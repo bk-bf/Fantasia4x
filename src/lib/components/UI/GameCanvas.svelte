@@ -289,18 +289,6 @@
     wash: 'rgba(150, 240, 215, 0.45)'
   };
 
-  // Work-designation region tints (harvest / woodcut / forage / mine / dig). These tiles also get an
-  // icon, but painting them as a region (translucent fill + outer-edge outline, via paintTileRegion)
-  // makes a marked patch read as one zone — matching the standing-zone look — instead of scattered
-  // dark marks. Green = gather (plants/wood/forage), brown = dig/mine.
-  const DESIGNATION_TINT_COLORS: Record<string, string> = {
-    harvest: 'rgba(76, 204, 68, 0.20)',
-    woodcut: 'rgba(76, 204, 68, 0.20)',
-    forage: 'rgba(120, 200, 80, 0.20)',
-    mine: 'rgba(204, 136, 51, 0.20)',
-    dig: 'rgba(204, 136, 51, 0.20)'
-  };
-
   // Phase A2 dynamic lighting: lit campfires emit warm point light, baked into
   // the tile renderer (replaces the old floating DOM radial glow). §M: the dim, static
   // ancient-wood grove glows (collected on terrain change into `resourceGlowEmitters`) are
@@ -1628,22 +1616,9 @@
       }
     }
 
-    // Work-designation region tints (harvest / woodcut / forage / mine / dig) — same region look as
-    // the standing zones (the icons below draw on top), so a cut/harvest patch reads as one zone
-    // rather than a borderless dark blob.
-    {
-      const byColor = new Map<string, Set<string>>();
-      for (const key in designations) {
-        const c = DESIGNATION_TINT_COLORS[designations[key]];
-        if (!c) continue;
-        let set = byColor.get(c);
-        if (!set) byColor.set(c, (set = new Set()));
-        set.add(key);
-      }
-      for (const [color, set] of byColor) {
-        paintTileRegion(ctx, set, color, color.replace(/[\d.]+\)$/, '0.9)'));
-      }
-    }
+    // Work designations (harvest / woodcut / forage / mine / dig) get NO tile tint or zone overlay —
+    // each marked tile already shows a work-type icon (drawn below). Only standing zones (stockpile /
+    // drink / wash, above) and the live drag preview are tinted.
 
     // Live zone drag-paint preview. Drawn here on the lightweight 2D overlay
     // (rather than tinting the WebGL grid) so the heavy terrain vertex buffer
@@ -1694,9 +1669,10 @@
       ctx.restore();
     }
 
-    // Live "select similar resource" drag preview. Matching tiles glow green, the
-    // rest are dimmed. Drawn on the 2D overlay so dragging across many tiles never
-    // rebuilds the WebGL terrain buffer.
+    // Live "select similar resource" drag preview — a green zone (matching the standing-zone
+    // aesthetic). Matching tiles glow a brighter green; the rest stay a faint green so the drag area
+    // reads as one zone instead of a black blackout. Drawn on the 2D overlay so dragging across many
+    // tiles never rebuilds the WebGL terrain buffer.
     if (similarDragActive) {
       const minX = Math.min(similarAnchorX, similarEndX);
       const maxX = Math.max(similarAnchorX, similarEndX);
@@ -1713,10 +1689,18 @@
           const sx2 = (rx - viewX) * tileWidth;
           const sy2 = (ry - viewY) * tileHeight;
           const match = (worldMap[ry]?.[rx]?.resources?.[similarDragResourceId] ?? 0) > 0;
-          ctx.fillStyle = match ? 'rgba(60, 230, 90, 0.40)' : 'rgba(0, 0, 0, 0.45)';
+          ctx.fillStyle = match ? 'rgba(76, 204, 68, 0.42)' : 'rgba(76, 204, 68, 0.14)';
           ctx.fillRect(sx2, sy2, tileWidth, tileHeight);
         }
       }
+      // Lighter-green outline around the drag rect, matching the standing-zone aesthetic.
+      const ox = (minX - viewX) * tileWidth;
+      const oy = (minY - viewY) * tileHeight;
+      const ow = (maxX - minX + 1) * tileWidth;
+      const oh = (maxY - minY + 1) * tileHeight;
+      ctx.strokeStyle = 'rgba(160, 255, 160, 0.95)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(ox + 0.5, oy + 0.5, ow - 1, oh - 1);
       ctx.restore();
     }
 
