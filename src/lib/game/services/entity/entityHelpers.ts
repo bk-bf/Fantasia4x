@@ -137,6 +137,56 @@ function mobThreatSubsets(allMobs: Mob[]): { predators: Mob[]; prey: Mob[] } {
   return _mobThreatCache;
 }
 
+// ENGINE-PERFORMANCE-II §S1 (ADR-008): the prey→nearest-predator map, computed ONCE per tick with the
+// WASM spatial-core uniform-grid batch query instead of the old O(prey × predators) double loop (the
+// `nearestPredatorThreat` + `dist` hot pair in the trace). Keyed on the allMobs ref (self-invalidates
+// on any mob change, like mobThreatSubsets). The batch radius bounds the search; each prey then applies
+// its own light-scaled vision. Falls back to the JS scan until the WASM is initialised in the worker.
+const THREAT_QUERY_RANGE = 40; // ≥ any effective vision range (base ≤ ~25 + night/light boost)
+let _predNearestCache: { ref: Mob[] | undefined; map: Map<string, Mob | null> } | null = null;
+
+function nearestPredatorMap(allMobs: Mob[]): Map<string, Mob | null> {
+  if (_predNearestCache && _predNearestCache.ref === allMobs) return _predNearestCache.map;
+  const { predators, prey } = mobThreatSubsets(allMobs);
+  const map = new Map<string, Mob | null>();
+  if (predators.length > 0 && prey.length > 0) {
+    const pts = new Float32Array(predators.length * 2);
+    for (let i = 0; i < predators.length; i++) {
+      pts[2 * i] = predators[i].x;
+      pts[2 * i + 1] = predators[i].y;
+    }
+    const qrs = new Float32Array(prey.length * 2);
+    for (let i = 0; i < prey.length; i++) {
+      qrs[2 * i] = prey[i].x;
+      qrs[2 * i + 1] = prey[i].y;
+    }
+    const res = wasmPathfinderService.nearestEach(pts, qrs, THREAT_QUERY_RANGE);
+    if (res) {
+      for (let i = 0; i < prey.length; i++) {
+        const idx = res[i];
+        map.set(prey[i].id, idx >= 0 ? predators[idx] : null);
+      }
+    } else {
+      // WASM not ready yet → identical-behaviour JS fallback (the old per-prey scan).
+      for (const p of prey) {
+        let best: Mob | null = null;
+        let bd = THREAT_QUERY_RANGE;
+        for (const m of predators) {
+          if (m.id === p.id) continue;
+          const d = dist(p, { x: m.x, y: m.y });
+          if (d < bd) {
+            bd = d;
+            best = m;
+          }
+        }
+        map.set(p.id, best);
+      }
+    }
+  }
+  _predNearestCache = { ref: allMobs, map };
+  return map;
+}
+
 export function findNearestPrey(mob: Mob, allMobs: Mob[], allowLivePrey: boolean): Mob | null {
   let best: Mob | null = null;
   let bestDist = Infinity;
@@ -204,18 +254,12 @@ export function nearestPredatorThreat(
   visionRange: number
 ): { pos: { x: number; y: number } } | null {
   if (!def.huntable) return null;
-  let best: Mob | null = null;
-  let bestDist = Infinity;
-  // Pre-filtered predator subset (non-corpse, def.predator), computed once per tick.
-  for (const m of mobThreatSubsets(allMobs).predators) {
-    if (m.id === prey.id) continue;
-    const d = dist(prey, { x: m.x, y: m.y });
-    if (d <= visionRange && d < bestDist) {
-      bestDist = d;
-      best = m;
-    }
-  }
-  return best ? { pos: { x: best.x, y: best.y } } : null;
+  // §S1: O(1) lookup into the per-tick WASM batch result (nearest predator within THREAT_QUERY_RANGE);
+  // apply this prey's own light-scaled vision to the cached nearest.
+  const best = nearestPredatorMap(allMobs).get(prey.id);
+  if (!best) return null;
+  const d = dist(prey, { x: best.x, y: best.y });
+  return d <= visionRange ? { pos: { x: best.x, y: best.y } } : null;
 }
 
 export function wanderStep(mob: Mob, def: CreatureDefinition, state: GameState): Mob {

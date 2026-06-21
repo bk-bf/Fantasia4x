@@ -73,8 +73,17 @@
   let tileSize = 8; // current zoom (px per tile), from the camera store
   const densityMul = () => {
     const frac = Math.max(0, Math.min(1, (MAX_TILE - tileSize) / (MAX_TILE - MIN_TILE)));
-    return 0.8 + frac * 1.4; // 0.8× zoomed in → 2.2× zoomed out, gentle linear ramp
+    // ENGINE-PERFORMANCE-II §R5: gentler zoom-out ramp (was 0.8 + frac*1.4 = up to 2.2×). The big
+    // particle count zoomed out was a top renderer cost; 0.8 + frac*0.8 caps it at ~1.6×.
+    return 0.8 + frac * 0.8;
   };
+
+  // §R5: render the weather into a buffer at this fraction of the (CSS-pixel) canvas size, then let the
+  // browser upscale it for display. Weather is soft/blurry, so the resolution drop is invisible — but
+  // the per-frame full-screen ops (clear + vignette fill) cost ~RENDER_SCALE² as much fillrate (~64%
+  // less at 0.6). Drawing stays in CSS coordinates via a matching ctx transform, so sizes / density /
+  // fall speed are all preserved exactly.
+  const RENDER_SCALE = 0.6;
   // Leaves are scenery-scale (a leaf is roughly a tile), so unlike rain/snow they should shrink as
   // you zoom OUT — combined with the higher count from densityMul, zoomed-out leaves read as a fine,
   // dense flurry rather than a few huge blobs. Linear in tile size, clamped.
@@ -96,13 +105,24 @@
   const TWO_PI = Math.PI * 2;
 
   function resize() {
-    if (!canvas) return;
-    const w = Math.floor(canvas.clientWidth);
-    const h = Math.floor(canvas.clientHeight);
-    if (w <= 0 || h <= 0) return;
-    if (canvas.width !== w) canvas.width = w;
-    if (canvas.height !== h) canvas.height = h;
+    if (!canvas || !ctx) return;
+    const cw = Math.floor(canvas.clientWidth);
+    const ch = Math.floor(canvas.clientHeight);
+    if (cw <= 0 || ch <= 0) return;
+    // §R5: buffer is RENDER_SCALE × the CSS size; we draw in CSS coords and the matching ctx transform
+    // rasterizes into the smaller buffer (the browser upscales it for display).
+    const bw = Math.max(1, Math.round(cw * RENDER_SCALE));
+    const bh = Math.max(1, Math.round(ch * RENDER_SCALE));
+    if (canvas.width !== bw) canvas.width = bw;
+    if (canvas.height !== bh) canvas.height = bh;
+    // Setting canvas.width/height resets the context — (re)apply the draw-in-CSS-coords transform.
+    ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
   }
+
+  // CSS-pixel drawing dimensions (the coordinate space all the particle code works in — the ctx
+  // transform maps it into the RENDER_SCALE buffer).
+  const cssW = () => (canvas ? canvas.width / RENDER_SCALE : 0);
+  const cssH = () => (canvas ? canvas.height / RENDER_SCALE : 0);
 
   /** A big, soft, slow-drifting haze cloud blob (shared by `fog` and the veil under `foggy_rain`).
    *  `spd` is horizontal drift; `r` the base radius; `ph` a bob phase; `len` a radius-breathing phase. */
@@ -165,8 +185,8 @@
   /** How many particles we want right now: data `density` (per megapixel) × intensity × zoom-out, capped. */
   function targetCount(): number {
     if (!canvas || mode === 'none') return 0;
-    const w = canvas.width;
-    const h = canvas.height;
+    const w = cssW();
+    const h = cssH();
     if (w <= 0 || h <= 0) return 0;
     // Fog is a handful of big soft blobs, not a per-pixel particle field (no zoom scaling).
     // More, larger, overlapping blobs read as continuous haze rather than a scatter of distinct discs.
@@ -184,8 +204,8 @@
       parts.length = target;
       return;
     }
-    const w = canvas.width;
-    const h = canvas.height;
+    const w = cssW();
+    const h = cssH();
     while (parts.length < target) parts.push(makeParticle(w, h, false));
   }
 
@@ -196,7 +216,7 @@
   }
 
   function clear() {
-    if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (ctx && canvas) ctx.clearRect(0, 0, cssW(), cssH());
   }
 
   function frame(t: number) {
@@ -204,8 +224,8 @@
     if (!ctx || mode === 'none') return;
     const dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0.016;
     lastT = t;
-    const w = canvas.width;
-    const h = canvas.height;
+    const w = cssW();
+    const h = cssH();
     ctx.clearRect(0, 0, w, h);
 
     if (isRain()) {
@@ -349,13 +369,13 @@
   /** Keep the foggy_rain veil's blob pool at a screen-sized count (independent of zoom, like fog). */
   function ensureFogBlobs() {
     if (!canvas) return;
-    const target = Math.min(18, Math.max(4, Math.round((canvas.width * canvas.height) / 220_000)));
+    const target = Math.min(18, Math.max(4, Math.round((cssW() * cssH()) / 220_000)));
     if (fogBlobs.length === target) return;
     if (fogBlobs.length > target) {
       fogBlobs.length = target;
       return;
     }
-    while (fogBlobs.length < target) fogBlobs.push(makeFogBlob(canvas.width, canvas.height));
+    while (fogBlobs.length < target) fogBlobs.push(makeFogBlob(cssW(), cssH()));
   }
 
   const unsub = currentWeather.subscribe((wx) => {
