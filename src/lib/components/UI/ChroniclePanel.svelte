@@ -114,9 +114,7 @@
   </div>
 
   <div class="log-list">
-    {#if $recentActivity.length === 0}
-      <div class="empty">awaiting events...</div>
-    {:else}
+    {#if $recentActivity.length > 0}
       {#each $recentActivity as entry (entry.id)}
         <div
           class="entry {SEV_CLASS[entry.severity] || ''} {entry.focusX !== undefined
@@ -320,13 +318,6 @@
   }
   .sev-crit .type {
     color: var(--neg);
-  }
-
-  .empty {
-    padding: 8px;
-    color: var(--text-muted);
-    font-size: 9px;
-    font-style: italic;
   }
 
   .clickable {
