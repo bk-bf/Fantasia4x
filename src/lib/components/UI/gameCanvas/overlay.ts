@@ -24,7 +24,11 @@ function hexToRgb(hex?: string): { r: number; g: number; b: number } | null {
  * yet hauled are tinted gold as a "needs hauling" cue. Items whose def has no `charSpans` fall back
  * to the legacy '$' (stored) / '*' (loose) marker glyphs.
  */
-export function overlayDroppedItems(grid: GameGrid, drops: DroppedItem[]): void {
+export function overlayDroppedItems(
+  grid: GameGrid,
+  drops: DroppedItem[],
+  isHidden?: (x: number, y: number) => boolean
+): void {
   // ASCII '*' glyph index in the sprite sheet (glyph 42 in standard CP437)
   const STAR_GLYPH = glyph(SHEET.MAP, 42);
   // '$' glyph (glyph 36 in CP437) for stored stockpile items
@@ -32,6 +36,8 @@ export function overlayDroppedItems(grid: GameGrid, drops: DroppedItem[]): void 
   const GOLD = { r: 1.0, g: 0.85, b: 0.1 };
   const GREEN = { r: 0.2, g: 0.9, b: 0.3 };
   for (const drop of drops) {
+    // Skip items on fog-hidden tiles — they'd float over the mountain silhouette.
+    if (isHidden?.(drop.x, drop.y)) continue;
     const existing = grid.getTile(drop.x, drop.y);
     const def = itemService.getItemById(drop.resourceId);
     const sprite = def?.charSpans

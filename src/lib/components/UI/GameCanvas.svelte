@@ -4,7 +4,11 @@
   import { get } from 'svelte/store';
   import { browser } from '$app/environment';
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
-  import { buildGameGrid, generatePlaceholderGrid } from '$lib/webgl/fantasia-world.js';
+  import {
+    buildGameGrid,
+    generatePlaceholderGrid,
+    computeHiddenMask
+  } from '$lib/webgl/fantasia-world.js';
   import {
     gameState,
     rendererReady,
@@ -148,6 +152,13 @@
   let ready = false;
   let errorMsg = '';
   let worldMap: WorldTile[][] = [];
+
+  // Interior-mountain "fog" mask (computeHiddenMask): tiles buried inside a massif / sealed in a
+  // pocket render blank in the terrain pass, and must NOT leak through the other render paths either —
+  // glow emitters on them are dropped, hovering them shows no info panel, and an explore-tab jump
+  // can't drop a highlight on them. Recomputed on the same gated cadence as terrain rebuilds.
+  let hiddenMask: boolean[][] = [];
+  const isHiddenTile = (x: number, y: number): boolean => hiddenMask[y]?.[x] ?? false;
 
   // Previous references for terrain-rebuild change detection (see gameState.subscribe).
   let _prevWorldMap: unknown;
@@ -414,7 +425,9 @@
       // (selectTileAt). When the tile is empty, fall back to a transient yellow highlight so the jump
       // still has a visible anchor. selectTile = false: a Pawn/Entity-tab jump that selects its
       // specific entity by id itself — here we only pan, so the tile-pick can't override that id.
-      if (selectTile && !selectTileAt(x, y)) {
+      // Skip the fallback highlight on a fog-hidden tile so a jump to a buried target doesn't pin a
+      // yellow marker over the silhouette and give its location away.
+      if (selectTile && !selectTileAt(x, y) && !isHiddenTile(x, y)) {
         highlightedResourceTiles = new Set([`${x},${y}`]);
       }
       // No terrain rebuild — the focus jump only moves the camera + selection (2D overlay).
@@ -471,8 +484,10 @@
   // Whether the cursor is currently over the canvas — gates the per-frame hover re-derive
   // during follow (so a stale tile isn't recomputed after the cursor has left the map).
   let cursorOverCanvas = false;
+  // A fog-hidden tile (mountain interior / sealed pocket) shows NO inspector — hovering it must not
+  // reveal the resources, soil, or subterrain buried under the silhouette.
   $: hoverTile =
-    hoverTileX >= 0 && hoverTileY >= 0 && worldMap.length > 0
+    hoverTileX >= 0 && hoverTileY >= 0 && worldMap.length > 0 && !isHiddenTile(hoverTileX, hoverTileY)
       ? (worldMap[hoverTileY]?.[hoverTileX] ?? null)
       : null;
   $: hoverResources = hoverTile
@@ -1001,10 +1016,16 @@
       if (worldMap.length > 0) {
         if (terrainChanged) {
           _terrainDirty = true; // coalesced in the render loop (throttled)
+          // Recompute the interior-mountain mask on the same gated cadence (mining a wall changes the
+          // silhouette) so hover/jump/glow all agree with the freshly-rebuilt terrain image.
+          hiddenMask = computeHiddenMask(worldMap);
           // §M: recompute the static grove glows on the same (gated) cadence as terrain rebuilds —
           // groves rarely change, and this O(map) scan piggybacks on the rebuild that's happening
-          // anyway. Then re-merge with the building lights.
-          resourceGlowEmitters = lightingService.collectResourceEmitters(worldMap);
+          // anyway. Drop glows on hidden tiles so a buried magic grove doesn't bleed light through the
+          // fog, then re-merge with the building lights.
+          resourceGlowEmitters = lightingService
+            .collectResourceEmitters(worldMap)
+            .filter((e) => !isHiddenTile(e.x, e.y));
           refreshEmitters();
         }
       } else {
@@ -1053,7 +1074,7 @@
     // a pawn standing on an item's tile composites on top of the item glyph
     // instead of overwriting it (terrain → items → entities, three glyph layers).
     itemOverlayGrid.clear();
-    overlayDroppedItems(itemOverlayGrid, droppedItems);
+    overlayDroppedItems(itemOverlayGrid, droppedItems, isHiddenTile);
     // Clamp dt so a CPU-stall frame (e.g. pathfinding for many entities) doesn't
     // produce alpha≈1 and snap all entities to their new positions at once.
     const clampedDt = Math.min(dt, 0.05);
@@ -1093,6 +1114,10 @@
 
       const cellX = Math.round(rm.x);
       const cellY = Math.round(rm.y);
+      // Don't draw a mob standing on a fog-hidden tile — it would float on top of the mountain
+      // silhouette and give away that the interior is open. (Render-pos bookkeeping above is kept so
+      // it slides back in correctly when it steps out of the fog.)
+      if (isHiddenTile(cellX, cellY)) continue;
       // MARK highlight reuses the click-selection colour, keyed by id so it follows the mob.
       const isSelected =
         mob.id === selectedMobId || (markedKind === 'mob' && markedSet.has(mob.id));
@@ -1137,6 +1162,9 @@
       // Owning cell = nearest integer tile; offset keeps the glyph within ±0.5 tile.
       const cellX = Math.round(rp.x);
       const cellY = Math.round(rp.y);
+      // Don't draw a pawn on a fog-hidden tile (see mob note above) — keep its interpolation state but
+      // skip the glyph so it doesn't render over the mountain silhouette.
+      if (isHiddenTile(cellX, cellY)) continue;
       // MARK highlight reuses the click-selection colour, keyed by id so it follows the pawn.
       const isSelected =
         pawn.id === selectedPawnId || (markedKind === 'pawn' && markedSet.has(pawn.id));
@@ -1208,6 +1236,7 @@
     const newCollapsed = [];
     for (const p of pawns) {
       if (!p.position) continue;
+      if (isHiddenTile(p.position.x, p.position.y)) continue; // under the fog → no Zzz/✚/↓ leak
       if (p.currentState === 'Collapsed') {
         const o = overlayOf(p.id, p.position.x, p.position.y);
         if (onScreen(o)) newCollapsed.push(o);
@@ -1221,6 +1250,7 @@
     }
     for (const m of mobs) {
       if (m.state !== 'Sleeping') continue;
+      if (isHiddenTile(m.x, m.y)) continue; // under the fog → no Zzz leak
       const o = overlayOf(m.id, m.x, m.y);
       if (onScreen(o)) newSleep.push(o);
     }
@@ -1251,6 +1281,7 @@
         .filter(
           (p) =>
             p.position &&
+            !isHiddenTile(p.position.x, p.position.y) &&
             p.currentState != null &&
             PROGRESS_BAR_STATES.has(p.currentState) &&
             p.activeJob &&
@@ -1265,7 +1296,7 @@
         .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
       // Eating progress for mobs (foraging / hunting).
       ...mobs
-        .filter((m) => (m.eatProgress ?? 0) > 0)
+        .filter((m) => (m.eatProgress ?? 0) > 0 && !isHiddenTile(m.x, m.y))
         .map((m) => ({
           id: m.id,
           left: (m.x - viewX + 0.5) * tW,
@@ -1321,7 +1352,13 @@
     // Health bars for damaged pawns and mobs.
     const newHealth = [
       ...pawns
-        .filter((p) => p.position && p.isAlive !== false && (p.state.health ?? 100) < 100)
+        .filter(
+          (p) =>
+            p.position &&
+            !isHiddenTile(p.position.x, p.position.y) &&
+            p.isAlive !== false &&
+            (p.state.health ?? 100) < 100
+        )
         .map((p) => ({
           id: `hp-${p.id}`,
           left: (p.position!.x - viewX + 0.5) * tW,
@@ -1331,7 +1368,7 @@
         }))
         .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
       ...mobs
-        .filter((m) => m.state !== 'Corpse' && m.health < m.maxHealth)
+        .filter((m) => m.state !== 'Corpse' && m.health < m.maxHealth && !isHiddenTile(m.x, m.y))
         .map((m) => ({
           id: `hp-${m.id}`,
           left: (m.x - viewX + 0.5) * tW,
@@ -2080,7 +2117,11 @@
     }
 
     const tileData = worldMap[y]?.[x];
-    const tileResources = Object.entries(tileData?.resources ?? {}).filter(([, v]) => v > 0);
+    // Fog-hidden tiles (buried mountain interior) expose nothing selectable — an explore-tab jump to a
+    // resource under the silhouette must not pin a highlight that gives away its exact buried location.
+    const tileResources = isHiddenTile(x, y)
+      ? []
+      : Object.entries(tileData?.resources ?? {}).filter(([, v]) => v > 0);
     if (tileResources.length > 0) {
       const [resourceId] = tileResources[0];
       selectedResourceTile = { x, y, resourceId };
@@ -2186,21 +2227,10 @@
     markRenderDirty();
   });
 
-  // §E.1 followup 2: while PAUSED, the renderer caches the heavy terrain pass to an FBO and re-blits it
-  // each frame (entity overlays + weather stay live). Toggle it with the pause state. A repaint on the
-  // transition lets the cache capture (on pause) / drop (on resume).
-  let isPausedNow = false;
-  const unsubPaused = gameState.isPaused.subscribe((p) => {
-    isPausedNow = p;
-    renderer?.setTerrainCacheEnabled(p);
-    markRenderDirty();
-  });
-
   onDestroy(() => {
     unsubState();
     unsubUI();
     unsubWorldGen();
-    unsubPaused();
     unsubCombatFeedback();
     unsubAttackLunges();
     unsubProjectiles();
@@ -2252,7 +2282,6 @@
         worldMap.length > 0 ? buildGameGrid(worldMap, buildings) : generatePlaceholderGrid();
       renderer.setGrid(grid);
       renderer.setViewTileOffset(viewX, viewY);
-      renderer.setTerrainCacheEnabled(isPausedNow); // apply current pause state (subscription fired pre-init)
       // Phase A2: bake ONLY the static (flicker-free) additive point light into the
       // renderer; the global day/night ambient and the fire flicker are both applied
       // as shader uniforms, so the terrain buffer never rebakes per frame.
@@ -2267,9 +2296,14 @@
         );
         renderer.setAmbient(light, tinted);
         lightingService.setAmbient(light, tinted);
-        // §M: seed grove glows from the current map, then merge with building lights.
-        if (worldMap.length > 0)
-          resourceGlowEmitters = lightingService.collectResourceEmitters(worldMap);
+        // §M: seed grove glows from the current map (minus fog-hidden tiles), then merge with building
+        // lights. Seed the hidden mask here too so the first hover/jump already respects the fog.
+        if (worldMap.length > 0) {
+          hiddenMask = computeHiddenMask(worldMap);
+          resourceGlowEmitters = lightingService
+            .collectResourceEmitters(worldMap)
+            .filter((e) => !isHiddenTile(e.x, e.y));
+        }
         refreshEmitters();
         _ambientLight = light;
         _ambientTint = tinted;
@@ -2343,6 +2377,13 @@
 
   function startLoop() {
     let lastFpsPush = 0;
+    let lastDrawAt = 0;
+    // Safety net for the frozen render: even with nothing marked dirty, redraw at least this often so a
+    // missed dirty trigger (e.g. an async terrain rebuild a few frames after GENERATE / size toggle, or
+    // a layout-resize on opening Custom Map) can never leave a STALE frame on screen longer than this.
+    // ~2.5 redraws/sec when idle ≈ negligible cost vs. the 20 FPS saturation it replaces, but
+    // bulletproof against the "blank/partial map until I pan" staleness.
+    const FROZEN_SAFETY_MS = 400;
     function frame() {
       if (!renderer || !ready) return;
       // Real elapsed time drives interpolation so motion is smooth at the display
@@ -2395,12 +2436,13 @@
       // still wants its animation layers (weather/status/glow) live (see §E.1 followup: cache the
       // heavy map+entity layers while keeping the light animated layers redrawing).
       const frozen = customMapPreview || tileWidth < FREEZE_TILE_PX;
-      if (_renderDirty || !frozen) {
+      if (_renderDirty || !frozen || now - lastDrawAt >= FROZEN_SAFETY_MS) {
         renderer.setItemOverlayGrid(itemOverlayGrid);
         renderer.setOverlayGrid(pawnOverlayGrid);
         renderer.beginFrame();
         renderer.endFrame();
         _renderDirty = false;
+        lastDrawAt = now;
         // Surface render FPS to the topbar ~4×/sec to avoid store churn.
         if (now - lastFpsPush > 250) {
           lastFpsPush = now;
