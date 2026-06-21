@@ -570,6 +570,58 @@ re-clones now copying 250k tiles** — same root cause leaking across the bounda
   FPS. `pnpm check`/`pnpm test` green (486 tests). *(`perf.log` logs TPS only; FPS is the user's eyes —
   but the flat-TPS recovery + no sustained dips corroborates it.)*
 
+### §E.1 · Zoom-out: contain-fit + the LOD question (2026-06-21)
+
+**Follow-on to §E, same root cause one level further out.** Chunking made render `O(visible tiles)` —
+but at the **zoom-out floor** the *whole* map is visible, so on L/750² and XL/1000² every chunk is in
+view: ~560k–1M glyph quads drawn per frame, and **panning churns chunk VBOs** (build → upload at the
+margin ring) → the user-reported zoom-out pan lag.
+
+- [~] **Contain-fit (TRIED → REVERTED 2026-06-21).** Switched COVER (`Math.max`) → CONTAIN (`Math.min`)
+  so the floor showed the whole map. But on a wide screen + square map it leaves letterbox bars (empty
+  out-of-map "aether"), which the user dislikes. Reverted to COVER: the floor FILLS the canvas
+  edge-to-edge (binding axis = width), no aether; the other axis overflows so you pan along it.
+- [~] **Colour-blend LOD (TRIED → REVERTED 2026-06-21).** A minimap-texture LOD (one `mapW×mapH` quad,
+  per-texel = `background`+`foreground` blend, mip-filtered) below a zoom threshold. Collapsed render
+  to O(1) but **looked wrong** — a flat colour wash discards the busy *glyph texture* (thousands of
+  tiny chars) that makes zoomed-out terrain read as terrain. Reverted (`minimap-renderer.ts` deleted,
+  `renderer-core` restored). **Lesson: a per-tile colour can't reproduce the glyph look.**
+- [x] **Render-on-demand (THE FIX, 2026-06-21).** Root cause of the sub-20 FPS on a *static* zoomed-out
+  view (esp. the custom-map page): the rAF loop drew the terrain — *all* visible chunks, ~1M tiles at
+  the XL floor — **every frame even when nothing changed**. `perf.log` was healthy 60 TPS (render-side,
+  per §D-method). Fix: a `_renderDirty` flag in GameCanvas's `frame()`. When the scene is **FROZEN** the
+  GL draw (`beginFrame`/`endFrame`) is **skipped unless something visible changed**; the WebGL canvas
+  retains its last frame, so a static map costs ~0 render. Dirty is set by the event-driven repaint
+  primitives (`drawDesignations`/`redrawOverlayNow`/`setView`→pan/zoom, worldGenRev); a position-only
+  worker flush does *not* mark dirty. **FROZEN = map-generation mode OR zoomed out past
+  `FREEZE_TILE_PX = 4`** (entity motion sub-pixel). **NOT a bare in-game pause** — paused-but-zoomed-in
+  keeps drawing so its animation layers stay live (see followup 2). Frozen-idle reports `0 FPS` (no
+  frames = no FPS, by design). **No LOD / no colour hack** — faithful glyph render at all zooms.
+- [x] **Map-generation mode = stripped static viewer (2026-06-21).** While the Custom Map popup is open:
+  the sim is **paused** (`CustomMapMenu`; was wastefully running ~92 TPS behind it), the render is
+  **frozen** (above), **no entities/items are drawn** (GameCanvas clears the overlays — the fresh New
+  Game map still has them in state until GENERATE), and the chrome is stripped (`+page`): both sidebars
+  + bottom nav hidden, the weather layer hidden, and the game HUD replaced by a bare "MAP GENERATION"
+  header (no time/season/weather/speed/pause/TPS·FPS — none of it should be computing yet). Net: a
+  literal zoom/pan image viewer.
+- [ ] **Followup 1 — render only the viewport.** Terrain is already chunk-culled; entities are built
+  for all then GL-clips the off-screen quads (cheap at current counts). If entity count ever explodes,
+  cull `updatePawnOverlay` to the viewport rect. Low priority.
+- [~] **Followup 2 — paused terrain FBO cache (TRIED → REVERTED 2026-06-21).** Captured the terrain
+  pass to a viewport FBO while paused and re-blitted it. In practice it **locked stale/blank captures**:
+  it captured at the wrong moment (pre-rebuild / mid-resize / pre-camera-refit) and then served that
+  frame until a pan/zoom invalidated it — blank map after GENERATE, blank on opening Custom Map, partial
+  map on a size toggle. Too fragile + unverifiable from here, so **reverted** (`terrain-cache.ts`
+  deleted, all `renderer-core`/`renderer`/GameCanvas wiring removed). **Lesson: a capture-and-serve cache
+  needs a bulletproof "when to recapture" signal; the precise-invalidation approach missed cases.**
+- [x] **Robust freeze instead — a safety redraw (2026-06-21).** The render-on-demand freeze now redraws
+  **at least every `FROZEN_SAFETY_MS = 400`** even with nothing marked dirty, so a missed dirty trigger
+  (async terrain rebuild after GENERATE/size-toggle, a layout resize on opening Custom Map) can never
+  leave a stale/blank frame on screen longer than 400ms — it self-heals. ~2.5 redraws/sec when idle ≈
+  negligible vs. the 20 FPS saturation it replaces, and bulletproof against the "blank until I pan"
+  staleness. The precise dirty flag still gives instant redraw on real events; the safety net only
+  catches the misses.
+
 ### Follow-ups (not needed for the FPS fix)
 
 - [ ] **`buildGameGrid` is still O(map).** `redrawOverlayNow` floods + `setTile`s all 250k tiles into a
