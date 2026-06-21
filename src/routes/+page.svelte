@@ -389,8 +389,7 @@
     pointer-events: none;
   }
   .map-locked .bottom-nav {
-    pointer-events: none;
-    opacity: 0.35;
+    display: none;
   }
 
   /* Overlay panel: bottom 50% of the map area, semi-transparent so map shows above */

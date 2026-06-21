@@ -3,41 +3,21 @@
 
   Shown by +page.svelte while `!bootReveal`, i.e. through the whole boot: save load → WebGL init
   (which happens BEHIND this overlay, once storeReady mounts the game-container) → a paused warmup
-  linger that hides the worker-boot/WebGL-init GC. Replaces the two old inline screens ("LOADING…"
-  in +page + "Initializing renderer…" in GameCanvas).
+  linger that hides the worker-boot/WebGL-init GC.
 
-  The bar is indeterminate-but-smooth: it eases toward ~95% over the expected load window; the parent
-  unmounts this component the instant `bootReveal` fires, so it never sits at a fake 100%. Phase text
-  comes from the `loadingStatus` store, updated through the boot in stores/gameState.
+  Indeterminate circular spinner — the boot is brief and not linear (it doesn't pass through fixed
+  phases on the menu→game path), so a determinate bar misrepresented progress. The parent unmounts
+  this the instant `bootReveal` fires. Phase text (when present) comes from the `loadingStatus` store.
 -->
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { tweened } from 'svelte/motion';
-  import { cubicOut } from 'svelte/easing';
   import { fade } from 'svelte/transition';
-  import { loadingStatus, bootReveal, WORKER_WARMUP_MS } from '$lib/stores/gameState';
-
-  const progress = tweened(0, { duration: 400, easing: cubicOut });
-
-  onMount(() => {
-    // Ease the fill toward ~95% over a window a touch longer than the warmup linger so the bar keeps
-    // creeping through save-load + WebGL-init too, and never sits at a fake 100%.
-    progress.set(0.95, { duration: WORKER_WARMUP_MS * 1.6, easing: cubicOut });
-  });
-
-  // Top the bar off to 100% the instant the overlay is dropped (same `bootReveal` flag +page uses),
-  // so the bar reaches the end EXACTLY as the screen fades out — no popping at a partial fill.
-  $effect(() => {
-    if ($bootReveal) progress.set(1, { duration: 200 });
-  });
+  import { loadingStatus } from '$lib/stores/gameState';
 </script>
 
 <div class="loading-screen" out:fade={{ duration: 250 }}>
   <div class="box">
     <div class="title">FANTASIA</div>
-    <div class="bar" role="progressbar" aria-valuenow={Math.round($progress * 100)}>
-      <div class="fill" style:width="{$progress * 100}%"></div>
-    </div>
+    <div class="spinner" role="status" aria-label="Loading"></div>
     <div class="status">{$loadingStatus}</div>
   </div>
 </div>
@@ -56,8 +36,7 @@
   .box {
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    width: min(360px, 70vw);
+    gap: 18px;
     align-items: center;
   }
   .title {
@@ -66,22 +45,29 @@
     letter-spacing: 0.5em;
     text-indent: 0.5em; /* balance the trailing letter-spacing */
   }
-  .bar {
-    width: 100%;
-    height: 4px;
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    overflow: hidden;
+  .spinner {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent-hi);
+    animation: spin 0.8s linear infinite;
   }
-  .fill {
-    height: 100%;
-    background: var(--accent-hi);
-    transition: none; /* width is driven by the tweened store, not CSS */
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
   .status {
     color: var(--text-muted, #555);
     font-size: 12px;
     letter-spacing: 0.15em;
     min-height: 1em;
+  }
+  /* Respect reduced-motion: pause the rotation, keep the ring visible as a static indicator. */
+  @media (prefers-reduced-motion: reduce) {
+    .spinner {
+      animation: none;
+    }
   }
 </style>
