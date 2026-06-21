@@ -25,7 +25,8 @@
     DroppedItem,
     FuelSettings,
     Item,
-    Mob
+    Mob,
+    ZoneInstance
   } from '$lib/game/core/types.js';
   import type { GameGrid } from '$lib/webgl/game-grid.js';
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
@@ -97,6 +98,7 @@
   } from '$lib/components/UI/gameCanvas/spriteSheets';
   import { redrawHudSpriteIcons } from '$lib/components/UI/gameCanvas/hudSpriteIcon';
   import BuildingFuelPanel from '$lib/components/UI/gameCanvas/BuildingFuelPanel.svelte';
+  import StockpileZonePanel from '$lib/components/UI/gameCanvas/StockpileZonePanel.svelte';
   import {
     buildPawnCard,
     buildMobCard,
@@ -310,6 +312,8 @@
   // Tile → zone-instance id (from game state); lets us suppress a single zone's
   // overlay tint when the player hides that instance's color in the Building tab.
   let designationZoneId: Record<string, string> = {};
+  // Full zone-instance list (filters + labels) from the snapshot — drives the clicked-stockpile panel.
+  let zoneInstances: ZoneInstance[] = [];
   // Zone-instance ids whose color the player has hidden (persisted on the instance
   // in the save). Derived from zoneInstances in the gameState snapshot below.
   let hiddenZoneInstances = new Set<string>();
@@ -389,6 +393,7 @@
       selectedPawnId = s.selectedPawnId;
       if (s.selectedPawnId) {
         selectedBuildingId = null;
+        selectedZoneId = null;
         selectedResourceTile = null;
         selectedItemId = null;
         highlightedResourceTiles = new Set();
@@ -399,6 +404,7 @@
       selectedMobId = s.selectedMobId;
       if (s.selectedMobId) {
         selectedBuildingId = null;
+        selectedZoneId = null;
         selectedResourceTile = null;
         selectedItemId = null;
         highlightedResourceTiles = new Set();
@@ -453,6 +459,8 @@
   let blueprintDragTiles = new Set<string>();
   // Resource tile interaction
   let selectedResourceTile: { x: number; y: number; resourceId: string } | null = null;
+  // Click-locked stockpile zone (by ZoneInstance.id) — shows the zone filter/draw/clear card.
+  let selectedZoneId: string | null = null;
   // Click-locked dropped item (by stable DroppedItem.id) — the loose-item analogue of selectedResourceTile,
   // so a clicked item stack pins its info card just like a pawn/mob/building/resource does. Re-derived
   // live from `droppedItems` so the card tracks decay/durability and clears itself when the stack is gone.
@@ -873,6 +881,37 @@
   $: hoverItemCard = hoverDroppedItem ? buildItemCard(hoverDroppedItem) : null;
   $: selectedItemCard = selectedItem ? buildItemCard(selectedItem) : null;
 
+  // ── Click-locked stockpile zone (the zone info/filter card) ───────────────────────
+  $: selectedZone = selectedZoneId
+    ? (zoneInstances.find((z) => z.id === selectedZoneId) ?? null)
+    : null;
+  $: selectedZoneTileKeys = selectedZoneId
+    ? Object.keys(designationZoneId).filter((k) => designationZoneId[k] === selectedZoneId)
+    : [];
+  // Per-item totals physically stored on THIS zone's tiles (stored drops) — feeds the filter card's
+  // counts so "what's actually here" reads truthfully (and items at 0 still list, for filtering).
+  $: selectedZoneInventory = (() => {
+    if (!selectedZoneId) return {} as Record<string, number>;
+    const tiles = new Set(selectedZoneTileKeys);
+    const inv: Record<string, number> = {};
+    for (const d of droppedItems) {
+      if (!d.stored || !tiles.has(`${d.x},${d.y}`)) continue;
+      inv[d.resourceId] = (inv[d.resourceId] ?? 0) + d.quantity;
+    }
+    return inv;
+  })();
+  // Is the active DRAW/CLEAR tool currently aimed at the selected zone? (highlights its button)
+  $: zoneToolDrawing =
+    designationMode && activeZoneInstanceId === selectedZoneId && !zoneEraseMode;
+  $: zoneToolClearing =
+    designationMode && activeZoneInstanceId === selectedZoneId && zoneEraseMode;
+
+  /** Enter the paint tool for a stockpile zone — DRAW extends (erase off), CLEAR reduces (erase on). */
+  function paintZoneTool(instanceId: string, erase: boolean) {
+    zoneEraseMode = erase;
+    uiState.activateDesignation('stockpile', instanceId);
+  }
+
   function moveCostLabel(cost: number): { label: string; color: string } {
     if (cost <= 0) return { label: 'impassable', color: '#cc4444' };
     if (cost <= 1.0) return { label: 'normal', color: '#70bb70' };
@@ -968,9 +1007,8 @@
     designations = s.designations ?? {};
     zoneTiles = s.zoneTiles ?? {};
     designationZoneId = s.designationZoneId ?? {};
-    hiddenZoneInstances = new Set(
-      (s.zoneInstances ?? []).filter((z) => z.colorHidden).map((z) => z.id)
-    );
+    zoneInstances = s.zoneInstances ?? [];
+    hiddenZoneInstances = new Set(zoneInstances.filter((z) => z.colorHidden).map((z) => z.id));
     droppedItems = s.droppedItems ?? [];
     mobs = s.mobs ?? [];
     // Only the terrain layer is expensive to rebuild (buildGameGrid scans the
@@ -2096,6 +2134,7 @@
     | { kind: 'pawn'; id: string }
     | { kind: 'mob'; id: string }
     | { kind: 'building'; id: string }
+    | { kind: 'zone'; id: string }
     | { kind: 'item'; id: string }
     | { kind: 'resource'; resourceId: string };
 
@@ -2107,6 +2146,7 @@
     selectedPawnId = null;
     selectedMobId = null;
     selectedBuildingId = null;
+    selectedZoneId = null;
     selectedResourceTile = null;
     selectedItemId = null;
     highlightedResourceTiles = new Set();
@@ -2124,6 +2164,9 @@
         break;
       case 'building':
         selectedBuildingId = layer.id;
+        break;
+      case 'zone':
+        selectedZoneId = layer.id;
         break;
       case 'item':
         selectedItemId = layer.id;
@@ -2145,6 +2188,11 @@
     if (mob) layers.push({ kind: 'mob', id: mob.id });
     const building = buildings.find((b) => b.x === x && b.y === y);
     if (building) layers.push({ kind: 'building', id: building.id });
+    // Stockpile zone occupying this tile (designationZoneId maps "x,y" → ZoneInstance.id).
+    const zoneId = designationZoneId[`${x},${y}`];
+    if (zoneId && zoneInstances.find((z) => z.id === zoneId && z.type === 'stockpile')) {
+      layers.push({ kind: 'zone', id: zoneId });
+    }
     if (!isHiddenTile(x, y)) {
       for (const it of droppedItems) {
         if (it.x === x && it.y === y) layers.push({ kind: 'item', id: it.id });
@@ -2224,18 +2272,27 @@
       return;
     }
 
-    // Designation mode: handled by drag — single-click still paints one tile
+    // Designation mode: handled by drag — single-click still affects one tile. In erase mode (the
+    // CLEAR tool) a single click removes that tile instead of painting it.
     if (designationMode) {
-      gameState.command({
-        type: 'designate',
-        payload: {
-          x: hoverTileX,
-          y: hoverTileY,
-          type: designationTypeActive,
-          instanceId: activeZoneInstanceId ?? undefined
-        },
-        save: true
-      });
+      if (zoneEraseMode) {
+        gameState.command({
+          type: 'clearRect',
+          payload: { x1: hoverTileX, y1: hoverTileY, x2: hoverTileX, y2: hoverTileY },
+          save: true
+        });
+      } else {
+        gameState.command({
+          type: 'designate',
+          payload: {
+            x: hoverTileX,
+            y: hoverTileY,
+            type: designationTypeActive,
+            instanceId: activeZoneInstanceId ?? undefined
+          },
+          save: true
+        });
+      }
       // Designations + zone tints are 2D-overlay layers now — repaint just that, no terrain rebuild.
       drawDesignations();
       return;
@@ -2265,6 +2322,7 @@
     _cycleTileY = -1;
     _cycleIndex = 0;
     selectedBuildingId = null;
+    selectedZoneId = null;
     selectedResourceTile = null;
     selectedItemId = null;
     selectedMobId = null;
@@ -2614,12 +2672,21 @@
           similarDragMode = false;
           similarDragActive = false;
           redrawOverlay();
+        } else if (designationMode) {
+          // Actively painting (e.g. the zone DRAW/CLEAR tool) → back out of the tool first; a second
+          // Escape then clears whatever's still selected (the zone card, etc.).
+          uiState.deactivateDesignation();
+          zoneEraseMode = false;
+          zoneDragActive = false;
+          drawDesignations();
         } else if (selectedResourceTile) {
           selectedResourceTile = null;
           highlightedResourceTiles = new Set();
           drawDesignations();
         } else if (selectedItemId) {
           selectedItemId = null;
+        } else if (selectedZoneId) {
+          selectedZoneId = null;
         } else if (selectedMobId) {
           selectedMobId = null;
           uiState.selectMob(null);
@@ -3500,6 +3567,19 @@
           <BuildingFuelPanel building={selectedBuilding} {pawns} open={showFuelSettings} />
         {/if}
       </div>
+    {:else if selectedZone}
+      <!-- Stockpile zone card: DRAW/CLEAR tools + per-item haul filter (from the tile click-cycle) -->
+      <StockpileZonePanel
+        instanceId={selectedZone.id}
+        label={selectedZone.label}
+        filter={selectedZone.filter}
+        inventory={selectedZoneInventory}
+        tileCount={selectedZoneTileKeys.length}
+        drawing={zoneToolDrawing}
+        clearing={zoneToolClearing}
+        onDraw={() => paintZoneTool(selectedZone.id, false)}
+        onClear={() => paintZoneTool(selectedZone.id, true)}
+      />
     {:else if selectedItemCard}
       <!-- Click-locked dropped item card (from the tile click-cycle), above the hover/resource cards -->
       <SelectedEntityCard model={selectedItemCard} />

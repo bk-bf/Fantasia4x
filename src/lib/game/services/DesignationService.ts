@@ -397,6 +397,26 @@ class DesignationServiceImpl {
     };
   }
 
+  /** Replace a zone instance's filter wholesale. Used by the per-item stockpile filter panel, which
+   *  computes the next {allowedCategories, blockedItems} locally (item-level granularity the
+   *  category-only toggle can't express) and sends it in one go. */
+  setInstanceFilter(instanceId: string, filter: ZoneFilter, gs: GameState): GameState {
+    return {
+      ...gs,
+      zoneInstances: (gs.zoneInstances ?? []).map((z) =>
+        z.id === instanceId
+          ? {
+              ...z,
+              filter: {
+                allowedCategories: [...filter.allowedCategories],
+                blockedItems: [...filter.blockedItems]
+              }
+            }
+          : z
+      )
+    };
+  }
+
   /** Clear all category restrictions from a zone instance's filter. */
   clearInstanceFilter(instanceId: string, gs: GameState): GameState {
     return {

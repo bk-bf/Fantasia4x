@@ -25,7 +25,8 @@ import type {
   CraftingInProgress,
   FilterableZoneType,
   PlacedBuilding,
-  Season
+  Season,
+  ZoneFilter
 } from '../core/types';
 import {
   addToStockpileZone,
@@ -353,6 +354,8 @@ export const COMMANDS: Record<string, Cmd> = {
   ) => designationService.toggleInstanceCategory(p.instanceId, p.category, p.allCategories, s),
   clearInstanceFilter: (s, p: { instanceId: string }) =>
     designationService.clearInstanceFilter(p.instanceId, s),
+  setInstanceFilter: (s, p: { instanceId: string; filter: ZoneFilter }) =>
+    designationService.setInstanceFilter(p.instanceId, p.filter, s),
   setZoneColorHidden: (s, p: { instanceId: string; hidden: boolean }) =>
     designationService.setInstanceColorHidden(p.instanceId, p.hidden, s),
   setAllZoneColorHidden: (s, p: { hidden: boolean }) =>
