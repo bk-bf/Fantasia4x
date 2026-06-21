@@ -2,7 +2,7 @@
 
 # PRODUCTION CHAIN III — Medieval Depth, Magic Ages, Construction, Armour & Famed Items
 
-> **Related:** [ROADMAP](ROADMAP.md) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) (§Q quality, §M magic gear, §F farming, §L logistics) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) (carcass yields, husbandry/wool source) · [SOCIAL-LAYER](SOCIAL-LAYER.md) (equipment prestige) · [MAGIC-SKILLS](MAGIC-SKILLS.md) (magic ages, alchemy) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) (gating) · [NOTES](../game/NOTES.md) (farming/terraform notes) · [game/DESIGN](../../game/DESIGN.md) · archived: [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (Pass I)
+> **Related:** [ROADMAP](ROADMAP.md) · [PRODUCTION-CHAIN-II](../archive/PRODUCTION-CHAIN-II-2026-06-21.md) (§Q quality, §M magic gear, §F farming, §L logistics) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) (carcass yields, husbandry/wool source) · [SOCIAL-LAYER](SOCIAL-LAYER.md) (equipment prestige) · [MAGIC-SKILLS](MAGIC-SKILLS.md) (magic ages, alchemy) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) (gating) · [NOTES](../game/NOTES.md) (farming/terraform notes) · [game/DESIGN](../../game/DESIGN.md) · archived: [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (Pass I)
 
 ## Status
 
@@ -442,7 +442,7 @@ A **new identity tier ABOVE the §Q quality scale** (Crude→…→Legendary). �
 | §I Famed | §Q quality (done); conditions (done) | §B Manaforge; boss roster (NOTES) | end-game chase |
 
 **Not duplicated here (cross-linked):** §F farming/food/brewing and §L logistics live in
-[PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md); husbandry/wool *source* + carcass-yield Phase B live in
+[PRODUCTION-CHAIN-II](../archive/PRODUCTION-CHAIN-II-2026-06-21.md); husbandry/wool *source* + carcass-yield Phase B live in
 [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md); prestige *effect* lives in
 [SOCIAL-LAYER](SOCIAL-LAYER.md); farming/terraform world notes in [NOTES](../game/NOTES.md).
 

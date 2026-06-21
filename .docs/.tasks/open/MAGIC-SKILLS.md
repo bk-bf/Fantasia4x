@@ -2,7 +2,7 @@
 
 # MAGIC FRAMEWORK & SKILL TREES
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) (**§M = this spec's Phase 0**: passive foundation + foci materials) · [PRODUCTION-CHAIN-III](PRODUCTION-CHAIN-III.md) (§A magic ages, §G alchemy/potions) · [game/DESIGN](../../game/DESIGN.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [PRODUCTION-CHAIN-II](../archive/PRODUCTION-CHAIN-II-2026-06-21.md) (**§M = this spec's Phase 0**: passive foundation + foci materials) · [PRODUCTION-CHAIN-III](PRODUCTION-CHAIN-III.md) (§A magic ages, §G alchemy/potions) · [game/DESIGN](../../game/DESIGN.md)
 
 ## Status
 
@@ -12,7 +12,7 @@ COMBAT-SYSTEM first; this spec then slots skills and spells into its existing
 combat loop (the optional skill bar, `triggerSkill`, and the `Injury`/damage
 pipeline).
 
-**Phase 0 is [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) §M.**
+**Phase 0 is [PRODUCTION-CHAIN-II](../archive/PRODUCTION-CHAIN-II-2026-06-21.md) §M.**
 The magic layer ships passive-first: §M delivers the materials (ancient woods, infused crystals),
 the attuned gear, and — critically — the **buff-delivery mechanism**. A magical buff is *just a
 `conditions.jsonc` entry* (transient, `magical: true`); attuned gear grants it while worn via the

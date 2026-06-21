@@ -2,7 +2,7 @@
 
 # PAWN SOCIAL LAYER & MOOD DEPTH
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [PRODUCTION-CHAIN-III](PRODUCTION-CHAIN-III.md) (§F armour / royalty outfits) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) (§M magic regalia) · [game/DESIGN](../../game/DESIGN.md) · [LIVING-WORLD](LIVING-WORLD.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [PRODUCTION-CHAIN-III](PRODUCTION-CHAIN-III.md) (§F armour / royalty outfits) · [PRODUCTION-CHAIN-II](../archive/PRODUCTION-CHAIN-II-2026-06-21.md) (§M magic regalia) · [game/DESIGN](../../game/DESIGN.md) · [LIVING-WORLD](LIVING-WORLD.md)
 
 ## Status
 
@@ -170,7 +170,7 @@ Every equippable item gains a **`prestige`** value (how impressive it makes the 
 total prestige = sum of worn-item prestige (× quality / Famed / material). Prestige is the deliberate
 **counterpart to the encumbrance trade-off**: heavy combat plate protects but rarely impresses; a
 **royal/leader outfit** impresses but barely protects — the *same* fork shape as the helmet-vs-magic-
-diadem choice already shipped in [PRODUCTION-CHAIN-II §M](PRODUCTION-CHAIN-II.md) (a buff crown costs
+diadem choice already shipped in [PRODUCTION-CHAIN-II §M](../archive/PRODUCTION-CHAIN-II-2026-06-21.md) (a buff crown costs
 your helmet slot).
 
 ### What prestige does (mood/social effects)

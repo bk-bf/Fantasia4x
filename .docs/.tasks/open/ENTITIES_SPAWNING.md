@@ -2,7 +2,7 @@
 
 # ENTITY SPAWNING (Mobs, Animals, Taming & Husbandry)
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) (archived) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (archived) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) (§L logistics) · [PRODUCTION-CHAIN-III](PRODUCTION-CHAIN-III.md) (§E carcass yields, beast hides, wool/leather split) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) (archived) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) (archived) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (archived) · [PRODUCTION-CHAIN-II](../archive/PRODUCTION-CHAIN-II-2026-06-21.md) (§L logistics) · [PRODUCTION-CHAIN-III](PRODUCTION-CHAIN-III.md) (§E carcass yields, beast hides, wool/leather split) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) (archived) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
 
 ## Status
 
@@ -429,7 +429,7 @@ slows to base pawn speed until healed (vet work category, Phase E2 — deferred)
 ## Future — Hauling & Logistics Progression (capture only; unspecced, do not build yet)
 
 > Parked ideas from a 2026-06-17 design chat. **Now spec'd** in
-> [PRODUCTION-CHAIN-II §L](PRODUCTION-CHAIN-II.md#l--bulk-logistics-wheelbarrows-carts-roads):
+> [PRODUCTION-CHAIN-II §L](../archive/PRODUCTION-CHAIN-II-2026-06-21.md#l--bulk-logistics-wheelbarrows-carts-roads):
 > the pawn-pushed wheelbarrow/handcart/road rungs ship there independently; the **animal-hauling
 > rungs (pack/draft)** remain the natural extension of Phases C–D below and hard-block on them.
 > The notes below are retained as the originating design rationale.

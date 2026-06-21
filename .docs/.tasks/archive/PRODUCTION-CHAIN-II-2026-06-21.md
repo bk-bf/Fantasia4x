@@ -2,13 +2,19 @@
 
 # PRODUCTION CHAIN II — Quality, Magic, Logistics & Farming
 
-> **Related:** [ROADMAP](ROADMAP.md) · [PRODUCTION-CHAIN-III](PRODUCTION-CHAIN-III.md) (medieval depth, magic ages, armour, famed items — the follow-on pass) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) (logistics + husbandry) · [MAGIC-SKILLS](MAGIC-SKILLS.md) (foci materials) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) (gating) · [RANGED-COMBAT](../archive/RANGED-COMBAT-2026-06-21.md) · archived: [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (Pass I) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) (materialBonuses) · [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) (growing seasons) · [game/DESIGN](../../game/DESIGN.md)
+> **Related:** [ROADMAP](../open/ROADMAP.md) · [PRODUCTION-CHAIN-III](../open/PRODUCTION-CHAIN-III.md) (medieval depth, magic ages, armour, famed items — the follow-on pass) · [ENTITIES_SPAWNING](../open/ENTITIES_SPAWNING.md) (logistics + husbandry) · [MAGIC-SKILLS](../open/MAGIC-SKILLS.md) (foci materials) · [RESEARCH-ENHANCEMENT](../open/RESEARCH-ENHANCEMENT.md) (gating) · [RANGED-COMBAT](RANGED-COMBAT-2026-06-21.md) · archived: [PRODUCTION-CHAIN-EXPANSION](PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (Pass I) · [EQUIPMENT-EXPANSION](EQUIPMENT-EXPANSION.md) (materialBonuses) · [SEASONS_WEATHER](SEASONS_WEATHER-2026-06-17.md) (growing seasons) · [game/DESIGN](../../game/DESIGN.md)
 
 ## Status
 
-**[~] In progress** — **§Q (Item Quality) DONE (2026-06-18)** closing R8, **§M (Magical Resources & Gear) DONE (2026-06-18)** as the MAGIC-SKILLS passive foundation, and **§L (Bulk Logistics) pawn-pushed carts DONE (2026-06-20)** (roads + draft animals deferred); **§F (Farming) spec reworked 2026-06-20** into a soil/terrain + farming layer (dirt fertility from grass subterrain · dig/reposition soil · terraform via compost · growing zones + crops + wetness gating), **not yet implemented.**
+**[x] DONE (2026-06-21) — archived.** All four chapters shipped:
+- **§Q (Item Quality) DONE (2026-06-18)** — closes R8; per-stack craft-quality tier stamped → propagated to instances → consumed by combat/tools + cooked-meal nutrition yield.
+- **§M (Magical Resources & Gear) DONE (2026-06-18)** — ancient woods + crystals → attuned passive-buff gear + arcane staves; MAGIC-SKILLS Phase 0 foundation.
+- **§L (Bulk Logistics) DONE (2026-06-20)** — pawn-pushed carts (two-handed tool + `inventoryBonus` + load encumbrance). *Roads + draft-animal carts deferred → ENTITIES C–D / a later pass.*
+- **§F (Farming, Food & Drink) DONE (2026-06-21)** — soil-fertility subterrain ladder (barren dirt → terra preta), dig, compost→fertiliser→terraform Soil-Works, growing zones + crops with conditional growth + soil exhaustion, per-node `growth`; and the **F8 food chain** (quern→flour, oven→bread/pies, fermenter→ale/wine/mead) with **alcohol as a staged, pain-numbing mood good** + **food poisoning** (nausea/dysentery, routed through `poison_resistance`, rarity-scaled for cooked dishes).
+
+**Deferred (forwarded, not part of this spec's close):** meal-variety mood signal + joy-driven drinking → **SOCIAL-LAYER**; dairy/egg recipes + manure + draft animals → **ENTITIES C–D**; §Q quality→buff-strength scaling + per-instance food tier → a later per-instance-food pass; roads → optional future. See the Deferred bullets in each chapter below.
 This is the **second** production/items/buildings/resources pass on top
-of the completed [Pass I](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (forage → fire →
+of the completed [Pass I](PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (forage → fire →
 tools → metal → leather). Pass I delivered the *mundane foundation*; Pass II adds the four
 depth layers that make a mature colony feel distinct: **craft quality**, **magic materials &
 stat-gear**, **bulk logistics**, and a real **farming → food → drink** chain.
@@ -32,7 +38,7 @@ Continues Pass I's rule: a **medieval-fantasy steampunk ceiling**, so we get ric
 
 - **Quality** turns "I have a sword" into "I have a *Masterwork* sword" — the same item DB,
   far more spread in outcomes, and a reason to keep your best crafter on the bench.
-- **Magic materials** are the first taste of the deferred [MAGIC-SKILLS](MAGIC-SKILLS.md)
+- **Magic materials** are the first taste of the deferred [MAGIC-SKILLS](../open/MAGIC-SKILLS.md)
   layer, delivered as **passive stat/trait gear** that needs no spell engine — so it ships now.
 - **Logistics** makes the **big map** (target 1000×1000) actually playable: the
   personal-carry vs bulk-logistics split (parked in ENTITIES_SPAWNING) becomes real.
@@ -132,7 +138,7 @@ Higher pawn skill/stats shift the distribution up; poor light / rushed work shif
 half of the magic layer first: rare magical materials → **attuned gear (rings, amulets, foci,
 bows)** that grants a **passive magical buff while worn**. It ships **without** the spell engine,
 but it is the foundation the active layer builds on: the buff-delivery plumbing it lays down (a
-magical buff *is a condition*) is exactly what [MAGIC-SKILLS](MAGIC-SKILLS.md)' active spells and
+magical buff *is a condition*) is exactly what [MAGIC-SKILLS](../open/MAGIC-SKILLS.md)' active spells and
 skill-tree nodes reuse — they apply the *same* magical conditions, just triggered on demand and
 gated by mana/research instead of by a worn item. Crafting the staff/focus first (the production
 chain) stays the gate, consistent with MAGIC-SKILLS' "attunement, not classes" model.
@@ -313,7 +319,7 @@ grove a reason to seek out.
 ## §L — Bulk Logistics (wheelbarrows, carts, roads) — **pawn-pushed carts DONE 2026-06-20**
 
 **Goal:** implement the **personal-carry vs bulk-logistics split** parked in
-[ENTITIES_SPAWNING → Hauling & Logistics Progression](ENTITIES_SPAWNING.md). Personal carry stays
+[ENTITIES_SPAWNING → Hauling & Logistics Progression](../open/ENTITIES_SPAWNING.md). Personal carry stays
 low; carts let a pawn haul far more. This chapter builds that layer.
 
 > **Shipped model (user call — simpler than the first draft below):** a cart is **not** a separate
@@ -503,7 +509,7 @@ growing.
 Cooking combines crops + meat/dairy/eggs → varied **meals** with nutrition **and** mood; a
 **meal-variety** signal decays a repeated dish's mood bonus and a varied diet restores it. §Q quality
 applies to cooked meals (Masterwork cook → higher-mood food). Dairy/eggs from
-[ENTITIES_SPAWNING Phase D](ENTITIES_SPAWNING.md) drop straight in.
+[ENTITIES_SPAWNING Phase D](../open/ENTITIES_SPAWNING.md) drop straight in.
 
 ---
 
@@ -609,15 +615,15 @@ growth" (the non-obvious reuse decision).
 
 ## Open Questions
 
-- [ ] **Quality floor:** does Crude (tier 0) appear for a competent colony, or is tier 1 the practical floor (Crude only on injured/dark/rushed crafts)? // possible to roll on every craft, greatly increased bad skill (which injured transfers into), low sight (which also lowers crafting), rushed is not an existing mechanic
-- [ ] **Batch quality:** when a recipe outputs a stack > 1 (food batches), is quality per-stack-uniform or per-unit? (Per-batch uniform is simpler; per-unit is finer but fragments stacks.) // per stack is fine
-- [ ] **Magic gating:** is the "Arcane Lapidary" gate a full RESEARCH-ENHANCEMENT node, or a standalone research now and folded into the lore-tier tree later? // research as a gate is deferred, everything will be gated behind research eventually, but its just one data bool in the recipe.jsonc, not necessary to make a big thing out of it now
-- [ ] **Amulet vs ring slot:** dedicated `amulet` slot (chosen) vs treating amulets as a second `ring` — confirm. // dedicated amulet slot that conflicts with specialised neck gear
-- [ ] **Bulk tag:** which resources are "bulk-only" (ore/log/hay/stone/block) vs personal-carriable, and where the tag lives (item field vs category).no bulk modeling, its deprecated for per pawn/entity carry capacity
-- [ ] **Road model:** build-tile road (chosen) vs derived "trampled path" from repeated pawn traffic. both can be implemented eventually, often traversed paths can over time become "packed dirt", which has a slightly lower movement cost the dirt, building cobble/brick roads will then completely remove any movement cost unlocking fast movement, but this system is not a priority at all, only an possible idea, deferred
-- [ ] **Crop persistence/save:** `tile.soil` + growing crops serialise with the world (assume yes — `tile.soil` is a persisted WorldTile field like `snow`/`walkable`). there should be no "tile.soil", instead growth is tied to the specific resource tile, breaking dirt into several versions ensures the relevant ones grow something others dont, seeds just mutate what grows on the dirt tile and the growing zone instructs pawns where to put the seeds 
-- [ ] **Alcohol depth:** mood-good only now vs a recreation/joy need — defer the need to SOCIAL-LAYER? mood only
-- [ ] **Spoilage of produce:** crops/bread/ale reuse Pass I `decaySeconds` + storage; confirm no new decay model needed.
+- [x] **Quality floor:** does Crude (tier 0) appear for a competent colony, or is tier 1 the practical floor (Crude only on injured/dark/rushed crafts)? // possible to roll on every craft, greatly increased bad skill (which injured transfers into), low sight (which also lowers crafting), rushed is not an existing mechanic
+- [x] **Batch quality:** when a recipe outputs a stack > 1 (food batches), is quality per-stack-uniform or per-unit? (Per-batch uniform is simpler; per-unit is finer but fragments stacks.) // per stack is fine
+- [x] **Magic gating:** is the "Arcane Lapidary" gate a full RESEARCH-ENHANCEMENT node, or a standalone research now and folded into the lore-tier tree later? // research as a gate is deferred, everything will be gated behind research eventually, but its just one data bool in the recipe.jsonc, not necessary to make a big thing out of it now
+- [x] **Amulet vs ring slot:** dedicated `amulet` slot (chosen) vs treating amulets as a second `ring` — confirm. // dedicated amulet slot that conflicts with specialised neck gear
+- [x] **Bulk tag:** which resources are "bulk-only" (ore/log/hay/stone/block) vs personal-carriable, and where the tag lives (item field vs category).no bulk modeling, its deprecated for per pawn/entity carry capacity
+- [x] **Road model:** build-tile road (chosen) vs derived "trampled path" from repeated pawn traffic. both can be implemented eventually, often traversed paths can over time become "packed dirt", which has a slightly lower movement cost the dirt, building cobble/brick roads will then completely remove any movement cost unlocking fast movement, but this system is not a priority at all, only an possible idea, deferred
+- [x] **Crop persistence/save:** `tile.soil` + growing crops serialise with the world (assume yes — `tile.soil` is a persisted WorldTile field like `snow`/`walkable`). there should be no "tile.soil", instead growth is tied to the specific resource tile, breaking dirt into several versions ensures the relevant ones grow something others dont, seeds just mutate what grows on the dirt tile and the growing zone instructs pawns where to put the seeds 
+- [x] **Alcohol depth:** mood-good only now vs a recreation/joy need — defer the need to SOCIAL-LAYER? mood only
+- [x] **Spoilage of produce → RESOLVED:** crops/bread/ale reuse Pass I `decaySeconds`/`deteriorationRate` + `decaysTo` (e.g. bread → `rotten_food`); no new decay model. Cooked dishes spoil fast, preserves/drinks keep — set per item.
 - [x] **§F soil source of truth → RESOLVED (user):** **no `tile.soil` field.** Fertility lives in the **dirt/grass resource version** on the tile (driven by the grass-density subterrain noise), read via `soilTierForTile`. → F1.
 - [x] **§F dig vs clear → RESOLVED (user):** `dig` is the **same harvest-vs-cut model as trees** — a `dig` interaction that returns the normal harvest + extra (the soil item) and depletes the node. → F2.
 - [x] **§F fertilizer → RESOLVED (user):** `compost` is a **build material** for better soil; placing soil types goes through the **building menu** (Soil Works). → F3/F7.
