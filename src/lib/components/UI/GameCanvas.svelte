@@ -452,6 +452,14 @@
   $: hoverResources = hoverTile
     ? Object.entries(hoverTile.resources ?? {}).filter(([, v]) => v > 0)
     : [];
+  // §F: the resource to NAME in the inspector — an active node (count > 0), else a still-STANDING
+  // depleted one (a foraged tree/bush keeps a growth entry while its yield regrows). Without this
+  // the panel — and its growth readout — blanked the instant a tree was foraged to count 0, even
+  // though the tree is still there. Felled/dug/mined nodes drop their growth entry → fall back to '—'.
+  $: hoverDisplayResource = hoverTile
+    ? (hoverResources[0]?.[0] ??
+      Object.keys(hoverTile.growth ?? {}).find((id) => (hoverTile.growth?.[id] ?? 0) > 0))
+    : undefined;
   $: hoverZoneType = hoverTile
     ? (zoneTiles[`${hoverTile.x},${hoverTile.y}`]?.[0] ??
       designations[`${hoverTile.x},${hoverTile.y}`] ??
@@ -3354,9 +3362,9 @@
       <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
         >{BIOMES[hoverTile.terrainType]?.displayName ?? hoverTile.terrainType},{SUBTERRAINS[
           hoverTile.subType
-        ]?.displayName ?? hoverTile.subType},{hoverResources[0]?.[0]
-          ? (resourceObjectService.getById(hoverResources[0][0])?.displayName ??
-            hoverResources[0][0])
+        ]?.displayName ?? hoverTile.subType},{hoverDisplayResource
+          ? (resourceObjectService.getById(hoverDisplayResource)?.displayName ??
+            hoverDisplayResource)
           : '—'}</span
       >
       {#if !hoverTile.walkable}
@@ -3383,10 +3391,10 @@
               ? '#b09030'
               : '#c83018'}">light {Math.round(hoverTileLight * 100)}%</span
         >
-        {#if hoverResources[0]?.[0]}
-          {@const growRes = resourceObjectService.getById(hoverResources[0][0])}
+        {#if hoverDisplayResource}
+          {@const growRes = resourceObjectService.getById(hoverDisplayResource)}
           {#if growRes && isGrowableResource(growRes)}
-            {@const gpct = Math.round(hoverTile.growth?.[hoverResources[0][0]] ?? 100)}
+            {@const gpct = Math.round(hoverTile.growth?.[hoverDisplayResource] ?? 100)}
             <span
               style="color:{gpct >= 100 ? '#68b030' : gpct >= 50 ? '#9aac3a' : '#c89a3a'}"
               title="resource maturity — scales harvest yield; crops grow only with enough fertility, warmth, water and light"

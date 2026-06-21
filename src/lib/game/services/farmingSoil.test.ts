@@ -182,9 +182,9 @@ describe('§F resource growth/maturity', () => {
     expect(full).toHaveProperty('hay');
   });
 
-  it('a tree forage knocks growth back to 80% (just branches), not 0%', () => {
+  it('a tree forage only strips ~20% growth (just branches) — the tree stays standing', () => {
     const forage = resourceObjectService.getInteractionByDesignationType('pine_tree', 'forage')!;
-    expect(forage.harvestGrowthReset).toBe(80);
+    expect(forage.harvestGrowthCost).toBe(20);
   });
 });
 

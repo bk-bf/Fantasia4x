@@ -52,10 +52,12 @@ export interface ResourceInteractionDef {
    */
   harvestSubType?: string;
   /**
-   * PRODUCTION-CHAIN-II §F: the growth% a node is reset to after THIS harvest (default 0). A tree's
-   * branch-forage sets 80 — it only knocks the canopy back a little, vs a full cut/reap that strips it.
+   * PRODUCTION-CHAIN-II §F: growth% SUBTRACTED from a node by THIS harvest (default 0 — the plant
+   * stays fully grown and just regrows its yield). A tree/bush forage takes only branches/berries, so
+   * it knocks ~20 off; the node stays standing (keeps its growth entry) and reads as a living plant.
+   * Felling (woodcut), digging and mining instead DEPLETE the node (harvestDepletes) and drop it.
    */
-  harvestGrowthReset?: number;
+  harvestGrowthCost?: number;
 }
 
 export interface ResourceObjectDef {

@@ -161,9 +161,15 @@ export function complete(job: Job, gs: GameState): GameState {
       col.growth = g;
     }
   } else {
-    // §F: harvesting RESETS the node's growth — to 0% by default, or the interaction's
-    // `harvestGrowthReset` (a tree's branch-forage leaves it ~80%). Yield was already scaled above.
-    col.growth = { ...(col.growth ?? {}), [job.resourceId!]: interaction?.harvestGrowthReset ?? 0 };
+    // §F: a persistent harvest only STRIPS a little growth — `harvestGrowthCost` (a tree/bush forage
+    // takes ~20% for branches/berries; 0 = no loss). The node stays STANDING (growth > 0 ⇒ still drawn
+    // and named in the inspector); only felling/digging (harvestDepletes) removes it. Yield was already
+    // scaled by the pre-harvest growth above.
+    const prevGrowth = col.growth?.[job.resourceId!] ?? 100;
+    col.growth = {
+      ...(col.growth ?? {}),
+      [job.resourceId!]: Math.max(0, prevGrowth - (interaction?.harvestGrowthCost ?? 0))
+    };
     // CROPS re-mature via the conditional growth pass (processCropGrowth), NOT a flat cooldown — so a
     // perennial crop only regrows while its tile still meets fertility/temp/wetness/light. Wild plants
     // keep the timed-cooldown regrowth.

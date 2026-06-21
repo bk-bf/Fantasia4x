@@ -124,42 +124,37 @@ export function buildGameGrid(worldMap: WorldTile[][], buildings?: PlacedBuildin
       if (hasResources) {
         const activeEntry = Object.entries(tile.resources!).find(([, amt]) => amt > 0);
 
-        // Resolve which resource is showing a cooldown glyph when fully depleted.
-        // Cooldown keys are either "resourceId" (simple) or "resourceId:itemId" (compound).
-        let cooldownResourceId: string | undefined;
-        if (!activeEntry) {
-          const firstCoolingKey = Object.keys(tile.resourceCooldowns ?? {}).find(
-            (k) => (tile.resourceCooldowns![k] ?? 0) > 0
+        // §F: a depleted node (count 0) may still be STANDING. Foraging a tree/bush only takes its
+        // branches/berries — the plant stays put and keeps a `growth` entry while its pickable yield
+        // regrows; FELLING (woodcut), digging or mining DROPS the growth entry, so those tiles fall
+        // through to bare subterrain (dirt). When nothing is pickable yet, draw the most-grown
+        // standing resource and dim it by HOW grown it is — so a foraged tree reads as a living tree
+        // (≈80% bright), not the old fixed 35% half-dead glyph that looked like the tree was gone.
+        let resKey: string | undefined = activeEntry?.[0];
+        let brightness = 1;
+        if (resKey) {
+          // Partial recovery: count back but some per-yield cooldowns still active → medium dim.
+          const partial = Object.keys(tile.resourceCooldowns ?? {}).some((k) =>
+            k.startsWith(resKey! + ':')
           );
-          if (firstCoolingKey) {
-            cooldownResourceId = firstCoolingKey.includes(':')
-              ? firstCoolingKey.split(':')[0]
-              : firstCoolingKey;
+          if (partial) brightness = 0.65;
+        } else {
+          let bestGrowth = 0;
+          for (const [id, g] of Object.entries(tile.growth ?? {})) {
+            if (g > bestGrowth) {
+              bestGrowth = g;
+              resKey = id;
+            }
           }
+          if (resKey) brightness = Math.max(0.4, bestGrowth / 100);
         }
 
-        // Partial recovery: resource count > 0 but some per-yield cooldowns still active.
-        const isPartialRecovery = activeEntry
-          ? Object.keys(tile.resourceCooldowns ?? {}).some((k) =>
-              k.startsWith(activeEntry[0] + ':')
-            )
-          : false;
-
-        const resKey = activeEntry?.[0] ?? cooldownResourceId;
         const resDef = resKey ? resourceObjectService.getById(resKey) : undefined;
         if (resDef && resDef.chars.length > 0) {
           // Resource layer: pick deterministic char from the resource's char pool
           const h = ((tile.x * 1619 + tile.y * 31337) >>> 0) % resDef.chars.length;
           char = resDef.chars[h];
-          if (cooldownResourceId) {
-            // Fully depleted + on cooldown — very dim (35% brightness)
-            fg = [resDef.fg[0] * 0.35, resDef.fg[1] * 0.35, resDef.fg[2] * 0.35];
-          } else if (isPartialRecovery) {
-            // Some yields back, some still cooling — medium brightness (65%)
-            fg = [resDef.fg[0] * 0.65, resDef.fg[1] * 0.65, resDef.fg[2] * 0.65];
-          } else {
-            fg = resDef.fg;
-          }
+          fg = [resDef.fg[0] * brightness, resDef.fg[1] * brightness, resDef.fg[2] * brightness];
           // Background ALWAYS comes from the subterrain, never the resource — a resource is a glyph
           // (fg char) drawn over uniform terrain. Using resDef.bg leaked the resource's own colour
           // (e.g. trees' green [0.07,0.1,0.03]) into the tile background, and it lingered after harvest

@@ -467,7 +467,7 @@
           }
         ],
         "persistent"     : true,
-        "harvestGrowthReset": 80, "harvestDepletes": false
+        "harvestGrowthCost": 20, "harvestDepletes": false
       }
     ]
   },
@@ -598,7 +598,7 @@
           }
         ],
         "persistent"     : true,
-        "harvestGrowthReset": 80, "harvestDepletes": false
+        "harvestGrowthCost": 20, "harvestDepletes": false
       }
     ]
   },
@@ -729,7 +729,7 @@
           }
         ],
         "persistent"     : true,
-        "harvestGrowthReset": 80, "harvestDepletes": false
+        "harvestGrowthCost": 20, "harvestDepletes": false
       }
     ]
   },
@@ -860,7 +860,7 @@
           }
         ],
         "persistent"     : true,
-        "harvestGrowthReset": 80, "harvestDepletes": false
+        "harvestGrowthCost": 20, "harvestDepletes": false
       }
     ]
   },
@@ -991,7 +991,7 @@
           }
         ],
         "persistent"     : true,
-        "harvestGrowthReset": 80, "harvestDepletes": false
+        "harvestGrowthCost": 20, "harvestDepletes": false
       }
     ]
   },
@@ -1268,6 +1268,7 @@
         {"itemId": "fruit_seed",   "min": 1,  "max": 3,  "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
+      "harvestGrowthCost": 20,
       "regrowthTurns"  : 2400 // ~8 days at 300 turns/day
     }
   },
@@ -1294,6 +1295,7 @@
         {"itemId": "grain_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
+      "harvestGrowthCost": 20,
       "regrowthTurns"  : 3000 // ~10 days at 300 turns/day
     }
   },
@@ -1321,6 +1323,7 @@
         {"itemId": "plant_fiber", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
+      "harvestGrowthCost": 20,
       "regrowthTurns"  : 3000 // ~10 days at 300 turns/day
     }
   },
