@@ -423,6 +423,7 @@
   let markEndY = 0;
   let markedKind: 'pawn' | 'mob' | null = null; // committed highlight kind
   let markedIds: string[] = []; // committed highlighted entity ids
+  let markedSet = new Set<string>(); // same ids, for O(1) lookup in the per-frame render loop
   let pawnMoveMode = false; // pawns: awaiting a destination click
 
   let zoneAnchorX = 0;
@@ -520,8 +521,11 @@
   // How many of the highlighted pawns are currently drafted — gates the MOVE action.
   $: markedDraftedCount =
     markedKind === 'pawn'
-      ? pawns.filter((p) => p.drafted && markedIds.includes(p.id)).length
+      ? pawns.filter((p) => p.drafted && markedSet.has(p.id)).length
       : 0;
+  // All highlighted pawns already drafted → the verb flips to UNDRAFT.
+  $: markedAllDrafted =
+    markedKind === 'pawn' && markedIds.length > 0 && markedDraftedCount === markedIds.length;
 
   $: hoverMob = hoverMobId ? (mobs.find((m) => m.id === hoverMobId) ?? null) : null;
 
@@ -1051,7 +1055,9 @@
 
       const cellX = Math.round(rm.x);
       const cellY = Math.round(rm.y);
-      const isSelected = mob.id === selectedMobId;
+      // MARK highlight reuses the click-selection colour, keyed by id so it follows the mob.
+      const isSelected =
+        mob.id === selectedMobId || (markedKind === 'mob' && markedSet.has(mob.id));
       const mLunge = lungeOffset(mob.id, nowMs);
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: def.chars[0],
@@ -1093,7 +1099,9 @@
       // Owning cell = nearest integer tile; offset keeps the glyph within ±0.5 tile.
       const cellX = Math.round(rp.x);
       const cellY = Math.round(rp.y);
-      const isSelected = pawn.id === selectedPawnId;
+      // MARK highlight reuses the click-selection colour, keyed by id so it follows the pawn.
+      const isSelected =
+        pawn.id === selectedPawnId || (markedKind === 'pawn' && markedSet.has(pawn.id));
       const isSleeping = pawn.currentState === 'Sleeping';
       // Collapsed = downed from pain / blood loss / starvation — lies on the ground like sleep, but it's
       // an emergency, marked by the red ↓ overlay rather than the calm blue Zzz.
@@ -1482,6 +1490,64 @@
     drawDesignations();
   }
 
+  /**
+   * Paint a set of "x,y" tiles as one region: a translucent fill plus an outline drawn ONLY on the
+   * region's outer edge (a side gets a line only where the neighbour tile isn't in the set), so it
+   * reads as a single zone instead of a grid of per-tile boxes. Shared by the standing-zone tints
+   * and the resource MARK highlight so the two look identical. `fill`/`stroke` are CSS colour strings.
+   */
+  function paintTileRegion(
+    ctx: CanvasRenderingContext2D,
+    tiles: Set<string>,
+    fill: string,
+    stroke: string
+  ) {
+    const W = container?.clientWidth ?? 0;
+    const H = container?.clientHeight ?? 0;
+    const colW = Math.ceil(W / tileWidth);
+    const rowH = Math.ceil(H / tileHeight);
+    const onScreen = (wx: number, wy: number) =>
+      wx >= viewX - 1 && wy >= viewY - 1 && wx <= viewX + colW && wy <= viewY + rowH;
+    ctx.save();
+    ctx.fillStyle = fill;
+    for (const key of tiles) {
+      const ci = key.indexOf(',');
+      const wx = +key.slice(0, ci);
+      const wy = +key.slice(ci + 1);
+      if (!onScreen(wx, wy)) continue;
+      ctx.fillRect((wx - viewX) * tileWidth, (wy - viewY) * tileHeight, tileWidth, tileHeight);
+    }
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (const key of tiles) {
+      const ci = key.indexOf(',');
+      const wx = +key.slice(0, ci);
+      const wy = +key.slice(ci + 1);
+      if (!onScreen(wx, wy)) continue;
+      const sx = (wx - viewX) * tileWidth;
+      const sy = (wy - viewY) * tileHeight;
+      if (!tiles.has(`${wx - 1},${wy}`)) {
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx, sy + tileHeight);
+      }
+      if (!tiles.has(`${wx + 1},${wy}`)) {
+        ctx.moveTo(sx + tileWidth, sy);
+        ctx.lineTo(sx + tileWidth, sy + tileHeight);
+      }
+      if (!tiles.has(`${wx},${wy - 1}`)) {
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + tileWidth, sy);
+      }
+      if (!tiles.has(`${wx},${wy + 1}`)) {
+        ctx.moveTo(sx, sy + tileHeight);
+        ctx.lineTo(sx + tileWidth, sy + tileHeight);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function drawDesignations() {
     if (!designCanvas || !container || !worldMap.length) return;
     const W = container.clientWidth;
@@ -1534,61 +1600,11 @@
         if (c) add(key, c);
       }
 
-      if (byColor.size > 0) {
-        const colW = Math.ceil(W / tileWidth);
-        const rowH = Math.ceil(H / tileHeight);
-        const onScreen = (wx: number, wy: number) =>
-          wx >= viewX - 1 && wy >= viewY - 1 && wx <= viewX + colW && wy <= viewY + rowH;
-        ctx.save();
-        ctx.lineWidth = 1.5;
-        for (const [color, set] of byColor) {
-          // Translucent fill for every tile of this zone.
-          ctx.fillStyle = color;
-          for (const key of set) {
-            const ci = key.indexOf(',');
-            const wx = +key.slice(0, ci);
-            const wy = +key.slice(ci + 1);
-            if (!onScreen(wx, wy)) continue;
-            ctx.fillRect(
-              (wx - viewX) * tileWidth,
-              (wy - viewY) * tileHeight,
-              tileWidth,
-              tileHeight
-            );
-          }
-          // Outline ONLY the region's outer edge — an edge is drawn on a side only where the neighbour
-          // tile isn't part of this same zone. Adjacency uses the full set (incl. off-screen tiles) so
-          // no false border appears at the viewport edge. This replaces the per-tile box that read as a
-          // grid; interior shared edges get no line.
-          ctx.strokeStyle = color.replace(/[\d.]+\)$/, '0.95)');
-          ctx.beginPath();
-          for (const key of set) {
-            const ci = key.indexOf(',');
-            const wx = +key.slice(0, ci);
-            const wy = +key.slice(ci + 1);
-            if (!onScreen(wx, wy)) continue;
-            const sx = (wx - viewX) * tileWidth;
-            const sy = (wy - viewY) * tileHeight;
-            if (!set.has(`${wx - 1},${wy}`)) {
-              ctx.moveTo(sx, sy);
-              ctx.lineTo(sx, sy + tileHeight);
-            }
-            if (!set.has(`${wx + 1},${wy}`)) {
-              ctx.moveTo(sx + tileWidth, sy);
-              ctx.lineTo(sx + tileWidth, sy + tileHeight);
-            }
-            if (!set.has(`${wx},${wy - 1}`)) {
-              ctx.moveTo(sx, sy);
-              ctx.lineTo(sx + tileWidth, sy);
-            }
-            if (!set.has(`${wx},${wy + 1}`)) {
-              ctx.moveTo(sx, sy + tileHeight);
-              ctx.lineTo(sx + tileWidth, sy + tileHeight);
-            }
-          }
-          ctx.stroke();
-        }
-        ctx.restore();
+      // Each zone colour → translucent fill + outer-edge outline (interior shared edges get no line,
+      // so a multi-tile zone reads as one region, not a grid). Adjacency uses the full set incl.
+      // off-screen tiles, so no false border appears at the viewport edge.
+      for (const [color, set] of byColor) {
+        paintTileRegion(ctx, set, color, color.replace(/[\d.]+\)$/, '0.95)'));
       }
     }
 
@@ -1667,20 +1683,16 @@
       ctx.restore();
     }
 
-    // Draw yellow tile highlights (below icons) — just transparent rect fills.
+    // Resource MARK highlight (the tiles a "select similar" produced) — painted as a single region
+    // with the same translucent-fill + outer-edge-outline look as the standing zones, so a marked
+    // resource patch reads as one zone instead of a grid of yellow boxes.
     if (highlightedResourceTiles.size > 0) {
-      ctx.save();
-      ctx.fillStyle = '#f0d020';
-      ctx.globalAlpha = 0.28;
-      for (const key of highlightedResourceTiles) {
-        const [wx, wy] = key.split(',').map(Number);
-        const sx = (wx - viewX) * tileWidth;
-        const sy = (wy - viewY) * tileHeight;
-        if (sx < -tileWidth || sy < -tileHeight || sx > W + tileWidth || sy > H + tileHeight)
-          continue;
-        ctx.fillRect(sx, sy, tileWidth, tileHeight);
-      }
-      ctx.restore();
+      paintTileRegion(
+        ctx,
+        highlightedResourceTiles,
+        'rgba(240, 208, 32, 0.22)',
+        'rgba(240, 208, 32, 0.95)'
+      );
     }
 
     // Selected resource tile (single-click): a yellow box around the tile. Drawn here on the 2D
@@ -1742,27 +1754,9 @@
       ctx.restore();
     }
 
-    // Committed MARK highlight — an amber ring on each highlighted pawn/mob's tile so the group stays
-    // visible while the player decides DRAFT/MOVE (pawns) or HUNT (mobs).
-    if (markedKind && markedIds.length > 0) {
-      const marked = new Set(markedIds);
-      const tiles =
-        markedKind === 'pawn'
-          ? pawns.filter((p) => marked.has(p.id)).map((p) => p.position)
-          : mobs.filter((m) => marked.has(m.id)).map((m) => ({ x: m.x, y: m.y }));
-      ctx.save();
-      ctx.strokeStyle = 'rgba(255, 210, 110, 0.95)';
-      ctx.lineWidth = 2;
-      for (const pos of tiles) {
-        if (!pos) continue;
-        const sx = (pos.x - viewX) * tileWidth;
-        const sy = (pos.y - viewY) * tileHeight;
-        if (sx < -tileWidth || sy < -tileHeight || sx > W + tileWidth || sy > H + tileHeight)
-          continue;
-        ctx.strokeRect(sx + 1.5, sy + 1.5, tileWidth - 3, tileHeight - 3);
-      }
-      ctx.restore();
-    }
+    // (The committed MARK highlight is NOT drawn here: it rides the entity glyph grid's selection
+    // colour in updatePawnOverlay() so it follows the moving entity, rather than a static tile ring
+    // that would stay behind once the pawn walks off.)
 
     // Item stack counts: a subtle count badge in each item tile's bottom-right corner, drawn only
     // when zoomed in close enough to be legible (and only for piles of 2+) so loose/stockpiled
@@ -2467,13 +2461,14 @@
       return;
     }
     if (markKind) {
-      // MARK highlight drag (pawns or mobs): start the selection box.
+      // MARK highlight drag (pawns or mobs): start the selection box. Cheap 2D-overlay repaint only
+      // (like the zone/resource drags) — never the heavy terrain rebuild that redrawOverlay() forces.
       markDragActive = true;
       markAnchorX = hoverTileX;
       markAnchorY = hoverTileY;
       markEndX = hoverTileX;
       markEndY = hoverTileY;
-      redrawOverlay();
+      drawDesignations();
       return;
     }
     if (similarDragMode) {
@@ -2553,7 +2548,8 @@
     if (markDragActive) {
       markEndX = hoverTileX;
       markEndY = hoverTileY;
-      redrawOverlay();
+      // Cheap 2D-overlay redraw only — never rebuild the WebGL terrain buffer mid-drag.
+      drawDesignations();
       return;
     }
     if (similarDragActive) {
@@ -2742,6 +2738,7 @@
     markDragActive = false;
     markedKind = null;
     markedIds = [];
+    markedSet = new Set();
     pawnMoveMode = false;
   }
 
@@ -2763,9 +2760,12 @@
         .map((m) => m.id);
     }
     markedKind = markedIds.length > 0 ? markKind : null;
+    markedSet = new Set(markedIds);
     markKind = null;
     markDragActive = false;
-    redrawOverlay();
+    // Cheap 2D-overlay repaint only (clears the drag box) — the per-entity highlight rides the
+    // glyph grid in the per-frame render loop, so it follows the entity instead of staying behind.
+    drawDesignations();
   }
 
   /** Drop the current highlight + any pending mark gesture. */
@@ -2774,15 +2774,20 @@
     markDragActive = false;
     markedKind = null;
     markedIds = [];
+    markedSet = new Set();
     pawnMoveMode = false;
-    redrawOverlay();
+    drawDesignations();
   }
 
-  /** DRAFT verb: draft every highlighted pawn (highlight stays so MOVE can follow). */
+  /** DRAFT verb: draft (or, when all are already drafted, undraft) the highlighted pawns. The
+   *  highlight stays so MOVE can follow. */
   function draftMarkedPawns() {
-    if (markedKind === 'pawn' && markedIds.length > 0) {
-      gameState.command({ type: 'draftPawns', payload: { ids: markedIds }, save: true });
-    }
+    if (markedKind !== 'pawn' || markedIds.length === 0) return;
+    gameState.command({
+      type: 'draftPawns',
+      payload: { ids: markedIds, drafted: !markedAllDrafted },
+      save: true
+    });
   }
 
   /** HUNT verb: queue every highlighted mob for hunting, then clear the highlight. */
@@ -2800,12 +2805,12 @@
 
   /** Destination click: spread the highlighted drafted pawns onto tiles around (x,y). */
   function issueMarkedPawnMove(x: number, y: number) {
-    const ids = pawns.filter((p) => p.drafted && markedIds.includes(p.id)).map((p) => p.id);
+    const ids = pawns.filter((p) => p.drafted && markedSet.has(p.id)).map((p) => p.id);
     if (ids.length > 0) {
       gameState.command({ type: 'movePawnsFormation', payload: { ids, x, y }, save: true });
     }
     pawnMoveMode = false;
-    redrawOverlay();
+    drawDesignations();
   }
 
   function startSimilarSelect() {
@@ -2998,7 +3003,7 @@
       // spreads them onto distinct tiles around the click; otherwise it's just the selected pawn.
       const groupIds =
         markedKind === 'pawn'
-          ? pawns.filter((p) => p.drafted && markedIds.includes(p.id)).map((p) => p.id)
+          ? pawns.filter((p) => p.drafted && markedSet.has(p.id)).map((p) => p.id)
           : [];
       const issueMove = () => {
         if (groupIds.length > 1) {
@@ -3194,7 +3199,9 @@
           : `entit${markedIds.length !== 1 ? 'ies' : 'y'}`} highlighted
       </span>
       {#if markedKind === 'pawn'}
-        <button class="mark-btn" on:click={draftMarkedPawns}>DRAFT</button>
+        <button class="mark-btn" on:click={draftMarkedPawns}>
+          {markedAllDrafted ? 'UNDRAFT' : 'DRAFT'}
+        </button>
         <button class="mark-btn" on:click={startMarkedPawnMove} disabled={markedDraftedCount === 0}>
           MOVE{markedDraftedCount > 0 ? ` (${markedDraftedCount})` : ''}
         </button>

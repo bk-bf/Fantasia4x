@@ -114,21 +114,25 @@ export const COMMANDS: Record<string, Cmd> = {
         : pw
     )
   }),
-  /** MARK multi-select: draft every listed (living) pawn at once, clearing any current job. */
-  draftPawns: (s, p: { ids: string[] }) => ({
-    ...s,
-    pawns: s.pawns.map((pw) =>
-      p.ids.includes(pw.id) && pw.isAlive !== false
-        ? {
-            ...pw,
-            drafted: true,
-            draftTarget: undefined,
-            activeJob: undefined,
-            currentState: 'Idle' as never
-          }
-        : pw
-    )
-  }),
+  /** MARK multi-select: draft (or, with `drafted:false`, undraft) every listed living pawn at once,
+   *  clearing any current job/target. */
+  draftPawns: (s, p: { ids: string[]; drafted?: boolean }) => {
+    const draft = p.drafted !== false;
+    return {
+      ...s,
+      pawns: s.pawns.map((pw) =>
+        p.ids.includes(pw.id) && pw.isAlive !== false
+          ? {
+              ...pw,
+              drafted: draft,
+              draftTarget: undefined,
+              activeJob: undefined,
+              currentState: 'Idle' as never
+            }
+          : pw
+      )
+    };
+  },
   /** MARK multi-move: spread the listed drafted pawns onto distinct walkable tiles around (x,y) so
    *  they don't all path to (and fight over) one cell. Each pawn claims the nearest free tile via a
    *  spiral from the target, the centre tile going to the first pawn. */
