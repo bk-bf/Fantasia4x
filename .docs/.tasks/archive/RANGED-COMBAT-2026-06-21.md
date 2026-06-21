@@ -2,7 +2,7 @@
 
 # RANGED COMBAT & AMMUNITION
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) (LoS dep + hot-loop rules) · [TRAITS-AND-PERKS](TRAITS-AND-PERKS.md) (soft-class perks tune these axes) · [game/DESIGN](../game/DESIGN.md)
+> **Related:** [ROADMAP](../open/ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM-2026-06-11.md) · [EQUIPMENT-EXPANSION](EQUIPMENT-EXPANSION.md) · [ENTITIES_SPAWNING](../open/ENTITIES_SPAWNING.md) · [MAGIC-SKILLS](../open/MAGIC-SKILLS.md) · [ENGINE-PERFORMANCE](../open/ENGINE-PERFORMANCE.md) (LoS dep + hot-loop rules) · [TRAITS-AND-PERKS](../open/TRAITS-AND-PERKS.md) (soft-class perks tune these axes) · [game/DESIGN](../../game/DESIGN.md)
 
 ## Status
 
