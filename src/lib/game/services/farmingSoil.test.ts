@@ -230,11 +230,11 @@ describe('§F soil exhaustion from farming', () => {
       );
     };
 
-    reap(); // wear 8
-    reap(); // 16
-    reap(); // 24 — still terra preta
+    // pumpkin fertilityCost 10, WEAR_PER_TIER 100 → 10 harvests per tier drop (generous, since the
+    // crop is BLOCKED from replanting the moment terra preta drops below tier 4).
+    for (let i = 0; i < 9; i++) reap(); // wear 90 — still terra preta
     expect(gs.worldMap[0][0].subType).toBe('terra_preta');
-    reap(); // 32 ≥ 25 → drop a tier
+    reap(); // 100 → drop a tier
     expect(gs.worldMap[0][0].subType).toBe('deep_grass'); // worn down to rich soil
     expect(soilFertilityPct(gs.worldMap[0][0])).toBe(75);
   });

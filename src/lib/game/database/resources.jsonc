@@ -2140,7 +2140,7 @@
     "id": "crop_wheat", "displayName": "Wheat", "subterrain": "grass", "walkable": true, "grazing": true,
     "charSpans": [ {"sheet": "crops", "id": 0} ], "fg": [0.82, 0.68, 0.2], "bg": [0.08, 0.06, 0.03],
     "color": "#D1AD33", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "grain_seed", "minSoil": 1, "minMoisture": 25, "maxMoisture": 70, "minTemp": 5, "maxTemp": 38, "needsLight": true, "fertilityCost": 3, "growthTurns": 2000},
+    "crop": {"seedItem": "grain_seed", "minSoil": 1, "minMoisture": 25, "maxMoisture": 70, "minTemp": 5, "maxTemp": 38, "needsLight": true, "fertilityCost": 5, "growthTurns": 2000},
     "designationTypes": ["harvest"],
     "interaction": {
       "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
@@ -2155,7 +2155,7 @@
     "id": "crop_cabbage", "displayName": "Vegetable Bed", "subterrain": "grass", "walkable": true, "grazing": true,
     "charSpans": [ {"sheet": "crops", "id": 1} ], "fg": [0.5, 0.7, 0.3], "bg": [0.08, 0.06, 0.03],
     "color": "#7FB04E", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "veg_seed", "minSoil": 1, "minMoisture": 35, "maxMoisture": 80, "minTemp": 0, "maxTemp": 30, "needsLight": true, "fertilityCost": 3, "growthTurns": 1500},
+    "crop": {"seedItem": "veg_seed", "minSoil": 1, "minMoisture": 35, "maxMoisture": 80, "minTemp": 0, "maxTemp": 30, "needsLight": true, "fertilityCost": 5, "growthTurns": 1500},
     "designationTypes": ["harvest"],
     "interaction": {
       "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
@@ -2170,7 +2170,7 @@
     "id": "crop_beans", "displayName": "Bean Rows", "subterrain": "grass", "walkable": true, "grazing": true,
     "charSpans": [ {"sheet": "crops", "id": 2} ], "fg": [0.55, 0.6, 0.3], "bg": [0.08, 0.06, 0.03],
     "color": "#A8924E", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "legume_seed", "minSoil": 1, "minMoisture": 25, "maxMoisture": 65, "minTemp": 8, "maxTemp": 36, "needsLight": true, "fertilityCost": 2, "growthTurns": 2200},
+    "crop": {"seedItem": "legume_seed", "minSoil": 1, "minMoisture": 25, "maxMoisture": 65, "minTemp": 8, "maxTemp": 36, "needsLight": true, "fertilityCost": 4, "growthTurns": 2200},
     "designationTypes": ["harvest"],
     "interaction": {
       "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
@@ -2185,7 +2185,7 @@
     "id": "crop_flax", "displayName": "Flax Field", "subterrain": "tall_grass", "walkable": true, "grazing": true,
     "charSpans": [ {"sheet": "crops", "id": 3} ], "fg": [0.62, 0.7, 0.4], "bg": [0.08, 0.06, 0.03],
     "color": "#9EAE6A", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "fibre_seed", "minSoil": 2, "minMoisture": 45, "maxMoisture": 90, "minTemp": 5, "maxTemp": 32, "needsLight": true, "fertilityCost": 4, "growthTurns": 2400},
+    "crop": {"seedItem": "fibre_seed", "minSoil": 2, "minMoisture": 45, "maxMoisture": 90, "minTemp": 5, "maxTemp": 32, "needsLight": true, "fertilityCost": 7, "growthTurns": 2400},
     "designationTypes": ["harvest"],
     "interaction": {
       "action": "reap", "workCategory": "planting", "workAmount": 10, "toolRequirement": null,
@@ -2200,7 +2200,7 @@
     "id": "crop_berries", "displayName": "Berry Patch", "subterrain": "tall_grass", "walkable": true, "grazing": true,
     "charSpans": [ {"sheet": "crops", "id": 4} ], "fg": [0.7, 0.35, 0.35], "bg": [0.08, 0.06, 0.03],
     "color": "#B0584E", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "fruit_seed", "minSoil": 2, "minMoisture": 35, "maxMoisture": 80, "minTemp": 2, "maxTemp": 34, "needsLight": true, "fertilityCost": 4, "growthTurns": 3000},
+    "crop": {"seedItem": "fruit_seed", "minSoil": 2, "minMoisture": 35, "maxMoisture": 80, "minTemp": 2, "maxTemp": 34, "needsLight": true, "fertilityCost": 7, "growthTurns": 3000},
     "designationTypes": ["harvest"],
     "interaction": {
       "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
@@ -2215,7 +2215,7 @@
     "id": "crop_herbs", "displayName": "Herb Garden", "subterrain": "tall_grass", "walkable": true, "grazing": true,
     "charSpans": [ {"sheet": "crops", "id": 5} ], "fg": [0.5, 0.7, 0.45], "bg": [0.08, 0.06, 0.03],
     "color": "#6FA66A", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "herb_seed", "minSoil": 2, "minMoisture": 30, "maxMoisture": 75, "minTemp": 5, "maxTemp": 34, "needsLight": true, "fertilityCost": 3, "growthTurns": 1800},
+    "crop": {"seedItem": "herb_seed", "minSoil": 2, "minMoisture": 30, "maxMoisture": 75, "minTemp": 5, "maxTemp": 34, "needsLight": true, "fertilityCost": 6, "growthTurns": 1800},
     "designationTypes": ["harvest"],
     "interaction": {
       "action": "reap", "workCategory": "planting", "workAmount": 6, "toolRequirement": null,
@@ -2230,7 +2230,7 @@
     "id": "crop_pumpkin", "displayName": "Pumpkin Patch", "subterrain": "terra_preta", "walkable": true, "grazing": true,
     "charSpans": [ {"sheet": "crops", "id": 6} ], "fg": [0.82, 0.47, 0.18], "bg": [0.08, 0.06, 0.03],
     "color": "#D2772A", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "prize_seed", "minSoil": 4, "minMoisture": 40, "maxMoisture": 85, "minTemp": 12, "maxTemp": 38, "needsLight": true, "fertilityCost": 8, "growthTurns": 3600},
+    "crop": {"seedItem": "prize_seed", "minSoil": 4, "minMoisture": 40, "maxMoisture": 85, "minTemp": 12, "maxTemp": 38, "needsLight": true, "fertilityCost": 10, "growthTurns": 3600},
     "designationTypes": ["harvest"],
     "interaction": {
       "action": "reap", "workCategory": "planting", "workAmount": 12, "toolRequirement": null,

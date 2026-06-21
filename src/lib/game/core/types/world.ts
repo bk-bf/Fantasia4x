@@ -32,9 +32,11 @@ export interface WorldTile {
   growth?: Record<string, number>;
   /**
    * PRODUCTION-CHAIN-II §F — accumulated fertility drawn by HARVESTED crops at the current soil tier
-   * (0–25). Each harvested crop adds its `crop.fertilityCost`; at 25 the tile's soil drops one tier
-   * (terra preta → rich → loam → poor → barren `dirt`) and the wear carries the remainder. Only
-   * cultivated, reaped crops wear soil — wild plants and crops that died never charge it.
+   * (0–100 = one tier). Each harvested crop adds its `crop.fertilityCost`; at 100 the tile's soil
+   * drops one tier (terra preta → rich → loam → poor → barren `dirt`) and the wear carries the
+   * remainder — so a crop gets ~WEAR_PER_TIER/fertilityCost harvests before its tile drops below its
+   * `minSoil` and replanting is blocked. Only cultivated, reaped crops wear soil; wild plants and
+   * crops that died never charge it.
    */
   fertilityWear?: number;
   /** Accumulated snow cover 0–100 (SEASONS_WEATHER). Builds while it's snowing AND temp < 0°C,

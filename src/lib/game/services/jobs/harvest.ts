@@ -197,16 +197,20 @@ export function complete(job: Job, gs: GameState): GameState {
   // and higher-tier crops draw faster. Only HARVESTED crops charge this (a crop that died is reset to
   // 1% and never reaches here); wild plants never wear soil.
   if (def?.crop) {
-    const TIER_SIZE = 25;
+    // WEAR_PER_TIER is decoupled from the 25-point fertility scale and set generous on purpose:
+    // planting is gated by `minSoil`, so a crop is blocked the instant its tile drops ONE tier below
+    // it — the meaningful budget is "harvests before that first drop" = WEAR_PER_TIER / fertilityCost
+    // (≈20 for staple crops, ≈10 for a prize crop). Keep this high or expensive soils give too few runs.
+    const WEAR_PER_TIER = 100;
     let wear = (col.fertilityWear ?? 0) + def.crop.fertilityCost;
-    while (wear >= TIER_SIZE) {
+    while (wear >= WEAR_PER_TIER) {
       const tier = soilTierForTile(col);
       if (tier <= 0) {
         wear = 0; // already barren — nothing left to exhaust
         break;
       }
       col.subType = SUBTYPE_BY_SOIL_TIER[(tier - 1) as 0 | 1 | 2 | 3];
-      wear -= TIER_SIZE;
+      wear -= WEAR_PER_TIER;
     }
     col.fertilityWear = wear;
     // subType may have dropped a tier → refresh the tile's physics from the new (barer) subterrain.
