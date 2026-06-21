@@ -551,23 +551,24 @@ growth" (the non-obvious reuse decision).
 - [x] `core/Terrains.ts`: **`soilFertilityPct(tile) → 0/25/50/75/100`** (depicted like wetness) from `subType`, + `soilTierForTile` 0–4 bucket + `SOIL_TIER_NAME`/`SOIL_ITEM_BY_TIER`/`SUBTYPE_BY_SOIL_TIER`. Derived, no stored field. (Also restored `terrainBlocksSight`, which a prior Terrains.ts edit had dropped.)
 - [x] Info panel (F9): tile HUD shows **`fertility X%`** (tier-coloured, name in tooltip) next to wetness — replacing the soil-name readout. `core/soilFertility.test.ts`.
 
-**P2 — Dig = cut interaction (F2)**
-- [ ] `DesignationType += 'dig'`; add a `dig` interaction (`harvestDepletes: true`) to `grass_patch`/`tall_grass_patch`/`deep_grass_patch` (+ a bare `dirt` resource) yielding the normal harvest drops **+ the tier's soil item**; `resourceObjectService.getByDesignation` + `HARVEST_DTYPES` include `dig`. Reuses `jobs/harvest.ts` (no new handler). Test: dig deep_grass → hay + fiber + `terra_preta`, node depletes to dirt.
+**P2 — Dig = cut interaction (F2) ✅ DONE 2026-06-20**
+- [x] `DesignationType += 'dig'`; `HARVEST_DTYPES` + `getByDesignation` include `dig`; new `ResourceInteractionDef.harvestSubType` (strip-to subterrain on deplete) handled in `jobs/harvest.complete`. Grass patches get a `dig` interaction (`workCategory: "digging"`, `harvestDepletes`, `harvestSubType: "dirt"`) yielding hay + the tier's **soil item** (grass→poor_soil, tall→loam, deep→rich_soil) + **`dirt`** (the diggable subsoil) — then the tile drops to bare dirt (0% fertility). DIG button in the selection card + shovel marker. Test: deep_grass dig → rich_soil + dirt, depletes.
 
-**P3 — Terraforming / Soil Works build menu (F3)**
-- [ ] `buildings.jsonc`: `lay_poor_soil`/`lay_loam`/`lay_terra_preta` (passable tile-improvement builds); recipes consume the soil item (+ `compost` for loam→terra preta).
-- [ ] `BuildingService`: on complete place the fertile resource + set `subType`; restore on deconstruct (mirror the `walkable`/movementCost tile-write). Test: build `lay_terra_preta` on a dirt tile → `soilTierForTile` = 3.
+**P3 — Terraforming / Soil Works build menu (F3) ✅ DONE 2026-06-20** (`check`/`test` green; farmingSoil.test.ts)
+- [x] `buildings.jsonc`: `lay_poor_soil`/`lay_loam`/`lay_rich_soil`/`lay_terra_preta` — passable one-shot "tile-improvement" builds (build-menu **FARMING & SOIL** section via `effects.farming`), `planting`-tool gated. **HSK-cost chain (no ash):** poor = `dirt`+`compost`; loam/rich/terra each demand **`fertiliser` + `compost` + `blue_clay` + `dirt`** in rising amounts (terra preta = 8 fertiliser + 5 compost + 5 clay + 10 dirt). New typed `Building.terraformSubType` field.
+- [x] `jobs/construct.complete`: a build with `terraformSubType` rewrites the tile's `subType` (+ walkable/movementCost/blocksSight, in-place delta like harvest.ts) and **removes itself** — "replace the dirt". Test: complete `lay_rich_soil` on a dirt tile → `subType` deep_grass, fertility 75%, build consumed.
 
-**P4 — Grow zone + `plant` job (F4)**
-- [ ] `FilterableZoneType += 'grow'` (filter = seed/crop); zone paint + `zoneTiles` wiring.
-- [ ] `jobs.jsonc` `plant` JobDef (`workCategory: "planting"`) + `Job['type']` + JobService handler; generate for eligible empty tiles in a grow zone (`soilTierForTile ≥ crop.minSoil`); completion consumes a seed + sets `tile.resources[crop]=1` (immature) and starts its growth cooldown.
+**P4 — Grow zone + `plant` job (F4) ✅ DONE 2026-06-20**
+- [x] `FilterableZoneType`/`DesignationType += 'grow'` (a STANDING zone, in `zoneTiles` like stockpile); ZonePanel **GROW** zone (seed-filterable) + `ZONE_META`. Paintable.
+- [x] `jobs.jsonc` `plant` JobDef (`workCategory: "planting"`) + `Job['type']`/entities `activeJob` unions + `JobService.handlers.plant` + `jobs/plant.ts`. Generate: for each **cleared** grow-zone tile whose zone-filter seed is in stock + `soilTierForTile ≥ crop.minSoil` → a plant job. Complete: consume a seed, place the crop **immature** (`resources[crop]=0`) + a growth cooldown. (Reaping a matured crop is an ordinary `harvest` designation; annuals replant.)
 
-**P5 — Growth via regrowth + crops (F5/F6)**
-- [ ] `resources.jsonc`: crop resource objects (grain/veg/legume/fibre/fruit/herb/prize) with `plant`+`harvest` interactions, `minSoil`, `idealMoisture`, `baseRegrowthTurns`, yields = food + `*_seed`; wild grain/berry → seed forage.
-- [ ] Extend the regrowth-duration scaler (where `seasonRegrowthMultiplier` is applied in `jobs/harvest.ts` / on plant) by `fertility × wetness × fertilizer`; stunt-gate at `minSoil`; frost halt (SEASONS). Info panel shows maturity % from the cooldown (F9). **No new per-tick loop.**
+**P5 — Growth via regrowth + crops (F5/F6) ✅ DONE 2026-06-20**
+- [x] `items.jsonc`: 7 crop seeds + 6 crop products (`grain`/`vegetables`/`legumes`/`fruit`/`culinary_herbs`/`pumpkin`; flax → existing `flax_fiber`). Wild crops drop a few seeds on harvest (`wild_barley`/`wild_rye`→grain, `berry_bush`→fruit, `mushroom_patch`/`wildflower_patch`→herb) — farming bootstraps from foraging.
+- [x] `resources.jsonc`: 7 crop resource objects (`crop_wheat`/`crop_cabbage`/`crop_beans`/`crop_flax`/`crop_berries`/`crop_herbs`/`crop_pumpkin`) — empty `spawn` (planted only) + a `crop` spec (`seedItem`/`minSoil`/`idealMoisture`/`growthTurns`), harvest yields food + seed; annuals deplete, berries/herbs perennial. New `ResourceObjectDef.crop` field.
+- [x] Growth = the **existing regrowth cooldown** (no new tick): plant sets the cooldown to `growthTurns / (fertility × wetness)` (season-scaled), and `processResourceRegrowth` matures it (count → nodeAmount). Below `minSoil` the seed can't be planted (gate). Prize crops need terra preta (minSoil 4).
 
-**P6 — Fertilizer (F7)**
-- [ ] `buildings.jsonc`: `compost_bin` (passive); `recipes.jsonc`: rotten items + `hay` + `ash` → `compost` (passive timer). `compost` is a **build material** for `lay_terra_preta` (P3) — the gate for prize crops. Manure path stubbed behind ENTITIES D.
+**P6 — Fertilizer (F7) ✅ DONE 2026-06-20** — *reworked into a deeper HSK chain*
+- [x] `compost_bin` (passive, FARMING & SOIL): `make_compost` rots rotten food/meat/carcass/hide + `hay` → `compost`; then **`make_fertiliser`** post-processes 3 `compost` → 1 `fertiliser` (new item) — the concentrated amendment the complex soils are built from. So the full gate is **rot+hay → compost → fertiliser → (with clay + dug dirt) → loam/rich/terra preta**. (`ash` removed from the soil costs per user.) Manure path stubbed behind ENTITIES D.
 
 **P7 — Food chain + meals (F8/F10)**
 - [ ] `items.jsonc`: crop products, flour/bread/malt/ale/wine/mead. `buildings.jsonc`: Quern, Oven, Fermenter. `recipes.jsonc`: milling, baking, fermentation (passive timer).
