@@ -1,16 +1,16 @@
 <!--
-  StockpileZonePanel — the click-info card for a stockpile zone tile (the zone analogue of the
-  building card + BuildingFuelPanel). Self-contained: given the clicked zone instance it edits that
-  instance's item filter directly via gameState.command. The parent (GameCanvas) owns the DRAW/CLEAR
-  tools (it holds the designation/erase mode) and passes them in as callbacks.
+  StockpileZonePanel — the per-item haul-filter pop-up for a stockpile zone. The zone's INFO CARD
+  itself is the shared SelectedEntityCard (built in GameCanvas, same chrome as pawn/mob/building);
+  this is only the FILTER fly-out it opens, mirroring BuildingFuelPanel under the campfire card (same
+  absolute-above-the-card layout, `open` toggle owned by the parent, stopPropagation).
 
-  Filter model: the per-item checkboxes are grouped by the items.jsonc `category` (same categorical
-  sort as ResourceSidebar) and EVERY non-hidden item is listed even at 0 stock, so you can filter to
-  the individual item. The canonical "everything allowed" filter is {allowedCategories:[], blocked:[]}
-  (cheap, and what the haul engine treats as no-filter); any restriction is materialized to the full
-  category list + an explicit blockedItems set, so a single unchecked item — or a fully unchecked zone
-  — is representable without the empty=all overload biting. Reads use the true engine semantics so a
-  filter set from the category-only ZonePanel still displays correctly.
+  Filter model: per-item checkboxes grouped by the items.jsonc `category` (same categorical sort as
+  ResourceSidebar). EVERY non-hidden item is listed even at 0 stock so you can filter to the single
+  item. Canonical "all allowed" = {allowedCategories:[], blockedItems:[]} (what the haul engine treats
+  as no-filter); any restriction is materialized to the full category list + an explicit blockedItems
+  set, so a single unchecked item — or a fully unchecked zone — is representable without the empty=all
+  overload. Reads use the true engine semantics so a filter set from the category-only ZonePanel still
+  displays correctly.
 -->
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
@@ -20,24 +20,14 @@
 
   let {
     instanceId,
-    label,
     filter,
     inventory = {},
-    tileCount,
-    drawing = false,
-    clearing = false,
-    onDraw,
-    onClear
+    open = false
   }: {
     instanceId: string;
-    label: string;
     filter: ZoneFilter;
     inventory?: Record<string, number>;
-    tileCount: number;
-    drawing?: boolean;
-    clearing?: boolean;
-    onDraw: () => void;
-    onClear: () => void;
+    open?: boolean;
   } = $props();
 
   // Static item universe (non-hidden — internal items like natural weapons are never haul targets),
@@ -57,7 +47,6 @@
 
   const catLabel = (cat: string) => cat.replace(/_/g, ' ').toUpperCase();
 
-  let filterOpen = $state(false);
   let collapsed = $state<Set<string>>(new Set(GROUPS.map(([c]) => c))); // start collapsed (it's long)
   let hideEmpty = $state(false);
 
@@ -119,185 +108,118 @@
     else next.add(cat);
     collapsed = next;
   }
-
-  const storedTotal = $derived(Object.values(inventory).reduce((a, b) => a + b, 0));
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="sz-panel"
+  class="zfp"
+  class:open
   onmousedown={(e) => e.stopPropagation()}
   onmouseup={(e) => e.stopPropagation()}
   onwheel={(e) => e.stopPropagation()}
 >
-  <div class="sz-hdr">
-    <span class="sz-title">▣ {label}</span>
-    <span class="sz-meta">{tileCount} tiles · {Math.floor(storedTotal)} stored</span>
+  <div class="zfp-hdr">
+    stored items
+    <span class="zfp-count">{checkedCount}/{ALL_IDS.length} allowed</span>
+  </div>
+  <div class="zfp-bar">
+    <button class="zfp-mini" disabled={allChecked} onclick={() => setAll(true)}>CHECK ALL</button>
+    <button class="zfp-mini" disabled={noneChecked} onclick={() => setAll(false)}>UNCHECK ALL</button>
+    <button
+      class="zfp-mini"
+      class:active={hideEmpty}
+      title="Show/hide categories & items with 0 stored here"
+      onclick={() => (hideEmpty = !hideEmpty)}>∅</button
+    >
   </div>
 
-  <!-- Action buttons: FILTER (top in order) · DRAW (extend) · CLEAR (reduce) -->
-  <div class="sz-actions">
-    <button class="sz-btn" class:active={filterOpen} onclick={() => (filterOpen = !filterOpen)}>
-      FILTER
-    </button>
-    <button class="sz-btn" class:active={drawing} title="Extend this zone — drag to paint tiles" onclick={onDraw}>
-      DRAW
-    </button>
-    <button class="sz-btn clear" class:active={clearing} title="Reduce this zone — drag to erase tiles" onclick={onClear}>
-      CLEAR
-    </button>
+  <div class="zfp-list">
+    {#each GROUPS as [cat, items] (cat)}
+      {@const shown = hideEmpty ? items.filter((i) => (inventory[i.id] ?? 0) > 0) : items}
+      {#if shown.length > 0}
+        {@const isOpen = !collapsed.has(cat)}
+        {@const on = catChecked(cat)}
+        <div class="zfp-cat">
+          <input
+            type="checkbox"
+            checked={on === items.length}
+            class:partial={on > 0 && on < items.length}
+            onchange={() => toggleCategory(cat)}
+            title="Toggle every item in this category"
+          />
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <span class="zfp-cat-name" class:open={isOpen} role="button" tabindex="0" onclick={() => toggleCat(cat)}>
+            <span class="zfp-caret">{isOpen ? '▾' : '▸'}</span>{catLabel(cat)}
+            <span class="zfp-cat-count">{on}/{items.length}</span>
+          </span>
+        </div>
+        {#if isOpen}
+          {#each shown as item (item.id)}
+            {@const amt = Math.floor(inventory[item.id] ?? 0)}
+            <label class="zfp-item">
+              <input type="checkbox" checked={isChecked(item.id)} onchange={() => toggleItem(item.id)} />
+              <span class="zfp-item-name">{item.name}</span>
+              <span class="zfp-item-amt" class:zero={amt === 0}>{amt}</span>
+            </label>
+          {/each}
+        {/if}
+      {/if}
+    {/each}
   </div>
-
-  {#if filterOpen}
-    <div class="sz-filter">
-      <div class="sz-filter-hdr">
-        <span>STORED ITEMS</span>
-        <span class="sz-filter-count">{checkedCount}/{ALL_IDS.length} allowed</span>
-      </div>
-      <div class="sz-filter-bar">
-        <button class="sz-mini" disabled={allChecked} onclick={() => setAll(true)}>CHECK ALL</button>
-        <button class="sz-mini" disabled={noneChecked} onclick={() => setAll(false)}>UNCHECK ALL</button>
-        <button
-          class="sz-mini"
-          class:active={hideEmpty}
-          title="Show/hide categories & items with 0 stored here"
-          onclick={() => (hideEmpty = !hideEmpty)}>∅</button
-        >
-      </div>
-
-      <div class="sz-list">
-        {#each GROUPS as [cat, items] (cat)}
-          {@const shown = hideEmpty ? items.filter((i) => (inventory[i.id] ?? 0) > 0) : items}
-          {#if shown.length > 0}
-            {@const open = !collapsed.has(cat)}
-            {@const on = catChecked(cat)}
-            <div class="sz-cat">
-              <input
-                type="checkbox"
-                checked={on === items.length}
-                class:partial={on > 0 && on < items.length}
-                onchange={() => toggleCategory(cat)}
-                title="Toggle every item in this category"
-              />
-              <!-- svelte-ignore a11y_click_events_have_key_events -->
-              <span class="sz-cat-name" class:open role="button" tabindex="0" onclick={() => toggleCat(cat)}>
-                <span class="sz-caret">{open ? '▾' : '▸'}</span>{catLabel(cat)}
-                <span class="sz-cat-count">{on}/{items.length}</span>
-              </span>
-            </div>
-            {#if open}
-              {#each shown as item (item.id)}
-                {@const amt = Math.floor(inventory[item.id] ?? 0)}
-                <label class="sz-item">
-                  <input type="checkbox" checked={isChecked(item.id)} onchange={() => toggleItem(item.id)} />
-                  <span class="sz-item-name">{item.name}</span>
-                  <span class="sz-item-amt" class:zero={amt === 0}>{amt}</span>
-                </label>
-              {/each}
-            {/if}
-          {/if}
-        {/each}
-      </div>
-      <div class="sz-note">Only checked items are hauled into this stockpile.</div>
-    </div>
-  {/if}
+  <div class="zfp-note">Only checked items are hauled into this stockpile.</div>
 </div>
 
 <style>
-  .sz-panel {
+  /* Fly-out above the zone card — same chrome/positioning as BuildingFuelPanel under the campfire. */
+  .zfp {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 0;
     width: 100%;
-    max-width: 320px;
+    max-width: 300px;
+    opacity: 0;
+    transform: translateY(6px);
+    overflow: hidden;
+    max-height: 0;
+    pointer-events: none;
     background: rgba(13, 9, 3, 0.98);
     border: 1px solid #7a5e28;
     color: #d4a860;
     font-family: 'Courier New', monospace;
-    font-size: 10px;
-    padding: 6px 8px;
-    pointer-events: all;
-    filter: url(#ambient-tint);
-  }
-
-  .sz-hdr {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 6px;
-    margin-bottom: 5px;
-  }
-  .sz-title {
-    color: #f0c060;
-    font-size: 11px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .sz-meta {
-    color: #9c7a3a;
     font-size: 9px;
-    white-space: nowrap;
-    flex-shrink: 0;
+    z-index: 20;
+    filter: url(#ambient-tint);
+    transition:
+      opacity 140ms ease,
+      transform 140ms ease,
+      max-height 200ms ease;
+  }
+  .zfp.open {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 360px;
+    pointer-events: all;
+    padding: 5px 7px;
   }
 
-  .sz-actions {
-    display: flex;
-    gap: 5px;
-  }
-  .sz-btn {
-    flex: 1;
-    padding: 3px 6px;
-    background: transparent;
-    border: 1px solid #7a5e28;
-    color: #d4a860;
-    font-family: 'Courier New', monospace;
-    font-size: 10px;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    transition: background 0.12s;
-  }
-  .sz-btn:hover,
-  .sz-btn.active {
-    background: color-mix(in srgb, #e0a848 22%, transparent);
-    border-color: #e0a848;
-    color: #f0c878;
-  }
-  .sz-btn.clear {
-    border-color: #8a5a3a;
-    color: #c68a60;
-  }
-  .sz-btn.clear:hover,
-  .sz-btn.clear.active {
-    background: color-mix(in srgb, #c46a40 22%, transparent);
-    border-color: #c46a40;
-    color: #e8a070;
-  }
-
-  /* ── Filter checklist ───────────────────────────────────── */
-  .sz-filter {
-    margin-top: 6px;
-    border-top: 1px solid rgba(122, 94, 40, 0.6);
-    padding-top: 5px;
-  }
-  .sz-filter-hdr {
+  .zfp-hdr {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    color: #c8a048;
+    color: #f0c060;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     margin-bottom: 4px;
   }
-  .sz-filter-count {
+  .zfp-count {
     color: #9c7a3a;
-    font-size: 9px;
   }
-  .sz-filter-bar {
+  .zfp-bar {
     display: flex;
     gap: 4px;
     margin-bottom: 5px;
   }
-  .sz-mini {
+  .zfp-mini {
     background: #160f06;
     border: 1px solid #6b4f22;
     color: #d0a858;
@@ -307,33 +229,33 @@
     padding: 2px 6px;
     cursor: pointer;
   }
-  .sz-mini:hover:not(:disabled),
-  .sz-mini.active {
+  .zfp-mini:hover:not(:disabled),
+  .zfp-mini.active {
     background: #24180a;
     border-color: #b07a28;
     color: #f0c878;
   }
-  .sz-mini:disabled {
+  .zfp-mini:disabled {
     opacity: 0.35;
     cursor: default;
   }
 
-  .sz-list {
-    max-height: 220px;
+  .zfp-list {
+    max-height: 250px;
     overflow-y: auto;
     padding-right: 2px;
     scrollbar-width: thin;
     scrollbar-color: #6b4f22 transparent;
   }
 
-  .sz-cat {
+  .zfp-cat {
     display: flex;
     align-items: center;
     gap: 5px;
     padding: 3px 2px 2px;
     border-bottom: 1px solid rgba(122, 94, 40, 0.35);
   }
-  .sz-cat-name {
+  .zfp-cat-name {
     display: flex;
     align-items: baseline;
     gap: 4px;
@@ -344,32 +266,31 @@
     user-select: none;
     min-width: 0;
   }
-  .sz-cat-name.open {
+  .zfp-cat-name.open {
     color: #f0c060;
   }
-  .sz-caret {
+  .zfp-caret {
     width: 8px;
     flex-shrink: 0;
     color: #9c7a3a;
   }
-  .sz-cat-count {
+  .zfp-cat-count {
     margin-left: auto;
     color: #9c7a3a;
-    font-size: 9px;
     flex-shrink: 0;
   }
 
-  .sz-item {
+  .zfp-item {
     display: flex;
     align-items: center;
     gap: 5px;
     padding: 1px 2px 1px 16px;
     cursor: pointer;
   }
-  .sz-item:hover {
+  .zfp-item:hover {
     background: rgba(224, 168, 72, 0.08);
   }
-  .sz-item-name {
+  .zfp-item-name {
     color: #d4a860;
     flex: 1;
     white-space: nowrap;
@@ -377,27 +298,25 @@
     text-overflow: ellipsis;
     min-width: 0;
   }
-  .sz-item-amt {
+  .zfp-item-amt {
     color: #c8a048;
     font-weight: bold;
     flex-shrink: 0;
-    font-size: 9px;
   }
-  .sz-item-amt.zero {
+  .zfp-item-amt.zero {
     color: #6a5226;
     font-weight: normal;
   }
 
-  .sz-note {
+  .zfp-note {
     color: #8a6c34;
-    font-size: 9px;
     margin-top: 4px;
     font-style: italic;
   }
 
-  /* Themed checkboxes (mirror BuildingFuelPanel). */
-  .sz-cat input[type='checkbox'],
-  .sz-item input[type='checkbox'] {
+  /* Themed checkboxes (match BuildingFuelPanel). */
+  .zfp-cat input[type='checkbox'],
+  .zfp-item input[type='checkbox'] {
     appearance: none;
     width: 11px;
     height: 11px;
@@ -408,17 +327,17 @@
     margin: 0;
     flex-shrink: 0;
   }
-  .sz-cat input[type='checkbox']:hover,
-  .sz-item input[type='checkbox']:hover {
+  .zfp-cat input[type='checkbox']:hover,
+  .zfp-item input[type='checkbox']:hover {
     border-color: #c88a30;
   }
-  .sz-cat input[type='checkbox']:checked,
-  .sz-item input[type='checkbox']:checked {
+  .zfp-cat input[type='checkbox']:checked,
+  .zfp-item input[type='checkbox']:checked {
     background: #2a1a08;
     border-color: #e0a848;
   }
-  .sz-cat input[type='checkbox']:checked::after,
-  .sz-item input[type='checkbox']:checked::after {
+  .zfp-cat input[type='checkbox']:checked::after,
+  .zfp-item input[type='checkbox']:checked::after {
     content: '';
     position: absolute;
     left: 2px;
@@ -430,18 +349,16 @@
     transform: rotate(45deg);
   }
   /* Partial (some-but-not-all items in a category checked): a dash instead of a tick. */
-  .sz-cat input[type='checkbox'].partial {
+  .zfp-cat input[type='checkbox'].partial {
     background: #2a1a08;
     border-color: #c8a048;
   }
-  .sz-cat input[type='checkbox'].partial::after {
+  .zfp-cat input[type='checkbox'].partial::after {
     content: '';
     position: absolute;
     left: 2px;
     top: 4px;
     width: 5px;
-    height: 0;
     border-top: 2px solid #e0b860;
-    transform: none;
   }
 </style>

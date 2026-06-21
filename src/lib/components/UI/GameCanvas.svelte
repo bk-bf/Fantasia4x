@@ -912,6 +912,32 @@
     uiState.activateDesignation('stockpile', instanceId);
   }
 
+  // Zone info card — built through the SHARED SelectedEntityCard model (same chrome as pawn/mob/
+  // building), with FILTER/DRAW/CLEAR in the button column. The per-item haul filter is the
+  // StockpileZonePanel fly-out the FILTER button opens (mirrors the building card + fuel panel).
+  $: zoneStoredTotal = Object.values(selectedZoneInventory).reduce((a, b) => a + b, 0);
+  $: zoneCard = ((): SelectedEntityModel | null => {
+    if (!selectedZone) return null;
+    const allowed =
+      selectedZone.filter.allowedCategories.length === 0 ? 'all items' : 'filtered';
+    const id = selectedZone.id;
+    return {
+      name: selectedZone.label,
+      status: 'stockpile',
+      selected: true,
+      dismissable: true,
+      lines: [
+        `${selectedZoneTileKeys.length} tiles · ${Math.floor(zoneStoredTotal)} stored`,
+        `haul filter: ${allowed}`
+      ],
+      buttons: [
+        { label: 'FILTER', active: showZoneFilter, onClick: () => (showZoneFilter = !showZoneFilter) },
+        { label: 'DRAW', active: zoneToolDrawing, onClick: () => paintZoneTool(id, false) },
+        { label: 'CLEAR', active: zoneToolClearing, onClick: () => paintZoneTool(id, true) }
+      ]
+    } satisfies SelectedEntityModel;
+  })();
+
   function moveCostLabel(cost: number): { label: string; color: string } {
     if (cost <= 0) return { label: 'impassable', color: '#cc4444' };
     if (cost <= 1.0) return { label: 'normal', color: '#70bb70' };
@@ -2188,10 +2214,14 @@
     if (mob) layers.push({ kind: 'mob', id: mob.id });
     const building = buildings.find((b) => b.x === x && b.y === y);
     if (building) layers.push({ kind: 'building', id: building.id });
-    // Stockpile zone occupying this tile (designationZoneId maps "x,y" → ZoneInstance.id).
-    const zoneId = designationZoneId[`${x},${y}`];
-    if (zoneId && zoneInstances.find((z) => z.id === zoneId && z.type === 'stockpile')) {
-      layers.push({ kind: 'zone', id: zoneId });
+    // Stockpile zone on this tile. `zoneTiles` is the canonical membership map (same source the hover
+    // inspector uses); the owning instance id comes from `designationZoneId`, falling back to any
+    // stockpile instance so a tile painted before instances existed still opens the panel.
+    const key = `${x},${y}`;
+    if (zoneTiles[key]?.includes('stockpile')) {
+      const zoneId =
+        designationZoneId[key] ?? zoneInstances.find((z) => z.type === 'stockpile')?.id;
+      if (zoneId) layers.push({ kind: 'zone', id: zoneId });
     }
     if (!isHiddenTile(x, y)) {
       for (const it of droppedItems) {
@@ -2666,6 +2696,8 @@
           redrawOverlay();
         } else if (showFuelSettings) {
           showFuelSettings = false;
+        } else if (showZoneFilter) {
+          showZoneFilter = false;
         } else if (markKind || markedKind || pawnMoveMode) {
           clearMark();
         } else if (similarDragMode) {
@@ -3203,6 +3235,18 @@
     showFuelSettings = !showFuelSettings;
   }
 
+  // Stockpile zone FILTER fly-out (mirrors showFuelSettings): owned here, toggled by the card's
+  // FILTER button, reset when the selected zone changes.
+  let showZoneFilter = false;
+  let zoneFilterForId: string | null = null;
+  $: {
+    const nextZoneId = selectedZoneId;
+    if (nextZoneId !== zoneFilterForId) {
+      showZoneFilter = false;
+      zoneFilterForId = nextZoneId;
+    }
+  }
+
   function assignShelterPawn(pawnId: string | null) {
     if (!selectedBuilding) return;
     const id = selectedBuilding.id;
@@ -3567,19 +3611,19 @@
           <BuildingFuelPanel building={selectedBuilding} {pawns} open={showFuelSettings} />
         {/if}
       </div>
-    {:else if selectedZone}
-      <!-- Stockpile zone card: DRAW/CLEAR tools + per-item haul filter (from the tile click-cycle) -->
-      <StockpileZonePanel
-        instanceId={selectedZone.id}
-        label={selectedZone.label}
-        filter={selectedZone.filter}
-        inventory={selectedZoneInventory}
-        tileCount={selectedZoneTileKeys.length}
-        drawing={zoneToolDrawing}
-        clearing={zoneToolClearing}
-        onDraw={() => paintZoneTool(selectedZone.id, false)}
-        onClear={() => paintZoneTool(selectedZone.id, true)}
-      />
+    {:else if selectedZone && zoneCard}
+      <!-- Stockpile zone: shared SelectedEntityCard chrome (FILTER/DRAW/CLEAR in the button column)
+           plus the FILTER fly-out, laid out exactly like the building card + fuel panel. -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="bld-row" role="presentation" on:mousedown|stopPropagation on:mouseup|stopPropagation>
+        <SelectedEntityCard model={zoneCard} embedded />
+        <StockpileZonePanel
+          instanceId={selectedZone.id}
+          filter={selectedZone.filter}
+          inventory={selectedZoneInventory}
+          open={showZoneFilter}
+        />
+      </div>
     {:else if selectedItemCard}
       <!-- Click-locked dropped item card (from the tile click-cycle), above the hover/resource cards -->
       <SelectedEntityCard model={selectedItemCard} />
