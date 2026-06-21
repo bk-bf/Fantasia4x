@@ -168,6 +168,20 @@
   // immediately (hidden behind the Custom Map overlay) instead of up to 500ms later.
   let _forceTerrainRebuild = false;
 
+  // Render-on-demand. The rAF loop draws the terrain (all visible chunks) EVERY frame; at the zoom-out
+  // floor of a big map that rasterizes ~1M tiles/frame even when nothing changes — the sub-20 FPS on
+  // the static custom-map / zoomed-out view. When the scene is FROZEN — sim paused, OR zoomed out past
+  // FREEZE_TILE_PX (entity motion sub-pixel) — we skip the GL draw unless something VISIBLE changed
+  // (`_renderDirty`, set by the event-driven repaint primitives: camera/zoom, terrain rebuild,
+  // selection/designation, regen, resize, pause toggle). So a static map is drawn once then costs
+  // nothing. Unfrozen (running + zoomed in) draws every frame exactly as before — normal play unchanged.
+  let _renderDirty = true;
+  let isPausedNow = false;
+  const FREEZE_TILE_PX = 4; // below this on-screen tile size, entity motion is imperceptible → freeze
+  const markRenderDirty = () => {
+    _renderDirty = true;
+  };
+
   // Viewport offset in tile coordinates
   let viewX = 0;
   let viewY = 0;
@@ -1490,6 +1504,7 @@
 
   function redrawOverlayNow() {
     if (!renderer?.isReady() || worldMap.length === 0) return;
+    markRenderDirty(); // terrain changed → force a draw even when frozen
     // Profiler: how often the full 38k-tile terrain grid is rebuilt + re-uploaded. If this is
     // ~1/tick during RUNNING, the renderCPU cost is rebuild churn (fix the trigger); if ~0 while
     // renderCPU stays high, the cost is the per-frame buffer re-upload in the renderer instead.
@@ -1579,6 +1594,7 @@
 
   function drawDesignations() {
     if (!designCanvas || !container || !worldMap.length) return;
+    markRenderDirty(); // selection / designation / drag preview changed → force a draw even when frozen
     const W = container.clientWidth;
     const H = container.clientHeight;
     // Back the 2D overlay with the *device* pixel grid (not CSS px). Without this the canvas is
@@ -2168,12 +2184,21 @@
     }
     _forceTerrainRebuild = true;
     _terrainDirty = true;
+    markRenderDirty();
+  });
+
+  // Track pause state for the render-on-demand freeze, and repaint once on any pause toggle (so
+  // pausing settles the final frame and unpausing immediately resumes live drawing).
+  const unsubPaused = gameState.isPaused.subscribe((p) => {
+    isPausedNow = p;
+    markRenderDirty();
   });
 
   onDestroy(() => {
     unsubState();
     unsubUI();
     unsubWorldGen();
+    unsubPaused();
     unsubCombatFeedback();
     unsubAttackLunges();
     unsubProjectiles();
@@ -2353,14 +2378,28 @@
         _lastTerrainBuild = now;
         redrawOverlayNow();
       }
-      renderer.setItemOverlayGrid(itemOverlayGrid);
-      renderer.setOverlayGrid(pawnOverlayGrid);
-      renderer.beginFrame();
-      renderer.endFrame();
-      // Surface render FPS to the topbar ~4×/sec to avoid store churn.
-      if (now - lastFpsPush > 250) {
+      // Render-on-demand: when the scene is FROZEN (paused, or zoomed out past FREEZE_TILE_PX where
+      // entity motion is sub-pixel) skip the GL draw unless something visible changed. The WebGL
+      // canvas retains its last frame, so a static map just stays on screen at ~0 render cost.
+      // Unfrozen (running + zoomed in) draws every frame as before. The 2D overlay (selection/zones)
+      // is its own canvas and updates independently, so interactions stay responsive either way.
+      const frozen = isPausedNow || tileWidth < FREEZE_TILE_PX;
+      if (_renderDirty || !frozen) {
+        renderer.setItemOverlayGrid(itemOverlayGrid);
+        renderer.setOverlayGrid(pawnOverlayGrid);
+        renderer.beginFrame();
+        renderer.endFrame();
+        _renderDirty = false;
+        // Surface render FPS to the topbar ~4×/sec to avoid store churn.
+        if (now - lastFpsPush > 250) {
+          lastFpsPush = now;
+          renderFps.set(Math.round(renderer.getStats().fps));
+        }
+      } else if (now - lastFpsPush > 250) {
+        // Frozen + idle: no frames drawn, so report 0 — the HUD reflects that we're spending no
+        // render cost on a static view (there's no FPS to show).
         lastFpsPush = now;
-        renderFps.set(Math.round(renderer.getStats().fps));
+        renderFps.set(0);
       }
       animationId = requestAnimationFrame(frame);
     }

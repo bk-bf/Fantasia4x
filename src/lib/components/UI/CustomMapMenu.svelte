@@ -53,6 +53,11 @@
   let dirty = false;
   let previewTimer: ReturnType<typeof setTimeout> | undefined;
 
+  // Pause the sim while shaping the map — nothing should advance (no time/weather/growth) during
+  // preview, and a running sim just wastes CPU + pushes state behind the popup. Restore on close.
+  const wasPaused = get(gameState.isPaused);
+  if (!wasPaused) gameState.pauseGame();
+
   // Yield `n` animation frames, so the browser gets to paint between steps.
   function nextFrames(n: number): Promise<void> {
     return new Promise((resolve) => {
@@ -114,6 +119,7 @@
   onDestroy(() => {
     clearTimeout(previewTimer);
     if (dirty) gameState.restoreWorld(baseline);
+    if (!wasPaused) gameState.unpauseGame();
   });
 
   function toggleLock(id: string) {
