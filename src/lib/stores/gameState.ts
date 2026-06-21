@@ -727,6 +727,54 @@ export const bootReveal = writable(false);
 /** Human-readable phase shown on the loading screen (LoadingScreen.svelte), updated through boot. */
 export const loadingStatus = writable('Initializing…');
 
+// ===== MAIN MENU / BOOT GATE =====
+/**
+ * Top-level app phase. `'menu'` shows the main menu (MainScreen logo + New/Load/Settings/Exit) and
+ * holds the heavy sim boot; `'game'` mounts the game. The profiler sandbox auto-boots straight into
+ * the game (no menu); everything else opens at the menu.
+ */
+export type AppPhase = 'menu' | 'game';
+
+// The main menu is a player-facing affordance. DEV launches boot straight into the game (the old,
+// pre-menu behaviour) so iteration isn't taxed by a menu click: --debug (VITE_DEBUG_MODE), --log
+// (VITE_DEBUG_LOG), and --profiler (VITE_PROFILER) all SKIP the menu. A clean/player launch (none of
+// those flags) opens at the menu. Use `./launch.sh --electron --play` to playtest the menu flow.
+const MENU_ENABLED =
+  browser &&
+  import.meta.env.VITE_DEBUG_MODE !== 'true' &&
+  import.meta.env.VITE_DEBUG_LOG !== 'true' &&
+  import.meta.env.VITE_PROFILER !== 'true';
+
+export const appPhase = writable<AppPhase>(MENU_ENABLED ? 'menu' : 'game');
+
+// Boot gate: the heavy save-load + worker start is held inside savedStateReady until the menu fires
+// New/Load (startGame resolves this). `_bootMode` tells the loader whether to ignore the save and
+// start a fresh colony. Profiler mode returns before the gate, so it never waits.
+let _resolveBootGate!: () => void;
+const bootGate = new Promise<void>((resolve) => {
+  _resolveBootGate = resolve;
+});
+let _bootMode: 'new' | 'load' = 'load';
+// Read through a typed getter so the loader IIFE sees the declared union, not the narrowed
+// initializer (TS CFA narrows a module-level `let` to its literal inside an immediately-invoked fn).
+const bootMode = (): 'new' | 'load' => _bootMode;
+
+// Dev/profiler launches have no menu to click — release the gate now so the loader boots straight
+// into the (loaded) game, exactly as before the menu existed.
+if (!MENU_ENABLED) _resolveBootGate();
+
+/**
+ * Leave the main menu and boot the game. `'new'` starts a fresh colony (ignores any save, fresh
+ * seed); `'load'` resumes the persisted save. Flips `appPhase` to `'game'` (mounting the loading
+ * overlay) and releases the boot gate so savedStateReady proceeds. Idempotent — a second call no-ops
+ * because the already-resolved gate can't re-trigger the one-shot loader.
+ */
+function startGame(mode: 'new' | 'load') {
+  _bootMode = mode;
+  appPhase.set('game');
+  _resolveBootGate();
+}
+
 /** How long the loading overlay lingers after the renderer is up before the reveal — lets the worker
  *  boot (module eval + WASM + init-state deserialize, ~0–2s of native + GC) and the WebGL-init GC
  *  settle behind the overlay before the (paused) reveal. Also paces the loading bar (LoadingScreen
@@ -892,8 +940,15 @@ export const savedStateReady: Promise<void> = (async () => {
     return;
   }
 
-  const savedState = await loadSave();
+  // Menu-gated boot: hold here until the player picks New/Load (startGame resolves bootGate). The
+  // profiler branch returned above, so it never reaches this await.
+  await bootGate;
+  loadingStatus.set('Loading world…');
+
+  // `'new'` ignores any save and rolls a fresh seed so each new game differs; `'load'` resumes disk.
+  const savedState = bootMode() === 'new' ? null : await loadSave();
   let baseState = savedState ? applyMigrations(savedState) : initialGameState;
+  if (bootMode() === 'new') baseState = { ...baseState, seed: freshSeed() };
 
   // P0-2/D7: reseed the sim RNG from the persisted seed so the run replays deterministically,
   // and clear module-level state (unreachable-job memory) carried over from a prior session.
@@ -1023,6 +1078,8 @@ export const gameState = {
   consumeGlobalItem,
   resetGame,
   wipeAndReload,
+  /** Leave the main menu and boot the game ('new' = fresh colony, 'load' = resume save). */
+  startGame,
   regenWorld,
   restoreWorld,
   setMapSize,

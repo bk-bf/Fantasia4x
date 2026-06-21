@@ -169,6 +169,21 @@ export async function loadSave(): Promise<GameState | null> {
   return null;
 }
 
+/**
+ * Cheap existence check — does a save exist? Used by the main menu to enable/disable "Load Game"
+ * without paying loadSave's full hydrate. Reads the row but skips hydration.
+ */
+export async function hasSave(): Promise<boolean> {
+  if (!browser) return false;
+  try {
+    const idbState = await idbGet<GameState>(SAVE_KEY);
+    if (idbState) return true;
+    return readLegacyLocalStorage() != null;
+  } catch {
+    return false;
+  }
+}
+
 /** Delete the current save (and its chronicle) from both storage backends. */
 export async function deleteSave(): Promise<void> {
   if (!browser) return;

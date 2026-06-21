@@ -1,7 +1,7 @@
 <script lang="ts">
   // Top-bar settings dropdown. Lightweight + extensible: each row is a persisted view preference
   // from uiPrefs (deliberately separate from the IndexedDB game save). Add future view toggles here.
-  import { hideSidebars } from '$lib/stores/uiPrefs';
+  import { hideSidebars, debugMode } from '$lib/stores/uiPrefs';
   import { gameState } from '$lib/stores/gameState';
 
   let open = false;
@@ -39,6 +39,10 @@
       <label class="menu-row">
         <input type="checkbox" checked={$hideSidebars} on:change={hideSidebars.toggle} />
         <span>Hide sidebars</span>
+      </label>
+      <label class="menu-row">
+        <input type="checkbox" checked={$debugMode} on:change={debugMode.toggle} />
+        <span>Debug mode</span>
       </label>
       <div class="menu-sep"></div>
       <button class="menu-row action danger" on:click={wipeSave}>Wipe save</button>

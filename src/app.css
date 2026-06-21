@@ -35,6 +35,27 @@ body {
   padding: 0;
 }
 
+/* App-shell hardening — this is a game window, not a document. Disable accidental text selection
+   (the stray blue drag-highlight) and native image drag everywhere, then re-enable selection only
+   where the user genuinely types or needs to copy text (form fields + anything tagged .selectable,
+   e.g. the debug log). Works in the browser dev build and the Electron shell alike. */
+html {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+input,
+textarea,
+[contenteditable='true'],
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
+}
+img {
+  -webkit-user-drag: none;
+}
+
 ::-webkit-scrollbar {
   width: 3px;
   height: 3px;

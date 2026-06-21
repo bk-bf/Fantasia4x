@@ -18,10 +18,11 @@
   import WorldEffectsLayer from '$lib/components/UI/WorldEffectsLayer.svelte';
   import LoadingScreen from '$lib/components/UI/LoadingScreen.svelte';
   import GameOverScreen from '$lib/components/UI/GameOverScreen.svelte';
+  import MainMenu from '$lib/components/UI/MainMenu.svelte';
   import { autohideScroll } from '$lib/actions/autohideScroll';
   import { uiState } from '$lib/stores/uiState';
-  import { hideSidebars } from '$lib/stores/uiPrefs';
-  import { gameState, storeReady, bootReveal, isGameOver } from '$lib/stores/gameState';
+  import { hideSidebars, debugMode } from '$lib/stores/uiPrefs';
+  import { gameState, storeReady, bootReveal, isGameOver, appPhase } from '$lib/stores/gameState';
   // Side-effect import: starts the EXPLORE tab's background resource-ledger cache from game start, so
   // opening the tab reads a ready list instead of scanning the whole map on the click path.
   import '$lib/stores/discoveredResources';
@@ -93,12 +94,13 @@
     return bDef?.category === 'knowledge' && b.status === 'complete';
   });
 
-  // DEBUG (log) tab is present under --debug (VITE_DEBUG_MODE) or the standalone --log
-  // (VITE_DEBUG_LOG) flag — the latter shows the log viewer without the rest of the dev UI.
-  const DEBUG_ENABLED =
+  // DEBUG (log) tab is present under the build flags --debug (VITE_DEBUG_MODE) / --log
+  // (VITE_DEBUG_LOG), OR at runtime when the player enables Debug mode in Settings ($debugMode).
+  const DEBUG_BUILD_FLAG =
     import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_LOG === 'true';
+  $: debugEnabled = DEBUG_BUILD_FLAG || $debugMode;
 
-  const NAV_TABS = [
+  $: NAV_TABS = [
     { key: 'pawns', label: 'PAWNS', fkey: 'F2' },
     { key: 'work', label: 'WORK', fkey: 'F3' },
     { key: 'building', label: 'BUILDINGS', fkey: 'F4' },
@@ -107,12 +109,26 @@
     { key: 'race', label: 'RACE', fkey: 'F7' },
     { key: 'research', label: 'RESEARCH', fkey: 'F8', needsResearch: true },
     { key: 'entities', label: 'ENTITIES', fkey: 'F9' },
-    ...(DEBUG_ENABLED ? [{ key: 'debug', label: 'DEBUG', fkey: 'F10' }] : [])
+    ...(debugEnabled ? [{ key: 'debug', label: 'DEBUG', fkey: 'F10' }] : [])
   ];
 
   function toggle(key: string) {
     if (key === 'research' && !hasResearch) return;
     uiState.toggleScreen(key as any);
+  }
+
+  // ===== APP HARDENING (browser + Electron) =====
+  // Suppress the browser-chrome behaviours that leak into a game window: the right-click context
+  // menu, accidental file drag-drop navigation, and ctrl/⌘+wheel pinch-zoom. Text selection itself
+  // is killed in app.css (user-select: none, re-enabled on inputs).
+  function blockContextMenu(e: Event) {
+    e.preventDefault();
+  }
+  function blockDragNav(e: DragEvent) {
+    e.preventDefault();
+  }
+  function blockZoom(e: WheelEvent) {
+    if (e.ctrlKey || e.metaKey) e.preventDefault();
   }
 
   function handleKeydown(e: KeyboardEvent) {
@@ -150,7 +166,13 @@
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window
+  on:keydown={handleKeydown}
+  on:contextmenu={blockContextMenu}
+  on:dragover={blockDragNav}
+  on:drop={blockDragNav}
+  on:wheel|nonpassive={blockZoom}
+/>
 
 <svelte:head>
   <title>Fantasia4x</title>
@@ -164,7 +186,11 @@
   </filter>
 </svg>
 
-{#if $storeReady}
+{#if $appPhase === 'menu'}
+  <MainMenu />
+{/if}
+
+{#if $appPhase === 'game' && $storeReady}
   <div class="game-container">
     <div class="game-header">
       <GameControls />
@@ -243,7 +269,7 @@
      overlay (no separate "Initializing renderer…" screen). The overlay is dropped by `bootReveal`,
      which fires a paused warmup beat AFTER the renderer is up — hiding the worker-boot/WebGL-init GC.
      Keyboard input is gated on the same flag (handleKeydown) so Space can't unpause behind it. -->
-{#if !$bootReveal}
+{#if $appPhase === 'game' && !$bootReveal}
   <LoadingScreen />
 {/if}
 

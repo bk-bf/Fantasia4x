@@ -10,6 +10,9 @@
 #     ./launch.sh --debug --electron      ./launch.sh --profiler --tauri
 # --log: add the in-game DEBUG log tab + verbose firehose (no other dev UI) to any launch — handy
 #   to watch the log under --profiler/--electron, e.g. ./launch.sh --profiler --electron --log.
+# --play: clean PLAYER launch (shell only) — drops --debug so the game opens at the MAIN MENU with
+#   the DEBUG tab hidden, the way an alpha build looks. Still served by the live dev server, so
+#   bug-fixes are a reload away (no rebuild). Immersive playtesting: ./launch.sh --electron --play.
 # --hmr: opt INTO Vite hot-reload / live page-reload. OFF by default for EVERY launch (including
 #   --debug/--profiler/--electron/--tauri) so an agent editing the tree never reloads a live playtest.
 # codegraph is a separate always-on systemd user service (see codegraph_hint below).
@@ -20,12 +23,14 @@ PIDS=()
 PROFILER=false
 LOG=false
 HMR=false
+PLAY=false
 SHELL_TARGET=""
 for arg in "$@"; do
   case "$arg" in
     --profiler) PROFILER=true ;;
     --log) LOG=true ;;
     --hmr) HMR=true ;;
+    --play) PLAY=true ;;
     --electron) SHELL_TARGET=electron ;;
     --tauri) SHELL_TARGET=tauri ;;
   esac
@@ -103,12 +108,16 @@ if [[ -n "$SHELL_TARGET" ]]; then
   fi
   # --profiler boots WITHOUT --debug so the sim profiles clean (no verbose firehose). Add --log to
   # surface the DEBUG log tab + firehose on demand (e.g. ./launch.sh --profiler --electron --log).
+  # --play: clean PLAYER build — NO --debug, so the MAIN MENU shows and the DEBUG tab is hidden; an
+  # immersive playtest over the live dev server, so bug-fixes are still just a reload away.
   SERVER_FLAG="--debug"; [[ "$PROFILER" == true ]] && SERVER_FLAG="--profiler"
+  [[ "$PLAY" == true ]] && SERVER_FLAG=""
   SERVER_FLAG="$SERVER_FLAG$LOG_FLAG$HMR_FLAG"
+  SERVER_LABEL="play"; [[ "$PLAY" != true ]] && SERVER_LABEL="${SERVER_FLAG#--}"
   PORT=5173
   [[ -f "$SCRIPT_DIR/.devport" ]] && PORT=$(< "$SCRIPT_DIR/.devport")
 
-  echo "Fantasia4x — $SHELL_TARGET shell over ${SERVER_FLAG#--} server (main only)"
+  echo "Fantasia4x — $SHELL_TARGET shell over $SERVER_LABEL server (main only)"
   echo ""
   codegraph_hint
   launch "$SCRIPT_DIR" "main" "$SERVER_FLAG"

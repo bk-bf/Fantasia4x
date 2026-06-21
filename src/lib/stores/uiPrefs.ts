@@ -5,6 +5,7 @@ import { writable } from 'svelte/store';
 const COLLAPSED_RES_CATS_KEY = 'fx.resourcePanel.collapsedCategories';
 const HIDE_EMPTY_RES_CATS_KEY = 'fx.resourcePanel.hideEmptyCategories';
 const HIDE_SIDEBARS_KEY = 'fx.layout.hideSidebars';
+const DEBUG_MODE_KEY = 'fx.debug.enabled';
 
 function loadStringList(key: string): string[] {
   if (typeof localStorage === 'undefined') return [];
@@ -87,3 +88,10 @@ export const hideEmptyResourceCategories = createPersistedBool(HIDE_EMPTY_RES_CA
  * settings menu.
  */
 export const hideSidebars = createPersistedBool(HIDE_SIDEBARS_KEY, true);
+
+/**
+ * Debug mode: reveals the in-game DEBUG tab (map brushes / spawn tools / log) at runtime —
+ * independent of the build-time VITE_DEBUG_MODE flag. OFF by default so a shipped/alpha build hides
+ * the dev surface; the player opts in from Settings. Persisted.
+ */
+export const debugMode = createPersistedBool(DEBUG_MODE_KEY, false);
