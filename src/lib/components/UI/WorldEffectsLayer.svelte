@@ -35,6 +35,11 @@
   // tiles the whole screen with overlays. Track the live zoom so each stays ~1 tile across at any zoom
   // (shrinks out, grows in), clamped. (Lair PARTICLE effects compute their own fxScale separately.)
   $: floatScale = Math.max(0.25, Math.min(1.5, $cameraTileSize / BASE_TILE));
+
+  // Floating combat text (damage numbers + condition labels) reads as cluttered at full zoom-in, so
+  // cap its scale 20% below the other floats' 1.5 ceiling (1.5 × 0.8 = 1.2). Lower zooms are unchanged
+  // (floatScale is already < 1.2 there); only the max-zoom end shrinks.
+  $: combatFloatScale = Math.min(floatScale, 1.2);
 </script>
 
 <div class="world-effects-layer">
@@ -197,7 +202,7 @@
   {#each $worldEffects.floatingTextOverlays as overlay (overlay.id)}
     <div
       class="combat-float {overlay.kind}"
-      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({floatScale});{overlay.color
+      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({combatFloatScale});{overlay.color
         ? ` color:${overlay.color};`
         : ''}"
     >
