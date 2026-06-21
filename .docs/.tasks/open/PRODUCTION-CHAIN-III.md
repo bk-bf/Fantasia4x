@@ -241,8 +241,8 @@ We stall at **clay-brick walls** (`mud_brick_wall`); the masonry/concrete tiers 
 A missing primitive: **adhesive**. Today everything is "lashed with cordage." Add a real glue line so
 hafting/joinery/composite items have a binder, and so later tiers feel distinct.
 
-- **Tree resin** (`resin`): a **yield added to certain trees** (pine/conifer + the warm magic wood
-  `emberwood`). Tapped/gathered alongside `woodcutting` (a low-rate secondary yield, or a tap-station).
+- **Tree resin** (`resin`): a **yield from mundane conifers only** (`pine_tree`) — **magic trees
+  (emberwood etc.) do NOT give resin.** Tapped/gathered alongside `woodcutting` (a low-rate secondary yield, or a tap-station).
   **Early glue.** Rework select recipes to consume `resin` as a binder (composite tools, bow nocks,
   hafted heads, sealed buckets, torch-binding) — *optionally alongside* cordage so cordage stays useful.
 - **Bone glue** (`bone_glue`) — **proposed light-glue tier** (per user "maybe light glue via grinding
@@ -255,7 +255,7 @@ hafting/joinery/composite items have a binder, and so later tiers feel distinct.
 
 ### D.1 Implementation checklist
 
-- [x] `resin` item — a **gate material**: a rough 0–1 woodcut trickle on `pine_tree` + `emberwood_grove`, plus the reliable **`resin_tap`** passive station (plank/bronze tier; `tap_resin` recipe renders resin from bark/conifer logs).
+- [x] `resin` item — a **gate material**: a rough 0–1 woodcut trickle on `pine_tree` only (**magic trees give no resin**), plus the reliable **`resin_tap`** passive station (plank/bronze tier; `tap_resin` renders resin from bark/pine logs).
 - [~] Rework existing binder recipes to accept/require `resin` — `wooden_bucket`/`wooden_barrel` use it (with `bone_glue`/`hide_glue` alternatives); the broader composite-tool/haft/bow rework is still open.
 - [x] `bone_meal` (grind @ `quern`) + `bone_glue`/`hide_glue` (boil @ `hearth`) recipes.
 - [ ] `arcane_resin` (alchemy, gem-dust) for magic assemblies. *(needs gem_dust — Step 3/5)*
@@ -486,7 +486,7 @@ non-obvious mechanic. Ordered by ROI + unblocking:
 ## Open Questions
 
 - [x] **Bucket model** — RESOLVED: crafted at carpenter_bench → **built as a placed passive FURNACE that burns `tanning_brine` as fuel** (reuses `maxFuel`/`fuelConsumptionRate`/`fuelRequirements` wholesale); brine is brewed in a separate passive `wooden_barrel`. See §B.2.
-- [x] **Resin gather model** — RESOLVED: **both, and resin is a gate material.** Chopping a conifer (pine/emberwood) drops only a **rough 0–1** resin trickle (unreliable); the reliable supply is the **`resin_tap`** — a passive station at the **plank/bronze tier** (built from planks) that slowly draws pitch from bark/conifer logs (reuses the passive-furnace timer). So the binder/bucket/glue economy gates on building taps, not on lucky chops.
+- [x] **Resin gather model** — RESOLVED: **both, and resin is a gate material.** Chopping a **mundane conifer (pine only — magic trees give no resin)** drops a **rough 0–1** resin trickle (unreliable); the reliable supply is the **`resin_tap`** — a passive station at the **plank/bronze tier** (built from planks) that slowly draws pitch from bark/pine logs (reuses the passive-furnace timer). So the binder/bucket/glue economy gates on building taps, not on lucky chops.
 - [x] **Gem-dust economy** — RESOLVED: **infused gems only** grind to `gem_dust`; normal cut gems stay trade goods (+ a future, unplanned art/decoration pigment sink). See "Gem-dust source" in §C.1.
 - [x] **Famed promotion** — RESOLVED: **both**, both very rare — crafted as the extreme tail of the §Q quality roll (above Legendary, skill/station-scaled, immensely rare; *not* a targetable reforge recipe), and dropped by very high-level mobs/bosses. See §I.
 - [x] **Famed vs §Q stacking** — RESOLVED: Famed is its **own top tier above tier 5** (a crafted Famed comes *from* the quality roll, so it has no separate lower tier); the ×2–5 stat-explosion multiplies the item's definition (quality-relevant) stats directly.
