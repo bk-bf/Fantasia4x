@@ -207,6 +207,12 @@ const MOB_COLD = new Set<string>([
   'bloodVolume',
   'maxBloodVolume'
 ]);
+// Mob fields that must ship EVERY flush because they're mutated IN PLACE (ADR-002) — their object ref
+// never changes, so a ref-diff would silently go stale. `needs` (hunger/fatigue drained in place by
+// entityLifecycle.stepHunger) is the only one; everything else on a mob is a scalar (value-compared,
+// safe under in-place mutation) or a REPLACED object (transientConditions/path/conditions/limbs — new
+// ref on change). Drives the field-level ref-diff in syncEntities for mobs (mobs=374KB→~80KB).
+const MOB_VOLATILE = new Set<string>(['needs']);
 // Cold-field sync = per-field REF-DIFF (replaces the old staggered RESYNC_EVERY round-robin, which
 // left the selected-pawn detail panels ≤2s stale — pill/health/gear lagging the sim). Each cold
 // field is re-sent ONLY the flush its object ref changes; healthy entities ship nothing, so the
@@ -284,7 +290,8 @@ function syncEntities<T extends { id: string }>(
   arr: readonly T[],
   prevIds: Set<string>,
   cold: Set<string>,
-  lastCold: Map<string, Record<string, unknown>>
+  lastCold: Map<string, Record<string, unknown>>,
+  volatile?: Set<string>
 ): EntitySync<T> {
   const upserts: Array<Partial<T> & { id: string }> = new Array(arr.length);
   const order: string[] = new Array(arr.length);
@@ -297,13 +304,32 @@ function syncEntities<T extends { id: string }>(
     const seen = prevIds.has(e.id);
     let refs = lastCold.get(e.id);
     if (!refs) lastCold.set(e.id, (refs = {}));
-    // Slim hot projection, then add each cold field whose ref changed (all of them on first sight).
-    const o = slimEntity(e, cold) as Record<string, unknown>;
-    for (const k of cold) {
-      const v = er[k];
-      if (!seen || v !== refs[k]) {
-        o[k] = v;
-        refs[k] = v;
+    let o: Record<string, unknown>;
+    if (volatile) {
+      // Field-level ref-diff over EVERY field (hot+cold unified): ship `id`, the `volatile` fields
+      // (mutated IN PLACE, so ref-diff can't see their change — always send), and any other field whose
+      // value/ref changed since last SENT. Scalars compare by value (safe even when mutated in place);
+      // objects compare by ref (the mob FSM REPLACES them on change). The client merges {...prev,...u},
+      // so omitted = unchanged. Cuts the every-flush "all hot fields × all mobs" payload (374KB) to
+      // "needs + what actually moved" — most mobs ship just {id, needs} (~80KB at 900 mobs).
+      o = { id: e.id };
+      for (const k in e) {
+        if (k === 'id') continue;
+        const v = er[k];
+        if (!seen || volatile.has(k) || v !== refs[k]) {
+          o[k] = v;
+          refs[k] = v;
+        }
+      }
+    } else {
+      // Slim hot projection (all hot fields wholesale), then add each cold field whose ref changed.
+      o = slimEntity(e, cold) as Record<string, unknown>;
+      for (const k of cold) {
+        const v = er[k];
+        if (!seen || v !== refs[k]) {
+          o[k] = v;
+          refs[k] = v;
+        }
       }
     }
     projectSentEntity(o);
@@ -397,7 +423,7 @@ function publish(state: GameState, flush: boolean, commit = false) {
 
   flushSeq++;
   const pawns = syncEntities(state.pawns, lastPawnIds, PAWN_COLD, lastPawnCold);
-  const mobs = syncEntities(state.mobs ?? [], lastMobIds, MOB_COLD, lastMobCold);
+  const mobs = syncEntities(state.mobs ?? [], lastMobIds, MOB_COLD, lastMobCold, MOB_VOLATILE);
   const wmDelta = tileDeltas
     ? tileDeltas.map((d) => ({ y: d.y, x: d.x, tile: slimTile(d.tile) }))
     : undefined;
