@@ -167,14 +167,27 @@
       return;
     }
     if (e.key === 'Escape') {
-      // First ESC cancels the active in-world action / closes an open panel; ESC on the bare map
-      // opens the pause menu.
+      // RimWorld-style back-out ladder: each ESC dismisses the most recent thing; the pause menu only
+      // opens once there's nothing left to close. NOTE: when the map canvas has focus it handles its
+      // own richer ladder (selection/brushes/drags) and stops propagation, so this runs only for the
+      // bare map or selections made from the side tabs (where the canvas isn't focused).
       if ($uiState.blueprintBuildingId) {
         uiState.deactivateBlueprint();
       } else if ($uiState.designationActive) {
         uiState.deactivateDesignation(); // restores _screenBeforeDesignation (e.g. 'building')
       } else if (currentScreen !== 'main') {
         uiState.setScreen('main');
+      } else if (
+        $uiState.selectedPawnId ||
+        $uiState.selectedMobId ||
+        $uiState.cameraFollowPawnId ||
+        $uiState.cameraFollowMobId
+      ) {
+        // A pawn/mob selected (or being followed) from the Pawn/Entity tab — clear it before the menu.
+        uiState.selectPawn(null);
+        uiState.selectMob(null);
+        uiState.setFollowPawn(null);
+        uiState.setFollowMob(null);
       } else {
         openPauseMenu();
       }

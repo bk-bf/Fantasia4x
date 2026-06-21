@@ -2520,60 +2520,67 @@
         setView(viewX, viewY + SCROLL_STEP);
         e.preventDefault();
         break;
-      case 'Escape':
+      case 'Escape': {
+        // RimWorld-style "back out one step": Escape dismisses the most recent in-world thing — an
+        // active tool/brush first, then a selection/follow. Only when there is genuinely NOTHING left
+        // to dismiss do we let the event bubble to the window handler (+page.svelte), which opens the
+        // pause menu. Without the consume-when-dismissed gate below, one Escape would BOTH clear the
+        // selection here AND pop the pause menu — the reported annoyance.
+        let dismissed = true;
         if (debugBrush) {
           uiState.deactivateDebugBrush();
           redrawOverlay();
-          break;
-        }
-        if (showFuelSettings) {
+        } else if (showFuelSettings) {
           showFuelSettings = false;
-          break;
-        }
-        if (markKind || markedKind || pawnMoveMode) {
+        } else if (markKind || markedKind || pawnMoveMode) {
           clearMark();
-          break;
-        }
-        if (similarDragMode) {
+        } else if (similarDragMode) {
           similarDragMode = false;
           similarDragActive = false;
           redrawOverlay();
-          break;
-        }
-        if (selectedResourceTile) {
+        } else if (selectedResourceTile) {
           selectedResourceTile = null;
           highlightedResourceTiles = new Set();
           drawDesignations();
-          break;
-        }
-        if (selectedMobId) {
+        } else if (selectedMobId) {
           selectedMobId = null;
           uiState.selectMob(null);
           drawDesignations();
-          break;
-        }
-        if (selectedBuildingId) {
+        } else if (selectedBuildingId) {
           selectedBuildingId = null;
-          break;
-        }
-        if (blueprintBuildingId) {
+        } else if (blueprintBuildingId) {
           uiState.deactivateBlueprint();
           blueprintDragActive = false;
           blueprintDragTiles.clear();
           redrawOverlay();
-          break;
+        } else if (
+          designationMode ||
+          selectedPawnId ||
+          cameraFollowPawnId ||
+          cameraFollowMobId ||
+          selDragActive ||
+          selRect
+        ) {
+          // An active zone/designation tool, a selected/followed pawn, or an in-progress drag-select.
+          uiState.deactivateDesignation();
+          zoneEraseMode = false;
+          zoneDragActive = false;
+          selDragActive = false;
+          selRect = null;
+          selectedPawnId = null;
+          uiState.selectPawn(null);
+          uiState.setFollowPawn(null);
+          uiState.setFollowMob(null);
+          drawDesignations();
+        } else {
+          dismissed = false; // nothing to back out of → let the pause menu open
         }
-        uiState.deactivateDesignation();
-        zoneEraseMode = false;
-        zoneDragActive = false;
-        selDragActive = false;
-        selRect = null;
-        selectedPawnId = null;
-        uiState.selectPawn(null);
-        uiState.setFollowPawn(null);
-        uiState.setFollowMob(null);
-        drawDesignations();
+        if (dismissed) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
         break;
+      }
       case 'x':
       case 'X':
         if (designationMode) {
