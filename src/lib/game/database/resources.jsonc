@@ -198,7 +198,8 @@
           "skillMultiplier": 0.15,
           "regrowthTurns"  : 4200
         },
-        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
+        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500},
+        {"itemId": "resin", "min": 0, "max": 1, "skillId": "woodcutting", "skillMultiplier": 0.06, "regrowthTurns": 4200}
       ],
       "persistent"     : true,
       "harvestDepletes": true
@@ -392,6 +393,14 @@
           "skillId"        : "woodcutting",
           "skillMultiplier": 0.05,
           "regrowthTurns"  : 4200
+        },
+        {
+          "itemId"         : "resin",
+          "min"            : 0,
+          "max"            : 1,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.06,
+          "regrowthTurns"  : 4200
         }
       ],
       "persistent"     : true,
@@ -435,6 +444,14 @@
             "max"            : 3,
             "skillId"        : "woodcutting",
             "skillMultiplier": 0.05,
+            "regrowthTurns"  : 4200
+          },
+          {
+            "itemId"         : "resin",
+            "min"            : 0,
+            "max"            : 1,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.06,
             "regrowthTurns"  : 4200
           }
         ],

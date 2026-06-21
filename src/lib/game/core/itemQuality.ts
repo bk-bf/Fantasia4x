@@ -84,6 +84,21 @@ export function qualityMultiplier(quality: ItemQuality | undefined): number {
   return QUALITY_TIERS[clampTier(quality)].multiplier;
 }
 
+/**
+ * PRODUCTION-CHAIN-III §I: the full stat multiplier = the §Q tier multiplier × the Famed stat-
+ * explosion (×2–5, layered on top — a Famed Masterwork is absurd). `famedStatMult` is the per-
+ * instance value stamped by `rollFamedIdentity`; absent / ≤0 → no explosion (the common case), so the
+ * result collapses to plain `qualityMultiplier(quality)` and the hot-path callers keep their
+ * no-allocation early-return.
+ */
+export function combinedQualityMultiplier(
+  quality: ItemQuality | undefined,
+  famedStatMult?: number
+): number {
+  const q = qualityMultiplier(quality);
+  return famedStatMult && famedStatMult > 0 ? q * famedStatMult : q;
+}
+
 /** Name prefix for a tier (e.g. "Masterwork"); empty string for the Standard baseline. */
 export function qualityPrefix(quality: ItemQuality | undefined): string {
   if (quality === undefined) return '';
@@ -107,9 +122,13 @@ export function qualityName(quality: ItemQuality | undefined): string {
  * returned unchanged (no allocation in the hot combat path); otherwise a shallow copy with the
  * quality-relevant fields multiplied. Used by Combat when resolving an equipped weapon's attack.
  */
-export function scaleWeaponQuality(wp: WeaponProps, quality: ItemQuality | undefined): WeaponProps {
-  const mult = qualityMultiplier(quality);
-  if (mult === 1.0) return wp;
+export function scaleWeaponQuality(
+  wp: WeaponProps,
+  quality: ItemQuality | undefined,
+  famedStatMult?: number
+): WeaponProps {
+  const mult = combinedQualityMultiplier(quality, famedStatMult);
+  if (mult === 1.0) return wp; // common path: no allocation (peace + ordinary gear)
   const out: WeaponProps = { ...wp };
   for (const f of WEAPON_QUALITY_FIELDS) {
     const v = out[f];
@@ -118,9 +137,14 @@ export function scaleWeaponQuality(wp: WeaponProps, quality: ItemQuality | undef
   return out;
 }
 
-/** Return armour properties scaled by quality (R8 consume side). Standard/undefined → unchanged. */
-export function scaleArmorQuality(ap: ArmorProps, quality: ItemQuality | undefined): ArmorProps {
-  const mult = qualityMultiplier(quality);
+/** Return armour properties scaled by quality (R8 consume side) + the §I Famed explosion.
+ *  Standard/undefined and non-Famed → unchanged (no allocation). */
+export function scaleArmorQuality(
+  ap: ArmorProps,
+  quality: ItemQuality | undefined,
+  famedStatMult?: number
+): ArmorProps {
+  const mult = combinedQualityMultiplier(quality, famedStatMult);
   if (mult === 1.0) return ap;
   const out: ArmorProps = { ...ap };
   for (const f of ARMOR_QUALITY_FIELDS) {

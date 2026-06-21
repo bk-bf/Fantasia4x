@@ -12,7 +12,7 @@ import statsData from '../database/stats.jsonc';
 import conditionsData from '../database/conditions.jsonc';
 import itemsData from '../database/items.jsonc';
 import { WORK_CATEGORIES } from '../core/Work';
-import { qualityMultiplier } from '../core/itemQuality';
+import { combinedQualityMultiplier } from '../core/itemQuality';
 import {
   conditionStatMultipliers,
   conditionPainMultiplier,
@@ -82,7 +82,8 @@ function heldToolBoost(
     if (!b) return;
     found = true;
     // §Q: a higher-quality tool gives a bigger work boost (and, separately, wears slower).
-    const q = qualityMultiplier(inst.quality);
+    // §I: a Famed tool explodes that boost ×2–5 on top of its tier.
+    const q = combinedQualityMultiplier(inst.quality, inst.famedStatMult);
     if (b.speed * q > speed) speed = b.speed * q;
     if (b.yield * q > yieldB) yieldB = b.yield * q;
   };

@@ -141,6 +141,33 @@ describe('stat scaling (consume side)', () => {
     const wp = { damage: 10, attackSpeed: 1, range: 0 };
     expect(scaleWeaponQuality(wp, 0).damage).toBeLessThan(10);
   });
+
+  // PRODUCTION-CHAIN-III §I — the Famed stat-explosion layers ×2–5 OVER the §Q tier multiplier.
+  it('famedStatMult explodes weapon stats on top of the quality tier', () => {
+    const wp = { damage: 10, attackSpeed: 1, range: 0 };
+    // Masterwork (×1.5) × Famed ×3 = ×4.5
+    const famedMaster = scaleWeaponQuality(wp, 4, 3);
+    expect(famedMaster.damage).toBeCloseTo(10 * 1.5 * 3);
+    expect(famedMaster.attackSpeed).toBe(1); // intrinsic — still unscaled
+  });
+
+  it('famedStatMult explodes armour value on top of the quality tier', () => {
+    const ap = { defense: 20, armorValue: 8 };
+    const famedFine = scaleArmorQuality(ap, 2, 2.5); // ×1.15 × 2.5
+    expect(famedFine.defense).toBeCloseTo(20 * 1.15 * 2.5);
+    expect(famedFine.armorValue).toBeCloseTo(8 * 1.15 * 2.5);
+  });
+
+  it('famed on a no-tier (Standard) item still explodes; absent famedStatMult keeps the no-alloc path', () => {
+    const wp = { damage: 10, attackSpeed: 1, range: 0 };
+    // Standard tier (×1.0) but Famed ×4 → ×4, and a fresh object (not the same ref)
+    const famedStd = scaleWeaponQuality(wp, STANDARD_QUALITY, 4);
+    expect(famedStd.damage).toBeCloseTo(40);
+    expect(famedStd).not.toBe(wp);
+    // No famedStatMult + Standard → SAME object (hot-path invariant preserved)
+    expect(scaleWeaponQuality(wp, STANDARD_QUALITY)).toBe(wp);
+    expect(scaleWeaponQuality(wp, STANDARD_QUALITY, 0)).toBe(wp);
+  });
 });
 
 describe('stamp on craft output', () => {

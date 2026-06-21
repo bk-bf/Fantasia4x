@@ -364,7 +364,8 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
     const item = itemService.getItemById(mh.itemId);
     if (item?.weaponProperties) {
       // §Q: a Masterwork blade hits harder — scale the quality-relevant fields by the stamped tier.
-      const wp = scaleWeaponQuality(item.weaponProperties, mh.quality);
+      // §I: a Famed blade explodes those fields ×2–5 on top of its tier.
+      const wp = scaleWeaponQuality(item.weaponProperties, mh.quality, mh.famedStatMult);
       const p = profileFromWeapon(str, dex, wp, item.name ?? 'weapon');
       return applyMeleeGrip(p, getGrip(attacker)); // BB grip: duelist/2H add offense (melee only)
     }
@@ -482,7 +483,8 @@ function partArmorReduction(defender: Pawn | Mob, partId: BodyPartId, armorPen: 
       const baseAp = itemService.getItemById(inst.itemId)?.armorProperties;
       if (!baseAp) continue;
       // §Q: a Masterwork breastplate absorbs more — scale armour value by the stamped tier.
-      const candidate = scaleArmorQuality(baseAp, inst.quality);
+      // §I: a Famed piece explodes that value ×2–5 on top of its tier.
+      const candidate = scaleArmorQuality(baseAp, inst.quality, inst.famedStatMult);
       if (candidate.defense > bestDef) bestDef = candidate.defense;
     }
   }
@@ -1268,7 +1270,8 @@ class CombatServiceImpl implements CombatService {
   ): RangedOverride {
     const rawWp = itemService.getItemById(rw.itemId)?.weaponProperties;
     // §Q: a Masterwork bow shoots harder/truer — scale the quality-relevant fields by the tier.
-    const wp = rawWp ? scaleWeaponQuality(rawWp, rw.quality) : undefined;
+    // §I: a Famed bow explodes them ×2–5 on top of its tier.
+    const wp = rawWp ? scaleWeaponQuality(rawWp, rw.quality, rw.famedStatMult) : undefined;
     const profile = profileFromWeapon(
       pawn.stats.strength,
       pawn.stats.dexterity,

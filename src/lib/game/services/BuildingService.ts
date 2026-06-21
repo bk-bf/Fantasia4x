@@ -435,7 +435,12 @@ export class BuildingServiceImpl implements BuildingService {
       // work-point model: workRequired = workAmount directly
       workRequired: building.workAmount,
       workDone: instant ? building.workAmount : 0,
-      materialsDelivered: false
+      materialsDelivered: false,
+      // PRODUCTION-CHAIN-III §B.2: seed the per-building fuel whitelist from the def so a tanning
+      // bucket only ever burns brine (the refuel planner reads fuelSettings.allowedFuelItemIds).
+      ...(building.defaultAllowedFuelItemIds && building.defaultAllowedFuelItemIds.length > 0
+        ? { fuelSettings: { allowedFuelItemIds: [...building.defaultAllowedFuelItemIds] } }
+        : {})
     };
     let state: GameState = { ...gameState, buildings: [...(gameState.buildings ?? []), placed] };
 

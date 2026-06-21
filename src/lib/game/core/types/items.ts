@@ -28,6 +28,18 @@ export interface ItemInstance {
    * Standard (×1.0) — uncrafted / world-spawned items and bulk materials carry no quality.
    */
   quality?: ItemQuality;
+  /**
+   * PRODUCTION-CHAIN-III §I — Famed: a named legend ABOVE the §Q tier scale. Set on the
+   * vanishingly-rare craft roll (the tail above Legendary, skill/station-scaled — see `rollFamed`)
+   * or a high-level mob drop. When `famed`, the item carries a generated `famedName`/`famedHistory`,
+   * a per-stat explosion multiplier (`famedStatMult`, ×2–5, layered over the §Q tier), and
+   * `famedEnchants` (1–3 condition ids granted while equipped, reusing `grantsConditions`).
+   */
+  famed?: boolean;
+  famedName?: string;
+  famedHistory?: string;
+  famedStatMult?: number;
+  famedEnchants?: string[];
 }
 
 export interface PawnInventory {
@@ -294,6 +306,13 @@ export interface Item {
    * existing condition `modifiers` pipeline and auto-clears on unequip. No bespoke stat-bonus system.
    */
   grantsConditions?: string[];
+  /**
+   * PRODUCTION-CHAIN-III §G: for a CONSUMABLE potion, how many turns its `grantsConditions` buff
+   * lasts once drunk. The active "drink → push timed condition into `conditionTimers`" use-action
+   * reuses Combat's on-hit timer mechanic (see ENGINE/Combat `conditionTimers`/`transientConditions`).
+   * Absent on worn gear (that buff is passive-while-equipped, no timer).
+   */
+  conditionDurationTurns?: number;
   /** §M magic-material affinity hook (e.g. "lunar"|"fire"|"earth") — quality/flavour edge now; a
    *  mana/affinity bonus consumed by MAGIC-SKILLS later. Carried by ancient `magic_wood` species. */
   affinity?: string;

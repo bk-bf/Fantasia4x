@@ -66,6 +66,8 @@ export interface RangedWeapon {
   ammoCategory?: string;
   /** §Q craft-quality tier of the equipped instance — scales the shot's damage/accuracy/pen. */
   quality?: ItemQuality;
+  /** §I Famed stat-explosion multiplier of the equipped instance (×2–5, layered over the §Q tier). */
+  famedStatMult?: number;
   /** Which hand holds it — a thrown weapon's slot is cleared when it leaves the hand (self-consume). */
   slot: 'mainHand' | 'offHand';
   /** Visual particle style for the flight (thrown weapon's own; launchers override from the ammo). */
@@ -94,6 +96,7 @@ export function getRangedWeapon(attacker: Pawn | Mob): RangedWeapon | null {
         strScaled: wp!.strScaled ?? true,
         ammoCategory: wp!.ammoCategory,
         quality: inst.quality,
+        famedStatMult: inst.famedStatMult,
         slot,
         projectile: wp!.projectile,
         channeled: wp!.channeled

@@ -98,7 +98,7 @@
     "id"               : "make_cured_sturdy_hide",
     "station"          : "hide_rack",
     "inputs"           : {"wolf_hide": 1, "ash": 2},
-    "inputAlternatives": [ {"boar_hide": 1, "ash": 2}, {"wolf_hide": 1, "salt": 1}, {"boar_hide": 1, "salt": 1} ],
+    "inputAlternatives": [ {"boar_hide": 1, "ash": 2}, {"wolf_hide": 1, "salt": 1}, {"boar_hide": 1, "salt": 1}, {"worg_hide": 1, "ash": 2}, {"worg_hide": 1, "salt": 1} ],
     "outputs"          : {"cured_sturdy_hide": 1},
     "workAmount"       : 60,
     "toolTierRequired" : 0
@@ -107,7 +107,7 @@
     "id"               : "make_cured_heavy_hide",
     "station"          : "hide_rack",
     "inputs"           : {"elk_hide": 1, "ash": 2},
-    "inputAlternatives": [ {"elk_hide": 1, "salt": 1} ],
+    "inputAlternatives": [ {"elk_hide": 1, "salt": 1}, {"aurochs_hide": 1, "ash": 2}, {"aurochs_hide": 1, "salt": 1} ],
     "outputs"          : {"cured_heavy_hide": 1},
     "workAmount"       : 70,
     "toolTierRequired" : 0
@@ -2061,7 +2061,7 @@
     "id": "make_mail_coif",
     "station": "anvil",
     "inputs": {
-      "iron_bar": 6,
+      "mail_rings": 4,
       "linen_gambeson": 1
     },
     "outputs": {
@@ -2098,7 +2098,7 @@
     "id": "make_mail_hauberk",
     "station": "anvil",
     "inputs": {
-      "iron_bar": 12,
+      "mail_rings": 8,
       "linen_gambeson": 1
     },
     "outputs": {
@@ -2388,5 +2388,326 @@
     "outputs"         : {"mead": 2},
     "workAmount"      : 84,
     "toolTierRequired": 0
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §D — Resin & Glue
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id": "grind_bone_meal", "station": "quern",
+    "inputs": {"large_bones": 1}, "inputAlternatives": [ {"medium_bones": 2}, {"huge_bones": 1} ],
+    "outputs": {"bone_meal": 2}, "workAmount": 18, "toolTierRequired": 0
+  },
+  {
+    "id": "boil_bone_glue", "station": "hearth",
+    "inputs": {"bone_meal": 2, "water": 1}, "outputs": {"bone_glue": 1}, "workAmount": 24, "toolTierRequired": 0
+  },
+  {
+    "id": "boil_hide_glue", "station": "hearth",
+    "inputs": {"rotten_hide": 1, "water": 1}, "inputAlternatives": [ {"cured_thin_hide": 1, "water": 1} ],
+    "outputs": {"hide_glue": 1}, "workAmount": 24, "toolTierRequired": 0
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §B — Carpentry: buckets & barrels (carpenter_bench), brine (brewing_barrel)
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id": "make_wooden_bucket", "station": "carpenter_bench",
+    "inputs": {"pine_plank": 2, "resin": 1}, "inputAlternatives": [ {"pine_plank": 2, "bone_glue": 1}, {"pine_plank": 2, "hide_glue": 1} ],
+    "outputs": {"wooden_bucket": 1}, "workAmount": 16, "toolTierRequired": 1
+  },
+  {
+    "id": "make_wooden_barrel", "station": "carpenter_bench",
+    "inputs": {"pine_plank": 4, "resin": 2, "iron_nail": 2}, "inputAlternatives": [ {"pine_plank": 4, "bone_glue": 2, "iron_nail": 2} ],
+    "outputs": {"wooden_barrel": 1}, "workAmount": 28, "toolTierRequired": 1
+  },
+  {
+    "id": "brew_tanning_brine", "station": "brewing_barrel", "passive": true,
+    "inputs": {"bark": 3, "salt": 1, "ash": 1, "water": 2}, "outputs": {"tanning_brine": 2},
+    "workAmount": 60, "toolTierRequired": 0
+  },
+  {
+    "id": "brew_beast_brine", "station": "brewing_barrel", "passive": true,
+    "inputs": {"bark": 4, "salt": 2, "ash": 2, "water": 3}, "outputs": {"beast_brine": 1},
+    "workAmount": 96, "toolTierRequired": 0
+  },
+
+  // Common leather tanned PASSIVELY in a bucket (the brine is the tannin, burned as fuel — no bark).
+  // tanning_rack (active batch) recipes are kept as the throughput upgrade above hand-buckets.
+  {
+    "id": "tan_thin_leather_bucket", "station": "tanning_bucket_station", "passive": true,
+    "inputs": {"cured_thin_hide": 1}, "outputs": {"thin_leather": 1}, "workAmount": 40, "toolTierRequired": 0
+  },
+  {
+    "id": "tan_light_leather_bucket", "station": "tanning_bucket_station", "passive": true,
+    "inputs": {"cured_light_hide": 1}, "outputs": {"light_leather": 1}, "workAmount": 48, "toolTierRequired": 0
+  },
+  {
+    "id": "tan_sturdy_leather_bucket", "station": "tanning_bucket_station", "passive": true,
+    "inputs": {"cured_sturdy_hide": 1}, "outputs": {"sturdy_leather": 1}, "workAmount": 56, "toolTierRequired": 0
+  },
+  {
+    "id": "tan_heavy_leather_bucket", "station": "tanning_bucket_station", "passive": true,
+    "inputs": {"cured_heavy_hide": 1}, "outputs": {"heavy_leather": 1}, "workAmount": 64, "toolTierRequired": 0
+  },
+  {
+    "id": "tan_thick_leather_bucket", "station": "tanning_bucket_station", "passive": true,
+    "inputs": {"cured_thick_hide": 1}, "outputs": {"thick_leather": 1}, "workAmount": 72, "toolTierRequired": 0
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §E — Butchery yields for new carcasses (closing the ENTITIES Phase B gap)
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id": "make_aurochs_meat", "station": "butcher_spot",
+    "inputs": {"aurochs_carcass": 1}, "outputs": {"aurochs_meat": 2, "aurochs_hide": 1, "large_bones": 2},
+    "workAmount": 3600, "toolTierRequired": 0
+  },
+  {
+    "id": "make_mammoth_meat", "station": "butcher_spot",
+    "inputs": {"woolly_mammoth_carcass": 1}, "outputs": {"mammoth_meat": 3, "mammoth_fur": 1, "ivory": 2, "huge_bones": 2, "coarse_wool": 2},
+    "workAmount": 7200, "toolTierRequired": 0
+  },
+  {
+    "id": "make_owlbear_meat", "station": "butcher_spot",
+    "inputs": {"owlbear_carcass": 1}, "outputs": {"owlbear_meat": 2, "owlbear_pelt": 1, "large_bones": 1},
+    "workAmount": 3600, "toolTierRequired": 0
+  },
+  {
+    "id": "make_sabretooth_meat", "station": "butcher_spot",
+    "inputs": {"sabretooth_carcass": 1}, "outputs": {"sabretooth_meat": 1, "sabretooth_pelt": 1, "large_bones": 1},
+    "workAmount": 2400, "toolTierRequired": 0
+  },
+  {
+    "id": "make_crocodile_meat", "station": "butcher_spot",
+    "inputs": {"mire_crocodile_carcass": 1}, "outputs": {"crocodile_meat": 1, "croc_scaled_hide": 1, "medium_bones": 1},
+    "workAmount": 2400, "toolTierRequired": 0
+  },
+  {
+    "id": "make_hippogriff_meat", "station": "butcher_spot",
+    "inputs": {"hippogriff_carcass": 1}, "outputs": {"hippogriff_meat": 1, "hippogriff_feathered_hide": 1, "feathers": 2, "medium_bones": 1},
+    "workAmount": 2400, "toolTierRequired": 0
+  },
+  {
+    "id": "make_hoarfowl_meat", "station": "butcher_spot",
+    "inputs": {"hoarfowl_carcass": 1}, "outputs": {"fowl_meat": 1, "feathers": 1, "small_bones": 1},
+    "workAmount": 200, "toolTierRequired": 0
+  },
+  {
+    "id": "make_worg_meat", "station": "butcher_spot",
+    "inputs": {"worg_carcass": 1}, "outputs": {"worg_meat": 1, "worg_hide": 1, "medium_bones": 1},
+    "workAmount": 900, "toolTierRequired": 0
+  },
+  {
+    "id": "make_jackal_meat", "station": "butcher_spot",
+    "inputs": {"jackal_carcass": 1}, "outputs": {"worg_meat": 1, "wolf_hide": 1, "small_bones": 1},
+    "workAmount": 400, "toolTierRequired": 0
+  },
+  {
+    "id": "make_quillback_meat", "station": "butcher_spot",
+    "inputs": {"quillback_carcass": 1}, "outputs": {"boar_meat": 1, "boar_hide": 1, "medium_bones": 1},
+    "workAmount": 900, "toolTierRequired": 0
+  },
+  {
+    "id": "make_olm_meat", "station": "butcher_spot",
+    "inputs": {"giant_olm_carcass": 1}, "outputs": {"crocodile_meat": 1, "small_bones": 1},
+    "workAmount": 400, "toolTierRequired": 0
+  },
+
+  // Beast-grade leather: raw → cured (hide_rack) → tanned in BEAST brine (beast bucket) → hardened.
+  {
+    "id": "cure_beast_hide", "station": "hide_rack",
+    "inputs": {"owlbear_pelt": 1, "ash": 3},
+    "inputAlternatives": [ {"sabretooth_pelt": 1, "ash": 3}, {"mammoth_fur": 1, "ash": 4}, {"bear_pelt": 1, "ash": 3}, {"hippogriff_feathered_hide": 1, "ash": 3}, {"owlbear_pelt": 1, "salt": 2}, {"sabretooth_pelt": 1, "salt": 2}, {"bear_pelt": 1, "salt": 2} ],
+    "outputs": {"cured_beast_hide": 1}, "workAmount": 90, "toolTierRequired": 1
+  },
+  {
+    "id": "tan_beast_leather", "station": "beast_tanning_bucket", "passive": true,
+    "inputs": {"cured_beast_hide": 1}, "outputs": {"beast_leather": 1}, "workAmount": 120, "toolTierRequired": 1
+  },
+  {
+    "id": "tan_scale_plate", "station": "beast_tanning_bucket", "passive": true,
+    "inputs": {"croc_scaled_hide": 1}, "outputs": {"scale_plate": 1}, "workAmount": 120, "toolTierRequired": 1
+  },
+  {
+    "id": "harden_boiled_leather", "station": "tanning_rack",
+    "inputs": {"beast_leather": 1, "water": 1}, "outputs": {"boiled_leather": 1}, "workAmount": 60, "toolTierRequired": 1
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §E.2 — Wool line (soft goods). coarse_wool sourced from §E butchery; the
+  // refine/felt/weave ladder lives at the weaving frame. (Live-shear / sheep source: see spec note.)
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id": "card_wool", "station": "weaving_frame",
+    "inputs": {"coarse_wool": 2}, "outputs": {"wool": 1}, "workAmount": 14, "toolTierRequired": 0
+  },
+  {
+    "id": "comb_fine_wool", "station": "weaving_frame",
+    "inputs": {"wool": 2}, "outputs": {"fine_wool": 1}, "workAmount": 18, "toolTierRequired": 0
+  },
+  {
+    "id": "make_felt", "station": "weaving_frame",
+    "inputs": {"wool": 3}, "outputs": {"felt": 1}, "workAmount": 20, "toolTierRequired": 0
+  },
+  {
+    "id": "weave_woolcloth", "station": "weaving_frame",
+    "inputs": {"fine_wool": 2}, "outputs": {"woolcloth": 1}, "workAmount": 24, "toolTierRequired": 0
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §C — Construction chain: mortar → concrete → magic-dust concrete
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id": "burn_quicklime", "station": "pottery_kiln", "passive": true,
+    "inputs": {"limestone": 2}, "outputs": {"quicklime": 2}, "workAmount": 16, "toolTierRequired": 1
+  },
+  {
+    "id": "make_mortar", "station": "masons_bench",
+    "inputs": {"quicklime": 1, "sand": 1, "water": 1}, "outputs": {"mortar": 2}, "workAmount": 12, "toolTierRequired": 1
+  },
+  {
+    "id": "crush_stone", "station": "masons_bench",
+    "inputs": {"granite": 1}, "inputAlternatives": [ {"limestone": 1}, {"sandstone": 1}, {"marble": 1} ],
+    "outputs": {"crushed_stone": 2}, "workAmount": 14, "toolTierRequired": 1
+  },
+  {
+    "id": "make_concrete", "station": "masons_bench",
+    "inputs": {"quicklime": 1, "crushed_stone": 2, "water": 1}, "outputs": {"concrete": 2}, "workAmount": 18, "toolTierRequired": 1
+  },
+  {
+    "id": "draw_rebar", "station": "anvil",
+    "inputs": {"iron_bar": 1}, "inputAlternatives": [ {"steel_bar": 1} ],
+    "outputs": {"rebar": 2}, "workAmount": 24, "toolTierRequired": 2
+  },
+  // Magic age (runic_inscription): gem_dust is ground from INFUSED gems only — never normal cut gems.
+  {
+    "id": "grind_gem_dust", "station": "lapidary_bench", "researchRequired": "runic_inscription",
+    "inputs": {"infused_ruby": 1},
+    "inputAlternatives": [ {"infused_sapphire": 1}, {"infused_emerald": 1}, {"infused_topaz": 1}, {"infused_amethyst": 1}, {"infused_citrine": 1}, {"infused_moonstone": 1} ],
+    "outputs": {"gem_dust": 2}, "workAmount": 20, "toolTierRequired": 1
+  },
+  {
+    "id": "mix_magic_concrete", "station": "masons_bench", "researchRequired": "runic_inscription",
+    "inputs": {"concrete": 2, "gem_dust": 1}, "outputs": {"magic_concrete": 2}, "workAmount": 32, "toolTierRequired": 2
+  },
+  {
+    "id": "make_arcane_resin", "station": "lapidary_bench", "researchRequired": "runic_inscription",
+    "inputs": {"resin": 2, "gem_dust": 1}, "outputs": {"arcane_resin": 2}, "workAmount": 24, "toolTierRequired": 1
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §F — Armour: mail wire/ring sub-chain, scale, steel plate, beast/bone, regalia
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id": "draw_iron_wire", "station": "anvil", "researchRequired": "iron_working",
+    "inputs": {"iron_bar": 1}, "outputs": {"iron_wire": 2}, "workAmount": 14, "toolTierRequired": 2
+  },
+  {
+    "id": "make_mail_rings", "station": "anvil", "researchRequired": "iron_working",
+    "inputs": {"iron_wire": 1}, "outputs": {"mail_rings": 2}, "workAmount": 16, "toolTierRequired": 2
+  },
+  {
+    "id": "make_scale_cuirass", "station": "makers_bench",
+    "inputs": {"scale_plate": 4, "sturdy_leather": 2}, "outputs": {"scale_cuirass": 1}, "workAmount": 60, "toolTierRequired": 1
+  },
+  {
+    "id": "make_plate_cuirass", "station": "anvil", "researchRequired": "steel_making",
+    "inputs": {"steel_bar": 8, "boiled_leather": 1}, "outputs": {"plate_cuirass": 1}, "workAmount": 64, "toolTierRequired": 3
+  },
+  {
+    "id": "make_great_helm", "station": "anvil", "researchRequired": "steel_making",
+    "inputs": {"steel_bar": 4}, "outputs": {"great_helm": 1}, "workAmount": 40, "toolTierRequired": 3
+  },
+  {
+    "id": "make_beast_leather_plate", "station": "makers_bench",
+    "inputs": {"boiled_leather": 4, "sturdy_leather": 2}, "inputAlternatives": [ {"boiled_leather": 4, "heavy_leather": 2} ],
+    "outputs": {"beast_leather_plate": 1}, "workAmount": 72, "toolTierRequired": 1
+  },
+  {
+    "id": "make_bone_plated_cuirass", "station": "makers_bench",
+    "inputs": {"huge_bones": 3, "heavy_leather": 2}, "inputAlternatives": [ {"large_bones": 5, "heavy_leather": 2} ],
+    "outputs": {"bone_plated_cuirass": 1}, "workAmount": 64, "toolTierRequired": 1
+  },
+  {
+    "id": "make_horned_helm", "station": "makers_bench",
+    "inputs": {"huge_bones": 1, "large_bones": 2, "sturdy_leather": 1}, "outputs": {"horned_helm": 1}, "workAmount": 48, "toolTierRequired": 1
+  },
+  {
+    "id": "make_ceremonial_plate", "station": "anvil", "researchRequired": "steel_making",
+    "inputs": {"steel_bar": 6, "gold_bar": 2}, "outputs": {"ceremonial_plate": 1}, "workAmount": 80, "toolTierRequired": 3
+  },
+  {
+    "id": "make_regal_robes", "station": "weaving_frame",
+    "inputs": {"woolcloth": 4, "fine_wool": 2}, "outputs": {"regal_robes": 1}, "workAmount": 36, "toolTierRequired": 0
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §G — Alchemy: vessels, mundane products (dye/soap/tannin), and potions
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id": "fire_clay_alembic", "station": "pottery_kiln", "passive": true,
+    "inputs": {"blue_clay": 4}, "outputs": {"clay_alembic": 1}, "workAmount": 18, "toolTierRequired": 1
+  },
+  {
+    "id": "blow_glassware", "station": "advanced_kiln", "passive": true,
+    "inputs": {"sand": 3}, "outputs": {"glassware": 2}, "workAmount": 20, "toolTierRequired": 1, "researchRequired": "pottery"
+  },
+  {
+    "id": "distil_tannin", "station": "alchemy_lab",
+    "inputs": {"bark": 4, "water": 1}, "outputs": {"tannin": 2}, "workAmount": 18, "toolTierRequired": 1, "researchRequired": "basic_alchemy"
+  },
+  {
+    "id": "make_dye", "station": "alchemy_lab",
+    "inputs": {"wild_berries": 3, "water": 1}, "inputAlternatives": [ {"culinary_herbs": 3, "water": 1} ],
+    "outputs": {"dye": 2}, "workAmount": 14, "toolTierRequired": 1, "researchRequired": "basic_alchemy"
+  },
+  {
+    "id": "make_soap", "station": "alchemy_lab",
+    "inputs": {"animal_fat": 2, "ash": 2}, "outputs": {"soap": 2}, "workAmount": 16, "toolTierRequired": 1, "researchRequired": "basic_alchemy"
+  },
+  // Potions — gem-dust gives potency, glassware is the bottle. gem_dust is itself runic-gated, so
+  // potions naturally sit in the magic ages. Quality (alchemy_quality stat) will scale duration later.
+  {
+    "id": "brew_potion_of_might", "station": "alchemy_lab",
+    "inputs": {"woundwort": 2, "gem_dust": 1, "glassware": 1}, "outputs": {"potion_of_might": 1}, "workAmount": 24, "toolTierRequired": 1
+  },
+  {
+    "id": "brew_draught_of_vigor", "station": "alchemy_lab",
+    "inputs": {"woundwort": 2, "gem_dust": 1, "glassware": 1}, "outputs": {"draught_of_vigor": 1}, "workAmount": 24, "toolTierRequired": 1
+  },
+  {
+    "id": "brew_elixir_of_grace", "station": "alchemy_lab",
+    "inputs": {"woundwort": 2, "gem_dust": 1, "glassware": 1}, "outputs": {"elixir_of_grace": 1}, "workAmount": 24, "toolTierRequired": 1
+  },
+  {
+    "id": "brew_tonic_of_fortitude", "station": "alchemy_lab",
+    "inputs": {"woundwort": 2, "gem_dust": 1, "glassware": 1}, "outputs": {"tonic_of_fortitude": 1}, "workAmount": 24, "toolTierRequired": 1
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §B.3 — Magic recipe families gated to the infused capstone stations
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id": "smelt_magic_alloy", "station": "runic_crucible", "researchRequired": "runic_inscription",
+    "inputs": {"steel_bar": 2, "gem_dust": 1}, "outputs": {"magic_alloy_bar": 1}, "workAmount": 36, "toolTierRequired": 2
+  },
+  {
+    "id": "spin_enchant_thread", "station": "runic_loom", "researchRequired": "runic_inscription",
+    "inputs": {"fine_wool": 2, "gem_dust": 1}, "inputAlternatives": [ {"woolcloth": 2, "gem_dust": 1} ],
+    "outputs": {"enchant_thread": 2}, "workAmount": 28, "toolTierRequired": 1
+  },
+  {
+    "id": "cut_runed_block", "station": "glyph_cutters_banker", "researchRequired": "runic_inscription",
+    "inputs": {"granite_block": 1, "gem_dust": 1}, "inputAlternatives": [ {"limestone_block": 1, "gem_dust": 1}, {"marble_block": 1, "gem_dust": 1} ],
+    "outputs": {"runed_block": 1}, "workAmount": 32, "toolTierRequired": 2
+  },
+
+  // §D resin tap — the reliable resin source (vs the rough 0–1 woodcut trickle). Passive + slow on
+  // purpose: resin is a gate material, so the tap draws pitch from conifer bark/logs over time.
+  {
+    "id": "tap_resin", "station": "resin_tap", "passive": true,
+    "inputs": {"bark": 2}, "inputAlternatives": [ {"pine_log": 1}, {"emberwood_log": 1} ],
+    "outputs": {"resin": 2}, "workAmount": 60, "toolTierRequired": 1
   }
 ]

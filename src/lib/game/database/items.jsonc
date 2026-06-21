@@ -1312,7 +1312,7 @@
     "charSpans"        : [ {"sheet": "items", "id": 33} ],
     "name"             : "Granite Block",
     "type"             : "material",
-    "category"         : "construction",
+    "category"         : "block",
     "maxDurability"    : 300,
     "deteriorationRate": 0.01,
     "description"      : "Dressed granite block. Strong walls and prestige stonework.",
@@ -1327,7 +1327,7 @@
     "charSpans"        : [ {"sheet": "items", "id": 33} ],
     "name"             : "Limestone Block",
     "type"             : "material",
-    "category"         : "construction",
+    "category"         : "block",
     "maxDurability"    : 300,
     "deteriorationRate": 0.01,
     "description"      : "Dressed limestone block. Soft, easy walls and mortar work.",
@@ -1342,7 +1342,7 @@
     "charSpans"        : [ {"sheet": "items", "id": 33} ],
     "name"             : "Sandstone Block",
     "type"             : "material",
-    "category"         : "construction",
+    "category"         : "block",
     "maxDurability"    : 300,
     "deteriorationRate": 0.01,
     "description"      : "Dressed sandstone block. Cheap bulk building.",
@@ -1357,7 +1357,7 @@
     "charSpans"        : [ {"sheet": "items", "id": 33} ],
     "name"             : "Marble Block",
     "type"             : "material",
-    "category"         : "construction",
+    "category"         : "block",
     "maxDurability"    : 300,
     "deteriorationRate": 0.01,
     "description"      : "Dressed marble block. Statues, fine floors, prestige decor.",
@@ -6197,5 +6197,519 @@
     "category": "drink", "description": "Honey wine, golden and potent. The oldest brew there is — and the one that bites hardest.",
     "color": "#D8A52A", "amount": 0, "weightKg": 0.9, "volumeL": 1, "nutrition": 12, "intoxication": 14,
     "maxDurability": 300, "deteriorationRate": 0.004
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §D — Resin & Glue (the binder chain)
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id"               : "resin",
+    "charSpans"        : [ {"sheet": "items", "id": 71} ],
+    "name"             : "Tree Resin",
+    "type"             : "material",
+    "category"         : "organic",
+    "maxDurability"    : 200,
+    "deteriorationRate": 0.01,
+    "description"      : "Sticky sap tapped from conifers. The earliest glue — seals buckets, hafts heads, and binds bow nocks.",
+    "color"            : "#C68A2E",
+    "amount"           : 0,
+    "weightKg"         : 0.3,
+    "volumeL"          : 0.4,
+    "processingType"   : ["crafting"]
+  },
+  {
+    "id"               : "bone_meal",
+    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "name"             : "Bone Meal",
+    "type"             : "material",
+    "category"         : "organic",
+    "maxDurability"    : 120,
+    "deteriorationRate": 0.02,
+    "description"      : "Bone ground to a coarse powder. Boils into glue, or feeds the soil as fertiliser.",
+    "color"            : "#D8D0BC",
+    "amount"           : 0,
+    "weightKg"         : 0.4,
+    "volumeL"          : 0.4,
+    "processingType"   : ["crafting"]
+  },
+  {
+    "id"               : "bone_glue",
+    "charSpans"        : [ {"sheet": "items", "id": 71} ],
+    "name"             : "Bone Glue",
+    "type"             : "material",
+    "category"         : "organic",
+    "maxDurability"    : 200,
+    "deteriorationRate": 0.01,
+    "description"      : "Strong glue boiled down from bone meal. A craftable binder that beats wild resin — no resinous grove needed.",
+    "color"            : "#B89860",
+    "amount"           : 0,
+    "weightKg"         : 0.3,
+    "volumeL"          : 0.3,
+    "processingType"   : ["crafting"]
+  },
+  {
+    "id"               : "hide_glue",
+    "charSpans"        : [ {"sheet": "items", "id": 71} ],
+    "name"             : "Hide Glue",
+    "type"             : "material",
+    "category"         : "organic",
+    "maxDurability"    : 200,
+    "deteriorationRate": 0.01,
+    "description"      : "Glue rendered from hide scraps and trimmings. Interchangeable with bone glue — a sink for tanning offcuts.",
+    "color"            : "#A88858",
+    "amount"           : 0,
+    "weightKg"         : 0.3,
+    "volumeL"          : 0.3,
+    "processingType"   : ["crafting"]
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §B — Carpentry: buckets, barrels, and tanning brine (the bucket's "fuel")
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id"               : "wooden_bucket",
+    "charSpans"        : [ {"sheet": "items", "id": 41} ],
+    "name"             : "Wooden Bucket",
+    "type"             : "material",
+    "category"         : "storage",
+    "maxDurability"    : 150,
+    "deteriorationRate": 0.02,
+    "description"      : "Resin-sealed plank-staved bucket. Carry water — or set it down and load it with brine to tan hides.",
+    "color"            : "#9A7B4F",
+    "amount"           : 0,
+    "weightKg"         : 2,
+    "volumeL"          : 3,
+    "processingType"   : ["crafting"]
+  },
+  {
+    "id"               : "wooden_barrel",
+    "charSpans"        : [ {"sheet": "items", "id": 41} ],
+    "name"             : "Wooden Barrel",
+    "type"             : "material",
+    "category"         : "storage",
+    "maxDurability"    : 200,
+    "deteriorationRate": 0.015,
+    "description"      : "Big plank-staved cask. Set it down to steep tanning brine or ferment a brew over days.",
+    "color"            : "#8B6B45",
+    "amount"           : 0,
+    "weightKg"         : 6,
+    "volumeL"          : 12,
+    "processingType"   : ["crafting"]
+  },
+  {
+    "id"               : "tanning_brine",
+    "charSpans"        : [ {"sheet": "items", "id": 71} ],
+    "name"             : "Tanning Brine",
+    "type"             : "material",
+    "category"         : "organic",
+    "maxDurability"    : 300,
+    "deteriorationRate": 0.005,
+    "description"      : "Bark-tannin pickle — salt, ash-lye and water steeped for days. The soak liquor a tanning bucket burns through to turn cured hide into leather.",
+    "color"            : "#6E5326",
+    "amount"           : 0,
+    "weightKg"         : 1,
+    "volumeL"          : 1.5,
+    "fuelValue"        : 12,
+    "fuelHeat"         : 1,
+    "processingType"   : ["crafting"]
+  },
+  {
+    "id"               : "beast_brine",
+    "charSpans"        : [ {"sheet": "items", "id": 71} ],
+    "name"             : "Beast Brine",
+    "type"             : "material",
+    "category"         : "organic",
+    "maxDurability"    : 300,
+    "deteriorationRate": 0.005,
+    "description"      : "A fierce double-strength tannin liquor of oak-gall and hardwood ash. Hot enough to bite into thick beast hide — ordinary brine can't.",
+    "color"            : "#4A360F",
+    "amount"           : 0,
+    "weightKg"         : 1.2,
+    "volumeL"          : 1.5,
+    "fuelValue"        : 16,
+    "fuelHeat"         : 3,
+    "processingType"   : ["crafting"]
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §E — Beast meat, hides & byproducts (closing the carcass-yield gap)
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id": "aurochs_meat", "charSpans": [ {"sheet": "items", "id": 67} ], "name": "Aurochs Meat", "type": "food",
+    "category": "meat", "maxDurability": 60, "deteriorationRate": 0.08,
+    "description": "Heavy slabs of wild-ox beef. Feeds a hall.", "color": "#9C4A30", "amount": 0,
+    "weightKg": 1.6, "volumeL": 1.6, "nutrition": 90, "toolTierRequired": 0, "processingType": ["cooking"],
+    "decaySeconds": 900, "decaysTo": "rotten_meat"
+  },
+  {
+    "id": "mammoth_meat", "charSpans": [ {"sheet": "items", "id": 67} ], "name": "Mammoth Meat", "type": "food",
+    "category": "meat", "maxDurability": 60, "deteriorationRate": 0.07,
+    "description": "Dense, fatty proboscidean meat. One tusk-beast feeds a colony through winter.", "color": "#8A4628", "amount": 0,
+    "weightKg": 2, "volumeL": 2, "nutrition": 110, "toolTierRequired": 0, "processingType": ["cooking"],
+    "decaySeconds": 1200, "decaysTo": "rotten_meat"
+  },
+  {
+    "id": "owlbear_meat", "charSpans": [ {"sheet": "items", "id": 67} ], "name": "Owlbear Meat", "type": "food",
+    "category": "meat", "maxDurability": 60, "deteriorationRate": 0.08,
+    "description": "Rank, stringy meat off a fearsome beast. Edible, just.", "color": "#7A5238", "amount": 0,
+    "weightKg": 1.4, "volumeL": 1.4, "nutrition": 78, "toolTierRequired": 0, "processingType": ["cooking"],
+    "decaySeconds": 600, "decaysTo": "rotten_meat"
+  },
+  {
+    "id": "sabretooth_meat", "charSpans": [ {"sheet": "items", "id": 67} ], "name": "Sabretooth Meat", "type": "food",
+    "category": "meat", "maxDurability": 60, "deteriorationRate": 0.08,
+    "description": "Lean great-cat meat. Gamey and tough, but plentiful.", "color": "#9A6040", "amount": 0,
+    "weightKg": 1.2, "volumeL": 1.2, "nutrition": 70, "toolTierRequired": 0, "processingType": ["cooking"],
+    "decaySeconds": 600, "decaysTo": "rotten_meat"
+  },
+  {
+    "id": "crocodile_meat", "charSpans": [ {"sheet": "items", "id": 67} ], "name": "Crocodile Meat", "type": "food",
+    "category": "meat", "maxDurability": 60, "deteriorationRate": 0.09,
+    "description": "Pale, firm reptile tail-meat. Mild once cooked through.", "color": "#B0A060", "amount": 0,
+    "weightKg": 1.1, "volumeL": 1.1, "nutrition": 64, "toolTierRequired": 0, "processingType": ["cooking"],
+    "decaySeconds": 600, "decaysTo": "rotten_meat"
+  },
+  {
+    "id": "hippogriff_meat", "charSpans": [ {"sheet": "items", "id": 67} ], "name": "Hippogriff Meat", "type": "food",
+    "category": "meat", "maxDurability": 60, "deteriorationRate": 0.08,
+    "description": "Half-fowl, half-horse — rich dark meat with a poultry edge.", "color": "#A85838", "amount": 0,
+    "weightKg": 1.3, "volumeL": 1.3, "nutrition": 80, "toolTierRequired": 0, "processingType": ["cooking"],
+    "decaySeconds": 600, "decaysTo": "rotten_meat"
+  },
+  {
+    "id": "fowl_meat", "charSpans": [ {"sheet": "items", "id": 67} ], "name": "Fowl Meat", "type": "food",
+    "category": "meat", "maxDurability": 50, "deteriorationRate": 0.09,
+    "description": "Wild-bird meat off a hoarfowl or the like. Quick and lean.", "color": "#C08858", "amount": 0,
+    "weightKg": 0.6, "volumeL": 0.6, "nutrition": 40, "toolTierRequired": 0, "processingType": ["cooking"],
+    "decaySeconds": 500, "decaysTo": "rotten_meat"
+  },
+  {
+    "id": "worg_meat", "charSpans": [ {"sheet": "items", "id": 67} ], "name": "Worg Meat", "type": "food",
+    "category": "meat", "maxDurability": 60, "deteriorationRate": 0.08,
+    "description": "Coarse meat off a great wolf-beast. Tough, gamey, filling.", "color": "#8A5840", "amount": 0,
+    "weightKg": 1.1, "volumeL": 1.1, "nutrition": 60, "toolTierRequired": 0, "processingType": ["cooking"],
+    "decaySeconds": 600, "decaysTo": "rotten_meat"
+  },
+  {
+    "id": "ivory", "charSpans": [ {"sheet": "items", "id": 138} ], "name": "Ivory", "type": "material",
+    "category": "organic", "maxDurability": 200, "deteriorationRate": 0.005,
+    "description": "A mammoth tusk's dense ivory. Prestige carving, inlay, and fine hafts.", "color": "#EDE4CF",
+    "amount": 0, "weightKg": 2, "volumeL": 1.5, "processingType": ["crafting"]
+  },
+  {
+    "id": "huge_bones", "charSpans": [ {"sheet": "items", "id": 138} ], "name": "Huge Bones", "type": "material",
+    "category": "organic", "maxDurability": 90, "deteriorationRate": 0.06,
+    "description": "Colossal load-bearing bones from a mammoth or great beast. Heavy bone armour and structural carving.", "color": "#CEC6B2",
+    "amount": 0, "weightKg": 2.5, "volumeL": 3, "processingType": ["crafting"]
+  },
+  {
+    "id": "feathers", "charSpans": [ {"sheet": "items", "id": 158} ], "name": "Feathers", "type": "material",
+    "category": "organic", "maxDurability": 80, "deteriorationRate": 0.07,
+    "description": "Large flight feathers off a hippogriff or fowl. Fletching, stuffing, and showy trim.", "color": "#C8B488",
+    "amount": 0, "weightKg": 0.15, "volumeL": 0.6, "processingType": ["crafting"]
+  },
+
+  // Beast-grade RAW hides (drop from the §E peak beasts; feed the multi-step beast-leather chain)
+  {
+    "id": "aurochs_hide", "charSpans": [ {"sheet": "items", "id": 152} ], "name": "Aurochs Hide", "type": "material",
+    "category": "organic", "maxDurability": 90, "deteriorationRate": 0.06, "decaySeconds": 3000, "decaysTo": "rotten_hide",
+    "description": "A vast, heavy wild-ox hide. Cures into the toughest common leather.", "color": "#7A5838",
+    "amount": 0, "weightKg": 3.5, "volumeL": 7, "toolTierRequired": 0, "processingType": ["leatherworking"]
+  },
+  {
+    "id": "worg_hide", "charSpans": [ {"sheet": "items", "id": 152} ], "name": "Worg Hide", "type": "material",
+    "category": "organic", "maxDurability": 85, "deteriorationRate": 0.07, "decaySeconds": 3000, "decaysTo": "rotten_hide",
+    "description": "Coarse, dense pelt of a great wolf-beast. Sturdy leather and warm cloaks.", "color": "#6A6258",
+    "amount": 0, "weightKg": 2.2, "volumeL": 4.5, "toolTierRequired": 0, "processingType": ["leatherworking"]
+  },
+  {
+    "id": "owlbear_pelt", "charSpans": [ {"sheet": "items", "id": 152} ], "name": "Owlbear Pelt", "type": "material",
+    "category": "organic", "maxDurability": 95, "deteriorationRate": 0.06, "decaySeconds": 3000, "decaysTo": "rotten_hide",
+    "description": "A dense, matted pelt — fur over a thick beast hide. Beast-grade leather backing.", "color": "#5E4632",
+    "amount": 0, "weightKg": 3.5, "volumeL": 7, "toolTierRequired": 0, "processingType": ["leatherworking"]
+  },
+  {
+    "id": "sabretooth_pelt", "charSpans": [ {"sheet": "items", "id": 152} ], "name": "Sabretooth Pelt", "type": "material",
+    "category": "organic", "maxDurability": 95, "deteriorationRate": 0.06, "decaySeconds": 3000, "decaysTo": "rotten_hide",
+    "description": "A great-cat's dense striped pelt. Beast-grade hide, prized for armour and prestige.", "color": "#9A7048",
+    "amount": 0, "weightKg": 3, "volumeL": 6, "toolTierRequired": 0, "processingType": ["leatherworking"]
+  },
+  {
+    "id": "mammoth_fur", "charSpans": [ {"sheet": "items", "id": 152} ], "name": "Mammoth Fur-Hide", "type": "material",
+    "category": "organic", "maxDurability": 100, "deteriorationRate": 0.05, "decaySeconds": 3600, "decaysTo": "rotten_hide",
+    "description": "Immense shaggy fur-hide. The thickest beast leather there is — and the warmest.", "color": "#6E5236",
+    "amount": 0, "weightKg": 6, "volumeL": 12, "toolTierRequired": 0, "processingType": ["leatherworking"]
+  },
+  {
+    "id": "croc_scaled_hide", "charSpans": [ {"sheet": "items", "id": 152} ], "name": "Scaled Crocodile Hide", "type": "material",
+    "category": "organic", "maxDurability": 110, "deteriorationRate": 0.05, "decaySeconds": 3600, "decaysTo": "rotten_hide",
+    "description": "Armoured reptilian hide, ridged with bony scutes. Hardens into scale plate.", "color": "#4C5A3A",
+    "amount": 0, "weightKg": 3.5, "volumeL": 6, "toolTierRequired": 0, "processingType": ["leatherworking"]
+  },
+  {
+    "id": "hippogriff_feathered_hide", "charSpans": [ {"sheet": "items", "id": 152} ], "name": "Feathered Hide", "type": "material",
+    "category": "organic", "maxDurability": 90, "deteriorationRate": 0.06, "decaySeconds": 3000, "decaysTo": "rotten_hide",
+    "description": "Half-feathered, half-hide pelt of a hippogriff. Light beast-grade armour backing.", "color": "#7A5E40",
+    "amount": 0, "weightKg": 2.5, "volumeL": 5, "toolTierRequired": 0, "processingType": ["leatherworking"]
+  },
+
+  // Beast-leather chain intermediates: raw → cured → tanned (beast_brine) → hardened/plated
+  {
+    "id": "cured_beast_hide", "charSpans": [ {"sheet": "items", "id": 152} ], "name": "Cured Beast Hide", "type": "material",
+    "category": "organic", "maxDurability": 130, "deteriorationRate": 0.03,
+    "description": "Scraped and ash-cured beast hide. Stable — won't rot. Soaks in beast brine to become beast leather.", "color": "#6A4E34",
+    "amount": 0, "weightKg": 3, "volumeL": 6, "toolTierRequired": 0, "processingType": ["leatherworking"]
+  },
+  {
+    "id": "beast_leather", "charSpans": [ {"sheet": "items", "id": 152} ], "name": "Beast Leather", "type": "material",
+    "category": "leather", "maxDurability": 200, "deteriorationRate": 0.02,
+    "description": "Thick, supple leather tanned from beast hide in strong brine. Heavy armour and prestige goods.", "color": "#5A4228",
+    "amount": 0, "weightKg": 2, "volumeL": 4
+  },
+  {
+    "id": "boiled_leather", "charSpans": [ {"sheet": "items", "id": 152} ], "name": "Boiled Leather", "type": "material",
+    "category": "leather", "maxDurability": 240, "deteriorationRate": 0.015,
+    "description": "Beast leather hardened in hot wax and water until rigid as a shell. The leather peak — heavy armour plate.", "color": "#3E2E1A",
+    "amount": 0, "weightKg": 2.2, "volumeL": 4
+  },
+  {
+    "id": "scale_plate", "charSpans": [ {"sheet": "items", "id": 152} ], "name": "Scale Plate", "type": "material",
+    "category": "leather", "maxDurability": 260, "deteriorationRate": 0.012,
+    "description": "Hardened crocodile scutes laid like overlapping plates. Natural scale armour.", "color": "#3A4A2C",
+    "amount": 0, "weightKg": 2.6, "volumeL": 4
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §E.2 — Wool ≠ leather: the soft-goods / furniture material line
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id": "wool", "charSpans": [ {"sheet": "items", "id": 158} ], "name": "Wool", "type": "material",
+    "category": "organic", "maxDurability": 100, "deteriorationRate": 0.03,
+    "description": "Sheared fleece. Spun, felted, or woven into soft furnishings — never armour.", "color": "#E8E0D0",
+    "amount": 0, "weightKg": 0.4, "volumeL": 1.2, "processingType": ["weaving"]
+  },
+  {
+    "id": "coarse_wool", "charSpans": [ {"sheet": "items", "id": 158} ], "name": "Coarse Wool", "type": "material",
+    "category": "organic", "maxDurability": 100, "deteriorationRate": 0.03,
+    "description": "Rough fleece off a goat or mammoth. Felts into thick bedding and packs.", "color": "#C8BCA4",
+    "amount": 0, "weightKg": 0.5, "volumeL": 1.4, "processingType": ["weaving"]
+  },
+  {
+    "id": "fine_wool", "charSpans": [ {"sheet": "items", "id": 158} ], "name": "Fine Wool", "type": "material",
+    "category": "organic", "maxDurability": 120, "deteriorationRate": 0.025,
+    "description": "Soft, fine-staple fleece. Woven into prestige cloth and the finest furnishings.", "color": "#F2ECE0",
+    "amount": 0, "weightKg": 0.3, "volumeL": 1, "processingType": ["weaving"]
+  },
+  {
+    "id": "felt", "charSpans": [ {"sheet": "items", "id": 158} ], "name": "Felt", "type": "material",
+    "category": "organic", "maxDurability": 140, "deteriorationRate": 0.02,
+    "description": "Matted wool pressed into a dense cloth. Bedding, padding, packs and soft furnishings.", "color": "#D8CCB4",
+    "amount": 0, "weightKg": 0.5, "volumeL": 1.2, "processingType": ["weaving"]
+  },
+  {
+    "id": "woolcloth", "charSpans": [ {"sheet": "items", "id": 158} ], "name": "Woolcloth", "type": "material",
+    "category": "organic", "maxDurability": 150, "deteriorationRate": 0.02,
+    "description": "Woven wool cloth. Furnishings, bedding, and prestige hangings.", "color": "#C8B89C",
+    "amount": 0, "weightKg": 0.4, "volumeL": 1, "processingType": ["weaving"]
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §C — Construction: the wall-material ladder (mortar → concrete → magic-dust)
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id": "quicklime", "charSpans": [ {"sheet": "items", "id": 11} ], "name": "Quicklime", "type": "material",
+    "category": "stone", "maxDurability": 200, "deteriorationRate": 0.02,
+    "description": "Limestone burned in the kiln to caustic lime. The binder in mortar and concrete.", "color": "#E8E4D8",
+    "amount": 0, "weightKg": 0.8, "volumeL": 0.6, "processingType": ["masonry"]
+  },
+  {
+    "id": "mortar", "charSpans": [ {"sheet": "items", "id": 11} ], "name": "Mortar", "type": "material",
+    "category": "stone", "maxDurability": 200, "deteriorationRate": 0.02,
+    "description": "Lime, sand and water worked to a paste. Beds and binds dressed stone blocks into a lasting wall.", "color": "#CFC8B6",
+    "amount": 0, "weightKg": 1, "volumeL": 0.8, "processingType": ["masonry"]
+  },
+  {
+    "id": "crushed_stone", "charSpans": [ {"sheet": "items", "id": 11} ], "name": "Crushed Stone", "type": "material",
+    "category": "stone", "maxDurability": 200, "deteriorationRate": 0.01,
+    "description": "Rock hammered to gravel. Pozzolanic aggregate for concrete — and the bed for roads.", "color": "#A8A096",
+    "amount": 0, "weightKg": 1.5, "volumeL": 1.2, "processingType": ["masonry"]
+  },
+  {
+    "id": "concrete", "charSpans": [ {"sheet": "items", "id": 11} ], "name": "Concrete", "type": "material",
+    "category": "stone", "maxDurability": 250, "deteriorationRate": 0.005,
+    "description": "Roman-style mix of quicklime and crushed stone. Sets hard as rock — the strongest mundane masonry.", "color": "#9C968C",
+    "amount": 0, "weightKg": 2, "volumeL": 1.5, "processingType": ["masonry"]
+  },
+  {
+    "id": "rebar", "charSpans": [ {"sheet": "items", "id": 138} ], "name": "Rebar", "type": "material",
+    "category": "metal", "maxDurability": 300, "deteriorationRate": 0,
+    "description": "Iron bar drawn into ribbed rod. Cast into concrete, it carries the load no stone can.", "color": "#8A6048",
+    "amount": 0, "weightKg": 2.5, "volumeL": 0.5, "processingType": ["metalworking"]
+  },
+  {
+    "id": "gem_dust", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Gem Dust", "type": "material",
+    "category": "magic_crystal", "maxDurability": 0, "deteriorationRate": 0,
+    "description": "Mana-dust ground from an infused gem. The shared currency of every magic age — walls, infused stations, binders, potions, defences and reforging all draw on it.", "color": "#C060E0",
+    "amount": 0, "weightKg": 0.05, "volumeL": 0.05
+  },
+  {
+    "id": "magic_concrete", "charSpans": [ {"sheet": "items", "id": 11} ], "name": "Runed Concrete", "type": "material",
+    "category": "stone", "maxDurability": 400, "deteriorationRate": 0,
+    "description": "Concrete kneaded with gem-dust until the runes set glowing in the cure. Walls of it shrug off blade, weather and spell alike.", "color": "#7C5CA0",
+    "amount": 0, "weightKg": 2.2, "volumeL": 1.5, "processingType": ["masonry"]
+  },
+  {
+    "id": "arcane_resin", "charSpans": [ {"sheet": "items", "id": 71} ], "name": "Arcane Binder", "type": "material",
+    "category": "magic_crystal", "maxDurability": 300, "deteriorationRate": 0,
+    "description": "Tree resin alloyed with gem-dust into a binder that holds magic-material assemblies — Famed reforging, magic furniture, runed gear.", "color": "#B070D0",
+    "amount": 0, "weightKg": 0.2, "volumeL": 0.2
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §F — Armour breadth: wire/ring sub-chain, scale, steel plate, beast/bone peak
+  // (no civilian apparel — armour is the only worn layer; the only cost is encumbrance, already wired)
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id": "iron_wire", "charSpans": [ {"sheet": "items", "id": 138} ], "name": "Iron Wire", "type": "material",
+    "category": "metal", "maxDurability": 200, "deteriorationRate": 0,
+    "description": "Iron bar drawn through a plate into fine wire. Coiled and cut, it becomes mail rings.", "color": "#9098A0",
+    "amount": 0, "weightKg": 0.6, "volumeL": 0.2, "processingType": ["metalworking"]
+  },
+  {
+    "id": "mail_rings", "charSpans": [ {"sheet": "items", "id": 138} ], "name": "Mail Rings", "type": "material",
+    "category": "metal", "maxDurability": 200, "deteriorationRate": 0,
+    "description": "Loose riveted iron rings, ready to be woven into a coif or hauberk. The heart of the mail sub-chain.", "color": "#888F98",
+    "amount": 0, "weightKg": 0.8, "volumeL": 0.3, "processingType": ["metalworking"]
+  },
+  {
+    "id": "scale_cuirass", "charSpans": [ {"sheet": "items", "id": 11} ], "name": "Scale Cuirass", "type": "armor",
+    "category": "leather", "deteriorationRate": 0.01, "description": "Hardened scales laced in overlapping rows over a leather coat. Flexible medium armour with a reptilian bite.",
+    "color": "#3A4A2C", "amount": 0, "weightKg": 8, "volumeL": 5, "tier": 2, "maxDurability": 180, "durabilityLossPerCombatHit": 8,
+    "armorProperties": {"defense": 16, "armorType": "medium", "slot": "bodyMid", "equipmentSlot": "bodyMid", "armorLayer": "mail", "armorValue": 16, "fatiguePerTurn": 0.4, "movementPenalty": 0.03, "pierceResistance": 0.2}
+  },
+  {
+    "id": "plate_cuirass", "charSpans": [ {"sheet": "items", "id": 11} ], "name": "Steel Plate Cuirass", "type": "armor",
+    "category": "metal", "deteriorationRate": 0.006, "description": "A fitted steel breast-and-back plate. The pinnacle of mundane body armour — turns most blows outright.",
+    "color": "#B0B8C0", "amount": 0, "weightKg": 14, "volumeL": 7, "tier": 3, "maxDurability": 320, "durabilityLossPerCombatHit": 3, "researchRequired": "steel_making",
+    "armorProperties": {"defense": 30, "armorType": "heavy", "slot": "bodyOuter", "equipmentSlot": "bodyOuter", "armorLayer": "plate", "armorValue": 30, "fatiguePerTurn": 0.8, "movementPenalty": 0.1, "slashResistance": 0.3, "pierceResistance": 0.25, "crushResistance": 0.15}
+  },
+  {
+    "id": "great_helm", "charSpans": [ {"sheet": "items", "id": 82} ], "name": "Steel Great Helm", "type": "armor",
+    "category": "metal", "deteriorationRate": 0.006, "description": "A heavy enclosed steel helm. Maximum head protection — at the price of a narrowed view.",
+    "color": "#A8B0B8", "amount": 0, "weightKg": 4, "volumeL": 5, "tier": 3, "maxDurability": 300, "durabilityLossPerCombatHit": 3, "researchRequired": "steel_making",
+    "armorProperties": {"defense": 22, "armorType": "heavy", "slot": "headOuter", "equipmentSlot": "headOuter", "armorLayer": "plate", "armorValue": 22, "fatiguePerTurn": 0.4, "movementPenalty": 0.05, "visionProtection": 0.1, "slashResistance": 0.3}
+  },
+  {
+    "id": "beast_leather_plate", "charSpans": [ {"sheet": "items", "id": 8} ], "name": "Beast-Leather Plate", "type": "armor",
+    "category": "leather", "deteriorationRate": 0.008, "description": "Boiled beast-leather plates riveted into a cuirass. Rivals steel, lighter on the shoulders — and impressive to behold.",
+    "color": "#3E2E1A", "amount": 0, "weightKg": 9, "volumeL": 6, "tier": 3, "maxDurability": 280, "durabilityLossPerCombatHit": 5,
+    "armorProperties": {"defense": 26, "armorType": "heavy", "slot": "bodyOuter", "equipmentSlot": "bodyOuter", "armorLayer": "plate", "armorValue": 26, "fatiguePerTurn": 0.5, "movementPenalty": 0.05, "coldResistance": 0.15, "prestigeBonus": 4}
+  },
+  {
+    "id": "bone_plated_cuirass", "charSpans": [ {"sheet": "items", "id": 11} ], "name": "Bone-Plated Cuirass", "type": "armor",
+    "category": "organic", "deteriorationRate": 0.008, "description": "Great beast-bone plates lashed over a leather coat. Heavy, savage, and a closing of the butchery loop.",
+    "color": "#CEC6B2", "amount": 0, "weightKg": 11, "volumeL": 7, "tier": 3, "maxDurability": 260, "durabilityLossPerCombatHit": 6,
+    "armorProperties": {"defense": 27, "armorType": "heavy", "slot": "bodyOuter", "equipmentSlot": "bodyOuter", "armorLayer": "plate", "armorValue": 27, "fatiguePerTurn": 0.55, "movementPenalty": 0.07, "crushResistance": 0.2, "prestigeBonus": 3, "intimidation": 3}
+  },
+  {
+    "id": "horned_helm", "charSpans": [ {"sheet": "items", "id": 82} ], "name": "Horned Helm", "type": "armor",
+    "category": "organic", "deteriorationRate": 0.008, "description": "A bone-and-horn helm crowned with a beast's horns. Fearsome, and a peak-tier head guard.",
+    "color": "#C8BCA0", "amount": 0, "weightKg": 3, "volumeL": 4, "tier": 3, "maxDurability": 220, "durabilityLossPerCombatHit": 6,
+    "armorProperties": {"defense": 18, "armorType": "heavy", "slot": "headOuter", "equipmentSlot": "headOuter", "armorLayer": "plate", "armorValue": 18, "fatiguePerTurn": 0.3, "movementPenalty": 0.03, "prestigeBonus": 3, "intimidation": 4}
+  },
+  // §F.3 prestige regalia — body pieces that trade defence/encumbrance for prestige (SOCIAL-LAYER
+  // drives the effect; the head/amulet regalia line already exists).
+  {
+    "id": "ceremonial_plate", "charSpans": [ {"sheet": "items", "id": 11} ], "name": "Ceremonial Plate", "type": "armor",
+    "category": "metal", "deteriorationRate": 0.004, "description": "Gilt-and-engraved parade armour. All show and little guard — worn to command, not to fight.",
+    "color": "#E8C860", "amount": 0, "weightKg": 12, "volumeL": 7, "tier": 3, "maxDurability": 240, "durabilityLossPerCombatHit": 6, "researchRequired": "steel_making",
+    "armorProperties": {"defense": 8, "armorType": "heavy", "slot": "bodyOuter", "equipmentSlot": "bodyOuter", "armorLayer": "plate", "armorValue": 8, "fatiguePerTurn": 0.7, "movementPenalty": 0.1, "prestigeBonus": 22}
+  },
+  {
+    "id": "regal_robes", "charSpans": [ {"sheet": "items", "id": 158} ], "name": "Regal Robes", "type": "armor",
+    "category": "organic", "deteriorationRate": 0.01, "description": "Fine woolcloth robes, dyed and trimmed for a leader's court. Negligible armour, immense bearing.",
+    "color": "#7B2D6B", "amount": 0, "weightKg": 1.5, "volumeL": 3, "tier": 2, "maxDurability": 120, "durabilityLossPerCombatHit": 8,
+    "armorProperties": {"defense": 1, "armorType": "light", "slot": "bodyBase", "equipmentSlot": "bodyBase", "armorLayer": "gambeson", "armorValue": 1, "fatiguePerTurn": 0.05, "movementPenalty": 0.0, "prestigeBonus": 18, "coldResistance": 0.12}
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §G — Alchemy & Potions (replaces "chemistry"). Potions ride the condition
+  // pipeline (§M buff pool); the active drink→timed-condition use-action is a scoped follow-up.
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id": "clay_alembic", "charSpans": [ {"sheet": "items", "id": 41} ], "name": "Clay Alembic", "type": "material",
+    "category": "storage", "maxDurability": 120, "deteriorationRate": 0.02,
+    "description": "A fired-clay still with a long condensing neck. The heart of the alchemy lab — distils tinctures, brines and spirits.", "color": "#A0522D",
+    "amount": 0, "weightKg": 2, "volumeL": 3, "processingType": ["crafting"]
+  },
+  {
+    "id": "glassware", "charSpans": [ {"sheet": "items", "id": 41} ], "name": "Glassware", "type": "material",
+    "category": "storage", "maxDurability": 80, "deteriorationRate": 0.01,
+    "description": "Blown-glass flasks and phials melted from sand. Holds reagents — and bottles a finished potion.", "color": "#A8D0C8",
+    "amount": 0, "weightKg": 0.4, "volumeL": 0.6, "processingType": ["crafting"]
+  },
+  {
+    "id": "tannin", "charSpans": [ {"sheet": "items", "id": 11} ], "name": "Tannin Concentrate", "type": "material",
+    "category": "organic", "maxDurability": 200, "deteriorationRate": 0.01,
+    "description": "Bark boiled down to a strong tannin concentrate. Brews a faster, finer tanning brine.", "color": "#5A3D1E",
+    "amount": 0, "weightKg": 0.3, "volumeL": 0.3, "processingType": ["crafting"]
+  },
+  {
+    "id": "dye", "charSpans": [ {"sheet": "items", "id": 71} ], "name": "Dye", "type": "material",
+    "category": "organic", "maxDurability": 150, "deteriorationRate": 0.02,
+    "description": "Boiled-down plant and berry colour. Stains cloth and leather for prestige goods.", "color": "#9C27B0",
+    "amount": 0, "weightKg": 0.2, "volumeL": 0.2, "processingType": ["crafting"]
+  },
+  {
+    "id": "soap", "charSpans": [ {"sheet": "items", "id": 41} ], "name": "Soap", "type": "consumable",
+    "category": "consumable", "maxDurability": 100, "deteriorationRate": 0.01,
+    "description": "Fat boiled with ash-lye into hard soap. Washes off the filth that breeds sickness.", "color": "#E8E0C8",
+    "amount": 0, "weightKg": 0.2, "volumeL": 0.2, "processingType": ["crafting"]
+  },
+  {
+    "id": "potion_of_might", "charSpans": [ {"sheet": "items", "id": 71} ], "name": "Potion of Might", "type": "consumable",
+    "category": "drink", "maxDurability": 200, "deteriorationRate": 0.005,
+    "description": "A red draught that floods the limbs with strength. Grants Might for a time once drunk.", "color": "#D03040",
+    "amount": 0, "weightKg": 0.3, "volumeL": 0.3, "grantsConditions": ["might"], "conditionDurationTurns": 1200
+  },
+  {
+    "id": "draught_of_vigor", "charSpans": [ {"sheet": "items", "id": 71} ], "name": "Draught of Vigor", "type": "consumable",
+    "category": "drink", "maxDurability": 200, "deteriorationRate": 0.005,
+    "description": "A green tonic that banishes fatigue and steadies the wind. Grants Vigor for a time.", "color": "#40A030",
+    "amount": 0, "weightKg": 0.3, "volumeL": 0.3, "grantsConditions": ["vigor"], "conditionDurationTurns": 1200
+  },
+  {
+    "id": "elixir_of_grace", "charSpans": [ {"sheet": "items", "id": 71} ], "name": "Elixir of Grace", "type": "consumable",
+    "category": "drink", "maxDurability": 200, "deteriorationRate": 0.005,
+    "description": "A clear silver elixir that quickens the step and the eye. Grants Grace for a time — offsets the load of heavy armour.", "color": "#80C0E0",
+    "amount": 0, "weightKg": 0.3, "volumeL": 0.3, "grantsConditions": ["grace"], "conditionDurationTurns": 1200
+  },
+  {
+    "id": "tonic_of_fortitude", "charSpans": [ {"sheet": "items", "id": 71} ], "name": "Tonic of Fortitude", "type": "consumable",
+    "category": "drink", "maxDurability": 200, "deteriorationRate": 0.005,
+    "description": "A dark, bitter tonic that hardens flesh against harm. Grants Fortitude for a time.", "color": "#8060A0",
+    "amount": 0, "weightKg": 0.3, "volumeL": 0.3, "grantsConditions": ["fortitude"], "conditionDurationTurns": 1200
+  },
+
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-III §B.3 — Magic-material families unlocked by the infused capstone stations
+  // ════════════════════════════════════════════════════════════════════════════════════════════
+  {
+    "id": "magic_alloy_bar", "charSpans": [ {"sheet": "items", "id": 138} ], "name": "Magic-Alloy Bar", "type": "material",
+    "category": "metal", "maxDurability": 400, "deteriorationRate": 0,
+    "description": "Steel re-smelted with gem-dust in a runic crucible. Light, keen, and faintly aglow — the metal of mythic gear.", "color": "#9C7CC0",
+    "amount": 0, "weightKg": 1.5, "volumeL": 0.4, "processingType": ["metalworking"]
+  },
+  {
+    "id": "enchant_thread", "charSpans": [ {"sheet": "items", "id": 158} ], "name": "Enchant-Thread", "type": "material",
+    "category": "organic", "maxDurability": 300, "deteriorationRate": 0,
+    "description": "Fine wool spun through with gem-dust on a runic loom. Woven into prestige cloth and the linings of enchanted gear.", "color": "#C090E0",
+    "amount": 0, "weightKg": 0.2, "volumeL": 0.4, "processingType": ["weaving"]
+  },
+  {
+    "id": "runed_block", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Runed Block", "type": "material",
+    "category": "block", "maxDurability": 500, "deteriorationRate": 0,
+    "description": "A dressed block cut with gem-dust glyphs at the glyph-cutter's banker. The stone of the magic wall age.", "color": "#7C5CA0",
+    "amount": 0, "weightKg": 5, "volumeL": 3, "processingType": ["masonry"]
   }
 ]

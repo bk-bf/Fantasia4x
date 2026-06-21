@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { recipeService } from './RecipeService';
+import recipesData from '../database/recipes.jsonc';
+import itemsData from '../database/items.jsonc';
+import buildingsData from '../database/buildings.jsonc';
 
 /**
  * Recipe registry Stage A — recipes unify authored (recipes.jsonc, with byproducts) and
@@ -43,5 +46,33 @@ describe('RecipeService (recipe registry, Stage A)', () => {
     // sanity: outputs/inputs resolve (sawdust etc. exist)
     const r = recipeService.getRecipeById('saw_pine_planks');
     expect(r!.outputs).toHaveProperty('sawdust');
+  });
+
+  // Referential integrity over the WHOLE authored recipe DB — guards against a typo'd item or
+  // station id silently breaking a chain (caught a real class of bug while authoring PRODUCTION-
+  // CHAIN-III's leather/wool/glue lines). Every input/output/alternative must resolve to a real
+  // item, and every station to a real building.
+  it('every authored recipe + alternative resolves to real item and building ids', () => {
+    const itemIds = new Set((itemsData as Array<{ id: string }>).map((i) => i.id));
+    const buildingIds = new Set((buildingsData as Array<{ id: string }>).map((b) => b.id));
+    const recipes = recipesData as Array<{
+      id: string;
+      station?: string;
+      inputs?: Record<string, number>;
+      outputs?: Record<string, number>;
+      inputAlternatives?: Array<Record<string, number>>;
+    }>;
+    const errors: string[] = [];
+    for (const r of recipes) {
+      const ingredientSets = [r.inputs, r.outputs, ...(r.inputAlternatives ?? [])].filter(
+        Boolean
+      ) as Array<Record<string, number>>;
+      for (const set of ingredientSets)
+        for (const itemId of Object.keys(set))
+          if (!itemIds.has(itemId)) errors.push(`${r.id}: unknown item "${itemId}"`);
+      if (r.station && !buildingIds.has(r.station))
+        errors.push(`${r.id}: unknown station "${r.station}"`);
+    }
+    expect(errors).toEqual([]);
   });
 });
