@@ -2186,10 +2186,21 @@
     markRenderDirty();
   });
 
+  // §E.1 followup 2: while PAUSED, the renderer caches the heavy terrain pass to an FBO and re-blits it
+  // each frame (entity overlays + weather stay live). Toggle it with the pause state. A repaint on the
+  // transition lets the cache capture (on pause) / drop (on resume).
+  let isPausedNow = false;
+  const unsubPaused = gameState.isPaused.subscribe((p) => {
+    isPausedNow = p;
+    renderer?.setTerrainCacheEnabled(p);
+    markRenderDirty();
+  });
+
   onDestroy(() => {
     unsubState();
     unsubUI();
     unsubWorldGen();
+    unsubPaused();
     unsubCombatFeedback();
     unsubAttackLunges();
     unsubProjectiles();
@@ -2241,6 +2252,7 @@
         worldMap.length > 0 ? buildGameGrid(worldMap, buildings) : generatePlaceholderGrid();
       renderer.setGrid(grid);
       renderer.setViewTileOffset(viewX, viewY);
+      renderer.setTerrainCacheEnabled(isPausedNow); // apply current pause state (subscription fired pre-init)
       // Phase A2: bake ONLY the static (flicker-free) additive point light into the
       // renderer; the global day/night ambient and the fire flicker are both applied
       // as shader uniforms, so the terrain buffer never rebakes per frame.

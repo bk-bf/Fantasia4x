@@ -11,6 +11,7 @@ import { createSquareCellAtlas, loadBitlandsAtlas } from './font-atlas.js';
 import { TextureManager } from './texture-manager.js';
 import { CharacterRenderer } from './character-renderer.js';
 import { GridRenderer } from './grid-renderer.js';
+import { TerrainCache } from './terrain-cache.js';
 import { WebGLStateManager } from './webgl-state.js';
 import type { GameGrid } from './game-grid.js';
 import type { FontAtlas } from './types.js';
@@ -63,6 +64,12 @@ export class WebGLRendererCore {
   private textureManager: TextureManager | null = null;
   private characterRenderer: CharacterRenderer | null = null;
   private gridRenderer: GridRenderer | null = null;
+  // Terrain FBO cache (§E.1 followup 2). While PAUSED, the heavy terrain pass is captured to a
+  // viewport texture once and re-blitted each frame (1 sample/pixel) instead of re-running the
+  // fillrate-heavy terrain shader — the entity overlays still draw live on top. Gated on paused, so
+  // running play never touches it. Invalidated on camera/grid/resize so a pan re-captures.
+  private terrainCache: TerrainCache | null = null;
+  private terrainCacheEnabled = false;
 
   // Resources
   private fontAtlas: FontAtlas | null = null;
@@ -146,6 +153,17 @@ export class WebGLRendererCore {
   setGrid(grid: GameGrid): void {
     this.gameGrid = grid;
     this.gridVersion++;
+    this.terrainCache?.invalidate(); // terrain content changed → re-capture the paused cache
+  }
+
+  /**
+   * Enable/disable the paused terrain cache (§E.1 followup 2). Pass `true` while the game is paused so
+   * the heavy terrain pass is captured once and re-blitted; `false` (running) renders terrain directly.
+   * Toggling re-captures on the next frame.
+   */
+  setTerrainCacheEnabled(enabled: boolean): void {
+    if (enabled !== this.terrainCacheEnabled) this.terrainCache?.invalidate();
+    this.terrainCacheEnabled = enabled;
   }
 
   /** Inject the entity-overlay grid (pawns/mobs) rendered on top of the terrain. */
@@ -160,12 +178,23 @@ export class WebGLRendererCore {
 
   /** Set the top-left viewport tile position. */
   setViewTileOffset(x: number, y: number): void {
+    if (x !== this.viewTileX || y !== this.viewTileY) this.terrainCache?.invalidate();
     this.viewTileX = x;
     this.viewTileY = y;
   }
 
   /** Update ambient light values; called each turn from the game canvas. */
   setAmbient(light: number, tint: [number, number, number]): void {
+    // Day/night tint is baked into the cached terrain image; if it actually changes (e.g. a debug
+    // season override while paused) the cache must re-capture. No-op cost while running (cache off).
+    if (
+      light !== this.ambientLight ||
+      tint[0] !== this.ambientTint[0] ||
+      tint[1] !== this.ambientTint[1] ||
+      tint[2] !== this.ambientTint[2]
+    ) {
+      this.terrainCache?.invalidate();
+    }
     this.ambientLight = light;
     this.ambientTint = tint;
   }
@@ -210,6 +239,7 @@ export class WebGLRendererCore {
   /** Change tile pixel dimensions (used for zoom). Regenerates atlas only when the integer cell size changes (skipped for bitmap tilesets). */
   setTileSize(w: number, h: number): void {
     const prevCellSize = Math.round(this.tileWidth);
+    if (w !== this.tileWidth || h !== this.tileHeight) this.terrainCache?.invalidate(); // zoom changed
     this.tileWidth = w;
     this.tileHeight = h;
     if (!this.tilesetLoaded && Math.round(w) !== prevCellSize) {
@@ -314,6 +344,7 @@ export class WebGLRendererCore {
         this.fontAtlas,
         this.debug
       );
+      this.terrainCache = new TerrainCache(gl);
 
       if (this.debug) console.log('✅ WebGL2 renderer ready');
       return true;
@@ -328,6 +359,7 @@ export class WebGLRendererCore {
     this.viewport.height = height;
     this.projectionMatrix = createOrthographicMatrix(0, width, height, 0);
     this.webglState.updateViewport(width, height);
+    this.terrainCache?.invalidate(); // viewport size changed → re-capture at the new size
   }
 
   beginFrame(): void {
@@ -391,33 +423,55 @@ export class WebGLRendererCore {
     // Terrain pass — opaque, fills every cell background. Rendered as viewport-culled CHUNKS (§E):
     // geometry is camera-independent (world-space verts + u_viewOffset/u_zoom), so only the chunks
     // overlapping the viewport are built/drawn and panning just changes which chunks are visible.
-    this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
+    // §E.1 followup 2: while PAUSED (terrainCacheEnabled), render the terrain ONCE into an FBO and
+    // re-blit it each frame instead of re-running the fillrate-heavy shader; the entity overlays still
+    // draw live on top. The cache self-invalidates on camera/grid/resize/ambient change.
     const tTerrain = performance.now();
-    const gridStats = this.gridRenderer.renderGrid(this.gameGrid, {
-      // Geometry baked at the fixed base size; zoom comes from u_zoom.
-      tileWidth: BASE_TILE_PX,
-      tileHeight: BASE_TILE_PX,
-      viewportX: this.viewTileX,
-      viewportY: this.viewTileY,
-      viewportWidth: viewportTilesW,
-      viewportHeight: viewportTilesH,
-      lightSampler: this.lightSampler ?? undefined,
-      lightTime,
-      pointLightActive: this.dynamicLight,
-      lightVersion: this.lightVersion,
-      litBounds: this.lightBounds,
-      cacheVersion: this.gridVersion
-    });
+    const cache = this.terrainCache;
+    if (this.terrainCacheEnabled && cache && cache.isValid()) {
+      // Paused + valid: just blit the cached terrain (1 sample/pixel).
+      cache.draw();
+    } else {
+      const capturing =
+        this.terrainCacheEnabled && cache
+          ? cache.beginCapture(this.viewport.width, this.viewport.height)
+          : false;
+      this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
+      const gridStats = this.gridRenderer.renderGrid(this.gameGrid, {
+        // Geometry baked at the fixed base size; zoom comes from u_zoom.
+        tileWidth: BASE_TILE_PX,
+        tileHeight: BASE_TILE_PX,
+        viewportX: this.viewTileX,
+        viewportY: this.viewTileY,
+        viewportWidth: viewportTilesW,
+        viewportHeight: viewportTilesH,
+        lightSampler: this.lightSampler ?? undefined,
+        lightTime,
+        pointLightActive: this.dynamicLight,
+        lightVersion: this.lightVersion,
+        litBounds: this.lightBounds,
+        cacheVersion: this.gridVersion
+      });
+      this.stats.vertexCount += gridStats.tilesRendered * 6;
+      if (capturing && cache) {
+        cache.endCapture(); // back to the default framebuffer
+        cache.draw(); // and blit the freshly-captured terrain to the screen this frame too
+      }
+    }
     this.stats.terrainMs = performance.now() - tTerrain;
-
     this.stats.drawCalls++;
-    this.stats.vertexCount += gridStats.tilesRendered * 6;
 
     // Overlay passes — glyph-only, alpha-blended on top of the terrain so the tile
     // underneath keeps rendering and motion can be sub-tile. Draw order is
     // terrain → items → entities: each is its own single-glyph grid, so a pawn
     // composites OVER a dropped item instead of overwriting its glyph.
     if (this.overlayGrid || this.itemOverlayGrid) {
+      // The terrain-cache blit binds its OWN program + texture (TEXTURE0); re-assert the tile renderer
+      // program + font atlas before the glyph overlays (no-op after the direct terrain path).
+      this.shaderManager.useProgram('tileRenderer');
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
+      this.shaderManager.setUniform('tileRenderer', 'u_fontAtlas', 0);
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 1);
@@ -493,6 +547,8 @@ export class WebGLRendererCore {
 
   dispose(): void {
     this.gridRenderer?.dispose();
+    this.terrainCache?.dispose();
+    this.terrainCache = null;
     this.characterRenderer?.dispose();
     this.shaderManager?.dispose();
     this.textureManager?.dispose();

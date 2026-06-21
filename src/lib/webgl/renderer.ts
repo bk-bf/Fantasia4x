@@ -70,6 +70,14 @@ export class WebGLRenderer {
   }
 
   /**
+   * Enable/disable the paused terrain FBO cache (§E.1 followup 2): while paused the heavy terrain pass
+   * is captured once and re-blitted; running renders directly.
+   */
+  setTerrainCacheEnabled(enabled: boolean): void {
+    this.core.setTerrainCacheEnabled(enabled);
+  }
+
+  /**
    * Resize the renderer and update projection matrix
    */
   resize(width: number, height: number): void {
