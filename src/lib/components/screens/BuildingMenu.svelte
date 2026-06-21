@@ -28,6 +28,7 @@
     'SMELTING & FORGE',
     'ARCANE',
     'FARMING & SOIL',
+    'KITCHEN & BREWING',
     'FOOD & HIDES',
     'TRAPS & WATER',
     'BEDS & SHELTER',
@@ -42,6 +43,7 @@
     const e = (b.effects ?? {}) as Record<string, number | boolean>;
     if (b.id === 'campfire' || b.id === 'hearth' || e.isFire) return 'FIRE & COOKING';
     if (e.farming) return 'FARMING & SOIL'; // §F: compost bin + Soil-Works terraform builds
+    if (e.cooking) return 'KITCHEN & BREWING'; // §F8: quern, oven, fermenter
     if (e.smeltingEnabled || e.smithingEnabled) return 'SMELTING & FORGE';
     if (
       e.butcheringEnabled ||

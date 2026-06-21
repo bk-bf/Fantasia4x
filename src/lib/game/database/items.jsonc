@@ -398,6 +398,8 @@
     "volumeL"          : 0.8,
     "nutrition"        : 90,
     "toolTierRequired" : 0,
+    "poisonChance"     : 0.05,
+    "rarity"           : "common",
     "decaySeconds"     : 600,
     "decaysTo"         : "rotten_food"
   },
@@ -417,6 +419,8 @@
     "nutrition"        : 150,
     "toolTierRequired" : 0,
     "components"       : [],
+    "poisonChance"     : 0.04,
+    "rarity"           : "uncommon",
     "decaySeconds"     : 300,
     "decaysTo"         : "rotten_food"
   },
@@ -1031,6 +1035,7 @@
     "category": "drink",
     "maxDurability": 100,
     "deteriorationRate": 0,
+    "poisonChance": 0,
     "description": "Clean drinking water — drawn from a river/well or boiled and kept in a clay urn. Quenches thirst.",
     "color": "#4FC3F7",
     "amount": 0,
@@ -1099,6 +1104,8 @@
     "volumeL"          : 1,
     "nutrition"        : 60,
     "toolTierRequired" : 0,
+    "poisonChance"     : 0.02,
+    "rarity"           : "uncommon",
     "decaySeconds"     : 36000,
     "decaysTo"         : "rotten_meat"
   },
@@ -1117,6 +1124,8 @@
     "volumeL"          : 0.8,
     "nutrition"        : 54,
     "toolTierRequired" : 0,
+    "poisonChance"     : 0.03,
+    "rarity"           : "common",
     "decaySeconds"     : 28000,
     "decaysTo"         : "rotten_meat"
   },
@@ -2828,6 +2837,7 @@
     "weightKg"         : 0.1,
     "volumeL"          : 0.2,
     "nutrition"        : -60,
+    "poisonChance"     : 0.85,
     "effects"          : {"nausea": 1, "healthBonus": -0.5}
   },
   {
@@ -2844,6 +2854,7 @@
     "weightKg"         : 0.5,
     "volumeL"          : 0.5,
     "nutrition"        : -45,
+    "poisonChance"     : 0.85,
     "effects"          : {"nausea": 1, "healthBonus": -0.3}
   },
   {
@@ -6133,5 +6144,58 @@
     "category": "food", "description": "A fat prize gourd grown only in terra preta. Hearty cooking, and a grower's pride.",
     "color": "#D2772A", "amount": 0, "weightKg": 3, "volumeL": 4, "nutrition": 120,
     "maxDurability": 120, "deteriorationRate": 0.03
+  },
+  // ── PRODUCTION-CHAIN-II §F8 — Milling, baking, brewing (the food chain) ──────────────────────
+  // Quern → flour; Oven → bread/pies; Fermenter (passive) → malt → ale, fruit → wine, honey → mead.
+  {
+    "id": "flour", "charSpans": [ {"sheet": "items", "id": 113} ], "name": "Flour", "type": "material",
+    "category": "organic", "description": "Grain ground fine on a quern. The base of bread, pies and pastry — not eaten raw.",
+    "color": "#E8DCC0", "amount": 0, "weightKg": 0.2, "volumeL": 0.3, "nutrition": 0,
+    "maxDurability": 100, "deteriorationRate": 0.04
+  },
+  {
+    "id": "bread", "charSpans": [ {"sheet": "items", "id": 113} ], "name": "Bread", "type": "food",
+    "category": "food", "description": "A dense risen loaf baked in the oven. The staff of life — filling, and it travels.",
+    "color": "#C79A53", "amount": 0, "weightKg": 0.4, "volumeL": 0.6, "nutrition": 78,
+    "poisonChance": 0.01, "rarity": "common",
+    "maxDurability": 45, "deteriorationRate": 0.09
+  },
+  {
+    "id": "meat_pie", "charSpans": [ {"sheet": "items", "id": 113} ], "name": "Pie", "type": "food",
+    "category": "food", "description": "Meat and a little veg baked into a pastry crust. A hot, hearty meal in the hand.",
+    "color": "#B5742F", "amount": 0, "weightKg": 0.5, "volumeL": 0.6, "nutrition": 120,
+    "poisonChance": 0.04, "rarity": "uncommon",
+    "maxDurability": 38, "deteriorationRate": 0.11
+  },
+  {
+    "id": "honey", "charSpans": [ {"sheet": "items", "id": 113} ], "name": "Honey", "type": "food",
+    "category": "food", "description": "Sweet golden honey. Eaten as a treat, kept indefinitely, and fermented into mead. (Beekeeping — ENTITIES D.)",
+    "color": "#E0A52A", "amount": 0, "weightKg": 0.4, "volumeL": 0.3, "nutrition": 40,
+    "poisonChance": 0,
+    "maxDurability": 1000, "deteriorationRate": 0
+  },
+  {
+    "id": "malt", "charSpans": [ {"sheet": "items", "id": 113} ], "name": "Malt", "type": "material",
+    "category": "organic", "description": "Grain steeped, sprouted and kilned in the fermenter — the sugary base that ferments into ale.",
+    "color": "#C9A25A", "amount": 0, "weightKg": 0.2, "volumeL": 0.3, "nutrition": 0,
+    "maxDurability": 150, "deteriorationRate": 0.02
+  },
+  {
+    "id": "ale", "charSpans": [ {"sheet": "items", "id": 71} ], "name": "Ale", "type": "consumable",
+    "category": "drink", "description": "Cloudy malt ale, mashed and fermented in the cask. Lifts the spirits — and goes to the head.",
+    "color": "#B7791F", "amount": 0, "weightKg": 1, "volumeL": 1, "nutrition": 10, "intoxication": 8,
+    "maxDurability": 200, "deteriorationRate": 0.01
+  },
+  {
+    "id": "wine", "charSpans": [ {"sheet": "items", "id": 71} ], "name": "Wine", "type": "consumable",
+    "category": "drink", "description": "Fruit pressed and fermented to a deep, heady wine. A finer drink, and a stronger one.",
+    "color": "#7B2D43", "amount": 0, "weightKg": 0.9, "volumeL": 1, "nutrition": 8, "intoxication": 12,
+    "maxDurability": 300, "deteriorationRate": 0.004
+  },
+  {
+    "id": "mead", "charSpans": [ {"sheet": "items", "id": 71} ], "name": "Mead", "type": "consumable",
+    "category": "drink", "description": "Honey wine, golden and potent. The oldest brew there is — and the one that bites hardest.",
+    "color": "#D8A52A", "amount": 0, "weightKg": 0.9, "volumeL": 1, "nutrition": 12, "intoxication": 14,
+    "maxDurability": 300, "deteriorationRate": 0.004
   }
 ]

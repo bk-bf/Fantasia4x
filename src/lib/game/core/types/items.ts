@@ -249,6 +249,16 @@ export interface Item {
   // Food properties
   nutrition?: number; // Dedicated nutrition value for food items
 
+  /** §F8: alcohol mood-good. The one-shot mood lift granted when this drink is consumed; its presence
+   *  marks the item as alcoholic (also applies a short `intoxicated` condition). 0/absent = sober. */
+  intoxication?: number;
+
+  /** §F8 food poisoning: per-serving probability (0–1) this food gives a pawn nausea/dysentery when
+   *  eaten. Absent ⇒ a sane default by category (raw meat high, crops/foraged mild, drinks low).
+   *  Routed through the eater's `poison_resistance` (CON) and, for cooked dishes, scaled by the item's
+   *  `rarity` → rarities.jsonc `poisonMult` (a low-grade cooked meal is dicier). See pawnQueries. */
+  poisonChance?: number;
+
   /** Medicine quality 0–1 — added to a tend's treatment quality when consumed (COMBAT-SYSTEM caretaking). */
   medicineQuality?: number;
 

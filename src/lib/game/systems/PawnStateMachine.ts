@@ -42,6 +42,7 @@ import { gameLogger } from '../dev/gameLogger';
 import { perTick } from '../core/time';
 import {
   driveNeedConditions,
+  decayIntoxication,
   driveTemperatureConditions,
   driveEncumbrance,
   driveWindchill,
@@ -345,6 +346,7 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // in conditions.jsonc — no hardcoded MALNUTRITION_*/DEHYDRATION_* constants.
   const needVals = pawn.needs as unknown as Record<string, number> | undefined;
   const lethalCause = driveNeedConditions(conditions, needVals);
+  decayIntoxication(conditions); // §F8: the staged `intoxicated` condition wears off over time
   if (lethalCause) {
     return killPawn(
       { ...gameState.pawns.find((p) => p.id === pawn.id)!, conditions, bloodVolume },

@@ -142,8 +142,11 @@ export interface ConditionModifiers {
   moveSpeed?: number; // multiplier on movement
   hungerRate?: number; // multiplier on hunger accrual rate
   fatigueRate?: number; // multiplier on fatigue accrual rate
+  thirstRate?: number; // multiplier on thirst accrual rate (e.g. dysentery's fluid loss)
+  consciousness?: number; // multiplier on the consciousness capacity (e.g. heavy intoxication)
   dodge?: number; // extra multiplier on the defender's evasion (most evasion now flows via DEX)
   hitChance?: number; // extra multiplier on the attacker's to-hit (most accuracy now flows via DEX)
+  pain?: number; // multiplier on felt pain (< 1 numbs it — alcohol/painkillers); see conditionPainMultiplier
   /** Index signature so the UI can iterate modifiers generically (effectLines); all values are multipliers. */
   [key: string]: number | undefined;
 }

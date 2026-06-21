@@ -1,9 +1,12 @@
 // Rarity tier definitions with associated colors
-// Used for displaying items, buildings, and other entities by rarity
+// Used for displaying items, buildings, and other entities by rarity.
+// `poisonMult` (§F8): multiplier on a COOKED food's base food-poisoning chance — a low-grade dish
+// (common) is dicier, a finely-made one (rare+) is cleaner. Only applied to items that carry a
+// `rarity`; raw/unrated foods use a flat 1× (see pawnQueries.mealPoisonChance).
 [
-  { "id": "common", "name": "Common", "color": "#9E9E9E" },
-  { "id": "uncommon", "name": "Uncommon", "color": "#4CAF50" },
-  { "id": "rare", "name": "Rare", "color": "#2196F3" },
-  { "id": "epic", "name": "Epic", "color": "#9C27B0" },
-  { "id": "legendary", "name": "Legendary", "color": "#FF9800" }
+  { "id": "common", "name": "Common", "color": "#9E9E9E", "poisonMult": 1.3 },
+  { "id": "uncommon", "name": "Uncommon", "color": "#4CAF50", "poisonMult": 1.0 },
+  { "id": "rare", "name": "Rare", "color": "#2196F3", "poisonMult": 0.7 },
+  { "id": "epic", "name": "Epic", "color": "#9C27B0", "poisonMult": 0.45 },
+  { "id": "legendary", "name": "Legendary", "color": "#FF9800", "poisonMult": 0.25 }
 ]

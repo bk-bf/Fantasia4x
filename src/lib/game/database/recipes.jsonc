@@ -2316,5 +2316,77 @@
     "outputs"         : {"fertiliser": 1},
     "workAmount"      : 60,
     "toolTierRequired": 0
+  },
+  // ── PRODUCTION-CHAIN-II §F8 — milling, baking, brewing ───────────────────────────────────────
+  // MILL (quern): grain → flour.
+  {
+    "id"              : "mill_flour",
+    "station"         : "quern",
+    "inputs"          : {"grain": 2},
+    "outputs"         : {"flour": 2},
+    "workAmount"      : 8,
+    "toolTierRequired": 0
+  },
+  // BAKE (oven): flour + water → bread; flour + meat (+ veg) → pies.
+  {
+    "id"              : "bake_bread",
+    "station"         : "oven",
+    "inputs"          : {"flour": 2, "water": 1},
+    "outputs"         : {"bread": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "bake_pie",
+    "station"         : "oven",
+    "inputs"          : {"flour": 1},
+    "outputs"         : {"meat_pie": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 0,
+    "dynamicRecipe"   : {
+      "meat": {
+        "acceptsCategory": "meat",
+        "quantity"       : 1,
+        "default"        : {"name": "Pie", "description": "Meat baked into a pastry crust — a hot meal in the hand."}
+      }
+    }
+  },
+  // BREW (fermenter, passive timers): grain → malt → ale; fruit → wine; honey → mead.
+  {
+    "id"              : "malt_grain",
+    "station"         : "fermenter",
+    "passive"         : true,
+    "inputs"          : {"grain": 2},
+    "outputs"         : {"malt": 2},
+    "workAmount"      : 30,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "brew_ale",
+    "station"         : "fermenter",
+    "passive"         : true,
+    "inputs"          : {"malt": 2, "water": 1},
+    "outputs"         : {"ale": 2},
+    "workAmount"      : 60,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "ferment_wine",
+    "station"         : "fermenter",
+    "passive"         : true,
+    "inputs"          : {"fruit": 4},
+    "outputs"         : {"wine": 2},
+    "workAmount"      : 72,
+    "toolTierRequired": 0
+  },
+  // mead — honey → mead. Honey awaits beekeeping (ENTITIES D); the recipe is ready for when it lands.
+  {
+    "id"              : "ferment_mead",
+    "station"         : "fermenter",
+    "passive"         : true,
+    "inputs"          : {"honey": 3, "water": 1},
+    "outputs"         : {"mead": 2},
+    "workAmount"      : 84,
+    "toolTierRequired": 0
   }
 ]

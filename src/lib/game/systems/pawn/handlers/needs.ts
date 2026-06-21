@@ -7,7 +7,15 @@ import { gameLogger } from '../../../dev/gameLogger';
 import { perTick } from '../../../core/time';
 import { consumeFromStockpiles } from '../../../core/GameState';
 import { PAWN_STATE, type PawnStateName } from '../pawnStates';
-import { isAdjacent, selectFoodForMeal, consumeMeal, hasAvailableFood } from '../pawnQueries';
+import {
+  isAdjacent,
+  selectFoodForMeal,
+  consumeMeal,
+  hasAvailableFood,
+  applyIntoxication,
+  applyFoodPoisoning
+} from '../pawnQueries';
+import { pawnStatService } from '../../../services/PawnStatService';
 import {
   findNearestStorageBuilding,
   tryAssignPath,
@@ -165,17 +173,20 @@ export function handleHungry(pawn: Pawn, gameState: GameState): GameState {
 
   // Eat in place: consume all selected food now, then sit and eat for EATING_TURNS_GROUND turns.
   // Clear any residual movement so the pawn is gated at this tile, not still walking while it eats.
-  const { state: afterMeal, hungerRecovered } = consumeMeal(meal, gameState);
+  const { state: afterMeal, hungerRecovered, intoxication } = consumeMeal(meal, gameState);
   gameLogger.log(
     gameState.turn,
     'NEED-CHECK',
     () =>
       `${pawn.name} starts eating [${fmtMeal(meal)}] hunger=${(pawn.needs?.hunger ?? 0).toFixed(1)} at ${fmtPos(pawn)} (in place)`
   );
+  const poisonRes = pawnStatService.evaluateStat('poison_resistance', pawn);
   return mutatePawn(afterMeal, pawn.id, (p) => {
     p.path = [];
     p.isMoving = false;
     p.currentState = PAWN_STATE.EATING;
+    applyIntoxication(p, intoxication); // §F8: a drink in the meal lifts mood + makes the pawn tipsy
+    applyFoodPoisoning(p, meal, poisonRes); // §F8: a tainted serving may bring on nausea/dysentery
     p.activeJob = {
       type: 'need' as const,
       targetX: p.position?.x ?? 0,
@@ -264,16 +275,19 @@ export function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState 
       // Arrived at campfire — now select and consume the full meal, then start eating.
       const meal = selectFoodForMeal(pawn, gameState);
       if (meal.length === 0) return goIdle(pawn, gameState);
-      const { state: afterMeal, hungerRecovered } = consumeMeal(meal, gameState);
+      const { state: afterMeal, hungerRecovered, intoxication } = consumeMeal(meal, gameState);
       gameLogger.log(
         gameState.turn,
         'NEED-CHECK',
         () =>
           `${pawn.name} starts eating [${fmtMeal(meal)}] hunger=${(pawn.needs?.hunger ?? 0).toFixed(1)} at ${fmtPos(pawn)} (at campfire)`
       );
+      const poisonRes = pawnStatService.evaluateStat('poison_resistance', pawn);
       return mutatePawn(afterMeal, pawn.id, (p) => {
         p.currentState = PAWN_STATE.EATING;
         p.hasReachedDestination = false;
+        applyIntoxication(p, intoxication); // §F8: a drink in the meal lifts mood + makes the pawn tipsy
+        applyFoodPoisoning(p, meal, poisonRes); // §F8: a tainted serving may bring on nausea/dysentery
         p.activeJob = {
           ...activeJob,
           timeRequired: EATING_TURNS,

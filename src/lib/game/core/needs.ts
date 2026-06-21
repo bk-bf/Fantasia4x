@@ -63,7 +63,10 @@ export const SHOCK_BLOOD_ONSET = 0.35;
  * loss already drive consciousness → collapse → death; shock layers its stat/work penalty on top.
  */
 export function applyShock(conditions: EntityCondition[], pain: number, bloodLossFrac = 0): void {
-  const painSev = (pain - SHOCK_PAIN_ONSET) / (100 - SHOCK_PAIN_ONSET);
+  // §F8: a pain-numbing condition (drunk, painkillers) dulls the felt pain that drives shock — a
+  // sloshed pawn shrugs off a wound that would stagger a sober one. Blood-loss shock is unaffected.
+  const feltPain = pain * conditionPainMultiplier({ conditions });
+  const painSev = (feltPain - SHOCK_PAIN_ONSET) / (100 - SHOCK_PAIN_ONSET);
   const bloodSev = (bloodLossFrac - SHOCK_BLOOD_ONSET) / (1 - SHOCK_BLOOD_ONSET);
   const severity = Math.min(0.99, Math.max(0, painSev, bloodSev));
   const idx = conditions.findIndex((c) => c.id === 'shock');
@@ -73,6 +76,64 @@ export function applyShock(conditions: EntityCondition[], pain: number, bloodLos
   } else if (idx !== -1) {
     conditions.splice(idx, 1);
   }
+}
+
+/** §F8: per-second severity the `intoxicated` condition sheds (drink wears off over a few minutes). */
+const INTOX_DECAY_PER_SEC = 0.002;
+
+/**
+ * Decay the (persistent, staged) `intoxicated` condition one tick — drink wears off over time. Drinking
+ * pushes severity UP ({@link pawnQueries.applyIntoxication}); this drains it back down, dropping through
+ * the stages (blackout → drunk → merry → tipsy) and clearing at 0. Pawns only (mobs don't drink).
+ */
+export function decayIntoxication(conditions: EntityCondition[]): void {
+  const idx = conditions.findIndex((c) => c.id === 'intoxicated');
+  if (idx === -1) return;
+  const next = conditions[idx].severity - perTick(INTOX_DECAY_PER_SEC);
+  if (next <= 0) conditions.splice(idx, 1);
+  else conditions[idx] = { ...conditions[idx], severity: next };
+}
+
+/**
+ * Aggregate one modifier KEY's multiplier across an entity's active conditions (persistent stages ×
+ * transient defs). Identity 1 when nothing relevant is active (early-out on the hot path). Used for the
+ * non-stat capacity/feel keys (`pain`, `consciousness`) that don't flow through conditionStatMultipliers.
+ */
+function conditionModifierProduct(
+  entity: { conditions?: EntityCondition[]; transientConditions?: string[] },
+  key: keyof ConditionModifiers
+): number {
+  const conds = entity.conditions;
+  const tconds = entity.transientConditions;
+  if ((!conds || conds.length === 0) && (!tconds || tconds.length === 0)) return 1;
+  let mult = 1;
+  for (const c of conds ?? []) {
+    const v = getConditionCurrentStage(c)?.modifiers[key];
+    if (v != null) mult *= v;
+  }
+  for (const id of tconds ?? []) {
+    const v = TRANSIENT_BY_ID.get(id)?.modifiers[key];
+    if (v != null) mult *= v;
+  }
+  return mult;
+}
+
+/** `pain` multiplier (< 1 numbs felt pain — alcohol/painkillers). Applied to the shock driver and to
+ *  PawnStatService's pain → consciousness chokepoint, so a drunk pawn staves off pain-shock + stays up. */
+export function conditionPainMultiplier(entity: {
+  conditions?: EntityCondition[];
+  transientConditions?: string[];
+}): number {
+  return conditionModifierProduct(entity, 'pain');
+}
+
+/** `consciousness` multiplier (< 1 dims alertness — heavy drink, etc.). Applied to the consciousness
+ *  capacity in PawnStatService: enough cups and a pawn goes woozy, then blacks out (collapse). */
+export function conditionConsciousnessMultiplier(entity: {
+  conditions?: EntityCondition[];
+  transientConditions?: string[];
+}): number {
+  return conditionModifierProduct(entity, 'consciousness');
 }
 
 /**
@@ -336,17 +397,20 @@ export function comfortRange(traits: ReadonlyArray<{ name: string }> | undefined
 export function conditionNeedMultipliers(conditions: EntityCondition[]): {
   hungerRate: number;
   fatigueRate: number;
+  thirstRate: number;
 } {
   let hungerRate = 1;
   let fatigueRate = 1;
+  let thirstRate = 1;
   for (const c of conditions) {
     const stage = getConditionCurrentStage(c);
     if (stage) {
       hungerRate *= stage.modifiers.hungerRate ?? 1;
       fatigueRate *= stage.modifiers.fatigueRate ?? 1;
+      thirstRate *= stage.modifiers.thirstRate ?? 1;
     }
   }
-  return { hungerRate, fatigueRate };
+  return { hungerRate, fatigueRate, thirstRate };
 }
 
 // ── Condition → base-stat penalties ────────────────────────────────────────────────────────────

@@ -71,34 +71,19 @@
                 "label"      : "fairly windy",
                 "minSeverity": 0.4,
                 "color"      : "#8FB0D4",
-                "modifiers"  : {
-                    "dexterity"     : 0.9 ,
-                    "moveSpeed"     : 0.92,
-                    "workEfficiency": 0.95,
-                    "fatigueRate"   : 1.1
-                }
+                "modifiers"  : {"dexterity": 0.9, "moveSpeed": 0.92, "workEfficiency": 0.95, "fatigueRate": 1.1}
             },
             {
                 "label"      : "very windy",
                 "minSeverity": 0.6,
                 "color"      : "#6FA0CC",
-                "modifiers"  : {
-                    "dexterity"     : 0.82,
-                    "moveSpeed"     : 0.85,
-                    "workEfficiency": 0.88,
-                    "fatigueRate"   : 1.2
-                }
+                "modifiers"  : {"dexterity": 0.82, "moveSpeed": 0.85, "workEfficiency": 0.88, "fatigueRate": 1.2}
             },
             {
                 "label"      : "extremely windy",
                 "minSeverity": 0.8,
                 "color"      : "#4F8FC4",
-                "modifiers"  : {
-                    "dexterity"     : 0.72,
-                    "moveSpeed"     : 0.75,
-                    "workEfficiency": 0.78,
-                    "fatigueRate"   : 1.3
-                }
+                "modifiers"  : {"dexterity": 0.72, "moveSpeed": 0.75, "workEfficiency": 0.78, "fatigueRate": 1.3}
             }
         ]
     },
@@ -612,7 +597,7 @@
         "description": "Under a roof, out of the weather. Recovers from cold and heat far faster, and a storm's gloom is held at bay.",
         "color": "#7E9FBF",
         "charSpans": [ {"sheet": "font", "id": 127} ],
-        "modifiers": {"fatigueRate": 0.95}
+        "modifiers": {"fatigueRate": 0.9}
     },
     {
         "id"         : "filthy",
@@ -623,6 +608,84 @@
         "floater"    : true,
         "charSpans"  : [ {"sheet": "font", "id": 177} ],
         "modifiers"  : {"workEfficiency": 0.85}
+    },
+    {
+        "id": "intoxicated",
+        "name": "Intoxicated",
+        "description": "Warm and merry from drink (§F8). Drink lifts the mood and dulls pain, but the more that goes down the unsteadier the hands, eyes and feet — until it wears off. Severity rises with each cup and decays over time.",
+        "color": "#D8A52A",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 247} ],
+        "stages": [
+            {
+                "label"      : "tipsy",
+                "minSeverity": 0.0,
+                "color"      : "#E8C35A",
+                "modifiers"  : {"dexterity": 0.95, "perception": 0.95, "pain": 0.85}
+            },
+            {
+                "label"      : "merry",
+                "minSeverity": 0.3,
+                "color"      : "#D8A52A",
+                "modifiers"  : {"dexterity": 0.88, "perception": 0.9, "workEfficiency": 0.92, "pain": 0.7}
+            },
+            {
+                "label"      : "drunk",
+                "minSeverity": 0.6,
+                "color"      : "#C2871A",
+                "modifiers"  : {
+                    "strength"      : 0.9 ,
+                    "dexterity"     : 0.7 ,
+                    "perception"    : 0.7 ,
+                    "workEfficiency": 0.75,
+                    "moveSpeed"     : 0.85,
+                    "consciousness" : 0.8 ,
+                    "pain"          : 0.55
+                }
+            },
+            {
+                "label"      : "blackout drunk",
+                "minSeverity": 0.85,
+                "color"      : "#9C6A12",
+                "modifiers"  : {
+                    "strength"      : 0.7,
+                    "dexterity"     : 0.4,
+                    "perception"    : 0.4,
+                    "workEfficiency": 0.4,
+                    "moveSpeed"     : 0.5,
+                    "consciousness" : 0.4,
+                    "pain"          : 0.4
+                }
+            }
+        ]
+    },
+    {
+        "id": "nausea",
+        "name": "Nausea",
+        "transient": true,
+        "description": "Queasy and off-colour after a bad bite. The stomach turns — clumsy, slow work and no appetite until it passes.",
+        "color": "#8FAE52",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 247} ],
+        "modifiers": {"dexterity": 0.85, "workEfficiency": 0.6, "moveSpeed": 0.85, "hungerRate": 0.7}
+    },
+    {
+        "id": "dysentery",
+        "name": "Dysentery",
+        "transient": true,
+        "description": "A gut sickness from spoiled or tainted food. Fever, cramps and fluid loss leave the body wrung out and weak — strength, dexterity and endurance all sag, the body parches faster, and it lingers for days.",
+        "color": "#6E8B3D",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 247} ],
+        "modifiers": {
+            "strength"      : 0.7,
+            "dexterity"     : 0.7,
+            "constitution"  : 0.8,
+            "workEfficiency": 0.4,
+            "moveSpeed"     : 0.7,
+            "thirstRate"    : 1.6,
+            "fatigueRate"   : 1.4
+        }
     },
     {
         "id"         : "mood_ecstatic",

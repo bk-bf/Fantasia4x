@@ -13,7 +13,11 @@ import conditionsData from '../database/conditions.jsonc';
 import itemsData from '../database/items.jsonc';
 import { WORK_CATEGORIES } from '../core/Work';
 import { qualityMultiplier } from '../core/itemQuality';
-import { conditionStatMultipliers } from '../core/needs';
+import {
+  conditionStatMultipliers,
+  conditionPainMultiplier,
+  conditionConsciousnessMultiplier
+} from '../core/needs';
 
 // conditions.jsonc holds both persistent conditions (severity/stages) and transient ones
 // (re-derived each tick); split them by the `duration` discriminant — see the file header.
@@ -259,7 +263,10 @@ function calculateCapacityValue(
   limbs.forEach((l) => {
     bleedPain += l.bleedRate * 0.5;
   });
-  const painValue = (injuryPain + limbPain + bleedPain) / 100;
+  // §F8: a pain-numbing condition (drunk, painkillers) dulls felt pain — so it presses less on
+  // consciousness/the pain capacity. The injuries are still there; the body just feels them less.
+  const painValue =
+    ((injuryPain + limbPain + bleedPain) / 100) * conditionPainMultiplier(pawn);
 
   switch (capacityId) {
     case 'consciousness': {
@@ -289,7 +296,13 @@ function calculateCapacityValue(
         Math.max(0, (bloodLoss - BLOOD_FAINT_ONSET) / (BLOOD_FAINT_FLOOR - BLOOD_FAINT_ONSET))
       );
       const bloodMult = 1 - bloodSeverity;
-      value = (baseCon + sightCap * 0.1 + hearingCap * 0.05) * painMult * bloodMult;
+      // §F8: heavy intoxication dims alertness (drunk → woozy, blackout → can collapse) — a
+      // `consciousness` condition modifier, multiplied straight onto the capacity.
+      value =
+        (baseCon + sightCap * 0.1 + hearingCap * 0.05) *
+        painMult *
+        bloodMult *
+        conditionConsciousnessMultiplier(pawn);
       break;
     }
     case 'pain': {

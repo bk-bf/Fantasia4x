@@ -372,22 +372,30 @@ export class PawnServiceImpl implements PawnService {
    * condition-stage multiplier. This is the single source of truth for the need-drain rate;
    * both the legacy per-turn path and the per-tick accrual (processNeedsTick) scale this value.
    */
-  private getNeedIncreasePerTurn(pawn: Pawn): { hunger: number; fatigue: number } {
+  private getNeedIncreasePerTurn(pawn: Pawn): {
+    hunger: number;
+    fatigue: number;
+    thirstRate: number;
+  } {
     const transientConditions = getActiveTransientConditions(pawn);
 
-    // Combine hungerRate/fatigueRate multipliers from all active transient conditions (multiply
-    // together). e.g. 'eating' sets hungerRate=0 (paused), 'sleeping' sets hungerRate=0.33, fatigueRate=0.
+    // Combine hunger/fatigue/thirst rate multipliers from all active transient conditions (multiply
+    // together). e.g. 'eating' sets hungerRate=0 (paused), 'sleeping' sets hungerRate=0.33, fatigueRate=0;
+    // 'dysentery' sets thirstRate>1 (fluid loss makes the pawn thirstier).
     let hungerRate = transientConditions.reduce((r, e) => r * (e.modifiers.hungerRate ?? 1), 1);
     let fatigueRate = transientConditions.reduce((r, e) => r * (e.modifiers.fatigueRate ?? 1), 1);
+    let thirstRate = transientConditions.reduce((r, e) => r * (e.modifiers.thirstRate ?? 1), 1);
 
-    // Also apply condition stage hungerRate/fatigueRate modifiers (e.g. malnutrition increases hunger rate).
+    // Also apply persistent condition-stage rate modifiers (e.g. malnutrition increases hunger rate).
     const condMults = conditionNeedMultipliers(pawn.conditions ?? []);
     hungerRate *= condMults.hungerRate;
     fatigueRate *= condMults.fatigueRate;
+    thirstRate *= condMults.thirstRate;
 
     return {
       hunger: this.getHungerIncreasePerTurn(pawn) * hungerRate,
-      fatigue: this.getRestIncreasePerTurn(pawn) * fatigueRate
+      fatigue: this.getRestIncreasePerTurn(pawn) * fatigueRate,
+      thirstRate
     };
   }
 
@@ -456,8 +464,9 @@ export class PawnServiceImpl implements PawnService {
       const hunger = Math.min(100, needs.hunger + rate.hunger * hungerMul * dt);
       const fatigue = Math.min(100, needs.fatigue + rate.fatigue * fatigueMul * dt);
       // §D water needs: thirst & hygiene accrue each tick like hunger. Eating quenches
-      // some thirst (handled where meals are consumed); drinking/washing reset them.
-      const thirst = Math.min(100, (needs.thirst ?? 0) + THIRST_INCREASE_PER_SECOND * dt);
+      // some thirst (handled where meals are consumed); drinking/washing reset them. A condition's
+      // `thirstRate` (dysentery's fluid loss) speeds the climb.
+      const thirst = Math.min(100, (needs.thirst ?? 0) + THIRST_INCREASE_PER_SECOND * rate.thirstRate * dt);
       const hygiene = Math.min(100, (needs.hygiene ?? 0) + HYGIENE_INCREASE_PER_SECOND * dt);
 
       // SEASONS_WEATHER wetness: soak fast on wet (>50%) tiles (roofs keep tiles dry — tileWetness

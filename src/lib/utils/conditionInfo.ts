@@ -53,7 +53,10 @@ const MOD_LABEL: Partial<Record<keyof ConditionModifiers, string>> = {
   dodge: 'Dodge',
   hitChance: 'Aim',
   hungerRate: 'Hunger rate',
-  fatigueRate: 'Fatigue rate'
+  fatigueRate: 'Fatigue rate',
+  thirstRate: 'Thirst rate',
+  pain: 'Pain',
+  consciousness: 'Consciousness'
 };
 
 function effectLines(mods: ConditionModifiers): string[] {
@@ -120,6 +123,8 @@ function persistentSources(entity: Pawn | Mob, def: ConditionDef): string[] {
       return [`Pain ${Math.round(entity.pain ?? 0)}/100`];
     case 'windchilled':
       return ['Out in the wind — sheltered by a roof or the lee of a wall/mountain'];
+    case 'intoxicated':
+      return ['Drink — wears off over time'];
     default:
       return [];
   }
@@ -142,6 +147,9 @@ function transientSources(entity: Pawn | Mob, id: string): string[] {
       return ['Currently sleeping'];
     case 'winded':
       return ['Stamina spent in combat'];
+    case 'nausea':
+    case 'dysentery':
+      return ['Food poisoning — a tainted or undercooked meal'];
     case 'knockdown':
     case 'collapse': {
       const t = entity.conditionTimers?.[id];
