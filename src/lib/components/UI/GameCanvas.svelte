@@ -390,7 +390,9 @@
       if (s.selectedPawnId) {
         selectedBuildingId = null;
         selectedResourceTile = null;
+        selectedItemId = null;
         highlightedResourceTiles = new Set();
+        _cycleTileX = -1; // a tab pick breaks the map click-cycle
       }
     }
     if (s.selectedMobId !== selectedMobId) {
@@ -398,7 +400,9 @@
       if (s.selectedMobId) {
         selectedBuildingId = null;
         selectedResourceTile = null;
+        selectedItemId = null;
         highlightedResourceTiles = new Set();
+        _cycleTileX = -1;
       }
     }
     cameraFollowPawnId = s.cameraFollowPawnId ?? null;
@@ -449,6 +453,15 @@
   let blueprintDragTiles = new Set<string>();
   // Resource tile interaction
   let selectedResourceTile: { x: number; y: number; resourceId: string } | null = null;
+  // Click-locked dropped item (by stable DroppedItem.id) — the loose-item analogue of selectedResourceTile,
+  // so a clicked item stack pins its info card just like a pawn/mob/building/resource does. Re-derived
+  // live from `droppedItems` so the card tracks decay/durability and clears itself when the stack is gone.
+  let selectedItemId: string | null = null;
+  // Click-to-cycle: repeated clicks on the SAME tile step through the selectable layers stacked on it
+  // (pawn → mob → building → item(s) → resource(s)) one per click. Reset when a different tile is clicked.
+  let _cycleTileX = -1;
+  let _cycleTileY = -1;
+  let _cycleIndex = 0;
   let similarDragMode = false;
   let similarDragResourceId = '';
   let similarDragDesignationType: DesignationType = 'harvest';
@@ -812,11 +825,16 @@
     return '#D32F2F';
   }
 
-  // Dropped-item hover panel — same shared SelectedEntityCard as pawns/mobs/buildings/resources,
-  // so the title sits on top and FRESH/COND bars (the reusable StatBar) render below it.
-  $: hoverItemCard = (() => {
-    const d = hoverDroppedItem;
-    if (!d) return null;
+  // Click-locked dropped item, re-derived live from droppedItems by id (tracks decay/condition; auto-
+  // clears to null when the stack is consumed/hauled away). Same card builder as the hover panel.
+  $: selectedItem = selectedItemId
+    ? (droppedItems.find((d) => d.id === selectedItemId) ?? null)
+    : null;
+
+  // Dropped-item info panel — same shared SelectedEntityCard as pawns/mobs/buildings/resources, so the
+  // title sits on top and FRESH/COND bars (the reusable StatBar) render below it. Shared by the hover
+  // panel and the click-locked selection (buildItemCard).
+  function buildItemCard(d: DroppedItem): SelectedEntityModel {
     const itemDef = ITEMS_DATABASE.find((i) => i.id === d.resourceId);
     const maxDur = itemDef?.maxDurability ?? 100;
     const freshPct =
@@ -851,7 +869,9 @@
       bars,
       note: d.stored ? 'stored' : 'dropped item — awaiting hauler'
     } satisfies SelectedEntityModel;
-  })();
+  }
+  $: hoverItemCard = hoverDroppedItem ? buildItemCard(hoverDroppedItem) : null;
+  $: selectedItemCard = selectedItem ? buildItemCard(selectedItem) : null;
 
   function moveCostLabel(cost: number): { label: string; color: string } {
     if (cost <= 0) return { label: 'impassable', color: '#cc4444' };
@@ -2071,46 +2091,93 @@
     });
   }
 
+  // One selectable layer stacked on a tile.
+  type TileLayer =
+    | { kind: 'pawn'; id: string }
+    | { kind: 'mob'; id: string }
+    | { kind: 'building'; id: string }
+    | { kind: 'item'; id: string }
+    | { kind: 'resource'; resourceId: string };
+
+  // Commit a single layer as THE selection — mutually exclusive (one selected thing at a time). This
+  // centralizes the per-kind reset that used to be duplicated across selectTileAt's branches + the tab
+  // sync, so every selection path (click, click-cycle, camera jump, tab pick) clears the others the
+  // same way and the click-locked item state can't be orphaned.
+  function applyTileLayer(layer: TileLayer, x: number, y: number): void {
+    selectedPawnId = null;
+    selectedMobId = null;
+    selectedBuildingId = null;
+    selectedResourceTile = null;
+    selectedItemId = null;
+    highlightedResourceTiles = new Set();
+    showShelterAssign = false;
+    uiState.selectPawn(null);
+    uiState.selectMob(null);
+    switch (layer.kind) {
+      case 'pawn':
+        selectedPawnId = layer.id;
+        uiState.selectPawn(layer.id);
+        break;
+      case 'mob':
+        selectedMobId = layer.id;
+        uiState.selectMob(layer.id);
+        break;
+      case 'building':
+        selectedBuildingId = layer.id;
+        break;
+      case 'item':
+        selectedItemId = layer.id;
+        break;
+      case 'resource':
+        selectedResourceTile = { x, y, resourceId: layer.resourceId };
+        break;
+    }
+  }
+
+  // Every selectable layer stacked on a tile, in cycle order: pawn → mob → building → item(s) →
+  // resource(s). handleTileClick steps through this on repeated clicks of the same tile; the first
+  // entry is what a single click picks. Fog-hidden tiles expose nothing (no buried item/resource leak).
+  function tileLayers(x: number, y: number): TileLayer[] {
+    const layers: TileLayer[] = [];
+    const pawn = findPawnAtTile(x, y);
+    if (pawn) layers.push({ kind: 'pawn', id: pawn.id });
+    const mob = findMobAtTile(x, y);
+    if (mob) layers.push({ kind: 'mob', id: mob.id });
+    const building = buildings.find((b) => b.x === x && b.y === y);
+    if (building) layers.push({ kind: 'building', id: building.id });
+    if (!isHiddenTile(x, y)) {
+      for (const it of droppedItems) {
+        if (it.x === x && it.y === y) layers.push({ kind: 'item', id: it.id });
+      }
+      const tileData = worldMap[y]?.[x];
+      for (const [resourceId, v] of Object.entries(tileData?.resources ?? {})) {
+        if (v > 0) layers.push({ kind: 'resource', resourceId });
+      }
+    }
+    return layers;
+  }
+
   // Pick whatever is on (x,y) and select it — building > pawn > mob > resource, in that priority.
-  // Shared by manual map clicks (handleTileClick) and camera jumps (focusMapOn from the EXPLORE/PAWN/
-  // ENTITY tabs) so a jumped-to tile gets the *same* selection + highlight + info HUD as a click,
-  // instead of a separate yellow-flash highlight. Returns true if something was selected; false if
-  // the tile is empty (the caller decides what an empty tile means — deselect, or a drafted move).
+  // Shared by camera jumps (focusMapOn from the EXPLORE/PAWN/ENTITY tabs) so a jumped-to tile gets the
+  // *same* selection + highlight + info HUD as a click. Manual clicks use handleTileClick's CYCLE path
+  // instead (so a stacked tile steps through its layers). Returns true if something was selected; false
+  // if the tile is empty (the caller decides what an empty tile means — deselect, or a drafted move).
   function selectTileAt(x: number, y: number): boolean {
     const clickedBuilding = buildings.find((b) => b.x === x && b.y === y);
     if (clickedBuilding) {
-      selectedBuildingId = clickedBuilding.id;
-      selectedPawnId = null;
-      selectedMobId = null;
-      selectedResourceTile = null;
-      highlightedResourceTiles = new Set();
-      showShelterAssign = false;
-      uiState.selectPawn(null);
-      uiState.selectMob(null);
+      applyTileLayer({ kind: 'building', id: clickedBuilding.id }, x, y);
       return true;
     }
 
     const clickedPawn = findPawnAtTile(x, y);
     if (clickedPawn) {
-      selectedPawnId = clickedPawn.id;
-      selectedBuildingId = null;
-      selectedMobId = null;
-      selectedResourceTile = null;
-      highlightedResourceTiles = new Set();
-      uiState.selectPawn(clickedPawn.id);
-      uiState.selectMob(null);
+      applyTileLayer({ kind: 'pawn', id: clickedPawn.id }, x, y);
       return true;
     }
 
     const clickedMob = findMobAtTile(x, y);
     if (clickedMob) {
-      selectedMobId = clickedMob.id;
-      selectedPawnId = null;
-      selectedBuildingId = null;
-      selectedResourceTile = null;
-      highlightedResourceTiles = new Set();
-      uiState.selectPawn(null);
-      uiState.selectMob(clickedMob.id);
+      applyTileLayer({ kind: 'mob', id: clickedMob.id }, x, y);
       return true;
     }
 
@@ -2121,14 +2188,7 @@
       ? []
       : Object.entries(tileData?.resources ?? {}).filter(([, v]) => v > 0);
     if (tileResources.length > 0) {
-      const [resourceId] = tileResources[0];
-      selectedResourceTile = { x, y, resourceId };
-      selectedPawnId = null;
-      selectedBuildingId = null;
-      selectedMobId = null;
-      highlightedResourceTiles = new Set();
-      uiState.selectPawn(null);
-      uiState.selectMob(null);
+      applyTileLayer({ kind: 'resource', resourceId: tileResources[0][0] }, x, y);
       return true;
     }
 
@@ -2181,16 +2241,32 @@
       return;
     }
 
-    // Building > pawn > mob > resource — shared with camera jumps (see selectTileAt).
-    if (selectTileAt(hoverTileX, hoverTileY)) {
+    // Click-to-cycle: a tile can stack several selectable layers (pawn / mob / building / item(s) /
+    // resource(s)). The FIRST click on a tile selects the top layer; each repeat click on the SAME
+    // tile steps to the next layer (wrapping around), so you can reach the item or resource under a
+    // pawn without moving it. A click on a different tile restarts the cycle at its top layer.
+    const layers = tileLayers(hoverTileX, hoverTileY);
+    if (layers.length > 0) {
+      if (hoverTileX === _cycleTileX && hoverTileY === _cycleTileY) {
+        _cycleIndex = (_cycleIndex + 1) % layers.length;
+      } else {
+        _cycleTileX = hoverTileX;
+        _cycleTileY = hoverTileY;
+        _cycleIndex = 0;
+      }
+      applyTileLayer(layers[_cycleIndex], hoverTileX, hoverTileY);
       drawDesignations();
       return;
     }
 
-    // Click on empty tile → deselect all. Drafted-pawn move orders are right-click only
-    // (see handleContextMenu's draft branch).
+    // Click on empty tile → deselect all + reset the cycle. Drafted-pawn move orders are right-click
+    // only (see handleContextMenu's draft branch).
+    _cycleTileX = -1;
+    _cycleTileY = -1;
+    _cycleIndex = 0;
     selectedBuildingId = null;
     selectedResourceTile = null;
+    selectedItemId = null;
     selectedMobId = null;
     highlightedResourceTiles = new Set();
     uiState.selectMob(null);
@@ -2542,6 +2618,8 @@
           selectedResourceTile = null;
           highlightedResourceTiles = new Set();
           drawDesignations();
+        } else if (selectedItemId) {
+          selectedItemId = null;
         } else if (selectedMobId) {
           selectedMobId = null;
           uiState.selectMob(null);
@@ -2576,6 +2654,11 @@
           dismissed = false; // nothing to back out of → let the pause menu open
         }
         if (dismissed) {
+          // Backing out a selection also resets the click-cycle, so re-clicking the same tile starts
+          // again at its top layer rather than resuming mid-cycle.
+          _cycleTileX = -1;
+          _cycleTileY = -1;
+          _cycleIndex = 0;
           e.preventDefault();
           e.stopPropagation();
         }
@@ -3417,6 +3500,9 @@
           <BuildingFuelPanel building={selectedBuilding} {pawns} open={showFuelSettings} />
         {/if}
       </div>
+    {:else if selectedItemCard}
+      <!-- Click-locked dropped item card (from the tile click-cycle), above the hover/resource cards -->
+      <SelectedEntityCard model={selectedItemCard} />
     {:else if resourceCard}
       <SelectedEntityCard model={resourceCard} />
     {:else if hasSelection}
