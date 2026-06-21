@@ -587,6 +587,21 @@ export class GameEngineImpl implements GameEngine {
           };
           continue;
         }
+        // A move target is STATIC: once a route to it exists, movement just advances along it —
+        // re-running A* every tick recomputes the identical path and (per call) slices the whole
+        // walkable grid, which scales with map size (250k tiles @ 500×500). Skip the re-path while the
+        // pawn still holds a live route whose end is this target; recovery is automatic — movement drops
+        // the path when it empties (arrival) or stays blocked (MAX_BLOCKED_TICKS), and the empty path
+        // fails this guard next tick → re-path. (Soft-body occupancy means a transient body on the path
+        // routes around at the movement layer, not a wall, so a stale-by-a-tick path is safe.)
+        const route = pawn.path;
+        const end = route && route.length > 0 ? route[route.length - 1] : undefined;
+        const hasLiveRoute =
+          !!end &&
+          (pawn.pathIndex ?? 0) < route!.length &&
+          end.x === target.x &&
+          end.y === target.y;
+        if (hasLiveRoute) continue;
         // Shared with the draft-move commands so a move order computed at command time (even paused)
         // traces the same route this tick would (see draftMovePath.ts).
         gs = assignDraftMovePath(gs, pawn, target.x, target.y, blocked);
