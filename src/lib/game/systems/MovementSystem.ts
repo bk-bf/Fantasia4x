@@ -217,6 +217,13 @@ export function stepBody<T extends MovableBody>(
   if (!midCrossing) claimed.add(targetKey);
   const moved = advanceAlongPath(body, Math.max(0.01, speed), worldMap);
   const done = !moved.path || moved.path.length === 0;
-  const out = body.blockedTicks ? { ...moved, blockedTicks: 0 } : moved;
+  // Only clear the deadlock counter on REAL progress (a tile actually entered). Clearing it on every
+  // non-blocked tick let an intermittently-blocked mob — e.g. a dense pack where each member's target
+  // tile flickers occupied/free as packmates jostle — reset `blockedTicks` to 0 before it ever reached
+  // MAX_BLOCKED_TICKS, so the drop-and-reroute breaker NEVER fired and the mob sat on a stale path
+  // forever (frozen-in-Wander gridlock). A legit slow mob accumulating cost on a free tile never
+  // entered the blocked branch, so its counter stays 0 regardless — this only affects the gridlock case.
+  const progressed = moved.x !== body.x || moved.y !== body.y;
+  const out = body.blockedTicks && progressed ? { ...moved, blockedTicks: 0 } : moved;
   return { body: out, status: 'moved', done };
 }

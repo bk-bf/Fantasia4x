@@ -65,6 +65,25 @@ describe('stepBody — shared move pass', () => {
     expect(res.body.blockedTicks).toBe(0);
   });
 
+  it('preserves blockedTicks on a non-blocked tick that makes NO progress (gridlock breaker)', () => {
+    // A mob that was blocked (counter climbing) gets a momentarily-free target tile but is too slow to
+    // fully enter it this tick (cost-60 tile, speed 4 → no position change). The counter must be KEPT,
+    // not reset to 0 — else an intermittently-blocked mob (a dense pack whose target tiles flicker
+    // occupied/free) never reaches MAX_BLOCKED_TICKS and the drop-and-reroute breaker never fires, so
+    // the whole pack freezes in Wander on stale paths forever.
+    const b = body('a', 0, 0, { path: [{ x: 1, y: 0 }], pathIndex: 0, blockedTicks: 5 });
+    const res = stepBody(b, new Set(), new Set(), world(), 4);
+    expect(res.body.x).toBe(0); // did not actually enter the tile
+    expect(res.body.blockedTicks).toBe(5); // counter preserved (was wrongly reset to 0 before the fix)
+  });
+
+  it('clears blockedTicks once the mob actually enters a tile (real progress)', () => {
+    const b = body('a', 0, 0, { path: [{ x: 1, y: 0 }], pathIndex: 0, blockedTicks: 5 });
+    const res = stepBody(b, new Set(), new Set(), world(), 200); // fast enough to cross in one tick
+    expect(res.body.x).toBe(1); // entered the tile
+    expect(res.body.blockedTicks).toBe(0); // real progress clears the counter
+  });
+
   it('prevents two fresh movers converging on one tile (claim set)', () => {
     const claimed = new Set<string>();
     const a = stepBody(body('a', 0, 0, { path: [{ x: 1, y: 1 }], pathIndex: 0 }), new Set(), claimed, world(), 200);
