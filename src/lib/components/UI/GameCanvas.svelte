@@ -107,6 +107,11 @@
   import itemsData from '$lib/game/database/items.jsonc';
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
+
+  // Main-menu backdrop mode (rendered behind MainMenu). A live but non-interactive atmospheric view:
+  // no hover/click/pan/zoom/keys, no HUD, a static centred framing, and it does NOT drive the
+  // boot-reveal sequence or the player's saved camera. Entities still animate (never frozen).
+  export let menuPreview = false;
   // Per-building refuel settings UI now lives in gameCanvas/BuildingFuelPanel.svelte (fuel items,
   // filters, threshold). Sprite-sheet cache + HUD-icon action live in gameCanvas/{spriteSheets,
   // hudSpriteIcon}.
@@ -487,7 +492,10 @@
   // A fog-hidden tile (mountain interior / sealed pocket) shows NO inspector — hovering it must not
   // reveal the resources, soil, or subterrain buried under the silhouette.
   $: hoverTile =
-    hoverTileX >= 0 && hoverTileY >= 0 && worldMap.length > 0 && !isHiddenTile(hoverTileX, hoverTileY)
+    hoverTileX >= 0 &&
+    hoverTileY >= 0 &&
+    worldMap.length > 0 &&
+    !isHiddenTile(hoverTileX, hoverTileY)
       ? (worldMap[hoverTileY]?.[hoverTileX] ?? null)
       : null;
   $: hoverResources = hoverTile
@@ -565,17 +573,21 @@
   /** Returns " #N" in debug mode, derived from debugId or the trailing number in the id string. */
 
   $: selectedPawnCard = selectedPawn
-    ? buildPawnCard(selectedPawn, true, { cameraFollowPawnId, startMark: () => startMarkDrag('pawn') })
+    ? buildPawnCard(selectedPawn, true, {
+        cameraFollowPawnId,
+        startMark: () => startMarkDrag('pawn')
+      })
     : null;
   $: hoverPawnCard = hoverPawn
-    ? buildPawnCard(hoverPawn, false, { cameraFollowPawnId, startMark: () => startMarkDrag('pawn') })
+    ? buildPawnCard(hoverPawn, false, {
+        cameraFollowPawnId,
+        startMark: () => startMarkDrag('pawn')
+      })
     : null;
 
   // How many of the highlighted pawns are currently drafted — gates the MOVE action.
   $: markedDraftedCount =
-    markedKind === 'pawn'
-      ? pawns.filter((p) => p.drafted && markedSet.has(p.id)).length
-      : 0;
+    markedKind === 'pawn' ? pawns.filter((p) => p.drafted && markedSet.has(p.id)).length : 0;
   // All highlighted pawns already drafted → the verb flips to UNDRAFT.
   $: markedAllDrafted =
     markedKind === 'pawn' && markedIds.length > 0 && markedDraftedCount === markedIds.length;
@@ -586,7 +598,10 @@
     if (!hoverMob) return null;
     const def = getCreatureById(hoverMob.creatureId);
     return def
-      ? buildMobCard(hoverMob, def, false, { cameraFollowMobId, startMark: () => startMarkDrag('mob') })
+      ? buildMobCard(hoverMob, def, false, {
+          cameraFollowMobId,
+          startMark: () => startMarkDrag('mob')
+        })
       : null;
   })();
 
@@ -2234,7 +2249,8 @@
     unsubCombatFeedback();
     unsubAttackLunges();
     unsubProjectiles();
-    rendererReady.set(false); // a remount must re-init WebGL before the game is shown again
+    // The menu backdrop is not the real renderer boot — leave the boot-reveal flag untouched.
+    if (!menuPreview) rendererReady.set(false); // a remount must re-init WebGL before the game shows
     if (browser) {
       cancelAnimationFrame(animationId);
       renderer?.dispose();
@@ -2251,18 +2267,30 @@
       viewX = 0;
       viewY = 0;
 
-      // Restore camera from previous session (survives hot reloads)
-      try {
-        const saved = sessionStorage.getItem(CAMERA_STORAGE_KEY);
-        if (saved) {
-          const c = JSON.parse(saved);
-          if (typeof c.tileWidth === 'number')
-            tileWidth = tileHeight = Math.max(fitTileSize, Math.min(MAX_TILE_W, c.tileWidth));
-          if (typeof c.viewX === 'number') viewX = c.viewX;
-          if (typeof c.viewY === 'number') viewY = c.viewY;
+      if (menuPreview) {
+        // Static, centred framing at the cover-fit floor (the unbound axis overflows the viewport,
+        // so the scene reads as "a bit bigger than the screen"). No saved-camera restore — the
+        // backdrop must never read or write the player's camera.
+        const mapW = worldMap.length > 0 ? worldMap[0].length : MAP_W;
+        const mapH = worldMap.length > 0 ? worldMap.length : MAP_H;
+        const visW = Math.ceil(canvas.width / tileWidth);
+        const visH = Math.ceil(canvas.height / tileHeight);
+        viewX = Math.max(0, Math.floor((mapW - visW) / 2));
+        viewY = Math.max(0, Math.floor((mapH - visH) / 2));
+      } else {
+        // Restore camera from previous session (survives hot reloads)
+        try {
+          const saved = sessionStorage.getItem(CAMERA_STORAGE_KEY);
+          if (saved) {
+            const c = JSON.parse(saved);
+            if (typeof c.tileWidth === 'number')
+              tileWidth = tileHeight = Math.max(fitTileSize, Math.min(MAX_TILE_W, c.tileWidth));
+            if (typeof c.viewX === 'number') viewX = c.viewX;
+            if (typeof c.viewY === 'number') viewY = c.viewY;
+          }
+        } catch {
+          /* ignore corrupt data */
         }
-      } catch {
-        /* ignore corrupt data */
       }
 
       // Init pathfinder WASM early so pawns can navigate as soon as turns start
@@ -2310,7 +2338,8 @@
       }
 
       ready = true;
-      rendererReady.set(true); // WebGL is up — arms the paused warmup linger that drops the overlay
+      // The backdrop must not arm the boot-reveal linger — that belongs to the real game's renderer.
+      if (!menuPreview) rendererReady.set(true); // WebGL up — arms the warmup linger that drops overlay
       startLoop();
 
       new ResizeObserver(() => {
@@ -2423,7 +2452,10 @@
       updateWorldEffectOverlays();
       // Coalesced sim-driven terrain rebuild: at most once per TERRAIN_REBUILD_MIN_MS instead
       // of the full 38k-tile rebuild every frame that resource regrowth/harvest would force.
-      if (_terrainDirty && (_forceTerrainRebuild || now - _lastTerrainBuild >= TERRAIN_REBUILD_MIN_MS)) {
+      if (
+        _terrainDirty &&
+        (_forceTerrainRebuild || now - _lastTerrainBuild >= TERRAIN_REBUILD_MIN_MS)
+      ) {
         _terrainDirty = false;
         _forceTerrainRebuild = false;
         _lastTerrainBuild = now;
@@ -2435,7 +2467,8 @@
       // (entity motion sub-pixel). NB: we do NOT freeze on a bare in-game pause — paused-but-zoomed-in
       // still wants its animation layers (weather/status/glow) live (see §E.1 followup: cache the
       // heavy map+entity layers while keeping the light animated layers redrawing).
-      const frozen = customMapPreview || tileWidth < FREEZE_TILE_PX;
+      // The menu backdrop is a LIVE scene (grazing prey) — never freeze it, even zoomed out.
+      const frozen = !menuPreview && (customMapPreview || tileWidth < FREEZE_TILE_PX);
       if (_renderDirty || !frozen || now - lastDrawAt >= FROZEN_SAFETY_MS) {
         renderer.setItemOverlayGrid(itemOverlayGrid);
         renderer.setOverlayGrid(pawnOverlayGrid);
@@ -2468,6 +2501,7 @@
   }
 
   function saveCameraState() {
+    if (menuPreview) return; // backdrop never persists the player's camera
     // Debounced: the actual sessionStorage write is a synchronous, blocking call
     // that must not run on every mousemove during a camera drag (caused stutter).
     if (saveCameraTimer !== null) clearTimeout(saveCameraTimer);
@@ -2485,7 +2519,7 @@
   }
 
   function handleKeyDown(e: KeyboardEvent) {
-    if (!ready) return;
+    if (!ready || menuPreview) return;
     switch (e.key) {
       case 'ArrowLeft':
         setView(viewX - SCROLL_STEP, viewY);
@@ -2569,7 +2603,7 @@
   }
 
   function handleWheel(e: WheelEvent) {
-    if (!ready || !renderer) return;
+    if (!ready || !renderer || menuPreview) return;
     e.preventDefault();
     const dir = e.deltaY > 0 ? -1 : 1;
 
@@ -2604,6 +2638,7 @@
   }
 
   function handleMouseDown(e: MouseEvent) {
+    if (menuPreview) return;
     if (e.button !== 0) return;
     if (pawnMoveMode) {
       // MOVE phase: a single left-click is the destination the drafted group spreads around.
@@ -2673,6 +2708,7 @@
   }
 
   function handleMouseMove(e: MouseEvent) {
+    if (menuPreview) return;
     // Always track hover tile
     if (canvas) {
       const rect = canvas.getBoundingClientRect();
@@ -2802,7 +2838,7 @@
       drawDesignations();
       return;
     }
-    if (dragDistance < 3 && !customMapPreview) {
+    if (dragDistance < 3 && !customMapPreview && !menuPreview) {
       // Recompute hover tile from current viewX/viewY — the follow camera may
       // have shifted the view since the last mousemove, making the stored tile stale.
       // (Floor the combined coord — viewX/viewY are fractional under smooth follow.)
@@ -3091,6 +3127,7 @@
   /** Right-click: clear designation at hovered tile (or drag-erase rect in zone mode). */
   function handleContextMenu(e: MouseEvent) {
     e.preventDefault();
+    if (menuPreview) return;
     equipMenu = null;
     if (hoverTileX < 0 || hoverTileY < 0) return;
 
@@ -3363,197 +3400,200 @@
     </div>
   {/if}
   <!-- Info HUD (selection + hover cards + tile tooltip). Entirely suppressed while the Custom Map
-       popup is open — the player is shaping terrain, not inspecting entities. -->
-  {#if !customMapPreview}
-  {#if selectedPawnCard}
-    <!-- Selected pawn card — locked to this pawn regardless of mouse hover -->
-    <SelectedEntityCard model={selectedPawnCard} />
-  {:else if selectedMobCard}
-    <!-- Selected mob/animal card — locked to this creature regardless of hover -->
-    <SelectedEntityCard model={selectedMobCard} />
-  {:else if selectedBuilding}
-    {@const canConfigureFuel =
-      selectedBuilding.status === 'complete' &&
-      !selectedBuilding.deconstructQueued &&
-      buildingService.getBuildingById(selectedBuilding.type)?.maxFuel !== undefined}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-      class="bld-row"
-      role="presentation"
-      on:mousedown|stopPropagation
-      on:mouseup|stopPropagation
-    >
-      {#if buildingCard}
-        <SelectedEntityCard model={buildingCard} embedded />
-      {/if}
-      {#if canConfigureFuel}
-        <BuildingFuelPanel building={selectedBuilding} {pawns} open={showFuelSettings} />
-      {/if}
-    </div>
-  {:else if resourceCard}
-    <SelectedEntityCard model={resourceCard} />
-  {:else if hasSelection}
-    <!-- Multi-tile drag-select summary -->
-    <div class="tile-hud tile-hud--selection">
-      <span class="sel-title">◈ SELECTION</span>
-      {#if selPawns.length > 0}
-        <div class="sel-row sel-pawns">
-          {selPawns.length} pawn{selPawns.length !== 1 ? 's' : ''}: {selPawns
-            .map((p) => p.name ?? p.id)
-            .join(', ')}
-        </div>
-      {/if}
-      {#if selBuildings.length > 0}
-        <div class="sel-row sel-buildings">
-          {selBuildings.length} building{selBuildings.length !== 1 ? 's' : ''}: {selBuildings
-            .map((b) => b.type)
-            .join(', ')}
-        </div>
-      {/if}
-      {#each Object.entries(selZones) as [type, count]}
-        <div class="sel-row" style="color:{ZONE_META[type]?.color ?? '#aaa'}">
-          {count}× {ZONE_META[type]?.label ?? type}
-        </div>
-      {/each}
-      <div class="sel-hint">Esc to clear</div>
-    </div>
-  {:else if hoverPawnCard}
-    <SelectedEntityCard model={hoverPawnCard} />
-  {:else if hoverMobCard}
-    <SelectedEntityCard model={hoverMobCard} />
-  {:else if hoverBuilding && !hoverPawn}
-    {@const bDef = buildingService.getBuildingById(hoverBuilding.type)}
-    {@const isBlueprint = hoverBuilding.status !== 'complete'}
-    <div class="tile-hud tile-hud--building">
-      <div class="bld-header">
-        <span class="bld-name">{bDef?.name ?? hoverBuilding.type}</span>
-        <span class="bld-status">
-          [{isBlueprint
-            ? hoverBuilding.paused
-              ? 'paused'
-              : 'building'
-            : 'complete'}{hoverBuilding.deconstructQueued ? ' ⊢ demolish' : ''}]
-        </span>
-      </div>
-      {#if isBlueprint}
-        {@const workDone = hoverBuilding.workDone ?? 0}
-        {@const workReq = hoverBuilding.workRequired ?? bDef?.workAmount ?? 1}
-        <div class="bld-progress">
-          [{jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] {Math.round(workDone)}/{workReq} work
-        </div>
-      {:else if hoverBuilding.deconstructQueued}
-        {@const dDone = hoverBuilding.deconstructWorkDone ?? 0}
-        {@const dReq = hoverBuilding.deconstructWorkRequired ?? 1}
-        <div class="bld-progress">
-          [{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {Math.round(dDone)}/{dReq} work
-        </div>
-        <div class="bld-note">⊢ demolishing…</div>
-      {/if}
-      {#if bDef?.description}
-        <div class="bld-desc">{bDef.description}</div>
-      {/if}
-      {#if !isBlueprint && !hoverBuilding.deconstructQueued && bDef?.maxFuel !== undefined}
-        {@const fuelMax = bDef.maxFuel}
-        {@const fuelCurr = hoverBuilding.fuel ?? 0}
-        <div class="bld-fuel">
-          FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {Math.floor(
-            fuelCurr
-          )}/{Math.floor(fuelMax)}
-          {#if hoverBuilding.lit}<span class="fuel-lit">● lit</span>{:else}<span class="fuel-dark"
-              >○ unlit</span
-            >{/if}
-        </div>
-      {/if}
-    </div>
-  {:else if hoverItemCard}
-    <!-- Dropped item on the hovered tile — shared SelectedEntityCard, bars below the title -->
-    <SelectedEntityCard model={hoverItemCard} />
-  {:else if hoverTile}
-    {@const tileThermal = computeThermalAt(hoverTile.x, hoverTile.y, buildings)}
-    {@const tileTemp = tileTemperature(
-      hoverTile.terrainType,
-      $currentSeason,
-      $currentWeather,
-      tileThermal
-    )}
-    {@const tileWet = tileWetness(hoverTile.moisture ?? 0, $currentWeather, tileThermal)}
-    {@const windWord = windDegreeWord(
-      effectiveWindAt(hoverTile.x, hoverTile.y, $currentWeather, tileThermal, worldMap)
-    )}
-    {@const tileSnow = Math.round(hoverTile.snow ?? 0)}
-    {@const soilTier = soilTierForTile(hoverTile)}
-    {@const soilPct = soilFertilityPct(hoverTile)}
-    <div class="tile-hud">
-      <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
-        >{BIOMES[hoverTile.terrainType]?.displayName ?? hoverTile.terrainType},{SUBTERRAINS[
-          hoverTile.subType
-        ]?.displayName ?? hoverTile.subType},{hoverDisplayResource
-          ? (resourceObjectService.getById(hoverDisplayResource)?.displayName ??
-            hoverDisplayResource)
-          : '—'}</span
+       popup is open OR in the menu backdrop — neither inspects entities. -->
+  {#if !customMapPreview && !menuPreview}
+    {#if selectedPawnCard}
+      <!-- Selected pawn card — locked to this pawn regardless of mouse hover -->
+      <SelectedEntityCard model={selectedPawnCard} />
+    {:else if selectedMobCard}
+      <!-- Selected mob/animal card — locked to this creature regardless of hover -->
+      <SelectedEntityCard model={selectedMobCard} />
+    {:else if selectedBuilding}
+      {@const canConfigureFuel =
+        selectedBuilding.status === 'complete' &&
+        !selectedBuilding.deconstructQueued &&
+        buildingService.getBuildingById(selectedBuilding.type)?.maxFuel !== undefined}
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="bld-row"
+        role="presentation"
+        on:mousedown|stopPropagation
+        on:mouseup|stopPropagation
       >
-      {#if !hoverTile.walkable}
-        <div class="tile-move" style="color:#cc4444">move: impassable</div>
-      {:else}
-        {@const effMoveCost = (hoverTile.movementCost ?? 1) * (1 + tileSnow / 100)}
-        {@const mc = moveCostLabel(effMoveCost)}
-        <div class="tile-move" style="color:{mc.color}">
-          move ×{effMoveCost.toFixed(1)}{#if tileSnow > 0}<span style="color:#cdd6e0">
-              (snow)</span
-            >{/if}
-        </div>
-      {/if}
-      {#if hoverZoneType && ZONE_META[hoverZoneType]}
-        <div class="tile-zone" style="color:{ZONE_META[hoverZoneType].color}">
-          {ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}
-        </div>
-      {/if}
-      <div class="tile-env">
-        <span
-          style="color:{hoverTileLight >= 0.8
-            ? '#68b030'
-            : hoverTileLight >= 0.4
-              ? '#b09030'
-              : '#c83018'}">light {Math.round(hoverTileLight * 100)}%</span
-        >
-        {#if hoverDisplayResource}
-          {@const growRes = resourceObjectService.getById(hoverDisplayResource)}
-          {#if growRes && isGrowableResource(growRes)}
-            {@const gpct = Math.round(hoverTile.growth?.[hoverDisplayResource] ?? 100)}
-            <span
-              style="color:{gpct >= 100 ? '#68b030' : gpct >= 50 ? '#9aac3a' : '#c89a3a'}"
-              title="resource maturity — scales harvest yield; crops grow only with enough fertility, warmth, water and light"
-              >growth {gpct}%</span
-            >
-          {/if}
+        {#if buildingCard}
+          <SelectedEntityCard model={buildingCard} embedded />
+        {/if}
+        {#if canConfigureFuel}
+          <BuildingFuelPanel building={selectedBuilding} {pawns} open={showFuelSettings} />
         {/if}
       </div>
-      <div class="tile-env">
-        <span style="color:{tileTemp <= 0 ? '#5aa0e0' : tileTemp >= 30 ? '#e07a2a' : '#b0a060'}"
-          >temp {tileTemp}°C</span
-        >
-        <span style="color:{tileWet >= 60 ? '#3a9ed0' : tileWet >= 30 ? '#6aa0a0' : '#a08a5a'}"
-          >wet {Math.round(tileWet)}%</span
-        >
-        <span
-          style="color:{soilTier >= 4
-            ? '#6fae3a'
-            : soilTier === 3
-              ? '#86ac3a'
-              : soilTier === 2
-                ? '#9aac3a'
-                : soilTier === 1
-                  ? '#a89a4a'
-                  : '#8a7a5a'}"
-          title="soil fertility ({SOIL_TIER_NAME[soilTier]}) — drives what crops grow here and how fast"
-          >fertility {soilPct}%</span
-        >
-        {#if tileSnow > 0}<span style="color:#cdd6e0">snow {tileSnow}%</span>{/if}
-        {#if windWord}<span style="color:#8fc8a0">{windWord} windy</span>{/if}
-        {#if tileThermal.roofed}<span style="color:#7e9fbf">roofed</span>{/if}
+    {:else if resourceCard}
+      <SelectedEntityCard model={resourceCard} />
+    {:else if hasSelection}
+      <!-- Multi-tile drag-select summary -->
+      <div class="tile-hud tile-hud--selection">
+        <span class="sel-title">◈ SELECTION</span>
+        {#if selPawns.length > 0}
+          <div class="sel-row sel-pawns">
+            {selPawns.length} pawn{selPawns.length !== 1 ? 's' : ''}: {selPawns
+              .map((p) => p.name ?? p.id)
+              .join(', ')}
+          </div>
+        {/if}
+        {#if selBuildings.length > 0}
+          <div class="sel-row sel-buildings">
+            {selBuildings.length} building{selBuildings.length !== 1 ? 's' : ''}: {selBuildings
+              .map((b) => b.type)
+              .join(', ')}
+          </div>
+        {/if}
+        {#each Object.entries(selZones) as [type, count]}
+          <div class="sel-row" style="color:{ZONE_META[type]?.color ?? '#aaa'}">
+            {count}× {ZONE_META[type]?.label ?? type}
+          </div>
+        {/each}
+        <div class="sel-hint">Esc to clear</div>
       </div>
-    </div>
-  {/if}
+    {:else if hoverPawnCard}
+      <SelectedEntityCard model={hoverPawnCard} />
+    {:else if hoverMobCard}
+      <SelectedEntityCard model={hoverMobCard} />
+    {:else if hoverBuilding && !hoverPawn}
+      {@const bDef = buildingService.getBuildingById(hoverBuilding.type)}
+      {@const isBlueprint = hoverBuilding.status !== 'complete'}
+      <div class="tile-hud tile-hud--building">
+        <div class="bld-header">
+          <span class="bld-name">{bDef?.name ?? hoverBuilding.type}</span>
+          <span class="bld-status">
+            [{isBlueprint
+              ? hoverBuilding.paused
+                ? 'paused'
+                : 'building'
+              : 'complete'}{hoverBuilding.deconstructQueued ? ' ⊢ demolish' : ''}]
+          </span>
+        </div>
+        {#if isBlueprint}
+          {@const workDone = hoverBuilding.workDone ?? 0}
+          {@const workReq = hoverBuilding.workRequired ?? bDef?.workAmount ?? 1}
+          <div class="bld-progress">
+            [{jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] {Math.round(
+              workDone
+            )}/{workReq} work
+          </div>
+        {:else if hoverBuilding.deconstructQueued}
+          {@const dDone = hoverBuilding.deconstructWorkDone ?? 0}
+          {@const dReq = hoverBuilding.deconstructWorkRequired ?? 1}
+          <div class="bld-progress">
+            [{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {Math.round(dDone)}/{dReq} work
+          </div>
+          <div class="bld-note">⊢ demolishing…</div>
+        {/if}
+        {#if bDef?.description}
+          <div class="bld-desc">{bDef.description}</div>
+        {/if}
+        {#if !isBlueprint && !hoverBuilding.deconstructQueued && bDef?.maxFuel !== undefined}
+          {@const fuelMax = bDef.maxFuel}
+          {@const fuelCurr = hoverBuilding.fuel ?? 0}
+          <div class="bld-fuel">
+            FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {Math.floor(
+              fuelCurr
+            )}/{Math.floor(fuelMax)}
+            {#if hoverBuilding.lit}<span class="fuel-lit">● lit</span>{:else}<span class="fuel-dark"
+                >○ unlit</span
+              >{/if}
+          </div>
+        {/if}
+      </div>
+    {:else if hoverItemCard}
+      <!-- Dropped item on the hovered tile — shared SelectedEntityCard, bars below the title -->
+      <SelectedEntityCard model={hoverItemCard} />
+    {:else if hoverTile}
+      {@const tileThermal = computeThermalAt(hoverTile.x, hoverTile.y, buildings)}
+      {@const tileTemp = tileTemperature(
+        hoverTile.terrainType,
+        $currentSeason,
+        $currentWeather,
+        tileThermal
+      )}
+      {@const tileWet = tileWetness(hoverTile.moisture ?? 0, $currentWeather, tileThermal)}
+      {@const windWord = windDegreeWord(
+        effectiveWindAt(hoverTile.x, hoverTile.y, $currentWeather, tileThermal, worldMap)
+      )}
+      {@const tileSnow = Math.round(hoverTile.snow ?? 0)}
+      {@const soilTier = soilTierForTile(hoverTile)}
+      {@const soilPct = soilFertilityPct(hoverTile)}
+      <div class="tile-hud">
+        <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
+          >{BIOMES[hoverTile.terrainType]?.displayName ?? hoverTile.terrainType},{SUBTERRAINS[
+            hoverTile.subType
+          ]?.displayName ?? hoverTile.subType},{hoverDisplayResource
+            ? (resourceObjectService.getById(hoverDisplayResource)?.displayName ??
+              hoverDisplayResource)
+            : '—'}</span
+        >
+        {#if !hoverTile.walkable}
+          <div class="tile-move" style="color:#cc4444">move: impassable</div>
+        {:else}
+          {@const effMoveCost = (hoverTile.movementCost ?? 1) * (1 + tileSnow / 100)}
+          {@const mc = moveCostLabel(effMoveCost)}
+          <div class="tile-move" style="color:{mc.color}">
+            move ×{effMoveCost.toFixed(1)}{#if tileSnow > 0}<span style="color:#cdd6e0">
+                (snow)</span
+              >{/if}
+          </div>
+        {/if}
+        {#if hoverZoneType && ZONE_META[hoverZoneType]}
+          <div class="tile-zone" style="color:{ZONE_META[hoverZoneType].color}">
+            {ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}
+          </div>
+        {/if}
+        <div class="tile-env">
+          <span
+            style="color:{hoverTileLight >= 0.8
+              ? '#68b030'
+              : hoverTileLight >= 0.4
+                ? '#b09030'
+                : '#c83018'}">light {Math.round(hoverTileLight * 100)}%</span
+          >
+          {#if hoverDisplayResource}
+            {@const growRes = resourceObjectService.getById(hoverDisplayResource)}
+            {#if growRes && isGrowableResource(growRes)}
+              {@const gpct = Math.round(hoverTile.growth?.[hoverDisplayResource] ?? 100)}
+              <span
+                style="color:{gpct >= 100 ? '#68b030' : gpct >= 50 ? '#9aac3a' : '#c89a3a'}"
+                title="resource maturity — scales harvest yield; crops grow only with enough fertility, warmth, water and light"
+                >growth {gpct}%</span
+              >
+            {/if}
+          {/if}
+        </div>
+        <div class="tile-env">
+          <span style="color:{tileTemp <= 0 ? '#5aa0e0' : tileTemp >= 30 ? '#e07a2a' : '#b0a060'}"
+            >temp {tileTemp}°C</span
+          >
+          <span style="color:{tileWet >= 60 ? '#3a9ed0' : tileWet >= 30 ? '#6aa0a0' : '#a08a5a'}"
+            >wet {Math.round(tileWet)}%</span
+          >
+          <span
+            style="color:{soilTier >= 4
+              ? '#6fae3a'
+              : soilTier === 3
+                ? '#86ac3a'
+                : soilTier === 2
+                  ? '#9aac3a'
+                  : soilTier === 1
+                    ? '#a89a4a'
+                    : '#8a7a5a'}"
+            title="soil fertility ({SOIL_TIER_NAME[
+              soilTier
+            ]}) — drives what crops grow here and how fast">fertility {soilPct}%</span
+          >
+          {#if tileSnow > 0}<span style="color:#cdd6e0">snow {tileSnow}%</span>{/if}
+          {#if windWord}<span style="color:#8fc8a0">{windWord} windy</span>{/if}
+          {#if tileThermal.roofed}<span style="color:#7e9fbf">roofed</span>{/if}
+        </div>
+      </div>
+    {/if}
   {/if}
 
   {#if equipMenu}

@@ -125,6 +125,15 @@ export class GameEngineImpl implements GameEngine {
   /** Command-path commit sink (P-2 user actions). Same decoupling as outputSink. */
   private commitSink: ((state: GameState, save: boolean) => void) | null = null;
 
+  /** Menu-preview mode (set via the worker `init` message). When true, `processGameTurn` branches to
+   *  the slim `processPreviewTurn` — environment + prey-only entity step only — so the main-menu
+   *  backdrop costs almost nothing. The real PEACE hot path below is left completely untouched. */
+  private previewMode = false;
+
+  setPreviewMode(v: boolean): void {
+    this.previewMode = v;
+  }
+
   setOutputSink(sink: (state: GameState, flush: boolean) => void): void {
     this.outputSink = sink;
   }
@@ -164,6 +173,10 @@ export class GameEngineImpl implements GameEngine {
       // counter so the object last committed to the store (same reference) is never mutated in
       // place. (gameState.turn counts ticks.)
       this.gameState = { ...this.gameState, turn: this.gameState.turn + 1 };
+
+      // Menu-preview backdrop: run only the atmospheric phases and bail before the full sim — see
+      // processPreviewTurn. Branches out HERE so none of the per-tick hot path below changes.
+      if (this.previewMode) return this.processPreviewTurn();
 
       // Phase runner — profiler removed; profile via the browser (Firefox Profiler) instead.
       const t = (_label: string, fn: () => void): void => fn();
@@ -258,6 +271,44 @@ export class GameEngineImpl implements GameEngine {
         systemsUpdated: ['pawns', 'work', 'buildings', 'research', 'crafting'],
         errors: []
       };
+    } catch (error) {
+      return {
+        success: false,
+        turnsProcessed: 0,
+        systemsUpdated: [],
+        errors: [error instanceof Error ? error.message : 'Unknown error']
+      };
+    }
+  }
+
+  /**
+   * Slim per-tick loop for the main-menu backdrop preview (see `previewMode`). Advances only the
+   * atmospheric, consequence-free systems the menu wants:
+   *   • environment — weather Markov roll + day/night light (no tile-state consequence).
+   *   • entity step — prey-only spawn + FSM wander/graze + movement.
+   * Deliberately OMITTED vs the full turn: needs/items/research/jobs/buildings/passiveProd/pawns,
+   * resource regrowth, crop growth, combat. Also skips `tickLairs` (no lairs), `stepHunger` and
+   * `removeDead` — preview prey never starve or die, so there are no carcasses and no array churn;
+   * they just graze and wander indefinitely.
+   */
+  private processPreviewTurn(): TurnProcessingResult {
+    try {
+      this.processEnvironment();
+
+      this.gameState = entityService.spawnEntities(this.gameState!, { preyOnly: true });
+      this.gameState = entityService.stepEntities(this.gameState!);
+      this.gameState = entityService.advanceMobMovement(this.gameState!);
+
+      this.lastTurnProcessed = this.gameState!.turn;
+      this.gameStateManager!.updateState(this.gameState!);
+
+      // Same wall-clock-gated UI push as the real turn so the backdrop renders at ~15 Hz.
+      const nowMs = performance.now();
+      const flush = nowMs - this.lastFlushMs >= UI_PUSH_MS;
+      if (flush) this.lastFlushMs = nowMs;
+      this.outputSink?.(this.gameState!, flush);
+
+      return { success: true, turnsProcessed: 1, systemsUpdated: ['preview'], errors: [] };
     } catch (error) {
       return {
         success: false,

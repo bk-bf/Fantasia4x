@@ -513,6 +513,9 @@ self.onmessage = async (e: MessageEvent) => {
       resetUnreachableJobs();
       installForwardingLogSink();
       gameEngine.setGameStateManager(new GameStateManager(msg.state));
+      // Menu-preview backdrop runs a gutted turn; the real boot omits `preview` ⇒ false, so the
+      // New/Load re-init cleanly clears it back to the full sim.
+      gameEngine.setPreviewMode(!!msg.preview);
       gameEngine.setOutputSink(publish); // per-tick → snapshot
       gameEngine.setCommitSink((s) => publish(s, true)); // command result → snapshot
       await wasmPathfinderService.init();

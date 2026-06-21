@@ -12,16 +12,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
-  import { gameState } from '$lib/stores/gameState';
+  import { gameState, menuPreviewReady } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import { hasSave } from '$lib/stores/saveManager';
   import { debugMode, hideSidebars } from '$lib/stores/uiPrefs';
+  import MenuPreviewBackdrop from '$lib/components/UI/MenuPreviewBackdrop.svelte';
 
   let canLoad = $state(false);
   let showSettings = $state(false);
   // Exit is only meaningful in the desktop shell; window.close() is a no-op in a normal browser tab.
-  const isDesktop =
-    typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent ?? '');
+  const isDesktop = typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent ?? '');
 
   onMount(async () => {
     canLoad = await hasSave();
@@ -45,6 +45,11 @@
 </script>
 
 <div class="main-menu" transition:fade={{ duration: 200 }}>
+  <!-- Live atmospheric world behind the menu — mounts once the preview worker is ticking. -->
+  {#if $menuPreviewReady}
+    <MenuPreviewBackdrop />
+  {/if}
+
   <div class="glow" aria-hidden="true"></div>
 
   <div class="content">
@@ -104,11 +109,28 @@
 
   .content {
     position: relative;
+    z-index: 1; /* above the live map backdrop (z-index 0) */
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 10px;
     width: min(360px, 80vw);
+  }
+
+  /* Faint dark scrim hugging the wordmark + menu so the text stays legible over a vivid, busy map,
+     without dimming the rest of the scene (near-full vividness). */
+  .content::before {
+    content: '';
+    position: absolute;
+    inset: -48px -80px;
+    z-index: -1;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(6, 4, 2, 0.72) 0%,
+      rgba(6, 4, 2, 0.45) 45%,
+      transparent 80%
+    );
+    pointer-events: none;
   }
 
   .title {

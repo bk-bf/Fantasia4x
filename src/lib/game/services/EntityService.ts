@@ -19,8 +19,8 @@ import { advanceMobMovement } from './entity/entityHelpers';
 class EntityServiceImpl {
   /** Seed a fresh/loaded world with a starting population (no-op if entities already exist).
    *  `packs` omitted ⇒ area-scaled target (normal play); explicit ⇒ fixed-pack profiler/dev path. */
-  seedInitialEntities(state: GameState, packs?: number): GameState {
-    return spawning.seedInitialEntities(state, packs);
+  seedInitialEntities(state: GameState, packs?: number, opts?: { preyOnly?: boolean }): GameState {
+    return spawning.seedInitialEntities(state, packs, opts);
   }
 
   /** Lair lifecycle (territory): daily-paced repopulation of emptied lairs + capped growth of new
@@ -29,9 +29,10 @@ class EntityServiceImpl {
     return spawning.tickLairs(state);
   }
 
-  /** DF-style periodic spawner — biome-weighted, night-boosted, capped. */
-  spawnEntities(state: GameState): GameState {
-    return spawning.spawnEntities(state);
+  /** DF-style periodic spawner — biome-weighted, night-boosted, capped. `preyOnly` (menu preview)
+   *  restricts the roll to non-predators so the backdrop never spawns a hunt. */
+  spawnEntities(state: GameState, opts?: { preyOnly?: boolean }): GameState {
+    return spawning.spawnEntities(state, opts);
   }
 
   /** Advance every entity's FSM one tick (movement is applied by advanceMobMovement). */

@@ -120,13 +120,14 @@ class SimWorkerBridge {
     this.w.onerror = (e) => console.error('[SIM-WORKER] error:', e.message || e);
   }
 
-  init(state: GameState, seed: number): void {
+  init(state: GameState, seed: number, opts?: { preview?: boolean }): void {
     this.worldMap = state.worldMap;
     this.lastState = {}; // matches the worker resetting its sectional-diff baseline on init
     this.pawnMirror.clear();
     this.mobMirror.clear();
     this.dropMirror.clear();
-    this.w?.postMessage({ kind: 'init', state, seed });
+    // `preview` (menu backdrop) makes the engine run a gutted turn; the real boot omits it ⇒ false.
+    this.w?.postMessage({ kind: 'init', state, seed, preview: opts?.preview ?? false });
   }
   command(cmd: unknown): void {
     this.w?.postMessage({ kind: 'command', cmd });

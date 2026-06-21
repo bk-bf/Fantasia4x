@@ -610,6 +610,54 @@ function restoreWorld(snapshot: GameState) {
   loadStateIntoWorker(snapshot);
 }
 
+// ===== MAIN-MENU BACKDROP PREVIEW =====
+/** Fixed, curated seed so the title-screen world looks the same every launch. */
+const MENU_PREVIEW_SEED = 0x5eed1f;
+/** Small world (cheap to build + seed) — big enough that the cover-fit zoom-out floor overflows the
+ *  viewport for an atmospheric, slightly-oversized framing. NOT the player's Custom Map size. */
+const MENU_PREVIEW_MAP = { w: 160, h: 100 };
+
+/**
+ * Boot the main-menu backdrop: a live but gutted preview of the game world that renders behind the
+ * title screen (see MenuPreviewBackdrop / GameCanvas `menuPreview`). It starts the sim worker EARLY
+ * (the heavy real boot still waits for New/Load) in `preview` mode, where the engine runs only the
+ * atmospheric phases — weather + day/night roll and prey-only grazing/wandering — with NO pawns, NO
+ * predators/hunting, and none of the environmental-consequence systems (regrowth, crop growth, item
+ * decay, jobs, buildings, combat). Snapshots are not saved (`previewActive`). Clicking New/Load
+ * re-inits this same worker into the full sim (savedStateReady → real init), so it's a clean hand-off.
+ */
+function startMenuPreview() {
+  if (!browser || !USE_SIM_WORKER) return;
+  rng.reseed(MENU_PREVIEW_SEED);
+  resetUnreachableJobs();
+  const world = generateWorld(MENU_PREVIEW_MAP.w, MENU_PREVIEW_MAP.h, MENU_PREVIEW_SEED);
+  resourceGeneratorService.generateResources(world, MENU_PREVIEW_SEED);
+
+  let preview: GameState = {
+    ...initialGameState,
+    seed: MENU_PREVIEW_SEED,
+    worldMap: world,
+    pawns: [],
+    mobs: [],
+    buildings: [],
+    designations: {},
+    jobs: []
+  };
+  // Prey only — no laired hostiles, no free-roaming predators — so the backdrop never spawns a hunt.
+  preview = entityService.seedInitialEntities(preview, undefined, { preyOnly: true });
+
+  previewActive = true;
+  gameStore.setSilent(preview);
+  gameStore.notify();
+  worldGenRev.update((n) => n + 1);
+
+  simWorkerBridge.start();
+  simWorkerBridge.init(preview, MENU_PREVIEW_SEED, { preview: true });
+  simWorkerBridge.setSpeed(1);
+  simWorkerBridge.setPaused(false); // the backdrop runs regardless of the (real game's) pause state
+  menuPreviewReady.set(true);
+}
+
 // ===== ITEM MANAGEMENT =====
 // ADR-021 W3: routed through the serializable command registry (`commands.ts`) instead of an inline
 // closure, so the same logic can run in the sim worker after cutover. dispatchCommand on the main
@@ -719,6 +767,20 @@ function wipeAndReload() {
 export const storeReady = writable(false);
 
 /**
+ * True once the main-menu backdrop preview world is in the store + the worker is ticking it (see
+ * `startMenuPreview`). Gates the `<MenuPreviewBackdrop>` mount in MainMenu. Cleared on New/Load so
+ * the backdrop unmounts before the real sim takes over the worker.
+ */
+export const menuPreviewReady = writable(false);
+
+/**
+ * The worker is currently running the menu-preview backdrop (gutted turn, prey-only, no pawns). While
+ * true, snapshots are NOT persisted — the preview world must never be written to the save (it would
+ * masquerade as a loadable game). Flipped off at the real New/Load worker re-init.
+ */
+let previewActive = false;
+
+/**
  * Set true by GameCanvas once the WebGL renderer has finished initialising. `storeReady` mounts the
  * game-container so WebGL begins initialising BEHIND the loading overlay; `rendererReady` then marks
  * it up. The overlay itself is dropped by `bootReveal`, a paused beat LATER (see below).
@@ -750,9 +812,7 @@ export type AppPhase = 'menu' | 'game';
 // `--profiler` (VITE_PROFILER) is the sole technical exception: its loader branch returns early with
 // its own auto-boot sandbox and never goes through `startGame`, so it must bypass the menu too.
 const MENU_ENABLED =
-  browser &&
-  import.meta.env.VITE_DEBUG_MODE !== 'true' &&
-  import.meta.env.VITE_PROFILER !== 'true';
+  browser && import.meta.env.VITE_DEBUG_MODE !== 'true' && import.meta.env.VITE_PROFILER !== 'true';
 
 export const appPhase = writable<AppPhase>(MENU_ENABLED ? 'menu' : 'game');
 
@@ -780,6 +840,10 @@ if (!MENU_ENABLED) _resolveBootGate();
  */
 function startGame(mode: 'new' | 'load') {
   _bootMode = mode;
+  // Tear down the menu backdrop: unmount it now, and freeze the preview worker so it stops emitting
+  // (still-unsaved) snapshots during the gap before savedStateReady re-inits it into the real sim.
+  menuPreviewReady.set(false);
+  if (previewActive && USE_SIM_WORKER) simWorkerBridge.setPaused(true);
   appPhase.set('game');
   _resolveBootGate();
 }
@@ -1240,13 +1304,25 @@ if (USE_SIM_WORKER) {
     gameStore.setSilent(s);
     if (flush) {
       gameStore.notify();
-      scheduleSave(s);
+      // Never persist the menu-preview world — it must not masquerade as a loadable save.
+      if (!previewActive) scheduleSave(s);
     }
   };
-  simWorkerBridge.onFullState = (s) => scheduleSave(s);
+  simWorkerBridge.onFullState = (s) => {
+    if (!previewActive) scheduleSave(s);
+  };
+
+  // Main-menu backdrop: boot the gutted preview world into the worker right away (the heavy real boot
+  // still waits for New/Load). Skipped when the menu is bypassed (--debug / --profiler launch straight
+  // into the game).
+  if (MENU_ENABLED) startMenuPreview();
+
   savedStateReady.then(() => {
     // Kick the worker off in parallel with the WebGL init that's already happening behind the
     // overlay; the paused warmup linger (rendererReady subscription) covers the worker boot + GC.
+    // This is also the menu-preview → real-sim hand-off: re-init the SAME worker with the real state
+    // (no `preview` flag ⇒ engine clears previewMode), so the backdrop's worker becomes the game sim.
+    previewActive = false; // real snapshots persist from here on
     simWorkerBridge.start();
     const st = get(gameState) as GameState;
     simWorkerBridge.init(st, st.seed);

@@ -37,11 +37,19 @@ let idCounter = 0;
  * An explicit `packsOverride` (profiler/dev) keeps the legacy fixed-pack behaviour + flat caps for
  * benchmark comparability.
  */
-export function seedInitialEntities(state: GameState, packsOverride?: number): GameState {
+export function seedInitialEntities(
+  state: GameState,
+  packsOverride?: number,
+  opts?: { preyOnly?: boolean }
+): GameState {
   if ((state.mobs?.length ?? 0) > 0) return state;
+  const preyOnly = opts?.preyOnly ?? false;
   // Free-roaming pool EXCLUDES laired hostiles — those come only from their lair tiles (seedLairs).
-  // So this area-scaled seeding is now pure wildlife (prey + neutral roamers).
-  const dayCreatures = CREATURES.filter((c) => !c.nightOnly && !c.lair);
+  // So this area-scaled seeding is now pure wildlife (prey + neutral roamers). The menu-preview's
+  // `preyOnly` additionally drops any free-roaming predator so the backdrop never spawns a hunt.
+  const dayCreatures = CREATURES.filter(
+    (c) => !c.nightOnly && !c.lair && (!preyOnly || !c.predator)
+  );
   if (dayCreatures.length === 0) return state;
 
   const h = state.worldMap.length;
@@ -92,8 +100,8 @@ export function seedInitialEntities(state: GameState, packsOverride?: number): G
   }
 
   // Laired hostiles: one bound pack per lair tile (skipped on the fixed/profiler path for benchmark
-  // stability). These are the SOLE source of laired hostiles — controlled, leashed, sparse.
-  const lairMobs = fixed ? [] : seedLairs(state);
+  // stability, and on the prey-only menu preview). These are the SOLE source of laired hostiles.
+  const lairMobs = fixed || preyOnly ? [] : seedLairs(state);
 
   return { ...state, mobs: [...(state.mobs ?? []), ...seeded, ...lairMobs] };
 }
@@ -319,7 +327,7 @@ export function devSpawnMobs(state: GameState, count = 5, creatureId?: string): 
 
 // ===== SPAWNING =================================================================
 
-export function spawnEntities(state: GameState): GameState {
+export function spawnEntities(state: GameState, opts?: { preyOnly?: boolean }): GameState {
   // Only roll on the spawn-check cadence to keep per-tick cost ~zero.
   if (state.turn % SPAWN_CHECK_INTERVAL !== 0) return state;
 
@@ -337,7 +345,7 @@ export function spawnEntities(state: GameState): GameState {
   const caps = populationCaps(state.worldMap[0]?.length ?? 0, state.worldMap.length);
   if (live.length >= caps.total) return state;
 
-  const def = pickSpawnCreature(isNight);
+  const def = pickSpawnCreature(isNight, opts?.preyOnly ?? false);
   if (!def) return state;
   if (def.entityClass === 'mob' && hostileCount >= caps.hostile) return state;
   if (def.entityClass === 'animal' && neutralCount >= caps.neutral) return state;
@@ -362,9 +370,15 @@ export function spawnEntities(state: GameState): GameState {
   return { ...state, mobs: [...mobs, ...newMobs] };
 }
 
-export function pickSpawnCreature(isNight: boolean): CreatureDefinition | undefined {
+export function pickSpawnCreature(
+  isNight: boolean,
+  preyOnly = false
+): CreatureDefinition | undefined {
   // Laired hostiles never spawn via the periodic spawner — their population is fixed by lair tiles.
-  const pool = CREATURES.filter((c) => !c.lair && (!c.nightOnly || isNight));
+  // `preyOnly` (menu preview) further drops predators so the backdrop stays a peaceful graze.
+  const pool = CREATURES.filter(
+    (c) => !c.lair && (!c.nightOnly || isNight) && (!preyOnly || !c.predator)
+  );
   if (pool.length === 0) return undefined;
   return pool[Math.floor(rng.random() * pool.length)];
 }
