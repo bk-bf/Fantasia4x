@@ -16,7 +16,7 @@
     currentWeather,
     worldGenRev
   } from '$lib/stores/gameState.js';
-  import { cameraTileSize } from '$lib/stores/cameraView.js';
+  import { cameraTileSize, cameraZoomRange } from '$lib/stores/cameraView.js';
   import type {
     WorldTile,
     Pawn,
@@ -47,6 +47,7 @@
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
   import { uiState } from '$lib/stores/uiState.js';
   import { worldEffects } from '$lib/stores/worldEffects.js';
+  import type { GlyphFloat, GlyphFloatKind } from '$lib/stores/worldEffects.js';
   import {
     combatFeedback,
     FLOAT_TTL_MS,
@@ -133,6 +134,9 @@
   let tileHeight = 8;
   // Publish the zoom (tile px size) so the out-of-canvas weather overlay can scale particle density.
   $: cameraTileSize.set(tileWidth);
+  // Publish the zoom RANGE too: the floor (fitTileSize) shrinks as the map grows, so the weather
+  // overlay scales density/size against the REAL per-map range rather than a hardcoded tile span.
+  $: cameraZoomRange.set({ min: fitTileSize, max: MAX_TILE_W });
 
   function computeFitTileSize(canvasW: number, canvasH: number): number {
     const mapW = worldMap.length > 0 ? worldMap[0].length : MAP_W;
@@ -242,11 +246,8 @@
   // here caused 60fps Svelte store updates and DOM re-renders whenever viewX/viewY
   // changed (every frame during camera follow), scaling with sleeping-pawn count and
   // tanking FPS at night when everyone was asleep.
-  let _sleepOverlayKey = '';
-  let _restOverlayKey = '';
-  let _collapsedOverlayKey = '';
+  let _glyphFloatKey = ''; // unified sleep/rest/collapse/campfire glyph floats
   let _progressOverlayKey = '';
-  let _campfireOverlayKey = '';
   let _particleOverlayKey = '';
   // Lair particle-effect tiles, CACHED. Scanning the visible tile-rect every frame is O(map) when
   // zoomed out (the whole map is "visible") — a serious per-frame tax. Lairs change only on
@@ -1239,56 +1240,54 @@
     const tW = tileWidth;
     const tH = tileHeight;
 
-    // Split sleeping pawns: those with real wounds are RECOVERING (red ✚), the rest just nap (Zzz).
-    const overlayOf = (id: string, x: number, y: number) => ({
+    // Anchored looping glyph floats — sleep Zzz / recovery ✚ / collapse ↓ / campfire sparks — built
+    // into ONE array (discriminated by `kind`) so the render layer shares a single positioning+scaling
+    // wrapper instead of four duplicate each-blocks. Each entry's final screen position (incl. the
+    // per-kind vertical anchor) is baked in here. Sleeping pawns with real wounds are RECOVERING (red
+    // ✚), the rest just nap (Zzz).
+    const glyphOf = (id: string, x: number, y: number, kind: GlyphFloatKind): GlyphFloat => ({
       id,
       left: (x - viewX + 0.5) * tW,
-      top: (y - viewY) * tH - 18
+      top: (y - viewY) * tH - 18,
+      kind
     });
     const onScreen = (o: { left: number; top: number }) => o.left >= 0 && o.top >= 0 && o.left <= W;
-    const newSleep = [];
-    const newResting = [];
-    const newCollapsed = [];
+    const newGlyphs: GlyphFloat[] = [];
     for (const p of pawns) {
       if (!p.position) continue;
       if (isHiddenTile(p.position.x, p.position.y)) continue; // under the fog → no Zzz/✚/↓ leak
       if (p.currentState === 'Collapsed') {
-        const o = overlayOf(p.id, p.position.x, p.position.y);
-        if (onScreen(o)) newCollapsed.push(o);
+        const o = glyphOf(p.id, p.position.x, p.position.y, 'collapse');
+        if (onScreen(o)) newGlyphs.push(o);
         continue;
       }
       if (p.currentState !== 'Sleeping') continue;
-      const o = overlayOf(p.id, p.position.x, p.position.y);
-      if (!onScreen(o)) continue;
-      if (needsRecovery(p as never)) newResting.push(o);
-      else newSleep.push(o);
+      const o = glyphOf(p.id, p.position.x, p.position.y, needsRecovery(p as never) ? 'rest' : 'sleep');
+      if (onScreen(o)) newGlyphs.push(o);
     }
     for (const m of mobs) {
       if (m.state !== 'Sleeping') continue;
       if (isHiddenTile(m.x, m.y)) continue; // under the fog → no Zzz leak
-      const o = overlayOf(m.id, m.x, m.y);
-      if (onScreen(o)) newSleep.push(o);
+      const o = glyphOf(m.id, m.x, m.y, 'sleep');
+      if (onScreen(o)) newGlyphs.push(o);
     }
-    const sleepKey = newSleep
-      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
-      .join('|');
-    if (sleepKey !== _sleepOverlayKey) {
-      _sleepOverlayKey = sleepKey;
-      worldEffects.setSleepingOverlays(newSleep);
+    // Campfire sparks anchor at the tile CENTER (not the -18 head offset of the pawn glyphs).
+    for (const b of buildings) {
+      if (b.type !== 'campfire' || b.status !== 'complete' || b.lit !== true) continue;
+      const o: GlyphFloat = {
+        id: b.id,
+        left: (b.x - viewX + 0.5) * tW,
+        top: (b.y - viewY + 0.5) * tH,
+        kind: 'campfire'
+      };
+      if (o.left >= 0 && o.top >= 0 && o.left <= W) newGlyphs.push(o);
     }
-    const restKey = newResting
-      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
+    const glyphKey = newGlyphs
+      .map((o) => `${o.kind}:${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
       .join('|');
-    if (restKey !== _restOverlayKey) {
-      _restOverlayKey = restKey;
-      worldEffects.setRestingOverlays(newResting);
-    }
-    const collapsedKey = newCollapsed
-      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
-      .join('|');
-    if (collapsedKey !== _collapsedOverlayKey) {
-      _collapsedOverlayKey = collapsedKey;
-      worldEffects.setCollapsedOverlays(newCollapsed);
+    if (glyphKey !== _glyphFloatKey) {
+      _glyphFloatKey = glyphKey;
+      worldEffects.setGlyphFloats(newGlyphs);
     }
 
     const newProgress = [
@@ -1329,22 +1328,6 @@
     if (progressKey !== _progressOverlayKey) {
       _progressOverlayKey = progressKey;
       worldEffects.setProgressOverlays(newProgress);
-    }
-
-    const newCampfire = buildings
-      .filter((b) => b.type === 'campfire' && b.status === 'complete' && b.lit === true)
-      .map((b) => ({
-        id: b.id,
-        left: (b.x - viewX + 0.5) * tW,
-        top: (b.y - viewY + 0.5) * tH
-      }))
-      .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W);
-    const campfireKey = newCampfire
-      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
-      .join('|');
-    if (campfireKey !== _campfireOverlayKey) {
-      _campfireOverlayKey = campfireKey;
-      worldEffects.setCampfireOverlays(newCampfire);
     }
 
     // Lair particle effects: project the CACHED lair tiles (not a per-frame map scan) to screen,

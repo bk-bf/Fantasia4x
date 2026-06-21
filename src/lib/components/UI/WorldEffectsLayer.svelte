@@ -40,38 +40,39 @@
 <div class="world-effects-layer">
   <!-- ── World-Space Animations (positions derived from tile coordinates) ──────── -->
 
-  {#each $worldEffects.sleepingOverlays as overlay (overlay.id)}
-    <div
-      class="zzz-float"
-      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({floatScale});"
-    >
-      <span class="zzz-z" style="animation-delay:0s">Z</span><span
-        class="zzz-z"
-        style="animation-delay:0.7s">z</span
-      ><span class="zzz-z" style="animation-delay:1.4s">z</span>
-    </div>
-  {/each}
-
-  {#each $worldEffects.restingOverlays as overlay (overlay.id)}
-    <div
-      class="rest-float"
-      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({floatScale});"
-    >
-      <span class="rest-cross">✚</span>
-    </div>
-  {/each}
-
-  <!-- Collapsed/downed: same rising stagger as the Zzz of sleep, but red ↓ arrows (an emergency tell). -->
-  {#each $worldEffects.collapsedOverlays as overlay (overlay.id)}
-    <div
-      class="collapse-float"
-      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({floatScale});"
-    >
-      <span class="collapse-arrow" style="animation-delay:0s">↓</span><span
-        class="collapse-arrow"
-        style="animation-delay:0.7s">↓</span
-      ><span class="collapse-arrow" style="animation-delay:1.4s">↓</span>
-    </div>
+  <!-- Anchored looping glyph floats — ONE each-block over a `kind`-discriminated array (was four
+       near-identical blocks for sleep / recovery / collapse / campfire). All share this positioning +
+       zoom-scaling wrapper; only the inner glyph cluster + its CSS animation differ per kind. -->
+  {#each $worldEffects.glyphFloats as float (float.kind + float.id)}
+    {@const xf = `transform: translate(${float.left}px, ${float.top}px) translateX(-50%) scale(${floatScale});`}
+    {#if float.kind === 'sleep'}
+      <div class="zzz-float" style={xf}>
+        <span class="zzz-z" style="animation-delay:0s">Z</span><span
+          class="zzz-z"
+          style="animation-delay:0.7s">z</span
+        ><span class="zzz-z" style="animation-delay:1.4s">z</span>
+      </div>
+    {:else if float.kind === 'rest'}
+      <div class="rest-float" style={xf}>
+        <span class="rest-cross">✚</span>
+      </div>
+    {:else if float.kind === 'collapse'}
+      <!-- Collapsed/downed: same rising stagger as the Zzz of sleep, but red ↓ arrows (emergency tell). -->
+      <div class="collapse-float" style={xf}>
+        <span class="collapse-arrow" style="animation-delay:0s">↓</span><span
+          class="collapse-arrow"
+          style="animation-delay:0.7s">↓</span
+        ><span class="collapse-arrow" style="animation-delay:1.4s">↓</span>
+      </div>
+    {:else if float.kind === 'campfire'}
+      <div class="fire-sparks" style={xf}>
+        <span class="spark s1">·</span>
+        <span class="spark s2">*</span>
+        <span class="spark s3">·</span>
+        <span class="spark s4">*</span>
+        <span class="spark s5">·</span>
+      </div>
+    {/if}
   {/each}
 
   {#each $worldEffects.progressOverlays as overlay (overlay.id)}
@@ -80,19 +81,6 @@
       style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({floatScale});"
     >
       <div class="pawn-progress-fill" style="width:{overlay.progress * 100}%"></div>
-    </div>
-  {/each}
-
-  {#each $worldEffects.campfireOverlays as overlay (overlay.id)}
-    <div
-      class="fire-sparks"
-      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({floatScale});"
-    >
-      <span class="spark s1">·</span>
-      <span class="spark s2">*</span>
-      <span class="spark s3">·</span>
-      <span class="spark s4">*</span>
-      <span class="spark s5">·</span>
     </div>
   {/each}
 
@@ -202,10 +190,14 @@
   {/if}
 
   <!-- ── Floating combat text (damage / miss / dodge / crit / bleed) ───────────── -->
+  <!-- Damage numbers and data-driven condition labels (winded, envenomed…) — share the same zoom
+       scaling as the other per-tile floats so they shrink/grow with the map instead of staying a fixed
+       pixel size (a wall of full-size text when zoomed out on a busy fight). The rise/fade keyframe
+       animates margin-top, so this scale() on the inline transform is preserved throughout. -->
   {#each $worldEffects.floatingTextOverlays as overlay (overlay.id)}
     <div
       class="combat-float {overlay.kind}"
-      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);{overlay.color
+      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({floatScale});{overlay.color
         ? ` color:${overlay.color};`
         : ''}"
     >

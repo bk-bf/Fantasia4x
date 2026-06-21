@@ -3,10 +3,16 @@
 // Add new effect types here to extend the system (weather, particle effects, etc.)
 import { writable } from 'svelte/store';
 
-export interface SleepingOverlay {
+/** One anchored, looping-animation "glyph float" pinned to a tile/entity — the family that used to
+ *  be four parallel arrays (Zzz of sleep, ✚ of recovery, ↓ of collapse, campfire sparks). They are
+ *  identical plumbing (project tile→screen, scale with zoom, render a CSS glyph cluster); only `kind`
+ *  selects the inner glyphs + animation in WorldEffectsLayer. One array, one setter, one diff-key. */
+export type GlyphFloatKind = 'sleep' | 'rest' | 'collapse' | 'campfire';
+export interface GlyphFloat {
   id: string;
   left: number;
   top: number;
+  kind: GlyphFloatKind;
 }
 
 export interface ProgressOverlay {
@@ -14,12 +20,6 @@ export interface ProgressOverlay {
   left: number;
   top: number;
   progress: number; // 0–1
-}
-
-export interface CampfireOverlay {
-  id: string;
-  left: number;
-  top: number;
 }
 
 /** Ambient per-tile particle effect (e.g. a lair's smoke). `effect` selects the animation in
@@ -66,13 +66,10 @@ export interface FloatingTextOverlay {
 }
 
 export interface WorldEffectsState {
-  sleepingOverlays: SleepingOverlay[];
-  /** Wounded pawns lying down to RECOVER (distinct red ✚ marker, vs the blue Zzz of plain sleep). */
-  restingOverlays: SleepingOverlay[];
-  /** Collapsed/downed pawns (pain/blood-loss/hunger) — a subtle red ↓ marker, vs the blue Zzz of sleep. */
-  collapsedOverlays: SleepingOverlay[];
+  /** Anchored looping glyph floats — sleep Zzz / recovery ✚ / collapse ↓ / campfire sparks, one array
+   *  discriminated by `kind` (was four parallel arrays). */
+  glyphFloats: GlyphFloat[];
   progressOverlays: ProgressOverlay[];
-  campfireOverlays: CampfireOverlay[];
   particleOverlays: ParticleOverlay[];
   projectileOverlays: ProjectileOverlay[];
   healthOverlays: HealthOverlay[];
@@ -85,11 +82,8 @@ export interface WorldEffectsState {
 
 function createWorldEffectsStore() {
   const { subscribe, update } = writable<WorldEffectsState>({
-    sleepingOverlays: [],
-    restingOverlays: [],
-    collapsedOverlays: [],
+    glyphFloats: [],
     progressOverlays: [],
-    campfireOverlays: [],
     particleOverlays: [],
     projectileOverlays: [],
     healthOverlays: [],
@@ -99,20 +93,11 @@ function createWorldEffectsStore() {
 
   return {
     subscribe,
-    setSleepingOverlays(overlays: SleepingOverlay[]) {
-      update((s) => ({ ...s, sleepingOverlays: overlays }));
-    },
-    setRestingOverlays(overlays: SleepingOverlay[]) {
-      update((s) => ({ ...s, restingOverlays: overlays }));
-    },
-    setCollapsedOverlays(overlays: SleepingOverlay[]) {
-      update((s) => ({ ...s, collapsedOverlays: overlays }));
+    setGlyphFloats(overlays: GlyphFloat[]) {
+      update((s) => ({ ...s, glyphFloats: overlays }));
     },
     setProgressOverlays(overlays: ProgressOverlay[]) {
       update((s) => ({ ...s, progressOverlays: overlays }));
-    },
-    setCampfireOverlays(overlays: CampfireOverlay[]) {
-      update((s) => ({ ...s, campfireOverlays: overlays }));
     },
     setParticleOverlays(overlays: ParticleOverlay[]) {
       update((s) => ({ ...s, particleOverlays: overlays }));
