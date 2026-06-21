@@ -13,7 +13,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { browser } from '$app/environment';
   import { currentWeather, gameState } from '$lib/stores/gameState';
-  import { cameraTileSize } from '$lib/stores/cameraView';
+  import { cameraTileSize, cameraZoomRange } from '$lib/stores/cameraView';
   import {
     weatherOverlayKind,
     weatherFallSpeed,
@@ -64,19 +64,31 @@
   // foggy_rain composites rain drops (in `parts`) with a separate, small pool of slow fog blobs.
   let fogBlobs: Particle[] = [];
 
-  // Zoom-out "in the clouds" feel: the further the camera zooms OUT, the MORE particles (count only —
-  // speed and size stay constant). The multiplier is LINEAR in tile size across the real zoom range so
-  // it ramps gently as you scroll, rather than staying flat then doubling near the end (a hyperbola
-  // did that). The pool grows/shrinks by the delta (reconcile) so the change is gradual, not a pop.
-  const MIN_TILE = 6; // ~ fully zoomed out (whole map fits)
-  const MAX_TILE = 40; // fully zoomed in
+  // Zoom-reactive "in the clouds" feel, scaled against the REAL per-map zoom range (not a hardcoded
+  // tile span): `zoomMin` is the zoom-out floor (fitTileSize — smaller on bigger maps, ~1px on a 750²
+  // map) and `zoomMax` the zoom-in ceiling, both from cameraZoomRange. `zoomInFrac` is therefore 0 at
+  // each map's OWN fully-zoomed-out extreme and 1 fully zoomed in — so on M/L maps, which zoom out far
+  // past where an S map bottoms out, the weather keeps scaling instead of flat-lining at an old fixed
+  // floor. The pool grows/shrinks by the delta (reconcile) so the change is gradual, not a pop.
   let tileSize = 8; // current zoom (px per tile), from the camera store
-  const densityMul = () => {
-    const frac = Math.max(0, Math.min(1, (MAX_TILE - tileSize) / (MAX_TILE - MIN_TILE)));
-    // ENGINE-PERFORMANCE-II §R5: gentler zoom-out ramp (was 0.8 + frac*1.4 = up to 2.2×). The big
-    // particle count zoomed out was a top renderer cost; 0.8 + frac*0.8 caps it at ~1.6×.
-    return 0.8 + frac * 0.8;
+  let zoomMin = 8; // zoom-out floor (fitTileSize), from cameraZoomRange
+  let zoomMax = 40; // zoom-in ceiling (MAX_TILE_W), from cameraZoomRange
+  const zoomInFrac = () => {
+    const span = Math.max(1, zoomMax - zoomMin);
+    return Math.max(0, Math.min(1, (tileSize - zoomMin) / span));
   };
+
+  // Particle SIZE multiplier: rain streaks / snow specks / dust / leaves all shrink as you zoom OUT,
+  // so far-out on a big map they read as a fine mist rather than a sparse scatter of screen-huge blobs
+  // (a 12px streak was 12 tiles wide at the zoom-out floor). UNCAPPED at the small end against the real
+  // range, so the L/750² far-zoom genuinely gets smaller than the S/250² floor ever does.
+  const sizeMul = () => 0.3 + zoomInFrac() * 1.0; // ~0.3× fully out → 1.3× fully in
+
+  // Particle COUNT multiplier: DENSER as you zoom out (frac → 0). Crucially this rises in lock-step
+  // with the shrink above — smaller particles cost proportionally less fillrate, so packing in more of
+  // them keeps the per-frame draw cost bounded while the look gets visibly denser. (See targetCount's
+  // fillrate-aware cap, which is what actually guards §R5's perf budget.)
+  const densityMul = () => 0.8 + (1 - zoomInFrac()) * 1.6; // 0.8× fully in → 2.4× fully out
 
   // §R5: render the weather into a buffer at this fraction of the (CSS-pixel) canvas size, then let the
   // browser upscale it for display. Weather is soft/blurry, so the resolution drop is invisible — but
@@ -84,13 +96,6 @@
   // less at 0.6). Drawing stays in CSS coordinates via a matching ctx transform, so sizes / density /
   // fall speed are all preserved exactly.
   const RENDER_SCALE = 0.6;
-  // Leaves are scenery-scale (a leaf is roughly a tile), so unlike rain/snow they should shrink as
-  // you zoom OUT — combined with the higher count from densityMul, zoomed-out leaves read as a fine,
-  // dense flurry rather than a few huge blobs. Linear in tile size, clamped.
-  const leafScale = () => {
-    const frac = Math.max(0, Math.min(1, (tileSize - MIN_TILE) / (MAX_TILE - MIN_TILE)));
-    return 0.4 + frac * 0.9; // 0.4× fully zoomed out → 1.3× fully zoomed in
-  };
 
   interface Particle {
     x: number;
@@ -192,7 +197,13 @@
     // More, larger, overlapping blobs read as continuous haze rather than a scatter of distinct discs.
     if (mode === 'fog') return Math.min(40, Math.max(10, Math.round((w * h) / 95_000)));
     const perPx = density / 1_000_000; // density is per-megapixel for readable data values
-    return Math.min(1600, Math.floor(w * h * perPx * (0.5 + intensity) * densityMul()));
+    // §R5 fillrate-aware cap: the per-frame draw cost is roughly count × particle-size, so as the
+    // particles shrink (sizeMul → 0.3 zoomed out) we can afford proportionally MORE of them for the
+    // same budget. Dividing the old flat 1600 cap by sizeMul lets the count climb to ~2400 at the
+    // far-zoom on big maps (denser) while keeping total fillrate bounded BELOW the old worst case
+    // (each particle is ~0.3× the size). Clamped so it never explodes if sizeMul gets tiny.
+    const cap = Math.min(2400, Math.round(1600 / Math.max(0.45, sizeMul())));
+    return Math.min(cap, Math.floor(w * h * perPx * (0.5 + intensity) * densityMul()));
   }
 
   /** Grow/shrink the pool toward the target — adds/removes only the delta, so zoom/intensity/resize
@@ -235,13 +246,15 @@
         renderFog(w, h, fogBlobs, dt, 0.85);
       }
       const wind = rainSlant(); // horizontal slant (px per px fallen), wind-driven
+      const s = sizeMul(); // zoom-driven streak length (shorter zoomed out → finer rain)
       ctx.strokeStyle = `rgba(180, 205, 235, ${0.25 + 0.35 * intensity})`;
       ctx.lineWidth = 1.1;
       ctx.lineCap = 'round';
       ctx.beginPath();
       for (const p of parts) {
+        const len = p.len * s;
         ctx.moveTo(p.x, p.y);
-        ctx.lineTo(p.x + wind * p.len, p.y + p.len);
+        ctx.lineTo(p.x + wind * len, p.y + len);
         p.y += p.spd * dt;
         p.x += wind * p.spd * dt;
         if (p.y > h) {
@@ -263,6 +276,7 @@
           ? particleColor.map((c, i) => Math.round(c * ambLight * ambTint[i]))
           : [255, 255, 255];
       const baseA = mode === 'dust' ? 0.18 + 0.22 * intensity : 0.5 + 0.4 * intensity;
+      const s = sizeMul(); // zoom-driven speck radius (smaller zoomed out → finer flurry)
       ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${baseA})`;
       ctx.beginPath();
       for (const p of parts) {
@@ -271,8 +285,9 @@
         p.x += drift * dt;
         const dx = Math.sin(p.ph * 1.6) * 6; // gentle sway
         const drawX = p.x + dx;
-        ctx.moveTo(drawX + p.r, p.y);
-        ctx.arc(drawX, p.y, p.r, 0, TWO_PI);
+        const r = p.r * s;
+        ctx.moveTo(drawX + r, p.y);
+        ctx.arc(drawX, p.y, r, 0, TWO_PI);
         if (p.y > h + 6) {
           p.y = -6;
           p.x = Math.random() * w;
@@ -284,13 +299,13 @@
     } else if (mode === 'leaves') {
       // Tumbling leaves/petals in the type's particleColor (green spring, red/orange autumn). Each
       // drifts hard sideways on the wind, bobs, and rotates — drawn as a small rotated ellipse.
-      // - leafScale() shrinks them as you zoom out (dense fine flurry, not big blobs).
+      // - sizeMul() shrinks them as you zoom out (dense fine flurry, not big blobs).
       // - colour is multiplied by ambient day/night light so they sit UNDER the brightness and don't
       //   glow at night (foliage goes dark like the scene).
       // - `swirl` (windStrength × intensity) drives gusts: an extreme dry gale whips them sideways
       //   and tosses them up/down, so strong wind reads as chaotic swirl rather than a steady fall.
       const drift = sideDrift();
-      const scale = leafScale();
+      const scale = sizeMul(); // shrink leaves as you zoom out (dense fine flurry, not big blobs)
       const swirl = windStrength * Math.max(0.3, intensity);
       const [cr, cg, cb] = particleColor.map((c) => Math.round(c * ambLight));
       const a0 = ambTint[0];
@@ -405,10 +420,18 @@
     }
   });
 
-  // Camera zoom → more particles as you zoom out. Reconcile (grow/shrink the delta) every step so the
-  // density ramps smoothly while scrolling, with no respawn pop.
+  // Camera zoom → more (and finer) particles as you zoom out. Reconcile (grow/shrink the delta) every
+  // step so the density ramps smoothly while scrolling, with no respawn pop. (Particle SIZE is applied
+  // at draw time from sizeMul(), so it re-scales every frame without needing a reconcile.)
   const unsubZoom = cameraTileSize.subscribe((ts) => {
     tileSize = ts;
+    if (mode !== 'none') reconcile();
+  });
+  // The zoom RANGE itself shifts when the map size changes (a new game / map regen): re-anchor the
+  // floor/ceiling so zoomInFrac is measured against the active map's real range.
+  const unsubZoomRange = cameraZoomRange.subscribe((r) => {
+    zoomMin = r.min;
+    zoomMax = r.max;
     if (mode !== 'none') reconcile();
   });
 
@@ -432,6 +455,7 @@
     ro?.disconnect();
     unsub();
     unsubZoom();
+    unsubZoomRange();
     unsubAmbient();
   });
 </script>
