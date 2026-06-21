@@ -13,6 +13,7 @@ import {
   SUBTYPE_BY_SOIL_TIER
 } from '../../core/Terrains';
 import { markTileDirty } from '../../core/tileDeltas';
+import { pushRegrowth, minCooldownExpiry } from '../../systems/regrowthQueue';
 import { patchPathfindingWalkable } from '../PathfinderService';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { ticksFromSeconds } from '../../core/time';
@@ -27,7 +28,9 @@ import { HARVEST_DTYPES, resourceMatchesDesignation, resourceMatchesFilter } fro
 const MIN_FORAGE_GROWTH = 60;
 
 /** True when this interaction is a regrow-gated forage (persistent, not a depleting cut/dig/mine). */
-function isForageGated(interaction: { persistent?: boolean; harvestDepletes?: boolean } | undefined) {
+function isForageGated(
+  interaction: { persistent?: boolean; harvestDepletes?: boolean } | undefined
+) {
   return interaction?.persistent === true && interaction.harvestDepletes !== true;
 }
 
@@ -49,7 +52,10 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
       j.resourceId ?? '',
       designationType
     );
-    if (isForageGated(interaction) && (tile?.growth?.[j.resourceId ?? ''] ?? 100) < MIN_FORAGE_GROWTH)
+    if (
+      isForageGated(interaction) &&
+      (tile?.growth?.[j.resourceId ?? ''] ?? 100) < MIN_FORAGE_GROWTH
+    )
       return false;
     return (tile?.resources?.[j.resourceId ?? ''] ?? 0) > 0;
   });
@@ -204,7 +210,9 @@ export function complete(job: Job, gs: GameState): GameState {
       const regrowthRate = seasonRegrowthMultiplier(gs.season);
       const cooldownTicks = (turns: number) =>
         gs.turn + Math.round(ticksFromSeconds(turns) / regrowthRate);
-      const yieldHasPerItemCooldowns = interaction!.yields.some((y) => y.regrowthTurns !== undefined);
+      const yieldHasPerItemCooldowns = interaction!.yields.some(
+        (y) => y.regrowthTurns !== undefined
+      );
       if (yieldHasPerItemCooldowns) {
         // Per-yield compound keys: "resourceId:itemId" → turn
         for (const y of interaction!.yields) {
@@ -217,6 +225,10 @@ export function complete(job: Job, gs: GameState): GameState {
         newCooldowns[job.resourceId!] = cooldownTicks(interaction.regrowthTurns);
       }
       col.resourceCooldowns = newCooldowns;
+      // ENGINE-PERFORMANCE-II §S2: schedule this tile's soonest cooldown so the engine drains only due
+      // tiles instead of rescanning the whole worldMap every tick. (worldMap ref is stable in play, so
+      // a rescan would never see this in-place write.)
+      pushRegrowth(minCooldownExpiry(newCooldowns), col.x, col.y);
     }
   }
 
