@@ -75,9 +75,11 @@ describe('entity starvation (headless sim)', () => {
 
     expect(diedAtTurn).toBeGreaterThan(0);
     const daysToDie = diedAtTurn / DAY_TICKS;
-    // Before the rebalance this was ~1 day. Target: a multi-day ordeal (~a week).
+    // Before the rebalance this was ~1 day. Target: a multi-day ordeal (~a week-and-a-half) — the
+    // multi-day severity accrual plus malnutrition's ~1-day onset grace (driver.onsetDelay: a maxed
+    // need must HOLD for a day before the condition even begins, so it can't latch from a brief spike).
     expect(daysToDie).toBeGreaterThan(4);
-    expect(daysToDie).toBeLessThan(10);
+    expect(daysToDie).toBeLessThan(11.5);
   });
 
   it('a merely-hungry entity does NOT collapse — it keeps acting and tries to feed', () => {

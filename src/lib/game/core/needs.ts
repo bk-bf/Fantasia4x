@@ -165,8 +165,15 @@ export function applyConditionDriver(
   const idx = conditions.findIndex((c) => c.id === def.id);
   if (needVal >= d.onset) {
     const rate = perTick(needVal >= 100 ? d.rateMax : d.rateCritical);
-    if (idx === -1) conditions.push({ id: def.id, severity: rate });
-    else
+    if (idx === -1) {
+      // Onset delay: seed a NEGATIVE severity so the condition only crosses 0 — becoming visible,
+      // stat-affecting and lethal-eligible — after the need has held at/above onset for `onsetDelay`
+      // seconds. Severity climbs by rateMax/sec at a maxed need, so seeding -(onsetDelay·rateMax)
+      // means a maxed need takes exactly `onsetDelay` s to begin (longer at a partial need). A negative
+      // severity matches no stage, so it stays hidden everywhere (display skips severity ≤ 0, stage
+      // lookups return undefined → no modifiers/floaters/lethal) until it surfaces.
+      conditions.push({ id: def.id, severity: -(d.onsetDelay ?? 0) * d.rateMax + rate });
+    } else
       conditions[idx] = {
         ...conditions[idx],
         severity: Math.min(1.0, conditions[idx].severity + rate)

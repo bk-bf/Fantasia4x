@@ -178,6 +178,11 @@ export interface ConditionDriver {
   rateMax: number;
   /** Per-second severity loss while the need is below `safe`. */
   recovery: number;
+  /** Seconds the need must hold at/above `onset` before the condition BEGINS (severity rises above 0
+   *  and the condition becomes visible, stat-affecting and lethal-eligible). Implemented by seeding a
+   *  negative severity that climbs to 0 over this window at a maxed need — so e.g. dehydration only
+   *  starts after ~a day of 100% thirst, not the instant thirst is high. Omit/0 for instant onset. */
+  onsetDelay?: number;
 }
 
 /**
