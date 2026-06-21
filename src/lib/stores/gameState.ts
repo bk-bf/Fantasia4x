@@ -582,14 +582,22 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
     return;
   }
 
-  let next: GameState = { ...base, seed: s, worldMap: newWorld, mobs: [] };
-  // Keep the race pool/relations intact across a world regen (idempotent if already present).
-  next = ensureRacePool(next);
   // A GENERATE is a fresh deterministic run (see seed reseed above), so ROLL A NEW COLONY rather than
-  // carrying the previous pawns over from the store — the old code re-placed `base.pawns` (same pawns,
-  // new positions), so every regenerate produced the same colonists. Draw fresh pawns from the pool
-  // (same colony size), spawn them on valid land, and re-derive work assignments for the new ids.
+  // carrying the previous race/pawns over from the store — the old code re-placed `base.pawns` (same
+  // pawns, new positions), so every regenerate produced the same colonists. Clear the race pool +
+  // pawns so ensureRacePool re-rolls the whole pool from the (reseeded) rng — seed → world AND colony,
+  // fully deterministic — then draw fresh pawns across it (same colony size) and re-derive work.
   const colonySize = base.pawns.length || 5;
+  let next: GameState = {
+    ...base,
+    seed: s,
+    worldMap: newWorld,
+    mobs: [],
+    racePool: [],
+    raceRelations: [],
+    pawns: []
+  };
+  next = ensureRacePool(next);
   next = { ...next, pawns: spawnPawnsOnMap(generateColonyPawns(next.racePool, colonySize), newWorld) };
   next = markColonyRacesDiscovered(next);
   next = workService.ensureDefaultWorkAssignments(next);
