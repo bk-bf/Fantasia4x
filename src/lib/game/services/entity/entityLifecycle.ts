@@ -238,7 +238,13 @@ export function stepHunger(state: GameState): GameState {
     // ── Shock ──────────────────────────────────────────────────────────────────
     // Graded `fractured` condition synced from the limb tree — crushes the mob's STR/DEX on
     // top of the manipulation/moving capacity hit, same as pawns; cleared as the bones knit.
-    if (limbs) syncFractureConditions(conditions, limbs);
+    // ENGINE-PERFORMANCE-II: skip the per-tick limb/part scan for HEALTHY mobs. A fracture is a
+    // structural (painful) wound, so `pain == 0` AND no existing `fractured` condition ⇒ there's
+    // nothing to sync (the scan would just confirm worst = 0). The `fractured`-condition check still
+    // runs the sync once more to CLEAR a condition the tick a bone finishes knitting. 958 mobs ×
+    // O(parts) every tick → ~0 in the common (uninjured) case — it was 6.2% of the worker.
+    if (limbs && ((mob.pain ?? 0) > 0 || conditions.some((c) => c.id === 'fractured')))
+      syncFractureConditions(conditions, limbs);
 
     // Severe pain OR heavy blood loss sends a mob into shock — SAME rule as pawns (applyShock); this
     // subsumes the old blood_loss condition. mob.pain is kept current by combat + the heal block above.

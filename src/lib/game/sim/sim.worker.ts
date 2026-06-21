@@ -191,7 +191,21 @@ const MOB_COLD = new Set<string>([
   'limbs',
   'injuries',
   'conditions',
-  'conditionTimers'
+  'conditionTimers',
+  // ENGINE-PERFORMANCE-II §S4: per-frame the renderer reads only x/y/id/state/isAlive/eatProgress/
+  // health/maxHealth/creatureId/path off a mob; these scalars are worker-AI- or selected-card-only and
+  // change rarely for a typical idle mob, so ship them ONLY on change (the selected card reads the
+  // mirror's last value). At 958 mobs this trims the every-flush hot payload that the snapshot clones.
+  'stateSince',
+  'targetPawnId',
+  'diedAt',
+  'huntTargetId',
+  'huntCooldownUntil',
+  'forageCooldownUntil',
+  'blockedTicks',
+  'pain',
+  'bloodVolume',
+  'maxBloodVolume'
 ]);
 // Cold-field sync = per-field REF-DIFF (replaces the old staggered RESYNC_EVERY round-robin, which
 // left the selected-pawn detail panels ≤2s stale — pill/health/gear lagging the sim). Each cold
