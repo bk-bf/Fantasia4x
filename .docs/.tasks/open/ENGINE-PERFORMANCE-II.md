@@ -39,38 +39,53 @@ CPU profiler chunks for **per-thread per-function self-time** (`/tmp/parsetrace.
 
 ## Renderer (FPS) — prioritised
 
-- [ ] **R1 — Static light bake is O(tiles × all-emitters), re-run every chunk rebuild (≈35% combined).**
-  `LightingService.samplePointStatic` loops **every** emitter per tile-corner; `collectResourceEmitters`
-  scans all 562k tiles → potentially thousands of grove-glow emitters; both re-run on each terrain
-  rebuild (and chunks rebuild constantly while panning). The point light is **flicker-free / static**, so
-  it should be computed **once per emitter-set change**, not per rebuild.
-  - **(a) Cache the per-tile static light** in a `Float32Array(w*h*3)` keyed by `lightVersion`; chunk
-    rebuilds read it (O(1)/tile) instead of re-sampling.
-  - **(b) Spatially bucket emitters** (coarse grid); the bake samples only emitters in a tile's bucket +
-    ring → O(tiles × nearby) when (a) is recomputed.
-  - **(c) Cull grove glows at scale** — cap count / merge nearby / skip when zoomed past a threshold;
-    thousands of sub-pixel glows aren't visible.
+- [x] **R1 — static light bake cached (2026-06-21).** `LightingService.samplePointStatic` looped **every**
+  emitter per tile-corner, re-run on every terrain chunk rebuild — O(tiles × emitters), 15.3% + inflating
+  the 19.7% terrain rebuild. Now a **splat-built per-corner cache**: iterate emitters once per
+  `emittersVersion`, add each to the corners within its radius (**O(emitters × r²)**) into a flat
+  `Float32Array` over the emitter bounding box; the per-corner sample is an **O(1) lookup**. Flicker-free,
+  so valid until the emitter set changes (campfire toggled / grove harvested). Falloff math is a direct
+  translation of the old loop. `check`/`test` green (552). *(Follow-ups still open if needed: (b) was
+  unnecessary — splatting already makes the build O(emitters×r²); (c) cull grove glows at scale only if
+  the build hitch on emitter change shows up. The per-corner return still allocs a `[r,g,b]` as before —
+  unchanged, not a regression.)* **Pending fresh-trace validation.**
 - [ ] **R2 — `buildGameGrid` is whole-map O(562k)** (`getTilesInRegion`+`setTile`, the §E follow-up):
   `redrawOverlayNow` floods all tiles into a fresh `GameGrid` on each terrain-change event. Make it
   **per-chunk dirty** — the worker already ships `worldMapDelta`s; invalidate only changed chunks, build
   grid tiles lazily per visible chunk. Removes the O(map) flood + the per-tile `setTile` churn.
-- [ ] **R3 — `discoveredResources.buildRows` scans all 562k tiles on the RENDER thread** per turn-bucket
-  (7%). Options: move to the worker; make it incremental (resource deltas); or only rebuild while the
-  EXPLORE tab is open. It feeds a tab most ticks don't show.
+- [x] **R3 — gate the EXPLORE ledger on tab-open (2026-06-21).** After R1, `discoveredResources.buildRows`
+  became the **#1 renderer cost (~33%)** in the trace — a 562k-tile scan every 15 turns on the render
+  thread, running whether or not the EXPLORE tab was open (it's usually closed). Now `maybeScheduleRebuild`
+  early-returns unless the tab is open; opening the tab rebuilds once if stale (`uiState` subscription).
+  Closed ⇒ zero scans. `check`/`test` green (552). **Pending fresh-trace validation.**
+- [x] **R5 — weather at reduced resolution (2026-06-21).** `WeatherCanvas.frame` was 14.4% (new #1 after
+  R1+R3) — two full-screen ops + up to 1600 particles every frame, more when zoomed out. Now the canvas
+  buffer is **`RENDER_SCALE = 0.6` × the CSS size** with a matching `ctx.setTransform`, so drawing stays
+  in CSS coords (sizes / density / fall-speed preserved exactly) but rasterizes into a buffer with
+  **~0.36× the fillrate** (CSS-upscaled — weather is soft, no visible loss). Zoom-out particle ramp
+  softened (2.2× → 1.6×). `check`/`test` green (552). **Pending fresh-trace validation.**
 - [ ] **R4 — `updateWorldEffectOverlays` is per-frame O(1650 mobs)** with `.map/.filter` allocation chains
   (4.6%). Viewport-cull to on-screen mobs first; reuse buffers; throttle. (Also gate on the render-on-
   demand freeze where possible.)
 
 ## Sim (TPS) — prioritised
 
-- [ ] **S1 — Entity AI nearest-X queries are O(N²) (the TPS killer).** `nearestPredatorThreat` (and the
-  prey/threat scans) loop the whole predator/prey subset **per mob**, every tick → ~10⁵–10⁶ `dist` calls
-  at 1650 mobs. **Put nearest-entity behind a spatial index** — a uniform grid, or the existing WASM
-  spatial-core nearest-entity query (**ADR-008**: spatial queries belong in the spatial service). Turns
-  O(prey × allPredators) into O(prey × nearbyBucket). Single biggest TPS lever.
-- [ ] **S2 — `processResourceRegrowth` full-map pre-scan every tick (886ms).** It scans all 562k tiles
-  every tick just to detect an expired cooldown. Replace with a **min-heap / sorted queue of next-
-  regrowth times** (or a dirty-set of tiles-on-cooldown); the per-tick check becomes O(1)–O(#expiring).
+- [~] **S1 — WASM spatial-core nearest-entity query (2026-06-21).** Added `nearest_each(points, queries,
+  maxDist) -> Int32Array` to the Rust spatial-core (`spatial-core/src/lib.rs`) — a uniform grid (cell =
+  `maxDist`, 3×3 cell scan), built + rebuilt WASM via `pnpm add:wasm`. Exposed as
+  `wasmPathfinderService.nearestEach` (ADR-008). **`nearestPredatorThreat` rewired**: the prey→nearest-
+  predator map is now computed **once per tick** via one batch call (`nearestPredatorMap`, keyed on the
+  allMobs ref) instead of the O(prey × predators) double loop — the lookup is O(1). JS fallback keeps it
+  identical until the WASM inits in the worker (exercised by `entitySim.test.ts`, 20 tests green).
+  `check`/`test` green (552). **Pending fresh-trace validation.** **Same-pattern follow-up:**
+  `findNearestPrey` (O(predators × prey)) and `nearestPawn` can reuse `nearestEach` + the per-tick cache.
+- [x] **S2 — regrowth min-heap (2026-06-21).** Replaced the per-tick full-map cooldown scan (886ms) with
+  a **min-heap of `(turn, x, y)`** (`systems/regrowthQueue.ts`): the engine peeks O(1) ("anything due?")
+  and drains only the due tiles. Fed at the harvest set-site (`jobs/harvest.ts` pushes a tile's soonest
+  cooldown) + rebuilt once on a worldMap REPLACE (load/regen/test, ref change). Stale entries (re-
+  harvest / already done) pop and skip; processed tiles re-queue their next-soonest. `processResource-
+  Regrowth` common case is now O(1). `check` green; `resourceRegrowth.test.ts` (4) + full suite (552)
+  green. **Pending fresh-trace validation.**
 - [ ] **S3 — Pathfinding at scale.** `buildPathfindingGridsSoftBlocked` overlays entity occupancy on the
   (cached) base grid per pathfind, and A* runs for many mobs. Levers: **incremental occupancy** (don't
   rebuild the blocked overlay from scratch), **throttle/stagger** path recomputes (not every mob every
