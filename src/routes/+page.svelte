@@ -221,7 +221,7 @@
 {/if}
 
 {#if $appPhase === 'game' && $storeReady}
-  <div class="game-container">
+  <div class="game-container" class:map-locked={customMapOpen}>
     <div class="game-header">
       <GameControls />
     </div>
@@ -379,6 +379,18 @@
     min-height: 0;
     position: relative;
     overflow: hidden;
+  }
+
+  /* Custom Map popup is up (New Game / world shaping): lock the world behind it. The canvas mouse
+     handlers are element-level, so pointer-events:none on the map area stops hover tooltips AND
+     click-selection from firing; the bottom nav is dimmed + made non-interactive. The popup itself
+     is a fixed-position sibling at the container root, so it's unaffected. */
+  .map-locked .map-area {
+    pointer-events: none;
+  }
+  .map-locked .bottom-nav {
+    pointer-events: none;
+    opacity: 0.35;
   }
 
   /* Overlay panel: bottom 50% of the map area, semi-transparent so map shows above */
