@@ -1604,8 +1604,8 @@
     "durability"       : 20,
     "maxDurability"    : 20,
     "toolTierRequired" : 0,
-    "toolBoost"        : {"speed": 0.4, "yield": 0.3},
-    "processingType"   : ["crafting", "butchery"]
+    "toolBoost"        : {"speed": 0.25, "yield": 0.18},
+    "processingType"   : ["butchery", "leatherworking"]
   },
   {
     "id"               : "flint_sickle",
@@ -1614,7 +1614,7 @@
     "type"             : "tool",
     "category"         : "harvesting",
     "deteriorationRate": 0.02,
-    "description"      : "Knapped flint chips set along a curved branch. Cuts grass and plant fiber twice as fast.",
+    "description"      : "Knapped flint chips set along a curved branch. Reaps grain and tends crops faster than bare hands — a field hand's flint knife.",
     "color"            : "#BBBBAA",
     "amount"           : 0,
     "weightKg"         : 0.5,
@@ -1623,8 +1623,8 @@
     "durability"       : 25,
     "maxDurability"    : 25,
     "toolTierRequired" : 0,
-    "processingType"   : ["foraging", "harvesting"],
-    "effects"          : {"foragingBonus": 0.5}
+    "processingType"   : ["planting"],
+    "toolBoost"        : {"speed": 0.3, "yield": 0.22}
   },
   {
     "id"               : "stone_chopper",
@@ -1659,8 +1659,8 @@
     "volumeL"          : 0.8,
     "tier"             : 0,
     "toolTierRequired" : 0,
-    "toolBoost"        : {"speed": 0.3, "yield": 0.2},
-    "processingType"   : ["crafting", "fishing", "mining"]
+    "toolBoost"        : {"speed": 0.2, "yield": 0.12},
+    "processingType"   : ["digging", "fishing"]
   },
   {
     "id": "stone_axe",
@@ -1679,7 +1679,7 @@
     "maxDurability": 40,
     "durabilityLossPerAction": 5,
     "toolTierRequired": 0,
-    "toolBoost": {"speed": 0.5, "yield": 0.4},
+    "toolBoost": {"speed": 0.5, "yield": 0.38},
     "processingType": ["woodcutting"]
   },
   {
@@ -1700,7 +1700,7 @@
     "durabilityLossPerAction": 2,
     "toolTierRequired": 1,
     "researchRequired": "iron_working",
-    "toolBoost": {"speed": 0.8, "yield": 0.6},
+    "toolBoost": {"speed": 1.0, "yield": 0.75},
     "processingType": ["woodcutting"]
   },
   {
@@ -1721,7 +1721,7 @@
     "durabilityLossPerAction": 1,
     "toolTierRequired": 2,
     "researchRequired": "steel_making",
-    "toolBoost": {"speed": 1.0, "yield": 0.8},
+    "toolBoost": {"speed": 1.5, "yield": 1.2},
     "processingType": ["woodcutting"]
   },
   {
@@ -1759,7 +1759,7 @@
     "maxDurability": 40,
     "durabilityLossPerAction": 5,
     "toolTierRequired": 0,
-    "toolBoost": {"speed": 0.5, "yield": 0.4},
+    "toolBoost": {"speed": 0.5, "yield": 0.38},
     "processingType": ["mining"]
   },
   {
@@ -1799,7 +1799,7 @@
     "maxDurability"    : 30,
     "toolTierRequired" : 0,
     "weaponProperties" : {"damage": 8, "attackSpeed": 1, "range": 1},
-    "toolBoost"        : {"speed": 0.4},
+    "toolBoost"        : {"speed": 0.45},
     "processingType"   : ["hunting"]
   },
   {
@@ -1807,9 +1807,9 @@
     "charSpans"        : [ {"sheet": "items", "id": 159} ],
     "name"             : "Stone Spade",
     "type"             : "tool",
-    "category"         : "construction",
+    "category"         : "digging",
     "deteriorationRate": 0.01,
-    "description"      : "Flat-bladed stone spade. Earth-moving and clay extraction.",
+    "description"      : "Flat-bladed stone spade. Earth-moving and clay extraction — digs far faster than a bare digging stick.",
     "color"            : "#888888",
     "amount"           : 0,
     "weightKg"         : 1.2,
@@ -1818,7 +1818,92 @@
     "durability"       : 35,
     "maxDurability"    : 35,
     "toolTierRequired" : 0,
-    "processingType"   : ["construction", "mining"]
+    "toolBoost"        : {"speed": 0.5, "yield": 0.38},
+    "processingType"   : ["digging", "construction", "mining"]
+  },
+  {
+    "id"               : "iron_shovel",
+    "charSpans"        : [ {"sheet": "items", "id": 159} ],
+    "name"             : "Iron Shovel",
+    "type"             : "tool",
+    "category"         : "digging",
+    "deteriorationRate": 0.008,
+    "description"      : "A forged iron shovel. Cuts through packed earth and clay with ease — far faster and longer-lived than a stone spade.",
+    "color"            : "#9AA0A6",
+    "amount"           : 0,
+    "weightKg"         : 2.0,
+    "volumeL"          : 1.6,
+    "tier"             : 2,
+    "durability"       : 150,
+    "maxDurability"    : 150,
+    "durabilityLossPerAction": 2,
+    "toolTierRequired" : 1,
+    "researchRequired" : "iron_working",
+    "toolBoost"        : {"speed": 1.0, "yield": 0.75},
+    "processingType"   : ["digging", "construction", "mining"]
+  },
+  {
+    "id"               : "steel_shovel",
+    "charSpans"        : [ {"sheet": "items", "id": 159} ],
+    "name"             : "Steel Shovel",
+    "type"             : "tool",
+    "category"         : "digging",
+    "deteriorationRate": 0.004,
+    "description"      : "A tempered steel shovel. Bites into the hardest ground and keeps its edge — the digger's finest tool.",
+    "color"            : "#C8CDD2",
+    "amount"           : 0,
+    "weightKg"         : 2.1,
+    "volumeL"          : 1.6,
+    "tier"             : 3,
+    "durability"       : 260,
+    "maxDurability"    : 260,
+    "durabilityLossPerAction": 1,
+    "toolTierRequired" : 2,
+    "researchRequired" : "steel_making",
+    "toolBoost"        : {"speed": 1.5, "yield": 1.2},
+    "processingType"   : ["digging", "construction", "mining"]
+  },
+  {
+    "id"               : "iron_hoe",
+    "charSpans"        : [ {"sheet": "items", "id": 159} ],
+    "name"             : "Iron Hoe",
+    "type"             : "tool",
+    "category"         : "planting",
+    "deteriorationRate": 0.008,
+    "description"      : "A forged iron hoe. Turns and tills soil far faster than a stone blade, and holds its edge through a whole season.",
+    "color"            : "#9AA0A6",
+    "amount"           : 0,
+    "weightKg"         : 1.6,
+    "volumeL"          : 1.4,
+    "tier"             : 2,
+    "durability"       : 150,
+    "maxDurability"    : 150,
+    "durabilityLossPerAction": 2,
+    "toolTierRequired" : 1,
+    "researchRequired" : "iron_working",
+    "toolBoost"        : {"speed": 1.0, "yield": 0.75},
+    "processingType"   : ["planting"]
+  },
+  {
+    "id"               : "steel_hoe",
+    "charSpans"        : [ {"sheet": "items", "id": 159} ],
+    "name"             : "Steel Hoe",
+    "type"             : "tool",
+    "category"         : "planting",
+    "deteriorationRate": 0.004,
+    "description"      : "A tempered steel hoe. Slices through root-bound earth effortlessly — the farmer's finest tool.",
+    "color"            : "#C8CDD2",
+    "amount"           : 0,
+    "weightKg"         : 1.7,
+    "volumeL"          : 1.4,
+    "tier"             : 3,
+    "durability"       : 260,
+    "maxDurability"    : 260,
+    "durabilityLossPerAction": 1,
+    "toolTierRequired" : 2,
+    "researchRequired" : "steel_making",
+    "toolBoost"        : {"speed": 1.5, "yield": 1.2},
+    "processingType"   : ["planting"]
   },
   {
     "id"               : "clay_cooking_pot",
@@ -2800,7 +2885,7 @@
     "type": "tool",
     "category": "butchery",
     "deteriorationRate": 0.02,
-    "description": "A heavy blade split from large animal bone and knapped to a sharp edge, lashed to a hardwood grip with cordage. Renders 25% more yield from any carcass than a flint knife.",
+    "description": "A heavy blade split from large animal bone and knapped to a sharp edge, lashed to a hardwood grip with cordage. Renders noticeably more yield from any carcass than a flint knife.",
     "color": "#C8A87A",
     "amount": 0,
     "weightKg": 0.6,
@@ -2809,7 +2894,7 @@
     "durability": 45,
     "maxDurability": 45,
     "toolTierRequired": 0,
-    "toolBoost": {"speed": 0.5, "yield": 0.45},
+    "toolBoost": {"speed": 0.55, "yield": 0.45},
     "processingType": ["butchery"],
     "effects": {"butcheryYieldBonus": 0.25}
   },
@@ -2848,7 +2933,7 @@
     "durability": 80,
     "maxDurability": 80,
     "toolTierRequired": 1,
-    "toolBoost": {"speed": 0.4},
+    "toolBoost": {"speed": 0.45},
     "processingType": ["metalworking"]
   },
   {
@@ -2867,7 +2952,7 @@
     "durability": 160,
     "maxDurability": 160,
     "toolTierRequired": 2,
-    "toolBoost": {"speed": 0.6},
+    "toolBoost": {"speed": 1.0},
     "processingType": ["metalworking"]
   },
   // ── Natural weapons ─────────────────────────────────────────────────────────

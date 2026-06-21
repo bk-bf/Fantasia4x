@@ -10,6 +10,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Foraging',
     description: 'Gather berries, nuts, and edible plants from the wild',
     color: '#4CAF50',
+    // Tool-free (the bootstrap activity) — a knife/sickle speeds it up but is never required.
+    boostTools: ['flint_knife', 'flint_sickle'],
     primaryStat: 'perception',
     secondaryStat: 'constitution',
     baseEfficiency: 1.0
@@ -69,7 +71,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Planting',
     description: 'Sow seeds, tend crops, and manage farmland',
     color: '#66BB6A',
-    toolsRequired: ['digging_stick', 'stone_hoe', 'iron_hoe'],
+    toolsRequired: ['flint_sickle', 'stone_hoe', 'iron_hoe', 'steel_hoe'],
     primaryStat: 'dexterity',
     secondaryStat: 'intelligence',
     baseEfficiency: 1.0
@@ -110,6 +112,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Digging',
     description: 'Excavate soil, clay, and minerals from the ground',
     color: '#8D6E63',
+    // Tool-free (dig interactions require no tool) — a stick/spade/shovel speeds it up, never gates.
+    boostTools: ['digging_stick', 'stone_spade', 'iron_shovel', 'steel_shovel'],
     primaryStat: 'dexterity',
     secondaryStat: 'intelligence',
     baseEfficiency: 1.0

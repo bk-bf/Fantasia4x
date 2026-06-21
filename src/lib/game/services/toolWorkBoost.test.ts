@@ -38,7 +38,7 @@ describe('tool work boost (additive, items.jsonc toolBoost)', () => {
     const bareM = pawnStatService.getWorkModifiers(base(), 'mining');
     const pickM = pawnStatService.getWorkModifiers(carrying('stone_pick'), 'mining');
     expect(pickM.speed).toBeCloseTo(bareM.speed + 0.5); // stone_pick toolBoost.speed
-    expect(pickM.yield!).toBeCloseTo(bareM.yield! + 0.4); // stone_pick toolBoost.yield
+    expect(pickM.yield!).toBeCloseTo(bareM.yield! + 0.38); // stone_pick toolBoost.yield
   });
 
   it('an equipped tool boosts identically to a carried one', () => {
@@ -59,6 +59,14 @@ describe('tool work boost (additive, items.jsonc toolBoost)', () => {
     const bareS = pawnStatService.getWorkModifiers(base(), 'metalworking').speed;
     expect(green).toBeGreaterThan(bareS);
     expect(steel).toBeGreaterThan(green);
+  });
+
+  it('a knife/sickle boosts foraging via boostTools (without gating it)', () => {
+    const bareF = pawnStatService.getWorkModifiers(base(), 'foraging').speed;
+    const knifeF = pawnStatService.getWorkModifiers(carrying('flint_knife'), 'foraging').speed;
+    const sickleF = pawnStatService.getWorkModifiers(carrying('flint_sickle'), 'foraging').speed;
+    expect(knifeF).toBeGreaterThan(bareF);
+    expect(sickleF).toBeGreaterThan(bareF);
   });
 
   it('no held tool → no boost', () => {

@@ -5,6 +5,7 @@
   import type { Item, Recipe } from '$lib/game/core/types';
   import { recipeService } from '$lib/game/services/RecipeService';
   import { itemService } from '$lib/game/services/ItemService';
+  import { WORK_CATEGORIES } from '$lib/game/core/Work';
   import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService';
 
   // decaySeconds is authored in in-game seconds; one in-game day = TURNS_PER_DAY (300) of them.
@@ -139,10 +140,16 @@
     }
 
     if (item.type === 'tool' && item.toolBoost) {
+      // Name the actual work(s) the tool serves instead of a bare "Work speed". A tool boosts only
+      // the work categories that LIST it in `toolsRequired` (Work.ts) — the same list that gates them.
+      const works = WORK_CATEGORIES.filter(
+        (c) => c.toolsRequired?.includes(item.id) || c.boostTools?.includes(item.id)
+      ).map((c) => c.name);
+      const workLabel = works.length ? works.join(' / ') : 'Work';
       if (item.toolBoost.speed != null)
-        out.push({ label: 'Work speed', val: pct(item.toolBoost.speed) });
+        out.push({ label: `${workLabel} speed`, val: pct(item.toolBoost.speed) });
       if (item.toolBoost.yield != null)
-        out.push({ label: 'Work yield', val: pct(item.toolBoost.yield) });
+        out.push({ label: `${workLabel} yield`, val: pct(item.toolBoost.yield) });
     }
 
     if (item.nutrition != null || nutritionBonus) {

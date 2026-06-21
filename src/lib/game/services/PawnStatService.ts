@@ -45,10 +45,12 @@ const WORK_STAT_IDS = new Set(STATS.filter((s) => s.category === 'work').map((s)
 // A held tool ADDS its `toolBoost.speed` / `toolBoost.yield` to the matching work category's speed /
 // yield modifier (so a stone_pick with {speed:0.5,yield:0.4} turns a 1.0 mining mult into 1.5 / 1.4).
 // The magnitudes live on the tool ITEMS (items.jsonc); which category a tool serves comes from
-// Work.ts `toolsRequired`. Built once.
+// Work.ts `toolsRequired` (gates + boosts) PLUS `boostTools` (boosts only — e.g. a sickle/knife
+// speeds up tool-free foraging without gating it). Built once.
 const CATEGORY_TOOLS: Record<string, Set<string>> = {};
 for (const cat of WORK_CATEGORIES) {
-  if (cat.toolsRequired?.length) CATEGORY_TOOLS[cat.id] = new Set(cat.toolsRequired);
+  const ids = [...(cat.toolsRequired ?? []), ...(cat.boostTools ?? [])];
+  if (ids.length) CATEGORY_TOOLS[cat.id] = new Set(ids);
 }
 const TOOL_BOOST: Record<string, { speed: number; yield: number }> = {};
 for (const item of ITEMS_DB) {

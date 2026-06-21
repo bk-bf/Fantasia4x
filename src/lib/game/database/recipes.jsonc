@@ -800,6 +800,42 @@
     "researchRequired": "steel_making"
   },
   {
+    "id"              : "make_iron_shovel",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 2, "branch": 1, "cordage": 1},
+    "outputs"         : {"iron_shovel": 1},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_steel_shovel",
+    "station"         : "anvil",
+    "inputs"          : {"steel_bar": 2, "branch": 1, "cordage": 1},
+    "outputs"         : {"steel_shovel": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_iron_hoe",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 2, "branch": 1, "cordage": 1},
+    "outputs"         : {"iron_hoe": 1},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_steel_hoe",
+    "station"         : "anvil",
+    "inputs"          : {"steel_bar": 2, "branch": 1, "cordage": 1},
+    "outputs"         : {"steel_hoe": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
     "id"              : "make_rope",
     "station"         : "ropewalk",
     "inputs"          : {"cordage": 6},

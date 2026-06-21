@@ -126,7 +126,12 @@ export interface WorkCategory {
   color: string;
 
   // Requirements
+  // `toolsRequired` BOTH gates and boosts: a pawn can only work this category while holding one of
+  // these (JobService), and the held tool's `toolBoost` is added to the modifier (PawnStatService).
   toolsRequired?: string[];
+  // `boostTools` ONLY boosts — never gates. For tool-free categories (e.g. foraging is the
+  // bootstrap activity) where a held tool should speed work up but must not become a requirement.
+  boostTools?: string[];
   skillRequired?: string;
 
   // Efficiency modifiers
