@@ -4,7 +4,7 @@ import { buildingService } from './BuildingService';
 import { resourceObjectService } from './ResourceObjectService';
 import { complete as constructComplete } from './jobs/construct';
 import { complete as plantComplete } from './jobs/plant';
-import { complete as harvestComplete } from './jobs/harvest';
+import { complete as harvestComplete, generate as harvestGenerate } from './jobs/harvest';
 import { isGrowableResource } from './ResourceObjectService';
 import { SUBTERRAINS, soilFertilityPct } from '../core/Terrains';
 import type { GameState, Job } from '../core/types';
@@ -185,6 +185,30 @@ describe('§F resource growth/maturity', () => {
   it('a tree forage only strips ~20% growth (just branches) — the tree stays standing', () => {
     const forage = resourceObjectService.getInteractionByDesignationType('pine_tree', 'forage')!;
     expect(forage.harvestGrowthCost).toBe(20);
+  });
+
+  it('a foraged-down tree (growth < 60%) queues no new forage job until it regrows', () => {
+    const mk = (growth: number) =>
+      ({
+        worldMap: [
+          [
+            {
+              x: 0,
+              y: 0,
+              subType: 'deep_grass',
+              terrainType: 'forest',
+              walkable: false,
+              resources: { pine_tree: 3 },
+              growth: { pine_tree: growth }
+            }
+          ]
+        ],
+        designations: { '0,0': 'forage' },
+        pawns: []
+      }) as unknown as GameState;
+
+    expect(harvestGenerate([], mk(80)).some((j) => j.resourceId === 'pine_tree')).toBe(true);
+    expect(harvestGenerate([], mk(40)).some((j) => j.resourceId === 'pine_tree')).toBe(false);
   });
 });
 

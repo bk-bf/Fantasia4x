@@ -155,10 +155,12 @@ class ResourceGeneratorServiceImpl {
     rng: (min: number, max: number) => number
   ): void {
     tile.resources[def.id] = rng(def.nodeAmountRange[0], def.nodeAmountRange[1]);
-    // §F: growable plants spawn at a RANDOM 50–100% maturity (never below 50% — keeps the map's yields
-    // healthy) so the world isn't uniformly full-grown; growth scales harvest yield + shows in the panel.
+    // §F: growable plants spawn at a RANDOM 60–100% maturity so the world isn't uniformly full-grown
+    // (growth scales harvest yield + shows in the panel). The 60% floor matches the forage regrow gate
+    // (MIN_FORAGE_GROWTH) so a freshly-spawned wild plant is always foragable at least once — below it,
+    // a never-foraged node would be permanently locked (wild growth only recovers via yield regrowth).
     if (isGrowableResource(def)) {
-      (tile.growth ??= {})[def.id] = rng(50, 100);
+      (tile.growth ??= {})[def.id] = rng(60, 100);
     }
     // walkable comes directly from the resource; movementCost falls back to the objectSubType
     // subterrain so slow-but-passable resources still apply cost.

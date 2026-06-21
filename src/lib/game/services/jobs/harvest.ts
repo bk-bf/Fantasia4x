@@ -20,6 +20,17 @@ import { seasonRegrowthMultiplier } from '../EnvironmentService';
 import { rng } from '../../core/rng';
 import { HARVEST_DTYPES, resourceMatchesDesignation, resourceMatchesFilter } from './filters';
 
+// §F anti-spam: a forage (persistent, non-depleting) node can't be foraged again until it has
+// REGROWN past this growth floor — each forage strips `harvestGrowthCost` (~20%), so a stripped
+// tree/bush must recover (its yield cooldown restores growth → 100%) before the next gather. Felling,
+// digging and mining (harvestDepletes) are never gated; a crop reap only fires at full maturity.
+const MIN_FORAGE_GROWTH = 60;
+
+/** True when this interaction is a regrow-gated forage (persistent, not a depleting cut/dig/mine). */
+function isForageGated(interaction: { persistent?: boolean; harvestDepletes?: boolean } | undefined) {
+  return interaction?.persistent === true && interaction.harvestDepletes !== true;
+}
+
 export function generate(jobs: Job[], gs: GameState): Job[] {
   // Remove harvest jobs whose exact designated tile no longer permits harvesting,
   // or whose resource is gone.
@@ -33,6 +44,13 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
     )
       return false;
     const tile = gs.worldMap[j.targetY]?.[j.targetX];
+    // Drop a forage job whose node has dropped below the regrow floor (§F anti-spam).
+    const interaction = resourceObjectService.getInteractionByDesignationType(
+      j.resourceId ?? '',
+      designationType
+    );
+    if (isForageGated(interaction) && (tile?.growth?.[j.resourceId ?? ''] ?? 100) < MIN_FORAGE_GROWTH)
+      return false;
     return (tile?.resources?.[j.resourceId ?? ''] ?? 0) > 0;
   });
 
@@ -56,6 +74,11 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
       if ((amount ?? 0) <= 0) continue;
       if (!resourceMatchesDesignation(dtype, resourceId)) continue;
       if (!resourceMatchesFilter(dtype, resourceId, gs, key)) continue;
+
+      // §F anti-spam: don't queue a forage on a still-recovering node (growth below the regrow floor).
+      const interaction = resourceObjectService.getInteractionByDesignationType(resourceId, dtype);
+      if (isForageGated(interaction) && (tile.growth?.[resourceId] ?? 100) < MIN_FORAGE_GROWTH)
+        continue;
 
       const existKey = `${x},${y},${resourceId}`;
       if (harvestKeys.has(existKey)) continue;
