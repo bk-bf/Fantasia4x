@@ -144,7 +144,9 @@ const WET_SOAK_HOURS_HEAVY = 0.5; // >80% tile → full in ~30 in-game minutes
 const WET_DRY_HOURS_MAX = 5; // cold + exposed → full dry (100→0) takes ~5 in-game hours
 const WET_DRY_HOURS_MIN = 1; // warm + sheltered → ~1 in-game hour
 const WET_DRY_WARM_REF = 25; // °C at which warmth contributes its full drying speedup
-const WET_DRY_SHELTER_SPEED = 0.4; // a roof contributes this much (0–1) toward fastest drying
+const WET_DRY_SHELTER_SPEED = 0.7; // a roof contributes this much (0–1) toward fastest drying — being
+//   sheltered is the dominant lever, so a pawn under cover towels off quickly even when it's cold out
+const WET_DRY_WARMTH_SPEED = 0.6; // warmth contributes this much (0–1) on top (independent of shelter)
 
 /**
  * PawnService Implementation - Focused on pawn behavior and needs only
@@ -484,11 +486,13 @@ export class PawnServiceImpl implements PawnService {
         wetness = Math.min(100, wetness + gainPerSec * dt);
       } else if (wetness > 0) {
         // Warmth (up to WET_DRY_WARM_REF) and a roof each push drying toward the 1-hour floor;
-        // cold + exposed leaves the full 5-hour dry time.
+        // cold + exposed leaves the full 5-hour dry time. Being SHELTERED dominates — a roof gets a
+        // pawn most of the way to the floor on its own (towel off out of the rain), warmth on top
+        // reaches it — so a sheltered pawn dries far quicker than one drying in the open.
         const warmth = Math.max(0, Math.min(1, temp / WET_DRY_WARM_REF));
         const drySpeed = Math.min(
           1,
-          warmth * (1 - WET_DRY_SHELTER_SPEED) + (thermal?.roofed ? WET_DRY_SHELTER_SPEED : 0)
+          warmth * WET_DRY_WARMTH_SPEED + (thermal?.roofed ? WET_DRY_SHELTER_SPEED : 0)
         );
         const dryHours = WET_DRY_HOURS_MAX - (WET_DRY_HOURS_MAX - WET_DRY_HOURS_MIN) * drySpeed;
         const dryPerSec = 100 / (dryHours * HOUR_SECONDS);

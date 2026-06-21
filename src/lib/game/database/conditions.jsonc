@@ -594,7 +594,7 @@
         "id": "sheltered",
         "name": "Sheltered",
         "transient": true,
-        "description": "Under a roof, out of the weather. Recovers from cold and heat far faster, and a storm's gloom is held at bay.",
+        "description": "Under a roof, out of the weather. Recovers from cold and heat far faster, dries off quickly, breaks the wind so windchill barely bites, and a storm's gloom is held at bay.",
         "color": "#7E9FBF",
         "charSpans": [ {"sheet": "font", "id": 127} ],
         "modifiers": {"fatigueRate": 0.9}

@@ -104,6 +104,10 @@ const COMBAT_SCAN_INTERVAL = 6;
 
 /** SEASONS_WEATHER: a sheltered (roofed) pawn recovers from hypothermia/heat stroke this much faster. */
 const SHELTER_RECOVERY_MUL = 2.5;
+/** SEASONS_WEATHER: extra wind cut a ROOF gives beyond its (rain-oriented) weatherProtection — a roof
+ *  over your head breaks the wind well regardless of how watertight it is, so a sheltered pawn drops
+ *  windchill fast (and feels far less windchill amplification on the cold). */
+const SHELTER_WIND_MUL = 0.25;
 
 // SEASONS_WEATHER — cold/heat exposure is a TRACKED per-pawn meter (needs.coldExposure/heatExposure),
 // not an instantaneous read: it lags toward the environmental exposure (degrees past comfort, after
@@ -378,8 +382,12 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     );
     if (tile || hasTempCondition || hasExposure) {
       const thermal = pos ? thermalAt(pos.x, pos.y) : undefined;
-      if (pos && thermal)
+      if (pos && thermal) {
         windLevel = effectiveWindAt(pos.x, pos.y, gameState.weather, thermal, gameState.worldMap);
+        // Being SHELTERED breaks the wind well beyond a roof's rain-protection: cut the felt wind hard
+        // so a roofed pawn sheds windchill fast (and gets far less windchill on the cold) — see comment.
+        if (thermal.roofed) windLevel *= SHELTER_WIND_MUL;
+      }
       const weatherDelta = weatherEffects(gameState.weather).tempDelta;
       const base = tile?.temperature ?? 15;
       const temp = thermal
@@ -455,8 +463,8 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
 
   // ── Windchill ← effective wind ───────────────────────────────────────────
   // Stage the `windchilled` condition (slightly→extremely windy) DIRECTLY from the wind felt this
-  // tick — instantaneous like encumbrance, not accrued. The lee of a wall/mountain or a roof already
-  // cut `windLevel` in effectiveWindAt, so a sheltered pawn drops to nothing on its own.
+  // tick — instantaneous like encumbrance, not accrued. The lee of a wall/mountain and especially a
+  // roof (SHELTER_WIND_MUL, above) cut `windLevel` hard, so a sheltered pawn sheds windchill at once.
   driveWindchill(conditions, windLevel);
 
   // ── Encumbrance ← carry load ─────────────────────────────────────────────
