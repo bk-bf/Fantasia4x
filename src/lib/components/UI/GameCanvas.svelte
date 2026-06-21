@@ -1203,8 +1203,14 @@
     const cullMinY = viewY - CULL_MARGIN;
     const cullMaxX = viewX + Math.ceil((container?.clientWidth ?? 0) / tileWidth) + CULL_MARGIN;
     const cullMaxY = viewY + Math.ceil((container?.clientHeight ?? 0) / tileHeight) + CULL_MARGIN;
+    // Entity render LOD: below this tile pixel size a mob glyph is ~a pixel, and drawing ~900 of them is
+    // the dominant zoom-out render cost — drop mobs entirely (terrain + glow + weather still render).
+    // mobRenderPos is emptied by the cleanup below, so they snap correctly when zoomed back in. Tunable.
+    const ENTITY_RENDER_MIN_PX = 5;
+    const renderMobs = tileWidth >= ENTITY_RENDER_MIN_PX;
     const seenMobs = new Set<string>();
     for (const mob of liveMobs) {
+      if (!renderMobs) break;
       const def = getCreatureById(mob.creatureId);
       if (!def || !def.chars.length) continue;
       if (mob.x < cullMinX || mob.x > cullMaxX || mob.y < cullMinY || mob.y > cullMaxY) continue;

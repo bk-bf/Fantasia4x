@@ -625,6 +625,24 @@ export function isWalkable(state: GameState, x: number, y: number): boolean {
   return !!tile && tile.walkable;
 }
 
+/**
+ * §LOD vision bubble: is the mob within `radius` (Chebyshev) of ANY live pawn? Drives the per-tick sim
+ * gate — a mob outside the bubble FREEZES (no FSM / A* / hunger / combat), getting only cheap periodic
+ * background drift. O(pawns) per mob; pawns are few, so the whole gate is ~O(mobs × pawns) — negligible
+ * next to the per-mob A* it elides. This is the architecture's primary scaling lever at full-map sizes.
+ */
+export function mobInLiveRegion(
+  mob: { x: number; y: number },
+  pawns: Pawn[],
+  radius: number
+): boolean {
+  for (let i = 0; i < pawns.length; i++) {
+    const pos = pawns[i].position;
+    if (pos && Math.abs(pos.x - mob.x) <= radius && Math.abs(pos.y - mob.y) <= radius) return true;
+  }
+  return false;
+}
+
 export function nearestPawn(
   mob: Mob,
   pawns: Pawn[],

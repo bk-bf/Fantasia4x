@@ -24,7 +24,9 @@ import {
   findReachableFoodTile,
   huntAttacker,
   approachForMelee,
-  edibleResourceOnTile
+  edibleResourceOnTile,
+  mobInLiveRegion,
+  isWalkable
 } from './entityHelpers';
 import {
   type TileFoodKind,
@@ -35,6 +37,10 @@ import {
   HUNGER_EAT_THRESHOLD,
   willFinishOffDowned,
   FORAGE_RADIUS,
+  LIVE_RADIUS,
+  BACKGROUND_DRIFT_INTERVAL,
+  REALITY_RADIUS,
+  REALITY_INWARD_BIAS,
   SLEEP_FATIGUE_THRESHOLD,
   SLEEP_MAX_HUNGER,
   SAFE_RESET_TICKS,
@@ -152,9 +158,46 @@ function traceStuck(mob: Mob, def: CreatureDefinition, state: GameState, turn: n
   );
 }
 
+// §LOD background churn: a frozen off-bubble mob takes one cheap step (no pathfinding, no occupancy —
+// it's off-screen, overlaps are invisible) so the world reads as alive when the player pans into it.
+// REALITY BUBBLE: within the outer band (REALITY_RADIUS) of a pawn, the step is biased INWARD toward the
+// nearest pawn, so wildlife migrates into the live bubble on its own instead of every encounter hinging
+// on the player walking out to it. Beyond the band it's a pure random walk (diffusion keeps the map
+// populated, not funnelled into the colony). Spread (not in-place): fires ~once/6s per mob.
+function backgroundDrift(mob: Mob, state: GameState, livePawns: Pawn[]): Mob {
+  let nearD = Infinity;
+  let nearX = 0;
+  let nearY = 0;
+  for (const p of livePawns) {
+    const pos = p.position;
+    if (!pos) continue;
+    const d = Math.max(Math.abs(pos.x - mob.x), Math.abs(pos.y - mob.y));
+    if (d < nearD) {
+      nearD = d;
+      nearX = pos.x;
+      nearY = pos.y;
+    }
+  }
+  let dx: number;
+  let dy: number;
+  if (nearD <= REALITY_RADIUS && rng.random() < REALITY_INWARD_BIAS) {
+    dx = Math.sign(nearX - mob.x);
+    dy = Math.sign(nearY - mob.y);
+  } else {
+    dx = Math.floor(rng.random() * 3) - 1;
+    dy = Math.floor(rng.random() * 3) - 1;
+  }
+  if (dx === 0 && dy === 0) return mob;
+  const nx = mob.x + dx;
+  const ny = mob.y + dy;
+  if (!isWalkable(state, nx, ny)) return mob;
+  return { ...mob, x: nx, y: ny, path: [], pathIndex: 0, nextCellCostLeft: undefined };
+}
+
 export function stepEntities(state: GameState): GameState {
   const mobs = state.mobs;
   if (!mobs || mobs.length === 0) return state;
+  const turn = state.turn;
 
   // §S5: refill the per-tick hunt budget. Count mobs ALREADY engaged so the cap is on the concurrent
   // total, not just new starts. O(mobs) once/tick — cheap.
@@ -184,6 +227,20 @@ export function stepEntities(state: GameState): GameState {
     const def = getCreatureById(mob.creatureId);
     if (!def) {
       next[i] = mob;
+      continue;
+    }
+    // §LOD: outside the pawn vision bubble, FREEZE — no FSM / A* / hunger / combat. The only work is a
+    // cheap random drift on a position-staggered interval, so the off-screen world isn't a frozen
+    // tableau when the player pans over it. This is THE scaling lever: stepOne (FSM + A*) runs for the
+    // handful near the colony, not all ~900 mobs. No live pawns (all dead / test isolation) ⇒ no bubble
+    // centre, so the gate is disabled and every mob sims as before.
+    if (livePawns.length > 0 && !mobInLiveRegion(mob, livePawns, LIVE_RADIUS)) {
+      const drifted =
+        turn % BACKGROUND_DRIFT_INTERVAL === (mob.x + mob.y) % BACKGROUND_DRIFT_INTERVAL
+          ? backgroundDrift(mob, state, livePawns)
+          : mob;
+      next[i] = drifted;
+      if (drifted !== mob) changed = true;
       continue;
     }
     const stepped = stepOne(
