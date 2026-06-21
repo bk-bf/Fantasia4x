@@ -105,7 +105,6 @@
     <thead>
       <tr>
         <th class="name-hdr">WORKER</th>
-        <th class="state-hdr">STATUS</th>
         {#each WORK_CATEGORIES as wc}
           <th
             class="work-hdr"
@@ -114,6 +113,7 @@
             onclick={() => toggleColumn(wc.id)}>{ABBR[wc.id] ?? wc.id.slice(0, 3).toUpperCase()}</th
           >
         {/each}
+        <th class="state-hdr">STATUS</th>
       </tr>
     </thead>
     <tbody>
@@ -123,7 +123,6 @@
           onclick={() => (selectedPawn = selectedPawn === pawn.id ? null : pawn.id)}
         >
           <td class="name-cell">{pawn.name.toUpperCase()}</td>
-          <td class="state-cell" style="color:{stateColor(pawn)}">{stateLabel(pawn)}</td>
           {#each WORK_CATEGORIES as wc}
             {@const lvl = getPawnLaborLevel(pawn.id, wc.id)}
             {@const rk = rankMap[pawn.id]?.[wc.id]}
@@ -148,6 +147,7 @@
               </button>
             </td>
           {/each}
+          <td class="state-cell" style="color:{stateColor(pawn)}">{stateLabel(pawn)}</td>
         </tr>
       {/each}
       {#if pawns.length === 0}
@@ -187,8 +187,7 @@
   }
   .matrix {
     border-collapse: collapse;
-    width: max-content;
-    min-width: 100%;
+    width: 100%;
   }
   .matrix th,
   .matrix td {
@@ -196,25 +195,21 @@
     padding: 0;
     text-align: center;
   }
-  .name-hdr {
+  /* Equal fixed width on both end columns so the work grid is centered
+     between them in the 100%-wide table. */
+  .name-hdr,
+  .state-hdr {
     text-align: left;
     padding: 2px 6px;
     color: var(--text-dim);
     font-size: 10px;
-    min-width: 80px;
-  }
-  .state-hdr {
-    text-align: left;
-    padding: 2px 4px;
-    color: var(--text-dim);
-    font-size: 10px;
-    min-width: 72px;
+    width: 169px;
+    white-space: nowrap;
   }
   .work-hdr {
     padding: 2px 3px;
     color: var(--text-dim);
     font-size: 10px;
-    width: 32px;
     min-width: 32px;
     cursor: pointer;
   }
@@ -247,7 +242,7 @@
   }
   .cell-btn {
     position: relative;
-    width: 32px;
+    width: 100%;
     height: 32px;
     padding: 0;
     background: transparent;
