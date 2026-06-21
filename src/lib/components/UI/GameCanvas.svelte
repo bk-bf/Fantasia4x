@@ -9,7 +9,8 @@
     gameState,
     rendererReady,
     currentSeason,
-    currentWeather
+    currentWeather,
+    worldGenRev
   } from '$lib/stores/gameState.js';
   import { cameraTileSize } from '$lib/stores/cameraView.js';
   import type {
@@ -158,6 +159,10 @@
   let _terrainDirty = false;
   let _lastTerrainBuild = 0;
   const TERRAIN_REBUILD_MIN_MS = 500;
+  // Set when the whole world is REPLACED (regen / size change / restore — see worldGenRev). Forces the
+  // next frame's terrain rebuild to bypass the throttle above, so a player-driven regen repaints
+  // immediately (hidden behind the Custom Map overlay) instead of up to 500ms later.
+  let _forceTerrainRebuild = false;
 
   // Viewport offset in tile coordinates
   let viewX = 0;
@@ -2147,9 +2152,24 @@
     if (browser) await init();
   });
 
+  // A full world replace (worldGenRev bump from regen / size change / restore) forces an immediate,
+  // throttle-bypassing terrain rebuild so the new map paints THIS frame — kept hidden behind the
+  // Custom Map GENERATING overlay. Skip the first (subscribe-time) emission: init() already draws the
+  // initial map via its own buildGameGrid.
+  let _worldGenSeen = false;
+  const unsubWorldGen = worldGenRev.subscribe(() => {
+    if (!_worldGenSeen) {
+      _worldGenSeen = true;
+      return;
+    }
+    _forceTerrainRebuild = true;
+    _terrainDirty = true;
+  });
+
   onDestroy(() => {
     unsubState();
     unsubUI();
+    unsubWorldGen();
     unsubCombatFeedback();
     unsubAttackLunges();
     unsubProjectiles();
@@ -2323,8 +2343,9 @@
       updateWorldEffectOverlays();
       // Coalesced sim-driven terrain rebuild: at most once per TERRAIN_REBUILD_MIN_MS instead
       // of the full 38k-tile rebuild every frame that resource regrowth/harvest would force.
-      if (_terrainDirty && now - _lastTerrainBuild >= TERRAIN_REBUILD_MIN_MS) {
+      if (_terrainDirty && (_forceTerrainRebuild || now - _lastTerrainBuild >= TERRAIN_REBUILD_MIN_MS)) {
         _terrainDirty = false;
+        _forceTerrainRebuild = false;
         _lastTerrainBuild = now;
         redrawOverlayNow();
       }

@@ -507,6 +507,14 @@ function setGameSpeed(speed: number) {
   if (USE_SIM_WORKER) simWorkerBridge.setSpeed(speed);
 } // ===== WORLD REGEN =====
 /**
+ * Bumped on every full world REPLACE (regen / size change / preview / restore / reset). GameCanvas
+ * watches it to force an IMMEDIATE terrain rebuild that bypasses its 500ms sim-rebuild throttle — so a
+ * player-driven regen repaints the map this frame (kept hidden behind the Custom Map GENERATING
+ * overlay) instead of up to half a second later, after the overlay has already dropped.
+ */
+export const worldGenRev = writable(0);
+
+/**
  * Adopt a freshly-built GameState as the canonical state (world regen / reset). Under the worker
  * (the only browser path) a full-state REPLACE can't go through the command registry — it re-inits
  * the worker with the new state (which resets its snapshot baselines + restarts the tick loop). The
@@ -515,6 +523,7 @@ function setGameSpeed(speed: number) {
 function loadStateIntoWorker(state: GameState) {
   gameStore.setSilent(state);
   gameStore.notify();
+  worldGenRev.update((n) => n + 1);
   scheduleSave(state);
   if (USE_SIM_WORKER) {
     simWorkerBridge.init(state, state.seed);
