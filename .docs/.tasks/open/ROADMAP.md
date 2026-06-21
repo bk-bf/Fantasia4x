@@ -123,7 +123,8 @@ Layer, Research Enhancement, and the deferred Entity Spawning C–E content.
 | Item                                                    | Status         | Spec                                                   |
 | ------------------------------------------------------- | -------------- | ------------------------------------------------------ |
 | Viability spike (WASM + saves in desktop window) — **A/B'd Electron vs Tauri** | [x] **done → Electron chosen** | [DISTRIBUTION.md](DISTRIBUTION.md) Phase A · `desktop-spike/` |
-| Adapter-static migration + AI endpoint decision (now targeting **Electron**) | [ ]            | [DISTRIBUTION.md](DISTRIBUTION.md) Phase B |
+| **App shell — main menu + hardening** (title screen: New/Load/Settings/Exit; deferred sim boot; runtime debug-mode pref → DEBUG tab; selection/context-menu/zoom/drag suppression) | [x] 2026-06-21 | [DISTRIBUTION.md](DISTRIBUTION.md) Phase B0 — menu skipped under `--debug`/`--log`/`--profiler`; `./launch.sh --electron --play` for clean playtest |
+| Adapter-static migration + AI endpoint decision (now targeting **Electron**) | [ ] — **/api confirmed dev-only** (no runtime server dependency → static build is unblocked) | [DISTRIBUTION.md](DISTRIBUTION.md) Phase B |
 | Linux / Windows / macOS release bundles + CI matrix     | [ ]            | [DISTRIBUTION.md](DISTRIBUTION.md) Phase C |
 
 ---

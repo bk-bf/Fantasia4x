@@ -92,6 +92,46 @@ export interface SaveAdapter {
 
 ---
 
+## Phase B0 — App shell: main menu + hardening — ✅ DONE (2026-06-21)
+
+The player-facing window shell, built ahead of packaging so playtesting happens in the real
+title-screen flow. All renderer-side (works in the browser dev build and the Electron shell alike);
+the Electron-process hardening (preload/contextIsolation/CSP) is still Phase B.
+
+- [x] **Main menu** (`components/UI/MainMenu.svelte`) — centred FANTASIA wordmark over the existing
+      theme, with **New Game / Load Game / Settings / Exit**. New Game → fresh colony + fresh seed,
+      then opens the Custom Map popup; Load Game → resumes the save (disabled when none, via
+      `saveManager.hasSave()`); Exit → `window.close()` (shown only in the Electron shell).
+- [x] **Deferred sim boot** — an `appPhase` store (`'menu' | 'game'`) + a boot gate inside
+      `savedStateReady` (`stores/gameState.ts`): the worker + WebGL only spin up once New/Load is
+      chosen (`gameState.startGame('new'|'load')`), so the menu is instant. The whole existing boot
+      sequence (worker start, `storeReady`, profiler path) is preserved behind the gate.
+- [x] **Menu skipped on DEV launches** — `--debug` (VITE_DEBUG_MODE), `--log` (VITE_DEBUG_LOG) and
+      `--profiler` (VITE_PROFILER) boot straight into the game (gate auto-released), so iteration
+      isn't taxed by a click. `./launch.sh --electron --play` runs a **clean player launch** (no
+      `--debug`) over the live dev server → menu shows, DEBUG tab hidden, bug-fixes a reload away.
+- [x] **Runtime debug-mode** (`uiPrefs.debugMode`, persisted) — the in-game DEBUG tab is now gated on
+      `VITE_DEBUG_MODE || $debugMode`, toggleable from the menu's Settings panel and the in-game
+      settings dropdown. A clean build hides the dev surface until the player opts in.
+- [x] **Input hardening** (`app.css` + `+page.svelte`) — global `user-select: none` (re-enabled on
+      inputs / `.selectable`), no image drag, and suppressed right-click context menu, file
+      drag-drop navigation, and ctrl/⌘+wheel zoom. Kills the stray blue drag-highlight and other
+      browser-chrome leaks in the game window.
+- [ ] **Electron-process hardening** (Phase B) — `contextIsolation: true`, `nodeIntegration: false`,
+      a minimal preload (quit / runtime DevTools toggle bound to `debugMode`), drop
+      `remote-debugging-port` in prod, CSP. Left for the packaging pass so the electron-debug MCP
+      (`:9222`) dev workflow isn't disturbed.
+
+> **Playtest-vs-build guidance (recorded 2026-06-21).** For immersive playtesting a packaged 0.0.1
+> binary adds essentially nothing over `./launch.sh --electron --play` (clean menu flow, debug
+> hidden) and *taxes* iteration: every change needs a rebuild/repackage instead of a reload, and the
+> binary's `file://` origin has a *separate* IndexedDB save from the dev-server origin, so playtest
+> progress wouldn't even carry over. **Recommendation:** playtest in `--play`; reserve an actual
+> packaged build for (a) a one-time "does the adapter-static prod bundle run" smoke test before the
+> public alpha, and (b) the real release. The static build is unblocked (see B2).
+
+---
+
 ## Phase B — Configuration & Permissions (before first release)
 
 ### B1 — `tauri.conf.json` hardening
@@ -136,10 +176,16 @@ export interface SaveAdapter {
 ### B2 — AI endpoints
 
 The Gemini API calls live in `src/routes/api/` (SvelteKit server routes).
-Those server routes **do not exist** in a static Tauri build — they are removed
-by `adapter-static`.
+Those server routes **do not exist** in a static build — they are removed by `adapter-static`.
 
-Options (pick one before Phase B is complete):
+> **✅ Verified 2026-06-21 — the shipped game has NO runtime server dependency.** A sweep of all
+> `/api/*` callers found every one is dev-only: `/api/log` + `/api/logs` are `import.meta.env.DEV`-
+> guarded log mirroring (no-ops in prod), and `generate-character` / `generate-event` are **not
+> called from the client at all** (legacy endpoints). So `adapter-static` dropping the server routes
+> does **not** break the game — the static build is unblocked. The options below only matter *if/when*
+> AI generation is actually wired into the client; until then this is a no-op.
+
+Options (pick one *if AI generation is later wired in*):
 
 | Option                                           | Approach                                                                | Trade-off                                                            |
 | ------------------------------------------------ | ----------------------------------------------------------------------- | -------------------------------------------------------------------- |
@@ -239,9 +285,9 @@ dev = Firefox (SpiderMonkey). Consequences this spec must respect:
 
 ## Open Questions
 
-- [ ] Will `adapter-static` break any existing SvelteKit route that is not `api/`?
-      (Check for any non-static `load()` functions that hit a DB or environment
-      variable only available server-side.)
+- [x] Will `adapter-static` break any existing SvelteKit route that is not `api/`?
+      **No** — the app is a single `+page.svelte` route with no server `load()`; all `/api/*` usage
+      is dev-only (verified 2026-06-21, see B2). Static build is safe to adopt.
 - [ ] What minimum WebView version do target platforms ship with? (WASM +
       `wasm-unsafe-eval` requires Chromium 91+ / WebKit 615+.)
 - [ ] Should the save file be a single JSON blob or split per-colony for
@@ -254,4 +300,7 @@ dev = Firefox (SpiderMonkey). Consequences this spec must respect:
 
 ## Status
 
-Spec written. No implementation started.
+Phase A (viability spike) **done → Electron chosen**. Phase B0 (app shell: main menu + input
+hardening) **done 2026-06-21**. `/api` confirmed dev-only, so adapter-static is unblocked. Remaining:
+Phase B (adapter-static migration, save adapter, Electron-process hardening) → Phase C (packaging +
+CI matrix). No packaged build cut yet — playtest via `./launch.sh --electron --play`.
