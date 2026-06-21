@@ -35,7 +35,8 @@
     tileTemperature,
     tileWetness,
     computeThermalAt,
-    weatherWindStrength
+    effectiveWindAt,
+    windDegreeWord
   } from '$lib/game/services/EnvironmentService.js';
   import { lightingService } from '$lib/game/services/LightingService.js';
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
@@ -58,7 +59,10 @@
     soilTierForTile,
     SOIL_TIER_NAME
   } from '$lib/game/core/Terrains.js';
-  import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
+  import {
+    resourceObjectService,
+    isGrowableResource
+  } from '$lib/game/services/ResourceObjectService.js';
   import { itemService } from '$lib/game/services/ItemService.js';
   import {
     getRefuelRequirements,
@@ -3356,8 +3360,9 @@
       tileThermal
     )}
     {@const tileWet = tileWetness(hoverTile.moisture ?? 0, $currentWeather, tileThermal)}
-    {@const windy =
-      Math.max(weatherWindStrength($currentWeather?.type), $currentWeather?.wind ?? 0) >= 0.4}
+    {@const windWord = windDegreeWord(
+      effectiveWindAt(hoverTile.x, hoverTile.y, $currentWeather, tileThermal, worldMap)
+    )}
     {@const tileSnow = Math.round(hoverTile.snow ?? 0)}
     {@const soilTier = soilTierForTile(hoverTile)}
     {@const soilPct = soilFertilityPct(hoverTile)}
@@ -3381,30 +3386,30 @@
             >{/if}
         </div>
       {/if}
-      {#if hoverResources[0]?.[0] && hoverTile.growth?.[hoverResources[0][0]] !== undefined}
-        {@const gpct = Math.round(hoverTile.growth[hoverResources[0][0]])}
-        <div
-          class="tile-move"
-          style="color:{gpct >= 100 ? '#6fae3a' : gpct >= 50 ? '#9aac3a' : '#c89a3a'}"
-          title="resource maturity — scales harvest yield; crops grow only with enough fertility, warmth, water and light"
-        >
-          growth {gpct}%
-        </div>
-      {/if}
       {#if hoverZoneType && ZONE_META[hoverZoneType]}
         <div class="tile-zone" style="color:{ZONE_META[hoverZoneType].color}">
           {ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}
         </div>
       {/if}
-      <div
-        class="tile-light"
-        style="color:{hoverTileLight >= 0.8
-          ? '#68b030'
-          : hoverTileLight >= 0.4
-            ? '#b09030'
-            : '#c83018'}"
-      >
-        light {Math.round(hoverTileLight * 100)}%
+      <div class="tile-env">
+        <span
+          style="color:{hoverTileLight >= 0.8
+            ? '#68b030'
+            : hoverTileLight >= 0.4
+              ? '#b09030'
+              : '#c83018'}">light {Math.round(hoverTileLight * 100)}%</span
+        >
+        {#if hoverResources[0]?.[0]}
+          {@const growRes = resourceObjectService.getById(hoverResources[0][0])}
+          {#if growRes && isGrowableResource(growRes)}
+            {@const gpct = Math.round(hoverTile.growth?.[hoverResources[0][0]] ?? 100)}
+            <span
+              style="color:{gpct >= 100 ? '#68b030' : gpct >= 50 ? '#9aac3a' : '#c89a3a'}"
+              title="resource maturity — scales harvest yield; crops grow only with enough fertility, warmth, water and light"
+              >growth {gpct}%</span
+            >
+          {/if}
+        {/if}
       </div>
       <div class="tile-env">
         <span style="color:{tileTemp <= 0 ? '#5aa0e0' : tileTemp >= 30 ? '#e07a2a' : '#b0a060'}"
@@ -3427,7 +3432,7 @@
           >fertility {soilPct}%</span
         >
         {#if tileSnow > 0}<span style="color:#cdd6e0">snow {tileSnow}%</span>{/if}
-        {#if windy}<span style="color:#8fc8a0">windy</span>{/if}
+        {#if windWord}<span style="color:#8fc8a0">{windWord} windy</span>{/if}
         {#if tileThermal.roofed}<span style="color:#7e9fbf">roofed</span>{/if}
       </div>
     </div>
@@ -3646,10 +3651,6 @@
     margin-top: 1px;
   }
   .tile-move {
-    font-size: 9px;
-    margin-top: 1px;
-  }
-  .tile-light {
     font-size: 9px;
     margin-top: 1px;
   }
