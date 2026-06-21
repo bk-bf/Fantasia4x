@@ -106,10 +106,12 @@ the Electron-process hardening (preload/contextIsolation/CSP) is still Phase B.
       `savedStateReady` (`stores/gameState.ts`): the worker + WebGL only spin up once New/Load is
       chosen (`gameState.startGame('new'|'load')`), so the menu is instant. The whole existing boot
       sequence (worker start, `storeReady`, profiler path) is preserved behind the gate.
-- [x] **Menu skipped on DEV launches** — `--debug` (VITE_DEBUG_MODE), `--log` (VITE_DEBUG_LOG) and
-      `--profiler` (VITE_PROFILER) boot straight into the game (gate auto-released), so iteration
-      isn't taxed by a click. `./launch.sh --electron --play` runs a **clean player launch** (no
-      `--debug`) over the live dev server → menu shows, DEBUG tab hidden, bug-fixes a reload away.
+- [x] **Menu skipped only by `--debug`** — `--debug` (VITE_DEBUG_MODE) is the dev-iteration launch
+      and boots straight into the game (gate auto-released); the `--profiler` sandbox bypasses it too
+      (technical: its loader returns early with an auto-boot scenario, never hitting `startGame`).
+      **Everything else opens at the menu** — clean, `--log`, and especially `--play`, which mirrors
+      the player binary feel (no `--debug`: menu shows, DEBUG tab hidden) over the live dev server so
+      bug-fixes stay a reload away. That's the point of `--play`: you test the *game*, not debug mode.
 - [x] **Runtime debug-mode** (`uiPrefs.debugMode`, persisted) — the in-game DEBUG tab is now gated on
       `VITE_DEBUG_MODE || $debugMode`, toggleable from the menu's Settings panel and the in-game
       settings dropdown. A clean build hides the dev surface until the player opts in.
