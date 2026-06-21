@@ -176,25 +176,30 @@
   {/each}
 
   <!-- ── Draft target lines ────────────────────────────────────────────────────── -->
-  {#each $worldEffects.draftTargetOverlays as overlay (overlay.id)}
-    {@const last = overlay.points[overlay.points.length - 1]}
+  <!-- All draft lines share ONE full-screen SVG. Previously each line was its own 100%×100% <svg>,
+       so a group move spawned N full-viewport compositing layers repainting every frame — that
+       starved the main-thread sim loop and tanked TPS (see ENGINE-PERFORMANCE.md, render-boundary). -->
+  {#if $worldEffects.draftTargetOverlays.length > 0}
     <svg
       class="draft-target-line"
       style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;"
     >
-      <polyline
-        points={overlay.points.map((p) => `${p.x},${p.y}`).join(' ')}
-        fill="none"
-        stroke="#ff4444"
-        stroke-width="2"
-        stroke-dasharray="4,4"
-        opacity="0.7"
-      />
-      {#if last}
-        <circle cx={last.x} cy={last.y} r="4" fill="#ff4444" opacity="0.5" />
-      {/if}
+      {#each $worldEffects.draftTargetOverlays as overlay (overlay.id)}
+        {@const last = overlay.points[overlay.points.length - 1]}
+        <polyline
+          points={overlay.points.map((p) => `${p.x},${p.y}`).join(' ')}
+          fill="none"
+          stroke="#ff4444"
+          stroke-width="2"
+          stroke-dasharray="4,4"
+          opacity="0.7"
+        />
+        {#if last}
+          <circle cx={last.x} cy={last.y} r="4" fill="#ff4444" opacity="0.5" />
+        {/if}
+      {/each}
     </svg>
-  {/each}
+  {/if}
 
   <!-- ── Floating combat text (damage / miss / dodge / crit / bleed) ───────────── -->
   {#each $worldEffects.floatingTextOverlays as overlay (overlay.id)}

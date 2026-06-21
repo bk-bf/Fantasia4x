@@ -1328,9 +1328,13 @@
       .filter((p) => p.position && p.drafted && p.draftTarget)
       .map((p) => {
         const target = p.draftTarget!;
-        // Build polyline from current position through remaining path tiles to target.
+        // Start the polyline at the pawn's INTERPOLATED render position, not its logical tile —
+        // otherwise the first segment lags a tile behind the smoothly-sliding glyph and a stub of the
+        // line trails visibly behind a moving pawn. `pawnRenderPos` (updated just above this frame)
+        // tracks where the glyph actually is.
+        const rp = pawnRenderPos.get(p.id) ?? p.position!;
         const points: Array<{ x: number; y: number }> = [
-          { x: (p.position!.x - viewX + 0.5) * tW, y: (p.position!.y - viewY + 0.5) * tH }
+          { x: (rp.x - viewX + 0.5) * tW, y: (rp.y - viewY + 0.5) * tH }
         ];
         const path = p.path ?? [];
         const pathIdx = p.pathIndex ?? 0;

@@ -33,6 +33,7 @@ import {
   patchPathfindingWalkable
 } from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
+import { assignDraftMovePath } from '../services/draftMovePath';
 import { isGameDebug, gatedConsole } from '../core/log';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
@@ -586,27 +587,9 @@ export class GameEngineImpl implements GameEngine {
           };
           continue;
         }
-        const { walkable, costs, width, height } = buildPathfindingGridsWithBlocked(
-          gs.worldMap,
-          blocked,
-          pawn.position.x,
-          pawn.position.y,
-          target.x,
-          target.y
-        );
-        const path = wasmPathfinderService.findPath(
-          walkable,
-          costs,
-          width,
-          height,
-          pawn.position.x,
-          pawn.position.y,
-          target.x,
-          target.y
-        );
-        if (path && path.length > 0) {
-          gs = pawnService.assignPath(pawn.id, path, gs);
-        }
+        // Shared with the draft-move commands so a move order computed at command time (even paused)
+        // traces the same route this tick would (see draftMovePath.ts).
+        gs = assignDraftMovePath(gs, pawn, target.x, target.y, blocked);
       } else if (target.type === 'attack') {
         let tx = -1,
           ty = -1;

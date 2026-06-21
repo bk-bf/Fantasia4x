@@ -48,6 +48,8 @@ import { devSpawnMobs } from '../services/entity/entitySpawning';
 import { makeWeather, tileWetness } from '../services/EnvironmentService';
 import { resourceObjectService } from '../services/ResourceObjectService';
 import { patchPathfindingWalkable } from '../services/PathfinderService';
+import { occupancyService } from '../services/OccupancyService';
+import { assignDraftMovePath } from '../services/draftMovePath';
 import { markTileDirty } from '../core/tileDeltas';
 import type { SimCommand } from './simProtocol';
 
@@ -93,13 +95,25 @@ export const COMMANDS: Record<string, Cmd> = {
   },
 
   // ── pawns ──────────────────────────────────────────────────────────────────
-  /** Set or clear (`target: null`) a pawn's draft target. */
-  setPawnDraftTarget: (s, p: { pawnId: string; target: unknown }) => ({
-    ...s,
-    pawns: s.pawns.map((pw) =>
-      pw.id === p.pawnId ? { ...pw, draftTarget: (p.target as never) ?? undefined } : pw
-    )
-  }),
+  /** Set or clear (`target: null`) a pawn's draft target. For a MOVE target the A* path is computed
+   *  right here so the preview line traces the real route immediately — even while paused (the
+   *  per-tick draft pass would otherwise be the first to path it). */
+  setPawnDraftTarget: (s, p: { pawnId: string; target: unknown }) => {
+    let gs: GameState = {
+      ...s,
+      pawns: s.pawns.map((pw) =>
+        pw.id === p.pawnId ? { ...pw, draftTarget: (p.target as never) ?? undefined } : pw
+      )
+    };
+    const t = p.target as { type?: string; x?: number; y?: number } | null;
+    if (t && t.type === 'move' && typeof t.x === 'number' && typeof t.y === 'number') {
+      const pawn = gs.pawns.find((pw) => pw.id === p.pawnId);
+      if (pawn && pawn.position && pawn.currentState !== 'Collapsed') {
+        gs = assignDraftMovePath(gs, pawn, t.x, t.y);
+      }
+    }
+    return gs;
+  },
   toggleDraft: (s, p: { pawnId: string }) => ({
     ...s,
     pawns: s.pawns.map((pw) =>
@@ -145,7 +159,7 @@ export const COMMANDS: Record<string, Cmd> = {
       claimed.add(`${tile.x},${tile.y}`);
       targets.set(id, tile);
     }
-    return {
+    let gs: GameState = {
       ...s,
       pawns: s.pawns.map((pw) => {
         const t = targets.get(pw.id);
@@ -154,6 +168,16 @@ export const COMMANDS: Record<string, Cmd> = {
           : pw;
       })
     };
+    // Path each pawn now (shared solid-body occupancy snapshot) so all the preview lines trace their
+    // real routes the instant the order lands — paused or running.
+    const occ = occupancyService.blockedTiles(gs);
+    for (const [id, t] of targets) {
+      const pawn = gs.pawns.find((pw) => pw.id === id);
+      if (pawn && pawn.drafted && pawn.position && pawn.currentState !== 'Collapsed') {
+        gs = assignDraftMovePath(gs, pawn, t.x, t.y, occ);
+      }
+    }
+    return gs;
   },
   setPawnStance: (s, p: { pawnId: string; stance: string }) => ({
     ...s,
