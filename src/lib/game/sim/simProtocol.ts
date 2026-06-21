@@ -83,6 +83,10 @@ export type WorkerToMain =
       // (The worker-internal accumulator type is the full `TileDelta` in core/tileDeltas.ts.)
       worldMapDelta?: Array<{ y: number; x: number; tile: Partial<WorldTile> }>;
       flush: boolean;
+      // True when the snapshot is a COMMAND result or the pause hand-off (not a sim tick). The bridge
+      // applies these even while paused; it drops non-commit (tick) snapshots so the renderer isn't
+      // raced by in-flight frames after the user pauses.
+      commit?: boolean;
     }
   | { kind: 'fullState'; state: GameState } // for save/load reconciliation
   | { kind: 'simlog'; events: SimLogEvent[] }

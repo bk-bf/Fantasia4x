@@ -334,7 +334,10 @@ function syncEntities<T extends { id: string }>(
  * and the bridge reuses its cached copy — no re-clone across the boundary. pawns/mobs change every
  * tick so they still flow; worldMap stays special-cased (38k tiles, sent only when its ref changes).
  */
-function publish(state: GameState, flush: boolean) {
+// `commit` marks a snapshot that originates from a COMMAND result (or the pause hand-off), not a sim
+// tick. The main thread drops non-commit snapshots while paused (so the renderer can't be raced by
+// in-flight tick frames), but always applies commit ones so player actions while paused still render.
+function publish(state: GameState, flush: boolean, commit = false) {
   if (!flush) return;
   const worldMapChanged = state.worldMap !== lastWorldMap;
   lastWorldMap = state.worldMap;
@@ -452,7 +455,8 @@ function publish(state: GameState, flush: boolean) {
     // Slim each changed tile to the render/movement fields (§D) — the heavy part of the harvest-time
     // post/onmessage cost was cloning full WorldTiles for every changed tile.
     worldMapDelta: wmDelta,
-    flush
+    flush,
+    commit
   });
 }
 
@@ -531,7 +535,7 @@ self.onmessage = async (e: MessageEvent) => {
       // New/Load re-init cleanly clears it back to the full sim.
       gameEngine.setPreviewMode(!!msg.preview);
       gameEngine.setOutputSink(publish); // per-tick → snapshot
-      gameEngine.setCommitSink((s) => publish(s, true)); // command result → snapshot
+      gameEngine.setCommitSink((s) => publish(s, true, true)); // command result → snapshot (commit)
       await wasmPathfinderService.init();
       lastWorldMap = (msg.state as GameState).worldMap;
       lastSent = {}; // reset the sectional-diff baseline so the first publish sends every field
@@ -546,8 +550,9 @@ self.onmessage = async (e: MessageEvent) => {
       lastBatch = performance.now();
       if (!loop) loop = setInterval(batch, 16);
       post({ kind: 'ready' });
-      // Push the initial state straight back so the main projection is populated.
-      publish(msg.state, true);
+      // Push the initial state straight back so the main projection is populated. Mark it commit so it
+      // ALWAYS applies even if the game boots paused (else the client's paused gate would drop it → blank).
+      publish(msg.state, true, true);
       break;
     }
     case 'command':
@@ -560,6 +565,9 @@ self.onmessage = async (e: MessageEvent) => {
     case 'setPaused':
       paused = msg.paused;
       if (!paused) lastBatch = performance.now();
+      // On PAUSE, ship one authoritative frame (commit) so the main thread's displayed state lands
+      // EXACTLY on the paused sim — any in-flight tick snapshots it dropped are reconciled here.
+      else publish(gameEngine.getGameState(), true, true);
       break;
     case 'requestSave':
       post({ kind: 'fullState', state: gameEngine.getGameState() });

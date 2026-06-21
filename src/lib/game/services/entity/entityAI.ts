@@ -74,6 +74,84 @@ function takeHuntSlot(): boolean {
 const HUNT_BUSY_BACKOFF_MIN_S = 4;
 const HUNT_BUSY_BACKOFF_JITTER_S = 16;
 
+// ── Stuck-mob diagnostics (debug-only, → .debug/ai.log) ─────────────────────────────────────────
+// Targeted detector for the "frozen in place" pathology. Tracks each mob's position frame-to-frame;
+// when one sits still while in a state that SHOULD be moving, it dumps exactly WHY in one line:
+//   • next=(x,y)[..] — what occupies its next path cell: free / a live mob (kind#id+state) / corpse /
+//     wall. A live packmate here = pack gridlock; 'free' but not moving = a stalled cost budget.
+//   • blockedTicks / costLeft — is the deadlock breaker climbing, and is sub-tile cost progressing?
+//   • adjCorpse / corpse5 — is an edible carcass adjacent/near that it's ignoring (the eat-state theory)?
+// Worker-only Map, never snapshotted; the whole thing no-ops unless gameLogger.isEnabled.
+// OFF by default: the per-stuck-mob cellDesc + nearbyCorpse scans are O(mobs) each, so a freeze with
+// many stuck mobs turns this O(mobs²) and craters TPS (measured 60→1 during the #1816 freeze). Flip to
+// true only to diagnose a fresh freeze, then flip back.
+const STUCK_TRACE_ENABLED = false;
+const _posTrack = new Map<string, { x: number; y: number; since: number; lastLog: number }>();
+const STUCK_LOG_AFTER = 60; // ticks unmoved (~1 s) before a moving-state mob counts as stuck
+const STUCK_LOG_EVERY = 180; // re-log a still-stuck mob at most this often (~3 s)
+const STUCK_MOVING_STATES = new Set<MobState>([
+  'Wander',
+  'Hunting',
+  'Fleeing',
+  'Alerted',
+  'Foraging',
+  'Grazing',
+  'Startled'
+]);
+
+/** Describe whatever occupies (x,y): wall / pawn / a live mob (kind#id + state) / corpse / free. */
+function cellDesc(state: GameState, x: number, y: number, selfId: string): string {
+  const tile = state.worldMap[y]?.[x];
+  if (!tile || !tile.walkable) return 'wall';
+  for (const p of state.pawns)
+    if (p.isAlive !== false && p.position?.x === x && p.position?.y === y)
+      return `pawn#${p.id.slice(-6)}`;
+  for (const m of state.mobs ?? []) {
+    if (m.id === selfId || m.x !== x || m.y !== y) continue;
+    if (m.state === 'Corpse') return `corpse#${m.id.slice(-6)}`;
+    return `${getCreatureById(m.creatureId)?.id ?? 'mob'}#${m.id.slice(-6)}(${m.state})`;
+  }
+  return 'free';
+}
+
+/** Nearest EDIBLE corpse within Chebyshev `r` of the mob (tests the "ignoring the carcass" theory). */
+function nearbyCorpse(state: GameState, mob: Mob, r: number): string {
+  for (const m of state.mobs ?? []) {
+    if (m.state !== 'Corpse' || (m.intactness ?? 1) <= 0) continue;
+    const d = Math.max(Math.abs(m.x - mob.x), Math.abs(m.y - mob.y));
+    if (d <= r) return `(${m.x},${m.y})d=${d}i=${(m.intactness ?? 1).toFixed(2)}`;
+  }
+  return 'no';
+}
+
+function traceStuck(mob: Mob, def: CreatureDefinition, state: GameState, turn: number): void {
+  if (!STUCK_TRACE_ENABLED || !gameLogger.isEnabled) return;
+  if (_posTrack.size > 8000) _posTrack.clear(); // bound: forget dead/old mobs wholesale (debug tool)
+  const rec = _posTrack.get(mob.id);
+  if (!rec || rec.x !== mob.x || rec.y !== mob.y) {
+    _posTrack.set(mob.id, { x: mob.x, y: mob.y, since: turn, lastLog: 0 });
+    return; // moved (or first sight) — reset the stuck clock
+  }
+  const stuckFor = turn - rec.since;
+  if (stuckFor < STUCK_LOG_AFTER || !STUCK_MOVING_STATES.has(mob.state)) return;
+  if (rec.lastLog && turn - rec.lastLog < STUCK_LOG_EVERY) return;
+  rec.lastLog = turn;
+  const pathLen = mob.path?.length ?? 0;
+  const nextCell = pathLen > 0 ? mob.path![mob.pathIndex ?? 0] : null;
+  const nextDesc = nextCell
+    ? `next=(${nextCell.x},${nextCell.y})[${cellDesc(state, nextCell.x, nextCell.y, mob.id)}]`
+    : 'next=NONE';
+  gameLogger.log(
+    turn,
+    'ENTITY-STUCK',
+    `${def.id}#${mob.id.slice(-6)} STUCK ${stuckFor}t @(${mob.x},${mob.y}) state=${mob.state}` +
+      ` hunger=${mob.needs.hunger.toFixed(1)}/${HUNGER_EAT_THRESHOLD} blockedTicks=${mob.blockedTicks ?? 0}` +
+      ` costLeft=${(mob.nextCellCostLeft ?? 0).toFixed(1)} path=${pathLen > 0 ? `${mob.pathIndex ?? 0}/${pathLen}` : 'none'}` +
+      ` ${nextDesc} adjCorpse=${nearbyCorpse(state, mob, 1)} corpse5=${nearbyCorpse(state, mob, 5)}` +
+      (mob.huntTargetId ? ` prey=${mob.huntTargetId.slice(-6)}` : '')
+  );
+}
+
 export function stepEntities(state: GameState): GameState {
   const mobs = state.mobs;
   if (!mobs || mobs.length === 0) return state;
@@ -236,6 +314,9 @@ export function stepOne(
   // advanceMobMovement(), which uses the shared MovementSystem path engine.
   const turn = state.turn;
 
+  // Per-tick stuck-mob detector — OFF by default (STUCK_TRACE_ENABLED); flip on to diagnose freezes.
+  if (STUCK_TRACE_ENABLED) traceStuck(mob, def, state, turn);
+
   // Periodic entity-state snapshot — every 300 turns (~5 s at 60 tps).
   if (turn % 300 === 0) {
     const pathLen = mob.path?.length ?? 0;
@@ -245,6 +326,7 @@ export function stepOne(
       'ENTITY-STATE',
       `${def.id}#${mob.id.slice(-6)} state=${mob.state} pos=(${mob.x},${mob.y})` +
         ` hunger=${mob.needs.hunger.toFixed(1)} fatigue=${mob.needs.fatigue.toFixed(1)}` +
+        ` blockedTicks=${mob.blockedTicks ?? 0} costLeft=${(mob.nextCellCostLeft ?? 0).toFixed(1)}` +
         ` path=${pathLen > 0 ? `${pathIdx}/${pathLen} end=(${mob.path![pathLen - 1].x},${mob.path![pathLen - 1].y})` : 'none'}` +
         (mob.huntTargetId ? ` prey=${mob.huntTargetId.slice(-6)}` : '')
     );
@@ -410,14 +492,19 @@ export function stepHostile(
     mob.state !== 'Exhausted' &&
     chebDist(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) > (mob.lairRange ?? Infinity)
   ) {
+    // NB: do NOT clear `path` here. moveToward→stepDirectional preserves nextCellCostLeft only when the
+    // re-issued step matches the current path's next cell (its anti-reset guard). Blanking the path
+    // every tick defeats that guard, so the sub-tile cost budget is wiped each tick and a mob whose
+    // per-tile cost exceeds one tick's movement budget (any normal/diagonal tile) can NEVER finish a
+    // step — it freezes on the leash boundary (the #1816–1821 column freeze). Letting stepDirectional
+    // own the path resets the cost ONCE (when abandoning a hunt path for home) then accumulates.
     return moveToward(
       {
         ...mob,
         state: 'Wander',
         stateSince: turn,
         huntTargetId: undefined,
-        eatProgress: undefined,
-        path: []
+        eatProgress: undefined
       },
       { x: mob.lairX!, y: mob.lairY! },
       state

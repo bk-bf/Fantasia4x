@@ -112,6 +112,11 @@ class SimWorkerBridge {
   onState: ((s: GameState, flush: boolean) => void) | null = null;
   /** Store hook: a requested full state (for explicit save). */
   onFullState: ((s: GameState) => void) | null = null;
+  /** Mirror of the worker's paused flag. While true the client DROPS per-tick (non-commit) snapshots
+   *  so the renderer can't be raced by in-flight tick frames after the user hits pause (the worker
+   *  takes up to one batch to actually stop). Commit snapshots — command results + the pause hand-off
+   *  — are always applied so player actions while paused still render. */
+  private paused = false;
 
   start(): void {
     if (this.w) return;
@@ -136,6 +141,9 @@ class SimWorkerBridge {
     this.w?.postMessage({ kind: 'setSpeed', speed });
   }
   setPaused(paused: boolean): void {
+    // Set the client gate FIRST (synchronously) so any tick snapshots already queued from the worker
+    // are dropped on arrival — the render freezes the instant the user clicks, not a batch later.
+    this.paused = paused;
     this.w?.postMessage({ kind: 'setPaused', paused });
   }
   requestSave(): void {
@@ -151,10 +159,14 @@ class SimWorkerBridge {
     worldMap?: GameState['worldMap'];
     worldMapDelta?: Array<{ y: number; x: number; tile: Partial<WorldTile> }>;
     flush?: boolean;
+    commit?: boolean;
     error?: string;
     events?: SimLogEvent[];
   }): void {
     if (m.kind === 'snapshot') {
+      // While paused, drop in-flight TICK snapshots (the renderer race). Commit snapshots — command
+      // results and the worker's pause hand-off frame — always apply so paused actions still show.
+      if (this.paused && !m.commit) return;
       if (m.worldMap) {
         this.worldMap = m.worldMap;
       } else if (m.worldMapDelta) {
