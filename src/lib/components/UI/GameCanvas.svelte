@@ -1193,10 +1193,21 @@
     const livePawns = freshState.pawns ?? pawns;
 
     // ── Mobs / animals — same interpolation approach as pawns ─────────────────
+    // Viewport cull bounds (tiles, +margin for mid-slide / re-entry). At 900 mobs this per-frame
+    // smooth+setTile loop was THE zoom/pan FPS cost — it ran over EVERY mob regardless of zoom. Now we
+    // touch only the on-screen handful. Off-screen mobs stop interpolating and snap when they re-enter
+    // (the >2-tile guard below), which happens out in the margin so it's invisible. Selection/hit-tests
+    // (findMobAtTile) read the sim mob list, not mobRenderPos, so culling here can't break clicking.
+    const CULL_MARGIN = 3;
+    const cullMinX = viewX - CULL_MARGIN;
+    const cullMinY = viewY - CULL_MARGIN;
+    const cullMaxX = viewX + Math.ceil((container?.clientWidth ?? 0) / tileWidth) + CULL_MARGIN;
+    const cullMaxY = viewY + Math.ceil((container?.clientHeight ?? 0) / tileHeight) + CULL_MARGIN;
     const seenMobs = new Set<string>();
     for (const mob of liveMobs) {
       const def = getCreatureById(mob.creatureId);
       if (!def || !def.chars.length) continue;
+      if (mob.x < cullMinX || mob.x > cullMaxX || mob.y < cullMinY || mob.y > cullMaxY) continue;
       seenMobs.add(mob.id);
 
       const target = simTarget(mob, worldMap);
