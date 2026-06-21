@@ -269,12 +269,16 @@ export function toggleHuntMark(mobId: string) {
 /** Reactive deps for {@link buildPawnCard} (camera-follow id changes over time). */
 export interface PawnCardDeps {
   cameraFollowPawnId: string | null;
+  /** MARK button — begin the highlight drag for pawns. The group is only *highlighted*; the player
+   *  then presses DRAFT / MOVE on the group HUD. Threaded in from GameCanvas. */
+  startMark: () => void;
 }
 
-/** Reactive deps + drag callback for {@link buildMobCard}. */
+/** Reactive deps + MARK callback for {@link buildMobCard}. */
 export interface MobCardDeps {
   cameraFollowMobId: string | null;
-  startHuntDrag: (mob: Mob) => void;
+  /** MARK button — begin the highlight drag for mobs; the player then presses HUNT on the group HUD. */
+  startMark: () => void;
 }
 
 export function buildPawnCard(
@@ -282,7 +286,7 @@ export function buildPawnCard(
   selected: boolean,
   deps: PawnCardDeps
 ): SelectedEntityModel {
-  const { cameraFollowPawnId } = deps;
+  const { cameraFollowPawnId, startMark } = deps;
   const bars: EntityBar[] = [
     { label: 'HUNGER', value: pawn.needs.hunger, warn: pawn.needs.hunger > 60 },
     { label: 'REST', value: pawn.needs.fatigue, warn: pawn.needs.fatigue > 60 },
@@ -375,6 +379,11 @@ export function buildPawnCard(
                 pawnScreenTab: 'gear',
                 currentScreen: 'pawns'
               }))
+          },
+          {
+            // Drag a box to highlight pawns; DRAFT / MOVE then act on the whole group.
+            label: 'MARK',
+            onClick: () => startMark()
           }
         ] satisfies EntityButton[])
       : undefined,
@@ -393,7 +402,7 @@ export function buildMobCard(
   selected: boolean,
   deps: MobCardDeps
 ): SelectedEntityModel {
-  const { cameraFollowMobId, startHuntDrag } = deps;
+  const { cameraFollowMobId, startMark } = deps;
   const bars: EntityBar[] = [
     {
       label: 'HUNGER',
@@ -459,8 +468,9 @@ export function buildMobCard(
             onClick: () => toggleHuntMark(mob.id)
           },
           {
+            // Drag a box to highlight mobs; HUNT then queues the whole group for hunting.
             label: 'MARK',
-            onClick: () => startHuntDrag(mob)
+            onClick: () => startMark()
           }
         ] satisfies EntityButton[])
       : undefined,

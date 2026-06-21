@@ -411,15 +411,19 @@
   let similarEndX = 0;
   let similarEndY = 0;
 
-  // Hunt-drag mode: drag a zone to mark all same-type mobs in the area for hunting
-  let huntDragMode = false;
-  let huntDragCreatureId = '';
-  let huntDragCreatureName = '';
-  let huntDragActive = false;
-  let huntAnchorX = 0;
-  let huntAnchorY = 0;
-  let huntEndX = 0;
-  let huntEndY = 0;
+  // MARK highlight: drag a box to highlight a group of pawns OR mobs — no immediate action. Which
+  // kind is decided by the info-panel MARK button that started the drag. Once committed, a group HUD
+  // offers the relevant verb: DRAFT/MOVE for pawns, HUNT for mobs. `pawnMoveMode` is the second phase
+  // for pawns (click a tile → the drafted ones spread onto tiles around it).
+  let markKind: 'pawn' | 'mob' | null = null; // a MARK drag is in progress (selecting)
+  let markDragActive = false; // mouse is down, box is being dragged
+  let markAnchorX = 0;
+  let markAnchorY = 0;
+  let markEndX = 0;
+  let markEndY = 0;
+  let markedKind: 'pawn' | 'mob' | null = null; // committed highlight kind
+  let markedIds: string[] = []; // committed highlighted entity ids
+  let pawnMoveMode = false; // pawns: awaiting a destination click
 
   let zoneAnchorX = 0;
   let zoneAnchorY = 0;
@@ -507,21 +511,34 @@
   /** Returns " #N" in debug mode, derived from debugId or the trailing number in the id string. */
 
   $: selectedPawnCard = selectedPawn
-    ? buildPawnCard(selectedPawn, true, { cameraFollowPawnId })
+    ? buildPawnCard(selectedPawn, true, { cameraFollowPawnId, startMark: () => startMarkDrag('pawn') })
     : null;
-  $: hoverPawnCard = hoverPawn ? buildPawnCard(hoverPawn, false, { cameraFollowPawnId }) : null;
+  $: hoverPawnCard = hoverPawn
+    ? buildPawnCard(hoverPawn, false, { cameraFollowPawnId, startMark: () => startMarkDrag('pawn') })
+    : null;
+
+  // How many of the highlighted pawns are currently drafted — gates the MOVE action.
+  $: markedDraftedCount =
+    markedKind === 'pawn'
+      ? pawns.filter((p) => p.drafted && markedIds.includes(p.id)).length
+      : 0;
 
   $: hoverMob = hoverMobId ? (mobs.find((m) => m.id === hoverMobId) ?? null) : null;
 
   $: hoverMobCard = (() => {
     if (!hoverMob) return null;
     const def = getCreatureById(hoverMob.creatureId);
-    return def ? buildMobCard(hoverMob, def, false, { cameraFollowMobId, startHuntDrag }) : null;
+    return def
+      ? buildMobCard(hoverMob, def, false, { cameraFollowMobId, startMark: () => startMarkDrag('mob') })
+      : null;
   })();
 
   $: selectedMobCard = (() => {
     if (!selectedMob || !selectedMobDef) return null;
-    return buildMobCard(selectedMob, selectedMobDef, true, { cameraFollowMobId, startHuntDrag });
+    return buildMobCard(selectedMob, selectedMobDef, true, {
+      cameraFollowMobId,
+      startMark: () => startMarkDrag('mob')
+    });
   })();
 
   // Building under hovered tile (all statuses)
@@ -1706,6 +1723,47 @@
       }
     }
 
+    // MARK highlight drag preview — an amber box; entities inside get highlighted on release.
+    if (markDragActive) {
+      const minX = Math.min(markAnchorX, markEndX);
+      const minY = Math.min(markAnchorY, markEndY);
+      const maxX = Math.max(markAnchorX, markEndX);
+      const maxY = Math.max(markAnchorY, markEndY);
+      const sx = (minX - viewX) * tileWidth;
+      const sy = (minY - viewY) * tileHeight;
+      const rw = (maxX - minX + 1) * tileWidth;
+      const rh = (maxY - minY + 1) * tileHeight;
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 200, 90, 0.22)';
+      ctx.fillRect(sx, sy, rw, rh);
+      ctx.strokeStyle = 'rgba(255, 210, 110, 0.95)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(sx + 0.5, sy + 0.5, rw - 1, rh - 1);
+      ctx.restore();
+    }
+
+    // Committed MARK highlight — an amber ring on each highlighted pawn/mob's tile so the group stays
+    // visible while the player decides DRAFT/MOVE (pawns) or HUNT (mobs).
+    if (markedKind && markedIds.length > 0) {
+      const marked = new Set(markedIds);
+      const tiles =
+        markedKind === 'pawn'
+          ? pawns.filter((p) => marked.has(p.id)).map((p) => p.position)
+          : mobs.filter((m) => marked.has(m.id)).map((m) => ({ x: m.x, y: m.y }));
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 210, 110, 0.95)';
+      ctx.lineWidth = 2;
+      for (const pos of tiles) {
+        if (!pos) continue;
+        const sx = (pos.x - viewX) * tileWidth;
+        const sy = (pos.y - viewY) * tileHeight;
+        if (sx < -tileWidth || sy < -tileHeight || sx > W + tileWidth || sy > H + tileHeight)
+          continue;
+        ctx.strokeRect(sx + 1.5, sy + 1.5, tileWidth - 3, tileHeight - 3);
+      }
+      ctx.restore();
+    }
+
     // Item stack counts: a subtle count badge in each item tile's bottom-right corner, drawn only
     // when zoomed in close enough to be legible (and only for piles of 2+) so loose/stockpiled
     // goods read as item stacks rather than buildings. Aggregated per tile, so a mixed pile shows
@@ -2311,10 +2369,8 @@
           showFuelSettings = false;
           break;
         }
-        if (huntDragMode) {
-          huntDragMode = false;
-          huntDragActive = false;
-          redrawOverlay();
+        if (markKind || markedKind || pawnMoveMode) {
+          clearMark();
           break;
         }
         if (similarDragMode) {
@@ -2405,12 +2461,18 @@
 
   function handleMouseDown(e: MouseEvent) {
     if (e.button !== 0) return;
-    if (huntDragMode) {
-      huntDragActive = true;
-      huntAnchorX = hoverTileX;
-      huntAnchorY = hoverTileY;
-      huntEndX = hoverTileX;
-      huntEndY = hoverTileY;
+    if (pawnMoveMode) {
+      // MOVE phase: a single left-click is the destination the drafted group spreads around.
+      if (hoverTileX >= 0 && hoverTileY >= 0) issueMarkedPawnMove(hoverTileX, hoverTileY);
+      return;
+    }
+    if (markKind) {
+      // MARK highlight drag (pawns or mobs): start the selection box.
+      markDragActive = true;
+      markAnchorX = hoverTileX;
+      markAnchorY = hoverTileY;
+      markEndX = hoverTileX;
+      markEndY = hoverTileY;
       redrawOverlay();
       return;
     }
@@ -2488,9 +2550,9 @@
       drawDesignations();
       return;
     }
-    if (huntDragActive) {
-      huntEndX = hoverTileX;
-      huntEndY = hoverTileY;
+    if (markDragActive) {
+      markEndX = hoverTileX;
+      markEndY = hoverTileY;
       redrawOverlay();
       return;
     }
@@ -2525,8 +2587,8 @@
   }
 
   function handleMouseUp() {
-    if (huntDragActive) {
-      completeHuntDrag();
+    if (markDragActive) {
+      completeMarkDrag();
       return;
     }
     if (similarDragActive) {
@@ -2673,37 +2735,76 @@
     drawDesignations();
   }
 
-  function startHuntDrag(mob: Mob) {
-    const def = getCreatureById(mob.creatureId);
-    huntDragCreatureId = mob.creatureId;
-    huntDragCreatureName = def?.name ?? mob.creatureId.replace(/_/g, ' ');
-    huntDragMode = true;
-    huntDragActive = false;
+  /** MARK button (pawn or mob card): begin a box-drag that just *highlights* a group — no action
+   *  fires until the user presses the group verb (DRAFT/MOVE or HUNT). Clears any prior highlight. */
+  function startMarkDrag(kind: 'pawn' | 'mob') {
+    markKind = kind;
+    markDragActive = false;
+    markedKind = null;
+    markedIds = [];
+    pawnMoveMode = false;
   }
 
-  function completeHuntDrag() {
-    const minX = Math.min(huntAnchorX, huntEndX);
-    const maxX = Math.max(huntAnchorX, huntEndX);
-    const minY = Math.min(huntAnchorY, huntEndY);
-    const maxY = Math.max(huntAnchorY, huntEndY);
-    const ids = new Set(
-      mobs
-        .filter(
-          (m) =>
-            m.creatureId === huntDragCreatureId &&
-            m.state !== 'Corpse' &&
-            m.x >= minX &&
-            m.x <= maxX &&
-            m.y >= minY &&
-            m.y <= maxY
-        )
-        .map((m) => m.id)
-    );
-    if (ids.size > 0) {
-      gameState.command({ type: 'markMobsForHunt', payload: { ids: [...ids] }, save: true });
+  /** End of the highlight drag: collect the living entities of the chosen kind inside the box. */
+  function completeMarkDrag() {
+    const minX = Math.min(markAnchorX, markEndX);
+    const maxX = Math.max(markAnchorX, markEndX);
+    const minY = Math.min(markAnchorY, markEndY);
+    const maxY = Math.max(markAnchorY, markEndY);
+    const inBox = (x?: number, y?: number) =>
+      x != null && y != null && x >= minX && x <= maxX && y >= minY && y <= maxY;
+    if (markKind === 'pawn') {
+      markedIds = pawns
+        .filter((p) => p.isAlive !== false && inBox(p.position?.x, p.position?.y))
+        .map((p) => p.id);
+    } else {
+      markedIds = mobs
+        .filter((m) => m.isAlive !== false && m.state !== 'Corpse' && inBox(m.x, m.y))
+        .map((m) => m.id);
     }
-    huntDragMode = false;
-    huntDragActive = false;
+    markedKind = markedIds.length > 0 ? markKind : null;
+    markKind = null;
+    markDragActive = false;
+    redrawOverlay();
+  }
+
+  /** Drop the current highlight + any pending mark gesture. */
+  function clearMark() {
+    markKind = null;
+    markDragActive = false;
+    markedKind = null;
+    markedIds = [];
+    pawnMoveMode = false;
+    redrawOverlay();
+  }
+
+  /** DRAFT verb: draft every highlighted pawn (highlight stays so MOVE can follow). */
+  function draftMarkedPawns() {
+    if (markedKind === 'pawn' && markedIds.length > 0) {
+      gameState.command({ type: 'draftPawns', payload: { ids: markedIds }, save: true });
+    }
+  }
+
+  /** HUNT verb: queue every highlighted mob for hunting, then clear the highlight. */
+  function huntMarkedMobs() {
+    if (markedKind === 'mob' && markedIds.length > 0) {
+      gameState.command({ type: 'markMobsForHunt', payload: { ids: markedIds }, save: true });
+    }
+    clearMark();
+  }
+
+  /** MOVE verb: arm the destination click for the highlighted (drafted) pawns. */
+  function startMarkedPawnMove() {
+    if (markedKind === 'pawn' && markedDraftedCount > 0) pawnMoveMode = true;
+  }
+
+  /** Destination click: spread the highlighted drafted pawns onto tiles around (x,y). */
+  function issueMarkedPawnMove(x: number, y: number) {
+    const ids = pawns.filter((p) => p.drafted && markedIds.includes(p.id)).map((p) => p.id);
+    if (ids.length > 0) {
+      gameState.command({ type: 'movePawnsFormation', payload: { ids, x, y }, save: true });
+    }
+    pawnMoveMode = false;
     redrawOverlay();
   }
 
@@ -2893,12 +2994,27 @@
       // the moment the cursor moves onto the menu, so a deferred "Move here" must use these snapshots.
       const tileX = hoverTileX;
       const tileY = hoverTileY;
-      const issueMove = () =>
-        gameState.command({
-          type: 'setPawnDraftTarget',
-          payload: { pawnId, target: { type: 'move', x: tileX, y: tileY } },
-          save: true
-        });
+      // If a MARK highlight of drafted pawns is active, "move here" commands the whole group and
+      // spreads them onto distinct tiles around the click; otherwise it's just the selected pawn.
+      const groupIds =
+        markedKind === 'pawn'
+          ? pawns.filter((p) => p.drafted && markedIds.includes(p.id)).map((p) => p.id)
+          : [];
+      const issueMove = () => {
+        if (groupIds.length > 1) {
+          gameState.command({
+            type: 'movePawnsFormation',
+            payload: { ids: groupIds, x: tileX, y: tileY },
+            save: true
+          });
+        } else {
+          gameState.command({
+            type: 'setPawnDraftTarget',
+            payload: { pawnId, target: { type: 'move', x: tileX, y: tileY } },
+            save: true
+          });
+        }
+      };
 
       // Any item on the tile opens a menu (equip / pick-up / haul entries + a Move option), so the
       // menu never silently loses to a move order. Empty tile → move straight away.
@@ -3056,11 +3172,36 @@
         — ({Math.abs(similarEndX - similarAnchorX) + 1}×{Math.abs(similarEndY - similarAnchorY) +
           1}){/if}
     </div>
-  {:else if huntDragMode}
-    <div class="designation-hud" style:color="#ee8844" style:border-color="#ee8844">
-      [⊞ HUNT {huntDragCreatureName.toUpperCase()}] — drag zone to queue all for hunting · Esc
-      cancel{#if huntDragActive}
-        — ({Math.abs(huntEndX - huntAnchorX) + 1}×{Math.abs(huntEndY - huntAnchorY) + 1}){/if}
+  {:else if markKind}
+    <div class="designation-hud" style:color="#ffc85a" style:border-color="#ffc85a">
+      [⊞ MARK {markKind === 'pawn' ? 'PAWNS' : 'ENTITIES'}] — drag a box to highlight · Esc cancel{#if markDragActive}
+        — ({Math.abs(markEndX - markAnchorX) + 1}×{Math.abs(markEndY - markAnchorY) + 1}){/if}
+    </div>
+  {:else if pawnMoveMode}
+    <div class="designation-hud" style:color="#ffc85a" style:border-color="#ffc85a">
+      [⊞ MOVE] — click a tile to send {markedDraftedCount} drafted pawn{markedDraftedCount !== 1
+        ? 's'
+        : ''} there · Esc cancel
+    </div>
+  {/if}
+  {#if markedKind && !markKind && !pawnMoveMode}
+    <!-- Group action HUD for the committed MARK highlight (pointer-events on, unlike the text HUDs). -->
+    <div class="mark-hud">
+      <span class="mark-count">
+        ◈ {markedIds.length}
+        {markedKind === 'pawn'
+          ? `pawn${markedIds.length !== 1 ? 's' : ''}`
+          : `entit${markedIds.length !== 1 ? 'ies' : 'y'}`} highlighted
+      </span>
+      {#if markedKind === 'pawn'}
+        <button class="mark-btn" on:click={draftMarkedPawns}>DRAFT</button>
+        <button class="mark-btn" on:click={startMarkedPawnMove} disabled={markedDraftedCount === 0}>
+          MOVE{markedDraftedCount > 0 ? ` (${markedDraftedCount})` : ''}
+        </button>
+      {:else}
+        <button class="mark-btn" on:click={huntMarkedMobs}>HUNT</button>
+      {/if}
+      <button class="mark-btn" on:click={clearMark}>CLEAR</button>
     </div>
   {/if}
   {#if selectedPawnCard}
@@ -3483,6 +3624,44 @@
     pointer-events: none;
     white-space: nowrap;
     z-index: 10;
+  }
+  /* ── MARK group action HUD ─────────────────────── */
+  .mark-hud {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(30, 20, 0, 0.92);
+    border: 1px solid #ffc85a;
+    padding: 3px 8px;
+    z-index: 11;
+    font-family: 'Courier New', monospace;
+  }
+  .mark-count {
+    color: #ffc85a;
+    font-size: 11px;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+  .mark-btn {
+    background: transparent;
+    border: 1px solid #ffc85a;
+    color: #ffc85a;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 8px;
+    cursor: pointer;
+  }
+  .mark-btn:hover:not(:disabled) {
+    background: rgba(255, 200, 90, 0.2);
+  }
+  .mark-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
   }
   /* ── Building HUD card ─────────────────────────── */
   .tile-hud--building {
