@@ -334,12 +334,19 @@
   .collapse-arrow {
     color: #e23b3b;
     font-family: 'Courier New', monospace;
-    font-size: 8px;
+    font-size: 11px;
     font-weight: bold;
     opacity: 0;
     /* Reuse the Zzz rise (opacity + translateY + scale) — colour/glyph are the only difference. */
     animation: zzz-rise 2.1s ease-out infinite;
-    text-shadow: 0 0 4px #800;
+    /* The thin ↓ glyph reads lighter than the heavy ✚ recovery cross, so thicken its stroke with
+       same-colour offset shadows (on top of the red emergency glow) to match that visual weight. */
+    text-shadow:
+      0.6px 0 0 #e23b3b,
+      -0.6px 0 0 #e23b3b,
+      0 0.6px 0 #e23b3b,
+      0 -0.6px 0 #e23b3b,
+      0 0 4px #800;
     will-change: transform, opacity;
   }
 
