@@ -71,11 +71,17 @@ for the full design; the wins:
 - [x] **Per-chunk GPU invalidation.** `setGrid(grid, dirtyTiles)` stamps only the §E chunks holding a
   changed cell (`markTerrainChunksDirty`) instead of bumping the global `gridVersion` (which re-vertexed
   every visible chunk for one changed tile).
-- [x] **Frozen-view bitmap cache (2026-06-22 polish).** Zoomed out past `FREEZE_TILE_PX` the whole map is
-  visible, so the live path re-rasterized all ~550 chunks every `FROZEN_SAFETY_MS` (and rebuilt LRU-evicted
-  ones — the hitch crossing into the static view). Now the frozen frame is rendered to GL ONCE, snapshotted
-  into a 2D `<canvas>` overlay, and that bitmap is shown while frozen — ZERO GL until the view/terrain
-  changes. GL canvas stays underneath as a fallback (a blank capture is transparent, never black).
+- [~] **Frozen-view bitmap cache — TRIED, REVERTED (2026-06-22).** Idea: snapshot the frozen GL frame into
+  a 2D `<canvas>` overlay so the zoomed-out static view costs zero GL. It **regressed FPS** instead: the
+  capture `drawImage(glCanvas)` forces a GPU→CPU pipeline sync each terrain-delta frame (the **GameCanvas
+  rAF 102 ms** violation), and the overlay stacked a redundant full-screen composited layer on the still-
+  present GL canvas. Reverted to the simple render-on-demand freeze (the GL canvas already retains its last
+  frame when frozen — that IS the cache, at zero extra cost). The original zoom-out "hitch" is minor; if
+  revisited, do it WITHOUT a per-frame GL→2D readback (e.g. a longer `FROZEN_SAFETY_MS`, or render the
+  static map to a low-res GL texture once). Render-side native (GPU raster/composite) — `(root) native`
+  ~50% in the zoom-out trace — is dominated by the **WeatherCanvas** 2D particle raster (up to 2400
+  particles full-screen, the 631 ms violation), not terrain; gate weather harder at extreme zoom-out if it
+  needs more headroom.
 
 ---
 
