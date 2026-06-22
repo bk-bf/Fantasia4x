@@ -714,8 +714,9 @@ export function syncTransientConditions(pawn: Pawn): Pawn {
 
   // SEASONS_WEATHER: under a roof → sheltered (faster cold/heat recovery + storm-mood relief).
   if (pawn.position && isRoofedTile(pawn.position.x, pawn.position.y)) ids.push('sheltered');
-  // SEASONS_WEATHER: soaked → wet (cold bites harder, heat less; chance of a chill when soaked + cold).
-  if ((pawn.needs?.wetness ?? 0) >= 50) ids.push('wet');
+  // SEASONS_WEATHER: only FULLY soaked → wet (cold bites harder, heat less; chance of a chill when
+  // soaked + cold). The wetness meter still amplifies cold below 100; the `wet` tell shows only at max.
+  if ((pawn.needs?.wetness ?? 0) >= 100) ids.push('wet');
 
   // Mood-based transient conditions (discrete ranges replace continuous morale calculation)
   const mood = pawn.state?.mood ?? 50;
