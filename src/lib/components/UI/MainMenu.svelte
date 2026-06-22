@@ -81,6 +81,20 @@
       </nav>
     {/if}
   </div>
+
+  <!-- Subtle bottom-left footer: build version + tileset attribution. -->
+  <div class="footer-note">
+    <span>version: alpha 0.1.0</span>
+    <span class="sep">·</span>
+    <span>tileset:
+      <a
+        class="credit-link"
+        href="https://github.com/DragonDePlatino/bitlands"
+        target="_blank"
+        rel="noopener noreferrer">Bitlands</a
+      > by DragonDePlatino</span
+    >
+  </div>
 </div>
 
 <style>
@@ -105,6 +119,40 @@
     background: radial-gradient(circle, rgba(240, 136, 40, 0.12) 0%, transparent 70%);
     filter: blur(8px);
     pointer-events: none;
+  }
+
+  /* Bottom-left footer — version + tileset credit. Grey-white, small, legible over the map but
+     deliberately understated (low opacity + a soft dark shadow), never competing with the menu. */
+  .footer-note {
+    position: absolute;
+    left: 6px;
+    bottom: 4px;
+    z-index: 1; /* above the live map backdrop (z-index 0) */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 4px;
+    max-width: min(90vw, 520px);
+    color: rgba(244, 246, 248, 0.7);
+    font-family: 'Courier New', monospace;
+    font-size: 8px;
+    letter-spacing: 0.03em;
+    line-height: 1.4;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.85);
+  }
+  .footer-note .sep {
+    opacity: 0.6;
+  }
+  .credit-link {
+    color: rgba(248, 249, 250, 0.82);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(248, 249, 250, 0.3);
+    transition:
+      color 0.12s,
+      border-color 0.12s;
+  }
+  .credit-link:hover {
+    color: var(--accent-hi);
+    border-bottom-color: var(--accent-hi);
   }
 
   .content {
