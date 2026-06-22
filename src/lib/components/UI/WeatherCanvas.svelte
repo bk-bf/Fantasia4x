@@ -90,6 +90,14 @@
   // fillrate-aware cap, which is what actually guards §R5's perf budget.)
   const densityMul = () => 0.8 + (1 - zoomInFrac()) * 1.6; // 0.8× fully in → 2.4× fully out
 
+  // EXTREME zoom-out gate: below SUBPIXEL_TILE px/tile the whole map is on screen and individual drops
+  // are sub-pixel — you read weather as a faint haze, not distinct particles. There, the PER-PARTICLE
+  // overhead (the draw-loop iteration + path/arc setup per particle, which does NOT shrink with size)
+  // dominates the frame, so 2400 invisible specks just tank FPS for no visual gain (the zoom-out FPS
+  // crater). Hard-attenuate the count from 1× at SUBPIXEL_TILE down to a 0.2× floor as tiles vanish.
+  const SUBPIXEL_TILE = 4; // px per tile (matches GameCanvas's FREEZE_TILE_PX — the static-view threshold)
+  const subpixelAtten = () => Math.max(0.2, Math.min(1, tileSize / SUBPIXEL_TILE));
+
   // §R5: render the weather into a buffer at this fraction of the (CSS-pixel) canvas size, then let the
   // browser upscale it for display. Weather is soft/blurry, so the resolution drop is invisible — but
   // the per-frame full-screen ops (clear + vignette fill) cost ~RENDER_SCALE² as much fillrate (~64%
@@ -203,7 +211,9 @@
     // far-zoom on big maps (denser) while keeping total fillrate bounded BELOW the old worst case
     // (each particle is ~0.3× the size). Clamped so it never explodes if sizeMul gets tiny.
     const cap = Math.min(2400, Math.round(1600 / Math.max(0.45, sizeMul())));
-    return Math.min(cap, Math.floor(w * h * perPx * (0.5 + intensity) * densityMul()));
+    const want = Math.min(cap, Math.floor(w * h * perPx * (0.5 + intensity) * densityMul()));
+    // Sub-pixel zoom-out: cut the count hard (per-particle overhead, not fillrate, is the cost there).
+    return Math.round(want * subpixelAtten());
   }
 
   /** Grow/shrink the pool toward the target — adds/removes only the delta, so zoom/intensity/resize
