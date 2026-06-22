@@ -55,6 +55,9 @@
   <div class="content">
     <h1 class="title">FANTASIA</h1>
     <div class="subtitle">— a 4X colony chronicle —</div>
+    <div class="credit-line">
+      alpha 0.1.0 · tileset: Bitlands by DragonDePlatino
+    </div>
 
     {#if showSettings}
       <div class="panel" role="menu" tabindex="-1">
@@ -81,15 +84,6 @@
       </nav>
     {/if}
   </div>
-
-  <!-- Subtle bottom-left footer: build version + tileset attribution. Plain text on purpose — NO link.
-       This is an Electron-shelled app; an anchor would open the Chromium engine's browser, exposing
-       the under-the-hood webview. Credit reads as the source path so it's still attributable. -->
-  <div class="footer-note">
-    <span>version: alpha 0.1.0</span>
-    <span class="sep">·</span>
-    <span>tileset: Bitlands by DragonDePlatino · github.com/DragonDePlatino/bitlands</span>
-  </div>
 </div>
 
 <style>
@@ -114,28 +108,6 @@
     background: radial-gradient(circle, rgba(240, 136, 40, 0.12) 0%, transparent 70%);
     filter: blur(8px);
     pointer-events: none;
-  }
-
-  /* Bottom-left footer — version + tileset credit. Grey-white, small, legible over the map but
-     deliberately understated (low opacity + a soft dark shadow), never competing with the menu. */
-  .footer-note {
-    position: absolute;
-    left: 6px;
-    bottom: 4px;
-    z-index: 1; /* above the live map backdrop (z-index 0) */
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 4px;
-    max-width: min(90vw, 520px);
-    color: rgba(244, 246, 248, 0.7);
-    font-family: 'Courier New', monospace;
-    font-size: 8px;
-    letter-spacing: 0.03em;
-    line-height: 1.4;
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.85);
-  }
-  .footer-note .sep {
-    opacity: 0.6;
   }
 
   .content {
@@ -178,13 +150,28 @@
     color: var(--text);
     font-size: 12px;
     letter-spacing: 0.2em;
-    margin-bottom: 26px;
+    margin-bottom: 4px;
     /* Sits in the faded edge of the scrim, so carry its own dark backing — a tight drop shadow plus a
        soft black halo — to stay legible over the colourful, busy map. */
     text-shadow:
       0 1px 2px rgba(0, 0, 0, 0.95),
       0 0 6px rgba(0, 0, 0, 0.9),
       0 0 14px rgba(0, 0, 0, 0.75);
+  }
+
+  /* Third sub-header under the subtitle: version + tileset credit, in a cursive script to set it apart
+     from the terminal wordmark while echoing the subtitle's muted, dark-backed treatment. */
+  .credit-line {
+    font-family: 'Segoe Script', 'Brush Script MT', 'Comic Sans MS', cursive;
+    font-style: italic;
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    margin-bottom: 24px;
+    text-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.95),
+      0 0 6px rgba(0, 0, 0, 0.9),
+      0 0 12px rgba(0, 0, 0, 0.7);
   }
 
   .menu,
