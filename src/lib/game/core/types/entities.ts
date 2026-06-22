@@ -73,6 +73,12 @@ export interface Mob {
   /** Tick when the entity can re-enter Foraging after finding no REACHABLE food tile — stops a
    *  boxed-in forager re-scanning/re-pathing (and re-logging) the same unreachable tile every tick. */
   forageCooldownUntil?: number;
+  /** Turn the mob last ran its full FSM think (stepOne). Off-bubble it normally thinks every
+   *  AI_THROTTLE_TICKS, but a nearby predator forces a per-tick threat-interrupt think — so the
+   *  elapsed-tick scale for time-based accrual (eat progress, flee stamina) must be the ACTUAL gap
+   *  `turn - lastThinkTick`, not a fixed AI_THROTTLE_TICKS (else an interrupted flee drains stamina
+   *  60× too fast). In-bubble this is just the previous turn (gap 1). */
+  lastThinkTick?: number;
   /** Committed flee destination (a distant safe tile). While fleeing the mob runs to THIS point,
    *  re-routing around blocks, and only re-picks when it arrives or the point stops being safe —
    *  so it can't flip direction each time the path ends (the flee-yoyo). */

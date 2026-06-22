@@ -214,9 +214,14 @@ export function stepEntities(state: GameState): GameState {
       next[i] = mob; // throttled this tick — keep state; movement + combat run per-tick elsewhere
       continue;
     }
-    // Elapsed-time scale for time-based FSM progress (eating): off-bubble mobs only get here every Nth
-    // tick, so N ticks of progress happen per think (a threat-interrupted eater would just flee, not eat).
-    _thinkDtTicks = inBubble ? 1 : AI_THROTTLE_TICKS;
+    // Elapsed-time scale for time-based FSM progress (eat progress, flee stamina): use the ACTUAL gap
+    // since this mob last thought, not a fixed AI_THROTTLE_TICKS. Off-bubble it's normally ~N, but a
+    // threat-interrupt makes it think every tick (gap ≈ 1) — assuming N there drained stamina 60× too
+    // fast (3 tiles → instantly winded). Clamp to [1, N]; first-ever think (no lastThinkTick) ⇒ 1.
+    _thinkDtTicks = inBubble
+      ? 1
+      : Math.min(AI_THROTTLE_TICKS, Math.max(1, turn - (mob.lastThinkTick ?? turn - 1)));
+    mob.lastThinkTick = turn; // ADR-002 hot path: mutate in place; carried forward by stepOne's spread
     const stepped = stepOne(
       mob,
       def,
