@@ -312,7 +312,11 @@ export function stepEntities(state: GameState): GameState {
           if (d.id.startsWith(`carcass-${mobId}-`)) {
             const { conditions, removed } = consumeTop(d.unitConditions, consumed * 100);
             touched = true;
-            return { ...d, quantity: Math.max(0, d.quantity - removed), unitConditions: conditions };
+            return {
+              ...d,
+              quantity: Math.max(0, d.quantity - removed),
+              unitConditions: conditions
+            };
           }
         }
         return d;
@@ -482,7 +486,13 @@ function sleepOrReturnHome(mob: Mob, turn: number, state: GameState): Mob {
     chebDist(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) > (mob.lairRange ?? Infinity)
   ) {
     return moveToward(
-      { ...mob, state: 'Wander', stateSince: turn, huntTargetId: undefined, eatProgress: undefined },
+      {
+        ...mob,
+        state: 'Wander',
+        stateSince: turn,
+        huntTargetId: undefined,
+        eatProgress: undefined
+      },
       { x: mob.lairX!, y: mob.lairY! },
       state
     );
@@ -564,8 +574,7 @@ export function stepHostile(
   // target), FEEDING on the kill, OR critically hungry, the leash stretches by HUNT_OVERSTRETCH_TILES —
   // the hunter commits to the chase past the boundary AND eats the corpse where it lies (else the hunt is
   // wasted — it'd abandon the meal). Once the hunt+meal end (plain lairRange applies again) it's pulled home.
-  const onHunt =
-    mob.state === 'Hunting' || mob.state === 'Attacking' || mob.huntTargetId != null;
+  const onHunt = mob.state === 'Hunting' || mob.state === 'Attacking' || mob.huntTargetId != null;
   const feeding = mob.state === 'Eating'; // finishing the kill / a corpse — don't drag it off its meal
   const desperate = mob.needs.hunger >= HUNGER_OVERSTRETCH_THRESHOLD;
   const leashReach =
@@ -725,7 +734,8 @@ export function stepHostile(
         // one tick — then return null so the mob STILL WANDERS this tick (the cooldown carries through
         // the wander's `{...mob}` spread). Returning a non-Hunting mob here FROZE denied hunters.
         mob.huntCooldownUntil =
-          turn + ticksFromSeconds(HUNT_BUSY_BACKOFF_MIN_S + rng.random() * HUNT_BUSY_BACKOFF_JITTER_S);
+          turn +
+          ticksFromSeconds(HUNT_BUSY_BACKOFF_MIN_S + rng.random() * HUNT_BUSY_BACKOFF_JITTER_S);
         return null;
       }
       return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
@@ -1204,7 +1214,11 @@ export function stepForaging(
 
   if (found.path.length === 0) {
     // Standing on the food tile already — start eating.
-    return { ...mob, eatProgress: (_thinkDtTicks * SECONDS_PER_TICK) / EAT_GRASS_SECONDS, path: [] };
+    return {
+      ...mob,
+      eatProgress: (_thinkDtTicks * SECONDS_PER_TICK) / EAT_GRASS_SECONDS,
+      path: []
+    };
   }
   return { ...mob, path: found.path, pathIndex: 0, nextCellCostLeft: undefined };
 }

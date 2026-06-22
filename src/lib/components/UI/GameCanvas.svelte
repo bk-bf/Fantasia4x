@@ -935,10 +935,8 @@
     return inv;
   })();
   // Is the active DRAW/CLEAR tool currently aimed at the selected zone? (highlights its button)
-  $: zoneToolDrawing =
-    designationMode && activeZoneInstanceId === selectedZoneId && !zoneEraseMode;
-  $: zoneToolClearing =
-    designationMode && activeZoneInstanceId === selectedZoneId && zoneEraseMode;
+  $: zoneToolDrawing = designationMode && activeZoneInstanceId === selectedZoneId && !zoneEraseMode;
+  $: zoneToolClearing = designationMode && activeZoneInstanceId === selectedZoneId && zoneEraseMode;
 
   /** Enter the paint tool for a stockpile zone — DRAW extends (erase off), CLEAR reduces (erase on). */
   function paintZoneTool(instanceId: string, erase: boolean) {
@@ -952,8 +950,7 @@
   $: zoneStoredTotal = Object.values(selectedZoneInventory).reduce((a, b) => a + b, 0);
   $: zoneCard = ((): SelectedEntityModel | null => {
     if (!selectedZone) return null;
-    const allowed =
-      selectedZone.filter.allowedCategories.length === 0 ? 'all items' : 'filtered';
+    const allowed = selectedZone.filter.allowedCategories.length === 0 ? 'all items' : 'filtered';
     const id = selectedZone.id;
     return {
       name: selectedZone.label,
@@ -965,7 +962,11 @@
         `haul filter: ${allowed}`
       ],
       buttons: [
-        { label: 'FILTER', active: showZoneFilter, onClick: () => (showZoneFilter = !showZoneFilter) },
+        {
+          label: 'FILTER',
+          active: showZoneFilter,
+          onClick: () => (showZoneFilter = !showZoneFilter)
+        },
         { label: 'DRAW', active: zoneToolDrawing, onClick: () => paintZoneTool(id, false) },
         { label: 'CLEAR', active: zoneToolClearing, onClick: () => paintZoneTool(id, true) }
       ]
@@ -1389,7 +1390,12 @@
         continue;
       }
       if (p.currentState === 'Sleeping') {
-        const o = glyphOf(p.id, p.position.x, p.position.y, needsRecovery(p as never) ? 'rest' : 'sleep');
+        const o = glyphOf(
+          p.id,
+          p.position.x,
+          p.position.y,
+          needsRecovery(p as never) ? 'rest' : 'sleep'
+        );
         if (onScreen(o)) newGlyphs.push(o);
         continue;
       }
@@ -2837,7 +2843,10 @@
           renderFps.set(0); // static bitmap view — no render cost to report
         }
       } else {
-        if (_frozenShown) showFrozenOverlay(false); // back to the live GL canvas
+        if (_frozenShown) {
+          showFrozenOverlay(false); // back to the live GL canvas
+          _renderDirty = true; // the retained GL frame is at the frozen zoom — force a fresh draw now
+        }
         if (_renderDirty || now - lastDrawAt >= FROZEN_SAFETY_MS) {
           drawGL();
           _renderDirty = false;
@@ -3831,7 +3840,12 @@
       <!-- Stockpile zone: shared SelectedEntityCard chrome (FILTER/DRAW/CLEAR in the button column)
            plus the FILTER fly-out, laid out exactly like the building card + fuel panel. -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="bld-row" role="presentation" on:mousedown|stopPropagation on:mouseup|stopPropagation>
+      <div
+        class="bld-row"
+        role="presentation"
+        on:mousedown|stopPropagation
+        on:mouseup|stopPropagation
+      >
         <SelectedEntityCard model={zoneCard} embedded />
         <StockpileZonePanel
           instanceId={selectedZone.id}
