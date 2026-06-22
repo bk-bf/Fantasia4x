@@ -10,7 +10,10 @@
  */
 import { isClientRuntime } from '../core/runtime';
 import { realSimLogSink } from '../../stores/simLogBridge';
-import { markRenderTileDirty, clearRenderTileDeltas } from '../../components/UI/gameCanvas/mainTileDeltas';
+import {
+  markRenderTileDirty,
+  clearRenderTileDeltas
+} from '../../components/UI/gameCanvas/mainTileDeltas';
 import { batchLogReplay } from '../../stores/Log';
 import type { SimLogEvent, EntitySync } from './simProtocol';
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
@@ -49,7 +52,10 @@ function updateEntityMirror<T extends { id: string }>(
 
 // Reconstruct the ordered array after updating the mirror. `.filter` is defensive: a healthy delta
 // keeps `order ⊆ mirror`, but a stranded id must never crash a downstream `.filter(d => d.stored)`.
-function applyEntitySync<T extends { id: string }>(mirror: Map<string, T>, sync: EntitySync<T>): T[] {
+function applyEntitySync<T extends { id: string }>(
+  mirror: Map<string, T>,
+  sync: EntitySync<T>
+): T[] {
   updateEntityMirror(mirror, sync, false);
   if ('full' in sync) return sync.full;
   return sync.order.map((id) => mirror.get(id)).filter((e): e is T => e !== undefined);

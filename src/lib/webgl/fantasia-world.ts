@@ -51,9 +51,7 @@ const SOLID_SUBTYPES = new Set(['rocky', 'cliff', 'mineral_deposit']);
 /** A tile is "solid" iff it's a rocky/cliff/mineral subtype STILL carrying its wall/ore resource. */
 function tileSolidValue(t: WorldTile): boolean {
   return (
-    SOLID_SUBTYPES.has(t.subType) &&
-    !!t.resources &&
-    Object.values(t.resources).some((a) => a > 0)
+    SOLID_SUBTYPES.has(t.subType) && !!t.resources && Object.values(t.resources).some((a) => a > 0)
   );
 }
 

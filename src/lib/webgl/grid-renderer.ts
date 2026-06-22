@@ -236,7 +236,15 @@ export class GridRenderer {
     let drawnVerts = 0;
     for (let cy = minCY; cy <= maxCY; cy++) {
       for (let cx = minCX; cx <= maxCX; cx++) {
-        drawnVerts += this.drawTerrainChunk(grid, options, cx, cy, cacheVersion, lightVersion, frame);
+        drawnVerts += this.drawTerrainChunk(
+          grid,
+          options,
+          cx,
+          cy,
+          cacheVersion,
+          lightVersion,
+          frame
+        );
       }
     }
 
@@ -274,7 +282,15 @@ export class GridRenderer {
     ) {
       const tiles = grid.getTilesInRegion(cx * CS, cy * CS, CS, CS);
       if (!chunk) {
-        chunk = { vao: null, vbo: null, count: 0, builtVersion: version, builtLight: lightVersion, builtDirty: dirtyStamp, lastFrame: frame };
+        chunk = {
+          vao: null,
+          vbo: null,
+          count: 0,
+          builtVersion: version,
+          builtLight: lightVersion,
+          builtDirty: dirtyStamp,
+          lastFrame: frame
+        };
         this.terrainChunks.set(key, chunk);
       }
       if (tiles.length === 0) {
