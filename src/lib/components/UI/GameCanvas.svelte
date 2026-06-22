@@ -5,11 +5,18 @@
   import { browser } from '$app/environment';
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
   import {
-    buildGameGrid,
     applyTileToGrid,
+    applyBuildingToGrid,
     generatePlaceholderGrid,
-    computeHiddenMask
+    updateHiddenMaskAt,
+    type HiddenMaskState,
+    type TileCoord
   } from '$lib/webgl/fantasia-world.js';
+  import {
+    drainRenderTileDeltas,
+    clearRenderTileDeltas
+  } from '$lib/components/UI/gameCanvas/mainTileDeltas';
+  import { fullRebuildTerrain } from '$lib/components/UI/gameCanvas/terrainPaint';
   import {
     gameState,
     rendererReady,
@@ -165,10 +172,13 @@
   let errorMsg = '';
   let worldMap: WorldTile[][] = [];
 
-  // Interior-mountain "fog" mask (computeHiddenMask): tiles buried inside a massif / sealed in a
-  // pocket render blank in the terrain pass, and must NOT leak through the other render paths either —
-  // glow emitters on them are dropped, hovering them shows no info panel, and an explore-tab jump
-  // can't drop a highlight on them. Recomputed on the same gated cadence as terrain rebuilds.
+  // Interior-mountain "fog" mask: tiles buried inside a massif / sealed in a pocket render blank in the
+  // terrain pass, and must NOT leak through the other render paths either — glow emitters on them are
+  // dropped, hovering them shows no info panel, and an explore-tab jump can't drop a highlight on them.
+  // ADR-026: the mask STATE (mask + the solid/exterior grids it derives from) is persisted so it can be
+  // updated LOCALLY when a tile's solidness flips (mining) — never re-BFS'd whole-map on a delta.
+  // `hiddenMask` aliases `_maskState.mask` (same ref; updateHiddenMaskAt mutates it in place).
+  let _maskState: HiddenMaskState | null = null;
   let hiddenMask: boolean[][] = [];
   const isHiddenTile = (x: number, y: number): boolean => hiddenMask[y]?.[x] ?? false;
 
@@ -179,16 +189,20 @@
   let _prevZoneTiles: unknown;
   let _prevTerrainRev: number | undefined; // ADR-021: worker-sent terrain revision (see unsubState)
   let _prevDesignationRev: number | undefined; // §D: worker-sent designation revision → cheap 2D overlay redraw (no terrain rebuild)
-  // §R2 incremental terrain: keep the terrain GameGrid PERSISTENT and re-apply only the tiles whose ref
-  // changed since the last build (the worker's worldMapDelta gives changed tiles fresh refs; unchanged
-  // ones keep theirs). buildGameGrid (562k setTile) is reserved for genuine full rebuilds — without this
-  // a 3-tile regrowth rebuilt the whole map (~150ms hitch ⇒ FPS crater at 4×). `_builtTiles` is the
-  // flat snapshot of tile refs the persistent grid was last drawn from.
+  // ADR-026 incremental terrain: the terrain GameGrid is PERSISTENT. A full rebuild (buildGameGrid, 562k
+  // setTile) is reserved for `_fullRebuildTerrain` only — first build or a genuine new-map load (worldMap
+  // ARRAY ref replaced). Every routine change (harvest/regrowth/mining via worldMapDelta, building
+  // placement, blueprint preview) repaints ONLY the affected tiles, driven by the changed-coord channel
+  // (mainTileDeltas) — never a whole-map scan or rebuild (the FPS crater that ADR-026 forbids).
   let _terrainGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
-  let _builtTiles: (WorldTile | undefined)[] = [];
-  let _terrainGridWorldMapRef: unknown; // worldMap ARRAY ref of the last build (changes only on full send)
-  let _terrainGridBuildingsSig = '';
-  let _terrainGridHadBlueprint = false; // last build painted a blueprint preview ⇒ next build must be full
+  let _terrainGridWorldMapRef: unknown; // worldMap ARRAY ref of the last full build (new ref ⇒ new map ⇒ full rebuild)
+  // Incremental building diff: last-painted completed buildings keyed by id (pos + visual sig), so a
+  // placement/removal/deconstruct repaints just the changed footprints (single cells).
+  let _prevBuildingsById = new Map<string, { x: number; y: number; sig: string }>();
+  // Blueprint preview tiles painted last frame — repainted (cleared) when the preview moves/ends.
+  let _prevBlueprintTiles = new Set<string>();
+  // §M grove-glow emitters keyed "y,x" so a delta upserts/deletes one tile's emitter (no full re-scan).
+  let _emitterMap = new Map<string, import('$lib/game/services/LightingService.js').LightEmitter>();
   // Terrain rebuild is O(map) (38k-tile vertex buffer). worldMap churns every tick from
   // resource regrowth/harvest, which would rebuild it every frame (~60ms). Those changes are
   // invisible if they lag a fraction of a second, so coalesce sim-driven terrain rebuilds to
@@ -1126,18 +1140,10 @@
     if (renderer?.isReady()) {
       if (worldMap.length > 0) {
         if (terrainChanged) {
+          // ADR-026: just flag dirty — the throttled redrawOverlayNow repaints ONLY the changed cells
+          // and updates the hidden mask + grove glows INCREMENTALLY from the worldMapDelta coords. No
+          // whole-map computeHiddenMask / collectResourceEmitters scan here anymore (the per-tick crater).
           _terrainDirty = true; // coalesced in the render loop (throttled)
-          // Recompute the interior-mountain mask on the same gated cadence (mining a wall changes the
-          // silhouette) so hover/jump/glow all agree with the freshly-rebuilt terrain image.
-          hiddenMask = computeHiddenMask(worldMap);
-          // §M: recompute the static grove glows on the same (gated) cadence as terrain rebuilds —
-          // groves rarely change, and this O(map) scan piggybacks on the rebuild that's happening
-          // anyway. Drop glows on hidden tiles so a buried magic grove doesn't bleed light through the
-          // fog, then re-merge with the building lights.
-          resourceGlowEmitters = lightingService
-            .collectResourceEmitters(worldMap)
-            .filter((e) => !isHiddenTile(e.x, e.y));
-          refreshEmitters();
         }
       } else {
         renderer.setGrid(generatePlaceholderGrid());
@@ -1663,61 +1669,150 @@
     });
   }
 
+  /** ADR-026 per-building visual signature (the fields applyBuildingToGrid actually draws). */
+  function _buildingSig(b: PlacedBuilding): string {
+    return `${b.x},${b.y}:${b.type}:${b.status}:${b.deconstructQueued ? 1 : 0}:${b.paused ? 1 : 0}`;
+  }
+
+  /** Current blueprint-preview cells (drag set, or the single hover tile), keyed "x,y". */
+  function _currentBlueprintTiles(): Set<string> {
+    const s = new Set<string>();
+    if (!blueprintBuildingId) return s;
+    if (blueprintDragActive && blueprintDragTiles.size > 0) {
+      for (const k of blueprintDragTiles) s.add(k);
+    } else if (hoverTileX >= 0 && hoverTileY >= 0) {
+      s.add(`${hoverTileX},${hoverTileY}`);
+    }
+    return s;
+  }
+
+  /** Re-evaluate one tile's grove-glow emitter membership; returns true iff the emitter SET changed. */
+  function _updateEmitterAt(y: number, x: number, tile: WorldTile): boolean {
+    const key = y + ',' + x;
+    const had = _emitterMap.has(key);
+    const e = lightingService.emitterForTile(tile);
+    const willHave = !!e && !isHiddenTile(x, y); // a buried grove must not bleed light through the fog
+    if (willHave === had) {
+      if (willHave) _emitterMap.set(key, e!); // refresh content; no structural change
+      return false;
+    }
+    if (willHave) _emitterMap.set(key, e!);
+    else _emitterMap.delete(key);
+    return true;
+  }
+
+  /**
+   * ADR-026: the ONLY full-map terrain build, called for the first build or a genuine new-map load
+   * (worldMap ARRAY ref replaced). Delegates to the `terrainPaint.fullRebuildTerrain` seam — the single
+   * module codegraph allows to call buildGameGrid + computeHiddenMaskState — then assigns the result to
+   * component state and seeds every incremental baseline (mask state, building diff, blueprint, emitters).
+   */
+  function _fullRebuildTerrain(): void {
+    const built = fullRebuildTerrain(worldMap, buildings, _buildingSig);
+    _terrainGrid = built.terrainGrid;
+    _maskState = built.maskState;
+    hiddenMask = _maskState.mask;
+    _terrainGridWorldMapRef = worldMap;
+    _prevBuildingsById = built.buildingsById;
+    _emitterMap = built.emitterMap;
+    resourceGlowEmitters = built.emitters;
+    clearRenderTileDeltas(); // a full repaint supersedes any pending per-tile coords
+    refreshEmitters();
+
+    // Blueprint preview (if a placement tool is active across the rebuild) sits on top.
+    _prevBlueprintTiles = _currentBlueprintTiles();
+    for (const k of _prevBlueprintTiles) {
+      const ci = k.indexOf(',');
+      _blueprintPreviewTile(_terrainGrid, +k.slice(0, ci), +k.slice(ci + 1));
+    }
+  }
+
   function redrawOverlayNow() {
     if (!renderer?.isReady() || worldMap.length === 0) return;
     markRenderDirty(); // terrain changed → force a draw even when frozen
-    const buildingsSig = buildingsVisualSig(buildings);
-    // §R2: FULL rebuild (the expensive 562k-setTile buildGameGrid) only when we must — no grid yet, a
-    // whole-map send (array ref changed), buildings changed, or a blueprint preview is/was painted.
-    // Otherwise INCREMENTAL: a cheap O(map) ref-scan re-applies ONLY the tiles whose ref changed (the
-    // worker gives changed tiles fresh refs), which kills the per-rebuild 150ms hitch at 4× speed.
-    const needFull =
-      !_terrainGrid ||
-      worldMap !== _terrainGridWorldMapRef ||
-      buildingsSig !== _terrainGridBuildingsSig ||
-      !!blueprintBuildingId ||
-      _terrainGridHadBlueprint;
     const W = worldMap[0]?.length ?? 0;
-    if (needFull) {
-      _terrainGrid = buildGameGrid(worldMap, buildings);
-      _builtTiles = new Array(W * worldMap.length);
-      for (let y = 0; y < worldMap.length; y++) {
-        const row = worldMap[y];
-        for (let x = 0; x < W; x++) _builtTiles[y * W + x] = row[x];
-      }
-      _terrainGridWorldMapRef = worldMap;
-      _terrainGridBuildingsSig = buildingsSig;
-      _terrainGridHadBlueprint = !!blueprintBuildingId;
-      // Blueprint placement preview — painted on top; it forces a full rebuild so it can be cleanly
-      // cleared on the next build (zone/selection previews live on the 2D overlay in drawDesignations).
-      if (blueprintBuildingId) {
-        if (blueprintDragActive && blueprintDragTiles.size > 0) {
-          for (const key of blueprintDragTiles) {
-            const [tx, ty] = key.split(',').map(Number);
-            _blueprintPreviewTile(_terrainGrid, tx, ty);
-          }
-        } else if (hoverTileX >= 0 && hoverTileY >= 0) {
-          _blueprintPreviewTile(_terrainGrid, hoverTileX, hoverTileY);
-        }
-      }
-    } else if (_terrainGrid) {
-      for (let y = 0; y < worldMap.length; y++) {
-        const row = worldMap[y];
-        for (let x = 0; x < W; x++) {
-          const t = row[x];
-          const idx = y * W + x;
-          if (t !== _builtTiles[idx]) {
-            applyTileToGrid(_terrainGrid, t, hiddenMask);
-            _builtTiles[idx] = t;
-          }
-        }
-      }
+
+    // ADR-026: FULL rebuild ONLY on first build or a genuine new-map load (worldMap ARRAY ref replaced —
+    // worldgen / size change / restore). Every routine change is incremental below.
+    if (!_terrainGrid || !_maskState || worldMap !== _terrainGridWorldMapRef) {
+      _fullRebuildTerrain();
+      renderer.setGrid(_terrainGrid!);
+      drawDesignations();
+      return;
     }
 
-    if (_terrainGrid) {
+    // ── Collect the cells to repaint this frame (never a whole-map scan) ──────────────────────────────
+    const deltas = drainRenderTileDeltas() ?? []; // worldMap deltas (harvest / regrowth / mining)
+    const dirty = new Set<number>();
+    for (const c of deltas) dirty.add(c.y * W + c.x);
+
+    // Buildings: diff vs the last-painted set; a placement/removal/deconstruct repaints just its cell.
+    const curBuildings = new Map<string, { x: number; y: number; sig: string }>();
+    for (const b of buildings) {
+      if (b.status === 'complete') curBuildings.set(b.id, { x: b.x, y: b.y, sig: _buildingSig(b) });
+    }
+    for (const [id, prev] of _prevBuildingsById) {
+      const c = curBuildings.get(id);
+      if (!c || c.sig !== prev.sig) dirty.add(prev.y * W + prev.x); // removed/changed → clear old cell
+    }
+    for (const [id, c] of curBuildings) {
+      const prev = _prevBuildingsById.get(id);
+      if (!prev || prev.sig !== c.sig) dirty.add(c.y * W + c.x); // added/changed → repaint new cell
+    }
+    _prevBuildingsById = curBuildings;
+
+    // Blueprint preview: repaint the cells it left AND the cells it now covers (clear old, draw new).
+    const curBlueprint = _currentBlueprintTiles();
+    for (const k of _prevBlueprintTiles) {
+      const ci = k.indexOf(',');
+      dirty.add(+k.slice(ci + 1) * W + +k.slice(0, ci));
+    }
+    for (const k of curBlueprint) {
+      const ci = k.indexOf(',');
+      dirty.add(+k.slice(ci + 1) * W + +k.slice(0, ci));
+    }
+    _prevBlueprintTiles = curBlueprint;
+
+    // Hidden mask: update LOCALLY from the worldMap deltas (only flips on mining); a changed mask cell
+    // changes the silhouette around the mined wall, so repaint those too.
+    if (deltas.length) {
+      const maskTouched = updateHiddenMaskAt(_maskState, worldMap, deltas as TileCoord[]);
+      for (const c of maskTouched) dirty.add(c.y * W + c.x);
+    }
+
+    if (dirty.size === 0) {
       renderer.setGrid(_terrainGrid);
       drawDesignations();
+      return;
     }
+
+    // ── Repaint terrain for each affected cell, re-overlay any building/blueprint on it, track glows ──
+    let emittersChanged = false;
+    for (const key of dirty) {
+      const x = key % W;
+      const y = (key / W) | 0;
+      const t = worldMap[y]?.[x];
+      if (!t) continue;
+      applyTileToGrid(_terrainGrid, t, hiddenMask);
+      if (_updateEmitterAt(y, x, t)) emittersChanged = true;
+    }
+    for (const b of buildings) {
+      if (b.status === 'complete' && dirty.has(b.y * W + b.x)) applyBuildingToGrid(_terrainGrid, b);
+    }
+    for (const k of curBlueprint) {
+      const ci = k.indexOf(',');
+      _blueprintPreviewTile(_terrainGrid, +k.slice(0, ci), +k.slice(ci + 1));
+    }
+    if (emittersChanged) {
+      resourceGlowEmitters = [..._emitterMap.values()];
+      refreshEmitters();
+    }
+
+    // GPU: invalidate ONLY the chunks holding a changed cell (ADR-026 §6) — not a global gridVersion bump.
+    const dirtyTiles: TileCoord[] = [];
+    for (const key of dirty) dirtyTiles.push({ x: key % W, y: (key / W) | 0 });
+    renderer.setGrid(_terrainGrid, dirtyTiles);
+    drawDesignations();
   }
 
   /**
@@ -2521,9 +2616,15 @@
       const ok = await renderer.waitForInitialization();
       if (!ok || !renderer.isReady()) throw new Error('Renderer init failed');
 
-      const grid =
-        worldMap.length > 0 ? buildGameGrid(worldMap, buildings) : generatePlaceholderGrid();
-      renderer.setGrid(grid);
+      // ADR-026: the initial terrain build goes through _fullRebuildTerrain (the single full-build seam)
+      // — it seeds the persistent grid, the hidden-mask state, the building-diff baseline and the grove
+      // glow map, so every later change can be incremental. Pre-game (no map) shows the placeholder.
+      if (worldMap.length > 0) {
+        _fullRebuildTerrain();
+        renderer.setGrid(_terrainGrid!);
+      } else {
+        renderer.setGrid(generatePlaceholderGrid());
+      }
       renderer.setViewTileOffset(viewX, viewY);
       // Phase A2: bake ONLY the static (flicker-free) additive point light into the
       // renderer; the global day/night ambient and the fire flicker are both applied
@@ -2539,15 +2640,7 @@
         );
         renderer.setAmbient(light, tinted);
         lightingService.setAmbient(light, tinted);
-        // §M: seed grove glows from the current map (minus fog-hidden tiles), then merge with building
-        // lights. Seed the hidden mask here too so the first hover/jump already respects the fog.
-        if (worldMap.length > 0) {
-          hiddenMask = computeHiddenMask(worldMap);
-          resourceGlowEmitters = lightingService
-            .collectResourceEmitters(worldMap)
-            .filter((e) => !isHiddenTile(e.x, e.y));
-        }
-        refreshEmitters();
+        if (worldMap.length === 0) refreshEmitters(); // map present ⇒ _fullRebuildTerrain already did
         _ambientLight = light;
         _ambientTint = tinted;
       }

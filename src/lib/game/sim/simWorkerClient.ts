@@ -10,6 +10,7 @@
  */
 import { isClientRuntime } from '../core/runtime';
 import { realSimLogSink } from '../../stores/simLogBridge';
+import { markRenderTileDirty, clearRenderTileDeltas } from '../../components/UI/gameCanvas/mainTileDeltas';
 import { batchLogReplay } from '../../stores/Log';
 import type { SimLogEvent, EntitySync } from './simProtocol';
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
@@ -175,13 +176,20 @@ class SimWorkerBridge {
       // consistent (frames can't be skipped — see updateEntityMirror).
       if (m.worldMap) {
         this.worldMap = m.worldMap;
+        // ADR-026: a full worldMap send (worldgen / game-load) → GameCanvas does a full rebuild that
+        // repaints every cell, so any pending per-tile coords are moot (mirrors worker clearTileDeltas).
+        clearRenderTileDeltas();
       } else if (m.worldMapDelta) {
         // Merge each SLIM delta tile (§D) onto the full cached tile: only render/movement fields are
         // shipped during harvest; the rest are preserved from the cached tile (they don't change on a
         // regrowth/harvest delta). Cheap vs. re-cloning full tiles; renderer rebuilds off _terrainRev.
         for (const d of m.worldMapDelta) {
           const row = this.worldMap[d.y];
-          if (row) row[d.x] = { ...row[d.x], ...d.tile };
+          if (row) {
+            row[d.x] = { ...row[d.x], ...d.tile };
+            // ADR-026: record the coord so GameCanvas repaints ONLY this cell (no whole-map scan).
+            markRenderTileDirty(d.y, d.x);
+          }
         }
       }
       // Merge the sectional diff onto the mirror: changed fields overwrite, unchanged ones keep

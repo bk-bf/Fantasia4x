@@ -7,7 +7,7 @@ import { writable } from 'svelte/store';
  *  be four parallel arrays (Zzz of sleep, ✚ of recovery, ↓ of collapse, campfire sparks). They are
  *  identical plumbing (project tile→screen, scale with zoom, render a CSS glyph cluster); only `kind`
  *  selects the inner glyphs + animation in WorldEffectsLayer. One array, one setter, one diff-key. */
-export type GlyphFloatKind = 'sleep' | 'rest' | 'collapse' | 'campfire';
+export type GlyphFloatKind = 'sleep' | 'rest' | 'collapse' | 'winded' | 'campfire';
 export interface GlyphFloat {
   id: string;
   left: number;

@@ -34,8 +34,8 @@ export class WebGLRenderer {
   /**
    * Inject (or update) the game grid to render.
    */
-  setGrid(grid: GameGrid): void {
-    this.core.setGrid(grid);
+  setGrid(grid: GameGrid, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
+    this.core.setGrid(grid, dirtyTiles);
   }
 
   /**

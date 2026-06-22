@@ -142,10 +142,20 @@ export class WebGLRendererCore {
     return this.initPromise;
   }
 
-  /** Inject the game grid to render. Call whenever the world changes. */
-  setGrid(grid: GameGrid): void {
+  /**
+   * Inject the game grid to render. Call whenever the world changes.
+   *
+   * ADR-026: pass `dirtyTiles` for an INCREMENTAL terrain update — only the chunks holding those tiles
+   * re-vertex (every other visible chunk keeps its cached VBO). Omit it for a full rebuild (new map /
+   * first build), which bumps the global cacheVersion and re-vertexes every visible chunk.
+   */
+  setGrid(grid: GameGrid, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
     this.gameGrid = grid;
-    this.gridVersion++;
+    if (dirtyTiles && dirtyTiles.length > 0) {
+      this.gridRenderer?.markTerrainChunksDirty(dirtyTiles);
+    } else {
+      this.gridVersion++;
+    }
   }
 
   /** Inject the entity-overlay grid (pawns/mobs) rendered on top of the terrain. */

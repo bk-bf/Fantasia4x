@@ -150,24 +150,36 @@ class LightingServiceImpl {
     const out: LightEmitter[] = [];
     for (const row of worldMap) {
       for (const tile of row) {
-        const res = tile.resources;
-        if (!res) continue;
-        for (const id in res) {
-          if ((res[id] ?? 0) <= 0) continue;
-          const glow = resourceObjectService.getById(id)?.glow;
-          if (glow)
-            out.push({
-              x: tile.x,
-              y: tile.y,
-              color: glow.color,
-              radius: glow.radius,
-              intensity: glow.intensity,
-              flicker: glow.flicker ?? false
-            });
-        }
+        const e = this.emitterForTile(tile);
+        if (e) out.push(e);
       }
     }
     return out;
+  }
+
+  /**
+   * §M glow emitter for ONE tile, or `null` if it carries no glowing resource. Single-tile factory split
+   * out of {@link collectResourceEmitters} so GameCanvas can update its grove-glow set INCREMENTALLY from
+   * a `worldMapDelta` (ADR-026) — upsert/delete the one changed tile's entry instead of re-scanning all
+   * ~562k tiles on every terrain change. A grove tile carries one glow resource, so the first wins.
+   */
+  emitterForTile(tile: WorldTile): LightEmitter | null {
+    const res = tile.resources;
+    if (!res) return null;
+    for (const id in res) {
+      if ((res[id] ?? 0) <= 0) continue;
+      const glow = resourceObjectService.getById(id)?.glow;
+      if (glow)
+        return {
+          x: tile.x,
+          y: tile.y,
+          color: glow.color,
+          radius: glow.radius,
+          intensity: glow.intensity,
+          flicker: glow.flicker ?? false
+        };
+    }
+    return null;
   }
 
   /**

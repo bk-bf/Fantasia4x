@@ -48,17 +48,39 @@ const SOLID_SUBTYPES = new Set(['rocky', 'cliff', 'mineral_deposit']);
  * Mining a wall clears its resource → it becomes non-solid → the flood reaches further in on the next
  * rebuild (the dig reveals inward, DF-style).
  */
-export function computeHiddenMask(worldMap: WorldTile[][]): boolean[][] {
+/** A tile is "solid" iff it's a rocky/cliff/mineral subtype STILL carrying its wall/ore resource. */
+function tileSolidValue(t: WorldTile): boolean {
+  return (
+    SOLID_SUBTYPES.has(t.subType) &&
+    !!t.resources &&
+    Object.values(t.resources).some((a) => a > 0)
+  );
+}
+
+/**
+ * Persistent hidden-mask state (ADR-026): the `mask` PLUS the intermediate `solid`/`exterior` grids it
+ * was derived from, so {@link updateHiddenMaskAt} can re-derive a LOCAL region after a tile's solidness
+ * flips (mining) — no whole-map BFS on a per-tick delta. Built once per map by {@link computeHiddenMaskState}.
+ */
+export interface HiddenMaskState {
+  mask: boolean[][];
+  solid: boolean[][];
+  exterior: boolean[][];
+  mw: number;
+  mh: number;
+}
+
+/** Coord pair returned by the incremental updater (tiles whose rendered mask actually changed). */
+export interface TileCoord {
+  y: number;
+  x: number;
+}
+
+/** Full O(map) hidden-mask build (border-BFS). ADR-026: only legal on a new-map load, never per-delta. */
+export function computeHiddenMaskState(worldMap: WorldTile[][]): HiddenMaskState {
   const mh = worldMap.length;
   const mw = worldMap[0]?.length ?? 0;
-  const solid: boolean[][] = worldMap.map((row) =>
-    row.map(
-      (t) =>
-        SOLID_SUBTYPES.has(t.subType) &&
-        !!t.resources &&
-        Object.values(t.resources).some((a) => a > 0)
-    )
-  );
+  const solid: boolean[][] = worldMap.map((row) => row.map(tileSolidValue));
 
   // BFS the exterior from the border through non-solid tiles (4-connected so walls seal diagonally).
   const exterior: boolean[][] = worldMap.map((row) => row.map(() => false));
@@ -85,31 +107,226 @@ export function computeHiddenMask(worldMap: WorldTile[][]): boolean[][] {
     flood(cx, cy + 1);
     flood(cx, cy - 1);
   }
-  // In-bounds exterior only — the map edge is the void, not open ground (see doc above).
-  const extInBounds = (x: number, y: number): boolean =>
-    x >= 0 && y >= 0 && x < mw && y < mh && exterior[y][x];
 
   const mask: boolean[][] = worldMap.map((row) => row.map(() => false));
   for (let y = 0; y < mh; y++) {
-    for (let x = 0; x < mw; x++) {
-      if (!solid[y][x]) {
-        mask[y][x] = !exterior[y][x]; // enclosed open pocket → hidden
-        continue;
-      }
-      let rim = false;
-      for (let dy = -1; dy <= 1 && !rim; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          if (dx === 0 && dy === 0) continue;
-          if (extInBounds(x + dx, y + dy)) {
-            rim = true; // wall facing open ground → visible silhouette
-            break;
-          }
-        }
-      }
-      mask[y][x] = !rim;
+    for (let x = 0; x < mw; x++) mask[y][x] = maskAt(solid, exterior, mw, mh, x, y);
+  }
+  return { mask, solid, exterior, mw, mh };
+}
+
+/** Back-compat thin wrapper: the mask only (used by buildGameGrid + tests). */
+export function computeHiddenMask(worldMap: WorldTile[][]): boolean[][] {
+  return computeHiddenMaskState(worldMap).mask;
+}
+
+/** In-bounds exterior test — the map edge is the void, not open ground (see doc above). */
+function extInBounds(exterior: boolean[][], mw: number, mh: number, x: number, y: number): boolean {
+  return x >= 0 && y >= 0 && x < mw && y < mh && exterior[y][x];
+}
+
+/** Mask value for one tile from the current solid/exterior grids (the per-tile rule, shared by full + incremental). */
+function maskAt(
+  solid: boolean[][],
+  exterior: boolean[][],
+  mw: number,
+  mh: number,
+  x: number,
+  y: number
+): boolean {
+  if (!solid[y][x]) return !exterior[y][x]; // enclosed open pocket → hidden
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      if (extInBounds(exterior, mw, mh, x + dx, y + dy)) return false; // wall facing open ground → silhouette
     }
   }
-  return mask;
+  return true;
+}
+
+/**
+ * ADR-026 incremental hidden-mask update. Given the changed-tile coords from a `worldMapDelta`, re-derive
+ * the mask for ONLY the affected region — never a whole-map BFS:
+ *  - If no changed tile's `solid` value flipped (harvest/regrowth/grass — the per-tick common case) this
+ *    early-outs at O(changed) with zero flood work.
+ *  - A wall MINED (solid→non-solid) floods the freshly-opened pocket to exterior, bounded by pocket size.
+ *  - A tile that becomes solid (rare — terraform) clears exterior on just that cell, then re-tests each
+ *    non-solid neighbour's reachability; all OTHER exterior flags stay valid as anchors, so a neighbour
+ *    still touching open ground resolves in O(1), and only a genuinely sealed pocket costs its own size.
+ * Mutates `state` in place; returns the tiles whose rendered mask changed (caller repaints just those).
+ */
+export function updateHiddenMaskAt(
+  state: HiddenMaskState,
+  worldMap: WorldTile[][],
+  changed: ReadonlyArray<TileCoord>
+): TileCoord[] {
+  const { solid, exterior, mw, mh } = state;
+  // 1. Keep only coords whose solidness actually flipped — the topology that the mask depends on.
+  const flips: TileCoord[] = [];
+  for (const { y, x } of changed) {
+    const t = worldMap[y]?.[x];
+    if (!t) continue;
+    if (tileSolidValue(t) !== solid[y][x]) flips.push({ y, x });
+  }
+  if (flips.length === 0) return []; // no topology change → mask unchanged (the per-tick fast path)
+
+  // Tiles whose exterior flag we changed — their mask + their neighbours' masks may shift.
+  const exteriorTouched = new Set<number>();
+  const markExt = (x: number, y: number, val: boolean) => {
+    if (exterior[y][x] !== val) {
+      exterior[y][x] = val;
+      exteriorTouched.add(y * mw + x);
+    }
+  };
+  const nonSolidNbrs = (x: number, y: number): TileCoord[] => {
+    const out: TileCoord[] = [];
+    if (x > 0 && !solid[y][x - 1]) out.push({ y, x: x - 1 });
+    if (x < mw - 1 && !solid[y][x + 1]) out.push({ y, x: x + 1 });
+    if (y > 0 && !solid[y - 1][x]) out.push({ y: y - 1, x });
+    if (y < mh - 1 && !solid[y + 1][x]) out.push({ y: y + 1, x });
+    return out;
+  };
+
+  for (const { y, x } of flips) {
+    const nowSolid = tileSolidValue(worldMap[y][x]);
+    solid[y][x] = nowSolid;
+    if (nowSolid) {
+      // ── CLOSING: tile became solid ──────────────────────────────────────────
+      markExt(x, y, false); // a solid tile is never "exterior"
+      // Each non-solid neighbour that WAS exterior might now be cut off; re-test reachability.
+      for (const n of nonSolidNbrs(x, y)) {
+        if (!exterior[n.y][n.x]) continue;
+        recomputeExteriorComponent(solid, exterior, mw, mh, n.x, n.y, markExt);
+      }
+    } else {
+      // ── OPENING: tile became non-solid (mined) ──────────────────────────────
+      // Flood the connected non-solid pocket from here; if it touches the border or an existing
+      // exterior tile, the whole pocket becomes exterior (the dig reveals inward, DF-style).
+      floodOpenedPocket(solid, exterior, mw, mh, x, y, markExt);
+    }
+  }
+
+  // 2. Recompute mask for every exterior-touched tile AND its 8-neighbours (a solid tile's mask depends
+  //    on whether a neighbour is exterior). Collect the cells whose mask value actually changed.
+  const out: TileCoord[] = [];
+  const recheck = new Set<number>();
+  for (const key of exteriorTouched) {
+    const tx = key % mw;
+    const ty = (key / mw) | 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = tx + dx;
+        const ny = ty + dy;
+        if (nx < 0 || ny < 0 || nx >= mw || ny >= mh) continue;
+        recheck.add(ny * mw + nx);
+      }
+    }
+  }
+  for (const key of recheck) {
+    const tx = key % mw;
+    const ty = (key / mw) | 0;
+    const m = maskAt(solid, exterior, mw, mh, tx, ty);
+    if (state.mask[ty][tx] !== m) {
+      state.mask[ty][tx] = m;
+      out.push({ y: ty, x: tx });
+    }
+  }
+  return out;
+}
+
+/** OPENING flood: mark the non-solid component at (sx,sy) exterior iff it reaches the border / existing exterior. */
+function floodOpenedPocket(
+  solid: boolean[][],
+  exterior: boolean[][],
+  mw: number,
+  mh: number,
+  sx: number,
+  sy: number,
+  markExt: (x: number, y: number, val: boolean) => void
+): void {
+  if (exterior[sy][sx]) return;
+  const stack: number[] = [sy * mw + sx];
+  const comp: number[] = [];
+  const seen = new Set<number>(stack);
+  let reachesExterior = false;
+  while (stack.length) {
+    const key = stack.pop()!;
+    const cx = key % mw;
+    const cy = (key / mw) | 0;
+    comp.push(key);
+    if (cx === 0 || cy === 0 || cx === mw - 1 || cy === mh - 1) reachesExterior = true;
+    const nbr = (nx: number, ny: number) => {
+      if (nx < 0 || ny < 0 || nx >= mw || ny >= mh) return;
+      if (solid[ny][nx]) return;
+      if (exterior[ny][nx]) {
+        reachesExterior = true; // touches the known exterior → anchor
+        return;
+      }
+      const k = ny * mw + nx;
+      if (!seen.has(k)) {
+        seen.add(k);
+        stack.push(k);
+      }
+    };
+    nbr(cx + 1, cy);
+    nbr(cx - 1, cy);
+    nbr(cx, cy + 1);
+    nbr(cx, cy - 1);
+  }
+  if (reachesExterior) for (const k of comp) markExt(k % mw, (k / mw) | 0, true);
+}
+
+/** Max tiles a CLOSING re-test will flood before concluding "still open" — one added tile cannot seal a
+ *  region larger than this, so exceeding the budget safely means the pocket is NOT sealed (keep exterior). */
+const SEAL_TEST_BUDGET = 8192;
+
+/** CLOSING re-test: if the non-solid component at (sx,sy) no longer reaches the map BORDER, mark it hidden.
+ *  Floods over non-solid tiles WITHOUT using the `exterior` flag as an anchor — the component itself is
+ *  still flagged exterior (it was, until this seal), so border-reachability is the only valid test. A real
+ *  seal is a small pocket (explored fully → no border → hidden); a non-sealing wall reaches the border fast
+ *  or blows the budget (a huge region one tile can't seal → keep exterior). */
+function recomputeExteriorComponent(
+  solid: boolean[][],
+  exterior: boolean[][],
+  mw: number,
+  mh: number,
+  sx: number,
+  sy: number,
+  markExt: (x: number, y: number, val: boolean) => void
+): void {
+  const stack: number[] = [sy * mw + sx];
+  const comp: number[] = [];
+  const seen = new Set<number>(stack);
+  let reaches = false;
+  let visited = 0;
+  while (stack.length) {
+    const key = stack.pop()!;
+    const cx = key % mw;
+    const cy = (key / mw) | 0;
+    comp.push(key);
+    if (cx === 0 || cy === 0 || cx === mw - 1 || cy === mh - 1) {
+      reaches = true; // touches the map border → genuinely exterior
+      break;
+    }
+    if (++visited > SEAL_TEST_BUDGET) {
+      reaches = true; // too large to have been sealed by a single tile → leave exterior as-is
+      break;
+    }
+    const nbr = (nx: number, ny: number) => {
+      if (nx < 0 || ny < 0 || nx >= mw || ny >= mh) return;
+      if (solid[ny][nx]) return;
+      const k = ny * mw + nx;
+      if (!seen.has(k)) {
+        seen.add(k);
+        stack.push(k);
+      }
+    };
+    nbr(cx + 1, cy);
+    nbr(cx - 1, cy);
+    nbr(cx, cy + 1);
+    nbr(cx, cy - 1);
+  }
+  if (!reaches) for (const k of comp) markExt(k % mw, (k / mw) | 0, false); // sealed → hide the pocket
 }
 
 /** `#rrggbb` → [r,g,b] in 0..1, or null on a missing/bad hex. */
@@ -219,48 +436,26 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
   });
 }
 
-export function buildGameGrid(worldMap: WorldTile[][], buildings?: PlacedBuilding[]): GameGrid {
+export function buildGameGrid(
+  worldMap: WorldTile[][],
+  buildings?: PlacedBuilding[],
+  hiddenMask?: boolean[][]
+): GameGrid {
   const grid = new GameGrid();
 
   // Interior-mountain hiding (flood-fill silhouette) — see computeHiddenMask. A hidden tile renders as
   // a blank dirt-bg square (clean massif silhouette / sealed pocket), the same mask GameCanvas uses to
-  // stop glow, hover, and explore-jumps from revealing what's buried.
-  const hiddenMask = computeHiddenMask(worldMap);
+  // stop glow, hover, and explore-jumps from revealing what's buried. The caller (ADR-026
+  // `_fullRebuildTerrain`) passes the mask it already built so we don't BFS the whole map twice.
+  const mask = hiddenMask ?? computeHiddenMask(worldMap);
   for (const row of worldMap) {
-    for (const tile of row) applyTileToGrid(grid, tile, hiddenMask);
+    for (const tile of row) applyTileToGrid(grid, tile, mask);
   }
 
   // Phase 4d: overlay *completed* buildings only — they're opaque, so they live on the glyph grid.
   // Planned / under-construction blueprints are drawn separately on the 2D overlay (drawDesignations
   // in GameCanvas) where real alpha is available, so they can be semi-transparent ghosts.
-  if (buildings) {
-    for (const b of buildings) {
-      if (b.status !== 'complete') continue;
-      const def = buildingService.getBuildingById(b.type);
-      const char = def?.charSpans
-        ? (resolveCharSpans(def.charSpans as Parameters<typeof resolveCharSpans>[0])[0] ?? '#')
-        : '#';
-      // Render from the building's `color` tag (its single tunable hex), falling back to the legacy
-      // `fg` array, then a default. So editing `color` in buildings.jsonc actually recolours it.
-      const fg = hexToRgb01(def?.color) ?? def?.fg ?? [0.87, 0.62, 0.12];
-      const bg = def?.bg ?? [0.06, 0.04, 0.01];
-      grid.setTile(b.x, b.y, {
-        char,
-        foreground: { r: fg[0], g: fg[1], b: fg[2] },
-        background: { r: bg[0], g: bg[1], b: bg[2] },
-        position: { x: b.x, y: b.y }
-      });
-      // Deconstruct-queued overlay: render the demolition glyph in orange-red
-      if (b.deconstructQueued) {
-        grid.setTile(b.x, b.y, {
-          char: DECONSTRUCT_GLYPH,
-          foreground: { r: 1.0, g: 0.25, b: 0.05 },
-          background: { r: bg[0], g: bg[1], b: bg[2] },
-          position: { x: b.x, y: b.y }
-        });
-      }
-    }
-  }
+  if (buildings) for (const b of buildings) applyBuildingToGrid(grid, b);
 
   // NOTE: standing-zone tints (stockpile/drink/wash) are NOT baked here anymore. They — like the
   // work-designation icons — are painted on the lightweight 2D overlay in GameCanvas.drawDesignations,
@@ -268,6 +463,40 @@ export function buildGameGrid(worldMap: WorldTile[][], buildings?: PlacedBuildin
   // "map lags then the color appears" hitch). buildGameGrid is now purely terrain + buildings.
 
   return grid;
+}
+
+/**
+ * Paint ONE completed building's glyph onto the grid (its single cell). Shared by buildGameGrid (full
+ * rebuild) and GameCanvas's incremental building diff (ADR-026) — so placing/removing a building repaints
+ * only its footprint, never all ~562k tiles. Non-complete buildings (blueprints) are NOT drawn here —
+ * they're semi-transparent ghosts on the 2D overlay. The caller repaints the underlying terrain first
+ * (a removed building → terrain shows through), then calls this for any building still on the cell.
+ */
+export function applyBuildingToGrid(grid: GameGrid, b: PlacedBuilding): void {
+  if (b.status !== 'complete') return;
+  const def = buildingService.getBuildingById(b.type);
+  const char = def?.charSpans
+    ? (resolveCharSpans(def.charSpans as Parameters<typeof resolveCharSpans>[0])[0] ?? '#')
+    : '#';
+  // Render from the building's `color` tag (its single tunable hex), falling back to the legacy
+  // `fg` array, then a default. So editing `color` in buildings.jsonc actually recolours it.
+  const fg = hexToRgb01(def?.color) ?? def?.fg ?? [0.87, 0.62, 0.12];
+  const bg = def?.bg ?? [0.06, 0.04, 0.01];
+  grid.setTile(b.x, b.y, {
+    char,
+    foreground: { r: fg[0], g: fg[1], b: fg[2] },
+    background: { r: bg[0], g: bg[1], b: bg[2] },
+    position: { x: b.x, y: b.y }
+  });
+  // Deconstruct-queued overlay: render the demolition glyph in orange-red
+  if (b.deconstructQueued) {
+    grid.setTile(b.x, b.y, {
+      char: DECONSTRUCT_GLYPH,
+      foreground: { r: 1.0, g: 0.25, b: 0.05 },
+      background: { r: bg[0], g: bg[1], b: bg[2] },
+      position: { x: b.x, y: b.y }
+    });
+  }
 }
 
 /**

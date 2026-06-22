@@ -66,6 +66,7 @@ interface TerrainChunk {
   count: number; // uploaded vertex count (0 = empty/off-map chunk, skip the draw)
   builtVersion: number; // cacheVersion the data was baked for (rebuild on mismatch)
   builtLight: number; // lightVersion baked into a_light (rebuild on emitter-set change)
+  builtDirty: number; // per-chunk dirty stamp baked in (ADR-026 incremental terrain — rebuild on mismatch)
   lastFrame: number; // last frame this chunk was visible (for eviction)
 }
 
@@ -99,6 +100,11 @@ export class GridRenderer {
   private static readonly CHUNK_SWEEP_EVERY = 120; // run the eviction sweep this often (frames)
   private terrainChunks: Map<string, TerrainChunk> = new Map();
   private terrainFrame = 0; // monotonic frame counter for chunk LRU eviction
+  // ADR-026 per-chunk dirty: a partial terrain update (markTerrainChunksDirty) stamps ONLY the chunks
+  // holding a changed tile, so they rebuild while every other visible chunk keeps its cached VBO — vs.
+  // bumping the global cacheVersion, which re-vertexes every visible chunk for a single changed tile.
+  private chunkDirty = new Map<string, number>();
+  private chunkDirtyCounter = 0;
 
   // Render statistics
   private stats: GridRenderStats = {
@@ -194,6 +200,19 @@ export class GridRenderer {
    * shader uniforms — so a chunk's buffer is valid across pans and only the VISIBLE SET changes as
    * you scroll, never the geometry.
    */
+  /**
+   * ADR-026: mark only the chunks containing these changed tiles for rebuild on the next draw. Used by
+   * the incremental terrain path (a single bumped stamp per affected chunk) instead of a global
+   * cacheVersion bump, which would re-vertex every visible chunk for one changed tile.
+   */
+  markTerrainChunksDirty(tiles: ReadonlyArray<{ x: number; y: number }>): void {
+    const CS = GridRenderer.CHUNK_SIZE;
+    for (const t of tiles) {
+      const key = `${Math.floor(t.x / CS)}:${Math.floor(t.y / CS)}`;
+      this.chunkDirty.set(key, ++this.chunkDirtyCounter);
+    }
+  }
+
   private renderTerrainChunked(grid: GameGrid, options: GridRenderOptions): number {
     const CS = GridRenderer.CHUNK_SIZE;
     const m = GridRenderer.CHUNK_MARGIN;
@@ -245,11 +264,17 @@ export class GridRenderer {
     const CS = GridRenderer.CHUNK_SIZE;
     const key = `${cx}:${cy}`;
     let chunk = this.terrainChunks.get(key);
+    const dirtyStamp = this.chunkDirty.get(key) ?? 0; // ADR-026 per-chunk incremental invalidation
 
-    if (!chunk || chunk.builtVersion !== version || chunk.builtLight !== lightVersion) {
+    if (
+      !chunk ||
+      chunk.builtVersion !== version ||
+      chunk.builtLight !== lightVersion ||
+      chunk.builtDirty !== dirtyStamp
+    ) {
       const tiles = grid.getTilesInRegion(cx * CS, cy * CS, CS, CS);
       if (!chunk) {
-        chunk = { vao: null, vbo: null, count: 0, builtVersion: version, builtLight: lightVersion, lastFrame: frame };
+        chunk = { vao: null, vbo: null, count: 0, builtVersion: version, builtLight: lightVersion, builtDirty: dirtyStamp, lastFrame: frame };
         this.terrainChunks.set(key, chunk);
       }
       if (tiles.length === 0) {
@@ -271,6 +296,7 @@ export class GridRenderer {
       }
       chunk.builtVersion = version;
       chunk.builtLight = lightVersion;
+      chunk.builtDirty = dirtyStamp;
     }
 
     chunk.lastFrame = frame;
