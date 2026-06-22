@@ -73,6 +73,15 @@
           style="animation-delay:0.7s">↓</span
         ><span class="collapse-arrow" style="animation-delay:1.4s">↓</span>
       </div>
+    {:else if float.kind === 'winded'}
+      <!-- Winded/out-of-breath: the SAME rising stagger as collapse, but BLUE ↓ arrows — an exhausted
+           (not downed) tell, so it reads as "catching its breath", distinct from the red collapse emergency. -->
+      <div class="winded-float" style={xf}>
+        <span class="winded-arrow" style="animation-delay:0s">↓</span><span
+          class="winded-arrow"
+          style="animation-delay:0.7s">↓</span
+        ><span class="winded-arrow" style="animation-delay:1.4s">↓</span>
+      </div>
     {:else if float.kind === 'campfire'}
       <div class="fire-sparks" style={xf}>
         <span class="spark s1">·</span>
@@ -347,6 +356,37 @@
       0 0.6px 0 #e23b3b,
       0 -0.6px 0 #e23b3b,
       0 0 4px #800;
+    will-change: transform, opacity;
+  }
+
+  /* ── Winded (stamina spent) — the SAME rising stagger as collapse, but BLUE ↓ arrows: a conscious,
+     out-of-breath pawn/mob catching its breath, distinct from the red collapse emergency. ── */
+
+  .winded-float {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    display: flex;
+    gap: 1px;
+    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) scale(...) */
+  }
+
+  .winded-arrow {
+    color: #4aa3ff;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    opacity: 0;
+    /* Reuse the Zzz rise (opacity + translateY + scale) — colour/glyph are the only difference. */
+    animation: zzz-rise 2.1s ease-out infinite;
+    /* Same stroke-thickening as the collapse ↓ (the thin glyph reads light), but in blue. */
+    text-shadow:
+      0.6px 0 0 #4aa3ff,
+      -0.6px 0 0 #4aa3ff,
+      0 0.6px 0 #4aa3ff,
+      0 -0.6px 0 #4aa3ff,
+      0 0 4px #0a3a80;
     will-change: transform, opacity;
   }
 

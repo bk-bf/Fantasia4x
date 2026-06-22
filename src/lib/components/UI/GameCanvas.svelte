@@ -1373,15 +1373,30 @@
         if (onScreen(o)) newGlyphs.push(o);
         continue;
       }
-      if (p.currentState !== 'Sleeping') continue;
-      const o = glyphOf(p.id, p.position.x, p.position.y, needsRecovery(p as never) ? 'rest' : 'sleep');
-      if (onScreen(o)) newGlyphs.push(o);
+      if (p.currentState === 'Sleeping') {
+        const o = glyphOf(p.id, p.position.x, p.position.y, needsRecovery(p as never) ? 'rest' : 'sleep');
+        if (onScreen(o)) newGlyphs.push(o);
+        continue;
+      }
+      // Winded (stamina spent) — a blue ↓ tell on a conscious, non-sleeping pawn, so an exhausted
+      // pawn standing to catch its breath reads at a glance (transientConditions ships hot every flush).
+      if ((p.transientConditions ?? []).includes('winded')) {
+        const o = glyphOf(p.id, p.position.x, p.position.y, 'winded');
+        if (onScreen(o)) newGlyphs.push(o);
+      }
     }
     for (const m of mobs) {
-      if (m.state !== 'Sleeping') continue;
-      if (isHiddenTile(m.x, m.y)) continue; // under the fog → no Zzz leak
-      const o = glyphOf(m.id, m.x, m.y, 'sleep');
-      if (onScreen(o)) newGlyphs.push(o);
+      if (isHiddenTile(m.x, m.y)) continue; // under the fog → no Zzz/↓ leak
+      if (m.state === 'Sleeping') {
+        const o = glyphOf(m.id, m.x, m.y, 'sleep');
+        if (onScreen(o)) newGlyphs.push(o);
+        continue;
+      }
+      // Winded mob (e.g. a boar that sprinted itself out) stands still to recover — show the blue ↓ tell.
+      if ((m.transientConditions ?? []).includes('winded')) {
+        const o = glyphOf(m.id, m.x, m.y, 'winded');
+        if (onScreen(o)) newGlyphs.push(o);
+      }
     }
     // Campfire sparks anchor at the tile CENTER (not the -18 head offset of the pawn glyphs).
     for (const b of buildings) {
