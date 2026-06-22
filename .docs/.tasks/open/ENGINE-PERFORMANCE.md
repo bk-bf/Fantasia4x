@@ -42,6 +42,20 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
   by `combatSim.test.ts` (a `tickCombat`-doesn't-mutate-its-input test, so the fresh-corpse index-diff stays
   valid). **Lesson (the reason for the AGENTS.md cross-check rule): I caused a perf regression while fixing a
   perf bug — every hot-path/snapshot edit must be cross-checked against THIS spec + `perf.log` re-read after.**
+- **🗺️ INCREMENTAL-ONLY TERRAIN (ADR-026, 2026-06-22) — every full-map CPU rebuild on a delta eliminated.**
+  At 750² (562k tiles) the renderer still re-derived what the worker already shipped: a 562k ref-scan per
+  redraw, a 562k-`setTile` `buildGameGrid` on ANY building change, and a whole-map `computeHiddenMask` BFS +
+  `collectResourceEmitters` scan on EVERY harvest/regrowth tick. Fix: a main-thread changed-tile channel
+  (`mainTileDeltas`, fed by `simWorkerClient` from `worldMapDelta`) drives per-cell repaints via
+  `applyTileToGrid`; buildings/blueprint are diffed (single-cell `applyBuildingToGrid`); the hidden mask
+  updates LOCALLY (`updateHiddenMaskAt` — early-outs unless a SOLID tile flips, then re-floods only the
+  affected pocket, persisted `solid`/`exterior`); grove glows are a per-tile emitter `Map`. The full
+  builders now live behind ONE seam (`gameCanvas/terrainPaint::fullRebuildTerrain`, first build / new-map
+  load only), enforced by a codegraph `restricted-callee` rule (ADR-026). GPU side: `setGrid(grid,
+  dirtyTiles)` stamps only the §E chunks holding a changed cell (`markTerrainChunksDirty`) instead of a
+  global `gridVersion` bump. Guarded by `hiddenMaskIncremental.test.ts`; `check`/`test` (561) green,
+  `graph:check` ADR-026 ✓. **Re-check `perf.log` in-game** (the `[TRIG]` probe should still show
+  `worldMapRef=0`; terrain bumps only on real changes, no per-tick whole-map scan).
 - **🧱 CHUNKED TERRAIN (§E, 2026-06-20) — FPS regression from the 500×500 default map, FIXED + validated in-game.** Commit
   `b2a1031` changed the default map 240×160 → 500×500 (**38k → 250k tiles, 6.5×**). TPS was unaffected
   (the sim is per-*entity*: a 5-pawn/420-mob playtest) but **FPS clapped** — the renderer drew the WHOLE
