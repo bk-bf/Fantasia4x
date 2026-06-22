@@ -1399,6 +1399,12 @@
       }
     }
     for (const m of mobs) {
+      // A corpse is inert: the sim FSM skips Corpse mobs (entityAI.stepEntities), so their
+      // conditionTimers never tick down and any transient they died with — `winded` especially —
+      // stays frozen on the entity forever. Without this guard the blue ↓ "winded" tell (and the
+      // sleep Zzz) kept animating over a dead body that no longer renders as a live mob. Living-status
+      // overlays must never attach to a corpse, regardless of stale transientConditions.
+      if (m.state === 'Corpse') continue;
       if (isHiddenTile(m.x, m.y)) continue; // under the fog → no Zzz/↓ leak
       if (m.state === 'Sleeping') {
         const o = glyphOf(m.id, m.x, m.y, 'sleep');
