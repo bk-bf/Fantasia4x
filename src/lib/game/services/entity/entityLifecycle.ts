@@ -156,10 +156,14 @@ export function stepHunger(state: GameState): GameState {
     // acting (trying to hunt/forage) for in-game DAYS, growing progressively weaker, and only dies
     // when malnutrition reaches lethal severity. The severe stage trips the FSM into Collapsed
     // (entityAI). Mobs carry no `thirst` need, so dehydration never onsets.
-    const lethalCondition = driveNeedConditions(conditions, {
-      ...(mob.needs as unknown as Record<string, number>),
-      hunger: newHunger
-    });
+    const lethalCondition = driveNeedConditions(
+      conditions,
+      {
+        ...(mob.needs as unknown as Record<string, number>),
+        hunger: newHunger
+      },
+      tickScale
+    );
     if (lethalCondition) {
       const cause = lethalCondition === 'malnutrition' ? 'starvation' : lethalCondition;
       simLog.logEntityDeath(mob.id, entityName(mob), cause, turn, mob.x, mob.y);

@@ -220,12 +220,17 @@ export function applyConditionDriver(
   conditions: EntityCondition[],
   def: ConditionDef,
   needVal: number,
-  recoveryMul = 1
+  recoveryMul = 1,
+  // Elapsed real ticks this call represents. 1 for per-tick callers (pawns, in-bubble mobs); an
+  // off-bubble mob only reaches here on its throttled think-tick, so it passes AI_THROTTLE_TICKS to
+  // accrue/recover at the same per-tick rate over the ticks it skipped (matches the bars in stepHunger).
+  // The onset *delay* is wall-clock and does NOT scale — only the post-onset accrual/recovery does.
+  tickScale = 1
 ): void {
   const d = def.driver!;
   const idx = conditions.findIndex((c) => c.id === def.id);
   if (needVal >= d.onset) {
-    const rate = perTick(needVal >= 100 ? d.rateMax : d.rateCritical);
+    const rate = perTick(needVal >= 100 ? d.rateMax : d.rateCritical) * tickScale;
     if (idx === -1) {
       // Onset delay: seed a NEGATIVE severity so the condition only crosses 0 — becoming visible,
       // stat-affecting and lethal-eligible — after the need has held at/above onset for `onsetDelay`
@@ -243,7 +248,7 @@ export function applyConditionDriver(
   }
   if (needVal < d.safe && idx !== -1) {
     // `recoveryMul` accelerates recovery (e.g. a sheltered pawn warms/cools faster — SEASONS_WEATHER).
-    const newSeverity = conditions[idx].severity - perTick(d.recovery) * recoveryMul;
+    const newSeverity = conditions[idx].severity - perTick(d.recovery) * recoveryMul * tickScale;
     if (newSeverity <= 0) conditions.splice(idx, 1);
     else conditions[idx] = { ...conditions[idx], severity: newSeverity };
   }
@@ -259,13 +264,16 @@ export function applyConditionDriver(
  */
 export function driveNeedConditions(
   conditions: EntityCondition[],
-  needVals: Record<string, number> | undefined
+  needVals: Record<string, number> | undefined,
+  // Off-bubble mobs call this once per throttled think-tick — pass AI_THROTTLE_TICKS so malnutrition
+  // accrues/recovers at the real per-tick rate over the skipped ticks. Pawns omit it (per-tick → 1).
+  tickScale = 1
 ): string | null {
   for (const def of CONDITIONS_DB) {
     if (!def.driver) continue;
     if (def.driver.source) continue; // environment-driven (temperature) — see driveTemperatureConditions
     const needVal = needVals?.[def.driver.need!] ?? 0;
-    applyConditionDriver(conditions, def, needVal);
+    applyConditionDriver(conditions, def, needVal, 1, tickScale);
     const current = conditions.find((c) => c.id === def.id);
     if (current && current.severity >= def.lethalSeverity) return def.id;
   }
