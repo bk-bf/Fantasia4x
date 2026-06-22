@@ -76,6 +76,11 @@
     background: rgba(255, 42, 26, 0.12);
     box-shadow: inset 2px 0 0 #ff2a1a;
   }
+  /* Hover solidifies the row's background like the parent chronicle entries (.entry:hover). Placed
+     after the tier/crit/fatal backgrounds (equal specificity) so it wins on source order. */
+  .line:hover {
+    background: var(--bg-hover);
+  }
 
   .head {
     display: flex;
@@ -168,19 +173,20 @@
     color: #fff;
     background: #cc2222;
   }
-  /* Wound this swing inflicted — coloured by severity. */
+  /* Wound this swing inflicted — coloured by severity. Light text on darker, saturated backgrounds so
+     the label stays legible (the old near-black text washed out under the panel's night/weather tint). */
   .tag.wound {
     text-transform: capitalize;
-    color: #1a1208;
-    background: #c98a3a;
+    color: #f4ecd8;
+    background: #8a5a24;
   }
   .tag.wound.sev-minor {
-    color: #111;
-    background: #9a9a8a;
+    color: #ece8da;
+    background: #5f5f50;
   }
   .tag.wound.sev-serious {
-    color: #1a1208;
-    background: #e0853a;
+    color: #fff;
+    background: #b4631d;
   }
   .tag.wound.sev-critical {
     color: #fff;

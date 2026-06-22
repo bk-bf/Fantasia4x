@@ -225,6 +225,12 @@
   .panel.transparent .entry:hover {
     background: var(--bg-hover);
   }
+  /* Nested combat-breakdown rows are siblings of .entry (not .entry themselves), so the click-through
+     aside leaves them with no pointer-events — re-enable so they stay hoverable like the parent lines
+     (their own .line:hover then solidifies the background). */
+  .panel.transparent :global(.breakdown) {
+    pointer-events: auto;
+  }
   .panel.transparent .clear-btn {
     pointer-events: auto;
   }
