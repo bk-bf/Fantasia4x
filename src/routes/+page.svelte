@@ -21,10 +21,19 @@
   import MainMenu from '$lib/components/UI/MainMenu.svelte';
   import PauseMenu from '$lib/components/UI/PauseMenu.svelte';
   import { get } from 'svelte/store';
+  import { onMount } from 'svelte';
   import { autohideScroll } from '$lib/actions/autohideScroll';
   import { uiState } from '$lib/stores/uiState';
   import { hideSidebars, debugMode } from '$lib/stores/uiPrefs';
-  import { gameState, storeReady, bootReveal, isGameOver, appPhase } from '$lib/stores/gameState';
+  import {
+    gameState,
+    storeReady,
+    bootReveal,
+    isGameOver,
+    appPhase,
+    menuPreviewReady,
+    menuPreviewRendered
+  } from '$lib/stores/gameState';
   // Side-effect import: starts the EXPLORE tab's background resource-ledger cache from game start, so
   // opening the tab reads a ready list instead of scanning the whole map on the click path.
   import '$lib/stores/discoveredResources';
@@ -118,6 +127,21 @@
     if (key === 'research' && !hasResearch) return;
     uiState.toggleScreen(key as any);
   }
+
+  // ===== MENU LOADING OVERLAY =====
+  // Hold the loading overlay over the title screen until the preview map fires its "first frame
+  // painted" signal (menuPreviewRendered), so the ~1s WebGL init + terrain build is hidden instead of
+  // popping in late. Once revealed it stays revealed (the map only loads once per session).
+  let menuRevealed = false;
+  $: if ($menuPreviewRendered) menuRevealed = true;
+  // Safety nets so the loader can never strand the menu: reveal anyway after a generous timeout (e.g.
+  // WebGL unavailable → the map never paints), and immediately if the preview never even starts
+  // (menuPreviewReady stays false, e.g. a no-worker fallback).
+  onMount(() => {
+    const t = setTimeout(() => (menuRevealed = true), 8000);
+    return () => clearTimeout(t);
+  });
+  $: menuLoading = $appPhase === 'menu' && $menuPreviewReady && !menuRevealed;
 
   // ===== PAUSE / ESCAPE MENU =====
   let pauseMenuOpen = false;
@@ -242,6 +266,14 @@
 
 {#if $appPhase === 'menu'}
   <MainMenu />
+{/if}
+
+<!-- Title-screen loader: covers the menu + its preview map while the backdrop's WebGL/terrain inits,
+     and drops (fades out) the instant the map reports its first painted frame (menuPreviewRendered),
+     so the load is hidden rather than popping in a second late. Rendered AFTER MainMenu so it sits on
+     top at the same z-index. -->
+{#if menuLoading}
+  <LoadingScreen />
 {/if}
 
 {#if $appPhase === 'game' && $storeReady}

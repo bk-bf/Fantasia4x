@@ -29,9 +29,11 @@
     overflow: hidden;
     /* Click-through: the menu buttons sit above and own all interaction. */
     pointer-events: none;
-    /* Hidden until the first terrain frame is painted (see header) — then fade in. */
+    /* Hidden until the first terrain frame is painted (see header). The title-screen loader covers the
+       whole init and only drops on that same signal, so this just needs a quick fade to align with the
+       loader's fade-out — by the time the loader is gone the map is already there, no late "loading in". */
     opacity: 0;
-    transition: opacity 0.8s ease-out;
+    transition: opacity 0.3s ease-out;
   }
   .menu-backdrop.revealed {
     opacity: 1;
