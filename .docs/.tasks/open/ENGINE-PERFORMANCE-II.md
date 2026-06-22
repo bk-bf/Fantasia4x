@@ -26,7 +26,7 @@ up to 1650 mobs** to expose the next ceiling:
 
 ---
 
-## 🧠 BREAKTHROUGH 1 — Entity complexity bubble (the TPS lever) — SHIPPED
+## BREAKTHROUGH 1 — Entity complexity bubble (the TPS lever) — SHIPPED
 
 The headline TPS fix (supersedes S5b "entity LOD"). **THINKING is gated, not drawing** — every mob is
 still rendered and still *moves + fights* every tick; only the expensive *decisions* are throttled by
@@ -54,7 +54,7 @@ distance. `services/entity/entityAI.ts` + `entityHelpers.ts` + `entityLifecycle.
 
 ---
 
-## 🗺️ BREAKTHROUGH 2 — Incremental-only terrain (the FPS lever) — SHIPPED (ADR-026)
+## BREAKTHROUGH 2 — Incremental-only terrain (the FPS lever) — SHIPPED (ADR-026)
 
 The headline FPS fix (supersedes **R2**). **No full-map rebuild on a per-tick delta** — repaint only the
 changed cells + their dependents; a full O(map) pass is legal ONLY on a new-map load. Codified as
