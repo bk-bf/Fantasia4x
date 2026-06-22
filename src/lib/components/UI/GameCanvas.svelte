@@ -228,15 +228,6 @@
     _renderDirty = true;
   };
 
-  // Frozen-view bitmap cache. When zoomed out past FREEZE_TILE_PX the whole 750² map is visible, so the
-  // live GL path re-rasterizes ALL ~550 visible chunks (and rebuilds any the LRU evicted) — the hitch the
-  // user feels crossing into the static view. Instead we render the frozen frame to GL ONCE, snapshot it
-  // into a 2D `<canvas>` overlay, and show that bitmap while frozen — ZERO GL work until the view/terrain
-  // changes (`_renderDirty`). The GL canvas stays underneath: a no-op/blank capture just shows the live
-  // frozen frame through (clearRect→drawImage, so a failed snapshot is transparent, never black).
-  let frozenCanvas: HTMLCanvasElement;
-  let _frozenShown = false;
-
   // Viewport offset in tile coordinates
   let viewX = 0;
   let viewY = 0;
@@ -1669,36 +1660,6 @@
     _lairTiles = out;
   }
 
-  /** Toggle the frozen bitmap overlay on/off (display only — the bitmap itself persists for reuse). */
-  function showFrozenOverlay(show: boolean): void {
-    if (!frozenCanvas) return;
-    frozenCanvas.style.display = show ? 'block' : 'none';
-    _frozenShown = show;
-  }
-
-  /**
-   * Snapshot the just-rendered GL frame into the 2D `frozenCanvas` overlay and show it. Done in the SAME
-   * rAF tick right after endFrame, so the WebGL drawing buffer is still intact (no preserveDrawingBuffer
-   * needed). A failed/blank capture is transparent (clearRect first), so the live GL frame underneath
-   * shows through — never a black screen.
-   */
-  function captureFrozenFrame(): void {
-    if (!canvas || !frozenCanvas) return;
-    if (frozenCanvas.width !== canvas.width || frozenCanvas.height !== canvas.height) {
-      frozenCanvas.width = canvas.width;
-      frozenCanvas.height = canvas.height;
-    }
-    const fctx = frozenCanvas.getContext('2d');
-    if (!fctx) return;
-    fctx.clearRect(0, 0, frozenCanvas.width, frozenCanvas.height);
-    try {
-      fctx.drawImage(canvas, 0, 0);
-    } catch {
-      return; // capture failed → leave overlay hidden, keep showing live GL
-    }
-    showFrozenOverlay(true);
-  }
-
   // Rebuilding the full base grid + bumping the terrain version is expensive at
   // zoom-out (tens of thousands of tiles). Mousemove-driven previews (zone paint,
   // selection drag, blueprint drag) can fire many times per frame, so coalesce
@@ -2822,41 +2783,22 @@
       // heavy map+entity layers while keeping the light animated layers redrawing).
       // The menu backdrop is a LIVE scene (grazing prey) — never freeze it, even zoomed out.
       const frozen = !menuPreview && (customMapPreview || tileWidth < FREEZE_TILE_PX);
-      const drawGL = () => {
-        renderer!.setItemOverlayGrid(itemOverlayGrid);
-        renderer!.setOverlayGrid(pawnOverlayGrid);
-        renderer!.beginFrame();
-        renderer!.endFrame();
-      };
-      if (frozen) {
-        // Static zoomed-out view: (re)render to GL + snapshot to the bitmap cache ONLY when something
-        // visible changed (pan/zoom/terrain → _renderDirty) or the cache isn't up yet. Otherwise the
-        // bitmap is on screen and we do ZERO GL work — no per-FROZEN_SAFETY_MS all-chunks re-raster.
-        if (_renderDirty || !_frozenShown) {
-          drawGL();
-          captureFrozenFrame(); // snapshot the GL frame into the overlay, then show it
-          _renderDirty = false;
-          lastDrawAt = now;
-        }
+      if (_renderDirty || !frozen || now - lastDrawAt >= FROZEN_SAFETY_MS) {
+        renderer.setItemOverlayGrid(itemOverlayGrid);
+        renderer.setOverlayGrid(pawnOverlayGrid);
+        renderer.beginFrame();
+        renderer.endFrame();
+        _renderDirty = false;
+        lastDrawAt = now;
+        // Surface render FPS to the topbar ~4×/sec to avoid store churn.
         if (now - lastFpsPush > 250) {
           lastFpsPush = now;
-          renderFps.set(0); // static bitmap view — no render cost to report
+          renderFps.set(Math.round(renderer.getStats().fps));
         }
-      } else {
-        if (_frozenShown) {
-          showFrozenOverlay(false); // back to the live GL canvas
-          _renderDirty = true; // the retained GL frame is at the frozen zoom — force a fresh draw now
-        }
-        if (_renderDirty || now - lastDrawAt >= FROZEN_SAFETY_MS) {
-          drawGL();
-          _renderDirty = false;
-          lastDrawAt = now;
-          // Surface render FPS to the topbar ~4×/sec to avoid store churn.
-          if (now - lastFpsPush > 250) {
-            lastFpsPush = now;
-            renderFps.set(Math.round(renderer.getStats().fps));
-          }
-        }
+      } else if (now - lastFpsPush > 250) {
+        // Frozen + idle: no frames drawn, so report 0 — the WebGL canvas retains its last frame.
+        lastFpsPush = now;
+        renderFps.set(0);
       }
       animationId = requestAnimationFrame(frame);
     }
@@ -3724,7 +3666,6 @@
   on:contextmenu={handleContextMenu}
 >
   <canvas bind:this={canvas}></canvas>
-  <canvas bind:this={frozenCanvas} class="frozen-layer"></canvas>
   <canvas bind:this={designCanvas} class="desig-layer"></canvas>
 
   {#if errorMsg}
@@ -4159,20 +4100,6 @@
   }
   .canvas-wrap.dragging {
     cursor: var(--app-cursor), grabbing;
-  }
-  .frozen-layer {
-    /* ADR-026 §II: bitmap snapshot of the GL frame shown while the zoomed-out view is frozen, so the
-       static map costs zero GL. Sits directly over the GL canvas (below designations); ambient dimming is
-       already baked into the captured pixels, so NO #ambient-tint filter here (that would double-dim). */
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 0;
-    image-rendering: pixelated;
-    display: none;
   }
   .desig-layer {
     position: absolute;
