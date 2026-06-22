@@ -30,6 +30,16 @@ export function isStandingZoneType(type: DesignationType): boolean {
   return STANDING_ZONE_TYPES.has(type);
 }
 
+/**
+ * Zone types that may ONLY be painted on walkable land — the gate that stops a stockpile/farm from
+ * being drawn into water or onto a mountain/cliff wall (pawns stand on these tiles to work them).
+ * This is the FLAG the impassable-tile block reads: a zone type is restricted iff it's in this set.
+ * `drink`/`wash` are deliberately absent (they sit ON water, which is impassable — gated by
+ * `requiresWater` instead), and a future HOME/territory zone is likewise left out so it CAN enclose
+ * impassable tiles (walls, water). Add new land-only zones here; leave impassable-capable ones out.
+ */
+const WALKABLE_ONLY_ZONE_TYPES = new Set<DesignationType>(['stockpile', 'grow']);
+
 /** Tile keys ("x,y") that belong to the given standing-zone type. */
 export function zoneTileKeys(gameState: GameState, type: DesignationType): string[] {
   const zt = gameState.zoneTiles ?? {};
@@ -102,6 +112,16 @@ class DesignationServiceImpl {
     return !!t && (t.type === 'water' || t.terrainType === 'river' || t.terrainType === 'lake');
   }
 
+  /** Impassable = the tile can't be walked onto (water, mountain/cliff wall, solid building). */
+  isImpassableTile(gameState: GameState, x: number, y: number): boolean {
+    return gameState.worldMap?.[y]?.[x]?.walkable === false;
+  }
+
+  /** True when `type` is a zone that may only be painted on walkable land (see WALKABLE_ONLY_ZONE_TYPES). */
+  private requiresWalkableLand(type: DesignationType): boolean {
+    return WALKABLE_ONLY_ZONE_TYPES.has(type);
+  }
+
   /**
    * Add or update a designation at (x, y).
    * Optionally assigns the tile to a zone instance.
@@ -116,6 +136,9 @@ class DesignationServiceImpl {
   ): GameState {
     // Drink/wash zones are only valid on water — silently ignore off-water paints.
     if (this.requiresWater(type) && !this.isWaterTile(gameState, x, y)) return gameState;
+    // Land zones (stockpile/farm) can't be painted on impassable tiles (water / walls). Flag-gated via
+    // WALKABLE_ONLY_ZONE_TYPES so future home/territory zones can still mark impassable tiles.
+    if (this.requiresWalkableLand(type) && this.isImpassableTile(gameState, x, y)) return gameState;
     const k = this.key(x, y);
     let state: GameState;
     if (isStandingZoneType(type)) {
@@ -227,6 +250,7 @@ class DesignationServiceImpl {
     const mapW = gameState.worldMap?.[0]?.length ?? 0;
 
     const waterOnly = this.requiresWater(type);
+    const walkableOnly = this.requiresWalkableLand(type);
     const standingZone = isStandingZoneType(type);
     const newDesignations = standingZone ? undefined : { ...(gameState.designations ?? {}) };
     const newZoneTiles = standingZone ? { ...(gameState.zoneTiles ?? {}) } : undefined;
@@ -237,6 +261,8 @@ class DesignationServiceImpl {
         if (mapH > 0 && (x < 0 || y < 0 || x >= mapW || y >= mapH)) continue;
         // Drink/wash zones only paint onto water tiles within the dragged rect.
         if (waterOnly && !this.isWaterTile(gameState, x, y)) continue;
+        // Land zones skip impassable tiles (water / walls) — flag-gated for future home zones.
+        if (walkableOnly && this.isImpassableTile(gameState, x, y)) continue;
         const k = this.key(x, y);
         if (standingZone) this.addZoneTile(newZoneTiles!, k, type);
         else newDesignations![k] = type;

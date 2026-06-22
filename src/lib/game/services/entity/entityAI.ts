@@ -39,6 +39,7 @@ import {
   FORAGE_RADIUS,
   LIVE_RADIUS,
   THREAT_INTERRUPT_RANGE,
+  AI_THROTTLE_TICKS,
   SLEEP_FATIGUE_THRESHOLD,
   SLEEP_MAX_HUNGER,
   SAFE_RESET_TICKS,
@@ -66,6 +67,11 @@ import {
 // Cap scales with population (with a floor) so the ecosystem still predates healthily — it bounds the
 // worst case, not normal play.
 let _huntSlots = 0;
+// §LOD: ticks elapsed since this mob last ran its FSM — 1 inside the bubble (per-tick), AI_THROTTLE_TICKS
+// outside (it only thinks every Nth tick). Set per-mob in stepEntities; read by the eating steppers so
+// time-based progress (eatProgress) advances by REAL elapsed time, not per-think — otherwise a throttled
+// grazer's "Eating" took N× too long. Module var (same pattern as _huntSlots); defaults to 1 for tests.
+let _thinkDtTicks = 1;
 function takeHuntSlot(): boolean {
   if (_huntSlots <= 0) return false;
   _huntSlots--;
@@ -208,6 +214,9 @@ export function stepEntities(state: GameState): GameState {
       next[i] = mob; // throttled this tick — keep state; movement + combat run per-tick elsewhere
       continue;
     }
+    // Elapsed-time scale for time-based FSM progress (eating): off-bubble mobs only get here every Nth
+    // tick, so N ticks of progress happen per think (a threat-interrupted eater would just flee, not eat).
+    _thinkDtTicks = inBubble ? 1 : AI_THROTTLE_TICKS;
     const stepped = stepOne(
       mob,
       def,
@@ -772,7 +781,8 @@ export function stepHostile(
       }
       // Drain stamina while fleeing; transition to Exhausted when empty.
       const curStamina = mob.stamina ?? mob.maxStamina ?? calcMaxStamina(mob.stats);
-      const drainedStamina = curStamina - FLEE_STAMINA_DRAIN_PER_SECOND * SECONDS_PER_TICK;
+      const drainedStamina =
+        curStamina - FLEE_STAMINA_DRAIN_PER_SECOND * SECONDS_PER_TICK * _thinkDtTicks;
       if (drainedStamina <= 0) {
         return { ...mob, state: 'Exhausted', stateSince: turn, stamina: 0, path: [] };
       }
@@ -950,7 +960,8 @@ export function stepAnimal(
     case 'Fleeing': {
       // Drain stamina while fleeing; transition to Exhausted when empty.
       const curStamina = mob.stamina ?? mob.maxStamina ?? calcMaxStamina(mob.stats);
-      const drainedStamina = curStamina - FLEE_STAMINA_DRAIN_PER_SECOND * SECONDS_PER_TICK;
+      const drainedStamina =
+        curStamina - FLEE_STAMINA_DRAIN_PER_SECOND * SECONDS_PER_TICK * _thinkDtTicks;
       if (drainedStamina <= 0) {
         // Exhaustion is a transient, repeating state (flee → exhaust → recover → flee);
         // not chronicle-worthy — logging it floods the log.
@@ -1070,7 +1081,7 @@ export function stepForaging(
   // Eating in progress — stay still and advance progress by elapsed seconds.
   const progress = mob.eatProgress ?? 0;
   if (progress > 0) {
-    const next = progress + SECONDS_PER_TICK / EAT_GRASS_SECONDS;
+    const next = progress + (_thinkDtTicks * SECONDS_PER_TICK) / EAT_GRASS_SECONDS;
     if (next >= 1) {
       // Deplete the edible resource (grass OR wild forage node) on the current tile,
       // restoring more hunger from real forage food than from plain grass.
@@ -1132,7 +1143,7 @@ export function stepForaging(
 
   if (found.path.length === 0) {
     // Standing on the food tile already — start eating.
-    return { ...mob, eatProgress: SECONDS_PER_TICK / EAT_GRASS_SECONDS, path: [] };
+    return { ...mob, eatProgress: (_thinkDtTicks * SECONDS_PER_TICK) / EAT_GRASS_SECONDS, path: [] };
   }
   return { ...mob, path: found.path, pathIndex: 0, nextCellCostLeft: undefined };
 }
@@ -1169,7 +1180,7 @@ export function stepHunting(
         stateSince: turn
       };
     }
-    const next = progress + SECONDS_PER_TICK / EAT_CORPSE_SECONDS;
+    const next = progress + (_thinkDtTicks * SECONDS_PER_TICK) / EAT_CORPSE_SECONDS;
     if (next >= 1) {
       // Record the portion consumed so the corpse's meatLeft is updated after the loop.
       pendingMeatConsumption.set(
@@ -1184,7 +1195,7 @@ export function stepHunting(
       if (stillHungry && !targetStripped) {
         return {
           ...mob,
-          eatProgress: SECONDS_PER_TICK / EAT_CORPSE_SECONDS,
+          eatProgress: (_thinkDtTicks * SECONDS_PER_TICK) / EAT_CORPSE_SECONDS,
           needs: { ...mob.needs, hunger: newHunger, lastMeal: turn }
         };
       }
@@ -1256,7 +1267,7 @@ export function stepHunting(
       return {
         ...mob,
         huntTargetId: prey.id,
-        eatProgress: SECONDS_PER_TICK / EAT_CORPSE_SECONDS,
+        eatProgress: (_thinkDtTicks * SECONDS_PER_TICK) / EAT_CORPSE_SECONDS,
         path: []
       };
     }

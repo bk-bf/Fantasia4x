@@ -109,7 +109,7 @@ export function stepHunger(state: GameState): GameState {
       mob.needs.hunger + hungerDelta * (sleepingNow ? SLEEP_HUNGER_RATE : 1)
     );
     const newFatigue = sleepingNow
-      ? Math.max(0, mob.needs.fatigue - SLEEP_RECOVERY_PER_SECOND * SECONDS_PER_TICK)
+      ? Math.max(0, mob.needs.fatigue - SLEEP_RECOVERY_PER_SECOND * SECONDS_PER_TICK * tickScale)
       : Math.min(100, mob.needs.fatigue + fatigueDelta);
 
     // ── Clotting ──────────────────────────────────────────────────────────────────
@@ -117,11 +117,14 @@ export function stepHunger(state: GameState): GameState {
     // higher base chance (MOB_* constants) and reliably self-stabilise within ~an in-game hour after a
     // fight. Mutates the limb objects in place (M3 — no per-tick alloc).
     const limbs = mob.limbs;
-    if (limbs && turn % MOB_CLOT_ROLL_INTERVAL === 0) {
-      const clotChance = Math.min(
-        0.95,
-        Math.max(0, MOB_BASE_CLOT_CHANCE * pawnStatService.evaluateStat('blood_clotting', mob))
-      );
+    if (limbs && (inBubble ? turn % MOB_CLOT_ROLL_INTERVAL === 0 : true)) {
+      // Off-bubble: roll EVERY think (the mob's only cadence) but scale the per-roll chance down so the
+      // expected clot rate over an interval matches the bubble's single per-interval roll.
+      const clotChance =
+        Math.min(
+          0.95,
+          Math.max(0, MOB_BASE_CLOT_CHANCE * pawnStatService.evaluateStat('blood_clotting', mob))
+        ) * (inBubble ? 1 : tickScale / MOB_CLOT_ROLL_INTERVAL);
       // Clotting mutates limb objects in place → bump mob.limbs ref so the worker re-ships the
       // updated bleed/clot state to the body panel (ref-diff cold sync).
       if (rollWoundClotting(limbs, clotChance, turn)) mob.limbs = limbs.slice();
@@ -133,10 +136,10 @@ export function stepHunger(state: GameState): GameState {
     let bloodVolume = mob.bloodVolume ?? maxBV;
 
     if (totalBleedRate > 0) {
-      bloodVolume = Math.max(0, bloodVolume - perTick(totalBleedRate));
+      bloodVolume = Math.max(0, bloodVolume - perTick(totalBleedRate) * tickScale);
     } else if (bloodVolume < maxBV) {
       // Slow regeneration when not bleeding (~2000s to full recovery).
-      bloodVolume = Math.min(maxBV, bloodVolume + perTick(0.05));
+      bloodVolume = Math.min(maxBV, bloodVolume + perTick(0.05) * tickScale);
     }
 
     // (The redundant `blood_loss` condition is gone — low blood now drives `shock` directly, below.)
@@ -231,10 +234,13 @@ export function stepHunger(state: GameState): GameState {
       mob.state === 'Alerted' ||
       mob.state === 'Hunting' ||
       mob.state === 'Fleeing';
-    if (limbs && !inCombat && turn % MOB_HEAL_INTERVAL === 0) {
+    // Off-bubble mobs only reach stepHunger on their think-tick (every tickScale ticks), so they'd
+    // almost never land on the turn%INTERVAL gate — fire EACH think with tickScale× the per-tick heal
+    // instead; bubble mobs keep the cheap interval-gating (avoids per-tick heal-scan + limbs ref-bump).
+    if (limbs && !inCombat && (inBubble ? turn % MOB_HEAL_INTERVAL === 0 : true)) {
       const healed = healLimbsInPlace(
         limbs,
-        MOB_WOUND_HEAL_PER_TICK * MOB_HEAL_INTERVAL,
+        MOB_WOUND_HEAL_PER_TICK * (inBubble ? MOB_HEAL_INTERVAL : tickScale),
         turn,
         false
       );
@@ -278,7 +284,9 @@ export function stepHunger(state: GameState): GameState {
     // cadence (100+ mobs → don't recompute wind shelter every tick). `windchilled` is the persistent
     // condition (snapped from the felt wind, like the pawn); `wet` the transient (soaked tile). No
     // shelter model — wild mobs are exposed. effectiveWindAt early-outs to 0 when it isn't windy.
-    if (turn % MOB_WEATHER_INTERVAL === 0) {
+    // A condition SYNC (not an accumulator) — off-bubble fire it each think so the felt wind/wet stays
+    // current; bubble keeps the slow interval cadence (don't recompute shelter for 100+ mobs every tick).
+    if (inBubble ? turn % MOB_WEATHER_INTERVAL === 0 : true) {
       const tile = state.worldMap[mob.y]?.[mob.x];
       const { wind, wetness } = creatureExposureAt(
         mob.x,

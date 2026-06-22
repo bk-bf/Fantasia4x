@@ -137,7 +137,7 @@ export const LIVE_RADIUS = 34;
  * imperceptible (no animal re-decides 60×/s). THE primary sim-cost lever now. Modular: raise N for more
  * savings at the cost of more decision latency; lower for snappier off-bubble AI.
  */
-export const AI_THROTTLE_TICKS = 60; // ~1s at 60tps
+export const AI_THROTTLE_TICKS = 60; // ~1s at 60tps; also the elapsed-tick scale for off-bubble eating
 /** §LOD — a throttled (off-bubble) mob thinks IMMEDIATELY anyway if a predator is within this many
  *  tiles (cheap per-tick interrupt via the cached threat map), so fleeing isn't delayed by up to
  *  AI_THROTTLE_TICKS. Small — only imminent danger justifies bypassing the throttle. */
