@@ -217,7 +217,9 @@ function defaultEatsForDiet(diet: EntityDiet): FoodCategory[] {
 
 function toDefinition(raw: RawCreature): CreatureDefinition {
   const rs = raw.stats as { str: number; dex: number; con: number; per: number };
-  const visionRange = Math.round(2 + rs.per * 0.65);
+  // ×2 — MUST mirror baseVisionRange() in core/vision.ts (doubled sight range). Feeds the precomputed
+  // def.stats.visionRange + fleeRange so a creature's flee distance scales with its doubled detection.
+  const visionRange = Math.round(4 + rs.per * 1.3);
   const stats: CreatureStats = {
     str: rs.str,
     dex: rs.dex,

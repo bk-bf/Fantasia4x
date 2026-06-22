@@ -1774,9 +1774,9 @@
         const cx = (v.x - viewX + 0.5) * tileWidth;
         const cy = (v.y - viewY + 0.5) * tileHeight;
         const rad = Math.max(1, v.r * tileWidth);
-        const g = ctx.createRadialGradient(cx, cy, rad * 0.7, cx, cy, rad);
-        g.addColorStop(0, 'rgba(0, 0, 0, 1)'); // fully clear the dim in the core of vision
-        g.addColorStop(1, 'rgba(0, 0, 0, 0)'); // soft fade back to dim at the vision edge
+        const g = ctx.createRadialGradient(cx, cy, rad * 0.92, cx, cy, rad);
+        g.addColorStop(0, 'rgba(0, 0, 0, 1)'); // fully clear the dim across the whole circle…
+        g.addColorStop(1, 'rgba(0, 0, 0, 0)'); // …then a thin 8% feather so the boundary reads crisply
         ctx.fillStyle = g;
         ctx.fillRect(cx - rad, cy - rad, rad * 2, rad * 2);
       }

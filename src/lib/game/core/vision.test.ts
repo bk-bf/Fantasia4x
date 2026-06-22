@@ -15,9 +15,9 @@ const pawn = (per: number, traits: Array<{ effects: { nightVision?: number } }> 
   ({ stats: { perception: per }, racialTraits: traits }) as unknown as Pawn;
 
 describe('shared vision model', () => {
-  it('baseVisionRange matches the legacy creature formula round(2 + per*0.65)', () => {
-    expect(baseVisionRange(10)).toBe(9);
-    expect(baseVisionRange(15)).toBe(12);
+  it('baseVisionRange is the doubled sight formula round(4 + per*1.3)', () => {
+    expect(baseVisionRange(10)).toBe(17);
+    expect(baseVisionRange(15)).toBe(24);
   });
 
   it('lightVisionMultiplier: dark shrinks to the floor, day is full, night_vision restores', () => {

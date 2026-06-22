@@ -124,11 +124,12 @@ export const WANDER_MOVES_PER_SECOND = 1.0;
 /**
  * §LOD — pawn vision bubble. Only mobs within this Chebyshev range (tiles) of a live pawn run the full
  * per-tick sim (FSM, A* pathfinding, hunger, combat). Everything outside is FROZEN and only gets cheap
- * periodic background churn (drift). Sized to comfortably exceed pawn vision (~12-15) so a mob is
- * already "warm" before it enters view — no pop-in. THE primary scaling lever: stepOne/stepHunger run
- * for the handful near the colony, not all ~900 mobs. Tunable.
+ * periodic background churn (drift). MUST comfortably exceed the player's actual sight range (now ~17-25
+ * after the ×2 in baseVisionRange) so a mob is already "warm" before it enters view — the render shows
+ * mobs out to vision, so the sim region has to cover at least that or they pop in frozen. THE primary
+ * scaling lever: stepOne/stepHunger run for the handful near the colony, not all ~900 mobs. Tunable.
  */
-export const LIVE_RADIUS = 28;
+export const LIVE_RADIUS = 34;
 /** §LOD — a frozen (off-bubble) mob drifts one tile this often (ticks), staggered by position so they
  *  don't lurch in unison. Fakes off-screen activity without per-tick AI; ~6s at 60tps. */
 export const BACKGROUND_DRIFT_INTERVAL = 360;

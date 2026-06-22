@@ -17,7 +17,11 @@ const VISION_LIGHT_FLOOR = 0.35;
  *  pawn `vision_range` path and the per-creature `def.stats.visionRange`; matches the latter exactly,
  *  so entity daytime vision is unchanged). */
 export function baseVisionRange(perception: number): number {
-  return Math.round(2 + perception * 0.65);
+  // ×2 the original (2 + per×0.65): doubled sight range so the LOS vision bubble shows meaningfully more.
+  // Shared by pawns AND mobs (perception is set from a creature's `per` at spawn), so predator/prey
+  // detection scales together and the balance is preserved. KEEP IN SYNC with Creatures.toDefinition's
+  // `visionRange` (it mirrors this for the precomputed def.stats.visionRange + fleeRange).
+  return Math.round(4 + perception * 1.3);
 }
 
 /** This entity's 0–1 night-vision (darkness immunity). Mobs read it from their creature def; pawns
