@@ -4,7 +4,7 @@
 // read ~20 reactive vars + the render-pos interpolation Maps + the renderer each frame, so they
 // need a stateful-renderer redesign rather than a mechanical move.
 import type { GameGrid } from '$lib/webgl/game-grid.js';
-import type { DroppedItem, PlacedBuilding } from '$lib/game/core/types.js';
+import type { DroppedItem } from '$lib/game/core/types.js';
 import { glyph, SHEET } from '$lib/webgl/tilesets.js';
 import { resolveCharSpans, type CharSpan } from '$lib/game/core/Terrains.js';
 import { itemService } from '$lib/game/services/ItemService.js';
@@ -62,16 +62,4 @@ export function overlayDroppedItems(
   }
 }
 
-/**
- * A signature of only the building fields that `buildGameGrid` actually draws (id/pos/type/status/
- * deconstruct/paused) — used to skip terrain rebuilds when a lit campfire mutates `fuel`/`lit` each
- * tick (invisible on the map) but nothing visible changed.
- */
-export function buildingsVisualSig(bs: PlacedBuilding[]): string {
-  let sig = '';
-  for (let i = 0; i < bs.length; i++) {
-    const b = bs[i];
-    sig += `${b.id}:${b.x},${b.y}:${b.type}:${b.status}:${b.deconstructQueued ? 1 : 0}:${b.paused ? 1 : 0}|`;
-  }
-  return sig;
-}
+// buildingsVisualSig moved to core/buildingSig (shared with the sim worker — see that module).

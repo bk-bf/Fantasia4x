@@ -152,7 +152,7 @@ export function findNearestDepositPoint(
 ): { x: number; y: number } | null {
   if (!pawn.position) return null;
   const { x: px, y: py } = pawn.position;
-  const dist = (x: number, y: number) => manhattan(x, y, px, py);
+  const distHere = (x: number, y: number) => manhattan(x, y, px, py);
   const standable = (x: number, y: number) =>
     !!gs.worldMap?.[y]?.[x]?.walkable && !occupancyService.isBlocked(gs, x, y, pawn.id);
 
@@ -161,7 +161,7 @@ export function findNearestDepositPoint(
   let nearestAny: { x: number; y: number; dist: number } | null = null;
   for (const key of zoneTileKeys(gs, 'stockpile')) {
     const [x, y] = key.split(',').map(Number);
-    const d = dist(x, y);
+    const d = distHere(x, y);
     if (!nearestAny || d < nearestAny.dist) nearestAny = { x, y, dist: d };
     if (standable(x, y) && (!bestStandable || d < bestStandable.dist))
       bestStandable = { x, y, dist: d };
@@ -178,7 +178,7 @@ export function findNearestDepositPoint(
         const x = b.x + dx;
         const y = b.y + dy;
         if (!standable(x, y)) continue;
-        const d = dist(x, y);
+        const d = distHere(x, y);
         if (!best || d < best.dist) best = { x, y, dist: d };
       }
     }

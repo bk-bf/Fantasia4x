@@ -2,6 +2,7 @@ import type { Race, RacialTrait, RaceLore, RaceRelation } from './types';
 import raceDbData from '../database/racial-traits.jsonc';
 import loreData from '../database/race-lore.jsonc';
 import { rng } from './rng';
+import { clamp } from './math';
 
 export const RACIAL_TRAIT_DATABASE: RacialTrait[] = raceDbData as unknown as RacialTrait[];
 
@@ -410,8 +411,4 @@ function generateRaceName(): string {
     'ex'
   ];
   return rng.pick(prefixes) + rng.pick(suffixes);
-}
-
-function clamp(v: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, v));
 }

@@ -8,6 +8,7 @@ import type { WorldTile } from '../core/types';
 import type { ResourceObjectDef } from './ResourceObjectService';
 import { resourceObjectService, isGrowableResource } from './ResourceObjectService';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '../core/Terrains';
+import { makeSeededRng } from '../core/rng';
 
 /**
  * Subterrains whose resources form CLUSTERS rather than per-tile scatter: each connected blob of
@@ -16,16 +17,12 @@ import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '../core/Terrains';
  */
 const CLUSTERED_SUBTYPES = new Set(['mineral_deposit']);
 
-/** Simple xorshift32 PRNG — deterministic, seeded. */
+/** Deterministic integer-range RNG: the shared seeded xorshift float gen (core/rng) scaled to
+ *  [min, max] inclusive. Same sequence as before — the float gen is byte-identical to the old inline
+ *  xorshift, so resource placement for a given seed is unchanged. */
 function makeRng(seed: number) {
-  let s = seed >>> 0 || 1;
-  return (min: number, max: number): number => {
-    s ^= s << 13;
-    s ^= s >>> 17;
-    s ^= s << 5;
-    const t = (s >>> 0) / 0x100000000;
-    return Math.floor(t * (max - min + 1)) + min;
-  };
+  const rand = makeSeededRng(seed);
+  return (min: number, max: number): number => Math.floor(rand() * (max - min + 1)) + min;
 }
 
 class ResourceGeneratorServiceImpl {

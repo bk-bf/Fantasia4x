@@ -26,6 +26,22 @@ export function mulberry32(seed: number): () => number {
 }
 
 /**
+ * xorshift32 — a seeded PRNG yielding floats in [0, 1). DISTINCT from mulberry32: this is the exact
+ * algorithm world + resource generation have always used, so it must stay byte-identical (changing it
+ * would reshuffle every generated world for a given seed). Consolidated here from the two private
+ * `makeRng` copies that lived in WorldGenerator and ResourceGeneratorService.
+ */
+export function makeSeededRng(seed: number): () => number {
+  let s = seed >>> 0 || 1;
+  return () => {
+    s ^= s << 13;
+    s ^= s >>> 17;
+    s ^= s << 5;
+    return (s >>> 0) / 0x100000000;
+  };
+}
+
+/**
  * A reseedable random stream with the convenience helpers the codebase needs.
  * Holds its current 32-bit state so it can be snapshotted/reseeded for tests.
  */

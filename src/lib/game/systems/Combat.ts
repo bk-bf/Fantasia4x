@@ -46,6 +46,7 @@ import type { ConditionDef, TransientConditionDef } from '../core/types';
 import { simLog, type CombatTextKind } from '../core/logSink';
 import { rng } from '../core/rng';
 import { chebyshev } from '../core/distance';
+import { clamp } from '../core/math';
 import { perTick } from '../core/time';
 // P-4: the body-part anatomy table + selection helpers moved to core/BodyParts. Re-export the two
 // symbols external code imported from Combat (PawnHealth, EntityService, Pawns) so they're unchanged.
@@ -206,9 +207,6 @@ export interface CombatService {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-function clamp(v: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, v));
-}
 
 // recomputeWound / recomputeWoundInPlace / rollWoundClotting moved to core/Wounds.ts (ADR-008 layering);
 // Combat imports recomputeWound below for damage application.

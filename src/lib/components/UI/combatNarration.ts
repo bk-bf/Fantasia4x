@@ -54,7 +54,7 @@ function bumpTier(tier: NarrationTier, by: number): NarrationTier {
 }
 
 /** Stable pick so wording doesn't flicker between re-renders (seeded by the swing itself). */
-function pick(list: string[], seed: number): string {
+function pickBySeed(list: string[], seed: number): string {
   return list[((Math.round(seed) % list.length) + list.length) % list.length];
 }
 
@@ -87,7 +87,7 @@ export function describeSwing(t: CombatTurnEntry): SwingNarration {
   if (!t.hit) {
     return {
       attacker: t.attackerName,
-      verb: pick(MISS_VERBS, seed),
+      verb: pickBySeed(MISS_VERBS, seed),
       target: t.defenderName,
       tier: 'minor',
       dodged: true
@@ -98,7 +98,7 @@ export function describeSwing(t: CombatTurnEntry): SwingNarration {
   const part = bodyPartName(t.bodyPart);
   return {
     attacker: t.attackerName,
-    verb: pick(HIT_VERBS[family][tier], seed),
+    verb: pickBySeed(HIT_VERBS[family][tier], seed),
     target: part ? `${t.defenderName}'s ${part}` : t.defenderName,
     tier,
     dodged: false

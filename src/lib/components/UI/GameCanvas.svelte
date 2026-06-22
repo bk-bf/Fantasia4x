@@ -113,7 +113,8 @@
     jobProgressBar,
     PROGRESS_BAR_STATES
   } from '$lib/components/UI/gameCanvas/selectionCard';
-  import { overlayDroppedItems, buildingsVisualSig } from '$lib/components/UI/gameCanvas/overlay';
+  import { overlayDroppedItems } from '$lib/components/UI/gameCanvas/overlay';
+  import { buildingsVisualSig } from '$lib/game/core/buildingSig';
   import type { ItemPillView } from '$lib/components/UI/ItemPills.svelte';
   import itemsData from '$lib/game/database/items.jsonc';
 

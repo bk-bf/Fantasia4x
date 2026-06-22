@@ -11,6 +11,7 @@ import {
 } from '../core/Terrains';
 import { resourceGeneratorService } from '../services/ResourceGeneratorService';
 import { biomeBaseMoisture, baseMoistureFromWater } from '../services/EnvironmentService';
+import { makeSeededRng } from '../core/rng';
 
 // Noise constants ported from Celestia noise_generator.gd
 const TERRAIN_FREQUENCY = 0.005;
@@ -28,17 +29,6 @@ const WARP_AMOUNT = 35; // tiles of max displacement — bigger, sweeping meande
 // elevation, pools coherent lakes/seas in any lowland biome instead of confining water to the
 // swamp/river density bands. Lower frequency = larger, fewer water bodies.
 const WATER_FREQUENCY = 0.012;
-
-/** Simple seeded PRNG (xorshift32) — returns values in [0, 1). */
-function makeRng(seed: number) {
-  let s = seed >>> 0 || 1;
-  return () => {
-    s ^= s << 13;
-    s ^= s >>> 17;
-    s ^= s << 5;
-    return (s >>> 0) / 0x100000000;
-  };
-}
 
 /**
  * Fractional Brownian Motion over a simplex noise function.
@@ -112,10 +102,10 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
   const detailSeed = (seed * 6971) >>> 0;
 
   // Two independent noise instances — same API as simplex-noise v4
-  const terrainNoise = createNoise2D(makeRng(seed));
-  const detailNoise = createNoise2D(makeRng(detailSeed));
+  const terrainNoise = createNoise2D(makeSeededRng(seed));
+  const detailNoise = createNoise2D(makeSeededRng(detailSeed));
   // Third independent field drives decoupled water placement (biome-agnostic lakes/seas).
-  const waterNoise = createNoise2D(makeRng((seed * 7919) >>> 0));
+  const waterNoise = createNoise2D(makeSeededRng((seed * 7919) >>> 0));
   const waterLevel = getWaterLevel();
 
   const world: WorldTile[][] = [];

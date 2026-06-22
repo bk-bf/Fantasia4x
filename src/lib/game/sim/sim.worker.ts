@@ -23,6 +23,7 @@ import { projectSentEntity } from './entityProjection';
 import type { SimLogEvent, EntitySync } from './simProtocol';
 import { drainTileDeltas, clearTileDeltas } from '../core/tileDeltas';
 import { carcassConditionByType } from '../core/carcassCondition';
+import { buildingsVisualSig } from '../core/buildingSig';
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
@@ -72,20 +73,6 @@ let prevWM: unknown,
   prevBuildingsSig = '',
   prevDesignations: unknown,
   prevZoneTiles: unknown;
-
-/**
- * Visual signature of the building set — ONLY the fields the terrain layer draws (pos/type/status/
- * deconstruct/paused), deliberately EXCLUDING fuel/lit. Mirrors GameCanvas.buildingsVisualSig.
- * Critical for terrainRev: a lit campfire decrements fuel every tick → a fresh `buildings` array
- * every tick → a raw ref-compare would bump terrainRev constantly and rebuild the 38k-tile terrain
- * ~2/s for an invisible change (the residual freeze frames).
- */
-function buildingsVisualSig(bs: GameState['buildings']): string {
-  let sig = '';
-  for (const b of bs ?? [])
-    sig += `${b.id}:${b.x},${b.y}:${b.type}:${b.status}:${b.deconstructQueued ? 1 : 0}:${b.paused ? 1 : 0}|`;
-  return sig;
-}
 
 function post(msg: unknown) {
   (self as unknown as Worker).postMessage(msg);

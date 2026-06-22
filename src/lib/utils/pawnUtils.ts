@@ -155,65 +155,6 @@ export function getStatColor(statValue: number): string {
   return '#9E9E9E';
 }
 
-export function getStatDescription(statName: string, statValue: number): string {
-  const descriptions: Record<string, Record<string, string>> = {
-    strength: {
-      exceptional: 'Legendary physical might',
-      high: 'Exceptional muscular power',
-      good: 'Above-average strength',
-      average: 'Decent physical power',
-      low: 'Below-average strength'
-    },
-    dexterity: {
-      exceptional: 'Supernatural agility and grace',
-      high: 'Exceptional speed and coordination',
-      good: 'Quick reflexes and nimble',
-      average: 'Adequate coordination',
-      low: 'Somewhat clumsy'
-    },
-    intelligence: {
-      exceptional: 'Brilliant genius-level intellect',
-      high: 'Highly intelligent and analytical',
-      good: 'Quick learner and sharp mind',
-      average: 'Average reasoning ability',
-      low: 'Slower to grasp concepts'
-    },
-    perception: {
-      exceptional: 'Razor-sharp senses and extraordinary awareness',
-      high: 'Excellent perception and detection',
-      good: 'Good instincts and alertness',
-      average: 'Decent situational awareness',
-      low: 'Sometimes misses important details'
-    },
-    charisma: {
-      exceptional: 'Magnetic personality and leadership',
-      high: 'Very charming and persuasive',
-      good: 'Pleasant and likeable',
-      average: 'Unremarkable social skills',
-      low: 'Awkward in social situations'
-    },
-    constitution: {
-      exceptional: 'Iron constitution and endurance',
-      high: 'Very hardy and resilient',
-      good: 'Good health and stamina',
-      average: 'Average physical resilience',
-      low: 'Somewhat frail'
-    }
-  };
-
-  const level =
-    statValue >= 18
-      ? 'exceptional'
-      : statValue >= 15
-        ? 'high'
-        : statValue >= 12
-          ? 'good'
-          : statValue >= 9
-            ? 'average'
-            : 'low';
-  return descriptions[statName]?.[level] || 'Unknown';
-}
-
 export function getMoodColor(mood: number): string {
   if (mood >= 80) return '#4CAF50';
   if (mood >= 60) return '#8BC34A';
