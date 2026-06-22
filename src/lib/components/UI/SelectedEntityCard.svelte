@@ -324,7 +324,7 @@
     background: rgba(28, 16, 6, 0.92);
     border: 1px solid #6b4a2a;
     color: #a07840;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 9px;
     line-height: 1.25;
     padding: 2px 7px;
@@ -383,7 +383,7 @@
     background: #2a1a0a;
     border: 1px solid #6b4a2a;
     color: #a07840;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 9px;
     padding: 1px 5px;
     cursor: pointer;

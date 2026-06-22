@@ -108,7 +108,7 @@
   }
   .sprite-literal {
     flex-shrink: 0;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     line-height: 1;
   }
 </style>

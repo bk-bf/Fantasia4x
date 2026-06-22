@@ -258,7 +258,7 @@
     background: var(--bg-panel, #11151c);
     border: 1px solid var(--border-hi, #3a4656);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     color: var(--text);
     pointer-events: none;

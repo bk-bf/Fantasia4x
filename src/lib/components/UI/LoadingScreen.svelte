@@ -31,7 +31,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
   }
   .box {
     display: flex;

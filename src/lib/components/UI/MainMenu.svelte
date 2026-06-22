@@ -95,7 +95,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     overflow: hidden;
   }
 
@@ -162,11 +162,11 @@
   /* Third sub-header under the subtitle: version + tileset credit, in a cursive script to set it apart
      from the terminal wordmark while echoing the subtitle's muted, dark-backed treatment. */
   .credit-line {
-    font-family: 'Fantasia Script', 'Segoe Script', 'Brush Script MT', cursive;
+    font-family: var(--font-script);
     font-weight: 600; /* matches the bundled Dancing Script weight (app.css @font-face) */
     color: var(--text);
-    /* Script faces have a small x-height, so size up a touch over the 12px subtitle to read level. */
-    font-size: 15px;
+    /* Kept below the 12px subtitle — a disclaimer line should never read larger than the slogan. */
+    font-size: 11px;
     letter-spacing: 0.04em;
     margin-bottom: 24px;
     text-shadow:
@@ -193,7 +193,7 @@
     background: var(--bg-panel);
     border: 1px solid var(--border);
     color: var(--text);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 14px;
     letter-spacing: 0.18em;
     text-transform: uppercase;

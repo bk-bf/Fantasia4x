@@ -185,7 +185,7 @@
     background: rgba(13, 9, 3, 0.98);
     border: 1px solid #7a5e28;
     color: #d4a860;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 9px;
     z-index: 20;
     filter: url(#ambient-tint);
@@ -223,7 +223,7 @@
     background: #160f06;
     border: 1px solid #6b4f22;
     color: #d0a858;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 9px;
     letter-spacing: 0.04em;
     padding: 2px 6px;

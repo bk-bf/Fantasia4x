@@ -215,7 +215,7 @@
     padding: 6px 8px;
     background: rgba(13, 9, 3, 0.98);
     color: #d4a860;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 9px;
   }
   section {
@@ -261,7 +261,7 @@
     background: #140e04;
     color: #e0b868;
     border: 1px solid #6a4e20;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 9px;
     padding: 2px 4px;
     min-width: 0;
@@ -291,7 +291,7 @@
     background: #160f06;
     border: 1px solid #6b4f22;
     color: #d0a858;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 9px;
     padding: 2px 6px;
     cursor: pointer;

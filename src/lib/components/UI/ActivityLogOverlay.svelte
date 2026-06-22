@@ -273,7 +273,7 @@
     cursor: pointer;
     transition: all 0.3s ease;
     backdrop-filter: blur(5px);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -310,7 +310,7 @@
     border-left: 3px solid #4caf50;
     display: flex;
     flex-direction: column;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     color: #e0e0e0;
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
@@ -346,7 +346,7 @@
     color: #e0e0e0;
     padding: 6px 12px;
     border-radius: 4px;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 0.9em;
     backdrop-filter: blur(5px);
   }

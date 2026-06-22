@@ -271,7 +271,7 @@
 
   .zzz-z {
     color: #7788ff;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 8px;
     font-weight: bold;
     opacity: 0;
@@ -317,7 +317,7 @@
 
   .rest-cross {
     color: #ff4d4d;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 8px;
     font-weight: bold;
     opacity: 0;
@@ -342,7 +342,7 @@
 
   .collapse-arrow {
     color: #e23b3b;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     font-weight: bold;
     opacity: 0;
@@ -374,7 +374,7 @@
 
   .winded-arrow {
     color: #4aa3ff;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     font-weight: bold;
     opacity: 0;
@@ -404,7 +404,7 @@
 
   .spark {
     position: absolute;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     font-weight: bold;
     opacity: 0;
@@ -474,7 +474,7 @@
   }
   .puff {
     position: absolute;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 17px;
     color: #4f4b45;
     opacity: 0;
@@ -663,7 +663,7 @@
   /* ── flies (wolf den — carrion buzz): tiny dark specks jittering over the den ── */
   .fly {
     position: absolute;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 13px;
     font-weight: bold;
     color: #14110e;
@@ -884,7 +884,7 @@
   /* ── feathers (harpy roost): pale shed feathers drifting DOWN, swaying ── */
   .feather {
     position: absolute;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 17px;
     font-weight: bold;
     color: #c4bcb2;
@@ -964,7 +964,7 @@
     position: absolute;
     left: 0;
     top: 0;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     font-weight: bold;
     white-space: nowrap;

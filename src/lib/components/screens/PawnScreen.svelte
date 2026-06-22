@@ -181,7 +181,7 @@
     overflow-y: auto;
     background: var(--bg);
     color: var(--text);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     display: flex;
     flex-direction: column;
@@ -225,7 +225,7 @@
     border: none;
     border-right: 1px solid var(--border);
     color: var(--text-muted);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     letter-spacing: 0.08em;
     cursor: pointer;

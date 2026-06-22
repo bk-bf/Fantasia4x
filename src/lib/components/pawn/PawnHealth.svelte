@@ -193,7 +193,7 @@
 
 <style>
   .health-section {
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
   }
 

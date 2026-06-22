@@ -426,7 +426,7 @@
     background: transparent;
     border: 1px solid var(--zcolor);
     color: var(--zcolor);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     letter-spacing: 0.05em;
     cursor: pointer;
@@ -476,7 +476,7 @@
     border: 1px solid var(--zcolor);
     color: var(--zcolor);
     cursor: pointer;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     letter-spacing: 0.05em;
     padding: 2px 10px;

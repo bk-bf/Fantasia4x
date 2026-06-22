@@ -4168,7 +4168,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 12px;
   }
   /* NT-U3: every hover/selection panel shares the building reference width (300px, fixed)
@@ -4182,7 +4182,7 @@
     background: rgba(28, 16, 6, 0.92);
     border: 1px solid #6b4a2a;
     color: #a07840;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     line-height: 1.5;
     padding: 2px 7px;
@@ -4242,7 +4242,7 @@
     background: rgba(0, 20, 10, 0.92);
     border: 1px solid #3aaa60;
     color: #50ee80;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     font-weight: bold;
     padding: 3px 10px;
@@ -4263,7 +4263,7 @@
     border: 1px solid #ffc85a;
     padding: 3px 8px;
     z-index: 11;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
   }
   .mark-count {
     color: #ffc85a;
@@ -4338,7 +4338,7 @@
     color: #c87020;
     font-size: 9px;
     margin-top: 3px;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     letter-spacing: 0.02em;
   }
   .fuel-lit {

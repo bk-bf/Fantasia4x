@@ -365,7 +365,7 @@
     background: #140e04;
     border: 1px solid #6a4e20;
     color: #e0b868;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 9px;
     padding: 1px 2px;
     appearance: textfield;
@@ -386,7 +386,7 @@
     background: #160f06;
     border: 1px solid #6b4f22;
     color: #d0a858;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 9px;
     padding: 1px 5px;
     cursor: pointer;

@@ -247,7 +247,7 @@
     padding: 0;
     background: transparent;
     border: none;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     cursor: pointer;
     display: flex;

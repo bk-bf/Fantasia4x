@@ -62,7 +62,7 @@
     border: 1px solid var(--border-hi);
     color: var(--text);
     cursor: pointer;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 9px;
     text-transform: uppercase;
     white-space: nowrap;
@@ -94,7 +94,7 @@
     gap: 6px;
     padding: 4px 6px;
     color: var(--text);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.02em;

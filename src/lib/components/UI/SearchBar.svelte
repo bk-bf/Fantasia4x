@@ -59,7 +59,7 @@
     background: var(--bg-panel);
     border: 1px solid var(--border);
     color: var(--text);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     letter-spacing: 0.04em;
     padding: 3px 18px 3px 8px;

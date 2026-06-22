@@ -85,7 +85,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
   }
 
   .pause-panel {
@@ -122,7 +122,7 @@
     background: var(--bg);
     border: 1px solid var(--border);
     color: var(--text);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 12px;
     letter-spacing: 0.16em;
     text-transform: uppercase;

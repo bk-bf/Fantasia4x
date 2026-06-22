@@ -138,7 +138,7 @@
     flex-direction: column;
     height: 100%;
     min-height: 0;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
   }
   .body {
     flex: 1;

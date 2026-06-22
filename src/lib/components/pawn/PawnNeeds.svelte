@@ -189,7 +189,7 @@
   }
 
   .block-bar {
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     letter-spacing: -0.02em;
     white-space: nowrap;

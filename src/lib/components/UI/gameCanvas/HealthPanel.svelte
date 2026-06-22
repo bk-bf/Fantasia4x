@@ -165,7 +165,7 @@
     background: rgba(13, 9, 3, 0.98);
     border: 1px solid #7a5e28;
     color: #c0a040;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 9px;
     line-height: 1.5;
     z-index: 20;

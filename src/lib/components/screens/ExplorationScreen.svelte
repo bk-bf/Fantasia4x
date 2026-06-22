@@ -121,7 +121,7 @@
     height: 100%;
     background: var(--bg);
     color: var(--text);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     display: flex;
     flex-direction: column;
@@ -152,7 +152,7 @@
     background: transparent;
     border: 1px solid var(--border);
     color: var(--text-dim);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     cursor: pointer;
   }
@@ -201,7 +201,7 @@
     border: none;
     border-bottom: 1px solid var(--border);
     color: var(--text-dim);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     cursor: pointer;
     text-align: left;

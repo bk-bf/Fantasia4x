@@ -17,7 +17,7 @@
     background: transparent;
     border: 1px solid var(--accent-hi);
     color: var(--accent-hi);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     letter-spacing: 0.06em;
     padding: 2px 6px;

@@ -321,7 +321,7 @@
     background: var(--bg-panel);
     border: 1px solid var(--border-hi);
     color: var(--text);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     padding: 6px 12px 10px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
@@ -360,7 +360,7 @@
     background: var(--bg);
     border: 1px solid var(--border);
     color: var(--text);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     padding: 1px 4px;
   }
@@ -369,7 +369,7 @@
     background: transparent;
     border: 1px solid var(--border);
     color: var(--text-dim);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     cursor: pointer;
   }
@@ -474,7 +474,7 @@
     align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, 0.6);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
   }
   .gen-box {
     display: flex;

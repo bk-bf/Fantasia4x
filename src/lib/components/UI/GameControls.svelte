@@ -245,7 +245,7 @@
     gap: 2px;
     background: var(--bg);
     border-bottom: 1px solid var(--border-hi);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     flex-shrink: 0;
   }
@@ -325,7 +325,7 @@
     border: 1px solid var(--border-hi);
     color: var(--text);
     cursor: pointer;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 9px;
     text-transform: uppercase;
     white-space: nowrap;
@@ -349,7 +349,7 @@
     border: 1px solid var(--border);
     color: var(--text-dim);
     cursor: pointer;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 9px;
   }
   .spd:hover {

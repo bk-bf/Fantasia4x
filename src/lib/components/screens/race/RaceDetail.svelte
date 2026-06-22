@@ -160,7 +160,7 @@
 
 <style>
   .detail {
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     color: var(--text);
   }

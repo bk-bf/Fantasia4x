@@ -262,7 +262,7 @@
     overflow-y: auto;
     background: var(--bg);
     color: var(--text);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     display: flex;
     flex-direction: column;
@@ -423,7 +423,7 @@
     background: var(--bg-hover);
     border: 1px solid var(--border-hi);
     color: var(--text);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     cursor: pointer;
     letter-spacing: 0.04em;

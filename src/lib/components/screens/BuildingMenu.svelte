@@ -394,7 +394,7 @@
     overflow-y: auto;
     background: var(--bg);
     color: var(--text);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     display: flex;
     flex-direction: column;
@@ -445,7 +445,7 @@
     background: none;
     border: 1px solid var(--border);
     color: var(--accent);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     padding: 2px 6px;
     cursor: pointer;
@@ -470,7 +470,7 @@
     background: var(--bg);
     border: 1px solid var(--border);
     color: var(--accent-hi);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     padding: 0 2px;
     max-width: 110px;
@@ -556,7 +556,7 @@
     background: none;
     border: none;
     color: var(--text-dim);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     line-height: 1;
     padding: 0 1px;

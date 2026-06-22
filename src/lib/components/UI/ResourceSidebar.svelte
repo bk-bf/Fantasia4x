@@ -215,7 +215,7 @@
     height: 100%;
     width: 100%;
     background: var(--bg-panel);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     color: var(--text);
     display: flex;
@@ -524,7 +524,7 @@
     padding: 0 8px 2px 24px;
     gap: 4px;
     font-size: 9px;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
   }
 
   .intactness-lbl {

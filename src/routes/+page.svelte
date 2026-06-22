@@ -355,7 +355,7 @@
     width: 100vw;
     background: var(--bg);
     color: var(--text);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     display: flex;
     flex-direction: column;
@@ -432,7 +432,7 @@
     height: 100%;
     padding-left: 12px;
     color: var(--accent-hi);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 12px;
     letter-spacing: 0.25em;
     text-transform: uppercase;
@@ -481,7 +481,7 @@
     border-right: 1px solid var(--border);
     color: var(--text);
     cursor: pointer;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.03em;

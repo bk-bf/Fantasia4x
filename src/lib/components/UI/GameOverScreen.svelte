@@ -47,7 +47,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
   }
   .box {
     display: flex;
@@ -83,7 +83,7 @@
     background: var(--bg-panel);
     color: var(--accent-hi);
     border: 1px solid var(--border);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 12px;
     letter-spacing: 0.25em;
     text-indent: 0.25em;

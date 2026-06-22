@@ -25,7 +25,7 @@
     display: flex;
     gap: 6px;
     align-items: baseline;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     line-height: 1.5;
   }

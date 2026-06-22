@@ -76,14 +76,14 @@
     gap: 8px;
     align-items: baseline;
     font-size: 11px;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
   }
   .need-row {
     display: flex;
     align-items: center;
     padding: 2px 8px;
     gap: 6px;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
   }
   .lbl {
     color: var(--text-dim);

@@ -231,7 +231,7 @@
     overflow-y: auto;
     background: var(--bg);
     color: var(--text);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     display: flex;
     flex-direction: column;
@@ -261,7 +261,7 @@
     background: transparent;
     border: 1px solid var(--border);
     color: var(--text-dim);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     cursor: pointer;
   }
@@ -310,7 +310,7 @@
     color: var(--text-muted, #777);
     cursor: pointer;
     font-size: 10px;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
   }
   .row-toggle:hover {
     color: var(--text);
@@ -325,7 +325,7 @@
     background: transparent;
     border: none;
     color: var(--text-dim);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     cursor: pointer;
     text-align: left;
@@ -384,7 +384,7 @@
     background: transparent;
     border: 1px solid var(--border);
     color: var(--text-dim);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     cursor: pointer;
   }

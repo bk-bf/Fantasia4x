@@ -37,7 +37,7 @@
     border-right: 1px solid var(--border);
     color: var(--text-dim);
     cursor: pointer;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.04em;

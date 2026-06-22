@@ -174,7 +174,7 @@
     height: 100%;
     width: 100%;
     background: var(--bg-panel);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     color: var(--text);
     display: flex;

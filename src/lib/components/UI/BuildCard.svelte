@@ -265,7 +265,7 @@
     background: transparent;
     border: 1px solid var(--border);
     color: var(--text-dim);
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     letter-spacing: 0.05em;
     cursor: pointer;
