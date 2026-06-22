@@ -923,3 +923,45 @@ Only pawns experience windchill and pawns are few (dozens), so an O(`WIND_SHADOW
 pawn per tick is far cheaper and needs no invalidation. The thermal field stays precomputed (keyed on
 buildings, not the whole terrain). Guarded by `windchill.test.ts`. Not graph-checkable — a
 data/runtime decision, not a call-edge invariant.
+
+### ADR-026 [GAME]: Incremental-Only Terrain — No Full-Map Rebuild on a Delta
+
+**Status:** Accepted (2026-06-22). Extends ADR-021 (§4c worldMap deltas) and ENGINE-PERFORMANCE §D/§E.
+
+**Context.** At the 750×750 default map (562k tiles) every whole-map traversal on a terrain change is a
+visible FPS crater. The sim already ships the *exact* changed tiles to the main thread as a
+`worldMapDelta` (ADR-021 §4c), yet the renderer threw those coords away and re-derived the change set by
+brute force: a 562k-tile ref-scan every redraw, a 562k-`setTile` `buildGameGrid` on *any* building change,
+and a global `computeHiddenMask` BFS + `collectResourceEmitters` scan on *every* harvest/regrowth tick.
+The earlier "incremental terrain" commit (`2539b52`) only persisted the grid — it still scanned and still
+full-rebuilt on buildings. The principle was made absolute.
+
+**Decision — a routine per-tick terrain change repaints ONLY the affected cells and their dependent
+neighbourhoods; a full O(map) traversal is permitted ONLY on a genuine new-map load (worldgen / game-load
+/ size change — the `worldMap` ARRAY ref is replaced).**
+
+- **Single full-build seam.** `GameCanvas._fullRebuildTerrain()` is the *only* caller of `buildGameGrid`
+  and `computeHiddenMaskState` (the whole-map builders). It runs on first build / new-map load and seeds
+  every incremental baseline (mask state, building diff, blueprint, grove-emitter map). The per-delta path
+  physically cannot reach the full builders — enforced structurally (see graph rule below).
+- **Changed-tile channel.** A main-thread `mainTileDeltas` singleton mirrors the worker's `tileDeltas`:
+  `simWorkerClient` records each `worldMapDelta` coord as it merges it; `redrawOverlayNow` DRAINS the
+  coords and repaints just those cells via `applyTileToGrid` — no scan.
+- **Buildings + blueprint are diffed,** not full-rebuilt: a placement/removal/deconstruct repaints its
+  single footprint cell (`applyBuildingToGrid`); the blueprint preview repaints only the cells it left +
+  now covers.
+- **Hidden mask is updated locally.** `updateHiddenMaskAt` early-outs when no changed tile's *solid*
+  topology flipped (harvest/regrowth/grass — the per-tick common case), and on a mining/terraform flip
+  re-floods only the affected connected component (bounded by pocket size, never the whole map). The
+  persisted `solid`/`exterior` grids make this possible.
+- **Grove glows are incremental** — an emitter `Map<"y,x">` upserts/deletes per changed tile
+  (`LightingService.emitterForTile`) instead of re-scanning.
+- **GPU invalidation is per-chunk.** `renderer.setGrid(grid, dirtyTiles)` stamps only the §E chunks
+  holding a changed cell (`markTerrainChunksDirty`); every other visible chunk keeps its cached VBO. A
+  full rebuild (no `dirtyTiles`) bumps the global `cacheVersion` as before.
+
+**Enforcement (graph-checkable).** A `restricted-callee` codegraph rule registered in
+`codegraph.config.json` flags any caller of `buildGameGrid` / `computeHiddenMaskState` other than
+`_fullRebuildTerrain`, so the per-delta path can never silently reintroduce a full rebuild — it's a
+`graph:check` gate like ADR-008. Also guarded at runtime by `hiddenMaskIncremental.test.ts`
+(local mask update matches a fresh full BFS) and the building-diff path.
