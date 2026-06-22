@@ -28,7 +28,10 @@ import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
 import { calculatePawnStats } from '$lib/game/entities/Pawns';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
-import { customizeMenuPreviewWorld } from '$lib/game/world/menuPreviewWorld';
+import {
+  customizeMenuPreviewWorld,
+  pickMenuPreviewClimate
+} from '$lib/game/world/menuPreviewWorld';
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
 import { entityService } from '$lib/game/services/EntityService';
 import { loadSave, scheduleSave, deleteSave, saveGameNow } from './saveManager';
@@ -627,14 +630,6 @@ const MENU_PREVIEW_SEED = 4051283263;
 /** Small world (cheap to build + seed) — big enough that the cover-fit zoom-out floor overflows the
  *  viewport for an atmospheric, slightly-oversized framing. NOT the player's Custom Map size. */
 const MENU_PREVIEW_MAP = { w: 160, h: 100 };
-/** Pinned title-screen weather: a pleasant spring breeze (blowing leaves), never fog. The engine skips
- *  the weather re-roll in preview mode (GameEngineImpl.processEnvironment) so this stays put. */
-const MENU_PREVIEW_WEATHER = {
-  type: 'spring_windy',
-  intensity: 0.6,
-  turnsRemaining: Number.MAX_SAFE_INTEGER,
-  wind: 0.6
-} as const;
 
 /**
  * Boot the main-menu backdrop: a live but gutted preview of the game world that renders behind the
@@ -655,12 +650,18 @@ function startMenuPreview() {
   // Done BEFORE entity seeding so prey spawn on the reshaped land, not in the new river.
   customizeMenuPreviewWorld(world);
 
+  // Random (per launch) season-appropriate weather; season pinned to the real-world date via
+  // `_debugSeason` (processEnvironment otherwise derives season from the turn). Falls back to a
+  // spring breeze if the pick fails.
+  const climate = pickMenuPreviewClimate();
+
   let preview: GameState = {
     ...initialGameState,
     seed: MENU_PREVIEW_SEED,
     worldMap: world,
-    season: 'spring',
-    weather: { ...MENU_PREVIEW_WEATHER },
+    season: climate.season,
+    _debugSeason: climate.season,
+    weather: climate.weather,
     pawns: [],
     mobs: [],
     buildings: [],
