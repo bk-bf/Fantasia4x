@@ -43,7 +43,7 @@ function landTemplate(world: WorldTile[][]): { biome: string; subId: string } {
 // season is winter (see localSeason). Everything else is fair game.
 const SEASON_WEATHER_POOL: Record<Season, string[]> = {
   spring: ['spring_windy', 'drizzle', 'rain', 'windy_rain', 'heavy_rain', 'storm', 'gale'],
-  summer: ['summer_windy', 'drizzle', 'rain', 'windy_rain', 'heat_wave', 'gale'],
+  summer: ['summer_windy', 'drizzle', 'rain', 'windy_rain', 'heavy_rain', 'storm', 'gale'],
   autumn: ['autumn_windy', 'drizzle', 'rain', 'windy_rain', 'heavy_rain', 'storm', 'gale'],
   winter: ['winter_windy', 'snow', 'blizzard', 'gale']
 };
