@@ -12,6 +12,7 @@ import { getActiveConditionViews } from '$lib/utils/conditionInfo.js';
 import { pawnService } from '$lib/game/services/PawnService.js';
 import { pawnStatService } from '$lib/game/services/PawnStatService.js';
 import { itemService } from '$lib/game/services/ItemService.js';
+import { jobService } from '$lib/game/services/JobService.js';
 import { getConditionCurrentStage, conditionStatMultipliers } from '$lib/game/core/needs.js';
 import type {
   SelectedEntityModel,
@@ -174,14 +175,19 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
       // drops it instead of showing a "80/80" part forever (the heal pass snaps to maxHp, this guards rounding).
       const hurt = part.isMissing || part.health < part.maxHp - 0.5 || part.injuries.length > 0;
       if (!hurt) continue;
+      // Per-part bleed = Σ its wounds' `bleeding` (same source the limb total rolls up), so each sub-part
+      // shows where the blood is actually coming from — not just the limb container.
+      const partBleed = part.injuries.reduce((s, inj) => s + (inj.bleeding ?? 0), 0);
       parts.push({
         label: partLabel(part.id),
         health: part.health,
         maxHp: part.maxHp,
         missing: part.isMissing,
+        bleedRate: partBleed > 0 ? partBleed : undefined,
         wounds: part.injuries.map((inj) => ({
           text: `${inj.type} (${inj.severity})${inj.infected ? ' · infected' : ''}`,
-          warn: woundWarn(inj)
+          warn: woundWarn(inj),
+          treated: inj.treatedAt != null // tended by a caretaker → green `+`
         }))
       });
     }
@@ -221,15 +227,14 @@ export function entityDebugLabel(entity: { id: string; debugId?: number }): stri
   return m ? ` #${m[1]}` : ` #${entity.id.slice(-4)}`;
 }
 
-/** Human-readable label for a pawn's current FSM state / active job. */
+/** Human-readable label for a pawn's current FSM state / active job. A Working pawn reads its task from
+ *  the active job's jobs.jsonc `label` (caretake → "Tend", construct → "Build", refuel → "Refuel"…) —
+ *  data-driven, so EVERY job type is task-specific instead of a generic "Working". */
 export function pawnStateLabel(p: Pawn): string {
   const s = p.currentState ?? 'Idle';
   if (s === 'Working' && p.activeJob) {
-    const t = p.activeJob.type;
-    if (t === 'harvest') return 'Harvesting';
-    if (t === 'haul') return 'Hauling';
-    if (t === 'construct') return 'Building';
-    if (t === 'craft') return 'Crafting';
+    const label = jobService.getJobLabel(p.activeJob.type);
+    if (label) return label;
   }
   return s.replace(/([A-Z])/g, ' $1').trim();
 }

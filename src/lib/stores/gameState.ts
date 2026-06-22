@@ -28,6 +28,7 @@ import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
 import { calculatePawnStats } from '$lib/game/entities/Pawns';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
+import { customizeMenuPreviewWorld } from '$lib/game/world/menuPreviewWorld';
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
 import { entityService } from '$lib/game/services/EntityService';
 import { loadSave, scheduleSave, deleteSave, saveGameNow } from './saveManager';
@@ -598,7 +599,10 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
     pawns: []
   };
   next = ensureRacePool(next);
-  next = { ...next, pawns: spawnPawnsOnMap(generateColonyPawns(next.racePool, colonySize), newWorld) };
+  next = {
+    ...next,
+    pawns: spawnPawnsOnMap(generateColonyPawns(next.racePool, colonySize), newWorld)
+  };
   next = markColonyRacesDiscovered(next);
   next = workService.ensureDefaultWorkAssignments(next);
   if (dev) next = applyDevWorld(next, itemQty);
@@ -619,10 +623,18 @@ function restoreWorld(snapshot: GameState) {
 
 // ===== MAIN-MENU BACKDROP PREVIEW =====
 /** Fixed, curated seed so the title-screen world looks the same every launch. */
-const MENU_PREVIEW_SEED = 0x5eed1f;
+const MENU_PREVIEW_SEED = 4051283263;
 /** Small world (cheap to build + seed) — big enough that the cover-fit zoom-out floor overflows the
  *  viewport for an atmospheric, slightly-oversized framing. NOT the player's Custom Map size. */
 const MENU_PREVIEW_MAP = { w: 160, h: 100 };
+/** Pinned title-screen weather: a pleasant spring breeze (blowing leaves), never fog. The engine skips
+ *  the weather re-roll in preview mode (GameEngineImpl.processEnvironment) so this stays put. */
+const MENU_PREVIEW_WEATHER = {
+  type: 'spring_windy',
+  intensity: 0.6,
+  turnsRemaining: Number.MAX_SAFE_INTEGER,
+  wind: 0.6
+} as const;
 
 /**
  * Boot the main-menu backdrop: a live but gutted preview of the game world that renders behind the
@@ -639,11 +651,16 @@ function startMenuPreview() {
   resetUnreachableJobs();
   const world = generateWorld(MENU_PREVIEW_MAP.w, MENU_PREVIEW_MAP.h, MENU_PREVIEW_SEED);
   resourceGeneratorService.generateResources(world, MENU_PREVIEW_SEED);
+  // Title-screen art direction: flatten the mountain + move the river to the lower-left (see module).
+  // Done BEFORE entity seeding so prey spawn on the reshaped land, not in the new river.
+  customizeMenuPreviewWorld(world);
 
   let preview: GameState = {
     ...initialGameState,
     seed: MENU_PREVIEW_SEED,
     worldMap: world,
+    season: 'spring',
+    weather: { ...MENU_PREVIEW_WEATHER },
     pawns: [],
     mobs: [],
     buildings: [],
@@ -779,6 +796,13 @@ export const storeReady = writable(false);
  * the backdrop unmounts before the real sim takes over the worker.
  */
 export const menuPreviewReady = writable(false);
+
+/**
+ * Flipped true by GameCanvas once the backdrop has PAINTED its first terrain frame. The backdrop holds
+ * at opacity 0 until then and fades in, so the WebGL init (which clears the whole canvas before the
+ * first draw) happens invisibly behind the menu's dark background instead of flashing the screen.
+ */
+export const menuPreviewRendered = writable(false);
 
 /**
  * The worker is currently running the menu-preview backdrop (gutted turn, prey-only, no pawns). While

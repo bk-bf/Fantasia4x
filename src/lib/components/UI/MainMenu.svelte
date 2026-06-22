@@ -144,10 +144,16 @@
   }
 
   .subtitle {
-    color: var(--text-muted);
+    color: var(--text);
     font-size: 12px;
     letter-spacing: 0.2em;
     margin-bottom: 26px;
+    /* Sits in the faded edge of the scrim, so carry its own dark backing — a tight drop shadow plus a
+       soft black halo — to stay legible over the colourful, busy map. */
+    text-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.95),
+      0 0 6px rgba(0, 0, 0, 0.9),
+      0 0 14px rgba(0, 0, 0, 0.75);
   }
 
   .menu,
@@ -156,6 +162,10 @@
     flex-direction: column;
     gap: 8px;
     width: 100%;
+    /* Day/night + weather/season hue, exactly like the in-game side panels: the same live
+       #ambient-tint feColorMatrix (driven off the preview world's turn + weather in +page.svelte)
+       multiplies the buttons' RGB so they shift warm at dawn/dusk, cool at night, with the scene. */
+    filter: url(#ambient-tint);
   }
 
   .menu-btn {

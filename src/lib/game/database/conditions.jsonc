@@ -540,6 +540,9 @@
         "color": "#b71c1c",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 19} ],
+        // Status-animation priority — the downed ↓ glyph beats every other state tell (winded, sleeping):
+        // being out of the fight is the most important thing to read at a glance.
+        "priority": 100,
         "modifiers": {"dexterity": 0.1, "strength": 0.3, "moveSpeed": 0.0, "workEfficiency": 0.0}
     },
     {
@@ -558,6 +561,7 @@
         "description": "Resting. Metabolism slows; hunger accrues at one-third the normal rate.",
         "color"      : "#ffb300",
         "hidden"     : true,
+        "priority"   : 50,
         "modifiers"  : {"hungerRate": 0.33, "fatigueRate": 0.0}
     },
     {
@@ -582,6 +586,7 @@
         "color": "#9575cd",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 126} ],
+        "priority": 20,
         "modifiers": {"strength": 0.5, "dexterity": 0.4, "moveSpeed": 0.3}
     },
     {

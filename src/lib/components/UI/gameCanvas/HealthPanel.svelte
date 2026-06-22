@@ -126,8 +126,17 @@
                   missing: part.missing
                 })}">{Math.round(part.health)}/{Math.round(part.maxHp)}</span
               >
+              {#if part.bleedRate && part.bleedRate > 0}
+                <span class="hp-bleed" title="this sub-part's bleed"
+                  >▼ {part.bleedRate.toFixed(1)}</span
+                >
+              {/if}
               {#each part.wounds as w (w.text)}
-                <span class="hp-wound" class:hp-warn={w.warn}>· {w.text}</span>
+                <span class="hp-wound" class:hp-warn={w.warn}
+                  >· {w.text}{#if w.treated}<span class="hp-treated" title="tended by a caretaker"
+                      >+</span
+                    >{/if}</span
+                >
               {/each}
               {#if part.missing && part.wounds.length === 0}
                 <span class="hp-wound">· gone</span>
@@ -269,6 +278,12 @@
   }
   .hp-warn {
     color: #ee8844;
+  }
+  /* A tended wound: a small green `+` after the wound text — at a glance, "a caretaker has treated this". */
+  .hp-treated {
+    color: #68a030;
+    font-weight: bold;
+    margin-left: 2px;
   }
   /* A destroyed sub-part (0 HP) is gone — grey the whole row so it reads as lost, not active. */
   .hp-gone,

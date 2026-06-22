@@ -1,17 +1,24 @@
 <!--
   MenuPreviewBackdrop — the live, atmospheric map shown BEHIND the main menu (MainMenu.svelte).
 
-  It mounts a single GameCanvas in `menuPreview` mode: a non-interactive, HUD-less render of a gutted
-  preview world (fixed seed, prey-only grazing, weather + day/night rolling, no pawns / predators /
-  environmental-consequence systems). The preview world + worker are booted by `startMenuPreview` in
-  gameState.ts; this component only renders it. Full-screen, click-through, and behind the menu text.
+  It mounts a single GameCanvas in `menuPreview` mode (a non-interactive, HUD-less render of a gutted
+  preview world — fixed seed, prey-only grazing, day/night progressing, no pawns / predators /
+  consequence systems) plus the WeatherCanvas particle overlay so the pinned spring breeze (blowing
+  leaves) animates over it. The preview world + worker are booted by `startMenuPreview` in gameState.ts.
+
+  The wrapper holds at opacity 0 until GameCanvas reports its first painted frame (`menuPreviewRendered`)
+  and then fades in — so the WebGL init (which clears the whole canvas before the first draw) happens
+  invisibly behind the menu's dark background instead of flashing the screen. Full-screen, click-through.
 -->
 <script lang="ts">
   import GameCanvas from '$lib/components/UI/GameCanvas.svelte';
+  import WeatherCanvas from '$lib/components/UI/WeatherCanvas.svelte';
+  import { menuPreviewRendered } from '$lib/stores/gameState';
 </script>
 
-<div class="menu-backdrop" aria-hidden="true">
+<div class="menu-backdrop" class:revealed={$menuPreviewRendered} aria-hidden="true">
   <GameCanvas menuPreview />
+  <WeatherCanvas />
 </div>
 
 <style>
@@ -22,5 +29,11 @@
     overflow: hidden;
     /* Click-through: the menu buttons sit above and own all interaction. */
     pointer-events: none;
+    /* Hidden until the first terrain frame is painted (see header) — then fade in. */
+    opacity: 0;
+    transition: opacity 0.8s ease-out;
+  }
+  .menu-backdrop.revealed {
+    opacity: 1;
   }
 </style>

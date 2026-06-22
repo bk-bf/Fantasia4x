@@ -57,6 +57,10 @@ export interface TransientConditionDef {
    *  a hardcoded constant, so designers tune it in the data and pawns + mobs can't drift. The behavioural
    *  suppression ("not while sleeping") stays in code; this is purely the need + cutoff. */
   needOnset?: { need: string; atOrAbove: number };
+  /** Status-animation priority: when an entity has several conditions that each want to play their own
+   *  glyph float (the ↓/Zzz over the sprite), the HIGHEST priority wins so the most important state shows
+   *  (e.g. `collapse` must beat `winded`). Default 0 (no glyph / lowest). Read via `conditionPriority`. */
+  priority?: number;
   modifiers: ConditionModifiers;
 }
 

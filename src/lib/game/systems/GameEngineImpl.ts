@@ -363,9 +363,10 @@ export class GameEngineImpl implements GameEngine {
       this.temperatureSeason = season;
     }
 
-    // Weather: one Markov step per in-game day at midnight.
+    // Weather: one Markov step per in-game day at midnight. Skipped in the menu-preview backdrop —
+    // it pins a fixed pleasant breeze (spring_windy) and must never wander into fog/storm.
     const ticksPerDay = TURNS_PER_DAY * TICKS_PER_SECOND;
-    if (gs.turn % ticksPerDay === 0 && gs.weather) {
+    if (!this.previewMode && gs.turn % ticksPerDay === 0 && gs.weather) {
       const prevType = gs.weather.type;
       gs.weather = advanceWeatherForDay(gs.weather, season, rng);
       // Chronicle only an actual change of weather type (a spell merely running down isn't news).

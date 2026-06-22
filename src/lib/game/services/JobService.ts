@@ -354,6 +354,12 @@ class JobServiceImpl {
     return JOB_DEF_BY_ID.get(type)?.lightAffected !== false;
   }
 
+  /** The human label for a job type from jobs.jsonc (`caretake` → "Tend", `construct` → "Build"…). The
+   *  UI status reads this so a working pawn's tag is task-specific instead of a generic "Working". */
+  getJobLabel(type: string): string | undefined {
+    return JOB_DEF_BY_ID.get(type)?.label;
+  }
+
   /** Colony job type ids that have a registered behaviour handler (= jobs.jsonc ids). Exposed for
    *  the drift-guard test and tooling. */
   jobTypeIds(): string[] {

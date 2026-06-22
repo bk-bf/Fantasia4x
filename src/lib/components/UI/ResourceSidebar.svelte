@@ -6,8 +6,22 @@
     hideSidebars
   } from '$lib/stores/uiPrefs';
   import { itemService } from '$lib/game/services/ItemService';
+  import { uiState } from '$lib/stores/uiState';
 
   type StockItem = { id: string; name: string; amount: number; color?: string };
+
+  // Click a resource → jump the camera to a physical stack of it (like the chronicle jumps to an entity).
+  // Cycles through every on-ground stack of that item on repeated clicks, so the player can sweep them all.
+  const lastJumpIdx: Record<string, number> = {};
+  function jumpToItemStack(itemId: string) {
+    const stacks = ($gameState?.droppedItems ?? []).filter((d) => d.resourceId === itemId);
+    if (stacks.length === 0) return; // nothing physical on the map (e.g. an abstract/derived total)
+    stacks.sort((a, b) => a.y - b.y || a.x - b.x); // stable order so cycling is predictable
+    const idx = ((lastJumpIdx[itemId] ?? -1) + 1) % stacks.length;
+    lastJumpIdx[itemId] = idx;
+    const s = stacks[idx];
+    uiState.focusMapOn(s.x, s.y, true); // pan + select the tile → the item stack's card opens
+  }
 
   // ── Live state ────────────────────────────────────────────────────────────
   const stockpile = $derived($currentStockpile as StockItem[]);
@@ -150,7 +164,14 @@
             <div class="cat-empty">none</div>
           {/if}
           {#each items as item (item.id)}
-            <div class="res-row">
+            <div
+              class="res-row"
+              onclick={() => jumpToItemStack(item.id)}
+              role="button"
+              tabindex="0"
+              title="jump to a stack on the map"
+              onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && jumpToItemStack(item.id)}
+            >
               {#if itemChanges[item.id]}
                 <span
                   class="delta"
@@ -430,6 +451,7 @@
     align-items: baseline;
     padding: 1px 8px 1px 24px; /* left gutter holds the delta + nesting indent */
     gap: 3px;
+    cursor: pointer; /* click → jump to a stack of this item on the map */
   }
   .res-row:hover {
     background: var(--bg-hover);

@@ -48,6 +48,13 @@ export function transientNeedOnset(id: string): { need: string; atOrAbove: numbe
   return TRANSIENT_BY_ID.get(id)?.needOnset;
 }
 
+/** Status-animation priority for a condition id (conditions.jsonc `priority`), default 0. When an entity
+ *  has several glyph-animated states active, the renderer plays the highest-priority one (collapse > sleep
+ *  > winded), so the most important state-to-know shows over its sprite. */
+export function conditionPriority(id: string): number {
+  return TRANSIENT_BY_ID.get(id)?.priority ?? 0;
+}
+
 /**
  * Fatigue at/above which the `tired` (Exhausted) transient shows — sourced from the `tired` condition's
  * `needOnset` in conditions.jsonc (single source of truth), shared by pawns and mobs. Distinct from the

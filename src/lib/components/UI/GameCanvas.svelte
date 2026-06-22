@@ -20,6 +20,7 @@
   import {
     gameState,
     rendererReady,
+    menuPreviewRendered,
     currentSeason,
     currentWeather,
     worldGenRev
@@ -87,6 +88,7 @@
   import { getEquipmentSlot } from '$lib/game/core/PawnEquipment.js';
   import { getRangedWeapon } from '$lib/game/systems/rangedCombat.js';
   import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
+  import { conditionPriority } from '$lib/game/core/needs';
   import { getCreatureById } from '$lib/game/core/Creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
   import { simTarget } from '$lib/game/systems/MovementSystem.js';
@@ -124,6 +126,10 @@
   // no hover/click/pan/zoom/keys, no HUD, a static centred framing, and it does NOT drive the
   // boot-reveal sequence or the player's saved camera. Entities still animate (never frozen).
   export let menuPreview = false;
+  /** Backdrop zoom multiplier over the cover-fit floor — a closer, more detailed title-screen shot. */
+  const MENU_PREVIEW_ZOOM = 2;
+  /** One-shot guard so the backdrop's first painted frame flips `menuPreviewRendered` exactly once. */
+  let _previewPainted = false;
   // Per-building refuel settings UI now lives in gameCanvas/BuildingFuelPanel.svelte (fuel items,
   // filters, threshold). Sprite-sheet cache + HUD-icon action live in gameCanvas/{spriteSheets,
   // hudSpriteIcon}.
@@ -1373,28 +1379,34 @@
     });
     const onScreen = (o: { left: number; top: number }) => o.left >= 0 && o.top >= 0 && o.left <= W;
     const newGlyphs: GlyphFloat[] = [];
+    // Status-animation PRIORITY (conditions.jsonc `priority`): an entity can be in several glyph-worthy
+    // states at once (collapsed AND winded, sleeping AND winded). Play only the HIGHEST-priority one so
+    // the most important state-to-know shows over the sprite — collapse(100) > sleep(50) > winded(20).
+    // Priorities precomputed once (constant per build) → no per-entity lookup in this per-frame loop.
+    const prioCollapse = conditionPriority('collapse');
+    const prioSleeping = conditionPriority('sleeping');
+    const prioWinded = conditionPriority('winded');
     for (const p of pawns) {
       if (!p.position) continue;
       if (isHiddenTile(p.position.x, p.position.y)) continue; // under the fog → no Zzz/✚/↓ leak
-      if (p.currentState === 'Collapsed') {
-        const o = glyphOf(p.id, p.position.x, p.position.y, 'collapse');
-        if (onScreen(o)) newGlyphs.push(o);
-        continue;
+      let kind: GlyphFloatKind | null = null;
+      let prio = -1;
+      if (p.currentState === 'Collapsed' && prioCollapse > prio) {
+        prio = prioCollapse;
+        kind = 'collapse';
       }
-      if (p.currentState === 'Sleeping') {
-        const o = glyphOf(
-          p.id,
-          p.position.x,
-          p.position.y,
-          needsRecovery(p as never) ? 'rest' : 'sleep'
-        );
-        if (onScreen(o)) newGlyphs.push(o);
-        continue;
+      // Sleeping pawns with real wounds are RECOVERING (red ✚), the rest just nap (Zzz).
+      if (p.currentState === 'Sleeping' && prioSleeping > prio) {
+        prio = prioSleeping;
+        kind = needsRecovery(p as never) ? 'rest' : 'sleep';
       }
-      // Winded (stamina spent) — a blue ↓ tell on a conscious, non-sleeping pawn, so an exhausted
-      // pawn standing to catch its breath reads at a glance (transientConditions ships hot every flush).
-      if ((p.transientConditions ?? []).includes('winded')) {
-        const o = glyphOf(p.id, p.position.x, p.position.y, 'winded');
+      // Winded (stamina spent) — a blue ↓ tell; loses to collapse/sleep so the more urgent state wins.
+      if ((p.transientConditions ?? []).includes('winded') && prioWinded > prio) {
+        prio = prioWinded;
+        kind = 'winded';
+      }
+      if (kind) {
+        const o = glyphOf(p.id, p.position.x, p.position.y, kind);
         if (onScreen(o)) newGlyphs.push(o);
       }
     }
@@ -1406,14 +1418,25 @@
       // overlays must never attach to a corpse, regardless of stale transientConditions.
       if (m.state === 'Corpse') continue;
       if (isHiddenTile(m.x, m.y)) continue; // under the fog → no Zzz/↓ leak
-      if (m.state === 'Sleeping') {
-        const o = glyphOf(m.id, m.x, m.y, 'sleep');
-        if (onScreen(o)) newGlyphs.push(o);
-        continue;
+      let kind: GlyphFloatKind | null = null;
+      let prio = -1;
+      // Collapsed mob (combat KO / starvation) — the downed ↓, the bug fix: it MUST beat winded (a mob
+      // that collapses while winded was wrongly showing the winded tell; pawns already prioritised this).
+      if (m.state === 'Collapsed' && prioCollapse > prio) {
+        prio = prioCollapse;
+        kind = 'collapse';
+      }
+      if (m.state === 'Sleeping' && prioSleeping > prio) {
+        prio = prioSleeping;
+        kind = 'sleep';
       }
       // Winded mob (e.g. a boar that sprinted itself out) stands still to recover — show the blue ↓ tell.
-      if ((m.transientConditions ?? []).includes('winded')) {
-        const o = glyphOf(m.id, m.x, m.y, 'winded');
+      if ((m.transientConditions ?? []).includes('winded') && prioWinded > prio) {
+        prio = prioWinded;
+        kind = 'winded';
+      }
+      if (kind) {
+        const o = glyphOf(m.id, m.x, m.y, kind);
         if (onScreen(o)) newGlyphs.push(o);
       }
     }
@@ -2572,8 +2595,10 @@
     unsubCombatFeedback();
     unsubAttackLunges();
     unsubProjectiles();
-    // The menu backdrop is not the real renderer boot — leave the boot-reveal flag untouched.
-    if (!menuPreview) rendererReady.set(false); // a remount must re-init WebGL before the game shows
+    // The menu backdrop is not the real renderer boot — leave the boot-reveal flag untouched, but
+    // re-arm its own fade-in (a remount must repaint before being revealed again).
+    if (menuPreview) menuPreviewRendered.set(false);
+    else rendererReady.set(false); // a remount must re-init WebGL before the game shows
     if (browser) {
       cancelAnimationFrame(animationId);
       renderer?.dispose();
@@ -2591,9 +2616,11 @@
       viewY = 0;
 
       if (menuPreview) {
-        // Static, centred framing at the cover-fit floor (the unbound axis overflows the viewport,
-        // so the scene reads as "a bit bigger than the screen"). No saved-camera restore — the
-        // backdrop must never read or write the player's camera.
+        // Static, centred framing zoomed IN past the cover-fit floor (MENU_PREVIEW_ZOOM×) for a closer,
+        // more detailed title-screen shot — entities + blowing leaves read clearly. The map still fills
+        // the screen (zooming in only shows less of it); both axes overflow, so it's centred. No
+        // saved-camera restore — the backdrop must never read or write the player's camera.
+        tileWidth = tileHeight = Math.min(MAX_TILE_W, fitTileSize * MENU_PREVIEW_ZOOM);
         const mapW = worldMap.length > 0 ? worldMap[0].length : MAP_W;
         const mapH = worldMap.length > 0 ? worldMap.length : MAP_H;
         const visW = Math.ceil(canvas.width / tileWidth);
@@ -2797,6 +2824,12 @@
         renderer.endFrame();
         _renderDirty = false;
         lastDrawAt = now;
+        // Backdrop: the terrain is now actually on screen — reveal it (the wrapper fades 0→1), so the
+        // WebGL clear/init never flashed in the open. One-shot.
+        if (menuPreview && !_previewPainted) {
+          _previewPainted = true;
+          menuPreviewRendered.set(true);
+        }
         // Surface render FPS to the topbar ~4×/sec to avoid store churn.
         if (now - lastFpsPush > 250) {
           lastFpsPush = now;

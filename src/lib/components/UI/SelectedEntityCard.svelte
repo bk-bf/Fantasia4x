@@ -70,6 +70,7 @@
   export interface HealthWound {
     text: string; // "crush (serious)" / "puncture · infected"
     warn?: boolean;
+    treated?: boolean; // a caretaker has tended it (treatedAt set) → shows a green `+`
   }
 
   /** A damaged sub-part (organ/bone/finger) inside a limb, with its own HP and wounds. */
@@ -78,6 +79,7 @@
     health: number; // current HP
     maxHp: number;
     missing?: boolean; // severed/destroyed — or taken when its container was severed (containment cascade)
+    bleedRate?: number; // this part's own bleed (Σ its wounds' bleeding), blood/s while > 0
     wounds: HealthWound[];
   }
 
