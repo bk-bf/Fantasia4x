@@ -82,18 +82,13 @@
     {/if}
   </div>
 
-  <!-- Subtle bottom-left footer: build version + tileset attribution. -->
+  <!-- Subtle bottom-left footer: build version + tileset attribution. Plain text on purpose — NO link.
+       This is an Electron-shelled app; an anchor would open the Chromium engine's browser, exposing
+       the under-the-hood webview. Credit reads as the source path so it's still attributable. -->
   <div class="footer-note">
     <span>version: alpha 0.1.0</span>
     <span class="sep">·</span>
-    <span>tileset:
-      <a
-        class="credit-link"
-        href="https://github.com/DragonDePlatino/bitlands"
-        target="_blank"
-        rel="noopener noreferrer">Bitlands</a
-      > by DragonDePlatino</span
-    >
+    <span>tileset: Bitlands by DragonDePlatino · github.com/DragonDePlatino/bitlands</span>
   </div>
 </div>
 
@@ -141,18 +136,6 @@
   }
   .footer-note .sep {
     opacity: 0.6;
-  }
-  .credit-link {
-    color: rgba(248, 249, 250, 0.82);
-    text-decoration: none;
-    border-bottom: 1px solid rgba(248, 249, 250, 0.3);
-    transition:
-      color 0.12s,
-      border-color 0.12s;
-  }
-  .credit-link:hover {
-    color: var(--accent-hi);
-    border-bottom-color: var(--accent-hi);
   }
 
   .content {

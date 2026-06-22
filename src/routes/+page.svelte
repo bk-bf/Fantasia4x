@@ -147,6 +147,15 @@
   function blockZoom(e: WheelEvent) {
     if (e.ctrlKey || e.metaKey) e.preventDefault();
   }
+  // The app must NEVER navigate the webview — it's a game in an Electron/Chromium shell, and a link
+  // following through (e.g. a credit URL) would surface the underlying browser. Swallow any click that
+  // resolves to an anchor with an href, in the CAPTURE phase, before it can navigate. The game is a
+  // single page driven by buttons, so this never blocks anything legitimate. (The Electron main process
+  // backs this up with setWindowOpenHandler/will-navigate denials — desktop-spike/electron/main.js.)
+  function blockLinkNav(e: MouseEvent) {
+    const a = (e.target as Element | null)?.closest?.('a[href]');
+    if (a) e.preventDefault();
+  }
 
   function handleKeydown(e: KeyboardEvent) {
     // Ignore ALL keyboard input while the loading overlay is up — otherwise Space would toggle pause
@@ -215,6 +224,8 @@
   on:dragover={blockDragNav}
   on:drop={blockDragNav}
   on:wheel|nonpassive={blockZoom}
+  on:click|capture={blockLinkNav}
+  on:auxclick|capture={blockLinkNav}
 />
 
 <svelte:head>

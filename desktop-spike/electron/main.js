@@ -6,7 +6,7 @@
 //   Terminal 2:  cd desktop-spike/electron && pnpm start
 //
 // Read the on-screen "NNFPS · NNTPS" counter (top controls bar) and compare to your Zen number.
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, shell } = require('electron');
 
 const URL = process.env.SPIKE_URL || 'http://localhost:5173';
 
@@ -41,6 +41,44 @@ function createWindow() {
     backgroundThrottling: false,
     webPreferences: {
       backgroundThrottling: false
+    }
+  });
+
+  // ── Navigation hardening: the engine-level guarantee that the Chromium webview is NEVER exposed ──
+  // This is a GAME, not a browser. No in-app window may ever be spawned, and the window must never
+  // navigate away from the app's own origin (a stray link, a dropped file, window.open…). Anything
+  // that genuinely wants the web (an external credit/support URL) is handed to the OS's default
+  // browser via shell.openExternal — it opens out there, not in our Chromium shell.
+  const appOrigin = () => {
+    try {
+      return new URL(win.webContents.getURL() || URL).origin;
+    } catch {
+      return new URL(URL).origin;
+    }
+  };
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  win.webContents.on('will-navigate', (e, url) => {
+    let sameOrigin = false;
+    try {
+      sameOrigin = new URL(url).origin === appOrigin();
+    } catch {
+      /* unparseable → treat as foreign */
+    }
+    if (!sameOrigin) {
+      e.preventDefault();
+      if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+    }
+  });
+  // Belt-and-suspenders: also refuse navigation to a brand-new document via will-frame-navigate
+  // (covers iframes/subframes), same origin rule.
+  win.webContents.on('will-redirect', (e, url) => {
+    try {
+      if (new URL(url).origin !== appOrigin()) e.preventDefault();
+    } catch {
+      e.preventDefault();
     }
   });
 
