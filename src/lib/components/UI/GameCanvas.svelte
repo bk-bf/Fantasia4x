@@ -3992,6 +3992,11 @@
     pointer-events: none;
     z-index: 1;
     image-rendering: pixelated;
+    /* Sit the zone tints / designations / resource highlight / selection markings UNDER the day/night
+       + weather filter, like the WebGL terrain (shader-dimmed) and the panels (#ambient-tint). Without
+       this the 2D overlay glowed at full brightness at night while everything else dimmed — animal
+       highlighting (baked into the dimmed WebGL render) already sat behind it; now the rest matches. */
+    filter: url(#ambient-tint);
   }
   canvas {
     display: block;
