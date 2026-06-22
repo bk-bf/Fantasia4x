@@ -33,7 +33,7 @@ import {
   CLOT_ROLL_INTERVAL,
   BASE_CLOT_CHANCE
 } from '../core/Wounds';
-import { PART_DEF_MAP } from '../core/BodyParts';
+import { lethalAnatomyCause } from '../core/BodyParts';
 import conditionsData from '../database/conditions.jsonc';
 import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
@@ -569,24 +569,16 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     return killPawn(updatedGs.pawns.find((p) => p.id === pawn.id)!, 'infection', updatedGs);
   }
 
-  // ── Critical Limb / Part Destruction ──────────────────────────────────────
-  for (const limb of limbs) {
-    // A destroyed critical PART (a caved-in skull) is instant death even if the head aggregate still
-    // has HP — checked before the limb-aggregate rule so a crushed skull kills outright.
-    const fatalPart =
-      limb.id === 'head' &&
-      (limb.parts ?? []).some(
-        (part) => (part.isMissing || part.health <= 0) && PART_DEF_MAP[part.id]?.isCritical
-      );
-    if (fatalPart || (limb.health <= 0 && (limb.id === 'head' || limb.id === 'torso'))) {
-      const updatedGs = {
-        ...gameState,
-        pawns: gameState.pawns.map((p) =>
-          p.id === pawn.id ? { ...p, conditions, bloodVolume, limbs } : p
-        )
-      };
-      return killPawn(updatedGs.pawns.find((p) => p.id === pawn.id)!, 'critical_limb', updatedGs);
-    }
+  // ── Lethal anatomy (destroyed vital organ — incl. a crushed-to-0 heart — or head/torso at 0 HP) ──
+  // ONE shared rule (core/BodyParts.lethalAnatomyCause), identical to the combat resolver + mob reaper.
+  if (lethalAnatomyCause(limbs)) {
+    const updatedGs = {
+      ...gameState,
+      pawns: gameState.pawns.map((p) =>
+        p.id === pawn.id ? { ...p, conditions, bloodVolume, limbs } : p
+      )
+    };
+    return killPawn(updatedGs.pawns.find((p) => p.id === pawn.id)!, 'critical_limb', updatedGs);
   }
 
   // ── Broken-bone conditions ────────────────────────────────────────────────

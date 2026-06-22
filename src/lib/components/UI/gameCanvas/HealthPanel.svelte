@@ -12,6 +12,16 @@
 
   let { health, open = false }: { health: HealthModel | undefined; open?: boolean } = $props();
 
+  // Scrollbar hidden until actively scrolling (mirrors ChroniclePanel/ResourceSidebar) — a `.scrolling`
+  // flag set on scroll and cleared after a beat reveals/hides the thin thumb.
+  let scrolling = $state(false);
+  let scrollTimer: ReturnType<typeof setTimeout>;
+  function onScroll() {
+    scrolling = true;
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => (scrolling = false), 700);
+  }
+
   // bleedRate is blood/REAL-second; 1 in-game day = TURNS_PER_DAY real seconds → 24 in-game hours.
   // So in-game hours to bleed out = (blood ÷ bleedRate) × 24 / TURNS_PER_DAY.
   const HOURS_PER_BLOODSEC = 24 / TURNS_PER_DAY;
@@ -34,8 +44,11 @@
 <div
   class="health-panel"
   class:open
+  class:scrolling
   onmousedown={(e) => e.stopPropagation()}
   onmouseup={(e) => e.stopPropagation()}
+  onwheel={(e) => e.stopPropagation()}
+  onscroll={onScroll}
 >
   <div class="health-hdr">◈ HEALTH</div>
   {#if health}
@@ -147,10 +160,29 @@
     font-size: 9px;
     line-height: 1.5;
     z-index: 20;
+    /* Scrollbar hidden until actively scrolling (the `.scrolling` flag reveals the thin thumb), so the
+       bar never clutters the readout when it isn't needed. Gutter reserved so rows don't reflow. */
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
     transition:
       opacity 140ms ease,
       transform 140ms ease,
-      max-height 200ms ease;
+      max-height 200ms ease,
+      scrollbar-color 0.3s ease;
+  }
+  .health-panel.scrolling {
+    scrollbar-color: #7a5e28 transparent;
+  }
+  .health-panel::-webkit-scrollbar {
+    width: 8px;
+  }
+  .health-panel::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+  }
+  .health-panel.scrolling::-webkit-scrollbar-thumb {
+    background: #7a5e28;
   }
   .health-panel.open {
     opacity: 1;

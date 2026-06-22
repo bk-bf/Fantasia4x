@@ -4,6 +4,7 @@ import {
   rollBodyPart,
   parentLimbOf,
   enabledNaturalWeapons,
+  lethalAnatomyCause,
   BOUND_NATURAL_WEAPONS,
   PART_DEF_MAP,
   DEFAULT_PLAN
@@ -176,5 +177,47 @@ describe('body plans', () => {
       expect(w.has('bite')).toBe(false); // mouth gone
       expect(w.has('claw')).toBe(true); // the OTHER front paw still claws
     });
+  });
+});
+
+/**
+ * Lethal anatomy — the SINGLE death rule shared by combat + the per-tick pawn/mob reapers. Regression
+ * for the "heart-and-lungs-gone jackal still walking around" report: a CRUSHED vital organ (HP driven
+ * to 0 without being severed) must be lethal, which the old `isMissing`-only / head-`isCritical`-only
+ * checks missed.
+ */
+describe('lethalAnatomyCause', () => {
+  const torsoOf = (limbs: ReturnType<typeof createBodyPlanLimbs>) =>
+    limbs.find((l) => l.id === 'torso')!;
+
+  it('a full-health body is not lethal', () => {
+    expect(lethalAnatomyCause(createBodyPlanLimbs(DEFAULT_PLAN, 1))).toBeNull();
+  });
+
+  it('a CRUSHED heart (0 HP, NOT severed) is lethal — the jackal bug', () => {
+    const limbs = createBodyPlanLimbs(DEFAULT_PLAN, 1);
+    const heart = torsoOf(limbs).parts!.find((p) => p.id === 'heart')!;
+    heart.health = 0; // caved in by crush, isMissing stays false
+    expect(heart.isMissing).toBe(false);
+    expect(lethalAnatomyCause(limbs)).toBe('critical_limb');
+  });
+
+  it('a severed (missing) vital organ is lethal', () => {
+    const limbs = createBodyPlanLimbs(DEFAULT_PLAN, 1);
+    const heart = torsoOf(limbs).parts!.find((p) => p.id === 'heart')!;
+    heart.isMissing = true;
+    expect(lethalAnatomyCause(limbs)).toBe('critical_limb');
+  });
+
+  it('a non-vital torso part at 0 HP (e.g. a kidney) is NOT on its own lethal', () => {
+    const limbs = createBodyPlanLimbs(DEFAULT_PLAN, 1);
+    torsoOf(limbs).parts!.find((p) => p.id === 'leftKidney')!.health = 0;
+    expect(lethalAnatomyCause(limbs)).toBeNull();
+  });
+
+  it('the torso ROOT limb reduced to 0 aggregate HP is lethal', () => {
+    const limbs = createBodyPlanLimbs(DEFAULT_PLAN, 1);
+    torsoOf(limbs).health = 0;
+    expect(lethalAnatomyCause(limbs)).toBe('critical_limb');
   });
 });

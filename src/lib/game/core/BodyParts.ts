@@ -155,6 +155,35 @@ export function cascadeSeveredContents(
   return changed ? { parts: next, lostVital } : { parts, lostVital: false };
 }
 
+/**
+ * Canonical lethal-anatomy check — the SINGLE source of truth for "is this body dead?", shared by the
+ * combat hit resolver (immediate kill on the fatal blow) and the per-tick pawn/mob reapers (the
+ * guaranteed safety net). Previously three call sites disagreed: combat killed on a severed (`isMissing`)
+ * vital, while the reapers only checked the `isCritical` flag on the HEAD plus head/torso aggregate HP —
+ * so a CRUSHED torso vital (heart driven to 0 HP without being severed) killed nobody, leaving a
+ * heart-and-lungs-gone jackal walking around. One rule now:
+ *   • any VITAL (`isVital` — heart/brain) or CRITICAL (`isCritical` — skull) part that is missing OR at
+ *     ≤0 HP — HP-based, so a caved-in (crushed, not severed) organ counts; OR
+ *   • the head or torso ROOT limb reduced to ≤0 aggregate HP.
+ * Returns the death cause for logging, or null. (Blood-loss death stays separate — driven per-tick from
+ * bloodVolume ≤ 0.)
+ */
+export function lethalAnatomyCause(limbs: LimbState[] | undefined): 'critical_limb' | null {
+  if (!limbs) return null;
+  for (const limb of limbs) {
+    for (const part of limb.parts ?? []) {
+      const def = PART_DEF_MAP[part.id];
+      if ((def?.isVital || def?.isCritical) && (part.isMissing || part.health <= 0)) {
+        return 'critical_limb';
+      }
+    }
+    if (limb.health <= 0 && (limb.id === 'head' || limb.id === 'torso')) {
+      return 'critical_limb';
+    }
+  }
+  return null;
+}
+
 /** Natural-weapon ids currently usable given a limb tree: the union of `weapons` over every non-missing
  *  part (a destroyed jaw can't bite; one surviving front paw still claws). Unbound weapons aren't listed
  *  here — callers treat them as always-available via BOUND_NATURAL_WEAPONS. */

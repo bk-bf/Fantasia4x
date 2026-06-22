@@ -58,6 +58,7 @@ import {
   parentLimbOf,
   enabledNaturalWeapons,
   cascadeSeveredContents,
+  lethalAnatomyCause,
   skeletonPartOf,
   BOUND_NATURAL_WEAPONS,
   DEFAULT_PLAN,
@@ -747,9 +748,8 @@ class CombatServiceImpl implements CombatService {
       limbOfPart(entity, injury.bodyPart)?.id ?? parentLimbOf(planOf(entity), injury.bodyPart);
 
     // ── Update limb tree: merge this hit into the part's same-type wound ──────
-    // A severed container takes its contents (cascadeSeveredContents); set if that cascade claims a
-    // vital organ (e.g. a gutted chest → heart/lungs), which is lethal regardless of the hit part.
-    let cascadeLostVital = false;
+    // A severed container takes its contents (cascadeSeveredContents → gutted chest takes heart/lungs).
+    // Whether the resulting body is dead is decided ONCE below by lethalAnatomyCause(limbs).
     const limbs: LimbState[] = (entity.limbs ?? []).map((limb) => {
       if (limb.id !== targetLimbId) return limb;
 
@@ -807,7 +807,6 @@ class CombatServiceImpl implements CombatService {
       const cascade = justSevered
         ? cascadeSeveredContents(mergedParts, updatedPart.id)
         : { parts: mergedParts, lostVital: false };
-      if (cascade.lostVital) cascadeLostVital = true;
       const newParts = cascade.parts;
 
       // Bleed rate = sum of all current part-wound bleed (falls as wounds heal),
@@ -873,15 +872,16 @@ class CombatServiceImpl implements CombatService {
       transientConditions
     };
 
-    // Resolution: a destroyed vital part is instant death — whether hit directly, or taken when its
-    // container was severed (cascadeLostVital, e.g. a gutted chest). Otherwise a collapse takes the
-    // entity out of the fight WITHOUT killing it — a mob goes DOWN into the recoverable `Collapsed` state
-    // (the same one starvation uses), exactly like a pawn. Death now comes ONLY from a destroyed vital or
-    // from bleeding out (blood ≤ 0, handled per-tick in entityLifecycle) — NOT from a single blunt blow
-    // that merely tips an already-shocked creature under the consciousness floor. A downed mob lies there
-    // and recovers as consciousness climbs (blood regen / pain heals), bleeds out, or is finished off by a
-    // hungry predator (willFinishOffDowned). The FSM (entityAI) owns the stay-down/recover decision.
-    if ((partDef.isVital && injury.severity === 'destroyed') || cascadeLostVital) {
+    // Resolution: lethal anatomy is instant death — a destroyed vital organ (hit directly, crushed to
+    // 0 HP, or taken when its container was gutted) or a head/torso at 0 HP. ONE shared rule
+    // (lethalAnatomyCause), identical to the per-tick pawn/mob reapers, so a body that's dead by the
+    // reaper's standard never survives the blow that made it so. Otherwise a collapse takes the entity
+    // out of the fight WITHOUT killing it — a mob goes DOWN into the recoverable `Collapsed` state (the
+    // same one starvation uses), exactly like a pawn. Death comes ONLY from lethal anatomy or from
+    // bleeding out (blood ≤ 0, handled per-tick in entityLifecycle) — NOT from a single blunt blow that
+    // merely tips an already-shocked creature under the consciousness floor. A downed mob lies there and
+    // recovers as consciousness climbs, bleeds out, or is finished off (willFinishOffDowned).
+    if (lethalAnatomyCause(limbs)) {
       if (entityType === 'pawn') {
         (updated as Pawn).isAlive = false;
         (updated as Pawn).currentState = 'Dead';

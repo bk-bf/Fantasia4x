@@ -19,7 +19,7 @@ import { creatureExposureAt, accrueWetness } from '../EnvironmentService';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { pawnStatService } from '../PawnStatService';
 import { simLog } from '../../core/logSink';
-import { PART_DEF_MAP } from '../../core/BodyParts';
+import { lethalAnatomyCause } from '../../core/BodyParts';
 import {
   healLimbsInPlace,
   rollWoundClotting,
@@ -205,33 +205,21 @@ export function stepHunger(state: GameState): GameState {
       continue;
     }
 
-    // Critical limb destruction (head or torso at 0 HP).
-    let diedFromLimb = false;
-    if (limbs) {
-      for (const limb of limbs) {
-        // A caved-in skull (destroyed critical PART) kills outright, even if the head aggregate survives.
-        const fatalPart =
-          limb.id === 'head' &&
-          (limb.parts ?? []).some(
-            (p) => (p.isMissing || p.health <= 0) && PART_DEF_MAP[p.id]?.isCritical
-          );
-        if (fatalPart || (limb.health <= 0 && (limb.id === 'head' || limb.id === 'torso'))) {
-          simLog.logEntityDeath(mob.id, entityName(mob), 'critical_limb', turn, mob.x, mob.y);
-          mob.state = 'Corpse';
-          mob.isAlive = false;
-          mob.diedAt = turn;
-          mob.intactness = 1.0;
-          mob.bloodVolume = bloodVolume;
-          mob.conditions = conditions;
-          mob.limbs = limbs;
-          justDied.push(mob);
-          changed = true;
-          diedFromLimb = true;
-          break;
-        }
-      }
+    // Lethal anatomy — destroyed vital organ (incl. a crushed-to-0 heart) or a head/torso reduced to
+    // 0 HP. ONE shared rule (core/BodyParts.lethalAnatomyCause) so combat + this reaper agree.
+    if (lethalAnatomyCause(limbs)) {
+      simLog.logEntityDeath(mob.id, entityName(mob), 'critical_limb', turn, mob.x, mob.y);
+      mob.state = 'Corpse';
+      mob.isAlive = false;
+      mob.diedAt = turn;
+      mob.intactness = 1.0;
+      mob.bloodVolume = bloodVolume;
+      mob.conditions = conditions;
+      mob.limbs = limbs;
+      justDied.push(mob);
+      changed = true;
+      continue;
     }
-    if (diedFromLimb) continue;
 
     // Creatures can't dress wounds — they heal them OFF slowly over days (no tending, no severity
     // stall). MUTATED IN PLACE + throttled: the old immutable healLimbs rebuild ran every tick for
