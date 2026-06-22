@@ -6,6 +6,7 @@
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
   import {
     buildGameGrid,
+    applyTileToGrid,
     generatePlaceholderGrid,
     computeHiddenMask
   } from '$lib/webgl/fantasia-world.js';
@@ -178,6 +179,16 @@
   let _prevZoneTiles: unknown;
   let _prevTerrainRev: number | undefined; // ADR-021: worker-sent terrain revision (see unsubState)
   let _prevDesignationRev: number | undefined; // §D: worker-sent designation revision → cheap 2D overlay redraw (no terrain rebuild)
+  // §R2 incremental terrain: keep the terrain GameGrid PERSISTENT and re-apply only the tiles whose ref
+  // changed since the last build (the worker's worldMapDelta gives changed tiles fresh refs; unchanged
+  // ones keep theirs). buildGameGrid (562k setTile) is reserved for genuine full rebuilds — without this
+  // a 3-tile regrowth rebuilt the whole map (~150ms hitch ⇒ FPS crater at 4×). `_builtTiles` is the
+  // flat snapshot of tile refs the persistent grid was last drawn from.
+  let _terrainGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
+  let _builtTiles: (WorldTile | undefined)[] = [];
+  let _terrainGridWorldMapRef: unknown; // worldMap ARRAY ref of the last build (changes only on full send)
+  let _terrainGridBuildingsSig = '';
+  let _terrainGridHadBlueprint = false; // last build painted a blueprint preview ⇒ next build must be full
   // Terrain rebuild is O(map) (38k-tile vertex buffer). worldMap churns every tick from
   // resource regrowth/harvest, which would rebuild it every frame (~60ms). Those changes are
   // invisible if they lag a fraction of a second, so coalesce sim-driven terrain rebuilds to
@@ -1640,33 +1651,58 @@
   function redrawOverlayNow() {
     if (!renderer?.isReady() || worldMap.length === 0) return;
     markRenderDirty(); // terrain changed → force a draw even when frozen
-    // Profiler: how often the full 38k-tile terrain grid is rebuilt + re-uploaded. If this is
-    // ~1/tick during RUNNING, the renderCPU cost is rebuild churn (fix the trigger); if ~0 while
-    // renderCPU stays high, the cost is the per-frame buffer re-upload in the renderer instead.
-    const grid = buildGameGrid(worldMap, buildings);
-
-    // (Live zone drag-paint preview, the Shift+drag selection rectangle, the committed selection
-    // rectangle and the selected-resource highlight are all drawn on the lightweight 2D overlay in
-    // drawDesignations(), not here, to avoid rebuilding the heavy terrain buffer on every
-    // selection/camera change.)
-
-    // Blueprint placement preview
-    if (blueprintBuildingId) {
-      if (blueprintDragActive && blueprintDragTiles.size > 0) {
-        for (const key of blueprintDragTiles) {
-          const [tx, ty] = key.split(',').map(Number);
-          _blueprintPreviewTile(grid, tx, ty);
+    const buildingsSig = buildingsVisualSig(buildings);
+    // §R2: FULL rebuild (the expensive 562k-setTile buildGameGrid) only when we must — no grid yet, a
+    // whole-map send (array ref changed), buildings changed, or a blueprint preview is/was painted.
+    // Otherwise INCREMENTAL: a cheap O(map) ref-scan re-applies ONLY the tiles whose ref changed (the
+    // worker gives changed tiles fresh refs), which kills the per-rebuild 150ms hitch at 4× speed.
+    const needFull =
+      !_terrainGrid ||
+      worldMap !== _terrainGridWorldMapRef ||
+      buildingsSig !== _terrainGridBuildingsSig ||
+      !!blueprintBuildingId ||
+      _terrainGridHadBlueprint;
+    const W = worldMap[0]?.length ?? 0;
+    if (needFull) {
+      _terrainGrid = buildGameGrid(worldMap, buildings);
+      _builtTiles = new Array(W * worldMap.length);
+      for (let y = 0; y < worldMap.length; y++) {
+        const row = worldMap[y];
+        for (let x = 0; x < W; x++) _builtTiles[y * W + x] = row[x];
+      }
+      _terrainGridWorldMapRef = worldMap;
+      _terrainGridBuildingsSig = buildingsSig;
+      _terrainGridHadBlueprint = !!blueprintBuildingId;
+      // Blueprint placement preview — painted on top; it forces a full rebuild so it can be cleanly
+      // cleared on the next build (zone/selection previews live on the 2D overlay in drawDesignations).
+      if (blueprintBuildingId) {
+        if (blueprintDragActive && blueprintDragTiles.size > 0) {
+          for (const key of blueprintDragTiles) {
+            const [tx, ty] = key.split(',').map(Number);
+            _blueprintPreviewTile(_terrainGrid, tx, ty);
+          }
+        } else if (hoverTileX >= 0 && hoverTileY >= 0) {
+          _blueprintPreviewTile(_terrainGrid, hoverTileX, hoverTileY);
         }
-      } else if (hoverTileX >= 0 && hoverTileY >= 0) {
-        _blueprintPreviewTile(grid, hoverTileX, hoverTileY);
+      }
+    } else if (_terrainGrid) {
+      for (let y = 0; y < worldMap.length; y++) {
+        const row = worldMap[y];
+        for (let x = 0; x < W; x++) {
+          const t = row[x];
+          const idx = y * W + x;
+          if (t !== _builtTiles[idx]) {
+            applyTileToGrid(_terrainGrid, t, hiddenMask);
+            _builtTiles[idx] = t;
+          }
+        }
       }
     }
 
-    // (Live "select similar" drag preview is drawn on the 2D overlay in
-    // drawDesignations(), not here, to avoid rebuilding the terrain buffer.)
-
-    renderer.setGrid(grid);
-    drawDesignations();
+    if (_terrainGrid) {
+      renderer.setGrid(_terrainGrid);
+      drawDesignations();
+    }
   }
 
   /**

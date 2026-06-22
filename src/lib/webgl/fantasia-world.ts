@@ -126,115 +126,108 @@ function hexToRgb01(hex?: string): [number, number, number] | null {
  * Uses subterrain glyph + color when available, falls back to legacy type.
  * Overlays placed buildings and designations on top of terrain tiles.
  */
+const DIRT_BG = (SUBTERRAINS['dirt']?.bg ?? [0.08, 0.06, 0.03]) as [number, number, number];
+
+/**
+ * Paint ONE tile's terrain/resource/snow visual into the grid. Shared by buildGameGrid (full rebuild)
+ * and the incremental terrain update in GameCanvas — so a `worldMapDelta` re-applies only its changed
+ * tiles instead of rebuilding all ~562k (the 4× FPS crater). `hiddenMask` is the caller's (it only
+ * changes with walkability, never on a regrowth/harvest delta). Buildings are overlaid separately.
+ */
+export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boolean[][]): void {
+  // Hidden interior (buried rock or an enclosed pocket) → blank dirt-coloured tile.
+  if (hiddenMask[tile.y]?.[tile.x]) {
+    grid.setTile(tile.x, tile.y, {
+      char: ' ',
+      foreground: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
+      background: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
+      position: { x: tile.x, y: tile.y }
+    });
+    return;
+  }
+  // Layer 1: base subterrain
+  const sub = SUBTERRAINS[tile.subType] ?? SUBTERRAIN_FALLBACK;
+  // Layer 2: resource — overrides subterrain visuals when an active resource is present
+  const hasResources = tile.resources && Object.keys(tile.resources).length > 0;
+  let char: string;
+  let fg: [number, number, number];
+  let bg: [number, number, number];
+  if (hasResources) {
+    const activeEntry = Object.entries(tile.resources!).find(([, amt]) => amt > 0);
+    // §F: a depleted node (count 0) may still be STANDING — foraging takes only branches/berries, the
+    // plant stays put with a `growth` entry while its yield regrows; felling/dig/mine DROPS the growth
+    // entry (those fall through to dirt). When nothing is pickable, draw the most-grown standing
+    // resource dimmed by how grown it is, so a foraged tree still reads as a living tree.
+    let resKey: string | undefined = activeEntry?.[0];
+    let brightness = 1;
+    if (resKey) {
+      const partial = Object.keys(tile.resourceCooldowns ?? {}).some((k) =>
+        k.startsWith(resKey! + ':')
+      );
+      if (partial) brightness = 0.65;
+    } else {
+      let bestGrowth = 0;
+      for (const [id, g] of Object.entries(tile.growth ?? {})) {
+        if (g > bestGrowth) {
+          bestGrowth = g;
+          resKey = id;
+        }
+      }
+      if (resKey) brightness = Math.max(0.4, bestGrowth / 100);
+    }
+    const resDef = resKey ? resourceObjectService.getById(resKey) : undefined;
+    if (resDef && resDef.chars.length > 0) {
+      const h = ((tile.x * 1619 + tile.y * 31337) >>> 0) % resDef.chars.length;
+      char = resDef.chars[h];
+      fg = [resDef.fg[0] * brightness, resDef.fg[1] * brightness, resDef.fg[2] * brightness];
+      // Background ALWAYS from the subterrain (a resource is a glyph over uniform terrain) — using
+      // resDef.bg leaked the resource colour and lingered after harvest while on cooldown.
+      bg = sub.bg as [number, number, number];
+    } else {
+      char = pickChar(sub, tile.x, tile.y);
+      fg = sub.fg as [number, number, number];
+      bg = sub.bg as [number, number, number];
+    }
+  } else {
+    char = pickChar(sub, tile.x, tile.y);
+    fg = sub.fg as [number, number, number];
+    bg = sub.bg as [number, number, number];
+  }
+  // Snow cover (SEASONS_WEATHER): blend terrain/resource toward cool white by accumulated `snow`
+  // (0–100). Terrain layer only — buildings & dropped items draw on top and are never whitened.
+  const snow = tile.snow ?? 0;
+  if (snow > 0) {
+    const t = Math.min(1, snow / 100);
+    const wb = t * 0.9;
+    const wf = t * 0.75;
+    bg = [
+      bg[0] + (SNOW_WHITE[0] - bg[0]) * wb,
+      bg[1] + (SNOW_WHITE[1] - bg[1]) * wb,
+      bg[2] + (SNOW_WHITE[2] - bg[2]) * wb
+    ];
+    fg = [
+      fg[0] + (SNOW_WHITE[0] - fg[0]) * wf,
+      fg[1] + (SNOW_WHITE[1] - fg[1]) * wf,
+      fg[2] + (SNOW_WHITE[2] - fg[2]) * wf
+    ];
+  }
+  grid.setTile(tile.x, tile.y, {
+    char,
+    foreground: { r: fg[0], g: fg[1], b: fg[2] },
+    background: { r: bg[0], g: bg[1], b: bg[2] },
+    position: { x: tile.x, y: tile.y }
+  });
+}
+
 export function buildGameGrid(worldMap: WorldTile[][], buildings?: PlacedBuilding[]): GameGrid {
   const grid = new GameGrid();
 
   // Interior-mountain hiding (flood-fill silhouette) — see computeHiddenMask. A hidden tile renders as
   // a blank dirt-bg square (clean massif silhouette / sealed pocket), the same mask GameCanvas uses to
   // stop glow, hover, and explore-jumps from revealing what's buried.
-  const DIRT_BG = (SUBTERRAINS['dirt']?.bg ?? [0.08, 0.06, 0.03]) as [number, number, number];
   const hiddenMask = computeHiddenMask(worldMap);
-
   for (const row of worldMap) {
-    for (const tile of row) {
-      // Hidden interior (buried rock or an enclosed pocket) → blank dirt-coloured tile.
-      if (hiddenMask[tile.y]?.[tile.x]) {
-        grid.setTile(tile.x, tile.y, {
-          char: ' ',
-          foreground: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
-          background: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
-          position: { x: tile.x, y: tile.y }
-        });
-        continue;
-      }
-      // Layer 1: base subterrain
-      const sub = SUBTERRAINS[tile.subType] ?? SUBTERRAIN_FALLBACK;
-
-      // Layer 2: resource — overrides subterrain visuals when an active resource is present
-      const hasResources = tile.resources && Object.keys(tile.resources).length > 0;
-      let char: string;
-      let fg: [number, number, number];
-      let bg: [number, number, number];
-
-      if (hasResources) {
-        const activeEntry = Object.entries(tile.resources!).find(([, amt]) => amt > 0);
-
-        // §F: a depleted node (count 0) may still be STANDING. Foraging a tree/bush only takes its
-        // branches/berries — the plant stays put and keeps a `growth` entry while its pickable yield
-        // regrows; FELLING (woodcut), digging or mining DROPS the growth entry, so those tiles fall
-        // through to bare subterrain (dirt). When nothing is pickable yet, draw the most-grown
-        // standing resource and dim it by HOW grown it is — so a foraged tree reads as a living tree
-        // (≈80% bright), not the old fixed 35% half-dead glyph that looked like the tree was gone.
-        let resKey: string | undefined = activeEntry?.[0];
-        let brightness = 1;
-        if (resKey) {
-          // Partial recovery: count back but some per-yield cooldowns still active → medium dim.
-          const partial = Object.keys(tile.resourceCooldowns ?? {}).some((k) =>
-            k.startsWith(resKey! + ':')
-          );
-          if (partial) brightness = 0.65;
-        } else {
-          let bestGrowth = 0;
-          for (const [id, g] of Object.entries(tile.growth ?? {})) {
-            if (g > bestGrowth) {
-              bestGrowth = g;
-              resKey = id;
-            }
-          }
-          if (resKey) brightness = Math.max(0.4, bestGrowth / 100);
-        }
-
-        const resDef = resKey ? resourceObjectService.getById(resKey) : undefined;
-        if (resDef && resDef.chars.length > 0) {
-          // Resource layer: pick deterministic char from the resource's char pool
-          const h = ((tile.x * 1619 + tile.y * 31337) >>> 0) % resDef.chars.length;
-          char = resDef.chars[h];
-          fg = [resDef.fg[0] * brightness, resDef.fg[1] * brightness, resDef.fg[2] * brightness];
-          // Background ALWAYS comes from the subterrain, never the resource — a resource is a glyph
-          // (fg char) drawn over uniform terrain. Using resDef.bg leaked the resource's own colour
-          // (e.g. trees' green [0.07,0.1,0.03]) into the tile background, and it lingered after harvest
-          // while the tile was on cooldown. The land subterrains all share the dirt-brown bg, so this
-          // keeps the map background uniform.
-          bg = sub.bg as [number, number, number];
-        } else {
-          // Resource depleted or unknown — show base subterrain
-          char = pickChar(sub, tile.x, tile.y);
-          fg = sub.fg as [number, number, number];
-          bg = sub.bg as [number, number, number];
-        }
-      } else {
-        char = pickChar(sub, tile.x, tile.y);
-        fg = sub.fg as [number, number, number];
-        bg = sub.bg as [number, number, number];
-      }
-
-      // Snow cover (SEASONS_WEATHER): blend the terrain/resource colours toward a cool white by the
-      // tile's accumulated `snow` (0–100). Applied to the TERRAIN layer only — buildings & dropped
-      // items are drawn on top (below / separate sprite pass) so they're never whitened.
-      const snow = tile.snow ?? 0;
-      if (snow > 0) {
-        const t = Math.min(1, snow / 100);
-        const wb = t * 0.9; // background whitens the most (the ground goes under snow)
-        const wf = t * 0.75; // glyph fades toward white but stays faintly legible
-        bg = [
-          bg[0] + (SNOW_WHITE[0] - bg[0]) * wb,
-          bg[1] + (SNOW_WHITE[1] - bg[1]) * wb,
-          bg[2] + (SNOW_WHITE[2] - bg[2]) * wb
-        ];
-        fg = [
-          fg[0] + (SNOW_WHITE[0] - fg[0]) * wf,
-          fg[1] + (SNOW_WHITE[1] - fg[1]) * wf,
-          fg[2] + (SNOW_WHITE[2] - fg[2]) * wf
-        ];
-      }
-
-      grid.setTile(tile.x, tile.y, {
-        char,
-        foreground: { r: fg[0], g: fg[1], b: fg[2] },
-        background: { r: bg[0], g: bg[1], b: bg[2] },
-        position: { x: tile.x, y: tile.y }
-      });
-    }
+    for (const tile of row) applyTileToGrid(grid, tile, hiddenMask);
   }
 
   // Phase 4d: overlay *completed* buildings only — they're opaque, so they live on the glyph grid.
