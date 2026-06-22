@@ -3941,11 +3941,11 @@
     background: #050706;
     overflow: hidden;
     outline: none;
-    cursor: crosshair;
+    cursor: var(--app-cursor), crosshair;
     user-select: none;
   }
   .canvas-wrap.dragging {
-    cursor: crosshair;
+    cursor: var(--app-cursor), grabbing;
   }
   .desig-layer {
     position: absolute;
