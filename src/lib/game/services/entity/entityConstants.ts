@@ -92,6 +92,19 @@ export const STARVATION_COLLAPSE_SEVERITY = 0.65;
 export const HUNGER_EAT_THRESHOLD = 50;
 
 /**
+ * Soft territory leash (lair system). The hard leash pens a mob to `lairRange` of its lair, but a hard
+ * cutoff makes a hunter OSCILLATE at the boundary — it spots prey just outside, lunges, gets yanked home,
+ * re-spots, lunges… With overstretch the leash STRETCHES by this many tiles while the mob is actively
+ * pursuing prey (Hunting/Attacking) or is critically hungry (survival > territory, like Fleeing/Exhausted
+ * are exempt): it can chase past the boundary and commit to the kill, then — once the hunt ends and the
+ * normal `lairRange` applies again — it's compelled back home. Bounds the stray so the map isn't a churn
+ * of free-roaming packs.
+ */
+export const HUNT_OVERSTRETCH_TILES = 16;
+/** Hunger at/above which a predator may overstretch its leash to range for food (desperation). */
+export const HUNGER_OVERSTRETCH_THRESHOLD = 75;
+
+/**
  * Whether a mob FINISHES OFF a downed (Collapsed) pawn instead of leaving it be. Only a hungry
  * carnivore/predator does — it's a meal. Everything else disengages and wanders off (a downed pawn is
  * no threat). Shared by the entity FSM (whether to keep engaging a collapsed pawn) and Combat (whether

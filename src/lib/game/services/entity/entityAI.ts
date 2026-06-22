@@ -42,6 +42,8 @@ import {
   AI_THROTTLE_TICKS,
   SLEEP_FATIGUE_THRESHOLD,
   SLEEP_MAX_HUNGER,
+  HUNT_OVERSTRETCH_TILES,
+  HUNGER_OVERSTRETCH_THRESHOLD,
   SAFE_RESET_TICKS,
   STARTLED_TICKS,
   FLEE_STAMINA_DRAIN_PER_SECOND,
@@ -468,6 +470,26 @@ function chebDist(ax: number, ay: number, bx: number, by: number): number {
   return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
 }
 
+/**
+ * Bed down where the mob stands — UNLESS a laired mob has OVERSTRETCHED beyond its territory (a hunter
+ * that chased prey past the soft leash and is now tired far from home). Then it walks back toward the
+ * lair first and only sleeps once inside `lairRange`, so it never drops unconscious out in the open far
+ * afield (the safety net for a prolonged over-roam). No lair / already in territory ⇒ sleep in place.
+ */
+function sleepOrReturnHome(mob: Mob, turn: number, state: GameState): Mob {
+  if (
+    mob.lairId != null &&
+    chebDist(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) > (mob.lairRange ?? Infinity)
+  ) {
+    return moveToward(
+      { ...mob, state: 'Wander', stateSince: turn, huntTargetId: undefined, eatProgress: undefined },
+      { x: mob.lairX!, y: mob.lairY! },
+      state
+    );
+  }
+  return { ...mob, state: 'Sleeping', stateSince: turn, path: [] };
+}
+
 /** Nearest pawn POSITION this mob may actually engage: skips downed (Collapsed) pawns UNLESS `finisher`
  *  (a hungry predator that finishes them off). Manhattan, mirroring nearestPawn. Null when nothing is
  *  engageable — the signal for an Alerted/Attacking mob to disengage and wander instead of freezing over
@@ -531,16 +553,28 @@ export function stepHostile(
     };
   }
 
-  // ── Territory leash (lair system) ───────────────────────────────────────
+  // ── Territory leash (lair system, SOFT) ─────────────────────────────────
   // A laired mob that has strayed beyond its leash — drifted while wandering, or over-chased a target
   // — abandons whatever it's doing and heads home. Fleeing/Exhausted are exempt: survival overrides
   // territory. This (plus the Wander aggro gate below) keeps each pack penned to its lair, so the map
   // isn't a churning mass of 300 free-hunting hostiles.
+  //
+  // OVERSTRETCH: a hard cutoff made a hunter oscillate at the boundary (spot prey just outside → lunge →
+  // get yanked home → re-spot → lunge…). So while actively pursuing prey (Hunting/Attacking/locked on a
+  // target), FEEDING on the kill, OR critically hungry, the leash stretches by HUNT_OVERSTRETCH_TILES —
+  // the hunter commits to the chase past the boundary AND eats the corpse where it lies (else the hunt is
+  // wasted — it'd abandon the meal). Once the hunt+meal end (plain lairRange applies again) it's pulled home.
+  const onHunt =
+    mob.state === 'Hunting' || mob.state === 'Attacking' || mob.huntTargetId != null;
+  const feeding = mob.state === 'Eating'; // finishing the kill / a corpse — don't drag it off its meal
+  const desperate = mob.needs.hunger >= HUNGER_OVERSTRETCH_THRESHOLD;
+  const leashReach =
+    (mob.lairRange ?? Infinity) + (onHunt || feeding || desperate ? HUNT_OVERSTRETCH_TILES : 0);
   if (
     mob.lairId != null &&
     mob.state !== 'Fleeing' &&
     mob.state !== 'Exhausted' &&
-    chebDist(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) > (mob.lairRange ?? Infinity)
+    chebDist(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) > leashReach
   ) {
     // NB: do NOT clear `path` here. moveToward→stepDirectional preserves nextCellCostLeft only when the
     // re-issued step matches the current path's next cell (its anti-reset guard). Blanking the path
@@ -712,7 +746,7 @@ export function stepHostile(
     mob.state !== 'Alerted' &&
     mob.state !== 'Attacking'
   ) {
-    return { ...mob, state: 'Sleeping', stateSince: turn, path: [] };
+    return sleepOrReturnHome(mob, turn, state);
   }
 
   switch (mob.state) {
@@ -951,7 +985,7 @@ export function stepAnimal(
       mob.state !== 'Hunting' &&
       mob.state !== 'Eating'
     ) {
-      return { ...mob, state: 'Sleeping', stateSince: turn, path: [] };
+      return sleepOrReturnHome(mob, turn, state);
     }
   } else if (mob.state === 'Foraging' || mob.state === 'Hunting' || mob.state === 'Eating') {
     // Threatened while eating — drop food and flee.
