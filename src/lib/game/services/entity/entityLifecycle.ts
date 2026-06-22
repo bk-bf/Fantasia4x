@@ -5,13 +5,15 @@ import { getCreatureById } from '../../core/Creatures';
 import { SECONDS_PER_TICK, perTick } from '../../core/time';
 import {
   conditionNeedMultipliers,
+  transientNeedMultipliers,
   driveNeedConditions,
   applyShock,
   snapshotConditionStages,
   emitPersistentConditionFloaters,
   conditionsSig,
   syncFractureConditions,
-  driveWindchill
+  driveWindchill,
+  TIRED_FATIGUE_THRESHOLD
 } from '../../core/needs';
 import { creatureExposureAt } from '../EnvironmentService';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
@@ -28,10 +30,8 @@ import { entityName, mobInLiveRegion, isThinkTick } from './entityHelpers';
 import {
   BASE_HUNGER_PER_SECOND,
   BASE_FATIGUE_PER_SECOND,
-  SLEEP_HUNGER_RATE,
   SLEEP_RECOVERY_PER_SECOND,
   CORPSE_DECAY_TICKS,
-  TIRED_FATIGUE_THRESHOLD,
   MOB_WEATHER_INTERVAL,
   MOB_WIND_ONSET,
   MOB_WET_THRESHOLD,
@@ -111,12 +111,14 @@ export function stepHunger(state: GameState): GameState {
     const fatigueDelta =
       BASE_FATIGUE_PER_SECOND * SECONDS_PER_TICK * condMults.fatigueRate * tickScale;
 
-    // Sleeping: hunger accrues at 33% rate; fatigue recovers instead of rising.
+    // Eating PAUSES hunger (×0) and Sleeping SLOWS it (×0.33) — both pulled from the SAME conditions.jsonc
+    // `eating`/`sleeping` modifiers pawns use (transientNeedMultipliers), not a hardcoded constant, so the
+    // rates can't drift. Fatigue still RECOVERS while sleeping (a restorative, not just halted accrual).
     const sleepingNow = mob.state === 'Sleeping';
-    const newHunger = Math.min(
-      100,
-      mob.needs.hunger + hungerDelta * (sleepingNow ? SLEEP_HUNGER_RATE : 1)
-    );
+    const stateCond =
+      mob.state === 'Sleeping' ? 'sleeping' : mob.state === 'Eating' ? 'eating' : null;
+    const stateHungerRate = stateCond ? transientNeedMultipliers([stateCond]).hungerRate : 1;
+    const newHunger = Math.min(100, mob.needs.hunger + hungerDelta * stateHungerRate);
     const newFatigue = sleepingNow
       ? Math.max(0, mob.needs.fatigue - SLEEP_RECOVERY_PER_SECOND * SECONDS_PER_TICK * tickScale)
       : Math.min(100, mob.needs.fatigue + fatigueDelta);

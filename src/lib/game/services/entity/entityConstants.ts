@@ -169,11 +169,8 @@ export const HUNT_GIVE_UP_SECONDS = 25;
 /** Fatigue level at which mobs enter sleep — set lower than pawn (60 vs 72) so animals
  * sleep more naturally and spend a realistic fraction of time resting. */
 export const SLEEP_FATIGUE_THRESHOLD = 60;
-/** Fatigue level at which an awake creature reads as Exhausted (the `tired` transient — crushes STR/DEX
- * like a pawn). Mirrors the pawn FATIGUE_THRESHOLD (72, in systems/pawn) so the two agree without a
- * cross-layer import; a mob below the SLEEP threshold normally sleeps it off, but one kept awake (in a
- * fight) past this is visibly + mechanically exhausted. */
-export const TIRED_FATIGUE_THRESHOLD = 72;
+// The `tired` (Exhausted) badge threshold is now the single shared TIRED_FATIGUE_THRESHOLD in core/needs
+// (100 — pawns + mobs agree). entityLifecycle imports it from there.
 /** Weather exposure for creatures is HARDIER than pawns (fur/hide/instinct) and runs on a slow cadence
  *  (cost: there can be 100+ mobs). `windchilled` only bites a creature in stronger wind than a pawn
  *  (onset 0.45 vs 0.2); `wet` needs a genuinely soaked tile (75% vs the pawn's accrued 50). */
@@ -187,8 +184,8 @@ export function sleepWakeThreshold(hunger: number): number {
 /** Fatigue recovered per second while sleeping. Kept low (2.0) so animals sleep for a
  * substantial portion of their time rather than snapping back to full immediately. */
 export const SLEEP_RECOVERY_PER_SECOND = 2.0;
-/** Hunger accrual rate multiplier while sleeping (mirrors pawn hungerRate=0.33 sleeping effect). */
-export const SLEEP_HUNGER_RATE = 0.33;
+// The sleeping/eating hunger-rate now comes straight from the conditions.jsonc `sleeping`/`eating`
+// modifiers (transientNeedMultipliers), shared with pawns — no hardcoded SLEEP_HUNGER_RATE here.
 /** Hunger ceiling above which a mob won't enter sleep (mirrors pawn shouldPawnSleep: hunger < 87). */
 export const SLEEP_MAX_HUNGER = 87;
 /** Hunger restored when a foraging entity finishes eating from a wild forage node (berries…). */

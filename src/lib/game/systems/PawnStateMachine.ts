@@ -54,7 +54,8 @@ import {
   conditionsSig,
   syncFractureConditions,
   COLLAPSE_CONSCIOUSNESS,
-  RECOVER_CONSCIOUSNESS
+  RECOVER_CONSCIOUSNESS,
+  TIRED_FATIGUE_THRESHOLD
 } from '../core/needs';
 import {
   weatherEffects,
@@ -75,7 +76,7 @@ import { pawnById } from '../core/pawnIndex';
 // `pawn/pawnHelpers.ts`, the stateless queries in `pawn/pawnQueries.ts`, and the state enum in
 // `pawn/pawnStates.ts`. What remains here is the health/lifecycle block + the per-pawn dispatcher.
 import { PAWN_STATE, type PawnStateName } from './pawn/pawnStates';
-import { findCombatThreat, FATIGUE_THRESHOLD, FILTHY_THRESHOLD } from './pawn/pawnHelpers';
+import { findCombatThreat, FILTHY_THRESHOLD } from './pawn/pawnHelpers';
 import {
   handleIdle,
   handleMovingToResource,
@@ -703,7 +704,7 @@ export function syncTransientConditions(pawn: Pawn): Pawn {
   // Fatigue badge when not already sleeping. (Hunger/thirst no longer surface a transient flag —
   // they fold into the malnutrition/dehydration conditions, which now onset at the same need=70
   // threshold and escalate; the HUNGER/THIRST need bars are the live indicator.)
-  if (!isSleeping && (pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) ids.push('tired');
+  if (!isSleeping && (pawn.needs?.fatigue ?? 0) >= TIRED_FATIGUE_THRESHOLD) ids.push('tired');
   if ((pawn.needs?.hygiene ?? 0) >= FILTHY_THRESHOLD) ids.push('filthy');
 
   // Timer-based transient conditions (knockdown, etc.)

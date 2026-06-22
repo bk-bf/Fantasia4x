@@ -35,6 +35,14 @@ export const COLLAPSE_CONSCIOUSNESS = 0.3;
 export const RECOVER_CONSCIOUSNESS = 0.45;
 
 /**
+ * Fatigue at/above which the `tired` (Exhausted) transient is shown — the SAME badge for pawns and mobs
+ * (was duplicated as pawnHelpers.FATIGUE_THRESHOLD-for-the-badge + entityConstants.TIRED_FATIGUE_THRESHOLD).
+ * Distinct from the SEEK-REST threshold (pawn 72 / mob 60): a body normally rests long before this, so the
+ * debuff only bites when something keeps it awake to the exhaustion ceiling.
+ */
+export const TIRED_FATIGUE_THRESHOLD = 100;
+
+/**
  * If a (bare) transient/combat condition `id` is opted-in to floating text (`"floater": true` in
  * conditions.jsonc), return its display name + colour; otherwise undefined. For transient ids only
  * (`"winded"`, `"knockdown"`, …) — persistent conditions float via {@link emitPersistentConditionFloaters}
@@ -440,6 +448,31 @@ const TRANSIENT_BY_ID = new Map<string, TransientConditionDef>(
     ) as TransientConditionDef[]
   ).map((d) => [d.id, d])
 );
+
+/**
+ * Hunger/fatigue/thirst rate multipliers from a list of TRANSIENT condition IDs (the `eating`/`sleeping`
+ * pause + every timed transient with a need modifier). Mirrors {@link conditionNeedMultipliers} (which
+ * covers the PERSISTENT stage-based ones) for the transient half, so a mob can source its eating-pause /
+ * sleeping-slowdown from the SAME conditions.jsonc data pawns read — never a hardcoded constant.
+ */
+export function transientNeedMultipliers(ids: ReadonlyArray<string>): {
+  hungerRate: number;
+  fatigueRate: number;
+  thirstRate: number;
+} {
+  let hungerRate = 1;
+  let fatigueRate = 1;
+  let thirstRate = 1;
+  for (const id of ids) {
+    const m = TRANSIENT_BY_ID.get(id)?.modifiers;
+    if (m) {
+      hungerRate *= m.hungerRate ?? 1;
+      fatigueRate *= m.fatigueRate ?? 1;
+      thirstRate *= m.thirstRate ?? 1;
+    }
+  }
+  return { hungerRate, fatigueRate, thirstRate };
+}
 
 export interface StatMultipliers {
   strength: number;

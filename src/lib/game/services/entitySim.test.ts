@@ -143,9 +143,10 @@ describe('entity starvation (headless sim)', () => {
 
 describe('creature conditions affect creatures (parity with pawns)', () => {
   it('a fatigued, awake creature gets the `tired` (Exhausted) transient that crushes its stats', () => {
-    // Awake (Attacking → won't sleep it off) and past the exhaustion threshold.
+    // Awake (Attacking → won't sleep it off) and at the exhaustion ceiling (TIRED_FATIGUE_THRESHOLD = 100,
+    // shared with pawns — a creature normally sleeps long before this; only one kept awake hits it).
     let state = makeState([
-      makeGoblin({ state: 'Attacking', needs: { hunger: 0, fatigue: 90 } as any })
+      makeGoblin({ state: 'Attacking', needs: { hunger: 0, fatigue: 100 } as any })
     ]);
     state = entityService.stepHunger(state);
     expect(state.mobs![0].transientConditions ?? []).toContain('tired');
