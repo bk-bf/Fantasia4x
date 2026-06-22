@@ -24,6 +24,7 @@ import { buildingService } from './BuildingService';
 import itemsData from '../database/items.jsonc';
 import buildingsData from '../database/buildings.jsonc';
 import { SECONDS_PER_TICK } from '../core/time';
+import { chebyshev } from '../core/distance';
 import { sizeFromHeight } from '../core/Race';
 // Gated console shim (ADR-011): per-tick/per-action log/debug/info/warn are silent unless
 // gameDebug(true); console.error still surfaces.
@@ -465,7 +466,11 @@ export class ItemServiceImpl implements ItemService {
     }
     if (armorPocketL > 0.05) {
       volume.gear += armorPocketL;
-      gearSources.push({ name: 'armour pockets', weightKg: 0, volumeL: Math.round(armorPocketL * 10) / 10 });
+      gearSources.push({
+        name: 'armour pockets',
+        weightKg: 0,
+        volumeL: Math.round(armorPocketL * 10) / 10
+      });
     }
 
     weight.total = Math.max(1, weight.capacity + weight.gear);
@@ -724,7 +729,7 @@ export class ItemServiceImpl implements ItemService {
       // Chebyshev distance to the nearest fire; seasoning ring is exactly 2 (not adjacent).
       let nearest = Infinity;
       for (const f of fires) {
-        nearest = Math.min(nearest, Math.max(Math.abs(d.x - f.x), Math.abs(d.y - f.y)));
+        nearest = Math.min(nearest, chebyshev(d.x, d.y, f.x, f.y));
       }
       if (nearest !== 2) return d;
       const drying = (d.drying ?? 0) + SECONDS_PER_TICK;

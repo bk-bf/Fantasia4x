@@ -1,6 +1,7 @@
 /** pawn/handlers/combat — combat state handlers, extracted from PawnStateMachine (hotspot step 2). Each
  *  is a plain (pawn, gameState) => GameState function; the dispatcher wires them into the table. */
 import type { GameState, Pawn } from '../../../core/types';
+import { manhattan, chebyshev } from '../../../core/distance';
 import { PAWN_STATE } from '../pawnStates';
 import {
   findCombatThreat,
@@ -27,10 +28,7 @@ export function handleFighting(pawn: Pawn, gameState: GameState): GameState {
   if (!threat || !pawn.position) {
     return threat ? haltMovement(pawn, gameState) : transitionTo(pawn, PAWN_STATE.IDLE, gameState);
   }
-  const dist = Math.max(
-    Math.abs(pawn.position.x - threat.x),
-    Math.abs(pawn.position.y - threat.y)
-  );
+  const dist = Math.max(Math.abs(pawn.position.x - threat.x), Math.abs(pawn.position.y - threat.y));
 
   // RANGED-COMBAT: a ranged pawn stands and shoots once the threat is within weapon range (combatService
   // resolves the shot); only when the target is beyond range does it close to get into range.
@@ -101,7 +99,7 @@ export function handleHunting(pawn: Pawn, gameState: GameState): GameState {
   // R9 / ADR-010: weigh need urgency against PROXIMITY rather than a flat threshold — the "job
   // distance" is the distance to the quarry, so a pawn about to corner its prey resists breaking
   // off for distant food/rest (and still bolts when a need is critical or food/rest is close).
-  const jobDist = Math.abs(pawn.position.x - target.x) + Math.abs(pawn.position.y - target.y);
+  const jobDist = manhattan(pawn.position.x, pawn.position.y, target.x, target.y);
   const interrupted = checkNeedInterrupts(
     pawn,
     gameState,
@@ -120,8 +118,7 @@ export function handleHunting(pawn: Pawn, gameState: GameState): GameState {
     };
   }
 
-  const adjacent =
-    Math.max(Math.abs(pawn.position.x - target.x), Math.abs(pawn.position.y - target.y)) <= 1;
+  const adjacent = chebyshev(pawn.position.x, pawn.position.y, target.x, target.y) <= 1;
   if (adjacent) {
     // Corner the quarry into the shared prey "fight back" state — the exact hand-off the
     // predator→prey circuit performs (EntityService.stepHunting) — so the animal retaliates
@@ -145,8 +142,7 @@ export function handleHunting(pawn: Pawn, gameState: GameState): GameState {
 
   // Chase: re-path when we have no route or the quarry has drifted off the path's end tile.
   const pathEnd = pawn.path?.length ? pawn.path[pawn.path.length - 1] : null;
-  const drifted =
-    !pathEnd || Math.max(Math.abs(pathEnd.x - target.x), Math.abs(pathEnd.y - target.y)) > 1.5;
+  const drifted = !pathEnd || chebyshev(pathEnd.x, pathEnd.y, target.x, target.y) > 1.5;
   if ((pawn.path?.length ?? 0) > 0 && !drifted) return gameState; // keep following
 
   const afterPath = tryAssignPath(pawn, target.x, target.y, gameState);

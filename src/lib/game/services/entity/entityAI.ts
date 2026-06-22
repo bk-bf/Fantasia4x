@@ -4,6 +4,7 @@ import type { GameState, Mob, MobState, Pawn } from '../../core/types';
 import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
 import { getAmbientLight, computeTileLightLevel, weatherSightMul } from '../EnvironmentService';
 import { effectiveVisionRange } from '../../core/vision';
+import { manhattan, chebyshev } from '../../core/distance';
 import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
 import { calcMaxStamina } from '../../entities/Pawns';
 import { gameLogger } from '../../dev/gameLogger';
@@ -132,7 +133,7 @@ function cellDesc(state: GameState, x: number, y: number, selfId: string): strin
 function nearbyCorpse(state: GameState, mob: Mob, r: number): string {
   for (const m of state.mobs ?? []) {
     if (m.state !== 'Corpse' || (m.intactness ?? 1) <= 0) continue;
-    const d = Math.max(Math.abs(m.x - mob.x), Math.abs(m.y - mob.y));
+    const d = chebyshev(m.x, m.y, mob.x, mob.y);
     if (d <= r) return `(${m.x},${m.y})d=${d}i=${(m.intactness ?? 1).toFixed(2)}`;
   }
   return 'no';
@@ -509,11 +510,6 @@ export function tickMobConditionTimers(mob: Mob): Mob {
   return { ...mob, conditionTimers: next, transientConditions };
 }
 
-/** Chebyshev distance between two points (matches `dist`'s metric) — for lair-anchor checks. */
-function chebDist(ax: number, ay: number, bx: number, by: number): number {
-  return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
-}
-
 /**
  * Bed down where the mob stands — UNLESS a laired mob has OVERSTRETCHED beyond its territory (a hunter
  * that chased prey past the soft leash and is now tired far from home). Then it walks back toward the
@@ -523,7 +519,7 @@ function chebDist(ax: number, ay: number, bx: number, by: number): number {
 function sleepOrReturnHome(mob: Mob, turn: number, state: GameState): Mob {
   if (
     mob.lairId != null &&
-    chebDist(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) > (mob.lairRange ?? Infinity)
+    chebyshev(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) > (mob.lairRange ?? Infinity)
   ) {
     return moveToward(
       {
@@ -555,7 +551,7 @@ function nearestEngageablePos(
     const p = pawns[i];
     if (p.isAlive === false || !p.position) continue;
     if (!finisher && p.currentState === 'Collapsed') continue;
-    const d = Math.abs(p.position.x - mob.x) + Math.abs(p.position.y - mob.y);
+    const d = manhattan(p.position.x, p.position.y, mob.x, mob.y);
     if (d < bd) {
       bd = d;
       best = p.position;
@@ -623,7 +619,7 @@ export function stepHostile(
     mob.lairId != null &&
     mob.state !== 'Fleeing' &&
     mob.state !== 'Exhausted' &&
-    chebDist(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) > leashReach
+    chebyshev(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) > leashReach
   ) {
     // NB: do NOT clear `path` here. moveToward→stepDirectional preserves nextCellCostLeft only when the
     // re-issued step matches the current path's next cell (its anti-reset guard). Blanking the path
@@ -812,7 +808,7 @@ export function stepHostile(
       const pawnInTerritory =
         !inVision ||
         mob.lairId == null ||
-        chebDist(mob.lairX ?? mob.x, mob.lairY ?? mob.y, inVision.pos.x, inVision.pos.y) <=
+        chebyshev(mob.lairX ?? mob.x, mob.lairY ?? mob.y, inVision.pos.x, inVision.pos.y) <=
           (mob.lairRange ?? Infinity);
       if (inVision && (aggressive || tooClose) && pawnInTerritory) {
         return moveToward({ ...mob, state: 'Alerted', stateSince: turn }, inVision.pos, state);
@@ -949,7 +945,7 @@ function logFleeTrigger(
   visionRange: number
 ): void {
   if (!gameLogger.isEnabled) return;
-  const d = Math.max(Math.abs(threat.pos.x - mob.x), Math.abs(threat.pos.y - mob.y));
+  const d = chebyshev(threat.pos.x, threat.pos.y, mob.x, mob.y);
   gameLogger.log(
     turn,
     'ENTITY-FLEE',

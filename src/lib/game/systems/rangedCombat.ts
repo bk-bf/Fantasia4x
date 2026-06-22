@@ -15,6 +15,7 @@
  * fog-of-war raycast (ADR-019 / ADR-008 untouched), which earns its keep only for the full-map field.
  */
 import type { Pawn, Mob, Item, ItemInstance, ItemQuality } from '../core/types';
+import { chebyshev } from '../core/distance';
 import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
 
@@ -197,9 +198,10 @@ export function hasViableAmmo(pawn: Pawn, rw: RangedWeapon): boolean {
   return !rw.ammoCategory || pickAmmo(pawn, rw.ammoCategory) !== null;
 }
 
-/** Chebyshev (king-move) tile distance — the metric combat already uses for adjacency. */
+/** Chebyshev (king-move) tile distance — the metric combat already uses for adjacency.
+ *  Thin alias over the shared `chebyshev` so combat keeps its domain name without re-implementing it. */
 export function tileDistance(ax: number, ay: number, bx: number, by: number): number {
-  return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
+  return chebyshev(ax, ay, bx, by);
 }
 
 /** Reduced line-of-sight: the target is "in sight" if within the attacker's vision range. */

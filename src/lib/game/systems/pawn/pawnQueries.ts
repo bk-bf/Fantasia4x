@@ -11,6 +11,7 @@ import type { GameState, Pawn } from '../../core/types';
 import ITEMS_DATABASE from '../../database/items.jsonc';
 import RARITIES from '../../database/rarities.jsonc';
 import { consumeFromStockpiles } from '../../core/GameState';
+import { manhattan } from '../../core/distance';
 import { ticksFromSeconds } from '../../core/time';
 import { rng } from '../../core/rng';
 
@@ -68,10 +69,7 @@ export function findAdjacentApproach(
       const nx = tx + dx;
       const ny = ty + dy;
       if (!worldMap[ny]?.[nx]?.walkable || occupied?.has(`${nx},${ny}`)) continue;
-      const dist =
-        fromX !== undefined && fromY !== undefined
-          ? Math.abs(nx - fromX) + Math.abs(ny - fromY)
-          : 0;
+      const dist = fromX !== undefined && fromY !== undefined ? manhattan(nx, ny, fromX, fromY) : 0;
       if (dist < bestDist) {
         bestDist = dist;
         best = { x: nx, y: ny };
@@ -160,12 +158,17 @@ export function applyIntoxication(p: Pawn, moodLift: number): void {
   const idx = conditions.findIndex((c) => c.id === 'intoxicated');
   const add = moodLift * INTOX_SEVERITY_PER_MOOD;
   if (idx === -1) conditions.push({ id: 'intoxicated', severity: Math.min(1, add) });
-  else conditions[idx] = { ...conditions[idx], severity: Math.min(1, conditions[idx].severity + add) };
+  else
+    conditions[idx] = { ...conditions[idx], severity: Math.min(1, conditions[idx].severity + add) };
 }
 
 /** §F8: resolve one food's per-serving poison chance — explicit `poisonChance` (else a category
  *  default), scaled by the item's `rarity` poison multiplier (cooked dishes only; raw/unrated = 1×). */
-function itemPoisonChance(def: { poisonChance?: number; category?: string; rarity?: string }): number {
+function itemPoisonChance(def: {
+  poisonChance?: number;
+  category?: string;
+  rarity?: string;
+}): number {
   const base = def.poisonChance ?? POISON_BY_CATEGORY[def.category ?? ''] ?? 0;
   const mult = def.rarity ? (RARITY_POISON_MULT.get(def.rarity) ?? 1) : 1;
   return Math.max(0, Math.min(1, base * mult));

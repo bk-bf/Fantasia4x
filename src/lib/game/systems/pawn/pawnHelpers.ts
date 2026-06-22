@@ -21,6 +21,7 @@ import { gameLogger } from '../../dev/gameLogger';
 import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
 import { rng } from '../../core/rng';
 import { pawnById } from '../../core/pawnIndex';
+import { manhattan, chebyshev, findNearestBy } from '../../core/distance';
 import { computeTileLightLevel } from '../../services/EnvironmentService';
 import { effectiveVisionRange } from '../../core/vision';
 import { PAWN_STATE, type PawnStateName } from './pawnStates';
@@ -371,15 +372,13 @@ export function findNearestStorageBuilding(
   pawn: Pawn,
   gs: GameState
 ): { x: number; y: number; buildingId: string } | null {
-  if (!pawn.position) return null;
-  let best: { x: number; y: number; buildingId: string; dist: number } | null = null;
-  for (const b of gs.buildings ?? []) {
-    if (b.status !== 'complete') continue;
-    if (!CAMPFIRE_TYPES.includes(b.type)) continue;
-    const dist = Math.abs(b.x - pawn.position.x) + Math.abs(b.y - pawn.position.y);
-    if (!best || dist < best.dist) best = { x: b.x, y: b.y, buildingId: b.id, dist };
-  }
-  return best ? { x: best.x, y: best.y, buildingId: best.buildingId } : null;
+  const pos = pawn.position;
+  if (!pos) return null;
+  const campfires = (gs.buildings ?? []).filter(
+    (b) => b.status === 'complete' && CAMPFIRE_TYPES.includes(b.type)
+  );
+  const b = findNearestBy(campfires, (c) => manhattan(c.x, c.y, pos.x, pos.y));
+  return b ? { x: b.x, y: b.y, buildingId: b.id } : null;
 }
 
 /** Phase 6: find the best rest building for a pawn (assigned > quality > distance). */
@@ -420,7 +419,7 @@ export function findNearestRestBuilding(
       continue;
     const def = BUILDINGS_DB.find((d) => d.id === b.type);
     const quality = (def?.effects?.sleepQuality ?? 0) + (def?.effects?.fatigueRecovery ?? 0);
-    const dist = Math.abs(b.x - pawn.position!.x) + Math.abs(b.y - pawn.position!.y);
+    const dist = manhattan(b.x, b.y, pawn.position!.x, pawn.position!.y);
     // Quality dominates; distance is a small tie-break penalty.
     const score = quality * 100 - dist * 0.01;
     if (!best || score > best.score) best = { x: b.x, y: b.y, buildingId: b.id, score };
@@ -470,7 +469,7 @@ export function distToNearestFoodSource(pawn: Pawn, gs: GameState): number {
   if (!hasAvailableFood(gs)) return Infinity;
   const building = findNearestStorageBuilding(pawn, gs);
   if (!building) return 0; // no campfire → eat in place
-  return Math.abs(building.x - pawn.position.x) + Math.abs(building.y - pawn.position.y);
+  return manhattan(building.x, building.y, pawn.position.x, pawn.position.y);
 }
 
 /**
@@ -481,7 +480,7 @@ export function distToNearestRestSource(pawn: Pawn, gs: GameState): number {
   if (!pawn.position) return Infinity;
   const building = findNearestRestBuilding(pawn, gs);
   if (!building) return 0; // no shelter → sleep in place
-  return Math.abs(building.x - pawn.position.x) + Math.abs(building.y - pawn.position.y);
+  return manhattan(building.x, building.y, pawn.position.x, pawn.position.y);
 }
 
 /**
@@ -494,7 +493,7 @@ export function distFromPointToNearestFoodSource(x: number, y: number, gs: GameS
   for (const b of gs.buildings ?? []) {
     if (b.status !== 'complete') continue;
     if (!CAMPFIRE_TYPES.includes(b.type)) continue;
-    const d = Math.abs(b.x - x) + Math.abs(b.y - y);
+    const d = manhattan(b.x, b.y, x, y);
     if (d < best) best = d;
   }
   return best === Infinity ? 0 : best; // 0 = eat in place when no campfire exists
@@ -532,7 +531,7 @@ export function distFromPointToNearestRestSource(x: number, y: number, gs: GameS
   for (const b of gs.buildings ?? []) {
     if (b.status !== 'complete') continue;
     if (!REST_TYPES.includes(b.type)) continue;
-    const d = Math.abs(b.x - x) + Math.abs(b.y - y);
+    const d = manhattan(b.x, b.y, x, y);
     if (d < best) best = d;
   }
   return best === Infinity ? 0 : best; // 0 = sleep in place when no shelter exists
@@ -712,7 +711,7 @@ export function findCombatThreat(pawn: Pawn, gs: GameState): Mob | null {
   let bestDist = Infinity;
   // Pre-filtered hostile subset (computed once per tick), not the full mob list.
   for (const m of mobSubsets(gs).hostiles) {
-    const d = Math.max(Math.abs(px - m.x), Math.abs(py - m.y));
+    const d = chebyshev(px, py, m.x, m.y);
     if (d <= range && d < bestDist) {
       best = m;
       bestDist = d;
@@ -741,21 +740,12 @@ export function laborLevel(pawn: Pawn, workId: string, gs: GameState): number {
   return pri ?? 2;
 }
 
-/** Nearest live mob the player has flagged `markedForHunt` (Chebyshev), or null. */
+/** Nearest live mob the player has flagged `markedForHunt` (Chebyshev), or null. The hunt-flagged
+ *  subset is pre-filtered once per tick (mobSubsets), not the full mob list. */
 export function findNearestHuntTarget(pawn: Pawn, gs: GameState): Mob | null {
-  if (!pawn.position) return null;
-  const { x: px, y: py } = pawn.position;
-  let best: Mob | null = null;
-  let bestDist = Infinity;
-  // Pre-filtered hunt-flagged subset (computed once per tick), not the full mob list.
-  for (const m of mobSubsets(gs).huntTargets) {
-    const d = Math.max(Math.abs(px - m.x), Math.abs(py - m.y));
-    if (d < bestDist) {
-      best = m;
-      bestDist = d;
-    }
-  }
-  return best;
+  const pos = pawn.position;
+  if (!pos) return null;
+  return findNearestBy(mobSubsets(gs).huntTargets, (m) => chebyshev(m.x, m.y, pos.x, pos.y));
 }
 
 /** Put the pawn into HUNTING locked onto `target` (clearing any active job). */
@@ -787,7 +777,7 @@ export function tryStartHunt(pawn: Pawn, gs: GameState, bestJob: Job | null): Ga
   if (!target) return null;
 
   // Already in melee range — plant and let combat resolve swings.
-  if (Math.max(Math.abs(pawn.position.x - target.x), Math.abs(pawn.position.y - target.y)) <= 1) {
+  if (chebyshev(pawn.position.x, pawn.position.y, target.x, target.y) <= 1) {
     return enterHunting(pawn, target, gs);
   }
   // Otherwise commit only if we can actually path to it; else fall through to normal jobs
@@ -843,7 +833,7 @@ export function findNearestWaterTarget(
   for (const [key, type] of Object.entries(gs.designations ?? {})) {
     if (type !== kind) continue;
     const [x, y] = key.split(',').map(Number);
-    const dist = Math.abs(x - px) + Math.abs(y - py);
+    const dist = manhattan(x, y, px, py);
     if (!best || dist < best.dist) best = { x, y, dist };
   }
   if (best) return { x: best.x, y: best.y };
@@ -851,7 +841,7 @@ export function findNearestWaterTarget(
   if (kind === 'drink') {
     for (const b of gs.buildings ?? []) {
       if (b.status !== 'complete' || b.type !== 'well') continue;
-      const dist = Math.abs(b.x - px) + Math.abs(b.y - py);
+      const dist = manhattan(b.x, b.y, px, py);
       if (!best || dist < best.dist) best = { x: b.x, y: b.y, dist };
     }
   }

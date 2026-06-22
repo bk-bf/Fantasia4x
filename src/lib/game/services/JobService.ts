@@ -16,6 +16,7 @@
  */
 
 import type { DesignationType, DroppedItem, GameState, Job, JobDef, Pawn } from '../core/types';
+import { manhattan } from '../core/distance';
 import { WORK_CATEGORIES } from '../core/Work';
 import jobsData from '../database/jobs.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
@@ -268,8 +269,8 @@ class JobServiceImpl {
       const labA = laborSettings[workKeyA] ?? 2;
       const labB = laborSettings[workKeyB] ?? 2;
       if (labB !== labA) return labB - labA;
-      const dA = Math.abs(a.targetX - px) + Math.abs(a.targetY - py);
-      const dB = Math.abs(b.targetX - px) + Math.abs(b.targetY - py);
+      const dA = manhattan(a.targetX, a.targetY, px, py);
+      const dB = manhattan(b.targetX, b.targetY, px, py);
       return dA - dB;
     });
   }
@@ -443,7 +444,7 @@ class JobServiceImpl {
       if (!d.stored || (d.quantity ?? 0) <= 0 || d.reservedFor) continue;
       if (!ids.has(d.resourceId)) continue;
       if (!near) return d;
-      const dd = Math.abs(d.x - near.x) + Math.abs(d.y - near.y);
+      const dd = manhattan(d.x, d.y, near.x, near.y);
       if (dd < bestD) {
         bestD = dd;
         best = d;

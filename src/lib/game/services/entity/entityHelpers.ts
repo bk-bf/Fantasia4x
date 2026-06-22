@@ -4,6 +4,7 @@
 import type { GameState, Mob, Pawn } from '../../core/types';
 import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
 import { pawnById } from '../../core/pawnIndex';
+import { manhattan, chebyshev } from '../../core/distance';
 import { SECONDS_PER_TICK } from '../../core/time';
 import { stepBody, seedMidCrossClaims } from '../../systems/MovementSystem';
 import { resourceObjectService } from '../ResourceObjectService';
@@ -202,7 +203,7 @@ export function findNearestPrey(mob: Mob, allMobs: Mob[], allowLivePrey: boolean
     // fight-each-other bug: same-species mobs locked into mutual Attacking). Same creatureId = ally;
     // cross-species predation is still allowed, and scavenging ANY corpse (incl. same species) stays.
     if (candidate.state !== 'Corpse' && candidate.creatureId === mob.creatureId) continue;
-    const raw = Math.abs(candidate.x - mob.x) + Math.abs(candidate.y - mob.y);
+    const raw = manhattan(candidate.x, candidate.y, mob.x, mob.y);
     if (candidate.state === 'Corpse') {
       // Corpses weighted as 50% closer — free food with no danger.
       const d = raw * 0.5;
@@ -301,7 +302,7 @@ export function fleeFromThreats(
 ): Mob {
   if (threats.length === 0) return mob;
   const minThreatDist = (x: number, y: number) =>
-    threats.reduce((m, t) => Math.min(m, Math.max(Math.abs(t.x - x), Math.abs(t.y - y))), Infinity);
+    threats.reduce((m, t) => Math.min(m, chebyshev(t.x, t.y, x, y)), Infinity);
 
   const stayScore = minThreatDist(mob.x, mob.y);
   const heading = mob.path?.[mob.pathIndex ?? 0];
@@ -370,14 +371,13 @@ export function fleeToSafety(mob: Mob, threats: { x: number; y: number }[], stat
   const w = state.worldMap[0]?.length ?? 0;
   const fleeDistance = Math.max(8, Math.floor(Math.max(w, h) / 2));
   const minThreatDist = (x: number, y: number) =>
-    threats.reduce((m, t) => Math.min(m, Math.max(Math.abs(t.x - x), Math.abs(t.y - y))), Infinity);
+    threats.reduce((m, t) => Math.min(m, chebyshev(t.x, t.y, x, y)), Infinity);
 
   // Keep heading to the LOCKED destination: re-route to it around whatever blocked us, as long as we
   // haven't reached it and it's still far from every threat. This is what stops the direction flip.
   const dest = mob.fleeDest;
   if (dest) {
-    const reached =
-      Math.max(Math.abs(dest.x - mob.x), Math.abs(dest.y - mob.y)) <= FLEE_REACHED_DIST;
+    const reached = chebyshev(dest.x, dest.y, mob.x, mob.y) <= FLEE_REACHED_DIST;
     const stillSafe = minThreatDist(dest.x, dest.y) > fleeDistance / 2;
     if (!reached && stillSafe) {
       const path = pathTo(state, mob.x, mob.y, dest.x, dest.y, mob.id);
@@ -440,7 +440,7 @@ export function bestApproachTile(
       const ny = target.y + dy;
       if (!isWalkable(state, nx, ny)) continue;
       if (occupancyService.isBlocked(state, nx, ny, selfId)) continue;
-      const d = Math.abs(nx - from.x) + Math.abs(ny - from.y);
+      const d = manhattan(nx, ny, from.x, from.y);
       if (d < bestDist) {
         bestDist = d;
         best = { x: nx, y: ny };
@@ -481,9 +481,7 @@ export function approachForMelee(
 ): ApproachDecision {
   const pathEnd = mob.path && mob.path.length > 0 ? mob.path[mob.path.length - 1] : null;
   const pathExhausted = !mob.path?.length || (mob.pathIndex ?? 0) >= mob.path.length;
-  const targetMoved =
-    !pathEnd ||
-    Math.max(Math.abs(pathEnd.x - targetPos.x), Math.abs(pathEnd.y - targetPos.y)) > 1.5;
+  const targetMoved = !pathEnd || chebyshev(pathEnd.x, pathEnd.y, targetPos.x, targetPos.y) > 1.5;
   const repathDue = pathExhausted || (targetMoved && (turn - mob.stateSince) % 10 === 0);
   if (!repathDue) return { kind: 'hold' };
   const approachTile = bestApproachTile(state, mob, targetPos, mob.id) ?? targetPos;
@@ -519,7 +517,7 @@ export function stepDirectional(
 
   // All primary directions blocked (cornered against terrain) — try the full 8
   // neighbours sorted by how well they move away from / toward the reference point.
-  const curDist = Math.abs(mob.x - ref.x) + Math.abs(mob.y - ref.y);
+  const curDist = manhattan(mob.x, mob.y, ref.x, ref.y);
   const allNeighbours = [
     { x: mob.x - 1, y: mob.y - 1 },
     { x: mob.x, y: mob.y - 1 },
@@ -530,8 +528,8 @@ export function stepDirectional(
     { x: mob.x, y: mob.y + 1 },
     { x: mob.x + 1, y: mob.y + 1 }
   ].sort((a, b) => {
-    const dA = Math.abs(a.x - ref.x) + Math.abs(a.y - ref.y);
-    const dB = Math.abs(b.x - ref.x) + Math.abs(b.y - ref.y);
+    const dA = manhattan(a.x, a.y, ref.x, ref.y);
+    const dB = manhattan(b.x, b.y, ref.x, ref.y);
     // sign = -1 (flee): maximise distance → sort descending
     // sign = +1 (approach): minimise distance → sort ascending
     return (dA - dB) * sign;
@@ -544,7 +542,7 @@ export function stepDirectional(
     // tick → the Alerted back-and-forth. Holding at the cluster edge until an opening appears reads
     // as "surrounding the target" instead of twitching. (Flee, sign −1, still uses every neighbour.)
     if (sign === 1) {
-      const cDist = Math.abs(c.x - ref.x) + Math.abs(c.y - ref.y);
+      const cDist = manhattan(c.x, c.y, ref.x, ref.y);
       if (cDist >= curDist) break; // sorted ascending: nothing further in the list is closer either
     }
     if (isWalkable(state, c.x, c.y) && !occupancyService.isBlocked(state, c.x, c.y, mob.id)) {
@@ -677,7 +675,7 @@ export function nearestPawn(
   for (let i = 0; i < pawns.length; i++) {
     if (skipDowned && pawns[i].currentState === 'Collapsed') continue;
     const pos = pawns[i].position!;
-    const d = Math.abs(pos.x - mx) + Math.abs(pos.y - my);
+    const d = manhattan(pos.x, pos.y, mx, my);
     if (d < bestDist) {
       bestDist = d;
       best = pawns[i];
@@ -686,8 +684,9 @@ export function nearestPawn(
   return best ? { pawn: best, pos: best.position! } : null;
 }
 
+/** Chebyshev distance between a mob and a point (object-shaped convenience over `chebyshev`). */
 export function dist(mob: Mob, pos: { x: number; y: number }): number {
-  return Math.max(Math.abs(pos.x - mob.x), Math.abs(pos.y - mob.y));
+  return chebyshev(mob.x, mob.y, pos.x, pos.y);
 }
 
 /**

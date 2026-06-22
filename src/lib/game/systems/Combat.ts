@@ -45,6 +45,7 @@ import conditionsData from '../database/conditions.jsonc';
 import type { ConditionDef, TransientConditionDef } from '../core/types';
 import { simLog, type CombatTextKind } from '../core/logSink';
 import { rng } from '../core/rng';
+import { chebyshev } from '../core/distance';
 import { perTick } from '../core/time';
 // P-4: the body-part anatomy table + selection helpers moved to core/BodyParts. Re-export the two
 // symbols external code imported from Combat (PawnHealth, EntityService, Pawns) so they're unchanged.
@@ -1241,7 +1242,7 @@ class CombatServiceImpl implements CombatService {
       if (m.state === 'Collapsed') continue;
       const hostile = m.entityClass === 'mob' || m.state === 'Attacking' || m.state === 'Alerted';
       if (!hostile) continue;
-      const d = Math.max(Math.abs(px - m.x), Math.abs(py - m.y));
+      const d = chebyshev(px, py, m.x, m.y);
       if (d <= maxRange && d < bestDist) {
         best = m;
         bestDist = d;

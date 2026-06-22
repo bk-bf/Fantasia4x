@@ -10,6 +10,7 @@ import {
   absorbDropIfOnStockpileTile,
   aggregateFromDrops
 } from '../../core/GameState';
+import { manhattan } from '../../core/distance';
 import { occupancyService } from '../../services/OccupancyService';
 import { zoneTileKeys } from '../../services/DesignationService';
 import { itemService } from '../../services/ItemService';
@@ -151,7 +152,7 @@ export function findNearestDepositPoint(
 ): { x: number; y: number } | null {
   if (!pawn.position) return null;
   const { x: px, y: py } = pawn.position;
-  const dist = (x: number, y: number) => Math.abs(x - px) + Math.abs(y - py);
+  const dist = (x: number, y: number) => manhattan(x, y, px, py);
   const standable = (x: number, y: number) =>
     !!gs.worldMap?.[y]?.[x]?.walkable && !occupancyService.isBlocked(gs, x, y, pawn.id);
 
@@ -305,7 +306,7 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   // whatever tile happens to come first in designation-iteration order (the old "top row" bug).
   const px = pawn.position?.x ?? 0;
   const py = pawn.position?.y ?? 0;
-  const distToPawn = (x: number, y: number) => Math.abs(x - px) + Math.abs(y - py);
+  const distToPawn = (x: number, y: number) => manhattan(x, y, px, py);
   const stockpileTiles = zoneTileKeys(gs, 'stockpile')
     .map((key) => {
       const [x, y] = key.split(',').map(Number);
@@ -357,9 +358,7 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   // Identity-tracked instances (dynamicName, e.g. named carcasses) are laid into the stockpile as
   // individual, NON-stacking stored drops so each keeps its per-pawn name. Ordinary tracked items
   // (tools/weapons the pawn keeps) stay in hand. A carcass with nowhere to go also stays in hand.
-  const usedTileCoords = new Set(
-    newDropped.filter((d) => d.stored).map((d) => `${d.x},${d.y}`)
-  );
+  const usedTileCoords = new Set(newDropped.filter((d) => d.stored).map((d) => `${d.x},${d.y}`));
   for (const id of newDropIds) {
     const d = newDropped.find((x) => x.id === id);
     if (d) usedTileCoords.add(`${d.x},${d.y}`);

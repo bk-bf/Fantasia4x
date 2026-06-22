@@ -2,6 +2,7 @@
  *  is a plain (pawn, gameState) => GameState function; the dispatcher wires them into the table. */
 import type { GameState, Pawn } from '../../../core/types';
 import { gameLogger } from '../../../dev/gameLogger';
+import { manhattan } from '../../../core/distance';
 import { perTick } from '../../../core/time';
 import { jobService, BASE_WORK_RATE } from '../../../services/JobService';
 import { pawnStatService } from '../../../services/PawnStatService';
@@ -326,7 +327,7 @@ export function handleMovingToResource(pawn: Pawn, gameState: GameState): GameSt
   // Re-evaluated every turn so needs that arise mid-journey are caught early.
   // Both work priority and queue lookahead adjust when the pawn will divert.
   const enRouteDist = pawn.position
-    ? Math.abs(activeJob.targetX - pawn.position.x) + Math.abs(activeJob.targetY - pawn.position.y)
+    ? manhattan(activeJob.targetX, activeJob.targetY, pawn.position.x, pawn.position.y)
     : 0;
   const enRouteQueue = pawn.jobQueue ?? [];
   const enRouteLaborLevel = jobService.getJobLaborLevel(jobInPool, pawn, gameState);
@@ -388,7 +389,7 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
   // The threshold is adjusted by work priority (high-priority jobs resist interruption more)
   // and job-queue lookahead (if no upcoming task passes near food, eat sooner).
   const jobDist = pawn.position
-    ? Math.abs(activeJob.targetX - pawn.position.x) + Math.abs(activeJob.targetY - pawn.position.y)
+    ? manhattan(activeJob.targetX, activeJob.targetY, pawn.position.x, pawn.position.y)
     : 0;
   const queue = pawn.jobQueue ?? [];
   // Reuse jobInPool (found above) instead of scanning gameState.jobs a second time (D9.3).
