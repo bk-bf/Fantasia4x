@@ -28,11 +28,14 @@ export function edibleResourceOnTile(
   tile: { resources?: Record<string, number> } | undefined,
   kinds: Set<TileFoodKind>
 ): string | null {
-  if (!tile?.resources) return null;
+  const res = tile?.resources;
+  if (!res) return null;
   const wantGrass = kinds.has('grass');
   const wantForage = kinds.has('forage');
-  for (const [k, v] of Object.entries(tile.resources)) {
-    if ((v ?? 0) <= 0) continue;
+  // `for…in` (no Object.entries array alloc) — this runs per tile of the food scan (×thousands), so the
+  // per-call allocation was real GC churn at scale (ENGINE-PERFORMANCE — harpy-chase trace, ~10%).
+  for (const k in res) {
+    if ((res[k] ?? 0) <= 0) continue;
     if (wantGrass && resourceObjectService.getById(k)?.grazing) return k;
     if (wantForage && WILD_FORAGE_RESOURCE_IDS.has(k)) return k;
   }
@@ -48,23 +51,19 @@ export function findNearestFoodTile(
   kinds: Set<TileFoodKind>
 ): { x: number; y: number } | null {
   if (kinds.size === 0) return null;
-  let bestDist = Infinity;
-  let best: { x: number; y: number } | null = null;
-  for (let dy = -radius; dy <= radius; dy++) {
-    for (let dx = -radius; dx <= radius; dx++) {
-      const nx = x + dx;
-      const ny = y + dy;
-      const tile = state.worldMap[ny]?.[nx];
-      if (!tile?.walkable) continue;
-      if (!edibleResourceOnTile(tile, kinds)) continue;
-      const dist = Math.abs(dx) + Math.abs(dy);
-      if (dist < bestDist) {
-        bestDist = dist;
-        best = { x: nx, y: ny };
+  // Ring-scan nearest-first and return the FIRST hit. For grass (on ~every walkable tile) that's d≤1 —
+  // not the full (2·radius+1)² block (radius 120 ⇒ 58k tiles). Only sparse forage forces it outward.
+  for (let d = 0; d <= radius; d++) {
+    for (let dx = -d; dx <= d; dx++) {
+      const ay = d - Math.abs(dx);
+      const dys = ay === 0 ? [0] : [ay, -ay]; // the two tiles of this Manhattan ring at column dx
+      for (const dy of dys) {
+        const tile = state.worldMap[y + dy]?.[x + dx];
+        if (tile?.walkable && edibleResourceOnTile(tile, kinds)) return { x: x + dx, y: y + dy };
       }
     }
   }
-  return best;
+  return null;
 }
 
 /**
@@ -85,25 +84,30 @@ export function findReachableFoodTile(
   maxCandidates = 6
 ): { target: { x: number; y: number }; path: { x: number; y: number }[] } | null {
   if (kinds.size === 0) return null;
-  const candidates: { x: number; y: number; d: number }[] = [];
-  for (let dy = -radius; dy <= radius; dy++) {
-    for (let dx = -radius; dx <= radius; dx++) {
-      const nx = mob.x + dx;
-      const ny = mob.y + dy;
-      const tile = state.worldMap[ny]?.[nx];
-      if (!tile?.walkable) continue;
-      if (!edibleResourceOnTile(tile, kinds)) continue;
-      candidates.push({ x: nx, y: ny, d: Math.abs(dx) + Math.abs(dy) });
+  // Ring-scan nearest-first, collecting only the NEAREST `maxCandidates` edible tiles (already distance-
+  // ordered, so no sort) and stopping there — then A*-probe them for reachability. For grass this stops
+  // at d≤1; the old code scanned all (2·radius+1)² tiles (radius 120 ⇒ 58k) before sorting, which was
+  // ~20% of the worker in a graze-heavy scene. Same tiles get probed (the nearest reachable ones).
+  const candidates: { x: number; y: number }[] = [];
+  collect: for (let d = 0; d <= radius; d++) {
+    for (let dx = -d; dx <= d; dx++) {
+      const ay = d - Math.abs(dx);
+      const dys = ay === 0 ? [0] : [ay, -ay];
+      for (const dy of dys) {
+        const nx = mob.x + dx;
+        const ny = mob.y + dy;
+        const tile = state.worldMap[ny]?.[nx];
+        if (tile?.walkable && edibleResourceOnTile(tile, kinds)) {
+          candidates.push({ x: nx, y: ny });
+          if (candidates.length >= maxCandidates) break collect;
+        }
+      }
     }
   }
-  if (candidates.length === 0) return null;
-  candidates.sort((a, b) => a.d - b.d);
-  const probeCount = Math.min(candidates.length, maxCandidates);
-  for (let i = 0; i < probeCount; i++) {
-    const c = candidates[i];
-    if (c.x === mob.x && c.y === mob.y) return { target: { x: c.x, y: c.y }, path: [] };
+  for (const c of candidates) {
+    if (c.x === mob.x && c.y === mob.y) return { target: c, path: [] };
     const path = pathTo(state, mob.x, mob.y, c.x, c.y, mob.id);
-    if (path.length) return { target: { x: c.x, y: c.y }, path };
+    if (path.length) return { target: c, path };
   }
   return null;
 }
