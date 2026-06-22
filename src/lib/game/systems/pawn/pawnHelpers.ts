@@ -11,7 +11,7 @@ import { jobService } from '../../services/JobService';
 import { pawnService } from '../../services/PawnService';
 import {
   buildPathfindingGrids,
-  buildPathfindingGridsSoftBlocked,
+  buildSharedSoftBlockedGrid,
   pathfinderService
 } from '../../services/PathfinderService';
 import { occupancyService } from '../../services/OccupancyService';
@@ -183,29 +183,23 @@ export function tryAssignPath(
   if (!pawn.position) return null;
   if (!pathfinderService.isReady()) return null;
   if (isAdjacent(pawn.position.x, pawn.position.y, tx, ty)) return null;
-  const occupied = occupancyService.blockedTiles(gameState, pawn.id);
+  // PERF: shared per-tick occupancy + soft-blocked grid (same cache the mobs use) — the old per-call
+  // build cloned the whole 562k-tile cost array on EVERY pawn path request, which storms during startup
+  // job-pathing / combat repositioning (the harpy-fight TPS crater). Self-exclusion is dropped (the
+  // mover's own start-tile penalty is moot to A*); the chosen approach tile is unoccupied either way.
+  const blocked = occupancyService.blockedTilesShared(gameState);
   const approach = findAdjacentApproach(
     tx,
     ty,
     gameState.worldMap,
-    occupied,
+    blocked,
     pawn.position.x,
     pawn.position.y
   );
   if (!approach) {
     return null;
   }
-  // Bodies are solid: route AROUND other pawns/mobs. The approach tile is kept
-  // walkable (it was chosen as unoccupied), and the start tile too, so the pawn is
-  // never blocked by itself.
-  const { walkable, costs, width, height } = buildPathfindingGridsSoftBlocked(
-    gameState.worldMap,
-    occupied,
-    pawn.position.x,
-    pawn.position.y,
-    approach.x,
-    approach.y
-  );
+  const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(gameState.worldMap, blocked);
   // Churn instrumentation: count every actual A* run, by reason, plus the two churn
   // signals — re-planning while the pawn ALREADY holds a path (hadPath), and empty
   // results (fail = unreachable). A high hadPath or blockedRepath rate ⇒ behaviour bug.
@@ -330,16 +324,10 @@ export function tryAssignSleepPath(
   if (!pawn.position) return null;
   if (!pathfinderService.isReady()) return null;
   if (pawn.position.x === tx && pawn.position.y === ty) return null; // already on the bed
-  // Route around other bodies; the bed tile (goal) and the pawn's own tile stay walkable.
-  const blocked = occupancyService.blockedTiles(gameState, pawn.id);
-  const { walkable, costs, width, height } = buildPathfindingGridsSoftBlocked(
-    gameState.worldMap,
-    blocked,
-    pawn.position.x,
-    pawn.position.y,
-    tx,
-    ty
-  );
+  // Route around other bodies via the shared per-tick grid (see navigateToApproach above for why the
+  // self-exclusion / goal-exemption drop is safe). Was an O(map) clone per call.
+  const blocked = occupancyService.blockedTilesShared(gameState);
+  const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(gameState.worldMap, blocked);
   const path = pathfinderService.findPath(
     walkable,
     costs,
