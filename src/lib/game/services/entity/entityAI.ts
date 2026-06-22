@@ -211,7 +211,13 @@ export function stepEntities(state: GameState): GameState {
       !isThinkTick(mob.id, turn) &&
       !nearestPredatorThreat(mob, def, mobs, THREAT_INTERRUPT_RANGE)
     ) {
-      next[i] = mob; // throttled this tick — keep state; movement + combat run per-tick elsewhere
+      // Throttled this tick (no full FSM) — but keep WANDERING alive per-tick for benign roaming states,
+      // so off-bubble animals don't look frozen between their ~1s thinks. The decision is cheap: an
+      // 8-neighbour walkable scan at the same WANDER_MOVES_PER_SECOND probability used in-bubble (NOT
+      // sampled once/N, which dropped the wander rate ~N×). wanderStep early-outs while mid-step, so this
+      // is near-free most ticks; the expensive FSM (forage/hunt/A*) still only runs on the think-tick.
+      next[i] =
+        mob.state === 'Wander' || mob.state === 'Grazing' ? wanderStep(mob, def, state) : mob;
       continue;
     }
     // Elapsed-time scale for time-based FSM progress (eat progress, flee stamina): use the ACTUAL gap
