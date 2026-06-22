@@ -32,7 +32,8 @@ import {
 import {
   getConditionCurrentStage,
   getConditionFloater,
-  conditionStatMultipliers
+  conditionStatMultipliers,
+  COLLAPSE_CONSCIOUSNESS
 } from '../core/needs';
 import { getCreatureById } from '../core/Creatures';
 import { willFinishOffDowned } from '../services/entity/entityConstants';
@@ -127,11 +128,8 @@ const MOB_BASE_DAMAGE = 5;
 const CRIT_MULTIPLIER = 1.5;
 /** Upper bound on total crit chance (base stat + weapon critMod). */
 const CRIT_CHANCE_CAP = 0.6;
-/** Consciousness (capacity 0–1) below which an entity collapses — out of the fight,
- *  distinct from a brief blunt knockdown. Consciousness already folds in pain, blood
- *  loss and organ damage, so downing is unified rather than a separate pain threshold.
- *  Mobs are defeated on collapse; pawns go down until consciousness recovers. */
-const COLLAPSE_CONSCIOUSNESS = 0.3;
+// COLLAPSE_CONSCIOUSNESS (the down threshold) is now the single shared constant in core/needs — both
+// pawns and mobs go DOWN into the recoverable `collapse` condition at the same band (no instant kill).
 /** Turns a blunt knockdown keeps an entity prone (short tactical stagger). */
 const KNOCKDOWN_TURNS = 2;
 /**

@@ -12,6 +12,7 @@ import { markTileDirty } from '../../core/tileDeltas';
 import { consumeTop } from '../../core/carcassCondition';
 import { resourceObjectService } from '../ResourceObjectService';
 import { pawnStatService } from '../PawnStatService';
+import { COLLAPSE_CONSCIOUSNESS, RECOVER_CONSCIOUSNESS } from '../../core/needs';
 import {
   nearestPawn,
   dist,
@@ -33,8 +34,6 @@ import {
   type TileFoodKind,
   NIGHT_THRESHOLD,
   STARVATION_COLLAPSE_SEVERITY,
-  COLLAPSE_CONSCIOUSNESS,
-  COLLAPSE_RECOVER_CONSCIOUSNESS,
   FLEE_HEALTH_FRACTION,
   HUNGER_SATED_THRESHOLD,
   HUNGER_EAT_THRESHOLD,
@@ -391,12 +390,15 @@ export function stepOne(
   // starving — it no longer drops a mob mid-hunt the instant hunger crosses 80.
   const malnutritionSeverity = mob.conditions?.find((c) => c.id === 'malnutrition')?.severity ?? 0;
   const downedByStarvation = malnutritionSeverity >= STARVATION_COLLAPSE_SEVERITY;
-  // Combat KO + recovery (shares the Collapsed state with starvation). Low consciousness — pain +
-  // hypovolemic shock — DOWNS a mob into the recoverable Collapsed state, never instant death (death is
-  // blood-0 / destroyed-vital only, in entityLifecycle). It lies still and gets back up once consciousness
-  // climbs (blood regen / pain heals), or it bleeds out / is finished off. computeCapacities is cached and
-  // skipped for clearly-healthy mobs (no pain, blood ≥ half). Hysteresis: drop below COLLAPSE_CONSCIOUSNESS,
-  // only rise at COLLAPSE_RECOVER_CONSCIOUSNESS so it can't flicker at the floor.
+  // Combat KO + recovery — the SAME consciousness-driven `collapse` lifecycle pawns run in
+  // PawnStateMachine (shared COLLAPSE_CONSCIOUSNESS / RECOVER_CONSCIOUSNESS from core/needs), just inside
+  // the mob FSM. Low consciousness (pain + hypovolemic shock) DOWNS a mob into the recoverable Collapsed
+  // state — never instant death (death is blood-0 / destroyed-vital only, entityLifecycle). While down we
+  // REFRESH the `collapse` transient condition (conditions.jsonc → its modifiers + label apply for the
+  // FULL duration it's down, not just Combat's fixed knockdown timer) and CLEAR it on recovery, so the
+  // condition and the state never drift (the "Collapsed doesn't show as a condition" mismatch).
+  // computeCapacities is cached + skipped for clearly-healthy mobs. Hysteresis: drop below
+  // COLLAPSE_CONSCIOUSNESS, only rise at RECOVER_CONSCIOUSNESS, so it can't flicker at the floor.
   const maxBloodV = mob.maxBloodVolume ?? 100;
   const maybeDowned =
     mob.state === 'Collapsed' ||
@@ -405,22 +407,40 @@ export function stepOne(
   const consciousness = maybeDowned
     ? (pawnStatService.computeCapacities(mob).consciousness ?? 1)
     : 1;
-  const downThreshold =
-    mob.state === 'Collapsed' ? COLLAPSE_RECOVER_CONSCIOUSNESS : COLLAPSE_CONSCIOUSNESS;
+  const downThreshold = mob.state === 'Collapsed' ? RECOVER_CONSCIOUSNESS : COLLAPSE_CONSCIOUSNESS;
   if (downedByStarvation || consciousness < downThreshold) {
-    if (mob.state === 'Collapsed') return mob;
+    // Shock-collapse drives the `collapse` condition (refresh while down); starvation-collapse shows the
+    // `malnutrition` condition instead, so don't stamp `collapse` on a purely-starved mob.
+    const shock = consciousness < downThreshold;
+    let conditionTimers = mob.conditionTimers;
+    let transientConditions = mob.transientConditions;
+    if (shock) {
+      conditionTimers = {
+        ...(mob.conditionTimers ?? {}),
+        collapse: Math.max(mob.conditionTimers?.collapse ?? 0, 2)
+      };
+      transientConditions = (mob.transientConditions ?? []).includes('collapse')
+        ? mob.transientConditions
+        : [...(mob.transientConditions ?? []), 'collapse'];
+    }
+    if (mob.state === 'Collapsed') return { ...mob, conditionTimers, transientConditions };
     return {
       ...mob,
       state: 'Collapsed',
       stateSince: turn,
       path: [],
       huntTargetId: undefined,
-      eatProgress: undefined
+      eatProgress: undefined,
+      conditionTimers,
+      transientConditions
     };
   }
-  // Recovered (consciousness back up AND no longer starving): resume normal behaviour.
+  // Recovered (consciousness back up AND no longer starving): stand up + clear the `collapse` condition.
   if (mob.state === 'Collapsed') {
-    return { ...mob, state: 'Wander', stateSince: turn };
+    const conditionTimers = { ...(mob.conditionTimers ?? {}) };
+    delete conditionTimers.collapse;
+    const transientConditions = (mob.transientConditions ?? []).filter((c) => c !== 'collapse');
+    return { ...mob, state: 'Wander', stateSince: turn, conditionTimers, transientConditions };
   }
 
   // A downed (Collapsed) pawn is a threat/target ONLY to a hungry finisher (a predator that eats it);

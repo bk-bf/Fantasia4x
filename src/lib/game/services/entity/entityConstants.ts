@@ -91,14 +91,8 @@ export const STARVATION_COLLAPSE_SEVERITY = 0.65;
 /** Hunger threshold at which an entity transitions to a feeding state. */
 export const HUNGER_EAT_THRESHOLD = 50;
 
-/**
- * Consciousness (capacity) at/below which a creature collapses (combat KO) — matches Combat's threshold.
- * A combat-collapsed mob now goes DOWN into the recoverable `Collapsed` state, NOT instant death (death is
- * blood-0 / destroyed-vital only). `RECOVER` is the hysteresis ceiling — a downed mob only gets back UP
- * once consciousness climbs back to here (blood regen / pain heal), so it can't flicker at the floor.
- */
-export const COLLAPSE_CONSCIOUSNESS = 0.3;
-export const COLLAPSE_RECOVER_CONSCIOUSNESS = 0.4;
+// Collapse thresholds (COLLAPSE_CONSCIOUSNESS / RECOVER_CONSCIOUSNESS) live in core/needs — the single
+// shared band for pawns + mobs. The mob FSM (entityAI) imports them from there, not here.
 
 /**
  * Soft territory leash (lair system). The hard leash pens a mob to `lairRange` of its lair, but a hard

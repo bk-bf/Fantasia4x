@@ -52,7 +52,9 @@ import {
   snapshotConditionStages,
   emitPersistentConditionFloaters,
   conditionsSig,
-  syncFractureConditions
+  syncFractureConditions,
+  COLLAPSE_CONSCIOUSNESS,
+  RECOVER_CONSCIOUSNESS
 } from '../core/needs';
 import {
   weatherEffects,
@@ -137,11 +139,8 @@ const WET_SOAKED = 95;
 const WET_CHILL_CHANCE_PER_SEC = 0.04;
 const WET_CHILL_SEVERITY = 0.04;
 
-/** Consciousness (0–1) below which a pawn collapses (matches Combat.COLLAPSE_CONSCIOUSNESS).
- *  Folds in pain + blood loss + organ damage, so downing has one unified cause. */
-const COLLAPSE_CONSCIOUSNESS = 0.3;
-/** A collapsed pawn stands back up once consciousness recovers above this. */
-const RECOVER_CONSCIOUSNESS = 0.45;
+// COLLAPSE_CONSCIOUSNESS / RECOVER_CONSCIOUSNESS are the shared collapse band from core/needs — the SAME
+// thresholds Combat and the mob FSM (entityAI) use, so pawns and creatures down/recover identically.
 
 /** Wound healing is gated by what the pawn is doing (player decision): a pawn UP and active barely
  *  knits — only proper REST (the SLEEPING state, which the wound-recovery drive routes to) heals at

@@ -24,6 +24,17 @@ const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
 const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | TransientConditionDef>;
 
 /**
+ * The ONE collapse threshold pair, shared by every consumer so pawns and mobs collapse/recover on the
+ * SAME consciousness band (was duplicated in Combat, PawnStateMachine and entityConstants — they drifted).
+ * `consciousness` (computeCapacities) folds pain + blood loss + organ damage, so downing has one cause.
+ * Hysteresis: drop below COLLAPSE_CONSCIOUSNESS, only stand back up at RECOVER_CONSCIOUSNESS — so a body
+ * teetering at the floor can't flicker. The `collapse` transient condition (conditions.jsonc) is kept in
+ * lockstep with the down state on BOTH entity kinds (refreshed while down, cleared on recovery).
+ */
+export const COLLAPSE_CONSCIOUSNESS = 0.3;
+export const RECOVER_CONSCIOUSNESS = 0.45;
+
+/**
  * If a (bare) transient/combat condition `id` is opted-in to floating text (`"floater": true` in
  * conditions.jsonc), return its display name + colour; otherwise undefined. For transient ids only
  * (`"winded"`, `"knockdown"`, …) — persistent conditions float via {@link emitPersistentConditionFloaters}
