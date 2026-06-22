@@ -1,3 +1,14 @@
+/* Bundled cursive for the menu credit line — SELF-HOSTED (static/fonts), so the look never depends on
+   whatever script font a given OS happens to ship. Dancing Script, SIL OFL 1.1 (license bundled at
+   static/fonts/dancing-script-OFL.txt), aliased to 'Fantasia Script'. */
+@font-face {
+  font-family: 'Fantasia Script';
+  src: url('/fonts/dancing-script-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --bg: #0d0b07;
   --bg-panel: #150f08;

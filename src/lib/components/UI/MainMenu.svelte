@@ -162,10 +162,11 @@
   /* Third sub-header under the subtitle: version + tileset credit, in a cursive script to set it apart
      from the terminal wordmark while echoing the subtitle's muted, dark-backed treatment. */
   .credit-line {
-    font-family: 'Segoe Script', 'Brush Script MT', 'Comic Sans MS', cursive;
-    font-style: italic;
-    color: var(--text-muted);
-    font-size: 12px;
+    font-family: 'Fantasia Script', 'Segoe Script', 'Brush Script MT', cursive;
+    font-weight: 600; /* matches the bundled Dancing Script weight (app.css @font-face) */
+    color: var(--text);
+    /* Script faces have a small x-height, so size up a touch over the 12px subtitle to read level. */
+    font-size: 15px;
     letter-spacing: 0.04em;
     margin-bottom: 24px;
     text-shadow:
