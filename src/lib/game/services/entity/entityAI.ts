@@ -505,8 +505,16 @@ export function stepHostile(
   const effectiveBehaviour = def.nocturnalAggro && isNight ? 'aggressive' : def.behaviour;
   const aggressive = effectiveBehaviour === 'aggressive';
 
-  // Wounded entities flee regardless of state.
-  if (mob.health <= mob.maxHealth * FLEE_HEALTH_FRACTION && mob.state !== 'Fleeing') {
+  // Wounded entities flee regardless of state — EXCEPT while Exhausted (winded, physically can't run):
+  // re-triggering Fleeing there drains the last dregs of stamina and bounces straight back to Exhausted,
+  // an oscillation that never lets the mob recover. Exhausted owns "winded with a threat near" — it
+  // stands still and recovers, then the natural Exhausted→Wander exit re-arms this flee. (Cf. the leash
+  // exemption below; Exhausted is a survival state, not interruptible.)
+  if (
+    mob.health <= mob.maxHealth * FLEE_HEALTH_FRACTION &&
+    mob.state !== 'Fleeing' &&
+    mob.state !== 'Exhausted'
+  ) {
     return {
       ...mob,
       state: 'Fleeing',
@@ -550,7 +558,15 @@ export function stepHostile(
   // Huntable neutral animals (boar, elk, etc.) also react to predators and pack deaths.
   // They flee from flagged predators just like passive animals do, and panic when
   // they see a corpse of the same species within vision range.
-  if (def.huntable && mob.state !== 'Fleeing' && mob.state !== 'Attacking') {
+  // Exhausted is exempt (see the wounded-flee note above): a winded boar with a predator still in
+  // vision must be allowed to recover in the Exhausted case, not get yanked back to Fleeing every tick
+  // (the #480 Fleeing↔Exhausted oscillation). It resumes fleeing on the natural Exhausted→Wander exit.
+  if (
+    def.huntable &&
+    mob.state !== 'Fleeing' &&
+    mob.state !== 'Attacking' &&
+    mob.state !== 'Exhausted'
+  ) {
     const predThreat = nearestPredatorThreat(mob, def, allMobs, visionRange);
     if (predThreat) {
       return {
