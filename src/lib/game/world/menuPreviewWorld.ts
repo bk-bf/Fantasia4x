@@ -37,14 +37,15 @@ function landTemplate(world: WorldTile[][]): { biome: string; subId: string } {
 
 // ===== TITLE-SCREEN CLIMATE (random each launch, season from the real-world date) =====
 //
-// Curated per-season weather pools for the backdrop. fog / foggy_rain are deliberately excluded (drab,
-// low-vis — bad first impression), and snow / blizzard live ONLY in the winter pool, so they can only
-// appear when the machine's real-world season is winter (see localSeason). Everything else is fair game.
+// Curated per-season weather pools for the backdrop. `clear` is excluded so the title always shows a
+// visible weather effect; `fog` / `foggy_rain` are excluded too (drab, low-vis — bad first impression);
+// and snow / blizzard live ONLY in the winter pool, so they only appear when the machine's real-world
+// season is winter (see localSeason). Everything else is fair game.
 const SEASON_WEATHER_POOL: Record<Season, string[]> = {
-  spring: ['clear', 'spring_windy', 'drizzle', 'rain', 'windy_rain', 'heavy_rain', 'storm', 'gale'],
-  summer: ['clear', 'summer_windy', 'drizzle', 'rain', 'windy_rain', 'heat_wave', 'gale'],
-  autumn: ['clear', 'autumn_windy', 'drizzle', 'rain', 'windy_rain', 'heavy_rain', 'storm', 'gale'],
-  winter: ['clear', 'winter_windy', 'snow', 'blizzard', 'gale']
+  spring: ['spring_windy', 'drizzle', 'rain', 'windy_rain', 'heavy_rain', 'storm', 'gale'],
+  summer: ['summer_windy', 'drizzle', 'rain', 'windy_rain', 'heat_wave', 'gale'],
+  autumn: ['autumn_windy', 'drizzle', 'rain', 'windy_rain', 'heavy_rain', 'storm', 'gale'],
+  winter: ['winter_windy', 'snow', 'blizzard', 'gale']
 };
 
 /** Spring breeze — the universal fallback when the date/weather pick can't be resolved. */
