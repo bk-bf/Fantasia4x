@@ -6,6 +6,7 @@
  * dispatcher — so the import graph stays acyclic.
  */
 import type { GameState, Pawn, Mob, Building, PlacedBuilding, Job } from '../../core/types';
+import { transientNeedOnset } from '../../core/needs';
 import BUILDINGS_DATABASE_RAW from '../../database/buildings.jsonc';
 import { jobService } from '../../services/JobService';
 import { pawnService } from '../../services/PawnService';
@@ -36,9 +37,13 @@ export const HUNGER_THRESHOLD = 70; // Seek food at 70% (= Rimworld 30% saturati
 
 export const FATIGUE_THRESHOLD = 72; // Seek rest after ~225 turns ≈ 0.75 days (28% rest = 72% fatigue)
 
-// Hygiene (0–100, 100 = filthy) at/above which the `filthy` condition shows. Only the fully-grimy end
-// of the bar — a pawn isn't "Filthy" while merely a bit unwashed; the hygiene need bar is the gradient.
-export const FILTHY_THRESHOLD = 100;
+// Hygiene / wetness need at/above which the `filthy` / `wet` conditions show — both the FULL meter (100),
+// sourced from the conditions.jsonc `needOnset` (single source of truth, like `tired`), so designers tune
+// them in data. `filthy` is PAWN-only (mobs have no hygiene need). `wet` onsets at 100 for pawns AND mobs
+// alike — the difference is only how fast the wetness meter FILLS (the `wetness_resistance` stat), not the
+// threshold; mobs run the same meter via EnvironmentService.accrueWetness.
+export const FILTHY_THRESHOLD = transientNeedOnset('filthy')?.atOrAbove ?? 100;
+export const WET_THRESHOLD = transientNeedOnset('wet')?.atOrAbove ?? 100;
 
 // ===== WOUND RECOVERY =====
 /** Pain (0–100) at/above which a wounded pawn breaks off to rest and recover. */
@@ -199,7 +204,10 @@ export function tryAssignPath(
   if (!approach) {
     return null;
   }
-  const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(gameState.worldMap, blocked);
+  const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(
+    gameState.worldMap,
+    blocked
+  );
   // Churn instrumentation: count every actual A* run, by reason, plus the two churn
   // signals — re-planning while the pawn ALREADY holds a path (hadPath), and empty
   // results (fail = unreachable). A high hadPath or blockedRepath rate ⇒ behaviour bug.
@@ -327,7 +335,10 @@ export function tryAssignSleepPath(
   // Route around other bodies via the shared per-tick grid (see navigateToApproach above for why the
   // self-exclusion / goal-exemption drop is safe). Was an O(map) clone per call.
   const blocked = occupancyService.blockedTilesShared(gameState);
-  const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(gameState.worldMap, blocked);
+  const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(
+    gameState.worldMap,
+    blocked
+  );
   const path = pathfinderService.findPath(
     walkable,
     costs,

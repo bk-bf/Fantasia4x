@@ -180,14 +180,24 @@ describe('creature conditions affect creatures (parity with pawns)', () => {
     } as unknown as GameState;
   };
 
-  it('a creature on a soaked tile reads as `wet` (hardier threshold than a pawn)', () => {
-    let state = weatherState([makeGoblin()], 90); // 90 ≥ MOB_WET_THRESHOLD (75)
+  it('a creature soaks to `wet` on a wet tile — the shared wetness METER, onset at 100 like pawns', () => {
+    // Meter model (not instantaneous): start nearly soaked so one exposure pass on a 90% tile tops it to
+    // 100 → `wet`. The onset is a full meter for EVERY entity; resistance only changes the fill SPEED.
+    let state = weatherState(
+      [makeGoblin({ needs: { hunger: 0, fatigue: 0, wetness: 99 } as any })],
+      90
+    );
     state = entityService.stepHunger(state);
+    expect(state.mobs![0].needs.wetness).toBe(100);
     expect(state.mobs![0].transientConditions ?? []).toContain('wet');
   });
 
-  it('…but stays dry on damp-not-soaked ground (below the creature threshold)', () => {
-    let state = weatherState([makeGoblin()], 60); // a pawn would track toward wet; a creature shrugs it
+  it('…but stays dry on damp-not-soaked ground (tile below the soak threshold)', () => {
+    // Tile wetness ≤ WET_TILE_THRESHOLD (50) → the meter never fills, so it never reads `wet`.
+    let state = weatherState(
+      [makeGoblin({ needs: { hunger: 0, fatigue: 0, wetness: 0 } as any })],
+      40
+    );
     state = entityService.stepHunger(state);
     expect(state.mobs![0].transientConditions ?? []).not.toContain('wet');
   });

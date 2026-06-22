@@ -15,7 +15,7 @@ import {
   driveWindchill,
   TIRED_FATIGUE_THRESHOLD
 } from '../../core/needs';
-import { creatureExposureAt } from '../EnvironmentService';
+import { creatureExposureAt, accrueWetness } from '../EnvironmentService';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { pawnStatService } from '../PawnStatService';
 import { simLog } from '../../core/logSink';
@@ -34,7 +34,6 @@ import {
   CORPSE_DECAY_TICKS,
   MOB_WEATHER_INTERVAL,
   MOB_WIND_ONSET,
-  MOB_WET_THRESHOLD,
   LIVE_RADIUS,
   AI_THROTTLE_TICKS
 } from './entityConstants';
@@ -294,15 +293,14 @@ export function stepHunger(state: GameState): GameState {
     }
 
     // ── Weather exposure (windchilled / wet) ─────────────────────────────────────
-    // Creatures feel the wind and the wet too, but HARDIER than pawns (higher thresholds) and on a slow
-    // cadence (100+ mobs → don't recompute wind shelter every tick). `windchilled` is the persistent
-    // condition (snapped from the felt wind, like the pawn); `wet` the transient (soaked tile). No
-    // shelter model — wild mobs are exposed. effectiveWindAt early-outs to 0 when it isn't windy.
-    // A condition SYNC (not an accumulator) — off-bubble fire it each think so the felt wind/wet stays
-    // current; bubble keeps the slow interval cadence (don't recompute shelter for 100+ mobs every tick).
+    // Creatures feel the wind and the wet too, on a slow cadence (100+ mobs → don't recompute wind shelter
+    // every tick). `windchilled` is the persistent condition (snapped from felt wind, hardier MOB_WIND_ONSET).
+    // `wet` is the SAME metered model as pawns: mob.needs.wetness fills (accrueWetness) toward 100 on a wet
+    // tile — fill rate slowed by the wetness_resistance stat (a woolly/hardy beast soaks slower) — and onsets
+    // at the FULL meter (100), uniform with pawns. No shelter (wild) → slow exposed dry (drySpeed 0).
     if (inBubble ? turn % MOB_WEATHER_INTERVAL === 0 : true) {
       const tile = state.worldMap[mob.y]?.[mob.x];
-      const { wind, wetness } = creatureExposureAt(
+      const { wind, wetness: tileWet } = creatureExposureAt(
         mob.x,
         mob.y,
         state.weather,
@@ -310,7 +308,12 @@ export function stepHunger(state: GameState): GameState {
         tile?.moisture ?? 0
       );
       driveWindchill(conditions, wind, MOB_WIND_ONSET);
-      const wantWet = wetness >= MOB_WET_THRESHOLD;
+      // dt = in-game seconds this exposure pass covers (the in-bubble interval, or the off-bubble think gap).
+      const dt = (inBubble ? MOB_WEATHER_INTERVAL : tickScale) * SECONDS_PER_TICK;
+      const wetRes = pawnStatService.evaluateStat('wetness_resistance', mob);
+      const wet = accrueWetness(mob.needs.wetness ?? 0, tileWet, dt, wetRes, 0);
+      mob.needs.wetness = wet;
+      const wantWet = wet >= 100;
       if (wantWet !== (mob.transientConditions ?? []).includes('wet')) {
         const tc = (mob.transientConditions ?? []).filter((id) => id !== 'wet');
         if (wantWet) tc.push('wet');

@@ -729,6 +729,44 @@ export function tileWetness(
   return Math.max(0, Math.min(100, baseMoisture + fromWeather));
 }
 
+// ── Wetness meter (SEASONS_WEATHER) — shared by pawns AND mobs ────────────────────────────────────
+// The `wet` condition onsets at a FULL meter (100) for EVERY entity (uniform, like every metered
+// condition); susceptibility differs only in how FAST the meter fills — gated by the `wetness_resistance`
+// stat (fur/hide/fitness), so a hardy/woolly creature soaks slower. NOT a different onset threshold.
+const HOUR_SECONDS = TURNS_PER_DAY / 24; // in-game seconds per hour (300/24 = 12.5)
+export const WET_TILE_THRESHOLD = 50; // tile wetness % above which an entity starts to soak
+const WET_HEAVY_THRESHOLD = 80; // above this the meter fills twice as fast (full in ~½ hour)
+const WET_SOAK_HOURS = 1; // >50% tile → full meter (0→100) in ~1 in-game hour (at zero resistance)
+const WET_SOAK_HOURS_HEAVY = 0.5; // >80% tile → full in ~30 in-game minutes
+const WET_DRY_HOURS_MAX = 5; // cold + exposed → full dry (100→0) takes ~5 in-game hours
+const WET_DRY_HOURS_MIN = 1; // warm + sheltered → ~1 in-game hour
+
+/**
+ * Advance a wetness meter (0–100) one step toward soaked/dry. Soaks on a wet (>50%) tile, fill rate
+ * slowed by `resistance` (0–1, the `wetness_resistance` stat) — so every entity onsets `wet` at 100, but
+ * a water-shedding creature climbs there slower. Dries off wet ground, faster when warm/sheltered
+ * (`drySpeed01` 0–1). `dt` = elapsed in-game seconds. Shared by PawnService + the mob lifecycle.
+ */
+export function accrueWetness(
+  current: number,
+  tileWet: number,
+  dt: number,
+  resistance: number,
+  drySpeed01: number
+): number {
+  if (tileWet >= 100) return 100; // standing water / torrential rain → instantly soaked
+  if (tileWet > WET_TILE_THRESHOLD) {
+    const soakHours = tileWet >= WET_HEAVY_THRESHOLD ? WET_SOAK_HOURS_HEAVY : WET_SOAK_HOURS;
+    const res = Math.min(0.9, Math.max(0, resistance)); // capped so it never fully prevents soaking
+    return Math.min(100, current + (100 / (soakHours * HOUR_SECONDS)) * (1 - res) * dt);
+  }
+  if (current > 0) {
+    const dryHours = WET_DRY_HOURS_MAX - (WET_DRY_HOURS_MAX - WET_DRY_HOURS_MIN) * drySpeed01;
+    return Math.max(0, current - (100 / (dryHours * HOUR_SECONDS)) * dt);
+  }
+  return current;
+}
+
 /**
  * Wild-creature weather exposure at a tile: effective wind (0–1) and wetness (0–100), computed with NO
  * shelter (wild mobs don't take cover under roofs — lee-of-terrain wind shelter from `worldMap` still
