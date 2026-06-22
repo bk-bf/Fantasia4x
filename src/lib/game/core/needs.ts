@@ -22,6 +22,14 @@ import { simLog } from './logSink';
 const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
 /** Raw mixed list (persistent + transient shapes) for id-keyed lookups across both kinds. */
 const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | TransientConditionDef>;
+/** Transient condition defs keyed by id — for id→modifiers/needOnset lookups (used by the helpers below). */
+const TRANSIENT_BY_ID = new Map<string, TransientConditionDef>(
+  (
+    ALL_CONDITION_DEFS.filter(
+      (d) => (d as TransientConditionDef).transient === true
+    ) as TransientConditionDef[]
+  ).map((d) => [d.id, d])
+);
 
 /**
  * The ONE collapse threshold pair, shared by every consumer so pawns and mobs collapse/recover on the
@@ -34,13 +42,19 @@ const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | Tra
 export const COLLAPSE_CONSCIOUSNESS = 0.3;
 export const RECOVER_CONSCIOUSNESS = 0.45;
 
+/** The need + cutoff at which a NEED-threshold transient onsets, declared in conditions.jsonc (`needOnset`),
+ *  e.g. `tired` → fatigue ≥ 100. Read by the deriving code so the threshold lives in DATA, not constants. */
+export function transientNeedOnset(id: string): { need: string; atOrAbove: number } | undefined {
+  return TRANSIENT_BY_ID.get(id)?.needOnset;
+}
+
 /**
- * Fatigue at/above which the `tired` (Exhausted) transient is shown — the SAME badge for pawns and mobs
- * (was duplicated as pawnHelpers.FATIGUE_THRESHOLD-for-the-badge + entityConstants.TIRED_FATIGUE_THRESHOLD).
- * Distinct from the SEEK-REST threshold (pawn 72 / mob 60): a body normally rests long before this, so the
- * debuff only bites when something keeps it awake to the exhaustion ceiling.
+ * Fatigue at/above which the `tired` (Exhausted) transient shows — sourced from the `tired` condition's
+ * `needOnset` in conditions.jsonc (single source of truth), shared by pawns and mobs. Distinct from the
+ * SEEK-REST threshold (pawn 72 / mob 60): a body normally rests long before this, so the debuff only bites
+ * when something keeps it awake to the exhaustion ceiling. Falls back to 100 if the data is ever missing.
  */
-export const TIRED_FATIGUE_THRESHOLD = 100;
+export const TIRED_FATIGUE_THRESHOLD = transientNeedOnset('tired')?.atOrAbove ?? 100;
 
 /**
  * If a (bare) transient/combat condition `id` is opted-in to floating text (`"floater": true` in
@@ -439,15 +453,6 @@ export function conditionNeedMultipliers(conditions: EntityCondition[]): {
   }
   return { hungerRate, fatigueRate, thirstRate };
 }
-
-// ── Condition → base-stat penalties ────────────────────────────────────────────────────────────
-const TRANSIENT_BY_ID = new Map<string, TransientConditionDef>(
-  (
-    ALL_CONDITION_DEFS.filter(
-      (d) => (d as TransientConditionDef).transient === true
-    ) as TransientConditionDef[]
-  ).map((d) => [d.id, d])
-);
 
 /**
  * Hunger/fatigue/thirst rate multipliers from a list of TRANSIENT condition IDs (the `eating`/`sleeping`

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyConditionDriver } from './needs';
+import { applyConditionDriver, transientNeedOnset, TIRED_FATIGUE_THRESHOLD } from './needs';
 import { TICKS_PER_SECOND } from './time';
 import conditionsData from '$lib/game/database/conditions.jsonc';
 import type { ConditionDef, EntityCondition } from './types';
@@ -15,6 +15,14 @@ const ONE_DAY_SECONDS = 300; // TURNS_PER_DAY
 describe('§needs condition onset delay', () => {
   it('dehydration is configured with a one-day onset delay', () => {
     expect(dehydration.driver?.onsetDelay).toBe(ONE_DAY_SECONDS);
+  });
+
+  // The `tired` debuff threshold is DATA (conditions.jsonc `needOnset`), not a hardcoded constant — the
+  // shared TIRED_FATIGUE_THRESHOLD must be sourced from it (so it can't silently fall back to a default).
+  it('the `tired` exhaustion threshold is driven by the condition data (needOnset)', () => {
+    const onset = transientNeedOnset('tired');
+    expect(onset).toEqual({ need: 'fatigue', atOrAbove: 100 });
+    expect(TIRED_FATIGUE_THRESHOLD).toBe(onset!.atOrAbove); // derived from the JSON, not the fallback
   });
 
   it('a maxed need stays sub-zero (hidden) through the delay, then crosses 0 ~a day in', () => {

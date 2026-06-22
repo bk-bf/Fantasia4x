@@ -568,6 +568,10 @@
         "color": "#ff7043",
         "floater": true,
         "charSpans": [ {"sheet": "items", "id": 25} ],
+        // Onset at the exhaustion CEILING — a body normally rests (pawn seeks rest at fatigue 72, mob at
+        // 60) long before this, so the debuff only bites when something keeps it awake to the cap. Pawns
+        // and mobs both read this number; the "not while sleeping" suppression lives in code.
+        "needOnset": {"need": "fatigue", "atOrAbove": 100},
         "modifiers": {"strength": 0.7, "dexterity": 0.7, "perception": 0.8, "workEfficiency": 0.5, "moveSpeed": 0.5}
     },
     {

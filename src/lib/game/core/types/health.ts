@@ -52,6 +52,11 @@ export interface TransientConditionDef {
    *  first tick it appears on an entity — surfaced by Combat (timer/combat-driven ids) or
    *  syncTransientConditions (sync-derived ids). Opt-in: unflagged conditions never float. */
   floater?: boolean;
+  /** Data-driven onset for a NEED-threshold transient (e.g. `tired` at fatigue ≥ 100). The deriving
+   *  code (pawn syncTransientConditions / mob entityLifecycle) reads the threshold from HERE rather than
+   *  a hardcoded constant, so designers tune it in the data and pawns + mobs can't drift. The behavioural
+   *  suppression ("not while sleeping") stays in code; this is purely the need + cutoff. */
+  needOnset?: { need: string; atOrAbove: number };
   modifiers: ConditionModifiers;
 }
 
