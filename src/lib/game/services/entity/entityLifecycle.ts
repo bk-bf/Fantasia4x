@@ -24,7 +24,7 @@ import {
   MOB_CLOT_ROLL_INTERVAL,
   MOB_BASE_CLOT_CHANCE
 } from '../../core/Wounds';
-import { entityName, mobInLiveRegion } from './entityHelpers';
+import { entityName, mobInLiveRegion, isThinkTick } from './entityHelpers';
 import {
   BASE_HUNGER_PER_SECOND,
   BASE_FATIGUE_PER_SECOND,
@@ -35,7 +35,8 @@ import {
   MOB_WEATHER_INTERVAL,
   MOB_WIND_ONSET,
   MOB_WET_THRESHOLD,
-  LIVE_RADIUS
+  LIVE_RADIUS,
+  AI_THROTTLE_TICKS
 } from './entityConstants';
 
 /** Per-tick natural wound mend for creatures (no rest gate, no tending). Tuned so a beast recovers a
@@ -61,13 +62,16 @@ export function stepHunger(state: GameState): GameState {
   let changed = false;
   const justDied: Mob[] = [];
 
-  // §LOD vision bubble — same gate as stepEntities. Mobs outside it are FROZEN: no hunger, fatigue,
-  // clotting, healing, or weather. The off-screen world is paused in time and resumes when a pawn nears.
+  // §LOD temporal throttle — mirrors stepEntities. Inside the complexity bubble, hunger ticks every
+  // tick. Outside, it advances only on the mob's staggered think-tick, batched by AI_THROTTLE_TICKS so
+  // the long-run rate is unchanged — the mob just gets hungry in coarse steps instead of 60Hz.
   const livePawns = state.pawns.filter((p) => p.position && p.isAlive !== false);
   const lodActive = livePawns.length > 0; // no pawns ⇒ no bubble centre ⇒ sim everything (test/game-over)
   for (const mob of mobs) {
     if (mob.state === 'Corpse' || mob.isAlive === false) continue;
-    if (lodActive && !mobInLiveRegion(mob, livePawns, LIVE_RADIUS)) continue;
+    const inBubble = !lodActive || mobInLiveRegion(mob, livePawns, LIVE_RADIUS);
+    if (!inBubble && !isThinkTick(mob.id, turn)) continue;
+    const tickScale = inBubble ? 1 : AI_THROTTLE_TICKS; // batch off-bubble hunger over the skipped ticks
     const def = getCreatureById(mob.creatureId);
     if (!def) continue;
 
@@ -93,8 +97,10 @@ export function stepHunger(state: GameState): GameState {
       dietMult *
       condMults.hungerRate *
       sizeRate *
-      lairHungerMult;
-    const fatigueDelta = BASE_FATIGUE_PER_SECOND * SECONDS_PER_TICK * condMults.fatigueRate;
+      lairHungerMult *
+      tickScale;
+    const fatigueDelta =
+      BASE_FATIGUE_PER_SECOND * SECONDS_PER_TICK * condMults.fatigueRate * tickScale;
 
     // Sleeping: hunger accrues at 33% rate; fatigue recovers instead of rising.
     const sleepingNow = mob.state === 'Sleeping';

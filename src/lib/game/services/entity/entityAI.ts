@@ -26,7 +26,7 @@ import {
   approachForMelee,
   edibleResourceOnTile,
   mobInLiveRegion,
-  isWalkable
+  isThinkTick
 } from './entityHelpers';
 import {
   type TileFoodKind,
@@ -38,7 +38,7 @@ import {
   willFinishOffDowned,
   FORAGE_RADIUS,
   LIVE_RADIUS,
-  BACKGROUND_DRIFT_INTERVAL,
+  THREAT_INTERRUPT_RANGE,
   SLEEP_FATIGUE_THRESHOLD,
   SLEEP_MAX_HUNGER,
   SAFE_RESET_TICKS,
@@ -156,22 +156,6 @@ function traceStuck(mob: Mob, def: CreatureDefinition, state: GameState, turn: n
   );
 }
 
-// §LOD complexity bubble: outside it a mob is NOT simulated — no FSM, A*, hunger, or combat. It just
-// takes a cheap random step on a position-staggered interval so the off-bubble world isn't a frozen
-// tableau. Deliberately pure-random with NO goal-seeking / predation / hunger: modelling believable
-// behaviour off-screen would be faking a simulation that isn't running — the bubble exists precisely to
-// gate that fidelity. Everything is still RENDERED (the eye sees any distance); only the THINKING is
-// gated. Inside the bubble the full FSM runs and behaviour is real.
-function backgroundDrift(mob: Mob, state: GameState): Mob {
-  const dx = Math.floor(rng.random() * 3) - 1;
-  const dy = Math.floor(rng.random() * 3) - 1;
-  if (dx === 0 && dy === 0) return mob;
-  const nx = mob.x + dx;
-  const ny = mob.y + dy;
-  if (!isWalkable(state, nx, ny)) return mob;
-  return { ...mob, x: nx, y: ny, path: [], pathIndex: 0, nextCellCostLeft: undefined };
-}
-
 export function stepEntities(state: GameState): GameState {
   const mobs = state.mobs;
   if (!mobs || mobs.length === 0) return state;
@@ -209,17 +193,19 @@ export function stepEntities(state: GameState): GameState {
       next[i] = mob;
       continue;
     }
-    // §LOD: outside the complexity bubble, FREEZE the sim — no FSM / A* / hunger / combat. Just a cheap
-    // staggered random drift (backgroundDrift) so the off-bubble world isn't a frozen tableau. THE
-    // scaling lever: stepOne (FSM + A*) runs for the handful near the colony, not all ~900 mobs. No live
-    // pawns (all dead / test isolation) ⇒ no bubble centre, so the gate is off and every mob sims.
-    if (lodActive && !mobInLiveRegion(mob, livePawns, LIVE_RADIUS)) {
-      const drifted =
-        turn % BACKGROUND_DRIFT_INTERVAL === (mob.x + mob.y) % BACKGROUND_DRIFT_INTERVAL
-          ? backgroundDrift(mob, state)
-          : mob;
-      next[i] = drifted;
-      if (drifted !== mob) changed = true;
+    // §LOD temporal throttle: INSIDE the complexity bubble a mob thinks every tick (full accuracy).
+    // OUTSIDE, it runs the full FSM only on its staggered think-tick (~once/AI_THROTTLE_TICKS) OR if a
+    // predator is within THREAT_INTERRUPT_RANGE (the cheap per-tick interrupt, so fleeing isn't delayed).
+    // Between thinks it holds state and just follows its path via advanceMobMovement — decisions slow,
+    // motion + combat stay per-tick. THE scaling lever: stepOne (FSM + A*) runs for the handful near the
+    // colony + ~mobs/N elsewhere, not all ~900. No live pawns (test / game-over) ⇒ no bubble ⇒ all sim.
+    const inBubble = !lodActive || mobInLiveRegion(mob, livePawns, LIVE_RADIUS);
+    if (
+      !inBubble &&
+      !isThinkTick(mob.id, turn) &&
+      !nearestPredatorThreat(mob, def, mobs, THREAT_INTERRUPT_RANGE)
+    ) {
+      next[i] = mob; // throttled this tick — keep state; movement + combat run per-tick elsewhere
       continue;
     }
     const stepped = stepOne(

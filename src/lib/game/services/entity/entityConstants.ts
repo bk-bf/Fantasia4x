@@ -130,9 +130,18 @@ export const WANDER_MOVES_PER_SECOND = 1.0;
  * handful near the colony, not all ~900 mobs. Wide enough that nearby visible animals act real; tunable.
  */
 export const LIVE_RADIUS = 34;
-/** §LOD — a frozen (off-bubble) mob drifts one tile this often (ticks), staggered by position so they
- *  don't lurch in unison. Fakes off-screen activity without per-tick AI; ~6s at 60tps. */
-export const BACKGROUND_DRIFT_INTERVAL = 360;
+/**
+ * §LOD temporal throttle — OUTSIDE the complexity bubble a mob runs its full FSM DECISION (stepOne:
+ * threat scan, state choice, A* re-path) + hunger only every Nth tick, STAGGERED by id so ~mobs/N think
+ * per tick. Movement and combat still run EVERY tick (smooth), so this slows decisions, not motion —
+ * imperceptible (no animal re-decides 60×/s). THE primary sim-cost lever now. Modular: raise N for more
+ * savings at the cost of more decision latency; lower for snappier off-bubble AI.
+ */
+export const AI_THROTTLE_TICKS = 60; // ~1s at 60tps
+/** §LOD — a throttled (off-bubble) mob thinks IMMEDIATELY anyway if a predator is within this many
+ *  tiles (cheap per-tick interrupt via the cached threat map), so fleeing isn't delayed by up to
+ *  AI_THROTTLE_TICKS. Small — only imminent danger justifies bypassing the throttle. */
+export const THREAT_INTERRUPT_RANGE = 6;
 /** Cooldown after a failed hunt before the entity can re-enter Hunting state (seconds). */
 export const HUNT_COOLDOWN_SECONDS = 60;
 /** Cooldown after finding no reachable food tile before re-entering Foraging (seconds). Mirrors

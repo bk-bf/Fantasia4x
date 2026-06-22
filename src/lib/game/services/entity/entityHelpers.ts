@@ -15,7 +15,8 @@ import {
   type TileFoodKind,
   WILD_FORAGE_RESOURCE_IDS,
   HUNT_RADIUS,
-  WANDER_MOVES_PER_SECOND
+  WANDER_MOVES_PER_SECOND,
+  AI_THROTTLE_TICKS
 } from './entityConstants';
 
 export function entityName(mob: Mob): string {
@@ -641,6 +642,18 @@ export function mobInLiveRegion(
     if (pos && Math.abs(pos.x - mob.x) <= radius && Math.abs(pos.y - mob.y) <= radius) return true;
   }
   return false;
+}
+
+/**
+ * §LOD temporal throttle: is THIS tick the mob's staggered "think" tick? A stable hash of the id spreads
+ * each mob to a fixed slot in the AI_THROTTLE_TICKS window, so only ~mobs/N run their full FSM + hunger
+ * on any given tick (the rest hold state + keep moving). Shared by the FSM (stepEntities) and hunger
+ * (stepHunger) so a mob thinks and hungers on the SAME tick (consistent cadence). Cheap (O(id length)).
+ */
+export function isThinkTick(id: string, turn: number): boolean {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0;
+  return turn % AI_THROTTLE_TICKS === (h >>> 0) % AI_THROTTLE_TICKS;
 }
 
 export function nearestPawn(
