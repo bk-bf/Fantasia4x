@@ -58,8 +58,12 @@
         ><span class="zzz-z" style="animation-delay:1.4s">z</span>
       </div>
     {:else if float.kind === 'rest'}
+      <!-- Recovery: same rising stagger as the Zzz of sleep, but red ✚ crosses (a wounded-resting tell). -->
       <div class="rest-float" style={xf}>
-        <span class="rest-cross">✚</span>
+        <span class="rest-cross" style="animation-delay:0s">✚</span><span
+          class="rest-cross"
+          style="animation-delay:0.7s">✚</span
+        ><span class="rest-cross" style="animation-delay:1.4s">✚</span>
       </div>
     {:else if float.kind === 'collapse'}
       <!-- Collapsed/downed: same rising stagger as the Zzz of sleep, but red ↓ arrows (emergency tell). -->
@@ -289,36 +293,29 @@
     }
   }
 
-  /* ── Recovery (wounded, lying down) — a pulsing red ✚, distinct from the blue Zzz of plain sleep ── */
+  /* ── Recovery (wounded, lying down) — the SAME rising stagger as the Zzz of sleep / the ↓ of collapse,
+     but red ✚ crosses, so a resting wounded pawn animates like the other lying-down tells. ── */
 
   .rest-float {
     position: absolute;
     left: 0;
     top: 0;
     pointer-events: none;
-    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) */
+    display: flex;
+    gap: 1px;
+    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) scale(...) */
   }
 
   .rest-cross {
     color: #ff4d4d;
     font-family: 'Courier New', monospace;
-    font-size: 10px;
+    font-size: 8px;
     font-weight: bold;
-    text-shadow: 0 0 5px #a00;
-    animation: rest-pulse 1.4s ease-in-out infinite;
+    opacity: 0;
+    /* Reuse the Zzz rise (opacity + translateY + scale) — colour/glyph are the only difference. */
+    animation: zzz-rise 2.1s ease-out infinite;
+    text-shadow: 0 0 4px #a00;
     will-change: transform, opacity;
-  }
-
-  @keyframes rest-pulse {
-    0%,
-    100% {
-      opacity: 0.55;
-      transform: translateY(0) scale(0.9);
-    }
-    50% {
-      opacity: 1;
-      transform: translateY(-3px) scale(1.15);
-    }
   }
 
   /* ── Collapsed (downed: pain / blood loss / starvation) — the SAME rising stagger as the Zzz of sleep,
