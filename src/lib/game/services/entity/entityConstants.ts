@@ -122,25 +122,17 @@ export const CORPSE_PORTION = 0.5;
 /** Average wander-step decisions per second while grazing (idle fraction excluded). */
 export const WANDER_MOVES_PER_SECOND = 1.0;
 /**
- * §LOD — pawn vision bubble. Only mobs within this Chebyshev range (tiles) of a live pawn run the full
- * per-tick sim (FSM, A* pathfinding, hunger, combat). Everything outside is FROZEN and only gets cheap
- * periodic background churn (drift). MUST comfortably exceed the player's actual sight range (now ~17-25
- * after the ×2 in baseVisionRange) so a mob is already "warm" before it enters view — the render shows
- * mobs out to vision, so the sim region has to cover at least that or they pop in frozen. THE primary
- * scaling lever: stepOne/stepHunger run for the handful near the colony, not all ~900 mobs. Tunable.
+ * §LOD — COMPLEXITY bubble (not a vision bubble — everything is rendered regardless of distance; this
+ * gates THINKING, not drawing). Only mobs within this Chebyshev range (tiles) of a live pawn run the
+ * full per-tick sim (FSM, A* pathfinding, hunger, combat). Outside it a mob just takes a cheap random
+ * drift (backgroundDrift) — no behaviour modelled, since simulating believable off-screen behaviour
+ * would be faking a sim that isn't running. THE primary scaling lever: stepOne/stepHunger run for the
+ * handful near the colony, not all ~900 mobs. Wide enough that nearby visible animals act real; tunable.
  */
 export const LIVE_RADIUS = 34;
 /** §LOD — a frozen (off-bubble) mob drifts one tile this often (ticks), staggered by position so they
  *  don't lurch in unison. Fakes off-screen activity without per-tick AI; ~6s at 60tps. */
 export const BACKGROUND_DRIFT_INTERVAL = 360;
-/** §LOD reality bubble — the OUTER band [LIVE_RADIUS, REALITY_RADIUS] around a pawn. Frozen mobs here
- *  still don't think, but their background drift is BIASED inward (toward the nearest pawn) so wildlife
- *  trickles INTO the live bubble on its own — the player doesn't have to walk out to every animal.
- *  Beyond this band drift is a pure random walk (diffusion keeps the map populated, not funnelled). */
-export const REALITY_RADIUS = 64;
-/** Probability a reality-band frozen mob's periodic drift steps TOWARD the nearest pawn (vs random).
- *  Gentle by design — a slow inward trickle of wildlife, not a stampede to the colony. Tunable. */
-export const REALITY_INWARD_BIAS = 0.4;
 /** Cooldown after a failed hunt before the entity can re-enter Hunting state (seconds). */
 export const HUNT_COOLDOWN_SECONDS = 60;
 /** Cooldown after finding no reachable food tile before re-entering Foraging (seconds). Mirrors

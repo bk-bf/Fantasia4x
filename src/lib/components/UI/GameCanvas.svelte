@@ -80,7 +80,6 @@
   import { getRangedWeapon } from '$lib/game/systems/rangedCombat.js';
   import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
   import { getCreatureById } from '$lib/game/core/Creatures.js';
-  import { effectiveVisionRange } from '$lib/game/core/vision.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
   import { simTarget } from '$lib/game/systems/MovementSystem.js';
   import SelectedEntityCard from '$lib/components/UI/SelectedEntityCard.svelte';
@@ -158,9 +157,6 @@
   // designation overlay can be darkened/tinted to match the lit scene beneath it.
   let _ambientLight = 1;
   let _ambientTint: [number, number, number] = [1, 1, 1];
-  // §LOS — pawn vision sources (tile pos + Euclidean vision radius), recomputed each frame in
-  // updatePawnOverlay. Drives both the mob render cull AND the designCanvas vision-darkening pass.
-  let _visionSources: { x: number; y: number; r: number }[] = [];
   let container: HTMLDivElement;
   let renderer: WebGLRenderer | null = null;
   let animationId = 0;
@@ -1212,14 +1208,6 @@
     // mobRenderPos is emptied by the cleanup below, so they snap correctly when zoomed back in. Tunable.
     const ENTITY_RENDER_MIN_PX = 5;
     const renderMobs = tileWidth >= ENTITY_RENDER_MIN_PX;
-    // §LOS render: the colony only SEES within a pawn's vision range. Mobs outside every pawn's range
-    // aren't drawn (you can't see what no one is looking at), and the world beyond is darkened by the
-    // designCanvas vision pass (shared via _visionSources). Euclidean radius → reads as a clean circle.
-    _visionSources = livePawns
-      .filter((p) => p.position && p.isAlive !== false)
-      .map((p) => ({ x: p.position!.x, y: p.position!.y, r: effectiveVisionRange(p, _ambientLight) }));
-    const inVision = (x: number, y: number) =>
-      _visionSources.some((v) => (v.x - x) ** 2 + (v.y - y) ** 2 <= v.r * v.r);
     const seenMobs = new Set<string>();
     for (const mob of liveMobs) {
       if (!renderMobs) break;
@@ -1247,7 +1235,6 @@
       // silhouette and give away that the interior is open. (Render-pos bookkeeping above is kept so
       // it slides back in correctly when it steps out of the fog.)
       if (isHiddenTile(cellX, cellY)) continue;
-      if (!inVision(cellX, cellY)) continue; // §LOS — outside every pawn's vision range, unseen
       // MARK highlight reuses the click-selection colour, keyed by id so it follows the mob.
       const isSelected =
         mob.id === selectedMobId || (markedKind === 'mob' && markedSet.has(mob.id));
@@ -1760,28 +1747,6 @@
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
-
-    // §LOS vision darkening: dim everywhere except soft circles at each pawn's vision range, so the seen
-    // area is clearly lit and the rest "a bit darker" (not pitch black). Drawn FIRST so the
-    // destination-out punch erases only this dark layer — the zone tints / icons below draw on top
-    // unaffected; it darkens the WebGL terrain (and any culled entities) beneath via the layer composite.
-    const VISION_DIM_ALPHA = 0.3;
-    if (_visionSources.length > 0 && VISION_DIM_ALPHA > 0) {
-      ctx.fillStyle = `rgba(0, 0, 0, ${VISION_DIM_ALPHA})`;
-      ctx.fillRect(0, 0, W, H);
-      ctx.globalCompositeOperation = 'destination-out';
-      for (const v of _visionSources) {
-        const cx = (v.x - viewX + 0.5) * tileWidth;
-        const cy = (v.y - viewY + 0.5) * tileHeight;
-        const rad = Math.max(1, v.r * tileWidth);
-        const g = ctx.createRadialGradient(cx, cy, rad * 0.92, cx, cy, rad);
-        g.addColorStop(0, 'rgba(0, 0, 0, 1)'); // fully clear the dim across the whole circle…
-        g.addColorStop(1, 'rgba(0, 0, 0, 0)'); // …then a thin 8% feather so the boundary reads crisply
-        ctx.fillStyle = g;
-        ctx.fillRect(cx - rad, cy - rad, rad * 2, rad * 2);
-      }
-      ctx.globalCompositeOperation = 'source-over';
-    }
 
     // Standing-zone tints (stockpile / drink / wash). Painted here on the 2D overlay — bottom-most so
     // designation icons, previews and selection draw over them — instead of being baked into the WebGL
