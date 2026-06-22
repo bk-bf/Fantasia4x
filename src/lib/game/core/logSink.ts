@@ -30,6 +30,9 @@ export type CombatTextKind =
   | 'dodge'
   | 'bleed'
   | 'knockdown'
+  // A bone-break event label ("Fractured!") — its own kind so it sizes with the other status floaters
+  // (10px, like dodge) instead of borrowing `crit`'s 14px damage-number emphasis.
+  | 'fracture'
   // A data-driven condition-onset label (name from conditions.jsonc); colour comes via `color`.
   | 'condition';
 

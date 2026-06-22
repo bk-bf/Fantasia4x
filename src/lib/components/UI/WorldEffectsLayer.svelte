@@ -1021,6 +1021,12 @@
     color: #ffcc44;
     font-size: 10px;
   }
+  /* Bone break — amber so it reads as a serious wound, but sized like the other status floaters (10px,
+     matching dodge) rather than the 14px crit damage-number emphasis it used to borrow. */
+  .combat-float.fracture {
+    color: #ff9944;
+    font-size: 10px;
+  }
   /* Data-driven condition labels (winded, envenomed, …): colour set inline from conditions.jsonc;
      slightly smaller + italic so they read as a status cue, distinct from the damage number. */
   .combat-float.condition {

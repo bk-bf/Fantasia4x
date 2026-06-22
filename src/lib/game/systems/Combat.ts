@@ -1004,7 +1004,7 @@ class CombatServiceImpl implements CombatService {
       next = isTargetMob
         ? this.applyInjuryToMob(target.id, result.fractureInjury, next, false)
         : this.applyInjury(target.id, result.fractureInjury, next, false);
-      this.emitFloat(pos.x, pos.y, 'crit', 'Fractured!', 26);
+      this.emitFloat(pos.x, pos.y, 'fracture', 'Fractured!', 26);
     }
 
     // Floating text: damage number — a rolled crit OR a part-wrecking hit reads as
