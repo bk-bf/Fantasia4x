@@ -398,7 +398,7 @@
         "floater": true,
         "driver": {
             "source"      : "cold",
-            "onset"       : 45,
+            "onset"       : 100,
             "safe"        : 25,
             "rateCritical": 0.0005,
             "rateMax"     : 0.0015,
@@ -462,7 +462,7 @@
         "floater": true,
         "driver": {
             "source"      : "heat",
-            "onset"       : 45,
+            "onset"       : 100,
             "safe"        : 25,
             "rateCritical": 0.0005,
             "rateMax"     : 0.0015,

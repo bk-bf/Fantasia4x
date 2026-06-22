@@ -372,6 +372,17 @@ describe('Temperature comfort + exposure (hypothermia / heat stroke)', () => {
     expect(conditions.find((c) => c.id === 'hypothermia')).toBeUndefined();
   });
 
+  it('a half-full exposure meter never onsets the condition — it needs a FULL (100) meter', () => {
+    // The meter exists for a reason: cold/heat at 50% must NOT apply the condition (onset = 100).
+    const cold: EntityCondition[] = [];
+    for (let i = 0; i < 5000; i++) driveTemperatureConditions(cold, 50, 0);
+    expect(cold.find((c) => c.id === 'hypothermia')).toBeUndefined();
+
+    const heat: EntityCondition[] = [];
+    for (let i = 0; i < 5000; i++) driveTemperatureConditions(heat, 0, 99);
+    expect(heat.find((c) => c.id === 'heat_stroke')).toBeUndefined();
+  });
+
   it('heat exposure drives heat_stroke, not hypothermia', () => {
     const conditions: EntityCondition[] = [];
     for (let i = 0; i < 500; i++) driveTemperatureConditions(conditions, 0, 100);

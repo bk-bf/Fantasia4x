@@ -443,13 +443,13 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
           }
         );
       }
-      // Fully soaked while ACTUALLY cold (tracked cold exposure > 0, i.e. below the comfort floor) →
-      // a chance to catch a chill that accelerates hypothermia — the "rain consequence" at 100% wetness.
-      // Gated on `cold > 0` (not a flat temp threshold) so it can NEVER seed hypothermia while the
-      // cold-exposure meter reads 0: a soaked pawn in merely cool-but-comfortable air (5–12°C, where
-      // coldExposure is 0) no longer shows phantom "shivering" hypothermia. "Wet makes cold worse" is
-      // still modelled by WET_COLD_EXTRA amplifying real cold exposure above.
-      if (wetness >= WET_SOAKED && cold > 0 && rng.chance(perTick(WET_CHILL_CHANCE_PER_SEC))) {
+      // Fully soaked while the cold-exposure meter is MAXED (cold ≥ 100) → a chance to catch a chill
+      // that accelerates hypothermia — the "rain consequence" at 100% wetness. Gated on a FULL meter
+      // (not just `cold > 0`) so this can never apply hypothermia before the cold meter is full — the
+      // meter is the single source of truth for the condition (matching the driver's onset = 100).
+      // "Wet makes cold worse" is still modelled by WET_COLD_EXTRA amplifying cold exposure above, so
+      // a soaked pawn reaches a full meter (and hypothermia) sooner without the condition appearing early.
+      if (wetness >= WET_SOAKED && cold >= 100 && rng.chance(perTick(WET_CHILL_CHANCE_PER_SEC))) {
         const idx = conditions.findIndex((c) => c.id === 'hypothermia');
         if (idx === -1) conditions.push({ id: 'hypothermia', severity: WET_CHILL_SEVERITY });
         else
