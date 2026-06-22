@@ -2,7 +2,7 @@
 
 # ENGINE PERFORMANCE & SCALING
 
-> **Related:** [ROADMAP](ROADMAP.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-008, ADR-014, ADR-018/019/020/021) · [game/BUGS](../../game/BUGS.md) · [RANGED-COMBAT](../archive/RANGED-COMBAT-2026-06-21.md) (consumes LoS) · [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) (fog of war — deferred here) · [DISTRIBUTION](DISTRIBUTION.md) · archived: [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
+> **Related:** [**ENGINE-PERFORMANCE-II**](ENGINE-PERFORMANCE-II.md) — **Pass II (the 750²/high-mob load): entity complexity bubble + ADR-026 incremental-only terrain → 750² @ 120 FPS / 60 TPS, VICTORY 2026-06-22** · [ROADMAP](ROADMAP.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-008, ADR-014, ADR-018/019/020/021, **ADR-026**) · [game/BUGS](../../game/BUGS.md) · [RANGED-COMBAT](../archive/RANGED-COMBAT-2026-06-21.md) (consumes LoS) · [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) (fog of war — deferred here) · [DISTRIBUTION](DISTRIBUTION.md) · archived: [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
 
 Profiling-driven performance work, measured on the heavy `--profiler` sandbox (150 pawns +
 ~140 mobs, 240×160 map, 4× speed; `.debug/perf.log`).
