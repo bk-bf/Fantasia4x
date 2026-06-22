@@ -6,7 +6,7 @@
 
 ## 🏆 VICTORY (2026-06-22, validated in-game)
 
-**A 750×750 map (562,500 tiles) now runs at 120 FPS / 60 TPS @1×, and 4× climbs to ~120 TPS smoothly.**
+**A 500×500 map (~250,000 tiles) now runs at 120 FPS / 60 TPS @1×, and 4× climbs to ~120 TPS smoothly.**
 The two architectural breakthroughs below — an **entity complexity bubble** (TPS) and **incremental-only
 terrain** (FPS) — broke the ceiling that pure micro-opt (R1–R5/S1–S4) could only chip at. Pass-I's
 per-function trace methodology confirmed it: `generateBatchVertexData` **19.7% → 0.4%**, `samplePointStatic`
