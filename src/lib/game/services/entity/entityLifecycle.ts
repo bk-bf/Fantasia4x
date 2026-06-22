@@ -70,8 +70,17 @@ export function stepHunger(state: GameState): GameState {
   for (const mob of mobs) {
     if (mob.state === 'Corpse' || mob.isAlive === false) continue;
     const inBubble = !lodActive || mobInLiveRegion(mob, livePawns, LIVE_RADIUS);
-    if (!inBubble && !isThinkTick(mob.id, turn)) continue;
-    const tickScale = inBubble ? 1 : AI_THROTTLE_TICKS; // batch off-bubble hunger over the skipped ticks
+    // A BLEEDING mob is processed EVERY tick (even off-bubble) so its bleed-out is PROMPT — it dies of
+    // blood loss the tick blood crosses 0, not up to ~1s late on its next throttled think (which let a
+    // bleeding-out mob linger near-collapse and get its death mis-attributed to a stray combat poke). The
+    // `< maxBV` short-circuit skips the limb scan for the full-blood majority, preserving the throttle
+    // saving (healthy off-bubble mobs still skip).
+    const maxBV = mob.maxBloodVolume ?? 100;
+    const bleeding =
+      (mob.bloodVolume ?? maxBV) < maxBV &&
+      (mob.limbs?.some((l) => (l.bleedRate ?? 0) > 0) ?? false);
+    if (!inBubble && !isThinkTick(mob.id, turn) && !bleeding) continue;
+    const tickScale = inBubble || bleeding ? 1 : AI_THROTTLE_TICKS; // batch off-bubble hunger; bleeding = per-tick
     const def = getCreatureById(mob.creatureId);
     if (!def) continue;
 
@@ -132,7 +141,6 @@ export function stepHunger(state: GameState): GameState {
 
     // ── Blood loss ──────────────────────────────────────────────────────────────────
     const totalBleedRate = (limbs ?? []).reduce((sum, l) => sum + (l.bleedRate ?? 0), 0);
-    const maxBV = mob.maxBloodVolume ?? 100;
     let bloodVolume = mob.bloodVolume ?? maxBV;
 
     if (totalBleedRate > 0) {

@@ -92,6 +92,15 @@ export const STARVATION_COLLAPSE_SEVERITY = 0.65;
 export const HUNGER_EAT_THRESHOLD = 50;
 
 /**
+ * Consciousness (capacity) at/below which a creature collapses (combat KO) — matches Combat's threshold.
+ * A combat-collapsed mob now goes DOWN into the recoverable `Collapsed` state, NOT instant death (death is
+ * blood-0 / destroyed-vital only). `RECOVER` is the hysteresis ceiling — a downed mob only gets back UP
+ * once consciousness climbs back to here (blood regen / pain heal), so it can't flicker at the floor.
+ */
+export const COLLAPSE_CONSCIOUSNESS = 0.3;
+export const COLLAPSE_RECOVER_CONSCIOUSNESS = 0.4;
+
+/**
  * Soft territory leash (lair system). The hard leash pens a mob to `lairRange` of its lair, but a hard
  * cutoff makes a hunter OSCILLATE at the boundary — it spots prey just outside, lunges, gets yanked home,
  * re-spots, lunges… With overstretch the leash STRETCHES by this many tiles while the mob is actively

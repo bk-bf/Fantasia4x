@@ -878,8 +878,12 @@ class CombatServiceImpl implements CombatService {
 
     // Resolution: a destroyed vital part is instant death — whether hit directly, or taken when its
     // container was severed (cascadeLostVital, e.g. a gutted chest). Otherwise a collapse takes the
-    // entity out of the fight — a mob is defeated (no capture system yet), a pawn goes down (the state
-    // machine drives the Collapsed state + recovery).
+    // entity out of the fight WITHOUT killing it — a mob goes DOWN into the recoverable `Collapsed` state
+    // (the same one starvation uses), exactly like a pawn. Death now comes ONLY from a destroyed vital or
+    // from bleeding out (blood ≤ 0, handled per-tick in entityLifecycle) — NOT from a single blunt blow
+    // that merely tips an already-shocked creature under the consciousness floor. A downed mob lies there
+    // and recovers as consciousness climbs (blood regen / pain heals), bleeds out, or is finished off by a
+    // hungry predator (willFinishOffDowned). The FSM (entityAI) owns the stay-down/recover decision.
     if ((partDef.isVital && injury.severity === 'destroyed') || cascadeLostVital) {
       if (entityType === 'pawn') {
         (updated as Pawn).isAlive = false;
@@ -890,11 +894,11 @@ class CombatServiceImpl implements CombatService {
         (updated as Mob).diedAt = state.turn;
         (updated as Mob).intactness = 1.0;
       }
-    } else if (collapsed && entityType === 'mob') {
-      (updated as Mob).isAlive = false;
-      (updated as Mob).state = 'Corpse';
-      (updated as Mob).diedAt = state.turn;
-      (updated as Mob).intactness = 1.0;
+    } else if (collapsed && entityType === 'mob' && (updated as Mob).state !== 'Collapsed') {
+      (updated as Mob).state = 'Collapsed';
+      (updated as Mob).stateSince = state.turn;
+      (updated as Mob).path = [];
+      (updated as Mob).huntTargetId = undefined;
     }
 
     return this.spliceEntity(state, entity.id, updated, entityType === 'mob');
@@ -1232,6 +1236,11 @@ class CombatServiceImpl implements CombatService {
     let bestDist = Infinity;
     for (const m of mobs) {
       if (m.isAlive === false || m.state === 'Corpse') continue;
+      // A downed (Collapsed) mob is out of the fight — disengage rather than beat an unconscious body
+      // (it recovers / bleeds out / is finished by a hungry predator). Mirrors the collapsed-pawn skip.
+      // A drafted ATTACK order or a work-Hunt (huntTargetId) bypasses this acquire, so the player or a
+      // committed hunter can still finish a downed quarry.
+      if (m.state === 'Collapsed') continue;
       const hostile = m.entityClass === 'mob' || m.state === 'Attacking' || m.state === 'Alerted';
       if (!hostile) continue;
       const d = Math.max(Math.abs(px - m.x), Math.abs(py - m.y));

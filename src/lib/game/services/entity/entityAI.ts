@@ -11,6 +11,7 @@ import { rng } from '../../core/rng';
 import { markTileDirty } from '../../core/tileDeltas';
 import { consumeTop } from '../../core/carcassCondition';
 import { resourceObjectService } from '../ResourceObjectService';
+import { pawnStatService } from '../PawnStatService';
 import {
   nearestPawn,
   dist,
@@ -32,6 +33,8 @@ import {
   type TileFoodKind,
   NIGHT_THRESHOLD,
   STARVATION_COLLAPSE_SEVERITY,
+  COLLAPSE_CONSCIOUSNESS,
+  COLLAPSE_RECOVER_CONSCIOUSNESS,
   FLEE_HEALTH_FRACTION,
   HUNGER_SATED_THRESHOLD,
   HUNGER_EAT_THRESHOLD,
@@ -387,7 +390,24 @@ export function stepOne(
   // severity. Because malnutrition onsets at hunger 87 and accrues slowly, this takes in-game DAYS of
   // starving — it no longer drops a mob mid-hunt the instant hunger crosses 80.
   const malnutritionSeverity = mob.conditions?.find((c) => c.id === 'malnutrition')?.severity ?? 0;
-  if (malnutritionSeverity >= STARVATION_COLLAPSE_SEVERITY) {
+  const downedByStarvation = malnutritionSeverity >= STARVATION_COLLAPSE_SEVERITY;
+  // Combat KO + recovery (shares the Collapsed state with starvation). Low consciousness — pain +
+  // hypovolemic shock — DOWNS a mob into the recoverable Collapsed state, never instant death (death is
+  // blood-0 / destroyed-vital only, in entityLifecycle). It lies still and gets back up once consciousness
+  // climbs (blood regen / pain heals), or it bleeds out / is finished off. computeCapacities is cached and
+  // skipped for clearly-healthy mobs (no pain, blood ≥ half). Hysteresis: drop below COLLAPSE_CONSCIOUSNESS,
+  // only rise at COLLAPSE_RECOVER_CONSCIOUSNESS so it can't flicker at the floor.
+  const maxBloodV = mob.maxBloodVolume ?? 100;
+  const maybeDowned =
+    mob.state === 'Collapsed' ||
+    (mob.pain ?? 0) > 0 ||
+    (mob.bloodVolume ?? maxBloodV) < maxBloodV * 0.5;
+  const consciousness = maybeDowned
+    ? (pawnStatService.computeCapacities(mob).consciousness ?? 1)
+    : 1;
+  const downThreshold =
+    mob.state === 'Collapsed' ? COLLAPSE_RECOVER_CONSCIOUSNESS : COLLAPSE_CONSCIOUSNESS;
+  if (downedByStarvation || consciousness < downThreshold) {
     if (mob.state === 'Collapsed') return mob;
     return {
       ...mob,
@@ -398,7 +418,7 @@ export function stepOne(
       eatProgress: undefined
     };
   }
-  // Recovered (e.g. fed enough to drop below the severe stage): resume normal behaviour.
+  // Recovered (consciousness back up AND no longer starving): resume normal behaviour.
   if (mob.state === 'Collapsed') {
     return { ...mob, state: 'Wander', stateSince: turn };
   }

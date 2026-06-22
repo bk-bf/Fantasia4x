@@ -101,17 +101,16 @@ describe('combat sim (headless tickCombat)', () => {
     expect(mobInjured).toBe(true);
   });
 
-  it('part damage accumulates and a sustained beating drops a mob via pain collapse', () => {
-    // Pawn-only attacker (goblin Wandering, so it never swings back). The goblin can
-    // only die from cumulative pain collapse here — vital organs (hitWeight 0) are
-    // never directly struck — so this also proves collapse, not a lucky vital hit.
+  it('part damage accumulates and a sustained beating DOWNS a mob via pain collapse (not instant death)', () => {
+    // Pawn-only attacker (goblin Wandering, so it never swings back). Vital organs (hitWeight 0) are
+    // never directly struck, so the only resolution is cumulative pain/shock → COLLAPSE. Combat collapse
+    // now DOWNS a mob into the recoverable Collapsed state (not instant death — that's blood-0/vital only,
+    // handled in entityLifecycle, which tickCombat doesn't run). So we assert it's downed, not killed.
     let state = makeState([makePawn()], [makeGoblin({ state: 'Wander' })]);
     let accumulated = false;
     let maxPain = 0;
-    let died = false;
-    // 12000 ticks: attack cadence was halved (BASE_ATTACK_INTERVAL_TICKS 60→120), so the same
-    // number of swings now needs twice the tick budget to land and drive the pain collapse.
-    for (let t = 0; t < 12000 && !died; t++) {
+    let downed = false;
+    for (let t = 0; t < 12000 && !downed; t++) {
       state = { ...state, turn: t };
       state = combatService.tickCombat(state, 16);
       const g = state.mobs![0];
@@ -123,39 +122,57 @@ describe('combat sim (headless tickCombat)', () => {
         0
       );
       if (lost > 15) accumulated = true;
-      if (g.isAlive === false || g.state === 'Corpse') died = true;
+      if (g.state === 'Collapsed') downed = true;
+      expect(g.isAlive).not.toBe(false); // never INSTANT-killed by the beating — only downed
     }
     expect(accumulated).toBe(true); // bug fix: part damage persists and accumulates
-    expect(died).toBe(true); // the fight resolves via collapse (vitals are never struck)
+    expect(downed).toBe(true); // the fight resolves via collapse → DOWNED (Collapsed), not killed
     expect(maxPain).toBeGreaterThan(30); // …with pain a real driver of the downing
   });
 
-  it('tickCombat leaves its INPUT state arrays/objects intact (fresh-corpse diff stays valid)', () => {
+  it('a near-collapse (low-blood) mob takes a light blow and DOWNS, never instant-dies (the 3-dmg-punch regression)', () => {
+    // Field repro: a jackal in deep hypovolemic shock (it had won a brutal fight, blood critically low)
+    // took a 3-dmg blunt punch and INSTANTLY died — a collapse mis-counted as a kill. Combat collapse must
+    // DOWN a mob (recoverable Collapsed), never kill it; death is blood-0 / destroyed-vital ONLY.
+    const shocked = makeGoblin({ state: 'Wander', bloodVolume: 22, pain: 40 }); // ~78% blood lost → faint
+    let state = makeState([makePawn()], [shocked]);
+    let sawCollapsed = false;
+    for (let t = 0; t < 600; t++) {
+      state = { ...state, turn: t };
+      state = combatService.tickCombat(state, 16);
+      const g = state.mobs![0];
+      if (g.state === 'Collapsed') sawCollapsed = true;
+      expect(g.isAlive).not.toBe(false); // a light blow never instant-kills…
+      expect(g.state).not.toBe('Corpse'); // …it goes DOWN, doesn't die
+    }
+    expect(sawCollapsed).toBe(true); // the shock + blow downed it (recoverable), as it should
+  });
+
+  it('tickCombat leaves its INPUT state arrays/objects intact (status-change diff stays valid)', () => {
     // Perf: tickCombat clones the pawns/mobs arrays once and writes updated entities into the clone's
     // slots in place (no per-hit full-array rebuild). GameEngineImpl diffs preCombatState vs the result
-    // by index to spawn carcasses (handleFreshCombatCorpses) — that ONLY works if tickCombat never
-    // writes through to its input. Drive a pawn beating a passive goblin to death and assert that, on
-    // the killing tick, the input mob object/array is untouched while the result carries the corpse.
+    // by index (handleFreshCombatCorpses, etc.) — that ONLY works if tickCombat never writes through to
+    // its input. Drive a pawn beating a passive goblin until it DOWNS (Collapsed — the status-change the
+    // clone must isolate now that collapse no longer instant-kills) and assert the input is untouched.
     let state = makeState([makePawn()], [makeGoblin({ state: 'Wander' })]);
-    let validatedKill = false;
-    for (let t = 0; t < 12000 && !validatedKill; t++) {
+    let validated = false;
+    for (let t = 0; t < 12000 && !validated; t++) {
       const input = { ...state, turn: t };
       const inputMobs = input.mobs!;
       const inputMob = inputMobs[0];
-      const aliveBefore = inputMob.isAlive !== false && inputMob.state !== 'Corpse';
+      const upBefore = inputMob.state !== 'Collapsed';
       const result = combatService.tickCombat(input, 16);
       const resultMob = result.mobs![0];
-      if (aliveBefore && (resultMob.isAlive === false || resultMob.state === 'Corpse')) {
-        // Killing tick: the result diverged, but the input snapshot must be byte-for-byte unchanged.
+      if (upBefore && resultMob.state === 'Collapsed') {
+        // Status-change tick: the result diverged, but the input snapshot must be byte-for-byte unchanged.
         expect(result.mobs).not.toBe(inputMobs); // arrays diverged (clone, not in-place on input)
         expect(input.mobs![0]).toBe(inputMob); // same input object ref…
-        expect(inputMob.isAlive).not.toBe(false); // …still alive in the input
-        expect(inputMob.state).not.toBe('Corpse');
-        validatedKill = true;
+        expect(inputMob.state).not.toBe('Collapsed'); // …still standing in the input
+        validated = true;
       }
       state = result;
     }
-    expect(validatedKill).toBe(true);
+    expect(validated).toBe(true);
   });
 
   it('an Attacking mob damages the adjacent pawn', () => {
@@ -220,9 +237,10 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('a Hunting pawn attacks its marked quarry even though the prey is neutral', () => {
-    // A huntable deer is NOT a "hostile" (the Fighting/auto-engage path would ignore it),
-    // so this proves the work-driven hunt path: a pawn in Hunting with huntTargetId set
-    // swings at that specific mob and kills it — yielding a corpse to butcher.
+    // A huntable deer is NOT a "hostile" (the Fighting/auto-engage path would ignore it), so this proves
+    // the work-driven hunt path: a pawn in Hunting with huntTargetId set swings at that specific mob and
+    // DROPS it (Collapsed). The huntTargetId path keeps striking even a downed quarry (a committed hunter
+    // finishes it), and the actual death/corpse to butcher comes from bleed-out in entityLifecycle.
     const hunter = makePawn({ currentState: 'Hunting', huntTargetId: 'deer1' });
     const prey = makeGoblin({
       id: 'deer1',
@@ -232,16 +250,14 @@ describe('combat sim (headless tickCombat)', () => {
       stats: { ...stats, dexterity: 2 } // low dodge so swings land
     });
     let state = makeState([hunter], [prey]);
-    let died = false;
-    // 12000 ticks: attack cadence was halved (BASE_ATTACK_INTERVAL_TICKS 60→120), so the hunt needs
-    // twice the tick budget to land enough swings to kill the quarry.
-    for (let t = 0; t < 12000 && !died; t++) {
+    let downed = false;
+    for (let t = 0; t < 12000 && !downed; t++) {
       state = { ...state, turn: t };
       state = combatService.tickCombat(state, 16);
       const d = state.mobs![0];
-      if (d.isAlive === false || d.state === 'Corpse') died = true;
+      if (d.state === 'Collapsed' || d.isAlive === false || d.state === 'Corpse') downed = true;
     }
-    expect(died).toBe(true);
+    expect(downed).toBe(true);
   });
 
   it('a drafted pawn with NO attack order auto-engages an adjacent hostile (NT-4)', () => {
