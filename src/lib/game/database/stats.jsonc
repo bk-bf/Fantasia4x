@@ -257,6 +257,13 @@
         "description": "cold damage reduction — innate (stat-only); also slows HYPOTHERMIA onset from cold weather/temperature (SEASONS_WEATHER) — reduces cold exposure before the condition driver"
     },
     {
+        "id": "wetness_resistance",
+        "category": "resistance",
+        "primaryStat": "constitution",
+        "formula": "(0.0 + (CON − 10) × 0.015)",
+        "description": "how well the body sheds water (fur/hide/fitness) — innate (stat-only). Does NOT change the `wet` onset (a full 100 meter, same for all); it slows how FAST the wetness meter FILLS on wet ground, so a hardy/woolly creature soaks slower and a frail one fast (SEASONS_WEATHER)"
+    },
+    {
         "id"         : "lightning_resistance",
         "category"   : "resistance",
         "primaryStat": "dexterity",

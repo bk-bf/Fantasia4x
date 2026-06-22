@@ -592,6 +592,10 @@
         "color": "#4FA3D1",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 247} ],
+        // Onset at the FULL wetness meter (100) for EVERY entity — pawns and mobs run the same meter
+        // (EnvironmentService.accrueWetness). Susceptibility differs only in FILL RATE, gated by the
+        // `wetness_resistance` stat (fur/hide/fitness) — NOT a different threshold.
+        "needOnset": {"need": "wetness", "atOrAbove": 100},
         "modifiers": {"dexterity": 0.95, "moveSpeed": 0.9, "workEfficiency": 0.95}
     },
     {
@@ -611,6 +615,9 @@
         "color"      : "#8d6e63",
         "floater"    : true,
         "charSpans"  : [ {"sheet": "font", "id": 177} ],
+        // Onset when the `hygiene` need maxes out. PAWN-ONLY: creatures have no washing behaviour, so the
+        // mob lifecycle never derives `filthy` (no hygiene need) — this threshold is read only by pawns.
+        "needOnset"  : {"need": "hygiene", "atOrAbove": 100},
         "modifiers"  : {"workEfficiency": 0.85}
     },
     {
