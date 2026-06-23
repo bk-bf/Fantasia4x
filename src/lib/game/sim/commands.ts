@@ -20,6 +20,7 @@
  */
 import type {
   GameState,
+  Pawn,
   EquipmentSlot,
   ItemInstance,
   CraftingInProgress,
@@ -79,6 +80,45 @@ function nearestFreeTile(
     }
   }
   return null;
+}
+
+/**
+ * Achtung-style line formation: spread `pawns` evenly along the segment A→B. Slot i sits at
+ * A + (i/(N−1))·(B−A) (a single pawn goes to B, the release tile). Pawns are SORTED by their projection
+ * onto the line so they keep their left→right order and don't cross, then each slot snaps to the nearest
+ * free walkable tile. Returns pawnId → destination. Shared by the `movePawnsLine` command and the live
+ * client-side aim preview (GameCanvas), so the dots you drag match where they actually go.
+ */
+export function lineFormationTargets(
+  worldMap: GameState['worldMap'],
+  pawns: Pawn[],
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number
+): Map<string, { x: number; y: number }> {
+  const targets = new Map<string, { x: number; y: number }>();
+  const placeable = pawns.filter((p) => p.position);
+  const n = placeable.length;
+  if (n === 0) return targets;
+  const dirX = bx - ax;
+  const dirY = by - ay;
+  const proj = (p: Pawn) => (p.position!.x - ax) * dirX + (p.position!.y - ay) * dirY;
+  const sorted = [...placeable].sort((p, q) => proj(p) - proj(q));
+  const claimed = new Set<string>();
+  for (let i = 0; i < n; i++) {
+    const t = n === 1 ? 1 : i / (n - 1);
+    const free = nearestFreeTile(
+      worldMap,
+      Math.round(ax + dirX * t),
+      Math.round(ay + dirY * t),
+      claimed
+    );
+    if (!free) break; // map exhausted — leave the rest
+    claimed.add(`${free.x},${free.y}`);
+    targets.set(sorted[i].id, free);
+  }
+  return targets;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -171,6 +211,32 @@ export const COMMANDS: Record<string, Cmd> = {
     };
     // Path each pawn now (shared solid-body occupancy snapshot) so all the preview lines trace their
     // real routes the instant the order lands — paused or running.
+    const occ = occupancyService.blockedTiles(gs);
+    for (const [id, t] of targets) {
+      const pawn = gs.pawns.find((pw) => pw.id === id);
+      if (pawn && pawn.drafted && pawn.position && pawn.currentState !== 'Collapsed') {
+        gs = assignDraftMovePath(gs, pawn, t.x, t.y, occ);
+      }
+    }
+    return gs;
+  },
+  /** Achtung-style line move: spread the listed drafted pawns evenly along the segment (ax,ay)→(bx,by)
+   *  — see lineFormationTargets. Same paths-now behaviour as movePawnsFormation. */
+  movePawnsLine: (s, p: { ids: string[]; ax: number; ay: number; bx: number; by: number }) => {
+    const pawns = s.pawns.filter(
+      (pw) =>
+        p.ids.includes(pw.id) && pw.drafted && pw.position && pw.currentState !== 'Collapsed'
+    );
+    const targets = lineFormationTargets(s.worldMap, pawns, p.ax, p.ay, p.bx, p.by);
+    let gs: GameState = {
+      ...s,
+      pawns: s.pawns.map((pw) => {
+        const t = targets.get(pw.id);
+        return t && pw.drafted
+          ? { ...pw, draftTarget: { type: 'move', x: t.x, y: t.y } as never }
+          : pw;
+      })
+    };
     const occ = occupancyService.blockedTiles(gs);
     for (const [id, t] of targets) {
       const pawn = gs.pawns.find((pw) => pw.id === id);

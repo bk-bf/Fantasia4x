@@ -277,6 +277,9 @@ export interface PawnCardDeps {
   /** MARK button — begin the highlight drag for pawns. The group is only *highlighted*; the player
    *  then presses DRAFT / MOVE on the group HUD. Threaded in from GameCanvas. */
   startMark: () => void;
+  /** MOVE button (shown only for a drafted pawn) — arm the Achtung-style move-aim, so the next map
+   *  press draws the destination line/click. Threaded in from GameCanvas. */
+  armMove: () => void;
 }
 
 /** Reactive deps + MARK callback for {@link buildMobCard}. */
@@ -291,7 +294,7 @@ export function buildPawnCard(
   selected: boolean,
   deps: PawnCardDeps
 ): SelectedEntityModel {
-  const { cameraFollowPawnId, startMark } = deps;
+  const { cameraFollowPawnId, startMark, armMove } = deps;
   const bars: EntityBar[] = [
     { label: 'HUNGER', value: pawn.needs.hunger, warn: pawn.needs.hunger > 60 },
     { label: 'REST', value: pawn.needs.fatigue, warn: pawn.needs.fatigue > 60 },
@@ -365,6 +368,9 @@ export function buildPawnCard(
             active: pawn.drafted ?? false,
             onClick: () => toggleDraft(pawn.id)
           },
+          // A drafted pawn gets a MOVE button that arms the map move-aim (right-drag/click a line);
+          // hidden when undrafted (nothing to move).
+          ...(pawn.drafted ? [{ label: 'MOVE', onClick: () => armMove() }] : []),
           {
             label: 'WORK',
             onClick: () =>

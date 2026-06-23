@@ -118,6 +118,9 @@
   } from '$lib/components/UI/gameCanvas/selectionCard';
   import { overlayDroppedItems } from '$lib/components/UI/gameCanvas/overlay';
   import { buildingsVisualSig } from '$lib/game/core/buildingSig';
+  // Shared with the `movePawnsLine` command so the live drag preview's dots land exactly where the
+  // pawns will (same Achtung-style spacing + nearest-free-tile snap).
+  import { lineFormationTargets } from '$lib/game/sim/commands';
   import type { ItemPillView } from '$lib/components/UI/ItemPills.svelte';
   import itemsData from '$lib/game/database/items.jsonc';
 
@@ -516,8 +519,8 @@
 
   // MARK highlight: drag a box to highlight a group of pawns OR mobs — no immediate action. Which
   // kind is decided by the info-panel MARK button that started the drag. Once committed, a group HUD
-  // offers the relevant verb: DRAFT/MOVE for pawns, HUNT for mobs. `pawnMoveMode` is the second phase
-  // for pawns (click a tile → the drafted ones spread onto tiles around it).
+  // offers the relevant verb: DRAFT/MOVE for pawns, HUNT for mobs. MOVE is an Achtung-style aim (see
+  // the moveAim* state below), shared by the selected-pawn info card.
   let markKind: 'pawn' | 'mob' | null = null; // a MARK drag is in progress (selecting)
   let markDragActive = false; // mouse is down, box is being dragged
   let markAnchorX = 0;
@@ -527,7 +530,19 @@
   let markedKind: 'pawn' | 'mob' | null = null; // committed highlight kind
   let markedIds: string[] = []; // committed highlighted entity ids
   let markedSet = new Set<string>(); // same ids, for O(1) lookup in the per-frame render loop
-  let pawnMoveMode = false; // pawns: awaiting a destination click
+
+  // Drafted-pawn MOVE aim (Achtung2-style). A right-press-and-drag draws a line; the drafted pawns
+  // (the selected one, or the marked group) spread evenly along it with a live destination preview; a
+  // quick right-click (no drag) drops them in a compact block. The MOVE button on the info card / mark
+  // HUD ARMS the same gesture so a following left-press starts it too.
+  let moveAimActive = false; // a move-aim drag is in progress (press → release)
+  let moveAimArmed = false; // MOVE button pressed → the next press (either button) begins the aim
+  let moveAimAnchorX = 0;
+  let moveAimAnchorY = 0;
+  let moveAimEndX = 0;
+  let moveAimEndY = 0;
+  let moveAimSlots: { x: number; y: number }[] = []; // live preview destinations (recomputed on move)
+  let _aimCommitted = false; // set on release so the trailing contextmenu (right-drag) skips its menu
 
   let zoneAnchorX = 0;
   let zoneAnchorY = 0;
@@ -630,13 +645,15 @@
   $: selectedPawnCard = selectedPawn
     ? buildPawnCard(selectedPawn, true, {
         cameraFollowPawnId,
-        startMark: () => startMarkDrag('pawn')
+        startMark: () => startMarkDrag('pawn'),
+        armMove: () => armMoveAim()
       })
     : null;
   $: hoverPawnCard = hoverPawn
     ? buildPawnCard(hoverPawn, false, {
         cameraFollowPawnId,
-        startMark: () => startMarkDrag('pawn')
+        startMark: () => startMarkDrag('pawn'),
+        armMove: () => armMoveAim()
       })
     : null;
 
@@ -646,6 +663,15 @@
   // All highlighted pawns already drafted → the verb flips to UNDRAFT.
   $: markedAllDrafted =
     markedKind === 'pawn' && markedIds.length > 0 && markedDraftedCount === markedIds.length;
+
+  // How many pawns a MOVE aim would command: the marked drafted group if one is highlighted, else the
+  // single selected drafted pawn. Drives the aim HUD label + the card/HUD MOVE enablement.
+  $: moveAimCount =
+    markedKind === 'pawn' && markedDraftedCount > 0
+      ? markedDraftedCount
+      : selectedPawn?.drafted
+        ? 1
+        : 0;
 
   $: hoverMob = hoverMobId ? (mobs.find((m) => m.id === hoverMobId) ?? null) : null;
 
@@ -2130,6 +2156,39 @@
       ctx.restore();
     }
 
+    // Drafted-pawn MOVE aim preview (Achtung-style): the anchor→cursor line plus an amber dot at each
+    // computed destination slot. Drawn here on the cheap 2D overlay (NOT the WebGL grid) so dragging a
+    // line never rebuilds the terrain buffer — that rebuild was the jank. Slots are recomputed only on
+    // mousemove (moveAimSlots), not per frame.
+    if (moveAimActive) {
+      const ax = (moveAimAnchorX - viewX + 0.5) * tileWidth;
+      const ay = (moveAimAnchorY - viewY + 0.5) * tileHeight;
+      const bx = (moveAimEndX - viewX + 0.5) * tileWidth;
+      const by = (moveAimEndY - viewY + 0.5) * tileHeight;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 200, 90, 0.85)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(bx, by);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const r = Math.max(2, tileWidth * 0.22);
+      for (const s of moveAimSlots) {
+        const dx = (s.x - viewX + 0.5) * tileWidth;
+        const dy = (s.y - viewY + 0.5) * tileHeight;
+        ctx.beginPath();
+        ctx.arc(dx, dy, r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 200, 90, 0.35)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 220, 120, 0.95)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     // (The committed MARK highlight is NOT drawn here: it rides the entity glyph grid's selection
     // colour in updatePawnOverlay() so it follows the moving entity, rather than a static tile ring
     // that would stay behind once the pawn walks off.)
@@ -2931,7 +2990,13 @@
           showFuelSettings = false;
         } else if (showZoneFilter) {
           showZoneFilter = false;
-        } else if (markKind || markedKind || pawnMoveMode) {
+        } else if (moveAimActive || moveAimArmed) {
+          // Back out of a move-aim first, keeping the mark highlight so MOVE can be re-armed.
+          moveAimActive = false;
+          moveAimArmed = false;
+          moveAimSlots = [];
+          drawDesignations();
+        } else if (markKind || markedKind) {
           clearMark();
         } else if (similarDragMode) {
           similarDragMode = false;
@@ -3044,10 +3109,25 @@
 
   function handleMouseDown(e: MouseEvent) {
     if (menuPreview) return;
+    // Right button: begin a drafted-pawn MOVE aim (press-drag = line, click = block). A SINGLE selected
+    // pawn keeps its right-click context menu on a tile that has an attack target or pickup-able items —
+    // only an empty tile begins the aim there; a marked group always aims (no per-tile menu for groups).
+    if (e.button === 2) {
+      if (moveAimCount === 0 || hoverTileX < 0 || hoverTileY < 0) return; // nothing to move → contextmenu
+      const groupMove = markedKind === 'pawn' && markedDraftedCount > 0;
+      if (!groupMove) {
+        const hasMenu =
+          hasAttackTargetAt(hoverTileX, hoverTileY) ||
+          droppedItems.some((d) => d.x === hoverTileX && d.y === hoverTileY && d.quantity > 0);
+        if (hasMenu) return;
+      }
+      startMoveAim();
+      return;
+    }
     if (e.button !== 0) return;
-    if (pawnMoveMode) {
-      // MOVE phase: a single left-click is the destination the drafted group spreads around.
-      if (hoverTileX >= 0 && hoverTileY >= 0) issueMarkedPawnMove(hoverTileX, hoverTileY);
+    if (moveAimArmed && moveAimCount > 0 && hoverTileX >= 0 && hoverTileY >= 0) {
+      // The info-card / mark-HUD MOVE button armed the aim → a left-press now begins it too.
+      startMoveAim();
       return;
     }
     if (markKind) {
@@ -3129,6 +3209,15 @@
       cursorOverCanvas = true;
       updateHoverEntity();
     }
+    if (moveAimActive) {
+      // Extend the aim line to the cursor and recompute where each pawn would land — cheap 2D repaint
+      // only (recomputeMoveAim + drawDesignations), never a WebGL terrain rebuild (the jank source).
+      moveAimEndX = hoverTileX;
+      moveAimEndY = hoverTileY;
+      recomputeMoveAim();
+      drawDesignations();
+      return;
+    }
     if (zoneDragActive) {
       zoneEndX = hoverTileX;
       zoneEndY = hoverTileY;
@@ -3174,6 +3263,10 @@
   }
 
   function handleMouseUp() {
+    if (moveAimActive) {
+      commitMoveAim();
+      return;
+    }
     if (markDragActive) {
       completeMarkDrag();
       return;
@@ -3331,7 +3424,7 @@
     markedKind = null;
     markedIds = [];
     markedSet = new Set();
-    pawnMoveMode = false;
+    moveAimArmed = false;
   }
 
   /** End of the highlight drag: collect the living entities of the chosen kind inside the box. */
@@ -3367,7 +3460,9 @@
     markedKind = null;
     markedIds = [];
     markedSet = new Set();
-    pawnMoveMode = false;
+    moveAimArmed = false;
+    moveAimActive = false;
+    moveAimSlots = [];
     drawDesignations();
   }
 
@@ -3390,18 +3485,91 @@
     clearMark();
   }
 
-  /** MOVE verb: arm the destination click for the highlighted (drafted) pawns. */
-  function startMarkedPawnMove() {
-    if (markedKind === 'pawn' && markedDraftedCount > 0) pawnMoveMode = true;
+  /** MOVE verb (info card / mark HUD): arm the Achtung aim, so the next press begins a move-line. */
+  function armMoveAim() {
+    if (moveAimCount > 0) moveAimArmed = true;
   }
 
-  /** Destination click: spread the highlighted drafted pawns onto tiles around (x,y). */
-  function issueMarkedPawnMove(x: number, y: number) {
-    const ids = pawns.filter((p) => p.drafted && markedSet.has(p.id)).map((p) => p.id);
-    if (ids.length > 0) {
-      gameState.command({ type: 'movePawnsFormation', payload: { ids, x, y }, save: true });
+  /** The pawns a MOVE aim commands: the marked drafted group if one is highlighted, else the single
+   *  selected drafted pawn. (Mirrors {@link moveAimCount}.) */
+  function moveAimIds(): string[] {
+    if (markedKind === 'pawn' && markedDraftedCount > 0) {
+      return pawns.filter((p) => p.drafted && markedSet.has(p.id)).map((p) => p.id);
     }
-    pawnMoveMode = false;
+    if (selectedPawn?.drafted) return [selectedPawn.id];
+    return [];
+  }
+
+  /** Whether a single drafted pawn could ATTACK something on (x,y) — a living mob or another pawn.
+   *  Such a tile keeps its right-click attack menu instead of starting a move-aim. */
+  function hasAttackTargetAt(x: number, y: number): boolean {
+    if (mobs.some((m) => m.x === x && m.y === y && m.isAlive !== false)) return true;
+    return pawns.some(
+      (p) => p.id !== selectedPawnId && p.position?.x === x && p.position?.y === y && p.isAlive !== false
+    );
+  }
+
+  /** Begin the move-aim at the current hover tile (right-press, or armed left-press). */
+  function startMoveAim() {
+    moveAimActive = true;
+    moveAimArmed = false;
+    moveAimAnchorX = hoverTileX;
+    moveAimAnchorY = hoverTileY;
+    moveAimEndX = hoverTileX;
+    moveAimEndY = hoverTileY;
+    recomputeMoveAim();
+    drawDesignations();
+  }
+
+  /** Recompute the live destination dots — the SAME formation the `movePawnsLine` command will apply,
+   *  so what you see while dragging is exactly where they go. */
+  function recomputeMoveAim() {
+    const ids = moveAimIds();
+    if (ids.length === 0) {
+      moveAimSlots = [];
+      return;
+    }
+    // Match the command's eligibility (drafted + on-map + not collapsed) so the dots == the real move.
+    const aimPawns = pawns.filter(
+      (p) => ids.includes(p.id) && p.position && p.currentState !== 'Collapsed'
+    );
+    const m = lineFormationTargets(
+      worldMap,
+      aimPawns,
+      moveAimAnchorX,
+      moveAimAnchorY,
+      moveAimEndX,
+      moveAimEndY
+    );
+    moveAimSlots = [...m.values()];
+  }
+
+  /** Release: a drag past ~1 tile spreads the group along the line (`movePawnsLine`); a near-stationary
+   *  release is a click → compact block (`movePawnsFormation`, or a plain move for a single pawn). */
+  function commitMoveAim() {
+    const ids = moveAimIds();
+    const ax = moveAimAnchorX;
+    const ay = moveAimAnchorY;
+    const bx = moveAimEndX;
+    const by = moveAimEndY;
+    moveAimActive = false;
+    moveAimArmed = false;
+    moveAimSlots = [];
+    _aimCommitted = true; // the right-drag's trailing contextmenu must not also open a menu
+    if (ids.length > 0 && bx >= 0 && by >= 0) {
+      const dragLen = Math.abs(bx - ax) + Math.abs(by - ay);
+      if (ids.length === 1) {
+        gameState.command({
+          type: 'setPawnDraftTarget',
+          payload: { pawnId: ids[0], target: { type: 'move', x: bx, y: by } },
+          save: true
+        });
+      } else if (dragLen >= 2) {
+        gameState.command({ type: 'movePawnsLine', payload: { ids, ax, ay, bx, by }, save: true });
+      } else {
+        gameState.command({ type: 'movePawnsFormation', payload: { ids, x: bx, y: by }, save: true });
+      }
+    }
     drawDesignations();
   }
 
@@ -3545,6 +3713,12 @@
   function handleContextMenu(e: MouseEvent) {
     e.preventDefault();
     if (menuPreview) return;
+    // A right-press-drag/click that just committed a MOVE aim fires this contextmenu on release —
+    // swallow it so the aim doesn't also pop the attack/move menu.
+    if (_aimCommitted) {
+      _aimCommitted = false;
+      return;
+    }
     equipMenu = null;
     if (hoverTileX < 0 || hoverTileY < 0) return;
 
@@ -3604,26 +3778,15 @@
       // the moment the cursor moves onto the menu, so a deferred "Move here" must use these snapshots.
       const tileX = hoverTileX;
       const tileY = hoverTileY;
-      // If a MARK highlight of drafted pawns is active, "move here" commands the whole group and
-      // spreads them onto distinct tiles around the click; otherwise it's just the selected pawn.
-      const groupIds =
-        markedKind === 'pawn'
-          ? pawns.filter((p) => p.drafted && markedSet.has(p.id)).map((p) => p.id)
-          : [];
+      // This branch only runs for a SINGLE selected pawn on a tile that carries a menu (items here, or
+      // an attack target above) — group moves and empty-tile moves go through the right-drag aim. So
+      // "Move here" is just the selected pawn.
       const issueMove = () => {
-        if (groupIds.length > 1) {
-          gameState.command({
-            type: 'movePawnsFormation',
-            payload: { ids: groupIds, x: tileX, y: tileY },
-            save: true
-          });
-        } else {
-          gameState.command({
-            type: 'setPawnDraftTarget',
-            payload: { pawnId, target: { type: 'move', x: tileX, y: tileY } },
-            save: true
-          });
-        }
+        gameState.command({
+          type: 'setPawnDraftTarget',
+          payload: { pawnId, target: { type: 'move', x: tileX, y: tileY } },
+          save: true
+        });
       };
 
       // Any item on the tile opens a menu (equip / pick-up / haul entries + a Move option), so the
@@ -3787,14 +3950,20 @@
       [⊞ MARK {markKind === 'pawn' ? 'PAWNS' : 'ENTITIES'}] — drag a box to highlight · Esc cancel{#if markDragActive}
         — ({Math.abs(markEndX - markAnchorX) + 1}×{Math.abs(markEndY - markAnchorY) + 1}){/if}
     </div>
-  {:else if pawnMoveMode}
+  {:else if moveAimActive}
     <div class="designation-hud" style:color="#ffc85a" style:border-color="#ffc85a">
-      [⊞ MOVE] — click a tile to send {markedDraftedCount} drafted pawn{markedDraftedCount !== 1
+      [⊞ MOVE] — drag a line, release to spread {moveAimCount} drafted pawn{moveAimCount !== 1
         ? 's'
-        : ''} there · Esc cancel
+        : ''} along it · Esc cancel
+    </div>
+  {:else if moveAimArmed}
+    <div class="designation-hud" style:color="#ffc85a" style:border-color="#ffc85a">
+      [⊞ MOVE] — right-drag a line (or click) to send {moveAimCount} drafted pawn{moveAimCount !== 1
+        ? 's'
+        : ''} · Esc cancel
     </div>
   {/if}
-  {#if markedKind && !markKind && !pawnMoveMode}
+  {#if markedKind && !markKind && !moveAimActive && !moveAimArmed}
     <!-- Group action HUD for the committed MARK highlight (pointer-events on, unlike the text HUDs). -->
     <div class="mark-hud">
       <span class="mark-count">
@@ -3807,7 +3976,7 @@
         <button class="mark-btn" on:click={draftMarkedPawns}>
           {markedAllDrafted ? 'UNDRAFT' : 'DRAFT'}
         </button>
-        <button class="mark-btn" on:click={startMarkedPawnMove} disabled={markedDraftedCount === 0}>
+        <button class="mark-btn" on:click={armMoveAim} disabled={markedDraftedCount === 0}>
           MOVE{markedDraftedCount > 0 ? ` (${markedDraftedCount})` : ''}
         </button>
       {:else}
