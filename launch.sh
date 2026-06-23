@@ -13,8 +13,8 @@
 # --play: clean PLAYER launch (shell only) — drops --debug so the game opens at the MAIN MENU with
 #   the DEBUG tab hidden, the way an alpha build looks. Still served by the live dev server, so
 #   bug-fixes are a reload away (no rebuild). Immersive playtesting: ./launch.sh --electron --play.
-# --mm2: render the EXPERIMENTAL alternate main menu (MainMenu2) instead of the default one — a layout
-#   experiment, gated by VITE_MM2. E.g. ./launch.sh --electron --play --mm2.
+# --legacy-menu: render the ORIGINAL centred main menu (MainMenu) instead of the default left-aligned
+#   one (MainMenu2), gated by VITE_LEGACY_MENU. E.g. ./launch.sh --electron --play --legacy-menu.
 # --hmr: opt INTO Vite hot-reload / live page-reload. OFF by default for EVERY launch (including
 #   --debug/--profiler/--electron/--tauri) so an agent editing the tree never reloads a live playtest.
 # SANDBOXING (electron): ON BY DEFAULT. The dev server AND Electron run inside a private Linux network
@@ -37,7 +37,7 @@ PROFILER=false
 LOG=false
 HMR=false
 PLAY=false
-MM2=false
+LEGACY_MENU=false
 SANDBOX=auto   # auto = default ON for electron (OFF under --profiler); --sandbox forces on, --net-host forces off
 SHELL_TARGET=""
 for arg in "$@"; do
@@ -46,7 +46,7 @@ for arg in "$@"; do
     --log) LOG=true ;;
     --hmr) HMR=true ;;
     --play) PLAY=true ;;
-    --mm2) MM2=true ;;
+    --legacy-menu) LEGACY_MENU=true ;;
     --sandbox) SANDBOX=on ;;
     --net-host) SANDBOX=off ;;
     --electron) SHELL_TARGET=electron ;;
@@ -57,8 +57,8 @@ done
 # launch unless --hmr is passed, so an agent editing the tree never reloads a live playtest.
 LOG_FLAG=""; [[ "$LOG" == true ]] && LOG_FLAG=" --log"
 HMR_FLAG=""; [[ "$HMR" == true ]] && HMR_FLAG=" --hmr"
-# --mm2: render the experimental alternate main menu (MainMenu2) — e.g. ./launch.sh --electron --play --mm2
-MM2_FLAG=""; [[ "$MM2" == true ]] && MM2_FLAG=" --mm2"
+# --legacy-menu: render the original centred main menu (MainMenu) instead of the default MainMenu2.
+LEGACY_FLAG=""; [[ "$LEGACY_MENU" == true ]] && LEGACY_FLAG=" --legacy-menu"
 
 cleanup() {
   [[ ${#PIDS[@]} -eq 0 ]] && return
@@ -168,7 +168,7 @@ if [[ -n "$SHELL_TARGET" ]]; then
   # immersive playtest over the live dev server, so bug-fixes are still just a reload away.
   SERVER_FLAG="--debug"; [[ "$PROFILER" == true ]] && SERVER_FLAG="--profiler"
   [[ "$PLAY" == true ]] && SERVER_FLAG=""
-  SERVER_FLAG="$SERVER_FLAG$LOG_FLAG$HMR_FLAG$MM2_FLAG"
+  SERVER_FLAG="$SERVER_FLAG$LOG_FLAG$HMR_FLAG$LEGACY_FLAG"
   SERVER_LABEL="play"; [[ "$PLAY" != true ]] && SERVER_LABEL="${SERVER_FLAG#--}"
   PORT=5173
   [[ -f "$SCRIPT_DIR/.devport" ]] && PORT=$(< "$SCRIPT_DIR/.devport")

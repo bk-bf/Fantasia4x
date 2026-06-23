@@ -28,7 +28,7 @@ PROFILER_MODE=false
 PROFILER_AUTORUN=false
 HMR_MODE=false
 BROWSER_MODE=false
-MM2_MODE=false
+LEGACY_MENU_MODE=false
 
 # Read worktree-local port override if present
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -44,7 +44,7 @@ while [[ $# -gt 0 ]]; do
     --profiler-autorun) PROFILER_MODE=true; PROFILER_AUTORUN=true ;; # heavy sandbox, capture run
     --hmr) HMR_MODE=true ;; # opt into Vite hot-reload / live page-reload (off by default)
     --browser) BROWSER_MODE=true ;; # lift the desktop-shell guard so a plain browser can load the game
-    --mm2) MM2_MODE=true ;; # render the experimental alternate main menu (MainMenu2)
+    --legacy-menu) LEGACY_MENU_MODE=true ;; # render the original centred main menu (MainMenu)
     --port) PORT="$2"; shift ;;
     --port=*) PORT="${1#--port=}" ;;
   esac
@@ -122,12 +122,13 @@ else
   echo "Browser access blocked (default) — game loads only in the desktop shell; pass --browser to allow."
 fi
 
-# Experimental alternate main menu (MainMenu2): --mm2 sets VITE_MM2 so the client renders it.
-MM2_ENV=""
-if [[ "$MM2_MODE" == "true" ]]; then
-  echo "MM2 enabled — rendering the experimental alternate main menu (MainMenu2)."
-  MM2_ENV="VITE_MM2=true"
+# Main menu: MainMenu2 (left-aligned) is the DEFAULT; --legacy-menu sets VITE_LEGACY_MENU to render the
+# original centred MainMenu instead.
+LEGACY_ENV=""
+if [[ "$LEGACY_MENU_MODE" == "true" ]]; then
+  echo "Legacy menu enabled — rendering the original centred main menu (MainMenu)."
+  LEGACY_ENV="VITE_LEGACY_MENU=true"
 fi
 
-# shellcheck disable=SC2086 -- $PROFILER_ENV/$DEBUG_ENV/$HMR_ENV/$BROWSER_ENV/$MM2_ENV are intentional VAR=val flag passthroughs
-exec env $PROFILER_ENV $DEBUG_ENV $HMR_ENV $BROWSER_ENV $MM2_ENV VITE_DEV_BRANCH="$BRANCH" VITE_DEV_COMMIT="$COMMIT" pnpm exec vite dev --host --port $PORT
+# shellcheck disable=SC2086 -- $PROFILER_ENV/$DEBUG_ENV/$HMR_ENV/$BROWSER_ENV/$LEGACY_ENV are intentional VAR=val flag passthroughs
+exec env $PROFILER_ENV $DEBUG_ENV $HMR_ENV $BROWSER_ENV $LEGACY_ENV VITE_DEV_BRANCH="$BRANCH" VITE_DEV_COMMIT="$COMMIT" pnpm exec vite dev --host --port $PORT

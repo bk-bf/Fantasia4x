@@ -115,8 +115,9 @@
     import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_LOG === 'true';
   $: debugEnabled = DEBUG_BUILD_FLAG || $debugMode;
 
-  // Experimental alternate title screen — `./launch.sh … --mm2` (sets VITE_MM2). Off ⇒ the normal menu.
-  const USE_MM2 = import.meta.env.VITE_MM2 === 'true';
+  // MainMenu2 (left-aligned wordmark) is the DEFAULT title screen; `./launch.sh … --legacy-menu`
+  // (sets VITE_LEGACY_MENU) brings back the original centred MainMenu.
+  const USE_LEGACY_MENU = import.meta.env.VITE_LEGACY_MENU === 'true';
 
   $: NAV_TABS = [
     { key: 'pawns', label: 'PAWNS', fkey: 'F2' },
@@ -272,10 +273,10 @@
 </svg>
 
 {#if $appPhase === 'menu'}
-  {#if USE_MM2}
-    <MainMenu2 />
-  {:else}
+  {#if USE_LEGACY_MENU}
     <MainMenu />
+  {:else}
+    <MainMenu2 />
   {/if}
 {/if}
 

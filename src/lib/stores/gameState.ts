@@ -647,9 +647,10 @@ const MENU_PREVIEW_SEED = 4051283263;
  *  Both dimensions are ODD so the map has an exact centre tile — the magical-tree ring then centres on
  *  a real tile on both axes (an even dimension puts the centre between tiles ⇒ a half-tile offset). */
 const MENU_PREVIEW_MAP = { w: 161, h: 101 };
-/** Experimental MM2 backdrop (set by `--mm2` ⇒ VITE_MM2): center-scattered herds + a checkerboard of
- *  2× the magical trees, instead of MM1's four corner herds + symmetric tree ring. */
-const MENU_PREVIEW_MM2 = import.meta.env.VITE_MM2 === 'true';
+/** Legacy backdrop (set by `--legacy-menu` ⇒ VITE_LEGACY_MENU): the original four corner herds + a
+ *  symmetric magical-tree ring. The DEFAULT backdrop is the MainMenu2 one: a checkerboard of 2× the
+ *  magical trees and NO wildlife. */
+const MENU_PREVIEW_LEGACY = import.meta.env.VITE_LEGACY_MENU === 'true';
 
 /**
  * Boot the main-menu backdrop: a live but gutted preview of the game world that renders behind the
@@ -679,9 +680,9 @@ function startMenuPreview() {
     exclude: menuPreviewMagicalGroveIds()
   });
   // …then plant the glowing magical trees (after the ordinary-tree scatter, so they aren't clobbered).
-  // MM2 backdrop: 2× the trees in a jittered checkerboard across the map. MM1: the symmetric ring.
-  if (MENU_PREVIEW_MM2) placeMenuPreviewScatteredGroves(world, MENU_PREVIEW_SEED);
-  else placeMenuPreviewMagicalGroves(world, groveCenters, MENU_PREVIEW_SEED);
+  // Default (MainMenu2): 2× the trees in a jittered checkerboard. Legacy (MainMenu): the symmetric ring.
+  if (MENU_PREVIEW_LEGACY) placeMenuPreviewMagicalGroves(world, groveCenters, MENU_PREVIEW_SEED);
+  else placeMenuPreviewScatteredGroves(world, MENU_PREVIEW_SEED);
 
   // Random (per launch) season-appropriate weather; season pinned to the real-world date via
   // `_debugSeason` (processEnvironment otherwise derives season from the turn). Falls back to a
@@ -702,8 +703,8 @@ function startMenuPreview() {
     jobs: []
   };
   // Prey only — no laired hostiles, no free-roaming predators — so the backdrop never spawns a hunt.
-  // MM1 places four corner herds; MM2 has NO wildlife (the animals impaired the composition's harmony).
-  if (!MENU_PREVIEW_MM2) {
+  // Legacy menu places four corner herds; the default (MainMenu2) backdrop has NO wildlife.
+  if (MENU_PREVIEW_LEGACY) {
     preview = entityService.seedInitialEntities(preview, undefined, { preyOnly: true });
   }
 
