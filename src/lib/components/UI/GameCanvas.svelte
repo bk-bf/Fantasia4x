@@ -694,6 +694,56 @@
     });
   })();
 
+  // Summary card for a committed MARK highlight of 2+ entities — reuses SelectedEntityCard (shared
+  // chrome) instead of the old floating mark-HUD, so group DRAFT/UNDRAFT/MOVE/HUNT live in the same
+  // info panel a single selection uses. Just names + a "multiple selected" header; the per-entity
+  // detail is intentionally dropped (it's a group). Takes priority over any single selection below.
+  $: markedGroupCard = ((): SelectedEntityModel | null => {
+    if (!markedKind || markedIds.length < 1) return null;
+    const n = markedIds.length;
+    const plural = n !== 1;
+    const status = plural ? 'multiple targets' : 'marked';
+    if (markedKind === 'pawn') {
+      const names = pawns.filter((p) => markedSet.has(p.id)).map((p) => p.name);
+      const btns: EntityButton[] = [
+        {
+          label: markedAllDrafted ? 'UNDRAFT' : 'DRAFT',
+          active: markedAllDrafted,
+          onClick: () => draftMarkedPawns()
+        }
+      ];
+      // MOVE only once some are drafted (mirrors the old HUD's disabled state) — it arms the aim.
+      if (markedDraftedCount > 0) {
+        btns.push({ label: `MOVE (${markedDraftedCount})`, onClick: () => armMoveAim() });
+      }
+      btns.push({ label: 'CLEAR', onClick: () => clearMark() });
+      return {
+        name: `${n} pawn${plural ? 's' : ''} selected`,
+        status,
+        selected: true,
+        dismissable: true,
+        note: markedDraftedCount > 0 ? `${markedDraftedCount} of ${n} drafted` : 'none drafted',
+        lines: [names.join(', ')],
+        buttons: btns
+      } satisfies SelectedEntityModel;
+    }
+    // Mobs: a HUNT group.
+    const names = mobs
+      .filter((m) => markedSet.has(m.id))
+      .map((m) => getCreatureById(m.creatureId)?.name ?? 'creature');
+    return {
+      name: `${n} entit${plural ? 'ies' : 'y'} selected`,
+      status,
+      selected: true,
+      dismissable: true,
+      lines: [names.join(', ')],
+      buttons: [
+        { label: 'HUNT', onClick: () => huntMarkedMobs() },
+        { label: 'CLEAR', onClick: () => clearMark() }
+      ]
+    } satisfies SelectedEntityModel;
+  })();
+
   // Building under hovered tile (all statuses)
   $: hoverBuilding =
     hoverTileX >= 0 && hoverTileY >= 0
@@ -2587,6 +2637,15 @@
       return;
     }
 
+    // A plain left-click is a fresh selection focus, so drop any group MARK highlight (created via the
+    // MARK box-drag tool) — its summary card otherwise stays pinned over the single entity you clicked.
+    if (markedKind) {
+      markedKind = null;
+      markedIds = [];
+      markedSet = new Set();
+      moveAimArmed = false;
+    }
+
     // Click-to-cycle: a tile can stack several selectable layers (pawn / mob / building / item(s) /
     // resource(s)). The FIRST click on a tile selects the top layer; each repeat click on the SAME
     // tile steps to the next layer (wrapping around), so you can reach the item or resource under a
@@ -3963,32 +4022,14 @@
         : ''} · Esc cancel
     </div>
   {/if}
-  {#if markedKind && !markKind && !moveAimActive && !moveAimArmed}
-    <!-- Group action HUD for the committed MARK highlight (pointer-events on, unlike the text HUDs). -->
-    <div class="mark-hud">
-      <span class="mark-count">
-        ◈ {markedIds.length}
-        {markedKind === 'pawn'
-          ? `pawn${markedIds.length !== 1 ? 's' : ''}`
-          : `entit${markedIds.length !== 1 ? 'ies' : 'y'}`} highlighted
-      </span>
-      {#if markedKind === 'pawn'}
-        <button class="mark-btn" on:click={draftMarkedPawns}>
-          {markedAllDrafted ? 'UNDRAFT' : 'DRAFT'}
-        </button>
-        <button class="mark-btn" on:click={armMoveAim} disabled={markedDraftedCount === 0}>
-          MOVE{markedDraftedCount > 0 ? ` (${markedDraftedCount})` : ''}
-        </button>
-      {:else}
-        <button class="mark-btn" on:click={huntMarkedMobs}>HUNT</button>
-      {/if}
-      <button class="mark-btn" on:click={clearMark}>CLEAR</button>
-    </div>
-  {/if}
   <!-- Info HUD (selection + hover cards + tile tooltip). Entirely suppressed while the Custom Map
-       popup is open OR in the menu backdrop — neither inspects entities. -->
+       popup is open OR in the menu backdrop — neither inspects entities. A committed MARK group takes
+       priority over any single selection — its summary card (markedGroupCard) carries the group verbs. -->
   {#if !customMapPreview && !menuPreview}
-    {#if selectedPawnCard}
+    {#if markedGroupCard}
+      <!-- Group summary for a MARK highlight: names + DRAFT/UNDRAFT/MOVE (or HUNT) + CLEAR. -->
+      <SelectedEntityCard model={markedGroupCard} />
+    {:else if selectedPawnCard}
       <!-- Selected pawn card — locked to this pawn regardless of mouse hover -->
       <SelectedEntityCard model={selectedPawnCard} />
     {:else if selectedMobCard}
@@ -4446,44 +4487,7 @@
     white-space: nowrap;
     z-index: 10;
   }
-  /* ── MARK group action HUD ─────────────────────── */
-  .mark-hud {
-    position: absolute;
-    top: 6px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(30, 20, 0, 0.92);
-    border: 1px solid #ffc85a;
-    padding: 3px 8px;
-    z-index: 11;
-    font-family: var(--font-mono);
-  }
-  .mark-count {
-    color: #ffc85a;
-    font-size: 11px;
-    font-weight: bold;
-    white-space: nowrap;
-  }
-  .mark-btn {
-    background: transparent;
-    border: 1px solid #ffc85a;
-    color: #ffc85a;
-    font-family: inherit;
-    font-size: 11px;
-    font-weight: bold;
-    padding: 2px 8px;
-    cursor: pointer;
-  }
-  .mark-btn:hover:not(:disabled) {
-    background: rgba(255, 200, 90, 0.2);
-  }
-  .mark-btn:disabled {
-    opacity: 0.4;
-    cursor: default;
-  }
+  /* (The MARK group action HUD was folded into the shared SelectedEntityCard — see markedGroupCard.) */
   /* ── Building HUD card ─────────────────────────── */
   .tile-hud--building {
     /* width comes from .tile-hud (NT-U3 shared 300px) */
