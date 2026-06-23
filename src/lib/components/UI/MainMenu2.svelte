@@ -101,21 +101,6 @@
     max-width: 94vw;
   }
 
-  /* Dark scrim behind the left-aligned block so the text stays legible over a vivid, busy map. */
-  .content::before {
-    content: '';
-    position: absolute;
-    inset: -4vh -6vw -4vh -3.5vw;
-    z-index: -1;
-    background: radial-gradient(
-      ellipse at 30% 40%,
-      rgba(6, 4, 2, 0.78) 0%,
-      rgba(6, 4, 2, 0.5) 45%,
-      transparent 80%
-    );
-    pointer-events: none;
-  }
-
   /* Huge engraved-serif wordmark (Cinzel) — ~1/5 of the viewport tall — in the upper-left corner. */
   .title {
     font-family: var(--font-display);
