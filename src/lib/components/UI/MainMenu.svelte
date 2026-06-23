@@ -39,6 +39,14 @@
   function exitGame() {
     window.close();
   }
+
+  // The load list lets you delete snapshots (its ✕). Re-check on close so the Load Game button goes
+  // disabled/transparent again the moment the last snapshot is gone — `canLoad` is otherwise only
+  // sampled once at mount and would stay clickable over an empty list.
+  async function closeLoad() {
+    showLoad = false;
+    canLoad = await hasSave();
+  }
 </script>
 
 <div class="main-menu" transition:fade={{ duration: 200 }}>
@@ -73,7 +81,7 @@
 </div>
 
 {#if showLoad}
-  <SaveListMenu onClose={() => (showLoad = false)} />
+  <SaveListMenu onClose={closeLoad} />
 {/if}
 
 {#if showSettings}
