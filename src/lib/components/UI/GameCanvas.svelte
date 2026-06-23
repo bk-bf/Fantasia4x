@@ -3524,14 +3524,24 @@
     shiftSelectResourceAt(x, y);
   }
 
-  /** Add one pawn/mob id to the committed mark highlight (switching kind drops the previous set). The
-   *  resource brush and entity mark are mutually exclusive, so picking an entity clears the resource one. */
+  /** The ids a Shift gesture builds on: an active mark of the same kind, ELSE the single normally-selected
+   *  entity of that kind (so Shift-clicking a 2nd pawn keeps the 1st you had selected, instead of switching
+   *  to just the new one). Different kind → start fresh. */
+  function markBase(kind: 'pawn' | 'mob'): string[] {
+    if (markedKind === kind) return [...markedIds];
+    const selId = kind === 'pawn' ? selectedPawnId : selectedMobId;
+    return selId ? [selId] : [];
+  }
+
+  /** Add one pawn/mob id to the committed mark highlight (toggles off if already marked). The resource
+   *  brush and entity mark are mutually exclusive, so picking an entity clears the resource one. */
   function addEntityToMark(kind: 'pawn' | 'mob', id: string) {
-    const base = markedKind === kind ? markedIds : [];
-    if (base.includes(id)) return;
-    markedKind = kind;
-    markedIds = [...base, id];
-    markedSet = new Set(markedIds);
+    const base = markBase(kind);
+    // Toggle: Shift-clicking an already-marked entity removes it.
+    const ids = base.includes(id) ? base.filter((x) => x !== id) : [...base, id];
+    markedKind = ids.length > 0 ? kind : null;
+    markedIds = ids;
+    markedSet = new Set(ids);
     selectedResourceTile = null;
     selectedResourceTypes = new Set();
     drawDesignations();
@@ -3552,8 +3562,7 @@
         : mobs
             .filter((m) => m.isAlive !== false && m.state !== 'Corpse' && inBox(m.x, m.y))
             .map((m) => m.id);
-    const base = markedKind === kind ? markedIds : [];
-    const merged = new Set([...base, ...found]);
+    const merged = new Set([...markBase(kind), ...found]);
     if (merged.size === 0) return;
     markedKind = kind;
     markedIds = [...merged];
