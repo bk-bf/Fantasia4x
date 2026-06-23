@@ -46,6 +46,8 @@ Core data (src/lib/game/core/)         ← types, static databases, GameStateMan
 
   The work-category map (`_jobTypeToWorkKey`), labor prioritisation, UI display, and claim-gating all flow from the `JobDef` — never hand-write a `job.type` switch (the duplicated one in `pawnUtils` was deleted; use `jobService.getJobWorkCategory`). FSM-internal kinds (`eat`/`sleep`/`need`) are not colony jobs and have no `JobDef`.
 
+**Selection is not commitment** (UX): a selection/marking gesture — clicking, or drawing a drag-box — must only **highlight** the targets and surface a verb button; it must **never auto-execute** the action. Drawing a box over resources highlights them and shows a HARVEST/DESIGNATE button (the player presses it to commit); it does not auto-designate. Same shape everywhere: MARK pawns/mobs → highlight → then DRAFT/MOVE/HUNT. The highlight persists until the player confirms or clears it. The only thing that should vanish on release is the transient drag *preview*. Never collapse the two steps into an immediate commit "to save a click" — losing the review step is the bug.
+
 **Component size**: 200 line limit per component. Extract sub-components when exceeded.
 
 **Svelte 5 runes**: use `$state`, `$derived`, `$effect` — not legacy `$:` syntax.
