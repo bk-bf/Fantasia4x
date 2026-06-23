@@ -13,8 +13,10 @@ import { pawnService } from '../../services/PawnService';
 import {
   buildPathfindingGrids,
   buildSharedSoftBlockedGrid,
+  buildPathfindingGridsConfined,
   pathfinderService
 } from '../../services/PathfinderService';
+import { allowedTilesForPawn } from './zoneConfine';
 import { occupancyService } from '../../services/OccupancyService';
 import { getRangedWeapon, effectiveRangedRange } from '../rangedCombat';
 import { gameLogger } from '../../dev/gameLogger';
@@ -177,6 +179,20 @@ export function markJobUnreachable(pawnId: string, jobId: string, turn: number):
   m.set(jobId, turn + UNREACHABLE_COOLDOWN_TICKS);
 }
 
+/**
+ * Pick the A* grid for a pawn: the shared soft-blocked grid normally, or a zone-CONFINED grid (out-of-zone
+ * tiles walled off) when the pawn is assigned to a restriction zone and is NOT drafted (an explicit player
+ * draft/move overrides confinement). The confined grid means A* can never route the pawn out of its zone,
+ * and a target outside it simply yields no path (handled as unreachable by the callers).
+ */
+function gridForPawn(pawn: Pawn, gameState: GameState, blocked: Set<string>, sx: number, sy: number) {
+  if (!pawn.drafted) {
+    const allowed = allowedTilesForPawn(gameState, pawn.id);
+    if (allowed) return buildPathfindingGridsConfined(gameState.worldMap, blocked, allowed, sx, sy);
+  }
+  return buildSharedSoftBlockedGrid(gameState.worldMap, blocked);
+}
+
 export function tryAssignPath(
   pawn: Pawn,
   tx: number,
@@ -205,9 +221,12 @@ export function tryAssignPath(
   if (!approach) {
     return null;
   }
-  const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(
-    gameState.worldMap,
-    blocked
+  const { walkable, costs, width, height } = gridForPawn(
+    pawn,
+    gameState,
+    blocked,
+    pawn.position.x,
+    pawn.position.y
   );
   // Churn instrumentation: count every actual A* run, by reason, plus the two churn
   // signals — re-planning while the pawn ALREADY holds a path (hadPath), and empty
@@ -275,7 +294,8 @@ function randomWalkableNeighbour(
   gameState: GameState,
   x: number,
   y: number,
-  selfId: string
+  selfId: string,
+  allowed: Set<string> | null
 ): { x: number; y: number } | null {
   const dirs = [
     { dx: 0, dy: -1 },
@@ -298,6 +318,7 @@ function randomWalkableNeighbour(
     if (!walkable(nx, ny)) continue;
     if (dx !== 0 && dy !== 0 && !walkable(x + dx, y) && !walkable(x, y + dy)) continue;
     if (occupancyService.isBlocked(gameState, nx, ny, selfId)) continue;
+    if (allowed && !allowed.has(`${nx},${ny}`)) continue; // confined pawn: stay inside its zone
     return { x: nx, y: ny };
   }
   return null;
@@ -315,7 +336,9 @@ export function tryWanderStep(pawn: Pawn, gameState: GameState): GameState | nul
   if (!pawn.position) return null;
   if (pawn.isMoving && (pawn.path?.length ?? 0) > 0) return null; // already strolling
   if (rng.random() >= WANDER_MOVES_PER_SECOND * SECONDS_PER_TICK) return null;
-  const tile = randomWalkableNeighbour(gameState, pawn.position.x, pawn.position.y, pawn.id);
+  // A confined (non-drafted) pawn only mills within its restriction zone.
+  const allowed = pawn.drafted ? null : allowedTilesForPawn(gameState, pawn.id);
+  const tile = randomWalkableNeighbour(gameState, pawn.position.x, pawn.position.y, pawn.id, allowed);
   if (!tile) return null;
   return pawnService.assignPath(pawn.id, [tile], gameState);
 }
@@ -336,9 +359,12 @@ export function tryAssignSleepPath(
   // Route around other bodies via the shared per-tick grid (see navigateToApproach above for why the
   // self-exclusion / goal-exemption drop is safe). Was an O(map) clone per call.
   const blocked = occupancyService.blockedTilesShared(gameState);
-  const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(
-    gameState.worldMap,
-    blocked
+  const { walkable, costs, width, height } = gridForPawn(
+    pawn,
+    gameState,
+    blocked,
+    pawn.position.x,
+    pawn.position.y
   );
   const path = pathfinderService.findPath(
     walkable,

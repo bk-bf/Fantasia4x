@@ -150,6 +150,39 @@ export function buildPathfindingGridsSoftBlocked(
   return { walkable, costs, width, height };
 }
 
+/**
+ * Like the soft-blocked grid, but additionally CONFINES the route to `allowed` tiles: every tile not in
+ * the set becomes a hard wall, so A* (the WASM pathfinder, untouched — ADR-008) can never route a pawn
+ * outside its restriction zone. Body avoidance still applies (costs come from the shared soft-blocked
+ * grid). The mover's own tile is always kept walkable so A* can start and step back in if it ends up just
+ * outside. A goal outside `allowed` yields no route — the caller's "unreachable" handling copes.
+ *
+ * Builds a FRESH walkable array (all walls, then opens the allowed tiles) — O(allowed), not O(map) — and
+ * shares the soft-blocked cost array by reference (read-only).
+ */
+export function buildPathfindingGridsConfined(
+  worldMap: WorldTile[][],
+  blocked: Set<string>,
+  allowed: Set<string>,
+  sx: number,
+  sy: number
+): PathfindingGrids {
+  const soft = buildSharedSoftBlockedGrid(worldMap, blocked);
+  const { width, height, costs } = soft;
+  const walkable = new Uint8Array(width * height); // everything a wall by default
+  for (const key of allowed) {
+    const c = key.indexOf(',');
+    const x = +key.slice(0, c);
+    const y = +key.slice(c + 1);
+    if (x >= 0 && x < width && y >= 0 && y < height) {
+      const idx = y * width + x;
+      walkable[idx] = soft.walkable[idx]; // keep terrain walkability — an in-zone wall stays a wall
+    }
+  }
+  if (sx >= 0 && sx < width && sy >= 0 && sy < height) walkable[sy * width + sx] = 1;
+  return { walkable, costs, width, height };
+}
+
 // Per-tick shared soft-blocked grid (mob hot path). Every mob pathing in one FSM tick sees IDENTICAL
 // occupancy, so the O(map) cost-array clone + penalty pass is built ONCE and reused — keyed on the
 // (worldMap, blocked) refs, both stable through a tick (blocked = the per-tick-cached occupancy set;

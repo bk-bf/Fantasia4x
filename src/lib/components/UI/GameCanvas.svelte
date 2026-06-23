@@ -365,7 +365,9 @@
     // Drink/wash sit on (blue) water, so they need a stronger fill than the land stockpile tint to
     // read at all — plus a tile outline (see drawDesignations) so they stand out against the water.
     drink: 'rgba(120, 210, 255, 0.45)',
-    wash: 'rgba(150, 240, 215, 0.45)'
+    wash: 'rgba(150, 240, 215, 0.45)',
+    // Restriction zone — matches ZONE_DEFS' #b06cd0; a purple fence the eye reads as "keep pawns here".
+    restrict: 'rgba(176, 108, 208, 0.28)'
   };
 
   // Phase A2 dynamic lighting: lit campfires emit warm point light, baked into
@@ -1164,6 +1166,11 @@
       label: 'GROW ZONE',
       color: '#6fae3a',
       desc: 'Farmers sow the chosen seed on fertile soil here'
+    },
+    restrict: {
+      label: 'RESTRICT ZONE',
+      color: '#b06cd0',
+      desc: 'Assigned pawns stay confined to this zone'
     },
     harvest: { label: 'HARVEST', color: '#4ccc44', desc: 'Single-tile harvest designation' },
     mine: { label: 'MINE', color: '#cc8833', desc: 'Single-tile mining designation' },

@@ -214,7 +214,6 @@
   }
   .menu-btn.disabled {
     color: var(--text-muted);
-    cursor: not-allowed;
     opacity: 0.5;
   }
 </style>

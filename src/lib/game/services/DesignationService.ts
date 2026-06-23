@@ -11,6 +11,7 @@ import type {
   GameState,
   DesignationType,
   FilterableZoneType,
+  ZoneInstanceType,
   ZoneFilter,
   ZoneInstance
 } from '../core/types';
@@ -24,7 +25,7 @@ import { absorbDropIfOnStockpileTile } from '../core/GameState';
  * also carries a `harvest`/`woodcut` order. (`drink`/`wash` are water-only and never overlap a
  * land action, so they stay in `designations` as simple location markers.)
  */
-const STANDING_ZONE_TYPES = new Set<DesignationType>(['stockpile', 'grow']);
+const STANDING_ZONE_TYPES = new Set<DesignationType>(['stockpile', 'grow', 'restrict']);
 
 export function isStandingZoneType(type: DesignationType): boolean {
   return STANDING_ZONE_TYPES.has(type);
@@ -341,7 +342,7 @@ class DesignationServiceImpl {
 
   /** Create a new zone instance with an empty filter. Returns the updated state and the new ID. */
   createZoneInstance(
-    type: FilterableZoneType,
+    type: ZoneInstanceType,
     label: string,
     gs: GameState
   ): { state: GameState; id: string } {
@@ -352,7 +353,7 @@ class DesignationServiceImpl {
   /** Create a zone instance with a caller-supplied id (worker command path — the UI generates the
    *  id up front so it can enter paint mode immediately; no request-response reply needed). */
   createZoneInstanceWithId(
-    type: FilterableZoneType,
+    type: ZoneInstanceType,
     label: string,
     id: string,
     gs: GameState
@@ -460,6 +461,22 @@ class DesignationServiceImpl {
       zoneInstances: (gs.zoneInstances ?? []).map((z) =>
         z.id === instanceId ? { ...z, colorHidden: hidden } : z
       )
+    };
+  }
+
+  /** RESTRICT zones: add/remove a pawn from this zone's `assignedPawnIds`. A pawn so assigned is
+   *  confined to the union of every restrict zone it belongs to (see allowedTilesForPawn). */
+  toggleZonePawn(instanceId: string, pawnId: string, gs: GameState): GameState {
+    return {
+      ...gs,
+      zoneInstances: (gs.zoneInstances ?? []).map((z) => {
+        if (z.id !== instanceId) return z;
+        const cur = z.assignedPawnIds ?? [];
+        const assignedPawnIds = cur.includes(pawnId)
+          ? cur.filter((id) => id !== pawnId)
+          : [...cur, pawnId];
+        return { ...z, assignedPawnIds };
+      })
     };
   }
 

@@ -522,7 +522,6 @@
   }
   .nav-tab.disabled {
     color: var(--text-muted);
-    cursor: not-allowed;
   }
 
   .right-panel {

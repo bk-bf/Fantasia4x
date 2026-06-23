@@ -74,12 +74,13 @@ body {
 /* App-wide pointer: the stylised brown triangle instead of the OS black arrow. This is a game window,
    not a document — force the ONE pointer everywhere so buttons / links / clickable rows never flip to
    the OS hand cursor on hover. `!important` + the universal selector beat component-scoped
-   `cursor: pointer` (Svelte-scoped rules out-specify a plain global one). Text fields keep the I-beam;
-   disabled controls keep their not-allowed. */
+   `cursor: pointer` (Svelte-scoped rules out-specify a plain global one). Text fields keep the I-beam.
+   Disabled controls also keep this one pointer — an unclickable button shouldn't flip to a
+   `not-allowed` cursor (component `cursor: not-allowed` rules are intentionally overridden here). */
 body {
   cursor: var(--app-cursor), default;
 }
-*:not(input):not(textarea):not([contenteditable='true']):not(.selectable):not(:disabled) {
+*:not(input):not(textarea):not([contenteditable='true']):not(.selectable) {
   cursor: var(--app-cursor), default !important;
 }
 input,

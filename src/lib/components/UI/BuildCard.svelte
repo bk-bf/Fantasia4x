@@ -295,7 +295,4 @@
   .card-action--blocked {
     color: var(--text-muted, #777);
   }
-  .card-action:disabled {
-    cursor: not-allowed;
-  }
 </style>

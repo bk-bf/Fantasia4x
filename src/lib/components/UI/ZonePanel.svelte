@@ -2,7 +2,7 @@
 <script lang="ts">
   import { uiState } from '$lib/stores/uiState';
   import { gameState } from '$lib/stores/gameState';
-  import type { FilterableZoneType, Item } from '$lib/game/core/types';
+  import type { FilterableZoneType, ZoneInstanceType, Item } from '$lib/game/core/types';
   import itemsData from '$lib/game/database/items.jsonc';
   import BuildCard from './BuildCard.svelte';
   import SpriteIcon from './SpriteIcon.svelte';
@@ -16,12 +16,14 @@
   ].sort();
 
   const ZONE_DEFS: {
-    type: FilterableZoneType;
+    type: ZoneInstanceType;
     label: string;
     charSpans: CharSpan[];
     desc: string;
     color: string;
     filterable?: boolean;
+    /** Restriction zone: carries a pawn assignment (the PAWNS panel) instead of an item filter. */
+    pawnAssignable?: boolean;
     /** Renders a tile-background tint on the map (so the "color" toggle is meaningful). */
     tinted?: boolean;
   }[] = [
@@ -51,6 +53,15 @@
       tinted: true
     },
     {
+      type: 'restrict',
+      label: 'RESTRICT',
+      charSpans: [{ literal: '#' }],
+      desc: 'Assigned pawns stay inside this zone and never wander out',
+      color: '#b06cd0',
+      pawnAssignable: true,
+      tinted: true
+    },
+    {
       type: 'grow',
       label: 'GROW',
       charSpans: [{ literal: '"' }],
@@ -69,6 +80,8 @@
 
   /** Which zone instance currently has its filter panel open (null = none). */
   let openFilterInstance = $state<string | null>(null);
+  /** Which restriction zone currently has its PAWNS-assignment panel open (null = none). */
+  let openPawnsInstance = $state<string | null>(null);
 
   /** Count tiles per zone instance. */
   let instanceTileCounts = $derived(
@@ -82,7 +95,7 @@
   );
 
   /** Create a new zone instance and immediately enter painting mode. */
-  function newZone(type: FilterableZoneType) {
+  function newZone(type: ZoneInstanceType) {
     const existing = ($gameState.zoneInstances ?? []).filter((z) => z.type === type).length;
     const def = ZONE_DEFS.find((d) => d.type === type)!;
     const label = `${def.label[0]}${def.label.slice(1).toLowerCase()} ${existing + 1}`;
@@ -106,11 +119,21 @@
   function removeZone(instanceId: string) {
     gameState.command({ type: 'removeZoneInstance', payload: { instanceId }, save: true });
     if (openFilterInstance === instanceId) openFilterInstance = null;
+    if (openPawnsInstance === instanceId) openPawnsInstance = null;
     if (designationActive && activeInstId === instanceId) uiState.deactivateDesignation();
   }
 
   function toggleFilterPanel(instanceId: string) {
     openFilterInstance = openFilterInstance === instanceId ? null : instanceId;
+  }
+
+  function togglePawnsPanel(instanceId: string) {
+    openPawnsInstance = openPawnsInstance === instanceId ? null : instanceId;
+  }
+
+  /** Assign / unassign a pawn to a restriction zone (reuses the filter-panel UX, pawns instead of items). */
+  function toggleZonePawn(instanceId: string, pawnId: string) {
+    gameState.command({ type: 'toggleZonePawn', payload: { instanceId, pawnId }, save: true });
   }
 
   function toggleCategory(instanceId: string, category: string) {
@@ -207,6 +230,8 @@
       {@const isPainting = designationActive && activeInstId === inst.id}
       {@const hasFilter = inst.filter.allowedCategories.length > 0}
       {@const isFilterOpen = openFilterInstance === inst.id}
+      {@const isPawnsOpen = openPawnsInstance === inst.id}
+      {@const assignedCount = inst.assignedPawnIds?.length ?? 0}
       {@const colorHidden = inst.colorHidden ?? false}
 
       <div class="zone-card" class:painting={isPainting} style="--zcolor: {def?.color ?? '#888'}">
@@ -220,6 +245,11 @@
             {/if}
             {#if def?.filterable && hasFilter}
               <span class="zc-badge filtered">{inst.filter.allowedCategories.length} filtered</span>
+            {/if}
+            {#if def?.pawnAssignable}
+              <span class="zc-badge filtered"
+                >{assignedCount} pawn{assignedCount === 1 ? '' : 's'}</span
+              >
             {/if}
           </div>
           <div class="card-actions">
@@ -237,6 +267,11 @@
                 onclick={() => toggleFilterPanel(inst.id)}
               >
                 FILTER
+              </button>
+            {/if}
+            {#if def?.pawnAssignable}
+              <button class="zbtn" class:active={isPawnsOpen} onclick={() => togglePawnsPanel(inst.id)}>
+                PAWNS
               </button>
             {/if}
             {#if def?.tinted}
@@ -280,6 +315,32 @@
             {hasFilter
               ? 'Only checked categories will be hauled here.'
               : 'All categories allowed — uncheck to restrict this zone.'}
+          </div>
+        </div>
+      {/if}
+
+      {#if isPawnsOpen}
+        <div class="filter-panel" style="--zcolor: {def?.color ?? '#888'}">
+          <div class="filter-hdr">
+            PAWNS: {inst.label}
+            <span class="filter-hint">
+              {assignedCount > 0
+                ? `${assignedCount}/${($gameState.pawns ?? []).length} confined`
+                : 'none assigned (roam freely)'}
+            </span>
+          </div>
+          <div class="category-grid">
+            {#each $gameState.pawns ?? [] as p}
+              {@const checked = inst.assignedPawnIds?.includes(p.id) ?? false}
+              <label class="cat-label" class:checked>
+                <input type="checkbox" {checked} onchange={() => toggleZonePawn(inst.id, p.id)} />
+                {p.name}
+              </label>
+            {/each}
+          </div>
+          <div class="filter-note">
+            Checked pawns may only walk inside this zone (and any other zone they're assigned to).
+            Drafted pawns ignore it.
           </div>
         </div>
       {/if}

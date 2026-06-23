@@ -16,13 +16,19 @@ export type DesignationType =
   | 'drink'
   | 'wash'
   // ── PRODUCTION-CHAIN-II §F: growing zone — pawns sow the zone's seed onto eligible soil ──
-  | 'grow';
+  | 'grow'
+  // ── Restriction zone — confines its assigned pawns to its tiles (RimWorld-style allowed area) ──
+  | 'restrict';
 
 /** Zone types that support item-category filtering. */
 // Paintable zone-instance types. 'harvest'/'stockpile' carry an item filter; 'drink'/'wash' are
 // pure location designations (no filter) that pawns route to for thirst/hygiene; 'grow' carries a
 // seed filter (which crop to plant).
 export type FilterableZoneType = 'harvest' | 'stockpile' | 'drink' | 'wash' | 'grow';
+
+/** Every paintable zone-instance type: the item/seed-filterable ones plus 'restrict' (which carries a
+ *  pawn assignment instead of an item filter). */
+export type ZoneInstanceType = FilterableZoneType | 'restrict';
 
 /**
  * DF-style category filter for a zone type.
@@ -35,14 +41,18 @@ export interface ZoneFilter {
   blockedItems: string[];
 }
 
-/** A named, individually-filterable zone instance (e.g. "Forage 1", "Stockpile 2"). */
+/** A named, individually-filterable zone instance (e.g. "Forage 1", "Stockpile 2", "Restrict 1"). */
 export interface ZoneInstance {
   id: string;
-  type: FilterableZoneType;
+  type: ZoneInstanceType;
   label: string;
   filter: ZoneFilter;
   /** View-only: when true, this zone's tint is suppressed on the map. Persisted with the save. */
   colorHidden?: boolean;
+  /** RESTRICT zones only: pawns confined to this zone's tiles. A pawn's allowed area is the UNION of
+   *  every restrict zone it's assigned to; a pawn in no restrict zone roams the whole map. `filter` is
+   *  unused for restrict zones. */
+  assignedPawnIds?: string[];
 }
 
 /**

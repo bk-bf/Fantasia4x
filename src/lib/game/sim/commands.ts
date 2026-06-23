@@ -24,7 +24,7 @@ import type {
   EquipmentSlot,
   ItemInstance,
   CraftingInProgress,
-  FilterableZoneType,
+  ZoneInstanceType,
   PlacedBuilding,
   Season,
   ZoneFilter
@@ -413,10 +413,13 @@ export const COMMANDS: Record<string, Cmd> = {
   ) => designationService.designateRect(p.x1, p.y1, p.x2, p.y2, p.type as never, s, p.instanceId),
   // The caller generates the id (it needs it immediately to enter paint mode) and passes it in,
   // so this is fire-and-forget instead of the old request-response that returned a new id.
-  createZoneInstance: (s, p: { type: FilterableZoneType; label: string; id: string }) =>
+  createZoneInstance: (s, p: { type: ZoneInstanceType; label: string; id: string }) =>
     designationService.createZoneInstanceWithId(p.type, p.label, p.id, s),
   removeZoneInstance: (s, p: { instanceId: string }) =>
     designationService.removeZoneInstance(p.instanceId, s),
+  /** RESTRICT zones: toggle a pawn's membership (which pawns are confined to this zone). */
+  toggleZonePawn: (s, p: { instanceId: string; pawnId: string }) =>
+    designationService.toggleZonePawn(p.instanceId, p.pawnId, s),
   toggleInstanceCategory: (
     s,
     p: { instanceId: string; category: string; allCategories: string[] }

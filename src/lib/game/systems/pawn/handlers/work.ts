@@ -11,6 +11,7 @@ import { computeTileLightLevel } from '../../../services/EnvironmentService';
 import { dampenLightByNightVision, getNightVision } from '../../../core/vision';
 import { PAWN_STATE } from '../pawnStates';
 import { isAdjacent } from '../pawnQueries';
+import { allowedTilesForPawn } from '../zoneConfine';
 import {
   JOB_QUEUE_SIZE,
   transitionTo,
@@ -142,10 +143,21 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   // Don't pick jobs until the pathfinder is ready — prevents endless pick/release cycles
   if (!pathfinderService.isReady()) return gameState;
 
+  // Restriction zones: a confined (non-drafted) pawn may only claim jobs whose target tile lies inside
+  // its allowed area, so it never grabs out-of-zone work and then churns failing to path there. Built
+  // once here (only for confined pawns) so the isReachable predicate is O(1) per candidate.
+  const allowedZone = pawn.drafted ? null : allowedTilesForPawn(gameState, pawn.id);
+  const jobsById = allowedZone ? new Map(gameState.jobs.map((j) => [j.id, j])) : null;
+  const jobInZone = (id: string): boolean => {
+    if (!allowedZone || !jobsById) return true;
+    const j = jobsById.get(id);
+    return !j || allowedZone.has(`${j.targetX},${j.targetY}`);
+  };
+
   // Job-target selection (which job + the need-lookahead queue preview) is decided by JobService;
   // the handler injects the pawn-system reachability memory and only applies the result (P-4b).
   const { job, queuePreview } = jobService.selectJobForPawn(pawn, gameState, {
-    isReachable: (id) => !isJobUnreachableForPawn(pawn.id, id, gameState.turn),
+    isReachable: (id) => !isJobUnreachableForPawn(pawn.id, id, gameState.turn) && jobInZone(id),
     queueSize: JOB_QUEUE_SIZE
   });
 

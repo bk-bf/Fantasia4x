@@ -87,7 +87,9 @@
   input[type='range'] {
     accent-color: var(--accent);
     width: 130px;
-    cursor: not-allowed;
+    /* Disabled "coming soon" slider — keep the app pointer (inherited from the row) rather than the
+       OS not-allowed cursor; inputs are excluded from the global app-cursor rule, so opt in here. */
+    cursor: inherit;
     opacity: 0.5;
   }
   /* Retro-terminal dropdown — mirrors the construction material picker / fuel panel: flat dark field,
