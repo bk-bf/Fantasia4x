@@ -72,7 +72,7 @@ pnpm format               # Prettier write
 pnpm test                 # Vitest unit/regression suite (test:watch for watch mode)
 pnpm add:wasm             # rebuild spatial-core WASM → src/lib/spatial-core-pkg/
 pnpm graph                # (re)extract this project's graph via the standalone codegraph tool
-pnpm graph:serve          # codegraph viewer + JSON query API on http://localhost:5180
+pnpm graph:serve          # codegraph viewer + JSON query API on http://localhost:5185
 pnpm graph:check          # architecture checks (ADRs/layers/cycles/god-modules/orphans)
 pnpm graph:snapshot       # save the current graph as a baseline
 pnpm graph:diff           # diff the graph against the saved baseline
@@ -95,7 +95,7 @@ Covers **TypeScript** (`src/lib`), **Svelte** components, and **Rust**
 boundary. See `../codegraph/README.md`.
 
 - **Start it:** `pnpm graph:serve` (or `./launch.sh --debug`) → SvelteKit viewer
-  + API on http://localhost:5180. `--debug` also watches `src/lib` and
+  + API on http://localhost:5185. `--debug` also watches `src/lib` and
   re-extracts on change; otherwise re-extract manually with `pnpm graph`.
 - **Query the API (agents).** CORS-open; `GET /api` is self-documenting. With one
   project onboarded the default is Fantasia4x; otherwise append
@@ -109,8 +109,8 @@ boundary. See `../codegraph/README.md`.
     `sort=`/`group=`/`q=`/`kind=`/`exported=`/`tested=`/`cross=`/`limit=`)
   - Insights: `/api/check` · `/api/recommendations` · `/api/port-candidates` ·
     `/api/orphans`
-  - e.g. `curl 'localhost:5180/api/function?name=tickPawn'`
-    · `curl 'localhost:5180/api/path?from=processGameTurn&to=tickPawn'`
+  - e.g. `curl 'localhost:5185/api/function?name=tickPawn'`
+    · `curl 'localhost:5185/api/path?from=processGameTurn&to=tickPawn'`
 - **Descriptions:** every function gets one (curated → JSDoc → inferred). Improve
   specific ones by editing this repo's `codegraph.descriptions.json` (keyed
   `module::Class.method` for functions, full module path for modules), then
