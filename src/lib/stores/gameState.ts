@@ -839,13 +839,23 @@ export const loadingStatus = writable('Initializing…');
  */
 export type AppPhase = 'menu' | 'game';
 
+// One-shot override: `goToMainMenu()` sets this sessionStorage flag before reloading so the NEXT boot
+// opens the menu even under --debug/--profiler (which normally skip it). Read-and-clear so it forces the
+// menu exactly once — a later fresh launch still honours the build flags and boots straight into the save.
+const FORCE_MENU_KEY = 'f4x:forceMenu';
+const forceMenuOnce = browser && sessionStorage.getItem(FORCE_MENU_KEY) === '1';
+if (forceMenuOnce) sessionStorage.removeItem(FORCE_MENU_KEY);
+
 // The main menu is a player-facing affordance. Only `--debug` (VITE_DEBUG_MODE) SKIPS it — that's the
 // dev-iteration launch, where a menu click is just friction. Every other launch (clean, `--log`, and
 // `--play`) opens at the menu, so `./launch.sh --electron --play` exercises the real menu flow.
 // `--profiler` (VITE_PROFILER) is the sole technical exception: its loader branch returns early with
 // its own auto-boot sandbox and never goes through `startGame`, so it must bypass the menu too.
+// `forceMenuOnce` overrides the skip for one boot (the explicit "Main Menu" navigation from Settings).
 const MENU_ENABLED =
-  browser && import.meta.env.VITE_DEBUG_MODE !== 'true' && import.meta.env.VITE_PROFILER !== 'true';
+  browser &&
+  (forceMenuOnce ||
+    (import.meta.env.VITE_DEBUG_MODE !== 'true' && import.meta.env.VITE_PROFILER !== 'true'));
 
 export const appPhase = writable<AppPhase>(MENU_ENABLED ? 'menu' : 'game');
 
@@ -891,6 +901,21 @@ function startGame(mode: 'new' | 'load', slot = 0) {
  */
 function saveGame(): Promise<void> {
   return saveGameNow(get(gameState) as GameState);
+}
+
+/**
+ * Flush the save and return to the main menu. A plain reload would bypass the menu under --debug/--profiler
+ * (the dev launches boot straight into the save), so this arms the one-shot FORCE_MENU flag first — the
+ * next boot reads it and opens the menu instead. In a normal launch the reload reaches the menu anyway;
+ * the flag is harmless there. This is what lets a --debug session, which skips the menu at start, still get
+ * INTO the menu on demand (the Settings "Main Menu" button).
+ */
+async function goToMainMenu(): Promise<void> {
+  await saveGame();
+  if (browser) {
+    sessionStorage.setItem(FORCE_MENU_KEY, '1');
+    location.reload();
+  }
 }
 
 /** How long the loading overlay lingers after the renderer is up before the reveal — lets the worker
@@ -1213,6 +1238,8 @@ export const gameState = {
   startGame,
   /** Pause menu: flush the current state to disk immediately (resolves on write). */
   saveGame,
+  /** Save and reload back to the main menu (forces the menu even under the menu-skipping --debug launch). */
+  goToMainMenu,
   regenWorld,
   restoreWorld,
   setMapSize,
