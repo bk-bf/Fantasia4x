@@ -949,9 +949,19 @@
       (id) => resourceObjectService.getById(id)?.displayName ?? id
     );
     const marked = highlightedResourceTiles.size;
+    const designatedCount = [...highlightedResourceTiles].filter((k) => designations[k]).length;
+    const allDesignated = marked > 0 && designatedCount === marked;
     const btns: EntityButton[] = [];
-    if (marked > 0) {
-      btns.push({ label: `DESIGNATE (${marked})`, onClick: () => designateMarkedMulti() });
+    // DESIGNATE while any highlighted tile is still unmarked; CANCEL while any is marked — both act on
+    // the SAME working set across all selected types, so 5 different resources cancel with one press.
+    if (marked > 0 && !allDesignated) {
+      btns.push({
+        label: `DESIGNATE (${marked - designatedCount})`,
+        onClick: () => designateMarkedMulti()
+      });
+    }
+    if (designatedCount > 0) {
+      btns.push({ label: `CANCEL (${designatedCount})`, onClick: () => cancelMarkedMulti() });
     }
     btns.push({ label: 'CLEAR', onClick: () => clearResourceMark() });
     return {
@@ -959,7 +969,12 @@
       status: 'mark brush',
       selected: true,
       dismissable: true,
-      note: marked > 0 ? `${marked} tiles highlighted` : 'Shift+drag a box to highlight all of these',
+      note:
+        marked === 0
+          ? 'Shift+drag a box to highlight all of these'
+          : designatedCount > 0
+            ? `${designatedCount}/${marked} marked for harvest`
+            : `${marked} tiles highlighted`,
       lines: [typeNames.join(', ')],
       buttons: btns
     } satisfies SelectedEntityModel;
@@ -3494,7 +3509,8 @@
         },
         save: true
       });
-      highlightedResourceTiles = new Set();
+      // Keep the highlight as a persistent working set so the card now offers CANCEL on the same tiles
+      // (CLEAR drops it). Designating no longer silently deselects.
     } else {
       const { x, y } = selectedResourceTile;
       gameState.command({ type: 'designate', payload: { x, y, type: resolvedType }, save: true });
@@ -3517,7 +3533,7 @@
         },
         save: true
       });
-      highlightedResourceTiles = new Set();
+      // Keep the highlight (working set) — the card flips back to offering HARVEST on the same tiles.
     } else {
       const { x, y } = selectedResourceTile;
       gameState.command({ type: 'clearDesignation', payload: { x, y }, save: true });
@@ -3660,7 +3676,8 @@
 
   /** DESIGNATE the highlighted multi-type tiles (the multi-resource card's button): each tile is queued
    *  with ITS resource's own designation type (a tree → woodcut, a stone outcrop / berry bush → harvest
-   *  …), grouped into one command per type, then the highlight clears. */
+   *  …), grouped into one command per type. The highlight stays as a working set so CANCEL can undo the
+   *  same tiles; CLEAR drops it. */
   function designateMarkedMulti() {
     if (highlightedResourceTiles.size === 0) return;
     const byType = new Map<string, [number, number][]>();
@@ -3682,7 +3699,23 @@
     for (const [type, tiles] of byType) {
       gameState.command({ type: 'designateTiles', payload: { tiles, type }, save: true });
     }
-    clearResourceMark();
+    drawDesignations();
+  }
+
+  /** CANCEL the highlighted multi-type tiles (the multi-resource card's button): clears the designation
+   *  on each marked tile, keeping the highlight so DESIGNATE can re-apply. */
+  function cancelMarkedMulti() {
+    if (highlightedResourceTiles.size === 0) return;
+    gameState.command({
+      type: 'clearDesignationTiles',
+      payload: {
+        tiles: [...highlightedResourceTiles].map(
+          (key) => key.split(',').map(Number) as [number, number]
+        )
+      },
+      save: true
+    });
+    drawDesignations();
   }
 
   /** Drop the resource highlight + brush (the multi-resource card's CLEAR; also Escape). */
