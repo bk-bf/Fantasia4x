@@ -354,6 +354,20 @@ export async function deleteSave(): Promise<void> {
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
+// While the Custom Map popup is shaping a not-yet-committed world, autosave is suspended so a new game
+// (or a dev world-regen) doesn't write a phantom snapshot before the player commits with GENERATE.
+let _autosaveSuspended = false;
+/** Suspend/resume the debounced autosave. Suspending also drops any pending debounced write so an
+ *  already-scheduled one can't land after the suspend. Manual/eager writes (saveGameNow, snapshots) are
+ *  unaffected — only the periodic autosave is paused. */
+export function setAutosaveSuspended(suspended: boolean): void {
+  _autosaveSuspended = suspended;
+  if (suspended && _saveTimer !== null) {
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+  }
+}
+
 /**
  * Run `fn` when the main thread is next idle, falling back to a macrotask. ENGINE-PERFORMANCE.md §D3:
  * `stripState` clones all 38k worldMap tiles — running it synchronously inside the debounce timer hitched
@@ -375,6 +389,7 @@ function runWhenIdle(fn: () => void): void {
  */
 export function scheduleSave(state: GameState): void {
   if (!browser) return;
+  if (_autosaveSuspended) return; // map gen in progress — don't persist a half-shaped world
   if (!get(autosaveEnabled)) return;
   if (!activeSaveId) return; // no game started yet (menu) — nothing to autosave
   if (_saveTimer !== null) clearTimeout(_saveTimer);

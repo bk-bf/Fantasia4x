@@ -211,7 +211,7 @@ const lastPawnCold = new Map<string, Record<string, unknown>>();
 const lastMobCold = new Map<string, Record<string, unknown>>();
 // TEMP §D: log the snapshot payload size breakdown (~every 2s) to find which field dominates the
 // structured-clone. Set false / remove once the heavy field is identified.
-const SNAP_SIZE_LOG = true;
+const SNAP_SIZE_LOG = false;
 let flushSeq = 0;
 let lastPawnIds = new Set<string>();
 let lastMobIds = new Set<string>();

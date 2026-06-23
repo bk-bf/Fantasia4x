@@ -15,6 +15,7 @@
   import { get } from 'svelte/store';
   import { onDestroy } from 'svelte';
   import { gameState } from '$lib/stores/gameState';
+  import { setAutosaveSuspended } from '$lib/stores/saveManager';
   import {
     getBiomeConfig,
     applyBiomeShares,
@@ -61,6 +62,11 @@
   // preview, and a running sim just wastes CPU + pushes state behind the popup. Restore on close.
   const wasPaused = get(gameState.isPaused);
   if (!wasPaused) gameState.pauseGame();
+
+  // Suspend autosave while the map is being shaped: a new game (or a dev regen) must NOT write a save
+  // until the player commits with GENERATE — otherwise a half-built, never-confirmed map shows up in the
+  // save list. GENERATE persists the committed world explicitly; CLOSE/✕ just resumes (nothing written).
+  setAutosaveSuspended(true);
 
   // Yield `n` animation frames, so the browser gets to paint between steps.
   function nextFrames(n: number): Promise<void> {
@@ -114,6 +120,11 @@
       baseline = get(gameState);
       dirty = false;
     });
+    // Commit point: the map is now real (pawns placed, creatures seeded). Persist it eagerly so the new
+    // game appears in the save list immediately — this is the FIRST save, the moment the player committed.
+    // (Autosave is resumed by onDestroy when the popup unmounts on the onClose below.)
+    setAutosaveSuspended(false);
+    await gameState.flushSave();
     onClose();
   }
 
@@ -124,6 +135,7 @@
     clearTimeout(previewTimer);
     if (dirty) gameState.restoreWorld(baseline);
     if (!wasPaused) gameState.unpauseGame();
+    setAutosaveSuspended(false); // resume autosave however the popup closed (GENERATE / ✕ / nav)
   });
 
   function toggleLock(id: string) {

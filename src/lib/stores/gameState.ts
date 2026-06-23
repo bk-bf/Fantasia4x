@@ -1152,7 +1152,14 @@ export const savedStateReady: Promise<void> = (async () => {
     baseState.worldMap.length === 0 ||
     !baseState.worldMap[0]?.[0]?.terrainType
   ) {
-    const migratedWorld = generateWorld(240, 160, baseState.seed);
+    // A NEW game generates at the player's chosen size (currentMapSize — what the Custom Map popup shows
+    // and GENERATE uses), so the first map drawn under the popup matches and renders correctly. The
+    // legacy 240×160 is only for migrating an old save that somehow has no usable map. (Before this, a
+    // new game booted a 240×160 world into a popup/grid expecting 500×500 — it read as an empty map until
+    // the player rerolled the seed and regenerated at the right size.)
+    const genW = bootMode() === 'new' ? currentMapSize.w : 240;
+    const genH = bootMode() === 'new' ? currentMapSize.h : 160;
+    const migratedWorld = generateWorld(genW, genH, baseState.seed);
     resourceGeneratorService.generateResources(migratedWorld, baseState.seed);
     baseState = { ...baseState, worldMap: migratedWorld };
   } else if (!baseState.worldMap[0]?.[1]?.discovered) {
