@@ -89,20 +89,32 @@ function createWindow() {
       return false;
     }
   };
+  const isLoopbackUrl = (u) => {
+    try {
+      return LOOPBACK_HOSTS.has(new URL(u).hostname);
+    } catch {
+      return false;
+    }
+  };
+  // FAIL CLOSED: only ever hand a GENUINELY EXTERNAL (non-loopback, non-app) http(s) URL to the OS
+  // browser. Any loopback URL — the app itself, the dev server under any alias/port, HMR, Vite
+  // tooling — is NEVER punted, even if the origin-string match misfires. This is what stops the
+  // recurring "stray Zen tab at http://127.0.0.1:<port>/" for good: a local URL can no longer leak
+  // out, full stop. (A game shell has no legitimate reason to open localhost in your browser.)
+  const shouldOpenExternal = (url) =>
+    /^https?:\/\//i.test(url) && !isLoopbackUrl(url) && !isAppOrigin(url);
   win.webContents.setWindowOpenHandler(({ url }) => {
-    // Same-origin (the app itself) must NEVER be punted outward — only genuinely external URLs.
-    if (!isAppOrigin(url) && /^https?:\/\//i.test(url)) shell.openExternal(url);
+    if (shouldOpenExternal(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (e, url) => {
-    if (isAppOrigin(url)) return; // app's own navigation/reload — allow, never punt
-    e.preventDefault();
-    if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+    if (isAppOrigin(url) || isLoopbackUrl(url)) return; // app / local dev — allow, never punt
+    e.preventDefault(); // never let the window navigate away from the app
+    if (shouldOpenExternal(url)) shell.openExternal(url);
   });
-  // Belt-and-suspenders: also refuse navigation to a brand-new document via will-redirect
-  // (covers iframes/subframes), same fixed-origin rule.
+  // Belt-and-suspenders: refuse cross-origin redirects (covers iframes/subframes). Loopback is in-app.
   win.webContents.on('will-redirect', (e, url) => {
-    if (!isAppOrigin(url)) e.preventDefault();
+    if (!isAppOrigin(url) && !isLoopbackUrl(url)) e.preventDefault();
   });
 
   win.webContents.setUserAgent(shellUA);
