@@ -26,38 +26,84 @@ import {
   LAIR_TICK_INTERVAL,
   LAIR_REPOP_CHANCE,
   LAIR_GROW_CHANCE,
-  maxLairCount,
-  MENU_DECOR_BANDS_X,
-  MENU_DECOR_Y
+  maxLairCount
 } from './entityConstants';
 
 let idCounter = 0;
 
 // Soft tether radius (tiles, Chebyshev) for a menu-preview prey herd's invisible anchor — small enough
-// that herds read as distinct clusters that stay within their flanking band (so they don't drift behind
-// the menu UI), large enough that they still graze/wander visibly within it. Menu-only (see the anchor
-// assignment in seedInitialEntities + the leash in entityAI.stepAnimal).
+// that each corner herd reads as one tight cluster, large enough that they still graze/wander visibly
+// within it. Menu-only (see seedMenuHerds + the leash in entityAI.stepAnimal).
 const HERD_ANCHOR_RANGE = 6;
 
+// Menu backdrop wildlife: exactly FOUR medium herds, one tucked into each corner of the on-screen view,
+// framing the central title/menu. Corner anchors as map fractions — the menu zooms in 2× and centres on
+// the map centre, so the visible window is ≈ x[0.25,0.75] × y[0.27,0.72]; these sit just inside it,
+// clear of the central UI. A small per-herd jitter keeps the four off a perfect rectangle (natural).
+const MENU_HERD_CORNERS: ReadonlyArray<readonly [number, number]> = [
+  [0.31, 0.34], // upper-left
+  [0.69, 0.34], // upper-right
+  [0.31, 0.66], // lower-left
+  [0.69, 0.66] // lower-right
+];
+const MENU_HERD_CORNER_JITTER = 0.03; // ± map-fraction wobble on each corner anchor
+const MENU_HERD_SIZE_MIN = 6; // similar medium herd sizes (animals per corner)
+const MENU_HERD_SIZE_MAX = 9;
+
+/** Nearest spawnable tile to (cx,cy), searched outward in expanding Chebyshev rings (≤12). Used to land
+ *  a menu corner anchor on walkable wildlife land even if the exact corner tile is a grove/edge. */
+function nearestSpawnable(state: GameState, cx: number, cy: number): { x: number; y: number } | null {
+  const map = state.worldMap;
+  for (let r = 0; r <= 12; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; // ring perimeter only
+        const x = cx + dx;
+        const y = cy + dy;
+        if (isSpawnableTile(map[y]?.[x])) return { x, y };
+      }
+    }
+  }
+  return null;
+}
+
 /**
- * Pick a prey-herd spawn origin inside one of the MENU_DECOR side bands (menu preview ONLY), so herds
- * graze in the on-screen area FLANKING the centred title/menu UI rather than behind it. Searches a few
- * seeded points in a randomly-chosen band for a spawnable tile; null if none found (caller skips the
- * pack). Real play never calls this — it uses the normal map-wide findSpawnTile.
+ * Seed the menu backdrop's wildlife: four medium herds, one per corner, each anchored (invisible lair)
+ * so it stays a tight cluster in its corner (leash in entityAI.stepAnimal). One species per corner from
+ * a shuffled prey roster (variety), jittered position + size so it reads as a natural scene rather than
+ * four identical blobs. No periodic top-up runs in preview, so this fixed cast persists.
  */
-function menuHerdOrigin(state: GameState): { x: number; y: number } | null {
+function seedMenuHerds(state: GameState, dayCreatures: CreatureDefinition[]): GameState {
   const map = state.worldMap;
   const h = map.length;
   const w = map[0]?.length ?? 0;
-  if (w === 0 || h === 0) return null;
-  const [y0, y1] = MENU_DECOR_Y;
-  for (let attempt = 0; attempt < 40; attempt++) {
-    const [x0, x1] = MENU_DECOR_BANDS_X[Math.floor(rng.random() * MENU_DECOR_BANDS_X.length)];
-    const x = Math.floor((x0 + rng.random() * (x1 - x0)) * w);
-    const y = Math.floor((y0 + rng.random() * (y1 - y0)) * h);
-    if (isSpawnableTile(map[y]?.[x])) return { x, y };
-  }
-  return null;
+  if (w === 0 || h === 0 || dayCreatures.length === 0) return state;
+  const roster = [...dayCreatures].sort(() => rng.random() - 0.5);
+  const seeded: Mob[] = [];
+  MENU_HERD_CORNERS.forEach(([fx, fy], corner) => {
+    const def = roster[corner % roster.length];
+    const jx = (rng.random() * 2 - 1) * MENU_HERD_CORNER_JITTER;
+    const jy = (rng.random() * 2 - 1) * MENU_HERD_CORNER_JITTER;
+    const origin = nearestSpawnable(state, Math.round((fx + jx) * w), Math.round((fy + jy) * h));
+    if (!origin) return;
+    const anchorId = `herd-${origin.x}-${origin.y}`;
+    const size =
+      MENU_HERD_SIZE_MIN + Math.floor(rng.random() * (MENU_HERD_SIZE_MAX - MENU_HERD_SIZE_MIN + 1));
+    for (let i = 0; i < size; i++) {
+      let tile = origin;
+      if (i > 0) {
+        const cand = findNearbyWalkable(state, origin.x, origin.y);
+        if (cand && isSpawnableTile(map[cand.y]?.[cand.x])) tile = cand;
+      }
+      const mob = makeMob(def, tile.x, tile.y, state.turn);
+      mob.lairId = anchorId;
+      mob.lairX = origin.x;
+      mob.lairY = origin.y;
+      mob.lairRange = HERD_ANCHOR_RANGE;
+      seeded.push(mob);
+    }
+  });
+  return { ...state, mobs: [...(state.mobs ?? []), ...seeded] };
 }
 
 /**
@@ -81,6 +127,9 @@ export function seedInitialEntities(
     (c) => !c.nightOnly && !c.lair && (!preyOnly || !c.predator)
   );
   if (dayCreatures.length === 0) return state;
+
+  // MENU-PREVIEW: a hand-framed cast of four corner herds, not the area-scaled wildlife of real play.
+  if (preyOnly) return seedMenuHerds(state, dayCreatures);
 
   const h = state.worldMap.length;
   const w = state.worldMap[0]?.length ?? 0;
@@ -110,17 +159,8 @@ export function seedInitialEntities(
     if (def.entityClass === 'mob' && hostile >= caps.hostile) continue;
     if (def.entityClass === 'animal' && neutral >= caps.neutral) continue;
 
-    // MENU-PREVIEW: spawn herds in the side bands flanking the UI (menuHerdOrigin); real play roams the
-    // whole map (findSpawnTile).
-    const origin = preyOnly ? menuHerdOrigin(state) : findSpawnTile(state, def);
+    const origin = findSpawnTile(state, def);
     if (!origin) continue;
-
-    // MENU-PREVIEW ONLY: anchor each prey pack to an INVISIBLE home at its spawn origin so the herd
-    // stays clustered instead of diffusing across the backdrop (the title shot "meshing" — see the
-    // soft leash in entityAI.stepAnimal, gated on `lairId`). This reuses the lair-leash machinery with
-    // no lair TILE — just the anchor fields. Real play (`!preyOnly`) leaves prey free-roaming: they get
-    // no anchor, so the leash is a no-op for them.
-    const anchorId = preyOnly ? `herd-${origin.x}-${origin.y}` : null;
 
     const [packMin, packMax] = def.pack;
     const packSize = packMin + Math.floor(rng.random() * (packMax - packMin + 1));
@@ -132,14 +172,7 @@ export function seedInitialEntities(
         const cand = findNearbyWalkable(state, origin.x, origin.y);
         if (cand && isSpawnableTile(state.worldMap[cand.y]?.[cand.x])) tile = cand;
       }
-      const mob = makeMob(def, tile.x, tile.y, state.turn);
-      if (anchorId) {
-        mob.lairId = anchorId;
-        mob.lairX = origin.x;
-        mob.lairY = origin.y;
-        mob.lairRange = HERD_ANCHOR_RANGE;
-      }
-      seeded.push(mob);
+      seeded.push(makeMob(def, tile.x, tile.y, state.turn));
       if (def.entityClass === 'mob') hostile++;
       else neutral++;
     }
@@ -396,14 +429,8 @@ export function spawnEntities(state: GameState, opts?: { preyOnly?: boolean }): 
   if (def.entityClass === 'mob' && hostileCount >= caps.hostile) return state;
   if (def.entityClass === 'animal' && neutralCount >= caps.neutral) return state;
 
-  const preyOnly = opts?.preyOnly ?? false;
-  // MENU-PREVIEW: top-up spawns also go in the UI-flanking bands (matching the initial seed).
-  const origin = preyOnly ? menuHerdOrigin(state) : findSpawnTile(state, def);
+  const origin = findSpawnTile(state, def);
   if (!origin) return state;
-
-  // MENU-PREVIEW ONLY: anchor periodically-spawned prey to an invisible home too (matching the initial
-  // seed), so the backdrop's herds stay clustered as the population tops up. Real play gets no anchor.
-  const anchorId = preyOnly ? `herd-${origin.x}-${origin.y}` : null;
 
   const [packMin, packMax] = def.pack;
   const packSize = packMin + Math.floor(rng.random() * (packMax - packMin + 1));
@@ -416,14 +443,7 @@ export function spawnEntities(state: GameState, opts?: { preyOnly?: boolean }): 
       const cand = findNearbyWalkable(state, origin.x, origin.y);
       if (cand && isSpawnableTile(state.worldMap[cand.y]?.[cand.x])) tile = cand;
     }
-    const mob = makeMob(def, tile.x, tile.y, state.turn);
-    if (anchorId) {
-      mob.lairId = anchorId;
-      mob.lairX = origin.x;
-      mob.lairY = origin.y;
-      mob.lairRange = HERD_ANCHOR_RANGE;
-    }
-    newMobs.push(mob);
+    newMobs.push(makeMob(def, tile.x, tile.y, state.turn));
   }
 
   return { ...state, mobs: [...mobs, ...newMobs] };

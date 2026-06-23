@@ -285,7 +285,7 @@ export class GameEngineImpl implements GameEngine {
    * Slim per-tick loop for the main-menu backdrop preview (see `previewMode`). Advances only the
    * atmospheric, consequence-free systems the menu wants:
    *   • environment — weather Markov roll + day/night light (no tile-state consequence).
-   *   • entity step — prey-only spawn + FSM wander/graze + movement.
+   *   • entity step — FSM wander/graze + movement for the four fixed corner herds (no spawner).
    * Deliberately OMITTED vs the full turn: needs/items/research/jobs/buildings/passiveProd/pawns,
    * resource regrowth, crop growth, combat. Also skips `tickLairs` (no lairs), `stepHunger` and
    * `removeDead` — preview prey never starve or die, so there are no carcasses and no array churn;
@@ -295,7 +295,9 @@ export class GameEngineImpl implements GameEngine {
     try {
       this.processEnvironment();
 
-      this.gameState = entityService.spawnEntities(this.gameState!, { preyOnly: true });
+      // No periodic spawner here: the backdrop's cast is a FIXED set of four corner herds seeded once
+      // (seedMenuHerds). Topping up would add stray packs and break the framed four-herd composition;
+      // preview prey never die, so the seeded herds persist. Just step their FSM + movement.
       this.gameState = entityService.stepEntities(this.gameState!);
       this.gameState = entityService.advanceMobMovement(this.gameState!);
 
