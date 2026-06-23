@@ -35,6 +35,7 @@ import {
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
 import { entityService } from '$lib/game/services/EntityService';
 import { loadSave, scheduleSave, deleteSave, saveGameNow } from './saveManager';
+import { defaultGameSpeed } from './uiPrefs';
 import { clearActivityLog } from './Log';
 import { applyDevWorld } from '$lib/game/dev/devWorld';
 import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
@@ -1355,6 +1356,8 @@ if (USE_SIM_WORKER) {
     // This is also the menu-preview → real-sim hand-off: re-init the SAME worker with the real state
     // (no `preview` flag ⇒ engine clears previewMode), so the backdrop's worker becomes the game sim.
     previewActive = false; // real snapshots persist from here on
+    // Settings "Default game speed" — the rate the (always-paused-at-start) game runs at once unpaused.
+    gameSpeed.set(get(defaultGameSpeed));
     simWorkerBridge.start();
     const st = get(gameState) as GameState;
     simWorkerBridge.init(st, st.seed);

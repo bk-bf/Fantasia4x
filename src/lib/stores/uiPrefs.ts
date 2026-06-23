@@ -95,3 +95,48 @@ export const hideSidebars = createPersistedBool(HIDE_SIDEBARS_KEY, true);
  * the dev surface; the player opts in from Settings. Persisted.
  */
 export const debugMode = createPersistedBool(DEBUG_MODE_KEY, false);
+
+// ===== SETTINGS MENU (SettingsModal.svelte) =====
+
+function loadNumber(key: string, fallback: number): number {
+  if (typeof localStorage === 'undefined') return fallback;
+  const raw = localStorage.getItem(key);
+  if (raw === null) return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+/** localStorage-backed number preference (mirrors createPersistedBool). */
+function createPersistedNumber(key: string, fallback: number) {
+  const { subscribe, set } = writable<number>(loadNumber(key, fallback));
+  const save = (v: number) => {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(key, String(v));
+      } catch {
+        /* quota / private mode */
+      }
+    }
+    return v;
+  };
+  return {
+    subscribe,
+    set: (v: number) => set(save(v))
+  };
+}
+
+/** Graphics — render the weather particle overlay (rain/snow/leaves). ON by default; persisted.
+ *  Gates the <WeatherCanvas> mount in WorldEffectsLayer (in-game) + MenuPreviewBackdrop (title). */
+export const weatherEffects = createPersistedBool('fx.gfx.weather', true);
+
+/** Graphics — apply the day/night + weather hue tint to the UI panels/menu (the #ambient-tint
+ *  feColorMatrix in +page.svelte). ON by default; persisted. The MAP's own day/night lighting is
+ *  separate and unaffected — this is the UI tint only. */
+export const dayNightTint = createPersistedBool('fx.gfx.dayNightTint', true);
+
+/** Gameplay — debounced autosave to IndexedDB. ON by default; persisted. When off, scheduleSave is a
+ *  no-op (manual "Save Game" still writes). */
+export const autosaveEnabled = createPersistedBool('fx.gameplay.autosave', true);
+
+/** Gameplay — simulation speed a freshly-started game runs at once unpaused (1×/2×/4×). Persisted. */
+export const defaultGameSpeed = createPersistedNumber('fx.gameplay.defaultSpeed', 1);

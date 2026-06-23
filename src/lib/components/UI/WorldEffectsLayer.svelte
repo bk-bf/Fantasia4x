@@ -23,6 +23,7 @@
   import { cameraTileSize } from '$lib/stores/cameraView';
   import { gameState } from '$lib/stores/gameState';
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
+  import { weatherEffects } from '$lib/stores/uiPrefs';
   import WeatherCanvas from './WeatherCanvas.svelte';
 
   // Lair effects are authored at this reference tile size (px); fxScale tracks the live zoom so a
@@ -224,8 +225,11 @@
   {/each}
 
   <!-- ── Fullscreen Weather Overlay (SEASONS_WEATHER) ──────────────────────────── -->
-  <!-- Rain/snow particle system on a 2D canvas — reads the weather store itself, idles when clear. -->
-  <WeatherCanvas />
+  <!-- Rain/snow particle system on a 2D canvas — reads the weather store itself, idles when clear.
+       Gated on the Settings "Weather effects" toggle; unmounting it costs nothing when off. -->
+  {#if $weatherEffects}
+    <WeatherCanvas />
+  {/if}
 </div>
 
 <style>

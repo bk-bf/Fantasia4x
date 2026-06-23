@@ -15,8 +15,10 @@
  */
 
 import { browser } from '$app/environment';
+import { get } from 'svelte/store';
 import type { GameState, WorldTile } from '$lib/game/core/types';
 import type { ActivityLogEntry } from '$lib/game/core/Events';
+import { autosaveEnabled } from './uiPrefs';
 
 // ── constants ──────────────────────────────────────────────────────────────
 const DB_NAME = 'fantasia4x';
@@ -216,6 +218,9 @@ function runWhenIdle(fn: () => void): void {
  */
 export function scheduleSave(state: GameState): void {
   if (!browser) return;
+  // Settings "Autosave" off → never auto-persist. Manual saveGameNow() (pause-menu "Save Game") is
+  // intentionally NOT gated, so the player can still snapshot on demand.
+  if (!get(autosaveEnabled)) return;
   if (_saveTimer !== null) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
     _saveTimer = null;

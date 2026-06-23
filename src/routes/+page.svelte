@@ -24,7 +24,7 @@
   import { onMount } from 'svelte';
   import { autohideScroll } from '$lib/actions/autohideScroll';
   import { uiState } from '$lib/stores/uiState';
-  import { hideSidebars, debugMode } from '$lib/stores/uiPrefs';
+  import { hideSidebars, debugMode, dayNightTint } from '$lib/stores/uiPrefs';
   import {
     gameState,
     storeReady,
@@ -58,7 +58,10 @@
     effectivePanelSaturation(environmentService.effectiveSeason($gameState), $gameState.weather),
     ambient.light
   );
-  $: ambientMatrix = buildPanelMatrix(panelTint, panelSaturation);
+  // Settings "Day/night UI tint" off → feed the panel filter the IDENTITY matrix (no hue shift). The
+  // map's own day/night lighting (GameCanvas) is separate and stays on; this only neutralises the UI.
+  const IDENTITY_MATRIX = '1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0';
+  $: ambientMatrix = $dayNightTint ? buildPanelMatrix(panelTint, panelSaturation) : IDENTITY_MATRIX;
 
   // Low light deepens the bleakness of already-bleak weather. The extra desaturation is weighted by
   // how washed-out the weather already is (1 - baseSat), so clear skies stay untouched and FOG drains
@@ -341,8 +344,8 @@
               class:disabled
               on:click={() => toggle(tab.key)}
               {disabled}
-              title={disabled ? 'Requires a knowledge building' : tab.fkey}
-            >{tab.label}</button>
+              title={disabled ? 'Requires a knowledge building' : tab.fkey}>{tab.label}</button
+            >
           {/each}
         </nav>
       </main>
@@ -538,7 +541,6 @@
     color: var(--text-muted);
     cursor: not-allowed;
   }
-
 
   .right-panel {
     flex-shrink: 0;

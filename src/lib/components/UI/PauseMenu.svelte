@@ -10,15 +10,14 @@
 <script lang="ts">
   import { fade, scale } from 'svelte/transition';
   import { gameState } from '$lib/stores/gameState';
-  import { debugMode, hideSidebars } from '$lib/stores/uiPrefs';
+  import SettingsModal from './SettingsModal.svelte';
 
   let { onResume }: { onResume: () => void } = $props();
 
   let showSettings = $state(false);
   let saved = $state(false);
   let busy = $state(false);
-  const isDesktop =
-    typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent ?? '');
+  const isDesktop = typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent ?? '');
 
   async function saveGame() {
     if (busy) return;
@@ -48,33 +47,25 @@
   <div class="pause-panel" transition:scale={{ duration: 140, start: 0.96 }}>
     <h2 class="title">PAUSED</h2>
 
-    {#if showSettings}
-      <div class="menu">
-        <label class="row">
-          <input type="checkbox" checked={$debugMode} onchange={debugMode.toggle} />
-          <span>Debug mode</span>
-        </label>
-        <label class="row">
-          <input type="checkbox" checked={$hideSidebars} onchange={hideSidebars.toggle} />
-          <span>Cinematic layout</span>
-        </label>
-        <button class="menu-btn back" onclick={() => (showSettings = false)}>Back</button>
-      </div>
-    {:else}
-      <nav class="menu">
-        <button class="menu-btn" onclick={onResume}>Resume</button>
-        <button class="menu-btn" onclick={saveGame} disabled={busy}>
-          {saved ? 'Saved ✓' : 'Save Game'}
-        </button>
-        <button class="menu-btn" onclick={() => (showSettings = true)}>Settings</button>
-        <button class="menu-btn" onclick={exitToMenu} disabled={busy}>Exit to Main Menu</button>
-        {#if isDesktop}
-          <button class="menu-btn danger" onclick={quitDesktop} disabled={busy}>Quit to Desktop</button>
-        {/if}
-      </nav>
-    {/if}
+    <nav class="menu">
+      <button class="menu-btn" onclick={onResume}>Resume</button>
+      <button class="menu-btn" onclick={saveGame} disabled={busy}>
+        {saved ? 'Saved ✓' : 'Save Game'}
+      </button>
+      <button class="menu-btn" onclick={() => (showSettings = true)}>Settings</button>
+      <button class="menu-btn" onclick={exitToMenu} disabled={busy}>Exit to Main Menu</button>
+      {#if isDesktop}
+        <button class="menu-btn danger" onclick={quitDesktop} disabled={busy}
+          >Quit to Desktop</button
+        >
+      {/if}
+    </nav>
   </div>
 </div>
+
+{#if showSettings}
+  <SettingsModal onClose={() => (showSettings = false)} />
+{/if}
 
 <style>
   .pause-overlay {
@@ -147,23 +138,5 @@
   .menu-btn.danger:hover:not(:disabled) {
     color: var(--neg);
     border-color: var(--neg);
-  }
-  .menu-btn.back {
-    margin-top: 4px;
-    font-size: 11px;
-  }
-
-  .row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 6px 4px;
-    color: var(--text);
-    font-size: 12px;
-    letter-spacing: 0.06em;
-    cursor: pointer;
-  }
-  .row input {
-    accent-color: var(--accent);
   }
 </style>

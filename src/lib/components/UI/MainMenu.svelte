@@ -6,7 +6,7 @@
   this screen is instant and the worker/WebGL only spin up on a choice:
     • New Game  → fresh colony + opens the Custom Map popup so the player can shape the world first.
     • Load Game → resumes the persisted save (disabled when none exists).
-    • Settings  → inline panel (debug mode, cinematic layout).
+    • Settings  → opens the shared SettingsModal popup (graphics / gameplay / advanced toggles).
     • Exit      → quits the desktop window (no-op in a browser tab).
 -->
 <script lang="ts">
@@ -15,8 +15,8 @@
   import { gameState, menuPreviewReady } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import { hasSave } from '$lib/stores/saveManager';
-  import { debugMode, hideSidebars } from '$lib/stores/uiPrefs';
   import MenuPreviewBackdrop from '$lib/components/UI/MenuPreviewBackdrop.svelte';
+  import SettingsModal from '$lib/components/UI/SettingsModal.svelte';
 
   let canLoad = $state(false);
   let showSettings = $state(false);
@@ -55,36 +55,24 @@
   <div class="content">
     <h1 class="title">FANTASIA</h1>
     <div class="subtitle">— a 4X colony chronicle —</div>
-    <div class="credit-line">
-      alpha 0.1.0 · tileset: Bitlands by DragonDePlatino
-    </div>
+    <div class="credit-line">alpha 0.1.0 · tileset: Bitlands by DragonDePlatino</div>
 
-    {#if showSettings}
-      <div class="panel" role="menu" tabindex="-1">
-        <label class="row">
-          <input type="checkbox" checked={$debugMode} onchange={debugMode.toggle} />
-          <span>Debug mode</span>
-        </label>
-        <label class="row">
-          <input type="checkbox" checked={$hideSidebars} onchange={hideSidebars.toggle} />
-          <span>Cinematic layout</span>
-        </label>
-        <button class="menu-btn back" onclick={() => (showSettings = false)}>Back</button>
-      </div>
-    {:else}
-      <nav class="menu">
-        <button class="menu-btn" onclick={newGame}>New Game</button>
-        <button class="menu-btn" class:disabled={!canLoad} disabled={!canLoad} onclick={loadGame}>
-          Load Game
-        </button>
-        <button class="menu-btn" onclick={() => (showSettings = true)}>Settings</button>
-        {#if isDesktop}
-          <button class="menu-btn" onclick={exitGame}>Exit</button>
-        {/if}
-      </nav>
-    {/if}
+    <nav class="menu">
+      <button class="menu-btn" onclick={newGame}>New Game</button>
+      <button class="menu-btn" class:disabled={!canLoad} disabled={!canLoad} onclick={loadGame}>
+        Load Game
+      </button>
+      <button class="menu-btn" onclick={() => (showSettings = true)}>Settings</button>
+      {#if isDesktop}
+        <button class="menu-btn" onclick={exitGame}>Exit</button>
+      {/if}
+    </nav>
   </div>
 </div>
+
+{#if showSettings}
+  <SettingsModal onClose={() => (showSettings = false)} />
+{/if}
 
 <style>
   .main-menu {
@@ -175,8 +163,7 @@
       0 0 12px rgba(0, 0, 0, 0.7);
   }
 
-  .menu,
-  .panel {
+  .menu {
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -215,23 +202,5 @@
     color: var(--text-muted);
     cursor: not-allowed;
     opacity: 0.5;
-  }
-
-  .panel .row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 6px 4px;
-    color: var(--text);
-    font-size: 13px;
-    letter-spacing: 0.08em;
-    cursor: pointer;
-  }
-  .panel .row input {
-    accent-color: var(--accent);
-  }
-  .menu-btn.back {
-    margin-top: 6px;
-    font-size: 12px;
   }
 </style>

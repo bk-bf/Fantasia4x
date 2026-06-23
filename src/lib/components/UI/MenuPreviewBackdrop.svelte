@@ -14,11 +14,14 @@
   import GameCanvas from '$lib/components/UI/GameCanvas.svelte';
   import WeatherCanvas from '$lib/components/UI/WeatherCanvas.svelte';
   import { menuPreviewRendered } from '$lib/stores/gameState';
+  import { weatherEffects } from '$lib/stores/uiPrefs';
 </script>
 
 <div class="menu-backdrop" class:revealed={$menuPreviewRendered} aria-hidden="true">
   <GameCanvas menuPreview />
-  <WeatherCanvas />
+  {#if $weatherEffects}
+    <WeatherCanvas />
+  {/if}
 </div>
 
 <style>
