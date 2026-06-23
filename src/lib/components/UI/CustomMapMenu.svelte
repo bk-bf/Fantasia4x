@@ -15,7 +15,7 @@
   import { get } from 'svelte/store';
   import { onDestroy } from 'svelte';
   import { gameState } from '$lib/stores/gameState';
-  import { setAutosaveSuspended } from '$lib/stores/saveManager';
+  import { setActiveCommitted, isActiveCommitted } from '$lib/stores/saveManager';
   import {
     getBiomeConfig,
     applyBiomeShares,
@@ -63,10 +63,14 @@
   const wasPaused = get(gameState.isPaused);
   if (!wasPaused) gameState.pauseGame();
 
-  // Suspend autosave while the map is being shaped: a new game (or a dev regen) must NOT write a save
-  // until the player commits with GENERATE — otherwise a half-built, never-confirmed map shows up in the
-  // save list. GENERATE persists the committed world explicitly; CLOSE/✕ just resumes (nothing written).
-  setAutosaveSuspended(true);
+  // Uncommit the active save while the map is being shaped: a new game (or a dev regen preview) must NOT
+  // be persisted until the player commits with GENERATE — otherwise a half-built, never-confirmed map
+  // shows up in the save list (incl. via exit-to-menu's eager flush). GENERATE re-commits + persists;
+  // closing without generating restores the prior commit state (a dev colony stays saveable; an abandoned
+  // new game stays uncommitted, so nothing is written).
+  const prevCommitted = isActiveCommitted();
+  let generated = false;
+  setActiveCommitted(false);
 
   // Yield `n` animation frames, so the browser gets to paint between steps.
   function nextFrames(n: number): Promise<void> {
@@ -120,10 +124,11 @@
       baseline = get(gameState);
       dirty = false;
     });
-    // Commit point: the map is now real (pawns placed, creatures seeded). Persist it eagerly so the new
-    // game appears in the save list immediately — this is the FIRST save, the moment the player committed.
-    // (Autosave is resumed by onDestroy when the popup unmounts on the onClose below.)
-    setAutosaveSuspended(false);
+    // Commit point: the map is now real (pawns placed, creatures seeded). Mark committed and persist it
+    // eagerly so the game appears in the save list immediately — this is the FIRST save, the moment the
+    // player committed. `generated` stops onDestroy from un-committing it again on unmount.
+    generated = true;
+    setActiveCommitted(true);
     await gameState.flushSave();
     onClose();
   }
@@ -135,7 +140,9 @@
     clearTimeout(previewTimer);
     if (dirty) gameState.restoreWorld(baseline);
     if (!wasPaused) gameState.unpauseGame();
-    setAutosaveSuspended(false); // resume autosave however the popup closed (GENERATE / ✕ / nav)
+    // If the player never generated, restore the prior commit state: a dev colony (was committed) stays
+    // saveable; an abandoned new game (was uncommitted) stays uncommitted, so nothing is ever written.
+    if (!generated) setActiveCommitted(prevCommitted);
   });
 
   function toggleLock(id: string) {

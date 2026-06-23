@@ -43,7 +43,8 @@ import {
   overwriteSnapshotNow,
   setActiveSave,
   mintActiveSave,
-  ensureActiveSave
+  ensureActiveSave,
+  setActiveCommitted
 } from './saveManager';
 import { defaultGameSpeed } from './uiPrefs';
 import { clearActivityLog, reloadActivityLogForActiveSave, activityLog } from './Log';
@@ -896,7 +897,11 @@ if (!MENU_ENABLED) _resolveBootGate();
 function startGame(mode: 'new' | 'load', saveId?: string) {
   _bootMode = mode;
   if (mode === 'load' && saveId) setActiveSave(saveId);
-  else mintActiveSave(); // fresh colony → its own autosave snapshot
+  else {
+    mintActiveSave(); // fresh colony → its own autosave snapshot…
+    setActiveCommitted(false); // …but UNCOMMITTED until the player confirms the map with GENERATE, so
+    // abandoning map-gen (exit to menu / reload) never persists a phantom colony.
+  }
   // Tear down the menu backdrop: unmount it now, and freeze the preview worker so it stops emitting
   // (still-unsaved) snapshots during the gap before savedStateReady re-inits it into the real sim.
   menuPreviewReady.set(false);

@@ -54,10 +54,13 @@ function newSaveId(): string {
 let activeSaveId: string | null = null;
 export function setActiveSave(id: string): void {
   activeSaveId = id;
+  _activeCommitted = true; // loading an existing save is committed — persist it normally
 }
-/** Used by New Game: a brand-new active id so the fresh colony autosaves into its own snapshot. */
+/** Mint a brand-new active id (New Game, or the --debug empty-DB fallback). Committed by default; the
+ *  New-Game flow then uncommits it (setActiveCommitted(false)) until the map is confirmed with GENERATE. */
 export function mintActiveSave(): string {
   activeSaveId = newSaveId();
+  _activeCommitted = true;
   return activeSaveId;
 }
 /** Guarantee an active save id exists (mint one if not) — the boot calls this so a fresh game with no
@@ -354,18 +357,22 @@ export async function deleteSave(): Promise<void> {
 
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
-// While the Custom Map popup is shaping a not-yet-committed world, autosave is suspended so a new game
-// (or a dev world-regen) doesn't write a phantom snapshot before the player commits with GENERATE.
-let _autosaveSuspended = false;
-/** Suspend/resume the debounced autosave. Suspending also drops any pending debounced write so an
- *  already-scheduled one can't land after the suspend. Manual/eager writes (saveGameNow, snapshots) are
- *  unaffected — only the periodic autosave is paused. */
-export function setAutosaveSuspended(suspended: boolean): void {
-  _autosaveSuspended = suspended;
-  if (suspended && _saveTimer !== null) {
+// The active save is PERSISTED (autosave + eager flush) only once it is COMMITTED. A brand-new game is
+// uncommitted until the player confirms its map with GENERATE — so abandoning map-gen (exit to menu, ✕,
+// reload) never leaves a phantom colony in the save list — and the Custom Map popup also uncommits while
+// previewing a dev regen so a half-shaped preview isn't written. Loading an existing save is committed.
+let _activeCommitted = true;
+/** Mark whether the active save may be written. Setting it false also drops any pending debounced write
+ *  so an already-scheduled autosave can't land afterwards. */
+export function setActiveCommitted(committed: boolean): void {
+  _activeCommitted = committed;
+  if (!committed && _saveTimer !== null) {
     clearTimeout(_saveTimer);
     _saveTimer = null;
   }
+}
+export function isActiveCommitted(): boolean {
+  return _activeCommitted;
 }
 
 /**
@@ -389,7 +396,7 @@ function runWhenIdle(fn: () => void): void {
  */
 export function scheduleSave(state: GameState): void {
   if (!browser) return;
-  if (_autosaveSuspended) return; // map gen in progress — don't persist a half-shaped world
+  if (!_activeCommitted) return; // map not yet committed (new game pre-GENERATE) — don't persist it
   if (!get(autosaveEnabled)) return;
   if (!activeSaveId) return; // no game started yet (menu) — nothing to autosave
   if (_saveTimer !== null) clearTimeout(_saveTimer);
@@ -414,6 +421,9 @@ export function scheduleSave(state: GameState): void {
  */
 export function saveGameNow(state: GameState): Promise<void> {
   if (!browser) return Promise.resolve();
+  // An uncommitted new game (map-gen abandoned via exit-to-menu / ✕ / reload) must not be flushed —
+  // this is the path goToMainMenu()/quit take, and it's why abandoning map-gen left a phantom colony.
+  if (!_activeCommitted) return Promise.resolve();
   if (_saveTimer !== null) {
     clearTimeout(_saveTimer);
     _saveTimer = null;
