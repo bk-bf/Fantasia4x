@@ -107,6 +107,15 @@ const BLEED_CONSTANT = 32;
  *  but once a limb is actually blown off, the stump GUSHES. Set higher than any wound bleedMod (cut 1.0)
  *  so a ripped-off limb is the worst bleed in the game; still scaled by the clot/dressing factor. */
 const SEVERED_STUMP_BLEED_MOD = 2.5;
+/** Body-size multiplier on bleed. A part's SCALED maxHp ÷ its catalog default IS the creature's
+ *  `bodyScale` (createBodyPlanLimbs builds HP = round(default × bodyScale)). Bleed is otherwise computed
+ *  from `frac` (damage ÷ maxHp), which normalises size away — so a big beast bled at the SAME absolute
+ *  blood/s as a pawn while carrying a bodyScale× larger blood pool (maxBloodVolume = health × bodyScale),
+ *  i.e. it bled out 2–3.5× too slowly (a mammoth, scale 3.5, effectively never). Scaling bleed by bodyScale
+ *  makes bleed-out TIME invariant to size. A pawn (scale 1) is unchanged. */
+function bleedSizeScale(partDef: { maxHp: number } | undefined, maxHp: number): number {
+  return partDef && partDef.maxHp > 0 ? maxHp / partDef.maxHp : 1;
+}
 /** How many successful clot rolls a wound needs before it fully stops bleeding, by severity. Each stage
  *  cuts the bleed proportionally (serious at 1/2 clots → half bleed). */
 function clotsNeeded(severity: Injury['severity']): number {
@@ -173,6 +182,7 @@ export function recomputeWound(
               : (wd?.bleedMod ?? 0)) *
             frac *
             remaining *
+            bleedSizeScale(partDef, maxHp) *
             100
         ) / 100
       : 0,
@@ -214,7 +224,15 @@ export function recomputeWoundInPlace(
       ? Math.max(wd?.bleedMod ?? 0, SEVERED_STUMP_BLEED_MOD)
       : (wd?.bleedMod ?? 0);
   w.bleeding = partDef
-    ? Math.round(partDef.bleedRatio * BLEED_CONSTANT * effBleedMod * frac * remaining * 100) / 100
+    ? Math.round(
+        partDef.bleedRatio *
+          BLEED_CONSTANT *
+          effBleedMod *
+          frac *
+          remaining *
+          bleedSizeScale(partDef, maxHp) *
+          100
+      ) / 100
     : 0;
   w.painContribution =
     Math.round(accumDamage * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10) / 10;
