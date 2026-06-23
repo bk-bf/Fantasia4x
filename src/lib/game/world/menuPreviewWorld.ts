@@ -181,7 +181,10 @@ function ringPoints(c: Vec2, radius: number, n: number): Vec2[] {
 function seedPreviewGroves(world: WorldTile[][]): Vec2[] {
   const h = world.length;
   const w = world[0]?.length ?? 0;
-  const centre: Vec2 = { x: w / 2, y: h / 2 };
+  // True grid centre in TILE-INDEX space: tile i renders centred at pixel (i+0.5)·tileSize, so the index
+  // that lands on the on-screen centre is (w-1)/2 — NOT w/2 (that's half a tile right). With the odd map
+  // width (see MENU_PREVIEW_MAP), (w-1)/2 is an exact integer, so the ring centres on a real column.
+  const centre: Vec2 = { x: (w - 1) / 2, y: (h - 1) / 2 };
   const radius = Math.min(w, h) * RING_RADIUS_FRAC;
   return ringPoints(centre, radius, PREVIEW_GROVE_COUNT).filter((p) => {
     const t = world[p.y]?.[p.x];

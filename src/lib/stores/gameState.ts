@@ -642,8 +642,9 @@ function restoreWorld(snapshot: GameState) {
 /** Fixed, curated seed so the title-screen world looks the same every launch. */
 const MENU_PREVIEW_SEED = 4051283263;
 /** Small world (cheap to build + seed) — big enough that the cover-fit zoom-out floor overflows the
- *  viewport for an atmospheric, slightly-oversized framing. NOT the player's Custom Map size. */
-const MENU_PREVIEW_MAP = { w: 160, h: 100 };
+ *  viewport for an atmospheric, slightly-oversized framing. NOT the player's Custom Map size. Width is
+ *  ODD so the map has an exact centre column — the magical-tree ring then centres on a real tile. */
+const MENU_PREVIEW_MAP = { w: 161, h: 100 };
 
 /**
  * Boot the main-menu backdrop: a live but gutted preview of the game world that renders behind the
