@@ -140,3 +140,7 @@ export const autosaveEnabled = createPersistedBool('fx.gameplay.autosave', true)
 
 /** Gameplay — simulation speed a freshly-started game runs at once unpaused (1×/2×/4×). Persisted. */
 export const defaultGameSpeed = createPersistedNumber('fx.gameplay.defaultSpeed', 1);
+
+/** Controls — pan the map camera with WASD, in ADDITION to the arrow keys + mouse-drag (never instead
+ *  of them). ON by default; persisted. Gates only the WASD branch of GameCanvas.handleKeyDown. */
+export const wasdPan = createPersistedBool('fx.controls.wasdPan', true);

@@ -21,7 +21,8 @@
     hideSidebars,
     autosaveEnabled,
     defaultGameSpeed,
-    debugMode
+    debugMode,
+    wasdPan
   } from '$lib/stores/uiPrefs';
 
   let { onClose }: { onClose: () => void } = $props();
@@ -120,6 +121,15 @@
         label="Cinematic layout"
         checked={$hideSidebars}
         onToggle={hideSidebars.toggle}
+      />
+
+      <div class="section">Controls</div>
+      <SettingRow
+        type="checkbox"
+        label="WASD camera panning"
+        sub="— alongside arrow keys"
+        checked={$wasdPan}
+        onToggle={wasdPan.toggle}
       />
 
       <div class="section">Gameplay</div>

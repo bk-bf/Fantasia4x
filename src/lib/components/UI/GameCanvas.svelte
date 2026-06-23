@@ -3,6 +3,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { browser } from '$app/environment';
+  import { wasdPan } from '$lib/stores/uiPrefs';
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
   import {
     applyTileToGrid,
@@ -2873,6 +2874,32 @@
 
   function handleKeyDown(e: KeyboardEvent) {
     if (!ready || menuPreview) return;
+
+    // WASD camera panning — ADDITIVE to the arrow keys below (toggleable in Settings → Controls, on by
+    // default; never replaces the arrows or mouse-drag). Skipped when a modifier is held so it can't eat
+    // a shortcut (Ctrl+S …); a focused text field never reaches here — this handler lives on the
+    // focusable canvas, not the window — so typing W/A/S/D in a search/seed box won't scroll the map.
+    if (get(wasdPan) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      switch (e.key.toLowerCase()) {
+        case 'a':
+          setView(viewX - SCROLL_STEP, viewY);
+          e.preventDefault();
+          return;
+        case 'd':
+          setView(viewX + SCROLL_STEP, viewY);
+          e.preventDefault();
+          return;
+        case 'w':
+          setView(viewX, viewY - SCROLL_STEP);
+          e.preventDefault();
+          return;
+        case 's':
+          setView(viewX, viewY + SCROLL_STEP);
+          e.preventDefault();
+          return;
+      }
+    }
+
     switch (e.key) {
       case 'ArrowLeft':
         setView(viewX - SCROLL_STEP, viewY);
