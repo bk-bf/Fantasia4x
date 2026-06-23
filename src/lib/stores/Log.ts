@@ -95,12 +95,11 @@ if (browser) {
 }
 
 /**
- * Reload the chronicle for the now-active save slot — called by the boot once a slot is picked (the
- * module-init load above runs on the menu, against the default slot 0). For a fresh slot this resets
- * the store to that slot's persisted history, or [] for a brand-new colony, so each save shows its own
- * chronicle rather than the previously-loaded one.
+ * Reload the chronicle for the now-active save — called by the boot once a save is chosen (the module-init
+ * load above runs on the menu, before any active save id is set). For a fresh colony there's no log under
+ * the new id, so this resets the store to [], so each save shows its own chronicle rather than a prior one.
  */
-export async function reloadActivityLogForActiveSlot(): Promise<void> {
+export async function reloadActivityLogForActiveSave(): Promise<void> {
   if (!browser) return;
   activityLog.set(await loadActivityLog());
 }

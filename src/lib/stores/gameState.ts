@@ -34,9 +34,18 @@ import {
 } from '$lib/game/world/menuPreviewWorld';
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
 import { entityService } from '$lib/game/services/EntityService';
-import { loadSave, scheduleSave, deleteSave, saveGameNow, setActiveSlot } from './saveManager';
+import {
+  loadSave,
+  scheduleSave,
+  deleteSave,
+  saveGameNow,
+  saveSnapshotNow,
+  setActiveSave,
+  mintActiveSave,
+  ensureActiveSave
+} from './saveManager';
 import { defaultGameSpeed } from './uiPrefs';
-import { clearActivityLog, reloadActivityLogForActiveSlot } from './Log';
+import { clearActivityLog, reloadActivityLogForActiveSave, activityLog } from './Log';
 import { applyDevWorld } from '$lib/game/dev/devWorld';
 import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
 import { clearTileDeltas } from '$lib/game/core/tileDeltas';
@@ -876,16 +885,17 @@ const bootMode = (): 'new' | 'load' => _bootMode;
 if (!MENU_ENABLED) _resolveBootGate();
 
 /**
- * Leave the main menu and boot the game. `'new'` starts a fresh colony (ignores any save, fresh
- * seed); `'load'` resumes the persisted save. Flips `appPhase` to `'game'` (mounting the loading
- * overlay) and releases the boot gate so savedStateReady proceeds. Idempotent — a second call no-ops
- * because the already-resolved gate can't re-trigger the one-shot loader.
+ * Leave the main menu and boot the game. `'new'` starts a fresh colony (ignores any save, fresh seed) and
+ * mints a fresh active save id to autosave into; `'load'` adopts `saveId` as the active save and resumes
+ * it from disk. Flips `appPhase` to `'game'` (mounting the loading overlay) and releases the boot gate so
+ * savedStateReady proceeds. Idempotent — a second call no-ops because the resolved gate can't re-trigger
+ * the one-shot loader. (The menu-bypass --debug/--profiler boot never calls this; loadSave() then resolves
+ * the active id to the most-recent save.)
  */
-function startGame(mode: 'new' | 'load', slot = 0) {
+function startGame(mode: 'new' | 'load', saveId?: string) {
   _bootMode = mode;
-  // The picked slot is where this run loads from and saves to (autosave + manual). Default 0 for the
-  // menu-bypass (debug/profiler) boot which doesn't go through the slot picker.
-  setActiveSlot(slot);
+  if (mode === 'load' && saveId) setActiveSave(saveId);
+  else mintActiveSave(); // fresh colony → its own autosave snapshot
   // Tear down the menu backdrop: unmount it now, and freeze the preview worker so it stops emitting
   // (still-unsaved) snapshots during the gap before savedStateReady re-inits it into the real sim.
   menuPreviewReady.set(false);
@@ -895,11 +905,20 @@ function startGame(mode: 'new' | 'load', slot = 0) {
 }
 
 /**
- * Flush the current game state to disk immediately (pause menu "Save Game" / exit). The sim already
- * auto-saves debounced every tick; this guarantees an eager write the player can rely on. Resolves
- * when the IndexedDB write completes.
+ * Pause-menu "Save Game" — write a NEW frozen snapshot (timestamped checkpoint). Unlike autosave, this
+ * never overwrites the active save, so manual saves accumulate as an open list of restore points. Captures
+ * the current chronicle alongside. Resolves when the IndexedDB write completes.
  */
-function saveGame(): Promise<void> {
+async function saveGame(): Promise<void> {
+  await saveSnapshotNow(get(gameState) as GameState, get(activityLog));
+}
+
+/**
+ * One-shot eager flush of the ACTIVE save (exit / quit / return-to-menu), cancelling any pending debounced
+ * autosave. NOT a new snapshot and NOT gated by the autosave toggle — it's the safety write so progress
+ * isn't lost on the way out, mirroring the old exit-save behaviour.
+ */
+function flushSave(): Promise<void> {
   return saveGameNow(get(gameState) as GameState);
 }
 
@@ -911,7 +930,7 @@ function saveGame(): Promise<void> {
  * INTO the menu on demand (the Settings "Main Menu" button).
  */
 async function goToMainMenu(): Promise<void> {
-  await saveGame();
+  await flushSave();
   if (browser) {
     sessionStorage.setItem(FORCE_MENU_KEY, '1');
     location.reload();
@@ -1097,14 +1116,19 @@ export const savedStateReady: Promise<void> = (async () => {
   await bootGate;
   loadingStatus.set('Loading world…');
 
-  // `'new'` ignores any save and rolls a fresh seed so each new game differs; `'load'` resumes disk.
+  // `'new'` ignores any save and rolls a fresh seed so each new game differs; `'load'` resumes disk
+  // (loadSave with no active id — the --debug menu-bypass boot — resolves to the most-recent save).
   const savedState = bootMode() === 'new' ? null : await loadSave();
+  // Guarantee an autosave target even on a fresh --debug launch with an empty DB (no save loaded, and
+  // startGame — which mints one — was bypassed). No-op when New Game or a load already set the active id.
+  ensureActiveSave();
   let baseState = savedState ? applyMigrations(savedState) : initialGameState;
   if (bootMode() === 'new') baseState = { ...baseState, seed: freshSeed() };
 
-  // Load THIS slot's chronicle (the module-init load ran against the default slot on the menu). A
-  // fresh-colony slot resets it to []. Done before the sim starts so no stray entries cross slots.
-  await reloadActivityLogForActiveSlot();
+  // Load the active save's chronicle (the module-init load ran before a save was chosen). A fresh colony
+  // has no log under its new id, so this resets it to []. Done before the sim starts so no stray entries
+  // cross saves.
+  await reloadActivityLogForActiveSave();
 
   // P0-2/D7: reseed the sim RNG from the persisted seed so the run replays deterministically,
   // and clear module-level state (unreachable-job memory) carried over from a prior session.
@@ -1236,8 +1260,10 @@ export const gameState = {
   wipeAndReload,
   /** Leave the main menu and boot the game ('new' = fresh colony, 'load' = resume save). */
   startGame,
-  /** Pause menu: flush the current state to disk immediately (resolves on write). */
+  /** Pause menu "Save Game": write a new frozen snapshot (a timestamped checkpoint). */
   saveGame,
+  /** Eager flush of the active save on exit/quit (not a new snapshot; ungated by the autosave toggle). */
+  flushSave,
   /** Save and reload back to the main menu (forces the menu even under the menu-skipping --debug launch). */
   goToMainMenu,
   regenWorld,
