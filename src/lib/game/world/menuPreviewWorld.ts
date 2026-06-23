@@ -259,9 +259,9 @@ export function placeMenuPreviewMagicalGroves(
 /**
  * MM2 backdrop variant: plant 2× the magical trees scattered across the map in a jittered CHECKERBOARD
  * (every other grid cell, ± a fraction of a cell so they don't sit on a perfect lattice) — never gluing
- * together (cells are spaced well apart), and with an equal count of each species (cyclic over a shuffled
- * roster). Runs AFTER `generateResources`; placeSingleResource clears each target tile so it overwrites
- * any ordinary tree the scatter dropped there. Deterministic in the preview seed.
+ * together (cells are spaced well apart). Species are drawn from a balanced, SHUFFLED bag (equal count of
+ * each, MIXED across the map — not banded). Runs AFTER `generateResources`; placeSingleResource clears
+ * each target tile so it overwrites any ordinary tree the scatter dropped there. Deterministic in the seed.
  */
 export function placeMenuPreviewScatteredGroves(world: WorldTile[][], seed: number): void {
   const groves = magicalGroveDefs();
@@ -270,20 +270,30 @@ export function placeMenuPreviewScatteredGroves(world: WorldTile[][], seed: numb
   const w = world[0]?.length ?? 0;
   if (w === 0 || h === 0) return;
   const rand = makeSeededRng((seed ^ 0x2545f491) >>> 0);
-  // Balanced species: shuffle once, assign cyclically → equal counts (2×grove-count / species).
-  const order = [...groves];
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
-  }
   // Checkerboard grid over a central region: COLS×ROWS cells, half used ((c+r) even) ⇒ 2× the ring count.
   const COLS = 8;
   const ROWS = 6; // 8×6 = 48 cells → 24 checkerboard sites = 2 × PREVIEW_GROVE_COUNT
-  const x0 = 0.16 * w;
-  const y0 = 0.14 * h;
-  const cellW = (0.84 * w - x0) / COLS;
-  const cellH = (0.86 * h - y0) / ROWS;
-  const JIT = 0.32; // ± fraction of a cell — breaks the lattice without letting trees touch
+  const sites = Math.ceil((COLS * ROWS) / 2); // checkerboard cells actually planted (24)
+  // Balanced, SHUFFLED species bag sized to the SITES count: an equal share of each species, then
+  // Fisher-Yates so they're MIXED across the map (not banded into vertical stripes). Sizing the bag to
+  // `sites` (not all cells) is what keeps the counts exactly equal — 24 / 4 = 6 of each.
+  const bag: typeof groves = [];
+  const perSpecies = Math.floor(sites / groves.length);
+  for (const g of groves) for (let k = 0; k < perSpecies; k++) bag.push(g);
+  for (let i = 0; bag.length < sites; i++) bag.push(groves[i % groves.length]); // spread any remainder
+  for (let i = bag.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [bag[i], bag[j]] = [bag[j], bag[i]];
+  }
+  // Region is constrained to the on-screen window (the menu zooms 2× and shows only the central ~half of
+  // the map: ≈ x[0.25,0.75] × y[0.28,0.72]). Keeping every site inside it means all 24 trees are visible,
+  // so the equal species split actually shows — a wider region scattered half of them off-screen, which
+  // skewed the VISIBLE counts even though the data was balanced.
+  const x0 = 0.27 * w;
+  const y0 = 0.3 * h;
+  const cellW = (0.73 * w - x0) / COLS;
+  const cellH = (0.7 * h - y0) / ROWS;
+  const JIT = 0.28; // ± fraction of a cell — breaks the lattice without letting trees touch
   let placed = 0;
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
@@ -292,7 +302,7 @@ export function placeMenuPreviewScatteredGroves(world: WorldTile[][], seed: numb
       const y = Math.round(y0 + (r + 0.5) * cellH + (rand() * 2 - 1) * JIT * cellH);
       const tile = world[y]?.[x];
       if (!tile || WATER_SUBTYPES.has(tile.subType)) continue;
-      const def = order[placed % order.length];
+      const def = bag[placed];
       resourceGeneratorService.placeSingleResource(tile, def, (seed + placed * 2654435761) >>> 0);
       placed++;
     }

@@ -342,6 +342,9 @@ function hexToRgb01(hex?: string): [number, number, number] | null {
  * Overlays placed buildings and designations on top of terrain tiles.
  */
 const DIRT_BG = (SUBTERRAINS['dirt']?.bg ?? [0.08, 0.06, 0.03]) as [number, number, number];
+// Per-position salt added to the glyph hash for GLOWING (magical) groves only, so they pick different
+// sprites from their char range than the ordinary trees — bump this to reroll the magical-tree sprites.
+const GLOWING_GROVE_SPRITE_SALT = 53;
 
 /**
  * Paint ONE tile's terrain/resource/snow visual into the grid. Shared by buildGameGrid (full rebuild)
@@ -392,7 +395,11 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
     }
     const resDef = resKey ? resourceObjectService.getById(resKey) : undefined;
     if (resDef && resDef.chars.length > 0) {
-      const h = ((tile.x * 1619 + tile.y * 31337) >>> 0) % resDef.chars.length;
+      // Glyph is picked by tile position from the def's char range. Glowing (magical) groves add a salt
+      // so they draw DIFFERENT glyphs from the same range than the ordinary trees would — bump
+      // GLOWING_GROVE_SPRITE_SALT to reroll the magical-tree sprites without touching normal trees.
+      const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;
+      const h = ((tile.x * 1619 + tile.y * 31337 + salt) >>> 0) % resDef.chars.length;
       char = resDef.chars[h];
       fg = [resDef.fg[0] * brightness, resDef.fg[1] * brightness, resDef.fg[2] * brightness];
       // Background ALWAYS from the subterrain (a resource is a glyph over uniform terrain) — using

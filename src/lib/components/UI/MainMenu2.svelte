@@ -110,7 +110,10 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     margin: 0;
-    text-shadow: 0 0 28px rgba(240, 136, 40, 0.35);
+    /* Warm glow + a soft dark drop-shadow underneath so the wordmark lifts off the busy map. */
+    text-shadow:
+      0 0 28px rgba(240, 136, 40, 0.35),
+      0 6px 16px rgba(0, 0, 0, 0.75);
   }
 
   .subtitle {
@@ -118,18 +121,19 @@
     font-family: var(--font-display); /* same engraved serif as the FANTASIA wordmark */
     font-size: clamp(18px, 2vw, 30px);
     letter-spacing: 0.1em;
+    /* Dark drop-shadow underneath plus a tight halo for legibility over the map. */
     text-shadow:
+      0 3px 8px rgba(0, 0, 0, 0.8),
       0 1px 2px rgba(0, 0, 0, 0.95),
-      0 0 6px rgba(0, 0, 0, 0.9),
-      0 0 14px rgba(0, 0, 0, 0.75);
+      0 0 6px rgba(0, 0, 0, 0.9);
   }
 
-  /* Version + tileset credit, in the cursive script (kept), now sized up to match the larger block. */
+  /* Version + tileset credit, in the cursive script (kept) — kept small, a disclaimer never the slogan. */
   .credit-line {
     font-family: var(--font-script);
     font-weight: 600;
     color: var(--text);
-    font-size: clamp(15px, 1.5vw, 22px);
+    font-size: clamp(13px, 1.15vw, 17px);
     letter-spacing: 0.04em;
     text-shadow:
       0 1px 2px rgba(0, 0, 0, 0.95),
