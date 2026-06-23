@@ -8,34 +8,12 @@
 // Read the on-screen "NNFPS · NNTPS" counter (top controls bar) and compare to your Zen number.
 const { app, BrowserWindow, session, shell } = require('electron');
 
-// ── TEMPORARY DIAGNOSTIC: hunt the stray-tab opener ──────────────────────────────────────────────
-// Suppress ALL external opening (no tab can open from this process) AND log every attempt with a
-// stack trace, so we can see exactly what calls it. Remove this whole block once the cause is found.
-const _diag = (m) => {
-  try {
-    require('fs').appendFileSync(
-      require('path').join(require('os').homedir(), '.cache/f4x-electron-diag.log'),
-      `[${new Date().toISOString()}] ${m}\n`
-    );
-  } catch {
-    /* ignore */
-  }
-};
-try {
-  Object.defineProperty(shell, 'openExternal', {
-    configurable: true,
-    writable: true,
-    value: (url) => {
-      _diag(`shell.openExternal SUPPRESSED url=${url}\n  ${new Error().stack.split('\n').slice(2, 7).join('\n  ')}`);
-      return Promise.resolve(false);
-    }
-  });
-  _diag('=== main start; openExternal patched + SUPPRESSED ===');
-} catch (e) {
-  _diag('FAILED to patch openExternal: ' + e);
-}
-
-const URL = process.env.SPIKE_URL || 'http://localhost:5173';
+// NOTE: do NOT name this `URL` — that shadows the global WHATWG `URL` constructor for the whole module,
+// making every `new URL(...)` below throw "URL is not a constructor". That bug silently broke the
+// navigation hardening (every origin check fell into its catch and returned false), so the shell punted
+// its OWN dev-server URL out to the OS browser — a stray Zen tab on every HMR reload / "Exit to Main
+// Menu" reload. Keep it `APP_URL`.
+const APP_URL = process.env.SPIKE_URL || 'http://localhost:5173';
 
 // The dev/preview server (vite.config.ts SHELL_UA_MARKER guard) 403s any request that doesn't carry
 // this marker — so the game can't be opened in a plain browser tab. We append it to the default
@@ -82,29 +60,27 @@ function createWindow() {
   });
 
   // ── Navigation hardening: the engine-level guarantee that the Chromium webview is NEVER exposed ──
-  // This is a GAME, not a browser. No in-app window may ever be spawned, and the window must never
-  // navigate away from the app's own origin (a stray link, a dropped file, window.open…). Anything
-  // that genuinely wants the web (an external credit/support URL) is handed to the OS's default
-  // browser via shell.openExternal — it opens out there, not in our Chromium shell.
-  // The shell only ever hosts ONE origin: the app's own dev/prod server (URL). Judge "is this the
-  // app's origin?" against THAT fixed origin — never against win.webContents.getURL(), which goes
-  // opaque/error during a dev-server restart or HMR reconnect. The old getURL()-based check misfired
-  // exactly then: a same-origin reload to http://localhost:<port>/ was misread as foreign and punted
-  // to the OS browser (shell.openExternal), spawning a stray Zen tab on every HMR/restart. Compare to
-  // the stable APP_ORIGIN so the app's own reloads are always recognised as in-app.
-  // localhost / 127.0.0.1 / ::1 are the SAME server but DIFFERENT URL origins. Vite (`--host`), HMR,
-  // and redirects freely surface either alias, so comparing raw origins punted the app's own
-  // 127.0.0.1 reload out to the OS browser when it had loaded as localhost (and vice-versa in the
-  // sandboxed run). Treat any loopback host on the app's port+protocol as in-app.
+  // This is a GAME, not a browser. The window must never navigate away from the app, and no local URL
+  // may ever leak to the OS browser. We FAIL CLOSED: a URL is opened externally ONLY if it is a
+  // genuinely external (non-loopback, non-app) http(s) URL. Anything loopback — the app itself, the dev
+  // server under any alias/port, HMR, Vite tooling — stays in-app, full stop. (localhost / 127.0.0.1 /
+  // ::1 are the same server but different URL origins, and Vite/HMR/reloads surface any of them.)
   const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]']);
   const APP = (() => {
     try {
-      const u = new URL(URL);
+      const u = new URL(APP_URL);
       return { origin: u.origin, port: u.port, protocol: u.protocol, loopback: LOOPBACK_HOSTS.has(u.hostname) };
     } catch {
       return null;
     }
   })();
+  const isLoopbackUrl = (u) => {
+    try {
+      return LOOPBACK_HOSTS.has(new URL(u).hostname);
+    } catch {
+      return false;
+    }
+  };
   const isAppOrigin = (u) => {
     if (!APP) return false;
     try {
@@ -116,54 +92,30 @@ function createWindow() {
       return false;
     }
   };
-  const isLoopbackUrl = (u) => {
-    try {
-      return LOOPBACK_HOSTS.has(new URL(u).hostname);
-    } catch {
-      return false;
-    }
-  };
-  // FAIL CLOSED: only ever hand a GENUINELY EXTERNAL (non-loopback, non-app) http(s) URL to the OS
-  // browser. Any loopback URL — the app itself, the dev server under any alias/port, HMR, Vite
-  // tooling — is NEVER punted, even if the origin-string match misfires. This is what stops the
-  // recurring "stray Zen tab at http://127.0.0.1:<port>/" for good: a local URL can no longer leak
-  // out, full stop. (A game shell has no legitimate reason to open localhost in your browser.)
   const shouldOpenExternal = (url) =>
     /^https?:\/\//i.test(url) && !isLoopbackUrl(url) && !isAppOrigin(url);
-  _diag(`createWindow: URL=${URL}  APP=${JSON.stringify(APP)}`);
+
   win.webContents.setWindowOpenHandler(({ url }) => {
-    _diag(`windowOpenHandler: url=${url} should=${shouldOpenExternal(url)} loop=${isLoopbackUrl(url)} app=${isAppOrigin(url)}`);
     if (shouldOpenExternal(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (e, url) => {
-    _diag(`will-navigate: url=${url} loop=${isLoopbackUrl(url)} app=${isAppOrigin(url)}`);
     if (isAppOrigin(url) || isLoopbackUrl(url)) return; // app / local dev — allow, never punt
     e.preventDefault(); // never let the window navigate away from the app
     if (shouldOpenExternal(url)) shell.openExternal(url);
   });
   // Belt-and-suspenders: refuse cross-origin redirects (covers iframes/subframes). Loopback is in-app.
   win.webContents.on('will-redirect', (e, url) => {
-    _diag(`will-redirect: url=${url} loop=${isLoopbackUrl(url)} app=${isAppOrigin(url)}`);
     if (!isAppOrigin(url) && !isLoopbackUrl(url)) e.preventDefault();
-  });
-  // Catch any other path that might surface a new window / external open.
-  app.on('web-contents-created', (_e, wc) => {
-    wc.setWindowOpenHandler(({ url }) => {
-      _diag(`web-contents-created.windowOpenHandler: url=${url}`);
-      if (shouldOpenExternal(url)) shell.openExternal(url);
-      return { action: 'deny' };
-    });
   });
 
   win.webContents.setUserAgent(shellUA);
-  const load = () => win.loadURL(URL, { userAgent: shellUA });
+  const load = () => win.loadURL(APP_URL, { userAgent: shellUA });
   load();
 
   // Dev server may not be up yet / may restart — retry instead of showing Chromium's error page.
-  win.webContents.on('did-fail-load', (_e, code, desc, validatedURL) => {
-    _diag(`did-fail-load: code=${code} desc=${desc} url=${validatedURL}`);
-    console.warn(`load failed (${code} ${desc}) — retrying ${URL} in 1s`);
+  win.webContents.on('did-fail-load', (_e, code, desc) => {
+    console.warn(`load failed (${code} ${desc}) — retrying ${APP_URL} in 1s`);
     setTimeout(load, 1000);
   });
 
