@@ -117,6 +117,8 @@
     display: flex;
     align-items: baseline;
     gap: 8px;
+    /* Leave room for the absolutely-positioned ✕ (top-right) so the right-aligned badge can't clip it. */
+    padding-right: 22px;
   }
   .race {
     color: var(--accent-hi);
