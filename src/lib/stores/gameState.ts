@@ -40,6 +40,7 @@ import {
   deleteSave,
   saveGameNow,
   saveSnapshotNow,
+  overwriteSnapshotNow,
   setActiveSave,
   mintActiveSave,
   ensureActiveSave
@@ -914,6 +915,14 @@ async function saveGame(): Promise<void> {
 }
 
 /**
+ * Pause-menu "Save Game" → overwrite an EXISTING save the player picked, replacing it with the current
+ * state + chronicle (keeps its id, re-stamps the time). The alternative to saveGame()'s new snapshot.
+ */
+async function overwriteSave(id: string): Promise<void> {
+  await overwriteSnapshotNow(id, get(gameState) as GameState, get(activityLog));
+}
+
+/**
  * One-shot eager flush of the ACTIVE save (exit / quit / return-to-menu), cancelling any pending debounced
  * autosave. NOT a new snapshot and NOT gated by the autosave toggle — it's the safety write so progress
  * isn't lost on the way out, mirroring the old exit-save behaviour.
@@ -1260,8 +1269,10 @@ export const gameState = {
   wipeAndReload,
   /** Leave the main menu and boot the game ('new' = fresh colony, 'load' = resume save). */
   startGame,
-  /** Pause menu "Save Game": write a new frozen snapshot (a timestamped checkpoint). */
+  /** Pause menu "Save Game" → New Save: write a new frozen snapshot (a timestamped checkpoint). */
   saveGame,
+  /** Pause menu "Save Game" → overwrite a picked existing save in place (keeps its id). */
+  overwriteSave,
   /** Eager flush of the active save on exit/quit (not a new snapshot; ungated by the autosave toggle). */
   flushSave,
   /** Save and reload back to the main menu (forces the menu even under the menu-skipping --debug launch). */

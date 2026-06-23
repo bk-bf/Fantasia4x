@@ -1,22 +1,31 @@
 <!--
-  SaveListRow — one row in the SaveListMenu. Clicking the row loads that save; the corner ✕ deletes it
-  (two-step confirm). Shows the colony summary, an Auto/Manual badge (which kind of save wrote it last),
-  and the date+time it was taken.
+  SaveListRow — one row in the SaveListMenu. In LOAD mode, clicking the row loads that save. In SAVE mode,
+  clicking it OVERWRITES that save with the current game (two-step "Overwrite?" confirm, since it replaces a
+  checkpoint). The corner ✕ deletes the save (its own confirm), available in both modes. Shows the colony
+  summary, an Auto/Manual badge (which kind of save wrote it last), and the date+time it was taken.
 -->
 <script lang="ts">
   import type { SaveEntry } from '$lib/stores/saveManager';
 
   let {
     save,
-    onLoad,
+    mode = 'load',
+    onActivate,
     onDelete
   }: {
     save: SaveEntry;
-    onLoad: () => void;
+    mode?: 'load' | 'save';
+    onActivate: () => void; // load (load mode) or overwrite (save mode)
     onDelete: () => void;
   } = $props();
 
-  let confirming = $state(false);
+  // Only one inline confirm is shown at a time.
+  let confirm = $state<'none' | 'delete' | 'overwrite'>('none');
+
+  function activate() {
+    if (mode === 'save') confirm = 'overwrite';
+    else onActivate();
+  }
 
   const seasonCap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   function fmtWhen(ms: number): string {
@@ -31,7 +40,7 @@
 </script>
 
 <div class="row">
-  <button class="main" onclick={onLoad}>
+  <button class="main" onclick={activate}>
     <div class="top">
       <span class="race">{save.meta.raceName}</span>
       <span class="badge" class:auto={save.meta.kind === 'auto'}>
@@ -47,20 +56,32 @@
     <div class="when">{fmtWhen(save.meta.savedAt)}</div>
   </button>
 
-  {#if confirming}
+  {#if confirm === 'overwrite'}
+    <div class="confirm">
+      <span>Overwrite?</span>
+      <button
+        class="cbtn yes"
+        onclick={() => {
+          confirm = 'none';
+          onActivate();
+        }}>Yes</button
+      >
+      <button class="cbtn" onclick={() => (confirm = 'none')}>No</button>
+    </div>
+  {:else if confirm === 'delete'}
     <div class="confirm">
       <span>Delete?</span>
       <button
         class="cbtn yes"
         onclick={() => {
-          confirming = false;
+          confirm = 'none';
           onDelete();
         }}>Yes</button
       >
-      <button class="cbtn" onclick={() => (confirming = false)}>No</button>
+      <button class="cbtn" onclick={() => (confirm = 'none')}>No</button>
     </div>
   {:else}
-    <button class="del" aria-label="Delete save" onclick={() => (confirming = true)}>✕</button>
+    <button class="del" aria-label="Delete save" onclick={() => (confirm = 'delete')}>✕</button>
   {/if}
 </div>
 

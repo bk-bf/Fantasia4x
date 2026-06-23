@@ -243,11 +243,15 @@
     color: var(--accent-hi);
   }
   /* .body is the ScrollArea viewport (overflow + auto-hiding bar live in ScrollArea); here we only
-     size it and lay out its sections. :global because the element lives in ScrollArea's scope. */
+     size it and lay out its sections. :global because the element lives in ScrollArea's scope.
+     Bleed it into the panel's right padding so the scrollbar rides the panel edge, then re-pad the
+     content the same amount — otherwise the bar crowds the right-aligned checkboxes. */
   .settings-panel :global(.body) {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    margin-right: -18px;
+    padding-right: 10px;
   }
   .section {
     color: var(--accent-hi);

@@ -3,9 +3,9 @@
   the existing blueprint/designation/panel cancels), closed by Resume or ESC again. The game is
   paused while it's up (+page restores the prior pause state on resume).
 
-  Entries: Resume · Save Game (writes a new snapshot, with a transient confirmation) · Load Game (opens
-  the save list) · Settings (inline toggles, mirroring the title menu) · Exit to Main Menu (flush → reload
-  to the title) · Quit to Desktop (flush → close the window; desktop shell only).
+  Entries: Resume · Save Game (opens the save picker — New Save or overwrite an existing one; flashes a
+  transient confirmation) · Load Game (opens the save list) · Settings (inline toggles, mirroring the title
+  menu) · Exit to Main Menu (flush → reload to the title) · Quit to Desktop (flush → close; desktop only).
 -->
 <script lang="ts">
   import { fade, scale } from 'svelte/transition';
@@ -17,13 +17,14 @@
 
   let showSettings = $state(false);
   let showLoad = $state(false);
+  let showSave = $state(false);
   let saved = $state(false);
   let busy = $state(false);
   const isDesktop = typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent ?? '');
 
-  async function saveGame() {
-    if (busy) return;
-    await gameState.saveGame();
+  // The save picker (SaveListMenu, save mode) handles New Save vs overwrite, then calls back here so the
+  // button flashes confirmation.
+  function onSaved() {
     saved = true;
     setTimeout(() => (saved = false), 1600);
   }
@@ -50,7 +51,7 @@
 
     <nav class="menu">
       <button class="menu-btn" onclick={onResume}>Resume</button>
-      <button class="menu-btn" onclick={saveGame} disabled={busy}>
+      <button class="menu-btn" onclick={() => (showSave = true)} disabled={busy}>
         {saved ? 'Saved ✓' : 'Save Game'}
       </button>
       <button class="menu-btn" onclick={() => (showLoad = true)} disabled={busy}>Load Game</button>
@@ -64,6 +65,10 @@
     </nav>
   </div>
 </div>
+
+{#if showSave}
+  <SaveListMenu mode="save" {onSaved} onClose={() => (showSave = false)} />
+{/if}
 
 {#if showLoad}
   <SaveListMenu onClose={() => (showLoad = false)} />

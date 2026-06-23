@@ -410,10 +410,24 @@ export function saveGameNow(state: GameState): Promise<void> {
   });
 }
 
+/** Write the current state + chronicle as a manual snapshot under `id` (new or existing). Shared by the
+ *  "new snapshot" and "overwrite existing" paths so both stamp meta/log/state identically. */
+async function writeSnapshot(
+  id: string,
+  state: GameState,
+  chronicle?: ActivityLogEntry[]
+): Promise<void> {
+  idbPut(metaKey(id), buildMeta(state, 'manual')).catch(() => {});
+  if (chronicle && chronicle.length) idbPut(logKey(id), chronicle).catch(() => {});
+  await idbPut(saveKey(id), stripState(state)).catch((err) => {
+    console.warn('[SaveManager] Snapshot write failed:', err);
+  });
+}
+
 /**
- * Write a NEW frozen snapshot (the pause-menu "Save Game"). Mints a fresh id that does NOT become the
- * active save, so the snapshot is a permanent checkpoint while autosave keeps advancing the active save.
- * `chronicle` is captured alongside so the snapshot carries the history as it stood. Resolves to the new id.
+ * Write a NEW frozen snapshot (pause-menu "Save Game" → New Snapshot). Mints a fresh id that does NOT
+ * become the active save, so the snapshot is a permanent checkpoint while autosave keeps advancing the
+ * active save. `chronicle` is captured alongside so it carries the history as it stood. Resolves to the id.
  */
 export async function saveSnapshotNow(
   state: GameState,
@@ -421,12 +435,21 @@ export async function saveSnapshotNow(
 ): Promise<string> {
   if (!browser) return '';
   const id = newSaveId();
-  idbPut(metaKey(id), buildMeta(state, 'manual')).catch(() => {});
-  if (chronicle && chronicle.length) idbPut(logKey(id), chronicle).catch(() => {});
-  await idbPut(saveKey(id), stripState(state)).catch((err) => {
-    console.warn('[SaveManager] Snapshot write failed:', err);
-  });
+  await writeSnapshot(id, state, chronicle);
   return id;
+}
+
+/**
+ * Overwrite an EXISTING save in place (pause-menu "Save Game" → pick a save). Replaces its state, meta and
+ * chronicle and re-stamps savedAt, but keeps its id, so it stays the same list entry (re-sorted to newest).
+ */
+export async function overwriteSnapshotNow(
+  id: string,
+  state: GameState,
+  chronicle?: ActivityLogEntry[]
+): Promise<void> {
+  if (!browser) return;
+  await writeSnapshot(id, state, chronicle);
 }
 
 // ── activity-log (chronicle) persistence ─────────────────────────────────────

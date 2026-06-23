@@ -1,9 +1,11 @@
 <!--
-  SaveListMenu — the Load Game popup: a scrollable list of every save (autosave + manual snapshots),
-  newest first. Opened from the title screen (MainMenu) and the in-game ESC menu (PauseMenu). A row loads
-  on click; its ✕ deletes it (two-step confirm). New Game is a separate action (it doesn't pick from here),
-  so this popup is load/manage only. Reuses the modal scaffolding from SettingsModal (overlay + scrim +
-  <button> backdrop + Escape/✕ close).
+  SaveListMenu — the save picker: a scrollable list of every save (autosave + manual snapshots), newest
+  first. Two modes:
+    • 'load' (Load Game, from MainMenu/PauseMenu) — a row loads on click; its ✕ deletes it.
+    • 'save' (pause-menu "Save Game") — a "+ New Save" action writes a fresh snapshot; clicking a row
+      OVERWRITES that save with the current game (confirmed). Either way the popup closes and reports back.
+  New Game is a separate action (it doesn't pick from here). Reuses the modal scaffolding from SettingsModal
+  (overlay + scrim + <button> backdrop + Escape/✕ close).
 -->
 <script lang="ts">
   import { onMount } from 'svelte';
@@ -12,10 +14,15 @@
   import { listSaves, deleteSaveById, type SaveEntry } from '$lib/stores/saveManager';
   import SaveListRow from './SaveListRow.svelte';
 
-  let { onClose }: { onClose: () => void } = $props();
+  let {
+    onClose,
+    mode = 'load',
+    onSaved
+  }: { onClose: () => void; mode?: 'load' | 'save'; onSaved?: () => void } = $props();
 
   let saves = $state<SaveEntry[]>([]);
   let loaded = $state(false);
+  let busy = $state(false);
   async function refresh() {
     saves = await listSaves();
     loaded = true;
@@ -29,6 +36,22 @@
   async function del(id: string) {
     await deleteSaveById(id);
     await refresh();
+  }
+
+  // ── save mode ──
+  async function newSave() {
+    if (busy) return;
+    busy = true;
+    await gameState.saveGame();
+    onSaved?.();
+    onClose();
+  }
+  async function overwrite(id: string) {
+    if (busy) return;
+    busy = true;
+    await gameState.overwriteSave(id);
+    onSaved?.();
+    onClose();
   }
 
   function onKey(e: KeyboardEvent) {
@@ -52,18 +75,34 @@
     transition:scale={{ duration: 140, start: 0.96 }}
   >
     <div class="hdr">
-      <h2 class="title">Load Game</h2>
+      <h2 class="title">{mode === 'save' ? 'Save Game' : 'Load Game'}</h2>
       <button class="close" aria-label="Close" onclick={onClose}>✕</button>
     </div>
+
+    {#if mode === 'save'}
+      <button class="new-save" onclick={newSave} disabled={busy}>+ New Save</button>
+    {/if}
 
     <div class="list">
       {#if !loaded}
         <div class="empty">Loading…</div>
       {:else if saves.length === 0}
-        <div class="empty">No saves yet — start a New Game, or Save Game from the pause menu.</div>
+        <div class="empty">
+          {mode === 'save'
+            ? 'No saves yet — use New Save above to make your first snapshot.'
+            : 'No saves yet — start a New Game, or Save Game from the pause menu.'}
+        </div>
       {:else}
+        {#if mode === 'save'}
+          <div class="hint">…or overwrite an existing save:</div>
+        {/if}
         {#each saves as save (save.id)}
-          <SaveListRow {save} onLoad={() => load(save.id)} onDelete={() => del(save.id)} />
+          <SaveListRow
+            {save}
+            {mode}
+            onActivate={() => (mode === 'save' ? overwrite(save.id) : load(save.id))}
+            onDelete={() => del(save.id)}
+          />
         {/each}
       {/if}
     </div>
@@ -126,6 +165,37 @@
   }
   .close:hover {
     color: var(--accent-hi);
+  }
+  /* Primary "new save" action — reads as the recommended path; sits above the overwrite list. */
+  .new-save {
+    width: 100%;
+    margin-bottom: 12px;
+    padding: 10px 0;
+    background: var(--bg);
+    border: 1px solid var(--accent-hi);
+    color: var(--accent-hi);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+      background 0.12s,
+      color 0.12s;
+  }
+  .new-save:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+  .new-save:disabled {
+    color: var(--text-muted);
+    border-color: var(--border);
+    cursor: default;
+  }
+  .hint {
+    color: var(--text-muted);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
   }
   .list {
     display: flex;
