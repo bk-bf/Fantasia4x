@@ -82,16 +82,24 @@
     padding: 8px 6px;
     background: var(--bg);
     border: 1px solid var(--border);
+    border-radius: 7px;
     color: var(--text);
     font-family: var(--font-mono);
     cursor: pointer;
+    /* Soft drop shadow lifts each card off the panel so it reads as a raised tile, not a box drawn
+       inside another box. */
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.45);
     transition:
       background 0.12s,
-      border-color 0.12s;
+      border-color 0.12s,
+      box-shadow 0.12s,
+      transform 0.12s;
   }
   .main:hover {
     background: var(--bg-hover);
     border-color: var(--border-hi);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55);
+    transform: translateY(-1px);
   }
   .slot-no {
     color: var(--text-muted);
@@ -158,6 +166,7 @@
     gap: 6px;
     padding: 5px;
     background: rgba(6, 4, 2, 0.92);
+    border-radius: 0 0 7px 7px; /* match the card's rounded bottom corners */
     font-size: 10px;
     color: var(--text);
   }
