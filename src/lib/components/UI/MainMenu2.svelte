@@ -47,9 +47,13 @@
     <MenuPreviewBackdrop />
   {/if}
 
+  <!-- Warm "reverse shadow" glow radiating from the upper-left logo out into the map (matches the
+       original menu's ward-glow, repositioned to the corner the wordmark now lives in). -->
+  <div class="glow" aria-hidden="true"></div>
+
   <div class="content">
     <h1 class="title">FANTASIA</h1>
-    <div class="subtitle">— a 4X colony chronicle —</div>
+    <div class="subtitle">a 4X colony chronicle</div>
     <div class="credit-line">alpha 0.1.0 · tileset: Bitlands by DragonDePlatino</div>
 
     <nav class="menu">
@@ -86,6 +90,20 @@
     background: var(--bg);
     font-family: var(--font-mono);
     overflow: hidden;
+  }
+
+  /* Warm ward-glow bleeding from the upper-left (the logo) into the map — a soft "reverse shadow". Sits
+     above the backdrop (DOM order) but below .content (z-index 1), so the text stays crisp over it. */
+  .glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      circle at 24% 17%,
+      rgba(240, 136, 40, 0.1) 0%,
+      rgba(240, 136, 40, 0.035) 24%,
+      transparent 52%
+    );
   }
 
   /* Everything hugs the upper-left: huge wordmark in the corner, text + buttons left-aligned beneath. */
