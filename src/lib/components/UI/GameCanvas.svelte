@@ -866,6 +866,11 @@
     lines.push(
       `${selectedResourceTile.resourceId.replace(/_/g, ' ')} — ×${selectedResourceAmount} nodes`
     );
+    // Single-type Shift+drag feedback: how many tiles the mark covers (the HARVEST/CUT button below
+    // already applies to all of them via designateResource). Multi-type uses its own card instead.
+    if (selectedResourceTypes.size <= 1 && highlightedResourceTiles.size > 0) {
+      lines.push(`◈ ${highlightedResourceTiles.size} tiles marked — Shift+drag adds more`);
+    }
     // Harvestable items become stylised, item-coloured pills (hover → item card). Suppressed while
     // a designation is already queued — the status line covers that. Dedupe by itemId across
     // interactions, widening the quantity range to cover every interaction that yields it.
@@ -919,6 +924,32 @@
       dismissable: true,
       lines,
       itemPills,
+      buttons: btns
+    } satisfies SelectedEntityModel;
+  })();
+
+  // Multi-type resource MARK card — shown once 2+ resource KINDS are Shift-selected. Reuses the shared
+  // SelectedEntityCard (names + marked-tile count); DESIGNATE queues every marked tile with its own
+  // resource's designation type (grouped) in one press, so a mixed tree/stone/berry selection is marked
+  // for woodcut/harvest/forage at once. Takes priority over the single-resource card below.
+  $: multiResourceCard = ((): SelectedEntityModel | null => {
+    if (selectedResourceTypes.size < 2) return null;
+    const typeNames = [...selectedResourceTypes].map(
+      (id) => resourceObjectService.getById(id)?.displayName ?? id
+    );
+    const marked = highlightedResourceTiles.size;
+    const btns: EntityButton[] = [];
+    if (marked > 0) {
+      btns.push({ label: `DESIGNATE (${marked})`, onClick: () => designateMarkedMulti() });
+    }
+    btns.push({ label: 'CLEAR', onClick: () => clearResourceMark() });
+    return {
+      name: `${selectedResourceTypes.size} resource types`,
+      status: 'multiple targets',
+      selected: true,
+      dismissable: true,
+      note: marked > 0 ? `${marked} tiles marked` : 'Shift+drag a box to mark all of these',
+      lines: [typeNames.join(', ')],
       buttons: btns
     } satisfies SelectedEntityModel;
   })();
@@ -1057,15 +1088,20 @@
     return { label: 'barely passable', color: '#cc4444' };
   }
 
-  // ─── Selection system ─────────────────────────────────────────────────────
-  // Shift+drag to drag-select a rectangle; highlights entities inside.
-  let selDragActive = false;
+  // ─── Resource MARK selection (Shift) ──────────────────────────────────────
+  // Shift is a shortcut for the resource MARK tool: Shift+CLICK a resource adds its TYPE to the
+  // multi-select set (so you can stack "tree" + "stone outcrop" + "berry bush"); Shift+DRAG a box then
+  // marks every tile in it that holds ANY selected type. The marked tiles go into highlightedResourceTiles
+  // (shared with the single-resource MARK path), and the multi-resource card's DESIGNATE button queues
+  // each tile with its resource's own designation type (woodcut / harvest / forage …) in one press.
+  let selDragActive = false; // a Shift+drag mark-rectangle is in progress
   let selAnchorX = 0;
   let selAnchorY = 0;
   let selEndX = 0;
   let selEndY = 0;
-  // Committed selection rect (null = no selection)
-  let selRect: { x1: number; y1: number; x2: number; y2: number } | null = null;
+  // The set of resource type ids currently selected for marking (kebab ids — backend reference only,
+  // never rendered raw; the card routes through resourceObjectService.displayName).
+  let selectedResourceTypes = new Set<string>();
 
   const ZONE_META: Record<string, { label: string; color: string; desc: string }> = {
     stockpile: {
@@ -1085,44 +1121,6 @@
     construct: { label: 'CONSTRUCT', color: '#44aacc', desc: 'Construction site' }
   };
 
-  // Entities inside committed selRect
-  $: selPawns = selRect
-    ? pawns.filter(
-        (p) =>
-          p.position &&
-          p.position.x >= Math.min(selRect!.x1, selRect!.x2) &&
-          p.position.x <= Math.max(selRect!.x1, selRect!.x2) &&
-          p.position.y >= Math.min(selRect!.y1, selRect!.y2) &&
-          p.position.y <= Math.max(selRect!.y1, selRect!.y2)
-      )
-    : [];
-  $: selBuildings = selRect
-    ? buildings.filter(
-        (b) =>
-          b.x >= Math.min(selRect!.x1, selRect!.x2) &&
-          b.x <= Math.max(selRect!.x1, selRect!.x2) &&
-          b.y >= Math.min(selRect!.y1, selRect!.y2) &&
-          b.y <= Math.max(selRect!.y1, selRect!.y2)
-      )
-    : [];
-  $: selZones = (() => {
-    if (!selRect) return {} as Record<string, number>;
-    const minX = Math.min(selRect.x1, selRect.x2);
-    const maxX = Math.max(selRect.x1, selRect.x2);
-    const minY = Math.min(selRect.y1, selRect.y2);
-    const maxY = Math.max(selRect.y1, selRect.y2);
-    const counts: Record<string, number> = {};
-    const tally = (key: string, type: string) => {
-      const [x, y] = key.split(',').map(Number);
-      if (x >= minX && x <= maxX && y >= minY && y <= maxY) counts[type] = (counts[type] ?? 0) + 1;
-    };
-    for (const [key, type] of Object.entries(designations)) tally(key, type);
-    for (const [key, types] of Object.entries(zoneTiles)) for (const t of types) tally(key, t);
-    return counts;
-  })();
-  $: hasSelection =
-    selRect !== null &&
-    (selPawns.length > 0 || selBuildings.length > 0 || Object.keys(selZones).length > 0);
   // ──────────────────────────────────────────────────────────────────────────
 
   // Visual signature of the building set for terrain-rebuild change detection.
@@ -2162,29 +2160,43 @@
       ctx.restore();
     }
 
-    // Selection rectangle — both the live Shift+drag preview and the committed rect. Drawn on the
-    // 2D overlay (was a WebGL grid tint) so dragging/holding a selection never rebuilds terrain.
-    {
-      const sel = selDragActive
-        ? { x1: selAnchorX, y1: selAnchorY, x2: selEndX, y2: selEndY }
-        : selRect;
-      if (sel) {
-        const minX = Math.min(sel.x1, sel.x2);
-        const minY = Math.min(sel.y1, sel.y2);
-        const maxX = Math.max(sel.x1, sel.x2);
-        const maxY = Math.max(sel.y1, sel.y2);
-        const sx = (minX - viewX) * tileWidth;
-        const sy = (minY - viewY) * tileHeight;
-        const rw = (maxX - minX + 1) * tileWidth;
-        const rh = (maxY - minY + 1) * tileHeight;
-        ctx.save();
-        ctx.fillStyle = 'rgba(150, 190, 255, 0.22)';
-        ctx.fillRect(sx, sy, rw, rh);
-        ctx.strokeStyle = 'rgba(180, 210, 255, 0.95)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(sx + 0.5, sy + 0.5, rw - 1, rh - 1);
-        ctx.restore();
+    // Shift+drag resource-mark preview. A faint amber box shows the drag area; tiles inside it that hold
+    // a SELECTED resource type glow brighter (so you see exactly what the release will mark). Matching
+    // the "select similar" aesthetic. 2D overlay only — no WebGL terrain rebuild while dragging.
+    if (selDragActive) {
+      const minX = Math.min(selAnchorX, selEndX);
+      const minY = Math.min(selAnchorY, selEndY);
+      const maxX = Math.max(selAnchorX, selEndX);
+      const maxY = Math.max(selAnchorY, selEndY);
+      const types =
+        selectedResourceTypes.size > 0
+          ? selectedResourceTypes
+          : selectedResourceTile
+            ? new Set([selectedResourceTile.resourceId])
+            : new Set<string>();
+      const vx0 = Math.max(minX, viewX);
+      const vy0 = Math.max(minY, viewY);
+      const vx1 = Math.min(maxX, viewX + Math.ceil(W / tileWidth));
+      const vy1 = Math.min(maxY, viewY + Math.ceil(H / tileHeight));
+      ctx.save();
+      for (let ry = vy0; ry <= vy1; ry++) {
+        for (let rx = vx0; rx <= vx1; rx++) {
+          if (isHiddenTile(rx, ry)) continue;
+          const res = worldMap[ry]?.[rx]?.resources;
+          let match = false;
+          if (res) for (const t of types) if ((res[t] ?? 0) > 0) { match = true; break; }
+          ctx.fillStyle = match ? 'rgba(240, 208, 32, 0.42)' : 'rgba(240, 208, 32, 0.10)';
+          ctx.fillRect((rx - viewX) * tileWidth, (ry - viewY) * tileHeight, tileWidth, tileHeight);
+        }
       }
+      const sx = (minX - viewX) * tileWidth;
+      const sy = (minY - viewY) * tileHeight;
+      const rw = (maxX - minX + 1) * tileWidth;
+      const rh = (maxY - minY + 1) * tileHeight;
+      ctx.strokeStyle = 'rgba(255, 220, 120, 0.95)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(sx + 0.5, sy + 0.5, rw - 1, rh - 1);
+      ctx.restore();
     }
 
     // MARK highlight drag preview — an amber box; entities inside get highlighted on release.
@@ -2485,6 +2497,7 @@
     selectedResourceTile = null;
     selectedItemId = null;
     highlightedResourceTiles = new Set();
+    selectedResourceTypes = new Set();
     showShelterAssign = false;
     uiState.selectPawn(null);
     uiState.selectMob(null);
@@ -2508,6 +2521,8 @@
         break;
       case 'resource':
         selectedResourceTile = { x, y, resourceId: layer.resourceId };
+        // Seed the mark type-set with this resource, so a following Shift+drag marks all of its kind.
+        selectedResourceTypes = new Set([layer.resourceId]);
         break;
     }
   }
@@ -3071,6 +3086,7 @@
         } else if (selectedResourceTile) {
           selectedResourceTile = null;
           highlightedResourceTiles = new Set();
+          selectedResourceTypes = new Set();
           drawDesignations();
         } else if (selectedItemId) {
           selectedItemId = null;
@@ -3092,15 +3108,13 @@
           selectedPawnId ||
           cameraFollowPawnId ||
           cameraFollowMobId ||
-          selDragActive ||
-          selRect
+          selDragActive
         ) {
-          // An active zone/designation tool, a selected/followed pawn, or an in-progress drag-select.
+          // An active zone/designation tool, a selected/followed pawn, or an in-progress mark drag.
           uiState.deactivateDesignation();
           zoneEraseMode = false;
           zoneDragActive = false;
           selDragActive = false;
-          selRect = null;
           selectedPawnId = null;
           uiState.selectPawn(null);
           uiState.setFollowPawn(null);
@@ -3228,14 +3242,13 @@
       return;
     }
     if (e.shiftKey) {
-      // Shift+drag: start selection rectangle
+      // Shift = the resource MARK shortcut: begin a mark box (a no-drag release becomes a Shift+click
+      // that adds a resource type to the set; a drag marks every matching tile in the box).
       selDragActive = true;
       selAnchorX = hoverTileX;
       selAnchorY = hoverTileY;
       selEndX = hoverTileX;
       selEndY = hoverTileY;
-      // Clear previous committed rect while dragging
-      selRect = null;
       drawDesignations();
       return;
     }
@@ -3389,10 +3402,14 @@
       return;
     }
     if (selDragActive) {
-      // Commit selection
       selDragActive = false;
-      selRect = { x1: selAnchorX, y1: selAnchorY, x2: selEndX, y2: selEndY };
-      drawDesignations();
+      // A Shift+CLICK (no box) adds the resource under the tile to the mark type-set; a Shift+DRAG marks
+      // every matching tile in the box. Either way the multi-resource card then offers DESIGNATE.
+      if (selAnchorX === selEndX && selAnchorY === selEndY) {
+        shiftSelectResourceAt(selEndX, selEndY);
+      } else {
+        commitResourceMarkRect(selAnchorX, selAnchorY, selEndX, selEndY);
+      }
       return;
     }
     if (dragDistance < 3 && !customMapPreview && !menuPreview) {
@@ -3472,6 +3489,88 @@
       payload: { resourceId: selectedResourceTile.resourceId },
       save: true
     });
+    drawDesignations();
+  }
+
+  /** Shift+CLICK on a tile: add the top harvestable resource there to the mark type-set (and focus its
+   *  card), so several resource KINDS can be stacked before a Shift+drag marks them all at once. */
+  function shiftSelectResourceAt(x: number, y: number) {
+    if (isHiddenTile(x, y)) return;
+    const res = worldMap[y]?.[x]?.resources;
+    if (!res) return;
+    const rid = Object.entries(res).find(([id, v]) => {
+      if (v <= 0) return false;
+      const def = resourceObjectService.getById(id);
+      return !!def && def.designationTypes.length > 0; // harvestable only
+    })?.[0];
+    if (!rid) return;
+    selectedResourceTypes = new Set([...selectedResourceTypes, rid]);
+    selectedResourceTile = { x, y, resourceId: rid };
+    drawDesignations();
+  }
+
+  /** Shift+DRAG release: mark every tile in the box that holds ANY selected resource type. Additive, so
+   *  repeated drags accumulate; basis falls back to the single selected resource when the set is empty. */
+  function commitResourceMarkRect(x1: number, y1: number, x2: number, y2: number) {
+    const types =
+      selectedResourceTypes.size > 0
+        ? selectedResourceTypes
+        : selectedResourceTile
+          ? new Set([selectedResourceTile.resourceId])
+          : new Set<string>();
+    if (types.size === 0) return;
+    const minX = Math.min(x1, x2);
+    const maxX = Math.max(x1, x2);
+    const minY = Math.min(y1, y2);
+    const maxY = Math.max(y1, y2);
+    const next = new Set(highlightedResourceTiles);
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        if (isHiddenTile(x, y)) continue;
+        const res = worldMap[y]?.[x]?.resources;
+        if (!res) continue;
+        for (const t of types) {
+          if ((res[t] ?? 0) > 0) {
+            next.add(`${x},${y}`);
+            break;
+          }
+        }
+      }
+    }
+    highlightedResourceTiles = next;
+    drawDesignations();
+  }
+
+  /** DESIGNATE the multi-type marked tiles: each tile is queued with ITS resource's own designation type
+   *  (a tree → woodcut, a stone outcrop / berry bush → harvest …), grouped into one command per type. */
+  function designateMarkedMulti() {
+    if (highlightedResourceTiles.size === 0) return;
+    const byType = new Map<string, [number, number][]>();
+    for (const key of highlightedResourceTiles) {
+      const [x, y] = key.split(',').map(Number);
+      const res = worldMap[y]?.[x]?.resources ?? {};
+      let dtype: string | null = null;
+      for (const t of selectedResourceTypes) {
+        if ((res[t] ?? 0) > 0) {
+          dtype = resourceObjectService.getById(t)?.designationTypes[0] ?? null;
+          break;
+        }
+      }
+      if (!dtype) continue;
+      let bucket = byType.get(dtype);
+      if (!bucket) byType.set(dtype, (bucket = []));
+      bucket.push([x, y]);
+    }
+    for (const [type, tiles] of byType) {
+      gameState.command({ type: 'designateTiles', payload: { tiles, type }, save: true });
+    }
+    clearResourceMark();
+  }
+
+  /** Drop the marked tiles + the type-set (the multi-resource card's CLEAR; also Escape). */
+  function clearResourceMark() {
+    highlightedResourceTiles = new Set();
+    selectedResourceTypes = new Set();
     drawDesignations();
   }
 
@@ -3727,9 +3826,11 @@
     blueprintDragActive = false;
     blueprintDragTiles.clear();
     if (selDragActive) {
+      // Cursor left mid-drag → commit the mark box where it stands (only a real box, not a stray click).
       selDragActive = false;
-      selRect = { x1: selAnchorX, y1: selAnchorY, x2: selEndX, y2: selEndY };
-      drawDesignations();
+      if (selAnchorX !== selEndX || selAnchorY !== selEndY) {
+        commitResourceMarkRect(selAnchorX, selAnchorY, selEndX, selEndY);
+      }
     }
     hoverTileX = -1;
     hoverTileY = -1;
@@ -3988,9 +4089,9 @@
       {/if}
     </div>
   {:else if selDragActive}
-    <div class="designation-hud">
-      ◈ SELECTING ({Math.abs(selEndX - selAnchorX) + 1}×{Math.abs(selEndY - selAnchorY) + 1}) —
-      release to highlight
+    <div class="designation-hud" style:color="#ffd66a" style:border-color="#ffd66a">
+      [⊞ MARK RESOURCES] ({Math.abs(selEndX - selAnchorX) + 1}×{Math.abs(selEndY - selAnchorY) + 1}) —
+      release to mark every selected type in the box · Esc cancel
     </div>
   {:else if blueprintBuildingId}
     <div class="designation-hud">
@@ -4075,33 +4176,11 @@
     {:else if selectedItemCard}
       <!-- Click-locked dropped item card (from the tile click-cycle), above the hover/resource cards -->
       <SelectedEntityCard model={selectedItemCard} />
+    {:else if multiResourceCard}
+      <!-- Multi-type resource MARK summary (2+ Shift-selected kinds) — takes priority over the single. -->
+      <SelectedEntityCard model={multiResourceCard} />
     {:else if resourceCard}
       <SelectedEntityCard model={resourceCard} />
-    {:else if hasSelection}
-      <!-- Multi-tile drag-select summary -->
-      <div class="tile-hud tile-hud--selection">
-        <span class="sel-title">◈ SELECTION</span>
-        {#if selPawns.length > 0}
-          <div class="sel-row sel-pawns">
-            {selPawns.length} pawn{selPawns.length !== 1 ? 's' : ''}: {selPawns
-              .map((p) => p.name ?? p.id)
-              .join(', ')}
-          </div>
-        {/if}
-        {#if selBuildings.length > 0}
-          <div class="sel-row sel-buildings">
-            {selBuildings.length} building{selBuildings.length !== 1 ? 's' : ''}: {selBuildings
-              .map((b) => b.type)
-              .join(', ')}
-          </div>
-        {/if}
-        {#each Object.entries(selZones) as [type, count]}
-          <div class="sel-row" style="color:{ZONE_META[type]?.color ?? '#aaa'}">
-            {count}× {ZONE_META[type]?.label ?? type}
-          </div>
-        {/each}
-        <div class="sel-hint">Esc to clear</div>
-      </div>
     {:else if hoverPawnCard}
       <SelectedEntityCard model={hoverPawnCard} />
     {:else if hoverMobCard}
@@ -4432,31 +4511,6 @@
     filter: url(#ambient-tint);
   }
 
-  .tile-hud--selection {
-    white-space: normal;
-  }
-  .sel-title {
-    color: #c08040;
-    font-weight: bold;
-    margin-right: 5px;
-    display: block;
-    margin-bottom: 1px;
-  }
-  .sel-row {
-    font-size: 9px;
-    line-height: 1.4;
-  }
-  .sel-pawns {
-    color: #c8a060;
-  }
-  .sel-buildings {
-    color: #a08040;
-  }
-  .sel-hint {
-    color: #7a6030;
-    font-size: 9px;
-    margin-top: 2px;
-  }
   .tile-zone {
     font-size: 9px;
     margin-top: 1px;
