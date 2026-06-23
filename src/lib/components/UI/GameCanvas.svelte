@@ -866,18 +866,26 @@
     lines.push(
       `${selectedResourceTile.resourceId.replace(/_/g, ' ')} — ×${selectedResourceAmount} nodes`
     );
-    // MARK (select-similar) feedback: how many tiles are highlighted (the HARVEST/CUT button below
-    // applies to all of them via designateResource).
+    // The tiles this card acts on: the Shift-marked highlight if any, else just the selected node. The
+    // HARVEST and CANCEL buttons are derived over THIS set, so a mixed selection (some already marked
+    // for harvest, some not) gets BOTH — HARVEST marks the rest, CANCEL clears only the marked ones.
+    const tileKeys =
+      highlightedResourceTiles.size > 0
+        ? [...highlightedResourceTiles]
+        : [`${selectedResourceTile.x},${selectedResourceTile.y}`];
+    const designatedCount = tileKeys.filter((k) => designations[k]).length;
+    const anyDesignated = designatedCount > 0;
+    const allDesignated = designatedCount === tileKeys.length;
     if (highlightedResourceTiles.size > 0) {
-      lines.push(`◈ ${highlightedResourceTiles.size} tiles marked`);
+      lines.push(`◈ ${highlightedResourceTiles.size} tiles selected`);
     }
-    // Harvestable items become stylised, item-coloured pills (hover → item card). Suppressed while
-    // a designation is already queued — the status line covers that. Dedupe by itemId across
-    // interactions, widening the quantity range to cover every interaction that yields it.
+    if (anyDesignated) {
+      lines.push(`⊢ ${designatedCount}/${tileKeys.length} marked for harvest`);
+    }
+    // Harvestable items become stylised, item-coloured pills (hover → item card). Shown while there's
+    // still something to designate. Dedupe by itemId across interactions, widening the quantity range.
     const pillMap = new Map<string, { min: number; max: number }>();
-    if (selectedResourceDesignation) {
-      lines.push(`⊢ ${selectedResourceDesignation}…`);
-    } else {
+    if (!allDesignated) {
       for (const iact of activeInteractions) {
         for (const y of iact.yields) {
           if (y.max <= 0) continue;
@@ -894,9 +902,8 @@
       qty: min === max ? `×${max}` : `${min}–${max}`
     }));
     const btns: EntityButton[] = [];
-    if (selectedResourceDesignation) {
-      btns.push({ label: 'CANCEL ALL', onClick: cancelResourceDesignation });
-    } else {
+    // Designate buttons (HARVEST/CUT/…) while ANY tile in the selection is still unmarked.
+    if (!allDesignated) {
       for (const iact of activeInteractions) {
         const label = selectedResourceDef.lair
           ? 'DESTROY'
@@ -911,6 +918,10 @@
                   : 'HARVEST';
         btns.push({ label, onClick: () => designateResource(iact.designationType) });
       }
+    }
+    // CANCEL while ANY tile in the selection is marked — clears only those, never the whole type.
+    if (anyDesignated) {
+      btns.push({ label: 'CANCEL', onClick: cancelResourceDesignation });
     }
     btns.push({ label: 'MARK', onClick: startSimilarSelect });
     return {
@@ -3494,13 +3505,23 @@
 
   function cancelResourceDesignation() {
     if (!selectedResourceTile) return;
-    // Symmetric with MARK: clear every designated tile of this resource, not just the selected one,
-    // so a batch-marked resource cancels in full.
-    gameState.command({
-      type: 'clearDesignationsForResource',
-      payload: { resourceId: selectedResourceTile.resourceId },
-      save: true
-    });
+    // Cancel only what's selected: the highlighted (Shift-marked) tiles if any, else just the single
+    // selected node — NOT every tile of the resource type.
+    if (highlightedResourceTiles.size > 0) {
+      gameState.command({
+        type: 'clearDesignationTiles',
+        payload: {
+          tiles: [...highlightedResourceTiles].map(
+            (key) => key.split(',').map(Number) as [number, number]
+          )
+        },
+        save: true
+      });
+      highlightedResourceTiles = new Set();
+    } else {
+      const { x, y } = selectedResourceTile;
+      gameState.command({ type: 'clearDesignation', payload: { x, y }, save: true });
+    }
     drawDesignations();
   }
 
