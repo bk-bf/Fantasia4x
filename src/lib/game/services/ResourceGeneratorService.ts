@@ -30,10 +30,17 @@ class ResourceGeneratorServiceImpl {
    * Mutates the worldMap in-place to add resource amounts per tile.
    * Called once after generateWorld().
    * @param baseSeed  — the same seed used for world generation
+   * @param opts.exclude — resource ids the random scatter must NOT place (the menu preview excludes the
+   *   magical groves so its deliberately-placed ring is the SOLE source of them; real play omits this).
    */
-  generateResources(worldMap: WorldTile[][], baseSeed: number): void {
+  generateResources(
+    worldMap: WorldTile[][],
+    baseSeed: number,
+    opts?: { exclude?: ReadonlySet<string> }
+  ): void {
     const resourceSeed = (baseSeed * 7919) >>> 0;
-    const defs = resourceObjectService.getAll();
+    const all = resourceObjectService.getAll();
+    const defs = opts?.exclude ? all.filter((d) => !opts.exclude!.has(d.id)) : all;
     const rng = makeRng(resourceSeed);
 
     // Pass 1 — per-tile scatter for ordinary subterrains (trees, plants, surface stone, …).

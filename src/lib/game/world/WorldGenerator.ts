@@ -98,7 +98,12 @@ export function getTerraceNoise(
   return (Math.floor(normalized * steps) / steps) * 2.0 - 1.0;
 }
 
-export function generateWorld(width: number, height: number, seed = Date.now()): WorldTile[][] {
+export function generateWorld(
+  width: number,
+  height: number,
+  seed = Date.now(),
+  opts?: { skipResources?: boolean }
+): WorldTile[][] {
   const detailSeed = (seed * 6971) >>> 0;
 
   // Two independent noise instances — same API as simplex-noise v4
@@ -177,8 +182,10 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
   // Phase 5a: distribute base tile wetness outward from water (spider-web falloff).
   assignMoisture(world, detailNoise);
 
-  // Phase 5b: populate tile-level resource amounts
-  resourceGeneratorService.generateResources(world, seed);
+  // Phase 5b: populate tile-level resource amounts. Callers that need to control the scatter (e.g. the
+  // menu preview, which excludes the magical groves so only its deliberate ring exists) pass
+  // `skipResources` and run generateResources themselves.
+  if (!opts?.skipResources) resourceGeneratorService.generateResources(world, seed);
 
   return world;
 }

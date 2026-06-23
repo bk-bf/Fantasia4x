@@ -31,6 +31,7 @@ import { generateWorld } from '$lib/game/world/WorldGenerator';
 import {
   customizeMenuPreviewWorld,
   placeMenuPreviewMagicalGroves,
+  menuPreviewMagicalGroveIds,
   pickMenuPreviewClimate
 } from '$lib/game/world/menuPreviewWorld';
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
@@ -657,14 +658,22 @@ function startMenuPreview() {
   if (!browser || !USE_SIM_WORKER) return;
   rng.reseed(MENU_PREVIEW_SEED);
   resetUnreachableJobs();
-  const world = generateWorld(MENU_PREVIEW_MAP.w, MENU_PREVIEW_MAP.h, MENU_PREVIEW_SEED);
-  // Title-screen art direction: flatten the mountain, erase water, and carve extra forest groves (see
-  // module). Done BEFORE resource generation so ordinary trees populate the new grove (deep_grass)
-  // tiles, and BEFORE entity seeding so prey spawn on the reshaped land. Returns each grove's centre.
-  const groveCenters = customizeMenuPreviewWorld(world, MENU_PREVIEW_SEED);
-  resourceGeneratorService.generateResources(world, MENU_PREVIEW_SEED);
-  // …then drop a glowing magical grove into each carved grove (after the ordinary-tree scatter, so it
-  // isn't clobbered by it).
+  // `skipResources`: generateWorld normally scatters resources internally — but that pass can't exclude
+  // the magical groves, leaving stray ones off the deliberate ring. So the menu skips it and runs its
+  // OWN single excluded scatter below (otherwise the menu also double-generated resources).
+  const world = generateWorld(MENU_PREVIEW_MAP.w, MENU_PREVIEW_MAP.h, MENU_PREVIEW_SEED, {
+    skipResources: true
+  });
+  // Title-screen art direction: flatten the mountain, erase water, and compute the magical-tree ring (see
+  // module). Done BEFORE resource generation and entity seeding so prey spawn on the reshaped land.
+  const groveCenters = customizeMenuPreviewWorld(world);
+  // Exclude the magical groves from the RANDOM scatter so no stray ones spawn off the deliberate ring;
+  // ordinary trees/plants still scatter normally.
+  resourceGeneratorService.generateResources(world, MENU_PREVIEW_SEED, {
+    exclude: menuPreviewMagicalGroveIds()
+  });
+  // …then plant the glowing magical trees at the symmetric ring sites (after the ordinary-tree scatter,
+  // so they aren't clobbered by it).
   placeMenuPreviewMagicalGroves(world, groveCenters, MENU_PREVIEW_SEED);
 
   // Random (per launch) season-appropriate weather; season pinned to the real-world date via
