@@ -9,7 +9,6 @@ import { makeWeather } from '../services/EnvironmentService';
 import { makeSeededRng, freshSeed } from '../core/rng';
 import { resourceObjectService } from '../services/ResourceObjectService';
 import { resourceGeneratorService } from '../services/ResourceGeneratorService';
-import { MENU_DECOR_BANDS_X, MENU_DECOR_Y } from '../services/entity/entityConstants';
 
 const WATER_SUBTYPES = new Set(['water', 'shallow_water', 'rapids']);
 
@@ -91,50 +90,66 @@ export function pickMenuPreviewClimate(): { season: Season; weather: WeatherStat
   }
 }
 
-// Title-screen art direction: how many extra forest groves to stamp onto the plain (the generator
-// rolls only ~2 on this small flattened map). Each is a deep_grass blob; generateResources — run AFTER
-// this in startMenuPreview — scatters trees densely on deep_grass, so each blob fills in as a grove.
-const PREVIEW_GROVE_COUNT = 7;
-const GROVE_MIN_RADIUS = 3;
-const GROVE_MAX_RADIUS = 5;
+// Title-screen art direction: the magical groves are arranged in an almost-circular RING around the
+// centred title/menu UI (the logo + button stack sit over the map centre — see GameCanvas menu framing),
+// so they wreath the menu at roughly equal spacing instead of scattering. Each ring point gets a small
+// deep_grass blob (generateResources, run AFTER this, scatters ordinary trees onto deep_grass) with a
+// glowing magical tree planted dead-centre, so each reads as a natural little grove rather than a lone
+// icon. Counts/geometry are tuned to clear the UI box yet stay inside the zoomed-in (2×) visible window.
+const PREVIEW_GROVE_COUNT = 10;
+// Ring radius as a fraction of the map's SHORTER side: large enough to clear the central UI box on every
+// common aspect ratio, small enough to stay within the visible window (whose half-height is only ~0.17·H
+// on a wide screen). Square tiles ⇒ a constant tile radius renders as an actual circle on screen.
+const RING_RADIUS_FRAC = 0.18;
+const RING_ANGLE_JITTER = 0.25; // ± fraction of the 36° step — natural wobble, still "almost a circle"
+const RING_RADIUS_JITTER = 0.08; // ± fraction of the radius — groves sit at slightly varied distances
+const GROVE_BLOB_MIN_RADIUS = 2;
+const GROVE_BLOB_MAX_RADIUS = 4;
 
 /**
- * Stamp `PREVIEW_GROVE_COUNT` forest groves (deep_grass blobs) onto open land so the title shot reads
- * as a wooded landscape rather than bare grass, and RETURN each grove's centre tile. Deterministic in
- * the preview seed (so the backdrop is stable across launches). Centres are placed in the MENU_DECOR
- * side bands (the same on-screen area FLANKING the title/menu UI that the herds use) so the groves —
- * and their glowing magical centrepieces — actually decorate the menu instead of sitting off-screen or
- * behind the buttons. Only converts walkable, non-water land — never paves over the river. MUST run
- * BEFORE resource generation so trees populate the new deep_grass tiles; the returned centres are then
- * used to drop a glowing magical grove into each (after resources).
+ * Lay `PREVIEW_GROVE_COUNT` grove sites in a jittered ring around the map centre (where the title/menu
+ * UI sits), carve a small organic deep_grass blob at each, and RETURN the ring of centre tiles (for the
+ * glowing magical trees, planted after resource generation). Evenly spaced by angle (±jitter) at a near
+ * constant radius (±jitter) so it reads as an almost-circle wreathing the menu, but natural — not a
+ * mechanical polygon. Deterministic in the preview seed. Water is already flattened to land by the time
+ * this runs, so every ring tile is walkable land.
  */
 function seedPreviewGroves(world: WorldTile[][], seed: number): Array<{ x: number; y: number }> {
   const h = world.length;
   const w = world[0]?.length ?? 0;
   const rand = makeSeededRng((seed ^ 0x9e3779b9) >>> 0);
-  const [y0, y1] = MENU_DECOR_Y;
+  const cx0 = w / 2;
+  const cy0 = h / 2;
+  const ringR = Math.min(w, h) * RING_RADIUS_FRAC;
+  const step = (Math.PI * 2) / PREVIEW_GROVE_COUNT;
+  const startAngle = rand() * Math.PI * 2; // random ring orientation per seed
   const centers: Array<{ x: number; y: number }> = [];
   for (let g = 0; g < PREVIEW_GROVE_COUNT; g++) {
-    const [x0, x1] = MENU_DECOR_BANDS_X[g % MENU_DECOR_BANDS_X.length]; // alternate L / R bands
-    const cx = Math.floor((x0 + rand() * (x1 - x0)) * w);
-    const cy = Math.floor((y0 + rand() * (y1 - y0)) * h);
-    const radius = GROVE_MIN_RADIUS + Math.floor(rand() * (GROVE_MAX_RADIUS - GROVE_MIN_RADIUS + 1));
-    let carved = false;
-    for (let dy = -radius; dy <= radius; dy++) {
-      for (let dx = -radius; dx <= radius; dx++) {
+    const angle = startAngle + g * step + (rand() * 2 - 1) * step * RING_ANGLE_JITTER;
+    const r = ringR * (1 + (rand() * 2 - 1) * RING_RADIUS_JITTER);
+    const cx = Math.round(cx0 + Math.cos(angle) * r);
+    const cy = Math.round(cy0 + Math.sin(angle) * r);
+    if (cx < 0 || cy < 0 || cx >= w || cy >= h) continue;
+    const blobR =
+      GROVE_BLOB_MIN_RADIUS + Math.floor(rand() * (GROVE_BLOB_MAX_RADIUS - GROVE_BLOB_MIN_RADIUS + 1));
+    for (let dy = -blobR; dy <= blobR; dy++) {
+      for (let dx = -blobR; dx <= blobR; dx++) {
         const x = cx + dx;
         const y = cy + dy;
         if (x < 0 || y < 0 || x >= w || y >= h) continue;
         // Jittered radius → organic grove outline, not a hard disc.
-        if (Math.sqrt(dx * dx + dy * dy) > radius - 0.5 + rand()) continue;
+        if (Math.sqrt(dx * dx + dy * dy) > blobR - 0.5 + rand()) continue;
         const t = world[y][x];
         if (!t.walkable || WATER_SUBTYPES.has(t.subType)) continue;
         applySub(t, 'forest', 'deep_grass', 'forest');
-        carved = true;
       }
     }
-    // Only offer the centre as a magical-grove site if its own tile actually became grove land.
-    if (carved && world[cy]?.[cx]?.subType === 'deep_grass') centers.push({ x: cx, y: cy });
+    // Guarantee the centre tile is grove land so the magical centrepiece has somewhere to sit.
+    const c = world[cy]?.[cx];
+    if (c && c.walkable && !WATER_SUBTYPES.has(c.subType)) {
+      applySub(c, 'forest', 'deep_grass', 'forest');
+      centers.push({ x: cx, y: cy });
+    }
   }
   return centers;
 }
@@ -184,10 +199,18 @@ export function placeMenuPreviewMagicalGroves(
   const groves = magicalGroveDefs();
   if (groves.length === 0 || centers.length === 0) return;
   const rand = makeSeededRng((seed ^ 0x5bd1e995) >>> 0);
+  // Balanced species: shuffle the grove types once (so the round-robin below isn't biased to a fixed
+  // order each seed), then assign them around the ring cyclically. With 10 sites and 4 types every
+  // species appears 2–3× — no single tree dominates the pool, while neighbours still differ.
+  const order = [...groves];
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
   centers.forEach(({ x, y }, i) => {
     const tile = world[y]?.[x];
     if (!tile) return;
-    const def = groves[Math.floor(rand() * groves.length)];
+    const def = order[i % order.length];
     // Distinct seed per node so growth/amount vary; reuses the world-gen placement path.
     resourceGeneratorService.placeSingleResource(tile, def, (seed + i * 2654435761) >>> 0);
   });
