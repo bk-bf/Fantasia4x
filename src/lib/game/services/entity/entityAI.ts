@@ -174,7 +174,19 @@ function traceStuck(mob: Mob, def: CreatureDefinition, state: GameState, turn: n
 // misses a mob that jitters) and the 300-tick ENTITY-STATE snapshot, this fires every tick in BOTH the
 // throttled and full-FSM branches, so the state sequence is complete. O(1) per tick (one endsWith) —
 // only the matched mob pays the cellDesc scan. '' = off. Flip back to '' when done.
-const TRACE_MOB_ID = '456';
+// Trace target. TRACE_MOB_ID = an exact id suffix (e.g. '456') pins ONE entity; TRACE_CREATURE traces
+// EVERY mob of a creature type — robust to losing a save / not knowing the id up front, so the next
+// kobold that bounces is captured automatically. Set EITHER (or both); '' disables that selector. Reset
+// both to '' when done. Sleeping/Corpse mobs are skipped to bound the per-tick log volume.
+const TRACE_MOB_ID = '';
+const TRACE_CREATURE = 'kobold_skulker';
+function isTraced(mob: Mob): boolean {
+  if (!gameLogger.isEnabled || mob.state === 'Sleeping' || mob.state === 'Corpse') return false;
+  return (
+    (!!TRACE_MOB_ID && mob.id.endsWith(TRACE_MOB_ID)) ||
+    (!!TRACE_CREATURE && mob.creatureId === TRACE_CREATURE)
+  );
+}
 /** Ground-truth food state on tile (x,y): tile resources, dropped carcass items, and any corpse mob —
  *  the data that decides edibility but is invisible in a static read (tests the "dynamic carcass" theory). */
 function foodCtx(state: GameState, x: number, y: number): string {
@@ -196,7 +208,7 @@ function foodCtx(state: GameState, x: number, y: number): string {
   );
 }
 function traceMobTick(mob: Mob, state: GameState, turn: number, phase: string): void {
-  if (!TRACE_MOB_ID || !gameLogger.isEnabled || !mob.id.endsWith(TRACE_MOB_ID)) return;
+  if (!isTraced(mob)) return;
   const pathLen = mob.path?.length ?? 0;
   const nc = pathLen > 0 ? mob.path![mob.pathIndex ?? 0] : null;
   const end = pathLen > 0 ? mob.path![pathLen - 1] : null;
@@ -1315,7 +1327,7 @@ export function stepForaging(
     found = findReachableFoodTile(state, mob, FORAGE_RADIUS, new Set([kind]));
     if (found) break;
   }
-  if (TRACE_MOB_ID && gameLogger.isEnabled && mob.id.endsWith(TRACE_MOB_ID)) {
+  if (isTraced(mob)) {
     const onTile = edibleResourceOnTile(state.worldMap[mob.y]?.[mob.x], kinds);
     gameLogger.log(
       turn,
