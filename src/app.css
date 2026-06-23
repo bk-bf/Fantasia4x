@@ -28,11 +28,21 @@
   font-style: normal;
   font-display: swap;
 }
+/* Engraved Roman/epic serif (Cinzel) — a fantasy-title display face that reads heroic without being
+   cursive. Used for big wordmarks (e.g. the MM2 menu logo) via --font-display. */
+@font-face {
+  font-family: 'Fantasia Display';
+  src: url('/fonts/cinzel-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   /* Single source of truth for the UI font stacks — bundled first, system mono only as a safety net. */
   --font-mono: 'Fantasia Mono', 'Courier New', monospace;
   --font-script: 'Fantasia Script', 'Segoe Script', 'Brush Script MT', cursive;
+  --font-display: 'Fantasia Display', 'Cinzel', 'Trajan Pro', Georgia, serif;
 
   --bg: #0d0b07;
   --bg-panel: #150f08;

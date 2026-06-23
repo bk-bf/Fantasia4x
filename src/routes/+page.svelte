@@ -19,6 +19,7 @@
   import LoadingScreen from '$lib/components/UI/LoadingScreen.svelte';
   import GameOverScreen from '$lib/components/UI/GameOverScreen.svelte';
   import MainMenu from '$lib/components/UI/MainMenu.svelte';
+  import MainMenu2 from '$lib/components/UI/MainMenu2.svelte';
   import PauseMenu from '$lib/components/UI/PauseMenu.svelte';
   import { get } from 'svelte/store';
   import { onMount } from 'svelte';
@@ -113,6 +114,9 @@
   const DEBUG_BUILD_FLAG =
     import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_LOG === 'true';
   $: debugEnabled = DEBUG_BUILD_FLAG || $debugMode;
+
+  // Experimental alternate title screen — `./launch.sh … --mm2` (sets VITE_MM2). Off ⇒ the normal menu.
+  const USE_MM2 = import.meta.env.VITE_MM2 === 'true';
 
   $: NAV_TABS = [
     { key: 'pawns', label: 'PAWNS', fkey: 'F2' },
@@ -268,7 +272,11 @@
 </svg>
 
 {#if $appPhase === 'menu'}
-  <MainMenu />
+  {#if USE_MM2}
+    <MainMenu2 />
+  {:else}
+    <MainMenu />
+  {/if}
 {/if}
 
 <!-- Title-screen loader: covers the menu + its preview map while the backdrop's WebGL/terrain inits,
