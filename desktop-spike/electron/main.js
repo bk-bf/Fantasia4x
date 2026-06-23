@@ -65,16 +65,26 @@ function createWindow() {
   // exactly then: a same-origin reload to http://localhost:<port>/ was misread as foreign and punted
   // to the OS browser (shell.openExternal), spawning a stray Zen tab on every HMR/restart. Compare to
   // the stable APP_ORIGIN so the app's own reloads are always recognised as in-app.
-  const APP_ORIGIN = (() => {
+  // localhost / 127.0.0.1 / ::1 are the SAME server but DIFFERENT URL origins. Vite (`--host`), HMR,
+  // and redirects freely surface either alias, so comparing raw origins punted the app's own
+  // 127.0.0.1 reload out to the OS browser when it had loaded as localhost (and vice-versa in the
+  // sandboxed run). Treat any loopback host on the app's port+protocol as in-app.
+  const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]']);
+  const APP = (() => {
     try {
-      return new URL(URL).origin;
+      const u = new URL(URL);
+      return { origin: u.origin, port: u.port, protocol: u.protocol, loopback: LOOPBACK_HOSTS.has(u.hostname) };
     } catch {
       return null;
     }
   })();
   const isAppOrigin = (u) => {
+    if (!APP) return false;
     try {
-      return new URL(u).origin === APP_ORIGIN;
+      const x = new URL(u);
+      if (x.origin === APP.origin) return true;
+      // Same server reached via a different loopback alias (localhost ⇄ 127.0.0.1 ⇄ ::1).
+      return APP.loopback && LOOPBACK_HOSTS.has(x.hostname) && x.port === APP.port && x.protocol === APP.protocol;
     } catch {
       return false;
     }

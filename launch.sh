@@ -15,6 +15,17 @@
 #   bug-fixes are a reload away (no rebuild). Immersive playtesting: ./launch.sh --electron --play.
 # --hmr: opt INTO Vite hot-reload / live page-reload. OFF by default for EVERY launch (including
 #   --debug/--profiler/--electron/--tauri) so an agent editing the tree never reloads a live playtest.
+# SANDBOXING (electron): ON BY DEFAULT. The dev server AND Electron run inside a private Linux network
+#   namespace (rootless `unshare --net`), so the dev-server port exists ONLY inside that namespace and
+#   is physically UNREACHABLE from your browser (or any other host process) as a URL — the game is the
+#   only thing that can talk to it. The vite.config 403 guard is a bouncer; this removes the door.
+#   - --net-host: OPT OUT — run on normal host networking (the old behaviour). Needed when you want the
+#     CDP debug port (:9222) reachable for the electron-debug MCP, or any outbound network in-app.
+#   - --profiler implies --net-host automatically (the profiler/CDP workflow needs host access);
+#     pass --sandbox to force isolation even under --profiler.
+#   Electron runs with --no-sandbox in this mode (Chromium can't nest its sandbox in the user ns).
+#     ./launch.sh --electron            (sandboxed by default)
+#     ./launch.sh --electron --net-host (host networking — CDP/profiling reachable)
 # codegraph is a separate always-on systemd user service (see codegraph_hint below).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -24,6 +35,7 @@ PROFILER=false
 LOG=false
 HMR=false
 PLAY=false
+SANDBOX=auto   # auto = default ON for electron (OFF under --profiler); --sandbox forces on, --net-host forces off
 SHELL_TARGET=""
 for arg in "$@"; do
   case "$arg" in
@@ -31,6 +43,8 @@ for arg in "$@"; do
     --log) LOG=true ;;
     --hmr) HMR=true ;;
     --play) PLAY=true ;;
+    --sandbox) SANDBOX=on ;;
+    --net-host) SANDBOX=off ;;
     --electron) SHELL_TARGET=electron ;;
     --tauri) SHELL_TARGET=tauri ;;
   esac
@@ -99,6 +113,41 @@ wait_for_port() {
   echo ""; echo "  dev server did not come up." >&2; return 1
 }
 
+# Run the dev server + Electron together inside a private (rootless) network namespace so the dev
+# server's port is unreachable from the host browser — only the in-ns Electron can see it. Both
+# processes share the namespace's isolated loopback; nothing outside (Zen, curl, another tab) can
+# route to it. Values are passed via env to dodge nested-quoting in the unshared bash.
+run_isolated_electron() {
+  local port="$1" server_flag="$2" shell_dir="$3"
+  echo "  [electron · sandboxed] private net namespace — dev server on 127.0.0.1:$port is"
+  echo "                         UNREACHABLE from your browser; only this window can see it."
+  echo "                         (CDP :9222 is also in-ns — electron-debug MCP can't attach; no outbound net.)"
+  if ! unshare --user --map-root-user --net true 2>/dev/null; then
+    echo "  launch.sh: rootless network namespaces are unavailable on this kernel." >&2
+    echo "    (need kernel.unprivileged_userns_clone=1). Falling back is unsafe; aborting." >&2
+    return 1
+  fi
+  F4X_NS_PORT="$port" F4X_NS_SERVER_FLAG="$server_flag" F4X_NS_SHELL_DIR="$shell_dir" \
+  F4X_NS_SCRIPT_DIR="$SCRIPT_DIR" \
+  unshare --user --map-root-user --net -- bash -s <<'NSEOF'
+    set -u
+    ip link set lo up 2>/dev/null
+    "$F4X_NS_SCRIPT_DIR/dev.sh" $F4X_NS_SERVER_FLAG --port "$F4X_NS_PORT" &
+    SRV=$!
+    cleanup_ns() { kill "$SRV" 2>/dev/null; wait 2>/dev/null; }
+    trap 'cleanup_ns; exit 0' INT TERM
+    # Wait (in-ns) for the dev server to answer — any HTTP status counts (the 403 guard still responds).
+    for _ in $(seq 1 120); do
+      curl -s -o /dev/null "http://127.0.0.1:$F4X_NS_PORT/" && break
+      sleep 0.5
+    done
+    cd "$F4X_NS_SHELL_DIR" || { cleanup_ns; exit 1; }
+    # --no-sandbox: Chromium can't create its own sandbox nested inside this user namespace.
+    SPIKE_URL="http://127.0.0.1:$F4X_NS_PORT" ./node_modules/.bin/electron . --no-sandbox
+    cleanup_ns
+NSEOF
+}
+
 # Desktop webview shell over a single main server (cross-engine TPS spike).
 if [[ -n "$SHELL_TARGET" ]]; then
   SHELL_DIR="$SCRIPT_DIR/desktop-spike/$SHELL_TARGET"
@@ -118,9 +167,39 @@ if [[ -n "$SHELL_TARGET" ]]; then
   PORT=5173
   [[ -f "$SCRIPT_DIR/.devport" ]] && PORT=$(< "$SCRIPT_DIR/.devport")
 
+  # Resolve sandboxing: default ON for electron, OFF under --profiler (needs CDP/host), forced by
+  # --sandbox / --net-host. Only electron supports it.
+  SBX=false
+  if [[ "$SHELL_TARGET" == electron ]]; then
+    case "$SANDBOX" in
+      on) SBX=true ;;
+      off) SBX=false ;;
+      auto)
+        if [[ "$PROFILER" == true ]]; then
+          SBX=false
+          echo "launch.sh: --profiler ⇒ host networking (CDP :9222 / profiling needs it); pass --sandbox to force isolation." >&2
+        else
+          SBX=true
+        fi
+        ;;
+    esac
+  elif [[ "$SANDBOX" == on ]]; then
+    echo "launch.sh: --sandbox is supported for --electron only; ignoring it for $SHELL_TARGET." >&2
+  fi
+
   echo "Fantasia4x — $SHELL_TARGET shell over $SERVER_LABEL server (main only)"
   echo ""
   codegraph_hint
+
+  # Sandboxed electron: the dev server is started INSIDE the network namespace (not on the host), so
+  # skip the host-side launch/wait_for_port entirely and hand off to the isolated runner.
+  if [[ "$SHELL_TARGET" == electron && "$SBX" == true ]]; then
+    echo ""
+    run_isolated_electron "$PORT" "$SERVER_FLAG" "$SHELL_DIR"
+    cleanup
+    exit 0
+  fi
+
   launch "$SCRIPT_DIR" "main" "$SERVER_FLAG"
   wait_for_port "$PORT" || { cleanup; exit 1; }
   echo ""
