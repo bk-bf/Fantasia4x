@@ -32,13 +32,17 @@
   let locked = $state<Set<string>>(new Set());
   let water = $state<number>(Math.round(getWaterLevel() * 100));
 
-  // Map-size presets (square). Defaults to M (500×500) — see currentMapSize in gameState.
-  const SIZES = [
+  // Map-size presets (square). Defaults to M (500×500) — see currentMapSize in gameState. XL is a
+  // dev-only stress size: it's hidden in the shipped (--play) build and only offered in --debug.
+  const ALL_SIZES = [
     { label: 'S', dim: 250 },
     { label: 'M', dim: 500 },
     { label: 'L', dim: 750 },
     { label: 'XL', dim: 1000 }
   ];
+  const isDebug = import.meta.env.VITE_DEBUG_MODE === 'true';
+  const SIZES = isDebug ? ALL_SIZES : ALL_SIZES.filter((s) => s.label !== 'XL');
+  const L_DIM = 750; // Large — still in dev, can be laggy (disclaimer shown when selected)
   let size = $state<number>(gameState.getMapSize().w);
 
   // Shown while the (synchronous, main-thread-blocking) worldgen runs so the user isn't staring at a
@@ -236,6 +240,11 @@
     in and places pawns &amp; creatures.{#if import.meta.env.VITE_DEBUG_MODE === 'true'}
       <strong>✕</strong> discards the preview and reverts.{/if}
   </div>
+  {#if size === L_DIM}
+    <div class="cm-warn">
+      ⚠ Large maps are still in development — world generation and play can be laggy.
+    </div>
+  {/if}
 
   <div class="cm-grid">
     <span class="col-h"></span>
@@ -408,6 +417,15 @@
     color: var(--text-muted);
     font-size: 10px;
     padding: 5px 0;
+  }
+  /* Dev disclaimer shown only while the Large preset is selected — amber, set off with a left rule. */
+  .cm-warn {
+    color: #e0a020;
+    font-size: 10px;
+    margin-bottom: 5px;
+    padding: 4px 8px;
+    border-left: 2px solid #e0a020;
+    background: color-mix(in srgb, #e0a020 10%, transparent);
   }
   .cm-grid {
     display: grid;
