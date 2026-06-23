@@ -151,48 +151,47 @@
     };
   }
 
-  function makeParticle(w: number, h: number, atTop: boolean): Particle {
+  /** Reseed a particle's fields IN PLACE for the current mode (no allocation — called every frame on
+   *  respawn, so it must not churn garbage; see the per-frame-allocation trap in ENGINE-PERFORMANCE). */
+  function setParticle(p: Particle, w: number, h: number, atTop: boolean): void {
     if (isRain()) {
-      const spd = fallSpeed * (0.7 + Math.random() * 0.6); // ±variance around the data fall speed
       // Drops slant LEFT as they fall, drifting `|slant| × height` px over a full descent. Seed them
       // across a width extended by that slant so they still cover the bottom-right corner — otherwise
       // the coverage is a left-leaning parallelogram with a triangular gap bottom-right.
-      const slant = Math.abs(rainSlant()) * h;
-      return {
-        x: Math.random() * (w + slant),
-        y: atTop ? -20 - Math.random() * 40 : Math.random() * h,
-        len: 9 + Math.random() * 13 + windStrength * 12,
-        spd,
-        r: 0,
-        ph: 0
-      };
+      p.x = Math.random() * (w + Math.abs(rainSlant()) * h);
+      p.y = atTop ? -20 - Math.random() * 40 : Math.random() * h;
+      p.len = 9 + Math.random() * 13 + windStrength * 12;
+      p.spd = fallSpeed * (0.7 + Math.random() * 0.6); // ±variance around the data fall speed
+      p.r = 0;
+      p.ph = 0;
+      return;
     }
     if (mode === 'leaves') {
       // Tumbling leaves/petals: slow fall, strong sideways wind drift, a rotation/sway phase. Seeded
       // across an extended width (like rain) so the wind-blown corner stays covered.
-      const spd = fallSpeed * (0.6 + Math.random() * 0.8);
-      return {
-        x: Math.random() * (w + sideDrift() * 2),
-        y: atTop ? -20 - Math.random() * 40 : Math.random() * h,
-        len: 2 + Math.random() * 2, // half-length of the leaf (~⅓ smaller, less distracting)
-        spd,
-        r: 2 + Math.random() * 2,
-        ph: Math.random() * TWO_PI
-      };
+      p.x = Math.random() * (w + sideDrift() * 2);
+      p.y = atTop ? -20 - Math.random() * 40 : Math.random() * h;
+      p.len = 2 + Math.random() * 2; // half-length of the leaf (~⅓ smaller, less distracting)
+      p.spd = fallSpeed * (0.6 + Math.random() * 0.8);
+      p.r = 2 + Math.random() * 2;
+      p.ph = Math.random() * TWO_PI;
+      return;
     }
-    if (mode === 'fog') return makeFogBlob(w, h);
     // dots: snow / snowdust / dust — a falling, wind-drifting speck. Dust is finer than snow.
-    const spd = fallSpeed * (0.6 + Math.random() * 0.9);
+    p.x = Math.random() * (w + sideDrift() * 1.5); // extend for the sideways drift's covered corner
+    p.y = atTop ? -10 - Math.random() * 30 : Math.random() * h;
+    p.len = 0;
+    p.spd = fallSpeed * (0.6 + Math.random() * 0.9);
     // snow/snowdust ~⅓ smaller (less distracting); dust (summer pollen) a touch larger for visibility.
-    const sz = mode === 'dust' ? 0.8 + Math.random() * 1.5 : 0.67 + Math.random() * 1.47;
-    return {
-      x: Math.random() * (w + sideDrift() * 1.5), // extend for the sideways drift's covered corner
-      y: atTop ? -10 - Math.random() * 30 : Math.random() * h,
-      len: 0,
-      spd,
-      r: sz,
-      ph: Math.random() * TWO_PI
-    };
+    p.r = mode === 'dust' ? 0.8 + Math.random() * 1.5 : 0.67 + Math.random() * 1.47;
+    p.ph = Math.random() * TWO_PI;
+  }
+
+  function makeParticle(w: number, h: number, atTop: boolean): Particle {
+    if (mode === 'fog') return makeFogBlob(w, h);
+    const p: Particle = { x: 0, y: 0, len: 0, spd: 0, r: 0, ph: 0 };
+    setParticle(p, w, h, atTop);
+    return p;
   }
 
   /** How many particles we want right now: data `density` (per megapixel) × intensity × zoom-out, capped. */
@@ -267,13 +266,7 @@
         ctx.lineTo(p.x + wind * len, p.y + len);
         p.y += p.spd * dt;
         p.x += wind * p.spd * dt;
-        if (p.y > h) {
-          const np = makeParticle(w, h, true);
-          p.x = np.x;
-          p.y = np.y;
-          p.len = np.len;
-          p.spd = np.spd;
-        }
+        if (p.y > h) setParticle(p, w, h, true); // recycle in place — no per-frame allocation
       }
       ctx.stroke();
     } else if (isDots()) {
@@ -317,10 +310,12 @@
       const drift = sideDrift();
       const scale = sizeMul(); // shrink leaves as you zoom out (dense fine flurry, not big blobs)
       const swirl = windStrength * Math.max(0.3, intensity);
-      const [cr, cg, cb] = particleColor.map((c) => Math.round(c * ambLight));
-      const a0 = ambTint[0];
-      const a1 = ambTint[1];
-      const a2 = ambTint[2];
+      const cr = Math.round(particleColor[0] * ambLight * ambTint[0]);
+      const cg = Math.round(particleColor[1] * ambLight * ambTint[1]);
+      const cb = Math.round(particleColor[2] * ambLight * ambTint[2]);
+      // Colour/alpha are constant for the whole frame — build the fillStyle string ONCE here, not once
+      // per leaf inside the loop (that churned hundreds of identical strings per frame → GC stutter).
+      ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${0.55 + 0.35 * intensity})`;
       for (const p of parts) {
         p.ph += dt * (1.8 + swirl * 2.6); // faster tumble in high wind
         p.y += p.spd * dt + Math.sin(p.ph * 1.3) * swirl * 55 * dt; // updraughts/downdraughts
@@ -332,17 +327,11 @@
         ctx.save();
         ctx.translate(drawX, p.y);
         ctx.rotate(p.ph);
-        ctx.fillStyle = `rgba(${Math.round(cr * a0)}, ${Math.round(cg * a1)}, ${Math.round(cb * a2)}, ${0.55 + 0.35 * intensity})`;
         ctx.beginPath();
         ctx.ellipse(0, 0, rad, rad * wobble, 0, 0, TWO_PI);
         ctx.fill();
         ctx.restore();
-        if (p.y > h + 8) {
-          const np = makeParticle(w, h, true);
-          p.x = np.x;
-          p.y = np.y;
-          p.spd = np.spd;
-        }
+        if (p.y > h + 8) setParticle(p, w, h, true); // recycle in place — no per-frame allocation
         if (p.x > w + 16) p.x = -16;
         else if (p.x < -16) p.x = w + 16;
       }
