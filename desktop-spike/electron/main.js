@@ -8,6 +8,33 @@
 // Read the on-screen "NNFPS · NNTPS" counter (top controls bar) and compare to your Zen number.
 const { app, BrowserWindow, session, shell } = require('electron');
 
+// ── TEMPORARY DIAGNOSTIC: hunt the stray-tab opener ──────────────────────────────────────────────
+// Suppress ALL external opening (no tab can open from this process) AND log every attempt with a
+// stack trace, so we can see exactly what calls it. Remove this whole block once the cause is found.
+const _diag = (m) => {
+  try {
+    require('fs').appendFileSync(
+      require('path').join(require('os').homedir(), '.cache/f4x-electron-diag.log'),
+      `[${new Date().toISOString()}] ${m}\n`
+    );
+  } catch {
+    /* ignore */
+  }
+};
+try {
+  Object.defineProperty(shell, 'openExternal', {
+    configurable: true,
+    writable: true,
+    value: (url) => {
+      _diag(`shell.openExternal SUPPRESSED url=${url}\n  ${new Error().stack.split('\n').slice(2, 7).join('\n  ')}`);
+      return Promise.resolve(false);
+    }
+  });
+  _diag('=== main start; openExternal patched + SUPPRESSED ===');
+} catch (e) {
+  _diag('FAILED to patch openExternal: ' + e);
+}
+
 const URL = process.env.SPIKE_URL || 'http://localhost:5173';
 
 // The dev/preview server (vite.config.ts SHELL_UA_MARKER guard) 403s any request that doesn't carry
@@ -103,18 +130,30 @@ function createWindow() {
   // out, full stop. (A game shell has no legitimate reason to open localhost in your browser.)
   const shouldOpenExternal = (url) =>
     /^https?:\/\//i.test(url) && !isLoopbackUrl(url) && !isAppOrigin(url);
+  _diag(`createWindow: URL=${URL}  APP=${JSON.stringify(APP)}`);
   win.webContents.setWindowOpenHandler(({ url }) => {
+    _diag(`windowOpenHandler: url=${url} should=${shouldOpenExternal(url)} loop=${isLoopbackUrl(url)} app=${isAppOrigin(url)}`);
     if (shouldOpenExternal(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (e, url) => {
+    _diag(`will-navigate: url=${url} loop=${isLoopbackUrl(url)} app=${isAppOrigin(url)}`);
     if (isAppOrigin(url) || isLoopbackUrl(url)) return; // app / local dev — allow, never punt
     e.preventDefault(); // never let the window navigate away from the app
     if (shouldOpenExternal(url)) shell.openExternal(url);
   });
   // Belt-and-suspenders: refuse cross-origin redirects (covers iframes/subframes). Loopback is in-app.
   win.webContents.on('will-redirect', (e, url) => {
+    _diag(`will-redirect: url=${url} loop=${isLoopbackUrl(url)} app=${isAppOrigin(url)}`);
     if (!isAppOrigin(url) && !isLoopbackUrl(url)) e.preventDefault();
+  });
+  // Catch any other path that might surface a new window / external open.
+  app.on('web-contents-created', (_e, wc) => {
+    wc.setWindowOpenHandler(({ url }) => {
+      _diag(`web-contents-created.windowOpenHandler: url=${url}`);
+      if (shouldOpenExternal(url)) shell.openExternal(url);
+      return { action: 'deny' };
+    });
   });
 
   win.webContents.setUserAgent(shellUA);
@@ -122,7 +161,8 @@ function createWindow() {
   load();
 
   // Dev server may not be up yet / may restart — retry instead of showing Chromium's error page.
-  win.webContents.on('did-fail-load', (_e, code, desc) => {
+  win.webContents.on('did-fail-load', (_e, code, desc, validatedURL) => {
+    _diag(`did-fail-load: code=${code} desc=${desc} url=${validatedURL}`);
     console.warn(`load failed (${code} ${desc}) — retrying ${URL} in 1s`);
     setTimeout(load, 1000);
   });
