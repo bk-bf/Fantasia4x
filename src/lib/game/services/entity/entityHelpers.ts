@@ -82,7 +82,7 @@ export function findReachableFoodTile(
   mob: Mob,
   radius: number,
   kinds: Set<TileFoodKind>,
-  maxCandidates = 6
+  maxCandidates = 12
 ): { target: { x: number; y: number }; path: { x: number; y: number }[] } | null {
   if (kinds.size === 0) return null;
   // Ring-scan nearest-first, collecting only the NEAREST `maxCandidates` edible tiles (already distance-

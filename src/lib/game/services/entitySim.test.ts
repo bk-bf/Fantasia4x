@@ -124,6 +124,41 @@ describe('entity starvation (headless sim)', () => {
     expect(['Foraging', 'Eating']).toContain(g.state);
   });
 
+  it('a hungry omnivore standing ON a corpse scavenges it instead of foraging a far bush', () => {
+    // The reported bug: an omnivore predator (goblin/kobold) on a fresh corpse "refused to eat" and
+    // marched off toward a bush a few tiles away, because forage was chosen whenever a bush merely
+    // EXISTED — ahead of the corpse underfoot. The three food sources are now ranked by distance, so
+    // the corpse (dist 0) beats the bush (dist 4).
+    const world = smallWorld();
+    world[5][9].resources = { berry_bush: 3 }; // bush 4 tiles east — the tempting-but-farther option
+    const corpse = {
+      id: 'carcass',
+      creatureId: 'deer',
+      entityClass: 'animal',
+      state: 'Corpse',
+      isAlive: false,
+      x: 5,
+      y: 5, // same tile as the goblin — free food underfoot
+      intactness: 1.0,
+      needs: { hunger: 0, fatigue: 0 },
+      stateSince: 0
+    } as unknown as Mob;
+    const state = {
+      turn: 0,
+      mobs: [makeGoblin({ needs: { hunger: 70, fatigue: 0 } as any }), corpse],
+      pawns: [],
+      worldMap: world,
+      stockpile: {},
+      droppedItems: [],
+      buildings: []
+    } as unknown as GameState;
+    const out = entityService.stepEntities(state);
+    const g = out.mobs!.find((m) => m.id === 'g1')!;
+    // Scavenge the corpse (Hunting routes corpse-eating) — must NOT walk off to forage.
+    expect(['Hunting', 'Eating']).toContain(g.state);
+    expect(g.state).not.toBe('Foraging');
+  });
+
   it('hunger climbs to the 80 collapse point well before death (long pre-death suffering)', () => {
     let state = makeState([makeGoblin()]);
     let collapseTurn = -1;

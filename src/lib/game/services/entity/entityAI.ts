@@ -743,32 +743,40 @@ export function stepHostile(
     // Hunting every tick → the Wander↔Hunting oscillation reported mid-engagement. The sleep gate
     // below already excludes these two states for the same reason.
   ) {
-    // Forage real food (and graze, for herbivores) first; fall back to hunting live
-    // prey or scavenging a corpse only if nothing forageable is in range. A creature
-    // can scavenge (`eats` includes meat/organic) without being a hunter — only
-    // `predator`/`carnivore` mobs will go after LIVE prey.
+    // Eat from whichever of the three food sources is CLOSEST — nearest forage tile, nearest corpse
+    // (free food, any range), nearest live prey (within HUNT_RADIUS) — instead of the old "forage first
+    // whenever a bush merely EXISTS" rule that marched a mob standing ON a corpse off to a far bush (the
+    // reported bug). Distances are a cheap existence ring-scan / Manhattan — NO A* at the per-tick gate
+    // (ENGINE-PERFORMANCE); stepForaging still owns the reachability probe + forageCooldown once a mob has
+    // committed to Foraging, so an unpathable bush is backed off there, not re-probed here every tick. A
+    // creature can scavenge (`eats` has meat/organic) without being a hunter — only `predator`/`carnivore`
+    // mobs go after LIVE prey.
     const tileKinds = new Set<TileFoodKind>();
     if (def.grazes) tileKinds.add('grass');
     if (def.eats.includes('food')) tileKinds.add('forage');
     const canForage = tileKinds.size > 0;
     const canScavengeOrHunt = canHunt || def.eats.includes('meat') || def.eats.includes('organic');
-    const forageReachable = () =>
-      canForage &&
-      forageCooldownExpired &&
-      findNearestFoodTile(state, mob.x, mob.y, FORAGE_RADIUS, tileKinds) !== null;
-    const tryHunt = (): Mob | null => {
-      // Honor the post-give-up cooldown, exactly as stepAnimal does — re-entering Hunting the tick
-      // after bailing an unreachable hunt was the other half of the oscillation for hostile mobs.
-      if (!canScavengeOrHunt || !huntCooldownExpired) return null;
-      const prey = findNearestPrey(mob, allMobs, canHunt);
-      if (!prey) return null;
-      // §S5: a LIVE-prey hunt is combat — gate it on the concurrent-hunt budget so a hunger wave
-      // doesn't engage hundreds at once. Corpse-scavenging (prey is a Corpse) is cheap, never gated.
-      if (prey.state !== 'Corpse' && !takeHuntSlot()) {
-        // Budget full → stamp a JITTERED backoff IN PLACE (ADR-002; it's a scalar cold field) so we
-        // don't re-run the O(prey) findNearestPrey every tick and so denied hunters don't all retry on
-        // one tick — then return null so the mob STILL WANDERS this tick (the cooldown carries through
-        // the wander's `{...mob}` spread). Returning a non-Hunting mob here FROZE denied hunters.
+
+    // Nearest forage tile + its distance (honoring the post-failure cooldown stepForaging arms).
+    const forageTile =
+      canForage && forageCooldownExpired
+        ? findNearestFoodTile(state, mob.x, mob.y, FORAGE_RADIUS, tileKinds)
+        : null;
+    const forageDist = forageTile ? manhattan(mob.x, mob.y, forageTile.x, forageTile.y) : Infinity;
+
+    // Nearest corpse / live prey + its distance (corpses are free food at any range; the corpse-vs-live
+    // weighting lives inside findNearestPrey).
+    const prey =
+      canScavengeOrHunt && huntCooldownExpired ? findNearestPrey(mob, allMobs, canHunt) : null;
+    const preyDist = prey ? manhattan(mob.x, mob.y, prey.x, prey.y) : Infinity;
+
+    const tryHunt = (target: Mob): Mob | null => {
+      // §S5: a LIVE-prey hunt is combat — gate it on the concurrent-hunt budget so a hunger wave doesn't
+      // engage hundreds at once. Corpse-scavenging (target is a Corpse) is cheap, never gated.
+      if (target.state !== 'Corpse' && !takeHuntSlot()) {
+        // Budget full → stamp a JITTERED backoff IN PLACE (ADR-002; cold scalar field) so denied hunters
+        // don't all retry on one tick, then return null so the mob STILL WANDERS this tick (the cooldown
+        // carries through the wander's `{...mob}` spread).
         mob.huntCooldownUntil =
           turn +
           ticksFromSeconds(HUNT_BUSY_BACKOFF_MIN_S + rng.random() * HUNT_BUSY_BACKOFF_JITTER_S);
@@ -776,10 +784,20 @@ export function stepHostile(
       }
       return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
     };
+    const enterForage = (): Mob => ({ ...mob, state: 'Foraging', stateSince: turn, path: [] });
 
-    if (forageReachable()) return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
-    const hunted = tryHunt();
-    if (hunted) return hunted;
+    // Closest wins; a corpse/prey takes ties so an adjacent corpse isn't abandoned for an equidistant
+    // bush. Each branch falls back to the other source when its first choice can't be taken.
+    if (prey && preyDist <= forageDist) {
+      const hunted = tryHunt(prey);
+      if (hunted) return hunted;
+      if (forageTile) return enterForage(); // hunt budget full → take the bush instead
+    } else if (forageTile) {
+      return enterForage();
+    } else if (prey) {
+      const hunted = tryHunt(prey); // no forage in range → hunt/scavenge even if farther
+      if (hunted) return hunted;
+    }
   }
 
   // ── Fatigue-driven sleep (safe, no pawn in vision, not hungry) ──────────
