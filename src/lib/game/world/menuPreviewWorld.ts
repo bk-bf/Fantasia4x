@@ -88,7 +88,44 @@ export function pickMenuPreviewClimate(): { season: Season; weather: WeatherStat
   }
 }
 
-export function customizeMenuPreviewWorld(world: WorldTile[][]): void {
+// Title-screen art direction: how many extra forest groves to stamp onto the plain (the generator
+// rolls only ~2 on this small flattened map). Each is a deep_grass blob; generateResources — run AFTER
+// this in startMenuPreview — scatters trees densely on deep_grass, so each blob fills in as a grove.
+const PREVIEW_GROVE_COUNT = 7;
+const GROVE_MIN_RADIUS = 3;
+const GROVE_MAX_RADIUS = 6;
+
+/**
+ * Stamp `PREVIEW_GROVE_COUNT` forest groves (deep_grass blobs) onto open land so the title shot reads
+ * as a wooded landscape rather than bare grass. Deterministic in the preview seed (so the backdrop is
+ * stable across launches). Only converts walkable, non-water land — never paves over the river. MUST
+ * run BEFORE resource generation so trees populate the new deep_grass tiles.
+ */
+function seedPreviewGroves(world: WorldTile[][], seed: number): void {
+  const h = world.length;
+  const w = world[0]?.length ?? 0;
+  const rand = makeSeededRng((seed ^ 0x9e3779b9) >>> 0);
+  const margin = GROVE_MAX_RADIUS + 1;
+  for (let g = 0; g < PREVIEW_GROVE_COUNT; g++) {
+    const cx = margin + Math.floor(rand() * Math.max(1, w - margin * 2));
+    const cy = margin + Math.floor(rand() * Math.max(1, h - margin * 2));
+    const radius = GROVE_MIN_RADIUS + Math.floor(rand() * (GROVE_MAX_RADIUS - GROVE_MIN_RADIUS + 1));
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const x = cx + dx;
+        const y = cy + dy;
+        if (x < 0 || y < 0 || x >= w || y >= h) continue;
+        // Jittered radius → organic grove outline, not a hard disc.
+        if (Math.sqrt(dx * dx + dy * dy) > radius - 0.5 + rand()) continue;
+        const t = world[y][x];
+        if (!t.walkable || WATER_SUBTYPES.has(t.subType)) continue;
+        applySub(t, 'forest', 'deep_grass', 'forest');
+      }
+    }
+  }
+}
+
+export function customizeMenuPreviewWorld(world: WorldTile[][], seed: number): void {
   const h = world.length;
   const w = world[0]?.length ?? 0;
   if (w === 0 || h === 0) return;
@@ -103,4 +140,7 @@ export function customizeMenuPreviewWorld(world: WorldTile[][]): void {
       }
     }
   }
+
+  // …then carve extra forest groves into the open plain (more wooded title shot).
+  seedPreviewGroves(world, seed);
 }

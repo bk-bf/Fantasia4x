@@ -657,10 +657,11 @@ function startMenuPreview() {
   rng.reseed(MENU_PREVIEW_SEED);
   resetUnreachableJobs();
   const world = generateWorld(MENU_PREVIEW_MAP.w, MENU_PREVIEW_MAP.h, MENU_PREVIEW_SEED);
+  // Title-screen art direction: flatten the mountain, erase water, and carve extra forest groves (see
+  // module). Done BEFORE resource generation so trees populate the new grove (deep_grass) tiles, and
+  // BEFORE entity seeding so prey spawn on the reshaped land.
+  customizeMenuPreviewWorld(world, MENU_PREVIEW_SEED);
   resourceGeneratorService.generateResources(world, MENU_PREVIEW_SEED);
-  // Title-screen art direction: flatten the mountain + move the river to the lower-left (see module).
-  // Done BEFORE entity seeding so prey spawn on the reshaped land, not in the new river.
-  customizeMenuPreviewWorld(world);
 
   // Random (per launch) season-appropriate weather; season pinned to the real-world date via
   // `_debugSeason` (processEnvironment otherwise derives season from the turn). Falls back to a

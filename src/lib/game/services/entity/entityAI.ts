@@ -1149,6 +1149,17 @@ export function stepAnimal(
         logFleeTrigger(mob, def, threat, inVision != null, turn, visionRange);
         return { ...mob, state: 'Startled', stateSince: turn, path: [] };
       }
+      // Herd anchor (SOFT leash, reuses the lair system): a prey with an invisible home anchor that has
+      // grazed beyond its range heads back toward it, so herds stay clustered instead of diffusing apart.
+      // Only the menu-preview backdrop assigns anchors (entitySpawning, preyOnly) — real-play prey have
+      // `lairId == null`, so this is a no-op for them and they keep roaming freely. Mirrors the hostile
+      // leash in stepHostile: do NOT blank `path` here (lets moveToward keep its sub-tile cost budget).
+      if (
+        mob.lairId != null &&
+        chebyshev(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) > (mob.lairRange ?? Infinity)
+      ) {
+        return moveToward(mob, { x: mob.lairX!, y: mob.lairY! }, state);
+      }
       return wanderStep(mob, def, state);
     }
     case 'Startled': {

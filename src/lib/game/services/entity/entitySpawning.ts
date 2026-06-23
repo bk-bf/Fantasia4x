@@ -31,6 +31,11 @@ import {
 
 let idCounter = 0;
 
+// Soft tether radius (tiles, Chebyshev) for a menu-preview prey herd's invisible anchor — small enough
+// that herds read as distinct clusters on the backdrop, large enough that they still graze/wander
+// visibly within it. Menu-only (see the anchor assignment in seedInitialEntities).
+const HERD_ANCHOR_RANGE = 8;
+
 /**
  * Seed the initial wild population. Normal play (no `packsOverride`) scales the count with map AREA
  * via `targetEntityCount` — a 500×500 map seeds ~325 entities — and stops once the total target is
@@ -84,6 +89,13 @@ export function seedInitialEntities(
     const origin = findSpawnTile(state, def);
     if (!origin) continue;
 
+    // MENU-PREVIEW ONLY: anchor each prey pack to an INVISIBLE home at its spawn origin so the herd
+    // stays clustered instead of diffusing across the backdrop (the title shot "meshing" — see the
+    // soft leash in entityAI.stepAnimal, gated on `lairId`). This reuses the lair-leash machinery with
+    // no lair TILE — just the anchor fields. Real play (`!preyOnly`) leaves prey free-roaming: they get
+    // no anchor, so the leash is a no-op for them.
+    const anchorId = preyOnly ? `herd-${origin.x}-${origin.y}` : null;
+
     const [packMin, packMax] = def.pack;
     const packSize = packMin + Math.floor(rng.random() * (packMax - packMin + 1));
     for (let i = 0; i < packSize; i++) {
@@ -94,7 +106,14 @@ export function seedInitialEntities(
         const cand = findNearbyWalkable(state, origin.x, origin.y);
         if (cand && isSpawnableTile(state.worldMap[cand.y]?.[cand.x])) tile = cand;
       }
-      seeded.push(makeMob(def, tile.x, tile.y, state.turn));
+      const mob = makeMob(def, tile.x, tile.y, state.turn);
+      if (anchorId) {
+        mob.lairId = anchorId;
+        mob.lairX = origin.x;
+        mob.lairY = origin.y;
+        mob.lairRange = HERD_ANCHOR_RANGE;
+      }
+      seeded.push(mob);
       if (def.entityClass === 'mob') hostile++;
       else neutral++;
     }
@@ -354,6 +373,10 @@ export function spawnEntities(state: GameState, opts?: { preyOnly?: boolean }): 
   const origin = findSpawnTile(state, def);
   if (!origin) return state;
 
+  // MENU-PREVIEW ONLY: anchor periodically-spawned prey to an invisible home too (matching the initial
+  // seed), so the backdrop's herds stay clustered as the population tops up. Real play gets no anchor.
+  const anchorId = (opts?.preyOnly ?? false) ? `herd-${origin.x}-${origin.y}` : null;
+
   const [packMin, packMax] = def.pack;
   const packSize = packMin + Math.floor(rng.random() * (packMax - packMin + 1));
   const newMobs: Mob[] = [];
@@ -365,7 +388,14 @@ export function spawnEntities(state: GameState, opts?: { preyOnly?: boolean }): 
       const cand = findNearbyWalkable(state, origin.x, origin.y);
       if (cand && isSpawnableTile(state.worldMap[cand.y]?.[cand.x])) tile = cand;
     }
-    newMobs.push(makeMob(def, tile.x, tile.y, state.turn));
+    const mob = makeMob(def, tile.x, tile.y, state.turn);
+    if (anchorId) {
+      mob.lairId = anchorId;
+      mob.lairX = origin.x;
+      mob.lairY = origin.y;
+      mob.lairRange = HERD_ANCHOR_RANGE;
+    }
+    newMobs.push(mob);
   }
 
   return { ...state, mobs: [...mobs, ...newMobs] };
