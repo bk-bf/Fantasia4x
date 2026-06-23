@@ -34,9 +34,9 @@ import {
 } from '$lib/game/world/menuPreviewWorld';
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
 import { entityService } from '$lib/game/services/EntityService';
-import { loadSave, scheduleSave, deleteSave, saveGameNow } from './saveManager';
+import { loadSave, scheduleSave, deleteSave, saveGameNow, setActiveSlot } from './saveManager';
 import { defaultGameSpeed } from './uiPrefs';
-import { clearActivityLog } from './Log';
+import { clearActivityLog, reloadActivityLogForActiveSlot } from './Log';
 import { applyDevWorld } from '$lib/game/dev/devWorld';
 import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
 import { clearTileDeltas } from '$lib/game/core/tileDeltas';
@@ -871,8 +871,11 @@ if (!MENU_ENABLED) _resolveBootGate();
  * overlay) and releases the boot gate so savedStateReady proceeds. Idempotent — a second call no-ops
  * because the already-resolved gate can't re-trigger the one-shot loader.
  */
-function startGame(mode: 'new' | 'load') {
+function startGame(mode: 'new' | 'load', slot = 0) {
   _bootMode = mode;
+  // The picked slot is where this run loads from and saves to (autosave + manual). Default 0 for the
+  // menu-bypass (debug/profiler) boot which doesn't go through the slot picker.
+  setActiveSlot(slot);
   // Tear down the menu backdrop: unmount it now, and freeze the preview worker so it stops emitting
   // (still-unsaved) snapshots during the gap before savedStateReady re-inits it into the real sim.
   menuPreviewReady.set(false);
@@ -1073,6 +1076,10 @@ export const savedStateReady: Promise<void> = (async () => {
   const savedState = bootMode() === 'new' ? null : await loadSave();
   let baseState = savedState ? applyMigrations(savedState) : initialGameState;
   if (bootMode() === 'new') baseState = { ...baseState, seed: freshSeed() };
+
+  // Load THIS slot's chronicle (the module-init load ran against the default slot on the menu). A
+  // fresh-colony slot resets it to []. Done before the sim starts so no stray entries cross slots.
+  await reloadActivityLogForActiveSlot();
 
   // P0-2/D7: reseed the sim RNG from the persisted seed so the run replays deterministically,
   // and clear module-level state (unreachable-job memory) carried over from a prior session.

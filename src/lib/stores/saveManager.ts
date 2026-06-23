@@ -18,16 +18,47 @@ import { browser } from '$app/environment';
 import { get } from 'svelte/store';
 import type { GameState, WorldTile } from '$lib/game/core/types';
 import type { ActivityLogEntry } from '$lib/game/core/Events';
+import { TICKS_PER_SECOND } from '$lib/game/core/time';
 import { autosaveEnabled } from './uiPrefs';
 
 // ── constants ──────────────────────────────────────────────────────────────
 const DB_NAME = 'fantasia4x';
 const DB_VERSION = 1;
 const STORE = 'saves';
-const SAVE_KEY = 'current';
-// The chronicle / activity log is persisted under its own key alongside the save
-// so it survives a tab reload/discard (it lives in an in-memory store, not GameState).
-const LOG_KEY = 'activity-log';
+const LEGACY_SAVE_KEY = 'current'; // pre-slots single save — migrated into slot 0 on first access
+const LEGACY_LOG_KEY = 'activity-log';
+
+/** Number of save slots backing the title-screen slot picker (SaveSlotMenu). */
+export const SLOTS = 3;
+const slotKey = (i: number) => `save-${i}`;
+const slotLogKey = (i: number) => `activity-log-${i}`;
+const slotMetaKey = (i: number) => `save-${i}-meta`;
+
+// The RUNNING game writes to (and reads its chronicle from) the active slot. It's set when the player
+// picks a slot in the menu (load/new); default 0 so the menu-bypass (debug/profiler) boot has a slot.
+let activeSlot = 0;
+export function setActiveSlot(i: number): void {
+  activeSlot = i;
+}
+
+/** Small per-slot summary shown by the slot picker — read without hydrating the full save. */
+export interface SlotMeta {
+  raceName: string;
+  day: number;
+  season: string;
+  population: number;
+  savedAt: number; // epoch ms
+}
+const TICKS_PER_DAY = 300 * TICKS_PER_SECOND; // TURNS_PER_DAY (EnvironmentService) × ticks/sec
+function slotMeta(state: GameState): SlotMeta {
+  return {
+    raceName: state.race?.name ?? 'Unknown',
+    day: Math.floor((state.turn ?? 0) / TICKS_PER_DAY) + 1,
+    season: state.season ?? 'spring',
+    population: state.pawns?.length ?? 0,
+    savedAt: Date.now()
+  };
+}
 // The diagnostic debug log (unified logging: perf/ai/needs/job/system + verbose traces) is
 // persisted under its own key too — same reason, but kept separate so its higher churn never
 // competes with the chronicle's retention.
@@ -146,51 +177,96 @@ function clearLegacyLocalStorage(): void {
 
 // ── public API ─────────────────────────────────────────────────────────────
 
-/**
- * Load the most recent save.
- * Tries IndexedDB first; falls back to the old localStorage save and migrates it.
- * Returns null if no save exists.
- */
-export async function loadSave(): Promise<GameState | null> {
-  if (!browser) return null;
+// One-time move of any pre-slots save into slot 0: the old single IDB row (`'current'`) or, older
+// still, the localStorage save. Idempotent + guarded so it only runs when slot 0 is empty.
+let _migrated = false;
+async function migrateLegacy(): Promise<void> {
+  if (_migrated || !browser) return;
+  _migrated = true;
   try {
-    const idbState = await idbGet<GameState>(SAVE_KEY);
-    if (idbState) return hydrateState(idbState);
-
-    // One-time migration from localStorage
-    const legacy = readLegacyLocalStorage();
-    if (legacy) {
-      console.info('[SaveManager] Migrating save from localStorage → IndexedDB');
-      idbPut(SAVE_KEY, stripState(legacy)).catch(console.error);
-      clearLegacyLocalStorage();
-      return legacy; // already has ascii / A* defaults from the old save
+    if (await idbGet(slotKey(0))) return; // slot 0 already populated — nothing to migrate
+    const legacyIdb = await idbGet<GameState>(LEGACY_SAVE_KEY);
+    if (legacyIdb) {
+      console.info('[SaveManager] Migrating single save → slot 0');
+      await idbPut(slotKey(0), legacyIdb);
+      await idbPut(slotMetaKey(0), slotMeta(legacyIdb));
+      const legacyLog = await idbGet<ActivityLogEntry[]>(LEGACY_LOG_KEY);
+      if (legacyLog) await idbPut(slotLogKey(0), legacyLog);
+      await Promise.all([idbDelete(LEGACY_SAVE_KEY), idbDelete(LEGACY_LOG_KEY)]);
+      return;
     }
+    const legacyLs = readLegacyLocalStorage();
+    if (legacyLs) {
+      console.info('[SaveManager] Migrating localStorage save → slot 0');
+      await idbPut(slotKey(0), stripState(legacyLs));
+      await idbPut(slotMetaKey(0), slotMeta(legacyLs));
+      clearLegacyLocalStorage();
+    }
+  } catch (err) {
+    console.warn('[SaveManager] legacy migration failed:', err);
+  }
+}
+
+/** Load a slot's save (defaults to the active slot) and make it the active slot. null if empty. */
+export async function loadSave(slot: number = activeSlot): Promise<GameState | null> {
+  if (!browser) return null;
+  activeSlot = slot;
+  try {
+    await migrateLegacy();
+    const idbState = await idbGet<GameState>(slotKey(slot));
+    if (idbState) return hydrateState(idbState);
   } catch (err) {
     console.warn('[SaveManager] Load failed:', err);
   }
   return null;
 }
 
-/**
- * Cheap existence check — does a save exist? Used by the main menu to enable/disable "Load Game"
- * without paying loadSave's full hydrate. Reads the row but skips hydration.
- */
-export async function hasSave(): Promise<boolean> {
+/** Cheap existence check (no hydrate): a specific slot, or — with no arg — whether ANY slot is filled. */
+export async function hasSave(slot?: number): Promise<boolean> {
   if (!browser) return false;
   try {
-    const idbState = await idbGet<GameState>(SAVE_KEY);
-    if (idbState) return true;
-    return readLegacyLocalStorage() != null;
+    await migrateLegacy();
+    if (slot !== undefined) return (await idbGet(slotKey(slot))) != null;
+    for (let i = 0; i < SLOTS; i++) if (await idbGet(slotKey(i))) return true;
+    return false;
   } catch {
     return false;
   }
 }
 
-/** Delete the current save (and its chronicle) from both storage backends. */
+/** Per-slot summaries for the picker (null = empty slot). Back-fills a meta for any pre-meta save. */
+export async function readSlotMetas(): Promise<(SlotMeta | null)[]> {
+  if (!browser) return new Array(SLOTS).fill(null);
+  await migrateLegacy();
+  const metas: (SlotMeta | null)[] = [];
+  for (let i = 0; i < SLOTS; i++) {
+    let m = await idbGet<SlotMeta>(slotMetaKey(i)).catch(() => null);
+    if (!m) {
+      const st = await idbGet<GameState>(slotKey(i)).catch(() => null);
+      if (st) {
+        m = slotMeta(st);
+        idbPut(slotMetaKey(i), m).catch(() => {});
+      }
+    }
+    metas.push(m);
+  }
+  return metas;
+}
+
+/** Delete one slot — its save, chronicle and meta. */
+export async function deleteSlot(i: number): Promise<void> {
+  if (!browser) return;
+  if (i === 0) clearLegacyLocalStorage();
+  await Promise.all([idbDelete(slotKey(i)), idbDelete(slotLogKey(i)), idbDelete(slotMetaKey(i))]);
+}
+
+/** Wipe EVERY slot (and the legacy keys) — used by the dev hard-reset / wipe-and-reload. */
 export async function deleteSave(): Promise<void> {
   if (!browser) return;
   clearLegacyLocalStorage();
-  await Promise.all([idbDelete(SAVE_KEY), idbDelete(LOG_KEY)]);
+  const keys: Promise<void>[] = [idbDelete(LEGACY_SAVE_KEY), idbDelete(LEGACY_LOG_KEY)];
+  for (let i = 0; i < SLOTS; i++) keys.push(deleteSlot(i));
+  await Promise.all(keys);
 }
 
 // ── debounced save ─────────────────────────────────────────────────────────
@@ -224,11 +300,13 @@ export function scheduleSave(state: GameState): void {
   if (_saveTimer !== null) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
     _saveTimer = null;
+    const slot = activeSlot; // capture: the write target shouldn't drift if the slot changes mid-idle
     // Strip + write off the frame-critical path (§D3) — the 38k-tile clone is too heavy to run mid-frame.
     runWhenIdle(() => {
-      idbPut(SAVE_KEY, stripState(state)).catch((err) => {
+      idbPut(slotKey(slot), stripState(state)).catch((err) => {
         console.warn('[SaveManager] IndexedDB write failed:', err);
       });
+      idbPut(slotMetaKey(slot), slotMeta(state)).catch(() => {});
     });
   }, DEBOUNCE_MS);
 }
@@ -244,7 +322,9 @@ export function saveGameNow(state: GameState): Promise<void> {
     clearTimeout(_saveTimer);
     _saveTimer = null;
   }
-  return idbPut(SAVE_KEY, stripState(state)).catch((err) => {
+  const slot = activeSlot;
+  idbPut(slotMetaKey(slot), slotMeta(state)).catch(() => {});
+  return idbPut(slotKey(slot), stripState(state)).catch((err) => {
     console.warn('[SaveManager] IndexedDB write failed:', err);
   });
 }
@@ -255,7 +335,7 @@ export function saveGameNow(state: GameState): Promise<void> {
 export async function loadActivityLog(): Promise<ActivityLogEntry[]> {
   if (!browser) return [];
   try {
-    return (await idbGet<ActivityLogEntry[]>(LOG_KEY)) ?? [];
+    return (await idbGet<ActivityLogEntry[]>(slotLogKey(activeSlot))) ?? [];
   } catch (err) {
     console.warn('[SaveManager] Chronicle load failed:', err);
     return [];
@@ -273,7 +353,7 @@ export function scheduleSaveActivityLog(entries: ActivityLogEntry[]): void {
   if (_logSaveTimer !== null) clearTimeout(_logSaveTimer);
   _logSaveTimer = setTimeout(() => {
     _logSaveTimer = null;
-    idbPut(LOG_KEY, entries).catch((err) => {
+    idbPut(slotLogKey(activeSlot), entries).catch((err) => {
       console.warn('[SaveManager] Chronicle write failed:', err);
     });
   }, DEBOUNCE_MS);
@@ -290,7 +370,7 @@ export function saveActivityLogNow(entries: ActivityLogEntry[]): Promise<void> {
     clearTimeout(_logSaveTimer);
     _logSaveTimer = null;
   }
-  return idbPut(LOG_KEY, entries).catch((err) => {
+  return idbPut(slotLogKey(activeSlot), entries).catch((err) => {
     console.warn('[SaveManager] Chronicle write failed:', err);
   });
 }
