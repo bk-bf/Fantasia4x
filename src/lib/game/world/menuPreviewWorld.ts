@@ -60,6 +60,7 @@ const SEASON_WEATHER_POOL: Record<Season, ReadonlyArray<readonly [type: string, 
   ],
   summer: [
     ['summer_windy', 7],
+    ['spring_windy', 5], // the blowing-leaves breeze — included in summer too so it actually shows
     ['gale', 3],
     ['drizzle', 1],
     ['rain', 1],
