@@ -5,6 +5,7 @@
   import type { ActivityLogEntry } from '$lib/game/core/Events';
   import CombatBreakdown from './CombatBreakdown.svelte';
   import HoverTip from './HoverTip.svelte';
+  import ScrollArea from './ScrollArea.svelte';
 
   const TYPE_ABBR: Record<string, string> = {
     work: 'WRK',
@@ -99,15 +100,6 @@
   function onEntryLeave() {
     hoverEntry = null;
   }
-
-  // Scrollbar only visible while actively scrolling (mirrors ResourceSidebar's .res-area).
-  let scrolling = false;
-  let scrollTimer: ReturnType<typeof setTimeout>;
-  function onScroll() {
-    scrolling = true;
-    clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(() => (scrolling = false), 700);
-  }
 </script>
 
 <aside class="panel" class:transparent={$hideSidebars}>
@@ -122,7 +114,7 @@
     >
   </div>
 
-  <div class="log-list" class:scrolling on:scroll={onScroll}>
+  <ScrollArea class="log-list">
     {#if $recentActivity.length > 0}
       {#each $recentActivity as entry (entry.id)}
         <div
@@ -147,7 +139,7 @@
         {/if}
       {/each}
     {/if}
-  </div>
+  </ScrollArea>
 
   {#if hoverEntry}
     <HoverTip x={hoverX} y={hoverY}>
@@ -276,30 +268,10 @@
     cursor: default;
   }
 
-  .log-list {
+  /* .log-list is the ScrollArea viewport (overflow + auto-hiding bar live in ScrollArea). */
+  .panel :global(.log-list) {
     flex: 1;
-    overflow-y: auto;
     padding: 2px 0;
-    /* Reserve the scrollbar gutter so rows never reflow when the (auto-hiding) bar appears. */
-    scrollbar-gutter: stable;
-    /* Firefox: scrollbar hidden until actively scrolling. */
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-    transition: scrollbar-color 0.3s ease;
-  }
-  .log-list.scrolling {
-    scrollbar-color: var(--border) transparent;
-  }
-  /* WebKit: thumb only paints while scrolling. */
-  .log-list::-webkit-scrollbar {
-    width: 8px;
-  }
-  .log-list::-webkit-scrollbar-thumb {
-    background: transparent;
-    border-radius: 4px;
-  }
-  .log-list.scrolling::-webkit-scrollbar-thumb {
-    background: var(--border);
   }
 
   .entry {

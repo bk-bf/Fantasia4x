@@ -16,6 +16,7 @@
   import { fade, scale } from 'svelte/transition';
   import { onMount } from 'svelte';
   import SettingRow from './SettingRow.svelte';
+  import ScrollArea from './ScrollArea.svelte';
   import { gameState, appPhase } from '$lib/stores/gameState';
   import {
     weatherEffects,
@@ -95,7 +96,7 @@
       <button class="close" aria-label="Close settings" onclick={onClose}>✕</button>
     </div>
 
-    <div class="body">
+    <ScrollArea class="body">
       <div class="section">Display</div>
       <SettingRow
         type="select"
@@ -178,7 +179,7 @@
           {leaving ? 'Saving…' : 'Main Menu'}
         </button>
       {/if}
-    </div>
+    </ScrollArea>
 
     <button class="done" onclick={onClose}>Done</button>
   </div>
@@ -241,11 +242,12 @@
   .close:hover {
     color: var(--accent-hi);
   }
-  .body {
-    overflow-y: auto;
+  /* .body is the ScrollArea viewport (overflow + auto-hiding bar live in ScrollArea); here we only
+     size it and lay out its sections. :global because the element lives in ScrollArea's scope. */
+  .settings-panel :global(.body) {
     display: flex;
     flex-direction: column;
-    scrollbar-width: thin;
+    min-height: 0;
   }
   .section {
     color: var(--accent-hi);

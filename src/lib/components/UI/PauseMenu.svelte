@@ -3,15 +3,15 @@
   the existing blueprint/designation/panel cancels), closed by Resume or ESC again. The game is
   paused while it's up (+page restores the prior pause state on resume).
 
-  Entries: Resume · Save Game (eager flush, with a transient confirmation) · Load Game (opens the
-  3-slot picker in load mode) · Settings (inline toggles, mirroring the title menu) · Exit to Main
-  Menu (save → reload to the title) · Quit to Desktop (save → close the window; desktop shell only).
+  Entries: Resume · Save Game (writes a new snapshot, with a transient confirmation) · Load Game (opens
+  the save list) · Settings (inline toggles, mirroring the title menu) · Exit to Main Menu (flush → reload
+  to the title) · Quit to Desktop (flush → close the window; desktop shell only).
 -->
 <script lang="ts">
   import { fade, scale } from 'svelte/transition';
   import { gameState } from '$lib/stores/gameState';
   import SettingsModal from './SettingsModal.svelte';
-  import SaveSlotMenu from './SaveSlotMenu.svelte';
+  import SaveListMenu from './SaveListMenu.svelte';
 
   let { onResume }: { onResume: () => void } = $props();
 
@@ -31,16 +31,15 @@
   async function exitToMenu() {
     if (busy) return;
     busy = true;
-    await gameState.saveGame();
-    // Reload boots cleanly back to the title (menu shows under a clean/--play launch); New/Load both
-    // re-run the boot freshly. The eager save above guarantees nothing is lost.
-    location.reload();
+    // Flush the ACTIVE save (not a new snapshot) so nothing is lost, then reload — but force the menu so a
+    // --debug launch (which skips the menu at boot) still lands on the title rather than straight back in.
+    await gameState.goToMainMenu();
   }
 
   async function quitDesktop() {
     if (busy) return;
     busy = true;
-    await gameState.saveGame();
+    await gameState.flushSave();
     window.close();
   }
 </script>
@@ -67,7 +66,7 @@
 </div>
 
 {#if showLoad}
-  <SaveSlotMenu intent="load" onClose={() => (showLoad = false)} />
+  <SaveListMenu onClose={() => (showLoad = false)} />
 {/if}
 
 {#if showSettings}

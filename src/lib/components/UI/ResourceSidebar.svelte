@@ -7,6 +7,7 @@
   } from '$lib/stores/uiPrefs';
   import { itemService } from '$lib/game/services/ItemService';
   import { uiState } from '$lib/stores/uiState';
+  import ScrollArea from './ScrollArea.svelte';
 
   type StockItem = { id: string; name: string; amount: number; color?: string };
 
@@ -88,15 +89,6 @@
     else collapsedResourceCategories.clear();
   }
 
-  // ── Scrollbar: only visible while actively scrolling ────────────────────────
-  let scrolling = $state(false);
-  let scrollTimer: ReturnType<typeof setTimeout>;
-  function onScroll() {
-    scrolling = true;
-    clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(() => (scrolling = false), 700);
-  }
-
   function intactnessColor(pct: number): string {
     if (pct >= 70) return 'var(--pos)';
     if (pct >= 35) return '#e8b830';
@@ -144,7 +136,7 @@
     </div>
 
     <!-- Scrolling category list -->
-    <div class="res-area" class:scrolling onscroll={onScroll}>
+    <ScrollArea class="res-area">
       {#each groups as [cat, items] (cat)}
         {@const open = !collapsed.has(cat)}
         <div
@@ -204,7 +196,7 @@
           {/each}
         {/if}
       {/each}
-    </div>
+    </ScrollArea>
   {:else}
     <div class="empty">loading...</div>
   {/if}
@@ -373,32 +365,11 @@
     color: var(--accent-hi);
   }
 
-  /* Scrolling resource area */
-  .res-area {
+  /* Scrolling resource area — the ScrollArea viewport (overflow + auto-hiding bar live in ScrollArea;
+     its reserved gutter keeps right-aligned amounts from jumping when the thumb appears). */
+  .sidebar :global(.res-area) {
     flex: 1;
-    overflow-y: auto;
     padding: 2px 0;
-    /* Reserve the scrollbar gutter at all times so content width never changes when the
-       (auto-hiding) scrollbar appears/disappears — otherwise right-aligned amounts jump. */
-    scrollbar-gutter: stable;
-    /* Firefox: scrollbar hidden until scrolling. */
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-    transition: scrollbar-color 0.3s ease;
-  }
-  .res-area.scrolling {
-    scrollbar-color: var(--border) transparent;
-  }
-  /* WebKit: thumb only paints while scrolling. */
-  .res-area::-webkit-scrollbar {
-    width: 8px;
-  }
-  .res-area::-webkit-scrollbar-thumb {
-    background: transparent;
-    border-radius: 4px;
-  }
-  .res-area.scrolling::-webkit-scrollbar-thumb {
-    background: var(--border);
   }
 
   /* Category block header (collapsible — nesting mirrors the chronicle panel). */

@@ -17,6 +17,7 @@
   import { itemService } from '$lib/game/services/ItemService';
   import itemsData from '$lib/game/database/items.jsonc';
   import type { Item, ZoneFilter } from '$lib/game/core/types';
+  import ScrollArea from '$lib/components/UI/ScrollArea.svelte';
 
   let {
     instanceId,
@@ -72,8 +73,15 @@
     const next: ZoneFilter =
       checked.size >= ALL_IDS.length
         ? { allowedCategories: [], blockedItems: [] } // canonical "all"
-        : { allowedCategories: [...ALL_CATEGORIES], blockedItems: ALL_IDS.filter((id) => !checked.has(id)) };
-    gameState.command({ type: 'setInstanceFilter', payload: { instanceId, filter: next }, save: true });
+        : {
+            allowedCategories: [...ALL_CATEGORIES],
+            blockedItems: ALL_IDS.filter((id) => !checked.has(id))
+          };
+    gameState.command({
+      type: 'setInstanceFilter',
+      payload: { instanceId, filter: next },
+      save: true
+    });
   }
 
   function toggleItem(id: string) {
@@ -84,7 +92,9 @@
   }
 
   function catChecked(cat: string): number {
-    return GROUPS.find(([c]) => c === cat)?.[1].reduce((n, i) => n + (isChecked(i.id) ? 1 : 0), 0) ?? 0;
+    return (
+      GROUPS.find(([c]) => c === cat)?.[1].reduce((n, i) => n + (isChecked(i.id) ? 1 : 0), 0) ?? 0
+    );
   }
 
   function toggleCategory(cat: string) {
@@ -124,7 +134,9 @@
   </div>
   <div class="zfp-bar">
     <button class="zfp-mini" disabled={allChecked} onclick={() => setAll(true)}>CHECK ALL</button>
-    <button class="zfp-mini" disabled={noneChecked} onclick={() => setAll(false)}>UNCHECK ALL</button>
+    <button class="zfp-mini" disabled={noneChecked} onclick={() => setAll(false)}
+      >UNCHECK ALL</button
+    >
     <button
       class="zfp-mini"
       class:active={hideEmpty}
@@ -133,7 +145,7 @@
     >
   </div>
 
-  <div class="zfp-list">
+  <ScrollArea class="zfp-list">
     {#each GROUPS as [cat, items] (cat)}
       {@const shown = hideEmpty ? items.filter((i) => (inventory[i.id] ?? 0) > 0) : items}
       {#if shown.length > 0}
@@ -148,7 +160,13 @@
             title="Toggle every item in this category"
           />
           <!-- svelte-ignore a11y_click_events_have_key_events -->
-          <span class="zfp-cat-name" class:open={isOpen} role="button" tabindex="0" onclick={() => toggleCat(cat)}>
+          <span
+            class="zfp-cat-name"
+            class:open={isOpen}
+            role="button"
+            tabindex="0"
+            onclick={() => toggleCat(cat)}
+          >
             <span class="zfp-caret">{isOpen ? '▾' : '▸'}</span>{catLabel(cat)}
             <span class="zfp-cat-count">{on}/{items.length}</span>
           </span>
@@ -157,7 +175,11 @@
           {#each shown as item (item.id)}
             {@const amt = Math.floor(inventory[item.id] ?? 0)}
             <label class="zfp-item">
-              <input type="checkbox" checked={isChecked(item.id)} onchange={() => toggleItem(item.id)} />
+              <input
+                type="checkbox"
+                checked={isChecked(item.id)}
+                onchange={() => toggleItem(item.id)}
+              />
               <span class="zfp-item-name">{item.name}</span>
               <span class="zfp-item-amt" class:zero={amt === 0}>{amt}</span>
             </label>
@@ -165,7 +187,7 @@
         {/if}
       {/if}
     {/each}
-  </div>
+  </ScrollArea>
   <div class="zfp-note">Only checked items are hauled into this stockpile.</div>
 </div>
 
@@ -240,12 +262,10 @@
     cursor: default;
   }
 
-  .zfp-list {
+  /* .zfp-list is the ScrollArea viewport (overflow + auto-hiding bar live in ScrollArea). */
+  .zfp :global(.zfp-list) {
     max-height: 250px;
-    overflow-y: auto;
     padding-right: 2px;
-    scrollbar-width: thin;
-    scrollbar-color: #6b4f22 transparent;
   }
 
   .zfp-cat {
