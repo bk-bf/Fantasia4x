@@ -1,8 +1,9 @@
 <!--
-  SaveSlotMenu — the title-screen save-slot picker popup (three square slots). Opened by BOTH New Game
-  and Load Game; `intent` only sets the header. A filled slot loads on click; an empty slot starts a new
-  colony there; each filled slot's ✕ deletes it (confirmed). Reuses the modal scaffolding pattern from
-  SettingsModal (overlay + scrim + <button> backdrop + Escape/✕ close).
+  SaveSlotMenu — the save-slot picker popup (three square slots). Opened by BOTH New Game and Load Game;
+  `intent` sets the header AND whether empty slots are actionable. A filled slot loads on click and its ✕
+  deletes it (confirmed). An empty slot starts a new colony there ONLY under the `new` intent; under `load`
+  it's an inert placeholder (Load can only load an existing save — new-from-scratch lives on the main
+  menu's New Game). Reuses the modal scaffolding from SettingsModal (overlay + scrim + backdrop + Escape/✕).
 -->
 <script lang="ts">
   import { onMount } from 'svelte';
@@ -64,6 +65,7 @@
         <SaveSlotTile
           {meta}
           index={i}
+          allowNew={intent === 'new'}
           onLoad={() => load(i)}
           onNew={() => newGame(i)}
           onDelete={() => del(i)}

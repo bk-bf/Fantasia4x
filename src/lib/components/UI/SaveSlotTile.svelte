@@ -1,6 +1,8 @@
 <!--
   SaveSlotTile — one square in the SaveSlotMenu. Filled → colony summary, whole-tile click loads it,
-  corner ✕ deletes (two-step confirm). Empty → "+ New Game", click starts a fresh colony in this slot.
+  corner ✕ deletes (two-step confirm). Empty → "+ New Game" when `allowNew` (New Game intent), click
+  starts a fresh colony in this slot; otherwise (Load intent) an empty slot is inert — Load only ever
+  loads an existing save, it can't spin up a new game from scratch (that lives on the main menu's New Game).
 -->
 <script lang="ts">
   import type { SlotMeta } from '$lib/stores/saveManager';
@@ -8,12 +10,14 @@
   let {
     meta,
     index,
+    allowNew,
     onLoad,
     onNew,
     onDelete
   }: {
     meta: SlotMeta | null;
     index: number;
+    allowNew: boolean;
     onLoad: () => void;
     onNew: () => void;
     onDelete: () => void;
@@ -57,12 +61,18 @@
         >✕</button
       >
     {/if}
-  {:else}
+  {:else if allowNew}
     <button class="main empty" onclick={onNew}>
       <div class="slot-no">Slot {index + 1}</div>
       <div class="empty-label">Empty</div>
       <div class="empty-action">+ New Game</div>
     </button>
+  {:else}
+    <!-- Load intent: an empty slot has nothing to load, so it's a non-interactive placeholder. -->
+    <div class="main empty inert">
+      <div class="slot-no">Slot {index + 1}</div>
+      <div class="empty-label">Empty</div>
+    </div>
   {/if}
 </div>
 
@@ -126,6 +136,18 @@
     margin-top: 4px;
     font-size: 9px;
     color: var(--text-muted);
+  }
+  /* Load intent, empty slot: a dimmed, non-interactive placeholder (no hover lift, no pointer). */
+  .main.inert {
+    cursor: default;
+    box-shadow: none;
+    opacity: 0.5;
+  }
+  .main.inert:hover {
+    background: var(--bg);
+    border-color: var(--border);
+    box-shadow: none;
+    transform: none;
   }
   .empty .empty-label {
     color: var(--text-muted);
