@@ -866,10 +866,10 @@
     lines.push(
       `${selectedResourceTile.resourceId.replace(/_/g, ' ')} — ×${selectedResourceAmount} nodes`
     );
-    // Single-type Shift+drag feedback: how many tiles the mark covers (the HARVEST/CUT button below
-    // already applies to all of them via designateResource). Multi-type uses its own card instead.
-    if (selectedResourceTypes.size <= 1 && highlightedResourceTiles.size > 0) {
-      lines.push(`◈ ${highlightedResourceTiles.size} tiles marked — Shift+drag adds more`);
+    // MARK (select-similar) feedback: how many tiles are highlighted (the HARVEST/CUT button below
+    // applies to all of them via designateResource).
+    if (highlightedResourceTiles.size > 0) {
+      lines.push(`◈ ${highlightedResourceTiles.size} tiles marked`);
     }
     // Harvestable items become stylised, item-coloured pills (hover → item card). Suppressed while
     // a designation is already queued — the status line covers that. Dedupe by itemId across
@@ -928,29 +928,23 @@
     } satisfies SelectedEntityModel;
   })();
 
-  // Multi-type resource MARK card — shown once 2+ resource KINDS are Shift-selected. Reuses the shared
-  // SelectedEntityCard (names + marked-tile count); DESIGNATE queues every marked tile with its own
-  // resource's designation type (grouped) in one press, so a mixed tree/stone/berry selection is marked
-  // for woodcut/harvest/forage at once. Takes priority over the single-resource card below.
+  // Multi-type resource MARK "brush" — shown once 2+ resource KINDS are Shift-selected. Reuses the
+  // shared SelectedEntityCard to list the types; a Shift+drag then designates every tile holding any of
+  // them, each with its own designation type (tree → woodcut, stone/berry → harvest …) in one go. Takes
+  // priority over the single-resource card below.
   $: multiResourceCard = ((): SelectedEntityModel | null => {
     if (selectedResourceTypes.size < 2) return null;
     const typeNames = [...selectedResourceTypes].map(
       (id) => resourceObjectService.getById(id)?.displayName ?? id
     );
-    const marked = highlightedResourceTiles.size;
-    const btns: EntityButton[] = [];
-    if (marked > 0) {
-      btns.push({ label: `DESIGNATE (${marked})`, onClick: () => designateMarkedMulti() });
-    }
-    btns.push({ label: 'CLEAR', onClick: () => clearResourceMark() });
     return {
       name: `${selectedResourceTypes.size} resource types`,
-      status: 'multiple targets',
+      status: 'mark brush',
       selected: true,
       dismissable: true,
-      note: marked > 0 ? `${marked} tiles marked` : 'Shift+drag a box to mark all of these',
+      note: 'Shift+drag a box to designate all of these',
       lines: [typeNames.join(', ')],
-      buttons: btns
+      buttons: [{ label: 'CLEAR', onClick: () => clearResourceMark() }]
     } satisfies SelectedEntityModel;
   })();
 
@@ -2160,39 +2154,44 @@
       ctx.restore();
     }
 
-    // Shift+drag resource-mark preview. A faint amber box shows the drag area; tiles inside it that hold
-    // a SELECTED resource type glow brighter (so you see exactly what the release will mark). Matching
-    // the "select similar" aesthetic. 2D overlay only — no WebGL terrain rebuild while dragging.
+    // Shift+drag mark preview (universal). For a RESOURCE drag, tiles holding a selected type glow
+    // bright amber (you see what the release will designate); for a PAWN/MOB drag it's a plain amber
+    // box. 2D overlay only — no WebGL terrain rebuild while dragging.
     if (selDragActive) {
       const minX = Math.min(selAnchorX, selEndX);
       const minY = Math.min(selAnchorY, selEndY);
       const maxX = Math.max(selAnchorX, selEndX);
       const maxY = Math.max(selAnchorY, selEndY);
-      const types =
-        selectedResourceTypes.size > 0
-          ? selectedResourceTypes
-          : selectedResourceTile
-            ? new Set([selectedResourceTile.resourceId])
-            : new Set<string>();
-      const vx0 = Math.max(minX, viewX);
-      const vy0 = Math.max(minY, viewY);
-      const vx1 = Math.min(maxX, viewX + Math.ceil(W / tileWidth));
-      const vy1 = Math.min(maxY, viewY + Math.ceil(H / tileHeight));
-      ctx.save();
-      for (let ry = vy0; ry <= vy1; ry++) {
-        for (let rx = vx0; rx <= vx1; rx++) {
-          if (isHiddenTile(rx, ry)) continue;
-          const res = worldMap[ry]?.[rx]?.resources;
-          let match = false;
-          if (res) for (const t of types) if ((res[t] ?? 0) > 0) { match = true; break; }
-          ctx.fillStyle = match ? 'rgba(240, 208, 32, 0.42)' : 'rgba(240, 208, 32, 0.10)';
-          ctx.fillRect((rx - viewX) * tileWidth, (ry - viewY) * tileHeight, tileWidth, tileHeight);
-        }
-      }
       const sx = (minX - viewX) * tileWidth;
       const sy = (minY - viewY) * tileHeight;
       const rw = (maxX - minX + 1) * tileWidth;
       const rh = (maxY - minY + 1) * tileHeight;
+      ctx.save();
+      if (dragMarkKind() === 'resource') {
+        const types =
+          selectedResourceTypes.size > 0
+            ? selectedResourceTypes
+            : selectedResourceTile
+              ? new Set([selectedResourceTile.resourceId])
+              : new Set<string>();
+        const vx0 = Math.max(minX, viewX);
+        const vy0 = Math.max(minY, viewY);
+        const vx1 = Math.min(maxX, viewX + Math.ceil(W / tileWidth));
+        const vy1 = Math.min(maxY, viewY + Math.ceil(H / tileHeight));
+        for (let ry = vy0; ry <= vy1; ry++) {
+          for (let rx = vx0; rx <= vx1; rx++) {
+            if (isHiddenTile(rx, ry)) continue;
+            const res = worldMap[ry]?.[rx]?.resources;
+            let match = false;
+            if (res) for (const t of types) if ((res[t] ?? 0) > 0) { match = true; break; }
+            ctx.fillStyle = match ? 'rgba(240, 208, 32, 0.42)' : 'rgba(240, 208, 32, 0.10)';
+            ctx.fillRect((rx - viewX) * tileWidth, (ry - viewY) * tileHeight, tileWidth, tileHeight);
+          }
+        }
+      } else {
+        ctx.fillStyle = 'rgba(255, 200, 90, 0.18)';
+        ctx.fillRect(sx, sy, rw, rh);
+      }
       ctx.strokeStyle = 'rgba(255, 220, 120, 0.95)';
       ctx.lineWidth = 1;
       ctx.strokeRect(sx + 0.5, sy + 0.5, rw - 1, rh - 1);
@@ -3403,13 +3402,20 @@
     }
     if (selDragActive) {
       selDragActive = false;
-      // A Shift+CLICK (no box) adds the resource under the tile to the mark type-set; a Shift+DRAG marks
-      // every matching tile in the box. Either way the multi-resource card then offers DESIGNATE.
+      // Shift+CLICK (no box) adds the thing under the tile to its mark set; Shift+DRAG marks the whole
+      // box by inferred kind — pawns/mobs into the group card, resources straight to designations.
       if (selAnchorX === selEndX && selAnchorY === selEndY) {
-        shiftSelectResourceAt(selEndX, selEndY);
+        shiftClickTile(selEndX, selEndY);
       } else {
-        commitResourceMarkRect(selAnchorX, selAnchorY, selEndX, selEndY);
+        const kind = dragMarkKind();
+        if (kind === 'resource') {
+          designateResourceRect(selAnchorX, selAnchorY, selEndX, selEndY);
+        } else {
+          markBoxEntities(kind, selAnchorX, selAnchorY, selEndX, selEndY);
+        }
       }
+      // ALWAYS repaint so the live drag preview is cleared even when nothing matched (no stale box).
+      drawDesignations();
       return;
     }
     if (dragDistance < 3 && !customMapPreview && !menuPreview) {
@@ -3492,8 +3498,66 @@
     drawDesignations();
   }
 
-  /** Shift+CLICK on a tile: add the top harvestable resource there to the mark type-set (and focus its
-   *  card), so several resource KINDS can be stacked before a Shift+drag marks them all at once. */
+  // ── Shift = universal MARK shortcut (pawns / mobs / resources) ──────────────
+  // Kind for a Shift+DRAG box: continue an active entity mark, else follow the current selection
+  // (resource brush → resource, selected mob → mob), else default to pawns ("grab my units").
+  function dragMarkKind(): 'pawn' | 'mob' | 'resource' {
+    if (markedKind) return markedKind;
+    if (selectedResourceTile || selectedResourceTypes.size > 0) return 'resource';
+    if (selectedMobId) return 'mob';
+    return 'pawn';
+  }
+
+  /** Shift+CLICK one tile → add the top thing on it (pawn ▸ mob ▸ resource) to the matching mark set,
+   *  so individuals (or resource KINDS) can be stacked before — or instead of — a drag. */
+  function shiftClickTile(x: number, y: number) {
+    const pawn = findPawnAtTile(x, y);
+    if (pawn) return addEntityToMark('pawn', pawn.id);
+    const mob = findMobAtTile(x, y);
+    if (mob) return addEntityToMark('mob', mob.id);
+    shiftSelectResourceAt(x, y);
+  }
+
+  /** Add one pawn/mob id to the committed mark highlight (switching kind drops the previous set). The
+   *  resource brush and entity mark are mutually exclusive, so picking an entity clears the resource one. */
+  function addEntityToMark(kind: 'pawn' | 'mob', id: string) {
+    const base = markedKind === kind ? markedIds : [];
+    if (base.includes(id)) return;
+    markedKind = kind;
+    markedIds = [...base, id];
+    markedSet = new Set(markedIds);
+    selectedResourceTile = null;
+    selectedResourceTypes = new Set();
+    drawDesignations();
+  }
+
+  /** Shift+DRAG box for pawns/mobs → ADD every living entity of `kind` in the box to the mark set
+   *  (feeds the same markedGroupCard the MARK button does: DRAFT/MOVE for pawns, HUNT for mobs). */
+  function markBoxEntities(kind: 'pawn' | 'mob', x1: number, y1: number, x2: number, y2: number) {
+    const minX = Math.min(x1, x2);
+    const maxX = Math.max(x1, x2);
+    const minY = Math.min(y1, y2);
+    const maxY = Math.max(y1, y2);
+    const inBox = (x?: number, y?: number) =>
+      x != null && y != null && x >= minX && x <= maxX && y >= minY && y <= maxY;
+    const found =
+      kind === 'pawn'
+        ? pawns.filter((p) => p.isAlive !== false && inBox(p.position?.x, p.position?.y)).map((p) => p.id)
+        : mobs
+            .filter((m) => m.isAlive !== false && m.state !== 'Corpse' && inBox(m.x, m.y))
+            .map((m) => m.id);
+    const base = markedKind === kind ? markedIds : [];
+    const merged = new Set([...base, ...found]);
+    if (merged.size === 0) return;
+    markedKind = kind;
+    markedIds = [...merged];
+    markedSet = merged;
+    selectedResourceTile = null;
+    selectedResourceTypes = new Set();
+  }
+
+  /** Shift+CLICK on a resource tile: add the top harvestable resource there to the mark type-set (and
+   *  focus its card), so several resource KINDS can be stacked before a Shift+drag designates them. */
   function shiftSelectResourceAt(x: number, y: number) {
     if (isHiddenTile(x, y)) return;
     const res = worldMap[y]?.[x]?.resources;
@@ -3504,14 +3568,20 @@
       return !!def && def.designationTypes.length > 0; // harvestable only
     })?.[0];
     if (!rid) return;
+    // Switching to a resource brush drops any entity mark (they're mutually exclusive).
+    markedKind = null;
+    markedIds = [];
+    markedSet = new Set();
     selectedResourceTypes = new Set([...selectedResourceTypes, rid]);
     selectedResourceTile = { x, y, resourceId: rid };
     drawDesignations();
   }
 
-  /** Shift+DRAG release: mark every tile in the box that holds ANY selected resource type. Additive, so
-   *  repeated drags accumulate; basis falls back to the single selected resource when the set is empty. */
-  function commitResourceMarkRect(x1: number, y1: number, x2: number, y2: number) {
+  /** Shift+DRAG release: DESIGNATE every tile in the box that holds ANY selected resource type — each
+   *  with ITS resource's own designation type (a tree → woodcut, a stone outcrop / berry bush → harvest
+   *  …), grouped into one command per type. One-step: no lingering highlight zone is left behind, only
+   *  the per-tile work icons. Basis falls back to the single selected resource when the set is empty. */
+  function designateResourceRect(x1: number, y1: number, x2: number, y2: number) {
     const types =
       selectedResourceTypes.size > 0
         ? selectedResourceTypes
@@ -3523,7 +3593,7 @@
     const maxX = Math.max(x1, x2);
     const minY = Math.min(y1, y2);
     const maxY = Math.max(y1, y2);
-    const next = new Set(highlightedResourceTiles);
+    const byType = new Map<string, [number, number][]>();
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
         if (isHiddenTile(x, y)) continue;
@@ -3531,43 +3601,24 @@
         if (!res) continue;
         for (const t of types) {
           if ((res[t] ?? 0) > 0) {
-            next.add(`${x},${y}`);
+            const dtype = resourceObjectService.getById(t)?.designationTypes[0];
+            if (dtype) {
+              let bucket = byType.get(dtype);
+              if (!bucket) byType.set(dtype, (bucket = []));
+              bucket.push([x, y]);
+            }
             break;
           }
         }
       }
     }
-    highlightedResourceTiles = next;
-    drawDesignations();
-  }
-
-  /** DESIGNATE the multi-type marked tiles: each tile is queued with ITS resource's own designation type
-   *  (a tree → woodcut, a stone outcrop / berry bush → harvest …), grouped into one command per type. */
-  function designateMarkedMulti() {
-    if (highlightedResourceTiles.size === 0) return;
-    const byType = new Map<string, [number, number][]>();
-    for (const key of highlightedResourceTiles) {
-      const [x, y] = key.split(',').map(Number);
-      const res = worldMap[y]?.[x]?.resources ?? {};
-      let dtype: string | null = null;
-      for (const t of selectedResourceTypes) {
-        if ((res[t] ?? 0) > 0) {
-          dtype = resourceObjectService.getById(t)?.designationTypes[0] ?? null;
-          break;
-        }
-      }
-      if (!dtype) continue;
-      let bucket = byType.get(dtype);
-      if (!bucket) byType.set(dtype, (bucket = []));
-      bucket.push([x, y]);
-    }
     for (const [type, tiles] of byType) {
       gameState.command({ type: 'designateTiles', payload: { tiles, type }, save: true });
     }
-    clearResourceMark();
+    drawDesignations();
   }
 
-  /** Drop the marked tiles + the type-set (the multi-resource card's CLEAR; also Escape). */
+  /** Drop the resource mark brush (the multi-resource card's CLEAR; also Escape). */
   function clearResourceMark() {
     highlightedResourceTiles = new Set();
     selectedResourceTypes = new Set();
@@ -3829,8 +3880,14 @@
       // Cursor left mid-drag → commit the mark box where it stands (only a real box, not a stray click).
       selDragActive = false;
       if (selAnchorX !== selEndX || selAnchorY !== selEndY) {
-        commitResourceMarkRect(selAnchorX, selAnchorY, selEndX, selEndY);
+        const kind = dragMarkKind();
+        if (kind === 'resource') {
+          designateResourceRect(selAnchorX, selAnchorY, selEndX, selEndY);
+        } else {
+          markBoxEntities(kind, selAnchorX, selAnchorY, selEndX, selEndY);
+        }
       }
+      drawDesignations();
     }
     hoverTileX = -1;
     hoverTileY = -1;
@@ -4090,8 +4147,12 @@
     </div>
   {:else if selDragActive}
     <div class="designation-hud" style:color="#ffd66a" style:border-color="#ffd66a">
-      [⊞ MARK RESOURCES] ({Math.abs(selEndX - selAnchorX) + 1}×{Math.abs(selEndY - selAnchorY) + 1}) —
-      release to mark every selected type in the box · Esc cancel
+      [⊞ MARK {dragMarkKind() === 'resource'
+        ? 'RESOURCES'
+        : dragMarkKind() === 'mob'
+          ? 'CREATURES'
+          : 'PAWNS'}] ({Math.abs(selEndX - selAnchorX) + 1}×{Math.abs(selEndY - selAnchorY) + 1}) —
+      release to mark · Esc cancel
     </div>
   {:else if blueprintBuildingId}
     <div class="designation-hud">
