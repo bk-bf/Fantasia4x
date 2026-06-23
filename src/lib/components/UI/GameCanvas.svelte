@@ -928,23 +928,29 @@
     } satisfies SelectedEntityModel;
   })();
 
-  // Multi-type resource MARK "brush" — shown once 2+ resource KINDS are Shift-selected. Reuses the
-  // shared SelectedEntityCard to list the types; a Shift+drag then designates every tile holding any of
-  // them, each with its own designation type (tree → woodcut, stone/berry → harvest …) in one go. Takes
-  // priority over the single-resource card below.
+  // Multi-type resource MARK card — shown once 2+ resource KINDS are Shift-selected. Reuses the shared
+  // SelectedEntityCard to list the types + highlighted-tile count. Shift+drag HIGHLIGHTS matching tiles;
+  // DESIGNATE then queues each with its own designation type (tree → woodcut, stone/berry → harvest …),
+  // grouped, in one press — select-then-confirm, never auto-commit. Priority over the single card below.
   $: multiResourceCard = ((): SelectedEntityModel | null => {
     if (selectedResourceTypes.size < 2) return null;
     const typeNames = [...selectedResourceTypes].map(
       (id) => resourceObjectService.getById(id)?.displayName ?? id
     );
+    const marked = highlightedResourceTiles.size;
+    const btns: EntityButton[] = [];
+    if (marked > 0) {
+      btns.push({ label: `DESIGNATE (${marked})`, onClick: () => designateMarkedMulti() });
+    }
+    btns.push({ label: 'CLEAR', onClick: () => clearResourceMark() });
     return {
       name: `${selectedResourceTypes.size} resource types`,
       status: 'mark brush',
       selected: true,
       dismissable: true,
-      note: 'Shift+drag a box to designate all of these',
+      note: marked > 0 ? `${marked} tiles highlighted` : 'Shift+drag a box to highlight all of these',
       lines: [typeNames.join(', ')],
-      buttons: [{ label: 'CLEAR', onClick: () => clearResourceMark() }]
+      buttons: btns
     } satisfies SelectedEntityModel;
   })();
 
@@ -3409,7 +3415,7 @@
       } else {
         const kind = dragMarkKind();
         if (kind === 'resource') {
-          designateResourceRect(selAnchorX, selAnchorY, selEndX, selEndY);
+          commitResourceMarkRect(selAnchorX, selAnchorY, selEndX, selEndY);
         } else {
           markBoxEntities(kind, selAnchorX, selAnchorY, selEndX, selEndY);
         }
@@ -3577,11 +3583,11 @@
     drawDesignations();
   }
 
-  /** Shift+DRAG release: DESIGNATE every tile in the box that holds ANY selected resource type — each
-   *  with ITS resource's own designation type (a tree → woodcut, a stone outcrop / berry bush → harvest
-   *  …), grouped into one command per type. One-step: no lingering highlight zone is left behind, only
-   *  the per-tile work icons. Basis falls back to the single selected resource when the set is empty. */
-  function designateResourceRect(x1: number, y1: number, x2: number, y2: number) {
+  /** Shift+DRAG release: HIGHLIGHT every tile in the box that holds ANY selected resource type (additive,
+   *  so repeated drags accumulate). Nothing is designated yet — the card's HARVEST/DESIGNATE button
+   *  commits, exactly like the pawn/mob MARK → DRAFT/MOVE flow. Basis falls back to the single selected
+   *  resource when the type set is empty. */
+  function commitResourceMarkRect(x1: number, y1: number, x2: number, y2: number) {
     const types =
       selectedResourceTypes.size > 0
         ? selectedResourceTypes
@@ -3593,7 +3599,7 @@
     const maxX = Math.max(x1, x2);
     const minY = Math.min(y1, y2);
     const maxY = Math.max(y1, y2);
-    const byType = new Map<string, [number, number][]>();
+    const next = new Set(highlightedResourceTiles);
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
         if (isHiddenTile(x, y)) continue;
@@ -3601,24 +3607,44 @@
         if (!res) continue;
         for (const t of types) {
           if ((res[t] ?? 0) > 0) {
-            const dtype = resourceObjectService.getById(t)?.designationTypes[0];
-            if (dtype) {
-              let bucket = byType.get(dtype);
-              if (!bucket) byType.set(dtype, (bucket = []));
-              bucket.push([x, y]);
-            }
+            next.add(`${x},${y}`);
             break;
           }
         }
       }
     }
-    for (const [type, tiles] of byType) {
-      gameState.command({ type: 'designateTiles', payload: { tiles, type }, save: true });
-    }
+    highlightedResourceTiles = next;
     drawDesignations();
   }
 
-  /** Drop the resource mark brush (the multi-resource card's CLEAR; also Escape). */
+  /** DESIGNATE the highlighted multi-type tiles (the multi-resource card's button): each tile is queued
+   *  with ITS resource's own designation type (a tree → woodcut, a stone outcrop / berry bush → harvest
+   *  …), grouped into one command per type, then the highlight clears. */
+  function designateMarkedMulti() {
+    if (highlightedResourceTiles.size === 0) return;
+    const byType = new Map<string, [number, number][]>();
+    for (const key of highlightedResourceTiles) {
+      const [x, y] = key.split(',').map(Number);
+      const res = worldMap[y]?.[x]?.resources ?? {};
+      let dtype: string | null = null;
+      for (const t of selectedResourceTypes) {
+        if ((res[t] ?? 0) > 0) {
+          dtype = resourceObjectService.getById(t)?.designationTypes[0] ?? null;
+          break;
+        }
+      }
+      if (!dtype) continue;
+      let bucket = byType.get(dtype);
+      if (!bucket) byType.set(dtype, (bucket = []));
+      bucket.push([x, y]);
+    }
+    for (const [type, tiles] of byType) {
+      gameState.command({ type: 'designateTiles', payload: { tiles, type }, save: true });
+    }
+    clearResourceMark();
+  }
+
+  /** Drop the resource highlight + brush (the multi-resource card's CLEAR; also Escape). */
   function clearResourceMark() {
     highlightedResourceTiles = new Set();
     selectedResourceTypes = new Set();
@@ -3882,7 +3908,7 @@
       if (selAnchorX !== selEndX || selAnchorY !== selEndY) {
         const kind = dragMarkKind();
         if (kind === 'resource') {
-          designateResourceRect(selAnchorX, selAnchorY, selEndX, selEndY);
+          commitResourceMarkRect(selAnchorX, selAnchorY, selEndX, selEndY);
         } else {
           markBoxEntities(kind, selAnchorX, selAnchorY, selEndX, selEndY);
         }
