@@ -800,13 +800,17 @@ class CombatServiceImpl implements CombatService {
           ? existing.map((p, i) => (i === idx ? updatedPart : p))
           : [...existing, updatedPart];
 
-      // Containment cascade: if this hit just SEVERED the part (soft-tissue destruction → isMissing),
-      // everything nested inside it is gone too — a gutted abdomen takes liver/stomach/kidneys, a
-      // caved-in chest takes heart/lungs/spine. Only on the severing hit (prev wasn't already missing).
-      const justSevered = updatedPart.isMissing && !prev.isMissing;
-      const cascade = justSevered
-        ? cascadeSeveredContents(mergedParts, updatedPart.id)
-        : { parts: mergedParts, lostVital: false };
+      // Containment cascade: when this part is DESTROYED, everything nested inside it goes too — a gutted
+      // abdomen takes liver/stomach/kidneys, a caved-in chest takes heart/lungs/spine/ribcage. "Destroyed"
+      // is EITHER severed (soft-tissue blown clean off → isMissing) OR caved in to 0 HP. The HP arm is the
+      // fix for the "0-HP chest, pristine heart" regression: a chest beaten to 0 by MIXED wound types (a
+      // serious crush + a serious puncture — neither alone reaching 'destroyed'/sever) left its organs
+      // intact inside a flattened cavity, a walking corpse. cascadeSeveredContents is idempotent (it skips
+      // contents already gone), so re-running it while the part sits at 0 HP is a harmless no-op.
+      const cascade =
+        updatedPart.isMissing || updatedPart.health <= 0
+          ? cascadeSeveredContents(mergedParts, updatedPart.id)
+          : { parts: mergedParts, lostVital: false };
       const newParts = cascade.parts;
 
       // Bleed rate = sum of all current part-wound bleed (falls as wounds heal),

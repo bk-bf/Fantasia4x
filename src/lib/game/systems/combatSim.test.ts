@@ -456,6 +456,28 @@ describe('wound system (stacking + healing)', () => {
     expect(pawn.isAlive).toBe(false);
   });
 
+  it('a chest driven to 0 HP by MIXED wound types still guts the organs (no single wound severed it)', () => {
+    // The field regression: a chest beaten to 0/160 by a serious crush + a serious puncture — NEITHER
+    // wound alone reaching the 'destroyed' severity that flags isMissing — left heart & lungs pristine
+    // inside the flattened cavity. Drive exactly that: two different sub-lethal wound types summing past
+    // the chest's HP, with no single type ≥ maxHp (so isMissing stays false), and assert the organs go.
+    const chestHp = 80; // humanoid chest size at bodyScale 1
+    let state = makeState([makePawn({ limbs: createBodyPlanLimbs('humanoid', 1) })], []);
+    state = combatService.applyInjury('p1', { ...crush(chestHp * 0.6), bodyPart: 'chest' }, state);
+    state = combatService.applyInjury(
+      'p1',
+      { ...crush(chestHp * 0.6), type: 'puncture', bodyPart: 'chest' },
+      state
+    );
+    const pawn = state.pawns[0];
+    const chest = torsoPart(pawn, 'chest');
+    expect(chest.health).toBeLessThanOrEqual(0); // caved in…
+    expect(chest.isMissing).toBe(false); // …but NOT severed — each wound was only 'serious'
+    expect(torsoPart(pawn, 'heart').health).toBe(0); // organs gutted by the HP-trigger cascade
+    expect(torsoPart(pawn, 'leftLung').isMissing).toBe(true);
+    expect(pawn.isAlive).toBe(false); // a destroyed-vital body is dead (lethalAnatomyCause)
+  });
+
   it('the poultice recipe and medicine items are well-formed', () => {
     const herb = itemService.getItemById('woundwort');
     const poultice = itemService.getItemById('chewed_poultice');
