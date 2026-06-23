@@ -128,7 +128,7 @@ run_isolated_electron() {
     return 1
   fi
   F4X_NS_PORT="$port" F4X_NS_SERVER_FLAG="$server_flag" F4X_NS_SHELL_DIR="$shell_dir" \
-  F4X_NS_SCRIPT_DIR="$SCRIPT_DIR" \
+  F4X_NS_SCRIPT_DIR="$SCRIPT_DIR" F4X_NS_PLAY="$PLAY" \
   unshare --user --map-root-user --net -- bash -s <<'NSEOF'
     set -u
     ip link set lo up 2>/dev/null
@@ -143,7 +143,7 @@ run_isolated_electron() {
     done
     cd "$F4X_NS_SHELL_DIR" || { cleanup_ns; exit 1; }
     # --no-sandbox: Chromium can't create its own sandbox nested inside this user namespace.
-    SPIKE_URL="http://127.0.0.1:$F4X_NS_PORT" ./node_modules/.bin/electron . --no-sandbox
+    SPIKE_URL="http://127.0.0.1:$F4X_NS_PORT" F4X_PLAY="$F4X_NS_PLAY" ./node_modules/.bin/electron . --no-sandbox
     cleanup_ns
 NSEOF
 }
@@ -206,7 +206,7 @@ if [[ -n "$SHELL_TARGET" ]]; then
   case "$SHELL_TARGET" in
     electron)
       echo "  [electron] V8/Chromium → http://localhost:$PORT (close window or Ctrl-C to stop)"
-      (cd "$SHELL_DIR" && SPIKE_URL="http://localhost:$PORT" pnpm start)
+      (cd "$SHELL_DIR" && SPIKE_URL="http://localhost:$PORT" F4X_PLAY="$PLAY" pnpm start)
       ;;
     tauri)
       echo "  [tauri] WebKitGTK/JSC → http://127.0.0.1:$PORT (close window or Ctrl-C to stop)"

@@ -21,6 +21,11 @@ const APP_URL = process.env.SPIKE_URL || 'http://localhost:5173';
 // fetch (they all ride the default session). Keep this string in sync with SHELL_UA_MARKER.
 const SHELL_UA_MARKER = 'Fantasia4xShell';
 
+// --play (clean PLAYER launch from launch.sh): lock the Chromium webview down like an alpha build —
+// DevTools must NOT be reachable (Ctrl+Shift+I / Ctrl+Shift+J / F12 / right-click Inspect). Debug /
+// profiler launches leave DevTools available. launch.sh sets F4X_PLAY=true for the player build only.
+const PLAY_MODE = process.env.F4X_PLAY === 'true';
+
 // GC tuning experiment (§D). The renderer deserializes the whole sim snapshot every flush → high
 // transient-garbage rate → the GC sawtooth you see (TPS/FPS recover on pause, dip on resume). A
 // bigger V8 young generation lets that per-flush garbage die in cheap "scavenge" GCs instead of being
@@ -55,9 +60,23 @@ function createWindow() {
     // reading the moment you click away. Disable it so the spike measures the engine, not throttling.
     backgroundThrottling: false,
     webPreferences: {
-      backgroundThrottling: false
+      backgroundThrottling: false,
+      // Player build: disable DevTools at the engine level so no shortcut/menu can open it.
+      devTools: !PLAY_MODE
     }
   });
+
+  // Belt-and-suspenders for the player build: swallow the DevTools key shortcuts (Ctrl+Shift+I/J/C,
+  // F12) before Chromium's default accelerators see them. devTools:false already neuters them, but
+  // this guarantees the keypress is a no-op rather than relying on a toggle that's off.
+  if (PLAY_MODE) {
+    win.webContents.on('before-input-event', (event, input) => {
+      const key = (input.key || '').toLowerCase();
+      const devtoolsCombo =
+        (input.control && input.shift && (key === 'i' || key === 'j' || key === 'c')) || key === 'f12';
+      if (devtoolsCombo) event.preventDefault();
+    });
+  }
 
   // ── Navigation hardening: the engine-level guarantee that the Chromium webview is NEVER exposed ──
   // This is a GAME, not a browser. The window must never navigate away from the app, and no local URL
