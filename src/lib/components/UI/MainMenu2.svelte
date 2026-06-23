@@ -13,6 +13,7 @@
   import { menuPreviewReady, gameState } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import { hasSave } from '$lib/stores/saveManager';
+  import { getTimeOfDay } from '$lib/game/services/EnvironmentService';
   import MenuPreviewBackdrop from '$lib/components/UI/MenuPreviewBackdrop.svelte';
   import SettingsModal from '$lib/components/UI/SettingsModal.svelte';
   import SaveListMenu from '$lib/components/UI/SaveListMenu.svelte';
@@ -21,6 +22,30 @@
   let showSettings = $state(false);
   let showLoad = $state(false);
   const isDesktop = typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent ?? '');
+
+  // ── Sun/moon glow tracking the preview world's day/night cycle ──────────────────────────────────
+  // The warm "sun" glow rises at dawn on the left, arcs up to a noon peak, and sets on the right; then a
+  // cooler/whiter "moon" glow rises on the left at dusk, tracks low along the top border, and sets on the
+  // right by dawn. Positions/opacities are derived from `getTimeOfDay` (the same clock that lights the
+  // scene), so the glow stays in lock-step with the backdrop's day/night.
+  const DAWN = 0.25; // timeOfDay: sun up
+  const DUSK = 0.78; // timeOfDay: sun down
+  const NIGHT_LEN = 1 - DUSK + DAWN; // wraps midnight
+  const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+  // Fade an arc's opacity in over its first 12% and out over its last 12%, so rise/set are smooth.
+  const edgeFade = (prog: number) => clamp01(Math.min(prog, 1 - prog) / 0.12);
+
+  const tod = $derived(getTimeOfDay($gameState?.turn ?? 0));
+  const isDay = $derived(tod >= DAWN && tod <= DUSK);
+  const sunProg = $derived(clamp01((tod - DAWN) / (DUSK - DAWN)));
+  const moonProg = $derived(clamp01(((((tod - DUSK) % 1) + 1) % 1) / NIGHT_LEN));
+  // Sun: x left→right, y arcs high at noon (lower % = higher on screen). Moon: x left→right, low along top.
+  const sunX = $derived(8 + sunProg * 84);
+  const sunY = $derived(38 - Math.sin(sunProg * Math.PI) * 24);
+  const sunO = $derived(isDay ? edgeFade(sunProg) : 0);
+  const moonX = $derived(8 + moonProg * 84);
+  const moonY = $derived(12 - Math.sin(moonProg * Math.PI) * 4);
+  const moonO = $derived(!isDay ? edgeFade(moonProg) : 0);
 
   onMount(async () => {
     canLoad = await hasSave();
@@ -47,9 +72,10 @@
     <MenuPreviewBackdrop />
   {/if}
 
-  <!-- Warm "reverse shadow" glow radiating from the upper-left logo out into the map (matches the
-       original menu's ward-glow, repositioned to the corner the wordmark now lives in). -->
-  <div class="glow" aria-hidden="true"></div>
+  <!-- Day/night "reverse shadow" glows radiating into the map: a warm sun arcing across by day, a cool
+       moon tracking the top border by night (positions/opacity driven by the preview time-of-day). -->
+  <div class="sun-glow" aria-hidden="true" style="left:{sunX}%; top:{sunY}%; opacity:{sunO};"></div>
+  <div class="moon-glow" aria-hidden="true" style="left:{moonX}%; top:{moonY}%; opacity:{moonO};"></div>
 
   <div class="content">
     <h1 class="title">FANTASIA</h1>
@@ -92,17 +118,37 @@
     overflow: hidden;
   }
 
-  /* Warm ward-glow bleeding from the upper-left (the logo) into the map — a soft "reverse shadow". Sits
-     above the backdrop (DOM order) but below .content (z-index 1), so the text stays crisp over it. */
-  .glow {
+  /* Sun/moon ward-glows bleeding into the map — soft "reverse shadows" tracking the day/night cycle.
+     left/top/opacity are set inline from the time-of-day; the short transition smooths the ~15Hz steps.
+     Both sit above the backdrop (DOM order) but below .content (z-index 1), so the text stays crisp. */
+  .sun-glow,
+  .moon-glow {
     position: absolute;
-    inset: 0;
+    width: 80vmin;
+    height: 80vmin;
+    transform: translate(-50%, -50%); /* left/top position the CENTRE */
+    border-radius: 50%;
     pointer-events: none;
+    transition:
+      left 0.4s linear,
+      top 0.4s linear,
+      opacity 0.8s linear;
+  }
+  .sun-glow {
     background: radial-gradient(
-      circle at 24% 17%,
-      rgba(240, 136, 40, 0.1) 0%,
-      rgba(240, 136, 40, 0.035) 24%,
-      transparent 52%
+      circle,
+      rgba(240, 136, 40, 0.12) 0%,
+      rgba(240, 136, 40, 0.04) 34%,
+      transparent 64%
+    );
+  }
+  /* Moon: colder, lighter, whiter than the sun. */
+  .moon-glow {
+    background: radial-gradient(
+      circle,
+      rgba(206, 222, 255, 0.12) 0%,
+      rgba(206, 222, 255, 0.04) 34%,
+      transparent 64%
     );
   }
 
@@ -165,6 +211,12 @@
     align-items: flex-start;
     gap: 10px;
     margin-top: 7vh; /* dropped further below the credit line */
+    padding: 14px 16px;
+    /* Faint NEUTRAL-cool dark backing behind the buttons: gives the ambient tint a surface to read on.
+       A neutral base (not the warm --bg-panel, whose blue channel is ~0) lets the night tint's blue-
+       dominant multiplier actually render the purple, matching the in-game bottom bar. */
+    background: rgba(12, 12, 17, 0.34);
+    border-radius: 4px;
     /* Day/night + weather/season hue, exactly like the in-game side panels (see +page.svelte). */
     filter: url(#ambient-tint);
   }
@@ -173,7 +225,9 @@
     min-width: 320px;
     padding: 13px 22px;
     text-align: left;
-    background: var(--bg-panel);
+    /* Neutral-cool dark (not the warm --bg-panel) so the ambient #ambient-tint filter renders the full
+       day/night hue on the button FACE — warm at dawn/dusk, slightly purple at night — like the map. */
+    background: rgba(20, 19, 26, 0.92);
     border: 1px solid var(--border);
     color: var(--text);
     font-family: var(--font-mono);
