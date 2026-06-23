@@ -175,6 +175,26 @@ function traceStuck(mob: Mob, def: CreatureDefinition, state: GameState, turn: n
 // throttled and full-FSM branches, so the state sequence is complete. O(1) per tick (one endsWith) —
 // only the matched mob pays the cellDesc scan. '' = off. Flip back to '' when done.
 const TRACE_MOB_ID = '456';
+/** Ground-truth food state on tile (x,y): tile resources, dropped carcass items, and any corpse mob —
+ *  the data that decides edibility but is invisible in a static read (tests the "dynamic carcass" theory). */
+function foodCtx(state: GameState, x: number, y: number): string {
+  const res = state.worldMap[y]?.[x]?.resources;
+  const resStr = res
+    ? Object.entries(res)
+        .filter(([, n]) => (n ?? 0) > 0)
+        .map(([k, n]) => `${k}:${n}`)
+        .join(',')
+    : '';
+  const drops = (state.droppedItems ?? [])
+    .filter((d) => d.x === x && d.y === y)
+    .map((d) => `${d.resourceId}×${d.quantity}`)
+    .join(',');
+  const corpse = (state.mobs ?? []).find((m) => m.x === x && m.y === y && m.state === 'Corpse');
+  return (
+    `res={${resStr}} drops=[${drops}]` +
+    (corpse ? ` corpse=${getCreatureById(corpse.creatureId)?.id ?? '?'}#${corpse.id.slice(-6)}` : '')
+  );
+}
 function traceMobTick(mob: Mob, state: GameState, turn: number, phase: string): void {
   if (!TRACE_MOB_ID || !gameLogger.isEnabled || !mob.id.endsWith(TRACE_MOB_ID)) return;
   const pathLen = mob.path?.length ?? 0;
@@ -191,7 +211,9 @@ function traceMobTick(mob: Mob, state: GameState, turn: number, phase: string): 
       (nc ? ` next=(${nc.x},${nc.y})[${cellDesc(state, nc.x, nc.y, mob.id)}]` : '') +
       ` fCD=${mob.forageCooldownUntil ? Math.max(0, mob.forageCooldownUntil - turn) : 0}` +
       ` hCD=${mob.huntCooldownUntil ? Math.max(0, mob.huntCooldownUntil - turn) : 0}` +
-      (mob.huntTargetId ? ` prey=${mob.huntTargetId.slice(-6)}` : '')
+      (mob.huntTargetId ? ` prey=${mob.huntTargetId.slice(-6)}` : '') +
+      ` | @pos ${foodCtx(state, mob.x, mob.y)}` +
+      (end ? ` | @tgt(${end.x},${end.y}) ${foodCtx(state, end.x, end.y)}` : '')
   );
 }
 
@@ -1292,6 +1314,16 @@ export function stepForaging(
   for (const kind of tileKindOrder) {
     found = findReachableFoodTile(state, mob, FORAGE_RADIUS, new Set([kind]));
     if (found) break;
+  }
+  if (TRACE_MOB_ID && gameLogger.isEnabled && mob.id.endsWith(TRACE_MOB_ID)) {
+    const onTile = edibleResourceOnTile(state.worldMap[mob.y]?.[mob.x], kinds);
+    gameLogger.log(
+      turn,
+      'ENTITY-FEED',
+      `stepForage#${mob.id.slice(-6)} @(${mob.x},${mob.y}) onTileEdible=${onTile ?? 'NO'}` +
+        ` found=${found ? `(${found.target.x},${found.target.y})path${found.path.length}` : 'NULL→Wander+fCD'}` +
+        ` kinds=[${[...kinds].join(',')}]`
+    );
   }
   if (!found) {
     // No REACHABLE edible tile in range — back off (cooldown) so a boxed-in forager stops
