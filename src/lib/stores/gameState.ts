@@ -702,11 +702,10 @@ function startMenuPreview() {
     jobs: []
   };
   // Prey only — no laired hostiles, no free-roaming predators — so the backdrop never spawns a hunt.
-  // MM2 scatters several small herds across the centre; MM1 places four corner herds.
-  preview = entityService.seedInitialEntities(preview, undefined, {
-    preyOnly: true,
-    scatter: MENU_PREVIEW_MM2
-  });
+  // MM1 places four corner herds; MM2 has NO wildlife (the animals impaired the composition's harmony).
+  if (!MENU_PREVIEW_MM2) {
+    preview = entityService.seedInitialEntities(preview, undefined, { preyOnly: true });
+  }
 
   previewActive = true;
   gameStore.setSilent(preview);

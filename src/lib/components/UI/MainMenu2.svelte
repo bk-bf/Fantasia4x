@@ -211,24 +211,18 @@
     align-items: flex-start;
     gap: 10px;
     margin-top: 7vh; /* dropped further below the credit line */
-    padding: 14px 16px;
-    /* Faint NEUTRAL-cool dark backing behind the buttons: gives the ambient tint a surface to read on.
-       A neutral base (not the warm --bg-panel, whose blue channel is ~0) lets the night tint's blue-
-       dominant multiplier actually render the purple, matching the in-game bottom bar. */
-    background: rgba(12, 12, 17, 0.34);
-    border-radius: 4px;
-    /* Day/night + weather/season hue, exactly like the in-game side panels (see +page.svelte). */
+    /* Day/night + weather/season hue, exactly like the in-game info panel (see +page.svelte). */
     filter: url(#ambient-tint);
   }
 
+  /* Colours copied verbatim from the in-game info panel (SelectedEntityCard) so the buttons read — and
+     day/night-tint — identically to it: warm panel fill + bronze border, gold-on-hover. */
   .menu-btn {
     min-width: 320px;
     padding: 13px 22px;
     text-align: left;
-    /* Neutral-cool dark (not the warm --bg-panel) so the ambient #ambient-tint filter renders the full
-       day/night hue on the button FACE — warm at dawn/dusk, slightly purple at night — like the map. */
-    background: rgba(20, 19, 26, 0.92);
-    border: 1px solid var(--border);
+    background: rgba(28, 16, 6, 0.92);
+    border: 1px solid #6b4a2a;
     color: var(--text);
     font-family: var(--font-mono);
     font-size: 16px;
@@ -241,12 +235,12 @@
       border-color 0.12s;
   }
   .menu-btn:hover:not(.disabled) {
-    background: var(--bg-hover);
+    background: #2a1a0a;
     color: var(--accent-hi);
-    border-color: var(--border-hi);
+    border-color: #c8a060;
   }
   .menu-btn:active:not(.disabled) {
-    background: var(--bg-active);
+    background: #4a2010;
   }
   .menu-btn.disabled {
     color: var(--text-muted);
