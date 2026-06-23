@@ -643,8 +643,9 @@ function restoreWorld(snapshot: GameState) {
 const MENU_PREVIEW_SEED = 4051283263;
 /** Small world (cheap to build + seed) — big enough that the cover-fit zoom-out floor overflows the
  *  viewport for an atmospheric, slightly-oversized framing. NOT the player's Custom Map size. Width is
- *  ODD so the map has an exact centre column — the magical-tree ring then centres on a real tile. */
-const MENU_PREVIEW_MAP = { w: 161, h: 100 };
+ *  Both dimensions are ODD so the map has an exact centre tile — the magical-tree ring then centres on
+ *  a real tile on both axes (an even dimension puts the centre between tiles ⇒ a half-tile offset). */
+const MENU_PREVIEW_MAP = { w: 161, h: 101 };
 
 /**
  * Boot the main-menu backdrop: a live but gutted preview of the game world that renders behind the
