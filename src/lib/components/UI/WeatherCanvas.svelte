@@ -183,8 +183,8 @@
     if (mode === 'fog') return makeFogBlob(w, h);
     // dots: snow / snowdust / dust — a falling, wind-drifting speck. Dust is finer than snow.
     const spd = fallSpeed * (0.6 + Math.random() * 0.9);
-    // snow/snowdust ~⅓ smaller (less distracting); dust stays fine.
-    const sz = mode === 'dust' ? 0.6 + Math.random() * 1.2 : 0.67 + Math.random() * 1.47;
+    // snow/snowdust ~⅓ smaller (less distracting); dust (summer pollen) a touch larger for visibility.
+    const sz = mode === 'dust' ? 0.8 + Math.random() * 1.5 : 0.67 + Math.random() * 1.47;
     return {
       x: Math.random() * (w + sideDrift() * 1.5), // extend for the sideways drift's covered corner
       y: atTop ? -10 - Math.random() * 30 : Math.random() * h,
@@ -285,7 +285,7 @@
         mode === 'dust'
           ? particleColor.map((c, i) => Math.round(c * ambLight * ambTint[i]))
           : [255, 255, 255];
-      const baseA = mode === 'dust' ? 0.18 + 0.22 * intensity : 0.5 + 0.4 * intensity;
+      const baseA = mode === 'dust' ? 0.3 + 0.28 * intensity : 0.5 + 0.4 * intensity;
       const s = sizeMul(); // zoom-driven speck radius (smaller zoomed out → finer flurry)
       ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${baseA})`;
       ctx.beginPath();
