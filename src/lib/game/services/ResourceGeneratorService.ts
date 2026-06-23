@@ -59,6 +59,17 @@ class ResourceGeneratorServiceImpl {
   }
 
   /**
+   * Force a single resource object onto a tile (scripted / art-directed placement, e.g. the menu-preview
+   * magical groves). Clears any existing resources on the tile first so the node isn't visually clobbered
+   * by an earlier scatter pass. Deterministic in `seed`. Reuses the same `placeResource` as world-gen so
+   * the node's physics/visual baking can't drift from the procedural path.
+   */
+  placeSingleResource(tile: WorldTile, def: ResourceObjectDef, seed: number): void {
+    tile.resources = {};
+    this.placeResource(tile, def, makeRng(seed));
+  }
+
+  /**
    * Turn the mineral_deposit blobs the world generator produces into proper single-mineral veins:
    * each connected deposit blob gets ONE resource, and is GROWN to a 3–8 tile cluster by spreading
    * that same mineral into adjacent mountain tiles (carving the vein out of the surrounding rock /

@@ -7,6 +7,8 @@ import type { WorldTile, Season, WeatherState } from '../core/types';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '../core/Terrains';
 import { makeWeather } from '../services/EnvironmentService';
 import { makeSeededRng, freshSeed } from '../core/rng';
+import { resourceObjectService } from '../services/ResourceObjectService';
+import { resourceGeneratorService } from '../services/ResourceGeneratorService';
 
 const WATER_SUBTYPES = new Set(['water', 'shallow_water', 'rapids']);
 
@@ -97,19 +99,22 @@ const GROVE_MAX_RADIUS = 6;
 
 /**
  * Stamp `PREVIEW_GROVE_COUNT` forest groves (deep_grass blobs) onto open land so the title shot reads
- * as a wooded landscape rather than bare grass. Deterministic in the preview seed (so the backdrop is
- * stable across launches). Only converts walkable, non-water land — never paves over the river. MUST
- * run BEFORE resource generation so trees populate the new deep_grass tiles.
+ * as a wooded landscape rather than bare grass, and RETURN each grove's centre tile. Deterministic in
+ * the preview seed (so the backdrop is stable across launches). Only converts walkable, non-water land
+ * — never paves over the river. MUST run BEFORE resource generation so trees populate the new deep_grass
+ * tiles; the returned centres are then used to drop a glowing magical grove into each (after resources).
  */
-function seedPreviewGroves(world: WorldTile[][], seed: number): void {
+function seedPreviewGroves(world: WorldTile[][], seed: number): Array<{ x: number; y: number }> {
   const h = world.length;
   const w = world[0]?.length ?? 0;
   const rand = makeSeededRng((seed ^ 0x9e3779b9) >>> 0);
   const margin = GROVE_MAX_RADIUS + 1;
+  const centers: Array<{ x: number; y: number }> = [];
   for (let g = 0; g < PREVIEW_GROVE_COUNT; g++) {
     const cx = margin + Math.floor(rand() * Math.max(1, w - margin * 2));
     const cy = margin + Math.floor(rand() * Math.max(1, h - margin * 2));
     const radius = GROVE_MIN_RADIUS + Math.floor(rand() * (GROVE_MAX_RADIUS - GROVE_MIN_RADIUS + 1));
+    let carved = false;
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
         const x = cx + dx;
@@ -120,15 +125,22 @@ function seedPreviewGroves(world: WorldTile[][], seed: number): void {
         const t = world[y][x];
         if (!t.walkable || WATER_SUBTYPES.has(t.subType)) continue;
         applySub(t, 'forest', 'deep_grass', 'forest');
+        carved = true;
       }
     }
+    // Only offer the centre as a magical-grove site if its own tile actually became grove land.
+    if (carved && world[cy]?.[cx]?.subType === 'deep_grass') centers.push({ x: cx, y: cy });
   }
+  return centers;
 }
 
-export function customizeMenuPreviewWorld(world: WorldTile[][], seed: number): void {
+export function customizeMenuPreviewWorld(
+  world: WorldTile[][],
+  seed: number
+): Array<{ x: number; y: number }> {
   const h = world.length;
   const w = world[0]?.length ?? 0;
-  if (w === 0 || h === 0) return;
+  if (w === 0 || h === 0) return [];
   const land = landTemplate(world);
 
   for (let y = 0; y < h; y++) {
@@ -141,6 +153,37 @@ export function customizeMenuPreviewWorld(world: WorldTile[][], seed: number): v
     }
   }
 
-  // …then carve extra forest groves into the open plain (more wooded title shot).
-  seedPreviewGroves(world, seed);
+  // …then carve extra forest groves into the open plain (more wooded title shot), returning their
+  // centres so a glowing magical grove can be planted in each after resource generation.
+  return seedPreviewGroves(world, seed);
+}
+
+// The glowing "magical" groves (heartwood/moonwood/ironwood/emberwood) — the distinctive landmark trees.
+// Derived from the data (any tree resource that emits a `glow`) so a new magical species is picked up
+// automatically. They spawn at ~0.1% per tile in normal gen, so on the small menu map almost none roll;
+// we plant one at the centre of each carved grove instead.
+function magicalGroveDefs() {
+  return resourceObjectService.getAll().filter((d) => d.subterrain === 'tree' && d.glow);
+}
+
+/**
+ * Plant a glowing magical grove at the centre of each carved grove. Runs AFTER `generateResources` so
+ * the ordinary tree the scatter pass may have dropped on the centre tile is replaced (not the other way
+ * round). Deterministic in the preview seed. No-op if the data defines no glowing groves.
+ */
+export function placeMenuPreviewMagicalGroves(
+  world: WorldTile[][],
+  centers: Array<{ x: number; y: number }>,
+  seed: number
+): void {
+  const groves = magicalGroveDefs();
+  if (groves.length === 0 || centers.length === 0) return;
+  const rand = makeSeededRng((seed ^ 0x5bd1e995) >>> 0);
+  centers.forEach(({ x, y }, i) => {
+    const tile = world[y]?.[x];
+    if (!tile) return;
+    const def = groves[Math.floor(rand() * groves.length)];
+    // Distinct seed per node so growth/amount vary; reuses the world-gen placement path.
+    resourceGeneratorService.placeSingleResource(tile, def, (seed + i * 2654435761) >>> 0);
+  });
 }

@@ -30,6 +30,7 @@ import { calculatePawnStats } from '$lib/game/entities/Pawns';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
 import {
   customizeMenuPreviewWorld,
+  placeMenuPreviewMagicalGroves,
   pickMenuPreviewClimate
 } from '$lib/game/world/menuPreviewWorld';
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
@@ -658,10 +659,13 @@ function startMenuPreview() {
   resetUnreachableJobs();
   const world = generateWorld(MENU_PREVIEW_MAP.w, MENU_PREVIEW_MAP.h, MENU_PREVIEW_SEED);
   // Title-screen art direction: flatten the mountain, erase water, and carve extra forest groves (see
-  // module). Done BEFORE resource generation so trees populate the new grove (deep_grass) tiles, and
-  // BEFORE entity seeding so prey spawn on the reshaped land.
-  customizeMenuPreviewWorld(world, MENU_PREVIEW_SEED);
+  // module). Done BEFORE resource generation so ordinary trees populate the new grove (deep_grass)
+  // tiles, and BEFORE entity seeding so prey spawn on the reshaped land. Returns each grove's centre.
+  const groveCenters = customizeMenuPreviewWorld(world, MENU_PREVIEW_SEED);
   resourceGeneratorService.generateResources(world, MENU_PREVIEW_SEED);
+  // …then drop a glowing magical grove into each carved grove (after the ordinary-tree scatter, so it
+  // isn't clobbered by it).
+  placeMenuPreviewMagicalGroves(world, groveCenters, MENU_PREVIEW_SEED);
 
   // Random (per launch) season-appropriate weather; season pinned to the real-world date via
   // `_debugSeason` (processEnvironment otherwise derives season from the turn). Falls back to a
