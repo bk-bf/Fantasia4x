@@ -47,6 +47,49 @@ function stripJsoncComments(src: string): string {
   return out;
 }
 
+// Marker stamped into the User-Agent by the desktop shells (Electron main.js, Tauri tauri.conf.json).
+// Fantasia4x is a GAME, not a website: the dev/preview server must refuse to hand the playable app to
+// a plain browser tab (a stray Zen session-restore, a bookmark…). Only the desktop shell — which sends
+// this marker — gets through. Browser access is still possible on purpose via F4X_ALLOW_BROWSER=true
+// (dev.sh sets it for --profiler / --browser, since Firefox profiling needs a real browser).
+const SHELL_UA_MARKER = 'Fantasia4xShell';
+
+function desktopShellGuardPlugin(): Plugin {
+  const allowBrowser = process.env.F4X_ALLOW_BROWSER === 'true';
+  const guard = (
+    req: { headers: Record<string, string | string[] | undefined> },
+    res: { statusCode: number; setHeader: (k: string, v: string) => void; end: (body?: string) => void },
+    next: () => void
+  ) => {
+    if (allowBrowser) return next();
+    const ua = String(req.headers['user-agent'] || '');
+    if (ua.includes(SHELL_UA_MARKER)) return next();
+    res.statusCode = 403;
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.end(
+      `<!doctype html><html><head><meta charset="utf-8"><title>Fantasia4x</title>` +
+        `<style>html,body{margin:0;height:100%;background:#0d0b07;color:#c9b48a;` +
+        `font:16px/1.6 ui-monospace,Menlo,Consolas,monospace;display:flex;align-items:center;` +
+        `justify-content:center}main{max-width:34rem;padding:2rem;text-align:center}` +
+        `h1{font-size:1.3rem;color:#e0c98a}code{color:#9fce8a}</style></head>` +
+        `<body><main><h1>Fantasia4x runs in the desktop app</h1>` +
+        `<p>This is a game, not a web page. It will not load in a browser tab.</p>` +
+        `<p>Launch it via the desktop shell:<br><code>./launch.sh --electron</code></p>` +
+        `<p style="opacity:.6;font-size:.85rem">Need a browser anyway (profiling/debug)? ` +
+        `Start the server with <code>./dev.sh --browser</code>.</p></main></body></html>`
+    );
+  };
+  return {
+    name: 'f4x-desktop-shell-guard',
+    configureServer(server) {
+      server.middlewares.use(guard);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(guard);
+    }
+  };
+}
+
 function jsoncPlugin(): Plugin {
   return {
     name: 'vite-plugin-jsonc',
@@ -59,7 +102,7 @@ function jsoncPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [jsoncPlugin(), wasm(), sveltekit()],
+  plugins: [desktopShellGuardPlugin(), jsoncPlugin(), wasm(), sveltekit()],
   // The sim worker (ADR-021) is a module worker that dynamic-imports the WASM spatial core, which
   // needs code-splitting — unsupported by Vite's default IIFE worker format. ES format + the wasm
   // and jsonc plugins (the worker's import graph pulls .jsonc databases) make it bundle correctly.

@@ -4,6 +4,11 @@
 # Pass --debug to enable debug overlays (entity IDs, dev controls, map reroll) + verbose logging.
 # Pass --hmr to opt INTO Vite hot-reload / live page-reload. It is OFF by default so an agent editing
 #   the tree never reloads a live playtest. Composable with any other flag (e.g. ./dev.sh --debug --hmr).
+# Pass --browser to allow a PLAIN BROWSER to load the game. By default the server (vite.config.ts
+#   desktop-shell guard) 403s any request without the desktop-shell User-Agent marker — Fantasia4x is
+#   a game, not a web page, so it only runs in the Electron/Tauri shell. --browser sets
+#   F4X_ALLOW_BROWSER=true to lift the block for Firefox profiling / ad-hoc debugging. --profiler
+#   implies it (the profiler workflow records in the browser).
 # Pass --log to enable ONLY the in-game DEBUG log tab + verbose firehose (no other dev UI). Composable
 #   with --profiler (e.g. ./dev.sh --profiler --log) to watch the log during an otherwise-clean run.
 # Pass --profiler to boot the heavy populated sandbox (giant map, 150 pawns…) but with the REAL-game
@@ -22,6 +27,7 @@ LOG_MODE=false
 PROFILER_MODE=false
 PROFILER_AUTORUN=false
 HMR_MODE=false
+BROWSER_MODE=false
 
 # Read worktree-local port override if present
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -36,6 +42,7 @@ while [[ $# -gt 0 ]]; do
     --profiler) PROFILER_MODE=true ;; # heavy sandbox, real-game (paused) startup — NOT --debug
     --profiler-autorun) PROFILER_MODE=true; PROFILER_AUTORUN=true ;; # heavy sandbox, capture run
     --hmr) HMR_MODE=true ;; # opt into Vite hot-reload / live page-reload (off by default)
+    --browser) BROWSER_MODE=true ;; # lift the desktop-shell guard so a plain browser can load the game
     --port) PORT="$2"; shift ;;
     --port=*) PORT="${1#--port=}" ;;
   esac
@@ -102,5 +109,16 @@ else
   echo "HMR disabled (default) — pass --hmr to enable hot-reload."
 fi
 
-# shellcheck disable=SC2086 -- $PROFILER_ENV/$DEBUG_ENV/$HMR_ENV are intentional VAR=val flag passthroughs
-exec env $PROFILER_ENV $DEBUG_ENV $HMR_ENV VITE_DEV_BRANCH="$BRANCH" VITE_DEV_COMMIT="$COMMIT" pnpm exec vite dev --host --port $PORT
+# Desktop-shell guard (vite.config.ts) blocks plain browsers by default. --browser lifts it; --profiler
+# implies it (the profiler captures in the browser). Otherwise the game only loads in the Electron/Tauri
+# shell — a stray browser tab gets a 403 "runs in the desktop app" page instead of the playable game.
+BROWSER_ENV=""
+if [[ "$BROWSER_MODE" == "true" || "$PROFILER_MODE" == "true" ]]; then
+  echo "Browser access ENABLED — the desktop-shell guard is lifted (plain browser can load the game)."
+  BROWSER_ENV="F4X_ALLOW_BROWSER=true"
+else
+  echo "Browser access blocked (default) — game loads only in the desktop shell; pass --browser to allow."
+fi
+
+# shellcheck disable=SC2086 -- $PROFILER_ENV/$DEBUG_ENV/$HMR_ENV/$BROWSER_ENV are intentional VAR=val flag passthroughs
+exec env $PROFILER_ENV $DEBUG_ENV $HMR_ENV $BROWSER_ENV VITE_DEV_BRANCH="$BRANCH" VITE_DEV_COMMIT="$COMMIT" pnpm exec vite dev --host --port $PORT

@@ -6,9 +6,15 @@
 //   Terminal 2:  cd desktop-spike/electron && pnpm start
 //
 // Read the on-screen "NNFPS · NNTPS" counter (top controls bar) and compare to your Zen number.
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, session, shell } = require('electron');
 
 const URL = process.env.SPIKE_URL || 'http://localhost:5173';
+
+// The dev/preview server (vite.config.ts SHELL_UA_MARKER guard) 403s any request that doesn't carry
+// this marker — so the game can't be opened in a plain browser tab. We append it to the default
+// session's User-Agent, which covers the document, every subresource, the sim worker, and its WASM
+// fetch (they all ride the default session). Keep this string in sync with SHELL_UA_MARKER.
+const SHELL_UA_MARKER = 'Fantasia4xShell';
 
 // GC tuning experiment (§D). The renderer deserializes the whole sim snapshot every flush → high
 // transient-garbage rate → the GC sawtooth you see (TPS/FPS recover on pause, dip on resume). A
@@ -24,6 +30,10 @@ app.commandLine.appendSwitch('js-flags', '--max-semi-space-size=128');
 app.commandLine.appendSwitch('remote-debugging-port', process.env.ELECTRON_DEBUG_PORT || '9222');
 
 function createWindow() {
+  // Stamp the shell marker into the default session UA before any request goes out.
+  const shellUA = `${session.defaultSession.getUserAgent()} ${SHELL_UA_MARKER}`;
+  session.defaultSession.setUserAgent(shellUA);
+
   const win = new BrowserWindow({
     width: 1600,
     height: 1000,
@@ -49,40 +59,44 @@ function createWindow() {
   // navigate away from the app's own origin (a stray link, a dropped file, window.open…). Anything
   // that genuinely wants the web (an external credit/support URL) is handed to the OS's default
   // browser via shell.openExternal — it opens out there, not in our Chromium shell.
-  const appOrigin = () => {
+  // The shell only ever hosts ONE origin: the app's own dev/prod server (URL). Judge "is this the
+  // app's origin?" against THAT fixed origin — never against win.webContents.getURL(), which goes
+  // opaque/error during a dev-server restart or HMR reconnect. The old getURL()-based check misfired
+  // exactly then: a same-origin reload to http://localhost:<port>/ was misread as foreign and punted
+  // to the OS browser (shell.openExternal), spawning a stray Zen tab on every HMR/restart. Compare to
+  // the stable APP_ORIGIN so the app's own reloads are always recognised as in-app.
+  const APP_ORIGIN = (() => {
     try {
-      return new URL(win.webContents.getURL() || URL).origin;
-    } catch {
       return new URL(URL).origin;
+    } catch {
+      return null;
+    }
+  })();
+  const isAppOrigin = (u) => {
+    try {
+      return new URL(u).origin === APP_ORIGIN;
+    } catch {
+      return false;
     }
   };
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+    // Same-origin (the app itself) must NEVER be punted outward — only genuinely external URLs.
+    if (!isAppOrigin(url) && /^https?:\/\//i.test(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (e, url) => {
-    let sameOrigin = false;
-    try {
-      sameOrigin = new URL(url).origin === appOrigin();
-    } catch {
-      /* unparseable → treat as foreign */
-    }
-    if (!sameOrigin) {
-      e.preventDefault();
-      if (/^https?:\/\//i.test(url)) shell.openExternal(url);
-    }
+    if (isAppOrigin(url)) return; // app's own navigation/reload — allow, never punt
+    e.preventDefault();
+    if (/^https?:\/\//i.test(url)) shell.openExternal(url);
   });
-  // Belt-and-suspenders: also refuse navigation to a brand-new document via will-frame-navigate
-  // (covers iframes/subframes), same origin rule.
+  // Belt-and-suspenders: also refuse navigation to a brand-new document via will-redirect
+  // (covers iframes/subframes), same fixed-origin rule.
   win.webContents.on('will-redirect', (e, url) => {
-    try {
-      if (new URL(url).origin !== appOrigin()) e.preventDefault();
-    } catch {
-      e.preventDefault();
-    }
+    if (!isAppOrigin(url)) e.preventDefault();
   });
 
-  const load = () => win.loadURL(URL);
+  win.webContents.setUserAgent(shellUA);
+  const load = () => win.loadURL(URL, { userAgent: shellUA });
   load();
 
   // Dev server may not be up yet / may restart — retry instead of showing Chromium's error page.
