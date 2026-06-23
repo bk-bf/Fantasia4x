@@ -39,15 +39,49 @@ function landTemplate(world: WorldTile[][]): { biome: string; subId: string } {
 
 // ===== TITLE-SCREEN CLIMATE (random each launch, season from the real-world date) =====
 //
-// Curated per-season weather pools for the backdrop. `clear` is excluded so the title always shows a
-// visible weather effect; `fog` / `foggy_rain` are excluded too (drab, low-vis — bad first impression);
-// and snow / blizzard live ONLY in the winter pool, so they only appear when the machine's real-world
-// season is winter (see localSeason). Everything else is fair game.
-const SEASON_WEATHER_POOL: Record<Season, string[]> = {
-  spring: ['spring_windy', 'drizzle', 'rain', 'windy_rain', 'heavy_rain', 'storm', 'gale'],
-  summer: ['summer_windy', 'drizzle', 'rain', 'windy_rain', 'heavy_rain', 'storm', 'gale'],
-  autumn: ['autumn_windy', 'drizzle', 'rain', 'windy_rain', 'heavy_rain', 'storm', 'gale'],
-  winter: ['winter_windy', 'snow', 'blizzard', 'gale']
+// Curated per-season weather pools for the backdrop, each entry WEIGHTED for the per-launch pick (this
+// is menu-only — it does NOT affect in-game weather, which rolls via its own Markov chain). `clear` is
+// excluded so the title always shows a visible weather effect; `fog` / `foggy_rain` are excluded too
+// (drab, low-vis — bad first impression); and snow / blizzard live ONLY in the winter pool, so they only
+// appear when the machine's real-world season is winter (see localSeason).
+//
+// SPRING & SUMMER favour the dry WIND variants (the season breeze + gale, which blow leaves/dust) over
+// the RAIN variants (drizzle/rain/windy_rain/heavy_rain/storm), so the title mostly shows a pleasant
+// breeze and only occasionally rain. Autumn/winter stay evenly weighted (weight 1 each).
+const SEASON_WEATHER_POOL: Record<Season, ReadonlyArray<readonly [type: string, weight: number]>> = {
+  spring: [
+    ['spring_windy', 7],
+    ['gale', 3],
+    ['drizzle', 1],
+    ['rain', 1],
+    ['windy_rain', 1],
+    ['heavy_rain', 1],
+    ['storm', 1]
+  ],
+  summer: [
+    ['summer_windy', 7],
+    ['gale', 3],
+    ['drizzle', 1],
+    ['rain', 1],
+    ['windy_rain', 1],
+    ['heavy_rain', 1],
+    ['storm', 1]
+  ],
+  autumn: [
+    ['autumn_windy', 1],
+    ['drizzle', 1],
+    ['rain', 1],
+    ['windy_rain', 1],
+    ['heavy_rain', 1],
+    ['storm', 1],
+    ['gale', 1]
+  ],
+  winter: [
+    ['winter_windy', 1],
+    ['snow', 1],
+    ['blizzard', 1],
+    ['gale', 1]
+  ]
 };
 
 /** Spring breeze — the universal fallback when the date/weather pick can't be resolved. */
@@ -82,8 +116,19 @@ export function pickMenuPreviewClimate(): { season: Season; weather: WeatherStat
     if (!pool || pool.length === 0) {
       return { season: FALLBACK_CLIMATE.season, weather: makeWeather(FALLBACK_CLIMATE.type) };
     }
+    // Weighted pick: walk the cumulative weights (so spring/summer's high-weight wind variants win most
+    // launches). Last entry covers any floating-point drift at the top of the range.
     const rand = makeSeededRng(freshSeed());
-    const type = pool[Math.floor(rand() * pool.length)] ?? FALLBACK_CLIMATE.type;
+    const total = pool.reduce((s, [, weight]) => s + weight, 0);
+    let r = rand() * total;
+    let type = pool[pool.length - 1][0];
+    for (const [t, weight] of pool) {
+      r -= weight;
+      if (r < 0) {
+        type = t;
+        break;
+      }
+    }
     return { season, weather: makeWeather(type) };
   } catch {
     return { season: FALLBACK_CLIMATE.season, weather: makeWeather(FALLBACK_CLIMATE.type) };
