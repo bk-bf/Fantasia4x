@@ -255,3 +255,46 @@ export function placeMenuPreviewMagicalGroves(
     resourceGeneratorService.placeSingleResource(tile, def, (seed + i * 2654435761) >>> 0);
   });
 }
+
+/**
+ * MM2 backdrop variant: plant 2× the magical trees scattered across the map in a jittered CHECKERBOARD
+ * (every other grid cell, ± a fraction of a cell so they don't sit on a perfect lattice) — never gluing
+ * together (cells are spaced well apart), and with an equal count of each species (cyclic over a shuffled
+ * roster). Runs AFTER `generateResources`; placeSingleResource clears each target tile so it overwrites
+ * any ordinary tree the scatter dropped there. Deterministic in the preview seed.
+ */
+export function placeMenuPreviewScatteredGroves(world: WorldTile[][], seed: number): void {
+  const groves = magicalGroveDefs();
+  if (groves.length === 0) return;
+  const h = world.length;
+  const w = world[0]?.length ?? 0;
+  if (w === 0 || h === 0) return;
+  const rand = makeSeededRng((seed ^ 0x2545f491) >>> 0);
+  // Balanced species: shuffle once, assign cyclically → equal counts (2×grove-count / species).
+  const order = [...groves];
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  // Checkerboard grid over a central region: COLS×ROWS cells, half used ((c+r) even) ⇒ 2× the ring count.
+  const COLS = 8;
+  const ROWS = 6; // 8×6 = 48 cells → 24 checkerboard sites = 2 × PREVIEW_GROVE_COUNT
+  const x0 = 0.16 * w;
+  const y0 = 0.14 * h;
+  const cellW = (0.84 * w - x0) / COLS;
+  const cellH = (0.86 * h - y0) / ROWS;
+  const JIT = 0.32; // ± fraction of a cell — breaks the lattice without letting trees touch
+  let placed = 0;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if ((c + r) % 2 !== 0) continue; // checkerboard
+      const x = Math.round(x0 + (c + 0.5) * cellW + (rand() * 2 - 1) * JIT * cellW);
+      const y = Math.round(y0 + (r + 0.5) * cellH + (rand() * 2 - 1) * JIT * cellH);
+      const tile = world[y]?.[x];
+      if (!tile || WATER_SUBTYPES.has(tile.subType)) continue;
+      const def = order[placed % order.length];
+      resourceGeneratorService.placeSingleResource(tile, def, (seed + placed * 2654435761) >>> 0);
+      placed++;
+    }
+  }
+}

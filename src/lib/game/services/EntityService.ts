@@ -19,7 +19,11 @@ import { advanceMobMovement } from './entity/entityHelpers';
 class EntityServiceImpl {
   /** Seed a fresh/loaded world with a starting population (no-op if entities already exist).
    *  `packs` omitted ⇒ area-scaled target (normal play); explicit ⇒ fixed-pack profiler/dev path. */
-  seedInitialEntities(state: GameState, packs?: number, opts?: { preyOnly?: boolean }): GameState {
+  seedInitialEntities(
+    state: GameState,
+    packs?: number,
+    opts?: { preyOnly?: boolean; scatter?: boolean }
+  ): GameState {
     return spawning.seedInitialEntities(state, packs, opts);
   }
 

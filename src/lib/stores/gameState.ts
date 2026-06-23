@@ -31,6 +31,7 @@ import { generateWorld } from '$lib/game/world/WorldGenerator';
 import {
   customizeMenuPreviewWorld,
   placeMenuPreviewMagicalGroves,
+  placeMenuPreviewScatteredGroves,
   menuPreviewMagicalGroveIds,
   pickMenuPreviewClimate
 } from '$lib/game/world/menuPreviewWorld';
@@ -646,6 +647,9 @@ const MENU_PREVIEW_SEED = 4051283263;
  *  Both dimensions are ODD so the map has an exact centre tile — the magical-tree ring then centres on
  *  a real tile on both axes (an even dimension puts the centre between tiles ⇒ a half-tile offset). */
 const MENU_PREVIEW_MAP = { w: 161, h: 101 };
+/** Experimental MM2 backdrop (set by `--mm2` ⇒ VITE_MM2): center-scattered herds + a checkerboard of
+ *  2× the magical trees, instead of MM1's four corner herds + symmetric tree ring. */
+const MENU_PREVIEW_MM2 = import.meta.env.VITE_MM2 === 'true';
 
 /**
  * Boot the main-menu backdrop: a live but gutted preview of the game world that renders behind the
@@ -669,14 +673,15 @@ function startMenuPreview() {
   // Title-screen art direction: flatten the mountain, erase water, and compute the magical-tree ring (see
   // module). Done BEFORE resource generation and entity seeding so prey spawn on the reshaped land.
   const groveCenters = customizeMenuPreviewWorld(world);
-  // Exclude the magical groves from the RANDOM scatter so no stray ones spawn off the deliberate ring;
+  // Exclude the magical groves from the RANDOM scatter so no stray ones spawn off the deliberate layout;
   // ordinary trees/plants still scatter normally.
   resourceGeneratorService.generateResources(world, MENU_PREVIEW_SEED, {
     exclude: menuPreviewMagicalGroveIds()
   });
-  // …then plant the glowing magical trees at the symmetric ring sites (after the ordinary-tree scatter,
-  // so they aren't clobbered by it).
-  placeMenuPreviewMagicalGroves(world, groveCenters, MENU_PREVIEW_SEED);
+  // …then plant the glowing magical trees (after the ordinary-tree scatter, so they aren't clobbered).
+  // MM2 backdrop: 2× the trees in a jittered checkerboard across the map. MM1: the symmetric ring.
+  if (MENU_PREVIEW_MM2) placeMenuPreviewScatteredGroves(world, MENU_PREVIEW_SEED);
+  else placeMenuPreviewMagicalGroves(world, groveCenters, MENU_PREVIEW_SEED);
 
   // Random (per launch) season-appropriate weather; season pinned to the real-world date via
   // `_debugSeason` (processEnvironment otherwise derives season from the turn). Falls back to a
@@ -697,7 +702,11 @@ function startMenuPreview() {
     jobs: []
   };
   // Prey only — no laired hostiles, no free-roaming predators — so the backdrop never spawns a hunt.
-  preview = entityService.seedInitialEntities(preview, undefined, { preyOnly: true });
+  // MM2 scatters several small herds across the centre; MM1 places four corner herds.
+  preview = entityService.seedInitialEntities(preview, undefined, {
+    preyOnly: true,
+    scatter: MENU_PREVIEW_MM2
+  });
 
   previewActive = true;
   gameStore.setSilent(preview);

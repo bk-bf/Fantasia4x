@@ -50,6 +50,41 @@ const MENU_HERD_CORNER_JITTER = 0.03; // ± map-fraction wobble on each corner a
 const MENU_HERD_SIZE_MIN = 6; // similar medium herd sizes (animals per corner)
 const MENU_HERD_SIZE_MAX = 9;
 
+// MM2 backdrop wildlife: instead of four corner herds, several SMALL herds spread across the CENTRE on a
+// jittered grid — so the animals read as scattered through the middle without collapsing into one clump.
+const MENU_SCATTER_COLS = 3;
+const MENU_SCATTER_ROWS = 2; // 3×2 = 6 spread cluster anchors
+const MENU_SCATTER_REGION = { x0: 0.28, x1: 0.72, y0: 0.26, y1: 0.74 }; // central map fractions
+const MENU_SCATTER_JITTER = 0.06; // ± map-fraction wobble per anchor (keeps the grid from reading rigid)
+const MENU_SCATTER_HERD_MIN = 3; // small clusters
+const MENU_SCATTER_HERD_MAX = 5;
+
+/** Spawn a `size`-strong herd of `def` anchored at `origin` (invisible lair ⇒ the leash in stepAnimal
+ *  keeps it a cluster). Pack-mates spread to adjacent spawnable tiles. Appends to `seeded`. */
+function pushHerd(
+  state: GameState,
+  seeded: Mob[],
+  def: CreatureDefinition,
+  origin: { x: number; y: number },
+  size: number
+): void {
+  const map = state.worldMap;
+  const anchorId = `herd-${origin.x}-${origin.y}`;
+  for (let i = 0; i < size; i++) {
+    let tile = origin;
+    if (i > 0) {
+      const cand = findNearbyWalkable(state, origin.x, origin.y);
+      if (cand && isSpawnableTile(map[cand.y]?.[cand.x])) tile = cand;
+    }
+    const mob = makeMob(def, tile.x, tile.y, state.turn);
+    mob.lairId = anchorId;
+    mob.lairX = origin.x;
+    mob.lairY = origin.y;
+    mob.lairRange = HERD_ANCHOR_RANGE;
+    seeded.push(mob);
+  }
+}
+
 /** Nearest spawnable tile to (cx,cy), searched outward in expanding Chebyshev rings (≤12). Used to land
  *  a menu corner anchor on walkable wildlife land even if the exact corner tile is a grove/edge. */
 function nearestSpawnable(state: GameState, cx: number, cy: number): { x: number; y: number } | null {
@@ -86,23 +121,40 @@ function seedMenuHerds(state: GameState, dayCreatures: CreatureDefinition[]): Ga
     const jy = (rng.random() * 2 - 1) * MENU_HERD_CORNER_JITTER;
     const origin = nearestSpawnable(state, Math.round((fx + jx) * w), Math.round((fy + jy) * h));
     if (!origin) return;
-    const anchorId = `herd-${origin.x}-${origin.y}`;
     const size =
       MENU_HERD_SIZE_MIN + Math.floor(rng.random() * (MENU_HERD_SIZE_MAX - MENU_HERD_SIZE_MIN + 1));
-    for (let i = 0; i < size; i++) {
-      let tile = origin;
-      if (i > 0) {
-        const cand = findNearbyWalkable(state, origin.x, origin.y);
-        if (cand && isSpawnableTile(map[cand.y]?.[cand.x])) tile = cand;
-      }
-      const mob = makeMob(def, tile.x, tile.y, state.turn);
-      mob.lairId = anchorId;
-      mob.lairX = origin.x;
-      mob.lairY = origin.y;
-      mob.lairRange = HERD_ANCHOR_RANGE;
-      seeded.push(mob);
-    }
+    pushHerd(state, seeded, def, origin, size);
   });
+  return { ...state, mobs: [...(state.mobs ?? []), ...seeded] };
+}
+
+/**
+ * MM2 backdrop wildlife: several SMALL herds spread across the centre on a jittered grid (see the
+ * MENU_SCATTER_* constants) — animals scattered through the middle without forming one big clump. Each
+ * cluster is anchored (leash keeps it tight); the spread-out anchors keep the clusters distinct.
+ */
+function seedMenuHerdsScattered(state: GameState, dayCreatures: CreatureDefinition[]): GameState {
+  const map = state.worldMap;
+  const h = map.length;
+  const w = map[0]?.length ?? 0;
+  if (w === 0 || h === 0 || dayCreatures.length === 0) return state;
+  const roster = [...dayCreatures].sort(() => rng.random() - 0.5);
+  const { x0, x1, y0, y1 } = MENU_SCATTER_REGION;
+  const seeded: Mob[] = [];
+  let idx = 0;
+  for (let r = 0; r < MENU_SCATTER_ROWS; r++) {
+    for (let c = 0; c < MENU_SCATTER_COLS; c++) {
+      const fx = x0 + ((c + 0.5) / MENU_SCATTER_COLS) * (x1 - x0) + (rng.random() * 2 - 1) * MENU_SCATTER_JITTER;
+      const fy = y0 + ((r + 0.5) / MENU_SCATTER_ROWS) * (y1 - y0) + (rng.random() * 2 - 1) * MENU_SCATTER_JITTER;
+      const origin = nearestSpawnable(state, Math.round(fx * w), Math.round(fy * h));
+      if (!origin) continue;
+      const def = roster[idx++ % roster.length];
+      const size =
+        MENU_SCATTER_HERD_MIN +
+        Math.floor(rng.random() * (MENU_SCATTER_HERD_MAX - MENU_SCATTER_HERD_MIN + 1));
+      pushHerd(state, seeded, def, origin, size);
+    }
+  }
   return { ...state, mobs: [...(state.mobs ?? []), ...seeded] };
 }
 
@@ -116,7 +168,7 @@ function seedMenuHerds(state: GameState, dayCreatures: CreatureDefinition[]): Ga
 export function seedInitialEntities(
   state: GameState,
   packsOverride?: number,
-  opts?: { preyOnly?: boolean }
+  opts?: { preyOnly?: boolean; scatter?: boolean }
 ): GameState {
   if ((state.mobs?.length ?? 0) > 0) return state;
   const preyOnly = opts?.preyOnly ?? false;
@@ -128,8 +180,12 @@ export function seedInitialEntities(
   );
   if (dayCreatures.length === 0) return state;
 
-  // MENU-PREVIEW: a hand-framed cast of four corner herds, not the area-scaled wildlife of real play.
-  if (preyOnly) return seedMenuHerds(state, dayCreatures);
+  // MENU-PREVIEW: a hand-framed cast, not the area-scaled wildlife of real play. Default = four corner
+  // herds (MM1); `scatter` = several small herds spread across the centre (MM2).
+  if (preyOnly)
+    return opts?.scatter
+      ? seedMenuHerdsScattered(state, dayCreatures)
+      : seedMenuHerds(state, dayCreatures);
 
   const h = state.worldMap.length;
   const w = state.worldMap[0]?.length ?? 0;
