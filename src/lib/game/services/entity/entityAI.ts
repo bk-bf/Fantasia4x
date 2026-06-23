@@ -59,6 +59,7 @@ import {
   CORPSE_PORTION,
   HUNT_COOLDOWN_SECONDS,
   FORAGE_COOLDOWN_SECONDS,
+  FEEDING_STUCK_SECONDS,
   HUNT_GIVE_UP_SECONDS,
   WILD_FORAGE_RESOURCE_IDS
 } from './entityConstants';
@@ -100,7 +101,7 @@ const HUNT_BUSY_BACKOFF_JITTER_S = 16;
 // OFF by default: the per-stuck-mob cellDesc + nearbyCorpse scans are O(mobs) each, so a freeze with
 // many stuck mobs turns this O(mobs²) and craters TPS (measured 60→1 during the #1816 freeze). Flip to
 // true only to diagnose a fresh freeze, then flip back.
-const STUCK_TRACE_ENABLED = false;
+const STUCK_TRACE_ENABLED = true;
 const _posTrack = new Map<string, { x: number; y: number; since: number; lastLog: number }>();
 const STUCK_LOG_AFTER = 60; // ticks unmoved (~1 s) before a moving-state mob counts as stuck
 const STUCK_LOG_EVERY = 180; // re-log a still-stuck mob at most this often (~3 s)
@@ -167,6 +168,33 @@ function traceStuck(mob: Mob, def: CreatureDefinition, state: GameState, turn: n
   );
 }
 
+// ── Targeted per-tick trace of ONE entity (debug) ────────────────────────────────────────────────
+// Set TRACE_MOB_ID to a mob-id suffix (e.g. '456') to dump that ONE mob's full state EVERY tick to
+// ai.log — the tool for "why is THIS specific entity oscillating". Unlike traceStuck (position-keyed,
+// misses a mob that jitters) and the 300-tick ENTITY-STATE snapshot, this fires every tick in BOTH the
+// throttled and full-FSM branches, so the state sequence is complete. O(1) per tick (one endsWith) —
+// only the matched mob pays the cellDesc scan. '' = off. Flip back to '' when done.
+const TRACE_MOB_ID = '456';
+function traceMobTick(mob: Mob, state: GameState, turn: number, phase: string): void {
+  if (!TRACE_MOB_ID || !gameLogger.isEnabled || !mob.id.endsWith(TRACE_MOB_ID)) return;
+  const pathLen = mob.path?.length ?? 0;
+  const nc = pathLen > 0 ? mob.path![mob.pathIndex ?? 0] : null;
+  const end = pathLen > 0 ? mob.path![pathLen - 1] : null;
+  gameLogger.log(
+    turn,
+    'ENTITY-STATE',
+    `${getCreatureById(mob.creatureId)?.id ?? 'mob'}#${mob.id.slice(-6)} [${phase}] state=${mob.state}` +
+      ` pos=(${mob.x},${mob.y}) hunger=${mob.needs.hunger.toFixed(1)} fatigue=${mob.needs.fatigue.toFixed(1)}` +
+      ` eat=${mob.eatProgress?.toFixed(2) ?? '-'} since=${turn - mob.stateSince}` +
+      ` blocked=${mob.blockedTicks ?? 0} costLeft=${(mob.nextCellCostLeft ?? 0).toFixed(1)}` +
+      ` path=${pathLen > 0 ? `${mob.pathIndex ?? 0}/${pathLen} end=(${end!.x},${end!.y})` : 'none'}` +
+      (nc ? ` next=(${nc.x},${nc.y})[${cellDesc(state, nc.x, nc.y, mob.id)}]` : '') +
+      ` fCD=${mob.forageCooldownUntil ? Math.max(0, mob.forageCooldownUntil - turn) : 0}` +
+      ` hCD=${mob.huntCooldownUntil ? Math.max(0, mob.huntCooldownUntil - turn) : 0}` +
+      (mob.huntTargetId ? ` prey=${mob.huntTargetId.slice(-6)}` : '')
+  );
+}
+
 export function stepEntities(state: GameState): GameState {
   const mobs = state.mobs;
   if (!mobs || mobs.length === 0) return state;
@@ -223,6 +251,7 @@ export function stepEntities(state: GameState): GameState {
       // is near-free most ticks; the expensive FSM (forage/hunt/A*) still only runs on the think-tick.
       next[i] =
         mob.state === 'Wander' || mob.state === 'Grazing' ? wanderStep(mob, def, state) : mob;
+      traceMobTick(next[i], state, turn, 'throttled');
       continue;
     }
     // Elapsed-time scale for time-based FSM progress (eat progress, flee stamina): use the ACTUAL gap
@@ -246,6 +275,7 @@ export function stepEntities(state: GameState): GameState {
     );
     const ticked = tickMobConditionTimers(stepped);
     next[i] = ticked;
+    traceMobTick(ticked, state, turn, 'fsm');
     if (ticked !== mob) changed = true;
   }
 
@@ -708,6 +738,21 @@ export function stepHostile(
         eatProgress: undefined,
         huntTargetId: undefined
       };
+    }
+    // Exhaustion exit for a STUCK forager. The hold-block above only leaves Foraging on sated-hunger or
+    // a pawn in vision — there is NO fatigue exit, so a kobold whose one reachable forage tile is being
+    // body-blocked by a packmate (pack gridlock) ground here forever at fatigue ≥ threshold while never
+    // landing a bite (#456). A successful bite resets stateSince, so being in Foraging this long without
+    // one = genuinely stuck; if it's also exhausted, not mid-bite, and not critically hungry, abandon the
+    // attempt and sleep — it retries fed-and-rested once the tile clears.
+    if (
+      (mob.state === 'Foraging' || (mob.state === 'Eating' && !mob.huntTargetId)) &&
+      !mob.eatProgress &&
+      mob.needs.fatigue >= SLEEP_FATIGUE_THRESHOLD &&
+      mob.needs.hunger < SLEEP_MAX_HUNGER &&
+      turn - mob.stateSince > ticksFromSeconds(FEEDING_STUCK_SECONDS)
+    ) {
+      return sleepOrReturnHome(mob, turn, state);
     }
     // Foraging (and grazing-style Eating with no hunt target) routes to the forage
     // stepper; corpse-eating (huntTargetId set) and Hunting route to the hunt stepper.

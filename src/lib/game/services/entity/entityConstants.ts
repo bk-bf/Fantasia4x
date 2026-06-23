@@ -163,6 +163,12 @@ export const HUNT_COOLDOWN_SECONDS = 60;
 /** Cooldown after finding no reachable food tile before re-entering Foraging (seconds). Mirrors
  *  HUNT_COOLDOWN so a boxed-in forager backs off instead of oscillating Grazing/Wander↔Foraging. */
 export const FORAGE_COOLDOWN_SECONDS = 30;
+/** An exhausted forager that hasn't landed a single bite in this long is stuck (e.g. its one reachable
+ *  forage tile is permanently body-blocked by a packmate — kobold pack gridlock). It bails to sleep
+ *  instead of grinding the spot forever, since the Foraging state otherwise has no fatigue exit. Well
+ *  above a normal forage cycle (EAT_GRASS_SECONDS = 1.25s/bite + a short approach), so a mob that is
+ *  actually eating — which resets stateSince every bite — never trips it. */
+export const FEEDING_STUCK_SECONDS = 30;
 /** Give up a hunt that has dragged on this long without closing to attack range — stops the
  *  endless uncatchable chase (equal-speed predators) that thrashed the AI + log. */
 export const HUNT_GIVE_UP_SECONDS = 25;

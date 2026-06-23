@@ -159,6 +159,28 @@ describe('entity starvation (headless sim)', () => {
     expect(g.state).not.toBe('Foraging');
   });
 
+  it('an exhausted forager stuck mid-forage bails to sleep instead of grinding forever', () => {
+    // #456: a kobold/goblin whose one reachable forage tile is body-blocked by a packmate ground in
+    // Foraging forever — the Foraging hold-state had no fatigue exit. Exhausted (fatigue ≥ 60), only
+    // mildly hungry (< 87), and stuck (no successful bite for > FEEDING_STUCK_SECONDS, so stateSince is
+    // old) → it must abandon the attempt and sleep.
+    const stuckTurn = 31 * TICKS_PER_SECOND; // > FEEDING_STUCK_SECONDS (30s) past stateSince 0
+    const state = {
+      turn: stuckTurn,
+      mobs: [
+        makeGoblin({ state: 'Foraging', stateSince: 0, needs: { hunger: 50, fatigue: 70 } as any })
+      ],
+      pawns: [],
+      worldMap: smallWorld(),
+      stockpile: {},
+      droppedItems: [],
+      buildings: []
+    } as unknown as GameState;
+    const out = entityService.stepEntities(state);
+    const g = out.mobs!.find((m) => m.id === 'g1')!;
+    expect(g.state).toBe('Sleeping');
+  });
+
   it('hunger climbs to the 80 collapse point well before death (long pre-death suffering)', () => {
     let state = makeState([makeGoblin()]);
     let collapseTurn = -1;
