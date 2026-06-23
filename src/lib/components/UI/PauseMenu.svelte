@@ -3,18 +3,20 @@
   the existing blueprint/designation/panel cancels), closed by Resume or ESC again. The game is
   paused while it's up (+page restores the prior pause state on resume).
 
-  Entries: Resume · Save Game (eager flush, with a transient confirmation) · Settings (inline
-  toggles, mirroring the title menu) · Exit to Main Menu (save → reload to the title) · Quit to
-  Desktop (save → close the window; desktop shell only).
+  Entries: Resume · Save Game (eager flush, with a transient confirmation) · Load Game (opens the
+  3-slot picker in load mode) · Settings (inline toggles, mirroring the title menu) · Exit to Main
+  Menu (save → reload to the title) · Quit to Desktop (save → close the window; desktop shell only).
 -->
 <script lang="ts">
   import { fade, scale } from 'svelte/transition';
   import { gameState } from '$lib/stores/gameState';
   import SettingsModal from './SettingsModal.svelte';
+  import SaveSlotMenu from './SaveSlotMenu.svelte';
 
   let { onResume }: { onResume: () => void } = $props();
 
   let showSettings = $state(false);
+  let showLoad = $state(false);
   let saved = $state(false);
   let busy = $state(false);
   const isDesktop = typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent ?? '');
@@ -52,6 +54,7 @@
       <button class="menu-btn" onclick={saveGame} disabled={busy}>
         {saved ? 'Saved ✓' : 'Save Game'}
       </button>
+      <button class="menu-btn" onclick={() => (showLoad = true)} disabled={busy}>Load Game</button>
       <button class="menu-btn" onclick={() => (showSettings = true)}>Settings</button>
       <button class="menu-btn" onclick={exitToMenu} disabled={busy}>Exit to Main Menu</button>
       {#if isDesktop}
@@ -62,6 +65,10 @@
     </nav>
   </div>
 </div>
+
+{#if showLoad}
+  <SaveSlotMenu intent="load" onClose={() => (showLoad = false)} />
+{/if}
 
 {#if showSettings}
   <SettingsModal onClose={() => (showSettings = false)} />
