@@ -8,16 +8,15 @@
     • Default game speed — speed a new game starts at
     • Autosave — gates the debounced scheduleSave
     • Debug mode — reveals the in-game DEBUG tab
-    • Main Menu (in-game only) — save & return to the title; the way back into the menu under --debug,
-      which skips it at start (gameState.goToMainMenu)
   The Audio sliders are disabled placeholders (no sound system yet). Closes on ✕ / backdrop / Escape.
+  (Returning to the title is the pause menu's "Exit to Main Menu" — it works under --debug too.)
 -->
 <script lang="ts">
   import { fade, scale } from 'svelte/transition';
   import { onMount } from 'svelte';
   import SettingRow from './SettingRow.svelte';
   import ScrollArea from './ScrollArea.svelte';
-  import { gameState, appPhase } from '$lib/stores/gameState';
+  import { gameState } from '$lib/stores/gameState';
   import {
     weatherEffects,
     dayNightTint,
@@ -65,16 +64,6 @@
     if (confirm('Delete the save and restart from a new world? This cannot be undone.')) {
       gameState.wipeAndReload();
     }
-  }
-
-  // Save and return to the title screen. Only meaningful while in-game (when opened from the title menu
-  // we're already there). Chiefly for the --debug launch, which skips the menu at start — this is the
-  // way back INTO it. gameState.goToMainMenu flushes the save, then forces the menu on reload.
-  let leaving = $state(false);
-  async function toMainMenu() {
-    if (leaving) return;
-    leaving = true;
-    await gameState.goToMainMenu();
   }
 </script>
 
@@ -172,13 +161,6 @@
         onToggle={debugMode.toggle}
       />
       <button class="wipe" onclick={wipeSave}>Wipe save &amp; restart</button>
-
-      {#if $appPhase === 'game'}
-        <div class="section">Session</div>
-        <button class="leave" onclick={toMainMenu} disabled={leaving}>
-          {leaving ? 'Saving…' : 'Main Menu'}
-        </button>
-      {/if}
     </ScrollArea>
 
     <button class="done" onclick={onClose}>Done</button>
@@ -284,33 +266,6 @@
   .wipe:hover {
     color: var(--neg);
     border-color: var(--neg);
-  }
-  /* Navigation back to the title — a normal (non-destructive) action, so it reads like a standard button. */
-  .leave {
-    margin-top: 4px;
-    align-self: flex-start;
-    padding: 6px 12px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition:
-      background 0.12s,
-      color 0.12s,
-      border-color 0.12s;
-  }
-  .leave:hover:not(:disabled) {
-    background: var(--bg-hover);
-    color: var(--accent-hi);
-    border-color: var(--border-hi);
-  }
-  .leave:disabled {
-    color: var(--text-muted);
-    cursor: default;
   }
   .done {
     margin-top: 14px;
