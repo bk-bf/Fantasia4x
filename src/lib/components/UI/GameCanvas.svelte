@@ -3587,6 +3587,17 @@
     markedKind = null;
     markedIds = [];
     markedSet = new Set();
+    // HIGHLIGHT the clicked node (toggle), so the multi-selection is VISIBLE on the map — same as
+    // pawns lighting up — and the card's HARVEST/DESIGNATE button has tiles to act on. Seed from the
+    // node that was already (normally) selected so it joins the set instead of being dropped.
+    const next = new Set(highlightedResourceTiles);
+    if (next.size === 0 && selectedResourceTile) {
+      next.add(`${selectedResourceTile.x},${selectedResourceTile.y}`);
+    }
+    const key = `${x},${y}`;
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    highlightedResourceTiles = next;
     selectedResourceTypes = new Set([...selectedResourceTypes, rid]);
     selectedResourceTile = { x, y, resourceId: rid };
     drawDesignations();
