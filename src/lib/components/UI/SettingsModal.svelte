@@ -14,6 +14,7 @@
   import { fade, scale } from 'svelte/transition';
   import { onMount } from 'svelte';
   import SettingRow from './SettingRow.svelte';
+  import { gameState } from '$lib/stores/gameState';
   import {
     weatherEffects,
     dayNightTint,
@@ -51,6 +52,14 @@
     if (e.key === 'Escape') {
       e.stopPropagation();
       onClose();
+    }
+  }
+
+  // Relocated here from the old top-bar settings dropdown — wipe the IndexedDB save and reboot to a
+  // fresh world. Destructive, so it sits under a confirm in the Advanced section.
+  function wipeSave() {
+    if (confirm('Delete the save and restart from a new world? This cannot be undone.')) {
+      gameState.wipeAndReload();
     }
   }
 </script>
@@ -139,6 +148,7 @@
         checked={$debugMode}
         onToggle={debugMode.toggle}
       />
+      <button class="wipe" onclick={wipeSave}>Wipe save &amp; restart</button>
     </div>
 
     <button class="done" onclick={onClose}>Done</button>
@@ -219,6 +229,26 @@
   }
   .section:first-child {
     margin-top: 0;
+  }
+  /* Destructive action — quiet by default, reddens on hover so it never reads as a primary control. */
+  .wipe {
+    margin-top: 8px;
+    align-self: flex-start;
+    padding: 4px 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition:
+      color 0.12s,
+      border-color 0.12s;
+  }
+  .wipe:hover {
+    color: var(--neg);
+    border-color: var(--neg);
   }
   .done {
     margin-top: 14px;

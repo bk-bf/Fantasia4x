@@ -1,6 +1,7 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
+  import BackButton from '$lib/components/UI/BackButton.svelte';
   import WorkPriorities from '$lib/components/screens/work/WorkPriorities.svelte';
   import PopulationOverview from '$lib/components/screens/work/PopulationOverview.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
@@ -24,7 +25,7 @@
 <div class="work-screen">
   <div class="screen-hdr">
     | LABOR ASSIGNMENTS
-    <button class="hdr-btn" onclick={() => uiState.setScreen('main')}>BACK</button>
+    <BackButton />
   </div>
 
   <WorkPriorities {pawns} {workAssignments} bind:selectedPawn bind:selectedColumn />
@@ -57,20 +58,6 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
-  }
-  .hdr-btn {
-    margin-left: auto;
-    padding: 2px 8px;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    cursor: pointer;
-  }
-  .hdr-btn:hover {
-    color: var(--text);
-    border-color: var(--border-hi);
   }
   .section-hdr {
     padding: 4px 8px;

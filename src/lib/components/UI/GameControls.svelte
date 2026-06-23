@@ -9,7 +9,6 @@
     savedStateReady
   } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
-  import SettingsMenu from '$lib/components/UI/SettingsMenu.svelte';
   import { renderFps } from '$lib/stores/perfStats';
   import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService';
   import {
@@ -21,6 +20,11 @@
   } from '$lib/game/services/EnvironmentService';
   import { TICKS_PER_SECOND } from '$lib/game/core/time';
   import { onMount, onDestroy } from 'svelte';
+
+  // Map-generation mode: render the SAME iconic bar (title + frame), but swap the live HUD readouts
+  // (date / season / weather / turn / perf / pause / speed) for a clean "Map Generation" label —
+  // none of that is meant to be computing while the player is still shaping the world.
+  export let mapGen = false;
 
   let isPaused = false;
   let gameSpeed = 1;
@@ -194,46 +198,53 @@
       >@{import.meta.env.VITE_DEV_COMMIT}</span
     >
   {/if}
-  <span class="bi date" title="{gameDate.monthName} {gameDate.day}, Year {gameDate.year}"
-    >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span
-  >
-  <span class="bi phase" title="Time of day">{dayPhase}</span>
-  <span class="bi season" title="Season · average map temperature · weather · wind"
-    >{SEASON_LABELS[$currentSeason] ?? $currentSeason}{tempLabel ? ` ${tempLabel}` : ''} · {weatherLabel}{windLabel
-      ? ` · ${windLabel}`
-      : ''}</span
-  >
-  <span class="bi turn" title="Turn {currentTurnValue}">T{currentTurnValue}</span>
-  <span
-    class="bi perf"
-    title="Render {fps} FPS · Simulation {tps} TPS (target {TICKS_PER_SECOND *
-      gameSpeed} at {gameSpeed}×)">{fps}FPS · {tps}TPS</span
-  >
-  <span class="bi" class:running={!isPaused} class:paused={isPaused}>
-    {isPaused ? '■ PAUSED' : '● RUNNING'}
-  </span>
-  <span class="spacer" />
-  {#if currentScreen === 'main' && import.meta.env.VITE_DEBUG_MODE === 'true'}
-    <button
-      class="ctrl-btn"
-      class:is-paused={$uiState.customMapOpen}
-      on:click={() => uiState.toggleCustomMap()}
-      title="Custom map: tune biome generation with live sliders"
+  {#if mapGen}
+    <span class="bi sep">—</span>
+    <span class="bi mapgen">Map Generation</span>
+    <span class="spacer"></span>
+  {:else}
+    <span class="bi date" title="{gameDate.monthName} {gameDate.day}, Year {gameDate.year}"
+      >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span
     >
-      ⚙ CUSTOM MAP
-    </button>
-  {/if}
-  <button class="ctrl-btn" class:is-paused={isPaused} on:click={gameState.togglePause}>
-    {isPaused ? '▶ RESUME' : '⏸ PAUSE'}
-  </button>
-  <div class="speed-wrap">
-    {#each [1, 2, 4] as s}
-      <button class="spd" class:active={gameSpeed === s} on:click={() => gameState.setGameSpeed(s)}
-        >{s}x</button
+    <span class="bi phase" title="Time of day">{dayPhase}</span>
+    <span class="bi season" title="Season · average map temperature · weather · wind"
+      >{SEASON_LABELS[$currentSeason] ?? $currentSeason}{tempLabel ? ` ${tempLabel}` : ''} · {weatherLabel}{windLabel
+        ? ` · ${windLabel}`
+        : ''}</span
+    >
+    <span class="bi turn" title="Turn {currentTurnValue}">T{currentTurnValue}</span>
+    <span
+      class="bi perf"
+      title="Render {fps} FPS · Simulation {tps} TPS (target {TICKS_PER_SECOND *
+        gameSpeed} at {gameSpeed}×)">{fps}FPS · {tps}TPS</span
+    >
+    <span class="bi" class:running={!isPaused} class:paused={isPaused}>
+      {isPaused ? '■ PAUSED' : '● RUNNING'}
+    </span>
+    <span class="spacer"></span>
+    {#if currentScreen === 'main' && import.meta.env.VITE_DEBUG_MODE === 'true'}
+      <button
+        class="ctrl-btn"
+        class:is-paused={$uiState.customMapOpen}
+        on:click={() => uiState.toggleCustomMap()}
+        title="Custom map: tune biome generation with live sliders"
       >
-    {/each}
-  </div>
-  <SettingsMenu />
+        ⚙ CUSTOM MAP
+      </button>
+    {/if}
+    <button class="ctrl-btn" class:is-paused={isPaused} on:click={gameState.togglePause}>
+      {isPaused ? '▶ RESUME' : '⏸ PAUSE'}
+    </button>
+    <div class="speed-wrap">
+      {#each [1, 2, 4] as s}
+        <button
+          class="spd"
+          class:active={gameSpeed === s}
+          on:click={() => gameState.setGameSpeed(s)}>{s}x</button
+        >
+      {/each}
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -276,6 +287,14 @@
     letter-spacing: 0.04em;
     opacity: 0.7;
     font-family: var(--font-mono, monospace);
+  }
+  .bi.sep {
+    color: var(--text-muted);
+    padding: 0 2px;
+  }
+  .bi.mapgen {
+    color: var(--text);
+    letter-spacing: 0.06em;
   }
   .bi.date {
     color: var(--text-dim);

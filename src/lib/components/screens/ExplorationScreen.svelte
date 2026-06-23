@@ -12,6 +12,7 @@
   //      there's no click-to-open delay. `ensureDiscoveredResources()` is a first-open safety net.
   import { onMount } from 'svelte';
   import { uiState } from '$lib/stores/uiState';
+  import BackButton from '$lib/components/UI/BackButton.svelte';
   import {
     discoveredResources,
     ensureDiscoveredResources,
@@ -71,7 +72,7 @@
     | DISCOVERED RESOURCES &nbsp;<span class="dim">{typeCount} types · {rows.length} nodes</span>
     <div class="hdr-tools">
       <SearchBar bind:value={query} placeholder="search resources…" cacheKey="explore" />
-      <button class="hdr-btn" onclick={() => uiState.setScreen('main')}>BACK</button>
+      <BackButton />
     </div>
   </div>
 
@@ -146,19 +147,6 @@
     display: flex;
     align-items: center;
     gap: 8px;
-  }
-  .hdr-btn {
-    padding: 2px 8px;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    cursor: pointer;
-  }
-  .hdr-btn:hover {
-    color: var(--text);
-    border-color: var(--border-hi);
   }
   .empty {
     padding: 16px 12px;

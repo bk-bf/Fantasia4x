@@ -1,6 +1,7 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
+  import BackButton from '$lib/components/UI/BackButton.svelte';
   import { getCreatureById } from '$lib/game/core/Creatures';
   import type { Mob, LimbState } from '$lib/game/core/types';
   import FollowButton from '../UI/FollowButton.svelte';
@@ -104,7 +105,7 @@
     >
     <div class="hdr-tools">
       <SearchBar bind:value={query} placeholder="search entities…" cacheKey="entities" />
-      <button class="hdr-btn" onclick={() => uiState.setScreen('main')}>BACK</button>
+      <BackButton />
     </div>
   </div>
 
@@ -255,19 +256,6 @@
     display: flex;
     align-items: center;
     gap: 8px;
-  }
-  .hdr-btn {
-    padding: 2px 8px;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    cursor: pointer;
-  }
-  .hdr-btn:hover {
-    color: var(--text);
-    border-color: var(--border-hi);
   }
   .empty {
     padding: 16px 12px;

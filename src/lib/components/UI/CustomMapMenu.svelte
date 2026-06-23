@@ -212,20 +212,29 @@
         }}
       /></label
     >
-    <button class="cm-btn" onclick={rollSeed} title="roll a new random seed and preview it">⟳</button>
+    <button class="cm-btn" onclick={rollSeed} title="roll a new random seed and preview it"
+      >⟳</button
+    >
     <button class="cm-btn" onclick={reset} title="restore terrains.jsonc defaults">reset</button>
     <button
       class="cm-btn generate"
       onclick={generate}
       title="lock this terrain in and populate it with pawns & creatures">GENERATE</button
     >
-    <button class="cm-btn close" onclick={onClose} title="discard preview, revert to the previous map"
-      >✕</button
-    >
+    <!-- The discard/revert ✕ only makes sense in the debug build (where the popup is a toggleable tool).
+         In the normal new-game flow there's no previous map to revert to — GENERATE is the only exit. -->
+    {#if import.meta.env.VITE_DEBUG_MODE === 'true'}
+      <button
+        class="cm-btn close"
+        onclick={onClose}
+        title="discard preview, revert to the previous map">✕</button
+      >
+    {/if}
   </div>
   <div class="cm-note">
-    Roll / tweak sliders to <strong>preview</strong> the terrain. <strong>GENERATE</strong> locks it in
-    and places pawns &amp; creatures; <strong>✕</strong> discards the preview and reverts.
+    Roll / tweak sliders to <strong>preview</strong> the terrain. <strong>GENERATE</strong> locks it
+    in and places pawns &amp; creatures.{#if import.meta.env.VITE_DEBUG_MODE === 'true'}
+      <strong>✕</strong> discards the preview and reverts.{/if}
   </div>
 
   <div class="cm-grid">

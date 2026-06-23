@@ -4,40 +4,32 @@
   Centred FANTASIA wordmark (matching LoadingScreen's tokens) over a faint ward-glow, with the four
   classic entries. The heavy sim boot is HELD by gameState's boot gate until New/Load is chosen, so
   this screen is instant and the worker/WebGL only spin up on a choice:
-    • New Game  → fresh colony + opens the Custom Map popup so the player can shape the world first.
-    • Load Game → resumes the persisted save (disabled when none exists).
+    • New Game  → opens the 3-slot picker (SaveSlotMenu); an empty slot starts a fresh colony there
+                  (then the Custom Map popup), a filled one loads it.
+    • Load Game → opens the same slot picker (disabled when every slot is empty).
     • Settings  → opens the shared SettingsModal popup (graphics / gameplay / advanced toggles).
     • Exit      → quits the desktop window (no-op in a browser tab).
 -->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
-  import { gameState, menuPreviewReady } from '$lib/stores/gameState';
-  import { uiState } from '$lib/stores/uiState';
+  import { menuPreviewReady } from '$lib/stores/gameState';
   import { hasSave } from '$lib/stores/saveManager';
   import MenuPreviewBackdrop from '$lib/components/UI/MenuPreviewBackdrop.svelte';
   import SettingsModal from '$lib/components/UI/SettingsModal.svelte';
+  import SaveSlotMenu from '$lib/components/UI/SaveSlotMenu.svelte';
 
   let canLoad = $state(false);
   let showSettings = $state(false);
+  // The save-slot picker, opened by New Game / Load Game. `intent` only colours its header; the
+  // per-slot action is uniform (empty → new, filled → load) — see SaveSlotMenu.
+  let slotMenu = $state<'new' | 'load' | null>(null);
   // Exit is only meaningful in the desktop shell; window.close() is a no-op in a normal browser tab.
   const isDesktop = typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent ?? '');
 
   onMount(async () => {
     canLoad = await hasSave();
   });
-
-  function newGame() {
-    gameState.startGame('new');
-    // Open the Custom Map popup over the freshly-generated world so the first thing the player does
-    // is shape the terrain. It renders once the game-container mounts (storeReady).
-    uiState.setCustomMap(true);
-  }
-
-  function loadGame() {
-    if (!canLoad) return;
-    gameState.startGame('load');
-  }
 
   function exitGame() {
     window.close();
@@ -58,8 +50,13 @@
     <div class="credit-line">alpha 0.1.0 · tileset: Bitlands by DragonDePlatino</div>
 
     <nav class="menu">
-      <button class="menu-btn" onclick={newGame}>New Game</button>
-      <button class="menu-btn" class:disabled={!canLoad} disabled={!canLoad} onclick={loadGame}>
+      <button class="menu-btn" onclick={() => (slotMenu = 'new')}>New Game</button>
+      <button
+        class="menu-btn"
+        class:disabled={!canLoad}
+        disabled={!canLoad}
+        onclick={() => (slotMenu = 'load')}
+      >
         Load Game
       </button>
       <button class="menu-btn" onclick={() => (showSettings = true)}>Settings</button>
@@ -69,6 +66,10 @@
     </nav>
   </div>
 </div>
+
+{#if slotMenu}
+  <SaveSlotMenu intent={slotMenu} onClose={() => (slotMenu = null)} />
+{/if}
 
 {#if showSettings}
   <SettingsModal onClose={() => (showSettings = false)} />

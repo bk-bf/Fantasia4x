@@ -5,7 +5,7 @@
   import FilterTabs from '$lib/components/UI/FilterTabs.svelte';
   import SearchBar from '$lib/components/UI/SearchBar.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
-  import { uiState } from '$lib/stores/uiState';
+  import BackButton from '$lib/components/UI/BackButton.svelte';
   import ITEMS_DATABASE from '$lib/game/database/items.jsonc';
   import { itemService } from '$lib/game/services/ItemService';
   import { recipeService } from '$lib/game/services/RecipeService';
@@ -256,7 +256,7 @@
 <div class="crafting-screen">
   <div class="screen-hdr">
     | CRAFTING
-    <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
+    <BackButton />
   </div>
 
   <!-- Category tabs: pick a category, see its recipes. Sticky so they stay reachable on scroll. -->
@@ -372,7 +372,9 @@
                   { itemId: item.id, qty: `×${primaryQtyOf(item.id)}` },
                   ...byproductsOf(item.id).map(([bid, bq]) => ({ itemId: bid, qty: `×${bq}` }))
                 ] satisfies ItemPillView[]}
-                <div class="cost-out"><span class="cost-arrow">→</span><ItemPills pills={outPills} /></div>
+                <div class="cost-out">
+                  <span class="cost-arrow">→</span><ItemPills pills={outPills} />
+                </div>
               {/if}
             {/if}
           </BuildCard>
@@ -464,16 +466,6 @@
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--border);
-  }
-
-  .hdr-btn {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--accent);
-    font-family: var(--font-mono);
-    font-size: 10px;
-    padding: 2px 6px;
-    cursor: pointer;
   }
 
   .cost-item {

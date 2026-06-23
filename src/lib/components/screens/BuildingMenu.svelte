@@ -2,6 +2,7 @@
   import { gameState, currentRace } from '$lib/stores/gameState';
   import { addToStockpileZone } from '$lib/game/core/GameState';
   import { uiState } from '$lib/stores/uiState';
+  import BackButton from '$lib/components/UI/BackButton.svelte';
   import { itemService } from '$lib/game/services/ItemService';
   import { buildingService } from '$lib/game/services/BuildingService';
   import { onDestroy } from 'svelte';
@@ -264,7 +265,7 @@
 <div class="building-menu">
   <div class="screen-hdr">
     | CONSTRUCTION
-    <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
+    <BackButton />
   </div>
 
   <!-- Building groups + ZONES as a tab. Sticky filter bar so tabs/search stay reachable on scroll. -->
@@ -439,16 +440,6 @@
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--border);
-  }
-
-  .hdr-btn {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--accent);
-    font-family: var(--font-mono);
-    font-size: 10px;
-    padding: 2px 6px;
-    cursor: pointer;
   }
 
   .cost-item {

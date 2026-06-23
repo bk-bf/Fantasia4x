@@ -282,13 +282,9 @@
 {#if $appPhase === 'game' && $storeReady}
   <div class="game-container" class:map-locked={customMapOpen}>
     <div class="game-header">
-      {#if customMapOpen}
-        <!-- Map-generation mode: a stripped, static terrain viewer. No game HUD (time / season /
-             weather / speed / pause / TPS·FPS) — none of that is meant to be computing yet. -->
-        <div class="mapgen-header">MAP GENERATION</div>
-      {:else}
-        <GameControls />
-      {/if}
+      <!-- Same iconic bar throughout; in map-generation mode it swaps the live HUD (time / season /
+           weather / speed / pause / TPS·FPS) for a clean "Map Generation" label — see GameControls. -->
+      <GameControls mapGen={customMapOpen} />
     </div>
 
     <div class="game-body" class:sidebars-hidden={$hideSidebars}>
@@ -458,19 +454,6 @@
   .map-locked .left-panel,
   .map-locked .right-panel {
     display: none;
-  }
-
-  /* Minimal header shown in place of the game HUD during map generation. */
-  .mapgen-header {
-    display: flex;
-    align-items: center;
-    height: 100%;
-    padding-left: 12px;
-    color: var(--accent-hi);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
   }
 
   /* Overlay panel: bottom 50% of the map area, semi-transparent so map shows above */

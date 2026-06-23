@@ -90,13 +90,30 @@
     cursor: not-allowed;
     opacity: 0.5;
   }
+  /* Retro-terminal dropdown — mirrors the construction material picker / fuel panel: flat dark field,
+     thin border that warms to orange on hover/focus (the global option styling in app.css handles the
+     popup list + kills the native blue). */
   .opt-select {
     background: var(--bg);
-    color: var(--text);
+    color: var(--accent-hi);
     border: 1px solid var(--border);
     font-family: var(--font-mono);
     font-size: 12px;
     padding: 3px 6px;
     cursor: pointer;
+    outline: none;
+    transition:
+      border-color 0.12s,
+      color 0.12s;
+  }
+  .opt-select:hover {
+    border-color: var(--border-hi);
+  }
+  .opt-select:focus {
+    border-color: var(--accent-hi);
+  }
+  .opt.is-disabled .opt-select {
+    color: var(--text-muted);
+    cursor: default;
   }
 </style>
