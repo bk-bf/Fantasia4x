@@ -7,6 +7,46 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 
 ---
 
+## [FIXED] Stray browser tabs — Electron shell punted its own URL to Zen (`URL` shadowed the global)
+
+**Symptom:** While running the game in the Electron spike (`./launch.sh --electron`), **tabs at
+`http://127.0.0.1:5174/` kept opening in the OS browser (Zen)** — periodically on their own and
+reliably on **Exit to Main Menu** (which calls `location.reload()`) and on every **HMR reload**.
+Felt like the game was "launching itself in the browser for no reason." Maddening because it looked
+external (browser session-restore, a VS Code extension, the Claude Code extension were all suspected
+and ruled out).
+
+**Root cause (`desktop-spike/electron/main.js`):** a single shadowed variable.
+
+```js
+const URL = process.env.SPIKE_URL || 'http://localhost:5173'; // ← shadows the global URL constructor
+```
+
+`const URL = …` shadowed the **global WHATWG `URL` constructor for the whole module**, so **every
+`new URL(...)` in the file threw `"URL is not a constructor"`**. Each call sat inside a `try/catch`,
+so the throws were swallowed and every origin check (`isAppOrigin`, `isLoopbackUrl`, the original
+`appOrigin()`) **silently returned `false`**. The navigation-hardening then concluded the app's *own*
+dev-server URL was "external" and handed it to `shell.openExternal(url)` → OS browser → stray Zen tab.
+Any full navigation fired it: HMR reconnects, the dev-server restart retry, and the menu reload. The
+bug was latent from the start; `--hmr` + the reload-heavy menu just made `will-navigate` fire often
+enough to be constant.
+
+**Why it resisted several fixes:** the first patches rewrote the origin logic (stable `APP_ORIGIN`
+instead of `getURL()`; `localhost`⇄`127.0.0.1`⇄`::1` equivalence; a fail-closed "never punt loopback"
+gate) — all **correct logic sitting on code that could never run**, since they too called `new URL()`.
+Nothing helped until a diagnostic build (monkeypatch + suppress `shell.openExternal`, log every call
+with a stack, plus a temporary `xdg-open` PATH shim that logged the parent-process chain) caught the
+tell: `APP=null` and `loop=false` for a plain `http://127.0.0.1:5174/` — impossible **unless
+`new URL()` itself is throwing**. That pinned the shadowing.
+
+**Fix:** rename the constant to **`APP_URL`** so the global `URL` constructor is intact; the
+fail-closed gate (`shouldOpenExternal` = http(s) **and** not loopback **and** not the app origin) now
+actually executes, so a loopback URL can never leak to the browser. A prominent comment warns against
+re-introducing a `URL` binding. **Defense-in-depth added the same pass** (independent of this bug):
+the `vite.config.ts` `SHELL_UA_MARKER` guard 403s any browser without the desktop-shell User-Agent,
+and `./launch.sh --electron` now **network-namespace-sandboxes** the dev server by default
+(`unshare --net`, port unreachable from the host browser; `--net-host`/`--profiler` opt out).
+
 ## [FIXED] Blueprint-queue jank — fetch jobs churn from colliding reserved-drop ids
 
 **Symptom:** After drag-queuing a row of building blueprints (e.g. mud-brick walls), the assigned
