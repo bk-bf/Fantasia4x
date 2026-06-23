@@ -143,10 +143,10 @@ export function pickMenuPreviewClimate(): { season: Season; weather: WeatherStat
 // vertical and horizontal axes through the centre. Radius is tuned to clear the UI box yet stay inside
 // the 2× visible view. Each tree stands alone (no surrounding patch) — deliberately placed, by design.
 const PREVIEW_GROVE_COUNT = 12;
-// Ring radius as a fraction of the map's SHORTER side: large enough to clear the central UI box on every
-// common aspect ratio, small enough to stay within the visible window (whose half-height is only ~0.17·H
-// on a wide screen). Square tiles ⇒ a constant tile radius renders as an actual circle on screen.
-const RING_RADIUS_FRAC = 0.18;
+// Ring radius as a fraction of the map's SHORTER side: 0.20·100 = 20 tiles → a 40-tile diameter. Large
+// enough to clear the central UI box, small enough to stay within the 16:9 visible window (half-height
+// ~0.225·H ⇒ ±22 tiles). Square tiles ⇒ a constant tile radius renders as an actual circle on screen.
+const RING_RADIUS_FRAC = 0.2;
 
 // ── 2D vector helpers (grove ring geometry) ─────────────────────────────────────────────────────
 type Vec2 = { x: number; y: number };
