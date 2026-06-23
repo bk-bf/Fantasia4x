@@ -1008,7 +1008,14 @@
   // Dropped-item info panel — same shared SelectedEntityCard as pawns/mobs/buildings/resources, so the
   // title sits on top and FRESH/COND bars (the reusable StatBar) render below it. Shared by the hover
   // panel and the click-locked selection (buildItemCard).
-  function buildItemCard(d: DroppedItem): SelectedEntityModel {
+  function toggleDropForbidden(d: DroppedItem) {
+    gameState.command({
+      type: 'setDropForbidden',
+      payload: { dropId: d.id, forbidden: !d.forbidden },
+      save: true
+    });
+  }
+  function buildItemCard(d: DroppedItem, selected = false): SelectedEntityModel {
     const itemDef = ITEMS_DATABASE.find((i) => i.id === d.resourceId);
     const maxDur = itemDef?.maxDurability ?? 100;
     const freshPct =
@@ -1041,11 +1048,27 @@
       // they show this instance's current state, which the static pill hover can't.
       itemPills: [{ itemId: d.resourceId }],
       bars,
-      note: d.stored ? 'stored' : 'dropped item — awaiting hauler'
+      note: d.stored
+        ? 'stored'
+        : d.forbidden
+          ? 'forbidden — pawns will not haul this'
+          : 'dropped item — awaiting hauler',
+      // Loose stacks get a per-stack haul lockout toggle. Carcasses default to forbidden (see
+      // dropCarcass) so the player allows hauling once it's safe; anything haulable can be forbidden.
+      buttons:
+        selected && !d.stored
+          ? [
+              {
+                label: d.forbidden ? 'ALLOW HAUL' : 'FORBID HAUL',
+                active: !d.forbidden,
+                onClick: () => toggleDropForbidden(d)
+              }
+            ]
+          : undefined
     } satisfies SelectedEntityModel;
   }
   $: hoverItemCard = hoverDroppedItem ? buildItemCard(hoverDroppedItem) : null;
-  $: selectedItemCard = selectedItem ? buildItemCard(selectedItem) : null;
+  $: selectedItemCard = selectedItem ? buildItemCard(selectedItem, true) : null;
 
   // ── Click-locked stockpile zone (the zone info/filter card) ───────────────────────
   $: selectedZone = selectedZoneId
@@ -2215,9 +2238,19 @@
             if (isHiddenTile(rx, ry)) continue;
             const res = worldMap[ry]?.[rx]?.resources;
             let match = false;
-            if (res) for (const t of types) if ((res[t] ?? 0) > 0) { match = true; break; }
+            if (res)
+              for (const t of types)
+                if ((res[t] ?? 0) > 0) {
+                  match = true;
+                  break;
+                }
             ctx.fillStyle = match ? 'rgba(240, 208, 32, 0.42)' : 'rgba(240, 208, 32, 0.10)';
-            ctx.fillRect((rx - viewX) * tileWidth, (ry - viewY) * tileHeight, tileWidth, tileHeight);
+            ctx.fillRect(
+              (rx - viewX) * tileWidth,
+              (ry - viewY) * tileHeight,
+              tileWidth,
+              tileHeight
+            );
           }
         }
       } else {
@@ -3595,7 +3628,9 @@
       x != null && y != null && x >= minX && x <= maxX && y >= minY && y <= maxY;
     const found =
       kind === 'pawn'
-        ? pawns.filter((p) => p.isAlive !== false && inBox(p.position?.x, p.position?.y)).map((p) => p.id)
+        ? pawns
+            .filter((p) => p.isAlive !== false && inBox(p.position?.x, p.position?.y))
+            .map((p) => p.id)
         : mobs
             .filter((m) => m.isAlive !== false && m.state !== 'Corpse' && inBox(m.x, m.y))
             .map((m) => m.id);
@@ -3814,7 +3849,8 @@
   function hasAttackTargetAt(x: number, y: number): boolean {
     if (mobs.some((m) => m.x === x && m.y === y && m.isAlive !== false)) return true;
     return pawns.some(
-      (p) => p.id !== selectedPawnId && p.position?.x === x && p.position?.y === y && p.isAlive !== false
+      (p) =>
+        p.id !== selectedPawnId && p.position?.x === x && p.position?.y === y && p.isAlive !== false
     );
   }
 
@@ -3876,7 +3912,11 @@
       } else if (dragLen >= 2) {
         gameState.command({ type: 'movePawnsLine', payload: { ids, ax, ay, bx, by }, save: true });
       } else {
-        gameState.command({ type: 'movePawnsFormation', payload: { ids, x: bx, y: by }, save: true });
+        gameState.command({
+          type: 'movePawnsFormation',
+          payload: { ids, x: bx, y: by },
+          save: true
+        });
       }
     }
     drawDesignations();

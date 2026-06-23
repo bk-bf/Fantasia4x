@@ -57,6 +57,14 @@ export interface DroppedItem {
    * completion; cleared if the order is cancelled. Undefined = free.
    */
   reservedFor?: string;
+  /**
+   * Haul lockout. When true, no haul job will target this stack (and any in-flight haul job for it
+   * is pruned, so a pawn already walking to it turns back). Drops that appear in the world rather
+   * than from colony work — chiefly animal carcasses from `dropCarcass` — default to forbidden, so
+   * pawns don't wander into danger to retrieve a kill until the player explicitly allows it. Toggled
+   * per-stack from the item's info card (the `setDropForbidden` command). Undefined = haulable.
+   */
+  forbidden?: boolean;
 }
 
 export interface Job {

@@ -224,8 +224,7 @@ export const COMMANDS: Record<string, Cmd> = {
    *  — see lineFormationTargets. Same paths-now behaviour as movePawnsFormation. */
   movePawnsLine: (s, p: { ids: string[]; ax: number; ay: number; bx: number; by: number }) => {
     const pawns = s.pawns.filter(
-      (pw) =>
-        p.ids.includes(pw.id) && pw.drafted && pw.position && pw.currentState !== 'Collapsed'
+      (pw) => p.ids.includes(pw.id) && pw.drafted && pw.position && pw.currentState !== 'Collapsed'
     );
     const targets = lineFormationTargets(s.worldMap, pawns, p.ax, p.ay, p.bx, p.by);
     let gs: GameState = {
@@ -426,6 +425,14 @@ export const COMMANDS: Record<string, Cmd> = {
     designationService.clearInstanceFilter(p.instanceId, s),
   setInstanceFilter: (s, p: { instanceId: string; filter: ZoneFilter }) =>
     designationService.setInstanceFilter(p.instanceId, p.filter, s),
+  /** Toggle a loose stack's haul lockout (DroppedItem.forbidden). Forbidden stacks are skipped by the
+   *  haul generator and any in-flight haul for them is pruned next tick (see jobs/haul.ts). */
+  setDropForbidden: (s, p: { dropId: string; forbidden: boolean }) => ({
+    ...s,
+    droppedItems: (s.droppedItems ?? []).map((d) =>
+      d.id === p.dropId ? { ...d, forbidden: p.forbidden } : d
+    )
+  }),
   setZoneColorHidden: (s, p: { instanceId: string; hidden: boolean }) =>
     designationService.setInstanceColorHidden(p.instanceId, p.hidden, s),
   setAllZoneColorHidden: (s, p: { hidden: boolean }) =>

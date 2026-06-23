@@ -35,6 +35,9 @@ export function overlayDroppedItems(
   const DOLLAR_GLYPH = glyph(SHEET.MAP, 36);
   const GOLD = { r: 1.0, g: 0.85, b: 0.1 };
   const GREEN = { r: 0.2, g: 0.9, b: 0.3 };
+  // Forbidden loose stacks (e.g. an unclaimed wild carcass) — a muted grey-brown so they read as
+  // "left alone / not being hauled" rather than the gold "needs hauling" cue.
+  const FORBIDDEN = { r: 0.42, g: 0.36, b: 0.28 };
   for (const drop of drops) {
     // Skip items on fog-hidden tiles — they'd float over the mountain silhouette.
     if (isHidden?.(drop.x, drop.y)) continue;
@@ -43,15 +46,15 @@ export function overlayDroppedItems(
     const sprite = def?.charSpans
       ? (resolveCharSpans(def.charSpans as CharSpan[])[0] ?? null)
       : null;
-    // With a real sprite: item colour when stored, gold while it still needs hauling.
-    // Without one: legacy marker glyphs ('$' green stored / '*' gold loose).
+    // With a real sprite: item colour when stored, gold while it still needs hauling (muted when
+    // forbidden). Without one: legacy marker glyphs ('$' green stored / '*' gold loose).
     const char = sprite ?? (drop.stored ? DOLLAR_GLYPH : STAR_GLYPH);
-    const foreground = sprite
-      ? drop.stored
+    const foreground = drop.stored
+      ? sprite
         ? (hexToRgb(def?.color) ?? GREEN)
-        : GOLD
-      : drop.stored
-        ? GREEN
+        : GREEN
+      : drop.forbidden
+        ? FORBIDDEN
         : GOLD;
     grid.setTile(drop.x, drop.y, {
       char,

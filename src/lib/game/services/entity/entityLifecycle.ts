@@ -345,7 +345,10 @@ export function dropCarcass(state: GameState, mob: Mob): GameState {
     x: mob.x,
     y: mob.y,
     quantity: 1,
-    unitConditions: [condition]
+    unitConditions: [condition],
+    // A wild kill is not colony-made — forbid hauling by default so pawns don't trek into danger to
+    // retrieve it. The player allows it (per stack) from the carcass's info card once it's safe.
+    forbidden: true
   };
   let next: GameState = { ...state, droppedItems: [...(state.droppedItems ?? []), drop] };
   next = absorbDropIfOnStockpileTile(next, id);

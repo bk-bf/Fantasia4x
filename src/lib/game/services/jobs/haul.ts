@@ -9,8 +9,11 @@ import { zoneTileKeys } from '../DesignationService';
 import { itemMatchesFilter } from './filters';
 
 export function generate(jobs: Job[], gs: GameState): Job[] {
-  // Only consider non-stored drops (stored = already in stockpile)
-  const allDrops = (gs.droppedItems ?? []).filter((d) => !d.stored);
+  // Only consider non-stored, non-forbidden drops (stored = already in stockpile; forbidden = the
+  // player has locked it out of hauling — e.g. a wild carcass left where it fell). Excluding
+  // forbidden here also makes the stale-job prune below drop any in-flight haul for a stack that was
+  // just forbidden, so a pawn already walking to it abandons the trip.
+  const allDrops = (gs.droppedItems ?? []).filter((d) => !d.stored && !d.forbidden);
   // Apply stockpile zone filter — prefer per-instance filters, fall back to legacy zoneFilters.
   const stockpileInstances = (gs.zoneInstances ?? []).filter((z) => z.type === 'stockpile');
   const drops = allDrops.filter((d) => {
