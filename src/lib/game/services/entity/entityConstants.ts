@@ -12,6 +12,19 @@ export const NIGHT_SPAWN_MULT = 3; // ×multiplier when ambient light is low
 export const NIGHT_THRESHOLD = 0.3; // ambient light below this counts as night
 export const EDGE_BUFFER = 8; // tiles; no spawns within this band of the map edge
 export const MIN_PAWN_DISTANCE = 12; // tiles; do not spawn packs on top of the colony
+
+// ── MENU-PREVIEW art-direction placement ────────────────────────────────────────────────────────
+// Where the backdrop's prey herds AND magical groves sit, as map fractions, so they decorate the area
+// AROUND the centred title/menu UI instead of hiding behind it. The menu zooms in 2× (MENU_PREVIEW_ZOOM)
+// and centres the view on the map centre, so only the central ~half of the map is on screen and the
+// logo + button stack sits over its middle. These two side bands flank that central UI column (with a
+// reserved gap between them), and the vertical span trims the off-screen top/bottom margins — so a herd
+// or grove placed here is both ON screen and clear of the buttons. Tune these to reframe the backdrop.
+export const MENU_DECOR_BANDS_X: ReadonlyArray<readonly [number, number]> = [
+  [0.27, 0.38], // left of the UI column
+  [0.62, 0.73] // right of the UI column
+];
+export const MENU_DECOR_Y: readonly [number, number] = [0.34, 0.66];
 // Legacy flat caps — retained ONLY for the fixed-pack profiler/dev path (seedInitialEntities with an
 // explicit pack count) so its benchmark population stays comparable. Normal play uses the
 // area-scaled caps below.

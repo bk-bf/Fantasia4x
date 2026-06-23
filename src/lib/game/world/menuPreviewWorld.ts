@@ -9,6 +9,7 @@ import { makeWeather } from '../services/EnvironmentService';
 import { makeSeededRng, freshSeed } from '../core/rng';
 import { resourceObjectService } from '../services/ResourceObjectService';
 import { resourceGeneratorService } from '../services/ResourceGeneratorService';
+import { MENU_DECOR_BANDS_X, MENU_DECOR_Y } from '../services/entity/entityConstants';
 
 const WATER_SUBTYPES = new Set(['water', 'shallow_water', 'rapids']);
 
@@ -95,24 +96,28 @@ export function pickMenuPreviewClimate(): { season: Season; weather: WeatherStat
 // this in startMenuPreview — scatters trees densely on deep_grass, so each blob fills in as a grove.
 const PREVIEW_GROVE_COUNT = 7;
 const GROVE_MIN_RADIUS = 3;
-const GROVE_MAX_RADIUS = 6;
+const GROVE_MAX_RADIUS = 5;
 
 /**
  * Stamp `PREVIEW_GROVE_COUNT` forest groves (deep_grass blobs) onto open land so the title shot reads
  * as a wooded landscape rather than bare grass, and RETURN each grove's centre tile. Deterministic in
- * the preview seed (so the backdrop is stable across launches). Only converts walkable, non-water land
- * — never paves over the river. MUST run BEFORE resource generation so trees populate the new deep_grass
- * tiles; the returned centres are then used to drop a glowing magical grove into each (after resources).
+ * the preview seed (so the backdrop is stable across launches). Centres are placed in the MENU_DECOR
+ * side bands (the same on-screen area FLANKING the title/menu UI that the herds use) so the groves —
+ * and their glowing magical centrepieces — actually decorate the menu instead of sitting off-screen or
+ * behind the buttons. Only converts walkable, non-water land — never paves over the river. MUST run
+ * BEFORE resource generation so trees populate the new deep_grass tiles; the returned centres are then
+ * used to drop a glowing magical grove into each (after resources).
  */
 function seedPreviewGroves(world: WorldTile[][], seed: number): Array<{ x: number; y: number }> {
   const h = world.length;
   const w = world[0]?.length ?? 0;
   const rand = makeSeededRng((seed ^ 0x9e3779b9) >>> 0);
-  const margin = GROVE_MAX_RADIUS + 1;
+  const [y0, y1] = MENU_DECOR_Y;
   const centers: Array<{ x: number; y: number }> = [];
   for (let g = 0; g < PREVIEW_GROVE_COUNT; g++) {
-    const cx = margin + Math.floor(rand() * Math.max(1, w - margin * 2));
-    const cy = margin + Math.floor(rand() * Math.max(1, h - margin * 2));
+    const [x0, x1] = MENU_DECOR_BANDS_X[g % MENU_DECOR_BANDS_X.length]; // alternate L / R bands
+    const cx = Math.floor((x0 + rand() * (x1 - x0)) * w);
+    const cy = Math.floor((y0 + rand() * (y1 - y0)) * h);
     const radius = GROVE_MIN_RADIUS + Math.floor(rand() * (GROVE_MAX_RADIUS - GROVE_MIN_RADIUS + 1));
     let carved = false;
     for (let dy = -radius; dy <= radius; dy++) {

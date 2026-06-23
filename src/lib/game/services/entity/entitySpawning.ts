@@ -26,15 +26,39 @@ import {
   LAIR_TICK_INTERVAL,
   LAIR_REPOP_CHANCE,
   LAIR_GROW_CHANCE,
-  maxLairCount
+  maxLairCount,
+  MENU_DECOR_BANDS_X,
+  MENU_DECOR_Y
 } from './entityConstants';
 
 let idCounter = 0;
 
 // Soft tether radius (tiles, Chebyshev) for a menu-preview prey herd's invisible anchor — small enough
-// that herds read as distinct clusters on the backdrop, large enough that they still graze/wander
-// visibly within it. Menu-only (see the anchor assignment in seedInitialEntities).
-const HERD_ANCHOR_RANGE = 8;
+// that herds read as distinct clusters that stay within their flanking band (so they don't drift behind
+// the menu UI), large enough that they still graze/wander visibly within it. Menu-only (see the anchor
+// assignment in seedInitialEntities + the leash in entityAI.stepAnimal).
+const HERD_ANCHOR_RANGE = 6;
+
+/**
+ * Pick a prey-herd spawn origin inside one of the MENU_DECOR side bands (menu preview ONLY), so herds
+ * graze in the on-screen area FLANKING the centred title/menu UI rather than behind it. Searches a few
+ * seeded points in a randomly-chosen band for a spawnable tile; null if none found (caller skips the
+ * pack). Real play never calls this — it uses the normal map-wide findSpawnTile.
+ */
+function menuHerdOrigin(state: GameState): { x: number; y: number } | null {
+  const map = state.worldMap;
+  const h = map.length;
+  const w = map[0]?.length ?? 0;
+  if (w === 0 || h === 0) return null;
+  const [y0, y1] = MENU_DECOR_Y;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const [x0, x1] = MENU_DECOR_BANDS_X[Math.floor(rng.random() * MENU_DECOR_BANDS_X.length)];
+    const x = Math.floor((x0 + rng.random() * (x1 - x0)) * w);
+    const y = Math.floor((y0 + rng.random() * (y1 - y0)) * h);
+    if (isSpawnableTile(map[y]?.[x])) return { x, y };
+  }
+  return null;
+}
 
 /**
  * Seed the initial wild population. Normal play (no `packsOverride`) scales the count with map AREA
@@ -86,7 +110,9 @@ export function seedInitialEntities(
     if (def.entityClass === 'mob' && hostile >= caps.hostile) continue;
     if (def.entityClass === 'animal' && neutral >= caps.neutral) continue;
 
-    const origin = findSpawnTile(state, def);
+    // MENU-PREVIEW: spawn herds in the side bands flanking the UI (menuHerdOrigin); real play roams the
+    // whole map (findSpawnTile).
+    const origin = preyOnly ? menuHerdOrigin(state) : findSpawnTile(state, def);
     if (!origin) continue;
 
     // MENU-PREVIEW ONLY: anchor each prey pack to an INVISIBLE home at its spawn origin so the herd
@@ -370,12 +396,14 @@ export function spawnEntities(state: GameState, opts?: { preyOnly?: boolean }): 
   if (def.entityClass === 'mob' && hostileCount >= caps.hostile) return state;
   if (def.entityClass === 'animal' && neutralCount >= caps.neutral) return state;
 
-  const origin = findSpawnTile(state, def);
+  const preyOnly = opts?.preyOnly ?? false;
+  // MENU-PREVIEW: top-up spawns also go in the UI-flanking bands (matching the initial seed).
+  const origin = preyOnly ? menuHerdOrigin(state) : findSpawnTile(state, def);
   if (!origin) return state;
 
   // MENU-PREVIEW ONLY: anchor periodically-spawned prey to an invisible home too (matching the initial
   // seed), so the backdrop's herds stay clustered as the population tops up. Real play gets no anchor.
-  const anchorId = (opts?.preyOnly ?? false) ? `herd-${origin.x}-${origin.y}` : null;
+  const anchorId = preyOnly ? `herd-${origin.x}-${origin.y}` : null;
 
   const [packMin, packMax] = def.pack;
   const packSize = packMin + Math.floor(rng.random() * (packMax - packMin + 1));
