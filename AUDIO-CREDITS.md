@@ -44,3 +44,16 @@ night, and Heroes-of-Might-&-Magic-style battle themes in combat.
 | `ambient/rain.ogg`          | "Light Rain"           |
 | `ambient/rain-heavy.ogg`    | "Heavy Thunderstorm"   |
 | `ambient/forest.ogg`        | "Pine Forest"          |
+
+## Creature SFX — per-creature vocalisations (`audio/creatures/<archetype>/`)
+
+Intermittent, viewport/zoom-aware one-shots keyed by a creature `audio` archetype in
+creatures.jsonc. Mixed sources:
+
+| Archetype dir(s)                                                    | Source | Author | License |
+| ------------------------------------------------------------------ | ------ | ------ | ------- |
+| `canine`, `beast`, `grunt`, `critter`, `insect`, `reptile`, `goblinoid`, `wraith`, `raptor` | "80 CC0 creature SFX" (https://opengameart.org/content/80-cc0-creature-sfx) | rubberduck | CC0 |
+| `fowl`                                                             | "Chicken Sound Effect" (https://opengameart.org/content/chicken-sound-effect) | IMadeIt | CC-BY 3.0 |
+| `frog`                                                             | "Mutant Frog" (https://opengameart.org/content/mutant-frog) | AntumDeluge | CC0 |
+| `goat`                                                             | "Goat Bleat" (https://opengameart.org/content/goat-bleat) | leone | CC-BY 4.0 |
+| `boar`                                                             | "Pig SFX Pack" (https://opengameart.org/content/pig-sfx-pack) | Vinrax | CC-BY 3.0 |
