@@ -9,26 +9,30 @@ All bundled audio is **CC0** or **CC-BY** and cleared for use in this game, incl
 the build (or surface the credits in-game). Files live in `static/audio/` and were transcoded to OGG
 Vorbis (loudness-normalised) from the originals; no other modification.
 
-## Music — Alexandr Zhelanov (OpenGameArt), licensed CC BY 3.0 / 4.0
+## Music — OpenGameArt (Alexandr Zhelanov & RandomMind)
 
-> Music by **Alexandr Zhelanov** (https://opengameart.org/users/alexandr-zhelanov) — Licensed under
-> Creative Commons: By Attribution (3.0 or 4.0 as noted). https://creativecommons.org/licenses/by/4.0/
+> Mostly **Alexandr Zhelanov** (https://opengameart.org/users/alexandr-zhelanov), plus one CC0 track
+> by **RandomMind**. Licensed per-track as noted below (CC-BY requires attribution; OGA-BY 3.0 is
+> OpenGameArt's attribution licence; CC0 needs none). https://creativecommons.org/licenses/by/4.0/
 
 Medieval / fantasy-RPG campaign music — exploration & town themes by day, dark dungeon themes by
 night, and Heroes-of-Might-&-Magic-style battle themes in combat.
 
-| File                 | Original track            | License   | Source page |
-| -------------------- | ------------------------- | --------- | ----------- |
-| `music/menu.ogg`     | "Campaign"                | CC-BY 3.0 | https://opengameart.org/content/campaign-more-music-inside |
-| `music/day-1.ogg`    | "Town"                    | CC-BY 3.0 | https://opengameart.org/content/campaign-more-music-inside |
-| `music/day-2.ogg`    | "Middle age RPG Theme 1"  | CC-BY 3.0 | https://opengameart.org/content/campaign-more-music-inside |
-| `music/day-3.ogg`    | "Castle"                  | CC-BY 3.0 | https://opengameart.org/content/campaign-more-music-inside |
-| `music/day-4.ogg`    | "Middle age RPG Theme 2"  | CC-BY 3.0 | https://opengameart.org/content/campaign-more-music-inside |
-| `music/night-1.ogg`  | "Caves of Sorrow"         | CC-BY 3.0 | https://opengameart.org/content/caves-of-sorrow |
-| `music/night-2.ogg`  | "Dark Quest"              | CC-BY 4.0 | https://opengameart.org/content/dark-quest |
-| `music/combat-1.ogg` | "Battle Theme 1"          | CC-BY 4.0 | https://opengameart.org/content/battle-themes |
-| `music/combat-2.ogg` | "Battle Theme 3"          | CC-BY 4.0 | https://opengameart.org/content/battle-themes |
-| `music/combat-3.ogg` | "Battle Theme 5"          | CC-BY 4.0 | https://opengameart.org/content/battle-themes |
+| File                    | Original track            | Author           | License   | Source page |
+| ----------------------- | ------------------------- | ---------------- | --------- | ----------- |
+| `music/menu.ogg`        | "Campaign"                | Alexandr Zhelanov | CC-BY 3.0 | https://opengameart.org/content/campaign-more-music-inside |
+| `music/menu-kingdom.ogg`| "Kingdom Theme"           | Alexandr Zhelanov | CC-BY 3.0 | https://opengameart.org/content/old-music |
+| `music/day-1.ogg`       | "Town"                    | Alexandr Zhelanov | CC-BY 3.0 | https://opengameart.org/content/campaign-more-music-inside |
+| `music/day-2.ogg`       | "Middle age RPG Theme 1"  | Alexandr Zhelanov | CC-BY 3.0 | https://opengameart.org/content/campaign-more-music-inside |
+| `music/day-3.ogg`       | "Castle"                  | Alexandr Zhelanov | CC-BY 3.0 | https://opengameart.org/content/campaign-more-music-inside |
+| `music/day-4.ogg`       | "Middle age RPG Theme 2"  | Alexandr Zhelanov | CC-BY 3.0 | https://opengameart.org/content/campaign-more-music-inside |
+| `music/day-5.ogg`       | "Medieval: The Bard's Tale" | RandomMind     | CC0       | https://opengameart.org/content/medieval-the-bards-tale |
+| `music/night-1.ogg`     | "Caves of Sorrow"         | Alexandr Zhelanov | CC-BY 3.0 | https://opengameart.org/content/caves-of-sorrow |
+| `music/night-2.ogg`     | "Dark Quest"              | Alexandr Zhelanov | CC-BY 4.0 | https://opengameart.org/content/dark-quest |
+| `music/night-3.ogg`     | "A Darkness Opus"         | Alexandr Zhelanov | OGA-BY 3.0 | https://opengameart.org/content/a-darkness-opus |
+| `music/combat-1.ogg`    | "Battle Theme 1"          | Alexandr Zhelanov | CC-BY 4.0 | https://opengameart.org/content/battle-themes |
+| `music/combat-2.ogg`    | "Battle Theme 3"          | Alexandr Zhelanov | CC-BY 4.0 | https://opengameart.org/content/battle-themes |
+| `music/combat-3.ogg`    | "Battle Theme 5"          | Alexandr Zhelanov | CC-BY 4.0 | https://opengameart.org/content/battle-themes |
 
 ## Ambient — JC Sounds, "Nature Ambient Pack Vol 1", licensed CC BY 4.0
 
@@ -69,3 +73,12 @@ Intermittent, viewport/zoom-aware one-shots for pawns currently working, keyed b
 | --------------------------------------------------------- | ------ | ------ | ------- |
 | `woodcutting`, `mining`, `construction`, `crafting`        | "100 CC0 metal and wood SFX" (https://opengameart.org/content/100-cc0-metal-and-wood-sfx) | rubberduck | CC0 |
 | `foraging`, `planting`                                     | "20 Rustles of dry leaves" (https://opengameart.org/content/20-rustles-dry-leaves) | qubodup | CC0 |
+
+## UI SFX — button hover / click (`audio/ui/`)
+
+Subtle interface feedback played globally on button hover/press.
+
+| File             | Source | Author | License |
+| ---------------- | ------ | ------ | ------- |
+| `ui/hover.ogg`   | "51 UI sound effects" (https://opengameart.org/content/51-ui-sound-effects-buttons-switches-and-clicks) | Kenney (kenney.nl) | CC0 |
+| `ui/click.ogg`   | "51 UI sound effects" (https://opengameart.org/content/51-ui-sound-effects-buttons-switches-and-clicks) | Kenney (kenney.nl) | CC0 |
