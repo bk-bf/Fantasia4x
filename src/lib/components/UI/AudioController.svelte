@@ -19,7 +19,7 @@
   import { attackLunges } from '$lib/stores/attackLunges';
   import { combatFeedback } from '$lib/stores/combatFeedback';
   import { masterVolume, musicVolume, sfxVolume } from '$lib/stores/uiPrefs';
-  import { cameraViewport, cameraTileSize, cameraZoomRange } from '$lib/stores/cameraView';
+  import { cameraViewport, cameraTileSize } from '$lib/stores/cameraView';
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
   import { getCreatureById } from '$lib/game/core/Creatures';
   import { audioService } from '$lib/audio/AudioService';
@@ -38,12 +38,23 @@
 
   // ── Spatial creature SFX tuning ──
   const CREATURE_TICK_MS = 400; // how often audibility is recomputed + triggers roll
-  const ZOOM_FLOOR = 0.35; // in-view audibility when fully zoomed OUT (1.0 when fully zoomed in)
+  // Zoom scaling (px per tile): barely audible zoomed out, full when zoomed in onto them. The
+  // Entities-menu "jump to" snaps to ~24 px/tile (GameCanvas), so the ramp peaks around there.
+  const ZOOM_OUT_FLOOR = 0.2; // zoom contribution when fully zoomed out
+  const ZOOM_REF_LOW = 12; // px/tile where the zoom ramp begins
+  const ZOOM_REF_HIGH = 28; // px/tile where zoom contribution maxes out (≥ Entities-menu jump)
+  // Distance from the NEAREST pawn: the colony hears what's near it; far wildlife is very silent. This
+  // is what stops a zoomed-out view (whole map on screen) from triggering a cacophony — almost every
+  // creature is far from your pawns, so almost all are near-silent.
+  const PAWN_NEAR_TILES = 8; // within this of a pawn → full
+  const PAWN_FAR_TILES = 40; // by this far → floor
+  const PAWN_FAR_FLOOR = 0.1; // "very silent" for distant creatures (e.g. caught in a corner zoomed out)
   const OFFSCREEN_MAX = 0.12; // ceiling for just-off-screen creatures ("barely hear them")
   const OFFSCREEN_MARGIN = 0.6; // how far beyond the viewport (× its size) a creature is still faint
   const CALL_FAST_MS = 3000; // avg gap between calls for a fully-audible archetype
   const CALL_SLOW_MS = 18000; // avg gap for a barely-audible one
-  const CREATURE_GAIN = 0.42; // master trim so wildlife sits quietly under the music
+  const CREATURE_GAIN = 0.21; // master trim so wildlife sits quietly under the music
+  const MAX_CONCURRENT_ARCHETYPES = 3; // only the 3 loudest archetypes may call (no swarm of sounds)
   const LEVEL_EPS = 0.02; // below this, treat as silent
 
   let lastCombatAt = 0;
@@ -106,15 +117,22 @@
     }
     const mobs = $gameState?.mobs;
     const vp = get(cameraViewport);
+    const tile = get(cameraTileSize);
     if (!mobs?.length || vp.w <= 0) {
       audioService.setCreatureLevels([]);
       return;
     }
 
-    const tile = get(cameraTileSize);
-    const range = get(cameraZoomRange);
-    const zoomNorm = range.max > range.min ? (tile - range.min) / (range.max - range.min) : 1;
-    const zoomGain = ZOOM_FLOOR + (1 - ZOOM_FLOOR) * Math.max(0, Math.min(1, zoomNorm));
+    const zoomNorm = Math.max(
+      0,
+      Math.min(1, (tile - ZOOM_REF_LOW) / (ZOOM_REF_HIGH - ZOOM_REF_LOW))
+    );
+    const zoomGain = ZOOM_OUT_FLOOR + (1 - ZOOM_OUT_FLOOR) * zoomNorm;
+
+    // Pawn positions for the nearest-pawn distance attenuation.
+    const pawns = ($gameState?.pawns ?? [])
+      .map((p) => p.position)
+      .filter((pos): pos is { x: number; y: number } => !!pos);
 
     const x0 = vp.x;
     const y0 = vp.y;
@@ -141,35 +159,62 @@
         const fall = Math.min(1 - dx / marginX, 1 - dy / marginY);
         spatial = OFFSCREEN_MAX * Math.max(0, fall);
       }
-      const c = Math.max(0, Math.min(1, zoomGain * spatial));
+
+      // Nearest-pawn distance: near the colony = full, far = "very silent" (floor).
+      let pawnGain = PAWN_FAR_FLOOR;
+      if (pawns.length) {
+        let best = Infinity;
+        for (const pp of pawns) {
+          const d2 = (pp.x - m.x) ** 2 + (pp.y - m.y) ** 2;
+          if (d2 < best) best = d2;
+        }
+        const dist = Math.sqrt(best);
+        pawnGain =
+          dist <= PAWN_NEAR_TILES
+            ? 1
+            : Math.max(
+                PAWN_FAR_FLOOR,
+                1 -
+                  ((dist - PAWN_NEAR_TILES) / (PAWN_FAR_TILES - PAWN_NEAR_TILES)) *
+                    (1 - PAWN_FAR_FLOOR)
+              );
+      }
+
+      const c = Math.max(0, Math.min(1, zoomGain * spatial * pawnGain));
       if (c <= 0) continue;
       product.set(sound, (product.get(sound) ?? 1) * (1 - c));
     }
 
     const now = Date.now();
-    const levels: { label: string; level: number }[] = [];
+    const entries: { sound: string; label: string; level: number }[] = [];
     for (const [sound, prod] of product) {
       const level = 1 - prod;
       if (level < LEVEL_EPS) continue;
-      levels.push({
+      entries.push({
+        sound,
         label: CREATURE_SOUND_LABELS[sound as keyof typeof CREATURE_SOUND_LABELS] ?? sound,
         level
       });
+    }
+    // Only the loudest few archetypes may call — never a swarm of overlapping sounds.
+    entries.sort((a, b) => b.level - a.level);
+    const audible = entries.slice(0, MAX_CONCURRENT_ARCHETYPES);
 
-      // Trigger an intermittent one-shot: louder archetypes call more often, with jitter.
+    for (const e of audible) {
+      // Intermittent one-shot: louder archetypes call more often, with jitter.
       const gap =
-        (CALL_FAST_MS + (CALL_SLOW_MS - CALL_FAST_MS) * (1 - level)) * (0.7 + Math.random() * 0.6);
-      if (now - (lastFired.get(sound) ?? 0) >= gap) {
-        const clips = creatureClips(sound);
+        (CALL_FAST_MS + (CALL_SLOW_MS - CALL_FAST_MS) * (1 - e.level)) *
+        (0.7 + Math.random() * 0.6);
+      if (now - (lastFired.get(e.sound) ?? 0) >= gap) {
+        const clips = creatureClips(e.sound);
         audioService.playSfx(
           clips[Math.floor(Math.random() * clips.length)],
-          level * CREATURE_GAIN
+          e.level * CREATURE_GAIN
         );
-        lastFired.set(sound, now);
+        lastFired.set(e.sound, now);
       }
     }
-    levels.sort((a, b) => b.level - a.level);
-    audioService.setCreatureLevels(levels);
+    audioService.setCreatureLevels(audible.map((e) => ({ label: e.label, level: e.level })));
   }
 
   onMount(() => {

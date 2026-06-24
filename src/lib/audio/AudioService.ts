@@ -27,6 +27,7 @@ import {
 
 const MUSIC_FADE_MS = 2200;
 const AMBIENT_FADE_MS = 1600;
+const MAX_CONCURRENT_SFX = 3; // hard ceiling on simultaneously-playing creature one-shots
 
 // Scenes that replace the current track MID-SONG (fade out + swap). Everything else waits for the
 // playing track to finish before switching, so day↔night↔menu never cut a piece off — only the
@@ -82,6 +83,7 @@ class AudioServiceImpl {
 
   // ── Creature SFX (intermittent one-shots) ──
   private sfxHowls = new Map<string, Howl>(); // cached per clip url
+  private activeSfx = 0; // currently-sounding one-shots (hard concurrency cap)
   private creatureLevels: { label: string; level: number }[] = []; // for the debug panel only
 
   /** Resume the AudioContext on a user gesture and apply the current master volume. Idempotent. */
@@ -136,6 +138,7 @@ class AudioServiceImpl {
    */
   playSfx(url: string, volume: number): void {
     if (!this.unlocked || volume <= 0) return;
+    if (this.activeSfx >= MAX_CONCURRENT_SFX) return; // never more than N creature sounds at once
     let howl = this.sfxHowls.get(url);
     if (!howl) {
       howl = new Howl({ src: [url], volume: 1, preload: true });
@@ -143,6 +146,11 @@ class AudioServiceImpl {
     }
     const id = howl.play();
     howl.volume(Math.max(0, Math.min(1, volume)) * this.bus.sfx, id);
+    this.activeSfx++;
+    const release = () => (this.activeSfx = Math.max(0, this.activeSfx - 1));
+    howl.once('end', release, id);
+    howl.once('stop', release, id);
+    howl.once('playerror', release, id);
   }
 
   /** Publish the current creature audibility levels (debug panel only — playback is via playSfx). */
@@ -177,6 +185,7 @@ class AudioServiceImpl {
     this.beds.clear();
     for (const howl of this.sfxHowls.values()) howl.unload();
     this.sfxHowls.clear();
+    this.activeSfx = 0;
     this.creatureLevels = [];
     this.publish();
   }
