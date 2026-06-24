@@ -31,6 +31,8 @@ export interface RenderStats {
   /** Per-pass CPU time (ms) — terrain vs entity overlay — for the profiler render breakdown. */
   terrainMs: number;
   overlayMs: number;
+  /** DEBUG: terrain chunks (re)built+uploaded this frame (0 = fully cached). */
+  terrainRebuilds: number;
 }
 
 export interface RendererOptions {
@@ -123,7 +125,15 @@ export class WebGLRendererCore {
     this.tileWidth = options.tileWidth ?? 12;
     this.tileHeight = options.tileHeight ?? 20;
     this.timer = new PerformanceTimer();
-    this.stats = { fps: 0, frameTime: 0, drawCalls: 0, vertexCount: 0, terrainMs: 0, overlayMs: 0 };
+    this.stats = {
+      fps: 0,
+      frameTime: 0,
+      drawCalls: 0,
+      vertexCount: 0,
+      terrainMs: 0,
+      overlayMs: 0,
+      terrainRebuilds: 0
+    };
 
     this.viewport = { x: 0, y: 0, width: this.canvas.width, height: this.canvas.height };
 
@@ -419,6 +429,7 @@ export class WebGLRendererCore {
       cacheVersion: this.gridVersion
     });
     this.stats.terrainMs = performance.now() - tTerrain;
+    this.stats.terrainRebuilds = this.gridRenderer.chunksRebuiltLastRender; // DEBUG
     this.stats.drawCalls++;
     this.stats.vertexCount += gridStats.tilesRendered * 6;
 

@@ -100,6 +100,8 @@ export class GridRenderer {
   private static readonly CHUNK_SWEEP_EVERY = 120; // run the eviction sweep this often (frames)
   private terrainChunks: Map<string, TerrainChunk> = new Map();
   private terrainFrame = 0; // monotonic frame counter for chunk LRU eviction
+  /** DEBUG: how many terrain chunks were (re)built+uploaded in the most recent renderTerrainChunked. */
+  chunksRebuiltLastRender = 0;
   // ADR-026 per-chunk dirty: a partial terrain update (markTerrainChunksDirty) stamps ONLY the chunks
   // holding a changed tile, so they rebuild while every other visible chunk keeps its cached VBO — vs.
   // bumping the global cacheVersion, which re-vertexes every visible chunk for a single changed tile.
@@ -219,6 +221,7 @@ export class GridRenderer {
     const cacheVersion = options.cacheVersion ?? 0;
     const lightVersion = options.lightVersion ?? 0;
     const frame = ++this.terrainFrame;
+    this.chunksRebuiltLastRender = 0; // DEBUG: reset; drawTerrainChunk bumps it on each rebuild
 
     // Visible tile range → chunk range (with a margin ring so panning doesn't pop).
     const minTX = Math.floor(options.viewportX);
@@ -280,6 +283,7 @@ export class GridRenderer {
       chunk.builtLight !== lightVersion ||
       chunk.builtDirty !== dirtyStamp
     ) {
+      this.chunksRebuiltLastRender++; // DEBUG
       const tiles = grid.getTilesInRegion(cx * CS, cy * CS, CS, CS);
       if (!chunk) {
         chunk = {

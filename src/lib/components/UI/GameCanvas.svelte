@@ -2960,6 +2960,19 @@
   function startLoop() {
     let lastFpsPush = 0;
     let lastDrawAt = 0;
+    // ── DEBUG: menu-backdrop frame profiler (console). Logs a rolling summary ~every 2s and warns on
+    // individual hiccup frames (gap > 33ms), so we can see whether the stutter is render-side (terrain
+    // re-bake / draw cost) or a GC-sized gap with cheap render. Menu preview only; remove when solved.
+    let _dbgPrevT = 0;
+    let _dbgN = 0;
+    let _dbgRenderSum = 0;
+    let _dbgRenderMax = 0;
+    let _dbgGapMax = 0;
+    let _dbgRebuildSum = 0;
+    let _dbgRebuildFrames = 0;
+    let _dbgHiccups = 0;
+    let _dbgTerrainMaxMs = 0;
+    let _dbgWindowStart = 0;
     // Safety net for the frozen render: even with nothing marked dirty, redraw at least this often so a
     // missed dirty trigger (e.g. an async terrain rebuild a few frames after GENERATE / size toggle, or
     // a layout-resize on opening Custom Map) can never leave a STALE frame on screen longer than this.
@@ -3025,8 +3038,51 @@
       if (_renderDirty || !frozen || now - lastDrawAt >= FROZEN_SAFETY_MS) {
         renderer.setItemOverlayGrid(itemOverlayGrid);
         renderer.setOverlayGrid(pawnOverlayGrid);
+        const _dbgT0 = menuPreview ? performance.now() : 0;
         renderer.beginFrame();
         renderer.endFrame();
+        // ── DEBUG: menu-backdrop frame profiler ───────────────────────────────────────────────────
+        if (menuPreview) {
+          const renderMs = performance.now() - _dbgT0;
+          const gap = _dbgPrevT ? now - _dbgPrevT : 0; // inter-frame gap (the actual hiccup metric)
+          _dbgPrevT = now;
+          const st = renderer.getStats();
+          _dbgN++;
+          _dbgRenderSum += renderMs;
+          if (renderMs > _dbgRenderMax) _dbgRenderMax = renderMs;
+          if (gap > _dbgGapMax) _dbgGapMax = gap;
+          if (st.terrainMs > _dbgTerrainMaxMs) _dbgTerrainMaxMs = st.terrainMs;
+          _dbgRebuildSum += st.terrainRebuilds;
+          if (st.terrainRebuilds > 0) _dbgRebuildFrames++;
+          if (gap > 33) {
+            _dbgHiccups++;
+            console.warn(
+              `[MENU-PERF] HICCUP gap=${gap.toFixed(1)}ms render=${renderMs.toFixed(1)}ms ` +
+                `terrain=${st.terrainMs.toFixed(1)}ms rebuilds=${st.terrainRebuilds} ` +
+                `tiles=${st.vertexCount / 6}`
+            );
+          }
+          if (!_dbgWindowStart) _dbgWindowStart = now;
+          if (now - _dbgWindowStart >= 2000) {
+            console.info(
+              `[MENU-PERF] ${_dbgN}f/${((now - _dbgWindowStart) / 1000).toFixed(1)}s ` +
+                `(${(_dbgN / ((now - _dbgWindowStart) / 1000)).toFixed(0)}fps) | ` +
+                `render avg=${(_dbgRenderSum / _dbgN).toFixed(1)} max=${_dbgRenderMax.toFixed(1)}ms | ` +
+                `terrain max=${_dbgTerrainMaxMs.toFixed(1)}ms | ` +
+                `rebuilds=${(_dbgRebuildSum / _dbgN).toFixed(1)}/frame (${_dbgRebuildFrames}/${_dbgN} frames) | ` +
+                `gapMax=${_dbgGapMax.toFixed(1)}ms hiccups=${_dbgHiccups}`
+            );
+            _dbgWindowStart = now;
+            _dbgN = 0;
+            _dbgRenderSum = 0;
+            _dbgRenderMax = 0;
+            _dbgGapMax = 0;
+            _dbgRebuildSum = 0;
+            _dbgRebuildFrames = 0;
+            _dbgHiccups = 0;
+            _dbgTerrainMaxMs = 0;
+          }
+        }
         _renderDirty = false;
         lastDrawAt = now;
         // Backdrop: the terrain is now actually on screen — reveal it (the wrapper fades 0→1), so the

@@ -242,8 +242,10 @@
   function frame(t: number) {
     raf = requestAnimationFrame(frame);
     if (!ctx || mode === 'none') return;
+    const _wxGap = lastT ? t - lastT : 0; // DEBUG: raw inter-frame gap (the weather-stutter metric)
     const dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0.016;
     lastT = t;
+    const _wxT0 = import.meta.env.DEV ? performance.now() : 0; // DEBUG: draw-time start
     const w = cssW();
     const h = cssH();
     ctx.clearRect(0, 0, w, h);
@@ -337,6 +339,44 @@
       }
     } else if (mode === 'fog') {
       renderFog(w, h, parts, dt, 1);
+    }
+    // DEBUG: weather frame profiler — logs hiccup gaps + a ~2s summary so the weather stutter can be
+    // correlated with the GameCanvas [MENU-PERF] terrain numbers. Dev only; remove when solved.
+    if (import.meta.env.DEV) wxProfile(_wxGap, performance.now() - _wxT0);
+  }
+
+  // ── DEBUG weather profiler (see frame) ──────────────────────────────────────────────────────────
+  let _wxN = 0;
+  let _wxDrawSum = 0;
+  let _wxDrawMax = 0;
+  let _wxGapMax = 0;
+  let _wxHiccups = 0;
+  let _wxWinStart = 0;
+  function wxProfile(gap: number, drawMs: number) {
+    _wxN++;
+    _wxDrawSum += drawMs;
+    if (drawMs > _wxDrawMax) _wxDrawMax = drawMs;
+    if (gap > _wxGapMax) _wxGapMax = gap;
+    if (gap > 33) {
+      _wxHiccups++;
+      console.warn(
+        `[WX-PERF] HICCUP gap=${gap.toFixed(1)}ms draw=${drawMs.toFixed(2)}ms mode=${mode} parts=${parts.length}`
+      );
+    }
+    const now = performance.now();
+    if (!_wxWinStart) _wxWinStart = now;
+    if (now - _wxWinStart >= 2000) {
+      console.info(
+        `[WX-PERF] ${_wxN}f mode=${mode} parts=${parts.length} | ` +
+          `draw avg=${(_wxDrawSum / _wxN).toFixed(2)} max=${_wxDrawMax.toFixed(2)}ms | ` +
+          `gapMax=${_wxGapMax.toFixed(1)}ms hiccups=${_wxHiccups}`
+      );
+      _wxWinStart = now;
+      _wxN = 0;
+      _wxDrawSum = 0;
+      _wxDrawMax = 0;
+      _wxGapMax = 0;
+      _wxHiccups = 0;
     }
   }
 
