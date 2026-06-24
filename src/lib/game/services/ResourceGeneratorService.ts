@@ -9,6 +9,7 @@ import type { ResourceObjectDef } from './ResourceObjectService';
 import { resourceObjectService, isGrowableResource } from './ResourceObjectService';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '../core/Terrains';
 import { makeSeededRng } from '../core/rng';
+import { STARTING_BUBBLE_RADIUS } from './entity/entityConstants';
 
 /**
  * Subterrains whose resources form CLUSTERS rather than per-tile scatter: each connected blob of
@@ -43,13 +44,28 @@ class ResourceGeneratorServiceImpl {
     const defs = opts?.exclude ? all.filter((d) => !opts.exclude!.has(d.id)) : all;
     const rng = makeRng(resourceSeed);
 
+    // Lair-free spawn zone: never scatter a lair den within STARTING_BUBBLE_RADIUS of the map centre
+    // (where the colony starts — see spawnPawnsOnMap). Pairs with the time-boxed entity bubble so the
+    // den is neither physically generated NOR repopulated next to the player at spawn. Permanent for
+    // the initial map; lairs may still GROW near the centre later (tickLairs, once the bubble lifts).
+    const mapH = worldMap.length;
+    const mapW = worldMap[0]?.length ?? 0;
+    const cx = Math.floor(mapW / 2);
+    const cy = Math.floor(mapH / 2);
+    const lairFreeR2 = STARTING_BUBBLE_RADIUS * STARTING_BUBBLE_RADIUS;
+
     // Pass 1 — per-tile scatter for ordinary subterrains (trees, plants, surface stone, …).
     for (const row of worldMap) {
       for (const tile of row) {
         const baseSubType = tile.subType;
         if (CLUSTERED_SUBTYPES.has(baseSubType)) continue; // handled as clusters in pass 2
 
+        const dx = tile.x - cx;
+        const dy = tile.y - cy;
+        const lairBlocked = dx * dx + dy * dy <= lairFreeR2;
+
         for (const def of defs) {
+          if (def.lair && lairBlocked) continue; // keep dens out of the spawn bubble (try other defs)
           const chance = def.spawn.subterrains[baseSubType] ?? 0;
           if (chance <= 0) continue;
           if (rng(0, 100000) / 100000 >= chance) continue;
