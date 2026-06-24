@@ -98,6 +98,14 @@ export const BASE_FATIGUE_PER_SECOND = 0.32;
 export const STARVATION_COLLAPSE_SEVERITY = 0.65;
 /** Hunger threshold at which an entity transitions to a feeding state. */
 export const HUNGER_EAT_THRESHOLD = 50;
+/** Opening-game hunger grace for the INITIAL seeded population (game start only — not periodic spawns).
+ *  Mobs normally seed with hunger staggered over [0, HUNGER_EAT_THRESHOLD) (§S5 desync). At game start
+ *  we subtract this grace so the whole band sits NEGATIVE (overflowing-full) — every wild predator is
+ *  satiated and won't hunt until it climbs back up to the eat threshold. That buys the player the first
+ *  ~in-game day to settle before the food chain kicks off, instead of a turn-0 hunt→flee stampede. Equal
+ *  to the threshold, so the spread WIDTH (and thus the §S5 anti-wave desync) is preserved — just shifted
+ *  down to [−HUNGER_EAT_THRESHOLD, 0). Hunger has no lower clamp (entityLifecycle), so negatives are safe. */
+export const SEED_HUNGER_GRACE = HUNGER_EAT_THRESHOLD;
 
 // Collapse thresholds (COLLAPSE_CONSCIOUSNESS / RECOVER_CONSCIOUSNESS) live in core/needs — the single
 // shared band for pawns + mobs. The mob FSM (entityAI) imports them from there, not here.

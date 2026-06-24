@@ -28,7 +28,8 @@ import {
   LAIR_GROW_CHANCE,
   maxLairCount,
   STARTING_BUBBLE_RADIUS,
-  STARTING_BUBBLE_TURNS
+  STARTING_BUBBLE_TURNS,
+  SEED_HUNGER_GRACE
 } from './entityConstants';
 
 let idCounter = 0;
@@ -256,7 +257,7 @@ export function seedInitialEntities(
         const cand = findNearbyWalkable(state, origin.x, origin.y);
         if (cand && isSpawnableTile(state.worldMap[cand.y]?.[cand.x])) tile = cand;
       }
-      seeded.push(makeMob(def, tile.x, tile.y, state.turn));
+      seeded.push(makeMob(def, tile.x, tile.y, state.turn, SEED_HUNGER_GRACE));
       if (def.entityClass === 'mob') hostile++;
       else neutral++;
     }
@@ -264,7 +265,7 @@ export function seedInitialEntities(
 
   // Laired hostiles: one bound pack per lair tile (skipped on the fixed/profiler path for benchmark
   // stability, and on the prey-only menu preview). These are the SOLE source of laired hostiles.
-  const lairMobs = fixed || preyOnly ? [] : seedLairs(state);
+  const lairMobs = fixed || preyOnly ? [] : seedLairs(state, SEED_HUNGER_GRACE);
 
   return { ...state, mobs: [...(state.mobs ?? []), ...seeded, ...lairMobs] };
 }
@@ -299,7 +300,8 @@ function spawnPackAt(
   def: CreatureDefinition,
   lairX: number,
   lairY: number,
-  lairId: string
+  lairId: string,
+  hungerGrace = 0
 ): Mob[] {
   const map = state.worldMap;
   const range = def.lairRange ?? 40;
@@ -316,7 +318,7 @@ function spawnPackAt(
         ty = cand.y;
       }
     }
-    const mob = makeMob(def, tx, ty, state.turn);
+    const mob = makeMob(def, tx, ty, state.turn, hungerGrace);
     mob.lairId = lairId;
     mob.lairX = lairX;
     mob.lairY = lairY;
@@ -332,7 +334,7 @@ function spawnPackAt(
  * the territory checks in entityAI.stepHostile. A mob NEVER adopts another lair, so packs can't drift
  * onto a neighbour's lair and reclaim/extend it.
  */
-function seedLairs(state: GameState): Mob[] {
+function seedLairs(state: GameState, hungerGrace = 0): Mob[] {
   const lairIds = lairResourceIds();
   if (lairIds.size === 0) return [];
   const byLair = creaturesByLair(lairIds);
@@ -357,7 +359,7 @@ function seedLairs(state: GameState): Mob[] {
       const candidates = byLair.get(lairResId);
       if (!candidates || candidates.length === 0) continue;
       const def = candidates[Math.floor(rng.random() * candidates.length)];
-      seeded.push(...spawnPackAt(state, def, x, y, `lair-${lairResId}-${x}-${y}`));
+      seeded.push(...spawnPackAt(state, def, x, y, `lair-${lairResId}-${x}-${y}`, hungerGrace));
     }
   }
   return seeded;
@@ -607,7 +609,13 @@ export function findSpawnTile(
   return null;
 }
 
-export function makeMob(def: CreatureDefinition, x: number, y: number, turn: number): Mob {
+export function makeMob(
+  def: CreatureDefinition,
+  x: number,
+  y: number,
+  turn: number,
+  hungerGrace = 0
+): Mob {
   const initialState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
   const sizeClass: 'large' | 'medium' | 'small' =
     def.stats.str >= 14 ? 'large' : def.stats.str >= 6 ? 'medium' : 'small';
@@ -632,7 +640,9 @@ export function makeMob(def: CreatureDefinition, x: number, y: number, turn: num
   // window instead of firing all at once. Deterministic (seeded rng). Fatigue gets a smaller spread so
   // sleep/wake cycles desync too.
   const needs: EntityNeeds = {
-    hunger: rng.random() * HUNGER_EAT_THRESHOLD,
+    // §S5 stagger over [0, threshold); minus `hungerGrace` for the game-start seed so the band sits
+    // negative (satiated) and predators don't hunt until they climb back to the eat threshold.
+    hunger: rng.random() * HUNGER_EAT_THRESHOLD - hungerGrace,
     fatigue: rng.random() * 20,
     sleep: 0,
     lastSleep: turn,
