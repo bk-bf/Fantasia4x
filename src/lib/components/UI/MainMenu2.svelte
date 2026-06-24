@@ -13,7 +13,7 @@
   import { menuPreviewReady, gameState } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import { hasSave } from '$lib/stores/saveManager';
-  import { getTimeOfDay } from '$lib/game/services/EnvironmentService';
+  import { getTimeOfDay, weatherOverlayKind } from '$lib/game/services/EnvironmentService';
   import MenuPreviewBackdrop from '$lib/components/UI/MenuPreviewBackdrop.svelte';
   import SettingsModal from '$lib/components/UI/SettingsModal.svelte';
   import SaveListMenu from '$lib/components/UI/SaveListMenu.svelte';
@@ -39,10 +39,12 @@
   const isDay = $derived(tod >= DAWN && tod <= DUSK);
   const sunProg = $derived(clamp01((tod - DAWN) / (DUSK - DAWN)));
   const moonProg = $derived(clamp01(((((tod - DUSK) % 1) + 1) % 1) / NIGHT_LEN));
+  // On a RAIN launch the sky is overcast — hide the sun glow entirely (the moon still shows at night).
+  const isRaining = $derived(weatherOverlayKind($gameState?.weather?.type) === 'rain');
   // Sun: x left→right, y arcs high at noon (lower % = higher on screen). Moon: x left→right, low along top.
   const sunX = $derived(8 + sunProg * 84);
   const sunY = $derived(38 - Math.sin(sunProg * Math.PI) * 24);
-  const sunO = $derived(isDay ? edgeFade(sunProg) : 0);
+  const sunO = $derived(isDay && !isRaining ? edgeFade(sunProg) : 0);
   const moonX = $derived(8 + moonProg * 84);
   const moonY = $derived(12 - Math.sin(moonProg * Math.PI) * 4);
   const moonO = $derived(!isDay ? edgeFade(moonProg) : 0);
