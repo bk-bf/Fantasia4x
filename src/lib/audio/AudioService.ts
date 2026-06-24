@@ -89,6 +89,7 @@ class AudioServiceImpl {
 
   // ── Creature SFX (intermittent one-shots) ──
   private sfxHowls = new Map<string, Howl>(); // cached per clip url
+  private uiHowls = new Map<string, Howl>(); // cached per UI clip url (hover/click)
   private activeSfx = 0; // currently-sounding one-shots (hard concurrency cap)
   private creatureLevels: { label: string; level: number }[] = []; // for the debug panel only
   private workLevels: { label: string; level: number }[] = []; // for the debug panel only
@@ -161,6 +162,21 @@ class AudioServiceImpl {
     howl.once('playerror', release, id);
   }
 
+  /**
+   * Fire a UI feedback one-shot (button hover/click) at `volume` (0–1, before the sfx bus). Cached per
+   * clip; NOT subject to the creature-SFX concurrency cap so a click always responds, even mid-ambient.
+   */
+  playUi(url: string, volume: number): void {
+    if (!this.unlocked || volume <= 0) return;
+    let howl = this.uiHowls.get(url);
+    if (!howl) {
+      howl = new Howl({ src: [url], volume: 1, preload: true });
+      this.uiHowls.set(url, howl);
+    }
+    const id = howl.play();
+    howl.volume(Math.max(0, Math.min(1, volume)) * this.bus.sfx, id);
+  }
+
   /** Publish the current creature audibility levels (debug panel only — playback is via playSfx). */
   setCreatureLevels(levels: { label: string; level: number }[]): void {
     this.creatureLevels = levels;
@@ -216,6 +232,8 @@ class AudioServiceImpl {
     this.fireBed = null;
     for (const howl of this.sfxHowls.values()) howl.unload();
     this.sfxHowls.clear();
+    for (const howl of this.uiHowls.values()) howl.unload();
+    this.uiHowls.clear();
     this.activeSfx = 0;
     this.creatureLevels = [];
     this.workLevels = [];

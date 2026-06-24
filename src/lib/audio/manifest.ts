@@ -20,20 +20,28 @@ export type AmbientBed = 'birds-day' | 'night-crickets' | 'wind' | 'rain' | 'rai
  * it won't crash the app.
  */
 export const MUSIC: Record<MusicScene, string[]> = {
-  menu: ['/audio/music/menu.ogg'],
+  menu: ['/audio/music/menu.ogg', '/audio/music/menu-kingdom.ogg'],
   day: [
     '/audio/music/day-1.ogg',
     '/audio/music/day-2.ogg',
     '/audio/music/day-3.ogg',
-    '/audio/music/day-4.ogg'
+    '/audio/music/day-4.ogg',
+    '/audio/music/day-5.ogg'
   ],
-  night: ['/audio/music/night-1.ogg', '/audio/music/night-2.ogg'],
+  night: ['/audio/music/night-1.ogg', '/audio/music/night-2.ogg', '/audio/music/night-3.ogg'],
   combat: ['/audio/music/combat-1.ogg', '/audio/music/combat-2.ogg', '/audio/music/combat-3.ogg']
 };
 
 /** Looping campfire crackle, played for any lit fire building (campfire/hearth/furnace/…) in earshot.
  *  Driven by AudioController.evalFire → audioService.setFireLevel; volume scales with zoom + viewport. */
 export const FIRE_LOOP = '/audio/ambient/fire.ogg';
+
+/** Subtle UI feedback one-shots (hover/click on buttons). Played globally by AudioController's
+ *  delegated listeners via audioService.playUi. Kenney UI SFX (CC0). */
+export const UI_SFX = {
+  hover: '/audio/ui/hover.ogg',
+  click: '/audio/ui/click.ogg'
+} as const;
 
 /** Bed id → looping source file. */
 export const AMBIENT_FILES: Record<AmbientBed, string> = {
@@ -58,12 +66,15 @@ export const SCENE_LABELS: Record<MusicScene, string> = {
 
 export const TRACK_LABELS: Record<string, string> = {
   '/audio/music/menu.ogg': 'Campaign',
+  '/audio/music/menu-kingdom.ogg': 'Kingdom Theme',
   '/audio/music/day-1.ogg': 'Town',
   '/audio/music/day-2.ogg': 'Middle Age RPG Theme 1',
   '/audio/music/day-3.ogg': 'Castle',
   '/audio/music/day-4.ogg': 'Middle Age RPG Theme 2',
+  '/audio/music/day-5.ogg': "The Bard's Tale",
   '/audio/music/night-1.ogg': 'Caves of Sorrow',
   '/audio/music/night-2.ogg': 'Dark Quest',
+  '/audio/music/night-3.ogg': 'A Darkness Opus',
   '/audio/music/combat-1.ogg': 'Battle Theme 1',
   '/audio/music/combat-2.ogg': 'Battle Theme 3',
   '/audio/music/combat-3.ogg': 'Battle Theme 5'

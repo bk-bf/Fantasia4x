@@ -28,6 +28,7 @@
     CREATURE_SOUND_LABELS,
     workClipsFor,
     WORK_SOUND_LABELS,
+    UI_SFX,
     type MusicScene,
     type AmbientBed,
     type AmbientLayers
@@ -68,6 +69,11 @@
 
   // ── Fire SFX (continuous campfire-crackle loop for lit fire buildings). zoom × viewport, like work. ──
   const FIRE_GAIN = 0.45;
+
+  // ── UI feedback (subtle hover/click on buttons), via global delegated listeners ──
+  const UI_HOVER_GAIN = 0.22; // very subtle
+  const UI_CLICK_GAIN = 0.4;
+  const UI_HOVER_THROTTLE_MS = 45; // smooth a fast sweep across a toolbar (no machine-gun)
 
   // ── Ambient zoom balance ──
   // "Detail" beds (local critters/foliage) fade out as you zoom OUT; "weather" beds (wind/rain) stay
@@ -332,6 +338,29 @@
     audioService.setFireLevel(level < LEVEL_EPS ? 0 : level * FIRE_GAIN);
   }
 
+  // Subtle UI feedback via DELEGATED listeners (no per-button wiring): a soft tick on hovering a
+  // button and a click on pressing one. Capture phase so a handler's stopPropagation can't swallow it.
+  const uiButton = (t: EventTarget | null): Element | null =>
+    t instanceof Element ? t.closest('button:not([disabled]),[role="button"]') : null;
+  let lastHoverBtn: Element | null = null;
+  let lastHoverAt = 0;
+  function onUiOver(e: PointerEvent) {
+    const btn = uiButton(e.target);
+    if (!btn) {
+      lastHoverBtn = null;
+      return;
+    }
+    if (btn === lastHoverBtn) return; // still on the same button (moved over a child) → no repeat
+    lastHoverBtn = btn;
+    const now = Date.now();
+    if (now - lastHoverAt < UI_HOVER_THROTTLE_MS) return; // smooth fast toolbar sweeps
+    lastHoverAt = now;
+    audioService.playUi(UI_SFX.hover, UI_HOVER_GAIN);
+  }
+  function onUiClick(e: MouseEvent) {
+    if (uiButton(e.target)) audioService.playUi(UI_SFX.click, UI_CLICK_GAIN);
+  }
+
   onMount(() => {
     const unlock = () => {
       audioService.unlock();
@@ -339,6 +368,8 @@
     };
     window.addEventListener('pointerdown', unlock);
     window.addEventListener('keydown', unlock);
+    window.addEventListener('pointerover', onUiOver, true);
+    window.addEventListener('click', onUiClick, true);
 
     const iv = setInterval(() => (nowTick = Date.now()), 1000);
     const sfxIv = setInterval(() => {
@@ -351,6 +382,8 @@
     return () => {
       window.removeEventListener('pointerdown', unlock);
       window.removeEventListener('keydown', unlock);
+      window.removeEventListener('pointerover', onUiOver, true);
+      window.removeEventListener('click', onUiClick, true);
       clearInterval(iv);
       clearInterval(sfxIv);
       audioService.dispose();
