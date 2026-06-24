@@ -126,7 +126,7 @@
     },
     {
         "id"            : "giant_rat",
-        "audio"            : "critter",
+        "audio"            : "rustle",
         "name"          : "Giant Rat",
         "threatLevel"   : 2,    // DPS 3.8 | effHP 20 | skirmisher
         "entityClass"   : "animal",

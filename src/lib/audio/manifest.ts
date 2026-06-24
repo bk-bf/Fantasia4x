@@ -100,7 +100,8 @@ export type CreatureSoundId =
   | 'insect'
   | 'reptile'
   | 'goblinoid'
-  | 'wraith';
+  | 'wraith'
+  | 'rustle';
 
 const clips = (id: string, n: number): string[] =>
   Array.from({ length: n }, (_, i) => `/audio/creatures/${id}/${i + 1}.ogg`);
@@ -118,7 +119,8 @@ export const CREATURE_SFX: Record<CreatureSoundId, string[]> = {
   insect: clips('insect', 4),
   reptile: clips('reptile', 3),
   goblinoid: clips('goblinoid', 6),
-  wraith: clips('wraith', 5)
+  wraith: clips('wraith', 5),
+  rustle: clips('rustle', 5)
 };
 
 export const CREATURE_SOUND_LABELS: Record<CreatureSoundId, string> = {
@@ -134,7 +136,8 @@ export const CREATURE_SOUND_LABELS: Record<CreatureSoundId, string> = {
   insect: 'Insect',
   reptile: 'Reptile',
   goblinoid: 'Goblinoid',
-  wraith: 'Wraith'
+  wraith: 'Wraith',
+  rustle: 'Rustle'
 };
 
 /** Clips for an archetype id, or [] if the id is unknown. */

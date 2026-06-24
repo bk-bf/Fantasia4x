@@ -41,9 +41,9 @@
   const ZOOM_FLOOR = 0.35; // in-view audibility when fully zoomed OUT (1.0 when fully zoomed in)
   const OFFSCREEN_MAX = 0.12; // ceiling for just-off-screen creatures ("barely hear them")
   const OFFSCREEN_MARGIN = 0.6; // how far beyond the viewport (× its size) a creature is still faint
-  const CALL_FAST_MS = 1500; // avg gap between calls for a fully-audible archetype
-  const CALL_SLOW_MS = 9000; // avg gap for a barely-audible one
-  const CREATURE_GAIN = 0.85; // master trim so wildlife sits under the music
+  const CALL_FAST_MS = 3000; // avg gap between calls for a fully-audible archetype
+  const CALL_SLOW_MS = 18000; // avg gap for a barely-audible one
+  const CREATURE_GAIN = 0.42; // master trim so wildlife sits quietly under the music
   const LEVEL_EPS = 0.02; // below this, treat as silent
 
   let lastCombatAt = 0;
