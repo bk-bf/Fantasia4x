@@ -219,60 +219,50 @@
     }
   },
   {
-    "id"              : "make_stew",
+    "id"              : "make_small_stew",
     "station"         : "campfire",
     "inputs"          : {},
-    "outputs"         : {"stew": 1},
+    "outputs"         : {"small_stew": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "cooking", "minTier": 0},
     "dynamicRecipe"   : {
       "meat": {
         "acceptsCategory": "meat",
-        "quantity"       : 1,
-        "variants"       : {
-          "rabbit_meat" : {"name": "Rabbit Stew", "description": "A warm rabbit stew with wild herbs."},
-          "venison"     : {
-            "name"          : "Venison Stew",
-            "description"   : "Hearty deer stew, thick and rich.",
-            "nutritionBonus": 0.5
-          },
-          "wolf_meat"   : {
-            "name"          : "Wolf Stew",
-            "description"   : "Gamey wolf stew. Fills the belly if not the soul.",
-            "nutritionBonus": -0.3
-          },
-          "bear_meat"   : {
-            "name"          : "Bear Stew",
-            "description"   : "Rich, fatty bear stew. Warming and dense.",
-            "nutritionBonus": 1
-          },
-          "boar_meat"   : {
-            "name"          : "Boar Stew",
-            "description"   : "Wild pork boiled with roots and herbs.",
-            "nutritionBonus": 0.5
-          },
-          "elk_meat"    : {
-            "name"          : "Elk Stew",
-            "description"   : "Prime elk braised in the pot. Excellent.",
-            "nutritionBonus": 1
-          },
-          "goat_meat"   : {
-            "name"          : "Goat Stew",
-            "description"   : "Mountain goat stewed until tender.",
-            "nutritionBonus": 0.2
-          },
-          "chicken_meat": {
-            "name"          : "Chicken Broth",
-            "description"   : "Light wild-chicken broth. Comforting.",
-            "nutritionBonus": -0.5
-          },
-          "rat_meat"    : {
-            "name"          : "Rat Stew",
-            "description"   : "Unpleasant but surprisingly caloric.",
-            "nutritionBonus": -1.5
-          }
-        },
-        "default"        : {"name": "Stew", "description": "A hearty stew. Nutrition depends on ingredients."}
+        "quantity"       : 2,
+        "default"        : {"name": "Small Stew", "description": "A thin two-cut stew. Plain but filling."}
+      }
+    }
+  },
+  {
+    "id"              : "make_fine_stew",
+    "station"         : "campfire",
+    "inputs"          : {},
+    "outputs"         : {"fine_stew": 1},
+    "workAmount"      : 4,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "cooking", "minTier": 0},
+    "dynamicRecipe"   : {
+      "meat": {
+        "acceptsCategory": "meat",
+        "quantity"       : 3,
+        "default"        : {"name": "Fine Stew", "description": "A hearty three-cut stew, thick and rich."}
+      }
+    }
+  },
+  {
+    "id"              : "make_lavish_stew",
+    "station"         : "campfire",
+    "inputs"          : {},
+    "outputs"         : {"lavish_stew": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "cooking", "minTier": 0},
+    "dynamicRecipe"   : {
+      "meat": {
+        "acceptsCategory": "meat",
+        "quantity"       : 4,
+        "default"        : {"name": "Lavish Stew", "description": "A rich four-cut feast-stew, dense with meat."}
       }
     }
   },

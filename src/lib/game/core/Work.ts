@@ -171,6 +171,11 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Cooking',
     description: 'Prepare food at a campfire or cooking station',
     color: '#FF9800',
+    // The clay cooking pot is the cooking-vessel tool: only recipes that DECLARE a `cooking`
+    // toolRequirement (the stews — you can't boil a stew without a pot) are gated on it; tool-free
+    // campfire cooking like spit-roasting (no recipe toolRequirement) is unaffected. ADR-009 auto-grab
+    // applies — a cook fetches the pot from the colony stock en route, and it wears with use.
+    toolsRequired: ['clay_cooking_pot'],
     primaryStat: 'intelligence',
     secondaryStat: 'dexterity',
     baseEfficiency: 1.0

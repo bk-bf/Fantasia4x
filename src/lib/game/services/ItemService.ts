@@ -265,11 +265,9 @@ export class ItemServiceImpl implements ItemService {
       return false;
     }
 
-    // Phase 6: stew items require a clay_cooking_pot in the colony
-    if (recipe.station === 'campfire' && item.id === 'stew') {
-      const hasCookingPot = ((gameState.stockpile ?? {})['clay_cooking_pot'] ?? 0) > 0;
-      if (!hasCookingPot) return false;
-    }
+    // Stews require the clay cooking pot — now wired through the ADR-009 craft-tool gate (the recipes
+    // declare a `cooking` toolRequirement + the Cooking work category lists clay_cooking_pot), so a cook
+    // fetches/holds the pot to claim the job and it wears with use. No ad-hoc stockpile check needed.
 
     // §5 casting molds are ordinary single-use inputs now: a casting recipe lists `clay_mold` in
     // its inputs, so the generic material check below already gates on having one in stock.
