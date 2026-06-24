@@ -16,8 +16,6 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { gameState, currentWeather } from '$lib/stores/gameState';
-  import { attackLunges } from '$lib/stores/attackLunges';
-  import { combatFeedback } from '$lib/stores/combatFeedback';
   import { masterVolume, musicVolume, sfxVolume } from '$lib/stores/uiPrefs';
   import { cameraViewport, cameraTileSize } from '$lib/stores/cameraView';
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
@@ -81,8 +79,15 @@
     const night = wasNight ? light < NIGHT_LIGHT + NIGHT_HYST : light < NIGHT_LIGHT;
     wasNight = night;
 
-    const inCombat =
-      Date.now() - lastCombatAt < COMBAT_HOLD_MS || (gs?.pawns?.some((p) => p.drafted) ?? false);
+    // Combat music triggers ONLY on the PLAYER's pawns fighting: a drafted pawn actively attacking,
+    // or a hostile mob actively attacking one of our pawns. Deliberately NOT keyed off the combat-FX
+    // stores (attackLunges/combatFeedback) — those also fire for mob-vs-mob fights and fleeing across
+    // the map, which spuriously triggered the battle theme. 'Fleeing' mobs never count.
+    const pawnFighting =
+      (gs?.pawns?.some((p) => p.drafted && p.draftTarget?.type === 'attack') ?? false) ||
+      (gs?.mobs?.some((m) => m.state === 'Attacking' && !!m.targetPawnId) ?? false);
+    if (pawnFighting) lastCombatAt = Date.now();
+    const inCombat = pawnFighting || Date.now() - lastCombatAt < COMBAT_HOLD_MS;
 
     let scene: MusicScene;
     if (isMenu) scene = 'menu';
@@ -144,6 +149,8 @@
     // product of (1 − contribution) per archetype; audibility = 1 − product.
     const product = new Map<string, number>();
     for (const m of mobs) {
+      // Silent while asleep, downed, or dead.
+      if (m.state === 'Sleeping' || m.state === 'Collapsed' || m.state === 'Corpse') continue;
       const def = getCreatureById(m.creatureId);
       const sound = def?.audio;
       if (!sound || creatureClips(sound).length === 0) continue;
@@ -225,16 +232,12 @@
     window.addEventListener('pointerdown', unlock);
     window.addEventListener('keydown', unlock);
 
-    const stampLunge = attackLunges.subscribe((l) => l.length && (lastCombatAt = Date.now()));
-    const stampFloat = combatFeedback.subscribe((l) => l.length && (lastCombatAt = Date.now()));
     const iv = setInterval(() => (nowTick = Date.now()), 1000);
     const creatureIv = setInterval(evalCreatures, CREATURE_TICK_MS);
 
     return () => {
       window.removeEventListener('pointerdown', unlock);
       window.removeEventListener('keydown', unlock);
-      stampLunge();
-      stampFloat();
       clearInterval(iv);
       clearInterval(creatureIv);
       audioService.dispose();
