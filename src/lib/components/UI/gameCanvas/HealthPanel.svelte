@@ -101,7 +101,7 @@
             {#if limb.missing}
               <span style="color:{healthPctColor(0, { missing: true })}">missing</span>
             {:else}
-              <span style="color:{healthPctColor(limb.health)}">{Math.round(limb.health)}%</span>
+              <span style="color:{healthPctColor(limb.health)}">{Math.ceil(limb.health)}%</span>
               {#if limb.bleedRate && limb.bleedRate > 0}
                 <span class="hp-bleed">▼ {limb.bleedRate.toFixed(1)} blood/s</span>
               {/if}
@@ -114,7 +114,7 @@
                 class="hp-part-hp"
                 style="color:{healthPctColor((part.health / part.maxHp) * 100, {
                   missing: part.missing
-                })}">{Math.round(part.health)}/{Math.round(part.maxHp)}</span
+                })}">{Math.ceil(part.health)}/{Math.round(part.maxHp)}</span
               >
               {#if part.bleedRate && part.bleedRate > 0}
                 <span class="hp-bleed" title="this sub-part's bleed"
