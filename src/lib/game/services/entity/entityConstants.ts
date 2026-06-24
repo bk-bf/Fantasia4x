@@ -47,6 +47,13 @@ export function maxLairCount(width: number, height: number): number {
   return Math.max(3, Math.min(60, Math.round((width * height) / 6000)));
 }
 
+/** Opening-game safety bubble around the colony start (the map centre — see `spawnPawnsOnMap`): no lair
+ *  packs seed, repopulate, or grow within this radius for the first in-game month, so the player isn't
+ *  boxed in by a den on the doorstep before they can arm up. Purely time-boxed — it lifts after, and the
+ *  world fills in normally. */
+export const STARTING_BUBBLE_RADIUS = 28; // tiles from the start tile (Euclidean)
+export const STARTING_BUBBLE_TURNS = 30 * 300; // ~one in-game month (30 days × TURNS_PER_DAY=300)
+
 /**
  * Population ceilings for a map of this size. `total` bounds the whole wild population; the per-class
  * caps are loose guards (hostiles kept the minority) — with the roster cycled evenly during seeding,

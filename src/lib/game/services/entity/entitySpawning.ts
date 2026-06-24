@@ -26,10 +26,28 @@ import {
   LAIR_TICK_INTERVAL,
   LAIR_REPOP_CHANCE,
   LAIR_GROW_CHANCE,
-  maxLairCount
+  maxLairCount,
+  STARTING_BUBBLE_RADIUS,
+  STARTING_BUBBLE_TURNS
 } from './entityConstants';
 
 let idCounter = 0;
+
+/** Opening-game safety bubble: true while (x,y) sits within `STARTING_BUBBLE_RADIUS` of the colony start
+ *  (map centre — see `spawnPawnsOnMap`) AND the game is still in its first month. Gates every lair-spawn
+ *  path (seed / repopulate / grow) so no den lands on the player's doorstep before they can arm up.
+ *  Exported for unit testing. */
+export function inStartingBubble(state: GameState, x: number, y: number): boolean {
+  if (state.turn >= STARTING_BUBBLE_TURNS) return false;
+  const map = state.worldMap;
+  const w = map[0]?.length ?? 0;
+  const h = map.length;
+  const cx = Math.floor(w / 2);
+  const cy = Math.floor(h / 2);
+  const dx = x - cx;
+  const dy = y - cy;
+  return dx * dx + dy * dy <= STARTING_BUBBLE_RADIUS * STARTING_BUBBLE_RADIUS;
+}
 
 // Soft tether radius (tiles, Chebyshev) for a menu-preview prey herd's invisible anchor — small enough
 // that each corner herd reads as one tight cluster, large enough that they still graze/wander visibly
@@ -87,7 +105,11 @@ function pushHerd(
 
 /** Nearest spawnable tile to (cx,cy), searched outward in expanding Chebyshev rings (≤12). Used to land
  *  a menu corner anchor on walkable wildlife land even if the exact corner tile is a grove/edge. */
-function nearestSpawnable(state: GameState, cx: number, cy: number): { x: number; y: number } | null {
+function nearestSpawnable(
+  state: GameState,
+  cx: number,
+  cy: number
+): { x: number; y: number } | null {
   const map = state.worldMap;
   for (let r = 0; r <= 12; r++) {
     for (let dy = -r; dy <= r; dy++) {
@@ -144,8 +166,14 @@ function seedMenuHerdsScattered(state: GameState, dayCreatures: CreatureDefiniti
   let idx = 0;
   for (let r = 0; r < MENU_SCATTER_ROWS; r++) {
     for (let c = 0; c < MENU_SCATTER_COLS; c++) {
-      const fx = x0 + ((c + 0.5) / MENU_SCATTER_COLS) * (x1 - x0) + (rng.random() * 2 - 1) * MENU_SCATTER_JITTER;
-      const fy = y0 + ((r + 0.5) / MENU_SCATTER_ROWS) * (y1 - y0) + (rng.random() * 2 - 1) * MENU_SCATTER_JITTER;
+      const fx =
+        x0 +
+        ((c + 0.5) / MENU_SCATTER_COLS) * (x1 - x0) +
+        (rng.random() * 2 - 1) * MENU_SCATTER_JITTER;
+      const fy =
+        y0 +
+        ((r + 0.5) / MENU_SCATTER_ROWS) * (y1 - y0) +
+        (rng.random() * 2 - 1) * MENU_SCATTER_JITTER;
       const origin = nearestSpawnable(state, Math.round(fx * w), Math.round(fy * h));
       if (!origin) continue;
       const def = roster[idx++ % roster.length];
@@ -324,6 +352,8 @@ function seedLairs(state: GameState): Mob[] {
         }
       }
       if (!lairResId) continue;
+      // Opening-game bubble: leave doorstep dens dormant (worldgen keeps the resource; no pack yet).
+      if (inStartingBubble(state, x, y)) continue;
       const candidates = byLair.get(lairResId);
       if (!candidates || candidates.length === 0) continue;
       const def = candidates[Math.floor(rng.random() * candidates.length)];
@@ -377,6 +407,7 @@ export function tickLairs(state: GameState): GameState {
   // Repopulate emptied lairs.
   for (const lt of lairTiles) {
     if ((aliveByLair.get(lt.lairId) ?? 0) > 0) continue;
+    if (inStartingBubble(state, lt.x, lt.y)) continue; // stay dormant inside the opening-game bubble
     if (rng.random() >= LAIR_REPOP_CHANCE) continue;
     const cands = byLair.get(lt.resId);
     if (!cands || cands.length === 0) continue;
@@ -425,6 +456,7 @@ function tryPlaceNewLair(state: GameState): { x: number; y: number; resId: strin
     const y = EDGE_BUFFER + Math.floor(rng.random() * (h - 2 * EDGE_BUFFER));
     const tile = map[y]?.[x];
     if (!tile) continue;
+    if (inStartingBubble(state, x, y)) continue; // no new dens on the doorstep during the first month
     if (!subs.includes(tile.subType)) continue;
     if (!isSpawnableTile(tile)) continue;
     const res = tile.resources;
