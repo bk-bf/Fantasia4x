@@ -134,6 +134,22 @@ export function containedParts(parentId: BodyPartId): Set<BodyPartId> {
   return out;
 }
 
+/** Parts whose containment closure holds a VITAL/CRITICAL organ (chest → heart; skull → brain).
+ *  Destroying such a container — severed OR caved in to ≤0 HP — takes the organ with it, so the body
+ *  must read as dead even before the cascade has zeroed that organ (the per-tick reaper doesn't run the
+ *  cascade, and an old save can load a 0-HP chest with a still-intact heart). Precomputed from the
+ *  static topology. */
+const CONTAINER_OF_VITAL = new Set<BodyPartId>();
+for (const id of Object.keys(PART_DEF_MAP) as BodyPartId[]) {
+  for (const child of containedParts(id)) {
+    const cdef = PART_DEF_MAP[child];
+    if (cdef?.isVital || cdef?.isCritical) {
+      CONTAINER_OF_VITAL.add(id);
+      break;
+    }
+  }
+}
+
 /** When a container part is severed, its contents go with it: destroy every part nested inside
  *  `severedId` (set health 0 + isMissing). Returns the new parts array and whether the cascade took a
  *  VITAL organ (heart/lung/brain) — i.e. a gut-out of the chest that the caller must treat as lethal.
@@ -164,6 +180,9 @@ export function cascadeSeveredContents(
  * heart-and-lungs-gone jackal walking around. One rule now:
  *   • any VITAL (`isVital` — heart/brain) or CRITICAL (`isCritical` — skull) part that is missing OR at
  *     ≤0 HP — HP-based, so a caved-in (crushed, not severed) organ counts; OR
+ *   • a CONTAINER of a vital organ (chest → heart) that is missing OR at ≤0 HP — a caved-in chest kills
+ *     even when the cascade hasn't yet zeroed the heart inside it (the per-tick reaper doesn't cascade;
+ *     a pre-fix save can carry a 0-HP chest with a pristine heart — the "walking corpse" bug); OR
  *   • the head or torso ROOT limb reduced to ≤0 aggregate HP.
  * Returns the death cause for logging, or null. (Blood-loss death stays separate — driven per-tick from
  * bloodVolume ≤ 0.)
@@ -173,7 +192,8 @@ export function lethalAnatomyCause(limbs: LimbState[] | undefined): 'critical_li
   for (const limb of limbs) {
     for (const part of limb.parts ?? []) {
       const def = PART_DEF_MAP[part.id];
-      if ((def?.isVital || def?.isCritical) && (part.isMissing || part.health <= 0)) {
+      const destroyed = part.isMissing || part.health <= 0;
+      if (destroyed && (def?.isVital || def?.isCritical || CONTAINER_OF_VITAL.has(part.id))) {
         return 'critical_limb';
       }
     }

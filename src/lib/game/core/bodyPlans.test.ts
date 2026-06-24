@@ -220,4 +220,24 @@ describe('lethalAnatomyCause', () => {
     torsoOf(limbs).health = 0;
     expect(lethalAnatomyCause(limbs)).toBe('critical_limb');
   });
+
+  it('a CHEST caved to 0 HP is lethal even with a still-intact heart — the walking-corpse bug', () => {
+    // Finn's case: chest (container of the heart) beaten to 0 by mixed wounds, heart never zeroed by
+    // the cascade (loaded from a pre-fix save / reaper path), torso aggregate still > 0.
+    const limbs = createBodyPlanLimbs(DEFAULT_PLAN, 1);
+    const torso = torsoOf(limbs);
+    const chest = torso.parts!.find((p) => p.id === 'chest')!;
+    const heart = torso.parts!.find((p) => p.id === 'heart')!;
+    chest.health = 0; // caved in, not severed
+    expect(chest.isMissing).toBe(false);
+    expect(heart.health).toBeGreaterThan(0); // heart still pristine
+    expect(torso.health).toBeGreaterThan(0); // aggregate still alive
+    expect(lethalAnatomyCause(limbs)).toBe('critical_limb');
+  });
+
+  it('the ABDOMEN at 0 HP is NOT on its own lethal (it contains no vital organ)', () => {
+    const limbs = createBodyPlanLimbs(DEFAULT_PLAN, 1);
+    torsoOf(limbs).parts!.find((p) => p.id === 'abdomen')!.health = 0;
+    expect(lethalAnatomyCause(limbs)).toBeNull();
+  });
 });
