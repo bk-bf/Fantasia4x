@@ -28,7 +28,9 @@
     CREATURE_SOUND_LABELS,
     workClipsFor,
     WORK_SOUND_LABELS,
-    type MusicScene
+    type MusicScene,
+    type AmbientBed,
+    type AmbientLayers
   } from '$lib/audio/manifest';
 
   let { isMenu = false }: { isMenu?: boolean } = $props();
@@ -66,6 +68,14 @@
 
   // ── Fire SFX (continuous campfire-crackle loop for lit fire buildings). zoom × viewport, like work. ──
   const FIRE_GAIN = 0.45;
+
+  // ── Ambient zoom balance ──
+  // "Detail" beds (local critters/foliage) fade out as you zoom OUT; "weather" beds (wind/rain) stay
+  // and get a little louder — so the fully zoomed-out world is just wind & rain, and zooming in brings
+  // back birdsong / crickets / forest. Ramp reuses the ZOOM_REF band: detail = 0 at/below ZOOM_REF_LOW.
+  const WEATHER_BEDS = new Set<AmbientBed>(['wind', 'rain', 'rain-heavy']);
+  const WEATHER_ZOOM_BOOST = 0.3; // weather beds ×(1 + this) when fully zoomed out
+  let baseAmbient: AmbientLayers = {}; // weather/time mix (pre zoom-balance), set by the music effect
 
   let lastCombatAt = 0;
   let wasNight = false;
@@ -108,18 +118,15 @@
     else scene = night ? 'night' : 'day';
     audioService.setScene(scene);
 
-    // No world on the title screen → no nature beds.
-    if (isMenu) {
-      audioService.setAmbient({});
-    } else {
-      audioService.setAmbient(
-        resolveAmbient({
+    // Compute the base weather/time bed mix; the actual setAmbient (with zoom balance applied) happens
+    // in evalAmbient on the fast tick so it tracks zoom smoothly. No world on the title screen.
+    baseAmbient = isMenu
+      ? {}
+      : resolveAmbient({
           weatherType: wx?.type ?? 'clear',
           isNight: night,
           intensity: wx?.intensity ?? 0
-        })
-      );
-    }
+        });
   });
 
   type Vp = { x: number; y: number; w: number; h: number };
@@ -284,6 +291,24 @@
   }
 
   /**
+   * Apply the zoom balance to the base ambient mix and push it to the engine. Zoomed out → local
+   * "detail" beds (birds/crickets/forest) fade to silence and the weather beds (wind/rain) swell, so
+   * the whole-map view is just weather; zooming in restores the full soundscape.
+   */
+  function evalAmbient(): void {
+    if (isMenu) return void audioService.setAmbient({});
+    const tile = get(cameraTileSize);
+    const detail = Math.max(0, Math.min(1, (tile - ZOOM_REF_LOW) / (ZOOM_REF_HIGH - ZOOM_REF_LOW)));
+    const weatherMul = 1 + (1 - detail) * WEATHER_ZOOM_BOOST;
+    const out: AmbientLayers = {};
+    for (const key of Object.keys(baseAmbient) as AmbientBed[]) {
+      const g = (baseAmbient[key] ?? 0) * (WEATHER_BEDS.has(key) ? weatherMul : detail);
+      if (g > 0.001) out[key] = g;
+    }
+    audioService.setAmbient(out);
+  }
+
+  /**
    * Fire SFX: a single looping campfire crackle whose volume scales with the loudest lit fire building
    * in earshot (any complete, burning fuel building — campfire/hearth/furnace/…). zoom × viewport,
    * aggregated across fires via 1−Π(1−c); no pawn-distance (fires sit in the colony).
@@ -317,6 +342,7 @@
 
     const iv = setInterval(() => (nowTick = Date.now()), 1000);
     const sfxIv = setInterval(() => {
+      evalAmbient();
       evalCreatures();
       evalWork();
       evalFire();
