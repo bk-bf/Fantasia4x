@@ -58,3 +58,13 @@ creatures.jsonc. Mixed sources:
 | `goat`                                                             | "Goat Bleat" (https://opengameart.org/content/goat-bleat) | leone | CC-BY 4.0 |
 | `boar`                                                             | "Pig SFX Pack" (https://opengameart.org/content/pig-sfx-pack) | Vinrax | CC-BY 3.0 |
 | `rustle` (giant rat)                                              | "20 Rustles of dry leaves" (https://opengameart.org/content/20-rustles-dry-leaves) | qubodup | CC0 |
+
+## Work SFX — medieval labour (`audio/work/<work-category>/`)
+
+Intermittent, viewport/zoom-aware one-shots for pawns currently working, keyed by work category
+(or a `jobs.jsonc` JobDef `audio` override).
+
+| Category dir(s)                                            | Source | Author | License |
+| --------------------------------------------------------- | ------ | ------ | ------- |
+| `woodcutting`, `mining`, `construction`, `crafting`        | "100 CC0 metal and wood SFX" (https://opengameart.org/content/100-cc0-metal-and-wood-sfx) | rubberduck | CC0 |
+| `foraging`, `planting`                                     | "20 Rustles of dry leaves" (https://opengameart.org/content/20-rustles-dry-leaves) | qubodup | CC0 |
