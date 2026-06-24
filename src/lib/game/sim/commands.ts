@@ -22,7 +22,6 @@ import type {
   GameState,
   Pawn,
   EquipmentSlot,
-  ItemInstance,
   CraftingInProgress,
   ZoneInstanceType,
   PlacedBuilding,
@@ -34,10 +33,9 @@ import {
   consumeFromStockpiles,
   releaseReservation,
   reserveForOrder,
-  aggregateFromDrops,
   absorbDropIfOnStockpileTile
 } from '../core/GameState';
-import { equipItem, unequipItem, useConsumable, resolveEquipSlot } from '../core/PawnEquipment';
+import { equipItem, unequipItem, useConsumable, equipDropToPawn } from '../core/PawnEquipment';
 import { pickUpFromTile } from '../systems/pawn/pawnHauling';
 import { PAWN_STATE } from '../systems/pawn/pawnStates';
 import { designationService } from '../services/DesignationService';
@@ -529,49 +527,9 @@ export const COMMANDS: Record<string, Cmd> = {
 
   // ── equipment / dev ──────────────────────────────────────────────────────────
   /** Equip a loose item off a tile onto a pawn (ADR-016: the swapped-out item drops back). */
-  equipFromTile: (s, p: { pawnId: string; dropId: string }) => {
-    const drop = (s.droppedItems ?? []).find((d) => d.id === p.dropId);
-    if (!drop) return s;
-    const item = itemService.getItemById(drop.resourceId);
-    if (!item) return s;
-    const pawnIdx = s.pawns.findIndex((pw) => pw.id === p.pawnId);
-    if (pawnIdx < 0) return s;
-    const pawn = s.pawns[pawnIdx];
-    // Occupancy-aware: a 2nd ring goes to the free `ring2` slot instead of swapping the first.
-    const slot = resolveEquipSlot(pawn, item);
-    if (!slot) return s;
-    const instance: ItemInstance = drop.instance ?? {
-      instanceId: `${item.id}-${p.pawnId}-${Date.now()}`,
-      itemId: item.id,
-      durability: item.maxDurability ?? 100,
-      // §Q: carry the stack's craft-quality tier onto the equipped instance (like durability).
-      ...(drop.quality !== undefined ? { quality: drop.quality } : {})
-    };
-    const px = pawn.position?.x ?? drop.x;
-    const py = pawn.position?.y ?? drop.y;
-    let drops = (s.droppedItems ?? [])
-      .map((d) => (d.id === p.dropId ? { ...d, quantity: d.quantity - 1 } : d))
-      .filter((d) => d.quantity > 0);
-    const prev = pawn.equipment[slot];
-    if (prev) {
-      drops = [
-        ...drops,
-        {
-          id: `unequip-${prev.instanceId}-${Date.now()}`,
-          resourceId: prev.itemId,
-          x: px,
-          y: py,
-          quantity: 1,
-          stored: false,
-          instance: prev
-        }
-      ];
-    }
-    const pawns = s.pawns.map((pw, i) =>
-      i === pawnIdx ? { ...pw, equipment: { ...pw.equipment, [slot]: instance } } : pw
-    );
-    return { ...s, pawns, droppedItems: drops, stockpile: aggregateFromDrops(drops) };
-  },
+  // Instant equip-from-ground (no movement). The drafted equip ORDER walks the pawn over first and
+  // then applies this same `equipDropToPawn` on arrival (see GameEngineImpl._processDraftOrders).
+  equipFromTile: (s, p: { pawnId: string; dropId: string }) => equipDropToPawn(s, p.pawnId, p.dropId),
   /** Pick `quantity` units of a specific tile drop straight into a pawn's inventory (instant, like
    *  equipFromTile). Carry budget is respected — only what fits is taken (floor of 1). */
   pickUpItemFromTile: (s, p: { pawnId: string; dropId: string; quantity: number }) => {

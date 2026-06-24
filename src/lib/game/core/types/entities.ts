@@ -282,9 +282,10 @@ export interface Pawn {
   // ===== DRAFT MODE =====
   /** When true, pawn ignores jobs/needs and follows player orders. */
   drafted?: boolean;
-  /** Current draft order: move to tile, attack target, or haul a loose stack to a stockpile.
-   *  For `haul`, x/y is the SOURCE tile; the pawn shuttles its carry-budget-worth to the nearest
-   *  stockpile and back until the loose stack on that tile is cleared (multi-trip), then clears. */
+  /** Current draft order: move to tile, attack target, haul a loose stack to a stockpile, or fetch +
+   *  equip a ground item. For `haul`, x/y is the SOURCE tile; the pawn shuttles its carry-budget-worth
+   *  to the nearest stockpile and back until the loose stack on that tile is cleared (multi-trip), then
+   *  clears. For `equip`, the pawn walks to the drop's tile and equips one unit on arrival (then clears). */
   draftTarget?:
     | { type: 'move'; x: number; y: number }
     | {
@@ -295,7 +296,8 @@ export interface Pawn {
          *  auto (shoot from range if it has a ranged weapon + viable ammo, else close to melee). */
         mode?: 'ranged' | 'melee';
       }
-    | { type: 'haul'; x: number; y: number };
+    | { type: 'haul'; x: number; y: number }
+    | { type: 'equip'; dropId: string; x: number; y: number };
 
   // Phase 4/5: State machine primary state
   currentState?: string; // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Fighting' | 'Fleeing' | 'Dead'

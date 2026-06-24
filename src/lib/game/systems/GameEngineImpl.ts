@@ -28,6 +28,7 @@ import buildingsData from '../database/buildings.jsonc';
 
 import { pawnStateMachineService, reapDeadPawns } from './PawnStateMachine';
 import { findNearestDepositPoint, depositInventory, pickUpFromTile } from './pawn/pawnHauling';
+import { equipDropToPawn } from '../core/PawnEquipment';
 import { jobService } from '../services/JobService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { resourceObjectService } from '../services/ResourceObjectService';
@@ -802,6 +803,48 @@ export class GameEngineImpl implements GameEngine {
           }
         } else {
           clearHaul(); // nothing carried and the source is clear — done
+        }
+      } else if (target.type === 'equip') {
+        // Drafted "fetch + equip": walk to the drop's tile, then equip one unit on arrival and clear
+        // the order. Mirrors the haul pickup phase (select-then-act, not an instant teleport-equip).
+        const drop = (gs.droppedItems ?? []).find(
+          (d) => d.id === target.dropId && d.quantity > 0
+        );
+        const clearEquip = () => {
+          gs = {
+            ...gs,
+            pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, draftTarget: undefined } : p))
+          };
+        };
+        if (!drop) {
+          clearEquip(); // the item is gone (taken / decayed) — abandon the order
+        } else if (pawn.position.x === drop.x && pawn.position.y === drop.y) {
+          gs = pawnService.assignPath(pawn.id, [], gs);
+          gs = equipDropToPawn(gs, pawn.id, target.dropId);
+          gs = {
+            ...gs,
+            pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, draftTarget: undefined } : p))
+          };
+        } else {
+          const grids = buildPathfindingGridsWithBlocked(
+            gs.worldMap,
+            blocked,
+            pawn.position.x,
+            pawn.position.y,
+            drop.x,
+            drop.y
+          );
+          const path = wasmPathfinderService.findPath(
+            grids.walkable,
+            grids.costs,
+            grids.width,
+            grids.height,
+            pawn.position.x,
+            pawn.position.y,
+            drop.x,
+            drop.y
+          );
+          if (path && path.length > 0) gs = pawnService.assignPath(pawn.id, path, gs);
         }
       }
     }

@@ -5,9 +5,11 @@ import type {
   Item,
   PawnEquipment,
   PawnInventory,
-  EntityStats
+  EntityStats,
+  GameState
 } from './types';
 import { itemService } from '../services/ItemService';
+import { aggregateFromDrops } from './GameState';
 
 /** Default carry budget for a pawn with no stats/equipment. */
 const DEFAULT_MAX_WEIGHT_KG = 20;
@@ -116,6 +118,56 @@ export function resolveEquipSlot(pawn: Pawn, item: Item): EquipmentSlot | null {
   const partner = PAIRED_SLOTS[base];
   if (partner && pawn.equipment?.[base] && !pawn.equipment?.[partner]) return partner;
   return base;
+}
+
+/**
+ * Move ONE unit of a tile/stockpile drop into a pawn's matching equipment slot, returning the new
+ * state (or the state unchanged if the drop / item / slot can't be resolved). Any item already in that
+ * slot is dropped at the pawn. This is the SINGLE source of truth for equip-from-ground, shared by the
+ * instant `equipFromTile` command and the drafted "walk over, then equip" order (applied on arrival).
+ */
+export function equipDropToPawn(state: GameState, pawnId: string, dropId: string): GameState {
+  const drop = (state.droppedItems ?? []).find((d) => d.id === dropId);
+  if (!drop) return state;
+  const item = itemService.getItemById(drop.resourceId);
+  if (!item) return state;
+  const pawnIdx = state.pawns.findIndex((pw) => pw.id === pawnId);
+  if (pawnIdx < 0) return state;
+  const pawn = state.pawns[pawnIdx];
+  // Occupancy-aware: a 2nd ring goes to the free `ring2` slot instead of swapping the first.
+  const slot = resolveEquipSlot(pawn, item);
+  if (!slot) return state;
+  const instance: ItemInstance = drop.instance ?? {
+    instanceId: `${item.id}-${pawnId}-${Date.now()}`,
+    itemId: item.id,
+    durability: item.maxDurability ?? 100,
+    // §Q: carry the stack's craft-quality tier onto the equipped instance (like durability).
+    ...(drop.quality !== undefined ? { quality: drop.quality } : {})
+  };
+  const px = pawn.position?.x ?? drop.x;
+  const py = pawn.position?.y ?? drop.y;
+  let drops = (state.droppedItems ?? [])
+    .map((d) => (d.id === dropId ? { ...d, quantity: d.quantity - 1 } : d))
+    .filter((d) => d.quantity > 0);
+  const prev = pawn.equipment[slot];
+  if (prev) {
+    drops = [
+      ...drops,
+      {
+        id: `unequip-${prev.instanceId}-${Date.now()}`,
+        resourceId: prev.itemId,
+        x: px,
+        y: py,
+        quantity: 1,
+        stored: false,
+        instance: prev
+      }
+    ];
+  }
+  const pawns = state.pawns.map((pw, i) =>
+    i === pawnIdx ? { ...pw, equipment: { ...pw.equipment, [slot]: instance } } : pw
+  );
+  return { ...state, pawns, droppedItems: drops, stockpile: aggregateFromDrops(drops) };
 }
 
 export function canEquipItem(_pawn: Pawn, itemId: string): boolean {
