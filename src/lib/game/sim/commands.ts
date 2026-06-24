@@ -39,6 +39,7 @@ import {
 } from '../core/GameState';
 import { equipItem, unequipItem, useConsumable, resolveEquipSlot } from '../core/PawnEquipment';
 import { pickUpFromTile } from '../systems/pawn/pawnHauling';
+import { PAWN_STATE } from '../systems/pawn/pawnStates';
 import { designationService } from '../services/DesignationService';
 import { buildingService } from '../services/BuildingService';
 import { itemService } from '../services/ItemService';
@@ -253,7 +254,25 @@ export const COMMANDS: Record<string, Cmd> = {
   }),
   setPawnRestPolicy: (s, p: { pawnId: string; policy: string }) => ({
     ...s,
-    pawns: s.pawns.map((pw) => (pw.id === p.pawnId ? { ...pw, restPolicy: p.policy as never } : pw))
+    pawns: s.pawns.map((pw) => {
+      if (pw.id !== p.pawnId) return pw;
+      const next = { ...pw, restPolicy: p.policy as never };
+      // "No rest" takes effect IMMEDIATELY: if the pawn is mid-nap (or walking to a bed), roll it
+      // straight back to Idle so the next tick re-picks work — rather than letting handleSleeping run
+      // the nap down to its wake threshold first.
+      if (
+        p.policy === 'never' &&
+        (pw.currentState === PAWN_STATE.SLEEPING ||
+          pw.activeJob?.targetState === PAWN_STATE.SLEEPING)
+      ) {
+        next.currentState = PAWN_STATE.IDLE;
+        next.activeJob = undefined;
+        next.isMoving = false;
+        next.path = [];
+        if (pw.state) next.state = { ...pw.state, isSleeping: false };
+      }
+      return next;
+    })
   }),
   setPawnLaborLevel: (s, p: { pawnId: string; workId: string; level: 0 | 1 | 2 | 3 | 4 }) => {
     const a = { ...s.workAssignments };
