@@ -126,15 +126,14 @@
     else scene = night ? 'night' : 'day';
     audioService.setScene(scene);
 
-    // Compute the base weather/time bed mix; the actual setAmbient (with zoom balance applied) happens
-    // in evalAmbient on the fast tick so it tracks zoom smoothly. No world on the title screen.
-    baseAmbient = isMenu
-      ? {}
-      : resolveAmbient({
-          weatherType: wx?.type ?? 'clear',
-          isNight: night,
-          intensity: wx?.intensity ?? 0
-        });
+    // Compute the base weather/time bed mix from the live weather. The main menu runs a live weather +
+    // day/night preview too, so weather ambience plays on the title screen as well. evalAmbient applies
+    // the in-game zoom balance on the fast tick; the menu plays the full mix.
+    baseAmbient = resolveAmbient({
+      weatherType: wx?.type ?? 'clear',
+      isNight: night,
+      intensity: wx?.intensity ?? 0
+    });
   });
 
   type Vp = { x: number; y: number; w: number; h: number };
@@ -304,7 +303,9 @@
    * the whole-map view is just weather; zooming in restores the full soundscape.
    */
   function evalAmbient(): void {
-    if (isMenu) return void audioService.setAmbient({});
+    // Menu: play the full weather/time mix as a cinematic backdrop (no zoom balance — the title screen
+    // has no player camera to scale against). In-game applies the detail/weather zoom balance below.
+    if (isMenu) return void audioService.setAmbient(baseAmbient);
     const tile = get(cameraTileSize);
     const detail = Math.max(0, Math.min(1, (tile - ZOOM_REF_LOW) / (ZOOM_REF_HIGH - ZOOM_REF_LOW)));
     const weatherMul = 1 + (1 - detail) * WEATHER_ZOOM_BOOST;
