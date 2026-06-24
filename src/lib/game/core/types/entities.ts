@@ -275,6 +275,11 @@ export interface Pawn {
    */
   restPolicy?: 'never' | 'shelter' | 'always';
 
+  /** FORCE WORK (emergency): when true, the pawn neglects ALL needs — hunger, thirst, fatigue,
+   *  hygiene and wound recovery — and keeps working, never breaking off to eat/drink/rest. Can drive
+   *  a pawn to collapse or starve if left on; a deliberate, toggled override (PawnForceWork UI). */
+  forceWork?: boolean;
+
   /** Mob id this pawn is actively hunting (work-driven, set when it picks up a
    *  `markedForHunt` target). Chased + attacked while currentState === 'Hunting'. */
   huntTargetId?: string;

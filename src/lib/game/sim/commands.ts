@@ -272,6 +272,33 @@ export const COMMANDS: Record<string, Cmd> = {
       return next;
     })
   }),
+  /** FORCE WORK toggle: when enabled, the pawn neglects every need and keeps working. Like "no rest",
+   *  it takes effect IMMEDIATELY — a pawn currently acting on a need (eating / drinking / sleeping /
+   *  walking to one) is rolled back to Idle so the next tick re-picks work instead of finishing the need. */
+  setPawnForceWork: (s, p: { pawnId: string; forceWork: boolean }) => ({
+    ...s,
+    pawns: s.pawns.map((pw) => {
+      if (pw.id !== p.pawnId) return pw;
+      const next = { ...pw, forceWork: p.forceWork || undefined };
+      const NEED_STATES: string[] = [
+        PAWN_STATE.HUNGRY,
+        PAWN_STATE.TIRED,
+        PAWN_STATE.MOVING_TO_NEED,
+        PAWN_STATE.EATING,
+        PAWN_STATE.SLEEPING,
+        PAWN_STATE.DRINKING,
+        PAWN_STATE.WASHING
+      ];
+      if (p.forceWork && NEED_STATES.includes(pw.currentState as string)) {
+        next.currentState = PAWN_STATE.IDLE;
+        next.activeJob = undefined;
+        next.isMoving = false;
+        next.path = [];
+        if (pw.state) next.state = { ...pw.state, isSleeping: false };
+      }
+      return next;
+    })
+  }),
   setPawnLaborLevel: (s, p: { pawnId: string; workId: string; level: 0 | 1 | 2 | 3 | 4 }) => {
     const a = { ...s.workAssignments };
     const cur = a[p.pawnId] ?? { pawnId: p.pawnId, workPriorities: {}, laborSettings: {} };

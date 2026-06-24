@@ -61,6 +61,8 @@ function recoveryChoice(pawn: Pawn, gameState: GameState): NeedChoice {
 /** Raw-threshold need decision for an IDLE pawn (no active job). Priority: hunger → thirst →
  *  hygiene → fatigue (thirst before hygiene; dehydration is lethal). */
 export function selectIdleNeed(pawn: Pawn, gameState: GameState): NeedChoice {
+  // FORCE WORK: neglect every need and go straight to work (the FSM finds a job when no need wins).
+  if (pawn.forceWork) return null;
   if ((pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
     return { kind: 'eat' };
   }
@@ -98,6 +100,8 @@ export function selectInterruptNeed(
   queue: string[],
   laborLevel: number
 ): NeedChoice {
+  // FORCE WORK: never interrupt a job for a need — the pawn works through hunger/thirst/fatigue.
+  if (pawn.forceWork) return null;
   const hunger = pawn.needs?.hunger ?? 0;
   if (hunger >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
     const minQueueFood = computeMinQueueFoodDist(queue, pawn, gameState);
