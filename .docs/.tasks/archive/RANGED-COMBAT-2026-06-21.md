@@ -354,6 +354,8 @@ orders of magnitude under the fog-of-war field. Conflating the two is what made 
   cell → blocked (the two endpoints never block — shooter cover / target hugging a wall). The gate is
   now `dist ≤ effectiveRangedRange (vision-capped) && hasLineOfSight(...)` in `tryRangedShot` — vision
   is BOTH range-capped AND wall-blocked. Dropped into the existing seam with no caller changes.
+- [x] **Stat renamed `aggro_range → vision_range`** (`stats.jsonc`, 2026-06-19) so the id matches the
+  LoS mechanic it drives (`pawnVisionRange`); the UI label derives from the id, no callsite churn.
 
 **Bonuses:** the sampled line **un-blocks friendly-fire** (an ally on it = an optional roll — see the
 closeout); and the `blocksSight` tile flag is the **same occluder substrate** fog-of-war would later
