@@ -15,6 +15,7 @@
 // Singleton: import { audioService }. Never construct AudioServiceImpl directly. All methods are
 // no-ops until the browser unlocks audio (autoplay policy) — call unlock() from a user gesture.
 import { Howl, Howler } from 'howler';
+import { writable } from 'svelte/store';
 import {
   MUSIC,
   AMBIENT_FILES,
@@ -32,6 +33,24 @@ interface Bus {
   sfx: number;
 }
 
+/** Live playback snapshot for the debug "Now playing" panel. */
+export interface NowPlaying {
+  unlocked: boolean;
+  scene: MusicScene | null;
+  track: string | null; // current music file url (null = silence)
+  ambient: { bed: AmbientBed; gain: number }[]; // active beds with their target gain (0–1)
+  volumes: Bus;
+}
+
+/** Reactive playback state — subscribed by AudioNowPlaying.svelte. */
+export const nowPlaying = writable<NowPlaying>({
+  unlocked: false,
+  scene: null,
+  track: null,
+  ambient: [],
+  volumes: { master: 0.7, music: 0.7, sfx: 0.8 }
+});
+
 interface BedState {
   howl: Howl;
   target: number; // 0–1 bed gain (pre-sfx-bus)
@@ -45,6 +64,7 @@ class AudioServiceImpl {
   // ── Music channel ──
   private scene: MusicScene | null = null;
   private musicHowl: Howl | null = null;
+  private currentTrack: string | null = null;
   private playlist: string[] = [];
   private playIdx = 0;
 
@@ -59,6 +79,7 @@ class AudioServiceImpl {
     // Howler creates/locks the context lazily; nudging it here resumes a suspended context.
     const ctx = Howler.ctx;
     if (ctx && ctx.state === 'suspended') void ctx.resume();
+    this.publish();
   }
 
   /** Push the volume buses. master is global; music/sfx re-scale their live channels. */
@@ -70,6 +91,7 @@ class AudioServiceImpl {
     for (const bed of this.beds.values()) {
       if (bed.playing) bed.howl.volume(bed.target * this.bus.sfx);
     }
+    this.publish();
   }
 
   /** Switch the music scene, crossfading from the current track. No-op if already on that scene. */
@@ -100,12 +122,28 @@ class AudioServiceImpl {
   dispose(): void {
     this.musicHowl?.unload();
     this.musicHowl = null;
+    this.currentTrack = null;
     this.scene = null;
     for (const bed of this.beds.values()) bed.howl.unload();
     this.beds.clear();
+    this.publish();
   }
 
   // ── internals ──────────────────────────────────────────────────────────────────────────────────
+
+  /** Push the current playback snapshot into the reactive `nowPlaying` store (debug panel). */
+  private publish(): void {
+    const ambient = [...this.beds.entries()]
+      .filter(([, b]) => b.playing && b.target > 0)
+      .map(([bed, b]) => ({ bed, gain: b.target }));
+    nowPlaying.set({
+      unlocked: this.unlocked,
+      scene: this.scene,
+      track: this.currentTrack,
+      ambient,
+      volumes: { ...this.bus }
+    });
+  }
 
   private startTrack(url: string | undefined): void {
     const prev = this.musicHowl;
@@ -116,6 +154,8 @@ class AudioServiceImpl {
     }
     if (!url) {
       this.musicHowl = null;
+      this.currentTrack = null;
+      this.publish();
       return;
     }
     const howl = new Howl({ src: [url], html5: true, volume: 0, loop: false });
@@ -123,6 +163,8 @@ class AudioServiceImpl {
     howl.play();
     howl.fade(0, this.bus.music, MUSIC_FADE_MS);
     this.musicHowl = howl;
+    this.currentTrack = url;
+    this.publish();
   }
 
   private advanceTrack(from: Howl): void {
@@ -155,6 +197,7 @@ class AudioServiceImpl {
       bed.howl.once('fade', () => bed.howl.pause());
       bed.playing = false;
     }
+    this.publish();
   }
 }
 

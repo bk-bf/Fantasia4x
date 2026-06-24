@@ -18,6 +18,7 @@
   import type { Season } from '$lib/game/core/types';
   import itemsData from '$lib/game/database/items.jsonc';
   import buildingsData from '$lib/game/database/buildings.jsonc';
+  import AudioNowPlaying from '$lib/components/UI/AudioNowPlaying.svelte';
 
   type NamedDef = { id: string; name?: string; category?: string };
   const ITEMS = (itemsData as unknown as NamedDef[]).filter((i) => i.category !== 'natural_weapon');
@@ -70,6 +71,8 @@
 </script>
 
 <div class="menu">
+  <AudioNowPlaying />
+
   <section>
     <h4>Items</h4>
     <div class="row">
@@ -139,8 +142,7 @@
       <input
         type="checkbox"
         checked={!!$gameState._devResearchGateOff}
-        onchange={(e) =>
-          cmd('setResearchGateOff', { off: (e.target as HTMLInputElement).checked })}
+        onchange={(e) => cmd('setResearchGateOff', { off: (e.target as HTMLInputElement).checked })}
       />
       Research gate off <span class="hint">(show + allow unresearched recipes & buildings)</span>
     </label>

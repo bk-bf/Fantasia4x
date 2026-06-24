@@ -44,6 +44,42 @@ export const AMBIENT_FILES: Record<AmbientBed, string> = {
 /** Target gains for each currently-audible bed (0–1). Beds omitted from the map fade to silence. */
 export type AmbientLayers = Partial<Record<AmbientBed, number>>;
 
+// ── Human labels (for the now-playing / debug UI — raw filenames + bed ids are backend refs only). ──
+export const SCENE_LABELS: Record<MusicScene, string> = {
+  menu: 'Menu',
+  day: 'Day',
+  night: 'Night',
+  combat: 'Combat'
+};
+
+export const TRACK_LABELS: Record<string, string> = {
+  '/audio/music/menu.ogg': 'Campaign',
+  '/audio/music/day-1.ogg': 'Town',
+  '/audio/music/day-2.ogg': 'Middle Age RPG Theme 1',
+  '/audio/music/day-3.ogg': 'Castle',
+  '/audio/music/day-4.ogg': 'Middle Age RPG Theme 2',
+  '/audio/music/night-1.ogg': 'Caves of Sorrow',
+  '/audio/music/night-2.ogg': 'Dark Quest',
+  '/audio/music/combat-1.ogg': 'Battle Theme 1',
+  '/audio/music/combat-2.ogg': 'Battle Theme 3',
+  '/audio/music/combat-3.ogg': 'Battle Theme 5'
+};
+
+export const AMBIENT_LABELS: Record<AmbientBed, string> = {
+  'birds-day': 'Birds (day)',
+  'night-crickets': 'Crickets (night)',
+  wind: 'Wind',
+  rain: 'Rain',
+  'rain-heavy': 'Heavy rain',
+  forest: 'Forest'
+};
+
+/** Display title for a music track url (falls back to the bare filename). */
+export function trackLabel(url: string | null): string {
+  if (!url) return '—';
+  return TRACK_LABELS[url] ?? url.split('/').pop() ?? url;
+}
+
 // Weather-type → bed grouping. Mirrors the overlay/windStrength semantics in weather.jsonc so the
 // audio bed matches what the player sees: precipitation overlays → rain bed; windy/gale/blizzard →
 // wind bed. (Kept as plain sets so a new weather id simply falls through to the calm default.)
