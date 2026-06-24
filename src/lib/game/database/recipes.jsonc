@@ -566,6 +566,8 @@
     "workAmount"      : 5,
     "toolTierRequired": 0
   },
+  /* DISABLED — produces `firestarter`, which is commented out in items.jsonc (not implemented yet).
+     Re-enable alongside the item.
   {
     "id"              : "make_firestarter",
     "station"         : "craft_spot",
@@ -574,6 +576,7 @@
     "workAmount"      : 1,
     "toolTierRequired": 0
   },
+  */
   {
     "id"              : "make_flint_knife",
     "station"         : "craft_spot",

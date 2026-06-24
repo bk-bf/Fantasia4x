@@ -29,8 +29,11 @@
     /** Producing recipe + chosen ingredients — drives the per-material stat/nutrition deltas. */
     recipe?: Recipe | null;
     selectedIngredients?: Record<string, string>;
+    /** Work category (labor) this craft belongs to — "Butchery" / "Leatherworking" / "General
+     *  Crafting" / "Cooking" … Shown as the first row so the player knows which job performs it. */
+    jobLabel?: string | null;
   }
-  let { item, x, y, recipe = null, selectedIngredients = {} }: Props = $props();
+  let { item, x, y, recipe = null, selectedIngredients = {}, jobLabel = null }: Props = $props();
 
   // Per-material weapon/armour deltas for the chosen ingredient(s) (e.g. ash shaft → +3 accuracy).
   let deltas = $derived(
@@ -204,6 +207,13 @@
     <span class="tip-eff">{headline}</span>
   </div>
 
+  {#if jobLabel}
+    <div class="tip-row tip-job">
+      <span class="tip-lbl">Job</span>
+      <span class="tip-job-val">{jobLabel}</span>
+    </div>
+  {/if}
+
   {#each rows as r}
     <div class="tip-row">
       <span class="tip-lbl">{r.label}</span>
@@ -289,6 +299,15 @@
   }
   .tip-lbl {
     color: var(--text-dim);
+  }
+  /* The job/work-category line sits just under the header, set apart with a soft rule + accent value. */
+  .tip-job {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 3px;
+    margin-bottom: 2px;
+  }
+  .tip-job-val {
+    color: var(--accent-hi);
   }
   .tip-sep {
     margin-top: 4px;

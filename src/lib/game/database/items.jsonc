@@ -1579,6 +1579,8 @@
     "volumeL": 0.8,
     "toolTierRequired": 0
   },
+  /* DISABLED — the Firestarter isn't implemented yet (no code requires it to light a fire; its
+     `processingType: ["light"]` is unused). Re-enable together with the `make_firestarter` recipe.
   {
     "id"               : "firestarter",
     "charSpans"        : [ {"sheet": "items", "id": 159} ],
@@ -1597,6 +1599,7 @@
     "toolTierRequired" : 0,
     "processingType"   : ["light"]
   },
+  */
   {
     "id"               : "flint_knife",
     "charSpans"        : [ {"sheet": "items", "id": 201} ],

@@ -10,6 +10,7 @@
   import { itemService } from '$lib/game/services/ItemService';
   import { recipeService } from '$lib/game/services/RecipeService';
   import { buildingService } from '$lib/game/services/BuildingService';
+  import { WORK_CATEGORIES } from '$lib/game/core/Work';
   import { releaseReservation } from '$lib/game/core/GameState';
   import { onDestroy } from 'svelte';
   import type { Item } from '$lib/game/core/types';
@@ -34,6 +35,21 @@
     if (!stationId) return null;
     return buildingService.getBuildingById(stationId)?.name ?? stationId.replace(/_/g, ' ');
   };
+  /** Human label for the WORK CATEGORY (labor) a craft belongs to — the recipe/station tool-requirement
+   *  workType (Butchery / Leatherworking / Metalworking / …), with Cooking for food and General Crafting
+   *  as the catch-all. Surfaced in the recipe's hover panel so the player knows which labor performs it. */
+  const workName = (id: string): string =>
+    WORK_CATEGORIES.find((c) => c.id === id)?.name ?? id.replace(/_/g, ' ');
+  function jobLabelOf(item: Item): string {
+    if (item.isCarcass) return 'Butchery';
+    const req = recipeService.toolRequirementForRecipe(recipeOf(item.id));
+    if (req?.workType) return workName(req.workType);
+    // Mirror JobService._jobTypeToWorkKey: a food/edible craft is Cooking, everything else General Crafting.
+    const t = String(item.type ?? '');
+    const c = item.category ?? '';
+    if (t === 'food' || ['food', 'cooking', 'drink', 'meat'].includes(c)) return 'Cooking';
+    return 'General Crafting';
+  }
 
   let race: any = null;
   let craftingQueue: any[] = [];
@@ -310,6 +326,7 @@
             statItem={item}
             statRecipe={recipe}
             statIngredients={entry.selectedIngredients ?? {}}
+            jobLabel={jobLabelOf(item)}
             tint={item.color ?? 'var(--accent)'}
             workAmount={recipe?.workAmount ?? null}
             station={stationNameOf(item.id)}

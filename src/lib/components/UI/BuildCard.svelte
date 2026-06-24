@@ -65,8 +65,13 @@
   export let statIngredients: Record<string, string> = {};
   /** Building def whose effects/enabled-recipes pop in a hover breakdown (buildings tab). */
   export let buildingDef: Building | null = null;
+  /** Work category (labor) the craft belongs to — e.g. "Butchery" / "Leatherworking" / "General
+   *  Crafting". Set by the crafting screen; its presence ALSO forces the item hover panel on for every
+   *  recipe (so even a plain good with no combat/gear stats still gets a hover with its job line). */
+  export let jobLabel: string | null = null;
 
-  // Only fire the header hover when there's an item OR building breakdown worth showing.
+  // Fire the header hover when there's an item/building breakdown worth showing — OR a jobLabel (every
+  // crafting recipe, even a plain one, gets a hover panel carrying at least its job line).
   $: hasItemStats =
     !!statItem &&
     (!!statItem.weaponProperties ||
@@ -76,7 +81,9 @@
       statItem.medicineQuality != null ||
       statItem.decaySeconds != null ||
       Object.keys(statItem.effects ?? {}).length > 0);
-  $: hasStats = hasItemStats || !!buildingDef;
+  // The item tooltip shows for any stat-bearing item, or for any craft card (jobLabel present).
+  $: showItemTip = !!statItem && (hasItemStats || !!jobLabel);
+  $: hasStats = showItemTip || !!buildingDef;
 </script>
 
 <div class="build-card" class:disabled={!actionEnabled}>
@@ -150,11 +157,12 @@
 
 {#if statTip && buildingDef}
   <BuildingStatTooltip building={buildingDef} x={statTip.x} y={statTip.y} />
-{:else if statTip && hasItemStats && statItem}
+{:else if statTip && showItemTip && statItem}
   <ItemStatTooltip
     item={statItem}
     recipe={statRecipe}
     selectedIngredients={statIngredients}
+    {jobLabel}
     x={statTip.x}
     y={statTip.y}
   />
