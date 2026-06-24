@@ -58,24 +58,36 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
   // Total capacity = free tiles + tiles that can accept more of an already-stored type
   const canAccept = freeTileCount + storedResourceIds.size;
 
-  // Remove haul jobs whose dropped item no longer exists
-  jobs = jobs.filter((j) => {
-    if (j.type !== 'haul') return true;
-    const stillExists = drops.some((d) => d.id === j.droppedItemId);
-    if (!stillExists) console.log(`[HAUL-SYNC] pruned stale haul job ${j.id}`);
-    return stillExists;
+  // Remove haul jobs whose dropped item no longer exists, and keep each surviving job's `urgent` flag
+  // in sync with its source stack (so toggling urgency on an already-queued stack takes effect). The
+  // ref is preserved when nothing changed, so we don't churn job refs every tick (perf).
+  jobs = jobs.flatMap((j) => {
+    if (j.type !== 'haul') return [j];
+    const d = drops.find((x) => x.id === j.droppedItemId);
+    if (!d) {
+      console.log(`[HAUL-SYNC] pruned stale haul job ${j.id}`);
+      return [];
+    }
+    const urgent = d.urgent || undefined;
+    return [(j.urgent ?? undefined) === urgent ? j : { ...j, urgent }];
   });
 
   // Count active haul jobs to avoid scheduling more than we have capacity for
   const activeHaulCount = jobs.filter((j) => j.type === 'haul').length;
+  const atCapacity = activeHaulCount >= canAccept;
 
-  // Add haul jobs for dropped items that have no job yet, up to available capacity
-  for (const drop of drops) {
-    if (activeHaulCount >= canAccept) break; // stockpile full
+  // Add haul jobs for dropped items that have no job yet. Urgent stacks are scheduled FIRST (so they
+  // win scarce stockpile capacity) and bypass the capacity cap entirely — the player explicitly
+  // flagged them. Normal stacks are skipped once the stockpile is full.
+  const ordered = drops.some((d) => d.urgent)
+    ? [...drops].sort((a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0))
+    : drops;
+  for (const drop of ordered) {
+    if (atCapacity && !drop.urgent) continue; // stockpile full — non-urgent stacks wait
     const exists = jobs.some((j) => j.type === 'haul' && j.droppedItemId === drop.id);
     if (!exists) {
       console.log(
-        `[HAUL-SYNC] creating haul job for drop ${drop.id} (${drop.resourceId}×${drop.quantity})`
+        `[HAUL-SYNC] creating ${drop.urgent ? 'URGENT ' : ''}haul job for drop ${drop.id} (${drop.resourceId}×${drop.quantity})`
       );
       jobs.push({
         id: `haul-${drop.id}-${Date.now()}`,
@@ -86,7 +98,8 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
         droppedItemId: drop.id,
         workRequired: 1, // instant pick-up on arrival
         workDone: 0,
-        claimedBy: null
+        claimedBy: null,
+        ...(drop.urgent ? { urgent: true } : {})
       });
     }
   }

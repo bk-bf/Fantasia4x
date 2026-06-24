@@ -453,6 +453,14 @@ export const COMMANDS: Record<string, Cmd> = {
       d.id === p.dropId ? { ...d, forbidden: p.forbidden } : d
     )
   }),
+  /** Flag a loose stack as URGENT to haul — its haul job sorts to the top of every pawn's queue and is
+   *  created even when the stockpile is otherwise at capacity (see jobs/haul.ts + getAvailableJobs). */
+  setDropUrgent: (s, p: { dropId: string; urgent: boolean }) => ({
+    ...s,
+    droppedItems: (s.droppedItems ?? []).map((d) =>
+      d.id === p.dropId ? { ...d, urgent: p.urgent || undefined } : d
+    )
+  }),
   setZoneColorHidden: (s, p: { instanceId: string; hidden: boolean }) =>
     designationService.setInstanceColorHidden(p.instanceId, p.hidden, s),
   setAllZoneColorHidden: (s, p: { hidden: boolean }) =>

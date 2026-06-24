@@ -1040,6 +1040,13 @@
       save: true
     });
   }
+  function toggleDropUrgent(d: DroppedItem) {
+    gameState.command({
+      type: 'setDropUrgent',
+      payload: { dropId: d.id, urgent: !d.urgent },
+      save: true
+    });
+  }
   function buildItemCard(d: DroppedItem, selected = false): SelectedEntityModel {
     const itemDef = ITEMS_DATABASE.find((i) => i.id === d.resourceId);
     const maxDur = itemDef?.maxDurability ?? 100;
@@ -1077,9 +1084,12 @@
         ? 'stored'
         : d.forbidden
           ? 'forbidden — pawns will not haul this'
-          : 'dropped item — awaiting hauler',
-      // Loose stacks get a per-stack haul lockout toggle. Carcasses default to forbidden (see
-      // dropCarcass) so the player allows hauling once it's safe; anything haulable can be forbidden.
+          : d.urgent
+            ? 'urgent — hauled before other work'
+            : 'dropped item — awaiting hauler',
+      // Loose stacks get a per-stack haul lockout toggle (FORBID) + an URGENT toggle that jumps this
+      // stack's haul to the top of every pawn's queue. Carcasses default to forbidden (see dropCarcass)
+      // so the player allows hauling once it's safe; urgency is hidden while forbidden (no haul at all).
       buttons:
         selected && !d.stored
           ? [
@@ -1087,7 +1097,16 @@
                 label: d.forbidden ? 'ALLOW HAUL' : 'FORBID HAUL',
                 active: !d.forbidden,
                 onClick: () => toggleDropForbidden(d)
-              }
+              },
+              ...(!d.forbidden
+                ? [
+                    {
+                      label: d.urgent ? 'NORMAL HAUL' : 'URGENT HAUL',
+                      active: !!d.urgent,
+                      onClick: () => toggleDropUrgent(d)
+                    }
+                  ]
+                : [])
             ]
           : undefined
     } satisfies SelectedEntityModel;

@@ -65,6 +65,12 @@ export interface DroppedItem {
    * per-stack from the item's info card (the `setDropForbidden` command). Undefined = haulable.
    */
   forbidden?: boolean;
+  /**
+   * Urgent-haul flag. When set, this stack's haul job is sorted to the TOP of every pawn's job queue
+   * (ahead of labor-level and distance ordering) and is created even when the stockpile is otherwise
+   * at capacity. Toggled per-stack from the item's info card (`setDropUrgent`). Undefined = normal.
+   */
+  urgent?: boolean;
 }
 
 export interface Job {
@@ -96,6 +102,9 @@ export interface Job {
   workRequired: number; // total work points to complete
   workDone: number; // accumulated progress
   claimedBy: string | null; // pawnId claiming this job; null = open
+  /** Haul urgency, copied from the source `DroppedItem.urgent`. Urgent jobs sort to the top of every
+   *  pawn's available-job list (ahead of labor level + distance). See `getAvailableJobs`. */
+  urgent?: boolean;
 }
 
 /**

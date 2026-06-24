@@ -264,6 +264,10 @@ class JobServiceImpl {
     });
 
     return available.sort((a, b) => {
+      // Urgent-flagged haul jobs jump to the very top of the queue, ahead of labor level + distance.
+      const urgA = a.urgent ? 1 : 0;
+      const urgB = b.urgent ? 1 : 0;
+      if (urgB !== urgA) return urgB - urgA;
       const workKeyA = this._jobTypeToWorkKey(a, gameState);
       const workKeyB = this._jobTypeToWorkKey(b, gameState);
       const labA = laborSettings[workKeyA] ?? 2;
