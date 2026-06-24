@@ -3,8 +3,9 @@
 // ("play the night track", "fade in rain") are made by AudioController.svelte and pushed in here.
 //
 // Channels:
-//   • MUSIC   — one active track at a time; setScene() crossfades to a track from that scene and
-//               advances the scene's playlist on track end. Streamed (html5) to keep memory low.
+//   • MUSIC   — one active track at a time; setScene() switches scene. Normal scene changes wait for
+//               the current track to FINISH (no mid-song cut); only combat interrupts mid-song. Plays
+//               through the scene's shuffled playlist, advancing on track end. Streamed (html5).
 //   • AMBIENT — a pool of looping nature beds; setAmbient() crossfades each bed's gain toward a
 //               target (0 = fade out + pause). Web-Audio (html5:false) so the loops are gapless.
 //
@@ -26,6 +27,11 @@ import {
 
 const MUSIC_FADE_MS = 2200;
 const AMBIENT_FADE_MS = 1600;
+
+// Scenes that replace the current track MID-SONG (fade out + swap). Everything else waits for the
+// playing track to finish before switching, so day↔night↔menu never cut a piece off — only the
+// emergency combat transition (into OR out of a fight) interrupts.
+const EMERGENCY_SCENES: ReadonlySet<MusicScene> = new Set<MusicScene>(['combat']);
 
 interface Bus {
   master: number;
@@ -62,7 +68,8 @@ class AudioServiceImpl {
   private unlocked = false;
 
   // ── Music channel ──
-  private scene: MusicScene | null = null;
+  private scene: MusicScene | null = null; // scene currently playing
+  private desiredScene: MusicScene | null = null; // scene we want next (applied at track end)
   private musicHowl: Howl | null = null;
   private currentTrack: string | null = null;
   private playlist: string[] = [];
@@ -94,9 +101,23 @@ class AudioServiceImpl {
     this.publish();
   }
 
-  /** Switch the music scene, crossfading from the current track. No-op if already on that scene. */
+  /**
+   * Request a music scene. Normal scenes (day/night/menu) are deferred until the current track
+   * finishes — they never cut a piece off mid-play. Combat (an EMERGENCY scene) replaces the track
+   * mid-song, both when a fight starts and when it ends (so the battle theme doesn't linger). With
+   * nothing playing, the requested scene starts at once.
+   */
   setScene(scene: MusicScene): void {
-    if (!this.unlocked || scene === this.scene) return;
+    if (!this.unlocked || scene === this.desiredScene) return;
+    this.desiredScene = scene;
+    const idle = !this.musicHowl;
+    const emergency =
+      EMERGENCY_SCENES.has(scene) || (this.scene != null && EMERGENCY_SCENES.has(this.scene));
+    if ((idle || emergency) && scene !== this.scene) this.switchTo(scene);
+  }
+
+  /** Begin playing `scene` now (shuffled playlist), crossfading from any current track. */
+  private switchTo(scene: MusicScene): void {
     this.scene = scene;
     this.playlist = shuffle(MUSIC[scene] ?? []);
     this.playIdx = 0;
@@ -124,6 +145,7 @@ class AudioServiceImpl {
     this.musicHowl = null;
     this.currentTrack = null;
     this.scene = null;
+    this.desiredScene = null;
     for (const bed of this.beds.values()) bed.howl.unload();
     this.beds.clear();
     this.publish();
@@ -168,7 +190,13 @@ class AudioServiceImpl {
   }
 
   private advanceTrack(from: Howl): void {
-    if (from !== this.musicHowl || !this.scene) return; // scene changed underneath us
+    if (from !== this.musicHowl) return; // a newer track already took over
+    // A scene change was deferred while this track played — honour it now that it has finished.
+    if (this.desiredScene && this.desiredScene !== this.scene) {
+      this.switchTo(this.desiredScene);
+      return;
+    }
+    if (!this.scene) return;
     this.playIdx = (this.playIdx + 1) % this.playlist.length;
     this.startTrack(this.playlist[this.playIdx]);
   }
