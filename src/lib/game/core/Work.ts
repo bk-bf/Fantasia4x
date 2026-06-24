@@ -135,6 +135,10 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Construction',
     description: 'Build structures, roads, and infrastructure',
     color: '#4CAF50',
+    // Tool-free (you can build bare-handed) — a hammer held by the builder speeds it up, never gates.
+    // Same boost-only pattern as digging's spade/shovel: a stone→iron→steel hammer adds its
+    // `toolBoost.speed` (items.jsonc) to the construction work multiplier.
+    boostTools: ['stone_hammer', 'iron_hammer', 'steel_hammer'],
     primaryStat: 'strength',
     secondaryStat: 'intelligence',
     baseEfficiency: 1.0

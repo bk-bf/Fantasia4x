@@ -803,6 +803,24 @@
     "researchRequired": "steel_making"
   },
   {
+    "id"              : "make_iron_hammer",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 2, "branch": 1, "cordage": 1},
+    "outputs"         : {"iron_hammer": 1},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_steel_hammer",
+    "station"         : "anvil",
+    "inputs"          : {"steel_bar": 2, "branch": 1, "cordage": 1},
+    "outputs"         : {"steel_hammer": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
     "id"              : "make_iron_shovel",
     "station"         : "anvil",
     "inputs"          : {"iron_bar": 2, "branch": 1, "cordage": 1},

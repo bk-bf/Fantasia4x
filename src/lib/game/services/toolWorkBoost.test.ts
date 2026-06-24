@@ -69,6 +69,18 @@ describe('tool work boost (additive, items.jsonc toolBoost)', () => {
     expect(sickleF).toBeGreaterThan(bareF);
   });
 
+  it('a hammer boosts construction via boostTools (speed up building, never gates)', () => {
+    const bareC = pawnStatService.getWorkModifiers(base(), 'construction').speed;
+    const stoneC = pawnStatService.getWorkModifiers(carrying('stone_hammer'), 'construction').speed;
+    const ironC = pawnStatService.getWorkModifiers(carrying('iron_hammer'), 'construction').speed;
+    const steelC = pawnStatService.getWorkModifiers(carrying('steel_hammer'), 'construction').speed;
+    expect(stoneC).toBeCloseTo(bareC + 0.75);
+    expect(ironC).toBeCloseTo(bareC + 1.0);
+    expect(steelC).toBeCloseTo(bareC + 1.5);
+    expect(steelC).toBeGreaterThan(ironC);
+    expect(ironC).toBeGreaterThan(stoneC);
+  });
+
   it('no held tool → no boost', () => {
     const bareM = pawnStatService.getWorkModifiers(base(), 'mining');
     // A non-tool carried item does not boost.

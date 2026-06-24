@@ -12,7 +12,12 @@
   import itemsData from '$lib/game/database/items.jsonc';
   import { itemService } from '$lib/game/services/ItemService';
   import { buildingService } from '$lib/game/services/BuildingService';
-  import { getRefuelRequirements, planRefuel } from '$lib/game/services/fuelRules';
+  import {
+    getRefuelRequirements,
+    planRefuel,
+    resolveAllowedFuelIds,
+    getDefaultAllowedFuelIds
+  } from '$lib/game/services/fuelRules';
 
   export let building: PlacedBuilding;
   export let pawns: Pawn[];
@@ -26,9 +31,9 @@
     0,
     Math.min(100, selectedFuelSettings.refuelThresholdPct ?? 30)
   );
-  // Empty = "all allowed" (matches planRefuel, which applies no filter when none is saved) → every
-  // fuel shows checked by default, instead of the old 5-item default that contradicted the behaviour.
-  $: selectedFuelItemFilters = selectedFuelSettings.allowedFuelItemIds ?? [];
+  // Effective burn-list (shares fuelRules' resolution): an untouched building falls back to the
+  // sensible default set (no rope/planks/magic logs/brine); an explicit list — even empty — is honoured.
+  $: allowedFuelSet = resolveAllowedFuelIds(selectedFuelSettings);
   $: selectedRefuelPawnFilters = selectedFuelSettings.allowedRefuelPawnIds ?? [];
 
   // Refuel requirements (source of truth: fuelRules) shown so the player understands WHY a fire won't
@@ -53,25 +58,26 @@
     updateSelectedBuildingFuelSettings({ refuelThresholdPct: Math.max(0, Math.min(100, nextPct)) });
   }
 
+  // Every fuel-filter action writes an EXPLICIT id list (the resolved set with one item flipped), so the
+  // building is from then on under manual control — there's no longer an "empty = all" sentinel to fight.
   function toggleFuelItemFilter(itemId: string) {
-    if (selectedFuelItemFilters.length === 0) {
-      const allExceptClicked = FUEL_ITEMS.map((item) => item.id).filter((id) => id !== itemId);
-      updateSelectedBuildingFuelSettings({ allowedFuelItemIds: allExceptClicked });
-      return;
-    }
-
-    const set = new Set(selectedFuelItemFilters);
+    const set = new Set(allowedFuelSet);
     if (set.has(itemId)) set.delete(itemId);
     else set.add(itemId);
-
-    if (set.size >= FUEL_ITEMS.length) {
-      updateSelectedBuildingFuelSettings({ allowedFuelItemIds: [] });
-      return;
-    }
-
     updateSelectedBuildingFuelSettings({ allowedFuelItemIds: Array.from(set) });
   }
 
+  // Burn-everything (emergency) — explicitly includes the normally-excluded rope/planks/magic/brine.
+  function allowAllFuels() {
+    updateSelectedBuildingFuelSettings({ allowedFuelItemIds: FUEL_ITEMS.map((item) => item.id) });
+  }
+
+  // Reset to the sensible default burn-list (no crafted/valuable fuels).
+  function resetFuelToDefault() {
+    updateSelectedBuildingFuelSettings({ allowedFuelItemIds: [...getDefaultAllowedFuelIds()] });
+  }
+
+  // Burn nothing — empty explicit list. Refuel then reports "can't refuel" until something is re-checked.
   function clearFuelItemFilters() {
     updateSelectedBuildingFuelSettings({ allowedFuelItemIds: [] });
   }
@@ -186,15 +192,18 @@
         <label class="fuel-settings-row fuel-settings-row--compact">
           <input
             type="checkbox"
-            checked={selectedFuelItemFilters.length === 0 ||
-              selectedFuelItemFilters.includes(item.id)}
+            checked={allowedFuelSet.has(item.id)}
             on:change={() => toggleFuelItemFilter(item.id)}
           />
           <span>{item.name}</span>
         </label>
       {/each}
     </div>
-    <button class="fuel-mini-btn" on:click={clearFuelItemFilters}>allow all fuels</button>
+    <div class="fuel-mini-btn-row">
+      <button class="fuel-mini-btn" on:click={resetFuelToDefault}>defaults</button>
+      <button class="fuel-mini-btn" on:click={allowAllFuels}>allow all</button>
+      <button class="fuel-mini-btn" on:click={clearFuelItemFilters}>uncheck all</button>
+    </div>
   </div>
 
   <div class="fuel-settings-block">
@@ -380,6 +389,11 @@
     max-height: 70px;
     overflow-y: auto;
     padding-right: 2px;
+  }
+  .fuel-mini-btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
   }
   .fuel-mini-btn {
     margin-top: 3px;

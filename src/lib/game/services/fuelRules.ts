@@ -2,11 +2,45 @@
 // supply it. Extracted from JobService (P-4): fuel is a building concern, but BuildingService is at
 // the god-module limit, so these live as focused free functions. JobService still owns refuel job
 // generation/completion and calls in here for the rules.
-import type { GameState, PlacedBuilding, Item } from '../core/types';
+import type { GameState, PlacedBuilding, Item, FuelSettings } from '../core/types';
 import itemsData from '../database/items.jsonc';
 import { buildingService } from './BuildingService';
 
 const ITEMS_DB = itemsData as unknown as Item[];
+
+// ── Default fuel selection ─────────────────────────────────────────────────────────────────────────
+// Plenty of items are *technically* burnable (any positive `fuelValue`), but burning crafted/processed
+// goods by default is a footgun — nobody wants their rope, milled planks, magic logs or tanning brine
+// shovelled into a campfire. These are still selectable in the fuel panel as a manual/emergency choice;
+// they're just excluded from the out-of-the-box allow-list. A building whose `fuelSettings` is untouched
+// burns only this sensible default set (logs, firewood, peat, coal, kindling…).
+const DEFAULT_EXCLUDED_FUEL_IDS = new Set(['cordage', 'rope', 'tanning_brine', 'beast_brine']);
+
+/** Whether a fuel item is part of the sensible out-of-the-box burn list (excludes crafted/valuable fuels). */
+export function isDefaultFuel(item: Item): boolean {
+  if ((item.fuelValue ?? 0) <= 0) return false;
+  if (item.category === 'magic_wood') return false; // magic logs — far too valuable to burn by default
+  if (item.id.endsWith('_plank')) return false; // milled lumber is a build material, not kindling
+  return !DEFAULT_EXCLUDED_FUEL_IDS.has(item.id); // cordage / rope / brine — crafted or processed
+}
+
+let _defaultAllowedFuelIds: string[] | null = null;
+/** The default allow-list: every fuel item minus the crafted/valuable ones excluded above. */
+export function getDefaultAllowedFuelIds(): string[] {
+  if (!_defaultAllowedFuelIds)
+    _defaultAllowedFuelIds = ITEMS_DB.filter(isDefaultFuel).map((item) => item.id);
+  return _defaultAllowedFuelIds;
+}
+
+/**
+ * Resolve the effective set of fuel item ids a building may burn. An explicit `allowedFuelItemIds`
+ * (set by the fuel panel, or seeded from a building def like the tanning bucket) is honoured verbatim —
+ * including an empty array, which means "burn nothing". Only when the player has never configured the
+ * filter (`undefined`) do we fall back to the sensible default set.
+ */
+export function resolveAllowedFuelIds(settings?: FuelSettings): Set<string> {
+  return new Set(settings?.allowedFuelItemIds ?? getDefaultAllowedFuelIds());
+}
 
 const DEFAULT_REFUEL_THRESHOLD_RATIO = 0.3;
 const DEFAULT_REFUEL_REQUIRED_FUEL_TYPES = 2;
@@ -75,14 +109,13 @@ export function planRefuel(gs: GameState, building: PlacedBuilding): RefuelPlan 
     consumed[requirements.tinderItemId] = requirements.tinderAmount;
 
   const minHeat = def?.minFuelHeat ?? 0;
-  const allowedFuelIds = new Set(building.fuelSettings?.allowedFuelItemIds ?? []);
-  const hasFuelFilter = allowedFuelIds.size > 0;
+  const allowedFuelIds = resolveAllowedFuelIds(building.fuelSettings);
 
   let currentFuel = startFuel;
   for (const item of ITEMS_DB) {
     if ((item.fuelValue ?? 0) <= 0) continue;
     if ((item.fuelHeat ?? 1) < minHeat) continue; // §2 heat gate — same as the consume step
-    if (hasFuelFilter && !allowedFuelIds.has(item.id)) continue;
+    if (!allowedFuelIds.has(item.id)) continue;
     while (currentFuel < maxFuel) {
       const available = (stockpile[item.id] ?? 0) - (consumed[item.id] ?? 0);
       if (available <= 0) break;
