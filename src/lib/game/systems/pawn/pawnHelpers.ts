@@ -184,11 +184,23 @@ export function markJobUnreachable(pawnId: string, jobId: string, turn: number):
  * tiles walled off) when the pawn is assigned to a restriction zone and is NOT drafted (an explicit player
  * draft/move overrides confinement). The confined grid means A* can never route the pawn out of its zone,
  * and a target outside it simply yields no path (handled as unreachable by the callers).
+ *
+ * Confinement only keeps a pawn IN — it must never trap it OUT: when the pawn's START tile is outside its
+ * allowed area (zone freshly drawn away from it, or it was shoved out), the confined grid would wall off
+ * the whole route home and freeze it. So we fall back to the normal grid until the pawn is back inside;
+ * the work handler's "return to zone" step steers it in, after which confinement re-applies.
  */
-function gridForPawn(pawn: Pawn, gameState: GameState, blocked: Set<string>, sx: number, sy: number) {
+function gridForPawn(
+  pawn: Pawn,
+  gameState: GameState,
+  blocked: Set<string>,
+  sx: number,
+  sy: number
+) {
   if (!pawn.drafted) {
     const allowed = allowedTilesForPawn(gameState, pawn.id);
-    if (allowed) return buildPathfindingGridsConfined(gameState.worldMap, blocked, allowed, sx, sy);
+    if (allowed && allowed.has(`${sx},${sy}`))
+      return buildPathfindingGridsConfined(gameState.worldMap, blocked, allowed, sx, sy);
   }
   return buildSharedSoftBlockedGrid(gameState.worldMap, blocked);
 }
@@ -338,7 +350,13 @@ export function tryWanderStep(pawn: Pawn, gameState: GameState): GameState | nul
   if (rng.random() >= WANDER_MOVES_PER_SECOND * SECONDS_PER_TICK) return null;
   // A confined (non-drafted) pawn only mills within its restriction zone.
   const allowed = pawn.drafted ? null : allowedTilesForPawn(gameState, pawn.id);
-  const tile = randomWalkableNeighbour(gameState, pawn.position.x, pawn.position.y, pawn.id, allowed);
+  const tile = randomWalkableNeighbour(
+    gameState,
+    pawn.position.x,
+    pawn.position.y,
+    pawn.id,
+    allowed
+  );
   if (!tile) return null;
   return pawnService.assignPath(pawn.id, [tile], gameState);
 }

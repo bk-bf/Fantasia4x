@@ -11,7 +11,8 @@ import { computeTileLightLevel } from '../../../services/EnvironmentService';
 import { dampenLightByNightVision, getNightVision } from '../../../core/vision';
 import { PAWN_STATE } from '../pawnStates';
 import { isAdjacent } from '../pawnQueries';
-import { allowedTilesForPawn } from '../zoneConfine';
+import { allowedTilesForPawn, nearestAllowedTile } from '../zoneConfine';
+import { assignDraftMovePath } from '../../../services/draftMovePath';
 import {
   JOB_QUEUE_SIZE,
   transitionTo,
@@ -147,6 +148,18 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   // its allowed area, so it never grabs out-of-zone work and then churns failing to path there. Built
   // once here (only for confined pawns) so the isReachable predicate is O(1) per candidate.
   const allowedZone = pawn.drafted ? null : allowedTilesForPawn(gameState, pawn.id);
+
+  // If confined and currently OUTSIDE the allowed area (zone freshly drawn away from the pawn), march it
+  // back IN before considering any work — drawing a restriction zone should walk the pawn there, not
+  // freeze it. assignDraftMovePath uses the normal (unconfined) grid so the route home isn't walled off;
+  // once the pawn re-enters the zone, confinement re-applies. Skip while it's already striding home.
+  if (allowedZone && pawn.position && !allowedZone.has(`${pawn.position.x},${pawn.position.y}`)) {
+    if (pawn.isMoving && (pawn.path?.length ?? 0) > 0) return gameState;
+    const home = nearestAllowedTile(allowedZone, pawn.position.x, pawn.position.y);
+    if (home) return assignDraftMovePath(gameState, pawn, home.x, home.y);
+    return gameState; // no reachable allowed tile — stay put rather than churn
+  }
+
   const jobsById = allowedZone ? new Map(gameState.jobs.map((j) => [j.id, j])) : null;
   const jobInZone = (id: string): boolean => {
     if (!allowedZone || !jobsById) return true;

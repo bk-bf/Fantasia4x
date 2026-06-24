@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { GameState, WorldTile, ZoneInstance } from '../../core/types';
-import { allowedTilesForPawn } from './zoneConfine';
+import { allowedTilesForPawn, nearestAllowedTile } from './zoneConfine';
 import { buildPathfindingGridsConfined } from '../../services/PathfinderService';
 
 // Minimal GameState slice — allowedTilesForPawn only reads zoneInstances + designationZoneId. New object
@@ -47,6 +47,22 @@ describe('zone confinement — allowedTilesForPawn', () => {
   it('treats an assigned-but-unpainted zone as no confinement (null), not a frozen empty area', () => {
     const s = stateWith([restrictZone('z1', ['p1'])], {}); // assigned, but zero tiles painted
     expect(allowedTilesForPawn(s, 'p1')).toBeNull();
+  });
+});
+
+describe('zone confinement — nearestAllowedTile (the walk-home target for an out-of-zone pawn)', () => {
+  it('returns null for an empty allowed set', () => {
+    expect(nearestAllowedTile(new Set(), 0, 0)).toBeNull();
+  });
+
+  it('picks the closest allowed tile to the pawn', () => {
+    const allowed = new Set(['10,10', '2,1', '40,40']);
+    expect(nearestAllowedTile(allowed, 0, 0)).toEqual({ x: 2, y: 1 });
+  });
+
+  it('returns the pawn’s own tile when it is already in the zone', () => {
+    const allowed = new Set(['5,5', '6,6']);
+    expect(nearestAllowedTile(allowed, 5, 5)).toEqual({ x: 5, y: 5 });
   });
 });
 

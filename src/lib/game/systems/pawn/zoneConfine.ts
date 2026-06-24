@@ -49,3 +49,26 @@ export function allowedTilesForPawn(state: GameState, pawnId: string): Set<strin
   _byPawn.set(pawnId, result);
   return result;
 }
+
+/** Nearest "x,y" tile in `allowed` to (x,y), by squared distance — the tile a pawn standing OUTSIDE its
+ *  restriction zone walks back to (so drawing a zone away from a pawn marches it in, rather than freezing
+ *  it). Returns null only for an empty set. O(|allowed|), but called only for the rare out-of-zone pawn. */
+export function nearestAllowedTile(
+  allowed: Set<string>,
+  x: number,
+  y: number
+): { x: number; y: number } | null {
+  let best: { x: number; y: number } | null = null;
+  let bestD = Infinity;
+  for (const key of allowed) {
+    const c = key.indexOf(',');
+    const tx = +key.slice(0, c);
+    const ty = +key.slice(c + 1);
+    const d = (tx - x) * (tx - x) + (ty - y) * (ty - y);
+    if (d < bestD) {
+      bestD = d;
+      best = { x: tx, y: ty };
+    }
+  }
+  return best;
+}
