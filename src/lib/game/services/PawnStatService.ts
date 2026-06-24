@@ -70,12 +70,13 @@ for (const item of ITEMS_DB) {
 function heldToolBoost(
   entity: Pawn | Mob,
   workType: string
-): { speed: number; yield: number } | null {
+): { speed: number; yield: number; itemId?: string } | null {
   const tools = CATEGORY_TOOLS[workType];
   if (!tools) return null;
   let speed = 0;
   let yieldB = 0;
   let found = false;
+  let speedItemId: string | undefined; // the tool driving the (max) speed boost — for UI itemisation
   const consider = (inst: ItemInstance) => {
     if (!tools.has(inst.itemId)) return;
     const b = TOOL_BOOST[inst.itemId];
@@ -84,14 +85,17 @@ function heldToolBoost(
     // §Q: a higher-quality tool gives a bigger work boost (and, separately, wears slower).
     // §I: a Famed tool explodes that boost ×2–5 on top of its tier.
     const q = combinedQualityMultiplier(inst.quality, inst.famedStatMult);
-    if (b.speed * q > speed) speed = b.speed * q;
+    if (b.speed * q > speed) {
+      speed = b.speed * q;
+      speedItemId = inst.itemId;
+    }
     if (b.yield * q > yieldB) yieldB = b.yield * q;
   };
   const eq = (entity as Pawn).equipment;
   if (eq) for (const inst of Object.values(eq)) if (inst) consider(inst);
   const carried = (entity as Pawn).inventory?.instances;
   if (carried) for (const inst of carried) consider(inst);
-  return found ? { speed, yield: yieldB } : null;
+  return found ? { speed, yield: yieldB, itemId: speedItemId } : null;
 }
 
 // ── Formula evaluator: substitutes stat tokens + weight/height + capacities ──
@@ -472,6 +476,13 @@ export interface PawnStatService {
     workType: string,
     lightMultiplier?: number
   ): { speed: number; yield: number | null; quality: number | null };
+  /** The held tool (equipped or carried) contributing the work boost for `workType`, with its additive
+   *  speed/yield amounts (already quality-scaled) — for itemising the bonus in the work tooltip. Null
+   *  when the pawn holds no boosting tool for that category. */
+  heldToolFor(
+    pawn: Pawn | Mob,
+    workType: string
+  ): { itemId: string; speed: number; yield: number } | null;
   /** Check if a stat ID exists in stats.jsonc. */
   hasStat(statId: string): boolean;
 }
@@ -574,6 +585,15 @@ export class PawnStatServiceImpl implements PawnStatService {
       yield: axis('yield', 'workYield'),
       quality: axis('quality', 'workQuality')
     };
+  }
+
+  heldToolFor(
+    pawn: Pawn | Mob,
+    workType: string
+  ): { itemId: string; speed: number; yield: number } | null {
+    const b = heldToolBoost(pawn, workType);
+    if (!b || !b.itemId || (b.speed === 0 && b.yield === 0)) return null;
+    return { itemId: b.itemId, speed: b.speed, yield: b.yield };
   }
 
   hasStat(statId: string): boolean {

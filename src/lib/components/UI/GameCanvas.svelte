@@ -36,7 +36,8 @@
     FuelSettings,
     Item,
     Mob,
-    ZoneInstance
+    ZoneInstance,
+    EquipmentSlot
   } from '$lib/game/core/types.js';
   import type { GameGrid } from '$lib/webgl/game-grid.js';
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
@@ -293,6 +294,10 @@
   // Follow-camera smoothing constant (seconds). Slightly looser than pawn motion
   // so the camera trails gently rather than rigidly locking to the pawn.
   const FOLLOW_SMOOTH_TAU = 0.12;
+  // Where the followed entity sits vertically in the viewport (fraction from the top). Slightly above
+  // centre (just under 0.5) — keeps it near the middle while leaving a little extra room below for the
+  // selected-entity HUD card.
+  const FOLLOW_VERTICAL = 0.42;
 
   // World-effect overlay positions (Zzz, progress bars, campfire sparks) are computed
   // in the rAF frame() loop via updateWorldEffectOverlays(). Using $: reactive blocks
@@ -2970,7 +2975,7 @@
     if (!rp) return;
     const visW = (container?.clientWidth ?? 800) / tileWidth;
     const visH = (container?.clientHeight ?? 600) / tileHeight;
-    const [targetX, targetY] = clampView(rp.x - visW / 2, rp.y - visH * 0.25);
+    const [targetX, targetY] = clampView(rp.x - visW / 2, rp.y - visH * FOLLOW_VERTICAL);
     // Exponential smoothing keeps the slide framerate-independent; snap when very
     // close to avoid an endless asymptote (and to settle exactly on a teleport).
     const alpha = dt > 0 ? 1 - Math.exp(-dt / FOLLOW_SMOOTH_TAU) : 1;
@@ -2989,7 +2994,7 @@
     if (!rp) return;
     const visW = (container?.clientWidth ?? 800) / tileWidth;
     const visH = (container?.clientHeight ?? 600) / tileHeight;
-    const [targetX, targetY] = clampView(rp.x - visW / 2, rp.y - visH * 0.25);
+    const [targetX, targetY] = clampView(rp.x - visW / 2, rp.y - visH * FOLLOW_VERTICAL);
     const alpha = dt > 0 ? 1 - Math.exp(-dt / FOLLOW_SMOOTH_TAU) : 1;
     const dx = targetX - viewX;
     const dy = targetY - viewY;
@@ -4265,17 +4270,31 @@
           const name = itemService.getItemDisplayName(d);
           const slot = getEquipmentSlot(it);
           if (slot) {
-            // Equippable gear → ORDER the drafted pawn to walk to the item and equip it (handled by
-            // the 'equip' draft target in _processDraftOrders), not an instant teleport-equip.
-            entries.push({
-              label: `Equip ${name} → ${slotLabel(slot)}`,
-              run: () =>
-                gameState.command({
-                  type: 'setPawnDraftTarget',
-                  payload: { pawnId, target: { type: 'equip', dropId: d.id, x: tileX, y: tileY } },
-                  save: true
-                })
-            });
+            // Equippable gear → ORDER the drafted pawn to walk to the item and equip it (handled by the
+            // 'equip' draft target in _processDraftOrders), not an instant teleport-equip. `target` picks
+            // the destination: a specific equipment slot, 'inventory' (carry), or undefined (auto-resolve).
+            const equipOrder = (target?: EquipmentSlot | 'inventory') =>
+              gameState.command({
+                type: 'setPawnDraftTarget',
+                payload: { pawnId, target: { type: 'equip', dropId: d.id, x: tileX, y: tileY, slot: target } },
+                save: true
+              });
+            if (it.type === 'weapon') {
+              // A one-handed weapon may go in EITHER hand; a two-hander only in the main hand.
+              entries.push({ label: `Equip ${name} → Main Hand`, run: () => equipOrder('mainHand') });
+              if (!it.weaponProperties?.twoHanded) {
+                entries.push({ label: `Equip ${name} → Off Hand`, run: () => equipOrder('offHand') });
+              }
+            } else if (it.type === 'tool') {
+              // A tool can be WIELDED in hand, or CARRIED in the pack so a weapon can stay in hand —
+              // a carried tool still grants its work boost (heldToolBoost reads inventory too).
+              entries.push({ label: `Equip ${name} → Main Hand`, run: () => equipOrder('mainHand') });
+              entries.push({ label: `Carry ${name} (inventory)`, run: () => equipOrder('inventory') });
+            } else {
+              // Armour / shields / rings → their canonical slot (undefined = auto-resolve, so a 2nd
+              // ring still pairs into the free ring slot instead of swapping the first).
+              entries.push({ label: `Equip ${name} → ${slotLabel(slot)}`, run: () => equipOrder() });
+            }
             continue;
           }
           // Non-equippable → three pick-up tiers into the pawn's inventory.

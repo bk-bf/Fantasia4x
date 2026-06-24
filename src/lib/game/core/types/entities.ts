@@ -3,7 +3,7 @@
 
 import type { EntityStats } from './race';
 import type { EntityNeeds, EntityCondition, Injury, LimbState } from './health';
-import type { PawnInventory, PawnEquipment } from './items';
+import type { PawnInventory, PawnEquipment, EquipmentSlot } from './items';
 import type { RacialTrait } from './race';
 
 /** FSM state for a live entity. Hostile + neutral share one machine. */
@@ -285,7 +285,9 @@ export interface Pawn {
   /** Current draft order: move to tile, attack target, haul a loose stack to a stockpile, or fetch +
    *  equip a ground item. For `haul`, x/y is the SOURCE tile; the pawn shuttles its carry-budget-worth
    *  to the nearest stockpile and back until the loose stack on that tile is cleared (multi-trip), then
-   *  clears. For `equip`, the pawn walks to the drop's tile and equips one unit on arrival (then clears). */
+   *  clears. For `equip`, the pawn walks to the drop's tile and, on arrival, either equips one unit
+   *  into `slot` (or its auto-resolved slot when omitted) or — when `slot` is `'inventory'` — carries
+   *  one unit in its pack (e.g. a tool kept in inventory so a weapon can stay in hand). Then clears. */
   draftTarget?:
     | { type: 'move'; x: number; y: number }
     | {
@@ -297,7 +299,7 @@ export interface Pawn {
         mode?: 'ranged' | 'melee';
       }
     | { type: 'haul'; x: number; y: number }
-    | { type: 'equip'; dropId: string; x: number; y: number };
+    | { type: 'equip'; dropId: string; x: number; y: number; slot?: EquipmentSlot | 'inventory' };
 
   // Phase 4/5: State machine primary state
   currentState?: string; // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Fighting' | 'Fleeing' | 'Dead'

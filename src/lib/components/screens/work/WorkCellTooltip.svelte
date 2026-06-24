@@ -2,6 +2,8 @@
   import type { Pawn, WorkCategory } from '$lib/game/core/types';
   import { getEfficiencyColor } from '$lib/utils/pawnUtils';
   import { getActiveConditionViews } from '$lib/utils/conditionInfo';
+  import { pawnStatService } from '$lib/game/services/PawnStatService';
+  import { itemService } from '$lib/game/services/ItemService';
   import {
     LVL_NAMES,
     LABOR_COLORS,
@@ -74,6 +76,19 @@
     return out;
   });
 
+  // Held tool boost (equipped OR carried) for this category — its additive speed/yield is already
+  // folded into mods.speed/yield above; this itemises WHICH tool and by how much, so the player can
+  // confirm the bonus is applying (and that a carried tool counts, not just an equipped one).
+  let toolMod = $derived.by(() => {
+    const t = pawnStatService.heldToolFor(pawn, wc.id);
+    if (!t) return null;
+    return {
+      name: itemService.getItemById(t.itemId)?.name ?? t.itemId,
+      speed: t.speed,
+      yield: t.yield
+    };
+  });
+
   // Active conditions that drag work throughput (hungry, dehydration, infection…). Their
   // `workEfficiency` multiplier already folds into `mods.speed`; this just itemises WHY.
   let condMods = $derived.by(() => {
@@ -140,8 +155,16 @@
     <span>{skill}</span>
   </div>
 
-  {#if traitMods.length > 0 || condMods.length > 0}
+  {#if toolMod || traitMods.length > 0 || condMods.length > 0}
     <div class="tip-sep">MODIFIERS</div>
+    {#if toolMod}
+      <div class="tip-mod">
+        <span class="tip-mod-name" style="color:#ca8">{toolMod.name} (tool)</span>
+        <span class="tip-mod-val"
+          >+{toolMod.speed.toFixed(2)} spd{#if toolMod.yield > 0}, +{toolMod.yield.toFixed(2)} yld{/if}</span
+        >
+      </div>
+    {/if}
     {#each traitMods as m}
       <div class="tip-mod">
         <span class="tip-mod-name" style="color:{m.pct >= 0 ? '#6bc' : '#e08'}">{m.name}</span>

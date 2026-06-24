@@ -126,7 +126,12 @@ export function resolveEquipSlot(pawn: Pawn, item: Item): EquipmentSlot | null {
  * slot is dropped at the pawn. This is the SINGLE source of truth for equip-from-ground, shared by the
  * instant `equipFromTile` command and the drafted "walk over, then equip" order (applied on arrival).
  */
-export function equipDropToPawn(state: GameState, pawnId: string, dropId: string): GameState {
+export function equipDropToPawn(
+  state: GameState,
+  pawnId: string,
+  dropId: string,
+  targetSlot?: EquipmentSlot
+): GameState {
   const drop = (state.droppedItems ?? []).find((d) => d.id === dropId);
   if (!drop) return state;
   const item = itemService.getItemById(drop.resourceId);
@@ -134,8 +139,9 @@ export function equipDropToPawn(state: GameState, pawnId: string, dropId: string
   const pawnIdx = state.pawns.findIndex((pw) => pw.id === pawnId);
   if (pawnIdx < 0) return state;
   const pawn = state.pawns[pawnIdx];
-  // Occupancy-aware: a 2nd ring goes to the free `ring2` slot instead of swapping the first.
-  const slot = resolveEquipSlot(pawn, item);
+  // An explicit `targetSlot` (e.g. the player chose Off Hand) wins; otherwise auto-resolve — which is
+  // occupancy-aware, sending a 2nd ring to the free `ring2` slot instead of swapping the first.
+  const slot = targetSlot ?? resolveEquipSlot(pawn, item);
   if (!slot) return state;
   const instance: ItemInstance = drop.instance ?? {
     instanceId: `${item.id}-${pawnId}-${Date.now()}`,

@@ -820,7 +820,12 @@ export class GameEngineImpl implements GameEngine {
           clearEquip(); // the item is gone (taken / decayed) — abandon the order
         } else if (pawn.position.x === drop.x && pawn.position.y === drop.y) {
           gs = pawnService.assignPath(pawn.id, [], gs);
-          gs = equipDropToPawn(gs, pawn.id, target.dropId);
+          // `slot === 'inventory'` carries one unit in the pack (a tool kept off the hand); an explicit
+          // equipment slot (or auto-resolve when omitted) wears/wields it.
+          gs =
+            target.slot === 'inventory'
+              ? pickUpFromTile(gs, pawn.id, drop.x, drop.y, { dropId: target.dropId, maxQty: 1 })
+              : equipDropToPawn(gs, pawn.id, target.dropId, target.slot);
           gs = {
             ...gs,
             pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, draftTarget: undefined } : p))
