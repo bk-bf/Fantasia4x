@@ -80,6 +80,68 @@ export function trackLabel(url: string | null): string {
   return TRACK_LABELS[url] ?? url.split('/').pop() ?? url;
 }
 
+// ── Creature SFX ────────────────────────────────────────────────────────────────────────────────
+// Per-creature vocalisations, keyed by a small ARCHETYPE id (a `creatures.jsonc` "audio" value). Many
+// creatures share an archetype (every canine → "canine"). These play as INTERMITTENT ONE-SHOTS whose
+// volume + trigger rate scale with on-screen audibility (zoom + viewport proximity + count) —
+// computed in AudioController, played by audioService.playSfx. Each archetype lists 1+ clips; a random
+// one fires per trigger. Files live in static/audio/creatures/<id>/N.ogg.
+
+export type CreatureSoundId =
+  | 'fowl'
+  | 'raptor'
+  | 'canine'
+  | 'beast'
+  | 'boar'
+  | 'grunt'
+  | 'goat'
+  | 'critter'
+  | 'frog'
+  | 'insect'
+  | 'reptile'
+  | 'goblinoid'
+  | 'wraith';
+
+const clips = (id: string, n: number): string[] =>
+  Array.from({ length: n }, (_, i) => `/audio/creatures/${id}/${i + 1}.ogg`);
+
+export const CREATURE_SFX: Record<CreatureSoundId, string[]> = {
+  fowl: clips('fowl', 1),
+  raptor: clips('raptor', 2),
+  canine: clips('canine', 3),
+  beast: clips('beast', 3),
+  boar: clips('boar', 3),
+  grunt: clips('grunt', 5),
+  goat: clips('goat', 1),
+  critter: clips('critter', 4),
+  frog: clips('frog', 2),
+  insect: clips('insect', 4),
+  reptile: clips('reptile', 3),
+  goblinoid: clips('goblinoid', 6),
+  wraith: clips('wraith', 5)
+};
+
+export const CREATURE_SOUND_LABELS: Record<CreatureSoundId, string> = {
+  fowl: 'Fowl',
+  raptor: 'Raptor',
+  canine: 'Canine',
+  beast: 'Beast',
+  boar: 'Boar',
+  grunt: 'Game',
+  goat: 'Goat',
+  critter: 'Critter',
+  frog: 'Frog',
+  insect: 'Insect',
+  reptile: 'Reptile',
+  goblinoid: 'Goblinoid',
+  wraith: 'Wraith'
+};
+
+/** Clips for an archetype id, or [] if the id is unknown. */
+export function creatureClips(id: string | undefined): string[] {
+  return id && id in CREATURE_SFX ? CREATURE_SFX[id as CreatureSoundId] : [];
+}
+
 // Weather-type → bed grouping. Mirrors the overlay/windStrength semantics in weather.jsonc so the
 // audio bed matches what the player sees: precipitation overlays → rain bed; windy/gale/blizzard →
 // wind bed. (Kept as plain sets so a new weather id simply falls through to the calm default.)

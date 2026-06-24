@@ -45,6 +45,7 @@ export interface NowPlaying {
   scene: MusicScene | null;
   track: string | null; // current music file url (null = silence)
   ambient: { bed: AmbientBed; gain: number }[]; // active beds with their target gain (0–1)
+  creatures: { label: string; level: number }[]; // audible creature archetypes + their 0–1 audibility
   volumes: Bus;
 }
 
@@ -54,6 +55,7 @@ export const nowPlaying = writable<NowPlaying>({
   scene: null,
   track: null,
   ambient: [],
+  creatures: [],
   volumes: { master: 0.7, music: 0.7, sfx: 0.8 }
 });
 
@@ -77,6 +79,10 @@ class AudioServiceImpl {
 
   // ── Ambient channel ──
   private beds = new Map<AmbientBed, BedState>();
+
+  // ── Creature SFX (intermittent one-shots) ──
+  private sfxHowls = new Map<string, Howl>(); // cached per clip url
+  private creatureLevels: { label: string; level: number }[] = []; // for the debug panel only
 
   /** Resume the AudioContext on a user gesture and apply the current master volume. Idempotent. */
   unlock(): void {
@@ -124,6 +130,27 @@ class AudioServiceImpl {
     this.startTrack(this.playlist[0]);
   }
 
+  /**
+   * Fire a creature vocalisation one-shot at `volume` (0–1, before the sfx bus). Cheap and
+   * overlap-safe (Howler allocates a fresh node per play), so several creatures can call at once.
+   */
+  playSfx(url: string, volume: number): void {
+    if (!this.unlocked || volume <= 0) return;
+    let howl = this.sfxHowls.get(url);
+    if (!howl) {
+      howl = new Howl({ src: [url], volume: 1, preload: true });
+      this.sfxHowls.set(url, howl);
+    }
+    const id = howl.play();
+    howl.volume(Math.max(0, Math.min(1, volume)) * this.bus.sfx, id);
+  }
+
+  /** Publish the current creature audibility levels (debug panel only — playback is via playSfx). */
+  setCreatureLevels(levels: { label: string; level: number }[]): void {
+    this.creatureLevels = levels;
+    if (this.unlocked) this.publish();
+  }
+
   /** Crossfade the ambient bed mix toward the given target gains. Beds omitted fade to silence. */
   setAmbient(layers: AmbientLayers): void {
     if (!this.unlocked) return;
@@ -148,6 +175,9 @@ class AudioServiceImpl {
     this.desiredScene = null;
     for (const bed of this.beds.values()) bed.howl.unload();
     this.beds.clear();
+    for (const howl of this.sfxHowls.values()) howl.unload();
+    this.sfxHowls.clear();
+    this.creatureLevels = [];
     this.publish();
   }
 
@@ -163,6 +193,7 @@ class AudioServiceImpl {
       scene: this.scene,
       track: this.currentTrack,
       ambient,
+      creatures: this.creatureLevels,
       volumes: { ...this.bus }
     });
   }

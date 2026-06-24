@@ -26,7 +26,7 @@
     currentWeather,
     worldGenRev
   } from '$lib/stores/gameState.js';
-  import { cameraTileSize, cameraZoomRange } from '$lib/stores/cameraView.js';
+  import { cameraTileSize, cameraZoomRange, cameraViewport } from '$lib/stores/cameraView.js';
   import type {
     WorldTile,
     Pawn,
@@ -158,6 +158,14 @@
   // Publish the zoom RANGE too: the floor (fitTileSize) shrinks as the map grows, so the weather
   // overlay scales density/size against the REAL per-map range rather than a hardcoded tile span.
   $: cameraZoomRange.set({ min: fitTileSize, max: MAX_TILE_W });
+  // Publish the visible tile rectangle (top-left tile + tiles across) for the spatial creature-SFX
+  // layer. Re-runs on pan (viewX/viewY) and zoom (tileWidth/tileHeight); read on a throttled tick.
+  $: cameraViewport.set({
+    x: viewX,
+    y: viewY,
+    w: (container?.clientWidth ?? 0) / tileWidth,
+    h: (container?.clientHeight ?? 0) / tileHeight
+  });
 
   function computeFitTileSize(canvasW: number, canvasH: number): number {
     const mapW = worldMap.length > 0 ? worldMap[0].length : MAP_W;

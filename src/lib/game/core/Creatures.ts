@@ -196,6 +196,12 @@ export interface CreatureDefinition {
   lairRange?: number;
   hungerRate?: number;
   foodOverflow?: number;
+  /**
+   * Ambient vocalisation ARCHETYPE id (e.g. "fowl", "canine", "beast") — drives the spatial creature
+   * SFX layer (AudioController + audio/manifest.ts `CREATURE_SFX`). Many creatures share an archetype.
+   * Backend reference only (never shown in UI). Omitted = the creature is silent.
+   */
+  audio?: string;
 }
 
 type RawCreature = Record<string, unknown>;
@@ -271,7 +277,8 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     lair: (raw.lair as string | undefined) ?? undefined,
     lairRange: (raw.lairRange as number | undefined) ?? undefined,
     hungerRate: (raw.hungerRate as number | undefined) ?? undefined,
-    foodOverflow: (raw.foodOverflow as number | undefined) ?? undefined
+    foodOverflow: (raw.foodOverflow as number | undefined) ?? undefined,
+    audio: (raw.audio as string | undefined) ?? undefined
   };
 }
 

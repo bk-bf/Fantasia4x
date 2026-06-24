@@ -42,6 +42,23 @@
       {/each}
     {/if}
 
+    <!-- Creature SFX (viewport/zoom audibility) -->
+    <div class="np-group-label">Creatures (audibility)</div>
+    {#if $nowPlaying.creatures.length === 0}
+      <p class="np-none">— none in earshot —</p>
+    {:else}
+      {#each $nowPlaying.creatures as c (c.label)}
+        <StatBar
+          label={c.label}
+          value={c.level * 100}
+          max={100}
+          valueText={PCT(c.level)}
+          color="var(--accent)"
+          width={10}
+        />
+      {/each}
+    {/if}
+
     <!-- Volume buses -->
     <div class="np-group-label">Volume</div>
     <StatBar

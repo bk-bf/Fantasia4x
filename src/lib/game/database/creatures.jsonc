@@ -34,6 +34,7 @@
     // ── Hostiles ────────────────────────────────────────────────────────────
     {
         "id"            : "wolf",
+        "audio"            : "canine",
         "name"          : "Wolf",
         "threatLevel"   : 6,    // DPS 8.1 | effHP 47 | skirmisher
         "entityClass"   : "animal",
@@ -63,6 +64,7 @@
     },
     {
         "id": "bear",  // add anchor to beehives for bears, so they hang around and protect beehives from pawns
+        "audio": "beast",
         "name": "Bear",
         "threatLevel": 18,    // DPS 15.0 | effHP 226 | bruiser
         "entityClass": "animal",
@@ -94,6 +96,7 @@
     },
     {
         "id"            : "goblin",
+        "audio"            : "goblinoid",
         "name"          : "Goblin",
         "threatLevel"   : 2,    // DPS 1.8 | effHP 37 | harmless (fists+kick waste STR 20 — see notes)
         "entityClass"   : "mob",
@@ -123,6 +126,7 @@
     },
     {
         "id"            : "giant_rat",
+        "audio"            : "critter",
         "name"          : "Giant Rat",
         "threatLevel"   : 2,    // DPS 3.8 | effHP 20 | skirmisher
         "entityClass"   : "animal",
@@ -145,6 +149,7 @@
     },
     {
         "id"              : "shadow_wraith",
+        "audio"              : "wraith",
         "name"            : "Shadow Wraith",
         "threatLevel"     : 7,    // DPS 12.6 | effHP 50 | glass-cannon (no armor; fire melts it — see notes)
         "entityClass"     : "mob",
@@ -176,6 +181,7 @@
     // ── Neutral ─────────────────────────────────────────────────────────
     {
         "id"            : "deer",
+        "audio"            : "grunt",
         "name"          : "Deer",
         "threatLevel"   : 2,    // DPS 1.8 | effHP 38 | harmless
         "entityClass"   : "animal",
@@ -200,6 +206,7 @@
     },
     {
         "id"            : "rabbit",
+        "audio"            : "critter",
         "name"          : "Rabbit",
         "threatLevel"   : 1,    // DPS 1.1 | effHP 10 | harmless
         "entityClass"   : "animal",
@@ -222,6 +229,7 @@
     },
     {
         "id"                : "boar",
+        "audio"                : "boar",
         "name"              : "Wild Boar",
         "threatLevel"       : 10,    // DPS 13.7 | effHP 75 | glass-cannon
         "entityClass"       : "animal",
@@ -250,6 +258,7 @@
     },
     {
         "id"            : "elk",
+        "audio"            : "grunt",
         "name"          : "Elk",
         "threatLevel"   : 7,    // DPS 6.9 | effHP 86 | skirmisher
         "entityClass"   : "animal",
@@ -277,6 +286,7 @@
     },
     {
         "id": "mountain_goat",
+        "audio": "goat",
         "name": "Mountain Goat",
         "threatLevel": 2,    // DPS 2.0 | effHP 25 | harmless
         "entityClass": "animal",
@@ -306,6 +316,7 @@
     },
     {
         "id"            : "wild_chicken",
+        "audio"            : "fowl",
         "name"          : "Wild Chicken",
         "threatLevel"   : 1,    // DPS 0.2 | effHP 5 | harmless
         "entityClass"   : "animal",
@@ -339,6 +350,7 @@
     // ── Grazers & game (neutral/passive prey) ────────────────────────────────────
     {
         "id"                : "aurochs",
+        "audio"                : "beast",
         "name"              : "Aurochs",
         "threatLevel"       : 22,    // DPS 18.1 | effHP 260 | bruiser (pack 2-5 = scariest herd below mammoth)
         "entityClass"       : "animal",
@@ -366,6 +378,7 @@
     },
     {
         "id"                : "woolly_mammoth",
+        "audio"                : "beast",
         "name"              : "Woolly Mammoth",
         "threatLevel"       : 58,    // DPS 33.3 | effHP 814 | bruiser (bodyScale 3.5 double-dips dmg+pool — see notes)
         "entityClass"       : "animal",
@@ -394,6 +407,7 @@
     },
     {
         "id"            : "hippogriff",
+        "audio"            : "raptor",
         "name"          : "Hippogriff",
         "threatLevel"   : 9,    // DPS 10.1 | effHP 95 | skirmisher
         "entityClass"   : "animal",
@@ -424,6 +438,7 @@
     },
     {
         "id"            : "hoarfowl",
+        "audio"            : "fowl",
         "name"          : "Hoarfowl",
         "threatLevel"   : 2,    // DPS 1.7 | effHP 40 | harmless
         "entityClass"   : "animal",
@@ -449,6 +464,7 @@
     },
     {
         "id"            : "quillback",
+        "audio"            : "critter",
         "name"          : "Quillback",
         "threatLevel"   : 6,    // DPS 4.1 | effHP 96 | tank (armor 50 sponge, barely hurts you)
         "entityClass"   : "animal",
@@ -473,6 +489,7 @@
     // ── Predators (neutral/aggressive) ───────────────────────────────────────────
     {
         "id"            : "worg",
+        "audio"            : "canine",
         "name"          : "Worg",
         "threatLevel"   : 9,    // DPS 12.6 | effHP 74 | skirmisher
         "entityClass"   : "animal",
@@ -500,6 +517,7 @@
     },
     {
         "id"            : "jackal",
+        "audio"            : "canine",
         "name"          : "Jackal",
         "threatLevel"   : 4,    // DPS 6.5 | effHP 35 | glass-cannon
         "entityClass"   : "animal",
@@ -527,6 +545,7 @@
     },
     {
         "id"            : "owlbear",
+        "audio"            : "beast",
         "name"          : "Owlbear",
         "threatLevel"   : 22,    // DPS 21.3 | effHP 217 | bruiser
         "entityClass"   : "animal",
@@ -555,6 +574,7 @@
     },
     {
         "id"            : "sabretooth",
+        "audio"            : "beast",
         "name"          : "Sabretooth Cat",
         "threatLevel"   : 13,    // DPS 19.9 | effHP 96 | glass-cannon (highest DPS short of mammoth)
         "entityClass"   : "animal",
@@ -582,6 +602,7 @@
     },
     {
         "id"            : "mire_crocodile",
+        "audio"            : "reptile",
         "name"          : "Mire Crocodile",
         "threatLevel"   : 22,    // DPS 19.8 | effHP 238 | bruiser
         "entityClass"   : "animal",
@@ -610,6 +631,7 @@
     },
     {
         "id"            : "marsh_viper",
+        "audio"            : "reptile",
         "name"          : "Marsh Viper",
         "threatLevel"   : 3,    // DPS 3.8 | effHP 25 | skirmisher (envenom on-hit raises real danger)
         "entityClass"   : "animal",
@@ -638,6 +660,7 @@
     // ── Swamp & monstrous (low-intelligence threats) ─────────────────────────────
     {
         "id"            : "stirge",
+        "audio"            : "insect",
         "name"          : "Stirge",
         "threatLevel"   : 1,    // DPS 1.3 | effHP 15 | harmless (blood-drain swarm, dangerous in numbers)
         "entityClass"   : "animal",
@@ -662,6 +685,7 @@
     },
     {
         "id"            : "grimeling",
+        "audio"            : "goblinoid",
         "name"          : "Grimeling",
         "threatLevel"   : 5,    // DPS 4.8 | effHP 58 | skirmisher
         "entityClass"   : "animal",
@@ -686,6 +710,7 @@
     },
     {
         "id"            : "giant_olm",
+        "audio"            : "frog",
         "name"          : "Giant Olm",
         "threatLevel"   : 3,    // DPS 3.5 | effHP 40 | skirmisher
         "entityClass"   : "animal",
@@ -708,6 +733,7 @@
     },
     {
         "id"            : "thornwood_spider",
+        "audio"            : "insect",
         "name"          : "Thornwood Spider",
         "threatLevel"   : 5,    // DPS 7.6 | effHP 48 | skirmisher (envenom on-hit raises real danger)
         "entityClass"   : "animal",
@@ -736,6 +762,7 @@
     // ── Intelligent raiders (entityClass "mob" — drive aggression) ───────────────
     {
         "id"            : "kobold_skulker",
+        "audio"            : "goblinoid",
         "name"          : "Kobold Skulker",
         "threatLevel"   : 3,    // DPS 3.3 | effHP 30 | skirmisher
         "entityClass"   : "mob",
@@ -761,6 +788,7 @@
     },
     {
         "id"            : "gnoll_marauder",
+        "audio"            : "canine",
         "name"          : "Gnoll Marauder",
         "threatLevel"   : 8,    // DPS 11.6 | effHP 61 | glass-cannon (out-damages the orc — see notes)
         "entityClass"   : "mob",
@@ -787,6 +815,7 @@
     },
     {
         "id"            : "orc_reaver",
+        "audio"            : "goblinoid",
         "name"          : "Orc Reaver",
         "threatLevel"   : 6,    // DPS 4.7 | effHP 91 | tank (fists+slam waste STR 30 — weakest elite, see notes)
         "entityClass"   : "mob",
@@ -813,6 +842,7 @@
     },
     {
         "id"            : "harpy",
+        "audio"            : "raptor",
         "name"          : "Harpy",
         "threatLevel"   : 5,    // DPS 5.6 | effHP 47 | skirmisher (screech disorients on-hit)
         "entityClass"   : "mob",
@@ -839,6 +869,7 @@
     },
     {
         "id"            : "bullywug",
+        "audio"            : "frog",
         "name"          : "Bullywug",
         "threatLevel"   : 4,    // DPS 3.7 | effHP 49 | skirmisher (tongue ensnares on-hit)
         "entityClass"   : "mob",

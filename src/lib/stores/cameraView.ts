@@ -18,3 +18,17 @@ export const cameraTileSize = writable(8);
  * range; this store is the range's endpoints.
  */
 export const cameraZoomRange = writable<{ min: number; max: number }>({ min: 8, max: 40 });
+
+/**
+ * The current visible map rectangle in TILE coordinates: `x,y` = top-left tile (GameCanvas's
+ * viewX/viewY) and `w,h` = how many tiles fit across the viewport at the current zoom. Published by
+ * GameCanvas on every pan/zoom. Used by the spatial creature-SFX layer (AudioController) to decide
+ * which creatures are on-screen (loudest) vs just off it (faint). Read on a throttled tick, not
+ * subscribed reactively, so per-frame republishing is cheap.
+ */
+export const cameraViewport = writable<{ x: number; y: number; w: number; h: number }>({
+  x: 0,
+  y: 0,
+  w: 0,
+  h: 0
+});
