@@ -875,6 +875,13 @@
     lines.push(
       `${selectedResourceTile.resourceId.replace(/_/g, ' ')} — ×${selectedResourceAmount} nodes`
     );
+    // Growth maturity — same readout (colour ramp + tooltip) as the hover HUD, surfaced in the
+    // click-locked card too. Only meaningful for growable resources (crops/trees/bushes); scales yield.
+    const growthPct = isGrowableResource(selectedResourceDef)
+      ? (worldMap[selectedResourceTile.y]?.[selectedResourceTile.x]?.growth?.[
+          selectedResourceTile.resourceId
+        ] ?? 100)
+      : undefined;
     // The tiles this card acts on: the Shift-marked highlight if any, else just the selected node. The
     // HARVEST and CANCEL buttons are derived over THIS set, so a mixed selection (some already marked
     // for harvest, some not) gets BOTH — HARVEST marks the rest, CANCEL clears only the marked ones.
@@ -943,6 +950,7 @@
       selected: true,
       dismissable: true,
       lines,
+      growthPct,
       itemPills,
       buttons: btns
     } satisfies SelectedEntityModel;

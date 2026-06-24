@@ -57,6 +57,8 @@
     pos?: { x: number; y: number };
     /** Free-form text lines rendered below the header (description, progress, refund, etc.). */
     lines?: string[];
+    /** Resource growth maturity 0–100, rendered with the same colour ramp + tooltip as the hover HUD. */
+    growthPct?: number;
     /** Action buttons shown in a 3-column grid. Only rendered on selected cards. */
     buttons?: EntityButton[];
     /** Body health for the toggleable HEALTH popup (NT-U1). `undefined` hides the HEALTH button
@@ -188,6 +190,17 @@
         {#each model.lines as line}
           <div class="text-line">{line}</div>
         {/each}
+      </div>
+    {/if}
+
+    {#if model.growthPct != null}
+      {@const gpct = Math.round(model.growthPct)}
+      <div
+        class="growth-line"
+        style="color:{gpct >= 100 ? '#68b030' : gpct >= 50 ? '#9aac3a' : '#c89a3a'}"
+        title="resource maturity — scales harvest yield; crops grow only with enough fertility, warmth, water and light"
+      >
+        growth {gpct}%
       </div>
     {/if}
 
@@ -424,6 +437,11 @@
     font-size: 9px;
     white-space: normal;
     overflow-wrap: break-word;
+  }
+  /* Growth maturity readout — colour set inline to match the hover HUD's ramp. */
+  .growth-line {
+    font-size: 9px;
+    margin-bottom: 2px;
   }
   /* ── Stats / bars ─────────────────────────────────────────────── */
   .pawn-row {
