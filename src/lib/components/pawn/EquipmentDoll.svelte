@@ -1,7 +1,8 @@
 <!-- EquipmentDoll.svelte — paper-doll grid of equipment slots (RPG-style boxes) -->
 <script lang="ts">
-  import type { Pawn, EquipmentSlot } from '$lib/game/core/types';
+  import type { Pawn, EquipmentSlot, Item } from '$lib/game/core/types';
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
+  import ItemStatTooltip from '$lib/components/UI/ItemStatTooltip.svelte';
 
   let {
     pawn,
@@ -39,6 +40,19 @@
   function inst(slot: EquipmentSlot) {
     return pawn.equipment?.[slot];
   }
+
+  // Hover popup — the same stat/ability breakdown shown on craftable cards (ItemStatTooltip),
+  // portaled to the cursor while hovering a filled slot.
+  let statTip: { item: Item; x: number; y: number } | null = $state(null);
+  function showTip(def: Item, e: MouseEvent) {
+    statTip = { item: def, x: e.clientX, y: e.clientY };
+  }
+  function moveTip(e: MouseEvent) {
+    if (statTip) statTip = { ...statTip, x: e.clientX, y: e.clientY };
+  }
+  function hideTip() {
+    statTip = null;
+  }
 </script>
 
 <div class="doll">
@@ -46,7 +60,16 @@
     {@const it = inst(slot)}
     {@const def = it ? gameCoordinator.getItemById(it.itemId) : null}
     {@const maxDur = def?.maxDurability ?? 100}
-    <div class="slot-box" class:filled={!!it} class:empty={!it} style="grid-area: {slot}">
+    <div
+      class="slot-box"
+      class:filled={!!it}
+      class:empty={!it}
+      style="grid-area: {slot}"
+      onmouseenter={(e) => def && showTip(def, e)}
+      onmousemove={moveTip}
+      onmouseleave={hideTip}
+      role="presentation"
+    >
       <span class="slot-lbl">{label}</span>
       {#if it && def}
         {#if onTogglePin}
@@ -79,6 +102,10 @@
     </div>
   {/each}
 </div>
+
+{#if statTip}
+  <ItemStatTooltip item={statTip.item} x={statTip.x} y={statTip.y} />
+{/if}
 
 <style>
   .doll {

@@ -64,6 +64,9 @@
   const WORK_CALL_FAST_MS = 2000; // avg gap between strikes for a fully-audible work site
   const WORK_CALL_SLOW_MS = 8000;
 
+  // ── Fire SFX (continuous campfire-crackle loop for lit fire buildings). zoom × viewport, like work. ──
+  const FIRE_GAIN = 0.45;
+
   let lastCombatAt = 0;
   let wasNight = false;
   let nowTick = $state(0); // bumped every 1 s to re-evaluate combat-hold + dusk
@@ -280,6 +283,30 @@
     });
   }
 
+  /**
+   * Fire SFX: a single looping campfire crackle whose volume scales with the loudest lit fire building
+   * in earshot (any complete, burning fuel building — campfire/hearth/furnace/…). zoom × viewport,
+   * aggregated across fires via 1−Π(1−c); no pawn-distance (fires sit in the colony).
+   */
+  function evalFire(): void {
+    if (isMenu) return void audioService.setFireLevel(0);
+    const buildings = $gameState?.buildings;
+    const vp = get(cameraViewport);
+    if (!buildings?.length || vp.w <= 0) return void audioService.setFireLevel(0);
+
+    const zg = zoomGainFor(get(cameraTileSize));
+    let product = 1;
+    for (const b of buildings) {
+      if (b.status !== 'complete' || !b.lit) continue;
+      const spatial = spatialAt(b.x, b.y, vp);
+      if (spatial <= 0) continue;
+      const c = Math.max(0, Math.min(1, zg * spatial));
+      if (c > 0) product *= 1 - c;
+    }
+    const level = 1 - product;
+    audioService.setFireLevel(level < LEVEL_EPS ? 0 : level * FIRE_GAIN);
+  }
+
   onMount(() => {
     const unlock = () => {
       audioService.unlock();
@@ -292,6 +319,7 @@
     const sfxIv = setInterval(() => {
       evalCreatures();
       evalWork();
+      evalFire();
     }, CREATURE_TICK_MS);
 
     return () => {

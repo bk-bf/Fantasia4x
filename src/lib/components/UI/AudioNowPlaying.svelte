@@ -75,6 +75,16 @@
         />
       {/each}
     {/if}
+    {#if $nowPlaying.fire > 0}
+      <StatBar
+        label="Fire"
+        value={$nowPlaying.fire * 100}
+        max={100}
+        valueText={PCT($nowPlaying.fire)}
+        color="var(--accent)"
+        width={10}
+      />
+    {/if}
 
     <!-- Volume buses -->
     <div class="np-group-label">Volume</div>

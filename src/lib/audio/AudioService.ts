@@ -20,6 +20,7 @@ import { writable } from 'svelte/store';
 import {
   MUSIC,
   AMBIENT_FILES,
+  FIRE_LOOP,
   type MusicScene,
   type AmbientBed,
   type AmbientLayers
@@ -48,6 +49,7 @@ export interface NowPlaying {
   ambient: { bed: AmbientBed; gain: number }[]; // active beds with their target gain (0–1)
   creatures: { label: string; level: number }[]; // audible creature archetypes + their 0–1 audibility
   work: { label: string; level: number }[]; // audible work activities + their 0–1 audibility
+  fire: number; // campfire-crackle loop audibility 0–1 (lit fire buildings in earshot)
   volumes: Bus;
 }
 
@@ -59,6 +61,7 @@ export const nowPlaying = writable<NowPlaying>({
   ambient: [],
   creatures: [],
   work: [],
+  fire: 0,
   volumes: { master: 0.7, music: 0.7, sfx: 0.8 }
 });
 
@@ -82,6 +85,7 @@ class AudioServiceImpl {
 
   // ── Ambient channel ──
   private beds = new Map<AmbientBed, BedState>();
+  private fireBed: BedState | null = null; // looping campfire crackle (lit fire buildings)
 
   // ── Creature SFX (intermittent one-shots) ──
   private sfxHowls = new Map<string, Howl>(); // cached per clip url
@@ -109,6 +113,7 @@ class AudioServiceImpl {
     for (const bed of this.beds.values()) {
       if (bed.playing) bed.howl.volume(bed.target * this.bus.sfx);
     }
+    if (this.fireBed?.playing) this.fireBed.howl.volume(this.fireBed.target * this.bus.sfx);
     this.publish();
   }
 
@@ -183,6 +188,21 @@ class AudioServiceImpl {
     }
   }
 
+  /** Crossfade the single campfire-crackle loop toward `target` gain (0 = fade out + pause). */
+  setFireLevel(target: number): void {
+    if (!this.unlocked) return;
+    const t = Math.max(0, Math.min(1, target));
+    if (!this.fireBed) {
+      if (t <= 0) return; // nothing playing, nothing wanted — don't allocate
+      this.fireBed = {
+        howl: new Howl({ src: [FIRE_LOOP], html5: false, loop: true, volume: 0 }),
+        target: 0,
+        playing: false
+      };
+    }
+    this.fadeBed(this.fireBed, t);
+  }
+
   /** Stop everything and release the Howls (e.g. on teardown). */
   dispose(): void {
     this.musicHowl?.unload();
@@ -192,6 +212,8 @@ class AudioServiceImpl {
     this.desiredScene = null;
     for (const bed of this.beds.values()) bed.howl.unload();
     this.beds.clear();
+    this.fireBed?.howl.unload();
+    this.fireBed = null;
     for (const howl of this.sfxHowls.values()) howl.unload();
     this.sfxHowls.clear();
     this.activeSfx = 0;
@@ -214,6 +236,7 @@ class AudioServiceImpl {
       ambient,
       creatures: this.creatureLevels,
       work: this.workLevels,
+      fire: this.fireBed?.playing ? this.fireBed.target : 0,
       volumes: { ...this.bus }
     });
   }

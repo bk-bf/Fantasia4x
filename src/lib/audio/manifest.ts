@@ -31,6 +31,10 @@ export const MUSIC: Record<MusicScene, string[]> = {
   combat: ['/audio/music/combat-1.ogg', '/audio/music/combat-2.ogg', '/audio/music/combat-3.ogg']
 };
 
+/** Looping campfire crackle, played for any lit fire building (campfire/hearth/furnace/…) in earshot.
+ *  Driven by AudioController.evalFire → audioService.setFireLevel; volume scales with zoom + viewport. */
+export const FIRE_LOOP = '/audio/ambient/fire.ogg';
+
 /** Bed id → looping source file. */
 export const AMBIENT_FILES: Record<AmbientBed, string> = {
   'birds-day': '/audio/ambient/birds-day.ogg',
