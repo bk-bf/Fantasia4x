@@ -15,7 +15,13 @@
 // Singleton: import { audioService }. Never construct AudioServiceImpl directly. All methods are
 // no-ops until the browser unlocks audio (autoplay policy) — call unlock() from a user gesture.
 import { Howl, Howler } from 'howler';
-import { MUSIC, AMBIENT_FILES, type MusicScene, type AmbientBed, type AmbientLayers } from './manifest';
+import {
+  MUSIC,
+  AMBIENT_FILES,
+  type MusicScene,
+  type AmbientBed,
+  type AmbientLayers
+} from './manifest';
 
 const MUSIC_FADE_MS = 2200;
 const AMBIENT_FADE_MS = 1600;

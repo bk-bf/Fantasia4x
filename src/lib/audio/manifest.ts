@@ -21,9 +21,14 @@ export type AmbientBed = 'birds-day' | 'night-crickets' | 'wind' | 'rain' | 'rai
  */
 export const MUSIC: Record<MusicScene, string[]> = {
   menu: ['/audio/music/menu.ogg'],
-  day: ['/audio/music/day-lofi-1.ogg', '/audio/music/day-lofi-2.ogg', '/audio/music/day-lofi-3.ogg'],
+  day: [
+    '/audio/music/day-1.ogg',
+    '/audio/music/day-2.ogg',
+    '/audio/music/day-3.ogg',
+    '/audio/music/day-4.ogg'
+  ],
   night: ['/audio/music/night-1.ogg', '/audio/music/night-2.ogg'],
-  combat: ['/audio/music/combat-1.ogg', '/audio/music/combat-2.ogg']
+  combat: ['/audio/music/combat-1.ogg', '/audio/music/combat-2.ogg', '/audio/music/combat-3.ogg']
 };
 
 /** Bed id → looping source file. */

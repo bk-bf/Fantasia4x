@@ -65,7 +65,11 @@
       audioService.setAmbient({});
     } else {
       audioService.setAmbient(
-        resolveAmbient({ weatherType: wx?.type ?? 'clear', isNight: night, intensity: wx?.intensity ?? 0 })
+        resolveAmbient({
+          weatherType: wx?.type ?? 'clear',
+          isNight: night,
+          intensity: wx?.intensity ?? 0
+        })
       );
     }
   });
