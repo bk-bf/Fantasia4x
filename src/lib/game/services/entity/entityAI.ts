@@ -42,6 +42,7 @@ import {
   FORAGE_RADIUS,
   LIVE_RADIUS,
   THREAT_INTERRUPT_RANGE,
+  TERRITORIAL_LEASH,
   AI_THROTTLE_TICKS,
   SLEEP_FATIGUE_THRESHOLD,
   SLEEP_MAX_HUNGER,
@@ -204,7 +205,9 @@ function foodCtx(state: GameState, x: number, y: number): string {
   const corpse = (state.mobs ?? []).find((m) => m.x === x && m.y === y && m.state === 'Corpse');
   return (
     `res={${resStr}} drops=[${drops}]` +
-    (corpse ? ` corpse=${getCreatureById(corpse.creatureId)?.id ?? '?'}#${corpse.id.slice(-6)}` : '')
+    (corpse
+      ? ` corpse=${getCreatureById(corpse.creatureId)?.id ?? '?'}#${corpse.id.slice(-6)}`
+      : '')
   );
 }
 function traceMobTick(mob: Mob, state: GameState, turn: number, phase: string): void {
@@ -908,7 +911,10 @@ export function stepHostile(
         chebyshev(mob.lairX ?? mob.x, mob.lairY ?? mob.y, inVision.pos.x, inVision.pos.y) <=
           (mob.lairRange ?? Infinity);
       if (inVision && (aggressive || tooClose) && pawnInTerritory) {
-        return moveToward({ ...mob, state: 'Alerted', stateSince: turn }, inVision.pos, state);
+        // A non-aggressive territorial charger anchors to its current tile so the chase stays leashed
+        // (escapeable); an aggressive hunter has no anchor and pursues freely.
+        const charger = aggressive ? mob : { ...mob, chaseAnchorX: mob.x, chaseAnchorY: mob.y };
+        return moveToward({ ...charger, state: 'Alerted', stateSince: turn }, inVision.pos, state);
       }
       return wanderStep(mob, def, state);
     }
@@ -930,11 +936,34 @@ export function stepHostile(
           adjacent(mob, p.position)
       );
       if (adjPawn) return { ...mob, state: 'Attacking', stateSince: turn };
+      // Territorial leash: a NON-aggressive charger (neutral game — boar/aurochs/mammoth defending its
+      // space) gives up once IT has strayed past the short TERRITORIAL_LEASH from where the charge began
+      // (chaseAnchor), then heads back. Anchoring to the START tile — not the live pawn distance — is
+      // what makes it escapeable: a beast that keeps pace with a fleeing pawn would otherwise rampage
+      // across the whole base hitting every colonist it passed. Aggressive hunters (raiders / nocturnal
+      // predators) have no anchor and pursue to ~1.5× vision as before.
+      if (mob.chaseAnchorX != null && mob.chaseAnchorY != null) {
+        if (chebyshev(mob.x, mob.y, mob.chaseAnchorX, mob.chaseAnchorY) > TERRITORIAL_LEASH) {
+          return {
+            ...mob,
+            state: 'Wander',
+            stateSince: turn,
+            chaseAnchorX: undefined,
+            chaseAnchorY: undefined
+          };
+        }
+      }
       // Re-target the nearest ENGAGEABLE pawn (the global `nearest` may be a downed body we ignore). No
       // engageable target in range → wander off rather than hover over the collapsed pawn.
       const engage = nearestEngageablePos(mob, state.pawns, finisher);
       if (!engage || dist(mob, engage) > visionRange * 1.5) {
-        return { ...mob, state: 'Wander', stateSince: turn };
+        return {
+          ...mob,
+          state: 'Wander',
+          stateSince: turn,
+          chaseAnchorX: undefined,
+          chaseAnchorY: undefined
+        };
       }
       // Surround, don't stack: route to a DISTINCT free tile adjacent to the pawn via the shared
       // approachForMelee (same algorithm stepHunting uses), NOT a greedy step onto the pawn's own
@@ -966,7 +995,14 @@ export function stepHostile(
       // and we won't finish it) → leave the body and wander; out of reach → re-close via Alerted.
       const atkFinisher = willFinishOffDowned(mob.needs.hunger ?? 0, def);
       const engage = nearestEngageablePos(mob, state.pawns, atkFinisher);
-      if (!engage) return { ...mob, state: 'Wander', stateSince: turn };
+      if (!engage)
+        return {
+          ...mob,
+          state: 'Wander',
+          stateSince: turn,
+          chaseAnchorX: undefined,
+          chaseAnchorY: undefined
+        };
       if (!adjacent(mob, engage)) return { ...mob, state: 'Alerted', stateSince: turn };
       return mob;
     }
@@ -1156,7 +1192,8 @@ export function stepAnimal(
       // leash in stepHostile: do NOT blank `path` here (lets moveToward keep its sub-tile cost budget).
       if (
         mob.lairId != null &&
-        chebyshev(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) > (mob.lairRange ?? Infinity)
+        chebyshev(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) >
+          (mob.lairRange ?? Infinity)
       ) {
         return moveToward(mob, { x: mob.lairX!, y: mob.lairY! }, state);
       }

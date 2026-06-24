@@ -174,6 +174,11 @@ export const AI_THROTTLE_TICKS = 60; // ~1s at 60tps; also the elapsed-tick scal
  *  tiles (cheap per-tick interrupt via the cached threat map), so fleeing isn't delayed by up to
  *  AI_THROTTLE_TICKS. Small — only imminent danger justifies bypassing the throttle. */
 export const THREAT_INTERRUPT_RANGE = 6;
+/** Disengage leash (tiles) for a NON-aggressive territorial charger (neutral game like boar/aurochs/
+ *  woolly mammoth that charges a pawn who invaded its space). Once the pawn gets this far from the
+ *  beast it gives up and wanders home — so the charge is escapeable instead of an across-the-map
+ *  pursuit. Aggressive hunters (raiders, nocturnal predators) ignore this and chase to ~1.5× vision. */
+export const TERRITORIAL_LEASH = 8;
 /** Cooldown after a failed hunt before the entity can re-enter Hunting state (seconds). */
 export const HUNT_COOLDOWN_SECONDS = 60;
 /** Cooldown after finding no reachable food tile before re-entering Foraging (seconds). Mirrors

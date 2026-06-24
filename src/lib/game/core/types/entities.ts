@@ -83,6 +83,12 @@ export interface Mob {
    *  re-routing around blocks, and only re-picks when it arrives or the point stops being safe —
    *  so it can't flip direction each time the path ends (the flee-yoyo). */
   fleeDest?: { x: number; y: number };
+  /** Origin tile of a NON-aggressive territorial charge (boar/aurochs/mammoth defending its space).
+   *  Set when such a creature begins charging a too-close pawn; the chase is leashed to TERRITORIAL_LEASH
+   *  tiles of this anchor so it's escapeable (the beast gives up + heads back instead of pursuing across
+   *  the map). Cleared on disengage. Aggressive hunters never set it (they pursue to ~1.5× vision). */
+  chaseAnchorX?: number;
+  chaseAnchorY?: number;
   /** Consecutive ticks this mob has been unable to enter its next tile (blocked by
    * another entity). Once it exceeds a threshold the path is dropped so the FSM
    * re-routes around the obstruction instead of waiting forever (corridor deadlock). */
