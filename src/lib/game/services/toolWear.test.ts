@@ -5,7 +5,8 @@ import type { GameState, DroppedItem } from '../core/types';
 /**
  * §B tool work-wear. Each tool-gated work action spends the tool's durabilityLossPerAction
  * from gameState.toolWear; at maxDurability one tool breaks (consumed) and the counter resets.
- * stone_axe: maxDurability 40, durabilityLossPerAction 5 → exactly 8 fells per axe.
+ * stone_axe (rebalanced): maxDurability 30, durabilityLossPerAction 2 → exactly 15 fells per axe
+ * (flint/stone tools are brittle — half a steel tool's bite, gone in 10–20 uses).
  */
 function makeState(axes: number): GameState {
   const drops: DroppedItem[] = [
@@ -25,15 +26,15 @@ describe('§B tool work-wear (applyToolWear)', () => {
   it('accumulates wear per action without consuming the tool early', () => {
     let gs = makeState(1);
     gs = itemService.applyToolWear('woodcutting', gs);
-    expect(gs.toolWear?.['stone_axe']).toBe(5);
+    expect(gs.toolWear?.['stone_axe']).toBe(2);
     expect(gs.stockpile['stone_axe']).toBe(1);
   });
 
-  it('breaks the axe after exactly 8 fells (40/5)', () => {
+  it('breaks the axe after exactly 15 fells (30/2)', () => {
     let gs = makeState(1);
-    for (let i = 0; i < 7; i++) gs = itemService.applyToolWear('woodcutting', gs);
-    expect(gs.stockpile['stone_axe']).toBe(1); // still intact at 35/40
-    gs = itemService.applyToolWear('woodcutting', gs); // 8th fell → break
+    for (let i = 0; i < 14; i++) gs = itemService.applyToolWear('woodcutting', gs);
+    expect(gs.stockpile['stone_axe']).toBe(1); // still intact at 28/30
+    gs = itemService.applyToolWear('woodcutting', gs); // 15th fell → break
     expect(gs.stockpile['stone_axe'] ?? 0).toBe(0);
     expect(gs.toolWear?.['stone_axe']).toBe(0); // counter reset
   });

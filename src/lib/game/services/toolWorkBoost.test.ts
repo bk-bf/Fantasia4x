@@ -37,8 +37,8 @@ describe('tool work boost (additive, items.jsonc toolBoost)', () => {
   it('a carried stone_pick adds to mining speed AND yield', () => {
     const bareM = pawnStatService.getWorkModifiers(base(), 'mining');
     const pickM = pawnStatService.getWorkModifiers(carrying('stone_pick'), 'mining');
-    expect(pickM.speed).toBeCloseTo(bareM.speed + 0.5); // stone_pick toolBoost.speed
-    expect(pickM.yield!).toBeCloseTo(bareM.yield! + 0.38); // stone_pick toolBoost.yield
+    expect(pickM.speed).toBeCloseTo(bareM.speed + 0.75); // stone_pick toolBoost.speed (½ of steel)
+    expect(pickM.yield!).toBeCloseTo(bareM.yield! + 0.6); // stone_pick toolBoost.yield (½ of steel)
   });
 
   it('an equipped tool boosts identically to a carried one', () => {

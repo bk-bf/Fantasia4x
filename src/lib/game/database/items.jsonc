@@ -1613,10 +1613,10 @@
     "weightKg"         : 0.3,
     "volumeL"          : 0.4,
     "tier"             : 0,
-    "durability"       : 20,
-    "maxDurability"    : 20,
+    "durability"       : 30,
+    "maxDurability"    : 30,
     "toolTierRequired" : 0,
-    "toolBoost"        : {"speed": 0.25, "yield": 0.18},
+    "toolBoost"        : {"speed": 0.5, "yield": 0.4},
     "processingType"   : ["butchery", "leatherworking"]
   },
   {
@@ -1632,11 +1632,11 @@
     "weightKg": 0.5,
     "volumeL": 0.7,
     "tier": 0,
-    "durability": 25,
-    "maxDurability": 25,
+    "durability": 30,
+    "maxDurability": 30,
     "toolTierRequired": 0,
     "processingType": ["planting"],
-    "toolBoost": {"speed": 0.3, "yield": 0.22}
+    "toolBoost": {"speed": 0.6, "yield": 0.45}
   },
   {
     "id"               : "stone_chopper",
@@ -1651,8 +1651,8 @@
     "weightKg"         : 0.8,
     "volumeL"          : 0.9,
     "tier"             : 0,
-    "durability"       : 15,
-    "maxDurability"    : 15,
+    "durability"       : 24,
+    "maxDurability"    : 24,
     "toolTierRequired" : 0,
     "processingType"   : ["crafting", "woodcutting"]
   },
@@ -1687,11 +1687,11 @@
     "weightKg": 1.2,
     "volumeL": 1.4,
     "tier": 1,
-    "durability": 40,
-    "maxDurability": 40,
-    "durabilityLossPerAction": 5,
+    "durability": 30,
+    "maxDurability": 30,
+    "durabilityLossPerAction": 2,
     "toolTierRequired": 0,
-    "toolBoost": {"speed": 0.5, "yield": 0.38},
+    "toolBoost": {"speed": 0.75, "yield": 0.6},
     "processingType": ["woodcutting"]
   },
   {
@@ -1767,11 +1767,11 @@
     "weightKg": 1.4,
     "volumeL": 1.4,
     "tier": 1,
-    "durability": 40,
-    "maxDurability": 40,
-    "durabilityLossPerAction": 5,
+    "durability": 30,
+    "maxDurability": 30,
+    "durabilityLossPerAction": 2,
     "toolTierRequired": 0,
-    "toolBoost": {"speed": 0.5, "yield": 0.38},
+    "toolBoost": {"speed": 0.75, "yield": 0.6},
     "processingType": ["mining"]
   },
   {
@@ -1787,11 +1787,11 @@
     "weightKg": 1.2,
     "volumeL": 1.3,
     "tier": 1,
-    "durability": 40,
-    "maxDurability": 40,
-    "durabilityLossPerAction": 4,
+    "durability": 30,
+    "maxDurability": 30,
+    "durabilityLossPerAction": 2,
     "toolTierRequired": 0,
-    "toolBoost": {"speed": 0.45, "yield": 0.3},
+    "toolBoost": {"speed": 0.75, "yield": 0.6},
     "processingType": ["planting"]
   },
   {
@@ -1827,10 +1827,10 @@
     "weightKg": 1.2,
     "volumeL": 1.4,
     "tier": 1,
-    "durability": 35,
-    "maxDurability": 35,
+    "durability": 30,
+    "maxDurability": 30,
     "toolTierRequired": 0,
-    "toolBoost": {"speed": 0.5, "yield": 0.38},
+    "toolBoost": {"speed": 0.75, "yield": 0.6},
     "processingType": ["digging", "construction", "mining"]
   },
   {
@@ -2905,10 +2905,10 @@
     "weightKg": 0.6,
     "volumeL": 0.8,
     "tier": 1,
-    "durability": 45,
-    "maxDurability": 45,
+    "durability": 40,
+    "maxDurability": 40,
     "toolTierRequired": 0,
-    "toolBoost": {"speed": 0.55, "yield": 0.45},
+    "toolBoost": {"speed": 0.65, "yield": 0.5},
     "processingType": ["butchery"],
     "effects": {"butcheryYieldBonus": 0.25}
   },
@@ -2925,10 +2925,10 @@
     "weightKg": 0.5,
     "volumeL": 0.6,
     "tier": 0,
-    "durability": 18,
-    "maxDurability": 18,
+    "durability": 20,
+    "maxDurability": 20,
     "toolTierRequired": 0,
-    "toolBoost": {"speed": 0.2},
+    "toolBoost": {"speed": 0.5},
     "processingType": ["metalworking"]
   },
   {
@@ -2965,6 +2965,7 @@
     "tier": 2,
     "durability": 160,
     "maxDurability": 160,
+    "durabilityLossPerAction": 1,
     "toolTierRequired": 2,
     "toolBoost": {"speed": 1.0},
     "processingType": ["metalworking"]

@@ -144,3 +144,10 @@ export const defaultGameSpeed = createPersistedNumber('fx.gameplay.defaultSpeed'
 /** Controls — pan the map camera with WASD, in ADDITION to the arrow keys + mouse-drag (never instead
  *  of them). ON by default; persisted. Gates only the WASD branch of GameCanvas.handleKeyDown. */
 export const wasdPan = createPersistedBool('fx.controls.wasdPan', true);
+
+/** Audio — volume buses (0–100), read by AudioController.svelte and pushed to audioService. Master
+ *  scales everything; music/sfx scale their channel on top. Persisted. (SFX is reserved for future
+ *  one-shots — no SFX play yet, but the bus + slider exist so the wiring is complete.) */
+export const masterVolume = createPersistedNumber('fx.audio.master', 70);
+export const musicVolume = createPersistedNumber('fx.audio.music', 70);
+export const sfxVolume = createPersistedNumber('fx.audio.sfx', 80);
