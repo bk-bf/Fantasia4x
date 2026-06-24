@@ -71,8 +71,10 @@
   const FIRE_GAIN = 0.45;
 
   // ── UI feedback (subtle hover/click on buttons), via global delegated listeners ──
-  const UI_HOVER_GAIN = 0.22; // very subtle
-  const UI_CLICK_GAIN = 0.4;
+  // Gains are pre-bus (× SFX × Master), so keep them high enough to read over the music: a click at
+  // 0.9 × sfx(0.8) × master(0.7) ≈ 0.5 effective, comparable to a music track. Hover stays subtler.
+  const UI_HOVER_GAIN = 0.5;
+  const UI_CLICK_GAIN = 0.9;
   const UI_HOVER_THROTTLE_MS = 45; // smooth a fast sweep across a toolbar (no machine-gun)
 
   // ── Ambient zoom balance ──
