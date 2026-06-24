@@ -472,11 +472,24 @@ export class BuildingServiceImpl implements BuildingService {
    */
   applyBuildingFootprint(state: GameState, building: PlacedBuilding, blocking: boolean): GameState {
     const def = this.getBuildingById(building.type);
-    if (def?.walkable !== false) return state; // passable building — nothing to do
     const { x, y } = building;
     const row = state.worldMap?.[y];
     const tile = row?.[x];
     if (!tile) return state;
+
+    // Floor buildings (walkable) bake a movement/dryness modifier onto the tile — set on completion,
+    // cleared on deconstruct. Read by MovementSystem.moveCostToEnter (speed) and the pawn/mob wetness
+    // ticks (dryness). Mirrors the walkable/blocksSight bake below: mutate in place + dirty + fresh ref.
+    const floorSpeed = def?.effects?.floorSpeed;
+    const floorDryness = def?.effects?.floorDryness;
+    if (floorSpeed != null || floorDryness != null) {
+      if (blocking) tile.floor = { speed: floorSpeed ?? 1, dryness: floorDryness ?? 0 };
+      else delete tile.floor;
+      markTileDirty(y, x, tile);
+      return { ...state };
+    }
+
+    if (def?.walkable !== false) return state; // passable, non-floor building — nothing to do
     const nextWalkable = !blocking;
     if (tile.walkable === nextWalkable) return state; // already in the desired state
     // Mutate the one tile IN PLACE + mark it dirty (§D — like §C regrowth / harvest completion),

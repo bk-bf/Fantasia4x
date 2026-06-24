@@ -58,7 +58,11 @@ export function moveCostToEnter(
   worldMap: WorldTile[][]
 ): number {
   const tile = worldMap[to.y]?.[to.x];
-  const base = tile && tile.movementCost > 0 ? tile.movementCost : 1;
+  let base = tile && tile.movementCost > 0 ? tile.movementCost : 1;
+  // A constructed floor speeds traversal (boards/flagstones over mud/grass): `floor.speed` < 1 lowers
+  // the per-tile cost. Budget-only (like snow below) — route choice still uses the cached A* grid, so
+  // floors quicken the walk WITHOUT becoming preferred "streets" the pawn detours onto.
+  if (tile?.floor) base *= tile.floor.speed;
   // Snow cover slows traversal: +1×base per 100% snow (so 100% snow ⇒ double cost). Applied to the
   // movement budget only (route choice still uses the cached A* grid), so it slows pawns crossing
   // deep snow without rebuilding pathfinding every accumulation tick (SEASONS_WEATHER).

@@ -476,7 +476,10 @@ export class PawnServiceImpl implements PawnService {
       // fill rate slowed by the pawn's wetness_resistance — and dries when off wet ground, faster when
       // warm and/or under a roof. The `wet` condition onsets at the full meter (100), same for every entity.
       const wet0 = needs.wetness ?? 0;
-      const tileWet = tile ? tileWetness(tile.moisture ?? 0, gameState.weather, thermal) : 0;
+      let tileWet = tile ? tileWetness(tile.moisture ?? 0, gameState.weather, thermal) : 0;
+      // A constructed floor keeps the pawn off the wet ground (dry boards/flagstones): cut the tile's
+      // effective wetness by the floor's `dryness`. Pair with a roof to stay dry in the rain too.
+      if (tile?.floor) tileWet *= 1 - tile.floor.dryness;
       const warmth = Math.max(0, Math.min(1, temp / WET_DRY_WARM_REF));
       const drySpeed = Math.min(
         1,

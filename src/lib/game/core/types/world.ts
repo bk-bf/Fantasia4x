@@ -15,6 +15,13 @@ export interface WorldTile {
   temperature: number;
   movementCost: number;
   walkable: boolean;
+  /**
+   * Constructed indoor floor baked onto the tile by a floor building (BuildingService.applyBuildingFootprint),
+   * cleared on deconstruct. `speed` multiplies the tile's movement cost (<1 = faster — boards/flagstones
+   * beat mud/grass); `dryness` (0–1) cuts how wet the tile reads for an entity standing on it (you're on
+   * dry boards, off the wet ground). Sim-side only (movement + wetness ticks).
+   */
+  floor?: { speed: number; dryness: number };
   /** Combat line-of-sight occluder (RANGED-COMBAT Part VII). Baked alongside `walkable`: true on a
    *  wall building's tile and on natural rock (cliff / mountain_wall / cliff_wall), false on water and
    *  see-through non-walkables (campfire, furnace). `hasLineOfSight` reads this one flag per cell. */

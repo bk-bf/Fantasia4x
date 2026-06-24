@@ -288,13 +288,15 @@ export function stepHunger(state: GameState): GameState {
     // at the FULL meter (100), uniform with pawns. No shelter (wild) → slow exposed dry (drySpeed 0).
     if (inBubble ? turn % MOB_WEATHER_INTERVAL === 0 : true) {
       const tile = state.worldMap[mob.y]?.[mob.x];
-      const { wind, wetness: tileWet } = creatureExposureAt(
+      const { wind, wetness: rawTileWet } = creatureExposureAt(
         mob.x,
         mob.y,
         state.weather,
         state.worldMap,
         tile?.moisture ?? 0
       );
+      // A constructed floor keeps a creature off the wet ground too (same as pawns).
+      const tileWet = tile?.floor ? rawTileWet * (1 - tile.floor.dryness) : rawTileWet;
       driveWindchill(conditions, wind, MOB_WIND_ONSET);
       // dt = in-game seconds this exposure pass covers (the in-bubble interval, or the off-bubble think gap).
       const dt = (inBubble ? MOB_WEATHER_INTERVAL : tickScale) * SECONDS_PER_TICK;
