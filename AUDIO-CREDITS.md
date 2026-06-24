@@ -44,6 +44,7 @@ night, and Heroes-of-Might-&-Magic-style battle themes in combat.
 | `ambient/rain.ogg`          | "Light Rain"           |
 | `ambient/rain-heavy.ogg`    | "Heavy Thunderstorm"   |
 | `ambient/forest.ogg`        | "Pine Forest"          |
+| `ambient/fire.ogg`          | "Campfire Crackling"   |
 
 ## Creature SFX — per-creature vocalisations (`audio/creatures/<archetype>/`)
 
