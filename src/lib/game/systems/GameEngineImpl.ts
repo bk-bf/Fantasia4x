@@ -78,6 +78,11 @@ const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').
  */
 /** UI flush cadence in REAL milliseconds (~15 Hz) — wall-clock so it's independent of TPS. */
 const UI_PUSH_MS = 1000 / 15;
+/** Menu-backdrop flush cadence (~5 Hz) — the preview only animates a slow day/night + weather, and the
+ *  particle/terrain layers render on their OWN rAF, so it doesn't need 15 Hz snapshots. Throttling here
+ *  cuts the main-thread reactive churn (store notify → ambient/panel-tint recompute → glow style writes)
+ *  that was feeding the periodic ~44 ms major-GC pauses behind the weather stutter. */
+const PREVIEW_PUSH_MS = 1000 / 5;
 /** Item-deterioration runs every N ticks (not every tick): durability lifespans are days/weeks, so
  *  weathering all loose items every tick is wasted work + array churn. 600 ticks ≈ 0.8 in-game hour. */
 const DETERIORATION_INTERVAL_TICKS = 600;
@@ -304,9 +309,11 @@ export class GameEngineImpl implements GameEngine {
       this.lastTurnProcessed = this.gameState!.turn;
       this.gameStateManager!.updateState(this.gameState!);
 
-      // Same wall-clock-gated UI push as the real turn so the backdrop renders at ~15 Hz.
+      // Wall-clock-gated UI push, throttled to ~5 Hz for the backdrop (PREVIEW_PUSH_MS) — the day/night
+      // and weather move over minutes and the visible layers redraw on their own rAF, so a slower flush
+      // is invisible but cuts the per-snapshot main-thread allocation that drove the GC stutter.
       const nowMs = performance.now();
-      const flush = nowMs - this.lastFlushMs >= UI_PUSH_MS;
+      const flush = nowMs - this.lastFlushMs >= PREVIEW_PUSH_MS;
       if (flush) this.lastFlushMs = nowMs;
       this.outputSink?.(this.gameState!, flush);
 

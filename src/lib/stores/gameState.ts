@@ -715,7 +715,10 @@ function startMenuPreview() {
 
   simWorkerBridge.start();
   simWorkerBridge.init(preview, MENU_PREVIEW_SEED, { preview: true });
-  simWorkerBridge.setSpeed(1);
+  // 0.5× → ~30 TPS (vs 60): the backdrop only needs a slow day/night roll, so halving the tick rate cuts
+  // worker CPU/churn while the day still cycles in ~10 min (glow still visibly moves). Hiccup-side relief
+  // comes from the 5 Hz flush throttle (PREVIEW_PUSH_MS); this is worker-side hygiene.
+  simWorkerBridge.setSpeed(0.5);
   simWorkerBridge.setPaused(false); // the backdrop runs regardless of the (real game's) pause state
   menuPreviewReady.set(true);
 }
