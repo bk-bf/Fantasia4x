@@ -3,12 +3,13 @@
   in-game ESC menu (PauseMenu). Replaces the old hand-duplicated two-checkbox inline panels.
 
   Every control is wired to a persisted preference (uiPrefs.ts) that takes effect live:
+    • Audio (master/music/sfx) — volume buses read live by AudioController.svelte → audioService
     • Weather effects / Day-night UI tint — graphics toggles (WeatherCanvas mount / #ambient-tint filter)
     • Cinematic layout — hideSidebars
     • Default game speed — speed a new game starts at
     • Autosave — gates the debounced scheduleSave
     • Debug mode — reveals the in-game DEBUG tab
-  The Audio sliders are disabled placeholders (no sound system yet). Closes on ✕ / backdrop / Escape.
+  Closes on ✕ / backdrop / Escape.
   (Returning to the title is the pause menu's "Exit to Main Menu" — it works under --debug too.)
 -->
 <script lang="ts">
@@ -24,7 +25,10 @@
     autosaveEnabled,
     defaultGameSpeed,
     debugMode,
-    wasdPan
+    wasdPan,
+    masterVolume,
+    musicVolume,
+    sfxVolume
   } from '$lib/stores/uiPrefs';
 
   let { onClose }: { onClose: () => void } = $props();
@@ -99,9 +103,25 @@
       />
 
       <div class="section">Audio</div>
-      {#each ['Master volume', 'Music volume', 'SFX volume'] as label (label)}
-        <SettingRow type="slider" {label} sub="— coming soon" disabled />
-      {/each}
+      <SettingRow
+        type="slider"
+        label="Master volume"
+        sliderValue={$masterVolume}
+        onInput={masterVolume.set}
+      />
+      <SettingRow
+        type="slider"
+        label="Music volume"
+        sliderValue={$musicVolume}
+        onInput={musicVolume.set}
+      />
+      <SettingRow
+        type="slider"
+        label="SFX volume"
+        sub="— reserved"
+        sliderValue={$sfxVolume}
+        onInput={sfxVolume.set}
+      />
 
       <div class="section">Graphics</div>
       <SettingRow

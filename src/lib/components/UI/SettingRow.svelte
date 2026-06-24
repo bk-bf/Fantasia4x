@@ -11,10 +11,12 @@
     type,
     checked = false,
     value = '',
+    sliderValue = 80,
     options = [],
     disabled = false,
     onToggle,
-    onSelect
+    onSelect,
+    onInput
   }: {
     label: string;
     /** Faint trailing note, e.g. "— coming soon" on the disabled audio placeholders. */
@@ -22,10 +24,13 @@
     type: 'checkbox' | 'select' | 'slider';
     checked?: boolean;
     value?: string;
+    /** Slider position 0–100. Used (with onInput) for a live slider; ignored when disabled. */
+    sliderValue?: number;
     options?: Option[];
     disabled?: boolean;
     onToggle?: () => void;
     onSelect?: (v: string) => void;
+    onInput?: (v: number) => void;
   } = $props();
 </script>
 
@@ -46,8 +51,17 @@
         <option value={o.value}>{o.label}</option>
       {/each}
     </select>
-  {:else}
+  {:else if disabled}
     <input type="range" min="0" max="100" value="80" disabled aria-label={label} />
+  {:else}
+    <input
+      type="range"
+      min="0"
+      max="100"
+      value={sliderValue}
+      aria-label={label}
+      oninput={(e) => onInput?.(Number(e.currentTarget.value))}
+    />
   {/if}
 </label>
 
@@ -87,8 +101,11 @@
   input[type='range'] {
     accent-color: var(--accent);
     width: 130px;
-    /* Disabled "coming soon" slider — keep the app pointer (inherited from the row) rather than the
-       OS not-allowed cursor; inputs are excluded from the global app-cursor rule, so opt in here. */
+    cursor: pointer;
+  }
+  /* Disabled "coming soon" slider — dim it, and keep the app pointer (inherited from the row) rather
+     than the OS not-allowed cursor; inputs are excluded from the global app-cursor rule, so opt in. */
+  input[type='range']:disabled {
     cursor: inherit;
     opacity: 0.5;
   }

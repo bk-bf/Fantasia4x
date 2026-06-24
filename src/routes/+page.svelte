@@ -21,6 +21,7 @@
   import MainMenu from '$lib/components/UI/MainMenu.svelte';
   import MainMenu2 from '$lib/components/UI/MainMenu2.svelte';
   import PauseMenu from '$lib/components/UI/PauseMenu.svelte';
+  import AudioController from '$lib/components/UI/AudioController.svelte';
   import { get } from 'svelte/store';
   import { onMount } from 'svelte';
   import { autohideScroll } from '$lib/actions/autohideScroll';
@@ -263,6 +264,9 @@
 <svelte:head>
   <title>Fantasia4x</title>
 </svelte:head>
+
+<!-- Headless: reactive music/ambient driver (no DOM). Mounted always so menu music plays too. -->
+<AudioController isMenu={$appPhase === 'menu'} />
 
 <!-- Ambient day/night colour tint for panels — multiplies each RGB channel.
      Updated reactively each turn; identity matrix (all 1.0) at noon = no change. -->
