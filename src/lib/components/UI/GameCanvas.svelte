@@ -3,7 +3,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { browser } from '$app/environment';
-  import { wasdPan } from '$lib/stores/uiPrefs';
+  import { wasdPan, debugMode } from '$lib/stores/uiPrefs';
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
   import {
     applyTileToGrid,
@@ -271,6 +271,13 @@
   const pawnRenderPos = new Map<string, { x: number; y: number }>();
   const mobRenderPos = new Map<string, { x: number; y: number }>();
   let lastFrameTime = 0;
+  // DEBUG gate for the menu-backdrop frame profiler ([MENU-PERF]): ON only when Debug mode is enabled
+  // (Settings toggle → $debugMode) or a --debug/--log build flag is set. So normal --play and shipped
+  // builds run NONE of the measurement (zero cost). `subscribe` keeps it live with the settings toggle.
+  const _DBG_BUILD =
+    import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_LOG === 'true';
+  let _menuPerfOn = _DBG_BUILD;
+  const _unsubMenuPerf = debugMode.subscribe((v) => (_menuPerfOn = _DBG_BUILD || v));
   // Coalesces many per-mousemove preview redraws into one rebuild per frame.
   let overlayRedrawScheduled = false;
   // Smoothing time-constant (seconds). Lower = snappier, higher = smoother/laggier.
@@ -2800,6 +2807,7 @@
     unsubCombatFeedback();
     unsubAttackLunges();
     unsubProjectiles();
+    _unsubMenuPerf();
     // The menu backdrop is not the real renderer boot — leave the boot-reveal flag untouched, but
     // re-arm its own fade-in (a remount must repaint before being revealed again).
     if (menuPreview) menuPreviewRendered.set(false);
@@ -3038,11 +3046,11 @@
       if (_renderDirty || !frozen || now - lastDrawAt >= FROZEN_SAFETY_MS) {
         renderer.setItemOverlayGrid(itemOverlayGrid);
         renderer.setOverlayGrid(pawnOverlayGrid);
-        const _dbgT0 = menuPreview ? performance.now() : 0;
+        const _dbgT0 = menuPreview && _menuPerfOn ? performance.now() : 0;
         renderer.beginFrame();
         renderer.endFrame();
-        // ── DEBUG: menu-backdrop frame profiler ───────────────────────────────────────────────────
-        if (menuPreview) {
+        // ── DEBUG: menu-backdrop frame profiler (Debug-mode gated) ────────────────────────────────
+        if (menuPreview && _menuPerfOn) {
           const renderMs = performance.now() - _dbgT0;
           const gap = _dbgPrevT ? now - _dbgPrevT : 0; // inter-frame gap (the actual hiccup metric)
           _dbgPrevT = now;

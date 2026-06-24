@@ -14,6 +14,7 @@
   import { browser } from '$app/environment';
   import { currentWeather, gameState } from '$lib/stores/gameState';
   import { cameraTileSize, cameraZoomRange } from '$lib/stores/cameraView';
+  import { debugMode } from '$lib/stores/uiPrefs';
   import {
     weatherOverlayKind,
     weatherFallSpeed,
@@ -31,6 +32,12 @@
   let ctx: CanvasRenderingContext2D | null = null;
   let raf = 0;
   let lastT = 0;
+  // DEBUG gate for the [WX-PERF] frame profiler: ON only with Debug mode (Settings → $debugMode) or a
+  // --debug/--log build flag. Normal --play and shipped builds run none of the measurement (zero cost).
+  const _DBG_BUILD =
+    import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_LOG === 'true';
+  let _wxDbg = _DBG_BUILD;
+  const _unsubWxDbg = debugMode.subscribe((v) => (_wxDbg = _DBG_BUILD || v));
   let fogTime = 0; // seconds accumulator driving the fog's slow gust/shift
   let ro: ResizeObserver | undefined;
   let reduceMotion = false;
@@ -242,10 +249,10 @@
   function frame(t: number) {
     raf = requestAnimationFrame(frame);
     if (!ctx || mode === 'none') return;
-    const _wxGap = lastT ? t - lastT : 0; // DEBUG: raw inter-frame gap (the weather-stutter metric)
+    const _wxGap = _wxDbg && lastT ? t - lastT : 0; // DEBUG: raw inter-frame gap (the stutter metric)
     const dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0.016;
     lastT = t;
-    const _wxT0 = import.meta.env.DEV ? performance.now() : 0; // DEBUG: draw-time start
+    const _wxT0 = _wxDbg ? performance.now() : 0; // DEBUG: draw-time start
     const w = cssW();
     const h = cssH();
     ctx.clearRect(0, 0, w, h);
@@ -341,8 +348,8 @@
       renderFog(w, h, parts, dt, 1);
     }
     // DEBUG: weather frame profiler — logs hiccup gaps + a ~2s summary so the weather stutter can be
-    // correlated with the GameCanvas [MENU-PERF] terrain numbers. Dev only; remove when solved.
-    if (import.meta.env.DEV) wxProfile(_wxGap, performance.now() - _wxT0);
+    // correlated with the GameCanvas [MENU-PERF] terrain numbers. Debug-mode gated.
+    if (_wxDbg) wxProfile(_wxGap, performance.now() - _wxT0);
   }
 
   // ── DEBUG weather profiler (see frame) ──────────────────────────────────────────────────────────
@@ -496,6 +503,7 @@
     unsubZoom();
     unsubZoomRange();
     unsubAmbient();
+    _unsubWxDbg();
   });
 </script>
 
