@@ -57,3 +57,4 @@ creatures.jsonc. Mixed sources:
 | `frog`                                                             | "Mutant Frog" (https://opengameart.org/content/mutant-frog) | AntumDeluge | CC0 |
 | `goat`                                                             | "Goat Bleat" (https://opengameart.org/content/goat-bleat) | leone | CC-BY 4.0 |
 | `boar`                                                             | "Pig SFX Pack" (https://opengameart.org/content/pig-sfx-pack) | Vinrax | CC-BY 3.0 |
+| `rustle` (giant rat)                                              | "20 Rustles of dry leaves" (https://opengameart.org/content/20-rustles-dry-leaves) | qubodup | CC0 |
