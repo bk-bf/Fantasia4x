@@ -66,8 +66,8 @@
         },
         {
           "itemId"         : "branch",
-          "min"            : 2,
-          "max"            : 4,
+          "min"            : 4,
+          "max"            : 10,
           "skillId"        : "woodcutting",
           "skillMultiplier": 0.15,
           "regrowthTurns"  : 4200
@@ -108,8 +108,8 @@
         },
         {
           "itemId"         : "branch",
-          "min"            : 2,
-          "max"            : 4,
+          "min"            : 4,
+          "max"            : 10,
           "skillId"        : "woodcutting",
           "skillMultiplier": 0.15,
           "regrowthTurns"  : 4200
@@ -150,8 +150,8 @@
         },
         {
           "itemId"         : "branch",
-          "min"            : 2,
-          "max"            : 4,
+          "min"            : 4,
+          "max"            : 10,
           "skillId"        : "woodcutting",
           "skillMultiplier": 0.15,
           "regrowthTurns"  : 4200
@@ -192,8 +192,8 @@
         },
         {
           "itemId"         : "branch",
-          "min"            : 2,
-          "max"            : 4,
+          "min"            : 4,
+          "max"            : 10,
           "skillId"        : "woodcutting",
           "skillMultiplier": 0.15,
           "regrowthTurns"  : 4200
@@ -379,8 +379,8 @@
         },
         {
           "itemId"         : "branch",
-          "min"            : 2,
-          "max"            : 5,
+          "min"            : 4,
+          "max"            : 10,
           "skillId"        : "woodcutting",
           "skillMultiplier": 0.15,
           "regrowthTurns"  : 4200
@@ -431,8 +431,8 @@
           },
           {
             "itemId"         : "branch",
-            "min"            : 2,
-            "max"            : 5,
+            "min"            : 4,
+            "max"            : 10,
             "skillId"        : "woodcutting",
             "skillMultiplier": 0.15,
             "regrowthTurns"  : 4200
@@ -467,8 +467,8 @@
           {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
           {
             "itemId"         : "branch",
-            "min"            : 0,
-            "max"            : 2,
+            "min"            : 1,
+            "max"            : 5,
             "skillId"        : "foraging",
             "skillMultiplier": 0.1,
             "regrowthTurns"  : 450
@@ -526,8 +526,8 @@
         },
         {
           "itemId"         : "branch",
-          "min"            : 2,
-          "max"            : 5,
+          "min"            : 4,
+          "max"            : 10,
           "skillId"        : "woodcutting",
           "skillMultiplier": 0.15,
           "regrowthTurns"  : 4200
@@ -570,8 +570,8 @@
           },
           {
             "itemId"         : "branch",
-            "min"            : 2,
-            "max"            : 5,
+            "min"            : 4,
+            "max"            : 10,
             "skillId"        : "woodcutting",
             "skillMultiplier": 0.15,
             "regrowthTurns"  : 4200
@@ -598,8 +598,8 @@
           {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
           {
             "itemId"         : "branch",
-            "min"            : 0,
-            "max"            : 2,
+            "min"            : 1,
+            "max"            : 5,
             "skillId"        : "foraging",
             "skillMultiplier": 0.1,
             "regrowthTurns"  : 450
@@ -657,8 +657,8 @@
         },
         {
           "itemId"         : "branch",
-          "min"            : 2,
-          "max"            : 5,
+          "min"            : 4,
+          "max"            : 10,
           "skillId"        : "woodcutting",
           "skillMultiplier": 0.15,
           "regrowthTurns"  : 4200
@@ -701,8 +701,8 @@
           },
           {
             "itemId"         : "branch",
-            "min"            : 2,
-            "max"            : 5,
+            "min"            : 4,
+            "max"            : 10,
             "skillId"        : "woodcutting",
             "skillMultiplier": 0.15,
             "regrowthTurns"  : 4200
@@ -729,8 +729,8 @@
           {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
           {
             "itemId"         : "branch",
-            "min"            : 0,
-            "max"            : 2,
+            "min"            : 1,
+            "max"            : 5,
             "skillId"        : "foraging",
             "skillMultiplier": 0.1,
             "regrowthTurns"  : 450
@@ -788,8 +788,8 @@
         },
         {
           "itemId"         : "branch",
-          "min"            : 2,
-          "max"            : 5,
+          "min"            : 4,
+          "max"            : 10,
           "skillId"        : "woodcutting",
           "skillMultiplier": 0.15,
           "regrowthTurns"  : 4200
@@ -832,8 +832,8 @@
           },
           {
             "itemId"         : "branch",
-            "min"            : 2,
-            "max"            : 5,
+            "min"            : 4,
+            "max"            : 10,
             "skillId"        : "woodcutting",
             "skillMultiplier": 0.15,
             "regrowthTurns"  : 4200
@@ -860,8 +860,8 @@
           {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
           {
             "itemId"         : "branch",
-            "min"            : 0,
-            "max"            : 2,
+            "min"            : 1,
+            "max"            : 5,
             "skillId"        : "foraging",
             "skillMultiplier": 0.1,
             "regrowthTurns"  : 450
@@ -919,8 +919,8 @@
         },
         {
           "itemId"         : "branch",
-          "min"            : 2,
-          "max"            : 5,
+          "min"            : 4,
+          "max"            : 10,
           "skillId"        : "woodcutting",
           "skillMultiplier": 0.15,
           "regrowthTurns"  : 4200
@@ -963,8 +963,8 @@
           },
           {
             "itemId"         : "branch",
-            "min"            : 2,
-            "max"            : 5,
+            "min"            : 4,
+            "max"            : 10,
             "skillId"        : "woodcutting",
             "skillMultiplier": 0.15,
             "regrowthTurns"  : 4200
@@ -991,8 +991,8 @@
           {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
           {
             "itemId"         : "branch",
-            "min"            : 0,
-            "max"            : 2,
+            "min"            : 1,
+            "max"            : 5,
             "skillId"        : "foraging",
             "skillMultiplier": 0.1,
             "regrowthTurns"  : 450
@@ -1249,7 +1249,7 @@
       "toolRequirement": {"workType": "woodcutting", "minTier": 1},
       "yields"         : [
         {"itemId": "dry_firewood", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.1 },
-        {"itemId": "branch",       "min": 1, "max": 3, "skillId": "woodcutting", "skillMultiplier": 0.05}
+        {"itemId": "branch",       "min": 4, "max": 10, "skillId": "woodcutting", "skillMultiplier": 0.05}
       ]
     }
   },
