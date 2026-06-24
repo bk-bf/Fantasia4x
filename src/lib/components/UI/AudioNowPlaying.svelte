@@ -59,6 +59,23 @@
       {/each}
     {/if}
 
+    <!-- Work SFX (viewport/zoom audibility) -->
+    <div class="np-group-label">Work (audibility)</div>
+    {#if $nowPlaying.work.length === 0}
+      <p class="np-none">— none in earshot —</p>
+    {:else}
+      {#each $nowPlaying.work as w (w.label)}
+        <StatBar
+          label={w.label}
+          value={w.level * 100}
+          max={100}
+          valueText={PCT(w.level)}
+          color="var(--accent)"
+          width={10}
+        />
+      {/each}
+    {/if}
+
     <!-- Volume buses -->
     <div class="np-group-label">Volume</div>
     <StatBar

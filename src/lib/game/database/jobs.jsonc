@@ -11,13 +11,15 @@
 // NOT listed here: eat / sleep / need — those are FSM-internal activeJob kinds the pawn sets
 // directly; they are never generated into the colony job pool.
 [
+  // `audio` = work-SFX override (audio/manifest.ts WORK_SFX). Omitted on `harvest` so it resolves per
+  // harvested resource → woodcutting / mining / foraging. Carrying jobs (haul/fetch/refuel) stay silent.
   {"id": "harvest", "label": "Harvest", "workCategorySource": "designation", "claimGate": "harvestTool"},
   {"id": "haul", "label": "Haul", "workCategory": "hauling", "lightAffected": false},
-  {"id": "construct", "label": "Build", "workCategory": "construction"},
-  {"id": "deconstruct", "label": "Demolish", "workCategory": "construction"},
+  {"id": "construct", "label": "Build", "workCategory": "construction", "audio": "construction"},
+  {"id": "deconstruct", "label": "Demolish", "workCategory": "construction", "audio": "construction"},
   {"id": "fetch", "label": "Fetch", "workCategory": "hauling", "lightAffected": false},
-  {"id": "craft", "label": "Craft", "workCategory": "crafting", "workCategorySource": "recipe-output", "claimGate": "craftTool"},
+  {"id": "craft", "label": "Craft", "workCategory": "crafting", "workCategorySource": "recipe-output", "claimGate": "craftTool", "audio": "crafting"},
   {"id": "caretake", "label": "Tend", "workCategory": "caretaking"},
   {"id": "refuel", "label": "Refuel", "workCategory": "construction", "claimGate": "refuelAllowlist", "lightAffected": false},
-  {"id": "plant", "label": "Plant", "workCategory": "planting"}
+  {"id": "plant", "label": "Plant", "workCategory": "planting", "audio": "planting"}
 ]

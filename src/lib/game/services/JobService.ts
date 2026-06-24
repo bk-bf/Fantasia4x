@@ -360,6 +360,12 @@ class JobServiceImpl {
     return JOB_DEF_BY_ID.get(type)?.label;
   }
 
+  /** Optional work-SFX override id for a job type (jobs.jsonc `audio`); undefined → resolve by work
+   *  category. Read by the audio layer (AudioController) for the medieval labour sounds. */
+  getJobAudio(type: string): string | undefined {
+    return JOB_DEF_BY_ID.get(type)?.audio;
+  }
+
   /** Colony job type ids that have a registered behaviour handler (= jobs.jsonc ids). Exposed for
    *  the drift-guard test and tooling. */
   jobTypeIds(): string[] {

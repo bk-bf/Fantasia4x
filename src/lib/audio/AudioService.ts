@@ -47,6 +47,7 @@ export interface NowPlaying {
   track: string | null; // current music file url (null = silence)
   ambient: { bed: AmbientBed; gain: number }[]; // active beds with their target gain (0–1)
   creatures: { label: string; level: number }[]; // audible creature archetypes + their 0–1 audibility
+  work: { label: string; level: number }[]; // audible work activities + their 0–1 audibility
   volumes: Bus;
 }
 
@@ -57,6 +58,7 @@ export const nowPlaying = writable<NowPlaying>({
   track: null,
   ambient: [],
   creatures: [],
+  work: [],
   volumes: { master: 0.7, music: 0.7, sfx: 0.8 }
 });
 
@@ -85,6 +87,7 @@ class AudioServiceImpl {
   private sfxHowls = new Map<string, Howl>(); // cached per clip url
   private activeSfx = 0; // currently-sounding one-shots (hard concurrency cap)
   private creatureLevels: { label: string; level: number }[] = []; // for the debug panel only
+  private workLevels: { label: string; level: number }[] = []; // for the debug panel only
 
   /** Resume the AudioContext on a user gesture and apply the current master volume. Idempotent. */
   unlock(): void {
@@ -159,6 +162,12 @@ class AudioServiceImpl {
     if (this.unlocked) this.publish();
   }
 
+  /** Publish the current work-activity audibility levels (debug panel only — playback is via playSfx). */
+  setWorkLevels(levels: { label: string; level: number }[]): void {
+    this.workLevels = levels;
+    if (this.unlocked) this.publish();
+  }
+
   /** Crossfade the ambient bed mix toward the given target gains. Beds omitted fade to silence. */
   setAmbient(layers: AmbientLayers): void {
     if (!this.unlocked) return;
@@ -187,6 +196,7 @@ class AudioServiceImpl {
     this.sfxHowls.clear();
     this.activeSfx = 0;
     this.creatureLevels = [];
+    this.workLevels = [];
     this.publish();
   }
 
@@ -203,6 +213,7 @@ class AudioServiceImpl {
       track: this.currentTrack,
       ambient,
       creatures: this.creatureLevels,
+      work: this.workLevels,
       volumes: { ...this.bus }
     });
   }

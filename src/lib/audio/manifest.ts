@@ -145,6 +145,39 @@ export function creatureClips(id: string | undefined): string[] {
   return id && id in CREATURE_SFX ? CREATURE_SFX[id as CreatureSoundId] : [];
 }
 
+// ── Work SFX ──────────────────────────────────────────────────────────────────────────────────────
+// Medieval labour sounds keyed by WORK CATEGORY (Work.ts ids — woodcutting, mining, …). A working
+// pawn's category is resolved via jobService.getJobWorkCategory (which reads jobs.jsonc + the harvested
+// resource), so one `harvest` job still splits into woodcutting / mining / foraging by what's chopped.
+// jobs.jsonc JobDefs may also set an explicit `audio` override (jobService.getJobAudio), checked first.
+// Played as intermittent one-shots (chop… chop…) whose volume + rate scale with zoom + viewport.
+
+const workClips = (id: string, n: number): string[] =>
+  Array.from({ length: n }, (_, i) => `/audio/work/${id}/${i + 1}.ogg`);
+
+export const WORK_SFX: Record<string, string[]> = {
+  woodcutting: workClips('woodcutting', 5),
+  mining: workClips('mining', 5),
+  construction: workClips('construction', 5),
+  crafting: workClips('crafting', 5),
+  foraging: workClips('foraging', 3),
+  planting: workClips('planting', 3)
+};
+
+export const WORK_SOUND_LABELS: Record<string, string> = {
+  woodcutting: 'Woodcutting',
+  mining: 'Mining',
+  construction: 'Building',
+  crafting: 'Crafting',
+  foraging: 'Foraging',
+  planting: 'Planting'
+};
+
+/** Work clips for a category/override id, or [] if none exists for it. */
+export function workClipsFor(id: string | undefined): string[] {
+  return id && id in WORK_SFX ? WORK_SFX[id] : [];
+}
+
 // Weather-type → bed grouping. Mirrors the overlay/windStrength semantics in weather.jsonc so the
 // audio bed matches what the player sees: precipitation overlays → rain bed; windy/gale/blizzard →
 // wind bed. (Kept as plain sets so a new weather id simply falls through to the calm default.)

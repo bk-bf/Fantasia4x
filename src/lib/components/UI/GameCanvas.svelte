@@ -4246,10 +4246,16 @@
           const name = itemService.getItemDisplayName(d);
           const slot = getEquipmentSlot(it);
           if (slot) {
-            // Equippable gear → equip onto the pawn (existing behaviour).
+            // Equippable gear → ORDER the drafted pawn to walk to the item and equip it (handled by
+            // the 'equip' draft target in _processDraftOrders), not an instant teleport-equip.
             entries.push({
               label: `Equip ${name} → ${slotLabel(slot)}`,
-              run: () => gameState.equipItemFromTile(pawnId, d.id)
+              run: () =>
+                gameState.command({
+                  type: 'setPawnDraftTarget',
+                  payload: { pawnId, target: { type: 'equip', dropId: d.id, x: tileX, y: tileY } },
+                  save: true
+                })
             });
             continue;
           }

@@ -125,6 +125,10 @@ export interface JobDef {
   /** Whether low light slows this job (§G light→work). Defaults to true. Set false for jobs that
    *  don't need close sight — hauling/fetching/refuelling (carrying) are unaffected by darkness. */
   lightAffected?: boolean;
+  /** Optional work-SFX override id (audio/manifest.ts `WORK_SFX`) for the medieval labour sounds. When
+   *  omitted, the audio layer falls back to the job's resolved WORK CATEGORY — so `harvest` (no audio)
+   *  still splits into woodcutting / mining / foraging by the harvested resource. Backend ref only. */
+  audio?: string;
 }
 
 export interface WorkCategory {

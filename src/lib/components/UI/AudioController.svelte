@@ -20,11 +20,14 @@
   import { cameraViewport, cameraTileSize } from '$lib/stores/cameraView';
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
   import { getCreatureById } from '$lib/game/core/Creatures';
+  import { jobService } from '$lib/game/services/JobService';
   import { audioService } from '$lib/audio/AudioService';
   import {
     resolveAmbient,
     creatureClips,
     CREATURE_SOUND_LABELS,
+    workClipsFor,
+    WORK_SOUND_LABELS,
     type MusicScene
   } from '$lib/audio/manifest';
 
@@ -55,10 +58,17 @@
   const MAX_CONCURRENT_ARCHETYPES = 3; // only the 3 loudest archetypes may call (no swarm of sounds)
   const LEVEL_EPS = 0.02; // below this, treat as silent
 
+  // ── Work SFX tuning (medieval labour: chop/mine/hammer…). Shares the zoom/viewport model; no
+  // pawn-distance gate (the worker IS a pawn). A touch louder + more rhythmic than wildlife. ──
+  const WORK_GAIN = 0.4;
+  const WORK_CALL_FAST_MS = 2000; // avg gap between strikes for a fully-audible work site
+  const WORK_CALL_SLOW_MS = 8000;
+
   let lastCombatAt = 0;
   let wasNight = false;
   let nowTick = $state(0); // bumped every 1 s to re-evaluate combat-hold + dusk
-  const lastFired = new Map<string, number>(); // archetype id → last one-shot time
+  const lastFired = new Map<string, number>(); // creature archetype id → last one-shot time
+  const lastFiredWork = new Map<string, number>(); // work category id → last one-shot time
 
   // Volume buses → engine, live as sliders move.
   $effect(() => {
@@ -109,63 +119,92 @@
     }
   });
 
-  /**
-   * Spatial creature SFX: per archetype, combine every individual's audibility (zoom × viewport
-   * proximity, more individuals = louder via 1−Π(1−c)), publish the levels for the debug panel, and
-   * roll an intermittent one-shot whose volume + frequency scale with that audibility. On-screen +
-   * zoomed in = loud & frequent; just off-screen = rare & faint; far away or zoomed out = quiet/none.
-   */
-  function evalCreatures(): void {
-    if (isMenu) {
-      audioService.setCreatureLevels([]);
-      return;
-    }
-    const mobs = $gameState?.mobs;
-    const vp = get(cameraViewport);
-    const tile = get(cameraTileSize);
-    if (!mobs?.length || vp.w <= 0) {
-      audioService.setCreatureLevels([]);
-      return;
-    }
+  type Vp = { x: number; y: number; w: number; h: number };
 
-    const zoomNorm = Math.max(
-      0,
-      Math.min(1, (tile - ZOOM_REF_LOW) / (ZOOM_REF_HIGH - ZOOM_REF_LOW))
-    );
-    const zoomGain = ZOOM_OUT_FLOOR + (1 - ZOOM_OUT_FLOOR) * zoomNorm;
-
-    // Pawn positions for the nearest-pawn distance attenuation.
-    const pawns = ($gameState?.pawns ?? [])
-      .map((p) => p.position)
-      .filter((pos): pos is { x: number; y: number } => !!pos);
-
+  /** Viewport audibility for a tile: 1 inside, fading to OFFSCREEN_MAX just outside, 0 out of earshot. */
+  function spatialAt(x: number, y: number, vp: Vp): number {
     const x0 = vp.x;
     const y0 = vp.y;
     const x1 = vp.x + vp.w;
     const y1 = vp.y + vp.h;
-    const marginX = vp.w * OFFSCREEN_MARGIN;
-    const marginY = vp.h * OFFSCREEN_MARGIN;
+    if (x >= x0 && x < x1 && y >= y0 && y < y1) return 1;
+    const dx = x < x0 ? x0 - x : x >= x1 ? x - x1 : 0;
+    const dy = y < y0 ? y0 - y : y >= y1 ? y - y1 : 0;
+    const mX = vp.w * OFFSCREEN_MARGIN;
+    const mY = vp.h * OFFSCREEN_MARGIN;
+    if (dx > mX || dy > mY) return 0; // out of earshot
+    return OFFSCREEN_MAX * Math.max(0, Math.min(1 - dx / mX, 1 - dy / mY));
+  }
 
-    // product of (1 − contribution) per archetype; audibility = 1 − product.
+  /** Zoom audibility factor: ZOOM_OUT_FLOOR when zoomed out → 1.0 zoomed in (ramp over the ref band). */
+  function zoomGainFor(tile: number): number {
+    const n = Math.max(0, Math.min(1, (tile - ZOOM_REF_LOW) / (ZOOM_REF_HIGH - ZOOM_REF_LOW)));
+    return ZOOM_OUT_FLOOR + (1 - ZOOM_OUT_FLOOR) * n;
+  }
+
+  /**
+   * Shared one-shot emitter for a `soundId → product-of-(1−c)` map (audibility = 1 − product). Picks
+   * the loudest few ids, rolls an intermittent one-shot per id (volume + rate scale with audibility,
+   * jittered), and publishes the levels for the debug panel. Used by both wildlife and work SFX.
+   */
+  function emitSfx(
+    product: Map<string, number>,
+    opts: {
+      clips: (id: string) => string[];
+      label: (id: string) => string;
+      gain: number;
+      fastMs: number;
+      slowMs: number;
+      lastFired: Map<string, number>;
+      setLevels: (l: { label: string; level: number }[]) => void;
+    }
+  ): void {
+    const now = Date.now();
+    const entries: { id: string; label: string; level: number }[] = [];
+    for (const [id, prod] of product) {
+      const level = 1 - prod;
+      if (level < LEVEL_EPS) continue;
+      entries.push({ id, label: opts.label(id), level });
+    }
+    // Only the loudest few may call — never a swarm of overlapping sounds.
+    entries.sort((a, b) => b.level - a.level);
+    const audible = entries.slice(0, MAX_CONCURRENT_ARCHETYPES);
+    for (const e of audible) {
+      const gap =
+        (opts.fastMs + (opts.slowMs - opts.fastMs) * (1 - e.level)) * (0.7 + Math.random() * 0.6);
+      if (now - (opts.lastFired.get(e.id) ?? 0) >= gap) {
+        const clips = opts.clips(e.id);
+        audioService.playSfx(clips[Math.floor(Math.random() * clips.length)], e.level * opts.gain);
+        opts.lastFired.set(e.id, now);
+      }
+    }
+    opts.setLevels(audible.map((e) => ({ label: e.label, level: e.level })));
+  }
+
+  /**
+   * Spatial creature SFX: per archetype, combine every individual's audibility (zoom × viewport
+   * proximity × nearest-pawn distance; more individuals = louder via 1−Π(1−c)). On-screen + zoomed in
+   * + near the colony = loud & frequent; far from pawns or zoomed out = very silent. Asleep/downed/dead
+   * mobs are skipped.
+   */
+  function evalCreatures(): void {
+    if (isMenu) return void audioService.setCreatureLevels([]);
+    const mobs = $gameState?.mobs;
+    const vp = get(cameraViewport);
+    if (!mobs?.length || vp.w <= 0) return void audioService.setCreatureLevels([]);
+
+    const zg = zoomGainFor(get(cameraTileSize));
+    const pawns = ($gameState?.pawns ?? [])
+      .map((p) => p.position)
+      .filter((pos): pos is { x: number; y: number } => !!pos);
+
     const product = new Map<string, number>();
     for (const m of mobs) {
-      // Silent while asleep, downed, or dead.
       if (m.state === 'Sleeping' || m.state === 'Collapsed' || m.state === 'Corpse') continue;
-      const def = getCreatureById(m.creatureId);
-      const sound = def?.audio;
+      const sound = getCreatureById(m.creatureId)?.audio;
       if (!sound || creatureClips(sound).length === 0) continue;
-
-      let spatial: number;
-      const inside = m.x >= x0 && m.x < x1 && m.y >= y0 && m.y < y1;
-      if (inside) {
-        spatial = 1;
-      } else {
-        const dx = m.x < x0 ? x0 - m.x : m.x >= x1 ? m.x - x1 : 0;
-        const dy = m.y < y0 ? y0 - m.y : m.y >= y1 ? m.y - y1 : 0;
-        if (dx > marginX || dy > marginY) continue; // out of earshot
-        const fall = Math.min(1 - dx / marginX, 1 - dy / marginY);
-        spatial = OFFSCREEN_MAX * Math.max(0, fall);
-      }
+      const spatial = spatialAt(m.x, m.y, vp);
+      if (spatial <= 0) continue;
 
       // Nearest-pawn distance: near the colony = full, far = "very silent" (floor).
       let pawnGain = PAWN_FAR_FLOOR;
@@ -187,41 +226,58 @@
               );
       }
 
-      const c = Math.max(0, Math.min(1, zoomGain * spatial * pawnGain));
+      const c = Math.max(0, Math.min(1, zg * spatial * pawnGain));
       if (c <= 0) continue;
       product.set(sound, (product.get(sound) ?? 1) * (1 - c));
     }
 
-    const now = Date.now();
-    const entries: { sound: string; label: string; level: number }[] = [];
-    for (const [sound, prod] of product) {
-      const level = 1 - prod;
-      if (level < LEVEL_EPS) continue;
-      entries.push({
-        sound,
-        label: CREATURE_SOUND_LABELS[sound as keyof typeof CREATURE_SOUND_LABELS] ?? sound,
-        level
-      });
-    }
-    // Only the loudest few archetypes may call — never a swarm of overlapping sounds.
-    entries.sort((a, b) => b.level - a.level);
-    const audible = entries.slice(0, MAX_CONCURRENT_ARCHETYPES);
+    emitSfx(product, {
+      clips: creatureClips,
+      label: (id) => CREATURE_SOUND_LABELS[id as keyof typeof CREATURE_SOUND_LABELS] ?? id,
+      gain: CREATURE_GAIN,
+      fastMs: CALL_FAST_MS,
+      slowMs: CALL_SLOW_MS,
+      lastFired,
+      setLevels: (l) => audioService.setCreatureLevels(l)
+    });
+  }
 
-    for (const e of audible) {
-      // Intermittent one-shot: louder archetypes call more often, with jitter.
-      const gap =
-        (CALL_FAST_MS + (CALL_SLOW_MS - CALL_FAST_MS) * (1 - e.level)) *
-        (0.7 + Math.random() * 0.6);
-      if (now - (lastFired.get(e.sound) ?? 0) >= gap) {
-        const clips = creatureClips(e.sound);
-        audioService.playSfx(
-          clips[Math.floor(Math.random() * clips.length)],
-          e.level * CREATURE_GAIN
-        );
-        lastFired.set(e.sound, now);
-      }
+  /**
+   * Spatial WORK SFX: medieval labour sounds for pawns currently Working. The sound is the job's
+   * `audio` override (jobs.jsonc) or its resolved work category (so a `harvest` job splits into
+   * woodcutting/mining/foraging by what's harvested). Scales with zoom + viewport only — the worker IS
+   * a pawn, so no pawn-distance gate.
+   */
+  function evalWork(): void {
+    if (isMenu) return void audioService.setWorkLevels([]);
+    const gs = $gameState;
+    const pawns = gs?.pawns;
+    const vp = get(cameraViewport);
+    if (!pawns?.length || vp.w <= 0) return void audioService.setWorkLevels([]);
+
+    const zg = zoomGainFor(get(cameraTileSize));
+    const product = new Map<string, number>();
+    for (const p of pawns) {
+      const job = p.activeJob;
+      if (p.currentState !== 'Working' || !job || !p.position) continue;
+      const soundId = jobService.getJobAudio(job.type) ?? jobService.getJobWorkCategory(job, gs);
+      if (workClipsFor(soundId).length === 0) continue;
+      const spatial = spatialAt(p.position.x, p.position.y, vp);
+      if (spatial <= 0) continue;
+      const c = Math.max(0, Math.min(1, zg * spatial));
+      if (c <= 0) continue;
+      product.set(soundId, (product.get(soundId) ?? 1) * (1 - c));
     }
-    audioService.setCreatureLevels(audible.map((e) => ({ label: e.label, level: e.level })));
+
+    emitSfx(product, {
+      clips: workClipsFor,
+      label: (id) => WORK_SOUND_LABELS[id] ?? id,
+      gain: WORK_GAIN,
+      fastMs: WORK_CALL_FAST_MS,
+      slowMs: WORK_CALL_SLOW_MS,
+      lastFired: lastFiredWork,
+      setLevels: (l) => audioService.setWorkLevels(l)
+    });
   }
 
   onMount(() => {
@@ -233,13 +289,16 @@
     window.addEventListener('keydown', unlock);
 
     const iv = setInterval(() => (nowTick = Date.now()), 1000);
-    const creatureIv = setInterval(evalCreatures, CREATURE_TICK_MS);
+    const sfxIv = setInterval(() => {
+      evalCreatures();
+      evalWork();
+    }, CREATURE_TICK_MS);
 
     return () => {
       window.removeEventListener('pointerdown', unlock);
       window.removeEventListener('keydown', unlock);
       clearInterval(iv);
-      clearInterval(creatureIv);
+      clearInterval(sfxIv);
       audioService.dispose();
     };
   });
