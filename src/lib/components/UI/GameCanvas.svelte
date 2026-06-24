@@ -2039,7 +2039,12 @@
     ctx: CanvasRenderingContext2D,
     tiles: Set<string>,
     fill: string,
-    stroke: string
+    stroke: string,
+    // Tiles to OUTLINE as part of the region but NOT solid-fill — they belong to more than one zone
+    // and are painted with a diagonal stripe split instead (see paintSplitTiles), so the colours
+    // compose cleanly instead of stacking into a muddy double-fill. The outline still uses the full
+    // set, so each zone keeps an unbroken border through the overlap.
+    skipFill?: Set<string>
   ) {
     const W = container?.clientWidth ?? 0;
     const H = container?.clientHeight ?? 0;
@@ -2050,6 +2055,7 @@
     ctx.save();
     ctx.fillStyle = fill;
     for (const key of tiles) {
+      if (skipFill?.has(key)) continue;
       const ci = key.indexOf(',');
       const wx = +key.slice(0, ci);
       const wy = +key.slice(ci + 1);
@@ -2087,6 +2093,45 @@
     ctx.restore();
   }
 
+  /**
+   * Paint tiles that belong to MULTIPLE overlapping zones as diagonal stripes cycling through each
+   * zone's colour, clipped to the cell. This lets e.g. a stockpile + restriction zone share tiles and
+   * read as BOTH at once, instead of the two translucent fills stacking into a muddy blend (or one
+   * hiding the other). `tileColors` maps "x,y" → that tile's ordered list of zone fill colours.
+   */
+  function paintSplitTiles(ctx: CanvasRenderingContext2D, tileColors: Map<string, string[]>) {
+    const W = container?.clientWidth ?? 0;
+    const H = container?.clientHeight ?? 0;
+    const colW = Math.ceil(W / tileWidth);
+    const rowH = Math.ceil(H / tileHeight);
+    const stripe = Math.max(5, tileWidth / 3); // diagonal stripe width in px
+    for (const [key, colors] of tileColors) {
+      const ci = key.indexOf(',');
+      const wx = +key.slice(0, ci);
+      const wy = +key.slice(ci + 1);
+      if (wx < viewX - 1 || wy < viewY - 1 || wx > viewX + colW || wy > viewY + rowH) continue;
+      const sx = (wx - viewX) * tileWidth;
+      const sy = (wy - viewY) * tileHeight;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(sx, sy, tileWidth, tileHeight);
+      ctx.clip();
+      let i = 0;
+      for (let o = -tileHeight; o < tileWidth; o += stripe) {
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.beginPath();
+        ctx.moveTo(sx + o, sy);
+        ctx.lineTo(sx + o + stripe, sy);
+        ctx.lineTo(sx + o + stripe - tileHeight, sy + tileHeight);
+        ctx.lineTo(sx + o - tileHeight, sy + tileHeight);
+        ctx.closePath();
+        ctx.fill();
+        i++;
+      }
+      ctx.restore();
+    }
+  }
+
   function drawDesignations() {
     if (!designCanvas || !container || !worldMap.length) return;
     markRenderDirty(); // selection / designation / drag preview changed → force a draw even when frozen
@@ -2119,20 +2164,24 @@
       // Other designation types (harvest/mine/…) have no ZONE_TINT_COLORS entry and are skipped here —
       // they get icons below instead. Tiles whose zone instance has its colour hidden are excluded.
       const byColor = new Map<string, Set<string>>();
+      // Every zone colour stacked on a tile, in encounter order — drives the overlap stripe split so a
+      // tile in two+ zones (e.g. stockpile + restrict) shows BOTH instead of competing / hiding one.
+      const tileColors = new Map<string, string[]>();
       const add = (key: string, color: string) => {
         const inst = designationZoneId[key];
         if (inst && hiddenZoneInstances.has(inst)) return;
         let set = byColor.get(color);
         if (!set) byColor.set(color, (set = new Set()));
         set.add(key);
+        const list = tileColors.get(key);
+        if (!list) tileColors.set(key, [color]);
+        else if (!list.includes(color)) list.push(color);
       };
+      // Collect EVERY tinted zone type on a tile (no early break) so overlaps are detected.
       for (const key in zoneTiles) {
         for (const t of zoneTiles[key]) {
           const c = ZONE_TINT_COLORS[t];
-          if (c) {
-            add(key, c);
-            break;
-          }
+          if (c) add(key, c);
         }
       }
       for (const key in designations) {
@@ -2140,11 +2189,20 @@
         if (c) add(key, c);
       }
 
-      // Each zone colour → translucent fill + outer-edge outline (interior shared edges get no line,
-      // so a multi-tile zone reads as one region, not a grid). Adjacency uses the full set incl.
-      // off-screen tiles, so no false border appears at the viewport edge.
+      // Tiles shared by 2+ zones: solid-filled as diagonal stripes (below) rather than stacked fills.
+      const overlap = new Set<string>();
+      for (const [key, colors] of tileColors) if (colors.length > 1) overlap.add(key);
+
+      // Each zone colour → translucent fill + outer-edge outline (interior shared edges get no line, so
+      // a multi-tile zone reads as one region). Overlap tiles are outlined (border stays unbroken) but
+      // not solid-filled here; the stripe pass fills them so both colours compose cleanly.
       for (const [color, set] of byColor) {
-        paintTileRegion(ctx, set, color, color.replace(/[\d.]+\)$/, '0.95)'));
+        paintTileRegion(ctx, set, color, color.replace(/[\d.]+\)$/, '0.95)'), overlap);
+      }
+      if (overlap.size > 0) {
+        const overlapColors = new Map<string, string[]>();
+        for (const key of overlap) overlapColors.set(key, tileColors.get(key)!);
+        paintSplitTiles(ctx, overlapColors);
       }
     }
 
@@ -4276,24 +4334,42 @@
             const equipOrder = (target?: EquipmentSlot | 'inventory') =>
               gameState.command({
                 type: 'setPawnDraftTarget',
-                payload: { pawnId, target: { type: 'equip', dropId: d.id, x: tileX, y: tileY, slot: target } },
+                payload: {
+                  pawnId,
+                  target: { type: 'equip', dropId: d.id, x: tileX, y: tileY, slot: target }
+                },
                 save: true
               });
             if (it.type === 'weapon') {
               // A one-handed weapon may go in EITHER hand; a two-hander only in the main hand.
-              entries.push({ label: `Equip ${name} → Main Hand`, run: () => equipOrder('mainHand') });
+              entries.push({
+                label: `Equip ${name} → Main Hand`,
+                run: () => equipOrder('mainHand')
+              });
               if (!it.weaponProperties?.twoHanded) {
-                entries.push({ label: `Equip ${name} → Off Hand`, run: () => equipOrder('offHand') });
+                entries.push({
+                  label: `Equip ${name} → Off Hand`,
+                  run: () => equipOrder('offHand')
+                });
               }
             } else if (it.type === 'tool') {
               // A tool can be WIELDED in hand, or CARRIED in the pack so a weapon can stay in hand —
               // a carried tool still grants its work boost (heldToolBoost reads inventory too).
-              entries.push({ label: `Equip ${name} → Main Hand`, run: () => equipOrder('mainHand') });
-              entries.push({ label: `Carry ${name} (inventory)`, run: () => equipOrder('inventory') });
+              entries.push({
+                label: `Equip ${name} → Main Hand`,
+                run: () => equipOrder('mainHand')
+              });
+              entries.push({
+                label: `Carry ${name} (inventory)`,
+                run: () => equipOrder('inventory')
+              });
             } else {
               // Armour / shields / rings → their canonical slot (undefined = auto-resolve, so a 2nd
               // ring still pairs into the free ring slot instead of swapping the first).
-              entries.push({ label: `Equip ${name} → ${slotLabel(slot)}`, run: () => equipOrder() });
+              entries.push({
+                label: `Equip ${name} → ${slotLabel(slot)}`,
+                run: () => equipOrder()
+              });
             }
             continue;
           }

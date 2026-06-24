@@ -28,7 +28,7 @@ import buildingsData from '../database/buildings.jsonc';
 
 import { pawnStateMachineService, reapDeadPawns } from './PawnStateMachine';
 import { findNearestDepositPoint, depositInventory, pickUpFromTile } from './pawn/pawnHauling';
-import { equipDropToPawn } from '../core/PawnEquipment';
+import { equipDropToPawn, carryDropToInventory } from '../core/PawnEquipment';
 import { jobService } from '../services/JobService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { resourceObjectService } from '../services/ResourceObjectService';
@@ -820,11 +820,12 @@ export class GameEngineImpl implements GameEngine {
           clearEquip(); // the item is gone (taken / decayed) — abandon the order
         } else if (pawn.position.x === drop.x && pawn.position.y === drop.y) {
           gs = pawnService.assignPath(pawn.id, [], gs);
-          // `slot === 'inventory'` carries one unit in the pack (a tool kept off the hand); an explicit
-          // equipment slot (or auto-resolve when omitted) wears/wields it.
+          // `slot === 'inventory'` carries one unit in the pack as a TRACKED instance (a tool kept off
+          // the hand — instances are what the tool boost/gate read, and they survive deposits); an
+          // explicit equipment slot (or auto-resolve when omitted) wears/wields it.
           gs =
             target.slot === 'inventory'
-              ? pickUpFromTile(gs, pawn.id, drop.x, drop.y, { dropId: target.dropId, maxQty: 1 })
+              ? carryDropToInventory(gs, pawn.id, target.dropId)
               : equipDropToPawn(gs, pawn.id, target.dropId, target.slot);
           gs = {
             ...gs,

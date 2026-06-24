@@ -95,6 +95,12 @@ function heldToolBoost(
   if (eq) for (const inst of Object.values(eq)) if (inst) consider(inst);
   const carried = (entity as Pawn).inventory?.instances;
   if (carried) for (const inst of carried) consider(inst);
+  // Also recognise a tool held in the bulk `inventory.items` count map (no per-unit instance, so it
+  // counts at Standard quality) — a tool boosts work however it ended up in the pack.
+  const bulk = (entity as Pawn).inventory?.items;
+  if (bulk)
+    for (const id in bulk)
+      if ((bulk[id] ?? 0) > 0) consider({ itemId: id } as ItemInstance);
   return found ? { speed, yield: yieldB, itemId: speedItemId } : null;
 }
 

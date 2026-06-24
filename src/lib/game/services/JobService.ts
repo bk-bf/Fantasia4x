@@ -435,7 +435,10 @@ class JobServiceImpl {
     if (ids.length === 0) return false;
     if (Object.values(pawn.equipment ?? {}).some((inst) => inst && ids.includes(inst.itemId)))
       return true;
-    return (pawn.inventory?.instances ?? []).some((inst) => ids.includes(inst.itemId));
+    if ((pawn.inventory?.instances ?? []).some((inst) => ids.includes(inst.itemId))) return true;
+    // Also a tool sitting in the bulk `inventory.items` count map counts as held.
+    const bulk = pawn.inventory?.items ?? {};
+    return ids.some((id) => (bulk[id] ?? 0) > 0);
   }
 
   /** Does the colony hold a qualifying tool in stock? Keeps a gated job claimable so a toolless pawn

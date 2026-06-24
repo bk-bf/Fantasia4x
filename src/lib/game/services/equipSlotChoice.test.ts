@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { equipDropToPawn } from '../core/PawnEquipment';
+import { equipDropToPawn, carryDropToInventory } from '../core/PawnEquipment';
 import { pawnStatService } from './PawnStatService';
+import { jobService } from './JobService';
 import type { GameState, Pawn } from '../core/types';
 
 /**
@@ -59,5 +60,21 @@ describe('equip slot choice + carried-tool boost', () => {
       } as never
     });
     expect(pawnStatService.heldToolFor(pawn, 'mining')).toBeNull();
+  });
+
+  it('carryDropToInventory stores the tool as a tracked INSTANCE (not the bulk count map)', () => {
+    const out = carryDropToInventory(stateWithDrop(), 'p1', 'd1');
+    const inv = out.pawns[0].inventory;
+    expect(inv.instances.map((i) => i.itemId)).toContain('flint_knife');
+    expect(inv.items.flint_knife ?? 0).toBe(0); // not in the bulk count map
+    expect(out.droppedItems).toHaveLength(0); // drop consumed
+  });
+
+  it('a tool in the bulk items count map is still recognised by the boost AND the gate', () => {
+    const pawn = pawnWith({
+      inventory: { items: { flint_knife: 1 }, instances: [] } as never
+    });
+    expect(pawnStatService.heldToolFor(pawn, 'leatherworking')?.itemId).toBe('flint_knife');
+    expect(jobService.pawnHasToolFor(pawn, 'leatherworking', 0)).toBe(true);
   });
 });

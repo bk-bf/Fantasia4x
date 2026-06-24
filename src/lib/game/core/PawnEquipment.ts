@@ -176,6 +176,39 @@ export function equipDropToPawn(
   return { ...state, pawns, droppedItems: drops, stockpile: aggregateFromDrops(drops) };
 }
 
+/**
+ * Carry ONE unit of a tile/stockpile drop in the pawn's pack as a TRACKED instance (not the bulk
+ * `inventory.items` count map). Instances are the only inventory form the tool system reads — both the
+ * work boost (`heldToolBoost`) and the claim gate (`pawnHasToolFor`) scan `inventory.instances` — and
+ * they survive a stockpile deposit, so a tool kept this way stays with the pawn instead of being
+ * dropped. Used by the drafted "Carry … (inventory)" order so a carried tool actually boosts work.
+ */
+export function carryDropToInventory(state: GameState, pawnId: string, dropId: string): GameState {
+  const drop = (state.droppedItems ?? []).find((d) => d.id === dropId);
+  if (!drop) return state;
+  const item = itemService.getItemById(drop.resourceId);
+  if (!item) return state;
+  const pawnIdx = state.pawns.findIndex((pw) => pw.id === pawnId);
+  if (pawnIdx < 0) return state;
+  const pawn = state.pawns[pawnIdx];
+  const instance: ItemInstance = drop.instance ?? {
+    instanceId: `${item.id}-${pawnId}-${Date.now()}`,
+    itemId: item.id,
+    durability: item.maxDurability ?? 100,
+    ...(drop.quality !== undefined ? { quality: drop.quality } : {})
+  };
+  const drops = (state.droppedItems ?? [])
+    .map((d) => (d.id === dropId ? { ...d, quantity: d.quantity - 1 } : d))
+    .filter((d) => d.quantity > 0);
+  const inv = pawn.inventory ?? createPawnInventory();
+  const pawns = state.pawns.map((pw, i) =>
+    i === pawnIdx
+      ? { ...pw, inventory: { ...inv, instances: [...(inv.instances ?? []), instance] } }
+      : pw
+  );
+  return { ...state, pawns, droppedItems: drops, stockpile: aggregateFromDrops(drops) };
+}
+
 export function canEquipItem(_pawn: Pawn, itemId: string): boolean {
   const item = itemService.getItemById(itemId);
   if (!item) return false;
