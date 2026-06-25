@@ -31,7 +31,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # pnpm@11.3.0 (packageManager) requires Node >= 22.13 — Node 20 fails the install step.
+          node-version: 22
           cache: pnpm
 
       # Rust → WASM: spatial-core and sim-core are compiled fresh on each runner (the -pkg dirs are
