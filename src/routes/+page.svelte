@@ -272,7 +272,7 @@
 </svelte:head>
 
 <!-- Headless: reactive music/ambient driver (no DOM). Mounted always so menu music plays too. -->
-<AudioController isMenu={$appPhase === 'menu'} />
+<AudioController isMenu={$appPhase === 'menu'} playing={$appPhase === 'game' && $bootReveal} />
 
 <!-- Ambient day/night colour tint for panels — multiplies each RGB channel.
      Updated reactively each turn; identity matrix (all 1.0) at noon = no change. -->
