@@ -4273,6 +4273,17 @@
     equipMenu = null;
     if (hoverTileX < 0 || hoverTileY < 0) return;
 
+    // ── Rescue: right-click a COLLAPSED colonist → send the nearest free pawn to carry it to shelter.
+    // Takes priority over draft orders / designation-clear (you don't attack or paint over a downed
+    // ally). No-op (in the command) when there's no shelter or no one free. ──
+    if (!designationMode) {
+      const downed = findPawnAtTile(hoverTileX, hoverTileY);
+      if (downed && downed.currentState === 'Collapsed') {
+        gameState.command({ type: 'rescuePawn', payload: { victimId: downed.id }, save: true });
+        return;
+      }
+    }
+
     // ── Draft mode: right-click issues orders ────────────────────────────────
     if (selectedPawn?.drafted) {
       // Issue an attack order; `mode` forces melee/ranged (undefined = auto).

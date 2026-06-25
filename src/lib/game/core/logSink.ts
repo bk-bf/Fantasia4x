@@ -59,6 +59,16 @@ export interface CombatLungeRequest {
   dirY: number;
 }
 
+/** A world-space combat SOUND cue (tile coords) — a weapon swing or a condition onset. The renderer's
+ *  audio layer plays the clip set for `sound` at a volume scaled by zoom + viewport proximity. */
+export interface CombatSoundRequest {
+  /** Combat sound-id (audio/manifest.ts `COMBAT_SFX`): weapon archetype (slash/blunt/…) or condition
+   *  cue (knockdown/fracture/…). */
+  sound: string;
+  worldX: number;
+  worldY: number;
+}
+
 /** A ranged projectile to animate from shooter tile → target tile (visual only; the hit is already
  *  resolved hitscan). `effect` selects the particle style (from the ammo/weapon `projectile` field). */
 export interface CombatProjectileRequest {
@@ -101,6 +111,8 @@ export interface SimLogSink {
   pushCombatText(req: CombatTextRequest): void;
   /** Push an attacker-glyph lunge for the renderer (visual only). */
   pushAttackLunge(req: CombatLungeRequest): void;
+  /** Push a combat sound cue (weapon swing / condition onset) for the renderer's audio layer. */
+  pushCombatSound(req: CombatSoundRequest): void;
   /** Push a ranged projectile to animate shooter→target (visual only). */
   pushProjectile(req: CombatProjectileRequest): void;
 
@@ -123,6 +135,7 @@ const noopSink: SimLogSink = {
   logCombatKill: () => {},
   pushCombatText: () => {},
   pushAttackLunge: () => {},
+  pushCombatSound: () => {},
   pushProjectile: () => {},
   logEntityDeath: () => {}
 };

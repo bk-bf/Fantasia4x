@@ -38,6 +38,8 @@ import {
 import { equipItem, unequipItem, useConsumable, equipDropToPawn } from '../core/PawnEquipment';
 import { pickUpFromTile } from '../systems/pawn/pawnHauling';
 import { PAWN_STATE } from '../systems/pawn/pawnStates';
+import { hasShelter } from '../systems/pawn/handlers/rescue';
+import { manhattan } from '../core/distance';
 import { designationService } from '../services/DesignationService';
 import { buildingService } from '../services/BuildingService';
 import { itemService } from '../services/ItemService';
@@ -182,6 +184,59 @@ export const COMMANDS: Record<string, Cmd> = {
               draftTarget: undefined,
               activeJob: undefined,
               currentState: 'Idle' as never
+            }
+          : pw
+      )
+    };
+  },
+  /** Rescue order (right-click a collapsed colonist): dispatch the NEAREST free, able pawn to carry the
+   *  downed one to the closest shelter (REST building) so it recovers safely. No-op when the victim
+   *  isn't collapsed, the colony has no shelter, it's already being rescued, or no one is free. */
+  rescuePawn: (s, p: { victimId: string }) => {
+    const victim = s.pawns.find((pw) => pw.id === p.victimId);
+    if (!victim || victim.isAlive === false || !victim.position) return s;
+    if (victim.currentState !== PAWN_STATE.COLLAPSED) return s;
+    if (!hasShelter(s)) return s; // nowhere to take them
+    if (s.pawns.some((pw) => pw.rescue?.victimId === p.victimId)) return s; // already being rescued
+    // Nearest pawn that can actually go: alive, on-map, not drafted, and not busy with its own crisis.
+    const BUSY = new Set<string>([
+      PAWN_STATE.COLLAPSED,
+      PAWN_STATE.SLEEPING,
+      PAWN_STATE.RESCUING,
+      PAWN_STATE.FIGHTING,
+      PAWN_STATE.FLEEING,
+      PAWN_STATE.HUNTING
+    ]);
+    let rescuerId: string | null = null;
+    let bestD = Infinity;
+    for (const pw of s.pawns) {
+      if (pw.id === p.victimId || pw.isAlive === false || !pw.position || pw.drafted) continue;
+      if (BUSY.has(pw.currentState ?? PAWN_STATE.IDLE)) continue;
+      const d = manhattan(pw.position.x, pw.position.y, victim.position.x, victim.position.y);
+      if (d < bestD) {
+        bestD = d;
+        rescuerId = pw.id;
+      }
+    }
+    if (!rescuerId) return s;
+    const id = rescuerId;
+    // Release any pool job the rescuer had claimed so it isn't stranded.
+    const jobs = (s.jobs ?? []).some((j) => j.claimedBy === id)
+      ? (s.jobs ?? []).map((j) => (j.claimedBy === id ? { ...j, claimedBy: null } : j))
+      : s.jobs;
+    return {
+      ...s,
+      jobs,
+      pawns: s.pawns.map((pw) =>
+        pw.id === id
+          ? {
+              ...pw,
+              currentState: PAWN_STATE.RESCUING as never,
+              rescue: { victimId: p.victimId, carrying: false, destX: 0, destY: 0 },
+              activeJob: undefined,
+              draftTarget: undefined,
+              path: [],
+              isMoving: false
             }
           : pw
       )
@@ -564,7 +619,8 @@ export const COMMANDS: Record<string, Cmd> = {
   /** Equip a loose item off a tile onto a pawn (ADR-016: the swapped-out item drops back). */
   // Instant equip-from-ground (no movement). The drafted equip ORDER walks the pawn over first and
   // then applies this same `equipDropToPawn` on arrival (see GameEngineImpl._processDraftOrders).
-  equipFromTile: (s, p: { pawnId: string; dropId: string }) => equipDropToPawn(s, p.pawnId, p.dropId),
+  equipFromTile: (s, p: { pawnId: string; dropId: string }) =>
+    equipDropToPawn(s, p.pawnId, p.dropId),
   /** Pick `quantity` units of a specific tile drop straight into a pawn's inventory (instant, like
    *  equipFromTile). Carry budget is respected — only what fits is taken (floor of 1). */
   pickUpItemFromTile: (s, p: { pawnId: string; dropId: string; quantity: number }) => {

@@ -224,6 +224,12 @@ export function emitPersistentConditionFloaters(
   }
 }
 
+/** Combat-SFX cue id for a condition (conditions.jsonc `audio`), or undefined. Read by Combat to fire
+ *  a sound the tick a combat condition latches (knockdown/envenomed/shock/…). */
+export function conditionAudio(id: string): string | undefined {
+  return ALL_CONDITION_DEFS.find((d) => d.id === id)?.audio;
+}
+
 /** Return the active ConditionStage for a given condition at its current severity. */
 export function getConditionCurrentStage(condition: EntityCondition): ConditionStage | undefined {
   const def = CONDITIONS_DB.find((d) => d.id === condition.id);

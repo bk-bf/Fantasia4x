@@ -52,6 +52,9 @@ export interface TransientConditionDef {
    *  first tick it appears on an entity — surfaced by Combat (timer/combat-driven ids) or
    *  syncTransientConditions (sync-derived ids). Opt-in: unflagged conditions never float. */
   floater?: boolean;
+  /** Combat-SFX cue (audio/manifest.ts `COMBAT_SFX`) played the tick this condition latches in combat
+   *  — e.g. knockdown/envenomed/ensnared. Backend ref only; read by Combat → simLog.pushCombatSound. */
+  audio?: string;
   /** Data-driven onset for a NEED-threshold transient (e.g. `tired` at fatigue ≥ 100). The deriving
    *  code (pawn syncTransientConditions / mob entityLifecycle) reads the threshold from HERE rather than
    *  a hardcoded constant, so designers tune it in the data and pawns + mobs can't drift. The behavioural
@@ -220,6 +223,9 @@ export interface ConditionDef {
    *  condition first appears or graduates to a new stage. Opt-in, mirroring the transient flag;
    *  surfaced pawn-side by syncTransientConditions (mobs don't run that sync). */
   floater?: boolean;
+  /** Combat-SFX cue (audio/manifest.ts `COMBAT_SFX`) played when this condition latches in combat
+   *  (e.g. shock, fractured). Backend ref only; read by Combat → simLog.pushCombatSound. */
+  audio?: string;
 }
 
 /** Record appended to gameState.deadPawns when a pawn dies. */

@@ -89,6 +89,7 @@
     },
     {
         "id": "fractured",
+        "audio": "fracture",
         "name": "Fractured Bone",
         "description": "A cracked or shattered bone — graded by how far the break has gone. Severity tracks the worst fracture on the body: a hairline crack nags, but a fully shattered bone (bone HP driven to 0) is agony that collapses strength and dexterity and crawls all work. The struck limb's own function — manipulation for an arm, movement for a leg — is gutted on top via the body model. The limb is NOT lost: bone mends over WEEKS of rest (dressing + a caretaker speed it).",
         "lethalSeverity": 99,
@@ -329,6 +330,7 @@
     },
     {
         "id": "shock",
+        "audio": "shock",
         "name": "Shock",
         "charSpans": [ {"sheet": "font", "id": 19} ],
         "description": "Severe pain OR heavy blood loss has sent the body into shock — the single low-blood/high-pain crisis. The fighter goes cold, clumsy and blind: strength, dexterity and perception crash, so they barely hit, barely dodge and barely hurt anything.",
@@ -524,6 +526,7 @@
     // vs the persistent conditions above (which omit it). modifiers are multipliers.
     {
         "id": "knockdown",
+        "audio": "knockdown",
         "name": "Knocked Down",
         "transient": true,
         "description": "Prone from a heavy blunt blow — sprawled and helpless. Loses the next attack and is wide open to anyone standing over it; recovers after a couple of minutes.",
@@ -534,6 +537,7 @@
     },
     {
         "id": "collapse",
+        "audio": "knockdown",
         "name": "Collapsed",
         "transient": true,
         "description": "Overwhelmed by pain — incapacitated and out of the fight, a body on the ground. Recovers only as the pain subsides.",
@@ -745,6 +749,7 @@
     // decrement each tick and auto-clear. Trigger chance is reduced by the named resistance stat.
     {
         "id": "envenomed",
+        "audio": "envenomed",
         "name": "Envenomed",
         "transient": true,
         "description": "Venom courses through the blood — nauseous, weak and shaking. Strength, dexterity and endurance all fail until it passes. Onset chance is reduced by poison resistance (CON × blood filtration).",
@@ -762,6 +767,7 @@
     },
     {
         "id": "bloodletting",
+        "audio": "bloodletting",
         "name": "Bleeding Out",
         "transient": true,
         "description": "A feeding wound that won't clot — light-headed and shaky as blood seeps away, hands and feet going slack. Onset chance is reduced by piercing resistance (CON); a successful bite also drains blood directly (→ shock).",
@@ -772,6 +778,7 @@
     },
     {
         "id": "disoriented",
+        "audio": "disoriented",
         "name": "Disoriented",
         "transient": true,
         "description": "Reeling from a piercing screech — senses scrambled, slow to act and easy to land a blow on. Perception and dexterity scatter. Onset chance is reduced by mental resistance (INT).",
@@ -782,6 +789,7 @@
     },
     {
         "id": "ensnared",
+        "audio": "ensnared",
         "name": "Ensnared",
         "transient": true,
         "description": "Caught fast by a sticky tongue — rooted in place and wide open until torn free. Onset chance is reduced by blunt resistance (CON/STR — wrenching free).",

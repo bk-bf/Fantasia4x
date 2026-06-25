@@ -10,6 +10,7 @@ import { setSimLogSink, type SimLogSink } from '$lib/game/core/logSink';
 import { logActivity, logDiag, logEntityDeath, logCombatSwing, logCombatKill } from './Log';
 import { combatFeedback } from './combatFeedback';
 import { attackLunges } from './attackLunges';
+import { combatSounds } from './combatSounds';
 import { projectiles } from './projectiles';
 
 /**
@@ -24,6 +25,7 @@ export const realSimLogSink: SimLogSink = {
   logCombatKill,
   pushCombatText: (req) => combatFeedback.push(req),
   pushAttackLunge: (req) => attackLunges.push(req),
+  pushCombatSound: (req) => combatSounds.push(req),
   pushProjectile: (req) => projectiles.push(req),
   logEntityDeath
 };

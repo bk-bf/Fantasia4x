@@ -374,6 +374,11 @@ export interface Item {
     bloodDrain?: number; // blood volume drained on trigger (proboscis/feeding bites)
   };
 
+  /** Combat-SFX archetype (audio/manifest.ts `COMBAT_SFX`) played on each swing of this weapon or
+   *  natural weapon — e.g. "slash" / "blunt" / "pierce" / "bow" / "bite" / "venom". Backend ref only;
+   *  omitted = silent swing. Read by Combat → simLog.pushCombatSound. */
+  audio?: string;
+
   /**
    * RANGED-COMBAT: tags an item as ammunition. Any ammo feeds any ranged weapon sharing its
    * `ammoCategory` (better ammo = better result — the dynamic-material philosophy). Ammo is a

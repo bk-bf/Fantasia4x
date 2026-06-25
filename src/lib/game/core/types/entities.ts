@@ -313,7 +313,14 @@ export interface Pawn {
     | { type: 'equip'; dropId: string; x: number; y: number; slot?: EquipmentSlot | 'inventory' };
 
   // Phase 4/5: State machine primary state
-  currentState?: string; // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Fighting' | 'Fleeing' | 'Dead'
+  currentState?: string; // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Fighting' | 'Fleeing' | 'Rescuing' | 'Dead'
+  /**
+   * Active rescue order (currentState === 'Rescuing'): this pawn fetches a COLLAPSED colonist
+   * (`victimId`) and carries it to shelter. `carrying` flips once it reaches the victim; from then on
+   * the victim's position mirrors this carrier each tick until they reach (`destX`,`destY`) — the
+   * nearest rest building — where it's laid down. Set by the `rescuePawn` command (right-click).
+   */
+  rescue?: { victimId: string; carrying: boolean; destX: number; destY: number };
   /** Soft-preview of the next up-to-4 unclaimed job IDs the pawn would take after activeJob.
    *  Not claimed — used only for need-priority lookahead in the state machine. */
   jobQueue?: string[];

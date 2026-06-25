@@ -21,8 +21,9 @@ export const PAWN_STATE = {
   // Hunting (work-driven): chase a player-marked huntable mob and fight it to the kill.
   HUNTING: 'Hunting',
   // Downed by cumulative pain — out of the fight until pain subsides.
-  COLLAPSED: 'Collapsed'
+  COLLAPSED: 'Collapsed',
+  // Carrying a downed colonist to shelter (player rescue order). See handlers/rescue.ts.
+  RESCUING: 'Rescuing'
 } as const;
 
 export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];
-

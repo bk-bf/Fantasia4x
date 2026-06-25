@@ -94,6 +94,7 @@ import {
   handleWashing
 } from './pawn/handlers/needs';
 import { handleFighting, handleFleeing, handleHunting } from './pawn/handlers/combat';
+import { handleRescuing } from './pawn/handlers/rescue';
 // Re-exported for external consumers that imported them from this module historically.
 export { PAWN_STATE, type PawnStateName };
 export { resetUnreachableJobs } from './pawn/pawnHelpers';
@@ -826,7 +827,8 @@ const STATE_HANDLERS: Record<string, PawnHandler> = {
   [PAWN_STATE.WASHING]: handleWashing,
   [PAWN_STATE.FIGHTING]: handleFighting,
   [PAWN_STATE.FLEEING]: handleFleeing,
-  [PAWN_STATE.HUNTING]: handleHunting
+  [PAWN_STATE.HUNTING]: handleHunting,
+  [PAWN_STATE.RESCUING]: handleRescuing
 };
 
 function tickPawn(pawn: Pawn, gameState: GameState): GameState {
