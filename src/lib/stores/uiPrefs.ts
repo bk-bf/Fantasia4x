@@ -103,6 +103,15 @@ export const hideSidebars = createPersistedBool(HIDE_SIDEBARS_KEY, true);
  */
 export const debugMode = createPersistedBool(DEBUG_MODE_KEY, false);
 
+// In the Electron shell, mirror debug mode to the main process so it can gate DevTools (Ctrl+Shift+I)
+// on this setting — DevTools stay blocked in a normal player build and become available once the
+// player enables Debug mode in Settings. `subscribe` fires immediately with the persisted value, so
+// the main process is in sync from startup, then on every toggle. No-op in a plain browser.
+if (typeof window !== 'undefined') {
+  const shell = (window as unknown as { fantasia?: { setDebugMode?: (on: boolean) => void } }).fantasia;
+  if (shell?.setDebugMode) debugMode.subscribe((on) => shell.setDebugMode!(on));
+}
+
 // ===== SETTINGS MENU (SettingsModal.svelte) =====
 
 function loadNumber(key: string, fallback: number): number {

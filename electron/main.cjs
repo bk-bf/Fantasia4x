@@ -6,7 +6,7 @@
 // asset paths (/_app/…) that break under file:// (they'd point at the OS filesystem root). Registering
 // `app` as a STANDARD + SECURE scheme gives the page a real origin (app://bundle), so /_app/… resolves
 // to app://bundle/_app/…, the sim Worker + WASM load, and a clean CSP can target a single origin.
-const { app, BrowserWindow, protocol, shell } = require('electron');
+const { app, BrowserWindow, protocol, shell, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -61,6 +61,14 @@ async function serve(reqUrl) {
   }
 }
 
+// Whether DevTools may be opened — mirrored from the renderer's persisted `debugMode` setting (uiPrefs)
+// over the preload IPC bridge. A normal player build keeps this false (DevTools unreachable); toggling
+// "Debug mode" in Settings flips it. Gates the DevTools shortcuts in createWindow().
+let debugMode = false;
+ipcMain.on('f4x:set-debug-mode', (_event, on) => {
+  debugMode = !!on;
+});
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1600,
@@ -94,6 +102,20 @@ function createWindow() {
       e.preventDefault();
       shell.openExternal(url);
     }
+  });
+
+  // Gate DevTools on the in-app Debug setting: block the open shortcuts (Ctrl+Shift+I/J/C, F12) when
+  // debug mode is off, and force DevTools shut if anything else opens them. So a clean player build
+  // can't reach DevTools; enabling Debug mode in Settings restores them.
+  win.webContents.on('before-input-event', (event, input) => {
+    if (debugMode || input.type !== 'keyDown') return;
+    const key = (input.key || '').toLowerCase();
+    if (key === 'f12' || (input.control && input.shift && (key === 'i' || key === 'j' || key === 'c'))) {
+      event.preventDefault();
+    }
+  });
+  win.webContents.on('devtools-opened', () => {
+    if (!debugMode) win.webContents.closeDevTools();
   });
 
   win.loadURL(`${APP_ORIGIN}/`);
