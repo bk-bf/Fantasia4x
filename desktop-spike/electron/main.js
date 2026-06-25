@@ -6,7 +6,8 @@
 //   Terminal 2:  cd desktop-spike/electron && pnpm start
 //
 // Read the on-screen "NNFPS · NNTPS" counter (top controls bar) and compare to your Zen number.
-const { app, BrowserWindow, session, shell } = require('electron');
+const { app, BrowserWindow, session, shell, ipcMain } = require('electron');
+const path = require('path');
 
 // NOTE: do NOT name this `URL` — that shadows the global WHATWG `URL` constructor for the whole module,
 // making every `new URL(...)` below throw "URL is not a constructor". That bug silently broke the
@@ -25,6 +26,14 @@ const SHELL_UA_MARKER = 'Fantasia4xShell';
 // DevTools must NOT be reachable (Ctrl+Shift+I / Ctrl+Shift+J / F12 / right-click Inspect). Debug /
 // profiler launches leave DevTools available. launch.sh sets F4X_PLAY=true for the player build only.
 const PLAY_MODE = process.env.F4X_PLAY === 'true';
+
+// DevTools gating mirrors the packaged build (electron/main.cjs): in --play, DevTools follow the in-app
+// Debug setting — off by default, available once you tick Debug mode in Settings. The renderer mirrors
+// that setting to the main process over the preload IPC bridge. (--debug/--profiler leave DevTools on.)
+let debugMode = false;
+ipcMain.on('f4x:set-debug-mode', (_event, on) => {
+  debugMode = !!on;
+});
 
 // GC tuning experiment (§D). The renderer deserializes the whole sim snapshot every flush → high
 // transient-garbage rate → the GC sawtooth you see (TPS/FPS recover on pause, dip on resume). A
@@ -61,22 +70,27 @@ function createWindow() {
     backgroundThrottling: false,
     webPreferences: {
       backgroundThrottling: false,
-      // Player build: disable DevTools at the engine level so no shortcut/menu can open it.
-      devTools: !PLAY_MODE
+      // Mirror the packaged build: a preload exposes the debug-mode IPC bridge, and DevTools stay
+      // enabled at the engine level (gated below by the in-app Debug setting in --play).
+      preload: path.join(__dirname, 'preload.cjs'),
+      contextIsolation: true,
+      devTools: true
     }
   });
 
-  // Belt-and-suspenders for the player build: swallow the DevTools key shortcuts (Ctrl+Shift+I/J/C,
-  // F12) before Chromium's default accelerators see them. devTools:false already neuters them, but
-  // this guarantees the keypress is a no-op rather than relying on a toggle that's off.
-  if (PLAY_MODE) {
-    win.webContents.on('before-input-event', (event, input) => {
-      const key = (input.key || '').toLowerCase();
-      const devtoolsCombo =
-        (input.control && input.shift && (key === 'i' || key === 'j' || key === 'c')) || key === 'f12';
-      if (devtoolsCombo) event.preventDefault();
-    });
-  }
+  // In --play, gate DevTools on the in-app Debug setting (like the packaged build): block the open
+  // shortcuts (Ctrl+Shift+I/J/C, F12) unless Debug mode is on, and shut DevTools if anything opens them.
+  // --debug/--profiler (PLAY_MODE false) leave DevTools always reachable.
+  win.webContents.on('before-input-event', (event, input) => {
+    if (!PLAY_MODE || debugMode || input.type !== 'keyDown') return;
+    const key = (input.key || '').toLowerCase();
+    if (key === 'f12' || (input.control && input.shift && (key === 'i' || key === 'j' || key === 'c'))) {
+      event.preventDefault();
+    }
+  });
+  win.webContents.on('devtools-opened', () => {
+    if (PLAY_MODE && !debugMode) win.webContents.closeDevTools();
+  });
 
   // ── Navigation hardening: the engine-level guarantee that the Chromium webview is NEVER exposed ──
   // This is a GAME, not a browser. The window must never navigate away from the app, and no local URL
