@@ -83,16 +83,43 @@ fi
 echo "▸ Building SvelteKit static bundle…"
 pnpm build
 
-# 3. Package with electron-builder. --publish never: only ever produce local artifacts, never push a release.
+# Force IPv4 DNS for electron-builder's downloader. This machine's system resolver falls through to a
+# broken Tailscale IPv6 nameserver (fd7a:115c:a1e0::53), so the Go downloader can't resolve github
+# (ping/curl work only because they use the IPv4 path). Run packaging inside an unprivileged user+mount
+# namespace with resolv.conf pinned to public IPv4 resolvers — no sudo, no permanent system change. If
+# unprivileged namespaces are unavailable, fall back to a plain run (then a working system DNS is needed).
+RESOLV4="$(mktemp)"
+printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > "$RESOLV4"
+trap 'rm -f "$RESOLV4"' EXIT
+NS_DNS=false
+if unshare --user --map-root-user --mount --fork bash -c 'mount --bind "$1" /etc/resolv.conf' f4x "$RESOLV4" 2>/dev/null; then
+  NS_DNS=true
+  echo "▸ Forcing IPv4 DNS for electron-builder (user namespace, resolv.conf → 1.1.1.1)."
+else
+  echo "build.sh: unprivileged user namespaces unavailable — using the system DNS (may fail if IPv6 DNS is broken)." >&2
+fi
+
+# electron-builder, run with IPv4 DNS forced when the namespace is available.
+eb() {
+  if $NS_DNS; then
+    unshare --user --map-root-user --mount --fork \
+      bash -c 'mount --bind "$1" /etc/resolv.conf; shift; exec "$@"' \
+      f4x "$RESOLV4" pnpm exec electron-builder "$@"
+  else
+    pnpm exec electron-builder "$@"
+  fi
+}
+
+# Package with electron-builder. --publish never: only ever produce local artifacts, never push a release.
 EB_ARGS=(--publish never)
 if $LOCAL; then
   echo "▸ Packaging unpacked build for this machine (--dir)…"
-  pnpm exec electron-builder --dir "${EB_ARGS[@]}"
+  eb --dir "${EB_ARGS[@]}"
 else
   if $LINUX; then EB_ARGS+=(--linux); fi
   if $WINDOWS; then EB_ARGS+=(--win); fi
   echo "▸ Packaging installers (electron-builder ${EB_ARGS[*]})…"
-  pnpm exec electron-builder "${EB_ARGS[@]}"
+  eb "${EB_ARGS[@]}"
 fi
 
 echo
