@@ -36,10 +36,11 @@
     type AmbientLayers
   } from '$lib/audio/manifest';
 
-  // `isMenu`: title screen (drives the music scene). `playing`: the game is actually visible and being
-  // played — i.e. NOT the menu AND past the loading screen. The discrete one-shot SFX (creatures, work,
-  // combat, fire/ambient beds) gate on `playing`, so they stay silent during the post–New Game loading
-  // screen (isMenu is already false there, which used to let boars squeak over the loader).
+  // `isMenu`: title screen — drives the music scene AND the continuous ambient/fire BEDS, which keep
+  // playing over the loading screen and the map-gen preview (where they zoom-balance against the live
+  // camera). `playing`: the game is actually being PLAYED — not the menu, past the loading screen, and
+  // not the map-gen preview (uiState.customMapOpen). The discrete one-shot SFX (creatures, work, combat)
+  // gate on `playing`, so no boar squeaks over the loader or while tweaking the map-gen sliders.
   let { isMenu = false, playing = false }: { isMenu?: boolean; playing?: boolean } = $props();
 
   const COMBAT_HOLD_MS = 6000; // keep combat music briefly after the last blow
@@ -317,7 +318,7 @@
   function evalAmbient(): void {
     // Menu: play the full weather/time mix as a cinematic backdrop (no zoom balance — the title screen
     // has no player camera to scale against). In-game applies the detail/weather zoom balance below.
-    if (!playing) return void audioService.setAmbient(baseAmbient);
+    if (isMenu) return void audioService.setAmbient(baseAmbient);
     const tile = get(cameraTileSize);
     const detail = Math.max(0, Math.min(1, (tile - ZOOM_REF_LOW) / (ZOOM_REF_HIGH - ZOOM_REF_LOW)));
     const weatherMul = 1 + (1 - detail) * WEATHER_ZOOM_BOOST;
@@ -335,7 +336,7 @@
    * aggregated across fires via 1−Π(1−c); no pawn-distance (fires sit in the colony).
    */
   function evalFire(): void {
-    if (!playing) return void audioService.setFireLevel(0);
+    if (isMenu) return void audioService.setFireLevel(0);
     const buildings = $gameState?.buildings;
     const vp = get(cameraViewport);
     if (!buildings?.length || vp.w <= 0) return void audioService.setFireLevel(0);
