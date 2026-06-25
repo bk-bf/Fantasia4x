@@ -27,6 +27,8 @@ linux:
     - deb
   category: Game
   synopsis: A turn-based 4X colony chronicle.
+  # Required for the .deb package (Debian needs a maintainer contact). Change the email if you prefer.
+  maintainer: bk <boychenkokirill@gmail.com>
 
 win:
   target:
