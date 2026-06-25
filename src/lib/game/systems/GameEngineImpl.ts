@@ -58,7 +58,7 @@ import {
   SEASON_LABELS,
   weatherChronicleSeverity,
   seasonRegrowthMultiplier,
-  computeThermalAt,
+  thermalAt,
   tileTemperature
 } from '../services/EnvironmentService';
 import { zoneTileKeys } from '../services/DesignationService';
@@ -407,7 +407,9 @@ export class GameEngineImpl implements GameEngine {
     }
 
     // Rebuild the fire-warmth + roof-shelter field once per tick (before needs/conditions read it).
-    rebuildThermalField(gs.buildings);
+    // Passing worldMap folds in §M grove thermal auras (emberwood warms / moonwood cools) — cached,
+    // re-scanned only on a worldMap ref change, so this stays O(buildings) per tick.
+    rebuildThermalField(gs.buildings, gs.worldMap);
   }
 
   /**
@@ -553,7 +555,10 @@ export class GameEngineImpl implements GameEngine {
         const c = def?.crop;
         if (!c) continue;
 
-        const thermal = computeThermalAt(x, y, gs.buildings);
+        // Prebuilt field (rebuilt in processEnvironment, earlier this tick) — includes fire warmth,
+        // roof shelter AND §M grove auras, so a frost-tender crop is shielded near an emberwood grove
+        // (and chilled near a moonwood one).
+        const thermal = thermalAt(x, y);
         const temp = tileTemperature(tile.terrainType, gs.season, gs.weather, thermal);
         const m = tile.moisture ?? 0;
         // DEATH conditions (the soil can no longer carry the crop): exhausted fertility, frost/snow,
@@ -807,9 +812,7 @@ export class GameEngineImpl implements GameEngine {
       } else if (target.type === 'equip') {
         // Drafted "fetch + equip": walk to the drop's tile, then equip one unit on arrival and clear
         // the order. Mirrors the haul pickup phase (select-then-act, not an instant teleport-equip).
-        const drop = (gs.droppedItems ?? []).find(
-          (d) => d.id === target.dropId && d.quantity > 0
-        );
+        const drop = (gs.droppedItems ?? []).find((d) => d.id === target.dropId && d.quantity > 0);
         const clearEquip = () => {
           gs = {
             ...gs,

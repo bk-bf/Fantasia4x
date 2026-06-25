@@ -4643,7 +4643,7 @@
       <!-- Dropped item on the hovered tile — shared SelectedEntityCard, bars below the title -->
       <SelectedEntityCard model={hoverItemCard} />
     {:else if hoverTile}
-      {@const tileThermal = computeThermalAt(hoverTile.x, hoverTile.y, buildings)}
+      {@const tileThermal = computeThermalAt(hoverTile.x, hoverTile.y, buildings, worldMap)}
       {@const tileTemp = tileTemperature(
         hoverTile.terrainType,
         $currentSeason,

@@ -14,6 +14,7 @@ import { TICKS_PER_SECOND } from '../core/time';
 import { markTileDirty } from '../core/tileDeltas';
 import { buildingLight } from './LightingService';
 import { buildingService } from './BuildingService';
+import { resourceObjectService } from './ResourceObjectService';
 import { BIOMES } from '../core/Terrains';
 import seasonsData from '../database/seasons.jsonc';
 import weatherData from '../database/weather.jsonc';
@@ -594,8 +595,36 @@ function buildingShelter(b: {
 let fireSources: FireSource[] = [];
 let shelterTiles = new Map<string, { insulation: number; weatherProtection: number }>();
 
-/** Rebuild the thermal field from current buildings — once per tick (O(buildings)). */
-export function rebuildThermalField(buildings: PlacedBuilding[] | undefined): void {
+// §M grove thermal auras (emberwood warms, moonwood cools). These are STATIC resources, so the
+// (expensive) full-map scan is cached and only redone when the worldMap REFERENCE changes (map gen /
+// load) — never per tick. A negative `degrees` cools, mirroring how thermalAt sums fire warmth.
+// (Caveat: harvesting a grove to 0 leaves its aura until the next worldMap rebuild — rare + minor.)
+let groveSources: FireSource[] = [];
+let groveMapRef: WorldTile[][] | null = null;
+
+function scanGroveThermal(worldMap: WorldTile[][]): FireSource[] {
+  const out: FireSource[] = [];
+  for (let y = 0; y < worldMap.length; y++) {
+    const row = worldMap[y];
+    for (let x = 0; x < row.length; x++) {
+      const res = row[x]?.resources;
+      if (!res) continue;
+      for (const id in res) {
+        if ((res[id] ?? 0) <= 0) continue;
+        const t = resourceObjectService.getById(id)?.thermal;
+        if (t && t.radius > 0) out.push({ x, y, degrees: t.degrees, radius: t.radius });
+      }
+    }
+  }
+  return out;
+}
+
+/** Rebuild the thermal field from current buildings — once per tick (O(buildings)). `worldMap` (when
+ *  passed) folds in the cached §M grove auras (re-scanned only on a worldMap ref change). */
+export function rebuildThermalField(
+  buildings: PlacedBuilding[] | undefined,
+  worldMap?: WorldTile[][]
+): void {
   const fires: FireSource[] = [];
   const shelter = new Map<string, { insulation: number; weatherProtection: number }>();
   for (const b of buildings ?? []) {
@@ -616,7 +645,12 @@ export function rebuildThermalField(buildings: PlacedBuilding[] | undefined): vo
       );
     }
   }
-  fireSources = fires;
+  // Fold in §M grove auras (re-scan only when the map reference changes — groves are static).
+  if (worldMap && worldMap !== groveMapRef) {
+    groveMapRef = worldMap;
+    groveSources = scanGroveThermal(worldMap);
+  }
+  fireSources = groveSources.length ? fires.concat(groveSources) : fires;
   shelterTiles = shelter;
 }
 
@@ -645,11 +679,17 @@ export function isRoofedTile(x: number, y: number): boolean {
   return shelterTiles.has(y + ',' + x);
 }
 
-/** On-demand thermal sample from a buildings array (renderer/HUD has no prebuilt field). */
+/** Max grove thermal radius to scan around a tile in computeThermalAt's local window. */
+const GROVE_SCAN_RADIUS = 8;
+
+/** On-demand thermal sample from a buildings array (renderer/HUD has no prebuilt field). When
+ *  `worldMap` is supplied, §M grove auras within a small local window are folded in too, so the HUD's
+ *  tile-temp readout matches the gameplay field (a cheap ±GROVE_SCAN_RADIUS window, not a full scan). */
 export function computeThermalAt(
   x: number,
   y: number,
-  buildings: PlacedBuilding[] | undefined
+  buildings: PlacedBuilding[] | undefined,
+  worldMap?: WorldTile[][]
 ): ThermalSample {
   let warmth = 0;
   let insulation = 0;
@@ -669,6 +709,23 @@ export function computeThermalAt(
         roofed = true;
         insulation = Math.max(insulation, s.insulation);
         weatherProtection = Math.max(weatherProtection, s.weatherProtection);
+      }
+    }
+  }
+  if (worldMap) {
+    for (let yy = Math.max(0, y - GROVE_SCAN_RADIUS); yy <= y + GROVE_SCAN_RADIUS; yy++) {
+      const row = worldMap[yy];
+      if (!row) continue;
+      for (let xx = Math.max(0, x - GROVE_SCAN_RADIUS); xx <= x + GROVE_SCAN_RADIUS; xx++) {
+        const res = row[xx]?.resources;
+        if (!res) continue;
+        for (const id in res) {
+          if ((res[id] ?? 0) <= 0) continue;
+          const t = resourceObjectService.getById(id)?.thermal;
+          if (!t || t.radius <= 0) continue;
+          const dist = Math.sqrt((x - xx) ** 2 + (y - yy) ** 2);
+          if (dist < t.radius) warmth += t.degrees * (1 - dist / t.radius);
+        }
       }
     }
   }

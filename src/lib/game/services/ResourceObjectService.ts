@@ -97,6 +97,13 @@ export interface ResourceObjectDef {
     intensity: number;
     flicker?: boolean;
   };
+  /**
+   * §M optional thermal aura: this resource radiates heat (positive `degrees`) or chill (negative)
+   * to nearby tiles, folded into the environment thermal field exactly like a fire building — e.g. an
+   * emberwood grove warms its surroundings, a moonwood grove cools them. `degrees` is °C at the centre
+   * tile, fading linearly to 0 at `radius` tiles. Read by EnvironmentService.rebuildThermalField.
+   */
+  thermal?: { degrees: number; radius: number };
   /** Which designation types can target this resource. */
   designationTypes: DesignationType[];
   /**
