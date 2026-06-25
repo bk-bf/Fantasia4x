@@ -193,6 +193,42 @@ export function workClipsFor(id: string | undefined): string[] {
   return id && id in WORK_SFX ? WORK_SFX[id] : [];
 }
 
+// ── Combat SFX ──────────────────────────────────────────────────────────────────────────────────
+// One-shots fired per weapon swing (the item's `audio` archetype — slash/blunt/pierce/bow, or a
+// natural-weapon cue like bite/venom/screech) and per combat-condition onset (the condition's `audio`
+// — knockdown/fracture/…). Emitted by Combat via simLog.pushCombatSound → combatSounds store, played
+// by AudioController at a volume scaled by zoom + viewport (so distant brawls stay quiet).
+
+const combatClips = (id: string, n: number): string[] =>
+  Array.from({ length: n }, (_, i) => `/audio/combat/${id}/${i + 1}.ogg`);
+
+export const COMBAT_SFX: Record<string, string[]> = {
+  // weapon swings
+  slash: combatClips('slash', 2),
+  pierce: combatClips('pierce', 2),
+  blunt: combatClips('blunt', 2),
+  bow: combatClips('bow', 2),
+  // natural weapons
+  bite: combatClips('bite', 2),
+  venom: combatClips('venom', 2),
+  screech: combatClips('screech', 2),
+  spectral: combatClips('spectral', 2),
+  tongue: combatClips('tongue', 1),
+  // combat-condition onsets
+  knockdown: combatClips('knockdown', 1),
+  fracture: combatClips('fracture', 1),
+  shock: combatClips('shock', 1),
+  envenomed: combatClips('envenomed', 1),
+  disoriented: combatClips('disoriented', 1),
+  ensnared: combatClips('ensnared', 1),
+  bloodletting: combatClips('bloodletting', 1)
+};
+
+/** Combat clips for a sound id, or [] if none exists for it. */
+export function combatClipsFor(id: string | undefined): string[] {
+  return id && id in COMBAT_SFX ? COMBAT_SFX[id] : [];
+}
+
 // Weather-type → bed grouping. Mirrors the overlay/windStrength semantics in weather.jsonc so the
 // audio bed matches what the player sees: precipitation overlays → rain bed; windy/gale/blizzard →
 // wind bed. (Kept as plain sets so a new weather id simply falls through to the calm default.)

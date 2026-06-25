@@ -32,6 +32,7 @@ import {
 import {
   getConditionCurrentStage,
   getConditionFloater,
+  conditionAudio,
   conditionStatMultipliers,
   COLLAPSE_CONSCIOUSNESS
 } from '../core/needs';
@@ -952,6 +953,8 @@ class CombatServiceImpl implements CombatService {
       color: f.color,
       dy
     });
+    const sound = conditionAudio(id);
+    if (sound) simLog.pushCombatSound({ sound, worldX: x, worldY: y });
   }
 
   /**
@@ -977,6 +980,9 @@ class CombatServiceImpl implements CombatService {
     const ldy = pos.y - apos.y;
     const lmag = Math.hypot(ldx, ldy) || 1;
     simLog.pushAttackLunge({ attackerId: attacker.id, dirX: ldx / lmag, dirY: ldy / lmag });
+    // Weapon swing SFX (hit or miss) — the weapon / natural-weapon `audio` archetype at the struck tile.
+    const swingSound = itemService.getItemById(result.weaponId)?.audio;
+    if (swingSound) simLog.pushCombatSound({ sound: swingSound, worldX: pos.x, worldY: pos.y });
 
     const attackerName = this.entityName(attacker);
     const targetName = this.entityName(target);
@@ -1006,6 +1012,8 @@ class CombatServiceImpl implements CombatService {
         ? this.applyInjuryToMob(target.id, result.fractureInjury, next, false)
         : this.applyInjury(target.id, result.fractureInjury, next, false);
       this.emitFloat(pos.x, pos.y, 'fracture', 'Fractured!', 26);
+      const fxSound = conditionAudio('fractured');
+      if (fxSound) simLog.pushCombatSound({ sound: fxSound, worldX: pos.x, worldY: pos.y });
     }
 
     // Floating text: damage number — a rolled crit OR a part-wrecking hit reads as

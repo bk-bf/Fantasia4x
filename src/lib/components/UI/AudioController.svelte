@@ -16,6 +16,7 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { gameState, currentWeather } from '$lib/stores/gameState';
+  import { combatSounds } from '$lib/stores/combatSounds';
   import { masterVolume, musicVolume, sfxVolume } from '$lib/stores/uiPrefs';
   import { cameraViewport, cameraTileSize } from '$lib/stores/cameraView';
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
@@ -28,6 +29,7 @@
     CREATURE_SOUND_LABELS,
     workClipsFor,
     WORK_SOUND_LABELS,
+    combatClipsFor,
     UI_SFX,
     type MusicScene,
     type AmbientBed,
@@ -69,6 +71,9 @@
 
   // ── Fire SFX (continuous campfire-crackle loop for lit fire buildings). zoom × viewport, like work. ──
   const FIRE_GAIN = 0.45;
+
+  // ── Combat SFX (weapon swings + condition onsets), via the combatSounds cue store ──
+  const COMBAT_GAIN = 0.6; // pre-bus; combat should read clearly when it's on-screen
 
   // ── UI feedback (subtle hover/click on buttons), via global delegated listeners ──
   // Gains are pre-bus (× SFX × Master), so keep them high enough to read over the music: a click at
@@ -374,6 +379,29 @@
     window.addEventListener('pointerover', onUiOver, true);
     window.addEventListener('click', onUiClick, true);
 
+    // Combat sound cues — play each new cue once at a zoom/viewport-scaled volume (distant brawls stay
+    // quiet). Tracks fired ids; pruned to the live list so it stays bounded.
+    const firedCombat = new Set<string>();
+    const stampCombat = combatSounds.subscribe((list) => {
+      if (!list.length) return;
+      const vp = get(cameraViewport);
+      const tile = get(cameraTileSize);
+      const zg = zoomGainFor(tile);
+      for (const e of list) {
+        if (firedCombat.has(e.id)) continue;
+        firedCombat.add(e.id);
+        const clips = combatClipsFor(e.sound);
+        if (clips.length === 0) continue;
+        const aud = (vp.w > 0 ? spatialAt(e.worldX, e.worldY, vp) : 1) * zg;
+        if (aud < LEVEL_EPS) continue;
+        audioService.playSfx(clips[Math.floor(Math.random() * clips.length)], aud * COMBAT_GAIN);
+      }
+      if (firedCombat.size > 64) {
+        const live = new Set(list.map((e) => e.id));
+        for (const id of firedCombat) if (!live.has(id)) firedCombat.delete(id);
+      }
+    });
+
     const iv = setInterval(() => (nowTick = Date.now()), 1000);
     const sfxIv = setInterval(() => {
       evalAmbient();
@@ -387,6 +415,7 @@
       window.removeEventListener('keydown', unlock);
       window.removeEventListener('pointerover', onUiOver, true);
       window.removeEventListener('click', onUiClick, true);
+      stampCombat();
       clearInterval(iv);
       clearInterval(sfxIv);
       audioService.dispose();

@@ -1885,6 +1885,7 @@
   },
   {
     "id"               : "stone_spear",
+    "audio"               : "pierce",
     "charSpans"        : [ {"sheet": "items", "id": 208} ],
     "name"             : "Stone Spear",
     "type"             : "weapon",
@@ -3069,6 +3070,7 @@
   // staminaCost = stamina drained, critMod = added to the attacker's crit_chance.
   {
     "id"               : "fists",
+    "audio"               : "blunt",
     "charSpans"        : [ {"sheet": "items", "id": 0} ],
     "name"             : "Fists",
     "type"             : "weapon",
@@ -3093,6 +3095,7 @@
   },
   {
     "id"               : "kick",
+    "audio"               : "blunt",
     "charSpans"        : [ {"sheet": "items", "id": 0} ],
     "name"             : "Kick",
     "type"             : "weapon",
@@ -3118,6 +3121,7 @@
   },
   {
     "id"               : "bite",
+    "audio"               : "bite",
     "charSpans"        : [ {"sheet": "items", "id": 1} ],
     "name"             : "Bite",
     "type"             : "weapon",
@@ -3143,6 +3147,7 @@
   },
   {
     "id"               : "claw",
+    "audio"               : "slash",
     "charSpans"        : [ {"sheet": "items", "id": 1} ],
     "name"             : "Claw",
     "type"             : "weapon",
@@ -3168,6 +3173,7 @@
   },
   {
     "id"               : "slam",
+    "audio"               : "blunt",
     "charSpans"        : [ {"sheet": "items", "id": 0} ],
     "name"             : "Slam",
     "type"             : "weapon",
@@ -3193,6 +3199,7 @@
   },
   {
     "id"               : "tusk",
+    "audio"               : "blunt",
     "charSpans"        : [ {"sheet": "items", "id": 56} ],
     "name"             : "Tusk",
     "type"             : "weapon",
@@ -3218,6 +3225,7 @@
   },
   {
     "id"               : "charge",
+    "audio"               : "blunt",
     "charSpans"        : [ {"sheet": "items", "id": 0} ],
     "name"             : "Charge",
     "type"             : "weapon",
@@ -3243,6 +3251,7 @@
   },
   {
     "id"               : "antler",
+    "audio"               : "pierce",
     "charSpans"        : [ {"sheet": "items", "id": 56} ],
     "name"             : "Antler",
     "type"             : "weapon",
@@ -3267,6 +3276,7 @@
   },
   {
     "id"               : "headbutt",
+    "audio"               : "blunt",
     "charSpans"        : [ {"sheet": "items", "id": 0} ],
     "name"             : "Headbutt",
     "type"             : "weapon",
@@ -3291,6 +3301,7 @@
   },
   {
     "id"               : "peck",
+    "audio"               : "pierce",
     "charSpans"        : [ {"sheet": "items", "id": 1} ],
     "name"             : "Peck",
     "type"             : "weapon",
@@ -3314,6 +3325,7 @@
   },
   {
     "id"               : "spectral_strike",
+    "audio"               : "spectral",
     "charSpans"        : [ {"sheet": "items", "id": 49} ],
     "name"             : "Spectral Strike",
     "type"             : "weapon",
@@ -3339,6 +3351,7 @@
   },
   {
     "id": "venom_bite",
+    "audio": "venom",
     "charSpans": [ {"sheet": "items", "id": 1} ],
     "name": "Venomous Bite",
     "type": "weapon",
@@ -3365,6 +3378,7 @@
   },
   {
     "id": "proboscis",
+    "audio": "pierce",
     "charSpans": [ {"sheet": "items", "id": 1} ],
     "name": "Proboscis",
     "type": "weapon",
@@ -3396,6 +3410,7 @@
   },
   {
     "id": "screech",
+    "audio": "screech",
     "charSpans": [ {"sheet": "items", "id": 49} ],
     "name": "Screech",
     "type": "weapon",
@@ -3420,6 +3435,7 @@
   },
   {
     "id": "tongue",
+    "audio": "tongue",
     "charSpans": [ {"sheet": "items", "id": 1} ],
     "name": "Snaring Tongue",
     "type": "weapon",
@@ -3510,6 +3526,7 @@
   // ── Phase B: Tier 0 weapons ───────────────────────────────────────────────
   {
     "id": "flint_handaxe",
+    "audio": "slash",
     "charSpans": [ {"sheet": "items", "id": 204} ],
     "name": "Flint Handaxe",
     "type": "weapon",
@@ -3561,6 +3578,7 @@
   // ── Phase B: Tier 0.5 weapons ─────────────────────────────────────────────
   {
     "id": "bone_knife",
+    "audio": "pierce",
     "charSpans": [ {"sheet": "items", "id": 201} ],
     "name": "Bone Splinter Knife",
     "type": "weapon",
@@ -3590,6 +3608,7 @@
   },
   {
     "id": "antler_club",
+    "audio": "blunt",
     "charSpans": [ {"sheet": "items", "id": 202} ],
     "name": "Antler War Club",
     "type": "weapon",
@@ -3619,6 +3638,7 @@
   },
   {
     "id": "bone_tipped_spear",
+    "audio": "pierce",
     "charSpans": [ {"sheet": "items", "id": 208} ],
     "name": "Bone-Tipped Thrusting Spear",
     "type": "weapon",
@@ -3647,6 +3667,7 @@
   // ── Phase B: Tier 1 weapons ───────────────────────────────────────────────
   {
     "id": "bronze_punch_dagger",
+    "audio": "pierce",
     "charSpans": [ {"sheet": "items", "id": 201} ],
     "name": "Bronze Punch Dagger",
     "type": "weapon",
@@ -3678,6 +3699,7 @@
   },
   {
     "id": "leaf_blade_spear",
+    "audio": "pierce",
     "charSpans": [ {"sheet": "items", "id": 208} ],
     "name": "Leaf-Blade Spear",
     "type": "weapon",
@@ -3709,6 +3731,7 @@
   },
   {
     "id": "cast_bronze_hatchet",
+    "audio": "slash",
     "charSpans": [ {"sheet": "items", "id": 204} ],
     "name": "Cast Bronze Hatchet",
     "type": "weapon",
@@ -3739,6 +3762,7 @@
   },
   {
     "id": "self_bow",
+    "audio": "bow",
     "charSpans": [ {"sheet": "items", "id": 200} ],
     "name": "Self Bow",
     "type": "weapon",
@@ -3797,6 +3821,7 @@
   // ── Phase B: Tier 2 weapons ───────────────────────────────────────────────
   {
     "id": "short_seax",
+    "audio": "slash",
     "charSpans": [ {"sheet": "items", "id": 206} ],
     "name": "Short Seax",
     "type": "weapon",
@@ -3826,6 +3851,7 @@
   },
   {
     "id": "spatha",
+    "audio": "slash",
     "charSpans": [ {"sheet": "items", "id": 206} ],
     "name": "Spatha",
     "type": "weapon",
@@ -3857,6 +3883,7 @@
   },
   {
     "id": "bearded_axe",
+    "audio": "slash",
     "charSpans": [ {"sheet": "items", "id": 204} ],
     "name": "Bearded Axe",
     "type": "weapon",
@@ -3888,6 +3915,7 @@
   },
   {
     "id": "framea",
+    "audio": "pierce",
     "charSpans": [ {"sheet": "items", "id": 208} ],
     "name": "Framea",
     "type": "weapon",
@@ -3919,6 +3947,7 @@
   },
   {
     "id": "stone_maul",
+    "audio": "blunt",
     "charSpans": [ {"sheet": "items", "id": 202} ],
     "name": "Stone Maul",
     "type": "weapon",
@@ -3949,6 +3978,7 @@
   },
   {
     "id": "iron_mace",
+    "audio": "blunt",
     "charSpans": [ {"sheet": "items", "id": 203} ],
     "name": "Iron Mace",
     "type": "weapon",
@@ -3982,6 +4012,7 @@
   },
   {
     "id": "iron_warhammer",
+    "audio": "blunt",
     "charSpans": [ {"sheet": "items", "id": 203} ],
     "name": "Iron Warhammer",
     "type": "weapon",
@@ -4015,6 +4046,7 @@
   },
   {
     "id": "iron_greatsword",
+    "audio": "slash",
     "charSpans": [ {"sheet": "items", "id": 207} ],
     "name": "Iron Greatsword",
     "type": "weapon",
@@ -4047,6 +4079,7 @@
   },
   {
     "id": "steel_longsword",
+    "audio": "slash",
     "charSpans": [ {"sheet": "items", "id": 206} ],
     "name": "Steel Longsword",
     "type": "weapon",
@@ -4078,6 +4111,7 @@
   },
   {
     "id": "steel_greatsword",
+    "audio": "slash",
     "charSpans": [ {"sheet": "items", "id": 207} ],
     "name": "Steel Greatsword",
     "type": "weapon",
@@ -4110,6 +4144,7 @@
   },
   {
     "id": "steel_pike",
+    "audio": "pierce",
     "charSpans": [ {"sheet": "items", "id": 208} ],
     "name": "Steel Pike",
     "type": "weapon",
@@ -4142,6 +4177,7 @@
   },
   {
     "id": "steel_mace",
+    "audio": "blunt",
     "charSpans": [ {"sheet": "items", "id": 203} ],
     "name": "Steel Mace",
     "type": "weapon",
@@ -4176,6 +4212,7 @@
   },
   {
     "id": "steel_warhammer",
+    "audio": "blunt",
     "charSpans": [ {"sheet": "items", "id": 203} ],
     "name": "Steel Warhammer",
     "type": "weapon",
@@ -4209,6 +4246,7 @@
   },
   {
     "id": "steel_cleaver",
+    "audio": "slash",
     "charSpans": [ {"sheet": "items", "id": 205} ],
     "name": "Steel Cleaver",
     "type": "weapon",
@@ -4241,6 +4279,7 @@
   },
   {
     "id": "steel_greatcleaver",
+    "audio": "slash",
     "charSpans": [ {"sheet": "items", "id": 207} ],
     "name": "Steel Greatcleaver",
     "type": "weapon",
@@ -4273,6 +4312,7 @@
   },
   {
     "id": "steel_flail",
+    "audio": "blunt",
     "charSpans": [ {"sheet": "items", "id": 203} ],
     "name": "Steel Flail",
     "type": "weapon",
@@ -4307,6 +4347,7 @@
   },
   {
     "id": "iron_rondel",
+    "audio": "pierce",
     "charSpans": [ {"sheet": "items", "id": 201} ],
     "name": "Iron Rondel Dagger",
     "type": "weapon",
@@ -4338,6 +4379,7 @@
   },
   {
     "id": "steel_stiletto",
+    "audio": "pierce",
     "charSpans": [ {"sheet": "items", "id": 201} ],
     "name": "Steel Stiletto",
     "type": "weapon",
@@ -4369,6 +4411,7 @@
   },
   {
     "id": "iron_estoc",
+    "audio": "pierce",
     "charSpans": [ {"sheet": "items", "id": 206} ],
     "name": "Iron Estoc",
     "type": "weapon",
@@ -4401,6 +4444,7 @@
   },
   {
     "id": "steel_rapier",
+    "audio": "pierce",
     "charSpans": [ {"sheet": "items", "id": 206} ],
     "name": "Steel Rapier",
     "type": "weapon",
@@ -4433,6 +4477,7 @@
   },
   {
     "id": "war_bow",
+    "audio": "bow",
     "charSpans": [ {"sheet": "items", "id": 200} ],
     "name": "War Bow",
     "type": "weapon",
@@ -4467,6 +4512,7 @@
   },
   {
     "id": "throwing_stone",
+    "audio": "bow",
     "charSpans": [ {"sheet": "items", "id": 91} ],
     "name": "Throwing Stone",
     "type": "weapon",
@@ -4497,6 +4543,7 @@
   },
   {
     "id": "sling",
+    "audio": "bow",
     "charSpans": [ {"sheet": "items", "id": 199} ],
     "name": "Sling",
     "type": "weapon",
@@ -4531,6 +4578,7 @@
   },
   {
     "id": "throwing_spear",
+    "audio": "bow",
     "charSpans": [ {"sheet": "items", "id": 198} ],
     "name": "Throwing Spear",
     "type": "weapon",
@@ -4562,6 +4610,7 @@
   },
   {
     "id": "crossbow",
+    "audio": "bow",
     "charSpans": [ {"sheet": "items", "id": 197} ],
     "name": "Crossbow",
     "type": "weapon",
@@ -6327,6 +6376,7 @@
   // ── FIRE (ruby + emberwood) → burn ──
   {
     "id": "ember_staff",
+    "audio": "spectral",
     "charSpans": [ {"sheet": "items", "id": 198} ],
     "name": "Ember Staff",
     "type": "weapon",
@@ -6361,6 +6411,7 @@
   },
   {
     "id": "pyre_staff",
+    "audio": "spectral",
     "charSpans": [ {"sheet": "items", "id": 198} ],
     "name": "Pyre Staff",
     "type": "weapon",
@@ -6397,6 +6448,7 @@
   // ── FROST (sapphire + moonwood) → frostbite ──
   {
     "id": "frost_staff",
+    "audio": "spectral",
     "charSpans": [ {"sheet": "items", "id": 198} ],
     "name": "Frost Staff",
     "type": "weapon",
@@ -6431,6 +6483,7 @@
   },
   {
     "id": "rime_staff",
+    "audio": "spectral",
     "charSpans": [ {"sheet": "items", "id": 198} ],
     "name": "Rime Staff",
     "type": "weapon",
@@ -6467,6 +6520,7 @@
   // ── STORM/LIGHTNING (topaz + heartwood) → scorch ──
   {
     "id": "spark_staff",
+    "audio": "spectral",
     "charSpans": [ {"sheet": "items", "id": 198} ],
     "name": "Spark Staff",
     "type": "weapon",
@@ -6501,6 +6555,7 @@
   },
   {
     "id": "tempest_staff",
+    "audio": "spectral",
     "charSpans": [ {"sheet": "items", "id": 198} ],
     "name": "Tempest Staff",
     "type": "weapon",
