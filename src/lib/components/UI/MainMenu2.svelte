@@ -1,11 +1,11 @@
 <!--
-  MainMenu2 — EXPERIMENTAL alternate title screen, gated behind the build flag VITE_MM2 (launch via
-  `./launch.sh --electron --play --mm2`). +page.svelte renders this instead of MainMenu when the flag
-  is set. Same behaviour/affordances as MainMenu (New / Load / Settings / Exit, live world backdrop) —
+  MainMenu2 — the DEFAULT title screen. +page.svelte renders this unless VITE_LEGACY_MENU is set
+  (`./launch.sh … --legacy-menu`), which brings back the original centred MainMenu. Same
+  behaviour/affordances as MainMenu (New / Load / Settings / Credits / Exit, live world backdrop) —
   only the LAYOUT differs:
     • a huge engraved-serif FANTASIA wordmark (Cinzel, --font-display) in the upper-left corner,
     • the slogan + version/credit left-aligned beneath it at a proportionally larger size,
-    • the four menu entries stacked down the left border.
+    • the menu entries stacked down the left border.
 -->
 <script lang="ts">
   import { onMount } from 'svelte';
@@ -17,10 +17,12 @@
   import MenuPreviewBackdrop from '$lib/components/UI/MenuPreviewBackdrop.svelte';
   import SettingsModal from '$lib/components/UI/SettingsModal.svelte';
   import SaveListMenu from '$lib/components/UI/SaveListMenu.svelte';
+  import CreditsScroll from '$lib/components/UI/CreditsScroll.svelte';
 
   let canLoad = $state(false);
   let showSettings = $state(false);
   let showLoad = $state(false);
+  let showCredits = $state(false);
   const isDesktop = typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent ?? '');
 
   // ── Sun/moon glow tracking the preview world's day/night cycle ──────────────────────────────────
@@ -95,6 +97,7 @@
         Load Game
       </button>
       <button class="menu-btn" onclick={() => (showSettings = true)}>Settings</button>
+      <button class="menu-btn" onclick={() => (showCredits = true)}>Credits</button>
       {#if isDesktop}
         <button class="menu-btn" onclick={exitGame}>Exit</button>
       {/if}
@@ -108,6 +111,10 @@
 
 {#if showSettings}
   <SettingsModal onClose={() => (showSettings = false)} />
+{/if}
+
+{#if showCredits}
+  <CreditsScroll onClose={() => (showCredits = false)} />
 {/if}
 
 <style>
