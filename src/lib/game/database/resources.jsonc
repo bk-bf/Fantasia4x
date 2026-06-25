@@ -2013,8 +2013,8 @@
       "workAmount"     : 36,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "blue_clay", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.08},
-        {"itemId": "sand",      "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.08}
+        {"itemId": "blue_clay", "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.08},
+        {"itemId": "sand",      "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.08}
       ]
     }
   },
