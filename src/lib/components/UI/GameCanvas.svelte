@@ -789,6 +789,23 @@
     ? (designations[`${selectedResourceTile.x},${selectedResourceTile.y}`] ?? null)
     : null;
 
+  /** Environmental readout for a tile (light/temp/wet/wind) — shared by the tile, building hover and
+   *  building click panels so a floor/sleeping-spot/etc. shows the same conditions a bare tile does. */
+  function tileEnv(t: { x: number; y: number; terrainType: string; moisture?: number }) {
+    const thermal = computeThermalAt(t.x, t.y, buildings, worldMap);
+    return {
+      light: computeTileLightLevel(
+        environmentService.ambientTurn($gameState ?? { turn: 0 }),
+        buildings,
+        t.x,
+        t.y
+      ),
+      temp: tileTemperature(t.terrainType, $currentSeason, $currentWeather, thermal),
+      wet: tileWetness(t.moisture ?? 0, $currentWeather, thermal),
+      wind: windDegreeWord(effectiveWindAt(t.x, t.y, $currentWeather, thermal, worldMap))
+    };
+  }
+
   $: buildingCard = (() => {
     if (!selectedBuilding) return null;
     const bDef = buildingService.getBuildingById(selectedBuilding.type);
@@ -868,6 +885,14 @@
       if (canConfigFuel) {
         btns.push({ label: 'FUEL', active: showFuelSettings, onClick: toggleFuelSettingsPanel });
       }
+    }
+    // Environmental conditions of the tile the building sits on (same readout a bare tile shows).
+    const bt = worldMap[selectedBuilding.y]?.[selectedBuilding.x];
+    if (bt) {
+      const env = tileEnv(bt);
+      lines.push(
+        `light ${Math.round(env.light * 100)}%  ·  temp ${env.temp}°C  ·  wet ${Math.round(env.wet)}%  ·  ${env.wind}`
+      );
     }
     return {
       name: bDef?.name ?? selectedBuilding.type,
@@ -4636,6 +4661,25 @@
             {#if hoverBuilding.lit}<span class="fuel-lit">● lit</span>{:else}<span class="fuel-dark"
                 >○ unlit</span
               >{/if}
+          </div>
+        {/if}
+        {#if hoverTile}
+          {@const env = tileEnv(hoverTile)}
+          <div class="tile-env">
+            <span
+              style="color:{env.light >= 0.8
+                ? '#68b030'
+                : env.light >= 0.4
+                  ? '#b09030'
+                  : '#c83018'}">light {Math.round(env.light * 100)}%</span
+            >
+            <span style="color:{env.temp <= 0 ? '#5aa0e0' : env.temp >= 30 ? '#e07a2a' : '#b0a060'}"
+              >temp {env.temp}°C</span
+            >
+            <span style="color:{env.wet >= 60 ? '#3a9ed0' : env.wet >= 30 ? '#6aa0a0' : '#a08a5a'}"
+              >wet {Math.round(env.wet)}%</span
+            >
+            <span style="color:#9aa6b2">wind {env.wind}</span>
           </div>
         {/if}
       </div>

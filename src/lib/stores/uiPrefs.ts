@@ -82,6 +82,13 @@ function createPersistedBool(key: string, fallback: boolean) {
 export const hideEmptyResourceCategories = createPersistedBool(HIDE_EMPTY_RES_CATS_KEY, true);
 
 /**
+ * Per-sidebar minimize toggles: collapse the Kingdom/Resources panel (left) or the Chronicle panel
+ * (right) to a thin strip with just a restore button, widening the map. OFF by default; persisted.
+ */
+export const resourcesMinimized = createPersistedBool('fx.layout.resourcesMin', false);
+export const chronicleMinimized = createPersistedBool('fx.layout.chronicleMin', false);
+
+/**
  * "Cinematic" layout toggle: when on, the resource + chronicle sidebars go transparent and out of
  * flow (floating over the map), so the bottom nav and overlay panel reflow to fill the full viewport
  * width. ON by default; persisted across sessions (toggling it off sticks). Driven from the top-bar

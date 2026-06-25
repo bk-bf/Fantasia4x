@@ -486,7 +486,12 @@ export function applyBuildingToGrid(grid: GameGrid, b: PlacedBuilding): void {
   // Render from the building's `color` tag (its single tunable hex), falling back to the legacy
   // `fg` array, then a default. So editing `color` in buildings.jsonc actually recolours it.
   const fg = hexToRgb01(def?.color) ?? def?.fg ?? [0.87, 0.62, 0.12];
-  const bg = def?.bg ?? [0.06, 0.04, 0.01];
+  // `transparentBg` buildings (sleeping spot, flat markers) keep the terrain cell's background so they
+  // blend into the ground they sit on, instead of painting their own bg square.
+  const existingBg = def?.transparentBg ? grid.getTile(b.x, b.y)?.background : undefined;
+  const bg: [number, number, number] = existingBg
+    ? [existingBg.r, existingBg.g, existingBg.b]
+    : (def?.bg ?? [0.06, 0.04, 0.01]);
   grid.setTile(b.x, b.y, {
     char,
     foreground: { r: fg[0], g: fg[1], b: fg[2] },

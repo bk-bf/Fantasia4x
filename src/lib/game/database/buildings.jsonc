@@ -948,6 +948,7 @@
     "charSpans": [ {"sheet": "buildings", "id": 49} ],
     "fg": [0.55, 0.41, 0.08],
     "bg": [0.06, 0.04, 0.01],
+    "transparentBg": true,
     "description": "A cleared patch of ground marked as a sleeping area. Better than collapsing wherever you stand.",
     "category": "shelter",
     "buildingCost": {},

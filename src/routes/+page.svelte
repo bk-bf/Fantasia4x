@@ -26,7 +26,13 @@
   import { onMount } from 'svelte';
   import { autohideScroll } from '$lib/actions/autohideScroll';
   import { uiState } from '$lib/stores/uiState';
-  import { hideSidebars, debugMode, dayNightTint } from '$lib/stores/uiPrefs';
+  import {
+    hideSidebars,
+    debugMode,
+    dayNightTint,
+    resourcesMinimized,
+    chronicleMinimized
+  } from '$lib/stores/uiPrefs';
   import {
     gameState,
     storeReady,
@@ -301,7 +307,7 @@
     </div>
 
     <div class="game-body" class:sidebars-hidden={$hideSidebars}>
-      <aside class="left-panel">
+      <aside class="left-panel" class:minimized={$resourcesMinimized}>
         <ResourceSidebar />
       </aside>
 
@@ -359,7 +365,7 @@
         </nav>
       </main>
 
-      <aside class="right-panel">
+      <aside class="right-panel" class:minimized={$chronicleMinimized}>
         <ChroniclePanel />
       </aside>
     </div>
@@ -441,6 +447,14 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+  }
+
+  /* Minimised sidebars collapse to a thin strip (just the restore arrow + vertical label inside),
+     handing the freed width to the map. The panel renders its own collapsed view (ResourceSidebar /
+     ChroniclePanel); here we only shrink the column. */
+  .left-panel.minimized,
+  .right-panel.minimized {
+    width: 26px;
   }
 
   .main-content {

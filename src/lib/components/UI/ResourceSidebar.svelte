@@ -3,7 +3,8 @@
   import {
     collapsedResourceCategories,
     hideEmptyResourceCategories,
-    hideSidebars
+    hideSidebars,
+    resourcesMinimized
   } from '$lib/stores/uiPrefs';
   import { itemService } from '$lib/game/services/ItemService';
   import { uiState } from '$lib/stores/uiState';
@@ -96,8 +97,16 @@
   }
 </script>
 
-<aside class="sidebar" class:transparent={$hideSidebars}>
-  {#if race}
+<aside class="sidebar" class:transparent={$hideSidebars} class:collapsed={$resourcesMinimized}>
+  {#if $resourcesMinimized}
+    <button
+      class="restore-btn"
+      title="Expand resources"
+      aria-label="Expand resources"
+      onclick={() => resourcesMinimized.set(false)}>›</button
+    >
+    <span class="collapsed-label">RESOURCES</span>
+  {:else if race}
     <!-- Sticky header block: Kingdom + Resources header never scroll away. -->
     <div class="sticky-top">
       <div class="section-hdr">| KINGDOM</div>
@@ -130,6 +139,12 @@
             aria-label={allExpanded ? 'Collapse all categories' : 'Expand all categories'}
             disabled={groups.length === 0}
             onclick={toggleAll}>{allExpanded ? '⊟' : '⊞'}</button
+          >
+          <button
+            class="hdr-btn"
+            title="Minimise resources panel"
+            aria-label="Minimise resources panel"
+            onclick={() => resourcesMinimized.set(true)}>‹</button
           >
         </span>
       </div>
@@ -213,6 +228,40 @@
     display: flex;
     flex-direction: column;
     overflow: hidden; /* the inner .res-area scrolls, not the whole sidebar */
+  }
+
+  /* ── Collapsed strip (minimised) — restore arrow + vertical label; the left-panel column is narrowed
+     to match by +page.svelte (.left-panel.minimized). ── */
+  .sidebar.collapsed {
+    align-items: center;
+    padding-top: 4px;
+    gap: 6px;
+  }
+  .restore-btn {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--accent-hi);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .restore-btn:hover {
+    border-color: var(--border-hi);
+    background: var(--bg-hover);
+  }
+  .collapsed-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    color: var(--accent-hi);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    user-select: none;
   }
 
   /* "Hide sidebars" mode (top-bar settings): the panel floats fully transparently over the map.

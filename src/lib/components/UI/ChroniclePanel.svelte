@@ -1,7 +1,7 @@
 <script lang="ts">
   import { recentActivity, clearActivityLog } from '$lib/stores/Log';
   import { uiState } from '$lib/stores/uiState';
-  import { hideSidebars } from '$lib/stores/uiPrefs';
+  import { hideSidebars, chronicleMinimized } from '$lib/stores/uiPrefs';
   import type { ActivityLogEntry } from '$lib/game/core/Events';
   import CombatBreakdown from './CombatBreakdown.svelte';
   import HoverTip from './HoverTip.svelte';
@@ -102,44 +102,62 @@
   }
 </script>
 
-<aside class="panel" class:transparent={$hideSidebars}>
-  <div class="section-hdr">
-    <span>| CHRONICLE</span>
+<aside class="panel" class:transparent={$hideSidebars} class:collapsed={$chronicleMinimized}>
+  {#if $chronicleMinimized}
     <button
-      class="clear-btn"
-      title="Clear chronicle"
-      aria-label="Clear chronicle"
-      disabled={$recentActivity.length === 0}
-      on:click={clearActivityLog}>✕</button
+      class="restore-btn"
+      title="Expand chronicle"
+      aria-label="Expand chronicle"
+      on:click={() => chronicleMinimized.set(false)}>‹</button
     >
-  </div>
-
-  <ScrollArea class="log-list">
-    {#if $recentActivity.length > 0}
-      {#each $recentActivity as entry (entry.id)}
-        <div
-          class="entry {SEV_CLASS[entry.severity] || ''} {entry.focusX !== undefined
-            ? 'clickable'
-            : ''}"
-          class:expanded={expandedId === entry.id}
-          on:click={() => handleClick(entry)}
-          on:mouseenter={(e) => onEntryEnter(e, entry)}
-          on:mousemove={onEntryMove}
-          on:mouseleave={onEntryLeave}
-          role="button"
-          tabindex="0"
-          on:keydown={(e) => e.key === 'Enter' && handleClick(entry)}
+    <span class="collapsed-label">CHRONICLE</span>
+  {:else}
+    <div class="section-hdr">
+      <span>| CHRONICLE</span>
+      <span class="hdr-btns">
+        <button
+          class="hdr-icon-btn"
+          title="Minimise chronicle"
+          aria-label="Minimise chronicle"
+          on:click={() => chronicleMinimized.set(true)}>›</button
         >
-          <span class="turn">T{entry.turn}</span>
-          <span class="type">{abbr(entry)}</span>
-          <span class="msg">{entry.action}{entry.result ? ' · ' + entry.result : ''}</span>
-        </div>
-        {#if expandedId === entry.id && entry.combatBreakdown && entry.combatBreakdown.length > 0}
-          <CombatBreakdown turns={entry.combatBreakdown} />
-        {/if}
-      {/each}
-    {/if}
-  </ScrollArea>
+        <button
+          class="clear-btn"
+          title="Clear chronicle"
+          aria-label="Clear chronicle"
+          disabled={$recentActivity.length === 0}
+          on:click={clearActivityLog}>✕</button
+        >
+      </span>
+    </div>
+
+    <ScrollArea class="log-list">
+      {#if $recentActivity.length > 0}
+        {#each $recentActivity as entry (entry.id)}
+          <div
+            class="entry {SEV_CLASS[entry.severity] || ''} {entry.focusX !== undefined
+              ? 'clickable'
+              : ''}"
+            class:expanded={expandedId === entry.id}
+            on:click={() => handleClick(entry)}
+            on:mouseenter={(e) => onEntryEnter(e, entry)}
+            on:mousemove={onEntryMove}
+            on:mouseleave={onEntryLeave}
+            role="button"
+            tabindex="0"
+            on:keydown={(e) => e.key === 'Enter' && handleClick(entry)}
+          >
+            <span class="turn">T{entry.turn}</span>
+            <span class="type">{abbr(entry)}</span>
+            <span class="msg">{entry.action}{entry.result ? ' · ' + entry.result : ''}</span>
+          </div>
+          {#if expandedId === entry.id && entry.combatBreakdown && entry.combatBreakdown.length > 0}
+            <CombatBreakdown turns={entry.combatBreakdown} />
+          {/if}
+        {/each}
+      {/if}
+    </ScrollArea>
+  {/if}
 
   {#if hoverEntry}
     <HoverTip x={hoverX} y={hoverY}>
@@ -240,7 +258,14 @@
     flex-shrink: 0;
   }
 
-  .clear-btn {
+  .hdr-btns {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .clear-btn,
+  .hdr-icon-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -263,9 +288,49 @@
     background: var(--bg-hover);
   }
 
+  .hdr-icon-btn:hover {
+    color: var(--accent-hi);
+    border-color: var(--border-hi);
+    background: var(--bg-hover);
+  }
+
   .clear-btn:disabled {
     opacity: 0.3;
     cursor: default;
+  }
+
+  /* ── Collapsed strip (minimised) — a thin bar with a restore arrow + vertical label. The right-panel
+     column is narrowed to match by +page.svelte (.right-panel.minimized). ── */
+  .panel.collapsed {
+    align-items: center;
+    padding-top: 4px;
+    gap: 6px;
+  }
+  .restore-btn {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--accent-hi);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .restore-btn:hover {
+    border-color: var(--border-hi);
+    background: var(--bg-hover);
+  }
+  .collapsed-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    color: var(--accent-hi);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    user-select: none;
   }
 
   /* .log-list is the ScrollArea viewport (overflow + auto-hiding bar live in ScrollArea). */

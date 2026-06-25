@@ -297,11 +297,26 @@ export function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState 
       });
     }
     if (targetState === PAWN_STATE.SLEEPING) {
+      // Sleep ONLY when actually standing ON the bed tile. If movement stopped us short (a blocked
+      // final step, a path truncated to an adjacent tile), re-route onto the spot instead of
+      // collapsing one tile away. Sleep in place only when the bed is genuinely unreachable right now
+      // (the exhaustion guard still backstops a pawn that can never reach it).
+      const onBed =
+        pawn.position?.x === activeJob.targetX && pawn.position?.y === activeJob.targetY;
+      if (!onBed) {
+        const retried = tryAssignSleepPath(pawn, activeJob.targetX, activeJob.targetY, gameState);
+        if (retried) {
+          return mutatePawn(retried, pawn.id, (p) => {
+            p.hasReachedDestination = false;
+          });
+        }
+        // Unreachable this tick — fall through and sleep where we are (last resort).
+      }
       gameLogger.log(
         gameState.turn,
         'NEED-CHECK',
         () =>
-          `${pawn.name} goes to sleep at ${fmtPos(pawn)} fatigue=${(pawn.needs?.fatigue ?? 0).toFixed(1)} (at bed)`
+          `${pawn.name} goes to sleep at ${fmtPos(pawn)} fatigue=${(pawn.needs?.fatigue ?? 0).toFixed(1)} (${onBed ? 'on bed' : 'off-spot, bed unreachable'})`
       );
     }
     return mutatePawn(gameState, pawn.id, (p) => {

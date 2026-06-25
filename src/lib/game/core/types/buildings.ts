@@ -124,6 +124,9 @@ export interface Building {
   fg?: [number, number, number];
   /** Background color [r, g, b] 0–1 for map tile. */
   bg?: [number, number, number];
+  /** When true, the building keeps the UNDERLYING terrain tile's background instead of painting `bg`
+   *  — so a flat marker like a sleeping spot blends into whatever ground it was placed on. */
+  transparentBg?: boolean;
 
   /** Whether pawns/mobs can enter this building's tile. Defaults to true (passable
    *  furniture, spots, beds, doors). Set false for solid structures — walls, furnaces,
