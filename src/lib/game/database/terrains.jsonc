@@ -4,9 +4,8 @@
   // baseMoisture: biome baseline wetness 0–100% (display); weather adds/removes on top.
   "biomes": [
     { "id": "forest",   "displayName": "Forest",   "densityRange": [0.52, 0.6 ], "color": "#2E7D32", "baseTemp": 12, "baseMoisture": 50 },
-    { "id": "swamp",    "displayName": "Swamp",    "densityRange": [0.18, 0.28], "color": "#4E342E", "baseTemp": 18, "baseMoisture": 80 },
+    { "id": "swamp",    "displayName": "Swamp",    "densityRange": [0   , 0.28], "color": "#4E342E", "baseTemp": 18, "baseMoisture": 80 },
     { "id": "plains",   "displayName": "Plains",   "densityRange": [0.28, 0.52], "color": "#8BC34A", "baseTemp": 15, "baseMoisture": 30 },
-    { "id": "mountain", "displayName": "Mountain", "densityRange": [0.6 , 1   ], "color": "#757575", "baseTemp": 2 , "baseMoisture": 15 },
-    { "id": "river",    "displayName": "River",    "densityRange": [0   , 0.18], "color": "#1565C0", "baseTemp": 13, "baseMoisture": 90 }
+    { "id": "mountain", "displayName": "Mountain", "densityRange": [0.6 , 1   ], "color": "#757575", "baseTemp": 2 , "baseMoisture": 15 }
   ]
 }

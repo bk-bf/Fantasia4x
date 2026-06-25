@@ -668,8 +668,11 @@ function startMenuPreview() {
   // `skipResources`: generateWorld normally scatters resources internally — but that pass can't exclude
   // the magical groves, leaving stray ones off the deliberate ring. So the menu skips it and runs its
   // OWN single excluded scatter below (otherwise the menu also double-generated resources).
+  // tidyWater:false — the backdrop erases water below (customizeMenuPreviewWorld), so a riverbank ring
+  // would be left stranded with no water. The Custom Map / game gen keep it (default true).
   const world = generateWorld(MENU_PREVIEW_MAP.w, MENU_PREVIEW_MAP.h, MENU_PREVIEW_SEED, {
-    skipResources: true
+    skipResources: true,
+    tidyWater: false
   });
   // Title-screen art direction: flatten the mountain, erase water, and compute the magical-tree ring (see
   // module). Done BEFORE resource generation and entity seeding so prey spawn on the reshaped land.

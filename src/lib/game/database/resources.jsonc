@@ -1978,7 +1978,7 @@
     "bg"              : [0.08, 0.06, 0.03],
     "color"           : "#AD5C21",
     "spawn"           : {
-      "subterrains": {"clay": 0.85, "mud": 0.04, "bog": 0.03, "riverbank": 0.05, "shallow_water": 0.02}
+      "subterrains": {"clay": 0.85, "mud": 0.04, "bog": 0.03, "riverbank": 0.05}
     },
     "nodeAmountRange" : [2, 4],
     "designationTypes": ["harvest"],

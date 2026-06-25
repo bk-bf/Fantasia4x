@@ -102,7 +102,7 @@ export function generateWorld(
   width: number,
   height: number,
   seed = Date.now(),
-  opts?: { skipResources?: boolean }
+  opts?: { skipResources?: boolean; tidyWater?: boolean }
 ): WorldTile[][] {
   const detailSeed = (seed * 6971) >>> 0;
 
@@ -179,6 +179,12 @@ export function generateWorld(
     }
   }
 
+  // Phase 5·0: tidy waterbodies before moisture/resources — fill fully-enclosed land holes (nothing
+  // stranded inside a lake, e.g. a clay tile) and ring every waterbody with riverbank for a clean shore.
+  // Skipped via `tidyWater: false` by callers that erase water afterwards (the menu backdrop), which
+  // would otherwise leave the riverbank ring stranded as "banks with no river".
+  if (opts?.tidyWater !== false) tidyWaterbodies(world);
+
   // Phase 5a: distribute base tile wetness outward from water (spider-web falloff).
   assignMoisture(world, detailNoise);
 
@@ -188,6 +194,105 @@ export function generateWorld(
   if (!opts?.skipResources) resourceGeneratorService.generateResources(world, seed);
 
   return world;
+}
+
+// ── Waterbody tidy pass (Phase 5·0) ───────────────────────────────────────────────────────────────
+const WATER_SUBS = new Set(['water', 'shallow_water', 'rapids']);
+const isWaterTile = (t: WorldTile): boolean => WATER_SUBS.has(t.subType);
+
+// Re-derive a tile's subterrain-dependent fields after changing its subType (used by tidyWaterbodies).
+// Keeps x/y/density/terrainType; refreshes glyph, walkability, sight, movement cost, and legacy `type`.
+function setTileSubtype(t: WorldTile, subTypeName: string): void {
+  const sub = SUBTERRAINS[subTypeName] ?? SUBTERRAIN_FALLBACK;
+  t.subType = subTypeName;
+  t.ascii = pickChar(sub, t.x, t.y);
+  t.walkable = sub.walkable;
+  t.movementCost = sub.movementCost;
+  t.blocksSight = sub.blocksSight ?? false;
+  t.type = (WATER_SUBS.has(subTypeName) ? 'water' : 'land') as WorldTile['type'];
+}
+
+/**
+ * Tidy generated waterbodies (run before moisture/resources):
+ *  A) Fill enclosed holes — a non-water tile whose 8 neighbours are ALL water becomes water, so a clay
+ *     (or any land) tile is never stranded inside a lake.
+ *  B) Riverbank ring — every remaining non-water, non-mountain tile that touches water (8-neighbour)
+ *     becomes riverbank, giving each waterbody a consistent one-tile shore (and so no clay borders water).
+ */
+function tidyWaterbodies(world: WorldTile[][]): void {
+  const h = world.length;
+  const w = world[0]?.length ?? 0;
+  const waterAt = (x: number, y: number): boolean =>
+    x >= 0 && y >= 0 && x < w && y < h && isWaterTile(world[y][x]);
+
+  // A) Fill water-enclosed land. Label land into 8-connected components; any component that never
+  //    touches the map border is cut off from the outside by water — an island / stray clay patch
+  //    inside a waterbody — so flood it to water. The single largest component (the mainland) is always
+  //    kept, even on a continent-ringed-by-ocean map. This clears ALL land stranded inside water, not
+  //    just single-tile holes.
+  const comp = new Int32Array(w * h).fill(-1);
+  const compSize: number[] = [];
+  const compBorder: boolean[] = [];
+  for (let sy = 0; sy < h; sy++) {
+    for (let sx = 0; sx < w; sx++) {
+      if (comp[sy * w + sx] !== -1 || isWaterTile(world[sy][sx])) continue;
+      const id = compSize.length;
+      let size = 0;
+      let border = false;
+      const flood = [sy * w + sx];
+      comp[sy * w + sx] = id;
+      while (flood.length) {
+        const i = flood.pop() as number;
+        const x = i % w;
+        const y = (i / w) | 0;
+        size++;
+        if (x === 0 || y === 0 || x === w - 1 || y === h - 1) border = true;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (!dx && !dy) continue;
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+            const ni = ny * w + nx;
+            if (comp[ni] !== -1 || isWaterTile(world[ny][nx])) continue;
+            comp[ni] = id;
+            flood.push(ni);
+          }
+        }
+      }
+      compSize.push(size);
+      compBorder.push(border);
+    }
+  }
+  let mainland = 0;
+  for (let id = 1; id < compSize.length; id++) if (compSize[id] > compSize[mainland]) mainland = id;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const id = comp[y * w + x];
+      if (id >= 0 && id !== mainland && !compBorder[id]) setTileSubtype(world[y][x], 'water');
+    }
+  }
+
+  // B) Riverbank ring. Collect targets against the cleaned water tiles first, then apply — the adjacency
+  //    test only ever reads water, never freshly-laid riverbank.
+  const ring: WorldTile[] = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const t = world[y][x];
+      if (isWaterTile(t) || t.terrainType === 'mountain') continue;
+      let touchesWater = false;
+      for (let dy = -1; dy <= 1 && !touchesWater; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if ((dx || dy) && waterAt(x + dx, y + dy)) {
+            touchesWater = true;
+            break;
+          }
+        }
+      }
+      if (touchesWater) ring.push(t);
+    }
+  }
+  for (const t of ring) setTileSubtype(t, 'riverbank');
 }
 
 // Organic ± jitter on the baked moisture so the damp bands aren't perfectly smooth contours.
