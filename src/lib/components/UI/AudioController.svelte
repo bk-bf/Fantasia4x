@@ -96,15 +96,17 @@
   const lastFired = new Map<string, number>(); // creature archetype id → last one-shot time
   const lastFiredWork = new Map<string, number>(); // work category id → last one-shot time
 
-  // Volume buses → engine, live as sliders move.
-  $effect(() => {
+  // Volume buses → engine, pushed live as the Settings sliders move. Done via explicit store
+  // subscriptions (in onMount) rather than an $effect, so a slider change ALWAYS re-applies — incl.
+  // on the title screen where the menu ambience plays.
+  function pushVolumes(): void {
     audioService.setVolumes({
-      master: $masterVolume / 100,
-      music: $musicVolume / 100,
-      sfx: $sfxVolume / 100,
-      ambient: $ambientVolume / 100
+      master: get(masterVolume) / 100,
+      music: get(musicVolume) / 100,
+      sfx: get(sfxVolume) / 100,
+      ambient: get(ambientVolume) / 100
     });
-  });
+  }
 
   // Music scene + ambient bed mix. Re-runs on turn/weather/screen change and the 1 s tick.
   $effect(() => {
@@ -380,6 +382,11 @@
     window.addEventListener('pointerover', onUiOver, true);
     window.addEventListener('click', onUiClick, true);
 
+    // Apply the volume buses now and on every slider change (fires immediately on subscribe too).
+    const volUnsubs = [masterVolume, musicVolume, sfxVolume, ambientVolume].map((s) =>
+      s.subscribe(pushVolumes)
+    );
+
     // Combat sound cues — play each new cue once at a zoom/viewport-scaled volume (distant brawls stay
     // quiet). Tracks fired ids; pruned to the live list so it stays bounded.
     const firedCombat = new Set<string>();
@@ -417,6 +424,7 @@
       window.removeEventListener('pointerover', onUiOver, true);
       window.removeEventListener('click', onUiClick, true);
       stampCombat();
+      volUnsubs.forEach((u) => u());
       clearInterval(iv);
       clearInterval(sfxIv);
       audioService.dispose();

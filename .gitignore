@@ -8,6 +8,9 @@ node_modules
 /.svelte-kit
 /build
 
+# Electron packaging output (electron-builder). The icon source (build-resources/) IS committed.
+/dist-electron
+
 # Worktrees
 .worktrees/
 

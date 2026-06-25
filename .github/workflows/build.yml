@@ -1,0 +1,82 @@
+name: Build desktop binaries
+
+# Fires on every push to main — i.e. each time you merge dev → main — and on manual dispatch.
+# Each matrix runner builds the installer for its own OS and uploads it as an artifact. It does NOT
+# publish a release; grab the binaries from the run's Artifacts (or wire `--publish` later for releases).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push to main supersedes an in-flight build.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04 # → AppImage + .deb
+          - os: windows-latest # → NSIS .exe
+          - os: macos-latest # → .dmg (arm64; unsigned alpha)
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm first so setup-node can use it as the cache backend. Version comes from packageManager.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # Rust → WASM: spatial-core and sim-core are compiled fresh on each runner (the -pkg dirs are
+      # gitignored, not committed), so the toolchain + wasm-pack are required before `pnpm build`.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            spatial-core
+            sim-core
+
+      - uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build WASM crates
+        run: |
+          pnpm add:wasm
+          pnpm add:wasm:sim
+
+      - name: Build SvelteKit static bundle
+        run: pnpm build
+
+      - name: Package desktop binary
+        run: pnpm package
+        env:
+          # No Apple cert in CI — don't let electron-builder hunt for one and fail the macOS build.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: fantasia4x-${{ matrix.os }}
+          if-no-files-found: ignore
+          path: |
+            dist-electron/*.AppImage
+            dist-electron/*.deb
+            dist-electron/*.exe
+            dist-electron/*.dmg
+            dist-electron/*.blockmap
+            dist-electron/latest*.yml

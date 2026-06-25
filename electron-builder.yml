@@ -1,0 +1,46 @@
+# electron-builder config for the packaged Fantasia4x desktop binary (DISTRIBUTION Phase C).
+# Run via `pnpm dist` (builds the SvelteKit static output first, then packs). On a CI matrix each runner
+# produces its own platform's installer. The runtime app is fully self-contained: the SvelteKit build/
+# bundle already inlines every dependency (howler, uuid, the WASM, …), so no node_modules ship.
+appId: dev.fantasia4x.app
+productName: Fantasia4x
+copyright: Copyright (C) 2025 bk — AGPL-3.0-or-later
+
+directories:
+  # NOTE: SvelteKit emits to build/, which is also electron-builder's DEFAULT buildResources dir — so we
+  # MUST relocate buildResources (icons) and output, or they'd collide with the web bundle.
+  buildResources: build-resources
+  output: dist-electron
+
+# Ship only the shell + the prebuilt static site. No node_modules (everything is bundled into build/).
+files:
+  - electron/**/*
+  - build/**/*
+  - package.json
+
+# Read by electron-builder for all platforms; it derives .ico/.icns from this 1024px PNG.
+icon: build-resources/icon.png
+
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Game
+  synopsis: A turn-based 4X colony chronicle.
+
+win:
+  target:
+    - nsis
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+
+mac:
+  target:
+    - dmg
+  category: public.app-category.strategy-games
+  # Unsigned alpha build — without an Apple Developer cert there's nothing to sign/notarize, and leaving
+  # auto-discovery on makes the build fail looking for one. Gatekeeper will warn; right-click→Open opens it.
+  identity: null
