@@ -82,3 +82,14 @@ Subtle interface feedback played globally on button hover/press.
 | ---------------- | ------ | ------ | ------- |
 | `ui/hover.ogg`   | "51 UI sound effects" (https://opengameart.org/content/51-ui-sound-effects-buttons-switches-and-clicks) | Kenney (kenney.nl) | CC0 |
 | `ui/click.ogg`   | "51 UI sound effects" (https://opengameart.org/content/51-ui-sound-effects-buttons-switches-and-clicks) | Kenney (kenney.nl) | CC0 |
+
+## Combat SFX — weapon swings + condition cues (`audio/combat/<id>/`)
+
+Per-swing weapon sounds (the item/natural-weapon `audio` archetype in items.jsonc) and per-onset
+combat-condition cues (the condition `audio` in conditions.jsonc). All CC0.
+
+| Archetype(s)                                                  | Source | Author | License |
+| ------------------------------------------------------------- | ------ | ------ | ------- |
+| `slash`, `pierce`, `blunt`, `bow`, `bite` (weapon swings)     | "Swishes Sound Pack" (https://opengameart.org/content/swishes-sound-pack) | artisticdude | CC0 |
+| `venom`, `screech`, `spectral`, `tongue`, `shock`, `envenomed`, `disoriented`, `ensnared`, `bloodletting` | "80 CC0 creature SFX" (https://opengameart.org/content/80-cc0-creature-sfx) | rubberduck | CC0 |
+| `knockdown`, `fracture`                                       | "100 CC0 metal and wood SFX" (https://opengameart.org/content/100-cc0-metal-and-wood-sfx) | rubberduck | CC0 |
