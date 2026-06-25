@@ -157,10 +157,25 @@ NSEOF
 # Desktop webview shell over a single main server (cross-engine TPS spike).
 if [[ -n "$SHELL_TARGET" ]]; then
   SHELL_DIR="$SCRIPT_DIR/desktop-spike/$SHELL_TARGET"
+  # Per-worktree gap: each git worktree has its own (untracked) node_modules, so a fresh worktree's
+  # spike has none. Auto-install on first run instead of erroring — `--ignore-workspace` keeps the
+  # standalone spike out of the monorepo workspace hoisting.
   if [[ ! -d "$SHELL_DIR/node_modules" ]]; then
-    echo "launch.sh: $SHELL_TARGET deps not installed." >&2
-    echo "  Run: (cd $SHELL_DIR && pnpm install --ignore-workspace)" >&2
-    exit 1
+    echo "launch.sh: $SHELL_TARGET deps not installed — installing (first run in this worktree)…" >&2
+    (cd "$SHELL_DIR" && pnpm install --ignore-workspace) || {
+      echo "launch.sh: failed to install $SHELL_TARGET deps (cd $SHELL_DIR && pnpm install --ignore-workspace)." >&2
+      exit 1
+    }
+  fi
+  # The electron binary is unpacked by a postinstall script that pnpm 10 skips unless approved (the
+  # spike package.json allowlists it via pnpm.onlyBuiltDependencies). Guard anyway: if the runtime
+  # isn't unpacked, run electron's installer directly so the shell always launches.
+  if [[ "$SHELL_TARGET" == electron && ! -x "$SHELL_DIR/node_modules/electron/dist/electron" ]]; then
+    echo "launch.sh: unpacking electron runtime…" >&2
+    (cd "$SHELL_DIR" && node node_modules/electron/install.js) || {
+      echo "launch.sh: failed to unpack electron runtime." >&2
+      exit 1
+    }
   fi
   # --profiler boots WITHOUT --debug so the sim profiles clean (no verbose firehose). Add --log to
   # surface the DEBUG log tab + firehose on demand (e.g. ./launch.sh --profiler --electron --log).
