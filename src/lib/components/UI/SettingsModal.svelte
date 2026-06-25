@@ -199,7 +199,7 @@
   .settings-overlay {
     position: fixed;
     inset: 0;
-    z-index: 1100; /* above the pause overlay (900) and the menu (1000) */
+    z-index: 1400; /* topmost modal — above pause (900), menu (1000), the Custom Map popup (1200/1300) */
     background: rgba(6, 4, 2, 0.72);
     display: flex;
     align-items: center;
