@@ -5,6 +5,11 @@
  */
 
 import type { ShaderProgram } from './types.js';
+// Inline the shader source at build time (Vite ?raw) so it ships inside the JS bundle. A runtime
+// fetch('/src/lib/webgl/shaders/*.glsl') only works against the dev server — in a production/static
+// build (Electron app://, any static host) those source paths 404 and WebGL init fails.
+import vertexShaderSource from './shaders/vertex.glsl?raw';
+import fragmentShaderSource from './shaders/fragment.glsl?raw';
 
 export interface ShaderSource {
   vertex: string;
@@ -420,11 +425,12 @@ export async function createTileRendererShaders(
   const shaderManager = new ShaderManager(gl, debug);
 
   try {
-    // Load shader sources from external files
-    const shaderSource = await shaderManager.loadShaderSource(
-      '/src/lib/webgl/shaders/vertex.glsl',
-      '/src/lib/webgl/shaders/fragment.glsl'
-    );
+    // Shader sources are bundled at build time (?raw imports above) — no runtime fetch, so this works
+    // in dev and in static/Electron builds alike.
+    const shaderSource: ShaderSource = {
+      vertex: vertexShaderSource,
+      fragment: fragmentShaderSource
+    };
 
     console.log('📋 Vertex shader source length:', shaderSource.vertex.length);
     console.log('📋 Fragment shader source length:', shaderSource.fragment.length);
