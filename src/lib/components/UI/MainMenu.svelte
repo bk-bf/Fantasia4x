@@ -7,6 +7,7 @@
     • New Game  → starts a fresh colony immediately (then the Custom Map popup) — no slot to pick.
     • Load Game → opens the save list (SaveListMenu); disabled when there are no saves.
     • Settings  → opens the shared SettingsModal popup (graphics / gameplay / advanced toggles).
+    • Credits   → cinematic rolling credits (CreditsScroll): author, inspirations, asset authors.
     • Exit      → quits the desktop window (no-op in a browser tab).
 -->
 <script lang="ts">
@@ -18,10 +19,12 @@
   import MenuPreviewBackdrop from '$lib/components/UI/MenuPreviewBackdrop.svelte';
   import SettingsModal from '$lib/components/UI/SettingsModal.svelte';
   import SaveListMenu from '$lib/components/UI/SaveListMenu.svelte';
+  import CreditsScroll from '$lib/components/UI/CreditsScroll.svelte';
 
   let canLoad = $state(false);
   let showSettings = $state(false);
   let showLoad = $state(false);
+  let showCredits = $state(false);
   // Exit is only meaningful in the desktop shell; window.close() is a no-op in a normal browser tab.
   const isDesktop = typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent ?? '');
 
@@ -73,6 +76,7 @@
         Load Game
       </button>
       <button class="menu-btn" onclick={() => (showSettings = true)}>Settings</button>
+      <button class="menu-btn" onclick={() => (showCredits = true)}>Credits</button>
       {#if isDesktop}
         <button class="menu-btn" onclick={exitGame}>Exit</button>
       {/if}
@@ -86,6 +90,10 @@
 
 {#if showSettings}
   <SettingsModal onClose={() => (showSettings = false)} />
+{/if}
+
+{#if showCredits}
+  <CreditsScroll onClose={() => (showCredits = false)} />
 {/if}
 
 <style>
