@@ -1,11 +1,15 @@
 name: Build desktop binaries
 
-# Manually triggered only — run on demand from the Actions tab ("Run workflow") or
-# `gh workflow run "Build desktop binaries"`. Develop on main; build installers when you actually want
-# them, not on every push. Each matrix runner builds the installer for its own OS and uploads it as an
-# artifact. It does NOT publish a release; grab the binaries from the run's Artifacts.
+# Two ways to run:
+#   • workflow_dispatch (Actions → "Run workflow" / `gh workflow run`): builds installers and uploads
+#     them as run Artifacts. No release — use for ad-hoc / test builds.
+#   • push a tag `vX.Y.Z` (`git tag v0.1.0 && git push origin v0.1.0`): builds both OSes AND publishes a
+#     GitHub Release with the installers attached + auto-generated notes (the `release` job below).
+# Develop on main; cut a release by tagging when you want one.
 on:
   workflow_dispatch:
+  push:
+    tags: ['v*']
 
 # A newer manual run supersedes an in-flight one.
 concurrency:
@@ -83,3 +87,29 @@ jobs:
             dist-electron/*.dmg
             dist-electron/*.blockmap
             dist-electron/latest*.yml
+
+  # Only on a tag push: collect both OSes' installers and publish a GitHub Release with auto-generated
+  # notes (commits/PRs since the previous tag). workflow_dispatch runs skip this (the `if` is false).
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # required to create the release and upload assets
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts # each artifact unpacks into artifacts/<artifact-name>/
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -t FILES < <(find artifacts -type f \( -name '*.AppImage' -o -name '*.deb' -o -name '*.exe' \))
+          echo "Attaching ${#FILES[@]} installer(s): ${FILES[*]}"
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            "${FILES[@]}"
