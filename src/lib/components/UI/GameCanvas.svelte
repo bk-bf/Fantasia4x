@@ -4273,13 +4273,24 @@
     equipMenu = null;
     if (hoverTileX < 0 || hoverTileY < 0) return;
 
-    // ── Rescue: right-click a COLLAPSED colonist → send the nearest free pawn to carry it to shelter.
-    // Takes priority over draft orders / designation-clear (you don't attack or paint over a downed
-    // ally). No-op (in the command) when there's no shelter or no one free. ──
+    // ── Rescue: right-click a COLLAPSED colonist → pop a context menu (same one the ranged/melee
+    // target + equip actions use) offering to carry it to shelter. Takes priority over draft orders /
+    // designation-clear. The command sends the nearest free pawn (no-op if no shelter / no one free). ──
     if (!designationMode) {
       const downed = findPawnAtTile(hoverTileX, hoverTileY);
       if (downed && downed.currentState === 'Collapsed') {
-        gameState.command({ type: 'rescuePawn', payload: { victimId: downed.id }, save: true });
+        const victimId = downed.id;
+        equipMenu = {
+          x: e.clientX,
+          y: e.clientY,
+          entries: [
+            {
+              label: `Carry ${downed.name} to shelter`,
+              run: () =>
+                gameState.command({ type: 'rescuePawn', payload: { victimId }, save: true })
+            }
+          ]
+        };
         return;
       }
     }
