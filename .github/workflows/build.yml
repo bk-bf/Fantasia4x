@@ -65,10 +65,11 @@ jobs:
       - name: Build SvelteKit static bundle
         run: pnpm build
 
-      # --publish never: electron-builder auto-publishes to a GitHub release when it detects CI, which
-      # needs GH_TOKEN and isn't what we want — we only collect artifacts via upload-artifact below.
+      # Invoke electron-builder directly (not `pnpm package -- …`) so --publish never reliably reaches it:
+      # the pnpm-script `--` indirection dropped the flag, so electron-builder tried to auto-publish a
+      # GitHub release (needs GH_TOKEN) and failed even though every artifact built. We only want artifacts.
       - name: Package desktop binary
-        run: pnpm package -- --publish never
+        run: pnpm exec electron-builder --publish never
 
       - name: Upload installers
         uses: actions/upload-artifact@v4
