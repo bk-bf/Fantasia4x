@@ -21,7 +21,6 @@ jobs:
         include:
           - os: ubuntu-22.04 # → AppImage + .deb
           - os: windows-latest # → NSIS .exe
-          - os: macos-latest # → .dmg (arm64; unsigned alpha)
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -64,9 +63,6 @@ jobs:
 
       - name: Package desktop binary
         run: pnpm package
-        env:
-          # No Apple cert in CI — don't let electron-builder hunt for one and fail the macOS build.
-          CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Upload installers
         uses: actions/upload-artifact@v4
