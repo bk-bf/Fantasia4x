@@ -60,5 +60,24 @@ export default [
     rules: {
       'no-console': ['error', { allow: ['warn', 'error'] }]
     }
+  },
+  // Catch the dev-vs-packaged asset trap LIVE in the editor (ESLint LSP) before it reaches a build:
+  // fetch() of a `/src…` path works against the Vite dev server (./dev.sh, the Electron spike) but
+  // 404s in `pnpm build` output (Electron app://, any static host) — sources are bundled into _app/,
+  // there is no /src dir. Import the asset with ?raw / ?url, or put it in static/ and fetch from the
+  // site root. (Surfaced 2026-06-25 by the WebGL shader loader; see memory no-runtime-fetch-of-src-paths.)
+  // Limitation: matches string-literal `fetch('/src…')` in .js/.ts; .svelte scripts aren't linted yet.
+  {
+    files: ['**/*.{js,ts,mjs}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.name='fetch'] > Literal[value=/^\\/?src\\//]",
+          message:
+            "fetch() of a /src path 404s in the packaged/static build (it only works against the dev server). Import the asset with ?raw or ?url, or move it to static/ and fetch from the site root."
+        }
+      ]
+    }
   }
 ];

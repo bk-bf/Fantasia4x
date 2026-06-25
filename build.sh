@@ -9,6 +9,8 @@
 #   ./build.sh --linux --windows    both of the above
 #   ./build.sh --local              quick UNPACKED build for THIS machine — run it straight away,
 #                                     no installer packaging (dist-electron/linux-unpacked/)
+#   ./build.sh --dry                pre-flight: production static build + scan for dev-only /src asset
+#                                     paths that 404 once packaged. No packaging — fast; run during dev.
 #
 # WASM is rebuilt only if missing; delete src/lib/{spatial,sim}-core-pkg to force a fresh compile.
 set -euo pipefail
@@ -23,19 +25,42 @@ usage() {
 LINUX=false
 WINDOWS=false
 LOCAL=false
+DRY=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --linux) LINUX=true ;;
     --windows | --win) WINDOWS=true ;;
     --local) LOCAL=true ;;
+    --dry) DRY=true ;;
     -h | --help) usage; exit 0 ;;
     *) echo "build.sh: unknown option '$1' (try --help)" >&2; exit 1 ;;
   esac
   shift
 done
 
+# --dry: pre-flight a production build and scan it for dev-only /src asset paths — the class of bug that
+# only 404s once packaged (fetch('/src/…') works against the dev server, not the static bundle). No
+# electron packaging, so it's fast enough to run during spike testing. The ESLint rule catches the
+# common case live in the editor; this catches whatever reaches the actual bundle.
+if $DRY; then
+  if [[ ! -f src/lib/spatial-core-pkg/spatial_core.js || ! -f src/lib/sim-core-pkg/sim_core.js ]]; then
+    echo "▸ Building WASM packages…"; pnpm add:wasm; pnpm add:wasm:sim
+  fi
+  echo "▸ Building SvelteKit static bundle (production)…"
+  pnpm build
+  echo "▸ Scanning bundle for /src runtime fetch paths (would 404 in the packaged app)…"
+  if HITS=$(grep -rIlE "[\"']/src/" build/_app --include='*.js') && [[ -n "$HITS" ]]; then
+    echo "✗ DRY CHECK FAILED — bundle file(s) reference a quoted /src runtime path (404 when packaged):" >&2
+    echo "$HITS" | sed 's/^/    /' >&2
+    echo "  Fix: import the asset with ?raw / ?url, or move it to static/ and fetch from the site root." >&2
+    exit 1
+  fi
+  echo "✓ Dry check passed — production bundle has no /src runtime fetches. Safe to package."
+  exit 0
+fi
+
 if ! $LINUX && ! $WINDOWS && ! $LOCAL; then
-  echo "build.sh: pick at least one of --linux, --windows, --local." >&2
+  echo "build.sh: pick at least one of --linux, --windows, --local, --dry." >&2
   usage
   exit 1
 fi
