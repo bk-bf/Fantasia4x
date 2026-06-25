@@ -36,7 +36,11 @@
     type AmbientLayers
   } from '$lib/audio/manifest';
 
-  let { isMenu = false }: { isMenu?: boolean } = $props();
+  // `isMenu`: title screen (drives the music scene). `playing`: the game is actually visible and being
+  // played — i.e. NOT the menu AND past the loading screen. The discrete one-shot SFX (creatures, work,
+  // combat, fire/ambient beds) gate on `playing`, so they stay silent during the post–New Game loading
+  // screen (isMenu is already false there, which used to let boars squeak over the loader).
+  let { isMenu = false, playing = false }: { isMenu?: boolean; playing?: boolean } = $props();
 
   const COMBAT_HOLD_MS = 6000; // keep combat music briefly after the last blow
   const NIGHT_LIGHT = 0.4; // ambient-light threshold for "night"
@@ -213,7 +217,7 @@
    * mobs are skipped.
    */
   function evalCreatures(): void {
-    if (isMenu) return void audioService.setCreatureLevels([]);
+    if (!playing) return void audioService.setCreatureLevels([]);
     const mobs = $gameState?.mobs;
     const vp = get(cameraViewport);
     if (!mobs?.length || vp.w <= 0) return void audioService.setCreatureLevels([]);
@@ -274,7 +278,7 @@
    * a pawn, so no pawn-distance gate.
    */
   function evalWork(): void {
-    if (isMenu) return void audioService.setWorkLevels([]);
+    if (!playing) return void audioService.setWorkLevels([]);
     const gs = $gameState;
     const pawns = gs?.pawns;
     const vp = get(cameraViewport);
@@ -313,7 +317,7 @@
   function evalAmbient(): void {
     // Menu: play the full weather/time mix as a cinematic backdrop (no zoom balance — the title screen
     // has no player camera to scale against). In-game applies the detail/weather zoom balance below.
-    if (isMenu) return void audioService.setAmbient(baseAmbient);
+    if (!playing) return void audioService.setAmbient(baseAmbient);
     const tile = get(cameraTileSize);
     const detail = Math.max(0, Math.min(1, (tile - ZOOM_REF_LOW) / (ZOOM_REF_HIGH - ZOOM_REF_LOW)));
     const weatherMul = 1 + (1 - detail) * WEATHER_ZOOM_BOOST;
@@ -331,7 +335,7 @@
    * aggregated across fires via 1−Π(1−c); no pawn-distance (fires sit in the colony).
    */
   function evalFire(): void {
-    if (isMenu) return void audioService.setFireLevel(0);
+    if (!playing) return void audioService.setFireLevel(0);
     const buildings = $gameState?.buildings;
     const vp = get(cameraViewport);
     if (!buildings?.length || vp.w <= 0) return void audioService.setFireLevel(0);
@@ -391,7 +395,7 @@
     // quiet). Tracks fired ids; pruned to the live list so it stays bounded.
     const firedCombat = new Set<string>();
     const stampCombat = combatSounds.subscribe((list) => {
-      if (!list.length) return;
+      if (!list.length || !playing) return;
       const vp = get(cameraViewport);
       const tile = get(cameraTileSize);
       const zg = zoomGainFor(tile);
