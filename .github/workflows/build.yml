@@ -1,14 +1,13 @@
 name: Build desktop binaries
 
-# Fires on every push to main — i.e. each time you merge dev → main — and on manual dispatch.
-# Each matrix runner builds the installer for its own OS and uploads it as an artifact. It does NOT
-# publish a release; grab the binaries from the run's Artifacts (or wire `--publish` later for releases).
+# Manually triggered only — run on demand from the Actions tab ("Run workflow") or
+# `gh workflow run "Build desktop binaries"`. Develop on main; build installers when you actually want
+# them, not on every push. Each matrix runner builds the installer for its own OS and uploads it as an
+# artifact. It does NOT publish a release; grab the binaries from the run's Artifacts.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
-# A newer push to main supersedes an in-flight build.
+# A newer manual run supersedes an in-flight one.
 concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true

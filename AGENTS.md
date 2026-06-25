@@ -54,17 +54,13 @@ Core data (src/lib/game/core/)         ← types, static databases, GameStateMan
 
 **Spatial services must stay behind interfaces** (ADR-008): All pathfinding, fog-of-war, and spatial query logic must be implemented as services conforming to a defined TypeScript interface (e.g. `PathfindingService`, `SpatialIndexService`). The implementations are Rust compiled to WASM via `wasm-pack` — callsites must never import from `spatial-core/` directly, only from the TypeScript interface. "Spatial" means: A\* pathfinding, nearest-entity queries, fog-of-war visibility. It does **not** mean: pawn state machine, needs system, mood, work priorities, inventory — those stay in TypeScript services. **If you are about to implement spatial logic that bypasses the service interface, or inline it into a component, store, or GameEngineImpl, stop and flag it to the user.**
 
-## Branching & CI Workflow
+## CI / Build
 
-**`main` is CI-only — never work on it directly.** Pushing to `main` triggers the GitHub Actions
-desktop build (`.github/workflows/build.yml`: Linux AppImage/deb + Windows NSIS). The loop:
-
-1. **Sync** — `git -C .worktrees/dev merge --ff-only main` so `dev` carries the newest changes.
-2. **Work in `dev`** — all edits/commits happen in the `dev` worktree (`.worktrees/dev`), never in the `main` checkout.
-3. **Trigger CI** — when finished, push `dev` to `main` (fast-forward) to kick off the build; check the run's artifacts.
-
-`main` exists only to receive that push and run CI — treat it as a release/CI branch, not a working branch.
-CI runs on **Node 22** (pnpm@11.3.0 needs ≥ 22.13); use the same locally.
+Develop directly on `main` (no dev branch). The desktop build (`.github/workflows/build.yml`: Linux
+AppImage/deb + Windows NSIS) is **manually triggered** — run it on demand from the Actions tab
+("Run workflow") or `gh workflow run "Build desktop binaries"` when you want installers, not on every
+push. Grab the binaries from the run's Artifacts. CI runs **Node 22** (pnpm@11.3.0 needs ≥ 22.13);
+use the same locally.
 
 ## Package Manager
 
