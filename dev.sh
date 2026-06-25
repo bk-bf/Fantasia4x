@@ -57,6 +57,16 @@ if [[ ! -d "$SCRIPT_DIR/.svelte-kit" ]]; then
   (cd "$SCRIPT_DIR" && CI=true pnpm exec svelte-kit sync 2>&1) || true
 fi
 
+# Build the Rust→WASM packages if missing (fresh worktree / clean checkout — the -pkg dirs are
+# gitignored build outputs, so Vite can't resolve $lib/spatial-core-pkg|sim-core-pkg without them).
+if [[ ! -f "$SCRIPT_DIR/src/lib/spatial-core-pkg/spatial_core.js" || ! -f "$SCRIPT_DIR/src/lib/sim-core-pkg/sim_core.js" ]]; then
+  echo "Building WASM packages (spatial-core, sim-core)…"
+  (cd "$SCRIPT_DIR" && pnpm add:wasm && pnpm add:wasm:sim) || {
+    echo "dev.sh: WASM build failed — run 'pnpm add:wasm && pnpm add:wasm:sim' manually." >&2
+    exit 1
+  }
+fi
+
 if lsof -ti tcp:$PORT >/dev/null 2>&1; then
   echo "Dev server already running on http://localhost:$PORT"
   echo "PID(s): $(lsof -ti tcp:$PORT | tr '\n' ' ')"
