@@ -39,6 +39,9 @@ interface Bus {
   master: number;
   music: number;
   sfx: number;
+  /** Looping environment beds — weather/nature ambience (rain/wind/birds/…) + fire. Separate from
+   *  `sfx` (discrete one-shots: creatures/work/combat/UI) so rain can be quieted on its own. */
+  ambient: number;
 }
 
 /** Live playback snapshot for the debug "Now playing" panel. */
@@ -62,7 +65,7 @@ export const nowPlaying = writable<NowPlaying>({
   creatures: [],
   work: [],
   fire: 0,
-  volumes: { master: 0.7, music: 0.7, sfx: 0.8 }
+  volumes: { master: 0.7, music: 0.7, sfx: 0.8, ambient: 0.7 }
 });
 
 interface BedState {
@@ -72,7 +75,7 @@ interface BedState {
 }
 
 class AudioServiceImpl {
-  private bus: Bus = { master: 0.7, music: 0.7, sfx: 0.8 };
+  private bus: Bus = { master: 0.7, music: 0.7, sfx: 0.8, ambient: 0.7 };
   private unlocked = false;
 
   // ── Music channel ──
@@ -112,9 +115,9 @@ class AudioServiceImpl {
     // Re-apply per-channel gains immediately (no fade — slider drags should track live).
     if (this.musicHowl) this.musicHowl.volume(this.bus.music);
     for (const bed of this.beds.values()) {
-      if (bed.playing) bed.howl.volume(bed.target * this.bus.sfx);
+      if (bed.playing) bed.howl.volume(bed.target * this.bus.ambient);
     }
-    if (this.fireBed?.playing) this.fireBed.howl.volume(this.fireBed.target * this.bus.sfx);
+    if (this.fireBed?.playing) this.fireBed.howl.volume(this.fireBed.target * this.bus.ambient);
     this.publish();
   }
 
@@ -305,7 +308,7 @@ class AudioServiceImpl {
 
   private fadeBed(bed: BedState, target: number): void {
     bed.target = target;
-    const to = target * this.bus.sfx;
+    const to = target * this.bus.ambient;
     if (target > 0 && !bed.playing) {
       bed.playing = true;
       bed.howl.play();

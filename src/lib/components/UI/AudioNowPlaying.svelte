@@ -103,6 +103,13 @@
       width={10}
     />
     <StatBar
+      label="Ambient"
+      value={$nowPlaying.volumes.ambient * 100}
+      valueText={PCT($nowPlaying.volumes.ambient)}
+      color="var(--accent-hi)"
+      width={10}
+    />
+    <StatBar
       label="SFX"
       value={$nowPlaying.volumes.sfx * 100}
       valueText={PCT($nowPlaying.volumes.sfx)}

@@ -17,7 +17,7 @@
   import { get } from 'svelte/store';
   import { gameState, currentWeather } from '$lib/stores/gameState';
   import { combatSounds } from '$lib/stores/combatSounds';
-  import { masterVolume, musicVolume, sfxVolume } from '$lib/stores/uiPrefs';
+  import { masterVolume, musicVolume, sfxVolume, ambientVolume } from '$lib/stores/uiPrefs';
   import { cameraViewport, cameraTileSize } from '$lib/stores/cameraView';
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
   import { getCreatureById } from '$lib/game/core/Creatures';
@@ -101,7 +101,8 @@
     audioService.setVolumes({
       master: $masterVolume / 100,
       music: $musicVolume / 100,
-      sfx: $sfxVolume / 100
+      sfx: $sfxVolume / 100,
+      ambient: $ambientVolume / 100
     });
   });
 

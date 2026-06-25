@@ -3,7 +3,7 @@
   in-game ESC menu (PauseMenu). Replaces the old hand-duplicated two-checkbox inline panels.
 
   Every control is wired to a persisted preference (uiPrefs.ts) that takes effect live:
-    • Audio (master/music/sfx) — volume buses read live by AudioController.svelte → audioService
+    • Audio (master/music/ambient/sfx) — volume buses read live by AudioController.svelte → audioService
     • Weather effects / Day-night UI tint — graphics toggles (WeatherCanvas mount / #ambient-tint filter)
     • Cinematic layout — hideSidebars
     • Default game speed — speed a new game starts at
@@ -28,7 +28,8 @@
     wasdPan,
     masterVolume,
     musicVolume,
-    sfxVolume
+    sfxVolume,
+    ambientVolume
   } from '$lib/stores/uiPrefs';
 
   let { onClose }: { onClose: () => void } = $props();
@@ -117,8 +118,15 @@
       />
       <SettingRow
         type="slider"
+        label="Ambient volume"
+        sub="— weather, nature, fire"
+        sliderValue={$ambientVolume}
+        onInput={ambientVolume.set}
+      />
+      <SettingRow
+        type="slider"
         label="SFX volume"
-        sub="— reserved"
+        sub="— creatures, work, combat, UI"
         sliderValue={$sfxVolume}
         onInput={sfxVolume.set}
       />

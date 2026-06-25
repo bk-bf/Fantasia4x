@@ -153,8 +153,11 @@ export const defaultGameSpeed = createPersistedNumber('fx.gameplay.defaultSpeed'
 export const wasdPan = createPersistedBool('fx.controls.wasdPan', true);
 
 /** Audio — volume buses (0–100), read by AudioController.svelte and pushed to audioService. Master
- *  scales everything; music/sfx scale their channel on top. Persisted. (SFX is reserved for future
- *  one-shots — no SFX play yet, but the bus + slider exist so the wiring is complete.) */
+ *  scales everything; music / sfx / ambient scale their channel on top. Persisted.
+ *  - music   = the soundtrack
+ *  - sfx     = discrete one-shots: creature calls, work, combat, UI clicks
+ *  - ambient = looping environment beds: weather/nature (rain/wind/birds/…) + fire */
 export const masterVolume = createPersistedNumber('fx.audio.master', 70);
 export const musicVolume = createPersistedNumber('fx.audio.music', 70);
 export const sfxVolume = createPersistedNumber('fx.audio.sfx', 80);
+export const ambientVolume = createPersistedNumber('fx.audio.ambient', 70);
