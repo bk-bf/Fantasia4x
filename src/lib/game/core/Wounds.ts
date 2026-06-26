@@ -2,7 +2,7 @@
 // Combat maps each hit's damage type to a wound here; severity escalates with the
 // wound's accumulated damage relative to the struck part's max HP.
 import woundsRaw from '../database/wounds.jsonc';
-import { PART_DEF_MAP, BONE_FRACTION } from './BodyParts';
+import { PART_DEF_MAP, boneBreakBudget } from './BodyParts';
 import { rng } from './rng';
 import type { DamageType } from './types';
 import type { Injury, LimbState, BodyPartId } from './types/health';
@@ -160,7 +160,11 @@ export function recomputeWound(
   const wd = woundById(type);
   // Per-creature SCALED maxHp when the caller has it (bodyScale × default); else the catalog default.
   const maxHp = maxHpOverride ?? partDef?.maxHp ?? 1;
-  const frac = maxHp > 0 ? Math.min(accumDamage / maxHp, 1) : 0;
+  // A structural (fracture) wound is measured against the bone's BREAK budget, not the part's full HP — so
+  // "serious / critical / destroyed" track the actual break, in lockstep with the bone HP bar and the
+  // `fractured` condition. Soft-tissue wounds use the part's full HP.
+  const denom = wd?.structural ? boneBreakBudget(partDef, maxHp) : maxHp;
+  const frac = denom > 0 ? Math.min(accumDamage / denom, 1) : 0;
   const severity = severityFromFrac(frac);
   const clotProgress = prev?.clotProgress ?? 0;
   // Bleed = base × clot-remaining: a fresh wound bleeds full, then tapers as it clots (rolled
@@ -186,8 +190,14 @@ export function recomputeWound(
             100
         ) / 100
       : 0,
+    // Pain scales with the wound's SHARE of its part (frac) × the part's NOMINAL (default-scale) size, not
+    // raw accumulated HP — so a part at 85% HP barely hurts, and a big creature's larger absolute damage
+    // doesn't read as more pain than the same % wound on a pawn (size-invariant). For a pawn (bodyScale 1,
+    // scaled maxHp = nominal) this equals the old accum × painPerDamage; bigger creatures hurt ÷ bodyScale.
     painContribution:
-      Math.round(accumDamage * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10) / 10,
+      Math.round(
+        frac * (partDef?.maxHp ?? maxHp) * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10
+      ) / 10,
     infected: prev?.infected ?? false,
     // Carry the active dressing across recomputes — otherwise a wound reverts to "untended" the first
     // heal tick (treatmentQuality lost) and stalls (severity rule), undoing the medic's work.
@@ -214,7 +224,9 @@ export function recomputeWoundInPlace(
   const partDef = PART_DEF_MAP[w.bodyPart];
   const wd = woundById(w.type);
   const maxHp = maxHpOverride ?? partDef?.maxHp ?? 1;
-  const frac = maxHp > 0 ? Math.min(accumDamage / maxHp, 1) : 0;
+  // Structural wounds measure against the bone BREAK budget; soft wounds against the part's full HP.
+  const denom = wd?.structural ? boneBreakBudget(partDef, maxHp) : maxHp;
+  const frac = denom > 0 ? Math.min(accumDamage / denom, 1) : 0;
   w.severity = severityFromFrac(frac);
   w.damage = accumDamage;
   const remaining = clotRemaining(w);
@@ -234,8 +246,11 @@ export function recomputeWoundInPlace(
           100
       ) / 100
     : 0;
+  // Size-invariant, fraction-based pain (mirrors recomputeWound): frac × nominal part size × painPerDamage.
   w.painContribution =
-    Math.round(accumDamage * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10) / 10;
+    Math.round(
+      frac * (partDef?.maxHp ?? maxHp) * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10
+    ) / 10;
   if (w.inflictedAt == null) w.inflictedAt = turn;
 }
 
@@ -318,7 +333,9 @@ export function healLimbs(
       const hasBone = PART_DEF_MAP[part.id]?.boneHp != null;
       const fractureW = newWounds.find((w) => woundById(w.type)?.structural);
       const boneBroken =
-        hasBone && fractureW != null && fractureW.damage >= BONE_FRACTION * part.maxHp;
+        hasBone &&
+        fractureW != null &&
+        fractureW.damage >= boneBreakBudget(PART_DEF_MAP[part.id], part.maxHp);
       return { ...part, health, injuries: newWounds, boneBroken };
     });
     const totalBleed = newParts.reduce(
@@ -380,7 +397,9 @@ export function healLimbsInPlace(
       const hasBone = PART_DEF_MAP[part.id]?.boneHp != null;
       const fractureW = inj.find((w) => woundById(w.type)?.structural);
       part.boneBroken =
-        hasBone && fractureW != null && fractureW.damage >= BONE_FRACTION * part.maxHp;
+        hasBone &&
+        fractureW != null &&
+        fractureW.damage >= boneBreakBudget(PART_DEF_MAP[part.id], part.maxHp);
     }
     let totalBleed = 0;
     let partMaxTotal = 0;

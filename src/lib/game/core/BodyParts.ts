@@ -80,7 +80,11 @@ export const PART_DEF_MAP: Partial<Record<BodyPartId, BodyPartDef>> = {};
 for (const [id, p] of Object.entries(ALL_PARTS)) {
   PART_DEF_MAP[id as BodyPartId] = {
     id: id as BodyPartId,
-    maxHp: p.size,
+    // A distinct `skeleton` element (leftForearmBone, ribcage) is PURE bone — never struck directly, only
+    // fractured — so its whole HP IS the fracture budget (BONE_FRACTION of the flesh it mirrors). It breaks
+    // when chipped to 0. A `bone: true` flesh-wrapped bone (skull) keeps its full HP (the flesh takes the
+    // crush) and breaks at BONE_FRACTION of it. See boneBreakBudget.
+    maxHp: p.skeleton ? Math.max(1, Math.round(p.size * BONE_FRACTION)) : p.size,
     bleedRatio: p.bleedRatio,
     hitWeight: p.hitWeight,
     containedIn: p.containedIn as BodyPartId | undefined,
@@ -114,6 +118,15 @@ for (const def of Object.values(PART_DEF_MAP)) {
  *  can't fracture: eyes, soft abdomen, organs). Single source of truth for Combat's fracture targeting. */
 export function skeletonPartOf(partId: BodyPartId): BodyPartId | undefined {
   return SKELETON_OF[partId] ?? (PART_DEF_MAP[partId]?.boneHp != null ? partId : undefined);
+}
+
+/** Fracture damage that BREAKS a bone part, scaled to its actual (per-creature) HP. A distinct `skeleton`
+ *  element (leftForearmBone, ribcage) is pure bone — its whole HP is the budget, so it breaks when chipped
+ *  to 0. A `bone: true` flesh-wrapped bone (skull, snout) breaks at BONE_FRACTION of its HP since the rest
+ *  is crushable flesh. Single source of truth for the break threshold across Combat / Wounds / needs, so
+ *  the bone HP bar, the wound-severity label, and the `fractured` condition all move together. */
+export function boneBreakBudget(def: BodyPartDef | undefined, scaledMaxHp: number): number {
+  return def?.skeleton ? scaledMaxHp : BONE_FRACTION * scaledMaxHp;
 }
 
 /** Transitive closure of parts nested inside `parentId` (its organs/sub-parts, and theirs).

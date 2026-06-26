@@ -12,11 +12,17 @@ import type { EntityCondition, LimbState, Pawn } from '../core/types';
  * roll itself lives in Combat.performAttack).
  */
 describe('fracture anatomy + wound data', () => {
-  it('skeletal parts carry boneHp (a fraction of maxHp); soft parts do not', () => {
+  it('skeletal parts carry boneHp; a pure skeleton element IS its bone, a flesh-wrapped bone breaks before destruction', () => {
     // The forearm is now a SOFT segment wrapping leftForearmBone — the bone carries the boneHp.
     const forearmBone = PART_DEF_MAP['leftForearmBone']!;
     expect(forearmBone.boneHp).toBeGreaterThan(0);
-    expect(forearmBone.boneHp!).toBeLessThan(forearmBone.maxHp); // bone breaks before the part is destroyed
+    expect(forearmBone.skeleton).toBe(true);
+    // A distinct skeleton element is PURE bone: its whole HP IS the fracture budget — it breaks at HP 0.
+    expect(forearmBone.boneHp!).toBe(forearmBone.maxHp);
+    // A flesh-wrapped bone (skull, `bone: true`) keeps its full HP and breaks at a FRACTION of it — the
+    // rest is the crushable flesh that takes the cut/crush.
+    const skull = PART_DEF_MAP['skull']!;
+    expect(skull.boneHp!).toBeLessThan(skull.maxHp);
     expect(PART_DEF_MAP['leftForearm']!.boneHp).toBeUndefined(); // the flesh segment itself is not bone
     expect(PART_DEF_MAP['leftEye']!.boneHp).toBeUndefined(); // eyes have no bone
     expect(PART_DEF_MAP['heart']!.boneHp).toBeUndefined(); // organs have no bone
@@ -98,7 +104,8 @@ describe('broken bone effects', () => {
 
   it('syncFractureConditions drives a GRADED `fractured` condition from bone damage, clearing on heal', () => {
     const conditions: EntityCondition[] = [];
-    // leftForearmBone maxHp 35 → break threshold = 0.55×35 ≈ 19.25; a 25-damage fracture is fully broken.
+    // leftForearmBone is a pure skeleton element → its whole maxHp (35) IS the break budget; a 35-damage
+    // fracture (HP chipped to 0) is fully broken.
     const limbs = [
       {
         id: 'left_arm',
@@ -115,7 +122,7 @@ describe('broken bone effects', () => {
                 bodyPart: 'leftForearmBone',
                 type: 'fracture',
                 severity: 'serious',
-                damage: 25,
+                damage: 35,
                 bleeding: 0,
                 painContribution: 0,
                 infected: false
@@ -133,7 +140,7 @@ describe('broken bone effects', () => {
     // A hairline crack (low damage) → graded LOW severity.
     limbs[0].parts![0].injuries[0].damage = 5;
     syncFractureConditions(conditions, limbs);
-    expect(conditions.find((x) => x.id === 'fractured')!.severity).toBeCloseTo(5 / (0.55 * 35), 2);
+    expect(conditions.find((x) => x.id === 'fractured')!.severity).toBeCloseTo(5 / 35, 2);
 
     // Heals away → condition removed.
     limbs[0].parts![0].injuries = [];

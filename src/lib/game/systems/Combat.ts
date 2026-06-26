@@ -62,6 +62,7 @@ import {
   cascadeSeveredContents,
   lethalAnatomyCause,
   skeletonPartOf,
+  boneBreakBudget,
   BOUND_NATURAL_WEAPONS,
   DEFAULT_PLAN,
   BONE_FRACTION
@@ -717,7 +718,9 @@ class CombatServiceImpl implements CombatService {
         fractureInjury = {
           bodyPart: boneTargetId,
           type: 'fracture',
-          severity: severityFromFrac(final / partMaxHp),
+          // Severity against the bone's break budget (boneHp), not the flesh part's full HP — overwritten
+          // on merge by recomputeWound, but kept consistent for the single-hit/test path.
+          severity: severityFromFrac(final / boneHp),
           damage: final,
           bleeding: 0,
           painContribution: 0,
@@ -781,10 +784,13 @@ class CombatServiceImpl implements CombatService {
       // bone-break threshold, NOT the default-scale catalog value.
       const maxHp = prev.maxHp || partDef.maxHp;
 
-      // A structural (fracture) wound tracks BONE damage — it does NOT chip soft-tissue HP (the crush
-      // from the same blow already did); it only breaks the bone. Non-structural wounds reduce HP.
+      // Fracture HP handling. A distinct `skeleton` bone (hitWeight 0 — never struck directly) is pure
+      // bone, so a fracture is the ONLY thing that damages it: chip its HP 1:1 with the accumulated bone
+      // damage, so the bar empties exactly as the bone breaks (no more "full HP + serious fracture"). A
+      // `bone: true` flesh-wrapped bone (skull) already lost HP to the crush from the same blow, so ITS
+      // fracture stays break-only (no double-chip). Non-structural soft wounds reduce HP as before.
       const isStructural = woundById(injury.type)?.structural === true;
-      const newHp = isStructural ? prev.health : Math.max(0, prev.health - injury.damage);
+      const chipsBone = isStructural && partDef.skeleton === true;
 
       // Stack: one wound per type per part. Same-type hits accumulate damage and
       // escalate severity (5 crushes → one severe crush) instead of piling up.
@@ -797,6 +803,12 @@ class CombatServiceImpl implements CombatService {
           ? prev.injuries.map((w, i) => (i === wIdx ? merged : w))
           : [...prev.injuries, merged];
 
+      const newHp = chipsBone
+        ? Math.max(0, maxHp - accum) // pure bone: HP == remaining fracture budget
+        : isStructural
+          ? prev.health
+          : Math.max(0, prev.health - injury.damage);
+
       const updatedPart: BodyPartState = {
         ...prev,
         health: newHp,
@@ -804,7 +816,7 @@ class CombatServiceImpl implements CombatService {
         isMissing: prev.isMissing || (merged.severity === 'destroyed' && !isStructural),
         boneBroken:
           prev.boneBroken ||
-          (isStructural && partDef.boneHp != null && accum >= BONE_FRACTION * maxHp),
+          (isStructural && partDef.boneHp != null && accum >= boneBreakBudget(partDef, maxHp)),
         injuries: woundList
       };
       const mergedParts =

@@ -14,7 +14,7 @@ import type {
   LimbState
 } from './types';
 import conditionsData from '../database/conditions.jsonc';
-import { PART_DEF_MAP, BONE_FRACTION } from './BodyParts';
+import { PART_DEF_MAP, boneBreakBudget } from './BodyParts';
 import { woundById } from './Wounds';
 import { perTick } from './time';
 import { simLog } from './logSink';
@@ -550,7 +550,8 @@ export function conditionStatMultipliers(entity: {
 
 /** Sync the graded `fractured` condition from the limb tree. Severity = the WORST bone-damage fraction
  *  across all still-attached bone parts: a fracture wound's accumulated damage ÷ that part's break
- *  threshold (BONE_FRACTION × the part's SCALED maxHp). 0 → no condition; → 1.0 once a bone is fully
+ *  budget (boneBreakBudget — a skeleton element's whole HP, or BONE_FRACTION of a flesh-wrapped bone).
+ *  0 → no condition; → 1.0 once a bone is fully
  *  broken ("bone HP at 0" = max debuff). A broken bone never severs the limb (Combat excludes structural
  *  wounds from isMissing); the per-limb manipulation/moving cripple rides the boneBroken flag separately.
  *  Mutates the conditions array in place (matching the surrounding tick style). */
@@ -563,7 +564,7 @@ export function syncFractureConditions(conditions: EntityCondition[], limbs: Lim
       if (PART_DEF_MAP[p.id]?.boneHp == null) continue; // part has no skeleton → can't fracture
       const frac = p.injuries.find((w) => woundById(w.type)?.structural);
       if (!frac) continue;
-      const breakAt = BONE_FRACTION * p.maxHp; // scaled break threshold ("bone HP")
+      const breakAt = boneBreakBudget(PART_DEF_MAP[p.id], p.maxHp); // scaled break threshold ("bone HP")
       const sev = breakAt > 0 ? Math.min(1, frac.damage / breakAt) : 0;
       if (sev > worst) worst = sev;
     }
