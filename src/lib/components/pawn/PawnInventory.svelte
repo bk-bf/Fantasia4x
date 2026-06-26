@@ -4,6 +4,8 @@
   import ITEMS_DATABASE from '$lib/game/database/items.jsonc';
   import { itemService } from '$lib/game/services/ItemService';
   import { gameState } from '$lib/stores/gameState';
+  import CarryItemCard from './CarryItemCard.svelte';
+  import CarryCapacity from './CarryCapacity.svelte';
 
   export let pawn: Pawn;
 
@@ -47,23 +49,7 @@
       save: true
     });
   }
-  // Derive load + budget from the service (single source of truth = item defs). The cached
-  // pawn.inventory.weightKg is a write-only initial-shape field that is never updated on
-  // inventory mutation, so reading it showed a stale 0.0 (review R5 / playtest 2026-06-13).
-  $: cap = itemService.getCarryCapacityBreakdown(pawn);
-  $: load = itemService.getCurrentCarryLoad(pawn, $gameState);
-  $: maxWeightKg = cap.weight.total;
-  $: maxVolumeL = cap.volume.total;
-  $: weightKg = load.weightKg;
-  $: volumeL = load.volumeL;
-  // Raw (pre-floor) sums — when below 1 the budget is clamped to the 1.0 minimum.
-  $: wRaw = cap.weight.capacity + cap.weight.gear;
-  $: vRaw = cap.volume.capacity + cap.volume.gear;
   $: isEmpty = carried.length === 0 && carriedInstances.length === 0;
-
-  const r1 = (n: number) => Math.round(n * 10) / 10;
-  const signed = (n: number) => (n >= 0 ? '+' : '−') + r1(Math.abs(n));
-  const pct = (f: number) => `${Math.round(f * 100)}%`;
 
   function itemName(id: string): string {
     return (ITEMS_DATABASE as Item[]).find((i) => i.id === id)?.name ?? id;
@@ -73,85 +59,58 @@
 <div class="inv-section">
   <div class="section-hdr">
     | CARRYING
-    <span class="capacity">
-      [{weightKg.toFixed(1)}/{maxWeightKg.toFixed(1)} kg · {volumeL.toFixed(1)}/{maxVolumeL.toFixed(
-        1
-      )} L]
-      <div class="cap-tip">
-        <div class="tip-formula">CARRY CAPACITY — {cap.size} · {cap.bodyWeight}kg</div>
-        <div class="tip-row">
-          weight = <span class="tv">{cap.bodyWeight}kg</span> ×
-          <span class="tv">{pct(cap.weight.loadFraction)}</span> load (STR {cap.strength}){#if cap.weight.gear}
-            <span class="tv">{signed(cap.weight.gear)}</span> gear{/if} =
-          <span class="tv">{r1(maxWeightKg)}</span> kg{#if wRaw < maxWeightKg}
-            <span class="floor">(min 1)</span>{/if}
-        </div>
-        <div class="tip-row">
-          volume = <span class="tv">{cap.bodyWeight}kg</span> ×
-          <span class="tv">{pct(cap.volume.fraction)}</span>{#if cap.volume.gear}
-            <span class="tv">{signed(cap.volume.gear)}</span> gear{/if} =
-          <span class="tv">{r1(maxVolumeL)}</span> L{#if vRaw < maxVolumeL}
-            <span class="floor">(min 1)</span>{/if}
-        </div>
-        {#if cap.gearSources.length}
-          <div class="tip-gear">
-            {#each cap.gearSources as g}
-              <div>
-                {g.name}: <span class="tv">+{r1(g.weightKg)}</span> kg,
-                <span class="tv">+{r1(g.volumeL)}</span> L
-              </div>
-            {/each}
-          </div>
-        {:else}
-          <div class="tip-gear">no belt/back container — equip one to raise capacity</div>
-        {/if}
-      </div>
-    </span>
+    <CarryCapacity {pawn} />
   </div>
 
   {#if isEmpty}
     <div class="empty">nothing carried</div>
   {:else}
-    {#each carriedInstances as inst (inst.instanceId)}
-      <div class="row instance">
-        <span class="carry-mark">⚑</span>
-        <span class="item-name">{instanceLabel(inst)}</span>
+    <div class="card-grid">
+      <!-- Tracked instances: tools/weapons (kept in hand), named carcasses, and carried colonists. -->
+      {#each carriedInstances as inst (inst.instanceId)}
         {#if inst.itemId === 'carried_pawn'}
-          <span class="qty">carried</span>
-          <button
-            class="drop-btn"
-            title="Set down — lay the carried colonist on the pawn's tile and end the carry."
-            on:click={() => dropItem(inst.itemId)}>↓</button
-          >
+          <!-- A live colonist riding in the pack — no stat card, just a "set down" control. -->
+          <div class="card pawn-card">
+            <button
+              class="setdown"
+              title="Set down — lay the carried colonist on the pawn's tile and end the carry."
+              on:click={() => dropItem(inst.itemId)}>↓</button
+            >
+            <span class="pawn-name">{instanceLabel(inst)}</span>
+            <span class="pawn-tag">carried colonist</span>
+          </div>
         {:else}
-          <span class="qty">×1</span>
-          <button
-            class="drop-btn"
-            title="Drop now — put this item down on the pawn's tile."
-            on:click={() => dropInstance(inst)}>↓</button
-          >
+          {@const def = itemService.getItemById(inst.itemId)}
+          {#if def}
+            <CarryItemCard
+              {def}
+              name={instanceLabel(inst)}
+              durability={inst.durability}
+              maxDurability={def.maxDurability ?? 100}
+              onDrop={() => dropInstance(inst)}
+            />
+          {/if}
         {/if}
-      </div>
-    {/each}
-    {#each carried as [itemId, qty]}
-      <div class="row" class:pinned={pinned.has(itemId)}>
-        <button
-          class="pin-btn"
-          class:active={pinned.has(itemId)}
-          title={pinned.has(itemId)
-            ? 'Pinned — kept in hand, never deposited. Click to unpin.'
-            : 'Pin — keep this item (the pawn never deposits it).'}
-          on:click={() => togglePin(itemId)}>{pinned.has(itemId) ? '★' : '☆'}</button
-        >
-        <span class="item-name">{itemName(itemId)}</span>
-        <span class="qty">×{qty}</span>
-        <button
-          class="drop-btn"
-          title="Drop now — put this stack down on the pawn's tile."
-          on:click={() => dropItem(itemId)}>↓</button
-        >
-      </div>
-    {/each}
+      {/each}
+      <!-- Bulk stackable goods (the count map) — pinnable so they're never auto-deposited. -->
+      {#each carried as [itemId, qty]}
+        {@const def = itemService.getItemById(itemId)}
+        {#if def}
+          <CarryItemCard
+            {def}
+            name={itemName(itemId)}
+            {qty}
+            pinned={pinned.has(itemId)}
+            onPin={() => togglePin(itemId)}
+            pinTitle={pinned.has(itemId)
+              ? 'Pinned — kept in hand, never deposited. Click to unpin.'
+              : 'Pin — keep this item (the pawn never deposits it).'}
+            onDrop={() => dropItem(itemId)}
+            dropTitle="Drop now — put this stack down on the pawn's tile."
+          />
+        {/if}
+      {/each}
+    </div>
   {/if}
 </div>
 
@@ -170,56 +129,6 @@
     align-items: baseline;
   }
 
-  .capacity {
-    position: relative;
-    color: var(--text-dim, #666);
-    font-size: 0.7rem;
-    cursor: help;
-  }
-
-  .cap-tip {
-    display: none;
-    position: absolute;
-    z-index: 60;
-    left: 0;
-    top: 100%;
-    min-width: 240px;
-    max-width: 340px;
-    padding: 6px 8px;
-    background: var(--bg-panel, #0c1118);
-    border: 1px solid var(--border-hi, #3a4658);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-    color: var(--text, #ccc);
-    font-size: 10px;
-    line-height: 1.5;
-    text-transform: none;
-    pointer-events: none;
-  }
-  .capacity:hover .cap-tip {
-    display: block;
-  }
-  .tip-formula {
-    color: var(--accent-hi, #ffd24a);
-  }
-  .tip-row {
-    margin-top: 3px;
-    color: var(--text-dim, #888);
-  }
-  .tip-gear {
-    margin-top: 5px;
-    padding-top: 4px;
-    border-top: 1px solid var(--border, #222);
-    color: var(--text-dim, #888);
-    font-style: italic;
-  }
-  .cap-tip .tv {
-    color: #4caf50;
-  }
-  .cap-tip .floor {
-    color: var(--text-dim, #888);
-    font-style: italic;
-  }
-
   .empty {
     color: var(--text-dim, #666);
     font-size: 0.75rem;
@@ -227,65 +136,52 @@
     padding-left: 0.5rem;
   }
 
-  .row {
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 4px;
+    padding: 0 2px;
+  }
+
+  /* The carried-colonist card — a person, not an item, so it shows no stat panel. */
+  .pawn-card {
+    position: relative;
+    border: 1px solid var(--accent-hi, #ffd24a);
+    background: var(--bg-panel);
+    padding: 4px 6px 5px;
     display: flex;
-    align-items: baseline;
-    gap: 0.4rem;
+    flex-direction: column;
+    gap: 3px;
+    min-height: 42px;
+    overflow: hidden;
+  }
+  .pawn-name {
     font-family: var(--font-mono, monospace);
-    font-size: 0.75rem;
-    padding: 0.1rem 0.5rem;
-  }
-
-  .pin-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    font-size: 0.8rem;
-    line-height: 1;
-    color: var(--text-dim, #666);
-  }
-  .pin-btn:hover {
-    color: var(--text, #ccc);
-  }
-  .pin-btn.active {
+    font-size: 0.72rem;
     color: var(--accent-hi, #ffd24a);
+    line-height: 1.2;
+    padding-right: 16px;
   }
-
-  .drop-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0 0 0 0.3rem;
-    font-size: 0.8rem;
-    line-height: 1;
-    color: var(--text-dim, #666);
-  }
-  .drop-btn:hover {
+  .pawn-tag {
+    font-size: 0.62rem;
     color: var(--neg, #e05a5a);
-  }
-
-  .row.pinned .item-name {
-    color: var(--accent-hi, #ffd24a);
-  }
-  .row.instance .item-name {
-    color: var(--accent-hi, #ffd24a);
-    text-transform: none;
-  }
-  .carry-mark {
-    color: var(--neg, #e05a5a);
-    font-size: 0.8rem;
-    line-height: 1;
-  }
-
-  .item-name {
-    color: var(--text, #ccc);
     text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
-
-  .qty {
-    color: var(--accent, #0f0);
-    font-weight: bold;
-    margin-left: auto;
+  .setdown {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.7rem;
+    line-height: 1;
+    padding: 1px 2px;
+    color: var(--text-dim, #666);
+  }
+  .setdown:hover {
+    color: var(--neg, #e05a5a);
   }
 </style>
