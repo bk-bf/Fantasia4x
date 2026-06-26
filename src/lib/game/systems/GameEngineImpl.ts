@@ -75,6 +75,13 @@ import {
 import { zoneTileKeys } from '../services/DesignationService';
 import { soilTierForTile } from '../core/Terrains';
 import { markTileDirty } from '../core/tileDeltas';
+import {
+  RESOURCE_VISIBLE_GROWTH,
+  rebuildWildGrowth,
+  wildGrowthSize,
+  wildGrowthEntries,
+  removeWildGrowth
+} from '../core/wildGrowth';
 import { simLog } from '../core/logSink';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').Building[];
@@ -118,6 +125,9 @@ export class GameEngineImpl implements GameEngine {
   // ENGINE-PERFORMANCE-II §S2: the worldMap ref the regrowth min-heap was last (re)built from. A change
   // (load / regen) triggers a one-time rebuild; during play the ref is stable so the heap is incremental.
   private _lastRegrowthWorldMap: WorldTile[][] | null = null;
+  // The worldMap ref the wild-growth work-list was last (re)built from (same incremental contract as the
+  // regrowth heap above): rebuild once on a map REPLACE; during play the ref is stable so it's additive.
+  private _lastWildGrowthWorldMap: WorldTile[][] | null = null;
   private config: GameEngineConfig;
   private lastTurnProcessed = 0;
   /** `performance.now()` of the last UI flush — throttles notify/snapshot to ~15 Hz (UI_PUSH_MS). */
@@ -245,6 +255,7 @@ export class GameEngineImpl implements GameEngine {
       t('pawns', () => this.processPawns());
       t('resourceRegrowth', () => this.processResourceRegrowth());
       t('cropGrowth', () => this.processCropGrowth());
+      t('wildGrowth', () => this.processWildGrowth());
       t('entityStep', () => {
         this.gameState = entityService.spawnEntities(this.gameState!);
         this.gameState = entityService.tickLairs(this.gameState!);
@@ -603,6 +614,63 @@ export class GameEngineImpl implements GameEngine {
         }
         markTileDirty(y, x, tile);
       }
+    }
+  }
+
+  /**
+   * Regrow wild ground cover (berry bushes, wild grain, grass) GRADUALLY after a harvest/graze reset
+   * it to growth 0%. Unlike `processResourceRegrowth` (a binary cooldown that snaps a tree/rock node
+   * back), each `regrowsFromZero` plant climbs 0→100 over its `regrowthTurns` (season-scaled) so the
+   * tile reads as bare soil, then the plant fades back in past RESOURCE_VISIBLE_GROWTH; at 100% its
+   * count is restored (harvestable again).
+   *
+   * Iterates ONLY the bounded `wildGrowth` work-list (the handful of tiles currently recovering), never
+   * the whole map (ENGINE-PERFORMANCE — no per-tick O(map) pass); the peace path (empty list) is free.
+   * A tile delta ships only when growth crosses a visual bucket (≈5%) or matures — NOT every tick — so
+   * the gradual climb never floods the worker→main snapshot. In-place mutation + delta (ADR-002 amendment).
+   */
+  private processWildGrowth(): void {
+    if (!this.gameState) return;
+    const gs = this.gameState;
+    if (gs.worldMap !== this._lastWildGrowthWorldMap) {
+      rebuildWildGrowth(gs.worldMap, (id) => resourceObjectService.isRegrowsFromZero(id));
+      this._lastWildGrowthWorldMap = gs.worldMap;
+    }
+    if (wildGrowthSize() === 0) return;
+
+    const rate = seasonRegrowthMultiplier(gs.season);
+    // Ship a delta only when the rendered appearance changes: below the visible threshold the tile is
+    // bare soil (bucket -1); above it, dim in ~5% steps; the cross to 100% restores the count.
+    const DIRTY_BUCKET = 5;
+    const visualBucket = (g: number) =>
+      g < RESOURCE_VISIBLE_GROWTH ? -1 : Math.floor(g / DIRTY_BUCKET);
+
+    for (const { x, y } of wildGrowthEntries()) {
+      const tile = gs.worldMap[y]?.[x];
+      const growth = tile?.growth;
+      if (!tile || !growth) {
+        removeWildGrowth(x, y);
+        continue;
+      }
+      let stillGrowing = false;
+      for (const id in growth) {
+        const g = growth[id];
+        if (g >= 100) continue;
+        if ((tile.resources?.[id] ?? 0) > 0) continue; // already harvestable — not regrowing
+        const interaction = resourceObjectService.getRegrowsFromZeroInteraction(id);
+        if (!interaction?.regrowthTurns) continue; // not a gradual-regrow plant
+        const totalTicks = Math.max(1, ticksFromSeconds(interaction.regrowthTurns) / rate);
+        const next = Math.min(100, g + 100 / totalTicks);
+        growth[id] = next;
+        if (next >= 100) {
+          const [mn, mx] = resourceObjectService.getById(id)?.nodeAmountRange ?? [1, 1];
+          tile.resources[id] = mn + Math.floor(rng.random() * (mx - mn + 1)); // matured → harvestable
+        } else {
+          stillGrowing = true;
+        }
+        if (visualBucket(g) !== visualBucket(next)) markTileDirty(y, x, tile);
+      }
+      if (!stillGrowing) removeWildGrowth(x, y);
     }
   }
 

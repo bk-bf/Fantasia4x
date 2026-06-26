@@ -1286,8 +1286,8 @@
         {"itemId": "fruit_seed",   "min": 1,  "max": 3,  "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
-      "harvestGrowthCost": 20,
-      "regrowthTurns"  : 2400 // ~8 days at 300 turns/day
+      "regrowsFromZero": true,
+      "regrowthTurns"  : 2400 // ~8 days at 300 turns/day; growth climbs 0→100 over this span
     }
   },
   // Wild barley — primary primitive grain in open savanna zones.
@@ -1313,8 +1313,8 @@
         {"itemId": "grain_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
-      "harvestGrowthCost": 20,
-      "regrowthTurns"  : 3000 // ~10 days at 300 turns/day
+      "regrowsFromZero": true,
+      "regrowthTurns"  : 3000 // ~10 days at 300 turns/day; growth climbs 0→100 over this span
     }
   },
   // Wild rye — mixed grain and fibre source; grows in taller, damper grasses.
@@ -1341,8 +1341,8 @@
         {"itemId": "plant_fiber", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
-      "harvestGrowthCost": 20,
-      "regrowthTurns"  : 3000 // ~10 days at 300 turns/day
+      "regrowsFromZero": true,
+      "regrowthTurns"  : 3000 // ~10 days at 300 turns/day; growth climbs 0→100 over this span
     }
   },
   // ─────────────────────────────────────────────────────────────────────────
@@ -1693,7 +1693,8 @@
         {"itemId": "plant_fiber", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15}
       ],
       "persistent"     : true,
-      "regrowthTurns"  : 600 // ~2 days at 300 turns/day
+      "regrowsFromZero": true,
+      "regrowthTurns"  : 600 // ~2 days at 300 turns/day; growth climbs 0→100 over this span
     },
     "interactions"    : [
       {
@@ -1707,6 +1708,7 @@
           {"itemId": "plant_fiber", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15}
         ],
         "persistent"     : true,
+        "regrowsFromZero": true,
         "regrowthTurns"  : 600
       },
       {
@@ -1752,6 +1754,7 @@
         {"itemId": "plant_fiber", "min":  5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15}
       ],
       "persistent"     : true,
+      "regrowsFromZero": true,
       "regrowthTurns"  : 700
     },
     "interactions"    : [
@@ -1766,6 +1769,7 @@
           {"itemId": "plant_fiber", "min":  5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15}
         ],
         "persistent"     : true,
+        "regrowsFromZero": true,
         "regrowthTurns"  : 700
       },
       {
@@ -1810,6 +1814,7 @@
         {"itemId": "plant_fiber", "min": 5, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15}
       ],
       "persistent"     : true,
+      "regrowsFromZero": true,
       "regrowthTurns"  : 800
     },
     "interactions"    : [
@@ -1824,6 +1829,7 @@
           {"itemId": "plant_fiber", "min": 5, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15}
         ],
         "persistent"     : true,
+        "regrowsFromZero": true,
         "regrowthTurns"  : 800
       },
       {

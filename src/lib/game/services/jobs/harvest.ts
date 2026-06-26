@@ -13,6 +13,7 @@ import {
   SUBTYPE_BY_SOIL_TIER
 } from '../../core/Terrains';
 import { markTileDirty } from '../../core/tileDeltas';
+import { addWildGrowth } from '../../core/wildGrowth';
 import { pushRegrowth, minCooldownExpiry } from '../../systems/regrowthQueue';
 import { patchPathfindingWalkable } from '../PathfinderService';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
@@ -189,6 +190,13 @@ export function complete(job: Job, gs: GameState): GameState {
       delete g[job.resourceId!];
       col.growth = g;
     }
+  } else if (interaction?.regrowsFromZero) {
+    // Wild ground cover (berry bush, wild grain, grass): a harvest RESETS the node — growth → 0% so the
+    // tile reveals the bare soil under it (its subType is untouched, so it's the SAME soil tier, never
+    // forced to barren dirt). It then climbs 0→100 GRADUALLY via processWildGrowth (fading the plant
+    // back in past RESOURCE_VISIBLE_GROWTH) and restores its count at maturity — no binary cooldown.
+    col.growth = { ...(col.growth ?? {}), [job.resourceId!]: 0 };
+    addWildGrowth(col.x, col.y);
   } else {
     // §F: a persistent harvest only STRIPS a little growth — `harvestGrowthCost` (a tree/bush forage
     // takes ~20% for branches/berries; 0 = no loss). The node stays STANDING (growth > 0 ⇒ still drawn

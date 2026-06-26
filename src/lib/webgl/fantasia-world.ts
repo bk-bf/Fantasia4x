@@ -12,6 +12,7 @@ import {
   resolveCharSpans
 } from '$lib/game/core/Terrains.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
+import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/wildGrowth.js';
 import { buildingService } from '$lib/game/services/BuildingService.js';
 import { glyph, SHEET } from './tilesets.js';
 import type { RGB } from './tile-types.js';
@@ -391,7 +392,11 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
           resKey = id;
         }
       }
-      if (resKey) brightness = Math.max(0.4, bestGrowth / 100);
+      // §F gradual regrow: a wild plant reset to ~0% growth reads as BARE SOIL until it climbs past the
+      // visible threshold — only then does the (dimmed) plant glyph fade back in. Below it, draw the
+      // subterrain so a freshly-cut grass/grain tile shows the ground, not a ghost glyph.
+      if (resKey && bestGrowth < RESOURCE_VISIBLE_GROWTH) resKey = undefined;
+      else if (resKey) brightness = Math.max(0.4, bestGrowth / 100);
     }
     const resDef = resKey ? resourceObjectService.getById(resKey) : undefined;
     if (resDef && resDef.chars.length > 0) {

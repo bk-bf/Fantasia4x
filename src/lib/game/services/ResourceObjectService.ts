@@ -58,6 +58,14 @@ export interface ResourceInteractionDef {
    * Felling (woodcut), digging and mining instead DEPLETE the node (harvestDepletes) and drop it.
    */
   harvestGrowthCost?: number;
+  /**
+   * Wild ground cover (berry bushes, wild grain, grass) that fully resets on harvest: growth → 0% (the
+   * tile shows bare soil), then climbs back 0→100 GRADUALLY via `GameEngineImpl.processWildGrowth`,
+   * fading the plant back in (it reappears, dimmed, past `RESOURCE_VISIBLE_GROWTH`) and restoring the
+   * node's count at maturity. Replaces the binary `regrowthTurns` cooldown for these nodes — `regrowthTurns`
+   * here is still the 0→100 duration. Persistent, non-depleting only. (Trees keep per-yield cooldowns.)
+   */
+  regrowsFromZero?: boolean;
 }
 
 export interface ResourceObjectDef {
@@ -223,6 +231,24 @@ class ResourceObjectServiceImpl {
       if (found) return found;
     }
     return def.interaction;
+  }
+
+  /**
+   * The `regrowsFromZero` interaction for this resource (carries the 0→100 `regrowthTurns` the gradual
+   * growth pass advances at), or `undefined` if the node uses the binary cooldown / depletes. Checks
+   * `interactions[]` first (a grass patch's cut twin), then the primary `interaction`.
+   */
+  getRegrowsFromZeroInteraction(resourceId: string): ResourceInteractionDef | undefined {
+    const def = this.getById(resourceId);
+    if (!def) return undefined;
+    const found = def.interactions?.find((i) => i.regrowsFromZero);
+    if (found) return found;
+    return def.interaction.regrowsFromZero ? def.interaction : undefined;
+  }
+
+  /** True when any of this resource's interactions resets growth to 0 and regrows gradually. */
+  isRegrowsFromZero(resourceId: string): boolean {
+    return this.getRegrowsFromZeroInteraction(resourceId) !== undefined;
   }
 
   calculateYield(

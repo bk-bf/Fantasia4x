@@ -10,6 +10,7 @@ import { calcMaxStamina } from '../../entities/Pawns';
 import { gameLogger } from '../../dev/gameLogger';
 import { rng } from '../../core/rng';
 import { markTileDirty } from '../../core/tileDeltas';
+import { addWildGrowth } from '../../core/wildGrowth';
 import { consumeTop } from '../../core/carcassCondition';
 import { resourceObjectService } from '../ResourceObjectService';
 import { pawnStatService } from '../PawnStatService';
@@ -405,11 +406,17 @@ export function stepEntities(state: GameState): GameState {
     if (!tile) continue;
     const current = tile.resources?.[id] ?? 0;
     if (current <= 0) continue;
-    tile.resources = { ...tile.resources, [id]: Math.max(0, current - 1) };
+    const remaining = Math.max(0, current - 1);
+    tile.resources = { ...tile.resources, [id]: remaining };
     // §F: an animal grazing an unprotected CROP knocks it back to 1% — a death that (like frost/drought)
     // does NOT wear the soil (only reaped crops do). Wild grazeables (grass) are unaffected.
     if (tile.growth && id in tile.growth && resourceObjectService.getById(id)?.crop) {
       tile.growth[id] = 1;
+    }
+    // Grazed a wild plant down to nothing → it now regrows GRADUALLY (processWildGrowth climbs its
+    // growth back and restores the count). Enrol the tile so the bounded pass picks it up.
+    if (remaining === 0 && resourceObjectService.isRegrowsFromZero(id)) {
+      addWildGrowth(x, y);
     }
     markTileDirty(y, x, tile);
   }

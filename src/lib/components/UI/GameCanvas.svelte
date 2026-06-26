@@ -82,6 +82,7 @@
     resourceObjectService,
     isGrowableResource
   } from '$lib/game/services/ResourceObjectService.js';
+  import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/wildGrowth.js';
   import { itemService } from '$lib/game/services/ItemService.js';
   import {
     getRefuelRequirements,
@@ -605,9 +606,13 @@
   // depleted one (a foraged tree/bush keeps a growth entry while its yield regrows). Without this
   // the panel — and its growth readout — blanked the instant a tree was foraged to count 0, even
   // though the tree is still there. Felled/dug/mined nodes drop their growth entry → fall back to '—'.
+  // A wild plant reset below the visible threshold reads as bare soil (not yet regrown), so it isn't
+  // named — matches the renderer + click selection.
   $: hoverDisplayResource = hoverTile
     ? (hoverResources[0]?.[0] ??
-      Object.keys(hoverTile.growth ?? {}).find((id) => (hoverTile.growth?.[id] ?? 0) > 0))
+      Object.keys(hoverTile.growth ?? {}).find(
+        (id) => (hoverTile.growth?.[id] ?? 0) >= RESOURCE_VISIBLE_GROWTH
+      ))
     : undefined;
   $: hoverZoneType = hoverTile
     ? (zoneTiles[`${hoverTile.x},${hoverTile.y}`]?.[0] ??
@@ -979,9 +984,16 @@
       itemId,
       qty: min === max ? `×${max}` : `${min}–${max}`
     }));
+    // §F gradual regrow: a wild plant reset to growth 0 has no nodes until it climbs back to maturity.
+    // It stays selectable (inspect its growth%), but the HARVEST verb is withheld until it's ready —
+    // "the button doesn't work while regrowing" rather than the tile becoming unclickable.
+    const isRegrowing =
+      selectedResourceAmount <= 0 &&
+      resourceObjectService.isRegrowsFromZero(selectedResourceTile.resourceId);
+    if (isRegrowing) lines.push('regrowing — not ready to harvest');
     const btns: EntityButton[] = [];
     // Designate buttons (HARVEST/CUT/…) while ANY tile in the selection is still unmarked.
-    if (!allDesignated) {
+    if (!allDesignated && !isRegrowing) {
       for (const iact of activeInteractions) {
         const label = selectedResourceDef.lair
           ? 'DESTROY'
@@ -2805,8 +2817,19 @@
         if (it.x === x && it.y === y) layers.push({ kind: 'item', id: it.id });
       }
       const tileData = worldMap[y]?.[x];
+      const seenRes = new Set<string>();
       for (const [resourceId, v] of Object.entries(tileData?.resources ?? {})) {
-        if (v > 0) layers.push({ kind: 'resource', resourceId });
+        if (v > 0) {
+          layers.push({ kind: 'resource', resourceId });
+          seenRes.add(resourceId);
+        }
+      }
+      // §F gradual regrow: a depleted-but-regrowing wild plant (count 0) is still SELECTABLE once it's
+      // visible (growth ≥ threshold) so you can inspect it — it just isn't harvestable yet (the card
+      // omits the HARVEST verb). Below the threshold it reads as bare soil and isn't pickable.
+      for (const [resourceId, g] of Object.entries(tileData?.growth ?? {})) {
+        if (!seenRes.has(resourceId) && g >= RESOURCE_VISIBLE_GROWTH)
+          layers.push({ kind: 'resource', resourceId });
       }
     }
     return layers;
@@ -2839,12 +2862,18 @@
     const tileData = worldMap[y]?.[x];
     // Fog-hidden tiles (buried mountain interior) expose nothing selectable — an explore-tab jump to a
     // resource under the silhouette must not pin a highlight that gives away its exact buried location.
-    const tileResources = isHiddenTile(x, y)
-      ? []
-      : Object.entries(tileData?.resources ?? {}).filter(([, v]) => v > 0);
-    if (tileResources.length > 0) {
-      applyTileLayer({ kind: 'resource', resourceId: tileResources[0][0] }, x, y);
-      return true;
+    if (!isHiddenTile(x, y)) {
+      const active = Object.entries(tileData?.resources ?? {}).find(([, v]) => v > 0);
+      // Fall back to a depleted-but-regrowing wild plant (count 0, growth ≥ threshold) so it stays
+      // inspectable while it grows back — mirrors tileLayers().
+      const standing = active
+        ? undefined
+        : Object.entries(tileData?.growth ?? {}).find(([, g]) => g >= RESOURCE_VISIBLE_GROWTH);
+      const pick = active ?? standing;
+      if (pick) {
+        applyTileLayer({ kind: 'resource', resourceId: pick[0] }, x, y);
+        return true;
+      }
     }
 
     return false;
