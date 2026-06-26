@@ -51,9 +51,9 @@
     gameState.command({ type: 'setPawnLaborLevel', payload: { pawnId, workId, level } });
   }
 
-  function cycleLevel(pawnId: string, workId: string) {
+  function cycleLevel(pawnId: string, workId: string, dir: 1 | -1 = 1) {
     const cur = getPawnLaborLevel(pawnId, workId);
-    updatePawnLaborLevel(pawnId, workId, ((cur + 1) % 5) as 0 | 1 | 2 | 3 | 4);
+    updatePawnLaborLevel(pawnId, workId, (((cur + dir + 5) % 5) as 0 | 1 | 2 | 3 | 4));
   }
 
   // Speed / yield / quality per pawn/work from the single stats.jsonc model — drives both
@@ -135,7 +135,12 @@
                 onmouseleave={hideTip}
                 onclick={(e) => {
                   e.stopPropagation();
-                  cycleLevel(pawn.id, wc.id);
+                  cycleLevel(pawn.id, wc.id, 1);
+                }}
+                oncontextmenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  cycleLevel(pawn.id, wc.id, -1);
                 }}
               >
                 <span class="cell-lbl">{LABOR_LABELS[lvl]}</span>
@@ -165,7 +170,9 @@
   <span class="leg-sep">·</span>
   <span class="leg" style="color:{STAR_COLORS[0]}">{STAR_MARK} top jobs</span>
   <span class="leg" style="color:{WORST_COLORS[0]}">{WORST_MARK} weakest</span>
-  <span class="leg-hint">· click cell to cycle · hover for stats · click row for detail</span>
+  <span class="leg-hint"
+    >· click cell to cycle ↑ · right-click to cycle ↓ · hover for stats · click row for detail</span
+  >
 </div>
 
 {#if tip && tipPawn && tipWc && modMap[tip.pawnId]?.[tip.workId] && rankMap[tip.pawnId]?.[tip.workId]}
