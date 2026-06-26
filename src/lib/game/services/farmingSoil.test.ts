@@ -134,7 +134,7 @@ describe('§F crops + planting', () => {
     expect(wheat.crop?.seedItem).toBe('grain_seed');
     expect(wheat.crop?.minSoil).toBe(1);
     const y = resourceObjectService.calculateYield('crop_wheat', undefined, undefined, 'harvest');
-    expect(y).toHaveProperty('grain');
+    expect(y).toHaveProperty('wheat');
     expect(y).toHaveProperty('grain_seed');
     // prize crop needs terra preta (tier 4)
     expect(resourceObjectService.getById('crop_pumpkin')!.crop?.minSoil).toBe(4);

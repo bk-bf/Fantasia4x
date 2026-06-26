@@ -49,8 +49,8 @@ describe('§F8 stations + recipes', () => {
       expect(r.station).toBe('fermenter');
       expect(r.passive).toBe(true);
     }
-    // The chain links up: grain → flour → bread, grain → malt → ale.
-    expect(recipeService.getRecipeById('mill_flour')?.inputs).toHaveProperty('grain');
+    // The chain links up: wheat → flour → bread, wheat → malt → ale.
+    expect(recipeService.getRecipeById('mill_flour')?.inputs).toHaveProperty('wheat');
     expect(recipeService.getRecipeById('brew_ale')?.inputs).toHaveProperty('malt');
   });
 });

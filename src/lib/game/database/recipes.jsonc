@@ -2329,23 +2329,25 @@
     "toolTierRequired": 0
   },
   // ── PRODUCTION-CHAIN-II §F8 — milling, baking, brewing ───────────────────────────────────────
-  // MILL (quern): grain (or foraged wild oats) → flour.
+  // MILL (quern): wheat (or foraged wild oats) → flour. ~3 grain : 2 flour after the bran is sifted out.
   {
     "id"               : "mill_flour",
     "station"          : "quern",
-    "inputs"           : {"grain": 2},
-    "inputAlternatives": [ {"wild_oats": 2} ],
+    "inputs"           : {"wheat": 3},
+    "inputAlternatives": [ {"wild_oats": 3} ],
     "outputs"          : {"flour": 2},
     "workAmount"       : 8,
     "toolTierRequired" : 0
   },
-  // BAKE (oven): flour + water → bread; flour + meat (+ veg) → pies.
+  // BAKE (oven): flour + water → bread; flour + meat (+ veg) → pies. A whole loaf takes a real sack of
+  // flour (6) — ~9 grain in total, so cooking roughly CONSERVES the grain's food energy (a loaf ≈ the
+  // grain that went in) rather than conjuring calories; its value is being safe, digestible and filling.
   {
     "id"              : "bake_bread",
     "station"         : "oven",
-    "inputs"          : {"flour": 2, "water": 1},
+    "inputs"          : {"flour": 6, "water": 1},
     "outputs"         : {"bread": 1},
-    "workAmount"      : 12,
+    "workAmount"      : 18,
     "toolTierRequired": 0
   },
   {
@@ -2363,12 +2365,12 @@
       }
     }
   },
-  // BREW (fermenter, passive timers): grain → malt → ale; fruit → wine; honey → mead.
+  // BREW (fermenter, passive timers): wheat → malt → ale; fruit → wine; honey → mead.
   {
     "id"              : "malt_grain",
     "station"         : "fermenter",
     "passive"         : true,
-    "inputs"          : {"grain": 2},
+    "inputs"          : {"wheat": 2},
     "outputs"         : {"malt": 2},
     "workAmount"      : 30,
     "toolTierRequired": 0

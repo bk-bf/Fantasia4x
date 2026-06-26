@@ -280,7 +280,7 @@
       "parchment": 6
     },
     "materialRequirement": {
-      "grain": 10,
+      "wheat": 10,
       "fire_bricks": 5
     },
     "canBypassWithLore": false,

@@ -6871,13 +6871,13 @@
   },
   // ── PRODUCTION-CHAIN-II §F — Cultivated crop products (the harvest of a grown crop) ──────────
   {
-    "id"               : "grain",
+    "id"               : "wheat",
     "charSpans"        : [ {"sheet": "items", "id": 113} ],
-    "name"             : "Grain",
+    "name"             : "Wheat",
     "type"             : "food",
     "category"         : "food",
     "poisonChance"     : 0.1,
-    "description"      : "Cultivated cereal grain — wheat or barley. Raw it's gritty filler; milled to flour and baked it becomes bread (or malted for ale).",
+    "description"      : "Cultivated wheat grain. Raw it's gritty, hard-to-digest filler; milled to flour and baked it becomes bread (or malted for ale).",
     "color"            : "#D9B24A",
     "amount"           : 0,
     "weightKg"         : 0.2,

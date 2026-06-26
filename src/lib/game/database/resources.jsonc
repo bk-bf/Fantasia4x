@@ -2194,7 +2194,7 @@
     "interaction": {
       "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
       "yields": [
-        {"itemId": "grain",      "min": 34, "max": 54, "skillId": "planting", "skillMultiplier": 0.25},
+        {"itemId": "wheat",      "min": 34, "max": 54, "skillId": "planting", "skillMultiplier": 0.25},
         {"itemId": "grain_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
       ],
       "harvestDepletes": true
