@@ -800,7 +800,9 @@
         t.x,
         t.y
       ),
-      temp: tileTemperature(t.terrainType, $currentSeason, $currentWeather, thermal),
+      // Round for the readout only — a thermal aura (embertree warmth, fire) adds a fractional °C
+      // that must not leak decimals into the HUD. The sim keeps the un-rounded tileTemperature.
+      temp: Math.round(tileTemperature(t.terrainType, $currentSeason, $currentWeather, thermal)),
       wet: tileWetness(t.moisture ?? 0, $currentWeather, thermal),
       wind: windDegreeWord(effectiveWindAt(t.x, t.y, $currentWeather, thermal, worldMap))
     };
@@ -4710,11 +4712,8 @@
       <SelectedEntityCard model={hoverItemCard} />
     {:else if hoverTile}
       {@const tileThermal = computeThermalAt(hoverTile.x, hoverTile.y, buildings, worldMap)}
-      {@const tileTemp = tileTemperature(
-        hoverTile.terrainType,
-        $currentSeason,
-        $currentWeather,
-        tileThermal
+      {@const tileTemp = Math.round(
+        tileTemperature(hoverTile.terrainType, $currentSeason, $currentWeather, tileThermal)
       )}
       {@const tileWet = tileWetness(hoverTile.moisture ?? 0, $currentWeather, tileThermal)}
       {@const windWord = windDegreeWord(

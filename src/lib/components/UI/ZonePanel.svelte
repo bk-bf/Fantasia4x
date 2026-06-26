@@ -111,6 +111,9 @@
     if (designationActive && activeInstId === instanceId) {
       uiState.deactivateDesignation();
     } else {
+      // Auto-unhide a zone when you (re)paint it — the drawing tools should always show what you're
+      // editing, even if its colour was hidden on the map.
+      gameState.command({ type: 'setZoneColorHidden', payload: { instanceId, hidden: false }, save: true });
       uiState.activateDesignation(type, instanceId);
     }
   }

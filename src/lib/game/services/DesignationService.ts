@@ -362,7 +362,11 @@ class DesignationServiceImpl {
       id,
       type,
       label,
-      filter: { allowedCategories: [], blockedItems: [] }
+      filter: { allowedCategories: [], blockedItems: [] },
+      // A new RESTRICT zone confines EVERY current colonist by default — the usual intent is "keep the
+      // colony inside this area", and the player unchecks anyone who should roam free. (No tiles are
+      // painted yet, so nobody is actually confined until you draw it. Other zone types ignore this.)
+      ...(type === 'restrict' ? { assignedPawnIds: gs.pawns.map((p) => p.id) } : {})
     };
     return { ...gs, zoneInstances: [...(gs.zoneInstances ?? []), instance] };
   }
