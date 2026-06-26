@@ -17,6 +17,13 @@ import type { ResearchProject, LoreItem } from './research';
 import type { Pawn, Mob, TamedAnimal } from './entities';
 import type { DeadPawnRecord } from './health';
 
+/** Colony-wide food policy (the food filter panel). `allowedFoodItemIds` is the explicit eat-list — an
+ *  empty array means "eat nothing"; `undefined` falls back to the default (everything bar rotten food +
+ *  raw carcasses). Resolved by services/foodRules.resolveAllowedFoodIds. */
+export interface FoodSettings {
+  allowedFoodItemIds?: string[];
+}
+
 export interface GameState {
   /** Deterministic RNG seed (P0-2). Persisted so a loaded save replays identically. */
   seed: number;
@@ -70,6 +77,8 @@ export interface GameState {
   zoneInstances?: ZoneInstance[];
   /** Maps "x,y" tile keys to ZoneInstance.id for per-instance filter lookup. */
   designationZoneId?: Record<string, string>;
+  /** Colony-wide food filter (which items pawns may eat). Unset → the default eat-list. */
+  foodSettings?: FoodSettings;
   /** Phase 5a: active job pool — regenerated each turn by JobService */
   jobs: Job[];
   maxPopulation: number;

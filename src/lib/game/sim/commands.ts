@@ -27,7 +27,8 @@ import type {
   ZoneInstanceType,
   PlacedBuilding,
   Season,
-  ZoneFilter
+  ZoneFilter,
+  FoodSettings
 } from '../core/types';
 import { findAdjacentApproach, isAdjacent } from '../systems/pawn/pawnQueries';
 import {
@@ -587,6 +588,11 @@ export const COMMANDS: Record<string, Cmd> = {
         ? { ...b, fuelSettings: { ...((b.fuelSettings ?? {}) as object), ...p.updates } }
         : b
     )
+  }),
+  /** Colony-wide food filter (which items pawns may eat) — set by the food panel on the pawn card. */
+  setFoodSettings: (s, p: { updates: Partial<FoodSettings> }) => ({
+    ...s,
+    foodSettings: { ...(s.foodSettings ?? {}), ...p.updates }
   }),
 
   // ── designations / zones ─────────────────────────────────────────────────────

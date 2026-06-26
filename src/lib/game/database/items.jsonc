@@ -1686,12 +1686,13 @@
   },
   {
     "id"               : "stone_chopper",
+    "audio"            : "slash",
     "charSpans"        : [ {"sheet": "items", "id": 204} ],
     "name"             : "Stone Chopper",
     "type"             : "tool",
     "category"         : "primitive",
     "deteriorationRate": 0.01,
-    "description"      : "Large flaked stone. Rough chopping and scraping.",
+    "description"      : "A large flaked stone with one heavy chopping edge, lashed to a stub of branch — the first crude cleaver. Hacks through joint and sinew to render a carcass and quarters meat for the pot; it still roughs out kindling and planks, and swung in anger its weight bites bare flesh, though it skids off any armour. Clumsy and brittle, but it is the edge you have.",
     "color"            : "#888888",
     "amount"           : 0,
     "weightKg"         : 0.8,
@@ -1699,8 +1700,22 @@
     "tier"             : 0,
     "durability"       : 24,
     "maxDurability"    : 24,
+    "durabilityLossPerCombatHit": 2,
     "toolTierRequired" : 0,
-    "processingType"   : ["crafting", "woodcutting"]
+    "toolBoost"        : {"speed": 0.35, "yield": 0.2},
+    "processingType"   : ["butchery", "cooking", "crafting", "woodcutting"],
+    "weaponProperties" : {
+      "damage"          : 6,
+      "attackSpeed"     : 0.9,
+      "range"           : 0,
+      "damMin"          : 3,
+      "damMax"          : 8,
+      "reach"           : 1,
+      "damageType"      : "cutting",
+      "armorPenetration": 0.05,
+      "staminaCost"     : 3,
+      "critMod"         : 0.05
+    }
   },
   {
     "id"               : "digging_stick",

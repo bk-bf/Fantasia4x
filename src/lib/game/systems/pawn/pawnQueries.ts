@@ -14,6 +14,7 @@ import { consumeFromStockpiles } from '../../core/GameState';
 import { manhattan } from '../../core/distance';
 import { ticksFromSeconds } from '../../core/time';
 import { rng } from '../../core/rng';
+import { edibleNutrition, resolveAllowedFoodIds } from '../../services/foodRules';
 
 // ── §F8 alcohol (mood good) ──────────────────────────────────────────────────────────────────────
 /** Drink intoxication → `intoxicated` severity: each point of mood-lift adds 1/40 severity (an ale ≈
@@ -94,10 +95,11 @@ export function findAdjacentApproach(
 /** Quick check: is there any food available at all (no allocation). ADR-016: food is physical
  *  stock — the stored-drop `stockpile` aggregate, no legacy `gs.item` pool. */
 export function hasAvailableFood(gs: GameState): boolean {
+  const allowed = resolveAllowedFoodIds(gs.foodSettings);
   return Object.entries(gs.stockpile ?? {}).some(([id, amount]) => {
-    if (amount <= 0) return false;
+    if (amount <= 0 || !allowed.has(id)) return false;
     const def = ITEM_DEF_BY_ID.get(id);
-    return def?.category === 'food' || (def?.nutrition ?? 0) > 0;
+    return !!def && (def.category === 'food' || edibleNutrition(def) > 0);
   });
 }
 
@@ -113,12 +115,13 @@ export function selectFoodForMeal(pawn: Pawn, gs: GameState): MealPortion[] {
   const hungerToSatisfy = Math.max(0, (pawn.needs?.hunger ?? 0) - SAFE_HUNGER);
   if (hungerToSatisfy <= 0) return [];
 
+  const allowed = resolveAllowedFoodIds(gs.foodSettings); // colony food filter (panel) gates the eat-list
   type FoodOption = { id: string; available: number; nutrition: number };
   const options: FoodOption[] = [];
   for (const [id, amount] of Object.entries(gs.stockpile ?? {})) {
-    if (amount <= 0) continue;
+    if (amount <= 0 || !allowed.has(id)) continue;
     const def = ITEM_DEF_BY_ID.get(id);
-    const nutrition = def?.nutrition ?? 0;
+    const nutrition = edibleNutrition(def); // carcass-aware (raw carcasses derive nutrition from mass)
     if (def?.category !== 'food' && nutrition <= 0) continue;
     options.push({ id, available: amount, nutrition });
   }
@@ -152,7 +155,7 @@ export function consumeMeal(
   let intoxication = 0;
   for (const { id, units } of meal) {
     const def = ITEM_DEF_BY_ID.get(id);
-    hungerRecovered += (def?.nutrition ?? 0) * units;
+    hungerRecovered += edibleNutrition(def) * units; // carcass-aware (raw carcasses derive from mass)
     intoxication += (def?.intoxication ?? 0) * units;
     // consumeFromStockpiles keeps the stored-drop authority and aggregate in sync.
     state = consumeFromStockpiles(state, { [id]: units });
@@ -200,7 +203,7 @@ export function mealPoisonChance(meal: MealPortion[]): number {
     // a ~0-nutrition tainted item can still roll once and a stray non-positive value can't flip the
     // exponent negative. (Rotten food carries a small POSITIVE nutrition; its 0.85 poisonChance — not a
     // negative nutrition — is what makes it the worst offender.)
-    const rolls = (units * Math.max(1, def?.nutrition ?? 1)) / NUTRITION_PER_POISON_ROLL;
+    const rolls = (units * Math.max(1, edibleNutrition(def))) / NUTRITION_PER_POISON_ROLL;
     safe *= Math.pow(1 - p, rolls);
   }
   return 1 - safe;

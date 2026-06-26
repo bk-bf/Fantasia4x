@@ -51,7 +51,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Butchery',
     description: 'Process animal carcasses into meat, hide, and bone at a butcher spot',
     color: '#C62828',
-    toolsRequired: ['flint_knife', 'bone_cleaver'],
+    toolsRequired: ['flint_knife', 'stone_chopper', 'bone_cleaver'],
     primaryStat: 'strength',
     secondaryStat: 'dexterity',
     baseEfficiency: 1.0
@@ -176,6 +176,9 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     // campfire cooking like spit-roasting (no recipe toolRequirement) is unaffected. ADR-009 auto-grab
     // applies — a cook fetches the pot from the colony stock en route, and it wears with use.
     toolsRequired: ['clay_cooking_pot'],
+    // A stone chopper (the first cleaver) doesn't GATE cooking — you can spit-roast bare-handed — but
+    // held it speeds prep (quartering/mincing for the pot). Boost-only, like the sickle on foraging.
+    boostTools: ['stone_chopper'],
     primaryStat: 'intelligence',
     secondaryStat: 'dexterity',
     baseEfficiency: 1.0
