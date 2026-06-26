@@ -28,6 +28,11 @@ import buildingsData from '../database/buildings.jsonc';
 
 import { pawnStateMachineService, reapDeadPawns } from './PawnStateMachine';
 import { findNearestDepositPoint, depositInventory, pickUpFromTile } from './pawn/pawnHauling';
+import { nearestShelterTile } from './pawn/handlers/rescue';
+import { isAdjacent } from './pawn/pawnQueries';
+import { tryAssignPath } from './pawn/pawnHelpers';
+import { pickUpPawn, dropCarriedPawn, reconcileCarriedPawns, freeDropTileNear } from './pawn/carry';
+import { tendPatient, hasUntendedWound } from '../services/jobs/caretake';
 import { equipDropToPawn, carryDropToInventory } from '../core/PawnEquipment';
 import { jobService } from '../services/JobService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
@@ -855,9 +860,103 @@ export class GameEngineImpl implements GameEngine {
           );
           if (path && path.length > 0) gs = pawnService.assignPath(pawn.id, path, gs);
         }
+      } else if (target.type === 'rescue') {
+        // Drafted "carry to shelter": walk to the COLLAPSED victim, pick it up as CARGO (a named
+        // `carried_pawn` item — pawn/carry.ts; the body appears in the pack + eats carry budget), haul
+        // it to the nearest shelter and lay it down. Same pick-up→carry→drop shape as hauling goods to a
+        // stockpile. `reconcileCarriedPawns` is the safety net if this order is dropped mid-carry — the
+        // body is set down on the spot, so it can never get stranded.
+        const endRescue = () => {
+          gs = {
+            ...gs,
+            pawns: gs.pawns.map((p) =>
+              // `auto` rescues commandeered an idle pawn (rescuePawn command) — hand it back when done.
+              p.id === pawn.id
+                ? { ...p, draftTarget: undefined, drafted: target.auto ? false : p.drafted }
+                : p
+            )
+          };
+        };
+        const victim = gs.pawns.find((p) => p.id === target.victimId);
+        const carrying = victim?.carriedBy === pawn.id;
+        const here = pawn.position;
+        // Set the body down beside the carrier (never ON it) — a free, walkable tile.
+        const setDownBeside = () => {
+          const t = freeDropTileNear(gs, here.x, here.y, pawn.id, target.victimId);
+          gs = dropCarriedPawn(gs, pawn.id, target.victimId, t.x, t.y);
+        };
+        if (!victim || victim.isAlive === false || !victim.position) {
+          if (carrying) setDownBeside();
+          endRescue();
+        } else if (!carrying) {
+          // Reach phase — walk to the downed pawn; pick it up on arrival.
+          if (victim.currentState !== 'Collapsed') {
+            endRescue(); // recovered before we got there
+          } else if (
+            isAdjacent(here.x, here.y, victim.position.x, victim.position.y) ||
+            (here.x === victim.position.x && here.y === victim.position.y)
+          ) {
+            gs = pawnService.assignPath(pawn.id, [], gs);
+            gs = pickUpPawn(gs, pawn.id, target.victimId);
+          } else {
+            gs = this._draftWalk(gs, pawn, victim.position.x, victim.position.y);
+          }
+        } else {
+          // Carry phase — head to the nearest shelter and set the body down on arrival.
+          const dest = nearestShelterTile(gs, here.x, here.y);
+          if (!dest) {
+            setDownBeside(); // no free shelter — set the body down on a clear tile, don't stack it
+            endRescue();
+          } else if (
+            (here.x === dest.x && here.y === dest.y) ||
+            isAdjacent(here.x, here.y, dest.x, dest.y)
+          ) {
+            gs = pawnService.assignPath(pawn.id, [], gs);
+            gs = dropCarriedPawn(gs, pawn.id, target.victimId, dest.x, dest.y);
+            endRescue();
+          } else {
+            gs = this._draftWalk(gs, pawn, dest.x, dest.y);
+          }
+        }
+      } else if (target.type === 'tend') {
+        // Drafted "emergency care": walk adjacent to the patient and dress its untended wounds on
+        // arrival (the same tendPatient the auto caretake job runs), then clear the order.
+        const patient = gs.pawns.find((p) => p.id === target.patientId);
+        const clearTend = () => {
+          gs = {
+            ...gs,
+            pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, draftTarget: undefined } : p))
+          };
+        };
+        if (
+          !patient ||
+          patient.isAlive === false ||
+          !patient.position ||
+          !hasUntendedWound(patient, gs.turn)
+        ) {
+          clearTend(); // gone / dead / nothing left to dress
+        } else if (
+          isAdjacent(pawn.position.x, pawn.position.y, patient.position.x, patient.position.y) ||
+          (pawn.position.x === patient.position.x && pawn.position.y === patient.position.y)
+        ) {
+          gs = pawnService.assignPath(pawn.id, [], gs);
+          const medic = gs.pawns.find((p) => p.id === pawn.id)!;
+          gs = tendPatient(patient, medic, gs);
+          clearTend();
+        } else {
+          gs = this._draftWalk(gs, pawn, patient.position.x, patient.position.y);
+        }
       }
     }
     return gs;
+  }
+
+  /** Route `pawn` toward (tx,ty) for the non-combat draft orders (rescue/tend) and assign the path.
+   *  Uses `tryAssignPath`, which routes to an ADJACENT approach tile — so a (tx,ty) that's an unwalkable
+   *  building (a bed/shelter the body is carried to) is still reachable. No-op when already adjacent or
+   *  unreachable (the caller's own adjacency check then acts / the order waits). */
+  private _draftWalk(gs: GameState, pawn: Pawn, tx: number, ty: number): GameState {
+    return tryAssignPath(pawn, tx, ty, gs) ?? gs;
   }
 
   private processPawns(): void {
@@ -891,6 +990,11 @@ export class GameEngineImpl implements GameEngine {
     // Phase 5e: automatic needs now handled by PawnStateMachine (HUNGRY/TIRED states).
     tp('p.pawnTurn', () => {
       this.gameState = pawnService.processPawnTurn(this.gameState!);
+    });
+    // Carry safety net: lay down any carried body whose carrier stopped carrying it (un-drafted,
+    // re-ordered, dead) so a rescued pawn can never vanish. Cheap no-op when no one is carrying anyone.
+    tp('p.reconcileCarry', () => {
+      this.gameState = reconcileCarriedPawns(this.gameState!);
     });
   }
 

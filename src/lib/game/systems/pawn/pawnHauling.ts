@@ -18,6 +18,7 @@ import { gameLogger } from '../../dev/gameLogger';
 import { rng } from '../../core/rng';
 import { PAWN_STATE } from './pawnStates';
 import { goIdle } from './pawnHelpers';
+import { isCarriedPawnInstance } from './carry';
 
 const EMPTY_INVENTORY = {
   items: {},
@@ -293,7 +294,7 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   // pawn hauling ONLY a carcass (empty `items` map) must not short-circuit to idle.
   const carriedInstances = pawn.inventory?.instances ?? [];
   const hasDepositableInstance = carriedInstances.some(
-    (i) => itemService.getItemById(i.itemId)?.dynamicName
+    (i) => !isCarriedPawnInstance(i) && itemService.getItemById(i.itemId)?.dynamicName
   );
   if (Object.keys(inv).length === 0 && !hasDepositableInstance) return goIdle(pawn, gs);
 
@@ -365,6 +366,12 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   }
   const keptInstances: ItemInstance[] = [];
   for (const instance of carriedInstances) {
+    // A carried colonist is a LIVE pawn riding in the pack — never lay a person into a stockpile.
+    // It's set down as a restored pawn by the rescue order / reconcile, not deposited (pawn/carry.ts).
+    if (isCarriedPawnInstance(instance)) {
+      keptInstances.push(instance);
+      continue;
+    }
     if (!itemService.getItemById(instance.itemId)?.dynamicName) {
       keptInstances.push(instance);
       continue;

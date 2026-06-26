@@ -21,19 +21,26 @@ const TEND_WORK = 18;
 /** Dressing quality multiplier when the patient is NOT under a roof — a field dressing barely helps. */
 const OFF_SHELTER_TEND_MUL = 0.3;
 
-/** A patient is tendable when it's holding still (resting/downed) and carries a wound worth dressing —
- *  untended AND (bleeding or serious+). Minor non-bleeding scratches self-close at rest, so they don't
- *  spawn a medic job ("only minor wounds can be risked left untreated"). */
-function needsTending(patient: Pawn, turn: number): boolean {
-  if (patient.isAlive === false || !patient.position) return false;
-  const resting =
-    patient.currentState === PAWN_STATE.SLEEPING || patient.currentState === PAWN_STATE.COLLAPSED;
-  if (!resting) return false;
+/** Does this pawn carry a wound worth dressing — untended AND (bleeding or serious+)? Minor
+ *  non-bleeding scratches self-close, so they don't count ("only minor wounds can be risked left
+ *  untreated"). Shared by the auto caretake job and the player's drafted `tend` (emergency care) order. */
+export function hasUntendedWound(patient: Pawn, turn: number): boolean {
   return (patient.limbs ?? []).some((l) =>
     (l.parts ?? []).some((p) =>
       p.injuries.some((w) => !isTended(w, turn) && (w.bleeding > 0 || w.severity !== 'minor'))
     )
   );
+}
+
+/** A patient is tendable by the AUTO caretake job when it's holding still (resting/downed), not being
+ *  carried, and has a wound worth dressing. The drafted emergency-care order skips the resting gate —
+ *  a medic can be told to dress a standing colonist's wounds right now. */
+function needsTending(patient: Pawn, turn: number): boolean {
+  if (patient.isAlive === false || !patient.position || patient.carriedBy) return false;
+  const resting =
+    patient.currentState === PAWN_STATE.SLEEPING || patient.currentState === PAWN_STATE.COLLAPSED;
+  if (!resting) return false;
+  return hasUntendedWound(patient, turn);
 }
 
 /** Best medicine in the stockpile (highest `medicineQuality` with stock), or null. */

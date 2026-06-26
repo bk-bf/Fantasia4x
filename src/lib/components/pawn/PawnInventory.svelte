@@ -12,6 +12,12 @@
   $: carried = Object.entries(pawn.inventory?.items ?? {})
     .filter(([, qty]) => qty > 0)
     .sort(([a], [b]) => (pinned.has(b) ? 1 : 0) - (pinned.has(a) ? 1 : 0));
+  // Identity-tracked instances carry a per-pawn name (a hauled carcass, or a rescued colonist being
+  // carried as a `carried_pawn` body) — surface them so the carry list shows WHO/WHAT is in the pack,
+  // not just the stackable goods. Read-only here (a carried pawn is set down via the map order).
+  $: carriedInstances = (pawn.inventory?.instances ?? []).filter(
+    (i) => itemService.getItemById(i.itemId)?.dynamicName
+  );
 
   function togglePin(itemId: string) {
     gameState.command({ type: 'togglePinItem', payload: { pawnId: pawn.id, itemId }, save: true });
@@ -36,7 +42,7 @@
   // Raw (pre-floor) sums — when below 1 the budget is clamped to the 1.0 minimum.
   $: wRaw = cap.weight.capacity + cap.weight.gear;
   $: vRaw = cap.volume.capacity + cap.volume.gear;
-  $: isEmpty = carried.length === 0;
+  $: isEmpty = carried.length === 0 && carriedInstances.length === 0;
 
   const r1 = (n: number) => Math.round(n * 10) / 10;
   const signed = (n: number) => (n >= 0 ? '+' : '−') + r1(Math.abs(n));
@@ -89,6 +95,20 @@
   {#if isEmpty}
     <div class="empty">nothing carried</div>
   {:else}
+    {#each carriedInstances as inst (inst.instanceId)}
+      <div class="row instance">
+        <span class="carry-mark">⚑</span>
+        <span class="item-name">{inst.name ?? itemName(inst.itemId)}</span>
+        {#if inst.itemId === 'carried_pawn'}
+          <span class="qty">carried</span>
+          <button
+            class="drop-btn"
+            title="Set down — lay the carried colonist on the pawn's tile and end the carry."
+            on:click={() => dropItem(inst.itemId)}>↓</button
+          >
+        {/if}
+      </div>
+    {/each}
     {#each carried as [itemId, qty]}
       <div class="row" class:pinned={pinned.has(itemId)}>
         <button
@@ -223,6 +243,15 @@
 
   .row.pinned .item-name {
     color: var(--accent-hi, #ffd24a);
+  }
+  .row.instance .item-name {
+    color: var(--accent-hi, #ffd24a);
+    text-transform: none;
+  }
+  .carry-mark {
+    color: var(--neg, #e05a5a);
+    font-size: 0.8rem;
+    line-height: 1;
   }
 
   .item-name {

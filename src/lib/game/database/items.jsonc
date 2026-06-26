@@ -2981,6 +2981,26 @@
     "weightKg"         : 40,
     "volumeL"          : 50
   },
+  // ── Carried colonist (rescue) — a LIVE downed pawn while it rides in a rescuer's arms. Hidden
+  //    (never craftable/listed) like a natural weapon; `dynamicName` so the instance reads the
+  //    victim's name (reusing the carcass pattern). Heavy: a body fills the carrier's whole carry
+  //    budget, so they can't also haul goods. The real pawn entity stays in `gs.pawns` (hidden via
+  //    `carriedBy`) as the restore source — this item is its visible, capacity-counted stand-in.
+  {
+    "id"               : "carried_pawn",
+    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "name"             : "Unconscious Body",
+    "type"             : "material",
+    "category"         : "organic",
+    "hidden"           : true,
+    "dynamicName"      : true,
+    "deteriorationRate": 0,
+    "description"      : "A downed colonist slung over a rescuer's shoulders, being carried to safety.",
+    "color"            : "#9A7A6A",
+    "amount"           : 0,
+    "weightKg"         : 45,
+    "volumeL"          : 55
+  },
   // ── Tier 1 butchery tool ─────────────────────────────────────────────────────
   {
     "id": "bone_cleaver",

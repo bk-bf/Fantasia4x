@@ -39,6 +39,7 @@ import { equipItem, unequipItem, useConsumable, equipDropToPawn } from '../core/
 import { pickUpFromTile } from '../systems/pawn/pawnHauling';
 import { PAWN_STATE } from '../systems/pawn/pawnStates';
 import { hasShelter } from '../systems/pawn/handlers/rescue';
+import { dropCarriedPawn, freeDropTileNear, CARRIED_PAWN_ITEM } from '../systems/pawn/carry';
 import { manhattan } from '../core/distance';
 import { designationService } from '../services/DesignationService';
 import { buildingService } from '../services/BuildingService';
@@ -189,20 +190,27 @@ export const COMMANDS: Record<string, Cmd> = {
       )
     };
   },
-  /** Rescue order (right-click a collapsed colonist): dispatch the NEAREST free, able pawn to carry the
-   *  downed one to the closest shelter (REST building) so it recovers safely. No-op when the victim
-   *  isn't collapsed, the colony has no shelter, it's already being rescued, or no one is free. */
+  /** Auto rescue (right-click a collapsed colonist, no pawn selected): commandeer the NEAREST able pawn
+   *  to carry the downed one to shelter. It DRAFTS that pawn with an `auto` `rescue` order (drafted →
+   *  it won't wander off mid-carry; the order un-drafts it again on drop). No-op when the victim isn't
+   *  collapsed, is already being carried, the colony has no shelter, or no one's free. A drafted carrier
+   *  the player picked themselves uses `setPawnDraftTarget` instead (GameCanvas), not this. */
   rescuePawn: (s, p: { victimId: string }) => {
     const victim = s.pawns.find((pw) => pw.id === p.victimId);
     if (!victim || victim.isAlive === false || !victim.position) return s;
     if (victim.currentState !== PAWN_STATE.COLLAPSED) return s;
+    if (victim.carriedBy) return s; // already in someone's arms
     if (!hasShelter(s)) return s; // nowhere to take them
-    if (s.pawns.some((pw) => pw.rescue?.victimId === p.victimId)) return s; // already being rescued
-    // Nearest pawn that can actually go: alive, on-map, not drafted, and not busy with its own crisis.
+    if (
+      s.pawns.some(
+        (pw) => pw.draftTarget?.type === 'rescue' && pw.draftTarget.victimId === p.victimId
+      )
+    )
+      return s; // already being carried/dispatched
+    // Nearest pawn that can actually go: alive, on-map, not already drafted, not busy with its own crisis.
     const BUSY = new Set<string>([
       PAWN_STATE.COLLAPSED,
       PAWN_STATE.SLEEPING,
-      PAWN_STATE.RESCUING,
       PAWN_STATE.FIGHTING,
       PAWN_STATE.FLEEING,
       PAWN_STATE.HUNTING
@@ -231,10 +239,10 @@ export const COMMANDS: Record<string, Cmd> = {
         pw.id === id
           ? {
               ...pw,
-              currentState: PAWN_STATE.RESCUING as never,
-              rescue: { victimId: p.victimId, carrying: false, destX: 0, destY: 0 },
+              drafted: true,
+              currentState: 'Idle' as never,
+              draftTarget: { type: 'rescue', victimId: p.victimId, auto: true },
               activeJob: undefined,
-              draftTarget: undefined,
               path: [],
               isMoving: false
             }
@@ -402,8 +410,27 @@ export const COMMANDS: Record<string, Cmd> = {
    *  so the pin is cleared too. */
   dropCarriedItem: (s, p: { pawnId: string; itemId: string }) => {
     const pawn = s.pawns.find((pw) => pw.id === p.pawnId);
+    if (!pawn?.position) return s;
+    // Carried colonist: an inventory "body" is a LIVE pawn — set it down (restored, on a FREE tile) and
+    // end the carry, rather than spawning a `carried_pawn` item on the ground. Reuses the same drop UI.
+    if (p.itemId === CARRIED_PAWN_ITEM) {
+      const victim = s.pawns.find((pw) => pw.carriedBy === p.pawnId);
+      if (!victim) return s;
+      const tile = freeDropTileNear(s, pawn.position.x, pawn.position.y, p.pawnId, victim.id);
+      let gs = dropCarriedPawn(s, p.pawnId, victim.id, tile.x, tile.y);
+      // Clear the rescue order so the carrier doesn't immediately walk back and re-grab the body.
+      gs = {
+        ...gs,
+        pawns: gs.pawns.map((pw) =>
+          pw.id === p.pawnId && pw.draftTarget?.type === 'rescue'
+            ? { ...pw, draftTarget: undefined }
+            : pw
+        )
+      };
+      return gs;
+    }
     const qty = pawn?.inventory?.items?.[p.itemId] ?? 0;
-    if (!pawn?.position || qty <= 0) return s;
+    if (qty <= 0) return s;
     const drop = {
       id: `drop-${p.pawnId}-${p.itemId}-${Date.now()}`,
       resourceId: p.itemId,

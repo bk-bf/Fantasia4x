@@ -90,6 +90,7 @@
   import { getEquipmentSlot } from '$lib/game/core/PawnEquipment.js';
   import { getRangedWeapon } from '$lib/game/systems/rangedCombat.js';
   import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
+  import { hasUntendedWound } from '$lib/game/services/jobs/caretake';
   import { conditionPriority } from '$lib/game/core/needs';
   import { getCreatureById } from '$lib/game/core/Creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
@@ -1493,6 +1494,9 @@
     for (let i = 0; i < livePawns.length; i++) {
       const pawn = livePawns[i];
       if (!pawn.position) continue;
+      // Being carried (rescue): the victim rides inside its carrier — don't draw a second glyph that
+      // would float a tick behind. It reappears when laid down (carriedBy cleared).
+      if (pawn.carriedBy) continue;
       seen.add(pawn.id);
 
       const target = pawnSimTarget(pawn);
@@ -1593,6 +1597,7 @@
     const prioWinded = conditionPriority('winded');
     for (const p of pawns) {
       if (!p.position) continue;
+      if (p.carriedBy) continue; // carried victim is hidden — no floating ↓ over the carrier
       if (isHiddenTile(p.position.x, p.position.y)) continue; // under the fog → no Zzz/✚/↓ leak
       let kind: GlyphFloatKind | null = null;
       let prio = -1;
@@ -1797,11 +1802,11 @@
             }
           }
           points.push({ x: (tx - viewX + 0.5) * tW, y: (ty - viewY + 0.5) * tH });
-        } else if (pathIdx >= path.length) {
-          // Move order with no remaining path yet — e.g. issued while the game is PAUSED,
-          // before _processDraftOrders computes the route on a sim tick. Draw a straight line
-          // to the destination so the order is visible immediately; the real path replaces it
-          // once the sim advances. (NT-U4)
+        } else if (pathIdx >= path.length && 'x' in target) {
+          // Tile-targeted order (move/haul/equip) with no remaining path yet — e.g. issued while the
+          // game is PAUSED, before _processDraftOrders computes the route on a sim tick. Draw a straight
+          // line to the destination so the order is visible immediately; the real path replaces it once
+          // the sim advances. (NT-U4) rescue/tend target an entity (no tile), so they're skipped here.
           points.push({ x: (target.x - viewX + 0.5) * tW, y: (target.y - viewY + 0.5) * tH });
         }
         return { id: `draft-${p.id}`, points };
@@ -4275,25 +4280,50 @@
     equipMenu = null;
     if (hoverTileX < 0 || hoverTileY < 0) return;
 
-    // ── Rescue: right-click a COLLAPSED colonist → pop a context menu (same one the ranged/melee
-    // target + equip actions use) offering to carry it to shelter. Takes priority over draft orders /
-    // designation-clear. The command sends the nearest free pawn (no-op if no shelter / no one free). ──
+    // ── Medical orders: right-click a hurt colonist → pop a context menu (same chrome the ranged/melee
+    // target + equip actions use). Takes priority over draft orders / designation-clear.
+    //   • COLLAPSED → "Carry to shelter": with a drafted pawn selected, THAT pawn does it (a drafted
+    //     `rescue` order); otherwise the colony auto-dispatches its nearest free pawn (`rescuePawn`).
+    //   • Untended wounds (collapsed OR standing) AND a drafted medic selected → "Emergency care now"
+    //     (a drafted `tend` order — dresses/stops-the-bleeding on arrival, no need to carry first). ──
     if (!designationMode) {
-      const downed = findPawnAtTile(hoverTileX, hoverTileY);
-      if (downed && downed.currentState === 'Collapsed') {
-        const victimId = downed.id;
-        equipMenu = {
-          x: e.clientX,
-          y: e.clientY,
-          entries: [
-            {
-              label: `Carry ${downed.name} to shelter`,
-              run: () =>
-                gameState.command({ type: 'rescuePawn', payload: { victimId }, save: true })
-            }
-          ]
-        };
-        return;
+      const target = findPawnAtTile(hoverTileX, hoverTileY);
+      if (
+        target &&
+        target.id !== selectedPawn?.id &&
+        target.isAlive !== false &&
+        !target.carriedBy
+      ) {
+        const id = target.id;
+        const medic = selectedPawn?.drafted ? selectedPawn : null;
+        const issueOrder = (t: { type: string } & Record<string, unknown>) =>
+          gameState.command({
+            type: 'setPawnDraftTarget',
+            payload: { pawnId: medic!.id, target: t },
+            save: true
+          });
+        const entries: { label: string; run: () => void }[] = [];
+        if (target.currentState === 'Collapsed') {
+          entries.push({
+            label: `Carry ${target.name} to shelter`,
+            run: medic
+              ? () => issueOrder({ type: 'rescue', victimId: id })
+              : () =>
+                  gameState.command({ type: 'rescuePawn', payload: { victimId: id }, save: true })
+          });
+        }
+        // A drafted medic can be told to dress the wounds right where the patient lies — the answer for
+        // a bleeding colonist that would die before a carry-to-shelter finishes.
+        if (medic && hasUntendedWound(target, $gameState?.turn ?? 0)) {
+          entries.push({
+            label: `Emergency care for ${target.name} now`,
+            run: () => issueOrder({ type: 'tend', patientId: id })
+          });
+        }
+        if (entries.length > 0) {
+          equipMenu = { x: e.clientX, y: e.clientY, entries };
+          return;
+        }
       }
     }
 

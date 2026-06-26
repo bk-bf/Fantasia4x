@@ -293,12 +293,18 @@ export interface Pawn {
   // ===== DRAFT MODE =====
   /** When true, pawn ignores jobs/needs and follows player orders. */
   drafted?: boolean;
-  /** Current draft order: move to tile, attack target, haul a loose stack to a stockpile, or fetch +
-   *  equip a ground item. For `haul`, x/y is the SOURCE tile; the pawn shuttles its carry-budget-worth
-   *  to the nearest stockpile and back until the loose stack on that tile is cleared (multi-trip), then
-   *  clears. For `equip`, the pawn walks to the drop's tile and, on arrival, either equips one unit
-   *  into `slot` (or its auto-resolved slot when omitted) or — when `slot` is `'inventory'` — carries
-   *  one unit in its pack (e.g. a tool kept in inventory so a weapon can stay in hand). Then clears. */
+  /** Current draft order: move to tile, attack target, haul a loose stack to a stockpile, fetch +
+   *  equip a ground item, carry a downed ally to shelter, or rush emergency wound-care to a patient.
+   *  For `haul`, x/y is the SOURCE tile; the pawn shuttles its carry-budget-worth to the nearest
+   *  stockpile and back until the loose stack on that tile is cleared (multi-trip), then clears. For
+   *  `equip`, the pawn walks to the drop's tile and, on arrival, either equips one unit into `slot`
+   *  (or its auto-resolved slot when omitted) or — when `slot` is `'inventory'` — carries one unit in
+   *  its pack (e.g. a tool kept in inventory so a weapon can stay in hand). Then clears.
+   *  For `rescue`, the pawn walks to the COLLAPSED `victimId`, picks it up (the victim is set
+   *  `carriedBy` this pawn and hidden — it travels inside the carrier, not as a floating glyph), hauls
+   *  it to the nearest shelter and lays it down — exactly the pick-up→carry→drop shape of an item haul.
+   *  For `tend`, the pawn walks adjacent to `patientId` and dresses its untended wounds on arrival
+   *  (the same `tendPatient` the auto caretake job runs), then clears. */
   draftTarget?:
     | { type: 'move'; x: number; y: number }
     | {
@@ -310,17 +316,18 @@ export interface Pawn {
         mode?: 'ranged' | 'melee';
       }
     | { type: 'haul'; x: number; y: number }
-    | { type: 'equip'; dropId: string; x: number; y: number; slot?: EquipmentSlot | 'inventory' };
+    | { type: 'equip'; dropId: string; x: number; y: number; slot?: EquipmentSlot | 'inventory' }
+    | { type: 'rescue'; victimId: string; auto?: boolean }
+    | { type: 'tend'; patientId: string };
+
+  /** When set, this (downed) pawn is being CARRIED by the pawn whose id this is. While carried the
+   *  victim is hidden from the map (it rides inside the carrier as a `carried_pawn` inventory item —
+   *  see systems/pawn/carry.ts) and its position is only restored when it's laid down at the shelter or
+   *  the carry aborts. Lets the renderer skip the glyph/overlay so the body doesn't float behind. */
+  carriedBy?: string;
 
   // Phase 4/5: State machine primary state
-  currentState?: string; // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Fighting' | 'Fleeing' | 'Rescuing' | 'Dead'
-  /**
-   * Active rescue order (currentState === 'Rescuing'): this pawn fetches a COLLAPSED colonist
-   * (`victimId`) and carries it to shelter. `carrying` flips once it reaches the victim; from then on
-   * the victim's position mirrors this carrier each tick until they reach (`destX`,`destY`) — the
-   * nearest rest building — where it's laid down. Set by the `rescuePawn` command (right-click).
-   */
-  rescue?: { victimId: string; carrying: boolean; destX: number; destY: number };
+  currentState?: string; // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Fighting' | 'Fleeing' | 'Dead'
   /** Soft-preview of the next up-to-4 unclaimed job IDs the pawn would take after activeJob.
    *  Not claimed — used only for need-priority lookahead in the state machine. */
   jobQueue?: string[];
