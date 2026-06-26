@@ -35,12 +35,16 @@ const TRANSIENT_BY_ID = new Map<string, TransientConditionDef>(
  * The ONE collapse threshold pair, shared by every consumer so pawns and mobs collapse/recover on the
  * SAME consciousness band (was duplicated in Combat, PawnStateMachine and entityConstants — they drifted).
  * `consciousness` (computeCapacities) folds pain + blood loss + organ damage, so downing has one cause.
- * Hysteresis: drop below COLLAPSE_CONSCIOUSNESS, only stand back up at RECOVER_CONSCIOUSNESS — so a body
- * teetering at the floor can't flicker. The `collapse` transient condition (conditions.jsonc) is kept in
- * lockstep with the down state on BOTH entity kinds (refreshed while down, cleared on recovery).
+ * Hysteresis: drop below COLLAPSE_CONSCIOUSNESS, stand back up once consciousness climbs back past
+ * RECOVER_CONSCIOUSNESS. The gap is INTENTIONALLY tiny — just enough to stop a body teetering exactly at
+ * the floor from flickering up/down. A body should wake as soon as the thing that downed it (pain / blood
+ * loss) eases back past the trigger, NOT have to recover all the way to near-full (the old 0.45 band meant
+ * a pawn collapsed at pain ~80 only woke at pain ~65, which read as "stays down until healed").
+ * The `collapse` transient condition (conditions.jsonc) is kept in lockstep with the down state on BOTH
+ * entity kinds (refreshed while down, cleared on recovery).
  */
 export const COLLAPSE_CONSCIOUSNESS = 0.3;
-export const RECOVER_CONSCIOUSNESS = 0.45;
+export const RECOVER_CONSCIOUSNESS = 0.32;
 
 /** The need + cutoff at which a NEED-threshold transient onsets, declared in conditions.jsonc (`needOnset`),
  *  e.g. `tired` → fatigue ≥ 100. Read by the deriving code so the threshold lives in DATA, not constants. */
