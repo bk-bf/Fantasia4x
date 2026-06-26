@@ -27,10 +27,17 @@ const POISON_BY_CATEGORY: Record<string, number> = { meat: 0.16, food: 0.05, dri
 const RARITY_POISON_MULT = new Map<string, number>(
   (RARITIES as Array<{ id: string; poisonMult?: number }>).map((r) => [r.id, r.poisonMult ?? 1])
 );
+/** Nutrition that constitutes one "serving" for the poison roll. `poisonChance` is the risk PER SERVING
+ *  of nutrition, NOT per item — so a meal's risk scales with how much food (nutrition) was eaten, not how
+ *  many pieces. Set near a typical food item's nutrition (carp 48, oats 39) so high-nutrition foods keep
+ *  ~their authored per-item chance, while low-nutrition ones (berries: nutrition 3) stop being double-
+ *  punished — needing ~14 berries to fill hunger no longer compounds a 3% per-berry roll to a near-certain
+ *  ~53%; it's now ~one serving's worth ≈ the authored 3%. */
+const NUTRITION_PER_POISON_ROLL = 40;
 /** Share of poisoning events that become the serious `dysentery` rather than passing `nausea`. */
 const DYSENTERY_SHARE = 0.2;
-const NAUSEA_TICKS = ticksFromSeconds(180); // ~3 in-game min — queasy, passes
-const DYSENTERY_TICKS = ticksFromSeconds(900); // ~15 in-game min — a multi-day gut illness
+const NAUSEA_TICKS = ticksFromSeconds(180); // ~14 in-game hr (180 real-sec basis) — queasy, passes
+const DYSENTERY_TICKS = ticksFromSeconds(900); // ~3 in-game days — a multi-day gut illness
 
 // Index items by id once at module load — avoids an ITEMS_DATABASE.find(...) per stockpile entry
 // per call for every needy pawn each tick.
@@ -179,12 +186,22 @@ function itemPoisonChance(def: {
   return Math.max(0, Math.min(1, base * mult));
 }
 
-/** §F8: combined probability a meal carries at least one tainted serving (independent per serving). */
+/** §F8: combined probability a meal carries at least one tainted serving. The roll count scales with
+ *  NUTRITION eaten (units × per-unit nutrition ÷ NUTRITION_PER_POISON_ROLL), NOT raw item count — so
+ *  filling hunger on low-nutrition food (e.g. a fistful of berries) isn't compounded into near-certain
+ *  poisoning. `poisonChance` is the risk per serving's worth of nutrition. */
 export function mealPoisonChance(meal: MealPortion[]): number {
   let safe = 1;
   for (const { id, units } of meal) {
-    const p = itemPoisonChance(ITEM_DEF_BY_ID.get(id) ?? {});
-    if (p > 0) safe *= Math.pow(1 - p, units);
+    const def = ITEM_DEF_BY_ID.get(id);
+    const p = itemPoisonChance(def ?? {});
+    if (p <= 0) continue;
+    // Rolls scale with the FOOD MATTER eaten (units × per-unit nutrition), floored at 1 nutrition/unit so
+    // a ~0-nutrition tainted item can still roll once and a stray non-positive value can't flip the
+    // exponent negative. (Rotten food carries a small POSITIVE nutrition; its 0.85 poisonChance — not a
+    // negative nutrition — is what makes it the worst offender.)
+    const rolls = (units * Math.max(1, def?.nutrition ?? 1)) / NUTRITION_PER_POISON_ROLL;
+    safe *= Math.pow(1 - p, rolls);
   }
   return 1 - safe;
 }

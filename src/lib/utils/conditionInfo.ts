@@ -16,10 +16,15 @@ import { gameHoursFromTicks } from '$lib/game/services/EnvironmentService';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 
 /** A remaining tick duration shown as coarse IN-GAME time — the unit the clock and HealthReadout use —
- *  hours, or in-game minutes under an hour. Never "turns"/ticks. */
+ *  days, hours, or in-game minutes under an hour. Never "turns"/ticks. */
 function gameTimeLeft(ticks: number): string {
   const hours = gameHoursFromTicks(ticks);
-  if (hours >= 1) return `${hours < 10 ? hours.toFixed(1).replace(/\.0$/, '') : Math.round(hours)} hr`;
+  const round1 = (n: number) => (n < 10 ? n.toFixed(1).replace(/\.0$/, '') : String(Math.round(n)));
+  if (hours >= 24) {
+    const days = hours / 24;
+    return `${round1(days)} day${days === 1 ? '' : 's'}`;
+  }
+  if (hours >= 1) return `${round1(hours)} hr`;
   const mins = Math.round(hours * 60);
   return mins >= 1 ? `${mins} min` : '<1 min';
 }
@@ -159,8 +164,13 @@ function transientSources(entity: Pawn | Mob, id: string): string[] {
     case 'winded':
       return ['Stamina spent in combat'];
     case 'nausea':
-    case 'dysentery':
-      return ['Food poisoning — a tainted or undercooked meal'];
+    case 'dysentery': {
+      // Real countdown: these are fixed-duration timers (NAUSEA_TICKS / DYSENTERY_TICKS) that tick down.
+      const t = entity.conditionTimers?.[id] ?? 0;
+      return [
+        `Food poisoning — a tainted or undercooked meal${t > 0 ? ` — passes in ~${gameTimeLeft(t)}` : ''}`
+      ];
+    }
     case 'knockdown': {
       // Real countdown: the knockdown timer is the actual remaining prone time, shown in in-game hours.
       const t = entity.conditionTimers?.knockdown ?? 0;

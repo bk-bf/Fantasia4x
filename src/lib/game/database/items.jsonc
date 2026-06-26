@@ -2929,7 +2929,7 @@
     "amount"           : 0,
     "weightKg"         : 0.1,
     "volumeL"          : 0.2,
-    "nutrition"        : -60,
+    "nutrition"        : 5,
     "poisonChance"     : 0.85,
     "effects"          : {"nausea": 1, "healthBonus": -0.5}
   },
@@ -2946,7 +2946,7 @@
     "amount"           : 0,
     "weightKg"         : 0.5,
     "volumeL"          : 0.5,
-    "nutrition"        : -45,
+    "nutrition"        : 8,
     "poisonChance"     : 0.85,
     "effects"          : {"nausea": 1, "healthBonus": -0.3}
   },
