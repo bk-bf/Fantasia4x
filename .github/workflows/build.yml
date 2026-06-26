@@ -17,7 +17,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # On a tag push, skip the whole cloud build when a published GitHub Release already exists for the tag.
+  # That means it was cut locally by `build.sh --local --push` (which uploads its own installers), so
+  # rebuilding here would be wasted compute + a doomed "release already exists" failure. workflow_dispatch
+  # and the CI-path `build.sh --push` (no release yet) fall through and build normally.
+  guard:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - name: Does a published release already exist for this tag?
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists (cut locally) — skipping CI build."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: [guard]
+    # Run unless the guard said skip. always() so the job still evaluates when guard is itself skipped
+    # (workflow_dispatch): then outputs.skip is empty ≠ 'true' → build runs. A guard failure also leaves
+    # it empty → build runs (fail open, never silently drop a release).
+    if: ${{ always() && needs.guard.outputs.skip != 'true' }}
     strategy:
       fail-fast: false
       matrix:

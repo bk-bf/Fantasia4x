@@ -11,6 +11,12 @@
 #                                     no installer packaging (dist-electron/linux-unpacked/)
 #   ./build.sh --dry                pre-flight: production static build + scan for dev-only /src asset
 #                                     paths that 404 once packaged. No packaging — fast; run during dev.
+#   ./build.sh --push               cut a release via CI: autotag (git-cliff) + push → GitHub Actions
+#                                     builds both OSes and publishes the GitHub Release.
+#   ./build.sh --local --push       cut a release ENTIRELY on this machine: build Linux + Windows,
+#                                     git-cliff changelog, autotag, and gh-publish the installers.
+#                                     (CI's guard job skips the redundant cloud build for this tag.)
+#                                     Override the computed version with RELEASE_TAG=vX.Y.Z.
 #
 # WASM is rebuilt only if missing; delete src/lib/{spatial,sim}-core-pkg to force a fresh compile.
 set -euo pipefail
@@ -26,12 +32,14 @@ LINUX=false
 WINDOWS=false
 LOCAL=false
 DRY=false
+PUSH=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --linux) LINUX=true ;;
     --windows | --win) WINDOWS=true ;;
     --local) LOCAL=true ;;
     --dry) DRY=true ;;
+    --push) PUSH=true ;;
     -h | --help) usage; exit 0 ;;
     *) echo "build.sh: unknown option '$1' (try --help)" >&2; exit 1 ;;
   esac
@@ -57,6 +65,55 @@ if $DRY; then
   fi
   echo "✓ Dry check passed — production bundle has no /src runtime fetches. Safe to package."
   exit 0
+fi
+
+# ---- Release (--push) -------------------------------------------------------------------------------
+# --push cuts a tagged release. WITH --local everything happens here (build both OSes → git-cliff
+# changelog → tag → gh release + upload). WITHOUT --local it hands off to CI (tag + push;
+# .github/workflows/build.yml builds + publishes). A guard job in that workflow skips the redundant
+# cloud build when a published release already exists for the tag, so the local path never double-fires.
+RELEASE_TAG_OVERRIDE="${RELEASE_TAG:-}"
+if $PUSH; then
+  command -v git-cliff >/dev/null 2>&1 || {
+    echo "build.sh: --push needs git-cliff (autotag + changelog). Install: sudo pacman -S git-cliff" >&2; exit 1; }
+  command -v gh >/dev/null 2>&1 || { echo "build.sh: --push needs the GitHub CLI 'gh'." >&2; exit 1; }
+  gh auth status >/dev/null 2>&1 || { echo "build.sh: gh isn't authenticated — run 'gh auth login'." >&2; exit 1; }
+
+  BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+  if [[ "$BRANCH" != "main" ]]; then
+    read -rp "build.sh: on '$BRANCH', not main. Tag a release from here anyway? [y/N] " a
+    [[ "$a" == [yY]* ]] || { echo "Aborted."; exit 1; }
+  fi
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "build.sh: working tree has uncommitted changes — commit or stash before releasing." >&2; exit 1
+  fi
+
+  # Autotag: git-cliff computes the next semver from the conventional commits since the last tag.
+  TAG="${RELEASE_TAG_OVERRIDE:-$(git-cliff --bumped-version 2>/dev/null || true)}"
+  [[ -n "$TAG" ]] || { echo "build.sh: couldn't compute the next version (git-cliff --bumped-version). Set RELEASE_TAG=vX.Y.Z." >&2; exit 1; }
+  [[ "$TAG" == v* ]] || TAG="v$TAG"
+  if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+    echo "build.sh: tag $TAG already exists locally. Set RELEASE_TAG=vX.Y.Z to override." >&2; exit 1
+  fi
+
+  LAST_TAG="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo '')"
+  COMMITS="$(git rev-list --count "${LAST_TAG:+$LAST_TAG..}HEAD")"
+  echo "▸ Release ${LAST_TAG:-（first）} → $TAG  ($COMMITS commits)"
+
+  if $LOCAL; then
+    echo "  Mode: LOCAL — build Linux + Windows here, then publish to GitHub from this machine."
+    LINUX=true; WINDOWS=true   # a release always ships both installers, regardless of --local's usual meaning
+  else
+    echo "  Mode: CI — tag & push; GitHub Actions builds and publishes."
+    read -rp "  Tag $TAG, push origin/$BRANCH + $TAG, and let CI build+publish? [y/N] " a
+    [[ "$a" == [yY]* ]] || { echo "Aborted (nothing pushed)."; exit 1; }
+    git tag -a "$TAG" -m "$TAG"
+    git push origin "$BRANCH"
+    git push origin "$TAG"
+    REPO_URL="$(gh repo view --json url -q .url 2>/dev/null || echo '')"
+    echo "✓ Pushed $TAG. CI is building & will publish the release: ${REPO_URL}/actions"
+    exit 0
+  fi
 fi
 
 if ! $LINUX && ! $WINDOWS && ! $LOCAL; then
@@ -110,9 +167,10 @@ eb() {
   fi
 }
 
-# Package with electron-builder. --publish never: only ever produce local artifacts, never push a release.
+# Package with electron-builder. --publish never: electron-builder only ever produces local artifacts;
+# any GitHub publish is done explicitly below via gh (the --push path), never by electron-builder.
 EB_ARGS=(--publish never)
-if $LOCAL; then
+if $LOCAL && ! $PUSH; then
   echo "▸ Packaging unpacked build for this machine (--dir)…"
   eb --dir "${EB_ARGS[@]}"
 else
@@ -125,6 +183,36 @@ fi
 echo
 echo "✓ Done. Artifacts in dist-electron/:"
 ls -1 dist-electron/*.AppImage dist-electron/*.deb dist-electron/*.exe 2>/dev/null || true
-if $LOCAL; then
+if $LOCAL && ! $PUSH; then
   echo "  unpacked app → dist-electron/linux-unpacked/  (run: ./dist-electron/linux-unpacked/fantasia4x)"
+fi
+
+# ---- Publish the LOCAL release (build.sh --local --push) --------------------------------------------
+# The installers are built; now changelog → push branch → draft release (uploads assets, no tag yet) →
+# publish (this creates the tag, which is what fires CI; build.yml's guard then skips since the release
+# already exists with assets).
+if $PUSH && $LOCAL; then
+  echo
+  mapfile -t ASSETS < <(ls dist-electron/*.AppImage dist-electron/*.deb dist-electron/*.exe 2>/dev/null)
+  if [[ ${#ASSETS[@]} -eq 0 ]]; then
+    echo "build.sh: no installers in dist-electron/ to upload — aborting release." >&2; exit 1
+  fi
+
+  NOTES="$(mktemp)"; trap 'rm -f "$RESOLV4" "$NOTES"' EXIT
+  echo "▸ Generating changelog for $TAG (git-cliff)…"
+  git-cliff --tag "$TAG" --latest --strip header -o "$NOTES"
+
+  echo "▸ Assets to publish:"; printf '    %s\n' "${ASSETS[@]}"
+  read -rp "  Publish release $TAG to GitHub with these assets? [y/N] " a
+  [[ "$a" == [yY]* ]] || { echo "Aborted (nothing published)."; exit 1; }
+
+  echo "▸ Pushing $BRANCH so the release target commit exists on origin…"
+  git push origin "$BRANCH"
+
+  echo "▸ Creating draft release + uploading installers…"
+  gh release create "$TAG" --draft --target "$(git rev-parse HEAD)" --title "$TAG" --notes-file "$NOTES" "${ASSETS[@]}"
+  echo "▸ Publishing $TAG (creates the tag)…"
+  gh release edit "$TAG" --draft=false
+  git fetch origin --tags --quiet 2>/dev/null || true
+  echo "✓ Published: $(gh release view "$TAG" --json url -q .url 2>/dev/null)"
 fi

@@ -73,32 +73,55 @@ function refresh() {
   });
 }
 
-function onClick() {
+let buildTerminal;
+function runInTerminal(root, command) {
+  if (!buildTerminal || buildTerminal.exitStatus !== undefined) {
+    buildTerminal = vscode.window.createTerminal({ name: 'Fantasia4x build', cwd: root });
+  }
+  buildTerminal.show(true);
+  buildTerminal.sendText(command);
+}
+
+// Clicking the badge opens a menu to trigger a build or a release straight from the editor. The build
+// itself runs in an integrated terminal so its output (and the release confirmation prompts) is visible.
+async function onClick() {
   refresh();
-  const cfg = vscode.workspace.getConfiguration('fantasia4x.buildDistance');
   const root = workspaceRoot();
   if (!root) return;
-  const script = path.join(root, 'scripts', 'build-distance.sh');
-  const env = Object.assign({}, process.env, { BUILD_DISTANCE_MAX: String(cfg.get('max', 100)) });
-  execFile('bash', [script, '--json'], { cwd: root, env, timeout: 10000 }, (err, stdout) => {
-    if (err) return;
-    let data;
-    try {
-      data = JSON.parse(stdout.trim());
-    } catch (_e) {
-      return;
+
+  const picks = [
+    { label: '$(sync) Refresh badge', detail: 'Re-read commits since the last v* tag', action: 'refresh' },
+    {
+      label: '$(rocket) Local build — this machine',
+      detail: './build.sh --local  (unpacked, run immediately)',
+      action: './build.sh --local'
+    },
+    {
+      label: '$(package) Build installers — Linux + Windows',
+      detail: './build.sh --linux --windows',
+      action: './build.sh --linux --windows'
+    },
+    {
+      label: '$(cloud-upload) Release LOCALLY — build + publish to GitHub',
+      detail: './build.sh --local --push  (autotag + git-cliff + gh release)',
+      action: './build.sh --local --push'
+    },
+    {
+      label: '$(github) Release via CI — tag + push',
+      detail: './build.sh --push  (GitHub Actions builds & publishes)',
+      action: './build.sh --push'
     }
-    if (data.overdue) {
-      vscode.window.showWarningMessage(
-        `Build overdue: ${data.count} commits since ${data.lastTag || 'start'} (cap ${data.max}). Cut a release: git tag vX.Y.Z && git push origin vX.Y.Z`
-      );
-    } else {
-      vscode.window.setStatusBarMessage(
-        `Build distance: ${data.count}/${data.max} since ${data.lastTag || 'start'}`,
-        4000
-      );
-    }
+  ];
+
+  const choice = await vscode.window.showQuickPick(picks, {
+    placeHolder: 'Fantasia4x build / release'
   });
+  if (!choice) return;
+  if (choice.action === 'refresh') {
+    refresh();
+    return;
+  }
+  runInTerminal(root, choice.action);
 }
 
 function activate(context) {
