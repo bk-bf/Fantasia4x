@@ -359,8 +359,10 @@ export function driveTemperatureConditions(
   return null;
 }
 
-/** Load ratio below which a pawn is unencumbered; ratio at/above which encumbrance is maxed. */
-export const ENC_BURDEN_START = 0.8;
+/** Load ratio below which a pawn is unencumbered; ratio at/above which encumbrance is maxed.
+ *  The floor sits at FULL capacity (1.0): a pawn carrying anything up to its limit is fine, and
+ *  encumbrance only bites once it's OVER capacity (matches the UI "past ~100% encumbers" copy). */
+export const ENC_BURDEN_START = 1.0;
 export const ENC_OVERLOAD_FULL = 1.4;
 
 /**

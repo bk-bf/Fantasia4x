@@ -9,10 +9,16 @@ import type { EntityCondition, GameState, Pawn } from '../core/types';
  * (pockets). Replaces the old combat-only armour-encumbrance hook.
  */
 describe('driveEncumbrance (load → staged condition)', () => {
-  it('adds nothing while light, onsets past ~0.8, clears when unburdened again', () => {
+  it('adds nothing up to full capacity, onsets only OVER 1.0, clears when unburdened again', () => {
     const c: EntityCondition[] = [];
     driveEncumbrance(c, 0.5);
     expect(c.find((x) => x.id === 'encumbered')).toBeUndefined(); // light → no condition
+
+    driveEncumbrance(c, 0.95); // heavy but still within capacity → still fine
+    expect(c.find((x) => x.id === 'encumbered')).toBeUndefined();
+
+    driveEncumbrance(c, 1.0); // exactly at capacity → still no encumbrance
+    expect(c.find((x) => x.id === 'encumbered')).toBeUndefined();
 
     driveEncumbrance(c, 1.1); // over capacity
     const enc = c.find((x) => x.id === 'encumbered');
@@ -27,7 +33,7 @@ describe('driveEncumbrance (load → staged condition)', () => {
     const light: EntityCondition[] = [];
     const mid: EntityCondition[] = [];
     const heavy: EntityCondition[] = [];
-    driveEncumbrance(light, 0.9); // just over the floor
+    driveEncumbrance(light, 1.05); // just over the floor (capacity)
     driveEncumbrance(mid, 1.15);
     driveEncumbrance(heavy, 1.45); // maxed
 
