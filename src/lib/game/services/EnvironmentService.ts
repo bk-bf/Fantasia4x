@@ -26,6 +26,14 @@ import type { Season, WeatherState, WeatherType, WorldTile, PlacedBuilding } fro
 export const TURNS_PER_DAY = 300;
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 
+/** Ticks in one IN-GAME hour — the unit the clock and HealthReadout show. Author/display condition
+ *  durations in in-game hours via these instead of raw ticks/"turns" (750 = 300×60 / 24). */
+export const TICKS_PER_GAME_HOUR = TICKS_PER_DAY / 24;
+/** In-game hours → ticks (for authoring a duration in the JSON-friendly unit). */
+export const ticksFromGameHours = (hours: number): number => Math.round(hours * TICKS_PER_GAME_HOUR);
+/** Ticks → in-game hours (for displaying a remaining-time as the clock's unit). */
+export const gameHoursFromTicks = (ticks: number): number => ticks / TICKS_PER_GAME_HOUR;
+
 /**
  * Map turn (ticks) → fractional time-of-day in [0, 1).
  * 0.0 = midnight, 0.25 = 06:00, 0.5 = noon, 0.75 = 18:00.

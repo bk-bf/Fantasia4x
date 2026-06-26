@@ -12,6 +12,16 @@ import type {
   Injury
 } from '$lib/game/core/types';
 import conditionsData from '$lib/game/database/conditions.jsonc';
+import { gameHoursFromTicks } from '$lib/game/services/EnvironmentService';
+
+/** A remaining tick duration shown as coarse IN-GAME time — the unit the clock and HealthReadout use —
+ *  hours, or in-game minutes under an hour. Never "turns"/ticks. */
+function gameTimeLeft(ticks: number): string {
+  const hours = gameHoursFromTicks(ticks);
+  if (hours >= 1) return `${hours < 10 ? hours.toFixed(1).replace(/\.0$/, '') : Math.round(hours)} hr`;
+  const mins = Math.round(hours * 60);
+  return mins >= 1 ? `${mins} min` : '<1 min';
+}
 
 type CharSpan = { sheet?: string; id?: number; from?: number; to?: number; literal?: string };
 
@@ -150,11 +160,16 @@ function transientSources(entity: Pawn | Mob, id: string): string[] {
     case 'nausea':
     case 'dysentery':
       return ['Food poisoning — a tainted or undercooked meal'];
-    case 'knockdown':
-    case 'collapse': {
-      const t = entity.conditionTimers?.[id];
-      return [t ? `Recovering — ${t} turn${t === 1 ? '' : 's'} left` : 'Recovering'];
+    case 'knockdown': {
+      // Real countdown: the knockdown timer is the actual remaining prone time, shown in in-game hours.
+      const t = entity.conditionTimers?.knockdown ?? 0;
+      return [t > 0 ? `Recovering — ${gameTimeLeft(t)} left` : 'Recovering'];
     }
+    case 'collapse':
+      // NO countdown: the collapse timer is a 2-tick keepalive the FSM REFRESHES every tick while the
+      // body stays unconscious — it is never the real recovery time (which is driven by consciousness
+      // returning as pain/blood-loss ease), so showing it read a bogus, never-changing "2 turns left".
+      return ['Recovering'];
     default:
       // Mood conditions are pawn-only (mobs never sync them).
       if (id.startsWith('mood_'))

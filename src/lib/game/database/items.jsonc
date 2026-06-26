@@ -3394,7 +3394,7 @@
       "armorPenetration": 0.15,
       "critMod"         : 0.08
     },
-    "onHitEffect": {"condition": "envenomed", "chance": 0.5, "durationTurns": 30, "resist": "poison_resistance"}
+    "onHitEffect": {"condition": "envenomed", "chance": 0.5, "durationHours": 2.5, "resist": "poison_resistance"}
   },
   {
     "id": "proboscis",
@@ -3423,7 +3423,7 @@
     "onHitEffect": {
       "condition"    : "bloodletting",
       "chance"       : 0.6,
-      "durationTurns": 24,
+      "durationHours": 2,
       "resist"       : "piercing_resistance",
       "bloodDrain"   : 6
     }
@@ -3451,7 +3451,7 @@
       "weight"     : 1,
       "staminaCost": 2
     },
-    "onHitEffect": {"condition": "disoriented", "chance": 0.5, "durationTurns": 10, "resist": "mental_resistance"}
+    "onHitEffect": {"condition": "disoriented", "chance": 0.5, "durationHours": 0.5, "resist": "mental_resistance"}
   },
   {
     "id": "tongue",
@@ -3476,7 +3476,7 @@
       "weight"     : 1,
       "staminaCost": 3
     },
-    "onHitEffect": {"condition": "ensnared", "chance": 0.45, "durationTurns": 6, "resist": "blunt_resistance"}
+    "onHitEffect": {"condition": "ensnared", "chance": 0.45, "durationHours": 0.25, "resist": "blunt_resistance"}
   },
   // ── Phase B: carry containers ─────────────────────────────────────────────
   {

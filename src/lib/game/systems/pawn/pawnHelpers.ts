@@ -757,12 +757,17 @@ export function findCombatThreat(pawn: Pawn, gs: GameState): Mob | null {
   // it would hold fire until an enemy is already adjacent, or stand at a range it can't actually hit.
   const rw = getRangedWeapon(pawn);
   if (rw) range = Math.max(range, effectiveRangedRange(pawn, rw));
+  // A downed (Collapsed) mob is out of the fight — a defensive or fleeing pawn ignores it (mirrors how
+  // mobs skip Collapsed pawns via nearestPawn's skipDowned, and combatService already disengages from a
+  // downed mob rather than beat it). Only an aggressive pawn — the "finisher" analog — still engages it.
+  const ignoreDowned = stance !== 'aggressive';
   const px = pawn.position.x;
   const py = pawn.position.y;
   let best: Mob | null = null;
   let bestDist = Infinity;
   // Pre-filtered hostile subset (computed once per tick), not the full mob list.
   for (const m of mobSubsets(gs).hostiles) {
+    if (ignoreDowned && m.state === 'Collapsed') continue;
     const d = chebyshev(px, py, m.x, m.y);
     if (d <= range && d < bestDist) {
       best = m;

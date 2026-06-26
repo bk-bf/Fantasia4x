@@ -49,6 +49,7 @@ import { rng } from '../core/rng';
 import { chebyshev } from '../core/distance';
 import { clamp } from '../core/math';
 import { perTick } from '../core/time';
+import { ticksFromGameHours } from '../services/EnvironmentService';
 // P-4: the body-part anatomy table + selection helpers moved to core/BodyParts. Re-export the two
 // symbols external code imported from Combat (PawnHealth, EntityService, Pawns) so they're unchanged.
 import {
@@ -1133,7 +1134,10 @@ class CombatServiceImpl implements CombatService {
     if (rng.random() >= chance) return state;
 
     const timers = { ...(target.conditionTimers ?? {}) };
-    timers[eff.condition] = Math.max(timers[eff.condition] ?? 0, eff.durationTurns);
+    timers[eff.condition] = Math.max(
+      timers[eff.condition] ?? 0,
+      ticksFromGameHours(eff.durationHours)
+    );
     const transientConditions = (target.transientConditions ?? []).includes(eff.condition)
       ? target.transientConditions!
       : [...(target.transientConditions ?? []), eff.condition];
