@@ -307,6 +307,12 @@ class AudioServiceImpl {
   }
 
   private fadeBed(bed: BedState, target: number): void {
+    // Clamp the gain to [0,1] FIRST. Weather beds arrive with a zoom-out boost that can exceed 1
+    // (AudioController's weatherMul); leaving it >1 makes `target * bus.ambient` saturate at Howler's
+    // 1.0 ceiling, so the Ambient slider couldn't quiet rain/wind near the top of its range. Clamping
+    // first keeps the bus scaling linear across the whole slider (and bed.target — read back by
+    // setVolumes on a slider drag — stays ≤1 too).
+    target = Math.max(0, Math.min(1, target));
     bed.target = target;
     const to = target * this.bus.ambient;
     if (target > 0 && !bed.playing) {
