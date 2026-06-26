@@ -91,6 +91,12 @@
               contents={inst.contents ?? null}
               onDrop={() => dropInstance(inst)}
             />
+          {:else}
+            <!-- No def for this id — surface it LOUDLY rather than skipping silently. The raw id is
+                 shown on purpose: it's a data bug (a dangling itemId) and the id is the only clue. -->
+            <div class="card unknown-card" title="No items.jsonc entry for this id — data bug.">
+              ⚠ unknown item<br /><code>{inst.itemId}</code>
+            </div>
           {/if}
         {/if}
       {/each}
@@ -110,6 +116,11 @@
             onDrop={() => dropItem(itemId)}
             dropTitle="Drop now — put this stack down on the pawn's tile."
           />
+        {:else}
+          <!-- Loud fallback for a dangling bulk id (see above). Never silently drop carried goods. -->
+          <div class="card unknown-card" title="No items.jsonc entry for this id — data bug.">
+            ⚠ unknown item<br /><code>{itemId}</code> ×{qty}
+          </div>
         {/if}
       {/each}
     </div>
@@ -143,6 +154,23 @@
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 4px;
     padding: 0 2px;
+  }
+
+  /* Loud fallback for a carried id with no items.jsonc def — a data bug made visible. */
+  .unknown-card {
+    border: 1px solid var(--neg, #e05a5a);
+    background: var(--bg-panel);
+    padding: 4px 6px 5px;
+    min-height: 42px;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.68rem;
+    color: var(--neg, #e05a5a);
+    line-height: 1.3;
+    overflow: hidden;
+  }
+  .unknown-card code {
+    color: var(--text, #ccc);
+    word-break: break-all;
   }
 
   /* The carried-colonist card — a person, not an item, so it shows no stat panel. */
