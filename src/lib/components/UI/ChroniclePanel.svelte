@@ -302,7 +302,7 @@
     cursor: default;
   }
 
-  /* ── Collapsed strip (minimised) — a thin bar with a restore arrow + vertical label. The right-panel
+  /* ── Collapsed strip (minimised) — a thin bar with just the restore arrow. The right-panel
      column is narrowed to match by +page.svelte (.right-panel.minimized). ── */
   .panel.collapsed {
     align-items: center;

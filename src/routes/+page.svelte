@@ -452,7 +452,7 @@
     flex-direction: column;
   }
 
-  /* Minimised sidebars collapse to a thin strip (just the restore arrow + vertical label inside),
+  /* Minimised sidebars collapse to a thin strip (just the restore arrow inside),
      handing the freed width to the map. The panel renders its own collapsed view (ResourceSidebar /
      ChroniclePanel); here we only shrink the column. */
   .left-panel.minimized,
