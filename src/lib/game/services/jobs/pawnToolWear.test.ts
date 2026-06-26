@@ -41,7 +41,7 @@ describe('wearWorkingPawnTool — carried + equipped tools', () => {
 
   it('still wears an EQUIPPED tool (preferred over the pack)', () => {
     const out = wearWorkingPawnTool('h', 'woodcutting', stateWith(equippedAxe(30)));
-    expect(out.pawns[0].equipment.mainHand.durability).toBe(28);
+    expect(out.pawns[0].equipment.mainHand?.durability).toBe(28);
   });
 
   it('is a no-op with no matching tool (bare hands)', () => {

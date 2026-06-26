@@ -88,6 +88,7 @@
               quality={inst.quality}
               durability={inst.durability}
               maxDurability={def.maxDurability ?? 100}
+              contents={inst.contents ?? null}
               onDrop={() => dropInstance(inst)}
             />
           {/if}
