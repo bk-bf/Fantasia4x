@@ -18,7 +18,7 @@
   import { gameState, currentWeather } from '$lib/stores/gameState';
   import { combatSounds } from '$lib/stores/combatSounds';
   import { masterVolume, musicVolume, sfxVolume, ambientVolume } from '$lib/stores/uiPrefs';
-  import { cameraViewport, cameraTileSize } from '$lib/stores/cameraView';
+  import { cameraViewport, cameraTileSize, cameraZoomRange } from '$lib/stores/cameraView';
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
   import { getCreatureById } from '$lib/game/core/Creatures';
   import { jobService } from '$lib/game/services/JobService';
@@ -90,7 +90,8 @@
   // ── Ambient zoom balance ──
   // "Detail" beds (local critters/foliage) fade out as you zoom OUT; "weather" beds (wind/rain) stay
   // and get a little louder — so the fully zoomed-out world is just wind & rain, and zooming in brings
-  // back birdsong / crickets / forest. Ramp reuses the ZOOM_REF band: detail = 0 at/below ZOOM_REF_LOW.
+  // back birdsong / crickets / forest. The balance follows zoomDetail() — a log ramp across the full
+  // live zoom range — so the mix glides the whole way instead of only shifting near full zoom-out.
   const WEATHER_BEDS = new Set<AmbientBed>(['wind', 'rain', 'rain-heavy']);
   const WEATHER_ZOOM_BOOST = 0.3; // weather beds ×(1 + this) when fully zoomed out
   let baseAmbient: AmbientLayers = {}; // weather/time mix (pre zoom-balance), set by the music effect
@@ -311,6 +312,22 @@
   }
 
   /**
+   * Ambient "closeness" 0..1 across the FULL live zoom range — 1 = fully zoomed in (local detail loud),
+   * 0 = whole map on screen (only weather). Normalised against cameraZoomRange (min = whole-map fit,
+   * max = MAX_TILE_W) so it adapts to map size, and LOGARITHMIC because tile-size is perceptually log
+   * (1→2 px is a far bigger zoom step than 39→40 px). The old curve hard-coded a 12–28 px band that sat
+   * in the zoomed-OUT sliver of the range, so the mix stayed flat through most of the wheel and only the
+   * forest/birds dropped at the very end; this glides the detail/weather balance evenly the whole way.
+   */
+  function zoomDetail(tile: number): number {
+    const { min, max } = get(cameraZoomRange);
+    const lo = Math.max(1, min);
+    if (max <= lo) return 1;
+    const t = Math.max(lo, Math.min(max, tile));
+    return (Math.log(t) - Math.log(lo)) / (Math.log(max) - Math.log(lo));
+  }
+
+  /**
    * Apply the zoom balance to the base ambient mix and push it to the engine. Zoomed out → local
    * "detail" beds (birds/crickets/forest) fade to silence and the weather beds (wind/rain) swell, so
    * the whole-map view is just weather; zooming in restores the full soundscape.
@@ -319,8 +336,7 @@
     // Menu: play the full weather/time mix as a cinematic backdrop (no zoom balance — the title screen
     // has no player camera to scale against). In-game applies the detail/weather zoom balance below.
     if (isMenu) return void audioService.setAmbient(baseAmbient);
-    const tile = get(cameraTileSize);
-    const detail = Math.max(0, Math.min(1, (tile - ZOOM_REF_LOW) / (ZOOM_REF_HIGH - ZOOM_REF_LOW)));
+    const detail = zoomDetail(get(cameraTileSize));
     const weatherMul = 1 + (1 - detail) * WEATHER_ZOOM_BOOST;
     const out: AmbientLayers = {};
     for (const key of Object.keys(baseAmbient) as AmbientBed[]) {

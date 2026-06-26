@@ -27,7 +27,11 @@ import {
 } from './manifest';
 
 const MUSIC_FADE_MS = 2200;
-const AMBIENT_FADE_MS = 1600;
+// Time constant for the ambient-bed gain smoother (exponential glide, see ensureSmoothing). The bed
+// volume reaches ~95% of a new target in ~3×TAU. This REPLACES the old per-tick Howler.fade() — that
+// fade was restarted every ambient tick (~400 ms) with a long 1600 ms duration, so it never settled and
+// stuttered ("fires in batches" / chops). A frame-stepped glide tracks the zoom mix smoothly instead.
+const AMBIENT_SMOOTH_TAU_MS = 320;
 const MAX_CONCURRENT_SFX = 3; // hard ceiling on simultaneously-playing creature one-shots
 
 // Scenes that replace the current track MID-SONG (fade out + swap). Everything else waits for the
@@ -70,7 +74,8 @@ export const nowPlaying = writable<NowPlaying>({
 
 interface BedState {
   howl: Howl;
-  target: number; // 0–1 bed gain (pre-sfx-bus)
+  target: number; // 0–1 bed gain we're gliding TOWARD (pre-ambient-bus)
+  vol: number; // 0–1 bed gain RIGHT NOW (smoothed toward target each frame)
   playing: boolean;
 }
 
@@ -89,6 +94,8 @@ class AudioServiceImpl {
   // ── Ambient channel ──
   private beds = new Map<AmbientBed, BedState>();
   private fireBed: BedState | null = null; // looping campfire crackle (lit fire buildings)
+  private rafId: number | null = null; // running bed-gain smoother (rAF handle), null when idle
+  private lastRafTs = 0;
 
   // ── Creature SFX (intermittent one-shots) ──
   private sfxHowls = new Map<string, Howl>(); // cached per clip url
@@ -115,9 +122,10 @@ class AudioServiceImpl {
     // Re-apply per-channel gains immediately (no fade — slider drags should track live).
     if (this.musicHowl) this.musicHowl.volume(this.bus.music);
     for (const bed of this.beds.values()) {
-      if (bed.playing) bed.howl.volume(bed.target * this.bus.ambient);
+      if (bed.playing) bed.howl.volume(Math.min(1, bed.vol) * this.bus.ambient);
     }
-    if (this.fireBed?.playing) this.fireBed.howl.volume(this.fireBed.target * this.bus.ambient);
+    if (this.fireBed?.playing)
+      this.fireBed.howl.volume(Math.min(1, this.fireBed.vol) * this.bus.ambient);
     this.publish();
   }
 
@@ -216,6 +224,7 @@ class AudioServiceImpl {
       this.fireBed = {
         howl: new Howl({ src: [FIRE_LOOP], html5: false, loop: true, volume: 0 }),
         target: 0,
+        vol: 0,
         playing: false
       };
     }
@@ -224,6 +233,10 @@ class AudioServiceImpl {
 
   /** Stop everything and release the Howls (e.g. on teardown). */
   dispose(): void {
+    if (this.rafId != null && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(this.rafId);
+    }
+    this.rafId = null;
     this.musicHowl?.unload();
     this.musicHowl = null;
     this.currentTrack = null;
@@ -300,7 +313,7 @@ class AudioServiceImpl {
     let bed = this.beds.get(id);
     if (!bed) {
       const howl = new Howl({ src: [AMBIENT_FILES[id]], html5: false, loop: true, volume: 0 });
-      bed = { howl, target: 0, playing: false };
+      bed = { howl, target: 0, vol: 0, playing: false };
       this.beds.set(id, bed);
     }
     return bed;
@@ -308,25 +321,56 @@ class AudioServiceImpl {
 
   private fadeBed(bed: BedState, target: number): void {
     // Clamp the gain to [0,1] FIRST. Weather beds arrive with a zoom-out boost that can exceed 1
-    // (AudioController's weatherMul); leaving it >1 makes `target * bus.ambient` saturate at Howler's
+    // (AudioController's weatherMul); leaving it >1 makes `vol * bus.ambient` saturate at Howler's
     // 1.0 ceiling, so the Ambient slider couldn't quiet rain/wind near the top of its range. Clamping
-    // first keeps the bus scaling linear across the whole slider (and bed.target — read back by
-    // setVolumes on a slider drag — stays ≤1 too).
+    // first keeps the bus scaling linear across the whole slider.
     target = Math.max(0, Math.min(1, target));
     bed.target = target;
-    const to = target * this.bus.ambient;
     if (target > 0 && !bed.playing) {
+      // Start silent and let the smoother glide it up — no abrupt Howler fade to restart/stutter.
       bed.playing = true;
+      bed.vol = 0;
+      bed.howl.volume(0);
       bed.howl.play();
-      bed.howl.fade(0, to, AMBIENT_FADE_MS);
-    } else if (bed.playing) {
-      // Already playing: glide toward `to` (including 0) but NEVER pause. Pausing on near-zero gain
-      // made a bed hovering at a zoom threshold pause → re-play → swell up from 0 on every crossing,
-      // which sounds like the ambience "firing in batches" / chopping. It rests silently at 0 instead
-      // (publish() filters target>0 so it leaves the now-playing list); dispose() frees the voices.
-      bed.howl.fade(bed.howl.volume(), to, AMBIENT_FADE_MS);
     }
+    // The frame-stepped smoother does the actual gliding (toward `target`, including down to 0, where it
+    // pauses once it bottoms out). Just make sure it's running.
+    this.ensureSmoothing();
     this.publish();
+  }
+
+  /**
+   * Single requestAnimationFrame loop that glides every bed's live `vol` toward its `target` and writes
+   * `vol * bus.ambient` straight to Howler. Exponential smoothing (frame-rate independent) so the
+   * zoom/weather mix tracks continuously instead of through overlapping per-tick fades. A bed that
+   * bottoms out (target 0, vol ~0) is paused to free the voice; it glides back up from 0 if re-wanted,
+   * with no replay-swell. The loop stops itself when nothing is sounding.
+   */
+  private ensureSmoothing(): void {
+    if (this.rafId != null || typeof requestAnimationFrame === 'undefined') return;
+    this.lastRafTs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const step = (ts: number) => {
+      const dt = Math.min(100, Math.max(0, ts - this.lastRafTs)); // clamp long gaps (tab unfocus)
+      this.lastRafTs = ts;
+      const k = 1 - Math.exp(-dt / AMBIENT_SMOOTH_TAU_MS);
+      let active = false;
+      const glide = (bed: BedState) => {
+        if (!bed.playing) return;
+        bed.vol += (bed.target - bed.vol) * k;
+        if (bed.target <= 0 && bed.vol <= 1e-3) {
+          bed.vol = 0;
+          bed.playing = false;
+          bed.howl.pause();
+          return;
+        }
+        bed.howl.volume(Math.min(1, bed.vol) * this.bus.ambient);
+        active = true;
+      };
+      for (const bed of this.beds.values()) glide(bed);
+      if (this.fireBed) glide(this.fireBed);
+      this.rafId = active ? requestAnimationFrame(step) : null;
+    };
+    this.rafId = requestAnimationFrame(step);
   }
 }
 
