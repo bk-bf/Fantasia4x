@@ -1088,6 +1088,53 @@
     "weightKg": 1,
     "volumeL": 1
   },
+  // ── Portable water containers (nested liquid: `container` def + per-instance `contents` fill). Filled
+  //    at a drink zone; pawns sip from a carried one, and a filled container supplies a recipe's water. ─
+  {
+    "id": "waterskin",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Waterskin",
+    "type": "tool",
+    "category": "storage",
+    "description": "A stitched leather bag for water — light, and holds a fair few sips. Fill it at a drink zone and carry it so you needn't trek to the river every time you're parched.",
+    "color": "#7A5230",
+    "amount": 0,
+    "weightKg": 0.4,
+    "volumeL": 0.5,
+    "maxDurability": 80,
+    "deteriorationRate": 0.02,
+    "container": { "holds": "water", "capacityL": 3 }
+  },
+  {
+    "id": "flask",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Clay Flask",
+    "type": "tool",
+    "category": "storage",
+    "description": "A small stoppered flask of fired clay. Less than a skin, but cheap and sturdy.",
+    "color": "#A9794A",
+    "amount": 0,
+    "weightKg": 0.5,
+    "volumeL": 0.4,
+    "maxDurability": 60,
+    "deteriorationRate": 0.01,
+    "container": { "holds": "water", "capacityL": 1.5 }
+  },
+  {
+    "id": "jug",
+    "charSpans": [ {"sheet": "items", "id": 24} ],
+    "name": "Water Jug",
+    "type": "material",
+    "category": "storage",
+    "description": "A big-bellied clay jug — heavy when full, but holds enough water for a round of cooking and a round of drinks. Best kept in store and topped up.",
+    "color": "#B98B52",
+    "amount": 0,
+    "weightKg": 2,
+    "volumeL": 4,
+    "maxDurability": 70,
+    "deteriorationRate": 0.01,
+    "container": { "holds": "water", "capacityL": 10 }
+  },
   {
     "id"               : "animal_fat",
     "charSpans"        : [ {"sheet": "items", "id": 71} ],

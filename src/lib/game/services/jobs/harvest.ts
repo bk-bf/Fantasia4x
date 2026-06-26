@@ -306,7 +306,10 @@ export function complete(job: Job, gs: GameState): GameState {
   return state;
 }
 
-/** Decrement the working pawn's equipped tool for `workCategory`; unequip it (broke) at ≤0 durability.
+/** Decrement the working pawn's tool for `workCategory` and drop it (broke) at ≤0 durability. The tool
+ *  may be EQUIPPED or just CARRIED in the pack (`inventory.instances`) — both pass the tool gate and
+ *  boost work (PawnStatService.heldToolBoost reads both), so both must wear. A carried axe used to fell
+ *  trees forever without ever dulling because only the equipment slot was checked here.
  *  Shared with craft jobs (ADR-009 step 2 — craft-tool wear). */
 export function wearWorkingPawnTool(
   pawnId: string,
@@ -314,29 +317,57 @@ export function wearWorkingPawnTool(
   gs: GameState
 ): GameState {
   const pawn = gs.pawns.find((p) => p.id === pawnId);
-  if (!pawn?.equipment) return gs;
-  const slot = (Object.keys(pawn.equipment) as (keyof typeof pawn.equipment)[]).find((s) => {
-    const inst = pawn.equipment[s];
-    if (!inst) return false;
-    const def = itemService.getItemById(inst.itemId);
+  if (!pawn) return gs;
+  const matchesCategory = (itemId: string): boolean => {
+    const def = itemService.getItemById(itemId);
     return (
       def?.type === 'tool' &&
       (def.processingType?.includes(workCategory) || def.category === workCategory)
     );
-  });
-  if (!slot) return gs; // bare hands / tool not equipped — nothing to wear
-  const inst = pawn.equipment[slot]!;
-  const def = itemService.getItemById(inst.itemId);
-  const loss = def?.durabilityLossPerAction ?? 2;
-  const nextDur = (inst.durability ?? def?.maxDurability ?? 40) - loss;
+  };
+  const nextDurability = (inst: { itemId: string; durability?: number }): number => {
+    const def = itemService.getItemById(inst.itemId);
+    return (inst.durability ?? def?.maxDurability ?? 40) - (def?.durabilityLossPerAction ?? 2);
+  };
+
+  // Prefer an equipped tool (the belt/main-hand path); when broken it's unequipped → the per-pawn gate
+  // sees no tool → the pawn auto-grabs a replacement from stock.
+  const slot =
+    pawn.equipment &&
+    (Object.keys(pawn.equipment) as (keyof typeof pawn.equipment)[]).find((s) => {
+      const inst = pawn.equipment[s];
+      return inst && matchesCategory(inst.itemId);
+    });
+  if (slot) {
+    const inst = pawn.equipment[slot]!;
+    const nextDur = nextDurability(inst);
+    return {
+      ...gs,
+      pawns: gs.pawns.map((p) => {
+        if (p.id !== pawnId) return p;
+        const equipment = { ...p.equipment };
+        if (nextDur <= 0) delete equipment[slot];
+        else equipment[slot] = { ...inst, durability: nextDur };
+        return { ...p, equipment };
+      })
+    };
+  }
+
+  // Else wear a tool CARRIED in the pack. When it breaks, remove the instance so the gate re-fires and
+  // a fresh tool is fetched (same lifecycle as the unequip-on-break above).
+  const instances = pawn.inventory?.instances ?? [];
+  const invIdx = instances.findIndex((i) => matchesCategory(i.itemId));
+  if (invIdx < 0) return gs; // bare hands / no matching tool — nothing to wear
+  const inst = instances[invIdx];
+  const nextDur = nextDurability(inst);
   return {
     ...gs,
     pawns: gs.pawns.map((p) => {
       if (p.id !== pawnId) return p;
-      const equipment = { ...p.equipment };
-      if (nextDur <= 0) delete equipment[slot];
-      else equipment[slot] = { ...inst, durability: nextDur };
-      return { ...p, equipment };
+      const next = [...(p.inventory?.instances ?? [])];
+      if (nextDur <= 0) next.splice(invIdx, 1);
+      else next[invIdx] = { ...inst, durability: nextDur };
+      return { ...p, inventory: { ...p.inventory, instances: next } };
     })
   };
 }

@@ -40,6 +40,13 @@ export interface ItemInstance {
   famedHistory?: string;
   famedStatMult?: number;
   famedEnchants?: string[];
+  /**
+   * Liquid-container fill (waterskin/flask/jug): UNITS of this container def's `container.holds` item
+   * currently inside (0 / undefined = empty). For water (1 L/unit) it's the litres held. Drives the
+   * fill bar and how much the container can dispense (drinking / a recipe's `water` input). Only
+   * meaningful on `container` items.
+   */
+  contents?: number;
 }
 
 export interface PawnInventory {
@@ -282,6 +289,13 @@ export interface Item {
    * wheelbarrow/handcart held in hand). Raises the pawn's normal weight/volume carry budget.
    */
   inventoryBonus?: { weightKg: number; volumeL: number };
+  /**
+   * Liquid-container items (waterskin/flask/jug). `holds` is the item id it carries (e.g. "water");
+   * `capacityL` the max VOLUME of contents in litres — the held item's `volumeL` sets how many units fit
+   * (water is 1 L/unit, so capacityL ≈ max units). A filled instance tracks its level in
+   * `ItemInstance.contents`, and the contents' weight (held units × held weightKg) rides on top of the
+   * empty container's own `weightKg` for carry/encumbrance. */
+  container?: { holds: string; capacityL: number };
   /** Durability lost per combat hit when this item is equipped. */
   durabilityLossPerCombatHit?: number;
   // Future SEASONS_WEATHER stubs (no logic yet, just typed):
