@@ -31,7 +31,13 @@ import { findNearestDepositPoint, depositInventory, pickUpFromTile } from './paw
 import { nearestShelterTile } from './pawn/handlers/rescue';
 import { isAdjacent } from './pawn/pawnQueries';
 import { tryAssignPath } from './pawn/pawnHelpers';
-import { pickUpPawn, dropCarriedPawn, reconcileCarriedPawns, freeDropTileNear } from './pawn/carry';
+import {
+  pickUpPawn,
+  dropCarriedPawn,
+  reconcileCarriedPawns,
+  freeDropTileNear,
+  separateStackedBodies
+} from './pawn/carry';
 import { tendPatient, hasUntendedWound } from '../services/jobs/caretake';
 import { equipDropToPawn, carryDropToInventory } from '../core/PawnEquipment';
 import { jobService } from '../services/JobService';
@@ -882,7 +888,7 @@ export class GameEngineImpl implements GameEngine {
         const here = pawn.position;
         // Set the body down beside the carrier (never ON it) — a free, walkable tile.
         const setDownBeside = () => {
-          const t = freeDropTileNear(gs, here.x, here.y, pawn.id, target.victimId);
+          const t = freeDropTileNear(gs, here.x, here.y, target.victimId);
           gs = dropCarriedPawn(gs, pawn.id, target.victimId, t.x, t.y);
         };
         if (!victim || victim.isAlive === false || !victim.position) {
@@ -995,6 +1001,13 @@ export class GameEngineImpl implements GameEngine {
     // re-ordered, dead) so a rescued pawn can never vanish. Cheap no-op when no one is carrying anyone.
     tp('p.reconcileCarry', () => {
       this.gameState = reconcileCarriedPawns(this.gameState!);
+    });
+    // One-body-per-tile safety net: nudge apart any two bodies sharing a tile (a stale save or a future
+    // slip past the set-down/movement rules). Throttled — overlaps are rare and resolving within ~0.5 s
+    // is fine — so the O(bodies) scan + its Set don't allocate on the peace path every tick.
+    tp('p.deOverlap', () => {
+      if (((this.gameState!.turn ?? 0) & 31) === 0)
+        this.gameState = separateStackedBodies(this.gameState!);
     });
   }
 

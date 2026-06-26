@@ -6,7 +6,7 @@
 import type { GameState } from '../../../core/types';
 import { manhattan } from '../../../core/distance';
 import { REST_TYPES } from '../pawnHelpers';
-import { tileHasPawn } from '../carry';
+import { tileHasBody } from '../carry';
 
 /** Nearest COMPLETE rest building (bed/shelter) tile to (x,y) that is NOT already occupied by another
  *  pawn — a shelter holds one body, so a carrier never delivers onto an occupied bed (which glitched
@@ -20,7 +20,7 @@ export function nearestShelterTile(
   let bestD = Infinity;
   for (const b of gs.buildings ?? []) {
     if (b.status !== 'complete' || !REST_TYPES.includes(b.type)) continue;
-    if (tileHasPawn(gs, b.x, b.y)) continue; // bed taken — one body per shelter
+    if (tileHasBody(gs, b.x, b.y)) continue; // bed taken (pawn or mob) — one body per shelter
     const d = manhattan(b.x, b.y, x, y);
     if (d < bestD) {
       bestD = d;

@@ -491,7 +491,7 @@ export const COMMANDS: Record<string, Cmd> = {
     if (p.itemId === CARRIED_PAWN_ITEM) {
       const victim = s.pawns.find((pw) => pw.carriedBy === p.pawnId);
       if (!victim) return s;
-      const tile = freeDropTileNear(s, pawn.position.x, pawn.position.y, p.pawnId, victim.id);
+      const tile = freeDropTileNear(s, pawn.position.x, pawn.position.y, victim.id);
       let gs = dropCarriedPawn(s, p.pawnId, victim.id, tile.x, tile.y);
       // Clear the rescue order so the carrier doesn't immediately walk back and re-grab the body.
       gs = {

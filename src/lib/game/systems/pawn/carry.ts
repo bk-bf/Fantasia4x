@@ -24,11 +24,13 @@ export function isCarriedPawnInstance(inst: ItemInstance): boolean {
   return inst.itemId === CARRIED_PAWN_ITEM;
 }
 
-/** Is a LIVING, non-carried pawn (other than the listed ids) standing on (x,y)? A shelter/bed holds
- *  ONE body, so a tile with someone already on it is full — both the carry destination and the set-down
- *  tile must avoid these so two pawns never glitch onto the same cell. */
-export function tileHasPawn(gs: GameState, x: number, y: number, except: string[] = []): boolean {
-  return gs.pawns.some(
+/** Is a solid BODY — a living, non-carried pawn OR a non-corpse mob — standing on (x,y), other than the
+ *  listed ids? A tile holds at most ONE body (the same rule OccupancyService enforces for movement), so
+ *  any set-down/destination tile must avoid these so a pawn or mob never glitches onto a cell another
+ *  body already holds. The mob arm is what was missing: a tile under a downed/sleeping wolf used to read
+ *  as free, so a carried colonist got laid down on top of it. */
+export function tileHasBody(gs: GameState, x: number, y: number, except: string[] = []): boolean {
+  const onPawn = gs.pawns.some(
     (p) =>
       p.isAlive !== false &&
       !p.carriedBy &&
@@ -36,20 +38,25 @@ export function tileHasPawn(gs: GameState, x: number, y: number, except: string[
       p.position?.x === x &&
       p.position?.y === y
   );
+  if (onPawn) return true;
+  return (gs.mobs ?? []).some(
+    (m) => m.state !== 'Corpse' && !except.includes(m.id) && m.x === x && m.y === y
+  );
 }
 
-/** Nearest walkable, unoccupied tile to (x,y) — (x,y) itself when free, else a spiral outward. Used to
- *  set a carried colonist down without stacking it on top of another pawn. Falls back to (x,y). */
+/** Nearest walkable tile with NO body to (x,y) — (x,y) itself when clear, else a spiral outward. Used to
+ *  set a carried colonist down without stacking it on another body. The carrier is NOT excluded (it
+ *  occupies its own tile), so the body always lands BESIDE the carrier, never under it. Falls back to
+ *  (x,y) only when nothing free is found within the search radius. */
 export function freeDropTileNear(
   gs: GameState,
   x: number,
   y: number,
-  carrierId: string,
   victimId: string
 ): { x: number; y: number } {
-  const except = [carrierId, victimId];
+  const except = [victimId];
   const free = (tx: number, ty: number) =>
-    gs.worldMap?.[ty]?.[tx]?.walkable && !tileHasPawn(gs, tx, ty, except);
+    gs.worldMap?.[ty]?.[tx]?.walkable && !tileHasBody(gs, tx, ty, except);
   if (free(x, y)) return { x, y };
   for (let r = 1; r <= 6; r++) {
     for (let dy = -r; dy <= r; dy++) {
@@ -153,8 +160,8 @@ export function reconcileCarriedPawns(gs: GameState): GameState {
     const carrier = byId.get(victim.carriedBy);
     if (!isActivelyCarrying(carrier, victim.id)) {
       const base = carrier?.position ?? victim.position ?? { x: 0, y: 0 };
-      // Set down on a FREE tile near the carrier so the body never lands on top of another pawn.
-      const at = freeDropTileNear(gs, base.x, base.y, victim.carriedBy, victim.id);
+      // Set down on a FREE tile near the carrier so the body never lands on top of another body.
+      const at = freeDropTileNear(gs, base.x, base.y, victim.id);
       gs = dropCarriedPawn(gs, victim.carriedBy, victim.id, at.x, at.y);
     }
   }
@@ -177,5 +184,55 @@ export function reconcileCarriedPawns(gs: GameState): GameState {
         : { ...p, inventory: { ...p.inventory!, instances: kept } };
     })
   };
+  return gs;
+}
+
+/**
+ * De-overlap safety net — enforce the one-body-per-tile invariant at runtime. The set-down rules
+ * (freeDropTileNear/tileHasBody) and movement (OccupancyService) prevent NEW stacks, but a pre-existing
+ * save (the wolf-on-colonist the player reported) or any future slip could still leave two bodies on one
+ * tile. Each call finds the first overcrowded tile and nudges ONE intruder onto the nearest free walkable
+ * tile. Pawns are scanned before mobs, so the first body on a tile keeps its spot (a resting colonist
+ * stays) and the wandering/downed mob is the one moved; the moved body drops its path so its FSM re-plans.
+ * One nudge per call keeps it collision-free (a stack of N clears over N−1 calls) and cheap. Returns the
+ * state unchanged when nothing overlaps — the common case — so the caller can throttle it freely.
+ */
+export function separateStackedBodies(gs: GameState): GameState {
+  const seen = new Set<string>();
+  // Pawns first: a body already on a tile stays; a later body on the same tile is the one relocated.
+  for (const p of gs.pawns) {
+    if (p.isAlive === false || p.carriedBy || !p.position) continue;
+    const k = `${p.position.x},${p.position.y}`;
+    if (!seen.has(k)) {
+      seen.add(k);
+      continue;
+    }
+    const at = freeDropTileNear(gs, p.position.x, p.position.y, p.id);
+    if (at.x === p.position.x && at.y === p.position.y) continue; // boxed in — leave rather than churn
+    return {
+      ...gs,
+      pawns: gs.pawns.map((q) =>
+        q.id === p.id
+          ? { ...q, position: { x: at.x, y: at.y }, path: [], pathIndex: 0, isMoving: false }
+          : q
+      )
+    };
+  }
+  for (const m of gs.mobs ?? []) {
+    if (m.state === 'Corpse') continue;
+    const k = `${m.x},${m.y}`;
+    if (!seen.has(k)) {
+      seen.add(k);
+      continue;
+    }
+    const at = freeDropTileNear(gs, m.x, m.y, m.id);
+    if (at.x === m.x && at.y === m.y) continue;
+    return {
+      ...gs,
+      mobs: (gs.mobs ?? []).map((q) =>
+        q.id === m.id ? { ...q, x: at.x, y: at.y, path: [], pathIndex: 0 } : q
+      )
+    };
+  }
   return gs;
 }
