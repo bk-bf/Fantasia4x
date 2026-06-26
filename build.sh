@@ -12,12 +12,16 @@
 #                                     no installer packaging (dist-electron/linux-unpacked/)
 #   ./build.sh --dry                pre-flight: production static build + scan for dev-only /src asset
 #                                     paths that 404 once packaged. No packaging — fast; run during dev.
-#   ./build.sh --push               cut a release via CI: autotag (git-cliff) + push → GitHub Actions
+#   ./build.sh --push               cut a release via CI: autotag (patch bump) + push → GitHub Actions
 #                                     builds both OSes and publishes the GitHub Release.
 #   ./build.sh --local --push       cut a release ENTIRELY on this machine: build Linux + Windows,
 #                                     git-cliff changelog, autotag, and gh-publish the installers.
 #                                     (CI's guard job skips the redundant cloud build for this tag.)
-#                                     Override the computed version with RELEASE_TAG=vX.Y.Z.
+#   ./build.sh --push --tag v0.2.0  set the version/tag manually (any --push mode) instead of the
+#                                     automatic patch bump. RELEASE_TAG=vX.Y.Z env var works too.
+#
+# Autotag bumps the PATCH of the last v* tag — one release per ~100 commits (v0.1.0 → v0.1.1 → …).
+# Use --tag to jump a minor/major (e.g. --tag v0.2.0).
 #
 # WASM is rebuilt only if missing; delete src/lib/{spatial,sim}-core-pkg to force a fresh compile.
 set -euo pipefail
@@ -34,6 +38,7 @@ WINDOWS=false
 LOCAL=false
 DRY=false
 PUSH=false
+TAG_ARG=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --linux) LINUX=true ;;
@@ -41,6 +46,11 @@ while [[ $# -gt 0 ]]; do
     --local) LOCAL=true ;;
     --dry) DRY=true ;;
     --push) PUSH=true ;;
+    --tag | --version)
+      TAG_ARG="${2:-}"
+      [[ -n "$TAG_ARG" ]] || { echo "build.sh: --tag needs a version, e.g. --tag v0.2.0" >&2; exit 1; }
+      shift
+      ;;
     -h | --help) usage; exit 0 ;;
     *) echo "build.sh: unknown option '$1' (try --help)" >&2; exit 1 ;;
   esac
@@ -73,13 +83,18 @@ fi
 # changelog → tag → gh release + upload). WITHOUT --local it hands off to CI (tag + push;
 # .github/workflows/build.yml builds + publishes). A guard job in that workflow skips the redundant
 # cloud build when a published release already exists for the tag, so the local path never double-fires.
-RELEASE_TAG_OVERRIDE="${RELEASE_TAG:-}"
-if $PUSH; then
-  command -v git-cliff >/dev/null 2>&1 || {
-    echo "build.sh: --push needs git-cliff (autotag + changelog). Install: sudo pacman -S git-cliff" >&2; exit 1; }
-  command -v gh >/dev/null 2>&1 || { echo "build.sh: --push needs the GitHub CLI 'gh'." >&2; exit 1; }
-  gh auth status >/dev/null 2>&1 || { echo "build.sh: gh isn't authenticated — run 'gh auth login'." >&2; exit 1; }
+# Next version = the last v* tag with its PATCH bumped by one (v0.1.0 → v0.1.1). --tag / RELEASE_TAG
+# override this for a manual minor/major jump. First release (no tag yet) starts at v0.1.0.
+next_patch_tag() {
+  local last ver ma mi pa
+  last="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo '')"
+  if [[ -z "$last" ]]; then echo "v0.1.0"; return; fi
+  ver="${last#v}"
+  IFS=. read -r ma mi pa <<<"$ver"
+  echo "v${ma:-0}.${mi:-0}.$(( ${pa:-0} + 1 ))"
+}
 
+if $PUSH; then
   BRANCH="$(git rev-parse --abbrev-ref HEAD)"
   if [[ "$BRANCH" != "main" ]]; then
     read -rp "build.sh: on '$BRANCH', not main. Tag a release from here anyway? [y/N] " a
@@ -89,12 +104,11 @@ if $PUSH; then
     echo "build.sh: working tree has uncommitted changes — commit or stash before releasing." >&2; exit 1
   fi
 
-  # Autotag: git-cliff computes the next semver from the conventional commits since the last tag.
-  TAG="${RELEASE_TAG_OVERRIDE:-$(git-cliff --bumped-version 2>/dev/null || true)}"
-  [[ -n "$TAG" ]] || { echo "build.sh: couldn't compute the next version (git-cliff --bumped-version). Set RELEASE_TAG=vX.Y.Z." >&2; exit 1; }
+  # Version: explicit --tag, else RELEASE_TAG env, else the automatic patch bump.
+  TAG="${TAG_ARG:-${RELEASE_TAG:-$(next_patch_tag)}}"
   [[ "$TAG" == v* ]] || TAG="v$TAG"
   if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
-    echo "build.sh: tag $TAG already exists locally. Set RELEASE_TAG=vX.Y.Z to override." >&2; exit 1
+    echo "build.sh: tag $TAG already exists locally. Pass --tag vX.Y.Z to pick another." >&2; exit 1
   fi
 
   LAST_TAG="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo '')"
@@ -102,6 +116,10 @@ if $PUSH; then
   echo "▸ Release ${LAST_TAG:-（first）} → $TAG  ($COMMITS commits)"
 
   if $LOCAL; then
+    command -v git-cliff >/dev/null 2>&1 || {
+      echo "build.sh: --local --push needs git-cliff (changelog). Install: sudo pacman -S git-cliff" >&2; exit 1; }
+    command -v gh >/dev/null 2>&1 || { echo "build.sh: --local --push needs the GitHub CLI 'gh'." >&2; exit 1; }
+    gh auth status >/dev/null 2>&1 || { echo "build.sh: gh isn't authenticated — run 'gh auth login'." >&2; exit 1; }
     echo "  Mode: LOCAL — build Linux + Windows here, then publish to GitHub from this machine."
     LINUX=true; WINDOWS=true   # a release always ships both installers, regardless of --local's usual meaning
   else
