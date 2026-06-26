@@ -6,10 +6,18 @@
  *   - Async: never blocks the main thread.
  *   - Structured clone: stores objects directly (no JSON parse overhead on read).
  *
- * Save model — an OPEN LIST of snapshots, not fixed slots. Each save is one id with three rows:
- *   `save:<id>`  — the stripped GameState
+ * Save model — an OPEN LIST of snapshots, not fixed slots. Each save is one id with up to four rows:
+ *   `save:<id>`  — the stripped GameState MINUS its worldMap (the small, fast-changing dynamic slice)
+ *   `world:<id>` — the stripped worldMap (the heavy, near-static terrain)
  *   `meta:<id>`  — a SaveMeta summary (read by the picker without hydrating the full save)
  *   `log:<id>`   — that save's chronicle (activity log)
+ *
+ * STATIC/DYNAMIC SPLIT — the worldMap is the bulk of a save (tens of thousands of tiles) but is mutated
+ * in place and changes only occasionally (harvest/build/regrowth), tracked by `_terrainRev`. So the 2 s
+ * autosave writes ONLY the dynamic `save:` row (pawns/resources/jobs/…); the heavy `world:` row is
+ * rewritten only when `_terrainRev` (or the worldMap ref) actually changes. This makes the recurring
+ * autosave cost roughly independent of map size. Legacy saves embed the worldMap in the `save:` row;
+ * loadSave falls back to that, and the next autosave splits them apart.
  * There is one ACTIVE save id — the autosave/exit-flush target. New Game mints a fresh id; loading a save
  * makes IT active (so autosave overwrites the save you loaded, per the chosen model). The manual "Save Game"
  * button instead writes a NEW frozen snapshot that never becomes active, so manual saves accumulate as an
@@ -37,15 +45,39 @@ const STORE = 'saves';
 // Key scheme. The colon-prefixed namespaces are how listSaves() enumerates the open save list; the old
 // dash-style fixed-slot keys (`save-0`, `activity-log-0`, …) never collide with these and are migrated away.
 const SAVE_PREFIX = 'save:';
+const WORLD_PREFIX = 'world:';
 const META_PREFIX = 'meta:';
 const LOG_PREFIX = 'log:';
 const saveKey = (id: string) => SAVE_PREFIX + id;
+const worldKey = (id: string) => WORLD_PREFIX + id;
 const metaKey = (id: string) => META_PREFIX + id;
 const logKey = (id: string) => LOG_PREFIX + id;
 
 /** Mint a unique save id (timestamp + short random so two saves in the same millisecond can't collide). */
 function newSaveId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+// World-row dirty tracking for the ACTIVE autosave target. The worldMap is mutated IN PLACE (perf work
+// keeps `worldMapRef=0`) with `_terrainRev` bumping on every real terrain change, so the heavy `world:`
+// row is rewritten ONLY when that rev — or the worldMap reference itself (load/regen) — differs from what
+// we last persisted. Reset whenever the active target changes so the first autosave for it writes a world
+// row. `_savedWorldRef`/`_savedTerrainRev` are `null`/`undefined` until the active save has a world row.
+let _savedWorldRef: unknown = null;
+let _savedTerrainRev: number | undefined;
+const terrainRevOf = (state: GameState): number | undefined =>
+  (state as { _terrainRev?: number })._terrainRev;
+function resetWorldDirty(): void {
+  _savedWorldRef = null;
+  _savedTerrainRev = undefined;
+}
+/** True when the worldMap differs from what we last wrote to the active save's `world:` row. */
+function worldDirty(state: GameState): boolean {
+  return state.worldMap !== _savedWorldRef || terrainRevOf(state) !== _savedTerrainRev;
+}
+function markWorldSaved(state: GameState): void {
+  _savedWorldRef = state.worldMap;
+  _savedTerrainRev = terrainRevOf(state);
 }
 
 // The active save id — what the RUNNING game autosaves into (and reads its chronicle from). Set by the
@@ -55,12 +87,14 @@ let activeSaveId: string | null = null;
 export function setActiveSave(id: string): void {
   activeSaveId = id;
   _activeCommitted = true; // loading an existing save is committed — persist it normally
+  resetWorldDirty(); // new target → first autosave writes its world row
 }
 /** Mint a brand-new active id (New Game, or the --debug empty-DB fallback). Committed by default; the
  *  New-Game flow then uncommits it (setActiveCommitted(false)) until the map is confirmed with GENERATE. */
 export function mintActiveSave(): string {
   activeSaveId = newSaveId();
   _activeCommitted = true;
+  resetWorldDirty();
   return activeSaveId;
 }
 /** Guarantee an active save id exists (mint one if not) — the boot calls this so a fresh game with no
@@ -154,6 +188,7 @@ function hydrateTile(tile: SavedTile): WorldTile {
   return { ...tile, ascii: ' ', gCost: 0, hCost: 0, fCost: 0, parent: null };
 }
 
+/** Legacy combined strip (worldMap embedded) — still used by the one-time localStorage migration. */
 function stripState(state: GameState): unknown {
   return {
     ...state,
@@ -161,10 +196,22 @@ function stripState(state: GameState): unknown {
   };
 }
 
-function hydrateState(raw: GameState): GameState {
+/** The DYNAMIC slice: the whole state minus its worldMap (saved on the fast autosave cadence). */
+function stripDynamic(state: GameState): unknown {
+  const { worldMap: _worldMap, ...rest } = state; // eslint ignoreRestSiblings — worldMap goes to its own row
+  return rest;
+}
+
+/** The STATIC terrain: tiles stripped of runtime-only pathfinding/ascii fields (saved on terrain change). */
+function stripWorld(worldMap: GameState['worldMap']): SavedTile[][] {
+  return worldMap.map((row) => row.map(stripTile));
+}
+
+/** Recombine a dynamic slice + its (stripped) worldMap row into a runtime GameState. */
+function hydrateState(dynamic: GameState, world: SavedTile[][]): GameState {
   return {
-    ...raw,
-    worldMap: (raw.worldMap as unknown as SavedTile[][]).map((row) => row.map(hydrateTile))
+    ...dynamic,
+    worldMap: world.map((row) => row.map(hydrateTile))
   };
 }
 
@@ -319,8 +366,15 @@ export async function loadSave(id?: string): Promise<GameState | null> {
     if (!target) target = (await listSaves())[0]?.id ?? null; // newest, for the menu-bypass boot
     if (!target) return null;
     activeSaveId = target; // the game now autosaves into whatever we loaded
-    const st = await idbGet<GameState>(saveKey(target));
-    if (st) return hydrateState(st);
+    resetWorldDirty(); // fresh target → the first autosave after load (re)writes its world row
+    const dyn = await idbGet<GameState>(saveKey(target));
+    if (!dyn) return null;
+    // New format: the worldMap lives in its own `world:` row. Legacy format: it's still embedded in the
+    // save row (already stripped). Fall back to the embedded copy so old saves keep loading.
+    let world = await idbGet<SavedTile[][]>(worldKey(target));
+    const embedded = (dyn as { worldMap?: SavedTile[][] }).worldMap;
+    if (!world && embedded?.length) world = embedded;
+    if (world) return hydrateState(dyn, world);
   } catch (err) {
     console.warn('[SaveManager] Load failed:', err);
   }
@@ -338,10 +392,15 @@ export async function hasSave(): Promise<boolean> {
   }
 }
 
-/** Delete one save — its state, meta and chronicle. */
+/** Delete one save — its dynamic state, terrain, meta and chronicle. */
 export async function deleteSaveById(id: string): Promise<void> {
   if (!browser) return;
-  await Promise.all([idbDelete(saveKey(id)), idbDelete(metaKey(id)), idbDelete(logKey(id))]);
+  await Promise.all([
+    idbDelete(saveKey(id)),
+    idbDelete(worldKey(id)),
+    idbDelete(metaKey(id)),
+    idbDelete(logKey(id))
+  ]);
 }
 
 /** Wipe EVERY save (and any lingering legacy keys) — the dev hard-reset / wipe-and-reload. */
@@ -404,9 +463,18 @@ export function scheduleSave(state: GameState): void {
     _saveTimer = null;
     const id = activeSaveId; // capture: the target shouldn't drift if it changes mid-idle
     if (!id) return;
-    // Strip + write off the frame-critical path (§D3) — the 38k-tile clone is too heavy to run mid-frame.
+    // Strip + write off the frame-critical path (§D3). The DYNAMIC slice (no worldMap) is small and
+    // written every time; the heavy `world:` row is rewritten only when terrain actually changed —
+    // that's the whole point of the split, so the recurring autosave doesn't re-clone 38k tiles.
     runWhenIdle(() => {
-      idbPut(saveKey(id), stripState(state)).catch((err) => {
+      if (worldDirty(state)) {
+        markWorldSaved(state); // optimistic — cleared on failure so it retries next tick
+        idbPut(worldKey(id), stripWorld(state.worldMap)).catch((err) => {
+          resetWorldDirty();
+          console.warn('[SaveManager] worldMap write failed:', err);
+        });
+      }
+      idbPut(saveKey(id), stripDynamic(state)).catch((err) => {
         console.warn('[SaveManager] IndexedDB write failed:', err);
       });
       idbPut(metaKey(id), buildMeta(state, 'auto')).catch(() => {});
@@ -430,9 +498,24 @@ export function saveGameNow(state: GameState): Promise<void> {
   }
   const id = activeSaveId ?? mintActiveSave();
   idbPut(metaKey(id), buildMeta(state, 'auto')).catch(() => {});
-  return idbPut(saveKey(id), stripState(state)).catch((err) => {
-    console.warn('[SaveManager] IndexedDB write failed:', err);
-  });
+  // Split write. worldDirty() is true here whenever the world row is missing/stale for this id — which
+  // notably includes the autosave-OFF case (scheduleSave never ran, so no world row exists yet), so this
+  // exit flush still lands a complete, loadable save rather than a dynamic slice with no terrain.
+  const writes: Promise<unknown>[] = [
+    idbPut(saveKey(id), stripDynamic(state)).catch((err) => {
+      console.warn('[SaveManager] IndexedDB write failed:', err);
+    })
+  ];
+  if (worldDirty(state)) {
+    markWorldSaved(state);
+    writes.push(
+      idbPut(worldKey(id), stripWorld(state.worldMap)).catch((err) => {
+        resetWorldDirty();
+        console.warn('[SaveManager] worldMap write failed:', err);
+      })
+    );
+  }
+  return Promise.all(writes).then(() => {});
 }
 
 /** Write the current state + chronicle as a manual snapshot under `id` (new or existing). Shared by the
@@ -444,7 +527,12 @@ async function writeSnapshot(
 ): Promise<void> {
   idbPut(metaKey(id), buildMeta(state, 'manual')).catch(() => {});
   if (chronicle && chronicle.length) idbPut(logKey(id), chronicle).catch(() => {});
-  await idbPut(saveKey(id), stripState(state)).catch((err) => {
+  // A manual snapshot is a standalone, frozen checkpoint independent of the active save's world tracking,
+  // so it always carries its own full terrain row (these are infrequent, user-initiated writes).
+  idbPut(worldKey(id), stripWorld(state.worldMap)).catch((err) => {
+    console.warn('[SaveManager] Snapshot worldMap write failed:', err);
+  });
+  await idbPut(saveKey(id), stripDynamic(state)).catch((err) => {
     console.warn('[SaveManager] Snapshot write failed:', err);
   });
 }
