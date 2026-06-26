@@ -83,12 +83,12 @@
             onclick={() => onTogglePin?.(it.itemId)}>{isPinned(it.itemId) ? '★' : '☆'}</button
           >
         {/if}
-        <span class="it-name" title={def.name}>
-          {#if def.charSpans}
-            <SpriteIcon charSpans={def.charSpans} tint={def.color ?? null} px={16} />
-          {/if}
-          <span class="it-text">{def.name}</span>
-        </span>
+        {#if def.charSpans}
+          <div class="icon-wrap">
+            <SpriteIcon charSpans={def.charSpans} tint={def.color ?? null} px={34} />
+          </div>
+        {/if}
+        <span class="it-name" title={def.name}>{def.name}</span>
         <div class="dur-bar" title="{it.durability}/{maxDur}">
           <div
             class="dur-fill"
@@ -159,23 +159,29 @@
     padding: 0 12px;
   }
 
-  .it-name {
+  /* The item tile fills the slot's body so the sprite — not dead space — is the focus. */
+  .icon-wrap {
+    flex: 1;
     display: flex;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    min-height: 0;
+    padding: 2px 0;
+  }
+
+  .it-name {
     font-size: 11px;
     color: var(--text);
     line-height: 1.15;
-  }
-  .it-text {
+    text-align: center;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .dur-bar {
     height: 3px;
     background: var(--bg-active);
-    margin-top: auto;
   }
   .dur-fill {
     height: 100%;
