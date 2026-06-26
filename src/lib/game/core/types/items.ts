@@ -369,7 +369,7 @@ export interface Item {
   onHitEffect?: {
     condition: string;
     chance: number; // 0–1 base trigger chance on a landed hit
-    durationTurns: number; // condition-timer turns (same unit as KNOCKDOWN_TURNS)
+    durationTurns: number; // condition-timer turns (ticks; same unit as the knockdown timer)
     resist?: string; // stat id mitigating the chance (e.g. "poison_resistance")
     bloodDrain?: number; // blood volume drained on trigger (proboscis/feeding bites)
   };

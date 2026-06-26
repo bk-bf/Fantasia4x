@@ -529,7 +529,7 @@
         "audio": "knockdown",
         "name": "Knocked Down",
         "transient": true,
-        "description": "Prone from a heavy blunt blow — sprawled and helpless. Loses the next attack and is wide open to anyone standing over it; recovers after a couple of minutes.",
+        "description": "Prone from a heavy blunt blow — sprawled and helpless. Loses the next attack and is wide open to anyone standing over it; the heavier the blow, the longer it stays down.",
         "color": "#ff5722",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 15} ],

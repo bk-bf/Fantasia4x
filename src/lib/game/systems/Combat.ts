@@ -134,8 +134,18 @@ const CRIT_MULTIPLIER = 1.5;
 const CRIT_CHANCE_CAP = 0.6;
 // COLLAPSE_CONSCIOUSNESS (the down threshold) is now the single shared constant in core/needs — both
 // pawns and mobs go DOWN into the recoverable `collapse` condition at the same band (no instant kill).
-/** Turns a blunt knockdown keeps an entity prone (short tactical stagger). */
-const KNOCKDOWN_TURNS = 2;
+// How long a blunt knockdown keeps an entity prone, SCALED BY THE BLOW. Timers decrement once per tick
+// (a "turn" IS a tick; 750 ticks = 1 in-game hour). The old flat 2 turns (~0.03 s real at 1×, a single
+// frame at combat speed) was gone before you could see it and never cost the target an attack. Now it
+// FLOORS at one attack interval — see BASE/MIN_ATTACK_INTERVAL_TICKS — so it reliably costs the next
+// swing (floor ≈ 6 in-game min), plus extra turns per point of blunt damage dealt, capped so a single
+// huge hit (or a swarm refreshing it) can't near-permanently stun-lock. All three are tunable.
+const KNOCKDOWN_FLOOR_TURNS = 72;
+const KNOCKDOWN_TURNS_PER_DAMAGE = 4;
+const KNOCKDOWN_MAX_TURNS = 240;
+/** Initial keepalive for the `collapse` timer: the state machines REFRESH it each tick while the entity
+ *  stays unconscious and clear it on recovery, so this is just a short floor, NOT the real down-time. */
+const COLLAPSE_KEEPALIVE_TURNS = 2;
 /**
  * A pawn's innate attacks — ids of `natural_weapon` items in items.jsonc. Bare hands
  * are deliberately weak vs crafted gear so equipping a real weapon is a clear upgrade;
@@ -845,7 +855,7 @@ class CombatServiceImpl implements CombatService {
     // (Blood loss no longer writes a `blood_loss` condition — it folds into `shock`, derived from
     // pain OR blood-loss fraction in tickConditions/stepHunger. Combat leaves `conditions` untouched.)
 
-    // Transient conditions. Knockdown = a short blunt stagger (this swing rolled one).
+    // Transient conditions. Knockdown = a blunt stagger scaled by the blow (this swing rolled one).
     // Collapse = loss of consciousness (pain + blood loss + organ damage, via the
     // capacity), kept active while it stays low; the pawn state machine clears it as
     // the pawn recovers. Deliberately distinct: a stagger is momentary, a collapse
@@ -855,8 +865,15 @@ class CombatServiceImpl implements CombatService {
         .consciousness ?? 1;
     const collapsed = consciousness < COLLAPSE_CONSCIOUSNESS;
     const durations = { ...(entity.conditionTimers ?? {}) };
-    if (knockdown) durations.knockdown = Math.max(durations.knockdown ?? 0, KNOCKDOWN_TURNS);
-    if (collapsed) durations.collapse = Math.max(durations.collapse ?? 0, KNOCKDOWN_TURNS);
+    if (knockdown) {
+      // Floor (reliably costs the next attack) + scale by this blow's blunt damage, capped.
+      const kd = Math.min(
+        KNOCKDOWN_MAX_TURNS,
+        KNOCKDOWN_FLOOR_TURNS + Math.round(injury.damage * KNOCKDOWN_TURNS_PER_DAMAGE)
+      );
+      durations.knockdown = Math.max(durations.knockdown ?? 0, kd);
+    }
+    if (collapsed) durations.collapse = Math.max(durations.collapse ?? 0, COLLAPSE_KEEPALIVE_TURNS);
     const transientConditions = [...(entity.transientConditions ?? [])];
     const cpos = this.entityPos(entity);
     let condTier = 1; // stack each new condition label below the damage number (tier × ~13px)
