@@ -103,6 +103,14 @@
     // fire-and-forget — no round-trip to read back a worker-assigned id).
     const id = `${type}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     gameState.command({ type: 'createZoneInstance', payload: { type, label, id }, save: true });
+    // Inherit the surrounding hidden state: if every existing tinted zone is currently hidden, the new
+    // zone is born hidden too. Otherwise it would default to visible and, since drawing reveals ALL
+    // zones regardless of colorHidden, it'd be the one zone that stays revealed after you exit the tool
+    // while the rest re-hide. The colour stays revealed during drawing either way (the map gates the
+    // tint on designation mode), then re-hides on exit alongside the others.
+    if (allColorsHidden) {
+      gameState.command({ type: 'setZoneColorHidden', payload: { instanceId: id, hidden: true }, save: true });
+    }
     uiState.activateDesignation(type, id);
   }
 
