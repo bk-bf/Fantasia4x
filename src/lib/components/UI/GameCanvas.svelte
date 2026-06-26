@@ -1170,7 +1170,9 @@
   $: zoneToolDrawing = designationMode && activeZoneInstanceId === selectedZoneId && !zoneEraseMode;
   $: zoneToolClearing = designationMode && activeZoneInstanceId === selectedZoneId && zoneEraseMode;
 
-  /** Enter the paint tool for a stockpile zone — DRAW extends (erase off), CLEAR reduces (erase on). */
+  /** Enter the paint tool for a stockpile zone — DRAW extends (erase off), CLEAR reduces (erase on).
+   *  All zones reveal while a drawing tool is active (drawDesignations gates on designationMode), so no
+   *  colour flag is touched here — they auto-restore their hidden state when the tool is exited. */
   function paintZoneTool(instanceId: string, erase: boolean) {
     zoneEraseMode = erase;
     uiState.activateDesignation('stockpile', instanceId);
@@ -2201,7 +2203,10 @@
       const tileColors = new Map<string, string[]>();
       const add = (key: string, color: string) => {
         const inst = designationZoneId[key];
-        if (inst && hiddenZoneInstances.has(inst)) return;
+        // A zone whose colour is hidden is skipped — UNLESS a drawing tool is active, in which case
+        // EVERY zone is shown so you can lay one out around the others; it re-hides when you exit the
+        // tool (this redraws on the designation-mode toggle). No persisted flag is touched.
+        if (!designationMode && inst && hiddenZoneInstances.has(inst)) return;
         let set = byColor.get(color);
         if (!set) byColor.set(color, (set = new Set()));
         set.add(key);

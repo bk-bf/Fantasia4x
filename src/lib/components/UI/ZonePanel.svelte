@@ -111,9 +111,8 @@
     if (designationActive && activeInstId === instanceId) {
       uiState.deactivateDesignation();
     } else {
-      // Auto-unhide a zone when you (re)paint it — the drawing tools should always show what you're
-      // editing, even if its colour was hidden on the map.
-      gameState.command({ type: 'setZoneColorHidden', payload: { instanceId, hidden: false }, save: true });
+      // All zones reveal while a drawing tool is active (the map gates the tint on designation mode),
+      // then auto-restore their hidden state on exit — so no colour flag is touched here.
       uiState.activateDesignation(type, instanceId);
     }
   }
@@ -273,7 +272,11 @@
               </button>
             {/if}
             {#if def?.pawnAssignable}
-              <button class="zbtn" class:active={isPawnsOpen} onclick={() => togglePawnsPanel(inst.id)}>
+              <button
+                class="zbtn"
+                class:active={isPawnsOpen}
+                onclick={() => togglePawnsPanel(inst.id)}
+              >
                 PAWNS
               </button>
             {/if}
