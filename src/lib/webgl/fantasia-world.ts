@@ -460,7 +460,12 @@ export function buildGameGrid(
   // Phase 4d: overlay *completed* buildings only — they're opaque, so they live on the glyph grid.
   // Planned / under-construction blueprints are drawn separately on the 2D overlay (drawDesignations
   // in GameCanvas) where real alpha is available, so they can be semi-transparent ghosts.
-  if (buildings) for (const b of buildings) applyBuildingToGrid(grid, b);
+  // ROOFS LAST: a roof paints no glyph, it only SHADES the cell beneath, so it must be applied on top
+  // of the terrain AND any floor sharing the tile (roofs are passable — they coexist with floors).
+  if (buildings) {
+    for (const b of buildings) if (!isRoofBuilding(b)) applyBuildingToGrid(grid, b);
+    for (const b of buildings) if (isRoofBuilding(b)) applyBuildingToGrid(grid, b);
+  }
 
   // NOTE: standing-zone tints (stockpile/drink/wash) are NOT baked here anymore. They — like the
   // work-designation icons — are painted on the lightweight 2D overlay in GameCanvas.drawDesignations,
@@ -477,9 +482,46 @@ export function buildGameGrid(
  * they're semi-transparent ghosts on the 2D overlay. The caller repaints the underlying terrain first
  * (a removed building → terrain shows through), then calls this for any building still on the cell.
  */
+/** A roof renders as invisible SHADE (no glyph of its own) rather than an opaque cell — its callers
+ *  paint it last so it darkens whatever is beneath. */
+export function isRoofBuilding(b: PlacedBuilding): boolean {
+  return !!buildingService.getBuildingById(b.type)?.effects?.roof;
+}
+
+// How much a roof darkens the tile beneath it (per-channel multiply). The foreground stays readable so
+// the floor/ground/items show through; the background drops further so the interior reads as shaded.
+const ROOF_SHADE_FG = 0.62;
+const ROOF_SHADE_BG = 0.42;
+
 export function applyBuildingToGrid(grid: GameGrid, b: PlacedBuilding): void {
   if (b.status !== 'complete') return;
   const def = buildingService.getBuildingById(b.type);
+
+  // Roofs are INVISIBLE: they paint no glyph, so the floor/ground/items beneath stay visible. They only
+  // cast SHADE — darken the cell so a roofed interior reads as "under cover". The caller paints roofs
+  // last (after terrain + any floor on the tile), so this shades what's actually under the roof. A
+  // deconstruct-queued roof falls through to the glyph path below so the demolish marker is visible.
+  if (def?.effects?.roof && !b.deconstructQueued) {
+    const t = grid.getTile(b.x, b.y);
+    if (t) {
+      grid.setTile(b.x, b.y, {
+        char: t.char,
+        foreground: {
+          r: t.foreground.r * ROOF_SHADE_FG,
+          g: t.foreground.g * ROOF_SHADE_FG,
+          b: t.foreground.b * ROOF_SHADE_FG
+        },
+        background: {
+          r: t.background.r * ROOF_SHADE_BG,
+          g: t.background.g * ROOF_SHADE_BG,
+          b: t.background.b * ROOF_SHADE_BG
+        },
+        position: { x: b.x, y: b.y }
+      });
+    }
+    return;
+  }
+
   const char = def?.charSpans
     ? (resolveCharSpans(def.charSpans as Parameters<typeof resolveCharSpans>[0])[0] ?? '#')
     : '#';

@@ -8,6 +8,7 @@
   import {
     applyTileToGrid,
     applyBuildingToGrid,
+    isRoofBuilding,
     generatePlaceholderGrid,
     updateHiddenMaskAt,
     type HiddenMaskState,
@@ -2076,8 +2077,15 @@
       applyTileToGrid(_terrainGrid, t, hiddenMask);
       if (_updateEmitterAt(y, x, t)) emittersChanged = true;
     }
+    // ROOFS LAST (same as buildGameGrid): a roof only shades the cell beneath, so paint it after the
+    // terrain repaint AND any floor/building sharing the tile.
     for (const b of buildings) {
-      if (b.status === 'complete' && dirty.has(b.y * W + b.x)) applyBuildingToGrid(_terrainGrid, b);
+      if (b.status === 'complete' && !isRoofBuilding(b) && dirty.has(b.y * W + b.x))
+        applyBuildingToGrid(_terrainGrid, b);
+    }
+    for (const b of buildings) {
+      if (b.status === 'complete' && isRoofBuilding(b) && dirty.has(b.y * W + b.x))
+        applyBuildingToGrid(_terrainGrid, b);
     }
     for (const k of curBlueprint) {
       const ci = k.indexOf(',');
