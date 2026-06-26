@@ -474,6 +474,15 @@ pure JS + GPU-upload + GC, **not** paint/layout.
   runs the `stripState` 38k-tile clone + IDB write inside `requestIdleCallback` (macrotask fallback), off the
   frame-critical path. Post-fix trace cross-check: `saveManager`+`stripTile` dropped **~4.4% → ~0.9%** of
   stutter time. ✅
+- [x] **D3b — static/dynamic save split (recurring autosave ≈ map-size-independent) — LANDED 2026-06-26.**
+  Even idle-deferred, the 2 s autosave re-cloned the whole worldMap (the bulk of the payload) every time,
+  though terrain barely changes. saveManager now persists the worldMap to its OWN row (`world:<id>`) and the
+  2 s autosave writes only the dynamic slice (`save:<id>` = state minus worldMap, via `stripDynamic`); the
+  heavy `world:` row (`stripWorld`) is rewritten ONLY when `_terrainRev` — or the worldMap ref (load/regen) —
+  changes (`worldDirty()`), i.e. on harvest/build/regrowth, not every tick. Cuts the recurring clone+write by
+  ~80–90% on large maps. `saveGameNow` exit-flush + manual snapshots always write a complete pair (covers the
+  autosave-OFF case); `loadSave` falls back to the legacy embedded worldMap so old saves still load, and the
+  next autosave splits them. ✅
 
 ### §D-method · the trace toolchain this session built (TEMP — strip before ship)
 
