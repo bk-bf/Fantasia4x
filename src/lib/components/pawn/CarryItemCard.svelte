@@ -2,13 +2,15 @@
      ItemStatTooltip (the same stat/ability panel used on crafting cards and the equipment doll), so
      every carried item — bulk good or tracked tool/weapon — surfaces its info. Used by PawnInventory. -->
 <script lang="ts">
-  import type { Item } from '$lib/game/core/types';
+  import type { Item, ItemQuality } from '$lib/game/core/types';
   import ItemStatTooltip from '$lib/components/UI/ItemStatTooltip.svelte';
   import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
+  import { qualityColor, qualityPrefix } from '$lib/game/core/itemQuality';
 
   let {
     def,
     name,
+    quality = undefined,
     qty = null,
     durability = null,
     maxDurability = null,
@@ -20,6 +22,7 @@
   }: {
     def: Item;
     name: string;
+    quality?: ItemQuality;
     qty?: number | null;
     durability?: number | null;
     maxDurability?: number | null;
@@ -29,6 +32,15 @@
     dropTitle?: string;
     pinTitle?: string;
   } = $props();
+
+  // §Q craft-quality tint: a rolled (Fine/Superior/Masterwork/…) item colours its sprite + the
+  // RARITY WORD only; Standard/undefined falls back to the def's own colour and a plain name.
+  let qColor = $derived(qualityColor(quality));
+  // The passed `name` bakes in the quality prefix (getItemDisplayName) — split it back off so just
+  // the prefix is coloured, not the whole item name. (Famed/dynamic names carry no prefix → no split.)
+  let prefix = $derived(qualityPrefix(quality));
+  let hasPrefix = $derived(!!prefix && !!qColor && name.startsWith(`${prefix} `));
+  let baseName = $derived(hasPrefix ? name.slice(prefix.length + 1) : name);
 
   // Stat panel portaled to the cursor while hovering the name (same UX as EquipmentDoll).
   let tip: { x: number; y: number } | null = $state(null);
@@ -56,9 +68,12 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <span class="name" onmouseenter={show} onmousemove={move} onmouseleave={hide}>
     {#if def.charSpans}
-      <SpriteIcon charSpans={def.charSpans} tint={def.color ?? null} px={16} />
+      <SpriteIcon charSpans={def.charSpans} tint={qColor ?? def.color ?? null} px={16} />
     {/if}
-    <span class="name-text">{name}</span>
+    <span class="name-text"
+      >{#if hasPrefix}<span class="rarity" style="color:{qColor}">{prefix}</span>
+      {/if}{baseName}</span
+    >
   </span>
 
   <div class="meta">

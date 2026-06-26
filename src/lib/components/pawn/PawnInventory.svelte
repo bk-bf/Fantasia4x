@@ -85,6 +85,7 @@
             <CarryItemCard
               {def}
               name={instanceLabel(inst)}
+              quality={inst.quality}
               durability={inst.durability}
               maxDurability={def.maxDurability ?? 100}
               onDrop={() => dropInstance(inst)}

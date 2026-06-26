@@ -4,6 +4,7 @@
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
   import ItemStatTooltip from '$lib/components/UI/ItemStatTooltip.svelte';
   import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
+  import { qualityPrefix, qualityColor } from '$lib/game/core/itemQuality';
 
   let {
     pawn,
@@ -61,6 +62,7 @@
     {@const it = inst(slot)}
     {@const def = it ? gameCoordinator.getItemById(it.itemId) : null}
     {@const maxDur = def?.maxDurability ?? 100}
+    {@const qColor = it ? qualityColor(it.quality) : undefined}
     <div
       class="slot-box"
       class:filled={!!it}
@@ -85,10 +87,14 @@
         {/if}
         {#if def.charSpans}
           <div class="icon-wrap">
-            <SpriteIcon charSpans={def.charSpans} tint={def.color ?? null} px={34} />
+            <SpriteIcon charSpans={def.charSpans} tint={qColor ?? def.color ?? null} px={34} />
           </div>
         {/if}
-        <span class="it-name" title={def.name}>{def.name}</span>
+        {@const prefix = qualityPrefix(it.quality)}
+        <span class="it-name" title={prefix ? `${prefix} ${def.name}` : def.name}>
+          {#if prefix && qColor}<span class="rarity" style="color:{qColor}">{prefix}</span>
+          {/if}{def.name}
+        </span>
         <div class="dur-bar" title="{it.durability}/{maxDur}">
           <div
             class="dur-fill"
