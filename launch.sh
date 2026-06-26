@@ -15,8 +15,11 @@
 #   bug-fixes are a reload away (no rebuild). Immersive playtesting: ./launch.sh --electron --play.
 # --legacy-menu: render the ORIGINAL centred main menu (MainMenu) instead of the default left-aligned
 #   one (MainMenu2), gated by VITE_LEGACY_MENU. E.g. ./launch.sh --electron --play --legacy-menu.
-# --hmr: opt INTO Vite hot-reload / live page-reload. OFF by default for EVERY launch (including
-#   --debug/--profiler/--electron/--tauri) so an agent editing the tree never reloads a live playtest.
+# RELOAD: Vite hot-reload / live page-reload is OFF for every launch.sh server, so an agent editing the
+#   tree never reloads a live playtest. Manual browser reload (F5 / Ctrl+R / Ctrl+Shift+R) and DevTools
+#   are gated inside the Electron shell on the in-app Debug setting: a --play build blocks them until you
+#   tick Debug mode in Settings; --debug/--profiler leave them reachable. (To opt a raw dev.sh server
+#   back into hot-reload outside launch.sh, run `./dev.sh --hmr` directly.)
 # SANDBOXING (electron): ON BY DEFAULT. The dev server AND Electron run inside a private Linux network
 #   namespace (rootless `unshare --net`), so the dev-server port exists ONLY inside that namespace and
 #   is physically UNREACHABLE from your browser (or any other host process) as a URL — the game is the
@@ -35,7 +38,6 @@ PIDS=()
 
 PROFILER=false
 LOG=false
-HMR=false
 PLAY=false
 LEGACY_MENU=false
 SANDBOX=auto   # auto = default ON for electron (OFF under --profiler); --sandbox forces on, --net-host forces off
@@ -44,7 +46,6 @@ for arg in "$@"; do
   case "$arg" in
     --profiler) PROFILER=true ;;
     --log) LOG=true ;;
-    --hmr) HMR=true ;;
     --play) PLAY=true ;;
     --legacy-menu) LEGACY_MENU=true ;;
     --sandbox) SANDBOX=on ;;
@@ -53,10 +54,10 @@ for arg in "$@"; do
     --tauri) SHELL_TARGET=tauri ;;
   esac
 done
-# Suffixes appended to a server's dev.sh flag set (dev.sh parses multiple flags). HMR is OFF for every
-# launch unless --hmr is passed, so an agent editing the tree never reloads a live playtest.
+# Suffixes appended to a server's dev.sh flag set (dev.sh parses multiple flags). HMR is never passed
+# here, so launch.sh servers always run with hot-reload OFF — an agent editing the tree never reloads a
+# live playtest. (Run `./dev.sh --hmr` directly to opt a standalone server back in.)
 LOG_FLAG=""; [[ "$LOG" == true ]] && LOG_FLAG=" --log"
-HMR_FLAG=""; [[ "$HMR" == true ]] && HMR_FLAG=" --hmr"
 # --legacy-menu: render the original centred main menu (MainMenu) instead of the default MainMenu2.
 LEGACY_FLAG=""; [[ "$LEGACY_MENU" == true ]] && LEGACY_FLAG=" --legacy-menu"
 
@@ -183,7 +184,7 @@ if [[ -n "$SHELL_TARGET" ]]; then
   # immersive playtest over the live dev server, so bug-fixes are still just a reload away.
   SERVER_FLAG="--debug"; [[ "$PROFILER" == true ]] && SERVER_FLAG="--profiler"
   [[ "$PLAY" == true ]] && SERVER_FLAG=""
-  SERVER_FLAG="$SERVER_FLAG$LOG_FLAG$HMR_FLAG$LEGACY_FLAG"
+  SERVER_FLAG="$SERVER_FLAG$LOG_FLAG$LEGACY_FLAG"
   SERVER_LABEL="play"; [[ "$PLAY" != true ]] && SERVER_LABEL="${SERVER_FLAG#--}"
   PORT=5173
   [[ -f "$SCRIPT_DIR/.devport" ]] && PORT=$(< "$SCRIPT_DIR/.devport")
@@ -246,7 +247,7 @@ if [[ "$PROFILER" == true ]]; then
   echo "Fantasia4x — profiler sandbox (main server only)"
   echo ""
   codegraph_hint
-  launch "$SCRIPT_DIR" "main" "--profiler$LOG_FLAG$HMR_FLAG"
+  launch "$SCRIPT_DIR" "main" "--profiler$LOG_FLAG"
   echo ""
   echo "Ctrl-C to stop."
   wait
@@ -256,13 +257,13 @@ fi
 echo "Fantasia4x — launching all dev servers (debug mode)"
 echo ""
 
-launch "$SCRIPT_DIR" "main" "--debug$LOG_FLAG$HMR_FLAG"
+launch "$SCRIPT_DIR" "main" "--debug$LOG_FLAG"
 
 LAUNCH_DIR="$SCRIPT_DIR/.worktrees/launch"
 if [[ -d "$LAUNCH_DIR" ]]; then
   for wt in "$LAUNCH_DIR"/*/; do
     [[ -f "$wt/dev.sh" ]] || continue
-    launch "$wt" "$(basename "$wt")" "--debug$HMR_FLAG"
+    launch "$wt" "$(basename "$wt")" "--debug"
   done
 fi
 

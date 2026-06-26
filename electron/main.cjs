@@ -104,15 +104,17 @@ function createWindow() {
     }
   });
 
-  // Gate DevTools on the in-app Debug setting: block the open shortcuts (Ctrl+Shift+I/J/C, F12) when
-  // debug mode is off, and force DevTools shut if anything else opens them. So a clean player build
-  // can't reach DevTools; enabling Debug mode in Settings restores them.
+  // Gate browser shortcuts on the in-app Debug setting. When debug mode is off, block:
+  //   • DevTools open    — Ctrl+Shift+I/J/C, F12
+  //   • Reload / hard reload — F5, Ctrl+R, Ctrl+Shift+R (Cmd+R on macOS)
+  // A shipped player build is a game, not a browser tab: a stray reload wipes the in-memory session,
+  // so reload is debug-only just like DevTools. Enabling Debug mode in Settings restores both.
   win.webContents.on('before-input-event', (event, input) => {
     if (debugMode || input.type !== 'keyDown') return;
     const key = (input.key || '').toLowerCase();
-    if (key === 'f12' || (input.control && input.shift && (key === 'i' || key === 'j' || key === 'c'))) {
-      event.preventDefault();
-    }
+    const isDevTools = key === 'f12' || (input.control && input.shift && (key === 'i' || key === 'j' || key === 'c'));
+    const isReload = key === 'f5' || ((input.control || input.meta) && key === 'r');
+    if (isDevTools || isReload) event.preventDefault();
   });
   win.webContents.on('devtools-opened', () => {
     if (!debugMode) win.webContents.closeDevTools();

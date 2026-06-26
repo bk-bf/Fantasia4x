@@ -78,15 +78,18 @@ function createWindow() {
     }
   });
 
-  // In --play, gate DevTools on the in-app Debug setting (like the packaged build): block the open
-  // shortcuts (Ctrl+Shift+I/J/C, F12) unless Debug mode is on, and shut DevTools if anything opens them.
-  // --debug/--profiler (PLAY_MODE false) leave DevTools always reachable.
+  // In --play, gate browser shortcuts on the in-app Debug setting (like the packaged build) unless
+  // Debug mode is on:
+  //   • DevTools open    — Ctrl+Shift+I/J/C, F12
+  //   • Reload / hard reload — F5, Ctrl+R, Ctrl+Shift+R (Cmd+R on macOS)
+  // Reload is blocked alongside DevTools so an immersive playtest can't be wiped by a stray reload.
+  // --debug/--profiler (PLAY_MODE false) leave both always reachable. DevTools also force-shut below.
   win.webContents.on('before-input-event', (event, input) => {
     if (!PLAY_MODE || debugMode || input.type !== 'keyDown') return;
     const key = (input.key || '').toLowerCase();
-    if (key === 'f12' || (input.control && input.shift && (key === 'i' || key === 'j' || key === 'c'))) {
-      event.preventDefault();
-    }
+    const isDevTools = key === 'f12' || (input.control && input.shift && (key === 'i' || key === 'j' || key === 'c'));
+    const isReload = key === 'f5' || ((input.control || input.meta) && key === 'r');
+    if (isDevTools || isReload) event.preventDefault();
   });
   win.webContents.on('devtools-opened', () => {
     if (PLAY_MODE && !debugMode) win.webContents.closeDevTools();
