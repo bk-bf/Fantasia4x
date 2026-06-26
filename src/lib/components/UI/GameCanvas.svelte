@@ -514,9 +514,14 @@
   // Zone drag-paint state (drag fills a rectangle)
   let zoneDragActive = false;
 
-  // Blueprint drag-paint state
+  // Blueprint drag-paint state. Every building is a 1×1 footprint placed per-tile, so a placement
+  // drag fills the whole anchor→cursor RECTANGLE (like the zone tool) — drag a box over a room and
+  // every wall/roof/floor tile is painted at once, instead of clicking each tile or scrubbing a
+  // thin trail that skips cells on a fast drag. placeBuilding rejects blocked/occupied tiles, so
+  // filling over a wall or water simply no-ops there.
   let blueprintDragActive = false;
-  let blueprintDragTiles = new Set<string>();
+  let blueprintAnchorX = -1;
+  let blueprintAnchorY = -1;
   // Resource tile interaction
   let selectedResourceTile: { x: number; y: number; resourceId: string } | null = null;
   // Click-locked stockpile zone (by ZoneInstance.id) — shows the zone filter/draw/clear card.
@@ -1937,12 +1942,24 @@
     return `${b.x},${b.y}:${b.type}:${b.status}:${b.deconstructQueued ? 1 : 0}:${b.paused ? 1 : 0}`;
   }
 
-  /** Current blueprint-preview cells (drag set, or the single hover tile), keyed "x,y". */
+  /** Every "x,y" tile in the blueprint drag rectangle (anchor → current cursor). Empty if no drag. */
+  function _blueprintRectTiles(): Set<string> {
+    const s = new Set<string>();
+    if (!blueprintDragActive || blueprintAnchorX < 0 || hoverTileX < 0 || hoverTileY < 0) return s;
+    const x1 = Math.min(blueprintAnchorX, hoverTileX);
+    const x2 = Math.max(blueprintAnchorX, hoverTileX);
+    const y1 = Math.min(blueprintAnchorY, hoverTileY);
+    const y2 = Math.max(blueprintAnchorY, hoverTileY);
+    for (let y = y1; y <= y2; y++) for (let x = x1; x <= x2; x++) s.add(`${x},${y}`);
+    return s;
+  }
+
+  /** Current blueprint-preview cells (the drag rectangle, or the single hover tile), keyed "x,y". */
   function _currentBlueprintTiles(): Set<string> {
     const s = new Set<string>();
     if (!blueprintBuildingId) return s;
-    if (blueprintDragActive && blueprintDragTiles.size > 0) {
-      for (const k of blueprintDragTiles) s.add(k);
+    if (blueprintDragActive) {
+      return _blueprintRectTiles();
     } else if (hoverTileX >= 0 && hoverTileY >= 0) {
       s.add(`${hoverTileX},${hoverTileY}`);
     }
@@ -3388,7 +3405,8 @@
         } else if (blueprintBuildingId) {
           uiState.deactivateBlueprint();
           blueprintDragActive = false;
-          blueprintDragTiles.clear();
+          blueprintAnchorX = -1;
+          blueprintAnchorY = -1;
           redrawOverlay();
         } else if (
           designationMode ||
@@ -3521,10 +3539,10 @@
       return;
     }
     if (blueprintBuildingId) {
-      // Blueprint paint mode: track tiles as user drags
+      // Blueprint paint mode: anchor a fill rectangle here; the preview fills anchor→cursor as it drags.
       blueprintDragActive = true;
-      blueprintDragTiles.clear();
-      if (hoverTileX >= 0 && hoverTileY >= 0) blueprintDragTiles.add(`${hoverTileX},${hoverTileY}`);
+      blueprintAnchorX = hoverTileX;
+      blueprintAnchorY = hoverTileY;
       redrawOverlay();
       return;
     }
@@ -3599,7 +3617,7 @@
       return;
     }
     if (blueprintDragActive) {
-      if (hoverTileX >= 0 && hoverTileY >= 0) blueprintDragTiles.add(`${hoverTileX},${hoverTileY}`);
+      // Rectangle derives from anchor → current hover; repaint the ghost (clears the old rect, draws new).
       redrawOverlay();
       return;
     }
@@ -3635,9 +3653,12 @@
       return;
     }
     if (blueprintDragActive) {
-      // Commit blueprint placements at all dragged tiles
+      // Commit a blueprint at every tile in the drag rectangle (placeBuilding skips blocked/occupied
+      // ones). The tool STAYS ACTIVE afterwards — like the zone tool — so several rooms can be roofed
+      // back-to-back without reopening the build menu. Esc / right-click clears it.
       const bid = blueprintBuildingId;
-      if (bid && blueprintDragTiles.size > 0) {
+      const rectTiles = _blueprintRectTiles();
+      if (bid && rectTiles.size > 0) {
         const buildingDef = buildingService.getBuildingById(bid);
         if (buildingDef) {
           // ADR-016: placeBuilding RESERVES the cost to each building (pawns fetch it to the site);
@@ -3646,9 +3667,7 @@
             type: 'placeBuildings',
             payload: {
               bid,
-              tiles: [...blueprintDragTiles].map(
-                (key) => key.split(',').map(Number) as [number, number]
-              ),
+              tiles: [...rectTiles].map((key) => key.split(',').map(Number) as [number, number]),
               materials: blueprintMaterials ?? undefined
             },
             save: true
@@ -3656,8 +3675,9 @@
         }
       }
       blueprintDragActive = false;
-      blueprintDragTiles.clear();
-      uiState.deactivateBlueprint();
+      blueprintAnchorX = -1;
+      blueprintAnchorY = -1;
+      redrawOverlay();
       return;
     }
     if (zoneDragActive) {
@@ -4262,7 +4282,8 @@
     dragging = false;
     zoneDragActive = false;
     blueprintDragActive = false;
-    blueprintDragTiles.clear();
+    blueprintAnchorX = -1;
+    blueprintAnchorY = -1;
     if (selDragActive) {
       // Cursor left mid-drag → commit the mark box where it stands (only a real box, not a stray click).
       selDragActive = false;
@@ -4628,8 +4649,10 @@
     </div>
   {:else if blueprintBuildingId}
     <div class="designation-hud">
-      [◆ {buildingService.getBuildingById(blueprintBuildingId)?.name ?? blueprintBuildingId}] — drag
-      to paint · Esc cancel
+      [◆ {buildingService.getBuildingById(blueprintBuildingId)?.name ??
+        blueprintBuildingId}]{#if blueprintDragActive}
+        ({Math.abs(hoverTileX - blueprintAnchorX) + 1}×{Math.abs(hoverTileY - blueprintAnchorY) +
+          1}){/if} — drag a box to fill · stays active · Esc cancel
     </div>
   {:else if similarDragMode}
     <div class="designation-hud">
