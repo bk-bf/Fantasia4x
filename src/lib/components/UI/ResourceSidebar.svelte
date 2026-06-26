@@ -105,7 +105,6 @@
       aria-label="Expand resources"
       onclick={() => resourcesMinimized.set(false)}>›</button
     >
-    <span class="collapsed-label">RESOURCES</span>
   {:else if race}
     <!-- Sticky header block: Kingdom + Resources header never scroll away. -->
     <div class="sticky-top">
@@ -230,7 +229,7 @@
     overflow: hidden; /* the inner .res-area scrolls, not the whole sidebar */
   }
 
-  /* ── Collapsed strip (minimised) — restore arrow + vertical label; the left-panel column is narrowed
+  /* ── Collapsed strip (minimised) — just the restore arrow; the left-panel column is narrowed
      to match by +page.svelte (.left-panel.minimized). ── */
   .sidebar.collapsed {
     align-items: center;
@@ -253,15 +252,6 @@
   .restore-btn:hover {
     border-color: var(--border-hi);
     background: var(--bg-hover);
-  }
-  .collapsed-label {
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    color: var(--accent-hi);
-    font-size: 10px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    user-select: none;
   }
 
   /* "Hide sidebars" mode (top-bar settings): the panel floats fully transparently over the map.

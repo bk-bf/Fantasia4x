@@ -110,7 +110,6 @@
       aria-label="Expand chronicle"
       on:click={() => chronicleMinimized.set(false)}>‹</button
     >
-    <span class="collapsed-label">CHRONICLE</span>
   {:else}
     <div class="section-hdr">
       <span>| CHRONICLE</span>
@@ -327,16 +326,6 @@
     border-color: var(--border-hi);
     background: var(--bg-hover);
   }
-  .collapsed-label {
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    color: var(--accent-hi);
-    font-size: 10px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    user-select: none;
-  }
-
   /* .log-list is the ScrollArea viewport (overflow + auto-hiding bar live in ScrollArea). */
   .panel :global(.log-list) {
     flex: 1;
