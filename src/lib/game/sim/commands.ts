@@ -28,7 +28,8 @@ import type {
   PlacedBuilding,
   Season,
   ZoneFilter,
-  FoodSettings
+  FoodSettings,
+  ItemInstance
 } from '../core/types';
 import { findAdjacentApproach, isAdjacent } from '../systems/pawn/pawnQueries';
 import {
@@ -129,6 +130,37 @@ export function lineFormationTargets(
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Cmd = (state: GameState, payload: any) => GameState;
+
+/**
+ * Set a tracked ItemInstance (tool / weapon / armour) DOWN as a loose drop on `pos`, preserving its
+ * durability / quality / per-instance name (a worn axe isn't reset to pristine), and absorb it if that
+ * tile is a stockpile. The SINGLE drop path shared by the carry-card ↓ (`dropCarriedItem`) AND the
+ * equipment-doll unequip ✕ (`unequipPawnItem`). The unequip path used to clear the slot WITHOUT this
+ * and silently DESTROYED the item — both must go through here so they can never diverge again. The
+ * caller has already removed the instance from its source (inventory.instances or the equipment slot).
+ */
+function setInstanceDownOnTile(
+  s: GameState,
+  pawnId: string,
+  pos: { x: number; y: number },
+  inst: ItemInstance
+): GameState {
+  const def = itemService.getItemById(inst.itemId);
+  const drop = {
+    id: `drop-${pawnId}-${inst.instanceId}`,
+    resourceId: inst.itemId,
+    x: pos.x,
+    y: pos.y,
+    quantity: 1,
+    stored: false,
+    instance: inst,
+    durability: inst.durability,
+    ...(inst.quality !== undefined ? { quality: inst.quality } : {}),
+    ...(def?.dynamicName && inst.name ? { name: inst.name } : {})
+  };
+  const next: GameState = { ...s, droppedItems: [...(s.droppedItems ?? []), drop] };
+  return absorbDropIfOnStockpileTile(next, drop.id);
+}
 
 /** Registry. Add a command here + call `gameState.command({ type, payload, save })` at the site. */
 export const COMMANDS: Record<string, Cmd> = {
@@ -453,10 +485,21 @@ export const COMMANDS: Record<string, Cmd> = {
     ...s,
     pawns: s.pawns.map((pw) => (pw.id === p.pawnId ? equipItem(pw, p.itemId) : pw))
   }),
-  unequipPawnItem: (s, p: { pawnId: string; slot: string }) => ({
-    ...s,
-    pawns: s.pawns.map((pw) => (pw.id === p.pawnId ? unequipItem(pw, p.slot as EquipmentSlot) : pw))
-  }),
+  unequipPawnItem: (s, p: { pawnId: string; slot: string }) => {
+    const pawn = s.pawns.find((pw) => pw.id === p.pawnId);
+    const inst = pawn?.equipment?.[p.slot as EquipmentSlot];
+    // Clear the slot. (unequipItem only removes from the doll — on its own it would DESTROY the item.)
+    const afterUnequip: GameState = {
+      ...s,
+      pawns: s.pawns.map((pw) =>
+        pw.id === p.pawnId ? unequipItem(pw, p.slot as EquipmentSlot) : pw
+      )
+    };
+    if (!pawn?.position || !inst) return afterUnequip;
+    // Set the just-unequipped item DOWN on the pawn's tile via the SAME drop path as the carry-card ↓,
+    // so the worn item lands on the ground (preserving durability/quality) instead of vanishing.
+    return setInstanceDownOnTile(afterUnequip, p.pawnId, pawn.position, inst);
+  },
   useConsumableItem: (s, p: { pawnId: string; itemId: string }) => {
     const idx = s.pawns.findIndex((pw) => pw.id === p.pawnId);
     if (idx === -1) return s;
@@ -512,22 +555,9 @@ export const COMMANDS: Record<string, Cmd> = {
     if (p.instanceId) {
       const inst = pawn.inventory?.instances?.find((i) => i.instanceId === p.instanceId);
       if (!inst) return s;
-      const def = itemService.getItemById(inst.itemId);
-      const drop = {
-        id: `drop-${p.pawnId}-${inst.instanceId}`,
-        resourceId: inst.itemId,
-        x: pawn.position.x,
-        y: pawn.position.y,
-        quantity: 1,
-        stored: false,
-        instance: inst,
-        durability: inst.durability,
-        ...(inst.quality !== undefined ? { quality: inst.quality } : {}),
-        ...(def?.dynamicName && inst.name ? { name: inst.name } : {})
-      };
-      const next: GameState = {
+      // Remove the unit from the pack (+ un-pin once none remain), then set it down via the shared drop.
+      const afterRemove: GameState = {
         ...s,
-        droppedItems: [...(s.droppedItems ?? []), drop],
         pawns: s.pawns.map((pw) => {
           if (pw.id !== p.pawnId) return pw;
           const instances = (pw.inventory?.instances ?? []).filter(
@@ -546,7 +576,7 @@ export const COMMANDS: Record<string, Cmd> = {
           };
         })
       };
-      return absorbDropIfOnStockpileTile(next, drop.id);
+      return setInstanceDownOnTile(afterRemove, p.pawnId, pawn.position, inst);
     }
     const qty = pawn?.inventory?.items?.[p.itemId] ?? 0;
     if (qty <= 0) {
@@ -664,10 +694,19 @@ export const COMMANDS: Record<string, Cmd> = {
     ),
   clearDesignation: (s, p: { x: number; y: number }) =>
     designationService.clearDesignation(p.x, p.y, s),
+  /** Cancel ONLY the action order (harvest/woodcut/forage) on a tile, leaving any restrict/stockpile/
+   *  grow zone the tile belongs to intact. Use this — not `clearDesignation` — for harvest-mark cancel,
+   *  so cancelling a harvest inside a restrict zone doesn't evict the tile from the zone. */
+  clearActionDesignation: (s, p: { x: number; y: number }) =>
+    designationService.clearActionDesignation(p.x, p.y, s),
   /** Clear the designation on each listed tile (the targeted inverse of designateTiles — cancels only
    *  the marked tiles, not every tile of a resource type). */
   clearDesignationTiles: (s, p: { tiles: [number, number][] }) =>
     p.tiles.reduce((cur, [tx, ty]) => designationService.clearDesignation(tx, ty, cur), s),
+  /** Action-only variant of clearDesignationTiles — cancels harvest orders on the listed tiles without
+   *  touching any standing zones they sit in. */
+  clearActionDesignationTiles: (s, p: { tiles: [number, number][] }) =>
+    p.tiles.reduce((cur, [tx, ty]) => designationService.clearActionDesignation(tx, ty, cur), s),
   /** Clear every designated tile holding this resource (symmetric inverse of bulk MARK). */
   clearDesignationsForResource: (s, p: { resourceId: string }) =>
     designationService.clearDesignationsForResource(p.resourceId, s),
