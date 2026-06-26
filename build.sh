@@ -4,9 +4,10 @@
 # Mirrors the CI pipeline: Rust→WASM  →  SvelteKit static bundle  →  electron-builder.
 # Artifacts land in dist-electron/.
 #
+#   ./build.sh                      no OS flag → builds BOTH installers (Linux + Windows)
 #   ./build.sh --linux              Linux installers: AppImage + .deb
 #   ./build.sh --windows            Windows installer: NSIS .exe (cross-built via Wine on Linux)
-#   ./build.sh --linux --windows    both of the above
+#   ./build.sh --linux --windows    both of the above (same as no flag)
 #   ./build.sh --local              quick UNPACKED build for THIS machine — run it straight away,
 #                                     no installer packaging (dist-electron/linux-unpacked/)
 #   ./build.sh --dry                pre-flight: production static build + scan for dev-only /src asset
@@ -116,10 +117,11 @@ if $PUSH; then
   fi
 fi
 
+# Default (no --linux/--windows, and not the unpacked --local build): produce BOTH installers.
 if ! $LINUX && ! $WINDOWS && ! $LOCAL; then
-  echo "build.sh: pick at least one of --linux, --windows, --local, --dry." >&2
-  usage
-  exit 1
+  LINUX=true
+  WINDOWS=true
+  echo "▸ No OS flag given — building both installers (Linux + Windows)."
 fi
 
 # Windows installers cross-build on Linux through Wine — fail early with a clear hint if it's missing.
