@@ -3809,7 +3809,7 @@
     // selected node — NOT every tile of the resource type.
     if (highlightedResourceTiles.size > 0) {
       gameState.command({
-        type: 'clearDesignationTiles',
+        type: 'clearActionDesignationTiles',
         payload: {
           tiles: [...highlightedResourceTiles].map(
             (key) => key.split(',').map(Number) as [number, number]
@@ -3820,7 +3820,9 @@
       // Keep the highlight (working set) — the card flips back to offering HARVEST on the same tiles.
     } else {
       const { x, y } = selectedResourceTile;
-      gameState.command({ type: 'clearDesignation', payload: { x, y }, save: true });
+      // Action-only clear: cancelling a harvest mark must not evict the tile from a restrict/stockpile
+      // zone it also sits in (that silently shrank restrict zones — pawns then couldn't path to beds).
+      gameState.command({ type: 'clearActionDesignation', payload: { x, y }, save: true });
     }
     drawDesignations();
   }
@@ -4585,9 +4587,11 @@
         save: true
       });
       redrawOverlay();
-    } else if (designationService.hasDesignation(hoverTileX, hoverTileY, $gameState)) {
+    } else if (designationService.getDesignation(hoverTileX, hoverTileY, $gameState)) {
+      // Outside zone mode, right-click cancels the ACTION order only — leave any restrict/stockpile
+      // zone the tile belongs to intact (full clearDesignation here used to silently shrink zones).
       gameState.command({
-        type: 'clearDesignation',
+        type: 'clearActionDesignation',
         payload: { x: hoverTileX, y: hoverTileY },
         save: true
       });

@@ -183,16 +183,34 @@ class DesignationServiceImpl {
   }
 
   /**
+   * Clear ONLY the action order (harvest/woodcut/forage/dig) at (x, y), leaving any standing-zone
+   * membership on the tile untouched. Cancelling a harvest must NOT evict the tile from a restrict /
+   * stockpile / grow zone it also belongs to — `designationZoneId` and `zoneTiles` carry zone
+   * membership, not action orders, so clearing those here silently shrank overlapping zones (the
+   * "restrict zone keeps losing tiles when I harvest inside it" bug). Mirrors the harvest-completion
+   * clear (jobs/harvest.ts), which only touches `designations` for the same reason.
+   */
+  clearActionDesignation(x: number, y: number, gameState: GameState): GameState {
+    const k = this.key(x, y);
+    if (!(k in (gameState.designations ?? {}))) return gameState;
+    const newDesignations = { ...(gameState.designations ?? {}) };
+    delete newDesignations[k];
+    return { ...gameState, designations: newDesignations };
+  }
+
+  /**
    * Clear EVERY designated tile that still holds `resourceId` — the symmetric inverse of the
    * "MARK" bulk-designate (which marks all matching resource tiles). Without this, cancelling a
-   * batch-marked resource only cleared the one selected tile. Returns the updated GameState.
+   * batch-marked resource only cleared the one selected tile. Cancels only the action order on each
+   * tile (via `clearActionDesignation`) so a marked resource sitting inside a restrict/stockpile zone
+   * doesn't strip the zone when its harvest order is cancelled. Returns the updated GameState.
    */
   clearDesignationsForResource(resourceId: string, gameState: GameState): GameState {
     let state = gameState;
     for (const k of Object.keys(gameState.designations ?? {})) {
       const [x, y] = k.split(',').map(Number);
       if ((gameState.worldMap?.[y]?.[x]?.resources?.[resourceId] ?? 0) > 0) {
-        state = this.clearDesignation(x, y, state);
+        state = this.clearActionDesignation(x, y, state);
       }
     }
     return state;
