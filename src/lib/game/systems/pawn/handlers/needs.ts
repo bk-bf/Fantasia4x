@@ -203,9 +203,12 @@ export function handleTired(pawn: Pawn, gameState: GameState): GameState {
   // Seek the assigned/nearest bed and walk ON to its tile to sleep.
   // Only one pawn can occupy a bed at a time (findNearestRestBuilding skips occupied ones).
   const restBuilding = findNearestRestBuilding(pawn, gameState);
+  let onBed = false;
   if (restBuilding && pawn.position) {
     const atBed = pawn.position.x === restBuilding.x && pawn.position.y === restBuilding.y;
-    if (!atBed) {
+    if (atBed) {
+      onBed = true; // already standing on the bed tile — sleep here.
+    } else {
       const afterPath = tryAssignSleepPath(pawn, restBuilding.x, restBuilding.y, gameState);
       if (afterPath) {
         return mutatePawn(afterPath, pawn.id, (p) => {
@@ -221,28 +224,27 @@ export function handleTired(pawn: Pawn, gameState: GameState): GameState {
           };
         });
       }
-      // Bed unreachable this tick — hold in TIRED and retry next tick.
-      // Exhaustion-collapse guard in tick() will force sleep at fatigue=100.
+      // Bed exists but there's no path to it (walled off / across water / blocked). Don't freeze in
+      // TIRED forever waiting for a route that won't appear — lie down and sleep on the ground where
+      // we stand. Falls through to the ground-sleep block below (onBed stays false).
       gameLogger.log(
         gameState.turn,
         'NEED-CHECK',
-        `${pawn.name} TIRED: bed at (${restBuilding.x},${restBuilding.y}) unreachable this tick, retrying`
+        `${pawn.name} TIRED: bed at (${restBuilding.x},${restBuilding.y}) unreachable, sleeping on the ground`
       );
-      return gameState;
     }
-    // Already standing on the bed tile — sleep here.
   }
 
-  // No bed available, or already on the bed tile: sleep at current position.
-  // When sleeping on a bed, store the bed's coordinates as the job target so
-  // the UI and handleSleeping can identify which bed the pawn is using.
-  const sleepTargetX = restBuilding?.x ?? pawn.position?.x ?? 0;
-  const sleepTargetY = restBuilding?.y ?? pawn.position?.y ?? 0;
+  // Sleep at the current position (no bed, or the bed was unreachable). Only when actually on the
+  // bed tile do we store the bed's coords as the job target so the UI and handleSleeping can identify
+  // which bed the pawn is using — otherwise record where the pawn collapsed.
+  const sleepTargetX = onBed ? restBuilding!.x : (pawn.position?.x ?? 0);
+  const sleepTargetY = onBed ? restBuilding!.y : (pawn.position?.y ?? 0);
   gameLogger.log(
     gameState.turn,
     'NEED-CHECK',
     () =>
-      `${pawn.name} goes to sleep at ${fmtPos(pawn)} fatigue=${(pawn.needs?.fatigue ?? 0).toFixed(1)} (${restBuilding ? 'on bed' : 'on ground'})`
+      `${pawn.name} goes to sleep at ${fmtPos(pawn)} fatigue=${(pawn.needs?.fatigue ?? 0).toFixed(1)} (${onBed ? 'on bed' : 'on ground'})`
   );
   return mutatePawn(gameState, pawn.id, (p) => {
     p.currentState = PAWN_STATE.SLEEPING;
