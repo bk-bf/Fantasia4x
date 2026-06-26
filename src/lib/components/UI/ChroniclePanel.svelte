@@ -241,7 +241,11 @@
   .panel.transparent :global(.breakdown) {
     pointer-events: auto;
   }
-  .panel.transparent .clear-btn {
+  /* Every control in the floating panel stays clickable over the click-through aside — the minimise
+     (.hdr-icon-btn), clear (.clear-btn) and the collapsed restore arrow (.restore-btn). Listing
+     buttons wholesale (not one class at a time) is what stops a new header button silently going dead
+     in cinematic mode. */
+  .panel.transparent button {
     pointer-events: auto;
   }
 

@@ -300,7 +300,7 @@
   .sidebar.transparent .row,
   .sidebar.transparent .res-row,
   .sidebar.transparent .cat-hdr,
-  .sidebar.transparent .hdr-btn {
+  .sidebar.transparent button {
     pointer-events: auto;
   }
   /* Resting highlight behind every kingdom + resource line — the warm hover tint at ~1/3 strength,
