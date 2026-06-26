@@ -12,23 +12,31 @@ import type { GameState, Job } from '../core/types';
 // PRODUCTION-CHAIN-II §F — soil buildings (terraform) + compost + seeds + wild-crop seed yield.
 
 describe('§F crop seeds', () => {
-  it('all seven seed items exist with category "seed"', () => {
+  it('each per-crop seed exists, and its category is its own id (so a grow zone can target it)', () => {
     for (const id of [
       'grain_seed',
-      'veg_seed',
-      'legume_seed',
+      'cabbage_seed',
+      'turnip_seed',
+      'onion_seed',
+      'bean_seed',
+      'pea_seed',
       'fibre_seed',
-      'fruit_seed',
-      'herb_seed',
+      'berry_seed',
+      'apple_seed',
+      'grape_seed',
+      'thyme_seed',
+      'mint_seed',
       'prize_seed'
     ]) {
-      expect(itemService.getItemById(id)?.category).toBe('seed');
+      // Per-crop seed categories (ADR cropping expansion): the grow-zone filter grid picks a seed by
+      // category, so each seed's category equals its own id rather than a shared "seed" bucket.
+      expect(itemService.getItemById(id)?.category).toBe(id);
     }
   });
 });
 
 describe('§F wild crops drop a few seeds when harvested', () => {
-  it('wild barley/rye yield grain_seed; berry bush yields fruit_seed', () => {
+  it('wild barley/rye yield grain_seed; berry bush yields berry_seed; wild greens yield veg seed', () => {
     expect(resourceObjectService.calculateYield('wild_barley', undefined, undefined, 'harvest')).toHaveProperty(
       'grain_seed'
     );
@@ -36,7 +44,11 @@ describe('§F wild crops drop a few seeds when harvested', () => {
       'grain_seed'
     );
     expect(resourceObjectService.calculateYield('berry_bush', undefined, undefined, 'harvest')).toHaveProperty(
-      'fruit_seed'
+      'berry_seed'
+    );
+    // Wild greens are the wild source of cultivated-vegetable seed (no generic "veg_seed" any more).
+    expect(resourceObjectService.calculateYield('wild_greens', undefined, undefined, 'harvest')).toHaveProperty(
+      'turnip_seed'
     );
   });
 });
@@ -214,7 +226,20 @@ describe('§F resource growth/maturity', () => {
 
 describe('§F soil exhaustion from farming', () => {
   it('every crop declares a fertility cost; prize crops draw the most', () => {
-    for (const id of ['crop_wheat', 'crop_cabbage', 'crop_beans', 'crop_flax', 'crop_berries', 'crop_herbs']) {
+    for (const id of [
+      'crop_wheat',
+      'crop_cabbage',
+      'crop_turnip',
+      'crop_onion',
+      'crop_beans',
+      'crop_peas',
+      'crop_flax',
+      'crop_berries',
+      'crop_apples',
+      'crop_grapes',
+      'crop_thyme',
+      'crop_mint'
+    ]) {
       expect(resourceObjectService.getById(id)!.crop!.fertilityCost).toBeGreaterThan(0);
     }
     expect(resourceObjectService.getById('crop_pumpkin')!.crop!.fertilityCost).toBeGreaterThan(

@@ -15,11 +15,13 @@ import type { GameState, Pawn } from '../core/types';
 // PRODUCTION-CHAIN-II §F8 — milling, baking, brewing + alcohol as a mood good.
 
 describe('§F8 food-chain items', () => {
-  it('flour/malt are organic intermediates; bread/pie are food', () => {
+  it('flour/malt are organic intermediates; bread/pie are prepared meals', () => {
     expect(itemService.getItemById('flour')?.category).toBe('organic');
     expect(itemService.getItemById('malt')?.category).toBe('organic');
     expect((itemService.getItemById('bread')?.nutrition ?? 0)).toBeGreaterThan(0);
-    expect(itemService.getItemById('meat_pie')?.category).toBe('food');
+    // Cooked dishes group under `meal` now (the overloaded `food` category was split up).
+    expect(itemService.getItemById('bread')?.category).toBe('meal');
+    expect(itemService.getItemById('meat_pie')?.category).toBe('meal');
   });
 
   it('ale/wine/mead are drinks carrying an intoxication mood-lift (mead strongest)', () => {

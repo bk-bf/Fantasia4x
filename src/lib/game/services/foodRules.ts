@@ -11,9 +11,16 @@ const ITEMS_DB = itemsData as unknown as Item[];
  *  here; butchering then cooking the meat yields far more. Tuned low so raw carcass-eating is a fallback. */
 const CARCASS_NUTRITION_PER_KG = 2;
 
-/** True for a whole-animal carcass item (edible raw as a last resort; normally butchered into meat). */
+/** True for a whole-animal carcass item (edible raw as a last resort; normally butchered into meat).
+ *  `rotten_carcass` (decomposed → fertiliser) and `pawn_carcass` (a dead colonist — no cannibalism) are
+ *  carcass-shaped ids that are NOT food, so they're excluded from the raw-eat derivation. */
 export function isCarcass(item: { id?: string }): boolean {
-  return !!item.id && item.id.endsWith('_carcass');
+  return (
+    !!item.id &&
+    item.id.endsWith('_carcass') &&
+    item.id !== 'rotten_carcass' &&
+    item.id !== 'pawn_carcass'
+  );
 }
 
 /** Hunger one UNIT of an item restores. Carcasses carry no explicit `nutrition` (they're meant to be
@@ -35,10 +42,16 @@ export function isEdibleFood(item: Item): boolean {
   return item.category === 'food' || edibleNutrition(item) > 0;
 }
 
-// Rotten food and raw carcasses are edible but a last resort — left OUT of the default allow-list so
-// pawns won't gnaw a putrid haunch or an unbutchered body unless the player ticks them on in the panel.
+// Rotten food (category `spoiled`) and raw carcasses (category `carcass`) are edible but a last resort —
+// left OUT of the default allow-list so pawns won't gnaw a putrid haunch or an unbutchered body unless
+// the player ticks them on in the panel.
 function isDefaultBlockedFood(item: Item): boolean {
-  return item.id.startsWith('rotten_') || isCarcass(item);
+  return (
+    item.category === 'spoiled' ||
+    item.category === 'carcass' ||
+    item.id.startsWith('rotten_') ||
+    isCarcass(item)
+  );
 }
 
 /** Whether an item is in the sensible out-of-the-box eat list (excludes rotten food + raw carcasses). */

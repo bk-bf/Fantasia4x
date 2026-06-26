@@ -267,6 +267,22 @@
     }
   },
   {
+    "id"              : "make_pottage",
+    "station"         : "campfire",
+    "inputs"          : {},
+    "outputs"         : {"pottage": 1},
+    "workAmount"      : 3,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "cooking", "minTier": 0},
+    "dynamicRecipe"   : {
+      "veg": {
+        "acceptsCategory": "vegetable",
+        "quantity"       : 3,
+        "default"        : {"name": "Pottage", "description": "A thick boiled mess of garden vegetables."}
+      }
+    }
+  },
+  {
     "id"               : "make_copper_bar",
     "passive"          : true,
     "station"          : "stone_forge",
@@ -2365,7 +2381,7 @@
       }
     }
   },
-  // BREW (fermenter, passive timers): wheat → malt → ale; fruit → wine; honey → mead.
+  // BREW (fermenter, passive timers): wheat → malt → ale; grapes/apples/berries → wine; honey → mead.
   {
     "id"              : "malt_grain",
     "station"         : "fermenter",
@@ -2388,7 +2404,8 @@
     "id"              : "ferment_wine",
     "station"         : "fermenter",
     "passive"         : true,
-    "inputs"          : {"fruit": 4},
+    "inputs"          : {"grapes": 4},
+    "inputAlternatives": [ {"apple": 4}, {"wild_berries": 8} ],
     "outputs"         : {"wine": 2},
     "workAmount"      : 72,
     "toolTierRequired": 0
@@ -2673,7 +2690,8 @@
   },
   {
     "id": "make_dye", "station": "alchemy_lab",
-    "inputs": {"wild_berries": 3, "water": 1}, "inputAlternatives": [ {"culinary_herbs": 3, "water": 1} ],
+    "inputs": {"wild_berries": 3, "water": 1},
+    "inputAlternatives": [ {"thyme": 3, "water": 1}, {"mint": 3, "water": 1}, {"wild_sage": 3, "water": 1} ],
     "outputs": {"dye": 2}, "workAmount": 14, "toolTierRequired": 1, "researchRequired": "basic_alchemy"
   },
   {
