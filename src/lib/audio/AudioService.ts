@@ -319,12 +319,12 @@ class AudioServiceImpl {
       bed.playing = true;
       bed.howl.play();
       bed.howl.fade(0, to, AMBIENT_FADE_MS);
-    } else if (target > 0) {
-      bed.howl.fade(bed.howl.volume(), to, AMBIENT_FADE_MS);
     } else if (bed.playing) {
-      bed.howl.fade(bed.howl.volume(), 0, AMBIENT_FADE_MS);
-      bed.howl.once('fade', () => bed.howl.pause());
-      bed.playing = false;
+      // Already playing: glide toward `to` (including 0) but NEVER pause. Pausing on near-zero gain
+      // made a bed hovering at a zoom threshold pause → re-play → swell up from 0 on every crossing,
+      // which sounds like the ambience "firing in batches" / chopping. It rests silently at 0 instead
+      // (publish() filters target>0 so it leaves the now-playing list); dispose() frees the voices.
+      bed.howl.fade(bed.howl.volume(), to, AMBIENT_FADE_MS);
     }
     this.publish();
   }
