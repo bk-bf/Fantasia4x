@@ -793,10 +793,13 @@
     } satisfies SelectedEntityModel;
   })();
 
-  // Building under hovered tile (all statuses)
+  // Building under hovered tile (all statuses). Roofs are HOVER-TRANSPARENT — they don't surface an info
+  // card on hover (it blocked the tile readout beneath); the tile panel shows a "roofed" badge instead.
+  // Roofs stay inspectable by clicking (they're last in the click-cycle). Excluding roofs from the find
+  // also means a roof placed over a real building no longer shadows that building's hover card.
   $: hoverBuilding =
     hoverTileX >= 0 && hoverTileY >= 0
-      ? (buildings.find((b) => b.x === hoverTileX && b.y === hoverTileY) ?? null)
+      ? (buildings.find((b) => b.x === hoverTileX && b.y === hoverTileY && !isRoofBuilding(b)) ?? null)
       : null;
   // Click-selected building (stays locked until Esc / click elsewhere)
   $: selectedBuilding = selectedBuildingId
@@ -2801,7 +2804,9 @@
     if (pawn) layers.push({ kind: 'pawn', id: pawn.id });
     const mob = findMobAtTile(x, y);
     if (mob) layers.push({ kind: 'mob', id: mob.id });
-    const building = buildings.find((b) => b.x === x && b.y === y);
+    // Non-roof building sits at normal priority; the roof (if any) is appended LAST below, so a click
+    // reaches the floor/items/resources under it before the roof — mirroring its hover-transparency.
+    const building = buildings.find((b) => b.x === x && b.y === y && !isRoofBuilding(b));
     if (building) layers.push({ kind: 'building', id: building.id });
     // Stockpile zone on this tile. `zoneTiles` is the canonical membership map (same source the hover
     // inspector uses); the owning instance id comes from `designationZoneId`, falling back to any
@@ -2832,6 +2837,9 @@
           layers.push({ kind: 'resource', resourceId });
       }
     }
+    // Roof last in the cycle — clickable to inspect/demolish, but never the first thing a click grabs.
+    const roof = buildings.find((b) => b.x === x && b.y === y && isRoofBuilding(b));
+    if (roof) layers.push({ kind: 'building', id: roof.id });
     return layers;
   }
 
@@ -4905,6 +4913,7 @@
                 ? '#b09030'
                 : '#c83018'}">light {Math.round(hoverTileLight * 100)}%</span
           >
+          {#if tileThermal.roofed}<span style="color:#7e9fbf">roofed</span>{/if}
           {#if hoverDisplayResource}
             {@const growRes = resourceObjectService.getById(hoverDisplayResource)}
             {#if growRes && isGrowableResource(growRes)}
@@ -4940,7 +4949,6 @@
           >
           {#if tileSnow > 0}<span style="color:#cdd6e0">snow {tileSnow}%</span>{/if}
           {#if windWord}<span style="color:#8fc8a0">{windWord} windy</span>{/if}
-          {#if tileThermal.roofed}<span style="color:#7e9fbf">roofed</span>{/if}
         </div>
       </div>
     {/if}
