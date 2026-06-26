@@ -31,7 +31,9 @@
 		"add:wasm:sim": "cd sim-core && ~/.cargo/bin/wasm-pack build --target web --out-dir ../src/lib/sim-core-pkg",
 		"test:sim-core": "cd sim-core && cargo test",
 		"threat": "node scripts/threat-model.mjs",
-		"threat:check": "node scripts/threat-model.mjs --check"
+		"threat:check": "node scripts/threat-model.mjs --check",
+		"build:distance": "bash scripts/build-distance.sh",
+		"hooks:install": "bash scripts/hooks/install.sh"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.30.0",

@@ -1,0 +1,38 @@
+{
+  "name": "fantasia4x-build-distance",
+  "displayName": "Fantasia4x Build Distance",
+  "description": "Status bar badge showing how many commits have landed since the last v* release build.",
+  "version": "0.1.0",
+  "publisher": "bk",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "fantasia4x.buildDistance.refresh",
+        "title": "Build Distance: Refresh"
+      }
+    ],
+    "configuration": {
+      "title": "Fantasia4x Build Distance",
+      "properties": {
+        "fantasia4x.buildDistance.max": {
+          "type": "number",
+          "default": 100,
+          "description": "Commit cap between release builds (turns the badge red at/over this)."
+        },
+        "fantasia4x.buildDistance.pollSeconds": {
+          "type": "number",
+          "default": 30,
+          "description": "Fallback poll interval; the badge also refreshes on every commit and on window focus."
+        }
+      }
+    }
+  }
+}

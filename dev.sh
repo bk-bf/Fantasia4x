@@ -51,6 +51,11 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+# Build-distance reminder: warn when the working tree has drifted too many commits from the last
+# release build (last v* tag). Keeps each build ≤ BUILD_DISTANCE_MAX (default 100) commits apart.
+# Tolerant — never let it abort dev.sh startup.
+bash "$SCRIPT_DIR/scripts/build-distance.sh" || true
+
 # Generate .svelte-kit/ type definitions if missing (fresh worktree / clean checkout)
 if [[ ! -d "$SCRIPT_DIR/.svelte-kit" ]]; then
   echo "Generating .svelte-kit/…"
