@@ -14,6 +14,7 @@
     qty = null,
     durability = null,
     maxDurability = null,
+    contents = null,
     pinned = false,
     onPin = null,
     onDrop,
@@ -26,6 +27,8 @@
     qty?: number | null;
     durability?: number | null;
     maxDurability?: number | null;
+    /** Liquid-container fill (ItemInstance.contents): units of `def.container.holds` held inside. */
+    contents?: number | null;
     pinned?: boolean;
     onPin?: (() => void) | null;
     onDrop: () => void;
@@ -55,6 +58,15 @@
       ? Math.max(0, Math.min(100, (durability / maxDurability) * 100))
       : null
   );
+
+  // Liquid-container fill bar (waterskin/flask/jug). Water is 1 L/unit so `contents` (units) ≈ litres,
+  // and capacity is the def's `container.capacityL`. Shown next to the condition bar.
+  let container = $derived(def.container ?? null);
+  let fillPct = $derived(
+    container && contents != null
+      ? Math.max(0, Math.min(100, (contents / container.capacityL) * 100))
+      : null
+  );
 </script>
 
 <div class="card" class:pinned>
@@ -71,8 +83,8 @@
       <SpriteIcon charSpans={def.charSpans} tint={qColor ?? def.color ?? null} px={16} />
     {/if}
     <span class="name-text"
-      >{#if hasPrefix}<span class="rarity" style="color:{qColor}">{prefix}</span>
-      {/if}{baseName}</span
+      >{#if hasPrefix}<span class="rarity" style="color:{qColor}">{prefix}</span
+        >&nbsp;{/if}{baseName}</span
     >
   </span>
 
@@ -81,6 +93,11 @@
     {#if durPct != null}
       <div class="dur-bar" title="{durability}/{maxDurability}">
         <div class="dur-fill" class:low={durPct < 30} style="width:{durPct}%"></div>
+      </div>
+    {/if}
+    {#if fillPct != null && container}
+      <div class="fill-bar" title="{contents ?? 0}/{container.capacityL} L {container.holds}">
+        <div class="fill-fill" style="width:{fillPct}%"></div>
       </div>
     {/if}
   </div>
@@ -149,6 +166,16 @@
   }
   .dur-fill.low {
     background: var(--neg, #e05a5a);
+  }
+  /* Liquid-container fill — a blue "water level" bar beside the condition bar. */
+  .fill-bar {
+    flex: 1;
+    height: 3px;
+    background: var(--bg-active, #1a1f28);
+  }
+  .fill-fill {
+    height: 100%;
+    background: #4fc3f7;
   }
 
   .corner {

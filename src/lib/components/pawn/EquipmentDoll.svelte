@@ -91,10 +91,10 @@
           </div>
         {/if}
         {@const prefix = qualityPrefix(it.quality)}
-        <span class="it-name" title={prefix ? `${prefix} ${def.name}` : def.name}>
-          {#if prefix && qColor}<span class="rarity" style="color:{qColor}">{prefix}</span>
-          {/if}{def.name}
-        </span>
+        <span class="it-name" title={prefix ? `${prefix} ${def.name}` : def.name}
+          >{#if prefix && qColor}<span class="rarity" style="color:{qColor}">{prefix}</span
+            >&nbsp;{/if}{def.name}</span
+        >
         <div class="dur-bar" title="{it.durability}/{maxDur}">
           <div
             class="dur-fill"
