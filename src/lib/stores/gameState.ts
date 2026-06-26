@@ -799,33 +799,6 @@ function resetGame() {
   console.info('[GameState] Game reset to initial state.');
 }
 
-/**
- * Completely nuke all persisted state and reload the page.
- *
- * Stops the auto-turn timer FIRST so no in-flight turn can
- * re-write localStorage after the wipe but before reload.
- * Then removes every fantasia4x-* key so nothing stale survives.
- */
-function wipeAndReload() {
-  // 1. Kill timers — no more saves can fire after this point.
-  stopAutoTurns();
-
-  if (browser) {
-    // 2. Hide the game immediately so the old map doesn't flash while we
-    //    delete the save.  The loading screen will show until reload completes.
-    storeReady.set(false);
-    // 3. Clear dev log files (fire-and-forget; don't block reload on failure).
-    fetch('/api/logs', { method: 'DELETE', keepalive: true }).catch(() => {
-      /* silently ignore */
-    });
-    // 4. Delete the IndexedDB save (also clears any lingering localStorage keys).
-    deleteSave().finally(() => {
-      // 5. Reload — no need to mutate the store here since we're reloading.
-      location.reload();
-    });
-  }
-}
-
 // ===== STORE READY FLAG =====
 /**
  * Becomes `true` once the persisted save has been loaded and applied to the
@@ -1309,7 +1282,6 @@ export const gameState = {
   devClearAllItems,
   consumeGlobalItem,
   resetGame,
-  wipeAndReload,
   /** Leave the main menu and boot the game ('new' = fresh colony, 'load' = resume save). */
   startGame,
   /** Pause menu "Save Game" → New Save: write a new frozen snapshot (a timestamped checkpoint). */
