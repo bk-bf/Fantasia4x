@@ -8,16 +8,23 @@
 #   ./build.sh --linux              Linux installers: AppImage + .deb
 #   ./build.sh --windows            Windows installer: NSIS .exe (cross-built via Wine on Linux)
 #   ./build.sh --linux --windows    both of the above (same as no flag)
-#   ./build.sh --local              quick UNPACKED build for THIS machine — run it straight away,
-#                                     no installer packaging (dist-electron/linux-unpacked/)
+#   ./build.sh --unpacked           quick UNPACKED build for THIS machine — run it straight away,
+#                                     no installer packaging (dist-electron/linux-unpacked/). (--local
+#                                     still works as an alias.)
+#   ./build.sh --install            build the Linux AppImage installer, then install/update it on this
+#                                     machine via apkg (apkg -S). Combine with anything that builds an
+#                                     AppImage; run alone it builds just the Linux installer + installs.
 #   ./build.sh --dry                pre-flight: production static build + scan for dev-only /src asset
 #                                     paths that 404 once packaged. No packaging — fast; run during dev.
-#   ./build.sh --push               cut a release via CI: autotag (patch bump) + push → GitHub Actions
-#                                     builds both OSes and publishes the GitHub Release.
-#   ./build.sh --local --push       cut a release ENTIRELY on this machine: build Linux + Windows,
-#                                     git-cliff changelog, autotag, and gh-publish the installers.
-#                                     (CI's guard job skips the redundant cloud build for this tag.)
-#   ./build.sh --push --tag v0.2.0  set the version/tag manually (any --push mode) instead of the
+#   ./build.sh --push               cut a release ENTIRELY on this machine (the default): build Linux +
+#                                     Windows, git-cliff changelog, autotag, and gh-publish the installers.
+#                                     If dist-electron/ already holds installers newer than the HEAD
+#                                     commit, the build is SKIPPED and those artifacts are published
+#                                     as-is (you still confirm the asset list before anything uploads).
+#   ./build.sh --push --remote      cut the release via CI instead: autotag (patch bump) + push → GitHub
+#                                     Actions builds both OSes and publishes the GitHub Release. Nothing
+#                                     is built or published from this machine.
+#   ./build.sh --push --tag v0.2.0  set the version/tag manually (either --push mode) instead of the
 #                                     automatic patch bump. RELEASE_TAG=vX.Y.Z env var works too.
 #
 # Autotag bumps the PATCH of the last v* tag — one release per ~100 commits (v0.1.0 → v0.1.1 → …).
@@ -35,17 +42,23 @@ usage() {
 
 LINUX=false
 WINDOWS=false
-LOCAL=false
+UNPACKED=false
+REMOTE=false
 DRY=false
 PUSH=false
+INSTALL=false
+REUSE_BUILD=false
+RESOLV4=""
 TAG_ARG=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --linux) LINUX=true ;;
     --windows | --win) WINDOWS=true ;;
-    --local) LOCAL=true ;;
+    --unpacked | --local) UNPACKED=true ;;
+    --remote | --ci) REMOTE=true ;;
     --dry) DRY=true ;;
     --push) PUSH=true ;;
+    --install) INSTALL=true ;;
     --tag | --version)
       TAG_ARG="${2:-}"
       [[ -n "$TAG_ARG" ]] || { echo "build.sh: --tag needs a version, e.g. --tag v0.2.0" >&2; exit 1; }
@@ -78,9 +91,19 @@ if $DRY; then
   exit 0
 fi
 
+# --install: install/update the freshly built AppImage on this machine via apkg. It needs a real
+# AppImage, so force the Linux installer build (the unpacked --dir path produces none) and fail early
+# if apkg is missing.
+if $INSTALL; then
+  command -v apkg >/dev/null 2>&1 || {
+    echo "build.sh: --install needs 'apkg' (AppImage installer) on PATH." >&2; exit 1; }
+  LINUX=true
+  UNPACKED=false   # --install wants the packaged AppImage, not the unpacked --dir build
+fi
+
 # ---- Release (--push) -------------------------------------------------------------------------------
-# --push cuts a tagged release. WITH --local everything happens here (build both OSes → git-cliff
-# changelog → tag → gh release + upload). WITHOUT --local it hands off to CI (tag + push;
+# --push cuts a tagged release. By DEFAULT everything happens here on this machine (build both OSes →
+# git-cliff changelog → tag → gh release + upload). WITH --remote it instead hands off to CI (tag + push;
 # .github/workflows/build.yml builds + publishes). A guard job in that workflow skips the redundant
 # cloud build when a published release already exists for the tag, so the local path never double-fires.
 # Next version = the last v* tag with its PATCH bumped by one (v0.1.0 → v0.1.1). --tag / RELEASE_TAG
@@ -115,13 +138,33 @@ if $PUSH; then
   COMMITS="$(git rev-list --count "${LAST_TAG:+$LAST_TAG..}HEAD")"
   echo "▸ Release ${LAST_TAG:-（first）} → $TAG  ($COMMITS commits)"
 
-  if $LOCAL; then
+  if ! $REMOTE; then
     command -v git-cliff >/dev/null 2>&1 || {
-      echo "build.sh: --local --push needs git-cliff (changelog). Install: sudo pacman -S git-cliff" >&2; exit 1; }
-    command -v gh >/dev/null 2>&1 || { echo "build.sh: --local --push needs the GitHub CLI 'gh'." >&2; exit 1; }
+      echo "build.sh: --push needs git-cliff (changelog). Install: sudo pacman -S git-cliff" >&2; exit 1; }
+    command -v gh >/dev/null 2>&1 || { echo "build.sh: --push needs the GitHub CLI 'gh' (or use --remote for CI)." >&2; exit 1; }
     gh auth status >/dev/null 2>&1 || { echo "build.sh: gh isn't authenticated — run 'gh auth login'." >&2; exit 1; }
     echo "  Mode: LOCAL — build Linux + Windows here, then publish to GitHub from this machine."
-    LINUX=true; WINDOWS=true   # a release always ships both installers, regardless of --local's usual meaning
+    LINUX=true; WINDOWS=true   # a release always ships both installers
+
+    # Reuse existing artifacts instead of rebuilding when dist-electron/ already holds a Linux + Windows
+    # installer set, all built AFTER the current HEAD commit (nothing in the tree has changed since).
+    # You still confirm the asset list at the publish prompt below, so a stale reuse is recoverable.
+    HEAD_TS="$(git log -1 --format=%ct 2>/dev/null || echo 0)"
+    have_app="$(ls dist-electron/*.AppImage 2>/dev/null | head -1)"
+    have_exe="$(ls dist-electron/*.exe 2>/dev/null | head -1)"
+    if [[ -n "$have_app" && -n "$have_exe" ]]; then
+      stale=false
+      for f in dist-electron/*.AppImage dist-electron/*.deb dist-electron/*.exe; do
+        [[ -e "$f" ]] || continue
+        [[ "$(stat -c %Y "$f")" -ge "$HEAD_TS" ]] || stale=true
+      done
+      $stale || REUSE_BUILD=true
+    fi
+    if $REUSE_BUILD; then
+      echo "  Artifacts in dist-electron/ are newer than HEAD — reusing them, skipping the build."
+    else
+      echo "  No current installer set in dist-electron/ — building fresh."
+    fi
   else
     echo "  Mode: CI — tag & push; GitHub Actions builds and publishes."
     read -rp "  Tag $TAG, push origin/$BRANCH + $TAG, and let CI build+publish? [y/N] " a
@@ -135,12 +178,16 @@ if $PUSH; then
   fi
 fi
 
-# Default (no --linux/--windows, and not the unpacked --local build): produce BOTH installers.
-if ! $LINUX && ! $WINDOWS && ! $LOCAL; then
+# Default (no --linux/--windows, and not the unpacked build): produce BOTH installers.
+if ! $LINUX && ! $WINDOWS && ! $UNPACKED; then
   LINUX=true
   WINDOWS=true
   echo "▸ No OS flag given — building both installers (Linux + Windows)."
 fi
+
+# Build + package, unless --push found current artifacts to reuse (REUSE_BUILD). Everything from
+# the Wine check through electron-builder is skipped in that case; we fall straight through to publish.
+if ! $REUSE_BUILD; then
 
 # Windows installers cross-build on Linux through Wine — fail early with a clear hint if it's missing.
 if $WINDOWS && [[ "$(uname -s)" == "Linux" ]] && ! command -v wine >/dev/null 2>&1; then
@@ -190,7 +237,7 @@ eb() {
 # Package with electron-builder. --publish never: electron-builder only ever produces local artifacts;
 # any GitHub publish is done explicitly below via gh (the --push path), never by electron-builder.
 EB_ARGS=(--publish never)
-if $LOCAL && ! $PUSH; then
+if $UNPACKED && ! $PUSH; then
   echo "▸ Packaging unpacked build for this machine (--dir)…"
   eb --dir "${EB_ARGS[@]}"
 else
@@ -200,18 +247,31 @@ else
   eb "${EB_ARGS[@]}"
 fi
 
+fi  # end: build + package (skipped when REUSE_BUILD)
+
 echo
 echo "✓ Done. Artifacts in dist-electron/:"
 ls -1 dist-electron/*.AppImage dist-electron/*.deb dist-electron/*.exe 2>/dev/null || true
-if $LOCAL && ! $PUSH; then
+if $UNPACKED && ! $PUSH; then
   echo "  unpacked app → dist-electron/linux-unpacked/  (run: ./dist-electron/linux-unpacked/fantasia4x)"
 fi
 
-# ---- Publish the LOCAL release (build.sh --local --push) --------------------------------------------
+# --install: install/update the freshly built AppImage on this machine via apkg.
+if $INSTALL; then
+  APP="$(ls -t dist-electron/*.AppImage 2>/dev/null | head -1)"
+  if [[ -z "$APP" ]]; then
+    echo "build.sh: --install found no AppImage in dist-electron/ to install." >&2; exit 1
+  fi
+  echo "▸ Installing $APP via apkg…"
+  apkg -S "$APP" fantasia4x
+  echo "✓ Installed/updated fantasia4x (launch it from your app menu, or: apkg -R fantasia4x to remove)."
+fi
+
+# ---- Publish the LOCAL release (build.sh --push, without --remote) ----------------------------------
 # The installers are built; now changelog → push branch → draft release (uploads assets, no tag yet) →
 # publish (this creates the tag, which is what fires CI; build.yml's guard then skips since the release
 # already exists with assets).
-if $PUSH && $LOCAL; then
+if $PUSH && ! $REMOTE; then
   echo
   mapfile -t ASSETS < <(ls dist-electron/*.AppImage dist-electron/*.deb dist-electron/*.exe 2>/dev/null)
   if [[ ${#ASSETS[@]} -eq 0 ]]; then
