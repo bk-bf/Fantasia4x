@@ -62,8 +62,13 @@
   const PAWN_FAR_FLOOR = 0.1; // "very silent" for distant creatures (e.g. caught in a corner zoomed out)
   const OFFSCREEN_MAX = 0.12; // ceiling for just-off-screen creatures ("barely hear them")
   const OFFSCREEN_MARGIN = 0.6; // how far beyond the viewport (× its size) a creature is still faint
-  const CALL_FAST_MS = 6000; // avg gap between calls for a fully-audible archetype
-  const CALL_SLOW_MS = 36000; // avg gap for a barely-audible one
+  const CALL_FAST_MS = 6000; // MEAN gap between calls for a fully-audible archetype (Poisson; see emitSfx)
+  const CALL_SLOW_MS = 36000; // mean gap for a barely-audible one
+  const CALL_MIN_GAP_MS = 3000; // refractory floor — a creature never re-calls sooner than this
+  // Per-sound multipliers on the mean call gap. Some one-shots grate on repeat: the mountain goat has a
+  // single bleat clip with no variation, so on a routine cadence it became a "loop in your head" — call
+  // it far less often. (Keyed by CreatureSoundId; 1 = default rate.)
+  const CALL_RARITY: Partial<Record<string, number>> = { goat: 2.5 };
   const CREATURE_GAIN = 0.21; // master trim so wildlife sits quietly under the music
   const MAX_CONCURRENT_ARCHETYPES = 3; // only the 3 loudest archetypes may call (no swarm of sounds)
   const LEVEL_EPS = 0.02; // below this, treat as silent
@@ -71,8 +76,9 @@
   // ── Work SFX tuning (medieval labour: chop/mine/hammer…). Shares the zoom/viewport model; no
   // pawn-distance gate (the worker IS a pawn). A touch louder + more rhythmic than wildlife. ──
   const WORK_GAIN = 0.4;
-  const WORK_CALL_FAST_MS = 2000; // avg gap between strikes for a fully-audible work site
+  const WORK_CALL_FAST_MS = 2000; // mean gap between strikes for a fully-audible work site
   const WORK_CALL_SLOW_MS = 8000;
+  const WORK_MIN_GAP_MS = 1200; // refractory floor for work strikes
 
   // ── Fire SFX (continuous campfire-crackle loop for lit fire buildings). zoom × viewport, like work. ──
   const FIRE_GAIN = 0.45;
@@ -99,8 +105,8 @@
   let lastCombatAt = 0;
   let wasNight = false;
   let nowTick = $state(0); // bumped every 1 s to re-evaluate combat-hold + dusk
-  const lastFired = new Map<string, number>(); // creature archetype id → last one-shot time
-  const lastFiredWork = new Map<string, number>(); // work category id → last one-shot time
+  const nextFire = new Map<string, number>(); // creature sound id → scheduled time of its NEXT one-shot
+  const nextFireWork = new Map<string, number>(); // work category id → scheduled time of its NEXT one-shot
 
   // Volume buses → engine, pushed live as the Settings sliders move. Done via explicit store
   // subscriptions (in onMount) rather than an $effect, so a slider change ALWAYS re-applies — incl.
@@ -175,8 +181,14 @@
 
   /**
    * Shared one-shot emitter for a `soundId → product-of-(1−c)` map (audibility = 1 − product). Picks
-   * the loudest few ids, rolls an intermittent one-shot per id (volume + rate scale with audibility,
-   * jittered), and publishes the levels for the debug panel. Used by both wildlife and work SFX.
+   * the loudest few ids and fires an intermittent one-shot per id (volume + rate scale with audibility).
+   * Used by both wildlife and work SFX.
+   *
+   * Scheduling is a MEMORYLESS (Poisson) process: when an id fires, the NEXT gap is drawn ONCE from an
+   * exponential distribution with the given mean, floored by a refractory minimum. This is the fix for
+   * the "loop in your head" rhythm — the old code re-rolled a uniformly-jittered gap every 400 ms tick
+   * and fired the instant elapsed-time beat the smallest roll, which statistically collapsed the gaps to
+   * a near-constant interval. Exponential inter-arrivals have no perceptible period.
    */
   function emitSfx(
     product: Map<string, number>,
@@ -186,7 +198,9 @@
       gain: number;
       fastMs: number;
       slowMs: number;
-      lastFired: Map<string, number>;
+      minGapMs: number;
+      rarity?: (id: string) => number; // multiplier on the mean gap (default 1)
+      nextFire: Map<string, number>; // id → scheduled time of its next one-shot
       setLevels: (l: { label: string; level: number }[]) => void;
     }
   ): void {
@@ -201,14 +215,26 @@
     entries.sort((a, b) => b.level - a.level);
     const audible = entries.slice(0, MAX_CONCURRENT_ARCHETYPES);
     for (const e of audible) {
-      const gap =
-        (opts.fastMs + (opts.slowMs - opts.fastMs) * (1 - e.level)) * (0.7 + Math.random() * 0.6);
-      if (now - (opts.lastFired.get(e.id) ?? 0) >= gap) {
+      const meanGap =
+        (opts.fastMs + (opts.slowMs - opts.fastMs) * (1 - e.level)) * (opts.rarity?.(e.id) ?? 1);
+      let due = opts.nextFire.get(e.id);
+      if (due === undefined) {
+        // First time we hear this id: seed a SHORT randomized delay (independent of rarity) so it's
+        // actually heard soon after coming into earshot — rarity only governs the gaps AFTER that.
+        due = now + opts.minGapMs + Math.random() * opts.fastMs;
+        opts.nextFire.set(e.id, due);
+      }
+      if (now >= due) {
         const clips = opts.clips(e.id);
         audioService.playSfx(clips[Math.floor(Math.random() * clips.length)], e.level * opts.gain);
-        opts.lastFired.set(e.id, now);
+        // Exponential (memoryless) inter-arrival with the right mean, floored so it never machine-guns.
+        const gap = Math.max(opts.minGapMs, -Math.log(1 - Math.random()) * meanGap);
+        opts.nextFire.set(e.id, now + gap);
       }
     }
+    // NB: schedules PERSIST even while an id is out of earshot (we never delete them). An intermittently
+    // audible creature like the mountain goat keeps accruing its wait and fires when next heard, rather
+    // than resetting its timer every time it drops out of the audible top-N (which silenced it entirely).
     opts.setLevels(audible.map((e) => ({ label: e.label, level: e.level })));
   }
 
@@ -268,7 +294,9 @@
       gain: CREATURE_GAIN,
       fastMs: CALL_FAST_MS,
       slowMs: CALL_SLOW_MS,
-      lastFired,
+      minGapMs: CALL_MIN_GAP_MS,
+      rarity: (id) => CALL_RARITY[id] ?? 1,
+      nextFire,
       setLevels: (l) => audioService.setCreatureLevels(l)
     });
   }
@@ -306,7 +334,8 @@
       gain: WORK_GAIN,
       fastMs: WORK_CALL_FAST_MS,
       slowMs: WORK_CALL_SLOW_MS,
-      lastFired: lastFiredWork,
+      minGapMs: WORK_MIN_GAP_MS,
+      nextFire: nextFireWork,
       setLevels: (l) => audioService.setWorkLevels(l)
     });
   }
