@@ -4,6 +4,7 @@
 <script lang="ts">
   import type { Item } from '$lib/game/core/types';
   import ItemStatTooltip from '$lib/components/UI/ItemStatTooltip.svelte';
+  import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
 
   let {
     def,
@@ -53,7 +54,12 @@
   <button class="corner drop" title={dropTitle} onclick={onDrop}>↓</button>
 
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <span class="name" onmouseenter={show} onmousemove={move} onmouseleave={hide}>{name}</span>
+  <span class="name" onmouseenter={show} onmousemove={move} onmouseleave={hide}>
+    {#if def.charSpans}
+      <SpriteIcon charSpans={def.charSpans} tint={def.color ?? null} px={16} />
+    {/if}
+    <span class="name-text">{name}</span>
+  </span>
 
   <div class="meta">
     {#if qty != null}<span class="qty">×{qty}</span>{/if}
@@ -86,6 +92,9 @@
   }
 
   .name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     font-family: var(--font-mono, monospace);
     font-size: 0.72rem;
     color: var(--text, #ccc);

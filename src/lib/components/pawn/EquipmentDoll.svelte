@@ -3,6 +3,7 @@
   import type { Pawn, EquipmentSlot, Item } from '$lib/game/core/types';
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
   import ItemStatTooltip from '$lib/components/UI/ItemStatTooltip.svelte';
+  import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
 
   let {
     pawn,
@@ -82,7 +83,12 @@
             onclick={() => onTogglePin?.(it.itemId)}>{isPinned(it.itemId) ? '★' : '☆'}</button
           >
         {/if}
-        <span class="it-name" title={def.name}>{def.name}</span>
+        <span class="it-name" title={def.name}>
+          {#if def.charSpans}
+            <SpriteIcon charSpans={def.charSpans} tint={def.color ?? null} px={16} />
+          {/if}
+          <span class="it-text">{def.name}</span>
+        </span>
         <div class="dur-bar" title="{it.durability}/{maxDur}">
           <div
             class="dur-fill"
@@ -154,9 +160,16 @@
   }
 
   .it-name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     font-size: 11px;
     color: var(--text);
     line-height: 1.15;
+  }
+  .it-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .dur-bar {
