@@ -111,6 +111,7 @@
   } from '$lib/components/UI/gameCanvas/spriteSheets';
   import { redrawHudSpriteIcons } from '$lib/components/UI/gameCanvas/hudSpriteIcon';
   import BuildingFuelPanel from '$lib/components/UI/gameCanvas/BuildingFuelPanel.svelte';
+  import FoodFilterPanel from '$lib/components/UI/gameCanvas/FoodFilterPanel.svelte';
   import StockpileZonePanel from '$lib/components/UI/gameCanvas/StockpileZonePanel.svelte';
   import {
     buildPawnCard,
@@ -669,14 +670,18 @@
     ? buildPawnCard(selectedPawn, true, {
         cameraFollowPawnId,
         startMark: () => startMarkDrag('pawn'),
-        armMove: () => armMoveAim()
+        armMove: () => armMoveAim(),
+        toggleFood: () => toggleFoodSettingsPanel(),
+        foodOpen: showFoodSettings
       })
     : null;
   $: hoverPawnCard = hoverPawn
     ? buildPawnCard(hoverPawn, false, {
         cameraFollowPawnId,
         startMark: () => startMarkDrag('pawn'),
-        armMove: () => armMoveAim()
+        armMove: () => armMoveAim(),
+        toggleFood: () => {},
+        foodOpen: false
       })
     : null;
 
@@ -3342,6 +3347,8 @@
           redrawOverlay();
         } else if (showFuelSettings) {
           showFuelSettings = false;
+        } else if (showFoodSettings) {
+          showFoodSettings = false;
         } else if (showZoneFilter) {
           showZoneFilter = false;
         } else if (moveAimActive || moveAimArmed) {
@@ -4210,6 +4217,21 @@
     showFuelSettings = !showFuelSettings;
   }
 
+  // Colony food-filter fly-out (mirrors showFuelSettings): owned here, toggled by the pawn card's FOOD
+  // button. Colony-wide (not per-pawn), but reset when the selected pawn changes so it doesn't linger.
+  let showFoodSettings = false;
+  let foodSettingsForPawnId: string | null = null;
+  $: {
+    const nextPawnId = selectedPawn?.id ?? null;
+    if (nextPawnId !== foodSettingsForPawnId) {
+      showFoodSettings = false;
+      foodSettingsForPawnId = nextPawnId;
+    }
+  }
+  function toggleFoodSettingsPanel() {
+    showFoodSettings = !showFoodSettings;
+  }
+
   // Stockpile zone FILTER fly-out (mirrors showFuelSettings): owned here, toggled by the card's
   // FILTER button, reset when the selected zone changes.
   let showZoneFilter = false;
@@ -4642,8 +4664,18 @@
       <!-- Group summary for a MARK highlight: names + DRAFT/UNDRAFT/MOVE (or HUNT) + CLEAR. -->
       <SelectedEntityCard model={markedGroupCard} />
     {:else if selectedPawnCard}
-      <!-- Selected pawn card — locked to this pawn regardless of mouse hover -->
-      <SelectedEntityCard model={selectedPawnCard} />
+      <!-- Selected pawn card + the colony FOOD filter fly-out, laid out exactly like the building card +
+           fuel panel so the FOOD button's fly-out anchors above the card. -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="bld-row"
+        role="presentation"
+        on:mousedown|stopPropagation
+        on:mouseup|stopPropagation
+      >
+        <SelectedEntityCard model={selectedPawnCard} embedded />
+        <FoodFilterPanel open={showFoodSettings} />
+      </div>
     {:else if selectedMobCard}
       <!-- Selected mob/animal card — locked to this creature regardless of hover -->
       <SelectedEntityCard model={selectedMobCard} />

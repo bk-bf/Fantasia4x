@@ -207,6 +207,10 @@
     <span class="tip-eff">{headline}</span>
   </div>
 
+  {#if item.description}
+    <div class="tip-desc">{item.description}</div>
+  {/if}
+
   {#if jobLabel}
     <div class="tip-row tip-job">
       <span class="tip-lbl">Job</span>
@@ -290,6 +294,13 @@
     font-weight: bold;
     color: var(--accent);
     white-space: nowrap;
+  }
+  .tip-desc {
+    color: var(--text-muted);
+    font-size: 10px;
+    line-height: 1.4;
+    font-style: italic;
+    margin-bottom: 4px;
   }
   .tip-row {
     display: flex;
