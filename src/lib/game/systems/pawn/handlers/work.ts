@@ -164,7 +164,16 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   const jobInZone = (id: string): boolean => {
     if (!allowedZone || !jobsById) return true;
     const j = jobsById.get(id);
-    return !j || allowedZone.has(`${j.targetX},${j.targetY}`);
+    if (!j) return true;
+    if (allowedZone.has(`${j.targetX},${j.targetY}`)) return true;
+    // A pawn works a job from an ADJACENT tile, and the target itself can be an UNWALKABLE tile it
+    // never stands on — a wall/solid-building blueprint (built from beside it) or a resource node. So
+    // the job is workable from inside the zone if ANY neighbour of the target is in-zone. Confinement
+    // still holds: pathing stays on allowed tiles, so the pawn only ever STANDS inside the zone.
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++)
+        if ((dx || dy) && allowedZone.has(`${j.targetX + dx},${j.targetY + dy}`)) return true;
+    return false;
   };
 
   // Job-target selection (which job + the need-lookahead queue preview) is decided by JobService;

@@ -721,6 +721,10 @@
   // chrome) instead of the old floating mark-HUD, so group DRAFT/UNDRAFT/MOVE/HUNT live in the same
   // info panel a single selection uses. Just names + a "multiple selected" header; the per-entity
   // detail is intentionally dropped (it's a group). Takes priority over any single selection below.
+  // Gate the force BUILD / HARVEST verbs on whether any such job actually exists right now.
+  $: hasBuildJobs = ($gameState?.jobs ?? []).some((j) => j.type === 'construct');
+  $: hasHarvestJobs = ($gameState?.jobs ?? []).some((j) => j.type === 'harvest');
+
   $: markedGroupCard = ((): SelectedEntityModel | null => {
     if (!markedKind || markedIds.length < 1) return null;
     const n = markedIds.length;
@@ -739,6 +743,12 @@
       if (markedDraftedCount > 0) {
         btns.push({ label: `MOVE (${markedDraftedCount})`, onClick: () => armMoveAim() });
       }
+      // Force the highlighted colonists onto the nearest build / harvest job right now (overrides idle,
+      // work-priority and restrict-zone gating). Shown only when such jobs exist.
+      if (hasBuildJobs)
+        btns.push({ label: 'BUILD', onClick: () => forceMarkedPawnsJob('construct') });
+      if (hasHarvestJobs)
+        btns.push({ label: 'HARVEST', onClick: () => forceMarkedPawnsJob('harvest') });
       btns.push({ label: 'CLEAR', onClick: () => clearMark() });
       return {
         name: `${n} pawn${plural ? 's' : ''} selected`,
@@ -4025,6 +4035,15 @@
       payload: { ids: markedIds, drafted: !markedAllDrafted },
       save: true
     });
+  }
+
+  /** BUILD / HARVEST verb: force the highlighted colonists onto the nearest build/harvest job right now
+   *  (overrides idle wandering, work-priority and restrict-zone gating), then clear the highlight. */
+  function forceMarkedPawnsJob(jobType: 'construct' | 'harvest') {
+    if (markedKind === 'pawn' && markedIds.length > 0) {
+      gameState.command({ type: 'forcePawnJob', payload: { ids: markedIds, jobType }, save: true });
+    }
+    clearMark();
   }
 
   /** HUNT verb: queue every highlighted mob for hunting, then clear the highlight. */

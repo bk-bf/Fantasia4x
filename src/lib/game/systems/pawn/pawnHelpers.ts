@@ -222,13 +222,21 @@ export function tryAssignPath(
   // job-pathing / combat repositioning (the harpy-fight TPS crater). Self-exclusion is dropped (the
   // mover's own start-tile penalty is moot to A*); the chosen approach tile is unoccupied either way.
   const blocked = occupancyService.blockedTilesShared(gameState);
+  // A confined pawn (restrict zone, started inside it — same gate gridForPawn uses) must approach a
+  // job from a tile INSIDE its zone, or the confined grid can't reach the chosen neighbour and the
+  // path fails → the job gets marked unreachable. This is what stopped confined pawns building/working
+  // structures sitting inside their own zone.
+  const allowedZone = pawn.drafted ? null : allowedTilesForPawn(gameState, pawn.id);
+  const confinedZone =
+    allowedZone && allowedZone.has(`${pawn.position.x},${pawn.position.y}`) ? allowedZone : null;
   const approach = findAdjacentApproach(
     tx,
     ty,
     gameState.worldMap,
     blocked,
     pawn.position.x,
-    pawn.position.y
+    pawn.position.y,
+    confinedZone
   );
   if (!approach) {
     return null;

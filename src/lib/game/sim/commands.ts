@@ -21,6 +21,7 @@
 import type {
   GameState,
   Pawn,
+  Job,
   EquipmentSlot,
   CraftingInProgress,
   ZoneInstanceType,
@@ -28,6 +29,7 @@ import type {
   Season,
   ZoneFilter
 } from '../core/types';
+import { findAdjacentApproach, isAdjacent } from '../systems/pawn/pawnQueries';
 import {
   addToStockpileZone,
   consumeFromStockpiles,
@@ -304,6 +306,79 @@ export const COMMANDS: Record<string, Cmd> = {
       if (pawn && pawn.drafted && pawn.position && pawn.currentState !== 'Collapsed') {
         gs = assignDraftMovePath(gs, pawn, t.x, t.y, occ);
       }
+    }
+    return gs;
+  },
+  /** Force the listed colonists to immediately take the NEAREST available job of a kind (Build /
+   *  Harvest), overriding idle wandering, work-priority and restrict-zone gating — the manual "do this
+   *  now" override behind the right-click BUILD / HARVEST verbs. The pawn claims the job, paths to an
+   *  adjacent tile on the UNCONFINED grid (so a confined pawn can still reach it), and starts working;
+   *  the normal FSM handles arrival, work and completion from there. */
+  forcePawnJob: (s, p: { ids: string[]; jobType: 'construct' | 'harvest' }) => {
+    let gs = s;
+    for (const id of p.ids) {
+      const pawn = gs.pawns.find((pw) => pw.id === id);
+      if (!pawn?.position || pawn.isAlive === false) continue;
+      const { x: px, y: py } = pawn.position;
+      // Nearest unclaimed (or already-ours) job of the requested kind.
+      let best: Job | null = null;
+      let bestD = Infinity;
+      for (const j of gs.jobs ?? []) {
+        if (j.type !== p.jobType) continue;
+        if (j.claimedBy !== null && j.claimedBy !== id) continue;
+        const d = manhattan(j.targetX, j.targetY, px, py);
+        if (d < bestD) {
+          bestD = d;
+          best = j;
+        }
+      }
+      if (!best) continue;
+      const target = best;
+      const claim = (by: string | null): void => {
+        gs = {
+          ...gs,
+          jobs: (gs.jobs ?? []).map((j) => (j.id === target.id ? { ...j, claimedBy: by } : j))
+        };
+      };
+      claim(id);
+      const activeJob = {
+        type: target.type as 'harvest' | 'construct',
+        jobId: target.id,
+        targetX: target.targetX,
+        targetY: target.targetY,
+        resourceId: target.resourceId,
+        droppedItemId: target.droppedItemId,
+        buildingId: target.buildingId,
+        craftQueueId: target.craftQueueId,
+        progress: 0,
+        timeRequired: target.workRequired,
+        startedTurn: gs.turn
+      };
+      const setPawn = (patch: Partial<Pawn>): void => {
+        gs = { ...gs, pawns: gs.pawns.map((pw) => (pw.id === id ? { ...pw, ...patch } : pw)) };
+      };
+      // Adjacent already → start working this tick; else path to an adjacent approach (unconfined).
+      if (isAdjacent(px, py, target.targetX, target.targetY)) {
+        setPawn({
+          currentState: PAWN_STATE.WORKING as never,
+          activeJob: activeJob as never,
+          draftTarget: undefined
+        });
+        continue;
+      }
+      const blocked = occupancyService.blockedTiles(gs);
+      const approach = findAdjacentApproach(target.targetX, target.targetY, gs.worldMap, blocked, px, py);
+      if (!approach) {
+        claim(null); // nowhere to stand to work it — release so others can try
+        continue;
+      }
+      gs = assignDraftMovePath(gs, pawn, approach.x, approach.y, blocked);
+      setPawn({
+        currentState: PAWN_STATE.MOVING_TO_RESOURCE as never,
+        activeJob: activeJob as never,
+        hasReachedDestination: false,
+        draftTarget: undefined
+      });
     }
     return gs;
   },

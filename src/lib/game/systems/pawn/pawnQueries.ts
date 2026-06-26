@@ -59,7 +59,11 @@ export function findAdjacentApproach(
   worldMap: GameState['worldMap'],
   occupied?: Set<string>,
   fromX?: number,
-  fromY?: number
+  fromY?: number,
+  // Confinement: when a restrict-zone pawn is the mover, the approach tile it walks to must also lie
+  // INSIDE its zone — otherwise the confined pathfinding grid can't reach the picked neighbour and the
+  // path fails, wrongly marking the job (e.g. a build inside the zone) unreachable. null = no filter.
+  allowed?: Set<string> | null
 ): { x: number; y: number } | null {
   let best: { x: number; y: number } | null = null;
   let bestDist = Infinity;
@@ -69,6 +73,7 @@ export function findAdjacentApproach(
       const nx = tx + dx;
       const ny = ty + dy;
       if (!worldMap[ny]?.[nx]?.walkable || occupied?.has(`${nx},${ny}`)) continue;
+      if (allowed && !allowed.has(`${nx},${ny}`)) continue;
       const dist = fromX !== undefined && fromY !== undefined ? manhattan(nx, ny, fromX, fromY) : 0;
       if (dist < bestDist) {
         bestDist = dist;
