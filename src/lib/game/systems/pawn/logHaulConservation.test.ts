@@ -95,3 +95,24 @@ describe('depositInventory lays a carried log into the stockpile (the step with 
     expect(looseLogs(deposited) + carriedLogs(deposited) + storedLogs(deposited)).toBe(3);
   });
 });
+
+describe('THE STOCKPILE IS PHYSICAL — deposit requires being on/adjacent to it', () => {
+  it('a pawn ON a stockpile tile deposits into it (stored)', () => {
+    const pawn = makePawn(5, 5); // standing on a stockpile tile
+    pawn.inventory = { items: { yew_log: 3 }, instances: [] } as unknown as Pawn['inventory'];
+    const out = depositInventory(pawn, makeState(pawn, []));
+    expect(storedLogs(out)).toBe(3);
+    expect(looseLogs(out)).toBe(0);
+  });
+
+  it('a pawn FAR from the stockpile sets the load down LOOSE (no ethereal teleport)', () => {
+    const pawn = makePawn(0, 0); // nowhere near the stockpile at (5,5)/(6,5)
+    pawn.inventory = { items: { yew_log: 3 }, instances: [] } as unknown as Pawn['inventory'];
+    const out = depositInventory(pawn, makeState(pawn, []));
+    // The stockpile was NOT credited; the logs are loose on the pawn's own tile, still in the world.
+    expect(storedLogs(out)).toBe(0);
+    expect(looseLogs(out)).toBe(3);
+    expect((out.droppedItems ?? []).every((d) => d.x === 0 && d.y === 0)).toBe(true);
+    expect(carriedLogs(out)).toBe(0); // no longer in the pawn's hands
+  });
+});

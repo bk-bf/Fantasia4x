@@ -123,8 +123,16 @@ export function handleMovingToDeposit(pawn: Pawn, gameState: GameState): GameSta
         })
       );
     }
-    // Didn't quite make it — deposit in place anyway
-    return depositInventory(pawn, gameState);
+    // Path ended SHORT of the stockpile (the target tile got occupied, etc.). Do NOT set the load
+    // down out here — that was the ethereal-deposit leak (goods credited to a stockpile the pawn never
+    // reached). Re-enter HAULING to re-find the deposit point and path again, so the pawn stays
+    // MOTIVATED to physically reach the stockpile. A genuinely unreachable stockpile is caught by
+    // repathStuckMover above (→ load set down loose on the ground, never teleported).
+    return mutatePawn(gameState, pawn.id, (p) => {
+      p.currentState = PAWN_STATE.HAULING;
+      p.hasReachedDestination = false;
+      p.activeJob = undefined;
+    });
   }
   return gameState;
 }

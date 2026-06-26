@@ -342,6 +342,79 @@ export function stageInventoryAtStation(pawn: Pawn, orderId: string, gs: GameSta
   return next;
 }
 
+/**
+ * Set a carried load DOWN on the pawn's own tile as LOOSE drops (re-haulable), keeping pinned bulk
+ * goods and non-depositable instances (tools, a carried colonist) in hand. Used when a pawn must
+ * release its load but is NOT physically at a stockpile — so the goods stay real objects in the world
+ * instead of teleporting into a pile the pawn never reached (the ethereal-stockpile bug). The dropped
+ * stacks get a fresh haul job like any other loose drop once a reachable stockpile exists.
+ */
+function dropLooseAtPawn(
+  pawn: Pawn,
+  gs: GameState,
+  inv: Record<string, number>,
+  carriedInstances: ItemInstance[],
+  pinned: Set<string>
+): GameState {
+  const px = pawn.position?.x ?? 0;
+  const py = pawn.position?.y ?? 0;
+  const newDropped = [...(gs.droppedItems ?? [])];
+  for (const [resourceId, qty] of Object.entries(inv)) {
+    if (qty <= 0 || pinned.has(resourceId)) continue;
+    newDropped.push({
+      id: `loose-${resourceId}-${px}-${py}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`,
+      resourceId,
+      x: px,
+      y: py,
+      quantity: qty,
+      stored: false
+    });
+  }
+  // Identity instances (named carcasses) drop as their own loose named stacks; tools / carried pawns stay.
+  const keptInstances: ItemInstance[] = [];
+  for (const instance of carriedInstances) {
+    if (isCarriedPawnInstance(instance) || !itemService.getItemById(instance.itemId)?.dynamicName) {
+      keptInstances.push(instance);
+      continue;
+    }
+    newDropped.push({
+      id: `loose-${instance.instanceId}`,
+      resourceId: instance.itemId,
+      x: px,
+      y: py,
+      quantity: 1,
+      name: instance.name,
+      instance,
+      stored: false
+    });
+  }
+  gameLogger.log(
+    gs.turn,
+    'ITEM-DBG',
+    `depositInventory: ${pawn.name} NOT at a stockpile (pos ${px},${py}) — set load DOWN loose ${JSON.stringify(inv)} (no teleport)`
+  );
+  return {
+    ...gs,
+    droppedItems: newDropped,
+    pawns: gs.pawns.map((p) =>
+      p.id === pawn.id
+        ? {
+            ...p,
+            currentState: PAWN_STATE.IDLE,
+            activeJob: undefined,
+            inventory: {
+              ...(p.inventory ?? { ...EMPTY_INVENTORY }),
+              items: Object.fromEntries(
+                Object.entries(inv).filter(([rid, q]) => pinned.has(rid) && q > 0)
+              ),
+              instances: keptInstances
+            }
+          }
+        : p
+    )
+  };
+}
+
 /** Transfer everything in pawn.inventory into the correct stockpile zone. */
 export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   // ADR-016: a pawn carrying fetched inputs stages them ON its order's station, not the stockpile.
@@ -374,6 +447,19 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
     })
     .sort((a, b) => distToPawn(a.x, a.y) - distToPawn(b.x, b.y));
   const stockpileTileKeys = new Set(stockpileTiles.map((t) => t.key));
+
+  // THE STOCKPILE IS PHYSICAL — a pawn may only deposit into a stockpile it is standing ON or directly
+  // ADJACENT to (Chebyshev ≤ 1). Crediting the globally-NEAREST stockpile tile from a distance was the
+  // "ethereal stockpile" bug: a pawn picked an item up and the goods teleported into the pile with no
+  // visible carry. When a stockpile zone EXISTS but the pawn hasn't physically reached it, we DON'T
+  // touch the stockpile — the carried load is set down LOOSE on the pawn's own tile (a real, re-haulable
+  // object) so it stays in the world and gets hauled properly. The no-zone early-game path falls through.
+  const atStockpile =
+    stockpileTiles.length > 0 &&
+    stockpileTiles.some((t) => Math.max(Math.abs(t.x - px), Math.abs(t.y - py)) <= 1);
+  if (stockpileTiles.length > 0 && !atStockpile) {
+    return dropLooseAtPawn(pawn, gs, inv, carriedInstances, pinned);
+  }
 
   const newDropped = [...(gs.droppedItems ?? [])];
   // Track IDs of newly created unstored drops so we can trigger absorption below.
@@ -481,12 +567,13 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   );
 
   gameLogger.log(gs.turn, 'JOB-EVT', `${pawn.name} deposited inventory: ${JSON.stringify(inv)}`);
-  // ITEM-DBG: deposit — what left the pawn's hands and the NEW stored-drop ids it became on the
-  // stockpile tiles. Trace the stack from carry → ground id here; the pawn's items map is now cleared.
+  // ITEM-DBG: deposit — the pawn's position (must be ON/ADJACENT to the stockpile now), what left its
+  // hands, and the NEW stored-drop ids on the stockpile tiles. If `pos` is ever >1 tile from every
+  // stored drop id below, the adjacency gate leaked (it shouldn't — non-adjacent deposits drop loose).
   gameLogger.log(
     gs.turn,
     'ITEM-DBG',
-    `depositInventory: ${pawn.name} laid down ${JSON.stringify(inv)} → new drop ids [${newDropIds.join(',')}] ` +
+    `depositInventory: ${pawn.name} @ (${px},${py}) laid down ${JSON.stringify(inv)} → new drop ids [${newDropIds.join(',')}] ` +
       `(pinned kept: ${JSON.stringify(Object.fromEntries(Object.entries(inv).filter(([rid]) => pinned.has(rid))))})`
   );
 
