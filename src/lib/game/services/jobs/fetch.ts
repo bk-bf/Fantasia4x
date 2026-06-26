@@ -55,7 +55,8 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
         buildingId,
         stationX: dest.x,
         stationY: dest.y,
-        workRequired: 1, // instant pick-up on arrival
+        // Near-instant pick-up (~1 tick) — see haul.ts: the carry walk is the cost, not the scoop.
+        workRequired: 0.02,
         workDone: 0,
         claimedBy: null
       });

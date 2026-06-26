@@ -106,7 +106,10 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
         targetY: drop.y,
         resourceId: drop.resourceId,
         droppedItemId: drop.id,
-        workRequired: 1, // instant pick-up on arrival
+        // Near-instant pick-up: ~1 tick of "work" on arrival (was 1 work-point ≈ ⅓–1 s). The WALK to
+        // and from the stockpile is the real cost of hauling — scooping a stack off the ground should
+        // not. (BASE_WORK_RATE=1/s × TICKS_PER_SECOND=60 → 0.02 ≈ a single tick for a normal pawn.)
+        workRequired: 0.02,
         workDone: 0,
         claimedBy: null,
         ...(drop.urgent ? { urgent: true } : {})
