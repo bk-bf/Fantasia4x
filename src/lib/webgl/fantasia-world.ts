@@ -488,10 +488,11 @@ export function isRoofBuilding(b: PlacedBuilding): boolean {
   return !!buildingService.getBuildingById(b.type)?.effects?.roof;
 }
 
-// How much a roof darkens the tile beneath it (per-channel multiply). The foreground stays readable so
-// the floor/ground/items show through; the background drops further so the interior reads as shaded.
-const ROOF_SHADE_FG = 0.62;
-const ROOF_SHADE_BG = 0.42;
+// How much a roof darkens the tile beneath it (per-channel multiply). A LIGHT shade — just enough to
+// read as "under cover" without crushing the cell to black; backgrounds are already near-dark, so the
+// multiplier stays gentle (anything aggressive makes the tile look empty/black).
+const ROOF_SHADE_FG = 0.82;
+const ROOF_SHADE_BG = 0.72;
 
 export function applyBuildingToGrid(grid: GameGrid, b: PlacedBuilding): void {
   if (b.status !== 'complete') return;
