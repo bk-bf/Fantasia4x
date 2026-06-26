@@ -484,7 +484,7 @@ export const COMMANDS: Record<string, Cmd> = {
   /** Drop a carried item NOW: the whole stack lands as a loose drop on the pawn's tile (absorbed
    *  if that tile is a stockpile) and leaves the pawn's hands. Overrides a pin (explicit player act),
    *  so the pin is cleared too. */
-  dropCarriedItem: (s, p: { pawnId: string; itemId: string }) => {
+  dropCarriedItem: (s, p: { pawnId: string; itemId: string; instanceId?: string }) => {
     const pawn = s.pawns.find((pw) => pw.id === p.pawnId);
     if (!pawn?.position) return s;
     // Carried colonist: an inventory "body" is a LIVE pawn — set it down (restored, on a FREE tile) and
@@ -504,6 +504,48 @@ export const COMMANDS: Record<string, Cmd> = {
         )
       };
       return gs;
+    }
+    // Tracked instance (a carried tool/weapon/armour — held in `inventory.instances`, not the bulk
+    // count map). Drop that specific unit, preserving its durability/quality so a worn axe isn't reset
+    // to pristine on the ground.
+    if (p.instanceId) {
+      const inst = pawn.inventory?.instances?.find((i) => i.instanceId === p.instanceId);
+      if (!inst) return s;
+      const def = itemService.getItemById(inst.itemId);
+      const drop = {
+        id: `drop-${p.pawnId}-${inst.instanceId}`,
+        resourceId: inst.itemId,
+        x: pawn.position.x,
+        y: pawn.position.y,
+        quantity: 1,
+        stored: false,
+        instance: inst,
+        durability: inst.durability,
+        ...(inst.quality !== undefined ? { quality: inst.quality } : {}),
+        ...(def?.dynamicName && inst.name ? { name: inst.name } : {})
+      };
+      const next: GameState = {
+        ...s,
+        droppedItems: [...(s.droppedItems ?? []), drop],
+        pawns: s.pawns.map((pw) => {
+          if (pw.id !== p.pawnId) return pw;
+          const instances = (pw.inventory?.instances ?? []).filter(
+            (i) => i.instanceId !== p.instanceId
+          );
+          // Only un-pin the itemId once the pawn carries no more units of it (bulk or instance).
+          const stillHeld =
+            instances.some((i) => i.itemId === p.itemId) ||
+            (pw.inventory?.items?.[p.itemId] ?? 0) > 0;
+          return {
+            ...pw,
+            inventory: { ...pw.inventory, instances },
+            pinnedItems: stillHeld
+              ? pw.pinnedItems
+              : (pw.pinnedItems ?? []).filter((id) => id !== p.itemId)
+          };
+        })
+      };
+      return absorbDropIfOnStockpileTile(next, drop.id);
     }
     const qty = pawn?.inventory?.items?.[p.itemId] ?? 0;
     if (qty <= 0) return s;

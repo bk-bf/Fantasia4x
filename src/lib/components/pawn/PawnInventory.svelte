@@ -1,6 +1,6 @@
 <!-- PawnInventory.svelte — shows items the pawn is currently carrying -->
 <script lang="ts">
-  import type { Pawn, Item } from '$lib/game/core/types';
+  import type { Pawn, Item, ItemInstance } from '$lib/game/core/types';
   import ITEMS_DATABASE from '$lib/game/database/items.jsonc';
   import { itemService } from '$lib/game/services/ItemService';
   import { gameState } from '$lib/stores/gameState';
@@ -12,12 +12,29 @@
   $: carried = Object.entries(pawn.inventory?.items ?? {})
     .filter(([, qty]) => qty > 0)
     .sort(([a], [b]) => (pinned.has(b) ? 1 : 0) - (pinned.has(a) ? 1 : 0));
-  // Identity-tracked instances carry a per-pawn name (a hauled carcass, or a rescued colonist being
-  // carried as a `carried_pawn` body) — surface them so the carry list shows WHO/WHAT is in the pack,
-  // not just the stackable goods. Read-only here (a carried pawn is set down via the map order).
-  $: carriedInstances = (pawn.inventory?.instances ?? []).filter(
-    (i) => itemService.getItemById(i.itemId)?.dynamicName
-  );
+  // Every tracked instance in the pack — a fetched/carried TOOL or weapon (axe, hammer, pick), a
+  // hauled carcass, or a rescued colonist being carried as a `carried_pawn` body. Tools live in
+  // `inventory.instances` (not the bulk count map), so without listing all instances a carried axe
+  // was invisible in the carry UI. Each unit is one row (instances aren't stackable — they have
+  // per-unit durability/quality).
+  $: carriedInstances = pawn.inventory?.instances ?? [];
+
+  function instanceLabel(inst: ItemInstance): string {
+    if (inst.famed && inst.famedName) return inst.famedName;
+    return itemService.getItemDisplayName({
+      resourceId: inst.itemId,
+      name: inst.name,
+      quality: inst.quality
+    });
+  }
+
+  function dropInstance(inst: ItemInstance) {
+    gameState.command({
+      type: 'dropCarriedItem',
+      payload: { pawnId: pawn.id, itemId: inst.itemId, instanceId: inst.instanceId },
+      save: true
+    });
+  }
 
   function togglePin(itemId: string) {
     gameState.command({ type: 'togglePinItem', payload: { pawnId: pawn.id, itemId }, save: true });
@@ -98,13 +115,20 @@
     {#each carriedInstances as inst (inst.instanceId)}
       <div class="row instance">
         <span class="carry-mark">⚑</span>
-        <span class="item-name">{inst.name ?? itemName(inst.itemId)}</span>
+        <span class="item-name">{instanceLabel(inst)}</span>
         {#if inst.itemId === 'carried_pawn'}
           <span class="qty">carried</span>
           <button
             class="drop-btn"
             title="Set down — lay the carried colonist on the pawn's tile and end the carry."
             on:click={() => dropItem(inst.itemId)}>↓</button
+          >
+        {:else}
+          <span class="qty">×1</span>
+          <button
+            class="drop-btn"
+            title="Drop now — put this item down on the pawn's tile."
+            on:click={() => dropInstance(inst)}>↓</button
           >
         {/if}
       </div>

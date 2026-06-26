@@ -59,6 +59,20 @@ describe('pinned carried items are never deposited', () => {
     expect(drop).toMatchObject({ quantity: 5, x: 0, y: 0 });
   });
 
+  it('dropCarriedItem drops a tracked tool instance, preserving durability and removing it', () => {
+    const pawn = hauler({}, []);
+    pawn.inventory.instances = [{ instanceId: 'axe-1', itemId: 'stone_axe', durability: 42 }];
+    const out = COMMANDS.dropCarriedItem(makeState(pawn), {
+      pawnId: 'h',
+      itemId: 'stone_axe',
+      instanceId: 'axe-1'
+    });
+    expect(out.pawns[0].inventory.instances).toHaveLength(0);
+    const drop = (out.droppedItems ?? []).find((d) => d.resourceId === 'stone_axe');
+    expect(drop).toMatchObject({ quantity: 1, x: 0, y: 0, durability: 42 });
+    expect(drop?.instance).toMatchObject({ instanceId: 'axe-1', durability: 42 });
+  });
+
   it('togglePinItem flips the pin on and off for the right pawn', () => {
     const s = makeState(hauler({}, []));
     const on = COMMANDS.togglePinItem(s, { pawnId: 'h', itemId: 'stone_axe' });
