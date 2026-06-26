@@ -8,6 +8,7 @@ import { itemService } from '../ItemService';
 import { zoneTileKeys } from '../DesignationService';
 import { itemMatchesFilter } from './filters';
 import { ENC_OVERLOAD_FULL } from '../../core/needs';
+import { gameLogger } from '../../dev/gameLogger';
 
 /**
  * Would the colony's stockpile accept a drop of `resourceId`? Prefers per-instance zone filters,
@@ -219,6 +220,16 @@ export function complete(job: Job, gs: GameState): GameState {
       for (const [rid, q] of Object.entries(gained)) newItems[rid] = (newItems[rid] ?? 0) + q;
       return { ...p, inventory: { ...inv, items: newItems } };
     });
+    // ITEM-DBG: haul-job pickup — the drop `id` we completed, what was lifted (incl. the 3×3 sweep),
+    // and the pawn's inventory before → after. Confirms the stack physically entered the inventory.
+    gameLogger.log(
+      gs.turn,
+      'ITEM-DBG',
+      `haul.complete: ${pawn?.name ?? pawnId} job-drop=${job.droppedItemId} gained ${JSON.stringify(gained)} ` +
+        `inv ${JSON.stringify(pawn?.inventory?.items ?? {})} → ${JSON.stringify(
+          newPawns.find((p) => p.id === pawnId)?.inventory?.items ?? {}
+        )}`
+    );
     return { ...gs, droppedItems: newDropped, pawns: newPawns };
   }
 

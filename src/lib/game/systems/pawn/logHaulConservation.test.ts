@@ -76,7 +76,7 @@ describe('log pickup puts the log in the pawn inventory (not the void)', () => {
 describe('depositInventory lays a carried log into the stockpile (the step with no prior coverage)', () => {
   it('carried log → stored stockpile drop, removed from carry', () => {
     const pawn = makePawn(5, 5);
-    pawn.inventory = { items: { yew_log: 3 }, instances: [] } as Pawn['inventory'];
+    pawn.inventory = { items: { yew_log: 3 }, instances: [] } as unknown as Pawn['inventory'];
     const gs = makeState(pawn, []);
     const out = depositInventory(pawn, gs);
     expect(storedLogs(out)).toBe(3); // landed physically in the stockpile

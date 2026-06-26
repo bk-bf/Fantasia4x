@@ -90,6 +90,7 @@ export interface ActivityLogEntry {
     | 'ai'
     | 'needs'
     | 'job'
+    | 'item'
     | 'perf';
   actor?: string; // Pawn ID or 'system'
   action: string;

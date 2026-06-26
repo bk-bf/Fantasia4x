@@ -116,11 +116,20 @@ export function pickUpFromTile(
     else removeIds.add(d.id);
   }
 
-  if (!tookAny) return gs;
+  if (!tookAny) {
+    gameLogger.log(
+      gs.turn,
+      'ITEM-DBG',
+      `pickUpFromTile: ${pawn.name} took NOTHING at (${x},${y}) r${radius} ` +
+        `(cands=${cands.map((c) => `${c.id}:${c.resourceId}×${c.quantity}`).join(',')})`
+    );
+    return gs;
+  }
 
   const droppedItems = (gs.droppedItems ?? [])
     .filter((d) => !removeIds.has(d.id))
     .map((d) => (reduceQty.has(d.id) ? { ...d, quantity: reduceQty.get(d.id)! } : d));
+  const beforeItems = pawn.inventory?.items ?? {};
   const pawns = gs.pawns.map((p) => {
     if (p.id !== pawnId) return p;
     const inv = p.inventory ?? { ...EMPTY_INVENTORY };
@@ -128,6 +137,16 @@ export function pickUpFromTile(
     for (const [rid, q] of Object.entries(gained)) items[rid] = (items[rid] ?? 0) + q;
     return { ...p, inventory: { ...inv, items } };
   });
+  const after = pawns.find((p) => p.id === pawnId)?.inventory?.items ?? {};
+  // ITEM-DBG: a pickup happened — log which drop ids were consumed, what was gained, and the pawn's
+  // inventory BEFORE and AFTER so we can confirm the item physically entered the worker's inventory.
+  gameLogger.log(
+    gs.turn,
+    'ITEM-DBG',
+    `pickUpFromTile: ${pawn.name} gained ${JSON.stringify(gained)} ` +
+      `removed=[${[...removeIds].join(',')}] reduced=[${[...reduceQty].map(([id, q]) => `${id}→${q}`).join(',')}] ` +
+      `inv ${JSON.stringify(beforeItems)} → ${JSON.stringify(after)}`
+  );
   return { ...gs, droppedItems, pawns, stockpile: aggregateFromDrops(droppedItems) };
 }
 
@@ -462,6 +481,14 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   );
 
   gameLogger.log(gs.turn, 'JOB-EVT', `${pawn.name} deposited inventory: ${JSON.stringify(inv)}`);
+  // ITEM-DBG: deposit — what left the pawn's hands and the NEW stored-drop ids it became on the
+  // stockpile tiles. Trace the stack from carry → ground id here; the pawn's items map is now cleared.
+  gameLogger.log(
+    gs.turn,
+    'ITEM-DBG',
+    `depositInventory: ${pawn.name} laid down ${JSON.stringify(inv)} → new drop ids [${newDropIds.join(',')}] ` +
+      `(pinned kept: ${JSON.stringify(Object.fromEntries(Object.entries(inv).filter(([rid]) => pinned.has(rid))))})`
+  );
 
   // Trigger-based absorption: each new drop sitting on a stockpile tile is absorbed
   // immediately — marked stored and credited to the zone — without a separate scan.

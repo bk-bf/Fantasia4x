@@ -20,6 +20,9 @@ function tagToCategory(tag: string): LogCategory {
   if (tag === 'PAWN-TICK' || tag === 'NEED-CHECK') return 'needs';
   if (tag === 'STATE-CHG' || tag === 'JOB-EVT') return 'job';
   if (tag === 'YIELD-DBG') return 'work';
+  // ITEM-DBG: per-stack item lifecycle trace (spawn → pickup → carry → deposit → drop → sync) →
+  // .debug/item.log. Each line carries the DroppedItem `id` so a stack can be followed hop to hop.
+  if (tag === 'ITEM-DBG') return 'item';
   if (tag === 'PERF') return 'perf';
   return 'system'; // MAP-SNAP and any catch-all
 }

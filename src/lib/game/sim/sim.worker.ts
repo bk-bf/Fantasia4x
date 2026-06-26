@@ -24,6 +24,7 @@ import type { SimLogEvent, EntitySync } from './simProtocol';
 import { drainTileDeltas, clearTileDeltas } from '../core/tileDeltas';
 import { carcassConditionByType } from '../core/carcassCondition';
 import { buildingsVisualSig } from '../core/buildingSig';
+import { gameLogger } from '../dev/gameLogger';
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
@@ -411,6 +412,23 @@ function publish(state: GameState, flush: boolean, commit = false) {
 
   flushSeq++;
   const pawns = syncEntities(state.pawns, lastPawnIds, PAWN_COLD, lastPawnCold);
+  // ITEM-DBG: which pawns' `inventory` cold-field actually SHIPPED to the main thread this flush —
+  // it only ships the flush its object ref changes (a pickup/deposit/drop). If item.log shows a pickup
+  // but NO matching "SYNC→main shipped inventory" line follows, the change never crossed the worker
+  // boundary → the carry card stays stale (the "items vanish from inventory" bug). Cheap: the inner
+  // body runs only on the rare flush an inventory ref changed.
+  if (gameLogger.isEnabled && 'upserts' in pawns) {
+    for (const u of pawns.upserts) {
+      if (u && 'inventory' in u) {
+        const inv = (u as { inventory?: { items?: Record<string, number> } }).inventory;
+        gameLogger.log(
+          state.turn,
+          'ITEM-DBG',
+          `SYNC→main: shipped inventory for ${u.id} = ${JSON.stringify(inv?.items ?? {})}`
+        );
+      }
+    }
+  }
   const mobs = syncEntities(state.mobs ?? [], lastMobIds, MOB_COLD, lastMobCold, MOB_VOLATILE);
   const wmDelta = tileDeltas
     ? tileDeltas.map((d) => ({ y: d.y, x: d.x, tile: slimTile(d.tile) }))

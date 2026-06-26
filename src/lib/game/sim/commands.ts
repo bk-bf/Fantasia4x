@@ -50,6 +50,7 @@ import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
 import { researchService } from '../services/ResearchService';
 import { devSpawnLooseItems, devDestroyAllItems } from '../dev/devWorld';
+import { gameLogger } from '../dev/gameLogger';
 import { generatePawns } from '../entities/Pawns';
 import { devSpawnMobs } from '../services/entity/entitySpawning';
 import { makeWeather, tileWetness } from '../services/EnvironmentService';
@@ -548,7 +549,18 @@ export const COMMANDS: Record<string, Cmd> = {
       return absorbDropIfOnStockpileTile(next, drop.id);
     }
     const qty = pawn?.inventory?.items?.[p.itemId] ?? 0;
-    if (qty <= 0) return s;
+    if (qty <= 0) {
+      // ITEM-DBG: the player asked to drop an item the WORKER's pawn doesn't actually hold. If this
+      // fires while the carry card shows the item, the main-thread inventory mirror is STALE (the
+      // cold-field sync didn't deliver the change) — i.e. a sync bug, not a sim bug.
+      gameLogger.log(
+        s.turn,
+        'ITEM-DBG',
+        `dropCarriedItem(bulk): ${pawn?.name ?? p.pawnId} has 0×${p.itemId} in worker inventory ` +
+          `(items=${JSON.stringify(pawn?.inventory?.items ?? {})}) — NO-OP. If the UI showed it, the mirror is STALE.`
+      );
+      return s;
+    }
     const drop = {
       id: `drop-${p.pawnId}-${p.itemId}-${Date.now()}`,
       resourceId: p.itemId,
@@ -557,6 +569,11 @@ export const COMMANDS: Record<string, Cmd> = {
       quantity: qty,
       stored: false
     };
+    gameLogger.log(
+      s.turn,
+      'ITEM-DBG',
+      `dropCarriedItem(bulk): ${pawn.name} dropped ${p.itemId}×${qty} → drop ${drop.id} at (${pawn.position.x},${pawn.position.y})`
+    );
     const next: GameState = {
       ...s,
       droppedItems: [...(s.droppedItems ?? []), drop],

@@ -15,6 +15,7 @@ import {
   clearRenderTileDeltas
 } from '../../components/UI/gameCanvas/mainTileDeltas';
 import { batchLogReplay } from '../../stores/Log';
+import { vlog } from '../core/logSink';
 import type { SimLogEvent, EntitySync } from './simProtocol';
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
 
@@ -215,6 +216,22 @@ class SimWorkerBridge {
         return;
       }
 
+      // ITEM-DBG: confirm the main thread actually RECEIVED a pawn's inventory upsert (the other end
+      // of the worker's "SYNC→main shipped" line). Worker shipped + here received = the change reached
+      // the store, so a still-empty carry card is a render bug. Worker shipped but NO line here = the
+      // delta was lost in transit (dropped/raced flush). Cheap: only fires on a real inventory upsert.
+      if (m.pawns && 'upserts' in m.pawns) {
+        for (const u of m.pawns.upserts) {
+          if (u && 'inventory' in u) {
+            const inv = (u as { inventory?: { items?: Record<string, number> } }).inventory;
+            vlog(
+              'item',
+              this.lastState.turn ?? 0,
+              `RECV←worker: ${u.id} inventory = ${JSON.stringify(inv?.items ?? {})}`
+            );
+          }
+        }
+      }
       const pawns = m.pawns
         ? applyEntitySync(this.pawnMirror, m.pawns)
         : (this.lastState.pawns ?? []);
