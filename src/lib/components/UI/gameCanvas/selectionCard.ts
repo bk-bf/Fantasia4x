@@ -280,6 +280,11 @@ export interface PawnCardDeps {
   /** MOVE button (shown only for a drafted pawn) — arm the Achtung-style move-aim, so the next map
    *  press draws the destination line/click. Threaded in from GameCanvas. */
   armMove: () => void;
+  /** FOOD button — toggle the colony food-filter fly-out (what pawns are allowed to eat). Colony-wide,
+   *  surfaced on the pawn card; owned/rendered by GameCanvas like the building FUEL panel. */
+  toggleFood: () => void;
+  /** Whether the food-filter fly-out is currently open (drives the FOOD button's active state). */
+  foodOpen: boolean;
 }
 
 /** Reactive deps + MARK callback for {@link buildMobCard}. */
@@ -294,7 +299,7 @@ export function buildPawnCard(
   selected: boolean,
   deps: PawnCardDeps
 ): SelectedEntityModel {
-  const { cameraFollowPawnId, startMark, armMove } = deps;
+  const { cameraFollowPawnId, startMark, armMove, toggleFood, foodOpen } = deps;
   const bars: EntityBar[] = [
     { label: 'HUNGER', value: pawn.needs.hunger, warn: pawn.needs.hunger > 60 },
     { label: 'REST', value: pawn.needs.fatigue, warn: pawn.needs.fatigue > 60 },
@@ -390,6 +395,12 @@ export function buildPawnCard(
                 pawnScreenTab: 'gear',
                 currentScreen: 'pawns'
               }))
+          },
+          {
+            // Colony-wide food filter (what pawns may eat) — fly-out owned/rendered by GameCanvas.
+            label: 'FOOD',
+            active: foodOpen,
+            onClick: () => toggleFood()
           },
           {
             // Drag a box to highlight pawns; DRAFT / MOVE then act on the whole group.
