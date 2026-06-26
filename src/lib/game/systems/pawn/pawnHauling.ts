@@ -14,6 +14,8 @@ import { manhattan } from '../../core/distance';
 import { occupancyService } from '../../services/OccupancyService';
 import { zoneTileKeys } from '../../services/DesignationService';
 import { itemService } from '../../services/ItemService';
+import { stockpileAcceptsDrop } from '../../services/jobs/haul';
+import { ENC_OVERLOAD_FULL } from '../../core/needs';
 import { gameLogger } from '../../dev/gameLogger';
 import { rng } from '../../core/rng';
 import { PAWN_STATE } from './pawnStates';
@@ -35,10 +37,14 @@ const EMPTY_INVENTORY = {
  * context menu (a specific `dropId`) and the drafted "haul to stockpile" loop (every loose drop on
  * the tile). Items that don't fit stay on the ground for another trip.
  *
- * @param opts.dropId     restrict to one DroppedItem (the menu lists drops individually)
- * @param opts.resourceId restrict to one resource id
- * @param opts.maxQty     cap the TOTAL units taken across matching drops (default: all that fit)
- * @param opts.looseOnly  ignore `stored` (stockpiled) drops — used by haul so it never re-grabs stock
+ * @param opts.dropId       restrict to one DroppedItem (the menu lists drops individually)
+ * @param opts.resourceId   restrict to one resource id
+ * @param opts.maxQty       cap the TOTAL units taken across matching drops (default: all that fit)
+ * @param opts.looseOnly    ignore `stored` (stockpiled) drops — used by haul so it never re-grabs stock
+ * @param opts.radius       Chebyshev radius around (x,y) to sweep (default 0 = the tile itself)
+ * @param opts.capFactor    carry-budget multiplier (default 1; haul passes ENC_OVERLOAD_FULL to overfill)
+ * @param opts.skipForbidden ignore player-forbidden drops (auto-haul respects the lock; right-click doesn't)
+ * @param opts.acceptTest   predicate gating which resourceIds may be taken (e.g. stockpileAcceptsDrop)
  *
  * Always lets the pawn take at least ONE unit (mirrors `itemService.clampPickupQuantity`'s floor) so
  * a single over-budget item is never un-pickable. Recomputes `stockpile` since a picked-up `stored`
@@ -49,26 +55,39 @@ export function pickUpFromTile(
   pawnId: string,
   x: number,
   y: number,
-  opts: { dropId?: string; resourceId?: string; maxQty?: number; looseOnly?: boolean } = {}
+  opts: {
+    dropId?: string;
+    resourceId?: string;
+    maxQty?: number;
+    looseOnly?: boolean;
+    radius?: number;
+    capFactor?: number;
+    skipForbidden?: boolean;
+    acceptTest?: (resourceId: string) => boolean;
+  } = {}
 ): GameState {
   const pawn = gs.pawns.find((p) => p.id === pawnId);
   if (!pawn) return gs;
+  const radius = opts.radius ?? 0;
   const cands = (gs.droppedItems ?? []).filter(
     (d) =>
-      d.x === x &&
-      d.y === y &&
+      Math.abs(d.x - x) <= radius &&
+      Math.abs(d.y - y) <= radius &&
       d.quantity > 0 &&
       !d.reservedFor &&
       (!opts.looseOnly || !d.stored) &&
+      (!opts.skipForbidden || !d.forbidden) &&
       (!opts.dropId || d.id === opts.dropId) &&
-      (!opts.resourceId || d.resourceId === opts.resourceId)
+      (!opts.resourceId || d.resourceId === opts.resourceId) &&
+      (!opts.acceptTest || opts.acceptTest(d.resourceId))
   );
   if (cands.length === 0) return gs;
 
+  const capFactor = opts.capFactor ?? 1;
   const budget = itemService.getCarryBudget(pawn, gs);
   const load = itemService.getCurrentCarryLoad(pawn, gs);
-  let remW = budget.maxWeightKg - load.weightKg;
-  let remV = budget.maxVolumeL - load.volumeL;
+  let remW = budget.maxWeightKg * capFactor - load.weightKg;
+  let remV = budget.maxVolumeL * capFactor - load.volumeL;
   let remCap = opts.maxQty ?? Infinity;
 
   const reduceQty = new Map<string, number>();
@@ -110,6 +129,27 @@ export function pickUpFromTile(
     return { ...p, inventory: { ...inv, items } };
   });
   return { ...gs, droppedItems, pawns, stockpile: aggregateFromDrops(droppedItems) };
+}
+
+/**
+ * Opportunistic hauling: when a pawn finishes a job standing next to loose goods (e.g. a woodcutter
+ * on the tile it just felled), it grabs the stockpile-bound drops on its tile + the 8 neighbours and
+ * carries them off (overfilling to the encumbrance ceiling) instead of leaving them for a separate
+ * later haul trip. No-op (returns the state unchanged) when there's no stockpile to deliver to or
+ * nothing qualifying within reach — the caller checks whether the pawn ended up carrying anything.
+ * Cheap: bails before the pickup scan if no stockpile zone exists.
+ */
+export function opportunisticHaulPickup(gs: GameState, pawnId: string): GameState {
+  if (zoneTileKeys(gs, 'stockpile').length === 0) return gs;
+  const pawn = gs.pawns.find((p) => p.id === pawnId);
+  if (!pawn?.position) return gs;
+  return pickUpFromTile(gs, pawnId, pawn.position.x, pawn.position.y, {
+    radius: 1,
+    looseOnly: true,
+    skipForbidden: true,
+    capFactor: ENC_OVERLOAD_FULL,
+    acceptTest: (rid) => stockpileAcceptsDrop(gs, rid)
+  });
 }
 
 const NEIGHBORS8: ReadonlyArray<readonly [number, number]> = [

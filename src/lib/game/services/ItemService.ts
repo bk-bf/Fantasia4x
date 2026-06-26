@@ -152,7 +152,13 @@ export interface ItemService {
    *  source of truth for the CAPACITIES panel and the CARRYING header so the UI can show the maths. */
   getCarryCapacityBreakdown(pawn: Pawn): CarryCapacityBreakdown;
   canAddToInventory(pawn: Pawn, itemId: string, qty: number, state: GameState): boolean;
-  clampPickupQuantity(pawn: Pawn, itemId: string, qty: number, state: GameState): number;
+  clampPickupQuantity(
+    pawn: Pawn,
+    itemId: string,
+    qty: number,
+    state: GameState,
+    capFactor?: number
+  ): number;
   getCurrentCarryLoad(pawn: Pawn, state: GameState): { weightKg: number; volumeL: number };
 
   // Decay
@@ -534,15 +540,24 @@ export class ItemServiceImpl implements ItemService {
    * practice haulers are empty at pickup anyway (they deposit before taking new work), so this
    * only relaxes the genuinely-over-budget single-unit case.
    */
-  clampPickupQuantity(pawn: Pawn, itemId: string, qty: number, state: GameState): number {
+  clampPickupQuantity(
+    pawn: Pawn,
+    itemId: string,
+    qty: number,
+    state: GameState,
+    capFactor = 1
+  ): number {
     if (qty <= 0) return 0;
     const budget = this.getCarryBudget(pawn, state);
     const load = this.getCurrentCarryLoad(pawn, state);
     const def = this.getItemById(itemId);
     const perW = def?.weightKg ?? 0.1;
     const perV = def?.volumeL ?? 0.2;
-    const byW = perW > 0 ? Math.floor((budget.maxWeightKg - load.weightKg) / perW) : qty;
-    const byV = perV > 0 ? Math.floor((budget.maxVolumeL - load.volumeL) / perV) : qty;
+    // capFactor > 1 lets haulers load past full capacity into the `encumbered` band (ENC_OVERLOAD_FULL).
+    const maxW = budget.maxWeightKg * capFactor;
+    const maxV = budget.maxVolumeL * capFactor;
+    const byW = perW > 0 ? Math.floor((maxW - load.weightKg) / perW) : qty;
+    const byV = perV > 0 ? Math.floor((maxV - load.volumeL) / perV) : qty;
     return Math.max(1, Math.min(qty, byW, byV));
   }
 

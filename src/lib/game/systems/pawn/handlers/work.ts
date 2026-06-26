@@ -27,7 +27,12 @@ import {
   lightWorkMultiplier
 } from '../pawnHelpers';
 import { checkNeedInterrupts, selectIdleNeed, applyNeed } from '../needSelection';
-import { orderStationTile, depositInventory, findNearestDepositPoint } from '../pawnHauling';
+import {
+  orderStationTile,
+  depositInventory,
+  findNearestDepositPoint,
+  opportunisticHaulPickup
+} from '../pawnHauling';
 import { addInstanceToInventory } from '../../../core/PawnEquipment';
 import { aggregateFromDrops } from '../../../core/GameState';
 
@@ -485,8 +490,15 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
   const jobStillExists = (afterAdvance.jobs ?? []).some((j) => j.id === jobId);
 
   if (!jobStillExists) {
+    // Opportunistic hauling: a pawn that just finished a non-haul job while standing next to loose,
+    // stockpile-bound goods (e.g. a woodcutter on the tile it just felled) grabs them now and hauls
+    // them off in the same trip, instead of leaving them for a separate later haul. Haul jobs
+    // already sweep their own 3×3 on pickup (haul.complete), so they're skipped here.
+    const afterPickup =
+      activeJob.type === 'haul' ? afterAdvance : opportunisticHaulPickup(afterAdvance, pawn.id);
+
     // Job complete. If pawn is now carrying items, enter HAULING state.
-    const updatedPawn = afterAdvance.pawns.find((p) => p.id === pawn.id);
+    const updatedPawn = afterPickup.pawns.find((p) => p.id === pawn.id);
     const invItems = updatedPawn?.inventory?.items ?? {};
     const hasInventory = Object.values(invItems).some((v) => v > 0);
     // What was completed: prefer the most specific target (harvested resource / built building /
@@ -517,13 +529,13 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
         'JOB-EVT',
         `${pawn.name} → HAULING inv:${JSON.stringify(invItems)}`
       );
-      return mutatePawn(afterAdvance, pawn.id, (p) => {
+      return mutatePawn(afterPickup, pawn.id, (p) => {
         p.currentState = PAWN_STATE.HAULING;
         p.activeJob = undefined;
       });
     }
 
-    return mutatePawn(afterAdvance, pawn.id, (p) => {
+    return mutatePawn(afterPickup, pawn.id, (p) => {
       p.currentState = PAWN_STATE.IDLE;
       p.activeJob = undefined;
     });

@@ -7,6 +7,26 @@ import { gatedConsole as console, isGameDebug } from '../../core/log';
 import { itemService } from '../ItemService';
 import { zoneTileKeys } from '../DesignationService';
 import { itemMatchesFilter } from './filters';
+import { ENC_OVERLOAD_FULL } from '../../core/needs';
+
+/**
+ * Would the colony's stockpile accept a drop of `resourceId`? Prefers per-instance zone filters,
+ * falls back to the legacy single `zoneFilters['stockpile']`; an empty `allowedCategories` accepts
+ * everything. The single source for "is this haulable into a stockpile" — used by haul `generate()`
+ * AND the opportunistic sweep (pawnHauling) so a pawn never grabs items the stockpile would bounce.
+ */
+export function stockpileAcceptsDrop(gs: GameState, resourceId: string): boolean {
+  const stockpileInstances = (gs.zoneInstances ?? []).filter((z) => z.type === 'stockpile');
+  if (stockpileInstances.length > 0) {
+    return stockpileInstances.some((inst) => {
+      if (inst.filter.allowedCategories.length === 0) return true;
+      return itemMatchesFilter(resourceId, inst.filter);
+    });
+  }
+  const legacyFilter = gs.zoneFilters?.['stockpile'];
+  if (!legacyFilter || legacyFilter.allowedCategories.length === 0) return true;
+  return itemMatchesFilter(resourceId, legacyFilter);
+}
 
 export function generate(jobs: Job[], gs: GameState): Job[] {
   // Only consider non-stored, non-forbidden drops (stored = already in stockpile; forbidden = the
@@ -15,18 +35,7 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
   // just forbidden, so a pawn already walking to it abandons the trip.
   const allDrops = (gs.droppedItems ?? []).filter((d) => !d.stored && !d.forbidden);
   // Apply stockpile zone filter — prefer per-instance filters, fall back to legacy zoneFilters.
-  const stockpileInstances = (gs.zoneInstances ?? []).filter((z) => z.type === 'stockpile');
-  const drops = allDrops.filter((d) => {
-    if (stockpileInstances.length > 0) {
-      return stockpileInstances.some((inst) => {
-        if (inst.filter.allowedCategories.length === 0) return true;
-        return itemMatchesFilter(d.resourceId, inst.filter);
-      });
-    }
-    const legacyFilter = gs.zoneFilters?.['stockpile'];
-    if (!legacyFilter || legacyFilter.allowedCategories.length === 0) return true;
-    return itemMatchesFilter(d.resourceId, legacyFilter);
-  });
+  const drops = allDrops.filter((d) => stockpileAcceptsDrop(gs, d.resourceId));
   // Heavy per-tick string building guarded behind the debug flag (see core/log.ts):
   // gatedConsole suppresses output, but the drops.map() would still run every tick.
   if (isGameDebug()) {
@@ -118,8 +127,10 @@ export function complete(job: Job, gs: GameState): GameState {
   if (pawnId) {
     const pawn = gs.pawns.find((p) => p.id === pawnId);
     // R5 carry budget: take only what fits; the rest stays on the ground for another trip.
+    // Haulers load up to the encumbrance ceiling (ENC_OVERLOAD_FULL = 1.4×) — they deliberately
+    // overfill into the `encumbered` band so a felled tree clears in fewer trips.
     const taken = pawn
-      ? itemService.clampPickupQuantity(pawn, drop.resourceId, drop.quantity, gs)
+      ? itemService.clampPickupQuantity(pawn, drop.resourceId, drop.quantity, gs, ENC_OVERLOAD_FULL)
       : drop.quantity;
     if (taken <= 0) return gs;
 
@@ -151,10 +162,11 @@ export function complete(job: Job, gs: GameState): GameState {
       return { ...gs, droppedItems: newDropped, pawns: newPawns };
     }
 
-    // N-4: top up the remaining carry budget with OTHER loose, unreserved drops of the same
-    // resource on the same tile, so a harvested tile of many small drops clears in one trip
-    // instead of one item per round-trip. (Opportunistic en-route pickup is a future extension.)
-    let total = taken;
+    // Top up the remaining (1.4×) carry budget with OTHER loose, unreserved, unforbidden,
+    // stockpile-accepted drops of ANY resource on the drop tile OR its 8 neighbours, so a felled
+    // tree's mixed pile (logs + branches + bark + fiber, possibly spilled onto adjacent tiles)
+    // clears in ONE trip instead of one resource per round-trip. Gains accumulate per-resource.
+    const gained: Record<string, number> = { [drop.resourceId]: taken };
     const removeIds = new Set<string>();
     const reduceQty = new Map<string, number>();
     const targetRem = drop.quantity - taken;
@@ -162,22 +174,26 @@ export function complete(job: Job, gs: GameState): GameState {
     else removeIds.add(drop.id);
 
     if (pawn) {
-      const def = itemService.getItemById(drop.resourceId);
-      const perW = def?.weightKg ?? 0.1;
-      const perV = def?.volumeL ?? 0.2;
+      const firstDef = itemService.getItemById(drop.resourceId);
       const budget = itemService.getCarryBudget(pawn, gs);
       const load = itemService.getCurrentCarryLoad(pawn, gs);
-      let remW = budget.maxWeightKg - load.weightKg - taken * perW;
-      let remV = budget.maxVolumeL - load.volumeL - taken * perV;
+      let remW =
+        budget.maxWeightKg * ENC_OVERLOAD_FULL - load.weightKg - taken * (firstDef?.weightKg ?? 0.1);
+      let remV =
+        budget.maxVolumeL * ENC_OVERLOAD_FULL - load.volumeL - taken * (firstDef?.volumeL ?? 0.2);
       for (const cand of gs.droppedItems ?? []) {
         if (remW <= 0 || remV <= 0) break;
-        if (cand.id === drop.id || cand.stored || cand.reservedFor) continue;
-        if (cand.resourceId !== drop.resourceId || cand.x !== drop.x || cand.y !== drop.y) continue;
+        if (cand.id === drop.id || cand.stored || cand.reservedFor || cand.forbidden) continue;
+        if (Math.abs(cand.x - drop.x) > 1 || Math.abs(cand.y - drop.y) > 1) continue;
+        if (!stockpileAcceptsDrop(gs, cand.resourceId)) continue;
+        const def = itemService.getItemById(cand.resourceId);
+        const perW = def?.weightKg ?? 0.1;
+        const perV = def?.volumeL ?? 0.2;
         const byW = perW > 0 ? Math.floor(remW / perW) : cand.quantity;
         const byV = perV > 0 ? Math.floor(remV / perV) : cand.quantity;
         const take = Math.min(cand.quantity, byW, byV);
         if (take <= 0) continue;
-        total += take;
+        gained[cand.resourceId] = (gained[cand.resourceId] ?? 0) + take;
         remW -= take * perW;
         remV -= take * perV;
         const rem = cand.quantity - take;
@@ -200,7 +216,7 @@ export function complete(job: Job, gs: GameState): GameState {
         maxVolumeL: 20
       };
       const newItems = { ...inv.items };
-      newItems[drop.resourceId] = (newItems[drop.resourceId] ?? 0) + total;
+      for (const [rid, q] of Object.entries(gained)) newItems[rid] = (newItems[rid] ?? 0) + q;
       return { ...p, inventory: { ...inv, items: newItems } };
     });
     return { ...gs, droppedItems: newDropped, pawns: newPawns };
