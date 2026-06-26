@@ -9,6 +9,7 @@
   import type { FuelSettings, PlacedBuilding, Pawn, Item } from '$lib/game/core/types.js';
   import { hudSpriteIconAction } from '$lib/components/UI/gameCanvas/hudSpriteIcon';
   import type { HudSpriteIconRef } from '$lib/components/UI/gameCanvas/spriteSheets';
+  import ItemFilterChecklist from '$lib/components/UI/gameCanvas/ItemFilterChecklist.svelte';
   import itemsData from '$lib/game/database/items.jsonc';
   import { itemService } from '$lib/game/services/ItemService';
   import { buildingService } from '$lib/game/services/BuildingService';
@@ -58,14 +59,8 @@
     updateSelectedBuildingFuelSettings({ refuelThresholdPct: Math.max(0, Math.min(100, nextPct)) });
   }
 
-  // Every fuel-filter action writes an EXPLICIT id list (the resolved set with one item flipped), so the
-  // building is from then on under manual control — there's no longer an "empty = all" sentinel to fight.
-  function toggleFuelItemFilter(itemId: string) {
-    const set = new Set(allowedFuelSet);
-    if (set.has(itemId)) set.delete(itemId);
-    else set.add(itemId);
-    updateSelectedBuildingFuelSettings({ allowedFuelItemIds: Array.from(set) });
-  }
+  // Every fuel-filter action writes an EXPLICIT id list (the new allow-list), so the building is from
+  // then on under manual control — there's no longer an "empty = all" sentinel to fight.
 
   // Burn-everything (emergency) — explicitly includes the normally-excluded rope/planks/magic/brine.
   function allowAllFuels() {
@@ -187,18 +182,12 @@
 
   <div class="fuel-settings-block">
     <div class="fuel-settings-label">fuel filters</div>
-    <div class="fuel-checklist">
-      {#each FUEL_ITEMS as item}
-        <label class="fuel-settings-row fuel-settings-row--compact">
-          <input
-            type="checkbox"
-            checked={allowedFuelSet.has(item.id)}
-            on:change={() => toggleFuelItemFilter(item.id)}
-          />
-          <span>{item.name}</span>
-        </label>
-      {/each}
-    </div>
+    <ItemFilterChecklist
+      items={FUEL_ITEMS}
+      allowed={allowedFuelSet}
+      onChange={(ids) => updateSelectedBuildingFuelSettings({ allowedFuelItemIds: ids })}
+      listMaxHeight="120px"
+    />
     <div class="fuel-mini-btn-row">
       <button class="fuel-mini-btn" on:click={resetFuelToDefault}>defaults</button>
       <button class="fuel-mini-btn" on:click={allowAllFuels}>allow all</button>

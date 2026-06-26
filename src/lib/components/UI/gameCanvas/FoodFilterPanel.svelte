@@ -9,6 +9,7 @@
   import type { FoodSettings, Item } from '$lib/game/core/types.js';
   import { hudSpriteIconAction } from '$lib/components/UI/gameCanvas/hudSpriteIcon';
   import type { HudSpriteIconRef } from '$lib/components/UI/gameCanvas/spriteSheets';
+  import ItemFilterChecklist from '$lib/components/UI/gameCanvas/ItemFilterChecklist.svelte';
   import itemsData from '$lib/game/database/items.jsonc';
   import {
     isEdibleFood,
@@ -19,11 +20,9 @@
 
   export let open = false;
 
-  // Every edible item (incl. raw carcasses + rotten food, which sit unchecked by default), sorted by
-  // name so the long list reads alphabetically.
-  const FOOD_ITEMS = (itemsData as unknown as Item[])
-    .filter(isEdibleFood)
-    .sort((a, b) => a.name.localeCompare(b.name));
+  // Every edible item (incl. raw carcasses + rotten food, which sit unchecked by default). The
+  // checklist groups them by category and sorts within each group.
+  const FOOD_ITEMS = (itemsData as unknown as Item[]).filter(isEdibleFood);
   const FOOD_SETTINGS_ICON_REF: HudSpriteIconRef = { sheet: 'items', id: 127 }; // berries glyph
 
   $: foodSettings = ($gameState.foodSettings ?? {}) as FoodSettings;
@@ -35,14 +34,8 @@
     gameState.command({ type: 'setFoodSettings', payload: { updates }, save: true });
   }
 
-  // Every food-filter action writes an EXPLICIT id list (resolved set with one item flipped), so the
-  // colony is from then on under manual control — no "unset = default" sentinel to fight.
-  function toggleFood(itemId: string) {
-    const set = new Set(allowedFoodSet);
-    if (set.has(itemId)) set.delete(itemId);
-    else set.add(itemId);
-    update({ allowedFoodItemIds: Array.from(set) });
-  }
+  // Every food-filter action writes an EXPLICIT id list (the new allow-list), so the colony is from
+  // then on under manual control — no "unset = default" sentinel to fight.
   function resetToDefault() {
     update({ allowedFoodItemIds: [...getDefaultAllowedFoodIds()] });
   }
@@ -73,18 +66,11 @@
 
   <div class="food-settings-block">
     <div class="food-settings-label">pawns may eat</div>
-    <div class="food-checklist">
-      {#each FOOD_ITEMS as item}
-        <label class="food-settings-row food-settings-row--compact">
-          <input
-            type="checkbox"
-            checked={allowedFoodSet.has(item.id)}
-            on:change={() => toggleFood(item.id)}
-          />
-          <span>{item.name}</span>
-        </label>
-      {/each}
-    </div>
+    <ItemFilterChecklist
+      items={FOOD_ITEMS}
+      allowed={allowedFoodSet}
+      onChange={(ids) => update({ allowedFoodItemIds: ids })}
+    />
     <div class="food-mini-btn-row">
       <button class="food-mini-btn" on:click={resetToDefault}>defaults</button>
       <button class="food-mini-btn" on:click={allowAll}>allow all</button>
@@ -151,50 +137,6 @@
     margin-bottom: 3px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-  }
-  .food-settings-row {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin-top: 2px;
-  }
-  .food-settings-row input[type='checkbox'] {
-    appearance: none;
-    width: 11px;
-    height: 11px;
-    border: 1px solid #8e6a2a;
-    background: #140e04;
-    box-shadow: inset 0 0 0 1px rgba(12, 8, 2, 0.7);
-    cursor: pointer;
-    position: relative;
-    margin: 0;
-  }
-  .food-settings-row input[type='checkbox']:hover {
-    border-color: #c88a30;
-    background: #1a1206;
-  }
-  .food-settings-row input[type='checkbox']:checked {
-    background: #2a1a08;
-    border-color: #e0a848;
-  }
-  .food-settings-row input[type='checkbox']:checked::after {
-    content: '';
-    position: absolute;
-    left: 2px;
-    top: 0px;
-    width: 4px;
-    height: 7px;
-    border: solid #f0c060;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-  }
-  .food-settings-row--compact {
-    margin-top: 1px;
-  }
-  .food-checklist {
-    max-height: 168px;
-    overflow-y: auto;
-    padding-right: 2px;
   }
   .food-mini-btn-row {
     display: flex;
