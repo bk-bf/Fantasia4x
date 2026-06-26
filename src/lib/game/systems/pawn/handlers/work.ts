@@ -422,6 +422,29 @@ export function handleMovingToResource(pawn: Pawn, gameState: GameState): GameSt
   return gameState;
 }
 
+// How far (Chebyshev) another claimable job of the SAME type counts as "still part of this cluster".
+// While one exists within this radius, a pawn defers its opportunistic haul and keeps working the
+// patch — so it finishes the 10 bushes next to it before making the trip to the stockpile.
+const OPPORTUNISTIC_DEFER_RADIUS = 16;
+
+/**
+ * Is there another claimable job of the same `jobType` within OPPORTUNISTIC_DEFER_RADIUS of the pawn —
+ * i.e. more of the same work cluster left to do? Used to hold off opportunistic hauling until the pawn
+ * has cleared the local patch (don't haul after every single bush). Unclaimed jobs, or ones this pawn
+ * already holds, count; another pawn's claim does not.
+ */
+function moreNearbySameTypeWork(pawn: Pawn, gs: GameState, jobType: string): boolean {
+  const px = pawn.position?.x;
+  const py = pawn.position?.y;
+  if (px == null || py == null) return false;
+  return (gs.jobs ?? []).some(
+    (j) =>
+      j.type === jobType &&
+      (j.claimedBy == null || j.claimedBy === pawn.id) &&
+      Math.max(Math.abs(j.targetX - px), Math.abs(j.targetY - py)) <= OPPORTUNISTIC_DEFER_RADIUS
+  );
+}
+
 export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
   const activeJob = pawn.activeJob;
   if (!activeJob || activeJob.type === 'need') return goIdle(pawn, gameState);
@@ -443,7 +466,10 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
   const laborLevel = jobService.getJobLaborLevel(jobInPool, pawn, gameState);
 
   const interrupted = checkNeedInterrupts(pawn, gameState, 'Working', jobDist, queue, laborLevel);
-  if (interrupted) return interrupted;
+  // A need is pulling the pawn off the job — it's leaving the work area anyway, so scoop up any loose
+  // stockpile-bound goods on its tile to carry along (delivered after the need via handleIdle's
+  // haul-recovery). No-op when nothing's there, so it never detours a hungry pawn — just a free grab.
+  if (interrupted) return opportunisticHaulPickup(interrupted, pawn.id);
 
   // Must be adjacent to the job target to work it (ADR-016: craft is no longer exempt — the
   // pawn crafts AT the station tile). Only abstract (0,0) jobs are worked in place.
@@ -500,10 +526,14 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
   if (!jobStillExists) {
     // Opportunistic hauling: a pawn that just finished a non-haul job while standing next to loose,
     // stockpile-bound goods (e.g. a woodcutter on the tile it just felled) grabs them now and hauls
-    // them off in the same trip, instead of leaving them for a separate later haul. Haul jobs
-    // already sweep their own 3×3 on pickup (haul.complete), so they're skipped here.
+    // them off in the same trip, instead of leaving them for a separate later haul. Haul jobs already
+    // sweep their own 3×3 on pickup (haul.complete), so they're skipped here. DEFERRED while more of
+    // the same work cluster remains nearby: the pawn finishes the patch of bushes/trees first and only
+    // makes the stockpile trip on the LAST one — otherwise it'd shuttle back after every single bush.
     const afterPickup =
-      activeJob.type === 'haul' ? afterAdvance : opportunisticHaulPickup(afterAdvance, pawn.id);
+      activeJob.type === 'haul' || moreNearbySameTypeWork(pawn, afterAdvance, activeJob.type)
+        ? afterAdvance
+        : opportunisticHaulPickup(afterAdvance, pawn.id);
 
     // Job complete. If pawn is now carrying items, enter HAULING state.
     const updatedPawn = afterPickup.pawns.find((p) => p.id === pawn.id);

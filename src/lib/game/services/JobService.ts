@@ -494,13 +494,14 @@ class JobServiceImpl {
       return interaction?.workCategory ?? 'foraging';
     }
 
-    // Dynamic: a craft job producing a FOOD item is a cooking job — so the Cooking labor slider
-    // (Work.ts `cooking`) drives its priority and `cooking_speed`/`cooking_quality` apply. Any other
-    // craft output falls through to the static `crafting` category below.
+    // Dynamic: a craft job producing a prepared MEAL (cooked dish — stew/bread/pie/pottage/roast) is a
+    // cooking job — so the Cooking labor slider (Work.ts `cooking`) drives its priority and
+    // `cooking_speed`/`cooking_quality` apply. Raw foods come from harvest, not craft; any other craft
+    // output falls through to the static `crafting` category below.
     if (def?.workCategorySource === 'recipe-output') {
       const order = (gs?.craftingQueue ?? []).find((o) => o.id === job.craftQueueId);
       const cat = order ? itemService.getItemById(order.item.id)?.category : undefined;
-      if (cat === 'food') return 'cooking';
+      if (cat === 'meal') return 'cooking';
     }
 
     // Static mapping from jobs.jsonc. FSM-internal kinds (eat/sleep/need) have no JobDef and map to
