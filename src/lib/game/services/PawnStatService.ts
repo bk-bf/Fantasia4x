@@ -16,8 +16,10 @@ import { combinedQualityMultiplier } from '../core/itemQuality';
 import {
   conditionStatMultipliers,
   conditionPainMultiplier,
-  conditionConsciousnessMultiplier
+  conditionConsciousnessMultiplier,
+  RECOVER_CONSCIOUSNESS
 } from '../core/needs';
+import { SECONDS_PER_TICK } from '../core/time';
 
 // conditions.jsonc holds both persistent conditions (severity/stages) and transient ones
 // (re-derived each tick); split them by the `duration` discriminant — see the file header.
@@ -472,6 +474,9 @@ export interface PawnStatService {
   evaluateStat(statId: string, pawn: Pawn | Mob): number;
   /** Compute all body capacities (0–1) for a pawn or mob. */
   computeCapacities(pawn: Pawn | Mob, lightMultiplier?: number): Record<string, number>;
+  /** Ticks until a COLLAPSED entity wakes (consciousness back past RECOVER_CONSCIOUSNESS) when recovery
+   *  is BLOOD-driven, or null when no honest estimate exists (still bleeding / blood full → wound-bound). */
+  estimateBloodRecoveryTicks(entity: Pawn | Mob): number | null;
   /**
    * Speed / yield / quality multipliers for a work type. `yield` and `quality` are
    * `null` for jobs that don't have that axis (e.g. hauling has neither, a gather job
@@ -517,6 +522,33 @@ export class PawnStatServiceImpl implements PawnStatService {
       return caps;
     }
     return this._buildCapacities(pawn, lightMultiplier);
+  }
+
+  estimateBloodRecoveryTicks(entity: Pawn | Mob): number | null {
+    const c0 = this.computeCapacities(entity).consciousness ?? 1;
+    if (c0 >= RECOVER_CONSCIOUSNESS) return 0; // already at/over the wake line
+    const totalBleed = (entity.limbs ?? []).reduce((s, l) => s + (l.bleedRate ?? 0), 0);
+    if (totalBleed > 0) return null; // still bleeding → blood is FALLING, not recovering
+    const maxBlood = entity.maxBloodVolume ?? 100;
+    const blood = entity.bloodVolume ?? maxBlood;
+    if (blood >= maxBlood) return null; // blood full → recovery is wound/pain-bound (mends glacially)
+    // cCeil = consciousness if blood were fully restored. MUST bypass computeCapacities' cache: it keys
+    // on limbs/injuries identity (not blood), so a {...entity, bloodVolume} clone would hit the cache and
+    // wrongly return the current-blood value. _buildCapacities recomputes fresh.
+    const cCeil = this._buildCapacities({ ...entity, bloodVolume: maxBlood } as Pawn).consciousness ?? 1;
+    if (cCeil < RECOVER_CONSCIOUSNESS) return null; // even full blood < wake line → pain/organ-bound
+    // consciousness(blood) = cCeil × bloodMult(blood) (blood is the ONLY blood-dependent factor), so
+    // invert for the blood that hits the wake line, then divide the gap by the per-tick regen.
+    const bloodMultTarget = RECOVER_CONSCIOUSNESS / cCeil;
+    const bloodLossTarget =
+      BLOOD_FAINT_ONSET + (1 - bloodMultTarget) * (BLOOD_FAINT_FLOOR - BLOOD_FAINT_ONSET);
+    const bloodTarget = maxBlood * (1 - bloodLossTarget);
+    // Blood regen per tick — inlined from calcBloodRegenRate(entities/Pawns) (importing it would close a
+    // PawnStatService↔Pawns↔Combat cycle): (1 + (CON−10)·0.08)·0.05 blood/sec, CON-scaled, × per-tick.
+    const bloodRegenPerSec = (1.0 + ((entity.stats?.constitution ?? 10) - 10) * 0.08) * 0.05;
+    const regenPerTick = bloodRegenPerSec * SECONDS_PER_TICK;
+    if (regenPerTick <= 0 || bloodTarget <= blood) return null;
+    return (bloodTarget - blood) / regenPerTick;
   }
 
   private _buildCapacities(pawn: Pawn | Mob, lightMultiplier?: number): Record<string, number> {

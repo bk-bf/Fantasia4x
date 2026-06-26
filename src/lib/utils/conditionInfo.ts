@@ -13,6 +13,7 @@ import type {
 } from '$lib/game/core/types';
 import conditionsData from '$lib/game/database/conditions.jsonc';
 import { gameHoursFromTicks } from '$lib/game/services/EnvironmentService';
+import { pawnStatService } from '$lib/game/services/PawnStatService';
 
 /** A remaining tick duration shown as coarse IN-GAME time — the unit the clock and HealthReadout use —
  *  hours, or in-game minutes under an hour. Never "turns"/ticks. */
@@ -166,22 +167,32 @@ function transientSources(entity: Pawn | Mob, id: string): string[] {
       return [t > 0 ? `Recovering — ${gameTimeLeft(t)} left` : 'Recovering'];
     }
     case 'collapse': {
-      // Out cold from low consciousness — name the DRIVER (pain vs blood loss) and show its LIVE value so
-      // the player sees WHY it's down and watches it ease toward the wake point. No fixed countdown: the
-      // timer is a per-tick keepalive, and a real ETA is unreliable (pain mends glacially and both rates
-      // depend on rest/treatment/wound severity) — the moving driver value is the honest progress signal.
-      const e = entity as { pain?: number; bloodVolume?: number; maxBloodVolume?: number };
+      // Out cold from low consciousness — name the DRIVER (pain vs blood loss) with its live value, and
+      // a wake ETA when recovery is BLOOD-driven (a clean, predictable regen rate). When it's wound/pain-
+      // bound or still bleeding there's no honest number (wounds mend glacially, at a treatment-dependent
+      // pace), so just the moving driver value is shown — it ticks toward the wake point as the body mends.
+      const e = entity as {
+        pain?: number;
+        bloodVolume?: number;
+        maxBloodVolume?: number;
+        limbs?: { bleedRate?: number }[];
+      };
       const pain = Math.round(e.pain ?? 0);
       const maxBlood = e.maxBloodVolume ?? 100;
-      const bloodLoss = Math.max(0, 1 - (e.bloodVolume ?? maxBlood) / maxBlood);
+      const bloodLossPct = Math.round(Math.max(0, 1 - (e.bloodVolume ?? maxBlood) / maxBlood) * 100);
+      const bleeding = (e.limbs ?? []).reduce((s, l) => s + (l?.bleedRate ?? 0), 0) > 0;
       // Mirror the consciousness suppressors (PawnStatService): the LOWER multiplier is the bigger cause.
       const painMult = 1 - Math.max(0, pain / 100 - 0.1);
-      const bloodMult = 1 - Math.min(1, Math.max(0, (bloodLoss - 0.2) / 0.35));
-      let cause = '';
-      if (bloodMult < painMult && bloodMult < 0.99) cause = `blood loss (${Math.round(bloodLoss * 100)}% lost)`;
+      const bloodMult = 1 - Math.min(1, Math.max(0, (bloodLossPct / 100 - 0.2) / 0.35));
+      let cause: string;
+      if (bleeding) cause = `bleeding out (${bloodLossPct}% lost)`;
+      else if (bloodMult < painMult && bloodMult < 0.99) cause = `blood loss (${bloodLossPct}% lost)`;
       else if (painMult < 0.99) cause = `pain (${pain}/100)`;
-      else if (bloodMult < 0.99) cause = `blood loss (${Math.round(bloodLoss * 100)}% lost)`;
-      return [cause ? `Out cold — ${cause}` : 'Recovering'];
+      else if (bloodMult < 0.99) cause = `blood loss (${bloodLossPct}% lost)`;
+      else cause = '';
+      const ticks = pawnStatService.estimateBloodRecoveryTicks(entity);
+      const eta = ticks && ticks > 0 ? `, wakes in ~${gameTimeLeft(ticks)}` : '';
+      return [cause ? `Out cold — ${cause}${eta}` : `Recovering${eta}`];
     }
     default:
       // Mood conditions are pawn-only (mobs never sync them).
