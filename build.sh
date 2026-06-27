@@ -131,14 +131,15 @@ next_patch_tag() {
 }
 
 # Rewrite the "release pill" shields badge in README.md to the just-cut version and commit+push that
-# one-line doc bump. The <!-- release-pill:start/end --> markers make the line safe to regenerate in
-# place; no-ops if the file or markers are absent, or if the badge is already current.
+# one-line doc bump. The badge line ends with a `<!-- release-pill -->` marker (a trailing inline
+# comment — kept OFF the line start so GitHub still parses the badge as markdown, not as a raw HTML
+# block). No-ops if the file or marker are absent, or if the badge is already current.
 update_release_pill() {
-  local tag="$1" file="README.md" repo pill
-  [[ -f "$file" ]] && grep -q 'release-pill:start' "$file" || return 0
+  local tag="$1" file="README.md" repo badge
+  [[ -f "$file" ]] && grep -q '<!-- release-pill -->' "$file" || return 0
   repo="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || echo 'bk-bf/Fantasia4x')"
-  pill="<!-- release-pill:start -->[![Release](https://img.shields.io/badge/release-${tag}-brightgreen)](https://github.com/${repo}/releases/latest)<!-- release-pill:end -->"
-  sed -i "s#<!-- release-pill:start -->.*<!-- release-pill:end -->#${pill}#" "$file"
+  badge="[![Release](https://img.shields.io/badge/release-${tag}-brightgreen)](https://github.com/${repo}/releases/latest)"
+  sed -i "s#.*<!-- release-pill -->#${badge} <!-- release-pill -->#" "$file"
   git diff --quiet -- "$file" && return 0   # already current
   git add "$file"
   git commit -q -m "docs(readme): bump release pill to $tag"
