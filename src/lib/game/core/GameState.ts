@@ -381,13 +381,16 @@ export function isStorageTile(state: GameState, x: number, y: number): boolean {
  * caller in the services layer; core only surfaces the list + "is this tile filtered".
  */
 export function binFilterAt(state: GameState, x: number, y: number): string[] | null {
-  let best: string[] | null = null;
   for (const b of state.buildings ?? []) {
     if (b.status !== 'complete' || b.x !== x || b.y !== y) continue;
-    const f = STORAGE_BIN_FILTER.get(b.type);
-    if (f) best = f; // a filtered bin on the tile restricts it
+    if (binStacksForType(b.type) <= 0) continue; // not a storage bin
+    // Player override (the FILTER fly-out) wins — an explicit item-id list, even empty (= take nothing).
+    const override = b.storageSettings?.allowedItemIds;
+    if (override !== undefined) return override;
+    // Else the building's static default: a specialized bin's category list, or null = general (all).
+    return STORAGE_BIN_FILTER.get(b.type) ?? null;
   }
-  return best;
+  return null;
 }
 
 /** True when a specialized (filtered) store sits on tile (x,y) — the generic credit path skips these. */

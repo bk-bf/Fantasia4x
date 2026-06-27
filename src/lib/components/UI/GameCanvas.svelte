@@ -114,6 +114,7 @@
   } from '$lib/components/UI/gameCanvas/spriteSheets';
   import { redrawHudSpriteIcons } from '$lib/components/UI/gameCanvas/hudSpriteIcon';
   import BuildingFuelPanel from '$lib/components/UI/gameCanvas/BuildingFuelPanel.svelte';
+  import BuildingStoragePanel from '$lib/components/UI/gameCanvas/BuildingStoragePanel.svelte';
   import FoodFilterPanel from '$lib/components/UI/gameCanvas/FoodFilterPanel.svelte';
   import StockpileZonePanel from '$lib/components/UI/gameCanvas/StockpileZonePanel.svelte';
   import {
@@ -856,16 +857,13 @@
    *  building click panels so a floor/sleeping-spot/etc. shows the same conditions a bare tile does. */
   function tileEnv(t: { x: number; y: number; terrainType: string; moisture?: number }) {
     const thermal = computeThermalAt(t.x, t.y, buildings, worldMap);
+    const envTurn = environmentService.ambientTurn($gameState ?? { turn: 0 });
     return {
-      light: computeTileLightLevel(
-        environmentService.ambientTurn($gameState ?? { turn: 0 }),
-        buildings,
-        t.x,
-        t.y
-      ),
+      light: computeTileLightLevel(envTurn, buildings, t.x, t.y),
       // Round for the readout only — a thermal aura (embertree warmth, fire) adds a fractional °C
       // that must not leak decimals into the HUD. The sim keeps the un-rounded tileTemperature.
-      temp: Math.round(tileTemperature(t.terrainType, $currentSeason, $currentWeather, thermal)),
+      // Uses the ambient turn so the diurnal day/night swing matches the visible time of day.
+      temp: Math.round(tileTemperature(t.terrainType, $currentSeason, envTurn, $currentWeather, thermal)),
       wet: tileWetness(t.moisture ?? 0, $currentWeather, thermal),
       wind: windDegreeWord(effectiveWindAt(t.x, t.y, $currentWeather, thermal, worldMap))
     };
@@ -879,6 +877,10 @@
     const workReq = selectedBuilding.workRequired ?? bDef?.workAmount ?? 1;
     const canConfigFuel =
       !isBlueprint && !selectedBuilding.deconstructQueued && bDef?.maxFuel !== undefined;
+    const canConfigStorage =
+      !isBlueprint &&
+      !selectedBuilding.deconstructQueued &&
+      (bDef?.effects?.storageStacks ?? 0) > 0;
     const statusStr = isBlueprint
       ? selectedBuilding.paused
         ? 'paused'
@@ -949,6 +951,13 @@
       btns.push({ label: 'DEMOLISH', onClick: deconstructBuilding });
       if (canConfigFuel) {
         btns.push({ label: 'FUEL', active: showFuelSettings, onClick: toggleFuelSettingsPanel });
+      }
+      if (canConfigStorage) {
+        btns.push({
+          label: 'FILTER',
+          active: showStorageSettings,
+          onClick: toggleStorageSettingsPanel
+        });
       }
     }
     // Environmental conditions of the tile the building sits on (same readout a bare tile shows).
@@ -3452,6 +3461,8 @@
           redrawOverlay();
         } else if (showFuelSettings) {
           showFuelSettings = false;
+        } else if (showStorageSettings) {
+          showStorageSettings = false;
         } else if (showFoodSettings) {
           showFoodSettings = false;
         } else if (showZoneFilter) {
@@ -4313,18 +4324,27 @@
 
   let showShelterAssign = false;
   let showFuelSettings = false;
+  let showStorageSettings = false;
   let fuelSettingsForBuildingId: string | null = null;
 
   $: {
     const nextId = selectedBuilding?.id ?? null;
     if (nextId !== fuelSettingsForBuildingId) {
       showFuelSettings = false;
+      showStorageSettings = false;
       fuelSettingsForBuildingId = nextId;
     }
   }
 
   function toggleFuelSettingsPanel() {
     showFuelSettings = !showFuelSettings;
+    if (showFuelSettings) showStorageSettings = false; // the two fly-outs share the same slot
+  }
+
+  // §F storage-bin item filter fly-out (mirrors showFuelSettings), toggled by the card's FILTER button.
+  function toggleStorageSettingsPanel() {
+    showStorageSettings = !showStorageSettings;
+    if (showStorageSettings) showFuelSettings = false;
   }
 
   // Colony food-filter fly-out (mirrors showFuelSettings): owned here, toggled by the pawn card's FOOD
@@ -4802,6 +4822,10 @@
         selectedBuilding.status === 'complete' &&
         !selectedBuilding.deconstructQueued &&
         buildingService.getBuildingById(selectedBuilding.type)?.maxFuel !== undefined}
+      {@const canConfigureStorage =
+        selectedBuilding.status === 'complete' &&
+        !selectedBuilding.deconstructQueued &&
+        (buildingService.getBuildingById(selectedBuilding.type)?.effects?.storageStacks ?? 0) > 0}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="bld-row"
@@ -4814,6 +4838,9 @@
         {/if}
         {#if canConfigureFuel}
           <BuildingFuelPanel building={selectedBuilding} {pawns} open={showFuelSettings} />
+        {/if}
+        {#if canConfigureStorage}
+          <BuildingStoragePanel building={selectedBuilding} open={showStorageSettings} />
         {/if}
       </div>
     {:else if selectedZone && zoneCard}
@@ -4931,7 +4958,13 @@
     {:else if hoverTile}
       {@const tileThermal = computeThermalAt(hoverTile.x, hoverTile.y, buildings, worldMap)}
       {@const tileTemp = Math.round(
-        tileTemperature(hoverTile.terrainType, $currentSeason, $currentWeather, tileThermal)
+        tileTemperature(
+          hoverTile.terrainType,
+          $currentSeason,
+          environmentService.ambientTurn($gameState ?? { turn: 0 }),
+          $currentWeather,
+          tileThermal
+        )
       )}
       {@const tileWet =
         tileWetness(hoverTile.moisture ?? 0, $currentWeather, tileThermal) *

@@ -678,6 +678,15 @@ export const COMMANDS: Record<string, Cmd> = {
         : b
     )
   }),
+  /** §F storage bins — set a store building's per-item filter (the FILTER fly-out on its card). */
+  setBuildingStorageSettings: (s, p: { id: string; updates: Record<string, unknown> }) => ({
+    ...s,
+    buildings: (s.buildings ?? []).map((b) =>
+      b.id === p.id
+        ? { ...b, storageSettings: { ...((b.storageSettings ?? {}) as object), ...p.updates } }
+        : b
+    )
+  }),
   /** Colony-wide food filter (which items pawns may eat) — set by the food panel on the pawn card. */
   setFoodSettings: (s, p: { updates: Partial<FoodSettings> }) => ({
     ...s,

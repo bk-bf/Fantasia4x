@@ -81,6 +81,15 @@ export interface FuelSettings {
   paused?: boolean;
 }
 
+export interface StorageSettings {
+  /**
+   * §F storage bins — explicit per-building allow-list of item IDs this store accepts. `undefined`
+   * means "use the building's default": a specialized bin's `storageFilter` (categories), or accept
+   * everything for a general store. An explicit list — even empty — is honoured (empty = take nothing).
+   */
+  allowedItemIds?: string[];
+}
+
 export interface PlacedBuilding {
   id: string; // unique instance id
   type: string; // building definition id (matches Building.id)
@@ -97,6 +106,7 @@ export interface PlacedBuilding {
   fuel?: number; // current fuel units remaining
   lit?: boolean; // campfire is burning right now
   fuelSettings?: FuelSettings; // optional per-building refuel controls
+  storageSettings?: StorageSettings; // §F optional per-building storage-bin item filter
   // Deconstruction
   deconstructQueued?: boolean; // player has queued this building for demolition
   deconstructWorkRequired?: number; // work points to demolish (½ workAmount)
