@@ -147,6 +147,12 @@ export class RecipeServiceImpl implements RecipeService {
     return this.producedBy.get(itemId)?.[0];
   }
 
+  /** The categories a dynamic slot accepts — unifies the `acceptsCategories[]` (mixed) and the
+   *  `acceptsCategory` single-category shorthand so callers never branch on which was authored. */
+  slotCategories(slot: { acceptsCategory?: string; acceptsCategories?: string[] }): string[] {
+    return slot.acceptsCategories ?? (slot.acceptsCategory ? [slot.acceptsCategory] : []);
+  }
+
   isPassive(recipe: Recipe | undefined): boolean {
     if (!recipe) return false;
     return recipe.passive ?? this.isPassiveStation(recipe.station);

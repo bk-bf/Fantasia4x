@@ -105,6 +105,12 @@ export interface ItemService {
   makeDynamicName(itemId: string, subjectName: string): string;
   /** R10: display name for a dropped item — honours a `dynamicName` item's per-drop `name` override. */
   getItemDisplayName(drop: { resourceId: string; name?: string; quality?: ItemQuality }): string;
+  /** §F8: compose a mixed-ingredient dish's per-instance name from the chosen ingredients
+   *  ("Venison & Cabbage Stew"). Returns undefined unless the item is a `dynamicName` dynamicRecipe. */
+  composeDynamicDishName(
+    itemId: string,
+    selected?: Record<string, string>
+  ): string | undefined;
   getItemsByType(type: string): Item[];
   getItemsByCategory(category: string): Item[];
   /** Distinct item categories (sorted), across the whole item DB. */
@@ -192,6 +198,29 @@ export class ItemServiceImpl implements ItemService {
     const def = this.getItemById(itemId);
     if (!def?.dynamicName) return def?.name ?? itemId;
     return `${subjectName}'s ${def.name}`;
+  }
+
+  composeDynamicDishName(
+    itemId: string,
+    selected?: Record<string, string>
+  ): string | undefined {
+    const def = this.getItemById(itemId);
+    const recipe = recipeService.getRecipeForItem(itemId);
+    if (!def?.dynamicName || !recipe?.dynamicRecipe || !selected) return undefined;
+    // Unique ingredient display names in slot order → "A", "A & B", "A, B & C".
+    const names: string[] = [];
+    for (const slotKey of Object.keys(recipe.dynamicRecipe)) {
+      const ingId = selected[slotKey];
+      if (!ingId) continue;
+      const n = this.getItemById(ingId)?.name ?? ingId;
+      if (!names.includes(n)) names.push(n);
+    }
+    if (names.length === 0) return def.name;
+    const list =
+      names.length === 1
+        ? names[0]
+        : `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
+    return `${list} ${def.name}`;
   }
 
   getItemDisplayName(drop: { resourceId: string; name?: string; quality?: ItemQuality }): string {
@@ -290,15 +319,24 @@ export class ItemServiceImpl implements ItemService {
     const recipe = recipeService.getRecipeForItem(itemId);
     if (!recipe?.dynamicRecipe) return {};
     const selected: Record<string, string> = {};
+    // DISTINCT across slots: a mixed-ingredient dish (e.g. a 3-ingredient stew) auto-fills each slot
+    // with a DIFFERENT in-stock item so it composes a varied meal, not three of the same. Tracks both
+    // the chosen ids AND the running per-id demand so two slots landing on the same item still verify
+    // the COMBINED quantity is in stock (the resolveActiveCost sum-path mirrors this).
+    const demand: Record<string, number> = {};
     for (const [slotKey, slot] of Object.entries(recipe.dynamicRecipe)) {
+      const cats = recipeService.slotCategories(slot);
       const candidates = ITEMS_DATABASE.filter(
         (i) =>
-          i.category === slot.acceptsCategory &&
-          this.getAvailableQuantity(i.id, gameState) >= slot.quantity
+          cats.includes(i.category) &&
+          this.getAvailableQuantity(i.id, gameState) >= (demand[i.id] ?? 0) + slot.quantity
       );
       if (!candidates.length) return null;
-      // Pick the first available (lowest index = most common)
-      selected[slotKey] = candidates[0].id;
+      // Prefer an item not already chosen by another slot (variety); fall back to the first that still
+      // has enough combined stock if every candidate is already taken.
+      const chosen = candidates.find((c) => !(c.id in demand)) ?? candidates[0];
+      selected[slotKey] = chosen.id;
+      demand[chosen.id] = (demand[chosen.id] ?? 0) + slot.quantity;
     }
     return selected;
   }
@@ -327,14 +365,22 @@ export class ItemServiceImpl implements ItemService {
     const selected = selectedIngredients ?? this.autoSelectIngredients(itemId, gameState);
     if (!selected) return null;
 
+    // SUM per id across slots (two slots may legitimately pick the same item) — never overwrite, or a
+    // 2× pick would only charge once. Verify the COMBINED demand against stock.
     const dynamicCosts: Record<string, number> = {};
     for (const [slotKey, slot] of Object.entries(recipe.dynamicRecipe)) {
       const chosenId = selected[slotKey];
-      if (!chosenId || this.getAvailableQuantity(chosenId, gameState) < slot.quantity) return null;
-      dynamicCosts[chosenId] = slot.quantity;
+      if (!chosenId) return null;
+      dynamicCosts[chosenId] = (dynamicCosts[chosenId] ?? 0) + slot.quantity;
+    }
+    for (const [id, qty] of Object.entries(dynamicCosts)) {
+      if (this.getAvailableQuantity(id, gameState) < qty) return null;
     }
 
-    return { ...baseCost, ...dynamicCosts };
+    // Merge base + dynamic by SUMMING (a dish could also list a base input that overlaps a slot pick).
+    const total: Record<string, number> = { ...baseCost };
+    for (const [id, qty] of Object.entries(dynamicCosts)) total[id] = (total[id] ?? 0) + qty;
+    return total;
   }
 
   hasRequiredTools(itemId: string, gameState: GameState): boolean {

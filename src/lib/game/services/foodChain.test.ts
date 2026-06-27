@@ -6,6 +6,7 @@ import {
   consumeMeal,
   applyIntoxication,
   applyFoodPoisoning,
+  applyMealBuff,
   mealPoisonChance
 } from '../systems/pawn/pawnQueries';
 import { decayIntoxication } from '../core/needs';
@@ -145,5 +146,68 @@ describe('§F8 food poisoning', () => {
     const immune = { conditionTimers: {} } as unknown as Pawn;
     applyFoodPoisoning(immune, [{ id: 'rotten_meat', units: 20 }], 1);
     expect(Object.keys(immune.conditionTimers ?? {}).length).toBe(0);
+  });
+});
+
+// §F8 — mixed-ingredient dishes (stew/pie) + meal buffs.
+describe('§F8 mixed dishes & meal buffs', () => {
+  it('stews are multi-slot dishes over a mixed pool; tiers add slots (2 → 3 → 4)', () => {
+    const slots = (id: string) => Object.keys(recipeService.getRecipeById(id)!.dynamicRecipe!);
+    expect(slots('make_small_stew').length).toBe(2);
+    expect(slots('make_fine_stew').length).toBe(3);
+    expect(slots('make_lavish_stew').length).toBe(4);
+    // each slot accepts the full stew pool (not meat-only)
+    const slot = Object.values(recipeService.getRecipeById('make_small_stew')!.dynamicRecipe!)[0];
+    for (const c of ['meat', 'fish', 'vegetable', 'legume', 'herb'])
+      expect(recipeService.slotCategories(slot)).toContain(c);
+  });
+
+  it('pies are flour-gated dishes with a fruit/veg/meat/fish pool; tiers add fillings + flour', () => {
+    expect(recipeService.getRecipeById('bake_simple_pie')!.inputs.flour).toBe(1);
+    expect(recipeService.getRecipeById('bake_hearty_pie')!.inputs.flour).toBe(2);
+    expect(Object.keys(recipeService.getRecipeById('bake_simple_pie')!.dynamicRecipe!).length).toBe(1);
+    expect(Object.keys(recipeService.getRecipeById('bake_hearty_pie')!.dynamicRecipe!).length).toBe(3);
+    const slot = Object.values(recipeService.getRecipeById('bake_pie')!.dynamicRecipe!)[0];
+    expect(recipeService.slotCategories(slot)).toContain('fruit');
+  });
+
+  it('a dish names itself from its chosen ingredients ("Venison & Cabbage Stew")', () => {
+    const name = itemService.composeDynamicDishName('small_stew', {
+      ingredient1: 'venison',
+      ingredient2: 'cabbage'
+    });
+    expect(name).toBe('Venison & Cabbage Stew');
+  });
+
+  it('resolveActiveCost sums quantities when two slots pick the same ingredient', () => {
+    const gs = { droppedItems: [{ resourceId: 'venison', quantity: 9, stored: true }] } as unknown as GameState;
+    const cost = itemService.resolveActiveCost('fine_stew', gs, {
+      ingredient1: 'venison',
+      ingredient2: 'venison',
+      ingredient3: 'venison'
+    });
+    expect(cost).toEqual({ venison: 3 }); // 1 per slot, summed — not overwritten to 1
+  });
+
+  it('each cooked dish carries a mealBuff whose condition exists and is transient', () => {
+    const buffIds = new Set(
+      (conditionsData as Array<{ id: string; transient?: boolean }>)
+        .filter((c) => c.transient)
+        .map((c) => c.id)
+    );
+    for (const id of ['small_stew', 'lavish_stew', 'meat_pie', 'hearty_pie', 'pottage', 'bread']) {
+      const buff = itemService.getItemById(id)?.mealBuff;
+      expect(buff, id).toBeTruthy();
+      expect(buffIds.has(buff!.condition), `${id} → ${buff!.condition}`).toBe(true);
+    }
+    // tiers map to the right purpose: stew = endurance, hearty pie = fortification
+    expect(itemService.getItemById('lavish_stew')!.mealBuff!.condition).toBe('hearty_meal');
+    expect(itemService.getItemById('hearty_pie')!.mealBuff!.condition).toBe('fortified');
+  });
+
+  it('eating a dish stamps its meal buff onto conditionTimers (max-duration, refreshed each meal)', () => {
+    const p = { conditionTimers: {} } as unknown as Pawn;
+    applyMealBuff(p, [{ id: 'lavish_stew', units: 1 }]);
+    expect((p.conditionTimers ?? {}).hearty_meal ?? 0).toBeGreaterThan(0);
   });
 });

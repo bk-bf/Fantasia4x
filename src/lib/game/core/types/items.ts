@@ -108,8 +108,12 @@ export type EquipmentSlot =
  * and optional stat tweaks.
  */
 export interface DynamicIngredientSlot {
-  /** Items with this `category` are accepted in this slot (e.g. "meat") */
-  acceptsCategory: string;
+  /** Items with this `category` are accepted in this slot (e.g. "meat"). Single-category shorthand. */
+  acceptsCategory?: string;
+  /** Items in ANY of these categories are accepted (e.g. a stew slot taking meat/fish/vegetable/legume).
+   *  Use this for mixed-ingredient dishes; `acceptsCategory` is the single-category shorthand. Read both
+   *  through `recipeService.slotCategories(slot)` so callers never branch. */
+  acceptsCategories?: string[];
   /** Units consumed from the chosen ingredient */
   quantity: number;
   /**
@@ -277,6 +281,12 @@ export interface Item {
    *  Routed through the eater's `poison_resistance` (CON) and, for cooked dishes, scaled by the item's
    *  `rarity` → rarities.jsonc `poisonMult` (a low-grade cooked meal is dicier). See pawnQueries. */
   poisonChance?: number;
+
+  /** §F8 meal buff: a transient condition stamped on the eater when this cooked meal is consumed (via
+   *  pawnQueries.applyMealBuff → conditionTimers, like nausea/intoxication). `condition` is a
+   *  conditions.jsonc id (well_fed/hearty_meal/nourished/fortified/refreshed/soothed); `seconds` is its
+   *  duration in authored seconds (≈12.5s = 1 in-game hr). Cooked dishes only — raw food carries none. */
+  mealBuff?: { condition: string; seconds: number };
 
   /** Medicine quality 0–1 — added to a tend's treatment quality when consumed (COMBAT-SYSTEM caretaking). */
   medicineQuality?: number;

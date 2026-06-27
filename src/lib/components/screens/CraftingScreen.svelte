@@ -146,8 +146,10 @@
     return CAT_GROUP[c] ?? 'GOODS';
   }
 
-  // A craftable card. Dynamic recipes (e.g. spit_meat over any meat) expand into one
-  // entry per available ingredient so the player chooses by picking a card.
+  // A craftable card. A SINGLE-slot dynamic recipe (e.g. spit_meat over any meat) expands into one
+  // entry per available ingredient (pick by picking a card). A MULTI-slot dish (stew/pie) renders ONE
+  // card with a per-slot ingredient picker (see `slots`); the chosen ids drive the cost + composed name.
+  type DishSlot = { key: string; label: string; quantity: number; options: Item[] };
   type CraftEntry = {
     key: string;
     item: Item;
@@ -155,11 +157,27 @@
     description: string | null;
     category: string;
     selectedIngredients?: Record<string, string>;
-    /** Extra inputs contributed by the chosen dynamic ingredient. */
+    /** Extra inputs contributed by the chosen dynamic ingredient(s). */
     dynamicCost: Record<string, number>;
+    /** Multi-slot dish: the per-slot pickers to render in the card body. */
+    slots?: DishSlot[];
   };
 
-  function entriesFor(item: Item, amounts: Record<string, number>): CraftEntry[] {
+  // Per-dish manual ingredient selection: dish itemId → slotKey → chosen ingredient itemId.
+  // The player picks each slot; an empty/partial selection leaves the card a non-craftable placeholder.
+  let dishSel: Record<string, Record<string, string>> = {};
+  function setDishSlot(itemId: string, slotKey: string, ingredientId: string) {
+    const cur = { ...(dishSel[itemId] ?? {}) };
+    if (ingredientId) cur[slotKey] = ingredientId;
+    else delete cur[slotKey];
+    dishSel = { ...dishSel, [itemId]: cur }; // reassign → craftEntries recompute
+  }
+
+  function entriesFor(
+    item: Item,
+    amounts: Record<string, number>,
+    sel: Record<string, Record<string, string>>
+  ): CraftEntry[] {
     const cat = craftCategory(item);
     const recipe = recipeOf(item.id);
     const plain = (): CraftEntry[] => [
@@ -174,11 +192,51 @@
     ];
     if ((item.isCarcass && item.yields) || !recipe?.dynamicRecipe) return plain();
 
-    // Single-slot dynamic recipe (the only authored shape) → a card per in-stock ingredient.
-    const [slotKey, slot] = Object.entries(recipe.dynamicRecipe)[0];
-    const variantItems = (ITEMS_DATABASE as Item[]).filter(
-      (i) => i.category === slot.acceptsCategory
-    );
+    const slotEntries = Object.entries(recipe.dynamicRecipe);
+
+    // MULTI-slot dish → one card with a picker per slot. The composed name/cost come from the live
+    // selection; all slots must be chosen before it's craftable (a partial pick stays a placeholder).
+    if (slotEntries.length > 1) {
+      const slots: DishSlot[] = slotEntries.map(([key, slot]) => ({
+        key,
+        label: recipeService.slotCategories(slot).join('/'),
+        quantity: slot.quantity,
+        options: (ITEMS_DATABASE as Item[]).filter(
+          (i) =>
+            recipeService.slotCategories(slot).includes(i.category) &&
+            (amounts[i.id] ?? 0) > 0
+        )
+      }));
+      const chosen = sel[item.id] ?? {};
+      const allPicked = slotEntries.every(([key]) => chosen[key]);
+      const dynamicCost: Record<string, number> = {};
+      if (allPicked) {
+        for (const [key, slot] of slotEntries) {
+          const id = chosen[key];
+          dynamicCost[id] = (dynamicCost[id] ?? 0) + slot.quantity;
+        }
+      }
+      const composed = allPicked
+        ? itemService.composeDynamicDishName(item.id, chosen)
+        : undefined;
+      return [
+        {
+          key: item.id,
+          item,
+          name: composed ?? item.name,
+          description: item.description ?? null,
+          category: cat,
+          selectedIngredients: allPicked ? { ...chosen } : undefined,
+          dynamicCost,
+          slots
+        }
+      ];
+    }
+
+    // Single-slot dynamic recipe → a card per in-stock ingredient (the established shape).
+    const [slotKey, slot] = slotEntries[0];
+    const cats = recipeService.slotCategories(slot);
+    const variantItems = (ITEMS_DATABASE as Item[]).filter((i) => cats.includes(i.category));
     const inStock = variantItems.filter((vi) => (amounts[vi.id] ?? 0) >= slot.quantity);
     if (inStock.length === 0) {
       // Empty larder: one discoverability card with the recipe's default identity (renders MISSING).
@@ -207,7 +265,7 @@
     });
   }
 
-  $: craftEntries = allCraftableItems.flatMap((i) => entriesFor(i, itemMap));
+  $: craftEntries = allCraftableItems.flatMap((i) => entriesFor(i, itemMap, dishSel));
 
   $: craftCategories = CRAFT_CAT_ORDER.map((cat) => ({
     id: cat,
@@ -314,8 +372,8 @@
           {@const intactness = carcassConditions[item.id] ?? 100}
           {@const pct = Math.round(intactness)}
           {@const dynNeed =
-            isPlaceholder && recipe?.dynamicRecipe
-              ? Object.values(recipe.dynamicRecipe)[0].acceptsCategory
+            !entry.slots && isPlaceholder && recipe?.dynamicRecipe
+              ? recipeService.slotCategories(Object.values(recipe.dynamicRecipe)[0]).join('/')
               : null}
           {@const canQueue = $gameState !== null && itemService.canQueueCraft(item.id, $gameState)}
           {@const useQty = !isCarcass && !isPlaceholder}
@@ -372,6 +430,24 @@
               })) satisfies ItemPillView[]}
               <ItemPills pills={yieldPills} />
             {:else}
+              {#if entry.slots}
+                <!-- Multi-slot dish: pick each ingredient. The dish names itself from the picks and is
+                     craftable once every slot is chosen. -->
+                <div class="dish-pickers">
+                  {#each entry.slots as s (s.key)}
+                    <select
+                      class="dish-select"
+                      value={dishSel[item.id]?.[s.key] ?? ''}
+                      on:change={(e) => setDishSlot(item.id, s.key, e.currentTarget.value)}
+                    >
+                      <option value="">— {s.label} ×{s.quantity} —</option>
+                      {#each s.options as opt (opt.id)}
+                        <option value={opt.id}>{opt.name} ({getItemAmount(opt.id)})</option>
+                      {/each}
+                    </select>
+                  {/each}
+                </div>
+              {/if}
               {@const costPills = Object.entries(baseCost).map(([id, n]) => {
                 const have = getItemAmount(id);
                 return { itemId: id, qty: `×${n}`, sub: `(${have})`, dim: have < (n as number) };
@@ -506,6 +582,28 @@
   .cost-arrow {
     color: var(--text-dim);
     opacity: 0.6;
+  }
+
+  /* Multi-slot dish ingredient pickers (stew/pie). */
+  .dish-pickers {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 3px;
+  }
+  .dish-select {
+    width: 100%;
+    box-sizing: border-box;
+    background: #140e04;
+    border: 1px solid #6a4e20;
+    color: #e0b868;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 1px 3px;
+  }
+  .dish-select:focus {
+    outline: none;
+    border-color: #c88a30;
   }
 
   .muted-text {

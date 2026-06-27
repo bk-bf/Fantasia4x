@@ -224,6 +224,10 @@
       }
     }
   },
+  // STEW (campfire): a pot of mixed ingredients — meat, fish, garden veg, legumes, a pinch of herbs.
+  // Each slot takes ONE ingredient from the stew pool and the cook picks them, so the dish names itself
+  // from what went in ("Venison & Cabbage Stew"). Tiers add slots (2 → 3 → 4 distinct ingredients), more
+  // nutrition, and a longer `hearty_meal` buff. Output items carry `dynamicName: true` (see items.jsonc).
   {
     "id"              : "make_small_stew",
     "station"         : "campfire",
@@ -233,10 +237,14 @@
     "toolTierRequired": 0,
     "toolRequirement" : {"workType": "cooking", "minTier": 0},
     "dynamicRecipe"   : {
-      "meat": {
-        "acceptsCategory": "meat",
-        "quantity"       : 2,
-        "default"        : {"name": "Small Stew", "description": "A thin two-cut stew. Plain but filling."}
+      "ingredient1": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "quantity"         : 1,
+        "default"          : {"name": "Stew", "description": "A simple two-ingredient stew. Plain but filling."}
+      },
+      "ingredient2": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "quantity"         : 1
       }
     }
   },
@@ -249,10 +257,18 @@
     "toolTierRequired": 0,
     "toolRequirement" : {"workType": "cooking", "minTier": 0},
     "dynamicRecipe"   : {
-      "meat": {
-        "acceptsCategory": "meat",
-        "quantity"       : 3,
-        "default"        : {"name": "Fine Stew", "description": "A hearty three-cut stew, thick and rich."}
+      "ingredient1": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "quantity"         : 1,
+        "default"          : {"name": "Fine Stew", "description": "A hearty three-ingredient stew, thick and rich."}
+      },
+      "ingredient2": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "quantity"         : 1
+      },
+      "ingredient3": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "quantity"         : 1
       }
     }
   },
@@ -265,10 +281,22 @@
     "toolTierRequired": 0,
     "toolRequirement" : {"workType": "cooking", "minTier": 0},
     "dynamicRecipe"   : {
-      "meat": {
-        "acceptsCategory": "meat",
-        "quantity"       : 4,
-        "default"        : {"name": "Lavish Stew", "description": "A rich four-cut feast-stew, dense with meat."}
+      "ingredient1": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "quantity"         : 1,
+        "default"          : {"name": "Lavish Stew", "description": "A rich four-ingredient feast-stew, dense and hearty."}
+      },
+      "ingredient2": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "quantity"         : 1
+      },
+      "ingredient3": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "quantity"         : 1
+      },
+      "ingredient4": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "quantity"         : 1
       }
     }
   },
@@ -288,6 +316,8 @@
       }
     }
   },
+  // TODO(honey): a fruit compote / stewed-fruit treat (fruit ×3 + honey → a `refreshed` morale dish) once
+  // beekeeping (ENTITIES D) makes honey obtainable. Fruit currently has no cooked outlet besides pies/wine.
   {
     "id"               : "make_copper_bar",
     "passive"          : true,
@@ -2368,6 +2398,25 @@
     "workAmount"      : 18,
     "toolTierRequired": 0
   },
+  // PIE (oven): an upgrade over bread — the flour gate makes even a simple pie a higher-tier good. The
+  // filling is a free pick from meat/fish/veg/fruit, so a pie names itself ("Apple Pie", "Venison & Onion
+  // Pie"). Tiers add fillings (1 → 2 → 3 distinct) + flour, climbing the meal buff (nourished → fortified).
+  // Fruit fillings make a sweet pie; meat/veg a savoury one — same recipe, the ingredients tell the story.
+  {
+    "id"              : "bake_simple_pie",
+    "station"         : "oven",
+    "inputs"          : {"flour": 1},
+    "outputs"         : {"simple_pie": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 0,
+    "dynamicRecipe"   : {
+      "filling1": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "fruit"],
+        "quantity"         : 1,
+        "default"          : {"name": "Simple Pie", "description": "A single filling baked into a pastry crust."}
+      }
+    }
+  },
   {
     "id"              : "bake_pie",
     "station"         : "oven",
@@ -2376,13 +2425,42 @@
     "workAmount"      : 16,
     "toolTierRequired": 0,
     "dynamicRecipe"   : {
-      "meat": {
-        "acceptsCategory": "meat",
-        "quantity"       : 1,
-        "default"        : {"name": "Pie", "description": "Meat baked into a pastry crust — a hot meal in the hand."}
+      "filling1": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "fruit"],
+        "quantity"         : 1,
+        "default"          : {"name": "Pie", "description": "Two fillings baked into a pastry crust — a hot meal in the hand."}
+      },
+      "filling2": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "fruit"],
+        "quantity"         : 1
       }
     }
   },
+  {
+    "id"              : "bake_hearty_pie",
+    "station"         : "oven",
+    "inputs"          : {"flour": 2},
+    "outputs"         : {"hearty_pie": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 0,
+    "dynamicRecipe"   : {
+      "filling1": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "fruit"],
+        "quantity"         : 1,
+        "default"          : {"name": "Hearty Pie", "description": "A deep, three-filling pie under a thick crust. A feast in itself."}
+      },
+      "filling2": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "fruit"],
+        "quantity"         : 1
+      },
+      "filling3": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "fruit"],
+        "quantity"         : 1
+      }
+    }
+  },
+  // TODO(honey): a sweetened pie / honey-glazed pie variant (flour + fruit + honey → a `refreshed`/treat
+  // pie) once beekeeping (ENTITIES D) makes honey obtainable. Skipped now — honey has no source yet.
   // BREW (fermenter, passive timers): wheat → malt → ale; grapes/apples/berries → wine; honey → mead.
   {
     "id"              : "malt_grain",

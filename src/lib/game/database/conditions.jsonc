@@ -707,6 +707,66 @@
             "fatigueRate"   : 1.4
         }
     },
+    // ── Food buffs ("transient": true, applied on eat) ───────────────────────
+    // Stamped onto conditionTimers when a meal carrying a `mealBuff` is eaten (see
+    // pawnQueries.applyMealBuff), exactly like nausea/intoxication — they decrement each tick and
+    // auto-clear. The POINT is that meal classes differ in PURPOSE, not just nutrition: a stew is
+    // endurance fare, a pie is fortifying, fruit lifts morale, herbs aid recovery. Kept deliberately
+    // SUBTLE (≈5–10%) — a good meal is an edge, not a mandatory optimisation loop. modifiers = multipliers.
+    {
+        "id"         : "well_fed",
+        "name"       : "Well Fed",
+        "transient"  : true,
+        "description": "A proper hot meal in the belly. Settled and ready to work.",
+        "color"      : "#9CCC65",
+        "charSpans"  : [ {"sheet": "font", "id": 1} ],
+        "modifiers"  : {"workEfficiency": 1.05}
+    },
+    {
+        "id"         : "hearty_meal",
+        "name"       : "Hearty Meal",
+        "transient"  : true,
+        "description": "A thick, stick-to-the-ribs stew. Stays filling for hours and keeps the body going.",
+        "color"      : "#C8A064",
+        "charSpans"  : [ {"sheet": "font", "id": 1} ],
+        "modifiers"  : {"hungerRate": 0.85, "fatigueRate": 0.92}
+    },
+    {
+        "id"         : "nourished",
+        "name"       : "Nourished",
+        "transient"  : true,
+        "description": "A full, balanced meal of meat and garden veg. The body works the better for it.",
+        "color"      : "#8BC34A",
+        "charSpans"  : [ {"sheet": "font", "id": 2} ],
+        "modifiers"  : {"constitution": 1.05, "workEfficiency": 1.06}
+    },
+    {
+        "id"         : "fortified",
+        "name"       : "Fortified",
+        "transient"  : true,
+        "description": "A rich, hearty feast. The body is steeled — stronger, hardier, and slow to tire.",
+        "color"      : "#D8A52A",
+        "charSpans"  : [ {"sheet": "font", "id": 2} ],
+        "modifiers"  : {"strength": 1.05, "constitution": 1.06, "fatigueRate": 0.88}
+    },
+    {
+        "id"         : "refreshed",
+        "name"       : "Refreshed",
+        "transient"  : true,
+        "description": "Sweet, cool fruit — a welcome lift. Senses sharpen and the step lightens.",
+        "color"      : "#AED581",
+        "charSpans"  : [ {"sheet": "font", "id": 1} ],
+        "modifiers"  : {"perception": 1.05, "dexterity": 1.03}
+    },
+    {
+        "id"         : "soothed",
+        "name"       : "Soothed",
+        "transient"  : true,
+        "description": "Calming herbs settle the body — aches ease and weariness lifts. Good fare for the mending.",
+        "color"      : "#80CBC4",
+        "charSpans"  : [ {"sheet": "font", "id": 1} ],
+        "modifiers"  : {"fatigueRate": 0.9, "pain": 0.95}
+    },
     {
         "id"         : "mood_ecstatic",
         "name"       : "Ecstatic",

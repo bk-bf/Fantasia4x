@@ -200,13 +200,21 @@ export function completeCraftOrder(
       const stamp =
         quality !== undefined &&
         QUALITY_STAMPED_TYPES.has(itemService.getItemById(outId)?.type ?? '');
+      // §F8: the PRIMARY output of a mixed-ingredient dish gets a composed per-instance name
+      // ("Venison & Cabbage Stew"). A named drop won't fold into a counted pile (GameState.ts) — each
+      // distinct dish stays its own stack, which is the intent for a self-naming meal.
+      const dishName =
+        outId === itemId
+          ? itemService.composeDynamicDishName(itemId, entry.selectedIngredients)
+          : undefined;
       next.push({
         id,
         resourceId: outId,
         x: station.x,
         y: station.y,
         quantity: qty,
-        ...(stamp ? { quality } : {})
+        ...(stamp ? { quality } : {}),
+        ...(dishName ? { name: dishName } : {})
       });
       newDropIds.push(id);
     }

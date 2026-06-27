@@ -14,7 +14,8 @@ import {
   consumeMeal,
   hasAvailableFood,
   applyIntoxication,
-  applyFoodPoisoning
+  applyFoodPoisoning,
+  applyMealBuff
 } from '../pawnQueries';
 import { pawnStatService } from '../../../services/PawnStatService';
 import {
@@ -188,6 +189,7 @@ export function handleHungry(pawn: Pawn, gameState: GameState): GameState {
     p.currentState = PAWN_STATE.EATING;
     applyIntoxication(p, intoxication); // §F8: a drink in the meal lifts mood + makes the pawn tipsy
     applyFoodPoisoning(p, meal, poisonRes); // §F8: a tainted serving may bring on nausea/dysentery
+    applyMealBuff(p, meal); // §F8: a cooked dish grants its meal buff (well_fed/hearty_meal/…)
     p.activeJob = {
       type: 'need' as const,
       targetX: p.position?.x ?? 0,
@@ -291,6 +293,7 @@ export function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState 
         p.hasReachedDestination = false;
         applyIntoxication(p, intoxication); // §F8: a drink in the meal lifts mood + makes the pawn tipsy
         applyFoodPoisoning(p, meal, poisonRes); // §F8: a tainted serving may bring on nausea/dysentery
+        applyMealBuff(p, meal); // §F8: a cooked dish grants its meal buff (well_fed/hearty_meal/…)
         p.activeJob = {
           ...activeJob,
           timeRequired: EATING_TURNS,

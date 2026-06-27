@@ -227,3 +227,20 @@ export function applyFoodPoisoning(p: Pawn, meal: MealPortion[], poisonResistanc
     [id]: Math.max(p.conditionTimers?.[id] ?? 0, dur)
   };
 }
+
+/** §F8: apply a cooked meal's BUFF to a pawn draft (in place). Each eaten item carrying a `mealBuff`
+ *  (cooked dishes only — stew/pie/etc.) stamps its transient condition onto `conditionTimers` for the
+ *  authored duration (refreshed every meal, max-duration so re-eating tops it up, never shortens). The
+ *  buffs are deliberately small (≈5–10%); their value is PURPOSE — endurance vs fortification vs morale
+ *  vs recovery — so cooking for the right meal matters beyond raw nutrition. No-op for raw/uncooked food. */
+export function applyMealBuff(p: Pawn, meal: MealPortion[]): void {
+  for (const { id } of meal) {
+    const buff = ITEM_DEF_BY_ID.get(id)?.mealBuff;
+    if (!buff) continue;
+    const dur = ticksFromSeconds(buff.seconds);
+    p.conditionTimers = {
+      ...(p.conditionTimers ?? {}),
+      [buff.condition]: Math.max(p.conditionTimers?.[buff.condition] ?? 0, dur)
+    };
+  }
+}
