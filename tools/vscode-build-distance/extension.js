@@ -1,7 +1,8 @@
 // Fantasia4x — Build Distance status bar badge.
 //
 // Shows commits since the last v* release tag, read live from scripts/build-distance.sh --json.
-// Green/dim under the cap, yellow approaching (>=90%), red at/over the cap. Refreshes on every commit
+// Green/dim under the cap, yellow approaching (>=90%) and over the cap (informational only — no hard
+// gate). Refreshes on every commit
 // (watches .git/logs/HEAD), when the window regains focus, and on a slow fallback poll. Click to refresh
 // and, when overdue, get the exact tag command to cut a release.
 //
@@ -57,9 +58,9 @@ function refresh() {
     const ref = lastTag ? 'since ' + lastTag : 'no v* tag yet';
 
     if (overdue) {
-      item.text = `$(warning) BUILD OVERDUE ${count}/${cap}`;
-      item.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
-      item.tooltip = `${count} commits ${ref} (cap ${cap}). Commits are BLOCKED by the pre-commit hook until you cut a release.\nClick for the tag command.`;
+      item.text = `$(warning) Build ${count}/${cap}`;
+      item.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+      item.tooltip = `${count} commits ${ref} (cap ${cap}) — over the soft cap. Consider cutting a release.\nClick for the tag command.`;
     } else if (count >= warn) {
       item.text = `$(git-commit) Build ${count}/${cap}`;
       item.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');

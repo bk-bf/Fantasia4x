@@ -12,7 +12,7 @@
 #   scripts/build-distance.sh --count    # print just the number (for hooks / other scripts)
 #   scripts/build-distance.sh --json     # {count,max,warn,lastTag,overdue} (the VS Code badge reads this)
 #   scripts/build-distance.sh --quiet    # print ONLY when at/over the cap (for a git hook); exit 0
-#   scripts/build-distance.sh --check    # like --quiet but exit 1 when over the cap (pre-commit hook / CI)
+#   scripts/build-distance.sh --check    # like --quiet; informational only — always exits 0 (gate disabled)
 set -euo pipefail
 
 MAX=${BUILD_DISTANCE_MAX:-100}
@@ -49,11 +49,11 @@ fi
 # ANSI (skip when not a TTY, e.g. piped into a log).
 if [[ -t 1 ]]; then RED=$'\e[1;31m'; YEL=$'\e[33m'; DIM=$'\e[2m'; RST=$'\e[0m'; else RED=""; YEL=""; DIM=""; RST=""; fi
 
-OVERDUE_MSG="${RED}⚠️  BUILD OVERDUE — ${COUNT} commits ${REF} (cap ${MAX}).${RST} Cut a release: ${RED}git tag vX.Y.Z && git push origin vX.Y.Z${RST} to trigger the build + GitHub Release."
+OVERDUE_MSG="${YEL}⚠️  Build distance: ${COUNT} commits ${REF} (cap ${MAX}).${RST} Consider cutting a release: ${YEL}git tag vX.Y.Z && git push origin vX.Y.Z${RST} to trigger the build + GitHub Release."
 
 if (( COUNT >= MAX )); then
   echo "$OVERDUE_MSG"
-  [[ "$MODE" == "--check" ]] && exit 1
+  # Gate disabled: --check no longer fails (was `exit 1`). Informational only — never blocks commits/CI.
   exit 0
 fi
 

@@ -17,5 +17,5 @@ fi
 ln -sf "$SRC" "$DEST"
 chmod +x "$SRC"
 echo "build-distance: installed pre-commit hook → $DEST"
-echo "  Commits now blocked once the tree is \$BUILD_DISTANCE_MAX (default 100) commits past the last v* tag."
-echo "  Bypass a single commit with: git commit --no-verify"
+echo "  Informational only — prints a heads-up once the tree is \$BUILD_DISTANCE_MAX (default 100) commits"
+echo "  past the last v* tag, but no longer blocks the commit (hard gate disabled)."
