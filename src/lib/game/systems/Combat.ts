@@ -1210,6 +1210,14 @@ class CombatServiceImpl implements CombatService {
     const inst = eq[slot];
     if (!inst) return pawn;
     const dur = Math.max(0, (inst.durability ?? 0) - loss);
+    // Condition 0 = the item SHATTERS: remove it from the slot so it's no longer worn/usable (mirrors
+    // the tool-wear break in harvest.ts — a worn-out item must leave the equipment doll, not linger at
+    // cond 0). Covers both the attacker's mainHand weapon and the defender's struck armour.
+    if (dur <= 0) {
+      const next = { ...pawn.equipment } as Record<string, ItemInstance | undefined>;
+      delete next[slot];
+      return { ...pawn, equipment: next };
+    }
     return { ...pawn, equipment: { ...pawn.equipment, [slot]: { ...inst, durability: dur } } };
   }
 

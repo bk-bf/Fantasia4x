@@ -683,6 +683,47 @@ function tickConditionTimers(pawn: Pawn): Pawn {
 }
 
 /**
+ * Reap SHATTERED gear — any worn or carried item whose durability has hit 0 is destroyed (removed), so
+ * a cond-0 stone maul can't keep sitting in the equipment doll, still usable. Combat already removes a
+ * weapon/armour the instant it breaks (Combat.decrEquipDurability), and tool-wear removes a worn-out
+ * tool (harvest.ts); this is the catch-all safety net for anything that reached 0 by another path or in
+ * an older save. Returns a NEW pawn only when something was reaped — allocation-free otherwise (the
+ * common case: no broken gear). Carcasses and a carried colonist (dynamicName / non-durable instances)
+ * legitimately sit at durability 0 and are NEVER reaped — only real wearable gear is.
+ */
+function reapBrokenGear(pawn: Pawn): Pawn | null {
+  let equipment = pawn.equipment;
+  let equipChanged = false;
+  // Only real gear can be equipped, so a slot at durability 0 is genuinely worn out → remove it.
+  for (const slot of Object.keys(pawn.equipment ?? {}) as (keyof NonNullable<Pawn['equipment']>)[]) {
+    const inst = pawn.equipment?.[slot];
+    if (inst && inst.durability != null && inst.durability <= 0) {
+      if (!equipChanged) {
+        equipment = { ...pawn.equipment };
+        equipChanged = true;
+      }
+      delete (equipment as Record<string, unknown>)[slot as string];
+    }
+  }
+  // Carried pack instances: reap only broken WEARABLE gear (tool/weapon/armour with a durability pool);
+  // never a carcass (dynamicName) or a carried colonist (no maxDurability).
+  const insts = pawn.inventory?.instances ?? [];
+  const keptInsts = insts.filter((i) => {
+    if (i.durability == null || i.durability > 0) return true;
+    const def = itemService.getItemById(i.itemId);
+    const wearable = !!def?.maxDurability && def.maxDurability > 0 && !def.dynamicName;
+    return !wearable; // keep everything except broken wearable gear
+  });
+  const instChanged = keptInsts.length !== insts.length;
+  if (!equipChanged && !instChanged) return null;
+  return {
+    ...pawn,
+    equipment: equipChanged ? equipment : pawn.equipment,
+    inventory: instChanged ? { ...pawn.inventory!, instances: keptInsts } : pawn.inventory
+  };
+}
+
+/**
  * Derive the pawn's transientConditions list from current state flags, needs, and durations.
  * Called after each tick so PawnService.calculateNeedsUpdate always reads fresh values.
  */
@@ -885,6 +926,16 @@ class PawnStateMachineImpl {
       // Re-fetch pawn in case tickConditions updated it.
       let afterConditions = pawnById(state.pawns, pawn.id);
       if (!afterConditions || afterConditions.isAlive === false) continue;
+
+      // Reap any gear that has worn down to condition 0 (every ~0.5 s — durability changes slowly, so
+      // no need to scan every tick). Allocation-free unless something actually broke.
+      if (gameState.turn % 30 === 0) {
+        const reaped = reapBrokenGear(afterConditions);
+        if (reaped) {
+          state = { ...state, pawns: state.pawns.map((p) => (p.id === pawn.id ? reaped : p)) };
+          afterConditions = reaped;
+        }
+      }
 
       // ── Wound healing + collapse lifecycle (COMBAT-SYSTEM) ────────────────
       // Pain is the sum of active wounds, so a pawn recovers by mending them — but

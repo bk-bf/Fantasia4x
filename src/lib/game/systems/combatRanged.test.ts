@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { combatService } from './Combat';
+import { rng } from '../core/rng';
 import {
   getRangedWeapon,
   pickAmmo,
@@ -368,15 +369,26 @@ describe('ranged combat (headless tickCombat)', () => {
   });
 
   it('a hammer strips a foe’s armour far faster than a cleaver (armour damage ≠ flesh damage)', () => {
-    let h = makeState([makeMeleeAttacker('ha', 'steel_warhammer', 'hd'), makeArmored('hd')], []);
+    // Reseed identically before each run so the hit/dodge rolls match — isolating the weapon difference
+    // (the test is rng-order-fragile otherwise). Give the armour a HUGE durability pool so it never
+    // shatters (condition 0 now removes it from the slot), and measure the WEAR RATE: the hammer caves
+    // plate far faster, so its armour ends with much less remaining than the cleaver's.
+    const armored = (id: string) => {
+      const p = makeArmored(id);
+      p.equipment.bodyMid!.durability = 100_000;
+      return p;
+    };
+    rng.reseed(20260627);
+    let h = makeState([makeMeleeAttacker('ha', 'steel_warhammer', 'hd'), armored('hd')], []);
     for (let t = 0; t < 3000; t++) h = combatService.tickCombat({ ...h, turn: t }, 16);
     const hammerArmor = h.pawns.find((p) => p.id === 'hd')!.equipment.bodyMid!.durability!;
 
-    let c = makeState([makeMeleeAttacker('ca', 'steel_cleaver', 'cd'), makeArmored('cd')], []);
+    rng.reseed(20260627);
+    let c = makeState([makeMeleeAttacker('ca', 'steel_cleaver', 'cd'), armored('cd')], []);
     for (let t = 0; t < 3000; t++) c = combatService.tickCombat({ ...c, turn: t }, 16);
     const cleaverArmor = c.pawns.find((p) => p.id === 'cd')!.equipment.bodyMid!.durability!;
 
-    expect(hammerArmor).toBeLessThan(cleaverArmor); // the hammer caves the plate; the cleaver leaves it
+    expect(hammerArmor).toBeLessThan(cleaverArmor); // the hammer caves the plate; the cleaver barely scratches it
   });
 
   it('FINESSE: a rapier scales melee damage with PER (a sword scales with STR)', () => {
