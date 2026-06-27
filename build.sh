@@ -22,6 +22,8 @@
 #                                     If dist-electron/ already holds installers newer than the HEAD
 #                                     commit, the build is SKIPPED and those artifacts are published
 #                                     as-is (you still confirm the asset list before anything uploads).
+#                                     On success it also bumps the README release badge to the new
+#                                     version (a follow-up doc commit, pushed automatically).
 #   ./build.sh --push --remote      cut the release via CI instead: autotag (patch bump) + push → GitHub
 #                                     Actions builds both OSes and publishes the GitHub Release. Nothing
 #                                     is built or published from this machine.
@@ -126,6 +128,22 @@ next_patch_tag() {
   ver="${last#v}"
   IFS=. read -r ma mi pa <<<"$ver"
   echo "v${ma:-0}.${mi:-0}.$(( ${pa:-0} + 1 ))"
+}
+
+# Rewrite the "release pill" shields badge in README.md to the just-cut version and commit+push that
+# one-line doc bump. The <!-- release-pill:start/end --> markers make the line safe to regenerate in
+# place; no-ops if the file or markers are absent, or if the badge is already current.
+update_release_pill() {
+  local tag="$1" file="README.md" repo pill
+  [[ -f "$file" ]] && grep -q 'release-pill:start' "$file" || return 0
+  repo="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || echo 'bk-bf/Fantasia4x')"
+  pill="<!-- release-pill:start -->[![Release](https://img.shields.io/badge/release-${tag}-brightgreen)](https://github.com/${repo}/releases/latest)<!-- release-pill:end -->"
+  sed -i "s#<!-- release-pill:start -->.*<!-- release-pill:end -->#${pill}#" "$file"
+  git diff --quiet -- "$file" && return 0   # already current
+  git add "$file"
+  git commit -q -m "docs(readme): bump release pill to $tag"
+  git push -q origin "$BRANCH"
+  echo "▸ Release pill in $file bumped → $tag (committed & pushed)."
 }
 
 if $PUSH; then
@@ -335,4 +353,7 @@ EOF
   gh release edit "$TAG" --draft=false
   git fetch origin --tags --quiet 2>/dev/null || true
   echo "✓ Published: $(gh release view "$TAG" --json url -q .url 2>/dev/null)"
+
+  # Keep the README release badge pointing at the version we just shipped.
+  update_release_pill "$TAG"
 fi
