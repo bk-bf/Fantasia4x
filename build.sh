@@ -301,9 +301,26 @@ if $PUSH && ! $REMOTE; then
     echo "build.sh: no installers in dist-electron/ to upload — aborting release." >&2; exit 1
   fi
 
-  NOTES="$(mktemp)"; trap 'rm -f "$RESOLV4" "$NOTES"' EXIT
+  NOTES="$(mktemp)"; CHANGELOG="$(mktemp)"; trap 'rm -f "$RESOLV4" "$NOTES" "$CHANGELOG"' EXIT
   echo "▸ Generating changelog for $TAG (git-cliff)…"
-  git-cliff --tag "$TAG" --latest --strip header -o "$NOTES"
+  git-cliff --tag "$TAG" --latest --strip header -o "$CHANGELOG"
+  # Release notes = fixed description/blurb header + the git-cliff feature log collapsed in a
+  # "Full feature log" dropdown (keeps the release page short; the log expands on click).
+  {
+    cat <<EOF
+Fantasia4x $TAG
+
+A realtime 4X colony chronicle: generate a race, manage pawns, assign work, construct buildings, craft items, research technologies, and explore. Early alpha — expect rough edges and missing polish.
+
+Downloads below: Windows installer (.exe), Linux .AppImage (portable — chmod +x and run) or .deb. The game is open-source (AGPL-3.0).
+
+<details>
+<summary><strong>Full feature log</strong></summary>
+
+EOF
+    cat "$CHANGELOG"
+    printf '\n\n</details>\n'
+  } > "$NOTES"
 
   echo "▸ Assets to publish:"; printf '    %s\n' "${ASSETS[@]}"
   read -rp "  Publish release $TAG to GitHub with these assets? [y/N] " a
