@@ -68,8 +68,11 @@ describe('RecipeService (recipe registry, Stage A)', () => {
         Boolean
       ) as Array<Record<string, number>>;
       for (const set of ingredientSets)
-        for (const itemId of Object.keys(set))
+        for (const itemId of Object.keys(set)) {
+          // `category:<cat>` slots resolve to concrete items at craft time — not authored item ids.
+          if (itemId.startsWith('category:')) continue;
           if (!itemIds.has(itemId)) errors.push(`${r.id}: unknown item "${itemId}"`);
+        }
       if (r.station && !buildingIds.has(r.station))
         errors.push(`${r.id}: unknown station "${r.station}"`);
     }

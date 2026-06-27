@@ -80,7 +80,7 @@
   {
     "id"              : "make_tanning_bucket",
     "station"         : "sawtable",
-    "inputs"          : {"pine_plank": 2, "cordage": 1},
+    "inputs"          : {"category:plank": 2, "cordage": 1},
     "outputs"         : {"tanning_bucket": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0
@@ -1041,7 +1041,7 @@
   {
     "id"              : "make_wooden_chest",
     "station"         : "sawtable",
-    "inputs"          : {"pine_plank": 4, "iron_nail": 6},
+    "inputs"          : {"category:plank": 4, "iron_nail": 6},
     "outputs"         : {"wooden_chest": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1
@@ -2446,7 +2446,7 @@
   {
     "id"              : "make_wheel",
     "station"         : "anvil",
-    "inputs"          : {"pine_plank": 2, "iron_bar": 1},
+    "inputs"          : {"category:plank": 2, "iron_bar": 1},
     "outputs"         : {"wheel": 1},
     "workAmount"      : 60,
     "toolTierRequired": 1,
@@ -2455,7 +2455,7 @@
   {
     "id"              : "make_wheelbarrow",
     "station"         : "sawtable",
-    "inputs"          : {"pine_plank": 4, "wheel": 1, "iron_nail": 6},
+    "inputs"          : {"category:plank": 4, "wheel": 1, "iron_nail": 6},
     "outputs"         : {"wheelbarrow": 1},
     "workAmount"      : 120,
     "toolTierRequired": 1,
@@ -2464,7 +2464,7 @@
   {
     "id"              : "make_handcart",
     "station"         : "sawtable",
-    "inputs"          : {"pine_plank": 8, "wheel": 2, "cordage": 4},
+    "inputs"          : {"category:plank": 8, "wheel": 2, "cordage": 4},
     "outputs"         : {"handcart": 1},
     "workAmount"      : 200,
     "toolTierRequired": 1,
@@ -2659,8 +2659,8 @@
   {
     "id"               : "make_wooden_bucket",
     "station"          : "carpenter_bench",
-    "inputs"           : {"pine_plank": 2, "resin": 1},
-    "inputAlternatives": [ {"pine_plank": 2, "bone_glue": 1}, {"pine_plank": 2, "hide_glue": 1} ],
+    "inputs"           : {"category:plank": 2, "resin": 1},
+    "inputAlternatives": [ {"category:plank": 2, "bone_glue": 1}, {"category:plank": 2, "hide_glue": 1} ],
     "outputs"          : {"wooden_bucket": 1},
     "workAmount"       : 16,
     "toolTierRequired" : 1
@@ -2668,8 +2668,8 @@
   {
     "id"               : "make_wooden_barrel",
     "station"          : "carpenter_bench",
-    "inputs"           : {"pine_plank": 4, "resin": 2, "iron_nail": 2},
-    "inputAlternatives": [ {"pine_plank": 4, "bone_glue": 2, "iron_nail": 2} ],
+    "inputs"           : {"category:plank": 4, "resin": 2, "iron_nail": 2},
+    "inputAlternatives": [ {"category:plank": 4, "bone_glue": 2, "iron_nail": 2} ],
     "outputs"          : {"wooden_barrel": 1},
     "workAmount"       : 28,
     "toolTierRequired" : 1

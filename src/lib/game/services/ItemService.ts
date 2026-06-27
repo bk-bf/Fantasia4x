@@ -352,6 +352,59 @@ export class ItemServiceImpl implements ItemService {
     return selected;
   }
 
+  /**
+   * Expand a cost map's `category:<cat>` slots (e.g. `category:plank` = "any plank") into concrete item
+   * ids, paid greedily from AVAILABLE stock. Concrete keys are checked against stock too. Returns the
+   * concrete `{itemId: qty}` map, or null if any slot can't be covered — the recipe analogue of
+   * BuildingService.resolveBuildingCost.
+   */
+  expandCategoryCost(
+    cost: Record<string, number>,
+    gameState: GameState
+  ): Record<string, number> | null {
+    const out: Record<string, number> = {};
+    const used: Record<string, number> = {};
+    for (const [key, qty] of Object.entries(cost)) {
+      if (key.startsWith('category:')) {
+        const cat = key.slice('category:'.length);
+        let need = qty;
+        for (const item of ITEMS_DATABASE) {
+          if (need <= 0) break;
+          if (!itemMatchesCostCategory(item, cat)) continue;
+          const avail = this.getAvailableQuantity(item.id, gameState) - (used[item.id] ?? 0);
+          if (avail <= 0) continue;
+          const take = Math.min(avail, need);
+          out[item.id] = (out[item.id] ?? 0) + take;
+          used[item.id] = (used[item.id] ?? 0) + take;
+          need -= take;
+        }
+        if (need > 0) return null;
+      } else {
+        const avail = this.getAvailableQuantity(key, gameState) - (used[key] ?? 0);
+        if (avail < qty) return null;
+        out[key] = (out[key] ?? 0) + qty;
+        used[key] = (used[key] ?? 0) + qty;
+      }
+    }
+    return out;
+  }
+
+  /** Stock-agnostic expansion: map each `category:<cat>` slot to a REPRESENTATIVE concrete item (the
+   *  first match) so a pending/display cost never carries a raw `category:` key. */
+  expandCategoryCostLoose(cost: Record<string, number>): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const [key, qty] of Object.entries(cost)) {
+      if (key.startsWith('category:')) {
+        const cat = key.slice('category:'.length);
+        const rep = ITEMS_DATABASE.find((i) => itemMatchesCostCategory(i, cat))?.id ?? key;
+        out[rep] = (out[rep] ?? 0) + qty;
+      } else {
+        out[key] = (out[key] ?? 0) + qty;
+      }
+    }
+    return out;
+  }
+
   resolveActiveCost(
     itemId: string,
     gameState: GameState,
@@ -359,13 +412,15 @@ export class ItemServiceImpl implements ItemService {
   ): Record<string, number> | null {
     const recipe = recipeService.getRecipeForItem(itemId);
     if (!recipe) return null;
-    const satisfies = (cost: Record<string, number>) =>
-      Object.entries(cost).every(([id, qty]) => this.getAvailableQuantity(id, gameState) >= qty);
 
-    // Resolve base crafting cost (empty inputs {} is valid — no base materials needed)
-    let baseCost: Record<string, number> | null = satisfies(recipe.inputs) ? recipe.inputs : null;
+    // Resolve base crafting cost (empty inputs {} is valid — no base materials needed). Expands any
+    // `category:` slots from stock; an unaffordable base falls through to the alternatives.
+    let baseCost = this.expandCategoryCost(recipe.inputs, gameState);
     if (baseCost === null && recipe.inputAlternatives?.length) {
-      baseCost = recipe.inputAlternatives.find(satisfies) ?? null;
+      for (const alt of recipe.inputAlternatives) {
+        baseCost = this.expandCategoryCost(alt, gameState);
+        if (baseCost) break;
+      }
     }
     if (baseCost === null) return null;
 
@@ -417,9 +472,9 @@ export class ItemServiceImpl implements ItemService {
   calculateCraftingCost(itemId: string): Record<string, number> {
     const recipe = recipeService.getRecipeForItem(itemId);
     if (recipe)
-      return Object.keys(recipe.inputs).length
-        ? recipe.inputs
-        : (recipe.inputAlternatives?.[0] ?? {});
+      return this.expandCategoryCostLoose(
+        Object.keys(recipe.inputs).length ? recipe.inputs : (recipe.inputAlternatives?.[0] ?? {})
+      );
     return {};
   }
 

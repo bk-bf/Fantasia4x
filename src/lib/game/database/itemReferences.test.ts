@@ -63,6 +63,9 @@ describe('recipes.jsonc inputs/outputs resolve to real items', () => {
       for (const m of maps) {
         if (!m) continue;
         for (const id of Object.keys(m)) {
+          // `category:<cat>` slots (e.g. category:plank = "any plank") are resolved to concrete items
+          // at craft time, not authored ids — skip them here.
+          if (id.startsWith('category:')) continue;
           if (!itemIds.has(id)) missing.push(`${r.id} → ${id}`);
         }
       }

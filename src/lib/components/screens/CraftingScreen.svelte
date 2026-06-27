@@ -17,11 +17,9 @@
 
   // Recipe registry: per-item recipe lookups (static DBs — plain functions, not reactive).
   const recipeOf = (itemId: string) => recipeService.getRecipeForItem(itemId);
-  const costOf = (itemId: string): Record<string, number> => {
-    const r = recipeOf(itemId);
-    if (!r) return {};
-    return Object.keys(r.inputs).length ? r.inputs : (r.inputAlternatives?.[0] ?? {});
-  };
+  // `category:plank`-style slots are expanded to a representative concrete item for display so the
+  // cost row shows a real material name, never a raw `category:` key.
+  const costOf = (itemId: string): Record<string, number> => itemService.calculateCraftingCost(itemId);
   /** Byproduct outputs (excluding the primary item) for display. */
   const byproductsOf = (itemId: string): [string, number][] => {
     const r = recipeOf(itemId);
