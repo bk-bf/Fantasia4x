@@ -20,20 +20,13 @@ import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { ticksFromSeconds } from '../../core/time';
 import { seasonRegrowthMultiplier } from '../EnvironmentService';
 import { rng } from '../../core/rng';
-import { HARVEST_DTYPES, resourceMatchesDesignation, resourceMatchesFilter } from './filters';
-
-// §F anti-spam: a forage (persistent, non-depleting) node can't be foraged again until it has
-// REGROWN past this growth floor — each forage strips `harvestGrowthCost` (~20%), so a stripped
-// tree/bush must recover (its yield cooldown restores growth → 100%) before the next gather. Felling,
-// digging and mining (harvestDepletes) are never gated; a crop reap only fires at full maturity.
-const MIN_FORAGE_GROWTH = 60;
-
-/** True when this interaction is a regrow-gated forage (persistent, not a depleting cut/dig/mine). */
-function isForageGated(
-  interaction: { persistent?: boolean; harvestDepletes?: boolean } | undefined
-) {
-  return interaction?.persistent === true && interaction.harvestDepletes !== true;
-}
+import {
+  HARVEST_DTYPES,
+  MIN_FORAGE_GROWTH,
+  isForageGated,
+  resourceMatchesDesignation,
+  resourceMatchesFilter
+} from './filters';
 
 export function generate(jobs: Job[], gs: GameState): Job[] {
   // Remove harvest jobs whose exact designated tile no longer permits harvesting,

@@ -84,6 +84,7 @@
     isGrowableResource
   } from '$lib/game/services/ResourceObjectService.js';
   import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/wildGrowth.js';
+  import { isHarvestableTileNow, MIN_FORAGE_GROWTH } from '$lib/game/services/jobs/filters.js';
   import { itemService } from '$lib/game/services/ItemService.js';
   import { aggregateMaterialMods } from '$lib/game/core/materialProperties';
   import {
@@ -1054,7 +1055,17 @@
       selectedResourceAmount <= 0 &&
       resourceObjectService.isRegrowsFromZero(selectedResourceTile.resourceId);
     if (isRegrowing) lines.push('regrowing — not ready to harvest');
+    // A forage node still below the regrow floor (≥1 node but immature) generates no job, so withhold
+    // its verb — same gate the mark command enforces (jobs/filters.isHarvestableTileNow), so the button
+    // can't offer a mark that would paint a phantom marker no pawn ever works. Enabled if ANY tile in the
+    // selection is harvestable now (the command skips the immature ones).
+    const harvestableNow = (dtype: DesignationType) =>
+      tileKeys.some((k) => {
+        const [hx, hy] = k.split(',').map(Number);
+        return isHarvestableTileNow({ worldMap }, hx, hy, dtype);
+      });
     const btns: EntityButton[] = [];
+    let withheldImmature = false;
     // Designate buttons (HARVEST/CUT/…) while ANY tile in the selection is still unmarked.
     if (!allDesignated && !isRegrowing) {
       for (const iact of activeInteractions) {
@@ -1069,9 +1080,16 @@
                 : iact.designationType === 'dig'
                   ? 'DIG'
                   : 'HARVEST';
-        btns.push({ label, onClick: () => designateResource(iact.designationType) });
+        const dtype = iact.designationType;
+        if (dtype && !harvestableNow(dtype)) {
+          withheldImmature = true;
+          continue;
+        }
+        btns.push({ label, onClick: () => designateResource(dtype) });
       }
     }
+    if (withheldImmature && growthPct !== undefined)
+      lines.push(`not ready — ${Math.round(growthPct)}% grown (needs ${MIN_FORAGE_GROWTH}%)`);
     // CANCEL while ANY tile in the selection is marked — clears only those, never the whole type.
     if (anyDesignated) {
       btns.push({ label: 'CANCEL', onClick: cancelResourceDesignation });

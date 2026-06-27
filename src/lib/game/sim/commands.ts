@@ -29,8 +29,10 @@ import type {
   Season,
   ZoneFilter,
   FoodSettings,
-  ItemInstance
+  ItemInstance,
+  DesignationType
 } from '../core/types';
+import { isHarvestableTileNow } from '../services/jobs/filters';
 import { findAdjacentApproach, isAdjacent } from '../systems/pawn/pawnQueries';
 import {
   addToStockpileZone,
@@ -694,11 +696,19 @@ export const COMMANDS: Record<string, Cmd> = {
   }),
 
   // ── designations / zones ─────────────────────────────────────────────────────
+  // A harvest-style mark is rejected on a tile with nothing harvestable RIGHT NOW (e.g. a forage node
+  // still below the regrow floor) so it can't paint a phantom marker that never becomes a workable job
+  // (isHarvestableTileNow returns true for non-harvest designations, so zones are unaffected).
   designate: (s, p: { x: number; y: number; type: string; instanceId?: string }) =>
-    designationService.designate(p.x, p.y, p.type as never, s, p.instanceId),
+    isHarvestableTileNow(s, p.x, p.y, p.type as DesignationType)
+      ? designationService.designate(p.x, p.y, p.type as never, s, p.instanceId)
+      : s,
   designateTiles: (s, p: { tiles: [number, number][]; type: string }) =>
     p.tiles.reduce(
-      (cur, [tx, ty]) => designationService.designate(tx, ty, p.type as never, cur),
+      (cur, [tx, ty]) =>
+        isHarvestableTileNow(cur, tx, ty, p.type as DesignationType)
+          ? designationService.designate(tx, ty, p.type as never, cur)
+          : cur,
       s
     ),
   clearDesignation: (s, p: { x: number; y: number }) =>

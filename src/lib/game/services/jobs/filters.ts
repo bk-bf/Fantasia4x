@@ -56,6 +56,48 @@ export function resourceMatchesFilter(
   return interaction.yields.some((y) => itemMatchesFilter(y.itemId, filter!));
 }
 
+// §F anti-spam: a forage (persistent, non-depleting) node can't be foraged again until it has regrown
+// past this growth floor. Felling (woodcut), digging and mining DEPLETE the node and are never gated.
+// Shared by the harvest job generator AND the mark UI/command, so the "can I mark this for harvest?"
+// gate can't drift from the "will a job be generated?" gate (the phantom-harvest-marker bug: marking a
+// below-growth forage node painted a marker that never produced a workable job).
+export const MIN_FORAGE_GROWTH = 60;
+
+/** True when this interaction is a regrow-gated forage (persistent, not a depleting cut/dig/mine). */
+export function isForageGated(
+  interaction: { persistent?: boolean; harvestDepletes?: boolean } | undefined
+): boolean {
+  return interaction?.persistent === true && interaction.harvestDepletes !== true;
+}
+
+/**
+ * True when designating (x,y) for `designationType` would yield a workable harvest job RIGHT NOW — i.e.
+ * the tile holds at least one matching resource that isn't a forage node still below the regrow floor.
+ * Mirrors the per-tile loop in jobs/harvest.ts `generate`. Used to gate the mark UI/command so a player
+ * can't paint a harvest marker on an immature forage node that no pawn will ever work.
+ */
+export function isHarvestableTileNow(
+  gs: Pick<GameState, 'worldMap'>,
+  x: number,
+  y: number,
+  designationType: DesignationType
+): boolean {
+  if (!HARVEST_DTYPES.includes(designationType)) return true; // non-harvest designations aren't gated
+  const tile = gs.worldMap?.[y]?.[x];
+  if (!tile) return false;
+  for (const [resourceId, amount] of Object.entries(tile.resources ?? {})) {
+    if ((amount ?? 0) <= 0) continue;
+    if (!resourceMatchesDesignation(designationType, resourceId)) continue;
+    const interaction = resourceObjectService.getInteractionByDesignationType(
+      resourceId,
+      designationType
+    );
+    if (isForageGated(interaction) && (tile.growth?.[resourceId] ?? 100) < MIN_FORAGE_GROWTH) continue;
+    return true;
+  }
+  return false;
+}
+
 /** Check whether a single item ID passes a ZoneFilter. */
 export function itemMatchesFilter(itemId: string, filter: ZoneFilter): boolean {
   if (filter.blockedItems.includes(itemId)) return false;
