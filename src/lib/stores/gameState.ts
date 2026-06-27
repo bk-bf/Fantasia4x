@@ -220,12 +220,21 @@ function applyMigrations(state: GameState): GameState {
   // stockpile drawn over a restrict zone clobbered its id and silently shrank the restrict area). It's
   // now tile→{ zoneType → instanceId } — one layer per zone type. Convert any old flat string values,
   // keying each by its instance's zone type.
-  if (state.designationZoneId && Object.values(state.designationZoneId).some((v) => typeof v === 'string')) {
-    const typeById = new Map((state.zoneInstances ?? []).map((z) => [z.id, z.type as DesignationType]));
+  if (
+    state.designationZoneId &&
+    Object.values(state.designationZoneId).some((v) => typeof v === 'string')
+  ) {
+    const typeById = new Map(
+      (state.zoneInstances ?? []).map((z) => [z.id, z.type as DesignationType])
+    );
+    const STANDING: DesignationType[] = ['stockpile', 'grow', 'restrict'];
     const layered: Record<string, Partial<Record<DesignationType, string>>> = {};
     for (const [k, v] of Object.entries(state.designationZoneId)) {
       if (typeof v === 'string') {
-        const t = typeById.get(v);
+        // Prefer the instance's own type; if that id is stale (not in zoneInstances), fall back to the
+        // standing-zone type actually painted on this tile so the tile keeps a usable layer (otherwise
+        // it stays tinted via zoneTiles but loses its instance id and can never be hidden/selected).
+        const t = typeById.get(v) ?? (state.zoneTiles?.[k] ?? []).find((zt) => STANDING.includes(zt));
         if (t) layered[k] = { [t]: v };
       } else if (v) {
         layered[k] = v;
