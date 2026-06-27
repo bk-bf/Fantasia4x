@@ -23,10 +23,12 @@
 //   WRAPPING a `skeleton: true` bone part (hitWeight 0 → never struck directly; takes ONLY fractures).
 //   The bone is `containedIn` its flesh part; a hit on the flesh routes its fracture roll to the bone
 //   beneath (see Combat `skeletonPartOf`). Breaking the bone cripples without severing; a severed flesh
-//   part takes its bone with it. The chest→ribcage pair is the template — head→skull, jaw→jawBone, snout→
-//   snoutBone, maw, beak, tail, wings, snake body segments and the arachnid carapace ALL follow it: the
-//   bone keeps its anatomical name (skull, ribcage), the flesh outer is the region (head, chest). The
-//   FLESH container holds the vital organ + kills when torn apart; the BONE only cripples when broken.
+//   part takes its bone with it. The chest→ribcage pair is the template, and EVERY bone carries its real
+//   anatomical name (no `<region>Bone`): head→skull, jaw→mandible, snout→rostrum, forearm→ulna, hand→
+//   metacarpus, upperLeg→femur, wing→humerus/carpometacarpus, bird leg→tibiotarsus/tarsometatarsus, tail→
+//   caudalVertebrae, snake body→fore/mid/hindVertebrae. The FLESH container holds the vital organ + kills
+//   when torn apart; the BONE only cripples when broken. (No internal bone for things that HAVE none: snake
+//   fangs are TEETH and arthropods are EXOSKELETAL — chitin is the hittable structure, no skeleton child.)
 //
 // Add `limbMap: "<plan>"` to a creature in creatures.jsonc; pawns default to "humanoid".
 {
@@ -72,7 +74,7 @@
   },
   "plans": {
     "humanoid": {
-      "// note": "Each limb SEGMENT is soft tissue (cut/puncture/crush) wrapping a `*Bone` skeleton (hitWeight 0, fracture-only) — a hit on the flesh routes its fracture to the bone within. Same model as chest→ribcage.",
+      "// note": "Each limb SEGMENT is soft tissue (cut/puncture/crush) wrapping its named bone (scapula/humerus/ulna/metacarpus, ilium/femur/tibia/metatarsus; hitWeight 0, fracture-only) — a hit on the flesh routes its fracture to the bone within. Same model as chest→ribcage.",
       "parts": {
         "leftShoulder"     : {"size": 40, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "armor": 0.7},
         "leftScapula" : {"size": 40, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftShoulder"},
@@ -137,7 +139,7 @@
       }
     },
     "quadruped": {
-      "// note": "Clawed/padded quadrupeds (wolf, bear, cat, rat…). Leg SEGMENTS (flesh + `*Bone` skeleton) + tail here are reused by quadruped_hooved and amphibian (which swap the feet).",
+      "// note": "Clawed/padded quadrupeds (wolf, bear, cat, rat…). Leg SEGMENTS (flesh + named bone: scapula/humerus/ulna/metacarpus front, ilium/femur/tibia/metatarsus hind) + tail (caudalVertebrae) here are reused by quadruped_hooved and amphibian (which swap the feet).",
       "parts": {
         "frontLeftShoulder"     : {"size": 40, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "armor": 0.7},
         "frontLeftScapula" : {"size": 40, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontLeftShoulder"},
@@ -231,7 +233,7 @@
       }
     },
     "avian": {
-      "// note": "Birds/bats — the WINGS are flesh outer (leftWing/leftWingtip) + `*Bone` skeleton like every other limb; the LEG segments are flesh + `*Bone` skeleton too.",
+      "// note": "Birds/bats — the WINGS are flesh outer (leftWing/leftWingtip) over the wing bones (humerus + carpometacarpus); the LEGS are flesh over femur/tibiotarsus/tarsometatarsus (bird-specific bones).",
       "parts": {
         "beak"          : {"size": 18, "bleedRatio": 0.02, "hitWeight": 3, "weapons": ["peck", "bite", "proboscis"], "armor": 0.6},
         "premaxilla"      : {"size": 18, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "beak"},

@@ -79,7 +79,7 @@ export const PART_DEF_MAP: Partial<Record<BodyPartId, BodyPartDef>> = {};
 for (const [id, p] of Object.entries(ALL_PARTS)) {
   PART_DEF_MAP[id as BodyPartId] = {
     id: id as BodyPartId,
-    // The ONE bone type — a hidden `skeleton` element (leftForearmBone, ribcage, skull…) — is PURE
+    // The ONE bone type — a hidden `skeleton` element (leftUlna, ribcage, skull, femur…) — is PURE
     // bone: never struck directly, only fractured, so its whole HP IS the fracture budget (BONE_FRACTION
     // of the flesh part it mirrors) and it breaks when chipped to 0. Flesh parts keep their full size.
     maxHp: p.skeleton ? Math.max(1, Math.round(p.size * BONE_FRACTION)) : p.size,

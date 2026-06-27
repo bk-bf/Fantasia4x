@@ -76,7 +76,7 @@ export interface EntityCondition {
 // Limb + body-part ids are DATA-DRIVEN (body plans in limbmap.jsonc — humanoid arms/legs, quadruped
 // paws + tail, avian wings, serpentine body, arachnid legs, …), so these are open `string` aliases
 // rather than closed unions. The humanoid set (head/torso/left_arm/…; skull/chest/leftHand/…) is the
-// canonical baseline; other plans introduce their own ids (frontLeftPaw, leftWingBone, foreBody, …).
+// canonical baseline; other plans introduce their own ids (frontLeftPaw, leftWing, foreBody, …).
 export type LimbId = string;
 
 export const CRITICAL_LIMBS: LimbId[] = ['head', 'torso'];
@@ -87,7 +87,7 @@ export const CRITICAL_LIMBS: LimbId[] = ['head', 'torso'];
 export type DamageType = 'cutting' | 'piercing' | 'blunt' | 'fire' | 'frost' | 'lightning';
 
 /** A body-part id from limbmap.jsonc's catalog — open `string` (data-driven across body plans;
- *  humanoid skull/chest/leftHand…, quadruped frontLeftPaw/tail, avian leftWingBone, …). */
+ *  humanoid skull/chest/leftHand…, quadruped frontLeftPaw/tail, avian leftWing/leftCarpometacarpus, …). */
 export type BodyPartId = string;
 
 export interface Injury {

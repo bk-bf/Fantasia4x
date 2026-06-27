@@ -8,24 +8,26 @@ import type { EntityCondition, LimbState, Pawn } from '../core/types';
 /**
  * Bone fractures (COMBAT-SYSTEM): heavy/blunt trauma can BREAK a limb's bone — a structural wound that
  * cripples the limb (manipulation/moving + a graded `fractured` condition crushing STR/DEX) WITHOUT severing
- * it, and a caved-in skull kills outright. These lock the deterministic data + wiring (the RNG fracture
+ * it. (Death comes from tearing the FLESH container apart, not breaking the bone.) These lock the
+ * deterministic data + wiring (the RNG fracture
  * roll itself lives in Combat.performAttack).
  */
 describe('fracture anatomy + wound data', () => {
   it('there is ONE bone type: every bone is a hidden skeleton element whose whole HP is its break budget', () => {
-    // The forearm is a SOFT segment wrapping leftForearmBone — the bone carries the boneHp.
-    const forearmBone = PART_DEF_MAP['leftForearmBone']!;
-    expect(forearmBone.skeleton).toBe(true);
-    expect(forearmBone.boneHp).toBeGreaterThan(0);
-    expect(forearmBone.boneHp!).toBe(forearmBone.maxHp); // pure bone: whole HP IS the fracture budget
+    // The forearm is a SOFT segment wrapping its real bone, the ulna (proper anatomy — no `*Bone` names).
+    const ulna = PART_DEF_MAP['leftUlna']!;
+    expect(ulna.skeleton).toBe(true);
+    expect(ulna.boneHp).toBeGreaterThan(0);
+    expect(ulna.boneHp!).toBe(ulna.maxHp); // pure bone: whole HP IS the fracture budget
     // The bone keeps its anatomical name: the `skull` IS the (hidden) bone; the `head` is the flesh outer
-    // that wraps it. No more `bone: true`, no backwards `skullBone`.
+    // that wraps it. No `bone: true`, no lazy `skullBone`/`jawBone`.
     const skull = PART_DEF_MAP['skull']!;
     expect(skull.skeleton).toBe(true);
     expect(skull.boneHp!).toBe(skull.maxHp);
     expect(skull.containedIn).toBe('head');
+    expect(PART_DEF_MAP['mandible']!.containedIn).toBe('jaw'); // jaw flesh → mandible
     expect(PART_DEF_MAP['head']!.boneHp).toBeUndefined(); // the head flesh is not bone
-    expect(PART_DEF_MAP['skullBone']).toBeUndefined(); // the backwards name is gone
+    expect(PART_DEF_MAP['skullBone']).toBeUndefined(); // the lazy name never exists
     expect(PART_DEF_MAP['leftForearm']!.boneHp).toBeUndefined(); // the flesh segment itself is not bone
     expect(PART_DEF_MAP['leftEye']!.boneHp).toBeUndefined(); // eyes have no bone
     expect(PART_DEF_MAP['heart']!.boneHp).toBeUndefined(); // organs have no bone
@@ -45,8 +47,8 @@ describe('fracture anatomy + wound data', () => {
 
   it('a hit FRACTURES the skeleton: the flesh part routes its fracture to the bone it wraps', () => {
     expect(skeletonPartOf('chest')).toBe('ribcage'); // torso wall → ribcage
-    expect(skeletonPartOf('leftForearm')).toBe('leftForearmBone'); // arm flesh → forearm bone
-    expect(skeletonPartOf('leftFoot')).toBe('leftFootBone'); // foot flesh → foot bone
+    expect(skeletonPartOf('leftForearm')).toBe('leftUlna'); // arm flesh → ulna
+    expect(skeletonPartOf('leftFoot')).toBe('leftMetatarsus'); // foot flesh → metatarsus
     expect(skeletonPartOf('head')).toBe('skull'); // head flesh → skull (the bone keeps its name)
     expect(skeletonPartOf('abdomen')).toBeUndefined(); // soft, boneless → can't fracture
     expect(skeletonPartOf('leftEye')).toBeUndefined();
@@ -91,7 +93,7 @@ describe('broken bone effects', () => {
           bleedRate: 0,
           parts: [
             {
-              id: 'leftForearmBone',
+              id: 'leftUlna',
               health: 35,
               maxHp: 35,
               isMissing: false,
@@ -112,7 +114,7 @@ describe('broken bone effects', () => {
 
   it('syncFractureConditions drives a GRADED `fractured` condition from bone damage, clearing on heal', () => {
     const conditions: EntityCondition[] = [];
-    // leftForearmBone is a pure skeleton element → its whole maxHp (35) IS the break budget; a 35-damage
+    // The ulna is a pure skeleton element → its whole maxHp (35) IS the break budget; a 35-damage
     // fracture (HP chipped to 0) is fully broken.
     const limbs = [
       {
@@ -121,13 +123,13 @@ describe('broken bone effects', () => {
         bleedRate: 0,
         parts: [
           {
-            id: 'leftForearmBone',
+            id: 'leftUlna',
             health: 35,
             maxHp: 35,
             isMissing: false,
             injuries: [
               {
-                bodyPart: 'leftForearmBone',
+                bodyPart: 'leftUlna',
                 type: 'fracture',
                 severity: 'serious',
                 damage: 35,
