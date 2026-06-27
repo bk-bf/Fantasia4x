@@ -619,6 +619,23 @@
     "gatheringTypes"   : ["woodcutting"]
   },
   {
+    "id"               : "apple_log",
+    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "name"             : "Apple Log",
+    "type"             : "material",
+    "category"         : "wood",
+    "description"      : "Dense, close-grained fruitwood from a felled apple tree. Fine carving stock and a slow, fragrant firewood.",
+    "color"            : "#A06A4A",
+    "amount"           : 0,
+    "weightKg"         : 3,
+    "volumeL"          : 3.5,
+    "fuelValue"        : 16,
+    "fuelHeat"         : 1,
+    "deteriorationRate": 0.05,
+    "maxDurability"    : 120,
+    "gatheringTypes"   : ["woodcutting"]
+  },
+  {
     "id"               : "oak_log",
     "charSpans"        : [ {"sheet": "items", "id": 225} ],
     "name"             : "Oak Log",

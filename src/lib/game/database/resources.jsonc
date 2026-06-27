@@ -751,6 +751,71 @@
       }
     ]
   },
+  // Wild apple tree — a fruit-bearing broadleaf. FORAGE it standing to pick apples (sustainable, the
+  // fruit regrows); WOODCUT it to fell for apple_log + a final pick of the apples still on the boughs.
+  // The wild counterpart of the cultivated crop_apples orchard (mirrors wild_grapevine ↔ crop_grapes).
+  {
+    "id"              : "apple_tree",
+    "displayName"     : "Apple Tree",
+    "subterrain"      : "tree",
+    "walkable"        : false,
+    "charSpans"       : [ {"sheet": "plants", "from": 0, "to": 71} ],
+    "fg"              : [0.46, 0.55, 0.26],
+    "bg"              : [0.07, 0.1, 0.03],
+    "color"           : "#6E8A3A",
+    "spawn"           : {
+      "subterrains": {"deep_grass": 0.01, "grass": 0.007, "tall_grass": 0.004, "dirt": 0.002}
+    },
+    "nodeAmountRange" : [3, 6],
+    "designationTypes": ["woodcut", "forage"],
+    "interaction"     : {
+      "designationType": "woodcut",
+      "action"         : "woodcut",
+      "workCategory"   : "woodcutting",
+      "workAmount"     : 15,
+      "toolRequirement": {"workType": "woodcutting", "minTier": 1},
+      "yields"         : [
+        {"itemId": "apple_log",  "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2,  "regrowthTurns": 4200},
+        {"itemId": "bark",       "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1,  "regrowthTurns": 1500},
+        {"itemId": "branch",     "min": 4, "max": 8, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
+        {"itemId": "apple",      "min": 3, "max": 6, "skillId": "woodcutting", "skillMultiplier": 0.1,  "regrowthTurns": 4200},
+        {"itemId": "apple_seed", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.05, "regrowthTurns": 4200}
+      ],
+      "persistent"     : true,
+      "harvestDepletes": true
+    },
+    "interactions"    : [
+      {
+        "designationType": "woodcut",
+        "action"         : "woodcut",
+        "workCategory"   : "woodcutting",
+        "workAmount"     : 15,
+        "toolRequirement": {"workType": "woodcutting", "minTier": 1},
+        "yields"         : [
+          {"itemId": "apple_log",  "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2,  "regrowthTurns": 4200},
+          {"itemId": "bark",       "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1,  "regrowthTurns": 1500},
+          {"itemId": "branch",     "min": 4, "max": 8, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
+          {"itemId": "apple",      "min": 3, "max": 6, "skillId": "woodcutting", "skillMultiplier": 0.1,  "regrowthTurns": 4200},
+          {"itemId": "apple_seed", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.05, "regrowthTurns": 4200}
+        ],
+        "persistent"     : true,
+        "harvestDepletes": true
+      },
+      {
+        "designationType": "forage",
+        "action"         : "forage",
+        "workCategory"   : "foraging",
+        "workAmount"     : 8,
+        "toolRequirement": null,
+        "yields"         : [
+          {"itemId": "apple",      "min": 4, "max": 8, "skillId": "foraging", "skillMultiplier": 0.2,  "regrowthTurns": 1800},
+          {"itemId": "apple_seed", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05, "regrowthTurns": 1800}
+        ],
+        "persistent"     : true,
+        "harvestGrowthCost": 20, "harvestDepletes": false
+      }
+    ]
+  },
   {
     "id"              : "ash_tree",
     "displayName"     : "Ash Tree",
@@ -1284,8 +1349,7 @@
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "wild_berries", "min": 25, "max": 40, "skillId": "foraging", "skillMultiplier": 0.2},
-        {"itemId": "berry_seed",   "min": 1,  "max": 3,  "skillId": "foraging", "skillMultiplier": 0.05},
-        {"itemId": "apple_seed",   "min": 0,  "max": 1,  "skillId": "foraging", "skillMultiplier": 0.04}
+        {"itemId": "berry_seed",   "min": 1,  "max": 3,  "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
