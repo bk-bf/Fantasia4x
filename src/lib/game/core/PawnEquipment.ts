@@ -146,7 +146,9 @@ export function equipDropToPawn(
   const instance: ItemInstance = drop.instance ?? {
     instanceId: `${item.id}-${pawnId}-${Date.now()}`,
     itemId: item.id,
-    durability: item.maxDurability ?? 100,
+    // §M a tougher material (oak/sturdy leather ×1.3, ironwood ×1.7) gives the item more durability to
+    // wear through; a flimsy one (pine/silk) less.
+    durability: Math.round((item.maxDurability ?? 100) * (drop.matDur ?? 1)),
     // §Q: carry the stack's craft-quality tier onto the equipped instance (like durability).
     ...(drop.quality !== undefined ? { quality: drop.quality } : {})
   };
@@ -194,7 +196,9 @@ export function carryDropToInventory(state: GameState, pawnId: string, dropId: s
   const instance: ItemInstance = drop.instance ?? {
     instanceId: `${item.id}-${pawnId}-${Date.now()}`,
     itemId: item.id,
-    durability: item.maxDurability ?? 100,
+    // §M a tougher material (oak/sturdy leather ×1.3, ironwood ×1.7) gives the item more durability to
+    // wear through; a flimsy one (pine/silk) less.
+    durability: Math.round((item.maxDurability ?? 100) * (drop.matDur ?? 1)),
     ...(drop.quality !== undefined ? { quality: drop.quality } : {})
   };
   const drops = (state.droppedItems ?? [])

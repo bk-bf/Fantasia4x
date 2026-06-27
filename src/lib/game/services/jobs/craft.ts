@@ -10,6 +10,7 @@ import { itemService } from '../ItemService';
 import { recipeService } from '../RecipeService';
 import { pawnStatService } from '../PawnStatService';
 import { rollCraftQuality, qualityMultiplier } from '../../core/itemQuality';
+import { aggregateMaterialMods } from '../../core/materialProperties';
 import {
   absorbDropIfOnStockpileTile,
   reserveForOrder,
@@ -185,6 +186,14 @@ export function completeCraftOrder(
   // ADR-016: destroy the inputs staged on the station (the reserved drops carried here), then
   // spawn the outputs as drops ON the station tile. If the tile is a stockpile they're absorbed;
   // otherwise they sit on the station until a hauler stores them — exactly the physical model.
+  // §M material durability: the dynamic material this craft consumed (oak vs pine plank, sturdy vs thin
+  // leather) scales the finished item's durability. Read it off the reserved inputs before they're
+  // destroyed below; 1 (neutral) when nothing material was used.
+  const matDur = aggregateMaterialMods(
+    (gs.droppedItems ?? []).filter((d) => d.reservedFor === entry.id).map((d) => d.resourceId),
+    'item'
+  ).durability;
+
   const station = stationTileFor(entry, gs);
   const droppedItems = (gs.droppedItems ?? []).filter((d) => d.reservedFor !== entry.id);
   const newQueue = (gs.craftingQueue ?? []).filter((e) => e.id !== entry.id);
@@ -214,6 +223,7 @@ export function completeCraftOrder(
         y: station.y,
         quantity: qty,
         ...(stamp ? { quality } : {}),
+        ...(stamp && matDur !== 1 ? { matDur } : {}),
         ...(dishName ? { name: dishName } : {})
       });
       newDropIds.push(id);

@@ -44,6 +44,13 @@ export interface DroppedItem {
    */
   quality?: ItemQuality;
   /**
+   * §M material durability multiplier (1 = neutral) of the dynamic material this stack was crafted
+   * from (oak vs pine, sturdy vs thin leather). Stamped at craft completion for equipment/tools and
+   * carried onto the equipped `ItemInstance` so the item's effective durability scales with what it
+   * was built from. Undefined = neutral (×1).
+   */
+  matDur?: number;
+  /**
    * Per-drop display-name override (R10). Used for `dynamicName` items (e.g. a pawn corpse, which
    * reads "Bjorn's Corpse" instead of the generic def name). Resolved at spawn; see
    * `itemService.makeDynamicName` / `getItemDisplayName`.
