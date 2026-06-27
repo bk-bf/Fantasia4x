@@ -59,6 +59,7 @@ import {
 } from '../core/needs';
 import {
   weatherEffects,
+  diurnalTempDelta,
   coldExposure,
   heatExposure,
   thermalAt,
@@ -388,11 +389,12 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
         // so a roofed pawn sheds windchill fast (and gets far less windchill on the cold) — see comment.
         if (thermal.roofed) windLevel *= SHELTER_WIND_MUL;
       }
-      const weatherDelta = weatherEffects(gameState.weather).tempDelta;
+      // Open-air delta = weather + the diurnal day/night swing, the same pair the need-rate hot path uses.
+      const airDelta =
+        weatherEffects(gameState.weather).tempDelta +
+        diurnalTempDelta(gameState.turn, gameState.season);
       const base = tile?.temperature ?? 15;
-      const temp = thermal
-        ? effectiveTemperature(base, weatherDelta, thermal)
-        : base + weatherDelta;
+      const temp = thermal ? effectiveTemperature(base, airDelta, thermal) : base + airDelta;
       const comfort = comfortRange(pawn.racialTraits);
       // Instantaneous environmental exposure past the comfort band = the TARGET the tracked meter
       // lags toward (after resistance + wetness). The meter — not this raw value — drives the condition.

@@ -64,6 +64,7 @@ import {
   weatherEffects,
   rebuildThermalField,
   accumulateSnow,
+  diurnalTempDelta,
   TURNS_PER_DAY,
   WEATHER_LABELS,
   SEASON_LABELS,
@@ -417,7 +418,11 @@ export class GameEngineImpl implements GameEngine {
     // HUD readout: average effective map temperature = baked tile average + live weather delta.
     // Assigned only on change to keep the sectional snapshot quiet (PERF-4: a cheap top-level scalar).
     if (this.avgTileTemp !== undefined) {
-      const avg = Math.round(this.avgTileTemp + weatherEffects(gs.weather).tempDelta);
+      const avg = Math.round(
+        this.avgTileTemp +
+          weatherEffects(gs.weather).tempDelta +
+          diurnalTempDelta(gs.turn, gs.season)
+      );
       if (avg !== gs.avgTemperature) gs.avgTemperature = avg;
     }
 
@@ -425,7 +430,7 @@ export class GameEngineImpl implements GameEngine {
     // Cadence-gated so the per-tile snow churn stays bounded (only bucket-crossing tiles ship a delta).
     const snowInterval = Math.max(1, Math.floor(ticksPerDay / 24));
     if (gs.worldMap.length > 0 && gs.turn % snowInterval === 0) {
-      accumulateSnow(gs.worldMap, gs.weather, 1);
+      accumulateSnow(gs.worldMap, gs.weather, gs.season, gs.turn, 1);
     }
 
     // Rebuild the fire-warmth + roof-shelter field once per tick (before needs/conditions read it).
@@ -581,7 +586,7 @@ export class GameEngineImpl implements GameEngine {
         // roof shelter AND §M grove auras, so a frost-tender crop is shielded near an emberwood grove
         // (and chilled near a moonwood one).
         const thermal = thermalAt(x, y);
-        const temp = tileTemperature(tile.terrainType, gs.season, gs.weather, thermal);
+        const temp = tileTemperature(tile.terrainType, gs.season, gs.turn, gs.weather, thermal);
         const m = tile.moisture ?? 0;
         // DEATH conditions (the soil can no longer carry the crop): exhausted fertility, frost/snow,
         // cold/heat out of the crop's window, or drought/flood. A dead crop is set to 1% — NOT 0% — so

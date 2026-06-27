@@ -291,6 +291,60 @@ export function recomputeWorldTemperature(worldMap: WorldTile[][], season: Seaso
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Diurnal temperature swing (day/night) — SEASONS_WEATHER Subsystem 3 amendment.
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Open-air temperature is coldest just before dawn and warmest mid-afternoon (it LAGS solar noon,
+// like real air temperature). This is a single global scalar of time-of-day, folded into the same
+// delta slot as the weather term in `effectiveTemperature`/`tileTemperature` — so it costs nothing
+// per pawn (PERF-3) and never bakes into the 38k-tile worldMap (PERF-1/2: `tile.temperature` stays the
+// season-baked mean). Because it rides that slot it is damped by a roof's `weatherProtection` and
+// pulled toward NEUTRAL_TEMP by insulation, so shelter flattens the night chill automatically.
+
+/** Peak °C the open-air temperature rises above / falls below the season-baked mean (×season scale). */
+const DIURNAL_AMPLITUDE = 7;
+/** Per-season amplitude scaling — clear, dry summers swing hard (desert nights); winter's cloud
+ *  blanket damps the day/night swing. */
+const DIURNAL_SEASON_SCALE: Record<Season, number> = {
+  spring: 1.0,
+  summer: 1.2,
+  autumn: 1.0,
+  winter: 0.6
+};
+
+/** Normalised diurnal curve (−1 coldest … +1 warmest), phase-lagged behind the light curve: trough at
+ *  pre-dawn (~05:00), crest mid-afternoon (~15:00). t = timeOfDay (0 = midnight). Wraps at t=0/1. */
+const DIURNAL_KEYFRAMES: { t: number; v: number }[] = [
+  { t: 0.0, v: -0.55 }, // 00:00 — still cooling through the night
+  { t: 0.21, v: -1.0 }, // 05:00 — coldest, just before dawn
+  { t: 0.33, v: -0.4 }, // 08:00 — morning warm-up
+  { t: 0.5, v: 0.45 }, // 12:00 — noon (air still climbing toward the afternoon peak)
+  { t: 0.625, v: 1.0 }, // 15:00 — warmest
+  { t: 0.75, v: 0.5 }, // 18:00 — evening cool-down begins
+  { t: 0.875, v: -0.1 }, // 21:00 — night chill setting in
+  { t: 1.0, v: -0.55 } // 24:00 — wrap (matches 00:00)
+];
+
+function diurnalCurve(t: number): number {
+  for (let i = 0; i < DIURNAL_KEYFRAMES.length - 1; i++) {
+    const a = DIURNAL_KEYFRAMES[i];
+    const b = DIURNAL_KEYFRAMES[i + 1];
+    if (t >= a.t && t <= b.t) return lerp(a.v, b.v, (t - a.t) / (b.t - a.t));
+  }
+  return DIURNAL_KEYFRAMES[DIURNAL_KEYFRAMES.length - 1].v;
+}
+
+/**
+ * °C the open-air temperature deviates from the season-baked mean at this turn, from the diurnal
+ * day/night cycle — coldest pre-dawn, warmest mid-afternoon; amplitude scales by season. Added to the
+ * weather delta in `effectiveTemperature`/`tileTemperature`, so a roof + insulation flatten it.
+ */
+export function diurnalTempDelta(turn: number, season: Season | undefined): number {
+  const scale = season ? DIURNAL_SEASON_SCALE[season] : 1;
+  return diurnalCurve(getTimeOfDay(turn)) * DIURNAL_AMPLITUDE * scale;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Phase C — Weather (SEASONS_WEATHER Subsystem 4)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -853,18 +907,21 @@ export function creatureExposureAt(
 
 /**
  * Effective temperature (°C) at a tile for display — mirrors what the need-rate hot path computes:
- * baked tile temperature (biome base + season offset) + the live weather delta, then shelter
- * (roof insulation + weather protection) + nearby fire warmth. Computed on demand from `terrainType`
- * + season + weather (+ optional thermal sample), so the worker-only `tile.temperature` never ships.
+ * baked tile temperature (biome base + season offset) + the live weather delta + the diurnal day/night
+ * swing, then shelter (roof insulation + weather protection) + nearby fire warmth. Computed on demand
+ * from `terrainType` + season + turn + weather (+ optional thermal sample), so the worker-only
+ * `tile.temperature` never ships.
  */
 export function tileTemperature(
   terrainType: string,
   season: Season | undefined,
+  turn: number,
   weather?: WeatherState,
   thermal: ThermalSample = NO_THERMAL
 ): number {
   const base = biomeBaseTemp(terrainType) + (season ? SEASONS[season].tempOffset : 0);
-  return effectiveTemperature(base, weatherEffects(weather).tempDelta, thermal);
+  const airDelta = weatherEffects(weather).tempDelta + diurnalTempDelta(turn, season);
+  return effectiveTemperature(base, airDelta, thermal);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -893,15 +950,18 @@ function isSnowingWeather(weather?: WeatherState): boolean {
  * the worldMap). Snow builds only while it's snowing AND the tile's effective temperature is below
  * 0°C, scaled by the tile's wetness; it melts once at/above freezing. Call on a SLOW cadence (hourly)
  * — only tiles whose snow crosses a render bucket are marked dirty, so the worldMapDelta stays small.
- * Uses the baked `tile.temperature` (biome+season) + the live weather delta — all cheap scalars.
+ * Uses the baked `tile.temperature` (biome+season) + the live weather delta + the diurnal swing — all
+ * cheap scalars — so afternoon thaws and cold-night freezes fall out of the same day/night cycle.
  */
 export function accumulateSnow(
   worldMap: WorldTile[][],
   weather: WeatherState | undefined,
+  season: Season | undefined,
+  turn: number,
   hours = 1
 ): void {
   const snowing = isSnowingWeather(weather);
-  const wDelta = weatherEffects(weather).tempDelta;
+  const wDelta = weatherEffects(weather).tempDelta + diurnalTempDelta(turn, season);
   for (const row of worldMap) {
     for (const tile of row) {
       const prev = tile.snow ?? 0;

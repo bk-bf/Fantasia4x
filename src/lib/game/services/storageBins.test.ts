@@ -85,6 +85,26 @@ describe('storage bins — specialized filter', () => {
     expect(storageTileAcceptsDrop(gs, 0, 0, 'wheat')).toBe(true);
   });
 
+  it('a per-building override (FILTER fly-out) wins over the static default', () => {
+    // A general basket restricted by the player to hay only.
+    const basket = bin('wicker_basket', 0, 0);
+    (basket as { storageSettings?: { allowedItemIds: string[] } }).storageSettings = {
+      allowedItemIds: ['hay']
+    };
+    const gs = state([basket]);
+    expect(storageTileAcceptsDrop(gs, 0, 0, 'hay')).toBe(true);
+    expect(storageTileAcceptsDrop(gs, 0, 0, 'goat_meat')).toBe(false);
+  });
+
+  it('an empty override means the store takes nothing', () => {
+    const larder = bin('meat_larder', 0, 0);
+    (larder as { storageSettings?: { allowedItemIds: string[] } }).storageSettings = {
+      allowedItemIds: []
+    };
+    const gs = state([larder]);
+    expect(storageTileAcceptsDrop(gs, 0, 0, 'goat_meat')).toBe(false);
+  });
+
   it('storageAcceptsDrop is true only when SOME store admits the resource', () => {
     const meatOnly = state([bin('meat_larder', 0, 0)]);
     expect(storageAcceptsDrop(meatOnly, 'goat_meat')).toBe(true);

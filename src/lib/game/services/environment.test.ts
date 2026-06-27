@@ -11,6 +11,7 @@ import {
   recomputeWorldTemperature,
   biomeBaseTemp,
   seasonRegrowthMultiplier,
+  diurnalTempDelta,
   advanceWeatherForDay,
   weatherEffects,
   getEnvironmentTint,
@@ -289,20 +290,37 @@ describe('EnvironmentService — weather (Phase C)', () => {
 
 describe('EnvironmentService — per-tile display fields (HUD)', () => {
   it('tileTemperature = biome base + season offset + weather delta', () => {
-    const base = tileTemperature('plains', 'spring', {
+    // Same turn for both calls so the diurnal swing is identical and the weather delta is isolated.
+    const base = tileTemperature('plains', 'spring', 0, {
       type: 'clear',
       intensity: 0,
       turnsRemaining: 0
     });
-    const cold = tileTemperature('plains', 'spring', {
+    const cold = tileTemperature('plains', 'spring', 0, {
       type: 'snow',
       intensity: 0.5,
       turnsRemaining: 0
     });
     expect(cold).toBeLessThan(base);
     // winter is colder than summer for the same tile.
-    expect(tileTemperature('plains', 'winter', undefined)).toBeLessThan(
-      tileTemperature('plains', 'summer', undefined)
+    expect(tileTemperature('plains', 'winter', 0, undefined)).toBeLessThan(
+      tileTemperature('plains', 'summer', 0, undefined)
+    );
+  });
+
+  it('diurnal swing: pre-dawn is colder than mid-afternoon, and is flat at season=undefined×0 reference', () => {
+    const ticksPerDay = TURNS_PER_DAY * TICKS_PER_SECOND;
+    const preDawn = Math.round(0.21 * ticksPerDay); // ~05:00, the curve trough
+    const afternoon = Math.round(0.625 * ticksPerDay); // ~15:00, the curve crest
+    // The diurnal delta itself dips below 0 pre-dawn and rises above 0 mid-afternoon.
+    expect(diurnalTempDelta(preDawn, 'summer')).toBeLessThan(0);
+    expect(diurnalTempDelta(afternoon, 'summer')).toBeGreaterThan(0);
+    expect(diurnalTempDelta(afternoon, 'summer')).toBeGreaterThan(diurnalTempDelta(preDawn, 'summer'));
+    // Summer swings harder than winter (clear/dry vs. cloud-blanketed) for the same time of day.
+    expect(diurnalTempDelta(afternoon, 'summer')).toBeGreaterThan(diurnalTempDelta(afternoon, 'winter'));
+    // It flows through into the tile's effective temperature: afternoon plains are warmer than pre-dawn.
+    expect(tileTemperature('plains', 'summer', afternoon, undefined)).toBeGreaterThan(
+      tileTemperature('plains', 'summer', preDawn, undefined)
     );
   });
 
@@ -447,8 +465,8 @@ describe('Thermal model — fire warmth, roof shelter, effective temperature', (
     const roof: ThermalSample = { warmth: 0, insulation: 0.5, weatherProtection: 1, roofed: true };
     const rain = { type: 'heavy_rain' as const, intensity: 0.75, turnsRemaining: 0 };
     // Under a roof during winter rain, the tile is warmer than fully exposed.
-    expect(tileTemperature('plains', 'winter', rain, roof)).toBeGreaterThan(
-      tileTemperature('plains', 'winter', rain, NO_THERMAL)
+    expect(tileTemperature('plains', 'winter', 0, rain, roof)).toBeGreaterThan(
+      tileTemperature('plains', 'winter', 0, rain, NO_THERMAL)
     );
     // …and drier (rain kept out).
     expect(tileWetness(biomeBaseMoisture('plains'), rain, roof)).toBeLessThan(

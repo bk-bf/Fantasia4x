@@ -23,6 +23,7 @@ import { getConditionCurrentStage, conditionNeedMultipliers, comfortRange } from
 import {
   getAmbientLight,
   weatherEffects,
+  diurnalTempDelta,
   thermalAt,
   effectiveTemperature,
   isRoofedTile,
@@ -433,7 +434,9 @@ export class PawnServiceImpl implements PawnService {
     // allocation. Per-pawn temperature is read from the cached `tile.temperature` (baked per season)
     // plus this live weather delta, so weather changes never touch the 38k-tile worldMap.
     const weatherFx = weatherEffects(gameState.weather);
-    const weatherTemp = weatherFx.tempDelta;
+    // Open-air temperature delta = weather + the diurnal day/night swing (coldest pre-dawn, warmest
+    // mid-afternoon). Both are global scalars precomputed once per tick; shelter flattens them downstream.
+    const weatherTemp = weatherFx.tempDelta + diurnalTempDelta(gameState.turn, gameState.season);
     const nightFatigueMul =
       getAmbientLight(gameState.turn) < NIGHT_LIGHT_THRESHOLD ? NIGHT_FATIGUE_MUL : 1;
     const worldMap = gameState.worldMap;
