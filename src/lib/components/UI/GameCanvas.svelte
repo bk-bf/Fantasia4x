@@ -85,6 +85,7 @@
   } from '$lib/game/services/ResourceObjectService.js';
   import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/wildGrowth.js';
   import { itemService } from '$lib/game/services/ItemService.js';
+  import { aggregateMaterialMods } from '$lib/game/core/materialProperties';
   import {
     getRefuelRequirements,
     getRefuelThresholdRatio,
@@ -888,6 +889,21 @@
       : `complete${selectedBuilding.deconstructQueued ? ' ⊢ demolish' : ''}`;
     const lines: string[] = [];
     if (bDef?.description) lines.push(bDef.description);
+    // §M amenity: the building's effective comfort/beauty (def + chosen-material mods). Drives nearby
+    // pawns' rest, healing and mood — surfaced so the player sees what a couch/silk build is worth.
+    {
+      const mm = selectedBuilding.materials
+        ? aggregateMaterialMods(Object.values(selectedBuilding.materials), 'building')
+        : null;
+      const comfort = (bDef?.effects?.comfort ?? 0) + (mm?.comfort ?? 0);
+      const beauty = (bDef?.effects?.beauty ?? 0) + (mm?.beauty ?? 0);
+      if (comfort > 0 || beauty > 0) {
+        const parts: string[] = [];
+        if (comfort > 0) parts.push(`comfort +${comfort.toFixed(2)}`);
+        if (beauty > 0) parts.push(`beauty +${beauty.toFixed(2)}`);
+        lines.push(parts.join('  ·  '));
+      }
+    }
     if (isBlueprint) {
       lines.push(
         `[${jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] ${Math.round(workDone)}/${workReq} work`
