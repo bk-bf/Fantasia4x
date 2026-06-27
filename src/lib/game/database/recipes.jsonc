@@ -26,6 +26,15 @@
     "toolTierRequired": 0
   },
   {
+    "id"               : "hew_beam",
+    "station"          : "chopping_block",
+    "inputs"           : {"pine_log": 2},
+    "inputAlternatives": [ {"oak_log": 2}, {"birch_log": 2}, {"ash_log": 2} ],
+    "outputs"          : {"beam": 1, "branch": 1},
+    "workAmount"       : 6,
+    "toolTierRequired" : 1
+  },
+  {
     "id"               : "burn_charcoal",
     "station"          : "charcoal_pit",
     "passive"          : true,
@@ -510,6 +519,38 @@
     "toolTierRequired": 0
   },
   {
+    "id"              : "make_heartwood_plank",
+    "station"         : "heartwood_joiner",
+    "inputs"          : {"heartwood_log": 1},
+    "outputs"         : {"heartwood_plank": 2},
+    "workAmount"      : 8,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "make_moonwood_plank",
+    "station"         : "heartwood_joiner",
+    "inputs"          : {"moonwood_log": 1},
+    "outputs"         : {"moonwood_plank": 2},
+    "workAmount"      : 8,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "make_ironwood_plank",
+    "station"         : "heartwood_joiner",
+    "inputs"          : {"ironwood_log": 1},
+    "outputs"         : {"ironwood_plank": 2},
+    "workAmount"      : 10,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "make_emberwood_plank",
+    "station"         : "heartwood_joiner",
+    "inputs"          : {"emberwood_log": 1},
+    "outputs"         : {"emberwood_plank": 2},
+    "workAmount"      : 8,
+    "toolTierRequired": 2
+  },
+  {
     "id"              : "make_saw",
     "station"         : "makers_bench",
     "inputs"          : {"bronze_bar": 1, "ash_log": 1},
@@ -931,6 +972,14 @@
     "outputs"         : {"iron_nail": 12},
     "workAmount"      : 6,
     "toolTierRequired": 1
+  },
+  {
+    "id"              : "make_steel_rivet",
+    "station"         : "anvil",
+    "inputs"          : {"steel_bar": 1},
+    "outputs"         : {"steel_rivet": 12},
+    "workAmount"      : 8,
+    "toolTierRequired": 2
   },
   {
     "id"              : "make_wooden_chest",

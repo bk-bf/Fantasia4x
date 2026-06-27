@@ -1,6 +1,7 @@
 [
   {
     "id": "campfire",
+    "ageTier": "primitive:1",
     "name": "Campfire",
     "color": "#FF6600",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
@@ -26,6 +27,7 @@
   },
   {
     "id": "hearth",
+    "ageTier": "primitive:1",
     "name": "Stone Hearth",
     "color": "#FF7722",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
@@ -53,6 +55,7 @@
   },
   {
     "id": "craft_spot",
+    "ageTier": "primitive:1",
     "name": "Craft Spot",
     "color": "#C8A064",
     "charSpans": [ {"sheet": "buildings", "id": 1} ],
@@ -72,6 +75,7 @@
   },
   {
     "id": "makers_bench",
+    "ageTier": "primitive:2",
     "name": "Crude Workbench",
     "color": "#8B6914",
     "charSpans": [ {"sheet": "items", "id": 46} ],
@@ -98,6 +102,7 @@
   },
   {
     "id": "butcher_spot",
+    "ageTier": "primitive:2",
     "name": "Butcher Spot",
     "color": "#C62828",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -118,6 +123,7 @@
   },
   {
     "id": "dressing_stone",
+    "ageTier": "primitive:2",
     "name": "Dressing Stone",
     "color": "#8D6E63",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -137,6 +143,7 @@
   },
   {
     "id": "chopping_block",
+    "ageTier": "primitive:2",
     "name": "Splitting Stump",
     "color": "#8B6914",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -156,6 +163,7 @@
   },
   {
     "id": "sawtable",
+    "ageTier": "bronze:1",
     "name": "Sawpit",
     "color": "#B87333",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -175,6 +183,7 @@
   },
   {
     "id": "pottery_kiln",
+    "ageTier": "copper:1",
     "passive": true,
     "name": "Potter's Kiln",
     "color": "#A0522D",
@@ -202,6 +211,7 @@
   },
   {
     "id": "advanced_kiln",
+    "ageTier": "copper:2",
     "passive": true,
     "name": "Advanced Kiln",
     "color": "#B5651D",
@@ -212,7 +222,7 @@
     "category": "production",
     "walkable": false,
     "lightRadius": 4,
-    "buildingCost": {"fire_bricks": 8, "granite": 6},
+    "buildingCost": {"fire_bricks": 8, "granite_block": 3},
     "workAmount": 32,
     "toolTierRequired": 1,
     "populationRequired": 1,
@@ -229,6 +239,7 @@
   },
   {
     "id": "masons_bench",
+    "ageTier": "copper:2",
     "name": "Stonecutter's Banker",
     "color": "#9E8E8A",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -248,6 +259,7 @@
   },
   {
     "id": "charcoal_pit",
+    "ageTier": "primitive:2",
     "passive": true,
     "name": "Charcoal Clamp",
     "color": "#2B2B2B",
@@ -269,6 +281,7 @@
   },
   {
     "id": "ropewalk",
+    "ageTier": "primitive:3",
     "name": "Ropewalk",
     "color": "#A8814E",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -276,7 +289,7 @@
     "bg": [0.06, 0.05, 0.03],
     "description": "A long covered lane of posts and a twisting hook. Strands of cordage are laid out and walked into strong rope — the kind a well windlass or rigging needs.",
     "category": "production",
-    "buildingCost": {"pine_log": 3, "branch": 8, "cordage": 4},
+    "buildingCost": {"pine_log": 3, "beam": 2, "cordage": 4},
     "workAmount": 18,
     "toolTierRequired": 0,
     "populationRequired": 1,
@@ -288,6 +301,7 @@
   },
   {
     "id": "well",
+    "ageTier": "primitive:3",
     "name": "Draw Well",
     "color": "#4FC3F7",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -308,6 +322,7 @@
   },
   {
     "id": "drying_rack",
+    "ageTier": "primitive:2",
     "name": "Drying Rack",
     "color": "#9C5A3C",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -327,6 +342,7 @@
   },
   {
     "id": "hide_rack",
+    "ageTier": "primitive:2",
     "name": "Curing Frame",
     "color": "#9A7B4F",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -346,6 +362,7 @@
   },
   {
     "id": "tanning_rack",
+    "ageTier": "copper:2",
     "name": "Tannery",
     "color": "#7E5E36",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -366,6 +383,7 @@
   },
   {
     "id": "stone_forge",
+    "ageTier": "copper:2",
     "name": "Smelting Hearth",
     "color": "#FF5722",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
@@ -375,7 +393,7 @@
     "category": "production",
     "walkable": false,
     "lightRadius": 5,
-    "buildingCost": {"fired_brick": 10, "granite": 6},
+    "buildingCost": {"fired_brick": 10, "granite_block": 3},
     "workAmount": 30,
     "toolTierRequired": 1,
     "toolRequirement": {"workType": "metalworking", "minTier": 0},
@@ -393,6 +411,7 @@
   },
   {
     "id": "bloomery",
+    "ageTier": "iron:1",
     "passive": true,
     "name": "Bloomery Furnace",
     "color": "#B71C1C",
@@ -404,7 +423,7 @@
     "walkable": false,
     "lightRadius": 5,
     "lightIntensity": 1.2,
-    "buildingCost": {"fired_brick": 20, "granite": 8},
+    "buildingCost": {"fired_brick": 20, "granite_block": 4},
     "workAmount": 40,
     "toolTierRequired": 1,
     "populationRequired": 1,
@@ -421,6 +440,7 @@
   },
   {
     "id": "anvil",
+    "ageTier": "iron:1",
     "name": "Smithy",
     "color": "#607D8B",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -429,7 +449,7 @@
     "description": "A heavy iron anvil, smithing tools and a grinding wheel. Forges metal bars into tools, weapons and armour — and grinds the edges that blades need.",
     "category": "production",
     "walkable": false,
-    "buildingCost": {"iron_bar": 4, "granite": 6},
+    "buildingCost": {"iron_bar": 4, "granite_block": 3},
     "workAmount": 30,
     "toolTierRequired": 1,
     "toolRequirement": {"workType": "metalworking", "minTier": 0},
@@ -442,6 +462,7 @@
   },
   {
     "id": "casting_hearth",
+    "ageTier": "bronze:1",
     "name": "Casting Hearth",
     "color": "#CD7F32",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
@@ -451,7 +472,7 @@
     "category": "production",
     "walkable": false,
     "lightRadius": 5,
-    "buildingCost": {"fired_brick": 10, "granite": 6},
+    "buildingCost": {"fired_brick": 10, "granite_block": 3},
     "workAmount": 30,
     "toolTierRequired": 1,
     "toolRequirement": {"workType": "metalworking", "minTier": 0},
@@ -469,6 +490,7 @@
   },
   {
     "id": "finery_forge",
+    "ageTier": "iron:2",
     "name": "Finery Forge",
     "color": "#8E3B2E",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
@@ -479,7 +501,7 @@
     "walkable": false,
     "lightRadius": 5,
     "lightIntensity": 1.2,
-    "buildingCost": {"fired_brick": 16, "granite": 8, "iron_bar": 2},
+    "buildingCost": {"fired_brick": 16, "granite_block": 4, "iron_bar": 2},
     "workAmount": 44,
     "toolTierRequired": 2,
     "toolRequirement": {"workType": "metalworking", "minTier": 1},
@@ -497,6 +519,7 @@
   },
   {
     "id": "wooden_table",
+    "ageTier": "iron:1",
     "name": "Wooden Table",
     "color": "#B5824A",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -516,6 +539,7 @@
   },
   {
     "id"                : "wooden_stool",
+    "ageTier": "iron:1",
     "name"              : "Wooden Stool",
     "color"             : "#C0894E",
     "charSpans"         : [ {"sheet": "items", "id": 85} ],
@@ -535,6 +559,7 @@
   },
   {
     "id": "wicker_basket",
+    "ageTier": "primitive:2",
     "name": "Wicker Basket",
     "color": "#C8A050",
     "charSpans": [ {"sheet": "items", "id": 173} ],
@@ -555,6 +580,7 @@
   },
   {
     "id": "clay_storage_jars",
+    "ageTier": "copper:1",
     "name": "Clay Storage Jars",
     "color": "#B07840",
     "charSpans": [ {"sheet": "items", "id": 26} ],
@@ -575,6 +601,7 @@
   },
   {
     "id": "storage_chest",
+    "ageTier": "iron:1",
     "name": "Storage Chest",
     "color": "#8B5A2B",
     "charSpans": [ {"sheet": "items", "id": 38} ],
@@ -595,6 +622,7 @@
   },
   {
     "id": "larder_cupboard",
+    "ageTier": "bronze:1",
     "name": "Larder Cupboard",
     "color": "#9A7B4F",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -614,6 +642,7 @@
   },
   {
     "id": "hay_rack",
+    "ageTier": "primitive:2",
     "name": "Hay Rack",
     "color": "#D4B44A",
     "charSpans": [ {"sheet": "items", "id": 25} ],
@@ -635,6 +664,7 @@
   },
   {
     "id": "meat_larder",
+    "ageTier": "primitive:2",
     "name": "Meat Hooks",
     "color": "#9A4A40",
     "charSpans": [ {"sheet": "buildings", "id": 49} ],
@@ -643,7 +673,7 @@
     "transparentBg": true,
     "description": "Iron hooks on a roped rail for hanging carcasses and joints in the cool and airy. Keeps meat off the ground and slows the turn — for meat and carcasses only.",
     "category": "furniture",
-    "buildingCost": {"branch": 4, "cordage": 4, "rope": 2},
+    "buildingCost": {"branch": 4, "cordage": 4},
     "workAmount": 12,
     "toolTierRequired": 0,
     "populationRequired": 1,
@@ -656,6 +686,7 @@
   },
   {
     "id": "salting_barrel",
+    "ageTier": "bronze:1",
     "name": "Salting Barrel",
     "color": "#7C6A8A",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -677,15 +708,16 @@
   },
   {
     "id": "rope_granary",
+    "ageTier": "primitive:3",
     "name": "Rope-Hung Granary",
     "color": "#C0A24A",
     "charSpans": [ {"sheet": "items", "id": 173} ],
     "fg": [0.75, 0.63, 0.29],
     "bg": [0.07, 0.06, 0.02],
     "transparentBg": true,
-    "description": "Grain sacks slung from ropes on a staddle frame, lifted clear of the damp and out of reach of rats. Keeps grain and seed dry and vermin-safe — and stores nothing but grain and seed.",
+    "description": "Grain sacks slung from ropes on a hewn staddle frame, lifted clear of the damp ground. Keeps grain and seed dry and slow to spoil — and stores nothing but grain and seed.",
     "category": "furniture",
-    "buildingCost": {"branch": 6, "rope": 4, "cordage": 4},
+    "buildingCost": {"beam": 2, "rope": 4, "cordage": 4},
     "workAmount": 14,
     "toolTierRequired": 0,
     "populationRequired": 1,
@@ -698,6 +730,7 @@
   },
   {
     "id": "root_clamp",
+    "ageTier": "primitive:2",
     "name": "Root Clamp",
     "color": "#7A5A38",
     "charSpans": [ {"sheet": "plants", "id": 201} ],
@@ -719,6 +752,7 @@
   },
   {
     "id": "thatch_roof",
+    "ageTier": "primitive:1",
     "name": "Thatch Roof",
     "color": "#C8B560",
     "charSpans": [ {"sheet": "buildings", "id": 5} ],
@@ -739,6 +773,7 @@
   },
   {
     "id": "tile_roof",
+    "ageTier": "copper:1",
     "name": "Tiled Roof",
     "color": "#9C3B2E",
     "charSpans": [ {"sheet": "buildings", "id": 5} ],
@@ -758,6 +793,7 @@
   },
   {
     "id"                : "door",
+    "ageTier": "bronze:1",
     "name"              : "Plank Door",
     "color"             : "#8B6914",
     "charSpans"         : [ {"sheet": "items", "id": 53} ],
@@ -777,6 +813,7 @@
   },
   {
     "id": "window",
+    "ageTier": "primitive:2",
     "name": "Wind-Eye",
     "color": "#A0742C",
     "charSpans": [ {"sheet": "buildings", "id": 2} ],
@@ -797,6 +834,7 @@
   },
   {
     "id": "snare_trap",
+    "ageTier": "primitive:2",
     "name": "Snare",
     "color": "#8D7B5A",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -816,6 +854,7 @@
   },
   {
     "id": "deadfall",
+    "ageTier": "primitive:1",
     "name": "Deadfall Trap",
     "color": "#6E5B3A",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -835,6 +874,7 @@
   },
   {
     "id": "branch_wall",
+    "ageTier": "primitive:1",
     "name": "Branch Wall",
     "color": "#8B6914",
     "charSpans": [ {"sheet": "plants", "id": 201} ],
@@ -856,6 +896,7 @@
   },
   {
     "id"                : "wicker_wall",
+    "ageTier": "primitive:2",
     "name"              : "Wicker Wall",
     "color"             : "#C8A064",
     "charSpans"         : [ {"sheet": "plants", "id": 201} ],
@@ -876,6 +917,7 @@
   },
   {
     "id"                : "daub_wall",
+    "ageTier": "primitive:1",
     "name"              : "Daub Wall",
     "color"             : "#B5651D",
     "charSpans"         : [ {"sheet": "plants", "id": 201} ],
@@ -896,6 +938,7 @@
   },
   {
     "id"                : "mud_brick_wall",
+    "ageTier": "primitive:2",
     "name"              : "Mud Brick Wall",
     "color"             : "#724411",
     "charSpans"         : [ {"sheet": "tiles", "id": 149} ],
@@ -916,6 +959,7 @@
   },
   {
     "id": "stone_block_wall",
+    "ageTier": "copper:2",
     "name": "Stone Block Wall",
     "color": "#9E948A",
     "charSpans": [ {"sheet": "tiles", "id": 149} ],
@@ -936,6 +980,7 @@
   },
   {
     "id": "rebar_concrete_wall",
+    "ageTier": "steel:1",
     "name": "Reinforced Concrete Wall",
     "color": "#8C867C",
     "charSpans": [ {"sheet": "tiles", "id": 149} ],
@@ -945,7 +990,7 @@
     "category": "structure",
     "walkable": false,
     "blocksSight": true,
-    "buildingCost": {"concrete": 4, "rebar": 2},
+    "buildingCost": {"concrete": 4, "rebar": 2, "steel_rivet": 2},
     "workAmount": 140,
     "toolTierRequired": 2,
     "populationRequired": 1,
@@ -956,6 +1001,7 @@
   },
   {
     "id": "magic_concrete_wall",
+    "ageTier": "runed:3",
     "name": "Runed Concrete Wall",
     "color": "#7C5CA0",
     "charSpans": [ {"sheet": "tiles", "id": 149} ],
@@ -985,6 +1031,7 @@
   },
   {
     "id"                : "branch_door",
+    "ageTier": "primitive:2",
     "name"              : "Branch Door",
     "color"             : "#8B6914",
     "charSpans"         : [ {"sheet": "buildings", "id": 51} ],
@@ -1007,6 +1054,7 @@
   // ticks. NOT streets — they don't bias pathing; pair with a roof to also stay dry in the rain.
   {
     "id": "packed_earth_floor",
+    "ageTier": "primitive:1",
     "name": "Packed-Earth Floor",
     "color": "#9C7A4D",
     "charSpans": [ {"sheet": "tiles", "id": 64} ],
@@ -1025,6 +1073,7 @@
   },
   {
     "id": "wooden_floor",
+    "ageTier": "bronze:1",
     "name": "Plank Floor",
     "color": "#8B6914",
     "charSpans": [ {"sheet": "tiles", "id": 5} ],
@@ -1043,6 +1092,7 @@
   },
   {
     "id": "stone_floor",
+    "ageTier": "copper:1",
     "name": "Flagstone Floor",
     "color": "#9AA0A6",
     "charSpans": [ {"sheet": "tiles", "id": 5} ],
@@ -1050,7 +1100,7 @@
     "bg": [0.06, 0.07, 0.08],
     "description": "Cut granite flags fitted tight. The fastest, driest footing a mundane colony can lay — stays clean through any weather.",
     "category": "structure",
-    "buildingCost": {"granite": 4},
+    "buildingCost": {"granite_block": 2},
     "workAmount": 12,
     "toolTierRequired": 1,
     "populationRequired": 1,
@@ -1061,6 +1111,7 @@
   },
   {
     "id": "branch_floor",
+    "ageTier": "primitive:2",
     "name": "Branch Floor",
     "color": "#8B6914",
     "charSpans": [ {"sheet": "tiles", "id": 64} ],
@@ -1079,6 +1130,7 @@
   },
   {
     "id": "hay_floor",
+    "ageTier": "primitive:1",
     "name": "Rush Floor",
     "color": "#C8B45A",
     "charSpans": [ {"sheet": "tiles", "id": 64} ],
@@ -1097,6 +1149,7 @@
   },
   {
     "id": "clay_floor",
+    "ageTier": "primitive:1",
     "name": "Rammed-Clay Floor",
     "color": "#A88860",
     "charSpans": [ {"sheet": "tiles", "id": 5} ],
@@ -1115,6 +1168,7 @@
   },
   {
     "id": "mud_brick_floor",
+    "ageTier": "primitive:2",
     "name": "Mud-Brick Floor",
     "color": "#9A6A30",
     "charSpans": [ {"sheet": "tiles", "id": 5} ],
@@ -1133,6 +1187,7 @@
   },
   {
     "id": "sleeping_spot",
+    "ageTier": "primitive:1",
     "name": "Sleeping Spot",
     "color": "#8B6914",
     "charSpans": [ {"sheet": "buildings", "id": 49} ],
@@ -1152,6 +1207,7 @@
   },
   {
     "id": "hay_bed",
+    "ageTier": "primitive:2",
     "name": "Hay Bed",
     "color": "#D4B44A",
     "charSpans": [ {"sheet": "items", "id": 25} ],
@@ -1171,6 +1227,7 @@
   },
   {
     "id": "hide_bed",
+    "ageTier": "primitive:3",
     "name": "Hide Bed",
     "color": "#9A7B4F",
     "charSpans": [ {"sheet": "items", "id": 25} ],
@@ -1190,6 +1247,7 @@
   },
   {
     "id": "leather_bed",
+    "ageTier": "iron:1",
     "name": "Leather Bed",
     "color": "#7E5E36",
     "charSpans": [ {"sheet": "items", "id": 25} ],
@@ -1209,6 +1267,7 @@
   },
   {
     "id"                : "weaving_frame",
+    "ageTier": "primitive:3",
     "name"              : "Weaving Frame",
     "color"             : "#C8A050",
     "charSpans"         : [ {"sheet": "buildings", "id": 39} ],
@@ -1216,7 +1275,7 @@
     "bg"                : [0.06, 0.04, 0.01],
     "description"       : "A simple loom frame lashed from branches. Processes plant fibers into cloth.",
     "category"          : "production",
-    "buildingCost"      : {"branch": 6, "cordage": 3},
+    "buildingCost"      : {"beam": 2, "cordage": 3},
     "workAmount"        : 20,
     "toolTierRequired"  : 0,
     "populationRequired": 1,
@@ -1228,6 +1287,7 @@
   },
   {
     "id": "lapidary_bench",
+    "ageTier": "runed:1",
     "name": "Lapidary Bench",
     "color": "#A060D0",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -1235,7 +1295,7 @@
     "bg": [0.05, 0.03, 0.07],
     "description": "A jeweller's bench of shaped stone and bronze tools. Cuts and polishes crystals into trade gems, and — once Attunement is researched — attunes mana-infused crystals and sets them into rings and amulets.",
     "category": "production",
-    "buildingCost": {"granite_block": 2, "bronze_bar": 1, "branch": 4, "cordage": 2},
+    "buildingCost": {"granite_block": 2, "bronze_bar": 1, "pine_plank": 2, "iron_nail": 4},
     "workAmount": 40,
     "toolTierRequired": 1,
     "populationRequired": 1,
@@ -1247,6 +1307,7 @@
   },
   {
     "id": "runecarver_bench",
+    "ageTier": "runed:1",
     "name": "Runecarver's Bench",
     "color": "#6B4E8C",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -1254,7 +1315,7 @@
     "bg": [0.05, 0.03, 0.07],
     "description": "A carving bench of heartwood and dressed stone, its surface scored with channelling runes. Cuts a magic-wood stave and seats a polished crystal to make a first elemental staff — INT, not muscle, drives the blast. The apprentice's bench, a bloomery to the altar's finery.",
     "category": "production",
-    "buildingCost": {"heartwood_log": 2, "granite_block": 2, "cordage": 3},
+    "buildingCost": {"heartwood_plank": 2, "granite_block": 2, "gem_dust": 1},
     "workAmount": 30,
     "toolTierRequired": 1,
     "populationRequired": 1,
@@ -1266,6 +1327,7 @@
   },
   {
     "id": "attunement_altar",
+    "ageTier": "runed:2",
     "name": "Attunement Altar",
     "color": "#9050D0",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
@@ -1292,6 +1354,7 @@
     // and it rots them down into `compost` over time (the make_compost recipe, recipes.jsonc). Compost
     // is the gating material for the Soil-Works builds below — rot + scraps become your best soil.
     "id": "compost_bin",
+    "ageTier": "primitive:2",
     "passive": true,
     "name": "Compost Bin",
     "color": "#5A4326",
@@ -1315,6 +1378,7 @@
     // to the tile, work it in, and on completion the tile's subType is raised (jobs/construct.complete
     // reads `terraformSubType`) and the build removes itself. Compost is the gate — each tier needs more.
     "id": "lay_poor_soil",
+    "ageTier": "primitive:1",
     "name": "Lay Poor Soil",
     "color": "#79643F",
     "charSpans": [ {"sheet": "tiles", "from": 64, "to": 71} ],
@@ -1336,6 +1400,7 @@
   },
   {
     "id": "lay_loam",
+    "ageTier": "primitive:2",
     "name": "Lay Loam",
     "color": "#6D5836",
     "charSpans": [ {"sheet": "tiles", "from": 64, "to": 71} ],
@@ -1357,6 +1422,7 @@
   },
   {
     "id": "lay_rich_soil",
+    "ageTier": "primitive:2",
     "name": "Lay Rich Soil",
     "color": "#61502E",
     "charSpans": [ {"sheet": "tiles", "from": 64, "to": 71} ],
@@ -1378,6 +1444,7 @@
   },
   {
     "id": "lay_terra_preta",
+    "ageTier": "primitive:2",
     "name": "Lay Terra Preta",
     "color": "#574325",
     "charSpans": [ {"sheet": "tiles", "from": 64, "to": 71} ],
@@ -1400,6 +1467,7 @@
   // ── PRODUCTION-CHAIN-II §F8 — the food chain: quern (mill), oven (bake), fermenter (brew) ───────
   {
     "id": "quern",
+    "ageTier": "primitive:1",
     "name": "Quern",
     "color": "#8A8079",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -1419,6 +1487,7 @@
   },
   {
     "id": "oven",
+    "ageTier": "primitive:1",
     "name": "Clay Oven",
     "color": "#9C5A2E",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -1438,6 +1507,7 @@
   },
   {
     "id": "fermenter",
+    "ageTier": "bronze:1",
     "passive": true,
     "name": "Fermenter",
     "color": "#6E4B2A",
@@ -1446,7 +1516,7 @@
     "bg": [0.05, 0.04, 0.02],
     "description": "A row of covered casks where malt, fruit and honey ferment over days into ale, wine and mead. A passive timer — load it and let it work.",
     "category": "production",
-    "buildingCost": {"pine_plank": 4, "branch": 6, "cordage": 4},
+    "buildingCost": {"pine_plank": 4, "cordage": 4},
     "workAmount": 16,
     "toolTierRequired": 0,
     "populationRequired": 1,
@@ -1461,6 +1531,7 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "carpenter_bench",
+    "ageTier": "iron:1",
     "name": "Carpenter's Bench",
     "color": "#A07840",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -1480,6 +1551,7 @@
   },
   {
     "id": "tanning_bucket_station",
+    "ageTier": "primitive:3",
     "passive": true,
     "name": "Tanning Bucket",
     "color": "#9A7B4F",
@@ -1505,6 +1577,7 @@
   },
   {
     "id": "beast_tanning_bucket",
+    "ageTier": "iron:1",
     "passive": true,
     "name": "Beast Tanning Bucket",
     "color": "#6E5326",
@@ -1530,6 +1603,7 @@
   },
   {
     "id": "brewing_barrel",
+    "ageTier": "bronze:1",
     "passive": true,
     "name": "Brewing Barrel",
     "color": "#8B6B45",
@@ -1553,6 +1627,7 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "alchemy_lab",
+    "ageTier": "bronze:2",
     "name": "Alchemy Lab",
     "color": "#7E57C2",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -1576,6 +1651,7 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "manaforge",
+    "ageTier": "runed:3",
     "name": "Manaforge",
     "color": "#B060E0",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
@@ -1583,7 +1659,7 @@
     "bg": [0.06, 0.03, 0.08],
     "description": "An anvil ringed with glyph-light, its heat drawn from bound mana. Forges magic-alloy weapons and armour and rune-etched tools no mundane smithy can.",
     "category": "production",
-    "buildingCost": {"iron_bar": 8, "granite": 12, "gem_dust": 2},
+    "buildingCost": {"iron_bar": 8, "granite_block": 6, "gem_dust": 2},
     "workAmount": 64,
     "toolTierRequired": 2,
     "populationRequired": 1,
@@ -1595,6 +1671,7 @@
   },
   {
     "id": "runic_crucible",
+    "ageTier": "runed:3",
     "name": "Runic Crucible",
     "color": "#9C7CC0",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
@@ -1602,7 +1679,7 @@
     "bg": [0.06, 0.04, 0.08],
     "description": "A crucible that melts steel and gem-dust into magic-alloy bars — the feedstock of mythic metalwork.",
     "category": "production",
-    "buildingCost": {"fired_brick": 32, "granite": 16, "iron_bar": 4, "gem_dust": 2},
+    "buildingCost": {"fired_brick": 32, "granite_block": 8, "iron_bar": 4, "gem_dust": 2},
     "workAmount": 72,
     "toolTierRequired": 2,
     "populationRequired": 1,
@@ -1621,6 +1698,7 @@
   },
   {
     "id": "runic_loom",
+    "ageTier": "runed:3",
     "name": "Runic Loom",
     "color": "#C090E0",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -1628,7 +1706,7 @@
     "bg": [0.06, 0.04, 0.08],
     "description": "A loom strung with gem-dust thread. Weaves enchant-thread and prestige cloth shot through with bound mana.",
     "category": "production",
-    "buildingCost": {"branch": 12, "cordage": 6, "gem_dust": 2},
+    "buildingCost": {"ironwood_plank": 2, "fine_wool": 4, "gem_dust": 2},
     "workAmount": 48,
     "toolTierRequired": 1,
     "populationRequired": 1,
@@ -1640,6 +1718,7 @@
   },
   {
     "id"                : "glyph_cutters_banker",
+    "ageTier": "runed:3",
     "name"              : "Glyph-Cutter's Banker",
     "color"             : "#8C6CB0",
     "charSpans"         : [ {"sheet": "buildings", "id": 39} ],
@@ -1647,7 +1726,7 @@
     "bg"                : [0.06, 0.04, 0.08],
     "description"       : "A mason's banker fitted with gem-dust chisels. Cuts runed blocks for the magic wall age.",
     "category"          : "production",
-    "buildingCost"      : {"granite": 12, "pine_log": 4, "gem_dust": 2},
+    "buildingCost"      : {"granite_block": 6, "heartwood_plank": 2, "gem_dust": 2},
     "workAmount"        : 56,
     "toolTierRequired"  : 2,
     "populationRequired": 1,
@@ -1659,6 +1738,7 @@
   },
   {
     "id": "arcane_alembic",
+    "ageTier": "runed:3",
     "name": "Arcane Alembic",
     "color": "#9050C0",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -1678,6 +1758,7 @@
   },
   {
     "id": "heartwood_joiner",
+    "ageTier": "runed:3",
     "name": "Heartwood Joiner",
     "color": "#A07840",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -1703,6 +1784,7 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "palisade",
+    "ageTier": "primitive:2",
     "name": "Palisade",
     "color": "#7A5A2E",
     "charSpans": [ {"sheet": "plants", "id": 201} ],
@@ -1723,6 +1805,7 @@
   },
   {
     "id": "barricade",
+    "ageTier": "primitive:2",
     "name": "Barricade",
     "color": "#8B6914",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -1743,6 +1826,7 @@
   },
   {
     "id": "gatehouse",
+    "ageTier": "iron:1",
     "name": "Gatehouse",
     "color": "#9E948A",
     "charSpans": [ {"sheet": "buildings", "id": 51} ],
@@ -1750,7 +1834,7 @@
     "bg": [0.07, 0.06, 0.05],
     "description": "A fortified stone gateway through a wall — block and mortar around a heavy timber gate. The strong point of a curtain wall.",
     "category": "structure",
-    "buildingCost": {"category:block": 6, "mortar": 2, "oak_log": 2},
+    "buildingCost": {"category:block": 6, "mortar": 2, "oak_plank": 2},
     "workAmount": 80,
     "toolTierRequired": 1,
     "populationRequired": 1,
@@ -1766,6 +1850,7 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "resin_tap",
+    "ageTier": "bronze:1",
     "passive": true,
     "name": "Resin Tap",
     "color": "#C68A2E",
