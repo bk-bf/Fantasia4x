@@ -5,13 +5,44 @@
   import type { Building } from '$lib/game/core/types';
   import { recipeService } from '$lib/game/services/RecipeService';
   import { itemService } from '$lib/game/services/ItemService';
+  import {
+    getMaterialProperty,
+    aggregateMaterialMods
+  } from '$lib/game/core/materialProperties';
 
   interface Props {
     building: Building;
+    /** Chosen `category:` build materials (costKey → itemId) — drives the per-material stat section. */
+    materials?: Record<string, string>;
     x: number;
     y: number;
   }
-  let { building, x, y }: Props = $props();
+  let { building, materials = {}, x, y }: Props = $props();
+
+  // §M Per-material stat deltas for the CHOSEN build materials: durability (multiplier) plus additive
+  // beauty / comfort / insulation. Empty when nothing is picked (the slot is still "any …").
+  let matIds = $derived(Object.values(materials).filter(Boolean));
+  let matNames = $derived(
+    matIds.map((id) => getMaterialProperty(id)?.label ?? id.replace(/_/g, ' ')).join(', ')
+  );
+  let matMods = $derived(matIds.length ? aggregateMaterialMods(matIds, 'building') : null);
+  // Rows for the MATERIAL section: a signed/×-formatted line per non-neutral stat.
+  let matRows = $derived.by(() => {
+    const out: { label: string; val: string; good: boolean }[] = [];
+    if (!matMods) return out;
+    const dur = matMods.durability ?? 1;
+    if (Math.abs(dur - 1) > 0.001)
+      out.push({ label: 'Durability', val: `×${dur.toFixed(2)}`, good: dur >= 1 });
+    const add: [string, number][] = [
+      ['Beauty', matMods.beauty ?? 0],
+      ['Comfort', matMods.comfort ?? 0],
+      ['Insulation', matMods.insulation ?? 0]
+    ];
+    for (const [label, v] of add)
+      if (Math.abs(v) > 0.001)
+        out.push({ label, val: `${v > 0 ? '+' : ''}${v.toFixed(2)}`, good: v >= 0 });
+    return out;
+  });
 
   function portal(node: HTMLElement) {
     document.body.appendChild(node);
@@ -130,6 +161,16 @@
     <div class="tip-sep">PROPERTIES</div>
     {#each propRows as r}
       <div class="tip-row"><span class="tip-lbl">{r.label}</span><span>{r.val}</span></div>
+    {/each}
+  {/if}
+
+  {#if matRows.length > 0}
+    <div class="tip-sep">MATERIAL · {matNames}</div>
+    {#each matRows as r}
+      <div class="tip-row">
+        <span class="tip-lbl">{r.label}</span>
+        <span style="color:{r.good ? '#6bc' : '#e08'}">{r.val}</span>
+      </div>
     {/each}
   {/if}
 

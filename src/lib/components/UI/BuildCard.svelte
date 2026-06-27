@@ -65,6 +65,9 @@
   export let statIngredients: Record<string, string> = {};
   /** Building def whose effects/enabled-recipes pop in a hover breakdown (buildings tab). */
   export let buildingDef: Building | null = null;
+  /** Chosen `category:` build materials (costKey → itemId) — feeds per-material stat deltas
+   *  (durability/beauty/comfort/insulation) into the building hover breakdown. */
+  export let statMaterials: Record<string, string> = {};
   /** Work category (labor) the craft belongs to — e.g. "Butchery" / "Leatherworking" / "General
    *  Crafting". Set by the crafting screen; its presence ALSO forces the item hover panel on for every
    *  recipe (so even a plain good with no combat/gear stats still gets a hover with its job line). */
@@ -156,7 +159,12 @@
 {/if}
 
 {#if statTip && buildingDef}
-  <BuildingStatTooltip building={buildingDef} x={statTip.x} y={statTip.y} />
+  <BuildingStatTooltip
+    building={buildingDef}
+    materials={statMaterials}
+    x={statTip.x}
+    y={statTip.y}
+  />
 {:else if statTip && showItemTip && statItem}
   <ItemStatTooltip
     item={statItem}

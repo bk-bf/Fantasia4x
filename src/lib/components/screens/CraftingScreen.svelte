@@ -10,6 +10,7 @@
   import { itemService } from '$lib/game/services/ItemService';
   import { recipeService } from '$lib/game/services/RecipeService';
   import { buildingService } from '$lib/game/services/BuildingService';
+  import { getMaterialProperty } from '$lib/game/core/materialProperties';
   import { WORK_CATEGORIES } from '$lib/game/core/Work';
   import { releaseReservation } from '$lib/game/core/GameState';
   import { onDestroy } from 'svelte';
@@ -47,6 +48,18 @@
     const c = item.category ?? '';
     if (t === 'food' || ['food', 'cooking', 'drink', 'meat'].includes(c)) return 'Cooking';
     return 'General Crafting';
+  }
+
+  // §M One-line "what this ingredient brings" note under a chosen dish slot: the dynamic-recipe
+  // variant's nutrition tweak (food) and/or the material's stat property (crafted-gear materials).
+  function dishSlotNote(itemId: string, slotKey: string, ingredientId: string): string | null {
+    const parts: string[] = [];
+    const variant = recipeOf(itemId)?.dynamicRecipe?.[slotKey]?.variants?.[ingredientId];
+    const nb = variant?.nutritionBonus;
+    if (nb) parts.push(`${nb > 0 ? '+' : ''}${nb} nutrition`);
+    const mp = getMaterialProperty(ingredientId);
+    if (mp) parts.push(`${mp.label}: ${mp.desc}`);
+    return parts.length ? parts.join(' · ') : null;
   }
 
   let race: any = null;
@@ -381,7 +394,9 @@
             description={entry.description}
             statItem={item}
             statRecipe={recipe}
-            statIngredients={entry.selectedIngredients ?? {}}
+            statIngredients={entry.slots
+              ? (dishSel[item.id] ?? {})
+              : (entry.selectedIngredients ?? {})}
             jobLabel={jobLabelOf(item)}
             tint={item.color ?? 'var(--accent)'}
             workAmount={recipe?.workAmount ?? null}
@@ -433,16 +448,30 @@
                      craftable once every slot is chosen. -->
                 <div class="dish-pickers">
                   {#each entry.slots as s (s.key)}
-                    <select
-                      class="dish-select"
-                      value={dishSel[item.id]?.[s.key] ?? ''}
-                      on:change={(e) => setDishSlot(item.id, s.key, e.currentTarget.value)}
-                    >
-                      <option value="">— {s.label} ×{s.quantity} —</option>
-                      {#each s.options as opt (opt.id)}
-                        <option value={opt.id}>{opt.name} ({getItemAmount(opt.id)})</option>
-                      {/each}
-                    </select>
+                    {@const sel = dishSel[item.id]?.[s.key] ?? ''}
+                    {@const have = sel ? getItemAmount(sel) : 0}
+                    {@const short = !!sel && have < s.quantity}
+                    <!-- svelte-ignore a11y_no_onchange -->
+                    <span class="cost-item cost-cat" class:neg-text={!sel || short}>
+                      <select
+                        class="mat-select"
+                        class:unset={!sel}
+                        value={sel}
+                        on:change={(e) => setDishSlot(item.id, s.key, e.currentTarget.value)}
+                        title="choose {s.label} to use"
+                      >
+                        <option value="">any {s.label}</option>
+                        {#each s.options as opt (opt.id)}
+                          <option value={opt.id}>{opt.name} ({getItemAmount(opt.id)})</option>
+                        {/each}
+                      </select>
+                      <span class="cost-qty">×{s.quantity}</span>
+                      {#if sel}<span class="cost-have" class:neg-text={short}>({have})</span>{/if}
+                    </span>
+                    {#if sel}
+                      {@const note = dishSlotNote(item.id, s.key, sel)}
+                      {#if note}<span class="mat-effect">▸ {note}</span>{/if}
+                    {/if}
                   {/each}
                 </div>
               {/if}
@@ -582,26 +611,49 @@
     opacity: 0.6;
   }
 
-  /* Multi-slot dish ingredient pickers (stew/pie). */
+  /* Multi-slot dish ingredient pickers (stew/pie) — the SAME "any X" dropdown pattern as the building
+     material picker (BuildingMenu .mat-select), so picking a stew's meat reads like picking a wall's
+     plank. */
   .dish-pickers {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
     margin-bottom: 3px;
   }
-  .dish-select {
-    width: 100%;
-    box-sizing: border-box;
-    background: #140e04;
-    border: 1px solid #6a4e20;
-    color: #e0b868;
-    font-family: var(--font-mono);
-    font-size: 9px;
-    padding: 1px 3px;
+  .cost-cat {
+    margin-top: 2px;
   }
-  .dish-select:focus {
+  .mat-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--accent-hi);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 0 2px;
+    max-width: 120px;
+    cursor: pointer;
     outline: none;
-    border-color: #c88a30;
+  }
+  .mat-select:hover {
+    border-color: var(--border-hi);
+  }
+  .mat-select:focus {
+    border-color: var(--accent-hi);
+  }
+  /* An unchosen slot reads as a dashed, dimmed prompt so it's obvious it still needs a pick. */
+  .mat-select.unset {
+    border-style: dashed;
+    color: var(--text-dim);
+  }
+  .cost-have {
+    opacity: 0.6;
+  }
+  /* §M chosen-ingredient effect line under a picker (nutrition / material stat). */
+  .mat-effect {
+    display: block;
+    color: #7e9fbf;
+    font-size: 9px;
+    margin: 0 0 2px 4px;
   }
 
   .muted-text {

@@ -302,6 +302,7 @@
             charSpans={building.charSpans}
             description={building.description ?? null}
             buildingDef={building}
+            statMaterials={selectedMaterials[building.id] ?? {}}
             tint={building.color ?? 'var(--accent)'}
             workAmount={building.workAmount ?? null}
             badge={placed > 0 ? `×${placed}` : null}
