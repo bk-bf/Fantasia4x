@@ -147,6 +147,24 @@ update_release_pill() {
   echo "▸ Release pill in $file bumped → $tag (committed & pushed)."
 }
 
+# electron-builder names every artifact after package.json's "version" (Fantasia4x-<version>.AppImage,
+# …Setup.<version>.exe, fantasia4x_<version>_amd64.deb). The release TAG is independent (autotagged /
+# --tag), so without this they drift — a v0.1.119 release shipped files named 0.1.0. Pin package.json to
+# the tag (minus the leading v) before packaging and commit it, so the filenames match the release and
+# the version is recorded in-tree. No-ops if already current. Returns 0 if it changed the version.
+sync_pkg_version() {
+  local tag="$1" ver file="package.json" cur
+  ver="${tag#v}"
+  cur="$(node -p "require('./$file').version" 2>/dev/null || echo '')"
+  [[ "$cur" == "$ver" ]] && return 1   # already current — nothing to do
+  # Edit just the top-level "version" line (npm/pnpm version would also create a tag, which we manage here).
+  sed -i -E "0,/\"version\": \"[^\"]*\"/s//\"version\": \"$ver\"/" "$file"
+  git add "$file"
+  git commit -q -m "chore(release): set package.json version to $ver"
+  echo "▸ package.json version → $ver (committed) so artifacts are named for the release."
+  return 0
+}
+
 if $PUSH; then
   BRANCH="$(git rev-parse --abbrev-ref HEAD)"
   if [[ "$BRANCH" != "main" ]]; then
@@ -176,6 +194,12 @@ if $PUSH; then
     echo "  Mode: LOCAL — build Linux + Windows here, then publish to GitHub from this machine."
     LINUX=true; WINDOWS=true   # a release always ships both installers
 
+    # Pin package.json to $TAG so electron-builder names artifacts for the release (else they ship as
+    # the stale package.json version). If it actually changed, the existing dist-electron/ artifacts carry
+    # the OLD name — force a rebuild rather than reuse them.
+    VERSION_CHANGED=false
+    if sync_pkg_version "$TAG"; then VERSION_CHANGED=true; fi
+
     # Reuse existing artifacts instead of rebuilding when dist-electron/ already holds a Linux + Windows
     # installer set, all built AFTER the current HEAD commit (nothing in the tree has changed since).
     # You still confirm the asset list at the publish prompt below, so a stale reuse is recoverable.
@@ -188,7 +212,7 @@ if $PUSH; then
         [[ -e "$f" ]] || continue
         [[ "$(stat -c %Y "$f")" -ge "$HEAD_TS" ]] || stale=true
       done
-      $stale || REUSE_BUILD=true
+      { $stale || $VERSION_CHANGED; } || REUSE_BUILD=true
     fi
     if $REUSE_BUILD; then
       echo "  Artifacts in dist-electron/ are newer than HEAD — reusing them, skipping the build."
