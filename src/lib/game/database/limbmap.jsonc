@@ -81,6 +81,10 @@
         "leftUpperArm"     : {"size": 45, "bleedRatio": 0.05, "hitWeight": 2, "isPaired": true, "armor": 0.6},
         "leftHumerus" : {"size": 45, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftUpperArm"},
         "leftForearm"      : {"size": 35, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "armor": 0.5},
+        // TODO(anatomy): the forearm is really two parallel bones (radius + ulna) and the lower leg two
+        // (tibia + fibula). We model each segment as its single dominant bone (ulna / tibia) because the
+        // engine binds one bone per flesh segment (skeletonPartOf). Splitting them — so one can break while
+        // the other holds — needs that 1:1 routing relaxed; applies to the quadruped/avian analogues too.
         "leftUlna"  : {"size": 35, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftForearm"},
         "leftHand"         : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "weapons": ["fists", "claw"], "armor": 0.4},
         "leftMetacarpus"     : {"size": 30, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftHand"},
