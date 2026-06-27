@@ -309,6 +309,24 @@ tile.temperature = biomeBaseTemp + seasonOffset + weatherMod + shelterMod
 > status → 2.5× faster hypothermia/heat-stroke recovery + dampened storm-mood. *(Full 4-wall flood-fill
 > enclosure — Subsystem 7 item 1 — is still approximated by roof presence.)*
 
+> **✅ Amendment (2026-06-27) — diurnal day/night swing.** The baked `tile.temperature` only changed at
+> a season boundary, so a full day read perfectly flat (pre-dawn was as warm as mid-afternoon — too
+> little daily variety). Added `EnvironmentService.diurnalTempDelta(turn, season)`: a keyframe curve
+> (trough ~05:00, crest ~15:00 — phase-lagged behind the light/sun curve like real air temperature),
+> **±7 °C** base amplitude scaled per season (`summer ×1.2 … spring/autumn ×1.0 … winter ×0.6` — clear
+> dry summers swing hard, winter's cloud blanket damps it). It is a single **global scalar of
+> time-of-day**, summed with `weatherDelta` into the SAME open-air delta slot of `effectiveTemperature`
+> /`tileTemperature` — so a roof's `weatherProtection` + insulation flatten the night chill automatically,
+> and there is **no new per-pawn cost** (PERF-3) and **nothing new baked into the worldMap** (PERF-1/2:
+> `tile.temperature` stays the season-baked *mean*; the swing rides live alongside the weather term).
+> Threaded through the need-rate hot path (`PawnService`), the hypothermia/heat driver
+> (`PawnStateMachine`), the crop-frost driver + `avgTemperature` topbar + snow pass (`GameEngineImpl`,
+> so afternoons thaw / cold nights freeze), and the two HUD readouts (`GameCanvas`, on the *ambient*
+> turn so the readout matches the visible time of day). `tileTemperature`/`accumulateSnow` gained a
+> `turn` (+`season`) arg. Curve carries a ~−0.5 °C daily-mean bias (more hours cool than warm) —
+> intentional and negligible. Locked by `environment.test.ts` ("diurnal swing: pre-dawn colder than
+> mid-afternoon").
+
 > **⚠ Perf (PERF-1 & PERF-2).** `temperature` is a **worldMap** field. The season-change recompute
 > **must mutate affected tiles IN PLACE + `markTileDirty(x,y)`** — never `worldMap.map()` (a 38k rebuild
 > + cross-worker re-clone, the §C/§D6 cliff). `temperature` is already dropped from the slim-tile
