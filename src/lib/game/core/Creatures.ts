@@ -126,6 +126,13 @@ export interface CreatureDefinition {
   huntable: boolean;
   canSteal: boolean;
   chargesWhenWounded: boolean;
+  /**
+   * Whether a `neutral` creature defends its personal space — charging a pawn that wanders within
+   * half its vision range (boar/bear/wolf). Defaults to TRUE. Set FALSE on placid herbivores
+   * (aurochs, mammoth) that ignore an approaching pawn and only fight back once actually attacked.
+   * Has no effect on `passive` (always flees) or `aggressive` (always charges) creatures.
+   */
+  territorial: boolean;
   /** 0–1 darkness immunity (§G). 0 = sight/work scale fully with light (normal); 1 = sees and works
    *  at full range/speed regardless of darkness (nocturnal predators). Defaults to 0. */
   nightVision: number;
@@ -262,6 +269,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     huntable: (raw.huntable as boolean) ?? false,
     canSteal: (raw.canSteal as boolean) ?? false,
     chargesWhenWounded: (raw.chargesWhenWounded as boolean) ?? false,
+    territorial: (raw.territorial as boolean) ?? true,
     nightVision: (raw.nightVision as number) ?? 0,
     produces: raw.produces as CreatureProduces | undefined,
     carcassItemId: (raw.carcassItemId as string) ?? undefined,

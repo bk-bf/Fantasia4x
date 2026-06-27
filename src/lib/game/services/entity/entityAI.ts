@@ -907,8 +907,14 @@ export function stepHostile(
       // Aggressive creatures attack on full sight range.
       // Neutral creatures are territorial: defend personal space when a pawn
       // steps within half their vision range (e.g. bears charge if approached).
+      // Placid herbivores (territorial === false — aurochs, mammoth) skip this: they ignore an
+      // approaching pawn and only fight back once actually attacked (the hunt handler forces them
+      // into Attacking), so wandering too close no longer provokes a charge.
       const tooClose =
-        !aggressive && inVision && dist(mob, inVision.pos) <= Math.ceil(visionRange * 0.5);
+        !aggressive &&
+        def.territorial &&
+        inVision &&
+        dist(mob, inVision.pos) <= Math.ceil(visionRange * 0.5);
       // Territory: a laired mob only engages a pawn that's INSIDE its lair's range. Pawns passing
       // outside the territory are seen but ignored — so the player can travel safely between lairs and
       // only triggers a pack by entering its turf.

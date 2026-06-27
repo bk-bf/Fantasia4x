@@ -362,6 +362,7 @@
         "bodyScale"         : 2.0,
         "nightVision"       : 0.4,
         "behaviour"         : "neutral",
+        "territorial"       : false, // placid herbivore — ignores approaching pawns, only fights back when attacked
         "diet"              : "herbivore",
         "grazes"            : true,
         "huntable"          : true,
@@ -390,6 +391,7 @@
         "bodyScale"         : 3.5,
         "nightVision"       : 0.3,
         "behaviour"         : "neutral",
+        "territorial"       : false, // placid herbivore — ignores approaching pawns, only fights back when attacked
         "diet"              : "herbivore",
         "grazes"            : true,
         "huntable"          : true,
