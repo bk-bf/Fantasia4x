@@ -316,6 +316,24 @@
       }
     }
   },
+  // BREW HERB TEA (campfire): herbs steeped in hot water → a calming `soothed` drink (the cooked outlet
+  // for thyme/mint/sage). Eaten via the meal path like ale/wine, so its meal buff fires on consumption.
+  {
+    "id"              : "brew_herb_tea",
+    "station"         : "campfire",
+    "inputs"          : {"water": 1},
+    "outputs"         : {"herbal_tea": 1},
+    "workAmount"      : 3,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "cooking", "minTier": 0},
+    "dynamicRecipe"   : {
+      "herb": {
+        "acceptsCategory": "herb",
+        "quantity"       : 2,
+        "default"        : {"name": "Herbal Tea", "description": "Herbs steeped in hot water — calming and restorative."}
+      }
+    }
+  },
   // TODO(honey): a fruit compote / stewed-fruit treat (fruit ×3 + honey → a `refreshed` morale dish) once
   // beekeeping (ENTITIES D) makes honey obtainable. Fruit currently has no cooked outlet besides pies/wine.
   {

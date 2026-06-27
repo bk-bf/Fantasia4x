@@ -195,7 +195,15 @@ describe('§F8 mixed dishes & meal buffs', () => {
         .filter((c) => c.transient)
         .map((c) => c.id)
     );
-    for (const id of ['small_stew', 'lavish_stew', 'meat_pie', 'hearty_pie', 'pottage', 'bread']) {
+    for (const id of [
+      'small_stew',
+      'lavish_stew',
+      'meat_pie',
+      'hearty_pie',
+      'pottage',
+      'bread',
+      'herbal_tea'
+    ]) {
       const buff = itemService.getItemById(id)?.mealBuff;
       expect(buff, id).toBeTruthy();
       expect(buffIds.has(buff!.condition), `${id} → ${buff!.condition}`).toBe(true);
@@ -203,6 +211,11 @@ describe('§F8 mixed dishes & meal buffs', () => {
     // tiers map to the right purpose: stew = endurance, hearty pie = fortification
     expect(itemService.getItemById('lavish_stew')!.mealBuff!.condition).toBe('hearty_meal');
     expect(itemService.getItemById('hearty_pie')!.mealBuff!.condition).toBe('fortified');
+    // herbal tea is the cooked outlet for herbs → soothed (recovery)
+    expect(itemService.getItemById('herbal_tea')!.mealBuff!.condition).toBe('soothed');
+    expect(recipeService.slotCategories(
+      Object.values(recipeService.getRecipeById('brew_herb_tea')!.dynamicRecipe!)[0]
+    )).toContain('herb');
   });
 
   it('eating a dish stamps its meal buff onto conditionTimers (max-duration, refreshed each meal)', () => {
