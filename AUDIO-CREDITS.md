@@ -82,6 +82,7 @@ Subtle interface feedback played globally on button hover/press.
 | ---------------- | ------ | ------ | ------- |
 | `ui/hover.ogg`   | "51 UI sound effects" (https://opengameart.org/content/51-ui-sound-effects-buttons-switches-and-clicks) | Kenney (kenney.nl) | CC0 |
 | `ui/click.ogg`   | "51 UI sound effects" (https://opengameart.org/content/51-ui-sound-effects-buttons-switches-and-clicks) | Kenney (kenney.nl) | CC0 |
+| `ui/threat-alert.ogg` | "Attention" bugle call (https://commons.wikimedia.org/wiki/File:Attention_Bugle_Call_(US).oga) — threat-sighted alarm; trimmed + loudness-normalised | U.S. Army Band | Public domain |
 
 ## Combat SFX — weapon swings + condition cues (`audio/combat/<id>/`)
 
