@@ -17,6 +17,15 @@ describe('category:plank dynamic slot', () => {
     expect(itemMatchesCostCategory({ id: 'granite', category: 'stone' }, 'stone')).toBe(true);
   });
 
+  it('`log` matches any *_log; `block` resolves natively via item.category', () => {
+    for (const id of ['pine_log', 'oak_log', 'heartwood_log'])
+      expect(itemMatchesCostCategory({ id, category: 'wood' }, 'log')).toBe(true);
+    expect(itemMatchesCostCategory({ id: 'pine_plank', category: 'wood' }, 'log')).toBe(false);
+    // blocks already carry category "block" — no pseudo-slot needed
+    expect(itemMatchesCostCategory({ id: 'granite_block', category: 'block' }, 'block')).toBe(true);
+    expect(itemMatchesCostCategory({ id: 'marble_block', category: 'block' }, 'block')).toBe(true);
+  });
+
   it('expandCategoryCostLoose maps category:plank → a representative concrete plank', () => {
     const out = itemService.expandCategoryCostLoose({ 'category:plank': 4, iron_nail: 2 });
     const keys = Object.keys(out);

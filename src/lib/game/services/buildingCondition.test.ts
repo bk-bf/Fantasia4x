@@ -57,16 +57,16 @@ describe('BuildingService condition (refactor Stage 1)', () => {
   });
 
   it('repair restores condition to 100 and consumes ~25% of build cost', () => {
-    const gs = makeState([wall({ condition: 40 })], { branch: 10, plant_fiber: 10 });
+    const gs = makeState([wall({ condition: 40 })], { branch: 10, cordage: 10 });
     const out = buildingService.repairBuilding('b1', gs);
     expect(out.buildings![0].condition).toBe(100);
-    // 25% of {branch:8, plant_fiber:4} = {branch:2, plant_fiber:1}
+    // 25% of branch_wall {branch:8, cordage:8} = {branch:2, cordage:2}
     expect(out.stockpile['branch']).toBe(8);
-    expect(out.stockpile['plant_fiber']).toBe(9);
+    expect(out.stockpile['cordage']).toBe(8);
   });
 
   it('repair is a no-op when materials are unaffordable', () => {
-    const gs = makeState([wall({ condition: 40 })], { branch: 0, plant_fiber: 0 });
+    const gs = makeState([wall({ condition: 40 })], { branch: 0, cordage: 0 });
     expect(buildingService.repairBuilding('b1', gs)).toBe(gs);
   });
 });

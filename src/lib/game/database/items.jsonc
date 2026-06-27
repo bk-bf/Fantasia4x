@@ -1034,6 +1034,21 @@
     "toolTierRequired": 1
   },
   {
+    "id": "bronze_nail",
+    "charSpans": [ {"sheet": "items", "id": 162} ],
+    "name": "Bronze Nails",
+    "type": "material",
+    "category": "metal",
+    "maxDurability": 180,
+    "deteriorationRate": 0.015,
+    "description": "A handful of cast bronze nails and tacks. The bronze-age fastener — pins planks into doors, floors and furniture before iron is smelted.",
+    "color": "#A8782E",
+    "amount": 0,
+    "weightKg": 0.2,
+    "volumeL": 0.1,
+    "toolTierRequired": 1
+  },
+  {
     "id": "steel_rivet",
     "charSpans": [ {"sheet": "items", "id": 162} ],
     "name": "Steel Rivets",

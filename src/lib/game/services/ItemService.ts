@@ -49,6 +49,7 @@ const BUILDING_DEFS_FOR_ITEMS = buildingsData as unknown as import('../core/type
  */
 export function itemMatchesCostCategory(item: { id: string; category?: string }, cat: string): boolean {
   if (cat === 'plank') return item.id.endsWith('_plank');
+  if (cat === 'log') return item.id.endsWith('_log');
   return item.category === cat;
 }
 

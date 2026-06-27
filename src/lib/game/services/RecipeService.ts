@@ -4,6 +4,14 @@ import recipesData from '../database/recipes.jsonc';
 import buildingsData from '../database/buildings.jsonc';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
+
+// `category:<cat>` slot match (local copy of ItemService.itemMatchesCostCategory to avoid a
+// RecipeService↔ItemService import cycle): `plank`/`log` match any *_plank / *_log; else item.category.
+function recipeItemMatchesCategory(item: { id: string; category?: string }, cat: string): boolean {
+  if (cat === 'plank') return item.id.endsWith('_plank');
+  if (cat === 'log') return item.id.endsWith('_log');
+  return item.category === cat;
+}
 const AUTHORED_RECIPES = recipesData as unknown as Recipe[];
 
 /** ADR-009 step 2: station id → its craft-tool requirement (data-driven, mirrors resources.jsonc).
@@ -127,6 +135,16 @@ export class RecipeServiceImpl implements RecipeService {
       }
       for (const k of inputItems) {
         (this.usedIn.get(k) ?? this.usedIn.set(k, []).get(k)!).push(r);
+        // A `category:<cat>` slot (e.g. category:log) is "used by" every concrete item that satisfies
+        // it — index it under each so getRecipesUsing('pine_log') still finds the dynamic recipe.
+        if (k.startsWith('category:')) {
+          const cat = k.slice('category:'.length);
+          for (const it of ITEMS_DATABASE) {
+            if (!recipeItemMatchesCategory(it, cat)) continue;
+            const arr = this.usedIn.get(it.id) ?? this.usedIn.set(it.id, []).get(it.id)!;
+            if (!arr.includes(r)) arr.push(r);
+          }
+        }
       }
     }
   }

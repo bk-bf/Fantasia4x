@@ -24,6 +24,7 @@ const ITEMS_DB = itemsData as unknown as Item[];
 // pseudo-category `plank` matches ANY sawn plank so `category:plank` means "any plank".
 function itemMatchesCostCategory(item: { id: string; category?: string }, cat: string): boolean {
   if (cat === 'plank') return item.id.endsWith('_plank');
+  if (cat === 'log') return item.id.endsWith('_log');
   return item.category === cat;
 }
 

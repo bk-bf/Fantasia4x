@@ -11,8 +11,7 @@
   {
     "id"               : "split_firewood",
     "station"          : "chopping_block",
-    "inputs"           : {"pine_log": 1},
-    "inputAlternatives": [ {"birch_log": 1}, {"oak_log": 1}, {"ash_log": 1}, {"yew_log": 1} ],
+    "inputs"           : {"category:log": 1},
     "outputs"          : {"green_firewood": 3, "branch": 2},
     "workAmount"       : 2,
     "toolTierRequired" : 0
@@ -28,8 +27,7 @@
   {
     "id"               : "hew_beam",
     "station"          : "chopping_block",
-    "inputs"           : {"pine_log": 2},
-    "inputAlternatives": [ {"oak_log": 2}, {"birch_log": 2}, {"ash_log": 2} ],
+    "inputs"           : {"category:log": 2},
     "outputs"          : {"beam": 1, "branch": 1},
     "workAmount"       : 6,
     "toolTierRequired" : 1
@@ -38,8 +36,8 @@
     "id"               : "burn_charcoal",
     "station"          : "charcoal_pit",
     "passive"          : true,
-    "inputs"           : {"pine_log": 2},
-    "inputAlternatives": [ {"oak_log": 2}, {"birch_log": 2}, {"ash_log": 2}, {"dry_firewood": 3} ],
+    "inputs"           : {"category:log": 2},
+    "inputAlternatives": [ {"dry_firewood": 3} ],
     "outputs"          : {"charcoal": 2, "ash": 1},
     "workAmount"       : 12,
     "toolTierRequired" : 0
@@ -371,6 +369,14 @@
     "inputs"          : {"copper_bar": 3, "tin_bar": 1, "clay_mold": 1},
     "outputs"         : {"bronze_bar": 1},
     "workAmount"      : 10,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "make_bronze_nail",
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1},
+    "outputs"         : {"bronze_nail": 12},
+    "workAmount"      : 6,
     "toolTierRequired": 1
   },
   {
