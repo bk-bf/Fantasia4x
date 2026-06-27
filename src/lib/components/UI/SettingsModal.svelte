@@ -20,6 +20,8 @@
   import {
     weatherEffects,
     dayNightTint,
+    showFps,
+    showTps,
     hideSidebars,
     autosaveEnabled,
     defaultGameSpeed,
@@ -92,6 +94,20 @@
           { value: 'fullscreen', label: 'Fullscreen' }
         ]}
         onSelect={setWindowMode}
+      />
+      <SettingRow
+        type="checkbox"
+        label="Show FPS"
+        sub="— render frames/sec in the top bar"
+        checked={$showFps}
+        onToggle={showFps.toggle}
+      />
+      <SettingRow
+        type="checkbox"
+        label="Show TPS"
+        sub="— simulation ticks/sec in the top bar"
+        checked={$showTps}
+        onToggle={showTps.toggle}
       />
 
       <div class="section">Audio</div>

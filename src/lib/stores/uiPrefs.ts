@@ -150,6 +150,11 @@ export const weatherEffects = createPersistedBool('fx.gfx.weather', true);
  *  separate and unaffected — this is the UI tint only. */
 export const dayNightTint = createPersistedBool('fx.gfx.dayNightTint', true);
 
+/** Display — show the render FPS / simulation TPS readouts in the top bar. Each gates its own half of
+ *  the perf chip in GameControls. ON by default; persisted. */
+export const showFps = createPersistedBool('fx.display.showFps', true);
+export const showTps = createPersistedBool('fx.display.showTps', true);
+
 /** Gameplay — debounced autosave to IndexedDB. ON by default; persisted. When off, scheduleSave is a
  *  no-op (manual "Save Game" still writes). */
 export const autosaveEnabled = createPersistedBool('fx.gameplay.autosave', true);

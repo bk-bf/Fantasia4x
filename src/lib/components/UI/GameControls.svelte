@@ -10,6 +10,7 @@
   } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import { renderFps } from '$lib/stores/perfStats';
+  import { showFps, showTps } from '$lib/stores/uiPrefs';
   import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService';
   import {
     SEASON_LABELS,
@@ -213,11 +214,14 @@
         : ''}</span
     >
     <span class="bi turn" title="Turn {currentTurnValue}">T{currentTurnValue}</span>
-    <span
-      class="bi perf"
-      title="Render {fps} FPS · Simulation {tps} TPS (target {TICKS_PER_SECOND *
-        gameSpeed} at {gameSpeed}×)">{fps}FPS · {tps}TPS</span
-    >
+    {#if $showFps || $showTps}
+      <span
+        class="bi perf"
+        title="Render {fps} FPS · Simulation {tps} TPS (target {TICKS_PER_SECOND *
+          gameSpeed} at {gameSpeed}×)"
+        >{#if $showFps}{fps}FPS{/if}{#if $showFps && $showTps} · {/if}{#if $showTps}{tps}TPS{/if}</span
+      >
+    {/if}
     <span class="bi" class:running={!isPaused} class:paused={isPaused}>
       {isPaused ? '■ PAUSED' : '● RUNNING'}
     </span>
