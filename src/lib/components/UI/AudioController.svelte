@@ -17,6 +17,7 @@
   import { get } from 'svelte/store';
   import { gameState, currentWeather } from '$lib/stores/gameState';
   import { combatSounds } from '$lib/stores/combatSounds';
+  import { threatPulse } from '$lib/stores/uiState';
   import { masterVolume, musicVolume, sfxVolume, ambientVolume } from '$lib/stores/uiPrefs';
   import { cameraViewport, cameraTileSize, cameraZoomRange } from '$lib/stores/cameraView';
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
@@ -31,6 +32,7 @@
     WORK_SOUND_LABELS,
     combatClipsFor,
     UI_SFX,
+    THREAT_ALERT_SFX,
     type MusicScene,
     type AmbientBed,
     type AmbientLayers
@@ -92,6 +94,10 @@
   const UI_HOVER_GAIN = 0.5;
   const UI_CLICK_GAIN = 0.9;
   const UI_HOVER_THROTTLE_MS = 45; // smooth a fast sweep across a toolbar (no machine-gun)
+
+  // ── Threat alert (trumpet/bugle), via the threatPulse signal — a mob first spotting a colonist ──
+  // Non-spatial colony-wide alarm; prominent so the player hears it even when it auto-pauses the game.
+  const THREAT_ALERT_GAIN = 0.85;
 
   // ── Ambient zoom balance ──
   // "Detail" beds (local critters/foliage) fade out as you zoom OUT; "weather" beds (wind/rain) stay
@@ -460,6 +466,16 @@
       }
     });
 
+    // Threat alert — a hostile mob has just spotted a colonist. The sim-log bridge bumps threatPulse to
+    // a fresh timestamp per sighting; fire the trumpet ONCE per bump. Skip the immediate replay of the
+    // current value on subscribe (and the 0 = never-fired sentinel) so it never sounds on load.
+    let lastThreat = get(threatPulse);
+    const stampThreat = threatPulse.subscribe((v) => {
+      if (v === lastThreat) return;
+      lastThreat = v;
+      if (v > 0) audioService.playUi(THREAT_ALERT_SFX, THREAT_ALERT_GAIN);
+    });
+
     const iv = setInterval(() => (nowTick = Date.now()), 1000);
     const sfxIv = setInterval(() => {
       evalAmbient();
@@ -474,6 +490,7 @@
       window.removeEventListener('pointerover', onUiOver, true);
       window.removeEventListener('click', onUiClick, true);
       stampCombat();
+      stampThreat();
       volUnsubs.forEach((u) => u());
       clearInterval(iv);
       clearInterval(sfxIv);

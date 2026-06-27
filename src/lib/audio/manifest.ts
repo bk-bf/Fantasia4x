@@ -43,6 +43,12 @@ export const UI_SFX = {
   click: '/audio/ui/click.ogg'
 } as const;
 
+/** Alert one-shot: a trumpet/bugle call fired ONCE when a hostile mob first spots a colonist (the
+ *  threatPulse signal). Played by AudioController via audioService.playUi — non-spatial (a colony-wide
+ *  alarm, not tied to the camera), so it reads at full volume regardless of where the sighting happens.
+ *  Public-domain US Army "Attention" bugle call. */
+export const THREAT_ALERT_SFX = '/audio/ui/threat-alert.ogg';
+
 /** Bed id → looping source file. */
 export const AMBIENT_FILES: Record<AmbientBed, string> = {
   'birds-day': '/audio/ambient/birds-day.ogg',
