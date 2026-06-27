@@ -508,6 +508,9 @@ export function getRestBuildingAtPawn(pawn: Pawn, gs: GameState): PlacedBuilding
   );
 }
 
+// §M room amenity helper lives in core/buildingAmenity (acyclic: services + pawn systems both use it).
+export { amenityAt, AMENITY_RADIUS } from '../../core/buildingAmenity';
+
 /** True when the pawn is adjacent to a shelter (better sleep). */
 export function isAtRestBuilding(pawn: Pawn, gs: GameState): boolean {
   return getRestBuildingAtPawn(pawn, gs) !== null;

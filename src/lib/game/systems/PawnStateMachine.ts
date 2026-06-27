@@ -87,7 +87,7 @@ import { pawnById } from '../core/pawnIndex';
 // `pawn/pawnHelpers.ts`, the stateless queries in `pawn/pawnQueries.ts`, and the state enum in
 // `pawn/pawnStates.ts`. What remains here is the health/lifecycle block + the per-pawn dispatcher.
 import { PAWN_STATE, type PawnStateName } from './pawn/pawnStates';
-import { findCombatThreat, FILTHY_THRESHOLD, WET_THRESHOLD } from './pawn/pawnHelpers';
+import { findCombatThreat, amenityAt, FILTHY_THRESHOLD, WET_THRESHOLD } from './pawn/pawnHelpers';
 import {
   handleIdle,
   handleMovingToResource,
@@ -649,6 +649,11 @@ export function healWounds(pawn: Pawn, turn = 0, buildings?: PlacedBuilding[]): 
         if (bonus) mult *= 1 + bonus;
         break;
       }
+      // §M room amenity: recovering in a comfortable, beautiful, finely-furnished room (couch/cushions/
+      // silk/wool) knits wounds faster — the surrounding furniture, scaled small + capped.
+      const a = amenityAt(buildings, px, py);
+      const amenityHeal = Math.min(0.5, (a.comfort + a.beauty) * 0.15);
+      if (amenityHeal > 0) mult *= 1 + amenityHeal;
     }
   }
   if ((pawn.needs?.hunger ?? 0) <= HEALING_CONFIG.wellFedHunger)

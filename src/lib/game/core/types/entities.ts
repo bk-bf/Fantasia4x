@@ -89,6 +89,12 @@ export interface Mob {
    *  the map). Cleared on disengage. Aggressive hunters never set it (they pursue to ~1.5× vision). */
   chaseAnchorX?: number;
   chaseAnchorY?: number;
+  /** Last tile at which this mob actually HAD line-of-sight to a pawn. A mob can only START aggro on a
+   *  pawn it can SEE (detection is LOS-gated — no chasing a target spotted through a wall); once it has
+   *  seen one, it remembers this spot and presses to it when the pawn slips behind cover, abandoning the
+   *  hunt there if it can't re-acquire. Cleared on disengage. AI-internal — not in the render snapshot. */
+  lastSeenX?: number;
+  lastSeenY?: number;
   /** Consecutive ticks this mob has been unable to enter its next tile (blocked by
    * another entity). Once it exceeds a threshold the path is dropped so the FSM
    * re-routes around the obstruction instead of waiting forever (corridor deadlock). */

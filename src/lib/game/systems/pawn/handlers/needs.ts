@@ -28,6 +28,7 @@ import {
   SLEEPING_TURNS,
   SLEEPING_TURNS_GROUND,
   getRestBuildingAtPawn,
+  amenityAt,
   BUILDINGS_DB,
   FATIGUE_PER_SLEEPING_GROUND,
   HUNGER_THRESHOLD,
@@ -408,7 +409,17 @@ export function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
   const shelterBonus = restBuilding
     ? (def?.effects?.fatigueRecovery ?? def?.effects?.sleepQuality ?? 0)
     : 0;
-  const fatigueRecovery = FATIGUE_PER_SLEEPING_GROUND + shelterBonus;
+  // §M room amenity: a comfortable, beautiful, finely-built bedroom (couch/cushioned chair/feather bed,
+  // silk/wool/cotton material) rests a pawn faster. Scaled small + capped so it tops up the bed's rest
+  // quality without dwarfing it. Material choice feeds in via amenityAt (the building's `materials`).
+  const pos = pawn.position;
+  const amenityBonus = pos
+    ? Math.min(0.4, (() => {
+        const a = amenityAt(gameState.buildings, pos.x, pos.y);
+        return (a.comfort + a.beauty) * 0.15;
+      })())
+    : 0;
+  const fatigueRecovery = FATIGUE_PER_SLEEPING_GROUND + shelterBonus + amenityBonus;
   const sleepDuration = restBuilding ? SLEEPING_TURNS : SLEEPING_TURNS_GROUND; // for progress bar only
   // fatigueRecovery is a per-second rate; apply one tick's worth each step.
   const newFatigue = Math.max(0, (pawn.needs?.fatigue ?? 50) - perTick(fatigueRecovery));

@@ -20,6 +20,7 @@ import { stepBody } from '../systems/MovementSystem';
 import { occupancyService } from './OccupancyService';
 import conditionsData from '../database/conditions.jsonc';
 import { getConditionCurrentStage, conditionNeedMultipliers, comfortRange } from '../core/needs';
+import { amenityAt } from '../core/buildingAmenity';
 import {
   getAmbientLight,
   weatherEffects,
@@ -233,7 +234,20 @@ export class PawnServiceImpl implements PawnService {
     if (weatherMood < 0 && pawn.position && isRoofedTile(pawn.position.x, pawn.position.y)) {
       weatherMood *= 0.4;
     }
-    pawn.state = this.calculateStateUpdate(pawn.state, pawn.needs, gameState.turn, weatherMood);
+    // §M pleasant surroundings: a pawn standing on a comfortable, beautiful, finely-furnished tile
+    // drifts toward a better mood, proportional to that tile's amenity (material choice feeds in).
+    let amenityMood = 0;
+    if (pawn.position) {
+      const a = amenityAt(gameState.buildings, pawn.position.x, pawn.position.y);
+      amenityMood = Math.min(3, (a.comfort + a.beauty) * 1.5);
+    }
+    pawn.state = this.calculateStateUpdate(
+      pawn.state,
+      pawn.needs,
+      gameState.turn,
+      weatherMood,
+      amenityMood
+    );
     return gameState;
   }
 
@@ -613,13 +627,18 @@ export class PawnServiceImpl implements PawnService {
     state: PawnState,
     needs: EntityNeeds,
     currentTurn: number,
-    weatherMood = 0
+    weatherMood = 0,
+    amenityMood = 0
   ): PawnState {
     const newState = { ...state };
 
     // SEASONS_WEATHER: weather sets a gentle mood drift (pleasant skies lift, storms depress).
     if (weatherMood !== 0) {
       newState.mood = Math.max(0, Math.min(100, newState.mood + perTick(weatherMood)));
+    }
+    // §M pleasant-surroundings mood lift, proportional to the occupied tile's comfort + beauty.
+    if (amenityMood > 0) {
+      newState.mood = Math.min(100, newState.mood + perTick(amenityMood));
     }
 
     // Critical needs override current activities.
