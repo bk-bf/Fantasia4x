@@ -56,12 +56,21 @@ const SHELL_UA_MARKER = 'Fantasia4xShell';
 
 function desktopShellGuardPlugin(): Plugin {
   const allowBrowser = process.env.F4X_ALLOW_BROWSER === 'true';
+  // Dev tooling under /dev/ (spritesheet-viewer, …) is only reachable when the server is started in
+  // debug mode — i.e. `./dev.sh --debug`, the way the Electron spike is run for debugging. Without it,
+  // those paths stay behind the desktop-shell guard like everything else.
+  const debugMode = process.env.VITE_DEBUG_MODE === 'true';
   const guard = (
-    req: { headers: Record<string, string | string[] | undefined> },
+    req: { url?: string; headers: Record<string, string | string[] | undefined> },
     res: { statusCode: number; setHeader: (k: string, v: string) => void; end: (body?: string) => void },
     next: () => void
   ) => {
     if (allowBrowser) return next();
+    // In debug mode only: standalone dev tools under /dev/ (spritesheet-viewer, …) open in a plain
+    // browser — they aren't the game, so let them through, along with the static tileset BMPs they load
+    // (/tilesets/). Those are just images; the playable app (root document + bundle) stays guarded.
+    const url = req.url || '';
+    if (debugMode && (url.startsWith('/dev/') || url.startsWith('/tilesets/'))) return next();
     const ua = String(req.headers['user-agent'] || '');
     if (ua.includes(SHELL_UA_MARKER)) return next();
     res.statusCode = 403;
