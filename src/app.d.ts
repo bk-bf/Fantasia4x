@@ -9,6 +9,10 @@ declare global {
     // interface PageState {}
     // interface Platform {}
   }
+
+  // Compile-time constant injected by vite.config.ts `define` — package.json's version, shown on the
+  // title screen so the credit line always matches the shipped build.
+  const __APP_VERSION__: string;
 }
 
 // Vite env vars

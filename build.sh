@@ -147,11 +147,13 @@ update_release_pill() {
   echo "▸ Release pill in $file bumped → $tag (committed & pushed)."
 }
 
-# electron-builder names every artifact after package.json's "version" (Fantasia4x-<version>.AppImage,
-# …Setup.<version>.exe, fantasia4x_<version>_amd64.deb). The release TAG is independent (autotagged /
-# --tag), so without this they drift — a v0.1.119 release shipped files named 0.1.0. Pin package.json to
-# the tag (minus the leading v) before packaging and commit it, so the filenames match the release and
-# the version is recorded in-tree. No-ops if already current. Returns 0 if it changed the version.
+# package.json's "version" is the single source of truth for the build's version: electron-builder names
+# every artifact after it (Fantasia4x-<version>.AppImage, …Setup.<version>.exe, fantasia4x_<version>_amd64
+# .deb), AND vite.config.ts injects it as __APP_VERSION__ for the title-screen credit line. The release
+# TAG is independent (autotagged / --tag), so without this they drift — v0.1.119 once shipped files named
+# 0.1.0 with an "alpha 0.1.0" menu. Pin package.json to the tag (minus the leading v) before packaging and
+# commit it, so the filenames AND the in-app version match the release. No-ops if already current; returns
+# 0 if it changed the version.
 sync_pkg_version() {
   local tag="$1" ver file="package.json" cur
   ver="${tag#v}"

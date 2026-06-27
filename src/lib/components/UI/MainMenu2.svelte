@@ -84,7 +84,7 @@
   <div class="content">
     <h1 class="title">FANTASIA</h1>
     <div class="subtitle">a 4X colony chronicle</div>
-    <div class="credit-line">alpha 0.1.0 · tileset: Bitlands by DragonDePlatino</div>
+    <div class="credit-line">alpha {__APP_VERSION__} · tileset: Bitlands by DragonDePlatino</div>
 
     <nav class="menu">
       <button class="menu-btn" onclick={newGame}>New Game</button>

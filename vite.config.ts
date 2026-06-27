@@ -110,7 +110,17 @@ function jsoncPlugin(): Plugin {
   };
 }
 
+// App version, read from package.json at config time and injected as a compile-time constant so the
+// title-screen credit line always matches the shipped build (build.sh pins package.json to the release
+// tag, so this tracks the release without a second hardcoded string to forget).
+const APP_VERSION = JSON.parse(
+  fs.readFileSync(path.join(findGitRoot(process.cwd()), 'package.json'), 'utf-8')
+).version;
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(APP_VERSION)
+  },
   plugins: [desktopShellGuardPlugin(), jsoncPlugin(), wasm(), sveltekit()],
   // The sim worker (ADR-021) is a module worker that dynamic-imports the WASM spatial core, which
   // needs code-splitting — unsupported by Vite's default IIFE worker format. ES format + the wasm
