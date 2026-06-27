@@ -7,6 +7,7 @@ import { gameLogger } from '../../../dev/gameLogger';
 import { perTick } from '../../../core/time';
 import { consumeFromStockpiles } from '../../../core/GameState';
 import { PAWN_STATE, type PawnStateName } from '../pawnStates';
+import { tileHasBody } from '../carry';
 import {
   isAdjacent,
   selectFoodForMeal,
@@ -305,6 +306,13 @@ export function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState 
       // (the exhaustion guard still backstops a pawn that can never reach it).
       const onBed =
         pawn.position?.x === activeJob.targetX && pawn.position?.y === activeJob.targetY;
+      // The chosen bed got occupied by a body since we set out (e.g. a pawn collapsed into it — the
+      // one we just tended). Don't loop re-routing toward a tile we can never step onto: drop back to
+      // TIRED to RE-SELECT a different bed (findNearestRestBuilding now skips body-occupied beds) or
+      // sleep on the ground. This is what unfreezes a pawn stuck "MovingToNeed" beside a downed ally.
+      if (!onBed && tileHasBody(gameState, activeJob.targetX, activeJob.targetY, [pawn.id])) {
+        return transitionTo(pawn, PAWN_STATE.TIRED, gameState);
+      }
       if (!onBed) {
         const retried = tryAssignSleepPath(pawn, activeJob.targetX, activeJob.targetY, gameState);
         if (retried) {

@@ -28,6 +28,7 @@ import { computeTileLightLevel } from '../../services/EnvironmentService';
 import { effectiveVisionRange } from '../../core/vision';
 import { PAWN_STATE, type PawnStateName } from './pawnStates';
 import { isAdjacent, findAdjacentApproach, hasAvailableFood } from './pawnQueries';
+import { tileHasBody } from './carry';
 
 // ===== NEED THRESHOLDS =====
 // Calibrated to 1 in-game day = 300 turns (1 turn ≈ 5 in-game min; 1 day ≈ 5 real min at 1 turn/sec):
@@ -452,20 +453,21 @@ export function findNearestRestBuilding(
     if (b.status !== 'complete') continue;
     if (!REST_TYPES.includes(b.type)) continue;
     if (b.assignedPawnId && b.assignedPawnId !== pawn.id) continue;
-    // Exclusive occupancy: skip if another pawn is sleeping on this tile OR is already
-    // en route to sleep here (MOVING_TO_NEED with targetState=SLEEPING).
-    // Without the en-route check, all fatigued pawns simultaneously claim the same bed.
+    // Skip a bed with ANY body already on its tile — a sleeping pawn, but ALSO a collapsed/downed pawn
+    // lying in it (e.g. one just tended) or a mob. Such a tile is movement-blocked, so routing there
+    // would strand the sleeper one tile short forever (the freeze this fixes). `tileHasBody` excludes
+    // this pawn, so a pawn already standing on the bed isn't skipped.
+    if (tileHasBody(gs, b.x, b.y, [pawn.id])) continue;
+    // Exclusive occupancy: also skip a bed another pawn is already EN ROUTE to sleep in (it isn't on
+    // the tile yet, so tileHasBody can't see it). Without this, all fatigued pawns claim the same bed.
     if (
       gs.pawns.some(
         (p) =>
           p.id !== pawn.id &&
-          ((p.currentState === PAWN_STATE.SLEEPING &&
-            p.position?.x === b.x &&
-            p.position?.y === b.y) ||
-            (p.currentState === PAWN_STATE.MOVING_TO_NEED &&
-              p.activeJob?.targetState === PAWN_STATE.SLEEPING &&
-              p.activeJob?.targetX === b.x &&
-              p.activeJob?.targetY === b.y))
+          p.currentState === PAWN_STATE.MOVING_TO_NEED &&
+          p.activeJob?.targetState === PAWN_STATE.SLEEPING &&
+          p.activeJob?.targetX === b.x &&
+          p.activeJob?.targetY === b.y
       )
     )
       continue;
