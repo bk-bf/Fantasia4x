@@ -2769,6 +2769,42 @@
     }
   },
   {
+    "id"              : "crop_cotton",
+    "displayName"     : "Cotton Field",
+    "subterrain"      : "tall_grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 139} ],
+    "fg"              : [0.82, 0.82, 0.72],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#D8D2BE",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "cotton_seed",
+      "minSoil"      : 2,
+      "minMoisture"  : 40,
+      "maxMoisture"  : 85,
+      "minTemp"      : 16,
+      "maxTemp"      : 38,
+      "needsLight"   : true,
+      "fertilityCost": 8,
+      "growthTurns"  : 2800
+    },
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 10,
+      "toolRequirement": null,
+      "yields"         : [
+        {"itemId": "cotton_fiber", "min": 4, "max": 8, "skillId": "planting", "skillMultiplier": 0.2},
+        {"itemId": "cotton_seed", "min": 1, "max": 3, "skillId": "planting", "skillMultiplier": 0.1}
+      ],
+      "harvestDepletes": true
+    }
+  },
+  {
     "id"              : "crop_berries",
     "displayName"     : "Berry Patch",
     "subterrain"      : "tall_grass",

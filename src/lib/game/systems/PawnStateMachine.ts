@@ -16,6 +16,7 @@
 import type {
   GameState,
   Pawn,
+  PlacedBuilding,
   ConditionDef,
   ConditionStage,
   Injury,
@@ -35,6 +36,15 @@ import {
 } from '../core/Wounds';
 import { lethalAnatomyCause } from '../core/BodyParts';
 import conditionsData from '../database/conditions.jsonc';
+import buildingsData from '../database/buildings.jsonc';
+// Per-bed wound-recovery: a sleeping pawn knits faster on a better bed. We reuse each bed's
+// `treatmentBonus` (the same quality gradient the caretaker dressing uses: sleeping_spot 0.1 →
+// feather_bed 0.7) as a heal multiplier, so a colonist heals fastest in the softest bed.
+const BED_TREATMENT_BONUS = new Map<string, number>(
+  (buildingsData as unknown as Array<{ id: string; effects?: { treatmentBonus?: number } }>)
+    .filter((b) => (b.effects?.treatmentBonus ?? 0) > 0)
+    .map((b) => [b.id, b.effects!.treatmentBonus!])
+);
 import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
 import { simLog } from '../core/logSink';
@@ -615,7 +625,7 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   return gameState;
 }
 
-export function healWounds(pawn: Pawn, turn = 0): Pawn {
+export function healWounds(pawn: Pawn, turn = 0, buildings?: PlacedBuilding[]): Pawn {
   const limbs = pawn.limbs;
   const hasWounds = limbs?.some((l) => (l.parts ?? []).some((p) => p.injuries.length > 0));
   if (!limbs || !hasWounds) return pawn;
@@ -629,6 +639,17 @@ export function healWounds(pawn: Pawn, turn = 0): Pawn {
   if (resting) {
     mult *= HEALING_CONFIG.sleepingMultiplier;
     if (pawn.position && isRoofedTile(pawn.position.x, pawn.position.y)) mult *= SHELTER_HEAL_MUL;
+    // Per-bed recovery: a better bed knits wounds faster (sleeping_spot ×1.1 → feather_bed ×1.7).
+    if (buildings && pawn.position) {
+      const px = pawn.position.x;
+      const py = pawn.position.y;
+      for (const b of buildings) {
+        if (b.status !== 'complete' || b.x !== px || b.y !== py) continue;
+        const bonus = BED_TREATMENT_BONUS.get(b.type);
+        if (bonus) mult *= 1 + bonus;
+        break;
+      }
+    }
   }
   if ((pawn.needs?.hunger ?? 0) <= HEALING_CONFIG.wellFedHunger)
     mult *= HEALING_CONFIG.wellFedMultiplier;
@@ -949,7 +970,7 @@ class PawnStateMachineImpl {
         afterConditions.currentState === PAWN_STATE.HUNTING ||
         (afterConditions.drafted === true && afterConditions.draftTarget?.type === 'attack');
       if (!inMelee) {
-        const healed = healWounds(afterConditions, state.turn);
+        const healed = healWounds(afterConditions, state.turn, state.buildings);
         if (healed !== afterConditions) {
           afterConditions = healed;
           state = {

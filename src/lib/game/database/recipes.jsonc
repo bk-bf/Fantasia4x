@@ -833,7 +833,7 @@
     "id"              : "make_goat_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"mountain_goat_carcass": 1},
-    "outputs"         : {"goat_meat": 1, "goat_hide": 1, "medium_bones": 1},
+    "outputs"         : {"goat_meat": 1, "goat_hide": 1, "coarse_wool": 2, "medium_bones": 1},
     "workAmount"      : 900,
     "toolTierRequired": 0
   },
@@ -843,6 +843,14 @@
     "inputs"          : {"wild_chicken_carcass": 1},
     "outputs"         : {"chicken_meat": 1, "chicken_feathers": 1, "small_bones": 1},
     "workAmount"      : 200,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "harvest_thornwood_silk",
+    "station"         : "butcher_spot",
+    "inputs"          : {"thornwood_spider_carcass": 1},
+    "outputs"         : {"raw_silk": 4, "small_bones": 1},
+    "workAmount"      : 150,
     "toolTierRequired": 0
   },
   {
@@ -1093,6 +1101,48 @@
     "outputs"         : {"linen_cloth": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
+  },
+  // ── Fabric extension: cotton / silk cloth, plush cushions, mage garments ───
+  {
+    "id"              : "weave_cotton",
+    "station"         : "weaving_frame",
+    "inputs"          : {"cotton_fiber": 3},
+    "outputs"         : {"cotton_cloth": 1},
+    "workAmount"      : 4,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "reel_silk",
+    "station"         : "weaving_frame",
+    "inputs"          : {"raw_silk": 2},
+    "outputs"         : {"silk_cloth": 1},
+    "workAmount"      : 6,
+    "toolTierRequired": 1
+  },
+  {
+    "id"               : "make_cushion",
+    "station"          : "weaving_frame",
+    "inputs"           : {"cotton_cloth": 2, "feathers": 25},
+    "inputAlternatives": [ {"linen_cloth": 2, "cotton_fiber": 25}, {"woolcloth": 2, "feathers": 25} ],
+    "outputs"          : {"cushion": 1},
+    "workAmount"       : 6,
+    "toolTierRequired" : 1
+  },
+  {
+    "id"              : "make_wool_cloak",
+    "station"         : "weaving_frame",
+    "inputs"          : {"woolcloth": 3},
+    "outputs"         : {"wool_cloak": 1},
+    "workAmount"      : 8,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "make_arcane_robe",
+    "station"         : "runic_loom",
+    "inputs"          : {"silk_cloth": 4, "gem_dust": 2},
+    "outputs"         : {"arcane_robe": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 2
   },
   // ── Phase B: sinew from medium/large butchery ─────────────────────────────
   {
