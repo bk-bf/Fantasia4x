@@ -4,6 +4,7 @@ import type { GameState, Mob, MobState, Pawn } from '../../core/types';
 import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
 import { getAmbientLight, computeTileLightLevel, weatherSightMul } from '../EnvironmentService';
 import { effectiveVisionRange } from '../../core/vision';
+import { hasLineOfSight } from '../../systems/rangedCombat';
 import { manhattan, chebyshev } from '../../core/distance';
 import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
 import { calcMaxStamina } from '../../entities/Pawns';
@@ -530,7 +531,21 @@ export function stepOne(
   // Weather shortens detection too (fog/storm/blizzard — SEASONS_WEATHER): folds into the shared
   // vision model so both this mob's sight and (via the same fn) pawn detection degrade in murk.
   const visionRange = effectiveVisionRange(mob, tileLight, weatherSightMul(state.weather?.type));
-  const inVision = nearest && dist(mob, nearest.pos) <= visionRange ? nearest : null;
+  // A pawn is "in vision" only with an unobstructed line of sight — the SAME `blocksSight` Bresenham
+  // ranged combat uses — so a mob can't detect (and start chasing) a pawn spotted THROUGH a wall. The
+  // LOS test runs only when a pawn is already within range, so the cost stays on mobs that have a
+  // candidate in sight range, not every mob every tick.
+  const inVision =
+    nearest &&
+    dist(mob, nearest.pos) <= visionRange &&
+    hasLineOfSight(state.worldMap, mob.x, mob.y, nearest.pos.x, nearest.pos.y)
+      ? nearest
+      : null;
+  // LOS memory: while the mob can actually SEE a pawn, remember WHERE. When the pawn slips behind cover
+  // the mob presses to this last-seen tile (see Alerted) instead of tracking it through the wall, and
+  // gives up there if it can't re-acquire. A mob that has never had LOS carries no memory, so it can't
+  // aggro on an unseen pawn at all.
+  if (inVision) mob = { ...mob, lastSeenX: inVision.pos.x, lastSeenY: inVision.pos.y };
   const isNight = getAmbientLight(turn) < NIGHT_THRESHOLD;
 
   // Passive creatures (herbivores, timid omnivores) use the prey FSM.
@@ -966,16 +981,29 @@ export function stepHostile(
           };
         }
       }
-      // Re-target the nearest ENGAGEABLE pawn (the global `nearest` may be a downed body we ignore). No
-      // engageable target in range → wander off rather than hover over the collapsed pawn.
-      const engage = nearestEngageablePos(mob, state.pawns, finisher);
-      if (!engage || dist(mob, engage) > visionRange * 1.5) {
+      // Chase what we can SEE; once the pawn slips out of sight, press to the LAST tile we saw one and
+      // abandon the hunt there if we can't re-acquire — never track a now-unseen pawn through a wall.
+      // `inVision` is already LOS-gated (and skips downed bodies), so it's the live engage point;
+      // `lastSeen*` is the frozen memory from when sight broke (set at detection above, cleared here).
+      const seen = inVision ? inVision.pos : null;
+      const memory =
+        mob.lastSeenX != null && mob.lastSeenY != null
+          ? { x: mob.lastSeenX, y: mob.lastSeenY }
+          : null;
+      const engage = seen ?? memory;
+      const giveUp =
+        !engage || // never had eyes on anyone (or the trail was cleared)
+        (seen != null && dist(mob, seen) > visionRange * 1.5) || // in sight but fled out of pursuit range
+        (seen == null && memory != null && dist(mob, memory) <= 1); // reached the last-seen spot, trail cold
+      if (giveUp) {
         return {
           ...mob,
           state: 'Wander',
           stateSince: turn,
           chaseAnchorX: undefined,
-          chaseAnchorY: undefined
+          chaseAnchorY: undefined,
+          lastSeenX: undefined,
+          lastSeenY: undefined
         };
       }
       // Surround, don't stack: route to a DISTINCT free tile adjacent to the pawn via the shared

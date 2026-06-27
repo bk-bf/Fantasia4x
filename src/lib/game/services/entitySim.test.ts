@@ -534,3 +534,37 @@ describe('feeding states do not oscillate (hostile FSM + unreachable forage)', (
     expect(state.mobs![0].forageCooldownUntil).toBeGreaterThan(0);
   });
 });
+
+describe('mob aggro requires line of sight (no chasing pawns seen through walls)', () => {
+  const NOON = 9000; // timeOfDay ≈ 0.5 → full ambient light, so vision range isn't night-shortened
+  const pawnAt = (x: number, y: number) =>
+    ({ id: 'p1', isAlive: true, position: { x, y }, currentState: 'Idle' }) as any;
+
+  function aggroState(blockSight: boolean): GameState {
+    const world = smallWorld();
+    // Wall tile on the straight line between the goblin (5,5) and the pawn (9,5).
+    if (blockSight) (world[5][7] as any).blocksSight = true;
+    return {
+      turn: NOON,
+      mobs: [makeGoblin({ x: 5, y: 5, state: 'Wander' })], // goblin behaviour is "aggressive"
+      pawns: [pawnAt(9, 5)],
+      worldMap: world,
+      stockpile: {},
+      droppedItems: [],
+      buildings: []
+    } as unknown as GameState;
+  }
+
+  it('an aggressive mob does NOT aggro a pawn it can only "see" through a wall', () => {
+    const g = entityService.stepEntities(aggroState(true)).mobs!.find((m) => m.id === 'g1')!;
+    expect(g.state).toBe('Wander'); // blocked line of sight → never alerts
+    expect(g.lastSeenX).toBeUndefined(); // and never records having seen the pawn
+  });
+
+  it('the same mob DOES aggro on clear line of sight, and remembers the tile it saw them on', () => {
+    const g = entityService.stepEntities(aggroState(false)).mobs!.find((m) => m.id === 'g1')!;
+    expect(g.state).toBe('Alerted'); // clear LOS → engages
+    expect(g.lastSeenX).toBe(9); // last-seen memory → chase to here when the pawn breaks LOS
+    expect(g.lastSeenY).toBe(5);
+  });
+});
