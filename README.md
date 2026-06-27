@@ -3,11 +3,11 @@
 [![Release](https://img.shields.io/badge/release-v0.1.0-brightgreen)](https://github.com/bk-bf/Fantasia4x/releases/latest)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 
-A hobby 4X strategy game project with procedurally generated civilizations. Built with SvelteKit.
+A hobby 4X, colony sim strategy game project with procedurally generated civilizations. Built with SvelteKit.
 
 ## What is this?
 
-This is a personal project I work on occasionally when I have time and inspiration. The basic idea is to make a 4X fantasy game where your civilization is procedurally generated each playthrough, giving you different traits and bonuses that shape how you play.
+This is a personal project I work on occasionally when I have time and inspiration. The basic idea is to make a 4X, colony sim fantasy game where your civilization is procedurally generated each playthrough, giving you different traits and bonuses that shape how you play.
 
 Right now it has:
 
