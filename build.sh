@@ -360,8 +360,11 @@ if $PUSH && ! $REMOTE; then
   fi
 
   NOTES="$(mktemp)"; CHANGELOG="$(mktemp)"; trap 'rm -f "$RESOLV4" "$NOTES" "$CHANGELOG"' EXIT
-  echo "▸ Generating changelog for $TAG (git-cliff)…"
-  git-cliff --tag "$TAG" --latest --strip header -o "$CHANGELOG"
+  # Changelog = ONLY what's new since the last release. Bound git-cliff to the LAST_TAG..HEAD commit
+  # range (computed above) so the feature log lists just this version's changes, not the whole project
+  # history re-listed every release. First release (no prior tag) → no range, so it lists everything.
+  echo "▸ Generating changelog for $TAG (git-cliff, changes since ${LAST_TAG:-the beginning})…"
+  git-cliff ${LAST_TAG:+"$LAST_TAG..HEAD"} --tag "$TAG" --strip header -o "$CHANGELOG"
   # Release notes = fixed description/blurb header + the git-cliff feature log collapsed in a
   # "Full feature log" dropdown (keeps the release page short; the log expands on click).
   {
@@ -377,6 +380,9 @@ Downloads below: Windows installer (.exe), Linux .AppImage (portable — chmod +
 
 EOF
     cat "$CHANGELOG"
+    # When there IS a previous release, the log above is only the new changes — close it with a cursive
+    # (italic) nod to everything that shipped before, so it reads as "this version + all prior work".
+    [[ -n "$LAST_TAG" ]] && printf '\n_…and everything from the previous versions._\n'
     printf '\n\n</details>\n'
   } > "$NOTES"
 

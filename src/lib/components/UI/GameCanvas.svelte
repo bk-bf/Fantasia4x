@@ -3141,7 +3141,12 @@
         const visW = Math.ceil(canvas.width / tileWidth);
         const visH = Math.ceil(canvas.height / tileHeight);
         viewX = Math.max(0, Math.floor((mapW - visW) / 2));
-        viewY = Math.max(0, Math.floor((mapH - visH) / 2));
+        // Nudge the camera half a tile further down the map (a fractional tile offset — u_viewOffset
+        // pans continuously, the chunk cull floors + has a margin ring) so the bottom screen edge no
+        // longer slices a row mid-tile. An integer-tile framing left a partial bottom row where only the
+        // tile BACKGROUND showed (its foreground glyph clipped off) — a jarring black-ish sliver; the
+        // half-tile shift moves that cut off-screen so the bottom row reads as whole ground.
+        viewY = Math.max(0, Math.floor((mapH - visH) / 2)) + 0.5;
       } else {
         // Restore camera from previous session (survives hot reloads)
         try {
