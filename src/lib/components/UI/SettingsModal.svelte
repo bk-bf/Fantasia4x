@@ -24,6 +24,7 @@
     showTps,
     hideSidebars,
     autosaveEnabled,
+    autoPauseOnThreat,
     defaultGameSpeed,
     debugMode,
     wasdPan,
@@ -186,6 +187,12 @@
         label="Autosave"
         checked={$autosaveEnabled}
         onToggle={autosaveEnabled.toggle}
+      />
+      <SettingRow
+        type="checkbox"
+        label="Auto-pause on threat"
+        checked={$autoPauseOnThreat}
+        onToggle={autoPauseOnThreat.toggle}
       />
 
       <div class="section">Advanced</div>

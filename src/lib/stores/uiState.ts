@@ -186,3 +186,8 @@ function createUIState() {
 }
 
 export const uiState = createUIState();
+
+/** Threat-alert pulse signal: bumped to `Date.now()` when a mob first spots a colonist (the sim-log
+ *  bridge's threatAlert handler). The Chronicle overlay watches it to flash its restore/toggle button
+ *  while the panel is minimised, so the player notices the (paused) alert. 0 = never fired / acknowledged. */
+export const threatPulse = writable(0);

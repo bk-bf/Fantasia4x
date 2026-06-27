@@ -12,6 +12,8 @@ import { combatFeedback } from './combatFeedback';
 import { attackLunges } from './attackLunges';
 import { combatSounds } from './combatSounds';
 import { projectiles } from './projectiles';
+import { requestThreatPause } from './gameState';
+import { threatPulse } from './uiState';
 
 /**
  * The real (DOM/store-backed) sink. Exported so the sim-worker bridge can replay buffered
@@ -27,7 +29,26 @@ export const realSimLogSink: SimLogSink = {
   pushAttackLunge: (req) => attackLunges.push(req),
   pushCombatSound: (req) => combatSounds.push(req),
   pushProjectile: (req) => projectiles.push(req),
-  logEntityDeath
+  logEntityDeath,
+  // A mob just spotted a colonist: auto-pause (if enabled), drop a PULSING chronicle alert, and bump the
+  // pulse signal so the Chronicle's restore button flashes while minimised.
+  threatAlert: (mobId, mobName, pawnName, turn, focusX, focusY) => {
+    requestThreatPause();
+    logActivity({
+      turn,
+      type: 'combat',
+      actor: mobId,
+      action: `${mobName} spotted ${pawnName}!`,
+      target: pawnName,
+      result: 'Threat sighted',
+      severity: 'critical',
+      entityIds: [mobId],
+      focusX,
+      focusY,
+      pulse: true
+    });
+    threatPulse.set(Date.now());
+  }
 };
 
 setSimLogSink(realSimLogSink);

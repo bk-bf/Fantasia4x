@@ -15,7 +15,13 @@ import {
   driveWindchill,
   TIRED_FATIGUE_THRESHOLD
 } from '../../core/needs';
-import { creatureExposureAt, accrueWetness } from '../EnvironmentService';
+import {
+  creatureExposureAt,
+  accrueWetness,
+  getAmbientLight,
+  weatherSightMul
+} from '../EnvironmentService';
+import { isWitnessedByColony } from '../../core/vision';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { pawnStatService } from '../PawnStatService';
 import { simLog } from '../../core/logSink';
@@ -66,6 +72,11 @@ export function stepHunger(state: GameState): GameState {
   // the long-run rate is unchanged — the mob just gets hungry in coarse steps instead of 60Hz.
   const livePawns = state.pawns.filter((p) => p.position && p.isAlive !== false);
   const lodActive = livePawns.length > 0; // no pawns ⇒ no bubble centre ⇒ sim everything (test/game-over)
+  // Chronicle-scope: a death is only logged if a colonist could see the tile it happened on (range only).
+  const witnessAmbient = getAmbientLight(turn);
+  const witnessWeatherMul = weatherSightMul(state.weather?.type);
+  const deathWitnessed = (x: number, y: number) =>
+    isWitnessedByColony(state.pawns, x, y, witnessAmbient, witnessWeatherMul);
   for (const mob of mobs) {
     if (mob.state === 'Corpse' || mob.isAlive === false) continue;
     const inBubble = !lodActive || mobInLiveRegion(mob, livePawns, LIVE_RADIUS);
@@ -175,7 +186,8 @@ export function stepHunger(state: GameState): GameState {
     );
     if (lethalCondition) {
       const cause = lethalCondition === 'malnutrition' ? 'starvation' : lethalCondition;
-      simLog.logEntityDeath(mob.id, entityName(mob), cause, turn, mob.x, mob.y);
+      if (deathWitnessed(mob.x, mob.y))
+        simLog.logEntityDeath(mob.id, entityName(mob), cause, turn, mob.x, mob.y);
       mob.state = 'Corpse';
       mob.isAlive = false;
       mob.diedAt = turn;
@@ -192,7 +204,8 @@ export function stepHunger(state: GameState): GameState {
 
     // Death by blood loss.
     if (bloodVolume <= 0) {
-      simLog.logEntityDeath(mob.id, entityName(mob), 'blood_loss', turn, mob.x, mob.y);
+      if (deathWitnessed(mob.x, mob.y))
+        simLog.logEntityDeath(mob.id, entityName(mob), 'blood_loss', turn, mob.x, mob.y);
       mob.state = 'Corpse';
       mob.isAlive = false;
       mob.diedAt = turn;
@@ -208,7 +221,8 @@ export function stepHunger(state: GameState): GameState {
     // Lethal anatomy — destroyed vital organ (incl. a crushed-to-0 heart) or a head/torso reduced to
     // 0 HP. ONE shared rule (core/BodyParts.lethalAnatomyCause) so combat + this reaper agree.
     if (lethalAnatomyCause(limbs)) {
-      simLog.logEntityDeath(mob.id, entityName(mob), 'critical_limb', turn, mob.x, mob.y);
+      if (deathWitnessed(mob.x, mob.y))
+        simLog.logEntityDeath(mob.id, entityName(mob), 'critical_limb', turn, mob.x, mob.y);
       mob.state = 'Corpse';
       mob.isAlive = false;
       mob.diedAt = turn;
@@ -378,7 +392,17 @@ export function removeDead(state: GameState): GameState {
       // misfire where a starving entity "started fleeing" just before dying.
       const cause =
         m.needs.hunger >= 95 ? 'starvation' : (m.bloodVolume ?? 1) <= 0 ? 'blood_loss' : 'injuries';
-      simLog.logEntityDeath(m.id, entityName(m), cause, state.turn, m.x, m.y);
+      // Chronicle-scope: only log the death if a colonist could see the tile (range only).
+      if (
+        isWitnessedByColony(
+          state.pawns,
+          m.x,
+          m.y,
+          getAmbientLight(state.turn),
+          weatherSightMul(state.weather?.type)
+        )
+      )
+        simLog.logEntityDeath(m.id, entityName(m), cause, state.turn, m.x, m.y);
       return {
         ...m,
         state: 'Corpse' as MobState,

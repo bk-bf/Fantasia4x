@@ -162,6 +162,11 @@ export const autosaveEnabled = createPersistedBool('fx.gameplay.autosave', true)
 /** Gameplay — simulation speed a freshly-started game runs at once unpaused (1×/2×/4×). Persisted. */
 export const defaultGameSpeed = createPersistedNumber('fx.gameplay.defaultSpeed', 1);
 
+/** Gameplay — auto-pause the game the moment a threat first spots a colonist (a mob entering Alerted on
+ *  a pawn). ON by default; persisted. When off, the threat still raises a pulsing chronicle alert but the
+ *  sim keeps running. Read by the sim-log bridge's threatAlert handler (stores/simLogBridge.ts). */
+export const autoPauseOnThreat = createPersistedBool('fx.gameplay.autoPauseOnThreat', true);
+
 /** Controls — pan the map camera with WASD, in ADDITION to the arrow keys + mouse-drag (never instead
  *  of them). ON by default; persisted. Gates only the WASD branch of GameCanvas.handleKeyDown. */
 export const wasdPan = createPersistedBool('fx.controls.wasdPan', true);

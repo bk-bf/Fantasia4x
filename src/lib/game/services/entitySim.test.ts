@@ -1,7 +1,27 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { entityService } from './EntityService';
 import { TICKS_PER_SECOND } from '../core/time';
+import { setSimLogSink, type SimLogSink } from '../core/logSink';
 import type { GameState, Mob } from '../core/types';
+
+/** A no-op sink with a recording `threatAlert` — lets a headless sim assert the one-shot threat alert. */
+function makeThreatSpy() {
+  const calls: unknown[][] = [];
+  const noop = () => {};
+  const sink = {
+    logActivity: () => '',
+    logEvent: noop,
+    logCombatSwing: noop,
+    logCombatKill: noop,
+    pushCombatText: noop,
+    pushAttackLunge: noop,
+    pushCombatSound: noop,
+    pushProjectile: noop,
+    logEntityDeath: noop,
+    threatAlert: (...a: unknown[]) => calls.push(a)
+  } as unknown as SimLogSink;
+  return { sink, calls };
+}
 
 /**
  * Headless entity-simulation harness (the answer to "I can't drive the browser"): it runs the
@@ -566,5 +586,32 @@ describe('mob aggro requires line of sight (no chasing pawns seen through walls)
     expect(g.state).toBe('Alerted'); // clear LOS → engages
     expect(g.lastSeenX).toBe(9); // last-seen memory → chase to here when the pawn breaks LOS
     expect(g.lastSeenY).toBe(5);
+  });
+
+  it('firing the threat alert ONCE per episode (auto-pause + chronicle pulse), not every tick', () => {
+    const { sink, calls } = makeThreatSpy();
+    setSimLogSink(sink);
+
+    // First think: Wander → Alerted on the visible pawn → one threatAlert, alertedPawn latched.
+    let state = aggroState(false);
+    state = entityService.stepEntities(state);
+    const g1 = state.mobs!.find((m) => m.id === 'g1')!;
+    expect(g1.state).toBe('Alerted');
+    expect(g1.alertedPawn).toBe(true);
+    expect(calls.length).toBe(1);
+    // calls[0] = [mobId, mobName, pawnName, turn, x, y]
+    expect(calls[0][0]).toBe('g1');
+
+    // Subsequent thinks while it stays Alerted on the same pawn → no repeat alert.
+    for (let i = 0; i < 3; i++) {
+      state = { ...state, turn: NOON + i + 1 };
+      state = entityService.stepEntities(state);
+    }
+    expect(calls.length).toBe(1); // still once — guarded by alertedPawn
+  });
+
+  afterEach(() => {
+    // Restore a quiet sink so the spy doesn't leak into other suites.
+    setSimLogSink(makeThreatSpy().sink);
   });
 });

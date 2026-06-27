@@ -3,7 +3,8 @@ import {
   baseVisionRange,
   lightVisionMultiplier,
   effectiveVisionRange,
-  getNightVision
+  getNightVision,
+  isWitnessedByColony
 } from './vision';
 import type { Pawn, Mob } from './types';
 
@@ -52,5 +53,37 @@ describe('shared vision model', () => {
     const m = effectiveVisionRange({ creatureId: 'nope', stats: { perception: 12 } } as unknown as Mob, 1);
     expect(p).toBe(m);
     expect(p).toBe(baseVisionRange(12));
+  });
+});
+
+// Chronicle scoping: only log combat/deaths a colonist could see (range only — walls don't gate it).
+const atPawn = (x: number, y: number, over: Partial<Pawn> = {}): Pawn =>
+  ({ id: `p${x}_${y}`, isAlive: true, position: { x, y }, stats: { perception: 10 }, ...over }) as Pawn;
+
+describe('isWitnessedByColony', () => {
+  const DAY = 1.0;
+  const range = effectiveVisionRange(atPawn(0, 0), DAY); // per 10 → 17 tiles in daylight
+
+  it('an event within a pawn’s sight range is witnessed; one beyond it is not', () => {
+    expect(isWitnessedByColony([atPawn(0, 0)], range, 0, DAY)).toBe(true); // at the edge
+    expect(isWitnessedByColony([atPawn(0, 0)], range + 1, 0, DAY)).toBe(false); // one tile past
+  });
+
+  it('uses Chebyshev (diagonal counts as one); ANY pawn seeing it is enough', () => {
+    expect(isWitnessedByColony([atPawn(0, 0)], range, range, DAY)).toBe(true); // diagonal edge
+    expect(isWitnessedByColony([atPawn(0, 0), atPawn(99, 99)], 99, 99, DAY)).toBe(true);
+  });
+
+  it('ignores dead / position-less pawns, and an empty or undefined colony witnesses nothing', () => {
+    expect(isWitnessedByColony([atPawn(5, 5, { isAlive: false })], 5, 5, DAY)).toBe(false);
+    expect(isWitnessedByColony([atPawn(5, 5, { position: undefined })], 5, 5, DAY)).toBe(false);
+    expect(isWitnessedByColony([], 5, 5, DAY)).toBe(false);
+    expect(isWitnessedByColony(undefined, 5, 5, DAY)).toBe(false);
+  });
+
+  it('darkness shrinks the witnessed radius', () => {
+    const far = Math.round(range * 0.7); // inside daytime range
+    expect(isWitnessedByColony([atPawn(0, 0)], far, 0, DAY)).toBe(true);
+    expect(isWitnessedByColony([atPawn(0, 0)], far, 0, 0.0)).toBe(false); // same tile, pitch dark
   });
 });

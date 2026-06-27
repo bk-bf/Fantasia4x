@@ -49,7 +49,7 @@ import {
   ensureActiveSave,
   setActiveCommitted
 } from './saveManager';
-import { defaultGameSpeed } from './uiPrefs';
+import { defaultGameSpeed, autoPauseOnThreat } from './uiPrefs';
 import { clearActivityLog, reloadActivityLogForActiveSave, activityLog } from './Log';
 import { applyDevWorld } from '$lib/game/dev/devWorld';
 import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
@@ -517,6 +517,15 @@ function unpauseGame() {
 
 function togglePause() {
   isPaused.update((paused) => !paused);
+}
+
+/** Auto-pause request from a threat alert (a mob spotting a colonist). Honours the `autoPauseOnThreat`
+ *  setting — a no-op when the player has it off. Mirrors `pauseGame` (store + worker) so the sim halts.
+ *  Called at runtime from the sim-log bridge, so the gameState↔simLogBridge import cycle stays safe. */
+export function requestThreatPause() {
+  if (!get(autoPauseOnThreat)) return;
+  isPaused.set(true);
+  if (USE_SIM_WORKER) simWorkerBridge.setPaused(true);
 }
 
 // Speed is applied live by stepSimulation via gameSpeedValue (kept in sync by the

@@ -125,6 +125,17 @@ export interface SimLogSink {
     focusX: number,
     focusY: number
   ): void;
+
+  /** A mob just SPOTTED a colonist (newly entered Alerted on a pawn) — drives the main thread's
+   *  auto-pause + a pulsing chronicle alert. Fired once per alert episode, not every tick. */
+  threatAlert(
+    mobId: string,
+    mobName: string,
+    pawnName: string,
+    turn: number,
+    focusX: number,
+    focusY: number
+  ): void;
 }
 
 /** Default no-op sink: a headless sim (and the test suite) logs nothing until a real sink is set. */
@@ -137,7 +148,8 @@ const noopSink: SimLogSink = {
   pushAttackLunge: () => {},
   pushCombatSound: () => {},
   pushProjectile: () => {},
-  logEntityDeath: () => {}
+  logEntityDeath: () => {},
+  threatAlert: () => {}
 };
 
 /**

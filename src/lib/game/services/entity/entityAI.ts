@@ -31,8 +31,10 @@ import {
   approachForMelee,
   edibleResourceOnTile,
   mobInLiveRegion,
-  isThinkTick
+  isThinkTick,
+  entityName
 } from './entityHelpers';
+import { simLog } from '../../core/logSink';
 import {
   type TileFoodKind,
   NIGHT_THRESHOLD,
@@ -652,7 +654,7 @@ function nearestEngageablePos(
 export function stepHostile(
   mob: Mob,
   def: CreatureDefinition,
-  inVision: { pos: { x: number; y: number } } | null,
+  inVision: { pawn: Pawn; pos: { x: number; y: number } } | null,
   nearest: { pos: { x: number; y: number } } | null,
   visionRange: number,
   isNight: boolean,
@@ -939,10 +941,25 @@ export function stepHostile(
         chebyshev(mob.lairX ?? mob.x, mob.lairY ?? mob.y, inVision.pos.x, inVision.pos.y) <=
           (mob.lairRange ?? Infinity);
       if (inVision && (aggressive || tooClose) && pawnInTerritory) {
+        // A mob newly LOCKING ONTO a colonist: fire the one-shot threat alert (auto-pause + chronicle
+        // pulse on the main thread). `alertedPawn` gates it to once per episode (cleared on disengage).
+        if (!mob.alertedPawn)
+          simLog.threatAlert(
+            mob.id,
+            entityName(mob),
+            inVision.pawn.name ?? 'a colonist',
+            turn,
+            mob.x,
+            mob.y
+          );
         // A non-aggressive territorial charger anchors to its current tile so the chase stays leashed
         // (escapeable); an aggressive hunter has no anchor and pursues freely.
         const charger = aggressive ? mob : { ...mob, chaseAnchorX: mob.x, chaseAnchorY: mob.y };
-        return moveToward({ ...charger, state: 'Alerted', stateSince: turn }, inVision.pos, state);
+        return moveToward(
+          { ...charger, state: 'Alerted', stateSince: turn, alertedPawn: true },
+          inVision.pos,
+          state
+        );
       }
       return wanderStep(mob, def, state);
     }
@@ -977,7 +994,8 @@ export function stepHostile(
             state: 'Wander',
             stateSince: turn,
             chaseAnchorX: undefined,
-            chaseAnchorY: undefined
+            chaseAnchorY: undefined,
+            alertedPawn: undefined
           };
         }
       }
@@ -1003,7 +1021,8 @@ export function stepHostile(
           chaseAnchorX: undefined,
           chaseAnchorY: undefined,
           lastSeenX: undefined,
-          lastSeenY: undefined
+          lastSeenY: undefined,
+          alertedPawn: undefined
         };
       }
       // Surround, don't stack: route to a DISTINCT free tile adjacent to the pawn via the shared
@@ -1042,7 +1061,8 @@ export function stepHostile(
           state: 'Wander',
           stateSince: turn,
           chaseAnchorX: undefined,
-          chaseAnchorY: undefined
+          chaseAnchorY: undefined,
+          alertedPawn: undefined
         };
       if (!adjacent(mob, engage)) return { ...mob, state: 'Alerted', stateSince: turn };
       return mob;
@@ -1088,8 +1108,19 @@ export function stepHostile(
       return { ...mob, path: [] }; // stay still while winded
     }
     case 'Sleeping': {
-      // Woken by a pawn entering vision.
-      if (inVision) return { ...mob, state: 'Alerted', stateSince: turn };
+      // Woken by a pawn entering vision — also fire the one-shot threat alert (auto-pause + pulse).
+      if (inVision) {
+        if (!mob.alertedPawn)
+          simLog.threatAlert(
+            mob.id,
+            entityName(mob),
+            inVision.pawn.name ?? 'a colonist',
+            turn,
+            mob.x,
+            mob.y
+          );
+        return { ...mob, state: 'Alerted', stateSince: turn, alertedPawn: true };
+      }
       // Natural wake when rested or force-wake when ravenously hungry.
       if (
         mob.needs.fatigue <= sleepWakeThreshold(mob.needs.hunger) ||

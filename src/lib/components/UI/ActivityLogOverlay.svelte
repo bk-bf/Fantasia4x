@@ -11,12 +11,24 @@
     logBuilding // Convenience function
   } from '$lib/stores/Log';
   import { gameState } from '$lib/stores/gameState';
+  import { threatPulse } from '$lib/stores/uiState';
   import { fade, fly } from 'svelte/transition';
   import { onMount } from 'svelte';
 
   export let isOpen = false;
 
   let logFilter: 'all' | 'work' | 'events' | 'critical' = 'all';
+
+  // Threat-alert attention cue: when a mob spots a colonist while the chronicle is MINIMISED (closed),
+  // pulse the toggle button until the player opens it. Opening acknowledges the current pulse; a later
+  // alert (a newer timestamp) re-pulses. (The entry itself flashes once via the `pulse` flag below.)
+  let toggleAlerting = false;
+  let ackPulse = 0;
+  $: if ($threatPulse > ackPulse && !isOpen) toggleAlerting = true;
+  $: if (isOpen) {
+    toggleAlerting = false;
+    ackPulse = $threatPulse;
+  }
 
   // Get appropriate activity log based on filter
   $: currentActivityLog = (() => {
@@ -174,6 +186,7 @@
   class="log-toggle-btn"
   on:click={toggleLog}
   class:active={isOpen}
+  class:alerting={toggleAlerting}
   title="Toggle Activity Log"
 >
   📋
@@ -218,12 +231,13 @@
           </div>
         {:else}
           <div class="activity-list">
-            {#each currentActivityLog as entry}
+            {#each currentActivityLog as entry (entry.id)}
               <div
                 class="activity-entry"
                 class:critical={entry.severity === 'critical'}
                 class:warning={entry.severity === 'warning'}
                 class:error={entry.severity === 'error'}
+                class:pulse={entry.pulse}
               >
                 <div class="activity-header">
                   <span class="severity-icon" style="color: {getSeverityColor(entry.severity)}">
@@ -286,6 +300,24 @@
     box-shadow: 0 0 20px rgba(76, 175, 80, 0.4);
     transform: scale(1.05);
     bottom: 18px; /* Slight lift on hover */
+  }
+
+  /* Threat alert: a mob spotted a colonist while the chronicle is minimised — pulse red until opened. */
+  .log-toggle-btn.alerting {
+    border-color: #ff5252;
+    color: #ff5252;
+    animation: threat-toggle-pulse 1.1s ease-in-out infinite;
+  }
+  @keyframes threat-toggle-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 6px rgba(255, 82, 82, 0.5);
+      background: rgba(255, 82, 82, 0.12);
+    }
+    50% {
+      box-shadow: 0 0 22px rgba(255, 82, 82, 0.9);
+      background: rgba(255, 82, 82, 0.32);
+    }
   }
 
   /* Overlay Backdrop - More transparent */
@@ -419,6 +451,20 @@
   .activity-entry.critical {
     border-color: rgba(211, 47, 47, 0.8);
     background: rgba(211, 47, 47, 0.15);
+  }
+
+  /* Threat-sighted line: flash once when it lands so the eye catches it (keyed `each` → runs per entry). */
+  .activity-entry.pulse {
+    animation: threat-entry-flash 2.4s ease-out 1;
+  }
+  @keyframes threat-entry-flash {
+    0% {
+      box-shadow: 0 0 0 2px rgba(255, 82, 82, 0.9);
+      background: rgba(255, 82, 82, 0.4);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(255, 82, 82, 0);
+    }
   }
 
   .activity-entry.warning {

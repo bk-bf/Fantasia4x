@@ -106,6 +106,9 @@ export interface ActivityLogEntry {
   focusY?: number;
   /** Per-turn combat breakdown — shown when expanding a combat log entry. */
   combatBreakdown?: CombatTurnEntry[];
+  /** One-shot attention flag: the chronicle flashes this entry once (a mob spotting a colonist). The
+   *  overlay drives a single pulse animation off it; it is not persisted as a meaningful state. */
+  pulse?: boolean;
 }
 
 /** Log categories = the `ActivityLogEntry.type` union — the single dimension the unified log

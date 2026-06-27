@@ -62,3 +62,32 @@ export function effectiveVisionRange(
   const lit = base * lightVisionMultiplier(lightLevel, getNightVision(entity));
   return Math.max(1, Math.round(lit * weatherSightMul));
 }
+
+/** Chebyshev distance — the grid metric the FSM uses for sight (a diagonal counts as 1). */
+function cheb(ax: number, ay: number, bx: number, by: number): number {
+  return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
+}
+
+/** Could the COLONY see something happen at (x,y)? True if any ALIVE pawn is within its sight RANGE of the
+ *  tile — range only, NO line-of-sight (walls don't gate the chronicle; this is "did a colonist roughly
+ *  witness it", not strict LOS). Used to scope combat-engagement + death lines to what the colony saw, so
+ *  the chronicle isn't flooded by wildlife brawls across the map. `ambientLight` is the day/night ambient
+ *  (per-tile fire light is ignored — a cheap, good-enough approximation for a log filter). */
+export function isWitnessedByColony(
+  pawns: Pawn[] | undefined,
+  x: number,
+  y: number,
+  ambientLight: number,
+  weatherSightMul = 1
+): boolean {
+  if (!pawns) return false;
+  for (const p of pawns) {
+    if (p.isAlive === false || !p.position) continue;
+    if (
+      cheb(p.position.x, p.position.y, x, y) <=
+      effectiveVisionRange(p, ambientLight, weatherSightMul)
+    )
+      return true;
+  }
+  return false;
+}

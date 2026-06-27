@@ -95,6 +95,10 @@ export interface Mob {
    *  hunt there if it can't re-acquire. Cleared on disengage. AI-internal — not in the render snapshot. */
   lastSeenX?: number;
   lastSeenY?: number;
+  /** Set while this mob is in an active alert episode against a colonist (entered Alerted on a pawn).
+   *  Gates the one-shot `threatAlert` (auto-pause + chronicle pulse) so it fires once per episode, not
+   *  every tick; cleared when the mob disengages back to Wander. AI-internal — not in the render snapshot. */
+  alertedPawn?: boolean;
   /** Consecutive ticks this mob has been unable to enter its next tile (blocked by
    * another entity). Once it exceeds a threshold the path is dropped so the FSM
    * re-routes around the obstruction instead of waiting forever (corridor deadlock). */

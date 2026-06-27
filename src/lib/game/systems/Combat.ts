@@ -49,7 +49,12 @@ import { rng } from '../core/rng';
 import { chebyshev } from '../core/distance';
 import { clamp } from '../core/math';
 import { perTick } from '../core/time';
-import { ticksFromGameHours } from '../services/EnvironmentService';
+import {
+  ticksFromGameHours,
+  getAmbientLight,
+  weatherSightMul
+} from '../services/EnvironmentService';
+import { isWitnessedByColony } from '../core/vision';
 // P-4: the body-part anatomy table + selection helpers moved to core/BodyParts. Re-export the two
 // symbols external code imported from Combat (PawnHealth, EntityService, Pawns) so they're unchanged.
 import {
@@ -1036,17 +1041,37 @@ class CombatServiceImpl implements CombatService {
     const attackerName = this.entityName(attacker);
     const targetName = this.entityName(target);
     const isTargetMob = 'entityClass' in target;
+    // Chronicle-scope: only log this engagement if the colony could see it (any pawn within sight range
+    // of the struck tile). A pawn-vs-mob fight is always witnessed (the pawn is at/adjacent to `pos`); a
+    // wildlife brawl off across the map drops out, so the chronicle stays the colony's own record.
+    const witnessed = isWitnessedByColony(
+      state.pawns,
+      pos.x,
+      pos.y,
+      getAmbientLight(turn),
+      weatherSightMul(state.weather?.type)
+    );
 
     // Miss → no injury, but log + show the dodge. The swing still cost stamina.
     if (!result.hit) {
       this.emitFloat(pos.x, pos.y, 'dodge', 'dodge');
-      simLog.logCombatSwing(attacker.id, attackerName, target.id, targetName, turn, pos.x, pos.y, {
-        turn,
-        attackerName,
-        defenderName: targetName,
-        hit: false,
-        weapon: result.weaponId
-      });
+      if (witnessed)
+        simLog.logCombatSwing(
+          attacker.id,
+          attackerName,
+          target.id,
+          targetName,
+          turn,
+          pos.x,
+          pos.y,
+          {
+            turn,
+            attackerName,
+            defenderName: targetName,
+            hit: false,
+            weapon: result.weaponId
+          }
+        );
       return { state, staminaCost: result.staminaCost };
     }
     if (!result.injury) return { state, staminaCost: result.staminaCost };
@@ -1084,29 +1109,34 @@ class CombatServiceImpl implements CombatService {
     if (!result.knockdown && result.injury.bleeding > 0)
       this.emitFloat(pos.x, pos.y, 'bleed', 'bleed', 13);
 
-    simLog.logCombatSwing(attacker.id, attackerName, target.id, targetName, turn, pos.x, pos.y, {
-      turn,
-      attackerName,
-      defenderName: targetName,
-      hit: true,
-      damage: result.injury.damage,
-      injury: result.injury.bodyPart,
-      knockdown: result.knockdown,
-      crit: result.crit,
-      weapon: result.weaponId,
-      bodyPart: result.injury.bodyPart,
-      damageType: result.damageType,
-      partMaxHp: result.partMaxHp,
-      partRemainingHp: result.partRemainingHp,
-      bleeding: result.injury.bleeding > 0,
-      woundType: result.injury.type,
-      woundSeverity: result.injury.severity
-    });
+    if (witnessed)
+      simLog.logCombatSwing(attacker.id, attackerName, target.id, targetName, turn, pos.x, pos.y, {
+        turn,
+        attackerName,
+        defenderName: targetName,
+        hit: true,
+        damage: result.injury.damage,
+        injury: result.injury.bodyPart,
+        knockdown: result.knockdown,
+        crit: result.crit,
+        weapon: result.weaponId,
+        bodyPart: result.injury.bodyPart,
+        damageType: result.damageType,
+        partMaxHp: result.partMaxHp,
+        partRemainingHp: result.partRemainingHp,
+        bleeding: result.injury.bleeding > 0,
+        woundType: result.injury.type,
+        woundSeverity: result.injury.severity
+      });
 
     const after = isTargetMob
       ? next.mobs?.find((m) => m.id === target.id)
       : next.pawns.find((p) => p.id === target.id);
-    if (after && (after.isAlive === false || ('state' in after && after.state === 'Corpse'))) {
+    if (
+      witnessed &&
+      after &&
+      (after.isAlive === false || ('state' in after && after.state === 'Corpse'))
+    ) {
       simLog.logCombatKill(
         attacker.id,
         attackerName,
