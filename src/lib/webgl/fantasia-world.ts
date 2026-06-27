@@ -493,6 +493,14 @@ export function isRoofBuilding(b: PlacedBuilding): boolean {
   return !!buildingService.getBuildingById(b.type)?.effects?.roof;
 }
 
+/** A floor is a walkable surface building (planks/flagstone/packed earth) — it carries a `floorSpeed`
+ *  and/or `floorDryness` effect and reads AS the tile's ground (the hover panel relabels the surface
+ *  to the floor's name rather than popping a separate building card). */
+export function isFloorBuilding(b: PlacedBuilding): boolean {
+  const eff = buildingService.getBuildingById(b.type)?.effects;
+  return !!eff && (eff.floorDryness != null || eff.floorSpeed != null);
+}
+
 // How much a roof darkens the tile beneath it (per-channel multiply). A LIGHT shade — just enough to
 // read as "under cover" without crushing the cell to black; backgrounds are already near-dark, so the
 // multiplier stays gentle (anything aggressive makes the tile look empty/black).

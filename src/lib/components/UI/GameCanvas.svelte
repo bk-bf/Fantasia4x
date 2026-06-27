@@ -9,6 +9,7 @@
     applyTileToGrid,
     applyBuildingToGrid,
     isRoofBuilding,
+    isFloorBuilding,
     generatePlaceholderGrid,
     updateHiddenMaskAt,
     type HiddenMaskState,
@@ -793,13 +794,31 @@
     } satisfies SelectedEntityModel;
   })();
 
-  // Building under hovered tile (all statuses). Roofs are HOVER-TRANSPARENT — they don't surface an info
-  // card on hover (it blocked the tile readout beneath); the tile panel shows a "roofed" badge instead.
-  // Roofs stay inspectable by clicking (they're last in the click-cycle). Excluding roofs from the find
-  // also means a roof placed over a real building no longer shadows that building's hover card.
+  // Building under hovered tile (all statuses). Roofs AND floors are HOVER-TRANSPARENT — they don't
+  // surface a separate info card (a roof's blocked the tile readout beneath; a floor reads AS the
+  // ground, relabelling the tile panel's surface to its name). Both stay inspectable by clicking
+  // (last in the click-cycle). Excluding them also means a roof/floor over a real building no longer
+  // shadows that building's hover card.
   $: hoverBuilding =
     hoverTileX >= 0 && hoverTileY >= 0
-      ? (buildings.find((b) => b.x === hoverTileX && b.y === hoverTileY && !isRoofBuilding(b)) ?? null)
+      ? (buildings.find(
+          (b) =>
+            b.x === hoverTileX &&
+            b.y === hoverTileY &&
+            !isRoofBuilding(b) &&
+            !isFloorBuilding(b)
+        ) ?? null)
+      : null;
+  // The complete floor building on the hovered tile (if any) — drives the surface relabel in the tile
+  // panel ("Clay floor" in place of the bare subterrain) and the floor-dryness cut on the wet readout.
+  $: hoverFloorName =
+    hoverTile && hoverTile.floor
+      ? (() => {
+          const f = buildings.find(
+            (b) => b.x === hoverTile.x && b.y === hoverTile.y && isFloorBuilding(b)
+          );
+          return f ? (buildingService.getBuildingById(f.type)?.name ?? null) : null;
+        })()
       : null;
   // Click-selected building (stays locked until Esc / click elsewhere)
   $: selectedBuilding = selectedBuildingId
@@ -2804,9 +2823,12 @@
     if (pawn) layers.push({ kind: 'pawn', id: pawn.id });
     const mob = findMobAtTile(x, y);
     if (mob) layers.push({ kind: 'mob', id: mob.id });
-    // Non-roof building sits at normal priority; the roof (if any) is appended LAST below, so a click
-    // reaches the floor/items/resources under it before the roof — mirroring its hover-transparency.
-    const building = buildings.find((b) => b.x === x && b.y === y && !isRoofBuilding(b));
+    // A "real" building (wall/station) sits at normal priority; surface buildings — roof & floor — are
+    // appended LAST below, so a click reaches the pawn/item/resource on the tile before the surface,
+    // mirroring their hover-transparency. (A click still reaches the floor/roof by cycling, to demolish.)
+    const building = buildings.find(
+      (b) => b.x === x && b.y === y && !isRoofBuilding(b) && !isFloorBuilding(b)
+    );
     if (building) layers.push({ kind: 'building', id: building.id });
     // Stockpile zone on this tile. `zoneTiles` is the canonical membership map (same source the hover
     // inspector uses); the owning instance id comes from `designationZoneId`, falling back to any
@@ -2837,7 +2859,10 @@
           layers.push({ kind: 'resource', resourceId });
       }
     }
-    // Roof last in the cycle — clickable to inspect/demolish, but never the first thing a click grabs.
+    // Surface buildings (floor, then roof) last in the cycle — clickable to inspect/demolish, but never
+    // the first thing a click grabs.
+    const floor = buildings.find((b) => b.x === x && b.y === y && isFloorBuilding(b));
+    if (floor) layers.push({ kind: 'building', id: floor.id });
     const roof = buildings.find((b) => b.x === x && b.y === y && isRoofBuilding(b));
     if (roof) layers.push({ kind: 'building', id: roof.id });
     return layers;
@@ -2849,7 +2874,11 @@
   // instead (so a stacked tile steps through its layers). Returns true if something was selected; false
   // if the tile is empty (the caller decides what an empty tile means — deselect, or a drafted move).
   function selectTileAt(x: number, y: number): boolean {
-    const clickedBuilding = buildings.find((b) => b.x === x && b.y === y);
+    // Surface buildings (roof/floor) don't claim a jump — a jump to a pawn/resource on a floored tile
+    // should land on that entity, not the floor (the floor is reachable via the click-cycle).
+    const clickedBuilding = buildings.find(
+      (b) => b.x === x && b.y === y && !isRoofBuilding(b) && !isFloorBuilding(b)
+    );
     if (clickedBuilding) {
       applyTileLayer({ kind: 'building', id: clickedBuilding.id }, x, y);
       return true;
@@ -4873,7 +4902,9 @@
       {@const tileTemp = Math.round(
         tileTemperature(hoverTile.terrainType, $currentSeason, $currentWeather, tileThermal)
       )}
-      {@const tileWet = tileWetness(hoverTile.moisture ?? 0, $currentWeather, tileThermal)}
+      {@const tileWet =
+        tileWetness(hoverTile.moisture ?? 0, $currentWeather, tileThermal) *
+        (hoverTile.floor ? 1 - hoverTile.floor.dryness : 1)}
       {@const windWord = windDegreeWord(
         effectiveWindAt(hoverTile.x, hoverTile.y, $currentWeather, tileThermal, worldMap)
       )}
@@ -4882,9 +4913,9 @@
       {@const soilPct = soilFertilityPct(hoverTile)}
       <div class="tile-hud">
         <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
-          >{BIOMES[hoverTile.terrainType]?.displayName ?? hoverTile.terrainType},{SUBTERRAINS[
-            hoverTile.subType
-          ]?.displayName ?? hoverTile.subType},{hoverDisplayResource
+          >{BIOMES[hoverTile.terrainType]?.displayName ?? hoverTile.terrainType},{hoverFloorName ??
+            (SUBTERRAINS[hoverTile.subType]?.displayName ??
+              hoverTile.subType)},{hoverDisplayResource
             ? (resourceObjectService.getById(hoverDisplayResource)?.displayName ??
               hoverDisplayResource)
             : '—'}</span
