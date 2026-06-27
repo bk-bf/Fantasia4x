@@ -11,9 +11,10 @@
 #   ./build.sh --unpacked           quick UNPACKED build for THIS machine — run it straight away,
 #                                     no installer packaging (dist-electron/linux-unpacked/). (--local
 #                                     still works as an alias.)
-#   ./build.sh --install            build the Linux AppImage installer, then install/update it on this
-#                                     machine via apkg (apkg -S). Combine with anything that builds an
-#                                     AppImage; run alone it builds just the Linux installer + installs.
+#   ./build.sh --install            build the Linux installers, then install/update on THIS machine,
+#                                     picking the native method: the .deb via apt on Debian/Ubuntu-family
+#                                     hosts (dpkg present), else the AppImage via apkg. Combine with
+#                                     anything that builds installers; run alone it builds Linux + installs.
 #   ./build.sh --dry                pre-flight: production static build + scan for dev-only /src asset
 #                                     paths that 404 once packaged. No packaging — fast; run during dev.
 #   ./build.sh --push               cut a release ENTIRELY on this machine (the default): build Linux +
@@ -50,6 +51,7 @@ INSTALL=false
 REUSE_BUILD=false
 RESOLV4=""
 TAG_ARG=""
+INSTALL_METHOD=""   # set by the --install pre-flight: "deb" (apt) or "apkg" (AppImage)
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --linux) LINUX=true ;;
@@ -91,14 +93,23 @@ if $DRY; then
   exit 0
 fi
 
-# --install: install/update the freshly built AppImage on this machine via apkg. It needs a real
-# AppImage, so force the Linux installer build (the unpacked --dir path produces none) and fail early
-# if apkg is missing.
+# --install: install/update the freshly built app on this machine, using the host's native package
+# format. On a Debian/Ubuntu-family host (dpkg present) install the .deb via apt — it lands in the
+# system package db and apt resolves dependencies; everywhere else fall back to apkg installing the
+# AppImage. Either way force the Linux installer build (the unpacked --dir path produces neither) and
+# fail early if the chosen method's tooling is missing.
 if $INSTALL; then
-  command -v apkg >/dev/null 2>&1 || {
-    echo "build.sh: --install needs 'apkg' (AppImage installer) on PATH." >&2; exit 1; }
   LINUX=true
-  UNPACKED=false   # --install wants the packaged AppImage, not the unpacked --dir build
+  UNPACKED=false   # --install wants a packaged installer, not the unpacked --dir build
+  if command -v dpkg >/dev/null 2>&1; then
+    INSTALL_METHOD=deb
+    command -v apt >/dev/null 2>&1 || command -v apt-get >/dev/null 2>&1 || {
+      echo "build.sh: --install on a .deb host needs apt/apt-get to install the package." >&2; exit 1; }
+  else
+    INSTALL_METHOD=apkg
+    command -v apkg >/dev/null 2>&1 || {
+      echo "build.sh: --install needs 'apkg' (AppImage installer) on PATH — no dpkg found for a .deb install." >&2; exit 1; }
+  fi
 fi
 
 # ---- Release (--push) -------------------------------------------------------------------------------
@@ -256,15 +267,27 @@ if $UNPACKED && ! $PUSH; then
   echo "  unpacked app → dist-electron/linux-unpacked/  (run: ./dist-electron/linux-unpacked/fantasia4x)"
 fi
 
-# --install: install/update the freshly built AppImage on this machine via apkg.
+# --install: install/update the freshly built app on this machine via the method picked in the
+# pre-flight — the native .deb (apt) on Debian/Ubuntu-family hosts, else the AppImage (apkg).
 if $INSTALL; then
-  APP="$(ls -t dist-electron/*.AppImage 2>/dev/null | head -1)"
-  if [[ -z "$APP" ]]; then
-    echo "build.sh: --install found no AppImage in dist-electron/ to install." >&2; exit 1
+  if [[ "$INSTALL_METHOD" == deb ]]; then
+    PKG="$(ls -t dist-electron/*.deb 2>/dev/null | head -1)"
+    if [[ -z "$PKG" ]]; then
+      echo "build.sh: --install found no .deb in dist-electron/ to install." >&2; exit 1
+    fi
+    APT="$(command -v apt || command -v apt-get)"
+    echo "▸ Installing $PKG via $APT (sudo)…"
+    sudo "$APT" install -y "./$PKG"   # leading ./ makes apt treat it as a local file, not a repo name
+    echo "✓ Installed/updated fantasia4x from the .deb (launch from your app menu, or: sudo apt remove fantasia4x)."
+  else
+    APP="$(ls -t dist-electron/*.AppImage 2>/dev/null | head -1)"
+    if [[ -z "$APP" ]]; then
+      echo "build.sh: --install found no AppImage in dist-electron/ to install." >&2; exit 1
+    fi
+    echo "▸ Installing $APP via apkg…"
+    apkg -S "$APP" fantasia4x
+    echo "✓ Installed/updated fantasia4x (launch it from your app menu, or: apkg -R fantasia4x to remove)."
   fi
-  echo "▸ Installing $APP via apkg…"
-  apkg -S "$APP" fantasia4x
-  echo "✓ Installed/updated fantasia4x (launch it from your app menu, or: apkg -R fantasia4x to remove)."
 fi
 
 # ---- Publish the LOCAL release (build.sh --push, without --remote) ----------------------------------
