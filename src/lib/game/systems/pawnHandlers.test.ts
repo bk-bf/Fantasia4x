@@ -169,17 +169,26 @@ describe('PawnStateMachine handler behaviour locks', () => {
   });
 
   describe('Hungry', () => {
-    it('eats in place (no campfire): consumes food and enters Eating', () => {
+    it('fetches stockpiled food into its pack, then eats it from inventory (no ethereal stockpile)', () => {
       const gs = makeState({
         pawns: [makePawn({ currentState: 'Hungry', needs: needs({ hunger: 85 }) })],
+        // Physical food sitting on the pawn's tile (5,5); the aggregate mirrors the stored drop.
+        droppedItems: [
+          { id: 'd1', resourceId: 'wild_oats', x: 5, y: 5, quantity: 5, stored: true } as never
+        ],
         stockpile: { wild_oats: 5 } // nutrition 39 → 2 units cover the 75-point deficit
       });
-      const out = tick1(gs);
-      // Primary lock: a meal was selected and the eat-in-place branch ran → Eating with a recovery
-      // amount stamped on the need job. (Exact stock count is governed by the stored-drop model,
-      // not asserted here.)
+      // Tick 1: standing on the food → it picks a serving up into its pack, re-evaluating as Hungry.
+      const afterPickup = tick1(gs);
+      expect(afterPickup.pawns[0].currentState).toBe('Hungry');
+      const carried = afterPickup.pawns[0].inventory?.items?.wild_oats ?? 0;
+      expect(carried).toBeGreaterThan(0);
+      // Tick 2: carrying food, no campfire → eats it in place FROM ITS OWN INVENTORY.
+      const out = tick1(afterPickup);
       expect(out.pawns[0].currentState).toBe('Eating');
       expect(out.pawns[0].activeJob?.hungerToRecover ?? 0).toBeGreaterThan(0);
+      // The food came out of the pawn's pack, not teleported from the colony aggregate.
+      expect(out.pawns[0].inventory?.items?.wild_oats ?? 0).toBeLessThan(carried);
     });
 
     it('returns to Idle when Hungry but no food is available', () => {
@@ -188,6 +197,20 @@ describe('PawnStateMachine handler behaviour locks', () => {
         stockpile: {}
       });
       expect(tick1(gs).pawns[0].currentState).toBe('Idle');
+    });
+
+    it('does NOT eat from the ethereal aggregate when no physical drop is reachable', () => {
+      // Aggregate says there's food, but there's no DroppedItem to fetch — the pawn must not consume it
+      // out of thin air (the bug). It waits (Idle) and the aggregate is untouched.
+      const gs = makeState({
+        pawns: [makePawn({ currentState: 'Hungry', needs: needs({ hunger: 85 }) })],
+        droppedItems: [],
+        stockpile: { wild_oats: 5 }
+      });
+      const out = tick1(gs);
+      expect(out.pawns[0].currentState).toBe('Idle');
+      expect(out.pawns[0].currentState).not.toBe('Eating');
+      expect(out.stockpile.wild_oats).toBe(5); // nothing consumed from the ethereal pool
     });
   });
 });

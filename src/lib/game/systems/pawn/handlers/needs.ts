@@ -11,12 +11,17 @@ import { tileHasBody } from '../carry';
 import {
   isAdjacent,
   selectFoodForMeal,
-  consumeMeal,
+  selectFoodFromInventory,
+  findNearestFoodDrops,
+  mealNutrition,
+  isAllowedFoodId,
   hasAvailableFood,
   applyIntoxication,
   applyFoodPoisoning,
-  applyMealBuff
+  applyMealBuff,
+  type MealPortion
 } from '../pawnQueries';
+import { pickUpFromTile } from '../pawnHauling';
 import { pawnStatService } from '../../../services/PawnStatService';
 import {
   findNearestStorageBuilding,
@@ -51,6 +56,79 @@ function fmtMeal(meal: { id: string; units: number }[]): string {
 }
 function fmtPos(pawn: Pawn): string {
   return pawn.position ? `(${pawn.position.x},${pawn.position.y})` : '(?,?)';
+}
+
+/**
+ * Begin EATING from the food the pawn CARRIES: deduct the meal from its pack (ADR-002 in place), apply
+ * intoxication/poisoning/meal-buff, and spread the hunger recovery over `duration`. The food is consumed
+ * from the pawn's own inventory — NOT the ethereal colony aggregate — so a pawn only eats what it
+ * physically fetched and is holding. Shared by the eat-in-place and arrived-at-campfire paths.
+ */
+function startEatingFromInventory(
+  pawn: Pawn,
+  gameState: GameState,
+  meal: MealPortion[],
+  where: string,
+  duration: number = EATING_TURNS_GROUND
+): GameState {
+  const { hungerRecovered, intoxication } = mealNutrition(meal);
+  const poisonRes = pawnStatService.evaluateStat('poison_resistance', pawn);
+  gameLogger.log(
+    gameState.turn,
+    'NEED-CHECK',
+    () =>
+      `${pawn.name} starts eating [${fmtMeal(meal)}] hunger=${(pawn.needs?.hunger ?? 0).toFixed(1)} at ${fmtPos(pawn)} (${where})`
+  );
+  return mutatePawn(gameState, pawn.id, (p) => {
+    // Eat from the pack: deduct the consumed units (drop the key once a stack is finished).
+    const items = { ...(p.inventory?.items ?? {}) };
+    for (const m of meal) {
+      const left = (items[m.id] ?? 0) - m.units;
+      if (left > 0) items[m.id] = left;
+      else delete items[m.id];
+    }
+    if (p.inventory) p.inventory = { ...p.inventory, items };
+    p.path = [];
+    p.isMoving = false;
+    p.hasReachedDestination = false;
+    p.currentState = PAWN_STATE.EATING;
+    applyIntoxication(p, intoxication); // §F8: a drink in the meal lifts mood + makes the pawn tipsy
+    applyFoodPoisoning(p, meal, poisonRes); // §F8: a tainted serving may bring on nausea/dysentery
+    applyMealBuff(p, meal); // §F8: a cooked dish grants its meal buff (well_fed/hearty_meal/…)
+    p.activeJob = {
+      type: 'need' as const,
+      targetX: p.position?.x ?? 0,
+      targetY: p.position?.y ?? 0,
+      progress: 0,
+      timeRequired: duration,
+      turnsInState: 0,
+      hungerToRecover: hungerRecovered
+    };
+  });
+}
+
+/**
+ * Pick up stockpiled food at (x,y) into the pawn's pack, then drop it back to HUNGRY to re-evaluate
+ * (eat now / carry to a campfire). Returns null when nothing grabbable is there (the stack vanished
+ * before the pawn arrived) so the caller can try the next stack or idle. The pickup cap mirrors the
+ * colony-optimal meal size so a pawn grabs a serving, not the whole larder.
+ */
+function grabFoodAt(gameState: GameState, pawn: Pawn, x: number, y: number): GameState | null {
+  const cap = selectFoodForMeal(pawn, gameState).reduce((s, m) => s + m.units, 0) || 1;
+  const grabbed = pickUpFromTile(gameState, pawn.id, x, y, {
+    radius: 1,
+    maxQty: cap,
+    acceptTest: (rid) => isAllowedFoodId(gameState, rid)
+  });
+  const p2 = grabbed.pawns.find((p) => p.id === pawn.id);
+  if (!p2 || selectFoodFromInventory(p2, grabbed).length === 0) return null; // nothing entered the pack
+  return mutatePawn(grabbed, pawn.id, (p) => {
+    p.currentState = PAWN_STATE.HUNGRY;
+    p.path = [];
+    p.isMoving = false;
+    p.hasReachedDestination = false;
+    p.activeJob = undefined;
+  });
 }
 
 /** §D: drink at the reached target over DRINK_TURNS (not instant — mirrors eating). Consumes one
@@ -144,63 +222,72 @@ export function handleWashing(pawn: Pawn, gameState: GameState): GameState {
 }
 
 export function handleHungry(pawn: Pawn, gameState: GameState): GameState {
-  const meal = selectFoodForMeal(pawn, gameState);
-  if (meal.length === 0) {
-    return transitionTo(pawn, PAWN_STATE.IDLE, gameState);
+  // Eat from the PACK first. If the pawn already carries allowed food (it just fetched it, below, or was
+  // hauling some), eat it — walking to a campfire for the faster recovery if one's reachable, else right
+  // where it stands. Food is consumed from the pawn's own inventory, never the ethereal aggregate.
+  const carried = selectFoodFromInventory(pawn, gameState);
+  if (carried.length > 0) {
+    const campfire = findNearestStorageBuilding(pawn, gameState);
+    if (
+      campfire &&
+      pawn.position &&
+      !isAdjacent(pawn.position.x, pawn.position.y, campfire.x, campfire.y)
+    ) {
+      const afterPath = tryAssignPath(pawn, campfire.x, campfire.y, gameState);
+      if (afterPath) {
+        // Carry the food to the fire; it's eaten on arrival (handleMovingToNeed, EATING target).
+        return mutatePawn(afterPath, pawn.id, (p) => {
+          p.currentState = PAWN_STATE.MOVING_TO_NEED;
+          p.activeJob = {
+            type: 'need' as const,
+            targetX: campfire.x,
+            targetY: campfire.y,
+            progress: 0,
+            timeRequired: EATING_TURNS,
+            turnsInState: 0,
+            targetState: PAWN_STATE.EATING
+          };
+        });
+      }
+    }
+    return startEatingFromInventory(pawn, gameState, carried, 'in place');
   }
 
-  // Phase 6: try to pathfind to the nearest campfire — eat there for better recovery speed
-  const storageBuilding = findNearestStorageBuilding(pawn, gameState);
-  if (
-    storageBuilding &&
-    pawn.position &&
-    !isAdjacent(pawn.position.x, pawn.position.y, storageBuilding.x, storageBuilding.y)
-  ) {
-    const afterPath = tryAssignPath(pawn, storageBuilding.x, storageBuilding.y, gameState);
+  // Empty pack: the pawn must FETCH physical food before it can eat (ADR-016 — no consuming the ethereal
+  // aggregate). Walk to the nearest reachable stockpiled food and pick it up; eating happens next tick
+  // via the carried-food branch above.
+  if (selectFoodForMeal(pawn, gameState).length === 0)
+    return transitionTo(pawn, PAWN_STATE.IDLE, gameState); // no food anywhere in the colony
+
+  for (const d of findNearestFoodDrops(pawn, gameState)) {
+    if (!pawn.position) break;
+    const onOrAdjacent =
+      (pawn.position.x === d.x && pawn.position.y === d.y) ||
+      isAdjacent(pawn.position.x, pawn.position.y, d.x, d.y);
+    if (onOrAdjacent) {
+      const grabbed = grabFoodAt(gameState, pawn, d.x, d.y);
+      if (grabbed) return grabbed; // got food → re-evaluate as HUNGRY next tick (eat / carry to fire)
+      continue; // nothing grabbable here — try the next nearest stack
+    }
+    const afterPath = tryAssignPath(pawn, d.x, d.y, gameState);
     if (afterPath) {
-      // Food is NOT consumed yet — it will be taken on arrival at the campfire.
       return mutatePawn(afterPath, pawn.id, (p) => {
         p.currentState = PAWN_STATE.MOVING_TO_NEED;
         p.activeJob = {
           type: 'need' as const,
-          targetX: storageBuilding.x,
-          targetY: storageBuilding.y,
+          targetX: d.x,
+          targetY: d.y,
           progress: 0,
           timeRequired: EATING_TURNS,
           turnsInState: 0,
-          targetState: PAWN_STATE.EATING
+          targetState: PAWN_STATE.HUNGRY // arrival = pick the food up, then re-evaluate
         };
       });
     }
   }
-
-  // Eat in place: consume all selected food now, then sit and eat for EATING_TURNS_GROUND turns.
-  // Clear any residual movement so the pawn is gated at this tile, not still walking while it eats.
-  const { state: afterMeal, hungerRecovered, intoxication } = consumeMeal(meal, gameState);
-  gameLogger.log(
-    gameState.turn,
-    'NEED-CHECK',
-    () =>
-      `${pawn.name} starts eating [${fmtMeal(meal)}] hunger=${(pawn.needs?.hunger ?? 0).toFixed(1)} at ${fmtPos(pawn)} (in place)`
-  );
-  const poisonRes = pawnStatService.evaluateStat('poison_resistance', pawn);
-  return mutatePawn(afterMeal, pawn.id, (p) => {
-    p.path = [];
-    p.isMoving = false;
-    p.currentState = PAWN_STATE.EATING;
-    applyIntoxication(p, intoxication); // §F8: a drink in the meal lifts mood + makes the pawn tipsy
-    applyFoodPoisoning(p, meal, poisonRes); // §F8: a tainted serving may bring on nausea/dysentery
-    applyMealBuff(p, meal); // §F8: a cooked dish grants its meal buff (well_fed/hearty_meal/…)
-    p.activeJob = {
-      type: 'need' as const,
-      targetX: p.position?.x ?? 0,
-      targetY: p.position?.y ?? 0,
-      progress: 0,
-      timeRequired: EATING_TURNS_GROUND,
-      turnsInState: 0,
-      hungerToRecover: hungerRecovered
-    };
-  });
+  // Food exists in the colony but none is physically reachable right now — wait it out as IDLE rather
+  // than teleport-eat (strictly physical food, per design). Hunger keeps climbing; starvation still bites.
+  return transitionTo(pawn, PAWN_STATE.IDLE, gameState);
 }
 
 export function handleTired(pawn: Pawn, gameState: GameState): GameState {
@@ -277,31 +364,16 @@ export function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState 
 
   if (pawn.hasReachedDestination && pawn.position) {
     const targetState = (activeJob.targetState ?? PAWN_STATE.EATING) as PawnStateName;
+    if (targetState === PAWN_STATE.HUNGRY) {
+      // Arrived at the food stockpile — pick a serving up into the pack, then re-evaluate as HUNGRY
+      // (eat here / carry to a campfire). If the stack vanished before arrival, drop to Idle to re-pick.
+      return grabFoodAt(gameState, pawn, activeJob.targetX, activeJob.targetY) ?? goIdle(pawn, gameState);
+    }
     if (targetState === PAWN_STATE.EATING) {
-      // Arrived at campfire — now select and consume the full meal, then start eating.
-      const meal = selectFoodForMeal(pawn, gameState);
-      if (meal.length === 0) return goIdle(pawn, gameState);
-      const { state: afterMeal, hungerRecovered, intoxication } = consumeMeal(meal, gameState);
-      gameLogger.log(
-        gameState.turn,
-        'NEED-CHECK',
-        () =>
-          `${pawn.name} starts eating [${fmtMeal(meal)}] hunger=${(pawn.needs?.hunger ?? 0).toFixed(1)} at ${fmtPos(pawn)} (at campfire)`
-      );
-      const poisonRes = pawnStatService.evaluateStat('poison_resistance', pawn);
-      return mutatePawn(afterMeal, pawn.id, (p) => {
-        p.currentState = PAWN_STATE.EATING;
-        p.hasReachedDestination = false;
-        applyIntoxication(p, intoxication); // §F8: a drink in the meal lifts mood + makes the pawn tipsy
-        applyFoodPoisoning(p, meal, poisonRes); // §F8: a tainted serving may bring on nausea/dysentery
-        applyMealBuff(p, meal); // §F8: a cooked dish grants its meal buff (well_fed/hearty_meal/…)
-        p.activeJob = {
-          ...activeJob,
-          timeRequired: EATING_TURNS,
-          turnsInState: 0,
-          hungerToRecover: hungerRecovered
-        };
-      });
+      // Arrived at the campfire carrying food — eat it from the pack (the campfire's faster recovery).
+      const meal = selectFoodFromInventory(pawn, gameState);
+      if (meal.length === 0) return goIdle(pawn, gameState); // lost the food en route
+      return startEatingFromInventory(pawn, gameState, meal, 'at campfire', EATING_TURNS);
     }
     if (targetState === PAWN_STATE.SLEEPING) {
       // Sleep ONLY when actually standing ON the bed tile. If movement stopped us short (a blocked

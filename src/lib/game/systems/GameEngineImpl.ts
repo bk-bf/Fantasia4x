@@ -38,9 +38,10 @@ import {
   freeDropTileNear,
   separateStackedBodies
 } from './pawn/carry';
-import { tendPatient, hasUntendedWound } from '../services/jobs/caretake';
+import { tendPatient, hasUntendedWound, TEND_WORK } from '../services/jobs/caretake';
 import { equipDropToPawn, carryDropToInventory } from '../core/PawnEquipment';
-import { jobService } from '../services/JobService';
+import { jobService, BASE_WORK_RATE } from '../services/JobService';
+import { pawnStatService } from '../services/PawnStatService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { resourceObjectService } from '../services/ResourceObjectService';
 import { entityService } from '../services/EntityService';
@@ -998,13 +999,25 @@ export class GameEngineImpl implements GameEngine {
           }
         }
       } else if (target.type === 'tend') {
-        // Drafted "emergency care": walk adjacent to the patient and dress its untended wounds on
-        // arrival (the same tendPatient the auto caretake job runs), then clear the order.
+        // Drafted "emergency care": walk adjacent to the patient and dress its untended wounds ONE AT A
+        // TIME (worst/most-bleeding first — the same per-wound tendPatient the auto caretake job runs),
+        // pacing each tend off the medic's `caretaking` work speed so it's never an instant heal; clear
+        // the order once nothing untended remains.
         const patient = gs.pawns.find((p) => p.id === target.patientId);
         const clearTend = () => {
           gs = {
             ...gs,
             pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, draftTarget: undefined } : p))
+          };
+        };
+        const setNextTend = (nextTendTurn: number) => {
+          gs = {
+            ...gs,
+            pawns: gs.pawns.map((p) =>
+              p.id === pawn.id
+                ? { ...p, draftTarget: { type: 'tend', patientId: target.patientId, nextTendTurn } }
+                : p
+            )
           };
         };
         if (
@@ -1018,10 +1031,24 @@ export class GameEngineImpl implements GameEngine {
           isAdjacent(pawn.position.x, pawn.position.y, patient.position.x, patient.position.y) ||
           (pawn.position.x === patient.position.x && pawn.position.y === patient.position.y)
         ) {
-          gs = pawnService.assignPath(pawn.id, [], gs);
-          const medic = gs.pawns.find((p) => p.id === pawn.id)!;
-          gs = tendPatient(patient, medic, gs);
-          clearTend();
+          gs = pawnService.assignPath(pawn.id, [], gs); // stand at the bedside
+          // Dress one wound when the per-wound timer is due (first arrival = immediately), then arm the
+          // next window. Between windows the medic just holds position (draftTarget keeps nextTendTurn).
+          if (target.nextTendTurn === undefined || gs.turn >= target.nextTendTurn) {
+            const medic = gs.pawns.find((p) => p.id === pawn.id)!;
+            gs = tendPatient(patient, medic, gs);
+            const after = gs.pawns.find((p) => p.id === target.patientId);
+            if (!after || !hasUntendedWound(after, gs.turn)) {
+              clearTend();
+            } else {
+              const speed = pawnStatService.getWorkModifiers(medic, 'caretaking').speed || 1;
+              const perWoundTurns = Math.max(
+                1,
+                Math.ceil((TEND_WORK / (BASE_WORK_RATE * speed)) * TICKS_PER_SECOND)
+              );
+              setNextTend(gs.turn + perWoundTurns);
+            }
+          }
         } else {
           gs = this._draftWalk(gs, pawn, patient.position.x, patient.position.y);
         }

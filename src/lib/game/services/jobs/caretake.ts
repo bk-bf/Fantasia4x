@@ -16,8 +16,14 @@ import { CARE_CONFIG, isTended } from '../../core/Wounds';
 import { rng } from '../../core/rng';
 import { PAWN_STATE } from '../../systems/pawn/pawnStates';
 
-/** Work points to dress a patient's wounds (a short on-site job). */
-const TEND_WORK = 18;
+/** Work points to dress ONE wound (a short on-site job). The auto caretake job accrues this at the
+ *  medic's stat-scaled `caretaking` speed and dresses a single wound per completion, so a badly hurt
+ *  patient is tended wound-by-wound over time (never an instant all-at-once heal). Exported so the
+ *  drafted emergency-care order can pace its per-wound tends off the same budget. */
+export const TEND_WORK = 18;
+
+/** Order wounds worst-first: more bleeding wins, then higher severity as the tiebreak. */
+const SEVERITY_RANK: Record<string, number> = { minor: 1, serious: 2, critical: 3, destroyed: 4 };
 /** Dressing quality multiplier when the patient is NOT under a roof — a field dressing barely helps. */
 const OFF_SHELTER_TEND_MUL = 0.3;
 
@@ -68,19 +74,38 @@ function shelterTendFactor(gs: GameState, x: number, y: number): number {
 }
 
 /**
- * Dress `patient`'s untended wounds using `medic`'s `medical_skill` (folds in sight × manipulation ×
- * consciousness) × mood × variance, plus the best stockpile medicine (consumed), the whole roll scaled
- * by the patient's shelter (heavy off-roof penalty). Stamps the rolled quality on each untended wound.
+ * Dress the SINGLE worst untended wound on `patient` (most bleeding first, severity as the tiebreak)
+ * using `medic`'s `medical_skill` (folds in sight × manipulation × consciousness) × mood × variance,
+ * plus the best stockpile medicine (consumed), the whole roll scaled by the patient's shelter (heavy
+ * off-roof penalty). One wound per call so a mangled patient is tended progressively rather than fully
+ * healed in one instant pass — the caller (auto job / drafted order) repeats until none remain.
  * Exported for the job handler and tests. A botched roll (< minTendQuality) does nothing.
  */
 export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameState {
   const turn = gs.turn;
   const limbs = patient.limbs;
   if (!limbs || !patient.position) return gs;
-  const hasUntended = limbs.some((l) =>
-    (l.parts ?? []).some((p) => p.injuries.some((w) => !isTended(w, turn)))
-  );
-  if (!hasUntended) return gs;
+
+  // Pick the worst untended wound: most bleeding, then highest severity.
+  let target: { li: number; pi: number; wi: number; bleeding: number; rank: number } | null = null;
+  for (let li = 0; li < limbs.length; li++) {
+    const parts = limbs[li].parts ?? [];
+    for (let pi = 0; pi < parts.length; pi++) {
+      const injuries = parts[pi].injuries;
+      for (let wi = 0; wi < injuries.length; wi++) {
+        const w = injuries[wi];
+        if (isTended(w, turn)) continue;
+        const rank = SEVERITY_RANK[w.severity] ?? 0;
+        if (
+          !target ||
+          w.bleeding > target.bleeding ||
+          (w.bleeding === target.bleeding && rank > target.rank)
+        )
+          target = { li, pi, wi, bleeding: w.bleeding, rank };
+      }
+    }
+  }
+  if (!target) return gs; // nothing left to dress
 
   const skill = pawnStatService.evaluateStat('medical_skill', medic);
   const mood = medic.state?.mood ?? 50;
@@ -91,20 +116,18 @@ export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameStat
   const quality = Math.max(0, Math.min(1, (skillRoll + (med?.quality ?? 0)) * shelter));
   if (quality < CARE_CONFIG.minTendQuality) return gs; // botched / hopeless in the field
 
-  const newLimbs = limbs.map((limb) => {
-    const parts = limb.parts;
-    if (!parts || !parts.some((p) => p.injuries.length > 0)) return limb;
-    const newParts = parts.map((part) =>
-      part.injuries.length === 0
+  const newLimbs = limbs.map((limb, li) => {
+    if (li !== target!.li) return limb;
+    const parts = limb.parts ?? [];
+    const newParts = parts.map((part, pi) =>
+      pi !== target!.pi
         ? part
         : {
             ...part,
-            injuries: part.injuries.map((w) =>
+            injuries: part.injuries.map((w, wi) =>
               // Dressing a wound STOPS its bleeding immediately (the reliable answer vs the lucky clot
               // roll) and stamps the tend for faster healing.
-              isTended(w, turn)
-                ? w
-                : { ...w, treatedAt: turn, treatmentQuality: quality, bleeding: 0 }
+              wi === target!.wi ? { ...w, treatedAt: turn, treatmentQuality: quality, bleeding: 0 } : w
             )
           }
     );
@@ -118,7 +141,7 @@ export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameStat
     ...gs,
     pawns: gs.pawns.map((p) => (p.id === patient.id ? { ...patient, limbs: newLimbs } : p))
   };
-  if (med) next = consumeFromStockpiles(next, { [med.id]: 1 }); // one dose per tend
+  if (med) next = consumeFromStockpiles(next, { [med.id]: 1 }); // one dose per wound dressed
   return next;
 }
 

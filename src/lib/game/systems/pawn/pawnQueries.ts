@@ -105,20 +105,33 @@ export function hasAvailableFood(gs: GameState): boolean {
 
 export type MealPortion = { id: string; units: number };
 
+/** True when `id` is food this colony's food filter currently permits a pawn to eat. */
+export function isAllowedFoodId(gs: GameState, id: string): boolean {
+  if (!resolveAllowedFoodIds(gs.foodSettings).has(id)) return false;
+  const def = ITEM_DEF_BY_ID.get(id);
+  return !!def && (def.category === 'food' || edibleNutrition(def) > 0);
+}
+
 /**
- * Select a meal that brings the pawn to SAFE_HUNGER from physical stockpile stock. Takes the
- * most nutritious food first and eats as many units as needed (an item's `nutrition` IS the
- * hunger it removes per unit — no scaling, no per-type cap), then supplements with less
- * nutritious options.
+ * Select a meal that brings the pawn to SAFE_HUNGER from a `supply` map (id → units). Defaults to the
+ * colony aggregate (`gs.stockpile`) for "what could I eat?" queries; the eat path passes the pawn's
+ * own `inventory.items` so it eats the food it physically CARRIES, not the ethereal stockpile (ADR-016
+ * — a hungry pawn fetches food to its pack, then eats from there). Takes the most nutritious food first
+ * and eats as many units as needed (an item's `nutrition` IS the hunger it removes per unit), then
+ * supplements with less nutritious options.
  */
-export function selectFoodForMeal(pawn: Pawn, gs: GameState): MealPortion[] {
+export function selectFoodForMeal(
+  pawn: Pawn,
+  gs: GameState,
+  supply: Record<string, number> = gs.stockpile ?? {}
+): MealPortion[] {
   const hungerToSatisfy = Math.max(0, (pawn.needs?.hunger ?? 0) - SAFE_HUNGER);
   if (hungerToSatisfy <= 0) return [];
 
   const allowed = resolveAllowedFoodIds(gs.foodSettings); // colony food filter (panel) gates the eat-list
   type FoodOption = { id: string; available: number; nutrition: number };
   const options: FoodOption[] = [];
-  for (const [id, amount] of Object.entries(gs.stockpile ?? {})) {
+  for (const [id, amount] of Object.entries(supply)) {
     if (amount <= 0 || !allowed.has(id)) continue;
     const def = ITEM_DEF_BY_ID.get(id);
     const nutrition = edibleNutrition(def); // carcass-aware (raw carcasses derive nutrition from mass)
@@ -141,6 +154,47 @@ export function selectFoodForMeal(pawn: Pawn, gs: GameState): MealPortion[] {
     remaining -= unitsTaken * hungerPerUnit;
   }
   return meal;
+}
+
+/** The meal a pawn can eat from the food it CARRIES (its pack) right now — the eat-from-inventory path. */
+export function selectFoodFromInventory(pawn: Pawn, gs: GameState): MealPortion[] {
+  return selectFoodForMeal(pawn, gs, pawn.inventory?.items ?? {});
+}
+
+/** Stored food drops a hungry pawn could fetch, nearest first (capped). Reachability is tested by the
+ *  caller (it routes with tryAssignPath); this just ranks physical, edible, unreserved stockpile stacks
+ *  so the pawn walks to real food instead of consuming the ethereal aggregate. */
+const MAX_FOOD_DROP_CANDIDATES = 8;
+export function findNearestFoodDrops(
+  pawn: Pawn,
+  gs: GameState
+): { id: string; x: number; y: number; resourceId: string }[] {
+  const pos = pawn.position;
+  if (!pos) return [];
+  const cands = (gs.droppedItems ?? []).filter(
+    (d) =>
+      d.stored && d.quantity > 0 && !d.reservedFor && !d.forbidden && isAllowedFoodId(gs, d.resourceId)
+  );
+  cands.sort((a, b) => manhattan(a.x, a.y, pos.x, pos.y) - manhattan(b.x, b.y, pos.x, pos.y));
+  return cands
+    .slice(0, MAX_FOOD_DROP_CANDIDATES)
+    .map((d) => ({ id: d.id, x: d.x, y: d.y, resourceId: d.resourceId }));
+}
+
+/** Hunger relief + alcohol mood-lift a meal yields, WITHOUT consuming anything — the eat handlers
+ *  deduct the food from the pawn's inventory themselves (ADR-002 in-place), then apply this. */
+export function mealNutrition(meal: MealPortion[]): {
+  hungerRecovered: number;
+  intoxication: number;
+} {
+  let hungerRecovered = 0;
+  let intoxication = 0;
+  for (const { id, units } of meal) {
+    const def = ITEM_DEF_BY_ID.get(id);
+    hungerRecovered += edibleNutrition(def) * units;
+    intoxication += (def?.intoxication ?? 0) * units;
+  }
+  return { hungerRecovered, intoxication };
 }
 
 /** Consume a pre-selected meal from physical stockpile stock, returning updated state, total hunger

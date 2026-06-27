@@ -313,8 +313,9 @@ export interface Pawn {
    *  For `rescue`, the pawn walks to the COLLAPSED `victimId`, picks it up (the victim is set
    *  `carriedBy` this pawn and hidden — it travels inside the carrier, not as a floating glyph), hauls
    *  it to the nearest shelter and lays it down — exactly the pick-up→carry→drop shape of an item haul.
-   *  For `tend`, the pawn walks adjacent to `patientId` and dresses its untended wounds on arrival
-   *  (the same `tendPatient` the auto caretake job runs), then clears. */
+   *  For `tend`, the pawn walks adjacent to `patientId` and dresses its untended wounds ONE AT A TIME
+   *  (worst/most-bleeding first, the same `tendPatient` the auto caretake job runs), pacing each tend
+   *  off its `caretaking` work speed via `nextTendTurn`, then clears once no untended wound remains. */
   draftTarget?:
     | { type: 'move'; x: number; y: number }
     | {
@@ -328,7 +329,7 @@ export interface Pawn {
     | { type: 'haul'; x: number; y: number }
     | { type: 'equip'; dropId: string; x: number; y: number; slot?: EquipmentSlot | 'inventory' }
     | { type: 'rescue'; victimId: string; auto?: boolean }
-    | { type: 'tend'; patientId: string };
+    | { type: 'tend'; patientId: string; nextTendTurn?: number };
 
   /** When set, this (downed) pawn is being CARRIED by the pawn whose id this is. While carried the
    *  victim is hidden from the map (it rides inside the carrier as a `carried_pawn` inventory item —

@@ -169,6 +169,39 @@ describe('wound recovery & bleeding', () => {
     expect(wound.treatedAt).toBeDefined();
   });
 
+  it('tends only the worst untended wound per pass (most-bleeding first), leaving the rest', () => {
+    let gs = combatService.applyInjury('p1', { ...cut(50), bodyPart: 'chest' }, state([makePawn()]));
+    gs = combatService.applyInjury('p1', { ...cut(30), bodyPart: 'leftHand' }, gs);
+    // Force a deterministic bleed order: the chest wound bleeds harder than the hand wound.
+    gs = {
+      ...gs,
+      pawns: gs.pawns.map((p) => ({
+        ...p,
+        limbs: p.limbs!.map((l) => ({
+          ...l,
+          parts: (l.parts ?? []).map((part) => ({
+            ...part,
+            injuries: part.injuries.map((w) => ({
+              ...w,
+              bleeding: part.id === 'chest' ? 5 : part.id === 'leftHand' ? 2 : w.bleeding
+            }))
+          }))
+        }))
+      })),
+      buildings: [{ id: 'b', type: 'hay_bed', x: 5, y: 5, status: 'complete', progress: 1 }] as never
+    };
+    const medic = makePawn({ id: 'm1', name: 'Medic' });
+    rng.reseed(3);
+    const after = tendPatient(gs.pawns[0], medic, gs);
+    const parts = after.pawns[0].limbs!.flatMap((l) => l.parts ?? []);
+    const chest = parts.find((p) => p.id === 'chest')!.injuries[0];
+    const hand = parts.find((p) => p.id === 'leftHand')!.injuries[0];
+    expect(chest.treatedAt).toBeDefined(); // the worst (most-bleeding) wound is dressed first
+    expect(chest.bleeding).toBe(0); // dressing stops its bleed
+    expect(hand.treatedAt).toBeUndefined(); // the lesser wound is left for the next pass
+    expect(hand.bleeding).toBe(2);
+  });
+
   it('a minor scratch does not force recovery, but a serious wound does', () => {
     const minor = combatService.applyInjury(
       'p1',
