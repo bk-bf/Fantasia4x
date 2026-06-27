@@ -14,6 +14,21 @@ import buildingsData from '../database/buildings.jsonc';
 
 const BUILDING_DEFS = buildingsData as unknown as Building[];
 
+// §F storage bins — buildings whose `effects.storageStacks` (> 1) turn their tile into a DENSE store
+// that holds several distinct stored piles instead of the usual one, AND act as a stockpile slot on
+// their own (no drawn zone needed). Precomputed once: defs are static, so the per-tile/per-tick checks
+// below stay O(buildings) with O(1) lookups rather than rescanning every def. Other storage buildings
+// just add a `storageStacks` to their effects to opt in. `preservation` (0–1) slows food spoilage.
+const STORAGE_BIN_STACKS = new Map<string, number>(
+  BUILDING_DEFS.filter((d) => (d.effects?.storageStacks ?? 0) > 0).map((d) => [
+    d.id,
+    d.effects.storageStacks
+  ])
+);
+function binStacksForType(type: string): number {
+  return STORAGE_BIN_STACKS.get(type) ?? 0;
+}
+
 export class GameStateManager {
   private state: GameState;
 
@@ -303,6 +318,57 @@ export function tileFreeCapacity(state: GameState, x: number, y: number): number
   return Math.max(0, tileCapacity(state, x, y) - tileStoredQuantity(state, x, y));
 }
 
+// ── §F storage bins ────────────────────────────────────────────────────────────────────────────
+/**
+ * How many DISTINCT stored piles tile (x,y) may hold: 1 for a plain stockpile tile, or the largest
+ * `storageStacks` of any complete storage-bin building on it (a wicker basket holds 4). The single
+ * source of truth for per-tile pile capacity — shared by haul-job sync and the deposit search.
+ */
+export function tilePileCapacity(state: GameState, x: number, y: number): number {
+  let cap = 1;
+  for (const b of state.buildings ?? []) {
+    if (b.status !== 'complete' || b.x !== x || b.y !== y) continue;
+    const stacks = binStacksForType(b.type);
+    if (stacks > cap) cap = stacks;
+  }
+  return cap;
+}
+
+/** Count of distinct stored piles physically sitting on tile (x,y). */
+export function tileStoredPileCount(state: GameState, x: number, y: number): number {
+  let n = 0;
+  for (const d of state.droppedItems ?? []) if (d.stored && d.x === x && d.y === y) n++;
+  return n;
+}
+
+/** A storage-bin building (effects.storageStacks) sits, complete, on tile (x,y). */
+export function isStorageBinTile(state: GameState, x: number, y: number): boolean {
+  for (const b of state.buildings ?? [])
+    if (b.status === 'complete' && b.x === x && b.y === y && binStacksForType(b.type) > 0)
+      return true;
+  return false;
+}
+
+/**
+ * Every tile that accepts hauled goods: drawn `stockpile` zone tiles ∪ standalone storage-bin tiles.
+ * The single "where can a hauler deposit" source — shared by haul-job capacity sync, the deposit-point
+ * search, the opportunistic sweep, and the absorb trigger, so a bin works with no stockpile zone drawn.
+ */
+export function storageTileKeys(state: GameState): string[] {
+  const seen = new Set<string>();
+  const zt = state.zoneTiles ?? {};
+  for (const k in zt) if (zt[k]?.includes('stockpile')) seen.add(k);
+  for (const b of state.buildings ?? [])
+    if (b.status === 'complete' && binStacksForType(b.type) > 0) seen.add(`${b.x},${b.y}`);
+  return [...seen];
+}
+
+/** True when tile (x,y) accepts hauled goods (stockpile zone tile OR a storage-bin tile). */
+export function isStorageTile(state: GameState, x: number, y: number): boolean {
+  if (state.zoneTiles?.[`${x},${y}`]?.includes('stockpile')) return true;
+  return isStorageBinTile(state, x, y);
+}
+
 /**
  * Choose a tile to physically store items on. Prefers the explicit `tileKey`, then a
  * stockpile-designated tile with free capacity, then any stockpile tile, then an existing
@@ -314,14 +380,13 @@ function pickStorageTile(state: GameState, tileKey: string | null): { x: number;
     const [x, y] = tileKey.split(',').map(Number);
     if (Number.isFinite(x) && Number.isFinite(y)) return { x, y };
   }
-  const zt = state.zoneTiles ?? {};
+  // Scan stockpile zone tiles AND standalone storage-bin tiles; prefer one with a free pile slot.
   let fallback: { x: number; y: number } | null = null;
-  for (const key of Object.keys(zt)) {
-    if (!zt[key]?.includes('stockpile')) continue;
+  for (const key of storageTileKeys(state)) {
     const [x, y] = key.split(',').map(Number);
     if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
     if (!fallback) fallback = { x, y };
-    if (tileFreeCapacity(state, x, y) > 0) return { x, y };
+    if (tileStoredPileCount(state, x, y) < tilePileCapacity(state, x, y)) return { x, y };
   }
   if (fallback) return fallback;
   const sd = (state.droppedItems ?? []).find((d) => d.stored);
@@ -415,8 +480,8 @@ export function absorbDropIfOnStockpileTile(state: GameState, dropId: string): G
   const drop = (state.droppedItems ?? []).find((d) => d.id === dropId);
   if (!drop || drop.stored) return state;
 
-  const tileKey = `${drop.x},${drop.y}`;
-  if (!state.zoneTiles?.[tileKey]?.includes('stockpile')) return state;
+  // Stockpile zone tile OR a standalone storage-bin tile (a basket stores without a drawn zone).
+  if (!isStorageTile(state, drop.x, drop.y)) return state;
 
   // Identity-tracked drops (a per-instance `name` override, a tracked `instance`, or a §Q craft
   // `quality` tier) must NOT be folded into a counted pile — that would erase the identity / merge

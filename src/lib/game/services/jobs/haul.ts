@@ -5,7 +5,7 @@ import type { GameState, Job, ItemInstance } from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
 import { gatedConsole as console, isGameDebug } from '../../core/log';
 import { itemService } from '../ItemService';
-import { zoneTileKeys } from '../DesignationService';
+import { storageTileKeys, tilePileCapacity, tileStoredPileCount } from '../../core/GameState';
 import { itemMatchesFilter } from './filters';
 import { ENC_OVERLOAD_FULL } from '../../core/needs';
 import { gameLogger } from '../../dev/gameLogger';
@@ -46,27 +46,30 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
     );
   }
 
-  // Haul jobs only make sense when there is a stockpile zone to deliver to.
-  const stockpileTiles = zoneTileKeys(gs, 'stockpile');
+  // Haul jobs only make sense when there is somewhere to deliver to — a drawn stockpile zone OR a
+  // standalone storage-bin building (a wicker basket stores without a zone).
+  const stockpileTiles = storageTileKeys(gs);
   if (stockpileTiles.length === 0) {
     // Remove any leftover haul jobs and skip creation
     const pruned = jobs.filter((j) => j.type !== 'haul');
     if (pruned.length !== jobs.length)
-      console.log('[HAUL-SYNC] no stockpile zone — removed all haul jobs');
+      console.log('[HAUL-SYNC] no stockpile — removed all haul jobs');
     return pruned;
   }
 
-  // Count free stockpile tiles (not occupied by a stored item)
-  const usedCoords = new Set(
-    (gs.droppedItems ?? []).filter((d) => d.stored).map((d) => `${d.x},${d.y}`)
-  );
-  // A tile is "available" if it's free OR already holds the same resource (can stack)
+  // Free pile-slots across all storage tiles: each tile holds `tilePileCapacity` distinct piles
+  // (1 for a plain stockpile tile, more for a dense bin), minus the piles already stored on it.
+  let freeSlots = 0;
+  for (const key of stockpileTiles) {
+    const [x, y] = key.split(',').map(Number);
+    freeSlots += Math.max(0, tilePileCapacity(gs, x, y) - tileStoredPileCount(gs, x, y));
+  }
+  // An already-stored resource type can always absorb more (a haul tops up its existing pile without
+  // claiming a new slot), so total acceptance = free slots + distinct stored types.
   const storedResourceIds = new Set(
     (gs.droppedItems ?? []).filter((d) => d.stored).map((d) => d.resourceId)
   );
-  const freeTileCount = stockpileTiles.filter(([key]) => !usedCoords.has(key)).length;
-  // Total capacity = free tiles + tiles that can accept more of an already-stored type
-  const canAccept = freeTileCount + storedResourceIds.size;
+  const canAccept = freeSlots + storedResourceIds.size;
 
   // Remove haul jobs whose dropped item no longer exists, and keep each surviving job's `urgent` flag
   // in sync with its source stack (so toggling urgency on an already-queued stack takes effect). The

@@ -8,11 +8,13 @@ import type { GameState, Pawn, ItemInstance } from '../../core/types';
 import {
   addToStockpileZone,
   absorbDropIfOnStockpileTile,
-  aggregateFromDrops
+  aggregateFromDrops,
+  storageTileKeys,
+  tilePileCapacity,
+  tileStoredPileCount
 } from '../../core/GameState';
 import { manhattan } from '../../core/distance';
 import { occupancyService } from '../../services/OccupancyService';
-import { zoneTileKeys } from '../../services/DesignationService';
 import { itemService } from '../../services/ItemService';
 import { stockpileAcceptsDrop } from '../../services/jobs/haul';
 import { ENC_OVERLOAD_FULL } from '../../core/needs';
@@ -159,7 +161,7 @@ export function pickUpFromTile(
  * Cheap: bails before the pickup scan if no stockpile zone exists.
  */
 export function opportunisticHaulPickup(gs: GameState, pawnId: string): GameState {
-  if (zoneTileKeys(gs, 'stockpile').length === 0) return gs;
+  if (storageTileKeys(gs).length === 0) return gs;
   const pawn = gs.pawns.find((p) => p.id === pawnId);
   if (!pawn?.position) return gs;
   return pickUpFromTile(gs, pawnId, pawn.position.x, pawn.position.y, {
@@ -216,10 +218,10 @@ export function findNearestDepositPoint(
   const standable = (x: number, y: number) =>
     !!gs.worldMap?.[y]?.[x]?.walkable && !occupancyService.isBlocked(gs, x, y, pawn.id);
 
-  // ── Tier 1: stockpile zones — stand ON the nearest standable zone tile. ──
+  // ── Tier 1: stockpile zones + storage bins — stand ON the nearest standable storage tile. ──
   let bestStandable: { x: number; y: number; dist: number } | null = null;
   let nearestAny: { x: number; y: number; dist: number } | null = null;
-  for (const key of zoneTileKeys(gs, 'stockpile')) {
+  for (const key of storageTileKeys(gs)) {
     const [x, y] = key.split(',').map(Number);
     const d = distHere(x, y);
     if (!nearestAny || d < nearestAny.dist) nearestAny = { x, y, dist: d };
@@ -440,13 +442,21 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   const px = pawn.position?.x ?? 0;
   const py = pawn.position?.y ?? 0;
   const distToPawn = (x: number, y: number) => manhattan(x, y, px, py);
-  const stockpileTiles = zoneTileKeys(gs, 'stockpile')
+  const stockpileTiles = storageTileKeys(gs)
     .map((key) => {
       const [x, y] = key.split(',').map(Number);
-      return { key, x, y };
+      return { key, x, y, cap: tilePileCapacity(gs, x, y) };
     })
     .sort((a, b) => distToPawn(a.x, a.y) - distToPawn(b.x, b.y));
   const stockpileTileKeys = new Set(stockpileTiles.map((t) => t.key));
+  // Distinct stored piles already on each storage tile — incremented as we lay new piles below so a
+  // dense bin (capacity > 1) accepts several stacks while a plain tile fills after one.
+  const pileCount = new Map<string, number>();
+  for (const d of gs.droppedItems ?? [])
+    if (d.stored && stockpileTileKeys.has(`${d.x},${d.y}`))
+      pileCount.set(`${d.x},${d.y}`, (pileCount.get(`${d.x},${d.y}`) ?? 0) + 1);
+  const firstTileWithRoom = () =>
+    stockpileTiles.find((t) => (pileCount.get(t.key) ?? 0) < t.cap);
 
   // THE STOCKPILE IS PHYSICAL — a pawn may only deposit into a stockpile it is standing ON or directly
   // ADJACENT to (Chebyshev ≤ 1). Crediting the globally-NEAREST stockpile tile from a distance was the
@@ -480,15 +490,14 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
       .sort((a, b) => distToPawn(a.x, a.y) - distToPawn(b.x, b.y))[0];
     let tile: { x: number; y: number } | null = null;
     if (existingStoredDrop) {
+      // Stacks onto its existing pile — no new slot consumed.
       tile = { x: existingStoredDrop.x, y: existingStoredDrop.y };
     } else {
-      const usedCoords = new Set(
-        newDropped
-          .filter((d) => d.stored && stockpileTileKeys.has(`${d.x},${d.y}`))
-          .map((d) => `${d.x},${d.y}`)
-      );
-      const freeTile = stockpileTiles.find((t) => !usedCoords.has(t.key));
-      if (freeTile) tile = { x: freeTile.x, y: freeTile.y };
+      const freeTile = firstTileWithRoom();
+      if (freeTile) {
+        tile = { x: freeTile.x, y: freeTile.y };
+        pileCount.set(freeTile.key, (pileCount.get(freeTile.key) ?? 0) + 1); // claim the slot
+      }
     }
 
     if (tile) {
@@ -504,11 +513,7 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   // Identity-tracked instances (dynamicName, e.g. named carcasses) are laid into the stockpile as
   // individual, NON-stacking stored drops so each keeps its per-pawn name. Ordinary tracked items
   // (tools/weapons the pawn keeps) stay in hand. A carcass with nowhere to go also stays in hand.
-  const usedTileCoords = new Set(newDropped.filter((d) => d.stored).map((d) => `${d.x},${d.y}`));
-  for (const id of newDropIds) {
-    const d = newDropped.find((x) => x.id === id);
-    if (d) usedTileCoords.add(`${d.x},${d.y}`);
-  }
+  // Reuses the same `pileCount`/`firstTileWithRoom` slot accounting so each named pile takes one slot.
   const keptInstances: ItemInstance[] = [];
   for (const instance of carriedInstances) {
     // A carried colonist is a LIVE pawn riding in the pack — never lay a person into a stockpile.
@@ -521,12 +526,12 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
       keptInstances.push(instance);
       continue;
     }
-    const freeTile = stockpileTiles.find((t) => !usedTileCoords.has(t.key));
+    const freeTile = firstTileWithRoom();
     if (!freeTile) {
       keptInstances.push(instance); // no room — keep carrying it
       continue;
     }
-    usedTileCoords.add(freeTile.key);
+    pileCount.set(freeTile.key, (pileCount.get(freeTile.key) ?? 0) + 1);
     const id = `stored-${instance.instanceId}`;
     newDropIds.push(id);
     newDropped.push({

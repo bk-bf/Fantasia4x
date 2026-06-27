@@ -572,14 +572,21 @@ export class ItemServiceImpl implements ItemService {
     const drops = gameState.droppedItems;
     if (!drops || drops.length === 0) return gameState;
 
-    // Best container preservationBonus per tile (from stored container stacks sharing the tile).
+    // Best preservation per tile — the larger of any stored container stack's `preservationBonus`
+    // (woven basket item −10%, clay urn −20%…) and any storage-bin BUILDING's `effects.preservation`
+    // on the same tile (the wicker-basket store keeps its food fresher). Best one wins.
     const tilePreserve = new Map<string, number>();
+    const bump = (key: string, bonus: number | undefined) => {
+      if (bonus === undefined || bonus <= 0) return;
+      if (bonus > (tilePreserve.get(key) ?? 0)) tilePreserve.set(key, bonus);
+    };
     for (const d of drops) {
       if (!d.stored || (d.quantity ?? 0) <= 0) continue;
-      const bonus = this.getItemById(d.resourceId)?.preservationBonus;
-      if (bonus === undefined || bonus <= 0) continue;
-      const key = `${d.x},${d.y}`;
-      if (bonus > (tilePreserve.get(key) ?? 0)) tilePreserve.set(key, bonus);
+      bump(`${d.x},${d.y}`, this.getItemById(d.resourceId)?.preservationBonus);
+    }
+    for (const b of gameState.buildings ?? []) {
+      if (b.status !== 'complete') continue;
+      bump(`${b.x},${b.y}`, BUILDING_DEFS_FOR_ITEMS.find((def) => def.id === b.type)?.effects?.preservation);
     }
 
     let changed = false;

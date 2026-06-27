@@ -820,6 +820,20 @@
           return f ? (buildingService.getBuildingById(f.type)?.name ?? null) : null;
         })()
       : null;
+  // §F storage bins — a building with `effects.storageStacks` is a standalone store (a wicker basket):
+  // its tile accepts hauled goods with no drawn stockpile zone, so the "haul to stockpile" affordances
+  // must treat a bin tile as a stockpile tile.
+  const buildingIsStorageBin = (b: { type: string; status: string }) =>
+    b.status === 'complete' && !!buildingService.getBuildingById(b.type)?.effects?.storageStacks;
+  $: hasStorageBin = buildings.some(buildingIsStorageBin);
+  $: hoverBin =
+    hoverBuilding && buildingIsStorageBin(hoverBuilding) ? hoverBuilding : null;
+  // Stored piles physically sitting in the hovered bin — surfaced in its hover card (the basket
+  // represents its contents; the individual piles don't each draw their own glyph on the tile).
+  $: hoverBinContents = hoverBin
+    ? droppedItems.filter((d) => d.stored && d.x === hoverBin.x && d.y === hoverBin.y)
+    : [];
+
   // Click-selected building (stays locked until Esc / click elsewhere)
   $: selectedBuilding = selectedBuildingId
     ? (buildings.find((b) => b.id === selectedBuildingId) ?? null)
@@ -4624,8 +4638,11 @@
         }
         // Haul the loose stack to a stockpile (multi-trip), if one exists and this tile isn't one.
         const looseHere = tileItems.some((d) => !d.stored && !d.reservedFor);
-        const tileIsStockpile = (zoneTiles[`${tileX},${tileY}`] ?? []).includes('stockpile');
-        const stockpileExists = Object.values(zoneTiles).some((t) => t.includes('stockpile'));
+        const tileIsStockpile =
+          (zoneTiles[`${tileX},${tileY}`] ?? []).includes('stockpile') ||
+          buildings.some((b) => b.x === tileX && b.y === tileY && buildingIsStorageBin(b));
+        const stockpileExists =
+          Object.values(zoneTiles).some((t) => t.includes('stockpile')) || hasStorageBin;
         if (looseHere && stockpileExists && !tileIsStockpile) {
           entries.push({
             label: 'Haul to stockpile',
@@ -4861,6 +4878,15 @@
         {/if}
         {#if bDef?.description}
           <div class="bld-desc">{bDef.description}</div>
+        {/if}
+        {#if hoverBin && !isBlueprint}
+          {@const cap = bDef?.effects?.storageStacks ?? 1}
+          <div class="bld-store">stored {hoverBinContents.length}/{cap} stacks</div>
+          {#each hoverBinContents as d (d.id)}
+            <div class="bld-store-item">· {itemService.getItemDisplayName(d)} ×{d.quantity}</div>
+          {:else}
+            <div class="bld-store-item" style="opacity:0.6">· empty</div>
+          {/each}
         {/if}
         {#if !isBlueprint && !hoverBuilding.deconstructQueued && bDef?.maxFuel !== undefined}
           {@const fuelMax = bDef.maxFuel}
@@ -5239,6 +5265,16 @@
     font-size: 9px;
     margin-top: 1px;
     line-height: 1.4;
+  }
+  .bld-store {
+    color: #c8a050;
+    font-size: 9px;
+    margin-top: 3px;
+  }
+  .bld-store-item {
+    color: #a89060;
+    font-size: 9px;
+    line-height: 1.3;
   }
   .bld-progress {
     color: #a08840;

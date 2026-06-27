@@ -88,7 +88,7 @@
     "bg"              : [0.1, 0.09, 0.07],
     "color"           : "#F2EBC2",
     "glow"            : { "color": [1.0, 0.97, 0.8], "radius": 3.0, "intensity": 0.5, "flicker": true },
-    "thermal"         : { "degrees": -5, "radius": 5 },
+    "thermal"         : {"degrees": -5, "radius": 5},
     "spawn"           : { "subterrains": {"deep_grass": 0.0016, "grass": 0.0006, "tall_grass": 0.0004} },
     "nodeAmountRange" : [2, 4],
     "designationTypes": ["woodcut", "forage"],
@@ -173,7 +173,7 @@
     "bg"              : [0.1, 0.05, 0.03],
     "color"           : "#B5481E",
     "glow"            : { "color": [1.0, 0.55, 0.25], "radius": 3.0, "intensity": 0.5, "flicker": true },
-    "thermal"         : { "degrees": 5, "radius": 5 },
+    "thermal"         : {"degrees": 5, "radius": 5},
     "spawn"           : { "subterrains": {"savanna": 0.005, "dirt": 0.0007} },
     "nodeAmountRange" : [2, 4],
     "designationTypes": ["woodcut", "forage"],
@@ -460,12 +460,12 @@
         "harvestDepletes": true
       },
       {
-        "designationType": "forage",
-        "action"         : "forage",
-        "workCategory"   : "foraging",
-        "workAmount"     : 9,
-        "toolRequirement": null,
-        "yields"         : [
+        "designationType"  : "forage",
+        "action"           : "forage",
+        "workCategory"     : "foraging",
+        "workAmount"       : 9,
+        "toolRequirement"  : null,
+        "yields"           : [
           {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
           {
             "itemId"         : "branch",
@@ -484,8 +484,9 @@
             "regrowthTurns"  : 300
           }
         ],
-        "persistent"     : true,
-        "harvestGrowthCost": 20, "harvestDepletes": false
+        "persistent"       : true,
+        "harvestGrowthCost": 20,
+        "harvestDepletes"  : false
       }
     ]
   },
@@ -591,12 +592,12 @@
         "harvestDepletes": true
       },
       {
-        "designationType": "forage",
-        "action"         : "forage",
-        "workCategory"   : "foraging",
-        "workAmount"     : 9,
-        "toolRequirement": null,
-        "yields"         : [
+        "designationType"  : "forage",
+        "action"           : "forage",
+        "workCategory"     : "foraging",
+        "workAmount"       : 9,
+        "toolRequirement"  : null,
+        "yields"           : [
           {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
           {
             "itemId"         : "branch",
@@ -615,8 +616,9 @@
             "regrowthTurns"  : 300
           }
         ],
-        "persistent"     : true,
-        "harvestGrowthCost": 20, "harvestDepletes": false
+        "persistent"       : true,
+        "harvestGrowthCost": 20,
+        "harvestDepletes"  : false
       }
     ]
   },
@@ -722,12 +724,12 @@
         "harvestDepletes": true
       },
       {
-        "designationType": "forage",
-        "action"         : "forage",
-        "workCategory"   : "foraging",
-        "workAmount"     : 9,
-        "toolRequirement": null,
-        "yields"         : [
+        "designationType"  : "forage",
+        "action"           : "forage",
+        "workCategory"     : "foraging",
+        "workAmount"       : 9,
+        "toolRequirement"  : null,
+        "yields"           : [
           {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
           {
             "itemId"         : "branch",
@@ -746,8 +748,9 @@
             "regrowthTurns"  : 300
           }
         ],
-        "persistent"     : true,
-        "harvestGrowthCost": 20, "harvestDepletes": false
+        "persistent"       : true,
+        "harvestGrowthCost": 20,
+        "harvestDepletes"  : false
       }
     ]
   },
@@ -763,9 +766,7 @@
     "fg"              : [0.52, 0.26, 0.25],
     "bg"              : [0.08, 0.07, 0.04],
     "color"           : "#85423C",
-    "spawn"           : {
-      "subterrains": {"deep_grass": 0.01, "grass": 0.007, "tall_grass": 0.004, "dirt": 0.002}
-    },
+    "spawn"           : { "subterrains": {"deep_grass": 0.01, "grass": 0.007, "tall_grass": 0.004, "dirt": 0.002} },
     "nodeAmountRange" : [3, 6],
     "designationTypes": ["woodcut", "forage"],
     "interaction"     : {
@@ -775,11 +776,46 @@
       "workAmount"     : 15,
       "toolRequirement": {"workType": "woodcutting", "minTier": 1},
       "yields"         : [
-        {"itemId": "apple_log",  "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2,  "regrowthTurns": 4200},
-        {"itemId": "bark",       "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1,  "regrowthTurns": 1500},
-        {"itemId": "branch",     "min": 4, "max": 8, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
-        {"itemId": "apple",      "min": 3, "max": 6, "skillId": "woodcutting", "skillMultiplier": 0.1,  "regrowthTurns": 4200},
-        {"itemId": "apple_seed", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.05, "regrowthTurns": 4200}
+        {
+          "itemId"         : "apple_log",
+          "min"            : 2,
+          "max"            : 4,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.2,
+          "regrowthTurns"  : 4200
+        },
+        {
+          "itemId"         : "bark",
+          "min"            : 1,
+          "max"            : 2,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.1,
+          "regrowthTurns"  : 1500
+        },
+        {
+          "itemId"         : "branch",
+          "min"            : 4,
+          "max"            : 8,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.15,
+          "regrowthTurns"  : 4200
+        },
+        {
+          "itemId"         : "apple",
+          "min"            : 3,
+          "max"            : 6,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.1,
+          "regrowthTurns"  : 4200
+        },
+        {
+          "itemId"         : "apple_seed",
+          "min"            : 1,
+          "max"            : 2,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.05,
+          "regrowthTurns"  : 4200
+        }
       ],
       "persistent"     : true,
       "harvestDepletes": true
@@ -792,27 +828,77 @@
         "workAmount"     : 15,
         "toolRequirement": {"workType": "woodcutting", "minTier": 1},
         "yields"         : [
-          {"itemId": "apple_log",  "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2,  "regrowthTurns": 4200},
-          {"itemId": "bark",       "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1,  "regrowthTurns": 1500},
-          {"itemId": "branch",     "min": 4, "max": 8, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
-          {"itemId": "apple",      "min": 3, "max": 6, "skillId": "woodcutting", "skillMultiplier": 0.1,  "regrowthTurns": 4200},
-          {"itemId": "apple_seed", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.05, "regrowthTurns": 4200}
+          {
+            "itemId"         : "apple_log",
+            "min"            : 2,
+            "max"            : 4,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.2,
+            "regrowthTurns"  : 4200
+          },
+          {
+            "itemId"         : "bark",
+            "min"            : 1,
+            "max"            : 2,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.1,
+            "regrowthTurns"  : 1500
+          },
+          {
+            "itemId"         : "branch",
+            "min"            : 4,
+            "max"            : 8,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.15,
+            "regrowthTurns"  : 4200
+          },
+          {
+            "itemId"         : "apple",
+            "min"            : 3,
+            "max"            : 6,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.1,
+            "regrowthTurns"  : 4200
+          },
+          {
+            "itemId"         : "apple_seed",
+            "min"            : 1,
+            "max"            : 2,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.05,
+            "regrowthTurns"  : 4200
+          }
         ],
         "persistent"     : true,
         "harvestDepletes": true
       },
       {
-        "designationType": "forage",
-        "action"         : "forage",
-        "workCategory"   : "foraging",
-        "workAmount"     : 8,
-        "toolRequirement": null,
-        "yields"         : [
-          {"itemId": "apple",      "min": 4, "max": 8, "skillId": "foraging", "skillMultiplier": 0.2,  "regrowthTurns": 1800},
-          {"itemId": "apple_seed", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05, "regrowthTurns": 1800}
+        "designationType"  : "forage",
+        "action"           : "forage",
+        "workCategory"     : "foraging",
+        "workAmount"       : 8,
+        "toolRequirement"  : null,
+        "yields"           : [
+          {
+            "itemId"         : "apple",
+            "min"            : 4,
+            "max"            : 8,
+            "skillId"        : "foraging",
+            "skillMultiplier": 0.2,
+            "regrowthTurns"  : 1800
+          },
+          {
+            "itemId"         : "apple_seed",
+            "min"            : 0,
+            "max"            : 2,
+            "skillId"        : "foraging",
+            "skillMultiplier": 0.05,
+            "regrowthTurns"  : 1800
+          }
         ],
-        "persistent"     : true,
-        "harvestGrowthCost": 20, "harvestDepletes": false
+        "persistent"       : true,
+        "harvestGrowthCost": 20,
+        "harvestDepletes"  : false
       }
     ]
   },
@@ -918,12 +1004,12 @@
         "harvestDepletes": true
       },
       {
-        "designationType": "forage",
-        "action"         : "forage",
-        "workCategory"   : "foraging",
-        "workAmount"     : 9,
-        "toolRequirement": null,
-        "yields"         : [
+        "designationType"  : "forage",
+        "action"           : "forage",
+        "workCategory"     : "foraging",
+        "workAmount"       : 9,
+        "toolRequirement"  : null,
+        "yields"           : [
           {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
           {
             "itemId"         : "branch",
@@ -942,8 +1028,9 @@
             "regrowthTurns"  : 300
           }
         ],
-        "persistent"     : true,
-        "harvestGrowthCost": 20, "harvestDepletes": false
+        "persistent"       : true,
+        "harvestGrowthCost": 20,
+        "harvestDepletes"  : false
       }
     ]
   },
@@ -1049,12 +1136,12 @@
         "harvestDepletes": true
       },
       {
-        "designationType": "forage",
-        "action"         : "forage",
-        "workCategory"   : "foraging",
-        "workAmount"     : 9,
-        "toolRequirement": null,
-        "yields"         : [
+        "designationType"  : "forage",
+        "action"           : "forage",
+        "workCategory"     : "foraging",
+        "workAmount"       : 9,
+        "toolRequirement"  : null,
+        "yields"           : [
           {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
           {
             "itemId"         : "branch",
@@ -1073,8 +1160,9 @@
             "regrowthTurns"  : 300
           }
         ],
-        "persistent"     : true,
-        "harvestGrowthCost": 20, "harvestDepletes": false
+        "persistent"       : true,
+        "harvestGrowthCost": 20,
+        "harvestDepletes"  : false
       }
     ]
   },
@@ -1316,7 +1404,7 @@
       "workAmount"     : 12,
       "toolRequirement": {"workType": "woodcutting", "minTier": 1},
       "yields"         : [
-        {"itemId": "dry_firewood", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.1 },
+        {"itemId": "dry_firewood", "min": 2, "max":  4, "skillId": "woodcutting", "skillMultiplier": 0.1 },
         {"itemId": "branch",       "min": 4, "max": 10, "skillId": "woodcutting", "skillMultiplier": 0.05}
       ]
     }
@@ -1348,8 +1436,8 @@
       "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "wild_berries", "min": 25, "max": 40, "skillId": "foraging", "skillMultiplier": 0.2},
-        {"itemId": "berry_seed",   "min": 1,  "max": 3,  "skillId": "foraging", "skillMultiplier": 0.05}
+        {"itemId": "wild_berries", "min": 25, "max": 40, "skillId": "foraging", "skillMultiplier": 0.2 },
+        {"itemId": "berry_seed",   "min":  1, "max":  3, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
@@ -1375,8 +1463,8 @@
       "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "wild_oats", "min": 24, "max": 38, "skillId": "foraging", "skillMultiplier": 0.2},
-        {"itemId": "grain_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+        {"itemId": "wild_oats",  "min": 24, "max": 38, "skillId": "foraging", "skillMultiplier": 0.2 },
+        {"itemId": "grain_seed", "min":  1, "max":  2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
@@ -1402,9 +1490,9 @@
       "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "wild_oats",   "min": 18, "max": 30, "skillId": "foraging", "skillMultiplier": 0.2},
-        {"itemId": "grain_seed",  "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05},
-        {"itemId": "plant_fiber", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+        {"itemId": "wild_oats",   "min": 18, "max": 30, "skillId": "foraging", "skillMultiplier": 0.2 },
+        {"itemId": "grain_seed",  "min":  1, "max":  2, "skillId": "foraging", "skillMultiplier": 0.05},
+        {"itemId": "plant_fiber", "min":  1, "max":  2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
@@ -1412,16 +1500,20 @@
     }
   },
   // Wild greens — uncultivated brassicas/roots; the wild source of vegetable seed (cabbage/turnip/onion).
+  // Each wild crop is its own plant: it drops its OWN vegetable + that vegetable's seed (no grab-bag).
+  // Wild cabbage — leafy wild brassica; the wild source of cabbage.
   {
-    "id"              : "wild_greens",
-    "displayName"     : "Wild Greens",
+    "id"              : "wild_cabbage",
+    "displayName"     : "Wild Cabbage",
     "subterrain"      : "tall_grass",
     "walkable"        : true,
-    "charSpans"       : [ {"sheet": "plants", "id": 21} ],
-    "fg"              : [0.5, 0.66, 0.34],
+    "charSpans"       : [ {"sheet": "crops", "id": 77} ],
+    "fg"              : [0.46, 0.64, 0.36],
     "bg"              : [0.07, 0.07, 0.04],
-    "color"           : "#7FA64E",
-    "spawn"           : { "subterrains": {"tall_grass": 0.012, "grass": 0.008, "deep_grass": 0.006, "riverbank": 0.004, "moss": 0.003} },
+    "color"           : "#6FA64E",
+    "spawn"           : {
+      "subterrains": {"tall_grass": 0.01, "grass": 0.007, "deep_grass": 0.005, "riverbank": 0.004, "moss": 0.003}
+    },
     "nodeAmountRange" : [2, 5],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -1430,27 +1522,27 @@
       "workAmount"     : 7,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "turnip",       "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
-        {"itemId": "cabbage_seed", "min": 0, "max": 1, "skillId": "foraging", "skillMultiplier": 0.05},
-        {"itemId": "turnip_seed",  "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05},
-        {"itemId": "onion_seed",   "min": 0, "max": 1, "skillId": "foraging", "skillMultiplier": 0.05}
+        {"itemId": "cabbage",      "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "cabbage_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
       "regrowthTurns"  : 2400 // ~8 days at 300 turns/day
     }
   },
-  // Wild vetch — scrambling wild legume; the wild source of bean and pea seed.
+  // Wild turnip — a fat wild taproot; the wild source of turnip.
   {
-    "id"              : "wild_vetch",
-    "displayName"     : "Wild Vetch",
-    "subterrain"      : "savanna",
+    "id"              : "wild_turnip",
+    "displayName"     : "Wild Turnip",
+    "subterrain"      : "grass",
     "walkable"        : true,
-    "charSpans"       : [ {"sheet": "plants", "id": 21} ],
-    "fg"              : [0.58, 0.62, 0.32],
-    "bg"              : [0.08, 0.07, 0.03],
-    "color"           : "#8FA64E",
-    "spawn"           : { "subterrains": {"savanna": 0.012, "tall_grass": 0.008, "grass": 0.006, "scrubland": 0.005, "dirt": 0.002} },
+    "charSpans"       : [ {"sheet": "crops", "id": 67} ],
+    "fg"              : [0.6, 0.62, 0.4],
+    "bg"              : [0.07, 0.07, 0.04],
+    "color"           : "#A9A86E",
+    "spawn"           : {
+      "subterrains": {"grass": 0.01, "tall_grass": 0.007, "deep_grass": 0.005, "dirt": 0.004, "riverbank": 0.003}
+    },
     "nodeAmountRange" : [2, 5],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -1459,13 +1551,99 @@
       "workAmount"     : 7,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "peas",      "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
-        {"itemId": "bean_seed", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05},
-        {"itemId": "pea_seed",  "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+        {"itemId": "turnip",      "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "turnip_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+      ],
+      "persistent"     : true,
+      "regrowsFromZero": true,
+      "regrowthTurns"  : 2200 // ~7 days at 300 turns/day
+    }
+  },
+  // Wild onion — pungent wild allium; the wild source of onion.
+  {
+    "id"              : "wild_onion",
+    "displayName"     : "Wild Onion",
+    "subterrain"      : "savanna",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 54} ],
+    "fg"              : [0.66, 0.6, 0.36],
+    "bg"              : [0.08, 0.07, 0.03],
+    "color"           : "#B79A52",
+    "spawn"           : {
+      "subterrains": {"savanna": 0.01, "tall_grass": 0.007, "grass": 0.006, "scrubland": 0.004, "dirt": 0.003}
+    },
+    "nodeAmountRange" : [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "forage",
+      "workCategory"   : "foraging",
+      "workAmount"     : 7,
+      "toolRequirement": null,
+      "yields"         : [
+        {"itemId": "onion",      "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "onion_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+      ],
+      "persistent"     : true,
+      "regrowsFromZero": true,
+      "regrowthTurns"  : 2400 // ~8 days at 300 turns/day
+    }
+  },
+  // Wild beans — climbing wild legume; the wild source of beans.
+  {
+    "id"              : "wild_beans",
+    "displayName"     : "Wild Beans",
+    "subterrain"      : "savanna",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 63} ],
+    "fg"              : [0.56, 0.6, 0.34],
+    "bg"              : [0.08, 0.07, 0.03],
+    "color"           : "#9AA456",
+    "spawn"           : {
+      "subterrains": {"savanna": 0.01, "tall_grass": 0.007, "grass": 0.005, "scrubland": 0.004, "dirt": 0.002}
+    },
+    "nodeAmountRange" : [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "forage",
+      "workCategory"   : "foraging",
+      "workAmount"     : 7,
+      "toolRequirement": null,
+      "yields"         : [
+        {"itemId": "beans",     "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "bean_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
       "regrowthTurns"  : 2600 // ~9 days at 300 turns/day
+    }
+  },
+  // Wild peas — scrambling wild vetch; the wild source of peas.
+  {
+    "id"              : "wild_peas",
+    "displayName"     : "Wild Peas",
+    "subterrain"      : "tall_grass",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 63} ],
+    "fg"              : [0.58, 0.64, 0.34],
+    "bg"              : [0.08, 0.07, 0.03],
+    "color"           : "#8FA64E",
+    "spawn"           : {
+      "subterrains": {"tall_grass": 0.01, "grass": 0.007, "savanna": 0.005, "deep_grass": 0.004, "dirt": 0.002}
+    },
+    "nodeAmountRange" : [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "forage",
+      "workCategory"   : "foraging",
+      "workAmount"     : 7,
+      "toolRequirement": null,
+      "yields"         : [
+        {"itemId": "peas",     "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "pea_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+      ],
+      "persistent"     : true,
+      "regrowsFromZero": true,
+      "regrowthTurns"  : 2500 // ~8 days at 300 turns/day
     }
   },
   // Wild grapevine — tangled wild vine; the wild source of grape cuttings (and a few berries).
@@ -1474,11 +1652,13 @@
     "displayName"     : "Wild Grapevine",
     "subterrain"      : "bush",
     "walkable"        : true,
-    "charSpans"       : [ {"sheet": "plants", "id": 41} ],
+    "charSpans"       : [ {"sheet": "crops", "id": 79} ],
     "fg"              : [0.55, 0.4, 0.6],
     "bg"              : [0.06, 0.06, 0.05],
     "color"           : "#7B4E8C",
-    "spawn"           : { "subterrains": {"bush": 0.02, "tall_grass": 0.006, "scrubland": 0.005, "deep_grass": 0.004} },
+    "spawn"           : {
+      "subterrains": {"bush": 0.02, "tall_grass": 0.006, "scrubland": 0.005, "deep_grass": 0.004}
+    },
     "nodeAmountRange" : [2, 4],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -2133,9 +2313,7 @@
     "fg"              : [0.68, 0.36, 0.13],
     "bg"              : [0.08, 0.06, 0.03],
     "color"           : "#AD5C21",
-    "spawn"           : {
-      "subterrains": {"clay": 0.85, "mud": 0.04, "bog": 0.03, "riverbank": 0.05}
-    },
+    "spawn"           : { "subterrains": {"clay": 0.85, "mud": 0.04, "bog": 0.03, "riverbank": 0.05} },
     "nodeAmountRange" : [2, 4],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -2158,9 +2336,7 @@
     "fg"              : [0.58, 0.44, 0.13],
     "bg"              : [0.08, 0.06, 0.03],
     "color"           : "#947021",
-    "spawn"           : {
-      "subterrains": {"riverbank": 0.6}
-    },
+    "spawn"           : { "subterrains": {"riverbank": 0.6} },
     "nodeAmountRange" : [1, 3],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -2332,7 +2508,6 @@
       ]
     }
   },
-
   // ═══════════════════════════════════════════════════════════════════════════
   // PRODUCTION-CHAIN-II §F — CULTIVATED CROPS (sown by the `plant` job in a grow zone)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2342,29 +2517,71 @@
   // time) until mature + harvestable. Reaping (harvest) routes to the `planting` labour. Annuals
   // deplete on harvest (replant); berries/herbs are perennial (persistent → regrow).
   {
-    "id": "crop_wheat", "displayName": "Wheat", "subterrain": "grass", "walkable": true, "grazing": true,
-    "charSpans": [ {"sheet": "crops", "id": 0} ], "fg": [0.82, 0.68, 0.2], "bg": [0.08, 0.06, 0.03],
-    "color": "#D1AD33", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "grain_seed", "minSoil": 1, "minMoisture": 25, "maxMoisture": 70, "minTemp": 5, "maxTemp": 38, "needsLight": true, "fertilityCost": 5, "growthTurns": 2000},
+    "id"              : "crop_wheat",
+    "displayName"     : "Wheat",
+    "subterrain"      : "grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 0} ],
+    "fg"              : [0.82, 0.68, 0.2],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#D1AD33",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "grain_seed",
+      "minSoil"      : 1,
+      "minMoisture"  : 25,
+      "maxMoisture"  : 70,
+      "minTemp"      : 5,
+      "maxTemp"      : 38,
+      "needsLight"   : true,
+      "fertilityCost": 5,
+      "growthTurns"  : 2000
+    },
     "designationTypes": ["harvest"],
-    "interaction": {
-      "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
-      "yields": [
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 8,
+      "toolRequirement": null,
+      "yields"         : [
         {"itemId": "wheat",      "min": 34, "max": 54, "skillId": "planting", "skillMultiplier": 0.25},
-        {"itemId": "grain_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
+        {"itemId": "grain_seed", "min":  1, "max":  2, "skillId": "planting", "skillMultiplier": 0.1 }
       ],
       "harvestDepletes": true
     }
   },
   {
-    "id": "crop_cabbage", "displayName": "Cabbage Patch", "subterrain": "grass", "walkable": true, "grazing": true,
-    "charSpans": [ {"sheet": "crops", "id": 1} ], "fg": [0.5, 0.7, 0.3], "bg": [0.08, 0.06, 0.03],
-    "color": "#7FB04E", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "cabbage_seed", "minSoil": 1, "minMoisture": 35, "maxMoisture": 80, "minTemp": 0, "maxTemp": 30, "needsLight": true, "fertilityCost": 5, "growthTurns": 1500},
+    "id"              : "crop_cabbage",
+    "displayName"     : "Cabbage Patch",
+    "subterrain"      : "grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 1} ],
+    "fg"              : [0.5, 0.7, 0.3],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#7FB04E",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "cabbage_seed",
+      "minSoil"      : 1,
+      "minMoisture"  : 35,
+      "maxMoisture"  : 80,
+      "minTemp"      : 0,
+      "maxTemp"      : 30,
+      "needsLight"   : true,
+      "fertilityCost": 5,
+      "growthTurns"  : 1500
+    },
     "designationTypes": ["harvest"],
-    "interaction": {
-      "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
-      "yields": [
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 8,
+      "toolRequirement": null,
+      "yields"         : [
         {"itemId": "cabbage",      "min": 3, "max": 6, "skillId": "planting", "skillMultiplier": 0.2},
         {"itemId": "cabbage_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
       ],
@@ -2372,14 +2589,35 @@
     }
   },
   {
-    "id": "crop_turnip", "displayName": "Turnip Bed", "subterrain": "grass", "walkable": true, "grazing": true,
-    "charSpans": [ {"sheet": "crops", "id": 1} ], "fg": [0.62, 0.66, 0.42], "bg": [0.08, 0.06, 0.03],
-    "color": "#C9BC8E", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "turnip_seed", "minSoil": 1, "minMoisture": 30, "maxMoisture": 75, "minTemp": -2, "maxTemp": 28, "needsLight": true, "fertilityCost": 4, "growthTurns": 1300},
+    "id"              : "crop_turnip",
+    "displayName"     : "Turnip Bed",
+    "subterrain"      : "grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 1} ],
+    "fg"              : [0.62, 0.66, 0.42],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#C9BC8E",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "turnip_seed",
+      "minSoil"      : 1,
+      "minMoisture"  : 30,
+      "maxMoisture"  : 75,
+      "minTemp"      : -2,
+      "maxTemp"      : 28,
+      "needsLight"   : true,
+      "fertilityCost": 4,
+      "growthTurns"  : 1300
+    },
     "designationTypes": ["harvest"],
-    "interaction": {
-      "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
-      "yields": [
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 8,
+      "toolRequirement": null,
+      "yields"         : [
         {"itemId": "turnip",      "min": 4, "max": 7, "skillId": "planting", "skillMultiplier": 0.2},
         {"itemId": "turnip_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
       ],
@@ -2387,14 +2625,35 @@
     }
   },
   {
-    "id": "crop_onion", "displayName": "Onion Bed", "subterrain": "grass", "walkable": true, "grazing": true,
-    "charSpans": [ {"sheet": "crops", "id": 1} ], "fg": [0.7, 0.6, 0.3], "bg": [0.08, 0.06, 0.03],
-    "color": "#C9A24E", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "onion_seed", "minSoil": 1, "minMoisture": 30, "maxMoisture": 70, "minTemp": 2, "maxTemp": 32, "needsLight": true, "fertilityCost": 4, "growthTurns": 1600},
+    "id"              : "crop_onion",
+    "displayName"     : "Onion Bed",
+    "subterrain"      : "grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 1} ],
+    "fg"              : [0.7, 0.6, 0.3],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#C9A24E",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "onion_seed",
+      "minSoil"      : 1,
+      "minMoisture"  : 30,
+      "maxMoisture"  : 70,
+      "minTemp"      : 2,
+      "maxTemp"      : 32,
+      "needsLight"   : true,
+      "fertilityCost": 4,
+      "growthTurns"  : 1600
+    },
     "designationTypes": ["harvest"],
-    "interaction": {
-      "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
-      "yields": [
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 8,
+      "toolRequirement": null,
+      "yields"         : [
         {"itemId": "onion",      "min": 4, "max": 7, "skillId": "planting", "skillMultiplier": 0.2},
         {"itemId": "onion_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
       ],
@@ -2402,14 +2661,35 @@
     }
   },
   {
-    "id": "crop_beans", "displayName": "Bean Rows", "subterrain": "grass", "walkable": true, "grazing": true,
-    "charSpans": [ {"sheet": "crops", "id": 2} ], "fg": [0.55, 0.6, 0.3], "bg": [0.08, 0.06, 0.03],
-    "color": "#A8924E", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "bean_seed", "minSoil": 1, "minMoisture": 25, "maxMoisture": 65, "minTemp": 8, "maxTemp": 36, "needsLight": true, "fertilityCost": 4, "growthTurns": 2200},
+    "id"              : "crop_beans",
+    "displayName"     : "Bean Rows",
+    "subterrain"      : "grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 2} ],
+    "fg"              : [0.55, 0.6, 0.3],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#A8924E",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "bean_seed",
+      "minSoil"      : 1,
+      "minMoisture"  : 25,
+      "maxMoisture"  : 65,
+      "minTemp"      : 8,
+      "maxTemp"      : 36,
+      "needsLight"   : true,
+      "fertilityCost": 4,
+      "growthTurns"  : 2200
+    },
     "designationTypes": ["harvest"],
-    "interaction": {
-      "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
-      "yields": [
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 8,
+      "toolRequirement": null,
+      "yields"         : [
         {"itemId": "beans",     "min": 3, "max": 5, "skillId": "planting", "skillMultiplier": 0.2},
         {"itemId": "bean_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
       ],
@@ -2417,14 +2697,35 @@
     }
   },
   {
-    "id": "crop_peas", "displayName": "Pea Rows", "subterrain": "grass", "walkable": true, "grazing": true,
-    "charSpans": [ {"sheet": "crops", "id": 2} ], "fg": [0.58, 0.65, 0.32], "bg": [0.08, 0.06, 0.03],
-    "color": "#8FA64E", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "pea_seed", "minSoil": 1, "minMoisture": 30, "maxMoisture": 70, "minTemp": 4, "maxTemp": 30, "needsLight": true, "fertilityCost": 4, "growthTurns": 2000},
+    "id"              : "crop_peas",
+    "displayName"     : "Pea Rows",
+    "subterrain"      : "grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 2} ],
+    "fg"              : [0.58, 0.65, 0.32],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#8FA64E",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "pea_seed",
+      "minSoil"      : 1,
+      "minMoisture"  : 30,
+      "maxMoisture"  : 70,
+      "minTemp"      : 4,
+      "maxTemp"      : 30,
+      "needsLight"   : true,
+      "fertilityCost": 4,
+      "growthTurns"  : 2000
+    },
     "designationTypes": ["harvest"],
-    "interaction": {
-      "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
-      "yields": [
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 8,
+      "toolRequirement": null,
+      "yields"         : [
         {"itemId": "peas",     "min": 3, "max": 5, "skillId": "planting", "skillMultiplier": 0.2},
         {"itemId": "pea_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
       ],
@@ -2432,14 +2733,35 @@
     }
   },
   {
-    "id": "crop_flax", "displayName": "Flax Field", "subterrain": "tall_grass", "walkable": true, "grazing": true,
-    "charSpans": [ {"sheet": "crops", "id": 3} ], "fg": [0.62, 0.7, 0.4], "bg": [0.08, 0.06, 0.03],
-    "color": "#9EAE6A", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "fibre_seed", "minSoil": 2, "minMoisture": 45, "maxMoisture": 90, "minTemp": 5, "maxTemp": 32, "needsLight": true, "fertilityCost": 7, "growthTurns": 2400},
+    "id"              : "crop_flax",
+    "displayName"     : "Flax Field",
+    "subterrain"      : "tall_grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 3} ],
+    "fg"              : [0.62, 0.7, 0.4],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#9EAE6A",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "fibre_seed",
+      "minSoil"      : 2,
+      "minMoisture"  : 45,
+      "maxMoisture"  : 90,
+      "minTemp"      : 5,
+      "maxTemp"      : 32,
+      "needsLight"   : true,
+      "fertilityCost": 7,
+      "growthTurns"  : 2400
+    },
     "designationTypes": ["harvest"],
-    "interaction": {
-      "action": "reap", "workCategory": "planting", "workAmount": 10, "toolRequirement": null,
-      "yields": [
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 10,
+      "toolRequirement": null,
+      "yields"         : [
         {"itemId": "flax_fiber", "min": 3, "max": 6, "skillId": "planting", "skillMultiplier": 0.2},
         {"itemId": "fibre_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
       ],
@@ -2447,89 +2769,220 @@
     }
   },
   {
-    "id": "crop_berries", "displayName": "Berry Patch", "subterrain": "tall_grass", "walkable": true, "grazing": true,
-    "charSpans": [ {"sheet": "crops", "id": 4} ], "fg": [0.7, 0.35, 0.35], "bg": [0.08, 0.06, 0.03],
-    "color": "#B0584E", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "berry_seed", "minSoil": 2, "minMoisture": 35, "maxMoisture": 80, "minTemp": 2, "maxTemp": 34, "needsLight": true, "fertilityCost": 7, "growthTurns": 3000},
+    "id"              : "crop_berries",
+    "displayName"     : "Berry Patch",
+    "subterrain"      : "tall_grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 4} ],
+    "fg"              : [0.7, 0.35, 0.35],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#B0584E",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "berry_seed",
+      "minSoil"      : 2,
+      "minMoisture"  : 35,
+      "maxMoisture"  : 80,
+      "minTemp"      : 2,
+      "maxTemp"      : 34,
+      "needsLight"   : true,
+      "fertilityCost": 7,
+      "growthTurns"  : 3000
+    },
     "designationTypes": ["harvest"],
-    "interaction": {
-      "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
-      "yields": [
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 8,
+      "toolRequirement": null,
+      "yields"         : [
         {"itemId": "wild_berries", "min": 18, "max": 32, "skillId": "planting", "skillMultiplier": 0.2},
-        {"itemId": "berry_seed",   "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
+        {"itemId": "berry_seed",   "min":  1, "max":  2, "skillId": "planting", "skillMultiplier": 0.1}
       ],
-      "persistent": true, "regrowthTurns": 1800
+      "persistent"     : true,
+      "regrowthTurns"  : 1800
     }
   },
   {
-    "id": "crop_apples", "displayName": "Apple Orchard", "subterrain": "tall_grass", "walkable": true, "grazing": true,
-    "charSpans": [ {"sheet": "crops", "id": 4} ], "fg": [0.72, 0.4, 0.32], "bg": [0.08, 0.06, 0.03],
-    "color": "#C0584E", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "apple_seed", "minSoil": 2, "minMoisture": 35, "maxMoisture": 80, "minTemp": 0, "maxTemp": 32, "needsLight": true, "fertilityCost": 7, "growthTurns": 3600},
+    "id"              : "crop_apples",
+    "displayName"     : "Apple Orchard",
+    "subterrain"      : "tall_grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 4} ],
+    "fg"              : [0.72, 0.4, 0.32],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#C0584E",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "apple_seed",
+      "minSoil"      : 2,
+      "minMoisture"  : 35,
+      "maxMoisture"  : 80,
+      "minTemp"      : 0,
+      "maxTemp"      : 32,
+      "needsLight"   : true,
+      "fertilityCost": 7,
+      "growthTurns"  : 3600
+    },
     "designationTypes": ["harvest"],
-    "interaction": {
-      "action": "reap", "workCategory": "planting", "workAmount": 9, "toolRequirement": null,
-      "yields": [
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 9,
+      "toolRequirement": null,
+      "yields"         : [
         {"itemId": "apple",      "min": 5, "max": 9, "skillId": "planting", "skillMultiplier": 0.2},
         {"itemId": "apple_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
       ],
-      "persistent": true, "regrowthTurns": 2200
+      "persistent"     : true,
+      "regrowthTurns"  : 2200
     }
   },
   {
-    "id": "crop_grapes", "displayName": "Grapevine", "subterrain": "tall_grass", "walkable": true, "grazing": true,
-    "charSpans": [ {"sheet": "crops", "id": 4} ], "fg": [0.55, 0.4, 0.6], "bg": [0.08, 0.06, 0.03],
-    "color": "#7B4E8C", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "grape_seed", "minSoil": 2, "minMoisture": 30, "maxMoisture": 70, "minTemp": 8, "maxTemp": 36, "needsLight": true, "fertilityCost": 7, "growthTurns": 3400},
+    "id"              : "crop_grapes",
+    "displayName"     : "Grapevine",
+    "subterrain"      : "tall_grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 4} ],
+    "fg"              : [0.55, 0.4, 0.6],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#7B4E8C",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "grape_seed",
+      "minSoil"      : 2,
+      "minMoisture"  : 30,
+      "maxMoisture"  : 70,
+      "minTemp"      : 8,
+      "maxTemp"      : 36,
+      "needsLight"   : true,
+      "fertilityCost": 7,
+      "growthTurns"  : 3400
+    },
     "designationTypes": ["harvest"],
-    "interaction": {
-      "action": "reap", "workCategory": "planting", "workAmount": 9, "toolRequirement": null,
-      "yields": [
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 9,
+      "toolRequirement": null,
+      "yields"         : [
         {"itemId": "grapes",     "min": 5, "max": 9, "skillId": "planting", "skillMultiplier": 0.2},
         {"itemId": "grape_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
       ],
-      "persistent": true, "regrowthTurns": 2000
+      "persistent"     : true,
+      "regrowthTurns"  : 2000
     }
   },
   {
-    "id": "crop_thyme", "displayName": "Thyme Garden", "subterrain": "tall_grass", "walkable": true, "grazing": true,
-    "charSpans": [ {"sheet": "crops", "id": 5} ], "fg": [0.5, 0.7, 0.45], "bg": [0.08, 0.06, 0.03],
-    "color": "#6FA66A", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "thyme_seed", "minSoil": 2, "minMoisture": 25, "maxMoisture": 70, "minTemp": 5, "maxTemp": 34, "needsLight": true, "fertilityCost": 6, "growthTurns": 1800},
+    "id"              : "crop_thyme",
+    "displayName"     : "Thyme Garden",
+    "subterrain"      : "tall_grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 5} ],
+    "fg"              : [0.5, 0.7, 0.45],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#6FA66A",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "thyme_seed",
+      "minSoil"      : 2,
+      "minMoisture"  : 25,
+      "maxMoisture"  : 70,
+      "minTemp"      : 5,
+      "maxTemp"      : 34,
+      "needsLight"   : true,
+      "fertilityCost": 6,
+      "growthTurns"  : 1800
+    },
     "designationTypes": ["harvest"],
-    "interaction": {
-      "action": "reap", "workCategory": "planting", "workAmount": 6, "toolRequirement": null,
-      "yields": [
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 6,
+      "toolRequirement": null,
+      "yields"         : [
         {"itemId": "thyme",      "min": 2, "max": 4, "skillId": "planting", "skillMultiplier": 0.2},
         {"itemId": "thyme_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
       ],
-      "persistent": true, "regrowthTurns": 1500
+      "persistent"     : true,
+      "regrowthTurns"  : 1500
     }
   },
   {
-    "id": "crop_mint", "displayName": "Mint Bed", "subterrain": "tall_grass", "walkable": true, "grazing": true,
-    "charSpans": [ {"sheet": "crops", "id": 5} ], "fg": [0.45, 0.7, 0.5], "bg": [0.08, 0.06, 0.03],
-    "color": "#5FA67A", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "mint_seed", "minSoil": 2, "minMoisture": 40, "maxMoisture": 85, "minTemp": 5, "maxTemp": 32, "needsLight": true, "fertilityCost": 6, "growthTurns": 1600},
+    "id"              : "crop_mint",
+    "displayName"     : "Mint Bed",
+    "subterrain"      : "tall_grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 5} ],
+    "fg"              : [0.45, 0.7, 0.5],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#5FA67A",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "mint_seed",
+      "minSoil"      : 2,
+      "minMoisture"  : 40,
+      "maxMoisture"  : 85,
+      "minTemp"      : 5,
+      "maxTemp"      : 32,
+      "needsLight"   : true,
+      "fertilityCost": 6,
+      "growthTurns"  : 1600
+    },
     "designationTypes": ["harvest"],
-    "interaction": {
-      "action": "reap", "workCategory": "planting", "workAmount": 6, "toolRequirement": null,
-      "yields": [
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 6,
+      "toolRequirement": null,
+      "yields"         : [
         {"itemId": "mint",      "min": 2, "max": 4, "skillId": "planting", "skillMultiplier": 0.2},
         {"itemId": "mint_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
       ],
-      "persistent": true, "regrowthTurns": 1400
+      "persistent"     : true,
+      "regrowthTurns"  : 1400
     }
   },
   {
-    "id": "crop_pumpkin", "displayName": "Pumpkin Patch", "subterrain": "terra_preta", "walkable": true, "grazing": true,
-    "charSpans": [ {"sheet": "crops", "id": 6} ], "fg": [0.82, 0.47, 0.18], "bg": [0.08, 0.06, 0.03],
-    "color": "#D2772A", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
-    "crop": {"seedItem": "prize_seed", "minSoil": 4, "minMoisture": 40, "maxMoisture": 85, "minTemp": 12, "maxTemp": 38, "needsLight": true, "fertilityCost": 10, "growthTurns": 3600},
+    "id"              : "crop_pumpkin",
+    "displayName"     : "Pumpkin Patch",
+    "subterrain"      : "terra_preta",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 41} ],
+    "fg"              : [0.82, 0.47, 0.18],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#D2772A",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "prize_seed",
+      "minSoil"      : 4,
+      "minMoisture"  : 40,
+      "maxMoisture"  : 85,
+      "minTemp"      : 12,
+      "maxTemp"      : 38,
+      "needsLight"   : true,
+      "fertilityCost": 10,
+      "growthTurns"  : 3600
+    },
     "designationTypes": ["harvest"],
-    "interaction": {
-      "action": "reap", "workCategory": "planting", "workAmount": 12, "toolRequirement": null,
-      "yields": [
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 12,
+      "toolRequirement": null,
+      "yields"         : [
         {"itemId": "pumpkin",    "min": 2, "max": 4, "skillId": "planting", "skillMultiplier": 0.2},
         {"itemId": "prize_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
       ],

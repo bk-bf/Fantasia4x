@@ -36,7 +36,7 @@ describe('§F crop seeds', () => {
 });
 
 describe('§F wild crops drop a few seeds when harvested', () => {
-  it('wild barley/rye yield grain_seed; berry bush yields berry_seed; wild greens yield veg seed', () => {
+  it('wild barley/rye yield grain_seed; berry bush yields berry_seed; each wild veg yields its own seed', () => {
     expect(resourceObjectService.calculateYield('wild_barley', undefined, undefined, 'harvest')).toHaveProperty(
       'grain_seed'
     );
@@ -46,10 +46,16 @@ describe('§F wild crops drop a few seeds when harvested', () => {
     expect(resourceObjectService.calculateYield('berry_bush', undefined, undefined, 'harvest')).toHaveProperty(
       'berry_seed'
     );
-    // Wild greens are the wild source of cultivated-vegetable seed (no generic "veg_seed" any more).
-    expect(resourceObjectService.calculateYield('wild_greens', undefined, undefined, 'harvest')).toHaveProperty(
-      'turnip_seed'
-    );
+    // Each wild crop is its own plant, dropping its OWN vegetable + matching seed (no grab-bag plant).
+    for (const [resId, seed] of [
+      ['wild_turnip', 'turnip_seed'],
+      ['wild_cabbage', 'cabbage_seed'],
+      ['wild_onion', 'onion_seed'],
+      ['wild_beans', 'bean_seed'],
+      ['wild_peas', 'pea_seed']
+    ] as const) {
+      expect(resourceObjectService.calculateYield(resId, undefined, undefined, 'harvest')).toHaveProperty(seed);
+    }
   });
 });
 
