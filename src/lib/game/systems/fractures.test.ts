@@ -12,17 +12,20 @@ import type { EntityCondition, LimbState, Pawn } from '../core/types';
  * roll itself lives in Combat.performAttack).
  */
 describe('fracture anatomy + wound data', () => {
-  it('skeletal parts carry boneHp; a pure skeleton element IS its bone, a flesh-wrapped bone breaks before destruction', () => {
-    // The forearm is now a SOFT segment wrapping leftForearmBone — the bone carries the boneHp.
+  it('there is ONE bone type: every bone is a hidden skeleton element whose whole HP is its break budget', () => {
+    // The forearm is a SOFT segment wrapping leftForearmBone — the bone carries the boneHp.
     const forearmBone = PART_DEF_MAP['leftForearmBone']!;
-    expect(forearmBone.boneHp).toBeGreaterThan(0);
     expect(forearmBone.skeleton).toBe(true);
-    // A distinct skeleton element is PURE bone: its whole HP IS the fracture budget — it breaks at HP 0.
-    expect(forearmBone.boneHp!).toBe(forearmBone.maxHp);
-    // A flesh-wrapped bone (skull, `bone: true`) keeps its full HP and breaks at a FRACTION of it — the
-    // rest is the crushable flesh that takes the cut/crush.
+    expect(forearmBone.boneHp).toBeGreaterThan(0);
+    expect(forearmBone.boneHp!).toBe(forearmBone.maxHp); // pure bone: whole HP IS the fracture budget
+    // The bone keeps its anatomical name: the `skull` IS the (hidden) bone; the `head` is the flesh outer
+    // that wraps it. No more `bone: true`, no backwards `skullBone`.
     const skull = PART_DEF_MAP['skull']!;
-    expect(skull.boneHp!).toBeLessThan(skull.maxHp);
+    expect(skull.skeleton).toBe(true);
+    expect(skull.boneHp!).toBe(skull.maxHp);
+    expect(skull.containedIn).toBe('head');
+    expect(PART_DEF_MAP['head']!.boneHp).toBeUndefined(); // the head flesh is not bone
+    expect(PART_DEF_MAP['skullBone']).toBeUndefined(); // the backwards name is gone
     expect(PART_DEF_MAP['leftForearm']!.boneHp).toBeUndefined(); // the flesh segment itself is not bone
     expect(PART_DEF_MAP['leftEye']!.boneHp).toBeUndefined(); // eyes have no bone
     expect(PART_DEF_MAP['heart']!.boneHp).toBeUndefined(); // organs have no bone
@@ -40,18 +43,23 @@ describe('fracture anatomy + wound data', () => {
     expect(ribcage.containedIn).toBe('chest'); // severed with the chest
   });
 
-  it('a hit FRACTURES the skeleton: the flesh segment routes its fracture to the bone it wraps', () => {
+  it('a hit FRACTURES the skeleton: the flesh part routes its fracture to the bone it wraps', () => {
     expect(skeletonPartOf('chest')).toBe('ribcage'); // torso wall → ribcage
     expect(skeletonPartOf('leftForearm')).toBe('leftForearmBone'); // arm flesh → forearm bone
     expect(skeletonPartOf('leftFoot')).toBe('leftFootBone'); // foot flesh → foot bone
+    expect(skeletonPartOf('head')).toBe('skull'); // head flesh → skull (the bone keeps its name)
     expect(skeletonPartOf('abdomen')).toBeUndefined(); // soft, boneless → can't fracture
     expect(skeletonPartOf('leftEye')).toBeUndefined();
-    expect(skeletonPartOf('leftForearmBone')).toBe('leftForearmBone'); // a bone targets itself
   });
 
-  it('the skull is a CRITICAL part (its destruction is instant death)', () => {
-    expect(PART_DEF_MAP['skull']!.isCritical).toBe(true);
+  it('no BONE is instant-death: a broken skull/ribcage cripples, only tearing the flesh container kills', () => {
+    // Bones are never `critical` — breaking one cripples the limb, it does not instantly kill. Death comes
+    // from destroying the FLESH container (head/chest) that holds the vital organ (brain/heart).
+    expect(PART_DEF_MAP['skull']!.isCritical).toBeUndefined();
+    expect(PART_DEF_MAP['ribcage']!.isCritical).toBeUndefined();
     expect(PART_DEF_MAP['leftForearm']!.isCritical).toBeUndefined();
+    // The only `critical` part is a vital CORE (the amorphous essence), not a bone.
+    expect(PART_DEF_MAP['essence']!.isCritical).toBe(true);
   });
 
   it('the fracture wound is structural, painful, slow to heal, and does NOT bleed', () => {

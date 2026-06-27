@@ -41,7 +41,6 @@ interface CatalogPart {
   isVital?: boolean;
   isPaired?: boolean;
   containedIn?: string;
-  bone?: boolean;
   skeleton?: boolean;
   critical?: boolean;
   weapons?: string[];
@@ -80,18 +79,19 @@ export const PART_DEF_MAP: Partial<Record<BodyPartId, BodyPartDef>> = {};
 for (const [id, p] of Object.entries(ALL_PARTS)) {
   PART_DEF_MAP[id as BodyPartId] = {
     id: id as BodyPartId,
-    // A distinct `skeleton` element (leftForearmBone, ribcage) is PURE bone — never struck directly, only
-    // fractured — so its whole HP IS the fracture budget (BONE_FRACTION of the flesh it mirrors). It breaks
-    // when chipped to 0. A `bone: true` flesh-wrapped bone (skull) keeps its full HP (the flesh takes the
-    // crush) and breaks at BONE_FRACTION of it. See boneBreakBudget.
+    // The ONE bone type — a hidden `skeleton` element (leftForearmBone, ribcage, skull…) — is PURE
+    // bone: never struck directly, only fractured, so its whole HP IS the fracture budget (BONE_FRACTION
+    // of the flesh part it mirrors) and it breaks when chipped to 0. Flesh parts keep their full size.
     maxHp: p.skeleton ? Math.max(1, Math.round(p.size * BONE_FRACTION)) : p.size,
     bleedRatio: p.bleedRatio,
     hitWeight: p.hitWeight,
     containedIn: p.containedIn as BodyPartId | undefined,
     isPaired: p.isPaired ?? false,
     isVital: p.isVital ?? false,
-    // A bone-bearing flesh limb (`bone`) OR a distinct skeletal element (`skeleton`) carries a boneHp.
-    boneHp: p.bone || p.skeleton ? Math.round(p.size * BONE_FRACTION) : undefined,
+    // There is ONE bone type: a distinct `skeleton` element (hidden, fracture-only). It carries a boneHp;
+    // its whole HP IS that budget (see maxHp above). Flesh parts never fracture directly — they route to
+    // the skeleton child they wrap (skeletonPartOf).
+    boneHp: p.skeleton ? Math.round(p.size * BONE_FRACTION) : undefined,
     skeleton: p.skeleton ?? undefined,
     isCritical: p.critical ?? undefined,
     weapons: p.weapons,
@@ -117,14 +117,17 @@ for (const def of Object.values(PART_DEF_MAP)) {
  *  else the part itself when it's a bone-bearing limb (forearm → forearm), else undefined (no skeleton →
  *  can't fracture: eyes, soft abdomen, organs). Single source of truth for Combat's fracture targeting. */
 export function skeletonPartOf(partId: BodyPartId): BodyPartId | undefined {
-  return SKELETON_OF[partId] ?? (PART_DEF_MAP[partId]?.boneHp != null ? partId : undefined);
+  // Every fracturable part is a flesh outer wrapping a hidden `skeleton` child — a hit on the flesh routes
+  // its fracture here. A soft part with no skeleton child (eye, soft abdomen, organ) → undefined (can't
+  // fracture). Bones are never struck directly, so this is only ever called with the flesh part.
+  return SKELETON_OF[partId];
 }
 
-/** Fracture damage that BREAKS a bone part, scaled to its actual (per-creature) HP. A distinct `skeleton`
- *  element (leftForearmBone, ribcage) is pure bone — its whole HP is the budget, so it breaks when chipped
- *  to 0. A `bone: true` flesh-wrapped bone (skull, snout) breaks at BONE_FRACTION of its HP since the rest
- *  is crushable flesh. Single source of truth for the break threshold across Combat / Wounds / needs, so
- *  the bone HP bar, the wound-severity label, and the `fractured` condition all move together. */
+/** Fracture damage that BREAKS a bone part, scaled to its actual (per-creature) HP. There is ONE bone
+ *  type: a hidden `skeleton` element whose whole HP IS its break budget — it breaks when chipped to 0.
+ *  Single source of truth for the break threshold across Combat / Wounds / needs, so the bone HP bar, the
+ *  wound-severity label, and the `fractured` condition all move together. (Kept as a function so a future
+ *  partial-budget bone would have one place to change.) */
 export function boneBreakBudget(def: BodyPartDef | undefined, scaledMaxHp: number): number {
   return def?.skeleton ? scaledMaxHp : BONE_FRACTION * scaledMaxHp;
 }
@@ -191,9 +194,10 @@ export function cascadeSeveredContents(
  * vital, while the reapers only checked the `isCritical` flag on the HEAD plus head/torso aggregate HP —
  * so a CRUSHED torso vital (heart driven to 0 HP without being severed) killed nobody, leaving a
  * heart-and-lungs-gone jackal walking around. One rule now:
- *   • any VITAL (`isVital` — heart/brain) or CRITICAL (`isCritical` — skull) part that is missing OR at
- *     ≤0 HP — HP-based, so a caved-in (crushed, not severed) organ counts; OR
- *   • a CONTAINER of a vital organ (chest → heart) that is missing OR at ≤0 HP — a caved-in chest kills
+ *   • any VITAL (`isVital` — heart/brain) or CRITICAL (`isCritical` — the amorphous vital core; a BONE is
+ *     never critical) part that is missing OR at ≤0 HP — HP-based, so a caved-in (crushed) organ counts; OR
+ *   • a CONTAINER of a vital organ (chest → heart, head → brain) that is missing OR at ≤0 HP — tearing the
+ *     flesh container apart takes the organ and kills (breaking the BONE inside — skull/ribcage — does not);
  *     even when the cascade hasn't yet zeroed the heart inside it (the per-tick reaper doesn't cascade;
  *     a pre-fix save can carry a 0-HP chest with a pristine heart — the "walking corpse" bug); OR
  *   • the head or torso ROOT limb reduced to ≤0 aggregate HP.

@@ -123,6 +123,16 @@ const FRACTURE_BLUNT_BASE = 0.6;
 const FRACTURE_OTHER_BASE = 0.12;
 const FRACTURE_BLUNT_CAP = 0.85;
 const FRACTURE_OTHER_CAP = 0.3;
+/** Every blow lands a DOUBLE wound: a crush/cut on the outer flesh AND a fracture on the bone beneath —
+ *  and their depths are INDEPENDENT. The bone takes a share of the blow's RAW force by damage class: blunt
+ *  shock drives through to the bone (× the weapon's bluntMod — a maul's signature), a cut/thrust mostly
+ *  parts flesh and barely loads the bone. The bone is shielded by worn ARMOUR (it stops the impact) but
+ *  NOT by the flesh's own toughness — so a tough-hided beast can take a shallow flesh wound yet a cracked
+ *  bone from a hammer, while a deep blade cut leaves the bone intact. */
+const BONE_TRANSFER_BLUNT = 0.7;
+const BONE_TRANSFER_OTHER = 0.2;
+/** ± spread on the transmitted bone load, so flesh and bone depth vary independently per blow. */
+const BONE_DAMAGE_VARIANCE = 0.4;
 /** Stats are on a ~5–22 scale; this divisor keeps damage in a sensible range. */
 const STAT_SCALE = 10;
 /** How strongly a creature's `bodyScale` boosts its natural-weapon damage (softened, see attackerProfile):
@@ -699,18 +709,27 @@ class CombatServiceImpl implements CombatService {
     );
     const knockdown = knockChance > 0 && rng.random() * 100 < knockChance;
 
-    // Fracture roll: heavy trauma cracks the bone beneath the soft-tissue wound. Tracked as a SEPARATE
-    // `fracture` wound on the SKELETON: for a flesh wall over a distinct bone (chest) the fracture lands on
-    // the bone it wraps (ribcage); for a bone-bearing limb (forearm) it lands on the part itself. Enough
-    // accumulated fracture damage BREAKS the bone (cripples the limb without severing it — see
-    // _applyInjuryToEntity / boneBroken). A part with no skeleton (soft abdomen, eyes, organs) can't break.
+    // Fracture roll: the blow ALSO loads the bone beneath the flesh wound, INDEPENDENTLY of the flesh crush
+    // (see BONE_TRANSFER_*). The fracture is a SEPARATE wound on the SKELETON the struck flesh wraps
+    // (head→skull, forearm→forearmBone, chest→ribcage). Enough accumulated bone damage BREAKS it
+    // (cripples the limb without severing — see _applyInjuryToEntity / boneBroken). A soft part with no
+    // skeleton child (abdomen, eyes, organs) routes nowhere and can't fracture.
     let fractureInjury: Injury | null = null;
     const boneTargetId = skeletonPartOf(partId);
     if (boneTargetId != null && hpMissing > 0) {
       const isBlunt = damageType === 'blunt';
-      const boneHp = BONE_FRACTION * partMaxHp; // scaled to this creature's actual part size
+      const boneHp = BONE_FRACTION * partMaxHp; // the bone's break budget, scaled to this creature
+      // Bone load is rolled from the RAW force, not the flesh `final`: type-based transfer, shielded by
+      // worn armour but not flesh toughness, with a per-blow variance — so the two depths diverge.
+      const transfer = isBlunt ? BONE_TRANSFER_BLUNT * bluntMod : BONE_TRANSFER_OTHER;
+      const variance = 1 + (rng.random() * 2 - 1) * BONE_DAMAGE_VARIANCE;
+      const boneDamage = Math.max(
+        1,
+        Math.round(raw * transfer * (1 - armorRed) * (crit ? CRIT_MULTIPLIER : 1) * variance)
+      );
+      // Chance scales with how hard the BONE was loaded (not the flesh crush), capped so it's never sure.
       const fractureChance = clamp(
-        (isBlunt ? FRACTURE_BLUNT_BASE * bluntMod : FRACTURE_OTHER_BASE) * (final / boneHp),
+        (isBlunt ? FRACTURE_BLUNT_BASE : FRACTURE_OTHER_BASE) * (boneDamage / boneHp),
         0,
         isBlunt ? FRACTURE_BLUNT_CAP : FRACTURE_OTHER_CAP
       );
@@ -718,10 +737,10 @@ class CombatServiceImpl implements CombatService {
         fractureInjury = {
           bodyPart: boneTargetId,
           type: 'fracture',
-          // Severity against the bone's break budget (boneHp), not the flesh part's full HP — overwritten
-          // on merge by recomputeWound, but kept consistent for the single-hit/test path.
-          severity: severityFromFrac(final / boneHp),
-          damage: final,
+          // Severity against the bone's break budget — overwritten on merge by recomputeWound, but kept
+          // consistent for the single-hit/test path.
+          severity: severityFromFrac(boneDamage / boneHp),
+          damage: boneDamage,
           bleeding: 0,
           painContribution: 0,
           infected: false

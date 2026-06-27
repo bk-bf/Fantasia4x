@@ -222,6 +222,38 @@ describe('combat sim (headless tickCombat)', () => {
     expect(crits).toBeGreaterThan(0);
   });
 
+  it('a blow lands a DOUBLE wound whose flesh and bone depths are INDEPENDENT (blunt cracks bone, blades rarely do)', () => {
+    // High-STR attacker, near-zero-dodge target → lots of landed hits. The pawn's hands offer fists
+    // (blunt) and claw (cutting); resolveHit rolls between them, so one run samples both damage classes.
+    const attacker = makePawn({ stats: { ...stats, strength: 22, dexterity: 20 } });
+    const defender = makeGoblin({ stats: { ...stats, dexterity: 1 } });
+    const empty = makeState([], []);
+    let bluntHits = 0;
+    let cutHits = 0;
+    let bluntFractures = 0;
+    let cutFractures = 0;
+    let fractures = 0;
+    let diverged = 0;
+    for (let i = 0; i < 3000; i++) {
+      const r = combatService.resolveHit(attacker, defender, empty);
+      if (!r.hit) continue;
+      const isBlunt = r.damageType === 'blunt';
+      if (isBlunt) bluntHits++;
+      else if (r.damageType === 'cutting') cutHits++;
+      if (r.fractureInjury) {
+        fractures++;
+        if (isBlunt) bluntFractures++;
+        else if (r.damageType === 'cutting') cutFractures++;
+        // Bone load is rolled independently of the flesh crush — NOT the old hardwired-equal value.
+        if (r.injury && r.fractureInjury.damage !== r.injury.damage) diverged++;
+      }
+    }
+    expect(fractures).toBeGreaterThan(20); // blunt blows crack bone
+    expect(diverged / fractures).toBeGreaterThan(0.8); // flesh vs bone depth decoupled
+    // Blunt shock drives through to bone FAR more readily than a cut does, per landed hit.
+    expect(bluntFractures / Math.max(1, bluntHits)).toBeGreaterThan(cutFractures / Math.max(1, cutHits));
+  });
+
   it('melee lands a sane ~60% at parity (no more ~80% dodge whiff-slog)', () => {
     // Evenly-matched DEX-10 combatants. The old formula (DEX×3 − dodge×20, no base) gave ~10% here,
     // so fights never resolved; the rebased formula centres parity near 60%.

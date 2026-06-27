@@ -115,9 +115,17 @@ describe('body plans', () => {
     expect(parentLimbOf('quadruped', 'tail')).toBe('tail');
   });
 
-  it('skull stays a critical, bone-bearing part across the rebuild', () => {
-    expect(PART_DEF_MAP['skull']!.isCritical).toBe(true);
-    expect(PART_DEF_MAP['skull']!.boneHp).toBeGreaterThan(0);
+  it('the skull is the BONE (skeleton), the head is the flesh that holds the brain; a broken skull is not death', () => {
+    // The skull is the hidden cranium bone — never struck directly, fracture-only, NOT critical (breaking
+    // a bone cripples, it does not instantly kill). The head is the flesh outer that wraps it.
+    const skull = PART_DEF_MAP['skull']!;
+    expect(skull.skeleton).toBe(true);
+    expect(skull.isCritical).toBeUndefined(); // a bone is never instant-death
+    expect(skull.containedIn).toBe('head');
+    expect(PART_DEF_MAP['head']!.skeleton).toBeUndefined(); // head is flesh
+    // The brain lives in the FLESH head, so tearing the head apart (not cracking the skull) is what kills.
+    expect(PART_DEF_MAP['brain']!.containedIn).toBe('head');
+    expect(PART_DEF_MAP['brain']!.isVital).toBe(true);
   });
 
   describe('natural-weapon part binding', () => {
