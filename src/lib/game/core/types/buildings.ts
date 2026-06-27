@@ -179,6 +179,13 @@ export interface Building {
 
   // Storage capabilities
   storageCapacity: Record<string, number>; // Storage for different item categories
+  /**
+   * §F storage bins — a specialized store (hay rack, meat hooks, salting barrel…) restricts what its
+   * tile accepts. Entries are matched as item CATEGORIES or explicit item IDs (so `hay`, miscategorised
+   * as "primitive", can still be the sole content of a hay rack). Absent/empty = a GENERAL store that
+   * takes anything (like the wicker basket). Only meaningful alongside `effects.storageStacks`.
+   */
+  storageFilter?: string[];
 
   // Building-specific properties
   buildingProperties?: {

@@ -16,7 +16,7 @@ import {
 import { manhattan } from '../../core/distance';
 import { occupancyService } from '../../services/OccupancyService';
 import { itemService } from '../../services/ItemService';
-import { stockpileAcceptsDrop } from '../../services/jobs/haul';
+import { storageAcceptsDrop, storageTileAcceptsDrop } from '../../services/jobs/haul';
 import { ENC_OVERLOAD_FULL } from '../../core/needs';
 import { gameLogger } from '../../dev/gameLogger';
 import { rng } from '../../core/rng';
@@ -169,7 +169,7 @@ export function opportunisticHaulPickup(gs: GameState, pawnId: string): GameStat
     looseOnly: true,
     skipForbidden: true,
     capFactor: ENC_OVERLOAD_FULL,
-    acceptTest: (rid) => stockpileAcceptsDrop(gs, rid)
+    acceptTest: (rid) => storageAcceptsDrop(gs, rid)
   });
 }
 
@@ -455,8 +455,13 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   for (const d of gs.droppedItems ?? [])
     if (d.stored && stockpileTileKeys.has(`${d.x},${d.y}`))
       pileCount.set(`${d.x},${d.y}`, (pileCount.get(`${d.x},${d.y}`) ?? 0) + 1);
-  const firstTileWithRoom = () =>
-    stockpileTiles.find((t) => (pileCount.get(t.key) ?? 0) < t.cap);
+  // Nearest storage tile that has a free pile slot AND whose store accepts this resource (a specialized
+  // bin only takes its category; a general store/zone takes anything). Used for both the counted items
+  // and the named instances below so neither lands in a bin that would reject it.
+  const firstTileFor = (resourceId: string) =>
+    stockpileTiles.find(
+      (t) => (pileCount.get(t.key) ?? 0) < t.cap && storageTileAcceptsDrop(gs, t.x, t.y, resourceId)
+    );
 
   // THE STOCKPILE IS PHYSICAL — a pawn may only deposit into a stockpile it is standing ON or directly
   // ADJACENT to (Chebyshev ≤ 1). Crediting the globally-NEAREST stockpile tile from a distance was the
@@ -493,7 +498,7 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
       // Stacks onto its existing pile — no new slot consumed.
       tile = { x: existingStoredDrop.x, y: existingStoredDrop.y };
     } else {
-      const freeTile = firstTileWithRoom();
+      const freeTile = firstTileFor(resourceId);
       if (freeTile) {
         tile = { x: freeTile.x, y: freeTile.y };
         pileCount.set(freeTile.key, (pileCount.get(freeTile.key) ?? 0) + 1); // claim the slot
@@ -526,9 +531,9 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
       keptInstances.push(instance);
       continue;
     }
-    const freeTile = firstTileWithRoom();
+    const freeTile = firstTileFor(instance.itemId);
     if (!freeTile) {
-      keptInstances.push(instance); // no room — keep carrying it
+      keptInstances.push(instance); // no room / no accepting store — keep carrying it
       continue;
     }
     pileCount.set(freeTile.key, (pileCount.get(freeTile.key) ?? 0) + 1);

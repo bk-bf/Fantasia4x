@@ -4882,6 +4882,11 @@
         {#if hoverBin && !isBlueprint}
           {@const cap = bDef?.effects?.storageStacks ?? 1}
           <div class="bld-store">stored {hoverBinContents.length}/{cap} stacks</div>
+          {#if bDef?.storageFilter?.length}
+            <div class="bld-store-item" style="color:#7e9fbf">
+              holds {bDef.storageFilter.map((c) => c.replace(/_/g, ' ')).join(', ')}
+            </div>
+          {/if}
           {#each hoverBinContents as d (d.id)}
             <div class="bld-store-item">· {itemService.getItemDisplayName(d)} ×{d.quantity}</div>
           {:else}

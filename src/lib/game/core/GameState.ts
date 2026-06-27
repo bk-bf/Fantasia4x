@@ -28,6 +28,12 @@ const STORAGE_BIN_STACKS = new Map<string, number>(
 function binStacksForType(type: string): number {
   return STORAGE_BIN_STACKS.get(type) ?? 0;
 }
+// A specialized store's allow-list (categories OR item ids); only types that actually restrict appear.
+// The category MATCHING lives in the services layer (it needs item defs); core only needs to know the
+// list and whether a tile is filtered (so the generic fallback never dumps into a specialized bin).
+const STORAGE_BIN_FILTER = new Map<string, string[]>(
+  BUILDING_DEFS.filter((d) => (d.storageFilter?.length ?? 0) > 0).map((d) => [d.id, d.storageFilter!])
+);
 
 export class GameStateManager {
   private state: GameState;
@@ -370,6 +376,26 @@ export function isStorageTile(state: GameState, x: number, y: number): boolean {
 }
 
 /**
+ * The allow-list (categories/item-ids) of a SPECIALIZED store on tile (x,y), or null when the tile is a
+ * general store (plain stockpile / unfiltered bin) that takes anything. Category matching is done by the
+ * caller in the services layer; core only surfaces the list + "is this tile filtered".
+ */
+export function binFilterAt(state: GameState, x: number, y: number): string[] | null {
+  let best: string[] | null = null;
+  for (const b of state.buildings ?? []) {
+    if (b.status !== 'complete' || b.x !== x || b.y !== y) continue;
+    const f = STORAGE_BIN_FILTER.get(b.type);
+    if (f) best = f; // a filtered bin on the tile restricts it
+  }
+  return best;
+}
+
+/** True when a specialized (filtered) store sits on tile (x,y) — the generic credit path skips these. */
+export function isFilteredBinTile(state: GameState, x: number, y: number): boolean {
+  return binFilterAt(state, x, y) !== null;
+}
+
+/**
  * Choose a tile to physically store items on. Prefers the explicit `tileKey`, then a
  * stockpile-designated tile with free capacity, then any stockpile tile, then an existing
  * stored pile, then (0,0). Capacity is advisory here — storing never fails (items are never
@@ -380,11 +406,14 @@ function pickStorageTile(state: GameState, tileKey: string | null): { x: number;
     const [x, y] = tileKey.split(',').map(Number);
     if (Number.isFinite(x) && Number.isFinite(y)) return { x, y };
   }
-  // Scan stockpile zone tiles AND standalone storage-bin tiles; prefer one with a free pile slot.
+  // Generic credit fallback: scan GENERAL storage tiles only (stockpile zones + unfiltered bins) — a
+  // specialized bin (hay rack/meat hooks) must never be force-fed a non-matching resource here, since
+  // this path can't check categories. Prefer one with a free pile slot.
   let fallback: { x: number; y: number } | null = null;
   for (const key of storageTileKeys(state)) {
     const [x, y] = key.split(',').map(Number);
     if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    if (isFilteredBinTile(state, x, y)) continue;
     if (!fallback) fallback = { x, y };
     if (tileStoredPileCount(state, x, y) < tilePileCapacity(state, x, y)) return { x, y };
   }

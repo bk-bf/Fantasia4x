@@ -5,7 +5,12 @@ import type { GameState, Job, ItemInstance } from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
 import { gatedConsole as console, isGameDebug } from '../../core/log';
 import { itemService } from '../ItemService';
-import { storageTileKeys, tilePileCapacity, tileStoredPileCount } from '../../core/GameState';
+import {
+  storageTileKeys,
+  tilePileCapacity,
+  tileStoredPileCount,
+  binFilterAt
+} from '../../core/GameState';
 import { itemMatchesFilter } from './filters';
 import { ENC_OVERLOAD_FULL } from '../../core/needs';
 import { gameLogger } from '../../dev/gameLogger';
@@ -29,14 +34,47 @@ export function stockpileAcceptsDrop(gs: GameState, resourceId: string): boolean
   return itemMatchesFilter(resourceId, legacyFilter);
 }
 
+/** Does a SPECIALIZED store's allow-list (categories OR explicit item ids) admit this resource? */
+function resourceAllowedByList(resourceId: string, allowed: string[]): boolean {
+  if (allowed.includes(resourceId)) return true; // explicit item id (e.g. hay rack accepts `hay`)
+  const cat = itemService.getItemById(resourceId)?.category;
+  return cat ? allowed.includes(cat) : false;
+}
+
+/**
+ * Would the store on a SPECIFIC tile (x,y) take a drop of `resourceId`? A specialized bin matches its
+ * own filter; a plain stockpile tile / unfiltered bin defers to the colony stockpile filter. The single
+ * per-tile acceptance source — used by the deposit search and the haulability gate below.
+ */
+export function storageTileAcceptsDrop(
+  gs: GameState,
+  x: number,
+  y: number,
+  resourceId: string
+): boolean {
+  const filter = binFilterAt(gs, x, y);
+  if (filter) return resourceAllowedByList(resourceId, filter);
+  return stockpileAcceptsDrop(gs, resourceId);
+}
+
+/** Is `resourceId` haulable at all — does ANY existing storage tile (zone or bin) accept it? */
+export function storageAcceptsDrop(gs: GameState, resourceId: string): boolean {
+  for (const key of storageTileKeys(gs)) {
+    const [x, y] = key.split(',').map(Number);
+    if (storageTileAcceptsDrop(gs, x, y, resourceId)) return true;
+  }
+  return false;
+}
+
 export function generate(jobs: Job[], gs: GameState): Job[] {
   // Only consider non-stored, non-forbidden drops (stored = already in stockpile; forbidden = the
   // player has locked it out of hauling — e.g. a wild carcass left where it fell). Excluding
   // forbidden here also makes the stale-job prune below drop any in-flight haul for a stack that was
   // just forbidden, so a pawn already walking to it abandons the trip.
   const allDrops = (gs.droppedItems ?? []).filter((d) => !d.stored && !d.forbidden);
-  // Apply stockpile zone filter — prefer per-instance filters, fall back to legacy zoneFilters.
-  const drops = allDrops.filter((d) => stockpileAcceptsDrop(gs, d.resourceId));
+  // Only haul a drop some store will actually take — a zone/general store (its filter) OR a specialized
+  // bin whose category/item list admits it. Stops a meat-only larder from attracting grain it can't hold.
+  const drops = allDrops.filter((d) => storageAcceptsDrop(gs, d.resourceId));
   // Heavy per-tick string building guarded behind the debug flag (see core/log.ts):
   // gatedConsole suppresses output, but the drops.map() would still run every tick.
   if (isGameDebug()) {
