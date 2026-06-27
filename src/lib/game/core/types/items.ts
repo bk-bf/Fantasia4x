@@ -140,6 +140,29 @@ export interface DynamicIngredientSlot {
  * *synthesised* from an item's legacy inline `craftingCost`/`workshopType` fields during
  * migration so both sources work behind one accessor.
  */
+/**
+ * §M material properties — a dynamic build/craft material (oak vs pine plank, granite vs marble
+ * block, silk vs linen cloth) shifts the finished building's / item's stats. Authored in
+ * `materialProperties.jsonc`, keyed by material item id; the chosen material for a `category:` cost
+ * slot looks its entry up. `building` mods adjust a placed building's stats; `item` mods the crafted
+ * output. Multipliers default to 1 (neutral), additive deltas to 0.
+ */
+export interface MaterialStatMods {
+  durability?: number; // ×maxDurability (item) / ÷conditionDecayPerTurn (building); 1 = neutral
+  beauty?: number; // + building beauty
+  comfort?: number; // + building comfort
+  insulation?: number; // + building thermalInsulation
+  weight?: number; // ×weightKg (item); 1 = neutral
+}
+export interface MaterialProperty {
+  /** Short display name for the hover card, e.g. "Oak". */
+  label: string;
+  /** One-line benefit/detriment summary, e.g. "+durable, +handsome, heavier". */
+  desc: string;
+  building?: MaterialStatMods;
+  item?: MaterialStatMods;
+}
+
 export interface Recipe {
   id: string;
   /** workshopType / building id required to run this recipe (null/undefined = anywhere). */

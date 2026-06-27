@@ -4,6 +4,7 @@
   import { uiState } from '$lib/stores/uiState';
   import BackButton from '$lib/components/UI/BackButton.svelte';
   import { itemService } from '$lib/game/services/ItemService';
+  import { getMaterialProperty } from '$lib/game/core/materialProperties';
   import { buildingService } from '$lib/game/services/BuildingService';
   import { onDestroy } from 'svelte';
   import CurrentTask from '../UI/CurrentTask.svelte';
@@ -340,6 +341,9 @@
                   <span class="cost-qty">×{n}</span>
                   <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
                 </span>
+                {@const selMat = selectedMaterials[building.id]?.[id]}
+                {@const mp = selMat ? getMaterialProperty(selMat) : null}
+                {#if mp}<span class="mat-effect">▸ {mp.label}: {mp.desc}</span>{/if}
               {/each}
             {/if}
           </BuildCard>
@@ -450,6 +454,13 @@
   /* Category material-picker rows sit just under the concrete-cost pills. */
   .cost-cat {
     margin-top: 2px;
+  }
+  /* §M chosen-material stat effect line under the picker. */
+  .mat-effect {
+    display: block;
+    color: #7e9fbf;
+    font-size: 9px;
+    margin: 1px 0 2px 4px;
   }
 
   .cost-qty {

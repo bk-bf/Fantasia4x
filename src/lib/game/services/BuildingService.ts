@@ -8,6 +8,7 @@ import { patchPathfindingWalkable } from './PathfinderService';
 import type { CharSpan } from '../core/Terrains';
 import { rng } from '../core/rng';
 import { perTick } from '../core/time';
+import { aggregateMaterialMods } from '../core/materialProperties';
 import {
   consumeFromStockpiles,
   addToStockpileZone,
@@ -445,6 +446,11 @@ export class BuildingServiceImpl implements BuildingService {
       workRequired: building.workAmount,
       workDone: instant ? building.workAmount : 0,
       materialsDelivered: false,
+      // §M record the player's per-slot material picks so the finished building's stats reflect what
+      // it was built from (oak vs pine plank, granite vs marble block). Empty = default/auto material.
+      ...(materialOverride && Object.keys(materialOverride).length > 0
+        ? { materials: { ...materialOverride } }
+        : {}),
       // PRODUCTION-CHAIN-III §B.2: seed the per-building fuel whitelist from the def so a tanning
       // bucket only ever burns brine (the refuel planner reads fuelSettings.allowedFuelItemIds).
       ...(building.defaultAllowedFuelItemIds && building.defaultAllowedFuelItemIds.length > 0
@@ -680,7 +686,11 @@ export class BuildingServiceImpl implements BuildingService {
       if (!rate) return b;
       const cur = b.condition ?? 100;
       if (cur <= 0) return b;
-      const next = Math.max(0, cur - perTick(rate));
+      // §M a more durable material decays slower (oak/granite ÷1.3, ironwood ÷1.7; pine/sandstone ÷0.85).
+      const durMul = b.materials
+        ? aggregateMaterialMods(Object.values(b.materials), 'building').durability
+        : 1;
+      const next = Math.max(0, cur - perTick(rate) / durMul);
       if (next === cur) return b;
       changed = true;
       return { ...b, condition: next };

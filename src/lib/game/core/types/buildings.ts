@@ -98,6 +98,9 @@ export interface PlacedBuilding {
   status: 'planned' | 'under_construction' | 'complete';
   progress: number; // 0–1 (legacy; use workDone/workRequired for placed buildings)
   paused?: boolean; // construction paused by player
+  /** §M chosen materials per `category:` cost slot (slotKey → itemId), recorded at placement so the
+   *  building's stats reflect what it was built from (oak vs pine, granite vs marble). */
+  materials?: Record<string, string>;
   // Phase 5c: work-point construction
   workRequired?: number; // = buildDef.workAmount
   workDone?: number; // accumulated work points

@@ -4,6 +4,7 @@
 <script lang="ts">
   import type { Item, Recipe } from '$lib/game/core/types';
   import { recipeService } from '$lib/game/services/RecipeService';
+  import { getMaterialProperty } from '$lib/game/core/materialProperties';
   import { itemService } from '$lib/game/services/ItemService';
   import { WORK_CATEGORIES } from '$lib/game/core/Work';
   import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService';
@@ -50,6 +51,13 @@
     Object.values(selectedIngredients)
       .map((id) => itemService.getItemById(id)?.name ?? id.replace(/_/g, ' '))
       .join(', ')
+  );
+  // §M generic material-property summaries (durability/beauty/weight…) for the chosen materials.
+  let matNotes = $derived(
+    Object.values(selectedIngredients)
+      .map((id) => getMaterialProperty(id))
+      .filter((m): m is NonNullable<typeof m> => !!m)
+      .map((m) => `${m.label}: ${m.desc}`)
   );
   // Dynamic-recipe variant nutrition tweak (e.g. cooked-meat-over-venison), added to base nutrition.
   let nutritionBonus = $derived.by(() => {
@@ -225,7 +233,7 @@
     </div>
   {/each}
 
-  {#if matDelta.length > 0}
+  {#if matDelta.length > 0 || matNotes.length > 0}
     <div class="tip-sep">
       MATERIAL{#if matNames}
         · {matNames}{/if}
@@ -237,6 +245,9 @@
           >{fmtDelta(field, val)}</span
         >
       </div>
+    {/each}
+    {#each matNotes as note}
+      <div class="tip-mod" style="color:#7e9fbf">{note}</div>
     {/each}
   {/if}
 
