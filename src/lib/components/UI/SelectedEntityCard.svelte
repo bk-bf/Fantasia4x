@@ -376,10 +376,16 @@
   }
   .tile-hud {
     background: rgba(28, 16, 6, 0.92);
-    border: 1px solid #6b4a2a;
+    /* Golden frame drawn as an INSET ring, not a plain `border`. The wrapper carries the
+       `filter: url(#ambient-tint)` SVG filter, which rasterises this card; a 1px border is the outermost
+       paint on the vertical edges and the filter blends it to a translucent (white-looking) line there.
+       Keeping a transparent 1px border preserves the exact box-model layout while box-shadow paints the
+       frame just INSIDE the edge, away from the fringing boundary — so it stays solid gold on all sides. */
+    border: 1px solid transparent;
+    box-shadow: inset 0 0 0 1px #6b4a2a;
     color: #a07840;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 11px;
     line-height: 1.25;
     padding: 2px 7px;
     pointer-events: auto;
@@ -408,20 +414,20 @@
   .pawn-name {
     color: #c8a060;
     font-weight: bold;
-    font-size: 10px;
+    font-size: 12px;
   }
   .pawn-state {
     color: #7a6030;
-    font-size: 9px;
+    font-size: 11px;
   }
   .pawn-dismiss {
     color: #886630;
-    font-size: 9px;
+    font-size: 11px;
   }
   /* Mood pinned to the right of the header (next to the name). */
   .pawn-mood {
     color: #c0a040;
-    font-size: 9px;
+    font-size: 11px;
     flex-shrink: 0;
     white-space: nowrap;
   }
@@ -438,7 +444,7 @@
     border: 1px solid #6b4a2a;
     color: #a07840;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 11px;
     padding: 1px 5px;
     cursor: pointer;
     pointer-events: auto;
@@ -475,13 +481,13 @@
   }
   .text-line {
     color: #c0a040;
-    font-size: 9px;
+    font-size: 11px;
     white-space: normal;
     overflow-wrap: break-word;
   }
   /* Growth maturity readout — colour set inline to match the hover HUD's ramp. */
   .growth-line {
-    font-size: 9px;
+    font-size: 11px;
     margin-bottom: 2px;
   }
   /* ── Stats / bars ─────────────────────────────────────────────── */
@@ -490,7 +496,7 @@
     flex-wrap: wrap;
     gap: 2px 8px;
     align-items: baseline;
-    font-size: 9px;
+    font-size: 11px;
   }
   /* Keep each label+value glued together so a wrap never splits "STR" from its number. */
   .pawn-stat {
@@ -515,7 +521,7 @@
   }
   .pawn-job {
     color: #8a7040;
-    font-size: 9px;
+    font-size: 11px;
     margin-top: 1px;
     white-space: normal;
     overflow-wrap: break-word;
@@ -540,6 +546,6 @@
   }
   .pawn-pos {
     color: #776040;
-    font-size: 9px;
+    font-size: 11px;
   }
 </style>
