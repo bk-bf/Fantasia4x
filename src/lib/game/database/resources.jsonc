@@ -760,9 +760,9 @@
     "subterrain"      : "tree",
     "walkable"        : false,
     "charSpans"       : [ {"sheet": "plants", "from": 0, "to": 71} ],
-    "fg"              : [0.46, 0.55, 0.26],
-    "bg"              : [0.07, 0.1, 0.03],
-    "color"           : "#6E8A3A",
+    "fg"              : [0.52, 0.26, 0.25],
+    "bg"              : [0.08, 0.07, 0.04],
+    "color"           : "#85423C",
     "spawn"           : {
       "subterrains": {"deep_grass": 0.01, "grass": 0.007, "tall_grass": 0.004, "dirt": 0.002}
     },
