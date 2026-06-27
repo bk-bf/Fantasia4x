@@ -208,16 +208,18 @@
     // MULTI-slot dish → one card with a picker per slot. The composed name/cost come from the live
     // selection; all slots must be chosen before it's craftable (a partial pick stays a placeholder).
     if (slotEntries.length > 1) {
-      const slots: DishSlot[] = slotEntries.map(([key, slot]) => ({
-        key,
-        label: recipeService.slotCategories(slot).join('/'),
-        quantity: slot.quantity,
-        options: (ITEMS_DATABASE as Item[]).filter(
-          (i) =>
-            recipeService.slotCategories(slot).includes(i.category) &&
-            (amounts[i.id] ?? 0) > 0
-        )
-      }));
+      const slots: DishSlot[] = slotEntries.map(([key, slot]) => {
+        const cats = recipeService.slotCategories(slot);
+        // EVERY individual ingredient of the slot's categories (venison, rabbit, trout, …), not just
+        // what's in stock — full ingredient control, in-stock sorted first, exactly like the building
+        // material picker. Out-of-stock picks just render the slot short (MISSING/QUEUE), same as a wall.
+        const seen = new Set<string>();
+        const options = cats
+          .flatMap((c) => itemService.getItemsByCategory(c))
+          .filter((i) => (seen.has(i.id) ? false : (seen.add(i.id), true)))
+          .sort((a, b) => ((amounts[b.id] ?? 0) > 0 ? 1 : 0) - ((amounts[a.id] ?? 0) > 0 ? 1 : 0));
+        return { key, label: cats.join('/'), quantity: slot.quantity, options };
+      });
       const chosen = sel[item.id] ?? {};
       const allPicked = slotEntries.every(([key]) => chosen[key]);
       const dynamicCost: Record<string, number> = {};
@@ -484,7 +486,8 @@
                 <span class="cost-item neg-text"
                   >any {dynNeed} <span class="cost-qty">×1</span></span
                 >
-              {:else if costPills.length === 0}
+              {:else if costPills.length === 0 && !entry.slots}
+                <!-- A multi-slot dish's ingredient pickers ARE its cost, so "free" must not show there. -->
                 <span class="muted-text">free</span>
               {/if}
               {#if primaryQtyOf(item.id) > 1 || byproductsOf(item.id).length > 0}
