@@ -4,6 +4,7 @@
 import type { DesignationType, GameState, Item, ZoneFilter } from '../../core/types';
 import itemsData from '../../database/items.jsonc';
 import { resourceObjectService } from '../ResourceObjectService';
+import { zoneInstanceIdAt } from '../DesignationService';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
 
@@ -34,7 +35,10 @@ export function resourceMatchesFilter(
 ): boolean {
   let filter: ZoneFilter | undefined;
   if (tileKey) {
-    const instanceId = gs.designationZoneId?.[tileKey];
+    // A harvest tile inherits the filter of any filterable standing zone it overlaps (stockpile/grow);
+    // each lives in its own layer now, so an overlapping restrict zone no longer hides this filter.
+    const instanceId =
+      zoneInstanceIdAt(gs, tileKey, 'stockpile') ?? zoneInstanceIdAt(gs, tileKey, 'grow');
     if (instanceId) {
       const inst = (gs.zoneInstances ?? []).find((z) => z.id === instanceId);
       filter = inst?.filter;

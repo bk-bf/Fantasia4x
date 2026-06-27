@@ -43,23 +43,27 @@ describe('clearDesignationsForResource (CANCEL ALL ⇆ MARK)', () => {
   it('preserves zone membership on tiles whose action order is cancelled', () => {
     const state = makeState();
     // The stone tile at (1,1) is ALSO inside a restrict zone.
-    (state.designationZoneId as Record<string, string>)['1,1'] = 'restrict-1';
+    (state.designationZoneId as Record<string, { restrict: string }>)['1,1'] = {
+      restrict: 'restrict-1'
+    };
     (state.zoneTiles as Record<string, string[]>)['1,1'] = ['restrict'];
 
     const out = designationService.clearDesignationsForResource('stone', state);
     expect(out.designations['1,1']).toBeUndefined(); // harvest order cancelled
-    expect(out.designationZoneId?.['1,1']).toBe('restrict-1'); // zone membership kept
+    expect(out.designationZoneId?.['1,1']?.restrict).toBe('restrict-1'); // zone membership kept
     expect(out.zoneTiles?.['1,1']).toEqual(['restrict']);
   });
 
   it('clearActionDesignation removes only the action order, not the zone', () => {
     const state = makeState();
-    (state.designationZoneId as Record<string, string>)['0,0'] = 'restrict-1';
+    (state.designationZoneId as Record<string, { restrict: string }>)['0,0'] = {
+      restrict: 'restrict-1'
+    };
     (state.zoneTiles as Record<string, string[]>)['0,0'] = ['restrict'];
 
     const out = designationService.clearActionDesignation(0, 0, state);
     expect(out.designations['0,0']).toBeUndefined();
-    expect(out.designationZoneId?.['0,0']).toBe('restrict-1');
+    expect(out.designationZoneId?.['0,0']?.restrict).toBe('restrict-1');
     expect(out.zoneTiles?.['0,0']).toEqual(['restrict']);
   });
 });

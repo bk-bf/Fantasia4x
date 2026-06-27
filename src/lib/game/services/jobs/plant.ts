@@ -7,7 +7,7 @@
 // crop resource lists `designationTypes: ['harvest']`); after an annual depletes, the zone replants.
 import type { GameState, Job } from '../../core/types';
 import { gatedConsole as console } from '../../core/log';
-import { zoneTileKeys } from '../DesignationService';
+import { zoneTileKeys, zoneInstanceIdAt } from '../DesignationService';
 import { resourceObjectService, type ResourceObjectDef } from '../ResourceObjectService';
 import { itemService } from '../ItemService';
 import { soilTierForTile } from '../../core/Terrains';
@@ -45,7 +45,7 @@ function isObstructed(tile: { resources?: Record<string, number> }): boolean {
 /** The crop to sow on a grow-zone tile: the first crop whose seed passes the zone's filter, fits the
  *  tile's soil tier, and is in stock. Null when nothing plantable applies. */
 function cropForTile(gs: GameState, tile: { subType: string }, tileKey: string): ResourceObjectDef | null {
-  const instId = gs.designationZoneId?.[tileKey];
+  const instId = zoneInstanceIdAt(gs, tileKey, 'grow');
   const inst = (gs.zoneInstances ?? []).find((z) => z.id === instId);
   const filter = inst?.filter;
   const tier = soilTierForTile(tile);

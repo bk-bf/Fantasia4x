@@ -155,7 +155,9 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
   for (const [k, v] of Object.entries(state.designations ?? {})) {
     if (v !== 'harvest') designations[k] = v;
   }
-  const designationZoneId: Record<string, string> = { ...(state.designationZoneId ?? {}) };
+  const designationZoneId: Record<string, Partial<Record<DesignationType, string>>> = {
+    ...(state.designationZoneId ?? {})
+  };
   // Stockpile is a standing zone — store it in zoneTiles (not the single-value designations map)
   // so it coexists with harvest/woodcut orders on the same tile.
   const zoneTiles: Record<string, DesignationType[]> = { ...(state.zoneTiles ?? {}) };
@@ -163,7 +165,7 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
   for (const k of stockpileTiles) {
     const cur = zoneTiles[k] ?? [];
     if (!cur.includes('stockpile')) zoneTiles[k] = [...cur, 'stockpile'];
-    designationZoneId[k] = stockpileInstance.id;
+    designationZoneId[k] = { ...designationZoneId[k], stockpile: stockpileInstance.id };
   }
 
   // --- 6. Assemble new state --------------------------------------

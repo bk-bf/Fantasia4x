@@ -374,7 +374,7 @@
   let zoneTiles: Record<string, DesignationType[]> = {};
   // Tile → zone-instance id (from game state); lets us suppress a single zone's
   // overlay tint when the player hides that instance's color in the Building tab.
-  let designationZoneId: Record<string, string> = {};
+  let designationZoneId: Record<string, Partial<Record<DesignationType, string>>> = {};
   // Full zone-instance list (filters + labels) from the snapshot — drives the clicked-stockpile panel.
   let zoneInstances: ZoneInstance[] = [];
   // Zone-instance ids whose color the player has hidden (persisted on the instance
@@ -1248,7 +1248,9 @@
     ? (zoneInstances.find((z) => z.id === selectedZoneId) ?? null)
     : null;
   $: selectedZoneTileKeys = selectedZoneId
-    ? Object.keys(designationZoneId).filter((k) => designationZoneId[k] === selectedZoneId)
+    ? Object.keys(designationZoneId).filter((k) =>
+        Object.values(designationZoneId[k] ?? {}).includes(selectedZoneId!)
+      )
     : [];
   // Per-item totals physically stored on THIS zone's tiles (stored drops) — feeds the filter card's
   // counts so "what's actually here" reads truthfully (and items at 0 still list, for filtering).
@@ -2316,8 +2318,10 @@
       // Every zone colour stacked on a tile, in encounter order — drives the overlap stripe split so a
       // tile in two+ zones (e.g. stockpile + restrict) shows BOTH instead of competing / hiding one.
       const tileColors = new Map<string, string[]>();
-      const add = (key: string, color: string) => {
-        const inst = designationZoneId[key];
+      const add = (key: string, color: string, type: DesignationType) => {
+        // The owning instance comes from THIS zone type's layer, so each overlapping zone's hidden
+        // flag is checked against its own colour rather than whichever id last landed on the tile.
+        const inst = designationZoneId[key]?.[type];
         // A zone whose colour is hidden is skipped — UNLESS a drawing tool is active, in which case
         // EVERY zone is shown so you can lay one out around the others; it re-hides when you exit the
         // tool (this redraws on the designation-mode toggle). No persisted flag is touched.
@@ -2333,12 +2337,12 @@
       for (const key in zoneTiles) {
         for (const t of zoneTiles[key]) {
           const c = ZONE_TINT_COLORS[t];
-          if (c) add(key, c);
+          if (c) add(key, c, t);
         }
       }
       for (const key in designations) {
         const c = ZONE_TINT_COLORS[designations[key]];
-        if (c) add(key, c);
+        if (c) add(key, c, designations[key]);
       }
 
       // Tiles shared by 2+ zones: solid-filled as diagonal stripes (below) rather than stacked fills.
@@ -2877,7 +2881,7 @@
     const key = `${x},${y}`;
     if (zoneTiles[key]?.includes('stockpile')) {
       const zoneId =
-        designationZoneId[key] ?? zoneInstances.find((z) => z.type === 'stockpile')?.id;
+        designationZoneId[key]?.stockpile ?? zoneInstances.find((z) => z.type === 'stockpile')?.id;
       if (zoneId) layers.push({ kind: 'zone', id: zoneId });
     }
     if (!isHiddenTile(x, y)) {

@@ -87,8 +87,11 @@
   let instanceTileCounts = $derived(
     (() => {
       const counts: Record<string, number> = {};
-      for (const instId of Object.values($gameState.designationZoneId ?? {})) {
-        counts[instId] = (counts[instId] ?? 0) + 1;
+      // Each tile holds one instance id per zone layer (type); count every layer toward its instance.
+      for (const layers of Object.values($gameState.designationZoneId ?? {})) {
+        for (const instId of Object.values(layers ?? {})) {
+          counts[instId] = (counts[instId] ?? 0) + 1;
+        }
       }
       return counts;
     })()

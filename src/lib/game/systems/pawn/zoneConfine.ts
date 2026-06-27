@@ -22,8 +22,11 @@ function rebuild(state: GameState): void {
   const restrict = (state.zoneInstances ?? []).filter((z) => z.type === 'restrict');
   if (restrict.length === 0) return;
   for (const z of restrict) _zoneTiles.set(z.id, new Set());
-  for (const [tile, zid] of Object.entries(state.designationZoneId ?? {})) {
-    _zoneTiles.get(zid)?.add(tile);
+  for (const [tile, layers] of Object.entries(state.designationZoneId ?? {})) {
+    // Read only the restrict layer — a tile shared with a stockpile/grow zone still counts toward its
+    // restrict zone (the layers are independent, so overlap no longer steals the tile).
+    const zid = layers?.restrict;
+    if (zid) _zoneTiles.get(zid)?.add(tile);
   }
   _restrictZones = restrict.map((z) => ({ id: z.id, pawns: new Set(z.assignedPawnIds ?? []) }));
 }

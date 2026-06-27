@@ -4,11 +4,14 @@ import { allowedTilesForPawn, nearestAllowedTile } from './zoneConfine';
 import { buildPathfindingGridsConfined } from '../../services/PathfinderService';
 
 // Minimal GameState slice — allowedTilesForPawn only reads zoneInstances + designationZoneId. New object
-// refs each call so the memo doesn't bleed between cases.
+// refs each call so the memo doesn't bleed between cases. The `restrictTiles` arg is the flat tile→id
+// shorthand; it's wrapped into the layered `{ tile: { restrict: id } }` shape the real state uses.
 function stateWith(
   zoneInstances: ZoneInstance[],
-  designationZoneId: Record<string, string>
+  restrictTiles: Record<string, string>
 ): GameState {
+  const designationZoneId: Record<string, { restrict: string }> = {};
+  for (const [tile, id] of Object.entries(restrictTiles)) designationZoneId[tile] = { restrict: id };
   return { zoneInstances, designationZoneId } as unknown as GameState;
 }
 const restrictZone = (id: string, assignedPawnIds: string[]): ZoneInstance => ({
@@ -47,6 +50,19 @@ describe('zone confinement — allowedTilesForPawn', () => {
   it('treats an assigned-but-unpainted zone as no confinement (null), not a frozen empty area', () => {
     const s = stateWith([restrictZone('z1', ['p1'])], {}); // assigned, but zero tiles painted
     expect(allowedTilesForPawn(s, 'p1')).toBeNull();
+  });
+
+  it('keeps a restrict tile that also belongs to another zone (overlap no longer steals it)', () => {
+    // Tile (1,1) is in restrict zone z1 AND a stockpile — both layers coexist on the same tile, so the
+    // restrict confinement still includes it (the bug that stranded confined pawns Idle).
+    const s = {
+      zoneInstances: [restrictZone('z1', ['p1'])],
+      designationZoneId: {
+        '1,1': { restrict: 'z1', stockpile: 'sp1' },
+        '1,2': { restrict: 'z1' }
+      }
+    } as unknown as GameState;
+    expect([...allowedTilesForPawn(s, 'p1')!].sort()).toEqual(['1,1', '1,2']);
   });
 });
 

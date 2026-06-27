@@ -75,8 +75,13 @@ export interface GameState {
   zoneFilters?: Partial<Record<FilterableZoneType, ZoneFilter>>;
   /** Named zone instances, each with their own filter. Replaces zoneFilters. */
   zoneInstances?: ZoneInstance[];
-  /** Maps "x,y" tile keys to ZoneInstance.id for per-instance filter lookup. */
-  designationZoneId?: Record<string, string>;
+  /** Standing-zone instance membership keyed as "x,y" → one instance id per zone *layer* (zone type)
+   *  present on the tile, e.g. `{ stockpile: 'stockpile-ab', restrict: 'restrict-cd' }`. Layered by
+   *  type so overlapping zones of different kinds (a stockpile drawn inside a restrict area) never
+   *  clobber each other's instance id — the bug that silently shrank a restrict zone wherever it met
+   *  another zone and stranded confined pawns Idle. Read a single layer via the DesignationService
+   *  `zoneInstanceIdAt` helper. */
+  designationZoneId?: Record<string, Partial<Record<DesignationType, string>>>;
   /** Colony-wide food filter (which items pawns may eat). Unset → the default eat-list. */
   foodSettings?: FoodSettings;
   /** Phase 5a: active job pool — regenerated each turn by JobService */

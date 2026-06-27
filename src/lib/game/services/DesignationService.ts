@@ -59,6 +59,17 @@ export function isZoneTile(
   return !!gameState.zoneTiles?.[`${x},${y}`]?.includes(type);
 }
 
+/** The zone-instance id of a specific standing-zone *layer* (zone type) on the tile, or null. Each
+ *  zone type occupies its own layer in `designationZoneId`, so reading the restrict layer of a tile
+ *  that also holds a stockpile returns the restrict instance — they no longer clobber. */
+export function zoneInstanceIdAt(
+  gameState: GameState,
+  tileKey: string,
+  type: DesignationType
+): string | null {
+  return gameState.designationZoneId?.[tileKey]?.[type] ?? null;
+}
+
 class DesignationServiceImpl {
   private key(x: number, y: number): string {
     return `${x},${y}`;
@@ -151,9 +162,14 @@ class DesignationServiceImpl {
       state = { ...gameState, designations: { ...(gameState.designations ?? {}), [k]: type } };
     }
     if (zoneInstanceId) {
+      // Write into THIS zone type's layer only, preserving any other zone's id already on the tile.
+      const prev = (state.designationZoneId ?? {})[k];
       state = {
         ...state,
-        designationZoneId: { ...(state.designationZoneId ?? {}), [k]: zoneInstanceId }
+        designationZoneId: {
+          ...(state.designationZoneId ?? {}),
+          [k]: { ...prev, [type]: zoneInstanceId }
+        }
       };
     }
     // Painting a stockpile over existing loose items absorbs them in place.
@@ -286,7 +302,7 @@ class DesignationServiceImpl {
         if (standingZone) this.addZoneTile(newZoneTiles!, k, type);
         else newDesignations![k] = type;
         paintedTiles.add(k);
-        if (zoneInstanceId && newZoneIds) newZoneIds[k] = zoneInstanceId;
+        if (zoneInstanceId && newZoneIds) newZoneIds[k] = { ...newZoneIds[k], [type]: zoneInstanceId };
       }
     }
     let state: GameState = {
@@ -395,13 +411,22 @@ class DesignationServiceImpl {
     const designations = { ...(gs.designations ?? {}) };
     const zoneTiles = { ...(gs.zoneTiles ?? {}) };
     const instType = (gs.zoneInstances ?? []).find((z) => z.id === instanceId)?.type;
-    for (const [k, zId] of Object.entries(zoneIdMap)) {
-      if (zId === instanceId) {
-        delete zoneIdMap[k];
-        // Clear the tile from whichever map holds this instance's type.
-        if (instType && isStandingZoneType(instType)) this.removeZoneTile(zoneTiles, k, instType);
-        else delete designations[k];
+    for (const [k, layers] of Object.entries(zoneIdMap)) {
+      // Drop only the layer(s) pointing at this instance; other zones on the tile stay put.
+      let touched = false;
+      const next = { ...layers };
+      for (const [t, zId] of Object.entries(next)) {
+        if (zId === instanceId) {
+          delete next[t as DesignationType];
+          touched = true;
+        }
       }
+      if (!touched) continue;
+      if (Object.keys(next).length === 0) delete zoneIdMap[k];
+      else zoneIdMap[k] = next;
+      // Clear the tile from whichever map holds this instance's type.
+      if (instType && isStandingZoneType(instType)) this.removeZoneTile(zoneTiles, k, instType);
+      else delete designations[k];
     }
     return {
       ...gs,

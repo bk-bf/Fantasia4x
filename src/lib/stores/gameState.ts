@@ -19,7 +19,13 @@ import { simWorkerBridge, USE_SIM_WORKER } from '$lib/game/sim/simWorkerClient';
 // ADR-021 W3: serializable command registry (shared with the future sim worker).
 import { applySimCommand } from '$lib/game/sim/commands';
 import type { SimCommand } from '$lib/game/sim/simProtocol';
-import type { GameState, Pawn, WorldTile, FilterableZoneType } from '$lib/game/core/types';
+import type {
+  GameState,
+  Pawn,
+  WorldTile,
+  FilterableZoneType,
+  DesignationType
+} from '$lib/game/core/types';
 import { generateColonyPawns } from '$lib/game/entities/Pawns';
 import { pawnService } from '$lib/game/services/PawnService';
 import { generateRace, generateRacePool, generateRaceRelations } from '$lib/game/core/Race';
@@ -210,10 +216,29 @@ function applyMigrations(state: GameState): GameState {
     state.buildings = [...(state.buildings ?? []), ...migratedBuildings];
     delete (state as { buildingQueue?: unknown }).buildingQueue;
   }
+  // LAYERED-ZONES migration: designationZoneId was tile→instanceId (a single zone per tile, so a
+  // stockpile drawn over a restrict zone clobbered its id and silently shrank the restrict area). It's
+  // now tile→{ zoneType → instanceId } — one layer per zone type. Convert any old flat string values,
+  // keying each by its instance's zone type.
+  if (state.designationZoneId && Object.values(state.designationZoneId).some((v) => typeof v === 'string')) {
+    const typeById = new Map((state.zoneInstances ?? []).map((z) => [z.id, z.type as DesignationType]));
+    const layered: Record<string, Partial<Record<DesignationType, string>>> = {};
+    for (const [k, v] of Object.entries(state.designationZoneId)) {
+      if (typeof v === 'string') {
+        const t = typeById.get(v);
+        if (t) layered[k] = { [t]: v };
+      } else if (v) {
+        layered[k] = v;
+      }
+    }
+    state = { ...state, designationZoneId: layered };
+  }
   // Migrate legacy zoneFilters to zoneInstances
   if ((!state.zoneInstances || state.zoneInstances.length === 0) && state.zoneFilters) {
     const instances: import('$lib/game/core/types').ZoneInstance[] = [];
-    const zoneIdMap: Record<string, string> = { ...(state.designationZoneId ?? {}) };
+    const zoneIdMap: Record<string, Partial<Record<DesignationType, string>>> = {
+      ...(state.designationZoneId ?? {})
+    };
     for (const [typeKey, filter] of Object.entries(state.zoneFilters)) {
       const type = typeKey as FilterableZoneType;
       if (!filter) continue;
@@ -223,7 +248,7 @@ function applyMigrations(state: GameState): GameState {
         const label = `${type.charAt(0).toUpperCase()}${type.slice(1)} 1`;
         instances.push({ id, type, label, filter });
         for (const [key] of tilesOfType) {
-          zoneIdMap[key] = id;
+          zoneIdMap[key] = { ...zoneIdMap[key], [type]: id };
         }
       }
     }
