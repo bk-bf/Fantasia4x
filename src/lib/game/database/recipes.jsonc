@@ -982,6 +982,63 @@
     "toolTierRequired": 2
   },
   {
+    "id"               : "spin_thread",
+    "station"          : "spinning_wheel",
+    "inputs"           : {"flax_fiber": 2},
+    "inputAlternatives": [ {"coarse_wool": 2}, {"wool": 1} ],
+    "outputs"          : {"thread": 3},
+    "workAmount"       : 3,
+    "toolTierRequired" : 1
+  },
+  {
+    "id"              : "throw_clay_jug",
+    "station"         : "potters_wheel",
+    "inputs"          : {"blue_clay": 1},
+    "outputs"         : {"clay_jug": 1},
+    "workAmount"      : 3,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "refine_porcelain_clay",
+    "station"         : "porcelain_workshop",
+    "inputs"          : {"blue_clay": 3, "sand": 1},
+    "outputs"         : {"porcelain_clay": 2},
+    "workAmount"      : 5,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "fire_porcelain_vessels",
+    "station"         : "porcelain_workshop",
+    "inputs"          : {"porcelain_clay": 2},
+    "outputs"         : {"porcelain_vessels": 1},
+    "workAmount"      : 6,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "make_crucible_steel",
+    "station"         : "crucible_steelworks",
+    "inputs"          : {"iron_bar": 2, "coke": 2, "sand": 1},
+    "outputs"         : {"crucible_steel": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "smelt_blast_steel",
+    "station"         : "blast_furnace",
+    "inputs"          : {"iron_bar": 2, "coke": 2, "limestone": 1},
+    "outputs"         : {"steel_bar": 3},
+    "workAmount"      : 8,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "make_mechanism",
+    "station"         : "clockwork_bench",
+    "inputs"          : {"crucible_steel": 1, "iron_bar": 1},
+    "outputs"         : {"mechanism": 2},
+    "workAmount"      : 8,
+    "toolTierRequired": 2
+  },
+  {
     "id"              : "make_wooden_chest",
     "station"         : "sawtable",
     "inputs"          : {"pine_plank": 4, "iron_nail": 6},
@@ -1026,7 +1083,7 @@
   {
     "id"              : "weave_linen",
     "station"         : "weaving_frame",
-    "inputs"          : {"flax_fiber": 3},
+    "inputs"          : {"thread": 3},
     "outputs"         : {"linen_cloth": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0

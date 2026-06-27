@@ -19,6 +19,14 @@ import {
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
 const ITEMS_DB = itemsData as unknown as Item[];
 
+// `category:<cat>` cost-slot match. Local copy of ItemService.itemMatchesCostCategory (kept here to
+// avoid a BuildingService↔ItemService import cycle): real categories match `item.category`; the
+// pseudo-category `plank` matches ANY sawn plank so `category:plank` means "any plank".
+function itemMatchesCostCategory(item: { id: string; category?: string }, cat: string): boolean {
+  if (cat === 'plank') return item.id.endsWith('_plank');
+  return item.category === cat;
+}
+
 // O(1) id lookup over the static building DB. `getBuildingById` was a per-call `.find()` and
 // showed up hot in the sim worker profile (~3.6%); the DB never mutates at runtime, so index once.
 let _buildingById: Map<string, Building> | null = null;
@@ -196,7 +204,7 @@ export class BuildingServiceImpl implements BuildingService {
         const chosen = materialOverride?.[key];
         if (chosen) {
           const item = ITEMS_DB.find((i) => i.id === chosen);
-          if (item && item.category === cat) {
+          if (item && itemMatchesCostCategory(item, cat)) {
             const avail = (stock[item.id] ?? 0) - (used[item.id] ?? 0);
             const take = Math.min(Math.max(avail, 0), need);
             if (take > 0) {
@@ -208,7 +216,7 @@ export class BuildingServiceImpl implements BuildingService {
         }
         for (const item of ITEMS_DB) {
           if (need <= 0) break;
-          if (item.category !== cat) continue;
+          if (!itemMatchesCostCategory(item, cat)) continue;
           const avail = (stock[item.id] ?? 0) - (used[item.id] ?? 0);
           if (avail <= 0) continue;
           const take = Math.min(avail, need);

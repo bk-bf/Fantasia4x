@@ -41,6 +41,17 @@ function itemIndex(): Map<string, Item> {
 // Building defs are needed for tile-aware decay (storage multipliers, roofs).
 const BUILDING_DEFS_FOR_ITEMS = buildingsData as unknown as import('../core/types').Building[];
 
+/**
+ * `category:<cat>` cost/slot match. Real item categories match by `item.category`; the special
+ * pseudo-category **`plank`** matches ANY sawn plank (pine/oak/birch/ash/yew + magic-wood planks),
+ * so a building cost (`category:plank`) or recipe slot can ask for "any plank" rather than hardcoding
+ * `pine_plank`. Add further pseudo-categories here as the single chokepoint.
+ */
+export function itemMatchesCostCategory(item: { id: string; category?: string }, cat: string): boolean {
+  if (cat === 'plank') return item.id.endsWith('_plank');
+  return item.category === cat;
+}
+
 // §B Durability defaults — every item weathers when left exposed (loose, unsheltered).
 // Explicit `deteriorationRate`/`maxDurability` on an item override these. Rate 0 = weather-immune.
 const DEFAULT_MAX_DURABILITY = 100;
@@ -237,7 +248,7 @@ export class ItemServiceImpl implements ItemService {
   }
 
   getItemsByCategory(category: string): Item[] {
-    return ITEMS_DATABASE.filter((item) => item.category === category);
+    return ITEMS_DATABASE.filter((item) => itemMatchesCostCategory(item, category));
   }
 
   getAllCategories(): string[] {
