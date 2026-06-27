@@ -265,6 +265,45 @@ function applyMigrations(state: GameState): GameState {
       state = { ...state, zoneInstances: instances, designationZoneId: zoneIdMap };
     }
   }
+  // ORPHANED-ZONE-TILE recovery: a tile keeps its tint from `zoneTiles` (stockpile/grow/restrict) or
+  // `designations` (drink/wash) — maps separate from the zone-instance list. `removeZoneInstance` clears
+  // those, but if it ever ran against the pre-layered flat `designationZoneId` it deleted the instance
+  // yet left the tiles behind: an un-removable tint with no zone to manage it. Reconcile by TYPE — drop
+  // any zone tile/marker whose zone type has no surviving instance. No-op on a healthy save (every
+  // painted type still has its instance); only damaged saves shed orphans.
+  {
+    const ZONE_DESIGNATIONS: DesignationType[] = ['drink', 'wash'];
+    const STANDING_ZONES: DesignationType[] = ['stockpile', 'grow', 'restrict'];
+    const activeTypes = new Set((state.zoneInstances ?? []).map((z) => z.type as DesignationType));
+    const validIds = new Set((state.zoneInstances ?? []).map((z) => z.id));
+    let changed = false;
+    // zoneTiles: strip standing-zone types whose instances are all gone.
+    const zoneTiles: Record<string, DesignationType[]> = {};
+    for (const [k, types] of Object.entries(state.zoneTiles ?? {})) {
+      const kept = types.filter((t) => !STANDING_ZONES.includes(t) || activeTypes.has(t));
+      if (kept.length !== types.length) changed = true;
+      if (kept.length > 0) zoneTiles[k] = kept;
+    }
+    // designations: drop drink/wash water-zone markers whose instances are gone (leave work orders).
+    const designations: Record<string, DesignationType> = { ...(state.designations ?? {}) };
+    for (const [k, t] of Object.entries(designations)) {
+      if (ZONE_DESIGNATIONS.includes(t) && !activeTypes.has(t)) {
+        delete designations[k];
+        changed = true;
+      }
+    }
+    // designationZoneId: drop any layer pointing at a missing instance; drop the tile when empty.
+    const zoneIdMap: Record<string, Partial<Record<DesignationType, string>>> = {};
+    for (const [k, layers] of Object.entries(state.designationZoneId ?? {})) {
+      const next: Partial<Record<DesignationType, string>> = {};
+      for (const [t, id] of Object.entries(layers ?? {})) {
+        if (validIds.has(id)) next[t as DesignationType] = id;
+        else changed = true;
+      }
+      if (Object.keys(next).length > 0) zoneIdMap[k] = next;
+    }
+    if (changed) state = { ...state, zoneTiles, designations, designationZoneId: zoneIdMap };
+  }
   // SURVIVAL-HEALTH migration: backfill new pawn health fields for old saves
   if (!state.deadPawns) state.deadPawns = [];
   state.pawns = state.pawns.map((p) => {
