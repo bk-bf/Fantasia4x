@@ -1889,6 +1889,14 @@
 
   // ── Phase B: Tier 0 armour recipes ────────────────────────────────────────
   {
+    "id"              : "make_wicker_vest",
+    "station"         : "craft_spot",
+    "inputs"          : {"branch": 3, "plant_fiber": 4, "cordage": 3},
+    "outputs"         : {"wicker_vest": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 0
+  },
+  {
     "id": "make_raw_hide_vest",
     "station": "makers_bench",
     "inputs": {

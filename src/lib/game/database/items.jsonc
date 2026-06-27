@@ -3369,6 +3369,58 @@
     }
   },
   {
+    "id"               : "boar_tusk",
+    "audio"               : "blunt",
+    "charSpans"        : [ {"sheet": "items", "id": 56} ],
+    "name"             : "Boar Tusk",
+    "type"             : "weapon",
+    "category"         : "natural_weapon",
+    "hidden"           : true,
+    "maxDurability"    : 100,
+    "deteriorationRate": 0,
+    "description"      : "Short, curved boar tusks. Goring slashes — far less reach than a great beast's tusks.",
+    "color"            : "#C8A080",
+    "amount"           : 0,
+    "weightKg"         : 0,
+    "volumeL"          : 0,
+    "weaponProperties" : {
+      "damage"          : 9,
+      "attackSpeed"     : 1,
+      "range"           : 1,
+      "damageType"      : "piercing",
+      "weight"          : 2,
+      "staminaCost"     : 3,
+      "armorPenetration": 0.25,
+      "critMod"         : 0.08
+    }
+  },
+  {
+    "id"               : "boar_charge",
+    "audio"               : "blunt",
+    "charSpans"        : [ {"sheet": "items", "id": 0} ],
+    "name"             : "Boar Charge",
+    "type"             : "weapon",
+    "category"         : "natural_weapon",
+    "hidden"           : true,
+    "maxDurability"    : 100,
+    "deteriorationRate": 0,
+    "description"      : "A low, barrelling charge. Solid blunt impact, but nothing like a bull's.",
+    "color"            : "#C8A080",
+    "amount"           : 0,
+    "weightKg"         : 0,
+    "volumeL"          : 0,
+    "weaponProperties" : {
+      "damage"          : 8,
+      "attackSpeed"     : 1,
+      "range"           : 1,
+      "damageType"      : "blunt",
+      "bluntMod"        : 1.5,
+      "weight"          : 1,
+      "staminaCost"     : 4,
+      "armorPenetration": 0.15
+    }
+  },
+  {
     "id"               : "antler",
     "audio"               : "pierce",
     "charSpans"        : [ {"sheet": "items", "id": 56} ],
@@ -5092,6 +5144,33 @@
     }
   },
   // ── Phase B: Tier 0 armour ────────────────────────────────────────────────
+  {
+    "id": "wicker_vest",
+    "charSpans": [ {"sheet": "items", "id": 9} ],
+    "name": "Wicker Vest",
+    "type": "armor",
+    "category": "primitive",
+    "deteriorationRate": 0.04,
+    "description": "Branches and plant fibre lashed into a stiff woven jerkin. The very first armour — turns a glancing claw or a thrown stone, but splits and frays fast. Anything better needs hide or hammered metal.",
+    "color": "#B89048",
+    "amount": 0,
+    "weightKg": 2.0,
+    "volumeL": 6.0,
+    "tier": 0,
+    "maxDurability": 22,
+    "durabilityLossPerCombatHit": 60,
+    "armorProperties": {
+      "defense"        : 2,
+      "armorType"      : "light",
+      "slot"           : "bodyBase",
+      "equipmentSlot"  : "bodyBase",
+      "armorLayer"     : "gambeson",
+      "armorValue"     : 2,
+      "fatiguePerTurn" : 0.07,
+      "movementPenalty": 0.0,
+      "coldResistance" : 0.05
+    }
+  },
   {
     "id": "raw_hide_vest",
     "charSpans": [ {"sheet": "items", "id": 9} ],

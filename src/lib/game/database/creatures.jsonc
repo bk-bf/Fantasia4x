@@ -231,12 +231,12 @@
         "id"                : "boar",
         "audio"                : "boar",
         "name"              : "Wild Boar",
-        "threatLevel"       : 10,    // DPS 13.7 | effHP 75 | glass-cannon
+        "threatLevel"       : 6,    // DPS 6.7 | effHP 75 | skirmisher
         "entityClass"       : "animal",
         "charSpans"         : [ {"sheet": "creatures", "id": 248} ],
         "fg"                : [1.0, 1.0, 1.0],
         "bg"                : [0.0, 0.0, 0.0],
-        "stats"             : {"str": 28, "dex": 11, "con": 9, "per": 6},
+        "stats"             : {"str": 20, "dex": 11, "con": 9, "per": 6},
         "naturalArmor"      : 25,
         "bodyScale"         : 1.3,
         "nightVision"       : 0.75,
@@ -253,7 +253,7 @@
         "mountable"         : false,
         "biomeWeights"      : {"forest": 1.0, "swamp": 0.6},
         "carcassItemId"     : "boar_carcass",
-        "naturalWeapons"    : ["tusk", "charge"],
+        "naturalWeapons"    : ["boar_tusk", "boar_charge"],
         "limbMap"        : "quadruped_hooved"
     },
     {
