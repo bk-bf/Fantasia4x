@@ -2,9 +2,9 @@
 //
 // Shows commits since the last v* release tag, read live from scripts/build-distance.sh --json.
 // Green/dim under the cap, yellow approaching (>=90%) and over the cap (informational only — no hard
-// gate). Refreshes on every commit
-// (watches .git/logs/HEAD), when the window regains focus, and on a slow fallback poll. Click to refresh
-// and, when overdue, get the exact tag command to cut a release.
+// gate). Refreshes on every commit (watches .git/logs/HEAD), the instant a release is cut (build.sh
+// --push touches .git/build-distance-refresh), when the window regains focus, and on a slow fallback
+// poll. Click to refresh and, when overdue, get the exact tag command to cut a release.
 //
 // Plain JS, no build step. Install by symlinking this folder into ~/.vscode/extensions (see README.md).
 
@@ -16,7 +16,6 @@ const fs = require('fs');
 /** @type {vscode.StatusBarItem} */
 let item;
 let timer;
-let watcher;
 
 function workspaceRoot() {
   const folders = vscode.workspace.workspaceFolders;
@@ -134,15 +133,17 @@ function activate(context) {
   );
 
   // Refresh the moment a commit lands (.git/logs/HEAD is appended on every commit / checkout / reset),
+  // the moment a release is cut (build.sh --push touches .git/build-distance-refresh once the new v* tag
+  // exists — creating a tag doesn't move HEAD, so the reset wouldn't otherwise show until the poll),
   // when the window regains focus, and on a slow fallback poll.
   const root = workspaceRoot();
   if (root) {
-    watcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(root, '.git/logs/HEAD')
-    );
-    watcher.onDidChange(refresh);
-    watcher.onDidCreate(refresh);
-    context.subscriptions.push(watcher);
+    for (const rel of ['.git/logs/HEAD', '.git/build-distance-refresh']) {
+      const w = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(root, rel));
+      w.onDidChange(refresh);
+      w.onDidCreate(refresh);
+      context.subscriptions.push(w);
+    }
   }
   context.subscriptions.push(
     vscode.window.onDidChangeWindowState((s) => {
