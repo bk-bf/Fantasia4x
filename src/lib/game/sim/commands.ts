@@ -345,6 +345,30 @@ export const COMMANDS: Record<string, Cmd> = {
     }
     return gs;
   },
+  /** MARK group attack: order every listed drafted pawn to attack the SAME target (a mob or pawn) — the
+   *  right-click-a-mob-with-a-drafted-group order. Each pawn paths to the target and stops at adjacency
+   *  (melee) / weapon range (auto-ranged); the per-tick draft pass routes them on the shared occupancy
+   *  grid, so they fan onto distinct adjacent tiles and SURROUND it instead of stacking. Mode is auto per
+   *  pawn (a shooter holds range, a melee pawn closes in) — mirrors a single `setPawnDraftTarget` attack,
+   *  just applied to the whole group. Collapsed/dead/undrafted pawns in the list are skipped. */
+  attackTargetWith: (s, p: { ids: string[]; targetId: string; targetType: 'pawn' | 'mob' }) => ({
+    ...s,
+    pawns: s.pawns.map((pw) =>
+      p.ids.includes(pw.id) &&
+      pw.drafted &&
+      pw.isAlive !== false &&
+      pw.currentState !== PAWN_STATE.COLLAPSED
+        ? {
+            ...pw,
+            draftTarget: {
+              type: 'attack',
+              targetId: p.targetId,
+              targetType: p.targetType
+            } as never
+          }
+        : pw
+    )
+  }),
   /** Force the listed colonists to immediately take the NEAREST available job of a kind (Build /
    *  Harvest), overriding idle wandering, work-priority and restrict-zone gating — the manual "do this
    *  now" override behind the right-click BUILD / HARVEST verbs. The pawn claims the job, paths to an
@@ -403,7 +427,14 @@ export const COMMANDS: Record<string, Cmd> = {
         continue;
       }
       const blocked = occupancyService.blockedTiles(gs);
-      const approach = findAdjacentApproach(target.targetX, target.targetY, gs.worldMap, blocked, px, py);
+      const approach = findAdjacentApproach(
+        target.targetX,
+        target.targetY,
+        gs.worldMap,
+        blocked,
+        px,
+        py
+      );
       if (!approach) {
         claim(null); // nowhere to stand to work it — release so others can try
         continue;

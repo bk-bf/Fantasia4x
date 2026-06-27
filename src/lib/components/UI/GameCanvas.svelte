@@ -808,10 +808,7 @@
     hoverTileX >= 0 && hoverTileY >= 0
       ? (buildings.find(
           (b) =>
-            b.x === hoverTileX &&
-            b.y === hoverTileY &&
-            !isRoofBuilding(b) &&
-            !isFloorBuilding(b)
+            b.x === hoverTileX && b.y === hoverTileY && !isRoofBuilding(b) && !isFloorBuilding(b)
         ) ?? null)
       : null;
   // The complete floor building on the hovered tile (if any) — drives the surface relabel in the tile
@@ -831,8 +828,7 @@
   const buildingIsStorageBin = (b: { type: string; status: string }) =>
     b.status === 'complete' && !!buildingService.getBuildingById(b.type)?.effects?.storageStacks;
   $: hasStorageBin = buildings.some(buildingIsStorageBin);
-  $: hoverBin =
-    hoverBuilding && buildingIsStorageBin(hoverBuilding) ? hoverBuilding : null;
+  $: hoverBin = hoverBuilding && buildingIsStorageBin(hoverBuilding) ? hoverBuilding : null;
   // Stored piles physically sitting in the hovered bin — surfaced in its hover card (the basket
   // represents its contents; the individual piles don't each draw their own glyph on the tile).
   $: hoverBinContents = hoverBin
@@ -867,7 +863,9 @@
       // Round for the readout only — a thermal aura (embertree warmth, fire) adds a fractional °C
       // that must not leak decimals into the HUD. The sim keeps the un-rounded tileTemperature.
       // Uses the ambient turn so the diurnal day/night swing matches the visible time of day.
-      temp: Math.round(tileTemperature(t.terrainType, $currentSeason, envTurn, $currentWeather, thermal)),
+      temp: Math.round(
+        tileTemperature(t.terrainType, $currentSeason, envTurn, $currentWeather, thermal)
+      ),
       wet: tileWetness(t.moisture ?? 0, $currentWeather, thermal),
       wind: windDegreeWord(effectiveWindAt(t.x, t.y, $currentWeather, thermal, worldMap))
     };
@@ -3632,7 +3630,11 @@
     if (e.button === 2) {
       if (moveAimCount === 0 || hoverTileX < 0 || hoverTileY < 0) return; // nothing to move → contextmenu
       const groupMove = markedKind === 'pawn' && markedDraftedCount > 0;
-      if (!groupMove) {
+      if (groupMove) {
+        // A drafted group right-clicking a MOB issues a surround-and-attack order (handled on the
+        // contextmenu below), not a move — so don't begin the move aim here; let the contextmenu fire.
+        if (mobAt(hoverTileX, hoverTileY)) return;
+      } else {
         const hasMenu =
           hasAttackTargetAt(hoverTileX, hoverTileY) ||
           droppedItems.some((d) => d.x === hoverTileX && d.y === hoverTileY && d.quantity > 0);
@@ -4247,6 +4249,13 @@
     );
   }
 
+  /** The living mob on tile (x,y), or null. Used by the drafted-group right-click: a group over a mob
+   *  issues a surround-and-attack order instead of a move. Restricted to MOBS (never friendly pawns) so
+   *  a group right-click can't order colonists to attack each other. */
+  function mobAt(x: number, y: number) {
+    return mobs.find((m) => m.x === x && m.y === y && m.isAlive !== false) ?? null;
+  }
+
   /** Begin the move-aim at the current hover tile (right-press, or armed left-press). */
   function startMoveAim() {
     moveAimActive = true;
@@ -4541,6 +4550,23 @@
           equipMenu = { x: e.clientX, y: e.clientY, entries };
           return;
         }
+      }
+    }
+
+    // ── Drafted GROUP attack: a marked group of drafted pawns right-clicking a mob orders ALL of them
+    // to attack it at once. They each path to the mob and stop at adjacency/range; the per-tick draft
+    // pass spreads them onto distinct adjacent tiles, so they SURROUND it. Takes priority over the
+    // single-pawn block below so the highlighted group wins (mirrors group MOVE > single move). ──
+    if (markedKind === 'pawn' && markedDraftedCount > 0) {
+      const mob = mobAt(hoverTileX, hoverTileY);
+      if (mob) {
+        const ids = pawns.filter((p) => p.drafted && markedSet.has(p.id)).map((p) => p.id);
+        gameState.command({
+          type: 'attackTargetWith',
+          payload: { ids, targetId: mob.id, targetType: 'mob' },
+          save: true
+        });
+        return;
       }
     }
 
@@ -5018,8 +5044,8 @@
       <div class="tile-hud">
         <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
           >{BIOMES[hoverTile.terrainType]?.displayName ?? hoverTile.terrainType},{hoverFloorName ??
-            (SUBTERRAINS[hoverTile.subType]?.displayName ??
-              hoverTile.subType)},{hoverDisplayResource
+            SUBTERRAINS[hoverTile.subType]?.displayName ??
+            hoverTile.subType},{hoverDisplayResource
             ? (resourceObjectService.getById(hoverDisplayResource)?.displayName ??
               hoverDisplayResource)
             : '—'}</span
