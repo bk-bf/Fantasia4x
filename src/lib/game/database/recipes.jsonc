@@ -78,7 +78,7 @@
   {
     "id"              : "make_tanning_bucket",
     "station"         : "sawtable",
-    "inputs"          : {"category:plank": 2, "cordage": 1},
+    "inputs"          : {"category:plank": 2, "resin": 1},
     "outputs"         : {"tanning_bucket": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0
@@ -876,7 +876,7 @@
   {
     "id"              : "make_iron_tongs",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "cordage": 1},
+    "inputs"          : {"iron_bar": 1, "light_leather": 1},
     "outputs"         : {"iron_tongs": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -885,7 +885,7 @@
   {
     "id"              : "make_steel_tongs",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "cordage": 1},
+    "inputs"          : {"steel_bar": 1, "light_leather": 1},
     "outputs"         : {"steel_tongs": 1},
     "workAmount"      : 8,
     "toolTierRequired": 2,
@@ -894,7 +894,7 @@
   {
     "id"              : "make_iron_axe",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "branch": 1, "cordage": 1},
+    "inputs"          : {"iron_bar": 2, "branch": 1, "light_leather": 1},
     "outputs"         : {"iron_axe": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -903,7 +903,7 @@
   {
     "id"              : "make_steel_axe",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "branch": 1, "cordage": 1},
+    "inputs"          : {"steel_bar": 2, "branch": 1, "light_leather": 1},
     "outputs"         : {"steel_axe": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -912,7 +912,7 @@
   {
     "id"              : "make_iron_hammer",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "branch": 1, "cordage": 1},
+    "inputs"          : {"iron_bar": 2, "branch": 1, "light_leather": 1},
     "outputs"         : {"iron_hammer": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -921,7 +921,7 @@
   {
     "id"              : "make_steel_hammer",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "branch": 1, "cordage": 1},
+    "inputs"          : {"steel_bar": 2, "branch": 1, "light_leather": 1},
     "outputs"         : {"steel_hammer": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -930,7 +930,7 @@
   {
     "id"              : "make_iron_shovel",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "branch": 1, "cordage": 1},
+    "inputs"          : {"iron_bar": 2, "branch": 1, "light_leather": 1},
     "outputs"         : {"iron_shovel": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -939,7 +939,7 @@
   {
     "id"              : "make_steel_shovel",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "branch": 1, "cordage": 1},
+    "inputs"          : {"steel_bar": 2, "branch": 1, "light_leather": 1},
     "outputs"         : {"steel_shovel": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -948,7 +948,7 @@
   {
     "id"              : "make_iron_hoe",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "branch": 1, "cordage": 1},
+    "inputs"          : {"iron_bar": 2, "branch": 1, "light_leather": 1},
     "outputs"         : {"iron_hoe": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -957,7 +957,7 @@
   {
     "id"              : "make_steel_hoe",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "branch": 1, "cordage": 1},
+    "inputs"          : {"steel_bar": 2, "branch": 1, "light_leather": 1},
     "outputs"         : {"steel_hoe": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -1177,7 +1177,7 @@
   {
     "id"              : "make_bronze_punch_dagger",
     "station"         : "casting_hearth",
-    "inputs"          : {"copper_bar": 1, "clay_mold": 1, "medium_bones": 1, "cordage": 1},
+    "inputs"          : {"copper_bar": 1, "clay_mold": 1, "medium_bones": 1, "light_leather": 1},
     "outputs"         : {"bronze_punch_dagger": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -1186,7 +1186,7 @@
   {
     "id"              : "make_leaf_blade_spear",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "cordage": 1},
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "light_leather": 1},
     "outputs"         : {"leaf_blade_spear": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -1213,7 +1213,7 @@
   {
     "id"              : "make_cast_bronze_hatchet",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "cordage": 1},
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "light_leather": 1},
     "outputs"         : {"cast_bronze_hatchet": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -1296,7 +1296,7 @@
   {
     "id"              : "make_short_seax",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "cordage": 1},
+    "inputs"          : {"iron_bar": 1, "light_leather": 1},
     "outputs"         : {"short_seax": 1},
     "workAmount"      : 8,
     "toolTierRequired": 2,
@@ -1316,7 +1316,7 @@
   {
     "id"              : "make_spatha",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "cordage": 1},
+    "inputs"          : {"iron_bar": 2, "light_leather": 1},
     "outputs"         : {"spatha": 1},
     "workAmount"      : 12,
     "toolTierRequired": 2,
@@ -1348,7 +1348,7 @@
   {
     "id"              : "make_bearded_axe",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "cordage": 1},
+    "inputs"          : {"iron_bar": 2, "light_leather": 1},
     "outputs"         : {"bearded_axe": 1},
     "workAmount"      : 12,
     "toolTierRequired": 2,
@@ -1371,7 +1371,7 @@
   {
     "id"              : "make_framea",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "cordage": 1},
+    "inputs"          : {"iron_bar": 1, "light_leather": 1},
     "outputs"         : {"framea": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -1402,7 +1402,7 @@
   {
     "id"              : "make_iron_mace",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "cordage": 1},
+    "inputs"          : {"iron_bar": 1, "light_leather": 1},
     "outputs"         : {"iron_mace": 1},
     "workAmount"      : 9,
     "toolTierRequired": 2,
@@ -1411,7 +1411,7 @@
   {
     "id"              : "make_iron_warhammer",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "oak_plank": 1, "cordage": 1},
+    "inputs"          : {"iron_bar": 2, "oak_plank": 1, "light_leather": 1},
     "outputs"         : {"iron_warhammer": 1},
     "workAmount"      : 13,
     "toolTierRequired": 2,
@@ -1420,7 +1420,7 @@
   {
     "id"              : "make_iron_greatsword",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "cordage": 1},
+    "inputs"          : {"iron_bar": 2, "light_leather": 1},
     "outputs"         : {"iron_greatsword": 1},
     "workAmount"      : 14,
     "toolTierRequired": 2,
@@ -1429,7 +1429,7 @@
   {
     "id"              : "make_steel_longsword",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "cordage": 1},
+    "inputs"          : {"steel_bar": 1, "light_leather": 1},
     "outputs"         : {"steel_longsword": 1},
     "workAmount"      : 14,
     "toolTierRequired": 2,
@@ -1438,7 +1438,7 @@
   {
     "id"              : "make_steel_greatsword",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "cordage": 1},
+    "inputs"          : {"steel_bar": 2, "light_leather": 1},
     "outputs"         : {"steel_greatsword": 1},
     "workAmount"      : 18,
     "toolTierRequired": 2,
@@ -1447,7 +1447,7 @@
   {
     "id"              : "make_steel_pike",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "oak_plank": 1, "cordage": 1},
+    "inputs"          : {"steel_bar": 1, "oak_plank": 1, "light_leather": 1},
     "outputs"         : {"steel_pike": 1},
     "workAmount"      : 13,
     "toolTierRequired": 2,
@@ -1456,7 +1456,7 @@
   {
     "id"              : "make_steel_mace",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "cordage": 1},
+    "inputs"          : {"steel_bar": 1, "light_leather": 1},
     "outputs"         : {"steel_mace": 1},
     "workAmount"      : 13,
     "toolTierRequired": 2,
@@ -1465,7 +1465,7 @@
   {
     "id"              : "make_steel_warhammer",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "oak_plank": 1, "cordage": 1},
+    "inputs"          : {"steel_bar": 2, "oak_plank": 1, "light_leather": 1},
     "outputs"         : {"steel_warhammer": 1},
     "workAmount"      : 17,
     "toolTierRequired": 2,
@@ -1474,7 +1474,7 @@
   {
     "id"              : "make_steel_cleaver",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "cordage": 1},
+    "inputs"          : {"steel_bar": 2, "light_leather": 1},
     "outputs"         : {"steel_cleaver": 1},
     "workAmount"      : 15,
     "toolTierRequired": 2,
@@ -1483,7 +1483,7 @@
   {
     "id"              : "make_steel_greatcleaver",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 3, "cordage": 1},
+    "inputs"          : {"steel_bar": 3, "light_leather": 1},
     "outputs"         : {"steel_greatcleaver": 1},
     "workAmount"      : 20,
     "toolTierRequired": 2,
@@ -1492,7 +1492,7 @@
   {
     "id"              : "make_steel_flail",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "iron_bar": 1, "cordage": 1},
+    "inputs"          : {"steel_bar": 1, "iron_bar": 1, "light_leather": 1},
     "outputs"         : {"steel_flail": 1},
     "workAmount"      : 14,
     "toolTierRequired": 2,
@@ -1501,7 +1501,7 @@
   {
     "id"              : "make_iron_rondel",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "cordage": 1},
+    "inputs"          : {"iron_bar": 1, "light_leather": 1},
     "outputs"         : {"iron_rondel": 1},
     "workAmount"      : 7,
     "toolTierRequired": 2,
@@ -1510,7 +1510,7 @@
   {
     "id"              : "make_steel_stiletto",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "cordage": 1},
+    "inputs"          : {"steel_bar": 1, "light_leather": 1},
     "outputs"         : {"steel_stiletto": 1},
     "workAmount"      : 9,
     "toolTierRequired": 2,
@@ -1519,7 +1519,7 @@
   {
     "id"              : "make_iron_estoc",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "cordage": 1},
+    "inputs"          : {"iron_bar": 1, "light_leather": 1},
     "outputs"         : {"iron_estoc": 1},
     "workAmount"      : 12,
     "toolTierRequired": 2,
@@ -1528,7 +1528,7 @@
   {
     "id"              : "make_steel_rapier",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "cordage": 1},
+    "inputs"          : {"steel_bar": 1, "light_leather": 1},
     "outputs"         : {"steel_rapier": 1},
     "workAmount"      : 15,
     "toolTierRequired": 2,
@@ -1580,7 +1580,7 @@
   {
     "id"              : "make_crossbow",
     "station"         : "anvil",
-    "inputs"          : {"oak_plank": 2, "iron_bar": 1, "sinew": 1, "cordage": 1},
+    "inputs"          : {"oak_plank": 2, "iron_bar": 1, "sinew": 1, "light_leather": 1},
     "outputs"         : {"crossbow": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -1613,7 +1613,7 @@
   {
     "id"              : "make_iron_arrow",
     "station"         : "anvil",
-    "inputs"          : {"branch": 1, "iron_bar": 1, "cordage": 1},
+    "inputs"          : {"branch": 1, "iron_bar": 1, "sinew": 1},
     "outputs"         : {"iron_arrow": 8},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -1622,7 +1622,7 @@
   {
     "id"              : "make_iron_bolt",
     "station"         : "anvil",
-    "inputs"          : {"branch": 1, "iron_bar": 1, "cordage": 1},
+    "inputs"          : {"branch": 1, "iron_bar": 1, "sinew": 1},
     "outputs"         : {"iron_bolt": 6},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -1663,7 +1663,7 @@
   {
     "id"              : "make_broadhead_arrow",
     "station"         : "anvil",
-    "inputs"          : {"branch": 1, "iron_bar": 1, "cordage": 1},
+    "inputs"          : {"branch": 1, "iron_bar": 1, "sinew": 1},
     "outputs"         : {"broadhead_arrow": 6},
     "workAmount"      : 5,
     "toolTierRequired": 1,
@@ -1672,7 +1672,7 @@
   {
     "id"              : "make_barbed_arrow",
     "station"         : "anvil",
-    "inputs"          : {"branch": 1, "iron_bar": 1, "cordage": 1},
+    "inputs"          : {"branch": 1, "iron_bar": 1, "sinew": 1},
     "outputs"         : {"barbed_arrow": 4},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -1681,7 +1681,7 @@
   {
     "id"              : "make_heavy_quarrel",
     "station"         : "anvil",
-    "inputs"          : {"branch": 1, "iron_bar": 1, "cordage": 1},
+    "inputs"          : {"branch": 1, "iron_bar": 1, "sinew": 1},
     "outputs"         : {"heavy_quarrel": 6},
     "workAmount"      : 7,
     "toolTierRequired": 1,
@@ -1734,7 +1734,7 @@
   {
     "id"              : "make_iron_boss_shield",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "cordage": 1},
+    "inputs"          : {"iron_bar": 1, "light_leather": 1},
     "outputs"         : {"iron_boss_shield": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -2394,7 +2394,7 @@
   {
     "id"              : "make_ember_staff",
     "station"         : "runecarver_bench",
-    "inputs"          : {"emberwood_log": 1, "cut_ruby": 1, "cordage": 1},
+    "inputs"          : {"emberwood_log": 1, "cut_ruby": 1, "enchant_thread": 1},
     "outputs"         : {"ember_staff": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1,
@@ -2403,7 +2403,7 @@
   {
     "id"              : "make_frost_staff",
     "station"         : "runecarver_bench",
-    "inputs"          : {"moonwood_log": 1, "cut_sapphire": 1, "cordage": 1},
+    "inputs"          : {"moonwood_log": 1, "cut_sapphire": 1, "enchant_thread": 1},
     "outputs"         : {"frost_staff": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1,
@@ -2412,7 +2412,7 @@
   {
     "id"              : "make_spark_staff",
     "station"         : "runecarver_bench",
-    "inputs"          : {"heartwood_log": 1, "cut_topaz": 1, "cordage": 1},
+    "inputs"          : {"heartwood_log": 1, "cut_topaz": 1, "enchant_thread": 1},
     "outputs"         : {"spark_staff": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1,
@@ -2470,7 +2470,7 @@
   {
     "id"              : "make_handcart",
     "station"         : "sawtable",
-    "inputs"          : {"category:plank": 8, "wheel": 2, "cordage": 4},
+    "inputs"          : {"category:plank": 8, "wheel": 2, "bronze_nail": 4},
     "outputs"         : {"handcart": 1},
     "workAmount"      : 200,
     "toolTierRequired": 1,
