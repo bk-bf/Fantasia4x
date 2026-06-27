@@ -70,8 +70,16 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
   // Only consider non-stored, non-forbidden drops (stored = already in stockpile; forbidden = the
   // player has locked it out of hauling — e.g. a wild carcass left where it fell). Excluding
   // forbidden here also makes the stale-job prune below drop any in-flight haul for a stack that was
-  // just forbidden, so a pawn already walking to it abandons the trip.
-  const allDrops = (gs.droppedItems ?? []).filter((d) => !d.stored && !d.forbidden);
+  // just forbidden, so a pawn already walking to it abandons the trip. Drops on a re-haul cooldown
+  // (just set down loose because the stockpile was unreachable, dropLooseAtPawn) are skipped until the
+  // cooldown lapses — otherwise the same unreachable pawn re-grabs and re-drops them every tick (the
+  // floor-shuffle). The cooldown expires, so the goods resume hauling once a route opens.
+  const allDrops = (gs.droppedItems ?? []).filter(
+    (d) =>
+      !d.stored &&
+      !d.forbidden &&
+      !(d.rehaulCooldownUntil != null && d.rehaulCooldownUntil > gs.turn)
+  );
   // Only haul a drop some store will actually take — a zone/general store (its filter) OR a specialized
   // bin whose category/item list admits it. Stops a meat-only larder from attracting grain it can't hold.
   const drops = allDrops.filter((d) => storageAcceptsDrop(gs, d.resourceId));
@@ -223,12 +231,15 @@ export function complete(job: Job, gs: GameState): GameState {
       const budget = itemService.getCarryBudget(pawn, gs);
       const load = itemService.getCurrentCarryLoad(pawn, gs);
       let remW =
-        budget.maxWeightKg * ENC_OVERLOAD_FULL - load.weightKg - taken * (firstDef?.weightKg ?? 0.1);
+        budget.maxWeightKg * ENC_OVERLOAD_FULL -
+        load.weightKg -
+        taken * (firstDef?.weightKg ?? 0.1);
       let remV =
         budget.maxVolumeL * ENC_OVERLOAD_FULL - load.volumeL - taken * (firstDef?.volumeL ?? 0.2);
       for (const cand of gs.droppedItems ?? []) {
         if (remW <= 0 || remV <= 0) break;
         if (cand.id === drop.id || cand.stored || cand.reservedFor || cand.forbidden) continue;
+        if (cand.rehaulCooldownUntil != null && cand.rehaulCooldownUntil > gs.turn) continue;
         if (Math.abs(cand.x - drop.x) > 1 || Math.abs(cand.y - drop.y) > 1) continue;
         if (!stockpileAcceptsDrop(gs, cand.resourceId)) continue;
         const def = itemService.getItemById(cand.resourceId);

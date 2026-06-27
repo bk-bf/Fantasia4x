@@ -78,6 +78,14 @@ export interface DroppedItem {
    * at capacity. Toggled per-stack from the item's info card (`setDropUrgent`). Undefined = normal.
    */
   urgent?: boolean;
+  /**
+   * Re-haul cooldown (turn number). Stamped when a hauling pawn sets this load DOWN loose because it
+   * could not physically reach a stockpile (`dropLooseAtPawn`). Until this turn passes, `haul.generate`
+   * skips the stack — otherwise the same unreachable pawn re-grabs it the very next tick and drops it
+   * again, an infinite floor-shuffle. It still expires, so once a route opens (player builds a path,
+   * moves the stockpile, frees the approach) the goods become haulable again. Undefined = no cooldown.
+   */
+  rehaulCooldownUntil?: number;
 }
 
 export interface Job {

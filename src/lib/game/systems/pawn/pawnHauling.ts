@@ -34,6 +34,14 @@ const EMPTY_INVENTORY = {
 } as const;
 
 /**
+ * Ticks a load set DOWN loose by `dropLooseAtPawn` (stockpile unreachable) is skipped by `haul.generate`
+ * before it may be re-targeted. Without it the same unreachable pawn re-grabs the pile and drops it again
+ * every tick — the floor-shuffle. Long enough to break the per-tick storm, short enough that the goods
+ * resume hauling soon after a route opens. ~10 in-game seconds at 60 TPS.
+ */
+export const REHAUL_COOLDOWN_TICKS = 600;
+
+/**
  * Pick up ground items at tile (x,y) into a pawn's inventory, clamped by its weight/volume carry
  * budget (belt/back containers raise it). Pure + worker-safe — used by the right-click "pick up"
  * context menu (a specific `dropId`) and the drafted "haul to stockpile" loop (every loose drop on
@@ -46,6 +54,7 @@ const EMPTY_INVENTORY = {
  * @param opts.radius       Chebyshev radius around (x,y) to sweep (default 0 = the tile itself)
  * @param opts.capFactor    carry-budget multiplier (default 1; haul passes ENC_OVERLOAD_FULL to overfill)
  * @param opts.skipForbidden ignore player-forbidden drops (auto-haul respects the lock; right-click doesn't)
+ * @param opts.skipCooling  ignore drops on a re-haul cooldown (auto-haul respects it; right-click doesn't)
  * @param opts.acceptTest   predicate gating which resourceIds may be taken (e.g. stockpileAcceptsDrop)
  *
  * Always lets the pawn take at least ONE unit (mirrors `itemService.clampPickupQuantity`'s floor) so
@@ -65,6 +74,7 @@ export function pickUpFromTile(
     radius?: number;
     capFactor?: number;
     skipForbidden?: boolean;
+    skipCooling?: boolean;
     acceptTest?: (resourceId: string) => boolean;
   } = {}
 ): GameState {
@@ -79,6 +89,7 @@ export function pickUpFromTile(
       !d.reservedFor &&
       (!opts.looseOnly || !d.stored) &&
       (!opts.skipForbidden || !d.forbidden) &&
+      (!opts.skipCooling || !(d.rehaulCooldownUntil != null && d.rehaulCooldownUntil > gs.turn)) &&
       (!opts.dropId || d.id === opts.dropId) &&
       (!opts.resourceId || d.resourceId === opts.resourceId) &&
       (!opts.acceptTest || opts.acceptTest(d.resourceId))
@@ -168,6 +179,7 @@ export function opportunisticHaulPickup(gs: GameState, pawnId: string): GameStat
     radius: 1,
     looseOnly: true,
     skipForbidden: true,
+    skipCooling: true,
     capFactor: ENC_OVERLOAD_FULL,
     acceptTest: (rid) => storageAcceptsDrop(gs, rid)
   });
@@ -360,6 +372,9 @@ function dropLooseAtPawn(
 ): GameState {
   const px = pawn.position?.x ?? 0;
   const py = pawn.position?.y ?? 0;
+  // Cool the set-down stack so haul.generate doesn't re-target it next tick (the floor-shuffle loop):
+  // the pawn that just failed to reach a stockpile from this tile can't reach it next tick either.
+  const rehaulCooldownUntil = gs.turn + REHAUL_COOLDOWN_TICKS;
   const newDropped = [...(gs.droppedItems ?? [])];
   for (const [resourceId, qty] of Object.entries(inv)) {
     if (qty <= 0 || pinned.has(resourceId)) continue;
@@ -369,7 +384,8 @@ function dropLooseAtPawn(
       x: px,
       y: py,
       quantity: qty,
-      stored: false
+      stored: false,
+      rehaulCooldownUntil
     });
   }
   // Identity instances (named carcasses) drop as their own loose named stacks; tools / carried pawns stay.
@@ -387,7 +403,8 @@ function dropLooseAtPawn(
       quantity: 1,
       name: instance.name,
       instance,
-      stored: false
+      stored: false,
+      rehaulCooldownUntil
     });
   }
   gameLogger.log(
