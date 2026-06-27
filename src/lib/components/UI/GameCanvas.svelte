@@ -686,7 +686,8 @@
         startMark: () => startMarkDrag('pawn'),
         armMove: () => armMoveAim(),
         toggleFood: () => toggleFoodSettingsPanel(),
-        foodOpen: showFoodSettings
+        foodOpen: showFoodSettings,
+        moodModel: $gameState ? pawnService.getMoodBreakdown(selectedPawn, $gameState) : undefined
       })
     : null;
   $: hoverPawnCard = hoverPawn
@@ -695,7 +696,8 @@
         startMark: () => startMarkDrag('pawn'),
         armMove: () => armMoveAim(),
         toggleFood: () => {},
-        foodOpen: false
+        foodOpen: false,
+        moodModel: $gameState ? pawnService.getMoodBreakdown(hoverPawn, $gameState) : undefined
       })
     : null;
 

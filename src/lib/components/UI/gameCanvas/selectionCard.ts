@@ -20,6 +20,7 @@ import type {
   EntityButton,
   EntityStat,
   HealthModel,
+  MoodModel,
   HealthLimb,
   HealthPart,
   HealthWound,
@@ -285,6 +286,9 @@ export interface PawnCardDeps {
   toggleFood: () => void;
   /** Whether the food-filter fly-out is currently open (drives the FOOD button's active state). */
   foodOpen: boolean;
+  /** §M Mood breakdown for the MOOD pop-up (pawnService.getMoodBreakdown). Threaded in from GameCanvas
+   *  because it needs the live GameState (weather + nearby buildings), which this builder doesn't hold. */
+  moodModel?: MoodModel;
 }
 
 /** Reactive deps + MARK callback for {@link buildMobCard}. */
@@ -299,7 +303,7 @@ export function buildPawnCard(
   selected: boolean,
   deps: PawnCardDeps
 ): SelectedEntityModel {
-  const { cameraFollowPawnId, startMark, armMove, toggleFood, foodOpen } = deps;
+  const { cameraFollowPawnId, startMark, armMove, toggleFood, foodOpen, moodModel } = deps;
   const bars: EntityBar[] = [
     { label: 'HUNGER', value: pawn.needs.hunger, warn: pawn.needs.hunger > 60 },
     { label: 'REST', value: pawn.needs.fatigue, warn: pawn.needs.fatigue > 60 },
@@ -351,6 +355,8 @@ export function buildPawnCard(
     pos: selected ? (pawn.position ?? undefined) : undefined,
     // Built for hover cards too so the shared HEALTH toggle works on hover, not just selection.
     health: buildHealthModel(pawn),
+    // §M Mood breakdown for the MOOD pop-up (computed in GameCanvas, which holds the live GameState).
+    moodModel,
     buttons: selected
       ? ([
           {

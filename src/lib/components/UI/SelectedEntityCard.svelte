@@ -64,8 +64,25 @@
     /** Body health for the toggleable HEALTH popup (NT-U1). `undefined` hides the HEALTH button
      *  entirely (entity has no body model); a present-but-undamaged model shows "no damage". */
     health?: HealthModel;
+    /** §M Mood drivers for the toggleable MOOD popup. `undefined` hides the MOOD button (entity has
+     *  no mood model — mobs/resources). Distinct from `mood` (the header's numeric value). */
+    moodModel?: MoodModel;
     /** Called when a non-selected hover card is clicked (to select the entity). */
     onSelect?: () => void;
+  }
+
+  /** §M One signed per-tick mood driver acting on the pawn (benefit if `delta > 0`, debuff if `< 0`). */
+  export interface MoodDriver {
+    label: string;
+    delta: number;
+  }
+
+  /** §M Whole mood snapshot rendered by the MOOD popup: current value, net per-tick `trend`, and the
+   *  active drivers. Mirrors `pawnService.getMoodBreakdown` / `calculateStateUpdate`. */
+  export interface MoodModel {
+    mood: number;
+    trend: number;
+    drivers: MoodDriver[];
   }
 
   /** One wound line on a body part, or an active condition. */
@@ -126,6 +143,8 @@
   import ItemPills from './ItemPills.svelte';
   import HealthPanel from './gameCanvas/HealthPanel.svelte';
   import { healthToggle } from './gameCanvas/healthToggle.svelte';
+  import MoodPanel from './gameCanvas/MoodPanel.svelte';
+  import { moodToggle } from './gameCanvas/moodToggle.svelte';
 
   // `embedded`: render as an in-flow flex item instead of self-anchoring to the canvas.
   // Used when a parent (e.g. the building row, which also hosts the fuel-settings panel)
@@ -265,7 +284,12 @@
     <HealthPanel health={model.health} open={healthToggle.open} />
   {/if}
 
-  {#if (model.buttons && model.buttons.length > 0) || (model.health && model.selected)}
+  {#if model.moodModel}
+    <!-- §M MOOD opens as a pop-up above the card, mirroring HEALTH. -->
+    <MoodPanel mood={model.moodModel} open={moodToggle.open} />
+  {/if}
+
+  {#if (model.buttons && model.buttons.length > 0) || ((model.health || model.moodModel) && model.selected)}
     <div class="btn-col">
       {#if model.health && model.selected}
         <!-- NT-U1: HEALTH button only on the SELECTED card; the pop-up still shows on hover when the
@@ -282,6 +306,23 @@
           }}
         >
           HEALTH
+        </button>
+      {/if}
+      {#if model.moodModel && model.selected}
+        <!-- §M MOOD button — only on the SELECTED card; the pop-up shows on hover when the shared
+             toggle is on. Warn-tinted when mood is trending down. -->
+        <button
+          class="hud-btn"
+          class:hud-btn--active={moodToggle.open}
+          class:hud-btn--warn={model.moodModel.trend < -0.05}
+          onmousedown={(e) => e.stopPropagation()}
+          onmouseup={(e) => e.stopPropagation()}
+          onclick={(e) => {
+            e.stopPropagation();
+            moodToggle.open = !moodToggle.open;
+          }}
+        >
+          MOOD
         </button>
       {/if}
       {#each model.buttons ?? [] as btn (btn.label)}

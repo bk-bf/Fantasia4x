@@ -688,6 +688,49 @@ export class PawnServiceImpl implements PawnService {
     return newState;
   }
 
+  /**
+   * §M Mood breakdown for the info-panel MOOD pop-up — the signed per-tick mood drivers acting on the
+   * pawn right now (benefits + debuffs) and their net `trend`. MUST mirror the deltas applied in
+   * `calculateStateUpdate` so the readout matches what actually moves the bar.
+   */
+  getMoodBreakdown(
+    pawn: Pawn,
+    gameState: GameState
+  ): { mood: number; trend: number; drivers: { label: string; delta: number }[] } {
+    const needs = pawn.needs;
+    const st = pawn.state;
+    const drivers: { label: string; delta: number }[] = [];
+
+    // Weather (a roof softens a storm's gloom — same as the live path).
+    let weatherMood = weatherEffects(gameState.weather).mood;
+    if (weatherMood < 0 && pawn.position && isRoofedTile(pawn.position.x, pawn.position.y))
+      weatherMood *= 0.4;
+    if (weatherMood !== 0)
+      drivers.push({ label: weatherMood > 0 ? 'Fair skies' : 'Foul weather', delta: weatherMood });
+
+    // §M pleasant surroundings — comfort + beauty of the occupied tile.
+    if (pawn.position) {
+      const a = amenityAt(gameState.buildings, pawn.position.x, pawn.position.y);
+      const amenityMood = Math.min(3, (a.comfort + a.beauty) * 1.5);
+      if (amenityMood > 0) drivers.push({ label: 'Pleasant surroundings', delta: amenityMood });
+    }
+
+    // Need debuffs (mutually-exclusive critical block, then thirst/hygiene).
+    if (needs.hunger > 90) drivers.push({ label: 'Starving', delta: -5 });
+    else if (needs.fatigue > 95) drivers.push({ label: 'Exhausted', delta: -3 });
+    else if (needs.fatigue > 90) drivers.push({ label: 'Very tired', delta: -2 });
+    if ((needs.thirst ?? 0) > 90) drivers.push({ label: 'Parched', delta: -4 });
+    if ((needs.hygiene ?? 0) > 85) drivers.push({ label: 'Filthy', delta: -1 });
+
+    // Activity benefits.
+    if (st.isEating && needs.hunger > 50) drivers.push({ label: 'Eating', delta: 3 });
+    else if (st.isSleeping && needs.fatigue > 50) drivers.push({ label: 'Resting', delta: 2 });
+    else if (st.isWorking && needs.fatigue < 80) drivers.push({ label: 'Absorbed in work', delta: 1 });
+
+    const trend = drivers.reduce((s, d) => s + d.delta, 0);
+    return { mood: Math.round(st.mood ?? 50), trend, drivers };
+  }
+
   private calculateMorale(pawn: Pawn, gameState: GameState): number {
     let morale = pawn.state.mood;
 
