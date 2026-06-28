@@ -27,7 +27,12 @@ import { manhattan, chebyshev, findNearestBy } from '../../core/distance';
 import { computeTileLightLevel } from '../../services/EnvironmentService';
 import { effectiveVisionRange } from '../../core/vision';
 import { PAWN_STATE, type PawnStateName } from './pawnStates';
-import { isAdjacent, findAdjacentApproach, hasAvailableFood } from './pawnQueries';
+import {
+  isAdjacent,
+  findAdjacentApproach,
+  hasAvailableFood,
+  findNearestFoodDrops
+} from './pawnQueries';
 import { tileHasBody } from './carry';
 
 // ===== NEED THRESHOLDS =====
@@ -527,6 +532,31 @@ export function distToNearestFoodSource(pawn: Pawn, gs: GameState): number {
   const building = findNearestStorageBuilding(pawn, gs);
   if (!building) return 0; // no campfire → eat in place
   return manhattan(building.x, building.y, pawn.position.x, pawn.position.y);
+}
+
+/**
+ * Manhattan distance of the actual "walk to the stockpile to eat" trip — to the nearest reachable
+ * stockpiled food drop the pawn would fetch (handleHungry's empty-pack path). Infinity when no food
+ * drop is reachable. Distinct from {@link distToNearestFoodSource} (the campfire, which is 0 when none
+ * exists): this is the real journey distance we weigh against seeking water so a thirsty pawn next to
+ * a drink zone doesn't march off to a distant food stockpile and dehydrate.
+ */
+export function distToNearestFoodFetch(pawn: Pawn, gs: GameState): number {
+  if (!pawn.position) return Infinity;
+  const drops = findNearestFoodDrops(pawn, gs);
+  if (drops.length === 0) return Infinity;
+  return manhattan(drops[0].x, drops[0].y, pawn.position.x, pawn.position.y);
+}
+
+/**
+ * Manhattan distance to the nearest reachable drink target (a `drink` zone tile or a well).
+ * Infinity when none exists. Weighed against {@link distToNearestFoodFetch} to decide eat-vs-drink.
+ */
+export function distToNearestDrinkTarget(pawn: Pawn, gs: GameState): number {
+  if (!pawn.position) return Infinity;
+  const target = findNearestWaterTarget(pawn, gs, 'drink');
+  if (!target) return Infinity;
+  return manhattan(target.x, target.y, pawn.position.x, pawn.position.y);
 }
 
 /**
