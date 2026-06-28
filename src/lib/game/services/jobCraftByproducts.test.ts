@@ -12,9 +12,11 @@ import type { GameState } from '../core/types';
 function makeState(): GameState {
   const greenFirewood = itemService.getItemById('green_firewood')!;
   const recipe = recipeService.getRecipeForItem('green_firewood')!;
-  // The recipe's single input, staged on the station tile (reservedFor the order).
-  const inputId = Object.keys(recipe.inputs)[0];
-  const perRun = recipe.inputs[inputId];
+  // split_firewood sources its log via a dynamicRecipe slot now; a real queued order carries the
+  // concrete chosen log. Use pine_log as that concrete fill, staged on the station tile.
+  const slot = Object.values(recipe.dynamicRecipe ?? {})[0];
+  const inputId = Object.keys(recipe.inputs)[0] ?? 'pine_log';
+  const perRun = recipe.inputs[inputId] ?? slot.quantity;
   const quantity = 2;
 
   const station = { id: 'cb-1', type: recipe.station, x: 5, y: 5, status: 'complete' } as any;

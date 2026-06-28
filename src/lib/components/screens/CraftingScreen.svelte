@@ -248,7 +248,11 @@
     // Single-slot dynamic recipe → a card per in-stock ingredient (the established shape).
     const [slotKey, slot] = slotEntries[0];
     const cats = recipeService.slotCategories(slot);
-    const variantItems = (ITEMS_DATABASE as Item[]).filter((i) => cats.includes(i.category));
+    // Dedupe by id across cats; getItemsByCategory is pseudo-category aware (`log`/`plank` match by id
+    // suffix, not item.category — logs share the `wood` category with planks/beams).
+    const variantItems = [
+      ...new Map(cats.flatMap((c) => itemService.getItemsByCategory(c)).map((i) => [i.id, i])).values()
+    ];
     const inStock = variantItems.filter((vi) => (amounts[vi.id] ?? 0) >= slot.quantity);
     if (inStock.length === 0) {
       // Empty larder: one discoverability card with the recipe's default identity (renders MISSING).

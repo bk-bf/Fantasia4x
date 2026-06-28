@@ -11,10 +11,13 @@
   {
     "id"               : "split_firewood",
     "station"          : "chopping_block",
-    "inputs"           : {"category:log": 1},
+    "inputs"           : {},
     "outputs"          : {"green_firewood": 3, "branch": 2},
     "workAmount"       : 2,
-    "toolTierRequired" : 0
+    "toolTierRequired" : 0,
+    "dynamicRecipe"    : {
+      "log": {"acceptsCategory": "log", "quantity": 1, "default": {"name": "Green Firewood"}}
+    }
   },
   {
     "id"              : "saw_pine_planks",
@@ -27,10 +30,13 @@
   {
     "id"               : "hew_beam",
     "station"          : "chopping_block",
-    "inputs"           : {"category:log": 2},
+    "inputs"           : {},
     "outputs"          : {"beam": 1, "branch": 1},
     "workAmount"       : 6,
-    "toolTierRequired" : 1
+    "toolTierRequired" : 1,
+    "dynamicRecipe"    : {
+      "log": {"acceptsCategory": "log", "quantity": 2, "default": {"name": "Beam"}}
+    }
   },
   {
     "id"               : "burn_charcoal",

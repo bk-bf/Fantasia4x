@@ -146,6 +146,17 @@ export class RecipeServiceImpl implements RecipeService {
           }
         }
       }
+      // A `dynamicRecipe` slot (e.g. the firewood log slot accepting any `log`) is likewise "used by"
+      // every concrete item that fills it — index each so getRecipesUsing('pine_log') finds it too.
+      for (const slot of Object.values(r.dynamicRecipe ?? {})) {
+        for (const cat of this.slotCategories(slot)) {
+          for (const it of ITEMS_DATABASE) {
+            if (!recipeItemMatchesCategory(it, cat)) continue;
+            const arr = this.usedIn.get(it.id) ?? this.usedIn.set(it.id, []).get(it.id)!;
+            if (!arr.includes(r)) arr.push(r);
+          }
+        }
+      }
     }
   }
 

@@ -341,7 +341,7 @@ export class ItemServiceImpl implements ItemService {
       const cats = recipeService.slotCategories(slot);
       const candidates = ITEMS_DATABASE.filter(
         (i) =>
-          cats.includes(i.category) &&
+          cats.some((c) => itemMatchesCostCategory(i, c)) &&
           this.getAvailableQuantity(i.id, gameState) >= (demand[i.id] ?? 0) + slot.quantity
       );
       if (!candidates.length) return null;

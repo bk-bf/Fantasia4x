@@ -13,8 +13,11 @@ import type { GameState } from '../core/types';
 function makeState(stockQty: number): GameState {
   const greenFirewood = itemService.getItemById('green_firewood')!;
   const recipe = recipeService.getRecipeForItem('green_firewood')!;
-  const inputId = Object.keys(recipe.inputs)[0];
-  const perRun = recipe.inputs[inputId];
+  // split_firewood sources its log via a dynamicRecipe slot now; a queued order carries the concrete
+  // chosen log (pine_log here).
+  const slot = Object.values(recipe.dynamicRecipe ?? {})[0];
+  const inputId = Object.keys(recipe.inputs)[0] ?? 'pine_log';
+  const perRun = recipe.inputs[inputId] ?? slot.quantity;
   const quantity = 2;
   const needed = perRun * quantity;
 
@@ -57,8 +60,7 @@ describe('reservePendingCraftOrders (ADR-016 queue-without-materials)', () => {
   it('clears pending and reserves inputs once the full set is in stock', () => {
     const greenFirewood = itemService.getItemById('green_firewood')!;
     const recipe = recipeService.getRecipeForItem('green_firewood')!;
-    const inputId = Object.keys(recipe.inputs)[0];
-    const needed = recipe.inputs[inputId] * 2;
+    const needed = (Object.values(recipe.dynamicRecipe ?? {})[0].quantity ?? 1) * 2;
 
     const gs = jobService.reservePendingCraftOrders(makeState(needed));
 
@@ -70,8 +72,7 @@ describe('reservePendingCraftOrders (ADR-016 queue-without-materials)', () => {
 
   it('leaves the order pending and reserves nothing when stock is short', () => {
     const recipe = recipeService.getRecipeForItem('green_firewood')!;
-    const inputId = Object.keys(recipe.inputs)[0];
-    const needed = recipe.inputs[inputId] * 2;
+    const needed = (Object.values(recipe.dynamicRecipe ?? {})[0].quantity ?? 1) * 2;
 
     const gs = jobService.reservePendingCraftOrders(makeState(needed - 1));
 
@@ -82,8 +83,7 @@ describe('reservePendingCraftOrders (ADR-016 queue-without-materials)', () => {
 
   it('generates no fetch/craft job for a pending order', () => {
     const recipe = recipeService.getRecipeForItem('green_firewood')!;
-    const inputId = Object.keys(recipe.inputs)[0];
-    const needed = recipe.inputs[inputId] * 2;
+    const needed = (Object.values(recipe.dynamicRecipe ?? {})[0].quantity ?? 1) * 2;
 
     const gs = jobService.generateJobs(makeState(needed - 1));
     expect((gs.jobs ?? []).some((j) => j.craftQueueId === 'cq1')).toBe(false);
