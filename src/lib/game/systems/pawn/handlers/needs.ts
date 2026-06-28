@@ -116,7 +116,20 @@ function startEatingFromInventory(
  * colony-optimal meal size so a pawn grabs a serving, not the whole larder.
  */
 function grabFoodAt(gameState: GameState, pawn: Pawn, x: number, y: number): GameState | null {
-  const meal = selectFoodForMeal(pawn, gameState);
+  // Size the pickup to a meal made from the food ACTUALLY reachable at this tile — NOT the idealised
+  // colony-wide meal. selectFoodForMeal over the whole stockpile plans the highest-NUTRITION food
+  // anywhere (e.g. apple×3), but the pawn then physically grabs whatever is HERE (berries): 3 units of
+  // berries ≠ 3 units of apple in nutrition, so it nibbled 9 hunger off an 80 deficit and walked off
+  // still starving. Planning from the radius-1 reachable supply (matching pickUpFromTile's own scan)
+  // sizes the cap to the food it will really pick up.
+  const reachable: Record<string, number> = {};
+  for (const d of gameState.droppedItems ?? []) {
+    if (!d.stored || d.reservedFor || (d.quantity ?? 0) <= 0) continue;
+    if (Math.abs(d.x - x) > 1 || Math.abs(d.y - y) > 1) continue;
+    if (isAllowedFoodId(gameState, d.resourceId))
+      reachable[d.resourceId] = (reachable[d.resourceId] ?? 0) + d.quantity;
+  }
+  const meal = selectFoodForMeal(pawn, gameState, reachable);
   const cap = meal.reduce((s, m) => s + m.units, 0) || 1;
   const before = { ...(pawn.inventory?.items ?? {}) };
   const grabbed = pickUpFromTile(gameState, pawn.id, x, y, {
