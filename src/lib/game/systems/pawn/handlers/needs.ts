@@ -37,6 +37,8 @@ import {
   BUILDINGS_DB,
   FATIGUE_PER_SLEEPING_GROUND,
   HUNGER_THRESHOLD,
+  ROUTE_TO_DRINK_THIRST,
+  findNearestWaterTarget,
   SLEEP_WAKE_THRESHOLD_HUNGRY,
   SLEEP_WAKE_THRESHOLD_FED,
   needsRecovery,
@@ -497,23 +499,32 @@ export function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
   const newFatigue = Math.max(0, (pawn.needs?.fatigue ?? 50) - perTick(fatigueRecovery));
   const newSleep = Math.max(0, (pawn.needs?.sleep ?? 50) - perTick(fatigueRecovery));
 
-  // Wake when fatigue drops to the threshold for current hunger level.
-  // Fed pawns sleep to 0 (full rest). Hungry pawns wake at 30 so they can eat,
-  // but won't immediately re-sleep since 30 < FATIGUE_THRESHOLD (72).
+  // Wake when fatigue drops to the threshold for the pawn's current hunger/thirst.
+  // Fed+watered pawns sleep to 0 (full rest). A HUNGRY or THIRSTY pawn wakes early (at 30) so it can
+  // go eat/drink instead of sleeping through it — won't immediately re-sleep since 30 < FATIGUE (72).
+  // Thirst only forces a wake when the pawn must WALK to drink (a reachable drink zone/well): stored
+  // water and adjacent rivers are handled by processAutoDrink even while asleep, so they never reach
+  // this threshold; gating on a reachable target avoids an Idle↔Sleeping ping-pong when there's no
+  // water to go to at all (the hasAvailableFood analogue for thirst). Dehydration is lethal — this is
+  // the fix for pawns sleeping through rising thirst.
+  const thirsty =
+    (pawn.needs?.thirst ?? 0) >= ROUTE_TO_DRINK_THIRST &&
+    !!findNearestWaterTarget(pawn, gameState, 'drink');
   const wakeThreshold =
-    (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD
+    (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD || thirsty
       ? SLEEP_WAKE_THRESHOLD_HUNGRY
       : SLEEP_WAKE_THRESHOLD_FED;
   // A wounded pawn keeps resting even at zero fatigue — it stays down until its wounds clear (wounds
-  // only mend at full rate while resting), unless hunger forces it up to eat first or its restPolicy
+  // only mend at full rate while resting), unless hunger/thirst forces it up first or its restPolicy
   // is 'never' (then it wakes and goes back to work, accepting the slow active heal rate). Hunger only
   // wakes it when there's actually food to GO eat — with an empty stockpile, getting up is pointless
   // (and ping-pongs Idle↔Sleeping against recoveryChoice), so it stays down and heals. MUST mirror
-  // recoveryChoice's gate (same hunger && hasAvailableFood condition).
+  // recoveryChoice's gate (same hunger && hasAvailableFood condition); thirst mirrors it via `thirsty`.
   const recovering =
     (pawn.restPolicy ?? 'always') !== 'never' &&
     needsRecovery(pawn) &&
-    ((pawn.needs?.hunger ?? 0) < HUNGER_THRESHOLD || !hasAvailableFood(gameState));
+    ((pawn.needs?.hunger ?? 0) < HUNGER_THRESHOLD || !hasAvailableFood(gameState)) &&
+    !thirsty;
   const shouldWake = newFatigue <= wakeThreshold && !recovering;
 
   const updatedNeeds = {
