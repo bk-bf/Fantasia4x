@@ -36,4 +36,12 @@ export interface WeatherState {
    * side is calm. Optional for back-compat; defaults applied in EnvironmentService.
    */
   windDir?: number;
+  /**
+   * Which way the weather is travelling along the rain intensity ladder: `rising` (intensifying) or
+   * `falling` (calming after a climax). Reaching a climax (`heavy_rain`/`windy_rain`/`storm`) flips it
+   * to `falling`; returning to `clear` resets it to `rising`; otherwise it carries forward. Drizzle
+   * reads it so a drizzle on the way DOWN from rain strongly clears, while a drizzle building UP from
+   * clear can still develop into rain. Optional for back-compat; defaults to `rising`.
+   */
+  phase?: 'rising' | 'falling';
 }

@@ -287,8 +287,10 @@ describe('EnvironmentService — weather (Phase C)', () => {
         advanceWeatherForDay({ type: 'rain', intensity: 0.5, turnsRemaining: 0, wind: 0.95 }, 'autumn', rng).type
       );
     }
+    // The wind-scaled storm/windy_rain branches inflate the pool past 1 at this wind, yet the
+    // de-escalation escapes (clear, drizzle) must keep their proportional share and stay reachable.
     expect(seen.has('clear')).toBe(true);
-    expect(seen.has('foggy_rain')).toBe(true); // the other branch listed after the wind escalations
+    expect(seen.has('drizzle')).toBe(true);
   });
 
   it('weatherSightMul shortens sight in fog/storm and is 1 in clear', () => {

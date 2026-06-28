@@ -90,12 +90,10 @@ export interface RefuelPlan {
  * Plan a refuel from the colony stockpile, or `null` if one can't be performed right now.
  *
  * This is the SINGLE SOURCE OF TRUTH for refuelling: both `generate` (to decide whether to queue a
- * refuel job) and `complete` (to actually apply it) call this. Previously `generate` used a separate
- * "can satisfy?" check that ignored the station's `minFuelHeat` gate and the diversity the consume
- * step actually achieves — so a high-heat station (e.g. bloomery, minFuelHeat 4) with only low-heat
- * fuel (green wood) in the stockpile would queue a job whose `complete` consumed nothing, get the job
- * removed, then re-queued next reconcile → the pawn looped at the fire forever working with no result.
- * Sharing one plan makes that impossible: if `generate` queues it, `complete` will add fuel.
+ * refuel job) and `complete` (to actually apply it) call this. Sharing one plan means a queued job
+ * can never complete as a no-op — the historical bug where `generate`'s separate "can satisfy?"
+ * check disagreed with what `complete` actually consumed, so a pawn looped at the fire forever with
+ * no result. If `generate` queues it, `complete` will add fuel.
  *
  * Greedy fill: reserve tinder, then fill from each allowed fuel item (any fuel — there is no longer a
  * `minFuelHeat` refuel filter; a station too cold to smelt still LOADS the fuel, it just won't run)

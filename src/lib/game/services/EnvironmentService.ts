@@ -411,6 +411,8 @@ interface WeatherTransition {
   seasons?: Season[];
   /** Scale this branch's weight by ambient wind (high wind → far more likely; e.g. rain→storm). */
   windScaled?: boolean;
+  /** Gate this branch to a single travel phase along the rain ladder (rising vs. falling). */
+  phase?: 'rising' | 'falling';
 }
 interface WeatherDef extends WeatherEffects {
   id: string;
@@ -448,6 +450,19 @@ const DURATION_RANGE = WEATHER_FILE.durationRange;
 const WEATHER: Record<string, WeatherDef> = Object.fromEntries(
   WEATHER_FILE.types.map((t) => [t.id, t])
 );
+
+/** Rain-ladder climaxes: reaching one flips the chain into its `falling` (calming) descent, which
+ *  holds until the weather returns to `clear`. `heavy_rain` is the rain peak; `windy_rain`/`storm`
+ *  are the wind-driven peaks. */
+const CLIMAX_WEATHER = new Set(['heavy_rain', 'windy_rain', 'storm']);
+
+/** Travel phase once `type` is the current weather, given the previous phase: a climax forces the
+ *  `falling` descent, `clear` resets the climb, anything else carries the prior phase forward. */
+function weatherPhase(type: WeatherType, prev: 'rising' | 'falling'): 'rising' | 'falling' {
+  if (type === DEFAULT_WEATHER) return 'rising';
+  if (CLIMAX_WEATHER.has(type)) return 'falling';
+  return prev;
+}
 
 /** Resolve a weather def by id, falling back to the default (clear) for unknown/undefined. */
 function weatherDef(type?: string): WeatherDef {
@@ -627,6 +642,9 @@ export function heatExposure(temp: number, comfortMax: number): number {
 
 /** °C produced at a fire's centre per unit of `effects.warmth` (0–1). */
 const WARMTH_SCALE = 25;
+/** Fuel heat rating that yields a fire's full rated warmth (seasoned firewood, fuelHeat 2). Hotter
+ *  fuel (charcoal/coke) radiates proportionally more, green wood less — clamped to [0.4×, 2×]. */
+const WARMTH_REFERENCE_HEAT = 2;
 /** Interior temperature (°C) a fully-insulated roof tends toward. */
 const NEUTRAL_TEMP = 15;
 
@@ -655,17 +673,27 @@ interface FireSource {
 }
 
 /** A lit, complete fire building's warmth contribution (°C at centre + radius), or null. */
-function buildingWarmth(b: { type: string; status: string; lit?: boolean }): FireSource | null {
+function buildingWarmth(b: {
+  type: string;
+  status: string;
+  lit?: boolean;
+  fireHeat?: number;
+}): FireSource | null {
   if (b.status !== 'complete') return null;
   const def = buildingService.getBuildingById(b.type);
   const warmth = def?.effects?.warmth;
   if (!warmth || !def?.lightRadius) return null;
   const needsFuel = (def.maxFuel ?? 0) > 0;
   if (needsFuel && b.lit !== true) return null;
+  // §C: a fuelled fire radiates in proportion to the heat of the fuel it was stoked with (coke roasts,
+  // green wood barely warms). Fuel-free warmth buildings keep their full rated output.
+  const heatScale = needsFuel
+    ? Math.max(0.4, Math.min(2, (b.fireHeat ?? WARMTH_REFERENCE_HEAT) / WARMTH_REFERENCE_HEAT))
+    : 1;
   return {
     x: (b as PlacedBuilding).x,
     y: (b as PlacedBuilding).y,
-    degrees: warmth * WARMTH_SCALE,
+    degrees: warmth * WARMTH_SCALE * heatScale,
     radius: def.lightRadius
   };
 }
@@ -1108,13 +1136,15 @@ function rollWeatherType(
   prev: WeatherType,
   season: Season,
   wind: number,
-  rng: SeededRng
+  rng: SeededRng,
+  phase: 'rising' | 'falling'
 ): WeatherType {
   const transitions = weatherDef(prev).transitions ?? [];
   const weighted: Array<{ to: string; w: number }> = [];
   let total = 0;
   for (const tr of transitions) {
     if (tr.seasons && !tr.seasons.includes(season)) continue;
+    if (tr.phase && tr.phase !== phase) continue;
     let w = tr.seasonPrecip ? SEASONS[season].precipitation : (tr.chance ?? 0);
     if (tr.windScaled) w *= 1 + wind * WIND_TRANSITION_BOOST;
     if (w <= 0) continue;
@@ -1162,7 +1192,8 @@ export function advanceWeatherForDay(
   if (remaining > 0) {
     return { ...weather, wind, windDir, turnsRemaining: remaining };
   }
-  const type = rollWeatherType(weather.type, season, wind, rng);
+  const phase = weatherPhase(weather.type, weather.phase ?? 'rising');
+  const type = rollWeatherType(weather.type, season, wind, rng, phase);
   const def = weatherDef(type);
   const [minDur, maxDur] = def.durationRange ?? DURATION_RANGE;
   return {
@@ -1170,7 +1201,8 @@ export function advanceWeatherForDay(
     intensity: def.intensity,
     turnsRemaining: rng.int(minDur, maxDur),
     wind,
-    windDir
+    windDir,
+    phase: weatherPhase(type, phase)
   };
 }
 

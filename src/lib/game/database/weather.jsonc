@@ -178,10 +178,14 @@
       "panelSaturation": 0.97,
       "severity"       : "info",
       "transitions"    : [
-        { "to": "clear",      "chance": 0.25 },
-        { "to": "rain",       "chance": 0.18 },
-        { "to": "fog",        "chance": 0.08 },
-        { "to": "foggy_rain", "chance": 0.06 }
+        // Building UP from clear: drizzle can still develop into rain or simply linger/clear.
+        { "to": "rain",       "chance": 0.3,  "phase": "rising" },
+        { "to": "clear",      "chance": 0.15, "phase": "rising" },
+        { "to": "fog",        "chance": 0.08, "phase": "rising" },
+        { "to": "foggy_rain", "chance": 0.08, "phase": "rising" },
+        // Easing DOWN from a rain type: the front is passing — strongly clears, slight chance to relapse.
+        { "to": "clear",      "chance": 0.65, "phase": "falling" },
+        { "to": "rain",       "chance": 0.35, "phase": "falling" }
       ]
     },
     {
@@ -203,11 +207,13 @@
       "panelSaturation": 0.95,
       "severity"       : "info",
       "transitions"    : [
-        { "to": "drizzle",    "chance": 0.3 },
-        { "to": "clear",      "chance": 0.15 },
-        { "to": "heavy_rain", "chance": 0.12, "windScaled": true },
-        { "to": "windy_rain", "chance": 0.08, "windScaled": true },
-        { "to": "foggy_rain", "chance": 0.06 }
+        // ~60% eases off (35 drizzle / 25 clear), ~40% builds — heavy_rain by intensity, storm/windy
+        // only when the wind drives it (windScaled).
+        { "to": "drizzle",    "chance": 0.35 },
+        { "to": "clear",      "chance": 0.25 },
+        { "to": "heavy_rain", "chance": 0.25 },
+        { "to": "storm",      "chance": 0.15, "windScaled": true },
+        { "to": "windy_rain", "chance": 0.1,  "windScaled": true }
       ]
     },
     {
@@ -230,10 +236,12 @@
       "panelSaturation": 0.85,
       "severity"       : "warning",
       "transitions"    : [
-        { "to": "rain",       "chance": 0.25 },
-        { "to": "storm",      "chance": 0.2, "windScaled": true },
-        { "to": "heavy_rain", "chance": 0.15 },
-        { "to": "clear",      "chance": 0.06 }
+        // Same exit profile as normal rain — windy_rain is just rain that the wind system pushed into;
+        // its onset is wind-driven (the windy states' windScaled branches), not these weights.
+        { "to": "drizzle",    "chance": 0.35 },
+        { "to": "clear",      "chance": 0.25 },
+        { "to": "heavy_rain", "chance": 0.25 },
+        { "to": "storm",      "chance": 0.15, "windScaled": true }
       ]
     },
     {
@@ -256,10 +264,10 @@
       "panelSaturation": 0.82,
       "severity"       : "warning",
       "transitions"    : [
-        { "to": "rain",       "chance": 0.25 },
-        { "to": "storm",      "chance": 0.2, "windScaled": true },
-        { "to": "windy_rain", "chance": 0.12 },
-        { "to": "drizzle",    "chance": 0.1 }
+        // ~60% eases off (35 drizzle / 25 clear); storm only on wind; the leftover ~25% stays heavy.
+        { "to": "drizzle", "chance": 0.35 },
+        { "to": "clear",   "chance": 0.25 },
+        { "to": "storm",   "chance": 0.15, "windScaled": true }
       ]
     },
     {
@@ -282,9 +290,11 @@
       "panelSaturation": 0.72,
       "severity"       : "warning",
       "transitions"    : [
-        { "to": "heavy_rain", "chance": 0.35 },
-        { "to": "windy_rain", "chance": 0.2 },
-        { "to": "rain",       "chance": 0.15 }
+        // The storm front passes and the sky breaks: strongly clears, then drizzle, only a little rain.
+        // No path back up to heavy_rain — a storm spends itself, it doesn't bounce off its own peak.
+        { "to": "clear",   "chance": 0.45 },
+        { "to": "drizzle", "chance": 0.35 },
+        { "to": "rain",    "chance": 0.1 }
       ]
     },
 
