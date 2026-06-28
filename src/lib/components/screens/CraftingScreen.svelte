@@ -65,7 +65,6 @@
   let race: any = null;
   let craftingQueue: any[] = [];
   let completedResearch: string[] = [];
-  let currentToolLevel = 0;
   let currentPopulation = 0;
 
   // Read item amounts directly from the stockpile aggregate — the single source of truth.
@@ -312,7 +311,6 @@
     if (!state) return;
     craftingQueue = state.craftingQueue || [];
     completedResearch = state.completedResearch || [];
-    currentToolLevel = state.currentToolLevel || 0;
   });
 
   onDestroy(() => {
@@ -404,7 +402,7 @@
             workAmount={recipe?.workAmount ?? null}
             station={stationNameOf(item.id)}
             toolTier={recipe?.toolTierRequired ?? null}
-            toolMet={(recipe?.toolTierRequired ?? 0) <= currentToolLevel}
+            toolMet={$gameState !== null && itemService.hasRequiredTools(item.id, $gameState)}
             badge={isCarcass ? `${pct}%` : null}
             actionLabel={useQty
               ? !canQueue

@@ -17,7 +17,8 @@ import {
   consumeFromStockpiles,
   addToStockpileZone,
   aggregateFromDrops,
-  availableQuantityFromDrops
+  availableQuantityFromDrops,
+  colonyToolTier
 } from '../core/GameState';
 import { recipeService } from './RecipeService';
 import { buildingService } from './BuildingService';
@@ -453,7 +454,8 @@ export class ItemServiceImpl implements ItemService {
   hasRequiredTools(itemId: string, gameState: GameState): boolean {
     const tier = recipeService.getRecipeForItem(itemId)?.toolTierRequired;
     if (!tier) return true;
-    return gameState.currentToolLevel >= tier;
+    // ADR-009: a crafted/owned tool of the required tier satisfies the gate, not only research.
+    return colonyToolTier(gameState) >= tier;
   }
 
   hasRequiredBuilding(itemId: string, gameState: GameState): boolean {

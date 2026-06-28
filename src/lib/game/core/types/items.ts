@@ -280,6 +280,9 @@ export interface Item {
   // Lifespan of an exposed stack ≈ maxDurability / deteriorationRate ticks.
   /** Durability spent per work action when used as a tool (scaled by tier). */
   durabilityLossPerAction?: number;
+  /** Tool tier (1 = primitive stone, higher = better materials). A colony owning a tier-N tool meets
+   *  a `toolTierRequired: N` build/craft gate (see `colonyToolTier`) and the R4 harvest tool gate. */
+  tier?: number;
   /**
    * Additive work boost while this tool is held (equipped or carried). `speed`/`yield` are ADDED to
    * the matching work category's `*_speed`/`*_yield` modifier (stats.jsonc) in getWorkModifiers — e.g.

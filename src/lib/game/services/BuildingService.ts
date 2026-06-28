@@ -13,6 +13,7 @@ import {
   consumeFromStockpiles,
   addToStockpileZone,
   availableAggregateFromDrops,
+  colonyToolTier,
   reserveForOrder,
   releaseReservation
 } from '../core/GameState';
@@ -262,7 +263,10 @@ export class BuildingServiceImpl implements BuildingService {
     const building = this.getBuildingById(buildingId);
     if (!building?.toolTierRequired) return true;
 
-    return gameState.currentToolLevel >= building.toolTierRequired;
+    // ADR-009: a crafted/owned tool of the required tier satisfies the gate — not only research
+    // (currentToolLevel). Otherwise a fresh colony that has crafted a stone_axe (tier 1) could
+    // never build a tier-1 station, leaving it permanently BLOCKED despite holding the tool.
+    return colonyToolTier(gameState) >= building.toolTierRequired;
   }
 
   meetsStateRestrictions(buildingId: string, gameState: GameState): boolean {

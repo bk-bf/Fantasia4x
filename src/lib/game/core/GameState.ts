@@ -11,6 +11,15 @@ import type {
 import { rng } from './rng';
 import { mergeConditions } from './carcassCondition';
 import buildingsData from '../database/buildings.jsonc';
+import itemsData from '../database/items.jsonc';
+
+// Static tier table for tool items (type === 'tool', numeric `tier`). Built once — the item DB never
+// mutates at runtime. Used by `colonyToolTier` so owning a crafted tool satisfies tier gates.
+const TOOL_TIER_BY_ID: Map<string, number> = new Map(
+  (itemsData as unknown as Item[])
+    .filter((i) => i.type === 'tool' && typeof i.tier === 'number')
+    .map((i) => [i.id, i.tier as number])
+);
 
 const BUILDING_DEFS = buildingsData as unknown as Building[];
 
@@ -233,6 +242,23 @@ export function availableAggregateFromDrops(
     agg[d.resourceId] = (agg[d.resourceId] ?? 0) + d.quantity;
   }
   return agg;
+}
+
+/**
+ * ADR-009: the colony's effective tool tier — the higher of the research-granted `currentToolLevel`
+ * and the highest `tier` among tool items physically in stock. Crafting/owning a tier-N tool (e.g. a
+ * stone_axe is tier 1) satisfies a `toolTierRequired: N` build/craft gate even without the research
+ * that would also grant tier N — matching the colony-stock harvest gate (R4). Reserved stacks still
+ * count: the tool is owned even while earmarked as a building cost.
+ */
+export function colonyToolTier(state: GameState): number {
+  let tier = state.currentToolLevel ?? 0;
+  for (const d of state.droppedItems ?? []) {
+    if (!d.stored || (d.quantity ?? 0) <= 0) continue;
+    const t = TOOL_TIER_BY_ID.get(d.resourceId);
+    if (t != null && t > tier) tier = t;
+  }
+  return tier;
 }
 
 /**
