@@ -13,6 +13,8 @@ import {
   seasonRegrowthMultiplier,
   diurnalTempDelta,
   advanceWeatherForDay,
+  rederiveWeatherType,
+  weatherFreezing,
   weatherEffects,
   getEnvironmentTint,
   tileTemperature,
@@ -251,23 +253,53 @@ describe('EnvironmentService — weather (Phase C)', () => {
     expect(w.turnsRemaining).toBe(TICKS_PER_DAY * 2);
   });
 
-  it('clear steps to season-appropriate precip: winter→snow, warm→drizzle (over many rolls)', () => {
+  it('precip phase is TEMPERATURE-driven: freezing→snow, warm→drizzle (over many rolls)', () => {
     const rng = new SeededRng(99);
-    const winterTypes = new Set<WeatherType>();
-    const springTypes = new Set<WeatherType>();
+    const frozenTypes = new Set<WeatherType>();
+    const warmTypes = new Set<WeatherType>();
     for (let i = 0; i < 500; i++) {
-      winterTypes.add(
-        advanceWeatherForDay({ type: 'clear', intensity: 0, turnsRemaining: 0 }, 'winter', rng).type
+      // freezing=true → the wet branch falls as snow; freezing=false → as drizzle. Independent of season.
+      frozenTypes.add(
+        advanceWeatherForDay({ type: 'clear', intensity: 0, turnsRemaining: 0 }, 'winter', rng, true)
+          .type
       );
-      springTypes.add(
-        advanceWeatherForDay({ type: 'clear', intensity: 0, turnsRemaining: 0 }, 'spring', rng).type
+      warmTypes.add(
+        advanceWeatherForDay({ type: 'clear', intensity: 0, turnsRemaining: 0 }, 'spring', rng, false)
+          .type
       );
     }
-    // Winter's wet branch off clear is snow (never the warm-season drizzle); spring's is drizzle.
-    expect(winterTypes.has('snow')).toBe(true);
-    expect(winterTypes.has('drizzle')).toBe(false);
-    expect(springTypes.has('drizzle')).toBe(true);
-    expect(springTypes.has('snow')).toBe(false);
+    expect(frozenTypes.has('snow')).toBe(true);
+    expect(frozenTypes.has('drizzle')).toBe(false);
+    expect(warmTypes.has('drizzle')).toBe(true);
+    expect(warmTypes.has('snow')).toBe(false);
+  });
+
+  it('rederiveWeatherType flips a rain spell to snow when freezing, and back', () => {
+    const rain: WeatherState = {
+      type: 'rain',
+      intensity: 0.5,
+      turnsRemaining: 0,
+      precip: 'rain',
+      windLevel: 'calm'
+    };
+    expect(rederiveWeatherType(rain, 'spring', false)).toBe('rain');
+    expect(rederiveWeatherType(rain, 'spring', true)).toBe('snow');
+  });
+
+  it('weatherFreezing has hysteresis: snow ≤ −1°C, rain ≥ +1°C, prior phase holds between', () => {
+    expect(weatherFreezing(-3, false)).toBe(true); // cold → snow
+    expect(weatherFreezing(5, true)).toBe(false); // warm → rain
+    expect(weatherFreezing(0, true)).toBe(true); // dead zone holds prior (was frozen)
+    expect(weatherFreezing(0, false)).toBe(false); // dead zone holds prior (was thawed)
+  });
+
+  it('tileWetness reads down as ice covers the tile (frozen ≠ wet)', () => {
+    const open = tileWetness(80, undefined, undefined, 0);
+    const half = tileWetness(80, undefined, undefined, 50);
+    const frozen = tileWetness(80, undefined, undefined, 100);
+    expect(open).toBe(80);
+    expect(half).toBeCloseTo(40);
+    expect(frozen).toBe(0);
   });
 
   it('the wind readout never contradicts the derived type ("rain · extremely windy" is impossible)', () => {

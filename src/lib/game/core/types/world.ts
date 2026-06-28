@@ -52,6 +52,11 @@ export interface WorldTile {
    *  faster on wetter tiles; melts above 0°C. Whitens the terrain/resource layer in buildGameGrid.
    *  Ships to the renderer in the slim worldMapDelta (it is a visible per-tile field). */
   snow?: number;
+  /** Frozen layer 0–100 (SEASONS_WEATHER ice). The tile's own MOISTURE freezing in place below 0°C
+   *  (gradual, like snow), reducing effective wetness as it climbs; thaws back above 0°C. A thick sheet
+   *  on a water tile turns it walkable-but-slippery. Hidden below a small threshold + ships in the slim
+   *  worldMapDelta like `snow`. Blue-tinted frozen overlay in buildGameGrid. */
+  ice?: number;
   territoryOwner: string;
   // A* scratch fields (reset before each pathfind, not persisted)
   gCost?: number;

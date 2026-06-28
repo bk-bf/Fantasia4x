@@ -16,7 +16,7 @@ import { markTileDirty } from '../core/tileDeltas';
 import { buildingLight } from './LightingService';
 import { buildingService } from './BuildingService';
 import { resourceObjectService } from './ResourceObjectService';
-import { BIOMES } from '../core/Terrains';
+import { BIOMES, SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
 import seasonsData from '../database/seasons.jsonc';
 import weatherData from '../database/weather.jsonc';
 import type { SeededRng } from '../core/rng';
@@ -504,10 +504,47 @@ const REVERSE_GRID: Record<string, { precip: string; windLevel: string }> = (() 
   return out;
 })();
 
-/** Derive the displayed weather id from the (precip, wind) pair for a season. */
-function deriveWeatherType(precip: string, windLevel: string, season: Season): WeatherType {
-  const cell = WEATHER_GRID[precip]?.[windLevel] ?? DEFAULT_WEATHER;
+/** Wet precip families that FALL AS SNOW when the air is below freezing (temperature-driven phase). */
+const WET_PRECIP = new Set(['drizzle', 'rain', 'heavy_rain']);
+
+/**
+ * Derive the displayed weather id from the (precip, wind) pair for a season. When `freezing`, a wet
+ * precip family (drizzle/rain/heavy_rain) falls as SNOW instead — so it routes through the grid's `snow`
+ * row (calm/breezy → snow, windy → winter_windy, gale → blizzard). This is the temperature-driven
+ * rain⇄snow phase: the Markov chain only tracks how MUCH moisture; the air temp decides rain vs snow.
+ */
+function deriveWeatherType(
+  precip: string,
+  windLevel: string,
+  season: Season,
+  freezing = false
+): WeatherType {
+  const effPrecip = freezing && WET_PRECIP.has(precip) ? 'snow' : precip;
+  const cell = WEATHER_GRID[effPrecip]?.[windLevel] ?? DEFAULT_WEATHER;
   return cell === SEASON_WINDY_CELL ? `${season}_windy` : cell;
+}
+
+/**
+ * Re-derive a weather state's DISPLAY type from the current freezing flag without advancing the Markov
+ * chain — the live intraday rain⇄snow switch. Returns the (possibly snow-mapped) type; the engine
+ * reassigns `weather.type` only when it actually changes, so a spell that straddles 0°C snows overnight
+ * and rains by afternoon without churning the snapshot.
+ */
+export function rederiveWeatherType(weather: WeatherState, season: Season, freezing: boolean): string {
+  const { precip, windLevel } = weather.precip
+    ? { precip: weather.precip, windLevel: weather.windLevel ?? DEFAULT_WIND_LEVEL }
+    : axesFromType(weather.type);
+  return deriveWeatherType(precip, windLevel, season, freezing);
+}
+
+/** Hysteresis band for the rain⇄snow phase — snow takes over below −1°C, rain above +1°C, and the
+ *  prior phase HOLDS in the −1…+1 dead zone so precipitation doesn't flicker type around freezing. */
+const FREEZE_SNOW_BELOW = -1;
+const FREEZE_RAIN_ABOVE = 1;
+export function weatherFreezing(globalTemp: number, prevFreezing: boolean): boolean {
+  if (globalTemp <= FREEZE_SNOW_BELOW) return true;
+  if (globalTemp >= FREEZE_RAIN_ABOVE) return false;
+  return prevFreezing;
 }
 
 /** Recover the (precip, windLevel) axes from a state that only carries a derived `type`. */
@@ -975,10 +1012,14 @@ export function baseMoistureFromWater(biomeMoisture: number, distanceToWater: nu
 export function tileWetness(
   baseMoisture: number,
   weather?: WeatherState,
-  thermal: ThermalSample = NO_THERMAL
+  thermal: ThermalSample = NO_THERMAL,
+  ice = 0
 ): number {
   const fromWeather = weatherMoistureBonus(weather) * (1 - thermal.weatherProtection);
-  return Math.max(0, Math.min(100, baseMoisture + fromWeather));
+  const wet = Math.max(0, Math.min(100, baseMoisture + fromWeather));
+  // Frozen water isn't liquid: ice cover suppresses effective wetness so a frozen tile reads dry (and
+  // pawns/mobs stop soaking on it) — a full sheet ⇒ 0% wet. This is what stops "wet dirt at −3°C".
+  return ice > 0 ? wet * (1 - Math.min(100, ice) / 100) : wet;
 }
 
 // ── Wetness meter (SEASONS_WEATHER) — shared by pawns AND mobs ────────────────────────────────────
@@ -1034,7 +1075,8 @@ export function creatureExposureAt(
 ): { wind: number; wetness: number } {
   return {
     wind: effectiveWindAt(x, y, weather, NO_THERMAL, worldMap),
-    wetness: tileWetness(baseMoisture, weather, NO_THERMAL)
+    // Ice on the tile reads wetness down (frozen ≠ wet) — a creature on frozen ground doesn't soak.
+    wetness: tileWetness(baseMoisture, weather, NO_THERMAL, worldMap[y]?.[x]?.ice ?? 0)
   };
 }
 
@@ -1074,6 +1116,24 @@ const SNOW_MELT_PER_HOUR = 4;
 /** Only re-bake/ship a tile when its snow crosses one of these buckets (keeps deltas bounded). */
 const SNOW_RENDER_STEP = 5;
 
+// ── Ice (the tile's OWN moisture freezing in place — distinct from snow, which falls from the sky) ──
+/** Ice gained per in-game hour while below 0°C (gradual, like growth — wetness doesn't flash-freeze). */
+const ICE_FREEZE_PER_HOUR = 6;
+/** Ice lost per in-game hour once at/above 0°C (thaws a touch faster than it forms). */
+const ICE_MELT_PER_HOUR = 8;
+/** Only re-bake/ship a tile when its ice crosses one of these buckets (bounds deltas, like snow). */
+const ICE_RENDER_STEP = 5;
+/** °C below freezing at which ice forms at full rate; nearer 0 freezes slower (floor keeps it progressing). */
+const ICE_FULL_FREEZE_AT = 8;
+/** Movement cost of a frozen-over water tile — walkable but slippery, slower than open ground. */
+export const ICE_WATER_MOVE_COST = 2;
+/** Below this %, ice is HIDDEN (no readout, no overlay) so a stray rime doesn't clutter every cold tile. */
+export const ICE_VISIBLE = 8;
+/** Ice thickness at which an (otherwise impassable) water tile freezes solid → walkable. Reverts on thaw.
+ *  The freeze ceiling is the tile's own water content, so only genuinely wet tiles (open water/marsh)
+ *  ever reach this — dry land tops out far lower — and a cliff is never turned walkable. */
+export const ICE_WALKABLE = 60;
+
 /** True for the weather overlays that actually deposit snow. */
 function isSnowingWeather(weather?: WeatherState): boolean {
   const o = weatherOverlayKind(weather?.type);
@@ -1081,44 +1141,93 @@ function isSnowingWeather(weather?: WeatherState): boolean {
 }
 
 /**
- * Accumulate / melt snow across the whole map IN PLACE (PERF-1: mutate `tile.snow`, never rebuild
- * the worldMap). Snow builds only while it's snowing AND the tile's effective temperature is below
- * 0°C, scaled by the tile's wetness; it melts once at/above freezing. Call on a SLOW cadence (hourly)
- * — only tiles whose snow crosses a render bucket are marked dirty, so the worldMapDelta stays small.
- * Uses the baked `tile.temperature` (biome+season) + the live weather delta + the diurnal swing — all
- * cheap scalars — so afternoon thaws and cold-night freezes fall out of the same day/night cycle.
+ * Accumulate / melt SNOW and ICE across the whole map IN PLACE (PERF-1: mutate `tile.snow`/`tile.ice`,
+ * never rebuild the worldMap). Snow falls from the sky (builds only while it's SNOWING and temp < 0°C);
+ * ice is the tile's OWN moisture freezing in place (builds whenever temp < 0°C, gradually, capped by how
+ * much water the tile holds). Both melt at/above freezing. Call on a SLOW cadence (hourly) — only tiles
+ * whose snow/ice crosses a render bucket (or whose walkability flips) are marked dirty, so the
+ * worldMapDelta stays small. `patchWalkable` is wired by the engine to the pathfinder so a water tile
+ * that freezes solid (ice ≥ ICE_WALKABLE) becomes walkable-but-slippery and reverts on thaw.
+ * Uses the baked `tile.temperature` (biome+season) + the live weather delta + the diurnal swing.
  */
 export function accumulateSnow(
   worldMap: WorldTile[][],
   weather: WeatherState | undefined,
   season: Season | undefined,
   turn: number,
-  hours = 1
+  hours = 1,
+  patchWalkable?: (x: number, y: number, walkable: boolean) => void
 ): void {
   const snowing = isSnowingWeather(weather);
   const wDelta = weatherEffects(weather).tempDelta + diurnalTempDelta(turn, season);
   for (const row of worldMap) {
     for (const tile of row) {
-      const prev = tile.snow ?? 0;
       // Walkable tiles read their baked cache; impassable tiles (cliffs/peaks) carry no cached temp, so
       // recompute their biome temp on the fly here — keeps high peaks snow-capped without storing a temp.
       const baseTemp = tile.temperature ?? seasonBakedTemp(tile.terrainType, season);
       const temp = baseTemp + wDelta;
-      let next = prev;
+
+      // ── Snow (deposited by snowfall) ──
+      const prevSnow = tile.snow ?? 0;
+      let nextSnow = prevSnow;
       if (snowing && temp < 0) {
-        next = Math.min(
+        nextSnow = Math.min(
           100,
-          prev +
+          prevSnow +
             SNOW_ACCRUAL_PER_HOUR * snowWetFactor(tileWetness(tile.moisture ?? 0, weather)) * hours
         );
-      } else if (temp >= 0 && prev > 0) {
-        next = Math.max(0, prev - SNOW_MELT_PER_HOUR * hours);
+      } else if (temp >= 0 && prevSnow > 0) {
+        nextSnow = Math.max(0, prevSnow - SNOW_MELT_PER_HOUR * hours);
       }
-      if (next === prev) continue;
-      tile.snow = next;
-      // Only ship a delta when the change is visible (crossed a render bucket) — bounds churn.
-      if (Math.floor(next / SNOW_RENDER_STEP) !== Math.floor(prev / SNOW_RENDER_STEP)) {
-        markTileDirty(tile.y, tile.x, tile);
+      if (nextSnow !== prevSnow) {
+        tile.snow = nextSnow;
+        if (Math.floor(nextSnow / SNOW_RENDER_STEP) !== Math.floor(prevSnow / SNOW_RENDER_STEP)) {
+          markTileDirty(tile.y, tile.x, tile);
+        }
+      }
+
+      // ── Ice (the tile's own water freezing in place — gradual, capped by its liquid water content) ──
+      const prevIce = tile.ice ?? 0;
+      let nextIce = prevIce;
+      if (temp < 0) {
+        // Ceiling = how much liquid water the tile actually holds (raw wetness, no ice read-down): open
+        // water freezes to a thick sheet, dry dirt only a thin rime.
+        const wetCeiling = Math.min(100, tileWetness(tile.moisture ?? 0, weather));
+        if (wetCeiling > prevIce) {
+          const coldFactor = Math.min(1, Math.max(0.15, -temp / ICE_FULL_FREEZE_AT));
+          nextIce = Math.min(wetCeiling, prevIce + ICE_FREEZE_PER_HOUR * coldFactor * hours);
+        }
+      } else if (prevIce > 0) {
+        nextIce = Math.max(0, prevIce - ICE_MELT_PER_HOUR * hours);
+      }
+      if (nextIce !== prevIce) {
+        tile.ice = nextIce;
+        // A normally-impassable water tile freezes solid → walkable-but-slippery once the sheet crosses
+        // ICE_WALKABLE, and thaws back to open water below it. Gated on the BASE subterrain being
+        // unwalkable, so a frozen land tile is never affected and only water we froze is reverted.
+        let flipped = false;
+        const baseSub = SUBTERRAINS[tile.subType] ?? SUBTERRAIN_FALLBACK;
+        if (!baseSub.walkable) {
+          const wasWalk = prevIce >= ICE_WALKABLE;
+          const nowWalk = nextIce >= ICE_WALKABLE;
+          if (nowWalk && !wasWalk) {
+            tile.walkable = true;
+            tile.movementCost = ICE_WATER_MOVE_COST;
+            patchWalkable?.(tile.x, tile.y, true);
+            flipped = true;
+          } else if (!nowWalk && wasWalk) {
+            tile.walkable = false;
+            tile.movementCost = baseSub.movementCost;
+            patchWalkable?.(tile.x, tile.y, false);
+            flipped = true;
+          }
+        }
+        if (
+          flipped ||
+          Math.floor(nextIce / ICE_RENDER_STEP) !== Math.floor(prevIce / ICE_RENDER_STEP)
+        ) {
+          markTileDirty(tile.y, tile.x, tile);
+        }
       }
     }
   }
@@ -1249,7 +1358,8 @@ function rollChain(
 export function advanceWeatherForDay(
   weather: WeatherState,
   season: Season,
-  rng: SeededRng
+  rng: SeededRng,
+  freezing = false
 ): WeatherState {
   // Ambient wind direction backs/veers one of the 8 compass points on a chance roll (its own slow walk).
   let windDir = weather.windDir ?? DEFAULT_WIND_DIR;
@@ -1290,7 +1400,7 @@ export function advanceWeatherForDay(
   let wind = (weather.wind ?? (band[0] + band[1]) / 2) + (rng.random() * 2 - 1) * WIND_DRIFT;
   wind = Math.max(band[0], Math.min(band[1], wind));
 
-  const type = deriveWeatherType(precip, windLevel, season);
+  const type = deriveWeatherType(precip, windLevel, season, freezing);
   const def = weatherDef(type);
   return {
     type,

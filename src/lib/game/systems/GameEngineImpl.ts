@@ -67,6 +67,8 @@ import {
   weatherEffects,
   rebuildThermalField,
   accumulateSnow,
+  rederiveWeatherType,
+  weatherFreezing,
   diurnalTempDelta,
   TURNS_PER_DAY,
   WEATHER_LABELS,
@@ -152,6 +154,9 @@ export class GameEngineImpl implements GameEngine {
    *  season. Walkable-only because impassable tiles now carry no temperature (stripped at bake time);
    *  re-found when a new map loads or the cached tile is no longer walkable. */
   private tempProbe: { x: number; y: number } | undefined = undefined;
+  /** Hysteresis latch for the rain⇄snow weather phase (SEASONS_WEATHER ice) — held across ticks so
+   *  precipitation doesn't flicker type in the −1…+1°C dead zone around freezing. */
+  private weatherFreezing = false;
   /** Average baked tile temperature (biome + season, no weather) — combined with the live weather
    *  delta into `gameState.avgTemperature` for the HUD. Set whenever temperatures are recomputed. */
   private avgTileTemp: number | undefined = undefined;
@@ -437,12 +442,19 @@ export class GameEngineImpl implements GameEngine {
       }
     }
 
+    // Rain⇄snow PHASE follows the live global air temperature (biome+season mean + diurnal swing, weather-
+    // independent so there's no feedback loop), with hysteresis so it doesn't flicker around 0°C. A wet
+    // precip spell then falls as snow whenever it's freezing — including a sub-0 spring/autumn night.
+    const globalAirTemp = (this.avgTileTemp ?? 10) + diurnalTempDelta(gs.turn, gs.season);
+    const freezing = weatherFreezing(globalAirTemp, this.weatherFreezing);
+    this.weatherFreezing = freezing;
+
     // Weather: one Markov step per in-game day at midnight. Skipped in the menu-preview backdrop —
     // it pins a fixed pleasant breeze (spring_windy) and must never wander into fog/storm.
     const ticksPerDay = TURNS_PER_DAY * TICKS_PER_SECOND;
     if (!this.previewMode && gs.turn % ticksPerDay === 0 && gs.weather) {
       const prevType = gs.weather.type;
-      gs.weather = advanceWeatherForDay(gs.weather, season, rng);
+      gs.weather = advanceWeatherForDay(gs.weather, season, rng, freezing);
       // Chronicle only an actual change of weather type (a spell merely running down isn't news).
       if (gs.weather.type !== prevType) {
         simLog.logActivity({
@@ -456,6 +468,13 @@ export class GameEngineImpl implements GameEngine {
       }
     }
 
+    // Live intraday rain⇄snow re-derive: the SAME spell snows overnight and rains by a warm afternoon as
+    // the air crosses freezing. Reassign only on change to keep the weather sectional snapshot quiet.
+    if (!this.previewMode && gs.weather) {
+      const liveType = rederiveWeatherType(gs.weather, season, freezing);
+      if (liveType !== gs.weather.type) gs.weather = { ...gs.weather, type: liveType };
+    }
+
     // HUD readout: average effective map temperature = baked tile average + live weather delta.
     // Assigned only on change to keep the sectional snapshot quiet (PERF-4: a cheap top-level scalar).
     if (this.avgTileTemp !== undefined) {
@@ -467,11 +486,13 @@ export class GameEngineImpl implements GameEngine {
       if (avg !== gs.avgTemperature) gs.avgTemperature = avg;
     }
 
-    // Snow cover: a slow (hourly) IN-PLACE pass — builds while snowing & below freezing, melts above.
-    // Cadence-gated so the per-tile snow churn stays bounded (only bucket-crossing tiles ship a delta).
+    // Snow + ice: a slow (hourly) IN-PLACE pass — snow builds while snowing & below freezing; ice freezes
+    // a tile's own moisture below freezing; both melt above. Cadence-gated so the per-tile churn stays
+    // bounded (only bucket-crossing tiles ship a delta). `patchPathfindingWalkable` keeps the A* grid in
+    // sync when a water tile freezes solid (walkable) or thaws (impassable).
     const snowInterval = Math.max(1, Math.floor(ticksPerDay / 24));
     if (gs.worldMap.length > 0 && gs.turn % snowInterval === 0) {
-      accumulateSnow(gs.worldMap, gs.weather, gs.season, gs.turn, 1);
+      accumulateSnow(gs.worldMap, gs.weather, gs.season, gs.turn, 1, patchPathfindingWalkable);
     }
 
     // Rebuild the fire-warmth + roof-shelter field once per tick (before needs/conditions read it).

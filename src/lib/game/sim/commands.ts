@@ -58,7 +58,13 @@ import { devSpawnLooseItems, devDestroyAllItems } from '../dev/devWorld';
 import { gameLogger } from '../dev/gameLogger';
 import { generatePawns } from '../entities/Pawns';
 import { devSpawnMobs } from '../services/entity/entitySpawning';
-import { makeWeather, tileWetness } from '../services/EnvironmentService';
+import {
+  makeWeather,
+  tileWetness,
+  ICE_WALKABLE,
+  ICE_WATER_MOVE_COST
+} from '../services/EnvironmentService';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
 import { resourceObjectService } from '../services/ResourceObjectService';
 import { patchPathfindingWalkable } from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
@@ -1216,6 +1222,39 @@ export const COMMANDS: Record<string, Cmd> = {
         const next = v <= 0 ? 0 : Math.max(0, Math.min(100, Math.round(v * factor)));
         if (next === (tile.snow ?? 0)) continue;
         tile.snow = next;
+        markTileDirty(tile.y, tile.x, tile);
+      }
+    }
+    return { ...s };
+  },
+
+  /** Debug: set ice cover across the whole map to `value` (0–100), capped per tile by its wetness so
+   *  only wet ground / open water freezes thick (mirrors the real freeze ceiling). 0 clears it. A water
+   *  tile crossing ICE_WALKABLE flips to walkable-but-slippery (and back), keeping the A* grid in sync —
+   *  so you can also test frozen-water traversal, not just the visual. One-shot full-map pass. */
+  devSetMapIce: (s, p: { value: number }) => {
+    const v = Math.max(0, Math.min(100, p.value ?? 0));
+    for (const row of s.worldMap) {
+      for (const tile of row) {
+        const wetCeiling = Math.min(100, tileWetness(tile.moisture ?? 0, s.weather));
+        const next = v <= 0 ? 0 : Math.min(wetCeiling, v);
+        const prev = tile.ice ?? 0;
+        if (next === prev) continue;
+        tile.ice = next;
+        const baseSub = SUBTERRAINS[tile.subType] ?? SUBTERRAIN_FALLBACK;
+        if (!baseSub.walkable) {
+          const wasWalk = prev >= ICE_WALKABLE;
+          const nowWalk = next >= ICE_WALKABLE;
+          if (nowWalk && !wasWalk) {
+            tile.walkable = true;
+            tile.movementCost = ICE_WATER_MOVE_COST;
+            patchPathfindingWalkable(tile.x, tile.y, true);
+          } else if (!nowWalk && wasWalk) {
+            tile.walkable = false;
+            tile.movementCost = baseSub.movementCost;
+            patchPathfindingWalkable(tile.x, tile.y, false);
+          }
+        }
         markTileDirty(tile.y, tile.x, tile);
       }
     }

@@ -357,8 +357,10 @@
       {
         "id"         : "dry",
         "transitions": [
-          { "to": "drizzle",   "seasonPrecip": true, "seasons": ["spring", "summer", "autumn"] },
-          { "to": "snow",      "chance": 0.18, "seasons": ["winter"] },
+          // Precipitation ONSET happens in every season (weighted by that season's `precipitation`);
+          // whether it FALLS as rain or snow is decided by temperature at derive time (deriveWeatherType),
+          // not gated here — so a sub-0 spring night snows and a winter thaw rains. heat_wave stays summer.
+          { "to": "drizzle",   "seasonPrecip": true },
           { "to": "heat_wave", "chance": 0.08, "seasons": ["summer"] },
           { "to": "fog",       "chance": 0.05 }
         ]
@@ -406,9 +408,9 @@
         "id"         : "fog",
         "transitions": [
           { "to": "dry",        "chance": 0.35 },
-          { "to": "foggy_rain", "chance": 0.12, "seasons": ["spring", "summer", "autumn"] },
-          { "to": "drizzle",    "chance": 0.1,  "seasons": ["spring", "summer", "autumn"] },
-          { "to": "rain",       "chance": 0.06, "seasons": ["spring", "summer", "autumn"] }
+          { "to": "foggy_rain", "chance": 0.12 },
+          { "to": "drizzle",    "chance": 0.1 },
+          { "to": "rain",       "chance": 0.06 }
         ]
       },
       {

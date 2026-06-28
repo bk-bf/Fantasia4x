@@ -63,12 +63,17 @@ export function moveCostToEnter(
   // the per-tile cost. Budget-only (like snow below) — route choice still uses the cached A* grid, so
   // floors quicken the walk WITHOUT becoming preferred "streets" the pawn detours onto.
   if (tile?.floor) base *= tile.floor.speed;
-  // Snow cover slows traversal: +1×base per 100% snow (so 100% snow ⇒ double cost). Applied to the
-  // movement budget only (route choice still uses the cached A* grid), so it slows pawns crossing
-  // deep snow without rebuilding pathfinding every accumulation tick (SEASONS_WEATHER).
-  const snowMul = 1 + (tile?.snow ?? 0) / 100;
+  // Snow (deep, trudging) and ice (slippery, picked-across carefully) both slow traversal: +1×base per
+  // 100% combined cover (so a fully snowed/iced tile ⇒ double cost). Budget-only (route choice still uses
+  // the cached A* grid), so it slows pawns over deep snow / frozen water without rebuilding pathfinding
+  // every accumulation tick (SEASONS_WEATHER).
+  // TODO(slipped): on a high-ice tile (ice ≥ ICE_WALKABLE — frozen water especially), roll a small chance
+  // here / in stepBody to apply a transient "slipped" condition that knocks the entity prone for a beat
+  // (a knockdown). Later, footwear (crampons / hobnailed boots) would carry a stat that lowers that
+  // chance while crossing iced tiles. Needs a new condition def + a per-cross roll gated by ice%.
+  const coverMul = 1 + ((tile?.snow ?? 0) + (tile?.ice ?? 0)) / 100;
   const diagonal = from.x !== to.x && from.y !== to.y ? Math.SQRT2 : 1;
-  return base * snowMul * diagonal * TICKS_PER_SECOND;
+  return base * coverMul * diagonal * TICKS_PER_SECOND;
 }
 
 /**

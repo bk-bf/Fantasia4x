@@ -56,7 +56,8 @@
     tileWetness,
     computeThermalAt,
     effectiveWindAt,
-    windDegreeWord
+    windDegreeWord,
+    ICE_VISIBLE
   } from '$lib/game/services/EnvironmentService.js';
   import { lightingService } from '$lib/game/services/LightingService.js';
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
@@ -5012,8 +5013,9 @@
           tileThermal
         )
       )}
+      {@const tileIce = Math.round(hoverTile.ice ?? 0)}
       {@const tileWet =
-        tileWetness(hoverTile.moisture ?? 0, $currentWeather, tileThermal) *
+        tileWetness(hoverTile.moisture ?? 0, $currentWeather, tileThermal, tileIce) *
         (hoverTile.floor ? 1 - hoverTile.floor.dryness : 1)}
       {@const windWord = windDegreeWord(
         effectiveWindAt(hoverTile.x, hoverTile.y, $currentWeather, tileThermal, worldMap)
@@ -5033,7 +5035,7 @@
         {#if !hoverTile.walkable}
           <div class="tile-move" style="color:#cc4444">move: impassable</div>
         {:else}
-          {@const effMoveCost = (hoverTile.movementCost ?? 1) * (1 + tileSnow / 100)}
+          {@const effMoveCost = (hoverTile.movementCost ?? 1) * (1 + (tileSnow + tileIce) / 100)}
           {@const mc = moveCostLabel(effMoveCost)}
           <div class="tile-move" style="color:{mc.color}">
             move ×{effMoveCost.toFixed(1)}{#if tileSnow > 0}<span style="color:#cdd6e0">
@@ -5109,6 +5111,7 @@
             ]}) — drives what crops grow here and how fast">fertility {soilPct}%</span
           >
           {#if tileSnow > 0}<span style="color:#cdd6e0">snow {tileSnow}%</span>{/if}
+          {#if tileIce >= ICE_VISIBLE}<span style="color:#9fc8e0" title="frozen layer — suppresses wetness; thick ice on water turns it walkable but slippery">ice {tileIce}%</span>{/if}
         </div>
       </div>
     {/if}

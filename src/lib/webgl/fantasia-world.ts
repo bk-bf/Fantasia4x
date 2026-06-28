@@ -22,6 +22,10 @@ const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
 
 /** Cool white that snow-covered terrain blends toward (SEASONS_WEATHER snow cover). */
 const SNOW_WHITE: [number, number, number] = [0.92, 0.94, 0.97];
+/** Pale blue-white a frozen tile glazes toward (SEASONS_WEATHER ice) — a thin sheen, not a snow blanket. */
+const ICE_BLUE: [number, number, number] = [0.78, 0.88, 0.98];
+/** Below this %, ice is hidden (mirrors EnvironmentService.ICE_VISIBLE) so a stray rime doesn't glaze tiles. */
+const ICE_VISIBLE_RENDER = 8;
 
 /**
  * "Solid" = a cave/mineral_deposit mountain tile still carrying its wall/ore resource — impassable rock
@@ -437,6 +441,23 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
       fg[0] + (SNOW_WHITE[0] - fg[0]) * wf,
       fg[1] + (SNOW_WHITE[1] - fg[1]) * wf,
       fg[2] + (SNOW_WHITE[2] - fg[2]) * wf
+    ];
+  }
+  // Ice glaze (SEASONS_WEATHER): a frozen tile gets a THIN pale-blue sheen on top — deliberately gentle
+  // (a glaze, not a snow blanket), so even a fully frozen pond reads as a faint blue glass rather than
+  // white drift. Hidden below ICE_VISIBLE_RENDER. Drawn after snow so a snow-on-ice tile leans white.
+  const ice = tile.ice ?? 0;
+  if (ice >= ICE_VISIBLE_RENDER) {
+    const it = 0.18 + Math.min(1, ice / 100) * 0.22; // ~0.2 thin rime → ~0.4 solid sheet
+    bg = [
+      bg[0] + (ICE_BLUE[0] - bg[0]) * it,
+      bg[1] + (ICE_BLUE[1] - bg[1]) * it,
+      bg[2] + (ICE_BLUE[2] - bg[2]) * it
+    ];
+    fg = [
+      fg[0] + (ICE_BLUE[0] - fg[0]) * it * 0.8,
+      fg[1] + (ICE_BLUE[1] - fg[1]) * it * 0.8,
+      fg[2] + (ICE_BLUE[2] - fg[2]) * it * 0.8
     ];
   }
   grid.setTile(tile.x, tile.y, {
