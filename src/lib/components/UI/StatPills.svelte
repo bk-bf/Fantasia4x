@@ -24,6 +24,8 @@
     formula?: string;
     /** Breakdown rows (factor → value). */
     rows?: StatPillRow[];
+    /** Render a group separator BEFORE this pill (starts a new cluster — health | temp | combat). */
+    sep?: boolean;
   }
 </script>
 
@@ -49,6 +51,7 @@
 {#if pills.length > 0}
   <div class="stat-pills">
     {#each pills as p, i (p.label + ':' + i)}
+      {#if p.sep && i > 0}<span class="pill-sep" aria-hidden="true"></span>{/if}
       <div
         class="stat-pill"
         class:warn={p.warn}
@@ -106,6 +109,15 @@
   }
   .stat-pill.warn {
     background: color-mix(in srgb, var(--pill) 22%, rgba(40, 12, 6, 0.92));
+  }
+  /* Horizontal rule between pill clusters (health / temp / combat). Full width so it forces the next
+     cluster onto its own row, the way the combat block used to sit under a top border. */
+  .pill-sep {
+    flex-basis: 100%;
+    width: 100%;
+    height: 0;
+    margin: 3px 0 1px;
+    border-top: 1px solid rgba(122, 94, 40, 0.4);
   }
   .pill-k {
     color: color-mix(in srgb, var(--pill) 45%, #9a8458);

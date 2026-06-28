@@ -174,10 +174,43 @@ function combatPills(entity: Pawn | Mob): StatPillView[] {
   return pills;
 }
 
-/** All health-tab pills: blood, pain, live cold/heat exposure, cold/heat tolerance, then combat — each
- *  with a hover breakdown. Pure presentation data for StatPills. */
+/** Where a pawn's pain comes from: each injured sub-part (and any plain bruised/bleeding limb), as
+ *  "location · wound → % of total pain" rows for the Pain pill's hover, ranked by contribution. */
+function painLocationRows(entity: Pawn | Mob): StatPillRow[] {
+  const found: { label: string; pain: number }[] = [];
+  for (const limb of entity.limbs ?? []) {
+    const parts = limb.parts ?? [];
+    for (const part of parts) {
+      const pain = (part.injuries ?? []).reduce((sum, inj) => sum + (inj.painContribution ?? 0), 0);
+      if (pain <= 0) continue;
+      const worst = part.injuries?.[0];
+      const wound = worst ? ` · ${worst.type}${worst.infected ? ' · infected' : ''}` : '';
+      found.push({ label: `${partLabel(part.id)} (${limbLabel(limb.id)})${wound}`, pain });
+    }
+    // Soft-tissue damage / bleeding on a limb with no specific injured part still hurts.
+    const dmg = !limb.isMissing && limb.health < 100 ? (100 - limb.health) * 0.01 : 0;
+    const bleedPain = (limb.bleedRate ?? 0) * 0.5;
+    if (dmg + bleedPain > 0.05 && parts.every((pt) => (pt.injuries ?? []).length === 0)) {
+      found.push({
+        label: `${limbLabel(limb.id)} · ${bleedPain > 0 ? 'bleeding' : 'bruised'}`,
+        pain: dmg + bleedPain
+      });
+    }
+  }
+  found.sort((a, b) => b.pain - a.pain);
+  const total = found.reduce((sum, f) => sum + f.pain, 0) || 1;
+  return found
+    .slice(0, 6)
+    .map((f) => ({ label: f.label, value: `${Math.round((f.pain / total) * 100)}%` }));
+}
+
+/** All health-tab pills in three clusters (health | temp | combat), separated visually. Each carries a
+ *  hover breakdown. Pure presentation data for StatPills. */
 function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
-  const pills: StatPillView[] = [];
+  const health: StatPillView[] = [];
+  const temp: StatPillView[] = [];
+
+  // ── Health cluster: blood + pain ──
   if (entity.bloodVolume != null && entity.maxBloodVolume != null) {
     const pct = Math.round((entity.bloodVolume / entity.maxBloodVolume) * 100);
     const bleed = (entity.limbs ?? []).reduce((sum, l) => sum + (l.bleedRate ?? 0), 0);
@@ -195,7 +228,7 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
         value: hours >= 10 ? `~${Math.round(hours)}h` : `~${hours.toFixed(1)}h`
       });
     }
-    pills.push({
+    health.push({
       label: 'Blood',
       value: `${pct}%`,
       color: '#ee5544',
@@ -205,16 +238,19 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
     });
   }
   if ((entity.pain ?? 0) > 0) {
-    pills.push({
+    health.push({
       label: 'Pain',
       value: `${Math.round(entity.pain ?? 0)}%`,
       color: '#e07050',
       warn: (entity.pain ?? 0) >= 40,
-      desc: 'rises with injuries, limb damage and bleeding — saps consciousness'
+      desc: 'rises with injuries, limb damage and bleeding — saps consciousness',
+      rows: painLocationRows(entity)
     });
   }
+
+  // ── Temp cluster: live exposure meters + cold/heat tolerance ──
   if ((entity.needs?.coldExposure ?? 0) > 0) {
-    pills.push({
+    temp.push({
       label: 'Cold',
       value: `${Math.round(entity.needs?.coldExposure ?? 0)}%`,
       color: '#4fc3f7',
@@ -223,7 +259,7 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
     });
   }
   if ((entity.needs?.heatExposure ?? 0) > 0) {
-    pills.push({
+    temp.push({
       label: 'Heat',
       value: `${Math.round(entity.needs?.heatExposure ?? 0)}%`,
       color: '#fb8c00',
@@ -233,35 +269,60 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
   }
   const tol = pawnStatService.temperatureTolerance(entity);
   const deg = (d: number) => `${d >= 0 ? '+' : '−'}${Math.abs(Math.round(d))}°`;
+  // The bare comfort edge is the no-resistance onset; each source then shifts it toward the shown onset
+  // (cold sources push it DOWN, heat sources UP), so the rows literally add up to the pill's value.
   const tolRows = (
     comfortLabel: string,
     comfortVal: number,
     sources: { label: string; deg: number }[],
-    totalDeg: number,
+    onset: number,
+    below: boolean,
     capped: boolean
   ): StatPillRow[] => [
     { label: comfortLabel, value: `${Math.round(comfortVal)}°C` },
-    ...sources.map((src) => ({ label: src.label, value: deg(src.deg) })),
-    { label: 'headroom', value: `${deg(totalDeg)}${capped ? ' (cap)' : ''}` }
+    ...sources.map((src) => ({ label: src.label, value: deg(below ? -src.deg : src.deg) })),
+    {
+      label: below ? 'Rises below' : 'Rises above',
+      value: `${Math.round(onset)}°C${capped ? ' (cap)' : ''}`
+    }
   ];
-  pills.push(
+  temp.push(
     {
       label: 'Cold tol',
       value: `≤${Math.round(tol.coldOnset)}°`,
       color: '#4fc3f7',
       desc: 'cold meter starts rising below this temperature',
-      rows: tolRows('Comfort floor', tol.comfortMin, tol.coldSources, tol.coldDeg, tol.coldCapped)
+      rows: tolRows(
+        'Comfort floor',
+        tol.comfortMin,
+        tol.coldSources,
+        tol.coldOnset,
+        true,
+        tol.coldCapped
+      )
     },
     {
       label: 'Heat tol',
       value: `≥${Math.round(tol.heatOnset)}°`,
       color: '#fb8c00',
       desc: 'heat meter starts rising above this temperature',
-      rows: tolRows('Comfort ceiling', tol.comfortMax, tol.heatSources, tol.heatDeg, tol.heatCapped)
+      rows: tolRows(
+        'Comfort ceiling',
+        tol.comfortMax,
+        tol.heatSources,
+        tol.heatOnset,
+        false,
+        tol.heatCapped
+      )
     }
   );
-  pills.push(...combatPills(entity));
-  return pills;
+
+  // ── Combat cluster ──
+  const combat = combatPills(entity);
+
+  if (temp.length) temp[0].sep = true;
+  if (combat.length) combat[0].sep = true;
+  return [...health, ...temp, ...combat];
 }
 
 /**

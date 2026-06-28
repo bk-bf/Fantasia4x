@@ -20,7 +20,7 @@ import {
   comfortRange,
   RECOVER_CONSCIOUSNESS
 } from '../core/needs';
-import { equippedTemperatureResistance } from '../core/PawnEquipment';
+import { equippedTemperatureSources, type WornThermalSource } from '../core/PawnEquipment';
 import { SECONDS_PER_TICK } from '../core/time';
 
 // conditions.jsonc holds both persistent conditions (severity/stages) and transient ones
@@ -638,24 +638,30 @@ export class PawnStatServiceImpl implements PawnStatService {
 
   temperatureTolerance(pawn: Pawn | Mob): TemperatureTolerance {
     const { min: comfortMin, max: comfortMax } = comfortRange((pawn as Pawn).racialTraits);
-    const worn = equippedTemperatureResistance(pawn as Pawn);
+    const gear = equippedTemperatureSources(pawn as Pawn);
     // Split each side's resistance into its sources (in degrees): the CON-derived stat base, any trait
-    // resistance bonus, and worn gear. `evaluateStat` already folds the trait bonus into the stat, so
-    // the constitution base is the remainder.
-    const sideTolerance = (statId: string, gear: number) => {
+    // resistance bonus, and EACH worn garment by name. `evaluateStat` already folds the trait bonus into
+    // the stat, so the constitution base is the remainder.
+    const sideTolerance = (statId: string, pick: (g: WornThermalSource) => number) => {
       const stat = this.evaluateStat(statId, pawn);
       const trait = traitResistanceBonus(pawn, statId);
       const con = stat - trait;
       const sources: TempToleranceSource[] = [];
       if (con !== 0) sources.push({ label: 'Constitution', deg: con * TEMP_RES_DEG_PER_UNIT });
       if (trait !== 0) sources.push({ label: 'Traits', deg: trait * TEMP_RES_DEG_PER_UNIT });
-      if (gear !== 0) sources.push({ label: 'Gear', deg: gear * TEMP_RES_DEG_PER_UNIT });
-      const raw = (con + trait + gear) * TEMP_RES_DEG_PER_UNIT;
+      let gearTotal = 0;
+      for (const g of gear) {
+        const r = pick(g);
+        if (r === 0) continue;
+        sources.push({ label: g.name, deg: r * TEMP_RES_DEG_PER_UNIT });
+        gearTotal += r;
+      }
+      const raw = (con + trait + gearTotal) * TEMP_RES_DEG_PER_UNIT;
       const deg = Math.max(0, Math.min(TEMP_RES_DEG_CAP, raw));
       return { sources, deg, capped: raw > TEMP_RES_DEG_CAP };
     };
-    const cold = sideTolerance('cold_resistance', worn.cold);
-    const heat = sideTolerance('fire_resistance', worn.heat);
+    const cold = sideTolerance('cold_resistance', (g) => g.cold);
+    const heat = sideTolerance('fire_resistance', (g) => g.heat);
     return {
       comfortMin,
       comfortMax,

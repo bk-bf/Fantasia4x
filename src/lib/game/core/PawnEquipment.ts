@@ -46,6 +46,30 @@ export function equippedItemCounts(pawns: Pawn[]): Record<string, number> {
   return counts;
 }
 
+/** One worn garment's cold/heat resistance contribution (0–1 each), with its display name. */
+export interface WornThermalSource {
+  name: string;
+  cold: number;
+  heat: number;
+}
+
+/** Per-garment cold/heat resistance (SEASONS_WEATHER) from a pawn's worn armour — the breakdown behind
+ *  {@link equippedTemperatureResistance}, so the health-tab tolerance tooltip can itemise each piece. */
+export function equippedTemperatureSources(pawn: Pawn): WornThermalSource[] {
+  const out: WornThermalSource[] = [];
+  for (const inst of Object.values(pawn.equipment ?? {})) {
+    if (!inst) continue;
+    const item = itemService.getItemById(inst.itemId);
+    const ap = item?.armorProperties;
+    if (!ap) continue;
+    const cold = ap.coldResistance ?? 0;
+    const heat = ap.heatResistance ?? 0;
+    if (cold === 0 && heat === 0) continue;
+    out.push({ name: item?.name ?? inst.itemId, cold, heat });
+  }
+  return out;
+}
+
 /**
  * Sum cold/heat resistance (0–1 each) from a pawn's worn armour (SEASONS_WEATHER). Added on top of
  * the CON-derived cold_resistance/fire_resistance stats when computing temperature exposure.
@@ -53,12 +77,9 @@ export function equippedItemCounts(pawns: Pawn[]): Record<string, number> {
 export function equippedTemperatureResistance(pawn: Pawn): { cold: number; heat: number } {
   let cold = 0;
   let heat = 0;
-  for (const inst of Object.values(pawn.equipment ?? {})) {
-    if (!inst) continue;
-    const ap = itemService.getItemById(inst.itemId)?.armorProperties;
-    if (!ap) continue;
-    cold += ap.coldResistance ?? 0;
-    heat += ap.heatResistance ?? 0;
+  for (const g of equippedTemperatureSources(pawn)) {
+    cold += g.cold;
+    heat += g.heat;
   }
   return { cold, heat };
 }
