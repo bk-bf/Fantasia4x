@@ -50,14 +50,14 @@ describe('ResourceGenerator — mineral_deposit guarantee + clustering', () => {
 
   it('grows a lone mineral_deposit tile into a 3–8 tile single-mineral cluster', () => {
     for (let seed = 1; seed <= 6; seed++) {
-      // 9×9 mountain (rocky) field with one mineral_deposit tile at the centre.
+      // 9×9 mountain (cave floor) field with one mineral_deposit tile at the centre.
       const map: WorldTile[][] = Array.from({ length: 9 }, (_, y) =>
         Array.from({ length: 9 }, (_, x) =>
-          tile(x === 4 && y === 4 ? 'mineral_deposit' : 'rocky', x, y, 'mountain')
+          tile(x === 4 && y === 4 ? 'mineral_deposit' : 'cave', x, y, 'mountain')
         )
       );
       resourceGeneratorService.generateResources(map, seed * 31);
-      // tiles carrying an ore/coal/salt mineral (mountain_wall on the other rocky tiles is excluded)
+      // tiles carrying an ore/coal/salt mineral (the mountain walls on the other cave tiles are excluded)
       const oreTiles = map
         .flat()
         .filter((t) =>
@@ -75,7 +75,7 @@ describe('ResourceGenerator — mineral_deposit guarantee + clustering', () => {
   it('separate blobs can hold different minerals', () => {
     // Two blobs separated by a non-mineral gap column → two independent clusters.
     const map: WorldTile[][] = Array.from({ length: 4 }, (_, y) =>
-      Array.from({ length: 9 }, (_, x) => tile(x === 4 ? 'rocky' : 'mineral_deposit', x, y))
+      Array.from({ length: 9 }, (_, x) => tile(x === 4 ? 'cave' : 'mineral_deposit', x, y))
     );
     resourceGeneratorService.generateResources(map, 999);
     const leftId = Object.keys(map[0][0].resources)[0];

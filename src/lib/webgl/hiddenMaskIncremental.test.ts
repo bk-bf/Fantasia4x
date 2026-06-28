@@ -10,7 +10,7 @@ import type { WorldTile } from '$lib/game/core/types';
  * local re-flood can't drift from the ground truth.
  */
 
-// '#' = solid wall (rocky + ore), '.' = open grass. Each tile carries its real x/y.
+// '#' = solid wall (cave substrate + wall/ore resource), '.' = open grass. Each tile carries its x/y.
 function grid(rows: string[]): WorldTile[][] {
   return rows.map((row, y) =>
     [...row].map(
@@ -19,7 +19,7 @@ function grid(rows: string[]): WorldTile[][] {
           x,
           y,
           walkable: ch !== '#',
-          subType: ch === '#' ? 'rocky' : 'grass',
+          subType: ch === '#' ? 'cave' : 'grass',
           resources: ch === '#' ? { stone: 5 } : {}
         }) as WorldTile
     )
@@ -27,10 +27,11 @@ function grid(rows: string[]): WorldTile[][] {
 }
 
 const mine = (m: WorldTile[][], x: number, y: number) => {
-  m[y][x] = { ...m[y][x], subType: 'grass', resources: {} }; // mining clears the wall → non-solid
+  // Mining clears the wall → cave floor with no resource = non-solid (cave subtype stays).
+  m[y][x] = { ...m[y][x], subType: 'cave', resources: {}, walkable: true };
 };
 const wall = (m: WorldTile[][], x: number, y: number) => {
-  m[y][x] = { ...m[y][x], subType: 'rocky', resources: { stone: 5 }, walkable: false };
+  m[y][x] = { ...m[y][x], subType: 'cave', resources: { stone: 5 }, walkable: false };
 };
 
 /** Deep-equality of two boolean masks. */

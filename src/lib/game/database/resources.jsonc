@@ -131,7 +131,7 @@
     "fg"              : "#859ebd",
     "bg"              : "#0d0a08",
     "glow"            : { "color": [0.50, 0.70, 1.0], "radius": 3.0, "intensity": 0.5, "flicker": true },
-    "spawn"           : { "subterrains": {"deep_grass": 0.0014, "dirt": 0.0005, "rocky": 0.0008} },
+    "spawn"           : { "subterrains": {"deep_grass": 0.0014, "dirt": 0.0005} },
     "nodeAmountRange" : [2, 4],
     "designationTypes": ["woodcut", "forage"],
     "interaction"     : {
@@ -1279,7 +1279,7 @@
     "spawn"           : {
       // Intentionally sparse — these are high-value arcane nodes. Matches the other crystal nodes
       // (cave/rocky/cliff) so the seven minerals spawn at comparable rates.
-      "subterrains": {"cave": 0.0025, "rocky": 0.0025, "cliff": 0.002}
+      "subterrains": {"cave": 0.007}
     },
     "nodeAmountRange" : [1, 3],
     "designationTypes": ["harvest"],
@@ -1732,6 +1732,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
+      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "malachite", "min": 2, "max": 6, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -1752,6 +1753,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
+      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "chalcopyrite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -1772,6 +1774,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
+      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "azurite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -1792,6 +1795,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
+      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "cassiterite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -1812,6 +1816,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
+      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "hematite", "min": 2, "max": 6, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -1832,6 +1837,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
+      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "magnetite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -1852,6 +1858,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
+      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "limonite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -1872,6 +1879,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
+      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "galena", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -1892,6 +1900,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
+      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "native_gold", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -1912,6 +1921,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
+      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "electrum", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -1932,6 +1942,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
+      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "coal", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -1952,6 +1963,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
+      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "salt", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -1973,12 +1985,15 @@
     "charSpans"       : [ {"sheet": "plants", "id": 210} ],
     "fg"              : "#9e855e",
     "bg"              : "#140f08",
-    "spawn"           : { "subterrains": {"rocky": 0.99} },
+    // Shares the mountain (cave) floor pool with cliff_wall; 0.58/0.41 keeps the old rocky:cliff band
+    // ratio (granite walls a bit more common than sandstone) and ~99% total wall coverage.
+    "spawn"           : { "subterrains": {"cave": 0.58} },
     "nodeAmountRange" : [4, 8],
     "designationTypes": ["harvest"],
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
+      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},  // a pick — barehanded mining a solid wall was a bug
       "yields"         : [
@@ -1994,18 +2009,19 @@
     "roofSupport"     : true,
     "overheadRoof"    : true,
     "displayName"     : "Cliff Wall",
-    "subterrain"      : "cliff",
+    "subterrain"      : "rocky",
     "walkable"        : false,
     "blocksSight"     : true,
     "charSpans"       : [ {"sheet": "plants", "id": 210} ],
     "fg"              : "#806b45",
     "bg"              : "#140f08",
-    "spawn"           : { "subterrains": {"cliff": 0.99} },
+    "spawn"           : { "subterrains": {"cave": 0.41} },
     "nodeAmountRange" : [5, 10],
     "designationTypes": ["harvest"],
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
+      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
       "workAmount"     : 36,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [
@@ -2375,7 +2391,7 @@
     "fg"              : "#c71f3b",
     "bg"              : "#1a0a0d",
     "glow"            : { "color": [0.85, 0.22, 0.32], "radius": 1.8, "intensity": 0.08, "flicker": false },
-    "spawn"           : { "subterrains": {"cave": 0.0025, "rocky": 0.0025, "cliff": 0.002} },
+    "spawn"           : { "subterrains": {"cave": 0.007} },
     "nodeAmountRange" : [1, 3],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -2399,7 +2415,7 @@
     "fg"              : "#1f4fc7",
     "bg"              : "#0a0d1a",
     "glow"            : { "color": [0.25, 0.42, 0.85], "radius": 1.8, "intensity": 0.08, "flicker": false },
-    "spawn"           : { "subterrains": {"cave": 0.0025, "rocky": 0.0025, "cliff": 0.002} },
+    "spawn"           : { "subterrains": {"cave": 0.007} },
     "nodeAmountRange" : [1, 3],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -2423,7 +2439,7 @@
     "fg"              : "#1fa859",
     "bg"              : "#0a170d",
     "glow"            : { "color": [0.25, 0.78, 0.46], "radius": 1.8, "intensity": 0.08, "flicker": false },
-    "spawn"           : { "subterrains": {"cave": 0.0025, "rocky": 0.0025, "cliff": 0.002} },
+    "spawn"           : { "subterrains": {"cave": 0.007} },
     "nodeAmountRange" : [1, 3],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -2447,7 +2463,7 @@
     "fg"              : "#c7a31f",
     "bg"              : "#1a140a",
     "glow"            : { "color": [0.86, 0.72, 0.25], "radius": 1.8, "intensity": 0.08, "flicker": false },
-    "spawn"           : { "subterrains": {"cave": 0.0025, "rocky": 0.0025, "cliff": 0.002} },
+    "spawn"           : { "subterrains": {"cave": 0.007} },
     "nodeAmountRange" : [1, 3],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -2471,7 +2487,7 @@
     "fg"              : "#c7941f",
     "bg"              : "#1a120a",
     "glow"            : { "color": [0.86, 0.66, 0.25], "radius": 1.8, "intensity": 0.08, "flicker": false },
-    "spawn"           : { "subterrains": {"cave": 0.0025, "rocky": 0.0025, "cliff": 0.002} },
+    "spawn"           : { "subterrains": {"cave": 0.007} },
     "nodeAmountRange" : [1, 3],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -2495,7 +2511,7 @@
     "fg"              : "#a8b5c7",
     "bg"              : "#14171a",
     "glow"            : { "color": [0.76, 0.81, 0.88], "radius": 1.8, "intensity": 0.08, "flicker": false },
-    "spawn"           : { "subterrains": {"cave": 0.0025, "rocky": 0.0025, "cliff": 0.002} },
+    "spawn"           : { "subterrains": {"cave": 0.007} },
     "nodeAmountRange" : [1, 3],
     "designationTypes": ["harvest"],
     "interaction"     : {

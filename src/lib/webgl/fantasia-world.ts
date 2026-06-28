@@ -24,10 +24,11 @@ const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
 const SNOW_WHITE: [number, number, number] = [0.92, 0.94, 0.97];
 
 /**
- * "Solid" = a rocky/cliff/mineral_deposit tile still carrying its wall/ore resource — impassable rock
- * you'd have to mine through. Mining clears the resource → the tile stops being solid.
+ * "Solid" = a cave/mineral_deposit mountain tile still carrying its wall/ore resource — impassable rock
+ * you'd have to mine through. Mining clears the resource → the tile stops being solid (cave floor under
+ * walls, the ore vein under ore). `cave` is the walkable mountain floor walls/gems/outcrops sit on.
  */
-const SOLID_SUBTYPES = new Set(['rocky', 'cliff', 'mineral_deposit']);
+const SOLID_SUBTYPES = new Set(['cave', 'mineral_deposit']);
 
 /**
  * Interior-mountain hiding mask (flood-fill). `mask[y][x] === true` means the tile is buried inside a
@@ -49,7 +50,7 @@ const SOLID_SUBTYPES = new Set(['rocky', 'cliff', 'mineral_deposit']);
  * Mining a wall clears its resource → it becomes non-solid → the flood reaches further in on the next
  * rebuild (the dig reveals inward, DF-style).
  */
-/** A tile is "solid" iff it's a rocky/cliff/mineral subtype STILL carrying its wall/ore resource. */
+/** A tile is "solid" iff it's a cave/mineral subtype STILL carrying its wall/ore resource. */
 function tileSolidValue(t: WorldTile): boolean {
   return (
     SOLID_SUBTYPES.has(t.subType) && !!t.resources && Object.values(t.resources).some((a) => a > 0)
