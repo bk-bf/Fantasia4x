@@ -2540,12 +2540,12 @@
     "toolTierRequired": 0
   },
   // ── PRODUCTION-CHAIN-II §F8 — milling, baking, brewing ───────────────────────────────────────
-  // MILL (quern): wheat (or foraged wild oats) → flour. ~3 grain : 2 flour after the bran is sifted out.
+  // MILL (quern): any grain (wheat / rye / foraged wild oats) → flour. ~3 grain : 2 flour after the bran
+  // is sifted out. Category-slotted so every grain mills, and a new grain is wired in automatically.
   {
     "id"               : "mill_flour",
     "station"          : "quern",
-    "inputs"           : {"wheat": 3},
-    "inputAlternatives": [ {"wild_oats": 3} ],
+    "inputs"           : {"category:grain": 3},
     "outputs"          : {"flour": 2},
     "workAmount"       : 8,
     "toolTierRequired" : 0
@@ -2624,12 +2624,12 @@
   },
   // TODO(honey): a sweetened pie / honey-glazed pie variant (flour + fruit + honey → a `refreshed`/treat
   // pie) once beekeeping (ENTITIES D) makes honey obtainable. Skipped now — honey has no source yet.
-  // BREW (fermenter, passive timers): wheat → malt → ale; grapes/apples/berries → wine; honey → mead.
+  // BREW (fermenter, passive timers): any grain → malt → ale; grapes/apples/berries → wine; honey → mead.
   {
     "id"              : "malt_grain",
     "station"         : "fermenter",
     "passive"         : true,
-    "inputs"          : {"wheat": 2},
+    "inputs"          : {"category:grain": 2},
     "outputs"         : {"malt": 2},
     "workAmount"      : 30,
     "toolTierRequired": 0

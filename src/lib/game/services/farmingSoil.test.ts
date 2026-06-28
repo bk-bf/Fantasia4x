@@ -36,12 +36,12 @@ describe('§F crop seeds', () => {
 });
 
 describe('§F wild crops drop a few seeds when harvested', () => {
-  it('wild barley/rye yield grain_seed; berry bush yields berry_seed; each wild veg yields its own seed', () => {
+  it('wild barley yields grain_seed, wild rye yields rye_seed; berry bush yields berry_seed; each wild veg yields its own seed', () => {
     expect(resourceObjectService.calculateYield('wild_barley', undefined, undefined, 'harvest')).toHaveProperty(
       'grain_seed'
     );
     expect(resourceObjectService.calculateYield('wild_rye', undefined, undefined, 'harvest')).toHaveProperty(
-      'grain_seed'
+      'rye_seed'
     );
     expect(resourceObjectService.calculateYield('berry_bush', undefined, undefined, 'harvest')).toHaveProperty(
       'berry_seed'
