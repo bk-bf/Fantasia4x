@@ -1522,7 +1522,7 @@
     "subterrain"      : "grass",
     "walkable"        : true,
     "charSpans"       : [ {"sheet": "crops", "id": 187} ],
-    "fg"              : "#999e66",
+    "fg"              : "#BF9AC9",
     "bg"              : "#12120a",
     "spawn"           : {
       "subterrains": {"grass": 0.01, "tall_grass": 0.007, "deep_grass": 0.005, "dirt": 0.004, "riverbank": 0.003}
@@ -1550,7 +1550,7 @@
     "subterrain"      : "savanna",
     "walkable"        : true,
     "charSpans"       : [ {"sheet": "crops", "id": 171} ],
-    "fg"              : "#a8995c",
+    "fg"              : "#B9E3AD",
     "bg"              : "#141208",
     "spawn"           : {
       "subterrains": {"savanna": 0.01, "tall_grass": 0.007, "grass": 0.006, "scrubland": 0.004, "dirt": 0.003}
