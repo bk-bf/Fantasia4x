@@ -178,10 +178,10 @@
       "panelSaturation": 0.97,
       "severity"       : "info",
       "transitions"    : [
-        { "to": "rain",       "chance": 0.3 },
-        { "to": "clear",      "chance": 0.15 },
+        { "to": "clear",      "chance": 0.25 },
+        { "to": "rain",       "chance": 0.18 },
         { "to": "fog",        "chance": 0.08 },
-        { "to": "foggy_rain", "chance": 0.08 }
+        { "to": "foggy_rain", "chance": 0.06 }
       ]
     },
     {
@@ -203,11 +203,11 @@
       "panelSaturation": 0.95,
       "severity"       : "info",
       "transitions"    : [
-        { "to": "drizzle",    "chance": 0.2 },
-        { "to": "heavy_rain", "chance": 0.18, "windScaled": true },
-        { "to": "windy_rain", "chance": 0.12, "windScaled": true },
-        { "to": "foggy_rain", "chance": 0.08 },
-        { "to": "clear",      "chance": 0.08 }
+        { "to": "drizzle",    "chance": 0.3 },
+        { "to": "clear",      "chance": 0.15 },
+        { "to": "heavy_rain", "chance": 0.12, "windScaled": true },
+        { "to": "windy_rain", "chance": 0.08, "windScaled": true },
+        { "to": "foggy_rain", "chance": 0.06 }
       ]
     },
     {
