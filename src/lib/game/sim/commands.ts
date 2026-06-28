@@ -817,20 +817,56 @@ export const COMMANDS: Record<string, Cmd> = {
     const next = releaseReservation(s, p.queueId);
     return { ...next, craftingQueue: (next.craftingQueue || []).filter((q) => q.id !== p.queueId) };
   },
-  /** Drag-reorder the crafting queue. `orderedIds` is the new full order of queue ids; array position
-   *  drives priority (craft.ts works one order per station in queue order; reservePendingOrders reserves
-   *  pending inputs in queue order). Unknown/missing ids are dropped; any live order absent from the list
-   *  is appended in its original relative order so the queue can never silently lose an in-flight craft. */
-  reorderCrafting: (s, p: { orderedIds: string[] }) => {
+  /** Drag-move a crafting order: optionally re-pin it to a different physical workstation
+   *  (`stationBuildingId`) and reposition it before `beforeId` (or to the end). Array position drives
+   *  priority — craft.ts works one order per station in queue order. Re-pinning recomputes
+   *  `workRequired` for the new station's crafting bonus and rescales `workDone` so the progress %
+   *  carries over; the reserve-and-fetch system re-routes any staged inputs to the new station tile.
+   *  A station change to a building that can't fulfil the recipe (or doesn't exist) is ignored. */
+  moveCraftOrder: (s, p: { queueId: string; stationBuildingId?: string; beforeId?: string }) => {
     const queue = s.craftingQueue ?? [];
-    const byId = new Map(queue.map((o) => [o.id, o]));
-    const seen = new Set(p.orderedIds);
-    const reordered = p.orderedIds
-      .map((id) => byId.get(id))
-      .filter((o): o is CraftingInProgress => !!o);
-    for (const o of queue) if (!seen.has(o.id)) reordered.push(o);
-    return { ...s, craftingQueue: reordered };
+    const idx = queue.findIndex((o) => o.id === p.queueId);
+    if (idx < 0) return s;
+    let order = queue[idx];
+
+    // Re-pin to a new station (validated against the recipe's required station type).
+    if (p.stationBuildingId && p.stationBuildingId !== order.stationBuildingId) {
+      const target = (s.buildings ?? []).find(
+        (b) => b.id === p.stationBuildingId && b.status === 'complete'
+      );
+      if (
+        target &&
+        buildingService.stationFulfills(target.type, order.stationType ?? 'craft_spot')
+      ) {
+        const recipe = recipeService.getRecipeForItem(order.item.id);
+        const bonus = buildingService.craftingBonusOf(target.type);
+        const newRequired = Math.max(
+          1,
+          Math.ceil(((recipe?.workAmount ?? 1) * order.quantity) / (1 + bonus))
+        );
+        const pct = order.workRequired > 0 ? (order.workDone ?? 0) / order.workRequired : 0;
+        order = {
+          ...order,
+          stationBuildingId: target.id,
+          workRequired: newRequired,
+          workDone: Math.min(newRequired, Math.round(newRequired * pct))
+        };
+      }
+    }
+
+    const rest = queue.filter((o) => o.id !== p.queueId);
+    const at = p.beforeId ? rest.findIndex((o) => o.id === p.beforeId) : -1;
+    if (at >= 0) rest.splice(at, 0, order);
+    else rest.push(order);
+    return { ...s, craftingQueue: rest };
   },
+  /** Toggle the paused flag on a crafting order (chip pause button). */
+  toggleCraftPaused: (s, p: { queueId: string }) => ({
+    ...s,
+    craftingQueue: (s.craftingQueue ?? []).map((o) =>
+      o.id === p.queueId ? { ...o, paused: !o.paused } : o
+    )
+  }),
   /** Drag-reorder the in-progress construction queue. `orderedIds` is the new order of the incomplete
    *  builds; their relative order drives fetch/haul priority (fetch.ts/construct.ts iterate buildings in
    *  array order). Completed buildings keep their slots — only the in-progress slots are refilled. */

@@ -13,16 +13,18 @@ import { markTileDirty } from '../../core/tileDeltas';
 import { patchPathfindingWalkable } from '../PathfinderService';
 
 export function generate(jobs: Job[], gs: GameState): Job[] {
-  // Remove construct jobs for buildings that no longer exist or are complete
+  // Remove construct jobs for buildings that no longer exist, are complete, or are paused (pausing
+  // stops active construction; workDone is preserved and the job re-opens on resume).
   jobs = jobs.filter((j) => {
     if (j.type !== 'construct') return true;
     const b = (gs.buildings ?? []).find((b) => b.id === j.buildingId);
-    return b && b.status !== 'complete';
+    return b && b.status !== 'complete' && !b.paused;
   });
 
   // Add new construct jobs for incomplete buildings
   for (const building of gs.buildings ?? []) {
     if (building.status === 'complete') continue;
+    if (building.paused) continue;
     if (!building.x && !building.y && building.x !== 0 && building.y !== 0) continue;
 
     // Phase 6: zero-workRequired buildings were already completed by BuildingService.placeBuilding

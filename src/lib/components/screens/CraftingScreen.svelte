@@ -361,36 +361,73 @@
     gameState.command({ type: 'cancelCrafting', payload: { queueId } });
   }
 
-  // Active queue grouped by workstation (station building type). Hand-craftable orders (no station)
-  // fall into a "Hand Crafting" group. Array order within a group is the live priority order — the
-  // worker runs one order per physical station in queue order (craft.ts).
-  const stationKeyOf = (qi: any): string => qi.stationType ?? 'hand';
-  const stationLabelOf = (qi: any): string =>
-    qi.stationType
-      ? (buildingService.getBuildingById(qi.stationType)?.name ?? qi.stationType.replace(/_/g, ' '))
-      : 'Hand Crafting';
-  $: queueGroups = (() => {
-    const groups = new Map<string, { key: string; label: string; items: any[] }>();
+  // Active queue as per-physical-station LANES. A lane = one complete workstation building. We show a
+  // lane for every station of any TYPE that currently hosts ≥1 order — including that type's idle
+  // siblings — so tasks can be dragged between e.g. Crafting Spot 1 and Crafting Spot 2. Orders with no
+  // resolvable station (no craft_spot built / station deconstructed) fall into a Hand Crafting lane.
+  // Array order within a lane is the live priority (craft.ts runs one order per station in order).
+  $: buildingsList = $gameState?.buildings ?? [];
+  const stationTypeOf = (qi: any): string | null => {
+    const b = buildingsList.find(
+      (b: any) => b.id === qi.stationBuildingId && b.status === 'complete'
+    );
+    return b ? b.type : null;
+  };
+  $: craftLanes = (() => {
+    const typesInUse = new Set<string>();
+    let hasHand = false;
     for (const qi of craftingQueue) {
-      const key = stationKeyOf(qi);
-      let g = groups.get(key);
-      if (!g) groups.set(key, (g = { key, label: stationLabelOf(qi), items: [] }));
-      g.items.push(qi);
+      const t = stationTypeOf(qi);
+      if (t) typesInUse.add(t);
+      else hasHand = true;
     }
-    return [...groups.values()];
+    const lanes: { id: string | null; label: string; items: any[] }[] = [];
+    for (const type of typesInUse) {
+      const name = buildingService.getBuildingById(type)?.name ?? type.replace(/_/g, ' ');
+      const stations = buildingsList.filter((b: any) => b.type === type && b.status === 'complete');
+      stations.forEach((b: any, i: number) => {
+        lanes.push({
+          id: b.id,
+          label: stations.length > 1 ? `${name} ${i + 1}` : name,
+          items: craftingQueue.filter((q) => q.stationBuildingId === b.id)
+        });
+      });
+    }
+    if (hasHand)
+      lanes.push({
+        id: null,
+        label: 'Hand Crafting',
+        items: craftingQueue.filter((q) => stationTypeOf(q) === null)
+      });
+    return lanes;
   })();
 
-  // Drag-reorder within a station group → persist the new global queue order (drives priority).
+  // Drag a chip onto another chip (re-pin to its station + order before it) or onto a lane (re-pin to
+  // that station, append). The single moveCraftOrder command does reassign + reorder; re-pinning
+  // rescales workDone so the progress % carries over.
   let dragId: string | null = null;
-  function onQueueDrop(targetId: string) {
-    const from = craftingQueue.findIndex((q) => q.id === dragId);
-    const to = craftingQueue.findIndex((q) => q.id === targetId);
+  function moveOnChip(targetId: string, stationId: string | null) {
+    const id = dragId;
     dragId = null;
-    if (from < 0 || to < 0 || from === to) return;
-    const ids = craftingQueue.map((q) => q.id);
-    ids.splice(from, 1);
-    ids.splice(ids.indexOf(targetId), 0, craftingQueue[from].id);
-    gameState.command({ type: 'reorderCrafting', payload: { orderedIds: ids }, save: true });
+    if (!id || id === targetId) return;
+    gameState.command({
+      type: 'moveCraftOrder',
+      payload: { queueId: id, stationBuildingId: stationId ?? undefined, beforeId: targetId },
+      save: true
+    });
+  }
+  function moveOnLane(stationId: string | null) {
+    const id = dragId;
+    dragId = null;
+    if (!id || stationId === null) return; // Hand lane isn't a re-pin target.
+    gameState.command({
+      type: 'moveCraftOrder',
+      payload: { queueId: id, stationBuildingId: stationId },
+      save: true
+    });
+  }
+  function pauseCrafting(queueId: string) {
+    gameState.command({ type: 'toggleCraftPaused', payload: { queueId }, save: true });
   }
 </script>
 
@@ -418,44 +455,68 @@
       />
     </div>
 
-    <!-- Active crafting queue — split by workstation, drag chips to reorder (= priority). Sits between
-         the filter tabs and the recipe cards. -->
+    <!-- Active crafting queue — one lane per physical workstation. Drag chips to reorder within a lane
+         (= priority) or between same-type lanes (= which spot does it). Sits between tabs and cards. -->
     {#if craftingQueue.length > 0}
       <div class="build-jobs">
         <div class="jobs-hdr">| CRAFTING QUEUE ({craftingQueue.length})</div>
-        {#each queueGroups as group (group.key)}
-          <div class="jobs-station">{group.label}</div>
-          <div class="jobs-grid">
-            {#each group.items as qi (qi.id)}
-              {@const wReq = qi.workRequired ?? (recipeOf(qi.item.id)?.workAmount ?? 1) * 5}
-              {@const prog = Math.round(Math.min(100, ((qi.workDone ?? 0) / wReq) * 100))}
-              {@const qty = qi.quantity ?? 1}
-              <div
-                class="job-chip"
-                class:pending={qi.pending}
-                class:drag-over={dragId !== null && dragId !== qi.id}
-                draggable="true"
-                role="listitem"
-                on:dragstart={() => (dragId = qi.id)}
-                on:dragend={() => (dragId = null)}
-                on:dragover|preventDefault
-                on:drop|preventDefault={() => onQueueDrop(qi.id)}
-                title={qi.pending
-                  ? `${qi.item.name} ×${qty} — waiting for materials`
-                  : `${qi.item.name} ×${qty} — ${prog}%`}
-              >
-                {#if !qi.pending}<span class="job-fill" style="width:{prog}%"></span>{/if}
-                <span class="job-grip">⠿</span>
-                <span class="job-name"
-                  >{qi.item.name.toUpperCase()}{#if qty > 1}
-                    ×{qty}{/if}</span
+        {#each craftLanes as lane (lane.id ?? 'hand')}
+          <div
+            class="craft-lane"
+            class:lane-active={dragId !== null && lane.id !== null}
+            role="list"
+            on:dragover|preventDefault
+            on:drop|preventDefault={() => moveOnLane(lane.id)}
+          >
+            <div class="jobs-station">
+              {lane.label}{#if lane.items.length === 0}<span class="lane-empty"> · empty</span>{/if}
+            </div>
+            <div class="jobs-grid">
+              {#each lane.items as qi (qi.id)}
+                {@const wReq = qi.workRequired ?? (recipeOf(qi.item.id)?.workAmount ?? 1) * 5}
+                {@const prog = Math.round(Math.min(100, ((qi.workDone ?? 0) / wReq) * 100))}
+                {@const qty = qi.quantity ?? 1}
+                <div
+                  class="job-chip"
+                  class:pending={qi.pending}
+                  class:paused={qi.paused}
+                  class:drag-over={dragId !== null && dragId !== qi.id}
+                  draggable="true"
+                  role="listitem"
+                  on:dragstart={() => (dragId = qi.id)}
+                  on:dragend={() => (dragId = null)}
+                  on:dragover|preventDefault
+                  on:drop|preventDefault|stopPropagation={() => moveOnChip(qi.id, lane.id)}
+                  title={qi.paused
+                    ? `${qi.item.name} ×${qty} — paused (${prog}%)`
+                    : qi.pending
+                      ? `${qi.item.name} ×${qty} — waiting for materials`
+                      : `${qi.item.name} ×${qty} — ${prog}%`}
                 >
-                <span class="job-pct">{qi.pending ? 'WAIT' : `${prog}%`}</span>
-                <button class="job-x" title="Cancel" on:click={() => cancelCrafting(qi.id)}
-                  >✕</button
-                >
-              </div>
-            {/each}
+                  {#if !qi.pending}<span class="job-fill" style="width:{prog}%"></span>{/if}
+                  <span class="job-grip">⠿</span>
+                  <span class="job-name"
+                    >{qi.item.name.toUpperCase()}{#if qty > 1}
+                      ×{qty}{/if}</span
+                  >
+                  <span class="job-pct"
+                    >{qi.paused ? 'PAUSE' : qi.pending ? 'WAIT' : `${prog}%`}</span
+                  >
+                  <button
+                    class="job-pause"
+                    title={qi.paused ? 'Resume' : 'Pause'}
+                    on:click|stopPropagation={() => pauseCrafting(qi.id)}
+                    >{qi.paused ? '▶' : '⏸'}</button
+                  >
+                  <button class="job-x" title="Cancel" on:click={() => cancelCrafting(qi.id)}
+                    >✕</button
+                  >
+                </div>
+              {/each}
+              {#if lane.items.length === 0}
+                <span class="lane-drop-hint">drop a task here</span>
+              {/if}
+            </div>
           </div>
         {/each}
       </div>
@@ -761,7 +822,22 @@
     letter-spacing: 0.08em;
     padding: 0 0 4px;
   }
-  /* Per-workstation sub-header above each group of chips. */
+  /* One drop-zone lane per physical workstation. Generous padding + a min-height give the lane a
+     forgiving hit area so a chip doesn't need pinpoint release to land in it. */
+  .craft-lane {
+    border: 1px solid transparent;
+    border-radius: 2px;
+    padding: 3px 6px 6px;
+    margin-bottom: 3px;
+  }
+  /* While dragging, station lanes light up as valid drop targets (dashed border + faint fill so the
+     whole lane area — header, chips, and the slack below — reads as one big droppable zone). */
+  .craft-lane.lane-active {
+    border-color: var(--border-hi);
+    border-style: dashed;
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+  }
+  /* Per-workstation sub-header above each lane's chips. */
   .jobs-station {
     color: var(--text-dim);
     font-size: 9px;
@@ -769,11 +845,24 @@
     text-transform: uppercase;
     padding: 3px 0 2px;
   }
+  .lane-empty {
+    opacity: 0.6;
+    font-style: italic;
+  }
+  .lane-drop-hint {
+    color: var(--text-dim);
+    font-size: 9px;
+    font-style: italic;
+    opacity: 0.5;
+    padding: 2px 0;
+  }
   .jobs-grid {
     display: flex;
     flex-wrap: wrap;
+    align-content: flex-start;
     gap: 4px;
-    margin-bottom: 2px;
+    /* Slack below the chips so the lane stays an easy drop target even with a single chip. */
+    min-height: 26px;
   }
   .job-chip {
     position: relative;
@@ -794,6 +883,11 @@
   .job-chip.pending {
     border-style: dashed;
     opacity: 0.7;
+  }
+  /* Paused order — dimmed, halted (no fill animation), progress held. */
+  .job-chip.paused {
+    border-style: dotted;
+    opacity: 0.6;
   }
   /* Highlight valid drop targets while a chip is being dragged. */
   .job-chip.drag-over:hover {
@@ -842,5 +936,20 @@
   }
   .job-x:hover {
     color: var(--neg);
+  }
+  .job-pause {
+    position: relative;
+    z-index: 1;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1;
+    padding: 0 1px;
+    cursor: pointer;
+  }
+  .job-pause:hover {
+    color: var(--accent-hi);
   }
 </style>

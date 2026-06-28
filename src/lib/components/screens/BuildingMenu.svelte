@@ -210,6 +210,10 @@
     gameState.command({ type: 'cancelBuildingRefund', payload: { buildingId }, save: true });
   }
 
+  function pauseBuilding(buildingId: string) {
+    gameState.command({ type: 'togglePausedBuilding', payload: { id: buildingId }, save: true });
+  }
+
   // Drag-reorder the in-progress build queue → persist the new order (drives fetch/haul priority).
   let dragId: string | null = null;
   function onBuildDrop(targetId: string) {
@@ -320,6 +324,7 @@
             {@const prog = Math.round(((bp.workDone ?? 0) / (bp.workRequired ?? 50)) * 100)}
             <div
               class="job-chip"
+              class:paused={bp.paused}
               class:drag-over={dragId !== null && dragId !== bp.id}
               draggable="true"
               role="listitem"
@@ -327,12 +332,20 @@
               on:dragend={() => (dragId = null)}
               on:dragover|preventDefault
               on:drop|preventDefault={() => onBuildDrop(bp.id)}
-              title="{bDef?.name ?? bp.type} — {prog}%"
+              title={bp.paused
+                ? `${bDef?.name ?? bp.type} — paused (${prog}%)`
+                : `${bDef?.name ?? bp.type} — ${prog}%`}
             >
               <span class="job-fill" style="width:{prog}%"></span>
               <span class="job-grip">⠿</span>
               <span class="job-name">{bDef?.name.toUpperCase() ?? bp.type}</span>
-              <span class="job-pct">{prog}%</span>
+              <span class="job-pct">{bp.paused ? 'PAUSE' : `${prog}%`}</span>
+              <button
+                class="job-pause"
+                title={bp.paused ? 'Resume' : 'Pause'}
+                on:click|stopPropagation={() => pauseBuilding(bp.id)}
+                >{bp.paused ? '▶' : '⏸'}</button
+              >
               <button class="job-x" title="Cancel" on:click={() => cancelBuilding(bp.id)}>✕</button>
             </div>
           {/each}
@@ -578,6 +591,11 @@
   .job-chip.drag-over:hover {
     border-color: var(--accent-hi);
   }
+  /* Paused build — dimmed, construction halted, progress held. */
+  .job-chip.paused {
+    border-style: dotted;
+    opacity: 0.6;
+  }
   .job-grip {
     position: relative;
     z-index: 1;
@@ -624,5 +642,20 @@
   }
   .job-x:hover {
     color: var(--neg);
+  }
+  .job-pause {
+    position: relative;
+    z-index: 1;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1;
+    padding: 0 1px;
+    cursor: pointer;
+  }
+  .job-pause:hover {
+    color: var(--accent-hi);
   }
 </style>

@@ -59,10 +59,12 @@ export function reservePendingOrders(gs: GameState): GameState {
 }
 
 export function generate(jobs: Job[], gs: GameState): Job[] {
-  // Remove craft jobs for queue entries that no longer exist
+  // Remove craft jobs for queue entries that no longer exist or are paused (pausing stops active work;
+  // workDone on the order is preserved, the job re-opens on resume).
   jobs = jobs.filter((j) => {
     if (j.type !== 'craft') return true;
-    return (gs.craftingQueue ?? []).some((e) => e.id === j.craftQueueId);
+    const order = (gs.craftingQueue ?? []).find((e) => e.id === j.craftQueueId);
+    return !!order && !order.paused;
   });
 
   // Real queue priority: a physical workstation works ONE order at a time, in queue (array) order.
@@ -81,6 +83,9 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
   // target that tile so the pawn actually walks to the workstation to craft (ADR-016).
   for (const order of gs.craftingQueue ?? []) {
     if (!order.id) continue;
+    // Paused: no craft job, and (by skipping before the station-busy claim) it doesn't block later
+    // orders queued at the same station.
+    if (order.paused) continue;
     // ADR-016 passive furnaces: no pawn-worked craft job — the station produces it over time
     // (GameEngineImpl.processPassiveProduction). Inputs are still fetched/staged as usual. Honour
     // per-RECIPE `passive` (not just passive STATIONS) so a mixed station like stone_forge/hearth can

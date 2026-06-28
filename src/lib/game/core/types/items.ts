@@ -576,4 +576,7 @@ export interface CraftingInProgress {
   stationType?: string | null;
   /** Chosen workstation instance (PlacedBuilding.id) inputs are fetched to and crafted at. */
   stationBuildingId?: string;
+  /** Paused by the player: generates no craft job and accrues no work (workDone preserved), and does
+   *  not hold its station busy so later orders there can proceed. Materials still stage as normal. */
+  paused?: boolean;
 }
