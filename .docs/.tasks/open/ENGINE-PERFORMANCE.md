@@ -707,6 +707,37 @@ other logs (the spec's method — measure the boundary, not just the sim):
 
 ---
 
+## §G · CRAFT-OUTPUT DROP PILEUP — repeated crafting tanks FPS at a non-stockpile station (2026-06-28)
+
+**Surface:** user report — "crafting at the splitting stump causes immense FPS drops." `perf.log` showed
+**TPS flat at 60–61** throughout → render-side, not sim (the spec's first triage: an FPS dip with healthy TPS
+is render-side).
+
+**Cause (two compounding):**
+- **Root — craft completion never merged loose bulk outputs.** `completeCraftOrder` (`jobs/craft.ts`) pushed a
+  NEW `DroppedItem` (unique id) per output per completion. `absorbDropIfOnStockpileTile` merges only on stockpile
+  tiles; a station OFF any stockpile (e.g. a `chopping_block` turning logs → firewood+branch) therefore
+  accumulated a fresh green_firewood + branch stack EVERY completion → `droppedItems` grew unbounded on one tile.
+- **Amplifier — the per-frame item overlay has no cull and re-allocated per drop.** `overlayDroppedItems`
+  (`gameCanvas/overlay.ts`) runs every frame over ALL drops (no viewport cull — unlike the mob loop) and called
+  `resolveCharSpans` (fresh array alloc) + `hexToRgb` + `getItemById` for EVERY drop EVERY frame. The pileup is
+  on-screen (you watch the station), so culling wouldn't have helped — the count itself was the problem.
+
+**Fix:**
+- [x] **Merge plain bulk outputs into an existing loose pile** on the station tile (same resourceId/x/y, not
+  stored/reserved/forbidden, no name/quality/instance/unitConditions). Keeps a repeatedly-crafted station at ~2
+  stacks instead of N. Identity-bearing drops (§Q quality, dish name, tracked instance, carcass conditions) never
+  fold. Guarded by `craftDropMerge.test.ts`.
+- [x] **Memoise per-resource drop visuals** (`dropVisFor`, keyed by resourceId) so the per-frame loop stops
+  re-resolving `charSpans`/colour — the item DB is static. Kills that per-frame allocation churn.
+- [ ] **Viewport-cull `overlayDroppedItems`** (mirror the mob CULL_MARGIN loop) — deferred; the merge bounds the
+  count and the on-screen pileup case is already fixed, but a general defence for large maps with scattered drops.
+
+`check` 0 errors, full suite 733 + `craftDropMerge` green. **Re-verify in-game:** craft a long queue at a
+chopping_block off any stockpile and watch FPS hold while the station shows one firewood + one branch pile.
+
+---
+
 ## §A · PARKED (future research) — Rust-SoA simulation core — **port ABORTED after R1**
 
 > **ABORTED 2026-06-15.** The R1 benchmark (§9) measured Rust-SoA at only ~1.2–1.4× over *mutable*
