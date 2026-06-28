@@ -35,6 +35,7 @@ import { get } from 'svelte/store';
 import type { GameState, WorldTile } from '$lib/game/core/types';
 import type { ActivityLogEntry } from '$lib/game/core/Events';
 import { TICKS_PER_SECOND } from '$lib/game/core/time';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '$lib/game/core/Terrains';
 import { autosaveEnabled } from './uiPrefs';
 
 // ── constants ──────────────────────────────────────────────────────────────
@@ -215,6 +216,35 @@ function hydrateState(dynamic: GameState, world: SavedTile[][]): GameState {
   };
 }
 
+// Terrain rework (mountain biome): the unwalkable `cliff` subterrain was removed and `rocky` is no
+// longer painted as open mountain floor — both folded into the walkable `cave` floor that walls/ore
+// sit on. A pre-rework save still carries those subtypes, which now render as fallback and aren't in
+// the fog silhouette's SOLID set (→ broken line-of-sight overlay + stranded unwalkable tiles). This
+// one-time, idempotent pass remaps them on load. `cliff`/`rocky` only ever existed in mountains, so
+// the remap is safe everywhere.
+const REMAP_SUBTYPE: Record<string, string> = { cliff: 'cave', rocky: 'cave' };
+
+function migrateLoadedTerrain(worldMap: WorldTile[][]): void {
+  for (const row of worldMap) {
+    for (const tile of row) {
+      const next = REMAP_SUBTYPE[tile.subType];
+      if (!next) continue;
+      tile.subType = next;
+      // A tile still carrying a wall/ore resource keeps its baked solid physics (the resource governs
+      // walkability/sight — mining it now reveals cave via harvestSubType). An open floor tile (incl.
+      // one already mined out to a stranded `cliff`) re-derives from the cave subterrain so it becomes
+      // walkable, sight-open cave floor.
+      const blocked = !!tile.resources && Object.values(tile.resources).some((a) => a > 0);
+      if (!blocked) {
+        const sub = SUBTERRAINS[next] ?? SUBTERRAIN_FALLBACK;
+        tile.walkable = sub.walkable;
+        tile.blocksSight = sub.blocksSight ?? false;
+        tile.movementCost = sub.movementCost;
+      }
+    }
+  }
+}
+
 // ── core IDB operations ────────────────────────────────────────────────────
 
 async function idbGet<T>(key: string): Promise<T | null> {
@@ -374,7 +404,11 @@ export async function loadSave(id?: string): Promise<GameState | null> {
     let world = await idbGet<SavedTile[][]>(worldKey(target));
     const embedded = (dyn as { worldMap?: SavedTile[][] }).worldMap;
     if (!world && embedded?.length) world = embedded;
-    if (world) return hydrateState(dyn, world);
+    if (world) {
+      const state = hydrateState(dyn, world);
+      migrateLoadedTerrain(state.worldMap); // pre-rework saves: cliff/rocky → cave (one-time)
+      return state;
+    }
   } catch (err) {
     console.warn('[SaveManager] Load failed:', err);
   }
