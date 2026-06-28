@@ -38,4 +38,17 @@ describe('lair starting bubble', () => {
     const r = STARTING_BUBBLE_RADIUS;
     expect(inStartingBubble(stateAt(0), CX + r, CY + r)).toBe(false);
   });
+
+  it('follows the actual pawn position, not the map centre (off-centre colony)', () => {
+    // Mountainous-map case: the colony lands far from centre. The bubble must hug the pawn, leaving
+    // the (now empty) centre clear and the area around the pawn protected.
+    const px = 12;
+    const py = 12;
+    const state = { ...stateAt(0), pawns: [{ position: { x: px, y: py } }] } as unknown as GameState;
+    expect(inStartingBubble(state, px, py)).toBe(true);
+    expect(inStartingBubble(state, px + (STARTING_BUBBLE_RADIUS - 1), py)).toBe(true);
+    expect(inStartingBubble(state, px + STARTING_BUBBLE_RADIUS + 2, py)).toBe(false);
+    // The map centre is now outside the bubble (pawn is off-centre).
+    expect(inStartingBubble(state, CX, CY)).toBe(false);
+  });
 });

@@ -34,20 +34,33 @@ import {
 
 let idCounter = 0;
 
-/** Opening-game safety bubble: true while (x,y) sits within `STARTING_BUBBLE_RADIUS` of the colony start
- *  (map centre — see `spawnPawnsOnMap`) AND the game is still in its first month. Gates every lair-spawn
- *  path (seed / repopulate / grow) so no den lands on the player's doorstep before they can arm up.
- *  Exported for unit testing. */
+/** Opening-game safety bubble: true while (x,y) sits within `STARTING_BUBBLE_RADIUS` of the colony AND
+ *  the game is still in its first month. Gates every lair-spawn path (seed / repopulate / grow) so no
+ *  den lands on the player's doorstep before they can arm up. Measured against the ACTUAL placed pawns,
+ *  not the map centre — on mountainous maps `spawnPawnsOnMap` lands the colony on the nearest walkable
+ *  tile, which can be far from the centre, so a centre-anchored bubble would leave the pawns exposed.
+ *  Falls back to the map centre only when no pawn has a position yet (e.g. menu preview). Exported for
+ *  unit testing. */
 export function inStartingBubble(state: GameState, x: number, y: number): boolean {
   if (state.turn >= STARTING_BUBBLE_TURNS) return false;
+  const r2 = STARTING_BUBBLE_RADIUS * STARTING_BUBBLE_RADIUS;
+  let anyPawnPlaced = false;
+  for (const p of state.pawns ?? []) {
+    const pos = p.position;
+    if (!pos) continue;
+    anyPawnPlaced = true;
+    const dx = x - pos.x;
+    const dy = y - pos.y;
+    if (dx * dx + dy * dy <= r2) return true;
+  }
+  if (anyPawnPlaced) return false;
+  // Fallback: no placed pawns — keep the legacy centre-anchored bubble.
   const map = state.worldMap;
-  const w = map[0]?.length ?? 0;
-  const h = map.length;
-  const cx = Math.floor(w / 2);
-  const cy = Math.floor(h / 2);
+  const cx = Math.floor((map[0]?.length ?? 0) / 2);
+  const cy = Math.floor(map.length / 2);
   const dx = x - cx;
   const dy = y - cy;
-  return dx * dx + dy * dy <= STARTING_BUBBLE_RADIUS * STARTING_BUBBLE_RADIUS;
+  return dx * dx + dy * dy <= r2;
 }
 
 // Soft tether radius (tiles, Chebyshev) for a menu-preview prey herd's invisible anchor — small enough
