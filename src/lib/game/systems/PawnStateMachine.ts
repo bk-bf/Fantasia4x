@@ -60,6 +60,7 @@ import {
   getConditionFloater,
   applyShock,
   snapshotConditionStages,
+  snapshotVitalStages,
   emitPersistentConditionFloaters,
   detectVitalEscalations,
   conditionsSig,
@@ -360,6 +361,10 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // Stage of each flagged persistent condition BEFORE this tick's updates — so we can float a label
   // when one onsets or changes stage (shock/infection/thermia). Allocates nothing when none present.
   const prevStages = snapshotConditionStages(conditions);
+  // SEPARATE prev-stage snapshot for the vital alert (malnutrition/dehydration) — dehydration isn't a
+  // `floater` condition, so the floater snapshot above misses it; reusing it re-fired the alert every
+  // tick (chronicle spam). Captured at the same pre-mutation point.
+  const prevVitalStages = snapshotVitalStages(conditions);
   // Content signature BEFORE the in-place mutations below — so we can flip `pawn.conditions` to a new
   // array ref ONLY when something actually changed, which is what the worker's cold-field ref-diff
   // keys on to push the updated pills/health to the UI live (no churn on unchanged ticks). '' = empty.
@@ -636,7 +641,7 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   );
   // Colony-wide alert (chronicle + bugle) when a colonist's malnutrition/dehydration WORSENS a stage —
   // a starving/dehydrating pawn is an emergency the player should be told about, not just a floater.
-  for (const esc of detectVitalEscalations(prevStages, conditions)) {
+  for (const esc of detectVitalEscalations(prevVitalStages, conditions)) {
     simLog.vitalAlert(
       pawn.id,
       pawn.name,

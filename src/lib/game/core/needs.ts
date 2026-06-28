@@ -239,11 +239,30 @@ export function conditionAudio(id: string): string | undefined {
 const VITAL_ALERT_IDS = new Set(['malnutrition', 'dehydration']);
 
 /**
+ * Snapshot the stage label of every VITAL condition (malnutrition/dehydration) on an entity, taken
+ * BEFORE a tick mutates `conditions`, for {@link detectVitalEscalations}. This is DELIBERATELY separate
+ * from {@link snapshotConditionStages}, which only captures `floater`-flagged conditions — dehydration
+ * is NOT a floater, so reusing that snapshot left its prev-stage perpetually unknown and the alert
+ * re-fired EVERY tick (chronicle spam). Returns undefined when no vital condition is present.
+ */
+export function snapshotVitalStages(
+  conditions: EntityCondition[]
+): Map<string, string> | undefined {
+  let snap: Map<string, string> | undefined;
+  for (const c of conditions) {
+    if (!VITAL_ALERT_IDS.has(c.id)) continue;
+    const stage = getConditionCurrentStage(c);
+    if (stage) (snap ??= new Map()).set(c.id, stage.label);
+  }
+  return snap;
+}
+
+/**
  * Detect which vital conditions (malnutrition/dehydration) just ESCALATED to a worse stage since
- * `prevStages` (from {@link snapshotConditionStages}) — for the chronicle/bugle alert. Only UPWARD
- * graduations past the benign baseline stage (index 0 = "hungry"/"thirsty", which every pawn hits
- * routinely) count; recovery (downgrade) and the baseline never alert. Returns `{id, stageLabel}` per
- * escalation. Pure — the caller (PawnStateMachine) emits the sink event with the pawn's identity.
+ * `prevStages` (from {@link snapshotVitalStages} — NOT the floater snapshot) — for the chronicle/bugle
+ * alert. Only UPWARD graduations past the benign baseline stage (index 0 = "hungry"/"thirsty", which
+ * every pawn hits routinely) count; recovery (downgrade) and the baseline never alert. Returns
+ * `{id, stageLabel}` per escalation. Pure — the caller (PawnStateMachine) emits the sink event.
  */
 export function detectVitalEscalations(
   prevStages: Map<string, string> | undefined,
