@@ -10,7 +10,7 @@
  * Kept as a shim so the existing `gameLogger.log(turn, 'TAG', msg)` call sites don't change; the
  * tag is mapped to a log category. New code should prefer `vlog(category, turn, msg)` directly.
  */
-import { vlog, LOG_VERBOSE } from '../core/logSink';
+import { vlog, isVerboseLogging } from '../core/logSink';
 import type { GameState } from '../core/types';
 import type { LogCategory } from '../core/Events';
 
@@ -28,9 +28,10 @@ function tagToCategory(tag: string): LogCategory {
 }
 
 class GameLoggerImpl {
-  /** Verbose logging is on only under `--debug`/`--profiler` (the call-site fast-path guard). */
+  /** Verbose logging gate (build flag `--debug`/`--profiler`, or the Settings → Debug mode toggle at
+   *  runtime). Live read so call-site guards see a runtime toggle immediately. */
   get isEnabled(): boolean {
-    return LOG_VERBOSE;
+    return isVerboseLogging();
   }
 
   /** Forward a tagged line into the gated unified pipeline. No-op unless `LOG_VERBOSE`. */
@@ -38,9 +39,9 @@ class GameLoggerImpl {
     vlog(tagToCategory(tag), turn, msg);
   }
 
-  /** Periodic compact settlement snapshot (system category). No-op unless `LOG_VERBOSE`. */
+  /** Periodic compact settlement snapshot (system category). No-op unless verbose logging is on. */
   logMapSnap(gs: GameState): void {
-    if (!LOG_VERBOSE) return;
+    if (!isVerboseLogging()) return;
     const pawns = (gs.pawns ?? []).filter((p) => p.isAlive !== false).length;
     const mobs = (gs.mobs ?? []).filter((m) => m.state !== 'Corpse').length;
     const claimed = (gs.jobs ?? []).filter((j) => j.claimedBy).length;

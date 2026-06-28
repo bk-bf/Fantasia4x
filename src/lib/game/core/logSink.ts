@@ -214,6 +214,14 @@ export function setVerboseLogging(on: boolean): void {
   LOG_VERBOSE = on || BUILD_VERBOSE;
 }
 
+/** Live read of the verbose gate. Prefer this over importing `LOG_VERBOSE` at call sites that GUARD
+ *  expensive message construction (`if (isVerboseLogging()) …`): a function call always reflects the
+ *  latest `setVerboseLogging`, with no dependence on ES-module live-binding being preserved through
+ *  bundling. */
+export function isVerboseLogging(): boolean {
+  return LOG_VERBOSE;
+}
+
 /**
  * Gated verbose log. No-op (and the message thunk is never invoked) unless `LOG_VERBOSE`. Pass a
  * thunk for hot-path callers so the string is only built when verbose logging is actually on.

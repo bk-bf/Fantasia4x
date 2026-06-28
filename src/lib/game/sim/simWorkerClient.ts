@@ -150,10 +150,15 @@ class SimWorkerBridge {
     this.mobMirror.clear();
     this.dropMirror.clear();
     // `preview` (menu backdrop) makes the engine run a gutted turn; the real boot omits it ⇒ false.
-    this.w?.postMessage({ kind: 'init', state, seed, preview: opts?.preview ?? false });
-    // Re-apply the verbose gate to the (possibly freshly spawned) worker, since `init` resets its
-    // forwarding sink — without this a worker started after the toggle was set would log nothing.
-    this.w?.postMessage({ kind: 'setVerbose', on: this.verbose });
+    // `verbose` rides the init payload so a freshly spawned worker has the correct gate from its very
+    // first tick (no dependence on a follow-up message landing before logging starts).
+    this.w?.postMessage({
+      kind: 'init',
+      state,
+      seed,
+      preview: opts?.preview ?? false,
+      verbose: this.verbose
+    });
   }
   command(cmd: unknown): void {
     this.w?.postMessage({ kind: 'command', cmd });

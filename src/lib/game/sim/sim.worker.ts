@@ -565,6 +565,9 @@ self.onmessage = async (e: MessageEvent) => {
       rng.reseed(msg.seed ?? 0);
       resetUnreachableJobs();
       installForwardingLogSink();
+      // Apply the verbose gate as part of init so this worker's per-tick traces are correctly on/off
+      // from the first tick (Settings → Debug mode; rides the init payload).
+      setVerboseLogging(!!msg.verbose);
       gameEngine.setGameStateManager(new GameStateManager(msg.state));
       // Menu-preview backdrop runs a gutted turn; the real boot omits `preview` ⇒ false, so the
       // New/Load re-init cleanly clears it back to the full sim.
@@ -601,6 +604,22 @@ self.onmessage = async (e: MessageEvent) => {
       // Settings → Debug mode toggle: flip the worker's verbose gate so the per-tick sim traces
       // (needs/AI/jobs/items) start/stop forwarding to the chronicle + .debug logs at runtime.
       setVerboseLogging(!!msg.on);
+      // ALWAYS-ON confirmation (bypasses the gate it just set) so the change is visible in the DEBUG
+      // tab — the worker actually received and applied the toggle, not just the main thread.
+      {
+        let turn = 0;
+        try {
+          turn = gameEngine.getGameState().turn;
+        } catch {
+          /* setVerbose can arrive before init; turn 0 is fine for the confirmation line. */
+        }
+        simLog.logEvent({
+          category: 'system',
+          turn,
+          message: `verbose sim tracing ${msg.on ? 'ON' : 'OFF'} (worker)`
+        });
+        flushLog();
+      }
       break;
     case 'setPaused':
       paused = msg.paused;
