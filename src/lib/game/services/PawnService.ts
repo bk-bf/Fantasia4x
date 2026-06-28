@@ -19,7 +19,7 @@ import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
 import { stepBody } from '../systems/MovementSystem';
 import { occupancyService } from './OccupancyService';
 import conditionsData from '../database/conditions.jsonc';
-import { getConditionCurrentStage, conditionNeedMultipliers, comfortRange } from '../core/needs';
+import { getConditionCurrentStage, conditionNeedMultipliers } from '../core/needs';
 import { amenityAt } from '../core/buildingAmenity';
 import {
   getAmbientLight,
@@ -467,12 +467,16 @@ export class PawnServiceImpl implements PawnService {
       const pos = pawn.position;
       const tile = pos ? worldMap[pos.y]?.[pos.x] : undefined;
       const thermal = pos ? thermalAt(pos.x, pos.y) : undefined;
-      const base = tile ? seasonBakedTemp(tile.terrainType, gameState.season) : DEFAULT_COMFORT_TEMP;
+      const base = tile
+        ? seasonBakedTemp(tile.terrainType, gameState.season)
+        : DEFAULT_COMFORT_TEMP;
       const temp = thermal ? effectiveTemperature(base, weatherTemp, thermal) : base + weatherTemp;
-      // Comfort range (default ± trait shifts) — shared with the hypothermia/heat-stroke driver.
-      const comfort = comfortRange(pawn.racialTraits);
-      const cold = comfort.min - temp; // >0 when too cold → tires faster
-      const heat = temp - comfort.max; // >0 when too hot → hungers faster
+      // Comfort band shifted outward by cold/heat resistance (CON stat + worn gear), in degrees — the
+      // same onset the hypothermia/heat-stroke meter uses, so warm clothing pushes back the fatigue/
+      // hunger weather penalty too.
+      const tol = pawnStatService.temperatureTolerance(pawn);
+      const cold = tol.coldOnset - temp; // >0 when too cold → tires faster
+      const heat = temp - tol.heatOnset; // >0 when too hot → hungers faster
       const fatigueMul =
         weatherFx.fatigueMul * nightFatigueMul * (cold > 0 ? 1 + cold * COLD_FATIGUE_PER_DEG : 1);
       const hungerMul = weatherFx.hungerMul * (heat > 0 ? 1 + heat * HEAT_HUNGER_PER_DEG : 1);
@@ -728,7 +732,8 @@ export class PawnServiceImpl implements PawnService {
     // Activity benefits.
     if (st.isEating && needs.hunger > 50) drivers.push({ label: 'Eating', delta: 3 });
     else if (st.isSleeping && needs.fatigue > 50) drivers.push({ label: 'Resting', delta: 2 });
-    else if (st.isWorking && needs.fatigue < 80) drivers.push({ label: 'Absorbed in work', delta: 1 });
+    else if (st.isWorking && needs.fatigue < 80)
+      drivers.push({ label: 'Absorbed in work', delta: 1 });
 
     const trend = drivers.reduce((s, d) => s + d.delta, 0);
     return { mood: Math.round(st.mood ?? 50), trend, drivers };

@@ -130,6 +130,16 @@
     /** SEASONS_WEATHER tracked exposure meters 0–100 (cold/heat); shown as % next to Blood. */
     coldExposure?: number;
     heatExposure?: number;
+    /** SEASONS_WEATHER cold/heat tolerance in degrees: the temperatures at which each exposure meter
+     *  starts to rise = the comfort band shifted outward by resistance (CON stat + worn gear). */
+    tempTolerance?: {
+      comfortMin: number;
+      comfortMax: number;
+      coldDeg: number;
+      heatDeg: number;
+      coldOnset: number;
+      heatOnset: number;
+    };
     /** Combat-readiness stats (hit/dodge/crit), reflecting current injuries. Pawns/mobs only. */
     combat?: CombatStat[];
     /** Damaged limbs only — intact, full-health, non-bleeding limbs are omitted. */

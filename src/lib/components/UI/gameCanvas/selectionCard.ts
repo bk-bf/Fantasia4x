@@ -215,6 +215,9 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
     // SEASONS_WEATHER: tracked cold/heat exposure meters (pawns) — surfaced as % next to Blood.
     coldExposure: entity.needs?.coldExposure,
     heatExposure: entity.needs?.heatExposure,
+    // SEASONS_WEATHER: cold/heat tolerance in degrees (comfort band + resistance) — the temperatures at
+    // which each exposure meter starts to rise, gear included.
+    tempTolerance: pawnStatService.temperatureTolerance(entity),
     combat: combatStats(entity),
     limbs
   };

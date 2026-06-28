@@ -56,7 +56,6 @@ import {
   driveTemperatureConditions,
   driveEncumbrance,
   driveWindchill,
-  comfortRange,
   getConditionFloater,
   applyShock,
   snapshotConditionStages,
@@ -80,7 +79,6 @@ import {
   effectiveWindAt,
   seasonBakedTemp
 } from '../services/EnvironmentService';
-import { equippedTemperatureResistance } from '../core/PawnEquipment';
 import { calcBloodRegenRate } from '../entities/Pawns';
 import { rng } from '../core/rng';
 import { pawnById } from '../core/pawnIndex';
@@ -425,23 +423,13 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
         diurnalTempDelta(gameState.turn, gameState.season);
       const base = tile ? seasonBakedTemp(tile.terrainType, gameState.season) : 15;
       const temp = thermal ? effectiveTemperature(base, airDelta, thermal) : base + airDelta;
-      const comfort = comfortRange(pawn.racialTraits);
-      // Instantaneous environmental exposure past the comfort band = the TARGET the tracked meter
-      // lags toward (after resistance + wetness). The meter — not this raw value — drives the condition.
-      let coldTarget = coldExposure(temp, comfort.min);
-      let heatTarget = heatExposure(temp, comfort.max);
-      if (coldTarget > 0 || heatTarget > 0) {
-        // Resistance = CON-derived stat + worn armour (SEASONS_WEATHER equipment), capped.
-        const worn = equippedTemperatureResistance(pawn);
-        if (coldTarget > 0) {
-          const r = pawnStatService.evaluateStat('cold_resistance', pawn) + worn.cold;
-          coldTarget *= 1 - Math.min(0.9, Math.max(0, r));
-        }
-        if (heatTarget > 0) {
-          const r = pawnStatService.evaluateStat('fire_resistance', pawn) + worn.heat;
-          heatTarget *= 1 - Math.min(0.9, Math.max(0, r));
-        }
-      }
+      // Resistance (CON stat + worn gear) is folded into the comfort band as DEGREES of headroom, so the
+      // onset temperature already accounts for it — see PawnStatService.temperatureTolerance. The meter
+      // lags toward this target, and the tracked meter (not this raw read) drives the condition; wetness
+      // and wind then amplify the bite PAST the onset below.
+      const tol = pawnStatService.temperatureTolerance(pawn);
+      let coldTarget = coldExposure(temp, tol.coldOnset);
+      let heatTarget = heatExposure(temp, tol.heatOnset);
       // Being WET amplifies cold and dampens heat, scaled by how soaked the pawn is.
       const wetness = needs?.wetness ?? 0;
       if (wetness > 0) {
@@ -463,7 +451,6 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
       // worn cold-res, wetness, wind). NaN in coldTarget freezes the meter (approachExposure no-ops), so
       // it's printed raw. Gated behind verbose logging → .debug/needs.log.
       if (cold > 50 || heat > 50 || Number.isNaN(coldTarget)) {
-        const wornDbg = equippedTemperatureResistance(pawn);
         gameLogger.log(
           gameState.turn,
           'NEED-CHECK',
@@ -471,11 +458,14 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
             `TEMP-DBG ${pawn.name} pos:(${pawn.position?.x},${pawn.position?.y}) ` +
             `terrain:${tile?.terrainType ?? '?'} cachedTemp:${tile?.temperature} ` +
             `base:${base.toFixed(1)} eff:${temp.toFixed(1)} ` +
-            `comfort:[${comfort.min},${comfort.max}] coldTarget:${coldTarget} heatTarget:${heatTarget} ` +
-            `cold:${cold.toFixed(1)} heat:${heat.toFixed(1)} wornCold:${wornDbg.cold} ` +
-            `coldResStat:${pawnStatService.evaluateStat('cold_resistance', pawn)} ` +
+            `onset:[${tol.coldOnset.toFixed(1)},${tol.heatOnset.toFixed(1)}] ` +
+            `comfort:[${tol.comfortMin},${tol.comfortMax}] resDeg:[${tol.coldDeg.toFixed(1)},${tol.heatDeg.toFixed(1)}] ` +
+            `coldTarget:${coldTarget} heatTarget:${heatTarget} cold:${cold.toFixed(1)} heat:${heat.toFixed(1)} ` +
             `wet:${(needs?.wetness ?? 0).toFixed(0)} wind:${windLevel.toFixed(2)} roofed:${!!thermal?.roofed} ` +
-            `equip:[${Object.values(pawn.equipment ?? {}).map((i) => i?.itemId).filter(Boolean).join(',')}]`
+            `equip:[${Object.values(pawn.equipment ?? {})
+              .map((i) => i?.itemId)
+              .filter(Boolean)
+              .join(',')}]`
         );
       }
       if (needs) {
@@ -780,7 +770,9 @@ function reapBrokenGear(pawn: Pawn): Pawn | null {
   let equipment = pawn.equipment;
   let equipChanged = false;
   // Only real gear can be equipped, so a slot at durability 0 is genuinely worn out → remove it.
-  for (const slot of Object.keys(pawn.equipment ?? {}) as (keyof NonNullable<Pawn['equipment']>)[]) {
+  for (const slot of Object.keys(pawn.equipment ?? {}) as (keyof NonNullable<
+    Pawn['equipment']
+  >)[]) {
     const inst = pawn.equipment?.[slot];
     if (inst && inst.durability != null && inst.durability <= 0) {
       if (!equipChanged) {

@@ -17,8 +17,10 @@ import {
   conditionStatMultipliers,
   conditionPainMultiplier,
   conditionConsciousnessMultiplier,
+  comfortRange,
   RECOVER_CONSCIOUSNESS
 } from '../core/needs';
+import { equippedTemperatureResistance } from '../core/PawnEquipment';
 import { SECONDS_PER_TICK } from '../core/time';
 
 // conditions.jsonc holds both persistent conditions (severity/stages) and transient ones
@@ -101,8 +103,7 @@ function heldToolBoost(
   // counts at Standard quality) — a tool boosts work however it ended up in the pack.
   const bulk = (entity as Pawn).inventory?.items;
   if (bulk)
-    for (const id in bulk)
-      if ((bulk[id] ?? 0) > 0) consider({ itemId: id } as ItemInstance);
+    for (const id in bulk) if ((bulk[id] ?? 0) > 0) consider({ itemId: id } as ItemInstance);
   return found ? { speed, yield: yieldB, itemId: speedItemId } : null;
 }
 
@@ -278,8 +279,7 @@ function calculateCapacityValue(
   });
   // §F8: a pain-numbing condition (drunk, painkillers) dulls felt pain — so it presses less on
   // consciousness/the pain capacity. The injuries are still there; the body just feels them less.
-  const painValue =
-    ((injuryPain + limbPain + bleedPain) / 100) * conditionPainMultiplier(pawn);
+  const painValue = ((injuryPain + limbPain + bleedPain) / 100) * conditionPainMultiplier(pawn);
 
   switch (capacityId) {
     case 'consciousness': {
@@ -468,10 +468,34 @@ function pawnStateWorkMultiplier(pawn: Pawn | Mob): number {
   return mult;
 }
 
+// Temperature tolerance (SEASONS_WEATHER): cold/heat resistance (the CON-derived stat + worn-gear
+// insulation) is expressed as DEGREES of headroom on the comfort band — modelled on clothing `clo`
+// insulation, where heavy winter kit buys ~20 °C of cold tolerance. One full resistance unit
+// (stat + gear) ⇒ TEMP_RES_DEG_PER_UNIT °C, capped at TEMP_RES_DEG_CAP so no kit is fully immune.
+const TEMP_RES_DEG_PER_UNIT = 20;
+const TEMP_RES_DEG_CAP = 25;
+
+/** A pawn's effective temperature comfort, with resistance folded in as degrees. The cold meter (and
+ *  the cold fatigue penalty) start below `coldOnset`; the heat meter / hunger penalty above `heatOnset`. */
+export interface TemperatureTolerance {
+  /** Bare comfort band (race/trait), before resistance. */
+  comfortMin: number;
+  comfortMax: number;
+  /** Degrees of headroom resistance buys on each side. */
+  coldDeg: number;
+  heatDeg: number;
+  /** Temperatures at which the cold / heat meter starts to rise = comfort ∓ resistance degrees. */
+  coldOnset: number;
+  heatOnset: number;
+}
+
 // ── Service interface ──────────────────────────────────────────────────────
 export interface PawnStatService {
   /** Evaluate any stat formula from stats.jsonc for a given pawn or mob. */
   evaluateStat(statId: string, pawn: Pawn | Mob): number;
+  /** Effective cold/heat tolerance: the comfort band shifted outward by resistance (CON stat + worn
+   *  gear) expressed as degrees — i.e. the temperatures at which the cold/heat meter starts to rise. */
+  temperatureTolerance(pawn: Pawn | Mob): TemperatureTolerance;
   /** Compute all body capacities (0–1) for a pawn or mob. */
   computeCapacities(pawn: Pawn | Mob, lightMultiplier?: number): Record<string, number>;
   /** Ticks until a COLLAPSED entity wakes (consciousness back past RECOVER_CONSCIOUSNESS) when recovery
@@ -535,7 +559,8 @@ export class PawnStatServiceImpl implements PawnStatService {
     // cCeil = consciousness if blood were fully restored. MUST bypass computeCapacities' cache: it keys
     // on limbs/injuries identity (not blood), so a {...entity, bloodVolume} clone would hit the cache and
     // wrongly return the current-blood value. _buildCapacities recomputes fresh.
-    const cCeil = this._buildCapacities({ ...entity, bloodVolume: maxBlood } as Pawn).consciousness ?? 1;
+    const cCeil =
+      this._buildCapacities({ ...entity, bloodVolume: maxBlood } as Pawn).consciousness ?? 1;
     if (cCeil < RECOVER_CONSCIOUSNESS) return null; // even full blood < wake line → pain/organ-bound
     // consciousness(blood) = cCeil × bloodMult(blood) (blood is the ONLY blood-dependent factor), so
     // invert for the blood that hits the wake line, then divide the gap by the per-tick regen.
@@ -584,6 +609,23 @@ export class PawnStatServiceImpl implements PawnStatService {
     const capacities =
       def.category === 'capacity' ? this.computeCapacities(pawn) : this.computeCapacities(pawn);
     return evaluateFormula(def.formula, pawn, capacities) + traitResistanceBonus(pawn, statId);
+  }
+
+  temperatureTolerance(pawn: Pawn | Mob): TemperatureTolerance {
+    const { min: comfortMin, max: comfortMax } = comfortRange((pawn as Pawn).racialTraits);
+    const worn = equippedTemperatureResistance(pawn as Pawn);
+    const coldRes = this.evaluateStat('cold_resistance', pawn) + worn.cold;
+    const heatRes = this.evaluateStat('fire_resistance', pawn) + worn.heat;
+    const coldDeg = Math.max(0, Math.min(TEMP_RES_DEG_CAP, coldRes * TEMP_RES_DEG_PER_UNIT));
+    const heatDeg = Math.max(0, Math.min(TEMP_RES_DEG_CAP, heatRes * TEMP_RES_DEG_PER_UNIT));
+    return {
+      comfortMin,
+      comfortMax,
+      coldDeg,
+      heatDeg,
+      coldOnset: comfortMin - coldDeg,
+      heatOnset: comfortMax + heatDeg
+    };
   }
 
   getWorkModifiers(
