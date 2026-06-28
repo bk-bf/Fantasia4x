@@ -1236,8 +1236,10 @@ export const COMMANDS: Record<string, Cmd> = {
     const v = Math.max(0, Math.min(100, p.value ?? 0));
     for (const row of s.worldMap) {
       for (const tile of row) {
+        // Match the sim gate: only walkable ground / open water freeze; dry impassable rock never ices.
+        const canFreeze = tile.walkable || tile.type === 'water';
         const wetCeiling = Math.min(100, tileWetness(tile.moisture ?? 0, s.weather));
-        const next = v <= 0 ? 0 : Math.min(wetCeiling, v);
+        const next = !canFreeze || v <= 0 ? 0 : Math.min(wetCeiling, v);
         const prev = tile.ice ?? 0;
         if (next === prev) continue;
         tile.ice = next;

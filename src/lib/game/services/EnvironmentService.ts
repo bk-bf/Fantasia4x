@@ -1187,7 +1187,20 @@ export function accumulateSnow(
       }
 
       // ── Ice (the tile's own water freezing in place — gradual, capped by its liquid water content) ──
+      // Only WET-CAPABLE tiles freeze: walkable ground (holds a wet rime) and OPEN WATER (impassable, but
+      // freezes solid → walkable). DRY IMPASSABLE ROCK (cliffs / mountain peaks) has no liquid water to
+      // freeze, so it's skipped entirely — no wasted per-tile work and no nonsensical ice sheet on a cliff
+      // face (snow still caps those peaks above). `type === 'water'` is the open-water signal.
       const prevIce = tile.ice ?? 0;
+      const canFreeze = tile.walkable || tile.type === 'water';
+      if (!canFreeze) {
+        // Clear any stray ice such a tile picked up before this gate existed (e.g. the debug slider).
+        if (prevIce > 0) {
+          tile.ice = 0;
+          markTileDirty(tile.y, tile.x, tile);
+        }
+        continue;
+      }
       let nextIce = prevIce;
       if (temp < 0) {
         // Ceiling = how much liquid water the tile actually holds (raw wetness, no ice read-down): open

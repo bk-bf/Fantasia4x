@@ -5074,7 +5074,7 @@
                 {cond}%</span
               >{/if}
           {/if}
-          {#if hoverDisplayResource}
+          {#if hoverDisplayResource && hoverTile.walkable}
             {@const growRes = resourceObjectService.getById(hoverDisplayResource)}
             {#if growRes && isGrowableResource(growRes)}
               {@const gpct = Math.round(hoverTile.growth?.[hoverDisplayResource] ?? 100)}
@@ -5110,8 +5110,8 @@
               soilTier
             ]}) — drives what crops grow here and how fast">fertility {soilPct}%</span
           >
-          {#if tileSnow > 0}<span style="color:#cdd6e0">snow {tileSnow}%</span>{/if}
-          {#if tileIce >= ICE_VISIBLE}<span style="color:#9fc8e0" title="frozen layer — suppresses wetness; thick ice on water turns it walkable but slippery">ice {tileIce}%</span>{/if}
+          {#if hoverTile.walkable && tileSnow > 0}<span style="color:#cdd6e0">snow {tileSnow}%</span>{/if}
+          {#if hoverTile.walkable && tileIce >= ICE_VISIBLE}<span style="color:#9fc8e0" title="frozen layer — suppresses wetness; thick ice on water turns it walkable but slippery">ice {tileIce}%</span>{/if}
         </div>
       </div>
     {/if}
