@@ -98,6 +98,7 @@
       <input type="number" min="1" bind:value={pawnCount} title="count" />
       <button onclick={() => cmd('devSpawnPawns', { count: pawnCount })}>Spawn pawns</button>
     </div>
+    <button class="revive" onclick={() => cmd('devResurrect')}>✚ Resurrect all dead</button>
   </section>
 
   <section>
@@ -319,6 +320,15 @@
     background: #2a1a08;
     border-color: #e0a848;
     color: #f0c060;
+  }
+  button.revive {
+    color: #6ad29a;
+    border-color: #2a7a4a;
+  }
+  button.revive:hover {
+    background: #0a2418;
+    border-color: #3ad07a;
+    color: #80ffb0;
   }
   button.kill {
     color: #e07a5a;

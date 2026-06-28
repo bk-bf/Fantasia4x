@@ -958,6 +958,61 @@ export const COMMANDS: Record<string, Cmd> = {
     return s;
   },
 
+  /** DEBUG resurrect-all: bring every dead colonist back to full health. A pawn still in the array
+   *  (just died, not yet reaped) is FULLY restored in place — wounds/conditions cleared, blood/limbs
+   *  topped up, needs reset — so it doesn't immediately re-die. A pawn already reaped (only a
+   *  `deadPawns` record remains) is regenerated as a fresh body keeping its name (limbs/traits/skills
+   *  are lost — the original instance is gone). Clears `deadPawns`. */
+  devResurrect: (s) => {
+    const revive = (p: (typeof s.pawns)[number]) => ({
+      ...p,
+      isAlive: true,
+      corpseDropped: false,
+      currentState: PAWN_STATE.IDLE,
+      activeJob: undefined,
+      path: [],
+      isMoving: false,
+      bloodVolume: p.maxBloodVolume ?? 100,
+      needs: { ...(p.needs ?? {}), hunger: 0, thirst: 0, fatigue: 0, hygiene: 0 },
+      state: { ...(p.state ?? {}), health: 100, mood: Math.max(p.state?.mood ?? 50, 50) },
+      conditions: [],
+      limbs: (p.limbs ?? []).map((l) => ({
+        ...l,
+        isMissing: false,
+        health: 100,
+        bleedRate: 0,
+        parts: (l.parts ?? []).map((pt) => ({
+          ...pt,
+          isMissing: false,
+          health: pt.maxHp,
+          boneBroken: false,
+          injuries: []
+        }))
+      }))
+    });
+    let pawns = (s.pawns ?? []).map((p) => (p.isAlive === false ? revive(p) : p));
+
+    // Regenerate pawns already reaped from the array (only a deadPawns record survives).
+    const living = new Set(pawns.filter((p) => p.isAlive !== false).map((p) => p.name));
+    const reaped = (s.deadPawns ?? []).filter((r) => !living.has(r.name));
+    if (reaped.length > 0) {
+      const w = s.worldMap[0]?.length ?? 0;
+      const h = s.worldMap.length;
+      const cx = Math.floor(w / 2);
+      const cy = Math.floor(h / 2);
+      const occupied = new Set<string>(
+        pawns.filter((p) => p.position).map((p) => `${p.position!.x},${p.position!.y}`)
+      );
+      const fresh = generatePawns(s.race, reaped.length).map((np, i) => {
+        const pos = nearestFreeTile(s.worldMap, cx, cy, occupied) ?? { x: cx, y: cy };
+        occupied.add(`${pos.x},${pos.y}`);
+        return { ...np, name: reaped[i].name, position: pos, path: [], pathIndex: 0 };
+      });
+      pawns = [...pawns, ...fresh];
+    }
+    return { ...s, pawns, deadPawns: [] };
+  },
+
   /** Set the weather to a fixed type (sticky — won't re-roll until changed again). */
   setWeather: (s, p: { type: string }) => ({ ...s, weather: makeWeather(p.type) }),
 
