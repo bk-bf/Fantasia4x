@@ -36,6 +36,7 @@
   let buildingId = $state(BUILDINGS[0]?.id ?? '');
   let resourceId = $state(RESOURCES[0]?.id ?? '');
   let snowValue = $state(0);
+  let iceValue = $state(0);
 
   const brush = $derived($uiState.debugBrush);
   const cmd = (type: string, payload: Record<string, unknown> = {}) =>
@@ -70,6 +71,10 @@
   function setMapSnow(v: number) {
     snowValue = v;
     cmd('devSetMapSnow', { value: v });
+  }
+  function setMapIce(v: number) {
+    iceValue = v;
+    cmd('devSetMapIce', { value: v });
   }
 </script>
 
@@ -171,6 +176,28 @@
       />
     </div>
     <button onclick={() => setMapSnow(0)}>Clear snow</button>
+  </section>
+
+  <section>
+    <h4>Ice cover <span class="hint">(× tile wetness; water → walkable)</span></h4>
+    <div class="row">
+      <input
+        type="range"
+        min="0"
+        max="100"
+        step="1"
+        value={iceValue}
+        oninput={(e) => setMapIce(Number((e.target as HTMLInputElement).value))}
+      />
+      <input
+        type="number"
+        min="0"
+        max="100"
+        bind:value={iceValue}
+        onchange={() => setMapIce(iceValue)}
+      />
+    </div>
+    <button onclick={() => setMapIce(0)}>Clear ice</button>
   </section>
 
   <section>
