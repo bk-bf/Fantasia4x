@@ -93,6 +93,15 @@ pnpm graph:snapshot       # save the current graph as a baseline
 pnpm graph:diff           # diff the graph against the saved baseline
 ```
 
+> **Scope tests after an edit — do NOT run the full ~800-test suite by default** (it taxes the
+> machine). After an implementation, run `pnpm test:related <the files you just edited>` (precise;
+> a handful of tests). Run the full `pnpm test` only when the user explicitly asks, or when the
+> change touches a broad hub (`core/types.ts`, `ModifierSystem`, `GameStateManager`, the per-tick sim
+> path). Note `pnpm test:changed` derives its set from `git diff`, so it widens as the working tree
+> accumulates uncommitted changes — and editing a `forceRerunTrigger` file (`package.json`,
+> `vite.config.*`, `vitest.config.*`) makes it fall back to the full suite; prefer `test:related` in
+> those cases.
+
 > These `graph:*` scripts call the standalone codegraph CLI at `../codegraph`
 > (`node ../codegraph/bin/codegraph.mjs … Fantasia4x`) — it must be checked out as a
 > sibling of this repo. Override its location with `CODEGRAPH_DIR`.
