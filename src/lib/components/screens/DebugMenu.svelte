@@ -60,7 +60,10 @@
     const v = (e.target as HTMLSelectElement).value;
     cmd('setTimeOfDay', { timeOfDay: v === '' ? null : Number(v) });
   }
-  function armBrush(kind: 'regrow' | 'building' | 'resource', id: string | null = null) {
+  function armBrush(
+    kind: 'regrow' | 'building' | 'resource' | 'kill',
+    id: string | null = null
+  ) {
     if (brush?.kind === kind) uiState.deactivateDebugBrush();
     else uiState.activateDebugBrush(kind, id);
   }
@@ -168,6 +171,13 @@
       />
     </div>
     <button onclick={() => setMapSnow(0)}>Clear snow</button>
+  </section>
+
+  <section>
+    <h4>Insta-kill <span class="hint">(click a pawn/mob)</span></h4>
+    <button class="kill" class:active={brush?.kind === 'kill'} onclick={() => armBrush('kill')}>
+      {brush?.kind === 'kill' ? '■ ' : '☠ '}Kill (click entity)
+    </button>
   </section>
 
   <section>
@@ -309,6 +319,20 @@
     background: #2a1a08;
     border-color: #e0a848;
     color: #f0c060;
+  }
+  button.kill {
+    color: #e07a5a;
+    border-color: #9a3a2a;
+  }
+  button.kill:hover {
+    background: #2a1208;
+    border-color: #d0563a;
+    color: #ffa080;
+  }
+  button.kill.active {
+    background: #3a1408;
+    border-color: #ff5a3a;
+    color: #ff8060;
   }
   button.stop {
     color: #d98a6a;

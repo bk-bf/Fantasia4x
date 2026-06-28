@@ -434,8 +434,11 @@
   let blueprintBuildingId: string | null = null;
   // Chosen materials for the blueprint's `category:` cost slots (cost-key → itemId).
   let blueprintMaterials: Record<string, string> | null = null;
-  // Debug click-brush (DEBUG tab) — regrow / spawn building / spawn resource on click
-  let debugBrush: { kind: 'regrow' | 'building' | 'resource'; id: string | null } | null = null;
+  // Debug click-brush (DEBUG tab) — regrow / spawn building / spawn resource / kill on click
+  let debugBrush: {
+    kind: 'regrow' | 'building' | 'resource' | 'kill';
+    id: string | null;
+  } | null = null;
   // Selected building (click-locked, like selectedPawnId)
   let selectedBuildingId: string | null = null;
   // Selected mob/animal (click-locked, like selectedPawnId)
@@ -3003,6 +3006,11 @@
           payload: { resourceId: debugBrush.id, x: hoverTileX, y: hoverTileY },
           save: true
         });
+      } else if (debugBrush.kind === 'kill') {
+        // Insta-kill the pawn (preferred) or mob on the clicked tile. Stays armed for repeat clicks.
+        const victim =
+          findPawnAtTile(hoverTileX, hoverTileY) ?? findMobAtTile(hoverTileX, hoverTileY);
+        if (victim) gameState.command({ type: 'devKillEntity', payload: { id: victim.id }, save: true });
       }
       redrawOverlay();
       return;
@@ -4808,7 +4816,11 @@
         ? 'REGROW'
         : debugBrush.kind === 'building'
           ? 'SPAWN BUILDING'
-          : 'SPAWN RESOURCE'}] click tiles to apply · Esc to stop
+          : debugBrush.kind === 'kill'
+            ? 'KILL'
+            : 'SPAWN RESOURCE'}] click {debugBrush.kind === 'kill'
+        ? 'a pawn/mob to kill it'
+        : 'tiles to apply'} · Esc to stop
     </div>
   {:else if designationMode}
     <div

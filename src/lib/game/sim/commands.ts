@@ -44,6 +44,7 @@ import {
 import { equipItem, unequipItem, useConsumable, equipDropToPawn } from '../core/PawnEquipment';
 import { pickUpFromTile } from '../systems/pawn/pawnHauling';
 import { PAWN_STATE } from '../systems/pawn/pawnStates';
+import { killPawn } from '../systems/PawnStateMachine';
 import { hasShelter } from '../systems/pawn/handlers/rescue';
 import { dropCarriedPawn, freeDropTileNear, CARRIED_PAWN_ITEM } from '../systems/pawn/carry';
 import { manhattan } from '../core/distance';
@@ -944,6 +945,18 @@ export const COMMANDS: Record<string, Cmd> = {
   /** Force-spawn `count` mobs (ignores caps / current count). Optional specific creature id. */
   devSpawnEntities: (s, p: { count?: number; creatureId?: string }) =>
     devSpawnMobs(s, p.count ?? 5, p.creatureId),
+
+  /** DEBUG insta-kill: kill the pawn OR mob with `id`. Pawns die immediately (killPawn → corpse +
+   *  gear drop + chronicle). Mobs are set to 0 health so the entity lifecycle reaps them to a corpse
+   *  (+ carcass) on the next tick. Targeted from the kill click-brush (GameCanvas). */
+  devKillEntity: (s, p: { id: string }) => {
+    const pawn = (s.pawns ?? []).find((pw) => pw.id === p.id && pw.isAlive !== false);
+    if (pawn) return killPawn(pawn, 'combat', s);
+    const mobs = s.mobs ?? [];
+    if (mobs.some((m) => m.id === p.id))
+      return { ...s, mobs: mobs.map((m) => (m.id === p.id ? { ...m, health: 0 } : m)) };
+    return s;
+  },
 
   /** Set the weather to a fixed type (sticky — won't re-roll until changed again). */
   setWeather: (s, p: { type: string }) => ({ ...s, weather: makeWeather(p.type) }),
