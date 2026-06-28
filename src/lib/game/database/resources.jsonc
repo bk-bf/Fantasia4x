@@ -1985,8 +1985,11 @@
     "charSpans"       : [ {"sheet": "plants", "id": 210} ],
     "fg"              : "#9e855e",
     "bg"              : "#140f08",
-    // Shares the mountain (cave) floor pool with cliff_wall; 0.58/0.41 keeps the old rocky:cliff band
-    // ratio (granite walls a bit more common than sandstone) and ~99% total wall coverage.
+    // Shares the mountain (cave) floor pool with cliff_wall. Pass-1 rolls each def SEQUENTIALLY and
+    // independently (see ResourceGeneratorService) — mountain_wall is rolled first, cliff_wall on the
+    // ~42% that miss. So 0.58 here + 0.98 on cliff_wall yields a ~58/41 placed mix (old rocky:cliff
+    // band ratio, granite a bit more common than sandstone) AND ~99% total wall coverage — keeping the
+    // mountain interior solid so the line-of-sight fog silhouette stays tight.
     "spawn"           : { "subterrains": {"cave": 0.58} },
     "nodeAmountRange" : [4, 8],
     "designationTypes": ["harvest"],
@@ -2015,7 +2018,7 @@
     "charSpans"       : [ {"sheet": "plants", "id": 210} ],
     "fg"              : "#806b45",
     "bg"              : "#140f08",
-    "spawn"           : { "subterrains": {"cave": 0.41} },
+    "spawn"           : { "subterrains": {"cave": 0.98} },
     "nodeAmountRange" : [5, 10],
     "designationTypes": ["harvest"],
     "interaction"     : {
