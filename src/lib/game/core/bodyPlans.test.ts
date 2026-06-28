@@ -10,6 +10,8 @@ import {
   DEFAULT_PLAN
 } from './BodyParts';
 import { rng } from './rng';
+import { pawnStatService } from '../services/PawnStatService';
+import type { Mob } from './types';
 
 /**
  * Body plans (limbmap.jsonc): each creature category gets an anatomy that fits it — a wolf carries paws
@@ -250,5 +252,72 @@ describe('lethalAnatomyCause', () => {
     const limbs = createBodyPlanLimbs(DEFAULT_PLAN, 1);
     torsoOf(limbs).parts!.find((p) => p.id === 'abdomen')!.health = 0;
     expect(lethalAnatomyCause(limbs)).toBeNull();
+  });
+});
+
+/**
+ * Limbmap audit fixes: the viper's venom is a real organ (the venom_bite is bound to the VENOM GLANDS, not
+ * the fangs — destroy them and the venomous strike goes with them), the snake has kidneys (so its
+ * blood_filtration resolves instead of silently reading 100%), and an amorphous body can actually use the
+ * weapon it's designed for (the grimeling's `claw`, previously enabled by no part → a dead weapon).
+ */
+describe('species-specific organ + weapon wiring', () => {
+  const kill = (
+    limbs: ReturnType<typeof createBodyPlanLimbs>,
+    pred: (id: string) => boolean
+  ): ReturnType<typeof createBodyPlanLimbs> => {
+    for (const l of limbs)
+      for (const p of l.parts!)
+        if (pred(p.id)) {
+          p.isMissing = true;
+          p.health = 0;
+        }
+    return limbs;
+  };
+  const entity = (limbs: ReturnType<typeof createBodyPlanLimbs>): Mob =>
+    ({
+      limbs,
+      injuries: [],
+      conditions: [],
+      stats: { strength: 12, dexterity: 12, constitution: 10, intelligence: 8, perception: 10 },
+      bloodVolume: 100,
+      maxBloodVolume: 100
+    }) as unknown as Mob;
+
+  it('a viper carries venom glands + kidneys, with venom_bite bound to the glands (not the fangs)', () => {
+    const parts = createBodyPlanLimbs('serpentine', 1).flatMap((l) => l.parts!.map((p) => p.id));
+    expect(parts.filter((id) => /venomGland/i.test(id)).length).toBe(2);
+    expect(parts.filter((id) => /kidney/i.test(id)).length).toBe(2); // staggered fore/hind kidneys
+    expect(parts).not.toContain('spine'); // orphaned mammalian spine dropped (the vertebrae are the skeleton)
+    expect(PART_DEF_MAP['fangs']!.weapons).toEqual(['bite']); // venom moved OFF the fangs
+    expect(PART_DEF_MAP['leftVenomGland']!.weapons).toContain('venom_bite');
+  });
+
+  it("destroying a viper's venom glands takes the venomous bite — a plain bite remains on the fangs", () => {
+    const intact = enabledNaturalWeapons(createBodyPlanLimbs('serpentine', 1));
+    expect(intact.has('venom_bite')).toBe(true);
+    expect(intact.has('bite')).toBe(true);
+    const deglanded = enabledNaturalWeapons(
+      kill(createBodyPlanLimbs('serpentine', 1), (id) => /venomGland/i.test(id))
+    );
+    expect(deglanded.has('venom_bite')).toBe(false); // venom apparatus gone → no envenoming strike
+    expect(deglanded.has('bite')).toBe(true); // the fangs still bite
+  });
+
+  it("the snake's kidneys drive blood_filtration (no longer a silent 100%)", () => {
+    const full = pawnStatService.computeCapacities(
+      entity(createBodyPlanLimbs('serpentine', 1))
+    ).blood_filtration;
+    const noKidney = pawnStatService.computeCapacities(
+      entity(kill(createBodyPlanLimbs('serpentine', 1), (id) => /kidney/i.test(id)))
+    ).blood_filtration;
+    expect(full).toBeCloseTo(1.0);
+    expect(noKidney).toBeCloseTo(0.0); // both staggered kidneys gone → no filtration → heal_rate 0
+  });
+
+  it('an amorphous body (grimeling) can claw — its outer mass enables the weapon (no dead-weapon thrash)', () => {
+    const w = enabledNaturalWeapons(createBodyPlanLimbs('amorphous', 1));
+    expect(w.has('claw')).toBe(true); // the grimeling's listed weapon now resolves
+    expect(w.has('spectral_strike')).toBe(true); // the wraith's weapon is still enabled too
   });
 });

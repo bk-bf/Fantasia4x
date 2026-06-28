@@ -274,18 +274,23 @@
       }
     },
     "serpentine": {
+      // note": "Snake-kin (viper) — a fanged head + 3-segment body (fore/mid/hind, each flesh over its vertebrae) + tail. Venom is a real organ: the paired VENOM GLANDS behind the eyes carry the venom_bite, so destroying them takes the venomous strike with it (the fangs keep a plain bite). Snakes keep ONE functional lung (the right; the left is vestigial) and staggered kidneys (excretion → blood_filtration). No mammalian `spine` — the vertebrae ARE the skeleton.
       "parts": {
-        "fangs"        : {"size": 14, "bleedRatio": 0.01, "hitWeight": 2, "weapons": ["venom_bite", "bite"], "armor": 0.4},
-        "foreBody"     : {"size": 70, "bleedRatio": 0.12, "hitWeight": 20, "armor": 0.8},
-        "foreVertebrae" : {"size": 70, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "foreBody"},
-        "midBody"      : {"size": 65, "bleedRatio": 0.1, "hitWeight": 18, "armor": 0.8},
-        "midVertebrae"  : {"size": 65, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "midBody"},
-        "hindBody"     : {"size": 55, "bleedRatio": 0.07, "hitWeight": 12, "armor": 0.7},
-        "hindVertebrae" : {"size": 55, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "hindBody"}
+        "fangs"          : {"size": 14, "bleedRatio": 0.01, "hitWeight": 2, "weapons": ["bite"], "armor": 0.4},
+        "leftVenomGland" : {"size": 12, "bleedRatio": 0.02, "hitWeight": 0, "isPaired": true, "containedIn": "head", "weapons": ["venom_bite"]},
+        "rightVenomGland": {"size": 12, "bleedRatio": 0.02, "hitWeight": 0, "isPaired": true, "containedIn": "head", "weapons": ["venom_bite"]},
+        "foreBody"       : {"size": 70, "bleedRatio": 0.12, "hitWeight": 20, "armor": 0.8},
+        "foreVertebrae"  : {"size": 70, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "foreBody"},
+        "midBody"        : {"size": 65, "bleedRatio": 0.1, "hitWeight": 18, "armor": 0.8},
+        "midVertebrae"   : {"size": 65, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "midBody"},
+        "hindBody"       : {"size": 55, "bleedRatio": 0.07, "hitWeight": 12, "armor": 0.7},
+        "hindVertebrae"  : {"size": 55, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "hindBody"},
+        "foreKidney"     : {"size": 14, "bleedRatio": 0.02, "hitWeight": 0, "containedIn": "midBody"},
+        "hindKidney"     : {"size": 14, "bleedRatio": 0.02, "hitWeight": 0, "containedIn": "hindBody"}
       },
       "limbs": {
-        "head": ["head", "skull", "fangs", "leftEye", "rightEye", "brain"],
-        "body": ["foreBody", "foreVertebrae", "midBody", "midVertebrae", "hindBody", "hindVertebrae", "heart", "leftLung", "liver", "stomach", "spine"],
+        "head": ["head", "skull", "fangs", "leftVenomGland", "rightVenomGland", "leftEye", "rightEye", "brain"],
+        "body": ["foreBody", "foreVertebrae", "midBody", "midVertebrae", "hindBody", "hindVertebrae", "heart", "leftLung", "liver", "stomach", "foreKidney", "hindKidney"],
         "tail": ["tail", "caudalVertebrae"]
       }
     },
@@ -351,11 +356,11 @@
       }
     },
     "amorphous": {
-      "// note": "Incorporeal / ooze (wraith, grimeling) — a core essence + outer mass, no skeleton.",
+      "// note": "Incorporeal / ooze (wraith, grimeling) — a core essence + outer mass, no skeleton. The outer mass lashes out: it enables both the wraith's spectral_strike AND a physical claw/pseudopod (a creature only uses the weapons IT lists — the wraith strikes spectrally, the grimeling claws).",
       "parts": {
         "essence"   : {"size": 40, "bleedRatio": 0.0, "hitWeight": 0, "isVital": true, "critical": true, "containedIn": "core"},
         "core"      : {"size": 50, "bleedRatio": 0.0, "hitWeight": 20, "weapons": ["spectral_strike"], "armor": 0.5},
-        "outerMass" : {"size": 80, "bleedRatio": 0.0, "hitWeight": 40, "weapons": ["spectral_strike"], "armor": 0.6}
+        "outerMass" : {"size": 80, "bleedRatio": 0.0, "hitWeight": 40, "weapons": ["spectral_strike", "claw"], "armor": 0.6}
       },
       "limbs": {
         "core": ["core", "essence"],
