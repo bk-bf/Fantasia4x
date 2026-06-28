@@ -1,6 +1,6 @@
 <script lang="ts">
   import { gameState, currentRace } from '$lib/stores/gameState';
-  import { addToStockpileZone } from '$lib/game/core/GameState';
+  import { addToStockpileZone, availableAggregateFromDrops } from '$lib/game/core/GameState';
   import { uiState } from '$lib/stores/uiState';
   import BackButton from '$lib/components/UI/BackButton.svelte';
   import { itemService } from '$lib/game/services/ItemService';
@@ -125,7 +125,13 @@
   // Legacy compat
   $: availableBuildings = unlockedDefs;
 
-  $: getItemAmount = (itemId: string): number => $gameState?.stockpile?.[itemId] ?? 0;
+  // Show AVAILABLE (unreserved, stored) stock — the same number the build affordability gate
+  // (resolveBuildingCost → availableAggregateFromDrops) actually spends. The raw `stockpile` mirror
+  // counts reserved stacks too (locked by queued crafts / placed-building material reservations), so
+  // displaying it made a card read "Branch (88)" yet show MISSING — the count looked sufficient but
+  // wasn't spendable. ADR-016.
+  $: availStock = availableAggregateFromDrops($gameState?.droppedItems);
+  $: getItemAmount = (itemId: string): number => availStock[itemId] ?? 0;
 
   $: getBuildingCount = (buildingId: string): number => {
     return buildings.filter((b) => b.type === buildingId && b.status === 'complete').length;
@@ -136,9 +142,7 @@
   $: getCostHave = (id: string): number => {
     if (id.startsWith('category:')) {
       const cat = id.slice('category:'.length);
-      return itemService
-        .getItemsByCategory(cat)
-        .reduce((sum, it) => sum + ($gameState?.stockpile?.[it.id] ?? 0), 0);
+      return itemService.getItemsByCategory(cat).reduce((sum, it) => sum + getItemAmount(it.id), 0);
     }
     return getItemAmount(id);
   };
