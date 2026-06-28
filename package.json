@@ -17,6 +17,8 @@
 		"package:dir": "electron-builder --dir",
 		"dist": "pnpm build && electron-builder",
 		"test": "vitest run",
+		"test:changed": "vitest run --changed",
+		"test:related": "vitest related --run",
 		"test:watch": "vitest",
 		"check": "svelte-check --tsconfig ./tsconfig.json",
 		"lint": "eslint .",
