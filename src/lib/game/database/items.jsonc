@@ -553,12 +553,13 @@
     "category"         : "primitive",
     "maxDurability"    : 120,
     "deteriorationRate": 0.01,
-    "description"      : "Stripped plant stalks. Twisted into rope, woven into walls.",
+    "description"      : "Stripped plant stalks. Twisted into rope, woven into walls — or dried into hay.",
     "color"            : "#7EC850",
     "amount"           : 0,
     "weightKg"         : 0.05,
     "volumeL"          : 0.2,
     "fuelValue"        : 2,
+    "driesTo"          : {"itemId": "hay", "seconds": 1200},
     "gatheringTypes"   : ["foraging"]
   },
   {
@@ -714,6 +715,7 @@
     "fuelHeat"         : 1,
     "deteriorationRate": 0.04,
     "maxDurability"    : 120,
+    "driesTo"          : {"itemId": "dry_firewood", "seconds": 1800, "mode": "fire-ring"},
     "toolTierRequired" : 0
   },
   {
@@ -1315,7 +1317,8 @@
     "poisonChance"     : 0.02,
     "rarity"           : "uncommon",
     "decaySeconds"     : 36000,
-    "decaysTo"         : "rotten_meat"
+    "decaysTo"         : "rotten_meat",
+    "driesTo"          : null
   },
   {
     "id"               : "dried_meat",

@@ -347,6 +347,14 @@ export interface Item {
   decaySeconds?: number; // in-game seconds until one unit of this item spoils
   decaysTo?: string; // itemId it becomes on decay; omit to simply vanish
 
+  /**
+   * Passive drying: this stack cures into `itemId` after `seconds` of exposure (ItemService.stepDrying).
+   * `mode`: 'ambient' (default) cures where warm & dry, faster on a hay rack (effects.dryingBonus) /
+   * by a fire; 'fire-ring' cures only within 2 tiles of a lit fire (firewood seasoning). An explicit
+   * `null` opts an item out of an otherwise-matching CATEGORY drying rule (e.g. salted_meat).
+   */
+  driesTo?: { itemId: string; seconds: number; mode?: 'ambient' | 'fire-ring' } | null;
+
   // Requirements
   researchRequired?: string | null;
   level?: number;

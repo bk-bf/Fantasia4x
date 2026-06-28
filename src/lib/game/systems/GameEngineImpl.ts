@@ -114,6 +114,10 @@ const DETERIORATION_INTERVAL_TICKS = 600;
  *  boundary EVERY flush (the carcass-FPS regression). 60 ticks ≈ 1 s: invisible for spoilage, but cuts
  *  the ref-churn (and thus the cross-boundary clone) ~60×. Erosion is scaled by the elapsed ticks. */
 const DECAY_INTERVAL_TICKS = 60;
+/** Drying (`stepDrying`) runs every N ticks for the same reason as spoilage: a drying clock is
+ *  days-long, so per-tick re-referencing of the whole `droppedItems` array is wasted churn. 60 ticks
+ *  ≈ 1 s — invisible for drying. Accrual is scaled by the elapsed ticks. */
+const DRYING_INTERVAL_TICKS = 60;
 /** Job-board reconcile cadence (ADR-022). `generateJobs` rebuilds the board from current world
  *  sources — a self-healing, emission-derived pass — but that's wasted at 60 Hz when designations/
  *  buildings/drops change far slower. Running it every 6 ticks caps job-appearance latency at ≤6
@@ -235,8 +239,11 @@ export class GameEngineImpl implements GameEngine {
             DETERIORATION_INTERVAL_TICKS
           );
       });
-      t('woodDrying', () => {
-        this.gameState = itemService.stepDrying(this.gameState!);
+      t('drying', () => {
+        // Throttled like decay (see DRYING_INTERVAL_TICKS): cure that many ticks' worth in one pass
+        // instead of re-referencing the whole droppedItems array every tick.
+        if (this.gameState!.turn % DRYING_INTERVAL_TICKS === 0)
+          this.gameState = itemService.stepDrying(this.gameState!, DRYING_INTERVAL_TICKS);
       });
       t('researchTick', () => {
         this.gameState = researchService.processResearchTick(this.gameState!);
