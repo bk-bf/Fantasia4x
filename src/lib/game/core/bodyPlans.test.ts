@@ -44,7 +44,10 @@ describe('body plans', () => {
     expect(partIds.some((p) => /Finger|Toe/.test(p))).toBe(false); // no humanoid digits on a beast
   });
 
-  it('each plan still carries the core organs so the capacity model resolves', () => {
+  it('each plan carries a brain-like + heart-like organ so the capacity model resolves', () => {
+    // The capacity resolver is plan-agnostic (matches organs by pattern), so a plan may use its own
+    // anatomy's names — a spider's `synganglion` for the brain, `tubularHeart` for the heart — as long as
+    // SOME part fills each role. (Mammalian plans use the literal `brain`/`heart`; both satisfy this.)
     for (const plan of [
       'humanoid',
       'quadruped',
@@ -56,8 +59,8 @@ describe('body plans', () => {
       'winged_humanoid'
     ]) {
       const partIds = createBodyPlanLimbs(plan, 1).flatMap((l) => l.parts!.map((p) => p.id));
-      expect(partIds).toContain('brain');
-      expect(partIds).toContain('heart');
+      expect(partIds.some((id) => /brain|synganglion/i.test(id))).toBe(true);
+      expect(partIds.some((id) => /heart/i.test(id))).toBe(true);
     }
   });
 

@@ -262,6 +262,42 @@ function calculateCapacityValue(
   const organMissing = (limbId: string, organId: string) =>
     organ(limbId, organId)?.isMissing ?? false;
 
+  // Plan-agnostic organ lookup: gather the 0–1 health fractions of EVERY modelled part (across all limbs)
+  // whose id matches `pat` — a missing part counts 0. Lets a capacity find its organ wherever the body plan
+  // keeps it (a mammal's kidneys in the torso, a spider's Malpighian tubules in the opisthosoma; mammalian
+  // lungs vs arachnid book lungs) without hardcoding a limb or id. An EMPTY result means the plan doesn't
+  // model that organ at all → the caller treats it as fully healthy (matching the prior absent-organ fallback).
+  // For a mammal (organs only in their one expected limb) this returns exactly the same set the old literal
+  // `organMissing/organH` reads did, so existing creatures are unchanged.
+  const organFracs = (pat: RegExp): number[] => {
+    const out: number[] = [];
+    for (const l of limbs)
+      for (const p of l.parts ?? []) {
+        if (!pat.test(p.id)) continue;
+        if (p.isMissing) {
+          out.push(0);
+          continue;
+        }
+        const max = p.maxHp ?? 100;
+        out.push(max > 0 ? (p.health ?? max) / max : 0);
+      }
+    return out;
+  };
+  // A single (or bottleneck) organ's health fraction — the weakest match; not-modelled → fully healthy (1).
+  const organOne = (pat: RegExp): number => {
+    const f = organFracs(pat);
+    return f.length ? Math.min(...f) : 1;
+  };
+  // Paired-organ blend (eyes/lungs/kidneys): the weakest organ drags the capacity (min) while the rest
+  // compensate (avg). `minWeight` is the bottleneck share. Not-modelled → fully healthy (1).
+  const organBlend = (pat: RegExp, minWeight: number): number => {
+    const f = organFracs(pat);
+    const v = f.length ? f : [1];
+    const min = Math.min(...v);
+    const avg = v.reduce((a, b) => a + b, 0) / v.length;
+    return min * minWeight + avg * (1 - minWeight);
+  };
+
   let value = 1.0;
 
   // Pre-compute pain since consciousness depends on it
@@ -283,13 +319,9 @@ function calculateCapacityValue(
 
   switch (capacityId) {
     case 'consciousness': {
-      const brain = organMissing('head', 'brain') ? 0.0 : organH('head', 'brain') / 100;
-      const heart = organMissing('torso', 'heart') ? 0.0 : organH('torso', 'heart') / 100;
-      const leftLung = organMissing('torso', 'leftLung') ? 0.0 : organH('torso', 'leftLung') / 100;
-      const rightLung = organMissing('torso', 'rightLung')
-        ? 0.0
-        : organH('torso', 'rightLung') / 100;
-      const avgLung = (leftLung + rightLung) / 2;
+      const brain = organOne(/brain|synganglion/i); // mammalian brain OR an arachnid's synganglion
+      const heart = organOne(/heart/i);
+      const avgLung = organBlend(/lung/i, 0); // pure average across the lungs (book lungs included)
       const baseCon = brain * 0.5 + heart * 0.15 + avgLung * 0.1 + 0.1;
       const sightCap = capacities.sight ?? 1;
       const hearingCap = capacities.hearing ?? 1;
@@ -329,11 +361,9 @@ function calculateCapacityValue(
       break;
     }
     case 'sight': {
-      const leftEye = organMissing('head', 'leftEye') ? 0.0 : organH('head', 'leftEye') / 100;
-      const rightEye = organMissing('head', 'rightEye') ? 0.0 : organH('head', 'rightEye') / 100;
-      const minEye = Math.min(leftEye, rightEye);
-      const avgEye = (leftEye + rightEye) / 2;
-      const baseSight = minEye * 0.4 + avgEye * 0.6 + 0.05;
+      // Every eye the plan has (a humanoid's 2, a spider's 8): the worst eye bottlenecks (×0.4), the rest
+      // compensate (×0.6). A 2-eye creature is identical to the old leftEye/rightEye read.
+      const baseSight = organBlend(/eye/i, 0.4) + 0.05;
       value = baseSight * (lightMultiplier ?? 1.0);
       break;
     }
@@ -344,32 +374,22 @@ function calculateCapacityValue(
       break;
     }
     case 'blood_pumping': {
-      const heart = organMissing('torso', 'heart') ? 0.0 : organH('torso', 'heart') / 100;
-      value = heart * 0.9 + 0.1;
+      value = organOne(/heart/i) * 0.9 + 0.1;
       break;
     }
     case 'blood_filtration': {
-      const leftK = organMissing('torso', 'leftKidney') ? 0.0 : organH('torso', 'leftKidney') / 100;
-      const rightK = organMissing('torso', 'rightKidney')
-        ? 0.0
-        : organH('torso', 'rightKidney') / 100;
-      const minK = Math.min(leftK, rightK);
-      const avgK = (leftK + rightK) / 2;
-      value = minK * 0.4 + avgK * 0.6;
+      // Mammalian kidneys OR an arachnid's Malpighian tubules — same bottleneck/average blend either way.
+      value = organBlend(/kidney|malpighian/i, 0.4);
       break;
     }
     case 'breathing': {
-      const leftL = organMissing('torso', 'leftLung') ? 0.0 : organH('torso', 'leftLung') / 100;
-      const rightL = organMissing('torso', 'rightLung') ? 0.0 : organH('torso', 'rightLung') / 100;
-      const minL = Math.min(leftL, rightL);
-      const avgL = (leftL + rightL) / 2;
-      value = minL * 0.5 + avgL * 0.5 + 0.05;
+      // Mammalian lungs OR an arachnid's book lungs (both match /lung/i).
+      value = organBlend(/lung/i, 0.5) + 0.05;
       break;
     }
     case 'digestion': {
-      const stomach = organMissing('torso', 'stomach') ? 0.0 : organH('torso', 'stomach') / 100;
-      const liver = organMissing('torso', 'liver') ? 0.0 : organH('torso', 'liver') / 100;
-      value = stomach * 0.6 + liver * 0.4;
+      // Mammalian stomach + liver, OR an arachnid's sucking stomach + digestive gland (hepatopancreas).
+      value = organOne(/stomach/i) * 0.6 + organOne(/liver|digestivegland/i) * 0.4;
       break;
     }
     case 'talking': {
