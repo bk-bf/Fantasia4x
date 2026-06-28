@@ -7,6 +7,7 @@ import {
   GENERAL_ZONE_ID,
   computeAggregate,
   aggregateFromDrops,
+  availableAggregateFromDrops,
   absorbDropIfOnStockpileTile
 } from '$lib/game/core/GameState';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
@@ -1425,16 +1426,23 @@ export const pawnStats = derived(gameState, ($gameState) => $gameState.pawnStats
 
 /** Items currently in the colony stockpile, enriched from the items database, sorted by name. */
 export const currentStockpile = derived(gameState, ($gameState) => {
+  // Show AVAILABLE (unreserved) stock — not the raw `stockpile` mirror, which counts stacks already
+  // reserved for queued crafts / placed-building blueprints. Counting reserved stock made the sidebar
+  // read "Branch 200" while the build menu (which spends only unreserved stock) showed "Branch (0)
+  // MISSING" — the two numbers must agree, and the spendable one is the truthful one. ADR-016.
+  const drops = $gameState.droppedItems ?? [];
   // Identity-tracked stored drops (named carcasses etc.) surface as individual rows by name so a
   // dead colonist reads as "Vale's Carcass", not an anonymous "Carcass ×N". Their count is netted
   // out of the aggregate row for that resource (any remaining un-named stock still shows normally).
-  const drops = $gameState.droppedItems ?? [];
-  const namedStored = drops.filter((d) => d.stored && (d.quantity ?? 0) > 0 && d.name != null);
+  // Reserved named drops are excluded too, to stay consistent with the available aggregate below.
+  const namedStored = drops.filter(
+    (d) => d.stored && !d.reservedFor && (d.quantity ?? 0) > 0 && d.name != null
+  );
   const namedCount: Record<string, number> = {};
   for (const d of namedStored)
     namedCount[d.resourceId] = (namedCount[d.resourceId] ?? 0) + d.quantity;
 
-  const rows = Object.entries($gameState.stockpile ?? {})
+  const rows = Object.entries(availableAggregateFromDrops(drops))
     .map(([id, amount]) => [id, amount - (namedCount[id] ?? 0)] as const)
     .filter(([, amount]) => amount > 0)
     .map(([id, amount]) => {
@@ -1463,7 +1471,9 @@ export const currentStockpileZones = derived(gameState, ($gameState) => {
     const tileSet = new Set(zone.tiles);
     const inv: Record<string, number> = {};
     // Identity-tracked stored drops (named carcasses) show as individual rows; netted out of the
-    // counted aggregate so the zone view matches the main sidebar (see currentStockpile).
+    // counted aggregate. NOTE: this is a PHYSICAL zone-contents view, so it counts reserved stacks
+    // (they still physically sit on the zone's tiles until staged) — unlike the main sidebar
+    // (currentStockpile), which shows only unreserved/spendable stock.
     const namedRows: {
       id: string;
       name: string;
