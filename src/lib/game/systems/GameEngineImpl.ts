@@ -236,7 +236,7 @@ export class GameEngineImpl implements GameEngine {
           );
       });
       t('woodDrying', () => {
-        this.gameState = itemService.stepWoodDrying(this.gameState!);
+        this.gameState = itemService.stepDrying(this.gameState!);
       });
       t('researchTick', () => {
         this.gameState = researchService.processResearchTick(this.gameState!);

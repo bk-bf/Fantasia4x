@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { itemService } from './ItemService';
+import { rebuildThermalField } from './EnvironmentService';
 import { SECONDS_PER_TICK } from '../core/time';
-import type { GameState, DroppedItem, PlacedBuilding } from '../core/types';
+import type { GameState, DroppedItem, PlacedBuilding, WorldTile } from '../core/types';
 
 /**
  * Stage 4 — §1 wood seasoning + §C spoilage.
@@ -43,7 +44,7 @@ function state(drops: DroppedItem[], buildings: PlacedBuilding[]): GameState {
   } as unknown as GameState;
 }
 
-describe('§1 wood seasoning (stepWoodDrying)', () => {
+describe('§1 wood seasoning (stepDrying)', () => {
   it('seasons firewood at distance 2 from a lit fire, not adjacent or far', () => {
     const gs = state(
       [
@@ -53,7 +54,7 @@ describe('§1 wood seasoning (stepWoodDrying)', () => {
       ],
       [fire(0, 0)]
     );
-    const out = itemService.stepWoodDrying(gs);
+    const out = itemService.stepDrying(gs);
     expect(out.droppedItems!.find((d) => d.id === 'ring')!.drying).toBeGreaterThan(0);
     expect(out.droppedItems!.find((d) => d.id === 'adj')!.drying).toBeUndefined();
     expect(out.droppedItems!.find((d) => d.id === 'far')!.drying).toBeUndefined();
@@ -61,14 +62,81 @@ describe('§1 wood seasoning (stepWoodDrying)', () => {
 
   it('converts to dry_firewood once seasoned', () => {
     const gs = state([drop({ x: 2, y: 0, drying: 1799.999 })], [fire(0, 0)]);
-    const out = itemService.stepWoodDrying(gs);
+    const out = itemService.stepDrying(gs);
     expect(out.droppedItems![0].resourceId).toBe('dry_firewood');
   });
 
   it('no lit fire → nothing seasons', () => {
     const unlit = { ...fire(0, 0), lit: false };
     const gs = state([drop({ x: 2, y: 0 })], [unlit as PlacedBuilding]);
-    expect(itemService.stepWoodDrying(gs)).toBe(gs);
+    expect(itemService.stepDrying(gs)).toBe(gs);
+  });
+});
+
+describe('hay-making (stepDrying: plant_fiber → hay)', () => {
+  // plains: 15°C / 30% moisture (warm + dry); swamp: 18°C / 80% (wet). turn 10800 = mid-afternoon
+  // (warmest of the diurnal swing), so plains clears the 12°C drying floor.
+  const tile = (terrainType: string, moisture: number): WorldTile =>
+    ({ terrainType, moisture }) as unknown as WorldTile;
+  const fiber = (p: Partial<DroppedItem>): DroppedItem =>
+    drop({ resourceId: 'plant_fiber', quantity: 4, ...p });
+  function hayState(
+    drops: DroppedItem[],
+    row: WorldTile[],
+    buildings: PlacedBuilding[] = [],
+    turn = 10800
+  ): GameState {
+    rebuildThermalField(buildings); // reset the module thermal field → deterministic temps
+    return {
+      seed: 1,
+      turn,
+      stockpile: {},
+      stockpileZones: [],
+      droppedItems: drops,
+      buildings,
+      worldMap: [row]
+    } as unknown as GameState;
+  }
+
+  it('cures on a warm, dry tile', () => {
+    const out = itemService.stepDrying(hayState([fiber({ x: 0, y: 0 })], [tile('plains', 30)]));
+    expect(out.droppedItems![0].drying).toBeGreaterThan(0);
+  });
+
+  it('does not cure on a wet tile — accrued progress decays', () => {
+    const out = itemService.stepDrying(
+      hayState([fiber({ x: 0, y: 0, drying: 100 })], [tile('swamp', 80)])
+    );
+    expect(out.droppedItems![0].resourceId).toBe('plant_fiber');
+    expect(out.droppedItems![0].drying).toBeLessThan(100);
+  });
+
+  it('a hay rack (dryingBonus) cures faster than the open ground', () => {
+    const rack = {
+      id: 'rk',
+      type: 'hay_rack',
+      x: 1,
+      y: 0,
+      status: 'complete',
+      progress: 1
+    } as PlacedBuilding;
+    const out = itemService.stepDrying(
+      hayState(
+        [fiber({ id: 'open', x: 0, y: 0 }), fiber({ id: 'rack', x: 1, y: 0 })],
+        [tile('plains', 30), tile('plains', 30)],
+        [rack]
+      )
+    );
+    const open = out.droppedItems!.find((d) => d.id === 'open')!;
+    const onRack = out.droppedItems!.find((d) => d.id === 'rack')!;
+    expect(onRack.drying!).toBeGreaterThan(open.drying!);
+  });
+
+  it('converts to hay once cured', () => {
+    const out = itemService.stepDrying(
+      hayState([fiber({ x: 0, y: 0, drying: 1199.999 })], [tile('plains', 30)])
+    );
+    expect(out.droppedItems![0].resourceId).toBe('hay');
   });
 });
 

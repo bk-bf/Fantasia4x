@@ -197,7 +197,7 @@ describe('§F resource growth/maturity', () => {
     const none = resourceObjectService.calculateYield('grass_patch', undefined, undefined, 'harvest', 0);
     expect(Object.keys(none).length).toBe(0); // 0% growth → no harvest
     const full = resourceObjectService.calculateYield('grass_patch', undefined, undefined, 'harvest', 100);
-    expect(full).toHaveProperty('hay');
+    expect(full).toHaveProperty('plant_fiber');
   });
 
   it('a tree forage only strips ~20% growth (just branches) — the tree stays standing', () => {

@@ -2015,7 +2015,7 @@
   // High spawn rates fill unclaimed grass tiles; if a tree/bush/etc. already
   // claimed the tile the break exits before these entries are reached.
   // ─────────────────────────────────────────────────────────────────────────
-  // Ordinary grass stand — cut for hay; bare-handed is slow, a flint sickle doubles speed.
+  // Ordinary grass stand — cut for plant fibre (dry it into hay on a rack); a flint sickle doubles speed.
   {
     "id"              : "grass_patch",
     "displayName"     : "Grass Patch",
@@ -2035,7 +2035,6 @@
       "workAmount"     : 3,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "hay",         "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15},
         {"itemId": "plant_fiber", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15}
       ],
       "persistent"     : true,
@@ -2050,7 +2049,6 @@
         "workAmount"     : 3,
         "toolRequirement": null,
         "yields"         : [
-          {"itemId": "hay",         "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15},
           {"itemId": "plant_fiber", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15}
         ],
         "persistent"     : true,
@@ -2066,7 +2064,6 @@
         "workAmount"     : 10,
         "toolRequirement": null,
         "yields"         : [
-          {"itemId": "hay",       "min": 1, "max": 2, "skillId": "digging", "skillMultiplier": 0.1},
           {"itemId": "poor_soil", "min": 1, "max": 2, "skillId": "digging", "skillMultiplier": 0.1},
           {"itemId": "dirt",      "min": 1, "max": 2, "skillId": "digging", "skillMultiplier": 0.1}
         ],
@@ -2096,7 +2093,6 @@
       "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "hay",         "min": 10, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15},
         {"itemId": "plant_fiber", "min":  5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15}
       ],
       "persistent"     : true,
@@ -2111,7 +2107,6 @@
         "workAmount"     : 6,
         "toolRequirement": null,
         "yields"         : [
-          {"itemId": "hay",         "min": 10, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15},
           {"itemId": "plant_fiber", "min":  5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15}
         ],
         "persistent"     : true,
@@ -2126,7 +2121,6 @@
         "workAmount"     : 14,
         "toolRequirement": null,
         "yields"         : [
-          {"itemId": "hay",  "min": 2, "max": 4, "skillId": "digging", "skillMultiplier": 0.1},
           {"itemId": "loam", "min": 1, "max": 2, "skillId": "digging", "skillMultiplier": 0.1},
           {"itemId": "dirt", "min": 1, "max": 2, "skillId": "digging", "skillMultiplier": 0.1}
         ],
@@ -2156,7 +2150,6 @@
       "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "hay",         "min": 5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15},
         {"itemId": "plant_fiber", "min": 5, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15}
       ],
       "persistent"     : true,
@@ -2171,7 +2164,6 @@
         "workAmount"     : 6,
         "toolRequirement": null,
         "yields"         : [
-          {"itemId": "hay",         "min": 5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15},
           {"itemId": "plant_fiber", "min": 5, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15}
         ],
         "persistent"     : true,
@@ -2186,7 +2178,6 @@
         "workAmount"     : 16,
         "toolRequirement": null,
         "yields"         : [
-          {"itemId": "hay",       "min": 2, "max": 5, "skillId": "digging", "skillMultiplier": 0.1},
           {"itemId": "rich_soil", "min": 1, "max": 2, "skillId": "digging", "skillMultiplier": 0.1},
           {"itemId": "dirt",      "min": 1, "max": 3, "skillId": "digging", "skillMultiplier": 0.1}
         ],

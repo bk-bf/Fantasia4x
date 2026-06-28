@@ -22,6 +22,15 @@ import {
 } from '../core/GameState';
 import { recipeService } from './RecipeService';
 import { buildingService } from './BuildingService';
+import {
+  thermalAt,
+  seasonBakedTemp,
+  effectiveTemperature,
+  tileWetness,
+  weatherEffects,
+  diurnalTempDelta,
+  WET_TILE_THRESHOLD
+} from './EnvironmentService';
 import itemsData from '../database/items.jsonc';
 import buildingsData from '../database/buildings.jsonc';
 import { SECONDS_PER_TICK } from '../core/time';
@@ -69,6 +78,15 @@ const DEFAULT_DETERIORATION_RATE = 0.02; // per tick (before the global scale be
 export const DETERIORATION_GLOBAL_SCALE = 0.02;
 // §1 wood seasoning: sim-seconds within the drying ring before green firewood turns dry.
 const WOOD_DRYING_SECONDS = 1800;
+// Hay-making: cut grass (plant_fiber) cures into hay in the open ONLY where it is warm AND dry — laid
+// out on a tile that's wet (rain / near water / a bog) instead reverses the cure. A hay rack
+// (effects.dryingBonus) multiplies the rate; a nearby fire warms the tile (via thermalAt) so it clears
+// the temperature gate faster — the two stack. The fuel-fired kiln is a later tier: an actual furnace
+// that simply carries a larger dryingBonus, no special-casing here.
+const HAY_DRYING_SECONDS = 1200; // open-air seconds at full warmth before plant_fiber turns to hay
+const HAY_DRY_TEMP_FLOOR = 12; // °C below which the cut grass does not dry at all
+const HAY_DRY_TEMP_REF = 28; // °C at/above which drying runs at full (open-air) speed
+const HAY_WET_DECAY = 2; // drying seconds lost per real second while the stack sits on a wet tile
 const DETERIORATION_RATE_BY_CATEGORY: Record<string, number> = {
   stone: 0.004, // rock barely weathers
   primitive: 0.01,
@@ -195,8 +213,9 @@ export interface ItemService {
   applyToolWear(workCategory: string, gameState: GameState): GameState;
   /** §B: wear a specific tool by id; it breaks (consumed) at maxDurability. */
   wearToolById(toolId: string, gameState: GameState): GameState;
-  /** §1 wood seasoning: green firewood within 2 tiles (not adjacent) of a lit fire dries over time. */
-  stepWoodDrying(gameState: GameState): GameState;
+  /** Passive drying (every tick): green firewood seasons near a lit fire; plant_fiber (cut grass)
+   *  cures into hay where warm & dry, faster on a hay rack (effects.dryingBonus). */
+  stepDrying(gameState: GameState): GameState;
 }
 
 /**
@@ -842,37 +861,97 @@ export class ItemServiceImpl implements ItemService {
   }
 
   /**
-   * §1 wood seasoning. A stack of green_firewood (or peat, conceptually) stored/lying within
-   * 2 tiles — but NOT directly adjacent — of a lit fire (campfire/hearth) accrues drying time;
-   * after WOOD_DRYING_SECONDS it converts to dry_firewood (the best wood fuel). Direct adjacency
-   * doesn't season (and later carries fire-spread risk — Living World).
+   * Passive drying, run every tick over loose/stored stacks. Two cures share the pass:
+   *
+   * §1 wood seasoning — a stack of green_firewood lying within 2 tiles (but NOT directly adjacent) of
+   * a lit fire accrues drying time and after WOOD_DRYING_SECONDS becomes dry_firewood (the best fuel).
+   *
+   * Hay-making — plant_fiber (cut grass) cures into hay where it is warm AND dry: it accrues only when
+   * the tile's effective temperature is above HAY_DRY_TEMP_FLOOR and its wetness is below the wet
+   * threshold, scaled by warmth up to HAY_DRY_TEMP_REF. A wet tile (rain / near water / bog) instead
+   * decays the progress (rain ruins drying hay). A hay rack (effects.dryingBonus) multiplies the rate;
+   * a nearby fire raises the tile's temperature (folded in by thermalAt) so it stacks with the rack.
    */
-  stepWoodDrying(gameState: GameState): GameState {
+  stepDrying(gameState: GameState): GameState {
     const drops = gameState.droppedItems;
     if (!drops || drops.length === 0) return gameState;
 
-    // Lit fires: complete buildings that require lighting and are currently lit.
-    const fires: { x: number; y: number }[] = [];
-    for (const b of gameState.buildings ?? []) {
-      if (b.status === 'complete' && b.lit) fires.push({ x: b.x, y: b.y });
+    // Cheap pre-scan: skip the whole (allocating) pass unless something dryable is on the ground.
+    let hasDryable = false;
+    for (const d of drops) {
+      if (
+        (d.resourceId === 'green_firewood' || d.resourceId === 'plant_fiber') &&
+        (d.quantity ?? 0) > 0
+      ) {
+        hasDryable = true;
+        break;
+      }
     }
-    if (fires.length === 0) return gameState;
+    if (!hasDryable) return gameState;
+
+    // Lit fires (for §1 firewood seasoning ring) and hay-rack tiles (effects.dryingBonus multiplier).
+    const fires: { x: number; y: number }[] = [];
+    const dryRacks = new Map<string, number>();
+    for (const b of gameState.buildings ?? []) {
+      if (b.status !== 'complete') continue;
+      if (b.lit) fires.push({ x: b.x, y: b.y });
+      const bonus = buildingService.getBuildingById(b.type)?.effects?.dryingBonus ?? 0;
+      if (bonus > 0) {
+        const key = b.y + ',' + b.x;
+        dryRacks.set(key, Math.max(dryRacks.get(key) ?? 0, bonus));
+      }
+    }
+
+    // Per-tick env scalars for hay-making (cheap, once — mirrors the needs sim).
+    const worldMap = gameState.worldMap;
+    const weather = gameState.weather;
+    const weatherTemp =
+      weatherEffects(weather).tempDelta + diurnalTempDelta(gameState.turn, gameState.season);
 
     let changed = false;
     const next = drops.map((d) => {
-      if (d.resourceId !== 'green_firewood' || (d.quantity ?? 0) <= 0) return d;
-      // Chebyshev distance to the nearest fire; seasoning ring is exactly 2 (not adjacent).
-      let nearest = Infinity;
-      for (const f of fires) {
-        nearest = Math.min(nearest, chebyshev(d.x, d.y, f.x, f.y));
+      if ((d.quantity ?? 0) <= 0) return d;
+
+      if (d.resourceId === 'green_firewood') {
+        if (fires.length === 0) return d;
+        // Chebyshev distance to the nearest fire; seasoning ring is exactly 2 (not adjacent).
+        let nearest = Infinity;
+        for (const f of fires) nearest = Math.min(nearest, chebyshev(d.x, d.y, f.x, f.y));
+        if (nearest !== 2) return d;
+        const drying = (d.drying ?? 0) + SECONDS_PER_TICK;
+        changed = true;
+        if (drying >= WOOD_DRYING_SECONDS) return { ...d, resourceId: 'dry_firewood', drying: undefined };
+        return { ...d, drying };
       }
-      if (nearest !== 2) return d;
-      const drying = (d.drying ?? 0) + SECONDS_PER_TICK;
-      changed = true;
-      if (drying >= WOOD_DRYING_SECONDS) {
-        return { ...d, resourceId: 'dry_firewood', drying: undefined };
+
+      if (d.resourceId === 'plant_fiber') {
+        const tile = worldMap?.[d.y]?.[d.x];
+        if (!tile) return d; // no tile context (e.g. tests) — can't judge temp/wetness
+        const thermal = thermalAt(d.x, d.y);
+        const temp = effectiveTemperature(
+          seasonBakedTemp(tile.terrainType, gameState.season),
+          weatherTemp,
+          thermal
+        );
+        const wet = tileWetness(tile.moisture ?? 0, weather, thermal);
+        const have = d.drying ?? 0;
+        if (wet >= WET_TILE_THRESHOLD) {
+          // Damp/rained-on: the cure reverses (no conversion while wet).
+          if (have <= 0) return d;
+          changed = true;
+          return { ...d, drying: Math.max(0, have - SECONDS_PER_TICK * HAY_WET_DECAY) };
+        }
+        const warmth = (temp - HAY_DRY_TEMP_FLOOR) / (HAY_DRY_TEMP_REF - HAY_DRY_TEMP_FLOOR);
+        const factor = Math.max(0, Math.min(1, warmth));
+        if (factor <= 0) return d; // too cold to dry; just sits
+        const mult = dryRacks.get(d.y + ',' + d.x) ?? 1;
+        const drying = have + SECONDS_PER_TICK * factor * mult;
+        changed = true;
+        if (drying >= HAY_DRYING_SECONDS) return { ...d, resourceId: 'hay', drying: undefined };
+        return { ...d, drying };
       }
-      return { ...d, drying };
+
+      return d;
     });
 
     if (!changed) return gameState;
