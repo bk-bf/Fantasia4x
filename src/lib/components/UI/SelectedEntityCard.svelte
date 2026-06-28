@@ -149,7 +149,14 @@
   // `embedded`: render as an in-flow flex item instead of self-anchoring to the canvas.
   // Used when a parent (e.g. the building row, which also hosts the fuel-settings panel)
   // already owns the absolute positioning and lays the card out in a flex row.
-  let { model, embedded = false }: { model: SelectedEntityModel; embedded?: boolean } = $props();
+  // `body`: optional rich/colour-coded body snippet rendered in place of `model.lines` (e.g. the
+  // building card passes <BuildingInfo>). Lets a type supply structured content while still getting the
+  // shared shell — header, status, dismiss, the button column, health/mood pop-ups.
+  let {
+    model,
+    embedded = false,
+    body
+  }: { model: SelectedEntityModel; embedded?: boolean; body?: import('svelte').Snippet } = $props();
 
   // NT-U1: the HEALTH button opens a pop-up health panel (like the fuel panel) above the card.
   // The open/closed flag is SHARED (healthToggle) so it persists across every selected/hovered
@@ -204,7 +211,9 @@
       {/if}
     </div>
 
-    {#if model.lines && model.lines.length > 0}
+    {#if body}
+      {@render body()}
+    {:else if model.lines && model.lines.length > 0}
       <div class="text-lines">
         {#each model.lines as line}
           <div class="text-line">{line}</div>

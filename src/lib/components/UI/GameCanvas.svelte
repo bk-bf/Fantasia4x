@@ -872,10 +872,11 @@
     };
   }
 
-  // The clicked-building info is now rendered by the shared <BuildingInfo> component (colour-coded,
-  // structured — matching the hover panel). All this reactive provides is the ACTION buttons; the
-  // building stats/fuel/refund/needs/warning are computed inside BuildingInfo from `selectedBuilding`.
-  $: buildingButtons = ((): EntityButton[] | null => {
+  // Clicked-building card: the shared SelectedEntityCard SHELL (header/status/dismiss + the button
+  // COLUMN) with <BuildingInfo> supplied as its colour-coded body (rendered at the call site). This
+  // reactive builds the shell model — name, status, and the action buttons (which live in the column,
+  // not in the info panel).
+  $: buildingModel = ((): SelectedEntityModel | null => {
     if (!selectedBuilding) return null;
     const bDef = buildingService.getBuildingById(selectedBuilding.type);
     const isBlueprint = selectedBuilding.status !== 'complete';
@@ -885,6 +886,11 @@
       !isBlueprint &&
       !selectedBuilding.deconstructQueued &&
       (bDef?.effects?.storageStacks ?? 0) > 0;
+    const status = isBlueprint
+      ? selectedBuilding.paused
+        ? 'paused'
+        : 'building'
+      : `complete${selectedBuilding.deconstructQueued ? ' ⊢ demolish' : ''}`;
     const btns: EntityButton[] = [];
     if (isBlueprint) {
       btns.push({
@@ -909,7 +915,13 @@
         });
       }
     }
-    return btns;
+    return {
+      name: bDef?.name ?? selectedBuilding.type,
+      status,
+      selected: true,
+      dismissable: true,
+      buttons: btns
+    } satisfies SelectedEntityModel;
   })();
 
   $: resourceCard = (() => {
@@ -4847,37 +4859,29 @@
         on:mousedown|stopPropagation
         on:mouseup|stopPropagation
       >
-        <div class="bld-card-col">
-          <div class="bld-clicked">
-            <BuildingInfo
-              building={selectedBuilding}
-              detailed
-              binContents={clickedBin}
-              gameState={$gameState}
-            />
-            {#if bt}
-              {@const benv = tileEnv(bt)}
-              <EnvReadout
-                light={benv.light}
-                temp={benv.temp}
-                wet={benv.wet}
-                wind={benv.wind}
-                debugTemp={$debugMode ? seasonBakedTemp(bt.terrainType, $currentSeason) : null}
+        {#if buildingModel}
+          <SelectedEntityCard model={buildingModel} embedded>
+            {#snippet body()}
+              <BuildingInfo
+                building={selectedBuilding}
+                detailed
+                showHeader={false}
+                binContents={clickedBin}
+                gameState={$gameState}
               />
-            {/if}
-            {#if buildingButtons && buildingButtons.length > 0}
-              <div class="bld-actions">
-                {#each buildingButtons as b}
-                  <button
-                    class="bld-act-btn"
-                    class:bld-act-btn--active={b.active}
-                    on:click={b.onClick}>{b.label}</button
-                  >
-                {/each}
-              </div>
-            {/if}
-          </div>
-        </div>
+              {#if bt}
+                {@const benv = tileEnv(bt)}
+                <EnvReadout
+                  light={benv.light}
+                  temp={benv.temp}
+                  wet={benv.wet}
+                  wind={benv.wind}
+                  debugTemp={$debugMode ? seasonBakedTemp(bt.terrainType, $currentSeason) : null}
+                />
+              {/if}
+            {/snippet}
+          </SelectedEntityCard>
+        {/if}
         {#if canConfigureFuel}
           <BuildingFuelPanel building={selectedBuilding} {pawns} open={showFuelSettings} />
         {/if}
@@ -5254,52 +5258,8 @@
        overlay (z-index 5) — matching the hover HUD (.tile-hud) and the SelectedEntityCard it replaced. */
     z-index: 10;
   }
-  /* Clicked-building column: the info card with its colour-coded EnvReadout stacked below it. */
-  .bld-card-col {
-    display: flex;
-    flex-direction: column;
-  }
-  /* The clicked-building box — same retro chrome as the hover panel (.tile-hud) but IN-FLOW so it sits
-     in the bld-row beside the fuel/storage fly-outs, and interactive (pointer-events). */
-  .bld-clicked {
-    width: 340px;
-    box-sizing: border-box;
-    background: rgba(28, 16, 6, 0.92);
-    border: 1px solid #6b4a2a;
-    color: #a07840;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    line-height: 1.5;
-    padding: 2px 7px;
-    pointer-events: all;
-    filter: url(#ambient-tint);
-  }
-  .bld-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 5px;
-  }
-  .bld-act-btn {
-    background: #160f06;
-    border: 1px solid #6b4f22;
-    color: #c8a060;
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 0.04em;
-    padding: 2px 8px;
-    cursor: pointer;
-  }
-  .bld-act-btn:hover {
-    background: #241809;
-    border-color: #8a6a30;
-  }
-  .bld-act-btn--active {
-    border-color: #c8a060;
-    color: #e0c080;
-  }
-  /* (.bld-header/.bld-name/.bld-status/.bld-desc/.bld-store/.bld-progress/.bld-note/.bld-fuel/.fuel-*
-     moved into the shared BuildingInfo.svelte component — see it for the building-info styling.) */
+  /* (Clicked-building info now uses the shared SelectedEntityCard shell + <BuildingInfo> body; the
+     bespoke .bld-clicked/.bld-actions box and the .bld-* info styles moved into BuildingInfo.svelte.) */
   .tile-coord {
     color: #e8b86a;
     font-weight: bold;

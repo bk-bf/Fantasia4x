@@ -21,7 +21,8 @@
     building,
     detailed = false,
     binContents = [],
-    gameState = null
+    gameState = null,
+    showHeader = true
   }: {
     building: PlacedBuilding;
     /** Clicked card: show comfort/beauty, refund, refuel requirement + "won't refuel" warning. */
@@ -30,6 +31,8 @@
     binContents?: DroppedItem[];
     /** Needed for the refuel-feasibility check (detailed only). */
     gameState?: GameState | null;
+    /** False when embedded in SelectedEntityCard, whose shell already renders the name/status header. */
+    showHeader?: boolean;
   } = $props();
 
   const bDef = $derived(buildingService.getBuildingById(building.type));
@@ -74,11 +77,12 @@
 </script>
 
 <div class="bld-info">
-  <div class="bld-header">
-    <span class="bld-name">{bDef?.name ?? building.type}</span>
-    <span class="bld-status">[{statusStr}]</span>
-    {#if detailed}<span class="bld-dismiss" title="Press Esc to deselect">◈</span>{/if}
-  </div>
+  {#if showHeader}
+    <div class="bld-header">
+      <span class="bld-name">{bDef?.name ?? building.type}</span>
+      <span class="bld-status">[{statusStr}]</span>
+    </div>
+  {/if}
 
   {#if isBlueprint}
     {@const workDone = building.workDone ?? 0}
@@ -169,10 +173,6 @@
     color: #7a6030;
     font-size: 9px;
     flex: 1;
-  }
-  .bld-dismiss {
-    color: #7a6030;
-    font-size: 9px;
   }
   .bld-desc {
     color: #8a7040;
