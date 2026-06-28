@@ -7,6 +7,45 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 
 ---
 
+## [FIXED] Pawns freeze in hot weather — tile-temperature cache stuck at 0 (bake gated on season alone)
+
+**Symptom:** In **30 °C summer**, pawns' cold-exposure meter ran up to **~110 %** and they took
+hypothermia, while the hover HUD showed the correct hot temperature. It looked **inverted** (cold at hot
+temps, fine at low temps) and **unpredictable** — pawns were fine through a far colder spring, then froze
+in summer, and only on the tiles they happened to stand on. Suspected (and ruled out) the new wicker vest,
+the wet/wind cold amplifiers, and "too-severe" tuning. The vest was a red herring — its +5 % cold
+resistance only ever *helped*.
+
+**Root cause (`systems/GameEngineImpl.ts` temperature bake):** `tile.temperature` is a **worker-only
+cache** — the main thread never computes it, so every worldMap the worker boots with (fresh world **and
+every reloaded save / re-init**) arrives with the WorldGenerator default `temperature: 0` on *every* tile.
+The bake that fills it (`recomputeWorldTemperature`, biome baseline + season offset) was triggered **only
+on a season change** (`temperatureSeason !== season`). So whenever an unbaked all-zero map showed up while
+the engine's `temperatureSeason` **already equalled the current season**, the bake was skipped and the
+**entire map stayed 0 °C**. The sim's cold/heat path (`PawnStateMachine.tickConditions`, `PawnService`)
+reads that cache directly → it felt 0 °C everywhere → cold exposure climbed regardless of the *real*
+temperature. The HUD looked right because it computes temp **live** via `tileTemperature()`, ignoring the
+broken cache — hence the UI-vs-sim discrepancy. Changing the season forced one rebake, which is exactly
+why it "fixed itself" temporarily (the diagnostic `TEMP-BAKE` line confirmed it: `staleBefore(<=0)=16261`
+out of `tiles=16261` — **every tile was 0** at session start).
+
+**Why it resisted diagnosis:** the temperature *math* is sound and bounded (worn cold-res only subtracts;
+at an effective 21 °C the exposure target is 0 and the meter drains), so for a long time it looked
+impossible for the vest or weather to cause it. The instrumented `base:0.0` on a `terrain:forest` tile in
+summer — a value **no biome+season can produce** (min is mountain 2 + summer 15 = 17) — was the tell: the
+tile had simply never been baked.
+
+**Fix (`systems/GameEngineImpl.ts` + `services/EnvironmentService.ts`):** rebake when the cache **isn't
+valid for the current season**, not just on a season change. Each tick (O(1)) it probes one tile against
+the canonical baked value via the new shared `seasonBakedTemp(terrainType, season)` (the single formula
+`recomputeWorldTemperature` writes): after a harvest the probe matches (tiles are spread, temperature
+preserved) so there's **no needless 16k-tile rescan**, and it's false for a season change **or an all-zero
+reloaded map** — both trigger exactly one rebake. NOT fixed by per-pawn recompute (rejected: scales with
+pawn count); fixed at the cache source so the per-pawn read stays unchanged. A debug-gated `(cache N° ≠
+M°)` readout was added next to the hover-tile temp (`$debugMode`) to surface any future UI-vs-cache
+divergence instantly. The `TEMP-BAKE`/`TEMP-DBG` diagnostics in `EnvironmentService`/`PawnStateMachine`
+are gated behind verbose logging.
+
 ## [FIXED] Stray browser tabs — Electron shell punted its own URL to Zen (`URL` shadowed the global)
 
 **Symptom:** While running the game in the Electron spike (`./launch.sh --electron`), **tabs at
