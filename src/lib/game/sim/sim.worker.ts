@@ -17,7 +17,7 @@ import { gameEngine } from '../systems/GameEngineImpl';
 import { rng } from '../core/rng';
 import { resetUnreachableJobs } from '../systems/PawnStateMachine';
 import { TICKS_PER_SECOND } from '../core/time';
-import { setSimLogSink, simLog, type SimLogSink } from '../core/logSink';
+import { setSimLogSink, simLog, setVerboseLogging, type SimLogSink } from '../core/logSink';
 import { applySimCommand } from './commands';
 import { projectSentEntity } from './entityProjection';
 import type { SimLogEvent, EntitySync } from './simProtocol';
@@ -596,6 +596,11 @@ self.onmessage = async (e: MessageEvent) => {
       break;
     case 'setSpeed':
       speed = msg.speed;
+      break;
+    case 'setVerbose':
+      // Settings → Debug mode toggle: flip the worker's verbose gate so the per-tick sim traces
+      // (needs/AI/jobs/items) start/stop forwarding to the chronicle + .debug logs at runtime.
+      setVerboseLogging(!!msg.on);
       break;
     case 'setPaused':
       paused = msg.paused;

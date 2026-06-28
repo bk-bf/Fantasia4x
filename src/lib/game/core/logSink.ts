@@ -195,9 +195,24 @@ export function setSimLogSink(sink: SimLogSink): void {
  * (which enables neither) — they cost nothing: `vlog` returns before building the message, so the sim
  * profiles clean and there's no firehose. To watch the log during a profiler/electron run, opt in
  * explicitly with `--log`. Light perf logging (the 1 Hz TPS sampler) is separate and always on.
+ *
+ * The build flag is the FLOOR; the in-game Settings → Debug mode toggle can also turn it on at runtime
+ * in a shipped/`--play` build (so a player can capture the same traces without a debug build). The
+ * toggle drives `setVerboseLogging`, which is mirrored into the sim worker too (see simWorkerClient /
+ * sim.worker `setVerbose`). It's a live binding, so call sites reading `LOG_VERBOSE` see toggles
+ * immediately. OFF by default — normal play stays firehose-free.
  */
-export const LOG_VERBOSE: boolean =
+const BUILD_VERBOSE: boolean =
   import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_LOG === 'true';
+
+export let LOG_VERBOSE: boolean = BUILD_VERBOSE;
+
+/** Runtime override for the verbose gate (Settings → Debug mode). ORs with the build flag, so a
+ *  `--debug`/`--log` build stays verbose even when the toggle is off. Per module instance — the main
+ *  thread and the sim worker each call this against their own copy. */
+export function setVerboseLogging(on: boolean): void {
+  LOG_VERBOSE = on || BUILD_VERBOSE;
+}
 
 /**
  * Gated verbose log. No-op (and the message thunk is never invoked) unless `LOG_VERBOSE`. Pass a

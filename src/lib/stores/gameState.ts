@@ -56,7 +56,7 @@ import {
   ensureActiveSave,
   setActiveCommitted
 } from './saveManager';
-import { defaultGameSpeed, autoPauseOnThreat, autoPauseOnDeath } from './uiPrefs';
+import { defaultGameSpeed, autoPauseOnThreat, autoPauseOnDeath, debugMode } from './uiPrefs';
 import { clearActivityLog, reloadActivityLogForActiveSave, activityLog } from './Log';
 import { applyDevWorld } from '$lib/game/dev/devWorld';
 import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
@@ -1337,6 +1337,12 @@ if (USE_SIM_WORKER) {
   // ADR-021 cutover: keep the worker's loop in sync with pause/speed.
   isPaused.subscribe((p) => simWorkerBridge.setPaused(p));
 }
+// Settings → Debug mode toggle drives the verbose sim-log gate at runtime (so a shipped/--play build
+// can capture the same per-tick traces as a --debug build). `subscribe` fires immediately with the
+// persisted value, so the gate is in sync from boot, then on every toggle. setVerbose flips both this
+// thread's gate and the worker's. Unconditional: the in-thread (SSR/test) fallback only needs the
+// main-thread copy, which setVerbose still sets.
+debugMode.subscribe((on) => simWorkerBridge.setVerbose(on));
 gameSpeed.subscribe((value) => {
   gameSpeedValue = value;
 });

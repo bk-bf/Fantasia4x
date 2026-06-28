@@ -15,7 +15,7 @@ import {
   clearRenderTileDeltas
 } from '../../components/UI/gameCanvas/mainTileDeltas';
 import { batchLogReplay } from '../../stores/Log';
-import { vlog } from '../core/logSink';
+import { vlog, setVerboseLogging } from '../core/logSink';
 import type { SimLogEvent, EntitySync } from './simProtocol';
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
 
@@ -132,6 +132,9 @@ class SimWorkerBridge {
    *  takes up to one batch to actually stop). Commit snapshots — command results + the pause hand-off
    *  — are always applied so player actions while paused still render. */
   private paused = false;
+  /** Settings → Debug mode: mirror of the verbose-logging gate. Re-sent on every (re)init so a freshly
+   *  spawned worker inherits the current setting. */
+  private verbose = false;
 
   start(): void {
     if (this.w) return;
@@ -148,12 +151,23 @@ class SimWorkerBridge {
     this.dropMirror.clear();
     // `preview` (menu backdrop) makes the engine run a gutted turn; the real boot omits it ⇒ false.
     this.w?.postMessage({ kind: 'init', state, seed, preview: opts?.preview ?? false });
+    // Re-apply the verbose gate to the (possibly freshly spawned) worker, since `init` resets its
+    // forwarding sink — without this a worker started after the toggle was set would log nothing.
+    this.w?.postMessage({ kind: 'setVerbose', on: this.verbose });
   }
   command(cmd: unknown): void {
     this.w?.postMessage({ kind: 'command', cmd });
   }
   setSpeed(speed: number): void {
     this.w?.postMessage({ kind: 'setSpeed', speed });
+  }
+  /** Settings → Debug mode toggle: enable/disable the verbose sim traces at runtime. Flips both the
+   *  worker's gate (where the per-tick sim runs) and this thread's own gate (main-thread `vlog` calls,
+   *  e.g. the ITEM-DBG receive trace). */
+  setVerbose(on: boolean): void {
+    this.verbose = on;
+    setVerboseLogging(on); // main-thread copy
+    this.w?.postMessage({ kind: 'setVerbose', on });
   }
   setPaused(paused: boolean): void {
     // Set the client gate FIRST (synchronously) so any tick snapshots already queued from the worker
