@@ -393,6 +393,8 @@
         {#each displayedEntries as entry (entry.key)}
           {@const item = entry.item}
           {@const recipe = recipeOf(item.id)}
+          {@const toolReq = requiredToolOf(item.id)}
+          {@const toolReqMet = toolReq?.met ?? true}
           {@const isCarcass = item.isCarcass && item.yields}
           {@const isPlaceholder = !!recipe?.dynamicRecipe && !entry.selectedIngredients}
           {@const baseCost = isCarcass ? {} : { ...costOf(item.id), ...entry.dynamicCost }}
@@ -404,16 +406,19 @@
             ? getItemAmount(item.id) > 0
             : !isPlaceholder &&
               Object.entries(baseCost).every(([id, n]) => getItemAmount(id) >= (n as number))}
-          {@const craftable = isCarcass
-            ? $gameState !== null && itemService.canCraftItem(item.id, $gameState)
-            : stationReady && affordable}
+          {@const craftable =
+            toolReqMet &&
+            (isCarcass
+              ? $gameState !== null && itemService.canCraftItem(item.id, $gameState)
+              : stationReady && affordable)}
           {@const intactness = carcassConditions[item.id] ?? 100}
           {@const pct = Math.round(intactness)}
           {@const dynNeed =
             !entry.slots && isPlaceholder && recipe?.dynamicRecipe
               ? recipeService.slotCategories(Object.values(recipe.dynamicRecipe)[0]).join('/')
               : null}
-          {@const canQueue = $gameState !== null && itemService.canQueueCraft(item.id, $gameState)}
+          {@const canQueue =
+            $gameState !== null && itemService.canQueueCraft(item.id, $gameState) && toolReqMet}
           {@const useQty = !isCarcass && !isPlaceholder}
           <BuildCard
             name={entry.name.toUpperCase()}
@@ -430,8 +435,8 @@
             station={stationNameOf(item.id)}
             toolTier={recipe?.toolTierRequired ?? null}
             toolMet={$gameState !== null && itemService.hasRequiredTools(item.id, $gameState)}
-            requiredTool={requiredToolOf(item.id)?.name ?? null}
-            requiredToolMet={requiredToolOf(item.id)?.met ?? true}
+            requiredTool={toolReq?.name ?? null}
+            requiredToolMet={toolReqMet}
             badge={isCarcass ? `${pct}%` : null}
             actionLabel={useQty
               ? !canQueue
