@@ -417,13 +417,27 @@ export function tryAssignSleepPath(
 // Building type lists — module-level for use in helpers
 export const CAMPFIRE_TYPES = ['campfire'];
 
-export const REST_TYPES = [
-  'lean_to_shelter',
-  'woodland_shelter',
-  'stone_hut',
-  'sleeping_spot',
-  'hay_bed'
-];
+// Rest buildings are DATA-DRIVEN: any building def with a sleep effect (sleepQuality or
+// fatigueRecovery) counts. The old hardcoded list drifted — hide_bed/leather_bed/feather_bed were
+// missing, so a tired pawn ignored them and collapsed on the bare ground right next to a finished
+// bed. Deriving from effects means a new bed in buildings.jsonc is recognised automatically.
+let _restTypeSet: Set<string> | null = null;
+function restTypeSet(): Set<string> {
+  if (!_restTypeSet) {
+    _restTypeSet = new Set(
+      BUILDINGS_DB.filter(
+        (d) => (d.effects?.sleepQuality ?? 0) > 0 || (d.effects?.fatigueRecovery ?? 0) > 0
+      ).map((d) => d.id)
+    );
+  }
+  return _restTypeSet;
+}
+
+/** True when a building TYPE provides rest (has a sleep effect). Replaces the drift-prone REST_TYPES
+ *  list — see {@link restTypeSet}. */
+export function isRestBuildingType(type: string): boolean {
+  return restTypeSet().has(type);
+}
 
 /** Phase 6: find the nearest complete storage building (campfire etc.) to a pawn. */
 export function findNearestStorageBuilding(
@@ -447,7 +461,7 @@ export function findNearestRestBuilding(
   if (!pawn.position) return null;
   // 1. Prefer a building specifically assigned to this pawn.
   const assigned = (gs.buildings ?? []).find(
-    (b) => b.status === 'complete' && REST_TYPES.includes(b.type) && b.assignedPawnId === pawn.id
+    (b) => b.status === 'complete' && isRestBuildingType(b.type) && b.assignedPawnId === pawn.id
   );
   if (assigned) return { x: assigned.x, y: assigned.y, buildingId: assigned.id };
   // 2. Among unassigned buildings pick the highest quality one (distance as tie-break).
@@ -456,7 +470,7 @@ export function findNearestRestBuilding(
   let best: { x: number; y: number; buildingId: string; score: number } | null = null;
   for (const b of gs.buildings ?? []) {
     if (b.status !== 'complete') continue;
-    if (!REST_TYPES.includes(b.type)) continue;
+    if (!isRestBuildingType(b.type)) continue;
     if (b.assignedPawnId && b.assignedPawnId !== pawn.id) continue;
     // Skip a bed with ANY body already on its tile — a sleeping pawn, but ALSO a collapsed/downed pawn
     // lying in it (e.g. one just tended) or a mob. Such a tile is movement-blocked, so routing there
@@ -506,7 +520,7 @@ export function getRestBuildingAtPawn(pawn: Pawn, gs: GameState): PlacedBuilding
     (gs.buildings ?? []).find(
       (b) =>
         b.status === 'complete' &&
-        REST_TYPES.includes(b.type) &&
+        isRestBuildingType(b.type) &&
         Math.abs(b.x - pawn.position!.x) <= 1 &&
         Math.abs(b.y - pawn.position!.y) <= 1
     ) ?? null
@@ -617,7 +631,7 @@ export function distFromPointToNearestRestSource(x: number, y: number, gs: GameS
   let best = Infinity;
   for (const b of gs.buildings ?? []) {
     if (b.status !== 'complete') continue;
-    if (!REST_TYPES.includes(b.type)) continue;
+    if (!isRestBuildingType(b.type)) continue;
     const d = manhattan(b.x, b.y, x, y);
     if (d < best) best = d;
   }

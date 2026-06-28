@@ -5,7 +5,7 @@
  *  "where do I take them?" query — the nearest complete rest building. */
 import type { GameState } from '../../../core/types';
 import { manhattan } from '../../../core/distance';
-import { REST_TYPES } from '../pawnHelpers';
+import { isRestBuildingType } from '../pawnHelpers';
 import { tileHasBody } from '../carry';
 
 /** Nearest COMPLETE rest building (bed/shelter) tile to (x,y) that is NOT already occupied by another
@@ -19,7 +19,7 @@ export function nearestShelterTile(
   let best: { x: number; y: number } | null = null;
   let bestD = Infinity;
   for (const b of gs.buildings ?? []) {
-    if (b.status !== 'complete' || !REST_TYPES.includes(b.type)) continue;
+    if (b.status !== 'complete' || !isRestBuildingType(b.type)) continue;
     if (tileHasBody(gs, b.x, b.y)) continue; // bed taken (pawn or mob) — one body per shelter
     const d = manhattan(b.x, b.y, x, y);
     if (d < bestD) {
@@ -32,5 +32,5 @@ export function nearestShelterTile(
 
 /** Does the colony have anywhere to carry a rescued pawn? The `rescuePawn` command refuses early when not. */
 export function hasShelter(gs: GameState): boolean {
-  return (gs.buildings ?? []).some((b) => b.status === 'complete' && REST_TYPES.includes(b.type));
+  return (gs.buildings ?? []).some((b) => b.status === 'complete' && isRestBuildingType(b.type));
 }
