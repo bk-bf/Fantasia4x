@@ -286,8 +286,13 @@ export function seasonBakedTemp(terrainType: string, season: Season | undefined)
  */
 export function recomputeWorldTemperature(worldMap: WorldTile[][], season: Season): number {
   const offset = SEASONS[season].tempOffset;
-  let sum = 0;
   let count = 0;
+  // The HUD average is taken over WALKABLE tiles only — unwalkable cliff/rock/water (the bulk of the
+  // cold mountain biome) is land the colony can never stand on, so counting it dragged the topbar far
+  // below the temperatures the player actually reads on every accessible tile. Every tile still gets
+  // its `temperature` baked for the sim; only the returned mean is restricted.
+  let walkSum = 0;
+  let walkCount = 0;
   let staleBefore = 0; // tiles whose cached temp was <=0 / undefined / NaN BEFORE this bake (never baked)
   let minAfter = Infinity;
   let maxAfter = -Infinity;
@@ -297,8 +302,11 @@ export function recomputeWorldTemperature(worldMap: WorldTile[][], season: Seaso
       if (!((tile.temperature ?? 0) > 0)) staleBefore++;
       const temp = seasonBakedTemp(tile.terrainType, season);
       tile.temperature = temp;
-      sum += temp;
       count++;
+      if (tile.walkable) {
+        walkSum += temp;
+        walkCount++;
+      }
       if (temp < minAfter) minAfter = temp;
       if (temp > maxAfter) maxAfter = temp;
       if (temp <= 0) zeroAfter++;
@@ -315,8 +323,9 @@ export function recomputeWorldTemperature(worldMap: WorldTile[][], season: Seaso
       `TEMP-BAKE season=${season} offset=${offset} tiles=${count} staleBefore(<=0)=${staleBefore} ` +
       `after[min=${minAfter} max=${maxAfter} zero=${zeroAfter}]`
   );
-  // Average baked tile temperature (biome + season, no weather) — the topbar adds the weather delta.
-  return count > 0 ? sum / count : offset;
+  // Average baked tile temperature over WALKABLE land (biome + season, no weather) — the topbar adds
+  // the weather delta. Falls back to the season offset if a map somehow has no walkable tiles.
+  return walkCount > 0 ? walkSum / walkCount : offset;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
