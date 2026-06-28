@@ -55,14 +55,14 @@
       beauty: (bDef?.effects?.beauty ?? 0) + (mm?.beauty ?? 0)
     };
   });
-  // Refuel requirement + "won't refuel" flag (always tinder + N distinct fuel types).
+  // Refuel requirement + "won't refuel" flag (just tinder + any fuel — no distinct-type gate).
   const refuel = $derived.by(() => {
     if (!detailed || isBlueprint || building.deconstructQueued || bDef?.maxFuel === undefined)
       return null;
     const req = getRefuelRequirements(building.type);
     const tinderName =
       itemService.getItemById(req.tinderItemId)?.name ?? req.tinderItemId.replace(/_/g, ' ');
-    const needs = `needs: ${req.tinderAmount}× ${tinderName} + ${req.requiredFuelTypes} fuel types`;
+    const needs = `needs: ${req.tinderAmount}× ${tinderName} + any fuel`;
     const wantsFuel = (building.fuel ?? 0) / Math.max(bDef.maxFuel, 1) < getRefuelThresholdRatio(building);
     let warn: string | null = null;
     if (gameState && wantsFuel && planRefuel(gameState, building) === null) {
@@ -70,7 +70,7 @@
       warn =
         tinderStock < req.tinderAmount
           ? `⚠ won't refuel — need ${req.tinderAmount}× ${tinderName} (have ${tinderStock})`
-          : `⚠ won't refuel — not enough distinct fuel in stock`;
+          : `⚠ won't refuel — no fuel in stock`;
     }
     return { needs, warn };
   });

@@ -38,7 +38,7 @@
   $: selectedRefuelPawnFilters = selectedFuelSettings.allowedRefuelPawnIds ?? [];
 
   // Refuel requirements (source of truth: fuelRules) shown so the player understands WHY a fire won't
-  // refuel — e.g. it always needs tinder + a minimum number of distinct fuel types in the stockpile.
+  // refuel — it needs a pinch of tinder + any allowed fuel in the stockpile (a single type is fine).
   $: refuelReq = getRefuelRequirements(building.type);
   $: tinderName = itemService.getItemById(refuelReq.tinderItemId)?.name ?? refuelReq.tinderItemId;
   $: tinderStock = ($gameState.stockpile ?? {})[refuelReq.tinderItemId] ?? 0;
@@ -133,18 +133,18 @@
     fuel settings
   </div>
 
-  <!-- Refuel requirements — makes it clear WHY a fire won't refuel (it always needs tinder + a
-       minimum number of distinct fuel types in stock, even with plenty of one fuel). -->
+  <!-- Refuel requirements — makes it clear WHY a fire won't refuel (it needs a pinch of tinder + any
+       allowed fuel in stock; a single fuel type is fine). -->
   <div class="fuel-settings-block">
     <div class="fuel-settings-label">refuel needs</div>
     <div class="fuel-req">
-      {refuelReq.tinderAmount}× {tinderName} (tinder) + {refuelReq.requiredFuelTypes} fuel types
+      {refuelReq.tinderAmount}× {tinderName} (tinder) + any fuel
     </div>
     {#if cannotRefuel}
       <div class="fuel-warn">
         ⚠ can't refuel now{tinderStock < refuelReq.tinderAmount
           ? ` — need ${refuelReq.tinderAmount}× ${tinderName} (have ${tinderStock})`
-          : ' — not enough distinct fuel in stock'}
+          : ' — no fuel in stock'}
       </div>
     {/if}
   </div>

@@ -43,13 +43,15 @@ export function resolveAllowedFuelIds(settings?: FuelSettings): Set<string> {
 }
 
 const DEFAULT_REFUEL_THRESHOLD_RATIO = 0.3;
-const DEFAULT_REFUEL_REQUIRED_FUEL_TYPES = 2;
 const DEFAULT_REFUEL_TINDER_ITEM_ID = 'plant_fiber';
 const DEFAULT_REFUEL_TINDER_AMOUNT = 2;
 
-/** Fuel requirements resolved for a building type. */
+/** Fuel requirements resolved for a building type. A fire takes ANY single fuel — the only gate is
+ *  a pinch of tinder to get it going (the old "≥N distinct fuel types" gate was removed: it blocked
+ *  refuelling a hearth that had a stockpile of just firewood). Whether a STATION is hot enough to
+ *  smelt is no longer a refuel filter — it's the tracked `fireHeat` vs the def's `minFuelHeat`,
+ *  checked at production time (see GameEngineImpl.processPassiveProduction). */
 export interface RefuelRequirements {
-  requiredFuelTypes: number;
   tinderItemId: string;
   tinderAmount: number;
 }
@@ -62,20 +64,26 @@ export function getRefuelThresholdRatio(building: PlacedBuilding): number {
   return clampedPct / 100;
 }
 
-/** Resolve a building type's fuel requirements (required distinct fuel types + tinder), with defaults. */
+/** Resolve a building type's fuel requirements (just the tinder needed to light it), with defaults. */
 export function getRefuelRequirements(buildingType: string): RefuelRequirements {
   const req = buildingService.getBuildingById(buildingType)?.fuelRequirements;
   return {
-    requiredFuelTypes: Math.max(1, req?.requiredFuelTypes ?? DEFAULT_REFUEL_REQUIRED_FUEL_TYPES),
     tinderItemId: req?.tinderItemId ?? DEFAULT_REFUEL_TINDER_ITEM_ID,
     tinderAmount: Math.max(0, req?.tinderAmount ?? DEFAULT_REFUEL_TINDER_AMOUNT)
   };
 }
 
-/** The concrete plan for one refuel: exactly which items to consume and the resulting fuel level. */
+/** The concrete plan for one refuel: which items to consume, the resulting fuel level, and the
+ *  fire's new heat/longevity character derived from that fuel mix. */
 export interface RefuelPlan {
   consumed: Record<string, number>;
   newFuel: number;
+  /** Heat rating (fuelHeat units, ~1–5) of the loaded mix — energy-weighted. Drives smelt gating +
+   *  warmth output. A hearth fed coke runs hotter than one fed green wood. */
+  fireHeat: number;
+  /** Burn-longevity multiplier (≥1, energy-weighted `burnDuration`): dense fuel burns slower, so the
+   *  station drains `fuelConsumptionRate / burnFactor` per tick — fewer refuel trips for better fuel. */
+  burnFactor: number;
 }
 
 /**
@@ -89,10 +97,11 @@ export interface RefuelPlan {
  * removed, then re-queued next reconcile → the pawn looped at the fire forever working with no result.
  * Sharing one plan makes that impossible: if `generate` queues it, `complete` will add fuel.
  *
- * Mirrors the old greedy fill: reserve tinder, then fill from each eligible fuel item (passes the
- * `minFuelHeat` gate + the per-building fuel filter) in DB order until the tank is full or fuel runs
- * out. Returns null when there isn't enough tinder, no eligible fuel adds anything, or the consumed
- * set doesn't meet the building's required fuel-type diversity.
+ * Greedy fill: reserve tinder, then fill from each allowed fuel item (any fuel — there is no longer a
+ * `minFuelHeat` refuel filter; a station too cold to smelt still LOADS the fuel, it just won't run)
+ * in DB order until the tank is full or fuel runs out. From the consumed mix it derives the fire's
+ * `fireHeat` (energy-weighted `fuelHeat`) and `burnFactor` (energy-weighted `burnDuration`). Returns
+ * null only when there isn't enough tinder or no allowed fuel adds anything.
  */
 export function planRefuel(gs: GameState, building: PlacedBuilding): RefuelPlan | null {
   const def = buildingService.getBuildingById(building.type);
@@ -108,40 +117,35 @@ export function planRefuel(gs: GameState, building: PlacedBuilding): RefuelPlan 
   if (requirements.tinderAmount > 0)
     consumed[requirements.tinderItemId] = requirements.tinderAmount;
 
-  const minHeat = def?.minFuelHeat ?? 0;
   const allowedFuelIds = resolveAllowedFuelIds(building.fuelSettings);
 
   let currentFuel = startFuel;
+  // Energy-weighted accumulators for the loaded mix (weight = fuel units actually added).
+  let energy = 0;
+  let heatEnergy = 0;
+  let burnEnergy = 0;
   for (const item of ITEMS_DB) {
-    if ((item.fuelValue ?? 0) <= 0) continue;
-    if ((item.fuelHeat ?? 1) < minHeat) continue; // §2 heat gate — same as the consume step
+    const fuelValue = item.fuelValue ?? 0;
+    if (fuelValue <= 0) continue;
+    if (item.id === requirements.tinderItemId) continue; // tinder starts the fire; it isn't the fuel bed
     if (!allowedFuelIds.has(item.id)) continue;
     while (currentFuel < maxFuel) {
       const available = (stockpile[item.id] ?? 0) - (consumed[item.id] ?? 0);
       if (available <= 0) break;
       consumed[item.id] = (consumed[item.id] ?? 0) + 1;
-      currentFuel = Math.min(currentFuel + item.fuelValue!, maxFuel);
+      const added = Math.min(fuelValue, maxFuel - currentFuel);
+      currentFuel += added;
+      energy += added;
+      heatEnergy += added * (item.fuelHeat ?? 1);
+      burnEnergy += added * (item.burnDuration ?? 1);
     }
   }
 
-  if (currentFuel === startFuel) return null; // no eligible fuel actually added anything
-  if (!hasRequiredFuelTypesForRefuel(consumed, requirements)) return null;
-  return { consumed, newFuel: currentFuel };
-}
-
-/** Whether an actually-consumed fuel set meets the building's required fuel-type diversity + tinder. */
-export function hasRequiredFuelTypesForRefuel(
-  consumed: Record<string, number>,
-  requirements: RefuelRequirements
-): boolean {
-  if ((consumed[requirements.tinderItemId] ?? 0) < requirements.tinderAmount) return false;
-
-  const consumedFuelTypes = Object.keys(consumed).filter((id) => (consumed[id] ?? 0) > 0);
-  if (requirements.requiredFuelTypes <= 1) return consumedFuelTypes.length > 0;
-
-  const nonTinderTypeCount = consumedFuelTypes.filter(
-    (id) => id !== requirements.tinderItemId
-  ).length;
-
-  return nonTinderTypeCount >= Math.max(1, requirements.requiredFuelTypes - 1);
+  if (currentFuel === startFuel) return null; // no allowed fuel actually added anything
+  return {
+    consumed,
+    newFuel: currentFuel,
+    fireHeat: energy > 0 ? heatEnergy / energy : 1,
+    burnFactor: energy > 0 ? Math.max(1, burnEnergy / energy) : 1
+  };
 }

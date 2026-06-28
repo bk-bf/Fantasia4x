@@ -123,6 +123,12 @@ export interface PlacedBuilding {
   // Phase 6: fuel / lighting state
   fuel?: number; // current fuel units remaining
   lit?: boolean; // campfire is burning right now
+  /** Heat rating (fuelHeat units, ~1–5) of the fuel currently loaded — set on refuel from the energy-
+   *  weighted mix. Gates smelting (vs def.minFuelHeat) and scales radiated warmth. 0/undefined = cold. */
+  fireHeat?: number;
+  /** Burn-longevity multiplier (≥1) from the loaded fuel's `burnDuration`; the station drains
+   *  `fuelConsumptionRate / burnFactor` per tick, so denser fuel lasts longer. Undefined = 1×. */
+  burnFactor?: number;
   fuelSettings?: FuelSettings; // optional per-building refuel controls
   storageSettings?: StorageSettings; // §F optional per-building storage-bin item filter
   // Deconstruction
@@ -323,7 +329,6 @@ export interface Building {
   fluxPerBatch?: number; // limestone flux consumed per smelt batch (bloomery, §5)
   moldRequired?: string; // clay/metal mold consumed/worn per cast (§5/§G)
   fuelRequirements?: {
-    requiredFuelTypes?: number;
     tinderItemId?: string;
     tinderAmount?: number;
   };

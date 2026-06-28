@@ -33,7 +33,7 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
     if (b.fuelSettings?.paused) continue;
     const fuelRatio = (b.fuel ?? 0) / Math.max(bDef.maxFuel, 1);
     if (fuelRatio >= fuelRules.getRefuelThresholdRatio(b)) continue;
-    // Only queue when an actual refuel is possible (tinder + heat-eligible fuel + required diversity).
+    // Only queue when an actual refuel is possible (tinder + any allowed fuel in stock).
     if (fuelRules.planRefuel(gs, b) === null) continue;
     const exists = jobs.some((j) => j.type === 'refuel' && j.buildingId === b.id);
     if (!exists) {
@@ -62,8 +62,18 @@ export function complete(job: Job, gs: GameState): GameState {
   const plan = fuelRules.planRefuel(gs, building);
   if (!plan) return gs;
 
+  // The fresh batch sets the fire's character: its heat (smelt gate + warmth) and burn-longevity.
+  // Refuelling fires at <30% tank, so the new fuel dominates — overwrite rather than blend.
   const newBuildings = (gs.buildings ?? []).map((b) =>
-    b.id === job.buildingId ? { ...b, fuel: plan.newFuel, lit: plan.newFuel > 0 } : b
+    b.id === job.buildingId
+      ? {
+          ...b,
+          fuel: plan.newFuel,
+          lit: plan.newFuel > 0,
+          fireHeat: plan.fireHeat,
+          burnFactor: plan.burnFactor
+        }
+      : b
   );
   const maxFuel = buildingService.getBuildingById(building.type)?.maxFuel ?? 60;
   console.log(

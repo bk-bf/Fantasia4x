@@ -263,6 +263,10 @@ export interface Item {
   populationRequired?: number;
   // Phase 6: fuel / container / cooking properties
   fuelValue?: number; // fuel units added when used as campfire fuel
+  /** Burn-longevity multiplier (≥1, default 1): how much SLOWER a station burns while fed this fuel,
+   *  independent of `fuelValue` (bulk) and `fuelHeat` (temperature). Dense seasoned fuel (charcoal,
+   *  coke) smoulders far longer than kindling, so a tank of it needs refuelling far less often. */
+  burnDuration?: number;
   isContainer?: boolean; // acts as a storage container
   storageCapacity?: number; // max items stored
   preservationBonus?: number; // 0–1, reduces food spoilage rate

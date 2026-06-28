@@ -575,6 +575,7 @@
     "weightKg"         : 0.1,
     "volumeL"          : 0.4,
     "fuelValue"        : 8,
+    "burnDuration"     : 1.5,
     "gatheringTypes"   : ["foraging"]
   },
   {
@@ -606,6 +607,7 @@
     "volumeL"          : 4,
     "fuelValue"        : 10,
     "fuelHeat"         : 1,
+    "burnDuration"     : 1.5,
     "deteriorationRate": 0.05,
     "maxDurability"    : 120,
     "gatheringTypes"   : ["woodcutting"]
@@ -623,6 +625,7 @@
     "volumeL"          : 4,
     "fuelValue"        : 14,
     "fuelHeat"         : 1,
+    "burnDuration"     : 1.5,
     "deteriorationRate": 0.05,
     "maxDurability"    : 120,
     "gatheringTypes"   : ["woodcutting"]
@@ -640,6 +643,7 @@
     "volumeL"          : 3.5,
     "fuelValue"        : 16,
     "fuelHeat"         : 1,
+    "burnDuration"     : 2,
     "deteriorationRate": 0.05,
     "maxDurability"    : 120,
     "gatheringTypes"   : ["woodcutting"]
@@ -726,6 +730,7 @@
     "volumeL"          : 2.5,
     "fuelValue"        : 16,
     "fuelHeat"         : 2,
+    "burnDuration"     : 2,
     "deteriorationRate": 0.03
   },
   {
@@ -757,6 +762,7 @@
     "volumeL"          : 1.5,
     "fuelValue"        : 11,
     "fuelHeat"         : 2,
+    "burnDuration"     : 2,
     "deteriorationRate": 0.03,
     "maxDurability"    : 120,
     "gatheringTypes"   : ["digging", "mining"]
@@ -776,6 +782,7 @@
     "volumeL": 1,
     "fuelValue": 24,
     "fuelHeat": 3,
+    "burnDuration": 3,
     "toolTierRequired": 0
   },
   {
@@ -793,6 +800,7 @@
     "volumeL": 1.5,
     "fuelValue": 40,
     "fuelHeat": 4,
+    "burnDuration": 4,
     "gatheringTypes": ["mining"]
   },
   {
@@ -810,6 +818,7 @@
     "volumeL": 1.5,
     "fuelValue": 60,
     "fuelHeat": 5,
+    "burnDuration": 5,
     "toolTierRequired": 0
   },
   {

@@ -1156,10 +1156,17 @@ export class GameEngineImpl implements GameEngine {
       if (!station) continue;
       // Inputs must be fully loaded onto the furnace first.
       if (!jobService.isOrderSupplied(order, state)) continue;
-      // Gated by fuel/heat: a fuel-burning furnace must be lit. Furnaces without a fuel tank
-      // (e.g. charcoal_pit, where the loaded wood IS the fuel) run as soon as they're loaded.
+      // Gated by fuel/heat: a fuel-burning furnace must be lit AND hot enough. The station now
+      // accepts any fuel (no refuel filter); whether it can smelt is decided HERE — its tracked
+      // `fireHeat` (from the fuel it was fired with) must meet the def's `minFuelHeat`. A bloomery
+      // stoked with green wood stays lit but too cold to smelt, so the order stalls until hotter
+      // fuel arrives. Furnaces without a fuel tank (e.g. charcoal_pit, where the loaded wood IS the
+      // fuel) run as soon as they're loaded.
       const def = AVAILABLE_BUILDINGS.find((d) => d.id === station.type);
-      if ((def?.maxFuel ?? 0) > 0 && !station.lit) continue;
+      if ((def?.maxFuel ?? 0) > 0) {
+        if (!station.lit) continue;
+        if ((station.fireHeat ?? 0) < (def?.minFuelHeat ?? 0)) continue;
+      }
 
       const newDone = (order.workDone ?? 0) + perTick(PASSIVE_WORK_PER_SECOND);
       if (newDone >= (order.workRequired ?? 1)) {
@@ -1207,11 +1214,17 @@ export class GameEngineImpl implements GameEngine {
         return { ...b, lit: true };
       }
       if (!b.lit) return b;
-      const newFuel = Math.max(0, (b.fuel ?? 0) - perTick(buildingDef.fuelConsumptionRate));
+      // §D burn-longevity: denser fuel (high `burnDuration` → high `burnFactor`) drains slower, so a
+      // tank of charcoal/coke outlasts one of green wood and pawns refuel far less often.
+      const burnFactor = b.burnFactor ?? 1;
+      const newFuel = Math.max(0, (b.fuel ?? 0) - perTick(buildingDef.fuelConsumptionRate / burnFactor));
       const newLit = newFuel > 0;
       if (newFuel === b.fuel && newLit === b.lit) return b;
       changed = true;
-      return { ...b, fuel: newFuel, lit: newLit };
+      // Burnt out → the fire goes cold: clear its heat/longevity so warmth + smelt gating stop.
+      return newLit
+        ? { ...b, fuel: newFuel, lit: newLit }
+        : { ...b, fuel: newFuel, lit: newLit, fireHeat: 0, burnFactor: 1 };
     });
     if (!changed) return gs;
     return { ...gs, buildings: newBuildings };

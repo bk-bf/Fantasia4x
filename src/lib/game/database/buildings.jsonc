@@ -20,9 +20,9 @@
     "effects": {"warmth": 0.3, "cookingEnabled": true},
     "storageCapacity": {},
     "requiresLighting": true,
-    "maxFuel": 60,
+    "maxFuel": 120,
     "fuelConsumptionRate": 1,
-    "fuelRequirements": {"requiredFuelTypes": 2, "tinderItemId": "plant_fiber", "tinderAmount": 2},
+    "fuelRequirements": {"tinderItemId": "plant_fiber", "tinderAmount": 2},
     "buildingState": {"isUnique": false, "maxCount": 5}
   },
   {
@@ -47,10 +47,10 @@
     "effects": {"warmth": 0.6, "cookingEnabled": true, "boilingEnabled": true, "isFire": 1},
     "storageCapacity": {},
     "requiresLighting": true,
-    "maxFuel": 120,
+    "maxFuel": 240,
     "fuelConsumptionRate": 1,
     "minFuelHeat": 0,
-    "fuelRequirements": {"requiredFuelTypes": 2, "tinderItemId": "plant_fiber", "tinderAmount": 2},
+    "fuelRequirements": {"tinderItemId": "plant_fiber", "tinderAmount": 2},
     "buildingState": {"isUnique": false, "maxCount": 5}
   },
   {
@@ -206,7 +206,7 @@
     "maxFuel": 100,
     "fuelConsumptionRate": 1,
     "minFuelHeat": 2,
-    "fuelRequirements": {"requiredFuelTypes": 1, "tinderItemId": "plant_fiber", "tinderAmount": 2},
+    "fuelRequirements": {"tinderItemId": "plant_fiber", "tinderAmount": 2},
     "buildingState": {"isUnique": false}
   },
   {
@@ -234,7 +234,7 @@
     "maxFuel": 120,
     "fuelConsumptionRate": 1,
     "minFuelHeat": 3,
-    "fuelRequirements": {"requiredFuelTypes": 1, "tinderItemId": "plant_fiber", "tinderAmount": 2},
+    "fuelRequirements": {"tinderItemId": "plant_fiber", "tinderAmount": 2},
     "buildingState": {"isUnique": false}
   },
   {
@@ -406,7 +406,7 @@
     "maxFuel": 120,
     "fuelConsumptionRate": 2,
     "minFuelHeat": 3,
-    "fuelRequirements": {"requiredFuelTypes": 1, "tinderItemId": "plant_fiber", "tinderAmount": 2},
+    "fuelRequirements": {"tinderItemId": "plant_fiber", "tinderAmount": 2},
     "buildingState": {"isUnique": false}
   },
   {
@@ -435,7 +435,7 @@
     "maxFuel": 160,
     "fuelConsumptionRate": 3,
     "minFuelHeat": 3,
-    "fuelRequirements": {"requiredFuelTypes": 1, "tinderItemId": "plant_fiber", "tinderAmount": 2},
+    "fuelRequirements": {"tinderItemId": "plant_fiber", "tinderAmount": 2},
     "buildingState": {"isUnique": false}
   },
   {
@@ -485,7 +485,7 @@
     "maxFuel": 120,
     "fuelConsumptionRate": 2,
     "minFuelHeat": 3,
-    "fuelRequirements": {"requiredFuelTypes": 1, "tinderItemId": "plant_fiber", "tinderAmount": 2},
+    "fuelRequirements": {"tinderItemId": "plant_fiber", "tinderAmount": 2},
     "buildingState": {"isUnique": false}
   },
   {
@@ -514,7 +514,7 @@
     "maxFuel": 160,
     "fuelConsumptionRate": 3,
     "minFuelHeat": 5,
-    "fuelRequirements": {"requiredFuelTypes": 1, "tinderItemId": "plant_fiber", "tinderAmount": 2},
+    "fuelRequirements": {"tinderItemId": "plant_fiber", "tinderAmount": 2},
     "buildingState": {"isUnique": false}
   },
   {

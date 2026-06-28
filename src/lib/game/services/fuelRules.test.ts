@@ -10,18 +10,23 @@ function building(type: string, fuel = 0, extra: Partial<PlacedBuilding> = {}): 
   return { id: 'b1', type, x: 0, y: 0, status: 'complete', progress: 1, fuel, ...extra };
 }
 
-describe('planRefuel — shared generate/complete plan (refuel-loop fix)', () => {
-  it('high-heat station with ONLY low-heat fuel → null (the bug: gate passed, complete consumed nothing → loop)', () => {
-    // bloomery minFuelHeat 3; branch fuelHeat defaults to 1 → ineligible. Tons of branch, still null.
-    expect(planRefuel(gs({ plant_fiber: 10, branch: 100 }), building('bloomery'))).toBeNull();
+describe('planRefuel — shared generate/complete plan (any fuel loads; heat gates production)', () => {
+  it('a station LOADS any fuel, even too-cold fuel — the smelt gate moved to production', () => {
+    // bloomery minFuelHeat 3; branch fuelHeat 1. It still refuels (no refuel filter anymore) — the
+    // fire just runs too cold to smelt (fireHeat < 3, enforced at processPassiveProduction).
+    const plan = planRefuel(gs({ plant_fiber: 10, branch: 100 }), building('bloomery'));
+    expect(plan).not.toBeNull();
+    expect(plan!.consumed.branch).toBeGreaterThan(0);
+    expect(plan!.fireHeat).toBeLessThan(3); // too cold to smelt iron
   });
 
-  it('high-heat station WITH heat-eligible fuel (coal) → a real plan', () => {
+  it('hotter fuel sets a higher fireHeat — coal clears the bloomery smelt gate', () => {
     const plan = planRefuel(gs({ plant_fiber: 10, coal: 10 }), building('bloomery'));
     expect(plan).not.toBeNull();
     expect(plan!.newFuel).toBeGreaterThan(0);
     expect(plan!.consumed.coal).toBeGreaterThan(0);
     expect(plan!.consumed.plant_fiber).toBe(2); // tinder reserved
+    expect(plan!.fireHeat).toBeGreaterThanOrEqual(3); // hot enough to smelt
   });
 
   it('no tinder in stockpile → null', () => {
@@ -32,29 +37,39 @@ describe('planRefuel — shared generate/complete plan (refuel-loop fix)', () =>
     expect(planRefuel(gs({}), building('campfire'))).toBeNull();
   });
 
-  it('campfire with tinder + fuel → real plan that fills the tank', () => {
+  it('campfire with tinder + a single fuel type → real plan that fills the tank', () => {
     const plan = planRefuel(gs({ plant_fiber: 10, branch: 100 }), building('campfire'));
     expect(plan).not.toBeNull();
-    expect(plan!.newFuel).toBe(60); // campfire maxFuel
+    expect(plan!.newFuel).toBe(120); // campfire maxFuel
     expect(plan!.consumed.branch).toBeGreaterThan(0);
   });
 
   it('already-full tank → null (nothing to add)', () => {
-    expect(planRefuel(gs({ plant_fiber: 10, branch: 100 }), building('campfire', 60))).toBeNull();
+    expect(planRefuel(gs({ plant_fiber: 10, branch: 100 }), building('campfire', 120))).toBeNull();
   });
 
   it('iron bloomery (heat 3) runs on charcoal, the historical bloomery fuel', () => {
     const plan = planRefuel(gs({ plant_fiber: 10, charcoal: 10 }), building('bloomery'));
     expect(plan).not.toBeNull();
     expect(plan!.consumed.charcoal).toBeGreaterThan(0);
+    expect(plan!.fireHeat).toBeGreaterThanOrEqual(3);
   });
 
-  it('steel finery (heat 5) accepts ONLY coke — charcoal and coal are too cool/dirty', () => {
-    expect(planRefuel(gs({ plant_fiber: 10, charcoal: 50 }), building('finery_forge'))).toBeNull();
-    expect(planRefuel(gs({ plant_fiber: 10, coal: 50 }), building('finery_forge'))).toBeNull();
-    const plan = planRefuel(gs({ plant_fiber: 10, coke: 50 }), building('finery_forge'));
-    expect(plan).not.toBeNull();
-    expect(plan!.consumed.coke).toBeGreaterThan(0);
+  it('steel finery (heat 5): any fuel loads, but only coke gets the fire hot enough to smelt', () => {
+    const charcoalPlan = planRefuel(gs({ plant_fiber: 10, charcoal: 50 }), building('finery_forge'));
+    expect(charcoalPlan).not.toBeNull(); // it still loads…
+    expect(charcoalPlan!.fireHeat).toBeLessThan(5); // …but too cool to make steel
+    const cokePlan = planRefuel(gs({ plant_fiber: 10, coke: 50 }), building('finery_forge'));
+    expect(cokePlan).not.toBeNull();
+    expect(cokePlan!.consumed.coke).toBeGreaterThan(0);
+    expect(cokePlan!.fireHeat).toBeGreaterThanOrEqual(5);
+  });
+
+  it('§D burnFactor: better fuel burns longer — charcoal outlasts branch', () => {
+    const charcoal = planRefuel(gs({ plant_fiber: 10, charcoal: 50 }), building('hearth'));
+    const branch = planRefuel(gs({ plant_fiber: 10, branch: 100 }), building('hearth'));
+    expect(charcoal!.burnFactor).toBeGreaterThan(branch!.burnFactor);
+    expect(branch!.burnFactor).toBeGreaterThanOrEqual(1); // never speeds a fire up
   });
 });
 
