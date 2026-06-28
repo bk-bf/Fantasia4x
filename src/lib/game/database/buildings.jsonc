@@ -23,7 +23,7 @@
     "maxFuel": 120,
     "fuelConsumptionRate": 1,
     "fuelRequirements": {"tinderItemId": "plant_fiber", "tinderAmount": 2},
-    "defaultAllowedFuelItemIds": ["green_firewood", "dry_firewood", "peat", "charcoal", "sawdust"],
+    "defaultAllowedFuelItemIds": ["green_firewood", "dry_firewood", "peat", "charcoal"],
     "buildingState": {"isUnique": false, "maxCount": 5}
   },
   {
@@ -52,7 +52,7 @@
     "fuelConsumptionRate": 1,
     "minFuelHeat": 0,
     "fuelRequirements": {"tinderItemId": "plant_fiber", "tinderAmount": 2},
-    "defaultAllowedFuelItemIds": ["green_firewood", "dry_firewood", "peat", "charcoal", "sawdust"],
+    "defaultAllowedFuelItemIds": ["green_firewood", "dry_firewood", "peat", "charcoal"],
     "buildingState": {"isUnique": false, "maxCount": 5}
   },
   {
