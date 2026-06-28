@@ -79,6 +79,63 @@ describe('JobService claim / release', () => {
   });
 });
 
+describe('JobService subjobs (Work-tab fine-tuning)', () => {
+  function withLabor(laborSettings: Record<string, number>) {
+    return {
+      'pawn-a': { pawnId: 'pawn-a', workPriorities: {}, laborSettings }
+    } as unknown as GameState['workAssignments'];
+  }
+
+  it('exposes subjobs only for categories that aggregate multiple job types', () => {
+    expect(jobService.getSubjobsForCategory('construction').map((s) => s.id).sort()).toEqual(
+      ['construct', 'deconstruct', 'refuel', 'repair'].sort()
+    );
+    expect(jobService.getSubjobsForCategory('hauling').map((s) => s.id).sort()).toEqual(
+      ['fetch', 'haul'].sort()
+    );
+    expect(jobService.getSubjobsForCategory('crafting')).toEqual([]); // 1:1, nothing to expand
+  });
+
+  it('ranks a higher subjob ahead of its sibling WITHIN the same parent category', () => {
+    const gs = makeState({
+      jobs: [
+        makeJob({ id: 'j-build', type: 'construct' }),
+        makeJob({ id: 'j-repair', type: 'repair' })
+      ],
+      workAssignments: withLabor({ construction: 2, repair: 4 })
+    });
+    const order = jobService.getAvailableJobs(makePawn('pawn-a'), gs).map((j) => j.id);
+    expect(order.indexOf('j-repair')).toBeLessThan(order.indexOf('j-build'));
+  });
+
+  it('a subjob level NEVER lifts a job above a different category (cross-category guard)', () => {
+    // construction=normal with repair=urgent; hauling=high. The haul must still outrank the repair —
+    // repair's high subjob only matters among construction jobs.
+    const gs = makeState({
+      jobs: [
+        makeJob({ id: 'j-haul', type: 'haul' }),
+        makeJob({ id: 'j-repair', type: 'repair' })
+      ],
+      workAssignments: withLabor({ construction: 2, repair: 4, hauling: 3 })
+    });
+    const order = jobService.getAvailableJobs(makePawn('pawn-a'), gs).map((j) => j.id);
+    expect(order.indexOf('j-haul')).toBeLessThan(order.indexOf('j-repair'));
+  });
+
+  it('a subjob set to 0 is excluded while its parent category stays enabled', () => {
+    const gs = makeState({
+      jobs: [
+        makeJob({ id: 'j-build', type: 'construct' }),
+        makeJob({ id: 'j-repair', type: 'repair' })
+      ],
+      workAssignments: withLabor({ construction: 2, repair: 0 })
+    });
+    const ids = jobService.getAvailableJobs(makePawn('pawn-a'), gs).map((j) => j.id);
+    expect(ids).toContain('j-build');
+    expect(ids).not.toContain('j-repair');
+  });
+});
+
 describe('JobService advanceJob', () => {
   it('accumulates work without completing below the threshold', () => {
     const gs = makeState({ jobs: [makeJob({ workRequired: 10, workDone: 0 })] });

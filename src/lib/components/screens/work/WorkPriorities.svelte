@@ -2,6 +2,8 @@
   import { gameState } from '$lib/stores/gameState';
   import { WORK_CATEGORIES } from '$lib/game/core/Work';
   import { pawnStatService } from '$lib/game/services/PawnStatService';
+  import { jobService } from '$lib/game/services/JobService';
+  import { persisted, persist } from '$lib/stores/uiPersist';
   import type { Pawn, WorkAssignment } from '$lib/game/core/types';
   import {
     LABOR_LABELS,
@@ -34,6 +36,67 @@
 
   function toggleColumn(id: string) {
     selectedColumn = selectedColumn === id ? null : id;
+  }
+
+  // ── Subjobs: splittable categories (construction = build/demolish/refuel/repair, hauling =
+  // haul/fetch) can be right-click-EXPANDED to rank their job types WITHIN the parent. ───────────────
+  const subjobsByCat: Record<string, { id: string; label: string }[]> = {};
+  for (const wc of WORK_CATEGORIES) subjobsByCat[wc.id] = jobService.getSubjobsForCategory(wc.id);
+
+  // Which splittable columns are currently expanded (persisted across tab toggles).
+  let expanded = $state<string[]>(persisted('work.expandedCols', []) ?? []);
+  $effect(() => persist('work.expandedCols', expanded));
+  function toggleExpand(catId: string) {
+    expanded = expanded.includes(catId)
+      ? expanded.filter((c) => c !== catId)
+      : [...expanded, catId];
+  }
+
+  type Col =
+    | { kind: 'cat'; catId: string; name: string; abbr: string; splittable: boolean }
+    | { kind: 'sub'; catId: string; subId: string; label: string; abbr: string };
+
+  // Flattened column list: each category, plus its subjob columns when expanded. Drives BOTH the
+  // header row and every pawn row, so they can't drift.
+  let columns = $derived.by<Col[]>(() => {
+    const cols: Col[] = [];
+    for (const wc of WORK_CATEGORIES) {
+      const subs = subjobsByCat[wc.id];
+      cols.push({
+        kind: 'cat',
+        catId: wc.id,
+        name: wc.name,
+        abbr: ABBR[wc.id] ?? wc.id.slice(0, 3).toUpperCase(),
+        splittable: subs.length > 0
+      });
+      if (subs.length > 0 && expanded.includes(wc.id)) {
+        for (const sj of subs)
+          cols.push({
+            kind: 'sub',
+            catId: wc.id,
+            subId: sj.id,
+            label: sj.label,
+            abbr: sj.label.slice(0, 3).toUpperCase()
+          });
+      }
+    }
+    return cols;
+  });
+
+  // A subjob's effective level for a pawn: its explicit override if set, else the parent category level
+  // (inherited — shown dimmed). The assignment ranks an inherited subjob alongside its parent.
+  function getSubjobLevel(
+    pawnId: string,
+    catId: string,
+    subId: string
+  ): { level: 0 | 1 | 2 | 3 | 4; inherited: boolean } {
+    const ls = workAssignments[pawnId]?.laborSettings;
+    if (ls && subId in ls) return { level: ls[subId] as 0 | 1 | 2 | 3 | 4, inherited: false };
+    return { level: getPawnLaborLevel(pawnId, catId), inherited: true };
+  }
+  function cycleSubjob(pawnId: string, catId: string, subId: string, dir: 1 | -1) {
+    const cur = getSubjobLevel(pawnId, catId, subId).level;
+    updatePawnLaborLevel(pawnId, subId, (((cur + dir + 5) % 5) as 0 | 1 | 2 | 3 | 4));
   }
 
   function getPawnLaborLevel(pawnId: string, workId: string): 0 | 1 | 2 | 3 | 4 {
@@ -105,13 +168,35 @@
     <thead>
       <tr>
         <th class="name-hdr">WORKER</th>
-        {#each WORK_CATEGORIES as wc}
-          <th
-            class="work-hdr"
-            class:col-sel={selectedColumn === wc.id}
-            title="{wc.name} — click to highlight related attributes"
-            onclick={() => toggleColumn(wc.id)}>{ABBR[wc.id] ?? wc.id.slice(0, 3).toUpperCase()}</th
-          >
+        {#each columns as col}
+          {#if col.kind === 'cat'}
+            <th
+              class="work-hdr"
+              class:col-sel={selectedColumn === col.catId}
+              class:splittable={col.splittable}
+              title="{col.name} — click to highlight related attributes{col.splittable
+                ? '; right-click to expand subjobs'
+                : ''}"
+              onclick={() => toggleColumn(col.catId)}
+              oncontextmenu={(e) => {
+                e.preventDefault();
+                if (col.splittable) toggleExpand(col.catId);
+              }}
+              >{col.abbr}{#if col.splittable}<span class="caret"
+                  >{expanded.includes(col.catId) ? '▾' : '▸'}</span
+                >{/if}</th
+            >
+          {:else}
+            <th
+              class="work-hdr sub-hdr"
+              title="{col.label} — subjob; ranks within its parent category"
+              onclick={() => toggleColumn(col.catId)}
+              oncontextmenu={(e) => {
+                e.preventDefault();
+                toggleExpand(col.catId);
+              }}>{col.abbr}</th
+            >
+          {/if}
         {/each}
         <th class="state-hdr">STATUS</th>
       </tr>
@@ -123,40 +208,66 @@
           onclick={() => (selectedPawn = selectedPawn === pawn.id ? null : pawn.id)}
         >
           <td class="name-cell">{pawn.name.toUpperCase()}</td>
-          {#each WORK_CATEGORIES as wc}
-            {@const lvl = getPawnLaborLevel(pawn.id, wc.id)}
-            {@const rk = rankMap[pawn.id]?.[wc.id]}
-            <td>
-              <button
-                class="cell-btn"
-                style="color:{LABOR_COLORS[lvl]}"
-                onmouseenter={(e) => showTip(e, pawn.id, wc.id)}
-                onmousemove={moveTip}
-                onmouseleave={hideTip}
-                onclick={(e) => {
-                  e.stopPropagation();
-                  cycleLevel(pawn.id, wc.id, 1);
-                }}
-                oncontextmenu={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  cycleLevel(pawn.id, wc.id, -1);
-                }}
-              >
-                <span class="cell-lbl">{LABOR_LABELS[lvl]}</span>
-                {#if rk && rk.best >= 0}
-                  <span class="mark" style="color:{STAR_COLORS[rk.best]}">{STAR_MARK}</span>
-                {:else if rk && rk.worst >= 0}
-                  <span class="mark" style="color:{WORST_COLORS[rk.worst]}">{WORST_MARK}</span>
-                {/if}
-              </button>
-            </td>
+          {#each columns as col}
+            {#if col.kind === 'cat'}
+              {@const lvl = getPawnLaborLevel(pawn.id, col.catId)}
+              {@const rk = rankMap[pawn.id]?.[col.catId]}
+              <td>
+                <button
+                  class="cell-btn"
+                  style="color:{LABOR_COLORS[lvl]}"
+                  onmouseenter={(e) => showTip(e, pawn.id, col.catId)}
+                  onmousemove={moveTip}
+                  onmouseleave={hideTip}
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    cycleLevel(pawn.id, col.catId, 1);
+                  }}
+                  oncontextmenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    cycleLevel(pawn.id, col.catId, -1);
+                  }}
+                >
+                  <span class="cell-lbl">{LABOR_LABELS[lvl]}</span>
+                  {#if rk && rk.best >= 0}
+                    <span class="mark" style="color:{STAR_COLORS[rk.best]}">{STAR_MARK}</span>
+                  {:else if rk && rk.worst >= 0}
+                    <span class="mark" style="color:{WORST_COLORS[rk.worst]}">{WORST_MARK}</span>
+                  {/if}
+                </button>
+              </td>
+            {:else}
+              {@const sj = getSubjobLevel(pawn.id, col.catId, col.subId)}
+              <td class="sub-cell">
+                <button
+                  class="cell-btn"
+                  class:inherited={sj.inherited}
+                  style="color:{LABOR_COLORS[sj.level]}"
+                  title="{col.label}: {sj.inherited ? 'inherits parent' : 'override'} — click to set, right-click to lower"
+                  onmouseenter={(e) => showTip(e, pawn.id, col.catId)}
+                  onmousemove={moveTip}
+                  onmouseleave={hideTip}
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    cycleSubjob(pawn.id, col.catId, col.subId, 1);
+                  }}
+                  oncontextmenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    cycleSubjob(pawn.id, col.catId, col.subId, -1);
+                  }}
+                >
+                  <span class="cell-lbl">{LABOR_LABELS[sj.level]}</span>
+                </button>
+              </td>
+            {/if}
           {/each}
           <td class="state-cell" style="color:{stateColor(pawn)}">{stateLabel(pawn)}</td>
         </tr>
       {/each}
       {#if pawns.length === 0}
-        <tr><td colspan={WORK_CATEGORIES.length + 2} class="empty">no colonists</td></tr>
+        <tr><td colspan={columns.length + 2} class="empty">no colonists</td></tr>
       {/if}
     </tbody>
   </table>
@@ -171,7 +282,8 @@
   <span class="leg" style="color:{STAR_COLORS[0]}">{STAR_MARK} top jobs</span>
   <span class="leg" style="color:{WORST_COLORS[0]}">{WORST_MARK} weakest</span>
   <span class="leg-hint"
-    >· click cell to cycle ↑ · right-click to cycle ↓ · hover for stats · click row for detail</span
+    >· click cell ↑ · right-click ↓ · right-click a ▸ column header to expand subjobs · click row for
+    detail</span
   >
 </div>
 
@@ -226,6 +338,31 @@
   .work-hdr.col-sel {
     color: var(--accent-hi);
     background: color-mix(in srgb, var(--accent-hi) 18%, transparent);
+  }
+  .work-hdr.splittable {
+    /* a faint underline cue that this column expands on right-click */
+    text-decoration: underline dotted color-mix(in srgb, var(--text-dim) 60%, transparent);
+    text-underline-offset: 2px;
+  }
+  .caret {
+    font-size: 7px;
+    margin-left: 1px;
+    opacity: 0.7;
+  }
+  /* Subjob columns read as children of the category to their left. */
+  .work-hdr.sub-hdr {
+    font-size: 9px;
+    color: var(--text-muted, #6a7a8a);
+    background: color-mix(in srgb, var(--accent-hi) 6%, transparent);
+    border-left-style: dashed;
+  }
+  .sub-cell {
+    background: color-mix(in srgb, var(--accent-hi) 5%, transparent);
+    border-left-style: dashed !important;
+  }
+  /* An inherited (un-overridden) subjob cell is dimmed — it just follows its parent category. */
+  .cell-btn.inherited {
+    opacity: 0.4;
   }
   .name-cell {
     text-align: left;

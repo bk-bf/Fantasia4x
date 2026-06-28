@@ -41,6 +41,21 @@ import { isOrderSupplied as stagingIsOrderSupplied } from './jobs/staging';
 const JOB_DEFS = jobsData as unknown as JobDef[];
 const JOB_DEF_BY_ID = new Map<string, JobDef>(JOB_DEFS.map((d) => [d.id, d]));
 
+// Subjobs: job types that share a STATIC work category (e.g. construction = construct/deconstruct/
+// refuel/repair, hauling = haul/fetch). A category with >1 of these is "splittable" — the Work tab can
+// expand it and the player can rank the subjobs WITHIN the parent. Dynamic-category jobs (harvest by
+// designation, craft→cooking) are excluded — they already resolve to their own granular category.
+const SUBJOBS_BY_CATEGORY: Map<string, string[]> = (() => {
+  const m = new Map<string, string[]>();
+  for (const def of JOB_DEFS) {
+    if (!def.workCategory || def.workCategorySource) continue;
+    const arr = m.get(def.workCategory) ?? [];
+    arr.push(def.id);
+    m.set(def.workCategory, arr);
+  }
+  return m;
+})();
+
 /** The colony pool job types — the subset of Job['type'] that JobService generates & completes. */
 type JobPoolType =
   | 'harvest'
@@ -276,7 +291,13 @@ class JobServiceImpl {
       } else {
         priority = 2; // LABOR_LEVEL.NORMAL — default enabled
       }
-      return priority > 0;
+      if (priority <= 0) return false;
+      // Subjob override: an explicit 0 on a subjob key (e.g. `repair`) disables just THAT subjob,
+      // while the parent category (construction) stays enabled.
+      const subKey = this._jobSubKey(j, workKey);
+      if (subKey !== workKey && subKey in laborSettings && (laborSettings[subKey] ?? 2) <= 0)
+        return false;
+      return true;
     });
 
     return available.sort((a, b) => {
@@ -286,13 +307,39 @@ class JobServiceImpl {
       if (urgB !== urgA) return urgB - urgA;
       const workKeyA = this._jobTypeToWorkKey(a, gameState);
       const workKeyB = this._jobTypeToWorkKey(b, gameState);
+      // PRIMARY: parent-category level — the cross-category priority (unchanged). A subjob NEVER
+      // outranks a different category here.
       const labA = laborSettings[workKeyA] ?? 2;
       const labB = laborSettings[workKeyB] ?? 2;
       if (labB !== labA) return labB - labA;
+      // SECONDARY: subjob level, but ONLY between jobs of the SAME category — a subjob's level ranks it
+      // among its siblings (repair before construct), it does not lift it above other categories.
+      if (workKeyA === workKeyB) {
+        const subKeyA = this._jobSubKey(a, workKeyA);
+        const subKeyB = this._jobSubKey(b, workKeyB);
+        const subA = subKeyA !== workKeyA && subKeyA in laborSettings ? laborSettings[subKeyA] ?? 2 : labA;
+        const subB = subKeyB !== workKeyB && subKeyB in laborSettings ? laborSettings[subKeyB] ?? 2 : labB;
+        if (subB !== subA) return subB - subA;
+      }
       const dA = manhattan(a.targetX, a.targetY, px, py);
       const dB = manhattan(b.targetX, b.targetY, px, py);
       return dA - dB;
     });
+  }
+
+  /** The within-parent ranking key for a job: its job-type id when its category is splittable (the
+   *  job is one of several sharing that category), else just the category key (no subjob). */
+  private _jobSubKey(job: WorkKeyJob, categoryKey: string): string {
+    const subs = SUBJOBS_BY_CATEGORY.get(categoryKey);
+    return subs && subs.length > 1 && subs.includes(job.type) ? job.type : categoryKey;
+  }
+
+  /** Splittable categories' subjobs for the Work tab — `{id,label}` per job type, empty if the
+   *  category aggregates only one job type (nothing to expand). */
+  getSubjobsForCategory(categoryId: string): { id: string; label: string }[] {
+    const subs = SUBJOBS_BY_CATEGORY.get(categoryId);
+    if (!subs || subs.length <= 1) return [];
+    return subs.map((id) => ({ id, label: JOB_DEF_BY_ID.get(id)?.label ?? id }));
   }
 
   /**
