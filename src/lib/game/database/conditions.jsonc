@@ -126,7 +126,7 @@
             "safe"        : 40,
             "rateCritical": 0.0006,
             "rateMax"     : 0.0015,
-            "recovery"    : 0.0008,
+            "recovery"    : 0.008,
             "onsetDelay"  : 300
         },
         "stages": [
