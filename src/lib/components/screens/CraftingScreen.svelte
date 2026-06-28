@@ -21,7 +21,8 @@
   const recipeOf = (itemId: string) => recipeService.getRecipeForItem(itemId);
   // `category:plank`-style slots are expanded to a representative concrete item for display so the
   // cost row shows a real material name, never a raw `category:` key.
-  const costOf = (itemId: string): Record<string, number> => itemService.calculateCraftingCost(itemId);
+  const costOf = (itemId: string): Record<string, number> =>
+    itemService.calculateCraftingCost(itemId);
   /** Byproduct outputs (excluding the primary item) for display. */
   const byproductsOf = (itemId: string): [string, number][] => {
     const r = recipeOf(itemId);
@@ -251,9 +252,7 @@
           dynamicCost[id] = (dynamicCost[id] ?? 0) + slot.quantity;
         }
       }
-      const composed = allPicked
-        ? itemService.composeDynamicDishName(item.id, chosen)
-        : undefined;
+      const composed = allPicked ? itemService.composeDynamicDishName(item.id, chosen) : undefined;
       return [
         {
           key: item.id,
@@ -274,7 +273,9 @@
     // Dedupe by id across cats; getItemsByCategory is pseudo-category aware (`log`/`plank` match by id
     // suffix, not item.category — logs share the `wood` category with planks/beams).
     const variantItems = [
-      ...new Map(cats.flatMap((c) => itemService.getItemsByCategory(c)).map((i) => [i.id, i])).values()
+      ...new Map(
+        cats.flatMap((c) => itemService.getItemsByCategory(c)).map((i) => [i.id, i])
+      ).values()
     ];
     const inStock = variantItems.filter((vi) => (amounts[vi.id] ?? 0) >= slot.quantity);
     if (inStock.length === 0) {
@@ -450,7 +451,9 @@
                     ×{qty}{/if}</span
                 >
                 <span class="job-pct">{qi.pending ? 'WAIT' : `${prog}%`}</span>
-                <button class="job-x" title="Cancel" on:click={() => cancelCrafting(qi.id)}>✕</button>
+                <button class="job-x" title="Cancel" on:click={() => cancelCrafting(qi.id)}
+                  >✕</button
+                >
               </div>
             {/each}
           </div>

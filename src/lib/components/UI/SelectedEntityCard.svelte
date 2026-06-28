@@ -20,6 +20,8 @@
     color?: string;
     /** Right-hand readout. Defaults to `<rounded>%`. */
     valueText?: string;
+    /** Optional hover tooltip on the row (e.g. a drying-rate breakdown). */
+    title?: string;
   }
 
   export interface EntityButton {
@@ -254,6 +256,7 @@
             max={bar.max ?? 100}
             color={bar.color ?? (bar.warn ? BAR_WARN : BAR_OK)}
             valueText={bar.valueText ?? `${Math.floor(bar.value)}%`}
+            title={bar.title ?? null}
           />
         {/each}
       </div>

@@ -7,6 +7,8 @@
   export let color: string;
   /** Right-hand readout. Defaults to the rounded value; pass e.g. "72/100" or "72%" to override. */
   export let valueText: string | null = null;
+  /** Optional hover tooltip on the whole row (e.g. a drying-rate breakdown). */
+  export let title: string | null = null;
   export let width = 8;
 
   $: frac = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
@@ -14,7 +16,7 @@
   $: blocks = '█'.repeat(filled) + '░'.repeat(Math.max(0, width - filled));
 </script>
 
-<div class="stat-bar">
+<div class="stat-bar" title={title ?? undefined}>
   <span class="sb-label">{label}</span>
   <span class="sb-track" style="color: {color}">[{blocks}]</span>
   <span class="sb-val" style="color: {color}">{valueText ?? Math.round(value)}</span>

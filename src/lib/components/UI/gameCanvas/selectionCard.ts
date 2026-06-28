@@ -12,6 +12,7 @@ import { getActiveConditionViews } from '$lib/utils/conditionInfo.js';
 import { pawnService } from '$lib/game/services/PawnService.js';
 import { pawnStatService } from '$lib/game/services/PawnStatService.js';
 import { itemService } from '$lib/game/services/ItemService.js';
+import type { DryingStatus } from '$lib/game/services/ItemService.js';
 import { jobService } from '$lib/game/services/JobService.js';
 import { getConditionCurrentStage, conditionStatMultipliers } from '$lib/game/core/needs.js';
 import type {
@@ -419,6 +420,45 @@ export function jobProgressBar(progress: number): string {
   const clamped = Math.max(0, Math.min(1, progress));
   const filled = Math.round(clamped * 10);
   return '█'.repeat(filled) + '░'.repeat(10 - filled);
+}
+
+// Drying-speed arrow palette: slow → fast, plus reversing (wet) and stalled.
+const DRY_SLOW = '#cc7a33';
+const DRY_STEADY = '#c8b23a';
+const DRY_FAST = '#5fc23a';
+const DRY_WET = '#4aa3d4';
+const DRY_STALL = '#6b6b6b';
+
+/**
+ * Compact, colour-coded drying-speed arrow for a stack — shared by the item card and the building
+ * panel so the two read identically. Colour communicates HOW FAST it's curing (warmer + drier + a
+ * rack's bonus ⇒ faster); the glyph the direction (↑/⇈ curing, ↓ reversing while wet, · stalled).
+ * `rate` is open-ground-full-warmth-relative (1 = base; ×3 with a hay rack).
+ */
+export function dryingIndicator(s: DryingStatus): { glyph: string; color: string; title: string } {
+  if (s.rate < 0) {
+    const wet = s.wetness !== undefined ? ` (${Math.round(s.wetness)}% wetness)` : '';
+    return { glyph: '↓', color: DRY_WET, title: `drying reversing — too wet${wet}` };
+  }
+  if (s.rate === 0) {
+    const why =
+      s.reason === 'cold'
+        ? `too cold${s.temp !== undefined ? ` (${Math.round(s.temp)}°C)` : ''}`
+        : s.reason === 'no-fire'
+          ? 'needs a lit fire within 2 tiles'
+          : 'stalled';
+    return { glyph: '·', color: DRY_STALL, title: `not drying — ${why}` };
+  }
+  const fast = s.rate >= 1.8;
+  const steady = s.rate >= 0.8;
+  const color = fast ? DRY_FAST : steady ? DRY_STEADY : DRY_SLOW;
+  const word = fast ? 'fast' : steady ? 'steady' : 'slow';
+  const parts: string[] = [];
+  if (s.temp !== undefined) parts.push(`${Math.round(s.temp)}°C`);
+  if (s.wetness !== undefined) parts.push(`${Math.round(s.wetness)}% wet`);
+  if (s.bonus > 1) parts.push(`rack ×${s.bonus}`);
+  const detail = parts.length ? ` — ${parts.join(', ')}` : '';
+  return { glyph: fast ? '⇈' : '↑', color, title: `drying (${word})${detail}` };
 }
 
 /**

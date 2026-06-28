@@ -14,7 +14,7 @@
     getRefuelThresholdRatio
   } from '$lib/game/services/fuelRules';
   import { aggregateMaterialMods } from '$lib/game/core/materialProperties';
-  import { jobProgressBar } from './selectionCard';
+  import { jobProgressBar, dryingIndicator } from './selectionCard';
   import type { PlacedBuilding, DroppedItem, GameState } from '$lib/game/core/types';
 
   let {
@@ -133,7 +133,10 @@
         · {itemService.getItemDisplayName(d)} ×{d.quantity}
         {#if dryTarget !== null}
           {@const dry = Math.min(1, (d.drying ?? 0) / dryTarget)}
-          <span class="bld-dry">— DRY [{jobProgressBar(dry)}] {Math.round(dry * 100)}%</span>
+          {@const ind = gameState ? dryingIndicator(itemService.dryingStatus(d, gameState)!) : null}
+          <span class="bld-dry" style={ind ? `color:${ind.color}` : ''} title={ind?.title ?? ''}>
+            — DRY [{jobProgressBar(dry)}] {Math.round(dry * 100)}%{#if ind}&nbsp;{ind.glyph}{/if}</span
+          >
         {/if}
       </div>
     {:else}

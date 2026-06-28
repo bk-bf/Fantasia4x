@@ -119,6 +119,7 @@
   import {
     buildPawnCard,
     buildMobCard,
+    dryingIndicator,
     PROGRESS_BAR_STATES
   } from '$lib/components/UI/gameCanvas/selectionCard';
   import { overlayDroppedItems } from '$lib/components/UI/gameCanvas/overlay';
@@ -1150,15 +1151,18 @@
       color: itemBarColor(durPct),
       valueText: `${durPct}%`
     });
-    // Curing progress for stacks that dry (cut grass → hay, green firewood → dry firewood).
-    const dryTarget = itemService.dryingTargetSeconds(d.resourceId);
-    if (dryTarget !== null) {
-      const dryPct = Math.round(Math.min(1, (d.drying ?? 0) / dryTarget) * 100);
+    // Curing progress for stacks that dry (cut grass → hay, green firewood → dry firewood). The bar
+    // colour + trailing arrow encode the current drying SPEED (warmth/wetness/rack); fill = progress.
+    const dryStatus = itemService.dryingStatus(d, $gameState);
+    if (dryStatus) {
+      const dryPct = Math.round(Math.min(1, dryStatus.progress / dryStatus.target) * 100);
+      const ind = dryingIndicator(dryStatus);
       bars.push({
         label: 'DRY',
         value: dryPct,
-        color: itemBarColor(dryPct),
-        valueText: `${dryPct}%`
+        color: ind.color,
+        valueText: `${dryPct}% ${ind.glyph}`,
+        title: ind.title
       });
     }
     return {

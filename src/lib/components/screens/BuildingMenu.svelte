@@ -424,7 +424,6 @@
       </div>
     </div>
   {/if}
-
 </div>
 
 <style>
