@@ -22,6 +22,8 @@ Core data (src/lib/game/core/)         ← types, static databases, GameStateMan
 
 ## Key Rules
 
+**Ask before implementing — do NOT touch code unless explicitly asked.** Diagnosing a bug, explaining a root cause, or identifying "the right fix" is NOT permission to write it. When you find the fix, STOP at the proposal: state the cause + the change in a few lines and WAIT for an explicit go-ahead. Only edit the files the user named, doing only the scope they described — no extra helpers, refactors, "robust"/"while I'm here" additions, or UI flourishes (asked for a concise `(<value>)` readout → add exactly that, no labels/symbols/comparisons). Investigating and reading are fine without asking; editing is not. This overrides any "when you have enough info, act" instinct.
+
 **Service singletons**: import `fooService`, never instantiate `FooServiceImpl` directly.
 
 **State immutability** (command/structural path): for player actions and structural changes, never assign to `GameState` fields — use `GameStateManager` methods only (`addResource`, `updatePawn`, `updateState`…). **Exception — hot per-tick sim phases mutate entity fields IN PLACE** (ADR-002 amendment, ENGINE-PERFORMANCE.md): the immutable spread/`.map()` style was the dominant tick cost (~12.5×), so `processNeedsTick`, the pawn FSM updaters (`transitionTo`/`goIdle`/`mutatePawn` in `pawn/handlers/*`), and `stepHunger` mutate in place — safe behind the per-tick top-level copy + the `?simworker` snapshot clone. **Don't revert these to immutable** (reinstates the tax).
