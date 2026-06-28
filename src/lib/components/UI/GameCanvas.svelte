@@ -529,6 +529,10 @@
   let blueprintDragActive = false;
   let blueprintAnchorX = -1;
   let blueprintAnchorY = -1;
+  // ROOF-SUPPORT: per-redraw cache of the "does (x,y) bear a roof?" predicate, used to hide the
+  // blueprint ghost on roof tiles with no load-bearing wall/natural-blocker in span. Built lazily on
+  // the first preview tile of a redraw and reset to null before each preview loop so it stays fresh.
+  let _blueprintRoofSupport: ((x: number, y: number) => boolean) | null = null;
   // Resource tile interaction
   let selectedResourceTile: { x: number; y: number; resourceId: string } | null = null;
   // Click-locked stockpile zone (by ZoneInstance.id) — shows the zone filter/draw/clear card.
@@ -2023,6 +2027,7 @@
     refreshEmitters();
 
     // Blueprint preview (if a placement tool is active across the rebuild) sits on top.
+    _blueprintRoofSupport = null; // rebuild the roof-support predicate fresh for this redraw
     _prevBlueprintTiles = _currentBlueprintTiles();
     for (const k of _prevBlueprintTiles) {
       const ci = k.indexOf(',');
@@ -2109,6 +2114,7 @@
       if (b.status === 'complete' && isRoofBuilding(b) && dirty.has(b.y * W + b.x))
         applyBuildingToGrid(_terrainGrid, b);
     }
+    _blueprintRoofSupport = null; // rebuild the roof-support predicate fresh for this redraw
     for (const k of curBlueprint) {
       const ci = k.indexOf(',');
       _blueprintPreviewTile(_terrainGrid, +k.slice(0, ci), +k.slice(ci + 1));
@@ -2740,6 +2746,12 @@
     if (worldMap[ty]?.[tx]?.walkable === false) return;
     const building = buildingService.getBuildingById(blueprintBuildingId!);
     if (!building) return;
+    // ROOF-SUPPORT: a roof ghost only shows on a tile within span of a load-bearing support;
+    // unsupported tiles get no ghost (and placeBuilding rejects them), so the drag can't roof a void.
+    if (building.effects?.roof) {
+      _blueprintRoofSupport ??= buildingService.makeRoofSupportLookup(buildings, worldMap);
+      if (!buildingService.roofTileSupported(tx, ty, _blueprintRoofSupport)) return;
+    }
     const charSpans = building.charSpans;
     const char = charSpans
       ? (resolveCharSpans(charSpans as Parameters<typeof resolveCharSpans>[0])[0] ?? '#')

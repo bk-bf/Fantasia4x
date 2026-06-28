@@ -85,6 +85,13 @@ export interface ResourceObjectDef {
    * flag (a bare `cliff` blocks; `rocky` ground doesn't).
    */
   blocksSight?: boolean;
+  /**
+   * ROOF-SUPPORT: this resource is a load-bearing natural blocker (a tree trunk, stone outcrop,
+   * cliff/mountain wall) that can hold up a roof. A roof tile is only buildable within
+   * `MAX_ROOF_SPAN` (Chebyshev) of a support — a wall building (`effects.roofSupport`) or a
+   * resource flagged here. See BuildingService.makeRoofSupportLookup.
+   */
+  roofSupport?: boolean;
   /** Resolved char array (from charSpans in JSON). */
   chars: string[];
   fg: [number, number, number];

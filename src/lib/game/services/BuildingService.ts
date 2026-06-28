@@ -1,6 +1,7 @@
 import type { Building, GameState, PlacedBuilding } from '../core/types';
 import buildingsData from '../database/buildings.jsonc';
 import itemsData from '../database/items.jsonc';
+import resourcesData from '../database/resources.jsonc';
 import type { Item } from '../core/types';
 import { resolveCharSpans } from '../core/Terrains';
 import { markTileDirty } from '../core/tileDeltas';
@@ -20,6 +21,19 @@ import {
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
 const ITEMS_DB = itemsData as unknown as Item[];
+
+// ROOF-SUPPORT: a roofed tile must sit within this Chebyshev distance of a load-bearing support,
+// else its span is unsupported and the roof blueprint is rejected. 6 lets a room up to 13 tiles
+// wide be roofed by its perimeter walls alone; anything wider needs an interior wall.
+export const MAX_ROOF_SPAN = 6;
+
+// Natural blockers that bear a roof (trees, stone outcrop, cliff/mountain wall) — flagged
+// `roofSupport: true` in resources.jsonc. Indexed once; the DB never mutates at runtime.
+const ROOF_SUPPORT_RESOURCE_IDS: Set<string> = new Set(
+  (resourcesData as unknown as Array<{ id: string; roofSupport?: boolean }>)
+    .filter((r) => r.roofSupport)
+    .map((r) => r.id)
+);
 
 // `category:<cat>` cost-slot match. Local copy of ItemService.itemMatchesCostCategory (kept here to
 // avoid a BuildingService↔ItemService import cycle): real categories match `item.category`; the
@@ -95,6 +109,13 @@ export interface BuildingService {
     gameState: GameState,
     materialOverride?: Record<string, string>
   ): GameState;
+  /** ROOF-SUPPORT: a per-tile "does (x,y) bear a roof?" predicate (wall building or natural blocker). */
+  makeRoofSupportLookup(
+    buildings: PlacedBuilding[],
+    worldMap: GameState['worldMap']
+  ): (x: number, y: number) => boolean;
+  /** ROOF-SUPPORT: is (x,y) within MAX_ROOF_SPAN (Chebyshev) of a support tile? */
+  roofTileSupported(x: number, y: number, isSupport: (x: number, y: number) => boolean): boolean;
   hasCompletedBuilding(type: string, gameState: GameState): boolean;
   countCompletedBuildings(type: string, gameState: GameState): number;
   /** Apply a solid building's tile-blocking on completion / restore it on removal. No-op for
@@ -421,6 +442,42 @@ export class BuildingServiceImpl implements BuildingService {
     );
   }
 
+  /**
+   * ROOF-SUPPORT: build a cheap per-tile "does (x,y) bear a roof?" predicate over the current
+   * buildings + worldMap. A tile bears a roof if it holds a wall building (`effects.roofSupport`)
+   * or a natural-blocker resource (`roofSupport: true`). The wall tiles are indexed once so the
+   * whole blueprint drag can reuse one predicate (no O(buildings) scan per tile).
+   */
+  makeRoofSupportLookup(
+    buildings: PlacedBuilding[],
+    worldMap: GameState['worldMap']
+  ): (x: number, y: number) => boolean {
+    const supportTiles = new Set<string>();
+    for (const b of buildings ?? []) {
+      if (this.getBuildingById(b.type)?.effects?.roofSupport) supportTiles.add(`${b.x},${b.y}`);
+    }
+    return (x: number, y: number): boolean => {
+      if (supportTiles.has(`${x},${y}`)) return true;
+      const res = worldMap?.[y]?.[x]?.resources;
+      if (res) {
+        for (const rid in res) {
+          if (res[rid] > 0 && ROOF_SUPPORT_RESOURCE_IDS.has(rid)) return true;
+        }
+      }
+      return false;
+    };
+  }
+
+  /** ROOF-SUPPORT: is (x,y) within MAX_ROOF_SPAN (Chebyshev) of any load-bearing support tile? */
+  roofTileSupported(x: number, y: number, isSupport: (x: number, y: number) => boolean): boolean {
+    for (let dy = -MAX_ROOF_SPAN; dy <= MAX_ROOF_SPAN; dy++) {
+      for (let dx = -MAX_ROOF_SPAN; dx <= MAX_ROOF_SPAN; dx++) {
+        if ((dx !== 0 || dy !== 0) && isSupport(x + dx, y + dy)) return true;
+      }
+    }
+    return false;
+  }
+
   placeBuilding(
     type: string,
     x: number,
@@ -437,6 +494,13 @@ export class BuildingServiceImpl implements BuildingService {
     // building all set worldMap[y][x].walkable = false. Reject placement there so wall blueprints
     // can't be painted onto non-walkable terrain (mine it out first).
     if (gameState.worldMap?.[y]?.[x]?.walkable === false) return gameState;
+    // ROOF-SUPPORT: a roof tile must sit within MAX_ROOF_SPAN of a load-bearing support (a wall
+    // building or a natural-blocker resource), else the span is unsupported. Mirrors the blueprint
+    // preview in GameCanvas, which hides the ghost on unsupported roof tiles.
+    if (building.effects?.roof) {
+      const isSupport = this.makeRoofSupportLookup(gameState.buildings ?? [], gameState.worldMap);
+      if (!this.roofTileSupported(x, y, isSupport)) return gameState;
+    }
     const instant = building.workAmount === 0;
     const placed: PlacedBuilding = {
       id: `${type}-${x}-${y}-${Date.now()}`,

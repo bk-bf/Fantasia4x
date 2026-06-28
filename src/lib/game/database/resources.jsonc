@@ -38,6 +38,7 @@
   // 240×160 map — uncommon and worth seeking, but reliably findable.
   {
     "id"              : "heartwood_grove",
+    "roofSupport"     : true,
     "displayName"     : "Heartwood Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
@@ -80,6 +81,7 @@
   },
   {
     "id"              : "moonwood_grove",
+    "roofSupport"     : true,
     "displayName"     : "Moonwood Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
@@ -123,6 +125,7 @@
   },
   {
     "id"              : "ironwood_grove",
+    "roofSupport"     : true,
     "displayName"     : "Ironwood Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
@@ -165,6 +168,7 @@
   },
   {
     "id"              : "emberwood_grove",
+    "roofSupport"     : true,
     "displayName"     : "Emberwood Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
@@ -344,6 +348,7 @@
   //   forage   — bare hands; gathers surface materials; node stays and regrows quickly
   {
     "id"              : "pine_tree",
+    "roofSupport"     : true,
     "displayName"     : "Pine Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
@@ -492,6 +497,7 @@
   },
   {
     "id"              : "birch_tree",
+    "roofSupport"     : true,
     "displayName"     : "Birch Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
@@ -624,6 +630,7 @@
   },
   {
     "id"              : "oak_tree",
+    "roofSupport"     : true,
     "displayName"     : "Oak Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
@@ -759,6 +766,7 @@
   // The wild counterpart of the cultivated crop_apples orchard (mirrors wild_grapevine ↔ crop_grapes).
   {
     "id"              : "apple_tree",
+    "roofSupport"     : true,
     "displayName"     : "Apple Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
@@ -904,6 +912,7 @@
   },
   {
     "id"              : "ash_tree",
+    "roofSupport"     : true,
     "displayName"     : "Ash Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
@@ -1036,6 +1045,7 @@
   },
   {
     "id"              : "yew_tree",
+    "roofSupport"     : true,
     "displayName"     : "Yew Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
@@ -1173,6 +1183,7 @@
   // Common surface rock — most accessible stone source. Chance of bonus flint.
   {
     "id"              : "stone_outcrop",
+    "roofSupport"     : true,
     "displayName"     : "Stone Outcrop",
     "subterrain"      : "rocky",
     "walkable"        : false,
@@ -1386,6 +1397,7 @@
   // Dead standing tree — rotted, easier and faster to fell than a living tree.
   {
     "id"              : "dead_tree",
+    "roofSupport"     : true,
     "displayName"     : "Dead Tree",
     "subterrain"      : "dead_trees",
     "walkable"        : false,
@@ -1940,6 +1952,7 @@
   // Walkable rocky mountain floor — minable for stone.
   {
     "id"              : "mountain_wall",
+    "roofSupport"     : true,
     "displayName"     : "Mountain Wall",
     "subterrain"      : "rocky",
     "walkable"        : false,
@@ -1966,6 +1979,7 @@
   // Impassable cliff face — mine to open passage; yields dressed stone.
   {
     "id"              : "cliff_wall",
+    "roofSupport"     : true,
     "displayName"     : "Cliff Wall",
     "subterrain"      : "cliff",
     "walkable"        : false,
