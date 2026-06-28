@@ -28,6 +28,7 @@ import type {
   PlacedBuilding,
   Season,
   ZoneFilter,
+  ZonePriority,
   FoodSettings,
   ItemInstance,
   DesignationType
@@ -784,6 +785,10 @@ export const COMMANDS: Record<string, Cmd> = {
     designationService.clearInstanceFilter(p.instanceId, s),
   setInstanceFilter: (s, p: { instanceId: string; filter: ZoneFilter }) =>
     designationService.setInstanceFilter(p.instanceId, p.filter, s),
+  /** Set a stockpile zone's haul-fill priority (low/normal/preferred/urgent) — pawns top up higher
+   *  zones before spilling into lower ones (see findNearestDepositPoint / depositInventory). */
+  setInstancePriority: (s, p: { instanceId: string; priority: ZonePriority }) =>
+    designationService.setInstancePriority(p.instanceId, p.priority, s),
   /** Toggle a loose stack's haul lockout (DroppedItem.forbidden). Forbidden stacks are skipped by the
    *  haul generator and any in-flight haul for them is pruned next tick (see jobs/haul.ts). */
   setDropForbidden: (s, p: { dropId: string; forbidden: boolean }) => ({

@@ -13,8 +13,10 @@ import type {
   FilterableZoneType,
   ZoneInstanceType,
   ZoneFilter,
-  ZoneInstance
+  ZoneInstance,
+  ZonePriority
 } from '../core/types';
+import { ZONE_PRIORITY_RANK } from '../core/types';
 import { rng } from '../core/rng';
 import { absorbDropIfOnStockpileTile } from '../core/GameState';
 
@@ -68,6 +70,16 @@ export function zoneInstanceIdAt(
   type: DesignationType
 ): string | null {
   return gameState.designationZoneId?.[tileKey]?.[type] ?? null;
+}
+
+/** Haul-fill priority RANK of the stockpile zone covering tile (x,y) — higher fills first. Tiles in
+ *  no stockpile zone (bins, loose ground) default to the 'normal' rank. O(1) tile→instance lookup, so
+ *  it's safe on the per-deposit haul hot path. */
+export function zonePriorityRankAt(gs: GameState, x: number, y: number): number {
+  const id = zoneInstanceIdAt(gs, `${x},${y}`, 'stockpile');
+  if (!id) return ZONE_PRIORITY_RANK.normal;
+  const z = (gs.zoneInstances ?? []).find((zi) => zi.id === id);
+  return ZONE_PRIORITY_RANK[(z?.priority as ZonePriority) ?? 'normal'];
 }
 
 class DesignationServiceImpl {
@@ -487,6 +499,16 @@ class DesignationServiceImpl {
               }
             }
           : z
+      )
+    };
+  }
+
+  /** Set a stockpile zone's haul-fill priority (low/normal/preferred/urgent). */
+  setInstancePriority(instanceId: string, priority: ZonePriority, gs: GameState): GameState {
+    return {
+      ...gs,
+      zoneInstances: (gs.zoneInstances ?? []).map((z) =>
+        z.id === instanceId ? { ...z, priority } : z
       )
     };
   }

@@ -17,6 +17,7 @@ import { manhattan } from '../../core/distance';
 import { occupancyService } from '../../services/OccupancyService';
 import { itemService } from '../../services/ItemService';
 import { storageAcceptsDrop, storageTileAcceptsDrop } from '../../services/jobs/haul';
+import { zonePriorityRankAt } from '../../services/DesignationService';
 import { ENC_OVERLOAD_FULL } from '../../core/needs';
 import { gameLogger } from '../../dev/gameLogger';
 import { rng } from '../../core/rng';
@@ -230,17 +231,41 @@ export function findNearestDepositPoint(
   const standable = (x: number, y: number) =>
     !!gs.worldMap?.[y]?.[x]?.walkable && !occupancyService.isBlocked(gs, x, y, pawn.id);
 
-  // ── Tier 1: stockpile zones + storage bins — stand ON the nearest standable storage tile. ──
-  let bestStandable: { x: number; y: number; dist: number } | null = null;
+  // ── Tier 1: stockpile zones + storage bins. Walk to the highest-PRIORITY zone that still has room,
+  // nearest tile within it; only spill to a lower-priority zone once the higher ones are full (zone
+  // fill-priority — the player's low/normal/preferred/urgent setting). `hasRoom` is item-agnostic here
+  // (free pile slot); the exact per-item placement is re-checked in depositInventory. ──
+  type Cand = { x: number; y: number; dist: number; prio: number; room: boolean };
+  let best: Cand | null = null;
   let nearestAny: { x: number; y: number; dist: number } | null = null;
+  // Higher priority wins; among equal priority prefer a tile with room; then nearest.
+  const better = (a: Cand, b: Cand | null): boolean => {
+    if (!b) return true;
+    if (a.room !== b.room && a.prio === b.prio) return a.room; // same zone-prio → room breaks ties
+    if (a.room !== b.room) {
+      // A roomy lower-prio tile still loses to a roomy higher-prio one; a full higher-prio tile loses
+      // to a roomy lower-prio one (don't strand goods at a full preferred zone).
+      if (a.room && !b.room) return true;
+      if (!a.room && b.room) return false;
+    }
+    if (a.prio !== b.prio) return a.prio > b.prio;
+    return a.dist < b.dist;
+  };
   for (const key of storageTileKeys(gs)) {
     const [x, y] = key.split(',').map(Number);
     const d = distHere(x, y);
     if (!nearestAny || d < nearestAny.dist) nearestAny = { x, y, dist: d };
-    if (standable(x, y) && (!bestStandable || d < bestStandable.dist))
-      bestStandable = { x, y, dist: d };
+    if (!standable(x, y)) continue;
+    const cand: Cand = {
+      x,
+      y,
+      dist: d,
+      prio: zonePriorityRankAt(gs, x, y),
+      room: tileStoredPileCount(gs, x, y) < tilePileCapacity(gs, x, y)
+    };
+    if (better(cand, best)) best = cand;
   }
-  if (bestStandable) return { x: bestStandable.x, y: bestStandable.y };
+  if (best) return { x: best.x, y: best.y };
   if (nearestAny) return { x: nearestAny.x, y: nearestAny.y }; // occupied stockpile — deposit in place
 
   // ── Tier 2 + 3: storage buildings, then any complete building — stand ADJACENT. ──
@@ -459,12 +484,15 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   const px = pawn.position?.x ?? 0;
   const py = pawn.position?.y ?? 0;
   const distToPawn = (x: number, y: number) => manhattan(x, y, px, py);
+  // Zone fill-priority: higher-priority stockpile tiles are tried first (firstTileFor picks the first
+  // accepting tile with a free slot), so a roomy preferred zone fills before a normal/low one; distance
+  // breaks ties within a priority. Falls back to pure distance when all zones share the default.
   const stockpileTiles = storageTileKeys(gs)
     .map((key) => {
       const [x, y] = key.split(',').map(Number);
-      return { key, x, y, cap: tilePileCapacity(gs, x, y) };
+      return { key, x, y, cap: tilePileCapacity(gs, x, y), prio: zonePriorityRankAt(gs, x, y) };
     })
-    .sort((a, b) => distToPawn(a.x, a.y) - distToPawn(b.x, b.y));
+    .sort((a, b) => b.prio - a.prio || distToPawn(a.x, a.y) - distToPawn(b.x, b.y));
   const stockpileTileKeys = new Set(stockpileTiles.map((t) => t.key));
   // Distinct stored piles already on each storage tile — incremented as we lay new piles below so a
   // dense bin (capacity > 1) accepts several stacks while a plain tile fills after one.
@@ -503,23 +531,33 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
     if (qty <= 0) continue;
     if (pinned.has(resourceId)) continue; // keep pinned items — never deposited
 
-    // Prefer the NEAREST tile already holding this resource (stack near the pawn); else the
-    // nearest free tile (stockpileTiles is already sorted nearest-first).
+    // Existing pile of this resource — highest zone-priority first, then nearest (stacking avoids a
+    // new slot); and the best free accepting tile (stockpileTiles is priority-then-distance sorted).
     const existingStoredDrop = newDropped
       .filter(
         (d) => d.stored && d.resourceId === resourceId && stockpileTileKeys.has(`${d.x},${d.y}`)
       )
-      .sort((a, b) => distToPawn(a.x, a.y) - distToPawn(b.x, b.y))[0];
+      .sort(
+        (a, b) =>
+          zonePriorityRankAt(gs, b.x, b.y) - zonePriorityRankAt(gs, a.x, a.y) ||
+          distToPawn(a.x, a.y) - distToPawn(b.x, b.y)
+      )[0];
+    const freeTile = firstTileFor(resourceId);
+    // Zone fill-priority: top up the existing pile UNLESS a free tile sits in a strictly HIGHER-priority
+    // zone — then start a fresh pile there so the preferred zone fills first. Equal priority prefers the
+    // existing pile (no new slot consumed).
+    const exPrio = existingStoredDrop
+      ? zonePriorityRankAt(gs, existingStoredDrop.x, existingStoredDrop.y)
+      : -1;
+    const freePrio = freeTile ? zonePriorityRankAt(gs, freeTile.x, freeTile.y) : -1;
     let tile: { x: number; y: number } | null = null;
-    if (existingStoredDrop) {
-      // Stacks onto its existing pile — no new slot consumed.
+    if (existingStoredDrop && exPrio >= freePrio) {
       tile = { x: existingStoredDrop.x, y: existingStoredDrop.y };
-    } else {
-      const freeTile = firstTileFor(resourceId);
-      if (freeTile) {
-        tile = { x: freeTile.x, y: freeTile.y };
-        pileCount.set(freeTile.key, (pileCount.get(freeTile.key) ?? 0) + 1); // claim the slot
-      }
+    } else if (freeTile) {
+      tile = { x: freeTile.x, y: freeTile.y };
+      pileCount.set(freeTile.key, (pileCount.get(freeTile.key) ?? 0) + 1); // claim the slot
+    } else if (existingStoredDrop) {
+      tile = { x: existingStoredDrop.x, y: existingStoredDrop.y };
     }
 
     if (tile) {

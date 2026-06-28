@@ -16,20 +16,34 @@
   import { gameState } from '$lib/stores/gameState';
   import { itemService } from '$lib/game/services/ItemService';
   import itemsData from '$lib/game/database/items.jsonc';
-  import type { Item, ZoneFilter } from '$lib/game/core/types';
+  import type { Item, ZoneFilter, ZonePriority } from '$lib/game/core/types';
   import ScrollArea from '$lib/components/UI/ScrollArea.svelte';
 
   let {
     instanceId,
     filter,
+    priority = 'normal',
     inventory = {},
     open = false
   }: {
     instanceId: string;
     filter: ZoneFilter;
+    priority?: ZonePriority;
     inventory?: Record<string, number>;
     open?: boolean;
   } = $props();
+
+  // Haul-fill priority: pawns top up higher-priority zones before lower ones (and only spill into a
+  // lower zone once the higher is full). Drives findNearestDepositPoint / depositInventory ordering.
+  const PRIORITIES: { value: ZonePriority; label: string }[] = [
+    { value: 'low', label: 'Low' },
+    { value: 'normal', label: 'Normal' },
+    { value: 'preferred', label: 'Preferred' },
+    { value: 'urgent', label: 'Urgent' }
+  ];
+  function setPriority(value: ZonePriority) {
+    gameState.command({ type: 'setInstancePriority', payload: { instanceId, priority: value }, save: true });
+  }
 
   // Static item universe (non-hidden — internal items like natural weapons are never haul targets),
   // grouped by category and sorted exactly like the resource sidebar.
@@ -131,6 +145,20 @@
   <div class="zfp-hdr">
     stored items
     <span class="zfp-count">{checkedCount}/{ALL_IDS.length} allowed</span>
+  </div>
+  <div class="zfp-prio">
+    <span class="zfp-prio-label" title="Pawns fill higher-priority zones before lower ones">
+      fill priority
+    </span>
+    <select
+      class="zfp-prio-select"
+      value={priority}
+      onchange={(e) => setPriority(e.currentTarget.value as ZonePriority)}
+    >
+      {#each PRIORITIES as p (p.value)}
+        <option value={p.value}>{p.label}</option>
+      {/each}
+    </select>
   </div>
   <div class="zfp-bar">
     <button class="zfp-mini" disabled={allChecked} onclick={() => setAll(true)}>CHECK ALL</button>
@@ -235,6 +263,28 @@
   }
   .zfp-count {
     color: #9c7a3a;
+  }
+  .zfp-prio {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 5px;
+  }
+  .zfp-prio-label {
+    color: #9c7a3a;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.85em;
+  }
+  .zfp-prio-select {
+    flex: 1;
+    background: #160f06;
+    border: 1px solid #6b4f22;
+    color: #f0c060;
+    padding: 2px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
   .zfp-bar {
     display: flex;

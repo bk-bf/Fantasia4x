@@ -41,12 +41,27 @@ export interface ZoneFilter {
   blockedItems: string[];
 }
 
+/** Haul-fill priority for a stockpile zone: pawns top up higher-priority zones before lower ones
+ *  (and only spill into a lower zone once the higher one is full). 'normal' is the default. */
+export type ZonePriority = 'low' | 'normal' | 'preferred' | 'urgent';
+
+/** Numeric rank for {@link ZonePriority} — higher fills first. Exported so the haul-destination sort
+ *  and the UI dropdown share one source of truth. */
+export const ZONE_PRIORITY_RANK: Record<ZonePriority, number> = {
+  low: 0,
+  normal: 1,
+  preferred: 2,
+  urgent: 3
+};
+
 /** A named, individually-filterable zone instance (e.g. "Forage 1", "Stockpile 2", "Restrict 1"). */
 export interface ZoneInstance {
   id: string;
   type: ZoneInstanceType;
   label: string;
   filter: ZoneFilter;
+  /** Stockpile zones only: haul-fill priority (see {@link ZonePriority}). Undefined = 'normal'. */
+  priority?: ZonePriority;
   /** View-only: when true, this zone's tint is suppressed on the map. Persisted with the save. */
   colorHidden?: boolean;
   /** RESTRICT zones only: pawns confined to this zone's tiles. A pawn's allowed area is the UNION of

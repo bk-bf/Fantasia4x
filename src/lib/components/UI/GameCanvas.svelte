@@ -4953,6 +4953,7 @@
         <StockpileZonePanel
           instanceId={selectedZone.id}
           filter={selectedZone.filter}
+          priority={selectedZone.priority ?? 'normal'}
           inventory={selectedZoneInventory}
           open={showZoneFilter}
         />
