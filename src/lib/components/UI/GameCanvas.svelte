@@ -5250,6 +5250,9 @@
     align-items: stretch;
     gap: 4px;
     pointer-events: all;
+    /* z-index 10 so the clicked-building panel sits ABOVE the sidebars (z-index 6) and the weather
+       overlay (z-index 5) — matching the hover HUD (.tile-hud) and the SelectedEntityCard it replaced. */
+    z-index: 10;
   }
   /* Clicked-building column: the info card with its colour-coded EnvReadout stacked below it. */
   .bld-card-col {
