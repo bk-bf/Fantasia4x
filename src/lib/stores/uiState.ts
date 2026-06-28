@@ -44,9 +44,12 @@ interface UIState {
   /** Requests the pawn screen to open a specific tab. Cleared after reading. */
   pawnScreenTab: 'status' | 'attributes' | 'gear' | null;
   /** Debug click-brush (in-game DEBUG tab). null = inactive. `id` is the resource/building id the
-   *  spawn brushes paint; unused by `regrow`/`kill`. Clicking the map applies the brush at that tile
-   *  (the `kill` brush insta-kills the pawn/mob on the clicked tile). */
-  debugBrush: { kind: 'regrow' | 'building' | 'resource' | 'kill'; id: string | null } | null;
+   *  spawn brushes paint; unused by `regrow`/`kill`/`resurrect`. Clicking the map applies the brush at
+   *  that tile (`kill` insta-kills the pawn/mob there; `resurrect` revives the corpse there). */
+  debugBrush: {
+    kind: 'regrow' | 'building' | 'resource' | 'kill' | 'resurrect';
+    id: string | null;
+  } | null;
   /** Custom Map popup (biome-tuning sliders) open? Rendered at the page root, outside the filtered
    *  header, so it stacks above the WebGL canvas (a `filter` on `.game-header` traps fixed children). */
   customMapOpen: boolean;
@@ -168,7 +171,7 @@ function createUIState() {
 
     /** Arm a debug click-brush and drop to the map so the next clicks apply it. */
     activateDebugBrush: (
-      kind: 'regrow' | 'building' | 'resource' | 'kill',
+      kind: 'regrow' | 'building' | 'resource' | 'kill' | 'resurrect',
       id: string | null = null
     ) =>
       update((state) => ({

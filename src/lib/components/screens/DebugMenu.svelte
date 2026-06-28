@@ -61,7 +61,7 @@
     cmd('setTimeOfDay', { timeOfDay: v === '' ? null : Number(v) });
   }
   function armBrush(
-    kind: 'regrow' | 'building' | 'resource' | 'kill',
+    kind: 'regrow' | 'building' | 'resource' | 'kill' | 'resurrect',
     id: string | null = null
   ) {
     if (brush?.kind === kind) uiState.deactivateDebugBrush();
@@ -98,7 +98,6 @@
       <input type="number" min="1" bind:value={pawnCount} title="count" />
       <button onclick={() => cmd('devSpawnPawns', { count: pawnCount })}>Spawn pawns</button>
     </div>
-    <button class="revive" onclick={() => cmd('devResurrect')}>✚ Resurrect all dead</button>
   </section>
 
   <section>
@@ -175,9 +174,16 @@
   </section>
 
   <section>
-    <h4>Insta-kill <span class="hint">(click a pawn/mob)</span></h4>
+    <h4>Kill / Revive <span class="hint">(click an entity / corpse)</span></h4>
     <button class="kill" class:active={brush?.kind === 'kill'} onclick={() => armBrush('kill')}>
       {brush?.kind === 'kill' ? '■ ' : '☠ '}Kill (click entity)
+    </button>
+    <button
+      class="revive"
+      class:active={brush?.kind === 'resurrect'}
+      onclick={() => armBrush('resurrect')}
+    >
+      {brush?.kind === 'resurrect' ? '■ ' : '✚ '}Resurrect (click corpse)
     </button>
   </section>
 
@@ -325,7 +331,8 @@
     color: #6ad29a;
     border-color: #2a7a4a;
   }
-  button.revive:hover {
+  button.revive:hover,
+  button.revive.active {
     background: #0a2418;
     border-color: #3ad07a;
     color: #80ffb0;

@@ -958,25 +958,26 @@ export const COMMANDS: Record<string, Cmd> = {
     return s;
   },
 
-  /** DEBUG resurrect-all: bring every dead colonist back to full health. A pawn still in the array
-   *  (just died, not yet reaped) is FULLY restored in place — wounds/conditions cleared, blood/limbs
-   *  topped up, needs reset — so it doesn't immediately re-die. A pawn already reaped (only a
-   *  `deadPawns` record remains) is regenerated as a fresh body keeping its name (limbs/traits/skills
-   *  are lost — the original instance is gone). Clears `deadPawns`. */
-  devResurrect: (s) => {
-    const revive = (p: (typeof s.pawns)[number]) => ({
-      ...p,
+  /** DEBUG resurrect: bring back the dead colonist at tile (x,y) — targeted by the resurrect
+   *  click-brush (click a corpse). A pawn still in the array (just died, not yet reaped) is FULLY
+   *  restored in place — wounds/conditions cleared, blood/limbs topped up, needs reset — so it doesn't
+   *  immediately re-die. Otherwise the `pawn_carcass` drop on the tile is revived: a fresh body keeping
+   *  the dead pawn's name is spawned there and the carcass + its `deadPawns` record are cleared (the
+   *  original instance's limbs/traits/skills are gone — it was already reaped). */
+  devResurrectAt: (s, p: { x: number; y: number }) => {
+    const revive = (pw: (typeof s.pawns)[number]) => ({
+      ...pw,
       isAlive: true,
       corpseDropped: false,
       currentState: PAWN_STATE.IDLE,
       activeJob: undefined,
       path: [],
       isMoving: false,
-      bloodVolume: p.maxBloodVolume ?? 100,
-      needs: { ...(p.needs ?? {}), hunger: 0, thirst: 0, fatigue: 0, hygiene: 0 },
-      state: { ...(p.state ?? {}), health: 100, mood: Math.max(p.state?.mood ?? 50, 50) },
+      bloodVolume: pw.maxBloodVolume ?? 100,
+      needs: { ...(pw.needs ?? {}), hunger: 0, thirst: 0, fatigue: 0, hygiene: 0 },
+      state: { ...(pw.state ?? {}), health: 100, mood: Math.max(pw.state?.mood ?? 50, 50) },
       conditions: [],
-      limbs: (p.limbs ?? []).map((l) => ({
+      limbs: (pw.limbs ?? []).map((l) => ({
         ...l,
         isMissing: false,
         health: 100,
@@ -990,27 +991,44 @@ export const COMMANDS: Record<string, Cmd> = {
         }))
       }))
     });
-    let pawns = (s.pawns ?? []).map((p) => (p.isAlive === false ? revive(p) : p));
 
-    // Regenerate pawns already reaped from the array (only a deadPawns record survives).
-    const living = new Set(pawns.filter((p) => p.isAlive !== false).map((p) => p.name));
-    const reaped = (s.deadPawns ?? []).filter((r) => !living.has(r.name));
-    if (reaped.length > 0) {
-      const w = s.worldMap[0]?.length ?? 0;
-      const h = s.worldMap.length;
-      const cx = Math.floor(w / 2);
-      const cy = Math.floor(h / 2);
-      const occupied = new Set<string>(
-        pawns.filter((p) => p.position).map((p) => `${p.position!.x},${p.position!.y}`)
-      );
-      const fresh = generatePawns(s.race, reaped.length).map((np, i) => {
-        const pos = nearestFreeTile(s.worldMap, cx, cy, occupied) ?? { x: cx, y: cy };
-        occupied.add(`${pos.x},${pos.y}`);
-        return { ...np, name: reaped[i].name, position: pos, path: [], pathIndex: 0 };
-      });
-      pawns = [...pawns, ...fresh];
+    // 1. A dead pawn still on the array at this tile (same-turn death) → revive in place.
+    const dead = (s.pawns ?? []).find(
+      (pw) => pw.isAlive === false && pw.position?.x === p.x && pw.position?.y === p.y
+    );
+    if (dead) {
+      const name = dead.name;
+      return {
+        ...s,
+        pawns: (s.pawns ?? []).map((pw) => (pw.id === dead.id ? revive(pw) : pw)),
+        // Clear this pawn's corpse drop + memorial so the body doesn't linger alongside the revived pawn.
+        droppedItems: (s.droppedItems ?? []).filter(
+          (d) => !(d.resourceId === 'pawn_carcass' && d.id.startsWith(`corpse-${dead.id}-`))
+        ),
+        deadPawns: (s.deadPawns ?? []).filter((r) => r.name !== name)
+      };
     }
-    return { ...s, pawns, deadPawns: [] };
+
+    // 2. Otherwise revive the pawn_carcass sitting on this tile (the reaped case): spawn a fresh body
+    //    with the same name, remove the carcass + its memorial record.
+    const carcass = (s.droppedItems ?? []).find(
+      (d) => d.resourceId === 'pawn_carcass' && d.x === p.x && d.y === p.y
+    );
+    if (!carcass) return s;
+    // makeDynamicName stamps "<Name>'s Carcass" — strip the trailing possessive to recover the name.
+    const name = (carcass.name ?? '').replace(/'s [^']*$/, '') || 'Revenant';
+    const occupied = new Set<string>(
+      (s.pawns ?? []).filter((pw) => pw.position).map((pw) => `${pw.position!.x},${pw.position!.y}`)
+    );
+    const pos = nearestFreeTile(s.worldMap, p.x, p.y, occupied) ?? { x: p.x, y: p.y };
+    const [body] = generatePawns(s.race, 1);
+    const revived = { ...body, name, position: pos, path: [], pathIndex: 0 };
+    return {
+      ...s,
+      pawns: [...(s.pawns ?? []), revived],
+      droppedItems: (s.droppedItems ?? []).filter((d) => d.id !== carcass.id),
+      deadPawns: (s.deadPawns ?? []).filter((r) => r.name !== name)
+    };
   },
 
   /** Set the weather to a fixed type (sticky — won't re-roll until changed again). */

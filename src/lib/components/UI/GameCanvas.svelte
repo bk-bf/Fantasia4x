@@ -434,9 +434,9 @@
   let blueprintBuildingId: string | null = null;
   // Chosen materials for the blueprint's `category:` cost slots (cost-key → itemId).
   let blueprintMaterials: Record<string, string> | null = null;
-  // Debug click-brush (DEBUG tab) — regrow / spawn building / spawn resource / kill on click
+  // Debug click-brush (DEBUG tab) — regrow / spawn building / spawn resource / kill / resurrect on click
   let debugBrush: {
-    kind: 'regrow' | 'building' | 'resource' | 'kill';
+    kind: 'regrow' | 'building' | 'resource' | 'kill' | 'resurrect';
     id: string | null;
   } | null = null;
   // Selected building (click-locked, like selectedPawnId)
@@ -3011,6 +3011,13 @@
         const victim =
           findPawnAtTile(hoverTileX, hoverTileY) ?? findMobAtTile(hoverTileX, hoverTileY);
         if (victim) gameState.command({ type: 'devKillEntity', payload: { id: victim.id }, save: true });
+      } else if (debugBrush.kind === 'resurrect') {
+        // Revive the dead colonist / corpse on the clicked tile (the command resolves what's there).
+        gameState.command({
+          type: 'devResurrectAt',
+          payload: { x: hoverTileX, y: hoverTileY },
+          save: true
+        });
       }
       redrawOverlay();
       return;
@@ -4818,9 +4825,13 @@
           ? 'SPAWN BUILDING'
           : debugBrush.kind === 'kill'
             ? 'KILL'
-            : 'SPAWN RESOURCE'}] click {debugBrush.kind === 'kill'
+            : debugBrush.kind === 'resurrect'
+              ? 'RESURRECT'
+              : 'SPAWN RESOURCE'}] click {debugBrush.kind === 'kill'
         ? 'a pawn/mob to kill it'
-        : 'tiles to apply'} · Esc to stop
+        : debugBrush.kind === 'resurrect'
+          ? 'a corpse to revive it'
+          : 'tiles to apply'} · Esc to stop
     </div>
   {:else if designationMode}
     <div
