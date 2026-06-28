@@ -10,6 +10,7 @@
   import type { HealthModel } from '$lib/components/UI/SelectedEntityCard.svelte';
   import { healthPctColor, bloodColor, painColor } from './healthColors';
   import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService';
+  import TempTolerancePills from './TempTolerancePills.svelte';
 
   let { health }: { health: HealthModel | undefined } = $props();
 
@@ -65,32 +66,7 @@
         <span style="color:#fb8c00">{Math.round(health.heatExposure ?? 0)}%</span>
       </div>
     {/if}
-    {#if health.tempTolerance}
-      <div
-        class="hp-row"
-        title="The cold-exposure meter starts rising below this temperature (comfort band widened by cold resistance from constitution + worn gear)."
-      >
-        <span class="hp-k">Cold tol</span>
-        <span style="color:#4fc3f7">≤ {Math.round(health.tempTolerance.coldOnset)}°C</span>
-        <span class="tol-sub"
-          >comfort {Math.round(health.tempTolerance.comfortMin)}° · +{Math.round(
-            health.tempTolerance.coldDeg
-          )}° res</span
-        >
-      </div>
-      <div
-        class="hp-row"
-        title="The heat-exposure meter starts rising above this temperature (comfort band widened by heat resistance from constitution + worn gear)."
-      >
-        <span class="hp-k">Heat tol</span>
-        <span style="color:#fb8c00">≥ {Math.round(health.tempTolerance.heatOnset)}°C</span>
-        <span class="tol-sub"
-          >comfort {Math.round(health.tempTolerance.comfortMax)}° · +{Math.round(
-            health.tempTolerance.heatDeg
-          )}° res</span
-        >
-      </div>
-    {/if}
+    <TempTolerancePills tolerance={health.tempTolerance} />
     {#if (health.pain ?? 0) > 0}
       <div class="hp-row">
         <span class="hp-k">Pain</span>
@@ -220,12 +196,6 @@
   .hp-bleed-eta {
     color: #ee5544;
     white-space: nowrap;
-  }
-  /* Muted breakdown beside a cold/heat tolerance: the comfort base + resistance degrees. */
-  .tol-sub {
-    color: var(--text-dim);
-    opacity: 0.7;
-    font-size: 0.85em;
   }
   .hp-part {
     padding-left: 10px;

@@ -1,6 +1,7 @@
 <script lang="ts" module>
   import type { ConditionView } from '$lib/utils/conditionInfo';
   import type { ItemPillView } from './ItemPills.svelte';
+  import type { TemperatureTolerance } from '$lib/game/services/PawnStatService';
 
   export interface EntityStat {
     label: string;
@@ -130,16 +131,9 @@
     /** SEASONS_WEATHER tracked exposure meters 0–100 (cold/heat); shown as % next to Blood. */
     coldExposure?: number;
     heatExposure?: number;
-    /** SEASONS_WEATHER cold/heat tolerance in degrees: the temperatures at which each exposure meter
-     *  starts to rise = the comfort band shifted outward by resistance (CON stat + worn gear). */
-    tempTolerance?: {
-      comfortMin: number;
-      comfortMax: number;
-      coldDeg: number;
-      heatDeg: number;
-      coldOnset: number;
-      heatOnset: number;
-    };
+    /** SEASONS_WEATHER cold/heat tolerance: onset temperatures + per-source headroom breakdown,
+     *  rendered as compact pills with a hover panel. */
+    tempTolerance?: TemperatureTolerance;
     /** Combat-readiness stats (hit/dodge/crit), reflecting current injuries. Pawns/mobs only. */
     combat?: CombatStat[];
     /** Damaged limbs only — intact, full-health, non-bleeding limbs are omitted. */

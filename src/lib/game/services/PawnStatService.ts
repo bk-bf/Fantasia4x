@@ -475,18 +475,31 @@ function pawnStateWorkMultiplier(pawn: Pawn | Mob): number {
 const TEMP_RES_DEG_PER_UNIT = 20;
 const TEMP_RES_DEG_CAP = 25;
 
+/** One contributor to a side's resistance headroom, in degrees (for the hover breakdown). */
+export interface TempToleranceSource {
+  label: string;
+  /** Degrees of headroom contributed (can be negative — a frail constitution costs tolerance). */
+  deg: number;
+}
+
 /** A pawn's effective temperature comfort, with resistance folded in as degrees. The cold meter (and
  *  the cold fatigue penalty) start below `coldOnset`; the heat meter / hunger penalty above `heatOnset`. */
 export interface TemperatureTolerance {
   /** Bare comfort band (race/trait), before resistance. */
   comfortMin: number;
   comfortMax: number;
-  /** Degrees of headroom resistance buys on each side. */
+  /** Net degrees of headroom resistance buys on each side (clamped to [0, cap]). */
   coldDeg: number;
   heatDeg: number;
   /** Temperatures at which the cold / heat meter starts to rise = comfort ∓ resistance degrees. */
   coldOnset: number;
   heatOnset: number;
+  /** Per-source breakdown (Constitution / Traits / Gear) of each side's headroom, for the hover panel. */
+  coldSources: TempToleranceSource[];
+  heatSources: TempToleranceSource[];
+  /** True when the raw headroom hit the cap (so the breakdown sums beyond the shown degrees). */
+  coldCapped: boolean;
+  heatCapped: boolean;
 }
 
 // ── Service interface ──────────────────────────────────────────────────────
@@ -614,17 +627,34 @@ export class PawnStatServiceImpl implements PawnStatService {
   temperatureTolerance(pawn: Pawn | Mob): TemperatureTolerance {
     const { min: comfortMin, max: comfortMax } = comfortRange((pawn as Pawn).racialTraits);
     const worn = equippedTemperatureResistance(pawn as Pawn);
-    const coldRes = this.evaluateStat('cold_resistance', pawn) + worn.cold;
-    const heatRes = this.evaluateStat('fire_resistance', pawn) + worn.heat;
-    const coldDeg = Math.max(0, Math.min(TEMP_RES_DEG_CAP, coldRes * TEMP_RES_DEG_PER_UNIT));
-    const heatDeg = Math.max(0, Math.min(TEMP_RES_DEG_CAP, heatRes * TEMP_RES_DEG_PER_UNIT));
+    // Split each side's resistance into its sources (in degrees): the CON-derived stat base, any trait
+    // resistance bonus, and worn gear. `evaluateStat` already folds the trait bonus into the stat, so
+    // the constitution base is the remainder.
+    const sideTolerance = (statId: string, gear: number) => {
+      const stat = this.evaluateStat(statId, pawn);
+      const trait = traitResistanceBonus(pawn, statId);
+      const con = stat - trait;
+      const sources: TempToleranceSource[] = [];
+      if (con !== 0) sources.push({ label: 'Constitution', deg: con * TEMP_RES_DEG_PER_UNIT });
+      if (trait !== 0) sources.push({ label: 'Traits', deg: trait * TEMP_RES_DEG_PER_UNIT });
+      if (gear !== 0) sources.push({ label: 'Gear', deg: gear * TEMP_RES_DEG_PER_UNIT });
+      const raw = (con + trait + gear) * TEMP_RES_DEG_PER_UNIT;
+      const deg = Math.max(0, Math.min(TEMP_RES_DEG_CAP, raw));
+      return { sources, deg, capped: raw > TEMP_RES_DEG_CAP };
+    };
+    const cold = sideTolerance('cold_resistance', worn.cold);
+    const heat = sideTolerance('fire_resistance', worn.heat);
     return {
       comfortMin,
       comfortMax,
-      coldDeg,
-      heatDeg,
-      coldOnset: comfortMin - coldDeg,
-      heatOnset: comfortMax + heatDeg
+      coldDeg: cold.deg,
+      heatDeg: heat.deg,
+      coldOnset: comfortMin - cold.deg,
+      heatOnset: comfortMax + heat.deg,
+      coldSources: cold.sources,
+      heatSources: heat.sources,
+      coldCapped: cold.capped,
+      heatCapped: heat.capped
     };
   }
 
