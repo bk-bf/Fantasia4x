@@ -104,7 +104,15 @@ export const initialGameState: GameState = {
   /** Living-world (SEASONS_WEATHER): start in spring, clear skies. */
   season: 'spring',
   seasonDay: 0,
-  weather: { type: 'clear', intensity: 0, turnsRemaining: 0, wind: 0.3 },
+  weather: {
+    type: 'clear',
+    intensity: 0,
+    precip: 'dry',
+    windLevel: 'calm',
+    turnsRemaining: 0,
+    windTurns: 0,
+    wind: 0.15
+  },
   buildingCounts: {},
   /** Phase 4: placed buildings on the map */
   buildings: [],
@@ -235,7 +243,8 @@ function applyMigrations(state: GameState): GameState {
         // Prefer the instance's own type; if that id is stale (not in zoneInstances), fall back to the
         // standing-zone type actually painted on this tile so the tile keeps a usable layer (otherwise
         // it stays tinted via zoneTiles but loses its instance id and can never be hidden/selected).
-        const t = typeById.get(v) ?? (state.zoneTiles?.[k] ?? []).find((zt) => STANDING.includes(zt));
+        const t =
+          typeById.get(v) ?? (state.zoneTiles?.[k] ?? []).find((zt) => STANDING.includes(zt));
         if (t) layered[k] = { [t]: v };
       } else if (v) {
         layered[k] = v;

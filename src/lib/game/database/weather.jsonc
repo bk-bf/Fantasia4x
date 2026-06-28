@@ -1,12 +1,18 @@
-// Weather (SEASONS_WEATHER Subsystem 4) — fully data-driven. Loaded by EnvironmentService.
+// Weather (SEASONS_WEATHER Subsystem 4) — the single data source. Loaded by EnvironmentService.
 //
-// CONNECTED CHAINS, not isolated events. `transitions` is a WEIGHTED graph: weather flows along
-// intensity ladders (clear → drizzle → rain → heavy_rain → storm; snow → blizzard) with windy
-// parallels (spring_windy/…/windy_rain). Each day the current type either steps to a neighbour or
-// persists — see EnvironmentService.rollWeatherType.
+// Two halves in one file:
+//   • types[]  — the LABELLED weather states the rest of the game reads via `weather.type`: each a
+//                leaf of effects + visuals ("what does `storm` feel/look like").
+//   • the chains (precip / wind / grid …) — when each type is active. Weather is TWO independent
+//                Markov chains whose product DERIVES the displayed type:
+//                  PRECIP axis (wet) : dry → drizzle → rain → heavy_rain   (+ snow / fog / heat_wave)
+//                  WIND   axis       : calm → breezy → windy → gale
+//                They evolve separately, so a dry gale, a calm shower, and a windy rain all arise
+//                naturally — a windy day never depends on it raining. `storm`/`blizzard` live ONLY in
+//                the bottom-right corner (heavy precip AND a gale at once), gated by BOTH chains'
+//                weights, so wind can never force a storm on its own.
 //
-//   durationRange — [min,max] turns a spell lasts before it's re-rolled (per-type override allowed).
-//   default       — the starting / fallback weather id.
+//   default — the starting / fallback weather id (also the dry-calm derivation).
 //
 //   types[] fields:
 //     overlay       — UI animation the WeatherCanvas draws:
@@ -29,14 +35,9 @@
 //     moistureBonus — added to tile wetness % while active (soaks pawns); negative dries (heat wave).
 //     tint          — normalised RGB multiplied into the ambient tint.
 //     severity      — chronicle severity on onset: "info" | "warning".
-//     transitions[] — weighted neighbours. { to, chance } = weight; { to, seasonPrecip:true } pulls
-//                     the season's precipitation as the weight; seasons:[...] gates by season;
-//                     windScaled:true amplifies the weight with ambient wind (rain→storm on a gale).
-//                     The leftover weight (1 − Σ) is the chance the weather simply persists.
 {
-  "durationRange": [50, 400],
-  "default"      : "clear",
-  "types"        : [
+  "default": "clear",
+  "types"  : [
     {
       "id"           : "clear",
       "label"        : "Clear skies",
@@ -51,17 +52,7 @@
       "mood"         : 0.5,
       "moistureBonus": 0,
       "tint"         : [1.0, 1.0, 1.0],
-      "severity"     : "info",
-      "transitions"  : [
-        { "to": "spring_windy", "chance": 0.18, "seasons": ["spring"] },
-        { "to": "summer_windy", "chance": 0.18, "seasons": ["summer"] },
-        { "to": "autumn_windy", "chance": 0.18, "seasons": ["autumn"] },
-        { "to": "winter_windy", "chance": 0.18, "seasons": ["winter"] },
-        { "to": "drizzle",   "seasons": ["spring", "summer", "autumn"], "seasonPrecip": true },
-        { "to": "snow",      "chance": 0.18, "seasons": ["winter"] },
-        { "to": "heat_wave", "chance": 0.08, "seasons": ["summer"] },
-        { "to": "fog",       "chance": 0.05 }
-      ]
+      "severity"     : "info"
     },
 
     {
@@ -79,13 +70,7 @@
       "mood"         : 0.4,
       "moistureBonus": 0,
       "tint"         : [0.97, 1.0, 0.94],
-      "severity"     : "info",
-      "transitions"  : [
-        { "to": "clear",      "chance": 0.15 },
-        { "to": "drizzle",    "chance": 0.15 },
-        { "to": "windy_rain", "chance": 0.08, "windScaled": true },
-        { "to": "gale",       "chance": 0.05, "windScaled": true }
-      ]
+      "severity"     : "info"
     },
     {
       "id"           : "summer_windy",
@@ -103,14 +88,7 @@
       "mood"         : 0.3,
       "moistureBonus": -5,
       "tint"         : [1.0, 0.98, 0.9],
-      "severity"     : "info",
-      "transitions"  : [
-        { "to": "clear",      "chance": 0.18 },
-        { "to": "heat_wave",  "chance": 0.1 },
-        { "to": "drizzle",    "chance": 0.08 },
-        { "to": "windy_rain", "chance": 0.06, "windScaled": true },
-        { "to": "gale",       "chance": 0.05, "windScaled": true }
-      ]
+      "severity"     : "info"
     },
     {
       "id"           : "autumn_windy",
@@ -127,14 +105,7 @@
       "mood"         : 0.1,
       "moistureBonus": 0,
       "tint"         : [1.0, 0.9, 0.72],
-      "severity"     : "info",
-      "transitions"  : [
-        { "to": "clear",      "chance": 0.12 },
-        { "to": "drizzle",    "chance": 0.18 },
-        { "to": "fog",        "chance": 0.08 },
-        { "to": "windy_rain", "chance": 0.1, "windScaled": true },
-        { "to": "gale",       "chance": 0.07, "windScaled": true }
-      ]
+      "severity"     : "info"
     },
     {
       "id"           : "winter_windy",
@@ -150,13 +121,7 @@
       "mood"         : -0.4,
       "moistureBonus": 5,
       "tint"         : [0.9, 0.94, 1.0],
-      "severity"     : "info",
-      "transitions"  : [
-        { "to": "clear",    "chance": 0.1 },
-        { "to": "snow",     "chance": 0.18 },
-        { "to": "blizzard", "chance": 0.1, "windScaled": true },
-        { "to": "gale",     "chance": 0.06, "windScaled": true }
-      ]
+      "severity"     : "info"
     },
 
     {
@@ -176,17 +141,7 @@
       "moistureBonus"  : 10,
       "tint"           : [0.88, 0.91, 1.0],
       "panelSaturation": 0.97,
-      "severity"       : "info",
-      "transitions"    : [
-        // Building UP from clear: drizzle can still develop into rain or simply linger/clear.
-        { "to": "rain",       "chance": 0.3,  "phase": "rising" },
-        { "to": "clear",      "chance": 0.15, "phase": "rising" },
-        { "to": "fog",        "chance": 0.08, "phase": "rising" },
-        { "to": "foggy_rain", "chance": 0.08, "phase": "rising" },
-        // Easing DOWN from a rain type: the front is passing — strongly clears, slight chance to relapse.
-        { "to": "clear",      "chance": 0.65, "phase": "falling" },
-        { "to": "rain",       "chance": 0.35, "phase": "falling" }
-      ]
+      "severity"       : "info"
     },
     {
       "id"             : "rain",
@@ -205,16 +160,7 @@
       "moistureBonus"  : 20,
       "tint"           : [0.8, 0.85, 1.0],
       "panelSaturation": 0.95,
-      "severity"       : "info",
-      "transitions"    : [
-        // ~60% eases off (35 drizzle / 25 clear), ~40% builds — heavy_rain by intensity, storm/windy
-        // only when the wind drives it (windScaled).
-        { "to": "drizzle",    "chance": 0.35 },
-        { "to": "clear",      "chance": 0.25 },
-        { "to": "heavy_rain", "chance": 0.25 },
-        { "to": "storm",      "chance": 0.15, "windScaled": true },
-        { "to": "windy_rain", "chance": 0.1,  "windScaled": true }
-      ]
+      "severity"       : "info"
     },
     {
       "id"             : "windy_rain",
@@ -234,15 +180,7 @@
       "moistureBonus"  : 30,
       "tint"           : [0.8, 0.85, 1.0],
       "panelSaturation": 0.85,
-      "severity"       : "warning",
-      "transitions"    : [
-        // Same exit profile as normal rain — windy_rain is just rain that the wind system pushed into;
-        // its onset is wind-driven (the windy states' windScaled branches), not these weights.
-        { "to": "drizzle",    "chance": 0.35 },
-        { "to": "clear",      "chance": 0.25 },
-        { "to": "heavy_rain", "chance": 0.25 },
-        { "to": "storm",      "chance": 0.15, "windScaled": true }
-      ]
+      "severity"       : "warning"
     },
     {
       "id"             : "heavy_rain",
@@ -262,13 +200,7 @@
       "moistureBonus"  : 35,
       "tint"           : [0.78, 0.83, 1.0],
       "panelSaturation": 0.82,
-      "severity"       : "warning",
-      "transitions"    : [
-        // ~60% eases off (35 drizzle / 25 clear); storm only on wind; the leftover ~25% stays heavy.
-        { "to": "drizzle", "chance": 0.35 },
-        { "to": "clear",   "chance": 0.25 },
-        { "to": "storm",   "chance": 0.15, "windScaled": true }
-      ]
+      "severity"       : "warning"
     },
     {
       "id"             : "storm",
@@ -288,14 +220,7 @@
       "moistureBonus"  : 40,
       "tint"           : [0.72, 0.78, 0.95],
       "panelSaturation": 0.72,
-      "severity"       : "warning",
-      "transitions"    : [
-        // The storm front passes and the sky breaks: strongly clears, then drizzle, only a little rain.
-        // No path back up to heavy_rain — a storm spends itself, it doesn't bounce off its own peak.
-        { "to": "clear",   "chance": 0.45 },
-        { "to": "drizzle", "chance": 0.35 },
-        { "to": "rain",    "chance": 0.1 }
-      ]
+      "severity"       : "warning"
     },
 
     {
@@ -315,13 +240,7 @@
       "moistureBonus"  : 15,
       "tint"           : [0.92, 0.96, 1.0],
       "panelSaturation": 0.85,
-      "severity"       : "info",
-      "transitions"    : [
-        { "to": "clear",        "chance": 0.22 },
-        { "to": "winter_windy", "chance": 0.12, "seasons": ["winter"] },
-        { "to": "blizzard",     "chance": 0.15, "seasons": ["winter"], "windScaled": true },
-        { "to": "fog",          "chance": 0.08 }
-      ]
+      "severity"       : "info"
     },
     {
       "id"             : "blizzard",
@@ -341,12 +260,7 @@
       "moistureBonus"  : 25,
       "tint"           : [0.92, 0.96, 1.0],
       "panelSaturation": 0.7,
-      "severity"       : "warning",
-      "transitions"    : [
-        { "to": "snow",         "chance": 0.4 },
-        { "to": "winter_windy", "chance": 0.15 },
-        { "to": "clear",        "chance": 0.1 }
-      ]
+      "severity"       : "warning"
     },
 
     {
@@ -364,13 +278,7 @@
       "moistureBonus"  : 10,
       "tint"           : [0.88, 0.88, 0.9],
       "panelSaturation": 0.68,
-      "severity"       : "info",
-      "transitions"    : [
-        { "to": "clear",      "chance": 0.35 },
-        { "to": "foggy_rain", "chance": 0.12, "seasons": ["spring", "summer", "autumn"] },
-        { "to": "drizzle",    "chance": 0.1, "seasons": ["spring", "summer", "autumn"] },
-        { "to": "rain",       "chance": 0.06, "seasons": ["spring", "summer", "autumn"] }
-      ]
+      "severity"       : "info"
     },
     {
       "id"             : "foggy_rain",
@@ -389,13 +297,7 @@
       "moistureBonus"  : 25,
       "tint"           : [0.82, 0.85, 0.92],
       "panelSaturation": 0.78,
-      "severity"       : "info",
-      "transitions"    : [
-        { "to": "fog",     "chance": 0.2 },
-        { "to": "rain",    "chance": 0.2 },
-        { "to": "drizzle", "chance": 0.15 },
-        { "to": "clear",   "chance": 0.1 }
-      ]
+      "severity"       : "info"
     },
     {
       "id"           : "heat_wave",
@@ -411,11 +313,7 @@
       "mood"         : -1.0,
       "moistureBonus": -15,
       "tint"         : [1.0, 0.92, 0.8],
-      "severity"     : "warning",
-      "transitions"  : [
-        { "to": "clear",        "chance": 0.4 },
-        { "to": "summer_windy", "chance": 0.2, "seasons": ["summer"] }
-      ]
+      "severity"     : "warning"
     },
     {
       "id"           : "gale",
@@ -432,16 +330,163 @@
       "mood"         : -1.2,
       "moistureBonus": 0,
       "tint"         : [0.93, 0.92, 0.88],
-      "severity"     : "warning",
-      "durationRange": [30, 120],
-      "transitions"  : [
-        { "to": "clear",        "chance": 0.3 },
-        { "to": "spring_windy", "chance": 0.2, "seasons": ["spring"] },
-        { "to": "summer_windy", "chance": 0.2, "seasons": ["summer"] },
-        { "to": "autumn_windy", "chance": 0.2, "seasons": ["autumn"] },
-        { "to": "winter_windy", "chance": 0.2, "seasons": ["winter"] },
-        { "to": "fog",          "chance": 0.05 }
-      ]
+      "severity"     : "warning"
     }
-  ]
+  ],
+
+  // ─── EVOLUTION: the two orthogonal chains whose product derives `type` above ───
+  //   <chain>.default       — starting / fallback state id.
+  //   <chain>.durationRange — [min,max] ticks a state holds before it's re-rolled.
+  //   transitions[]         — weighted neighbours: { to, chance } fixed weight; { to, seasonPrecip }
+  //                           pulls the season's precipitation as the weight; seasons:[...] gates by
+  //                           season; the leftover weight (1 − Σ) is the chance the state persists.
+  //                           `phase` gates a branch to one travel direction of the precip ladder
+  //                           (rising vs. falling).
+  //   wind.bands            — the 0–1 ambient-wind scalar's range per wind level; the scalar
+  //                           random-walks INSIDE its level's band, so the readout always matches the
+  //                           level (and thus the derived type).
+  //   ladders               — ordered rungs used by the storm-corner step-down (calming both axes).
+  //   stormCorner           — derived types that, once reached, break next roll: both chains step one
+  //                           rung toward calm (the front passes, leaving stiller, clearer skies).
+  //   grid                  — (precip × wind) → display type id. "$season_windy" expands to the active
+  //                           season's windy variant (spring_windy / … / winter_windy).
+  "precip": {
+    "default"      : "dry",
+    "durationRange": [50, 400],
+    "states"       : [
+      {
+        "id"         : "dry",
+        "transitions": [
+          { "to": "drizzle",   "seasonPrecip": true, "seasons": ["spring", "summer", "autumn"] },
+          { "to": "snow",      "chance": 0.18, "seasons": ["winter"] },
+          { "to": "heat_wave", "chance": 0.08, "seasons": ["summer"] },
+          { "to": "fog",       "chance": 0.05 }
+        ]
+      },
+      {
+        "id"         : "drizzle",
+        "transitions": [
+          // Building UP from dry: can still develop into rain or simply linger/clear.
+          { "to": "rain",       "chance": 0.3,  "phase": "rising" },
+          { "to": "dry",        "chance": 0.15, "phase": "rising" },
+          { "to": "fog",        "chance": 0.08, "phase": "rising" },
+          { "to": "foggy_rain", "chance": 0.08, "phase": "rising" },
+          // Easing DOWN from rain: the front is passing — strongly clears, slight chance to relapse.
+          { "to": "dry",        "chance": 0.65, "phase": "falling" },
+          { "to": "rain",       "chance": 0.35, "phase": "falling" }
+        ]
+      },
+      {
+        "id"         : "rain",
+        "transitions": [
+          // ~60% eases off (35 drizzle / 25 dry), ~25% intensifies, leftover persists.
+          { "to": "drizzle",    "chance": 0.35 },
+          { "to": "dry",        "chance": 0.25 },
+          { "to": "heavy_rain", "chance": 0.25 }
+        ]
+      },
+      {
+        "id"         : "heavy_rain",
+        "transitions": [
+          // Eases toward drizzle/dry; the leftover ~25% stays heavy. (No storm here — storm is the
+          // heavy_rain × gale corner, decided by the wind chain.)
+          { "to": "drizzle", "chance": 0.35 },
+          { "to": "dry",     "chance": 0.25 },
+          { "to": "rain",    "chance": 0.15 }
+        ]
+      },
+      {
+        "id"         : "snow",
+        "transitions": [
+          { "to": "dry", "chance": 0.22 },
+          { "to": "fog", "chance": 0.08 }
+        ]
+      },
+      {
+        "id"         : "fog",
+        "transitions": [
+          { "to": "dry",        "chance": 0.35 },
+          { "to": "foggy_rain", "chance": 0.12, "seasons": ["spring", "summer", "autumn"] },
+          { "to": "drizzle",    "chance": 0.1,  "seasons": ["spring", "summer", "autumn"] },
+          { "to": "rain",       "chance": 0.06, "seasons": ["spring", "summer", "autumn"] }
+        ]
+      },
+      {
+        "id"         : "foggy_rain",
+        "transitions": [
+          { "to": "fog",     "chance": 0.2 },
+          { "to": "rain",    "chance": 0.2 },
+          { "to": "drizzle", "chance": 0.15 },
+          { "to": "dry",     "chance": 0.1 }
+        ]
+      },
+      {
+        "id"         : "heat_wave",
+        "transitions": [
+          { "to": "dry", "chance": 0.4 }
+        ]
+      }
+    ]
+  },
+
+  "wind": {
+    "default"      : "calm",
+    "durationRange": [50, 400],
+    "bands"        : {
+      "calm"  : [0.0,  0.3],
+      "breezy": [0.25, 0.5],
+      "windy" : [0.5,  0.72],
+      "gale"  : [0.72, 1.0]
+    },
+    "states": [
+      {
+        "id"         : "calm",
+        "transitions": [
+          { "to": "breezy", "chance": 0.25 }
+        ]
+      },
+      {
+        "id"         : "breezy",
+        "transitions": [
+          { "to": "calm",  "chance": 0.3 },
+          { "to": "windy", "chance": 0.2 }
+        ]
+      },
+      {
+        "id"         : "windy",
+        "transitions": [
+          { "to": "breezy", "chance": 0.35 },
+          { "to": "gale",   "chance": 0.12 },
+          { "to": "calm",   "chance": 0.1 }
+        ]
+      },
+      {
+        "id"         : "gale",
+        "transitions": [
+          // Symmetric to the rain descent: a gale spends itself back toward calm.
+          { "to": "windy",  "chance": 0.45 },
+          { "to": "breezy", "chance": 0.25 },
+          { "to": "calm",   "chance": 0.1 }
+        ]
+      }
+    ]
+  },
+
+  "ladders": {
+    "precip": ["dry", "drizzle", "rain", "heavy_rain"],
+    "wind"  : ["calm", "breezy", "windy", "gale"]
+  },
+
+  "stormCorner": ["storm", "blizzard"],
+
+  "grid": {
+    "dry"       : { "calm": "clear",      "breezy": "clear",      "windy": "$season_windy", "gale": "gale" },
+    "drizzle"   : { "calm": "drizzle",    "breezy": "drizzle",    "windy": "drizzle",       "gale": "windy_rain" },
+    "rain"      : { "calm": "rain",       "breezy": "rain",       "windy": "windy_rain",    "gale": "storm" },
+    "heavy_rain": { "calm": "heavy_rain", "breezy": "heavy_rain", "windy": "windy_rain",    "gale": "storm" },
+    "snow"      : { "calm": "snow",       "breezy": "snow",       "windy": "winter_windy",  "gale": "blizzard" },
+    "fog"       : { "calm": "fog",        "breezy": "fog",        "windy": "fog",           "gale": "gale" },
+    "foggy_rain": { "calm": "foggy_rain", "breezy": "foggy_rain", "windy": "foggy_rain",    "gale": "windy_rain" },
+    "heat_wave" : { "calm": "heat_wave",  "breezy": "heat_wave",  "windy": "$season_windy", "gale": "gale" }
+  }
 }

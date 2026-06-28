@@ -34,6 +34,8 @@ import {
   weatherChronicleSeverity,
   weatherSightMul,
   weatherWindStrength,
+  windDegreeWord,
+  ambientWind,
   SEASON_LABELS,
   type ThermalSample
 } from './EnvironmentService';
@@ -255,42 +257,55 @@ describe('EnvironmentService — weather (Phase C)', () => {
     expect(springTypes.has('snow')).toBe(false);
   });
 
-  it('a windy day biases the rain chain toward storm/windy branches (windScaled)', () => {
-    // From `rain`, count how often we step into a wind branch (windy_rain / storm / heavy_rain) at
-    // low vs high ambient wind. windScaled branches must be strictly more likely when it's windy.
-    const windBranches = new Set(['windy_rain', 'storm', 'heavy_rain']);
-    const count = (wind: number) => {
-      const rng = new SeededRng(123);
-      let n = 0;
-      for (let i = 0; i < 2000; i++) {
-        const w = advanceWeatherForDay(
-          { type: 'rain', intensity: 0.5, turnsRemaining: 0, wind },
-          'autumn',
-          rng
-        );
-        if (windBranches.has(w.type)) n++;
+  it('the wind readout never contradicts the derived type ("rain · extremely windy" is impossible)', () => {
+    // The whole point of the orthogonal model: a calm-axis precip type (clear/rain/heavy_rain/snow) has
+    // a windy/gale cell that routes to windy_rain/storm/winter_windy/blizzard/gale, so it can only ever
+    // co-occur with calm or breezy wind. Its readout must therefore never reach "very"/"extremely".
+    const calmAxis = new Set(['clear', 'rain', 'heavy_rain', 'snow']);
+    const rng = new SeededRng(42);
+    let w: WeatherState = { type: 'clear', intensity: 0, turnsRemaining: 0 };
+    for (let i = 0; i < 3000; i++) {
+      w = advanceWeatherForDay(w, i % 2 ? 'autumn' : 'spring', rng);
+      if (calmAxis.has(w.type)) {
+        expect(['', 'slightly', 'somewhat', 'fairly']).toContain(windDegreeWord(ambientWind(w)));
       }
-      return n;
-    };
-    expect(count(0.9)).toBeGreaterThan(count(0.05));
+    }
   });
 
-  it('the clear/improvement escape stays reachable from rain even at high wind (Σ>1 fix)', () => {
-    // Regression: when wind-scaled escalation weights push the transition pool past 1, the old draw
-    // walked branches in array order over a fixed [0,1) and returned on the first hit — so `clear`
-    // (listed last) became unreachable exactly when it was windy (0% escape). Drawing over the real
-    // pool keeps every branch's proportional share, so the colony can still catch a break in a gale.
-    const rng = new SeededRng(123);
+  it('wind is independent of precip: dry windy days AND calm showers both occur', () => {
+    // Orthogonality: over a long evolution we should see pure-wind dry types (a *_windy / gale with no
+    // rain) AND pure-wet types at calm wind (rain / drizzle) — a windy day never depends on it raining.
+    const rng = new SeededRng(8);
+    let w: WeatherState = { type: 'clear', intensity: 0, turnsRemaining: 0 };
     const seen = new Set<WeatherType>();
     for (let i = 0; i < 4000; i++) {
-      seen.add(
-        advanceWeatherForDay({ type: 'rain', intensity: 0.5, turnsRemaining: 0, wind: 0.95 }, 'autumn', rng).type
-      );
+      w = advanceWeatherForDay(w, 'autumn', rng);
+      seen.add(w.type);
     }
-    // The wind-scaled storm/windy_rain branches inflate the pool past 1 at this wind, yet the
-    // de-escalation escapes (clear, drizzle) must keep their proportional share and stay reachable.
-    expect(seen.has('clear')).toBe(true);
-    expect(seen.has('drizzle')).toBe(true);
+    const dryWind = seen.has('autumn_windy') || seen.has('gale');
+    const calmWet = seen.has('rain') || seen.has('drizzle');
+    expect(dryWind).toBe(true);
+    expect(calmWet).toBe(true);
+  });
+
+  it('a storm breaks: reaching the storm corner steps BOTH axes toward calm', () => {
+    // storm = heavy_rain (precip peak) × gale (wind peak). On the next re-roll the front passes and both
+    // chains step one rung down — heavy_rain→rain, gale→windy — so (rain, windy) derives windy_rain.
+    const w = advanceWeatherForDay(
+      {
+        type: 'storm',
+        intensity: 1,
+        precip: 'heavy_rain',
+        windLevel: 'gale',
+        turnsRemaining: 0,
+        windTurns: 0
+      },
+      'autumn',
+      new SeededRng(5)
+    );
+    expect(w.type).toBe('windy_rain');
+    expect(w.precip).toBe('rain');
+    expect(w.windLevel).toBe('windy');
   });
 
   it('weatherSightMul shortens sight in fog/storm and is 1 in clear', () => {
@@ -333,9 +348,13 @@ describe('EnvironmentService — per-tile display fields (HUD)', () => {
     // The diurnal delta itself dips below 0 pre-dawn and rises above 0 mid-afternoon.
     expect(diurnalTempDelta(preDawn, 'summer')).toBeLessThan(0);
     expect(diurnalTempDelta(afternoon, 'summer')).toBeGreaterThan(0);
-    expect(diurnalTempDelta(afternoon, 'summer')).toBeGreaterThan(diurnalTempDelta(preDawn, 'summer'));
+    expect(diurnalTempDelta(afternoon, 'summer')).toBeGreaterThan(
+      diurnalTempDelta(preDawn, 'summer')
+    );
     // Summer swings harder than winter (clear/dry vs. cloud-blanketed) for the same time of day.
-    expect(diurnalTempDelta(afternoon, 'summer')).toBeGreaterThan(diurnalTempDelta(afternoon, 'winter'));
+    expect(diurnalTempDelta(afternoon, 'summer')).toBeGreaterThan(
+      diurnalTempDelta(afternoon, 'winter')
+    );
     // It flows through into the tile's effective temperature: afternoon plains are warmer than pre-dawn.
     expect(tileTemperature('plains', 'summer', afternoon, undefined)).toBeGreaterThan(
       tileTemperature('plains', 'summer', preDawn, undefined)
@@ -348,7 +367,11 @@ describe('EnvironmentService — per-tile display fields (HUD)', () => {
     const wet = tileWetness(plains, { type: 'heavy_rain', intensity: 0.75, turnsRemaining: 0 });
     expect(wet).toBeGreaterThan(dry);
     expect(
-      tileWetness(biomeBaseMoisture('river'), { type: 'heavy_rain', intensity: 1, turnsRemaining: 0 })
+      tileWetness(biomeBaseMoisture('river'), {
+        type: 'heavy_rain',
+        intensity: 1,
+        turnsRemaining: 0
+      })
     ).toBeLessThanOrEqual(100);
     expect(
       tileWetness(biomeBaseMoisture('mountain'), {

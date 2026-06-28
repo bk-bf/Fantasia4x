@@ -31,7 +31,8 @@ const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
  *  durations in in-game hours via these instead of raw ticks/"turns" (750 = 300×60 / 24). */
 export const TICKS_PER_GAME_HOUR = TICKS_PER_DAY / 24;
 /** In-game hours → ticks (for authoring a duration in the JSON-friendly unit). */
-export const ticksFromGameHours = (hours: number): number => Math.round(hours * TICKS_PER_GAME_HOUR);
+export const ticksFromGameHours = (hours: number): number =>
+  Math.round(hours * TICKS_PER_GAME_HOUR);
 /** Ticks → in-game hours (for displaying a remaining-time as the clock's unit). */
 export const gameHoursFromTicks = (ticks: number): number => ticks / TICKS_PER_GAME_HOUR;
 
@@ -400,18 +401,17 @@ export type WeatherOverlayKind =
   | 'snowdust'
   | 'foggy_rain';
 
-// Data-driven (database/weather.jsonc): every weather id + its effects, visuals, and transitions.
+// Data-driven (database/weather.jsonc): every weather id + its effects/visuals (`types`), plus the two
+// orthogonal Markov chains (`precip` × `wind`) whose product derives the active type via `grid`.
 interface WeatherTransition {
   to: string;
   /** Fixed per-roll weight (a probability before normalisation; the leftover weight = "stays put"). */
   chance?: number;
-  /** Use the current season's `precipitation` as the weight (clear → rain/snow). */
+  /** Use the current season's `precipitation` as the weight (dry → drizzle/snow). */
   seasonPrecip?: boolean;
   /** Gate this transition to specific seasons. */
   seasons?: Season[];
-  /** Scale this branch's weight by ambient wind (high wind → far more likely; e.g. rain→storm). */
-  windScaled?: boolean;
-  /** Gate this branch to a single travel phase along the rain ladder (rising vs. falling). */
+  /** Gate this branch to a single travel phase along the precip ladder (rising vs. falling). */
   phase?: 'rising' | 'falling';
 }
 interface WeatherDef extends WeatherEffects {
@@ -436,32 +436,93 @@ interface WeatherDef extends WeatherEffects {
   moistureBonus: number;
   tint: [number, number, number];
   severity: 'info' | 'warning';
-  /** Optional per-type spell duration; falls back to the global durationRange. */
-  durationRange?: [number, number];
+}
+/** One node of an evolution chain (precip or wind) with its weighted neighbours. */
+interface ChainState {
+  id: string;
   transitions: WeatherTransition[];
 }
-const WEATHER_FILE = weatherData as unknown as {
+interface ChainDef {
+  default: string;
   durationRange: [number, number];
+  states: ChainState[];
+  /** Wind chain only: the 0–1 ambient-wind band each level random-walks within. */
+  bands?: Record<string, [number, number]>;
+}
+const WEATHER_FILE = weatherData as unknown as {
   default: string;
   types: WeatherDef[];
+  precip: ChainDef;
+  wind: ChainDef;
+  ladders: { precip: string[]; wind: string[] };
+  stormCorner: string[];
+  grid: Record<string, Record<string, string>>;
 };
 const DEFAULT_WEATHER = WEATHER_FILE.default;
-const DURATION_RANGE = WEATHER_FILE.durationRange;
 const WEATHER: Record<string, WeatherDef> = Object.fromEntries(
   WEATHER_FILE.types.map((t) => [t.id, t])
 );
 
-/** Rain-ladder climaxes: reaching one flips the chain into its `falling` (calming) descent, which
- *  holds until the weather returns to `clear`. `heavy_rain` is the rain peak; `windy_rain`/`storm`
- *  are the wind-driven peaks. */
-const CLIMAX_WEATHER = new Set(['heavy_rain', 'windy_rain', 'storm']);
+// ── The two evolution chains (precip × wind) + the derivation grid ──
+const PRECIP_CHAIN = WEATHER_FILE.precip;
+const WIND_CHAIN = WEATHER_FILE.wind;
+const PRECIP_STATES: Record<string, ChainState> = Object.fromEntries(
+  PRECIP_CHAIN.states.map((s) => [s.id, s])
+);
+const WIND_STATES: Record<string, ChainState> = Object.fromEntries(
+  WIND_CHAIN.states.map((s) => [s.id, s])
+);
+const WIND_BANDS: Record<string, [number, number]> = WIND_CHAIN.bands ?? {};
+const PRECIP_LADDER = WEATHER_FILE.ladders.precip;
+const WIND_LADDER = WEATHER_FILE.ladders.wind;
+const STORM_CORNER = new Set(WEATHER_FILE.stormCorner);
+const WEATHER_GRID = WEATHER_FILE.grid;
+const DEFAULT_PRECIP = PRECIP_CHAIN.default;
+const DEFAULT_WIND_LEVEL = WIND_CHAIN.default;
+const SEASON_WINDY_CELL = '$season_windy';
 
-/** Travel phase once `type` is the current weather, given the previous phase: a climax forces the
- *  `falling` descent, `clear` resets the climb, anything else carries the prior phase forward. */
-function weatherPhase(type: WeatherType, prev: 'rising' | 'falling'): 'rising' | 'falling' {
-  if (type === DEFAULT_WEATHER) return 'rising';
-  if (CLIMAX_WEATHER.has(type)) return 'falling';
+/** Reverse map: a derived display id → the (precip, windLevel) cell that produces it. Used to recover
+ *  the two axes from a state that only carries `type` (legacy saves / debug / menu backdrop). The
+ *  season-windy cells are keyed by the literal `$season_windy`, since they apply in every season. */
+const REVERSE_GRID: Record<string, { precip: string; windLevel: string }> = (() => {
+  const out: Record<string, { precip: string; windLevel: string }> = {};
+  for (const precip of Object.keys(WEATHER_GRID)) {
+    for (const windLevel of Object.keys(WEATHER_GRID[precip])) {
+      const cell = WEATHER_GRID[precip][windLevel];
+      if (!(cell in out)) out[cell] = { precip, windLevel };
+    }
+  }
+  return out;
+})();
+
+/** Derive the displayed weather id from the (precip, wind) pair for a season. */
+function deriveWeatherType(precip: string, windLevel: string, season: Season): WeatherType {
+  const cell = WEATHER_GRID[precip]?.[windLevel] ?? DEFAULT_WEATHER;
+  return cell === SEASON_WINDY_CELL ? `${season}_windy` : cell;
+}
+
+/** Recover the (precip, windLevel) axes from a state that only carries a derived `type`. */
+function axesFromType(type: string | undefined): { precip: string; windLevel: string } {
+  if (type && /_windy$/.test(type)) {
+    return (
+      REVERSE_GRID[SEASON_WINDY_CELL] ?? { precip: DEFAULT_PRECIP, windLevel: DEFAULT_WIND_LEVEL }
+    );
+  }
+  return (type && REVERSE_GRID[type]) || { precip: DEFAULT_PRECIP, windLevel: DEFAULT_WIND_LEVEL };
+}
+
+/** Precip-ladder climax (the top rung, `heavy_rain`) flips the wet chain into its `falling` descent;
+ *  `dry` resets the climb; off-ladder precip (snow/fog/heat_wave) carries the prior phase forward. */
+function precipPhaseFor(precip: string, prev: 'rising' | 'falling'): 'rising' | 'falling' {
+  if (precip === DEFAULT_PRECIP) return 'rising';
+  if (precip === PRECIP_LADDER[PRECIP_LADDER.length - 1]) return 'falling';
   return prev;
+}
+
+/** Step one rung toward index 0 (the calm/dry end) of a ladder; a no-op if already there or off-ladder. */
+function ladderDown(ladder: string[], id: string): string {
+  const i = ladder.indexOf(id);
+  return i > 0 ? ladder[i - 1] : id;
 }
 
 /** Resolve a weather def by id, falling back to the default (clear) for unknown/undefined. */
@@ -472,17 +533,24 @@ function weatherDef(type?: string): WeatherDef {
 /** All weather ids in declaration order (for the debug menu / pickers). */
 export const WEATHER_IDS: string[] = WEATHER_FILE.types.map((t) => t.id);
 
-/** Build a sticky WeatherState for a given type (debug): the spell runs effectively forever so the
- *  daily Markov chain won't re-roll it until the player changes it again. Ambient wind seeds from the
- *  type's own `windStrength` so a debug storm immediately looks/feels windy. */
+/** Build a sticky WeatherState for a given display type (debug / menu backdrop): both chains' spells
+ *  run effectively forever so the daily roll won't change it until the player does. The two axes are
+ *  recovered from the type and the ambient wind is seeded to the middle of its level's band, so a debug
+ *  storm immediately looks/feels stormy. */
 export function makeWeather(type: string): WeatherState {
   const def = weatherDef(type);
+  const { precip, windLevel } = axesFromType(def.id);
+  const band = WIND_BANDS[windLevel] ?? [DEFAULT_WIND, DEFAULT_WIND];
   return {
     type: def.id,
     intensity: def.intensity,
+    precip,
+    windLevel,
     turnsRemaining: Number.MAX_SAFE_INTEGER,
-    wind: def.windStrength ?? DEFAULT_WIND,
-    windDir: DEFAULT_WIND_DIR
+    windTurns: Number.MAX_SAFE_INTEGER,
+    wind: (band[0] + band[1]) / 2,
+    windDir: DEFAULT_WIND_DIR,
+    phase: precipPhaseFor(precip, 'rising')
   };
 }
 
@@ -1046,10 +1114,8 @@ export function accumulateSnow(
 
 /** Ambient-wind starting/fallback value when a WeatherState carries none (back-compat). */
 const DEFAULT_WIND = 0.3;
-/** Per-day ambient-wind random-walk step magnitude (±). */
+/** Per-day ambient-wind random-walk step magnitude (±), within the current wind level's band. */
 const WIND_DRIFT = 0.18;
-/** How hard ambient wind boosts a `windScaled` transition branch: weight × (1 + wind × this). */
-const WIND_TRANSITION_BOOST = 2.5;
 
 // ── Wind direction (8-way compass) — drives the downwind shelter shadow ───────
 /** Starting/fallback wind direction (index into WIND_DIRS) when a WeatherState carries none. */
@@ -1125,41 +1191,30 @@ export function effectiveWindAt(
 }
 
 /**
- * Data-driven connected-chain transition (weather.jsonc `transitions`). Unlike a first-match chain,
- * this is a WEIGHTED pick: each season-valid transition contributes a weight (its `chance`, or the
- * season `precipitation` for `seasonPrecip`, optionally amplified by ambient `wind` for `windScaled`
- * branches). One draw selects among them; the leftover weight (1 − Σ) is the chance the weather
- * simply persists. This is what makes weather flow along intensity ladders (clear→drizzle→rain→
- * heavy_rain→storm) and lets a windy day push toward the storm/windy branches.
+ * Weighted Markov step over one chain's `transitions` (weather.jsonc `precip`/`wind` states). Each
+ * season-valid and phase-valid neighbour contributes a weight (its `chance`, or the season
+ * `precipitation` for `seasonPrecip`); one draw selects among them and the leftover weight (1 − Σ) is
+ * the chance the state simply persists. Drawing over the real pool (Σ + persist) keeps every branch's
+ * proportional share regardless of array order. Returns the next state id (or the current one on persist).
  */
-function rollWeatherType(
-  prev: WeatherType,
+function rollChain(
+  state: ChainState | undefined,
   season: Season,
-  wind: number,
-  rng: SeededRng,
-  phase: 'rising' | 'falling'
-): WeatherType {
-  const transitions = weatherDef(prev).transitions ?? [];
+  phase: 'rising' | 'falling',
+  rng: SeededRng
+): string | undefined {
+  const transitions = state?.transitions ?? [];
   const weighted: Array<{ to: string; w: number }> = [];
   let total = 0;
   for (const tr of transitions) {
     if (tr.seasons && !tr.seasons.includes(season)) continue;
     if (tr.phase && tr.phase !== phase) continue;
-    let w = tr.seasonPrecip ? SEASONS[season].precipitation : (tr.chance ?? 0);
-    if (tr.windScaled) w *= 1 + wind * WIND_TRANSITION_BOOST;
+    const w = tr.seasonPrecip ? SEASONS[season].precipitation : (tr.chance ?? 0);
     if (w <= 0) continue;
     weighted.push({ to: tr.to, w });
     total += w;
   }
-  if (total <= 0) return prev;
-  // The leftover weight (1 − Σ) is the chance the weather PERSISTS. Model that as an explicit branch
-  // and draw across the FULL pool (Σ + persist ≥ 1). This matters when `windScaled` branches push Σ
-  // past 1: the old code drew over a fixed [0,1) and returned on the first cumulative hit, so any
-  // branch listed AFTER the point where the running sum reached 1 became unreachable — and the
-  // improvement/`clear` escapes are typically listed last, so a windy day silently starved exactly the
-  // exits out of bad weather (rain→clear dropped to 0% at high wind). Drawing over the real pool keeps
-  // every branch's proportional share regardless of array order. For Σ ≤ 1 this is identical to the old
-  // leftover-persist draw (pool = 1, r ∈ [0,1), same slices).
+  if (total <= 0) return state?.id;
   const persist = Math.max(0, 1 - total);
   const r = rng.random() * (total + persist);
   let acc = 0;
@@ -1167,42 +1222,74 @@ function rollWeatherType(
     acc += w;
     if (r < acc) return to;
   }
-  return prev; // fell into the persist slice
+  return state?.id; // fell into the persist slice
 }
 
 /**
- * Advance the weather one in-game day (called on day boundaries only — at most one new
- * WeatherState object per day, so snapshot churn is negligible). Ambient wind random-walks every day
- * (so the "wind trajectory" drifts independently of the weather type); the type only re-rolls when
- * the current spell's `turnsRemaining` has elapsed, otherwise the spell simply runs down.
+ * Advance the weather one in-game day (day boundaries only — one new WeatherState per day, negligible
+ * snapshot churn). TWO orthogonal chains step independently: PRECIP (wet axis) and WIND (windy axis),
+ * each re-rolling when its own spell elapses. The displayed `type` is DERIVED from the (precip, wind)
+ * pair, so wind and rain can never contradict and a storm needs BOTH chains at their peak at once. When
+ * yesterday's pair landed on a storm-corner type, both chains step one rung toward calm before deriving
+ * — the front passes and spends the storm on both axes. The ambient-wind scalar random-walks but stays
+ * inside its wind level's band, so the readout always matches the level (and thus the type).
  */
 export function advanceWeatherForDay(
   weather: WeatherState,
   season: Season,
   rng: SeededRng
 ): WeatherState {
-  const wind = Math.max(
-    0,
-    Math.min(1, (weather.wind ?? DEFAULT_WIND) + (rng.random() * 2 - 1) * WIND_DRIFT)
-  );
-  // Direction backs/veers one of the 8 compass points on a chance roll (its own slow walk).
+  // Ambient wind direction backs/veers one of the 8 compass points on a chance roll (its own slow walk).
   let windDir = weather.windDir ?? DEFAULT_WIND_DIR;
   if (rng.chance(WIND_DIR_TURN_CHANCE)) windDir = (windDir + (rng.chance(0.5) ? 1 : 7)) % 8;
-  const remaining = weather.turnsRemaining - TICKS_PER_DAY;
-  if (remaining > 0) {
-    return { ...weather, wind, windDir, turnsRemaining: remaining };
+
+  // Recover both axes (a legacy save / debug state may carry only `type`).
+  const recovered = axesFromType(weather.type);
+  let precip = weather.precip ?? recovered.precip;
+  let windLevel = weather.windLevel ?? recovered.windLevel;
+  let phase = precipPhaseFor(precip, weather.phase ?? 'rising');
+
+  let precipTurns = (weather.turnsRemaining ?? 0) - TICKS_PER_DAY;
+  let windTurns = (weather.windTurns ?? 0) - TICKS_PER_DAY;
+  const reroll = precipTurns <= 0 || windTurns <= 0;
+  const [pMin, pMax] = PRECIP_CHAIN.durationRange;
+  const [wMin, wMax] = WIND_CHAIN.durationRange;
+
+  if (STORM_CORNER.has(weather.type ?? '') && reroll) {
+    // The front passes: both axes step one rung toward calm and the wet chain enters its descent.
+    precip = ladderDown(PRECIP_LADDER, precip);
+    windLevel = ladderDown(WIND_LADDER, windLevel);
+    phase = 'falling';
+    precipTurns = rng.int(pMin, pMax);
+    windTurns = rng.int(wMin, wMax);
+  } else {
+    if (precipTurns <= 0) {
+      precip = rollChain(PRECIP_STATES[precip], season, phase, rng) ?? precip;
+      phase = precipPhaseFor(precip, phase);
+      precipTurns = rng.int(pMin, pMax);
+    }
+    if (windTurns <= 0) {
+      windLevel = rollChain(WIND_STATES[windLevel], season, phase, rng) ?? windLevel;
+      windTurns = rng.int(wMin, wMax);
+    }
   }
-  const phase = weatherPhase(weather.type, weather.phase ?? 'rising');
-  const type = rollWeatherType(weather.type, season, wind, rng, phase);
+
+  const band = WIND_BANDS[windLevel] ?? [DEFAULT_WIND, DEFAULT_WIND];
+  let wind = (weather.wind ?? (band[0] + band[1]) / 2) + (rng.random() * 2 - 1) * WIND_DRIFT;
+  wind = Math.max(band[0], Math.min(band[1], wind));
+
+  const type = deriveWeatherType(precip, windLevel, season);
   const def = weatherDef(type);
-  const [minDur, maxDur] = def.durationRange ?? DURATION_RANGE;
   return {
     type,
     intensity: def.intensity,
-    turnsRemaining: rng.int(minDur, maxDur),
+    precip,
+    windLevel,
+    turnsRemaining: precipTurns,
+    windTurns,
     wind,
     windDir,
-    phase: weatherPhase(type, phase)
+    phase
   };
 }
 

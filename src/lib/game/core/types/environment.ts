@@ -17,16 +17,29 @@ export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
 export type WeatherType = string;
 
 export interface WeatherState {
+  /**
+   * The DERIVED, labelled weather the rest of the game reads — the product of the two chains below via
+   * `weather.jsonc` `grid` (e.g. precip `rain` × wind `gale` ⇒ `storm`). Effects/visuals are looked up
+   * from its def.
+   */
   type: WeatherType;
   /** 0.0–1.0 — drives both gameplay severity and the visual overlay. */
   intensity: number;
-  /** Turns (ticks) until this weather is re-rolled by the Markov chain. */
-  turnsRemaining: number;
   /**
-   * Ambient wind 0.0–1.0 — a slowly-varying world scalar (its own daily random-walk), independent of
-   * the weather *type*. It biases the connected-chain transitions (a `windScaled` branch like
-   * rain→storm gets more likely as wind rises) and feeds the visual overlay slant alongside each
-   * type's own `windStrength`. Optional for back-compat; defaults applied in EnvironmentService.
+   * PRECIP-axis chain state (wet axis): `dry`/`drizzle`/`rain`/`heavy_rain` (+ `snow`/`fog`/
+   * `foggy_rain`/`heat_wave`). Optional for back-compat — recovered from `type` when absent.
+   */
+  precip?: string;
+  /** WIND-axis chain level (windy axis): `calm`/`breezy`/`windy`/`gale`. Recovered from `type` when absent. */
+  windLevel?: string;
+  /** Turns (ticks) until the PRECIP chain re-rolls. */
+  turnsRemaining: number;
+  /** Turns (ticks) until the WIND chain re-rolls (its own independent spell). */
+  windTurns?: number;
+  /**
+   * Ambient wind 0.0–1.0 — the live scalar that drives windchill and the visual overlay slant. It
+   * random-walks but stays inside the `windLevel`'s band (weather.jsonc `wind.bands`), so the readout
+   * always matches the wind level (and thus the derived `type`). Optional for back-compat.
    */
   wind?: number;
   /**
@@ -37,11 +50,10 @@ export interface WeatherState {
    */
   windDir?: number;
   /**
-   * Which way the weather is travelling along the rain intensity ladder: `rising` (intensifying) or
-   * `falling` (calming after a climax). Reaching a climax (`heavy_rain`/`windy_rain`/`storm`) flips it
-   * to `falling`; returning to `clear` resets it to `rising`; otherwise it carries forward. Drizzle
-   * reads it so a drizzle on the way DOWN from rain strongly clears, while a drizzle building UP from
-   * clear can still develop into rain. Optional for back-compat; defaults to `rising`.
+   * Which way the PRECIP chain is travelling: `rising` (intensifying) or `falling` (calming). Reaching
+   * the wet climax (`heavy_rain`) flips it to `falling`; returning to `dry` resets it to `rising`;
+   * otherwise it carries forward. Drizzle reads it so a drizzle on the way DOWN from rain strongly
+   * clears, while a drizzle building UP from dry can still develop into rain. Defaults to `rising`.
    */
   phase?: 'rising' | 'falling';
 }
