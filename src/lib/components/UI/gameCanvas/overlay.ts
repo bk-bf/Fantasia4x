@@ -18,6 +18,22 @@ function hexToRgb(hex?: string): { r: number; g: number; b: number } | null {
   return { r: ((n >> 16) & 0xff) / 255, g: ((n >> 8) & 0xff) / 255, b: (n & 0xff) / 255 };
 }
 
+// Per-resource static visuals (sprite glyph + stored tint), resolved once. The item DB never mutates
+// at runtime, so `resolveCharSpans`/`hexToRgb`/`getItemById` — previously called for EVERY drop EVERY
+// frame in the loop below — are memoised here, killing that per-frame allocation churn (the GC the perf
+// spec warns about). Keyed by resourceId.
+const _dropVisCache = new Map<string, { sprite: string | null; storedColor: { r: number; g: number; b: number } | null }>();
+function dropVisFor(resourceId: string): { sprite: string | null; storedColor: { r: number; g: number; b: number } | null } {
+  let v = _dropVisCache.get(resourceId);
+  if (!v) {
+    const def = itemService.getItemById(resourceId);
+    const sprite = def?.charSpans ? (resolveCharSpans(def.charSpans as CharSpan[])[0] ?? null) : null;
+    v = { sprite, storedColor: hexToRgb(def?.color) };
+    _dropVisCache.set(resourceId, v);
+  }
+  return v;
+}
+
 /**
  * Render dropped items with their own item-sheet sprite (resolved from the def's `charSpans`),
  * tinted by the def colour. Stored stockpile items use the item colour; freshly-dropped items not
@@ -41,21 +57,18 @@ export function overlayDroppedItems(
   for (const drop of drops) {
     // Skip items on fog-hidden tiles — they'd float over the mountain silhouette.
     if (isHidden?.(drop.x, drop.y)) continue;
-    const existing = grid.getTile(drop.x, drop.y);
-    const def = itemService.getItemById(drop.resourceId);
-    const sprite = def?.charSpans
-      ? (resolveCharSpans(def.charSpans as CharSpan[])[0] ?? null)
-      : null;
+    const { sprite, storedColor } = dropVisFor(drop.resourceId);
     // With a real sprite: item colour when stored, gold while it still needs hauling (muted when
     // forbidden). Without one: legacy marker glyphs ('$' green stored / '*' gold loose).
     const char = sprite ?? (drop.stored ? DOLLAR_GLYPH : STAR_GLYPH);
     const foreground = drop.stored
       ? sprite
-        ? (hexToRgb(def?.color) ?? GREEN)
+        ? (storedColor ?? GREEN)
         : GREEN
       : drop.forbidden
         ? FORBIDDEN
         : GOLD;
+    const existing = grid.getTile(drop.x, drop.y);
     grid.setTile(drop.x, drop.y, {
       char,
       foreground,

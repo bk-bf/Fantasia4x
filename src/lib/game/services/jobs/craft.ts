@@ -204,7 +204,6 @@ export function completeCraftOrder(
     const next = [...(state.droppedItems ?? [])];
     for (const [outId, qty] of Object.entries(outputs)) {
       if (qty <= 0) continue;
-      const id = `craft-${outId}-${station.x}-${station.y}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
       // §Q: stamp the rolled tier onto instance-bearing equipment/tools only; bulk byproducts go plain.
       const stamp =
         quality !== undefined &&
@@ -216,6 +215,35 @@ export function completeCraftOrder(
         outId === itemId
           ? itemService.composeDynamicDishName(itemId, entry.selectedIngredients)
           : undefined;
+      // PERF (render-side FPS): a plain bulk output folds into an existing LOOSE pile of the same
+      // resource already sitting on the station tile, instead of spawning a fresh stack every
+      // completion. Without this, a station crafted repeatedly off any stockpile (e.g. a chopping_block
+      // turning logs → firewood) piles up dozens of redundant same-tile stacks — `droppedItems` grows
+      // unbounded and the per-frame item overlay (overlayDroppedItems, no viewport cull) iterates +
+      // re-resolves them all every frame, tanking FPS while the sim TPS stays flat. (Stockpile tiles
+      // already merge via absorbDropIfOnStockpileTile; this is the non-stockpile case.) Identity-bearing
+      // drops — §Q quality, dish name, tracked instance, per-unit carcass conditions — never fold.
+      const plain = !stamp && !dishName;
+      if (plain) {
+        const mergeIdx = next.findIndex(
+          (d) =>
+            d.resourceId === outId &&
+            d.x === station.x &&
+            d.y === station.y &&
+            !d.stored &&
+            !d.reservedFor &&
+            !d.forbidden &&
+            d.name == null &&
+            d.quality == null &&
+            d.instance == null &&
+            d.unitConditions == null
+        );
+        if (mergeIdx >= 0) {
+          next[mergeIdx] = { ...next[mergeIdx], quantity: next[mergeIdx].quantity + qty };
+          continue;
+        }
+      }
+      const id = `craft-${outId}-${station.x}-${station.y}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
       next.push({
         id,
         resourceId: outId,
