@@ -101,7 +101,7 @@
 
   {#if bDef?.description}<div class="bld-desc">{bDef.description}</div>{/if}
 
-  {#if !isBlueprint && !building.deconstructQueued && bDef?.conditionDecayPerTurn}
+  {#if !isBlueprint && !building.deconstructQueued && buildingService.deterioratingRate(building.type) > 0}
     {@const cond = Math.round(building.condition ?? 100)}
     <div
       class="bld-condition"

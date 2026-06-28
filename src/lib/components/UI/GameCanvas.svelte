@@ -111,6 +111,7 @@
   } from '$lib/components/UI/gameCanvas/spriteSheets';
   import { redrawHudSpriteIcons } from '$lib/components/UI/gameCanvas/hudSpriteIcon';
   import BuildingFuelPanel from '$lib/components/UI/gameCanvas/BuildingFuelPanel.svelte';
+  import BuildingRepairPanel from '$lib/components/UI/gameCanvas/BuildingRepairPanel.svelte';
   import BuildingStoragePanel from '$lib/components/UI/gameCanvas/BuildingStoragePanel.svelte';
   import FoodFilterPanel from '$lib/components/UI/gameCanvas/FoodFilterPanel.svelte';
   import StockpileZonePanel from '$lib/components/UI/gameCanvas/StockpileZonePanel.svelte';
@@ -891,6 +892,11 @@
       !isBlueprint &&
       !selectedBuilding.deconstructQueued &&
       (bDef?.effects?.storageStacks ?? 0) > 0;
+    // REPAIR panel: any complete building that actually wears (and is therefore repairable).
+    const canRepair =
+      !isBlueprint &&
+      !selectedBuilding.deconstructQueued &&
+      buildingService.deterioratingRate(selectedBuilding.type) > 0;
     const status = isBlueprint
       ? selectedBuilding.paused
         ? 'paused'
@@ -911,6 +917,9 @@
       btns.push({ label: 'DEMOLISH', onClick: deconstructBuilding });
       if (canConfigFuel) {
         btns.push({ label: 'FUEL', active: showFuelSettings, onClick: toggleFuelSettingsPanel });
+      }
+      if (canRepair) {
+        btns.push({ label: 'REPAIR', active: showRepairSettings, onClick: toggleRepairSettingsPanel });
       }
       if (canConfigStorage) {
         btns.push({
@@ -3472,6 +3481,8 @@
           redrawOverlay();
         } else if (showFuelSettings) {
           showFuelSettings = false;
+        } else if (showRepairSettings) {
+          showRepairSettings = false;
         } else if (showStorageSettings) {
           showStorageSettings = false;
         } else if (showFoodSettings) {
@@ -4347,6 +4358,7 @@
   let showShelterAssign = false;
   let showFuelSettings = false;
   let showStorageSettings = false;
+  let showRepairSettings = false;
   let fuelSettingsForBuildingId: string | null = null;
 
   $: {
@@ -4354,19 +4366,36 @@
     if (nextId !== fuelSettingsForBuildingId) {
       showFuelSettings = false;
       showStorageSettings = false;
+      showRepairSettings = false;
       fuelSettingsForBuildingId = nextId;
     }
   }
 
   function toggleFuelSettingsPanel() {
     showFuelSettings = !showFuelSettings;
-    if (showFuelSettings) showStorageSettings = false; // the two fly-outs share the same slot
+    // The settings fly-outs share one slot — opening one closes the others.
+    if (showFuelSettings) {
+      showStorageSettings = false;
+      showRepairSettings = false;
+    }
   }
 
   // §F storage-bin item filter fly-out (mirrors showFuelSettings), toggled by the card's FILTER button.
   function toggleStorageSettingsPanel() {
     showStorageSettings = !showStorageSettings;
-    if (showStorageSettings) showFuelSettings = false;
+    if (showStorageSettings) {
+      showFuelSettings = false;
+      showRepairSettings = false;
+    }
+  }
+
+  // Repair settings fly-out (mirrors showFuelSettings), toggled by the card's REPAIR button.
+  function toggleRepairSettingsPanel() {
+    showRepairSettings = !showRepairSettings;
+    if (showRepairSettings) {
+      showFuelSettings = false;
+      showStorageSettings = false;
+    }
   }
 
   // Colony food-filter fly-out (mirrors showFuelSettings): owned here, toggled by the pawn card's FOOD
@@ -4873,6 +4902,10 @@
         selectedBuilding.status === 'complete' &&
         !selectedBuilding.deconstructQueued &&
         (buildingService.getBuildingById(selectedBuilding.type)?.effects?.storageStacks ?? 0) > 0}
+      {@const canConfigureRepair =
+        selectedBuilding.status === 'complete' &&
+        !selectedBuilding.deconstructQueued &&
+        buildingService.deterioratingRate(selectedBuilding.type) > 0}
       {@const bt = worldMap[selectedBuilding.y]?.[selectedBuilding.x]}
       {@const clickedBin = buildingIsStorageBin(selectedBuilding)
         ? droppedItems.filter(
@@ -4911,6 +4944,9 @@
         {/if}
         {#if canConfigureFuel}
           <BuildingFuelPanel building={selectedBuilding} {pawns} open={showFuelSettings} />
+        {/if}
+        {#if canConfigureRepair}
+          <BuildingRepairPanel building={selectedBuilding} {pawns} open={showRepairSettings} />
         {/if}
         {#if canConfigureStorage}
           <BuildingStoragePanel building={selectedBuilding} open={showStorageSettings} />

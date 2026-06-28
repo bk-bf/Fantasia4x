@@ -768,6 +768,7 @@
     "description": "Bundled-reed roofing on a tile. Cheap shelter overhead — rots and needs re-thatching.",
     "category": "structure",
     "buildingCost": {"hay": 4, "branch": 2},
+    "repairMaterials": ["hay", "branch", "plant_fiber"],
     "workAmount": 8,
     "toolTierRequired": 0,
     "populationRequired": 1,
@@ -794,6 +795,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
+    "conditionDecayPerTurn": 0,
     "effects": {"roof": 1, "weatherProtection": 0.85, "transparentRoof": 1, "thermalInsulation": 0.5},
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
@@ -815,6 +817,7 @@
     "populationRequired": 0,
     "researchRequired": null,
     "upkeepCost": {},
+    "conditionDecayPerTurn": 0,
     "effects": {"roof": 1, "weatherProtection": 1.0, "thermalInsulation": 0.9},
     "storageCapacity": {},
     "buildingState": {"isUnique": false}

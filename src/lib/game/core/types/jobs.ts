@@ -101,6 +101,7 @@ export interface Job {
     | 'sleep'
     | 'light'
     | 'refuel'
+    | 'repair' // restore a worn building to 100% condition, consuming proportional material
     | 'deconstruct'
     | 'plant'; // PRODUCTION-CHAIN-II §F: sow a crop on a grow-zone tile
   targetX: number;
@@ -144,8 +145,8 @@ export interface JobDef {
   workCategorySource?: 'designation' | 'recipe-output';
   /** Optional claim restriction enforced in `getAvailableJobs`. `harvestTool`/`craftTool`: ADR-009
    *  per-pawn tool gating (carry a qualifying tool, auto-grab otherwise); `refuelAllowlist`: the
-   *  building's `allowedRefuelPawnIds`. */
-  claimGate?: 'harvestTool' | 'craftTool' | 'refuelAllowlist';
+   *  building's `allowedRefuelPawnIds`; `repairAllowlist`: the building's `allowedRepairPawnIds`. */
+  claimGate?: 'harvestTool' | 'craftTool' | 'refuelAllowlist' | 'repairAllowlist';
   /** Whether low light slows this job (§G light→work). Defaults to true. Set false for jobs that
    *  don't need close sight — hauling/fetching/refuelling (carrying) are unaffected by darkness. */
   lightAffected?: boolean;

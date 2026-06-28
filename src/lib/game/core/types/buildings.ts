@@ -96,6 +96,19 @@ export interface FuelSettings {
   paused?: boolean;
 }
 
+/** Per-building repair controls — mirrors {@link FuelSettings}; edited by the REPAIR fly-out. */
+export interface RepairSettings {
+  /** Repair only once condition falls below this percentage (0-100). Default 100 (repair any wear). */
+  repairThresholdPct?: number;
+  /** Restrict the materials a repair may consume to these item IDs (the "flat pool" — any allowed item
+   *  counts toward the proportional cost). Empty/undefined means the building's default repair set. */
+  allowedMaterialItemIds?: string[];
+  /** Restrict repair jobs to these pawn IDs. Empty/undefined means any pawn. */
+  allowedRepairPawnIds?: string[];
+  /** When true, no new repair jobs are generated for this building. */
+  paused?: boolean;
+}
+
 export interface StorageSettings {
   /**
    * §F storage bins — explicit per-building allow-list of item IDs this store accepts. `undefined`
@@ -134,6 +147,7 @@ export interface PlacedBuilding {
   burnFactor?: number;
   fuelSettings?: FuelSettings; // optional per-building refuel controls
   storageSettings?: StorageSettings; // §F optional per-building storage-bin item filter
+  repairSettings?: RepairSettings; // optional per-building repair controls (threshold / materials / pawns)
   // Deconstruction
   deconstructQueued?: boolean; // player has queued this building for demolition
   deconstructWorkRequired?: number; // work points to demolish (½ workAmount)
@@ -325,7 +339,14 @@ export interface Building {
   /** Normalised RGB light colour [r,g,b] 0–1. Defaults to warm fire [1.0, 0.55, 0.22]. */
   lightColor?: [number, number, number];
   // ── PRODUCTION-CHAIN-EXPANSION §2/§5/§F: heat, flux, molds, storage ──
-  conditionDecayPerTurn?: number; // §B: structural wear/turn for complete instances (0/undefined = never decays)
+  /** §B structural wear/turn for complete instances. EXPLICIT `0` = IMMUNE (never decays — tile/mountain
+   *  roofs). `undefined` = use the default wear rate IF the building has a build cost (so every real
+   *  building deteriorates + is repairable); a free/marker building with no cost never decays. */
+  conditionDecayPerTurn?: number;
+  /** Repair-material allow-list (flat pool — any of these may be consumed for a repair). Undefined =
+   *  default to the build-cost item ids (with `category:` slots expanded). e.g. a thatch roof lists
+   *  hay + branch + plant_fiber so plant fiber can stand in for hay. */
+  repairMaterials?: string[];
   tileCapacityBonus?: number; // refactor Stage 2: extra item capacity this building grants to its tile (§F storage)
   minFuelHeat?: number; // station won't operate below this fuel heat rating (§2)
   passive?: boolean; // ADR-016: a furnace that transforms loaded inputs over time with no pawn job

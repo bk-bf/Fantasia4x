@@ -713,6 +713,15 @@ export const COMMANDS: Record<string, Cmd> = {
         : b
     )
   }),
+  /** Per-building repair controls (threshold / material allow-list / pawns / pause) — the REPAIR fly-out. */
+  setBuildingRepairSettings: (s, p: { id: string; updates: Record<string, unknown> }) => ({
+    ...s,
+    buildings: (s.buildings ?? []).map((b) =>
+      b.id === p.id
+        ? { ...b, repairSettings: { ...((b.repairSettings ?? {}) as object), ...p.updates } }
+        : b
+    )
+  }),
   /** §F storage bins — set a store building's per-item filter (the FILTER fly-out on its card). */
   setBuildingStorageSettings: (s, p: { id: string; updates: Record<string, unknown> }) => ({
     ...s,

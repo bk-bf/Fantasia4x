@@ -30,6 +30,7 @@ import * as fetch from './jobs/fetch';
 import * as craft from './jobs/craft';
 import * as caretake from './jobs/caretake';
 import * as refuel from './jobs/refuel';
+import * as repair from './jobs/repair';
 import * as plant from './jobs/plant';
 import { isOrderSupplied as stagingIsOrderSupplied } from './jobs/staging';
 
@@ -50,6 +51,7 @@ type JobPoolType =
   | 'craft'
   | 'caretake'
   | 'refuel'
+  | 'repair'
   | 'plant';
 // Compile-time guard: every JobPoolType must be a real Job['type'] member (fails to build otherwise).
 type _AssertPoolSubset = JobPoolType extends Job['type'] ? true : never;
@@ -98,6 +100,7 @@ class JobServiceImpl {
     craft: { generate: craft.generate, complete: craft.complete },
     caretake: { generate: caretake.generate, complete: caretake.complete },
     refuel: { generate: refuel.generate, complete: refuel.complete },
+    repair: { generate: repair.generate, complete: repair.complete },
     plant: { generate: plant.generate, complete: plant.complete }
   };
 
@@ -234,6 +237,13 @@ class JobServiceImpl {
       if (claimGate === 'refuelAllowlist' && j.buildingId) {
         const building = (gameState.buildings ?? []).find((b) => b.id === j.buildingId);
         const allowedPawns = building?.fuelSettings?.allowedRefuelPawnIds ?? [];
+        if (allowedPawns.length > 0 && !allowedPawns.includes(pawn.id)) return false;
+      }
+
+      // repairAllowlist: a building may restrict who is allowed to repair it.
+      if (claimGate === 'repairAllowlist' && j.buildingId) {
+        const building = (gameState.buildings ?? []).find((b) => b.id === j.buildingId);
+        const allowedPawns = building?.repairSettings?.allowedRepairPawnIds ?? [];
         if (allowedPawns.length > 0 && !allowedPawns.includes(pawn.id)) return false;
       }
 

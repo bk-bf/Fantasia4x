@@ -60,6 +60,14 @@ function weatherExposureFactor(weather: GameState['weather']): number {
   return Math.max(0.1, severity * (0.5 + 0.5 * intensity));
 }
 
+// Default structural wear/turn for a complete building whose def gives no explicit `conditionDecayPerTurn`
+// but DOES have a build cost — so every real building deteriorates + is repairable (slow; durable
+// materials slow it further). Free/marker buildings (no cost) and explicit `0` (immune roofs) never wear.
+const DEFAULT_CONDITION_DECAY = 0.15;
+// Weather-exposure multiplier used for a SHELTERED (roofed) non-structural building — it ages at the
+// calm baseline (use/age), NOT the full weather rate: furniture indoors doesn't rot in the rain.
+const SHELTERED_EXPOSURE = 0.12;
+
 // `category:<cat>` cost-slot match. Local copy of ItemService.itemMatchesCostCategory (kept here to
 // avoid a BuildingService↔ItemService import cycle): real categories match `item.category`; the
 // pseudo-category `plank` matches ANY sawn plank so `category:plank` means "any plank".
@@ -173,7 +181,9 @@ export interface BuildingService {
   stepTraps(gameState: GameState): GameState;
 
   // ── Refactor Stage 1: structural condition (§B building wear) ──
-  /** Decay complete buildings' `condition` by their def `conditionDecayPerTurn` (per-tick). */
+  /** Effective wear/turn for a building type (0 = immune/never-wears). Gates condition + repair. */
+  deterioratingRate(buildingType: string): number;
+  /** Decay complete buildings' `condition` by their effective wear rate (weather/shelter scaled). */
   stepBuildingCondition(gameState: GameState): GameState;
   /** Restore a building to full condition, consuming a fraction of its build cost. No-op if unaffordable. */
   repairBuilding(instanceId: string, gameState: GameState): GameState;
@@ -802,17 +812,44 @@ export class BuildingServiceImpl implements BuildingService {
     return state;
   }
 
+  /**
+   * Effective structural wear/turn for a building TYPE. EXPLICIT `0` = immune (tile/mountain roofs);
+   * an explicit positive rate is used as-is; `undefined` falls back to the default rate ONLY if the
+   * building has a build cost (so every real building deteriorates + is repairable), else 0. The shared
+   * gate for "does this building wear / show a condition meter + REPAIR panel".
+   */
+  deterioratingRate(buildingType: string): number {
+    const def = this.getBuildingById(buildingType);
+    if (!def) return 0;
+    const raw = def.conditionDecayPerTurn;
+    if (raw === 0) return 0; // explicit immune
+    if (raw && raw > 0) return raw; // explicit rate
+    return Object.keys(def.buildingCost ?? {}).length > 0 ? DEFAULT_CONDITION_DECAY : 0;
+  }
+
   stepBuildingCondition(gameState: GameState): GameState {
     // ROOF-SUPPORT / weather wear: structural wear scales with how harsh the weather is — a storm rots
-    // an exposed roof/wall fast, a clear calm day barely ages it. One scalar per tick (cheap); roofs
-    // with no `conditionDecayPerTurn` (tile_roof, the natural mountain_roof) never decay regardless.
-    const exposure = weatherExposureFactor(gameState.weather);
+    // an exposed roof/wall fast, a clear calm day barely ages it. One scalar per tick (cheap).
+    const weatherFactor = weatherExposureFactor(gameState.weather);
+    const buildings0 = gameState.buildings ?? [];
+    // Tiles a complete roof shelters — a NON-structural building under one ages at the calm baseline,
+    // not the full weather rate. Built lazily (only when a non-structural building is first weighed).
+    let roofedTiles: Set<string> | null = null;
+    const tileIsRoofed = (x: number, y: number): boolean => {
+      if (!roofedTiles) {
+        roofedTiles = new Set();
+        for (const b of buildings0)
+          if (b.status === 'complete' && this.getBuildingById(b.type)?.effects?.roof)
+            roofedTiles.add(`${b.x},${b.y}`);
+      }
+      return roofedTiles.has(`${x},${y}`);
+    };
     let changed = false;
     let broken: PlacedBuilding[] | null = null;
-    const buildings = (gameState.buildings ?? []).map((b) => {
+    const buildings = buildings0.map((b) => {
       if (b.status !== 'complete') return b;
       const def = AVAILABLE_BUILDINGS.find((d) => d.id === b.type);
-      const rate = def?.conditionDecayPerTurn;
+      const rate = this.deterioratingRate(b.type);
       if (!rate) return b;
       const cur = b.condition ?? 100;
       if (cur <= 0) return b;
@@ -820,6 +857,14 @@ export class BuildingServiceImpl implements BuildingService {
       const durMul = b.materials
         ? aggregateMaterialMods(Object.values(b.materials), 'building').durability
         : 1;
+      // The structural envelope (roof / wall / load-bearing) always takes the full weather; everything
+      // else is sheltered if it sits under a roof (indoor furniture doesn't weather like an exposed wall).
+      const structural = !!(
+        def?.effects?.roof ||
+        def?.walkable === false ||
+        def?.effects?.roofSupport
+      );
+      const exposure = structural || !tileIsRoofed(b.x, b.y) ? weatherFactor : SHELTERED_EXPOSURE;
       const next = Math.max(0, cur - (perTick(rate) * exposure) / durMul);
       if (next === cur) return b;
       changed = true;
