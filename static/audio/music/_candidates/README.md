@@ -1,27 +1,36 @@
-# Music candidates — UNWIRED audition batch
+# Music candidates — UNWIRED staging area
 
-These tracks are **not referenced by `manifest.ts`** and will not play in-game. They sit here so you
-can listen first and pick which to promote. Files are the **faithful OGG originals** (no re-encode /
-loudness pass yet) so you hear true quality.
+Drop tracks you're auditioning here. **Nothing in this tree is referenced by `manifest.ts`, so it
+never plays in-game** — it's purely for listening before committing. Keep the originals here (no
+re-encode / loudness pass yet) so you hear true quality while choosing.
 
-All **Alexandr Zhelanov** (our existing primary music artist), mirrored from the Internet Archive
-because opengameart.org's front-end was 502-ing. Same author, same originals.
+## Layout — mirrors the shipped tree
 
-| Suggested scene | File | Original track | Duration | License | Source |
-| --------------- | ---- | -------------- | -------- | ------- | ------ |
-| day | `day/for-the-king.ogg` | "For The King" | 4:31 | CC-BY 4.0 | https://archive.org/details/alexandrzhelanov-fortheking |
-| day | `day/full-of-memories.ogg` | "Full Of Memories" | 1:25 | CC-BY 4.0 | https://archive.org/details/fullofmemories |
-| day | `day/medieval-theme-1.ogg` | "СДП (средневековая тема 1)" | 2:53 | CC-BY 3.0 | https://archive.org/details/AlexandrZhelanov-oldmusic · https://opengameart.org/content/old-music |
-| day | `day/medieval-theme-2.ogg` | "СДП (Тема срдневек)" | 3:43 | CC-BY 3.0 | https://archive.org/details/AlexandrZhelanov-oldmusic · https://opengameart.org/content/old-music |
-| day | `day/legend.ogg` | "Легенда 1" (Legend) | 3:17 | CC-BY 3.0 | https://archive.org/details/AlexandrZhelanov-oldmusic · https://opengameart.org/content/old-music |
-| day | `day/magic-actions.ogg` | "Magic Actions" | 2:18 | CC-BY 4.0 | https://archive.org/details/magicactions |
-| night | `night/he-will-never-see-her-again.ogg` | "He Will Never See Her Again" | 4:18 | CC-BY 4.0 | https://archive.org/details/hewillneverseeheragain |
-| night | `night/unfriendly-forest.ogg` | "Unfriendly forest" | 1:00 | CC-BY 4.0 | https://archive.org/details/magicactions |
-| combat | `combat/light-battle.ogg` | "Light Battle Theme" | 1:44 | CC-BY 4.0 | https://archive.org/details/lightbattle |
+```
+_candidates/
+  all/    menu/  combat/  day/  night/   ← year-round (plays every season)
+  spring/ day/  night/
+  summer/ day/  night/
+  autumn/ day/  night/
+  winter/ day/  night/
+```
 
-## To promote a track (later, on your say-so)
+Sort each candidate into the bucket where you think it fits: `all/<scene>` for a year-round track,
+`<season>/{day,night}` for a season-specific one. `menu` and `combat` are season-agnostic, so they
+only exist under `all/`. (The `.gitkeep` files just keep the empty dirs in git — leave them.)
 
-1. Loudness-normalise + move it to `static/audio/music/<scene>-N.ogg` (match the existing pipeline).
-2. Add its path to the relevant `MUSIC[...]` array and a `TRACK_LABELS` entry in `src/lib/audio/manifest.ts`.
-3. Add the attribution row to `AUDIO-CREDITS.md` (all of these are CC-BY → attribution required).
-4. Delete this `_candidates/` tree before release so unused audio doesn't ship in the build.
+## Promote a track (the wiring step)
+
+Once you've picked the keepers, each gets:
+
+1. **Loudness-normalise to ≈ −17 LUFS** (matches the shipped catalogue) and encode to OGG, then move
+   it to the matching `static/audio/music/<bucket>/<scene>/` folder. Method that works well:
+   measure with `ffmpeg -af loudnorm=print_format=json` then apply a single `volume=<−17 − I>dB` gain
+   (exact for integrated loudness, preserves dynamics, one encode).
+2. Add its path to the right pool in `src/lib/audio/manifest.ts` (`MENU` / `COMBAT` / `DAY_SHARED` /
+   `NIGHT_SHARED` / `DAY_SEASONAL[season]` / `NIGHT_SEASONAL[season]`) **and** a `TRACK_LABELS` entry.
+3. Add the attribution row to `AUDIO-CREDITS.md` (CC-BY tracks require attribution).
+
+## Before release
+
+This whole `_candidates/` tree should be pruned so unused audio doesn't ship in the build.
