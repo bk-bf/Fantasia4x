@@ -23,9 +23,10 @@ import type {
   MoodModel,
   HealthLimb,
   HealthPart,
-  HealthWound,
-  CombatStat
+  HealthWound
 } from '$lib/components/UI/SelectedEntityCard.svelte';
+import type { StatPillView, StatPillRow } from '$lib/components/UI/StatPills.svelte';
+import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService';
 
 /** A wound is highlighted when it's serious enough to matter or has gone septic. */
 function woundWarn(inj: Injury): boolean {
@@ -86,77 +87,181 @@ function bestArmorDefense(entity: Pawn | Mob): number {
   return best;
 }
 
-function combatStats(entity: Pawn | Mob): CombatStat[] {
+const COMBAT_TINT = '#7f96a8'; // steel — neutral combat-readiness pills
+
+/** Combat-readiness pills (hit/dodge/crit/armour/load + ranged potential). Each formula-backed pill
+ *  carries its derivation (formula + current factor values) for the hover breakdown — the same data the
+ *  attributes panel shows. Evaluated against the live body, so injuries visibly drop them. */
+function combatPills(entity: Pawn | Mob): StatPillView[] {
   const s = (id: string) => pawnStatService.evaluateStat(id, entity);
-  // The live `encumbered` condition (set by the sim from worn-armour + pack load ÷ capacity) carries
-  // the dodge/move/aim penalty — read its active stage so the panel matches what combat applies.
+  const rows = (statId: string): StatPillRow[] =>
+    pawnStatService
+      .describeStat(entity, statId)
+      .vars.map((v) => ({ label: v.name, value: v.value }));
+  const formula = (statId: string) => pawnStatService.describeStat(entity, statId).formula;
+  // The live `encumbered` condition carries the dodge/move/aim penalty — read its stage so the pill
+  // matches what combat applies.
   const encCond = ('conditions' in entity ? entity.conditions : undefined)?.find(
     (c) => c.id === 'encumbered'
   );
   const encStage = encCond ? getConditionCurrentStage(encCond) : undefined;
   const dodge = s('dodge') * (encStage?.modifiers.dodge ?? 1);
-  const armor = bestArmorDefense(entity);
-  const out: CombatStat[] = [
+  const pills: StatPillView[] = [
     {
       label: 'Hit',
       value: `×${s('hit_chance').toFixed(2)}`,
-      title: 'melee accuracy (× sight × manipulation)'
+      color: COMBAT_TINT,
+      desc: 'melee accuracy',
+      formula: formula('hit_chance'),
+      rows: rows('hit_chance')
     },
     {
       label: 'Dodge',
       value: `×${dodge.toFixed(2)}`,
-      title: encStage
-        ? `evasion, including −${Math.round((1 - (encStage.modifiers.dodge ?? 1)) * 100)}% from being ${encStage.label}`
-        : 'evasion multiplier (× moving; lower when injured)'
+      color: COMBAT_TINT,
+      warn: !!encStage,
+      desc: encStage
+        ? `evasion · −${Math.round((1 - (encStage.modifiers.dodge ?? 1)) * 100)}% from being ${encStage.label}`
+        : 'evasion (lower when injured)',
+      formula: formula('dodge'),
+      rows: rows('dodge')
     },
     {
       label: 'Crit',
       value: `${Math.round(s('crit_chance') * 100)}%`,
-      title: 'base crit chance (weapons add their own)'
+      color: COMBAT_TINT,
+      desc: 'base crit chance (weapons add their own)',
+      formula: formula('crit_chance'),
+      rows: rows('crit_chance')
     },
     {
       label: 'Armor',
-      value: `${armor}`,
-      title:
-        'best armour (worn, or a creature’s natural hide) — % of a hit it turns before armour-pen'
+      value: `${bestArmorDefense(entity)}`,
+      color: COMBAT_TINT,
+      desc: 'best armour (worn, or a creature’s natural hide) — % of a hit it turns before armour-pen'
     }
   ];
   if (encCond) {
     // Reconstruct the load ratio from severity (sev = (ratio−0.8)/0.6) for a readable %.
     const ratio = 0.8 + encCond.severity * 0.6;
-    out.push({
+    pills.push({
       label: 'Load',
-      value: `${Math.round(ratio * 100)}% · ${encStage?.label ?? ''}`.trim(),
-      title:
-        'carried weight (worn armour + pack) ÷ carry capacity — past ~100% encumbers: slower, easier to hit, worse aim. STR + bags raise the limit.'
+      value: `${Math.round(ratio * 100)}%`,
+      color: COMBAT_TINT,
+      warn: true,
+      desc: `${encStage?.label ?? ''} — carried weight ÷ carry capacity; past ~100% slows you, easier to hit, worse aim. STR + bags raise the limit.`
     });
   }
-  // Ranged potential (PER = precision, DEX = speed, STR = draw power) — shown for every pawn so a
-  // build reads at a glance whether they'd make an archer (PER), a crossbowman (DEX), etc.
-  out.push(
+  // Ranged potential (PER = precision, DEX = speed, STR = draw power), shown for every pawn so a build
+  // reads at a glance whether they'd make an archer (PER), a crossbowman (DEX), etc.
+  const ranged: Array<[string, string, string]> = [
+    ['Aim', 'aim_accuracy', 'ranged accuracy — PER (precision)'],
+    ['Fire', 'aim_speed', 'ranged fire-rate — DEX (speed)'],
+    ['Reach', 'aim_range', 'ranged reach — PER, capped by vision'],
+    ['Reload', 'reload_speed', 'crossbow reload — DEX'],
+    ['Shot', 'ranged_damage', 'bow/throw damage — STR (draw/throw power)']
+  ];
+  for (const [label, id, desc] of ranged) {
+    pills.push({
+      label,
+      value: `×${s(id).toFixed(2)}`,
+      color: COMBAT_TINT,
+      desc,
+      formula: formula(id),
+      rows: rows(id)
+    });
+  }
+  return pills;
+}
+
+/** All health-tab pills: blood, pain, live cold/heat exposure, cold/heat tolerance, then combat — each
+ *  with a hover breakdown. Pure presentation data for StatPills. */
+function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
+  const pills: StatPillView[] = [];
+  if (entity.bloodVolume != null && entity.maxBloodVolume != null) {
+    const pct = Math.round((entity.bloodVolume / entity.maxBloodVolume) * 100);
+    const bleed = (entity.limbs ?? []).reduce((sum, l) => sum + (l.bleedRate ?? 0), 0);
+    const rows: StatPillRow[] = [
+      {
+        label: 'Volume',
+        value: `${Math.round(entity.bloodVolume)}/${Math.round(entity.maxBloodVolume)}`
+      }
+    ];
+    if (bleed > 0) {
+      const hours = (entity.bloodVolume / bleed) * (24 / TURNS_PER_DAY);
+      rows.push({ label: 'Bleeding', value: `${bleed.toFixed(1)}/s` });
+      rows.push({
+        label: 'To empty',
+        value: hours >= 10 ? `~${Math.round(hours)}h` : `~${hours.toFixed(1)}h`
+      });
+    }
+    pills.push({
+      label: 'Blood',
+      value: `${pct}%`,
+      color: '#ee5544',
+      warn: pct < 60 || bleed > 0,
+      desc: bleed > 0 ? 'losing blood' : 'whole-body blood pool',
+      rows
+    });
+  }
+  if ((entity.pain ?? 0) > 0) {
+    pills.push({
+      label: 'Pain',
+      value: `${Math.round(entity.pain ?? 0)}%`,
+      color: '#e07050',
+      warn: (entity.pain ?? 0) >= 40,
+      desc: 'rises with injuries, limb damage and bleeding — saps consciousness'
+    });
+  }
+  if ((entity.needs?.coldExposure ?? 0) > 0) {
+    pills.push({
+      label: 'Cold',
+      value: `${Math.round(entity.needs?.coldExposure ?? 0)}%`,
+      color: '#4fc3f7',
+      warn: true,
+      desc: 'hypothermia exposure — rises while colder than your tolerance'
+    });
+  }
+  if ((entity.needs?.heatExposure ?? 0) > 0) {
+    pills.push({
+      label: 'Heat',
+      value: `${Math.round(entity.needs?.heatExposure ?? 0)}%`,
+      color: '#fb8c00',
+      warn: true,
+      desc: 'heat-stroke exposure — rises while hotter than your tolerance'
+    });
+  }
+  const tol = pawnStatService.temperatureTolerance(entity);
+  const deg = (d: number) => `${d >= 0 ? '+' : '−'}${Math.abs(Math.round(d))}°`;
+  const tolRows = (
+    comfortLabel: string,
+    comfortVal: number,
+    sources: { label: string; deg: number }[],
+    totalDeg: number,
+    capped: boolean
+  ): StatPillRow[] => [
+    { label: comfortLabel, value: `${Math.round(comfortVal)}°C` },
+    ...sources.map((src) => ({ label: src.label, value: deg(src.deg) })),
+    { label: 'headroom', value: `${deg(totalDeg)}${capped ? ' (cap)' : ''}` }
+  ];
+  pills.push(
     {
-      label: 'Aim',
-      value: `×${s('aim_accuracy').toFixed(2)}`,
-      title: 'ranged accuracy — PER (precision)'
+      label: 'Cold tol',
+      value: `≤${Math.round(tol.coldOnset)}°`,
+      color: '#4fc3f7',
+      desc: 'cold meter starts rising below this temperature',
+      rows: tolRows('Comfort floor', tol.comfortMin, tol.coldSources, tol.coldDeg, tol.coldCapped)
     },
     {
-      label: 'Fire',
-      value: `×${s('aim_speed').toFixed(2)}`,
-      title: 'ranged fire-rate — DEX (speed)'
-    },
-    {
-      label: 'Reach',
-      value: `×${s('aim_range').toFixed(2)}`,
-      title: 'ranged reach — PER, capped by vision'
-    },
-    { label: 'Reload', value: `×${s('reload_speed').toFixed(2)}`, title: 'crossbow reload — DEX' },
-    {
-      label: 'Shot',
-      value: `×${s('ranged_damage').toFixed(2)}`,
-      title: 'bow/throw damage — STR (draw/throw power)'
+      label: 'Heat tol',
+      value: `≥${Math.round(tol.heatOnset)}°`,
+      color: '#fb8c00',
+      desc: 'heat meter starts rising above this temperature',
+      rows: tolRows('Comfort ceiling', tol.comfortMax, tol.heatSources, tol.heatDeg, tol.heatCapped)
     }
   );
-  return out;
+  pills.push(...combatPills(entity));
+  return pills;
 }
 
 /**
@@ -212,13 +317,11 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
         : undefined,
     bleedRate: bleedRate > 0 ? bleedRate : undefined,
     pain: entity.pain,
-    // SEASONS_WEATHER: tracked cold/heat exposure meters (pawns) — surfaced as % next to Blood.
+    // SEASONS_WEATHER: tracked cold/heat exposure meters (pawns) — kept for the "any-damage" gate.
     coldExposure: entity.needs?.coldExposure,
     heatExposure: entity.needs?.heatExposure,
-    // SEASONS_WEATHER: cold/heat tolerance in degrees (comfort band + resistance) — the temperatures at
-    // which each exposure meter starts to rise, gear included.
-    tempTolerance: pawnStatService.temperatureTolerance(entity),
-    combat: combatStats(entity),
+    // Blood / pain / exposure / tolerance / combat — all surfaced as compact hover-breakdown pills.
+    pills: buildHealthPills(entity),
     limbs
   };
 }

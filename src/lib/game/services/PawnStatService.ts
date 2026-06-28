@@ -475,6 +475,14 @@ function pawnStateWorkMultiplier(pawn: Pawn | Mob): number {
 const TEMP_RES_DEG_PER_UNIT = 20;
 const TEMP_RES_DEG_CAP = 25;
 
+/** A stat's value breakdown for a hover tooltip: the symbolic formula + each variable it uses with the
+ *  entity's current value (mirrors the attributes panel's derivation). */
+export interface StatDerivation {
+  formula: string;
+  description: string;
+  vars: { name: string; value: string }[];
+}
+
 /** One contributor to a side's resistance headroom, in degrees (for the hover breakdown). */
 export interface TempToleranceSource {
   label: string;
@@ -509,6 +517,10 @@ export interface PawnStatService {
   /** Effective cold/heat tolerance: the comfort band shifted outward by resistance (CON stat + worn
    *  gear) expressed as degrees — i.e. the temperatures at which the cold/heat meter starts to rise. */
   temperatureTolerance(pawn: Pawn | Mob): TemperatureTolerance;
+  /** The factor breakdown behind a stat's value (same data the attributes panel shows): the symbolic
+   *  formula plus each variable it uses with this entity's CURRENT value (attributes × condition,
+   *  capacities). For hover tooltips on the combat/health pills. */
+  describeStat(entity: Pawn | Mob, statId: string): StatDerivation;
   /** Compute all body capacities (0–1) for a pawn or mob. */
   computeCapacities(pawn: Pawn | Mob, lightMultiplier?: number): Record<string, number>;
   /** Ticks until a COLLAPSED entity wakes (consciousness back past RECOVER_CONSCIOUSNESS) when recovery
@@ -656,6 +668,45 @@ export class PawnStatServiceImpl implements PawnStatService {
       coldCapped: cold.capped,
       heatCapped: heat.capped
     };
+  }
+
+  describeStat(entity: Pawn | Mob, statId: string): StatDerivation {
+    const def = STAT_MAP[statId];
+    if (!def) return { formula: '', description: '', vars: [] };
+    const caps = this.computeCapacities(entity);
+    const s = entity.stats;
+    const tr = entity.physicalTraits;
+    const sm = conditionStatMultipliers(entity);
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    // Every formula variable (attributes scaled by active conditions, body traits, capacities) with its
+    // CURRENT value — the same set evaluateFormula feeds the compiled formula.
+    const all: Record<string, number> = {
+      STR: (s?.strength ?? 10) * sm.strength,
+      DEX: (s?.dexterity ?? 10) * sm.dexterity,
+      CON: (s?.constitution ?? 10) * sm.constitution,
+      PER: (s?.perception ?? 10) * sm.perception,
+      INT: (s?.intelligence ?? 10) * sm.intelligence,
+      CHA: s?.charisma ?? 10,
+      weight: tr?.weight ?? 70,
+      height: tr?.height ?? 170,
+      consciousness: caps.consciousness ?? 1,
+      manipulation: caps.manipulation ?? 1,
+      sight: caps.sight ?? 1,
+      moving: caps.moving ?? 1,
+      blood_pumping: caps.blood_pumping ?? 1,
+      blood_filtration: caps.blood_filtration ?? 1,
+      breathing: caps.breathing ?? 1,
+      digestion: caps.digestion ?? 1,
+      talking: caps.talking ?? 1,
+      hearing: caps.hearing ?? 1,
+      pain: caps.pain ?? 0
+    };
+    const formula = def.formula ?? '';
+    const vars: { name: string; value: string }[] = [];
+    for (const name of Object.keys(all)) {
+      if (new RegExp(`\\b${name}\\b`).test(formula)) vars.push({ name, value: String(r2(all[name])) });
+    }
+    return { formula, description: def.description ?? '', vars };
   }
 
   getWorkModifiers(

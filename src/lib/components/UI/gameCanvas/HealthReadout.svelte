@@ -1,26 +1,18 @@
 <!--
-  HealthReadout — the shared body-health readout: blood (+ bleed-out ETA), cold/heat exposure, pain,
-  combat-readiness stats, then every damaged limb with its bleed rate and injured sub-parts' HP +
-  wounds. Pure presentation off a `HealthModel` (built by selectionCard.buildHealthModel).
+  HealthReadout — the shared body-health readout: a row of compact stat pills (blood, pain, cold/heat
+  exposure + tolerance, combat-readiness — each with a hover breakdown), then every damaged limb with
+  its bleed rate and injured sub-parts' HP + wounds. Pure presentation off a `HealthModel` (built by
+  selectionCard.buildHealthModel).
 
   Used by BOTH the floating in-game info-card popup (HealthPanel — which wraps this in its pop-up
   chrome) and the Pawns-tab BODY section (PawnHealth), so the two read identically.
 -->
 <script lang="ts">
   import type { HealthModel } from '$lib/components/UI/SelectedEntityCard.svelte';
-  import { healthPctColor, bloodColor, painColor } from './healthColors';
-  import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService';
-  import TempTolerancePills from './TempTolerancePills.svelte';
+  import { healthPctColor } from './healthColors';
+  import StatPills from '$lib/components/UI/StatPills.svelte';
 
   let { health }: { health: HealthModel | undefined } = $props();
-
-  // bleedRate is blood/REAL-second; 1 in-game day = TURNS_PER_DAY real seconds → 24 in-game hours.
-  // So in-game hours to bleed out = (blood ÷ bleedRate) × 24 / TURNS_PER_DAY.
-  const HOURS_PER_BLOODSEC = 24 / TURNS_PER_DAY;
-  function bleedOutLabel(blood: number, bleedRate: number): string {
-    const h = (blood / bleedRate) * HOURS_PER_BLOODSEC;
-    return h >= 10 ? `(~${Math.round(h)}h to 0)` : `(~${h.toFixed(1)}h to 0)`;
-  }
 
   const damaged = $derived(
     !!health &&
@@ -34,55 +26,7 @@
 
 {#if health}
   <div class="health-readout">
-    {#if health.blood}
-      <div class="hp-row">
-        <span class="hp-k">Blood</span>
-        <span style="color:{bloodColor((health.blood.current / health.blood.max) * 100)}"
-          >{Math.round(health.blood.current)}/{Math.round(health.blood.max)} ({Math.round(
-            (health.blood.current / health.blood.max) * 100
-          )}%)</span
-        >
-        {#if health.bleedRate}
-          <span
-            class="hp-bleed-eta"
-            title="estimated in-game time until blood reaches 0 at the current bleed rate"
-            >▼ {health.bleedRate.toFixed(1)}/s · {bleedOutLabel(
-              health.blood.current,
-              health.bleedRate
-            )}</span
-          >
-        {/if}
-      </div>
-    {/if}
-    {#if (health.coldExposure ?? 0) > 0}
-      <div class="hp-row">
-        <span class="hp-k">Cold</span>
-        <span style="color:#4fc3f7">{Math.round(health.coldExposure ?? 0)}%</span>
-      </div>
-    {/if}
-    {#if (health.heatExposure ?? 0) > 0}
-      <div class="hp-row">
-        <span class="hp-k">Heat</span>
-        <span style="color:#fb8c00">{Math.round(health.heatExposure ?? 0)}%</span>
-      </div>
-    {/if}
-    <TempTolerancePills tolerance={health.tempTolerance} />
-    {#if (health.pain ?? 0) > 0}
-      <div class="hp-row">
-        <span class="hp-k">Pain</span>
-        <span style="color:{painColor(health.pain ?? 0)}">{Math.round(health.pain ?? 0)}%</span>
-      </div>
-    {/if}
-    {#if health.combat && health.combat.length > 0}
-      <div class="hp-combat">
-        {#each health.combat as c (c.label)}
-          <span class="hp-combat-item" title={c.title}>
-            <span class="hp-k-inline">{c.label}</span>
-            <span class="hp-combat-v">{c.value}</span>
-          </span>
-        {/each}
-      </div>
-    {/if}
+    <StatPills pills={health.pills ?? []} />
 
     {#if !damaged}
       <div class="hp-ok">no damage</div>
@@ -141,39 +85,9 @@
     line-height: 1.5;
     color: #c0a040;
   }
-  .hp-row {
-    display: flex;
-    gap: 6px;
-  }
-  .hp-k {
-    color: #7a6030;
-    display: inline-block;
-    min-width: 42px;
-  }
   .hp-ok {
     color: #68a030;
     padding-left: 2px;
-  }
-  /* Combat readiness sits with blood/pain in the summary block, set off by a faint rule.
-     Hit / Dodge / Crit share one row. */
-  .hp-combat {
-    margin-top: 3px;
-    padding-top: 2px;
-    border-top: 1px solid rgba(122, 94, 40, 0.4);
-    display: flex;
-    flex-wrap: wrap; /* wrap the readiness stats within the column instead of bleeding past its edge */
-    gap: 2px 14px;
-  }
-  .hp-combat-item {
-    display: inline-flex;
-    gap: 5px;
-    align-items: baseline;
-  }
-  .hp-k-inline {
-    color: #7a6030;
-  }
-  .hp-combat-v {
-    color: #d0a850;
   }
   .hp-limb {
     margin-top: 3px;
@@ -192,10 +106,6 @@
   }
   .hp-bleed {
     color: #ee8844;
-  }
-  .hp-bleed-eta {
-    color: #ee5544;
-    white-space: nowrap;
   }
   .hp-part {
     padding-left: 10px;

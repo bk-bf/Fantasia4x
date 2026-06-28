@@ -1,7 +1,7 @@
 <script lang="ts" module>
   import type { ConditionView } from '$lib/utils/conditionInfo';
   import type { ItemPillView } from './ItemPills.svelte';
-  import type { TemperatureTolerance } from '$lib/game/services/PawnStatService';
+  import type { StatPillView } from './StatPills.svelte';
 
   export interface EntityStat {
     label: string;
@@ -112,30 +112,20 @@
     parts: HealthPart[]; // injured sub-parts only
   }
 
-  /** A compact combat-stat row (label + formatted value) shown beside blood/pain. */
-  export interface CombatStat {
-    label: string;
-    value: string;
-    title?: string;
-  }
-
   /** Whole-body health snapshot rendered by the HEALTH popup. Active conditions are no longer shown
    *  here — they live in the main card's condition chips (see `conditionViews`). */
   export interface HealthModel {
-    /** Whole-body blood pool. */
+    /** Whole-body blood pool — kept for the "any-damage" gate; surfaced to the player via `pills`. */
     blood?: { current: number; max: number };
     /** Total active bleed across all limbs, in blood points per real second (0 if not bleeding). */
     bleedRate?: number;
-    /** Whole-body pain 0–100. */
+    /** Whole-body pain 0–100 — kept for the gate; surfaced via `pills`. */
     pain?: number;
-    /** SEASONS_WEATHER tracked exposure meters 0–100 (cold/heat); shown as % next to Blood. */
+    /** SEASONS_WEATHER tracked exposure meters 0–100 (cold/heat) — kept for the gate; shown via `pills`. */
     coldExposure?: number;
     heatExposure?: number;
-    /** SEASONS_WEATHER cold/heat tolerance: onset temperatures + per-source headroom breakdown,
-     *  rendered as compact pills with a hover panel. */
-    tempTolerance?: TemperatureTolerance;
-    /** Combat-readiness stats (hit/dodge/crit), reflecting current injuries. Pawns/mobs only. */
-    combat?: CombatStat[];
+    /** Blood / pain / exposure / tolerance / combat-readiness, all as compact hover-breakdown pills. */
+    pills?: StatPillView[];
     /** Damaged limbs only — intact, full-health, non-bleeding limbs are omitted. */
     limbs: HealthLimb[];
   }
