@@ -465,7 +465,9 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
           gameState.turn,
           'NEED-CHECK',
           () =>
-            `TEMP-DBG ${pawn.name} base:${(tile?.temperature ?? 15).toFixed(1)} eff:${temp.toFixed(1)} ` +
+            `TEMP-DBG ${pawn.name} pos:(${pawn.position?.x},${pawn.position?.y}) ` +
+            `terrain:${tile?.terrainType ?? '?'} cachedTemp:${tile?.temperature} ` +
+            `base:${(tile?.temperature ?? 15).toFixed(1)} eff:${temp.toFixed(1)} ` +
             `comfort:[${comfort.min},${comfort.max}] coldTarget:${coldTarget} heatTarget:${heatTarget} ` +
             `cold:${cold.toFixed(1)} heat:${heat.toFixed(1)} wornCold:${wornDbg.cold} ` +
             `coldResStat:${pawnStatService.evaluateStat('cold_resistance', pawn)} ` +

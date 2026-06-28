@@ -11,6 +11,7 @@
  */
 
 import { TICKS_PER_SECOND } from '../core/time';
+import { vlog } from '../core/logSink';
 import { markTileDirty } from '../core/tileDeltas';
 import { buildingLight } from './LightingService';
 import { buildingService } from './BuildingService';
@@ -278,14 +279,33 @@ export function recomputeWorldTemperature(worldMap: WorldTile[][], season: Seaso
   const offset = SEASONS[season].tempOffset;
   let sum = 0;
   let count = 0;
+  let staleBefore = 0; // tiles whose cached temp was <=0 / undefined / NaN BEFORE this bake (never baked)
+  let minAfter = Infinity;
+  let maxAfter = -Infinity;
+  let zeroAfter = 0; // tiles still <=0 AFTER the bake (should be IMPOSSIBLE: min biome+offset is well >0)
   for (const row of worldMap) {
     for (const tile of row) {
+      if (!((tile.temperature ?? 0) > 0)) staleBefore++;
       const temp = biomeBaseTemp(tile.terrainType) + offset;
       tile.temperature = temp;
       sum += temp;
       count++;
+      if (temp < minAfter) minAfter = temp;
+      if (temp > maxAfter) maxAfter = temp;
+      if (temp <= 0) zeroAfter++;
     }
   }
+  // TEMP-BAKE: confirms the season bake actually ran over the LIVE worldMap and what it produced. If you
+  // change season and still see cold pawns, compare staleBefore (how many tiles were 0) vs zeroAfter
+  // (must be 0) — a non-zero zeroAfter means a terrain has no/!>0 baseTemp; staleBefore>0 then 0 next
+  // bake means tiles ARE getting un-baked between seasons (the real bug).
+  vlog(
+    'system',
+    0,
+    () =>
+      `TEMP-BAKE season=${season} offset=${offset} tiles=${count} staleBefore(<=0)=${staleBefore} ` +
+      `after[min=${minAfter} max=${maxAfter} zero=${zeroAfter}]`
+  );
   // Average baked tile temperature (biome + season, no weather) — the topbar adds the weather delta.
   return count > 0 ? sum / count : offset;
 }
