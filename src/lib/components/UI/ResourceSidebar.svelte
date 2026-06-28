@@ -9,6 +9,13 @@
   import { itemService } from '$lib/game/services/ItemService';
   import { uiState } from '$lib/stores/uiState';
   import ScrollArea from './ScrollArea.svelte';
+  import type { Item } from '$lib/game/core/types.js';
+  import {
+    buildCategoryTree,
+    categoryKeyPath,
+    collectItemIds,
+    type TreeNode
+  } from '$lib/utils/itemCategoryTree.js';
 
   type StockItem = { id: string; name: string; amount: number; color?: string };
 
@@ -57,36 +64,44 @@
     }
   });
 
-  // ── Group resources by their raw items.jsonc `category` (data-driven) ───────
-  // When "hide empty" is off, every known category is seeded (so empty ones still show).
-  const groups = $derived.by(() => {
-    const map = new Map<string, StockItem[]>();
-    if (!$hideEmptyResourceCategories) {
-      for (const cat of itemService.getAllCategories()) map.set(cat, []);
+  // ── Group resources into the shared nested taxonomy (itemCategoryTree) ───────
+  // Built from the held resources' item DEFS (so the weapon/tool/food sub-trees resolve); when "hide
+  // empty" is off, every known category is seeded so empty branches still show. Amounts/deltas are
+  // looked up per-leaf from the live stockpile.
+  const amountById = $derived(new Map(stockpile.map((s) => [s.id, s])));
+  const tree = $derived.by((): TreeNode[] => {
+    const defs: Item[] = [];
+    for (const s of stockpile) {
+      const def = itemService.getItemById(s.id);
+      if (!def || def.hidden) continue; // internal items (natural weapons…) never show as resources
+      defs.push(def);
     }
-    for (const item of stockpile) {
-      const def = itemService.getItemById(item.id);
-      if (def?.hidden) continue; // internal items (natural weapons…) never show as resources
-      const cat = def?.category ?? 'other';
-      (map.get(cat) ?? map.set(cat, []).get(cat)!).push(item);
-    }
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    const seedLeaves = $hideEmptyResourceCategories
+      ? []
+      : itemService.getAllCategories().map(categoryKeyPath);
+    return buildCategoryTree(defs, { seedLeaves });
   });
 
-  function catLabel(cat: string): string {
-    return cat.replace(/_/g, ' ').toUpperCase();
+  function allNodeIds(): string[] {
+    const ids: string[] = [];
+    const visit = (n: TreeNode) => {
+      ids.push(n.path.join('/'));
+      n.children.forEach(visit);
+    };
+    tree.forEach(visit);
+    return ids;
   }
 
-  // ── Collapse state: persisted set of COLLAPSED categories (default: expanded) ─
+  // ── Collapse state: persisted set of COLLAPSED node-path ids (default: expanded) ─
   const collapsed = $derived(new Set($collapsedResourceCategories));
-  const allExpanded = $derived(groups.length > 0 && groups.every(([cat]) => !collapsed.has(cat)));
+  const allExpanded = $derived(tree.length > 0 && allNodeIds().every((id) => !collapsed.has(id)));
 
-  function toggleCat(cat: string) {
-    collapsedResourceCategories.toggle(cat);
+  function toggleCat(id: string) {
+    collapsedResourceCategories.toggle(id);
   }
 
   function toggleAll() {
-    if (allExpanded) collapsedResourceCategories.setAll(groups.map(([cat]) => cat));
+    if (allExpanded) collapsedResourceCategories.setAll(allNodeIds());
     else collapsedResourceCategories.clear();
   }
 
@@ -96,6 +111,74 @@
     return 'var(--neg)';
   }
 </script>
+
+{#snippet resNode(node: TreeNode, depth: number)}
+  {@const id = node.path.join('/')}
+  {@const open = !collapsed.has(id)}
+  {@const count = collectItemIds(node).length}
+  <div
+    class="cat-hdr"
+    class:open
+    style="padding-left: {8 + depth * 10}px"
+    onclick={() => toggleCat(id)}
+    role="button"
+    tabindex="0"
+    onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleCat(id)}
+  >
+    <span class="caret">{open ? '▾' : '▸'}</span>
+    <span class="cat-name">{node.label}</span>
+    <span class="cat-count">{count}</span>
+  </div>
+  {#if open}
+    {#if node.children.length === 0 && node.items.length === 0}
+      <div class="cat-empty" style="padding-left: {24 + depth * 10}px">none</div>
+    {/if}
+    {#each node.children as child (child.path.join('/'))}
+      {@render resNode(child, depth + 1)}
+    {/each}
+    {#each node.items as item (item.id)}
+      {@const stock = amountById.get(item.id)}
+      <div
+        class="res-row"
+        style="padding-left: {24 + depth * 10}px"
+        onclick={() => jumpToItemStack(item.id)}
+        role="button"
+        tabindex="0"
+        title="jump to a stack on the map"
+        onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && jumpToItemStack(item.id)}
+      >
+        {#if itemChanges[item.id]}
+          <span
+            class="delta"
+            class:pos={itemChanges[item.id] > 0}
+            class:neg={itemChanges[item.id] < 0}
+          >
+            {itemChanges[item.id] > 0 ? '+' : ''}{Math.floor(itemChanges[item.id])}
+          </span>
+        {/if}
+        <span class="res-name">{item.name}</span>
+        <span class="dots"></span>
+        <span class="res-amt" style="color:{stock?.color || 'var(--text)'}">
+          {Math.floor(stock?.amount ?? 0)}
+        </span>
+      </div>
+      {#if itemService.getItemById(item.id)?.isCarcass}
+        {@const pct = Math.round(carcassIntactness[item.id] ?? 100)}
+        <div class="carcass-row" style="padding-left: {24 + depth * 10}px">
+          <span class="intactness-lbl" style="color:{intactnessColor(pct)}">INTACT</span>
+          <span class="intactness-bar">
+            {#each Array(10) as _, i}
+              <span style="color:{intactnessColor(pct)}"
+                >{i < Math.round(pct / 10) ? '█' : '░'}</span
+              >
+            {/each}
+          </span>
+          <span class="intactness-pct" style="color:{intactnessColor(pct)}">{pct}%</span>
+        </div>
+      {/if}
+    {/each}
+  {/if}
+{/snippet}
 
 <aside class="sidebar" class:transparent={$hideSidebars} class:collapsed={$resourcesMinimized}>
   {#if $resourcesMinimized}
@@ -136,7 +219,7 @@
             class="hdr-btn"
             title={allExpanded ? 'Collapse all categories' : 'Expand all categories'}
             aria-label={allExpanded ? 'Collapse all categories' : 'Expand all categories'}
-            disabled={groups.length === 0}
+            disabled={tree.length === 0}
             onclick={toggleAll}>{allExpanded ? '⊟' : '⊞'}</button
           >
           <button
@@ -149,66 +232,10 @@
       </div>
     </div>
 
-    <!-- Scrolling category list -->
+    <!-- Scrolling category list (nested taxonomy) -->
     <ScrollArea class="res-area">
-      {#each groups as [cat, items] (cat)}
-        {@const open = !collapsed.has(cat)}
-        <div
-          class="cat-hdr"
-          class:open
-          onclick={() => toggleCat(cat)}
-          role="button"
-          tabindex="0"
-          onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleCat(cat)}
-        >
-          <span class="caret">{open ? '▾' : '▸'}</span>
-          <span class="cat-name">{catLabel(cat)}</span>
-          <span class="cat-count">{items.length}</span>
-        </div>
-        {#if open}
-          {#if items.length === 0}
-            <div class="cat-empty">none</div>
-          {/if}
-          {#each items as item (item.id)}
-            <div
-              class="res-row"
-              onclick={() => jumpToItemStack(item.id)}
-              role="button"
-              tabindex="0"
-              title="jump to a stack on the map"
-              onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && jumpToItemStack(item.id)}
-            >
-              {#if itemChanges[item.id]}
-                <span
-                  class="delta"
-                  class:pos={itemChanges[item.id] > 0}
-                  class:neg={itemChanges[item.id] < 0}
-                >
-                  {itemChanges[item.id] > 0 ? '+' : ''}{Math.floor(itemChanges[item.id])}
-                </span>
-              {/if}
-              <span class="res-name">{item.name}</span>
-              <span class="dots"></span>
-              <span class="res-amt" style="color:{item.color || 'var(--text)'}">
-                {Math.floor(item.amount)}
-              </span>
-            </div>
-            {#if itemService.getItemById(item.id)?.isCarcass}
-              {@const pct = Math.round(carcassIntactness[item.id] ?? 100)}
-              <div class="carcass-row">
-                <span class="intactness-lbl" style="color:{intactnessColor(pct)}">INTACT</span>
-                <span class="intactness-bar">
-                  {#each Array(10) as _, i}
-                    <span style="color:{intactnessColor(pct)}"
-                      >{i < Math.round(pct / 10) ? '█' : '░'}</span
-                    >
-                  {/each}
-                </span>
-                <span class="intactness-pct" style="color:{intactnessColor(pct)}">{pct}%</span>
-              </div>
-            {/if}
-          {/each}
-        {/if}
+      {#each tree as root (root.path.join('/'))}
+        {@render resNode(root, 0)}
       {/each}
     </ScrollArea>
   {:else}

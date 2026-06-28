@@ -1,13 +1,16 @@
 <!--
-  ItemFilterChecklist — shared category-grouped item allow-list with a compact search box, used by
-  both FoodFilterPanel and BuildingFuelPanel. Items are bucketed by their `category`; each category
-  has a tri-state header checkbox that toggles every item in the group at once (collapsible to keep a
-  long list short), plus per-item ticks. The search box filters by item name. The component owns no
-  policy — it takes the current `allowed` set and emits the full next id list via `onChange`; the
-  parent persists it. Category labels are humanized (never a raw category id — AGENTS "never leak ids").
+  ItemFilterChecklist — shared, NESTED category-grouped item allow-list with a compact search box +
+  toolbar, used by the fuel / food / repair / storage / stockpile filter panels. Items are bucketed
+  into a human-labelled taxonomy tree (itemCategoryTree.ts — Tools / Weapons→Melee→Cutting / … —
+  never a raw category id, AGENTS "never leak ids"). Every node has a tri-state header checkbox that
+  toggles its whole subtree at once and is collapsible. The toolbar adds collapse/expand-all and
+  copy/paste of the current allow-list (shared across panels via filterClipboard). The component owns
+  no policy — it takes the current `allowed` set and emits the full next id list via `onChange`.
 -->
 <script lang="ts">
   import type { Item } from '$lib/game/core/types.js';
+  import { buildCategoryTree, collectItemIds, type TreeNode } from '$lib/utils/itemCategoryTree.js';
+  import { filterClipboard } from '$lib/stores/filterClipboard.js';
 
   let {
     items,
@@ -24,31 +27,34 @@
   let query = $state('');
   let collapsed = $state<Record<string, boolean>>({});
 
-  function humanizeCategory(cat: string): string {
-    return cat.replace(/_/g, ' ');
+  const tree = $derived(buildCategoryTree(items, { query }));
+
+  // Subtree allow-counts, memoized per node path so each row's tri-state is one lookup.
+  const counts = $derived.by(() => {
+    const m = new Map<string, { allowed: number; total: number }>();
+    const visit = (node: TreeNode) => {
+      const ids = collectItemIds(node);
+      m.set(node.path.join('/'), {
+        allowed: ids.reduce((n, id) => n + (allowed.has(id) ? 1 : 0), 0),
+        total: ids.length
+      });
+      node.children.forEach(visit);
+    };
+    tree.forEach(visit);
+    return m;
+  });
+
+  function allNodeIds(): string[] {
+    const ids: string[] = [];
+    const visit = (node: TreeNode) => {
+      ids.push(node.path.join('/'));
+      node.children.forEach(visit);
+    };
+    tree.forEach(visit);
+    return ids;
   }
 
-  type Group = { key: string; label: string; items: Item[]; allowedCount: number };
-
-  const groups = $derived.by((): Group[] => {
-    const q = query.trim().toLowerCase();
-    const byCat = new Map<string, Item[]>();
-    for (const item of items) {
-      if (q && !item.name.toLowerCase().includes(q)) continue;
-      const cat = item.category || 'other';
-      const arr = byCat.get(cat);
-      if (arr) arr.push(item);
-      else byCat.set(cat, [item]);
-    }
-    return Array.from(byCat.entries())
-      .map(([key, list]) => ({
-        key,
-        label: humanizeCategory(key),
-        items: list.sort((a, b) => a.name.localeCompare(b.name)),
-        allowedCount: list.reduce((n, i) => n + (allowed.has(i.id) ? 1 : 0), 0)
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  });
+  const anyExpanded = $derived(allNodeIds().some((id) => !collapsed[id]));
 
   function toggleItem(id: string) {
     const set = new Set(allowed);
@@ -57,17 +63,35 @@
     onChange(Array.from(set));
   }
 
-  function toggleCategory(group: Group) {
+  function toggleNode(node: TreeNode) {
+    const ids = collectItemIds(node);
     const set = new Set(allowed);
-    const allOn = group.allowedCount === group.items.length;
-    for (const item of group.items) {
-      if (allOn) set.delete(item.id);
-      else set.add(item.id);
+    const allOn = ids.every((id) => set.has(id));
+    for (const id of ids) {
+      if (allOn) set.delete(id);
+      else set.add(id);
     }
     onChange(Array.from(set));
   }
 
-  // Reflect partial-selection on the category checkbox (DOM-only `indeterminate` property).
+  function toggleCollapseAll() {
+    const next: Record<string, boolean> = {};
+    if (anyExpanded) for (const id of allNodeIds()) next[id] = true; // collapse everything
+    collapsed = next; // else clears → everything expanded
+  }
+
+  function copyFilter() {
+    filterClipboard.copy(Array.from(allowed));
+  }
+
+  function pasteFilter() {
+    const clip = filterClipboard.peek();
+    if (!clip) return;
+    const here = new Set(items.map((i) => i.id));
+    onChange(clip.filter((id) => here.has(id)));
+  }
+
+  // Reflect partial-selection on a node checkbox (DOM-only `indeterminate` property).
   function indet(node: HTMLInputElement, partial: boolean) {
     node.indeterminate = partial;
     return {
@@ -78,62 +102,94 @@
   }
 </script>
 
-<div class="ifc">
-  <input
-    class="ifc-search"
-    type="text"
-    placeholder="search…"
-    bind:value={query}
-    onkeydown={(e) => e.stopPropagation()}
-  />
-  <div class="ifc-list" style="max-height: {listMaxHeight}">
-    {#each groups as group (group.key)}
-      {@const allOn = group.allowedCount === group.items.length}
-      {@const partial = group.allowedCount > 0 && !allOn}
-      <div class="ifc-cat">
-        <label class="ifc-row ifc-cat-hdr">
+{#snippet nodeRow(node: TreeNode, depth: number)}
+  {@const id = node.path.join('/')}
+  {@const c = counts.get(id) ?? { allowed: 0, total: 0 }}
+  {@const allOn = c.total > 0 && c.allowed === c.total}
+  {@const partial = c.allowed > 0 && !allOn}
+  <div class="ifc-cat">
+    <label class="ifc-row ifc-cat-hdr" style="padding-left: {depth * 12}px">
+      <input
+        type="checkbox"
+        checked={allOn}
+        use:indet={partial}
+        onchange={() => toggleNode(node)}
+      />
+      <button
+        type="button"
+        class="ifc-cat-toggle"
+        onclick={(e) => {
+          e.preventDefault();
+          collapsed[id] = !collapsed[id];
+        }}
+      >
+        <span class="ifc-caret">{collapsed[id] ? '▸' : '▾'}</span>
+        <span class="ifc-cat-name">{node.label}</span>
+        <span class="ifc-cat-count">{c.allowed}/{c.total}</span>
+      </button>
+    </label>
+    {#if !collapsed[id]}
+      {#each node.children as child (child.path.join('/'))}
+        {@render nodeRow(child, depth + 1)}
+      {/each}
+      {#each node.items as item (item.id)}
+        <label class="ifc-row ifc-item-row" style="padding-left: {(depth + 1) * 12 + 2}px">
           <input
             type="checkbox"
-            checked={allOn}
-            use:indet={partial}
-            onchange={() => toggleCategory(group)}
+            checked={allowed.has(item.id)}
+            onchange={() => toggleItem(item.id)}
           />
-          <button
-            type="button"
-            class="ifc-cat-toggle"
-            onclick={(e) => {
-              e.preventDefault();
-              collapsed[group.key] = !collapsed[group.key];
-            }}
-          >
-            <span class="ifc-caret">{collapsed[group.key] ? '▸' : '▾'}</span>
-            <span class="ifc-cat-name">{group.label}</span>
-            <span class="ifc-cat-count">{group.allowedCount}/{group.items.length}</span>
-          </button>
+          <span>{item.name}</span>
         </label>
-        {#if !collapsed[group.key]}
-          {#each group.items as item (item.id)}
-            <label class="ifc-row ifc-item-row">
-              <input
-                type="checkbox"
-                checked={allowed.has(item.id)}
-                onchange={() => toggleItem(item.id)}
-              />
-              <span>{item.name}</span>
-            </label>
-          {/each}
-        {/if}
-      </div>
+      {/each}
+    {/if}
+  </div>
+{/snippet}
+
+<div class="ifc">
+  <div class="ifc-toolbar">
+    <input
+      class="ifc-search"
+      type="text"
+      placeholder="search…"
+      bind:value={query}
+      onkeydown={(e) => e.stopPropagation()}
+    />
+    <button
+      type="button"
+      class="ifc-icon-btn"
+      title={anyExpanded ? 'Collapse all' : 'Expand all'}
+      onclick={toggleCollapseAll}>{anyExpanded ? '⊟' : '⊞'}</button
+    >
+    <button type="button" class="ifc-icon-btn" title="Copy filter" onclick={copyFilter}>⧉</button>
+    <button
+      type="button"
+      class="ifc-icon-btn"
+      title="Paste filter"
+      disabled={$filterClipboard === null}
+      onclick={pasteFilter}>⎘</button
+    >
+  </div>
+  <div class="ifc-list" style="max-height: {listMaxHeight}">
+    {#each tree as root (root.path.join('/'))}
+      {@render nodeRow(root, 0)}
     {/each}
-    {#if groups.length === 0}
+    {#if tree.length === 0}
       <div class="ifc-empty">no matches</div>
     {/if}
   </div>
 </div>
 
 <style>
+  .ifc-toolbar {
+    display: flex;
+    align-items: stretch;
+    gap: 3px;
+    margin-bottom: 3px;
+  }
   .ifc-search {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     box-sizing: border-box;
     background: #140e04;
     border: 1px solid #6a4e20;
@@ -141,7 +197,6 @@
     font-family: var(--font-mono);
     font-size: 9px;
     padding: 2px 4px;
-    margin-bottom: 3px;
   }
   .ifc-search::placeholder {
     color: #8a6a30;
@@ -151,6 +206,26 @@
     border-color: #c88a30;
     background: #1c1407;
     color: #f0c878;
+  }
+  .ifc-icon-btn {
+    flex: 0 0 auto;
+    background: #160f06;
+    border: 1px solid #6b4f22;
+    color: #d0a858;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1;
+    padding: 0 5px;
+    cursor: pointer;
+  }
+  .ifc-icon-btn:hover:not(:disabled) {
+    background: #24180a;
+    border-color: #b07a28;
+    color: #f0c878;
+  }
+  .ifc-icon-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
   }
   .ifc-list {
     overflow-y: auto;
@@ -173,6 +248,7 @@
     align-items: center;
     gap: 4px;
     flex: 1;
+    min-width: 0;
     background: none;
     border: none;
     padding: 0;
@@ -194,9 +270,6 @@
   }
   .ifc-cat-count {
     color: #a07c38;
-  }
-  .ifc-item-row {
-    padding-left: 14px;
   }
   .ifc-empty {
     color: #8a6a30;

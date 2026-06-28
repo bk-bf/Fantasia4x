@@ -4,13 +4,15 @@
   this is only the FILTER fly-out it opens, mirroring BuildingFuelPanel under the campfire card (same
   absolute-above-the-card layout, `open` toggle owned by the parent, stopPropagation).
 
-  Filter model: per-item checkboxes grouped by the items.jsonc `category` (same categorical sort as
-  ResourceSidebar). EVERY non-hidden item is listed even at 0 stock so you can filter to the single
-  item. Canonical "all allowed" = {allowedCategories:[], blockedItems:[]} (what the haul engine treats
-  as no-filter); any restriction is materialized to the full category list + an explicit blockedItems
-  set, so a single unchecked item — or a fully unchecked zone — is representable without the empty=all
-  overload. Reads use the true engine semantics so a filter set from the category-only ZonePanel still
-  displays correctly.
+  Filter model: per-item checkboxes grouped into the shared nested taxonomy (itemCategoryTree.ts —
+  same tree ResourceSidebar/ItemFilterChecklist use). EVERY non-hidden item is listed even at 0 stock
+  so you can filter to the single item. Canonical "all allowed" = {allowedCategories:[],
+  blockedItems:[]} (what the haul engine treats as no-filter); any restriction is materialized to the
+  full category list + an explicit blockedItems set, so a single unchecked item — or a fully unchecked
+  zone — is representable without the empty=all overload. Reads use the true engine semantics so a
+  filter set from the category-only ZonePanel still displays correctly. This keeps its own row render
+  (per-item stock amount + hide-empty) but shares the grouping + copy/paste clipboard with the other
+  filter panels.
 -->
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
@@ -18,6 +20,8 @@
   import itemsData from '$lib/game/database/items.jsonc';
   import type { Item, ZoneFilter, ZonePriority } from '$lib/game/core/types';
   import ScrollArea from '$lib/components/UI/ScrollArea.svelte';
+  import { buildCategoryTree, collectItemIds, type TreeNode } from '$lib/utils/itemCategoryTree.js';
+  import { filterClipboard } from '$lib/stores/filterClipboard.js';
 
   let {
     instanceId,
@@ -42,28 +46,33 @@
     { value: 'urgent', label: 'Urgent' }
   ];
   function setPriority(value: ZonePriority) {
-    gameState.command({ type: 'setInstancePriority', payload: { instanceId, priority: value }, save: true });
+    gameState.command({
+      type: 'setInstancePriority',
+      payload: { instanceId, priority: value },
+      save: true
+    });
   }
 
   // Static item universe (non-hidden — internal items like natural weapons are never haul targets),
-  // grouped by category and sorted exactly like the resource sidebar.
+  // grouped into the shared nested taxonomy and sorted exactly like the resource sidebar.
   const ALL_ITEMS = (itemsData as unknown as Item[]).filter((i) => !i.hidden);
   const ALL_IDS = ALL_ITEMS.map((i) => i.id);
   const ALL_CATEGORIES = itemService.getAllCategories();
-  const GROUPS: [string, Item[]][] = (() => {
-    const map = new Map<string, Item[]>();
-    for (const cat of ALL_CATEGORIES) map.set(cat, []);
-    for (const item of ALL_ITEMS) {
-      const cat = item.category ?? 'other';
-      (map.get(cat) ?? map.set(cat, []).get(cat)!).push(item);
-    }
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  })();
+  const TREE = buildCategoryTree(ALL_ITEMS);
 
-  const catLabel = (cat: string) => cat.replace(/_/g, ' ').toUpperCase();
+  function allNodeIds(): string[] {
+    const ids: string[] = [];
+    const visit = (n: TreeNode) => {
+      ids.push(n.path.join('/'));
+      n.children.forEach(visit);
+    };
+    TREE.forEach(visit);
+    return ids;
+  }
 
-  let collapsed = $state<Set<string>>(new Set(GROUPS.map(([c]) => c))); // start collapsed (it's long)
+  let collapsed = $state<Set<string>>(new Set(allNodeIds())); // start collapsed (it's long)
   let hideEmpty = $state(false);
+  const anyExpanded = $derived(allNodeIds().some((id) => !collapsed.has(id)));
 
   // True engine semantics (matches jobs/filters.itemMatchesFilter + the haul empty-cats short-circuit).
   function isChecked(id: string): boolean {
@@ -105,14 +114,14 @@
     commit(s);
   }
 
-  function catChecked(cat: string): number {
-    return (
-      GROUPS.find(([c]) => c === cat)?.[1].reduce((n, i) => n + (isChecked(i.id) ? 1 : 0), 0) ?? 0
-    );
+  /** [checked, total] over a node's whole subtree. */
+  function nodeChecked(node: TreeNode): [number, number] {
+    const ids = collectItemIds(node);
+    return [ids.reduce((n, id) => n + (isChecked(id) ? 1 : 0), 0), ids.length];
   }
 
-  function toggleCategory(cat: string) {
-    const ids = GROUPS.find(([c]) => c === cat)?.[1].map((i) => i.id) ?? [];
+  function toggleNode(node: TreeNode) {
+    const ids = collectItemIds(node);
     const allOn = ids.every((id) => isChecked(id));
     const s = currentChecked();
     for (const id of ids) {
@@ -126,13 +135,81 @@
     commit(on ? new Set(ALL_IDS) : new Set());
   }
 
-  function toggleCat(cat: string) {
+  function toggleCat(id: string) {
     const next = new Set(collapsed);
-    if (next.has(cat)) next.delete(cat);
-    else next.add(cat);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     collapsed = next;
   }
+
+  function toggleCollapseAll() {
+    collapsed = anyExpanded ? new Set(allNodeIds()) : new Set();
+  }
+
+  function copyFilter() {
+    filterClipboard.copy([...currentChecked()]);
+  }
+
+  function pasteFilter() {
+    const clip = filterClipboard.peek();
+    if (!clip) return;
+    const here = new Set(ALL_IDS);
+    commit(new Set(clip.filter((id) => here.has(id))));
+  }
+
+  /** Visible item ids of a node's subtree under the current hide-empty filter. */
+  function visibleItems(node: TreeNode): Item[] {
+    return hideEmpty ? node.items.filter((i) => (inventory[i.id] ?? 0) > 0) : node.items;
+  }
+  function subtreeHasVisible(node: TreeNode): boolean {
+    return visibleItems(node).length > 0 || node.children.some(subtreeHasVisible);
+  }
 </script>
+
+{#snippet catNode(node: TreeNode, depth: number)}
+  {#if subtreeHasVisible(node)}
+    {@const id = node.path.join('/')}
+    {@const isOpen = !collapsed.has(id)}
+    {@const [on, total] = nodeChecked(node)}
+    <div class="zfp-cat" style="padding-left: {depth * 12 + 2}px">
+      <input
+        type="checkbox"
+        checked={total > 0 && on === total}
+        class:partial={on > 0 && on < total}
+        onchange={() => toggleNode(node)}
+        title="Toggle every item in this category"
+      />
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <span
+        class="zfp-cat-name"
+        class:open={isOpen}
+        role="button"
+        tabindex="0"
+        onclick={() => toggleCat(id)}
+      >
+        <span class="zfp-caret">{isOpen ? '▾' : '▸'}</span>{node.label}
+        <span class="zfp-cat-count">{on}/{total}</span>
+      </span>
+    </div>
+    {#if isOpen}
+      {#each node.children as child (child.path.join('/'))}
+        {@render catNode(child, depth + 1)}
+      {/each}
+      {#each visibleItems(node) as item (item.id)}
+        {@const amt = Math.floor(inventory[item.id] ?? 0)}
+        <label class="zfp-item" style="padding-left: {(depth + 1) * 12 + 4}px">
+          <input
+            type="checkbox"
+            checked={isChecked(item.id)}
+            onchange={() => toggleItem(item.id)}
+          />
+          <span class="zfp-item-name">{item.name}</span>
+          <span class="zfp-item-amt" class:zero={amt === 0}>{amt}</span>
+        </label>
+      {/each}
+    {/if}
+  {/if}
+{/snippet}
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
@@ -167,6 +244,18 @@
     >
     <button
       class="zfp-mini"
+      title={anyExpanded ? 'Collapse all' : 'Expand all'}
+      onclick={toggleCollapseAll}>{anyExpanded ? '⊟' : '⊞'}</button
+    >
+    <button class="zfp-mini" title="Copy filter" onclick={copyFilter}>⧉</button>
+    <button
+      class="zfp-mini"
+      title="Paste filter"
+      disabled={$filterClipboard === null}
+      onclick={pasteFilter}>⎘</button
+    >
+    <button
+      class="zfp-mini"
       class:active={hideEmpty}
       title="Show/hide categories & items with 0 stored here"
       onclick={() => (hideEmpty = !hideEmpty)}>∅</button
@@ -174,46 +263,8 @@
   </div>
 
   <ScrollArea class="zfp-list">
-    {#each GROUPS as [cat, items] (cat)}
-      {@const shown = hideEmpty ? items.filter((i) => (inventory[i.id] ?? 0) > 0) : items}
-      {#if shown.length > 0}
-        {@const isOpen = !collapsed.has(cat)}
-        {@const on = catChecked(cat)}
-        <div class="zfp-cat">
-          <input
-            type="checkbox"
-            checked={on === items.length}
-            class:partial={on > 0 && on < items.length}
-            onchange={() => toggleCategory(cat)}
-            title="Toggle every item in this category"
-          />
-          <!-- svelte-ignore a11y_click_events_have_key_events -->
-          <span
-            class="zfp-cat-name"
-            class:open={isOpen}
-            role="button"
-            tabindex="0"
-            onclick={() => toggleCat(cat)}
-          >
-            <span class="zfp-caret">{isOpen ? '▾' : '▸'}</span>{catLabel(cat)}
-            <span class="zfp-cat-count">{on}/{items.length}</span>
-          </span>
-        </div>
-        {#if isOpen}
-          {#each shown as item (item.id)}
-            {@const amt = Math.floor(inventory[item.id] ?? 0)}
-            <label class="zfp-item">
-              <input
-                type="checkbox"
-                checked={isChecked(item.id)}
-                onchange={() => toggleItem(item.id)}
-              />
-              <span class="zfp-item-name">{item.name}</span>
-              <span class="zfp-item-amt" class:zero={amt === 0}>{amt}</span>
-            </label>
-          {/each}
-        {/if}
-      {/if}
+    {#each TREE as root (root.path.join('/'))}
+      {@render catNode(root, 0)}
     {/each}
   </ScrollArea>
   <div class="zfp-note">Only checked items are hauled into this stockpile.</div>
