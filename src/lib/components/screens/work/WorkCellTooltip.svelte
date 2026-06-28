@@ -22,10 +22,13 @@
     mods: { speed: number; yield: number | null; quality: number | null };
     rank: CellRank;
     level: 0 | 1 | 2 | 3 | 4;
+    /** Header name override — a subjob cell passes the subjob's name (e.g. "Repair") while its stats
+     *  still come from the parent category (`wc`). Defaults to the category name. */
+    name?: string;
     x: number;
     y: number;
   }
-  let { pawn, wc, mods, rank, level, x, y }: Props = $props();
+  let { pawn, wc, mods, rank, level, name, x, y }: Props = $props();
 
   // The work screen lives inside `.overlay-panel`, which sets `filter` (making it
   // the containing block for fixed positioning) and `overflow: hidden`. Both would
@@ -113,7 +116,7 @@
 
 <div class="tip" use:portal {style}>
   <div class="tip-hdr">
-    <span class="tip-name">{wc.name}</span>
+    <span class="tip-name">{name ?? wc.name}</span>
     <span class="tip-eff" style="color:{getEfficiencyColor(eff)}">{Math.round(eff * 100)}%</span>
   </div>
 

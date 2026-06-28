@@ -149,9 +149,18 @@
     return map;
   });
 
-  let tip = $state<{ pawnId: string; workId: string; x: number; y: number } | null>(null);
-  function showTip(e: MouseEvent, pawnId: string, workId: string) {
-    tip = { pawnId, workId, x: e.clientX, y: e.clientY };
+  // `workId` is always the parent CATEGORY (the tooltip's stats come from it). For a subjob cell we
+  // also carry the subjob's id + name so the header reads the subjob ("Repair"), not its parent.
+  let tip = $state<{
+    pawnId: string;
+    workId: string;
+    subId?: string;
+    label?: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  function showTip(e: MouseEvent, pawnId: string, workId: string, subId?: string, label?: string) {
+    tip = { pawnId, workId, subId, label, x: e.clientX, y: e.clientY };
   }
   function moveTip(e: MouseEvent) {
     if (tip) tip = { ...tip, x: e.clientX, y: e.clientY };
@@ -245,7 +254,7 @@
                   class:inherited={sj.inherited}
                   style="color:{LABOR_COLORS[sj.level]}"
                   title="{col.label}: {sj.inherited ? 'inherits parent' : 'override'} — click to set, right-click to lower"
-                  onmouseenter={(e) => showTip(e, pawn.id, col.catId)}
+                  onmouseenter={(e) => showTip(e, pawn.id, col.catId, col.subId, col.label)}
                   onmousemove={moveTip}
                   onmouseleave={hideTip}
                   onclick={(e) => {
@@ -293,7 +302,10 @@
     wc={tipWc}
     mods={modMap[tip.pawnId][tip.workId]}
     rank={rankMap[tip.pawnId][tip.workId]}
-    level={getPawnLaborLevel(tip.pawnId, tip.workId)}
+    level={tip.subId
+      ? getSubjobLevel(tip.pawnId, tip.workId, tip.subId).level
+      : getPawnLaborLevel(tip.pawnId, tip.workId)}
+    name={tip.label}
     x={tip.x}
     y={tip.y}
   />
