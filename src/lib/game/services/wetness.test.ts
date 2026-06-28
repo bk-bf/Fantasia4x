@@ -42,8 +42,8 @@ function pawn(wetness = 0): Pawn {
     injuries: []
   } as unknown as Pawn;
 }
-function state(p: Pawn, t: WorldTile, weather?: WeatherState): GameState {
-  return { seed: 1, turn: 0, pawns: [p], worldMap: [[t]], weather } as unknown as GameState;
+function state(p: Pawn, t: WorldTile, weather?: WeatherState, season?: string): GameState {
+  return { seed: 1, turn: 0, pawns: [p], worldMap: [[t]], weather, season } as unknown as GameState;
 }
 function run(s: GameState, ticks: number): GameState {
   for (let i = 0; i < ticks; i++) s = pawnService.processNeedsTick(s);
@@ -83,8 +83,11 @@ describe('pawn wetness (SEASONS_WEATHER)', () => {
   });
 
   it('dries FASTER when warm', () => {
-    const warm = run(state(pawn(80), tile('plains', 35), CLEAR), 500).pawns[0].needs.wetness!;
-    const cold = run(state(pawn(80), tile('plains', 0), CLEAR), 500).pawns[0].needs.wetness!;
+    // Temperature is derived live from terrain + SEASON (seasonBakedTemp — one source shared with the
+    // HUD), not a per-tile cache, so warm vs cold is driven by the season: plains in summer (+15 →
+    // 30 °C) dries faster than plains in winter (−20 → −5 °C).
+    const warm = run(state(pawn(80), tile('plains'), CLEAR, 'summer'), 500).pawns[0].needs.wetness!;
+    const cold = run(state(pawn(80), tile('plains'), CLEAR, 'winter'), 500).pawns[0].needs.wetness!;
     expect(warm).toBeLessThan(cold); // warmth evaporates more
   });
 

@@ -29,7 +29,8 @@ import {
   effectiveTemperature,
   isRoofedTile,
   tileWetness,
-  accrueWetness
+  accrueWetness,
+  seasonBakedTemp
 } from './EnvironmentService';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
 // gameDebug(true); console.error still surfaces.
@@ -445,8 +446,10 @@ export class PawnServiceImpl implements PawnService {
     // at the boundary — nothing retains a pre-tick reference to these objects.
     const pawns = gameState.pawns;
     // SEASONS_WEATHER (PERF-3): precompute the GLOBAL env factors ONCE per tick — scalar reads, no
-    // allocation. Per-pawn temperature is read from the cached `tile.temperature` (baked per season)
-    // plus this live weather delta, so weather changes never touch the 38k-tile worldMap.
+    // allocation. Per-pawn temperature base is computed live from `seasonBakedTemp(terrainType, season)`
+    // — the SAME source the HUD's `tileTemperature` uses — plus this live weather delta, so the
+    // need-rate sim and the displayed temperature can never disagree (a stale per-tile cache caused
+    // exactly that — see BUGS.md). O(1) per pawn (one biome lookup), not per-tile.
     const weatherFx = weatherEffects(gameState.weather);
     // Open-air temperature delta = weather + the diurnal day/night swing (coldest pre-dawn, warmest
     // mid-afternoon). Both are global scalars precomputed once per tick; shelter flattens them downstream.
@@ -459,12 +462,12 @@ export class PawnServiceImpl implements PawnService {
       if (pawn.isAlive === false) continue;
 
       const rate = this.getNeedIncreasePerTurn(pawn);
-      // Effective temperature at the pawn = cached tile temperature + live weather delta, shaped by
+      // Effective temperature at the pawn = season-baked tile base + live weather delta, shaped by
       // fire warmth + roof shelter (insulation/weather protection) from the per-tick thermal field.
       const pos = pawn.position;
       const tile = pos ? worldMap[pos.y]?.[pos.x] : undefined;
       const thermal = pos ? thermalAt(pos.x, pos.y) : undefined;
-      const base = tile?.temperature ?? DEFAULT_COMFORT_TEMP;
+      const base = tile ? seasonBakedTemp(tile.terrainType, gameState.season) : DEFAULT_COMFORT_TEMP;
       const temp = thermal ? effectiveTemperature(base, weatherTemp, thermal) : base + weatherTemp;
       // Comfort range (default ± trait shifts) — shared with the hypothermia/heat-stroke driver.
       const comfort = comfortRange(pawn.racialTraits);

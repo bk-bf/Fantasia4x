@@ -270,8 +270,8 @@ export function biomeBaseTemp(terrainType: string): number {
  *  (`recomputeWorldTemperature`) writes into `tile.temperature`; also used to TEST whether a tile is
  *  already baked for the current season (GameEngineImpl), so a reloaded all-zero map gets re-baked
  *  even when the season hasn't changed. */
-export function seasonBakedTemp(terrainType: string, season: Season): number {
-  return biomeBaseTemp(terrainType) + SEASONS[season].tempOffset;
+export function seasonBakedTemp(terrainType: string, season: Season | undefined): number {
+  return biomeBaseTemp(terrainType) + (season ? SEASONS[season].tempOffset : 0);
 }
 
 /**
@@ -947,7 +947,9 @@ export function tileTemperature(
   weather?: WeatherState,
   thermal: ThermalSample = NO_THERMAL
 ): number {
-  const base = biomeBaseTemp(terrainType) + (season ? SEASONS[season].tempOffset : 0);
+  // Single source of truth for the base (biome + season): `seasonBakedTemp` — the SAME helper the sim's
+  // per-pawn temperature path uses, so the HUD and the cold/heat simulation can never disagree.
+  const base = seasonBakedTemp(terrainType, season);
   const airDelta = weatherEffects(weather).tempDelta + diurnalTempDelta(turn, season);
   return effectiveTemperature(base, airDelta, thermal);
 }

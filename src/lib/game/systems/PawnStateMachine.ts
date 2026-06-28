@@ -77,7 +77,8 @@ import {
   thermalAt,
   isRoofedTile,
   effectiveTemperature,
-  effectiveWindAt
+  effectiveWindAt,
+  seasonBakedTemp
 } from '../services/EnvironmentService';
 import { equippedTemperatureResistance } from '../core/PawnEquipment';
 import { calcBloodRegenRate } from '../entities/Pawns';
@@ -394,9 +395,11 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   }
 
   // ── Temperature exposure → hypothermia / heat stroke (SEASONS_WEATHER) ──────
-  // Effective temperature at the pawn = cached tile temperature + live weather delta (same value the
-  // need-rate path uses). Cold/heat exposure past the comfort range drives the conditions, reduced by
-  // the pawn's cold_resistance / fire_resistance stats — which were previously defined but unused.
+  // Effective temperature at the pawn = season-baked tile base (`seasonBakedTemp`, the SAME source the
+  // HUD's `tileTemperature` uses) + live weather/diurnal delta. Computed live per pawn (O(1), a handful
+  // of pawns) rather than read from a per-tile cache, so the sim and the UI can never disagree.
+  // Cold/heat exposure past the comfort range drives the conditions, reduced by the pawn's
+  // cold_resistance / fire_resistance stats — which were previously defined but unused.
   // Effective wind felt at the pawn (after roof + lee shelter); reused below for cold amplification
   // and to drive the staged `windchilled` condition. 0 when the pawn is off-map.
   let windLevel = 0;
@@ -420,7 +423,7 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
       const airDelta =
         weatherEffects(gameState.weather).tempDelta +
         diurnalTempDelta(gameState.turn, gameState.season);
-      const base = tile?.temperature ?? 15;
+      const base = tile ? seasonBakedTemp(tile.terrainType, gameState.season) : 15;
       const temp = thermal ? effectiveTemperature(base, airDelta, thermal) : base + airDelta;
       const comfort = comfortRange(pawn.racialTraits);
       // Instantaneous environmental exposure past the comfort band = the TARGET the tracked meter
@@ -467,7 +470,7 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
           () =>
             `TEMP-DBG ${pawn.name} pos:(${pawn.position?.x},${pawn.position?.y}) ` +
             `terrain:${tile?.terrainType ?? '?'} cachedTemp:${tile?.temperature} ` +
-            `base:${(tile?.temperature ?? 15).toFixed(1)} eff:${temp.toFixed(1)} ` +
+            `base:${base.toFixed(1)} eff:${temp.toFixed(1)} ` +
             `comfort:[${comfort.min},${comfort.max}] coldTarget:${coldTarget} heatTarget:${heatTarget} ` +
             `cold:${cold.toFixed(1)} heat:${heat.toFixed(1)} wornCold:${wornDbg.cold} ` +
             `coldResStat:${pawnStatService.evaluateStat('cold_resistance', pawn)} ` +
