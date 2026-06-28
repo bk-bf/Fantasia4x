@@ -245,16 +245,22 @@
     "biomes"      : { "river": [null, null] }
   },
   {
+    // Transparent walkable base the wall resources (mountain_wall/cliff_wall) sit on for their
+    // while-standing render. No longer painted as open mountain floor — that's `cave` now — so it
+    // carries no biome range and only appears as a resource's render substrate.
     "id"          : "rocky",
     "displayName" : "Rocky Ground",
     "walkable"    : true,
     "movementCost": 2.5,
     "charSpans"   : [ {"literal": " "} ],  // transparent — visual comes from mountain_wall resource
     "fg"          : "#9e855e",
-    "bg"          : "#140f08",
-    "biomes"      : { "mountain": [null, -0.08] }
+    "bg"          : "#140f08"
   },
   {
+    // The walkable mountain INTERIOR floor — the "soil" of the mountain. Walls, ore, gems and stone
+    // outcrops are resource objects sitting ON cave floor; mining one reveals this walkable floor
+    // (resources set `harvestSubType: "cave"`). Covers the mountain's low+mid detail band; the
+    // high band [0.57, null] is `mineral_deposit` (ore veins).
     "id"          : "cave",
     "displayName" : "Cave",
     "walkable"    : true,
@@ -262,19 +268,7 @@
     "charSpans"   : [ {"sheet": "tiles", "id": 3} ],
     "fg"          : "#422e17",
     "bg"          : "#140f08",
-    // Cave generation was removed (the noise approaches all produced webs/blocky/straight tunnels).
-    // Cave has no biome range, so it does not spawn; the subterrain def is kept for future use.
-  },
-  {
-    "id"          : "cliff",
-    "displayName" : "Cliff",
-    "walkable"    : false,
-    "blocksSight" : true,
-    "movementCost": 0,
-    "charSpans"   : [ {"literal": " "} ],  // transparent — visual comes from cliff_wall resource
-    "fg"          : "#806b45",
-    "bg"          : "#140f08",
-    "biomes"      : { "mountain": [-0.08, 0.57] }
+    "biomes"      : { "mountain": [null, 0.57] }
   },
   {
     "id"          : "mineral_deposit",
