@@ -5,7 +5,7 @@
 import type { GameState, Pawn } from '../../../core/types';
 import { gameLogger } from '../../../dev/gameLogger';
 import { perTick } from '../../../core/time';
-import { consumeFromStockpiles } from '../../../core/GameState';
+import { consumeFromStockpiles, availableQuantityFromDrops } from '../../../core/GameState';
 import { PAWN_STATE, type PawnStateName } from '../pawnStates';
 import { tileHasBody } from '../carry';
 import {
@@ -116,13 +116,51 @@ function startEatingFromInventory(
  * colony-optimal meal size so a pawn grabs a serving, not the whole larder.
  */
 function grabFoodAt(gameState: GameState, pawn: Pawn, x: number, y: number): GameState | null {
-  const cap = selectFoodForMeal(pawn, gameState).reduce((s, m) => s + m.units, 0) || 1;
+  const meal = selectFoodForMeal(pawn, gameState);
+  const cap = meal.reduce((s, m) => s + m.units, 0) || 1;
+  const before = { ...(pawn.inventory?.items ?? {}) };
   const grabbed = pickUpFromTile(gameState, pawn.id, x, y, {
     radius: 1,
     maxQty: cap,
     acceptTest: (rid) => isAllowedFoodId(gameState, rid)
   });
   const p2 = grabbed.pawns.find((p) => p.id === pawn.id);
+  // EAT-DBG: pinpoint why a meal is small. Logs the meal the pawn WANTS (cap), the colony aggregate
+  // (gs.stockpile, reserved-INCLUSIVE) vs the unreserved-available stock (what pickUpFromTile can take),
+  // the unreserved food physically within radius 1 of the grab tile (fragmentation), and what actually
+  // entered the pack. cap≈3 ⇒ the meal sizing is the cause; cap big but gained≈3 ⇒ reserved/fragmented.
+  gameLogger.log(gameState.turn, 'NEED-CHECK', () => {
+    const after = p2?.inventory?.items ?? {};
+    const gained = Object.fromEntries(
+      Object.keys(after)
+        .map((k) => [k, (after[k] ?? 0) - (before[k] ?? 0)] as const)
+        .filter(([, d]) => d > 0)
+    );
+    const mealStr = meal.map((m) => `${m.id}×${m.units}`).join(',') || '(none)';
+    const ids = [...new Set([...meal.map((m) => m.id), ...Object.keys(gained)])];
+    const supply = ids
+      .map((id) => {
+        const agg = gameState.stockpile?.[id] ?? 0;
+        const avail = availableQuantityFromDrops(gameState.droppedItems, id);
+        const nearR1 = (gameState.droppedItems ?? [])
+          .filter(
+            (d) =>
+              d.resourceId === id &&
+              d.stored &&
+              !d.reservedFor &&
+              (d.quantity ?? 0) > 0 &&
+              Math.abs(d.x - x) <= 1 &&
+              Math.abs(d.y - y) <= 1
+          )
+          .reduce((s, d) => s + d.quantity, 0);
+        return `${id}{agg:${agg} avail:${avail} nearR1:${nearR1}}`;
+      })
+      .join(' ');
+    return (
+      `EAT-DBG ${pawn.name} H:${(pawn.needs?.hunger ?? 0).toFixed(1)} ` +
+      `wantMeal=[${mealStr}] cap=${cap} grabAt=(${x},${y}) gained=${JSON.stringify(gained)} | ${supply}`
+    );
+  });
   if (!p2 || selectFoodFromInventory(p2, grabbed).length === 0) return null; // nothing entered the pack
   return mutatePawn(grabbed, pawn.id, (p) => {
     p.currentState = PAWN_STATE.HUNGRY;
