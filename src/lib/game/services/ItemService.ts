@@ -835,6 +835,10 @@ export class ItemServiceImpl implements ItemService {
       }
       // A stack committed to a craft/ferment order (reservedFor — the transformation preserves it) or
       // one that is ACTIVELY drying (dry rate > 0) does NOT spoil. Everything else spoils as normal.
+      // TODO(realism, low-prio): `reservedFor` exempts ANY reserved input from spoilage, not just
+      // fermentation — so meat queued for a recipe won't rot while waiting. The intended rule is that
+      // only FERMENTING (sealed/anaerobic) preservation halts spoilage; other reservations should still
+      // rot. Narrow this by resolving the reserved order → recipe and checking the fermenter station.
       if (d.reservedFor || dryRateFor(d, gameState, dryCtx) > 0) {
         next.push(d);
         continue;
