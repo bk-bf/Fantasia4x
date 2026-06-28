@@ -150,7 +150,9 @@
     if (isMenu) scene = 'menu';
     else if (inCombat) scene = 'combat';
     else scene = night ? 'night' : 'day';
-    audioService.setScene(scene);
+    // Season picks the day/night scene's season-specific tracks (manifest.playlistFor); menu/combat
+    // ignore it. effectiveSeason honours the map-gen/debug season override.
+    audioService.setScene(scene, gs ? environmentService.effectiveSeason(gs) : undefined);
 
     // Compute the base weather/time bed mix from the live weather. The main menu runs a live weather +
     // day/night preview too, so weather ambience plays on the title screen as well. evalAmbient applies

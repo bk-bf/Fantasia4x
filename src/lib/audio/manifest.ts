@@ -7,30 +7,79 @@
 // Adding/renaming a track: drop the file in static/audio/{music,ambient}/, update the path here, and
 // (for CC-BY) add the attribution to AUDIO-CREDITS.md. Nothing else references the filenames.
 
+import type { Season } from '$lib/game/core/types';
+
 /** Music layer — exactly one scene is active at a time (priority resolved in AudioController). */
 export type MusicScene = 'menu' | 'day' | 'night' | 'combat';
 
 /** Nature ambient beds — several can layer simultaneously (e.g. rain + wind), each with its own gain. */
 export type AmbientBed = 'birds-day' | 'night-crickets' | 'wind' | 'rain' | 'rain-heavy' | 'forest';
 
-/**
- * Per-scene playlists. A scene with multiple tracks is played as a shuffled sequence (AudioService
- * advances on track end); a single-track scene effectively loops. Keep entries in sync with the files
- * actually present in static/audio/music/ — a missing file just fails to load (Howler onloaderror),
- * it won't crash the app.
- */
-export const MUSIC: Record<MusicScene, string[]> = {
-  menu: ['/audio/music/menu.ogg', '/audio/music/menu-kingdom.ogg'],
-  day: [
-    '/audio/music/day-1.ogg',
-    '/audio/music/day-2.ogg',
-    '/audio/music/day-3.ogg',
-    '/audio/music/day-4.ogg',
-    '/audio/music/day-5.ogg'
-  ],
-  night: ['/audio/music/night-1.ogg', '/audio/music/night-2.ogg', '/audio/music/night-3.ogg'],
-  combat: ['/audio/music/combat-1.ogg', '/audio/music/combat-2.ogg', '/audio/music/combat-3.ogg']
+// Files are organised static/audio/music/<bucket>/<scene>/ where <bucket> is `all` (year-round) or a
+// season id (spring/summer/autumn/winter), and <scene> is menu/combat/day/night. Menu + combat are
+// season-agnostic, so they only live under `all`.
+const MENU = ['/audio/music/all/menu/menu.ogg', '/audio/music/all/menu/menu-kingdom.ogg'];
+const COMBAT = [
+  '/audio/music/all/combat/combat-1.ogg',
+  '/audio/music/all/combat/combat-2.ogg',
+  '/audio/music/all/combat/combat-3.ogg',
+  '/audio/music/all/combat/combat-4.ogg',
+  '/audio/music/all/combat/combat-5.ogg'
+];
+
+// Day + night each play SHARED (year-round, under all/) tracks plus the ACTIVE season's own tracks, so
+// e.g. a winter day layers a winter-flavoured piece on top of the year-round day music. To give a
+// season its own track: drop the file in static/audio/music/<season>/{day,night}/ and add its path to
+// that season's list below. The seasonal pools start mostly empty — shared tracks carry every season.
+const DAY_SHARED = [
+  '/audio/music/all/day/day-1.ogg',
+  '/audio/music/all/day/day-2.ogg',
+  '/audio/music/all/day/day-3.ogg',
+  '/audio/music/all/day/day-4.ogg',
+  '/audio/music/all/day/day-5.ogg',
+  '/audio/music/all/day/day-6.ogg',
+  '/audio/music/all/day/day-7.ogg',
+  '/audio/music/all/day/day-8.ogg'
+];
+const DAY_SEASONAL: Record<Season, string[]> = {
+  spring: [],
+  summer: [],
+  autumn: [],
+  winter: ['/audio/music/winter/day/magic-actions.ogg']
 };
+const NIGHT_SHARED = [
+  '/audio/music/all/night/night-1.ogg',
+  '/audio/music/all/night/night-2.ogg',
+  '/audio/music/all/night/night-3.ogg',
+  '/audio/music/all/night/night-4.ogg',
+  '/audio/music/all/night/night-5.ogg'
+];
+const NIGHT_SEASONAL: Record<Season, string[]> = {
+  spring: [],
+  summer: [],
+  autumn: [],
+  winter: []
+};
+
+/**
+ * Resolve a scene's playlist. menu/combat are season-agnostic; day/night combine their SHARED pool
+ * with the active season's own tracks. A scene with multiple tracks is played as a shuffled sequence
+ * (AudioService advances on track end); a single-track scene effectively loops. Keep entries in sync
+ * with the files in static/audio/music/ — a missing file just fails to load (Howler onloaderror), it
+ * won't crash the app.
+ */
+export function playlistFor(scene: MusicScene, season?: Season): string[] {
+  switch (scene) {
+    case 'menu':
+      return MENU;
+    case 'combat':
+      return COMBAT;
+    case 'day':
+      return season ? [...DAY_SHARED, ...DAY_SEASONAL[season]] : DAY_SHARED;
+    case 'night':
+      return season ? [...NIGHT_SHARED, ...NIGHT_SEASONAL[season]] : NIGHT_SHARED;
+  }
+}
 
 /** Looping campfire crackle, played for any lit fire building (campfire/hearth/furnace/…) in earshot.
  *  Driven by AudioController.evalFire → audioService.setFireLevel; volume scales with zoom + viewport. */
@@ -71,19 +120,27 @@ export const SCENE_LABELS: Record<MusicScene, string> = {
 };
 
 export const TRACK_LABELS: Record<string, string> = {
-  '/audio/music/menu.ogg': 'Campaign',
-  '/audio/music/menu-kingdom.ogg': 'Kingdom Theme',
-  '/audio/music/day-1.ogg': 'Town',
-  '/audio/music/day-2.ogg': 'Middle Age RPG Theme 1',
-  '/audio/music/day-3.ogg': 'Castle',
-  '/audio/music/day-4.ogg': 'Middle Age RPG Theme 2',
-  '/audio/music/day-5.ogg': "The Bard's Tale",
-  '/audio/music/night-1.ogg': 'Caves of Sorrow',
-  '/audio/music/night-2.ogg': 'Dark Quest',
-  '/audio/music/night-3.ogg': 'A Darkness Opus',
-  '/audio/music/combat-1.ogg': 'Battle Theme 1',
-  '/audio/music/combat-2.ogg': 'Battle Theme 3',
-  '/audio/music/combat-3.ogg': 'Battle Theme 5'
+  '/audio/music/all/menu/menu.ogg': 'Campaign',
+  '/audio/music/all/menu/menu-kingdom.ogg': 'Kingdom Theme',
+  '/audio/music/all/day/day-1.ogg': 'Town',
+  '/audio/music/all/day/day-2.ogg': 'Middle Age RPG Theme 1',
+  '/audio/music/all/day/day-3.ogg': 'Castle',
+  '/audio/music/all/day/day-4.ogg': 'Middle Age RPG Theme 2',
+  '/audio/music/all/day/day-5.ogg': "The Bard's Tale",
+  '/audio/music/all/day/day-6.ogg': 'Legend',
+  '/audio/music/all/day/day-7.ogg': 'Medieval Theme 1',
+  '/audio/music/all/day/day-8.ogg': 'Medieval Theme 2',
+  '/audio/music/all/night/night-1.ogg': 'Caves of Sorrow',
+  '/audio/music/all/night/night-2.ogg': 'Dark Quest',
+  '/audio/music/all/night/night-3.ogg': 'A Darkness Opus',
+  '/audio/music/all/night/night-4.ogg': 'Full of Memories',
+  '/audio/music/all/night/night-5.ogg': 'He Will Never See Her Again',
+  '/audio/music/all/combat/combat-1.ogg': 'Battle Theme 1',
+  '/audio/music/all/combat/combat-2.ogg': 'Battle Theme 3',
+  '/audio/music/all/combat/combat-3.ogg': 'Battle Theme 5',
+  '/audio/music/all/combat/combat-4.ogg': 'For The King',
+  '/audio/music/all/combat/combat-5.ogg': 'Light Battle',
+  '/audio/music/winter/day/magic-actions.ogg': 'Magic Actions'
 };
 
 export const AMBIENT_LABELS: Record<AmbientBed, string> = {

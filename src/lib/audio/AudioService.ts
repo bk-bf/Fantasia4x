@@ -18,13 +18,14 @@
 import { Howl, Howler } from 'howler';
 import { writable } from 'svelte/store';
 import {
-  MUSIC,
+  playlistFor,
   AMBIENT_FILES,
   FIRE_LOOP,
   type MusicScene,
   type AmbientBed,
   type AmbientLayers
 } from './manifest';
+import type { Season } from '$lib/game/core/types';
 
 const MUSIC_FADE_MS = 2200;
 // Time constant for the ambient-bed gain smoother (exponential glide, see ensureSmoothing). The bed
@@ -86,6 +87,7 @@ class AudioServiceImpl {
   // ── Music channel ──
   private scene: MusicScene | null = null; // scene currently playing
   private desiredScene: MusicScene | null = null; // scene we want next (applied at track end)
+  private season: Season | undefined; // active season — picks day/night's seasonal tracks at switch time
   private musicHowl: Howl | null = null;
   private currentTrack: string | null = null;
   private playlist: string[] = [];
@@ -135,7 +137,8 @@ class AudioServiceImpl {
    * mid-song, both when a fight starts and when it ends (so the battle theme doesn't linger). With
    * nothing playing, the requested scene starts at once.
    */
-  setScene(scene: MusicScene): void {
+  setScene(scene: MusicScene, season?: Season): void {
+    this.season = season; // kept current so the NEXT day/night switch draws the right seasonal pool
     if (!this.unlocked || scene === this.desiredScene) return;
     this.desiredScene = scene;
     const idle = !this.musicHowl;
@@ -147,7 +150,7 @@ class AudioServiceImpl {
   /** Begin playing `scene` now (shuffled playlist), crossfading from any current track. */
   private switchTo(scene: MusicScene): void {
     this.scene = scene;
-    this.playlist = shuffle(MUSIC[scene] ?? []);
+    this.playlist = shuffle(playlistFor(scene, this.season));
     this.playIdx = 0;
     this.startTrack(this.playlist[0]);
   }
