@@ -65,6 +65,18 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
     return (gs.craftingQueue ?? []).some((e) => e.id === j.craftQueueId);
   });
 
+  // Real queue priority: a physical workstation works ONE order at a time, in queue (array) order.
+  // `stationsBusy` holds the station building ids that already own an active craft job — pre-seeded
+  // from in-progress craft jobs (don't preempt started work / waste workDone), then claimed by the
+  // earliest supplied order as we walk the queue. Hand-craftable orders (no station building) aren't
+  // gated — they have no shared station to serialise on. Keyed by stationBuildingId so two physical
+  // stations of the same type still run in parallel.
+  const stationsBusy = new Set<string>();
+  for (const j of jobs) {
+    if (j.type !== 'craft' || !j.buildingId) continue;
+    stationsBusy.add(j.buildingId);
+  }
+
   // Add a craft job only once the order's inputs are fully staged on its station tile, and
   // target that tile so the pawn actually walks to the workstation to craft (ADR-016).
   for (const order of gs.craftingQueue ?? []) {
@@ -78,11 +90,14 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
       recipeService.isPassiveStation(order.stationType)
     )
       continue;
+    // Skip this order if a higher-priority (earlier-queued) order already holds its station.
+    if (order.stationBuildingId && stationsBusy.has(order.stationBuildingId)) continue;
     const station = stationTileFor(order, gs);
     if (!station) continue;
     if (!orderSupplied(order, station, gs)) continue;
     const exists = jobs.some((j) => j.type === 'craft' && j.craftQueueId === order.id);
     if (!exists) {
+      if (order.stationBuildingId) stationsBusy.add(order.stationBuildingId);
       jobs.push({
         id: `craft-${order.id}`,
         type: 'craft',

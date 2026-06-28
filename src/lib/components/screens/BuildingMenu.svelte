@@ -210,6 +210,19 @@
     gameState.command({ type: 'cancelBuildingRefund', payload: { buildingId }, save: true });
   }
 
+  // Drag-reorder the in-progress build queue → persist the new order (drives fetch/haul priority).
+  let dragId: string | null = null;
+  function onBuildDrop(targetId: string) {
+    const order = allBuildingsInProgress.map((b) => b.id);
+    const from = order.indexOf(dragId ?? '');
+    const to = order.indexOf(targetId);
+    dragId = null;
+    if (from < 0 || to < 0 || from === to) return;
+    const moved = order.splice(from, 1)[0];
+    order.splice(order.indexOf(targetId), 0, moved);
+    gameState.command({ type: 'reorderBuilds', payload: { orderedIds: order }, save: true });
+  }
+
   function formatEffectName(camelCaseStr: string): string {
     return camelCaseStr
       .replace(/([A-Z])/g, ' $1')
@@ -295,6 +308,38 @@
         cacheKey="building"
       />
     </div>
+
+    <!-- Active construction queue — drag chips to reorder (= haul priority). Sits between the filter
+         tabs and the building cards. -->
+    {#if allBuildingsInProgress.length > 0}
+      <div class="build-jobs queue-top">
+        <div class="jobs-hdr">| ACTIVE BUILD JOBS ({allBuildingsInProgress.length})</div>
+        <div class="jobs-grid">
+          {#each allBuildingsInProgress as bp (bp.id)}
+            {@const bDef = buildingService.getBuildingById(bp.type)}
+            {@const prog = Math.round(((bp.workDone ?? 0) / (bp.workRequired ?? 50)) * 100)}
+            <div
+              class="job-chip"
+              class:drag-over={dragId !== null && dragId !== bp.id}
+              draggable="true"
+              role="listitem"
+              on:dragstart={() => (dragId = bp.id)}
+              on:dragend={() => (dragId = null)}
+              on:dragover|preventDefault
+              on:drop|preventDefault={() => onBuildDrop(bp.id)}
+              title="{bDef?.name ?? bp.type} — {prog}%"
+            >
+              <span class="job-fill" style="width:{prog}%"></span>
+              <span class="job-grip">⠿</span>
+              <span class="job-name">{bDef?.name.toUpperCase() ?? bp.type}</span>
+              <span class="job-pct">{prog}%</span>
+              <button class="job-x" title="Cancel" on:click={() => cancelBuilding(bp.id)}>✕</button>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
+
     {#if selectedSection === 'ZONES' && !searchTerm}
       <ZonePanel />
     {:else if displayedDefs.length > 0}
@@ -380,24 +425,6 @@
     </div>
   {/if}
 
-  <!-- Active construction queue — compact chips, kept below the build/zone tabs -->
-  {#if allBuildingsInProgress.length > 0}
-    <div class="build-jobs">
-      <div class="jobs-hdr">| ACTIVE BUILD JOBS ({allBuildingsInProgress.length})</div>
-      <div class="jobs-grid">
-        {#each allBuildingsInProgress as bp (bp.id)}
-          {@const bDef = buildingService.getBuildingById(bp.type)}
-          {@const prog = Math.round(((bp.workDone ?? 0) / (bp.workRequired ?? 50)) * 100)}
-          <div class="job-chip" title="{bDef?.name ?? bp.type} — {prog}%">
-            <span class="job-fill" style="width:{prog}%"></span>
-            <span class="job-name">{bDef?.name.toUpperCase() ?? bp.type}</span>
-            <span class="job-pct">{prog}%</span>
-            <button class="job-x" title="Cancel" on:click={() => cancelBuilding(bp.id)}>✕</button>
-          </div>
-        {/each}
-      </div>
-    </div>
-  {/if}
 </div>
 
 <style>
@@ -505,11 +532,19 @@
     color: var(--neg);
   }
 
-  /* ── Active build jobs / fires (compact chips, below the tabs) ── */
+  /* ── Active build jobs / fires (compact chips) ── */
   .build-jobs {
     padding: 4px 8px 8px;
     border-top: 1px solid var(--border);
     margin-top: 4px;
+  }
+  /* The build queue moved between the tabs and the cards — separator below it, not above. */
+  .build-jobs.queue-top {
+    padding: 5px 8px;
+    border-top: none;
+    border-bottom: 1px solid var(--border);
+    margin-top: 0;
+    background: var(--bg);
   }
   .jobs-hdr {
     color: var(--accent);
@@ -526,13 +561,30 @@
     position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     max-width: 170px;
     padding: 2px 5px;
     border: 1px solid var(--border);
     background: var(--bg-panel);
     overflow: hidden;
     font-size: 10px;
+  }
+  /* Build chips are draggable to reorder; fire chips reuse .job-chip but aren't draggable. */
+  .queue-top .job-chip {
+    cursor: grab;
+  }
+  .queue-top .job-chip:active {
+    cursor: grabbing;
+  }
+  .job-chip.drag-over:hover {
+    border-color: var(--accent-hi);
+  }
+  .job-grip {
+    position: relative;
+    z-index: 1;
+    color: var(--text-dim);
+    font-size: 9px;
+    cursor: grab;
   }
   .job-fill {
     position: absolute;

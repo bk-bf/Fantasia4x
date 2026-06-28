@@ -24,6 +24,7 @@ import { recipeService } from './RecipeService';
 import { buildingService } from './BuildingService';
 import {
   thermalAt,
+  computeThermalAt,
   seasonBakedTemp,
   effectiveTemperature,
   tileWetness,
@@ -87,6 +88,36 @@ const HAY_DRYING_SECONDS = 1200; // open-air seconds at full warmth before plant
 const HAY_DRY_TEMP_FLOOR = 12; // °C below which the cut grass does not dry at all
 const HAY_DRY_TEMP_REF = 28; // °C at/above which drying runs at full (open-air) speed
 const HAY_WET_DECAY = 2; // drying seconds lost per real second while the stack sits on a wet tile
+
+/**
+ * Cut-grass drying rate at a spot: drying-seconds gained per second of exposure. >0 cures, 0 = too
+ * cold to dry, <0 = reversing (the tile is wet — rain ruins drying hay). `bonus` is the tile's
+ * building dryingBonus (1 = open ground). The SINGLE formula stepDrying + the UI dryness readout
+ * share so they can't drift. Open-ground full-warmth rate = 1.
+ */
+function fiberDryRate(temp: number, wetness: number, bonus: number): number {
+  if (wetness >= WET_TILE_THRESHOLD) return -HAY_WET_DECAY;
+  const f = Math.max(0, Math.min(1, (temp - HAY_DRY_TEMP_FLOOR) / (HAY_DRY_TEMP_REF - HAY_DRY_TEMP_FLOOR)));
+  return f * bonus;
+}
+
+/** Live drying readout for one stack, for the UI dryness meter + speed arrow (null = doesn't dry). */
+export interface DryingStatus {
+  /** Total drying-seconds the stack needs before it cures. */
+  target: number;
+  /** Accrued drying-seconds so far. */
+  progress: number;
+  /** Drying-seconds gained per second now: >0 curing, 0 stalled, <0 reversing (wet). */
+  rate: number;
+  /** Why it isn't progressing (only when rate <= 0). */
+  reason?: 'wet' | 'cold' | 'no-fire';
+  /** Effective tile temperature (°C) — present for the temperature/wetness cure (plant_fiber). */
+  temp?: number;
+  /** Effective tile wetness (0–100%) — present for the temperature/wetness cure. */
+  wetness?: number;
+  /** Building drying multiplier in play (1 = open ground / no rack). */
+  bonus: number;
+}
 const DETERIORATION_RATE_BY_CATEGORY: Record<string, number> = {
   stone: 0.004, // rock barely weathers
   primitive: 0.01,
@@ -219,6 +250,9 @@ export interface ItemService {
   /** Drying seconds a stack of this resource needs before it cures (firewood → dry_firewood,
    *  plant_fiber → hay), for the UI dryness meter; null when the resource doesn't dry. */
   dryingTargetSeconds(resourceId: string): number | null;
+  /** Live drying readout for a stack — progress, current rate, and the temperature/wetness/bonus
+   *  driving it — for the UI dryness meter + speed arrow. null when the resource doesn't dry. */
+  dryingStatus(d: DroppedItem, gameState: GameState): DryingStatus | null;
 }
 
 /**
@@ -882,6 +916,48 @@ export class ItemServiceImpl implements ItemService {
     return null;
   }
 
+  /** Live drying readout for one stack (mirrors stepDrying via the shared fiberDryRate / fire-ring
+   *  rules). Uses computeThermalAt so the HUD on the main thread samples fire warmth correctly. */
+  dryingStatus(d: DroppedItem, gameState: GameState): DryingStatus | null {
+    const target = this.dryingTargetSeconds(d.resourceId);
+    if (target === null) return null;
+    const progress = d.drying ?? 0;
+
+    if (d.resourceId === 'green_firewood') {
+      // Seasons only inside the lit-fire ring (Chebyshev exactly 2), at a fixed rate.
+      let nearest = Infinity;
+      for (const b of gameState.buildings ?? []) {
+        if (b.status === 'complete' && b.lit) nearest = Math.min(nearest, chebyshev(d.x, d.y, b.x, b.y));
+      }
+      const inRing = nearest === 2;
+      return { target, progress, rate: inRing ? 1 : 0, reason: inRing ? undefined : 'no-fire', bonus: 1 };
+    }
+
+    // plant_fiber → hay: temperature/wetness cure, multiplied by a hay rack's dryingBonus.
+    const tile = gameState.worldMap?.[d.y]?.[d.x];
+    if (!tile) return { target, progress, rate: 0, reason: 'cold', bonus: 1 };
+    const thermal = computeThermalAt(d.x, d.y, gameState.buildings, gameState.worldMap);
+    const weatherTemp =
+      weatherEffects(gameState.weather).tempDelta + diurnalTempDelta(gameState.turn, gameState.season);
+    const temp = effectiveTemperature(seasonBakedTemp(tile.terrainType, gameState.season), weatherTemp, thermal);
+    const wetness = tileWetness(tile.moisture ?? 0, gameState.weather, thermal);
+    let bonus = 1;
+    for (const b of gameState.buildings ?? []) {
+      if (b.status !== 'complete' || b.x !== d.x || b.y !== d.y) continue;
+      bonus = Math.max(bonus, buildingService.getBuildingById(b.type)?.effects?.dryingBonus ?? 0);
+    }
+    const rate = fiberDryRate(temp, wetness, bonus);
+    return {
+      target,
+      progress,
+      rate,
+      reason: rate < 0 ? 'wet' : rate === 0 ? 'cold' : undefined,
+      temp,
+      wetness,
+      bonus
+    };
+  }
+
   stepDrying(gameState: GameState): GameState {
     const drops = gameState.droppedItems;
     if (!drops || drops.length === 0) return gameState;
@@ -945,19 +1021,13 @@ export class ItemServiceImpl implements ItemService {
         );
         const wet = tileWetness(tile.moisture ?? 0, weather, thermal);
         const have = d.drying ?? 0;
-        if (wet >= WET_TILE_THRESHOLD) {
-          // Damp/rained-on: the cure reverses (no conversion while wet).
-          if (have <= 0) return d;
-          changed = true;
-          return { ...d, drying: Math.max(0, have - SECONDS_PER_TICK * HAY_WET_DECAY) };
-        }
-        const warmth = (temp - HAY_DRY_TEMP_FLOOR) / (HAY_DRY_TEMP_REF - HAY_DRY_TEMP_FLOOR);
-        const factor = Math.max(0, Math.min(1, warmth));
-        if (factor <= 0) return d; // too cold to dry; just sits
         const mult = dryRacks.get(d.y + ',' + d.x) ?? 1;
-        const drying = have + SECONDS_PER_TICK * factor * mult;
+        const rate = fiberDryRate(temp, wet, mult);
+        if (rate === 0) return d; // too cold to dry; just sits
+        if (rate < 0 && have <= 0) return d; // wet, but nothing to lose
+        const drying = Math.max(0, have + SECONDS_PER_TICK * rate);
         changed = true;
-        if (drying >= HAY_DRYING_SECONDS) return { ...d, resourceId: 'hay', drying: undefined };
+        if (rate > 0 && drying >= HAY_DRYING_SECONDS) return { ...d, resourceId: 'hay', drying: undefined };
         return { ...d, drying };
       }
 

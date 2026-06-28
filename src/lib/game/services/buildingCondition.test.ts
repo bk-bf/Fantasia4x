@@ -46,6 +46,11 @@ describe('BuildingService condition (refactor Stage 1)', () => {
     expect(out.buildings![0].condition).toBeGreaterThan(99); // tiny per-tick amount
   });
 
+  it('removes a building that wears down to 0% condition (breakage)', () => {
+    const out = buildingService.stepBuildingCondition(makeState([wall({ condition: 0.0001 })]));
+    expect(out.buildings).toHaveLength(0);
+  });
+
   it('does not decay buildings under construction', () => {
     const gs = makeState([wall({ status: 'under_construction' })]);
     expect(buildingService.stepBuildingCondition(gs)).toBe(gs);

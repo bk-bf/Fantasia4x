@@ -808,6 +808,7 @@ export class BuildingServiceImpl implements BuildingService {
     // with no `conditionDecayPerTurn` (tile_roof, the natural mountain_roof) never decay regardless.
     const exposure = weatherExposureFactor(gameState.weather);
     let changed = false;
+    let broken: PlacedBuilding[] | null = null;
     const buildings = (gameState.buildings ?? []).map((b) => {
       if (b.status !== 'complete') return b;
       const def = AVAILABLE_BUILDINGS.find((d) => d.id === b.type);
@@ -822,9 +823,27 @@ export class BuildingServiceImpl implements BuildingService {
       const next = Math.max(0, cur - (perTick(rate) * exposure) / durMul);
       if (next === cur) return b;
       changed = true;
-      return { ...b, condition: next };
+      const updated = { ...b, condition: next };
+      // 0% condition → the structure FAILS: a roof falls in, a wall collapses. Collect it for removal.
+      if (next <= 0) (broken ??= []).push(updated);
+      return updated;
     });
-    return changed ? { ...gameState, buildings } : gameState;
+    if (!changed) return gameState;
+    // Common case: nothing hit 0 — just ship the decayed conditions.
+    if (!broken) return { ...gameState, buildings };
+    // Some buildings failed — drop them and restore any tile footprint (a wall re-opens its tile, a
+    // floor clears; a passable roof is a no-op). TODO: leave rubble / damage anything caught under a
+    // collapsing roof, mirroring the dangerous-collapse TODO in removeUnsupportedRoofs.
+    const brokenIds = new Set((broken as PlacedBuilding[]).map((b) => b.id));
+    let state: GameState = {
+      ...gameState,
+      buildings: buildings.filter((b) => !brokenIds.has(b.id))
+    };
+    for (const b of broken as PlacedBuilding[]) {
+      state = this.applyBuildingFootprint(state, b, false);
+      console.warn(`[BuildingService] ${b.type} at (${b.x},${b.y}) failed at 0% condition — removed`);
+    }
+    return state;
   }
 
   repairBuilding(instanceId: string, gameState: GameState): GameState {

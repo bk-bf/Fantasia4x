@@ -101,6 +101,17 @@
 
   {#if bDef?.description}<div class="bld-desc">{bDef.description}</div>{/if}
 
+  {#if !isBlueprint && !building.deconstructQueued && bDef?.conditionDecayPerTurn}
+    {@const cond = Math.round(building.condition ?? 100)}
+    <div
+      class="bld-condition"
+      style="color:{cond >= 70 ? '#68b030' : cond >= 35 ? '#c8a13a' : '#cc5544'}"
+      title="structural condition — weather wears it down; repair it or at 0% it fails and is lost"
+    >
+      CONDITION [{jobProgressBar(cond / 100)}] {cond}%
+    </div>
+  {/if}
+
   {#if detailed && (amenity.comfort > 0 || amenity.beauty > 0)}
     <div class="bld-stat">
       {#if amenity.comfort > 0}<span>comfort +{amenity.comfort.toFixed(2)}</span>{/if}
@@ -217,6 +228,11 @@
     color: #cc8833;
     font-size: 9px;
     margin-top: 2px;
+  }
+  .bld-condition {
+    font-size: 9px;
+    margin-top: 3px;
+    letter-spacing: 0.02em;
   }
   .bld-fuel {
     color: #c87020;

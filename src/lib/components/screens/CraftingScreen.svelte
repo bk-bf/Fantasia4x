@@ -354,14 +354,42 @@
     });
   }
 
-  function cancelCrafting(queueIndex: number) {
-    if (queueIndex < 0 || queueIndex >= craftingQueue.length) return;
+  function cancelCrafting(queueId: string) {
     // ADR-016: nothing was consumed at queue time — releaseReservation frees the (reserved or
     // staged) inputs, then the order is dropped (by id). See commands.ts `cancelCrafting`.
-    gameState.command({
-      type: 'cancelCrafting',
-      payload: { queueId: craftingQueue[queueIndex].id }
-    });
+    gameState.command({ type: 'cancelCrafting', payload: { queueId } });
+  }
+
+  // Active queue grouped by workstation (station building type). Hand-craftable orders (no station)
+  // fall into a "Hand Crafting" group. Array order within a group is the live priority order — the
+  // worker runs one order per physical station in queue order (craft.ts).
+  const stationKeyOf = (qi: any): string => qi.stationType ?? 'hand';
+  const stationLabelOf = (qi: any): string =>
+    qi.stationType
+      ? (buildingService.getBuildingById(qi.stationType)?.name ?? qi.stationType.replace(/_/g, ' '))
+      : 'Hand Crafting';
+  $: queueGroups = (() => {
+    const groups = new Map<string, { key: string; label: string; items: any[] }>();
+    for (const qi of craftingQueue) {
+      const key = stationKeyOf(qi);
+      let g = groups.get(key);
+      if (!g) groups.set(key, (g = { key, label: stationLabelOf(qi), items: [] }));
+      g.items.push(qi);
+    }
+    return [...groups.values()];
+  })();
+
+  // Drag-reorder within a station group → persist the new global queue order (drives priority).
+  let dragId: string | null = null;
+  function onQueueDrop(targetId: string) {
+    const from = craftingQueue.findIndex((q) => q.id === dragId);
+    const to = craftingQueue.findIndex((q) => q.id === targetId);
+    dragId = null;
+    if (from < 0 || to < 0 || from === to) return;
+    const ids = craftingQueue.map((q) => q.id);
+    ids.splice(from, 1);
+    ids.splice(ids.indexOf(targetId), 0, craftingQueue[from].id);
+    gameState.command({ type: 'reorderCrafting', payload: { orderedIds: ids }, save: true });
   }
 </script>
 
@@ -388,6 +416,48 @@
         cacheKey="crafting"
       />
     </div>
+
+    <!-- Active crafting queue — split by workstation, drag chips to reorder (= priority). Sits between
+         the filter tabs and the recipe cards. -->
+    {#if craftingQueue.length > 0}
+      <div class="build-jobs">
+        <div class="jobs-hdr">| CRAFTING QUEUE ({craftingQueue.length})</div>
+        {#each queueGroups as group (group.key)}
+          <div class="jobs-station">{group.label}</div>
+          <div class="jobs-grid">
+            {#each group.items as qi (qi.id)}
+              {@const wReq = qi.workRequired ?? (recipeOf(qi.item.id)?.workAmount ?? 1) * 5}
+              {@const prog = Math.round(Math.min(100, ((qi.workDone ?? 0) / wReq) * 100))}
+              {@const qty = qi.quantity ?? 1}
+              <div
+                class="job-chip"
+                class:pending={qi.pending}
+                class:drag-over={dragId !== null && dragId !== qi.id}
+                draggable="true"
+                role="listitem"
+                on:dragstart={() => (dragId = qi.id)}
+                on:dragend={() => (dragId = null)}
+                on:dragover|preventDefault
+                on:drop|preventDefault={() => onQueueDrop(qi.id)}
+                title={qi.pending
+                  ? `${qi.item.name} ×${qty} — waiting for materials`
+                  : `${qi.item.name} ×${qty} — ${prog}%`}
+              >
+                {#if !qi.pending}<span class="job-fill" style="width:{prog}%"></span>{/if}
+                <span class="job-grip">⠿</span>
+                <span class="job-name"
+                  >{qi.item.name.toUpperCase()}{#if qty > 1}
+                    ×{qty}{/if}</span
+                >
+                <span class="job-pct">{qi.pending ? 'WAIT' : `${prog}%`}</span>
+                <button class="job-x" title="Cancel" on:click={() => cancelCrafting(qi.id)}>✕</button>
+              </div>
+            {/each}
+          </div>
+        {/each}
+      </div>
+    {/if}
+
     {#if displayedEntries.length > 0}
       <div class="card-grid">
         {#each displayedEntries as entry (entry.key)}
@@ -543,35 +613,6 @@
   {#if allCraftableItems.length === 0}
     <div class="muted-row">no recipes available</div>
   {/if}
-
-  <!-- Active crafting queue — compact chips, kept below the recipe tabs (mirrors CONSTRUCTION) -->
-  {#if craftingQueue.length > 0}
-    <div class="build-jobs">
-      <div class="jobs-hdr">| CRAFTING QUEUE ({craftingQueue.length})</div>
-      <div class="jobs-grid">
-        {#each craftingQueue as qi, idx (qi.id)}
-          {@const wReq = qi.workRequired ?? (recipeOf(qi.item.id)?.workAmount ?? 1) * 5}
-          {@const prog = Math.round(Math.min(100, ((qi.workDone ?? 0) / wReq) * 100))}
-          {@const qty = qi.quantity ?? 1}
-          <div
-            class="job-chip"
-            class:pending={qi.pending}
-            title={qi.pending
-              ? `${qi.item.name} ×${qty} — waiting for materials`
-              : `${qi.item.name} ×${qty} — ${prog}%`}
-          >
-            {#if !qi.pending}<span class="job-fill" style="width:{prog}%"></span>{/if}
-            <span class="job-name"
-              >{qi.item.name.toUpperCase()}{#if qty > 1}
-                ×{qty}{/if}</span
-            >
-            <span class="job-pct">{qi.pending ? 'WAIT' : `${prog}%`}</span>
-            <button class="job-x" title="Cancel" on:click={() => cancelCrafting(idx)}>✕</button>
-          </div>
-        {/each}
-      </div>
-    </div>
-  {/if}
 </div>
 
 <style>
@@ -705,38 +746,62 @@
     color: var(--text-dim);
   }
 
-  /* ── Active crafting queue (compact chips, below the tabs — mirrors CONSTRUCTION) ── */
+  /* ── Active crafting queue (compact chips, between tabs and cards; split by workstation) ── */
   .build-jobs {
-    padding: 4px 8px 8px;
-    border-top: 1px solid var(--border);
-    margin-top: 4px;
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
   }
   .jobs-hdr {
     color: var(--accent);
     font-size: 10px;
     letter-spacing: 0.08em;
-    padding: 2px 0 5px;
+    padding: 0 0 4px;
+  }
+  /* Per-workstation sub-header above each group of chips. */
+  .jobs-station {
+    color: var(--text-dim);
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 3px 0 2px;
   }
   .jobs-grid {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
+    margin-bottom: 2px;
   }
   .job-chip {
     position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     max-width: 170px;
     padding: 2px 5px;
     border: 1px solid var(--border);
     background: var(--bg-panel);
     overflow: hidden;
     font-size: 10px;
+    cursor: grab;
+  }
+  .job-chip:active {
+    cursor: grabbing;
   }
   .job-chip.pending {
     border-style: dashed;
     opacity: 0.7;
+  }
+  /* Highlight valid drop targets while a chip is being dragged. */
+  .job-chip.drag-over:hover {
+    border-color: var(--accent-hi);
+  }
+  .job-grip {
+    position: relative;
+    z-index: 1;
+    color: var(--text-dim);
+    font-size: 9px;
+    cursor: grab;
   }
   .job-fill {
     position: absolute;

@@ -817,6 +817,39 @@ export const COMMANDS: Record<string, Cmd> = {
     const next = releaseReservation(s, p.queueId);
     return { ...next, craftingQueue: (next.craftingQueue || []).filter((q) => q.id !== p.queueId) };
   },
+  /** Drag-reorder the crafting queue. `orderedIds` is the new full order of queue ids; array position
+   *  drives priority (craft.ts works one order per station in queue order; reservePendingOrders reserves
+   *  pending inputs in queue order). Unknown/missing ids are dropped; any live order absent from the list
+   *  is appended in its original relative order so the queue can never silently lose an in-flight craft. */
+  reorderCrafting: (s, p: { orderedIds: string[] }) => {
+    const queue = s.craftingQueue ?? [];
+    const byId = new Map(queue.map((o) => [o.id, o]));
+    const seen = new Set(p.orderedIds);
+    const reordered = p.orderedIds
+      .map((id) => byId.get(id))
+      .filter((o): o is CraftingInProgress => !!o);
+    for (const o of queue) if (!seen.has(o.id)) reordered.push(o);
+    return { ...s, craftingQueue: reordered };
+  },
+  /** Drag-reorder the in-progress construction queue. `orderedIds` is the new order of the incomplete
+   *  builds; their relative order drives fetch/haul priority (fetch.ts/construct.ts iterate buildings in
+   *  array order). Completed buildings keep their slots — only the in-progress slots are refilled. */
+  reorderBuilds: (s, p: { orderedIds: string[] }) => {
+    const all = s.buildings ?? [];
+    const byId = new Map(all.map((b) => [b.id, b]));
+    const inOrder = p.orderedIds
+      .map((id) => byId.get(id))
+      .filter((b): b is PlacedBuilding => !!b && b.status !== 'complete');
+    const positions: number[] = [];
+    all.forEach((b, i) => {
+      if (b.status !== 'complete') positions.push(i);
+    });
+    const next = [...all];
+    positions.forEach((pos, k) => {
+      if (inOrder[k]) next[pos] = inOrder[k];
+    });
+    return { ...s, buildings: next };
+  },
   /** Queue a crafting order (ADR-016 reserve-and-fetch). Moved here from GameCoordinator so it runs
    *  on the worker's canonical state instead of the stale main-thread projection. */
   craftItem: (
