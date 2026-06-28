@@ -4,6 +4,9 @@
 // lifespans. Static-DB only → indexes computed once at module load, then O(1) per lookup.
 import { itemService } from '$lib/game/services/ItemService.js';
 import { recipeService } from '$lib/game/services/RecipeService.js';
+import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
+import { SOIL_TIER_NAME, type SoilTier } from '$lib/game/core/Terrains.js';
+import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService.js';
 import type { Item, Building } from '$lib/game/core/types.js';
 import buildingsData from '$lib/game/database/buildings.jsonc';
 
@@ -46,6 +49,8 @@ export interface ItemInfoView {
   craftedInto: string[];
   /** Building names this item is a construction cost for. */
   buildsInto: string[];
+  /** When the item is a crop's seed or its harvested produce: the crop's grow requirements. */
+  farming?: { crop: string; rows: { label: string; val: string }[] };
 }
 
 /** Build the hover-card view model for an item id (resource yield, dropped item, …). */
@@ -70,6 +75,23 @@ export function buildItemInfo(itemId: string): ItemInfoView {
   ];
   const buildsInto = [...new Set(buildingDefs.map((b) => b.name))];
 
+  // Farming: if this item is a crop's seed or its harvested produce, surface the crop's grow window
+  // (temp / water / soil / time) so the requirements read off either the seed bag or the harvest stack.
+  let farming: ItemInfoView['farming'];
+  const cropRel = resourceObjectService.getCropForItem(itemId);
+  if (cropRel?.def.crop) {
+    const cr = cropRel.def.crop;
+    const days = cr.growthTurns / TURNS_PER_DAY;
+    const rows = [
+      { label: 'Grows', val: `${cr.minTemp} to ${cr.maxTemp}°C` },
+      { label: 'Water', val: `${cr.minMoisture}–${cr.maxMoisture}%` },
+      { label: 'Soil', val: `≥ ${SOIL_TIER_NAME[cr.minSoil as SoilTier] ?? cr.minSoil}` },
+      { label: 'Matures', val: `${Number.isInteger(days) ? days : days.toFixed(1)} days` }
+    ];
+    if (cr.needsLight) rows.push({ label: 'Light', val: 'needs sun' });
+    farming = { crop: cropRel.def.displayName, rows };
+  }
+
   return {
     id: itemId,
     name,
@@ -80,6 +102,7 @@ export function buildItemInfo(itemId: string): ItemInfoView {
       def?.decaySeconds && def.decaySeconds > 0 ? formatDuration(def.decaySeconds) : undefined,
     condition: def?.maxDurability,
     craftedInto,
-    buildsInto
+    buildsInto,
+    farming
   };
 }

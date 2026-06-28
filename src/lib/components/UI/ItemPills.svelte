@@ -76,6 +76,12 @@
         {#if hovered.condition != null}<span>cond {hovered.condition}</span>{/if}
       </div>
     {/if}
+    {#if hovered.farming}
+      <div class="tip-hdr">FARMING · {hovered.farming.crop}</div>
+      {#each hovered.farming.rows as r}
+        <div class="tip-row tip-farm"><span class="tip-dim">{r.label}</span><span>{r.val}</span></div>
+      {/each}
+    {/if}
     {#if hovered.craftedInto.length > 0}
       <div class="tip-hdr">CRAFTS INTO</div>
       <div class="tip-row">{hovered.craftedInto.join(' · ')}</div>
@@ -154,5 +160,14 @@
   .tip-dim {
     color: var(--text-dim);
     font-style: italic;
+  }
+  /* Farming rows — label (dim) on the left, value on the right, like the env readout. */
+  .tip-farm {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .tip-farm .tip-dim {
+    font-style: normal;
   }
 </style>
