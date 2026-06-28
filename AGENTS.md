@@ -81,7 +81,10 @@ pnpm build                # production build
 pnpm check                # TypeScript + Svelte type check (svelte-check)
 pnpm lint                 # ESLint + Prettier check
 pnpm format               # Prettier write
-pnpm test                 # Vitest unit/regression suite (test:watch for watch mode)
+pnpm test                 # Vitest FULL suite (~800 tests) — only when asked or a broad hub changed
+pnpm test:related <files> # only tests importing the given source files (default after an edit)
+pnpm test:changed         # only tests affected by the current git diff
+pnpm test:watch           # watch mode
 pnpm add:wasm             # rebuild spatial-core WASM → src/lib/spatial-core-pkg/
 pnpm graph                # (re)extract this project's graph via the standalone codegraph tool
 pnpm graph:serve          # codegraph viewer + JSON query API on http://localhost:5185
