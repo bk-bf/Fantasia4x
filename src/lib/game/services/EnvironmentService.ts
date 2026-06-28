@@ -266,6 +266,14 @@ export function biomeBaseTemp(terrainType: string): number {
   return BIOMES[terrainType]?.baseTemp ?? DEFAULT_BIOME_TEMP;
 }
 
+/** The season-baked tile temperature = biome baseline + season offset. The SINGLE formula the bake
+ *  (`recomputeWorldTemperature`) writes into `tile.temperature`; also used to TEST whether a tile is
+ *  already baked for the current season (GameEngineImpl), so a reloaded all-zero map gets re-baked
+ *  even when the season hasn't changed. */
+export function seasonBakedTemp(terrainType: string, season: Season): number {
+  return biomeBaseTemp(terrainType) + SEASONS[season].tempOffset;
+}
+
 /**
  * Recompute every tile's temperature IN PLACE for the given season (PERF-1: never
  * `worldMap.map()`, never flip the worldMap ref → no terrain rebuild / re-clone).
@@ -286,7 +294,7 @@ export function recomputeWorldTemperature(worldMap: WorldTile[][], season: Seaso
   for (const row of worldMap) {
     for (const tile of row) {
       if (!((tile.temperature ?? 0) > 0)) staleBefore++;
-      const temp = biomeBaseTemp(tile.terrainType) + offset;
+      const temp = seasonBakedTemp(tile.terrainType, season);
       tile.temperature = temp;
       sum += temp;
       count++;

@@ -61,6 +61,7 @@ import { rng } from '../core/rng';
 import {
   seasonForTurn,
   recomputeWorldTemperature,
+  seasonBakedTemp,
   advanceWeatherForDay,
   weatherEffects,
   rebuildThermalField,
@@ -390,11 +391,24 @@ export class GameEngineImpl implements GameEngine {
     }
     if (seasonDay !== gs.seasonDay) gs.seasonDay = seasonDay;
 
-    // Recompute temperatures once when the season the map was baked for changes (or on first
-    // populated tick — fresh worlds carry temperature 0 until baked here).
-    if (gs.worldMap.length > 0 && this.temperatureSeason !== season) {
-      this.avgTileTemp = recomputeWorldTemperature(gs.worldMap, season);
-      this.temperatureSeason = season;
+    // Recompute tile temperatures when the cache isn't valid for the current season. Gating on the
+    // SEASON ALONE was the hypothermia bug: `tile.temperature` is a worker-only field, so a fresh
+    // world AND every reloaded save / re-init arrives with `temperature: 0` on every tile. If that
+    // unbaked map showed up while `temperatureSeason` already equalled the season, the bake was
+    // skipped and the whole map stayed 0 °C — pawns froze at any real temperature. Instead, probe one
+    // tile against the canonical baked value (`seasonBakedTemp`): O(1) per tick, it's true after a
+    // harvest (tiles are spread, temperature preserved) so no needless 16k-tile rescan, and false for
+    // a season change OR an all-zero reloaded map — both of which then trigger exactly one rebake.
+    if (gs.worldMap.length > 0) {
+      const probe = gs.worldMap[0]?.[0];
+      const cacheValid =
+        this.temperatureSeason === season &&
+        !!probe &&
+        probe.temperature === seasonBakedTemp(probe.terrainType, season);
+      if (!cacheValid) {
+        this.avgTileTemp = recomputeWorldTemperature(gs.worldMap, season);
+        this.temperatureSeason = season;
+      }
     }
 
     // Weather: one Markov step per in-game day at midnight. Skipped in the menu-preview backdrop —
