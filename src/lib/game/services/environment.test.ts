@@ -275,6 +275,22 @@ describe('EnvironmentService — weather (Phase C)', () => {
     expect(count(0.9)).toBeGreaterThan(count(0.05));
   });
 
+  it('the clear/improvement escape stays reachable from rain even at high wind (Σ>1 fix)', () => {
+    // Regression: when wind-scaled escalation weights push the transition pool past 1, the old draw
+    // walked branches in array order over a fixed [0,1) and returned on the first hit — so `clear`
+    // (listed last) became unreachable exactly when it was windy (0% escape). Drawing over the real
+    // pool keeps every branch's proportional share, so the colony can still catch a break in a gale.
+    const rng = new SeededRng(123);
+    const seen = new Set<WeatherType>();
+    for (let i = 0; i < 4000; i++) {
+      seen.add(
+        advanceWeatherForDay({ type: 'rain', intensity: 0.5, turnsRemaining: 0, wind: 0.95 }, 'autumn', rng).type
+      );
+    }
+    expect(seen.has('clear')).toBe(true);
+    expect(seen.has('foggy_rain')).toBe(true); // the other branch listed after the wind escalations
+  });
+
   it('weatherSightMul shortens sight in fog/storm and is 1 in clear', () => {
     expect(weatherSightMul('clear')).toBe(1);
     expect(weatherSightMul('fog')).toBeLessThan(0.6);

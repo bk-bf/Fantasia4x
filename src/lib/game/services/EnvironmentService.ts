@@ -1092,14 +1092,22 @@ function rollWeatherType(
     total += w;
   }
   if (total <= 0) return prev;
-  // Draw over [0,1): walk the weighted branches; falling past the end (when Σ < 1) = stay put.
-  const r = rng.random();
+  // The leftover weight (1 − Σ) is the chance the weather PERSISTS. Model that as an explicit branch
+  // and draw across the FULL pool (Σ + persist ≥ 1). This matters when `windScaled` branches push Σ
+  // past 1: the old code drew over a fixed [0,1) and returned on the first cumulative hit, so any
+  // branch listed AFTER the point where the running sum reached 1 became unreachable — and the
+  // improvement/`clear` escapes are typically listed last, so a windy day silently starved exactly the
+  // exits out of bad weather (rain→clear dropped to 0% at high wind). Drawing over the real pool keeps
+  // every branch's proportional share regardless of array order. For Σ ≤ 1 this is identical to the old
+  // leftover-persist draw (pool = 1, r ∈ [0,1), same slices).
+  const persist = Math.max(0, 1 - total);
+  const r = rng.random() * (total + persist);
   let acc = 0;
   for (const { to, w } of weighted) {
     acc += w;
     if (r < acc) return to;
   }
-  return prev;
+  return prev; // fell into the persist slice
 }
 
 /**
