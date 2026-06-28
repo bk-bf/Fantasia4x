@@ -17,7 +17,7 @@ describe('job registry (jobs.jsonc ↔ JobService)', () => {
     expect(new Set(defs.map((d) => d.id))).toEqual(new Set(jobService.jobTypeIds()));
   });
 
-  it('declares exactly the nine colony pool job types', () => {
+  it('declares exactly the ten colony pool job types', () => {
     expect(new Set(defs.map((d) => d.id))).toEqual(
       new Set([
         'harvest',
@@ -28,6 +28,7 @@ describe('job registry (jobs.jsonc ↔ JobService)', () => {
         'craft',
         'caretake',
         'refuel',
+        'repair',
         'plant'
       ])
     );
@@ -54,6 +55,7 @@ describe('job registry (jobs.jsonc ↔ JobService)', () => {
     expect(wk('craft')).toBe('crafting');
     expect(wk('caretake')).toBe('caretaking');
     expect(wk('refuel')).toBe('construction');
+    expect(wk('repair')).toBe('construction');
     // FSM-internal kinds (no JobDef) fall through to their own id, as before.
     expect(wk('eat')).toBe('eat');
     expect(wk('sleep')).toBe('sleep');

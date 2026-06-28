@@ -56,9 +56,16 @@ describe('BuildingService condition (refactor Stage 1)', () => {
     expect(buildingService.stepBuildingCondition(gs)).toBe(gs);
   });
 
-  it('does not decay a building whose def has no decay rate (e.g. hearth)', () => {
-    const gs = makeState([wall({ type: 'hearth' })]);
+  it('does not decay an IMMUNE building (conditionDecayPerTurn 0, e.g. tile_roof)', () => {
+    const gs = makeState([wall({ type: 'tile_roof' })]);
     expect(buildingService.stepBuildingCondition(gs)).toBe(gs);
+  });
+
+  it('applies default wear to a costed building with no explicit decay rate', () => {
+    // Every real (cost-bearing) building now deteriorates + is repairable; a hearth has a build cost
+    // but no explicit conditionDecayPerTurn, so it wears at the default rate.
+    const out = buildingService.stepBuildingCondition(makeState([wall({ type: 'hearth' })]));
+    expect(out.buildings![0].condition).toBeLessThan(100);
   });
 
   it('repair restores condition to 100 and consumes ~25% of build cost', () => {
