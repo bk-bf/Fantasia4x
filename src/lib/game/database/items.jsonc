@@ -1341,6 +1341,26 @@
     "decaysTo"         : "rotten_meat"
   },
   {
+    "id"               : "dried_fruit",
+    "charSpans"        : [ {"sheet": "items", "id": 127} ],
+    "name"             : "Dried Fruit",
+    "type"             : "food",
+    "category"         : "fruit",
+    "maxDurability"    : 80,
+    "deteriorationRate": 0.04,
+    "description"      : "Apples, berries and grapes shrivelled sweet in the sun and smoke. Keeps for months without spoiling.",
+    "color"            : "#9A5A3C",
+    "amount"           : 0,
+    "weightKg"         : 0.1,
+    "volumeL"          : 0.15,
+    "nutrition"        : 44,
+    "toolTierRequired" : 0,
+    "poisonChance"     : 0.01,
+    "rarity"           : "common",
+    "decaySeconds"     : 42000,
+    "decaysTo"         : "rotten_food"
+  },
+  {
     "id"               : "pine_plank",
     "charSpans"        : [ {"sheet": "items", "id": 225} ],
     "name"             : "Pine Plank",

@@ -92,6 +92,7 @@
   {
     "id"               : "make_cured_thin_hide",
     "station"          : "hide_rack",
+    "passive"          : true,
     "inputs"           : {"rabbit_pelt": 1, "ash": 2},
     "inputAlternatives": [ {"rat_pelt": 1, "ash": 2}, {"rabbit_pelt": 1, "salt": 1}, {"rat_pelt": 1, "salt": 1} ],
     "outputs"          : {"cured_thin_hide": 1},
@@ -101,6 +102,7 @@
   {
     "id"               : "make_cured_light_hide",
     "station"          : "hide_rack",
+    "passive"          : true,
     "inputs"           : {"deer_hide": 1, "ash": 2},
     "inputAlternatives": [ {"goat_hide": 1, "ash": 2}, {"deer_hide": 1, "salt": 1}, {"goat_hide": 1, "salt": 1} ],
     "outputs"          : {"cured_light_hide": 1},
@@ -110,6 +112,7 @@
   {
     "id"               : "make_cured_sturdy_hide",
     "station"          : "hide_rack",
+    "passive"          : true,
     "inputs"           : {"wolf_hide": 1, "ash": 2},
     "inputAlternatives": [
       {"boar_hide": 1, "ash": 2                                           },
@@ -125,6 +128,7 @@
   {
     "id"               : "make_cured_heavy_hide",
     "station"          : "hide_rack",
+    "passive"          : true,
     "inputs"           : {"elk_hide": 1, "ash": 2},
     "inputAlternatives": [ {"elk_hide": 1, "salt": 1}, {"aurochs_hide": 1, "ash": 2}, {"aurochs_hide": 1, "salt": 1} ],
     "outputs"          : {"cured_heavy_hide": 1},
@@ -134,6 +138,7 @@
   {
     "id"               : "make_cured_thick_hide",
     "station"          : "hide_rack",
+    "passive"          : true,
     "inputs"           : {"bear_pelt": 1, "ash": 2},
     "inputAlternatives": [ {"bear_pelt": 1, "salt": 1} ],
     "outputs"          : {"cured_thick_hide": 1},
@@ -483,21 +488,8 @@
       }
     }
   },
-  {
-    "id"              : "make_dried_meat",
-    "station"         : "drying_rack",
-    "inputs"          : {},
-    "outputs"         : {"dried_meat": 1},
-    "workAmount"      : 120,
-    "toolTierRequired": 0,
-    "dynamicRecipe"   : {
-      "meat": {
-        "acceptsCategory": "meat",
-        "quantity"       : 1,
-        "default"        : {"name": "Dried Meat", "description": "Wind- and smoke-dried meat. Keeps well without salt."}
-      }
-    }
-  },
+  // make_dried_meat removed — meat now cures into dried_meat PASSIVELY on the drying rack (or any warm,
+  // dry spot) via ItemService.stepDrying (item `category:meat` → driesTo dried_meat). No worked recipe.
   {
     "id"              : "make_oak_plank",
     "station"         : "sawtable",
@@ -2881,6 +2873,7 @@
   {
     "id"               : "cure_beast_hide",
     "station"          : "hide_rack",
+    "passive"          : true,
     "inputs"           : {"owlbear_pelt": 1, "ash": 3},
     "inputAlternatives": [
       {"sabretooth_pelt": 1, "ash": 3},

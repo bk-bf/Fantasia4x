@@ -91,7 +91,8 @@ type DryingRule = { itemId: string; seconds: number; mode: 'ambient' | 'fire-rin
 // Category-level drying rules (item-def `driesTo` overrides these; `driesTo: null` opts out). Mirrors
 // the old make_dried_meat recipe's `acceptsCategory: "meat"`.
 const CATEGORY_DRYING: Record<string, DryingRule> = {
-  meat: { itemId: 'dried_meat', seconds: 600, mode: 'ambient' }
+  meat: { itemId: 'dried_meat', seconds: 600, mode: 'ambient' },
+  fruit: { itemId: 'dried_fruit', seconds: 700, mode: 'ambient' }
 };
 
 /**
@@ -113,6 +114,49 @@ function dryingRuleFor(resourceId: string): DryingRule | null {
   if (def?.driesTo !== undefined) return def.driesTo ? { mode: 'ambient', ...def.driesTo } : null;
   const rule = def?.category ? CATEGORY_DRYING[def.category] : undefined;
   return rule && rule.itemId !== resourceId ? rule : null;
+}
+
+// Per-pass drying context (built once): lit fires (fire-ring seasoning) + rack tiles (dryingBonus) +
+// the global weather/diurnal temperature delta.
+type DryingCtx = { fires: { x: number; y: number }[]; dryRacks: Map<string, number>; weatherTemp: number };
+function dryingContext(gameState: GameState): DryingCtx {
+  const fires: { x: number; y: number }[] = [];
+  const dryRacks = new Map<string, number>();
+  for (const b of gameState.buildings ?? []) {
+    if (b.status !== 'complete') continue;
+    if (b.lit) fires.push({ x: b.x, y: b.y });
+    const bonus = buildingService.getBuildingById(b.type)?.effects?.dryingBonus ?? 0;
+    if (bonus > 0) {
+      const key = b.y + ',' + b.x;
+      dryRacks.set(key, Math.max(dryRacks.get(key) ?? 0, bonus));
+    }
+  }
+  const weatherTemp =
+    weatherEffects(gameState.weather).tempDelta + diurnalTempDelta(gameState.turn, gameState.season);
+  return { fires, dryRacks, weatherTemp };
+}
+
+/**
+ * Current drying rate for a stack (worker side — reads the prebuilt thermalAt field): drying-seconds
+ * gained per second. >0 = curing, 0 = idle (too cold / not by a fire), <0 = reversing (wet). The
+ * SINGLE determination both stepDrying (to cure) and stepItemDecay (to gate spoilage) consult, so a
+ * stack can never both dry and spoil. Reserved/committed stacks are handled by the callers, not here.
+ */
+function dryRateFor(d: DroppedItem, gameState: GameState, ctx: DryingCtx): number {
+  const rule = dryingRuleFor(d.resourceId);
+  if (!rule) return 0;
+  if (rule.mode === 'fire-ring') {
+    if (ctx.fires.length === 0) return 0;
+    let nearest = Infinity;
+    for (const f of ctx.fires) nearest = Math.min(nearest, chebyshev(d.x, d.y, f.x, f.y));
+    return nearest === 2 ? 1 : 0;
+  }
+  const tile = gameState.worldMap?.[d.y]?.[d.x];
+  if (!tile) return 0;
+  const thermal = thermalAt(d.x, d.y);
+  const temp = effectiveTemperature(seasonBakedTemp(tile.terrainType, gameState.season), ctx.weatherTemp, thermal);
+  const wet = tileWetness(tile.moisture ?? 0, gameState.weather, thermal);
+  return ambientDryRate(temp, wet, ctx.dryRacks.get(d.y + ',' + d.x) ?? 1);
 }
 
 /** Live drying readout for one stack, for the UI dryness meter + speed arrow (null = doesn't dry). */
@@ -774,6 +818,10 @@ export class ItemServiceImpl implements ItemService {
       bump(`${b.x},${b.y}`, BUILDING_DEFS_FOR_ITEMS.find((def) => def.id === b.type)?.effects?.preservation);
     }
 
+    // Drying context — so spoilage and drying can never run on the same stack at once (a stack is
+    // EITHER curing OR spoiling, never both). Priority: reserved/processing > drying > spoiling.
+    const dryCtx = dryingContext(gameState);
+
     let changed = false;
     const next: DroppedItem[] = [];
     const rotted: { resourceId: string; x: number; y: number; stored?: boolean; qty: number }[] =
@@ -782,6 +830,12 @@ export class ItemServiceImpl implements ItemService {
     for (const d of drops) {
       const def = this.getItemById(d.resourceId);
       if (!def?.decaySeconds || (d.quantity ?? 0) <= 0) {
+        next.push(d);
+        continue;
+      }
+      // A stack committed to a craft/ferment order (reservedFor — the transformation preserves it) or
+      // one that is ACTIVELY drying (dry rate > 0) does NOT spoil. Everything else spoils as normal.
+      if (d.reservedFor || dryRateFor(d, gameState, dryCtx) > 0) {
         next.push(d);
         continue;
       }
@@ -919,6 +973,8 @@ export class ItemServiceImpl implements ItemService {
   /** Live drying readout for one stack (mirrors stepDrying via the shared ambientDryRate / fire-ring
    *  rules). Uses computeThermalAt so the HUD on the main thread samples fire warmth correctly. */
   dryingStatus(d: DroppedItem, gameState: GameState): DryingStatus | null {
+    // Reserved → committed to a craft/ferment order: it's neither drying nor spoiling, so show nothing.
+    if (d.reservedFor) return null;
     const rule = dryingRuleFor(d.resourceId);
     if (!rule) return null;
     const target = rule.seconds;
@@ -964,68 +1020,30 @@ export class ItemServiceImpl implements ItemService {
     const drops = gameState.droppedItems;
     if (!drops || drops.length === 0) return gameState;
 
-    // Cheap pre-scan: skip the whole (allocating) pass unless something dryable is on the ground.
+    // Cheap pre-scan: skip the whole (allocating) pass unless something free + dryable is on the ground
+    // (reserved stacks are committed to an order — e.g. fermenting — and never dry).
     let hasDryable = false;
     for (const d of drops) {
-      if ((d.quantity ?? 0) > 0 && dryingRuleFor(d.resourceId)) {
+      if ((d.quantity ?? 0) > 0 && !d.reservedFor && dryingRuleFor(d.resourceId)) {
         hasDryable = true;
         break;
       }
     }
     if (!hasDryable) return gameState;
 
-    // Lit fires (fire-ring seasoning) and rack tiles (effects.dryingBonus multiplier).
-    const fires: { x: number; y: number }[] = [];
-    const dryRacks = new Map<string, number>();
-    for (const b of gameState.buildings ?? []) {
-      if (b.status !== 'complete') continue;
-      if (b.lit) fires.push({ x: b.x, y: b.y });
-      const bonus = buildingService.getBuildingById(b.type)?.effects?.dryingBonus ?? 0;
-      if (bonus > 0) {
-        const key = b.y + ',' + b.x;
-        dryRacks.set(key, Math.max(dryRacks.get(key) ?? 0, bonus));
-      }
-    }
-
-    // Env scalars for ambient drying (once per pass — mirrors the needs sim).
-    const worldMap = gameState.worldMap;
-    const weather = gameState.weather;
-    const weatherTemp =
-      weatherEffects(weather).tempDelta + diurnalTempDelta(gameState.turn, gameState.season);
+    const ctx = dryingContext(gameState);
     const dt = SECONDS_PER_TICK * elapsedTicks;
 
     let changed = false;
     const next = drops.map((d) => {
-      if ((d.quantity ?? 0) <= 0) return d;
+      // Reserved → committed to a craft/ferment order: the transformation owns it, so it neither
+      // dries nor (in stepItemDecay) spoils. Fermenting overrides both.
+      if ((d.quantity ?? 0) <= 0 || d.reservedFor) return d;
       const rule = dryingRuleFor(d.resourceId);
       if (!rule) return d;
-
-      if (rule.mode === 'fire-ring') {
-        if (fires.length === 0) return d;
-        // Chebyshev distance to the nearest fire; seasoning ring is exactly 2 (not adjacent).
-        let nearest = Infinity;
-        for (const f of fires) nearest = Math.min(nearest, chebyshev(d.x, d.y, f.x, f.y));
-        if (nearest !== 2) return d;
-        const drying = (d.drying ?? 0) + dt;
-        changed = true;
-        if (drying >= rule.seconds) return { ...d, resourceId: rule.itemId, drying: undefined };
-        return { ...d, drying };
-      }
-
-      // Ambient cure.
-      const tile = worldMap?.[d.y]?.[d.x];
-      if (!tile) return d; // no tile context (e.g. tests) — can't judge temp/wetness
-      const thermal = thermalAt(d.x, d.y);
-      const temp = effectiveTemperature(
-        seasonBakedTemp(tile.terrainType, gameState.season),
-        weatherTemp,
-        thermal
-      );
-      const wet = tileWetness(tile.moisture ?? 0, weather, thermal);
+      const rate = dryRateFor(d, gameState, ctx);
+      if (rate === 0) return d; // idle (too cold / not by a fire) — just sits (it spoils instead)
       const have = d.drying ?? 0;
-      const mult = dryRacks.get(d.y + ',' + d.x) ?? 1;
-      const rate = ambientDryRate(temp, wet, mult);
-      if (rate === 0) return d; // too cold to dry; just sits
       if (rate < 0 && have <= 0) return d; // wet, but nothing to lose
       const drying = Math.max(0, have + dt * rate);
       changed = true;

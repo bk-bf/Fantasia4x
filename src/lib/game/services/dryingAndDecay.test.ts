@@ -138,6 +138,51 @@ describe('hay-making (stepDrying: plant_fiber → hay)', () => {
     );
     expect(out.droppedItems![0].resourceId).toBe('hay');
   });
+
+  it('raw meat cures to dried_meat on a warm, dry tile (category rule)', () => {
+    const out = itemService.stepDrying(
+      hayState([drop({ resourceId: 'venison', x: 0, y: 0, drying: 599.999 })], [tile('plains', 30)])
+    );
+    expect(out.droppedItems![0].resourceId).toBe('dried_meat');
+  });
+
+  it('salted_meat opts out of meat drying (driesTo: null)', () => {
+    const out = itemService.stepDrying(
+      hayState([drop({ resourceId: 'salted_meat', x: 0, y: 0, drying: 599.999 })], [tile('plains', 30)])
+    );
+    expect(out.droppedItems![0].resourceId).toBe('salted_meat');
+  });
+
+  it('fruit cures to dried_fruit on a warm, dry tile (category rule)', () => {
+    const out = itemService.stepDrying(
+      hayState([drop({ resourceId: 'apple', x: 0, y: 0, drying: 699.999 })], [tile('plains', 30)])
+    );
+    expect(out.droppedItems![0].resourceId).toBe('dried_fruit');
+  });
+
+  // Mutual exclusion: a stack is EITHER curing OR spoiling, never both (priority reserved > dry > spoil).
+  it('actively drying meat does not spoil', () => {
+    const out = itemService.stepItemDecay(
+      hayState([drop({ resourceId: 'venison', x: 0, y: 0 })], [tile('plains', 30)])
+    );
+    expect(out.droppedItems![0].decayAcc ?? 0).toBe(0);
+  });
+
+  it('meat that is not drying (wet) spoils as normal', () => {
+    const out = itemService.stepItemDecay(
+      hayState([drop({ resourceId: 'venison', x: 0, y: 0 })], [tile('swamp', 80)])
+    );
+    expect(out.droppedItems![0].decayAcc ?? 0).toBeGreaterThan(0);
+  });
+
+  it('a reserved (fermenting/processing) stack neither dries nor spoils', () => {
+    const gs = hayState(
+      [drop({ resourceId: 'venison', x: 0, y: 0, reservedFor: 'order-1', drying: 100 })],
+      [tile('plains', 30)]
+    );
+    expect(itemService.stepDrying(gs).droppedItems![0].drying).toBe(100); // not drying
+    expect(itemService.stepItemDecay(gs).droppedItems![0].decayAcc ?? 0).toBe(0); // not spoiling
+  });
 });
 
 describe('§C spoilage (stepItemDecay)', () => {
