@@ -103,6 +103,9 @@ export interface StorageSettings {
    * everything for a general store. An explicit list — even empty — is honoured (empty = take nothing).
    */
   allowedItemIds?: string[];
+  /** Haul-fill priority for this storage bin (same scale as a stockpile zone). Pawns top up
+   *  higher-priority stores first. Undefined = 'normal'. See {@link ZonePriority}. */
+  priority?: ZonePriority;
 }
 
 export interface PlacedBuilding {

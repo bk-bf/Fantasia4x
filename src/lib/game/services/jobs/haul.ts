@@ -9,8 +9,11 @@ import {
   storageTileKeys,
   tilePileCapacity,
   tileStoredPileCount,
-  binFilterAt
+  binFilterAt,
+  isStorageTile,
+  aggregateFromDrops
 } from '../../core/GameState';
+import { zoneInstanceIdAt } from '../DesignationService';
 import { itemMatchesFilter } from './filters';
 import { ENC_OVERLOAD_FULL } from '../../core/needs';
 import { gameLogger } from '../../dev/gameLogger';
@@ -64,6 +67,48 @@ export function storageAcceptsDrop(gs: GameState, resourceId: string): boolean {
     if (storageTileAcceptsDrop(gs, x, y, resourceId)) return true;
   }
   return false;
+}
+
+/**
+ * Does the SPECIFIC store currently on tile (x,y) still admit `resourceId`? Unlike
+ * `storageTileAcceptsDrop` (which defers a plain stockpile tile to "any stockpile accepts"), this
+ * reads the filter of the very zone instance / bin sitting on the tile — so a pile in a zone that no
+ * longer lists its category is rejected even if some OTHER zone would take it. The eviction check
+ * below uses it; relocation to that other zone then happens through the normal loose-drop haul.
+ */
+function storedTileStillAccepts(gs: GameState, x: number, y: number, resourceId: string): boolean {
+  if (!isStorageTile(gs, x, y)) return false; // the zone/bin that held it is gone → evict
+  const binFilter = binFilterAt(gs, x, y);
+  if (binFilter) return resourceAllowedByList(resourceId, binFilter);
+  // Plain stockpile tile: the covering stockpile INSTANCE's own filter (not "any stockpile").
+  const instId = zoneInstanceIdAt(gs, `${x},${y}`, 'stockpile');
+  const inst = instId ? (gs.zoneInstances ?? []).find((z) => z.id === instId) : undefined;
+  if (inst) {
+    if (inst.filter.allowedCategories.length === 0) return true; // unfiltered zone takes anything
+    return itemMatchesFilter(resourceId, inst.filter);
+  }
+  // No per-instance filter (legacy single-zone save) — defer to the colony stockpile filter.
+  return stockpileAcceptsDrop(gs, resourceId);
+}
+
+/**
+ * Re-home stored piles the player has filtered out. When a category is unchecked from the stockpile/
+ * bin that a `stored` pile sits in, the pile must stop counting as "in a stockpile": we flip it back to
+ * a loose drop so (a) it leaves every stock aggregate, (b) the normal haul sync relocates it to another
+ * accepting store — and ONLY if one exists, so a pawn never picks it up to immediately drop it again —
+ * and (c) its URGENT/FORBID buttons reappear. Reserved piles (staged for a craft/fetch) are left alone.
+ * Runs on the job-board cadence; allocates nothing when nothing is evicted (the common path).
+ */
+export function reconcileEvictedDrops(gs: GameState): GameState {
+  let changed = false;
+  const drops = (gs.droppedItems ?? []).map((d) => {
+    if (!d.stored || d.reservedFor) return d;
+    if (storedTileStillAccepts(gs, d.x, d.y, d.resourceId)) return d;
+    changed = true;
+    return { ...d, stored: false };
+  });
+  if (!changed) return gs;
+  return { ...gs, droppedItems: drops, stockpile: aggregateFromDrops(drops) };
 }
 
 export function generate(jobs: Job[], gs: GameState): Job[] {

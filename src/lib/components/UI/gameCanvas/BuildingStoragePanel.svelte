@@ -9,12 +9,29 @@
 -->
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState.js';
-  import type { PlacedBuilding, Item } from '$lib/game/core/types.js';
+  import type { PlacedBuilding, Item, ZonePriority } from '$lib/game/core/types.js';
   import ItemFilterChecklist from '$lib/components/UI/gameCanvas/ItemFilterChecklist.svelte';
   import itemsData from '$lib/game/database/items.jsonc';
   import { buildingService } from '$lib/game/services/BuildingService';
 
   let { building, open = false }: { building: PlacedBuilding; open?: boolean } = $props();
+
+  // Haul-fill priority: pawns top up higher-priority stores before lower ones (same scale as a
+  // stockpile zone — see zonePriorityRankAt, which now honours a bin's storageSettings.priority).
+  const PRIORITIES: { value: ZonePriority; label: string }[] = [
+    { value: 'low', label: 'Low' },
+    { value: 'normal', label: 'Normal' },
+    { value: 'preferred', label: 'Preferred' },
+    { value: 'urgent', label: 'Urgent' }
+  ];
+  const binPriority = $derived(building.storageSettings?.priority ?? 'normal');
+  function setPriority(value: ZonePriority) {
+    gameState.command({
+      type: 'setBuildingStorageSettings',
+      payload: { id: building.id, updates: { priority: value } },
+      save: true
+    });
+  }
 
   // Non-hidden items only (internal items like natural weapons are never haul targets) — same universe
   // the stockpile-zone filter uses.
@@ -58,6 +75,20 @@
   onwheel={(e) => e.stopPropagation()}
 >
   <div class="store-hdr">storage filter</div>
+  <div class="store-prio">
+    <span class="store-prio-label" title="Pawns fill higher-priority stores before lower ones">
+      fill priority
+    </span>
+    <select
+      class="store-prio-select"
+      value={binPriority}
+      onchange={(e) => setPriority(e.currentTarget.value as ZonePriority)}
+    >
+      {#each PRIORITIES as p (p.value)}
+        <option value={p.value}>{p.label}</option>
+      {/each}
+    </select>
+  </div>
   <div class="store-block">
     <div class="store-label">
       {isSpecialized ? 'this store only holds:' : 'allow into this store:'}
@@ -111,6 +142,30 @@
     text-transform: uppercase;
     letter-spacing: 0.07em;
     margin-bottom: 4px;
+  }
+  .store-prio {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .store-prio-label {
+    color: #9c7a3a;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.85em;
+  }
+  .store-prio-select {
+    flex: 1;
+    background: #160f06;
+    border: 1px solid #6b4f22;
+    color: #f0c060;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
   .store-block {
     margin-top: 5px;

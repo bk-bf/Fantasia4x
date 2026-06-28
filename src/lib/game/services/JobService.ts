@@ -120,6 +120,12 @@ class JobServiceImpl {
   }
 
   generateJobs(gameState: GameState): GameState {
+    // Re-home any stored pile the player has just filtered out of its stockpile/bin: flip it back to a
+    // loose drop so it stops counting as stored, the haul sync below relocates it to another accepting
+    // store (if one exists), and its URGENT/FORBID buttons reappear. No-op (no realloc) when nothing
+    // was evicted — the common path.
+    gameState = haul.reconcileEvictedDrops(gameState);
+
     let jobs: Job[] = [...(gameState.jobs ?? [])];
 
     // Run each registered generator in jobs.jsonc declaration order (= the historical sequence:

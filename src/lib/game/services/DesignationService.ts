@@ -72,14 +72,21 @@ export function zoneInstanceIdAt(
   return gameState.designationZoneId?.[tileKey]?.[type] ?? null;
 }
 
-/** Haul-fill priority RANK of the stockpile zone covering tile (x,y) — higher fills first. Tiles in
- *  no stockpile zone (bins, loose ground) default to the 'normal' rank. O(1) tile→instance lookup, so
- *  it's safe on the per-deposit haul hot path. */
+/** Haul-fill priority RANK of the store covering tile (x,y) — higher fills first. A drawn stockpile
+ *  zone wins; otherwise a standalone storage bin may set its own fill priority; loose ground defaults
+ *  to 'normal'. O(1) tile→instance lookup (+ a small buildings scan only when no zone covers the tile),
+ *  so it's safe on the per-deposit haul hot path. */
 export function zonePriorityRankAt(gs: GameState, x: number, y: number): number {
   const id = zoneInstanceIdAt(gs, `${x},${y}`, 'stockpile');
-  if (!id) return ZONE_PRIORITY_RANK.normal;
-  const z = (gs.zoneInstances ?? []).find((zi) => zi.id === id);
-  return ZONE_PRIORITY_RANK[(z?.priority as ZonePriority) ?? 'normal'];
+  if (id) {
+    const z = (gs.zoneInstances ?? []).find((zi) => zi.id === id);
+    return ZONE_PRIORITY_RANK[(z?.priority as ZonePriority) ?? 'normal'];
+  }
+  const bin = (gs.buildings ?? []).find(
+    (b) => b.status === 'complete' && b.x === x && b.y === y && b.storageSettings?.priority
+  );
+  if (bin?.storageSettings?.priority) return ZONE_PRIORITY_RANK[bin.storageSettings.priority];
+  return ZONE_PRIORITY_RANK.normal;
 }
 
 class DesignationServiceImpl {
