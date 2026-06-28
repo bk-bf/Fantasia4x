@@ -4,6 +4,7 @@
   import { gameState } from '$lib/stores/gameState';
   import type { FilterableZoneType, ZoneInstanceType, Item } from '$lib/game/core/types';
   import itemsData from '$lib/game/database/items.jsonc';
+  import { resourceObjectService } from '$lib/game/services/ResourceObjectService';
   import BuildCard from './BuildCard.svelte';
   import SpriteIcon from './SpriteIcon.svelte';
 
@@ -14,6 +15,28 @@
   const ALL_CATEGORIES: string[] = [
     ...new Set(ITEMS_DATABASE.map((i) => i.category).filter(Boolean))
   ].sort();
+
+  // Sowable crops drive the GROW zone's picker — a seed/crop list, NOT the stockpile category grid.
+  // The zone filter still stores the seed's `category` in `allowedCategories` (the sow logic in
+  // jobs/plant.ts matches a seed by category), so a grow zone restricts which crops get sown. We show
+  // the crop's human `displayName` and feed the toggle only the SEED categories (not every item
+  // category) as its universe, so clear/invert math operates on the crop set alone.
+  const CROP_SEEDS: { name: string; category: string }[] = (() => {
+    const byCat = new Map<string, string>();
+    for (const d of resourceObjectService.getAll()) {
+      if (!d.crop) continue;
+      const seedId = d.crop.seedItem;
+      const cat = ITEMS_DATABASE.find((i) => i.id === seedId)?.category ?? seedId;
+      if (!byCat.has(cat)) byCat.set(cat, d.displayName);
+    }
+    return [...byCat.entries()]
+      .map(([category, name]) => ({ category, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  })();
+  const SEED_CATEGORIES: string[] = CROP_SEEDS.map((c) => c.category);
+
+  /** A grow zone filters by crop seed; everything else (stockpile) filters by item category. */
+  const filterUniverse = (type: string) => (type === 'grow' ? SEED_CATEGORIES : ALL_CATEGORIES);
 
   const ZONE_DEFS: {
     type: ZoneInstanceType;
@@ -149,10 +172,10 @@
     gameState.command({ type: 'toggleZonePawn', payload: { instanceId, pawnId }, save: true });
   }
 
-  function toggleCategory(instanceId: string, category: string) {
+  function toggleCategory(instanceId: string, type: string, category: string) {
     gameState.command({
       type: 'toggleInstanceCategory',
-      payload: { instanceId, category, allCategories: ALL_CATEGORIES },
+      payload: { instanceId, category, allCategories: filterUniverse(type) },
       save: true
     });
   }
@@ -257,7 +280,10 @@
               <span class="zc-badge">{tileCount} tiles</span>
             {/if}
             {#if def?.filterable && hasFilter}
-              <span class="zc-badge filtered">{inst.filter.allowedCategories.length} filtered</span>
+              <span class="zc-badge filtered"
+                >{inst.filter.allowedCategories.length}
+                {inst.type === 'grow' ? 'crops' : 'filtered'}</span
+              >
             {/if}
             {#if def?.pawnAssignable}
               <span class="zc-badge filtered"
@@ -279,7 +305,7 @@
                 class:active={isFilterOpen}
                 onclick={() => toggleFilterPanel(inst.id)}
               >
-                FILTER
+                {inst.type === 'grow' ? 'SEEDS' : 'FILTER'}
               </button>
             {/if}
             {#if def?.pawnAssignable}
@@ -307,31 +333,62 @@
       </div>
 
       {#if isFilterOpen}
+        {@const isGrow = inst.type === 'grow'}
         <div class="filter-panel" style="--zcolor: {def?.color ?? '#888'}">
           <div class="filter-hdr">
-            FILTER: {inst.label}
+            {isGrow ? 'SEEDS' : 'FILTER'}: {inst.label}
             <span class="filter-hint">
-              {hasFilter
-                ? `${inst.filter.allowedCategories.length}/${ALL_CATEGORIES.length} categories`
-                : 'no filter (all allowed)'}
+              {#if isGrow}
+                {hasFilter
+                  ? `${inst.filter.allowedCategories.length}/${CROP_SEEDS.length} crops`
+                  : 'no seed chosen (sows any in stock)'}
+              {:else}
+                {hasFilter
+                  ? `${inst.filter.allowedCategories.length}/${ALL_CATEGORIES.length} categories`
+                  : 'no filter (all allowed)'}
+              {/if}
             </span>
             {#if hasFilter}
               <button class="filter-clear-all" onclick={() => clearFilter(inst.id)}>CLEAR</button>
             {/if}
           </div>
           <div class="category-grid">
-            {#each ALL_CATEGORIES as cat}
-              {@const checked = !hasFilter || inst.filter.allowedCategories.includes(cat)}
-              <label class="cat-label" class:checked>
-                <input type="checkbox" {checked} onchange={() => toggleCategory(inst.id, cat)} />
-                {cat}
-              </label>
-            {/each}
+            {#if isGrow}
+              {#each CROP_SEEDS as crop}
+                {@const checked = !hasFilter || inst.filter.allowedCategories.includes(crop.category)}
+                <label class="cat-label" class:checked>
+                  <input
+                    type="checkbox"
+                    {checked}
+                    onchange={() => toggleCategory(inst.id, inst.type, crop.category)}
+                  />
+                  {crop.name}
+                </label>
+              {/each}
+            {:else}
+              {#each ALL_CATEGORIES as cat}
+                {@const checked = !hasFilter || inst.filter.allowedCategories.includes(cat)}
+                <label class="cat-label" class:checked>
+                  <input
+                    type="checkbox"
+                    {checked}
+                    onchange={() => toggleCategory(inst.id, inst.type, cat)}
+                  />
+                  {cat}
+                </label>
+              {/each}
+            {/if}
           </div>
           <div class="filter-note">
-            {hasFilter
-              ? 'Only checked categories will be hauled here.'
-              : 'All categories allowed — uncheck to restrict this zone.'}
+            {#if isGrow}
+              {hasFilter
+                ? 'Only checked crops will be sown here (soil & season permitting).'
+                : 'No crop chosen — farmers sow the first seed in stock. Check crops to restrict.'}
+            {:else}
+              {hasFilter
+                ? 'Only checked categories will be hauled here.'
+                : 'All categories allowed — uncheck to restrict this zone.'}
+            {/if}
           </div>
         </div>
       {/if}

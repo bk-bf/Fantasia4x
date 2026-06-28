@@ -395,7 +395,9 @@
     drink: 'rgba(120, 210, 255, 0.45)',
     wash: 'rgba(150, 240, 215, 0.45)',
     // Restriction zone — matches ZONE_DEFS' #b06cd0; a purple fence the eye reads as "keep pawns here".
-    restrict: 'rgba(176, 108, 208, 0.28)'
+    restrict: 'rgba(176, 108, 208, 0.28)',
+    // Grow zone — matches ZONE_DEFS' #6fae3a; a green field tint over the sown soil.
+    grow: 'rgba(111, 174, 58, 0.30)'
   };
 
   // Phase A2 dynamic lighting: lit campfires emit warm point light, baked into
