@@ -52,6 +52,7 @@
     environmentService,
     computeTileLightLevel,
     tileTemperature,
+    seasonBakedTemp,
     tileWetness,
     computeThermalAt,
     effectiveWindAt,
@@ -5121,7 +5122,14 @@
         <div class="tile-env">
           <span style="color:{tileTemp <= 0 ? '#5aa0e0' : tileTemp >= 30 ? '#e07a2a' : '#b0a060'}"
             >temp {tileTemp}°C</span
-          >
+          >{#if $debugMode}{@const cacheTemp = hoverTile.temperature}{@const baked = seasonBakedTemp(
+              hoverTile.terrainType,
+              $currentSeason
+            )}<span
+              title="Debug: cached tile.temperature (the season-baked base the SIM reads) vs the expected bake (biome + season). The UI temp above adds live weather/diurnal/thermal on top, so it won't match exactly — but if the cache is far off (e.g. 0) the temperature cache is stale/unbaked."
+              style="color:{cacheTemp === baked ? '#6a7a4a' : '#e0552a'}"
+              >(cache {cacheTemp ?? '∅'}°{#if cacheTemp !== baked} ≠ {baked}°{/if})</span
+            >{/if}
           <span style="color:{tileWet >= 60 ? '#3a9ed0' : tileWet >= 30 ? '#6aa0a0' : '#a08a5a'}"
             >wet {Math.round(tileWet)}%</span
           >
