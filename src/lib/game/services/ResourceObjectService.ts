@@ -227,6 +227,28 @@ class ResourceObjectServiceImpl {
     return this.byId.get(resourceId);
   }
 
+  /** Lazily-built map: item id → the cultivated crop it belongs to, as its SEED or harvested PRODUCE. */
+  private cropByItem: Map<string, { def: ResourceObjectDef; role: 'seed' | 'produce' }> | null = null;
+
+  /**
+   * The cultivated crop an ITEM relates to — its SEED (`crop.seedItem`) or its harvested PRODUCE (a reap
+   * yield) — so the item tooltip can surface the crop's grow window (temp/water/soil) for both. Seeds win
+   * when an id is both (a crop yields its own seed). `undefined` for items that aren't tied to a crop.
+   */
+  getCropForItem(itemId: string): { def: ResourceObjectDef; role: 'seed' | 'produce' } | undefined {
+    if (!this.cropByItem) {
+      const m = new Map<string, { def: ResourceObjectDef; role: 'seed' | 'produce' }>();
+      for (const def of this.defs) if (def.crop) m.set(def.crop.seedItem, { def, role: 'seed' });
+      for (const def of this.defs) {
+        if (!def.crop) continue;
+        for (const y of def.interaction.yields ?? [])
+          if (!m.has(y.itemId)) m.set(y.itemId, { def, role: 'produce' });
+      }
+      this.cropByItem = m;
+    }
+    return this.cropByItem.get(itemId);
+  }
+
   getByDesignation(type: DesignationType): ResourceObjectDef[] {
     const HARVEST_TYPES: DesignationType[] = ['harvest', 'woodcut', 'forage', 'dig'];
     if (!HARVEST_TYPES.includes(type)) return [];

@@ -6,6 +6,8 @@
   import { recipeService } from '$lib/game/services/RecipeService';
   import { getMaterialProperty } from '$lib/game/core/materialProperties';
   import { itemService } from '$lib/game/services/ItemService';
+  import { resourceObjectService } from '$lib/game/services/ResourceObjectService';
+  import { SOIL_TIER_NAME, type SoilTier } from '$lib/game/core/Terrains';
   import { WORK_CATEGORIES } from '$lib/game/core/Work';
   import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService';
 
@@ -195,6 +197,23 @@
     return out;
   });
 
+  // FARMING — when this item is a crop's SEED or its harvested PRODUCE, surface the crop's grow window
+  // (temp / water / soil / time) so the requirements read off either the seed bag or the harvest stack.
+  let farming = $derived.by((): { crop: string; rows: Row[] } | null => {
+    const c = resourceObjectService.getCropForItem(item.id);
+    if (!c?.def.crop) return null;
+    const cr = c.def.crop;
+    const days = cr.growthTurns / TURNS_PER_DAY;
+    const rows: Row[] = [
+      { label: 'Grows', val: `${cr.minTemp} to ${cr.maxTemp}°C` },
+      { label: 'Water', val: `${cr.minMoisture}–${cr.maxMoisture}%` },
+      { label: 'Soil', val: `≥ ${SOIL_TIER_NAME[cr.minSoil as SoilTier] ?? cr.minSoil}` },
+      { label: 'Matures', val: `${Number.isInteger(days) ? days : days.toFixed(1)} days` }
+    ];
+    if (cr.needsLight) rows.push({ label: 'Light', val: 'needs sun' });
+    return { crop: c.def.displayName, rows };
+  });
+
   // Generic effects map (e.g. consumables / gear stat tweaks) → the MODIFIERS block.
   let effects = $derived(Object.entries(item.effects ?? {}));
   // Ability grants from COMBAT-SYSTEM weapon tags.
@@ -232,6 +251,16 @@
       <span>{r.val}</span>
     </div>
   {/each}
+
+  {#if farming}
+    <div class="tip-sep">FARMING · {farming.crop}</div>
+    {#each farming.rows as r}
+      <div class="tip-row">
+        <span class="tip-lbl">{r.label}</span>
+        <span>{r.val}</span>
+      </div>
+    {/each}
+  {/if}
 
   {#if matDelta.length > 0 || matNotes.length > 0}
     <div class="tip-sep">
