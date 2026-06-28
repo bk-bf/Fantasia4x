@@ -234,6 +234,37 @@ export function conditionAudio(id: string): string | undefined {
   return ALL_CONDITION_DEFS.find((d) => d.id === id)?.audio;
 }
 
+/** Vital conditions that raise a colony-wide chronicle alert when they worsen a stage (a starving or
+ *  dehydrating colonist is an emergency the player should be told about, not just a floating label). */
+const VITAL_ALERT_IDS = new Set(['malnutrition', 'dehydration']);
+
+/**
+ * Detect which vital conditions (malnutrition/dehydration) just ESCALATED to a worse stage since
+ * `prevStages` (from {@link snapshotConditionStages}) — for the chronicle/bugle alert. Only UPWARD
+ * graduations past the benign baseline stage (index 0 = "hungry"/"thirsty", which every pawn hits
+ * routinely) count; recovery (downgrade) and the baseline never alert. Returns `{id, stageLabel}` per
+ * escalation. Pure — the caller (PawnStateMachine) emits the sink event with the pawn's identity.
+ */
+export function detectVitalEscalations(
+  prevStages: Map<string, string> | undefined,
+  next: EntityCondition[]
+): { id: string; stageLabel: string }[] {
+  const out: { id: string; stageLabel: string }[] = [];
+  for (const c of next) {
+    if (!VITAL_ALERT_IDS.has(c.id)) continue;
+    const def = CONDITIONS_DB.find((d) => d.id === c.id);
+    if (!def) continue;
+    const stages = def.stages;
+    let curIdx = -1;
+    for (let i = 0; i < stages.length; i++) if (c.severity >= stages[i].minSeverity) curIdx = i;
+    if (curIdx < 1) continue; // none, or the benign baseline stage — not alert-worthy
+    const prevLabel = prevStages?.get(c.id);
+    const prevIdx = prevLabel ? stages.findIndex((s) => s.label === prevLabel) : -1;
+    if (curIdx > prevIdx) out.push({ id: c.id, stageLabel: stages[curIdx].label });
+  }
+  return out;
+}
+
 /** Return the active ConditionStage for a given condition at its current severity. */
 export function getConditionCurrentStage(condition: EntityCondition): ConditionStage | undefined {
   const def = CONDITIONS_DB.find((d) => d.id === condition.id);

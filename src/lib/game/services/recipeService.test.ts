@@ -16,8 +16,9 @@ describe('RecipeService (recipe registry, Stage A)', () => {
     expect(r).toBeDefined();
     expect(r!.station).toBe('butcher_spot');
     expect(r!.inputs).toEqual({ deer_carcass: 1 });
-    // Butchery multi-yield (ADR-016 follow-up): one carcass → meat + hide + bones in one run.
-    expect(r!.outputs).toEqual({ venison: 1, deer_hide: 1, medium_bones: 1 });
+    // Butchery multi-yield (ADR-016 follow-up): one carcass → meat + hide + bones + sinew in one run
+    // (sinew is a butchery byproduct of medium/large animals now, not a separate whole-carcass recipe).
+    expect(r!.outputs).toEqual({ venison: 1, deer_hide: 1, medium_bones: 1, sinew: 1 });
   });
 
   it('an authored recipe with byproducts shadows the synthesised one (firewood → +branches)', () => {

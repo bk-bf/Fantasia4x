@@ -48,6 +48,12 @@
   export let toolTier: number | null = null;
   /** Whether the colony's current tool level satisfies {toolTier}; unmet tiers render in red. */
   export let toolMet = true;
+  /** Required NAMED tool for this recipe (recipe `toolRequirement` → a specific implement, e.g. a Clay
+   *  Cooking Pot for stews). Distinct from the numeric {toolTier}; shown so the player knows a stew
+   *  needs a pot even though the recipe is tier-0. Omitted when the recipe needs no named tool. */
+  export let requiredTool: string | null = null;
+  /** Whether the colony holds {requiredTool}; unmet renders in red with a "(none)" suffix. */
+  export let requiredToolMet = true;
   export let actionLabel: string;
   export let actionEnabled = true;
   /** ok = buildable/craftable, missing = can't afford, blocked = unmet requirement,
@@ -119,6 +125,14 @@
     {#if toolTier}<div class="card-tool" class:unmet={!toolMet} title="required tool tier">
         🔧 tier {toolTier} tools{#if !toolMet}
           (locked){/if}
+      </div>{/if}
+    {#if requiredTool}<div
+        class="card-tool"
+        class:unmet={!requiredToolMet}
+        title="required implement"
+      >
+        🍲 needs {requiredTool}{#if !requiredToolMet}
+          (none){/if}
       </div>{/if}
     <div class="card-cost"><slot /></div>
     {#if quantities && onQuantity}

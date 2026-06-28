@@ -25,6 +25,7 @@
     hideSidebars,
     autosaveEnabled,
     autoPauseOnThreat,
+    autoPauseOnDeath,
     defaultGameSpeed,
     debugMode,
     wasdPan,
@@ -193,6 +194,12 @@
         label="Auto-pause on threat"
         checked={$autoPauseOnThreat}
         onToggle={autoPauseOnThreat.toggle}
+      />
+      <SettingRow
+        type="checkbox"
+        label="Auto-pause on death"
+        checked={$autoPauseOnDeath}
+        onToggle={autoPauseOnDeath.toggle}
       />
 
       <div class="section">Advanced</div>

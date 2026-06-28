@@ -167,6 +167,11 @@ export const defaultGameSpeed = createPersistedNumber('fx.gameplay.defaultSpeed'
  *  sim keeps running. Read by the sim-log bridge's threatAlert handler (stores/simLogBridge.ts). */
 export const autoPauseOnThreat = createPersistedBool('fx.gameplay.autoPauseOnThreat', true);
 
+/** Gameplay — auto-pause the game the moment a colonist dies. ON by default; persisted. When off, the
+ *  death still raises a pulsing chronicle alert + bugle but the sim keeps running. Read by the sim-log
+ *  bridge's pawnDeath handler (stores/simLogBridge.ts). */
+export const autoPauseOnDeath = createPersistedBool('fx.gameplay.autoPauseOnDeath', true);
+
 /** Controls — pan the map camera with WASD, in ADDITION to the arrow keys + mouse-drag (never instead
  *  of them). ON by default; persisted. Gates only the WASD branch of GameCanvas.handleKeyDown. */
 export const wasdPan = createPersistedBool('fx.controls.wasdPan', true);

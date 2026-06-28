@@ -12,8 +12,8 @@ import { combatFeedback } from './combatFeedback';
 import { attackLunges } from './attackLunges';
 import { combatSounds } from './combatSounds';
 import { projectiles } from './projectiles';
-import { requestThreatPause } from './gameState';
-import { threatPulse } from './uiState';
+import { requestThreatPause, requestDeathPause } from './gameState';
+import { threatPulse, alertPulse } from './uiState';
 
 /**
  * The real (DOM/store-backed) sink. Exported so the sim-worker bridge can replay buffered
@@ -48,6 +48,45 @@ export const realSimLogSink: SimLogSink = {
       pulse: true
     });
     threatPulse.set(Date.now());
+  },
+  // A colonist's malnutrition/dehydration just worsened a stage: pulsing chronicle warning + the
+  // colony-alert bugle (alertPulse). No auto-pause — it's a warning, not an ambush.
+  vitalAlert: (_pawnId, pawnName, vital, stageLabel, turn, focusX, focusY) => {
+    const label = vital === 'malnutrition' ? 'Malnutrition' : 'Dehydration';
+    logActivity({
+      turn,
+      type: 'pawn_action',
+      actor: _pawnId,
+      action: `${pawnName} is ${stageLabel} — ${label.toLowerCase()} worsening`,
+      target: pawnName,
+      result: `${label}: ${stageLabel}`,
+      severity: 'warning',
+      entityIds: [_pawnId],
+      focusX,
+      focusY,
+      pulse: true
+    });
+    alertPulse.set(Date.now());
+  },
+  // A colonist died: auto-pause (if enabled) + pulsing chronicle alert + the colony-alert bugle. The
+  // per-path death LOG (killPawn / combat) already wrote the narrative entry; this adds the pulse +
+  // pause so the player can't miss a permadeath. Fired once from the shared finaliser.
+  pawnDeath: (pawnId, pawnName, cause, turn, focusX, focusY) => {
+    requestDeathPause();
+    logActivity({
+      turn,
+      type: 'pawn_action',
+      actor: pawnId,
+      action: `${pawnName} has died (${cause.replace(/_/g, ' ')})`,
+      target: pawnName,
+      result: 'Colonist lost',
+      severity: 'critical',
+      entityIds: [pawnId],
+      focusX,
+      focusY,
+      pulse: true
+    });
+    alertPulse.set(Date.now());
   }
 };
 

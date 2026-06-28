@@ -61,6 +61,7 @@ import {
   applyShock,
   snapshotConditionStages,
   emitPersistentConditionFloaters,
+  detectVitalEscalations,
   conditionsSig,
   syncFractureConditions,
   COLLAPSE_CONSCIOUSNESS,
@@ -215,6 +216,17 @@ function finalizePawnDeath(
   cause: DeadPawnRecord['cause'],
   gameState: GameState
 ): GameState {
+  // Colony-wide death alert: auto-pause (autoPauseOnDeath) + pulsing chronicle entry + bugle. Fired
+  // from the SHARED finaliser so it covers BOTH need/condition deaths (killPawn) and combat deaths
+  // (reapDeadPawns) exactly once — independent of the per-path activity logging above.
+  simLog.pawnDeath(
+    pawn.id,
+    pawn.name,
+    String(cause),
+    gameState.turn,
+    pawn.position?.x ?? -1,
+    pawn.position?.y ?? -1
+  );
   const deadRecord = {
     name: pawn.name,
     cause,
@@ -622,6 +634,19 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     pawn.position?.x ?? -1,
     pawn.position?.y ?? -1
   );
+  // Colony-wide alert (chronicle + bugle) when a colonist's malnutrition/dehydration WORSENS a stage —
+  // a starving/dehydrating pawn is an emergency the player should be told about, not just a floater.
+  for (const esc of detectVitalEscalations(prevStages, conditions)) {
+    simLog.vitalAlert(
+      pawn.id,
+      pawn.name,
+      esc.id as 'malnutrition' | 'dehydration',
+      esc.stageLabel,
+      gameState.turn,
+      pawn.position?.x ?? -1,
+      pawn.position?.y ?? -1
+    );
+  }
   return gameState;
 }
 

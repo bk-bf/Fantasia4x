@@ -136,6 +136,29 @@ export interface SimLogSink {
     focusX: number,
     focusY: number
   ): void;
+
+  /** A colonist's malnutrition/dehydration just ESCALATED to a worse stage — drives a pulsing
+   *  chronicle warning + the colony-alert bugle. Fired once per stage graduation, not every tick. */
+  vitalAlert(
+    pawnId: string,
+    pawnName: string,
+    vital: 'malnutrition' | 'dehydration',
+    stageLabel: string,
+    turn: number,
+    focusX: number,
+    focusY: number
+  ): void;
+
+  /** A colonist DIED — drives the main thread's auto-pause (autoPauseOnDeath) + a pulsing chronicle
+   *  alert + the colony-alert bugle. Fired once per death from the shared death finaliser. */
+  pawnDeath(
+    pawnId: string,
+    pawnName: string,
+    cause: string,
+    turn: number,
+    focusX: number,
+    focusY: number
+  ): void;
 }
 
 /** Default no-op sink: a headless sim (and the test suite) logs nothing until a real sink is set. */
@@ -149,7 +172,9 @@ const noopSink: SimLogSink = {
   pushCombatSound: () => {},
   pushProjectile: () => {},
   logEntityDeath: () => {},
-  threatAlert: () => {}
+  threatAlert: () => {},
+  vitalAlert: () => {},
+  pawnDeath: () => {}
 };
 
 /**

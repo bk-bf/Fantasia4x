@@ -11,7 +11,7 @@
     logBuilding // Convenience function
   } from '$lib/stores/Log';
   import { gameState } from '$lib/stores/gameState';
-  import { threatPulse } from '$lib/stores/uiState';
+  import { threatPulse, alertPulse } from '$lib/stores/uiState';
   import { fade, fly } from 'svelte/transition';
   import { onMount } from 'svelte';
 
@@ -19,15 +19,17 @@
 
   let logFilter: 'all' | 'work' | 'events' | 'critical' = 'all';
 
-  // Threat-alert attention cue: when a mob spots a colonist while the chronicle is MINIMISED (closed),
-  // pulse the toggle button until the player opens it. Opening acknowledges the current pulse; a later
-  // alert (a newer timestamp) re-pulses. (The entry itself flashes once via the `pulse` flag below.)
+  // Alert attention cue: when a threat sighting OR a colony-welfare emergency (malnutrition/dehydration
+  // worsening, a death) fires while the chronicle is MINIMISED (closed), pulse the toggle button until
+  // the player opens it. Opening acknowledges the current pulse; a later alert (a newer timestamp)
+  // re-pulses. (The entry itself flashes once via the `pulse` flag below.)
   let toggleAlerting = false;
   let ackPulse = 0;
-  $: if ($threatPulse > ackPulse && !isOpen) toggleAlerting = true;
+  $: latestPulse = Math.max($threatPulse, $alertPulse);
+  $: if (latestPulse > ackPulse && !isOpen) toggleAlerting = true;
   $: if (isOpen) {
     toggleAlerting = false;
-    ackPulse = $threatPulse;
+    ackPulse = latestPulse;
   }
 
   // Get appropriate activity log based on filter

@@ -191,3 +191,9 @@ export const uiState = createUIState();
  *  bridge's threatAlert handler). The Chronicle overlay watches it to flash its restore/toggle button
  *  while the panel is minimised, so the player notices the (paused) alert. 0 = never fired / acknowledged. */
 export const threatPulse = writable(0);
+
+/** Colony-alert pulse signal: bumped to `Date.now()` on a non-combat colony emergency — a colonist's
+ *  malnutrition/dehydration worsening a stage, or a pawn death (the sim-log bridge's vitalAlert /
+ *  pawnDeath handlers). Drives the same bugle (AudioController) + Chronicle restore-button flash as
+ *  {@link threatPulse}, kept separate so threat vs welfare alerts can diverge later. 0 = never fired. */
+export const alertPulse = writable(0);

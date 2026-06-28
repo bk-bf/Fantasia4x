@@ -10,6 +10,7 @@
   import { itemService } from '$lib/game/services/ItemService';
   import { recipeService } from '$lib/game/services/RecipeService';
   import { buildingService } from '$lib/game/services/BuildingService';
+  import { jobService } from '$lib/game/services/JobService';
   import { getMaterialProperty } from '$lib/game/core/materialProperties';
   import { WORK_CATEGORIES } from '$lib/game/core/Work';
   import { releaseReservation } from '$lib/game/core/GameState';
@@ -33,6 +34,28 @@
     const stationId = recipeOf(itemId)?.station;
     if (!stationId) return null;
     return buildingService.getBuildingById(stationId)?.name ?? stationId.replace(/_/g, ' ');
+  };
+  /** Named implement a recipe REQUIRES to be worked (recipe/station `toolRequirement` → the work
+   *  category's gating tool, e.g. a Clay Cooking Pot for stews). Surfaced on the card so the player
+   *  knows why a stew won't cook without a pot — the requirement is otherwise invisible (toolTier is 0)
+   *  and doesn't block queuing. `met` = the colony holds one (in stock or carried by a pawn). */
+  const requiredToolOf = (itemId: string): { name: string; met: boolean } | null => {
+    const req = recipeService.toolRequirementForRecipe(recipeOf(itemId));
+    if (!req) return null;
+    const toolIds = WORK_CATEGORIES.find((c) => c.id === req.workType)?.toolsRequired ?? [];
+    if (toolIds.length === 0) return null;
+    const minTier = req.minTier ?? 1;
+    const pick =
+      toolIds.find(
+        (id) => ((itemService.getItemById(id) as { tier?: number })?.tier ?? 1) >= minTier
+      ) ?? toolIds[0];
+    const name = itemService.getItemById(pick)?.name ?? pick;
+    const gs = $gameState;
+    const met =
+      !!gs &&
+      (jobService.colonyHasToolFor(gs, req.workType, minTier) ||
+        (gs.pawns ?? []).some((p) => jobService.pawnHasToolFor(p, req.workType, minTier)));
+    return { name, met };
   };
   /** Human label for the WORK CATEGORY (labor) a craft belongs to — the recipe/station tool-requirement
    *  workType (Butchery / Leatherworking / Metalworking / …), with Cooking for food and General Crafting
@@ -407,6 +430,8 @@
             station={stationNameOf(item.id)}
             toolTier={recipe?.toolTierRequired ?? null}
             toolMet={$gameState !== null && itemService.hasRequiredTools(item.id, $gameState)}
+            requiredTool={requiredToolOf(item.id)?.name ?? null}
+            requiredToolMet={requiredToolOf(item.id)?.met ?? true}
             badge={isCarcass ? `${pct}%` : null}
             actionLabel={useQty
               ? !canQueue

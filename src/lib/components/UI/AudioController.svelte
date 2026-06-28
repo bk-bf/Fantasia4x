@@ -17,7 +17,7 @@
   import { get } from 'svelte/store';
   import { gameState, currentWeather } from '$lib/stores/gameState';
   import { combatSounds } from '$lib/stores/combatSounds';
-  import { threatPulse } from '$lib/stores/uiState';
+  import { threatPulse, alertPulse } from '$lib/stores/uiState';
   import { masterVolume, musicVolume, sfxVolume, ambientVolume } from '$lib/stores/uiPrefs';
   import { cameraViewport, cameraTileSize, cameraZoomRange } from '$lib/stores/cameraView';
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
@@ -476,6 +476,15 @@
       if (v > 0) audioService.playUi(THREAT_ALERT_SFX, THREAT_ALERT_GAIN);
     });
 
+    // Colony welfare alert — a colonist starving/dehydrating worse or dying. Same bugle as the threat
+    // alert (one colony-wide horn), fired once per alertPulse bump.
+    let lastAlert = get(alertPulse);
+    const stampAlert = alertPulse.subscribe((v) => {
+      if (v === lastAlert) return;
+      lastAlert = v;
+      if (v > 0) audioService.playUi(THREAT_ALERT_SFX, THREAT_ALERT_GAIN);
+    });
+
     const iv = setInterval(() => (nowTick = Date.now()), 1000);
     const sfxIv = setInterval(() => {
       evalAmbient();
@@ -491,6 +500,7 @@
       window.removeEventListener('click', onUiClick, true);
       stampCombat();
       stampThreat();
+      stampAlert();
       volUnsubs.forEach((u) => u());
       clearInterval(iv);
       clearInterval(sfxIv);

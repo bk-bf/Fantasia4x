@@ -109,7 +109,9 @@ function installForwardingLogSink() {
     pushCombatSound: fwd('pushCombatSound'),
     pushProjectile: fwd('pushProjectile'),
     logEntityDeath: fwd('logEntityDeath'),
-    threatAlert: fwd('threatAlert')
+    threatAlert: fwd('threatAlert'),
+    vitalAlert: fwd('vitalAlert'),
+    pawnDeath: fwd('pawnDeath')
   } as SimLogSink);
 }
 
