@@ -8,7 +8,7 @@
 //                          snow in winter); referenced by weather.jsonc transitions via "seasonPrecip".
 //     tint               — normalised RGB multiplied into the ambient day/night tint (the seasonal palette).
 {
-  "daysPerSeason": 30,
+  "daysPerSeason": 90,
   "seasons"      : [
     {
       "id"                : "spring",

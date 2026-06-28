@@ -41,33 +41,35 @@
   const DAYS_PER_MONTH = 30;
   const MONTHS_PER_YEAR = 12;
 
+  // 12 months = 4 seasons × early/mid/late. The year starts in spring, matching the season
+  // system (seasons.jsonc daysPerSeason=90 → 3 months/season), so month and HUD season agree.
   const MONTH_NAMES = [
-    'Deepwinter',
-    'Thawing',
-    'Seedtime',
-    'Budding',
-    'Flowering',
-    'Midsummer',
-    'Hightide',
-    'Harvest',
-    'Goldfall',
-    'Frostfall',
-    'Snowfall',
-    'Midwinter'
+    'Early Spring',
+    'Mid Spring',
+    'Late Spring',
+    'Early Summer',
+    'Mid Summer',
+    'Late Summer',
+    'Early Autumn',
+    'Mid Autumn',
+    'Late Autumn',
+    'Early Winter',
+    'Mid Winter',
+    'Late Winter'
   ];
   const MONTH_ABBR = [
-    'DWN',
-    'THW',
-    'SEE',
-    'BUD',
-    'FLW',
-    'MDS',
-    'HTD',
-    'HRV',
-    'GOL',
-    'FRO',
-    'SNO',
-    'MDW'
+    'ESP',
+    'MSP',
+    'LSP',
+    'ESU',
+    'MSU',
+    'LSU',
+    'EAU',
+    'MAU',
+    'LAU',
+    'EWI',
+    'MWI',
+    'LWI'
   ];
 
   function turnToGameDate(turn: number) {
