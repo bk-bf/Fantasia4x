@@ -27,7 +27,7 @@
   const REPAIR_SETTINGS_ICON_REF: HudSpriteIconRef = { sheet: 'tiles', id: 11 };
 
   $: repairSettings = (building.repairSettings ?? {}) as RepairSettings;
-  $: repairThresholdPct = Math.max(0, Math.min(100, repairSettings.repairThresholdPct ?? 100));
+  $: repairThresholdPct = Math.max(0, Math.min(100, repairSettings.repairThresholdPct ?? 30));
   // Effective allowed-material set (shares repairRules' resolution): an untouched building falls back
   // to its default repair set; an explicit list — even empty — is honoured.
   $: allowedMaterialSet = resolveAllowedRepairIds(building);
@@ -54,6 +54,16 @@
   function setRepairThresholdPct(nextPct: number) {
     updateSelectedBuildingRepairSettings({
       repairThresholdPct: Math.max(0, Math.min(100, nextPct))
+    });
+  }
+
+  // "Apply to all": push THIS building's threshold onto every building, so you don't re-set the same
+  // condition % by hand for each one.
+  function applyThresholdToAll() {
+    gameState.command({
+      type: 'setAllBuildingsRepairThreshold',
+      payload: { pct: repairThresholdPct },
+      save: true
     });
   }
 
@@ -132,7 +142,11 @@
   </div>
 
   <label class="repair-settings-row">
-    <input type="checkbox" checked={repairSettings.paused ?? false} on:change={onRepairPausedChange} />
+    <input
+      type="checkbox"
+      checked={repairSettings.paused ?? false}
+      on:change={onRepairPausedChange}
+    />
     <span>pause repairs</span>
   </label>
 
@@ -156,6 +170,12 @@
         on:change={onRepairThresholdInput}
       />
       <span>% condition</span>
+      <button
+        type="button"
+        class="repair-icon-btn"
+        title="Apply this threshold to all buildings"
+        on:click={applyThresholdToAll}>⇊</button
+      >
     </div>
   </div>
 
@@ -354,6 +374,22 @@
     outline: none;
     border-color: #c88a30;
     background: #1c1407;
+    color: #f0c878;
+  }
+  .repair-icon-btn {
+    flex: 0 0 auto;
+    background: #160f06;
+    border: 1px solid #6b4f22;
+    color: #d0a858;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1;
+    padding: 1px 5px;
+    cursor: pointer;
+  }
+  .repair-icon-btn:hover {
+    background: #24180a;
+    border-color: #b07a28;
     color: #f0c878;
   }
   .repair-checklist {

@@ -722,6 +722,15 @@ export const COMMANDS: Record<string, Cmd> = {
         : b
     )
   }),
+  /** Push one building's repair threshold onto EVERY building — the REPAIR fly-out's "apply to all"
+   *  (saves re-setting the same condition % per building by hand). */
+  setAllBuildingsRepairThreshold: (s, p: { pct: number }) => ({
+    ...s,
+    buildings: (s.buildings ?? []).map((b) => ({
+      ...b,
+      repairSettings: { ...((b.repairSettings ?? {}) as object), repairThresholdPct: p.pct }
+    }))
+  }),
   /** §F storage bins — set a store building's per-item filter (the FILTER fly-out on its card). */
   setBuildingStorageSettings: (s, p: { id: string; updates: Record<string, unknown> }) => ({
     ...s,

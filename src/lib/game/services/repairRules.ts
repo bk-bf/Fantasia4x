@@ -9,7 +9,7 @@ import { availableAggregateFromDrops } from '../core/GameState';
 import { buildingService } from './BuildingService';
 import { itemService } from './ItemService';
 
-const DEFAULT_REPAIR_THRESHOLD_PCT = 100; // repair any wear by default
+const DEFAULT_REPAIR_THRESHOLD_PCT = 30; // repair once condition drops below 30% by default
 
 /** Condition % below which a building wants repairing (per-building override or default). */
 export function getRepairThresholdPct(building: PlacedBuilding): number {
