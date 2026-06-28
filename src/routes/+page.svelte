@@ -195,6 +195,19 @@
     const a = (e.target as Element | null)?.closest?.('a[href]');
     if (a) e.preventDefault();
   }
+  // Kill the native (OS/Chromium) `title` tooltip everywhere — it pops up after a hover delay and
+  // overlaps our own custom hover tooltips. We don't want to strip the `title=` text from 30+ markup
+  // sites (it stays useful as authored intent), so instead, as the pointer enters any titled element,
+  // move its `title` into `data-title` BEFORE the OS delay elapses — the native bubble never shows.
+  // Reactive Svelte titles that re-set themselves are simply re-stripped on the next mouseover.
+  function stripNativeTooltip(e: MouseEvent) {
+    const el = (e.target as Element | null)?.closest?.('[title]');
+    const title = el?.getAttribute('title');
+    if (el && title) {
+      el.setAttribute('data-title', title);
+      el.removeAttribute('title');
+    }
+  }
 
   function handleKeydown(e: KeyboardEvent) {
     // Ignore ALL keyboard input while the loading overlay is up — otherwise Space would toggle pause
@@ -265,6 +278,7 @@
   on:wheel|nonpassive={blockZoom}
   on:click|capture={blockLinkNav}
   on:auxclick|capture={blockLinkNav}
+  on:mouseover|capture={stripNativeTooltip}
 />
 
 <svelte:head>
