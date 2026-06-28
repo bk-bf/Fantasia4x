@@ -1433,7 +1433,7 @@
     "displayName"     : "Berry Bush",
     "subterrain"      : "bush",
     "walkable"        : true,
-    "charSpans"       : [ {"sheet": "plants", "id": 41} ],
+    "charSpans"       : [ {"sheet": "crops", "id": 198} ],
     "fg"              : [0.55, 0.27, 0.31],
     "bg"              : [0.06, 0.06, 0.05],
     "color"           : "#8C454F",
@@ -2093,7 +2093,7 @@
       "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "plant_fiber", "min":  5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15}
+        {"itemId": "plant_fiber", "min": 5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15}
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
@@ -2107,7 +2107,7 @@
         "workAmount"     : 6,
         "toolRequirement": null,
         "yields"         : [
-          {"itemId": "plant_fiber", "min":  5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15}
+          {"itemId": "plant_fiber", "min": 5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15}
         ],
         "persistent"     : true,
         "regrowsFromZero": true,
