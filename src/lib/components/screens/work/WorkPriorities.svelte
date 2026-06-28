@@ -130,6 +130,10 @@
       const row: Record<string, WorkMods> = {};
       for (const wc of WORK_CATEGORIES) {
         row[wc.id] = pawnStatService.getWorkModifiers(pawn, wc.id);
+        // Subjob mods: each reads its own `*_speed`/quality with the category as per-axis fallback, so
+        // an expanded cell + its tooltip show the pawn's actual aptitude for THAT subjob.
+        for (const sj of subjobsByCat[wc.id])
+          row[sj.id] = pawnStatService.getWorkModifiers(pawn, sj.id, undefined, wc.id);
       }
       map[pawn.id] = row;
     }
@@ -296,11 +300,11 @@
   >
 </div>
 
-{#if tip && tipPawn && tipWc && modMap[tip.pawnId]?.[tip.workId] && rankMap[tip.pawnId]?.[tip.workId]}
+{#if tip && tipPawn && tipWc && modMap[tip.pawnId]?.[tip.subId ?? tip.workId] && rankMap[tip.pawnId]?.[tip.workId]}
   <WorkCellTooltip
     pawn={tipPawn}
     wc={tipWc}
-    mods={modMap[tip.pawnId][tip.workId]}
+    mods={modMap[tip.pawnId][tip.subId ?? tip.workId]}
     rank={rankMap[tip.pawnId][tip.workId]}
     level={tip.subId
       ? getSubjobLevel(tip.pawnId, tip.workId, tip.subId).level

@@ -100,7 +100,9 @@ export interface ResourceObjectDef {
   overheadRoof?: boolean;
   /** Resolved char array (from charSpans in JSON). */
   chars: string[];
+  /** Resolved RGB (0–1) glyph colour, parsed from the `fg` hex string in JSON. */
   fg: [number, number, number];
+  /** Resolved RGB (0–1) background colour, parsed from the `bg` hex string in JSON. */
   bg: [number, number, number];
   spawn: {
     subterrains: Record<string, number>;
@@ -185,6 +187,18 @@ export function isGrowableResource(def: ResourceObjectDef): boolean {
   return ints.some((i) => i.persistent === true || i.regrowthTurns !== undefined);
 }
 
+/** Parse a `#RRGGBB` hex colour into a normalised RGB (0–1) triple; falls back to `fallback`. */
+function hexToRgb01(
+  hex: unknown,
+  fallback: [number, number, number]
+): [number, number, number] {
+  if (typeof hex !== 'string') return fallback;
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return fallback;
+  const n = parseInt(m[1], 16);
+  return [((n >> 16) & 0xff) / 255, ((n >> 8) & 0xff) / 255, (n & 0xff) / 255];
+}
+
 const WORK_STAT_FALLBACK: Record<string, keyof Pawn['stats']> = {
   foraging: 'perception',
   woodcutting: 'strength',
@@ -197,8 +211,10 @@ class ResourceObjectServiceImpl {
 
   constructor() {
     this.defs = (resourceObjectsData as unknown as Array<Record<string, unknown>>).map((raw) => ({
-      ...(raw as Omit<ResourceObjectDef, 'chars'>),
-      chars: resolveCharSpans((raw.charSpans ?? []) as CharSpan[])
+      ...(raw as Omit<ResourceObjectDef, 'chars' | 'fg' | 'bg'>),
+      chars: resolveCharSpans((raw.charSpans ?? []) as CharSpan[]),
+      fg: hexToRgb01(raw.fg, [0.87, 0.62, 0.12]),
+      bg: hexToRgb01(raw.bg, [0.06, 0.04, 0.01])
     }));
     this.byId = new Map(this.defs.map((d) => [d.id, d]));
   }

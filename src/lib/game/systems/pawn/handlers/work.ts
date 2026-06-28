@@ -507,10 +507,14 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
   // source: `*_speed` formula × body capacities × trait workSpeed × condition/status state,
   // with the light factor folded in via the `sight` capacity (so don't re-apply it here).
   const workCategory = jobService.getJobWorkCategory(activeJob, gameState);
+  // Subjobs (build/repair/demolish/refuel, haul/fetch) read their OWN `*_speed` when stats.jsonc
+  // defines one, falling back per-axis to the parent category — so a repair runs at repair_speed.
+  const workStatKey = jobService.getJobWorkStatKey(activeJob, gameState);
   const workSpeedMult = pawnStatService.getWorkModifiers(
     pawn,
-    workCategory,
-    lightSightFactor
+    workStatKey,
+    lightSightFactor,
+    workCategory
   ).speed;
   let workPoints =
     activeJob.type === 'construct' || activeJob.type === 'deconstruct'

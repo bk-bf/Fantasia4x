@@ -464,6 +464,38 @@
         "formula"    : "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.02) × manipulation × sight",
         "description": "building durability (× manipulation × sight)"
     },
+    // ── Construction SUBJOBS (Work-tab right-click expand). Keyed by job-type id; resolved per-axis with
+    //    a fallback to the parent `construction_*` (so `construct`/Build inherits — no entry needed), and
+    //    they share the construction SKILL. Distinct attributes give per-pawn variety: a brute demolishes,
+    //    a deft/sharp-eyed pawn repairs.
+    {
+        "id"         : "repair_speed",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (PER − 10) × 0.03) × manipulation × sight",
+        "description": "repair speed — careful patching of worn structure favours a deft, sharp-eyed hand (× manipulation × sight), NOT raw muscle. A construction subjob (falls back to the construction skill)."
+    },
+    {
+        "id"         : "repair_quality",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (INT − 10) × 0.02) × manipulation × sight × consciousness",
+        "description": "repair quality — how soundly the structure is restored (× manipulation × sight × consciousness)."
+    },
+    {
+        "id"         : "deconstruct_speed",
+        "category"   : "work",
+        "primaryStat": "strength",
+        "formula"    : "(1.0 + (STR − 10) × 0.05 + (CON − 10) × 0.02) × manipulation × moving",
+        "description": "demolition speed — brute teardown favours raw muscle and stamina (× manipulation × moving). Throughput is speed-only; it has no own quality stat (inherits the category's only for the work-tab readout)."
+    },
+    {
+        "id"         : "refuel_speed",
+        "category"   : "work",
+        "primaryStat": "strength",
+        "formula"    : "(1.0 + (STR − 10) × 0.03 + (CON − 10) × 0.03) × moving × manipulation",
+        "description": "refuel speed — hauling fuel to a fire/station, a carrying chore (× moving × manipulation). Speed-only throughput; no own quality stat."
+    },
     {
         "id"         : "alchemy_speed",
         "category"   : "work",
@@ -498,6 +530,15 @@
         "primaryStat": "strength",
         "formula"    : "(1.0 + (STR − 10) × 0.04 + (CON − 10) × 0.02) × moving × manipulation",
         "description": "hauling speed (× moving × manipulation)"
+    },
+    {
+        // Hauling SUBJOB: fetch (carry a reserved input to a workstation). `haul`/Haul inherits hauling
+        // (no entry). Fetch favours quick hands over load-bearing — nimble shuttle runs.
+        "id"         : "fetch_speed",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (CON − 10) × 0.02) × moving × manipulation",
+        "description": "fetch speed — nimble shuttle runs of reserved inputs to a station favour quick hands (× moving × manipulation); no quality axis."
     },
     {
         "id"         : "planting_speed",

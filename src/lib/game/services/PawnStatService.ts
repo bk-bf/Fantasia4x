@@ -418,7 +418,8 @@ function calculateCapacityValue(
 function traitWorkMult(
   pawn: Pawn | Mob,
   key: 'workSpeed' | 'workYield' | 'workQuality',
-  workType: string
+  workType: string,
+  fallbackType?: string
 ): number {
   let mult = 1;
   // Mobs have no racial traits; only Pawns carry them.
@@ -426,7 +427,10 @@ function traitWorkMult(
   for (const trait of traits ?? []) {
     const map = trait.effects?.[key] as Record<string, number> | undefined;
     if (!map) continue;
-    if (map[workType]) mult *= map[workType];
+    // Prefer a subjob-specific trait entry, else the parent category's — so a "Master Builder"
+    // (workSpeed.construction) still boosts the repair/demolish subjobs.
+    const specific = map[workType] ?? (fallbackType ? map[fallbackType] : undefined);
+    if (specific) mult *= specific;
     if (map['all']) mult *= map['all'];
   }
   return mult;
@@ -554,7 +558,8 @@ export interface PawnStatService {
   getWorkModifiers(
     pawn: Pawn | Mob,
     workType: string,
-    lightMultiplier?: number
+    lightMultiplier?: number,
+    fallbackType?: string
   ): { speed: number; yield: number | null; quality: number | null };
   /** The held tool (equipped or carried) contributing the work boost for `workType`, with its additive
    *  speed/yield amounts (already quality-scaled) — for itemising the bonus in the work tooltip. Null
@@ -739,33 +744,39 @@ export class PawnStatServiceImpl implements PawnStatService {
   getWorkModifiers(
     pawn: Pawn | Mob,
     workType: string,
-    lightMultiplier?: number
+    lightMultiplier?: number,
+    fallbackType?: string
   ): { speed: number; yield: number | null; quality: number | null } {
     // §G: a light multiplier dims the `sight` capacity, which every `*_speed`/`_yield`/`_quality`
     // formula multiplies by → work (and its quality) slows in the dark through the existing model.
     const capacities = this.computeCapacities(pawn, lightMultiplier);
-    // A held tool ADDS its toolBoost to the speed/yield modifier (items.jsonc `toolBoost`).
-    const toolBoost = heldToolBoost(pawn, workType);
+    // A held tool ADDS its toolBoost to the speed/yield modifier (items.jsonc `toolBoost`). Tools are
+    // authored per CATEGORY (a hammer boosts construction), so a subjob resolves them under its parent.
+    const toolBoost = heldToolBoost(pawn, fallbackType ?? workType);
+    // Subjobs (Work-tab expand): resolve `${workType}_${axis}` first, then the parent category
+    // (`fallbackType`) — so a subjob inherits any axis it doesn't define (Build = construction, etc).
+    const formulaFor = (axis: string): string | undefined =>
+      (STAT_MAP[`${workType}_${axis}`] ?? (fallbackType ? STAT_MAP[`${fallbackType}_${axis}`] : undefined))
+        ?.formula;
     // Base = stat formula × body capacities. Layer explicit trait multipliers on top.
     // Transient state (conditions/transient conditions) applies to throughput → speed only.
     const stateMult = pawnStateWorkMultiplier(pawn);
     const speed = Math.max(
       0.1,
-      (evaluateFormula(STAT_MAP[`${workType}_speed`]?.formula, pawn, capacities) +
-        (toolBoost?.speed ?? 0)) *
-        traitWorkMult(pawn, 'workSpeed', workType) *
+      (evaluateFormula(formulaFor('speed'), pawn, capacities) + (toolBoost?.speed ?? 0)) *
+        traitWorkMult(pawn, 'workSpeed', workType, fallbackType) *
         stateMult
     );
-    // yield / quality are present only for jobs that define them in stats.jsonc.
+    // yield / quality are present only for jobs that define them (in the subjob OR its parent).
     const axis = (kind: 'yield' | 'quality', traitKey: 'workYield' | 'workQuality') => {
-      const def = STAT_MAP[`${workType}_${kind}`];
-      if (!def) return null;
+      const formula = formulaFor(kind);
+      if (!formula) return null;
       // Tools add to yield (not quality — a sharp axe fells faster + recovers more, not "better wood").
       const toolAdd = kind === 'yield' ? (toolBoost?.yield ?? 0) : 0;
       return Math.max(
         0.1,
-        (evaluateFormula(def.formula, pawn, capacities) + toolAdd) *
-          traitWorkMult(pawn, traitKey, workType)
+        (evaluateFormula(formula, pawn, capacities) + toolAdd) *
+          traitWorkMult(pawn, traitKey, workType, fallbackType)
       );
     };
     return {

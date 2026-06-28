@@ -415,6 +415,13 @@ class JobServiceImpl {
     return this._jobTypeToWorkKey(job, gs);
   }
 
+  /** The STAT key for a job's work modifiers — the subjob id for a splittable category (so a repair
+   *  reads `repair_speed`), else the category. Pair with `getJobWorkCategory` as the fallback so a
+   *  subjob inherits any axis it doesn't define (`getWorkModifiers(pawn, statKey, light, category)`). */
+  getJobWorkStatKey(job: WorkKeyJob, gs?: GameState): string {
+    return this._jobSubKey(job, this._jobTypeToWorkKey(job, gs));
+  }
+
   /** Whether low light slows this job type (§G light→work). Defaults to true; jobs.jsonc sets it
    *  false for carrying jobs (haul/fetch/refuel) that don't need close sight. */
   isJobLightAffected(type: string): boolean {
