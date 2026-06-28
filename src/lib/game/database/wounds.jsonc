@@ -38,9 +38,14 @@
     // Wounds must be ~2.5 in-game days old (18000 ticks/day) before they can fester — a fresh
     // injury never infects on the spot; infection is a days-later threat of neglect.
     "infectionIncubationTicks": 45000     ,  // TODO: Cosider replacing this with a full health immunity stat system
-    "infectionRiskPerWound"   :     0.0004,
-    "infectionRiskMaxPerTick" :     0.0008,
-    "infectionRecoveryPerTick":     0.0015,
+    // Infection severity rates are PER SECOND (applied via perTick in PawnStateMachine, like the need
+    // drivers) — NOT per 60Hz tick. A single untended open wound on an average-CON (immune 0.35) pawn
+    // festers to lethal over ~1 in-game WEEK post-incubation: 0.0007 × (1−0.35) ≈ 4.6e-4/s → ~2200s →
+    // ~7.3 days (1 day = 300s). The cap (~2 wounds) shortens that to ~3.7 days. Recovery (all wounds
+    // tended or closed) clears it in ~1–2 days. (Was added RAW per tick → ~30–60s to lethal — the bug.)
+    "infectionRiskPerWound"   :     0.0007,
+    "infectionRiskMax"        :     0.0014,
+    "infectionRecovery"       :     0.002,
     "immuneResistBase"        :     0.35
   },
   "wounds" : [

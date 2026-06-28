@@ -45,13 +45,14 @@ export interface CareConfig {
    *  wounds carry no infection risk — infection is a days-later threat, not an at-the-moment-of-injury
    *  one. 18000 ticks = 1 in-game day (TURNS_PER_DAY 300 × 60 tps). */
   infectionIncubationTicks: number;
-  /** Infection pressure per tick per untended open wound. */
+  /** Infection pressure PER SECOND per untended open wound (applied via perTick, like the need
+   *  drivers — NOT a raw per-60Hz-tick value). */
   infectionRiskPerWound: number;
-  /** Cap on total per-tick infection pressure regardless of wound count — stops a heavily
+  /** Cap on total per-second infection pressure regardless of wound count — stops a heavily
    *  wounded pawn from infecting to lethal within a single fight (NT-3). */
-  infectionRiskMaxPerTick: number;
-  /** Infection severity recovered per tick when pressure is suppressed. */
-  infectionRecoveryPerTick: number;
+  infectionRiskMax: number;
+  /** Infection severity recovered PER SECOND when pressure is suppressed (all wounds tended/closed). */
+  infectionRecovery: number;
   /** Base immune resistance (added to CON scaling). */
   immuneResistBase: number;
 }

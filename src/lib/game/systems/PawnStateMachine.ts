@@ -569,17 +569,21 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   }
   // Cap total pressure so many simultaneous combat wounds can't stack into a near-instant
   // lethal infection — infection is the slow post-fight threat, not a mid-combat killer (NT-3).
-  infectionPressure = Math.min(infectionPressure, CARE_CONFIG.infectionRiskMaxPerTick);
+  infectionPressure = Math.min(infectionPressure, CARE_CONFIG.infectionRiskMax);
   const immune = Math.max(
     0,
     Math.min(0.95, CARE_CONFIG.immuneResistBase + (pawn.stats.constitution - 10) * 0.02)
   );
   const infIdx = conditions.findIndex((c) => c.id === 'infection');
   const curInf = infIdx >= 0 ? conditions[infIdx].severity : 0;
+  // Per-SECOND rates → per-tick via perTick (matches the need drivers). Untended open wounds fester;
+  // once every wound is tended or closed the pressure drops to 0 and the infection recovers. Tending
+  // a wound (the caretake job) IS the cure — there's no "no way to heal it", the progression was just
+  // 60× too fast (raw per-tick) to treat in time.
   const nextInf =
     infectionPressure > 0
-      ? Math.min(1, curInf + infectionPressure * (1 - immune))
-      : Math.max(0, curInf - CARE_CONFIG.infectionRecoveryPerTick);
+      ? Math.min(1, curInf + perTick(infectionPressure * (1 - immune)))
+      : Math.max(0, curInf - perTick(CARE_CONFIG.infectionRecovery));
   if (nextInf <= 0) {
     if (infIdx >= 0) conditions.splice(infIdx, 1);
   } else if (infIdx >= 0) {

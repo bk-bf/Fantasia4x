@@ -22,6 +22,8 @@ import {
   transitionTo,
   tryRouteToWaterNeed,
   distToNearestFoodSource,
+  distToNearestFoodFetch,
+  distToNearestDrinkTarget,
   distToNearestRestSource,
   computeMinQueueFoodDist,
   computeMinQueueRestDist,
@@ -58,20 +60,42 @@ function recoveryChoice(pawn: Pawn, gameState: GameState): NeedChoice {
   return { kind: 'sleep' };
 }
 
-/** Raw-threshold need decision for an IDLE pawn (no active job). Priority: hunger → thirst →
- *  hygiene → fatigue (thirst before hygiene; dehydration is lethal). */
+/** True when a pawn must seek water from a zone/well (thirst urgent AND no stockpiled water to sip). */
+function thirstNeedsRouting(pawn: Pawn, gameState: GameState): boolean {
+  return (
+    (pawn.needs?.thirst ?? 0) >= ROUTE_TO_DRINK_THIRST &&
+    (gameState.stockpile?.['water'] ?? 0) <= 0
+  );
+}
+
+/**
+ * Distance check between the two lethal needs: when a pawn is both hungry and thirsty, drink first
+ * whenever the drink target is no farther than the food it would walk to fetch. Thirst wins on ties
+ * (dehydration kills sooner than starvation), so a pawn standing next to a drink zone drinks instead
+ * of marching off to a distant stockpile to eat and dying of thirst. Only when food is *strictly*
+ * closer does it eat first — and it drinks on the next decision cycle once fed.
+ */
+function shouldDrinkBeforeEating(pawn: Pawn, gameState: GameState): boolean {
+  return distToNearestDrinkTarget(pawn, gameState) <= distToNearestFoodFetch(pawn, gameState);
+}
+
+/** Raw-threshold need decision for an IDLE pawn (no active job). Priority: (thirst|hunger by
+ *  proximity, thirst-first on ties) → hygiene → fatigue (dehydration is lethal). */
 export function selectIdleNeed(pawn: Pawn, gameState: GameState): NeedChoice {
   // FORCE WORK: neglect every need and go straight to work (the FSM finds a job when no need wins).
   if (pawn.forceWork) return null;
-  if ((pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
-    return { kind: 'eat' };
-  }
-  if (
-    (pawn.needs?.thirst ?? 0) >= ROUTE_TO_DRINK_THIRST &&
-    (gameState.stockpile?.['water'] ?? 0) <= 0
-  ) {
+  const hungerActive =
+    (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD && hasAvailableFood(gameState);
+  const thirstActive = thirstNeedsRouting(pawn, gameState);
+  // Thirst before hunger when its source is at least as close (or hunger isn't active at all).
+  if (thirstActive && (!hungerActive || shouldDrinkBeforeEating(pawn, gameState))) {
     const routed = tryRouteToWaterNeed(pawn, gameState, 'drink');
     if (routed) return { kind: 'water', need: 'drink', routedState: routed };
+  }
+  // Hunger only wins here when food is strictly closer than water (else the thirst block above took
+  // it); a failed drink route also falls through to eating rather than stalling.
+  if (hungerActive) {
+    return { kind: 'eat' };
   }
   // Wound recovery (restPolicy-gated): a meaningfully wounded pawn lies down to heal. Above
   // hygiene/fatigue, below the lethal hunger/thirst needs — handleSleeping holds it until wounds clear.
@@ -102,6 +126,22 @@ export function selectInterruptNeed(
 ): NeedChoice {
   // FORCE WORK: never interrupt a job for a need — the pawn works through hunger/thirst/fatigue.
   if (pawn.forceWork) return null;
+  // Thirst before hunger when the drink target is at least as close as the food the pawn would fetch
+  // (dehydration kills sooner). Keeps a thirsty pawn from interrupting work to march to a distant
+  // stockpile to eat while a drink zone is right next to it. Food-strictly-closer falls through to the
+  // hunger block below, then the thirst fallback after it.
+  if (thirstNeedsRouting(pawn, gameState) && shouldDrinkBeforeEating(pawn, gameState)) {
+    const routed = tryRouteToWaterNeed(pawn, gameState, 'drink');
+    if (routed) {
+      gameLogger.log(
+        gameState.turn,
+        'NEED-CHECK',
+        () =>
+          `[${label}] ${pawn.name} T:${(pawn.needs?.thirst ?? 0).toFixed(1)} → INTERRUPT→DRINK (nearer than food)`
+      );
+      return { kind: 'water', need: 'drink', routedState: routed };
+    }
+  }
   const hunger = pawn.needs?.hunger ?? 0;
   if (hunger >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
     const minQueueFood = computeMinQueueFoodDist(queue, pawn, gameState);
