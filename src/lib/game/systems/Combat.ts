@@ -67,6 +67,7 @@ import {
   cascadeSeveredContents,
   lethalAnatomyCause,
   skeletonPartOf,
+  organsOf,
   boneBreakBudget,
   BOUND_NATURAL_WEAPONS,
   DEFAULT_PLAN,
@@ -138,6 +139,23 @@ const BONE_TRANSFER_BLUNT = 0.7;
 const BONE_TRANSFER_OTHER = 0.2;
 /** ± spread on the transmitted bone load, so flesh and bone depth vary independently per blow. */
 const BONE_DAMAGE_VARIANCE = 0.4;
+/** Organ-penetration roll on a hit to a body cavity (abdomen/chest/head) — the soft-tissue twin of the
+ *  fracture roll. A blow into the cavity can reach an organ inside INDEPENDENTLY of the flesh wound, so a
+ *  battered low-HP abdomen with pristine kidneys is the norm, not a guaranteed gut-out. Penetrating wounds
+ *  (a thrust, a deep slash) find organs readily; blunt force ruptures a solid organ only on a hard hit
+ *  through the intact wall (rarer, capped low). Organs sit DEEPER than bone and a blow can pass between
+ *  them, so these chances/transfers are below the fracture ones. The all-or-nothing cascade still applies
+ *  separately when the cavity is actually destroyed (cascadeSeveredContents). Tunable, in HP/force terms. */
+const ORGAN_PENETRATE_BASE = 1.0;
+const ORGAN_BLUNT_BASE = 0.18;
+const ORGAN_PENETRATE_CAP = 0.5;
+const ORGAN_BLUNT_CAP = 0.18;
+/** Share of the blow's RAW force that drives inward to an organ, by damage class — penetrating (a thrust)
+ *  carries deep, blunt only partly transmits through the wall. Shielded by worn armour, like bone. */
+const ORGAN_TRANSFER_PENETRATING = 0.55;
+const ORGAN_TRANSFER_BLUNT = 0.25;
+/** ± spread on the transmitted organ load, so organ depth varies independently per blow (mirrors bone). */
+const ORGAN_DAMAGE_VARIANCE = 0.4;
 /** Stats are on a ~5–22 scale; this divisor keeps damage in a sensible range. */
 const STAT_SCALE = 10;
 /** How strongly a creature's `bodyScale` boosts its natural-weapon damage (softened, see attackerProfile):
@@ -216,6 +234,10 @@ export interface HitResult {
   /** Secondary BONE wound this swing also inflicted (a fracture roll succeeded) — applied alongside the
    *  soft-tissue injury. Cripples the limb if it breaks the bone; does not sever. */
   fractureInjury?: Injury | null;
+  /** Secondary ORGAN wound this swing also inflicted (an organ-penetration roll succeeded) — a deep blow
+   *  that reached an organ inside the struck cavity (kidney/liver/heart/lung), applied alongside the flesh
+   *  injury. Drives the matching capacity loss (blood_filtration, breathing…); does not sever the limb. */
+  organInjury?: Injury | null;
 }
 
 export interface CombatService {
@@ -753,12 +775,66 @@ class CombatServiceImpl implements CombatService {
       }
     }
 
+    // Organ-penetration roll: a deep blow into a body cavity can reach an organ inside, INDEPENDENTLY of
+    // the flesh wound — the soft-tissue twin of the fracture roll above. A shallow laceration across the
+    // abdomen wall just chips the container HP; only a thrust / hard hit finds the kidney or liver. (The
+    // destruction cascade still takes ALL contents when the cavity itself is gone — that path is separate.)
+    let organInjury: Injury | null = null;
+    const organCandidates = organsOf(partId);
+    if (organCandidates.length > 0 && hpMissing > 0) {
+      const isPenetrating = damageType === 'piercing' || damageType === 'cutting';
+      const transfer = isPenetrating ? ORGAN_TRANSFER_PENETRATING : ORGAN_TRANSFER_BLUNT;
+      const variance = 1 + (rng.random() * 2 - 1) * ORGAN_DAMAGE_VARIANCE;
+      // Force driven inward this blow — shielded by worn armour (not flesh toughness), exactly like bone load.
+      const organDamage = Math.max(
+        1,
+        Math.round(raw * transfer * (1 - armorRed) * (crit ? CRIT_MULTIPLIER : 1) * variance)
+      );
+      // Chance scales with that inward force vs the CAVITY's mass (a small thrust into a big torso rarely
+      // finds an organ; a hard deep blow does), capped so an organ hit is never a sure thing.
+      const organChance = clamp(
+        (isPenetrating ? ORGAN_PENETRATE_BASE : ORGAN_BLUNT_BASE) * (organDamage / partMaxHp),
+        0,
+        isPenetrating ? ORGAN_PENETRATE_CAP : ORGAN_BLUNT_CAP
+      );
+      if (rng.random() < organChance) {
+        // Which organ the blow found — weighted by size (a bigger organ is a bigger target), among the ones
+        // this defender ACTUALLY still has (body plans vary; a destroyed organ is no longer there to hit).
+        const present = organCandidates
+          .map((id) => limbOfPart(defender, id)?.parts?.find((p) => p.id === id && !p.isMissing))
+          .filter((p): p is BodyPartState => p != null);
+        if (present.length > 0) {
+          const totalW = present.reduce((s, p) => s + p.maxHp, 0);
+          let pick = rng.random() * totalW;
+          let chosen = present[0];
+          for (const p of present) {
+            pick -= p.maxHp;
+            if (pick <= 0) {
+              chosen = p;
+              break;
+            }
+          }
+          organInjury = {
+            bodyPart: chosen.id,
+            type: injury.type, // same damage class as the flesh wound (puncture / cut / crush)
+            // Provisional severity vs the organ's own HP — recomputeWound overwrites it on apply/merge.
+            severity: severityFromFrac(organDamage / chosen.maxHp),
+            damage: organDamage,
+            bleeding: 0,
+            painContribution: 0,
+            infected: false
+          };
+        }
+      }
+    }
+
     return {
       hit: true,
       bodyPart: partId,
       damage: final,
       injury,
       fractureInjury,
+      organInjury,
       knockdown,
       crit,
       damageType,
@@ -1088,6 +1164,15 @@ class CombatServiceImpl implements CombatService {
       this.emitFloat(pos.x, pos.y, 'fracture', 'Fractured!', 26);
       const fxSound = conditionAudio('fractured');
       if (fxSound) simLog.pushCombatSound({ sound: fxSound, worldX: pos.x, worldY: pos.y });
+    }
+
+    // An organ-penetration from the same blow lands as a third (internal) wound — no extra knockdown. The
+    // organ's HP loss flows into its capacity (kidney → blood_filtration, lung → breathing) via PawnStatService.
+    if (result.organInjury) {
+      next = isTargetMob
+        ? this.applyInjuryToMob(target.id, result.organInjury, next, false)
+        : this.applyInjury(target.id, result.organInjury, next, false);
+      this.emitFloat(pos.x, pos.y, 'fracture', 'Organ hit!', 26);
     }
 
     // Floating text: damage number — a rolled crit OR a part-wrecking hit reads as

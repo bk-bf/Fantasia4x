@@ -123,6 +123,26 @@ export function skeletonPartOf(partId: BodyPartId): BodyPartId | undefined {
   return SKELETON_OF[partId];
 }
 
+// Container part id → the soft internal organs it directly holds: its `containedIn` children that are
+// INTERNAL (hitWeight 0, never struck directly) and not the hidden skeleton element. The soft-tissue
+// analogue of SKELETON_OF — abdomen → [liver, stomach, kidneys], chest → [heart, lungs, spine], head →
+// [brain]. External sub-parts (fingers, toes — hitWeight > 0) are excluded: they're hit on their own.
+const ORGANS_OF: Partial<Record<BodyPartId, BodyPartId[]>> = {};
+for (const def of Object.values(PART_DEF_MAP)) {
+  if (def?.containedIn && !def.skeleton && def.hitWeight === 0) {
+    (ORGANS_OF[def.containedIn] ??= []).push(def.id);
+  }
+}
+
+/** The soft internal organs a deep hit on `partId` could PENETRATE to (abdomen → liver/stomach/kidneys;
+ *  chest → heart/lungs/spine; head → brain) — the direct contained, internal (hitWeight 0), non-skeleton
+ *  parts. Empty for a part with no organs. Single source of truth for Combat's organ-penetration roll —
+ *  the soft-tissue twin of `skeletonPartOf`. NOT the destruction cascade (that takes ALL contents at once
+ *  when the cavity is gone); this is the graded "a thrust reached an organ" roll on a non-fatal blow. */
+export function organsOf(partId: BodyPartId): BodyPartId[] {
+  return ORGANS_OF[partId] ?? [];
+}
+
 /** Fracture damage that BREAKS a bone part, scaled to its actual (per-creature) HP. There is ONE bone
  *  type: a hidden `skeleton` element whose whole HP IS its break budget — it breaks when chipped to 0.
  *  Single source of truth for the break threshold across Combat / Wounds / needs, so the bone HP bar, the
