@@ -17,7 +17,7 @@ import type { WorldTile } from './types';
 
 /** Below this growth% a regrowing plant is drawn as bare soil and is not yet selectable as a resource
  *  (it reappears, dimmed, once it crosses the threshold). Shared by the renderer + selection. */
-export const RESOURCE_VISIBLE_GROWTH = 10;
+export const RESOURCE_VISIBLE_GROWTH = 20;
 
 // Keyed "y,x" (matches tileDeltas) so repeated adds to the same tile collapse.
 const regrowing = new Set<string>();

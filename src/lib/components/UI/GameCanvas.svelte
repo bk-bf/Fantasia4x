@@ -85,6 +85,7 @@
     isGrowableResource
   } from '$lib/game/services/ResourceObjectService.js';
   import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/wildGrowth.js';
+  import { cropGrowthDirection } from '$lib/game/core/cropHealth.js';
   import { isHarvestableTileNow, MIN_FORAGE_GROWTH } from '$lib/game/services/jobs/filters.js';
   import { itemService } from '$lib/game/services/ItemService.js';
   import { getEquipmentSlot } from '$lib/game/core/PawnEquipment.js';
@@ -121,6 +122,7 @@
     buildPawnCard,
     buildMobCard,
     dryingIndicator,
+    growthIndicator,
     PROGRESS_BAR_STATES
   } from '$lib/components/UI/gameCanvas/selectionCard';
   import { overlayDroppedItems } from '$lib/components/UI/gameCanvas/overlay';
@@ -5074,11 +5076,22 @@
             {@const growRes = resourceObjectService.getById(hoverDisplayResource)}
             {#if growRes && isGrowableResource(growRes)}
               {@const gpct = Math.round(hoverTile.growth?.[hoverDisplayResource] ?? 100)}
+              {@const dir = growRes.crop
+                ? cropGrowthDirection(gpct, growRes.crop, {
+                    soilTier,
+                    temp: tileTemp,
+                    moisture: hoverTile.moisture ?? 0,
+                    snow: tileSnow
+                  })
+                : gpct >= 100
+                  ? 'mature'
+                  : 'rising'}
+              {@const gi = growthIndicator(dir)}
               <span
                 style="color:{gpct >= 100 ? '#68b030' : gpct >= 50 ? '#9aac3a' : '#c89a3a'}"
                 title="resource maturity — scales harvest yield; crops grow only with enough fertility, warmth, water and light"
                 >growth {gpct}%</span
-              >
+              ><span style="color:{gi.color}" title={gi.title}>{gi.glyph}</span>
             {/if}
           {/if}
           <span

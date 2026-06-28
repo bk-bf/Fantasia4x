@@ -1477,6 +1477,7 @@
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "wild_oats",   "min": 18, "max": 30, "skillId": "foraging", "skillMultiplier": 0.2 },
+        {"itemId": "rye_seed",    "min":  1, "max":  2, "skillId": "foraging", "skillMultiplier": 0.05},
         {"itemId": "grain_seed",  "min":  1, "max":  2, "skillId": "foraging", "skillMultiplier": 0.05},
         {"itemId": "plant_fiber", "min":  1, "max":  2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
@@ -1569,6 +1570,62 @@
       "persistent"     : true,
       "regrowsFromZero": true,
       "regrowthTurns"  : 2400 // ~8 days at 300 turns/day
+    }
+  },
+  // Wild kale — frost-hardy wild brassica; the wild source of kale.
+  {
+    "id"              : "wild_kale",
+    "displayName"     : "Wild Kale",
+    "subterrain"      : "tall_grass",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 153} ],
+    "fg"              : "#5e8c42",
+    "bg"              : "#12120a",
+    "spawn"           : {
+      "subterrains": {"tall_grass": 0.009, "grass": 0.006, "deep_grass": 0.005, "riverbank": 0.004, "moss": 0.003}
+    },
+    "nodeAmountRange" : [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "forage",
+      "workCategory"   : "foraging",
+      "workAmount"     : 7,
+      "toolRequirement": null,
+      "yields"         : [
+        {"itemId": "kale",      "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "kale_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+      ],
+      "persistent"     : true,
+      "regrowsFromZero": true,
+      "regrowthTurns"  : 2200 // ~7 days at 300 turns/day
+    }
+  },
+  // Wild radish — fast peppery wild root; the wild source of radish.
+  {
+    "id"              : "wild_radish",
+    "displayName"     : "Wild Radish",
+    "subterrain"      : "grass",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 187} ],
+    "fg"              : "#c36a66",
+    "bg"              : "#12120a",
+    "spawn"           : {
+      "subterrains": {"grass": 0.009, "tall_grass": 0.006, "deep_grass": 0.004, "dirt": 0.004, "riverbank": 0.003}
+    },
+    "nodeAmountRange" : [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "forage",
+      "workCategory"   : "foraging",
+      "workAmount"     : 6,
+      "toolRequirement": null,
+      "yields"         : [
+        {"itemId": "radish",      "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "radish_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+      ],
+      "persistent"     : true,
+      "regrowsFromZero": true,
+      "regrowthTurns"  : 2000 // ~7 days at 300 turns/day
     }
   },
   // Wild beans — climbing wild legume; the wild source of beans.
@@ -2492,6 +2549,111 @@
       "yields"         : [
         {"itemId": "wheat",      "min": 34, "max": 54, "skillId": "planting", "skillMultiplier": 0.25},
         {"itemId": "grain_seed", "min":  1, "max":  2, "skillId": "planting", "skillMultiplier": 0.1 }
+      ],
+      "harvestDepletes": true
+    }
+  },
+  {
+    "id"              : "crop_rye",
+    "displayName"     : "Rye",
+    "subterrain"      : "grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 121} ],
+    "fg"              : "#bf9924",
+    "bg"              : "#140f08",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "rye_seed",
+      "minSoil"      : 1,
+      "minMoisture"  : 25,
+      "maxMoisture"  : 70,
+      "minTemp"      : -8,
+      "maxTemp"      : 30,
+      "needsLight"   : true,
+      "fertilityCost": 4,
+      "growthTurns"  : 1900
+    },
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 8,
+      "toolRequirement": null,
+      "yields"         : [
+        {"itemId": "rye",      "min": 30, "max": 48, "skillId": "planting", "skillMultiplier": 0.25},
+        {"itemId": "rye_seed", "min":  1, "max":  2, "skillId": "planting", "skillMultiplier": 0.1 }
+      ],
+      "harvestDepletes": true
+    }
+  },
+  {
+    "id"              : "crop_kale",
+    "displayName"     : "Kale Patch",
+    "subterrain"      : "grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 153} ],
+    "fg"              : "#5e8c42",
+    "bg"              : "#140f08",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "kale_seed",
+      "minSoil"      : 1,
+      "minMoisture"  : 30,
+      "maxMoisture"  : 80,
+      "minTemp"      : -8,
+      "maxTemp"      : 26,
+      "needsLight"   : true,
+      "fertilityCost": 5,
+      "growthTurns"  : 1200
+    },
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 8,
+      "toolRequirement": null,
+      "yields"         : [
+        {"itemId": "kale",      "min": 3, "max": 6, "skillId": "planting", "skillMultiplier": 0.2},
+        {"itemId": "kale_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
+      ],
+      "harvestDepletes": true
+    }
+  },
+  {
+    "id"              : "crop_radish",
+    "displayName"     : "Radish Bed",
+    "subterrain"      : "grass",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 187} ],
+    "fg"              : "#c36a66",
+    "bg"              : "#140f08",
+    "spawn"           : {"subterrains": {}},
+    "nodeAmountRange" : [1, 1],
+    "crop"            : {
+      "seedItem"     : "radish_seed",
+      "minSoil"      : 1,
+      "minMoisture"  : 30,
+      "maxMoisture"  : 75,
+      "minTemp"      : -5,
+      "maxTemp"      : 28,
+      "needsLight"   : true,
+      "fertilityCost": 3,
+      "growthTurns"  : 900
+    },
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "reap",
+      "workCategory"   : "planting",
+      "workAmount"     : 7,
+      "toolRequirement": null,
+      "yields"         : [
+        {"itemId": "radish",      "min": 4, "max": 7, "skillId": "planting", "skillMultiplier": 0.2},
+        {"itemId": "radish_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
       ],
       "harvestDepletes": true
     }

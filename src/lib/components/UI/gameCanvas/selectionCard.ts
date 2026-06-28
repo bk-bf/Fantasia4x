@@ -15,6 +15,7 @@ import { itemService } from '$lib/game/services/ItemService.js';
 import type { DryingStatus } from '$lib/game/services/ItemService.js';
 import { jobService } from '$lib/game/services/JobService.js';
 import { getConditionCurrentStage, conditionStatMultipliers } from '$lib/game/core/needs.js';
+import type { GrowthDirection } from '$lib/game/core/cropHealth.js';
 import type {
   SelectedEntityModel,
   EntityBar,
@@ -459,6 +460,31 @@ export function dryingIndicator(s: DryingStatus): { glyph: string; color: string
   if (s.bonus > 1) parts.push(`rack ×${s.bonus}`);
   const detail = parts.length ? ` — ${parts.join(', ')}` : '';
   return { glyph: fast ? '⇈' : '↑', color, title: `drying (${word})${detail}` };
+}
+
+/** Falling-growth red (a withering crop) — matches the warning red used elsewhere in the HUD. */
+const GROW_FALL = '#cc5544';
+
+/**
+ * Compact growth-direction arrow for a growing resource — the crop-growth twin of {@link dryingIndicator},
+ * so the tile HUD reads the two meters in the same language: ↑ rising (favourable), ↓ falling (cold/dry/
+ * snow stress, the crop is slowly dying), ✓ ready (matured). Takes the direction from the shared
+ * `cropGrowthDirection` model so the pill can't drift from what the sim does next tick.
+ */
+export function growthIndicator(dir: GrowthDirection): {
+  glyph: string;
+  color: string;
+  title: string;
+} {
+  if (dir === 'falling')
+    return {
+      glyph: '↓',
+      color: GROW_FALL,
+      title: 'growth falling — the crop is cold, dry, snowed-on or over its heat limit and slowly dying'
+    };
+  if (dir === 'mature')
+    return { glyph: '✓', color: DRY_FAST, title: 'fully grown — ready to harvest' };
+  return { glyph: '↑', color: DRY_FAST, title: 'growth rising — conditions are favourable' };
 }
 
 /**

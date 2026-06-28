@@ -39,6 +39,7 @@ import {
   separateStackedBodies
 } from './pawn/carry';
 import { tendPatient, hasUntendedWound, TEND_WORK } from '../services/jobs/caretake';
+import { MIN_FORAGE_GROWTH } from '../services/jobs/filters';
 import { equipDropToPawn, carryDropToInventory } from '../core/PawnEquipment';
 import { jobService, BASE_WORK_RATE } from '../services/JobService';
 import { pawnStatService } from '../services/PawnStatService';
@@ -77,6 +78,7 @@ import {
 } from '../services/EnvironmentService';
 import { zoneTileKeys } from '../services/DesignationService';
 import { soilTierForTile } from '../core/Terrains';
+import { cropHealth, cropLossPerDay } from '../core/cropHealth';
 import { markTileDirty } from '../core/tileDeltas';
 import {
   RESOURCE_VISIBLE_GROWTH,
@@ -606,6 +608,7 @@ export class GameEngineImpl implements GameEngine {
     const growTiles = zoneTileKeys(gs, 'grow');
     if (growTiles.length === 0) return;
     const rate = seasonRegrowthMultiplier(gs.season);
+    const ticksPerDay = TURNS_PER_DAY * TICKS_PER_SECOND; // for the gradual cold-decline rate
 
     for (const key of growTiles) {
       const ci = key.indexOf(',');
@@ -627,20 +630,32 @@ export class GameEngineImpl implements GameEngine {
         const thermal = thermalAt(x, y);
         const temp = tileTemperature(tile.terrainType, gs.season, gs.turn, gs.weather, thermal);
         const m = tile.moisture ?? 0;
-        // DEATH conditions (the soil can no longer carry the crop): exhausted fertility, frost/snow,
-        // cold/heat out of the crop's window, or drought/flood. A dead crop is set to 1% — NOT 0% — so
-        // it never reads as a harvested cycle (no soil wear) and the whole map can't churn itself barren.
-        const dead =
-          soilTierForTile(tile) < c.minSoil ||
-          (tile.snow ?? 0) > 0 ||
-          temp < c.minTemp ||
-          temp > c.maxTemp ||
-          m < c.minMoisture ||
-          m > c.maxMoisture;
-        if (dead) {
+        const health = cropHealth(c, {
+          soilTier: soilTierForTile(tile),
+          temp,
+          moisture: m,
+          snow: tile.snow ?? 0
+        });
+        // Soil that can no longer carry the crop (its tier dropped below minSoil) is INSTANT death —
+        // reset to 1% (never 0) so it doesn't read as a harvested cycle (no soil wear) and the map can't
+        // churn itself barren.
+        if (health.soilDead) {
           if (growth[id] !== 1) {
             growth[id] = 1;
             if ((tile.resources[id] ?? 0) > 0) tile.resources[id] = 0;
+            markTileDirty(y, x, tile);
+          }
+          continue;
+        }
+        // Cold / heat / snow / drought are GRADUAL stresses: the bed withers over days — faster the
+        // further past its window — and recovers on a warm afternoon. It bottoms out at 1% (count
+        // cleared = dead), never below, so a withered plot still never charges soil wear.
+        if (health.severity > 0) {
+          const loss = cropLossPerDay(health.severity) / ticksPerDay;
+          const next = Math.max(1, growth[id] - loss);
+          if (next !== growth[id]) {
+            growth[id] = next;
+            if (next <= 1 && (tile.resources[id] ?? 0) > 0) tile.resources[id] = 0;
             markTileDirty(y, x, tile);
           }
           continue;
@@ -684,7 +699,7 @@ export class GameEngineImpl implements GameEngine {
 
     const rate = seasonRegrowthMultiplier(gs.season);
     // Ship a delta only when the rendered appearance changes: below the visible threshold the tile is
-    // bare soil (bucket -1); above it, dim in ~5% steps; the cross to 100% restores the count.
+    // bare soil (bucket -1); above it, dim in ~5% steps.
     const DIRTY_BUCKET = 5;
     const visualBucket = (g: number) =>
       g < RESOURCE_VISIBLE_GROWTH ? -1 : Math.floor(g / DIRTY_BUCKET);
@@ -700,18 +715,20 @@ export class GameEngineImpl implements GameEngine {
       for (const id in growth) {
         const g = growth[id];
         if (g >= 100) continue;
-        if ((tile.resources?.[id] ?? 0) > 0) continue; // already harvestable — not regrowing
         const interaction = resourceObjectService.getRegrowsFromZeroInteraction(id);
         if (!interaction?.regrowthTurns) continue; // not a gradual-regrow plant
         const totalTicks = Math.max(1, ticksFromSeconds(interaction.regrowthTurns) / rate);
         const next = Math.min(100, g + 100 / totalTicks);
         growth[id] = next;
-        if (next >= 100) {
+        // Harvestable once it climbs past the forage floor (count restored there, not at 100%), then it
+        // keeps maturing to 100 for a fuller yield. This aligns the count, the render-visibility line and
+        // the forage gate at MIN_FORAGE_GROWTH, so a cut plant takes exactly ONE pass and isn't
+        // re-harvestable until it has regrown past the floor (the multi-pass-grass fix).
+        if (next >= MIN_FORAGE_GROWTH && (tile.resources[id] ?? 0) <= 0) {
           const [mn, mx] = resourceObjectService.getById(id)?.nodeAmountRange ?? [1, 1];
-          tile.resources[id] = mn + Math.floor(rng.random() * (mx - mn + 1)); // matured → harvestable
-        } else {
-          stillGrowing = true;
+          tile.resources[id] = mn + Math.floor(rng.random() * (mx - mn + 1));
         }
+        if (next < 100) stillGrowing = true;
         if (visualBucket(g) !== visualBucket(next)) markTileDirty(y, x, tile);
       }
       if (!stillGrowing) removeWildGrowth(x, y);
