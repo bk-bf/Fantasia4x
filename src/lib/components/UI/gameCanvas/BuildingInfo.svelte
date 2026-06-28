@@ -117,7 +117,14 @@
       </div>
     {/if}
     {#each binContents as d (d.id)}
-      <div class="bld-store-item">· {itemService.getItemDisplayName(d)} ×{d.quantity}</div>
+      {@const dryTarget = itemService.dryingTargetSeconds(d.resourceId)}
+      <div class="bld-store-item">
+        · {itemService.getItemDisplayName(d)} ×{d.quantity}
+        {#if dryTarget !== null}
+          {@const dry = Math.min(1, (d.drying ?? 0) / dryTarget)}
+          <span class="bld-dry">— DRY [{jobProgressBar(dry)}] {Math.round(dry * 100)}%</span>
+        {/if}
+      </div>
     {:else}
       <div class="bld-store-item" style="opacity:0.6">· empty</div>
     {/each}
@@ -196,6 +203,10 @@
     color: #a89060;
     font-size: 9px;
     line-height: 1.3;
+  }
+  .bld-dry {
+    color: #d4b44a;
+    letter-spacing: 0.02em;
   }
   .bld-progress {
     color: #a08840;

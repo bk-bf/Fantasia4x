@@ -216,6 +216,9 @@ export interface ItemService {
   /** Passive drying (every tick): green firewood seasons near a lit fire; plant_fiber (cut grass)
    *  cures into hay where warm & dry, faster on a hay rack (effects.dryingBonus). */
   stepDrying(gameState: GameState): GameState;
+  /** Drying seconds a stack of this resource needs before it cures (firewood → dry_firewood,
+   *  plant_fiber → hay), for the UI dryness meter; null when the resource doesn't dry. */
+  dryingTargetSeconds(resourceId: string): number | null;
 }
 
 /**
@@ -872,6 +875,13 @@ export class ItemServiceImpl implements ItemService {
    * decays the progress (rain ruins drying hay). A hay rack (effects.dryingBonus) multiplies the rate;
    * a nearby fire raises the tile's temperature (folded in by thermalAt) so it stacks with the rack.
    */
+  /** Drying seconds before a stack cures, for the UI dryness meter (null = doesn't dry). */
+  dryingTargetSeconds(resourceId: string): number | null {
+    if (resourceId === 'green_firewood') return WOOD_DRYING_SECONDS;
+    if (resourceId === 'plant_fiber') return HAY_DRYING_SECONDS;
+    return null;
+  }
+
   stepDrying(gameState: GameState): GameState {
     const drops = gameState.droppedItems;
     if (!drops || drops.length === 0) return gameState;

@@ -1150,6 +1150,17 @@
       color: itemBarColor(durPct),
       valueText: `${durPct}%`
     });
+    // Curing progress for stacks that dry (cut grass → hay, green firewood → dry firewood).
+    const dryTarget = itemService.dryingTargetSeconds(d.resourceId);
+    if (dryTarget !== null) {
+      const dryPct = Math.round(Math.min(1, (d.drying ?? 0) / dryTarget) * 100);
+      bars.push({
+        label: 'DRY',
+        value: dryPct,
+        color: itemBarColor(dryPct),
+        valueText: `${dryPct}%`
+      });
+    }
     return {
       name: `★ ${displayName}`,
       status: `×${d.quantity}`,
@@ -5002,7 +5013,24 @@
           debugTemp={$debugMode ? seasonBakedTemp(hoverTile.terrainType, $currentSeason) : null}
         />
         <div class="tile-env">
-          {#if tileThermal.roofed}<span style="color:#7e9fbf">roofed</span>{/if}
+          {#if tileThermal.roofed}
+            {@const roofB = buildings.find(
+              (b) =>
+                b.x === hoverTile.x &&
+                b.y === hoverTile.y &&
+                b.status === 'complete' &&
+                isRoofBuilding(b)
+            )}
+            {@const roofDef = roofB ? buildingService.getBuildingById(roofB.type) : null}
+            <span style="color:#7e9fbf" title="under cover — this roof keeps rain and wind off the tile"
+              >{roofDef?.name ?? 'roofed'}</span
+            >{#if roofDef?.conditionDecayPerTurn}{@const cond = Math.round(roofB?.condition ?? 100)}<span
+                style="color:{cond >= 70 ? '#68b030' : cond >= 35 ? '#c8a13a' : '#cc5544'}"
+                title="roof condition — weather wears it down; repair before it fails"
+              >
+                {cond}%</span
+              >{/if}
+          {/if}
           {#if hoverDisplayResource}
             {@const growRes = resourceObjectService.getById(hoverDisplayResource)}
             {#if growRes && isGrowableResource(growRes)}

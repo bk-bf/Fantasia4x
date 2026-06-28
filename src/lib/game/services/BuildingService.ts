@@ -35,6 +35,31 @@ const ROOF_SUPPORT_RESOURCE_IDS: Set<string> = new Set(
     .map((r) => r.id)
 );
 
+/**
+ * Weather-exposure multiplier on structural wear (1 = the def's nominal `conditionDecayPerTurn`).
+ * Wet, violent weather rots thatch and scours mortar fast; clear/calm skies barely age a structure
+ * (a small fair-weather baseline remains — sun/thermal cycling). Computed ONCE per
+ * `stepBuildingCondition` tick (never per building) from the small top-level `weather` scalar — no
+ * per-tick allocation beyond the existing buildings `.map()`. Absent weather (tests / pre-weather
+ * saves) returns the nominal 1 so behaviour is unchanged.
+ */
+function weatherExposureFactor(weather: GameState['weather']): number {
+  if (!weather) return 1;
+  const type = weather.type ?? 'clear';
+  const intensity = weather.intensity ?? 0;
+  // Per-type damage to an EXPOSED structure (roofs/walls take the weather; interiors are unaffected).
+  let severity: number;
+  if (type === 'clear' || type === 'heat_wave')
+    severity = 0.12; // slow fair-weather ageing (sun, thermal cycling)
+  else if (type === 'fog') severity = 0.4;
+  else if (type === 'drizzle') severity = 0.8;
+  else if (type === 'rain' || type === 'snow' || type === 'foggy_rain') severity = 1.6;
+  else if (type === 'heavy_rain' || type === 'storm' || type === 'blizzard') severity = 3;
+  else severity = 1; // unknown/custom weather id → nominal
+  // Intensity scales the precip/wind-driven part — a light shower wears less than a downpour.
+  return Math.max(0.1, severity * (0.5 + 0.5 * intensity));
+}
+
 // `category:<cat>` cost-slot match. Local copy of ItemService.itemMatchesCostCategory (kept here to
 // avoid a BuildingService↔ItemService import cycle): real categories match `item.category`; the
 // pseudo-category `plank` matches ANY sawn plank so `category:plank` means "any plank".
@@ -778,6 +803,10 @@ export class BuildingServiceImpl implements BuildingService {
   }
 
   stepBuildingCondition(gameState: GameState): GameState {
+    // ROOF-SUPPORT / weather wear: structural wear scales with how harsh the weather is — a storm rots
+    // an exposed roof/wall fast, a clear calm day barely ages it. One scalar per tick (cheap); roofs
+    // with no `conditionDecayPerTurn` (tile_roof, the natural mountain_roof) never decay regardless.
+    const exposure = weatherExposureFactor(gameState.weather);
     let changed = false;
     const buildings = (gameState.buildings ?? []).map((b) => {
       if (b.status !== 'complete') return b;
@@ -790,7 +819,7 @@ export class BuildingServiceImpl implements BuildingService {
       const durMul = b.materials
         ? aggregateMaterialMods(Object.values(b.materials), 'building').durability
         : 1;
-      const next = Math.max(0, cur - perTick(rate) / durMul);
+      const next = Math.max(0, cur - (perTick(rate) * exposure) / durMul);
       if (next === cur) return b;
       changed = true;
       return { ...b, condition: next };

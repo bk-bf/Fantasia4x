@@ -772,7 +772,7 @@
     "researchRequired": null,
     "upkeepCost": {},
     "conditionDecayPerTurn": 0.6,
-    "effects": {"roof": 1, "weatherProtection": 0.4, "thermalInsulation": 0.3},
+    "effects": {"roof": 1, "weatherProtection": 0.35, "thermalInsulation": 0.3},
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
   },
@@ -792,7 +792,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"roof": 1, "weatherProtection": 1.0, "transparentRoof": 1, "thermalInsulation": 0.5},
+    "effects": {"roof": 1, "weatherProtection": 0.85, "transparentRoof": 1, "thermalInsulation": 0.5},
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
   },
