@@ -425,8 +425,27 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
     fg = sub.fg as [number, number, number];
     bg = sub.bg as [number, number, number];
   }
-  // Snow cover (SEASONS_WEATHER): blend terrain/resource toward cool white by accumulated `snow`
-  // (0–100). Terrain layer only — buildings & dropped items draw on top and are never whitened.
+  // Ice glaze (SEASONS_WEATHER): a frozen tile gets a THIN pale-blue sheen — deliberately gentle (a glaze,
+  // not a snow blanket), so a frozen pond reads as faint blue glass. Applied BENEATH snow so that on a
+  // heavily snowed tile the white drift covers the ice rather than the blue showing through. Hidden below
+  // ICE_VISIBLE_RENDER.
+  const ice = tile.ice ?? 0;
+  if (ice >= ICE_VISIBLE_RENDER) {
+    const it = 0.18 + Math.min(1, ice / 100) * 0.22; // ~0.2 thin rime → ~0.4 solid sheet
+    bg = [
+      bg[0] + (ICE_BLUE[0] - bg[0]) * it,
+      bg[1] + (ICE_BLUE[1] - bg[1]) * it,
+      bg[2] + (ICE_BLUE[2] - bg[2]) * it
+    ];
+    fg = [
+      fg[0] + (ICE_BLUE[0] - fg[0]) * it * 0.8,
+      fg[1] + (ICE_BLUE[1] - fg[1]) * it * 0.8,
+      fg[2] + (ICE_BLUE[2] - fg[2]) * it * 0.8
+    ];
+  }
+  // Snow cover (SEASONS_WEATHER): blend terrain/resource (and any ice glaze) toward cool white by
+  // accumulated `snow` (0–100). Drawn LAST so deep snow buries the ice tint. Terrain layer only —
+  // buildings & dropped items draw on top and are never whitened.
   const snow = tile.snow ?? 0;
   if (snow > 0) {
     const t = Math.min(1, snow / 100);
@@ -441,23 +460,6 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
       fg[0] + (SNOW_WHITE[0] - fg[0]) * wf,
       fg[1] + (SNOW_WHITE[1] - fg[1]) * wf,
       fg[2] + (SNOW_WHITE[2] - fg[2]) * wf
-    ];
-  }
-  // Ice glaze (SEASONS_WEATHER): a frozen tile gets a THIN pale-blue sheen on top — deliberately gentle
-  // (a glaze, not a snow blanket), so even a fully frozen pond reads as a faint blue glass rather than
-  // white drift. Hidden below ICE_VISIBLE_RENDER. Drawn after snow so a snow-on-ice tile leans white.
-  const ice = tile.ice ?? 0;
-  if (ice >= ICE_VISIBLE_RENDER) {
-    const it = 0.18 + Math.min(1, ice / 100) * 0.22; // ~0.2 thin rime → ~0.4 solid sheet
-    bg = [
-      bg[0] + (ICE_BLUE[0] - bg[0]) * it,
-      bg[1] + (ICE_BLUE[1] - bg[1]) * it,
-      bg[2] + (ICE_BLUE[2] - bg[2]) * it
-    ];
-    fg = [
-      fg[0] + (ICE_BLUE[0] - fg[0]) * it * 0.8,
-      fg[1] + (ICE_BLUE[1] - fg[1]) * it * 0.8,
-      fg[2] + (ICE_BLUE[2] - fg[2]) * it * 0.8
     ];
   }
   grid.setTile(tile.x, tile.y, {
