@@ -332,10 +332,11 @@ export interface Building {
     tinderItemId?: string;
     tinderAmount?: number;
   };
-  /** PRODUCTION-CHAIN-III §B.2: a passive furnace that may only burn these specific fuel items
-   *  (e.g. a tanning bucket burns `tanning_brine`/`beast_brine`, never firewood). Seeded into a
-   *  placed building's `fuelSettings.allowedFuelItemIds` at placement so the existing refuel filter
-   *  enforces it — no new fuel mechanic. Empty/undefined = any fuel item (the default furnace). */
+  /** PRODUCTION-CHAIN-III §B.2: the fuel-filter allow-list this building starts with — seeded into a
+   *  placed building's `fuelSettings.allowedFuelItemIds` at placement (the player can still edit it).
+   *  Two uses: a HARD restriction (a tanning bucket burns only `tanning_brine`/`beast_brine`, never
+   *  firewood) and a SANE default (a campfire/hearth burns everyday wood/turf, with logs/bark/coal as
+   *  manual emergency picks). Empty/undefined = the global default burn-list. */
   defaultAllowedFuelItemIds?: string[];
   isStorage?: boolean; // colonists can retrieve food/items here
   isRest?: boolean; // colonists can sleep here

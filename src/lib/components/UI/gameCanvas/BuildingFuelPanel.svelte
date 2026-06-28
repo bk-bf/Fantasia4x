@@ -41,6 +41,9 @@
   // refuel — it needs a pinch of tinder + any allowed fuel in the stockpile (a single type is fine).
   $: refuelReq = getRefuelRequirements(building.type);
   $: tinderName = itemService.getItemById(refuelReq.tinderItemId)?.name ?? refuelReq.tinderItemId;
+  // Tinder is reserved to LIGHT the fire — never burned as bulk fuel (planRefuel skips it), so it
+  // isn't a toggleable fuel-bed choice. Hide it from the filter and flag it as always-consumed below.
+  $: fuelFilterItems = FUEL_ITEMS.filter((item) => item.id !== refuelReq.tinderItemId);
   $: tinderStock = ($gameState.stockpile ?? {})[refuelReq.tinderItemId] ?? 0;
   $: maxFuel = buildingService.getBuildingById(building.type)?.maxFuel ?? 60;
   $: wantsFuel = (building.fuel ?? 0) / Math.max(maxFuel, 1) < selectedFuelThresholdPct / 100;
@@ -67,9 +70,14 @@
     updateSelectedBuildingFuelSettings({ allowedFuelItemIds: FUEL_ITEMS.map((item) => item.id) });
   }
 
-  // Reset to the sensible default burn-list (no crafted/valuable fuels).
+  // Reset to the sensible default burn-list. Prefer the building's OWN default (e.g. a campfire/hearth
+  // burns everyday wood/turf, not logs/bark — those stay manual); fall back to the global default set.
   function resetFuelToDefault() {
-    updateSelectedBuildingFuelSettings({ allowedFuelItemIds: [...getDefaultAllowedFuelIds()] });
+    const def = buildingService.getBuildingById(building.type);
+    const ids = def?.defaultAllowedFuelItemIds?.length
+      ? [...def.defaultAllowedFuelItemIds]
+      : [...getDefaultAllowedFuelIds()];
+    updateSelectedBuildingFuelSettings({ allowedFuelItemIds: ids });
   }
 
   // Burn nothing — empty explicit list. Refuel then reports "can't refuel" until something is re-checked.
@@ -138,7 +146,11 @@
   <div class="fuel-settings-block">
     <div class="fuel-settings-label">refuel needs</div>
     <div class="fuel-req">
-      {refuelReq.tinderAmount}× {tinderName} (tinder) + any fuel
+      <span>{refuelReq.tinderAmount}× {tinderName}</span>
+      <span class="fuel-pill" title="Tinder is always consumed to light the fire — it can't be turned off."
+        >tinder · always</span
+      >
+      <span class="fuel-req-dim">+ any fuel</span>
     </div>
     {#if cannotRefuel}
       <div class="fuel-warn">
@@ -183,7 +195,7 @@
   <div class="fuel-settings-block">
     <div class="fuel-settings-label">fuel filters</div>
     <ItemFilterChecklist
-      items={FUEL_ITEMS}
+      items={fuelFilterItems}
       allowed={allowedFuelSet}
       onChange={(ids) => updateSelectedBuildingFuelSettings({ allowedFuelItemIds: ids })}
       listMaxHeight="120px"
@@ -278,6 +290,23 @@
   }
   .fuel-req {
     color: #d4a860;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .fuel-req-dim {
+    color: #a07c38;
+  }
+  .fuel-pill {
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #f0c878;
+    background: #2a1c08;
+    border: 1px solid #8e6a2a;
+    padding: 0 4px;
+    cursor: help;
   }
   .fuel-warn {
     color: #e3833f;
