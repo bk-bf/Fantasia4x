@@ -1108,18 +1108,31 @@ export function stepHostile(
       return { ...mob, path: [] }; // stay still while winded
     }
     case 'Sleeping': {
-      // Woken by a pawn entering vision — also fire the one-shot threat alert (auto-pause + pulse).
+      // Woken by a pawn entering vision. Only a mob that would actually ENGAGE wakes HOSTILE (Alerted +
+      // one-shot threat alert): an aggressive predator, or a territorial neutral whose personal space is
+      // invaded (same rule as the Wander case). A placid herbivore (territorial === false — aurochs,
+      // mammoth) just wakes and resumes wandering; it has no reason to turn hostile at a passing colonist
+      // and only fights back once actually attacked (chargesWhenWounded → the hunt/combat path).
       if (inVision) {
-        if (!mob.alertedPawn)
-          simLog.threatAlert(
-            mob.id,
-            entityName(mob),
-            inVision.pawn.name ?? 'a colonist',
-            turn,
-            mob.x,
-            mob.y
-          );
-        return { ...mob, state: 'Alerted', stateSince: turn, alertedPawn: true };
+        const tooClose =
+          !aggressive && def.territorial && dist(mob, inVision.pos) <= Math.ceil(visionRange * 0.5);
+        if (aggressive || tooClose) {
+          if (!mob.alertedPawn)
+            simLog.threatAlert(
+              mob.id,
+              entityName(mob),
+              inVision.pawn.name ?? 'a colonist',
+              turn,
+              mob.x,
+              mob.y
+            );
+          return { ...mob, state: 'Alerted', stateSince: turn, alertedPawn: true };
+        }
+        return {
+          ...mob,
+          state: def.behaviour === 'passive' ? 'Grazing' : 'Wander',
+          stateSince: turn
+        };
       }
       // Natural wake when rested or force-wake when ravenously hungry.
       if (
