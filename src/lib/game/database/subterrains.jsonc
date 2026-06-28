@@ -6,8 +6,7 @@
 //   walkable     — whether pawns can enter this tile
 //   movementCost — movement point multiplier (1 = base speed)
 //   charSpans    — glyph source: [{sheet,from,to}] | [{sheet,id}] | [{literal}]
-//   fg / bg      — [r, g, b] render colours (0–1)
-//   color        — hex colour for minimap / UI
+//   fg / bg      — `#rrggbb` hex render colours (parsed to RGB 0–1 at load)
 //   biomes       — per-biome detail-noise range [min, max] that maps to this subterrain
 //                  (null = unbounded on that side; absent = not used in biome assignment)
 [
@@ -25,9 +24,8 @@
     "walkable"    : true,
     "movementCost": 1.2,
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
-    "fg"          : [0.52, 0.42, 0.28],
-    "bg"          : [0.09, 0.07, 0.04],
-    "color"       : "#857049",
+    "fg"          : "#856b47",
+    "bg"          : "#17120a",
     "biomes"      : { "forest": [null, -0.3], "plains": [null, -0.4] }
   },
   {
@@ -36,9 +34,8 @@
     "walkable"    : true,
     "movementCost": 1,
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
-    "fg"          : [0.47, 0.37, 0.24],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#79643F",
+    "fg"          : "#785e3d",
+    "bg"          : "#140f08",
     "biomes"      : { "forest": [-0.3, 0.18], "plains": [-0.4, 0.18] }
   },
   {
@@ -47,9 +44,8 @@
     "walkable"    : true,
     "movementCost": 1.5,
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
-    "fg"          : [0.39, 0.30, 0.19],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#61502E",
+    "fg"          : "#634d30",
+    "bg"          : "#140f08",
     "biomes"      : { "forest": [0.25, 0.97] }
   },
   {
@@ -58,9 +54,8 @@
     "walkable"    : true,
     "movementCost": 1.3,
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
-    "fg"          : [0.43, 0.33, 0.21],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#6D5836",
+    "fg"          : "#6e5436",
+    "bg"          : "#140f08",
     "biomes"      : { "plains": [0.25, 0.7] }
   },
   {
@@ -72,9 +67,8 @@
     "walkable"    : true,
     "movementCost": 1.2,
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
-    "fg"          : [0.36, 0.27, 0.17],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#574325",
+    "fg"          : "#5c452b",
+    "bg"          : "#140f08",
     "biomes"      : { "forest": [0.97, null] }
   },
   {
@@ -83,9 +77,8 @@
     "walkable"    : true,
     "movementCost": 1.2,
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — savanna resource paints the visual
-    "fg"          : [0.46, 0.3, 0.09],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#D1A326",
+    "fg"          : "#754d17",
+    "bg"          : "#140f08",
     "biomes"      : { "plains": [0.7, null] }
   },
   {
@@ -94,9 +87,8 @@
     "walkable"    : true,
     "movementCost": 1.8,
     "charSpans"   : [ {"sheet": "plants", "id": 41} ],
-    "fg"          : [0.26, 0.46, 0.05],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#42750D",
+    "fg"          : "#42750d",
+    "bg"          : "#140f08",
     "biomes"      : { "forest": [0.05, 0.15], "plains": [0.1, 0.15] }
   },
   {
@@ -105,9 +97,8 @@
     "walkable"    : true,
     "movementCost": 1.7,
     "charSpans"   : [ {"sheet": "plants", "id": 21} ],
-    "fg"          : [0.48, 0.34, 0.09],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#7A5717"
+    "fg"          : "#7a5717",
+    "bg"          : "#140f08"
   },
   {
     "id"          : "wildflowers",
@@ -115,9 +106,8 @@
     "walkable"    : true,
     "movementCost": 1.1,
     "charSpans"   : [ {"sheet": "plants", "from": 89, "to": 111} ],
-    "fg"          : [0.88, 0.42, 0.71],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#E06BB5"
+    "fg"          : "#e06bb5",
+    "bg"          : "#140f08"
   },
   {
     "id"          : "tree",
@@ -125,9 +115,8 @@
     "walkable"    : true,
     "movementCost": 2,
     "charSpans"   : [ {"sheet": "plants", "from": 0, "to": 71} ],
-    "fg"          : [0.52, 0.72, 0.11],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#85B81C"
+    "fg"          : "#85b81c",
+    "bg"          : "#140f08"
   },
   {
     "id"          : "tree_stump",
@@ -135,9 +124,8 @@
     "walkable"    : true,
     "movementCost": 2,
     "charSpans"   : [ {"sheet": "plants", "id": 209} ],
-    "fg"          : [0.56, 0.34, 0.09],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#8F5717"
+    "fg"          : "#8f5717",
+    "bg"          : "#140f08"
   },
   {
     "id"          : "fallen_logs",
@@ -145,9 +133,8 @@
     "walkable"    : true,
     "movementCost": 2.2,
     "charSpans"   : [ {"sheet": "plants", "id": 209} ],
-    "fg"          : [0.48, 0.26, 0.05],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#7A420D"
+    "fg"          : "#7a420d",
+    "bg"          : "#140f08"
   },
   {
     "id"          : "dead_trees",
@@ -155,9 +142,8 @@
     "walkable"    : true,
     "movementCost": 2.5,
     "charSpans"   : [ {"sheet": "plants", "from": 164, "to": 166} ],
-    "fg"          : [0.44, 0.36, 0.21],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#705C36"
+    "fg"          : "#705c36",
+    "bg"          : "#140f08"
   },
   {
     "id"          : "mushroom_patch",
@@ -165,9 +151,8 @@
     "walkable"    : true,
     "movementCost": 1.6,
     "charSpans"   : [ {"sheet": "plants", "id": 120} ],
-    "fg"          : [0.86, 0.52, 0.33],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#DB8554"
+    "fg"          : "#db8554",
+    "bg"          : "#140f08"
   },
   {
     "id"          : "moss",
@@ -175,9 +160,8 @@
     "walkable"    : true,
     "movementCost": 1.5,
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — moss resource paints the visual
-    "fg"          : [0.46, 0.3, 0.09],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#4C7A17",
+    "fg"          : "#754d17",
+    "bg"          : "#140f08",
     "biomes"      : { "swamp": [0.5, 0.7] }
   },
   {
@@ -186,9 +170,8 @@
     "walkable"    : true,
     "movementCost": 3,
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — mud resource paints the visual
-    "fg"          : [0.46, 0.3, 0.09],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#573817",
+    "fg"          : "#754d17",
+    "bg"          : "#140f08",
     "biomes"      : { "swamp": [null, -0.2] }
   },
   {
@@ -197,9 +180,8 @@
     "walkable"    : true,
     "movementCost": 3.5,
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — bog resource paints the visual
-    "fg"          : [0.46, 0.3, 0.09],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#4C4712",
+    "fg"          : "#754d17",
+    "bg"          : "#140f08",
     "biomes"      : { "swamp": [-0.2, 0.2] }
   },
   {
@@ -208,9 +190,8 @@
     "walkable"    : true,
     "movementCost": 2.8,
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — clay resource paints the visual
-    "fg"          : [0.46, 0.3, 0.09],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#AD5C21",
+    "fg"          : "#754d17",
+    "bg"          : "#140f08",
     "biomes"      : { "swamp": [0.2, 0.5] }
   },
   {
@@ -219,9 +200,8 @@
     "walkable"    : true,
     "movementCost": 25,
     "charSpans"   : [ {"literal": "."} ],
-    "fg"          : [0.7, 0.52, 0.25],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#B28540",
+    "fg"          : "#b38540",
+    "bg"          : "#140f08",
     "biomes"      : { "swamp": [0.7, null] }
   },
   {
@@ -233,9 +213,8 @@
     "walkable"    : true,
     "movementCost": 2.5,
     "charSpans"   : [ {"literal": "~"} ],
-    "fg"          : [0.2, 0.52, 0.41],
-    "bg"          : [0.04, 0.07, 0.08],
-    "color"       : "#338569"
+    "fg"          : "#338569",
+    "bg"          : "#0a1214"
   },
   {
     "id"          : "water",
@@ -243,9 +222,8 @@
     "walkable"    : false,
     "movementCost": 0,
     "charSpans"   : [ {"literal": "~"} ],
-    "fg"          : [0.16, 0.36, 0.55],
-    "bg"          : [0.04, 0.07, 0.08],
-    "color"       : "#295C8C"
+    "fg"          : "#295c8c",
+    "bg"          : "#0a1214"
   },
   {
     "id"          : "rapids",
@@ -253,9 +231,8 @@
     "walkable"    : false,
     "movementCost": 0,
     "charSpans"   : [ {"literal": "~"} ],
-    "fg"          : [0.38, 0.8, 0.91],
-    "bg"          : [0.04, 0.07, 0.08],
-    "color"       : "#61CCE8"
+    "fg"          : "#61cce8",
+    "bg"          : "#0a1214"
   },
   {
     "id"          : "riverbank",
@@ -263,9 +240,8 @@
     "walkable"    : true,
     "movementCost": 1.4,
     "charSpans"   : [ {"literal": "#"} ],
-    "fg"          : [0.58, 0.44, 0.13],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#947021",
+    "fg"          : "#947021",
+    "bg"          : "#140f08",
     "biomes"      : { "river": [null, null] }
   },
   {
@@ -274,9 +250,8 @@
     "walkable"    : true,
     "movementCost": 2.5,
     "charSpans"   : [ {"literal": " "} ],  // transparent — visual comes from mountain_wall resource
-    "fg"          : [0.62, 0.52, 0.37],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#9E855E",
+    "fg"          : "#9e855e",
+    "bg"          : "#140f08",
     "biomes"      : { "mountain": [null, -0.08] }
   },
   {
@@ -285,9 +260,8 @@
     "walkable"    : true,
     "movementCost": 1,
     "charSpans"   : [ {"sheet": "tiles", "id": 3} ],
-    "fg"          : [0.26, 0.18, 0.09],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#422E17"
+    "fg"          : "#422e17",
+    "bg"          : "#140f08",
     // Cave generation was removed (the noise approaches all produced webs/blocky/straight tunnels).
     // Cave has no biome range, so it does not spawn; the subterrain def is kept for future use.
   },
@@ -298,9 +272,8 @@
     "blocksSight" : true,
     "movementCost": 0,
     "charSpans"   : [ {"literal": " "} ],  // transparent — visual comes from cliff_wall resource
-    "fg"          : [0.5, 0.42, 0.27],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#806B45",
+    "fg"          : "#806b45",
+    "bg"          : "#140f08",
     "biomes"      : { "mountain": [-0.08, 0.57] }
   },
   {
@@ -309,9 +282,8 @@
     "walkable"    : true,
     "movementCost": 2.8,
     "charSpans"   : [ {"sheet": "tiles", "from": 43, "to": 47} ],
-    "fg"          : [0.92, 0.76, 0.13],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#EBC221",
+    "fg"          : "#ebc221",
+    "bg"          : "#140f08",
     "biomes"      : { "mountain": [0.57, null] }
   },
   {
@@ -320,9 +292,8 @@
     "walkable"    : true,
     "movementCost": 2,
     "charSpans"   : [ {"sheet": "tiles", "from": 48, "to": 55} ],
-    "fg"          : [0.4, 0.84, 0.79],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#66D6C9"
+    "fg"          : "#66d6c9",
+    "bg"          : "#140f08"
   },
   {
     "id"          : "arcane_glade",
@@ -330,8 +301,7 @@
     "walkable"    : true,
     "movementCost": 1.5,
     "charSpans"   : [ {"sheet": "tiles", "from": 40, "to": 42}, {"sheet": "tiles", "from": 56, "to": 57} ],
-    "fg"          : [0.86, 0.5, 0.79],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#DB80C9"
+    "fg"          : "#db80c9",
+    "bg"          : "#140f08"
   }
 ]

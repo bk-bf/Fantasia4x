@@ -235,6 +235,18 @@ export function resetBiomeConfig(): void {
 }
 
 // ── Subterrains ───────────────────────────────────────────────────────────────
+/** Parse a `#rrggbb` hex colour into a normalised RGB (0–1) triple; falls back to `fallback`. */
+function hexToRgb01(
+  hex: unknown,
+  fallback: [number, number, number]
+): [number, number, number] {
+  if (typeof hex !== 'string') return fallback;
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return fallback;
+  const n = parseInt(m[1], 16);
+  return [((n >> 16) & 0xff) / 255, ((n >> 8) & 0xff) / 255, (n & 0xff) / 255];
+}
+
 // Chars are resolved at load time from tile-index descriptors (charSpans) stored
 // in terrains.json.  Each span references tiles.bmp or plants.bmp by sheet + index.
 export const SUBTERRAINS: Record<string, SubterrainDef> = Object.fromEntries(
@@ -245,8 +257,8 @@ export const SUBTERRAINS: Record<string, SubterrainDef> = Object.fromEntries(
       walkable: sub.walkable as boolean,
       blocksSight: sub.blocksSight as boolean | undefined,
       movementCost: sub.movementCost as number,
-      fg: sub.fg as [number, number, number],
-      bg: sub.bg as [number, number, number],
+      fg: hexToRgb01(sub.fg, [0.5, 0.5, 0.5]),
+      bg: hexToRgb01(sub.bg, [0.03, 0.03, 0.03]),
       chars: resolveCharSpans(sub.charSpans as CharSpan[]),
       biomes: sub.biomes as Record<string, [number | null, number | null]> | undefined
     } satisfies SubterrainDef
