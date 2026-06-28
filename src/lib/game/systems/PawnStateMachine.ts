@@ -455,6 +455,24 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
       // drive the conditions from the tracked values — not the instantaneous environmental read.
       const cold = approachExposure(needs?.coldExposure ?? 0, coldTarget, recoveryMul);
       const heat = approachExposure(needs?.heatExposure ?? 0, heatTarget, recoveryMul);
+      // TEMP-DBG: why is a pawn cold/hot? Dumps the full chain when the meter is elevated so a stuck or
+      // runaway reading can be diagnosed (effective temp vs comfort band, target before/after the meter,
+      // worn cold-res, wetness, wind). NaN in coldTarget freezes the meter (approachExposure no-ops), so
+      // it's printed raw. Gated behind verbose logging → .debug/needs.log.
+      if (cold > 50 || heat > 50 || Number.isNaN(coldTarget)) {
+        const wornDbg = equippedTemperatureResistance(pawn);
+        gameLogger.log(
+          gameState.turn,
+          'NEED-CHECK',
+          () =>
+            `TEMP-DBG ${pawn.name} base:${(tile?.temperature ?? 15).toFixed(1)} eff:${temp.toFixed(1)} ` +
+            `comfort:[${comfort.min},${comfort.max}] coldTarget:${coldTarget} heatTarget:${heatTarget} ` +
+            `cold:${cold.toFixed(1)} heat:${heat.toFixed(1)} wornCold:${wornDbg.cold} ` +
+            `coldResStat:${pawnStatService.evaluateStat('cold_resistance', pawn)} ` +
+            `wet:${(needs?.wetness ?? 0).toFixed(0)} wind:${windLevel.toFixed(2)} roofed:${!!thermal?.roofed} ` +
+            `equip:[${Object.values(pawn.equipment ?? {}).map((i) => i?.itemId).filter(Boolean).join(',')}]`
+        );
+      }
       if (needs) {
         needs.coldExposure = cold;
         needs.heatExposure = heat;
