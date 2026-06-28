@@ -704,7 +704,8 @@ export class PawnStatServiceImpl implements PawnStatService {
     const formula = def.formula ?? '';
     const vars: { name: string; value: string }[] = [];
     for (const name of Object.keys(all)) {
-      if (new RegExp(`\\b${name}\\b`).test(formula)) vars.push({ name, value: String(r2(all[name])) });
+      if (new RegExp(`\\b${name}\\b`).test(formula))
+        vars.push({ name, value: String(r2(all[name])) });
     }
     return { formula, description: def.description ?? '', vars };
   }

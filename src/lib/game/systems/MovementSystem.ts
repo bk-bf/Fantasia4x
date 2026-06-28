@@ -187,14 +187,17 @@ export function seedMidCrossClaims<T extends MovableBody>(
  *
  * `occupancy` = every body's start-of-tick tile (build once per pass). `claimed` is MUTATED: a fresh
  * mover adds its target; pre-seed it with {@link seedMidCrossClaims}. The body's own tile is never a
- * blocker. Callers map any type-specific fields (pawn isMoving/hasReachedDestination) from the result.
+ * blocker. `targetByTile` (optional) maps each moving body's current tile → the tile it intends to
+ * enter, enabling the head-on swap break (see below). Callers map any type-specific fields (pawn
+ * isMoving/hasReachedDestination) from the result.
  */
 export function stepBody<T extends MovableBody>(
   body: T,
   occupancy: Set<string>,
   claimed: Set<string>,
   worldMap: WorldTile[][],
-  speed: number
+  speed: number,
+  targetByTile?: Map<string, { id: string; target: string }>
 ): StepResult<T> {
   const target = body.path?.[body.pathIndex ?? 0];
   if (!body.path || body.path.length === 0 || !target) {
@@ -203,10 +206,25 @@ export function stepBody<T extends MovableBody>(
   const targetKey = `${target.x},${target.y}`;
   const selfKey = `${body.x},${body.y}`;
   const midCrossing = body.nextCellCostLeft != null;
-  const blocked =
-    (occupancy.has(targetKey) && targetKey !== selfKey) || (!midCrossing && claimed.has(targetKey));
+  const occupiedByOther = occupancy.has(targetKey) && targetKey !== selfKey;
+  const blocked = occupiedByOther || (!midCrossing && claimed.has(targetKey));
 
   if (blocked) {
+    // Head-on swap deadlock: the body sitting on our target tile is itself trying to step onto OUR
+    // tile. Waiting is provably futile (it's waiting on us too), so don't burn the full
+    // MAX_BLOCKED_TICKS patience — break it NOW. A deterministic id tiebreak drops exactly ONE of the
+    // pair (the higher id) so its FSM re-routes next tick while the other proceeds; dropping both
+    // would let them re-route symmetrically and re-collide on the next approach.
+    if (occupiedByOther && targetByTile) {
+      const blocker = targetByTile.get(targetKey);
+      if (blocker && blocker.target === selfKey && body.id > blocker.id) {
+        return {
+          body: { ...body, path: [], pathIndex: 0, nextCellCostLeft: undefined, blockedTicks: 0 },
+          status: 'dropped',
+          done: false
+        };
+      }
+    }
     const bt = (body.blockedTicks ?? 0) + 1;
     if (bt > MAX_BLOCKED_TICKS) {
       return {

@@ -34,12 +34,21 @@ export interface OccupancyService {
   blockedTilesShared(state: GameState): Set<string>;
   /** True if (x, y) holds a body other than `excludeId`. */
   isBlocked(state: GameState, x: number, y: number, excludeId?: string): boolean;
+  /** Map of each MOVING body's CURRENT tile key → `{ id, target }`, where `target` is the next tile it
+   *  intends to enter. Lets the move pass spot a head-on swap deadlock — A wants B's tile while B wants
+   *  A's — and break it at once instead of waiting out MAX_BLOCKED_TICKS. Covers pawns AND mobs so a
+   *  pawn↔mob head-on resolves too. MEMOISED on the (mobs, pawns) array refs (stable within a tick),
+   *  like {@link blockedTilesShared}, so both move passes share one build. */
+  movingTargets(state: GameState): Map<string, { id: string; target: string }>;
 }
 
 class OccupancyServiceImpl implements OccupancyService {
   private _sharedMobs: unknown = null;
   private _sharedPawns: unknown = null;
   private _sharedSet: Set<string> | null = null;
+  private _mtMobs: unknown = null;
+  private _mtPawns: unknown = null;
+  private _mtMap: Map<string, { id: string; target: string }> | null = null;
 
   blockedTilesShared(state: GameState): Set<string> {
     if (this._sharedMobs === state.mobs && this._sharedPawns === state.pawns && this._sharedSet)
@@ -62,6 +71,26 @@ class OccupancyServiceImpl implements OccupancyService {
       occupied.add(`${m.x},${m.y}`);
     }
     return occupied;
+  }
+
+  movingTargets(state: GameState): Map<string, { id: string; target: string }> {
+    if (this._mtMobs === state.mobs && this._mtPawns === state.pawns && this._mtMap)
+      return this._mtMap;
+    const m = new Map<string, { id: string; target: string }>();
+    for (const p of state.pawns) {
+      if (p.isAlive === false || !p.position || !p.isMoving || !p.path?.length) continue;
+      const t = p.path[p.pathIndex ?? 0];
+      if (t) m.set(`${p.position.x},${p.position.y}`, { id: p.id, target: `${t.x},${t.y}` });
+    }
+    for (const mob of state.mobs ?? []) {
+      if (mob.state === 'Corpse' || !mob.path?.length) continue;
+      const t = mob.path[mob.pathIndex ?? 0];
+      if (t) m.set(`${mob.x},${mob.y}`, { id: mob.id, target: `${t.x},${t.y}` });
+    }
+    this._mtMobs = state.mobs;
+    this._mtPawns = state.pawns;
+    this._mtMap = m;
+    return m;
   }
 
   isBlocked(state: GameState, x: number, y: number, excludeId?: string): boolean {

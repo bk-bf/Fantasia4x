@@ -12,7 +12,7 @@
  */
 import type { GameState, Pawn } from '../core/types';
 import { occupancyService } from './OccupancyService';
-import { buildPathfindingGridsWithBlocked } from './PathfinderService';
+import { buildPathfindingGridsSoftBlocked } from './PathfinderService';
 import { wasmPathfinderService } from './WasmPathfinderService';
 import { pawnService } from './PawnService';
 
@@ -35,7 +35,7 @@ export function assignDraftMovePath(
   }
   if (!wasmPathfinderService.isReady()) return gs;
   const b = blocked ?? occupancyService.blockedTiles(gs);
-  const { walkable, costs, width, height } = buildPathfindingGridsWithBlocked(
+  const { walkable, costs, width, height } = buildPathfindingGridsSoftBlocked(
     gs.worldMap,
     b,
     pawn.position.x,

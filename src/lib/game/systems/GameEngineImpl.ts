@@ -49,7 +49,7 @@ import { combatService } from './Combat';
 import { getRangedWeapon, effectiveRangedRange, hasViableAmmo } from './rangedCombat';
 import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
 import {
-  buildPathfindingGridsWithBlocked,
+  buildPathfindingGridsSoftBlocked,
   patchPathfindingWalkable
 } from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
@@ -822,7 +822,7 @@ export class GameEngineImpl implements GameEngine {
             gs = pawnService.assignPath(pawn.id, [], gs);
           }
         } else {
-          const { walkable, costs, width, height } = buildPathfindingGridsWithBlocked(
+          const { walkable, costs, width, height } = buildPathfindingGridsSoftBlocked(
             gs.worldMap,
             blocked,
             pawn.position.x,
@@ -863,7 +863,7 @@ export class GameEngineImpl implements GameEngine {
           };
         };
         const walkTo = (tx: number, ty: number) => {
-          const grids = buildPathfindingGridsWithBlocked(
+          const grids = buildPathfindingGridsSoftBlocked(
             gs.worldMap,
             blocked,
             pawn.position!.x,
@@ -934,7 +934,7 @@ export class GameEngineImpl implements GameEngine {
             pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, draftTarget: undefined } : p))
           };
         } else {
-          const grids = buildPathfindingGridsWithBlocked(
+          const grids = buildPathfindingGridsSoftBlocked(
             gs.worldMap,
             blocked,
             pawn.position.x,

@@ -1031,6 +1031,8 @@ export class PawnServiceImpl implements PawnService {
     // per-tile claim logic is shared with the mob pass via MovementSystem.stepBody (MOVE-1), so
     // pawns and mobs can't diverge. `occupied` is built once from start-of-pass positions.
     const occupied = occupancyService.blockedTiles(state);
+    // Each moving body's intended next tile (pawns + mobs) — lets stepBody break head-on swaps at once.
+    const targetByTile = occupancyService.movingTargets(state);
     // Pre-seed claims with pawns already mid-crossing — they own their target tile this tick
     // (pawns store position as {x,y}, so this is inlined rather than via seedMidCrossClaims).
     const claimed = new Set<string>();
@@ -1072,7 +1074,8 @@ export class PawnServiceImpl implements PawnService {
         occupied,
         claimed,
         state.worldMap,
-        speed
+        speed,
+        targetByTile
       );
 
       if (res.status === 'held' || res.status === 'idle') {

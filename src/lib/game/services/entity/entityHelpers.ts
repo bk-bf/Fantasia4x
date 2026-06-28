@@ -566,6 +566,8 @@ export function advanceMobMovement(state: GameState): GameState {
   // via MovementSystem.stepBody so mobs and pawns enforce identical rules (MOVE-1). `occupancy` =
   // every body's CURRENT tile; `claimed` = tiles a mover has committed to entering this tick.
   const occupancy = occupancyService.blockedTiles(state); // includes self; self-tile guarded in stepBody
+  // Each moving body's intended next tile (mobs + pawns) — lets stepBody break head-on swaps at once.
+  const targetByTile = occupancyService.movingTargets(state);
   const claimed = new Set<string>();
   seedMidCrossClaims(mobs, claimed, (m) => m.state !== 'Corpse');
 
@@ -576,7 +578,7 @@ export function advanceMobMovement(state: GameState): GameState {
     const mob = mobs[i];
     const def = getCreatureById(mob.creatureId);
     const speed = def ? Math.max(0.5, def.stats.speed) : 1;
-    const res = stepBody(mob, occupancy, claimed, state.worldMap, speed);
+    const res = stepBody(mob, occupancy, claimed, state.worldMap, speed, targetByTile);
     next[i] = res.body;
     if (res.body !== mob) changed = true;
   }

@@ -3,7 +3,7 @@ import { combatService } from './Combat';
 import { healWounds } from './PawnStateMachine';
 import { tendPatient } from '../services/jobs/caretake';
 import { CREATURES } from '../core/Creatures';
-import { createBodyPlanLimbs } from '../core/BodyParts';
+import { createBodyPlanLimbs, organsOf, PART_DEF_MAP } from '../core/BodyParts';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
 import type { GameState, Injury, Mob, Pawn } from '../core/types';
@@ -252,6 +252,60 @@ describe('combat sim (headless tickCombat)', () => {
     expect(diverged / fractures).toBeGreaterThan(0.8); // flesh vs bone depth decoupled
     // Blunt shock drives through to bone FAR more readily than a cut does, per landed hit.
     expect(bluntFractures / Math.max(1, bluntHits)).toBeGreaterThan(cutFractures / Math.max(1, cutHits));
+  });
+
+  it('organsOf lists a cavity’s internal organs, and nothing for a part with none', () => {
+    // The penetration-targeting source of truth: a cavity exposes its soft internal organs (hitWeight 0,
+    // not the skeleton); a limb segment or the hand expose none, so a hit there can never reach an organ.
+    expect(organsOf('abdomen')).toEqual(
+      expect.arrayContaining(['leftKidney', 'rightKidney', 'liver', 'stomach'])
+    );
+    expect(organsOf('chest')).toEqual(expect.arrayContaining(['heart', 'leftLung', 'rightLung']));
+    expect(organsOf('chest')).not.toContain('ribcage'); // the bone is the fracture path, not an organ
+    expect(organsOf('leftForearm')).toEqual([]); // only a skeleton inside → nothing to penetrate to
+    expect(organsOf('leftHand')).toEqual([]); // fingers are external sub-parts (hitWeight > 0), not organs
+  });
+
+  it('a deep blow can reach an organ inside a cavity — penetrating finds them, blunt rarely ruptures', () => {
+    // A high-STR pawn batters a near-zero-dodge defender that carries a FULL humanoid body plan (so its
+    // organs actually exist to be struck). Run once with a CUTTING weapon (penetrating) and once with a
+    // BLUNT one (shallow) to prove the asymmetry: a thrust/slash reaches organs, a battering rarely does.
+    const empty = makeState([], []);
+    function organStats(weaponId: string) {
+      const attacker = makePawn({
+        stats: { ...stats, strength: 22, dexterity: 20 },
+        limbs: createBodyPlanLimbs('humanoid', 1), // real hands → the equipped weapon is actually wielded
+        equipment: { mainHand: { itemId: weaponId, instanceId: 'w1', durability: 100 } }
+      });
+      const defender = makePawn({
+        id: 'def',
+        stats: { ...stats, dexterity: 1 },
+        limbs: createBodyPlanLimbs('humanoid', 1)
+      });
+      let hits = 0;
+      let organ = 0;
+      let misTargeted = 0;
+      for (let i = 0; i < 4000; i++) {
+        const r = combatService.resolveHit(attacker, defender, empty);
+        if (!r.hit) continue;
+        hits++;
+        if (r.organInjury) {
+          organ++;
+          // An organ wound only ever lands on an organ INSIDE the struck cavity — never a flesh/limb part.
+          if (PART_DEF_MAP[r.organInjury.bodyPart]?.containedIn !== r.bodyPart) misTargeted++;
+        }
+      }
+      return { hits, organ, misTargeted };
+    }
+    const pen = organStats('stone_chopper'); // cutting → penetrating
+    const blunt = organStats('stone_spear'); // no damageType → blunt → shallow
+
+    expect(pen.organ).toBeGreaterThan(0); // penetrating blows DO reach organs
+    expect(pen.misTargeted).toBe(0); // and only ever an organ contained in the struck cavity
+    expect(blunt.misTargeted).toBe(0);
+    // Penetrating wounds find organs FAR more readily, per landed hit, than blunt force ruptures one — so a
+    // shallow battering craters the abdomen HP while the kidneys stay intact (the realism this whole fix is for).
+    expect(pen.organ / Math.max(1, pen.hits)).toBeGreaterThan(blunt.organ / Math.max(1, blunt.hits));
   });
 
   it('melee lands a sane ~60% at parity (no more ~80% dodge whiff-slog)', () => {
