@@ -843,6 +843,22 @@ export class ItemServiceImpl implements ItemService {
         next.push(d);
         continue;
       }
+      // Living World cold preservation: a sub-zero tile FREEZES the stack — bacterial spoilage halts
+      // entirely below 0°C (the cold/freezing the container note defers to the temperature system). Uses
+      // the SAME effective tile temp as drying (baked biome+season + weather/diurnal + nearby fire warmth),
+      // so an open frozen tile keeps food while a stockpile beside a fire still rots.
+      const fTile = gameState.worldMap?.[d.y]?.[d.x];
+      if (
+        fTile &&
+        effectiveTemperature(
+          seasonBakedTemp(fTile.terrainType, gameState.season),
+          dryCtx.weatherTemp,
+          thermalAt(d.x, d.y)
+        ) < 0
+      ) {
+        next.push(d);
+        continue;
+      }
       const mult = d.stored ? 1 - (tilePreserve.get(`${d.x},${d.y}`) ?? 0) : 1;
       changed = true;
 
