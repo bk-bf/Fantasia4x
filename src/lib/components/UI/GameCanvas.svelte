@@ -52,6 +52,7 @@
     environmentService,
     computeTileLightLevel,
     tileTemperature,
+    seasonBakedTemp,
     tileWetness,
     computeThermalAt,
     effectiveWindAt,
@@ -119,6 +120,7 @@
   import BuildingStoragePanel from '$lib/components/UI/gameCanvas/BuildingStoragePanel.svelte';
   import FoodFilterPanel from '$lib/components/UI/gameCanvas/FoodFilterPanel.svelte';
   import StockpileZonePanel from '$lib/components/UI/gameCanvas/StockpileZonePanel.svelte';
+  import EnvReadout from '$lib/components/UI/gameCanvas/EnvReadout.svelte';
   import {
     buildPawnCard,
     buildMobCard,
@@ -982,14 +984,8 @@
         });
       }
     }
-    // Environmental conditions of the tile the building sits on (same readout a bare tile shows).
-    const bt = worldMap[selectedBuilding.y]?.[selectedBuilding.x];
-    if (bt) {
-      const env = tileEnv(bt);
-      lines.push(
-        `light ${Math.round(env.light * 100)}%  ·  temp ${env.temp}°C  ·  wet ${Math.round(env.wet)}%  ·  ${env.wind}`
-      );
-    }
+    // Environmental conditions of the tile the building sits on render as a colour-coded <EnvReadout>
+    // below the card (same shared component the tile/building HOVER panels use), not a plain text line.
     return {
       name: bDef?.name ?? selectedBuilding.type,
       status: statusStr,
@@ -4930,7 +4926,22 @@
         on:mouseup|stopPropagation
       >
         {#if buildingCard}
-          <SelectedEntityCard model={buildingCard} embedded />
+          {@const bt = selectedBuilding
+            ? worldMap[selectedBuilding.y]?.[selectedBuilding.x]
+            : undefined}
+          <div class="bld-card-col">
+            <SelectedEntityCard model={buildingCard} embedded />
+            {#if bt}
+              {@const benv = tileEnv(bt)}
+              <EnvReadout
+                light={benv.light}
+                temp={benv.temp}
+                wet={benv.wet}
+                wind={benv.wind}
+                debugTemp={$debugMode ? seasonBakedTemp(bt.terrainType, $currentSeason) : null}
+              />
+            {/if}
+          </div>
         {/if}
         {#if canConfigureFuel}
           <BuildingFuelPanel building={selectedBuilding} {pawns} open={showFuelSettings} />
@@ -5031,22 +5042,13 @@
         {/if}
         {#if hoverTile}
           {@const env = tileEnv(hoverTile)}
-          <div class="tile-env">
-            <span
-              style="color:{env.light >= 0.8
-                ? '#68b030'
-                : env.light >= 0.4
-                  ? '#b09030'
-                  : '#c83018'}">light {Math.round(env.light * 100)}%</span
-            >
-            <span style="color:{env.temp <= 0 ? '#5aa0e0' : env.temp >= 30 ? '#e07a2a' : '#b0a060'}"
-              >temp {env.temp}°C</span
-            >
-            <span style="color:{env.wet >= 60 ? '#3a9ed0' : env.wet >= 30 ? '#6aa0a0' : '#a08a5a'}"
-              >wet {Math.round(env.wet)}%</span
-            >
-            <span style="color:#9aa6b2">wind {env.wind}</span>
-          </div>
+          <EnvReadout
+            light={env.light}
+            temp={env.temp}
+            wet={env.wet}
+            wind={env.wind}
+            debugTemp={$debugMode ? seasonBakedTemp(hoverTile.terrainType, $currentSeason) : null}
+          />
         {/if}
       </div>
     {:else if hoverItemCard}
@@ -5097,14 +5099,14 @@
             {ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}
           </div>
         {/if}
+        <EnvReadout
+          light={hoverTileLight}
+          temp={tileTemp}
+          wet={tileWet}
+          wind={windWord}
+          debugTemp={$debugMode ? seasonBakedTemp(hoverTile.terrainType, $currentSeason) : null}
+        />
         <div class="tile-env">
-          <span
-            style="color:{hoverTileLight >= 0.8
-              ? '#68b030'
-              : hoverTileLight >= 0.4
-                ? '#b09030'
-                : '#c83018'}">light {Math.round(hoverTileLight * 100)}%</span
-          >
           {#if tileThermal.roofed}<span style="color:#7e9fbf">roofed</span>{/if}
           {#if hoverDisplayResource}
             {@const growRes = resourceObjectService.getById(hoverDisplayResource)}
@@ -5117,14 +5119,6 @@
               >
             {/if}
           {/if}
-        </div>
-        <div class="tile-env">
-          <span style="color:{tileTemp <= 0 ? '#5aa0e0' : tileTemp >= 30 ? '#e07a2a' : '#b0a060'}"
-            >temp {tileTemp}°C</span
-          >{#if $debugMode}<span style="color:#6a7a4a">({hoverTile.temperature}°)</span>{/if}
-          <span style="color:{tileWet >= 60 ? '#3a9ed0' : tileWet >= 30 ? '#6aa0a0' : '#a08a5a'}"
-            >wet {Math.round(tileWet)}%</span
-          >
           <span
             style="color:{soilTier >= 4
               ? '#6fae3a'
@@ -5140,7 +5134,6 @@
             ]}) — drives what crops grow here and how fast">fertility {soilPct}%</span
           >
           {#if tileSnow > 0}<span style="color:#cdd6e0">snow {tileSnow}%</span>{/if}
-          {#if windWord}<span style="color:#8fc8a0">{windWord} windy</span>{/if}
         </div>
       </div>
     {/if}
@@ -5316,7 +5309,7 @@
     position: absolute;
     bottom: 6px;
     left: 6px;
-    width: 300px;
+    width: 340px;
     box-sizing: border-box;
     background: rgba(28, 16, 6, 0.92);
     border: 1px solid #6b4a2a;
@@ -5378,6 +5371,11 @@
     align-items: stretch;
     gap: 4px;
     pointer-events: all;
+  }
+  /* Clicked-building column: the info card with its colour-coded EnvReadout stacked below it. */
+  .bld-card-col {
+    display: flex;
+    flex-direction: column;
   }
   .bld-header {
     display: flex;
