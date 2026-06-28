@@ -124,7 +124,7 @@ describe('EnvironmentService — temperature (Phase B, PERF-1)', () => {
     const winter = [[tile('plains')]];
     recomputeWorldTemperature(summer, 'summer');
     recomputeWorldTemperature(winter, 'winter');
-    expect(winter[0][0].temperature).toBeLessThan(summer[0][0].temperature);
+    expect(winter[0][0].temperature!).toBeLessThan(summer[0][0].temperature!);
   });
 
   it('mutates IN PLACE — same array AND same tile refs (PERF-1: no worldMap.map / ref flip)', () => {
@@ -138,6 +138,19 @@ describe('EnvironmentService — temperature (Phase B, PERF-1)', () => {
 
   it('biomeBaseTemp falls back for unknown biomes', () => {
     expect(biomeBaseTemp('not-a-biome')).toBeTypeOf('number');
+  });
+
+  it('strips impassable tiles and averages only walkable land', () => {
+    const cliff = tile('mountain');
+    cliff.walkable = false;
+    cliff.temperature = 99; // a stale baked value that must be cleared
+    const map = [[tile('plains'), cliff]];
+    const mean = recomputeWorldTemperature(map, 'summer');
+    // Walkable plains keeps a baked temp; the impassable cliff is stripped to undefined.
+    expect(map[0][0].temperature).toBe(biomeBaseTemp('plains') + SEASONS.summer.tempOffset);
+    expect(map[0][1].temperature).toBeUndefined();
+    // The returned mean ignores the impassable tile entirely (no cold-cliff drag).
+    expect(mean).toBe(biomeBaseTemp('plains') + SEASONS.summer.tempOffset);
   });
 });
 

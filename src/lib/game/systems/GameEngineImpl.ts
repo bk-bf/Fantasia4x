@@ -146,6 +146,10 @@ export class GameEngineImpl implements GameEngine {
    * triggers exactly one in-place recompute (PERF-1), not one per tick.
    */
   private temperatureSeason: import('../core/types').Season | undefined = undefined;
+  /** Cached coords of a guaranteed-WALKABLE tile used to probe whether the map is baked for the current
+   *  season. Walkable-only because impassable tiles now carry no temperature (stripped at bake time);
+   *  re-found when a new map loads or the cached tile is no longer walkable. */
+  private tempProbe: { x: number; y: number } | undefined = undefined;
   /** Average baked tile temperature (biome + season, no weather) — combined with the live weather
    *  delta into `gameState.avgTemperature` for the HUD. Set whenever temperatures are recomputed. */
   private avgTileTemp: number | undefined = undefined;
@@ -400,14 +404,27 @@ export class GameEngineImpl implements GameEngine {
 
     // Recompute tile temperatures when the cache isn't valid for the current season. Gating on the
     // SEASON ALONE was the hypothermia bug: `tile.temperature` is a worker-only field, so a fresh
-    // world AND every reloaded save / re-init arrives with `temperature: 0` on every tile. If that
-    // unbaked map showed up while `temperatureSeason` already equalled the season, the bake was
-    // skipped and the whole map stayed 0 °C — pawns froze at any real temperature. Instead, probe one
-    // tile against the canonical baked value (`seasonBakedTemp`): O(1) per tick, it's true after a
-    // harvest (tiles are spread, temperature preserved) so no needless 16k-tile rescan, and false for
-    // a season change OR an all-zero reloaded map — both of which then trigger exactly one rebake.
+    // world AND every reloaded save / re-init arrives with an unbaked map. If that showed up while
+    // `temperatureSeason` already equalled the season, the bake was skipped and pawns froze. Instead,
+    // probe one tile against the canonical baked value (`seasonBakedTemp`): O(1) per tick, true after a
+    // harvest (tiles are spread, temperature preserved) so no needless rescan, and false for a season
+    // change OR a fresh/reloaded map — both of which then trigger exactly one rebake. The probe MUST be
+    // a walkable tile: impassable tiles now carry no temperature (stripped), so probing one would never
+    // match and would rebake every tick.
     if (gs.worldMap.length > 0) {
-      const probe = gs.worldMap[0]?.[0];
+      let probe = this.tempProbe ? gs.worldMap[this.tempProbe.y]?.[this.tempProbe.x] : undefined;
+      if (!probe?.walkable) {
+        probe = undefined;
+        outer: for (const row of gs.worldMap) {
+          for (const t of row) {
+            if (t.walkable) {
+              probe = t;
+              this.tempProbe = { x: t.x, y: t.y };
+              break outer;
+            }
+          }
+        }
+      }
       const cacheValid =
         this.temperatureSeason === season &&
         !!probe &&

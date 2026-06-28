@@ -12,7 +12,9 @@ export interface WorldTile {
   subType: string;
   density: number;
   moisture: number;
-  temperature: number;
+  /** Season-baked biome temperature (°C). Only WALKABLE land carries one — impassable cliff/water is
+   *  stripped (`undefined`) at bake time (recomputeWorldTemperature), since nothing stands there. */
+  temperature: number | undefined;
   movementCost: number;
   walkable: boolean;
   /**

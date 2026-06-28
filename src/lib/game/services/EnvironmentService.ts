@@ -237,8 +237,8 @@ export const SEASON_LABELS: Record<Season, string> = Object.fromEntries(
   SEASON_FILE.seasons.map((s) => [s.id, s.label])
 ) as unknown as Record<Season, string>;
 
-/** Fallback biome temperature for tiles whose biome carries no `baseTemp`. */
-const DEFAULT_BIOME_TEMP = 12;
+/** Fallback biome temperature for tiles whose biome carries no `baseTemp` (≈ plains baseline). */
+const DEFAULT_BIOME_TEMP = 10;
 
 /** Whole in-game days elapsed since turn 0. */
 export function dayIndexForTurn(turn: number): number {
@@ -276,8 +276,10 @@ export function seasonBakedTemp(terrainType: string, season: Season | undefined)
 }
 
 /**
- * Recompute every tile's temperature IN PLACE for the given season (PERF-1: never
- * `worldMap.map()`, never flip the worldMap ref → no terrain rebuild / re-clone).
+ * Recompute every WALKABLE tile's temperature IN PLACE for the given season (PERF-1: never
+ * `worldMap.map()`, never flip the worldMap ref → no terrain rebuild / re-clone). Impassable tiles
+ * are stripped (`temperature = undefined`) — they carry no temperature. Returns the mean over walkable
+ * land (the HUD topbar value).
  *
  * `temperature` is a worker-only field (dropped from the slim worldMapDelta — PERF-2),
  * so this deliberately does NOT call `markTileDirty`: there is nothing for the renderer
@@ -286,42 +288,40 @@ export function seasonBakedTemp(terrainType: string, season: Season | undefined)
  */
 export function recomputeWorldTemperature(worldMap: WorldTile[][], season: Season): number {
   const offset = SEASONS[season].tempOffset;
-  let count = 0;
-  // The HUD average is taken over WALKABLE tiles only — unwalkable cliff/rock/water (the bulk of the
-  // cold mountain biome) is land the colony can never stand on, so counting it dragged the topbar far
-  // below the temperatures the player actually reads on every accessible tile. Every tile still gets
-  // its `temperature` baked for the sim; only the returned mean is restricted.
+  // Temperature is a property of WALKABLE land only. Impassable terrain (cliff faces, open water) is
+  // STRIPPED — nothing ever stands there, so a baked value would just be a misleading cold-air reading
+  // that also dragged the HUD mean far below the temperatures the player reads on every accessible
+  // tile. Snow (the one consumer that paints impassable peaks) recomputes a biome temp on demand.
   let walkSum = 0;
   let walkCount = 0;
-  let staleBefore = 0; // tiles whose cached temp was <=0 / undefined / NaN BEFORE this bake (never baked)
+  let staleBefore = 0; // walkable tiles with no cached temp BEFORE this bake (never baked / reloaded)
   let minAfter = Infinity;
   let maxAfter = -Infinity;
-  let zeroAfter = 0; // tiles still <=0 AFTER the bake (should be IMPOSSIBLE: min biome+offset is well >0)
   for (const row of worldMap) {
     for (const tile of row) {
-      if (!((tile.temperature ?? 0) > 0)) staleBefore++;
+      if (!tile.walkable) {
+        if (tile.temperature !== undefined) tile.temperature = undefined;
+        continue;
+      }
+      if (tile.temperature === undefined) staleBefore++;
       const temp = seasonBakedTemp(tile.terrainType, season);
       tile.temperature = temp;
-      count++;
-      if (tile.walkable) {
-        walkSum += temp;
-        walkCount++;
-      }
+      walkSum += temp;
+      walkCount++;
       if (temp < minAfter) minAfter = temp;
       if (temp > maxAfter) maxAfter = temp;
-      if (temp <= 0) zeroAfter++;
     }
   }
   // TEMP-BAKE: confirms the season bake actually ran over the LIVE worldMap and what it produced. If you
-  // change season and still see cold pawns, compare staleBefore (how many tiles were 0) vs zeroAfter
-  // (must be 0) — a non-zero zeroAfter means a terrain has no/!>0 baseTemp; staleBefore>0 then 0 next
-  // bake means tiles ARE getting un-baked between seasons (the real bug).
+  // change season and still see cold pawns, watch staleBefore — a non-zero count on a settled map means
+  // walkable tiles were un-baked between seasons (the real bug). min/max can legitimately go below 0 in
+  // autumn/winter now, so there is no "must be positive" invariant any more.
   vlog(
     'system',
     0,
     () =>
-      `TEMP-BAKE season=${season} offset=${offset} tiles=${count} staleBefore(<=0)=${staleBefore} ` +
-      `after[min=${minAfter} max=${maxAfter} zero=${zeroAfter}]`
+      `TEMP-BAKE season=${season} offset=${offset} walkable=${walkCount} staleBefore=${staleBefore} ` +
+      `after[min=${minAfter} max=${maxAfter}]`
   );
   // Average baked tile temperature over WALKABLE land (biome + season, no weather) — the topbar adds
   // the weather delta. Falls back to the season offset if a map somehow has no walkable tiles.
@@ -1100,7 +1100,10 @@ export function accumulateSnow(
   for (const row of worldMap) {
     for (const tile of row) {
       const prev = tile.snow ?? 0;
-      const temp = (tile.temperature ?? 0) + wDelta;
+      // Walkable tiles read their baked cache; impassable tiles (cliffs/peaks) carry no cached temp, so
+      // recompute their biome temp on the fly here — keeps high peaks snow-capped without storing a temp.
+      const baseTemp = tile.temperature ?? seasonBakedTemp(tile.terrainType, season);
+      const temp = baseTemp + wDelta;
       let next = prev;
       if (snowing && temp < 0) {
         next = Math.min(
