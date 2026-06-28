@@ -87,12 +87,6 @@
   import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/wildGrowth.js';
   import { isHarvestableTileNow, MIN_FORAGE_GROWTH } from '$lib/game/services/jobs/filters.js';
   import { itemService } from '$lib/game/services/ItemService.js';
-  import { aggregateMaterialMods } from '$lib/game/core/materialProperties';
-  import {
-    getRefuelRequirements,
-    getRefuelThresholdRatio,
-    planRefuel
-  } from '$lib/game/services/fuelRules.js';
   import { getEquipmentSlot } from '$lib/game/core/PawnEquipment.js';
   import { getRangedWeapon } from '$lib/game/systems/rangedCombat.js';
   import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
@@ -121,10 +115,10 @@
   import FoodFilterPanel from '$lib/components/UI/gameCanvas/FoodFilterPanel.svelte';
   import StockpileZonePanel from '$lib/components/UI/gameCanvas/StockpileZonePanel.svelte';
   import EnvReadout from '$lib/components/UI/gameCanvas/EnvReadout.svelte';
+  import BuildingInfo from '$lib/components/UI/gameCanvas/BuildingInfo.svelte';
   import {
     buildPawnCard,
     buildMobCard,
-    jobProgressBar,
     PROGRESS_BAR_STATES
   } from '$lib/components/UI/gameCanvas/selectionCard';
   import { overlayDroppedItems } from '$lib/components/UI/gameCanvas/overlay';
@@ -878,87 +872,19 @@
     };
   }
 
-  $: buildingCard = (() => {
+  // The clicked-building info is now rendered by the shared <BuildingInfo> component (colour-coded,
+  // structured — matching the hover panel). All this reactive provides is the ACTION buttons; the
+  // building stats/fuel/refund/needs/warning are computed inside BuildingInfo from `selectedBuilding`.
+  $: buildingButtons = ((): EntityButton[] | null => {
     if (!selectedBuilding) return null;
     const bDef = buildingService.getBuildingById(selectedBuilding.type);
     const isBlueprint = selectedBuilding.status !== 'complete';
-    const workDone = selectedBuilding.workDone ?? 0;
-    const workReq = selectedBuilding.workRequired ?? bDef?.workAmount ?? 1;
     const canConfigFuel =
       !isBlueprint && !selectedBuilding.deconstructQueued && bDef?.maxFuel !== undefined;
     const canConfigStorage =
       !isBlueprint &&
       !selectedBuilding.deconstructQueued &&
       (bDef?.effects?.storageStacks ?? 0) > 0;
-    const statusStr = isBlueprint
-      ? selectedBuilding.paused
-        ? 'paused'
-        : 'building'
-      : `complete${selectedBuilding.deconstructQueued ? ' ⊢ demolish' : ''}`;
-    const lines: string[] = [];
-    if (bDef?.description) lines.push(bDef.description);
-    // §M amenity: the building's effective comfort/beauty (def + chosen-material mods). Drives nearby
-    // pawns' rest, healing and mood — surfaced so the player sees what a couch/silk build is worth.
-    {
-      const mm = selectedBuilding.materials
-        ? aggregateMaterialMods(Object.values(selectedBuilding.materials), 'building')
-        : null;
-      const comfort = (bDef?.effects?.comfort ?? 0) + (mm?.comfort ?? 0);
-      const beauty = (bDef?.effects?.beauty ?? 0) + (mm?.beauty ?? 0);
-      if (comfort > 0 || beauty > 0) {
-        const parts: string[] = [];
-        if (comfort > 0) parts.push(`comfort +${comfort.toFixed(2)}`);
-        if (beauty > 0) parts.push(`beauty +${beauty.toFixed(2)}`);
-        lines.push(parts.join('  ·  '));
-      }
-    }
-    if (isBlueprint) {
-      lines.push(
-        `[${jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] ${Math.round(workDone)}/${workReq} work`
-      );
-    } else if (selectedBuilding.deconstructQueued) {
-      const dDone = selectedBuilding.deconstructWorkDone ?? 0;
-      const dReq = selectedBuilding.deconstructWorkRequired ?? 1;
-      lines.push(
-        `[${jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] ${Math.round(dDone)}/${dReq} work`
-      );
-      lines.push('⊢ demolishing…');
-    } else {
-      const cost = bDef?.buildingCost ?? {};
-      if (Object.keys(cost).length > 0) {
-        lines.push(
-          `refund ½: ${Object.entries(cost)
-            .map(([id, n]) => `${Math.floor(Number(n) * 0.5)}×${id.replace(/_/g, ' ')}`)
-            .join(' ')}`
-        );
-      }
-      if (bDef?.maxFuel !== undefined) {
-        const fuelMax = bDef.maxFuel;
-        const fuelCurr = selectedBuilding.fuel ?? 0;
-        const litStr = selectedBuilding.lit ? '● lit' : '○ unlit';
-        lines.push(
-          `FUEL [${jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] ${Math.floor(fuelCurr)}/${Math.floor(fuelMax)} ${litStr}`
-        );
-        // Make the refuel requirement explicit on the card (it always needs tinder + N distinct fuel
-        // types), and flag when the colony can't currently satisfy it — so "won't refuel" is obvious.
-        const req = getRefuelRequirements(selectedBuilding.type);
-        const tinderName =
-          itemService.getItemById(req.tinderItemId)?.name ?? req.tinderItemId.replace(/_/g, ' ');
-        lines.push(
-          `needs: ${req.tinderAmount}× ${tinderName} + ${req.requiredFuelTypes} fuel types`
-        );
-        const wantsFuel =
-          fuelCurr / Math.max(fuelMax, 1) < getRefuelThresholdRatio(selectedBuilding);
-        if (wantsFuel && planRefuel($gameState, selectedBuilding) === null) {
-          const tinderStock = ($gameState.stockpile ?? {})[req.tinderItemId] ?? 0;
-          lines.push(
-            tinderStock < req.tinderAmount
-              ? `⚠ won't refuel — need ${req.tinderAmount}× ${tinderName} (have ${tinderStock})`
-              : `⚠ won't refuel — not enough distinct fuel in stock`
-          );
-        }
-      }
-    }
     const btns: EntityButton[] = [];
     if (isBlueprint) {
       btns.push({
@@ -969,8 +895,7 @@
     } else if (selectedBuilding.deconstructQueued) {
       btns.push({ label: 'CANCEL', onClick: cancelDeconstructBuilding });
     } else {
-      // BUILD: jump straight into blueprint-placement mode for another of the same
-      // building, skipping the Buildings tab.
+      // BUILD: jump straight into blueprint-placement mode for another of the same building.
       btns.push({ label: 'BUILD', onClick: buildAnother });
       btns.push({ label: 'DEMOLISH', onClick: deconstructBuilding });
       if (canConfigFuel) {
@@ -984,16 +909,7 @@
         });
       }
     }
-    // Environmental conditions of the tile the building sits on render as a colour-coded <EnvReadout>
-    // below the card (same shared component the tile/building HOVER panels use), not a plain text line.
-    return {
-      name: bDef?.name ?? selectedBuilding.type,
-      status: statusStr,
-      selected: true,
-      dismissable: true,
-      lines,
-      buttons: btns
-    } satisfies SelectedEntityModel;
+    return btns;
   })();
 
   $: resourceCard = (() => {
@@ -4918,6 +4834,12 @@
         selectedBuilding.status === 'complete' &&
         !selectedBuilding.deconstructQueued &&
         (buildingService.getBuildingById(selectedBuilding.type)?.effects?.storageStacks ?? 0) > 0}
+      {@const bt = worldMap[selectedBuilding.y]?.[selectedBuilding.x]}
+      {@const clickedBin = buildingIsStorageBin(selectedBuilding)
+        ? droppedItems.filter(
+            (d) => d.stored && d.x === selectedBuilding.x && d.y === selectedBuilding.y
+          )
+        : []}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="bld-row"
@@ -4925,12 +4847,14 @@
         on:mousedown|stopPropagation
         on:mouseup|stopPropagation
       >
-        {#if buildingCard}
-          {@const bt = selectedBuilding
-            ? worldMap[selectedBuilding.y]?.[selectedBuilding.x]
-            : undefined}
-          <div class="bld-card-col">
-            <SelectedEntityCard model={buildingCard} embedded />
+        <div class="bld-card-col">
+          <div class="bld-clicked">
+            <BuildingInfo
+              building={selectedBuilding}
+              detailed
+              binContents={clickedBin}
+              gameState={$gameState}
+            />
             {#if bt}
               {@const benv = tileEnv(bt)}
               <EnvReadout
@@ -4941,8 +4865,19 @@
                 debugTemp={$debugMode ? seasonBakedTemp(bt.terrainType, $currentSeason) : null}
               />
             {/if}
+            {#if buildingButtons && buildingButtons.length > 0}
+              <div class="bld-actions">
+                {#each buildingButtons as b}
+                  <button
+                    class="bld-act-btn"
+                    class:bld-act-btn--active={b.active}
+                    on:click={b.onClick}>{b.label}</button
+                  >
+                {/each}
+              </div>
+            {/if}
           </div>
-        {/if}
+        </div>
         {#if canConfigureFuel}
           <BuildingFuelPanel building={selectedBuilding} {pawns} open={showFuelSettings} />
         {/if}
@@ -4982,64 +4917,8 @@
     {:else if hoverMobCard}
       <SelectedEntityCard model={hoverMobCard} />
     {:else if hoverBuilding && !hoverPawn}
-      {@const bDef = buildingService.getBuildingById(hoverBuilding.type)}
-      {@const isBlueprint = hoverBuilding.status !== 'complete'}
       <div class="tile-hud tile-hud--building">
-        <div class="bld-header">
-          <span class="bld-name">{bDef?.name ?? hoverBuilding.type}</span>
-          <span class="bld-status">
-            [{isBlueprint
-              ? hoverBuilding.paused
-                ? 'paused'
-                : 'building'
-              : 'complete'}{hoverBuilding.deconstructQueued ? ' ⊢ demolish' : ''}]
-          </span>
-        </div>
-        {#if isBlueprint}
-          {@const workDone = hoverBuilding.workDone ?? 0}
-          {@const workReq = hoverBuilding.workRequired ?? bDef?.workAmount ?? 1}
-          <div class="bld-progress">
-            [{jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] {Math.round(
-              workDone
-            )}/{workReq} work
-          </div>
-        {:else if hoverBuilding.deconstructQueued}
-          {@const dDone = hoverBuilding.deconstructWorkDone ?? 0}
-          {@const dReq = hoverBuilding.deconstructWorkRequired ?? 1}
-          <div class="bld-progress">
-            [{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {Math.round(dDone)}/{dReq} work
-          </div>
-          <div class="bld-note">⊢ demolishing…</div>
-        {/if}
-        {#if bDef?.description}
-          <div class="bld-desc">{bDef.description}</div>
-        {/if}
-        {#if hoverBin && !isBlueprint}
-          {@const cap = bDef?.effects?.storageStacks ?? 1}
-          <div class="bld-store">stored {hoverBinContents.length}/{cap} stacks</div>
-          {#if bDef?.storageFilter?.length}
-            <div class="bld-store-item" style="color:#7e9fbf">
-              holds {bDef.storageFilter.map((c) => c.replace(/_/g, ' ')).join(', ')}
-            </div>
-          {/if}
-          {#each hoverBinContents as d (d.id)}
-            <div class="bld-store-item">· {itemService.getItemDisplayName(d)} ×{d.quantity}</div>
-          {:else}
-            <div class="bld-store-item" style="opacity:0.6">· empty</div>
-          {/each}
-        {/if}
-        {#if !isBlueprint && !hoverBuilding.deconstructQueued && bDef?.maxFuel !== undefined}
-          {@const fuelMax = bDef.maxFuel}
-          {@const fuelCurr = hoverBuilding.fuel ?? 0}
-          <div class="bld-fuel">
-            FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {Math.floor(
-              fuelCurr
-            )}/{Math.floor(fuelMax)}
-            {#if hoverBuilding.lit}<span class="fuel-lit">● lit</span>{:else}<span class="fuel-dark"
-                >○ unlit</span
-              >{/if}
-          </div>
-        {/if}
+        <BuildingInfo building={hoverBuilding} binContents={hoverBin ? hoverBinContents : []} />
         {#if hoverTile}
           {@const env = tileEnv(hoverTile)}
           <EnvReadout
@@ -5377,63 +5256,47 @@
     display: flex;
     flex-direction: column;
   }
-  .bld-header {
-    display: flex;
-    gap: 5px;
-    align-items: baseline;
-    margin-bottom: 2px;
-  }
-  .bld-name {
-    color: #c8a060;
-    font-weight: bold;
-    font-size: 11px;
-  }
-  .bld-status {
-    color: #7a6030;
-    font-size: 9px;
-    flex: 1;
-  }
-  .bld-desc {
-    color: #8a7040;
-    font-size: 9px;
-    margin-top: 1px;
-    line-height: 1.4;
-  }
-  .bld-store {
-    color: #c8a050;
-    font-size: 9px;
-    margin-top: 3px;
-  }
-  .bld-store-item {
-    color: #a89060;
-    font-size: 9px;
-    line-height: 1.3;
-  }
-  .bld-progress {
-    color: #a08840;
-    font-size: 9px;
-    margin-top: 2px;
-  }
-  .bld-note {
-    color: #cc8833;
-    font-size: 9px;
-    margin-top: 2px;
-  }
-  .bld-fuel {
-    color: #c87020;
-    font-size: 9px;
-    margin-top: 3px;
+  /* The clicked-building box — same retro chrome as the hover panel (.tile-hud) but IN-FLOW so it sits
+     in the bld-row beside the fuel/storage fly-outs, and interactive (pointer-events). */
+  .bld-clicked {
+    width: 340px;
+    box-sizing: border-box;
+    background: rgba(28, 16, 6, 0.92);
+    border: 1px solid #6b4a2a;
+    color: #a07840;
     font-family: var(--font-mono);
-    letter-spacing: 0.02em;
+    font-size: 10px;
+    line-height: 1.5;
+    padding: 2px 7px;
+    pointer-events: all;
+    filter: url(#ambient-tint);
   }
-  .fuel-lit {
-    color: #ff8800;
-    margin-left: 4px;
+  .bld-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 5px;
   }
-  .fuel-dark {
-    color: #604020;
-    margin-left: 4px;
+  .bld-act-btn {
+    background: #160f06;
+    border: 1px solid #6b4f22;
+    color: #c8a060;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    cursor: pointer;
   }
+  .bld-act-btn:hover {
+    background: #241809;
+    border-color: #8a6a30;
+  }
+  .bld-act-btn--active {
+    border-color: #c8a060;
+    color: #e0c080;
+  }
+  /* (.bld-header/.bld-name/.bld-status/.bld-desc/.bld-store/.bld-progress/.bld-note/.bld-fuel/.fuel-*
+     moved into the shared BuildingInfo.svelte component — see it for the building-info styling.) */
   .tile-coord {
     color: #e8b86a;
     font-weight: bold;
