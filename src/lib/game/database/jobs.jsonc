@@ -20,7 +20,7 @@
   {"id": "fetch", "label": "Fetch", "workCategory": "hauling", "lightAffected": false},
   {"id": "craft", "label": "Craft", "workCategory": "crafting", "workCategorySource": "recipe-output", "claimGate": "craftTool", "audio": "crafting"},
   {"id": "caretake", "label": "Tend", "workCategory": "caretaking"},
-  {"id": "refuel", "label": "Refuel", "workCategory": "construction", "claimGate": "refuelAllowlist", "lightAffected": false},
+  {"id": "refuel", "label": "Refuel", "workCategory": "hauling", "claimGate": "refuelAllowlist", "lightAffected": false},
   {"id": "repair", "label": "Repair", "workCategory": "construction", "claimGate": "repairAllowlist", "audio": "construction"},
   {"id": "plant", "label": "Plant", "workCategory": "planting", "audio": "planting"}
 ]

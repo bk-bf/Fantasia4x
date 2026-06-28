@@ -1862,7 +1862,7 @@
     "populationRequired": 1,
     "researchRequired": "basic_alchemy",
     "upkeepCost": {},
-    "effects": {"craftingEnabled": true, "tier": 2},
+    "effects": {"craftingEnabled": true, "alchemyEnabled": true, "tier": 2},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 2}
   },

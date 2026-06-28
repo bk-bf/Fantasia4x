@@ -54,7 +54,7 @@ describe('job registry (jobs.jsonc ↔ JobService)', () => {
     expect(wk('deconstruct')).toBe('construction');
     expect(wk('craft')).toBe('crafting');
     expect(wk('caretake')).toBe('caretaking');
-    expect(wk('refuel')).toBe('construction');
+    expect(wk('refuel')).toBe('hauling'); // a carrying chore — sits with haul/fetch, not construction
     expect(wk('repair')).toBe('construction');
     // FSM-internal kinds (no JobDef) fall through to their own id, as before.
     expect(wk('eat')).toBe('eat');
@@ -70,5 +70,15 @@ describe('job registry (jobs.jsonc ↔ JobService)', () => {
     expect(jobService.getJobWorkCategory(job, craftGs)).toBe('crafting');
     // No gs / unknown order → static fallback.
     expect(jobService.getJobWorkCategory(job)).toBe('crafting');
+  });
+
+  it('routes a craft order to its station DISCIPLINE (smith ≠ tanner ≠ brewer ≠ generalist)', () => {
+    const at = (stationType: string) =>
+      jobService.craftWorkCategory({ item: { id: 'iron_dagger' }, stationType });
+    expect(at('anvil')).toBe('metalworking'); // toolRequirement.workType
+    expect(at('butcher_spot')).toBe('butchery');
+    expect(at('alchemy_lab')).toBe('alchemy'); // alchemyEnabled flag (basic lab carries no tool gate)
+    expect(at('craft_spot')).toBe('crafting'); // generic station → no discipline
+    expect(jobService.craftWorkCategory(undefined)).toBe('crafting');
   });
 });

@@ -88,10 +88,11 @@ describe('JobService subjobs (Work-tab fine-tuning)', () => {
 
   it('exposes subjobs only for categories that aggregate multiple job types', () => {
     expect(jobService.getSubjobsForCategory('construction').map((s) => s.id).sort()).toEqual(
-      ['construct', 'deconstruct', 'refuel', 'repair'].sort()
+      ['construct', 'deconstruct', 'repair'].sort()
     );
+    // refuel is a carrying chore — it sits under hauling with haul/fetch.
     expect(jobService.getSubjobsForCategory('hauling').map((s) => s.id).sort()).toEqual(
-      ['fetch', 'haul'].sort()
+      ['fetch', 'haul', 'refuel'].sort()
     );
     expect(jobService.getSubjobsForCategory('crafting')).toEqual([]); // 1:1, nothing to expand
   });
