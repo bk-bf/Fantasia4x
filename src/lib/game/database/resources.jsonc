@@ -1953,6 +1953,7 @@
   {
     "id"              : "mountain_wall",
     "roofSupport"     : true,
+    "overheadRoof"    : true,
     "displayName"     : "Mountain Wall",
     "subterrain"      : "rocky",
     "walkable"        : false,
@@ -1980,6 +1981,7 @@
   {
     "id"              : "cliff_wall",
     "roofSupport"     : true,
+    "overheadRoof"    : true,
     "displayName"     : "Cliff Wall",
     "subterrain"      : "cliff",
     "walkable"        : false,

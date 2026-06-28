@@ -177,6 +177,10 @@ export interface Building {
    *  `walkable`. Baked onto the tile's `blocksSight` flag on completion, cleared on deconstruct. */
   blocksSight?: boolean;
 
+  /** Hide this def from the build menu — it is placed by the engine, never by the player (e.g. the
+   *  natural `mountain_roof` spawned when overhead rock is mined out). */
+  notBuildable?: boolean;
+
   // Construction requirements
   buildingCost: Record<string, number>; // Renamed from 'cost' to match item system
   workAmount: number;

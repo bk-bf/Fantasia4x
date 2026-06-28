@@ -92,6 +92,12 @@ export interface ResourceObjectDef {
    * resource flagged here. See BuildingService.makeRoofSupportLookup.
    */
   roofSupport?: boolean;
+  /**
+   * ROOF-SUPPORT: this is overhead rock (a mountain/cliff wall). Mining it OUT leaves a natural
+   * `mountain_roof` over the cleared tile, and may orphan nearby roofs that relied on it for support
+   * (see harvest.complete → BuildingService.removeUnsupportedRoofs).
+   */
+  overheadRoof?: boolean;
   /** Resolved char array (from charSpans in JSON). */
   chars: string[];
   fg: [number, number, number];

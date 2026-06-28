@@ -6,6 +6,7 @@ import type { DesignationType, GameState, Job } from '../../core/types';
 import { gatedConsole as console } from '../../core/log';
 import { resourceObjectService } from '../ResourceObjectService';
 import { itemService } from '../ItemService';
+import { buildingService } from '../BuildingService';
 import {
   SUBTERRAINS,
   SUBTERRAIN_FALLBACK,
@@ -303,6 +304,15 @@ export function complete(job: Job, gs: GameState): GameState {
   // → the per-pawn gate sees no tool → the pawn auto-grabs a replacement from stock.
   if (interaction?.toolRequirement && interaction.workCategory && job.claimedBy) {
     state = wearWorkingPawnTool(job.claimedBy, interaction.workCategory, state);
+  }
+
+  // ROOF-SUPPORT: mining OUT overhead rock (a mountain/cliff wall) leaves a natural rock roof over the
+  // now-open tile, and may orphan nearby roofs whose support was the rock just removed. Place the
+  // mountain roof (placeBuilding only keeps it if the cleared tile is still within span of support),
+  // then drop any roof that's now unsupported. See BuildingService for the dangerous-collapse TODO.
+  if (!shouldPersist && def?.overheadRoof) {
+    state = buildingService.placeBuilding('mountain_roof', job.targetX, job.targetY, state);
+    state = buildingService.removeUnsupportedRoofs(state, job.targetX, job.targetY);
   }
   return state;
 }

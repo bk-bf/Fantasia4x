@@ -797,6 +797,27 @@
     "buildingState": {"isUnique": false}
   },
   {
+    "id": "mountain_roof",
+    "ageTier": "primitive:1",
+    "name": "Overhead Mountain",
+    "color": "#4A4440",
+    "charSpans": [ {"sheet": "buildings", "id": 5} ],
+    "fg": [0.29, 0.27, 0.25],
+    "bg": [0.04, 0.04, 0.04],
+    "description": "Solid rock overhead — the natural roof left when a mountain is mined out. It needs the surrounding rock to hold it up; carve too wide and the unsupported span comes down.",
+    "category": "structure",
+    "notBuildable": true,
+    "buildingCost": {},
+    "workAmount": 0,
+    "toolTierRequired": 0,
+    "populationRequired": 0,
+    "researchRequired": null,
+    "upkeepCost": {},
+    "effects": {"roof": 1, "weatherProtection": 1.0, "thermalInsulation": 0.9},
+    "storageCapacity": {},
+    "buildingState": {"isUnique": false}
+  },
+  {
     "id"                : "door",
     "ageTier"           : "bronze:1",
     "name"              : "Plank Door",

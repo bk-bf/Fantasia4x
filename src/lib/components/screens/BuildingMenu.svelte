@@ -90,9 +90,11 @@
   // DEBUG `_devResearchGateOff`: show research-locked buildings too (toggle in the DEBUG tab).
   $: unlockedDefs = ALL_BUILDING_DEFS.filter(
     (b) =>
-      $gameState?._devResearchGateOff ||
-      !b.researchRequired ||
-      completedResearch.includes(b.researchRequired as string)
+      // Engine-placed defs (e.g. the natural mountain_roof) never appear in the menu.
+      !b.notBuildable &&
+      ($gameState?._devResearchGateOff ||
+        !b.researchRequired ||
+        completedResearch.includes(b.researchRequired as string))
   );
 
   // Grouped unlocked buildings — one pass via classify(), ordered by SECTION_ORDER,

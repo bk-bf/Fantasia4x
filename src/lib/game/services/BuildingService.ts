@@ -116,6 +116,8 @@ export interface BuildingService {
   ): (x: number, y: number) => boolean;
   /** ROOF-SUPPORT: is (x,y) within MAX_ROOF_SPAN (Chebyshev) of a support tile? */
   roofTileSupported(x: number, y: number, isSupport: (x: number, y: number) => boolean): boolean;
+  /** ROOF-SUPPORT: drop roofs near (cx,cy) that lost their support (e.g. overhead rock mined out). */
+  removeUnsupportedRoofs(state: GameState, cx: number, cy: number): GameState;
   hasCompletedBuilding(type: string, gameState: GameState): boolean;
   countCompletedBuildings(type: string, gameState: GameState): number;
   /** Apply a solid building's tile-blocking on completion / restore it on removal. No-op for
@@ -476,6 +478,36 @@ export class BuildingServiceImpl implements BuildingService {
       }
     }
     return false;
+  }
+
+  /**
+   * ROOF-SUPPORT: remove any roof building within MAX_ROOF_SPAN of (cx,cy) that no longer has a
+   * support in span — called after a load-bearing tile near (cx,cy) is removed (e.g. overhead rock
+   * mined out). A roof up to MAX_ROOF_SPAN away could have leaned on the now-gone support, so that
+   * window is exactly the set of roofs whose support must be rechecked.
+   *
+   * TODO: this is the "disappear for now" placeholder. Replace the silent removal with proper
+   * dangerous collapse mechanics — rubble left on the tile, falling-rock damage to any pawn/item
+   * caught under the unsupported span, and ideally a warning before the carve goes too wide.
+   */
+  removeUnsupportedRoofs(state: GameState, cx: number, cy: number): GameState {
+    const buildings = state.buildings ?? [];
+    const isSupport = this.makeRoofSupportLookup(buildings, state.worldMap);
+    const survivors: PlacedBuilding[] = [];
+    let collapsed = false;
+    for (const b of buildings) {
+      const isRoof = !!this.getBuildingById(b.type)?.effects?.roof;
+      if (
+        isRoof &&
+        Math.max(Math.abs(b.x - cx), Math.abs(b.y - cy)) <= MAX_ROOF_SPAN &&
+        !this.roofTileSupported(b.x, b.y, isSupport)
+      ) {
+        collapsed = true; // TODO: dangerous collapse instead of a clean vanish
+        continue;
+      }
+      survivors.push(b);
+    }
+    return collapsed ? { ...state, buildings: survivors } : state;
   }
 
   placeBuilding(
