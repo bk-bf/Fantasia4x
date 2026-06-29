@@ -56,6 +56,16 @@ export class WebGLRenderer {
   }
 
   /**
+   * Inject (or clear) the building-overlay grid. Rendered as a glyph-only,
+   * alpha-blended pass between the terrain and the item overlay, so a completed
+   * building composites over the floor/ground beneath it (its transparent pixels
+   * reveal the floor) instead of erasing it the way a baked terrain cell would.
+   */
+  setBuildingOverlayGrid(grid: GameGrid | null): void {
+    this.core.setBuildingOverlayGrid(grid);
+  }
+
+  /**
    * Set the viewport tile offset (top-left corner).
    */
   setViewTileOffset(x: number, y: number): void {

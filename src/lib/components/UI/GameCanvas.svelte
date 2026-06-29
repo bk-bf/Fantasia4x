@@ -126,7 +126,7 @@
     growthIndicator,
     PROGRESS_BAR_STATES
   } from '$lib/components/UI/gameCanvas/selectionCard';
-  import { overlayDroppedItems } from '$lib/components/UI/gameCanvas/overlay';
+  import { overlayDroppedItems, overlayBuildings } from '$lib/components/UI/gameCanvas/overlay';
   import { buildingsVisualSig } from '$lib/game/core/buildingSig';
   // Shared with the `movePawnsLine` command so the live drag preview's dots land exactly where the
   // pawns will (same Achtung-style spacing + nearest-free-tile snap).
@@ -284,6 +284,11 @@
   // overlay (terrain → items → entities). Keeping items out of pawnOverlayGrid is
   // what stops a pawn from blanking the item glyph on the tile it walks over.
   const itemOverlayGrid: GameGrid = new GameGridClass();
+  // Completed buildings get their OWN overlay grid too, rendered between the terrain and the item
+  // overlay (terrain+floor → buildings → items → pawns). A building is a glyph-only alpha pass like
+  // items, so the floor/ground baked in the terrain grid shows through the building sprite's
+  // transparent pixels instead of being blanked out by a baked opaque cell.
+  const buildingOverlayGrid: GameGrid = new GameGridClass();
   // Per-pawn rendered position in float world-tile coords, eased toward the
   // simulation's authoritative sub-tile position each frame for smooth 60fps motion.
   const pawnRenderPos = new Map<string, { x: number; y: number }>();
@@ -1486,6 +1491,11 @@
     // instead of overwriting it (terrain → items → entities, three glyph layers).
     itemOverlayGrid.clear();
     overlayDroppedItems(itemOverlayGrid, droppedItems, isHiddenTile);
+    // Completed buildings render as a glyph-only overlay BENEATH items (terrain+floor → buildings →
+    // items → pawns), so the floor baked in the terrain grid shows through the building sprite. Rebuilt
+    // here per frame like items; cheap (sparse, memoised visuals) and keeps preview/fog handling uniform.
+    buildingOverlayGrid.clear();
+    overlayBuildings(buildingOverlayGrid, buildings, isHiddenTile);
     // Clamp dt so a CPU-stall frame (e.g. pathfinding for many entities) doesn't
     // produce alpha≈1 and snap all entities to their new positions at once.
     const clampedDt = Math.min(dt, 0.05);
@@ -2135,10 +2145,11 @@
       applyTileToGrid(_terrainGrid, t, hiddenMask);
       if (_updateEmitterAt(y, x, t)) emittersChanged = true;
     }
-    // ROOFS LAST (same as buildGameGrid): a roof only shades the cell beneath, so paint it after the
-    // terrain repaint AND any floor/building sharing the tile.
+    // Only FLOORS and ROOFS bake into the terrain grid (floors first as the ground surface, ROOFS LAST
+    // since a roof only shades the cell beneath any floor sharing the tile). Regular buildings are NOT
+    // painted here — they render as a glyph-only overlay (overlayBuildings) so the floor shows through.
     for (const b of buildings) {
-      if (b.status === 'complete' && !isRoofBuilding(b) && dirty.has(b.y * W + b.x))
+      if (b.status === 'complete' && isFloorBuilding(b) && dirty.has(b.y * W + b.x))
         applyBuildingToGrid(_terrainGrid, b, worldMap[b.y]?.[b.x]);
     }
     for (const b of buildings) {
@@ -3295,6 +3306,7 @@
         // New Game map still HAS them in state until GENERATE; we just don't render them here).
         pawnOverlayGrid.clear();
         itemOverlayGrid.clear();
+        buildingOverlayGrid.clear();
       } else {
         updatePawnOverlay(dt);
       }
@@ -3336,6 +3348,7 @@
       // The menu backdrop is a LIVE scene (grazing prey) — never freeze it, even zoomed out.
       const frozen = !menuPreview && (customMapPreview || tileWidth < FREEZE_TILE_PX);
       if (_renderDirty || !frozen || now - lastDrawAt >= FROZEN_SAFETY_MS) {
+        renderer.setBuildingOverlayGrid(buildingOverlayGrid);
         renderer.setItemOverlayGrid(itemOverlayGrid);
         renderer.setOverlayGrid(pawnOverlayGrid);
         const _dbgT0 = menuPreview && _menuPerfOn ? performance.now() : 0;

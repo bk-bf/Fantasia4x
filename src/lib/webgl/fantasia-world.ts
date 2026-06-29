@@ -579,11 +579,13 @@ export function buildGameGrid(
   // Phase 4d: overlay *completed* buildings only — they're opaque, so they live on the glyph grid.
   // Planned / under-construction blueprints are drawn separately on the 2D overlay (drawDesignations
   // in GameCanvas) where real alpha is available, so they can be semi-transparent ghosts.
-  // ROOFS LAST: a roof paints no glyph, it only SHADES the cell beneath, so it must be applied on top
-  // of the terrain AND any floor sharing the tile (roofs are passable — they coexist with floors).
+  // Only FLOORS and ROOFS bake into the terrain grid. Floors are the ground surface (paint first);
+  // roofs paint no glyph, they only SHADE the cell beneath, so they go LAST — on top of the terrain
+  // AND any floor sharing the tile. Regular buildings are NOT baked: they render as a glyph-only
+  // overlay (overlayBuildings) so the floor/ground sprite shows through their transparent pixels.
   if (buildings) {
     for (const b of buildings)
-      if (!isRoofBuilding(b)) applyBuildingToGrid(grid, b, worldMap[b.y]?.[b.x]);
+      if (isFloorBuilding(b)) applyBuildingToGrid(grid, b, worldMap[b.y]?.[b.x]);
     for (const b of buildings)
       if (isRoofBuilding(b)) applyBuildingToGrid(grid, b, worldMap[b.y]?.[b.x]);
   }

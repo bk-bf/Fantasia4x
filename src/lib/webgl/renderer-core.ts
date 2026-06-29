@@ -87,6 +87,12 @@ export class WebGLRendererCore {
   // item's tile composites on top of it instead of overwriting the item glyph
   // (which is what happened when both shared one grid).
   private itemOverlayGrid: GameGrid | null = null;
+  // Completed buildings live in their OWN overlay grid, rendered between the terrain
+  // and the item overlay. Drawing a building as a glyph-only alpha pass (rather than
+  // baking it into the opaque terrain cell) lets the floor/ground sprite beneath show
+  // through the building sprite's transparent pixels — two stacked sprites, exactly
+  // how items composite over terrain. (Floors and roofs stay baked in the terrain grid.)
+  private buildingOverlayGrid: GameGrid | null = null;
 
   // Day/night ambient (Phase A — EnvironmentService drives these each turn).
   // Applied as the u_ambient fragment uniform, combined with the baked additive
@@ -176,6 +182,11 @@ export class WebGLRendererCore {
   /** Inject the item-overlay grid, rendered between the terrain and entities. */
   setItemOverlayGrid(grid: GameGrid | null): void {
     this.itemOverlayGrid = grid;
+  }
+
+  /** Inject the building-overlay grid, rendered between the terrain and items. */
+  setBuildingOverlayGrid(grid: GameGrid | null): void {
+    this.buildingOverlayGrid = grid;
   }
 
   /** Set the top-left viewport tile position. */
@@ -435,14 +446,16 @@ export class WebGLRendererCore {
 
     // Overlay passes — glyph-only, alpha-blended on top of the terrain so the tile
     // underneath keeps rendering and motion can be sub-tile. Draw order is
-    // terrain → items → entities: each is its own single-glyph grid, so a pawn
-    // composites OVER a dropped item instead of overwriting its glyph.
-    if (this.overlayGrid || this.itemOverlayGrid) {
+    // terrain → buildings → items → entities: each is its own single-glyph grid, so a
+    // building composites OVER the floor/ground (its transparent pixels reveal it), an
+    // item OVER the building, and a pawn OVER everything — none overwriting the glyph below.
+    if (this.overlayGrid || this.itemOverlayGrid || this.buildingOverlayGrid) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 1);
       const tOverlay = performance.now();
-      // Items first (beneath), then entities (on top).
+      // Buildings first (beneath), then items, then entities (on top).
+      this.renderGlyphOverlay(this.buildingOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
       this.renderGlyphOverlay(this.itemOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
       this.renderGlyphOverlay(this.overlayGrid, viewportTilesW, viewportTilesH, lightTime);
       this.stats.overlayMs = performance.now() - tOverlay;
