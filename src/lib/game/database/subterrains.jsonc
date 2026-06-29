@@ -27,7 +27,7 @@
     // (center/edge/corner/end/t_connection), picked by dirt-neighbour connectivity in applyTileToGrid.
     // charSpans stays as the fallback when a variant sprite is missing.
     "autotile"    : "t_dirt",
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_dirt_center"}, {"sheet": "mshock", "tile": "t_dirt_center2"}, {"sheet": "mshock", "tile": "t_dirt_center3"}, {"sheet": "mshock", "tile": "t_dirt_center4"} ],
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_dirt_unconnected"}, {"sheet": "mshock", "tile": "t_dirt_center2"}, {"sheet": "mshock", "tile": "t_dirt_center3"}, {"sheet": "mshock", "tile": "t_dirt_center4"} ],
     "fg"          : "#856b47",
     "bg"          : "#17120a",
     "biomes"      : { "forest": [null, -0.3], "plains": [null, -0.4] }

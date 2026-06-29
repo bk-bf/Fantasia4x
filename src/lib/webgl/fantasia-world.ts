@@ -570,7 +570,12 @@ export function applyTileToGrid(
  * Clears the cell (space glyph) when no visible resource so harvest/regrow deltas blank it. The bg is
  * irrelevant here — the resource pass is glyph-only (alpha-blended).
  */
-export function applyResourceToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boolean[][]): void {
+export function applyResourceToGrid(
+  grid: GameGrid,
+  tile: WorldTile,
+  hiddenMask: boolean[][],
+  season?: string
+): void {
   const clear = () =>
     grid.setTile(tile.x, tile.y, {
       char: ' ',
@@ -581,30 +586,53 @@ export function applyResourceToGrid(grid: GameGrid, tile: WorldTile, hiddenMask:
   if (hiddenMask[tile.y]?.[tile.x]) return clear();
   const hasResources = tile.resources && Object.keys(tile.resources).length > 0;
   if (!hasResources) return clear();
+
+  // Pick the resource to draw: a ready (amt>0) node, else the most-grown standing one.
   const activeEntry = Object.entries(tile.resources!).find(([, amt]) => amt > 0);
   let resKey: string | undefined = activeEntry?.[0];
-  let brightness = 1;
+  let growthVal = 100;
   if (resKey) {
-    const partial = Object.keys(tile.resourceCooldowns ?? {}).some((k) => k.startsWith(resKey! + ':'));
-    if (partial) brightness = 0.65;
+    growthVal = tile.growth?.[resKey] ?? 100;
   } else {
-    // depleted-but-standing: draw the most-grown plant dimmed; below the visible threshold show nothing.
-    let bestGrowth = 0;
+    let best = 0;
     for (const [id, g] of Object.entries(tile.growth ?? {})) {
-      if (g > bestGrowth) {
-        bestGrowth = g;
+      if (g > best) {
+        best = g;
         resKey = id;
       }
     }
-    if (resKey && bestGrowth < RESOURCE_VISIBLE_GROWTH) resKey = undefined;
-    else if (resKey) brightness = Math.max(0.4, bestGrowth / 100);
+    growthVal = best;
   }
   const resDef = resKey ? resourceObjectService.getById(resKey) : undefined;
-  if (!resDef || resDef.chars.length === 0) return clear();
+  if (!resDef) return clear();
+
   const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;
-  const h = ((tile.x * 1619 + tile.y * 31337 + salt) >>> 0) % resDef.chars.length;
+  const hash = (tile.x * 1619 + tile.y * 31337 + salt) >>> 0;
+
+  let brightness = 1;
+  let char: string | undefined;
+  if (resDef.growthChars && resDef.growthChars.length) {
+    // CROP: always rendered (planted soil shows the seed stage); sprite = growth-stage, not season.
+    const st = growthVal < 20 ? 0 : growthVal < 55 ? 1 : growthVal < 90 ? 2 : 3;
+    char = resDef.growthChars[Math.min(st, resDef.growthChars.length - 1)];
+  } else {
+    // Standing wild plant. A depleted (non-ready) one fades out below the visible-growth threshold.
+    if (!activeEntry) {
+      if (growthVal < RESOURCE_VISIBLE_GROWTH) return clear();
+      brightness = Math.max(0.4, growthVal / 100);
+    } else if (Object.keys(tile.resourceCooldowns ?? {}).some((k) => k.startsWith(resKey! + ':'))) {
+      brightness = 0.65; // partly foraged
+    }
+    const pool = (season && resDef.seasonChars?.[season]?.length
+      ? resDef.seasonChars[season]
+      : resDef.chars);
+    if (!pool.length) return clear();
+    char = pool[hash % pool.length];
+  }
+  if (!char) return clear();
+
   grid.setTile(tile.x, tile.y, {
-    char: resDef.chars[h],
+    char,
     foreground: {
       r: resDef.fg[0] * brightness,
       g: resDef.fg[1] * brightness,
@@ -618,13 +646,17 @@ export function applyResourceToGrid(grid: GameGrid, tile: WorldTile, hiddenMask:
 /** Build the transparent resource overlay (trees/grass/bushes/ore drawn over the terrain ground).
  *  Kept SPARSE — only tiles that carry a resource get a cell, so the renderer's viewport cull
  *  (getVisibleTiles, O(viewport)) and memory stay cheap. */
-export function buildResourceOverlay(worldMap: WorldTile[][], hiddenMask?: boolean[][]): GameGrid {
+export function buildResourceOverlay(
+  worldMap: WorldTile[][],
+  hiddenMask?: boolean[][],
+  season?: string
+): GameGrid {
   const grid = new GameGrid();
   const mask = hiddenMask ?? computeHiddenMask(worldMap);
   for (const row of worldMap)
     for (const tile of row)
       if (tile.resources && Object.keys(tile.resources).length > 0)
-        applyResourceToGrid(grid, tile, mask);
+        applyResourceToGrid(grid, tile, mask, season);
   return grid;
 }
 

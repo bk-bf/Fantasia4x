@@ -100,6 +100,12 @@ export interface ResourceObjectDef {
   overheadRoof?: boolean;
   /** Resolved char array (from charSpans in JSON). */
   chars: string[];
+  /** Crops only (`crop` field present): the growth-stage glyphs IN ORDER (seed→seedling→mature→harvest);
+   *  the renderer picks by the tile's growth%, not by season or position. */
+  growthChars?: string[];
+  /** Seasonal plants: per-season variety pools (parsed from _season_/_summer/… suffixes in tile names).
+   *  The renderer picks the current season's pool, falling back to the un-suffixed base sprites. */
+  seasonChars?: Record<string, string[]>;
   /** Resolved RGB (0–1) glyph colour, parsed from the `fg` hex string in JSON. */
   fg: [number, number, number];
   /** Resolved RGB (0–1) background colour, parsed from the `bg` hex string in JSON. */
@@ -210,12 +216,40 @@ class ResourceObjectServiceImpl {
   private readonly byId: Map<string, ResourceObjectDef>;
 
   constructor() {
-    this.defs = (resourceObjectsData as unknown as Array<Record<string, unknown>>).map((raw) => ({
-      ...(raw as Omit<ResourceObjectDef, 'chars' | 'fg' | 'bg'>),
-      chars: resolveCharSpans((raw.charSpans ?? []) as CharSpan[]),
-      fg: hexToRgb01(raw.fg, [0.87, 0.62, 0.12]),
-      bg: hexToRgb01(raw.bg, [0.06, 0.04, 0.01])
-    }));
+    this.defs = (resourceObjectsData as unknown as Array<Record<string, unknown>>).map((raw) => {
+      const spans = (raw.charSpans ?? []) as CharSpan[];
+      const chars = resolveCharSpans(spans);
+      // Per-span season bucketing: each span is one {sheet,tile} → one char (1:1), so read the season
+      // keyword(s) from the tile name and pool the resolved char. Un-suffixed names are the base pool
+      // (used as fallback for any season lacking a specific sprite). hydrangea_spring_autumn → both.
+      const seasons: Record<string, string[]> = { spring: [], summer: [], autumn: [], winter: [] };
+      const base: string[] = [];
+      spans.forEach((sp) => {
+        const c = resolveCharSpans([sp])[0];
+        if (!c) return;
+        const name = (sp as { tile?: string }).tile ?? '';
+        const tags = (['spring', 'summer', 'autumn', 'winter'] as const).filter((s) => name.includes(s));
+        if (tags.length) tags.forEach((s) => seasons[s].push(c));
+        else base.push(c);
+      });
+      const anySeason = Object.values(seasons).some((a) => a.length > 0);
+      const seasonChars = anySeason
+        ? {
+            spring: seasons.spring.length ? seasons.spring : base,
+            summer: seasons.summer.length ? seasons.summer : base,
+            autumn: seasons.autumn.length ? seasons.autumn : base,
+            winter: seasons.winter.length ? seasons.winter : base
+          }
+        : undefined;
+      return {
+        ...(raw as Omit<ResourceObjectDef, 'chars' | 'fg' | 'bg'>),
+        chars,
+        growthChars: raw.crop ? chars : undefined, // crop charSpans are the 4 stages, in order
+        seasonChars,
+        fg: hexToRgb01(raw.fg, [0.87, 0.62, 0.12]),
+        bg: hexToRgb01(raw.bg, [0.06, 0.04, 0.01])
+      };
+    });
     this.byId = new Map(this.defs.map((d) => [d.id, d]));
   }
 

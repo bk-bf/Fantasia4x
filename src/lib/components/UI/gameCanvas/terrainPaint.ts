@@ -40,11 +40,12 @@ export interface FullTerrainBuild {
 export function fullRebuildTerrain(
   worldMap: WorldTile[][],
   buildings: PlacedBuilding[],
-  buildingSig: (b: PlacedBuilding) => string
+  buildingSig: (b: PlacedBuilding) => string,
+  season?: string
 ): FullTerrainBuild {
   const maskState = computeHiddenMaskState(worldMap);
   const terrainGrid = buildGameGrid(worldMap, buildings, maskState.mask);
-  const resourceGrid = buildResourceOverlay(worldMap, maskState.mask);
+  const resourceGrid = buildResourceOverlay(worldMap, maskState.mask, season);
 
   const buildingsById = new Map<string, { x: number; y: number; sig: string }>();
   for (const b of buildings) {

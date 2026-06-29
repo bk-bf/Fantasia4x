@@ -8,6 +8,7 @@
   import {
     applyTileToGrid,
     applyResourceToGrid,
+    buildResourceOverlay,
     applyBuildingToGrid,
     isRoofBuilding,
     isFloorBuilding,
@@ -229,6 +230,27 @@
   // Transparent resource layer (trees/grass/bushes/ore) drawn over the terrain ground — kept in
   // lock-step with _terrainGrid (built in _fullRebuildTerrain, patched per dirty tile incrementally).
   let _resourceGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
+  // Season the resource overlay was last painted for — when it changes, the whole overlay is rebuilt
+  // (seasonal plants pick a different sprite pool; nothing else dirties on a season flip).
+  let _lastResourceSeason: string | undefined;
+  /** Current season as the lowercase key the resource season-pools use (spring/summer/autumn/winter). */
+  function _seasonStr(): string | undefined {
+    const s = get(currentSeason);
+    return s ? String(s).toLowerCase() : undefined;
+  }
+  // On a season flip, repaint the whole resource overlay so seasonal plants swap sprite pools (no tile
+  // dirties on a global season change, so the incremental path wouldn't catch it). Cheap vs terrain.
+  $: if (
+    browser &&
+    _resourceGrid &&
+    worldMap &&
+    hiddenMask &&
+    $currentSeason &&
+    String($currentSeason).toLowerCase() !== _lastResourceSeason
+  ) {
+    _lastResourceSeason = String($currentSeason).toLowerCase();
+    _resourceGrid = buildResourceOverlay(worldMap, hiddenMask, _lastResourceSeason);
+  }
   let _terrainGridWorldMapRef: unknown; // worldMap ARRAY ref of the last full build (new ref ⇒ new map ⇒ full rebuild)
   // Incremental building diff: last-painted completed buildings keyed by id (pos + visual sig), so a
   // placement/removal/deconstruct repaints just the changed footprints (single cells).
@@ -2061,9 +2083,10 @@
    * component state and seeds every incremental baseline (mask state, building diff, blueprint, emitters).
    */
   function _fullRebuildTerrain(): void {
-    const built = fullRebuildTerrain(worldMap, buildings, _buildingSig);
+    const built = fullRebuildTerrain(worldMap, buildings, _buildingSig, _seasonStr());
     _terrainGrid = built.terrainGrid;
     _resourceGrid = built.resourceGrid;
+    _lastResourceSeason = _seasonStr();
     _maskState = built.maskState;
     hiddenMask = _maskState.mask;
     _terrainGridWorldMapRef = worldMap;
@@ -2149,7 +2172,7 @@
       const t = worldMap[y]?.[x];
       if (!t) continue;
       applyTileToGrid(_terrainGrid, t, hiddenMask, worldMap);
-      if (_resourceGrid) applyResourceToGrid(_resourceGrid, t, hiddenMask);
+      if (_resourceGrid) applyResourceToGrid(_resourceGrid, t, hiddenMask, _seasonStr());
       if (_updateEmitterAt(y, x, t)) emittersChanged = true;
     }
     // Only FLOORS and ROOFS bake into the terrain grid (floors first as the ground surface, ROOFS LAST
