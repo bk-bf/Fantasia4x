@@ -18,6 +18,33 @@ MSHOCK_TILES.forEach((t, i) => {
   MSHOCK_INDEX[t[0]] = i;
 });
 
+function mshockChar(tile: string): string | undefined {
+  const i = MSHOCK_INDEX[tile];
+  return i === undefined ? undefined : String.fromCodePoint(MSHOCK_PUA_BASE + i);
+}
+
+/**
+ * CDDA multitile connection variants. A ground tile picks one by which cardinal neighbours share its
+ * subType: surrounded → `center`; an isolated patch → `unconnected`; a region's border → an edge/
+ * corner/end/t_connection whose sprite blends the ground out toward the *different* neighbour. Ultica's
+ * dirt sprites are opaque grass→dirt transitions, so a dirt patch feathers into the grass around it.
+ */
+export const AUTOTILE_VARIANTS = [
+  'center', 'edge_ns', 'edge_ew', 'corner_ne', 'corner_nw', 'corner_se', 'corner_sw',
+  'end_piece_n', 'end_piece_e', 'end_piece_s', 'end_piece_w',
+  't_connection_n', 't_connection_e', 't_connection_s', 't_connection_w', 'unconnected'
+] as const;
+
+/** Build variant→glyph map for an autotile ground (base "t_dirt" → t_dirt_center, t_dirt_edge_ns, …). */
+function buildAutotileChars(base: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const v of AUTOTILE_VARIANTS) {
+    const c = mshockChar(`${base}_${v}`);
+    if (c) out[v] = c;
+  }
+  return out;
+}
+
 /**
  * Terrains.ts — Biome and subterrain definitions
  * Ported from Celestia: world/terrain/terrain_database.gd
@@ -43,6 +70,9 @@ export interface SubterrainDef {
   fg: [number, number, number];
   bg: [number, number, number];
   chars: string[];
+  /** When set, this ground autotiles: variant suffix → glyph char. The renderer picks the variant by
+   *  cardinal-neighbour connectivity (see applyTileToGrid) so dirt feathers into the surrounding grass. */
+  autotile?: Record<string, string>;
   /** Per-biome noise threshold ranges [min, max] where null = unbounded. */
   biomes?: Record<string, [number | null, number | null]>;
 }
@@ -287,6 +317,7 @@ export const SUBTERRAINS: Record<string, SubterrainDef> = Object.fromEntries(
       fg: hexToRgb01(sub.fg, [0.5, 0.5, 0.5]),
       bg: hexToRgb01(sub.bg, [0.03, 0.03, 0.03]),
       chars: resolveCharSpans(sub.charSpans as CharSpan[]),
+      autotile: sub.autotile ? buildAutotileChars(sub.autotile as string) : undefined,
       biomes: sub.biomes as Record<string, [number | null, number | null]> | undefined
     } satisfies SubterrainDef
   ])

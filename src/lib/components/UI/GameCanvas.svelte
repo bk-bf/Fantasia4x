@@ -2148,7 +2148,7 @@
       const y = (key / W) | 0;
       const t = worldMap[y]?.[x];
       if (!t) continue;
-      applyTileToGrid(_terrainGrid, t, hiddenMask);
+      applyTileToGrid(_terrainGrid, t, hiddenMask, worldMap);
       if (_resourceGrid) applyResourceToGrid(_resourceGrid, t, hiddenMask);
       if (_updateEmitterAt(y, x, t)) emittersChanged = true;
     }

@@ -426,7 +426,48 @@ function isSnowFeature(tile: WorldTile): boolean {
  * Snow renders as a progressing white sprite over a white-bg overlay (see {@link snowCover}); ice as a faint blue glaze, strong on
  * open water but cut to a third on damp ground.
  */
-export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boolean[][]): void {
+/**
+ * Pick the autotile variant suffix for a ground tile by which cardinal neighbours share its subType
+ * (off-map counts as same, so the map border shows no spurious edges). Maps the 16 connection cases to
+ * CDDA's named subtiles. Used for dirt, whose Ultica sprites blend grass→dirt at the connected edge.
+ */
+function autotileVariant(tile: WorldTile, worldMap: WorldTile[][]): string {
+  const st = tile.subType;
+  const same = (nx: number, ny: number): boolean => {
+    const row = worldMap[ny];
+    if (!row) return true;
+    const n = row[nx];
+    return !n || n.subType === st;
+  };
+  const N = same(tile.x, tile.y - 1);
+  const E = same(tile.x + 1, tile.y);
+  const S = same(tile.x, tile.y + 1);
+  const W = same(tile.x - 1, tile.y);
+  const cnt = (N ? 1 : 0) + (E ? 1 : 0) + (S ? 1 : 0) + (W ? 1 : 0);
+  if (cnt === 4) return 'center';
+  if (cnt === 0) return 'unconnected';
+  if (cnt === 1) return N ? 'end_piece_n' : E ? 'end_piece_e' : S ? 'end_piece_s' : 'end_piece_w';
+  if (cnt === 3) {
+    // 3 connected → T-junction; named for the stem (opposite the one missing neighbour).
+    if (!N) return 't_connection_s';
+    if (!E) return 't_connection_w';
+    if (!S) return 't_connection_n';
+    return 't_connection_e';
+  }
+  if (N && S) return 'edge_ns';
+  if (E && W) return 'edge_ew';
+  if (N && E) return 'corner_ne';
+  if (N && W) return 'corner_nw';
+  if (S && E) return 'corner_se';
+  return 'corner_sw';
+}
+
+export function applyTileToGrid(
+  grid: GameGrid,
+  tile: WorldTile,
+  hiddenMask: boolean[][],
+  worldMap?: WorldTile[][]
+): void {
   // Hidden interior (buried rock or an enclosed pocket) → blank dirt-coloured tile.
   if (hiddenMask[tile.y]?.[tile.x]) {
     grid.setTile(tile.x, tile.y, {
@@ -441,7 +482,16 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
   // grid — they render in a separate transparent overlay (applyResourceToGrid / buildResourceOverlay)
   // so a full-colour CDDA sprite composites over the actual ground instead of a flat near-black bg.
   const sub = SUBTERRAINS[tile.subType] ?? SUBTERRAIN_FALLBACK;
-  let char = pickChar(sub, tile.x, tile.y);
+  // Autotile grounds (dirt) pick a neighbour-aware variant so they feather into the surrounding grass;
+  // everything else uses the position-hashed random variant. Falls back to center / chars if a variant
+  // sprite is missing or no worldMap (neighbour info) was passed.
+  let char: string;
+  if (sub.autotile && worldMap) {
+    const v = autotileVariant(tile, worldMap);
+    char = sub.autotile[v] ?? sub.autotile.center ?? pickChar(sub, tile.x, tile.y);
+  } else {
+    char = pickChar(sub, tile.x, tile.y);
+  }
   let fg: [number, number, number] = sub.fg as [number, number, number];
   let bg: [number, number, number] = sub.bg as [number, number, number];
   // Ice glaze (SEASONS_WEATHER): a pale-blue sheen, only on wet-capable tiles past the visible threshold.
@@ -589,7 +639,7 @@ export function buildGameGrid(
   // `_fullRebuildTerrain`) passes the mask it already built so we don't BFS the whole map twice.
   const mask = hiddenMask ?? computeHiddenMask(worldMap);
   for (const row of worldMap) {
-    for (const tile of row) applyTileToGrid(grid, tile, mask);
+    for (const tile of row) applyTileToGrid(grid, tile, mask, worldMap);
   }
 
   // Phase 4d: overlay *completed* buildings only — they're opaque, so they live on the glyph grid.
