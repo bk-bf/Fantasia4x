@@ -32,6 +32,20 @@ describe('seasonal plant rendering', () => {
   });
 });
 
+describe('magic groves (glow) are season-independent', () => {
+  const ember = resourceObjectService.getById('emberwood_grove')!;
+  it('emberwood ignores season pools (glow) and keeps its ember tiles', () => {
+    expect(ember.seasonChars).toBeUndefined();
+    expect(ember.chars.length).toBeGreaterThan(0);
+  });
+  it('renders the same ember tiles in summer as in winter (not blanked)', () => {
+    const summer = buildResourceOverlay([[tile({ resources: { emberwood_grove: 1 } })]], undefined, 'summer');
+    const winter = buildResourceOverlay([[tile({ resources: { emberwood_grove: 1 } })]], undefined, 'winter');
+    expect(ember.chars).toContain(summer.getTile(0, 0)!.char);
+    expect(summer.getTile(0, 0)!.char).toBe(winter.getTile(0, 0)!.char);
+  });
+});
+
 describe('berry bush harvested + seasonal', () => {
   const berry = resourceObjectService.getById('berry_bush')!;
   it('has season pools AND a harvested pool', () => {

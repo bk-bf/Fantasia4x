@@ -57,25 +57,38 @@ missing = [t for t in refs if not resolve(t)]
 if missing:
     print(f"WARN {len(missing)} tiles missing in both sets:", missing[:12])
 
-rows = (len(usable) + COLS - 1) // COLS
-sheet = Image.new("RGBA", (COLS * CW, rows * CH), (0, 0, 0, 0))
-tiles = []
-for i, stem in enumerate(usable):
+# Shelf-pack at NATIVE size (capped at MAXPX) so big sprites stay big — CDDA trees are 96x96 (3×3
+# cells), drawn bottom-anchored & overflowing by the renderer (qW=tileW*w/32, qH=tileH*h/32). The
+# renderer reads each tile's [x,y,w,h] rect, so any layout works; we just pack tightly into rows.
+MAXPX, ATLAS_W = 96, 512
+loaded = []
+for stem in usable:
     try:
         im = Image.open(resolve(stem)).convert("RGBA")
     except Exception as e:
         print("skip", stem, e); continue
-    if im.width > CW or im.height > CH:
-        im.thumbnail((CW, CH), Image.NEAREST)
-    w, h = im.width, im.height
-    col, row = i % COLS, i // COLS
-    x = col * CW + (CW - w) // 2
-    y = row * CH + (CH - h)
-    sheet.alpha_composite(im, (x, y))
-    tiles.append([stem, x, y, w, h])
+    if im.width > MAXPX or im.height > MAXPX:
+        im.thumbnail((MAXPX, MAXPX), Image.NEAREST)
+    loaded.append((stem, im))
+
+x = y = row_h = 0
+placed = []  # (stem, im, px, py)
+for stem, im in loaded:
+    w, h = im.size
+    if x + w > ATLAS_W:
+        x = 0; y += row_h; row_h = 0
+    placed.append((stem, im, x, y)); x += w; row_h = max(row_h, h)
+atlas_h = y + row_h
+
+sheet = Image.new("RGBA", (ATLAS_W, atlas_h), (0, 0, 0, 0))
+tiles = []
+for stem, im, px, py in placed:
+    sheet.alpha_composite(im, (px, py))
+    tiles.append([stem, px, py, im.width, im.height])
 
 os.makedirs(os.path.dirname(PNG_OUT), exist_ok=True)
 sheet.save(PNG_OUT)
 json.dump({"cell_w": CW, "cell_h": CH, "cols": COLS, "tiles": tiles}, open(JSON_OUT, "w"))
 gnd = sum(1 for t in tiles if GROUND.match(t[0]))
-print(f"wrote atlas {COLS}x{rows} cells, {len(tiles)} tiles ({gnd} ground from Ultica), {sum(1 for t in tiles if t[4]>CW)} tall")
+big = sum(1 for t in tiles if t[3] > 32 or t[4] > 32)
+print(f"wrote atlas {ATLAS_W}x{atlas_h}, {len(tiles)} tiles ({gnd} ground from Ultica), {big} larger-than-1-cell")

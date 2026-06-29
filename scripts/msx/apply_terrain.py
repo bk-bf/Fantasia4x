@@ -39,12 +39,35 @@ CROP_QUARTER = {
     "crop_onion": "greens", "crop_peas": "greens", "crop_beans": "greens",
     "wild_cabbage": "greens", "wild_kale": "greens", "wild_turnip": "greens",
     "wild_onion": "greens", "wild_radish": "greens",
-    "crop_berries": "flower", "crop_grapes": "flower", "crop_apples": "flower", "crop_pumpkin": "flower",
+    "crop_berries": "flower", "crop_grapes": "flower", "crop_apples": "flower",
     "crop_flax": "flower", "crop_cotton": "flower", "crop_thyme": "flower", "crop_mint": "flower",
 }
+# Crops that get a dedicated single sprite (not a generic quarter set).
+CROP_OVERRIDE = {"crop_pumpkin": ["f_wildpumpkin"], "crop_turnip": ["f_wildsbeet"]}
 FLOWERS = ["f_dandelion", "f_dandelion_season_summer", "f_dandelion_season_autumn", "f_dandelion_season_winter",
            "f_datura", "f_flower_spurge", "f_flower_tulip_1",
            "f_mustard_spring", "f_mustard_summer", "f_mustard_autumn"]
+
+# Trees (Ultica 96x96, rendered bottom-anchored & overflowing — see grid-renderer). Seasonal + harvested
+# variants are bucketed by ResourceObjectService. Magic groves carry `glow` so they ignore season and
+# always show their magical sprite, lit by the grove's colored glow emitter (hue).
+TREES = {
+    "pine_tree": ["pine_yar"],  # evergreen conifer
+    "yew_tree": ["pine_yar"],
+    "birch_tree": ["t_tree_birch", "t_tree_birch_autumn_1", "t_tree_birch_winter",
+                   "t_tree_birch_harvested", "t_tree_birch_harvested_autumn_1", "t_tree_birch_harvested_winter"],
+    "oak_tree": ["t_tree_beech_season_spring", "t_tree_beech_season_summer",
+                 "t_tree_beech_season_autumn", "t_tree_beech_season_winter"],
+    "ash_tree": ["t_tree_elm_spring", "t_tree_elm_summer", "t_tree_elm_autumn", "t_tree_elm_winter"],
+    "apple_tree": ["t_tree_apple", "t_tree_apple_autumn", "t_tree_apple_winter",
+                   "t_tree_apple_harvested", "t_tree_apple_harvested2"],
+    "dead_tree": ["t_tree_dead", "deadpine_yar"],
+    # magic groves (glow): season-independent
+    "heartwood_grove": ["t_tree_cherry"],
+    "moonwood_grove": ["t_tree_fungal00", "t_tree_fungal01", "t_tree_fungal02", "t_tree_fungal03"],
+    "ironwood_grove": ["t_tree_fungal04", "t_tree_fungal05", "t_tree_fungal06"],
+    "emberwood_grove": ["t_tree_cherry_autumn1", "t_tree_maple_autumn", "t_tree_season_autumn"],
+}
 
 # def id -> ordered list of tiles (variety / season pool). Crops + wild veg handled by tiles_for().
 MAP = {
@@ -56,11 +79,11 @@ MAP = {
   # ── resources: the green / plants painted ON TOP of soil ──
   "grass_patch": GRASS, "tall_grass_patch": GRASS_TALL, "deep_grass_patch": GRASS_LONG,
   "wildflower_patch": FLOWERS, "scrub_patch": ["t_grass_dead_unconnected", "t_grass"], "berry_bush": BERRY, "wild_grapevine": GRAPE,
-  "pine_tree": ["t_tree_pine"], "birch_tree": ["t_tree_birch"], "oak_tree": ["t_tree", "t_tree_beech_season_summer"],
-  "apple_tree": ["t_tree_apple"], "ash_tree": ["t_tree"], "yew_tree": ["t_tree_pine"], "dead_tree": ["t_tree_dead"],
+  **TREES,
 }
 
 def tiles_for(cur):
+    if cur in CROP_OVERRIDE: return CROP_OVERRIDE[cur]
     if cur in CROP_QUARTER: return crop_set(CROP_QUARTER[cur])
     if cur.startswith("crop_"): return crop_set("wheat")  # default any unlisted crop to grain
     if cur in MAP: return MAP[cur]

@@ -240,7 +240,9 @@ class ResourceObjectServiceImpl {
         if (tags.length) tags.forEach((s) => seasons[s].push(c));
         else base.push(c);
       });
-      const anySeason = Object.values(seasons).some((a) => a.length > 0);
+      // Glowing magic groves are season-independent (their _autumn/etc. tiles are chosen for the LOOK,
+      // not the season) — keep them on the flat chars[] pool so they always show, lit by their glow.
+      const anySeason = !raw.glow && Object.values(seasons).some((a) => a.length > 0);
       const seasonChars = anySeason
         ? {
             spring: seasons.spring.length ? seasons.spring : base,
