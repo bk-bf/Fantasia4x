@@ -19,6 +19,7 @@ import {
   applyIntoxication,
   applyFoodPoisoning,
   applyMealBuff,
+  SAFE_HUNGER,
   type MealPortion
 } from '../pawnQueries';
 import { pickUpFromTile } from '../pawnHauling';
@@ -132,11 +133,21 @@ function grabFoodAt(gameState: GameState, pawn: Pawn, x: number, y: number): Gam
   const meal = selectFoodForMeal(pawn, gameState, reachable);
   const cap = meal.reduce((s, m) => s + m.units, 0) || 1;
   const before = { ...(pawn.inventory?.items ?? {}) };
-  const grabbed = pickUpFromTile(gameState, pawn.id, x, y, {
-    radius: 1,
-    maxQty: cap,
-    acceptTest: (rid) => isAllowedFoodId(gameState, rid)
-  });
+  // Grab the PLANNED meal items, not an arbitrary `maxQty` of whatever food sits first in the drop
+  // array. The old single capped pickup sized the cap to the most-NUTRITIOUS reachable food (e.g.
+  // peas×2) but then physically took `cap` units of whatever pickUpFromTile scanned first — at a
+  // basket dominated by berry stacks that's 2 berries (~6 nutrition) against a 60+ deficit, so the
+  // pawn nibbled and walked off still starving, re-tripping the hunger interrupt a few tiles later.
+  // Picking up per planned `resourceId` makes the nutrition grabbed match the deficit the meal was
+  // planned for (the most nutritious food first, then less nutritious ones as the plan's supplement).
+  let grabbed = gameState;
+  for (const m of meal) {
+    grabbed = pickUpFromTile(grabbed, pawn.id, x, y, {
+      radius: 1,
+      resourceId: m.id,
+      maxQty: m.units
+    });
+  }
   const p2 = grabbed.pawns.find((p) => p.id === pawn.id);
   // EAT-DBG: pinpoint why a meal is small. Logs the meal the pawn WANTS (cap), the colony aggregate
   // (gs.stockpile, reserved-INCLUSIVE) vs the unreserved-available stock (what pickUpFromTile can take),
@@ -495,18 +506,27 @@ export function handleEating(pawn: Pawn, gameState: GameState): GameState {
   };
 
   if (turnsInState >= eatDuration) {
+    // Keep eating until satiated. If one serving didn't reach SAFE_HUNGER — the tile/basket ran short,
+    // the food was spread across stacks/types, or the carry budget capped the grab — and there's still
+    // food to get, drop back to HUNGRY to fetch + eat another serving rather than returning to work
+    // under-fed and re-tripping the hunger interrupt a few tiles later (the walk-back-and-forth this
+    // fixes). Re-entry eats leftover pack food first (no trip), else fetches the next stack — across
+    // food types and tiles — until hunger ≤ SAFE_HUNGER or no food is reachable. Self-terminating:
+    // selectFoodForMeal returns an empty meal once hunger ≤ SAFE_HUNGER, so handleHungry then idles.
+    const stillHungry = newHunger > SAFE_HUNGER && hasAvailableFood(gameState);
     gameLogger.log(
       gameState.turn,
       'NEED-CHECK',
       () =>
-        `${pawn.name} finished eating ate=${turnsInState} turns hunger=${newHunger.toFixed(1)} at ${fmtPos(pawn)}`
+        `${pawn.name} finished eating ate=${turnsInState} turns hunger=${newHunger.toFixed(1)} at ${fmtPos(pawn)}` +
+        (stillHungry ? ' → still hungry, fetching more' : '')
     );
     return mutatePawn(gameState, pawn.id, (p) => {
       p.path = [];
       p.isMoving = false;
       p.needs = updatedNeeds;
       p.state = updatedState;
-      p.currentState = PAWN_STATE.IDLE;
+      p.currentState = stillHungry ? PAWN_STATE.HUNGRY : PAWN_STATE.IDLE;
       p.activeJob = undefined;
     });
   }
