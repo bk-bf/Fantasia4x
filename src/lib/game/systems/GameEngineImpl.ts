@@ -47,6 +47,7 @@ import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { resourceObjectService } from '../services/ResourceObjectService';
 import { entityService } from '../services/EntityService';
 import { readMobPathStats } from '../services/entity/entityHelpers';
+import { maybeRebuildConnectivity } from '../services/entity/connectivity';
 import { combatService } from './Combat';
 import { getRangedWeapon, effectiveRangedRange, hasViableAmmo } from './rangedCombat';
 import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
@@ -548,6 +549,13 @@ export class GameEngineImpl implements GameEngine {
     const st = performance.now();
     rebuildThermalField(gs.buildings, gs.worldMap);
     this._phaseMs['env:thermal'] = (this._phaseMs['env:thermal'] ?? 0) + (performance.now() - st);
+
+    // Walkable-connectivity components for AI target selection (reachable() gating) — rebuilt on a slow
+    // cadence (mining / build / ice freeze-thaw are the only things that change it) + on a map ref change.
+    const sc = performance.now();
+    maybeRebuildConnectivity(gs.worldMap, gs.turn);
+    this._phaseMs['env:connectivity'] =
+      (this._phaseMs['env:connectivity'] ?? 0) + (performance.now() - sc);
   }
 
   /**

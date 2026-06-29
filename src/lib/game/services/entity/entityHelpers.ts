@@ -12,6 +12,7 @@ import { wasmPathfinderService } from '../WasmPathfinderService';
 import { buildSharedSoftBlockedGrid } from '../PathfinderService';
 import { occupancyService } from '../OccupancyService';
 import { hasLineOfSight } from '../../systems/rangedCombat';
+import { reachable } from './connectivity';
 import { simLog } from '../../core/logSink';
 import { rng } from '../../core/rng';
 import {
@@ -100,7 +101,13 @@ export function findReachableFoodTile(
         const nx = mob.x + dx;
         const ny = mob.y + dy;
         const tile = state.worldMap[ny]?.[nx];
-        if (tile?.walkable && edibleResourceOnTile(tile, kinds)) {
+        // Only collect food in the mob's OWN walkable component — a bush across a river/wall is walkable
+        // but unpathable, and probing it with A* was the wasted-sweep cost. reachable() is O(1).
+        if (
+          tile?.walkable &&
+          reachable(mob.x, mob.y, nx, ny) &&
+          edibleResourceOnTile(tile, kinds)
+        ) {
           candidates.push({ x: nx, y: ny });
           if (candidates.length >= maxCandidates) break collect;
         }
@@ -207,7 +214,10 @@ export function findNearestPrey(
   // pathing to it makes A* sweep the whole connected region (the 78%-fail perf cliff). Reuses the same
   // `blocksSight` Bresenham LOS as pawn aggro, and is the LAST check (only ray-cast a candidate that would
   // become the nearest), so it's a handful of rays per hunting mob, not one per prey.
-  const visible = (c: Mob) => hasLineOfSight(worldMap, mob.x, mob.y, c.x, c.y);
+  // Targetable = REACHABLE (same walkable component — O(1), so checked first to short-circuit) AND in
+  // line of sight (the gameplay gate: a hunter pursues only what it can actually see).
+  const canTarget = (c: Mob) =>
+    reachable(mob.x, mob.y, c.x, c.y) && hasLineOfSight(worldMap, mob.x, mob.y, c.x, c.y);
   // Pre-filtered prey subset (corpses with intactness>0 + live non-tamed huntables), once per tick.
   for (const candidate of mobThreatSubsets(allMobs).prey) {
     if (candidate.id === mob.id) continue;
@@ -219,12 +229,12 @@ export function findNearestPrey(
     if (candidate.state === 'Corpse') {
       // Corpses weighted as 50% closer — free food with no danger.
       const d = raw * 0.5;
-      if (d < bestDist && visible(candidate)) {
+      if (d < bestDist && canTarget(candidate)) {
         bestDist = d;
         best = candidate;
       }
     } else if (allowLivePrey && raw <= HUNT_RADIUS) {
-      if (raw < bestDist && visible(candidate)) {
+      if (raw < bestDist && canTarget(candidate)) {
         bestDist = raw;
         best = candidate;
       }
@@ -435,7 +445,13 @@ export function fleeToSafety(mob: Mob, threats: { x: number; y: number }[], stat
     const goal = isWalkable(state, c.tx, c.ty)
       ? { x: c.tx, y: c.ty }
       : findNearbyWalkable(state, c.tx, c.ty, mob.id);
-    if (!goal || (goal.x === mob.x && goal.y === mob.y)) continue;
+    // Skip a heading whose safe point isn't in the mob's component (unpathable) before spending an A*.
+    if (
+      !goal ||
+      (goal.x === mob.x && goal.y === mob.y) ||
+      !reachable(mob.x, mob.y, goal.x, goal.y)
+    )
+      continue;
     const path = pathTo(state, mob.x, mob.y, goal.x, goal.y, mob.id, "flee2");
     if (path.length > 0) return { ...mob, fleeDest: goal, path, pathIndex: 0 };
   }
