@@ -96,6 +96,7 @@
   import { conditionPriority } from '$lib/game/core/needs';
   import { getCreatureById } from '$lib/game/core/Creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
+  import { vlog } from '$lib/game/core/logSink.js';
   import { simTarget } from '$lib/game/systems/MovementSystem.js';
   import SelectedEntityCard from '$lib/components/UI/SelectedEntityCard.svelte';
   import type {
@@ -3271,6 +3272,15 @@
   function startLoop() {
     let lastFpsPush = 0;
     let lastDrawAt = 0;
+    // ── render-perf sampler (~1 Hz) → perf.log, interleaved with the worker's TPS lines so an in-game
+    // FPS dip can be LOCATED by measurement (the gap between the dt-derived frame time and the GL
+    // terrain/overlay breakdown is main-thread JS: the sim step + per-frame overlay building). Per-frame
+    // cost is allocation-free (three numeric accumulations on `dt`); getStats()/vlog only fire at window
+    // close. vlog no-ops unless verbose logging is on, so this is free in a normal (non-debug) run.
+    let _rpWinStart = 0;
+    let _rpFrames = 0;
+    let _rpDtSum = 0;
+    let _rpMaxDt = 0;
     // ── DEBUG: menu-backdrop frame profiler (console). Logs a rolling summary ~every 2s and warns on
     // individual hiccup frames (gap > 33ms), so we can see whether the stutter is render-side (terrain
     // re-bake / draw cost) or a GC-sized gap with cheap render. Menu preview only; remove when solved.
@@ -3297,6 +3307,32 @@
       const now = performance.now();
       const dt = lastFrameTime ? (now - lastFrameTime) / 1000 : 0;
       lastFrameTime = now;
+      // Render-perf sampler accumulation (allocation-free): frame count + frame-time sum/max this window.
+      if (dt > 0) {
+        _rpFrames++;
+        _rpDtSum += dt;
+        if (dt > _rpMaxDt) _rpMaxDt = dt;
+      }
+      if (_rpWinStart === 0) _rpWinStart = now;
+      else if (now - _rpWinStart >= 1000) {
+        const el = now - _rpWinStart;
+        const st = renderer.getStats();
+        const gs = get(gameState);
+        vlog(
+          'perf',
+          gs.turn,
+          `render fps=${Math.round((_rpFrames * 1000) / el)} ` +
+            `frameAvg=${((_rpDtSum * 1000) / Math.max(1, _rpFrames)).toFixed(1)}ms ` +
+            `frameMax=${(_rpMaxDt * 1000).toFixed(1)}ms ` +
+            `terrain=${st.terrainMs.toFixed(2)}ms overlay=${st.overlayMs.toFixed(2)}ms ` +
+            `rebuilds=${st.terrainRebuilds} draws=${st.drawCalls} verts=${st.vertexCount} ` +
+            `mobs=${gs.mobs?.length ?? 0} pawns=${gs.pawns?.length ?? 0}`
+        );
+        _rpWinStart = now;
+        _rpFrames = 0;
+        _rpDtSum = 0;
+        _rpMaxDt = 0;
+      }
       // Advance the simulation on this same thread/schedule (non-worker mode). Driving the sim
       // from the render loop (rather than a competing setInterval) prevents the timer starvation
       // that throttled a <1 ms/tick sim to ~20 TPS while rendering. (No-op under ?simworker.)
