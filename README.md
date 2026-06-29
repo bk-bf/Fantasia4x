@@ -1,6 +1,6 @@
 # Fantasia4x
 
-[![Release](https://img.shields.io/badge/release-v0.1.119-brightgreen)](https://github.com/bk-bf/Fantasia4x/releases/latest) <!-- release-pill -->
+[![Release](https://img.shields.io/badge/release-v0.1.247-brightgreen)](https://github.com/bk-bf/Fantasia4x/releases/latest) <!-- release-pill -->
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 
 A hobby 4X, colony sim strategy game project with procedurally generated civilizations. Built with SvelteKit.
