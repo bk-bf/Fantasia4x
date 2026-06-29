@@ -352,13 +352,77 @@ const DIRT_BG = (SUBTERRAINS['dirt']?.bg ?? [0.08, 0.06, 0.03]) as [number, numb
 // sprites from their char range than the ordinary trees — bump this to reroll the magical-tree sprites.
 const GLOWING_GROVE_SPRITE_SALT = 53;
 
+/** A tile's effective ice coverage for rendering: only wet-capable tiles (walkable ground / open water)
+ *  hold ice, and a sub-threshold rime is hidden. 0 means "no ice tint". */
+function iceCoverAt(t: WorldTile | undefined): number {
+  if (!t) return 0;
+  const ice = t.walkable || t.type === 'water' ? (t.ice ?? 0) : 0;
+  return ice >= ICE_VISIBLE_RENDER ? ice : 0;
+}
+
+/**
+ * 5×5 gaussian kernel (σ≈1.1, normalized) used to BLUR the snow/ice coverage so a sheet's edge fades
+ * over a couple of tiles instead of ending on a hard line. Flat row-major weights for the offset range
+ * [-2..2]×[-2..2]. Precomputed once.
+ */
+export const FROST_BLUR_R = 2;
+const FROST_BLUR_W: number[] = (() => {
+  const sigma = 1.1;
+  const w: number[] = [];
+  let sum = 0;
+  for (let dy = -FROST_BLUR_R; dy <= FROST_BLUR_R; dy++) {
+    for (let dx = -FROST_BLUR_R; dx <= FROST_BLUR_R; dx++) {
+      const v = Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma));
+      w.push(v);
+      sum += v;
+    }
+  }
+  return w.map((v) => v / sum);
+})();
+
+/** Neighbourhood-averaged (blurred) snow & ice coverage at a tile — the soft edge field. One pass over
+ *  the 5×5 window accumulating both. Out-of-bounds neighbours count as 0 so map edges fade out. */
+function blurredFrost(
+  worldMap: WorldTile[][],
+  x: number,
+  y: number
+): { snow: number; ice: number } {
+  let snow = 0;
+  let ice = 0;
+  let i = 0;
+  for (let dy = -FROST_BLUR_R; dy <= FROST_BLUR_R; dy++) {
+    const row = worldMap[y + dy];
+    for (let dx = -FROST_BLUR_R; dx <= FROST_BLUR_R; dx++, i++) {
+      const t = row?.[x + dx];
+      if (!t) continue;
+      const wt = FROST_BLUR_W[i];
+      snow += (t.snow ?? 0) * wt;
+      ice += iceCoverAt(t) * wt;
+    }
+  }
+  return { snow, ice };
+}
+
 /**
  * Paint ONE tile's terrain/resource/snow visual into the grid. Shared by buildGameGrid (full rebuild)
  * and the incremental terrain update in GameCanvas — so a `worldMapDelta` re-applies only its changed
  * tiles instead of rebuilding all ~562k (the 4× FPS crater). `hiddenMask` is the caller's (it only
  * changes with walkability, never on a regrowth/harvest delta). Buildings are overlaid separately.
+ *
+ * `worldMap` (optional) enables the snow/ice EDGE BLUR: a tile's frost tint comes from the gaussian
+ * average of its 5×5 neighbourhood, so a sheet's border FADES OUTWARD over ~2 tiles (frost bleeds a
+ * little onto the bare tiles past the edge, then to nothing) instead of ending on a hard line.
+ *
+ * Returns whether any frost tint was painted, so the caller can track which cells render frost and
+ * repaint the ring around a changed cell (the blur reads neighbours, so a cell's frost changes when a
+ * neighbour's does). See GameCanvas redrawOverlayNow.
  */
-export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boolean[][]): void {
+export function applyTileToGrid(
+  grid: GameGrid,
+  tile: WorldTile,
+  hiddenMask: boolean[][],
+  worldMap?: WorldTile[][]
+): boolean {
   // Hidden interior (buried rock or an enclosed pocket) → blank dirt-coloured tile.
   if (hiddenMask[tile.y]?.[tile.x]) {
     grid.setTile(tile.x, tile.y, {
@@ -367,7 +431,7 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
       background: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
       position: { x: tile.x, y: tile.y }
     });
-    return;
+    return false;
   }
   // Layer 1: base subterrain
   const sub = SUBTERRAINS[tile.subType] ?? SUBTERRAIN_FALLBACK;
@@ -425,13 +489,27 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
     fg = sub.fg as [number, number, number];
     bg = sub.bg as [number, number, number];
   }
+  // Snow/ice EDGE BLUR: the frost tint comes from the gaussian-blurred neighbourhood coverage, so a
+  // sheet's border fades OUTWARD across ~2 tiles (bleeds faintly onto the bare tiles past the edge) —
+  // see applyTileToGrid doc. Without worldMap (tests), fall back to the tile's own raw coverage.
+  let ice: number;
+  let snow: number;
+  if (worldMap) {
+    const b = blurredFrost(worldMap, tile.x, tile.y);
+    ice = b.ice;
+    snow = b.snow;
+  } else {
+    ice = iceCoverAt(tile);
+    snow = tile.snow ?? 0;
+  }
+  let frosted = false;
   // Ice glaze (SEASONS_WEATHER): a frozen tile gets a THIN pale-blue sheen — deliberately gentle (a glaze,
   // not a snow blanket), so a frozen pond reads as faint blue glass. Applied BENEATH snow so that on a
-  // heavily snowed tile the white drift covers the ice rather than the blue showing through. Hidden below
-  // ICE_VISIBLE_RENDER.
-  const ice = tile.ice ?? 0;
-  if (ice >= ICE_VISIBLE_RENDER) {
-    const it = 0.18 + Math.min(1, ice / 100) * 0.22; // ~0.2 thin rime → ~0.4 solid sheet
+  // heavily snowed tile the white drift covers the ice rather than the blue showing through. The blurred
+  // coverage ramps the intensity to 0 at the edge (no hard cutoff), feathering the border.
+  if (ice > 0.5) {
+    frosted = true;
+    const it = Math.min(1, ice / 100) * 0.4; // 0 at the feathered edge → ~0.4 solid sheet
     bg = [
       bg[0] + (ICE_BLUE[0] - bg[0]) * it,
       bg[1] + (ICE_BLUE[1] - bg[1]) * it,
@@ -446,8 +524,8 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
   // Snow cover (SEASONS_WEATHER): blend terrain/resource (and any ice glaze) toward cool white by
   // accumulated `snow` (0–100). Drawn LAST so deep snow buries the ice tint. Terrain layer only —
   // buildings & dropped items draw on top and are never whitened.
-  const snow = tile.snow ?? 0;
-  if (snow > 0) {
+  if (snow > 0.5) {
+    frosted = true;
     const t = Math.min(1, snow / 100);
     const wb = t * 0.9;
     const wf = t * 0.75;
@@ -468,12 +546,14 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
     background: { r: bg[0], g: bg[1], b: bg[2] },
     position: { x: tile.x, y: tile.y }
   });
+  return frosted;
 }
 
 export function buildGameGrid(
   worldMap: WorldTile[][],
   buildings?: PlacedBuilding[],
-  hiddenMask?: boolean[][]
+  hiddenMask?: boolean[][],
+  frostOut?: Set<number>
 ): GameGrid {
   const grid = new GameGrid();
 
@@ -482,8 +562,14 @@ export function buildGameGrid(
   // stop glow, hover, and explore-jumps from revealing what's buried. The caller (ADR-026
   // `_fullRebuildTerrain`) passes the mask it already built so we don't BFS the whole map twice.
   const mask = hiddenMask ?? computeHiddenMask(worldMap);
+  // `frostOut` (optional) collects the cells that render snow/ice (incl. the blurred bleed past a sheet's
+  // edge), keyed y*W+x — the baseline GameCanvas uses to know which cells' rings to repaint on a change.
+  const fw = worldMap[0]?.length ?? 0;
   for (const row of worldMap) {
-    for (const tile of row) applyTileToGrid(grid, tile, mask);
+    for (const tile of row) {
+      const frosted = applyTileToGrid(grid, tile, mask, worldMap);
+      if (frosted && frostOut) frostOut.add(tile.y * fw + tile.x);
+    }
   }
 
   // Phase 4d: overlay *completed* buildings only — they're opaque, so they live on the glyph grid.

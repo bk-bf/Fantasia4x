@@ -24,6 +24,9 @@ import type { WorldTile, PlacedBuilding } from '$lib/game/core/types.js';
 
 export interface FullTerrainBuild {
   terrainGrid: GameGrid;
+  /** Cells that render snow/ice (incl. the blurred bleed past a sheet's edge), keyed y*W+x — the
+   *  baseline for the per-delta path's frost-ring repaint. */
+  frostTiles: Set<number>;
   maskState: HiddenMaskState;
   /** Grove-glow emitters keyed "y,x" (hidden-tile emitters excluded), for incremental upsert/delete. */
   emitterMap: Map<string, LightEmitter>;
@@ -40,7 +43,8 @@ export function fullRebuildTerrain(
   buildingSig: (b: PlacedBuilding) => string
 ): FullTerrainBuild {
   const maskState = computeHiddenMaskState(worldMap);
-  const terrainGrid = buildGameGrid(worldMap, buildings, maskState.mask);
+  const frostTiles = new Set<number>();
+  const terrainGrid = buildGameGrid(worldMap, buildings, maskState.mask, frostTiles);
 
   const buildingsById = new Map<string, { x: number; y: number; sig: string }>();
   for (const b of buildings) {
@@ -56,5 +60,12 @@ export function fullRebuildTerrain(
     }
   }
 
-  return { terrainGrid, maskState, emitterMap, emitters: [...emitterMap.values()], buildingsById };
+  return {
+    terrainGrid,
+    frostTiles,
+    maskState,
+    emitterMap,
+    emitters: [...emitterMap.values()],
+    buildingsById
+  };
 }
