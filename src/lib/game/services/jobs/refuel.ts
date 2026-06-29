@@ -64,6 +64,12 @@ export function complete(job: Job, gs: GameState): GameState {
 
   // The fresh batch sets the fire's character: its heat (smelt gate + warmth) and burn-longevity.
   // Refuelling fires at <30% tank, so the new fuel dominates — overwrite rather than blend.
+  // The loaded fuel ids (tinder excluded), dominant first — display-only ("what's burning").
+  const tinderId = fuelRules.getRefuelRequirements(building.type).tinderItemId;
+  const fuelItemIds = Object.entries(plan.consumed)
+    .filter(([id]) => id !== tinderId)
+    .sort((a, b) => b[1] - a[1])
+    .map(([id]) => id);
   const newBuildings = (gs.buildings ?? []).map((b) =>
     b.id === job.buildingId
       ? {
@@ -71,7 +77,8 @@ export function complete(job: Job, gs: GameState): GameState {
           fuel: plan.newFuel,
           lit: plan.newFuel > 0,
           fireHeat: plan.fireHeat,
-          burnFactor: plan.burnFactor
+          burnFactor: plan.burnFactor,
+          fuelItemIds
         }
       : b
   );

@@ -63,7 +63,8 @@
     const tinderName =
       itemService.getItemById(req.tinderItemId)?.name ?? req.tinderItemId.replace(/_/g, ' ');
     const needs = `needs: ${req.tinderAmount}× ${tinderName} + any fuel`;
-    const wantsFuel = (building.fuel ?? 0) / Math.max(bDef.maxFuel, 1) < getRefuelThresholdRatio(building);
+    const wantsFuel =
+      (building.fuel ?? 0) / Math.max(bDef.maxFuel, 1) < getRefuelThresholdRatio(building);
     let warn: string | null = null;
     if (gameState && wantsFuel && planRefuel(gameState, building) === null) {
       const tinderStock = (gameState.stockpile ?? {})[req.tinderItemId] ?? 0;
@@ -135,7 +136,9 @@
           {@const dry = Math.min(1, (d.drying ?? 0) / dryTarget)}
           {@const ind = gameState ? dryingIndicator(itemService.dryingStatus(d, gameState)!) : null}
           <span class="bld-dry" style={ind ? `color:${ind.color}` : ''} title={ind?.title ?? ''}>
-            — DRY [{jobProgressBar(dry)}] {Math.round(dry * 100)}%{#if ind}&nbsp;{ind.glyph}{/if}</span
+            — DRY [{jobProgressBar(dry)}] {Math.round(
+              dry * 100
+            )}%{#if ind}&nbsp;{ind.glyph}{/if}</span
           >
         {/if}
       </div>
@@ -147,11 +150,18 @@
   {#if !isBlueprint && !building.deconstructQueued && bDef?.maxFuel !== undefined}
     {@const fuelMax = bDef.maxFuel}
     {@const fuelCurr = building.fuel ?? 0}
+    {@const burning = building.fuelItemIds ?? []}
     <div class="bld-fuel">
-      FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {Math.floor(fuelCurr)}/{Math.floor(
-        fuelMax
-      )}
-      {#if building.lit}<span class="fuel-lit">● lit</span>{:else}<span class="fuel-dark">○ unlit</span
+      FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {Math.floor(
+        fuelCurr
+      )}/{Math.floor(fuelMax)}
+      {#if building.lit}<span class="fuel-lit">● lit</span>{:else}<span class="fuel-dark"
+          >○ unlit</span
+        >{/if}
+      {#if building.lit && burning.length > 0}<span class="fuel-burning"
+          >· {itemService.getItemById(burning[0])?.name ??
+            burning[0].replace(/_/g, ' ')}{#if burning.length > 1}
+            +{burning.length - 1}{/if}</span
         >{/if}
     </div>
   {/if}
@@ -249,6 +259,10 @@
   }
   .fuel-dark {
     color: #604020;
+    margin-left: 4px;
+  }
+  .fuel-burning {
+    color: #b0651e;
     margin-left: 4px;
   }
   .bld-refund {

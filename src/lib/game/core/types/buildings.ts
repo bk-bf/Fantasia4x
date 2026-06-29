@@ -145,6 +145,9 @@ export interface PlacedBuilding {
   /** Burn-longevity multiplier (≥1) from the loaded fuel's `burnDuration`; the station drains
    *  `fuelConsumptionRate / burnFactor` per tick, so denser fuel lasts longer. Undefined = 1×. */
   burnFactor?: number;
+  /** Fuel item ids in the currently-loaded bed, dominant (most units) first — set on refuel from the
+   *  consumed mix (tinder excluded). Display-only ("what's burning" in the building panel). */
+  fuelItemIds?: string[];
   fuelSettings?: FuelSettings; // optional per-building refuel controls
   storageSettings?: StorageSettings; // §F optional per-building storage-bin item filter
   repairSettings?: RepairSettings; // optional per-building repair controls (threshold / materials / pawns)

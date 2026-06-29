@@ -758,8 +758,10 @@ export function heatExposure(temp: number, comfortMax: number): number {
 // (thermalAt) is O(fires)+O(1) — see GameEngineImpl.processEnvironment. The renderer/HUD, which has
 // no field, computes one tile on demand from the buildings array (computeThermalAt).
 
-/** °C produced at a fire's centre per unit of `effects.warmth` (0–1). */
-const WARMTH_SCALE = 25;
+/** °C produced at a fire's centre per unit of `effects.warmth` (0–1). A hearth (warmth 0.6) on
+ *  reference fuel now throws ~+36°C at its tile, falling off linearly across its light radius — sitting
+ *  by a fire actually warms you, instead of the old ~+15 that a stiff breeze erased. */
+const WARMTH_SCALE = 60;
 /** Fuel heat rating that yields a fire's full rated warmth (seasoned firewood, fuelHeat 2). Hotter
  *  fuel (charcoal/coke) radiates proportionally more, green wood less — clamped to [0.4×, 2×]. */
 const WARMTH_REFERENCE_HEAT = 2;
