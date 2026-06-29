@@ -444,22 +444,24 @@ function autotileVariant(tile: WorldTile, worldMap: WorldTile[][]): string {
   const S = same(tile.x, tile.y + 1);
   const W = same(tile.x - 1, tile.y);
   const cnt = (N ? 1 : 0) + (E ? 1 : 0) + (S ? 1 : 0) + (W ? 1 : 0);
+  // Ultica's variant names are oriented opposite our connection set (a 180° flip — N↔S, E↔W): an
+  // end_piece that CONNECTS north is the `end_piece_s` sprite, etc. Edges are symmetric so unaffected.
   if (cnt === 4) return 'center';
   if (cnt === 0) return 'unconnected';
-  if (cnt === 1) return N ? 'end_piece_n' : E ? 'end_piece_e' : S ? 'end_piece_s' : 'end_piece_w';
+  if (cnt === 1) return N ? 'end_piece_s' : E ? 'end_piece_w' : S ? 'end_piece_n' : 'end_piece_e';
   if (cnt === 3) {
-    // 3 connected → T-junction; named for the stem (opposite the one missing neighbour).
-    if (!N) return 't_connection_s';
-    if (!E) return 't_connection_w';
-    if (!S) return 't_connection_n';
-    return 't_connection_e';
+    // 3 connected → T-junction; named for the open (grass) side = the one missing neighbour.
+    if (!N) return 't_connection_n';
+    if (!E) return 't_connection_e';
+    if (!S) return 't_connection_s';
+    return 't_connection_w';
   }
   if (N && S) return 'edge_ns';
   if (E && W) return 'edge_ew';
-  if (N && E) return 'corner_ne';
-  if (N && W) return 'corner_nw';
-  if (S && E) return 'corner_se';
-  return 'corner_sw';
+  if (N && E) return 'corner_sw';
+  if (N && W) return 'corner_se';
+  if (S && E) return 'corner_nw';
+  return 'corner_ne';
 }
 
 export function applyTileToGrid(

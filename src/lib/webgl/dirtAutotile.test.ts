@@ -37,13 +37,23 @@ describe('dirt autotile variant selection', () => {
     expect(g.getTile(1, 1)!.char).toBe(AT.center);
   });
 
-  it('dirt with grass only to the south → t_connection_n (connects N,E,W)', () => {
+  it('dirt with grass only to the south → t_connection_s (open/grass side = south)', () => {
     const g = buildGameGrid([
       [t(0, 0, 'dirt'), t(1, 0, 'dirt'), t(2, 0, 'dirt')],
       [t(0, 1, 'dirt'), t(1, 1, 'dirt'), t(2, 1, 'dirt')],
       [t(0, 2, 'grass'), t(1, 2, 'grass'), t(2, 2, 'grass')]
     ]);
-    expect(g.getTile(1, 1)!.char).toBe(AT.t_connection_n);
+    expect(g.getTile(1, 1)!.char).toBe(AT.t_connection_s);
+  });
+
+  it('dirt open to the NE corner (grass N+E) → corner_ne sprite', () => {
+    // connected = S,W (grass on N,E) → corner_ne (named for the open/grass side)
+    const g = buildGameGrid([
+      [t(0, 0, 'dirt'), t(1, 0, 'grass'), t(2, 0, 'grass')],
+      [t(0, 1, 'dirt'), t(1, 1, 'dirt'), t(2, 1, 'grass')],
+      [t(0, 2, 'dirt'), t(1, 2, 'dirt'), t(2, 2, 'dirt')]
+    ]);
+    expect(g.getTile(1, 1)!.char).toBe(AT.corner_ne);
   });
 
   it('vertical dirt strip in grass → edge_ns', () => {
