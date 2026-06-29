@@ -42,6 +42,11 @@ export interface TileData {
   position: { x: number; y: number }; // Grid position
   animationOffset?: Vec2; // Optional offset for smooth animations
   rotation?: 0 | 90 | 180 | 270; // UV rotation in degrees (clockwise)
+  // Render scale in TILE UNITS (1 = one cell; 2 = two cells wide/tall). Oversized sprites (trees,
+  // large beasts) anchor at the base cell's BOTTOM-CENTER and overflow upward + sideways, so the
+  // trunk/feet stay on the owning tile while the canopy/body rises into the tiles above. Omit/1 = the
+  // normal one-cell quad (terrain, ordinary entities) — identical to the pre-scale geometry.
+  scale?: number;
   dirty?: boolean; // Marks tile for re-rendering
   lastUpdated?: number; // Timestamp of last modification
 }

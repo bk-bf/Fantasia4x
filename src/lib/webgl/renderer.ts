@@ -66,6 +66,19 @@ export class WebGLRenderer {
   }
 
   /**
+   * Inject (or clear) the (short) resource-overlay grid (grass/bushes/ore/crops). Rendered first in
+   * the glyph-only overlay group so plants composite over the terrain ground sprite beneath.
+   */
+  setResourceOverlayGrid(grid: GameGrid | null): void {
+    this.core.setResourceOverlayGrid(grid);
+  }
+
+  /** Tall resources (trees) — rendered after entities so the oversized canopy occludes pawns behind it. */
+  setResourceTallOverlayGrid(grid: GameGrid | null): void {
+    this.core.setResourceTallOverlayGrid(grid);
+  }
+
+  /**
    * Set the viewport tile offset (top-left corner).
    */
   setViewTileOffset(x: number, y: number): void {

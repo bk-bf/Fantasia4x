@@ -93,6 +93,13 @@ export class WebGLRendererCore {
   // through the building sprite's transparent pixels — two stacked sprites, exactly
   // how items composite over terrain. (Floors and roofs stay baked in the terrain grid.)
   private buildingOverlayGrid: GameGrid | null = null;
+  // Resources (grass/bushes/ore/crops) live in their OWN transparent overlay, rendered FIRST in the
+  // overlay group (terrain → resources → buildings → items → pawns) — so a plant glyph composites over
+  // the actual ground sprite instead of being baked over a flat near-black bg.
+  private resourceOverlayGrid: GameGrid | null = null;
+  // TALL resources (trees) render in their OWN pass AFTER entities, so a pawn standing on the tile
+  // behind a tree is occluded by the (oversized) canopy instead of drawing over it.
+  private resourceTallOverlayGrid: GameGrid | null = null;
 
   // Day/night ambient (Phase A — EnvironmentService drives these each turn).
   // Applied as the u_ambient fragment uniform, combined with the baked additive
@@ -187,6 +194,16 @@ export class WebGLRendererCore {
   /** Inject the building-overlay grid, rendered between the terrain and items. */
   setBuildingOverlayGrid(grid: GameGrid | null): void {
     this.buildingOverlayGrid = grid;
+  }
+
+  /** Inject the (short) resource-overlay grid (grass/bushes/ore/crops), rendered first over the terrain ground. */
+  setResourceOverlayGrid(grid: GameGrid | null): void {
+    this.resourceOverlayGrid = grid;
+  }
+
+  /** Inject the TALL resource-overlay grid (trees), rendered after entities so it occludes pawns behind it. */
+  setResourceTallOverlayGrid(grid: GameGrid | null): void {
+    this.resourceTallOverlayGrid = grid;
   }
 
   /** Set the top-left viewport tile position. */
@@ -449,15 +466,31 @@ export class WebGLRendererCore {
     // terrain → buildings → items → entities: each is its own single-glyph grid, so a
     // building composites OVER the floor/ground (its transparent pixels reveal it), an
     // item OVER the building, and a pawn OVER everything — none overwriting the glyph below.
-    if (this.overlayGrid || this.itemOverlayGrid || this.buildingOverlayGrid) {
+    if (
+      this.overlayGrid ||
+      this.itemOverlayGrid ||
+      this.buildingOverlayGrid ||
+      this.resourceOverlayGrid ||
+      this.resourceTallOverlayGrid
+    ) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 1);
       const tOverlay = performance.now();
-      // Buildings first (beneath), then items, then entities (on top).
+      // Short resources first (grass/bushes over the ground; dense → viewport-culled), then buildings,
+      // items, entities. TALL resources (trees) LAST so the oversized canopy occludes pawns/mobs
+      // standing on tiles behind the tree.
+      this.renderGlyphOverlay(this.resourceOverlayGrid, viewportTilesW, viewportTilesH, lightTime, true);
       this.renderGlyphOverlay(this.buildingOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
       this.renderGlyphOverlay(this.itemOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
       this.renderGlyphOverlay(this.overlayGrid, viewportTilesW, viewportTilesH, lightTime);
+      this.renderGlyphOverlay(
+        this.resourceTallOverlayGrid,
+        viewportTilesW,
+        viewportTilesH,
+        lightTime,
+        true
+      );
       this.stats.overlayMs = performance.now() - tOverlay;
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
       gl.disable(gl.BLEND);
@@ -466,12 +499,16 @@ export class WebGLRendererCore {
     }
   }
 
-  /** Render one glyph-only overlay grid (no-op when null). Caller sets up blend + u_glyphOnly. */
+  /** Render one glyph-only overlay grid (no-op when null). Caller sets up blend + u_glyphOnly.
+   *  Sparse overlays (pawns/items/buildings: a handful of cells) use renderAllTiles. The DENSE
+   *  resource overlays (a full forest of cells) pass `viewportCulled` so renderGrid takes the
+   *  getVisibleTiles path (O(viewport)) instead of rebuilding every set tile each frame. */
   private renderGlyphOverlay(
     grid: GameGrid | null,
     viewportTilesW: number,
     viewportTilesH: number,
-    lightTime: number
+    lightTime: number,
+    viewportCulled = false
   ): void {
     if (!grid || !this.gridRenderer) return;
     const stats = this.gridRenderer.renderGrid(grid, {
@@ -486,7 +523,7 @@ export class WebGLRendererCore {
       lightSampler: this.lightSampler ?? undefined,
       lightTime,
       litBounds: this.lightBounds,
-      renderAllTiles: true
+      renderAllTiles: !viewportCulled
     });
     this.stats.drawCalls++;
     this.stats.vertexCount += stats.tilesRendered * 6;

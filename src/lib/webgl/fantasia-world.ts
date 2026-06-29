@@ -437,62 +437,15 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
     });
     return;
   }
-  // Layer 1: base subterrain
+  // Base subterrain GROUND only. Resources (trees/grass/bushes/ore) are NO LONGER baked into this grid
+  // — they render in a separate TRANSPARENT overlay (applyResourceToGrid / buildResourceOverlay) so a
+  // plant glyph composites over the real ground sprite, AND so TALL resources (trees) can draw in a
+  // late pass above entities for canopy occlusion (terrain → short resources → buildings → items →
+  // pawns → tall resources). See ee9e77d2 / a4c89a21 (ported from Fantasia4x-ultica).
   const sub = SUBTERRAINS[tile.subType] ?? SUBTERRAIN_FALLBACK;
-  // Layer 2: resource — overrides subterrain visuals when an active resource is present
-  const hasResources = tile.resources && Object.keys(tile.resources).length > 0;
-  let char: string;
-  let fg: [number, number, number];
-  let bg: [number, number, number];
-  if (hasResources) {
-    const activeEntry = Object.entries(tile.resources!).find(([, amt]) => amt > 0);
-    // §F: a depleted node (count 0) may still be STANDING — foraging takes only branches/berries, the
-    // plant stays put with a `growth` entry while its yield regrows; felling/dig/mine DROPS the growth
-    // entry (those fall through to dirt). When nothing is pickable, draw the most-grown standing
-    // resource dimmed by how grown it is, so a foraged tree still reads as a living tree.
-    let resKey: string | undefined = activeEntry?.[0];
-    let brightness = 1;
-    if (resKey) {
-      const partial = Object.keys(tile.resourceCooldowns ?? {}).some((k) =>
-        k.startsWith(resKey! + ':')
-      );
-      if (partial) brightness = 0.65;
-    } else {
-      let bestGrowth = 0;
-      for (const [id, g] of Object.entries(tile.growth ?? {})) {
-        if (g > bestGrowth) {
-          bestGrowth = g;
-          resKey = id;
-        }
-      }
-      // §F gradual regrow: a wild plant reset to ~0% growth reads as BARE SOIL until it climbs past the
-      // visible threshold — only then does the (dimmed) plant glyph fade back in. Below it, draw the
-      // subterrain so a freshly-cut grass/grain tile shows the ground, not a ghost glyph.
-      if (resKey && bestGrowth < RESOURCE_VISIBLE_GROWTH) resKey = undefined;
-      else if (resKey) brightness = Math.max(0.4, bestGrowth / 100);
-    }
-    const resDef = resKey ? resourceObjectService.getById(resKey) : undefined;
-    if (resDef && resDef.chars.length > 0) {
-      // Glyph is picked by tile position from the def's char range. Glowing (magical) groves add a salt
-      // so they draw DIFFERENT glyphs from the same range than the ordinary trees would — bump
-      // GLOWING_GROVE_SPRITE_SALT to reroll the magical-tree sprites without touching normal trees.
-      const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;
-      const h = ((tile.x * 1619 + tile.y * 31337 + salt) >>> 0) % resDef.chars.length;
-      char = resDef.chars[h];
-      fg = [resDef.fg[0] * brightness, resDef.fg[1] * brightness, resDef.fg[2] * brightness];
-      // Background ALWAYS from the subterrain (a resource is a glyph over uniform terrain) — using
-      // resDef.bg leaked the resource colour and lingered after harvest while on cooldown.
-      bg = sub.bg as [number, number, number];
-    } else {
-      char = pickChar(sub, tile.x, tile.y);
-      fg = sub.fg as [number, number, number];
-      bg = sub.bg as [number, number, number];
-    }
-  } else {
-    char = pickChar(sub, tile.x, tile.y);
-    fg = sub.fg as [number, number, number];
-    bg = sub.bg as [number, number, number];
-  }
+  let char = pickChar(sub, tile.x, tile.y);
+  let fg: [number, number, number] = sub.fg as [number, number, number];
+  let bg: [number, number, number] = sub.bg as [number, number, number];
   // Ice glaze (SEASONS_WEATHER): a pale-blue sheen, only on wet-capable tiles past the visible threshold.
   // FULL strength on open water (a frozen pond reads as blue glass); cut to a THIRD on damp ground, where
   // it's just a faint rime — not the quasi-snow it used to read as. Drawn BENEATH snow.
@@ -558,6 +511,104 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
     background: { r: bg[0], g: bg[1], b: bg[2] },
     position: { x: tile.x, y: tile.y }
   });
+}
+
+/**
+ * Resource (tree / grass / bush / ore) glyph for ONE tile, painted into the TRANSPARENT resource
+ * overlays that render ABOVE the terrain ground. Resources split across TWO grids by size:
+ *   • `gridShort` — short plants (grass/bushes/ore/crops): drawn BENEATH entities.
+ *   • `gridTall`  — TALL resources (trees, `renderScale > 1`): drawn ABOVE entities in a late pass so
+ *     a pawn standing on the tile behind a tree is occluded by the canopy. The cell carries `scale`
+ *     so the glyph is drawn larger than one cell, anchored at its base (see TileData.scale).
+ * Clears BOTH cells (space glyph) when no visible resource — so harvest/regrow deltas blank it, and a
+ * resource that just changed size class (sapling → tall tree) doesn't leave a ghost in the other grid.
+ * The bg is irrelevant here — the resource pass is glyph-only (alpha-blended).
+ */
+export function applyResourceToGrid(
+  gridShort: GameGrid,
+  gridTall: GameGrid,
+  tile: WorldTile,
+  hiddenMask: boolean[][]
+): void {
+  const blank = (g: GameGrid) =>
+    g.setTile(tile.x, tile.y, {
+      char: ' ',
+      foreground: { r: 0, g: 0, b: 0 },
+      background: { r: 0, g: 0, b: 0 },
+      position: { x: tile.x, y: tile.y }
+    });
+  const clear = () => {
+    blank(gridShort);
+    blank(gridTall);
+  };
+  if (hiddenMask[tile.y]?.[tile.x]) return clear();
+  const hasResources = tile.resources && Object.keys(tile.resources).length > 0;
+  if (!hasResources) return clear();
+  const activeEntry = Object.entries(tile.resources!).find(([, amt]) => amt > 0);
+  // §F: a depleted node (count 0) may still be STANDING — foraging takes only branches/berries, the
+  // plant stays put with a `growth` entry while its yield regrows; felling/dig/mine DROPS the growth
+  // entry (those fall through to dirt). When nothing is pickable, draw the most-grown standing
+  // resource dimmed by how grown it is, so a foraged tree still reads as a living tree.
+  let resKey: string | undefined = activeEntry?.[0];
+  let brightness = 1;
+  if (resKey) {
+    const partial = Object.keys(tile.resourceCooldowns ?? {}).some((k) =>
+      k.startsWith(resKey! + ':')
+    );
+    if (partial) brightness = 0.65;
+  } else {
+    let bestGrowth = 0;
+    for (const [id, g] of Object.entries(tile.growth ?? {})) {
+      if (g > bestGrowth) {
+        bestGrowth = g;
+        resKey = id;
+      }
+    }
+    // §F gradual regrow: a wild plant reset to ~0% growth reads as BARE SOIL until it climbs past the
+    // visible threshold — only then does the (dimmed) plant glyph fade back in.
+    if (resKey && bestGrowth < RESOURCE_VISIBLE_GROWTH) resKey = undefined;
+    else if (resKey) brightness = Math.max(0.4, bestGrowth / 100);
+  }
+  const resDef = resKey ? resourceObjectService.getById(resKey) : undefined;
+  if (!resDef || resDef.chars.length === 0) return clear();
+  // Glyph is picked by tile position from the def's char range. Glowing (magical) groves add a salt so
+  // they draw DIFFERENT glyphs from the same range than the ordinary trees would.
+  const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;
+  const h = ((tile.x * 1619 + tile.y * 31337 + salt) >>> 0) % resDef.chars.length;
+  // Tall resources (renderScale > 1) go to the tall grid drawn ABOVE entities; everything else to the
+  // short grid beneath. Blank the OTHER grid in case this tile just switched size class.
+  const scale = resDef.renderScale && resDef.renderScale > 1 ? resDef.renderScale : undefined;
+  const tall = scale !== undefined;
+  blank(tall ? gridShort : gridTall);
+  (tall ? gridTall : gridShort).setTile(tile.x, tile.y, {
+    char: resDef.chars[h],
+    foreground: {
+      r: resDef.fg[0] * brightness,
+      g: resDef.fg[1] * brightness,
+      b: resDef.fg[2] * brightness
+    },
+    background: { r: 0, g: 0, b: 0 },
+    position: { x: tile.x, y: tile.y },
+    scale
+  });
+}
+
+/** Build the transparent resource overlays (trees/grass/bushes/ore drawn over the terrain ground),
+ *  SPLIT into a `short` layer (grass/bushes/ore/crops, drawn beneath entities) and a `tall` layer
+ *  (trees, drawn above entities so pawns behind them are occluded). Kept SPARSE — only resource tiles
+ *  get a cell, so the renderer's viewport cull (getVisibleTiles, O(viewport)) and memory stay cheap. */
+export function buildResourceOverlay(
+  worldMap: WorldTile[][],
+  hiddenMask?: boolean[][]
+): { short: GameGrid; tall: GameGrid } {
+  const short = new GameGrid();
+  const tall = new GameGrid();
+  const mask = hiddenMask ?? computeHiddenMask(worldMap);
+  for (const row of worldMap)
+    for (const tile of row)
+      if (tile.resources && Object.keys(tile.resources).length > 0)
+        applyResourceToGrid(short, tall, tile, mask);
+  return { short, tall };
 }
 
 export function buildGameGrid(

@@ -7,6 +7,7 @@
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
   import {
     applyTileToGrid,
+    applyResourceToGrid,
     applyBuildingToGrid,
     isRoofBuilding,
     isFloorBuilding,
@@ -225,6 +226,11 @@
   // placement, blueprint preview) repaints ONLY the affected tiles, driven by the changed-coord channel
   // (mainTileDeltas) — never a whole-map scan or rebuild (the FPS crater that ADR-026 forbids).
   let _terrainGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
+  // Transparent resource layers (built in _fullRebuildTerrain, patched per dirty tile incrementally,
+  // kept in lock-step with _terrainGrid). Short = grass/bushes/ore/crops (drawn beneath entities);
+  // tall = trees (drawn ABOVE entities so a pawn on the tile behind a tree is occluded by the canopy).
+  let _resourceGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
+  let _resourceTallGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
   let _terrainGridWorldMapRef: unknown; // worldMap ARRAY ref of the last full build (new ref ⇒ new map ⇒ full rebuild)
   // Incremental building diff: last-painted completed buildings keyed by id (pos + visual sig), so a
   // placement/removal/deconstruct repaints just the changed footprints (single cells).
@@ -1571,7 +1577,10 @@
         animationOffset: {
           x: (rm.x - cellX) * BASE_TILE_PX + mLunge.x,
           y: (rm.y - cellY) * BASE_TILE_PX + mLunge.y
-        }
+        },
+        // Big beasts (mammoth, etc.) draw larger than one cell, anchored at their feet (see
+        // TileData.scale). Visual-only — driven by the creature def's renderScale, not bodyScale.
+        scale: def.renderScale
       });
     }
     if (seenMobs.size !== mobRenderPos.size) {
@@ -2059,6 +2068,8 @@
   function _fullRebuildTerrain(): void {
     const built = fullRebuildTerrain(worldMap, buildings, _buildingSig);
     _terrainGrid = built.terrainGrid;
+    _resourceGrid = built.resourceGrid;
+    _resourceTallGrid = built.resourceTallGrid;
     _maskState = built.maskState;
     hiddenMask = _maskState.mask;
     _terrainGridWorldMapRef = worldMap;
@@ -2144,6 +2155,8 @@
       const t = worldMap[y]?.[x];
       if (!t) continue;
       applyTileToGrid(_terrainGrid, t, hiddenMask);
+      if (_resourceGrid && _resourceTallGrid)
+        applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask);
       if (_updateEmitterAt(y, x, t)) emittersChanged = true;
     }
     // Only FLOORS and ROOFS bake into the terrain grid (floors first as the ground surface, ROOFS LAST
@@ -3384,6 +3397,8 @@
       // The menu backdrop is a LIVE scene (grazing prey) — never freeze it, even zoomed out.
       const frozen = !menuPreview && (customMapPreview || tileWidth < FREEZE_TILE_PX);
       if (_renderDirty || !frozen || now - lastDrawAt >= FROZEN_SAFETY_MS) {
+        renderer.setResourceOverlayGrid(_resourceGrid);
+        renderer.setResourceTallOverlayGrid(_resourceTallGrid);
         renderer.setBuildingOverlayGrid(buildingOverlayGrid);
         renderer.setItemOverlayGrid(itemOverlayGrid);
         renderer.setOverlayGrid(pawnOverlayGrid);

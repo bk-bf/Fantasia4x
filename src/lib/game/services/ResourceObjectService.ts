@@ -104,6 +104,16 @@ export interface ResourceObjectDef {
   fg: [number, number, number];
   /** Resolved RGB (0–1) background colour, parsed from the `bg` hex string in JSON. */
   bg: [number, number, number];
+  /**
+   * Visual-only render scale in TILE UNITS (default 1.0). When > 1 the resource glyph is drawn larger
+   * than one cell, anchored at the base tile's bottom-center and overflowing upward (see
+   * TileData.scale) — so a tree reads as a canopy that rises into the tiles above. Resources with
+   * `renderScale > 1` are TALL: they render in the separate tall-resource overlay drawn ABOVE entities
+   * (terrain → short resources → buildings → items → pawns → tall resources), so a pawn standing on
+   * the tile behind a tree is occluded by the canopy. Omitted/1 = a normal one-cell glyph in the short
+   * overlay beneath entities (grass, bushes, ore, crops).
+   */
+  renderScale?: number;
   spawn: {
     subterrains: Record<string, number>;
   };

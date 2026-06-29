@@ -420,14 +420,20 @@ export class GridRenderer {
       const offsetX = tile.animationOffset?.x || 0;
       const offsetY = tile.animationOffset?.y || 0;
 
-      // Vertex quad always fills the full screen tile regardless of atlas tile size.
-      // UV coords reference the atlas tile via charInfo.{x,y,width,height}.
+      // Vertex quad fills the screen tile regardless of atlas tile size (UV coords reference the atlas
+      // tile via charInfo.{x,y,width,height}). Oversized sprites (tile.scale > 1 — trees, large beasts)
+      // grow the quad and ANCHOR it at the base cell's bottom-center, overflowing UPWARD + sideways so
+      // the trunk/feet stay on the owning tile while the canopy/body rises into the tiles above.
+      // scale === 1 (terrain, normal entities) reduces to the original full-cell quad exactly.
+      const scale = tile.scale && tile.scale > 0 ? tile.scale : 1;
       const tileW = options.tileWidth;
       const tileH = options.tileHeight;
-      const x1 = screenX + offsetX;
-      const y1 = screenY + offsetY;
-      const x2 = screenX + tileW + offsetX;
-      const y2 = screenY + tileH + offsetY;
+      const drawW = tileW * scale;
+      const drawH = tileH * scale;
+      const x1 = screenX + offsetX - (drawW - tileW) / 2;
+      const y1 = screenY + offsetY - (drawH - tileH);
+      const x2 = x1 + drawW;
+      const y2 = y1 + drawH;
 
       // Calculate texture coordinates.
       // Use a UV of (0,0)→(0,0) for missing chars so sprite.a ≈ 0 → bg fills tile.
