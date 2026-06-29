@@ -717,7 +717,27 @@ export function pathTo(
   void selfId;
   const blocked = occupancyService.blockedTilesShared(state);
   const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(state.worldMap, blocked);
-  return wasmPathfinderService.findPath(walkable, costs, width, height, sx, sy, ex, ey);
+  const _t0 = performance.now();
+  const res = wasmPathfinderService.findPath(walkable, costs, width, height, sx, sy, ex, ey);
+  // Neutral A* diagnostics (read+reset by GameEngineImpl's phase log): a FAIL is an empty result —
+  // an unreachable goal that made A* exhaust the whole connected region (the expensive case). Lets us
+  // tell "too many cheap paths" (high calls) from "few ruinous searches" (high fails / ms-per-call).
+  _pathMs += performance.now() - _t0;
+  _pathCalls++;
+  if (res.length === 0) _pathFails++;
+  else _pathLen += res.length;
+  return res;
+}
+
+let _pathCalls = 0;
+let _pathFails = 0;
+let _pathMs = 0;
+let _pathLen = 0;
+/** Read + reset the per-window mob A* counters (calls / unreachable-fails / total ms / total tiles). */
+export function readMobPathStats(): { calls: number; fails: number; ms: number; len: number } {
+  const s = { calls: _pathCalls, fails: _pathFails, ms: _pathMs, len: _pathLen };
+  _pathCalls = _pathFails = _pathMs = _pathLen = 0;
+  return s;
 }
 
 export function adjacent(mob: Mob, pos: { x: number; y: number }): boolean {

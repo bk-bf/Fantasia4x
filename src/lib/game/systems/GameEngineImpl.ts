@@ -46,6 +46,7 @@ import { pawnStatService } from '../services/PawnStatService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { resourceObjectService } from '../services/ResourceObjectService';
 import { entityService } from '../services/EntityService';
+import { readMobPathStats } from '../services/entity/entityHelpers';
 import { combatService } from './Combat';
 import { getRangedWeapon, effectiveRangedRange, hasViableAmmo } from './rangedCombat';
 import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
@@ -89,7 +90,7 @@ import {
   wildGrowthEntries,
   removeWildGrowth
 } from '../core/wildGrowth';
-import { simLog } from '../core/logSink';
+import { simLog, vlog } from '../core/logSink';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').Building[];
 
@@ -129,6 +130,8 @@ const DRYING_INTERVAL_TICKS = 60;
  *  to ~1/6 the cost. Claim/advance/complete still run every tick (independent of this pass), so
  *  claimed/in-progress jobs are untouched between rebuilds. */
 const JOB_GENERATION_INTERVAL_TICKS = 6;
+/** How many ticks to accumulate before logging the per-phase ms breakdown to perf.log (verbose only). */
+const PHASE_LOG_TICKS = 120;
 
 export class GameEngineImpl implements GameEngine {
   private gameState: GameState | null = null;
@@ -157,6 +160,11 @@ export class GameEngineImpl implements GameEngine {
   /** Hysteresis latch for the rain⇄snow weather phase (SEASONS_WEATHER ice) — held across ticks so
    *  precipitation doesn't flicker type in the −1…+1°C dead zone around freezing. */
   private weatherFreezing = false;
+  /** Per-phase wall-clock accumulator (ms) + tick count for the periodic perf breakdown logged to
+   *  `.debug/perf.log` (verbose only). Names which tick phase is eating time so a regression is located
+   *  by measurement, not guesswork. Reset each window. */
+  private _phaseMs: Record<string, number> = {};
+  private _phaseTicks = 0;
   /** Average baked tile temperature (biome + season, no weather) — combined with the live weather
    *  delta into `gameState.avgTemperature` for the HUD. Set whenever temperatures are recomputed. */
   private avgTileTemp: number | undefined = undefined;
@@ -223,8 +231,15 @@ export class GameEngineImpl implements GameEngine {
       // processPreviewTurn. Branches out HERE so none of the per-tick hot path below changes.
       if (this.previewMode) return this.processPreviewTurn();
 
-      // Phase runner — profiler removed; profile via the browser (Firefox Profiler) instead.
-      const t = (_label: string, fn: () => void): void => fn();
+      // Phase runner — times each phase into `_phaseMs` and logs a sorted ms breakdown to perf.log every
+      // PHASE_LOG_TICKS (verbose only), so a per-tick regression is located by measurement. performance.now()
+      // twice per phase is sub-microsecond — negligible vs the phase work it brackets.
+      const acc = this._phaseMs;
+      const t = (label: string, fn: () => void): void => {
+        const s = performance.now();
+        fn();
+        acc[label] = (acc[label] ?? 0) + (performance.now() - s);
+      };
 
       // Living-world environment (SEASONS_WEATHER Phase B/C): advance season + weather and refresh
       // tile temperature BEFORE needs tick, so the need-rate hot path reads current values.
@@ -278,12 +293,12 @@ export class GameEngineImpl implements GameEngine {
       t('cropGrowth', () => this.processCropGrowth());
       t('wildGrowth', () => this.processWildGrowth());
       t('entityStep', () => {
-        this.gameState = entityService.spawnEntities(this.gameState!);
-        this.gameState = entityService.tickLairs(this.gameState!);
-        this.gameState = entityService.stepEntities(this.gameState!);
-        this.gameState = entityService.advanceMobMovement(this.gameState!);
-        this.gameState = entityService.stepHunger(this.gameState!);
-        this.gameState = entityService.removeDead(this.gameState!);
+        t('es:spawn', () => (this.gameState = entityService.spawnEntities(this.gameState!)));
+        t('es:lairs', () => (this.gameState = entityService.tickLairs(this.gameState!)));
+        t('es:step', () => (this.gameState = entityService.stepEntities(this.gameState!)));
+        t('es:move', () => (this.gameState = entityService.advanceMobMovement(this.gameState!)));
+        t('es:hunger', () => (this.gameState = entityService.stepHunger(this.gameState!)));
+        t('es:removeDead', () => (this.gameState = entityService.removeDead(this.gameState!)));
       });
       t('combat', () => {
         const preCombatState = this.gameState!;
@@ -313,6 +328,36 @@ export class GameEngineImpl implements GameEngine {
         if (flush) this.lastFlushMs = nowMs;
         this.outputSink?.(this.gameState!, flush);
       });
+
+      // Periodic per-phase breakdown → perf.log (verbose only): avg ms/tick per phase over the window,
+      // sorted heaviest-first, so the dominant phase is named directly instead of guessed.
+      if (++this._phaseTicks >= PHASE_LOG_TICKS) {
+        const ticks = this._phaseTicks;
+        const line = Object.entries(acc)
+          .sort((a, b) => b[1] - a[1])
+          .map(([k, ms]) => `${k}=${(ms / ticks).toFixed(3)}`)
+          .join(' ');
+        vlog('perf', this.gameState.turn, `PHASE-MS/tick over ${ticks}t: ${line}`);
+        // Mob A* breakdown: calls/tick, unreachable-fail %, ms/tick, avg tiles/path — distinguishes
+        // "too many paths" from "ruinous unreachable searches". Plus the live walkable/total tile count.
+        const p = readMobPathStats();
+        let walkable = 0;
+        let total = 0;
+        for (const row of this.gameState.worldMap) {
+          total += row.length;
+          for (const t of row) if (t.walkable) walkable++;
+        }
+        vlog(
+          'perf',
+          this.gameState.turn,
+          `A*-STATS/tick over ${ticks}t: calls=${(p.calls / ticks).toFixed(1)} ` +
+            `fail%=${p.calls ? ((p.fails / p.calls) * 100).toFixed(0) : 0} ` +
+            `ms=${(p.ms / ticks).toFixed(2)} avgLen=${p.calls - p.fails > 0 ? (p.len / (p.calls - p.fails)).toFixed(1) : 0} ` +
+            `| map=${total} walkable=${walkable} (${total ? ((walkable / total) * 100).toFixed(0) : 0}%)`
+        );
+        this._phaseMs = {};
+        this._phaseTicks = 0;
+      }
 
       return {
         success: true,
@@ -492,13 +537,17 @@ export class GameEngineImpl implements GameEngine {
     // sync when a water tile freezes solid (walkable) or thaws (impassable).
     const snowInterval = Math.max(1, Math.floor(ticksPerDay / 24));
     if (gs.worldMap.length > 0 && gs.turn % snowInterval === 0) {
+      const s = performance.now();
       accumulateSnow(gs.worldMap, gs.weather, gs.season, gs.turn, 1, patchPathfindingWalkable);
+      this._phaseMs['env:snowIce'] = (this._phaseMs['env:snowIce'] ?? 0) + (performance.now() - s);
     }
 
     // Rebuild the fire-warmth + roof-shelter field once per tick (before needs/conditions read it).
     // Passing worldMap folds in §M grove thermal auras (emberwood warms / moonwood cools) — cached,
     // re-scanned only on a worldMap ref change, so this stays O(buildings) per tick.
+    const st = performance.now();
     rebuildThermalField(gs.buildings, gs.worldMap);
+    this._phaseMs['env:thermal'] = (this._phaseMs['env:thermal'] ?? 0) + (performance.now() - st);
   }
 
   /**
