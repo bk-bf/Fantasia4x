@@ -13,7 +13,8 @@ type WasmMod = {
     sx: number,
     sy: number,
     ex: number,
-    ey: number
+    ey: number,
+    max_iter: number
   ) => Uint32Array;
   // ENGINE-PERFORMANCE-II §S1: batch nearest-entity query (uniform grid). For each query point, the
   // index into `points` of the nearest within `maxDist`, or -1.
@@ -49,10 +50,13 @@ class WasmPathfinderServiceImpl implements PathfinderService {
     sx: number,
     sy: number,
     ex: number,
-    ey: number
+    ey: number,
+    /** Per-call node-expansion cap (0 = full-grid default, for long pawn paths). Mob callers pass a
+     *  tight cap so an unreachable goal bails fast instead of sweeping the whole connected region. */
+    maxIter = 0
   ): { x: number; y: number }[] {
     if (!this.mod) return [];
-    const raw = this.mod.find_path(walkable, costs, width, height, sx, sy, ex, ey);
+    const raw = this.mod.find_path(walkable, costs, width, height, sx, sy, ex, ey, maxIter);
     const path: { x: number; y: number }[] = [];
     for (let i = 0; i + 1 < raw.length; i += 2) {
       path.push({ x: raw[i], y: raw[i + 1] });

@@ -59,6 +59,10 @@ pub fn find_path(
     sy: u32,
     ex: u32,
     ey: u32,
+    // Per-call node-expansion cap. 0 = the default full-grid budget (long pawn cross-map paths). Mob
+    // callers pass a tight cap so an UNREACHABLE goal bails fast instead of sweeping the whole connected
+    // region (a 130k-tile open component was ~6.7ms/fail — the fleeing-prey perf cliff).
+    max_iter: u32,
 ) -> Vec<u32> {
     let w = width as usize;
     let h = height as usize;
@@ -84,10 +88,9 @@ pub fn find_path(
         return vec![sx, sy];
     }
 
-    // Search limit: allow up to the full grid size worth of node expansions.
-    // The old formula (w*h/10*1500/10000) gave only ~144 for a 120×80 map
-    // which was far too low for long cross-map paths.
-    let max_iter = (w * h).min(100_000) as u32;
+    // Search limit: the caller's per-call cap, or (0) the full-grid default for long cross-map paths.
+    // (The old formula (w*h/10*1500/10000) gave only ~144 for a 120×80 map — far too low.)
+    let cap = if max_iter == 0 { (w * h).min(100_000) as u32 } else { max_iter };
 
     // g_cost per node (f32, initialized to +∞)
     let mut g: Vec<f32> = vec![f32::INFINITY; n];
@@ -112,7 +115,7 @@ pub fn find_path(
             return reconstruct(&parent, start, end, w);
         }
         iters += 1;
-        if iters >= max_iter {
+        if iters >= cap {
             return vec![];
         }
 

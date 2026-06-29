@@ -359,6 +359,17 @@ export function fleeFromThreats(
 /** A flee destination is "reached" once the mob is this close to it (paths can't always land
  *  exactly on a far tile, and we re-evaluate near it anyway). */
 const FLEE_REACHED_DIST = 3;
+/** Length of one flight burst (tiles). Prey bolts ~this far in the safest committed direction, then
+ *  re-evaluates (Alert / re-flee if a threat is still close) — like a real animal's short escape sprint,
+ *  not a run to the far side of the map. Critically also a PERF bound: the old `max(w,h)/2` destination
+ *  (250 tiles on a 500² map) made flee A* sweep the whole connected region on the common unreachable
+ *  case (78% of mob path fails); a short burst keeps the path short AND reachable. Stamina still gates
+ *  how long the running actually lasts. */
+const FLEE_BURST_TILES = 22;
+/** A* node-expansion cap for MOB paths (passed to the WASM pathfinder). Mob targets are short-range, so
+ *  a reachable path finishes far under this; an unreachable goal bails here (<1ms) instead of sweeping
+ *  the whole open region. Pawns omit it (full default budget for cross-map paths). */
+const MOB_PATH_MAX_ITER = 8000;
 
 /**
  * Flee to a DISTANT safe destination and **commit to it**. The mob LOCKS a goal ~half the map away
@@ -381,7 +392,8 @@ export function fleeToSafety(mob: Mob, threats: { x: number; y: number }[], stat
 
   const h = state.worldMap.length;
   const w = state.worldMap[0]?.length ?? 0;
-  const fleeDistance = Math.max(8, Math.floor(Math.max(w, h) / 2));
+  // A SHORT escape burst (capped at half-map for tiny maps), not a run to the map's far edge.
+  const fleeDistance = Math.min(FLEE_BURST_TILES, Math.max(8, Math.floor(Math.max(w, h) / 2)));
   const minThreatDist = (x: number, y: number) =>
     threats.reduce((m, t) => Math.min(m, chebyshev(t.x, t.y, x, y)), Infinity);
 
@@ -731,7 +743,22 @@ export function pathTo(
   const blocked = occupancyService.blockedTilesShared(state);
   const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(state.worldMap, blocked);
   const _t0 = performance.now();
-  const res = wasmPathfinderService.findPath(walkable, costs, width, height, sx, sy, ex, ey);
+  // Mob paths are always SHORT-range (flee burst / hunt within radius / forage radius), so cap A* node
+  // expansions tightly: a reachable short path finishes well under this, but an UNREACHABLE goal bails
+  // here instead of sweeping the whole 130k-tile open region (the fleeing-prey perf cliff). Pawns keep
+  // the full default budget (they path cross-map). The LOS-gate + short flee cut the fails; this bounds
+  // any residual to <1ms regardless of map size.
+  const res = wasmPathfinderService.findPath(
+    walkable,
+    costs,
+    width,
+    height,
+    sx,
+    sy,
+    ex,
+    ey,
+    MOB_PATH_MAX_ITER
+  );
   // Neutral A* diagnostics (read+reset by GameEngineImpl's phase log): a FAIL is an empty result —
   // an unreachable goal that made A* exhaust the whole connected region (the expensive case). Lets us
   // tell "too many cheap paths" (high calls) from "few ruinous searches" (high fails / ms-per-call).
