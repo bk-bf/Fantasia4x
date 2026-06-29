@@ -14,6 +14,7 @@
   import { getMaterialProperty } from '$lib/game/core/materialProperties';
   import { WORK_CATEGORIES } from '$lib/game/core/Work';
   import { releaseReservation } from '$lib/game/core/GameState';
+  import { categoryPath, labelFor } from '$lib/utils/itemCategoryTree';
   import { onDestroy } from 'svelte';
   import type { Item } from '$lib/game/core/types';
 
@@ -111,6 +112,10 @@
         // Include items with a producing recipe (authored or synthesised)
         const recipe = recipeOf(item.id);
         if (!recipe) return false;
+        // Dedup byproducts: only a recipe's PRIMARY (first) output gets a card. Otherwise a recipe that
+        // also yields branches/sawdust/ash is listed a SECOND time under that byproduct's category (the
+        // "Green Firewood" duplicate — split_firewood's branch byproduct rendered its own card set).
+        if (Object.keys(recipe.outputs ?? {})[0] !== item.id) return false;
         // DEBUG `_devResearchGateOff`: show research-locked recipes too (toggle in the DEBUG tab).
         if (
           !$gameState._devResearchGateOff &&
@@ -126,58 +131,51 @@
 
   $: firstCraftingInProgress = craftingQueue.length > 0 ? craftingQueue[0] : null;
 
-  // Craft categories (filter tabs). Maps an item's data category onto a player-facing group.
-  const CRAFT_CAT_ORDER = [
-    'BUTCHERING',
-    'COOKING',
-    'WOOD & FUEL',
-    'STONE',
-    'METAL',
-    'LEATHER',
-    'TOOLS',
-    'PACKS',
-    'WEAPONS',
-    'ARMOR',
-    'MAGIC WEAPONS',
-    'MAGIC GEAR',
-    'GOODS',
-    'MEDICINE'
+  // Craft tabs: the shared stockpile-filter taxonomy (itemCategoryTree), used as FLAT tabs at the LEAF
+  // level — no parent→child nesting (e.g. Goods→Primitive shows just "Primitive"). Gear is kept coarse:
+  // weapons/tools/armour are split by MATERIAL in the data, so they'd scatter into material tabs —
+  // route those by function (Melee/Ranged Weapons, Ammunition, Tools, Armor) instead. Jewelry (worn,
+  // but its own tab) is pulled out before the armour fold. Order: gear → consumables → materials → goods.
+  const CRAFT_TAB_ORDER: string[] = [
+    labelFor('tools'),
+    labelFor('melee'),
+    labelFor('ranged'),
+    labelFor('ammunition'),
+    'Armor',
+    labelFor('jewelry'),
+    labelFor('meat'),
+    labelFor('meals'),
+    labelFor('drinks'),
+    labelFor('medicine'),
+    labelFor('wood'),
+    labelFor('stone'),
+    labelFor('metals'),
+    labelFor('gems'),
+    labelFor('textiles'),
+    labelFor('organic'),
+    labelFor('soil'),
+    labelFor('fuel'),
+    labelFor('primitive'),
+    labelFor('storage'),
+    labelFor('light')
   ];
-  const CAT_GROUP: Record<string, string> = {
-    wood: 'WOOD & FUEL',
-    fuel: 'WOOD & FUEL',
-    woodcutting: 'WOOD & FUEL',
-    stone: 'STONE',
-    construction: 'STONE',
-    metal: 'METAL',
-    ore: 'METAL',
-    metalworking: 'METAL',
-    leather: 'LEATHER',
-    medicine: 'MEDICINE'
-  };
   function craftCategory(item: Item): string {
-    const t = String(item.type ?? '');
-    const c = item.category ?? '';
-    // Raw cuts have category 'meat' and no dynamicRecipe; preserved/cooked meats
-    // (salted/dried) share category 'meat' but *consume* meat via a dynamicRecipe.
-    const consumesMeat = !!recipeOf(item.id)?.dynamicRecipe;
-    if (item.isCarcass || (c === 'meat' && !consumesMeat)) return 'BUTCHERING';
-    // §M magic, split in two (checked before the type/material fallbacks):
-    //   • arcane staves → MAGIC WEAPONS (caught before WEAPONS);
-    //   • jewelry (rings/amulets/crowns) + cut/attuned gems → MAGIC GEAR.
-    if (item.weaponProperties?.arcane) return 'MAGIC WEAPONS';
-    if (c === 'jewelry' || c === 'gem' || c === 'magic_gem' || item.grantsConditions?.length)
-      return 'MAGIC GEAR';
-    // Worn carry containers (packs, quivers, pouches, tool rolls) are type:tool but belong with gear,
-    // not hand tools — split them out by their inventory bonus before the tool check.
-    if (item.inventoryBonus) return 'PACKS';
-    if (t === 'tool') return 'TOOLS';
-    if (t === 'weapon') return 'WEAPONS';
-    // Worn protection (helmets, shields, body/limb armour, cloaks) — its own group, not GOODS/LEATHER.
-    if (t === 'armor') return 'ARMOR';
-    // Cooking = everything else edible/drinkable, incl. preserved meat.
-    if (t === 'food' || ['food', 'cooking', 'drink', 'meat'].includes(c)) return 'COOKING';
-    return CAT_GROUP[c] ?? 'GOODS';
+    // Worn jewelry (rings/amulets/crowns) — its own tab, though it's type:armor in the data.
+    if (item.category === 'jewelry') return 'Jewelry';
+    // Armour is categorised by MATERIAL (leather/metal/cloth…), so route by type — not categoryPath,
+    // which would scatter it into the material tabs.
+    if (String(item.type) === 'armor') return 'Armor';
+    const path = categoryPath(item);
+    if (path[0] === 'weapons') {
+      if (path[1] === 'shields') return 'Armor';
+      if (path[1] === 'melee') return labelFor('melee');
+      if (path[1] === 'ranged') return labelFor('ranged'); // incl. arcane staves
+      if (path[1] === 'ammunition') return labelFor('ammunition');
+      return labelFor('weapons');
+    }
+    if (path[0] === 'tools') return labelFor('tools'); // collapse every work-type tool into one tab
+    // Everything else (materials / goods / consumables / food): the deepest leaf label.
+    return labelFor(path[path.length - 1]);
   }
 
   // A craftable card. A SINGLE-slot dynamic recipe (e.g. spit_meat over any meat) expands into one
@@ -307,11 +305,18 @@
 
   $: craftEntries = allCraftableItems.flatMap((i) => entriesFor(i, itemMap, dishSel));
 
-  $: craftCategories = CRAFT_CAT_ORDER.map((cat) => ({
+  // Tabs present in the current craftable set, ordered by CRAFT_TAB_ORDER; any leaf not in that list
+  // (a category we didn't pre-order) is appended alphabetically so nothing silently disappears.
+  $: presentCats = new Set(craftEntries.map((e) => e.category));
+  $: orderedCats = [
+    ...CRAFT_TAB_ORDER.filter((c) => presentCats.has(c)),
+    ...[...presentCats].filter((c) => !CRAFT_TAB_ORDER.includes(c)).sort()
+  ];
+  $: craftCategories = orderedCats.map((cat) => ({
     id: cat,
     label: cat,
     entries: craftEntries.filter((e) => e.category === cat)
-  })).filter((c) => c.entries.length > 0);
+  }));
 
   // Restored across tab toggles (persist helper); the guard below falls back to the first category if
   // the remembered one no longer exists (e.g. research changed the available list).
