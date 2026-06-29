@@ -19,13 +19,17 @@ MSHOCK_TILES.forEach((t, i) => {
 });
 
 /**
- * Glyph chars whose MShock sprite is TALLER than one cell (h > base 32) — i.e. trees/tall plants that
- * overflow upward. These render in a SEPARATE overlay pass ABOVE entities (terrain → short resources →
- * buildings → items → pawns → tall resources) so a pawn standing on the tile BEHIND a tree is occluded
- * by the canopy instead of drawing on top of it. */
+ * Glyph chars whose MShock sprite is a TALL CANOPY (h > base 32) that should OCCLUDE entities standing
+ * behind it — i.e. trees. These render in a SEPARATE overlay pass ABOVE entities (terrain → short
+ * resources → buildings → items → pawns → tall resources) so a pawn on the tile BEHIND a tree is hidden
+ * by the canopy instead of drawing on top of it.
+ *
+ * Tall GRASS (`t_grass_long_*`/`t_grass_tall_*`, also >32px) is deliberately EXCLUDED: it's ground cover
+ * an entity stands amid/in front of, so it must render BENEATH entities (short layer) — the reverse of
+ * the tree case. Otherwise a pawn south of a tall-grass tile draws behind the blades. */
 export const MSHOCK_TALL = new Set<string>();
 MSHOCK_TILES.forEach((t, i) => {
-  if (t[4] > 32) MSHOCK_TALL.add(String.fromCodePoint(MSHOCK_PUA_BASE + i));
+  if (t[4] > 32 && !/grass/i.test(t[0])) MSHOCK_TALL.add(String.fromCodePoint(MSHOCK_PUA_BASE + i));
 });
 
 function mshockChar(tile: string): string | undefined {
