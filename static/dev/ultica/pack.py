@@ -102,5 +102,15 @@ for cat in order:
             manifest["atlases"].append(pack(an, sl, chunk, pg+1 if pages>1 else 0, (len(chunk)+COLS-1)//COLS))
         print(f"{an:22s} {len(tiles):5d}  ({pages} sheet/s)")
 for name,_ in SOURCES: grand_drop += sum(data[name][1].values())
+
+# Repackaged single-crop tiles (scripts/msx/quarter_crops.py): one crop per quarter × 4 growth stages.
+CROPS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(OUT))), "scripts/msx/crops")
+if os.path.isdir(CROPS_DIR):
+    crop_tiles = sorted((fn[:-4], os.path.join(CROPS_DIR, fn)) for fn in os.listdir(CROPS_DIR) if fn.endswith(".png"))
+    if crop_tiles:
+        manifest["atlases"].append(pack("crops (quartered)", "crops_view", crop_tiles, 0, (len(crop_tiles)+COLS-1)//COLS))
+        grand_keep += len(crop_tiles)
+        print(f"crops (quartered)      {len(crop_tiles)}")
+
 json.dump(manifest, open(os.path.join(OUT,"manifest.json"),"w"))
 print(f"\nTOTAL shown: {grand_keep}   dropped: {grand_drop}")

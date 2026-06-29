@@ -27,10 +27,13 @@ def index(src):
                 m.setdefault(fn[:-4], os.path.join(root, fn))
     return m
 MSHOCK, ULTICA = index(MSHOCK_SRC), index(ULTICA_SRC)
+# Repackaged single-crop tiles (quarter_crops.py): crop_<type>_<stage>. Take priority for crop_* names.
+CROPS = index(os.path.join(ROOT, "scripts/msx/crops"))
 
 GROUND = re.compile(r"^t_(dirt|grass)(_|$)")
 TREEBUSH = re.compile(r"^t_(shrub|tree|fern|underbrush)(_|$)")
 def resolve(stem):
+    if stem in CROPS: return CROPS[stem]
     if GROUND.match(stem) and stem in ULTICA: return ULTICA[stem]
     if TREEBUSH.match(stem) and stem in MSHOCK: return MSHOCK[stem]
     return MSHOCK.get(stem) or ULTICA.get(stem)

@@ -26,12 +26,23 @@ BERRY = ["t_shrub_blueberry", "t_shrub_blueberry_summer", "t_shrub_blueberry_win
 GRAPE = ["t_shrub_grape", "t_shrub_grape_summer", "t_shrub_grape_winter"]
 # Crops: the 4 generic growth stages IN ORDER (seed→seedling→mature→harvest). A def with a `crop`
 # field renders the stage by the tile's growth% (not season / not random) — see applyResourceToGrid.
-CROP_STAGES = ["generic_crop_seed", "generic_crop_seedling", "generic_crop_mature", "generic_crop_harvest"]
+# Crops use the quartered generic_crop tiles (scripts/msx/quarter_crops.py): one crop per quarter,
+# growing through 4 stages. TL wheat · BR rye · BL greens (cabbage/kale/veg) · TR flower (fruit/herb).
+def crop_set(qtype):
+    return [f"crop_{qtype}_{s}" for s in ("seed", "seedling", "mature", "harvest")]
+CROP_QUARTER = {
+    "crop_wheat": "wheat", "wild_barley": "wheat",
+    "crop_rye": "rye", "wild_rye": "rye",
+    "crop_kale": "greens", "crop_cabbage": "greens", "crop_turnip": "greens", "crop_radish": "greens",
+    "crop_onion": "greens", "crop_peas": "greens", "crop_beans": "greens",
+    "wild_cabbage": "greens", "wild_kale": "greens", "wild_turnip": "greens",
+    "wild_onion": "greens", "wild_radish": "greens",
+    "crop_berries": "flower", "crop_grapes": "flower", "crop_apples": "flower", "crop_pumpkin": "flower",
+    "crop_flax": "flower", "crop_cotton": "flower", "crop_thyme": "flower", "crop_mint": "flower",
+}
 FLOWERS = ["f_dandelion", "f_dandelion_season_summer", "f_dandelion_season_autumn", "f_dandelion_season_winter",
            "f_datura", "f_flower_spurge", "f_flower_tulip_1",
            "f_mustard_spring", "f_mustard_summer", "f_mustard_autumn"]
-CARROT = ["f_carrot_wild", "f_carrot_wild_season_autumn", "f_carrot_wild_season_winter"]
-WILDVEG = {"wild_cabbage", "wild_turnip", "wild_onion", "wild_kale", "wild_radish", "wild_beans", "wild_peas"}
 
 # def id -> ordered list of tiles (variety / season pool). Crops + wild veg handled by tiles_for().
 MAP = {
@@ -45,13 +56,12 @@ MAP = {
   "wildflower_patch": FLOWERS, "scrub_patch": SHRUB, "berry_bush": BERRY, "wild_grapevine": GRAPE,
   "pine_tree": ["t_tree_pine"], "birch_tree": ["t_tree_birch"], "oak_tree": ["t_tree", "t_tree_beech_season_summer"],
   "apple_tree": ["t_tree_apple"], "ash_tree": ["t_tree"], "yew_tree": ["t_tree_pine"], "dead_tree": ["t_tree_dead"],
-  "wild_barley": CROP_STAGES, "wild_rye": CROP_STAGES,
 }
 
 def tiles_for(cur):
+    if cur in CROP_QUARTER: return crop_set(CROP_QUARTER[cur])
+    if cur.startswith("crop_"): return crop_set("wheat")  # default any unlisted crop to grain
     if cur in MAP: return MAP[cur]
-    if cur.startswith("crop_"): return CROP_STAGES
-    if cur in WILDVEG: return CARROT
     return None
 
 def arr(tiles):
