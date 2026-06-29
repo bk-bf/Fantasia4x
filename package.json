@@ -1,7 +1,7 @@
 {
 	"name": "fantasia4x",
 	"private": true,
-	"version": "0.1.119",
+	"version": "0.1.247",
 	"license": "AGPL-3.0-or-later",
 	"description": "Fantasia4x — a turn-based 4X colony chronicle.",
 	"author": "bk",
