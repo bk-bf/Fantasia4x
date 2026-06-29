@@ -106,6 +106,9 @@ export interface ResourceObjectDef {
   /** Seasonal plants: per-season variety pools (parsed from _season_/_summer/… suffixes in tile names).
    *  The renderer picks the current season's pool, falling back to the un-suffixed base sprites. */
   seasonChars?: Record<string, string[]>;
+  /** Foraged-bush sprites (the `_harvested` variants) — the renderer swaps to these while the node is
+   *  on cooldown after foraging (berries gone), instead of just dimming the ripe sprite. */
+  harvestedChars?: string[];
   /** Resolved RGB (0–1) glyph colour, parsed from the `fg` hex string in JSON. */
   fg: [number, number, number];
   /** Resolved RGB (0–1) background colour, parsed from the `bg` hex string in JSON. */
@@ -224,10 +227,15 @@ class ResourceObjectServiceImpl {
       // (used as fallback for any season lacking a specific sprite). hydrangea_spring_autumn → both.
       const seasons: Record<string, string[]> = { spring: [], summer: [], autumn: [], winter: [] };
       const base: string[] = [];
+      const harvested: string[] = [];
       spans.forEach((sp) => {
         const c = resolveCharSpans([sp])[0];
         if (!c) return;
         const name = (sp as { tile?: string }).tile ?? '';
+        if (name.includes('harvested')) {
+          harvested.push(c);
+          return; // foraged-state sprite — its own pool, not a season/base variant
+        }
         const tags = (['spring', 'summer', 'autumn', 'winter'] as const).filter((s) => name.includes(s));
         if (tags.length) tags.forEach((s) => seasons[s].push(c));
         else base.push(c);
@@ -246,6 +254,7 @@ class ResourceObjectServiceImpl {
         chars,
         growthChars: raw.crop ? chars : undefined, // crop charSpans are the 4 stages, in order
         seasonChars,
+        harvestedChars: harvested.length ? harvested : undefined,
         fg: hexToRgb01(raw.fg, [0.87, 0.62, 0.12]),
         bg: hexToRgb01(raw.bg, [0.06, 0.04, 0.01])
       };

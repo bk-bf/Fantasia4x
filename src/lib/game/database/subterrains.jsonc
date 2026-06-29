@@ -100,7 +100,7 @@
     "displayName" : "Scrubland",
     "walkable"    : true,
     "movementCost": 1.7,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_shrub"}, {"sheet": "mshock", "tile": "t_grass_dead_unconnected"} ],
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_grass_dead_unconnected"}, {"sheet": "mshock", "tile": "t_grass"} ],
     "fg"          : "#7a5717",
     "bg"          : "#140f08"
   },

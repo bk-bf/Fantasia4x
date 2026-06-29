@@ -1300,7 +1300,7 @@
     "displayName"     : "Scrub Patch",
     "subterrain"      : "scrubland",
     "walkable"        : true,
-    "charSpans"       : [ {"sheet": "mshock", "tile": "t_shrub"}, {"sheet": "mshock", "tile": "t_shrub_winter"}, {"sheet": "mshock", "tile": "t_shrub_lilac_spring"}, {"sheet": "mshock", "tile": "t_shrub_lilac_summer"}, {"sheet": "mshock", "tile": "t_shrub_lilac_autumn"}, {"sheet": "mshock", "tile": "t_shrub_lilac_winter"}, {"sheet": "mshock", "tile": "t_shrub_hydrangea"}, {"sheet": "mshock", "tile": "t_shrub_hydrangea_summer"}, {"sheet": "mshock", "tile": "t_shrub_hydrangea_winter"}, {"sheet": "mshock", "tile": "t_shrub_rose_autumn"}, {"sheet": "mshock", "tile": "t_shrub_rose_winter"}, {"sheet": "mshock", "tile": "t_shrub_peanut"}, {"sheet": "mshock", "tile": "t_shrub_peanut_autumn"}, {"sheet": "mshock", "tile": "t_shrub_peanut_winter"} ],
+    "charSpans"       : [ {"sheet": "mshock", "tile": "t_grass_dead_unconnected"}, {"sheet": "mshock", "tile": "t_grass"} ],
     "fg"              : "#7a5717",
     "bg"              : "#1a1208",
     "spawn"           : {
@@ -1410,7 +1410,7 @@
     "displayName"     : "Berry Bush",
     "subterrain"      : "bush",
     "walkable"        : true,
-    "charSpans"       : [ {"sheet": "mshock", "tile": "t_shrub_blueberry"}, {"sheet": "mshock", "tile": "t_shrub_blueberry_summer"}, {"sheet": "mshock", "tile": "t_shrub_blueberry_winter"}, {"sheet": "mshock", "tile": "t_shrub_blackberry"}, {"sheet": "mshock", "tile": "t_shrub_blackberry_summer"}, {"sheet": "mshock", "tile": "t_shrub_blackberry_winter"}, {"sheet": "mshock", "tile": "t_shrub_raspberry"}, {"sheet": "mshock", "tile": "t_shrub_raspberry_summer"}, {"sheet": "mshock", "tile": "t_shrub_raspberry_winter"}, {"sheet": "mshock", "tile": "t_shrub_strawberry"}, {"sheet": "mshock", "tile": "t_shrub_strawberry_summer"}, {"sheet": "mshock", "tile": "t_shrub_strawberry_winter"}, {"sheet": "mshock", "tile": "t_shrub_huckleberry"}, {"sheet": "mshock", "tile": "t_shrub_huckleberry_summer"}, {"sheet": "mshock", "tile": "t_shrub_huckleberry_winter"} ],
+    "charSpans"       : [ {"sheet": "mshock", "tile": "t_shrub"}, {"sheet": "mshock", "tile": "t_shrub_winter"}, {"sheet": "mshock", "tile": "t_shrub_blackberry"}, {"sheet": "mshock", "tile": "t_shrub_blackberry_summer"}, {"sheet": "mshock", "tile": "t_shrub_blackberry_winter"}, {"sheet": "mshock", "tile": "t_shrub_blackberry_harvested"}, {"sheet": "mshock", "tile": "t_shrub_blueberry"}, {"sheet": "mshock", "tile": "t_shrub_blueberry_summer"}, {"sheet": "mshock", "tile": "t_shrub_blueberry_winter"}, {"sheet": "mshock", "tile": "t_shrub_blueberry_harvested"}, {"sheet": "mshock", "tile": "t_shrub_huckleberry"}, {"sheet": "mshock", "tile": "t_shrub_huckleberry_summer"}, {"sheet": "mshock", "tile": "t_shrub_huckleberry_winter"}, {"sheet": "mshock", "tile": "t_shrub_huckleberry_harvested"}, {"sheet": "mshock", "tile": "t_shrub_raspberry"}, {"sheet": "mshock", "tile": "t_shrub_raspberry_summer"}, {"sheet": "mshock", "tile": "t_shrub_raspberry_winter"}, {"sheet": "mshock", "tile": "t_shrub_raspberry_harvested"}, {"sheet": "mshock", "tile": "t_shrub_strawberry"}, {"sheet": "mshock", "tile": "t_shrub_strawberry_summer"}, {"sheet": "mshock", "tile": "t_shrub_strawberry_winter"}, {"sheet": "mshock", "tile": "t_shrub_strawberry_harvested"}, {"sheet": "mshock", "tile": "t_shrub_peanut"}, {"sheet": "mshock", "tile": "t_shrub_peanut_autumn"}, {"sheet": "mshock", "tile": "t_shrub_peanut_winter"}, {"sheet": "mshock", "tile": "t_shrub_peanut_harvested"}, {"sheet": "mshock", "tile": "t_shrub_rose_autumn"}, {"sheet": "mshock", "tile": "t_shrub_rose_winter"}, {"sheet": "mshock", "tile": "t_shrub_rose_harvested"} ],
     "fg"              : "#8c454f",
     "bg"              : "#0f0f0d",
     "spawn"           : {
@@ -1689,7 +1689,7 @@
     "displayName"     : "Wild Grapevine",
     "subterrain"      : "bush",
     "walkable"        : true,
-    "charSpans"       : [ {"sheet": "mshock", "tile": "t_shrub_grape"}, {"sheet": "mshock", "tile": "t_shrub_grape_summer"}, {"sheet": "mshock", "tile": "t_shrub_grape_winter"} ],
+    "charSpans"       : [ {"sheet": "mshock", "tile": "t_shrub_grape"}, {"sheet": "mshock", "tile": "t_shrub_grape_summer"}, {"sheet": "mshock", "tile": "t_shrub_grape_winter"}, {"sheet": "mshock", "tile": "t_shrub_grape_harvested"} ],
     "fg"              : "#8c6699",
     "bg"              : "#0f0f0d",
     "spawn"           : {

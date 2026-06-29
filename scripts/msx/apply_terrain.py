@@ -12,18 +12,20 @@ DIRT = ["t_dirt_unconnected", "t_dirt_center2", "t_dirt_center3", "t_dirt_center
 GRASS = ["t_grass", "t_grass_center2", "t_grass_center3", "t_grass_center4"]
 GRASS_LONG = ["t_grass_long_unconnected", "t_grass_long_unconnected2", "t_grass_long_unconnected3", "t_grass_long_unconnected4"]
 GRASS_TALL = ["t_grass_tall_unconnected", "t_grass_tall_unconnected2", "t_grass_tall_unconnected3", "t_grass_tall_unconnected4"]
-# Berry/shrub pools include base + per-season variants; ResourceObjectService buckets them by the
-# _season_/_summer/_winter/_autumn/_spring suffix in the name, and the renderer picks the current
-# season's pool (falling back to the un-suffixed base when a season has no specific sprite).
-SHRUB = ["t_shrub", "t_shrub_winter", "t_shrub_lilac_spring", "t_shrub_lilac_summer", "t_shrub_lilac_autumn",
-         "t_shrub_lilac_winter", "t_shrub_hydrangea", "t_shrub_hydrangea_summer", "t_shrub_hydrangea_winter",
-         "t_shrub_rose_autumn", "t_shrub_rose_winter", "t_shrub_peanut", "t_shrub_peanut_autumn", "t_shrub_peanut_winter"]
-BERRY = ["t_shrub_blueberry", "t_shrub_blueberry_summer", "t_shrub_blueberry_winter",
-         "t_shrub_blackberry", "t_shrub_blackberry_summer", "t_shrub_blackberry_winter",
-         "t_shrub_raspberry", "t_shrub_raspberry_summer", "t_shrub_raspberry_winter",
-         "t_shrub_strawberry", "t_shrub_strawberry_summer", "t_shrub_strawberry_winter",
-         "t_shrub_huckleberry", "t_shrub_huckleberry_summer", "t_shrub_huckleberry_winter"]
-GRAPE = ["t_shrub_grape", "t_shrub_grape_summer", "t_shrub_grape_winter"]
+# Berry-bush pool: base + per-season (_summer/_winter/_autumn) + _harvested variants. ResourceObjectService
+# buckets them — season suffix → that season's pool (falling back to base), `harvested` → the foraged-bush
+# pool the renderer swaps to while the bush is on cooldown. (Other generic bush/scrubland tiles removed.)
+BERRY = [
+    "t_shrub", "t_shrub_winter",
+    "t_shrub_blackberry", "t_shrub_blackberry_summer", "t_shrub_blackberry_winter", "t_shrub_blackberry_harvested",
+    "t_shrub_blueberry", "t_shrub_blueberry_summer", "t_shrub_blueberry_winter", "t_shrub_blueberry_harvested",
+    "t_shrub_huckleberry", "t_shrub_huckleberry_summer", "t_shrub_huckleberry_winter", "t_shrub_huckleberry_harvested",
+    "t_shrub_raspberry", "t_shrub_raspberry_summer", "t_shrub_raspberry_winter", "t_shrub_raspberry_harvested",
+    "t_shrub_strawberry", "t_shrub_strawberry_summer", "t_shrub_strawberry_winter", "t_shrub_strawberry_harvested",
+    "t_shrub_peanut", "t_shrub_peanut_autumn", "t_shrub_peanut_winter", "t_shrub_peanut_harvested",
+    "t_shrub_rose_autumn", "t_shrub_rose_winter", "t_shrub_rose_harvested"
+]
+GRAPE = ["t_shrub_grape", "t_shrub_grape_summer", "t_shrub_grape_winter", "t_shrub_grape_harvested"]
 # Crops: the 4 generic growth stages IN ORDER (seed→seedling→mature→harvest). A def with a `crop`
 # field renders the stage by the tile's growth% (not season / not random) — see applyResourceToGrid.
 # Crops use the quartered generic_crop tiles (scripts/msx/quarter_crops.py): one crop per quarter,
@@ -49,11 +51,11 @@ MAP = {
   # ── subterrains: fertile/forest ground = GRASS (plants layer on top); barren/debris = bare dirt ──
   "dirt": DIRT, "tree_stump": DIRT, "fallen_logs": DIRT, "dead_trees": DIRT,
   "grass": GRASS, "deep_grass": GRASS, "tall_grass": GRASS, "terra_preta": GRASS, "savanna": GRASS,
-  "tree": GRASS, "bush": GRASS, "scrubland": ["t_shrub", "t_grass_dead_unconnected"], "wildflowers": GRASS,
+  "tree": GRASS, "bush": GRASS, "scrubland": ["t_grass_dead_unconnected", "t_grass"], "wildflowers": GRASS,
   "moss": GRASS, "mushroom_patch": GRASS,
   # ── resources: the green / plants painted ON TOP of soil ──
   "grass_patch": GRASS, "tall_grass_patch": GRASS_TALL, "deep_grass_patch": GRASS_LONG,
-  "wildflower_patch": FLOWERS, "scrub_patch": SHRUB, "berry_bush": BERRY, "wild_grapevine": GRAPE,
+  "wildflower_patch": FLOWERS, "scrub_patch": ["t_grass_dead_unconnected", "t_grass"], "berry_bush": BERRY, "wild_grapevine": GRAPE,
   "pine_tree": ["t_tree_pine"], "birch_tree": ["t_tree_birch"], "oak_tree": ["t_tree", "t_tree_beech_season_summer"],
   "apple_tree": ["t_tree_apple"], "ash_tree": ["t_tree"], "yew_tree": ["t_tree_pine"], "dead_tree": ["t_tree_dead"],
 }

@@ -31,3 +31,21 @@ describe('seasonal plant rendering', () => {
     expect(flowers.seasonChars!.winter).toContain(g.getTile(0, 0)!.char);
   });
 });
+
+describe('berry bush harvested + seasonal', () => {
+  const berry = resourceObjectService.getById('berry_bush')!;
+  it('has season pools AND a harvested pool', () => {
+    expect(berry.seasonChars?.summer?.length).toBeGreaterThan(0);
+    expect(berry.harvestedChars?.length).toBeGreaterThan(0);
+  });
+  it('ripe bush → season pool; foraged (on cooldown) bush → harvested sprite', () => {
+    const ripe = buildResourceOverlay([[tile({ resources: { berry_bush: 1 } })]], undefined, 'summer');
+    expect(berry.seasonChars!.summer).toContain(ripe.getTile(0, 0)!.char);
+    const foraged = buildResourceOverlay(
+      [[tile({ resources: { berry_bush: 1 }, resourceCooldowns: { 'berry_bush:berries': 9999 } })]],
+      undefined,
+      'summer'
+    );
+    expect(berry.harvestedChars).toContain(foraged.getTile(0, 0)!.char);
+  });
+});

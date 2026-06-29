@@ -616,18 +616,24 @@ export function applyResourceToGrid(
     const st = growthVal < 20 ? 0 : growthVal < 55 ? 1 : growthVal < 90 ? 2 : 3;
     char = resDef.growthChars[Math.min(st, resDef.growthChars.length - 1)];
   } else {
-    // Standing wild plant. A depleted (non-ready) one fades out below the visible-growth threshold.
-    if (!activeEntry) {
-      if (growthVal < RESOURCE_VISIBLE_GROWTH) return clear();
-      brightness = Math.max(0.4, growthVal / 100);
-    } else if (Object.keys(tile.resourceCooldowns ?? {}).some((k) => k.startsWith(resKey! + ':'))) {
-      brightness = 0.65; // partly foraged
+    // Standing wild plant. While foraged (on cooldown) swap to the bush's _harvested sprite if it has
+    // one; otherwise fall back to dimming the ripe sprite.
+    const onCooldown = Object.keys(tile.resourceCooldowns ?? {}).some((k) => k.startsWith(resKey! + ':'));
+    if (onCooldown && resDef.harvestedChars?.length) {
+      char = resDef.harvestedChars[hash % resDef.harvestedChars.length];
+    } else {
+      // A depleted (non-ready) plant fades out below the visible-growth threshold.
+      if (!activeEntry) {
+        if (growthVal < RESOURCE_VISIBLE_GROWTH) return clear();
+        brightness = Math.max(0.4, growthVal / 100);
+      } else if (onCooldown) {
+        brightness = 0.65; // partly foraged, no harvested sprite available
+      }
+      const pool =
+        season && resDef.seasonChars?.[season]?.length ? resDef.seasonChars[season] : resDef.chars;
+      if (!pool.length) return clear();
+      char = pool[hash % pool.length];
     }
-    const pool = (season && resDef.seasonChars?.[season]?.length
-      ? resDef.seasonChars[season]
-      : resDef.chars);
-    if (!pool.length) return clear();
-    char = pool[hash % pool.length];
   }
   if (!char) return clear();
 
