@@ -24,6 +24,8 @@
 #                                     as-is (you still confirm the asset list before anything uploads).
 #                                     On success it also bumps the README release badge to the new
 #                                     version (a follow-up doc commit, pushed automatically).
+#                                     Only the NEW version's artifacts are published; older installers
+#                                     left in dist-electron/ are pruned afterwards.
 #   ./build.sh --push --remote      cut the release via CI instead: autotag (patch bump) + push → GitHub
 #                                     Actions builds both OSes and publishes the GitHub Release. Nothing
 #                                     is built or published from this machine.
@@ -354,9 +356,13 @@ fi
 # already exists with assets).
 if $PUSH && ! $REMOTE; then
   echo
-  mapfile -t ASSETS < <(ls dist-electron/*.AppImage dist-electron/*.deb dist-electron/*.exe 2>/dev/null)
+  # Publish ONLY this release's artifacts. electron-builder names them after the version (…-$VER.AppImage,
+  # …Setup $VER.exe, …_$VER_amd64.deb), so scope the glob to $VER — otherwise stale installers from a
+  # previous version still sitting in dist-electron/ get globbed and uploaded onto this release too.
+  VER="${TAG#v}"
+  mapfile -t ASSETS < <(ls dist-electron/*"$VER"*.AppImage dist-electron/*"$VER"*.deb dist-electron/*"$VER"*.exe 2>/dev/null)
   if [[ ${#ASSETS[@]} -eq 0 ]]; then
-    echo "build.sh: no installers in dist-electron/ to upload — aborting release." >&2; exit 1
+    echo "build.sh: no v$VER installers in dist-electron/ to upload — aborting release." >&2; exit 1
   fi
 
   NOTES="$(mktemp)"; CHANGELOG="$(mktemp)"; trap 'rm -f "$RESOLV4" "$NOTES" "$CHANGELOG"' EXIT
@@ -403,4 +409,13 @@ EOF
 
   # Keep the README release badge pointing at the version we just shipped.
   update_release_pill "$TAG"
+
+  # Prune stale builds: drop installers from OTHER versions so dist-electron/ holds only this release's
+  # set — keeps the dir from growing unbounded AND stops a later --push globbing an old version into its
+  # upload. Only the three installer types are touched; the unpacked dirs are left alone.
+  shopt -s nullglob
+  for f in dist-electron/*.AppImage dist-electron/*.deb dist-electron/*.exe; do
+    [[ "$f" == *"$VER"* ]] || { rm -f "$f" && echo "▸ Pruned stale artifact: $(basename "$f")"; }
+  done
+  shopt -u nullglob
 fi
