@@ -12,6 +12,7 @@ import { wasmPathfinderService } from '../WasmPathfinderService';
 import { buildSharedSoftBlockedGrid } from '../PathfinderService';
 import { occupancyService } from '../OccupancyService';
 import { hasLineOfSight } from '../../systems/rangedCombat';
+import { simLog } from '../../core/logSink';
 import { rng } from '../../core/rng';
 import {
   type TileFoodKind,
@@ -108,7 +109,7 @@ export function findReachableFoodTile(
   }
   for (const c of candidates) {
     if (c.x === mob.x && c.y === mob.y) return { target: c, path: [] };
-    const path = pathTo(state, mob.x, mob.y, c.x, c.y, mob.id);
+    const path = pathTo(state, mob.x, mob.y, c.x, c.y, mob.id, "forage");
     if (path.length) return { target: c, path };
   }
   return null;
@@ -391,7 +392,7 @@ export function fleeToSafety(mob: Mob, threats: { x: number; y: number }[], stat
     const reached = chebyshev(dest.x, dest.y, mob.x, mob.y) <= FLEE_REACHED_DIST;
     const stillSafe = minThreatDist(dest.x, dest.y) > fleeDistance / 2;
     if (!reached && stillSafe) {
-      const path = pathTo(state, mob.x, mob.y, dest.x, dest.y, mob.id);
+      const path = pathTo(state, mob.x, mob.y, dest.x, dest.y, mob.id, "flee");
       // nextCellCostLeft preserved (MOVE-1): the new path's first step is a neighbour of this tile.
       if (path.length > 0) return { ...mob, path, pathIndex: 0 };
     }
@@ -423,7 +424,7 @@ export function fleeToSafety(mob: Mob, threats: { x: number; y: number }[], stat
       ? { x: c.tx, y: c.ty }
       : findNearbyWalkable(state, c.tx, c.ty, mob.id);
     if (!goal || (goal.x === mob.x && goal.y === mob.y)) continue;
-    const path = pathTo(state, mob.x, mob.y, goal.x, goal.y, mob.id);
+    const path = pathTo(state, mob.x, mob.y, goal.x, goal.y, mob.id, "flee2");
     if (path.length > 0) return { ...mob, fleeDest: goal, path, pathIndex: 0 };
   }
 
@@ -496,7 +497,7 @@ export function approachForMelee(
   const repathDue = pathExhausted || (targetMoved && (turn - mob.stateSince) % 10 === 0);
   if (!repathDue) return { kind: 'hold' };
   const approachTile = bestApproachTile(state, mob, targetPos, mob.id) ?? targetPos;
-  const path = pathTo(state, mob.x, mob.y, approachTile.x, approachTile.y, mob.id);
+  const path = pathTo(state, mob.x, mob.y, approachTile.x, approachTile.y, mob.id, "approach");
   if (!path.length) return { kind: 'unreachable' };
   return { kind: 'repath', path };
 }
@@ -715,7 +716,8 @@ export function pathTo(
   sy: number,
   ex: number,
   ey: number,
-  selfId?: string
+  selfId?: string,
+  label = '?'
 ): { x: number; y: number }[] {
   if (!wasmPathfinderService.isReady()) return [];
   // Entities are SOFT obstacles: each body adds a routing-cost penalty so paths prefer to route AROUND
@@ -735,19 +737,49 @@ export function pathTo(
   // tell "too many cheap paths" (high calls) from "few ruinous searches" (high fails / ms-per-call).
   _pathMs += performance.now() - _t0;
   _pathCalls++;
-  if (res.length === 0) _pathFails++;
-  else _pathLen += res.length;
+  const lab = (_pathByLabel[label] ??= { calls: 0, fails: 0 });
+  lab.calls++;
+  if (res.length === 0) {
+    _pathFails++;
+    lab.fails++;
+    // Sample a few concrete failures per window (label + from→to + manhattan dist) so we can SEE which
+    // mobs are pathing where to nothing. Throttled to keep the log readable.
+    if (_failSamples < 8) {
+      _failSamples++;
+      simLog.logEvent({
+        category: 'ai',
+        severity: 'info',
+        turn: state.turn,
+        message: `PATHFAIL ${label} ${selfId ?? '?'} (${sx},${sy})->(${ex},${ey}) d=${Math.abs(ex - sx) + Math.abs(ey - sy)}`
+      });
+    }
+  } else _pathLen += res.length;
   return res;
 }
 
+const _pathByLabel: Record<string, { calls: number; fails: number }> = {};
+let _failSamples = 0;
 let _pathCalls = 0;
 let _pathFails = 0;
 let _pathMs = 0;
 let _pathLen = 0;
-/** Read + reset the per-window mob A* counters (calls / unreachable-fails / total ms / total tiles). */
-export function readMobPathStats(): { calls: number; fails: number; ms: number; len: number } {
-  const s = { calls: _pathCalls, fails: _pathFails, ms: _pathMs, len: _pathLen };
+/** Read + reset the per-window mob A* counters (calls / unreachable-fails / total ms / total tiles),
+ *  plus a per-call-site `calls/fails` breakdown so the dominant failing BEHAVIOUR is named. */
+export function readMobPathStats(): {
+  calls: number;
+  fails: number;
+  ms: number;
+  len: number;
+  byLabel: string;
+} {
+  const byLabel = Object.entries(_pathByLabel)
+    .sort((a, b) => b[1].fails - a[1].fails)
+    .map(([k, v]) => `${k}=${v.fails}/${v.calls}`)
+    .join(' ');
+  const s = { calls: _pathCalls, fails: _pathFails, ms: _pathMs, len: _pathLen, byLabel };
   _pathCalls = _pathFails = _pathMs = _pathLen = 0;
+  _failSamples = 0;
+  for (const k in _pathByLabel) delete _pathByLabel[k];
   return s;
 }
 

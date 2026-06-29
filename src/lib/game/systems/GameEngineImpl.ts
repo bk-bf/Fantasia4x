@@ -353,7 +353,7 @@ export class GameEngineImpl implements GameEngine {
           `A*-STATS/tick over ${ticks}t: calls=${(p.calls / ticks).toFixed(1)} ` +
             `fail%=${p.calls ? ((p.fails / p.calls) * 100).toFixed(0) : 0} ` +
             `ms=${(p.ms / ticks).toFixed(2)} avgLen=${p.calls - p.fails > 0 ? (p.len / (p.calls - p.fails)).toFixed(1) : 0} ` +
-            `| map=${total} walkable=${walkable} (${total ? ((walkable / total) * 100).toFixed(0) : 0}%)`
+            `| fails-by: ${p.byLabel} | map=${total} walkable=${walkable} (${total ? ((walkable / total) * 100).toFixed(0) : 0}%)`
         );
         this._phaseMs = {};
         this._phaseTicks = 0;
