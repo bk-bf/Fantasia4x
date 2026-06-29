@@ -18,6 +18,16 @@ MSHOCK_TILES.forEach((t, i) => {
   MSHOCK_INDEX[t[0]] = i;
 });
 
+/**
+ * Glyph chars whose MShock sprite is TALLER than one cell (h > base 32) — i.e. trees/tall plants that
+ * overflow upward. These render in a SEPARATE overlay pass ABOVE entities (terrain → short resources →
+ * buildings → items → pawns → tall resources) so a pawn standing on the tile BEHIND a tree is occluded
+ * by the canopy instead of drawing on top of it. */
+export const MSHOCK_TALL = new Set<string>();
+MSHOCK_TILES.forEach((t, i) => {
+  if (t[4] > 32) MSHOCK_TALL.add(String.fromCodePoint(MSHOCK_PUA_BASE + i));
+});
+
 function mshockChar(tile: string): string | undefined {
   const i = MSHOCK_INDEX[tile];
   return i === undefined ? undefined : String.fromCodePoint(MSHOCK_PUA_BASE + i);

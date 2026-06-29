@@ -73,6 +73,11 @@ export class WebGLRenderer {
     this.core.setResourceOverlayGrid(grid);
   }
 
+  /** Tall resources (trees) — rendered after entities so they occlude pawns standing behind them. */
+  setResourceTallOverlayGrid(grid: GameGrid | null): void {
+    this.core.setResourceTallOverlayGrid(grid);
+  }
+
   /**
    * Set the viewport tile offset (top-left corner).
    */

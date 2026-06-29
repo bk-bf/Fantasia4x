@@ -230,6 +230,8 @@
   // Transparent resource layer (trees/grass/bushes/ore) drawn over the terrain ground — kept in
   // lock-step with _terrainGrid (built in _fullRebuildTerrain, patched per dirty tile incrementally).
   let _resourceGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
+  // Tall resources (trees) — drawn ABOVE entities so a pawn on the tile behind a tree is occluded.
+  let _resourceTallGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
   // Season the resource overlay was last painted for — when it changes, the whole overlay is rebuilt
   // (seasonal plants pick a different sprite pool; nothing else dirties on a season flip).
   let _lastResourceSeason: string | undefined;
@@ -249,7 +251,9 @@
     String($currentSeason).toLowerCase() !== _lastResourceSeason
   ) {
     _lastResourceSeason = String($currentSeason).toLowerCase();
-    _resourceGrid = buildResourceOverlay(worldMap, hiddenMask, _lastResourceSeason);
+    const _res = buildResourceOverlay(worldMap, hiddenMask, _lastResourceSeason);
+    _resourceGrid = _res.short;
+    _resourceTallGrid = _res.tall;
   }
   let _terrainGridWorldMapRef: unknown; // worldMap ARRAY ref of the last full build (new ref ⇒ new map ⇒ full rebuild)
   // Incremental building diff: last-painted completed buildings keyed by id (pos + visual sig), so a
@@ -2086,6 +2090,7 @@
     const built = fullRebuildTerrain(worldMap, buildings, _buildingSig, _seasonStr());
     _terrainGrid = built.terrainGrid;
     _resourceGrid = built.resourceGrid;
+    _resourceTallGrid = built.resourceTallGrid;
     _lastResourceSeason = _seasonStr();
     _maskState = built.maskState;
     hiddenMask = _maskState.mask;
@@ -2172,7 +2177,8 @@
       const t = worldMap[y]?.[x];
       if (!t) continue;
       applyTileToGrid(_terrainGrid, t, hiddenMask, worldMap);
-      if (_resourceGrid) applyResourceToGrid(_resourceGrid, t, hiddenMask, _seasonStr());
+      if (_resourceGrid && _resourceTallGrid)
+        applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask, _seasonStr());
       if (_updateEmitterAt(y, x, t)) emittersChanged = true;
     }
     // Only FLOORS and ROOFS bake into the terrain grid (floors first as the ground surface, ROOFS LAST
@@ -3414,6 +3420,7 @@
       const frozen = !menuPreview && (customMapPreview || tileWidth < FREEZE_TILE_PX);
       if (_renderDirty || !frozen || now - lastDrawAt >= FROZEN_SAFETY_MS) {
         renderer.setResourceOverlayGrid(_resourceGrid);
+        renderer.setResourceTallOverlayGrid(_resourceTallGrid);
         renderer.setBuildingOverlayGrid(buildingOverlayGrid);
         renderer.setItemOverlayGrid(itemOverlayGrid);
         renderer.setOverlayGrid(pawnOverlayGrid);

@@ -98,6 +98,9 @@ export class WebGLRendererCore {
   // overlay group (terrain → resources → buildings → items → pawns) — so a full-colour CDDA plant
   // sprite composites over the actual ground sprite instead of being baked over a flat near-black bg.
   private resourceOverlayGrid: GameGrid | null = null;
+  // Tall resources (trees) render in their OWN pass AFTER entities, so a pawn standing on the tile
+  // behind a tree is occluded by the canopy instead of drawing over it.
+  private resourceTallOverlayGrid: GameGrid | null = null;
 
   // Day/night ambient (Phase A — EnvironmentService drives these each turn).
   // Applied as the u_ambient fragment uniform, combined with the baked additive
@@ -194,9 +197,14 @@ export class WebGLRendererCore {
     this.buildingOverlayGrid = grid;
   }
 
-  /** Inject the resource-overlay grid (trees/grass/bushes), rendered first over the terrain ground. */
+  /** Inject the (short) resource-overlay grid (grass/bushes/crops), rendered first over the terrain ground. */
   setResourceOverlayGrid(grid: GameGrid | null): void {
     this.resourceOverlayGrid = grid;
+  }
+
+  /** Inject the TALL resource-overlay grid (trees), rendered after entities so it occludes pawns behind it. */
+  setResourceTallOverlayGrid(grid: GameGrid | null): void {
+    this.resourceTallOverlayGrid = grid;
   }
 
   /** Set the top-left viewport tile position. */
@@ -477,7 +485,8 @@ export class WebGLRendererCore {
       this.overlayGrid ||
       this.itemOverlayGrid ||
       this.buildingOverlayGrid ||
-      this.resourceOverlayGrid
+      this.resourceOverlayGrid ||
+      this.resourceTallOverlayGrid
     ) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -488,6 +497,8 @@ export class WebGLRendererCore {
       this.renderGlyphOverlay(this.buildingOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
       this.renderGlyphOverlay(this.itemOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
       this.renderGlyphOverlay(this.overlayGrid, viewportTilesW, viewportTilesH, lightTime);
+      // Tall resources (trees) LAST → canopy occludes pawns/mobs standing on tiles behind the tree.
+      this.renderGlyphOverlay(this.resourceTallOverlayGrid, viewportTilesW, viewportTilesH, lightTime, true);
       this.stats.overlayMs = performance.now() - tOverlay;
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
       gl.disable(gl.BLEND);

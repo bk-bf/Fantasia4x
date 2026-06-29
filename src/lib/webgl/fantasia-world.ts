@@ -9,7 +9,8 @@ import {
   SUBTERRAINS,
   SUBTERRAIN_FALLBACK,
   pickChar,
-  resolveCharSpans
+  resolveCharSpans,
+  MSHOCK_TALL
 } from '$lib/game/core/Terrains.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
 import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/wildGrowth.js';
@@ -571,18 +572,23 @@ export function applyTileToGrid(
  * irrelevant here — the resource pass is glyph-only (alpha-blended).
  */
 export function applyResourceToGrid(
-  grid: GameGrid,
+  gridShort: GameGrid,
+  gridTall: GameGrid,
   tile: WorldTile,
   hiddenMask: boolean[][],
   season?: string
 ): void {
-  const clear = () =>
-    grid.setTile(tile.x, tile.y, {
+  const blank = (g: GameGrid) =>
+    g.setTile(tile.x, tile.y, {
       char: ' ',
       foreground: { r: 0, g: 0, b: 0 },
       background: { r: 0, g: 0, b: 0 },
       position: { x: tile.x, y: tile.y }
     });
+  const clear = () => {
+    blank(gridShort);
+    blank(gridTall);
+  };
   if (hiddenMask[tile.y]?.[tile.x]) return clear();
   const hasResources = tile.resources && Object.keys(tile.resources).length > 0;
   if (!hasResources) return clear();
@@ -637,7 +643,12 @@ export function applyResourceToGrid(
   }
   if (!char) return clear();
 
-  grid.setTile(tile.x, tile.y, {
+  // Tall sprites (trees) go to the tall layer drawn ABOVE entities so they occlude pawns standing
+  // behind them; everything else to the short layer drawn beneath entities. Clear the OTHER layer in
+  // case this tile just switched (e.g. a sapling grew into a tall tree).
+  const tall = MSHOCK_TALL.has(char);
+  blank(tall ? gridShort : gridTall);
+  (tall ? gridTall : gridShort).setTile(tile.x, tile.y, {
     char,
     foreground: {
       r: resDef.fg[0] * brightness,
@@ -649,21 +660,23 @@ export function applyResourceToGrid(
   });
 }
 
-/** Build the transparent resource overlay (trees/grass/bushes/ore drawn over the terrain ground).
- *  Kept SPARSE — only tiles that carry a resource get a cell, so the renderer's viewport cull
- *  (getVisibleTiles, O(viewport)) and memory stay cheap. */
+/** Build the transparent resource overlays (trees/grass/bushes/ore drawn over the terrain ground),
+ *  SPLIT into a `short` layer (drawn beneath entities) and a `tall` layer (trees, drawn above entities
+ *  so pawns behind them are occluded). Kept SPARSE — only resource tiles get a cell, so the renderer's
+ *  viewport cull (getVisibleTiles, O(viewport)) and memory stay cheap. */
 export function buildResourceOverlay(
   worldMap: WorldTile[][],
   hiddenMask?: boolean[][],
   season?: string
-): GameGrid {
-  const grid = new GameGrid();
+): { short: GameGrid; tall: GameGrid } {
+  const short = new GameGrid();
+  const tall = new GameGrid();
   const mask = hiddenMask ?? computeHiddenMask(worldMap);
   for (const row of worldMap)
     for (const tile of row)
       if (tile.resources && Object.keys(tile.resources).length > 0)
-        applyResourceToGrid(grid, tile, mask, season);
-  return grid;
+        applyResourceToGrid(short, tall, tile, mask, season);
+  return { short, tall };
 }
 
 export function buildGameGrid(

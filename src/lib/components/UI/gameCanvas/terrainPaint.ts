@@ -25,8 +25,10 @@ import type { WorldTile, PlacedBuilding } from '$lib/game/core/types.js';
 
 export interface FullTerrainBuild {
   terrainGrid: GameGrid;
-  /** Transparent resource layer (trees/grass/bushes/ore) drawn over the terrain ground. */
+  /** Short resource layer (grass/bushes/crops) drawn BENEATH entities. */
   resourceGrid: GameGrid;
+  /** Tall resource layer (trees) drawn ABOVE entities so pawns behind a tree are occluded. */
+  resourceTallGrid: GameGrid;
   maskState: HiddenMaskState;
   /** Grove-glow emitters keyed "y,x" (hidden-tile emitters excluded), for incremental upsert/delete. */
   emitterMap: Map<string, LightEmitter>;
@@ -45,7 +47,7 @@ export function fullRebuildTerrain(
 ): FullTerrainBuild {
   const maskState = computeHiddenMaskState(worldMap);
   const terrainGrid = buildGameGrid(worldMap, buildings, maskState.mask);
-  const resourceGrid = buildResourceOverlay(worldMap, maskState.mask, season);
+  const resources = buildResourceOverlay(worldMap, maskState.mask, season);
 
   const buildingsById = new Map<string, { x: number; y: number; sig: string }>();
   for (const b of buildings) {
@@ -63,7 +65,8 @@ export function fullRebuildTerrain(
 
   return {
     terrainGrid,
-    resourceGrid,
+    resourceGrid: resources.short,
+    resourceTallGrid: resources.tall,
     maskState,
     emitterMap,
     emitters: [...emitterMap.values()],
