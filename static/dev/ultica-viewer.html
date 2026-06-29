@@ -103,8 +103,8 @@
         ctx.clearRect(0, 0, st.overlay.width, st.overlay.height);
         // filter matches — faint orange fill
         if (filter) {
-          ctx.fillStyle = 'rgba(255,153,0,0.28)';
-          for (let i = 0; i < st.tiles.length; i++) if (st.tiles[i] && st.tiles[i].toLowerCase().includes(filter)) { const [x, y] = cellRect(i); ctx.fillRect(x, y, T, T); }
+          ctx.strokeStyle = '#ff9900'; ctx.lineWidth = 2;
+          for (let i = 0; i < st.tiles.length; i++) if (st.tiles[i] && st.tiles[i].toLowerCase().includes(filter)) { const [x, y] = cellRect(i); ctx.strokeRect(x + 1, y + 1, T - 2, T - 2); }
         }
         // selection — green
         if (selAtlas === name) {
