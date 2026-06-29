@@ -873,7 +873,9 @@ export function stepHostile(
     // Nearest corpse / live prey + its distance (corpses are free food at any range; the corpse-vs-live
     // weighting lives inside findNearestPrey).
     const prey =
-      canScavengeOrHunt && huntCooldownExpired ? findNearestPrey(mob, allMobs, canHunt) : null;
+      canScavengeOrHunt && huntCooldownExpired
+        ? findNearestPrey(mob, allMobs, canHunt, state.worldMap)
+        : null;
     const preyDist = prey ? manhattan(mob.x, mob.y, prey.x, prey.y) : Infinity;
 
     const tryHunt = (target: Mob): Mob | null => {
@@ -1577,17 +1579,17 @@ export function stepHunting(
       // Target is valid. Allow switching to a corpse if one appears (free food).
       if (lockedTarget.state === 'Corpse' && (lockedTarget.intactness ?? 1.0) <= 0) {
         // Locked target is stripped — clear and find new prey.
-        prey = findNearestPrey(mob, allMobs, allowLivePrey);
+        prey = findNearestPrey(mob, allMobs, allowLivePrey, state.worldMap);
       } else {
         prey = lockedTarget;
       }
     } else {
       // Locked target is gone — find new prey.
-      prey = findNearestPrey(mob, allMobs, allowLivePrey);
+      prey = findNearestPrey(mob, allMobs, allowLivePrey, state.worldMap);
     }
   } else {
     // No locked target — find nearest prey.
-    prey = findNearestPrey(mob, allMobs, allowLivePrey);
+    prey = findNearestPrey(mob, allMobs, allowLivePrey, state.worldMap);
   }
 
   if (!prey) {

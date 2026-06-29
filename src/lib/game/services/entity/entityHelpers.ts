@@ -1,7 +1,7 @@
 // Shared entity helpers — queries, movement, and foraging lookups used by the spawning, AI, and
 // lifecycle modules. Extracted from EntityService (P-4); converted from class methods to free
 // functions (the class had no instance state but `idCounter`, so `this.` simply dropped away).
-import type { GameState, Mob, Pawn } from '../../core/types';
+import type { GameState, Mob, Pawn, WorldTile } from '../../core/types';
 import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
 import { pawnById } from '../../core/pawnIndex';
 import { manhattan, chebyshev } from '../../core/distance';
@@ -11,6 +11,7 @@ import { resourceObjectService } from '../ResourceObjectService';
 import { wasmPathfinderService } from '../WasmPathfinderService';
 import { buildSharedSoftBlockedGrid } from '../PathfinderService';
 import { occupancyService } from '../OccupancyService';
+import { hasLineOfSight } from '../../systems/rangedCombat';
 import { rng } from '../../core/rng';
 import {
   type TileFoodKind,
@@ -193,9 +194,19 @@ function nearestPredatorMap(allMobs: Mob[]): Map<string, Mob | null> {
   return map;
 }
 
-export function findNearestPrey(mob: Mob, allMobs: Mob[], allowLivePrey: boolean): Mob | null {
+export function findNearestPrey(
+  mob: Mob,
+  allMobs: Mob[],
+  allowLivePrey: boolean,
+  worldMap: WorldTile[][]
+): Mob | null {
   let best: Mob | null = null;
   let bestDist = Infinity;
+  // Only commit to a target the hunter can actually SEE — a prey/corpse behind a wall is unreachable, and
+  // pathing to it makes A* sweep the whole connected region (the 78%-fail perf cliff). Reuses the same
+  // `blocksSight` Bresenham LOS as pawn aggro, and is the LAST check (only ray-cast a candidate that would
+  // become the nearest), so it's a handful of rays per hunting mob, not one per prey.
+  const visible = (c: Mob) => hasLineOfSight(worldMap, mob.x, mob.y, c.x, c.y);
   // Pre-filtered prey subset (corpses with intactness>0 + live non-tamed huntables), once per tick.
   for (const candidate of mobThreatSubsets(allMobs).prey) {
     if (candidate.id === mob.id) continue;
@@ -207,12 +218,12 @@ export function findNearestPrey(mob: Mob, allMobs: Mob[], allowLivePrey: boolean
     if (candidate.state === 'Corpse') {
       // Corpses weighted as 50% closer — free food with no danger.
       const d = raw * 0.5;
-      if (d < bestDist) {
+      if (d < bestDist && visible(candidate)) {
         bestDist = d;
         best = candidate;
       }
     } else if (allowLivePrey && raw <= HUNT_RADIUS) {
-      if (raw < bestDist) {
+      if (raw < bestDist && visible(candidate)) {
         bestDist = raw;
         best = candidate;
       }
