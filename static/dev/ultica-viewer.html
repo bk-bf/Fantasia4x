@@ -82,7 +82,7 @@
       const filterEl = document.getElementById('filter');
       filterEl.addEventListener('input', e => { clearTimeout(fTimer); fTimer = setTimeout(() => { setFilter(e.target.value.trim().toLowerCase()); }, 120); });
       filterEl.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.preventDefault(); clearTimeout(fTimer); setFilter(filterEl.value.trim().toLowerCase()); cycleMatch(e.shiftKey ? -1 : 1); }
+        if (e.key === 'Enter') { e.preventDefault(); clearTimeout(fTimer); const v = filterEl.value.trim().toLowerCase(); if (v !== filter) setFilter(v); cycleMatch(e.shiftKey ? -1 : 1); }
       });
       document.getElementById('copySel').addEventListener('click', copySelection);
       document.addEventListener('keydown', e => { if (e.key === 'Escape') { selSet.clear(); selAtlas = null; anchor = null; redrawAll(); updateSelInfo(); } });
