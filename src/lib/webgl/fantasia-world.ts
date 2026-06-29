@@ -398,9 +398,16 @@ function snowCover(tile: WorldTile): number {
   return Math.min(1, snow / 100);
 }
 
-/** Walkable resources that are still standing OBSTACLES — they keep their glyph and take only the
- *  white-bg overlay (like trees/walls), instead of being buried under the ground snow sprite. */
-const SNOW_FEATURE_RES = new Set(['berry_bush', 'scrub_patch', 'fallen_logs', 'tree_stump']);
+/** Resources that are standing OBSTACLES — they keep their glyph and take only the white-bg overlay
+ *  (like trees/walls), instead of being buried under the ground snow. Covers walkable features plus a
+ *  few (e.g. stone_outcrop) that should poke out regardless of how their tile's walkability resolves. */
+const SNOW_FEATURE_RES = new Set([
+  'berry_bush',
+  'scrub_patch',
+  'fallen_logs',
+  'tree_stump',
+  'stone_outcrop'
+]);
 
 /** A snow OBSTACLE: impassable terrain (trees, mountain/cliff walls, mineral & gem nodes, dead trees) or a
  *  standing walkable feature (berry bush, shrub, fallen log). Keeps its glyph; only its bg whitens. Open
