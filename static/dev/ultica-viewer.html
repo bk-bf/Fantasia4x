@@ -8,12 +8,15 @@
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body { background: #0d0d0d; color: #c8c8c8; font-family: 'Courier New', monospace; padding: 16px; }
       h1 { color: #ff9900; font-size: 16px; margin-bottom: 6px; }
-      .hint { color: #777; font-size: 11px; margin-bottom: 12px; max-width: 70ch; }
-      .controls { position: sticky; top: 0; background: #0d0d0de6; padding: 8px 0; display: flex; gap: 14px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; z-index: 50; }
+      .hint { color: #777; font-size: 11px; margin-bottom: 12px; max-width: 78ch; }
+      .hint b { color: #9ab; }
+      .controls { position: sticky; top: 0; background: #0d0d0def; padding: 8px 0; display: flex; gap: 14px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; z-index: 50; }
       label { font-size: 12px; color: #999; }
       input[type='text'] { background: #1a1a1a; border: 1px solid #444; color: #eee; padding: 4px 8px; font-family: monospace; font-size: 12px; width: 240px; }
       input[type='range'] { width: 120px; vertical-align: middle; }
       .val { color: #ff9900; font-size: 12px; }
+      button { background: #222; border: 1px solid #555; color: #ddd; font: 11px monospace; padding: 4px 8px; cursor: pointer; }
+      button:hover { border-color: #888; }
       #toc a { color: #8ab4ff; font-size: 11px; margin-right: 10px; text-decoration: none; }
       .sheet-section { margin-bottom: 24px; }
       .sheet-title { font-size: 13px; color: #ff9900; margin-bottom: 6px; border-bottom: 1px solid #333; padding-bottom: 4px; }
@@ -24,21 +27,24 @@
       canvas.overlay-canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
       .tooltip { position: fixed; background: #1a1a1a; border: 1px solid #ff9900; color: #eee; padding: 6px 10px; font-size: 12px; pointer-events: none; display: none; z-index: 100; white-space: nowrap; }
       .tooltip b { color: #ff9900; }
-      .copied { position: fixed; top: 20px; right: 20px; background: #1a4a1a; border: 1px solid #4a4; color: #8f8; padding: 8px 14px; font-size: 12px; z-index: 200; display: none; }
+      .copied { position: fixed; top: 20px; right: 20px; background: #1a4a1a; border: 1px solid #4a4; color: #8f8; padding: 8px 14px; font-size: 12px; z-index: 200; display: none; white-space: pre; }
       .miss { color: #a44; font-size: 12px; }
     </style>
   </head>
   <body>
     <h1>ULTICA TILE VIEWER — full set, modern stripped</h1>
     <div class="hint">
-      Every nested sprite in UltimateCataclysm (autotile fragments + numbered dups collapsed), with modern
-      content (guns/ammo/electronics/vehicles/sci-fi) removed. Hover → id · click → copy id · type in filter to highlight.
-      Regenerate via <code>static/dev/ultica/pack.py</code> (edit DROP_* there to tune the cull).
+      Every nested UltimateCataclysm sprite (autotile fragments + numbered dups collapsed), modern content removed.
+      <b>click</b> copy id · <b>shift-click</b> select range &amp; copy all ids · <b>Esc</b> clear selection ·
+      type in Filter then <b>Enter</b> to jump &amp; cycle through matches.
+      Regenerate via <code>static/dev/ultica/pack.py</code>.
     </div>
     <div class="controls">
       <label>Zoom <input type="range" id="zoom" min="1" max="4" value="2" step="1" /><span class="val" id="zoomVal">2×</span></label>
-      <label>Filter <input type="text" id="filter" placeholder="table, wall, mon_, f_bed, magic…" /></label>
+      <label>Filter <input type="text" id="filter" placeholder="table, wall, mon_, f_bed, magic… (Enter to cycle)" /></label>
       <span class="val" id="count"></span>
+      <button id="copySel">copy selection</button>
+      <span class="val" id="selinfo"></span>
     </div>
     <div id="toc"></div>
     <div id="sheets"></div>
@@ -49,76 +55,142 @@
       const CELL = 32, COLS = 16;
       let scale = 2, filter = '';
       const state = {};               // name -> { img, tiles, rows, canvas, overlay }
+      const order = [];               // atlas names in display order
+
+      // selection (range)
+      let selAtlas = null;            // atlas the selection lives in
+      const selSet = new Set();       // selected tile indices within selAtlas
+      let anchor = null;              // last plain-clicked idx (range pivot)
+      // filter-match cycling
+      let matches = [];               // [{name, idx}]
+      let matchCur = -1;
+      // hover
+      let hover = { name: null, idx: -1 };
+
       const tooltip = document.getElementById('tooltip');
       const copied = document.getElementById('copied');
       let copiedTimer = null;
-      const showCopied = () => { copied.style.display='block'; clearTimeout(copiedTimer); copiedTimer=setTimeout(()=>copied.style.display='none',1000); };
+      const toast = (msg) => { copied.textContent = msg; copied.style.display = 'block'; clearTimeout(copiedTimer); copiedTimer = setTimeout(() => (copied.style.display = 'none'), 1200); };
 
-      const slug = s => s.replace(/[^a-z0-9]/gi,'_');
-      const loadImage = src => new Promise((res,rej)=>{const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error('Failed: '+src)); i.src=src;});
+      const slug = s => s.replace(/[^a-z0-9]/gi, '_');
+      const loadImage = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Failed: ' + src)); i.src = src; });
+      const tw = () => CELL * scale;
 
-      document.getElementById('zoom').addEventListener('input', e => { scale=+e.target.value; document.getElementById('zoomVal').textContent=scale+'×'; for(const n in state) sizeAndDraw(n); });
-      let fTimer=null;
-      document.getElementById('filter').addEventListener('input', e => { clearTimeout(fTimer); fTimer=setTimeout(()=>{ filter=e.target.value.trim().toLowerCase(); applyFilter(); }, 120); });
+      document.getElementById('zoom').addEventListener('input', e => { scale = +e.target.value; document.getElementById('zoomVal').textContent = scale + '×'; for (const n of order) sizeAndDraw(n); });
 
-      function sizeAndDraw(name){
-        const st=state[name], cw=COLS*CELL*scale, ch=st.rows*CELL*scale;
-        st.canvas.width=cw; st.canvas.height=ch; st.overlay.width=cw; st.overlay.height=ch;
-        const ctx=st.canvas.getContext('2d'); ctx.imageSmoothingEnabled=false;
-        ctx.clearRect(0,0,cw,ch);
-        ctx.drawImage(st.img, 0,0, st.img.width, st.img.height, 0,0, cw, ch);   // whole atlas, one pass
-        drawOverlay(name, -1);
+      let fTimer = null;
+      const filterEl = document.getElementById('filter');
+      filterEl.addEventListener('input', e => { clearTimeout(fTimer); fTimer = setTimeout(() => { setFilter(e.target.value.trim().toLowerCase()); }, 120); });
+      filterEl.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); clearTimeout(fTimer); setFilter(filterEl.value.trim().toLowerCase()); cycleMatch(e.shiftKey ? -1 : 1); }
+      });
+      document.getElementById('copySel').addEventListener('click', copySelection);
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') { selSet.clear(); selAtlas = null; anchor = null; redrawAll(); updateSelInfo(); } });
+
+      function sizeAndDraw(name) {
+        const st = state[name], cw = COLS * CELL * scale, ch = st.rows * CELL * scale;
+        st.canvas.width = cw; st.canvas.height = ch; st.overlay.width = cw; st.overlay.height = ch;
+        const ctx = st.canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.drawImage(st.img, 0, 0, st.img.width, st.img.height, 0, 0, cw, ch);
+        drawOverlay(name);
       }
 
-      function drawOverlay(name, hi){
-        const st=state[name], tw=CELL*scale, ctx=st.overlay.getContext('2d');
-        ctx.clearRect(0,0,st.overlay.width, st.overlay.height);
-        if (filter){
-          ctx.fillStyle='rgba(255,153,0,0.30)';
-          for(let i=0;i<st.tiles.length;i++){ if(st.tiles[i] && st.tiles[i].toLowerCase().includes(filter)){ const r=(i/COLS)|0,c=i%COLS; ctx.fillRect(c*tw, r*tw, tw, tw);} }
+      function cellRect(idx) { return [(idx % COLS) * tw(), Math.floor(idx / COLS) * tw()]; }
+
+      function drawOverlay(name) {
+        const st = state[name], ctx = st.overlay.getContext('2d'), T = tw();
+        ctx.clearRect(0, 0, st.overlay.width, st.overlay.height);
+        // filter matches — faint orange fill
+        if (filter) {
+          ctx.fillStyle = 'rgba(255,153,0,0.28)';
+          for (let i = 0; i < st.tiles.length; i++) if (st.tiles[i] && st.tiles[i].toLowerCase().includes(filter)) { const [x, y] = cellRect(i); ctx.fillRect(x, y, T, T); }
         }
-        if (hi>=0){ const r=(hi/COLS)|0,c=hi%COLS; ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.strokeRect(c*tw+1, r*tw+1, tw-2, tw-2); }
+        // selection — green
+        if (selAtlas === name) {
+          ctx.fillStyle = 'rgba(70,210,120,0.30)'; ctx.strokeStyle = '#46d278'; ctx.lineWidth = 1.5;
+          for (const i of selSet) { const [x, y] = cellRect(i); ctx.fillRect(x, y, T, T); ctx.strokeRect(x + 0.5, y + 0.5, T - 1, T - 1); }
+        }
+        // current cycle match — cyan
+        if (matchCur >= 0 && matches[matchCur] && matches[matchCur].name === name) {
+          const [x, y] = cellRect(matches[matchCur].idx); ctx.strokeStyle = '#3df'; ctx.lineWidth = 3; ctx.strokeRect(x + 1.5, y + 1.5, T - 3, T - 3);
+        }
+        // hover — white
+        if (hover.name === name && hover.idx >= 0) { const [x, y] = cellRect(hover.idx); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, T - 2, T - 2); }
+      }
+      function redrawAll() { for (const n of order) drawOverlay(n); }
+
+      function setFilter(f) {
+        filter = f; matches = []; matchCur = -1;
+        if (filter) for (const name of order) { const t = state[name].tiles; for (let i = 0; i < t.length; i++) if (t[i] && t[i].toLowerCase().includes(filter)) matches.push({ name, idx: i }); }
+        redrawAll(); updateCount();
+      }
+      function updateCount() {
+        const c = document.getElementById('count');
+        if (!filter) { c.textContent = ''; return; }
+        c.textContent = matchCur >= 0 ? `${matchCur + 1}/${matches.length} matches` : `${matches.length} match${matches.length === 1 ? '' : 'es'}`;
+      }
+      function updateSelInfo() { document.getElementById('selinfo').textContent = selSet.size ? `${selSet.size} selected` : ''; }
+
+      function cycleMatch(dir) {
+        if (!matches.length) { toast('no matches'); return; }
+        matchCur = (matchCur + dir + matches.length) % matches.length;
+        const m = matches[matchCur];
+        redrawAll(); updateCount();
+        // scroll the matched tile to viewport centre
+        const rect = state[m.name].overlay.getBoundingClientRect();
+        const [cx, cy] = cellRect(m.idx);
+        window.scrollTo({ top: window.scrollY + rect.top + cy - innerHeight / 2 + tw() / 2, left: Math.max(0, window.scrollX + rect.left + cx - innerWidth / 2 + tw() / 2), behavior: 'smooth' });
       }
 
-      function applyFilter(){
-        let n=0; for(const name in state){ drawOverlay(name,-1); if(filter) n+=state[name].tiles.filter(t=>t&&t.toLowerCase().includes(filter)).length; }
-        document.getElementById('count').textContent = filter ? (n+' match'+(n===1?'':'es')) : '';
+      function copySelection() {
+        if (!selAtlas || !selSet.size) { toast('nothing selected'); return; }
+        const ids = [...selSet].sort((a, b) => a - b).map(i => state[selAtlas].tiles[i]).filter(Boolean);
+        navigator.clipboard.writeText(ids.join('\n')).then(() => toast(`copied ${ids.length} id${ids.length === 1 ? '' : 's'}`));
       }
 
-      function attach(name){
-        const st=state[name], wrap=st.overlay.parentElement;
-        wrap.addEventListener('mousemove', e=>{
-          const rect=st.overlay.getBoundingClientRect(), tw=CELL*scale;
-          const c=Math.floor((e.clientX-rect.left)/tw), r=Math.floor((e.clientY-rect.top)/tw), idx=r*COLS+c;
-          if(idx<0||idx>=st.tiles.length||!st.tiles[idx]){ tooltip.style.display='none'; drawOverlay(name,-1); return; }
-          drawOverlay(name, idx);
-          tooltip.innerHTML=`<b>${st.tiles[idx]}</b><br><span style="color:#999">${name} · click to copy</span>`;
-          tooltip.style.display='block'; tooltip.style.left=(e.clientX+14)+'px'; tooltip.style.top=(e.clientY+8)+'px';
+      function attach(name) {
+        const st = state[name], wrap = st.overlay.parentElement;
+        const idxAt = e => { const r = st.overlay.getBoundingClientRect(), T = tw(); const c = Math.floor((e.clientX - r.left) / T), rr = Math.floor((e.clientY - r.top) / T); const i = rr * COLS + c; return (i >= 0 && i < st.tiles.length && st.tiles[i]) ? i : -1; };
+        wrap.addEventListener('mousemove', e => {
+          const i = idxAt(e); hover = { name, idx: i };
+          for (const n of order) if (n !== name && state[n]) { /* clear other hovers cheaply */ }
+          drawOverlay(name);
+          if (i < 0) { tooltip.style.display = 'none'; return; }
+          tooltip.innerHTML = `<b>${st.tiles[i]}</b><br><span style="color:#999">${name} · click copy · shift-click range</span>`;
+          tooltip.style.display = 'block'; tooltip.style.left = (e.clientX + 14) + 'px'; tooltip.style.top = (e.clientY + 8) + 'px';
         });
-        wrap.addEventListener('mouseleave', ()=>{ drawOverlay(name,-1); tooltip.style.display='none'; });
-        wrap.addEventListener('click', e=>{
-          const rect=st.overlay.getBoundingClientRect(), tw=CELL*scale;
-          const c=Math.floor((e.clientX-rect.left)/tw), r=Math.floor((e.clientY-rect.top)/tw), idx=r*COLS+c;
-          if(idx>=0&&idx<st.tiles.length&&st.tiles[idx]) navigator.clipboard.writeText(st.tiles[idx]).then(showCopied);
+        wrap.addEventListener('mouseleave', () => { hover = { name: null, idx: -1 }; drawOverlay(name); tooltip.style.display = 'none'; });
+        wrap.addEventListener('click', e => {
+          const i = idxAt(e); if (i < 0) return;
+          if (e.shiftKey && selAtlas === name && anchor != null) {
+            const lo = Math.min(anchor, i), hi = Math.max(anchor, i);
+            selSet.clear(); for (let k = lo; k <= hi; k++) if (state[name].tiles[k]) selSet.add(k);
+            redrawAll(); updateSelInfo(); copySelection();
+          } else {
+            selAtlas = name; anchor = i; selSet.clear(); selSet.add(i);
+            redrawAll(); updateSelInfo();
+            navigator.clipboard.writeText(st.tiles[i]).then(() => toast(st.tiles[i]));
+          }
         });
       }
 
-      async function init(){
-        const container=document.getElementById('sheets'), toc=document.getElementById('toc');
+      async function init() {
+        const container = document.getElementById('sheets'), toc = document.getElementById('toc');
         let manifest;
-        try { manifest=await (await fetch('/dev/ultica/manifest.json')).json(); }
-        catch(e){ container.innerHTML='<div class="miss">⚠ manifest.json not found — run static/dev/ultica/pack.py first.</div>'; return; }
-        for(const a of manifest.atlases){
-          const id=slug(a.name);
+        try { manifest = await (await fetch('/dev/ultica/manifest.json')).json(); }
+        catch (e) { container.innerHTML = '<div class="miss">⚠ manifest.json not found — run static/dev/ultica/pack.py first.</div>'; return; }
+        for (const a of manifest.atlases) {
+          const id = slug(a.name);
           toc.insertAdjacentHTML('beforeend', `<a href="#${id}">${a.name} (${a.count})</a>`);
-          const section=document.createElement('div'); section.className='sheet-section'; section.id=id;
-          section.innerHTML=`<div class="sheet-title">${a.name.toUpperCase()} — ${a.count}</div>`;
-          const wrap=document.createElement('div'); wrap.className='grid-wrap'; wrap.style.cursor='crosshair';
-          const can=document.createElement('canvas'); can.className='sheet-canvas';
-          const ov=document.createElement('canvas'); ov.className='overlay-canvas';
+          const section = document.createElement('div'); section.className = 'sheet-section'; section.id = id;
+          section.innerHTML = `<div class="sheet-title">${a.name.toUpperCase()} — ${a.count}</div>`;
+          const wrap = document.createElement('div'); wrap.className = 'grid-wrap'; wrap.style.cursor = 'crosshair';
+          const can = document.createElement('canvas'); can.className = 'sheet-canvas';
+          const ov = document.createElement('canvas'); ov.className = 'overlay-canvas';
           wrap.appendChild(can); wrap.appendChild(ov); section.appendChild(wrap); container.appendChild(section);
-          try { const img=await loadImage('/dev/ultica/'+a.file); state[a.name]={img,tiles:a.tiles,rows:a.rows,canvas:can,overlay:ov}; sizeAndDraw(a.name); attach(a.name); }
-          catch(err){ wrap.outerHTML='<div class="miss">⚠ '+err.message+'</div>'; }
+          try { const img = await loadImage('/dev/ultica/' + a.file); state[a.name] = { img, tiles: a.tiles, rows: a.rows, canvas: can, overlay: ov }; order.push(a.name); sizeAndDraw(a.name); attach(a.name); }
+          catch (err) { wrap.outerHTML = '<div class="miss">⚠ ' + err.message + '</div>'; }
         }
       }
       init();
