@@ -16,6 +16,7 @@
 import type { GameGrid } from '$lib/webgl/game-grid.js';
 import {
   buildGameGrid,
+  buildResourceOverlay,
   computeHiddenMaskState,
   type HiddenMaskState
 } from '$lib/webgl/fantasia-world.js';
@@ -24,6 +25,8 @@ import type { WorldTile, PlacedBuilding } from '$lib/game/core/types.js';
 
 export interface FullTerrainBuild {
   terrainGrid: GameGrid;
+  /** Transparent resource layer (trees/grass/bushes/ore) drawn over the terrain ground. */
+  resourceGrid: GameGrid;
   maskState: HiddenMaskState;
   /** Grove-glow emitters keyed "y,x" (hidden-tile emitters excluded), for incremental upsert/delete. */
   emitterMap: Map<string, LightEmitter>;
@@ -41,6 +44,7 @@ export function fullRebuildTerrain(
 ): FullTerrainBuild {
   const maskState = computeHiddenMaskState(worldMap);
   const terrainGrid = buildGameGrid(worldMap, buildings, maskState.mask);
+  const resourceGrid = buildResourceOverlay(worldMap, maskState.mask);
 
   const buildingsById = new Map<string, { x: number; y: number; sig: string }>();
   for (const b of buildings) {
@@ -56,5 +60,12 @@ export function fullRebuildTerrain(
     }
   }
 
-  return { terrainGrid, maskState, emitterMap, emitters: [...emitterMap.values()], buildingsById };
+  return {
+    terrainGrid,
+    resourceGrid,
+    maskState,
+    emitterMap,
+    emitters: [...emitterMap.values()],
+    buildingsById
+  };
 }

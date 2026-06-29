@@ -437,62 +437,13 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
     });
     return;
   }
-  // Layer 1: base subterrain
+  // Base subterrain GROUND only. Resources (trees/grass/bushes/ore) are NO LONGER baked into this
+  // grid — they render in a separate transparent overlay (applyResourceToGrid / buildResourceOverlay)
+  // so a full-colour CDDA sprite composites over the actual ground instead of a flat near-black bg.
   const sub = SUBTERRAINS[tile.subType] ?? SUBTERRAIN_FALLBACK;
-  // Layer 2: resource — overrides subterrain visuals when an active resource is present
-  const hasResources = tile.resources && Object.keys(tile.resources).length > 0;
-  let char: string;
-  let fg: [number, number, number];
-  let bg: [number, number, number];
-  if (hasResources) {
-    const activeEntry = Object.entries(tile.resources!).find(([, amt]) => amt > 0);
-    // §F: a depleted node (count 0) may still be STANDING — foraging takes only branches/berries, the
-    // plant stays put with a `growth` entry while its yield regrows; felling/dig/mine DROPS the growth
-    // entry (those fall through to dirt). When nothing is pickable, draw the most-grown standing
-    // resource dimmed by how grown it is, so a foraged tree still reads as a living tree.
-    let resKey: string | undefined = activeEntry?.[0];
-    let brightness = 1;
-    if (resKey) {
-      const partial = Object.keys(tile.resourceCooldowns ?? {}).some((k) =>
-        k.startsWith(resKey! + ':')
-      );
-      if (partial) brightness = 0.65;
-    } else {
-      let bestGrowth = 0;
-      for (const [id, g] of Object.entries(tile.growth ?? {})) {
-        if (g > bestGrowth) {
-          bestGrowth = g;
-          resKey = id;
-        }
-      }
-      // §F gradual regrow: a wild plant reset to ~0% growth reads as BARE SOIL until it climbs past the
-      // visible threshold — only then does the (dimmed) plant glyph fade back in. Below it, draw the
-      // subterrain so a freshly-cut grass/grain tile shows the ground, not a ghost glyph.
-      if (resKey && bestGrowth < RESOURCE_VISIBLE_GROWTH) resKey = undefined;
-      else if (resKey) brightness = Math.max(0.4, bestGrowth / 100);
-    }
-    const resDef = resKey ? resourceObjectService.getById(resKey) : undefined;
-    if (resDef && resDef.chars.length > 0) {
-      // Glyph is picked by tile position from the def's char range. Glowing (magical) groves add a salt
-      // so they draw DIFFERENT glyphs from the same range than the ordinary trees would — bump
-      // GLOWING_GROVE_SPRITE_SALT to reroll the magical-tree sprites without touching normal trees.
-      const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;
-      const h = ((tile.x * 1619 + tile.y * 31337 + salt) >>> 0) % resDef.chars.length;
-      char = resDef.chars[h];
-      fg = [resDef.fg[0] * brightness, resDef.fg[1] * brightness, resDef.fg[2] * brightness];
-      // Background ALWAYS from the subterrain (a resource is a glyph over uniform terrain) — using
-      // resDef.bg leaked the resource colour and lingered after harvest while on cooldown.
-      bg = sub.bg as [number, number, number];
-    } else {
-      char = pickChar(sub, tile.x, tile.y);
-      fg = sub.fg as [number, number, number];
-      bg = sub.bg as [number, number, number];
-    }
-  } else {
-    char = pickChar(sub, tile.x, tile.y);
-    fg = sub.fg as [number, number, number];
-    bg = sub.bg as [number, number, number];
-  }
+  let char = pickChar(sub, tile.x, tile.y);
+  let fg: [number, number, number] = sub.fg as [number, number, number];
+  let bg: [number, number, number] = sub.bg as [number, number, number];
   // Ice glaze (SEASONS_WEATHER): a pale-blue sheen, only on wet-capable tiles past the visible threshold.
   // FULL strength on open water (a frozen pond reads as blue glass); cut to a THIRD on damp ground, where
   // it's just a faint rime — not the quasi-snow it used to read as. Drawn BENEATH snow.
@@ -558,6 +509,71 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
     background: { r: bg[0], g: bg[1], b: bg[2] },
     position: { x: tile.x, y: tile.y }
   });
+}
+
+/**
+ * Resource (tree / grass / bush / ore) glyph for ONE tile, painted into the TRANSPARENT resource
+ * overlay that renders ABOVE the terrain ground (terrain → resources → buildings → items → pawns).
+ * A full-colour CDDA sprite therefore composites over the real ground instead of a flat near-black bg.
+ * Clears the cell (space glyph) when no visible resource so harvest/regrow deltas blank it. The bg is
+ * irrelevant here — the resource pass is glyph-only (alpha-blended).
+ */
+export function applyResourceToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boolean[][]): void {
+  const clear = () =>
+    grid.setTile(tile.x, tile.y, {
+      char: ' ',
+      foreground: { r: 0, g: 0, b: 0 },
+      background: { r: 0, g: 0, b: 0 },
+      position: { x: tile.x, y: tile.y }
+    });
+  if (hiddenMask[tile.y]?.[tile.x]) return clear();
+  const hasResources = tile.resources && Object.keys(tile.resources).length > 0;
+  if (!hasResources) return clear();
+  const activeEntry = Object.entries(tile.resources!).find(([, amt]) => amt > 0);
+  let resKey: string | undefined = activeEntry?.[0];
+  let brightness = 1;
+  if (resKey) {
+    const partial = Object.keys(tile.resourceCooldowns ?? {}).some((k) => k.startsWith(resKey! + ':'));
+    if (partial) brightness = 0.65;
+  } else {
+    // depleted-but-standing: draw the most-grown plant dimmed; below the visible threshold show nothing.
+    let bestGrowth = 0;
+    for (const [id, g] of Object.entries(tile.growth ?? {})) {
+      if (g > bestGrowth) {
+        bestGrowth = g;
+        resKey = id;
+      }
+    }
+    if (resKey && bestGrowth < RESOURCE_VISIBLE_GROWTH) resKey = undefined;
+    else if (resKey) brightness = Math.max(0.4, bestGrowth / 100);
+  }
+  const resDef = resKey ? resourceObjectService.getById(resKey) : undefined;
+  if (!resDef || resDef.chars.length === 0) return clear();
+  const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;
+  const h = ((tile.x * 1619 + tile.y * 31337 + salt) >>> 0) % resDef.chars.length;
+  grid.setTile(tile.x, tile.y, {
+    char: resDef.chars[h],
+    foreground: {
+      r: resDef.fg[0] * brightness,
+      g: resDef.fg[1] * brightness,
+      b: resDef.fg[2] * brightness
+    },
+    background: { r: 0, g: 0, b: 0 },
+    position: { x: tile.x, y: tile.y }
+  });
+}
+
+/** Build the transparent resource overlay (trees/grass/bushes/ore drawn over the terrain ground).
+ *  Kept SPARSE — only tiles that carry a resource get a cell, so the renderer's viewport cull
+ *  (getVisibleTiles, O(viewport)) and memory stay cheap. */
+export function buildResourceOverlay(worldMap: WorldTile[][], hiddenMask?: boolean[][]): GameGrid {
+  const grid = new GameGrid();
+  const mask = hiddenMask ?? computeHiddenMask(worldMap);
+  for (const row of worldMap)
+    for (const tile of row)
+      if (tile.resources && Object.keys(tile.resources).length > 0)
+        applyResourceToGrid(grid, tile, mask);
+  return grid;
 }
 
 export function buildGameGrid(

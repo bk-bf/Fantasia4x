@@ -20,15 +20,9 @@ JSON_OUT = os.path.join(ROOT, "src/lib/game/core/mshock-atlas.json")
 CW, CH, COLS = 32, 64, 16
 
 refs = set()
-resource_tiles = set()   # tiles used by resources.jsonc → bake a ground patch under them so their
-                         # transparent pixels don't reveal the near-black subterrain bg (they're drawn
-                         # baked into the single terrain grid, not a transparent overlay).
 for f in ("subterrains", "resources", "buildings", "creatures", "items"):
     s = open(os.path.join(DB, f + ".jsonc")).read()
-    found = re.findall(r'"sheet"\s*:\s*"mshock"\s*,\s*"tile"\s*:\s*"([^"]+)"', s)
-    refs.update(found)
-    if f == "resources":
-        resource_tiles.update(found)
+    refs.update(re.findall(r'"sheet"\s*:\s*"mshock"\s*,\s*"tile"\s*:\s*"([^"]+)"', s))
 refs = sorted(refs)
 
 stem2path = {}
@@ -43,19 +37,9 @@ missing = [t for t in refs if t not in stem2path]
 if missing:
     print(f"WARN {len(missing)} referenced tiles missing as files:", missing[:12])
 
-# Ground patch baked under resource sprites (bottom 32px) so they read as plant-on-grass, not
-# plant-on-black. t_grass preferred; fall back to first dirt/grass-ish ground we can find.
-GROUND = None
-for g in ("t_grass", "t_grass_summer", "t_dirt_unconnected"):
-    if g in stem2path:
-        gi = Image.open(stem2path[g]).convert("RGBA")
-        if gi.size != (CW, CW): gi = gi.resize((CW, CW), Image.NEAREST)
-        GROUND = gi; break
-
 rows = (len(usable) + COLS - 1) // COLS
 sheet = Image.new("RGBA", (COLS * CW, rows * CH), (0, 0, 0, 0))
 tiles = []
-baked = 0
 for i, stem in enumerate(usable):
     try:
         im = Image.open(stem2path[stem]).convert("RGBA")
@@ -65,26 +49,14 @@ for i, stem in enumerate(usable):
         im.thumbnail((CW, CH), Image.NEAREST)   # fit, preserve aspect
     w, h = im.width, im.height
     col, row = i % COLS, i // COLS
-    cellX, cellBottom = col * CW, row * CH + CH
-    is_res = stem in resource_tiles and GROUND is not None
-    if is_res:
-        # bake a 32x32 grass patch at the cell bottom, then the sprite over it; the tile now spans the
-        # full 32 width and at least 32 tall (taller if the sprite overhangs upward).
-        sheet.alpha_composite(GROUND, (cellX, cellBottom - CW))
-        sx = cellX + (CW - w) // 2
-        sheet.alpha_composite(im, (sx, cellBottom - h))
-        tw_ = CW
-        th_ = max(h, CW)
-        x, y = cellX, cellBottom - th_
-        baked += 1
-    else:
-        w_ = w; x = cellX + (CW - w) // 2; y = cellBottom - h; tw_, th_ = w, h
-        sheet.alpha_composite(im, (x, y))
-    tiles.append([stem, x, y, tw_, th_])
+    x = col * CW + (CW - w) // 2          # horizontally centred
+    y = row * CH + (CH - h)              # BOTTOM-anchored in the 32x64 cell
+    sheet.alpha_composite(im, (x, y))
+    tiles.append([stem, x, y, w, h])
 
 os.makedirs(os.path.dirname(PNG_OUT), exist_ok=True)
 sheet.save(PNG_OUT)
 json.dump({"cell_w": CW, "cell_h": CH, "cols": COLS, "tiles": tiles}, open(JSON_OUT, "w"))
 tall = sum(1 for t in tiles if t[4] > CW)
-print(f"wrote {PNG_OUT}  ({COLS}x{rows} cells of {CW}x{CH}, {len(tiles)} tiles, {tall} tall>{CW}px, {baked} ground-baked)")
+print(f"wrote {PNG_OUT}  ({COLS}x{rows} cells of {CW}x{CH}, {len(tiles)} tiles, {tall} tall>{CW}px)")
 print(f"wrote {JSON_OUT}")
