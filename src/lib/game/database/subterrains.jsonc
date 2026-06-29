@@ -80,7 +80,9 @@
     "displayName" : "Savanna",
     "walkable"    : true,
     "movementCost": 1.2,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_grass"}, {"sheet": "mshock", "tile": "t_grass_center2"}, {"sheet": "mshock", "tile": "t_grass_center3"}, {"sheet": "mshock", "tile": "t_grass_center4"} ],  // dirt tile — savanna resource paints the visual
+    // autotile: dry sandy savanna ground feathers into the surrounding grass via t_sand_<variant>.
+    "autotile"    : "t_sand",
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_sand_unconnected"}, {"sheet": "mshock", "tile": "t_sand_center2"}, {"sheet": "mshock", "tile": "t_sand_center3"}, {"sheet": "mshock", "tile": "t_sand_center4"} ],
     "fg"          : "#754d17",
     "bg"          : "#140f08",
     "biomes"      : { "plains": [0.7, null] }
@@ -163,7 +165,9 @@
     "displayName" : "Moss",
     "walkable"    : true,
     "movementCost": 1.5,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_grass"}, {"sheet": "mshock", "tile": "t_grass_center2"}, {"sheet": "mshock", "tile": "t_grass_center3"}, {"sheet": "mshock", "tile": "t_grass_center4"} ],  // dirt tile — moss resource paints the visual
+    // autotile: moss feathers into surrounding ground via Ultica's t_moss_<variant> sprites.
+    "autotile"    : "t_moss",
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_moss_unconnected"}, {"sheet": "mshock", "tile": "t_moss_center2"} ],
     "fg"          : "#754d17",
     "bg"          : "#140f08",
     "biomes"      : { "swamp": [0.5, 0.7] }
@@ -173,7 +177,7 @@
     "displayName" : "Mud",
     "walkable"    : true,
     "movementCost": 3,
-    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — mud resource paints the visual
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_mud"} ],
     "fg"          : "#754d17",
     "bg"          : "#140f08",
     "biomes"      : { "swamp": [null, -0.2] }
@@ -183,8 +187,9 @@
     "displayName" : "Bog",
     "walkable"    : true,
     "movementCost": 3.5,
-    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — bog resource paints the visual
-    "fg"          : "#754d17",
+    // t_mud_bog: a murky-green hue-shifted copy of t_mud, baked at pack time (pack_atlas.py BOG_TINT).
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_mud_bog"} ],
+    "fg"          : "#4d5a2a",
     "bg"          : "#140f08",
     "biomes"      : { "swamp": [-0.2, 0.2] }
   },
@@ -193,7 +198,10 @@
     "displayName" : "Clay",
     "walkable"    : true,
     "movementCost": 2.8,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_clay"} ],  // dirt tile — clay resource paints the visual
+    // autotile: clay feathers into surrounding ground via Ultica's t_clay_<variant> sprites;
+    // t_claymound is the unconnected accent (a raised clay hummock) in the fallback pool.
+    "autotile"    : "t_clay",
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_clay_unconnected"}, {"sheet": "mshock", "tile": "t_claymound"} ],
     "fg"          : "#754d17",
     "bg"          : "#140f08",
     "biomes"      : { "swamp": [0.2, 0.5] }
@@ -203,7 +211,9 @@
     "displayName" : "Quicksand",
     "walkable"    : true,
     "movementCost": 25,
-    "charSpans"   : [ {"literal": "."} ],
+    // autotile: sandy quicksand pit feathers into the surrounding ground via t_sand_<variant>.
+    "autotile"    : "t_sand",
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_sand_unconnected"}, {"sheet": "mshock", "tile": "t_sand_center2"}, {"sheet": "mshock", "tile": "t_sand_center3"}, {"sheet": "mshock", "tile": "t_sand_center4"} ],
     "fg"          : "#b38540",
     "bg"          : "#140f08",
     "biomes"      : { "swamp": [0.7, null] }
@@ -216,7 +226,11 @@
     "displayName" : "Shallow Water",
     "walkable"    : true,
     "movementCost": 2.5,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_swater_dp"} ],
+    // CDDA water: a multitile autotile drawn over a land bg — it feathers into the shore via the
+    // t_swater_dp_<variant> sprites; `animated` cycles interior tiles through the 4 center frames.
+    "autotile"    : "t_water_sh",
+    "animated"    : true,
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_water_sh_unconnected"} ],
     "fg"          : "#338569",
     "bg"          : "#0a1214"
   },
@@ -225,7 +239,10 @@
     "displayName" : "Water",
     "walkable"    : false,
     "movementCost": 0,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_water_dp"} ],
+    // Deep water: autotiles into the shore (t_water_dp_<variant>); `animated` cycles the 4 center frames.
+    "autotile"    : "t_water_dp",
+    "animated"    : true,
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_water_dp_unconnected"} ],
     "fg"          : "#295c8c",
     "bg"          : "#0a1214"
   },
@@ -243,7 +260,10 @@
     "displayName" : "Riverbank",
     "walkable"    : true,
     "movementCost": 1.4,
-    "charSpans"   : [ {"literal": "#"} ],
+    // CDDA has no dedicated riverbank terrain — banks are sand at the water's edge. t_sand autotiles
+    // so the sandy bank feathers between the water and the surrounding land.
+    "autotile"    : "t_sand",
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_sand_unconnected"}, {"sheet": "mshock", "tile": "t_sand_center2"}, {"sheet": "mshock", "tile": "t_sand_center3"}, {"sheet": "mshock", "tile": "t_sand_center4"} ],
     "fg"          : "#947021",
     "bg"          : "#140f08",
     "biomes"      : { "river": [null, null] }

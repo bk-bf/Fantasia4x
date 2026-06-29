@@ -469,7 +469,10 @@ export function applyTileToGrid(
   grid: GameGrid,
   tile: WorldTile,
   hiddenMask: boolean[][],
-  worldMap?: WorldTile[][]
+  worldMap?: WorldTile[][],
+  /** Animation frame 0–3 for `animated` water: swaps the center sprite to center2/3/4 for a shimmer
+   *  (CDDA water carries 4 weighted center frames). 0 = base center; ignored for non-center variants. */
+  waterFrame = 0
 ): void {
   // Hidden interior (buried rock or an enclosed pocket) → blank dirt-coloured tile.
   if (hiddenMask[tile.y]?.[tile.x]) {
@@ -490,7 +493,11 @@ export function applyTileToGrid(
   // sprite is missing or no worldMap (neighbour info) was passed.
   let char: string;
   if (sub.autotile && worldMap) {
-    const v = autotileVariant(tile, worldMap);
+    let v = autotileVariant(tile, worldMap);
+    // Animated water: an interior (center) tile cycles center → center2/3/4 for the surface shimmer.
+    if (sub.animated && waterFrame > 0 && v === 'center' && sub.autotile['center' + (waterFrame + 1)]) {
+      v = 'center' + (waterFrame + 1);
+    }
     char = sub.autotile[v] ?? sub.autotile.center ?? pickChar(sub, tile.x, tile.y);
   } else {
     char = pickChar(sub, tile.x, tile.y);

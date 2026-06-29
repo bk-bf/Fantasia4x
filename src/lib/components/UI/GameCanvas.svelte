@@ -284,9 +284,45 @@
   // nothing. Unfrozen (running + zoomed in) draws every frame exactly as before — normal play unchanged.
   let _renderDirty = true;
   const FREEZE_TILE_PX = 4; // below this on-screen tile size, entity motion is imperceptible → freeze
+  // Animated water (CDDA shimmer): cycle interior water tiles through the 4 autotile center frames at a
+  // low frequency. Only VISIBLE `animated` subterrain tiles are re-stamped (+ passed as setGrid dirty
+  // tiles, so only their chunks rebuild) — bounded, off the per-tick sim path. See ENGINE-PERFORMANCE §E.
+  let _waterFrame = 0;
+  let _waterAnimAt = 0;
+  const WATER_ANIM_MS = 550; // ~2.2s for a full 4-frame loop
   const markRenderDirty = () => {
     _renderDirty = true;
   };
+
+  // Advance the animated-water shimmer: re-stamp the VISIBLE interior tiles of `animated` subterrains
+  // (deep + shallow water) to the next autotile center frame, then hand the renderer just those tiles as
+  // dirty so only their chunks rebuild. Throttled to WATER_ANIM_MS and skipped while frozen/zoomed out.
+  function animateWater(now: number): void {
+    if (now - _waterAnimAt < WATER_ANIM_MS) return;
+    _waterAnimAt = now;
+    if (!renderer || !_terrainGrid || !_maskState || !worldMap || tileWidth < FREEZE_TILE_PX) return;
+    _waterFrame = (_waterFrame + 1) % 4;
+    const mask = _maskState.mask;
+    const minX = Math.max(0, viewX);
+    const minY = Math.max(0, viewY);
+    const maxX = Math.min((worldMap[0]?.length ?? 0) - 1, viewX + Math.ceil((container?.clientWidth ?? 0) / tileWidth));
+    const maxY = Math.min(worldMap.length - 1, viewY + Math.ceil((container?.clientHeight ?? 0) / tileHeight));
+    const dirty: TileCoord[] = [];
+    for (let y = minY; y <= maxY; y++) {
+      const row = worldMap[y];
+      if (!row) continue;
+      for (let x = minX; x <= maxX; x++) {
+        const t = row[x];
+        if (!t || !SUBTERRAINS[t.subType]?.animated || mask[y]?.[x]) continue;
+        applyTileToGrid(_terrainGrid, t, mask, worldMap, _waterFrame);
+        dirty.push({ x, y });
+      }
+    }
+    if (dirty.length) {
+      renderer.setGrid(_terrainGrid, dirty);
+      _renderDirty = true;
+    }
+  }
 
   // Viewport offset in tile coordinates
   let viewX = 0;
@@ -3410,6 +3446,8 @@
         _lastTerrainBuild = now;
         redrawOverlayNow();
       }
+      // Animated water shimmer (low-frequency, viewport-culled — see animateWater).
+      animateWater(now);
       // Render-on-demand: when the scene is FROZEN skip the GL draw unless something visible changed.
       // The WebGL canvas retains its last frame, so a static map just stays on screen at ~0 render
       // cost. FROZEN = map-generation mode (a static terrain viewer) OR zoomed out past FREEZE_TILE_PX

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildGameGrid } from './fantasia-world';
+import { buildGameGrid, applyTileToGrid, computeHiddenMask } from './fantasia-world';
+import { GameGrid } from './game-grid';
 import { SUBTERRAINS } from '$lib/game/core/Terrains';
 import type { WorldTile } from '$lib/game/core/types';
 
@@ -63,5 +64,35 @@ describe('dirt autotile variant selection', () => {
       [t(0, 2, 'grass'), t(1, 2, 'dirt'), t(2, 2, 'grass')]
     ]);
     expect(g.getTile(1, 1)!.char).toBe(AT.edge_ns);
+  });
+});
+
+describe('animated water (CDDA shimmer)', () => {
+  const WATER = SUBTERRAINS['water'];
+  it('water is an animated autotile with 4 center frames', () => {
+    expect(WATER.animated).toBe(true);
+    expect(WATER.autotile?.center).toBeTruthy();
+    expect(WATER.autotile?.center2).toBeTruthy();
+    expect(WATER.autotile?.center3).toBeTruthy();
+    expect(WATER.autotile?.center4).toBeTruthy();
+  });
+
+  it('an interior water tile cycles center → center2/3/4 by frame', () => {
+    const world: WorldTile[][] = [
+      [t(0, 0, 'water'), t(1, 0, 'water'), t(2, 0, 'water')],
+      [t(0, 1, 'water'), t(1, 1, 'water'), t(2, 1, 'water')],
+      [t(0, 2, 'water'), t(1, 2, 'water'), t(2, 2, 'water')]
+    ];
+    const mask = computeHiddenMask(world);
+    const at = WATER.autotile!;
+    const frameChar = (f: number) => {
+      const g = new GameGrid();
+      applyTileToGrid(g, world[1][1], mask, world, f);
+      return g.getTile(1, 1)!.char;
+    };
+    expect(frameChar(0)).toBe(at.center);
+    expect(frameChar(1)).toBe(at.center2);
+    expect(frameChar(2)).toBe(at.center3);
+    expect(frameChar(3)).toBe(at.center4);
   });
 });

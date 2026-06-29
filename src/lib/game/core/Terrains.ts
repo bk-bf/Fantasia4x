@@ -49,10 +49,12 @@ export const AUTOTILE_VARIANTS = [
   't_connection_n', 't_connection_e', 't_connection_s', 't_connection_w', 'unconnected'
 ] as const;
 
-/** Build variant→glyph map for an autotile ground (base "t_dirt" → t_dirt_center, t_dirt_edge_ns, …). */
+/** Build variant→glyph map for an autotile ground (base "t_dirt" → t_dirt_center, t_dirt_edge_ns, …).
+ *  Also picks up the extra center frames (center2/3/4) when present — CDDA water carries 4 weighted
+ *  center sprites the renderer cycles for an animated surface (see SubterrainDef.animated). */
 function buildAutotileChars(base: string): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const v of AUTOTILE_VARIANTS) {
+  for (const v of [...AUTOTILE_VARIANTS, 'center2', 'center3', 'center4']) {
     const c = mshockChar(`${base}_${v}`);
     if (c) out[v] = c;
   }
@@ -87,6 +89,9 @@ export interface SubterrainDef {
   /** When set, this ground autotiles: variant suffix → glyph char. The renderer picks the variant by
    *  cardinal-neighbour connectivity (see applyTileToGrid) so dirt feathers into the surrounding grass. */
   autotile?: Record<string, string>;
+  /** Animated surface (water): the low-frequency render loop cycles interior tiles through the autotile
+   *  center frames (center→center2/3/4) for a shimmer. Only `animated` subterrains are re-stamped. */
+  animated?: boolean;
   /** Per-biome noise threshold ranges [min, max] where null = unbounded. */
   biomes?: Record<string, [number | null, number | null]>;
 }
@@ -332,6 +337,7 @@ export const SUBTERRAINS: Record<string, SubterrainDef> = Object.fromEntries(
       bg: hexToRgb01(sub.bg, [0.03, 0.03, 0.03]),
       chars: resolveCharSpans(sub.charSpans as CharSpan[]),
       autotile: sub.autotile ? buildAutotileChars(sub.autotile as string) : undefined,
+      animated: sub.animated as boolean | undefined,
       biomes: sub.biomes as Record<string, [number | null, number | null]> | undefined
     } satisfies SubterrainDef
   ])

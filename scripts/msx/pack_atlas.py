@@ -30,7 +30,7 @@ MSHOCK, ULTICA = index(MSHOCK_SRC), index(ULTICA_SRC)
 # Repackaged single-crop tiles (quarter_crops.py): crop_<type>_<stage>. Take priority for crop_* names.
 CROPS = index(os.path.join(ROOT, "scripts/msx/crops"))
 
-GROUND = re.compile(r"^t_(dirt|grass)(_|$)")
+GROUND = re.compile(r"^t_(dirt|grass|sand|moss|clay|claymound|mud|water_dp|water_sh)(_|$)")
 TREEBUSH = re.compile(r"^t_(shrub|tree|fern|underbrush)(_|$)")
 def resolve(stem):
     if stem in CROPS: return CROPS[stem]
@@ -46,14 +46,32 @@ refs = set()
 for f in ("subterrains", "resources", "buildings", "creatures", "items"):
     refs.update(re.findall(r'"sheet"\s*:\s*"mshock"\s*,\s*"tile"\s*:\s*"([^"]+)"',
                            open(os.path.join(DB, f + ".jsonc")).read()))
-# autotile bases → every variant sprite
+# autotile bases → every variant sprite, plus the extra center frames (center2/3/4) used for the
+# animated-water shimmer and for plain center variety (only those that exist in the set are kept).
 for base in re.findall(r'"autotile"\s*:\s*"([^"]+)"', open(os.path.join(DB, "subterrains.jsonc")).read()):
     refs.add(base)
     refs.update(f"{base}_{v}" for v in AUTOTILE_VARIANTS)
+    refs.update(f"{base}_center{n}" for n in (2, 3, 4))
 refs = sorted(refs)
 
-usable = [t for t in refs if resolve(t)]
-missing = [t for t in refs if not resolve(t)]
+# t_mud_bog: a murky-green hue-shift of t_mud, baked here (full-colour sprites ignore the fg tint, so
+# the bog hue must live in the pixels). Per-channel multiply pushes the brown mud toward olive/green.
+BOG_TINT = (0.60, 0.95, 0.45)
+def make_bog():
+    src = ULTICA.get("t_mud") or MSHOCK.get("t_mud")
+    if not src: return None
+    im = Image.open(src).convert("RGBA"); px = im.load()
+    for y in range(im.height):
+        for x in range(im.width):
+            r, g, b, a = px[x, y]
+            px[x, y] = (int(r * BOG_TINT[0]), int(g * BOG_TINT[1]), int(b * BOG_TINT[2]), a)
+    return im
+SYNTH = {}
+_bog = make_bog()
+if _bog: SYNTH["t_mud_bog"] = _bog
+
+usable = [t for t in refs if resolve(t) or t in SYNTH]
+missing = [t for t in refs if not resolve(t) and t not in SYNTH]
 if missing:
     print(f"WARN {len(missing)} tiles missing in both sets:", missing[:12])
 
@@ -64,7 +82,7 @@ MAXPX, ATLAS_W = 96, 512
 loaded = []
 for stem in usable:
     try:
-        im = Image.open(resolve(stem)).convert("RGBA")
+        im = SYNTH[stem] if stem in SYNTH else Image.open(resolve(stem)).convert("RGBA")
     except Exception as e:
         print("skip", stem, e); continue
     if im.width > MAXPX or im.height > MAXPX:

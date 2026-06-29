@@ -73,9 +73,12 @@ TREES = {
 MAP = {
   # ── subterrains: fertile/forest ground = GRASS (plants layer on top); barren/debris = bare dirt ──
   "dirt": DIRT, "tree_stump": DIRT, "fallen_logs": DIRT, "dead_trees": DIRT,
-  "grass": GRASS, "deep_grass": GRASS, "tall_grass": GRASS, "terra_preta": GRASS, "savanna": GRASS,
+  "grass": GRASS, "deep_grass": GRASS, "tall_grass": GRASS, "terra_preta": GRASS,
   "tree": GRASS, "bush": GRASS, "scrubland": ["t_grass_dead_unconnected", "t_grass"], "wildflowers": GRASS,
-  "moss": GRASS, "mushroom_patch": GRASS,
+  "mushroom_patch": GRASS,
+  # autotile grounds (autotile field set manually in subterrains.jsonc, like dirt) — charSpans = fallback pool
+  "savanna": ["t_sand_unconnected", "t_sand_center2", "t_sand_center3", "t_sand_center4"],
+  "moss": ["t_moss_unconnected", "t_moss_center2"],
   # ── resources: the green / plants painted ON TOP of soil ──
   "grass_patch": GRASS, "tall_grass_patch": GRASS_TALL, "deep_grass_patch": GRASS_LONG,
   "wildflower_patch": FLOWERS, "scrub_patch": ["t_grass_dead_unconnected", "t_grass"], "berry_bush": BERRY, "wild_grapevine": GRAPE,
