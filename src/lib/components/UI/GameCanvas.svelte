@@ -12,7 +12,6 @@
     isFloorBuilding,
     generatePlaceholderGrid,
     updateHiddenMaskAt,
-    FROST_BLUR_R,
     type HiddenMaskState,
     type TileCoord
   } from '$lib/webgl/fantasia-world.js';
@@ -225,10 +224,6 @@
   // placement, blueprint preview) repaints ONLY the affected tiles, driven by the changed-coord channel
   // (mainTileDeltas) — never a whole-map scan or rebuild (the FPS crater that ADR-026 forbids).
   let _terrainGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
-  // Cells that currently RENDER snow/ice (incl. the blurred bleed past a sheet's edge), keyed y*W+x.
-  // The edge blur reads neighbours, so when a frosted cell changes we must repaint the ring around it;
-  // this set tells the delta path which cells are frost-relevant (so frost-free seasons cost nothing).
-  let _frostTiles = new Set<number>();
   let _terrainGridWorldMapRef: unknown; // worldMap ARRAY ref of the last full build (new ref ⇒ new map ⇒ full rebuild)
   // Incremental building diff: last-painted completed buildings keyed by id (pos + visual sig), so a
   // placement/removal/deconstruct repaints just the changed footprints (single cells).
@@ -2053,7 +2048,6 @@
   function _fullRebuildTerrain(): void {
     const built = fullRebuildTerrain(worldMap, buildings, _buildingSig);
     _terrainGrid = built.terrainGrid;
-    _frostTiles = built.frostTiles;
     _maskState = built.maskState;
     hiddenMask = _maskState.mask;
     _terrainGridWorldMapRef = worldMap;
@@ -2131,45 +2125,6 @@
       return;
     }
 
-    // Snow/ice EDGE BLUR bleeds frost ~FROST_BLUR_R tiles past a sheet's border, and the blur reads
-    // neighbours — so when a frosted (or previously-frosted) cell changes, the ring around it must
-    // repaint too (and a cleared cell must wipe its bleed halo). Only runs when frost is present, so
-    // frost-free seasons add nothing; per-cell gating keeps the ring to genuinely frost-relevant cells.
-    const cellHasFrost = (x: number, y: number): boolean => {
-      const t = worldMap[y]?.[x];
-      return (
-        !!t && ((t.snow ?? 0) > 0 || ((t.walkable || t.type === 'water') && (t.ice ?? 0) >= 8))
-      );
-    };
-    let frostActive = _frostTiles.size > 0;
-    if (!frostActive) {
-      for (const c of deltas)
-        if (cellHasFrost(c.x, c.y)) {
-          frostActive = true;
-          break;
-        }
-    }
-    if (frostActive) {
-      const H = worldMap.length;
-      const R = FROST_BLUR_R;
-      const ring: number[] = [];
-      for (const key of dirty) {
-        const x0 = key % W;
-        const y0 = (key / W) | 0;
-        if (!cellHasFrost(x0, y0) && !_frostTiles.has(key)) continue; // not frost-relevant → no ring
-        for (let dy = -R; dy <= R; dy++) {
-          const ny = y0 + dy;
-          if (ny < 0 || ny >= H) continue;
-          for (let dx = -R; dx <= R; dx++) {
-            const nx = x0 + dx;
-            if (nx < 0 || nx >= W) continue;
-            ring.push(ny * W + nx);
-          }
-        }
-      }
-      for (const k of ring) dirty.add(k);
-    }
-
     // ── Repaint terrain for each affected cell, re-overlay any building/blueprint on it, track glows ──
     let emittersChanged = false;
     for (const key of dirty) {
@@ -2177,20 +2132,18 @@
       const y = (key / W) | 0;
       const t = worldMap[y]?.[x];
       if (!t) continue;
-      const frosted = applyTileToGrid(_terrainGrid, t, hiddenMask, worldMap); // worldMap → snow/ice blur
-      if (frosted) _frostTiles.add(key);
-      else _frostTiles.delete(key);
+      applyTileToGrid(_terrainGrid, t, hiddenMask);
       if (_updateEmitterAt(y, x, t)) emittersChanged = true;
     }
     // ROOFS LAST (same as buildGameGrid): a roof only shades the cell beneath, so paint it after the
     // terrain repaint AND any floor/building sharing the tile.
     for (const b of buildings) {
       if (b.status === 'complete' && !isRoofBuilding(b) && dirty.has(b.y * W + b.x))
-        applyBuildingToGrid(_terrainGrid, b);
+        applyBuildingToGrid(_terrainGrid, b, worldMap[b.y]?.[b.x]);
     }
     for (const b of buildings) {
       if (b.status === 'complete' && isRoofBuilding(b) && dirty.has(b.y * W + b.x))
-        applyBuildingToGrid(_terrainGrid, b);
+        applyBuildingToGrid(_terrainGrid, b, worldMap[b.y]?.[b.x]);
     }
     _blueprintRoofSupport = null; // rebuild the roof-support predicate fresh for this redraw
     for (const k of curBlueprint) {
