@@ -2220,7 +2220,7 @@
     "displayName"     : "Savanna",
     "subterrain"      : "savanna",
     "walkable"        : true,
-    "charSpans"       : [ {"sheet": "mshock", "tile": "t_dirt_unconnected"}, {"sheet": "mshock", "tile": "t_dirt_center2"}, {"sheet": "mshock", "tile": "t_dirt_center3"}, {"sheet": "mshock", "tile": "t_dirt_center4"} ],
+    "charSpans"       : [ {"sheet": "mshock", "tile": "t_grass"}, {"sheet": "mshock", "tile": "t_grass_center2"}, {"sheet": "mshock", "tile": "t_grass_center3"}, {"sheet": "mshock", "tile": "t_grass_center4"} ],
     "fg"              : "#d1a326",
     "bg"              : "#140f08",
     "spawn"           : { "subterrains": {"savanna": 0.92} },

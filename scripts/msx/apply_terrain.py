@@ -18,11 +18,12 @@ FERN = ["t_fern", "t_underbrush"]
 
 # def id -> ordered list of mshock tiles (variety pool)
 MAP = {
-  # ── subterrains: soil ladder + forest/plain ground = BARE earth/forest floor ──
-  "dirt": DIRT, "grass": DIRT, "deep_grass": DIRT, "tall_grass": DIRT, "terra_preta": DIRT, "savanna": DIRT,
+  # ── subterrains: fertile/forest ground = GRASS (plants layer on top); barren/debris = bare dirt ──
+  "dirt": DIRT, "tree_stump": DIRT, "fallen_logs": DIRT, "dead_trees": DIRT,
+  "grass": GRASS, "deep_grass": GRASS, "tall_grass": GRASS, "terra_preta": GRASS, "savanna": GRASS,
   "tree": GRASS,            # Forest Floor ground (the tree itself is a resource on top)
-  "bush": SHRUB, "scrubland": ["t_shrub", "t_grass_dead_unconnected"], "wildflowers": GRASS,
-  "tree_stump": DIRT, "fallen_logs": DIRT, "dead_trees": DIRT, "moss": GRASS, "mushroom_patch": GRASS,
+  "bush": GRASS, "scrubland": ["t_shrub", "t_grass_dead_unconnected"], "wildflowers": GRASS,
+  "moss": GRASS, "mushroom_patch": GRASS,
   # ── resources: the green / plants painted ON TOP of soil ──
   "grass_patch": GRASS, "tall_grass_patch": GRASS_TALL, "deep_grass_patch": GRASS_LONG,
   "wildflower_patch": GRASS, "scrub_patch": SHRUB, "berry_bush": BERRY, "wild_grapevine": ["t_shrub_grape"],
