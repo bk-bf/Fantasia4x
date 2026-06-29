@@ -27,6 +27,14 @@ const ICE_BLUE: [number, number, number] = [0.78, 0.88, 0.98];
 /** Below this %, ice is hidden (mirrors EnvironmentService.ICE_VISIBLE) so a stray rime doesn't glaze tiles. */
 const ICE_VISIBLE_RENDER = 8;
 
+/** Snow-cover sprites (bitlands `tiles` 44 → 45 → 46): increasingly-filled textures the snow layer
+ *  PROGRESSES through as it deepens, drawn fg-white over the kept (transparent) terrain bg — so light
+ *  snow is a sparse white texture over the ground and deep snow nearly fills the cell, before the final
+ *  stage goes completely white. */
+const SNOW_STAGE_CHARS: string[] = [44, 45, 46].map(
+  (id) => resolveCharSpans([{ sheet: 'tiles', id }] as Parameters<typeof resolveCharSpans>[0])[0]
+);
+
 /**
  * "Solid" = a cave/mineral_deposit mountain tile still carrying its wall/ore resource — impassable rock
  * you'd have to mine through. Mining clears the resource → the tile stops being solid (cave floor under
@@ -360,27 +368,46 @@ function tileHash(x: number, y: number, salt: number): number {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-/**
- * Snow PATCH coverage opacity [0,1] for a tile — 0 = bare ground, 1 = fully buried. Snow fills in as
- * PATCHES, not a uniform translucent wash: each tile has its own threshold (per-tile noise), and whitens
- * only once accumulated `snow` climbs past it. Two biases shape where patches form first:
- *   • HIGH-WETNESS ground whitens first (a wet tile needs far less snow) → patches nucleate on damp soil;
- *   • obstacles (walls / trees / buildings / any impassable feature) hold snow readily, so they're biased
- *     to whiten WITH the surrounding field instead of staying as bare holes in it.
- * Open water never takes snow here (it reads as ice — see the ice tint), so a frozen lake stays blue.
- * The patchiness comes from WHICH tiles are covered; a covered tile is then near-opaque (see callers).
- */
-function snowPatchOpacity(tile: WorldTile): number {
+/** Smooth low-frequency value noise in [0,1] — bilinear-interpolated hashed lattice (smoothstep blend). */
+function valueNoise(x: number, y: number): number {
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const fx = x - x0;
+  const fy = y - y0;
+  const sx = fx * fx * (3 - 2 * fx);
+  const sy = fy * fy * (3 - 2 * fy);
+  const a = tileHash(x0, y0, 51);
+  const b = tileHash(x0 + 1, y0, 51);
+  const c = tileHash(x0, y0 + 1, 51);
+  const d = tileHash(x0 + 1, y0 + 1, 51);
+  const top = a + (b - a) * sx;
+  const bot = c + (d - c) * sx;
+  return top + (bot - top) * sy;
+}
+
+/** Snow DRIFT field [0,1] — smooth ~7-tile blobs whose high points are the patch "middles" where the
+ *  deeper snow sprites accumulate, so snow reads as drifts that fill from the centres outward. */
+function snowField(x: number, y: number): number {
+  return valueNoise(x / 7, y / 7);
+}
+
+/** Global snow coverage [0,1] for a tile (0 = bare). Open water reads as ice, never snow. */
+function snowCover(tile: WorldTile): number {
   const snow = tile.snow ?? 0;
-  if (snow <= 0 || tile.type === 'water') return 0;
-  let wet = Math.max(0, Math.min(100, tile.moisture ?? 50));
-  const isFeature =
-    !tile.walkable || (!!tile.resources && Object.values(tile.resources).some((a) => a > 0));
-  if (isFeature) wet = Math.max(wet, 85); // snow settles on/around obstacles → no bare holes
-  const threshold = (1 - (wet / 100) * 0.7) * tileHash(tile.x, tile.y, 7) * 100;
-  const cover = snow - threshold;
-  if (cover <= 0) return 0;
-  return Math.min(1, cover / 12); // quick fade-in past the threshold, then a solid patch
+  if (snow <= 6 || tile.type === 'water') return 0;
+  return Math.min(1, snow / 100);
+}
+
+/** Walkable resources that are still standing OBSTACLES — they keep their glyph and take only the
+ *  white-bg overlay (like trees/walls), instead of being buried under the ground snow sprite. */
+const SNOW_FEATURE_RES = new Set(['berry_bush', 'scrub_patch', 'fallen_logs', 'tree_stump']);
+
+/** A snow OBSTACLE: impassable terrain (trees, mountain/cliff walls, mineral & gem nodes, dead trees) or a
+ *  standing walkable feature (berry bush, shrub, fallen log). Keeps its glyph; only its bg whitens. Open
+ *  walkable GROUND (grass, dirt, crops, moss…) is not a feature — it takes the progressing snow sprite. */
+function isSnowFeature(tile: WorldTile): boolean {
+  if (!tile.walkable) return true;
+  return tile.resources ? Object.keys(tile.resources).some((k) => SNOW_FEATURE_RES.has(k)) : false;
 }
 
 /**
@@ -389,7 +416,7 @@ function snowPatchOpacity(tile: WorldTile): number {
  * tiles instead of rebuilding all ~562k (the 4× FPS crater). `hiddenMask` is the caller's (it only
  * changes with walkability, never on a regrowth/harvest delta). Buildings are overlaid separately.
  *
- * Snow renders as patched coverage (see {@link snowPatchOpacity}); ice as a faint blue glaze, strong on
+ * Snow renders as a progressing white sprite over a white-bg overlay (see {@link snowCover}); ice as a faint blue glaze, strong on
  * open water but cut to a third on damp ground.
  */
 export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boolean[][]): void {
@@ -477,24 +504,46 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
       fg[2] + (ICE_BLUE[2] - fg[2]) * it * 0.8
     ];
   }
-  // Snow cover (SEASONS_WEATHER): patched coverage — a covered tile is near-OPAQUE white (the patchiness
-  // comes from which tiles are covered, biased to wet ground + obstacles first), not a translucent wash.
-  // Drawn LAST so it buries the ice tint. Terrain layer only — buildings get the same patch tint in
-  // applyBuildingToGrid so they don't punch holes in the field.
-  const snowOp = snowPatchOpacity(tile);
-  if (snowOp > 0) {
-    const wb = 0.7 + 0.28 * snowOp; // ~0.7–0.98: drastically less see-through than the old fade
-    const wf = wb * 0.85;
+  // Snow cover (SEASONS_WEATHER) — two layers:
+  //  • the MAIN look is a per-tile white BG overlay at VARYING opacity (drift field + jitter): some tiles
+  //    barely tinted, others solid white. This is the snow blanket; it covers most tiles.
+  //  • a MINORITY of GROUND tiles also get a scattered snow SPRITE accent for texture — never the whole
+  //    map. The three sprites mix in EARLY (45 by ~¼ coverage, 46 soon after), picked by a wide-spread
+  //    per-tile intensity so they scatter rather than form concentric rings.
+  // Snow is an OVERLAY, never a glyph replacement:
+  //  • a per-tile white BG overlay at VARYING opacity (drift field + jitter) — some tiles barely tinted,
+  //    others solid white. The main blanket; it covers most tiles.
+  //  • on GROUND, a matching white FG overlay (weighted to the high end) fades the ground-cover glyph
+  //    (grass / clay / savanna / dirt) so it stays visible under a light dusting but is hidden once the
+  //    tile reaches solid opaque white.
+  //  • a MINORITY of ground tiles also get a scattered snow SPRITE accent (44/45/46, mixed in early).
+  // OBSTACLES (trees, walls, mineral/gem nodes, bushes, shrubs, logs, dead trees — buildings in
+  // applyBuildingToGrid) keep their glyph fully and take only the bg overlay, so they poke out of the snow.
+  const gc = snowCover(tile);
+  if (gc > 0) {
+    const f = snowField(tile.x, tile.y);
+    const wbg = Math.max(
+      0,
+      Math.min(1, gc * 1.3 + (f - 0.5) * 0.8 + (tileHash(tile.x, tile.y, 41) - 0.5) * 0.2)
+    );
     bg = [
-      bg[0] + (SNOW_WHITE[0] - bg[0]) * wb,
-      bg[1] + (SNOW_WHITE[1] - bg[1]) * wb,
-      bg[2] + (SNOW_WHITE[2] - bg[2]) * wb
+      bg[0] + (SNOW_WHITE[0] - bg[0]) * wbg,
+      bg[1] + (SNOW_WHITE[1] - bg[1]) * wbg,
+      bg[2] + (SNOW_WHITE[2] - bg[2]) * wbg
     ];
-    fg = [
-      fg[0] + (SNOW_WHITE[0] - fg[0]) * wf,
-      fg[1] + (SNOW_WHITE[1] - fg[1]) * wf,
-      fg[2] + (SNOW_WHITE[2] - fg[2]) * wf
-    ];
+    if (!isSnowFeature(tile)) {
+      const wfg = wbg * wbg; // hide the ground glyph only as the cell nears solid white (overlay, not erase)
+      fg = [
+        fg[0] + (SNOW_WHITE[0] - fg[0]) * wfg,
+        fg[1] + (SNOW_WHITE[1] - fg[1]) * wfg,
+        fg[2] + (SNOW_WHITE[2] - fg[2]) * wfg
+      ];
+      if (tileHash(tile.x, tile.y, 17) < Math.min(0.5, gc * 0.7)) {
+        const intensity = gc + (f - 0.5) * 0.6 + (tileHash(tile.x, tile.y, 29) - 0.5) * 0.5;
+        char = SNOW_STAGE_CHARS[intensity > 0.7 ? 2 : intensity > 0.45 ? 1 : 0];
+        fg = [SNOW_WHITE[0], SNOW_WHITE[1], SNOW_WHITE[2]];
+      }
+    }
   }
   grid.setTile(tile.x, tile.y, {
     char,
@@ -608,13 +657,19 @@ export function applyBuildingToGrid(grid: GameGrid, b: PlacedBuilding, tile?: Wo
   const bg: [number, number, number] = existingBg
     ? [existingBg.r, existingBg.g, existingBg.b]
     : (def?.bg ?? [0.06, 0.04, 0.01]);
-  // Snow patch: whiten an OPAQUE building's own bg with the same patched coverage as the terrain so a
-  // structure in a snowfield doesn't read as a bare hole. (transparentBg buildings already inherit the
-  // snowy terrain bg above; roofs return earlier and keep the shaded — still snowy — ground beneath.)
+  // Snow: a building is an obstacle, so (like trees/walls) it keeps its glyph and just takes the same
+  // transparent→opaque white bg overlay as the terrain — using the same drift field so it whitens in step
+  // with the snow around it instead of reading as a bare hole.
   if (!existingBg && tile) {
-    const op = snowPatchOpacity(tile);
-    if (op > 0) {
-      const wb = 0.7 + 0.28 * op;
+    const gc = snowCover(tile);
+    if (gc > 0) {
+      const wb = Math.max(
+        0,
+        Math.min(
+          1,
+          gc * 1.3 + (snowField(b.x, b.y) - 0.5) * 0.8 + (tileHash(b.x, b.y, 41) - 0.5) * 0.2
+        )
+      );
       bg[0] += (SNOW_WHITE[0] - bg[0]) * wb;
       bg[1] += (SNOW_WHITE[1] - bg[1]) * wb;
       bg[2] += (SNOW_WHITE[2] - bg[2]) * wb;

@@ -530,7 +530,11 @@ function deriveWeatherType(
  * reassigns `weather.type` only when it actually changes, so a spell that straddles 0°C snows overnight
  * and rains by afternoon without churning the snapshot.
  */
-export function rederiveWeatherType(weather: WeatherState, season: Season, freezing: boolean): string {
+export function rederiveWeatherType(
+  weather: WeatherState,
+  season: Season,
+  freezing: boolean
+): string {
   const { precip, windLevel } = weather.precip
     ? { precip: weather.precip, windLevel: weather.windLevel ?? DEFAULT_WIND_LEVEL }
     : axesFromType(weather.type);
@@ -1111,6 +1115,9 @@ function snowWetFactor(wetness: number): number {
 }
 /** Snow gained per in-game hour on a wet-neutral tile while it's snowing and below freezing. */
 const SNOW_ACCRUAL_PER_HOUR = 3.5;
+/** Natural snow caps here (not 100): the in-game world tops out at the renderer's ~half-coverage look.
+ *  The debug slider (devSetMapSnow) can still push past this to preview heavier cover. */
+const SNOW_NATURAL_MAX = 50;
 /** Snow lost per in-game hour once the tile is at/above 0°C. */
 const SNOW_MELT_PER_HOUR = 4;
 /** Only re-bake/ship a tile when its snow crosses one of these buckets (keeps deltas bounded). */
@@ -1172,7 +1179,7 @@ export function accumulateSnow(
       let nextSnow = prevSnow;
       if (snowing && temp < 0) {
         nextSnow = Math.min(
-          100,
+          SNOW_NATURAL_MAX,
           prevSnow +
             SNOW_ACCRUAL_PER_HOUR * snowWetFactor(tileWetness(tile.moisture ?? 0, weather)) * hours
         );
