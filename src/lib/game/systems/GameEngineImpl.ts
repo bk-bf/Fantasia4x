@@ -91,7 +91,7 @@ import {
   wildGrowthEntries,
   removeWildGrowth
 } from '../core/wildGrowth';
-import { simLog, vlog } from '../core/logSink';
+import { simLog, vlog, isVerboseLogging } from '../core/logSink';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').Building[];
 
@@ -166,6 +166,10 @@ export class GameEngineImpl implements GameEngine {
    *  by measurement, not guesswork. Reset each window. */
   private _phaseMs: Record<string, number> = {};
   private _phaseTicks = 0;
+  /** Whether the per-phase perf instrumentation is active this tick — mirrors the Settings → Debug-mode
+   *  verbose toggle, refreshed once per tick. When off, `timed()` is a passthrough (zero overhead) and the
+   *  periodic breakdown / O(map) walkable scan never runs. */
+  private _dbg = false;
   /** Average baked tile temperature (biome + season, no weather) — combined with the live weather
    *  delta into `gameState.avgTemperature` for the HUD. Set whenever temperatures are recomputed. */
   private avgTileTemp: number | undefined = undefined;
@@ -211,6 +215,18 @@ export class GameEngineImpl implements GameEngine {
   // GameCoordinator (P-2b) — this class stays a turn coordinator + state owner. Mutating UI actions
   // reach canonical state via applyCommand (P-2).
 
+  /** Run `fn`, accumulating its wall-clock into `_phaseMs[label]` ONLY when Debug mode is on (`_dbg`);
+   *  otherwise a zero-overhead passthrough. Drives the perf breakdown logged in `processGameTurn`. */
+  private timed(label: string, fn: () => void): void {
+    if (!this._dbg) {
+      fn();
+      return;
+    }
+    const s = performance.now();
+    fn();
+    this._phaseMs[label] = (this._phaseMs[label] ?? 0) + (performance.now() - s);
+  }
+
   processGameTurn(): TurnProcessingResult {
     if (!this.gameState || !this.gameStateManager) {
       return {
@@ -232,15 +248,14 @@ export class GameEngineImpl implements GameEngine {
       // processPreviewTurn. Branches out HERE so none of the per-tick hot path below changes.
       if (this.previewMode) return this.processPreviewTurn();
 
-      // Phase runner — times each phase into `_phaseMs` and logs a sorted ms breakdown to perf.log every
-      // PHASE_LOG_TICKS (verbose only), so a per-tick regression is located by measurement. performance.now()
-      // twice per phase is sub-microsecond — negligible vs the phase work it brackets.
+      // Phase runner — when Debug mode is on, times each phase into `_phaseMs` and logs a sorted ms
+      // breakdown to perf.log every PHASE_LOG_TICKS, so a per-tick regression is LOCATED by measurement.
+      // When off, `timed()` is a straight passthrough (no perf cost) and nothing below logs. Refreshed once
+      // per tick from the live verbose/Debug-mode gate.
+      this._dbg = isVerboseLogging();
+      const dbg = this._dbg;
       const acc = this._phaseMs;
-      const t = (label: string, fn: () => void): void => {
-        const s = performance.now();
-        fn();
-        acc[label] = (acc[label] ?? 0) + (performance.now() - s);
-      };
+      const t = (label: string, fn: () => void): void => this.timed(label, fn);
 
       // Living-world environment (SEASONS_WEATHER Phase B/C): advance season + weather and refresh
       // tile temperature BEFORE needs tick, so the need-rate hot path reads current values.
@@ -332,7 +347,7 @@ export class GameEngineImpl implements GameEngine {
 
       // Periodic per-phase breakdown → perf.log (verbose only): avg ms/tick per phase over the window,
       // sorted heaviest-first, so the dominant phase is named directly instead of guessed.
-      if (++this._phaseTicks >= PHASE_LOG_TICKS) {
+      if (dbg && ++this._phaseTicks >= PHASE_LOG_TICKS) {
         const ticks = this._phaseTicks;
         const line = Object.entries(acc)
           .sort((a, b) => b[1] - a[1])
@@ -538,24 +553,19 @@ export class GameEngineImpl implements GameEngine {
     // sync when a water tile freezes solid (walkable) or thaws (impassable).
     const snowInterval = Math.max(1, Math.floor(ticksPerDay / 24));
     if (gs.worldMap.length > 0 && gs.turn % snowInterval === 0) {
-      const s = performance.now();
-      accumulateSnow(gs.worldMap, gs.weather, gs.season, gs.turn, 1, patchPathfindingWalkable);
-      this._phaseMs['env:snowIce'] = (this._phaseMs['env:snowIce'] ?? 0) + (performance.now() - s);
+      this.timed('env:snowIce', () =>
+        accumulateSnow(gs.worldMap, gs.weather, gs.season, gs.turn, 1, patchPathfindingWalkable)
+      );
     }
 
     // Rebuild the fire-warmth + roof-shelter field once per tick (before needs/conditions read it).
     // Passing worldMap folds in §M grove thermal auras (emberwood warms / moonwood cools) — cached,
     // re-scanned only on a worldMap ref change, so this stays O(buildings) per tick.
-    const st = performance.now();
-    rebuildThermalField(gs.buildings, gs.worldMap);
-    this._phaseMs['env:thermal'] = (this._phaseMs['env:thermal'] ?? 0) + (performance.now() - st);
+    this.timed('env:thermal', () => rebuildThermalField(gs.buildings, gs.worldMap));
 
     // Walkable-connectivity components for AI target selection (reachable() gating) — rebuilt on a slow
     // cadence (mining / build / ice freeze-thaw are the only things that change it) + on a map ref change.
-    const sc = performance.now();
-    maybeRebuildConnectivity(gs.worldMap, gs.turn);
-    this._phaseMs['env:connectivity'] =
-      (this._phaseMs['env:connectivity'] ?? 0) + (performance.now() - sc);
+    this.timed('env:connectivity', () => maybeRebuildConnectivity(gs.worldMap, gs.turn));
   }
 
   /**

@@ -13,7 +13,7 @@ import { buildSharedSoftBlockedGrid } from '../PathfinderService';
 import { occupancyService } from '../OccupancyService';
 import { hasLineOfSight } from '../../systems/rangedCombat';
 import { reachable } from './connectivity';
-import { simLog } from '../../core/logSink';
+import { simLog, isVerboseLogging } from '../../core/logSink';
 import { rng } from '../../core/rng';
 import {
   type TileFoodKind,
@@ -758,12 +758,14 @@ export function pathTo(
   void selfId;
   const blocked = occupancyService.blockedTilesShared(state);
   const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(state.worldMap, blocked);
-  const _t0 = performance.now();
   // Mob paths are always SHORT-range (flee burst / hunt within radius / forage radius), so cap A* node
   // expansions tightly: a reachable short path finishes well under this, but an UNREACHABLE goal bails
   // here instead of sweeping the whole 130k-tile open region (the fleeing-prey perf cliff). Pawns keep
-  // the full default budget (they path cross-map). The LOS-gate + short flee cut the fails; this bounds
-  // any residual to <1ms regardless of map size.
+  // the full default budget (they path cross-map). The reachable() gate + short flee cut the fails; this
+  // bounds any residual to <1ms regardless of map size. (The CAP is always on — it's a real fix; only the
+  // diagnostics below are Debug-mode-gated.)
+  const dbg = isVerboseLogging();
+  const _t0 = dbg ? performance.now() : 0;
   const res = wasmPathfinderService.findPath(
     walkable,
     costs,
@@ -775,28 +777,28 @@ export function pathTo(
     ey,
     MOB_PATH_MAX_ITER
   );
-  // Neutral A* diagnostics (read+reset by GameEngineImpl's phase log): a FAIL is an empty result —
-  // an unreachable goal that made A* exhaust the whole connected region (the expensive case). Lets us
-  // tell "too many cheap paths" (high calls) from "few ruinous searches" (high fails / ms-per-call).
-  _pathMs += performance.now() - _t0;
-  _pathCalls++;
-  const lab = (_pathByLabel[label] ??= { calls: 0, fails: 0 });
-  lab.calls++;
-  if (res.length === 0) {
-    _pathFails++;
-    lab.fails++;
-    // Sample a few concrete failures per window (label + from→to + manhattan dist) so we can SEE which
-    // mobs are pathing where to nothing. Throttled to keep the log readable.
-    if (_failSamples < 8) {
-      _failSamples++;
-      simLog.logEvent({
-        category: 'ai',
-        severity: 'info',
-        turn: state.turn,
-        message: `PATHFAIL ${label} ${selfId ?? '?'} (${sx},${sy})->(${ex},${ey}) d=${Math.abs(ex - sx) + Math.abs(ey - sy)}`
-      });
-    }
-  } else _pathLen += res.length;
+  // A* diagnostics (Debug mode only; read+reset by GameEngineImpl's phase log): a FAIL is an empty result
+  // — an unreachable goal. Distinguishes "too many cheap paths" (high calls) from "few ruinous searches"
+  // (high fails / ms-per-call), broken down by call-site label, with sampled from→to lines to ai.log.
+  if (dbg) {
+    _pathMs += performance.now() - _t0;
+    _pathCalls++;
+    const lab = (_pathByLabel[label] ??= { calls: 0, fails: 0 });
+    lab.calls++;
+    if (res.length === 0) {
+      _pathFails++;
+      lab.fails++;
+      if (_failSamples < 8) {
+        _failSamples++;
+        simLog.logEvent({
+          category: 'ai',
+          severity: 'info',
+          turn: state.turn,
+          message: `PATHFAIL ${label} ${selfId ?? '?'} (${sx},${sy})->(${ex},${ey}) d=${Math.abs(ex - sx) + Math.abs(ey - sy)}`
+        });
+      }
+    } else _pathLen += res.length;
+  }
   return res;
 }
 
