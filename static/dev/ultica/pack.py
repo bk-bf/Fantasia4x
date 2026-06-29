@@ -29,6 +29,18 @@ MODERN_TOKENS = {
 }
 CAT_MAP = {"overlay":"apparel"}
 
+# Innawood-informed creature cull: no MAN_MADE monsters, no zombies/post-apoc horrors.
+# Applied to mon_ ids only; FANTASY_KEEP wins so Magiclysm creatures survive.
+# post-apoc/man-made monster signatures matched as SUBSTRINGS (catches zombiegunner, laserturret, …)
+POSTAPOC_SUBSTR = ("zombie","skeleton","necro","boomer","spitter","shocker","brute","hulk","biollante",
+ "triffid","fungaloid","fungal","spore","mycus","migo","nether","shoggoth","gozu","blob","robot","turret",
+ "drone","manhack","eyebot","secubot","riotbot","tankbot","skitterbot","tripod","dispatch","cyborg","feral",
+ "razorclaw","chickenbot","generator","mutant","amalgamation","decayed","scorched","crawler","gasbag",
+ "kreck","gelatin","flaming_eye","broken")
+# whole-token fantasy keep (token match avoids 'orc' matching 'scorched')
+FANTASY_KEEP = {"golem","troll","ogre","demon","dragon","leprechaun","lizardfolk","mossling","yulecat",
+                "owlbear","goblin","orc","fairy","pixie","wraith","mammoth","megafauna","direwolf"}
+
 def category(rel):
     parts = rel.split(os.sep)
     cat = parts[1] if len(parts) > 1 else parts[0]
@@ -41,7 +53,12 @@ def category(rel):
 def is_modern(stem, rel):
     if set(rel.lower().split(os.sep)) & DROP_FOLDERS: return True
     if stem.startswith(DROP_PREFIX): return True
-    return bool(set(stem.lower().split("_")) & MODERN_TOKENS)
+    low = stem.lower()
+    if low.startswith("corpse_"): return True          # corpses aren't useful tiles anywhere
+    if low.startswith("mon_") or "/monsters/" in rel.lower():
+        if set(low.split("_")) & FANTASY_KEEP: return False
+        if any(k in low for k in POSTAPOC_SUBSTR): return True
+    return bool(set(low.split("_")) & MODERN_TOKENS)
 
 # collect: one entry per distinct sprite (drop fragments + numbered dups)
 seen, kept = set(), defaultdict(list)   # cat -> [(stem, abspath)]
