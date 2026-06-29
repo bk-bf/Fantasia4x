@@ -4,10 +4,12 @@ import wasm from 'vite-plugin-wasm';
 import path from 'path';
 import fs from 'fs';
 
-// Walks up from dir until it finds a .git DIRECTORY (worktrees have a .git FILE — skip those).
+// Walks up from dir until it finds a .git entry. A normal checkout has a .git DIRECTORY; a git
+// worktree has a .git FILE (gitlink) at its own root — either way that dir is the project root
+// (it owns package.json). Sibling worktrees would otherwise walk past to "/" → ENOENT /package.json.
 function findGitRoot(dir: string): string {
   const gitPath = path.join(dir, '.git');
-  if (fs.existsSync(gitPath) && fs.statSync(gitPath).isDirectory()) return dir;
+  if (fs.existsSync(gitPath)) return dir;
   const parent = path.dirname(dir);
   if (parent === dir) return dir;
   return findGitRoot(parent);

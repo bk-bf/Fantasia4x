@@ -1,7 +1,7 @@
 [
   {
     "id"               : "wild_berries",
-    "charSpans"        : [ {"sheet": "items", "id": 127} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "mulberries"} ],
     "name"             : "Wild Berries",
     "type"             : "food",
     "category"         : "fruit",
@@ -20,7 +20,7 @@
   },
   {
     "id"               : "common_carp",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_carpet_red"} ],
     "name"             : "Carp",
     "type"             : "food",
     "category"         : "fish",
@@ -58,7 +58,7 @@
   },
   {
     "id": "wild_sage",
-    "charSpans": [ {"sheet": "items", "id": 114} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "blutwurst_sausage"} ],
     "name": "Wild Sage",
     "type": "food",
     "category": "herb",
@@ -112,7 +112,7 @@
   },
   {
     "id"               : "river_trout",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "screwdriver"} ],
     "name"             : "River Trout",
     "type"             : "food",
     "category"         : "fish",
@@ -131,7 +131,7 @@
   },
   {
     "id"               : "rabbit_carcass",
-    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "skull_rabbit"} ],
     "name"             : "Rabbit Carcass",
     "type"             : "food",
     "category"         : "carcass",
@@ -150,7 +150,7 @@
   },
   {
     "id"               : "deer_carcass",
-    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "teddy_bear_var_toy_plush_wdeer"} ],
     "name"             : "Deer Carcass",
     "type"             : "food",
     "category"         : "carcass",
@@ -169,7 +169,7 @@
   },
   {
     "id"               : "rabbit_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "skull_rabbit"} ],
     "name"             : "Rabbit Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -207,7 +207,7 @@
   },
   {
     "id"               : "hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "acid_soaked_hide"} ],
     "name"             : "Raw Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -224,7 +224,7 @@
   },
   {
     "id"               : "rotten_hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "acid_soaked_hide"} ],
     "name"             : "Rotten Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -238,7 +238,7 @@
   },
   {
     "id"               : "tanning_bucket",
-    "charSpans"        : [ {"sheet": "items", "id": 41} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_vat_blue"} ],
     "name"             : "Tanning Bucket",
     "type"             : "material",
     "category"         : "storage",
@@ -252,7 +252,7 @@
   },
   {
     "id"               : "cured_thin_hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "raw_cured_fatty_meat"} ],
     "name"             : "Cured Thin Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -266,7 +266,7 @@
   },
   {
     "id"               : "cured_light_hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "raw_cured_fatty_meat"} ],
     "name"             : "Cured Light Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -280,7 +280,7 @@
   },
   {
     "id"               : "cured_sturdy_hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "raw_cured_fatty_meat"} ],
     "name"             : "Cured Sturdy Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -294,7 +294,7 @@
   },
   {
     "id"               : "cured_heavy_hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "raw_cured_fatty_meat"} ],
     "name"             : "Cured Heavy Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -308,7 +308,7 @@
   },
   {
     "id"               : "cured_thick_hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "raw_cured_fatty_meat"} ],
     "name"             : "Cured Thick Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -322,7 +322,7 @@
   },
   {
     "id"               : "thin_leather",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_ice_dp_thin_unconnected"} ],
     "name"             : "Thin Leather",
     "type"             : "material",
     "category"         : "leather",
@@ -336,7 +336,7 @@
   },
   {
     "id"               : "light_leather",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "lighter"} ],
     "name"             : "Light Leather",
     "type"             : "material",
     "category"         : "leather",
@@ -350,7 +350,7 @@
   },
   {
     "id"               : "sturdy_leather",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "leather"} ],
     "name"             : "Sturdy Leather",
     "type"             : "material",
     "category"         : "leather",
@@ -364,7 +364,7 @@
   },
   {
     "id"               : "heavy_leather",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "273x110slugheavy"} ],
     "name"             : "Heavy Leather",
     "type"             : "material",
     "category"         : "leather",
@@ -378,7 +378,7 @@
   },
   {
     "id"               : "thick_leather",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_ice_dp_thick_unconnected"} ],
     "name"             : "Thick Leather",
     "type"             : "material",
     "category"         : "leather",
@@ -392,7 +392,7 @@
   },
   {
     "id"               : "spit_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 68} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "meat"} ],
     "name"             : "Spit-Roasted Meat",
     "mealBuff"         : {"condition": "well_fed", "seconds": 50},
     "type"             : "food",
@@ -413,7 +413,7 @@
   },
   {
     "id"               : "small_stew",
-    "charSpans"        : [ {"sheet": "items", "id": 69} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "box_small"} ],
     "name"             : "Stew",
     "dynamicName"      : true,
     "mealBuff"         : {"condition": "hearty_meal", "seconds": 50},
@@ -435,7 +435,7 @@
   },
   {
     "id"               : "fine_stew",
-    "charSpans"        : [ {"sheet": "items", "id": 69} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "mre_beefstew"} ],
     "name"             : "Fine Stew",
     "dynamicName"      : true,
     "mealBuff"         : {"condition": "hearty_meal", "seconds": 75},
@@ -457,7 +457,7 @@
   },
   {
     "id"               : "lavish_stew",
-    "charSpans"        : [ {"sheet": "items", "id": 69} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "mre_beefstew"} ],
     "name"             : "Lavish Stew",
     "dynamicName"      : true,
     "mealBuff"         : {"condition": "hearty_meal", "seconds": 100},
@@ -517,7 +517,7 @@
   },
   {
     "id"               : "small_stone",
-    "charSpans"        : [ {"sheet": "items", "id": 29} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "box_small"} ],
     "name"             : "Small Stone",
     "type"             : "material",
     "category"         : "primitive",
@@ -532,7 +532,7 @@
   },
   {
     "id"               : "flint_shard",
-    "charSpans"        : [ {"sheet": "items", "id": 29} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "flint_steel"} ],
     "name"             : "Flint Shard",
     "type"             : "material",
     "category"         : "primitive",
@@ -547,7 +547,7 @@
   },
   {
     "id"               : "plant_fiber",
-    "charSpans"        : [ {"sheet": "items", "id": 158} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "eggplant"} ],
     "name"             : "Plant Fiber",
     "type"             : "material",
     "category"         : "primitive",
@@ -564,7 +564,7 @@
   },
   {
     "id"               : "bark",
-    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "birchbark"} ],
     "name"             : "Bark",
     "type"             : "material",
     "category"         : "primitive",
@@ -581,7 +581,7 @@
   },
   {
     "id"               : "hay",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "f_hay"} ],
     "name"             : "Hay",
     "type"             : "material",
     "category"         : "primitive",
@@ -597,7 +597,7 @@
   },
   {
     "id"               : "pine_log",
-    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_tree_pine"} ],
     "name"             : "Pine Log",
     "type"             : "material",
     "category"         : "wood",
@@ -615,7 +615,7 @@
   },
   {
     "id"               : "birch_log",
-    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "5425_t_tree_birch_0"} ],
     "name"             : "Birch Log",
     "type"             : "material",
     "category"         : "wood",
@@ -633,7 +633,7 @@
   },
   {
     "id"               : "apple_log",
-    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_tree_apple_vitrified"} ],
     "name"             : "Apple Log",
     "type"             : "material",
     "category"         : "wood",
@@ -651,7 +651,7 @@
   },
   {
     "id"               : "oak_log",
-    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "f_logstool"} ],
     "name"             : "Oak Log",
     "type"             : "material",
     "category"         : "wood",
@@ -668,7 +668,7 @@
   },
   {
     "id"               : "ash_log",
-    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "f_logstool"} ],
     "name"             : "Ash Log",
     "type"             : "material",
     "category"         : "wood",
@@ -685,7 +685,7 @@
   },
   {
     "id"               : "yew_log",
-    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "f_logstool"} ],
     "name"             : "Yew Log",
     "type"             : "material",
     "category"         : "wood",
@@ -702,7 +702,7 @@
   },
   {
     "id"               : "green_firewood",
-    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "1512_f_fireplace_0"} ],
     "name"             : "Green Firewood",
     "type"             : "material",
     "category"         : "fuel",
@@ -720,7 +720,7 @@
   },
   {
     "id"               : "dry_firewood",
-    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "1512_f_fireplace_0"} ],
     "name"             : "Dry Firewood",
     "type"             : "material",
     "category"         : "fuel",
@@ -771,7 +771,7 @@
   },
   {
     "id": "charcoal",
-    "charSpans": [ {"sheet": "items", "id": 29} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "charcoal"} ],
     "name": "Charcoal",
     "type": "material",
     "category": "fuel",
@@ -789,7 +789,7 @@
   },
   {
     "id": "coal",
-    "charSpans": [ {"sheet": "items", "id": 29} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "charcoal"} ],
     "name": "Coal",
     "type": "material",
     "category": "fuel",
@@ -945,7 +945,7 @@
   },
   {
     "id"               : "native_gold",
-    "charSpans"        : [ {"sheet": "items", "id": 29} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "1l_gold"} ],
     "name"             : "Native Gold",
     "type"             : "material",
     "category"         : "ore",
@@ -975,7 +975,7 @@
   },
   {
     "id"               : "copper_bar",
-    "charSpans"        : [ {"sheet": "items", "id": 23} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "copper"} ],
     "name"             : "Copper Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -989,7 +989,7 @@
   },
   {
     "id"               : "tin_bar",
-    "charSpans"        : [ {"sheet": "items", "id": 23} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "5l_tin"} ],
     "name"             : "Tin Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -1003,7 +1003,7 @@
   },
   {
     "id"               : "bronze_bar",
-    "charSpans"        : [ {"sheet": "items", "id": 23} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "5l_bronze"} ],
     "name"             : "Bronze Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -1017,7 +1017,7 @@
   },
   {
     "id"               : "iron_bar",
-    "charSpans"        : [ {"sheet": "items", "id": 23} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name"             : "Iron Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -1031,7 +1031,7 @@
   },
   {
     "id": "iron_nail",
-    "charSpans": [ {"sheet": "items", "id": 162} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Iron Nails",
     "type": "material",
     "category": "metal",
@@ -1046,7 +1046,7 @@
   },
   {
     "id": "bronze_nail",
-    "charSpans": [ {"sheet": "items", "id": 162} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_bronze"} ],
     "name": "Bronze Nails",
     "type": "material",
     "category": "metal",
@@ -1061,7 +1061,7 @@
   },
   {
     "id": "steel_rivet",
-    "charSpans": [ {"sheet": "items", "id": 162} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name": "Steel Rivets",
     "type": "material",
     "category": "metal",
@@ -1076,7 +1076,7 @@
   },
   {
     "id": "crucible_steel",
-    "charSpans": [ {"sheet": "items", "id": 23} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "crucible"} ],
     "name": "Crucible Steel",
     "type": "material",
     "category": "metal",
@@ -1106,7 +1106,7 @@
   },
   {
     "id"               : "lead_bar",
-    "charSpans"        : [ {"sheet": "items", "id": 23} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "lead"} ],
     "name"             : "Lead Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -1120,7 +1120,7 @@
   },
   {
     "id"               : "silver_bar",
-    "charSpans"        : [ {"sheet": "items", "id": 23} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "5l_silver"} ],
     "name"             : "Silver Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -1134,7 +1134,7 @@
   },
   {
     "id"               : "gold_bar",
-    "charSpans"        : [ {"sheet": "items", "id": 23} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "1l_gold"} ],
     "name"             : "Gold Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -1148,7 +1148,7 @@
   },
   {
     "id"               : "steel_bar",
-    "charSpans"        : [ {"sheet": "items", "id": 23} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name"             : "Steel Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -1162,7 +1162,7 @@
   },
   {
     "id"               : "ash",
-    "charSpans"        : [ {"sheet": "items", "id": 30} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "wash_kit"} ],
     "name"             : "Ash",
     "type"             : "material",
     "category"         : "primitive",
@@ -1177,7 +1177,7 @@
   },
   {
     "id": "salt",
-    "charSpans": [ {"sheet": "items", "id": 30} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "salt_water"} ],
     "name": "Salt",
     "type": "material",
     "category": "primitive",
@@ -1192,7 +1192,7 @@
   },
   {
     "id": "water",
-    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "salt_water"} ],
     "name": "Water",
     "type": "consumable",
     "category": "drink",
@@ -1209,7 +1209,7 @@
   //    at a drink zone; pawns sip from a carried one, and a filled container supplies a recipe's water. ─
   {
     "id": "waterskin",
-    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "salt_water"} ],
     "name": "Waterskin",
     "type": "tool",
     "category": "storage",
@@ -1224,7 +1224,7 @@
   },
   {
     "id": "flask",
-    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "flask_hip"} ],
     "name": "Clay Flask",
     "type": "tool",
     "category": "storage",
@@ -1254,7 +1254,7 @@
   },
   {
     "id"               : "animal_fat",
-    "charSpans"        : [ {"sheet": "items", "id": 71} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "boxer_shorts_var_boxer_shorts_animal"} ],
     "name"             : "Animal Fat",
     "type"             : "material",
     "category"         : "organic",
@@ -1285,7 +1285,7 @@
   },
   {
     "id"               : "candle",
-    "charSpans"        : [ {"sheet": "items", "id": 5} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "candle"} ],
     "name"             : "Tallow Candle",
     "type"             : "tool",
     "category"         : "light",
@@ -1301,7 +1301,7 @@
   },
   {
     "id"               : "salted_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "meat_salted"} ],
     "name"             : "Salted Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -1322,7 +1322,7 @@
   },
   {
     "id"               : "dried_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "meat"} ],
     "name"             : "Dried Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -1342,7 +1342,7 @@
   },
   {
     "id"               : "dried_fruit",
-    "charSpans"        : [ {"sheet": "items", "id": 127} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "dry_fruit"} ],
     "name"             : "Dried Fruit",
     "type"             : "food",
     "category"         : "fruit",
@@ -1362,7 +1362,7 @@
   },
   {
     "id"               : "pine_plank",
-    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_tree_pine"} ],
     "name"             : "Pine Plank",
     "type"             : "material",
     "category"         : "wood",
@@ -1379,7 +1379,7 @@
   },
   {
     "id"               : "beam",
-    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "wood_beam"} ],
     "name"             : "Hewn Beam",
     "type"             : "material",
     "category"         : "wood",
@@ -1396,7 +1396,7 @@
   },
   {
     "id"               : "oak_plank",
-    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "cloak_fur"} ],
     "name"             : "Oak Plank",
     "type"             : "material",
     "category"         : "wood",
@@ -1413,7 +1413,7 @@
   },
   {
     "id"               : "birch_plank",
-    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "5425_t_tree_birch_0"} ],
     "name"             : "Birch Plank",
     "type"             : "material",
     "category"         : "wood",
@@ -1430,7 +1430,7 @@
   },
   {
     "id"               : "ash_plank",
-    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "wash_kit"} ],
     "name"             : "Ash Plank",
     "type"             : "material",
     "category"         : "wood",
@@ -1447,7 +1447,7 @@
   },
   {
     "id"               : "yew_plank",
-    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "plank_long"} ],
     "name"             : "Yew Plank",
     "type"             : "material",
     "category"         : "wood",
@@ -1464,7 +1464,7 @@
   },
   {
     "id": "saw",
-    "charSpans": [ {"sheet": "items", "id": 159} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "saw"} ],
     "name": "Saw",
     "type": "tool",
     "category": "crafting",
@@ -1497,7 +1497,7 @@
   },
   {
     "id"               : "limestone",
-    "charSpans"        : [ {"sheet": "items", "id": 29} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "material_limestone"} ],
     "name"             : "Limestone",
     "type"             : "material",
     "category"         : "stone",
@@ -1557,7 +1557,7 @@
   },
   {
     "id"               : "granite_block",
-    "charSpans"        : [ {"sheet": "items", "id": 33} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "wood_block"} ],
     "name"             : "Granite Block",
     "type"             : "material",
     "category"         : "block",
@@ -1572,7 +1572,7 @@
   },
   {
     "id"               : "limestone_block",
-    "charSpans"        : [ {"sheet": "items", "id": 33} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "material_limestone"} ],
     "name"             : "Limestone Block",
     "type"             : "material",
     "category"         : "block",
@@ -1587,7 +1587,7 @@
   },
   {
     "id"               : "sandstone_block",
-    "charSpans"        : [ {"sheet": "items", "id": 33} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "wood_block"} ],
     "name"             : "Sandstone Block",
     "type"             : "material",
     "category"         : "block",
@@ -1602,7 +1602,7 @@
   },
   {
     "id"               : "marble_block",
-    "charSpans"        : [ {"sheet": "items", "id": 33} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "wood_block"} ],
     "name"             : "Marble Block",
     "type"             : "material",
     "category"         : "block",
@@ -1617,7 +1617,7 @@
   },
   {
     "id"               : "slate_tile",
-    "charSpans"        : [ {"sheet": "items", "id": 33} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_vitrified_tile"} ],
     "name"             : "Slate Tile",
     "type"             : "material",
     "category"         : "construction",
@@ -1632,7 +1632,7 @@
   },
   {
     "id": "blue_clay",
-    "charSpans": [ {"sheet": "items", "id": 30} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "t_clay"} ],
     "name": "Blue Clay",
     "type": "material",
     "category": "primitive",
@@ -1647,7 +1647,7 @@
   },
   {
     "id": "fire_clay",
-    "charSpans": [ {"sheet": "items", "id": 30} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "1512_f_fireplace_0"} ],
     "name": "Fire Clay",
     "type": "material",
     "category": "primitive",
@@ -1660,7 +1660,7 @@
   },
   {
     "id": "sand",
-    "charSpans": [ {"sheet": "items", "id": 30} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "sandpaper"} ],
     "name": "Sand",
     "type": "material",
     "category": "primitive",
@@ -1673,7 +1673,7 @@
   },
   {
     "id"               : "sphagnum_moss",
-    "charSpans"        : [ {"sheet": "items", "id": 117} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "mossberg_500"} ],
     "name"             : "Sphagnum Moss",
     "type"             : "material",
     "category"         : "primitive",
@@ -1706,7 +1706,7 @@
   },
   {
     "id": "rope",
-    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "t_rope_up_1"} ],
     "name": "Rope",
     "type": "material",
     "category": "primitive",
@@ -1722,7 +1722,7 @@
   },
   {
     "id"               : "mud_brick",
-    "charSpans"        : [ {"sheet": "items", "id": 23} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "brick"} ],
     "name"             : "Mud Brick",
     "type"             : "material",
     "category"         : "construction",
@@ -1737,7 +1737,7 @@
   },
   {
     "id"               : "fired_brick",
-    "charSpans"        : [ {"sheet": "items", "id": 23} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "1512_f_fireplace_0"} ],
     "name"             : "Fired Brick",
     "type"             : "material",
     "category"         : "construction",
@@ -1752,7 +1752,7 @@
   },
   {
     "id": "fire_bricks",
-    "charSpans": [ {"sheet": "items", "id": 23} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "1512_f_fireplace_0"} ],
     "name": "Fire Brick",
     "type": "material",
     "category": "construction",
@@ -1765,7 +1765,7 @@
   },
   {
     "id": "water_urn",
-    "charSpans": [ {"sheet": "items", "id": 24} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "salt_water"} ],
     "name": "Clay Urn",
     "type": "material",
     "category": "storage",
@@ -1783,7 +1783,7 @@
   },
   {
     "id": "clay_mold",
-    "charSpans": [ {"sheet": "items", "id": 153} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "t_clay"} ],
     "name": "Clay Mold",
     "type": "tool",
     "category": "metalworking",
@@ -1799,7 +1799,7 @@
   },
   {
     "id"               : "tile_mold",
-    "charSpans"        : [ {"sheet": "items", "id": 153} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_vitrified_tile"} ],
     "name"             : "Tile Mold",
     "type"             : "tool",
     "category"         : "metalworking",
@@ -1814,7 +1814,7 @@
   },
   {
     "id": "clay_roof_tile",
-    "charSpans": [ {"sheet": "items", "id": 50} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "t_clay"} ],
     "name": "Clay Roof Tile",
     "type": "material",
     "category": "construction",
@@ -1831,7 +1831,7 @@
      `processingType: ["light"]` is unused). Re-enable together with the `make_firestarter` recipe.
   {
     "id"               : "firestarter",
-    "charSpans"        : [ {"sheet": "items", "id": 159} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "1512_f_fireplace_0"} ],
     "name"             : "Firestarter",
     "type"             : "tool",
     "category"         : "primitive",
@@ -1850,7 +1850,7 @@
   */
   {
     "id"               : "flint_knife",
-    "charSpans"        : [ {"sheet": "items", "id": 201} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "flint_steel"} ],
     "name"             : "Flint Knife",
     "type"             : "tool",
     "category"         : "primitive",
@@ -1869,7 +1869,7 @@
   },
   {
     "id": "flint_sickle",
-    "charSpans": [ {"sheet": "items", "id": 159} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "flint_steel"} ],
     "name": "Flint Sickle",
     "type": "tool",
     "category": "harvesting",
@@ -1889,7 +1889,7 @@
   {
     "id"               : "stone_chopper",
     "audio"            : "slash",
-    "charSpans"        : [ {"sheet": "items", "id": 204} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "stone_chopper"} ],
     "name"             : "Stone Chopper",
     "type"             : "tool",
     "category"         : "primitive",
@@ -1921,7 +1921,7 @@
   },
   {
     "id"               : "digging_stick",
-    "charSpans"        : [ {"sheet": "items", "id": 159} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "digging_stick"} ],
     "name"             : "Digging Stick",
     "type"             : "tool",
     "category"         : "primitive",
@@ -1939,7 +1939,7 @@
   },
   {
     "id": "stone_axe",
-    "charSpans": [ {"sheet": "items", "id": 204} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "pickaxe"} ],
     "name": "Stone Axe",
     "type": "tool",
     "category": "woodcutting",
@@ -1959,7 +1959,7 @@
   },
   {
     "id": "iron_axe",
-    "charSpans": [ {"sheet": "items", "id": 204} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Iron Axe",
     "type": "tool",
     "category": "woodcutting",
@@ -1980,7 +1980,7 @@
   },
   {
     "id": "steel_axe",
-    "charSpans": [ {"sheet": "items", "id": 204} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name": "Steel Axe",
     "type": "tool",
     "category": "woodcutting",
@@ -2001,7 +2001,7 @@
   },
   {
     "id"               : "stone_hammer",
-    "charSpans"        : [ {"sheet": "items", "id": 159} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "hammer"} ],
     "name"             : "Stone Hammer",
     "type"             : "tool",
     "category"         : "construction",
@@ -2020,7 +2020,7 @@
   },
   {
     "id"               : "iron_hammer",
-    "charSpans"        : [ {"sheet": "items", "id": 159} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name"             : "Iron Hammer",
     "type"             : "tool",
     "category"         : "construction",
@@ -2041,7 +2041,7 @@
   },
   {
     "id"               : "steel_hammer",
-    "charSpans"        : [ {"sheet": "items", "id": 159} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name"             : "Steel Hammer",
     "type"             : "tool",
     "category"         : "construction",
@@ -2062,7 +2062,7 @@
   },
   {
     "id": "stone_pick",
-    "charSpans": [ {"sheet": "items", "id": 159} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "pickaxe"} ],
     "name": "Stone Pick",
     "type": "tool",
     "category": "mining",
@@ -2082,7 +2082,7 @@
   },
   {
     "id": "stone_hoe",
-    "charSpans": [ {"sheet": "items", "id": 159} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "hoe"} ],
     "name": "Stone Hoe",
     "type": "tool",
     "category": "planting",
@@ -2103,7 +2103,7 @@
   {
     "id"               : "stone_spear",
     "audio"               : "pierce",
-    "charSpans"        : [ {"sheet": "items", "id": 208} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "speargun"} ],
     "name"             : "Stone Spear",
     "type"             : "weapon",
     "category"         : "hunting",
@@ -2142,7 +2142,7 @@
   },
   {
     "id": "iron_shovel",
-    "charSpans": [ {"sheet": "items", "id": 159} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Iron Shovel",
     "type": "tool",
     "category": "digging",
@@ -2163,7 +2163,7 @@
   },
   {
     "id": "steel_shovel",
-    "charSpans": [ {"sheet": "items", "id": 159} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name": "Steel Shovel",
     "type": "tool",
     "category": "digging",
@@ -2184,7 +2184,7 @@
   },
   {
     "id": "iron_hoe",
-    "charSpans": [ {"sheet": "items", "id": 159} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Iron Hoe",
     "type": "tool",
     "category": "planting",
@@ -2205,7 +2205,7 @@
   },
   {
     "id": "steel_hoe",
-    "charSpans": [ {"sheet": "items", "id": 159} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name": "Steel Hoe",
     "type": "tool",
     "category": "planting",
@@ -2226,7 +2226,7 @@
   },
   {
     "id"               : "clay_cooking_pot",
-    "charSpans"        : [ {"sheet": "items", "id": 41} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_clay"} ],
     "name"             : "Clay Cooking Pot",
     "type"             : "tool",
     "category"         : "cooking",
@@ -2245,7 +2245,7 @@
   },
   {
     "id": "woven_basket",
-    "charSpans": [ {"sheet": "items", "id": 26} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "f_clay_oven"} ],
     "name": "Woven Basket",
     "type": "container",
     "category": "storage",
@@ -2263,7 +2263,7 @@
   },
   {
     "id": "wooden_chest",
-    "charSpans": [ {"sheet": "items", "id": 38} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "f_crate_c"} ],
     "name": "Wooden Chest",
     "type": "container",
     "category": "storage",
@@ -2281,7 +2281,7 @@
   },
   {
     "id"               : "wolf_carcass",
-    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "hoodie_var_wolf"} ],
     "name"             : "Wolf Carcass",
     "type"             : "material",
     "category"         : "carcass",
@@ -2299,7 +2299,7 @@
   },
   {
     "id"               : "bear_carcass",
-    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "skull_bear"} ],
     "name"             : "Bear Carcass",
     "type"             : "material",
     "category"         : "carcass",
@@ -2335,7 +2335,7 @@
   },
   {
     "id"               : "giant_rat_carcass",
-    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "vibrator"} ],
     "name"             : "Giant Rat Carcass",
     "type"             : "material",
     "category"         : "carcass",
@@ -2353,7 +2353,7 @@
   },
   {
     "id"               : "boar_carcass",
-    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "cardboard"} ],
     "name"             : "Boar Carcass",
     "type"             : "material",
     "category"         : "carcass",
@@ -2407,7 +2407,7 @@
   },
   {
     "id"               : "wild_chicken_carcass",
-    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "egg_chicken"} ],
     "name"             : "Wild Chicken Carcass",
     "type"             : "material",
     "category"         : "carcass",
@@ -2681,7 +2681,7 @@
   },
   {
     "id"               : "thornwood_spider_carcass",
-    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "bodysuit_lycra_var_spiderman_suit_red"} ],
     "name"             : "Thornwood Spider Carcass",
     "type"             : "material",
     "category"         : "carcass",
@@ -2735,7 +2735,7 @@
   },
   {
     "id"               : "orc_reaver_carcass",
-    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "porcelain_urn"} ],
     "name"             : "Orc Remains",
     "type"             : "material",
     "category"         : "carcass",
@@ -2791,7 +2791,7 @@
   // Creature-specific meats
   {
     "id"               : "wolf_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "hoodie_var_wolf"} ],
     "name"             : "Wolf Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -2810,7 +2810,7 @@
   },
   {
     "id"               : "bear_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "skull_bear"} ],
     "name"             : "Bear Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -2829,7 +2829,7 @@
   },
   {
     "id"               : "boar_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "cardboard"} ],
     "name"             : "Boar Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -2848,7 +2848,7 @@
   },
   {
     "id"               : "elk_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "meat"} ],
     "name"             : "Elk Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -2867,7 +2867,7 @@
   },
   {
     "id"               : "goat_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "meat"} ],
     "name"             : "Goat Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -2886,7 +2886,7 @@
   },
   {
     "id"               : "chicken_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "egg_chicken"} ],
     "name"             : "Chicken Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -2905,7 +2905,7 @@
   },
   {
     "id"               : "rat_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "vibrator"} ],
     "name"             : "Rat Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -2925,7 +2925,7 @@
   // Creature-specific hides / pelts
   {
     "id"               : "rabbit_pelt",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "skull_rabbit"} ],
     "name"             : "Rabbit Pelt",
     "type"             : "material",
     "category"         : "organic",
@@ -2943,7 +2943,7 @@
   },
   {
     "id"               : "deer_hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "teddy_bear_var_toy_plush_wdeer"} ],
     "name"             : "Deer Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -2961,7 +2961,7 @@
   },
   {
     "id"               : "wolf_hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "hoodie_var_wolf"} ],
     "name"             : "Wolf Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -2979,7 +2979,7 @@
   },
   {
     "id"               : "bear_pelt",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "skull_bear"} ],
     "name"             : "Bear Pelt",
     "type"             : "material",
     "category"         : "organic",
@@ -2997,7 +2997,7 @@
   },
   {
     "id"               : "boar_hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "cardboard"} ],
     "name"             : "Boar Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -3015,7 +3015,7 @@
   },
   {
     "id"               : "elk_hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "acid_soaked_hide"} ],
     "name"             : "Elk Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -3033,7 +3033,7 @@
   },
   {
     "id"               : "goat_hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "acid_soaked_hide"} ],
     "name"             : "Goat Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -3051,7 +3051,7 @@
   },
   {
     "id"               : "chicken_feathers",
-    "charSpans"        : [ {"sheet": "items", "id": 158} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "egg_chicken"} ],
     "name"             : "Chicken Feathers",
     "type"             : "material",
     "category"         : "organic",
@@ -3067,7 +3067,7 @@
   },
   {
     "id"               : "rat_pelt",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "vibrator"} ],
     "name"             : "Rat Pelt",
     "type"             : "material",
     "category"         : "organic",
@@ -3086,7 +3086,7 @@
   // Size-based bones (alternative sources via craftingCostAlternatives)
   {
     "id"               : "small_bones",
-    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "box_small"} ],
     "name"             : "Small Bones",
     "type"             : "material",
     "category"         : "organic",
@@ -3102,7 +3102,7 @@
   },
   {
     "id"               : "medium_bones",
-    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "box_medium"} ],
     "name"             : "Medium Bones",
     "type"             : "material",
     "category"         : "organic",
@@ -3118,7 +3118,7 @@
   },
   {
     "id"               : "large_bones",
-    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "box_large"} ],
     "name"             : "Large Bones",
     "type"             : "material",
     "category"         : "organic",
@@ -3135,7 +3135,7 @@
   // ── Spoiled / rotten items ──────────────────────────────────────────────────
   {
     "id"               : "rotten_food",
-    "charSpans"        : [ {"sheet": "items", "id": 69} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "birdfood"} ],
     "name"             : "Rotten Food",
     "type"             : "food",
     "category"         : "spoiled",
@@ -3152,7 +3152,7 @@
   },
   {
     "id"               : "rotten_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 69} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "meat"} ],
     "name"             : "Rotten Meat",
     "type"             : "food",
     "category"         : "spoiled",
@@ -3221,7 +3221,7 @@
   // ── Tier 1 butchery tool ─────────────────────────────────────────────────────
   {
     "id": "bone_cleaver",
-    "charSpans": [ {"sheet": "items", "id": 206} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "bone"} ],
     "name": "Bone Cleaver",
     "type": "tool",
     "category": "butchery",
@@ -3241,7 +3241,7 @@
   },
   {
     "id": "wooden_tongs",
-    "charSpans": [ {"sheet": "items", "id": 159} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "wooden_grip"} ],
     "name": "Green-Wood Tongs",
     "type": "tool",
     "category": "metalworking",
@@ -3260,7 +3260,7 @@
   },
   {
     "id": "iron_tongs",
-    "charSpans": [ {"sheet": "items", "id": 159} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Iron Tongs",
     "type": "tool",
     "category": "metalworking",
@@ -3279,7 +3279,7 @@
   },
   {
     "id": "steel_tongs",
-    "charSpans": [ {"sheet": "items", "id": 159} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name": "Steel Tongs",
     "type": "tool",
     "category": "metalworking",
@@ -3333,7 +3333,7 @@
   {
     "id"               : "kick",
     "audio"               : "blunt",
-    "charSpans"        : [ {"sheet": "items", "id": 0} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "swimming_kickboard"} ],
     "name"             : "Kick",
     "type"             : "weapon",
     "category"         : "natural_weapon",
@@ -3385,7 +3385,7 @@
   {
     "id"               : "claw",
     "audio"               : "slash",
-    "charSpans"        : [ {"sheet": "items", "id": 1} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "claw_bar"} ],
     "name"             : "Claw",
     "type"             : "weapon",
     "category"         : "natural_weapon",
@@ -3463,7 +3463,7 @@
   {
     "id"               : "charge",
     "audio"               : "blunt",
-    "charSpans"        : [ {"sheet": "items", "id": 0} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "ruger_charger"} ],
     "name"             : "Charge",
     "type"             : "weapon",
     "category"         : "natural_weapon",
@@ -3489,7 +3489,7 @@
   {
     "id"               : "boar_tusk",
     "audio"               : "blunt",
-    "charSpans"        : [ {"sheet": "items", "id": 56} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "cardboard"} ],
     "name"             : "Boar Tusk",
     "type"             : "weapon",
     "category"         : "natural_weapon",
@@ -3515,7 +3515,7 @@
   {
     "id"               : "boar_charge",
     "audio"               : "blunt",
-    "charSpans"        : [ {"sheet": "items", "id": 0} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "cardboard"} ],
     "name"             : "Boar Charge",
     "type"             : "weapon",
     "category"         : "natural_weapon",
@@ -3750,7 +3750,7 @@
   // ── Phase B: carry containers ─────────────────────────────────────────────
   {
     "id": "hide_tool_roll",
-    "charSpans": [ {"sheet": "items", "id": 20} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "acid_soaked_hide"} ],
     "name": "Hide Tool-Roll",
     "type": "tool",
     "category": "storage",
@@ -3766,7 +3766,7 @@
   },
   {
     "id": "hide_scrip",
-    "charSpans": [ {"sheet": "items", "id": 20} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "acid_soaked_hide"} ],
     "name": "Hide Scrip",
     "type": "tool",
     "category": "storage",
@@ -3798,7 +3798,7 @@
   },
   {
     "id"               : "wicker_frame",
-    "charSpans"        : [ {"sheet": "items", "id": 26} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "frame"} ],
     "name"             : "Wicker Frame",
     "type"             : "tool",
     "category"         : "storage",
@@ -3816,7 +3816,7 @@
   {
     "id": "flint_handaxe",
     "audio": "slash",
-    "charSpans": [ {"sheet": "items", "id": 204} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "flint_steel"} ],
     "name": "Flint Handaxe",
     "type": "weapon",
     "category": "primitive",
@@ -3843,7 +3843,7 @@
   },
   {
     "id": "wattle_buckler",
-    "charSpans": [ {"sheet": "items", "id": 144} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "3386_t_wall_wattle_0"} ],
     "name": "Wattle Buckler",
     "type": "armor",
     "category": "primitive",
@@ -3868,7 +3868,7 @@
   {
     "id": "bone_knife",
     "audio": "pierce",
-    "charSpans": [ {"sheet": "items", "id": 201} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "bone"} ],
     "name": "Bone Splinter Knife",
     "type": "weapon",
     "category": "primitive",
@@ -3898,7 +3898,7 @@
   {
     "id": "antler_club",
     "audio": "blunt",
-    "charSpans": [ {"sheet": "items", "id": 202} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "golf_club"} ],
     "name": "Antler War Club",
     "type": "weapon",
     "category": "primitive",
@@ -3928,7 +3928,7 @@
   {
     "id": "bone_tipped_spear",
     "audio": "pierce",
-    "charSpans": [ {"sheet": "items", "id": 208} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "bone"} ],
     "name": "Bone-Tipped Thrusting Spear",
     "type": "weapon",
     "category": "hunting",
@@ -3957,7 +3957,7 @@
   {
     "id": "bronze_punch_dagger",
     "audio": "pierce",
-    "charSpans": [ {"sheet": "items", "id": 201} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_bronze"} ],
     "name": "Bronze Punch Dagger",
     "type": "weapon",
     "category": "combat",
@@ -3989,7 +3989,7 @@
   {
     "id": "leaf_blade_spear",
     "audio": "pierce",
-    "charSpans": [ {"sheet": "items", "id": 208} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "blade"} ],
     "name": "Leaf-Blade Spear",
     "type": "weapon",
     "category": "combat",
@@ -4021,7 +4021,7 @@
   {
     "id": "cast_bronze_hatchet",
     "audio": "slash",
-    "charSpans": [ {"sheet": "items", "id": 204} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "casting_mold"} ],
     "name": "Cast Bronze Hatchet",
     "type": "weapon",
     "category": "combat",
@@ -4052,7 +4052,7 @@
   {
     "id": "self_bow",
     "audio": "bow",
-    "charSpans": [ {"sheet": "items", "id": 200} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "selfbow"} ],
     "name": "Self Bow",
     "type": "weapon",
     "category": "combat",
@@ -4086,7 +4086,7 @@
   },
   {
     "id": "rawhide_round_shield",
-    "charSpans": [ {"sheet": "items", "id": 144} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "groundnut_boiled"} ],
     "name": "Rawhide-Faced Round Shield",
     "type": "armor",
     "category": "combat",
@@ -4111,7 +4111,7 @@
   {
     "id": "short_seax",
     "audio": "slash",
-    "charSpans": [ {"sheet": "items", "id": 206} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "shorts"} ],
     "name": "Short Seax",
     "type": "weapon",
     "category": "combat",
@@ -4173,7 +4173,7 @@
   {
     "id": "bearded_axe",
     "audio": "slash",
-    "charSpans": [ {"sheet": "items", "id": 204} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "pickaxe"} ],
     "name": "Bearded Axe",
     "type": "weapon",
     "category": "combat",
@@ -4268,7 +4268,7 @@
   {
     "id": "iron_mace",
     "audio": "blunt",
-    "charSpans": [ {"sheet": "items", "id": 203} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Iron Mace",
     "type": "weapon",
     "category": "combat",
@@ -4302,7 +4302,7 @@
   {
     "id": "iron_warhammer",
     "audio": "blunt",
-    "charSpans": [ {"sheet": "items", "id": 203} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Iron Warhammer",
     "type": "weapon",
     "category": "combat",
@@ -4336,7 +4336,7 @@
   {
     "id": "iron_greatsword",
     "audio": "slash",
-    "charSpans": [ {"sheet": "items", "id": 207} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Iron Greatsword",
     "type": "weapon",
     "category": "combat",
@@ -4369,7 +4369,7 @@
   {
     "id": "steel_longsword",
     "audio": "slash",
-    "charSpans": [ {"sheet": "items", "id": 206} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name": "Steel Longsword",
     "type": "weapon",
     "category": "combat",
@@ -4401,7 +4401,7 @@
   {
     "id": "steel_greatsword",
     "audio": "slash",
-    "charSpans": [ {"sheet": "items", "id": 207} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name": "Steel Greatsword",
     "type": "weapon",
     "category": "combat",
@@ -4434,7 +4434,7 @@
   {
     "id": "steel_pike",
     "audio": "pierce",
-    "charSpans": [ {"sheet": "items", "id": 208} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name": "Steel Pike",
     "type": "weapon",
     "category": "combat",
@@ -4467,7 +4467,7 @@
   {
     "id": "steel_mace",
     "audio": "blunt",
-    "charSpans": [ {"sheet": "items", "id": 203} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name": "Steel Mace",
     "type": "weapon",
     "category": "combat",
@@ -4502,7 +4502,7 @@
   {
     "id": "steel_warhammer",
     "audio": "blunt",
-    "charSpans": [ {"sheet": "items", "id": 203} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name": "Steel Warhammer",
     "type": "weapon",
     "category": "combat",
@@ -4536,7 +4536,7 @@
   {
     "id": "steel_cleaver",
     "audio": "slash",
-    "charSpans": [ {"sheet": "items", "id": 205} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name": "Steel Cleaver",
     "type": "weapon",
     "category": "combat",
@@ -4569,7 +4569,7 @@
   {
     "id": "steel_greatcleaver",
     "audio": "slash",
-    "charSpans": [ {"sheet": "items", "id": 207} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name": "Steel Greatcleaver",
     "type": "weapon",
     "category": "combat",
@@ -4602,7 +4602,7 @@
   {
     "id": "steel_flail",
     "audio": "blunt",
-    "charSpans": [ {"sheet": "items", "id": 203} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name": "Steel Flail",
     "type": "weapon",
     "category": "combat",
@@ -4637,7 +4637,7 @@
   {
     "id": "iron_rondel",
     "audio": "pierce",
-    "charSpans": [ {"sheet": "items", "id": 201} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Iron Rondel Dagger",
     "type": "weapon",
     "category": "combat",
@@ -4669,7 +4669,7 @@
   {
     "id": "steel_stiletto",
     "audio": "pierce",
-    "charSpans": [ {"sheet": "items", "id": 201} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name": "Steel Stiletto",
     "type": "weapon",
     "category": "combat",
@@ -4701,7 +4701,7 @@
   {
     "id": "iron_estoc",
     "audio": "pierce",
-    "charSpans": [ {"sheet": "items", "id": 206} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Iron Estoc",
     "type": "weapon",
     "category": "combat",
@@ -4734,7 +4734,7 @@
   {
     "id": "steel_rapier",
     "audio": "pierce",
-    "charSpans": [ {"sheet": "items", "id": 206} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_steel"} ],
     "name": "Steel Rapier",
     "type": "weapon",
     "category": "combat",
@@ -4767,7 +4767,7 @@
   {
     "id": "war_bow",
     "audio": "bow",
-    "charSpans": [ {"sheet": "items", "id": 200} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "ch_talwar"} ],
     "name": "War Bow",
     "type": "weapon",
     "category": "combat",
@@ -4802,7 +4802,7 @@
   {
     "id": "throwing_stone",
     "audio": "bow",
-    "charSpans": [ {"sheet": "items", "id": 91} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "throwing_axe"} ],
     "name": "Throwing Stone",
     "type": "weapon",
     "category": "combat",
@@ -4833,7 +4833,7 @@
   {
     "id": "sling",
     "audio": "bow",
-    "charSpans": [ {"sheet": "items", "id": 199} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "slingpack"} ],
     "name": "Sling",
     "type": "weapon",
     "category": "combat",
@@ -4868,7 +4868,7 @@
   {
     "id": "throwing_spear",
     "audio": "bow",
-    "charSpans": [ {"sheet": "items", "id": 198} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "throwing_axe"} ],
     "name": "Throwing Spear",
     "type": "weapon",
     "category": "combat",
@@ -4936,7 +4936,7 @@
   },
   {
     "id"               : "sling_stone",
-    "charSpans"        : [ {"sheet": "items", "id": 91} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "slingpack"} ],
     "name"             : "Sling Stone",
     "type"             : "consumable",
     "category"         : "ammunition",
@@ -4958,7 +4958,7 @@
   },
   {
     "id": "cast_sling_bullet",
-    "charSpans": [ {"sheet": "items", "id": 91} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "casting_mold"} ],
     "name": "Cast Sling Bullet",
     "type": "consumable",
     "category": "ammunition",
@@ -4982,7 +4982,7 @@
   },
   {
     "id": "flint_arrow",
-    "charSpans": [ {"sheet": "items", "id": 196} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "flint_steel"} ],
     "name": "Flint-Tipped Arrow",
     "type": "consumable",
     "category": "ammunition",
@@ -5005,7 +5005,7 @@
   },
   {
     "id": "bone_arrow",
-    "charSpans": [ {"sheet": "items", "id": 196} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "bone"} ],
     "name": "Bone-Tipped Arrow",
     "type": "consumable",
     "category": "ammunition",
@@ -5028,7 +5028,7 @@
   },
   {
     "id": "broadhead_arrow",
-    "charSpans": [ {"sheet": "items", "id": 196} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "arrow_cf"} ],
     "name": "Broadhead Arrow",
     "type": "consumable",
     "category": "ammunition",
@@ -5051,7 +5051,7 @@
   },
   {
     "id": "iron_arrow",
-    "charSpans": [ {"sheet": "items", "id": 196} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Iron Bodkin Arrow",
     "type": "consumable",
     "category": "ammunition",
@@ -5074,7 +5074,7 @@
   },
   {
     "id": "barbed_arrow",
-    "charSpans": [ {"sheet": "items", "id": 196} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "wire_barbed"} ],
     "name": "Barbed War Arrow",
     "type": "consumable",
     "category": "ammunition",
@@ -5097,7 +5097,7 @@
   },
   {
     "id": "iron_bolt",
-    "charSpans": [ {"sheet": "items", "id": 197} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Iron Crossbow Bolt",
     "type": "consumable",
     "category": "ammunition",
@@ -5121,7 +5121,7 @@
   },
   {
     "id": "heavy_quarrel",
-    "charSpans": [ {"sheet": "items", "id": 197} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "273x110slugheavy"} ],
     "name": "Hardened Quarrel",
     "type": "consumable",
     "category": "ammunition",
@@ -5145,7 +5145,7 @@
   },
   {
     "id": "hide_arrow_sheath",
-    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "acid_soaked_hide"} ],
     "name": "Hide Arrow-Sheath",
     "type": "tool",
     "category": "storage",
@@ -5163,7 +5163,7 @@
   },
   {
     "id": "leather_back_quiver",
-    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "leather"} ],
     "name": "Leather Back Quiver",
     "type": "tool",
     "category": "storage",
@@ -5182,7 +5182,7 @@
   },
   {
     "id": "stiffened_war_quiver",
-    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "ch_talwar"} ],
     "name": "Stiffened War Quiver",
     "type": "tool",
     "category": "storage",
@@ -5201,7 +5201,7 @@
   },
   {
     "id": "leather_bolt_case",
-    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "leather"} ],
     "name": "Leather Bolt-Case",
     "type": "tool",
     "category": "storage",
@@ -5220,7 +5220,7 @@
   },
   {
     "id": "banded_bolt_quiver",
-    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "bolt_cf"} ],
     "name": "Iron-Banded Bolt-Case",
     "type": "tool",
     "category": "storage",
@@ -5239,7 +5239,7 @@
   },
   {
     "id": "iron_boss_shield",
-    "charSpans": [ {"sheet": "items", "id": 145} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Iron-Bossed Kite Shield",
     "type": "armor",
     "category": "combat",
@@ -5264,7 +5264,7 @@
   // ── Phase B: Tier 0 armour ────────────────────────────────────────────────
   {
     "id": "wicker_vest",
-    "charSpans": [ {"sheet": "items", "id": 9} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "vest_leather"} ],
     "name": "Wicker Vest",
     "type": "armor",
     "category": "primitive",
@@ -5291,7 +5291,7 @@
   },
   {
     "id": "raw_hide_vest",
-    "charSpans": [ {"sheet": "items", "id": 9} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "tea_raw"} ],
     "name": "Raw Hide Vest",
     "type": "armor",
     "category": "primitive",
@@ -5318,7 +5318,7 @@
   },
   {
     "id": "padded_cap",
-    "charSpans": [ {"sheet": "items", "id": 84} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "cloth_vest_padded"} ],
     "name": "Padded Linen Cap",
     "type": "armor",
     "category": "primitive",
@@ -5347,7 +5347,7 @@
   // ── Phase B: Tier 1 armour ────────────────────────────────────────────────
   {
     "id": "linen_gambeson",
-    "charSpans": [ {"sheet": "items", "id": 7} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "gambeson_hood"} ],
     "name": "Linen Gambeson",
     "type": "armor",
     "category": "cloth",
@@ -5375,7 +5375,7 @@
   },
   {
     "id": "boiled_leather_jerkin",
-    "charSpans": [ {"sheet": "items", "id": 8} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "grain_boiled"} ],
     "name": "Boiled Leather Jerkin",
     "type": "armor",
     "category": "leather",
@@ -5402,7 +5402,7 @@
   },
   {
     "id": "leather_coif",
-    "charSpans": [ {"sheet": "items", "id": 80} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "leather"} ],
     "name": "Leather Coif",
     "type": "armor",
     "category": "leather",
@@ -5429,7 +5429,7 @@
   },
   {
     "id": "rangers_hood",
-    "charSpans": [ {"sheet": "items", "id": 80} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "hoodie"} ],
     "name": "Ranger's Hood",
     "type": "armor",
     "category": "leather",
@@ -5485,7 +5485,7 @@
   },
   {
     "id": "marksmans_cloak",
-    "charSpans": [ {"sheet": "items", "id": 82} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "cloak_fur"} ],
     "name": "Marksman's Cloak",
     "type": "armor",
     "category": "leather",
@@ -5513,7 +5513,7 @@
   },
   {
     "id": "cast_bronze_skullcap",
-    "charSpans": [ {"sheet": "items", "id": 81} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "casting_mold"} ],
     "name": "Cast Bronze Skullcap",
     "type": "armor",
     "category": "metal",
@@ -5566,7 +5566,7 @@
   },
   {
     "id": "tallow_boots",
-    "charSpans": [ {"sheet": "items", "id": 146} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "tallow"} ],
     "name": "Tallow-Dressed Hide Boots",
     "type": "armor",
     "category": "leather",
@@ -5593,7 +5593,7 @@
   // ── Phase B: Tier 2 armour ────────────────────────────────────────────────
   {
     "id": "mail_coif",
-    "charSpans": [ {"sheet": "items", "id": 83} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "f_mailbox"} ],
     "name": "Riveted Mail Coif",
     "type": "armor",
     "category": "metal",
@@ -5620,7 +5620,7 @@
   },
   {
     "id": "iron_nasal_helm",
-    "charSpans": [ {"sheet": "items", "id": 82} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Iron Nasal Helm",
     "type": "armor",
     "category": "metal",
@@ -5647,7 +5647,7 @@
   },
   {
     "id": "mail_hauberk",
-    "charSpans": [ {"sheet": "items", "id": 10} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "f_mailbox"} ],
     "name": "Riveted Mail Hauberk",
     "type": "armor",
     "category": "metal",
@@ -5674,7 +5674,7 @@
   },
   {
     "id": "brigandine_coat",
-    "charSpans": [ {"sheet": "items", "id": 11} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "coat_rain"} ],
     "name": "Brigandine Coat",
     "type": "armor",
     "category": "metal",
@@ -5701,7 +5701,7 @@
   },
   {
     "id": "iron_gauntlets",
-    "charSpans": [ {"sheet": "items", "id": 73} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Riveted Iron Gauntlets",
     "type": "armor",
     "category": "metal",
@@ -5727,7 +5727,7 @@
   },
   {
     "id": "iron_shod_boots",
-    "charSpans": [ {"sheet": "items", "id": 147} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Iron-Shod Boots",
     "type": "armor",
     "category": "metal",
@@ -5753,7 +5753,7 @@
   },
   {
     "id": "iron_gorget",
-    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name": "Riveted Iron Gorget",
     "type": "armor",
     "category": "metal",
@@ -5780,7 +5780,7 @@
   // ── Phase B: raw materials ────────────────────────────────────────────────
   {
     "id"               : "sinew",
-    "charSpans"        : [ {"sheet": "items", "id": 158} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "sinew"} ],
     "name"             : "Sinew",
     "type"             : "material",
     "category"         : "fiber",
@@ -5794,7 +5794,7 @@
   },
   {
     "id"               : "flax_fiber",
-    "charSpans"        : [ {"sheet": "items", "id": 158} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "fiber_mat"} ],
     "name"             : "Flax Fiber",
     "type"             : "material",
     "category"         : "fiber",
@@ -5808,7 +5808,7 @@
   },
   {
     "id"               : "thread",
-    "charSpans"        : [ {"sheet": "items", "id": 158} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "thread"} ],
     "name"             : "Spun Thread",
     "type"             : "material",
     "category"         : "fiber",
@@ -5823,7 +5823,7 @@
   },
   {
     "id"               : "linen_cloth",
-    "charSpans"        : [ {"sheet": "items", "id": 48} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "cloth_vest_padded"} ],
     "name"             : "Linen Cloth",
     "type"             : "material",
     "category"         : "cloth",
@@ -5843,7 +5843,7 @@
   // quality/flavour edge now. Gathered with an axe like any tree.
   {
     "id": "heartwood_log",
-    "charSpans": [ {"sheet": "items", "id": 225} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "f_logstool"} ],
     "name": "Heartwood Log",
     "type": "material",
     "category": "magic_wood",
@@ -5861,7 +5861,7 @@
   },
   {
     "id": "moonwood_log",
-    "charSpans": [ {"sheet": "items", "id": 225} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "f_logstool"} ],
     "name": "Moonwood Log",
     "type": "material",
     "category": "magic_wood",
@@ -5879,7 +5879,7 @@
   },
   {
     "id": "ironwood_log",
-    "charSpans": [ {"sheet": "items", "id": 225} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "f_logstool"} ],
     "name": "Ironwood Log",
     "type": "material",
     "category": "magic_wood",
@@ -5897,7 +5897,7 @@
   },
   {
     "id": "emberwood_log",
-    "charSpans": [ {"sheet": "items", "id": 225} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "f_logstool"} ],
     "name": "Emberwood Log",
     "type": "material",
     "category": "magic_wood",
@@ -5917,7 +5917,7 @@
   //    heartwood_joiner; replaces raw logs / mundane planks in runed buildings. ──
   {
     "id": "heartwood_plank",
-    "charSpans": [ {"sheet": "items", "id": 225} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "plank_long"} ],
     "name": "Heartwood Plank",
     "type": "material",
     "category": "magic_wood",
@@ -5935,7 +5935,7 @@
   },
   {
     "id": "moonwood_plank",
-    "charSpans": [ {"sheet": "items", "id": 225} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "plank_long"} ],
     "name": "Moonwood Plank",
     "type": "material",
     "category": "magic_wood",
@@ -5953,7 +5953,7 @@
   },
   {
     "id": "ironwood_plank",
-    "charSpans": [ {"sheet": "items", "id": 225} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "plank_long"} ],
     "name": "Ironwood Plank",
     "type": "material",
     "category": "magic_wood",
@@ -5971,7 +5971,7 @@
   },
   {
     "id": "emberwood_plank",
-    "charSpans": [ {"sheet": "items", "id": 225} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "plank_long"} ],
     "name": "Emberwood Plank",
     "type": "material",
     "category": "magic_wood",
@@ -6020,7 +6020,7 @@
   },
   {
     "id"               : "cut_ruby",
-    "charSpans"        : [ {"sheet": "items", "id": 31} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "hotcut"} ],
     "name"             : "Cut Ruby",
     "type"             : "material",
     "category"         : "gem",
@@ -6047,7 +6047,7 @@
   },
   {
     "id"               : "ruby_ring",
-    "charSpans"        : [ {"sheet": "items", "id": 32} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "syringe"} ],
     "name"             : "Ruby Ring",
     "type"             : "armor",
     "category"         : "jewelry",
@@ -6080,7 +6080,7 @@
   // SAPPHIRE → Insight (focused work)
   {
     "id"               : "sapphire",
-    "charSpans"        : [ {"sheet": "items", "id": 30} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "sapphire"} ],
     "name"             : "Sapphire",
     "type"             : "material",
     "category"         : "crystal",
@@ -6094,7 +6094,7 @@
   },
   {
     "id"               : "infused_sapphire",
-    "charSpans"        : [ {"sheet": "items", "id": 31} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "sapphire"} ],
     "name"             : "Infused Sapphire",
     "type"             : "material",
     "category"         : "magic_crystal",
@@ -6108,7 +6108,7 @@
   },
   {
     "id"               : "cut_sapphire",
-    "charSpans"        : [ {"sheet": "items", "id": 31} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "hotcut"} ],
     "name"             : "Cut Sapphire",
     "type"             : "material",
     "category"         : "gem",
@@ -6121,7 +6121,7 @@
   },
   {
     "id"               : "attuned_sapphire",
-    "charSpans"        : [ {"sheet": "items", "id": 31} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "sapphire"} ],
     "name"             : "Attuned Sapphire",
     "type"             : "material",
     "category"         : "magic_gem",
@@ -6135,7 +6135,7 @@
   },
   {
     "id"               : "sapphire_ring",
-    "charSpans"        : [ {"sheet": "items", "id": 32} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "sapphire"} ],
     "name"             : "Sapphire Ring",
     "type"             : "armor",
     "category"         : "jewelry",
@@ -6151,7 +6151,7 @@
   },
   {
     "id"               : "sapphire_amulet",
-    "charSpans"        : [ {"sheet": "items", "id": 33} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "sapphire"} ],
     "name"             : "Sapphire Amulet",
     "type"             : "armor",
     "category"         : "jewelry",
@@ -6168,7 +6168,7 @@
   // EMERALD → Vigor (endurance)
   {
     "id"               : "emerald",
-    "charSpans"        : [ {"sheet": "items", "id": 30} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "emerald"} ],
     "name"             : "Emerald",
     "type"             : "material",
     "category"         : "crystal",
@@ -6182,7 +6182,7 @@
   },
   {
     "id"               : "infused_emerald",
-    "charSpans"        : [ {"sheet": "items", "id": 31} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "emerald"} ],
     "name"             : "Infused Emerald",
     "type"             : "material",
     "category"         : "magic_crystal",
@@ -6196,7 +6196,7 @@
   },
   {
     "id"               : "cut_emerald",
-    "charSpans"        : [ {"sheet": "items", "id": 31} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "hotcut"} ],
     "name"             : "Cut Emerald",
     "type"             : "material",
     "category"         : "gem",
@@ -6209,7 +6209,7 @@
   },
   {
     "id"               : "attuned_emerald",
-    "charSpans"        : [ {"sheet": "items", "id": 31} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "emerald"} ],
     "name"             : "Attuned Emerald",
     "type"             : "material",
     "category"         : "magic_gem",
@@ -6223,7 +6223,7 @@
   },
   {
     "id"               : "emerald_ring",
-    "charSpans"        : [ {"sheet": "items", "id": 32} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "emerald"} ],
     "name"             : "Emerald Ring",
     "type"             : "armor",
     "category"         : "jewelry",
@@ -6239,7 +6239,7 @@
   },
   {
     "id"               : "emerald_amulet",
-    "charSpans"        : [ {"sheet": "items", "id": 33} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "emerald"} ],
     "name"             : "Emerald Amulet",
     "type"             : "armor",
     "category"         : "jewelry",
@@ -6284,7 +6284,7 @@
   },
   {
     "id"               : "cut_topaz",
-    "charSpans"        : [ {"sheet": "items", "id": 31} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "hotcut"} ],
     "name"             : "Cut Topaz",
     "type"             : "material",
     "category"         : "gem",
@@ -6311,7 +6311,7 @@
   },
   {
     "id"               : "topaz_ring",
-    "charSpans"        : [ {"sheet": "items", "id": 32} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "syringe"} ],
     "name"             : "Topaz Ring",
     "type"             : "armor",
     "category"         : "jewelry",
@@ -6344,7 +6344,7 @@
   // AMETHYST → Keen Senses (awareness / dodge)
   {
     "id"               : "amethyst",
-    "charSpans"        : [ {"sheet": "items", "id": 30} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "amethyst_gold_ring"} ],
     "name"             : "Amethyst",
     "type"             : "material",
     "category"         : "crystal",
@@ -6358,7 +6358,7 @@
   },
   {
     "id"               : "infused_amethyst",
-    "charSpans"        : [ {"sheet": "items", "id": 31} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "amethyst_gold_ring"} ],
     "name"             : "Infused Amethyst",
     "type"             : "material",
     "category"         : "magic_crystal",
@@ -6372,7 +6372,7 @@
   },
   {
     "id"               : "cut_amethyst",
-    "charSpans"        : [ {"sheet": "items", "id": 31} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "hotcut"} ],
     "name"             : "Cut Amethyst",
     "type"             : "material",
     "category"         : "gem",
@@ -6385,7 +6385,7 @@
   },
   {
     "id": "attuned_amethyst",
-    "charSpans": [ {"sheet": "items", "id": 31} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "amethyst_gold_ring"} ],
     "name": "Attuned Amethyst",
     "type": "material",
     "category": "magic_gem",
@@ -6399,7 +6399,7 @@
   },
   {
     "id"               : "amethyst_ring",
-    "charSpans"        : [ {"sheet": "items", "id": 32} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "amethyst_gold_ring"} ],
     "name"             : "Amethyst Ring",
     "type"             : "armor",
     "category"         : "jewelry",
@@ -6415,7 +6415,7 @@
   },
   {
     "id"               : "amethyst_amulet",
-    "charSpans"        : [ {"sheet": "items", "id": 33} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "amethyst_gold_ring"} ],
     "name"             : "Amethyst Amulet",
     "type"             : "armor",
     "category"         : "jewelry",
@@ -6432,7 +6432,7 @@
   // CITRINE → Charm (ease / appetite)
   {
     "id"               : "citrine",
-    "charSpans"        : [ {"sheet": "items", "id": 30} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "citrine"} ],
     "name"             : "Citrine",
     "type"             : "material",
     "category"         : "crystal",
@@ -6446,7 +6446,7 @@
   },
   {
     "id"               : "infused_citrine",
-    "charSpans"        : [ {"sheet": "items", "id": 31} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "citrine"} ],
     "name"             : "Infused Citrine",
     "type"             : "material",
     "category"         : "magic_crystal",
@@ -6460,7 +6460,7 @@
   },
   {
     "id"               : "cut_citrine",
-    "charSpans"        : [ {"sheet": "items", "id": 31} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "hotcut"} ],
     "name"             : "Cut Citrine",
     "type"             : "material",
     "category"         : "gem",
@@ -6473,7 +6473,7 @@
   },
   {
     "id"               : "attuned_citrine",
-    "charSpans"        : [ {"sheet": "items", "id": 31} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "citrine"} ],
     "name"             : "Attuned Citrine",
     "type"             : "material",
     "category"         : "magic_gem",
@@ -6487,7 +6487,7 @@
   },
   {
     "id"               : "citrine_ring",
-    "charSpans"        : [ {"sheet": "items", "id": 32} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "citrine"} ],
     "name"             : "Citrine Ring",
     "type"             : "armor",
     "category"         : "jewelry",
@@ -6503,7 +6503,7 @@
   },
   {
     "id"               : "citrine_amulet",
-    "charSpans"        : [ {"sheet": "items", "id": 33} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "citrine"} ],
     "name"             : "Citrine Amulet",
     "type"             : "armor",
     "category"         : "jewelry",
@@ -6548,7 +6548,7 @@
   },
   {
     "id"               : "cut_moonstone",
-    "charSpans"        : [ {"sheet": "items", "id": 31} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "hotcut"} ],
     "name"             : "Cut Moonstone",
     "type"             : "material",
     "category"         : "gem",
@@ -6575,7 +6575,7 @@
   },
   {
     "id"               : "moonstone_ring",
-    "charSpans"        : [ {"sheet": "items", "id": 32} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "syringe"} ],
     "name"             : "Moonstone Ring",
     "type"             : "armor",
     "category"         : "jewelry",
@@ -6705,7 +6705,7 @@
   // ── Necklaces / torcs / pendants (amulet slot) ──
   {
     "id": "gold_torc",
-    "charSpans": [ {"sheet": "items", "id": 33} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "1l_gold"} ],
     "name": "Gold Torc",
     "type": "armor",
     "category": "jewelry",
@@ -6782,7 +6782,7 @@
   {
     "id": "ember_staff",
     "audio": "spectral",
-    "charSpans": [ {"sheet": "items", "id": 198} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "i_staff"} ],
     "name": "Ember Staff",
     "type": "weapon",
     "category": "combat",
@@ -6817,7 +6817,7 @@
   {
     "id": "pyre_staff",
     "audio": "spectral",
-    "charSpans": [ {"sheet": "items", "id": 198} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "i_staff"} ],
     "name": "Pyre Staff",
     "type": "weapon",
     "category": "combat",
@@ -6854,7 +6854,7 @@
   {
     "id": "frost_staff",
     "audio": "spectral",
-    "charSpans": [ {"sheet": "items", "id": 198} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "i_staff"} ],
     "name": "Frost Staff",
     "type": "weapon",
     "category": "combat",
@@ -6889,7 +6889,7 @@
   {
     "id": "rime_staff",
     "audio": "spectral",
-    "charSpans": [ {"sheet": "items", "id": 198} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "novel_crime"} ],
     "name": "Rime Staff",
     "type": "weapon",
     "category": "combat",
@@ -6926,7 +6926,7 @@
   {
     "id": "spark_staff",
     "audio": "spectral",
-    "charSpans": [ {"sheet": "items", "id": 198} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "i_staff"} ],
     "name": "Spark Staff",
     "type": "weapon",
     "category": "combat",
@@ -6961,7 +6961,7 @@
   {
     "id": "tempest_staff",
     "audio": "spectral",
-    "charSpans": [ {"sheet": "items", "id": 198} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "i_staff"} ],
     "name": "Tempest Staff",
     "type": "weapon",
     "category": "combat",
@@ -7002,7 +7002,7 @@
   // still costs move-speed via the load→encumbrance term in PawnService.getMoveSpeed.
   {
     "id"               : "wheel",
-    "charSpans"        : [ {"sheet": "items", "id": 33} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "wheel"} ],
     "name"             : "Cart Wheel",
     "type"             : "material",
     "category"         : "crafting",
@@ -7056,7 +7056,7 @@
   // amendment that turns loam into terra preta. Heavy materials; soil doesn't rot.
   {
     "id"               : "dirt",
-    "charSpans"        : [ {"sheet": "items", "id": 33} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_dirtfloor"} ],
     "name"             : "Barren Dirt",
     "type"             : "material",
     "category"         : "soil",
@@ -7069,7 +7069,7 @@
   },
   {
     "id"               : "poor_soil",
-    "charSpans"        : [ {"sheet": "items", "id": 33} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_dirtmound"} ],
     "name"             : "Poor Soil",
     "type"             : "material",
     "category"         : "soil",
@@ -7095,7 +7095,7 @@
   },
   {
     "id"               : "rich_soil",
-    "charSpans"        : [ {"sheet": "items", "id": 33} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_dirtmound"} ],
     "name"             : "Rich Soil",
     "type"             : "material",
     "category"         : "soil",
@@ -7108,7 +7108,7 @@
   },
   {
     "id"               : "terra_preta",
-    "charSpans"        : [ {"sheet": "items", "id": 33} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "f_firefly_terrarium"} ],
     "name"             : "Terra Preta",
     "type"             : "material",
     "category"         : "soil",
@@ -7150,7 +7150,7 @@
   // crops (each wild plant now drops a few seeds). Light, slow-spoiling.
   {
     "id"               : "grain_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "grain_boiled"} ],
     "name"             : "Grain Seed",
     "type"             : "material",
     "category"         : "grain_seed",
@@ -7163,7 +7163,7 @@
   },
   {
     "id"               : "cabbage_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "seeds"} ],
     "name"             : "Cabbage Seed",
     "type"             : "material",
     "category"         : "cabbage_seed",
@@ -7176,7 +7176,7 @@
   },
   {
     "id"               : "turnip_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "seeds"} ],
     "name"             : "Turnip Seed",
     "type"             : "material",
     "category"         : "turnip_seed",
@@ -7189,7 +7189,7 @@
   },
   {
     "id"               : "rye_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "f_dryer"} ],
     "name"             : "Rye Seed",
     "type"             : "material",
     "category"         : "rye_seed",
@@ -7202,7 +7202,7 @@
   },
   {
     "id"               : "kale_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "seeds"} ],
     "name"             : "Kale Seed",
     "type"             : "material",
     "category"         : "kale_seed",
@@ -7215,7 +7215,7 @@
   },
   {
     "id"               : "radish_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "seeds"} ],
     "name"             : "Radish Seed",
     "type"             : "material",
     "category"         : "radish_seed",
@@ -7228,7 +7228,7 @@
   },
   {
     "id"               : "onion_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "onion"} ],
     "name"             : "Onion Seed",
     "type"             : "material",
     "category"         : "onion_seed",
@@ -7241,7 +7241,7 @@
   },
   {
     "id"               : "bean_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "can_beans"} ],
     "name"             : "Bean Seed",
     "type"             : "material",
     "category"         : "bean_seed",
@@ -7254,7 +7254,7 @@
   },
   {
     "id"               : "pea_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "pear"} ],
     "name"             : "Pea Seed",
     "type"             : "material",
     "category"         : "pea_seed",
@@ -7267,7 +7267,7 @@
   },
   {
     "id"               : "fibre_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "plant_fibre"} ],
     "name"             : "Fibre Seed",
     "type"             : "material",
     "category"         : "fibre_seed",
@@ -7280,7 +7280,7 @@
   },
   {
     "id"               : "berry_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_shrub_blueberry"} ],
     "name"             : "Berry Seed",
     "type"             : "material",
     "category"         : "berry_seed",
@@ -7293,7 +7293,7 @@
   },
   {
     "id"               : "apple_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_tree_apple_vitrified"} ],
     "name"             : "Apple Pips",
     "type"             : "material",
     "category"         : "apple_seed",
@@ -7306,7 +7306,7 @@
   },
   {
     "id"               : "grape_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "grapes"} ],
     "name"             : "Grape Cuttings",
     "type"             : "material",
     "category"         : "grape_seed",
@@ -7319,7 +7319,7 @@
   },
   {
     "id"               : "thyme_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "thyme"} ],
     "name"             : "Thyme Seed",
     "type"             : "material",
     "category"         : "thyme_seed",
@@ -7332,7 +7332,7 @@
   },
   {
     "id"               : "mint_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "mintpatties"} ],
     "name"             : "Mint Seed",
     "type"             : "material",
     "category"         : "mint_seed",
@@ -7345,7 +7345,7 @@
   },
   {
     "id"               : "prize_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 118} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "seeds"} ],
     "name"             : "Prize Seed",
     "type"             : "material",
     "category"         : "prize_seed",
@@ -7359,7 +7359,7 @@
   // ── PRODUCTION-CHAIN-II §F — Cultivated crop products (the harvest of a grown crop) ──────────
   {
     "id"               : "wheat",
-    "charSpans"        : [ {"sheet": "items", "id": 113} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "wheat"} ],
     "name"             : "Wheat",
     "type"             : "food",
     "category"         : "grain",
@@ -7409,7 +7409,7 @@
   },
   {
     "id"               : "rye",
-    "charSpans"        : [ {"sheet": "items", "id": 113} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "f_dryer"} ],
     "name"             : "Rye",
     "type"             : "food",
     "category"         : "grain",
@@ -7457,7 +7457,7 @@
   },
   {
     "id"               : "onion",
-    "charSpans"        : [ {"sheet": "items", "id": 113} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "onion"} ],
     "name"             : "Onion",
     "type"             : "food",
     "category"         : "vegetable",
@@ -7473,7 +7473,7 @@
   },
   {
     "id"               : "beans",
-    "charSpans"        : [ {"sheet": "items", "id": 113} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "can_beans"} ],
     "name"             : "Beans",
     "type"             : "food",
     "category"         : "legume",
@@ -7505,7 +7505,7 @@
   },
   {
     "id"               : "apple",
-    "charSpans"        : [ {"sheet": "items", "id": 127} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_tree_apple_vitrified"} ],
     "name"             : "Apple",
     "type"             : "food",
     "category"         : "fruit",
@@ -7521,7 +7521,7 @@
   },
   {
     "id"               : "grapes",
-    "charSpans"        : [ {"sheet": "items", "id": 127} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "grapes"} ],
     "name"             : "Grapes",
     "type"             : "food",
     "category"         : "fruit",
@@ -7537,7 +7537,7 @@
   },
   {
     "id"               : "thyme",
-    "charSpans"        : [ {"sheet": "items", "id": 114} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "thyme"} ],
     "name"             : "Thyme",
     "type"             : "food",
     "category"         : "herb",
@@ -7554,7 +7554,7 @@
   },
   {
     "id"               : "mint",
-    "charSpans"        : [ {"sheet": "items", "id": 114} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "mintpatties"} ],
     "name"             : "Mint",
     "type"             : "food",
     "category"         : "herb",
@@ -7571,7 +7571,7 @@
   },
   {
     "id"               : "pumpkin",
-    "charSpans"        : [ {"sheet": "items", "id": 113} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "pumpkin"} ],
     "name"             : "Pumpkin",
     "type"             : "food",
     "category"         : "vegetable",
@@ -7604,7 +7604,7 @@
   },
   {
     "id"               : "bread",
-    "charSpans"        : [ {"sheet": "items", "id": 113} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "bread"} ],
     "name"             : "Bread",
     "mealBuff"         : {"condition": "well_fed", "seconds": 50},
     "type"             : "food",
@@ -7622,7 +7622,7 @@
   },
   {
     "id"               : "simple_pie",
-    "charSpans"        : [ {"sheet": "items", "id": 113} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "mace_simple"} ],
     "name"             : "Pie",
     "dynamicName"      : true,
     "mealBuff"         : {"condition": "nourished", "seconds": 50},
@@ -7641,7 +7641,7 @@
   },
   {
     "id"               : "meat_pie",
-    "charSpans"        : [ {"sheet": "items", "id": 113} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "meat"} ],
     "name"             : "Pie",
     "dynamicName"      : true,
     "mealBuff"         : {"condition": "nourished", "seconds": 75},
@@ -7660,7 +7660,7 @@
   },
   {
     "id"               : "hearty_pie",
-    "charSpans"        : [ {"sheet": "items", "id": 113} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "rapier"} ],
     "name"             : "Hearty Pie",
     "dynamicName"      : true,
     "mealBuff"         : {"condition": "fortified", "seconds": 100},
@@ -7679,7 +7679,7 @@
   },
   {
     "id": "honey",
-    "charSpans": [ {"sheet": "items", "id": 113} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "honeydew"} ],
     "name": "Honey",
     "type": "food",
     "category": "food",
@@ -7710,7 +7710,7 @@
   },
   {
     "id": "ale",
-    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "inhaler"} ],
     "name": "Ale",
     "type": "consumable",
     "category": "drink",
@@ -7726,7 +7726,7 @@
   },
   {
     "id": "herbal_tea",
-    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "teapot"} ],
     "name": "Herbal Tea",
     "type": "consumable",
     "category": "drink",
@@ -7743,7 +7743,7 @@
   },
   {
     "id"               : "wine",
-    "charSpans"        : [ {"sheet": "items", "id": 71} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "wine_glass"} ],
     "name"             : "Wine",
     "type"             : "consumable",
     "category"         : "drink",
@@ -7759,7 +7759,7 @@
   },
   {
     "id"               : "mead",
-    "charSpans"        : [ {"sheet": "items", "id": 71} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "t_alien_meadow_tree_1"} ],
     "name"             : "Mead",
     "type"             : "consumable",
     "category"         : "drink",
@@ -7778,7 +7778,7 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "resin",
-    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "t_resin_hole"} ],
     "name": "Tree Resin",
     "type": "material",
     "category": "organic",
@@ -7793,7 +7793,7 @@
   },
   {
     "id"               : "bone_meal",
-    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "bone"} ],
     "name"             : "Bone Meal",
     "type"             : "material",
     "category"         : "organic",
@@ -7808,7 +7808,7 @@
   },
   {
     "id": "bone_glue",
-    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "bone"} ],
     "name": "Bone Glue",
     "type": "material",
     "category": "organic",
@@ -7823,7 +7823,7 @@
   },
   {
     "id": "hide_glue",
-    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "acid_soaked_hide"} ],
     "name": "Hide Glue",
     "type": "material",
     "category": "organic",
@@ -7841,7 +7841,7 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "wooden_bucket",
-    "charSpans": [ {"sheet": "items", "id": 41} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "wooden_grip"} ],
     "name": "Wooden Bucket",
     "type": "material",
     "category": "storage",
@@ -7856,7 +7856,7 @@
   },
   {
     "id"               : "wooden_barrel",
-    "charSpans"        : [ {"sheet": "items", "id": 41} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "wooden_barrel"} ],
     "name"             : "Wooden Barrel",
     "type"             : "material",
     "category"         : "storage",
@@ -7871,7 +7871,7 @@
   },
   {
     "id": "tanning_brine",
-    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "t_vat_blue"} ],
     "name": "Tanning Brine",
     "type": "material",
     "category": "organic",
@@ -7908,7 +7908,7 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id"               : "aurochs_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "meat"} ],
     "name"             : "Aurochs Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -7927,7 +7927,7 @@
   },
   {
     "id"               : "mammoth_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "meat"} ],
     "name"             : "Mammoth Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -7946,7 +7946,7 @@
   },
   {
     "id"               : "owlbear_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "meat"} ],
     "name"             : "Owlbear Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -7965,7 +7965,7 @@
   },
   {
     "id"               : "sabretooth_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "meat"} ],
     "name"             : "Sabretooth Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -7984,7 +7984,7 @@
   },
   {
     "id"               : "crocodile_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "meat"} ],
     "name"             : "Crocodile Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -8003,7 +8003,7 @@
   },
   {
     "id"               : "hippogriff_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "meat"} ],
     "name"             : "Hippogriff Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -8022,7 +8022,7 @@
   },
   {
     "id"               : "fowl_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "meat"} ],
     "name"             : "Fowl Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -8041,7 +8041,7 @@
   },
   {
     "id"               : "worg_meat",
-    "charSpans"        : [ {"sheet": "items", "id": 67} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "meat"} ],
     "name"             : "Worg Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -8075,7 +8075,7 @@
   },
   {
     "id": "huge_bones",
-    "charSpans": [ {"sheet": "items", "id": 138} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "knife_huge_var_knife_butcher"} ],
     "name": "Huge Bones",
     "type": "material",
     "category": "organic",
@@ -8106,7 +8106,7 @@
   // Beast-grade RAW hides (drop from the §E peak beasts; feed the multi-step beast-leather chain)
   {
     "id"               : "aurochs_hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "acid_soaked_hide"} ],
     "name"             : "Aurochs Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -8124,7 +8124,7 @@
   },
   {
     "id"               : "worg_hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "acid_soaked_hide"} ],
     "name"             : "Worg Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -8178,7 +8178,7 @@
   },
   {
     "id"               : "mammoth_fur",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "fur"} ],
     "name"             : "Mammoth Fur-Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -8196,7 +8196,7 @@
   },
   {
     "id"               : "croc_scaled_hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "acid_soaked_hide"} ],
     "name"             : "Scaled Crocodile Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -8214,7 +8214,7 @@
   },
   {
     "id"               : "hippogriff_feathered_hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "acid_soaked_hide"} ],
     "name"             : "Feathered Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -8233,7 +8233,7 @@
   // Beast-leather chain intermediates: raw → cured → tanned (beast_brine) → hardened/plated
   {
     "id": "cured_beast_hide",
-    "charSpans": [ {"sheet": "items", "id": 152} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "raw_cured_fatty_meat"} ],
     "name": "Cured Beast Hide",
     "type": "material",
     "category": "organic",
@@ -8249,7 +8249,7 @@
   },
   {
     "id": "beast_leather",
-    "charSpans": [ {"sheet": "items", "id": 152} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "leather"} ],
     "name": "Beast Leather",
     "type": "material",
     "category": "leather",
@@ -8263,7 +8263,7 @@
   },
   {
     "id": "boiled_leather",
-    "charSpans": [ {"sheet": "items", "id": 152} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "grain_boiled"} ],
     "name": "Boiled Leather",
     "type": "material",
     "category": "leather",
@@ -8277,7 +8277,7 @@
   },
   {
     "id"               : "scale_plate",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "bathroom_scale"} ],
     "name"             : "Scale Plate",
     "type"             : "material",
     "category"         : "leather",
@@ -8294,7 +8294,7 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id"               : "wool",
-    "charSpans"        : [ {"sheet": "items", "id": 158} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "wool_suit"} ],
     "name"             : "Wool",
     "type"             : "material",
     "category"         : "organic",
@@ -8309,7 +8309,7 @@
   },
   {
     "id"               : "coarse_wool",
-    "charSpans"        : [ {"sheet": "items", "id": 158} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "wool_suit"} ],
     "name"             : "Coarse Wool",
     "type"             : "material",
     "category"         : "organic",
@@ -8324,7 +8324,7 @@
   },
   {
     "id"               : "fine_wool",
-    "charSpans"        : [ {"sheet": "items", "id": 158} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "wool_suit"} ],
     "name"             : "Fine Wool",
     "type"             : "material",
     "category"         : "organic",
@@ -8339,7 +8339,7 @@
   },
   {
     "id"               : "felt",
-    "charSpans"        : [ {"sheet": "items", "id": 158} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "felt_patch"} ],
     "name"             : "Felt",
     "type"             : "material",
     "category"         : "organic",
@@ -8370,7 +8370,7 @@
   // ── Fabric extension — cotton & silk cloth, plush stuffing, and mage garments ──────────────────
   {
     "id"               : "cotton_seed",
-    "charSpans"        : [ {"sheet": "items", "id": 113} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "cotton_ball"} ],
     "name"             : "Cotton Seed",
     "type"             : "material",
     "category"         : "cotton_seed",
@@ -8384,7 +8384,7 @@
   },
   {
     "id"               : "cotton_fiber",
-    "charSpans"        : [ {"sheet": "items", "id": 158} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "cotton_ball"} ],
     "name"             : "Cotton",
     "type"             : "material",
     "category"         : "fiber",
@@ -8398,7 +8398,7 @@
   },
   {
     "id"               : "cotton_cloth",
-    "charSpans"        : [ {"sheet": "items", "id": 158} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "cotton_ball"} ],
     "name"             : "Cotton Cloth",
     "type"             : "material",
     "category"         : "organic",
@@ -8413,7 +8413,7 @@
   },
   {
     "id"               : "raw_silk",
-    "charSpans"        : [ {"sheet": "items", "id": 158} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "tea_raw"} ],
     "name"             : "Raw Silk",
     "type"             : "material",
     "category"         : "organic",
@@ -8427,7 +8427,7 @@
   },
   {
     "id"               : "silk_cloth",
-    "charSpans"        : [ {"sheet": "items", "id": 158} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "cloth_vest_padded"} ],
     "name"             : "Silk Cloth",
     "type"             : "material",
     "category"         : "organic",
@@ -8456,7 +8456,7 @@
   },
   {
     "id"               : "wool_cloak",
-    "charSpans"        : [ {"sheet": "items", "id": 9} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "wool_suit"} ],
     "name"             : "Wool Cloak",
     "type"             : "armor",
     "category"         : "cloth",
@@ -8481,7 +8481,7 @@
   },
   {
     "id"               : "arcane_robe",
-    "charSpans"        : [ {"sheet": "items", "id": 7} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "robe_wizard"} ],
     "name"             : "Arcane Robe",
     "type"             : "armor",
     "category"         : "cloth",
@@ -8527,7 +8527,7 @@
   },
   {
     "id": "mortar",
-    "charSpans": [ {"sheet": "items", "id": 11} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "f_m224_mortar"} ],
     "name": "Mortar",
     "type": "material",
     "category": "stone",
@@ -8557,7 +8557,7 @@
   },
   {
     "id": "concrete",
-    "charSpans": [ {"sheet": "items", "id": 11} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "t_concrete"} ],
     "name": "Concrete",
     "type": "material",
     "category": "stone",
@@ -8572,7 +8572,7 @@
   },
   {
     "id"               : "rebar",
-    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "rebar"} ],
     "name"             : "Rebar",
     "type"             : "material",
     "category"         : "metal",
@@ -8587,7 +8587,7 @@
   },
   {
     "id": "gem_dust",
-    "charSpans": [ {"sheet": "items", "id": 31} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "mask_dust_var_blue_mask_dust"} ],
     "name": "Gem Dust",
     "type": "material",
     "category": "magic_crystal",
@@ -8601,7 +8601,7 @@
   },
   {
     "id": "magic_concrete",
-    "charSpans": [ {"sheet": "items", "id": 11} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "cards_magic"} ],
     "name": "Runed Concrete",
     "type": "material",
     "category": "stone",
@@ -8616,7 +8616,7 @@
   },
   {
     "id": "arcane_resin",
-    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "t_resin_hole"} ],
     "name": "Arcane Binder",
     "type": "material",
     "category": "magic_crystal",
@@ -8634,7 +8634,7 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id"               : "iron_wire",
-    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "5l_iron"} ],
     "name"             : "Iron Wire",
     "type"             : "material",
     "category"         : "metal",
@@ -8649,7 +8649,7 @@
   },
   {
     "id": "mail_rings",
-    "charSpans": [ {"sheet": "items", "id": 138} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "f_mailbox"} ],
     "name": "Mail Rings",
     "type": "material",
     "category": "metal",
@@ -8664,7 +8664,7 @@
   },
   {
     "id": "scale_cuirass",
-    "charSpans": [ {"sheet": "items", "id": 11} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "bathroom_scale"} ],
     "name": "Scale Cuirass",
     "type": "armor",
     "category": "leather",
@@ -8691,7 +8691,7 @@
   },
   {
     "id": "plate_cuirass",
-    "charSpans": [ {"sheet": "items", "id": 11} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "hotplate"} ],
     "name": "Steel Plate Cuirass",
     "type": "armor",
     "category": "metal",
@@ -8721,7 +8721,7 @@
   },
   {
     "id": "great_helm",
-    "charSpans": [ {"sheet": "items", "id": 82} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "compgreatbow"} ],
     "name": "Steel Great Helm",
     "type": "armor",
     "category": "metal",
@@ -8750,7 +8750,7 @@
   },
   {
     "id": "beast_leather_plate",
-    "charSpans": [ {"sheet": "items", "id": 8} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "leather"} ],
     "name": "Beast-Leather Plate",
     "type": "armor",
     "category": "leather",
@@ -8778,7 +8778,7 @@
   },
   {
     "id": "bone_plated_cuirass",
-    "charSpans": [ {"sheet": "items", "id": 11} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "bone"} ],
     "name": "Bone-Plated Cuirass",
     "type": "armor",
     "category": "organic",
@@ -8807,7 +8807,7 @@
   },
   {
     "id": "horned_helm",
-    "charSpans": [ {"sheet": "items", "id": 82} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "firehelmet"} ],
     "name": "Horned Helm",
     "type": "armor",
     "category": "organic",
@@ -8837,7 +8837,7 @@
   // drives the effect; the head/amulet regalia line already exists).
   {
     "id": "ceremonial_plate",
-    "charSpans": [ {"sheet": "items", "id": 11} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "hotplate"} ],
     "name": "Ceremonial Plate",
     "type": "armor",
     "category": "metal",
@@ -8897,7 +8897,7 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "clay_alembic",
-    "charSpans": [ {"sheet": "items", "id": 41} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "t_clay"} ],
     "name": "Clay Alembic",
     "type": "material",
     "category": "storage",
@@ -8927,7 +8927,7 @@
   },
   {
     "id": "clay_jug",
-    "charSpans": [ {"sheet": "items", "id": 26} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "t_clay"} ],
     "name": "Clay Jug",
     "type": "material",
     "category": "storage",
@@ -8945,7 +8945,7 @@
   },
   {
     "id": "porcelain_clay",
-    "charSpans": [ {"sheet": "items", "id": 26} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "t_clay"} ],
     "name": "Porcelain Clay",
     "type": "material",
     "category": "stone",
@@ -8960,7 +8960,7 @@
   },
   {
     "id": "porcelain_vessels",
-    "charSpans": [ {"sheet": "items", "id": 26} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "porcelain_urn"} ],
     "name": "Porcelain Vessels",
     "type": "material",
     "category": "storage",
@@ -8993,7 +8993,7 @@
   },
   {
     "id"               : "dye",
-    "charSpans"        : [ {"sheet": "items", "id": 71} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "hair_dye_kit"} ],
     "name"             : "Dye",
     "type"             : "material",
     "category"         : "organic",
@@ -9008,7 +9008,7 @@
   },
   {
     "id"               : "soap",
-    "charSpans"        : [ {"sheet": "items", "id": 41} ],
+    "charSpans"        : [ {"sheet": "mshock", "tile": "soap"} ],
     "name"             : "Soap",
     "type"             : "consumable",
     "category"         : "consumable",
@@ -9090,7 +9090,7 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "magic_alloy_bar",
-    "charSpans": [ {"sheet": "items", "id": 138} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "cards_magic"} ],
     "name": "Magic-Alloy Bar",
     "type": "material",
     "category": "metal",
@@ -9105,7 +9105,7 @@
   },
   {
     "id": "enchant_thread",
-    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "thread"} ],
     "name": "Enchant-Thread",
     "type": "material",
     "category": "organic",
@@ -9120,7 +9120,7 @@
   },
   {
     "id": "runed_block",
-    "charSpans": [ {"sheet": "items", "id": 33} ],
+    "charSpans": [ {"sheet": "mshock", "tile": "wood_block"} ],
     "name": "Runed Block",
     "type": "material",
     "category": "block",

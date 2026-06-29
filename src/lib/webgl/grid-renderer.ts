@@ -10,6 +10,7 @@ import type { CharacterRenderer } from './character-renderer.js';
 import type { ShaderManager } from './shaders.js';
 import type { FontAtlas } from './types.js';
 import { checkWebGLError } from './utils.js';
+import { MSHOCK_PUA_BASE } from '$lib/game/core/Terrains.js';
 
 /** Default fully-lit value used when no light sampler is supplied. */
 const ONE_LIGHT: [number, number, number] = [1, 1, 1];
@@ -388,7 +389,7 @@ export class GridRenderer {
     // ~5.2M-element `number[]` grown via `.push(...)` plus a final `new Float32Array(it)` copy —
     // the dominant allocation + GC cost of a full terrain rebuild, which the Chrome trace showed
     // is what the biggest renderer dips are made of. Output is byte-identical to the old path.
-    const FLOATS_PER_TILE = 6 * 23;
+    const FLOATS_PER_TILE = 6 * 24;
     const out = new Float32Array(tiles.length * FLOATS_PER_TILE);
     let o = 0;
     const sampler = options.lightSampler;
@@ -531,7 +532,10 @@ export class GridRenderer {
       }
 
       // Add vertex data for this character (2 triangles = 6 vertices)
-      // Vertex format: x, y, u, v, fr, fg, fb, br, bg, bb, dr, dg, db, or, og, ob, u1, v1, u2, v2, lr, lg, lb (23 floats)
+      // Vertex format: x, y, u, v, fr, fg, fb, br, bg, bb, dr, dg, db, or, og, ob, u1, v1, u2, v2, lr, lg, lb, fullColor (24 floats)
+      // MShock tiles (PUA ≥ U+EA00) draw full-colour; bitlands glyphs (< EA00) get luminance-tinted.
+      const cp0 = tile.char ? (tile.char.codePointAt(0) ?? 0) : 0;
+      const fc = cp0 >= MSHOCK_PUA_BASE ? 1 : 0;
       const charVertices = [
         // Triangle 1
         x1,
@@ -556,7 +560,8 @@ export class GridRenderer {
         ub[3],
         Ltl[0],
         Ltl[1],
-        Ltl[2], // Top-left
+        Ltl[2],
+        fc, // Top-left
         x2,
         y1,
         trU,
@@ -579,7 +584,8 @@ export class GridRenderer {
         ub[3],
         Ltr[0],
         Ltr[1],
-        Ltr[2], // Top-right
+        Ltr[2],
+        fc, // Top-right
         x1,
         y2,
         blU,
@@ -602,7 +608,8 @@ export class GridRenderer {
         ub[3],
         Lbl[0],
         Lbl[1],
-        Lbl[2], // Bottom-left
+        Lbl[2],
+        fc, // Bottom-left
 
         // Triangle 2
         x2,
@@ -627,7 +634,8 @@ export class GridRenderer {
         ub[3],
         Ltr[0],
         Ltr[1],
-        Ltr[2], // Top-right
+        Ltr[2],
+        fc, // Top-right
         x2,
         y2,
         brU,
@@ -650,7 +658,8 @@ export class GridRenderer {
         ub[3],
         Lbr[0],
         Lbr[1],
-        Lbr[2], // Bottom-right
+        Lbr[2],
+        fc, // Bottom-right
         x1,
         y2,
         blU,
@@ -673,7 +682,8 @@ export class GridRenderer {
         ub[3],
         Lbl[0],
         Lbl[1],
-        Lbl[2] // Bottom-left
+        Lbl[2],
+        fc // Bottom-left
       ];
 
       out.set(charVertices, o);
@@ -701,12 +711,12 @@ export class GridRenderer {
     }
   }
 
-  /** Bind the tileRenderer's 8 vertex attributes (23-float interleaved stride) for a VAO/VBO. */
+  /** Bind the tileRenderer's 9 vertex attributes (24-float interleaved stride) for a VAO/VBO. */
   private setupGridAttribs(vao: WebGLVertexArrayObject, vbo: WebGLBuffer): void {
     const gl = this.gl;
     gl.bindVertexArray(vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-    const stride = 23 * 4; // 23 floats per vertex, 4 bytes per float
+    const stride = 24 * 4; // 24 floats per vertex, 4 bytes per float
     // [name, size, offset-in-floats]
     const attribs: [string, number, number][] = [
       ['a_position', 2, 0],
@@ -716,7 +726,8 @@ export class GridRenderer {
       ['a_detail', 3, 10],
       ['a_outline', 3, 13],
       ['a_uvBounds', 4, 16],
-      ['a_light', 3, 20]
+      ['a_light', 3, 20],
+      ['a_fullColor', 1, 23]
     ];
     for (const [name, size, offset] of attribs) {
       const loc = this.shaderManager.getAttributeLocation('tileRenderer', name);

@@ -7,7 +7,9 @@
 
 import { createOrthographicMatrix, PerformanceTimer } from './utils.js';
 import { ShaderManager, createTileRendererShaders } from './shaders.js';
-import { createSquareCellAtlas, loadBitlandsAtlas } from './font-atlas.js';
+import { createSquareCellAtlas, loadBitlandsAtlas, extendAtlasWithNamedSheet } from './font-atlas.js';
+import { MSHOCK_PUA_BASE } from '$lib/game/core/Terrains.js';
+import mshockAtlasMap from '$lib/game/core/mshock-atlas.json';
 import { TextureManager } from './texture-manager.js';
 import { CharacterRenderer } from './character-renderer.js';
 import { GridRenderer } from './grid-renderer.js';
@@ -322,6 +324,23 @@ export class WebGLRendererCore {
       } catch {
         if (this.debug) console.warn('Bitlands atlas unavailable, using canvas atlas');
         this.fontAtlas = await createSquareCellAtlas(this.tileWidth, this.debug);
+      }
+
+      // Append the bundled MShockXotto+ named-tile sheet (full-colour 32×32 tiles).
+      // Registered at U+EA00 + index; charSpans {sheet:"mshock",tile} resolve here.
+      try {
+        this.fontAtlas = await extendAtlasWithNamedSheet(
+          this.fontAtlas,
+          '/tilesets/mshock_atlas.png',
+          mshockAtlasMap as Record<string, number>,
+          32,
+          32,
+          16,
+          MSHOCK_PUA_BASE,
+          this.debug
+        );
+      } catch (e) {
+        if (this.debug) console.warn('MShock atlas unavailable:', e);
       }
 
       this.textureManager = new TextureManager(gl, this.debug);

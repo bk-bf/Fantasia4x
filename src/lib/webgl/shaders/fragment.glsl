@@ -9,6 +9,7 @@ in vec3 v_detail;
 in vec3 v_outline;
 in vec4 v_uvBounds;  // (uMin, vMin, uMax, vMax) of this glyph in the atlas
 in vec3 v_light;     // Interpolated ADDITIVE point-light contribution (0 = none)
+in float v_fullColor; // 1 = draw atlas RGBA directly (MShock), 0 = luminance-tint (bitlands mask)
 
 uniform sampler2D u_fontAtlas;
 uniform vec2 u_texelSize;  // (1/atlasWidth, 1/atlasHeight)
@@ -32,6 +33,17 @@ void main() {
     vec3 light = min(u_ambient + v_light * u_lightFlicker, vec3(1.6));
 
     vec4 sprite = texture(u_fontAtlas, v_texCoord);
+
+    // MShock full-colour tiles: draw the atlas RGBA directly (lit), no luminance tint.
+    if (v_fullColor > 0.5) {
+        vec3 col = sprite.rgb * light;
+        if (u_glyphOnly > 0.5) {
+            fragColor = vec4(col, sprite.a);
+        } else {
+            fragColor = vec4(mix(v_background, col, sprite.a), 1.0);
+        }
+        return;
+    }
 
     // Outline: if this tile has an outline color and the current fragment is
     // in the background (alpha < 0.5) but a cardinal neighbour is inside the

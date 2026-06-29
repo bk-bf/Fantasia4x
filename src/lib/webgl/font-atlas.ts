@@ -631,6 +631,86 @@ export async function extendAtlasWithSheet(
 }
 
 /**
+ * Append a **name-keyed** sprite sheet (MShockXotto+) to an existing atlas.
+ *
+ * Unlike extendAtlasWithSheet (256-slot CP437 grid), this takes a `name → cellIndex`
+ * map (from mshock-atlas.json) and registers each tile under String.fromCodePoint(puaBase + index).
+ * The sheet is `cols`-wide grid of `tileW×tileH` cells with its OWN alpha (no magenta key).
+ * The combined atlas widens to fit the (wider) MShock sheet; bitlands UVs recompute from the new
+ * atlasWidth automatically at draw time, so existing glyphs are unaffected.
+ */
+export async function extendAtlasWithNamedSheet(
+  atlas: FontAtlas,
+  url: string,
+  nameToIndex: Record<string, number>,
+  tileW: number,
+  tileH: number,
+  cols: number,
+  puaBase: number,
+  debug = false
+): Promise<FontAtlas> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`extendAtlasWithNamedSheet: failed to load ${url}`));
+    image.src = url;
+  });
+
+  const newW = Math.max(atlas.atlasWidth, img.width);
+  const newH = atlas.atlasHeight + img.height;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = newW;
+  canvas.height = newH;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('extendAtlasWithNamedSheet: no 2D context');
+
+  // Existing atlas pixels on top (left-aligned), MShock sheet appended below.
+  const prev = document.createElement('canvas');
+  prev.width = atlas.atlasWidth;
+  prev.height = atlas.atlasHeight;
+  const pctx = prev.getContext('2d');
+  if (!pctx) throw new Error('extendAtlasWithNamedSheet: no copy context');
+  pctx.putImageData(atlas.texture, 0, 0);
+  ctx.drawImage(prev, 0, 0);
+  ctx.drawImage(img, 0, atlas.atlasHeight);
+
+  const characters = new Map(atlas.characters);
+  for (const [name, idx] of Object.entries(nameToIndex)) {
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    characters.set(String.fromCodePoint(puaBase + idx), {
+      char: name,
+      x: col * tileW,
+      y: atlas.atlasHeight + row * tileH,
+      width: tileW,
+      height: tileH,
+      xAdvance: tileW,
+      xOffset: 0,
+      yOffset: 0
+    });
+  }
+
+  if (debug) {
+    console.log(
+      `✅ extendAtlasWithNamedSheet: ${url} → ${newW}×${newH}, ` +
+        `${Object.keys(nameToIndex).length} named tiles at U+${puaBase.toString(16).toUpperCase()}`
+    );
+  }
+
+  return {
+    texture: ctx.getImageData(0, 0, newW, newH),
+    characters,
+    fontFamily: atlas.fontFamily,
+    fontSize: atlas.fontSize,
+    atlasWidth: newW,
+    atlasHeight: newH,
+    lineHeight: atlas.lineHeight,
+    baseline: atlas.baseline
+  };
+}
+
+/**
  * Load all eight bitlands sprite sheets into a single unified WebGL atlas.
  *
  * Atlas layout (each sheet is 192×288 px — 16 columns × 16 rows of 12×18 sprites):

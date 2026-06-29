@@ -1,7 +1,16 @@
 import terrainsData from '../database/terrains.jsonc';
 import subterrainsData from '../database/subterrains.jsonc';
 import { CP437_TO_UNICODE } from './cp437.js';
+import mshockAtlasMap from './mshock-atlas.json';
 import type { WorldTile } from './types';
+
+/**
+ * MShockXotto+ tiles occupy PUA codepoints starting here (bitlands uses U+E000–U+E9FF).
+ * A `{sheet:"mshock", tile:"t_grass"}` charSpan resolves to U+EA00 + mshock-atlas.json[tile];
+ * the renderer (font-atlas extendAtlasWithNamedSheet) registers those codepoints' atlas cells,
+ * and the shader draws them full-colour (a_fullColor) instead of luminance-tinting. */
+export const MSHOCK_PUA_BASE = 0xea00;
+const MSHOCK_INDEX = mshockAtlasMap as Record<string, number>;
 
 /**
  * Terrains.ts — Biome and subterrain definitions
@@ -73,11 +82,14 @@ export interface CharSpan {
     | 'workshops'
     | 'crops'
     | 'creatures'
-    | 'races';
+    | 'races'
+    | 'mshock';
   from?: number;
   to?: number;
   id?: number;
   literal?: string;
+  /** MShockXotto+ tile id (e.g. "t_grass", "f_anvil"). Used with sheet:"mshock". */
+  tile?: string;
 }
 
 type SheetFn = (n: number) => string;
@@ -98,6 +110,15 @@ const SHEET_FN: Record<string, SheetFn> = {
 export function resolveCharSpans(spans: CharSpan[]): string[] {
   return spans.flatMap((span) => {
     if (span.literal !== undefined) return [span.literal];
+    // MShockXotto+ named tiles: look the name up in the bundled atlas index → PUA codepoint.
+    if (span.sheet === 'mshock' || span.tile !== undefined) {
+      const idx = span.tile !== undefined ? MSHOCK_INDEX[span.tile] : undefined;
+      if (idx === undefined) {
+        console.warn(`resolveCharSpans: unknown mshock tile "${span.tile}" — fallback glyph`);
+        return ['?'];
+      }
+      return [String.fromCodePoint(MSHOCK_PUA_BASE + idx)];
+    }
     const fn = SHEET_FN[span.sheet ?? 'plants'];
     // Fail-soft: an unknown sheet name (typo, or a sheet not registered above) renders a visible
     // fallback glyph instead of throwing at import and 500-ing the whole game — a bad charSpans edit
