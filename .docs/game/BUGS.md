@@ -7,6 +7,51 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 
 ---
 
+## [FIXED] Sustained ~35 TPS — mob A* sweeping the map on UNREACHABLE flee targets (terrain rework opened the mountains)
+
+**Symptom:** TPS sat at a **sustained ~35** (down from 60) on a 500² map with ~420 mobs, seemingly out of
+nowhere right after a batch of temperature/ice work. It *looked* like the ice/temp changes caused it.
+
+**It was NOT the ice/temp work** — several confident theories were chased and **ruled out by measurement**:
+ice-freeze delta churn (`accumulateSnow` was 0.3 ms/tick), the walkable-only HUD average, and the
+`TEMP-DBG` verbose log (real, but Debug-only). The actual cause was the **terrain rework** (commits
+`1b7165a` + `18d195d8` + `ccc05c38`): it moved the mountain interior from an unwalkable `cliff` *subtype*
+to a **walkable `cave` floor + wall *resources*** on top. That ballooned the **connected walkable region**
+(`TEMP-BAKE walkable` ~15k → **129261**, i.e. **52% of the 250k-tile map**) and riddled it with pockets.
+
+**Root cause (`services/entity/entityHelpers.ts` `fleeToSafety` × `spatial-core` A*):** fleeing prey
+picked a destination **`max(w,h)/2` = 250 tiles** away (the old anti-yo-yo "commit to a far point"), and on
+the now-huge, disconnected map those points were usually **unreachable**. The WASM A* cap was
+`(w*h).min(100_000)`, so each **failed** search **exhausted the entire 130k-tile connected component**
+before returning empty (~**6.7 ms**). Only **~4–5** flee paths/tick × 6.7 ms ≈ **28 ms** = the whole tick
+budget. Mob *pathfinding*, not the ice work, not mob *count* (only ~4 path computes/tick), not path
+*following* (`es:move` 0.5 ms).
+
+**How it was finally measured (after the theories failed):** restored a **per-phase `t()` timer** → the
+cost was `entityStep`; **sub-timers** → `es:step` (`stepEntities`); the **CPU-profiler subtree** under
+`stepEntities` → **84% WASM A***; an **`A*-STATS`** counter → `calls=4.3 fail%=78 ms=28.7` (**~6.7 ms/fail**);
+**`PATHFAIL` from→to samples** → **all `flee2`, d=250–500**. The from→to lines named it outright.
+
+**Fix (four parts):**
+- **Short flee burst** — `fleeToSafety` now bolts `FLEE_BURST_TILES` (22) in the safest committed heading
+  (real-animal escape sprint, not a map-crossing), so paths are short **and** reachable. Stamina still gates
+  the run length. (Supersedes the "lock a far destination" anti-yo-yo from the cornered-flee fix below.)
+- **Per-call A* node cap** — `spatial-core find_path` gained a `max_iter` param (0 = full default for pawn
+  cross-map paths); mob `pathTo` passes `MOB_PATH_MAX_ITER` (8000), so any *residual* unreachable mob search
+  bails in <1 ms regardless of map size. Pawn pathfinding is untouched. (Rebuild: `pnpm add:wasm`.)
+- **Walkable-connectivity flood-fill** (`services/entity/connectivity.ts`) — a cheap periodic component
+  labelling (8-connected + corner-cut, matching A* exactly). Target selection now rejects cross-component
+  goals in **O(1)** *before* spending an A*: `findReachableFoodTile` (forage), `findNearestPrey` (hunt),
+  `fleeToSafety` (flee). Cleaner than "pick nearest → A* → fail → bail"; the node cap is the staleness net.
+- **LOS-gate on prey** — `findNearestPrey` only targets prey it can both *reach* (component) and *see*
+  (`hasLineOfSight`, the same Bresenham as pawn aggro).
+
+**Lesson (the recurring one):** the regression shipped next to unrelated work and *looked* like it; every
+"I think it's X" was wrong. **Measure — per-phase timing → profiler subtree → per-call stats → concrete
+from→to samples — don't theorise.** The `PHASE-MS` / `A*-STATS` / `PATHFAIL` instrumentation is kept
+in-tree, gated behind the Settings → Debug-mode toggle (zero cost when off). Full perf context:
+[.tasks/open/ENGINE-PERFORMANCE-II.md §S3](../.tasks/open/ENGINE-PERFORMANCE-II.md).
+
 ## [FIXED] Pawns freeze in hot weather — tile-temperature cache stuck at 0 (bake gated on season alone)
 
 **Symptom:** In **30 °C summer**, pawns' cold-exposure meter ran up to **~110 %** and they took
@@ -385,10 +430,10 @@ kept only as a fallback).
 
 ---
 
-## [OPEN] Elk FORAGE-UNREACHABLE oscillation
+## [FIXED] Elk FORAGE-UNREACHABLE oscillation — forager locked onto an unreachable food tile
 
 **Symptom:** An elk stuck near impassable terrain (e.g. `mob-elk-6000-18`) logs `FORAGE-UNREACHABLE` every 2 ticks indefinitely. The entity oscillates between `Foraging` and `Grazing` states at ~30 ticks/second.
 
-**Root cause:** When pathfinding to a food tile fails, `stepForaging` correctly transitions the mob to `Grazing`. But on the very next tick, the hungry-check in `stepAnimal` re-enters `Foraging` unconditionally (no cooldown). The same unreachable tile is found again, producing an infinite loop.
+**Root cause:** `findReachableFoodTile` collected edible tiles by `tile.walkable` only — but **walkable ≠ reachable** (a bush across a river/wall is walkable yet unpathable). The forager locked onto such a tile, `stepForaging` failed to path and dropped to `Grazing`, the hungry-check re-entered `Foraging` next tick, found the *same* unreachable tile, and looped.
 
-**Fix (not yet applied):** Add a `forageCooldownUntil?: number` field to `Mob` (mirroring the existing `huntCooldownUntil`). Set it when `FORAGE-UNREACHABLE` fires, and guard the `canForage → Foraging` transition in `stepAnimal` with a cooldown expiry check.
+**Fix:** subsumed by the walkable-connectivity work (see the §35-TPS post-mortem above). `findReachableFoodTile` now gates candidate collection on `reachable(mob, tile)` — a forager only ever considers food in its **own walkable component**, so an unreachable bush is never targeted in the first place. (The earlier proposal — a `forageCooldownUntil` band-aid — was made moot by fixing the *selection*.)

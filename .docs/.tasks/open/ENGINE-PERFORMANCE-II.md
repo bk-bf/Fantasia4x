@@ -101,7 +101,7 @@ The fresh 2026-06-22 trace **confirms** the 06-21 items that were "pending valid
 | **S4** | snapshot: demote 10 mob scalars to `MOB_COLD` | ✅ `syncEntities` ~2.6% worker (ships only hot scalars) |
 | **S5a** | stagger the hunger/hunt wave (spawn-hunger spread + concurrent-hunt cap + jittered backoff) | ✅ landed |
 | **S5b** | entity LOD | ✅ **delivered as Breakthrough 1** (complexity bubble) |
-| **S3** | pathfinding at scale | ◻ **now the dominant worker cost** — see below |
+| **S3** | pathfinding at scale | ◑ **in progress** — the fleeing-prey unreachable-A* cliff fixed (2026-06-29); see below |
 
 ## What's left (the new worker ceiling)
 
@@ -109,10 +109,29 @@ The renderer is no longer terrain-bound; the **worker** is the constraint at the
 worker self-time: WASM spatial `wasm-fn[27]` 16.3% + `[4]` 14.0% (~30%), `advanceMobMovement` 3.7% +
 `advanceAlongPath` 3.2%, `buildSharedSoftBlockedGrid` 3.9%, `blockedTiles` 2.9%.
 
-- [ ] **S3 — pathfinding at scale.** Biggest remaining lever. `buildSharedSoftBlockedGrid` rebuilds the
-  soft-blocked overlay; A* runs for many mobs. Levers: incremental occupancy (don't rebuild the blocked
-  overlay from scratch), throttle/stagger path recomputes, cap A*/tick, reuse paths until invalidated.
-  Off-bubble mobs already think rarely — so most A* is in-bubble + threat-interrupt fleeing.
+### S3 — pathfinding at scale
+
+- [x] **The fleeing-prey unreachable-A* cliff (2026-06-29).** On a 500² map opened up by the terrain rework
+  (mountain interior → walkable `cave`; **walkable 52%**, ~129k tiles, riddled with pockets), `fleeToSafety`
+  targeted a point `max(w,h)/2` (**250 tiles**) away — usually **unreachable**, and the WASM A* cap was
+  `(w*h).min(100_000)`, so each fail **swept the whole 130k-tile component** (~6.7 ms). ~4–5 such flee paths/
+  tick = **~28 ms = the entire tick budget → sustained 35 TPS**. Located by per-phase timing → profiler
+  subtree (`stepEntities` 84% WASM A*) → `A*-STATS` (`calls=4.3 fail%=78`) → `PATHFAIL` from→to (all `flee2`,
+  d=250–500). Full post-mortem in [BUGS.md](../../game/BUGS.md). Fix, four parts:
+  - **Short flee burst** — `FLEE_BURST_TILES` (22) committed heading, not a map-crossing → short + reachable.
+  - **Per-call A* node cap** — `spatial-core find_path` gained `max_iter` (0 = pawn default); mob `pathTo`
+    passes `MOB_PATH_MAX_ITER` (8000) so a residual unreachable mob search bails <1 ms at any map size.
+  - **Walkable-connectivity flood-fill** (`services/entity/connectivity.ts`) — cheap periodic component
+    labelling (8-connected + corner-cut, matches A* exactly), rebuilt on a slow cadence + on map ref change.
+    Target selection (forage/hunt/flee) rejects cross-component goals in **O(1)** before any A* — the
+    "select reachable" model instead of "pick nearest → A* → fail → bail". Worker-side TS singleton like the
+    thermal field / wild-growth set (a labelling pass, not a per-query spatial service; ADR-008-adjacent).
+  - **LOS-gate on prey** — `findNearestPrey` targets only reachable **and** visible prey.
+  - Instrumentation (`PHASE-MS` / `A*-STATS` / `PATHFAIL`) kept in-tree, gated behind the Debug-mode toggle.
+- [ ] **Still open: `buildSharedSoftBlockedGrid` + in-bubble A* volume.** The soft-blocked overlay is rebuilt
+  per request; A* still runs for many in-bubble + threat-interrupt mobs. Levers: incremental occupancy
+  (don't rebuild the blocked overlay from scratch), throttle/stagger path recomputes, reuse paths until
+  invalidated. Off-bubble mobs already think rarely.
 
 ## Path to 1000² (1,000,000 tiles, ~1650 mobs)
 
