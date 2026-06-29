@@ -8,8 +8,7 @@
 import { createOrthographicMatrix, PerformanceTimer } from './utils.js';
 import { ShaderManager, createTileRendererShaders } from './shaders.js';
 import { createSquareCellAtlas, loadBitlandsAtlas, extendAtlasWithNamedSheet } from './font-atlas.js';
-import { MSHOCK_PUA_BASE } from '$lib/game/core/Terrains.js';
-import mshockAtlasMap from '$lib/game/core/mshock-atlas.json';
+import { MSHOCK_PUA_BASE, MSHOCK_TILES } from '$lib/game/core/Terrains.js';
 import { TextureManager } from './texture-manager.js';
 import { CharacterRenderer } from './character-renderer.js';
 import { GridRenderer } from './grid-renderer.js';
@@ -332,10 +331,7 @@ export class WebGLRendererCore {
         this.fontAtlas = await extendAtlasWithNamedSheet(
           this.fontAtlas,
           '/tilesets/mshock_atlas.png',
-          mshockAtlasMap as Record<string, number>,
-          32,
-          32,
-          16,
+          MSHOCK_TILES,
           MSHOCK_PUA_BASE,
           this.debug
         );

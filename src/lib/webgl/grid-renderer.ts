@@ -12,6 +12,9 @@ import type { FontAtlas } from './types.js';
 import { checkWebGLError } from './utils.js';
 import { MSHOCK_PUA_BASE } from '$lib/game/core/Terrains.js';
 
+/** MShock sprites are authored on a 32px base cell; a 32×64 sprite renders 2× tall. */
+const MSHOCK_BASE_PX = 32;
+
 /** Default fully-lit value used when no light sampler is supplied. */
 const ONE_LIGHT: [number, number, number] = [1, 1, 1];
 /** Shared "no point light" value for tiles outside every emitter's reach. */
@@ -421,14 +424,29 @@ export class GridRenderer {
       const offsetX = tile.animationOffset?.x || 0;
       const offsetY = tile.animationOffset?.y || 0;
 
-      // Vertex quad always fills the full screen tile regardless of atlas tile size.
-      // UV coords reference the atlas tile via charInfo.{x,y,width,height}.
+      // MShock tiles (PUA ≥ U+EA00) draw full-colour AND keep their native aspect; bitlands
+      // glyphs (< EA00) fill the cell and get luminance-tinted.
+      const cp0 = tile.char ? (tile.char.codePointAt(0) ?? 0) : 0;
+      const fc = cp0 >= MSHOCK_PUA_BASE ? 1 : 0;
+
       const tileW = options.tileWidth;
       const tileH = options.tileHeight;
-      const x1 = screenX + offsetX;
-      const y1 = screenY + offsetY;
-      const x2 = screenX + tileW + offsetX;
-      const y2 = screenY + tileH + offsetY;
+      let x1, y1, x2, y2;
+      if (fc && charInfo) {
+        // MShock sprites are authored on a 32px base; a 32×64 tree → 2× cell height, drawn
+        // BOTTOM-anchored so it overflows upward into the cell above (CDDA tall-tile rendering).
+        const qW = tileW * (charInfo.width / MSHOCK_BASE_PX);
+        const qH = tileH * (charInfo.height / MSHOCK_BASE_PX);
+        x1 = screenX + offsetX + (tileW - qW) / 2; // horizontally centred
+        x2 = x1 + qW;
+        y2 = screenY + tileH + offsetY; // anchor to cell bottom
+        y1 = y2 - qH; // extend upward
+      } else {
+        x1 = screenX + offsetX;
+        y1 = screenY + offsetY;
+        x2 = screenX + tileW + offsetX;
+        y2 = screenY + tileH + offsetY;
+      }
 
       // Calculate texture coordinates.
       // Use a UV of (0,0)→(0,0) for missing chars so sprite.a ≈ 0 → bg fills tile.
@@ -533,9 +551,6 @@ export class GridRenderer {
 
       // Add vertex data for this character (2 triangles = 6 vertices)
       // Vertex format: x, y, u, v, fr, fg, fb, br, bg, bb, dr, dg, db, or, og, ob, u1, v1, u2, v2, lr, lg, lb, fullColor (24 floats)
-      // MShock tiles (PUA ≥ U+EA00) draw full-colour; bitlands glyphs (< EA00) get luminance-tinted.
-      const cp0 = tile.char ? (tile.char.codePointAt(0) ?? 0) : 0;
-      const fc = cp0 >= MSHOCK_PUA_BASE ? 1 : 0;
       const charVertices = [
         // Triangle 1
         x1,

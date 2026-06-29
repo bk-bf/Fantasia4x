@@ -23,7 +23,7 @@
     "displayName" : "Barren Dirt",
     "walkable"    : true,
     "movementCost": 1.2,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_dirtfloor"} ],
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_dirt_unconnected"}, {"sheet": "mshock", "tile": "t_dirt_center2"}, {"sheet": "mshock", "tile": "t_dirt_center3"}, {"sheet": "mshock", "tile": "t_dirt_center4"} ],
     "fg"          : "#856b47",
     "bg"          : "#17120a",
     "biomes"      : { "forest": [null, -0.3], "plains": [null, -0.4] }
@@ -33,7 +33,7 @@
     "displayName" : "Poor Soil",
     "walkable"    : true,
     "movementCost": 1,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_grass"} ],
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_dirt_unconnected"}, {"sheet": "mshock", "tile": "t_dirt_center2"}, {"sheet": "mshock", "tile": "t_dirt_center3"}, {"sheet": "mshock", "tile": "t_dirt_center4"} ],
     "fg"          : "#785e3d",
     "bg"          : "#140f08",
     "biomes"      : { "forest": [-0.3, 0.18], "plains": [-0.4, 0.18] }
@@ -43,7 +43,7 @@
     "displayName" : "Rich Soil",
     "walkable"    : true,
     "movementCost": 1.5,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_grass"} ],
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_dirt_unconnected"}, {"sheet": "mshock", "tile": "t_dirt_center2"}, {"sheet": "mshock", "tile": "t_dirt_center3"}, {"sheet": "mshock", "tile": "t_dirt_center4"} ],
     "fg"          : "#634d30",
     "bg"          : "#140f08",
     "biomes"      : { "forest": [0.25, 0.97] }
@@ -53,7 +53,7 @@
     "displayName" : "Loam",
     "walkable"    : true,
     "movementCost": 1.3,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_grass"} ],
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_dirt_unconnected"}, {"sheet": "mshock", "tile": "t_dirt_center2"}, {"sheet": "mshock", "tile": "t_dirt_center3"}, {"sheet": "mshock", "tile": "t_dirt_center4"} ],
     "fg"          : "#6e5436",
     "bg"          : "#140f08",
     "biomes"      : { "plains": [0.25, 0.7] }
@@ -66,7 +66,7 @@
     "displayName" : "Terra Preta",
     "walkable"    : true,
     "movementCost": 1.2,
-    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_dirt_unconnected"}, {"sheet": "mshock", "tile": "t_dirt_center2"}, {"sheet": "mshock", "tile": "t_dirt_center3"}, {"sheet": "mshock", "tile": "t_dirt_center4"} ],
     "fg"          : "#5c452b",
     "bg"          : "#140f08",
     "biomes"      : { "forest": [0.97, null] }
@@ -76,7 +76,7 @@
     "displayName" : "Savanna",
     "walkable"    : true,
     "movementCost": 1.2,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_grass_long_unconnected"} ],  // dirt tile — savanna resource paints the visual
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_dirt_unconnected"}, {"sheet": "mshock", "tile": "t_dirt_center2"}, {"sheet": "mshock", "tile": "t_dirt_center3"}, {"sheet": "mshock", "tile": "t_dirt_center4"} ],  // dirt tile — savanna resource paints the visual
     "fg"          : "#754d17",
     "bg"          : "#140f08",
     "biomes"      : { "plains": [0.7, null] }
@@ -86,7 +86,7 @@
     "displayName" : "Bush",
     "walkable"    : true,
     "movementCost": 1.8,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_shrub"} ],
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_shrub"}, {"sheet": "mshock", "tile": "t_shrub_lilac"}, {"sheet": "mshock", "tile": "t_shrub_hydrangea"}, {"sheet": "mshock", "tile": "t_shrub_rose"} ],
     "fg"          : "#42750d",
     "bg"          : "#140f08",
     "biomes"      : { "forest": [0.05, 0.15], "plains": [0.1, 0.15] }
@@ -96,7 +96,7 @@
     "displayName" : "Scrubland",
     "walkable"    : true,
     "movementCost": 1.7,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_shrub"} ],
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_shrub"}, {"sheet": "mshock", "tile": "t_grass_dead_unconnected"} ],
     "fg"          : "#7a5717",
     "bg"          : "#140f08"
   },
@@ -105,7 +105,7 @@
     "displayName" : "Wildflowers",
     "walkable"    : true,
     "movementCost": 1.1,
-    "charSpans"   : [ {"sheet": "plants", "from": 89, "to": 111} ],
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_grass"}, {"sheet": "mshock", "tile": "t_grass_center2"}, {"sheet": "mshock", "tile": "t_grass_center3"}, {"sheet": "mshock", "tile": "t_grass_center4"} ],
     "fg"          : "#e06bb5",
     "bg"          : "#140f08"
   },
@@ -114,7 +114,7 @@
     "displayName" : "Forest Floor",
     "walkable"    : true,
     "movementCost": 2,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_tree"} ],
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_grass"}, {"sheet": "mshock", "tile": "t_grass_center2"}, {"sheet": "mshock", "tile": "t_grass_center3"}, {"sheet": "mshock", "tile": "t_grass_center4"} ],
     "fg"          : "#85b81c",
     "bg"          : "#140f08"
   },
@@ -123,7 +123,7 @@
     "displayName" : "Tree Stump",
     "walkable"    : true,
     "movementCost": 2,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_tree"} ],
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_dirt_unconnected"}, {"sheet": "mshock", "tile": "t_dirt_center2"}, {"sheet": "mshock", "tile": "t_dirt_center3"}, {"sheet": "mshock", "tile": "t_dirt_center4"} ],
     "fg"          : "#8f5717",
     "bg"          : "#140f08"
   },
@@ -132,7 +132,7 @@
     "displayName" : "Fallen Logs",
     "walkable"    : true,
     "movementCost": 2.2,
-    "charSpans"   : [ {"sheet": "plants", "id": 209} ],
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_dirt_unconnected"}, {"sheet": "mshock", "tile": "t_dirt_center2"}, {"sheet": "mshock", "tile": "t_dirt_center3"}, {"sheet": "mshock", "tile": "t_dirt_center4"} ],
     "fg"          : "#7a420d",
     "bg"          : "#140f08"
   },
@@ -141,7 +141,7 @@
     "displayName" : "Dead Trees",
     "walkable"    : true,
     "movementCost": 2.5,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "t_tree"} ],
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_dirt_unconnected"}, {"sheet": "mshock", "tile": "t_dirt_center2"}, {"sheet": "mshock", "tile": "t_dirt_center3"}, {"sheet": "mshock", "tile": "t_dirt_center4"} ],
     "fg"          : "#705c36",
     "bg"          : "#140f08"
   },
@@ -150,7 +150,7 @@
     "displayName" : "Mushroom Patch",
     "walkable"    : true,
     "movementCost": 1.6,
-    "charSpans"   : [ {"sheet": "mshock", "tile": "3060_t_fungus_wall_0"} ],
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_grass"}, {"sheet": "mshock", "tile": "t_grass_center2"}, {"sheet": "mshock", "tile": "t_grass_center3"}, {"sheet": "mshock", "tile": "t_grass_center4"} ],
     "fg"          : "#db8554",
     "bg"          : "#140f08"
   },
@@ -159,7 +159,7 @@
     "displayName" : "Moss",
     "walkable"    : true,
     "movementCost": 1.5,
-    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — moss resource paints the visual
+    "charSpans"   : [ {"sheet": "mshock", "tile": "t_grass"}, {"sheet": "mshock", "tile": "t_grass_center2"}, {"sheet": "mshock", "tile": "t_grass_center3"}, {"sheet": "mshock", "tile": "t_grass_center4"} ],  // dirt tile — moss resource paints the visual
     "fg"          : "#754d17",
     "bg"          : "#140f08",
     "biomes"      : { "swamp": [0.5, 0.7] }

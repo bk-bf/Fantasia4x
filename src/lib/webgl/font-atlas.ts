@@ -633,19 +633,16 @@ export async function extendAtlasWithSheet(
 /**
  * Append a **name-keyed** sprite sheet (MShockXotto+) to an existing atlas.
  *
- * Unlike extendAtlasWithSheet (256-slot CP437 grid), this takes a `name → cellIndex`
- * map (from mshock-atlas.json) and registers each tile under String.fromCodePoint(puaBase + index).
- * The sheet is `cols`-wide grid of `tileW×tileH` cells with its OWN alpha (no magenta key).
- * The combined atlas widens to fit the (wider) MShock sheet; bitlands UVs recompute from the new
- * atlasWidth automatically at draw time, so existing glyphs are unaffected.
+ * `tiles` is the packing-order list `[name, x, y, w, h]` from mshock-atlas.json — each entry is
+ * registered under String.fromCodePoint(puaBase + index) with its own (possibly non-square, e.g.
+ * 32×64 tall) rect, so the renderer can sample + overflow tall sprites. The sheet carries its own
+ * alpha (no magenta key). The combined atlas widens to fit the (wider) MShock sheet; bitlands UVs
+ * recompute from the new atlasWidth at draw time, so existing glyphs are unaffected.
  */
 export async function extendAtlasWithNamedSheet(
   atlas: FontAtlas,
   url: string,
-  nameToIndex: Record<string, number>,
-  tileW: number,
-  tileH: number,
-  cols: number,
+  tiles: Array<[string, number, number, number, number]>,
   puaBase: number,
   debug = false
 ): Promise<FontAtlas> {
@@ -676,16 +673,15 @@ export async function extendAtlasWithNamedSheet(
   ctx.drawImage(img, 0, atlas.atlasHeight);
 
   const characters = new Map(atlas.characters);
-  for (const [name, idx] of Object.entries(nameToIndex)) {
-    const col = idx % cols;
-    const row = Math.floor(idx / cols);
-    characters.set(String.fromCodePoint(puaBase + idx), {
+  for (let i = 0; i < tiles.length; i++) {
+    const [name, x, y, w, h] = tiles[i];
+    characters.set(String.fromCodePoint(puaBase + i), {
       char: name,
-      x: col * tileW,
-      y: atlas.atlasHeight + row * tileH,
-      width: tileW,
-      height: tileH,
-      xAdvance: tileW,
+      x,
+      y: atlas.atlasHeight + y, // sheet sits below the existing atlas
+      width: w,
+      height: h,
+      xAdvance: w,
       xOffset: 0,
       yOffset: 0
     });
@@ -694,7 +690,7 @@ export async function extendAtlasWithNamedSheet(
   if (debug) {
     console.log(
       `✅ extendAtlasWithNamedSheet: ${url} → ${newW}×${newH}, ` +
-        `${Object.keys(nameToIndex).length} named tiles at U+${puaBase.toString(16).toUpperCase()}`
+        `${tiles.length} named tiles at U+${puaBase.toString(16).toUpperCase()}`
     );
   }
 

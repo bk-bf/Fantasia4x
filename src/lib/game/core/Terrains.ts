@@ -10,7 +10,13 @@ import type { WorldTile } from './types';
  * the renderer (font-atlas extendAtlasWithNamedSheet) registers those codepoints' atlas cells,
  * and the shader draws them full-colour (a_fullColor) instead of luminance-tinting. */
 export const MSHOCK_PUA_BASE = 0xea00;
-const MSHOCK_INDEX = mshockAtlasMap as Record<string, number>;
+/** Atlas tile rects: [name, x, y, w, h] in packing order. Index = order = PUA offset. */
+export type MshockTile = [string, number, number, number, number];
+export const MSHOCK_TILES = (mshockAtlasMap.tiles as MshockTile[]) ?? [];
+const MSHOCK_INDEX: Record<string, number> = {};
+MSHOCK_TILES.forEach((t, i) => {
+  MSHOCK_INDEX[t[0]] = i;
+});
 
 /**
  * Terrains.ts — Biome and subterrain definitions
