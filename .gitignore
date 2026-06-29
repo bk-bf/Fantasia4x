@@ -49,3 +49,6 @@ src/lib/sim-core-pkg/
 
 # Per-user MCP config (machine-local paths; see AGENTS.md → Performance Profiling)
 .mcp.json
+
+# Ultica dev viewer: generated atlases (regenerate via static/dev/ultica/pack.py)
+static/dev/ultica/*.png
