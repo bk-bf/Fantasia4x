@@ -110,10 +110,17 @@ boar `mon_boar_wild` · elk `mon_moose` · mountain_goat `mon_goat` · wild_chic
 sabretooth `mon_cougar` · giant_rat `mon_rat_king` · thornwood_spider `mon_demon_spider` ·
 shadow_wraith `mon_shadow`/`mon_wraith` · giant_olm `mon_frog_giant` (reuse).
 
-**❌ Gap — D&D-type monsters with no CDDA equivalent (17):** goblin, aurochs, woolly_mammoth, hippogriff,
-hoarfowl, quillback, worg, jackal, mire_crocodile, marsh_viper, stirge, grimeling, kobold_skulker,
-gnoll_marauder, orc_reaver, harpy, bullywug.
-→ **This is the decision point for the Chibi cross-test** — Chibi_Ultica / a CDDA fantasy creature mod, or commission. Post-apoc Ultica will never cover these.
+**Fantasy monsters — corrected after full-repo + Magiclysm sweep:** Magiclysm DOES add fantasy creatures,
+but the sprites are **not in Ultica** (Ultica's `mods/magiclysm` is items/furniture/golems/corpses only) and
+**not in Chibi_Ultica (0 magiclysm monsters)**. They live in **MShockXotto+** (`pngs_*/mods/Magiclysm/monster`, ~48 sprites) and BrownLikeBears.
+
+- **Ultica's OWN Magiclysm monsters (complete, 16):** `mon_ogre`, `mon_troll`, golems (`mon_claygolem/irongolem/stonegolem/plasticgolem`), demon spiders (`mon_demon_spider/_queen/_spiderling`), `mon_leprechaun`, `mon_lizardfolk_warrior`, `mon_workshop_elf`, `mon_zombie_dwarf`, `mon_mossling`, `mon_yulecat(_cub)`. → of the 17: thornwood_spider→`mon_demon_spider`, grimeling→`mon_mossling`, bullywug→`mon_lizardfolk_warrior`, + generic ogre/troll.
+- **Coverable only via MShockXotto+ Magiclysm** (different art style — seam risk vs Ultica): goblin `mon_goblin_chieftain/slinger`, orc `mon_orc_archer/blood_warrior`, owlbear `mon_owlbear(+cub)`, dragon `mon_dragon_black_wyrmling`.
+- **Pawn-side fantasy (Ultica `pngs_human_body_*/mods/magiclysm`):** dragon mutations (scales/wings/horns/tail/maw), wizard_hat, magi_staff wielded overlays — for colonists, not monsters.
+- **Coverable** via base CDDA animals: woolly_mammoth `mon_mammoth`, mire_crocodile `mon_crocodile`.
+- **❌ Truly absent everywhere (11):** harpy, hippogriff, gnoll_marauder, kobold_skulker, worg, aurochs, jackal, marsh_viper, stirge, grimeling, bullywug → commission, or rename to creatures that exist.
+
+→ **Chibi cross-test does NOT solve this** (Chibi has no magiclysm monsters). Real choice: pull MShockXotto+ Magiclysm monsters (accept style seam) for the 6, base animals for 2, commission/rename the remaining 11.
 
 ---
 
@@ -124,7 +131,7 @@ gnoll_marauder, orc_reaver, harpy, bullywug.
 - **Crops:** all `crop_*` → `f_planter_seedling` → `f_planter_mature` → `f_planter_harvest` (growth-stage tiles exist!) or `generic_crop_seedling`.
 - **Mushroom/berry/flower:** `t_fungus1..5` · `t_shrub_blackberry` · `f_flower_*`.
 - **Gems (ruby/sapphire/emerald/topaz/citrine/moonstone/amethyst nodes):** only jewelry *items* exist (`ruby_gold_ring`…), not ore nodes → reuse `t_rock` tinted per gem ⚠.
-- **❌ Ore minerals** (malachite, chalcopyrite, azurite, cassiterite, hematite, magnetite, limonite, galena, native_gold, electrum, coal, rock_salt): no CDDA ore-vein tiles → reuse `t_rock`/`t_rock_red`/`t_rock_blue` variants, or commission ore overlays.
+- **Ore minerals** (malachite, chalcopyrite, azurite, cassiterite, hematite, magnetite, limonite, galena, native_gold, electrum, coal, rock_salt): Magiclysm does NOT add ores; **no ore-vein *terrain*** exists in any tileset. BUT mined-ore **item chunks** do (`chunk_hematite`, `chunk_magnetite`, `chunk_cassiterite`, …) → use `t_rock` for the node + the chunk item sprite for the resource, or commission vein overlays for the rest.
 - **Magic terrain:** crystal_formation `f_huge_mana_crystal` · arcane_glade `f_magic_circle` ⚠.
 
 ---
