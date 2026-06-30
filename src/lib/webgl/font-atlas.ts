@@ -654,7 +654,8 @@ export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): 
   // Each sheet is a `cols × rows` grid of `cellW × cellH` sprites, registered at `puaBase + index`
   // (or CP437 when puaBase is null). The bitlands sheets default to a 16×16 grid of 12×18 cells; the
   // `trees` sheet carries LARGER native sprites (96×96, greyscaled CDDA trees from Fantasia4x-ultica)
-  // in a 2×5 grid — they render bigger than one cell via the per-tile `scale` (see TileData.scale).
+  // in a 2×16 grid (31 sprites: every tree tile ultica's resources reference, incl. unused seasonal/
+  // harvested variants) — they render bigger than one cell via the per-tile `scale` (see TileData.scale).
   const D = { cellW: tileW, cellH: tileH, cols: 16, rows: 16 };
   const sheets: Array<{
     url: string;
@@ -674,7 +675,7 @@ export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): 
     { url: '/tilesets/bitlands_crops.bmp', puaBase: 0xe700 },
     { url: '/tilesets/creatures.bmp', puaBase: 0xe800 },
     { url: '/tilesets/races.bmp', puaBase: 0xe900 },
-    { url: '/tilesets/trees.png', puaBase: 0xea00, cellW: 96, cellH: 96, cols: 2, rows: 5 }
+    { url: '/tilesets/trees.png', puaBase: 0xea00, cellW: 96, cellH: 96, cols: 2, rows: 16 }
   ];
 
   const results = await Promise.allSettled(
