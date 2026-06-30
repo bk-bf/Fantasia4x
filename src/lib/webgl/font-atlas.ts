@@ -651,7 +651,19 @@ export async function extendAtlasWithSheet(
  *   glyph(SHEET.MAP, 64)  →  humanoid at map position 64
  */
 export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): Promise<FontAtlas> {
-  const sheets: Array<{ url: string; puaBase: number | null }> = [
+  // Each sheet is a `cols × rows` grid of `cellW × cellH` sprites, registered at `puaBase + index`
+  // (or CP437 when puaBase is null). The bitlands sheets default to a 16×16 grid of 12×18 cells; the
+  // `trees` sheet carries LARGER native sprites (96×96, greyscaled CDDA trees from Fantasia4x-ultica)
+  // in a 2×5 grid — they render bigger than one cell via the per-tile `scale` (see TileData.scale).
+  const D = { cellW: tileW, cellH: tileH, cols: 16, rows: 16 };
+  const sheets: Array<{
+    url: string;
+    puaBase: number | null;
+    cellW?: number;
+    cellH?: number;
+    cols?: number;
+    rows?: number;
+  }> = [
     { url: '/tilesets/bitlands_tiles.bmp', puaBase: null }, // CP437 mapping
     { url: '/tilesets/bitlands_plants.bmp', puaBase: 0xe000 },
     { url: '/tilesets/bitlands_map.bmp', puaBase: 0xe200 },
@@ -661,7 +673,8 @@ export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): 
     { url: '/tilesets/bitlands_workshops.bmp', puaBase: 0xe600 },
     { url: '/tilesets/bitlands_crops.bmp', puaBase: 0xe700 },
     { url: '/tilesets/creatures.bmp', puaBase: 0xe800 },
-    { url: '/tilesets/races.bmp', puaBase: 0xe900 }
+    { url: '/tilesets/races.bmp', puaBase: 0xe900 },
+    { url: '/tilesets/trees.png', puaBase: 0xea00, cellW: 96, cellH: 96, cols: 2, rows: 5 }
   ];
 
   const results = await Promise.allSettled(
@@ -683,11 +696,20 @@ export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): 
     return null;
   });
 
-  const firstLoaded = imgs.find((img) => img !== null) as HTMLImageElement;
-  if (!firstLoaded) throw new Error('loadBitlandsAtlas: no tilesheets loaded');
-  const sheetH = firstLoaded.height; // 288
-  const atlasW = firstLoaded.width; // 192
-  const atlasH = sheetH * sheets.length; // 2304
+  if (!imgs.some((img) => img !== null)) throw new Error('loadBitlandsAtlas: no tilesheets loaded');
+
+  // Per-sheet slot height (rows × cellH); slots stack vertically. Layout is derived from the CONFIG
+  // (not the loaded image), so a missing sheet leaves its gap and never shifts the others' coords.
+  const slotW = (s: (typeof sheets)[number]) => (s.cols ?? D.cols) * (s.cellW ?? D.cellW);
+  const slotH = (s: (typeof sheets)[number]) => (s.rows ?? D.rows) * (s.cellH ?? D.cellH);
+  const yOffsets: number[] = [];
+  let acc = 0;
+  for (const s of sheets) {
+    yOffsets.push(acc);
+    acc += slotH(s);
+  }
+  const atlasW = Math.max(...sheets.map(slotW));
+  const atlasH = acc;
 
   const canvas = document.createElement('canvas');
   canvas.width = atlasW;
@@ -701,12 +723,19 @@ export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): 
     const img = imgs[s];
     if (!img) continue; // skip missing sheets
 
-    const yOffset = s * sheetH;
+    const sheet = sheets[s];
+    const cellW = sheet.cellW ?? D.cellW;
+    const cellH = sheet.cellH ?? D.cellH;
+    const cols = sheet.cols ?? D.cols;
+    const rows = sheet.rows ?? D.rows;
+    const yOffset = yOffsets[s];
+    const w = cols * cellW;
+    const h = rows * cellH;
     ctx.drawImage(img, 0, yOffset);
 
     // Strip magenta (255,0,255) background → alpha=0 so the shader's
     // mix(v_background, tinted, sprite.a) treats it as empty space.
-    const rawData = ctx.getImageData(0, yOffset, atlasW, sheetH);
+    const rawData = ctx.getImageData(0, yOffset, w, h);
     const d = rawData.data;
     for (let i = 0; i < d.length; i += 4) {
       if (d[i] === 255 && d[i + 1] === 0 && d[i + 2] === 255) {
@@ -715,18 +744,18 @@ export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): 
     }
     ctx.putImageData(rawData, 0, yOffset);
 
-    const { puaBase } = sheets[s];
-    for (let cp = 0; cp < 256; cp++) {
-      const col = cp % 16;
-      const row = Math.floor(cp / 16);
+    const { puaBase } = sheet;
+    for (let cp = 0; cp < cols * rows; cp++) {
+      const col = cp % cols;
+      const row = Math.floor(cp / cols);
       const uchar = puaBase === null ? CP437_TO_UNICODE[cp] : String.fromCodePoint(puaBase + cp);
       characters.set(uchar, {
         char: uchar,
-        x: col * tileW,
-        y: yOffset + row * tileH,
-        width: tileW,
-        height: tileH,
-        xAdvance: tileW,
+        x: col * cellW,
+        y: yOffset + row * cellH,
+        width: cellW,
+        height: cellH,
+        xAdvance: cellW,
         xOffset: 0,
         yOffset: 0
       });
