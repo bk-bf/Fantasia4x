@@ -1577,10 +1577,7 @@
         animationOffset: {
           x: (rm.x - cellX) * BASE_TILE_PX + mLunge.x,
           y: (rm.y - cellY) * BASE_TILE_PX + mLunge.y
-        },
-        // Big beasts (mammoth, etc.) draw larger than one cell, anchored at their feet (see
-        // TileData.scale). Visual-only — driven by the creature def's renderScale, not bodyScale.
-        scale: def.renderScale
+        }
       });
     }
     if (seenMobs.size !== mobRenderPos.size) {

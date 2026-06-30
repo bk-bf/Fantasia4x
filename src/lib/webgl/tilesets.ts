@@ -30,9 +30,7 @@ export const SHEET = {
   /** creatures.bmp           – creature / monster sprites  (U+E800–E8FF) */
   CREATURES: 0xe800,
   /** races.bmp               – playable race sprites       (U+E900–E9FF) */
-  RACES: 0xe900,
-  /** trees.png               – greyscaled CDDA trees 96×96  (U+EA00–EAFF) */
-  TREES: 0xea00
+  RACES: 0xe900
 } as const;
 
 /**

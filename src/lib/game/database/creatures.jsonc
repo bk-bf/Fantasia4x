@@ -360,7 +360,6 @@
         "stats"             : {"str": 40, "dex": 6, "con": 18, "per": 8},
         "naturalArmor"      : 35,
         "bodyScale"         : 2.0,
-        "renderScale"       : 1.6,   // visual-only: aurochs reads as a large beast (see TileData.scale)
         "nightVision"       : 0.4,
         "behaviour"         : "neutral",
         "territorial"       : false, // placid herbivore — ignores approaching pawns, only fights back when attacked
@@ -390,7 +389,6 @@
         "stats"             : {"str": 56, "dex": 4, "con": 24, "per": 7},
         "naturalArmor"      : 55,
         "bodyScale"         : 3.5,
-        "renderScale"       : 2.2,   // visual-only: towering canopy-height beast (see TileData.scale)
         "nightVision"       : 0.3,
         "behaviour"         : "neutral",
         "territorial"       : false, // placid herbivore — ignores approaching pawns, only fights back when attacked
@@ -559,7 +557,6 @@
         "stats"         : {"str": 40, "dex": 10, "con": 16, "per": 12},
         "naturalArmor"  : 30,
         "bodyScale"     : 2.0,
-        "renderScale"   : 1.6,   // visual-only: hulking owlbear (see TileData.scale)
         "nightVision"   : 0.7,
         "behaviour"     : "aggressive",
         "diet"          : "carnivore",

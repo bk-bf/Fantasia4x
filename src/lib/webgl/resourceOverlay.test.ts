@@ -5,10 +5,11 @@ import type { WorldTile } from '$lib/game/core/types';
 
 /**
  * Resources render in a SEPARATE transparent overlay (no longer baked into the terrain grid), split
- * into a SHORT layer (grass/bushes, beneath entities) and a TALL layer (trees, `renderScale > 1`,
- * drawn above entities so a pawn behind a tree is occluded by the canopy). A tall cell carries the
- * `scale` field so the glyph is drawn larger than one cell, anchored at its base. Ported from
- * Fantasia4x-ultica (ee9e77d2 + a4c89a21).
+ * into a SHORT layer (drawn beneath entities) and a TALL layer (`renderScale > 1`, drawn above entities
+ * so a pawn behind it is occluded). The split + per-tile `scale` are kept as infrastructure, but on
+ * this branch NO resource opts into `renderScale`, so everything routes to the short layer and the tall
+ * layer stays empty (trees render at their normal one-cell bitlands size). Ported from Fantasia4x-ultica
+ * (ee9e77d2 + a4c89a21).
  */
 function tile(over: Partial<WorldTile>): WorldTile {
   return {
@@ -24,18 +25,18 @@ function tile(over: Partial<WorldTile>): WorldTile {
 const noMask = [[false]];
 
 describe('resource overlay short/tall split', () => {
-  it('a tree (renderScale > 1) paints the TALL grid with a scale, leaving the short grid blank', () => {
+  it('a tree resource paints the SHORT grid with no scale (1× on this branch); tall grid stays blank', () => {
     const short = new GameGrid();
     const tall = new GameGrid();
     applyResourceToGrid(short, tall, tile({ resources: { oak_tree: 3 } }), noMask);
 
-    const tallCell = tall.getTile(0, 0)!;
-    expect(tallCell.char).not.toBe(' ');
-    expect(tallCell.scale).toBeGreaterThan(1);
-    expect(short.getTile(0, 0)!.char).toBe(' ');
+    const shortCell = short.getTile(0, 0)!;
+    expect(shortCell.char).not.toBe(' ');
+    expect(shortCell.scale).toBeUndefined();
+    expect(tall.getTile(0, 0)!.char).toBe(' ');
   });
 
-  it('a short resource (grass) paints the SHORT grid with no scale, leaving the tall grid blank', () => {
+  it('a grass resource paints the SHORT grid with no scale, leaving the tall grid blank', () => {
     const short = new GameGrid();
     const tall = new GameGrid();
     applyResourceToGrid(short, tall, tile({ resources: { grass_patch: 1 } }), noMask);
@@ -54,7 +55,7 @@ describe('resource overlay short/tall split', () => {
     expect(tall.getTile(0, 0)!.char).toBe(' ');
   });
 
-  it('buildResourceOverlay routes a tree to tall and grass to short', () => {
+  it('buildResourceOverlay returns both grids; current resources route to short, tall stays empty', () => {
     const worldMap: WorldTile[][] = [
       [
         tile({ x: 0, y: 0, resources: { oak_tree: 3 } }),
@@ -62,7 +63,9 @@ describe('resource overlay short/tall split', () => {
       ]
     ];
     const { short, tall } = buildResourceOverlay(worldMap, [[false, false]]);
-    expect(tall.getTile(0, 0)!.char).not.toBe(' ');
+    expect(short.getTile(0, 0)!.char).not.toBe(' ');
     expect(short.getTile(1, 0)!.char).not.toBe(' ');
+    expect(tall.getTile(0, 0)?.char ?? ' ').toBe(' ');
+    expect(tall.getTile(1, 0)?.char ?? ' ').toBe(' ');
   });
 });

@@ -61,9 +61,6 @@ const CROP = (n: number): string => String.fromCodePoint(0xe700 + n);
 const CR = (n: number): string => String.fromCodePoint(0xe800 + n);
 /** races.bmp index → PUA Unicode char (U+E900 + n) */
 const RA = (n: number): string => String.fromCodePoint(0xe900 + n);
-/** trees.png index → PUA Unicode char (U+EA00 + n) — greyscaled CDDA trees (96×96), tinted by the
- *  resource fg and drawn larger than one cell via renderScale (see TileData.scale). */
-const TREE = (n: number): string => String.fromCodePoint(0xea00 + n);
 
 // ── CharSpan resolver ─────────────────────────────────────────────────────────
 export interface CharSpan {
@@ -76,8 +73,7 @@ export interface CharSpan {
     | 'workshops'
     | 'crops'
     | 'creatures'
-    | 'races'
-    | 'trees';
+    | 'races';
   from?: number;
   to?: number;
   id?: number;
@@ -96,8 +92,7 @@ const SHEET_FN: Record<string, SheetFn> = {
   workshops: W,
   crops: CROP,
   creatures: CR,
-  races: RA,
-  trees: TREE
+  races: RA
 };
 
 export function resolveCharSpans(spans: CharSpan[]): string[] {

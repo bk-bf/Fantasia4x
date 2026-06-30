@@ -174,14 +174,6 @@ export interface CreatureDefinition {
    * single anatomy); durability comes from the larger blood pool + naturalArmor instead. Omitted = 1.0.
    */
   bodyScale?: number;
-  /**
-   * Visual-only render scale in TILE UNITS (default 1.0). When > 1 the creature's glyph is drawn
-   * larger than one cell, anchored at the base tile's bottom-center and overflowing upward (see
-   * TileData.scale) so a big beast reads as physically larger on the map. Kept SEPARATE from
-   * `bodyScale` (which drives combat HP/damage) so visuals can be tuned without touching balance.
-   * Omitted = 1.0 (one cell).
-   */
-  renderScale?: number;
   /** Body plan from limbmap.jsonc (humanoid | quadruped | avian | serpentine | arachnid |
    *  winged_humanoid | amorphous) — picks the creature's anatomy so a wolf carries paws + a tail
    *  instead of a humanoid's fingers/toes. Omitted = "humanoid". Drives ONLY structure + hit locations;
@@ -287,7 +279,6 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     resistances: (raw.resistances as Partial<Record<DamageType, number>> | undefined) ?? undefined,
     naturalArmor: (raw.naturalArmor as number | undefined) ?? undefined,
     bodyScale: (raw.bodyScale as number | undefined) ?? undefined,
-    renderScale: (raw.renderScale as number | undefined) ?? undefined,
     limbMap: (raw.limbMap as string | undefined) ?? undefined,
     spawnsInMountain: (raw.spawnsInMountain as boolean | undefined) ?? undefined,
     maxMountainDistance: (raw.maxMountainDistance as number | undefined) ?? undefined,
