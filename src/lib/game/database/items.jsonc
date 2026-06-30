@@ -684,6 +684,24 @@
     "gatheringTypes"   : ["woodcutting"]
   },
   {
+    "id"               : "willow_log",
+    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "name"             : "Willow Log",
+    "type"             : "material",
+    "category"         : "wood",
+    "description"      : "Light, soft riverbank timber. Easy to work but weak — wicker, fuel, and rough boards.",
+    "color"            : "#9CAA6B",
+    "amount"           : 0,
+    "weightKg"         : 3,
+    "volumeL"          : 4,
+    "fuelValue"        : 9,
+    "fuelHeat"         : 1,
+    "burnDuration"     : 1.2,
+    "deteriorationRate": 0.06,
+    "maxDurability"    : 120,
+    "gatheringTypes"   : ["woodcutting"]
+  },
+  {
     "id"               : "yew_log",
     "charSpans"        : [ {"sheet": "items", "id": 225} ],
     "name"             : "Yew Log",
@@ -1442,6 +1460,23 @@
     "fuelValue"        : 9,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.025,
+    "maxDurability"    : 120,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "willow_plank",
+    "charSpans"        : [ {"sheet": "items", "id": 225} ],
+    "name"             : "Willow Plank",
+    "type"             : "material",
+    "category"         : "wood",
+    "description"      : "Sawn willow board. Light and cheap panelling — soft and not for heavy framing.",
+    "color"            : "#B6C089",
+    "amount"           : 0,
+    "weightKg"         : 2,
+    "volumeL"          : 3,
+    "fuelValue"        : 7,
+    "fuelHeat"         : 1,
+    "deteriorationRate": 0.035,
     "maxDurability"    : 120,
     "toolTierRequired" : 0
   },

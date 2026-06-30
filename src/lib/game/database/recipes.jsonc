@@ -523,6 +523,14 @@
     "toolTierRequired": 0
   },
   {
+    "id"              : "make_willow_plank",
+    "station"         : "sawtable",
+    "inputs"          : {"willow_log": 1},
+    "outputs"         : {"willow_plank": 1},
+    "workAmount"      : 4,
+    "toolTierRequired": 0
+  },
+  {
     "id"              : "make_heartwood_plank",
     "station"         : "heartwood_joiner",
     "inputs"          : {"heartwood_log": 1},

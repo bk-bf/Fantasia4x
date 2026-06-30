@@ -100,6 +100,9 @@ export interface ResourceObjectDef {
   overheadRoof?: boolean;
   /** Resolved char array (from charSpans in JSON). */
   chars: string[];
+  /** Resolved leafless char pool (from winterCharSpans). Shown ONLY on snow-covered tiles — the
+   *  renderer swaps to this in winter so these glyphs never appear in other seasons. */
+  winterChars?: string[];
   /** Resolved RGB (0–1) glyph colour, parsed from the `fg` hex string in JSON. */
   fg: [number, number, number];
   /** Resolved RGB (0–1) background colour, parsed from the `bg` hex string in JSON. */
@@ -238,6 +241,9 @@ class ResourceObjectServiceImpl {
     this.defs = (resourceObjectsData as unknown as Array<Record<string, unknown>>).map((raw) => ({
       ...(raw as Omit<ResourceObjectDef, 'chars' | 'fg' | 'bg' | 'detail'>),
       chars: resolveCharSpans((raw.charSpans ?? []) as CharSpan[]),
+      winterChars: raw.winterCharSpans
+        ? resolveCharSpans(raw.winterCharSpans as CharSpan[])
+        : undefined,
       fg: hexToRgb01(raw.fg, [0.87, 0.62, 0.12]),
       bg: hexToRgb01(raw.bg, [0.06, 0.04, 0.01]),
       detail: raw.detail ? hexToRgb01(raw.detail, [1, 1, 1]) : undefined

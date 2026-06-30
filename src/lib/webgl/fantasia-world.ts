@@ -591,7 +591,11 @@ export function applyResourceToGrid(
   // Glyph is picked by tile position from the def's char range. Glowing (magical) groves add a salt so
   // they draw DIFFERENT glyphs from the same range than the ordinary trees would.
   const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;
-  const h = ((tile.x * 1619 + tile.y * 31337 + salt) >>> 0) % resDef.chars.length;
+  // Winter swap: deciduous trees carry a leafless winterChars pool that shows ONLY on snow-covered
+  // tiles. Rides the snow-driven buffer rebuild (snow already bakes a per-tile overlay below), so the
+  // bare-tree glyph appears/melts with the snow and never leaks into other seasons.
+  const pool = resDef.winterChars && snowCover(tile) > 0 ? resDef.winterChars : resDef.chars;
+  const h = ((tile.x * 1619 + tile.y * 31337 + salt) >>> 0) % pool.length;
   // renderScale != 1 draws the glyph scaled: > 1 = bigger/taller (trees), < 1 = smaller (an ore-vein
   // speck on the rock). Only renderScale > 1 routes to the TALL grid (drawn ABOVE entities for canopy
   // occlusion); < 1 stays in the SHORT grid beneath entities (under the fog/silhouette). Blank the
@@ -610,7 +614,7 @@ export function applyResourceToGrid(
       }
     : undefined;
   (tall ? gridTall : gridShort).setTile(tile.x, tile.y, {
-    char: resDef.chars[h],
+    char: pool[h],
     foreground: {
       r: resDef.fg[0] * brightness,
       g: resDef.fg[1] * brightness,
