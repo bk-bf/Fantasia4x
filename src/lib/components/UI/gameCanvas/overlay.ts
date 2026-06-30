@@ -92,9 +92,7 @@ function buildingVisFor(typeId: string): { sprite: string; color: { r: number; g
   if (!v) {
     const def = buildingService.getBuildingById(typeId);
     const sprite = def?.charSpans ? (resolveCharSpans(def.charSpans as CharSpan[])[0] ?? '#') : '#';
-    const fg = def?.fg;
-    const color =
-      hexToRgb(def?.color) ?? (fg ? { r: fg[0], g: fg[1], b: fg[2] } : { r: 0.87, g: 0.62, b: 0.12 });
+    const color = hexToRgb(def?.color) ?? { r: 0.87, g: 0.62, b: 0.12 };
     v = { sprite, color };
     _buildingVisCache.set(typeId, v);
   }

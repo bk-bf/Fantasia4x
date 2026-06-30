@@ -174,10 +174,6 @@ export interface Building {
   color?: string;
   /** Glyph source descriptors for map rendering (resolved via resolveCharSpans). */
   charSpans?: Array<{ sheet?: string; id?: number; from?: number; to?: number; literal?: string }>;
-  /** Foreground color [r, g, b] 0–1 for map tile. */
-  fg?: [number, number, number];
-  /** Background color [r, g, b] 0–1 for map tile. */
-  bg?: [number, number, number];
   /** When true, the building keeps the UNDERLYING terrain tile's background instead of painting `bg`
    *  — so a flat marker like a sleeping spot blends into whatever ground it was placed on. */
   transparentBg?: boolean;

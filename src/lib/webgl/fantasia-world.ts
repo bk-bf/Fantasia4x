@@ -742,15 +742,15 @@ export function applyBuildingToGrid(grid: GameGrid, b: PlacedBuilding, tile?: Wo
   const char = def?.charSpans
     ? (resolveCharSpans(def.charSpans as Parameters<typeof resolveCharSpans>[0])[0] ?? '#')
     : '#';
-  // Render from the building's `color` tag (its single tunable hex), falling back to the legacy
-  // `fg` array, then a default. So editing `color` in buildings.jsonc actually recolours it.
-  const fg = hexToRgb01(def?.color) ?? def?.fg ?? [0.87, 0.62, 0.12];
+  // Render from the building's `color` tag (its single tunable hex), then a default. So editing
+  // `color` in buildings.jsonc actually recolours it.
+  const fg = hexToRgb01(def?.color) ?? [0.87, 0.62, 0.12];
   // `transparentBg` buildings (sleeping spot, flat markers) keep the terrain cell's background so they
   // blend into the ground they sit on, instead of painting their own bg square.
   const existingBg = def?.transparentBg ? grid.getTile(b.x, b.y)?.background : undefined;
   const bg: [number, number, number] = existingBg
     ? [existingBg.r, existingBg.g, existingBg.b]
-    : (def?.bg ?? [0.06, 0.04, 0.01]);
+    : [0.06, 0.04, 0.01];
   // Snow: a building is an obstacle, so (like trees/walls) it keeps its glyph and just takes the same
   // transparent→opaque white bg overlay as the terrain — using the same drift field so it whitens in step
   // with the snow around it instead of reading as a bare hole.

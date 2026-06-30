@@ -1389,7 +1389,8 @@
     "subterrain"      : "fallen_logs",
     "walkable"        : true,
     "charSpans"       : [ {"sheet": "plants", "id": 209} ],
-    "fg"              : "#7a420d",
+    "renderScale"     : 0.5,
+    "fg"              : "#8f5717",
     "bg"              : "#17120a",
     "spawn"           : {
       "subterrains": {"deep_grass": 0.02, "grass": 0.015, "dirt": 0.01, "moss": 0.008, "mud": 0.005}
@@ -1473,6 +1474,7 @@
     "subterrain"      : "tree_stump",
     "walkable"        : true,
     "charSpans"       : [ {"sheet": "plants", "id": 209} ],
+    "renderScale"     : 0.5,
     "fg"              : "#8f5717",
     "bg"              : "#17120a",
     "spawn"           : {
