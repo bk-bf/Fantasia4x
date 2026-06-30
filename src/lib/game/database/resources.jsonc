@@ -1446,8 +1446,8 @@
     "displayName"     : "Scrub Patch",
     "subterrain"      : "scrubland",
     "walkable"        : true,
-    "charSpans"       : [ {"sheet": "plants", "id": 21} ],
-    "fg"              : "#7a5717",
+    "charSpans"       : [ {"sheet": "crops", "from": 197, "to": 201} ],
+    "fg"              : "#5a8c3a",
     "bg"              : "#17120a",
     "spawn"           : {
       "subterrains": {"savanna": 0.01, "tall_grass": 0.008, "moss": 0.006, "grass": 0.006, "mud": 0.004, "dirt": 0.004}
@@ -1556,8 +1556,9 @@
     "displayName"     : "Berry Bush",
     "subterrain"      : "bush",
     "walkable"        : true,
-    "charSpans"       : [ {"sheet": "crops", "id": 198} ],
-    "fg"              : "#8c454f",
+    "charSpans"       : [ {"sheet": "crops", "from": 197, "to": 201} ],
+    "fg"              : "#b83b3b",
+    "detail"          : "#5a8c3a",
     "bg"              : "#17120a",
     "spawn"           : {
       "subterrains": {"bush": 0.12, "deep_grass": 0.04, "grass": 0.03, "moss": 0.02, "scrubland": 0.015}
@@ -3109,8 +3110,9 @@
     "subterrain"      : "tall_grass",
     "walkable"        : true,
     "grazing"         : true,
-    "charSpans"       : [ {"sheet": "crops", "id": 198} ],
-    "fg"              : "#b35959",
+    "charSpans"       : [ {"sheet": "crops", "from": 197, "to": 201} ],
+    "fg"              : "#b83b3b",
+    "detail"          : "#5a8c3a",
     "bg"              : "#17120a",
     "spawn"           : {"subterrains": {}},
     "nodeAmountRange" : [1, 1],
