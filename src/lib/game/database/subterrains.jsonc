@@ -275,8 +275,8 @@
     "displayName" : "Mineral Deposit",
     "walkable"    : true,
     "movementCost": 2.8,
-    "charSpans"   : [ {"sheet": "tiles", "from": 43, "to": 47} ],
-    "fg"          : "#ebc221",
+    "charSpans"   : [ {"sheet": "plants", "id": 210} ],  // grey mountain-wall base; ore resources paint a coloured vein on top
+    "fg"          : "#9e855e",
     "bg"          : "#140f08",
     "biomes"      : { "mountain": [0.57, null] }
   },

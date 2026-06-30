@@ -11,7 +11,10 @@ import {
   pickChar,
   resolveCharSpans
 } from '$lib/game/core/Terrains.js';
-import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
+import {
+  resourceObjectService,
+  type ResourceObjectDef
+} from '$lib/game/services/ResourceObjectService.js';
 import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/wildGrowth.js';
 import { buildingService } from '$lib/game/services/BuildingService.js';
 import { glyph, SHEET } from './tilesets.js';
@@ -426,6 +429,36 @@ function isSnowFeature(tile: WorldTile): boolean {
  * Snow renders as a progressing white sprite over a white-bg overlay (see {@link snowCover}); ice as a faint blue glaze, strong on
  * open water but cut to a third on damp ground.
  */
+/** Resolve the single resource a tile currently SHOWS (its visible glyph + dimming), shared by the
+ *  terrain pass (to decide whether to suppress the ground glyph) and the resource overlay. Mirrors the
+ *  §F rules: the active (count > 0) resource, else the most-grown STANDING resource dimmed by growth and
+ *  hidden below the visible-growth gate. Returns the def + brightness, or undefined when nothing shows. */
+function resolveActiveResource(
+  tile: WorldTile
+): { resDef: ResourceObjectDef; brightness: number } | undefined {
+  if (!tile.resources || Object.keys(tile.resources).length === 0) return undefined;
+  const activeEntry = Object.entries(tile.resources).find(([, amt]) => amt > 0);
+  let resKey: string | undefined = activeEntry?.[0];
+  let brightness = 1;
+  if (resKey) {
+    const partial = Object.keys(tile.resourceCooldowns ?? {}).some((k) => k.startsWith(resKey! + ':'));
+    if (partial) brightness = 0.65;
+  } else {
+    let bestGrowth = 0;
+    for (const [id, g] of Object.entries(tile.growth ?? {})) {
+      if (g > bestGrowth) {
+        bestGrowth = g;
+        resKey = id;
+      }
+    }
+    if (resKey && bestGrowth < RESOURCE_VISIBLE_GROWTH) resKey = undefined;
+    else if (resKey) brightness = Math.max(0.4, bestGrowth / 100);
+  }
+  const resDef = resKey ? resourceObjectService.getById(resKey) : undefined;
+  if (!resDef || resDef.chars.length === 0) return undefined;
+  return { resDef, brightness };
+}
+
 export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boolean[][]): void {
   // Hidden interior (buried rock or an enclosed pocket) → blank dirt-coloured tile.
   if (hiddenMask[tile.y]?.[tile.x]) {
@@ -446,6 +479,13 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
   let char = pickChar(sub, tile.x, tile.y);
   let fg: [number, number, number] = sub.fg as [number, number, number];
   let bg: [number, number, number] = sub.bg as [number, number, number];
+  // Resources that DON'T show the ground below (the default) SUPPRESS the subterrain glyph here, so the
+  // resource — drawn in the transparent overlay — reads over the flat background (the pre-layering look;
+  // fixes e.g. dirt showing through a grass patch). Resources flagged `showGroundBelow` (ore veins) keep
+  // the ground char so the resource composites OVER it (the grey rock wall shows through the vein), the
+  // way a building shows the floor beneath it. (Snow may still re-paint a sprite below.)
+  const activeRes = resolveActiveResource(tile);
+  if (activeRes && !activeRes.resDef.showGroundBelow) char = ' ';
   // Ice glaze (SEASONS_WEATHER): a pale-blue sheen, only on wet-capable tiles past the visible threshold.
   // FULL strength on open water (a frozen pond reads as blue glass); cut to a THIRD on damp ground, where
   // it's just a faint rime — not the quasi-snow it used to read as. Drawn BENEATH snow.
@@ -542,35 +582,12 @@ export function applyResourceToGrid(
     blank(gridTall);
   };
   if (hiddenMask[tile.y]?.[tile.x]) return clear();
-  const hasResources = tile.resources && Object.keys(tile.resources).length > 0;
-  if (!hasResources) return clear();
-  const activeEntry = Object.entries(tile.resources!).find(([, amt]) => amt > 0);
-  // §F: a depleted node (count 0) may still be STANDING — foraging takes only branches/berries, the
-  // plant stays put with a `growth` entry while its yield regrows; felling/dig/mine DROPS the growth
-  // entry (those fall through to dirt). When nothing is pickable, draw the most-grown standing
-  // resource dimmed by how grown it is, so a foraged tree still reads as a living tree.
-  let resKey: string | undefined = activeEntry?.[0];
-  let brightness = 1;
-  if (resKey) {
-    const partial = Object.keys(tile.resourceCooldowns ?? {}).some((k) =>
-      k.startsWith(resKey! + ':')
-    );
-    if (partial) brightness = 0.65;
-  } else {
-    let bestGrowth = 0;
-    for (const [id, g] of Object.entries(tile.growth ?? {})) {
-      if (g > bestGrowth) {
-        bestGrowth = g;
-        resKey = id;
-      }
-    }
-    // §F gradual regrow: a wild plant reset to ~0% growth reads as BARE SOIL until it climbs past the
-    // visible threshold — only then does the (dimmed) plant glyph fade back in.
-    if (resKey && bestGrowth < RESOURCE_VISIBLE_GROWTH) resKey = undefined;
-    else if (resKey) brightness = Math.max(0.4, bestGrowth / 100);
-  }
-  const resDef = resKey ? resourceObjectService.getById(resKey) : undefined;
-  if (!resDef || resDef.chars.length === 0) return clear();
+  // §F resolution (active node, else most-grown standing past the visible-growth gate) is shared with
+  // the terrain pass via resolveActiveResource — so the glyph drawn here and the ground-suppression
+  // decision in applyTileToGrid always agree on WHICH resource the tile shows.
+  const active = resolveActiveResource(tile);
+  if (!active) return clear();
+  const { resDef, brightness } = active;
   // Glyph is picked by tile position from the def's char range. Glowing (magical) groves add a salt so
   // they draw DIFFERENT glyphs from the same range than the ordinary trees would.
   const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;

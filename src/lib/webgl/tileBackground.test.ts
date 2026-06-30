@@ -49,3 +49,32 @@ describe('tilemap background uniformity', () => {
     expect([bg.r, bg.g, bg.b]).toEqual([grassBg[0], grassBg[1], grassBg[2]]);
   });
 });
+
+/**
+ * Ground-layer suppression: a resource that does NOT set `showGroundBelow` (the default) blanks the
+ * terrain ground glyph so the resource (in the overlay) reads over the flat background — no dirt
+ * showing through. `showGroundBelow` resources (ore veins) keep the ground glyph so the grey rock-wall
+ * base composites beneath the coloured vein. See fantasia-world.applyTileToGrid / resolveActiveResource.
+ */
+describe('layered terrain ground suppression', () => {
+  it('an opaque resource (grass patch) blanks the terrain ground glyph', () => {
+    const grid = buildGameGrid([[tile({ subType: 'grass', resources: { grass_patch: 1 } })]]);
+    expect(grid.getTile(0, 0)!.char).toBe(' ');
+  });
+
+  it('a bare tile keeps its subterrain ground glyph', () => {
+    const grid = buildGameGrid([[tile({ subType: 'grass' })]]);
+    expect(grid.getTile(0, 0)!.char).not.toBe(' ');
+  });
+
+  it('an ore vein (showGroundBelow) keeps the grey rock-wall base glyph beneath it', () => {
+    // Explicit all-visible mask: the lone non-walkable ore tile would otherwise read as enclosed
+    // interior rock (hidden → blank) under the flood-fill.
+    const grid = buildGameGrid(
+      [[tile({ subType: 'mineral_deposit', resources: { hematite: 3 } })]],
+      undefined,
+      [[false]]
+    );
+    expect(grid.getTile(0, 0)!.char).not.toBe(' ');
+  });
+});

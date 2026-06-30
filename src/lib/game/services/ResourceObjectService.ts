@@ -114,6 +114,14 @@ export interface ResourceObjectDef {
    * overlay beneath entities (grass, bushes, ore, crops).
    */
   renderScale?: number;
+  /**
+   * When true, the tile's subterrain GROUND glyph is kept and this resource composites OVER it (drawn
+   * in the transparent overlay) — like a building showing the floor beneath. Used by ore veins, which
+   * sit on a grey rock-wall base. When false/omitted (the default), the terrain pass SUPPRESSES the
+   * ground glyph for this tile so the resource reads over the flat background (the pre-layering look —
+   * keeps e.g. dirt from showing through a grass patch). See fantasia-world.applyTileToGrid.
+   */
+  showGroundBelow?: boolean;
   spawn: {
     subterrains: Record<string, number>;
   };
