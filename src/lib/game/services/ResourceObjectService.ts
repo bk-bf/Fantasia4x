@@ -105,6 +105,13 @@ export interface ResourceObjectDef {
   /** Resolved RGB (0–1) background colour, parsed from the `bg` hex string in JSON. */
   bg: [number, number, number];
   /**
+   * Optional second tint for the two-colour glyph split (TileData.detail). The renderer blends
+   * fg↔detail by sprite luminance: DARK sprite pixels take `fg`, LIGHT pixels take `detail`. Trees use
+   * it for a brown trunk (dark stem pixels → `fg`) + green canopy (light pixels → `detail`). Omitted =
+   * single-tint (the dark line-work is auto-shaded from `fg`).
+   */
+  detail?: [number, number, number];
+  /**
    * Visual-only render scale in TILE UNITS (default 1.0; see TileData.scale).
    *  • `> 1` — bigger than one cell, anchored at the base tile's bottom and overflowing UPWARD (a tree
    *    canopy). These are TALL: they render in the separate tall-resource overlay drawn ABOVE entities
@@ -229,10 +236,11 @@ class ResourceObjectServiceImpl {
 
   constructor() {
     this.defs = (resourceObjectsData as unknown as Array<Record<string, unknown>>).map((raw) => ({
-      ...(raw as Omit<ResourceObjectDef, 'chars' | 'fg' | 'bg'>),
+      ...(raw as Omit<ResourceObjectDef, 'chars' | 'fg' | 'bg' | 'detail'>),
       chars: resolveCharSpans((raw.charSpans ?? []) as CharSpan[]),
       fg: hexToRgb01(raw.fg, [0.87, 0.62, 0.12]),
-      bg: hexToRgb01(raw.bg, [0.06, 0.04, 0.01])
+      bg: hexToRgb01(raw.bg, [0.06, 0.04, 0.01]),
+      detail: raw.detail ? hexToRgb01(raw.detail, [1, 1, 1]) : undefined
     }));
     this.byId = new Map(this.defs.map((d) => [d.id, d]));
   }

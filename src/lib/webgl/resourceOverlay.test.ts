@@ -33,6 +33,8 @@ describe('resource overlay short/tall split', () => {
     const shortCell = short.getTile(0, 0)!;
     expect(shortCell.char).not.toBe(' ');
     expect(shortCell.scale).toBeUndefined();
+    // Two-colour split: mundane trees carry a `detail` tint (brown trunk via fg, green canopy via detail).
+    expect(shortCell.detail).toBeDefined();
     expect(tall.getTile(0, 0)!.char).toBe(' ');
   });
 

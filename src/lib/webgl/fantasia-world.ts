@@ -600,6 +600,15 @@ export function applyResourceToGrid(
   const scale = rs && rs !== 1 ? rs : undefined;
   const tall = rs !== undefined && rs > 1;
   blank(tall ? gridShort : gridTall);
+  // Two-colour split (trees): when the def carries a `detail` tint, DARK sprite pixels (the trunk) take
+  // `fg` and LIGHT pixels (the canopy) take `detail`. Both dim with growth/cooldown brightness.
+  const detail = resDef.detail
+    ? {
+        r: resDef.detail[0] * brightness,
+        g: resDef.detail[1] * brightness,
+        b: resDef.detail[2] * brightness
+      }
+    : undefined;
   (tall ? gridTall : gridShort).setTile(tile.x, tile.y, {
     char: resDef.chars[h],
     foreground: {
@@ -609,6 +618,7 @@ export function applyResourceToGrid(
     },
     background: { r: 0, g: 0, b: 0 },
     position: { x: tile.x, y: tile.y },
+    detail,
     scale
   });
 }
