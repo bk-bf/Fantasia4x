@@ -47,6 +47,18 @@ describe('resource overlay short/tall split', () => {
     expect(tall.getTile(0, 0)!.char).toBe(' ');
   });
 
+  it('an ore vein (renderScale < 1) paints the SHORT grid downscaled; tall grid stays blank', () => {
+    const short = new GameGrid();
+    const tall = new GameGrid();
+    applyResourceToGrid(short, tall, tile({ resources: { hematite: 3 } }), noMask);
+
+    const shortCell = short.getTile(0, 0)!;
+    expect(shortCell.char).not.toBe(' ');
+    expect(shortCell.scale).toBeGreaterThan(0);
+    expect(shortCell.scale!).toBeLessThan(1);
+    expect(tall.getTile(0, 0)!.char).toBe(' ');
+  });
+
   it('a tile with no resources blanks both grids', () => {
     const short = new GameGrid();
     const tall = new GameGrid();

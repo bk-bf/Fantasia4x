@@ -720,7 +720,7 @@ export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): 
       const col = cp % 16;
       const row = Math.floor(cp / 16);
       const uchar = puaBase === null ? CP437_TO_UNICODE[cp] : String.fromCodePoint(puaBase + cp);
-      characters.set(uchar, {
+      const info = {
         char: uchar,
         x: col * tileW,
         y: yOffset + row * tileH,
@@ -729,7 +729,15 @@ export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): 
         xAdvance: tileW,
         xOffset: 0,
         yOffset: 0
-      });
+      };
+      characters.set(uchar, info);
+      // CP437 cell 32 maps to ' ' (space), which the renderer skips as "no glyph" — leaving that cell's
+      // sprite (a sparse speckle, used as the ore-vein glyph) otherwise unreachable. Alias it to a PUA
+      // codepoint so charSpans can address it (Terrains.T maps tile id 32 → U+EA00); same atlas cell.
+      if (puaBase === null && cp === 32) {
+        const alias = String.fromCodePoint(0xea00);
+        characters.set(alias, { ...info, char: alias });
+      }
     }
   }
 

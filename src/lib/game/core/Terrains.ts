@@ -38,7 +38,10 @@ export interface SubterrainDef {
  * atlas registered that cell under. This MUST be the exact CP437 table `loadBitlandsAtlas` uses, or
  * a `{sheet:"tiles", id}` resolves to the wrong/blank cell — so both share `core/cp437`.
  */
-const T = (n: number): string => CP437_TO_UNICODE[n] ?? String.fromCharCode(n);
+// Tile cell 32's CP437 char is ' ' (space), which the renderer skips as "no glyph" — so address that
+// cell via a PUA alias (registered in loadBitlandsAtlas) instead, keeping its sprite usable as a glyph.
+const T = (n: number): string =>
+  n === 32 ? String.fromCodePoint(0xea00) : (CP437_TO_UNICODE[n] ?? String.fromCharCode(n));
 /** Range of tiles.bmp indices → array of Unicode chars */
 const TR = (from: number, to: number): string[] =>
   Array.from({ length: to - from + 1 }, (_, i) => T(from + i));

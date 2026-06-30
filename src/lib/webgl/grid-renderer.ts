@@ -430,8 +430,14 @@ export class GridRenderer {
       const tileH = options.tileHeight;
       const drawW = tileW * scale;
       const drawH = tileH * scale;
-      const x1 = screenX + offsetX - (drawW - tileW) / 2;
-      const y1 = screenY + offsetY - (drawH - tileH);
+      const x1 = screenX + offsetX - (drawW - tileW) / 2; // always horizontally centered
+      // Upscaled sprites (scale > 1 — trees, big beasts) anchor at the cell's BOTTOM so the canopy/body
+      // grows upward off the base tile; downscaled marks (scale < 1 — ore veins) CENTER in the cell so
+      // the speck sits in the middle of the rock rather than at its foot. scale === 1 reduces to both.
+      const y1 =
+        scale >= 1
+          ? screenY + offsetY - (drawH - tileH)
+          : screenY + offsetY + (tileH - drawH) / 2;
       const x2 = x1 + drawW;
       const y2 = y1 + drawH;
 

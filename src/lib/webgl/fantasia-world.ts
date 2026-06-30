@@ -592,10 +592,13 @@ export function applyResourceToGrid(
   // they draw DIFFERENT glyphs from the same range than the ordinary trees would.
   const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;
   const h = ((tile.x * 1619 + tile.y * 31337 + salt) >>> 0) % resDef.chars.length;
-  // Tall resources (renderScale > 1) go to the tall grid drawn ABOVE entities; everything else to the
-  // short grid beneath. Blank the OTHER grid in case this tile just switched size class.
-  const scale = resDef.renderScale && resDef.renderScale > 1 ? resDef.renderScale : undefined;
-  const tall = scale !== undefined;
+  // renderScale != 1 draws the glyph scaled: > 1 = bigger/taller (trees), < 1 = smaller (an ore-vein
+  // speck on the rock). Only renderScale > 1 routes to the TALL grid (drawn ABOVE entities for canopy
+  // occlusion); < 1 stays in the SHORT grid beneath entities (under the fog/silhouette). Blank the
+  // OTHER grid in case the tile just switched layer.
+  const rs = resDef.renderScale;
+  const scale = rs && rs !== 1 ? rs : undefined;
+  const tall = rs !== undefined && rs > 1;
   blank(tall ? gridShort : gridTall);
   (tall ? gridTall : gridShort).setTile(tile.x, tile.y, {
     char: resDef.chars[h],
