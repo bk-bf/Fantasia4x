@@ -146,6 +146,12 @@ class ResourceGeneratorServiceImpl {
             const nt = worldMap[ny][nx];
             if (nt.terrainType !== 'mountain') continue; // keep veins in the mountains
             claimed[idx(nx, ny)] = 1;
+            // Carve the vein INTO the rock: the grown tile becomes mineral_deposit so the ore renders on
+            // a deposit base, never on bare `cave` floor (the reported bug). It's already non-walkable
+            // once the ore is placed, and mining reverts it to cave (harvestSubType). Mark it visited so
+            // the outer blob scan doesn't re-seed this now-deposit tile as a fresh cluster.
+            nt.subType = 'mineral_deposit';
+            visited[idx(nx, ny)] = 1;
             cluster.push(nt);
             queue.push(nt);
           }
