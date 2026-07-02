@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
-  import { formatEffectValue, workAxisLabel } from '$lib/utils/pawnUtils';
+  import { formatEffectValue, workAxisLabel } from '$lib/components/util/pawnUtils';
 
   export let pawn: Pawn;
 

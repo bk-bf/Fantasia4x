@@ -1,4 +1,4 @@
-/* filepath: src/lib/game/systems/regrowthQueue.ts */
+/* filepath: src/lib/game/core/regrowthQueue.ts */
 /**
  * Regrowth schedule — a min-heap of `(turn, x, y)` for the soonest-expiring resource cooldowns.
  *

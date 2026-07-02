@@ -45,9 +45,8 @@
   import type { GameGrid } from '$lib/webgl/game-grid.js';
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
   import { BASE_TILE_PX } from '$lib/webgl/tile-types.js';
-  import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
-  import { buildPathfindingGrids } from '$lib/game/services/PathfinderService.js';
+  import { buildPathfindingGrids, pathfinderService } from '$lib/game/services/PathfinderService.js';
   import { designationService } from '$lib/game/services/DesignationService.js';
   import {
     environmentService,
@@ -98,7 +97,7 @@
   import { getCreatureById } from '$lib/game/core/Creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
   import { vlog } from '$lib/game/core/logSink.js';
-  import { simTarget } from '$lib/game/systems/MovementSystem.js';
+  import { simTarget } from '$lib/game/services/MovementSystem.js';
   import SelectedEntityCard from '$lib/components/UI/SelectedEntityCard.svelte';
   import type {
     SelectedEntityModel,
@@ -3171,7 +3170,7 @@
       }
 
       // Init pathfinder WASM early so pawns can navigate as soon as turns start
-      wasmPathfinderService.init().catch((e) => console.warn('[GameCanvas] WASM init failed:', e));
+      pathfinderService.init().catch((e) => console.warn('[GameCanvas] WASM init failed:', e));
 
       renderer = new WebGLRenderer({
         canvas,

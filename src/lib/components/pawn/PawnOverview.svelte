@@ -7,7 +7,7 @@
     getHealthColor,
     getHealthDescription,
     getPawnTaskSummary
-  } from '$lib/utils/pawnUtils';
+  } from '$lib/components/util/pawnUtils';
   import { pawnService } from '$lib/game/services/PawnService';
   import { sizeFromHeight } from '$lib/game/core/Race';
   import PawnStance from './PawnStance.svelte';

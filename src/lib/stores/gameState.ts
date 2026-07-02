@@ -33,7 +33,7 @@ import { generateRace, generateRacePool, generateRaceRelations } from '$lib/game
 import { itemService } from '$lib/game/services/ItemService';
 import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
-import { calculatePawnStats } from '$lib/game/entities/Pawns';
+import { calculatePawnStats } from '$lib/game/systems/pawnDisplayStats';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
 import {
   customizeMenuPreviewWorld,

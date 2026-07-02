@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { GameState, Pawn } from '$lib/game/core/types';
-  import { getNeedColor, getNeedDescription } from '$lib/utils/pawnUtils';
-  import { getActiveConditionViews } from '$lib/utils/conditionInfo';
+  import { getNeedColor, getNeedDescription } from '$lib/components/util/pawnUtils';
+  import { getActiveConditionViews } from '$lib/components/util/conditionInfo';
   import ConditionChips from './ConditionChips.svelte';
 
   export let pawn: Pawn;

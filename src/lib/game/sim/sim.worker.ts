@@ -11,7 +11,7 @@
  * rarely changes). WASM (W1) inits in the worker. Save (W4) = post the full state on request.
  */
 import { isClientRuntime } from '../core/runtime';
-import { wasmPathfinderService } from '../services/WasmPathfinderService';
+import { pathfinderService } from '../services/PathfinderService';
 import { GameStateManager } from '../core/GameState';
 import { gameEngine } from '../systems/GameEngineImpl';
 import { rng } from '../core/rng';
@@ -438,9 +438,10 @@ function publish(state: GameState, flush: boolean, commit = false) {
     ? tileDeltas.map((d) => ({ y: d.y, x: d.x, tile: slimTile(d.tile) }))
     : undefined;
 
-  // TEMP §D snapshot-size probe: `post`/`onmessage` are 100% native structured-clone, so the only
-  // way to see WHICH field dominates the clone is to measure the serialized payload. Sampled ~every
-  // 2s; `[SNAP]` lines show per-component bytes + the biggest `state`-delta fields. Remove when done.
+  // §D snapshot-size probe (kept, gated off via SNAP_SIZE_LOG): `post`/`onmessage` are 100% native
+  // structured-clone, so the only way to see WHICH field dominates the clone is to measure the
+  // serialized payload. Sampled ~every 2s; `[SNAP]` lines show per-component bytes + the biggest
+  // `state`-delta fields. Snapshot bloat is a recurring trap (ENGINE-PERFORMANCE) — this is the tool.
   if (SNAP_SIZE_LOG && flushSeq % 30 === 0) {
     const sz = (x: unknown) => {
       try {
@@ -455,6 +456,7 @@ function publish(state: GameState, flush: boolean, commit = false) {
       .slice(0, 8)
       .map(([k, v]) => `${k}=${(v / 1000).toFixed(1)}k`)
       .join(' ');
+    // eslint-disable-next-line no-console -- gated snapshot-size probe
     console.info(
       `[SNAP] state=${(sz(delta) / 1000).toFixed(1)}k pawns=${(sz(pawns) / 1000).toFixed(1)}k ` +
         `mobs=${(sz(mobs) / 1000).toFixed(1)}k wmDelta=${(sz(wmDelta) / 1000).toFixed(1)}k ` +
@@ -471,9 +473,11 @@ function publish(state: GameState, flush: boolean, commit = false) {
         .slice(0, 12)
         .map(([k, v]) => `${k}=${v}`)
         .join(' ');
+      // eslint-disable-next-line no-console -- gated snapshot-size probe
       console.info(`[SNAP-PAWN] one slim pawn = ${sz(sp)}B · fields(bytes): ${pf}`);
     }
     // Which trigger fired the terrain rebuild over the last ~30 flushes (~2s)?
+    // eslint-disable-next-line no-console -- gated snapshot-size probe
     console.info(
       `[TRIG] terrain bumps/30flush: worldMapDelta=${_trigDelta} worldMapRef=${_trigWM} ` +
         `buildings=${_trigBSig} zones=${_trigZone} | designations(decoupled)=${_trigDesig}`
@@ -554,8 +558,8 @@ self.onmessage = async (e: MessageEvent) => {
       let ready = false;
       let error: string | undefined;
       try {
-        await wasmPathfinderService.init();
-        ready = wasmPathfinderService.isReady();
+        await pathfinderService.init();
+        ready = pathfinderService.isReady();
       } catch (err) {
         error = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
       }
@@ -575,7 +579,7 @@ self.onmessage = async (e: MessageEvent) => {
       gameEngine.setPreviewMode(!!msg.preview);
       gameEngine.setOutputSink(publish); // per-tick → snapshot
       gameEngine.setCommitSink((s) => publish(s, true, true)); // command result → snapshot (commit)
-      await wasmPathfinderService.init();
+      await pathfinderService.init();
       lastWorldMap = (msg.state as GameState).worldMap;
       lastSent = {}; // reset the sectional-diff baseline so the first publish sends every field
       flushSeq = 0; // first publish sends every entity full (empty id baseline → all "newly-seen")

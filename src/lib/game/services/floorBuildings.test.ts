@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildingService } from './BuildingService';
-import { moveCostToEnter } from '../systems/MovementSystem';
+import { moveCostToEnter } from './MovementSystem';
 import { tileWetness } from './EnvironmentService';
 import type { GameState, WorldTile, PlacedBuilding } from '../core/types';
 

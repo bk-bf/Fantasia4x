@@ -8,7 +8,7 @@ import { resourceObjectService } from '$lib/game/services/ResourceObjectService.
 import { type CreatureDefinition, getCreatureById } from '$lib/game/core/Creatures.js';
 import type { Pawn, Mob, Injury } from '$lib/game/core/types.js';
 import { limbLabel, partLabel } from '$lib/utils/bodyLabels';
-import { getActiveConditionViews } from '$lib/utils/conditionInfo.js';
+import { getActiveConditionViews } from '$lib/components/util/conditionInfo.js';
 import { pawnService } from '$lib/game/services/PawnService.js';
 import { pawnStatService } from '$lib/game/services/PawnStatService.js';
 import { itemService } from '$lib/game/services/ItemService.js';

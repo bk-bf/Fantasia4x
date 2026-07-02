@@ -12,7 +12,7 @@ import {
   pushRegrowth,
   minCooldownExpiry,
   rebuildRegrowthQueue
-} from './regrowthQueue';
+} from '../core/regrowthQueue';
 // NB: the engine no longer imports the Svelte store — its per-tick output goes through an
 // injected `outputSink` (set by the store on the main thread; postMessage in the sim worker).
 // This severs the only engine→store coupling, the prerequisite for running the sim off-thread
@@ -43,7 +43,6 @@ import { MIN_FORAGE_GROWTH } from '../services/jobs/filters';
 import { equipDropToPawn, carryDropToInventory } from '../core/PawnEquipment';
 import { jobService, BASE_WORK_RATE } from '../services/JobService';
 import { pawnStatService } from '../services/PawnStatService';
-import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { resourceObjectService } from '../services/ResourceObjectService';
 import { entityService } from '../services/EntityService';
 import { readMobPathStats } from '../services/entity/entityHelpers';
@@ -53,7 +52,8 @@ import { getRangedWeapon, effectiveRangedRange, hasViableAmmo } from './rangedCo
 import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
 import {
   buildPathfindingGridsSoftBlocked,
-  patchPathfindingWalkable
+  patchPathfindingWalkable,
+  pathfinderService
 } from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
 import { assignDraftMovePath } from '../services/draftMovePath';
@@ -833,7 +833,7 @@ export class GameEngineImpl implements GameEngine {
     // in-game second to avoid flooding the console.
     if (gs.turn % TICKS_PER_SECOND !== 0) return;
     const T = gs.turn;
-    const wasmReady = wasmPathfinderService.isReady();
+    const wasmReady = pathfinderService.isReady();
     const jobPool = (gs.jobs ?? []).length;
     const lines: string[] = [`[PAWN_DEBUG] T=${T} WASM=${wasmReady} jobs=${jobPool}`];
     for (const p of gs.pawns) {
@@ -959,7 +959,7 @@ export class GameEngineImpl implements GameEngine {
             tx,
             ty
           );
-          const path = wasmPathfinderService.findPath(
+          const path = pathfinderService.findPath(
             walkable,
             costs,
             width,
@@ -1000,7 +1000,7 @@ export class GameEngineImpl implements GameEngine {
             tx,
             ty
           );
-          const path = wasmPathfinderService.findPath(
+          const path = pathfinderService.findPath(
             grids.walkable,
             grids.costs,
             grids.width,
@@ -1071,7 +1071,7 @@ export class GameEngineImpl implements GameEngine {
             drop.x,
             drop.y
           );
-          const path = wasmPathfinderService.findPath(
+          const path = pathfinderService.findPath(
             grids.walkable,
             grids.costs,
             grids.width,

@@ -18,6 +18,7 @@ export default [
       '.svelte-kit/**',
       'package/**',
       'src/lib/spatial-core-pkg/**',
+      'src/lib/sim-core-pkg/**',
       'spatial-core/**',
       '**/*.svelte',
       '**/*.jsonc',

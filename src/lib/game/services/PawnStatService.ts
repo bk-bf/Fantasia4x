@@ -162,7 +162,7 @@ function compileFormula(formula: string): ((...vars: number[]) => number) | null
   let fn: ((...vars: number[]) => number) | null = null;
   if (/^[\d\s+\-*/.()]+$/.test(stripped)) {
     try {
-      // eslint-disable-next-line no-new-func
+       
       fn = new Function(...FORMULA_VARS, '"use strict"; return (' + expr + ');') as (
         ...vars: number[]
       ) => number;

@@ -4,7 +4,7 @@ import type { GameState, Mob, MobState, Pawn } from '../../core/types';
 import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
 import { getAmbientLight, computeTileLightLevel, weatherSightMul } from '../EnvironmentService';
 import { effectiveVisionRange } from '../../core/vision';
-import { hasLineOfSight } from '../../systems/rangedCombat';
+import { hasLineOfSight } from '../../core/lineOfSight';
 import { manhattan, chebyshev } from '../../core/distance';
 import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
 import { calcMaxStamina } from '../../entities/Pawns';

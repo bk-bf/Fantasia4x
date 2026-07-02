@@ -9,7 +9,7 @@ import { gatedConsole as console } from '../../core/log';
 import { itemService } from '../ItemService';
 import { recipeService } from '../RecipeService';
 import { pawnStatService } from '../PawnStatService';
-import { jobService } from '../JobService';
+import { craftWorkCategory } from './craftDiscipline';
 import { rollCraftQuality, qualityMultiplier } from '../../core/itemQuality';
 import { aggregateMaterialMods } from '../../core/materialProperties';
 import {
@@ -136,7 +136,7 @@ export function complete(job: Job, gs: GameState): GameState {
   let quality: ItemQuality | undefined;
   const pawn = job.claimedBy ? gs.pawns.find((p) => p.id === job.claimedBy) : undefined;
   if (pawn) {
-    const discipline = jobService.craftWorkCategory(entry);
+    const discipline = craftWorkCategory(entry);
     const axis = pawnStatService.getWorkModifiers(pawn, discipline, undefined, 'crafting').quality ?? 1;
     quality = rollCraftQuality(axis, () => rng.random());
   }

@@ -12,11 +12,12 @@ import {
   resolveCharSpans
 } from '$lib/game/core/Terrains.js';
 import {
-  resourceObjectService,
+  resourceObjectDefById,
   type ResourceObjectDef
-} from '$lib/game/services/ResourceObjectService.js';
+} from '$lib/game/core/resourceObjectDefs.js';
 import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/wildGrowth.js';
-import { buildingService } from '$lib/game/services/BuildingService.js';
+import { buildingDefById } from '$lib/game/core/buildingDefs.js';
+import { parseHexRgb01 } from '$lib/game/core/color.js';
 import { glyph, SHEET } from './tilesets.js';
 import type { RGB } from './tile-types.js';
 
@@ -344,15 +345,6 @@ function recomputeExteriorComponent(
   if (!reaches) for (const k of comp) markExt(k % mw, (k / mw) | 0, false); // sealed → hide the pocket
 }
 
-/** `#rrggbb` → [r,g,b] in 0..1, or null on a missing/bad hex. */
-function hexToRgb01(hex?: string): [number, number, number] | null {
-  if (!hex) return null;
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  if (!m) return null;
-  const n = parseInt(m[1], 16);
-  return [((n >> 16) & 0xff) / 255, ((n >> 8) & 0xff) / 255, (n & 0xff) / 255];
-}
-
 /**
  * Build a GameGrid from a Fantasia4x WorldTile 2D array.
  * Uses subterrain glyph + color when available, falls back to legacy type.
@@ -454,7 +446,7 @@ function resolveActiveResource(
     if (resKey && bestGrowth < RESOURCE_VISIBLE_GROWTH) resKey = undefined;
     else if (resKey) brightness = Math.max(0.4, bestGrowth / 100);
   }
-  const resDef = resKey ? resourceObjectService.getById(resKey) : undefined;
+  const resDef = resKey ? resourceObjectDefById(resKey) : undefined;
   if (!resDef || resDef.chars.length === 0) return undefined;
   return { resDef, brightness };
 }
@@ -693,14 +685,14 @@ export function buildGameGrid(
 /** A roof renders as invisible SHADE (no glyph of its own) rather than an opaque cell — its callers
  *  paint it last so it darkens whatever is beneath. */
 export function isRoofBuilding(b: PlacedBuilding): boolean {
-  return !!buildingService.getBuildingById(b.type)?.effects?.roof;
+  return !!buildingDefById(b.type)?.effects?.roof;
 }
 
 /** A floor is a walkable surface building (planks/flagstone/packed earth) — it carries a `floorSpeed`
  *  and/or `floorDryness` effect and reads AS the tile's ground (the hover panel relabels the surface
  *  to the floor's name rather than popping a separate building card). */
 export function isFloorBuilding(b: PlacedBuilding): boolean {
-  const eff = buildingService.getBuildingById(b.type)?.effects;
+  const eff = buildingDefById(b.type)?.effects;
   return !!eff && (eff.floorDryness != null || eff.floorSpeed != null);
 }
 
@@ -712,7 +704,7 @@ const ROOF_SHADE_BG = 0.72;
 
 export function applyBuildingToGrid(grid: GameGrid, b: PlacedBuilding, tile?: WorldTile): void {
   if (b.status !== 'complete') return;
-  const def = buildingService.getBuildingById(b.type);
+  const def = buildingDefById(b.type);
 
   // Roofs are INVISIBLE: they paint no glyph, so the floor/ground/items beneath stay visible. They only
   // cast SHADE — darken the cell so a roofed interior reads as "under cover". The caller paints roofs
@@ -744,7 +736,7 @@ export function applyBuildingToGrid(grid: GameGrid, b: PlacedBuilding, tile?: Wo
     : '#';
   // Render from the building's `color` tag (its single tunable hex), then a default. So editing
   // `color` in buildings.jsonc actually recolours it.
-  const fg = hexToRgb01(def?.color) ?? [0.87, 0.62, 0.12];
+  const fg = parseHexRgb01(def?.color) ?? [0.87, 0.62, 0.12];
   // `transparentBg` buildings (sleeping spot, flat markers) keep the terrain cell's background so they
   // blend into the ground they sit on, instead of painting their own bg square.
   const existingBg = def?.transparentBg ? grid.getTile(b.x, b.y)?.background : undefined;

@@ -76,12 +76,14 @@ export function verifyWasmInWorker(): void {
     console.warn('[SIM-WORKER] not in a browser; cannot spawn worker');
     return;
   }
+  // eslint-disable-next-line no-console -- one-shot W1 verifier, not on the sim path
   console.info('[SIM-WORKER] spawning worker, running wasm-check…');
   const w = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' });
   w.onmessage = (e: MessageEvent) => {
     const d = e.data;
     if (d?.type === 'wasm-result') {
       if (d.ready)
+        // eslint-disable-next-line no-console -- one-shot W1 verifier, not on the sim path
         console.info('[SIM-WORKER] ✅ WASM initialised IN the worker (browser=%s)', d.browser);
       else if (d.browser === false)
         console.error('[SIM-WORKER] ❌ browser FALSE in worker → init gate skipped WASM.');

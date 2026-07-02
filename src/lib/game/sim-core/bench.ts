@@ -74,7 +74,8 @@ function timeRuns(fn: () => number, reps: number): number {
     sink += fn();
     samples.push(performance.now() - t0);
   }
-  if (sink === Infinity) console.log('unreachable'); // keep `sink` live
+  // eslint-disable-next-line no-console -- unreachable; keeps `sink` live against DCE
+  if (sink === Infinity) console.log('unreachable');
   return median(samples);
 }
 

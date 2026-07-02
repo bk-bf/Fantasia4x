@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Pawn, WorkCategory } from '$lib/game/core/types';
-  import { getEfficiencyColor } from '$lib/utils/pawnUtils';
-  import { getActiveConditionViews } from '$lib/utils/conditionInfo';
+  import { getEfficiencyColor } from '$lib/components/util/pawnUtils';
+  import { getActiveConditionViews } from '$lib/components/util/conditionInfo';
   import { pawnStatService } from '$lib/game/services/PawnStatService';
   import { itemService } from '$lib/game/services/ItemService';
   import {

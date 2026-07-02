@@ -11,12 +11,12 @@ import type {
 } from '../core/types';
 import { consumeFromStockpiles } from '../core/GameState';
 import { pawnById } from '../core/pawnIndex';
-import { calculatePawnStats, categorizeStats, getStatDescription } from '../entities/Pawns';
+import { categorizeStats, getStatDescription } from '../entities/Pawns';
 import { pawnStatService } from './PawnStatService';
 import { itemService } from './ItemService';
 import { WORK_CATEGORIES } from '../core/Work';
 import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
-import { stepBody } from '../systems/MovementSystem';
+import { stepBody } from './MovementSystem';
 import { occupancyService } from './OccupancyService';
 import conditionsData from '../database/conditions.jsonc';
 import { getConditionCurrentStage, conditionNeedMultipliers } from '../core/needs';
@@ -65,10 +65,9 @@ export interface PawnService {
   getPawnActivities(pawnId: string, gameState: GameState): string[];
 
   // Stat Calculations (DELEGATED to existing Pawns.ts functions)
-  calculatePawnStats(
-    pawnId: string,
-    gameState: GameState
-  ): Record<string, { value: number; sources: string[] }>;
+  // NB: the display-stat map itself is built by systems/pawnDisplayStats.calculatePawnStats
+  // (consumed by the pawnStats store) — a service method wrapping it had no callers and would
+  // reach up a layer, so it was removed.
   categorizeStats(
     stats: Record<string, { value: number; sources: string[] }>
   ): Record<string, string[]>;
@@ -306,17 +305,6 @@ export class PawnServiceImpl implements PawnService {
   }
 
   // ===== STAT CALCULATIONS (DELEGATED) =====
-
-  calculatePawnStats(
-    pawnId: string,
-    gameState: GameState
-  ): Record<string, { value: number; sources: string[] }> {
-    const pawn = gameState.pawns.find((p) => p.id === pawnId);
-    if (!pawn) return {};
-
-    // DELEGATE to existing Pawns.ts function (which uses ModifierSystem)
-    return calculatePawnStats(pawn, gameState);
-  }
 
   categorizeStats(
     stats: Record<string, { value: number; sources: string[] }>

@@ -8,7 +8,7 @@ import type {
   EntityStats,
   GameState
 } from './types';
-import { itemService } from '../services/ItemService';
+import { itemDefById } from './itemDefs';
 import { aggregateFromDrops } from './GameState';
 
 /** Default carry budget for a pawn with no stats/equipment. */
@@ -59,7 +59,7 @@ export function equippedTemperatureSources(pawn: Pawn): WornThermalSource[] {
   const out: WornThermalSource[] = [];
   for (const inst of Object.values(pawn.equipment ?? {})) {
     if (!inst) continue;
-    const item = itemService.getItemById(inst.itemId);
+    const item = itemDefById(inst.itemId);
     const ap = item?.armorProperties;
     if (!ap) continue;
     const cold = ap.coldResistance ?? 0;
@@ -155,7 +155,7 @@ export function equipDropToPawn(
 ): GameState {
   const drop = (state.droppedItems ?? []).find((d) => d.id === dropId);
   if (!drop) return state;
-  const item = itemService.getItemById(drop.resourceId);
+  const item = itemDefById(drop.resourceId);
   if (!item) return state;
   const pawnIdx = state.pawns.findIndex((pw) => pw.id === pawnId);
   if (pawnIdx < 0) return state;
@@ -209,7 +209,7 @@ export function equipDropToPawn(
 export function carryDropToInventory(state: GameState, pawnId: string, dropId: string): GameState {
   const drop = (state.droppedItems ?? []).find((d) => d.id === dropId);
   if (!drop) return state;
-  const item = itemService.getItemById(drop.resourceId);
+  const item = itemDefById(drop.resourceId);
   if (!item) return state;
   const pawnIdx = state.pawns.findIndex((pw) => pw.id === pawnId);
   if (pawnIdx < 0) return state;
@@ -235,7 +235,7 @@ export function carryDropToInventory(state: GameState, pawnId: string, dropId: s
 }
 
 export function canEquipItem(_pawn: Pawn, itemId: string): boolean {
-  const item = itemService.getItemById(itemId);
+  const item = itemDefById(itemId);
   if (!item) return false;
   // Whether the item is in stock is the equip UI's concern (it only lists in-stock items, minus
   // what's already equipped). Here we only answer "does this item type have an equip slot" — so
@@ -251,7 +251,7 @@ export function canEquipItem(_pawn: Pawn, itemId: string): boolean {
  * Deposit + craft-staging both preserve `instances`, so the carried tool isn't dropped at a stockpile.
  */
 export function addInstanceToInventory(pawn: Pawn, itemId: string): Pawn {
-  const item = itemService.getItemById(itemId);
+  const item = itemDefById(itemId);
   if (!item) return pawn;
   const instance: ItemInstance = {
     instanceId: `${itemId}-${pawn.id}-${Date.now()}`,
@@ -266,7 +266,7 @@ export function addInstanceToInventory(pawn: Pawn, itemId: string): Pawn {
 }
 
 export function equipItem(pawn: Pawn, itemId: string): Pawn {
-  const item = itemService.getItemById(itemId);
+  const item = itemDefById(itemId);
   if (!item || !canEquipItem(pawn, itemId)) return pawn;
 
   const slot = resolveEquipSlot(pawn, item);
@@ -436,7 +436,7 @@ export function removeItemFromInventory(pawn: Pawn, itemId: string, quantity: nu
 
 // Update useConsumable to consume from global storage
 export function useConsumable(pawn: Pawn, itemId: string): Pawn {
-  const item = itemService.getItemById(itemId);
+  const item = itemDefById(itemId);
   if (!item || item.type !== 'consumable') return pawn;
   // Stock availability is checked + decremented by the caller against the colony stockpile (not
   // pawn.inventory.items, which is the pawn's carried goods — INV-1).
@@ -470,7 +470,7 @@ export function getEquipmentBonuses(pawn: Pawn): Record<string, number> {
 
   Object.values(pawn.equipment).forEach((inst) => {
     if (!inst) return;
-    const item = itemService.getItemById(inst.itemId);
+    const item = itemDefById(inst.itemId);
     if (!item) return;
     const bonuses = calculateItemBonuses(item);
     Object.entries(bonuses).forEach(([bonus, value]) => {
@@ -501,7 +501,7 @@ export function damageEquipment(pawn: Pawn, slot: EquipmentSlot, damage: number 
   const inst = pawn.equipment[slot];
   if (!inst) return pawn;
 
-  const def = itemService.getItemById(inst.itemId);
+  const def = itemDefById(inst.itemId);
   const newDurability = Math.max(0, inst.durability - damage);
 
   if (newDurability <= 0) {

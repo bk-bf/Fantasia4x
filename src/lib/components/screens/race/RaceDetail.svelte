@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Race, RaceRelation } from '$lib/game/core/types';
-  import { workAxisLabel } from '$lib/utils/pawnUtils';
+  import { workAxisLabel } from '$lib/components/util/pawnUtils';
   import StatBar from '$lib/components/UI/StatBar.svelte';
 
   export let race: Race;

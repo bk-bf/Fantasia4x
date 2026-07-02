@@ -15,7 +15,7 @@ import {
 } from '../../core/Terrains';
 import { markTileDirty } from '../../core/tileDeltas';
 import { addWildGrowth } from '../../core/wildGrowth';
-import { pushRegrowth, minCooldownExpiry } from '../../systems/regrowthQueue';
+import { pushRegrowth, minCooldownExpiry } from '../../core/regrowthQueue';
 import { patchPathfindingWalkable } from '../PathfinderService';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { ticksFromSeconds } from '../../core/time';

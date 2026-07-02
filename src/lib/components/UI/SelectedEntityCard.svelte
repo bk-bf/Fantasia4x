@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import type { ConditionView } from '$lib/utils/conditionInfo';
+  import type { ConditionView } from '$lib/components/util/conditionInfo';
   import type { ItemPillView } from './ItemPills.svelte';
   import type { StatPillView } from './StatPills.svelte';
 

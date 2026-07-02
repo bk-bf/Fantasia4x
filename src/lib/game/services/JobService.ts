@@ -22,7 +22,6 @@ import jobsData from '../database/jobs.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
 import { itemService } from './ItemService';
 import { recipeService } from './RecipeService';
-import { buildingService } from './BuildingService';
 import * as harvest from './jobs/harvest';
 import * as haul from './jobs/haul';
 import * as construct from './jobs/construct';
@@ -34,6 +33,7 @@ import * as refuel from './jobs/refuel';
 import * as repair from './jobs/repair';
 import * as plant from './jobs/plant';
 import { isOrderSupplied as stagingIsOrderSupplied } from './jobs/staging';
+import { craftWorkCategory } from './jobs/craftDiscipline';
 
 // ===== JOB REGISTRY (data-driven, jobs.jsonc) =====
 // The declarative half of the job system. jobs.jsonc lists the colony job types + their
@@ -46,18 +46,6 @@ const JOB_DEF_BY_ID = new Map<string, JobDef>(JOB_DEFS.map((d) => [d.id, d]));
 // refuel/repair, hauling = haul/fetch). A category with >1 of these is "splittable" — the Work tab can
 // expand it and the player can rank the subjobs WITHIN the parent. Dynamic-category jobs (harvest by
 // designation, craft→cooking) are excluded — they already resolve to their own granular category.
-// Crafting DISCIPLINES — the work categories a `craft` job can route to (instead of the generic
-// `crafting`), based on its station. Each has its own `*_speed`/`_quality` stats + tools + racial
-// traits, so a smith ≠ tanner ≠ brewer ≠ butcher ≠ generalist. Cooking is included (a prepared meal
-// always routes here regardless of station). Guards `toolRequirement.workType` routing.
-const CRAFT_DISCIPLINES = new Set([
-  'metalworking',
-  'leatherworking',
-  'butchery',
-  'alchemy',
-  'cooking'
-]);
-
 const SUBJOBS_BY_CATEGORY: Map<string, string[]> = (() => {
   const m = new Map<string, string[]>();
   for (const def of JOB_DEFS) {
@@ -593,32 +581,12 @@ class JobServiceImpl {
   }
 
   /**
-   * The crafting DISCIPLINE work-category for a craft order: a prepared meal/food → cooking; else the
-   * station's discipline (its `toolRequirement.workType` if it's a known discipline, else its
-   * capability flag — smithing/smelting→metalworking, leatherworking, butchering, arcane→alchemy,
-   * cooking); else generic `crafting`. SINGLE source shared by job routing (priority/speed) and the
-   * quality roll (jobs/craft.ts) so the two can't drift.
+   * The crafting DISCIPLINE work-category for a craft order. Delegates to the shared
+   * `jobs/craftDiscipline.ts` resolver — the SINGLE source shared by job routing (priority/speed)
+   * and the quality roll (jobs/craft.ts) so the two can't drift.
    */
   craftWorkCategory(order: { item: { id: string }; stationType?: string | null } | undefined): string {
-    if (!order) return 'crafting';
-    const outCat = itemService.getItemById(order.item.id)?.category;
-    if (outCat === 'meal' || outCat === 'food') return 'cooking';
-    return (order.stationType ? this._stationDiscipline(order.stationType) : undefined) ?? 'crafting';
-  }
-
-  /** A station building's crafting discipline (or undefined for a generic crafting station). */
-  private _stationDiscipline(stationType: string): string | undefined {
-    const def = buildingService.getBuildingById(stationType);
-    if (!def) return undefined;
-    const tw = def.toolRequirement?.workType;
-    if (tw && CRAFT_DISCIPLINES.has(tw)) return tw;
-    const e = (def.effects ?? {}) as Record<string, number>;
-    if (e.smithingEnabled || e.smeltingEnabled) return 'metalworking';
-    if (e.leatherworkingEnabled) return 'leatherworking';
-    if (e.butcheringEnabled) return 'butchery';
-    if (e.alchemyEnabled || e.arcane) return 'alchemy';
-    if (e.cooking) return 'cooking';
-    return undefined;
+    return craftWorkCategory(order);
   }
 }
 

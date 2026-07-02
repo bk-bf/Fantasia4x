@@ -20,7 +20,7 @@
 <script lang="ts">
   import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
   import HoverTip from '$lib/components/UI/HoverTip.svelte';
-  import { buildItemInfo, type ItemInfoView } from '$lib/utils/itemInfo';
+  import { buildItemInfo, type ItemInfoView } from '$lib/components/util/itemInfo';
 
   let { pills }: { pills: ItemPillView[] } = $props();
 

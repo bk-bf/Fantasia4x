@@ -6,12 +6,11 @@ import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
 import { pawnById } from '../../core/pawnIndex';
 import { manhattan, chebyshev } from '../../core/distance';
 import { SECONDS_PER_TICK } from '../../core/time';
-import { stepBody, seedMidCrossClaims } from '../../systems/MovementSystem';
+import { stepBody, seedMidCrossClaims } from '../MovementSystem';
 import { resourceObjectService } from '../ResourceObjectService';
-import { wasmPathfinderService } from '../WasmPathfinderService';
-import { buildSharedSoftBlockedGrid } from '../PathfinderService';
+import { buildSharedSoftBlockedGrid, pathfinderService } from '../PathfinderService';
 import { occupancyService } from '../OccupancyService';
-import { hasLineOfSight } from '../../systems/rangedCombat';
+import { hasLineOfSight } from '../../core/lineOfSight';
 import { reachable } from './connectivity';
 import { simLog, isVerboseLogging } from '../../core/logSink';
 import { rng } from '../../core/rng';
@@ -175,7 +174,7 @@ function nearestPredatorMap(allMobs: Mob[]): Map<string, Mob | null> {
       qrs[2 * i] = prey[i].x;
       qrs[2 * i + 1] = prey[i].y;
     }
-    const res = wasmPathfinderService.nearestEach(pts, qrs, THREAT_QUERY_RANGE);
+    const res = pathfinderService.nearestEach(pts, qrs, THREAT_QUERY_RANGE);
     if (res) {
       for (let i = 0; i < prey.length; i++) {
         const idx = res[i];
@@ -747,7 +746,7 @@ export function pathTo(
   selfId?: string,
   label = '?'
 ): { x: number; y: number }[] {
-  if (!wasmPathfinderService.isReady()) return [];
+  if (!pathfinderService.isReady()) return [];
   // Entities are SOFT obstacles: each body adds a routing-cost penalty so paths prefer to route AROUND
   // others, but never become impassable (the movement engine enforces no-stacking by holding at an
   // occupied tile). PERF: use the per-tick SHARED occupancy + grid (built once, reused by every mob
@@ -766,7 +765,7 @@ export function pathTo(
   // diagnostics below are Debug-mode-gated.)
   const dbg = isVerboseLogging();
   const _t0 = dbg ? performance.now() : 0;
-  const res = wasmPathfinderService.findPath(
+  const res = pathfinderService.findPath(
     walkable,
     costs,
     width,

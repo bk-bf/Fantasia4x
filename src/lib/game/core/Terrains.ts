@@ -1,6 +1,7 @@
 import terrainsData from '../database/terrains.jsonc';
 import subterrainsData from '../database/subterrains.jsonc';
 import { CP437_TO_UNICODE } from './cp437.js';
+import { hexToRgb01 } from './color';
 import type { WorldTile } from './types';
 
 /**
@@ -42,14 +43,8 @@ export interface SubterrainDef {
 // cell via a PUA alias (registered in loadBitlandsAtlas) instead, keeping its sprite usable as a glyph.
 const T = (n: number): string =>
   n === 32 ? String.fromCodePoint(0xea00) : (CP437_TO_UNICODE[n] ?? String.fromCharCode(n));
-/** Range of tiles.bmp indices → array of Unicode chars */
-const TR = (from: number, to: number): string[] =>
-  Array.from({ length: to - from + 1 }, (_, i) => T(from + i));
 /** plants.bmp index → PUA Unicode char (U+E000 + n) */
 const P = (n: number): string => String.fromCodePoint(0xe000 + n);
-/** Range of plants.bmp indices → array of PUA chars */
-const PR = (from: number, to: number): string[] =>
-  Array.from({ length: to - from + 1 }, (_, i) => P(from + i));
 /** map.bmp index → PUA Unicode char (U+E200 + n) */
 const M = (n: number): string => String.fromCodePoint(0xe200 + n);
 /** buildings.bmp index → PUA Unicode char (U+E400 + n) */
@@ -238,18 +233,6 @@ export function resetBiomeConfig(): void {
 }
 
 // ── Subterrains ───────────────────────────────────────────────────────────────
-/** Parse a `#rrggbb` hex colour into a normalised RGB (0–1) triple; falls back to `fallback`. */
-function hexToRgb01(
-  hex: unknown,
-  fallback: [number, number, number]
-): [number, number, number] {
-  if (typeof hex !== 'string') return fallback;
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  if (!m) return fallback;
-  const n = parseInt(m[1], 16);
-  return [((n >> 16) & 0xff) / 255, ((n >> 8) & 0xff) / 255, (n & 0xff) / 255];
-}
-
 // Chars are resolved at load time from tile-index descriptors (charSpans) stored
 // in terrains.json.  Each span references tiles.bmp or plants.bmp by sheet + index.
 export const SUBTERRAINS: Record<string, SubterrainDef> = Object.fromEntries(

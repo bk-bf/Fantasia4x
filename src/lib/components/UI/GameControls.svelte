@@ -11,7 +11,7 @@
   import { uiState } from '$lib/stores/uiState';
   import { renderFps } from '$lib/stores/perfStats';
   import { showFps, showTps } from '$lib/stores/uiPrefs';
-  import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService';
+  import { pathfinderService } from '$lib/game/services/PathfinderService';
   import {
     SEASON_LABELS,
     weatherLabel as getWeatherLabel,
@@ -141,9 +141,9 @@
     // Wait for the IndexedDB save to be loaded and applied before advancing turns.
     await savedStateReady;
     // Start turns; WASM pathfinder loads in the background.
-    // wasmPathfinderService.findPath returns [] when not ready — handled gracefully.
+    // pathfinderService.findPath returns [] when not ready — handled gracefully.
     gameState.startAutoTurns();
-    wasmPathfinderService.init().catch((err) => {
+    pathfinderService.init().catch((err) => {
       console.warn('[WASM] Pathfinder failed to load — pawns will stay idle until resolved:', err);
     });
 

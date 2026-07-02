@@ -1,6 +1,6 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
-  import { getPawnTaskSummary } from '$lib/utils/pawnUtils';
+  import { getPawnTaskSummary } from '$lib/components/util/pawnUtils';
   import { stateColor, stateLabel, needBar } from '$lib/utils/workUtils';
   import type { Pawn } from '$lib/game/core/types';
   import PawnAttributes from '$lib/components/pawn/PawnAttributes.svelte';

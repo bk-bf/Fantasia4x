@@ -8,6 +8,7 @@ import type {
   ItemQuality
 } from '../core/types';
 import { qualityPrefix } from '../core/itemQuality';
+import { itemDefById, itemMatchesCostCategory } from '../core/itemDefs';
 import {
   decayAll,
   normalizeConditions,
@@ -43,26 +44,12 @@ import { gatedConsole as console } from '../core/log';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
 
-// O(1) id lookup over the static item DB. `getItemById` was a per-call `.find()` and showed up
-// hot in the sim worker profile; the DB never mutates at runtime, so index once.
-let _itemById: Map<string, Item> | null = null;
-function itemIndex(): Map<string, Item> {
-  return (_itemById ??= new Map(ITEMS_DATABASE.map((i) => [i.id, i])));
-}
 // Building defs are needed for tile-aware decay (storage multipliers, roofs).
 const BUILDING_DEFS_FOR_ITEMS = buildingsData as unknown as import('../core/types').Building[];
 
-/**
- * `category:<cat>` cost/slot match. Real item categories match by `item.category`; the special
- * pseudo-category **`plank`** matches ANY sawn plank (pine/oak/birch/ash/yew + magic-wood planks),
- * so a building cost (`category:plank`) or recipe slot can ask for "any plank" rather than hardcoding
- * `pine_plank`. Add further pseudo-categories here as the single chokepoint.
- */
-export function itemMatchesCostCategory(item: { id: string; category?: string }, cat: string): boolean {
-  if (cat === 'plank') return item.id.endsWith('_plank');
-  if (cat === 'log') return item.id.endsWith('_log');
-  return item.category === cat;
-}
+// `category:<cat>` cost/slot matching lives in core/itemDefs.ts (single copy — was also pasted
+// into BuildingService). Re-exported for existing importers.
+export { itemMatchesCostCategory } from '../core/itemDefs';
 
 // §B Durability defaults — every item weathers when left exposed (loose, unsheltered).
 // Explicit `deteriorationRate`/`maxDurability` on an item override these. Rate 0 = weather-immune.
@@ -110,7 +97,7 @@ function ambientDryRate(temp: number, wetness: number, bonus: number): number {
 /** The drying rule for a stack's resource — the item def's `driesTo` first, then a category rule
  *  (CATEGORY_DRYING). `driesTo: null` opts out; a product can't dry into itself. null = doesn't dry. */
 function dryingRuleFor(resourceId: string): DryingRule | null {
-  const def = itemIndex().get(resourceId);
+  const def = itemDefById(resourceId);
   if (def?.driesTo !== undefined) return def.driesTo ? { mode: 'ambient', ...def.driesTo } : null;
   const rule = def?.category ? CATEGORY_DRYING[def.category] : undefined;
   return rule && rule.itemId !== resourceId ? rule : null;
@@ -318,7 +305,9 @@ export interface ItemService {
  */
 export class ItemServiceImpl implements ItemService {
   getItemById(id: string): Item | undefined {
-    return itemIndex().get(id);
+    // O(1) via the shared core index (core/itemDefs.ts) — a per-call `.find()` showed up hot in
+    // the sim worker profile.
+    return itemDefById(id);
   }
 
   makeDynamicName(itemId: string, subjectName: string): string {

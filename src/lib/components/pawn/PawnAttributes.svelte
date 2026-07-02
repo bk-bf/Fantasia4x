@@ -5,7 +5,7 @@
   import statsData from '$lib/game/database/stats.jsonc';
   import { pawnStatService } from '$lib/game/services/PawnStatService';
   import { itemService } from '$lib/game/services/ItemService';
-  import { getActiveConditionViews } from '$lib/utils/conditionInfo';
+  import { getActiveConditionViews } from '$lib/components/util/conditionInfo';
   import { conditionNeedMultipliers, conditionStatMultipliers } from '$lib/game/core/needs';
   import PawnStatBanner from './PawnStatBanner.svelte';
 

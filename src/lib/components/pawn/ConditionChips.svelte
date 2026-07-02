@@ -4,7 +4,7 @@
 <script lang="ts">
   import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
   import HoverTip from '$lib/components/UI/HoverTip.svelte';
-  import type { ConditionView } from '$lib/utils/conditionInfo';
+  import type { ConditionView } from '$lib/components/util/conditionInfo';
 
   let {
     views,

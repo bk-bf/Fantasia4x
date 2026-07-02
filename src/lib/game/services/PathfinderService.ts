@@ -2,6 +2,8 @@ import type { WorldTile } from '../core/types.js';
 import { wasmPathfinderService } from './WasmPathfinderService.js';
 
 export interface PathfinderService {
+  /** Initialise the underlying pathfinder (WASM). Idempotent — safe to call multiple times. */
+  init(): Promise<void>;
   /** Whether the underlying pathfinder (WASM) has finished initialising. */
   isReady(): boolean;
   findPath(
@@ -12,8 +14,18 @@ export interface PathfinderService {
     sx: number,
     sy: number,
     ex: number,
-    ey: number
+    ey: number,
+    /** Per-call node-expansion cap (0/omitted = full-grid default, for long pawn paths). Mob
+     *  callers pass a tight cap so an unreachable goal bails fast instead of sweeping the whole
+     *  connected region (ENGINE-PERFORMANCE-II). */
+    maxIter?: number
   ): { x: number; y: number }[];
+  /**
+   * Batch nearest-entity query (ENGINE-PERFORMANCE-II §S1). For each `[qx,qy]` in `queries`,
+   * returns the index into `points` (flat `[x,y,…]`) of the nearest within `maxDist`, or -1.
+   * Returns `null` while the backend isn't ready (caller falls back to a JS scan).
+   */
+  nearestEach(points: Float32Array, queries: Float32Array, maxDist: number): Int32Array | null;
 }
 
 /**

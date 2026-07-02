@@ -4,6 +4,8 @@ import itemsData from '../database/items.jsonc';
 import resourcesData from '../database/resources.jsonc';
 import type { Item } from '../core/types';
 import { resolveCharSpans } from '../core/Terrains';
+import { buildingDefById } from '../core/buildingDefs';
+import { itemMatchesCostCategory } from '../core/itemDefs';
 import { markTileDirty } from '../core/tileDeltas';
 import { patchPathfindingWalkable } from './PathfinderService';
 import type { CharSpan } from '../core/Terrains';
@@ -68,21 +70,7 @@ const DEFAULT_CONDITION_DECAY = 0.15;
 // calm baseline (use/age), NOT the full weather rate: furniture indoors doesn't rot in the rain.
 const SHELTERED_EXPOSURE = 0.12;
 
-// `category:<cat>` cost-slot match. Local copy of ItemService.itemMatchesCostCategory (kept here to
-// avoid a BuildingService↔ItemService import cycle): real categories match `item.category`; the
-// pseudo-category `plank` matches ANY sawn plank so `category:plank` means "any plank".
-function itemMatchesCostCategory(item: { id: string; category?: string }, cat: string): boolean {
-  if (cat === 'plank') return item.id.endsWith('_plank');
-  if (cat === 'log') return item.id.endsWith('_log');
-  return item.category === cat;
-}
 
-// O(1) id lookup over the static building DB. `getBuildingById` was a per-call `.find()` and
-// showed up hot in the sim worker profile (~3.6%); the DB never mutates at runtime, so index once.
-let _buildingById: Map<string, Building> | null = null;
-function buildingIndex(): Map<string, Building> {
-  return (_buildingById ??= new Map(AVAILABLE_BUILDINGS.map((b) => [b.id, b])));
-}
 
 /**
  * BuildingService - Clean interface for building queries and validation
@@ -194,7 +182,9 @@ export interface BuildingService {
  */
 export class BuildingServiceImpl implements BuildingService {
   getBuildingById(id: string): Building | undefined {
-    return buildingIndex().get(id);
+    // O(1) via the shared core index (core/buildingDefs.ts) — a per-call `.find()` showed up hot
+    // in the sim worker profile (~3.6%).
+    return buildingDefById(id);
   }
 
   getBuildingsByCategory(category: string): Building[] {

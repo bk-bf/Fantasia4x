@@ -138,7 +138,7 @@ export function lineFormationTargets(
   return targets;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type Cmd = (state: GameState, payload: any) => GameState;
 
 /**
