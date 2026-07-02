@@ -17,42 +17,51 @@ tracks architecture debt + whatever the gates flag.
 ADR-018..ADR-026, the audio subsystem, main menu + app-shell hardening, the terrain/art rework (bi-colour glyphs,
 trees, ore veins, ice), and the temperature/connectivity bug arcs logged in BUGS.md.
 
-Gate at last update (2026-07-01): `check` 0 (8 svelte warnings) · `test` **820/820** (115 files) ·
-`lint` **6 errors** (see G-1) · `build` ok · `graph:check` **12 errors / 43 warnings** (see A-items).
+Gate at last update (2026-07-02): `check` 0 (8 svelte warnings) · `test` **820/820** (115 files) ·
+`lint` **0** · `build` ok · `graph:check` **0 errors / 10 warnings** (the A-4 god-modules — the only
+open A-item).
 
 ---
 
-## Gate breakage (fix first — these are red right now)
+## Gate breakage
 
-- [ ] **G-1 · `pnpm lint` fails: 6 `no-console` errors on the sim path.** Stray `console.log`s in
-  `sim/sim.worker.ts` (458, 474, 477), `sim/simWorkerClient.ts` (79, 85) and `sim-core/bench.ts` (77) —
-  besides breaking the gate, unconditional console output in the worker hot path is a perf smell
-  (ENGINE-PERFORMANCE: log sinks must be debug-gated). Route through the gated logger or delete.
-  Plus 5 `unused eslint-disable` warnings (`--fix`-able).
+- [x] **G-1 · `pnpm lint` fails: 6 `no-console` errors on the sim path.** Resolved 2026-07-02. The
+  `[SNAP]` snapshot-size probe (sim.worker) is a *kept*, `SNAP_SIZE_LOG`-gated tool (snapshot bloat is a
+  recurring ENGINE-PERFORMANCE trap), so its three `console.info`s got the repo's
+  `eslint-disable-next-line no-console` idiom, as did the one-shot W1 wasm-check verifier
+  (simWorkerClient) and bench.ts's DCE keep-alive. The 5 `unused eslint-disable` warnings were removed
+  (`--fix` on three files); the two in generated `sim-core-pkg/*.d.ts` are now covered by an eslint
+  `ignores` entry (matching `spatial-core-pkg`). Gate: `lint` 0.
 
-## graph:check (2026-07-01 run — 12 errors, 43 warnings)
+## graph:check (2026-07-01 run — was 12 errors / 43 warnings; **all but A-4 resolved 2026-07-02**)
 
-Graph: 262 files · 1,983 functions · 2,971 edges. `adr-coverage` ✓ (all ADRs through 026 registered).
+Graph after the fixes: 269 files · 1,979 functions · 2,981 edges · `graph:check` 0 errors / 10 warnings.
 
-- [ ] **A-1 · ADR-008 ×10 — direct `wasmPathfinderService` imports bypass the `PathfinderService` interface.**
-  Landed during the pathfinding-perf arc (per-call `max_iter` cap, connectivity work):
-  `services/draftMovePath.ts:46`, `services/entity/entityHelpers.ts` (`nearestPredatorMap`:178, `pathTo`:769),
-  `systems/GameEngineImpl.ts` (`debugLogPawns`, `_processDraftOrders`, `walkTo`), and — worse, components —
-  `GameCanvas.svelte` + `GameControls.svelte`. Decide per callsite: route through the interface singleton, or
-  (if the new WASM-only params are the point) widen the TS interface and amend the rule's allowlist. The two
-  component callsites should go through a service regardless.
-- [ ] **A-2 · Dependency cycles ×2.** (1) a 6-module service cycle
-  `PawnStatService → ResourceObjectService → LightingService → EnvironmentService → ItemService → core/PawnEquipment → …`;
-  (2) `JobService ↔ jobs/craft` — the ADR-017 registry was designed to point one way (JobService binds
-  handlers by id); craft importing JobService back closes a loop. Break with a shared leaf module or
-  callback param.
-- [ ] **A-3 · Layer-direction warnings ×15.** Headline: **`core/PawnEquipment` → `services/ItemService`
-  (9 call sites)** — core data reaching *up* into services (also the seam that closes the A-2 cycle).
-  The rest are 1–3-callsite leaks (`utils/itemInfo`→4 services, `utils/conditionInfo`→2,
-  `webgl/fantasia-world`→ResourceObjectService/BuildingService, `entities/Pawns`→ModifierSystem,
-  `services/jobs/harvest`→regrowthQueue, entityHelpers/entityAI→rangedCombat/MovementSystem,
-  `utils/pawnUtils`→JobService). Chip opportunistically when touching each file.
-- [ ] **A-4 · God-modules ×10 (>40 functions).** The P-4 wave split the old set; growth minted a new one:
+- [x] **A-1 · ADR-008 ×10 — direct `wasmPathfinderService` imports bypass the `PathfinderService` interface.**
+  Resolved 2026-07-02: the `PathfinderService` interface was widened to the impl's real surface
+  (`init()`, `findPath(..., maxIter?)`, `nearestEach()` — the perf-arc additions that motivated the
+  bypasses), and every callsite (draftMovePath, entityHelpers, GameEngineImpl, GameCanvas, GameControls,
+  sim.worker) now imports the `pathfinderService` binding. Only the composition point
+  (`PathfinderService.ts`) knows the WASM impl, as ADR-008 intended.
+- [x] **A-2 · Dependency cycles ×2.** Resolved 2026-07-02. (1) The 6-module ring was closed by
+  `core/PawnEquipment → services/ItemService`; a core-layer `core/itemDefs.ts` (O(1) items.jsonc index;
+  ItemService delegates, single index) cut it. (2) `JobService ↔ jobs/craft`: the shared
+  discipline resolver moved to `services/jobs/craftDiscipline.ts` (leaf module both import;
+  `jobService.craftWorkCategory` delegates, public API unchanged).
+- [x] **A-3 · Layer-direction warnings ×15.** Resolved 2026-07-02, each by moving code to the layer it
+  belonged in (no rule was weakened): `core/PawnEquipment`→ItemService via `core/itemDefs.ts` (see A-2);
+  `MovementSystem` moved systems→**services** (imports only core; shared by pawn+mob movement);
+  `regrowthQueue` moved systems→**core** (pure heap over tiles, like `tileDeltas`); `hasLineOfSight`
+  extracted to **`core/lineOfSight.ts`** (pure Bresenham; rangedCombat re-exports); the pawn
+  *display*-stat block (`calculatePawnStats` + helpers) moved entities→**`systems/pawnDisplayStats.ts`**
+  (it enriches via ModifierSystem; the uncalled `pawnService.calculatePawnStats` wrapper was deleted);
+  webgl def lookups now hit **`core/buildingDefs.ts`** / **`core/resourceObjectDefs.ts`** (def tables
+  are core data — BuildingService/ResourceObjectService delegate to the same single indexes); and the
+  three UI info helpers (`itemInfo`, `conditionInfo`, `pawnUtils`) moved to
+  **`src/lib/components/util/`** — they format service data for panels, so they live at the UI layer
+  (`utils/` keeps only service-free leaves like `bodyLabels`).
+- [ ] **A-4 · God-modules ×10 (>40 functions)** — *deliberately skipped in the 2026-07-02 pass (user
+  call); split opportunistically.* The P-4 wave split the old set; growth minted a new one:
 
   | Module | fns | LOC | Note |
   | ------ | --- | --- | ---- |
@@ -60,24 +69,31 @@ Graph: 262 files · 1,983 functions · 2,971 edges. `adr-coverage` ✓ (all ADRs
   | `services/EnvironmentService` | 77 | 1,546 | grew through seasons/weather/temperature/ice arcs — best split candidate (temperature bake vs weather vs season/daylight) |
   | `stores/gameState` | 70 | 1,569 | boot/menu/save gate logic accreted (see BUGS temp-bake entry) |
   | `stores/saveManager` | 49 | 672 | |
-  | `services/BuildingService` | 48 | 924 | |
-  | `services/ItemService` | 46 | 1,120 | |
+  | `services/BuildingService` | 46 | 924 | |
+  | `services/ItemService` | 44 | 1,120 | |
   | `systems/Combat` | 43 | 1,995 | data table already split out 06-16; logic grew back via ranged/finesse/stamina work |
   | `systems/pawn/pawnHelpers` | 43 | 999 | was "no longer a god-module" on 06-16 — regressed |
   | `systems/GameEngineImpl` | 43 | 1,482 | |
   | `core/GameState` | 42 | 594 | |
 
-- [ ] **A-5 · Orphans ×14 — triage dead code vs extractor blind spots.** Likely real dead code:
-  `core/Terrains` `TR`/`PR`/`hexToRgb01` (leftovers of the hex-string colour migration), `core/Creatures.toDefinition`,
-  `pawnHauling.acceptTest`, `itemCategoryTree.sortNode`, `actions/autohideScroll.onScroll`, `audio/manifest`
-  `clips`/`workClips`/`combatClips`. Likely **false positives** (worker message-handler closures the extractor
-  can't see): `sim.worker` `installForwardingLogSink`/`logActivity`/`publish`/`batch` — if so, fix
-  `../codegraph` extract.mjs rather than suppressing.
-- [ ] **A-6 · Duplicate definitions ×4.** `hexToRgb01` ×3 (core/Terrains, ResourceObjectService,
-  webgl/fantasia-world), `itemMatchesCostCategory` ×2 (BuildingService, ItemService), `logActivity` ×2
-  (stores/Log, sim.worker), `clear` ×2 (name collision, probably fine). Consolidate the first two.
-- [ ] **A-7 · Graph snapshot baseline is stale** (~429 new edges since it was taken). Re-run
-  `pnpm graph:snapshot` once A-1/A-2 triage lands, so `graph:diff` becomes signal again.
+- [x] **A-5 · Orphans ×14 — triage dead code vs extractor blind spots.** Resolved 2026-07-02. Real dead
+  code was only `core/Terrains` `TR`/`PR` (tilesheet-range helpers orphaned by the asset re-org) —
+  deleted. The other 12 were **two extractor blind spots, fixed in `../codegraph` extract.mjs** rather
+  than suppressed: (1) a *callback bridge* — a function referenced as a call argument
+  (`forEach(sortNode)`, `addEventListener('scroll', onScroll)`, `setOutputSink(publish)`) or as a fn
+  value inside an object-literal argument (`setSimLogSink({ logActivity: … } as SimLogSink)` — type
+  wrappers unwrapped) now yields a caller→callback edge (same over-approximation as the registry
+  bridge); (2) *module top-level usage* — calls/references at module scope (`raw.map(toDefinition)`,
+  `clips('fowl', 1)` table builders, `self.onmessage = …` wiring) have no caller node, so the target is
+  marked `moduleUsed` and the orphan check treats it like `exported`/`tested`. Orphans now 0.
+- [x] **A-6 · Duplicate definitions ×4.** Resolved 2026-07-02. `hexToRgb01` → ONE copy in
+  **`core/color.ts`** (`hexToRgb01` + nullable `parseHexRgb01`; Terrains, resourceObjectDefs and
+  fantasia-world import it); `itemMatchesCostCategory` → **`core/itemDefs.ts`** (BuildingService's
+  "avoid the ItemService cycle" local copy deleted — core is below both; ItemService re-exports).
+  `logActivity`/`clear` were *name collisions of closure-scoped locals*, not copy-paste — the codegraph
+  duplicate check now skips `nested` (closure-scoped) functions, so it can't recur.
+- [x] **A-7 · Graph snapshot baseline is stale.** Re-snapshotted 2026-07-02 after the A-1..A-6 fixes
+  (269 files · 1,979 fns · 2,981 edges) — `graph:diff` is signal again.
 
 ## From playtest
 
