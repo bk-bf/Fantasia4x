@@ -53,7 +53,11 @@
         ? ''
         : 's'}
     </div>
-    <div class="when">{fmtWhen(save.meta.savedAt)}</div>
+    <div class="when">
+      {fmtWhen(save.meta.savedAt)}{#if save.meta.seed != null}<span class="seed" title="World-gen seed"
+        > · Seed {save.meta.seed}</span
+      >{/if}
+    </div>
   </button>
 
   {#if confirm === 'overwrite'}

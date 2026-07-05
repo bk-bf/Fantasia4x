@@ -112,6 +112,7 @@ export interface SaveMeta {
   population: number;
   savedAt: number; // epoch ms
   kind: 'auto' | 'manual'; // the kind of the LAST write (autosave vs manual snapshot)
+  seed?: number; // world-gen seed (GameState.seed); optional — pre-existing metas won't have it
 }
 /** One row in the save list: its id + summary. */
 export interface SaveEntry {
@@ -126,7 +127,8 @@ function buildMeta(state: GameState, kind: 'auto' | 'manual'): SaveMeta {
     season: state.season ?? 'spring',
     population: state.pawns?.length ?? 0,
     savedAt: Date.now(),
-    kind
+    kind,
+    seed: state.seed
   };
 }
 
