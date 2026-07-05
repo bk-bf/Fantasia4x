@@ -31,6 +31,9 @@
 #   Electron runs with --no-sandbox in this mode (Chromium can't nest its sandbox in the user ns).
 #     ./launch.sh --electron            (sandboxed by default)
 #     ./launch.sh --electron --net-host (host networking — CDP/profiling reachable)
+# SPRITESHEET VIEWER (desktop-shell launches): alongside any --electron/--tauri launch, a small
+#   browser-reachable dev server starts on :5174 serving the /dev/ spritesheet viewer
+#   (http://localhost:5174/dev/spritesheet-viewer.html) — the game server itself is shell-only/sandboxed.
 # codegraph is a separate always-on systemd user service (see codegraph_hint below).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -120,6 +123,17 @@ launch() {
   PIDS+=($!)
   echo "  [$label] http://localhost:$port"
   sleep 0.3
+}
+
+# Standalone spritesheet viewer: a small HOST-networking dev server on 5174 that a plain browser CAN
+# reach — the desktop-shell game server (5173) is sandboxed / shell-only, so the /dev/ tool can't be
+# opened there. --browser lifts the /dev/ + /tilesets/ guard so the static viewer loads. Tracked in
+# PIDS so cleanup stops it with everything else; quiet so its dev.sh logs don't clutter the console.
+start_spritesheet_viewer() {
+  local vport=5174
+  (cd "$SCRIPT_DIR" && exec env CI=true ./dev.sh --browser --port "$vport" >/dev/null 2>&1) &
+  PIDS+=($!)
+  echo "  [spritesheet] http://localhost:$vport/dev/spritesheet-viewer.html"
 }
 
 # codegraph now runs as its own always-on systemd user service, decoupled from
@@ -236,6 +250,7 @@ if [[ -n "$SHELL_TARGET" ]]; then
   echo "Fantasia4x — $SHELL_TARGET shell over $SERVER_LABEL server (main only)"
   echo ""
   codegraph_hint
+  start_spritesheet_viewer
 
   # Sandboxed electron: the dev server is started INSIDE the network namespace (not on the host), so
   # skip the host-side launch/wait_for_port entirely and hand off to the isolated runner.
