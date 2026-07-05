@@ -155,7 +155,6 @@
   const MAP_H = 160;
   const MAX_TILE_W = 40;
   const ZOOM_STEP = 2;
-  const SCROLL_STEP = 4; // tiles per arrow key press
   const CAMERA_STORAGE_KEY = 'fantasia4x-camera';
   let saveCameraTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -267,6 +266,14 @@
   let viewX = 0;
   let viewY = 0;
 
+  // Held pan directions (WASD + arrows), read per-frame by updateKeyboardPan for smooth gliding.
+  const heldPan = { left: false, right: false, up: false, down: false };
+  let panVelX = 0; // current pan velocity (tiles/sec), eased toward the held direction
+  let panVelY = 0;
+  const clearHeldPan = () => {
+    heldPan.left = heldPan.right = heldPan.up = heldPan.down = false;
+  };
+
   // Drag state
   let dragging = false;
   let dragStartX = 0;
@@ -314,6 +321,11 @@
   // Follow-camera smoothing constant (seconds). Slightly looser than pawn motion
   // so the camera trails gently rather than rigidly locking to the pawn.
   const FOLLOW_SMOOTH_TAU = 0.12;
+  // Smooth keyboard/arrow panning: holding a direction glides the camera (like a mouse-drag) instead of
+  // jumping a fixed step of tiles per keypress. The velocity eases toward the held direction's target speed
+  // and glides to a stop on release, driven per-frame by updateKeyboardPan (mirrors the follow camera).
+  const PAN_SPEED = 24; // tiles/sec at full glide
+  const PAN_SMOOTH_TAU = 0.09; // velocity ease-in / ease-out time constant (seconds)
   // Where the followed entity sits vertically in the viewport (fraction from the top). Slightly above
   // centre (just under 0.5) — keeps it near the middle while leaving a little extra room below for the
   // selected-entity HUD card.
@@ -3278,6 +3290,29 @@
     setView(viewX + dx * alpha, viewY + dy * alpha);
   }
 
+  // Smooth camera pan from held WASD/arrow keys: ease a velocity toward the held direction's target
+  // speed and glide to a stop on release — the mouse-drag feel, not per-press jumps. Framerate-
+  // independent (exponential smoothing on dt), same shape as updateCameraFollow.
+  function updateKeyboardPan(dt: number) {
+    if (dt <= 0 || !ready || menuPreview) return;
+    // A follow camera owns the view; a held pan key is ignored while following (don't fight it).
+    if (cameraFollowPawnId || cameraFollowMobId) {
+      panVelX = panVelY = 0;
+      return;
+    }
+    const tx = (heldPan.right ? 1 : 0) - (heldPan.left ? 1 : 0);
+    const ty = (heldPan.down ? 1 : 0) - (heldPan.up ? 1 : 0);
+    const a = 1 - Math.exp(-dt / PAN_SMOOTH_TAU);
+    panVelX += (tx * PAN_SPEED - panVelX) * a;
+    panVelY += (ty * PAN_SPEED - panVelY) * a;
+    // Settle exactly to 0 once released so the camera never creeps after the glide.
+    if (tx === 0 && Math.abs(panVelX) < 0.02) panVelX = 0;
+    if (ty === 0 && Math.abs(panVelY) < 0.02) panVelY = 0;
+    if (panVelX === 0 && panVelY === 0) return;
+    setView(viewX + panVelX * dt, viewY + panVelY * dt);
+    markRenderDirty(); // force a draw even when the scene is frozen (zoomed out)
+  }
+
   function startLoop() {
     let lastFpsPush = 0;
     let lastDrawAt = 0;
@@ -3366,6 +3401,7 @@
       updateHoverEntity();
       updateCameraFollow(dt);
       updateCameraFollowMob(dt);
+      updateKeyboardPan(dt);
       // Refresh the lair-tile cache occasionally (catches grown/destroyed lairs); projection is
       // per-frame in updateWorldEffectOverlays but the full-map scan is throttled to ~4s.
       if (now - _lairScanAt > 4000) {
@@ -3499,22 +3535,25 @@
     // default; never replaces the arrows or mouse-drag). Skipped when a modifier is held so it can't eat
     // a shortcut (Ctrl+S …); a focused text field never reaches here — this handler lives on the
     // focusable canvas, not the window — so typing W/A/S/D in a search/seed box won't scroll the map.
+    // Pan keys just FLAG a held direction; updateKeyboardPan glides the camera each frame (smooth,
+    // mouse-drag feel). Setting the flag is idempotent, so OS key-repeat is harmless — we only
+    // preventDefault so the page never scrolls. Release is handled by handleKeyUp.
     if (get(wasdPan) && !e.ctrlKey && !e.metaKey && !e.altKey) {
       switch (e.key.toLowerCase()) {
         case 'a':
-          setView(viewX - SCROLL_STEP, viewY);
+          heldPan.left = true;
           e.preventDefault();
           return;
         case 'd':
-          setView(viewX + SCROLL_STEP, viewY);
+          heldPan.right = true;
           e.preventDefault();
           return;
         case 'w':
-          setView(viewX, viewY - SCROLL_STEP);
+          heldPan.up = true;
           e.preventDefault();
           return;
         case 's':
-          setView(viewX, viewY + SCROLL_STEP);
+          heldPan.down = true;
           e.preventDefault();
           return;
       }
@@ -3522,19 +3561,19 @@
 
     switch (e.key) {
       case 'ArrowLeft':
-        setView(viewX - SCROLL_STEP, viewY);
+        heldPan.left = true;
         e.preventDefault();
         break;
       case 'ArrowRight':
-        setView(viewX + SCROLL_STEP, viewY);
+        heldPan.right = true;
         e.preventDefault();
         break;
       case 'ArrowUp':
-        setView(viewX, viewY - SCROLL_STEP);
+        heldPan.up = true;
         e.preventDefault();
         break;
       case 'ArrowDown':
-        setView(viewX, viewY + SCROLL_STEP);
+        heldPan.down = true;
         e.preventDefault();
         break;
       case 'Escape': {
@@ -3635,6 +3674,40 @@
           if (zoneDragActive) drawDesignations();
           e.preventDefault();
         }
+        break;
+    }
+  }
+
+  // Release a held pan direction (WASD + arrows). Cleared regardless of the wasdPan toggle so a key
+  // can never get stuck if the setting flips mid-hold; a lost keyup (window blur) is caught by
+  // clearHeldPan on the element's blur.
+  function handleKeyUp(e: KeyboardEvent) {
+    switch (e.key) {
+      case 'ArrowLeft':
+        heldPan.left = false;
+        break;
+      case 'ArrowRight':
+        heldPan.right = false;
+        break;
+      case 'ArrowUp':
+        heldPan.up = false;
+        break;
+      case 'ArrowDown':
+        heldPan.down = false;
+        break;
+    }
+    switch (e.key.toLowerCase()) {
+      case 'a':
+        heldPan.left = false;
+        break;
+      case 'd':
+        heldPan.right = false;
+        break;
+      case 'w':
+        heldPan.up = false;
+        break;
+      case 's':
+        heldPan.down = false;
         break;
     }
   }
@@ -4849,6 +4922,8 @@
   role="application"
   aria-label="World map"
   on:keydown={handleKeyDown}
+  on:keyup={handleKeyUp}
+  on:blur={clearHeldPan}
   on:mousedown={handleMouseDown}
   on:mousemove={handleMouseMove}
   on:mouseup={handleMouseUp}
