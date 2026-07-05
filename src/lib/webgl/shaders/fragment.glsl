@@ -4,7 +4,7 @@ precision mediump float;
 
 in vec2 v_texCoord;
 in vec3 v_foreground;
-in vec3 v_background;
+in vec4 v_background;    // rgb + per-cell opacity (a; 1 = opaque terrain cell)
 in vec3 v_detail;
 in vec3 v_outline;
 in vec4 v_uvBounds;  // (uMin, vMin, uMax, vMax) of this glyph in the atlas
@@ -70,7 +70,11 @@ void main() {
         return;
     }
 
-    // Composite: background fills the full tile, glyph blends on top.
-    vec3 lit = mix(v_background, tinted, sprite.a);
-    fragColor = vec4(lit * light, 1.0);
+    // Composite: background fills the full tile, glyph blends on top. Alpha carries the per-cell
+    // background opacity (v_background.a): the opaque terrain pass has blending disabled so its 1.0
+    // is ignored (output identical to the old vec3 path); the BLENDED weather layer (snow/ice wash)
+    // uses fractional bg alpha so the cell washes the terrain beneath it, while its glyph pixels
+    // (the snow sprites) stay fully opaque.
+    vec3 lit = mix(v_background.rgb, tinted, sprite.a);
+    fragColor = vec4(lit * light, mix(v_background.a, 1.0, sprite.a));
 }

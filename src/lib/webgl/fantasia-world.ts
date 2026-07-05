@@ -4,7 +4,7 @@
  */
 
 import { GameGrid } from './game-grid.js';
-import type { WorldTile, PlacedBuilding } from '$lib/game/core/types.js';
+import type { WorldTile, PlacedBuilding, Season } from '$lib/game/core/types.js';
 import {
   SUBTERRAINS,
   SUBTERRAIN_FALLBACK,
@@ -433,7 +433,9 @@ function resolveActiveResource(
   let resKey: string | undefined = activeEntry?.[0];
   let brightness = 1;
   if (resKey) {
-    const partial = Object.keys(tile.resourceCooldowns ?? {}).some((k) => k.startsWith(resKey! + ':'));
+    const partial = Object.keys(tile.resourceCooldowns ?? {}).some((k) =>
+      k.startsWith(resKey! + ':')
+    );
     if (partial) brightness = 0.65;
   } else {
     let bestGrowth = 0;
@@ -478,71 +480,94 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
   // way a building shows the floor beneath it. (Snow may still re-paint a sprite below.)
   const activeRes = resolveActiveResource(tile);
   if (activeRes && !activeRes.resDef.showGroundBelow) char = ' ';
-  // Ice glaze (SEASONS_WEATHER): a pale-blue sheen, only on wet-capable tiles past the visible threshold.
-  // FULL strength on open water (a frozen pond reads as blue glass); cut to a THIRD on damp ground, where
-  // it's just a faint rime — not the quasi-snow it used to read as. Drawn BENEATH snow.
-  const ice = tile.walkable || tile.type === 'water' ? (tile.ice ?? 0) : 0;
-  if (ice >= ICE_VISIBLE_RENDER) {
-    const iceMax = tile.type === 'water' ? 0.4 : 0.4 / 3; // water full · dirt ⅓ (faint rime)
-    const it = Math.min(1, ice / 100) * iceMax;
-    bg = [
-      bg[0] + (ICE_BLUE[0] - bg[0]) * it,
-      bg[1] + (ICE_BLUE[1] - bg[1]) * it,
-      bg[2] + (ICE_BLUE[2] - bg[2]) * it
-    ];
-    fg = [
-      fg[0] + (ICE_BLUE[0] - fg[0]) * it * 0.8,
-      fg[1] + (ICE_BLUE[1] - fg[1]) * it * 0.8,
-      fg[2] + (ICE_BLUE[2] - fg[2]) * it * 0.8
-    ];
-  }
-  // Snow cover (SEASONS_WEATHER) — two layers:
-  //  • the MAIN look is a per-tile white BG overlay at VARYING opacity (drift field + jitter): some tiles
-  //    barely tinted, others solid white. This is the snow blanket; it covers most tiles.
-  //  • a MINORITY of GROUND tiles also get a scattered snow SPRITE accent for texture — never the whole
-  //    map. The three sprites mix in EARLY (45 by ~¼ coverage, 46 soon after), picked by a wide-spread
-  //    per-tile intensity so they scatter rather than form concentric rings.
-  // Snow is an OVERLAY, never a glyph replacement:
-  //  • a per-tile white BG overlay at VARYING opacity (drift field + jitter) — some tiles barely tinted,
-  //    others solid white. The main blanket; it covers most tiles.
-  //  • on GROUND, a matching white FG overlay (weighted to the high end) fades the ground-cover glyph
-  //    (grass / clay / savanna / dirt) so it stays visible under a light dusting but is hidden once the
-  //    tile reaches solid opaque white.
-  //  • a MINORITY of ground tiles also get a scattered snow SPRITE accent (44/45/46, mixed in early).
-  // OBSTACLES (trees, walls, mineral/gem nodes, bushes, shrubs, logs, dead trees — buildings in
-  // applyBuildingToGrid) keep their glyph fully and take only the bg overlay, so they poke out of the snow.
-  const gc = snowCover(tile);
-  if (gc > 0) {
-    const f = snowField(tile.x, tile.y);
-    const wbg = Math.max(
-      0,
-      Math.min(1, gc * 1.3 + (f - 0.5) * 0.8 + (tileHash(tile.x, tile.y, 41) - 0.5) * 0.2)
-    );
-    bg = [
-      bg[0] + (SNOW_WHITE[0] - bg[0]) * wbg,
-      bg[1] + (SNOW_WHITE[1] - bg[1]) * wbg,
-      bg[2] + (SNOW_WHITE[2] - bg[2]) * wbg
-    ];
-    if (!isSnowFeature(tile)) {
-      const wfg = wbg * wbg; // hide the ground glyph only as the cell nears solid white (overlay, not erase)
-      fg = [
-        fg[0] + (SNOW_WHITE[0] - fg[0]) * wfg,
-        fg[1] + (SNOW_WHITE[1] - fg[1]) * wfg,
-        fg[2] + (SNOW_WHITE[2] - fg[2]) * wfg
-      ];
-      if (tileHash(tile.x, tile.y, 17) < Math.min(0.5, gc * 0.7)) {
-        const intensity = gc + (f - 0.5) * 0.6 + (tileHash(tile.x, tile.y, 29) - 0.5) * 0.5;
-        char = SNOW_STAGE_CHARS[intensity > 0.7 ? 2 : intensity > 0.45 ? 1 : 0];
-        fg = [SNOW_WHITE[0], SNOW_WHITE[1], SNOW_WHITE[2]];
-      }
-    }
-  }
+  // NOTE: snow cover + ice glaze are NOT baked here anymore. They live in their own blended weather
+  // layer ({@link applySnowToGrid} / {@link buildSnowOverlay}) drawn over the terrain with per-cell
+  // background alpha — so a snow/ice bucket crossing repaints ONLY that layer and never re-bakes the
+  // terrain/resource grids (the whole-map snow-onset hiccup this replaces). The terrain grid is now
+  // STATIC under weather.
   grid.setTile(tile.x, tile.y, {
     char,
     foreground: { r: fg[0], g: fg[1], b: fg[2] },
     background: { r: bg[0], g: bg[1], b: bg[2] },
     position: { x: tile.x, y: tile.y }
   });
+}
+
+/**
+ * Paint ONE tile's snow/ice weather visual into the SNOW layer — a sparse blended grid drawn between
+ * the terrain and the short-resource overlay. Faithful port of the old baked-in look, now composited:
+ *  • the MAIN look is a per-cell white wash at VARYING opacity (drift field + jitter, opacity ∝ snow
+ *    depth): some cells barely tinted, others solid white — the smooth snow blanket. It rides the
+ *    cell's `backgroundAlpha` (the a_background vec4), so the terrain beneath mixes toward SNOW_WHITE
+ *    exactly as the baked `bg + (SNOW_WHITE - bg) * wbg` did.
+ *  • a MINORITY of GROUND tiles also get a scattered snow SPRITE accent (44/45/46, mixed in early) for
+ *    texture — never the whole map. OBSTACLE tiles (trees, walls, standing features — isSnowFeature)
+ *    take only the wash, no sprite, so their glyphs poke out of the snow.
+ *  • the ICE glaze (pale-blue sheen; full strength on open water, ⅓ on damp ground) composites UNDER
+ *    the snow wash — both fold into this one cell's colour+alpha.
+ * Melted/bare cells REMOVE their cell so the sparse grid only rasterizes where weather actually shows.
+ */
+export function applySnowToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boolean[][]): void {
+  // Hidden interior stays a clean silhouette — no weather hints on buried rock.
+  if (hiddenMask[tile.y]?.[tile.x]) {
+    grid.removeTile(tile.x, tile.y);
+    return;
+  }
+  // Ice glaze strength (alpha toward ICE_BLUE). Wet-capable tiles only, past the visible threshold.
+  const ice = tile.walkable || tile.type === 'water' ? (tile.ice ?? 0) : 0;
+  const iceMax = tile.type === 'water' ? 0.4 : 0.4 / 3; // water full · dirt ⅓ (faint rime)
+  const ai = ice >= ICE_VISIBLE_RENDER ? Math.min(1, ice / 100) * iceMax : 0;
+  // Snow wash strength (alpha toward SNOW_WHITE) — same drift-field formula the baked path used.
+  const gc = snowCover(tile);
+  const f = snowField(tile.x, tile.y);
+  const as =
+    gc > 0
+      ? Math.max(
+          0,
+          Math.min(1, gc * 1.3 + (f - 0.5) * 0.8 + (tileHash(tile.x, tile.y, 41) - 0.5) * 0.2)
+        )
+      : 0;
+  // Composite ice-under-snow into ONE colour+alpha: over the terrain T this must equal
+  // snow-over(ice-over(T)) = T·(1-ai)(1-as) + ICE·ai·(1-as) + SNOW·as.
+  const alpha = ai + as - ai * as;
+  if (alpha < 0.01) {
+    grid.removeTile(tile.x, tile.y);
+    return;
+  }
+  const iw = (ai * (1 - as)) / alpha; // ice weight of the combined wash colour
+  const sw = as / alpha; // snow weight
+  const bg: [number, number, number] = [
+    ICE_BLUE[0] * iw + SNOW_WHITE[0] * sw,
+    ICE_BLUE[1] * iw + SNOW_WHITE[1] * sw,
+    ICE_BLUE[2] * iw + SNOW_WHITE[2] * sw
+  ];
+  // Scattered sprite accent on open ground (same per-tile eligibility hash + stage thresholds).
+  let char = ' ';
+  if (gc > 0 && !isSnowFeature(tile) && tileHash(tile.x, tile.y, 17) < Math.min(0.5, gc * 0.7)) {
+    const intensity = gc + (f - 0.5) * 0.6 + (tileHash(tile.x, tile.y, 29) - 0.5) * 0.5;
+    char = SNOW_STAGE_CHARS[intensity > 0.7 ? 2 : intensity > 0.45 ? 1 : 0];
+  }
+  grid.setTile(tile.x, tile.y, {
+    char,
+    foreground: { r: SNOW_WHITE[0], g: SNOW_WHITE[1], b: SNOW_WHITE[2] },
+    background: { r: bg[0], g: bg[1], b: bg[2] },
+    backgroundAlpha: alpha,
+    position: { x: tile.x, y: tile.y }
+  });
+}
+
+/** Build the sparse snow/ice weather layer for the whole map (full-build seam only — per-delta updates
+ *  go through {@link applySnowToGrid} on exactly the changed cells, mirroring the terrain path). */
+export function buildSnowOverlay(worldMap: WorldTile[][], hiddenMask?: boolean[][]): GameGrid {
+  const grid = new GameGrid();
+  const mask = hiddenMask ?? computeHiddenMask(worldMap);
+  for (const row of worldMap) {
+    for (const tile of row) {
+      // Only touch cells that can show anything — keeps the build O(weathered tiles), grid sparse.
+      if ((tile.snow ?? 0) > 0 || (tile.ice ?? 0) > 0) applySnowToGrid(grid, tile, mask);
+    }
+  }
+  return grid;
 }
 
 /**
@@ -560,7 +585,8 @@ export function applyResourceToGrid(
   gridShort: GameGrid,
   gridTall: GameGrid,
   tile: WorldTile,
-  hiddenMask: boolean[][]
+  hiddenMask: boolean[][],
+  season?: Season
 ): void {
   const blank = (g: GameGrid) =>
     g.setTile(tile.x, tile.y, {
@@ -583,10 +609,14 @@ export function applyResourceToGrid(
   // Glyph is picked by tile position from the def's char range. Glowing (magical) groves add a salt so
   // they draw DIFFERENT glyphs from the same range than the ordinary trees would.
   const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;
-  // Winter swap: deciduous trees carry a leafless winterChars pool that shows ONLY on snow-covered
-  // tiles. Rides the snow-driven buffer rebuild (snow already bakes a per-tile overlay below), so the
-  // bare-tree glyph appears/melts with the snow and never leaks into other seasons.
-  const pool = resDef.winterChars && snowCover(tile) > 0 ? resDef.winterChars : resDef.chars;
+  // Season variant (resources.jsonc `seasonVariants`): a def can override its char pool and/or colours
+  // per season — leafless winter trees, autumn-recoloured canopies. Driven by the SEASON (the caller
+  // rebuilds the resource overlay on a season change), never by snow — a freak summer/spring snowfall
+  // must not bare the trees (the old snow-gated swap did exactly that).
+  const variant = season ? resDef.seasonVariants?.[season] : undefined;
+  const pool = variant?.chars?.length ? variant.chars : resDef.chars;
+  const baseFg = variant?.fg ?? resDef.fg;
+  const baseDetail = variant?.detail ?? resDef.detail;
   const h = ((tile.x * 1619 + tile.y * 31337 + salt) >>> 0) % pool.length;
   // renderScale != 1 draws the glyph scaled: > 1 = bigger/taller (trees), < 1 = smaller (an ore-vein
   // speck on the rock). Only renderScale > 1 routes to the TALL grid (drawn ABOVE entities for canopy
@@ -597,20 +627,21 @@ export function applyResourceToGrid(
   const tall = rs !== undefined && rs > 1;
   blank(tall ? gridShort : gridTall);
   // Two-colour split (trees): when the def carries a `detail` tint, DARK sprite pixels (the trunk) take
-  // `fg` and LIGHT pixels (the canopy) take `detail`. Both dim with growth/cooldown brightness.
-  const detail = resDef.detail
+  // `fg` and LIGHT pixels (the canopy) take `detail`. Both dim with growth/cooldown brightness (and
+  // both honour the active season variant's colour overrides — autumn leaf recolours ride `detail`).
+  const detail = baseDetail
     ? {
-        r: resDef.detail[0] * brightness,
-        g: resDef.detail[1] * brightness,
-        b: resDef.detail[2] * brightness
+        r: baseDetail[0] * brightness,
+        g: baseDetail[1] * brightness,
+        b: baseDetail[2] * brightness
       }
     : undefined;
   (tall ? gridTall : gridShort).setTile(tile.x, tile.y, {
     char: pool[h],
     foreground: {
-      r: resDef.fg[0] * brightness,
-      g: resDef.fg[1] * brightness,
-      b: resDef.fg[2] * brightness
+      r: baseFg[0] * brightness,
+      g: baseFg[1] * brightness,
+      b: baseFg[2] * brightness
     },
     background: { r: 0, g: 0, b: 0 },
     position: { x: tile.x, y: tile.y },
@@ -625,7 +656,8 @@ export function applyResourceToGrid(
  *  get a cell, so the renderer's viewport cull (getVisibleTiles, O(viewport)) and memory stay cheap. */
 export function buildResourceOverlay(
   worldMap: WorldTile[][],
-  hiddenMask?: boolean[][]
+  hiddenMask?: boolean[][],
+  season?: Season
 ): { short: GameGrid; tall: GameGrid } {
   const short = new GameGrid();
   const tall = new GameGrid();
@@ -633,7 +665,7 @@ export function buildResourceOverlay(
   for (const row of worldMap)
     for (const tile of row)
       if (tile.resources && Object.keys(tile.resources).length > 0)
-        applyResourceToGrid(short, tall, tile, mask);
+        applyResourceToGrid(short, tall, tile, mask, season);
   return { short, tall };
 }
 
@@ -702,7 +734,7 @@ export function isFloorBuilding(b: PlacedBuilding): boolean {
 const ROOF_SHADE_FG = 0.82;
 const ROOF_SHADE_BG = 0.72;
 
-export function applyBuildingToGrid(grid: GameGrid, b: PlacedBuilding, tile?: WorldTile): void {
+export function applyBuildingToGrid(grid: GameGrid, b: PlacedBuilding, _tile?: WorldTile): void {
   if (b.status !== 'complete') return;
   const def = buildingDefById(b.type);
 
@@ -743,24 +775,8 @@ export function applyBuildingToGrid(grid: GameGrid, b: PlacedBuilding, tile?: Wo
   const bg: [number, number, number] = existingBg
     ? [existingBg.r, existingBg.g, existingBg.b]
     : [0.06, 0.04, 0.01];
-  // Snow: a building is an obstacle, so (like trees/walls) it keeps its glyph and just takes the same
-  // transparent→opaque white bg overlay as the terrain — using the same drift field so it whitens in step
-  // with the snow around it instead of reading as a bare hole.
-  if (!existingBg && tile) {
-    const gc = snowCover(tile);
-    if (gc > 0) {
-      const wb = Math.max(
-        0,
-        Math.min(
-          1,
-          gc * 1.3 + (snowField(b.x, b.y) - 0.5) * 0.8 + (tileHash(b.x, b.y, 41) - 0.5) * 0.2
-        )
-      );
-      bg[0] += (SNOW_WHITE[0] - bg[0]) * wb;
-      bg[1] += (SNOW_WHITE[1] - bg[1]) * wb;
-      bg[2] += (SNOW_WHITE[2] - bg[2]) * wb;
-    }
-  }
+  // NOTE: no snow mix here anymore — the blended snow layer (applySnowToGrid) draws over the terrain
+  // grid, so a floor baked here whitens under snowfall exactly in step with the ground around it.
   grid.setTile(b.x, b.y, {
     char,
     foreground: { r: fg[0], g: fg[1], b: fg[2] },

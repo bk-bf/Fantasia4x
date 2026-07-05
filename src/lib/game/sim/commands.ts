@@ -138,7 +138,6 @@ export function lineFormationTargets(
   return targets;
 }
 
- 
 type Cmd = (state: GameState, payload: any) => GameState;
 
 /**
@@ -1222,7 +1221,9 @@ export const COMMANDS: Record<string, Cmd> = {
         const next = v <= 0 ? 0 : Math.max(0, Math.min(100, Math.round(v * factor)));
         if (next === (tile.snow ?? 0)) continue;
         tile.snow = next;
-        markTileDirty(tile.y, tile.x, tile);
+        // 'snow' kind — full-map instant snow repaints only the blended snow layer (the stress case
+        // the layer exists for), never the terrain/resource grids.
+        markTileDirty(tile.y, tile.x, tile, 'snow');
       }
     }
     return { ...s };
@@ -1257,7 +1258,8 @@ export const COMMANDS: Record<string, Cmd> = {
             patchPathfindingWalkable(tile.x, tile.y, false);
           }
         }
-        markTileDirty(tile.y, tile.x, tile);
+        // 'snow' kind — the ice glaze lives in the blended snow layer (see accumulateSnow).
+        markTileDirty(tile.y, tile.x, tile, 'snow');
       }
     }
     return { ...s };

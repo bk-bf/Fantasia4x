@@ -1191,7 +1191,9 @@ export function accumulateSnow(
       if (nextSnow !== prevSnow) {
         tile.snow = nextSnow;
         if (Math.floor(nextSnow / SNOW_RENDER_STEP) !== Math.floor(prevSnow / SNOW_RENDER_STEP)) {
-          markTileDirty(tile.y, tile.x, tile);
+          // 'snow' kind: repaints only the blended snow layer — a whole-map onset/melt wave must
+          // never re-bake the terrain/resource grids (the snow-onset hiccup).
+          markTileDirty(tile.y, tile.x, tile, 'snow');
         }
       }
 
@@ -1206,7 +1208,7 @@ export function accumulateSnow(
         // Clear any stray ice such a tile picked up before this gate existed (e.g. the debug slider).
         if (prevIce > 0) {
           tile.ice = 0;
-          markTileDirty(tile.y, tile.x, tile);
+          markTileDirty(tile.y, tile.x, tile, 'snow');
         }
         continue;
       }
@@ -1248,7 +1250,9 @@ export function accumulateSnow(
           flipped ||
           Math.floor(nextIce / ICE_RENDER_STEP) !== Math.floor(prevIce / ICE_RENDER_STEP)
         ) {
-          markTileDirty(tile.y, tile.x, tile);
+          // 'snow' kind: the ice glaze renders in the blended snow layer; the walkable flip carries
+          // no terrain-grid visual (pathfinding is patched directly above), so terrain stays cached.
+          markTileDirty(tile.y, tile.x, tile, 'snow');
         }
       }
     }

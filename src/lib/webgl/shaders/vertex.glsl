@@ -5,7 +5,7 @@
 in vec2 a_position;      // Vertex position in screen coordinates
 in vec2 a_texCoord;      // Texture coordinates for character atlas
 in vec3 a_foreground;    // Foreground (dark glyph pixel) color
-in vec3 a_background;    // Background (transparent pixel) color
+in vec4 a_background;    // Background (transparent pixel) color + per-cell opacity (a; 1 = opaque)
 in vec3 a_detail;        // Detail/highlight (bright glyph pixel) color
 in vec3 a_outline;       // Outline color (vec3(0) = no outline)
 in vec4 a_uvBounds;      // Glyph UV bounds: (uMin, vMin, uMax, vMax)
@@ -21,7 +21,7 @@ uniform vec2 u_zoom;        // actualTileSize / BASE_TILE_PX; applied here so zo
 // Varying outputs (passed to fragment shader)
 out vec2 v_texCoord;     // Pass texture coordinates to fragment
 out vec3 v_foreground;   // Pass foreground color to fragment
-out vec3 v_background;   // Pass background color to fragment
+out vec4 v_background;   // Pass background color + opacity to fragment
 out vec3 v_detail;       // Pass detail color to fragment
 out vec3 v_outline;      // Pass outline color to fragment
 out vec4 v_uvBounds;     // Pass glyph UV bounds to fragment

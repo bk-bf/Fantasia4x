@@ -39,6 +39,15 @@ export class WebGLRenderer {
   }
 
   /**
+   * Inject (or update) the snow/ice weather grid — the blended per-cell wash + sprite layer drawn
+   * between terrain and resources. Pass `dirtyTiles` for an incremental update (only affected snow
+   * chunks re-vertex); omit for a full replace. Its invalidation never touches terrain/resource chunks.
+   */
+  setSnowGrid(grid: GameGrid | null, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
+    this.core.setSnowGrid(grid, dirtyTiles);
+  }
+
+  /**
    * Inject (or clear) the entity-overlay grid (pawns/mobs). Rendered as a
    * glyph-only, alpha-blended pass on top of the terrain grid.
    */

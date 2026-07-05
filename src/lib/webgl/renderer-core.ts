@@ -97,6 +97,13 @@ export class WebGLRendererCore {
   // through the building sprite's transparent pixels — two stacked sprites, exactly
   // how items composite over terrain. (Floors and roofs stay baked in the terrain grid.)
   private buildingOverlayGrid: GameGrid | null = null;
+  // Snow/ice weather layer — a sparse grid of per-cell translucent washes (backgroundAlpha) + snow
+  // sprites, drawn BLENDED right after the opaque terrain (before resources, so plants/trees/pawns
+  // poke out of the blanket). It has its OWN content version + chunk dirty stream (snowVersion /
+  // markSnowChunksDirty) so snow/ice bucket crossings never re-vertex terrain or resource chunks —
+  // decoupling weather churn from the ADR-026 terrain path entirely.
+  private snowGrid: GameGrid | null = null;
+  private snowVersion = 0;
   // Resources (grass/bushes/ore/crops) live in their OWN transparent overlay, rendered FIRST in the
   // overlay group (terrain → resources → buildings → items → pawns) — so a plant glyph composites over
   // the actual ground sprite instead of being baked over a flat near-black bg.
@@ -183,6 +190,21 @@ export class WebGLRendererCore {
       this.gridRenderer?.markTerrainChunksDirty(dirtyTiles);
     } else {
       this.gridVersion++;
+    }
+  }
+
+  /**
+   * Inject the snow/ice weather grid (drawn blended between terrain and resources). Mirrors setGrid's
+   * ADR-026 contract: pass `dirtyTiles` for an INCREMENTAL update (only the snow chunks holding those
+   * tiles re-vertex); omit for a full replace (new map / full weather rebuild), which bumps the snow
+   * layer's own content version. Neither path ever touches terrain/resource chunks.
+   */
+  setSnowGrid(grid: GameGrid | null, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
+    this.snowGrid = grid;
+    if (dirtyTiles && dirtyTiles.length > 0) {
+      this.gridRenderer?.markSnowChunksDirty(dirtyTiles);
+    } else {
+      this.snowVersion++;
     }
   }
 
@@ -466,6 +488,34 @@ export class WebGLRendererCore {
     this.stats.terrainRebuilds = this.gridRenderer.chunksRebuiltLastRender; // DEBUG
     this.stats.drawCalls++;
     this.stats.vertexCount += gridStats.tilesRendered * 6;
+
+    // Snow/ice weather pass — BLENDED, but NOT glyph-only (u_glyphOnly stays 0): each cell draws its
+    // background quad at the per-cell backgroundAlpha (the vec4 a_background), washing the terrain
+    // beneath toward white/ice-blue — the smooth snow blanket — while its glyph pixels (the snow
+    // sprites) render opaque. Chunk-cached under its own 'snow' layer + snowVersion, so it re-vertexes
+    // only on snow/ice changes and draws from cached VBOs every other frame, exactly like terrain.
+    if (this.snowGrid) {
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      const snowStats = this.gridRenderer.renderGrid(this.snowGrid, {
+        tileWidth: BASE_TILE_PX,
+        tileHeight: BASE_TILE_PX,
+        viewportX: this.viewTileX,
+        viewportY: this.viewTileY,
+        viewportWidth: viewportTilesW,
+        viewportHeight: viewportTilesH,
+        lightSampler: this.lightSampler ?? undefined,
+        lightTime,
+        pointLightActive: this.dynamicLight,
+        lightVersion: this.lightVersion,
+        litBounds: this.lightBounds,
+        cacheVersion: this.snowVersion,
+        chunkLayer: 'snow'
+      });
+      gl.disable(gl.BLEND);
+      this.stats.drawCalls++;
+      this.stats.vertexCount += snowStats.tilesRendered * 6;
+    }
 
     // Overlay passes — glyph-only, alpha-blended on top of the terrain so the tile
     // underneath keeps rendering and motion can be sub-tile. Draw order is

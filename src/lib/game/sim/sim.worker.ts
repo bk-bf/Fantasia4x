@@ -57,6 +57,10 @@ let lastWorldMap: GameState['worldMap'] | null = null;
 // every throttle window = freeze frames). In the worker, immutable updates preserve unchanged refs,
 // so we compute a reliable revision here and the renderer rebuilds terrain only when it actually bumps.
 let terrainRev = 0;
+// Snow/ice weather revision — a SEPARATE signal for the blended snow layer, so a snow-onset wave
+// (every snowable tile crossing a render bucket in one hourly tick) repaints ONLY that layer and
+// never bumps terrainRev (whose handler re-bakes terrain + resource cells — the snow-onset hiccup).
+let snowRev = 0;
 // §D: a SEPARATE, cheap signal for the 2D designation overlay. The dip-correlated trace showed the
 // dominant harvest dip was the full 38k-tile terrain rebuild, fired ~2×/s by designation churn —
 // even though buildGameGrid doesn't render designations (their icons are a separate 2D canvas). So
@@ -368,8 +372,11 @@ function publish(state: GameState, flush: boolean, commit = false) {
   // Terrain rebuild trigger — designations AND standing-zone tints are DELIBERATELY excluded: both are
   // painted on GameCanvas's 2D overlay now (buildGameGrid renders neither), so their churn must not
   // force the 38k-tile rebuild (the dominant harvest dip, trace §D; and the zone-commit hitch).
+  // Snow/ice-only deltas are ALSO excluded — they bump snowRev instead, repainting only the blended
+  // snow layer (a snow-onset wave touches most of the map; re-baking terrain for it was the hiccup).
   const cWM = state.worldMap !== prevWM;
-  const cDelta = tileDeltas !== null;
+  const cDelta = tileDeltas !== null && tileDeltas.some((d) => d.kind === 'terrain');
+  const cSnow = tileDeltas !== null && tileDeltas.some((d) => d.kind === 'snow');
   const cBSig = bSig !== prevBuildingsSig;
   const cZone = state.zoneTiles !== prevZoneTiles;
   if (cWM || cDelta || cBSig) {
@@ -380,6 +387,8 @@ function publish(state: GameState, flush: boolean, commit = false) {
     if (cDelta) _trigDelta++;
     if (cBSig) _trigBSig++;
   }
+  // A full worldMap send re-derives the whole snow layer too (GameCanvas full-rebuild path).
+  if (cWM || cSnow) snowRev++;
   // Designation icons + zone tints share the cheap 2D-overlay redraw rev.
   if (state.designations !== prevDesignations || cZone) {
     designationRev++;
@@ -403,6 +412,7 @@ function publish(state: GameState, flush: boolean, commit = false) {
     }
   }
   delta._terrainRev = terrainRev; // always present; renderer's terrain-rebuild trigger
+  delta._snowRev = snowRev; // snow/ice layer repaint trigger (decoupled from terrain)
   delta._designationRev = designationRev; // renderer's cheap 2D designation-overlay redraw trigger
 
   // Drops ride their own per-id channel (slim, no per-unit arrays). Recompute the small per-type
@@ -434,8 +444,14 @@ function publish(state: GameState, flush: boolean, commit = false) {
     }
   }
   const mobs = syncEntities(state.mobs ?? [], lastMobIds, MOB_COLD, lastMobCold, MOB_VOLATILE);
+  // `k: 1` marks a SNOW-ONLY delta (tile.snow/ice moved, nothing else) so the bridge routes its coord
+  // to the snow repaint channel instead of the terrain one. Terrain deltas omit it (slim clone).
   const wmDelta = tileDeltas
-    ? tileDeltas.map((d) => ({ y: d.y, x: d.x, tile: slimTile(d.tile) }))
+    ? tileDeltas.map((d) =>
+        d.kind === 'snow'
+          ? { y: d.y, x: d.x, tile: slimTile(d.tile), k: 1 as const }
+          : { y: d.y, x: d.x, tile: slimTile(d.tile) }
+      )
     : undefined;
 
   // §D snapshot-size probe (kept, gated off via SNAP_SIZE_LOG): `post`/`onmessage` are 100% native

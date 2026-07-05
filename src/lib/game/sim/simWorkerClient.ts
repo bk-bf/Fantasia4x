@@ -12,6 +12,7 @@ import { isClientRuntime } from '../core/runtime';
 import { realSimLogSink } from '../../stores/simLogBridge';
 import {
   markRenderTileDirty,
+  markSnowRenderTileDirty,
   clearRenderTileDeltas
 } from '../../components/UI/gameCanvas/mainTileDeltas';
 import { batchLogReplay } from '../../stores/Log';
@@ -193,7 +194,7 @@ class SimWorkerBridge {
     mobs?: EntitySync<Mob>;
     drops?: EntitySync<DroppedItem>;
     worldMap?: GameState['worldMap'];
-    worldMapDelta?: Array<{ y: number; x: number; tile: Partial<WorldTile> }>;
+    worldMapDelta?: Array<{ y: number; x: number; tile: Partial<WorldTile>; k?: 1 }>;
     flush?: boolean;
     commit?: boolean;
     error?: string;
@@ -216,7 +217,10 @@ class SimWorkerBridge {
           if (row) {
             row[d.x] = { ...row[d.x], ...d.tile };
             // ADR-026: record the coord so GameCanvas repaints ONLY this cell (no whole-map scan).
-            markRenderTileDirty(d.y, d.x);
+            // `k: 1` = snow/ice-only change → route to the snow channel, so a snow-onset wave
+            // repaints just the blended snow layer instead of re-baking terrain+resource cells.
+            if (d.k === 1) markSnowRenderTileDirty(d.y, d.x);
+            else markRenderTileDirty(d.y, d.x);
           }
         }
       }

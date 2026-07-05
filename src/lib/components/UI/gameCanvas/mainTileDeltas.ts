@@ -21,10 +21,18 @@ export interface RenderTileCoord {
 }
 
 const dirty = new Map<string, RenderTileCoord>();
+// Snow/ice-only changes (worker delta `k: 1`) — drained separately so a snow-onset wave repaints ONLY
+// the blended snow layer, never the terrain/resource grids (the snow-onset hiccup fix).
+const dirtySnow = new Map<string, RenderTileCoord>();
 
 /** Record that `worldMap[y][x]` changed and its grid cell must be re-painted this frame. */
 export function markRenderTileDirty(y: number, x: number): void {
   dirty.set(y + ',' + x, { y, x });
+}
+
+/** Record that only `worldMap[y][x]`'s snow/ice moved — repaint just its snow-layer cell. */
+export function markSnowRenderTileDirty(y: number, x: number): void {
+  dirtySnow.set(y + ',' + x, { y, x });
 }
 
 /** Drain the accumulated dirty coords for this frame, or `null` if none changed. */
@@ -35,7 +43,16 @@ export function drainRenderTileDeltas(): RenderTileCoord[] | null {
   return out;
 }
 
-/** Discard pending coords (a full terrain rebuild already repaints every tile). */
+/** Drain the accumulated snow-only dirty coords, or `null` if none changed. */
+export function drainSnowRenderTileDeltas(): RenderTileCoord[] | null {
+  if (dirtySnow.size === 0) return null;
+  const out = Array.from(dirtySnow.values());
+  dirtySnow.clear();
+  return out;
+}
+
+/** Discard pending coords (a full terrain rebuild already repaints every tile — snow layer included). */
 export function clearRenderTileDeltas(): void {
   dirty.clear();
+  dirtySnow.clear();
 }

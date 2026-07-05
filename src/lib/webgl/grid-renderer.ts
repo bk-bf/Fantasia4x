@@ -49,7 +49,9 @@ export interface GridRenderOptions {
   // Which cached chunk set this grid draws into. The static terrain is the default; the resource
   // overlays (trees/plants — dense, static between edits, same dirty cadence as terrain) reuse the
   // SAME chunked-cache machinery under their own chunk maps so they're built on change, not per frame.
-  chunkLayer?: 'terrain' | 'resource' | 'resourceTall';
+  // 'snow' is the blended weather layer (snow wash + sprites, ice glaze) — its own chunk map AND its
+  // own dirty stamps, so a snow-only change never re-vertexes terrain/resource chunks (and vice versa).
+  chunkLayer?: 'terrain' | 'resource' | 'resourceTall' | 'snow';
   // Whether any flickering point-light emitters are currently lit. When false,
   // the baked additive light is constant 0 and the terrain cache never rebuilds
   // for lighting; when true it refreshes at ~10 Hz to animate the flicker.
@@ -108,13 +110,19 @@ export class GridRenderer {
   // lightVersion / chunkDirty as terrain, since redrawOverlayNow rebuilds both from the same changed tiles.
   private resourceChunks: Map<string, TerrainChunk> = new Map();
   private resourceTallChunks: Map<string, TerrainChunk> = new Map();
+  // Snow/ice weather layer — separate chunk map AND separate dirty stamps (below), so a snow bucket
+  // crossing re-vertexes only snow chunks and a mined wall re-vertexes only terrain/resource chunks.
+  private snowChunks: Map<string, TerrainChunk> = new Map();
   private terrainFrame = 0; // monotonic frame counter for chunk LRU eviction
   /** DEBUG: how many terrain chunks were (re)built+uploaded in the most recent renderTerrainChunked. */
   chunksRebuiltLastRender = 0;
   // ADR-026 per-chunk dirty: a partial terrain update (markTerrainChunksDirty) stamps ONLY the chunks
   // holding a changed tile, so they rebuild while every other visible chunk keeps its cached VBO — vs.
   // bumping the global cacheVersion, which re-vertexes every visible chunk for a single changed tile.
+  // Terrain + the resource overlays SHARE stamps (redrawOverlayNow rebuilds them from the same changed
+  // cells); the snow layer has its OWN map so the two invalidation streams stay decoupled.
   private chunkDirty = new Map<string, number>();
+  private snowChunkDirty = new Map<string, number>();
   private chunkDirtyCounter = 0;
 
   // Render statistics
@@ -163,7 +171,9 @@ export class GridRenderer {
           ? this.resourceChunks
           : options.chunkLayer === 'resourceTall'
             ? this.resourceTallChunks
-            : this.terrainChunks;
+            : options.chunkLayer === 'snow'
+              ? this.snowChunks
+              : this.terrainChunks;
       const drawnTiles = this.renderTerrainChunked(grid, options, chunks);
       this.stats = {
         tilesRendered: drawnTiles,
@@ -230,6 +240,16 @@ export class GridRenderer {
     }
   }
 
+  /** Snow-layer analogue of {@link markTerrainChunksDirty} — stamps ONLY snow chunks, so a snow/ice
+   *  bucket crossing rebuilds the affected snow VBOs and nothing else (the whole point of the layer). */
+  markSnowChunksDirty(tiles: ReadonlyArray<{ x: number; y: number }>): void {
+    const CS = GridRenderer.CHUNK_SIZE;
+    for (const t of tiles) {
+      const key = `${Math.floor(t.x / CS)}:${Math.floor(t.y / CS)}`;
+      this.snowChunkDirty.set(key, ++this.chunkDirtyCounter);
+    }
+  }
+
   private renderTerrainChunked(
     grid: GameGrid,
     options: GridRenderOptions,
@@ -255,6 +275,9 @@ export class GridRenderer {
       return 0;
     }
 
+    // The snow layer keeps its own dirty stamps so its invalidation stream never crosses terrain's.
+    const dirtyMap = options.chunkLayer === 'snow' ? this.snowChunkDirty : this.chunkDirty;
+
     let drawnVerts = 0;
     for (let cy = minCY; cy <= maxCY; cy++) {
       for (let cx = minCX; cx <= maxCX; cx++) {
@@ -266,7 +289,8 @@ export class GridRenderer {
           cacheVersion,
           lightVersion,
           frame,
-          chunks
+          chunks,
+          dirtyMap
         );
       }
     }
@@ -290,13 +314,14 @@ export class GridRenderer {
     version: number,
     lightVersion: number,
     frame: number,
-    chunks: Map<string, TerrainChunk> = this.terrainChunks
+    chunks: Map<string, TerrainChunk> = this.terrainChunks,
+    dirtyMap: Map<string, number> = this.chunkDirty
   ): number {
     const gl = this.gl;
     const CS = GridRenderer.CHUNK_SIZE;
     const key = `${cx}:${cy}`;
     let chunk = chunks.get(key);
-    const dirtyStamp = this.chunkDirty.get(key) ?? 0; // ADR-026 per-chunk incremental invalidation
+    const dirtyStamp = dirtyMap.get(key) ?? 0; // ADR-026 per-chunk incremental invalidation
 
     if (
       !chunk ||
@@ -333,7 +358,7 @@ export class GridRenderer {
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, chunk.vbo);
         gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-        chunk.count = data.length / 23; // 23 floats per vertex
+        chunk.count = data.length / 24; // 24 floats per vertex
       }
       chunk.builtVersion = version;
       chunk.builtLight = lightVersion;
@@ -391,7 +416,7 @@ export class GridRenderer {
     // Bind VAO and render
     gl.bindVertexArray(this.gridVAO);
 
-    const vertexCount = vertexData.length / 23; // 23 components per vertex
+    const vertexCount = vertexData.length / 24; // 24 components per vertex
     gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
 
     gl.bindVertexArray(null);
@@ -408,11 +433,11 @@ export class GridRenderer {
    */
   private generateBatchVertexData(tiles: TileData[], options: GridRenderOptions): Float32Array {
     // Write straight into a preallocated typed array (ENGINE-PERFORMANCE.md §D): every tile emits
-    // exactly 6×23 = 138 floats and none is skipped, so the size is exact. This replaces a
+    // exactly 6×24 = 144 floats and none is skipped, so the size is exact. This replaces a
     // ~5.2M-element `number[]` grown via `.push(...)` plus a final `new Float32Array(it)` copy —
     // the dominant allocation + GC cost of a full terrain rebuild, which the Chrome trace showed
     // is what the biggest renderer dips are made of. Output is byte-identical to the old path.
-    const FLOATS_PER_TILE = 6 * 23;
+    const FLOATS_PER_TILE = 6 * 24;
     const out = new Float32Array(tiles.length * FLOATS_PER_TILE);
     let o = 0;
     const sampler = options.lightSampler;
@@ -459,9 +484,7 @@ export class GridRenderer {
       // grows upward off the base tile; downscaled marks (scale < 1 — ore veins) CENTER in the cell so
       // the speck sits in the middle of the rock rather than at its foot. scale === 1 reduces to both.
       const y1 =
-        scale >= 1
-          ? screenY + offsetY - (drawH - tileH)
-          : screenY + offsetY + (tileH - drawH) / 2;
+        scale >= 1 ? screenY + offsetY - (drawH - tileH) : screenY + offsetY + (tileH - drawH) / 2;
       const x2 = x1 + drawW;
       const y2 = y1 + drawH;
 
@@ -479,7 +502,13 @@ export class GridRenderer {
       // (Previously detail defaulted to the foreground, so black + white both became the tile colour
       // → flat fill, which made distinct cells like mud_brick_wall and mountain_wall identical.)
       const tileColor = [tile.foreground.r, tile.foreground.g, tile.foreground.b];
-      const bg = [tile.background.r, tile.background.g, tile.background.b];
+      // 4th component = per-cell background opacity (a_background.w). Opaque layers omit it (→ 1).
+      const bg = [
+        tile.background.r,
+        tile.background.g,
+        tile.background.b,
+        tile.backgroundAlpha ?? 1
+      ];
       const fg = tile.detail
         ? tileColor
         : [tileColor[0] * 0.3, tileColor[1] * 0.3, tileColor[2] * 0.3];
@@ -567,7 +596,7 @@ export class GridRenderer {
       }
 
       // Add vertex data for this character (2 triangles = 6 vertices)
-      // Vertex format: x, y, u, v, fr, fg, fb, br, bg, bb, dr, dg, db, or, og, ob, u1, v1, u2, v2, lr, lg, lb (23 floats)
+      // Vertex format: x, y, u, v, fr, fg, fb, br, bg, bb, ba, dr, dg, db, or, og, ob, u1, v1, u2, v2, lr, lg, lb (24 floats)
       const charVertices = [
         // Triangle 1
         x1,
@@ -580,6 +609,7 @@ export class GridRenderer {
         bg[0],
         bg[1],
         bg[2],
+        bg[3],
         dt[0],
         dt[1],
         dt[2],
@@ -603,6 +633,7 @@ export class GridRenderer {
         bg[0],
         bg[1],
         bg[2],
+        bg[3],
         dt[0],
         dt[1],
         dt[2],
@@ -626,6 +657,7 @@ export class GridRenderer {
         bg[0],
         bg[1],
         bg[2],
+        bg[3],
         dt[0],
         dt[1],
         dt[2],
@@ -651,6 +683,7 @@ export class GridRenderer {
         bg[0],
         bg[1],
         bg[2],
+        bg[3],
         dt[0],
         dt[1],
         dt[2],
@@ -674,6 +707,7 @@ export class GridRenderer {
         bg[0],
         bg[1],
         bg[2],
+        bg[3],
         dt[0],
         dt[1],
         dt[2],
@@ -697,6 +731,7 @@ export class GridRenderer {
         bg[0],
         bg[1],
         bg[2],
+        bg[3],
         dt[0],
         dt[1],
         dt[2],
@@ -737,22 +772,22 @@ export class GridRenderer {
     }
   }
 
-  /** Bind the tileRenderer's 8 vertex attributes (23-float interleaved stride) for a VAO/VBO. */
+  /** Bind the tileRenderer's 8 vertex attributes (24-float interleaved stride) for a VAO/VBO. */
   private setupGridAttribs(vao: WebGLVertexArrayObject, vbo: WebGLBuffer): void {
     const gl = this.gl;
     gl.bindVertexArray(vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-    const stride = 23 * 4; // 23 floats per vertex, 4 bytes per float
-    // [name, size, offset-in-floats]
+    const stride = 24 * 4; // 24 floats per vertex, 4 bytes per float
+    // [name, size, offset-in-floats] — a_background is vec4 (rgb + per-cell opacity)
     const attribs: [string, number, number][] = [
       ['a_position', 2, 0],
       ['a_texCoord', 2, 2],
       ['a_foreground', 3, 4],
-      ['a_background', 3, 7],
-      ['a_detail', 3, 10],
-      ['a_outline', 3, 13],
-      ['a_uvBounds', 4, 16],
-      ['a_light', 3, 20]
+      ['a_background', 4, 7],
+      ['a_detail', 3, 11],
+      ['a_outline', 3, 14],
+      ['a_uvBounds', 4, 17],
+      ['a_light', 3, 21]
     ];
     for (const [name, size, offset] of attribs) {
       const loc = this.shaderManager.getAttributeLocation('tileRenderer', name);

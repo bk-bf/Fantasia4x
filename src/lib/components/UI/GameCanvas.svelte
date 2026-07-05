@@ -8,7 +8,9 @@
   import {
     applyTileToGrid,
     applyResourceToGrid,
+    applySnowToGrid,
     applyBuildingToGrid,
+    buildResourceOverlay,
     isRoofBuilding,
     isFloorBuilding,
     generatePlaceholderGrid,
@@ -18,6 +20,7 @@
   } from '$lib/webgl/fantasia-world.js';
   import {
     drainRenderTileDeltas,
+    drainSnowRenderTileDeltas,
     clearRenderTileDeltas
   } from '$lib/components/UI/gameCanvas/mainTileDeltas';
   import { fullRebuildTerrain } from '$lib/components/UI/gameCanvas/terrainPaint';
@@ -46,7 +49,10 @@
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
   import { BASE_TILE_PX } from '$lib/webgl/tile-types.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
-  import { buildPathfindingGrids, pathfinderService } from '$lib/game/services/PathfinderService.js';
+  import {
+    buildPathfindingGrids,
+    pathfinderService
+  } from '$lib/game/services/PathfinderService.js';
   import { designationService } from '$lib/game/services/DesignationService.js';
   import {
     environmentService,
@@ -229,6 +235,16 @@
   // tall = trees (drawn ABOVE entities so a pawn on the tile behind a tree is occluded by the canopy).
   let _resourceGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
   let _resourceTallGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
+  // Blended snow/ice weather layer (per-cell wash + sprites), drawn between terrain and resources.
+  // Kept OUT of the terrain grid so a snow/ice change repaints only this grid's affected cells via the
+  // dedicated snow delta channel (_snowRev / drainSnowRenderTileDeltas) — never a terrain re-bake.
+  let _snowGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
+  let _snowDirty = false; // worker signalled snow/ice changes (coalesced like _terrainDirty)
+  let _lastSnowBuild = 0;
+  let _prevSnowRev: number | undefined; // worker-sent snow revision (see unsubState)
+  // Season the resource overlay was last painted with (drives resources.jsonc seasonVariants —
+  // leafless winter trees, autumn recolours). A change rebuilds the resource overlays exactly once.
+  let _renderSeason: import('$lib/game/core/types.js').Season | undefined;
   let _terrainGridWorldMapRef: unknown; // worldMap ARRAY ref of the last full build (new ref ⇒ new map ⇒ full rebuild)
   // Incremental building diff: last-painted completed buildings keyed by id (pos + visual sig), so a
   // placement/removal/deconstruct repaints just the changed footprints (single cells).
@@ -1403,6 +1419,7 @@
     // frame (90ms freeze frames). The worker sends `_terrainRev` (a reliable revision computed where
     // refs are stable); use it when present. In-thread, fall back to the ref checks.
     const workerRev = (s as unknown as { _terrainRev?: number })._terrainRev;
+    const workerSnowRev = (s as unknown as { _snowRev?: number })._snowRev;
     const workerDesigRev = (s as unknown as { _designationRev?: number })._designationRev;
     // Hiding/showing a zone's colour is a stable string signature (it survives the worker's structured
     // clone), so it's compared directly in both modes to trigger a cheap overlay redraw.
@@ -1427,7 +1444,12 @@
         ? workerDesigRev !== _prevDesignationRev
         : designations !== _prevDesignations || zoneTiles !== _prevZoneTiles);
 
+    // Snow/ice layer repaint trigger — its own revision, so a snow-onset wave (most of the map crossing
+    // a render bucket in one hourly tick) repaints ONLY the blended snow layer, never the terrain.
+    if (workerSnowRev !== undefined && workerSnowRev !== _prevSnowRev) _snowDirty = true;
+
     _prevTerrainRev = workerRev;
+    _prevSnowRev = workerSnowRev;
     _prevDesignationRev = workerDesigRev;
     _prevHiddenZoneSig = hiddenZoneSig;
     _prevWorldMap = worldMap;
@@ -1442,15 +1464,26 @@
       const { light, tint } = environmentService.getAmbient(environmentService.ambientTurn(s));
       // Season+weather hue, winter-desaturated so snow isn't painted by the dawn/dusk/night hues.
       // Debug-aware season so a season override applies immediately even while paused.
-      const tinted = environmentService.getMapAmbientTint(
-        tint,
-        environmentService.effectiveSeason(s),
-        s.weather
-      );
+      const season = environmentService.effectiveSeason(s);
+      const tinted = environmentService.getMapAmbientTint(tint, season, s.weather);
       renderer.setAmbient(light, tinted);
       lightingService.setAmbient(light, tinted);
       _ambientLight = light;
       _ambientTint = tinted;
+      // Season change → repaint the resource overlays under the new season's variants (leafless winter
+      // trees, autumn recolours — resources.jsonc seasonVariants). Rare (4×/game-year + debug override),
+      // so a full overlay rebuild + content-version bump (setGrid without dirtyTiles) is fine here; the
+      // guard on the worldMap ref skips it when a new-map full rebuild is about to run anyway.
+      if (season !== _renderSeason) {
+        _renderSeason = season;
+        if (_terrainGrid && _maskState && worldMap === _terrainGridWorldMapRef) {
+          const res = buildResourceOverlay(worldMap, hiddenMask, season);
+          _resourceGrid = res.short;
+          _resourceTallGrid = res.tall;
+          renderer.setGrid(_terrainGrid); // version bump → resource chunks re-vertex under the new pools
+          markRenderDirty();
+        }
+      }
     }
     // Camera follow is driven per-frame in the render loop (updateCameraFollow)
     // so it tracks the pawn's interpolated sub-tile position smoothly.
@@ -2091,17 +2124,19 @@
    * component state and seeds every incremental baseline (mask state, building diff, blueprint, emitters).
    */
   function _fullRebuildTerrain(): void {
-    const built = fullRebuildTerrain(worldMap, buildings, _buildingSig);
+    const built = fullRebuildTerrain(worldMap, buildings, _buildingSig, _renderSeason);
     _terrainGrid = built.terrainGrid;
     _resourceGrid = built.resourceGrid;
     _resourceTallGrid = built.resourceTallGrid;
+    _snowGrid = built.snowGrid;
+    renderer?.setSnowGrid(_snowGrid); // full replace → snow layer's own version bump
     _maskState = built.maskState;
     hiddenMask = _maskState.mask;
     _terrainGridWorldMapRef = worldMap;
     _prevBuildingsById = built.buildingsById;
     _emitterMap = built.emitterMap;
     resourceGlowEmitters = built.emitters;
-    clearRenderTileDeltas(); // a full repaint supersedes any pending per-tile coords
+    clearRenderTileDeltas(); // a full repaint supersedes any pending per-tile coords (snow included)
     refreshEmitters();
 
     // Blueprint preview (if a placement tool is active across the rebuild) sits on top.
@@ -2181,7 +2216,10 @@
       if (!t) continue;
       applyTileToGrid(_terrainGrid, t, hiddenMask);
       if (_resourceGrid && _resourceTallGrid)
-        applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask);
+        applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask, _renderSeason);
+      // A terrain change can flip the cell's snow rendering too (mining a wall changes isSnowFeature /
+      // the silhouette), so keep the snow layer's cell in lock-step. Cheap: one sparse-grid setTile.
+      if (_snowGrid) applySnowToGrid(_snowGrid, t, hiddenMask);
       if (_updateEmitterAt(y, x, t)) emittersChanged = true;
     }
     // Only FLOORS and ROOFS bake into the terrain grid (floors first as the ground surface, ROOFS LAST
@@ -2209,7 +2247,28 @@
     const dirtyTiles: TileCoord[] = [];
     for (const key of dirty) dirtyTiles.push({ x: key % W, y: (key / W) | 0 });
     renderer.setGrid(_terrainGrid, dirtyTiles);
+    if (_snowGrid) renderer.setSnowGrid(_snowGrid, dirtyTiles); // snow cells repainted in the loop above
     drawDesignations();
+  }
+
+  /**
+   * Incremental SNOW-layer repaint — the snow analogue of redrawOverlayNow's per-cell path. Drains the
+   * snow-only coords (worker `k: 1` deltas: accumulateSnow bucket crossings, debug snow/ice sliders),
+   * repaints exactly those cells in the blended snow grid, and invalidates only the snow chunks holding
+   * them. Never touches the terrain/resource grids — a whole-map snow onset costs one sparse setTile
+   * per changed cell + a re-vertex of affected SNOW chunks, not the old full terrain re-bake (the
+   * snow-onset hiccup this layer exists to kill).
+   */
+  function repaintSnowNow() {
+    if (!renderer?.isReady() || !_snowGrid || worldMap.length === 0) return;
+    const coords = drainSnowRenderTileDeltas();
+    if (!coords || coords.length === 0) return;
+    for (const c of coords) {
+      const t = worldMap[c.y]?.[c.x];
+      if (t) applySnowToGrid(_snowGrid, t, hiddenMask);
+    }
+    renderer.setSnowGrid(_snowGrid, coords);
+    markRenderDirty();
   }
 
   /**
@@ -3436,6 +3495,13 @@
         _forceTerrainRebuild = false;
         _lastTerrainBuild = now;
         redrawOverlayNow();
+      }
+      // Snow/ice layer repaint, coalesced on the same cadence (its changes are hourly-sim-driven, so
+      // a fraction of a second of lag is invisible). Decoupled from the terrain path entirely.
+      if (_snowDirty && now - _lastSnowBuild >= TERRAIN_REBUILD_MIN_MS) {
+        _snowDirty = false;
+        _lastSnowBuild = now;
+        repaintSnowNow();
       }
       // Render-on-demand: when the scene is FROZEN skip the GL draw unless something visible changed.
       // The WebGL canvas retains its last frame, so a static map just stays on screen at ~0 render
@@ -5191,104 +5257,106 @@
       {@const soilPct = soilFertilityPct(hoverTile)}
       <div class="tile-hud">
         <div class="tile-hud-body">
-        <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
-          >{BIOMES[hoverTile.terrainType]?.displayName ?? hoverTile.terrainType},{hoverFloorName ??
-            SUBTERRAINS[hoverTile.subType]?.displayName ??
-            hoverTile.subType},{hoverDisplayResource
-            ? (resourceObjectService.getById(hoverDisplayResource)?.displayName ??
-              hoverDisplayResource)
-            : '—'}</span
-        >
-        {#if !hoverTile.walkable}
-          <div class="tile-move" style="color:#cc4444">move: impassable</div>
-        {:else}
-          {@const effMoveCost = (hoverTile.movementCost ?? 1) * (1 + (tileSnow + tileIce) / 100)}
-          {@const mc = moveCostLabel(effMoveCost)}
-          <div class="tile-move" style="color:{mc.color}">
-            move ×{effMoveCost.toFixed(1)}{#if tileSnow > 0}<span style="color:#cdd6e0">
-                (snow)</span
-              >{/if}
-          </div>
-        {/if}
-        {#if hoverZoneType && ZONE_META[hoverZoneType]}
-          <div class="tile-zone" style="color:{ZONE_META[hoverZoneType].color}">
-            {ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}
-          </div>
-        {/if}
-        <EnvReadout
-          light={hoverTileLight}
-          temp={tileTemp}
-          wet={tileWet}
-          wind={windWord}
-          debugTemp={$debugMode ? seasonBakedTemp(hoverTile.terrainType, $currentSeason) : null}
-        />
-        <div class="tile-env">
-          {#if tileThermal.roofed}
-            {@const roofB = buildings.find(
-              (b) =>
-                b.x === hoverTile.x &&
-                b.y === hoverTile.y &&
-                b.status === 'complete' &&
-                isRoofBuilding(b)
-            )}
-            {@const roofDef = roofB ? buildingService.getBuildingById(roofB.type) : null}
-            <span
-              style="color:#7e9fbf"
-              title="under cover — this roof keeps rain and wind off the tile"
-              >{roofDef?.name ?? 'roofed'}</span
-            >{#if roofDef?.conditionDecayPerTurn}{@const cond = Math.round(
-                roofB?.condition ?? 100
-              )}<span
-                style="color:{cond >= 70 ? '#68b030' : cond >= 35 ? '#c8a13a' : '#cc5544'}"
-                title="roof condition — weather wears it down; repair before it fails"
-              >
-                {cond}%</span
-              >{/if}
-          {/if}
-          {#if hoverDisplayResource && hoverTile.walkable}
-            {@const growRes = resourceObjectService.getById(hoverDisplayResource)}
-            {#if growRes && isGrowableResource(growRes)}
-              {@const gpct = Math.round(hoverTile.growth?.[hoverDisplayResource] ?? 100)}
-              {@const dir = growRes.crop
-                ? cropGrowthDirection(gpct, growRes.crop, {
-                    soilTier,
-                    temp: tileTemp,
-                    moisture: hoverTile.moisture ?? 0,
-                    snow: tileSnow
-                  })
-                : gpct >= 100
-                  ? 'mature'
-                  : 'rising'}
-              {@const gi = growthIndicator(dir)}
-              <span
-                style="color:{gpct >= 100 ? '#68b030' : gpct >= 50 ? '#9aac3a' : '#c89a3a'}"
-                title="resource maturity — scales harvest yield; crops grow only with enough fertility, warmth, water and light"
-                >growth {gpct}%</span
-              ><span style="color:{gi.color}" title={gi.title}>{gi.glyph}</span>
-            {/if}
-          {/if}
-          <span
-            style="color:{soilTier >= 4
-              ? '#6fae3a'
-              : soilTier === 3
-                ? '#86ac3a'
-                : soilTier === 2
-                  ? '#9aac3a'
-                  : soilTier === 1
-                    ? '#a89a4a'
-                    : '#8a7a5a'}"
-            title="soil fertility ({SOIL_TIER_NAME[
-              soilTier
-            ]}) — drives what crops grow here and how fast">fertility {soilPct}%</span
+          <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
+            >{BIOMES[hoverTile.terrainType]?.displayName ??
+              hoverTile.terrainType},{hoverFloorName ??
+              SUBTERRAINS[hoverTile.subType]?.displayName ??
+              hoverTile.subType},{hoverDisplayResource
+              ? (resourceObjectService.getById(hoverDisplayResource)?.displayName ??
+                hoverDisplayResource)
+              : '—'}</span
           >
-          {#if hoverTile.walkable && tileSnow > 0}<span style="color:#cdd6e0">snow {tileSnow}%</span
-            >{/if}
-          {#if hoverTile.walkable && tileIce >= ICE_VISIBLE}<span
-              style="color:#9fc8e0"
-              title="frozen layer — suppresses wetness; thick ice on water turns it walkable but slippery"
-              >ice {tileIce}%</span
-            >{/if}
-        </div>
+          {#if !hoverTile.walkable}
+            <div class="tile-move" style="color:#cc4444">move: impassable</div>
+          {:else}
+            {@const effMoveCost = (hoverTile.movementCost ?? 1) * (1 + (tileSnow + tileIce) / 100)}
+            {@const mc = moveCostLabel(effMoveCost)}
+            <div class="tile-move" style="color:{mc.color}">
+              move ×{effMoveCost.toFixed(1)}{#if tileSnow > 0}<span style="color:#cdd6e0">
+                  (snow)</span
+                >{/if}
+            </div>
+          {/if}
+          {#if hoverZoneType && ZONE_META[hoverZoneType]}
+            <div class="tile-zone" style="color:{ZONE_META[hoverZoneType].color}">
+              {ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}
+            </div>
+          {/if}
+          <EnvReadout
+            light={hoverTileLight}
+            temp={tileTemp}
+            wet={tileWet}
+            wind={windWord}
+            debugTemp={$debugMode ? seasonBakedTemp(hoverTile.terrainType, $currentSeason) : null}
+          />
+          <div class="tile-env">
+            {#if tileThermal.roofed}
+              {@const roofB = buildings.find(
+                (b) =>
+                  b.x === hoverTile.x &&
+                  b.y === hoverTile.y &&
+                  b.status === 'complete' &&
+                  isRoofBuilding(b)
+              )}
+              {@const roofDef = roofB ? buildingService.getBuildingById(roofB.type) : null}
+              <span
+                style="color:#7e9fbf"
+                title="under cover — this roof keeps rain and wind off the tile"
+                >{roofDef?.name ?? 'roofed'}</span
+              >{#if roofDef?.conditionDecayPerTurn}{@const cond = Math.round(
+                  roofB?.condition ?? 100
+                )}<span
+                  style="color:{cond >= 70 ? '#68b030' : cond >= 35 ? '#c8a13a' : '#cc5544'}"
+                  title="roof condition — weather wears it down; repair before it fails"
+                >
+                  {cond}%</span
+                >{/if}
+            {/if}
+            {#if hoverDisplayResource && hoverTile.walkable}
+              {@const growRes = resourceObjectService.getById(hoverDisplayResource)}
+              {#if growRes && isGrowableResource(growRes)}
+                {@const gpct = Math.round(hoverTile.growth?.[hoverDisplayResource] ?? 100)}
+                {@const dir = growRes.crop
+                  ? cropGrowthDirection(gpct, growRes.crop, {
+                      soilTier,
+                      temp: tileTemp,
+                      moisture: hoverTile.moisture ?? 0,
+                      snow: tileSnow
+                    })
+                  : gpct >= 100
+                    ? 'mature'
+                    : 'rising'}
+                {@const gi = growthIndicator(dir)}
+                <span
+                  style="color:{gpct >= 100 ? '#68b030' : gpct >= 50 ? '#9aac3a' : '#c89a3a'}"
+                  title="resource maturity — scales harvest yield; crops grow only with enough fertility, warmth, water and light"
+                  >growth {gpct}%</span
+                ><span style="color:{gi.color}" title={gi.title}>{gi.glyph}</span>
+              {/if}
+            {/if}
+            <span
+              style="color:{soilTier >= 4
+                ? '#6fae3a'
+                : soilTier === 3
+                  ? '#86ac3a'
+                  : soilTier === 2
+                    ? '#9aac3a'
+                    : soilTier === 1
+                      ? '#a89a4a'
+                      : '#8a7a5a'}"
+              title="soil fertility ({SOIL_TIER_NAME[
+                soilTier
+              ]}) — drives what crops grow here and how fast">fertility {soilPct}%</span
+            >
+            {#if hoverTile.walkable && tileSnow > 0}<span style="color:#cdd6e0"
+                >snow {tileSnow}%</span
+              >{/if}
+            {#if hoverTile.walkable && tileIce >= ICE_VISIBLE}<span
+                style="color:#9fc8e0"
+                title="frozen layer — suppresses wetness; thick ice on water turns it walkable but slippery"
+                >ice {tileIce}%</span
+              >{/if}
+          </div>
         </div>
       </div>
     {/if}

@@ -2,7 +2,7 @@
 // CORE layer ("data files are definitions"). ResourceObjectService (business logic: designations,
 // yields, work amounts) consumes this table; the WebGL renderer reads defs for glyphs/tints without
 // reaching up into the services layer (the old webgl → ResourceObjectService leak).
-import type { DesignationType } from './types';
+import type { DesignationType, Season } from './types';
 import { resolveCharSpans, type CharSpan } from './Terrains';
 import resourceObjectsData from '../database/resources.jsonc';
 import { hexToRgb01 } from './color';
@@ -101,9 +101,18 @@ export interface ResourceObjectDef {
   overheadRoof?: boolean;
   /** Resolved char array (from charSpans in JSON). */
   chars: string[];
-  /** Resolved leafless char pool (from winterCharSpans). Shown ONLY on snow-covered tiles — the
-   *  renderer swaps to this in winter so these glyphs never appear in other seasons. */
-  winterChars?: string[];
+  /**
+   * Per-season visual overrides (resolved from `seasonVariants` in JSON). A variant may swap the char
+   * pool (`charSpans` → leafless winter trees) and/or override `fg`/`detail` (autumn leaf recolours).
+   * Driven purely by the CURRENT SEASON — the renderer rebuilds the resource overlay on a season
+   * change — never by snow cover, so a freak out-of-season snowfall can't bare the trees.
+   */
+  seasonVariants?: Partial<
+    Record<
+      Season,
+      { chars?: string[]; fg?: [number, number, number]; detail?: [number, number, number] }
+    >
+  >;
   /** Resolved RGB (0–1) glyph colour, parsed from the `fg` hex string in JSON. */
   fg: [number, number, number];
   /** Resolved RGB (0–1) background colour, parsed from the `bg` hex string in JSON. */
@@ -216,15 +225,38 @@ export function isGrowableResource(def: ResourceObjectDef): boolean {
   return ints.some((i) => i.persistent === true || i.regrowthTurns !== undefined);
 }
 
+/** Raw per-season override block as written in resources.jsonc (charSpans / fg / detail all optional). */
+interface RawSeasonVariant {
+  charSpans?: CharSpan[];
+  fg?: string;
+  detail?: string;
+}
+
+/** Resolve a def's raw `seasonVariants` JSON block into render-ready pools/colours (undefined if none). */
+function resolveSeasonVariants(raw: unknown): ResourceObjectDef['seasonVariants'] {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const out: NonNullable<ResourceObjectDef['seasonVariants']> = {};
+  for (const [season, v] of Object.entries(raw as Record<string, RawSeasonVariant>)) {
+    if (!v) continue;
+    out[season as Season] = {
+      chars: v.charSpans ? resolveCharSpans(v.charSpans) : undefined,
+      fg: v.fg ? hexToRgb01(v.fg, [0.87, 0.62, 0.12]) : undefined,
+      detail: v.detail ? hexToRgb01(v.detail, [1, 1, 1]) : undefined
+    };
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 /** The full parsed def table, in resources.jsonc order. */
 export const RESOURCE_OBJECT_DEFS: ResourceObjectDef[] = (
   resourceObjectsData as unknown as Array<Record<string, unknown>>
 ).map((raw) => ({
-  ...(raw as unknown as Omit<ResourceObjectDef, 'chars' | 'winterChars' | 'fg' | 'bg' | 'detail'>),
+  ...(raw as unknown as Omit<
+    ResourceObjectDef,
+    'chars' | 'seasonVariants' | 'fg' | 'bg' | 'detail'
+  >),
   chars: resolveCharSpans((raw.charSpans ?? []) as CharSpan[]),
-  winterChars: raw.winterCharSpans
-    ? resolveCharSpans(raw.winterCharSpans as CharSpan[])
-    : undefined,
+  seasonVariants: resolveSeasonVariants(raw.seasonVariants),
   fg: hexToRgb01(raw.fg, [0.87, 0.62, 0.12]),
   bg: hexToRgb01(raw.bg, [0.06, 0.04, 0.01]),
   detail: raw.detail ? hexToRgb01(raw.detail, [1, 1, 1]) : undefined

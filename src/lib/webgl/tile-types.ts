@@ -37,6 +37,11 @@ export interface TileData {
   char: string; // Character to display (CP437 or Unicode)
   foreground: RGB; // Text color
   background: RGB; // Background color
+  // Per-cell background OPACITY (0–1, default 1). Rides the a_background vec4's alpha channel. Opaque
+  // layers (terrain) leave it at 1; a blended pass (the snow/ice weather layer) uses fractional values
+  // so a cell can wash the layers beneath it toward `background` — the smooth snow blanket — without
+  // being baked into the terrain grid. Ignored wherever blending is off (the opaque terrain pass).
+  backgroundAlpha?: number;
   detail?: RGB; // Highlight/detail color for 3-color tint (defaults to foreground)
   outline?: RGB; // Outline color drawn around the glyph edges (omit = no outline)
   position: { x: number; y: number }; // Grid position

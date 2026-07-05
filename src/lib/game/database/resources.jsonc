@@ -493,7 +493,12 @@
     "subterrain"      : "tree",
     "walkable"        : false,
     "charSpans"       : [ {"sheet": "plants", "id": 26}, {"sheet": "plants", "id": 24} ],
-    "winterCharSpans" : [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ],
+    // Season variants: autumn recolours the canopy (detail = light canopy pixels); winter swaps to the
+    // leafless pool. Triggered by the SEASON (renderer rebuilds on season change), never by snow.
+    "seasonVariants"  : {
+      "autumn": {"detail": "#d9b13a"},
+      "winter": {"charSpans": [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ]}
+    },
     "fg"              : "#cdc8b8",
     "detail"          : "#b8c46b",
     "bg"              : "#17120a",
@@ -627,7 +632,10 @@
     "subterrain"      : "tree",
     "walkable"        : false,
     "charSpans"       : [ {"sheet": "plants", "id": 5}, {"sheet": "plants", "id": 23}, {"sheet": "plants", "id": 25} ],
-    "winterCharSpans" : [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ],
+    "seasonVariants"  : {
+      "autumn": {"detail": "#b06a24"},
+      "winter": {"charSpans": [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ]}
+    },
     "fg"              : "#6b4a2e",
     "detail"          : "#5c7a2e",
     "bg"              : "#17120a",
@@ -764,7 +772,10 @@
     "subterrain"      : "tree",
     "walkable"        : false,
     "charSpans"       : [ {"sheet": "plants", "id": 0}, {"sheet": "plants", "from": 2, "to": 14}, {"sheet": "plants", "from": 19, "to": 31}, {"sheet": "plants", "from": 33, "to": 52}, {"sheet": "plants", "from": 54, "to": 71} ],
-    "winterCharSpans" : [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ],
+    "seasonVariants"  : {
+      "autumn": {"detail": "#b3762e"},
+      "winter": {"charSpans": [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ]}
+    },
     "fg"              : "#6b4a2e",
     "detail"          : "#854240",
     "bg"              : "#17120a",
@@ -911,7 +922,10 @@
     "subterrain"      : "tree",
     "walkable"        : false,
     "charSpans"       : [ {"sheet": "plants", "id": 39}, {"sheet": "plants", "id": 36} ],
-    "winterCharSpans" : [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ],
+    "seasonVariants"  : {
+      "autumn": {"detail": "#c9a23c"},
+      "winter": {"charSpans": [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ]}
+    },
     "fg"              : "#6e5a44",
     "detail"          : "#80a159",
     "bg"              : "#17120a",
@@ -1172,7 +1186,7 @@
     ]
   },
   // Wet-loving broadleaf with drooping boughs — favours riverbanks and damp ground. Deciduous, so it
-  // goes leafless (winterCharSpans) under snow like the other broadleaves.
+  // goes leafless (seasonVariants.winter) in winter like the other broadleaves.
   {
     "id"              : "willow_tree",
     "roofSupport"     : true,
@@ -1180,7 +1194,10 @@
     "subterrain"      : "tree",
     "walkable"        : false,
     "charSpans"       : [ {"sheet": "plants", "id": 33}, {"sheet": "plants", "id": 35}, {"sheet": "plants", "id": 50}, {"sheet": "plants", "id": 9} ],
-    "winterCharSpans" : [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ],
+    "seasonVariants"  : {
+      "autumn": {"detail": "#c2b455"},
+      "winter": {"charSpans": [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ]}
+    },
     "fg"              : "#5c5238",
     "detail"          : "#9caa6b",
     "bg"              : "#17120a",
