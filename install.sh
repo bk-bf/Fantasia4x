@@ -62,4 +62,24 @@ if [[ ! -x "$SPIKE/node_modules/electron/dist/electron" ]]; then
   (cd "$SPIKE" && node node_modules/electron/install.js) || die "electron runtime unpack failed."
 fi
 
+# 6. VS Code "build distance" status-bar badge (commits since last release tag). Best-effort dev
+# convenience — symlink the extension into whichever editor's extensions dir exists. Requires a
+# "Developer: Reload Window" afterward (the tool's installer prints that).
+VSCODE_EXT_DIR=""
+for d in "$HOME/.vscode/extensions" "$HOME/.vscode-server/extensions" \
+         "$HOME/.vscodium/extensions" "$HOME/.cursor/extensions"; do
+  [[ -d "$d" ]] && { VSCODE_EXT_DIR="$d"; break; }
+done
+if [[ -n "$VSCODE_EXT_DIR" ]]; then
+  if [[ ! -L "$VSCODE_EXT_DIR/fantasia4x-build-distance" ]]; then
+    step "installing VS Code build-distance badge…"
+    "$SCRIPT_DIR/tools/vscode-build-distance/install.sh" "$VSCODE_EXT_DIR" \
+      || echo "install.sh: build-distance badge install failed (non-fatal)." >&2
+  else
+    echo "install.sh: VS Code build-distance badge already linked — skipping."
+  fi
+else
+  echo "install.sh: no VS Code/Cursor extensions dir found — skipping build-distance badge." >&2
+fi
+
 step "bootstrap complete — ./launch.sh is ready to run."
