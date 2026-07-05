@@ -650,6 +650,28 @@ export function applyResourceToGrid(
   });
 }
 
+/**
+ * Does the tile's currently-SHOWN resource look different between seasons `a` and `b` (its
+ * seasonVariants swap the char pool and/or fg/detail)? Drives the GRADUAL foliage transition
+ * (GameCanvas): at a season boundary only the trees whose appearance actually changes are staggered,
+ * so a spring→summer boundary (both use the base glyph) collects nothing and costs nothing.
+ * Char/fg/detail pools are resolved once at module load, so reference equality is a valid comparison.
+ */
+export function resourceSeasonChanges(tile: WorldTile, a: Season, b: Season): boolean {
+  const active = resolveActiveResource(tile);
+  if (!active) return false;
+  const { resDef } = active;
+  if (!resDef.seasonVariants) return false;
+  const va = resDef.seasonVariants[a];
+  const vb = resDef.seasonVariants[b];
+  if (va === vb) return false; // both fall back to the base look (or the same variant object)
+  return (
+    (va?.chars ?? resDef.chars) !== (vb?.chars ?? resDef.chars) ||
+    (va?.fg ?? resDef.fg) !== (vb?.fg ?? resDef.fg) ||
+    (va?.detail ?? resDef.detail) !== (vb?.detail ?? resDef.detail)
+  );
+}
+
 /** Build the transparent resource overlays (trees/grass/bushes/ore drawn over the terrain ground),
  *  SPLIT into a `short` layer (grass/bushes/ore/crops, drawn beneath entities) and a `tall` layer
  *  (trees, drawn above entities so pawns behind them are occluded). Kept SPARSE — only resource tiles

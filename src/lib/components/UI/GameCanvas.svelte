@@ -10,7 +10,7 @@
     applyResourceToGrid,
     applySnowToGrid,
     applyBuildingToGrid,
-    buildResourceOverlay,
+    resourceSeasonChanges,
     isRoofBuilding,
     isFloorBuilding,
     generatePlaceholderGrid,
@@ -242,9 +242,22 @@
   let _snowDirty = false; // worker signalled snow/ice changes (coalesced like _terrainDirty)
   let _lastSnowBuild = 0;
   let _prevSnowRev: number | undefined; // worker-sent snow revision (see unsubState)
-  // Season the resource overlay was last painted with (drives resources.jsonc seasonVariants —
-  // leafless winter trees, autumn recolours). A change rebuilds the resource overlays exactly once.
+  // Season the resource overlay is painted with (drives resources.jsonc seasonVariants — leafless
+  // winter trees, autumn recolours). Set to the current season on the first build (a load shows the
+  // correct look instantly); a season BOUNDARY crossing during play flips the foliage GRADUALLY (below).
   let _renderSeason: import('$lib/game/core/types.js').Season | undefined;
+  // ── Gradual seasonal foliage transition ──────────────────────────────────────────────────────────
+  // At a season boundary, each affected tree flips to the new look at its OWN random game-time offset,
+  // spread over FOLIAGE_WINDOW_TURNS — so the forest turns over days instead of every tree re-vertexing
+  // in one frame (perf) and the change reads as foliage gradually turning (realism). `_foliagePending`
+  // is sorted by flipTurn so the scheduler processes only the DUE prefix each frame; `_renderSeason`
+  // already holds the target, so each due tree just repaints via the shared incremental resource path.
+  const TURNS_PER_GAME_DAY = 300 * TICKS_PER_SECOND; // matches the GameControls calendar (300 s/day)
+  const FOLIAGE_WINDOW_TURNS = 4 * TURNS_PER_GAME_DAY; // spread the flip across ~4 in-game days (tunable)
+  const FOLIAGE_FLIPS_PER_FRAME = 48; // per-frame repaint budget while a transition is in progress
+  let _foliagePending: { x: number; y: number; flipTurn: number }[] = [];
+  let _foliageIdx = 0; // cursor into the sorted pending list (everything before it has flipped)
+  let _curTurn = 0; // latest game turn, mirrored from the snapshot for the turn-gated scheduler
   let _terrainGridWorldMapRef: unknown; // worldMap ARRAY ref of the last full build (new ref ⇒ new map ⇒ full rebuild)
   // Incremental building diff: last-painted completed buildings keyed by id (pos + visual sig), so a
   // placement/removal/deconstruct repaints just the changed footprints (single cells).
@@ -1470,18 +1483,23 @@
       lightingService.setAmbient(light, tinted);
       _ambientLight = light;
       _ambientTint = tinted;
-      // Season change → repaint the resource overlays under the new season's variants (leafless winter
-      // trees, autumn recolours — resources.jsonc seasonVariants). Rare (4×/game-year + debug override),
-      // so a full overlay rebuild + content-version bump (setGrid without dirtyTiles) is fine here; the
-      // guard on the worldMap ref skips it when a new-map full rebuild is about to run anyway.
-      if (season !== _renderSeason) {
+      // Season change → flip the deciduous foliage to the new season's variants (leafless winter trees,
+      // autumn recolours — resources.jsonc seasonVariants). The FIRST time (load/regen) we just adopt
+      // the season with no transition — the full rebuild below already paints the correct look. A real
+      // boundary crossing during play schedules a GRADUAL transition (staggered per tree over days).
+      _curTurn = (s as unknown as { turn?: number }).turn ?? _curTurn;
+      if (season !== undefined && season !== _renderSeason) {
+        const prev = _renderSeason;
+        // Finish any still-running transition instantly so no tree is stranded two seasons back.
+        if (_foliagePending.length > 0) _flushFoliageTransition();
         _renderSeason = season;
-        if (_terrainGrid && _maskState && worldMap === _terrainGridWorldMapRef) {
-          const res = buildResourceOverlay(worldMap, hiddenMask, season);
-          _resourceGrid = res.short;
-          _resourceTallGrid = res.tall;
-          renderer.setGrid(_terrainGrid); // version bump → resource chunks re-vertex under the new pools
-          markRenderDirty();
+        if (
+          prev !== undefined &&
+          _terrainGrid &&
+          _maskState &&
+          worldMap === _terrainGridWorldMapRef
+        ) {
+          _startFoliageTransition(prev, season, _curTurn);
         }
       }
     }
@@ -2269,6 +2287,91 @@
     }
     renderer.setSnowGrid(_snowGrid, coords);
     markRenderDirty();
+  }
+
+  /** Season boundary: collect the trees whose look changes between `prev` and `next` and give each a
+   *  random flip-turn within the transition window, so the forest turns GRADUALLY (and its repaints
+   *  spread across frames) instead of every tree re-vertexing at once. Sorted so the per-frame
+   *  scheduler only walks the due prefix. A boundary with no visual change (spring↔summer) collects
+   *  nothing. Scanning the map once here is cheaper than the old whole-forest rebuild it replaces. */
+  function _startFoliageTransition(
+    prev: import('$lib/game/core/types.js').Season,
+    next: import('$lib/game/core/types.js').Season,
+    turn: number
+  ): void {
+    const pending: { x: number; y: number; flipTurn: number }[] = [];
+    for (const row of worldMap) {
+      for (const t of row) {
+        if (!t.resources || isHiddenTile(t.x, t.y)) continue;
+        if (resourceSeasonChanges(t, prev, next))
+          pending.push({
+            x: t.x,
+            y: t.y,
+            flipTurn: turn + Math.floor(Math.random() * FOLIAGE_WINDOW_TURNS)
+          });
+      }
+    }
+    pending.sort((a, b) => a.flipTurn - b.flipTurn);
+    _foliagePending = pending;
+    _foliageIdx = 0;
+  }
+
+  /** Repaint every not-yet-flipped tree to `_renderSeason` at once — called when a new boundary
+   *  arrives before the last transition finished, so no tree is stranded two seasons back. */
+  function _flushFoliageTransition(): void {
+    if (
+      _resourceGrid &&
+      _resourceTallGrid &&
+      _terrainGrid &&
+      _foliageIdx < _foliagePending.length
+    ) {
+      const due: TileCoord[] = [];
+      for (let i = _foliageIdx; i < _foliagePending.length; i++) {
+        const p = _foliagePending[i];
+        const t = worldMap[p.y]?.[p.x];
+        if (t) {
+          applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask, _renderSeason);
+          due.push({ x: p.x, y: p.y });
+        }
+      }
+      if (due.length > 0 && renderer?.isReady()) {
+        renderer.setGrid(_terrainGrid, due);
+        markRenderDirty();
+      }
+    }
+    _foliagePending = [];
+    _foliageIdx = 0;
+  }
+
+  /** Per-frame scheduler: flip up to FOLIAGE_FLIPS_PER_FRAME trees whose flip-turn has passed, via the
+   *  shared incremental resource-repaint path (setGrid dirtyTiles → only their chunks re-vertex). Sorted
+   *  pending → walks only the due prefix; turn-gated, so it pauses with the sim and runs faster at higher
+   *  game speed (more game-time elapses per frame). O(1) when nothing is pending/due. */
+  function _processFoliageTransition(): void {
+    const P = _foliagePending;
+    if (_foliageIdx >= P.length) {
+      if (P.length) {
+        _foliagePending = [];
+        _foliageIdx = 0;
+      }
+      return;
+    }
+    if (!renderer?.isReady() || !_resourceGrid || !_resourceTallGrid || !_terrainGrid) return;
+    let budget = FOLIAGE_FLIPS_PER_FRAME;
+    const due: TileCoord[] = [];
+    while (_foliageIdx < P.length && budget > 0 && _curTurn >= P[_foliageIdx].flipTurn) {
+      const p = P[_foliageIdx++];
+      const t = worldMap[p.y]?.[p.x];
+      if (t) {
+        applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask, _renderSeason);
+        due.push({ x: p.x, y: p.y });
+        budget--;
+      }
+    }
+    if (due.length > 0) {
+      renderer.setGrid(_terrainGrid, due);
+      markRenderDirty();
+    }
   }
 
   /**
@@ -3503,6 +3606,9 @@
         _lastSnowBuild = now;
         repaintSnowNow();
       }
+      // Gradual seasonal foliage flip — a budgeted slice of due trees each frame (turn-gated + capped),
+      // so a season boundary turns the forest over days instead of re-vertexing every tree at once.
+      if (_foliagePending.length > 0) _processFoliageTransition();
       // Render-on-demand: when the scene is FROZEN skip the GL draw unless something visible changed.
       // The WebGL canvas retains its last frame, so a static map just stays on screen at ~0 render
       // cost. FROZEN = map-generation mode (a static terrain viewer) OR zoomed out past FREEZE_TILE_PX
