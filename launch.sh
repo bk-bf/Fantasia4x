@@ -36,6 +36,10 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PIDS=()
 
+# pnpm lives in the user-local npm prefix, which isn't on a non-login shell's PATH (dev.sh does the
+# same at its top). Without this the electron-deps bootstrap below fails with "pnpm: command not found".
+export PATH="$HOME/.npm-global/bin:$PATH"
+
 PROFILER=false
 LOG=false
 PLAY=false
