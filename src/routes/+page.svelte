@@ -71,6 +71,22 @@
   const IDENTITY_MATRIX = '1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0';
   $: ambientMatrix = $dayNightTint ? buildPanelMatrix(panelTint, panelSaturation) : IDENTITY_MATRIX;
 
+  // Rec.709 luminance weights — shared by the token tinting + the legible (brightness-preserving) tint.
+  const LUMA: [number, number, number] = [0.2126, 0.7152, 0.0722];
+
+  // Legible variant of the ambient tint for the floating info card (SelectedEntityCard), which is built
+  // on literal colours + a subtree filter (not theme tokens), so the token override below can't reach
+  // it. Same hue shift, but the tint vector is scaled to unit luminance so it NEVER dims — the matrix
+  // analogue of tintFont(). Keeps the on-hover/on-click card + its buttons readable at all hours.
+  $: legibleTint = ((): [number, number, number] => {
+    const l = LUMA[0] * panelTint[0] + LUMA[1] * panelTint[1] + LUMA[2] * panelTint[2];
+    const k = l > 1e-4 ? 1 / l : 1;
+    return [panelTint[0] * k, panelTint[1] * k, panelTint[2] * k];
+  })();
+  $: ambientLegibleMatrix = $dayNightTint
+    ? buildPanelMatrix(legibleTint, panelSaturation)
+    : IDENTITY_MATRIX;
+
   // Low light deepens the bleakness of already-bleak weather. The extra desaturation is weighted by
   // how washed-out the weather already is (1 - baseSat), so clear skies stay untouched and FOG drains
   // hardest, and by darkness (1 - light), so dawn/dusk/night look bleaker than midday under fog.
@@ -103,6 +119,84 @@
       `0 0 0 1 0`
     );
   }
+
+  // Background/separator colour tokens (mirror app.css :root). These carry the FULL day/night+weather
+  // tint — brightness included — so panel backgrounds and separators darken/desaturate with the scene,
+  // exactly as the old subtree filter made them. Applied via CSS-variable overrides on the panels (the
+  // `style=` bindings below) rather than a `filter`, so the tint never rasterises the panel TEXT.
+  const BG_TOKENS: Record<string, string> = {
+    '--bg': '#0d0b07',
+    '--bg-panel': '#150f08',
+    '--bg-hover': '#201808',
+    '--bg-active': '#2c1e0a',
+    '--border': '#4a3818',
+    '--border-hi': '#7a5e28',
+    '--tab-active': '#c04818'
+  };
+  // Text/accent colour tokens (mirror app.css :root). These take the tint's HUE only — luminance is
+  // restored to the original (tintFont) so the font never dims from night/season/weather; its colour
+  // just shifts to fit the lit scene. Keeps all panel/sidebar/nav/tab-screen text legible at all hours.
+  const FONT_TOKENS: Record<string, string> = {
+    '--text': '#d4a840',
+    '--text-dim': '#b09030',
+    '--text-muted': '#7a5c20',
+    '--accent': '#c84818',
+    '--accent-hi': '#f08828',
+    '--pos': '#68b030',
+    '--neg': '#c83018'
+  };
+
+  /** Tinted RGB (0–1) for a #rrggbb colour under the same feColorMatrix the panel filter used. */
+  function tintRGB(hex: string, tint: [number, number, number], s: number): [number, number, number] {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const [lr, lg, lb] = LUMA;
+    const [tr, tg, tb] = tint;
+    const wash = (1 - s) * 0.08;
+    return [
+      tr * (((1 - s) * lr + s) * r + (1 - s) * lg * g + (1 - s) * lb * b) + wash,
+      tg * ((1 - s) * lr * r + ((1 - s) * lg + s) * g + (1 - s) * lb * b) + wash,
+      tb * ((1 - s) * lr * r + (1 - s) * lg * g + ((1 - s) * lb + s) * b) + wash
+    ];
+  }
+  const toHex = ([r, g, b]: [number, number, number]): string => {
+    const h = (n: number) =>
+      Math.max(0, Math.min(255, Math.round(n * 255)))
+        .toString(16)
+        .padStart(2, '0');
+    return `#${h(r)}${h(g)}${h(b)}`;
+  };
+  const luma = ([r, g, b]: [number, number, number]): number =>
+    LUMA[0] * r + LUMA[1] * g + LUMA[2] * b;
+
+  /** Full tint (hue + brightness) — for backgrounds/separators. */
+  function tintBg(hex: string, tint: [number, number, number], s: number): string {
+    return toHex(tintRGB(hex, tint, s));
+  }
+  /** Hue-only tint — rescales the tinted colour back to the original luminance so text never dims. */
+  function tintFont(hex: string, tint: [number, number, number], s: number): string {
+    const base: [number, number, number] = [
+      parseInt(hex.slice(1, 3), 16) / 255,
+      parseInt(hex.slice(3, 5), 16) / 255,
+      parseInt(hex.slice(5, 7), 16) / 255
+    ];
+    const out = tintRGB(hex, tint, s);
+    const lo = luma(out);
+    const k = lo > 1e-4 ? luma(base) / lo : 1;
+    return toHex([out[0] * k, out[1] * k, out[2] * k]);
+  }
+
+  // Tinted-token override string bound to each panel: backgrounds take the full tint, text takes the
+  // hue-only (brightness-preserved) tint. Day/night UI tint off → base tokens pass through untouched.
+  $: ambientPanelVars = [
+    ...Object.entries(BG_TOKENS).map(
+      ([k, v]) => `${k}: ${$dayNightTint ? tintBg(v, panelTint, panelSaturation) : v}`
+    ),
+    ...Object.entries(FONT_TOKENS).map(
+      ([k, v]) => `${k}: ${$dayNightTint ? tintFont(v, panelTint, panelSaturation) : v}`
+    )
+  ].join('; ');
 
   let customMapOpen = false;
   uiState.subscribe((s) => {
@@ -297,6 +391,11 @@
   <filter id="ambient-tint" color-interpolation-filters="sRGB">
     <feColorMatrix type="matrix" values={ambientMatrix} />
   </filter>
+  <!-- Brightness-preserving variant: same ambient hue shift, luminance normalised so it never dims.
+       Used by the floating info card (SelectedEntityCard) so its text + buttons stay legible. -->
+  <filter id="ambient-tint-legible" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values={ambientLegibleMatrix} />
+  </filter>
 </svg>
 
 {#if $appPhase === 'menu'}
@@ -317,14 +416,14 @@
 
 {#if $appPhase === 'game' && $storeReady}
   <div class="game-container" class:map-locked={customMapOpen}>
-    <div class="game-header">
+    <div class="game-header" style={ambientPanelVars}>
       <!-- Same iconic bar throughout; in map-generation mode it swaps the live HUD (time / season /
            weather / speed / pause / TPS·FPS) for a clean "Map Generation" label — see GameControls. -->
       <GameControls mapGen={customMapOpen} />
     </div>
 
     <div class="game-body" class:sidebars-hidden={$hideSidebars}>
-      <aside class="left-panel" class:minimized={$resourcesMinimized}>
+      <aside class="left-panel" class:minimized={$resourcesMinimized} style={ambientPanelVars}>
         <ResourceSidebar />
       </aside>
 
@@ -341,7 +440,7 @@
 
           <!-- Overlay panel: slides up from bottom, covers 50% of map -->
           {#if currentScreen !== 'main'}
-            <div class="overlay-panel" use:autohideScroll>
+            <div class="overlay-panel" use:autohideScroll style={ambientPanelVars}>
               {#if currentScreen === 'pawns'}
                 <PawnScreen />
               {:else if currentScreen === 'work'}
@@ -366,7 +465,7 @@
         </div>
 
         <!-- Bottom nav bar -->
-        <nav class="bottom-nav">
+        <nav class="bottom-nav" style={ambientPanelVars}>
           {#each NAV_TABS as tab}
             {@const isActive = currentScreen === tab.key}
             {@const disabled = ('needsResearch' in tab ? tab.needsResearch : false) && !hasResearch}
@@ -382,7 +481,7 @@
         </nav>
       </main>
 
-      <aside class="right-panel" class:minimized={$chronicleMinimized}>
+      <aside class="right-panel" class:minimized={$chronicleMinimized} style={ambientPanelVars}>
         <ChroniclePanel />
       </aside>
     </div>
@@ -429,16 +528,13 @@
     overflow: hidden;
   }
 
-  /* Day/night ambient tint — SVG feColorMatrix multiplies each panel's RGB
-     channels by the same hue the map uses (cool blue night, warm dawn/dusk).
-     The matrix values are updated reactively from EnvironmentService.panelTint. */
-  .game-header,
-  .left-panel,
-  .right-panel,
-  .bottom-nav,
-  .overlay-panel {
-    filter: url(#ambient-tint);
-  }
+  /* Day/night ambient tint — the same hue the map uses (cool blue night, warm dawn/dusk) is now driven
+     through each panel's BACKGROUND & BORDER colour tokens (the `style={ambientPanelVars}` bindings in
+     the markup), NOT a subtree `filter`. A filter rasterises the whole subtree, tinting the panel TEXT
+     along with its chrome and dimming it at night; routing the tint through background/separator tokens
+     leaves the text tokens untouched, so the font stays legible while backgrounds and separators still
+     shift with the day/night/weather hue exactly as before. (The `#ambient-tint` SVG filter is still
+     used elsewhere — the floating sidebars-hidden text, gameCanvas popups, map overlays.) */
 
   .game-header {
     flex-shrink: 0;

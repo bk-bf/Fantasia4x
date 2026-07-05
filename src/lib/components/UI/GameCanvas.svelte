@@ -5456,9 +5456,11 @@
     white-space: normal;
     overflow-wrap: break-word;
     z-index: 10;
-    /* Day/night hue + weather desaturation, matching the chrome panels and selection card
-       (see +page.svelte #ambient-tint) — tile inspector / hover-building info panels. */
-    filter: url(#ambient-tint);
+    /* Day/night hue + weather desaturation via the brightness-PRESERVING variant (see +page.svelte
+       #ambient-tint-legible), matching the selection card: the tile-inspector / hover-building readout
+       shifts hue to fit the lit scene but its text never dims, so it stays readable at night / in fog.
+       (Literal-coloured, like the selection card — can't use the token-based panel tint.) */
+    filter: url(#ambient-tint-legible);
   }
 
   .tile-zone {

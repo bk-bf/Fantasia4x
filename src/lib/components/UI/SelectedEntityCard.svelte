@@ -365,9 +365,12 @@
        later in DOM, same root stacking context — painted over the on-click card, so fog/precip
        washed it more than the rest of the UI. */
     z-index: 10;
-    /* Same day/night hue + weather desaturation the chrome panels get (see +page.svelte
-       #ambient-tint), so the selection/hover info card matches the lit scene beneath it. */
-    filter: url(#ambient-tint);
+    /* Same day/night hue + weather desaturation the chrome panels get, but via the brightness-
+       PRESERVING variant (#ambient-tint-legible, see +page.svelte): the card's hue shifts to match the
+       lit scene while its text + buttons never dim, so the on-hover/on-click info stays readable at
+       night and under fog. (The card is built on literal colours, not theme tokens, so it can't use the
+       token-based panel tint — this filter is its equivalent.) */
+    filter: url(#ambient-tint-legible);
   }
   /* In-flow variant: the parent owns positioning (and sizes itself to this card, which a
      sibling absolutely-positioned panel like fuel-settings depends on for its width). */
