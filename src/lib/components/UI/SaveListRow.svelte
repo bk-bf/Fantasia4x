@@ -37,6 +37,36 @@
       minute: '2-digit'
     });
   }
+
+  // Copy the world-gen seed to the clipboard (the app-shell disables text selection, so a button is the
+  // only way to grab it). stopPropagation so the click never falls through to the row's load/overwrite.
+  let copied = $state(false);
+  let copyTimer: ReturnType<typeof setTimeout> | undefined;
+  async function copySeed(e: MouseEvent) {
+    e.stopPropagation();
+    if (save.meta.seed == null) return;
+    const text = String(save.meta.seed);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Fallback for a non-secure context where navigator.clipboard is unavailable.
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+      } catch {
+        /* best-effort */
+      }
+      ta.remove();
+    }
+    copied = true;
+    clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => (copied = false), 1200);
+  }
 </script>
 
 <div class="row">
@@ -53,12 +83,19 @@
         ? ''
         : 's'}
     </div>
-    <div class="when">
-      {fmtWhen(save.meta.savedAt)}{#if save.meta.seed != null}<span class="seed" title="World-gen seed"
-        > · Seed {save.meta.seed}</span
-      >{/if}
-    </div>
+    <div class="when">{fmtWhen(save.meta.savedAt)}</div>
   </button>
+
+  {#if save.meta.seed != null}
+    <button
+      class="seed"
+      class:copied
+      title="Copy world-gen seed"
+      onclick={copySeed}
+    >
+      {copied ? 'Copied ✓' : `Seed ${save.meta.seed} ⧉`}
+    </button>
+  {/if}
 
   {#if confirm === 'overwrite'}
     <div class="confirm">
@@ -157,6 +194,33 @@
   .when {
     font-size: 10px;
     color: var(--text-muted);
+  }
+  /* Copy-seed pill, floated bottom-right over the main button (which shows the date bottom-left). It's a
+     sibling of .main — not nested — so it's valid + its click never triggers a load/overwrite. */
+  .seed {
+    position: absolute;
+    bottom: 6px;
+    right: 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    padding: 1px 6px;
+    cursor: pointer;
+    transition:
+      color 0.12s,
+      border-color 0.12s;
+  }
+  .seed:hover {
+    color: var(--text);
+    border-color: var(--border-hi);
+  }
+  .seed.copied {
+    color: var(--accent-hi);
+    border-color: var(--accent-hi);
   }
   .del {
     position: absolute;
