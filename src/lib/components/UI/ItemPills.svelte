@@ -113,7 +113,7 @@
     background: color-mix(in srgb, var(--pill) 14%, rgba(28, 16, 6, 0.92));
     padding: 0 3px;
     height: 13px;
-    font-size: 8px;
+    font-size: 9px;
     line-height: 1;
     cursor: help;
   }
@@ -143,13 +143,13 @@
   }
   .tip-hdr {
     color: var(--text-dim);
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.08em;
     margin-top: 4px;
   }
   .tip-row {
     color: var(--text);
-    font-size: 10px;
+    font-size: 11px;
   }
   .tip-life {
     color: var(--text-muted);

@@ -69,7 +69,7 @@
     border-right: 1px solid var(--border);
     color: var(--text-muted);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.08em;
     cursor: pointer;
     text-transform: uppercase;

@@ -515,7 +515,7 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -633,7 +633,7 @@
     color: var(--text);
     cursor: pointer;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.03em;
     white-space: nowrap;

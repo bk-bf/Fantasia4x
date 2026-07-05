@@ -249,7 +249,7 @@
     width: 100%;
     background: var(--bg-panel);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text);
     display: flex;
     flex-direction: column;
@@ -272,7 +272,7 @@
     background: var(--bg);
     color: var(--accent-hi);
     font-family: inherit;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1;
     cursor: pointer;
   }
@@ -346,7 +346,7 @@
   .section-hdr {
     padding: 4px 8px 3px;
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--border);
     background: var(--bg);
@@ -375,7 +375,7 @@
     background: transparent;
     color: var(--text-dim);
     font-family: inherit;
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1;
     cursor: pointer;
   }
@@ -414,7 +414,7 @@
 
   .lbl {
     color: var(--text-dim);
-    font-size: 11px;
+    font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     white-space: nowrap;
@@ -472,13 +472,13 @@
   .cat-count {
     margin-left: auto;
     color: var(--text-muted);
-    font-size: 9px;
+    font-size: 10px;
     flex-shrink: 0;
   }
   .cat-empty {
     padding: 1px 8px 1px 24px;
     color: var(--text-muted);
-    font-size: 9px;
+    font-size: 10px;
     font-style: italic;
   }
 
@@ -501,7 +501,7 @@
     text-overflow: ellipsis;
     flex-shrink: 1;
     min-width: 0;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .dots {
@@ -515,7 +515,7 @@
     font-weight: bold;
     white-space: nowrap;
     flex-shrink: 0;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   /* Delta floats in the left gutter so it never reflows the name/amount. */
@@ -523,7 +523,7 @@
     position: absolute;
     left: 3px;
     top: 1px;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: bold;
     white-space: nowrap;
     pointer-events: none;
@@ -551,7 +551,7 @@
   .empty {
     padding: 8px;
     color: var(--text-muted);
-    font-size: 9px;
+    font-size: 10px;
     font-style: italic;
   }
 
@@ -560,7 +560,7 @@
     align-items: center;
     padding: 0 8px 2px 24px;
     gap: 4px;
-    font-size: 9px;
+    font-size: 10px;
     font-family: var(--font-mono);
   }
 
@@ -578,6 +578,6 @@
   .intactness-pct {
     white-space: nowrap;
     flex-shrink: 0;
-    font-size: 9px;
+    font-size: 10px;
   }
 </style>

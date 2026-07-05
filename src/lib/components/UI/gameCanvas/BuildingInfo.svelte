@@ -186,7 +186,7 @@
 <style>
   .bld-info {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.5;
   }
   .bld-header {
@@ -198,34 +198,34 @@
   .bld-name {
     color: #c8a060;
     font-weight: bold;
-    font-size: 11px;
+    font-size: 12px;
   }
   .bld-status {
     color: #7a6030;
-    font-size: 9px;
+    font-size: 10px;
     flex: 1;
   }
   .bld-desc {
     color: #8a7040;
-    font-size: 9px;
+    font-size: 10px;
     margin-top: 1px;
     line-height: 1.4;
   }
   .bld-stat {
     color: #9aa66a;
-    font-size: 9px;
+    font-size: 10px;
     margin-top: 2px;
     display: flex;
     gap: 8px;
   }
   .bld-store {
     color: #c8a050;
-    font-size: 9px;
+    font-size: 10px;
     margin-top: 3px;
   }
   .bld-store-item {
     color: #a89060;
-    font-size: 9px;
+    font-size: 10px;
     line-height: 1.3;
   }
   .bld-dry {
@@ -234,22 +234,22 @@
   }
   .bld-progress {
     color: #a08840;
-    font-size: 9px;
+    font-size: 10px;
     margin-top: 2px;
   }
   .bld-note {
     color: #cc8833;
-    font-size: 9px;
+    font-size: 10px;
     margin-top: 2px;
   }
   .bld-condition {
-    font-size: 9px;
+    font-size: 10px;
     margin-top: 3px;
     letter-spacing: 0.02em;
   }
   .bld-fuel {
     color: #c87020;
-    font-size: 9px;
+    font-size: 10px;
     margin-top: 3px;
     letter-spacing: 0.02em;
   }
@@ -267,17 +267,17 @@
   }
   .bld-refund {
     color: #8a8a5a;
-    font-size: 9px;
+    font-size: 10px;
     margin-top: 3px;
   }
   .bld-needs {
     color: #8a7a5a;
-    font-size: 9px;
+    font-size: 10px;
     margin-top: 2px;
   }
   .bld-warn {
     color: #cc8833;
-    font-size: 9px;
+    font-size: 10px;
     margin-top: 1px;
   }
 </style>

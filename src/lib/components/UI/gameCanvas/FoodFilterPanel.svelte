@@ -104,7 +104,7 @@
     background: rgba(13, 9, 3, 0.98);
     border: 1px solid #7a5e28;
     color: #d4a860;
-    font-size: 9px;
+    font-size: 10px;
     z-index: 20;
     filter: url(#ambient-tint);
     transition:
@@ -149,7 +149,7 @@
     border: 1px solid #6b4f22;
     color: #d0a858;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
     padding: 1px 5px;
     cursor: pointer;
   }

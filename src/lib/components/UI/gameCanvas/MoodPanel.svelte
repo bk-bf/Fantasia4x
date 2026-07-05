@@ -83,7 +83,7 @@
     border: 1px solid #7a5e28;
     color: #c0a040;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
     line-height: 1.5;
     z-index: 20;
     scrollbar-gutter: stable;

@@ -716,7 +716,7 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     display: flex;
     flex-direction: column;
   }
@@ -725,7 +725,7 @@
     padding: 5px 10px;
     background: var(--bg-panel);
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: bold;
     display: flex;
     justify-content: space-between;
@@ -773,7 +773,7 @@
     border: 1px solid var(--border);
     color: var(--accent-hi);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     padding: 0 2px;
     max-width: 120px;
     cursor: pointer;
@@ -797,7 +797,7 @@
   .mat-effect {
     display: block;
     color: #7e9fbf;
-    font-size: 9px;
+    font-size: 10px;
     margin: 0 0 2px 4px;
   }
 
@@ -811,7 +811,7 @@
 
   .muted-row {
     padding: 4px 10px;
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-dim);
   }
 
@@ -823,7 +823,7 @@
   }
   .jobs-hdr {
     color: var(--accent);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.08em;
     padding: 0 0 4px;
   }
@@ -845,7 +845,7 @@
   /* Per-workstation sub-header above each lane's chips. */
   .jobs-station {
     color: var(--text-dim);
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     padding: 3px 0 2px;
@@ -856,7 +856,7 @@
   }
   .lane-drop-hint {
     color: var(--text-dim);
-    font-size: 9px;
+    font-size: 10px;
     font-style: italic;
     opacity: 0.5;
     padding: 2px 0;
@@ -879,7 +879,7 @@
     border: 1px solid var(--border);
     background: var(--bg-panel);
     overflow: hidden;
-    font-size: 10px;
+    font-size: 11px;
     cursor: grab;
   }
   .job-chip:active {
@@ -902,7 +902,7 @@
     position: relative;
     z-index: 1;
     color: var(--text-dim);
-    font-size: 9px;
+    font-size: 10px;
     cursor: grab;
   }
   .job-fill {
@@ -925,7 +925,7 @@
     position: relative;
     z-index: 1;
     color: var(--accent);
-    font-size: 9px;
+    font-size: 10px;
   }
   .job-x {
     position: relative;
@@ -934,7 +934,7 @@
     border: none;
     color: var(--text-dim);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1;
     padding: 0 1px;
     cursor: pointer;
@@ -949,7 +949,7 @@
     border: none;
     color: var(--text-dim);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1;
     padding: 0 1px;
     cursor: pointer;

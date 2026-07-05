@@ -127,7 +127,7 @@
 
   .wordmark {
     color: var(--accent-hi);
-    font-size: 40px;
+    font-size: 41px;
     font-weight: 700;
     letter-spacing: 0.5em;
     text-indent: 0.5em;
@@ -135,7 +135,7 @@
     text-shadow: 0 0 18px rgba(240, 136, 40, 0.35);
   }
   .wordmark.small {
-    font-size: 22px;
+    font-size: 23px;
     margin: 6px 0 0;
   }
 
@@ -150,13 +150,13 @@
   }
   .role {
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.26em;
     text-transform: uppercase;
   }
   .name {
     color: var(--text);
-    font-size: 15px;
+    font-size: 16px;
     letter-spacing: 0.08em;
   }
 
@@ -168,7 +168,7 @@
     background: none;
     border: none;
     color: var(--text-muted);
-    font-size: 17px;
+    font-size: 18px;
     cursor: pointer;
     padding: 4px 6px;
     line-height: 1;
@@ -183,7 +183,7 @@
     right: 0;
     text-align: center;
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     opacity: 0.6;

@@ -81,7 +81,7 @@
      the Pawns-tab BODY section. */
   .health-readout {
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
     line-height: 1.5;
     color: #c0a040;
   }

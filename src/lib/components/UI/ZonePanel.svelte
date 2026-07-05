@@ -463,12 +463,12 @@
 
   .cost-item {
     color: var(--text-dim);
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .muted-text {
     color: var(--text-muted, #777);
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .hint {
@@ -532,7 +532,7 @@
 
   .zone-card .card-name {
     color: var(--zcolor);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.04em;
     font-weight: 600;
     flex: 1;
@@ -542,7 +542,7 @@
   }
 
   .zc-badge {
-    font-size: 9px;
+    font-size: 10px;
     color: var(--text-dim);
     flex-shrink: 0;
   }
@@ -562,7 +562,7 @@
     border: 1px solid var(--zcolor);
     color: var(--zcolor);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.05em;
     cursor: pointer;
     transition: background 0.12s;
@@ -612,7 +612,7 @@
     color: var(--zcolor);
     cursor: pointer;
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.05em;
     padding: 2px 10px;
     margin-left: auto;

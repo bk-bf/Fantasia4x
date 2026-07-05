@@ -87,7 +87,7 @@
     flex-wrap: wrap;
     align-items: baseline;
     gap: 4px;
-    font-size: 9px;
+    font-size: 10px;
   }
   /* Detail row sits under the header, indented — uses vertical space instead of
      crowding the narrow log column. */
@@ -96,7 +96,7 @@
     flex-wrap: wrap;
     align-items: baseline;
     gap: 5px;
-    font-size: 9px;
+    font-size: 10px;
     padding-left: 10px;
   }
 
@@ -154,7 +154,7 @@
     font-style: italic;
   }
   .tag {
-    font-size: 8px;
+    font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.04em;
     padding: 0 3px;

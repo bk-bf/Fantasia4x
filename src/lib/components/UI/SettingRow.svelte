@@ -73,7 +73,7 @@
     gap: 12px;
     padding: 7px 2px;
     color: var(--text);
-    font-size: 12px;
+    font-size: 13px;
     letter-spacing: 0.04em;
     cursor: pointer;
   }
@@ -84,7 +84,7 @@
   }
   .soon {
     color: var(--text-muted);
-    font-size: 9px;
+    font-size: 10px;
     font-style: italic;
     letter-spacing: 0.02em;
   }
@@ -117,7 +117,7 @@
     color: var(--accent-hi);
     border: 1px solid var(--border);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 13px;
     padding: 3px 6px;
     cursor: pointer;
     outline: none;

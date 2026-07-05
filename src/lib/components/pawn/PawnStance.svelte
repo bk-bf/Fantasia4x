@@ -64,7 +64,7 @@
     border-left: 1px solid var(--border);
     padding: 2px 8px;
     font-family: inherit;
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.04em;
     cursor: pointer;
   }

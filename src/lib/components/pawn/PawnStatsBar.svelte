@@ -18,7 +18,7 @@
     padding: 4px 8px;
     background: var(--bg-panel);
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--border);
   }

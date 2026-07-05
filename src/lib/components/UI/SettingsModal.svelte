@@ -259,7 +259,7 @@
   }
   .title {
     color: var(--accent-hi);
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     letter-spacing: 0.4em;
     text-indent: 0.4em;
@@ -269,7 +269,7 @@
     background: none;
     border: none;
     color: var(--text-muted);
-    font-size: 15px;
+    font-size: 16px;
     cursor: pointer;
     padding: 2px 4px;
     line-height: 1;
@@ -290,7 +290,7 @@
   }
   .section {
     color: var(--accent-hi);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.22em;
     text-transform: uppercase;
     margin: 12px 0 4px;
@@ -307,7 +307,7 @@
     border: 1px solid var(--border);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 13px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     cursor: pointer;

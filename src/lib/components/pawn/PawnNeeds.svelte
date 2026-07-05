@@ -138,7 +138,7 @@
     padding: 4px 8px;
     background: var(--bg-panel);
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--border);
   }
@@ -167,13 +167,13 @@
     color: var(--text-dim);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    font-size: 11px;
+    font-size: 12px;
     width: 70px;
     flex-shrink: 0;
   }
   .val {
     color: var(--text);
-    font-size: 11px;
+    font-size: 12px;
     min-width: 36px;
     text-align: right;
     flex-shrink: 0;
@@ -182,7 +182,7 @@
 
   .desc {
     color: var(--text-muted);
-    font-size: 11px;
+    font-size: 12px;
     font-style: italic;
     flex: 1;
     white-space: nowrap;
@@ -190,7 +190,7 @@
 
   .block-bar {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: -0.02em;
     white-space: nowrap;
   }

@@ -44,7 +44,7 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     display: flex;
     flex-direction: column;
   }
@@ -52,7 +52,7 @@
     padding: 5px 10px;
     background: var(--bg-panel);
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.08em;
     border-bottom: 1px solid var(--border-hi);
     flex-shrink: 0;
@@ -63,7 +63,7 @@
     padding: 4px 8px;
     background: var(--bg-panel);
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--border);
     border-top: 1px solid var(--border);

@@ -276,7 +276,7 @@
   .zzz-z {
     color: #7788ff;
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: 9px;
     font-weight: bold;
     opacity: 0;
     animation: zzz-rise 2.1s ease-out infinite;
@@ -322,7 +322,7 @@
   .rest-cross {
     color: #ff4d4d;
     font-family: var(--font-mono);
-    font-size: 8px;
+    font-size: 9px;
     font-weight: bold;
     opacity: 0;
     /* Reuse the Zzz rise (opacity + translateY + scale) — colour/glyph are the only difference. */
@@ -347,7 +347,7 @@
   .collapse-arrow {
     color: #e23b3b;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: bold;
     opacity: 0;
     /* Reuse the Zzz rise (opacity + translateY + scale) — colour/glyph are the only difference. */
@@ -379,7 +379,7 @@
   .winded-arrow {
     color: #4aa3ff;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: bold;
     opacity: 0;
     /* Reuse the Zzz rise (opacity + translateY + scale) — colour/glyph are the only difference. */
@@ -409,7 +409,7 @@
   .spark {
     position: absolute;
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: bold;
     opacity: 0;
     animation: fire-rise 1.1s ease-out infinite;
@@ -479,7 +479,7 @@
   .puff {
     position: absolute;
     font-family: var(--font-mono);
-    font-size: 17px;
+    font-size: 18px;
     color: #4f4b45;
     opacity: 0;
     filter: blur(3px);
@@ -668,7 +668,7 @@
   .fly {
     position: absolute;
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: bold;
     color: #14110e;
     opacity: 0.85;
@@ -889,7 +889,7 @@
   .feather {
     position: absolute;
     font-family: var(--font-mono);
-    font-size: 17px;
+    font-size: 18px;
     font-weight: bold;
     color: #c4bcb2;
     opacity: 0;
@@ -969,7 +969,7 @@
     left: 0;
     top: 0;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: bold;
     white-space: nowrap;
     pointer-events: none;
@@ -1007,35 +1007,35 @@
   }
   .combat-float.crit {
     color: #ff3322;
-    font-size: 14px;
+    font-size: 15px;
   }
   .combat-float.miss {
     color: #bbbbbb;
-    font-size: 10px;
+    font-size: 11px;
   }
   .combat-float.dodge {
     color: #66ccee;
-    font-size: 10px;
+    font-size: 11px;
   }
   .combat-float.bleed {
     color: #cc2222;
-    font-size: 10px;
+    font-size: 11px;
   }
   .combat-float.knockdown {
     color: #ffcc44;
-    font-size: 10px;
+    font-size: 11px;
   }
   /* Bone break — amber so it reads as a serious wound, but sized like the other status floaters (10px,
      matching dodge) rather than the 14px crit damage-number emphasis it used to borrow. */
   .combat-float.fracture {
     color: #ff9944;
-    font-size: 10px;
+    font-size: 11px;
   }
   /* Data-driven condition labels (winded, envenomed, …): colour set inline from conditions.jsonc;
      slightly smaller + italic so they read as a status cue, distinct from the damage number. */
   .combat-float.condition {
     color: #cccccc;
-    font-size: 10px;
+    font-size: 11px;
     font-style: italic;
   }
 </style>

@@ -60,7 +60,7 @@
     padding: 4px 8px;
     background: var(--bg-panel);
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--border);
     border-top: 1px solid var(--border);
@@ -75,7 +75,7 @@
     padding: 2px 8px;
     gap: 8px;
     align-items: baseline;
-    font-size: 11px;
+    font-size: 12px;
     font-family: var(--font-mono);
   }
   .need-row {
@@ -87,17 +87,17 @@
   }
   .lbl {
     color: var(--text-dim);
-    font-size: 11px;
+    font-size: 12px;
     width: 60px;
     flex-shrink: 0;
   }
   .bar-ascii {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--accent);
     letter-spacing: -1px;
   }
   .val {
-    font-size: 11px;
+    font-size: 12px;
   }
   .val.neg {
     color: #f44;

@@ -446,7 +446,7 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     display: flex;
     flex-direction: column;
   }
@@ -476,7 +476,7 @@
   }
   .muted-row {
     padding: 4px 10px;
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-dim);
   }
 
@@ -484,7 +484,7 @@
     padding: 5px 10px;
     background: var(--bg-panel);
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: bold;
     display: flex;
     justify-content: space-between;
@@ -505,7 +505,7 @@
   .mat-effect {
     display: block;
     color: #7e9fbf;
-    font-size: 9px;
+    font-size: 10px;
     margin: 1px 0 2px 4px;
   }
 
@@ -519,7 +519,7 @@
     border: 1px solid var(--border);
     color: var(--accent-hi);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     padding: 0 2px;
     max-width: 110px;
     cursor: pointer;
@@ -560,7 +560,7 @@
   }
   .jobs-hdr {
     color: var(--accent);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.08em;
     padding: 2px 0 5px;
   }
@@ -579,7 +579,7 @@
     border: 1px solid var(--border);
     background: var(--bg-panel);
     overflow: hidden;
-    font-size: 10px;
+    font-size: 11px;
   }
   /* Build chips are draggable to reorder; fire chips reuse .job-chip but aren't draggable. */
   .queue-top .job-chip {
@@ -600,7 +600,7 @@
     position: relative;
     z-index: 1;
     color: var(--text-dim);
-    font-size: 9px;
+    font-size: 10px;
     cursor: grab;
   }
   .job-fill {
@@ -626,7 +626,7 @@
     position: relative;
     z-index: 1;
     color: var(--accent);
-    font-size: 9px;
+    font-size: 10px;
   }
   .job-x {
     position: relative;
@@ -635,7 +635,7 @@
     border: none;
     color: var(--text-dim);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1;
     padding: 0 1px;
     cursor: pointer;
@@ -650,7 +650,7 @@
     border: none;
     color: var(--text-dim);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1;
     padding: 0 1px;
     cursor: pointer;

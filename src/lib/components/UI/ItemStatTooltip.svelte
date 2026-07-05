@@ -313,7 +313,7 @@
     border: 1px solid var(--border-hi, #3a4656);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text);
     pointer-events: none;
   }
@@ -337,7 +337,7 @@
   }
   .tip-desc {
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.4;
     font-style: italic;
     margin-bottom: 4px;
@@ -365,7 +365,7 @@
     padding-top: 3px;
     border-top: 1px solid var(--border);
     color: var(--text-muted, #555);
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.08em;
   }
   .tip-mod {

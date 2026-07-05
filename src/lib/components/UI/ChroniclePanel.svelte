@@ -184,7 +184,7 @@
     width: 100%;
     background: var(--bg-panel);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text);
     display: flex;
     flex-direction: column;
@@ -254,7 +254,7 @@
     justify-content: space-between;
     padding: 4px 6px 3px 0;
     color: var(--accent-hi);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--border);
     background: var(--bg);
@@ -279,7 +279,7 @@
     background: transparent;
     color: var(--text-dim);
     font-family: inherit;
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1;
     letter-spacing: 0;
     cursor: pointer;
@@ -318,7 +318,7 @@
     background: var(--bg);
     color: var(--accent-hi);
     font-family: inherit;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1;
     cursor: pointer;
   }
@@ -347,7 +347,7 @@
 
   .turn {
     color: var(--text-dim);
-    font-size: 9px;
+    font-size: 10px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -355,7 +355,7 @@
 
   .type {
     color: var(--accent-hi);
-    font-size: 9px;
+    font-size: 10px;
     text-transform: uppercase;
     white-space: nowrap;
     overflow: hidden;
@@ -367,7 +367,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   /* severity overrides */
@@ -409,7 +409,7 @@
     align-items: baseline;
     gap: 12px;
     margin-bottom: 3px;
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -439,7 +439,7 @@
     padding-top: 4px;
     border-top: 1px solid var(--border);
     color: var(--accent-hi);
-    font-size: 9px;
+    font-size: 10px;
     opacity: 0.85;
   }
 </style>

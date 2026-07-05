@@ -21,7 +21,7 @@
 <style>
   .health-section {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .section-hdr {

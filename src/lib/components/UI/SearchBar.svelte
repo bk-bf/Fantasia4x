@@ -60,7 +60,7 @@
     border: 1px solid var(--border);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.04em;
     padding: 3px 18px 3px 8px;
     width: 160px;
@@ -94,7 +94,7 @@
     background: none;
     border: none;
     color: var(--text-dim);
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1;
     padding: 0 2px;
     cursor: pointer;

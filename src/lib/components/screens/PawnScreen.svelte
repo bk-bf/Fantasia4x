@@ -182,7 +182,7 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     display: flex;
     flex-direction: column;
   }
@@ -191,7 +191,7 @@
     padding: 5px 10px;
     background: var(--bg-panel);
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.08em;
     border-bottom: 1px solid var(--border-hi);
     flex-shrink: 0;
@@ -226,7 +226,7 @@
     border-right: 1px solid var(--border);
     color: var(--text-muted);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.08em;
     cursor: pointer;
     text-transform: uppercase;

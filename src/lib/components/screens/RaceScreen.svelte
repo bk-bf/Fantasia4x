@@ -82,7 +82,7 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     display: flex;
     flex-direction: column;
   }
@@ -132,15 +132,15 @@
     padding-left: 8px;
   }
   .ri-name {
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.04em;
   }
   .ri-arch {
-    font-size: 9px;
+    font-size: 10px;
     color: var(--text-muted);
   }
   .ri-pop {
-    font-size: 9px;
+    font-size: 10px;
     color: var(--text-muted);
   }
   .race-item.selected .ri-arch,

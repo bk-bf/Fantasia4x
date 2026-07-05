@@ -28,7 +28,7 @@
     gap: 6px;
     align-items: baseline;
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.5;
   }
   .sb-label {

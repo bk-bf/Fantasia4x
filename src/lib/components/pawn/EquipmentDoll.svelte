@@ -155,7 +155,7 @@
   }
 
   .slot-lbl {
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--text-dim);
@@ -176,7 +176,7 @@
   }
 
   .it-name {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text);
     line-height: 1.15;
     text-align: center;
@@ -199,7 +199,7 @@
 
   .empty-mk {
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
     margin: auto;
   }
 
@@ -212,7 +212,7 @@
     color: var(--text-muted);
     cursor: pointer;
     font-family: inherit;
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1;
     padding: 1px 2px;
   }
@@ -232,7 +232,7 @@
     color: var(--text-muted);
     cursor: pointer;
     font-family: inherit;
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1;
     padding: 1px 2px;
   }

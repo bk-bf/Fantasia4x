@@ -86,7 +86,7 @@
   }
   .title {
     color: var(--accent-hi);
-    font-size: 18px;
+    font-size: 19px;
     letter-spacing: 0.5em;
     text-indent: 0.5em; /* balance the trailing letter-spacing */
   }
@@ -119,14 +119,14 @@
   }
   .status {
     color: var(--text-muted, #555);
-    font-size: 12px;
+    font-size: 13px;
     letter-spacing: 0.15em;
     min-height: 1em;
   }
   /* Rotating immersive note — quiet, italic, dim; a short opacity dip between lines reads as a fade. */
   .tip {
     color: var(--text-dim);
-    font-size: 12px;
+    font-size: 13px;
     font-style: italic;
     line-height: 1.5;
     letter-spacing: 0.02em;

@@ -38,7 +38,7 @@
     color: var(--text-dim);
     cursor: pointer;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     transition:
@@ -63,18 +63,18 @@
   }
 
   .name {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .race {
-    font-size: 9px;
+    font-size: 10px;
     color: var(--accent-hi);
     opacity: 0.85;
     letter-spacing: 0.04em;
   }
 
   .state {
-    font-size: 9px;
+    font-size: 10px;
     color: var(--text-muted);
     letter-spacing: 0.08em;
   }

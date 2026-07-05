@@ -263,7 +263,7 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     display: flex;
     flex-direction: column;
   }
@@ -272,7 +272,7 @@
     padding: 5px 10px;
     background: var(--bg-panel);
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.08em;
     border-bottom: 1px solid var(--border-hi);
     flex-shrink: 0;
@@ -282,7 +282,7 @@
     padding: 4px 8px;
     background: var(--bg-panel);
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--border);
     border-top: 1px solid var(--border);
@@ -317,14 +317,14 @@
     color: var(--text-dim);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    font-size: 11px;
+    font-size: 12px;
     width: 70px;
     flex-shrink: 0;
   }
 
   .val {
     color: var(--text);
-    font-size: 11px;
+    font-size: 12px;
     margin-left: auto;
     text-align: right;
   }
@@ -337,7 +337,7 @@
 
   .desc {
     color: var(--text-muted);
-    font-size: 11px;
+    font-size: 12px;
     font-style: italic;
     flex: 1;
   }
@@ -354,7 +354,7 @@
   .muted {
     color: var(--text-muted);
     font-style: italic;
-    font-size: 11px;
+    font-size: 12px;
     padding: 4px 8px;
   }
   .pos {
@@ -368,7 +368,7 @@
   .lore-name {
     padding: 3px 8px;
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.04em;
     border-bottom: 1px solid var(--border);
     margin-top: 2px;
@@ -377,7 +377,7 @@
   .desc-row {
     padding: 2px 8px 3px 16px;
     color: var(--text-muted);
-    font-size: 11px;
+    font-size: 12px;
     font-style: italic;
     border-bottom: 1px solid var(--border);
   }
@@ -392,7 +392,7 @@
   .research-name {
     padding: 4px 8px;
     color: var(--text);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.04em;
     border-bottom: 1px solid var(--border);
     background: var(--bg-panel);
@@ -402,13 +402,13 @@
   }
 
   .tier {
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0;
   }
 
   .cat {
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
     margin-left: auto;
   }
 
@@ -424,7 +424,7 @@
     border: 1px solid var(--border-hi);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     cursor: pointer;
     letter-spacing: 0.04em;
   }

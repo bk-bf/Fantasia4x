@@ -195,7 +195,7 @@
     border: 1px solid #6a4e20;
     color: #e0b868;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
     padding: 2px 4px;
   }
   .ifc-search::placeholder {
@@ -213,7 +213,7 @@
     border: 1px solid #6b4f22;
     color: #d0a858;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1;
     padding: 0 5px;
     cursor: pointer;
@@ -256,7 +256,7 @@
     cursor: pointer;
     color: #f0c060;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }

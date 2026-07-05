@@ -104,7 +104,7 @@
 
   .title {
     color: var(--accent-hi);
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 700;
     letter-spacing: 0.4em;
     text-indent: 0.4em;
@@ -125,7 +125,7 @@
     border: 1px solid var(--border);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 13px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     cursor: pointer;

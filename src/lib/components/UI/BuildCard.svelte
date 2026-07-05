@@ -227,7 +227,7 @@
   }
   .card-name {
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.04em;
     font-weight: 600;
     flex: 1;
@@ -237,18 +237,18 @@
   }
   .card-work {
     color: var(--text-dim);
-    font-size: 9px;
+    font-size: 10px;
     flex-shrink: 0;
     white-space: nowrap;
   }
   .card-badge {
     color: var(--accent-hi);
-    font-size: 10px;
+    font-size: 11px;
     flex-shrink: 0;
   }
   .card-desc {
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.35;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -258,7 +258,7 @@
   }
   .card-station {
     color: var(--text-dim);
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.03em;
     white-space: nowrap;
     overflow: hidden;
@@ -266,7 +266,7 @@
   }
   .card-tool {
     color: var(--text-dim);
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.03em;
     white-space: nowrap;
     overflow: hidden;
@@ -277,7 +277,7 @@
   }
   .card-cost {
     color: var(--text-dim);
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.4;
     min-height: 14px;
   }
@@ -296,7 +296,7 @@
     border: 1px solid var(--border);
     color: var(--text-dim);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.05em;
     cursor: pointer;
   }

@@ -233,7 +233,7 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     display: flex;
     flex-direction: column;
   }
@@ -273,7 +273,7 @@
     gap: 6px;
     padding: 3px 6px;
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.04em;
     border-bottom: 1px solid var(--border);
   }
@@ -297,7 +297,7 @@
     border: none;
     color: var(--text-muted, #777);
     cursor: pointer;
-    font-size: 10px;
+    font-size: 11px;
     font-family: var(--font-mono);
   }
   .row-toggle:hover {
@@ -314,7 +314,7 @@
     border: none;
     color: var(--text-dim);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     cursor: pointer;
     text-align: left;
   }
@@ -328,13 +328,13 @@
     gap: 4px;
   }
   .glyph {
-    font-size: 11px;
+    font-size: 12px;
   }
   .ename {
     color: var(--text);
   }
   .col-type {
-    font-size: 10px;
+    font-size: 11px;
     font-variant-numeric: tabular-nums;
     color: var(--text-muted);
   }
@@ -373,7 +373,7 @@
     border: 1px solid var(--border);
     color: var(--text-dim);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     cursor: pointer;
   }
   .act-btn:hover {
@@ -395,17 +395,17 @@
   }
   .expand-limb-name {
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
     min-width: 60px;
   }
   .expand-limb-hp {
-    font-size: 10px;
+    font-size: 11px;
     font-variant-numeric: tabular-nums;
     min-width: 36px;
   }
   .expand-limb-bleed {
     color: var(--neg);
-    font-size: 10px;
+    font-size: 11px;
   }
   .expand-parts {
     display: flex;
@@ -418,7 +418,7 @@
     display: flex;
     align-items: baseline;
     gap: 6px;
-    font-size: 10px;
+    font-size: 11px;
     opacity: 0.5;
   }
   .expand-part.damaged {
@@ -429,7 +429,7 @@
     gap: 3px;
   }
   .part-badge {
-    font-size: 9px;
+    font-size: 10px;
     padding: 0 3px;
     border-radius: 2px;
     background: var(--bg-panel);

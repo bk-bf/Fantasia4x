@@ -5357,7 +5357,7 @@
     border: none;
     border-bottom: 1px solid var(--border);
     color: var(--text);
-    font-size: 11px;
+    font-size: 12px;
     cursor: pointer;
     white-space: nowrap;
   }
@@ -5373,7 +5373,7 @@
     gap: 6px;
   }
   .qty-label {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text);
     white-space: nowrap;
   }
@@ -5384,7 +5384,7 @@
     background: var(--bg);
     border: 1px solid var(--border-hi);
     color: var(--text);
-    font-size: 12px;
+    font-size: 13px;
     font-family: inherit;
   }
   .qty-actions {
@@ -5439,7 +5439,7 @@
     align-items: center;
     justify-content: center;
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 13px;
   }
   /* NT-U3: every hover/selection panel shares the building reference width (300px, fixed)
      so no info panel is narrower or wider than another; long content wraps inside the box. */
@@ -5455,7 +5455,7 @@
     border: 1px solid transparent;
     color: #a07840;
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.5;
     padding: 2px 7px;
     pointer-events: none;
@@ -5484,15 +5484,15 @@
   }
 
   .tile-zone {
-    font-size: 9px;
+    font-size: 10px;
     margin-top: 1px;
   }
   .tile-move {
-    font-size: 9px;
+    font-size: 10px;
     margin-top: 1px;
   }
   .tile-env {
-    font-size: 9px;
+    font-size: 10px;
     margin-top: 1px;
     display: flex;
     gap: 8px;
@@ -5506,7 +5506,7 @@
     border: 1px solid #3aaa60;
     color: #50ee80;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: bold;
     padding: 3px 10px;
     pointer-events: none;

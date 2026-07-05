@@ -83,7 +83,7 @@
     padding: 4px 8px;
     background: var(--bg);
     color: var(--text-dim);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--border);
   }
@@ -109,7 +109,7 @@
 
   .cond-glyph {
     font-weight: bold;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1;
   }
 
@@ -137,7 +137,7 @@
   }
   .tip-warn {
     color: var(--neg, #ff5252);
-    font-size: 10px;
+    font-size: 11px;
     margin-top: 1px;
   }
   .tip-desc {
@@ -147,12 +147,12 @@
   }
   .tip-hdr {
     color: var(--text-dim);
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.08em;
     margin-top: 4px;
   }
   .tip-row {
     color: var(--text);
-    font-size: 10px;
+    font-size: 11px;
   }
 </style>

@@ -125,14 +125,14 @@
   }
   h4 {
     margin: 0 0 6px;
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--accent-hi);
   }
   .hint {
     color: var(--text-dim);
-    font-size: 9px;
+    font-size: 10px;
     text-transform: none;
     letter-spacing: 0;
   }
@@ -140,7 +140,7 @@
   .np-none {
     margin: 2px 0;
     color: var(--text-dim);
-    font-size: 10px;
+    font-size: 11px;
   }
   .np-music {
     display: flex;
@@ -154,7 +154,7 @@
   }
   .np-title {
     color: var(--text);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
   }
   .np-scene {
@@ -163,14 +163,14 @@
     border: 1px solid var(--border);
     border-radius: 2px;
     color: var(--accent);
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
   .np-group-label {
     margin: 8px 0 3px;
     color: var(--text-dim);
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }

@@ -395,7 +395,7 @@
     border: 1px solid transparent;
     color: #a07840;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.25;
     padding: 2px 7px;
     pointer-events: auto;
@@ -444,20 +444,20 @@
   .pawn-name {
     color: #c8a060;
     font-weight: bold;
-    font-size: 12px;
+    font-size: 13px;
   }
   .pawn-state {
     color: #7a6030;
-    font-size: 11px;
+    font-size: 12px;
   }
   .pawn-dismiss {
     color: #886630;
-    font-size: 11px;
+    font-size: 12px;
   }
   /* Mood pinned to the right of the header (next to the name). */
   .pawn-mood {
     color: #c0a040;
-    font-size: 11px;
+    font-size: 12px;
     flex-shrink: 0;
     white-space: nowrap;
   }
@@ -477,7 +477,7 @@
     border: 1px solid transparent;
     color: #a07840;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     padding: 1px 5px;
     cursor: pointer;
     pointer-events: auto;
@@ -538,13 +538,13 @@
   }
   .text-line {
     color: #c0a040;
-    font-size: 11px;
+    font-size: 12px;
     white-space: normal;
     overflow-wrap: break-word;
   }
   /* Growth maturity readout — colour set inline to match the hover HUD's ramp. */
   .growth-line {
-    font-size: 11px;
+    font-size: 12px;
     margin-bottom: 2px;
   }
   /* ── Stats / bars ─────────────────────────────────────────────── */
@@ -553,7 +553,7 @@
     flex-wrap: wrap;
     gap: 2px 8px;
     align-items: baseline;
-    font-size: 11px;
+    font-size: 12px;
   }
   /* Keep each label+value glued together so a wrap never splits "STR" from its number. */
   .pawn-stat {
@@ -578,7 +578,7 @@
   }
   .pawn-job {
     color: #8a7040;
-    font-size: 11px;
+    font-size: 12px;
     margin-top: 1px;
     white-space: normal;
     overflow-wrap: break-word;
@@ -606,6 +606,6 @@
   }
   .pawn-pos {
     color: #776040;
-    font-size: 11px;
+    font-size: 12px;
   }
 </style>

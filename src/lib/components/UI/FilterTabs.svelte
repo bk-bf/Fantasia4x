@@ -38,7 +38,7 @@
     border-right: 1px solid var(--border);
     color: var(--text-muted);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.06em;
     cursor: pointer;
     text-transform: uppercase;
@@ -63,6 +63,6 @@
   .ft-count {
     margin-left: 4px;
     color: var(--text-dim);
-    font-size: 9px;
+    font-size: 10px;
   }
 </style>

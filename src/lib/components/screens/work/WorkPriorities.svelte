@@ -337,14 +337,14 @@
     text-align: left;
     padding: 2px 6px;
     color: var(--text-dim);
-    font-size: 10px;
+    font-size: 11px;
     width: 169px;
     white-space: nowrap;
   }
   .work-hdr {
     padding: 2px 3px;
     color: var(--text-dim);
-    font-size: 10px;
+    font-size: 11px;
     min-width: 32px;
     cursor: pointer;
   }
@@ -361,13 +361,13 @@
     text-underline-offset: 2px;
   }
   .caret {
-    font-size: 7px;
+    font-size: 8px;
     margin-left: 1px;
     opacity: 0.7;
   }
   /* Subjob columns read as children of the category to their left. */
   .work-hdr.sub-hdr {
-    font-size: 9px;
+    font-size: 10px;
     color: var(--text-muted, #6a7a8a);
     background: color-mix(in srgb, var(--accent-hi) 6%, transparent);
     border-left-style: dashed;
@@ -383,14 +383,14 @@
   .name-cell {
     text-align: left;
     padding: 2px 6px;
-    font-size: 11px;
+    font-size: 12px;
     cursor: pointer;
     white-space: nowrap;
   }
   .state-cell {
     text-align: left;
     padding: 2px 4px;
-    font-size: 10px;
+    font-size: 11px;
     white-space: nowrap;
   }
   tr.sel {
@@ -408,7 +408,7 @@
     background: transparent;
     border: none;
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -424,7 +424,7 @@
     position: absolute;
     right: 2px;
     bottom: 1px;
-    font-size: 8px;
+    font-size: 9px;
     line-height: 1;
     pointer-events: none;
   }
@@ -433,7 +433,7 @@
     gap: 8px;
     padding: 3px 8px;
     border-bottom: 1px solid var(--border);
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-dim);
     flex-shrink: 0;
     flex-wrap: wrap;

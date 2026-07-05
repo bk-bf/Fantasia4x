@@ -148,7 +148,7 @@
   }
   .title {
     color: var(--accent-hi);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -158,7 +158,7 @@
     background: none;
     border: none;
     color: var(--text-muted);
-    font-size: 15px;
+    font-size: 16px;
     cursor: pointer;
     padding: 2px 4px;
     line-height: 1;
@@ -175,7 +175,7 @@
     border: 1px solid var(--accent-hi);
     color: var(--accent-hi);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 13px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     cursor: pointer;
@@ -193,7 +193,7 @@
   }
   .hint {
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.04em;
     margin-bottom: 2px;
   }
@@ -207,7 +207,7 @@
   }
   .empty {
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.5;
     text-align: center;
     padding: 28px 12px;

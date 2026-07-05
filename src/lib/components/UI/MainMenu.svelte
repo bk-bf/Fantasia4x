@@ -148,7 +148,7 @@
 
   .title {
     color: var(--accent-hi);
-    font-size: 42px;
+    font-size: 43px;
     font-weight: 700;
     letter-spacing: 0.5em;
     text-indent: 0.5em;
@@ -158,7 +158,7 @@
 
   .subtitle {
     color: var(--text);
-    font-size: 12px;
+    font-size: 13px;
     letter-spacing: 0.2em;
     margin-bottom: 4px;
     /* Sits in the faded edge of the scrim, so carry its own dark backing — a tight drop shadow plus a
@@ -176,7 +176,7 @@
     font-weight: 600; /* matches the bundled Dancing Script weight (app.css @font-face) */
     color: var(--text);
     /* Kept below the 12px subtitle — a disclaimer line should never read larger than the slogan. */
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.04em;
     margin-bottom: 24px;
     text-shadow:
@@ -203,7 +203,7 @@
     border: 1px solid var(--border);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 14px;
+    font-size: 15px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     cursor: pointer;

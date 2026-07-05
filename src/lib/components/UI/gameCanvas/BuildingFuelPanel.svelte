@@ -252,7 +252,7 @@
     background: rgba(13, 9, 3, 0.98);
     border: 1px solid #7a5e28;
     color: #d4a860;
-    font-size: 9px;
+    font-size: 10px;
     z-index: 20;
     /* Day/night hue + weather desaturation, matching the info card and chrome panels
        (see +page.svelte #ambient-tint). */
@@ -299,7 +299,7 @@
     color: #a07c38;
   }
   .fuel-pill {
-    font-size: 8px;
+    font-size: 9px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: #f0c878;
@@ -393,7 +393,7 @@
     border: 1px solid #6a4e20;
     color: #e0b868;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
     padding: 1px 2px;
     appearance: textfield;
   }
@@ -419,7 +419,7 @@
     border: 1px solid #6b4f22;
     color: #d0a858;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
     padding: 1px 5px;
     cursor: pointer;
   }

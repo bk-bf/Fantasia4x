@@ -62,7 +62,7 @@
   }
   .title {
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.1em;
     margin-right: auto;
   }
@@ -73,7 +73,7 @@
     border: 1px solid var(--border);
     color: var(--text);
     font-family: inherit;
-    font-size: 11px;
+    font-size: 12px;
     padding: 2px 5px;
     cursor: pointer;
     outline: none;
@@ -96,7 +96,7 @@
   }
   .count {
     color: var(--text-muted);
-    font-size: 11px;
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
   }
 </style>

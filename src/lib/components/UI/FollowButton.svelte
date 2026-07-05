@@ -18,7 +18,7 @@
     border: 1px solid var(--accent-hi);
     color: var(--accent-hi);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.06em;
     padding: 2px 6px;
     cursor: pointer;

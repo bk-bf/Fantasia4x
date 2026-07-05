@@ -142,7 +142,7 @@
   .row {
     display: flex;
     gap: 0.6em;
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.35;
     white-space: nowrap;
     overflow: hidden;
@@ -174,7 +174,7 @@
   }
   .waiting {
     color: var(--text-muted);
-    font-size: 11px;
+    font-size: 12px;
     font-style: italic;
     padding: 6px 2px;
   }

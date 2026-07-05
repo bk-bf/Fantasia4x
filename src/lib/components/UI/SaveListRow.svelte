@@ -163,7 +163,7 @@
   }
   .race {
     color: var(--accent-hi);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -172,7 +172,7 @@
   .badge {
     margin-left: auto;
     flex: none;
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--text-muted);
@@ -187,12 +187,12 @@
     opacity: 0.7;
   }
   .sub {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text);
     letter-spacing: 0.03em;
   }
   .when {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-muted);
   }
   /* Copy-seed pill, floated bottom-right over the main button (which shows the date bottom-left). It's a
@@ -206,7 +206,7 @@
     border-radius: 3px;
     color: var(--text-muted);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.03em;
     padding: 1px 6px;
     cursor: pointer;
@@ -231,7 +231,7 @@
     background: transparent;
     border: none;
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1;
     cursor: pointer;
   }
@@ -247,7 +247,7 @@
     padding: 0 10px;
     background: rgba(6, 4, 2, 0.92);
     border-radius: 0 6px 6px 0;
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text);
   }
   .cbtn {
@@ -255,7 +255,7 @@
     border: 1px solid var(--border);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     padding: 2px 7px;
     cursor: pointer;
   }

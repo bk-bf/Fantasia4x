@@ -263,7 +263,7 @@
     background: var(--bg);
     border-bottom: 1px solid var(--border-hi);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     flex-shrink: 0;
   }
 
@@ -283,13 +283,13 @@
     border: 1px solid color-mix(in srgb, var(--accent-hi) 35%, transparent);
     border-radius: 2px;
     padding: 0 4px;
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.04em;
     opacity: 0.85;
   }
   .bi.commit-label {
     color: var(--text-muted);
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.04em;
     opacity: 0.7;
     font-family: var(--font-mono, monospace);
@@ -312,11 +312,11 @@
   }
   .bi.turn {
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
   }
   .bi.perf {
     color: var(--text-dim);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.02em;
     min-width: 17ch;
     display: inline-block;
@@ -351,7 +351,7 @@
     color: var(--text);
     cursor: pointer;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
     text-transform: uppercase;
     white-space: nowrap;
   }
@@ -375,7 +375,7 @@
     color: var(--text-dim);
     cursor: pointer;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
   }
   .spd:hover {
     background: var(--bg-active);

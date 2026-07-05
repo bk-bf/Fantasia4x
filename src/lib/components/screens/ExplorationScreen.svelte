@@ -123,7 +123,7 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -158,7 +158,7 @@
     gap: 6px;
     padding: 3px 14px;
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.04em;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
@@ -190,7 +190,7 @@
     border-bottom: 1px solid var(--border);
     color: var(--text-dim);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     cursor: pointer;
     text-align: left;
     box-sizing: border-box;
@@ -208,7 +208,7 @@
     text-overflow: ellipsis;
   }
   .glyph {
-    font-size: 11px;
+    font-size: 12px;
   }
   .rname {
     color: var(--text);

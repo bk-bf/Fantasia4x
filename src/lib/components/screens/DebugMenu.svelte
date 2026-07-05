@@ -262,7 +262,7 @@
     background: rgba(13, 9, 3, 0.98);
     color: #d4a860;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
   }
   section {
     display: flex;
@@ -279,7 +279,7 @@
   }
   h4 {
     margin: 0;
-    font-size: 9px;
+    font-size: 10px;
     color: #c8a048;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -308,7 +308,7 @@
     color: #e0b868;
     border: 1px solid #6a4e20;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
     padding: 2px 4px;
     min-width: 0;
   }
@@ -338,7 +338,7 @@
     border: 1px solid #6b4f22;
     color: #d0a858;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
     padding: 2px 6px;
     cursor: pointer;
     text-transform: uppercase;

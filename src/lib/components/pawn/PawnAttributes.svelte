@@ -361,7 +361,7 @@
 <style>
   .attrs {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-dim);
   }
   .cat {
@@ -369,7 +369,7 @@
   }
   .cat-hdr {
     color: var(--accent-hi);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.06em;
     padding: 2px 6px;
     border-bottom: 1px solid var(--border);
@@ -413,7 +413,7 @@
     border: 1px solid var(--border-hi, #3a4658);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
     color: var(--text);
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.5;
     /* auto (not none) so an over-tall tip — capped by flipTip — can be scrolled to read */
     pointer-events: auto;
@@ -451,7 +451,7 @@
     color: var(--text-dim);
   }
   .trend {
-    font-size: 8px;
+    font-size: 9px;
     margin-left: 3px;
     vertical-align: middle;
   }

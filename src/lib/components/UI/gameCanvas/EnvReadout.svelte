@@ -48,7 +48,7 @@
     flex-wrap: nowrap;
     white-space: nowrap;
     gap: 8px;
-    font-size: 9px;
+    font-size: 10px;
     margin-top: 1px;
   }
   .dbg {

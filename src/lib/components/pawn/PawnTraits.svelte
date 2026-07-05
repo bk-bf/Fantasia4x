@@ -85,7 +85,7 @@
     padding: 4px 8px;
     background: var(--bg-panel);
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--border);
     border-top: 1px solid var(--border);
@@ -128,7 +128,7 @@
 
   .card-header {
     color: var(--accent-hi);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.04em;
     font-weight: 600;
     white-space: nowrap;
@@ -138,7 +138,7 @@
 
   .card-desc {
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.35;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -154,7 +154,7 @@
   }
 
   .tag {
-    font-size: 10px;
+    font-size: 11px;
     padding: 1px 5px;
     border-radius: 2px;
     background: var(--bg-active);
@@ -184,6 +184,6 @@
   .muted {
     color: var(--text-muted);
     font-style: italic;
-    font-size: 11px;
+    font-size: 12px;
   }
 </style>

@@ -161,7 +161,7 @@
 <style>
   .detail {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text);
   }
   .section-hdr {
@@ -233,7 +233,7 @@
     border-bottom: 1px solid var(--border);
   }
   .eff {
-    font-size: 10px;
+    font-size: 11px;
   }
   .pos {
     color: var(--pos);

@@ -60,12 +60,12 @@
   }
   .stat-lbl {
     color: var(--text-dim);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.04em;
   }
   .stat-val {
     color: var(--accent-hi);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
   }
   .stat-val.penalized {
@@ -75,7 +75,7 @@
     color: var(--pos, #4caf50);
   }
   .stat-delta {
-    font-size: 8px;
+    font-size: 9px;
     line-height: 1;
     color: var(--pos, #4caf50);
   }

@@ -235,7 +235,7 @@
     border: 1px solid #6b4a2a;
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 16px;
+    font-size: 17px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     cursor: pointer;

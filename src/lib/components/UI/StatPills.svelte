@@ -102,7 +102,7 @@
     background: color-mix(in srgb, var(--pill) 14%, rgba(28, 16, 6, 0.92));
     padding: 0 4px;
     height: 13px;
-    font-size: 8px;
+    font-size: 9px;
     line-height: 1;
     cursor: help;
     white-space: nowrap;
@@ -145,13 +145,13 @@
   .tip-formula {
     color: var(--text-dim);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
     margin: 2px 0;
     white-space: normal;
   }
   .tip-hdr {
     color: var(--text-dim);
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.08em;
     margin-top: 4px;
   }
@@ -160,7 +160,7 @@
     justify-content: space-between;
     gap: 10px;
     color: var(--text);
-    font-size: 10px;
+    font-size: 11px;
   }
   .tip-rk {
     color: var(--text-muted);

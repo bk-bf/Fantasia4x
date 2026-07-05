@@ -79,7 +79,7 @@
     border: 1px solid var(--border-hi, #3a4658);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
     color: var(--text, #ccc);
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.5;
     text-transform: none;
     pointer-events: none;

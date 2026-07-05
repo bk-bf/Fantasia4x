@@ -359,7 +359,7 @@
     border: 1px solid var(--border-hi);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     padding: 6px 12px 10px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
   }
@@ -381,13 +381,13 @@
   .size-lbl {
     color: var(--text-muted);
     letter-spacing: 0;
-    font-size: 10px;
+    font-size: 11px;
   }
   .seed {
     margin-left: auto;
     color: var(--text-muted);
     letter-spacing: 0;
-    font-size: 10px;
+    font-size: 11px;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -398,7 +398,7 @@
     border: 1px solid var(--border);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     padding: 1px 4px;
   }
   .cm-btn {
@@ -407,7 +407,7 @@
     border: 1px solid var(--border);
     color: var(--text-dim);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     cursor: pointer;
   }
   .cm-btn:hover {
@@ -434,13 +434,13 @@
   }
   .cm-note {
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
     padding: 5px 0;
   }
   /* Dev disclaimer shown only while the Large preset is selected — amber, set off with a left rule. */
   .cm-warn {
     color: #e0a020;
-    font-size: 10px;
+    font-size: 11px;
     margin-bottom: 5px;
     padding: 4px 8px;
     border-left: 2px solid #e0a020;
@@ -454,7 +454,7 @@
   }
   .col-h {
     color: var(--text-muted);
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.04em;
     border-bottom: 1px solid var(--border);
     padding-bottom: 2px;
@@ -463,7 +463,7 @@
     background: transparent;
     border: none;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 12px;
     padding: 0;
     line-height: 1;
     opacity: 0.55;
@@ -493,7 +493,7 @@
     text-align: right;
     color: var(--text-dim);
     font-variant-numeric: tabular-nums;
-    font-size: 10px;
+    font-size: 11px;
   }
   .water-sep {
     border-top: 1px solid var(--border);
@@ -506,7 +506,7 @@
   }
   .muted {
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
   }
 
   /* Worldgen feedback overlay — covers the whole screen above the popup (z 1200) while regenWorld
@@ -535,7 +535,7 @@
   .gen-title {
     color: var(--accent-hi);
     letter-spacing: 0.12em;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: bold;
   }
   .gen-bar {
@@ -565,6 +565,6 @@
   }
   .gen-sub {
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 11px;
   }
 </style>

@@ -59,18 +59,18 @@
   }
   .title {
     color: var(--danger, #c0392b);
-    font-size: 22px;
+    font-size: 23px;
     letter-spacing: 0.5em;
     text-indent: 0.5em;
   }
   .subtitle {
     color: var(--text);
-    font-size: 13px;
+    font-size: 14px;
     letter-spacing: 0.1em;
   }
   .stats {
     color: var(--text-muted, #555);
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.12em;
     display: flex;
     gap: 8px;
@@ -84,7 +84,7 @@
     color: var(--accent-hi);
     border: 1px solid var(--border);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 13px;
     letter-spacing: 0.25em;
     text-indent: 0.25em;
     padding: 8px 24px;
