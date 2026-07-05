@@ -33,6 +33,10 @@ export interface RenderStats {
   overlayMs: number;
   /** DEBUG: terrain chunks (re)built+uploaded this frame (0 = fully cached). */
   terrainRebuilds: number;
+  /** DEBUG / regression flag: resource-overlay chunks (re)built this frame across the short + tall
+   *  layers. Should be ~0 on a steady pan (fully cached); a nonzero value EVERY frame means the
+   *  resource overlay has regressed to the per-frame rebuild path — the zoom-out pan stutter. */
+  resourceRebuilds: number;
 }
 
 export interface RendererOptions {
@@ -145,7 +149,8 @@ export class WebGLRendererCore {
       vertexCount: 0,
       terrainMs: 0,
       overlayMs: 0,
-      terrainRebuilds: 0
+      terrainRebuilds: 0,
+      resourceRebuilds: 0
     };
 
     this.viewport = { x: 0, y: 0, width: this.canvas.width, height: this.canvas.height };
@@ -382,6 +387,7 @@ export class WebGLRendererCore {
     this.timer.start();
     this.stats.drawCalls = 0;
     this.stats.vertexCount = 0;
+    this.stats.resourceRebuilds = 0;
     this.webglState.clear();
   }
 
@@ -540,6 +546,10 @@ export class WebGLRendererCore {
         ? { chunkLayer, cacheVersion: this.gridVersion, lightVersion: this.lightVersion }
         : {})
     });
+    // Regression flag: for a cached resource layer, tally the chunks that had to rebuild this pass.
+    // On a steady pan this stays ~0; a nonzero value every frame means the cache broke (per-frame
+    // rebuild path) — surfaced as `resourceRebuilds=` in perf.log. See ADR-027.
+    if (chunkLayer) this.stats.resourceRebuilds += this.gridRenderer.chunksRebuiltLastRender;
     this.stats.drawCalls++;
     this.stats.vertexCount += stats.tilesRendered * 6;
   }

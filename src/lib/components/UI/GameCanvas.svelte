@@ -3368,7 +3368,8 @@
             `frameAvg=${((_rpDtSum * 1000) / Math.max(1, _rpFrames)).toFixed(1)}ms ` +
             `frameMax=${(_rpMaxDt * 1000).toFixed(1)}ms ` +
             `terrain=${st.terrainMs.toFixed(2)}ms overlay=${st.overlayMs.toFixed(2)}ms ` +
-            `rebuilds=${st.terrainRebuilds} draws=${st.drawCalls} verts=${st.vertexCount} ` +
+            `rebuilds=${st.terrainRebuilds} resourceRebuilds=${st.resourceRebuilds} ` +
+            `draws=${st.drawCalls} verts=${st.vertexCount} ` +
             `mobs=${gs.mobs?.length ?? 0} pawns=${gs.pawns?.length ?? 0}`
         );
         _rpWinStart = now;
