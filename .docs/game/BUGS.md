@@ -7,6 +7,54 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 
 ---
 
+## [FIXED] Sub-10 TPS on a fresh save + invisible walls — world resources scattered TWICE (a blocking tree stacked under a crop)
+
+**Symptom:** A brand-new save on a medium (500²) map ran at **sub-10 TPS** the moment pawns started moving —
+with only **5 pawns**. `PHASE-MS` named it instantly: the **`pawns` phase = 76–82 ms/tick** while everything
+else (incl. mob `entityStep`, 2.8 ms) was fine, and the mob `A*-STATS` looked healthy. Separately, the map
+had **invisible blocking tiles**: a tile that *rendered* as a wild turnip (or grass) was actually
+**non-walkable** — the player found it by clicking the tile and cycling the info panel to reveal a hidden
+`willow_tree` (also pine/oak/yew/etc.) sitting under the crop. Right-clicking a pawn to move near/through one
+made pawn A* sweep the map and detonate TPS.
+
+**Root cause (`stores/gameState.ts`):** world resources were **scattered twice**. `generateWorld` already
+calls `resourceGeneratorService.generateResources` internally ([WorldGenerator.ts:194], added in
+`5792d314`, gated by `skipResources` since `c56711d1`), but three new-game/migration paths *also* called
+`generateResources` on the same world right after — a redundant second pass. `placeResource` **adds** to
+`tile.resources` (`tile.resources[def.id] = …`, never clears) and sets `tile.walkable` to the last def
+placed, so the second pass **stacks a second species** onto a tile that already had one. A headless probe
+(seed 12345, 240×160) pinned it exactly: **double-call → 2016 multi-resource tiles, 993 of them
+non-walkable** (e.g. `[wild_barley, willow_tree] walkable=false`, `[grass_patch, oak_tree] walkable=false`);
+**single-call → 0**. The renderer draws the first `tile.resources` entry ([fantasia-world.ts] resource
+overlay), so the crop sprite hid the blocking tree. Each such tile is an **unreachable/invisible obstacle**;
+pawn pathfinding (uncapped 100k-node A*, no connectivity pre-check — unlike mobs after §S3) sweeps the
+component and fails, per moving pawn, every tick → the 76 ms `pawns` phase.
+
+**Why it went undetected for so long:** the double scatter is **old** (the redundant external calls predate
+the tree work — worker cutover `91259c43`, map-size `b45f1fa4`), and trees have spawned on `grass`/`deep_grass`
+(the same subterrains crops use) since before `144f4c31`. It stayed **latent and benign** while co-located
+pairs were two *walkable* ground covers (grass + wild_rye): the renderer showed one, `walkable` stayed true,
+zero gameplay impact. It turned **catastrophic and invisible** only recently, when the **resource-overlay
+layering** landed (`02fd05e4` "resource overlay rendering" + `29e563e8` "showGroundBelow") — before layering
+the tree glyph drew on top (you'd *see* it and route around); after, the crop composites over the tree, so
+the blocker became an invisible wall. The perf-sensitive worker turned the resulting unreachable A* into a TPS
+collapse rather than a minor hitch. NOT a single regression commit — a long-latent data bug that a rendering
+change unmasked.
+
+**Fix (`stores/gameState.ts`):** deleted the three redundant `resourceGeneratorService.generateResources(...)`
+calls that followed a `generateWorld(...)` (new-game regen, fresh-colony boot, and the no-map migration
+path) — `generateWorld` already scatters, so one pass is correct. Probe confirms **2016 → 0** co-located
+tiles, which removes the invisible walls **and** the pawn-pathing cliff at the source. The two *legitimate*
+`generateResources` callers are untouched: the **menu preview** (passes `skipResources: true` + its own
+excluded scatter) and the **pre-resource-gen save migration** (scatters an already-loaded, all-empty map — no
+preceding `generateWorld`). A comment at each deleted site warns against re-adding a second pass. Follow-up
+(defense-in-depth, not yet done): gate right-click MOVE on `connectivity.reachable()` + emit a "path blocked"
+chronicle entry, so a *genuinely* unreachable target (across water/mountains) is rejected before A* instead
+of queued.
+
+[WorldGenerator.ts:194]: ../../src/lib/game/world/WorldGenerator.ts
+[fantasia-world.ts]: ../../src/lib/webgl/fantasia-world.ts
+
 ## [FIXED] Sustained ~35 TPS — mob A* sweeping the map on UNREACHABLE flee targets (terrain rework opened the mountains)
 
 **Symptom:** TPS sat at a **sustained ~35** (down from 60) on a 500² map with ~420 mobs, seemingly out of

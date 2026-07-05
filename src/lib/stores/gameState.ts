@@ -678,8 +678,11 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
   // reseed the sim RNG, and clear stale module-level unreachable-job memory.
   rng.reseed(s);
   resetUnreachableJobs();
+  // generateWorld already scatters resources internally (WorldGenerator → generateResources). Do NOT
+  // add a second generateResources call here: placeResource ADDS to tile.resources without clearing, so
+  // a redundant pass stacks a second species onto ~2000 tiles — incl. a non-walkable tree hidden under a
+  // crop sprite (invisible blocking tiles → unreachable A* → TPS collapse). See BUGS.md.
   const newWorld = generateWorld(currentMapSize.w, currentMapSize.h, s);
-  resourceGeneratorService.generateResources(newWorld, s);
   const base = get(gameState) as GameState;
 
   if (preview) {
@@ -877,8 +880,9 @@ function resetGame() {
   const seed = freshSeed();
   rng.reseed(seed);
   resetUnreachableJobs();
+  // generateWorld already scatters resources internally — no second generateResources (see BUGS.md:
+  // the double scatter stacked a hidden blocking tree under a crop on ~2000 tiles).
   const world = generateWorld(240, 160, seed);
-  resourceGeneratorService.generateResources(world, seed);
   // Fresh mixed colony: regenerate the race pool + relations, draw pawns across it, then run
   // the same spawn/work/entity bootstrap the load path uses (Race overhaul).
   let fresh: GameState = {
@@ -1268,8 +1272,8 @@ export const savedStateReady: Promise<void> = (async () => {
     // the player rerolled the seed and regenerated at the right size.)
     const genW = bootMode() === 'new' ? currentMapSize.w : 240;
     const genH = bootMode() === 'new' ? currentMapSize.h : 160;
+    // generateWorld already scatters resources internally — no second generateResources (see BUGS.md).
     const migratedWorld = generateWorld(genW, genH, baseState.seed);
-    resourceGeneratorService.generateResources(migratedWorld, baseState.seed);
     baseState = { ...baseState, worldMap: migratedWorld };
   } else if (!baseState.worldMap[0]?.[1]?.discovered) {
     baseState = {
