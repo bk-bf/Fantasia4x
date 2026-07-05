@@ -5,6 +5,7 @@
  */
 
 import { isWebGL2Supported, checkWebGLError } from './utils.js';
+import { crashBreadcrumb } from './crashLog.js';
 
 export interface WebGLStateOptions {
   canvas: HTMLCanvasElement;
@@ -136,7 +137,16 @@ export class WebGLStateManager {
    */
   private onContextLost(event: Event): void {
     event.preventDefault();
-    console.warn('⚠️ WebGL context lost. Recovery needed...');
+    // `statusMessage` (WebGLContextEvent) sometimes carries the driver's reason (e.g. "GPU reset").
+    // Write it SYNCHRONOUSLY to .debug/crash.log FIRST — a GPU reset usually kills DevTools too, so a
+    // console.warn alone leaves no trace (the whole point of the crash breadcrumb).
+    const reason = (event as unknown as { statusMessage?: string }).statusMessage || '(no status)';
+    crashBreadcrumb(
+      0,
+      `WEBGL CONTEXT LOST — ${reason}. This is the hard crash: a draw exceeded the ` +
+        `GPU watchdog / OOM'd. Recovery attempted on 'restored'.`
+    );
+    console.warn('⚠️ WebGL context lost:', reason);
     this.gl = null;
   }
 
@@ -144,6 +154,11 @@ export class WebGLStateManager {
    * Handle WebGL context restoration
    */
   private async onContextRestored(_event: Event): Promise<void> {
+    crashBreadcrumb(
+      0,
+      'WEBGL CONTEXT RESTORED — reinitialising GL state (NOTE: renderer VBOs/shaders/' +
+        'textures in WebGLRendererCore are NOT rebuilt here, so the map may render blank until reload).'
+    );
     console.log('🔄 WebGL context restored. Reinitializing...');
 
     try {

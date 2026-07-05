@@ -5,6 +5,7 @@
   import { browser } from '$app/environment';
   import { wasdPan, debugMode } from '$lib/stores/uiPrefs';
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
+  import { crashBreadcrumb } from '$lib/webgl/crashLog.js';
   import {
     applyTileToGrid,
     applyResourceToGrid,
@@ -240,6 +241,13 @@
   // dedicated snow delta channel (_snowRev / drainSnowRenderTileDeltas) — never a terrain re-bake.
   let _snowGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
   let _snowDirty = false; // worker signalled snow/ice changes (coalesced like _terrainDirty)
+  // Crash observability: when a frame is about to issue an ABNORMALLY large GL draw (full-map
+  // re-vertex, a big snow/terrain delta batch), this holds a human reason. The render section writes a
+  // synchronous crash breadcrumb ("→ heavy draw START …") BEFORE the draw and ("✓ heavy draw OK …")
+  // AFTER — so if the GPU hard-hangs mid-draw (killing DevTools), .debug/crash.log ends on the START
+  // line, naming the exact trigger. Only large frames pay the sync-log cost.
+  let _heavyRenderReason = '';
+  const HEAVY_RENDER_TILES = 4000; // above this many re-vertexed cells in one frame → breadcrumb it
   let _lastSnowBuild = 0;
   let _prevSnowRev: number | undefined; // worker-sent snow revision (see unsubState)
   // Season the resource overlay is painted with (drives resources.jsonc seasonVariants — leafless
@@ -2142,6 +2150,10 @@
    * component state and seeds every incremental baseline (mask state, building diff, blueprint, emitters).
    */
   function _fullRebuildTerrain(): void {
+    // Breadcrumb: a full rebuild re-vertexes terrain + BOTH resource layers + the snow layer for every
+    // visible chunk in one frame — the prime GPU-hang suspect on a big/zoomed-out map (perf.log shows
+    // these as the fps=1 / 1050ms / rebuilds=216 frames). Named so crash.log pinpoints it.
+    _heavyRenderReason = `FULL-REBUILD map=${worldMap[0]?.length ?? 0}x${worldMap.length} season=${_renderSeason ?? '?'}`;
     const built = fullRebuildTerrain(worldMap, buildings, _buildingSig, _renderSeason);
     _terrainGrid = built.terrainGrid;
     _resourceGrid = built.resourceGrid;
@@ -2224,6 +2236,7 @@
       drawDesignations();
       return;
     }
+    if (dirty.size > HEAVY_RENDER_TILES) _heavyRenderReason = `TERRAIN-DELTA ${dirty.size} cells`;
 
     // ── Repaint terrain for each affected cell, re-overlay any building/blueprint on it, track glows ──
     let emittersChanged = false;
@@ -2281,6 +2294,8 @@
     if (!renderer?.isReady() || !_snowGrid || worldMap.length === 0) return;
     const coords = drainSnowRenderTileDeltas();
     if (!coords || coords.length === 0) return;
+    if (coords.length > HEAVY_RENDER_TILES)
+      _heavyRenderReason = `SNOW-BATCH ${coords.length} cells`;
     for (const c of coords) {
       const t = worldMap[c.y]?.[c.x];
       if (t) applySnowToGrid(_snowGrid, t, hiddenMask);
@@ -3524,172 +3539,199 @@
     const FROZEN_SAFETY_MS = 400;
     function frame() {
       if (!renderer || !ready) return;
-      // Real elapsed time drives interpolation so motion is smooth at the display
-      // refresh rate regardless of how fast/slow the simulation ticks.
-      const now = performance.now();
-      const dt = lastFrameTime ? (now - lastFrameTime) / 1000 : 0;
-      lastFrameTime = now;
-      // Render-perf sampler accumulation (allocation-free): frame count + frame-time sum/max this window.
-      if (dt > 0) {
-        _rpFrames++;
-        _rpDtSum += dt;
-        if (dt > _rpMaxDt) _rpMaxDt = dt;
-      }
-      if (_rpWinStart === 0) _rpWinStart = now;
-      else if (now - _rpWinStart >= 1000) {
-        const el = now - _rpWinStart;
-        const st = renderer.getStats();
-        const gs = get(gameState);
-        vlog(
-          'perf',
-          gs.turn,
-          `render fps=${Math.round((_rpFrames * 1000) / el)} ` +
-            `frameAvg=${((_rpDtSum * 1000) / Math.max(1, _rpFrames)).toFixed(1)}ms ` +
-            `frameMax=${(_rpMaxDt * 1000).toFixed(1)}ms ` +
-            `terrain=${st.terrainMs.toFixed(2)}ms overlay=${st.overlayMs.toFixed(2)}ms ` +
-            `rebuilds=${st.terrainRebuilds} resourceRebuilds=${st.resourceRebuilds} ` +
-            `draws=${st.drawCalls} verts=${st.vertexCount} ` +
-            `mobs=${gs.mobs?.length ?? 0} pawns=${gs.pawns?.length ?? 0}`
-        );
-        _rpWinStart = now;
-        _rpFrames = 0;
-        _rpDtSum = 0;
-        _rpMaxDt = 0;
-      }
-      // Advance the simulation on this same thread/schedule (non-worker mode). Driving the sim
-      // from the render loop (rather than a competing setInterval) prevents the timer starvation
-      // that throttled a <1 ms/tick sim to ~20 TPS while rendering. (No-op under ?simworker.)
-      gameState.stepSimulation(dt * 1000);
-      if (customMapPreview) {
-        // Map-generation mode is a terrain-only static viewer — never draw entities/items (the fresh
-        // New Game map still HAS them in state until GENERATE; we just don't render them here).
-        pawnOverlayGrid.clear();
-        itemOverlayGrid.clear();
-        buildingOverlayGrid.clear();
-      } else {
-        updatePawnOverlay(dt);
-      }
-      // While a follow camera is panning, the cursor stays put but the world slides under it — so
-      // the hovered tile (world coords, only refreshed on mousemove) goes stale within a frame and
-      // the hover card flickers off the followed entity. Re-derive it from the live cursor pixel +
-      // current view each frame so hover stays pinned to whatever is physically under the cursor.
-      if (cursorOverCanvas && (cameraFollowPawnId || cameraFollowMobId)) {
-        hoverTileX = Math.floor(lastCursorCx / tileWidth + viewX);
-        hoverTileY = Math.floor(lastCursorCy / tileHeight + viewY);
-      }
-      updateHoverEntity();
-      updateCameraFollow(dt);
-      updateCameraFollowMob(dt);
-      updateKeyboardPan(dt);
-      // Refresh the lair-tile cache occasionally (catches grown/destroyed lairs); projection is
-      // per-frame in updateWorldEffectOverlays but the full-map scan is throttled to ~4s.
-      if (now - _lairScanAt > 4000) {
-        _lairScanAt = now;
-        rebuildLairTiles();
-      }
-      updateWorldEffectOverlays();
-      // Coalesced sim-driven terrain rebuild: at most once per TERRAIN_REBUILD_MIN_MS instead
-      // of the full 38k-tile rebuild every frame that resource regrowth/harvest would force.
-      if (
-        _terrainDirty &&
-        (_forceTerrainRebuild || now - _lastTerrainBuild >= TERRAIN_REBUILD_MIN_MS)
-      ) {
-        _terrainDirty = false;
-        _forceTerrainRebuild = false;
-        _lastTerrainBuild = now;
-        redrawOverlayNow();
-      }
-      // Snow/ice layer repaint, coalesced on the same cadence (its changes are hourly-sim-driven, so
-      // a fraction of a second of lag is invisible). Decoupled from the terrain path entirely.
-      if (_snowDirty && now - _lastSnowBuild >= TERRAIN_REBUILD_MIN_MS) {
-        _snowDirty = false;
-        _lastSnowBuild = now;
-        repaintSnowNow();
-      }
-      // Gradual seasonal foliage flip — a budgeted slice of due trees each frame (turn-gated + capped),
-      // so a season boundary turns the forest over days instead of re-vertexing every tree at once.
-      if (_foliagePending.length > 0) _processFoliageTransition();
-      // Render-on-demand: when the scene is FROZEN skip the GL draw unless something visible changed.
-      // The WebGL canvas retains its last frame, so a static map just stays on screen at ~0 render
-      // cost. FROZEN = map-generation mode (a static terrain viewer) OR zoomed out past FREEZE_TILE_PX
-      // (entity motion sub-pixel). NB: we do NOT freeze on a bare in-game pause — paused-but-zoomed-in
-      // still wants its animation layers (weather/status/glow) live (see §E.1 followup: cache the
-      // heavy map+entity layers while keeping the light animated layers redrawing).
-      // The menu backdrop is a LIVE scene (grazing prey) — never freeze it, even zoomed out.
-      const frozen = !menuPreview && (customMapPreview || tileWidth < FREEZE_TILE_PX);
-      if (_renderDirty || !frozen || now - lastDrawAt >= FROZEN_SAFETY_MS) {
-        // Resource glyphs (trees/plants) draw at ALL zoom levels: the renderer caches them in chunked
-        // VBOs (rebuilt only on change, same cadence as terrain), so a zoomed-out redraw is cheap and
-        // panning stays smooth — no need to drop them and leave the map barren.
-        renderer.setResourceOverlayGrid(_resourceGrid);
-        renderer.setResourceTallOverlayGrid(_resourceTallGrid);
-        renderer.setBuildingOverlayGrid(buildingOverlayGrid);
-        renderer.setItemOverlayGrid(itemOverlayGrid);
-        renderer.setOverlayGrid(pawnOverlayGrid);
-        const _dbgT0 = menuPreview && _menuPerfOn ? performance.now() : 0;
-        renderer.beginFrame();
-        renderer.endFrame();
-        // ── DEBUG: menu-backdrop frame profiler (Debug-mode gated) ────────────────────────────────
-        if (menuPreview && _menuPerfOn) {
-          const renderMs = performance.now() - _dbgT0;
-          const gap = _dbgPrevT ? now - _dbgPrevT : 0; // inter-frame gap (the actual hiccup metric)
-          _dbgPrevT = now;
+      // Wrap the whole frame so a JS exception (vs. a GPU hang) also lands in .debug/crash.log with its
+      // stack, instead of only surfacing in the console the crash takes down. Rethrown after logging.
+      try {
+        // Real elapsed time drives interpolation so motion is smooth at the display
+        // refresh rate regardless of how fast/slow the simulation ticks.
+        const now = performance.now();
+        const dt = lastFrameTime ? (now - lastFrameTime) / 1000 : 0;
+        lastFrameTime = now;
+        // Render-perf sampler accumulation (allocation-free): frame count + frame-time sum/max this window.
+        if (dt > 0) {
+          _rpFrames++;
+          _rpDtSum += dt;
+          if (dt > _rpMaxDt) _rpMaxDt = dt;
+        }
+        if (_rpWinStart === 0) _rpWinStart = now;
+        else if (now - _rpWinStart >= 1000) {
+          const el = now - _rpWinStart;
           const st = renderer.getStats();
-          _dbgN++;
-          _dbgRenderSum += renderMs;
-          if (renderMs > _dbgRenderMax) _dbgRenderMax = renderMs;
-          if (gap > _dbgGapMax) _dbgGapMax = gap;
-          if (st.terrainMs > _dbgTerrainMaxMs) _dbgTerrainMaxMs = st.terrainMs;
-          _dbgRebuildSum += st.terrainRebuilds;
-          if (st.terrainRebuilds > 0) _dbgRebuildFrames++;
-          if (gap > 33) {
-            _dbgHiccups++;
-            console.warn(
-              `[MENU-PERF] HICCUP gap=${gap.toFixed(1)}ms render=${renderMs.toFixed(1)}ms ` +
-                `terrain=${st.terrainMs.toFixed(1)}ms rebuilds=${st.terrainRebuilds} ` +
-                `tiles=${st.vertexCount / 6}`
+          const gs = get(gameState);
+          vlog(
+            'perf',
+            gs.turn,
+            `render fps=${Math.round((_rpFrames * 1000) / el)} ` +
+              `frameAvg=${((_rpDtSum * 1000) / Math.max(1, _rpFrames)).toFixed(1)}ms ` +
+              `frameMax=${(_rpMaxDt * 1000).toFixed(1)}ms ` +
+              `terrain=${st.terrainMs.toFixed(2)}ms overlay=${st.overlayMs.toFixed(2)}ms ` +
+              `rebuilds=${st.terrainRebuilds} resourceRebuilds=${st.resourceRebuilds} ` +
+              `draws=${st.drawCalls} verts=${st.vertexCount} ` +
+              `mobs=${gs.mobs?.length ?? 0} pawns=${gs.pawns?.length ?? 0}`
+          );
+          _rpWinStart = now;
+          _rpFrames = 0;
+          _rpDtSum = 0;
+          _rpMaxDt = 0;
+        }
+        // Advance the simulation on this same thread/schedule (non-worker mode). Driving the sim
+        // from the render loop (rather than a competing setInterval) prevents the timer starvation
+        // that throttled a <1 ms/tick sim to ~20 TPS while rendering. (No-op under ?simworker.)
+        gameState.stepSimulation(dt * 1000);
+        if (customMapPreview) {
+          // Map-generation mode is a terrain-only static viewer — never draw entities/items (the fresh
+          // New Game map still HAS them in state until GENERATE; we just don't render them here).
+          pawnOverlayGrid.clear();
+          itemOverlayGrid.clear();
+          buildingOverlayGrid.clear();
+        } else {
+          updatePawnOverlay(dt);
+        }
+        // While a follow camera is panning, the cursor stays put but the world slides under it — so
+        // the hovered tile (world coords, only refreshed on mousemove) goes stale within a frame and
+        // the hover card flickers off the followed entity. Re-derive it from the live cursor pixel +
+        // current view each frame so hover stays pinned to whatever is physically under the cursor.
+        if (cursorOverCanvas && (cameraFollowPawnId || cameraFollowMobId)) {
+          hoverTileX = Math.floor(lastCursorCx / tileWidth + viewX);
+          hoverTileY = Math.floor(lastCursorCy / tileHeight + viewY);
+        }
+        updateHoverEntity();
+        updateCameraFollow(dt);
+        updateCameraFollowMob(dt);
+        updateKeyboardPan(dt);
+        // Refresh the lair-tile cache occasionally (catches grown/destroyed lairs); projection is
+        // per-frame in updateWorldEffectOverlays but the full-map scan is throttled to ~4s.
+        if (now - _lairScanAt > 4000) {
+          _lairScanAt = now;
+          rebuildLairTiles();
+        }
+        updateWorldEffectOverlays();
+        // Coalesced sim-driven terrain rebuild: at most once per TERRAIN_REBUILD_MIN_MS instead
+        // of the full 38k-tile rebuild every frame that resource regrowth/harvest would force.
+        if (
+          _terrainDirty &&
+          (_forceTerrainRebuild || now - _lastTerrainBuild >= TERRAIN_REBUILD_MIN_MS)
+        ) {
+          _terrainDirty = false;
+          _forceTerrainRebuild = false;
+          _lastTerrainBuild = now;
+          redrawOverlayNow();
+        }
+        // Snow/ice layer repaint, coalesced on the same cadence (its changes are hourly-sim-driven, so
+        // a fraction of a second of lag is invisible). Decoupled from the terrain path entirely.
+        if (_snowDirty && now - _lastSnowBuild >= TERRAIN_REBUILD_MIN_MS) {
+          _snowDirty = false;
+          _lastSnowBuild = now;
+          repaintSnowNow();
+        }
+        // Gradual seasonal foliage flip — a budgeted slice of due trees each frame (turn-gated + capped),
+        // so a season boundary turns the forest over days instead of re-vertexing every tree at once.
+        if (_foliagePending.length > 0) _processFoliageTransition();
+        // Render-on-demand: when the scene is FROZEN skip the GL draw unless something visible changed.
+        // The WebGL canvas retains its last frame, so a static map just stays on screen at ~0 render
+        // cost. FROZEN = map-generation mode (a static terrain viewer) OR zoomed out past FREEZE_TILE_PX
+        // (entity motion sub-pixel). NB: we do NOT freeze on a bare in-game pause — paused-but-zoomed-in
+        // still wants its animation layers (weather/status/glow) live (see §E.1 followup: cache the
+        // heavy map+entity layers while keeping the light animated layers redrawing).
+        // The menu backdrop is a LIVE scene (grazing prey) — never freeze it, even zoomed out.
+        const frozen = !menuPreview && (customMapPreview || tileWidth < FREEZE_TILE_PX);
+        if (_renderDirty || !frozen || now - lastDrawAt >= FROZEN_SAFETY_MS) {
+          // Resource glyphs (trees/plants) draw at ALL zoom levels: the renderer caches them in chunked
+          // VBOs (rebuilt only on change, same cadence as terrain), so a zoomed-out redraw is cheap and
+          // panning stays smooth — no need to drop them and leave the map barren.
+          renderer.setResourceOverlayGrid(_resourceGrid);
+          renderer.setResourceTallOverlayGrid(_resourceTallGrid);
+          renderer.setBuildingOverlayGrid(buildingOverlayGrid);
+          renderer.setItemOverlayGrid(itemOverlayGrid);
+          renderer.setOverlayGrid(pawnOverlayGrid);
+          const _dbgT0 = menuPreview && _menuPerfOn ? performance.now() : 0;
+          // Crash breadcrumb: if this frame queued an abnormally large draw, record it SYNCHRONOUSLY to
+          // .debug/crash.log BEFORE issuing the GL work — so a GPU hang that kills DevTools still leaves
+          // the trigger on disk (the last "→ heavy draw START …" with no matching "✓ …OK" is the culprit).
+          if (_heavyRenderReason) {
+            crashBreadcrumb(
+              get(gameState).turn,
+              `→ heavy draw START: ${_heavyRenderReason} (prevVerts≈${renderer.getStats().vertexCount}, tile=${tileWidth.toFixed(1)}px)`
             );
           }
-          if (!_dbgWindowStart) _dbgWindowStart = now;
-          if (now - _dbgWindowStart >= 2000) {
-            console.info(
-              `[MENU-PERF] ${_dbgN}f/${((now - _dbgWindowStart) / 1000).toFixed(1)}s ` +
-                `(${(_dbgN / ((now - _dbgWindowStart) / 1000)).toFixed(0)}fps) | ` +
-                `render avg=${(_dbgRenderSum / _dbgN).toFixed(1)} max=${_dbgRenderMax.toFixed(1)}ms | ` +
-                `terrain max=${_dbgTerrainMaxMs.toFixed(1)}ms | ` +
-                `rebuilds=${(_dbgRebuildSum / _dbgN).toFixed(1)}/frame (${_dbgRebuildFrames}/${_dbgN} frames) | ` +
-                `gapMax=${_dbgGapMax.toFixed(1)}ms hiccups=${_dbgHiccups}`
+          renderer.beginFrame();
+          renderer.endFrame();
+          if (_heavyRenderReason) {
+            const _hst = renderer.getStats();
+            crashBreadcrumb(
+              get(gameState).turn,
+              `✓ heavy draw OK: ${_heavyRenderReason} rebuilds=${_hst.terrainRebuilds} resRebuilds=${_hst.resourceRebuilds} draws=${_hst.drawCalls} verts=${_hst.vertexCount} frame=${_hst.frameTime.toFixed(1)}ms`
             );
-            _dbgWindowStart = now;
-            _dbgN = 0;
-            _dbgRenderSum = 0;
-            _dbgRenderMax = 0;
-            _dbgGapMax = 0;
-            _dbgRebuildSum = 0;
-            _dbgRebuildFrames = 0;
-            _dbgHiccups = 0;
-            _dbgTerrainMaxMs = 0;
+            _heavyRenderReason = '';
           }
-        }
-        _renderDirty = false;
-        lastDrawAt = now;
-        // Backdrop: the terrain is now actually on screen — reveal it (the wrapper fades 0→1), so the
-        // WebGL clear/init never flashed in the open. One-shot.
-        if (menuPreview && !_previewPainted) {
-          _previewPainted = true;
-          menuPreviewRendered.set(true);
-        }
-        // Surface render FPS to the topbar ~4×/sec to avoid store churn.
-        if (now - lastFpsPush > 250) {
+          // ── DEBUG: menu-backdrop frame profiler (Debug-mode gated) ────────────────────────────────
+          if (menuPreview && _menuPerfOn) {
+            const renderMs = performance.now() - _dbgT0;
+            const gap = _dbgPrevT ? now - _dbgPrevT : 0; // inter-frame gap (the actual hiccup metric)
+            _dbgPrevT = now;
+            const st = renderer.getStats();
+            _dbgN++;
+            _dbgRenderSum += renderMs;
+            if (renderMs > _dbgRenderMax) _dbgRenderMax = renderMs;
+            if (gap > _dbgGapMax) _dbgGapMax = gap;
+            if (st.terrainMs > _dbgTerrainMaxMs) _dbgTerrainMaxMs = st.terrainMs;
+            _dbgRebuildSum += st.terrainRebuilds;
+            if (st.terrainRebuilds > 0) _dbgRebuildFrames++;
+            if (gap > 33) {
+              _dbgHiccups++;
+              console.warn(
+                `[MENU-PERF] HICCUP gap=${gap.toFixed(1)}ms render=${renderMs.toFixed(1)}ms ` +
+                  `terrain=${st.terrainMs.toFixed(1)}ms rebuilds=${st.terrainRebuilds} ` +
+                  `tiles=${st.vertexCount / 6}`
+              );
+            }
+            if (!_dbgWindowStart) _dbgWindowStart = now;
+            if (now - _dbgWindowStart >= 2000) {
+              console.info(
+                `[MENU-PERF] ${_dbgN}f/${((now - _dbgWindowStart) / 1000).toFixed(1)}s ` +
+                  `(${(_dbgN / ((now - _dbgWindowStart) / 1000)).toFixed(0)}fps) | ` +
+                  `render avg=${(_dbgRenderSum / _dbgN).toFixed(1)} max=${_dbgRenderMax.toFixed(1)}ms | ` +
+                  `terrain max=${_dbgTerrainMaxMs.toFixed(1)}ms | ` +
+                  `rebuilds=${(_dbgRebuildSum / _dbgN).toFixed(1)}/frame (${_dbgRebuildFrames}/${_dbgN} frames) | ` +
+                  `gapMax=${_dbgGapMax.toFixed(1)}ms hiccups=${_dbgHiccups}`
+              );
+              _dbgWindowStart = now;
+              _dbgN = 0;
+              _dbgRenderSum = 0;
+              _dbgRenderMax = 0;
+              _dbgGapMax = 0;
+              _dbgRebuildSum = 0;
+              _dbgRebuildFrames = 0;
+              _dbgHiccups = 0;
+              _dbgTerrainMaxMs = 0;
+            }
+          }
+          _renderDirty = false;
+          lastDrawAt = now;
+          // Backdrop: the terrain is now actually on screen — reveal it (the wrapper fades 0→1), so the
+          // WebGL clear/init never flashed in the open. One-shot.
+          if (menuPreview && !_previewPainted) {
+            _previewPainted = true;
+            menuPreviewRendered.set(true);
+          }
+          // Surface render FPS to the topbar ~4×/sec to avoid store churn.
+          if (now - lastFpsPush > 250) {
+            lastFpsPush = now;
+            renderFps.set(Math.round(renderer.getStats().fps));
+          }
+        } else if (now - lastFpsPush > 250) {
+          // Frozen + idle: no frames drawn, so report 0 — the WebGL canvas retains its last frame.
           lastFpsPush = now;
-          renderFps.set(Math.round(renderer.getStats().fps));
+          renderFps.set(0);
         }
-      } else if (now - lastFpsPush > 250) {
-        // Frozen + idle: no frames drawn, so report 0 — the WebGL canvas retains its last frame.
-        lastFpsPush = now;
-        renderFps.set(0);
+        animationId = requestAnimationFrame(frame);
+      } catch (_frameErr) {
+        crashBreadcrumb(
+          get(gameState).turn,
+          `FRAME EXCEPTION — ${(_frameErr as Error)?.stack || String(_frameErr)}`
+        );
+        throw _frameErr; // still surface it; the rAF loop stops (it was crashing anyway)
       }
-      animationId = requestAnimationFrame(frame);
     }
     frame();
   }
