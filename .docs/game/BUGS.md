@@ -7,6 +7,37 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 
 ---
 
+## [FIXED] Zoomed-out panning stutters — the dense resource overlay re-vertexed every frame
+
+**Symptom:** With the map zoomed out, panning (mouse or keyboard) **stuttered badly** — `perf.log` showed
+`terrain=0.3ms` (cached fine) but **`overlay=230–290ms`** with `frameMax` up to **465ms**. Static (not
+panning) was smooth; only *moving* the camera while zoomed out hitched.
+
+**Root cause (`webgl/renderer-core.ts` × `grid-renderer.ts`):** the resource overlay (trees/plants — the
+`showGroundBelow` / resource-overlay layering added in `02fd05e4`) was drawn through the renderer's
+**dynamic overlay path** — `renderGrid` with no `cacheVersion` → `getVisibleTiles` + `generateBatchVertexData`
++ `uploadAndDraw`, i.e. geometry **rebuilt from scratch every frame.** That path was built for *sparse*
+overlays (a handful of pawn/item cells). The resource overlay is *dense* (every forest tile), so zoomed out
+— viewport covers the whole map — it re-vertexed ~50–100k tiles **per frame while panning.** Terrain never
+had this because it uses cached per-chunk VBOs (ADR-026 §E), rebuilt only on a delta. Measured with a
+per-frame `verts`/`overlay` sample: at ~2.6M verts, `overlay` was the entire hitch, `terrain` ~0.
+
+**Two intermediate fixes on the way (both kept, both partial):** (1) an LOD cutoff that *dropped* the
+resource glyphs past a zoom — killed the perf but left the map "barren and brown"; (2) folding
+`markRenderDirty()` into `setView` so mouse/follow pan also repaints when the scene is frozen (previously
+only the 400ms safety net redrew → jumpy). The LOD drop was then removed in favour of the real fix.
+
+**Fix (ADR-027):** route the dense resource overlays (short + tall) through the SAME cached chunk machinery
+as terrain — `renderGlyphOverlay(..., chunkLayer)` passes a `cacheVersion`/`lightVersion` so `renderGrid`
+takes the chunked path under dedicated `resourceChunks` / `resourceTallChunks` maps. They reuse terrain's
+`gridVersion` / `lightVersion` / per-chunk `chunkDirty` (both are rebuilt from the same changed tiles in
+`redrawOverlayNow → setGrid(dirtyTiles)`), so a glyph is re-vertexed only when its tile actually changes.
+Safe to cache: resource glyphs carry no per-frame `animationOffset`; fire flicker stays live via the
+`lightTime` uniform. Result: full tree/plant detail at ALL zoom levels **and** smooth panning (`overlay`
+drops to ~0 on a steady pan). **Regression guard:** a `resourceRebuilds=` counter in `perf.log` — ~0 when
+cached, spikes every frame if the overlay ever reverts to the per-frame path (this invariant isn't
+call-graph-checkable; see ADR-027).
+
 ## [FIXED] Sub-10 TPS on a fresh save + invisible walls — world resources scattered TWICE (a blocking tree stacked under a crop)
 
 **Symptom:** A brand-new save on a medium (500²) map ran at **sub-10 TPS** the moment pawns started moving —

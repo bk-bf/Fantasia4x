@@ -965,3 +965,43 @@ neighbourhoods; a full O(map) traversal is permitted ONLY on a genuine new-map l
 `_fullRebuildTerrain`, so the per-delta path can never silently reintroduce a full rebuild — it's a
 `graph:check` gate like ADR-008. Also guarded at runtime by `hiddenMaskIncremental.test.ts`
 (local mask update matches a fresh full BFS) and the building-diff path.
+
+### ADR-027 [GAME]: Dense Glyph Overlays Render via the Cached Chunk Path — No Per-Frame Rebuild
+
+**Status:** Accepted (2026-07-05). Extends ADR-021 (terrain cache) + ADR-026 (incremental terrain) and
+ENGINE-PERFORMANCE-II. Fixes the zoom-out pan stutter documented in BUGS.md.
+
+**Context.** The terrain layer is cached in per-chunk VBOs (ADR-026 §E), rebuilt only on a delta — cheap
+to redraw while panning. The **resource overlay** (trees/plants — the `resourceOverlay` / `showGroundBelow`
+layering added in `02fd05e4`) shipped on the renderer's *dynamic* overlay path (`grid-renderer.renderGrid`
+without a `cacheVersion` → `getVisibleTiles` + `generateBatchVertexData` + `uploadAndDraw`). That path was
+designed for **sparse** overlays (a handful of pawn/item/building cells) that legitimately change every
+frame. The resource overlay is **dense** (every forest/plant tile), so zoomed out — where the viewport
+covers the whole map — it re-vertexed ~50–100k tiles **every frame while panning** (`overlay` = 230–290 ms,
+`frameMax` up to 465 ms; measured in `perf.log`). Dropping the glyphs past a zoom (an LOD cutoff) fixed the
+perf but left the map barren.
+
+**Decision — a DENSE, static-between-edits glyph overlay renders through the SAME cached chunk machinery as
+terrain, never the per-frame dynamic path.** The resource short + tall overlays are drawn via
+`renderGlyphOverlay(..., chunkLayer)`, which passes a `cacheVersion` (+ `lightVersion`) into `renderGrid`,
+routing them to `renderTerrainChunked` under their own chunk maps (`resourceChunks` / `resourceTallChunks`).
+
+- **Shared invalidation signal.** The resource grids are rebuilt from the *same* changed tiles as terrain
+  in `redrawOverlayNow` → `setGrid(dirtyTiles)`, so they reuse terrain's `gridVersion` / `lightVersion` /
+  per-chunk `chunkDirty` — a stale glyph can never outlive a terrain edit, and a single harvest re-vertexes
+  only its chunk, not the whole forest.
+- **Safe to cache.** Resource glyphs carry no per-frame `animationOffset` (static geometry); growth-dimming
+  and the snow/winter glyph swap ride the terrain rebuild, and fire flicker stays live via the `lightTime`
+  shader uniform on the cached buffer. So the vertex buffer only regenerates on a genuine content/light change.
+- **No LOD drop.** Because the cached redraw is cheap at any zoom, resource glyphs draw at ALL zoom levels
+  (the earlier `RESOURCE_OVERLAY_MIN_PX` cutoff was removed).
+
+**Enforcement (NOT graph-checkable — a perf counter instead).** This is a *runtime argument* property, not
+a call edge: `renderGrid` always contains both the cached and dynamic branches, and which runs depends on
+whether `chunkLayer`/`cacheVersion` is passed — a regression drops that argument without changing any graph
+edge. It is the same class as ADR-021's terrain cache (also `checkable: false`), so codegraph cannot gate
+it. Instead it's flagged by the **`resourceRebuilds=` counter in `perf.log`** (`renderer-core` tallies
+resource-chunk rebuilds/frame): ~0 on a steady pan when cached, but a nonzero value **every frame** the
+moment the overlay reverts to the per-frame rebuild path — the exact stutter, visible within one perf
+window. Registered in `codegraph.config.json` as `checkable: false` so `graph:check`'s `adr-coverage` rule
+accounts for it.
