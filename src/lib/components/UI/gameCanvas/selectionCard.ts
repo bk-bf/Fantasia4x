@@ -222,17 +222,16 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
         value: `${Math.round(entity.bloodVolume)}/${Math.round(entity.maxBloodVolume)}`
       }
     ];
+    let etaStr = '';
     if (bleed > 0) {
       const hours = (entity.bloodVolume / bleed) * (24 / TURNS_PER_DAY);
+      etaStr = hours >= 10 ? `~${Math.round(hours)}h` : `~${hours.toFixed(1)}h`;
       rows.push({ label: 'Bleeding', value: `${bleed.toFixed(1)}/s` });
-      rows.push({
-        label: 'To empty',
-        value: hours >= 10 ? `~${Math.round(hours)}h` : `~${hours.toFixed(1)}h`
-      });
+      rows.push({ label: 'To empty', value: etaStr });
     }
     health.push({
       label: 'Blood',
-      value: `${pct}%`,
+      value: bleed > 0 ? `${pct}% (${etaStr})` : `${pct}%`,
       color: '#ee5544',
       warn: pct < 60 || bleed > 0,
       desc: bleed > 0 ? 'losing blood' : 'whole-body blood pool',

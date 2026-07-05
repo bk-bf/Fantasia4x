@@ -331,6 +331,12 @@ export interface Pawn {
     | { type: 'rescue'; victimId: string; auto?: boolean }
     | { type: 'tend'; patientId: string; nextTendTurn?: number };
 
+  /** 0–1 fill for the on-map progress bar during a drafted `tend` (emergency care). The drafted tend is
+   *  a draftTarget, not a WORKING job, so it has no `activeJob.progress`; this synthetic value (elapsed ÷
+   *  per-wound work window) drives the same overlay the mob `eatProgress` uses. Set each tick while
+   *  tending, cleared when the order finishes. */
+  tendProgress?: number;
+
   /** When set, this (downed) pawn is being CARRIED by the pawn whose id this is. While carried the
    *  victim is hidden from the map (it rides inside the carrier as a `carried_pawn` inventory item —
    *  see systems/pawn/carry.ts) and its position is only restored when it's laid down at the shelter or

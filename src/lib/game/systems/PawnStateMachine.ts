@@ -77,7 +77,8 @@ import {
   isRoofedTile,
   effectiveTemperature,
   effectiveWindAt,
-  seasonBakedTemp
+  seasonBakedTemp,
+  TURNS_PER_DAY
 } from '../services/EnvironmentService';
 import { calcBloodRegenRate } from '../entities/Pawns';
 import { rng } from '../core/rng';
@@ -169,6 +170,11 @@ const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
 // condition's `driver` block in conditions.jsonc — read generically by applyConditionDriver below.
 // Blood regen is computed per-pawn via calcBloodRegenRate(pawn.stats) × SECONDS_PER_TICK.
 // See blood_regeneration entry in stats.jsonc for the formula.
+
+/** Blood-out ETA (in game-hours) at which the info-only `bleeding` tell hits full severity=1: severity
+ *  = 1 − hoursToEmpty/REF, so with the stage cuts in conditions.jsonc it reads minor > ~4h, severe ≈ 4h,
+ *  fatal ≈ 1.2h. Purely a readout scale — the actual blood drain/death lives in the blood-loss tick. */
+const BLEED_ETA_REF_HOURS = 8;
 
 /** Return the active ConditionStage for a condition at the given severity, or undefined. */
 function getConditionStage(conditionId: string, severity: number): ConditionStage | undefined {
@@ -848,6 +854,17 @@ export function syncTransientConditions(pawn: Pawn): Pawn {
       const granted = itemService.getItemById(inst.itemId)?.grantsConditions;
       if (granted) for (const cid of granted) if (!ids.includes(cid)) ids.push(cid);
     }
+  }
+
+  // Bleeding tell (info-only): while any wound is seeping, surface HOW urgent it is — staged off the
+  // blood-out ETA, the same figure shown on the Blood pill. Pushed as an `id:stageLabel` combo (like the
+  // persistent stages below) so it renders a graded chip without applying any stat modifier.
+  const totalBleed = (pawn.limbs ?? []).reduce((s, l) => s + (l.bleedRate ?? 0), 0);
+  if (totalBleed > 0 && (pawn.bloodVolume ?? 0) > 0) {
+    const hoursToEmpty = (pawn.bloodVolume! / totalBleed) * (24 / TURNS_PER_DAY);
+    const severity = Math.max(0, Math.min(1, 1 - hoursToEmpty / BLEED_ETA_REF_HOURS));
+    const stage = getConditionStage('bleeding', severity);
+    if (stage) ids.push(`bleeding:${stage.label}`);
   }
 
   // Push persistent-condition stage labels too (e.g. "malnutrition:moderate").

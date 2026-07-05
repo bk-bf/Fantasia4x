@@ -64,6 +64,11 @@ export interface TransientConditionDef {
    *  glyph float (the ↓/Zzz over the sprite), the HIGHEST priority wins so the most important state shows
    *  (e.g. `collapse` must beat `winded`). Default 0 (no glyph / lowest). Read via `conditionPriority`. */
   priority?: number;
+  /** Info-only staging (e.g. `bleeding` → minor/severe/fatal). A transient normally has no stages;
+   *  when present, the deriving code pushes `id:stageLabel` into `transientConditions` (like the
+   *  persistent stage combos) and the chip picks colour/lethality from the matching stage. The stages'
+   *  modifiers are typically empty — the point is a graded READOUT, not a stat effect. */
+  stages?: ConditionStage[];
   modifiers: ConditionModifiers;
 }
 

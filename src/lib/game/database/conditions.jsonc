@@ -525,6 +525,42 @@
     // they appear/clear on their own when their cause does. `transient: true` is the bool discriminant
     // vs the persistent conditions above (which omit it). modifiers are multipliers.
     {
+        // Info-only tell (empty modifiers — never touches stats): surfaces that the body is losing blood
+        // and HOW URGENT it is, staged off the blood-out ETA (severity derived in syncTransientConditions
+        // as 1 − hoursToEmpty/8, so minor ≈ >4h, severe ≈ 4h, fatal ≈ 1.2h — the same ETA shown on the
+        // Blood pill). Clears on its own the moment the wounds clot. The actual blood drain / death lives
+        // in PawnStateMachine; this is purely the at-a-glance readout.
+        "id": "bleeding",
+        "name": "Bleeding",
+        "transient": true,
+        "description": "Open wounds are seeping blood. On its own it does nothing to the body — it's a warning of how fast blood is being lost and how long until it runs out. Dress the wounds (or let them clot) to stop it.",
+        "color": "#C62828",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 3} ],
+        "stages": [
+            {
+                "label"      : "minor",
+                "minSeverity": 0.0,
+                "color"      : "#D97B5A",
+                "modifiers"  : {}
+            },
+            {
+                "label"      : "severe",
+                "minSeverity": 0.5,
+                "color"      : "#C62828",
+                "modifiers"  : {}
+            },
+            {
+                "label"          : "fatal",
+                "minSeverity"    : 0.85,
+                "color"          : "#FF1744",
+                "lifeThreatening": true,
+                "modifiers"      : {}
+            }
+        ],
+        "modifiers": {}
+    },
+    {
         "id": "knockdown",
         "audio": "knockdown",
         "name": "Knocked Down",

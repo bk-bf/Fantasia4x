@@ -1150,7 +1150,9 @@ export class GameEngineImpl implements GameEngine {
         const clearTend = () => {
           gs = {
             ...gs,
-            pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, draftTarget: undefined } : p))
+            pawns: gs.pawns.map((p) =>
+              p.id === pawn.id ? { ...p, draftTarget: undefined, tendProgress: undefined } : p
+            )
           };
         };
         const setNextTend = (nextTendTurn: number) => {
@@ -1161,6 +1163,22 @@ export class GameEngineImpl implements GameEngine {
                 ? { ...p, draftTarget: { type: 'tend', patientId: target.patientId, nextTendTurn } }
                 : p
             )
+          };
+        };
+        // Per-wound work window (ticks) at the medic's caretaking speed — also the denominator for the
+        // synthetic progress bar shown while the medic holds the bedside between dressings.
+        const perWoundTurns = (medic: Pawn) =>
+          Math.max(
+            1,
+            Math.ceil(
+              (TEND_WORK / (BASE_WORK_RATE * (pawnStatService.getWorkModifiers(medic, 'caretaking').speed || 1))) *
+                TICKS_PER_SECOND
+            )
+          );
+        const setTendProgress = (progress: number) => {
+          gs = {
+            ...gs,
+            pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, tendProgress: progress } : p))
           };
         };
         if (
@@ -1176,7 +1194,8 @@ export class GameEngineImpl implements GameEngine {
         ) {
           gs = pawnService.assignPath(pawn.id, [], gs); // stand at the bedside
           // Dress one wound when the per-wound timer is due (first arrival = immediately), then arm the
-          // next window. Between windows the medic just holds position (draftTarget keeps nextTendTurn).
+          // next window. Between windows the medic holds position and its progress bar fills toward the
+          // next dressing, so a single order visibly tends every wound rather than looking finished/idle.
           if (target.nextTendTurn === undefined || gs.turn >= target.nextTendTurn) {
             const medic = gs.pawns.find((p) => p.id === pawn.id)!;
             gs = tendPatient(patient, medic, gs);
@@ -1184,13 +1203,14 @@ export class GameEngineImpl implements GameEngine {
             if (!after || !hasUntendedWound(after, gs.turn)) {
               clearTend();
             } else {
-              const speed = pawnStatService.getWorkModifiers(medic, 'caretaking').speed || 1;
-              const perWoundTurns = Math.max(
-                1,
-                Math.ceil((TEND_WORK / (BASE_WORK_RATE * speed)) * TICKS_PER_SECOND)
-              );
-              setNextTend(gs.turn + perWoundTurns);
+              setNextTend(gs.turn + perWoundTurns(medic));
+              setTendProgress(0);
             }
+          } else {
+            const medic = gs.pawns.find((p) => p.id === pawn.id)!;
+            const window = perWoundTurns(medic);
+            const remaining = target.nextTendTurn - gs.turn;
+            setTendProgress(Math.max(0, Math.min(1, 1 - remaining / window)));
           }
         } else {
           gs = this._draftWalk(gs, pawn, patient.position.x, patient.position.y);

@@ -1795,6 +1795,23 @@
           progress: Math.max(0, Math.min(1, p.activeJob?.progress ?? 0))
         }))
         .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
+      // Emergency-care (drafted `tend`) progress: the medic isn't in a WORKING job, so it has no
+      // activeJob.progress — the synthetic tendProgress drives its bar the same way mob eatProgress does.
+      ...pawns
+        .filter(
+          (p) =>
+            p.draftTarget?.type === 'tend' &&
+            (p.tendProgress ?? -1) >= 0 &&
+            p.position &&
+            !isHiddenTile(p.position.x, p.position.y)
+        )
+        .map((p) => ({
+          id: p.id,
+          left: (p.position!.x - viewX + 0.5) * tW,
+          top: (p.position!.y - viewY) * tH - 6,
+          progress: Math.max(0, Math.min(1, p.tendProgress ?? 0))
+        }))
+        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
       // Eating progress for mobs (foraging / hunting).
       ...mobs
         .filter((m) => (m.eatProgress ?? 0) > 0 && !isHiddenTile(m.x, m.y))

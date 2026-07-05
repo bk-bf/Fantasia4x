@@ -163,6 +163,14 @@ function transientSources(entity: Pawn | Mob, id: string): string[] {
       return ['Currently sleeping'];
     case 'winded':
       return ['Stamina spent in combat'];
+    case 'bleeding': {
+      const bleeders = allInjuries(entity).filter((i) => (i.bleeding ?? 0) > 0);
+      return bleeders.length
+        ? bleeders.map(
+            (i) => `${prettyPart(i.bodyPart)} — ${i.type} (bleeding ${Math.round(i.bleeding * 10) / 10})`
+          )
+        : ['Open wounds seeping blood'];
+    }
     case 'nausea':
     case 'dysentery': {
       // Real countdown: these are fixed-duration timers (NAUSEA_TICKS / DYSENTERY_TICKS) that tick down.
@@ -241,19 +249,30 @@ export function getActiveConditionViews(entity: Pawn | Mob): ConditionView[] {
     });
   }
 
-  for (const id of entity.transientConditions ?? []) {
-    const def = TRANSIENT.find((d) => d.id === id);
+  for (const entry of entity.transientConditions ?? []) {
+    // A staged transient (e.g. `bleeding:severe`) arrives as an `id:stageLabel` combo; a plain transient
+    // as a bare id. Persistent stage combos (e.g. `malnutrition:moderate`) also land here but resolve to
+    // no TRANSIENT def (they render from entity.conditions), so they fall through untouched.
+    const sep = entry.indexOf(':');
+    const baseId = sep >= 0 ? entry.slice(0, sep) : entry;
+    const stageLabel = sep >= 0 ? entry.slice(sep + 1) : undefined;
+    const def = TRANSIENT.find((d) => d.id === baseId);
     if (!def || def.hidden) continue;
+    const stage = stageLabel ? def.stages?.find((s) => s.label === stageLabel) : undefined;
+    if (stageLabel && !stage) continue; // combo whose base isn't a staged transient — skip
+    const mods = stage?.modifiers ?? def.modifiers;
     views.push({
       id: def.id,
       name: def.name,
-      color: def.color,
+      color: stage?.color ?? def.color,
       charSpans: def.charSpans,
       description: def.description,
       kind: 'transient',
-      sources: transientSources(entity, id),
-      effects: effectLines(def.modifiers),
-      modifiers: def.modifiers
+      stageLabel: stage?.label,
+      lifeThreatening: stage?.lifeThreatening,
+      sources: transientSources(entity, baseId),
+      effects: effectLines(mods),
+      modifiers: mods
     });
   }
 
