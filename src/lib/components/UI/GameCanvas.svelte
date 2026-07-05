@@ -5134,17 +5134,19 @@
       <SelectedEntityCard model={hoverMobCard} />
     {:else if hoverBuilding && !hoverPawn}
       <div class="tile-hud tile-hud--building">
-        <BuildingInfo building={hoverBuilding} binContents={hoverBin ? hoverBinContents : []} />
-        {#if hoverTile}
-          {@const env = tileEnv(hoverTile)}
-          <EnvReadout
-            light={env.light}
-            temp={env.temp}
-            wet={env.wet}
-            wind={env.wind}
-            debugTemp={$debugMode ? seasonBakedTemp(hoverTile.terrainType, $currentSeason) : null}
-          />
-        {/if}
+        <div class="tile-hud-body">
+          <BuildingInfo building={hoverBuilding} binContents={hoverBin ? hoverBinContents : []} />
+          {#if hoverTile}
+            {@const env = tileEnv(hoverTile)}
+            <EnvReadout
+              light={env.light}
+              temp={env.temp}
+              wet={env.wet}
+              wind={env.wind}
+              debugTemp={$debugMode ? seasonBakedTemp(hoverTile.terrainType, $currentSeason) : null}
+            />
+          {/if}
+        </div>
       </div>
     {:else if hoverItemCard}
       <!-- Dropped item on the hovered tile — shared SelectedEntityCard, bars below the title -->
@@ -5171,6 +5173,7 @@
       {@const soilTier = soilTierForTile(hoverTile)}
       {@const soilPct = soilFertilityPct(hoverTile)}
       <div class="tile-hud">
+        <div class="tile-hud-body">
         <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
           >{BIOMES[hoverTile.terrainType]?.displayName ?? hoverTile.terrainType},{hoverFloorName ??
             SUBTERRAINS[hoverTile.subType]?.displayName ??
@@ -5268,6 +5271,7 @@
               title="frozen layer — suppresses wetness; thick ice on water turns it walkable but slippery"
               >ice {tileIce}%</span
             >{/if}
+        </div>
         </div>
       </div>
     {/if}
@@ -5445,8 +5449,10 @@
     left: 6px;
     width: 340px;
     box-sizing: border-box;
-    background: rgba(28, 16, 6, 0.92);
-    border: 1px solid #6b4a2a;
+    /* Background + frame live on ::before (dimmed via #ambient-tint); the box is transparent so the
+       text layer (.tile-hud-body) can be lifted separately. Transparent 1px border keeps the box model. */
+    background: transparent;
+    border: 1px solid transparent;
     color: #a07840;
     font-family: var(--font-mono);
     font-size: 10px;
@@ -5456,10 +5462,24 @@
     white-space: normal;
     overflow-wrap: break-word;
     z-index: 10;
-    /* Day/night hue + weather desaturation via the brightness-PRESERVING variant (see +page.svelte
-       #ambient-tint-legible), matching the selection card: the tile-inspector / hover-building readout
-       shifts hue to fit the lit scene but its text never dims, so it stays readable at night / in fog.
-       (Literal-coloured, like the selection card — can't use the token-based panel tint.) */
+  }
+  /* Dimmed chrome layer: background + inset frame, darkened with the day/night+weather scene by
+     #ambient-tint (matching the panels + selection card). */
+  .tile-hud::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: rgba(28, 16, 6, 0.92);
+    box-shadow: inset 0 0 0 1px #6b4a2a;
+    filter: url(#ambient-tint);
+    pointer-events: none;
+  }
+  /* Lifted text layer: the tile-inspector / hover-building readout sits above the dimmed chrome and the
+     overlay — hue-shifted but brightness-preserved (#ambient-tint-legible) so it stays readable. */
+  .tile-hud-body {
+    position: relative;
+    z-index: 1;
     filter: url(#ambient-tint-legible);
   }
 

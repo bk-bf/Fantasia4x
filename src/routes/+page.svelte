@@ -167,34 +167,25 @@
         .padStart(2, '0');
     return `#${h(r)}${h(g)}${h(b)}`;
   };
-  const luma = ([r, g, b]: [number, number, number]): number =>
-    LUMA[0] * r + LUMA[1] * g + LUMA[2] * b;
 
-  /** Full tint (hue + brightness) — for backgrounds/separators. */
-  function tintBg(hex: string, tint: [number, number, number], s: number): string {
+  /** Tint one #rrggbb colour → hex, with the given tint vector + saturation. */
+  function tintTo(hex: string, tint: [number, number, number], s: number): string {
     return toHex(tintRGB(hex, tint, s));
   }
-  /** Hue-only tint — rescales the tinted colour back to the original luminance so text never dims. */
-  function tintFont(hex: string, tint: [number, number, number], s: number): string {
-    const base: [number, number, number] = [
-      parseInt(hex.slice(1, 3), 16) / 255,
-      parseInt(hex.slice(3, 5), 16) / 255,
-      parseInt(hex.slice(5, 7), 16) / 255
-    ];
-    const out = tintRGB(hex, tint, s);
-    const lo = luma(out);
-    const k = lo > 1e-4 ? luma(base) / lo : 1;
-    return toHex([out[0] * k, out[1] * k, out[2] * k]);
-  }
 
-  // Tinted-token override string bound to each panel: backgrounds take the full tint, text takes the
-  // hue-only (brightness-preserved) tint. Day/night UI tint off → base tokens pass through untouched.
+  // Tinted-token override string bound to each panel:
+  //  • BACKGROUND/separator tokens take the FULL tint (`panelTint`) — hue AND brightness dim with the
+  //    scene, so panel chrome sits UNDER the day/night+weather overlay exactly as before.
+  //  • TEXT/accent tokens take the LEGIBLE tint (`legibleTint`, the same unit-luminance-normalised
+  //    vector the info card's #ambient-tint-legible filter uses) — the hue shifts to fit the scene but
+  //    the brightness is LIFTED so the font reads ABOVE the overlay, matching the info card's font.
+  // Day/night UI tint off → base tokens pass through untouched.
   $: ambientPanelVars = [
     ...Object.entries(BG_TOKENS).map(
-      ([k, v]) => `${k}: ${$dayNightTint ? tintBg(v, panelTint, panelSaturation) : v}`
+      ([k, v]) => `${k}: ${$dayNightTint ? tintTo(v, panelTint, panelSaturation) : v}`
     ),
     ...Object.entries(FONT_TOKENS).map(
-      ([k, v]) => `${k}: ${$dayNightTint ? tintFont(v, panelTint, panelSaturation) : v}`
+      ([k, v]) => `${k}: ${$dayNightTint ? tintTo(v, legibleTint, panelSaturation) : v}`
     )
   ].join('; ');
 

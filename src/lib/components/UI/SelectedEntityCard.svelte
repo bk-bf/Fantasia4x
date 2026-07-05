@@ -193,6 +193,9 @@
   onclick={(e) => e.stopPropagation()}
 >
   <div class="tile-hud tile-hud--pawn" class:tile-hud--selected={model.selected}>
+    <!-- Text layer: lifted above the dimmed background/frame (which lives on .tile-hud::before) so the
+         info font stays readable at night/in fog while the card chrome still darkens with the scene. -->
+    <div class="tile-hud-body">
     <div class="pawn-header">
       <div class="pawn-meta">
         <span class="pawn-name">{model.name}</span>
@@ -283,6 +286,7 @@
     {#if model.pos}
       <div class="pawn-pos">pos ({model.pos.x},{model.pos.y})</div>
     {/if}
+    </div>
   </div>
 
   {#if model.health}
@@ -365,12 +369,11 @@
        later in DOM, same root stacking context — painted over the on-click card, so fog/precip
        washed it more than the rest of the UI. */
     z-index: 10;
-    /* Same day/night hue + weather desaturation the chrome panels get, but via the brightness-
-       PRESERVING variant (#ambient-tint-legible, see +page.svelte): the card's hue shifts to match the
-       lit scene while its text + buttons never dim, so the on-hover/on-click info stays readable at
-       night and under fog. (The card is built on literal colours, not theme tokens, so it can't use the
-       token-based panel tint — this filter is its equivalent.) */
-    filter: url(#ambient-tint-legible);
+    /* No filter on the wrapper: the card's BACKGROUND + frame are dimmed by #ambient-tint (on
+       .tile-hud::before) so the chrome darkens with the scene like every other panel, while the TEXT
+       layer (.tile-hud-body) and the buttons (.btn-col) are lifted by #ambient-tint-legible so the font
+       reads ABOVE the day/night+weather overlay. (The card is literal-coloured, not token-based, so it
+       needs these two filters instead of the panels' bg/font token split.) */
   }
   /* In-flow variant: the parent owns positioning (and sizes itself to this card, which a
      sibling absolutely-positioned panel like fuel-settings depends on for its width). */
@@ -384,20 +387,38 @@
     align-items: stretch;
   }
   .tile-hud {
-    background: rgba(28, 16, 6, 0.92);
-    /* Golden frame drawn as an INSET ring, not a plain `border`. The wrapper carries the
-       `filter: url(#ambient-tint)` SVG filter, which rasterises this card; a 1px border is the outermost
-       paint on the vertical edges and the filter blends it to a translucent (white-looking) line there.
-       Keeping a transparent 1px border preserves the exact box-model layout while box-shadow paints the
-       frame just INSIDE the edge, away from the fringing boundary — so it stays solid gold on all sides. */
+    position: relative;
+    /* Background + golden frame live on ::before below (dimmed via #ambient-tint); the box itself is
+       transparent so the text layer (.tile-hud-body) can be lifted separately. A transparent 1px border
+       preserves the exact box-model layout. */
+    background: transparent;
     border: 1px solid transparent;
-    box-shadow: inset 0 0 0 1px #6b4a2a;
     color: #a07840;
     font-family: var(--font-mono);
     font-size: 11px;
     line-height: 1.25;
     padding: 2px 7px;
     pointer-events: auto;
+  }
+  /* Dimmed chrome layer: card background + inset golden frame, darkened with the day/night+weather
+     scene by #ambient-tint (matching the panels). The inset box-shadow keeps the frame just inside the
+     edge, away from the filter's fringing boundary, so it stays solid gold on all sides. */
+  .tile-hud::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: rgba(28, 16, 6, 0.92);
+    box-shadow: inset 0 0 0 1px #6b4a2a;
+    filter: url(#ambient-tint);
+    pointer-events: none;
+  }
+  /* Lifted text layer: the card's font sits above the dimmed chrome and above the overlay, hue-shifted
+     but brightness-preserved by #ambient-tint-legible, so it stays readable at night / in fog. */
+  .tile-hud-body {
+    position: relative;
+    z-index: 1;
+    filter: url(#ambient-tint-legible);
   }
   /* NT-U3: fixed-width skeleton, identical for every object type, so long descriptions
      wrap inside the box instead of stretching it across the map. 300px is the building
@@ -447,6 +468,9 @@
     gap: 3px;
     flex-shrink: 0;
     pointer-events: auto;
+    /* Buttons are action chips — lifted as a whole (brightness-preserving hue) so they stay prominent
+       and readable above the overlay, matching the card's text layer. */
+    filter: url(#ambient-tint-legible);
   }
   .hud-btn {
     background: #2a1a0a;
@@ -540,9 +564,12 @@
     margin-top: 1px;
   }
   .tile-hud--selected {
-    border-color: #f0c060;
-    background: rgba(20, 14, 4, 0.96);
     color: #e8c870;
+  }
+  /* Selected card: brighter frame + slightly darker fill, on the dimmed chrome layer. */
+  .tile-hud--selected::before {
+    background: rgba(20, 14, 4, 0.96);
+    box-shadow: inset 0 0 0 1px #f0c060;
   }
   .tile-hud--selected .pawn-name {
     color: #ffe890;
