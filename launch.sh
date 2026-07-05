@@ -58,6 +58,26 @@ for arg in "$@"; do
     --tauri) SHELL_TARGET=tauri ;;
   esac
 done
+
+# Autobootstrap a fresh checkout/worktree. install.sh does all the NETWORK-dependent setup (deps,
+# WASM, electron shell); it MUST run here on the host, because a sandboxed electron launch below
+# starts the dev server inside a network-isolated namespace where any install fails with ENETUNREACH.
+# install.sh is idempotent — only invoke it when a required artifact is actually missing.
+needs_bootstrap() {
+  [[ -d "$SCRIPT_DIR/node_modules" ]]              || return 0
+  [[ -d "$SCRIPT_DIR/.svelte-kit" ]]               || return 0
+  [[ -d "$SCRIPT_DIR/src/lib/spatial-core-pkg" ]]  || return 0
+  [[ -d "$SCRIPT_DIR/src/lib/sim-core-pkg" ]]      || return 0
+  if [[ "$SHELL_TARGET" == electron ]]; then
+    [[ -x "$SCRIPT_DIR/desktop-spike/electron/node_modules/electron/dist/electron" ]] || return 0
+  fi
+  return 1
+}
+if needs_bootstrap; then
+  echo "launch.sh: fresh checkout — running ./install.sh (host bootstrap, needs network)…" >&2
+  "$SCRIPT_DIR/install.sh" || { echo "launch.sh: install.sh failed; aborting." >&2; exit 1; }
+  echo ""
+fi
 # Suffixes appended to a server's dev.sh flag set (dev.sh parses multiple flags). HMR is never passed
 # here, so launch.sh servers always run with hot-reload OFF — an agent editing the tree never reloads a
 # live playtest. (Run `./dev.sh --hmr` directly to opt a standalone server back in.)

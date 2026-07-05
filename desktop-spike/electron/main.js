@@ -48,6 +48,11 @@ app.commandLine.appendSwitch('js-flags', '--max-semi-space-size=128');
 // Debug-only shell, so it's always on; override the port with ELECTRON_DEBUG_PORT.
 app.commandLine.appendSwitch('remote-debugging-port', process.env.ELECTRON_DEBUG_PORT || '9222');
 
+// Chromium spews "Failed to connect to the bus" dbus ERRORs when it can't reach the session bus —
+// which is always, inside the sandboxed --net namespace (no bus there). They're harmless and never
+// actionable for this spike, so raise the stderr log threshold to FATAL to keep the terminal readable.
+app.commandLine.appendSwitch('log-level', '3');
+
 function createWindow() {
   // Stamp the shell marker into the default session UA before any request goes out.
   const shellUA = `${session.defaultSession.getUserAgent()} ${SHELL_UA_MARKER}`;
@@ -146,13 +151,25 @@ function createWindow() {
   });
 
   win.webContents.setUserAgent(shellUA);
-  const load = () => win.loadURL(APP_URL, { userAgent: shellUA });
+  // .catch(): loadURL rejects while the dev server is still booting; swallow it so Electron doesn't
+  // emit a "(node:…) electron: Failed to load URL" process warning every retry. did-fail-load below
+  // drives the retry loop instead.
+  const load = () => win.loadURL(APP_URL, { userAgent: shellUA }).catch(() => {});
   load();
 
   // Dev server may not be up yet / may restart — retry instead of showing Chromium's error page.
-  win.webContents.on('did-fail-load', (_e, code, desc) => {
-    console.warn(`load failed (${code} ${desc}) — retrying ${APP_URL} in 1s`);
+  // Log the wait ONCE (not once per second) so a ~10s boot doesn't flood the terminal.
+  let waitLogged = false;
+  win.webContents.on('did-fail-load', () => {
+    if (!waitLogged) {
+      console.log(`waiting for dev server at ${APP_URL}…`);
+      waitLogged = true;
+    }
     setTimeout(load, 1000);
+  });
+  win.webContents.on('did-finish-load', () => {
+    if (waitLogged) console.log('dev server connected.');
+    waitLogged = false;
   });
 
   // Uncomment to inspect / profile inside Electron's DevTools (same profiler UI as Chrome):
