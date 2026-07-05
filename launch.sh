@@ -31,9 +31,10 @@
 #   Electron runs with --no-sandbox in this mode (Chromium can't nest its sandbox in the user ns).
 #     ./launch.sh --electron            (sandboxed by default)
 #     ./launch.sh --electron --net-host (host networking — CDP/profiling reachable)
-# SPRITESHEET VIEWER (desktop-shell launches): alongside any --electron/--tauri launch, a small
-#   browser-reachable dev server starts on :5174 serving the /dev/ spritesheet viewer
-#   (http://localhost:5174/dev/spritesheet-viewer.html) — the game server itself is shell-only/sandboxed.
+# SPRITESHEET VIEWER (desktop-shell launches): alongside any --electron/--tauri launch, a tiny static
+#   file server (python3 http.server, rooted at static/) starts on :5174 serving the /dev/ spritesheet
+#   viewer (http://localhost:5174/dev/spritesheet-viewer.html) — the game server itself is shell-only/
+#   sandboxed. It is NOT a second Vite (that would thrash the shared dep cache and slow startup).
 # codegraph is a separate always-on systemd user service (see codegraph_hint below).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -125,13 +126,18 @@ launch() {
   sleep 0.3
 }
 
-# Standalone spritesheet viewer: a small HOST-networking dev server on 5174 that a plain browser CAN
-# reach — the desktop-shell game server (5173) is sandboxed / shell-only, so the /dev/ tool can't be
-# opened there. --browser lifts the /dev/ + /tilesets/ guard so the static viewer loads. Tracked in
-# PIDS so cleanup stops it with everything else; quiet so its dev.sh logs don't clutter the console.
+# Standalone spritesheet viewer: a tiny STATIC file server on 5174, rooted at static/, so a plain
+# browser can open the /dev/ viewer while the desktop-shell game server (5173) is sandboxed. The viewer
+# is self-contained HTML + <img> loads of /tilesets/*.bmp — both live under static/ — so it needs NO
+# Vite. (A second Vite against this same root thrashes the shared node_modules/.vite dep cache and makes
+# startup crawl; a static server sidesteps that entirely.) Tracked in PIDS so cleanup stops it; quiet.
 start_spritesheet_viewer() {
   local vport=5174
-  (cd "$SCRIPT_DIR" && exec env CI=true ./dev.sh --browser --port "$vport" >/dev/null 2>&1) &
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "  [spritesheet] skipped — python3 not found (needed for the static viewer server)" >&2
+    return
+  fi
+  (exec python3 -m http.server "$vport" --directory "$SCRIPT_DIR/static" >/dev/null 2>&1) &
   PIDS+=($!)
   echo "  [spritesheet] http://localhost:$vport/dev/spritesheet-viewer.html"
 }
