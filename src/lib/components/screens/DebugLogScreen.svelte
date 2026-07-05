@@ -105,7 +105,7 @@
     onclear={clearLogs}
   />
 
-  <ScrollArea class="body" bind:viewport={bodyEl}>
+  <ScrollArea class="body selectable" bind:viewport={bodyEl}>
     {#if $allLogEntries.length === 0}
       <div class="waiting">no log entries yet — unpause the game</div>
     {:else if filtered.length === 0}
