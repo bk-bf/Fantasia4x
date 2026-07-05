@@ -480,7 +480,14 @@ export class WebGLRendererCore {
       // Short resources first (grass/bushes over the ground; dense → viewport-culled), then buildings,
       // items, entities. TALL resources (trees) LAST so the oversized canopy occludes pawns/mobs
       // standing on tiles behind the tree.
-      this.renderGlyphOverlay(this.resourceOverlayGrid, viewportTilesW, viewportTilesH, lightTime, true);
+      this.renderGlyphOverlay(
+        this.resourceOverlayGrid,
+        viewportTilesW,
+        viewportTilesH,
+        lightTime,
+        true,
+        'resource'
+      );
       this.renderGlyphOverlay(this.buildingOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
       this.renderGlyphOverlay(this.itemOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
       this.renderGlyphOverlay(this.overlayGrid, viewportTilesW, viewportTilesH, lightTime);
@@ -489,7 +496,8 @@ export class WebGLRendererCore {
         viewportTilesW,
         viewportTilesH,
         lightTime,
-        true
+        true,
+        'resourceTall'
       );
       this.stats.overlayMs = performance.now() - tOverlay;
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
@@ -501,14 +509,16 @@ export class WebGLRendererCore {
 
   /** Render one glyph-only overlay grid (no-op when null). Caller sets up blend + u_glyphOnly.
    *  Sparse overlays (pawns/items/buildings: a handful of cells) use renderAllTiles. The DENSE
-   *  resource overlays (a full forest of cells) pass `viewportCulled` so renderGrid takes the
-   *  getVisibleTiles path (O(viewport)) instead of rebuilding every set tile each frame. */
+   *  resource overlays (a full forest of cells) pass a `chunkLayer` so renderGrid takes the CACHED
+   *  chunked path — built on change (same gridVersion/lightVersion/dirty as terrain), not per frame —
+   *  which is what makes zoomed-out panning cheap while keeping every tree/plant glyph. */
   private renderGlyphOverlay(
     grid: GameGrid | null,
     viewportTilesW: number,
     viewportTilesH: number,
     lightTime: number,
-    viewportCulled = false
+    viewportCulled = false,
+    chunkLayer?: 'resource' | 'resourceTall'
   ): void {
     if (!grid || !this.gridRenderer) return;
     const stats = this.gridRenderer.renderGrid(grid, {
@@ -523,7 +533,12 @@ export class WebGLRendererCore {
       lightSampler: this.lightSampler ?? undefined,
       lightTime,
       litBounds: this.lightBounds,
-      renderAllTiles: !viewportCulled
+      renderAllTiles: !viewportCulled,
+      // Cached resource layers ride terrain's content/light versions (they rebuild together from the
+      // same changed tiles in redrawOverlayNow → setGrid), so a stale glyph can't outlive a terrain edit.
+      ...(chunkLayer
+        ? { chunkLayer, cacheVersion: this.gridVersion, lightVersion: this.lightVersion }
+        : {})
     });
     this.stats.drawCalls++;
     this.stats.vertexCount += stats.tilesRendered * 6;

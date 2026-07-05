@@ -3309,8 +3309,7 @@
     if (tx === 0 && Math.abs(panVelX) < 0.02) panVelX = 0;
     if (ty === 0 && Math.abs(panVelY) < 0.02) panVelY = 0;
     if (panVelX === 0 && panVelY === 0) return;
-    setView(viewX + panVelX * dt, viewY + panVelY * dt);
-    markRenderDirty(); // force a draw even when the scene is frozen (zoomed out)
+    setView(viewX + panVelX * dt, viewY + panVelY * dt); // setView marks the frame dirty (frozen-safe)
   }
 
   function startLoop() {
@@ -3429,6 +3428,9 @@
       // The menu backdrop is a LIVE scene (grazing prey) — never freeze it, even zoomed out.
       const frozen = !menuPreview && (customMapPreview || tileWidth < FREEZE_TILE_PX);
       if (_renderDirty || !frozen || now - lastDrawAt >= FROZEN_SAFETY_MS) {
+        // Resource glyphs (trees/plants) draw at ALL zoom levels: the renderer caches them in chunked
+        // VBOs (rebuilt only on change, same cadence as terrain), so a zoomed-out redraw is cheap and
+        // panning stays smooth — no need to drop them and leave the map barren.
         renderer.setResourceOverlayGrid(_resourceGrid);
         renderer.setResourceTallOverlayGrid(_resourceTallGrid);
         renderer.setBuildingOverlayGrid(buildingOverlayGrid);
@@ -3524,6 +3526,10 @@
   function setView(x: number, y: number) {
     [viewX, viewY] = clampView(x, y);
     renderer?.setViewTileOffset(viewX, viewY);
+    // The view moved → the GL frame must repaint even when the scene is FROZEN (zoomed out). Without
+    // this, mouse-drag / keyboard / follow panning only refreshed on the 400 ms safety net → jumpy.
+    // Zoomed in the loop already draws every frame, so this is a no-op there.
+    markRenderDirty();
     saveCameraState();
     drawDesignations();
   }

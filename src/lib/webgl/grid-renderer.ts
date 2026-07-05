@@ -46,6 +46,10 @@ export interface GridRenderOptions {
   // regenerating tens of thousands of static terrain tiles every single frame.
   // Omit for layers whose content changes every frame (e.g. the pawn overlay).
   cacheVersion?: number;
+  // Which cached chunk set this grid draws into. The static terrain is the default; the resource
+  // overlays (trees/plants — dense, static between edits, same dirty cadence as terrain) reuse the
+  // SAME chunked-cache machinery under their own chunk maps so they're built on change, not per frame.
+  chunkLayer?: 'terrain' | 'resource' | 'resourceTall';
   // Whether any flickering point-light emitters are currently lit. When false,
   // the baked additive light is constant 0 and the terrain cache never rebuilds
   // for lighting; when true it refreshes at ~10 Hz to animate the flicker.
@@ -99,6 +103,11 @@ export class GridRenderer {
   private static readonly CHUNK_EVICT_FRAMES = 240; // ~4s un-drawn → free GL resources
   private static readonly CHUNK_SWEEP_EVERY = 120; // run the eviction sweep this often (frames)
   private terrainChunks: Map<string, TerrainChunk> = new Map();
+  // Resource-overlay chunk caches — same machinery as terrain, one map per glyph layer (short plants +
+  // tall canopy render in separate passes for occlusion ordering). Keyed by the SAME cacheVersion /
+  // lightVersion / chunkDirty as terrain, since redrawOverlayNow rebuilds both from the same changed tiles.
+  private resourceChunks: Map<string, TerrainChunk> = new Map();
+  private resourceTallChunks: Map<string, TerrainChunk> = new Map();
   private terrainFrame = 0; // monotonic frame counter for chunk LRU eviction
   /** DEBUG: how many terrain chunks were (re)built+uploaded in the most recent renderTerrainChunked. */
   chunksRebuiltLastRender = 0;
@@ -149,7 +158,13 @@ export class GridRenderer {
     // grids) keep the full-render + per-frame upload path below — they hold only a
     // handful of cells, so `renderAllTiles` returning every tile is already cheap.
     if (options.cacheVersion !== undefined) {
-      const drawnTiles = this.renderTerrainChunked(grid, options);
+      const chunks =
+        options.chunkLayer === 'resource'
+          ? this.resourceChunks
+          : options.chunkLayer === 'resourceTall'
+            ? this.resourceTallChunks
+            : this.terrainChunks;
+      const drawnTiles = this.renderTerrainChunked(grid, options, chunks);
       this.stats = {
         tilesRendered: drawnTiles,
         tilesCulled: 0,
@@ -215,7 +230,11 @@ export class GridRenderer {
     }
   }
 
-  private renderTerrainChunked(grid: GameGrid, options: GridRenderOptions): number {
+  private renderTerrainChunked(
+    grid: GameGrid,
+    options: GridRenderOptions,
+    chunks: Map<string, TerrainChunk> = this.terrainChunks
+  ): number {
     const CS = GridRenderer.CHUNK_SIZE;
     const m = GridRenderer.CHUNK_MARGIN;
     const cacheVersion = options.cacheVersion ?? 0;
@@ -246,12 +265,13 @@ export class GridRenderer {
           cy,
           cacheVersion,
           lightVersion,
-          frame
+          frame,
+          chunks
         );
       }
     }
 
-    if (frame % GridRenderer.CHUNK_SWEEP_EVERY === 0) this.evictStaleChunks(frame);
+    if (frame % GridRenderer.CHUNK_SWEEP_EVERY === 0) this.evictStaleChunks(frame, chunks);
     this.currentVertexCount = drawnVerts;
     return drawnVerts / 6;
   }
@@ -269,12 +289,13 @@ export class GridRenderer {
     cy: number,
     version: number,
     lightVersion: number,
-    frame: number
+    frame: number,
+    chunks: Map<string, TerrainChunk> = this.terrainChunks
   ): number {
     const gl = this.gl;
     const CS = GridRenderer.CHUNK_SIZE;
     const key = `${cx}:${cy}`;
-    let chunk = this.terrainChunks.get(key);
+    let chunk = chunks.get(key);
     const dirtyStamp = this.chunkDirty.get(key) ?? 0; // ADR-026 per-chunk incremental invalidation
 
     if (
@@ -295,7 +316,7 @@ export class GridRenderer {
           builtDirty: dirtyStamp,
           lastFrame: frame
         };
-        this.terrainChunks.set(key, chunk);
+        chunks.set(key, chunk);
       }
       if (tiles.length === 0) {
         chunk.count = 0; // off-map / empty — keep the entry so we don't rescan until the next bump
@@ -329,15 +350,18 @@ export class GridRenderer {
     return 0;
   }
 
-  /** Free the GL resources of any terrain chunk not drawn within CHUNK_EVICT_FRAMES (bounds memory while panning). */
-  private evictStaleChunks(frame: number): void {
+  /** Free the GL resources of any chunk not drawn within CHUNK_EVICT_FRAMES (bounds memory while panning). */
+  private evictStaleChunks(
+    frame: number,
+    chunks: Map<string, TerrainChunk> = this.terrainChunks
+  ): void {
     const gl = this.gl;
     const maxAge = GridRenderer.CHUNK_EVICT_FRAMES;
-    for (const [key, chunk] of this.terrainChunks) {
+    for (const [key, chunk] of chunks) {
       if (frame - chunk.lastFrame > maxAge) {
         if (chunk.vbo) gl.deleteBuffer(chunk.vbo);
         if (chunk.vao) gl.deleteVertexArray(chunk.vao);
-        this.terrainChunks.delete(key);
+        chunks.delete(key);
       }
     }
   }
