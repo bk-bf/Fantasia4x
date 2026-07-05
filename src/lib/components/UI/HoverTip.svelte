@@ -81,7 +81,13 @@
 </script>
 
 <div class="tip" use:portal style="left:{x + GAP}px; top:{y + GAP}px;">
-  <slot />
+  <!-- Text layer lifted above the day/night+weather overlay (#ambient-tint-legible) while the tip's
+       background + frame are dimmed beneath it (.tip::before, #ambient-tint) — so the tooltip folds
+       under the overlay like the panels/cards instead of floating over it at full brightness. The SVG
+       filters are global-by-id, so they still apply even though this panel is portaled onto <body>. -->
+  <div class="tip-body">
+    <slot />
+  </div>
 </div>
 
 <style>
@@ -94,13 +100,33 @@
     max-height: calc(100vh - 16px);
     overflow-y: auto;
     padding: 5px 7px;
-    background: var(--bg-panel, #11151c);
-    border: 1px solid var(--border-hi, #3a4656);
+    /* Background + frame moved to ::before (dimmed by #ambient-tint); the box itself is transparent so
+       the text layer can be lifted separately. A transparent 1px border keeps the box model. */
+    background: transparent;
+    border: 1px solid transparent;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
     font-family: var(--font-mono);
     font-size: 11px;
     line-height: 1.4;
     color: var(--text);
     pointer-events: none;
+  }
+  /* Dimmed chrome layer: tooltip background + inset frame, darkened with the day/night+weather scene. */
+  .tip::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: var(--bg-panel, #11151c);
+    box-shadow: inset 0 0 0 1px var(--border-hi, #3a4656);
+    filter: url(#ambient-tint);
+    pointer-events: none;
+  }
+  /* Lifted text layer: tooltip contents sit above the dimmed chrome and the overlay — hue-shifted but
+     brightness-preserved (#ambient-tint-legible) so the text stays readable at night / in fog. */
+  .tip-body {
+    position: relative;
+    z-index: 1;
+    filter: url(#ambient-tint-legible);
   }
 </style>

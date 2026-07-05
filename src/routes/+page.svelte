@@ -83,9 +83,10 @@
     const k = l > 1e-4 ? 1 / l : 1;
     return [panelTint[0] * k, panelTint[1] * k, panelTint[2] * k];
   })();
-  $: ambientLegibleMatrix = $dayNightTint
-    ? buildPanelMatrix(legibleTint, panelSaturation)
-    : IDENTITY_MATRIX;
+  // Text uses saturation = 1 (no weather desaturation): the hue shifts with the time-of-day tint and the
+  // brightness is preserved, but the font keeps its COLOUR character instead of washing to muddy grey
+  // under fog/night the way backgrounds do. (Backgrounds still take the full bleak `panelSaturation`.)
+  $: ambientLegibleMatrix = $dayNightTint ? buildPanelMatrix(legibleTint, 1) : IDENTITY_MATRIX;
 
   // Low light deepens the bleakness of already-bleak weather. The extra desaturation is weighted by
   // how washed-out the weather already is (1 - baseSat), so clear skies stay untouched and FOG drains
@@ -133,9 +134,10 @@
     '--border-hi': '#7a5e28',
     '--tab-active': '#c04818'
   };
-  // Text/accent colour tokens (mirror app.css :root). These take the tint's HUE only — luminance is
-  // restored to the original (tintFont) so the font never dims from night/season/weather; its colour
-  // just shifts to fit the lit scene. Keeps all panel/sidebar/nav/tab-screen text legible at all hours.
+  // Text/accent colour tokens (mirror app.css :root). These are tinted with the LEGIBLE (unit-luminance-
+  // normalised) vector so the hue shifts to fit the scene but the brightness is LIFTED above the overlay
+  // — the font never dims from night/season/weather. Keeps all panel/sidebar/nav/tab-screen text legible
+  // at all hours, matching the info card / tooltip text layers (#ambient-tint-legible).
   const FONT_TOKENS: Record<string, string> = {
     '--text': '#d4a840',
     '--text-dim': '#b09030',
@@ -185,7 +187,7 @@
       ([k, v]) => `${k}: ${$dayNightTint ? tintTo(v, panelTint, panelSaturation) : v}`
     ),
     ...Object.entries(FONT_TOKENS).map(
-      ([k, v]) => `${k}: ${$dayNightTint ? tintTo(v, legibleTint, panelSaturation) : v}`
+      ([k, v]) => `${k}: ${$dayNightTint ? tintTo(v, legibleTint, 1) : v}`
     )
   ].join('; ');
 

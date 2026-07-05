@@ -315,7 +315,7 @@
             healthToggle.open = !healthToggle.open;
           }}
         >
-          HEALTH
+          <span class="hud-btn-lbl">HEALTH</span>
         </button>
       {/if}
       {#if model.moodModel && model.selected}
@@ -332,7 +332,7 @@
             moodToggle.open = !moodToggle.open;
           }}
         >
-          MOOD
+          <span class="hud-btn-lbl">MOOD</span>
         </button>
       {/if}
       {#each model.buttons ?? [] as btn (btn.label)}
@@ -346,7 +346,7 @@
             btn.onClick();
           }}
         >
-          {btn.label}
+          <span class="hud-btn-lbl">{btn.label}</span>
         </button>
       {/each}
     </div>
@@ -468,13 +468,13 @@
     gap: 3px;
     flex-shrink: 0;
     pointer-events: auto;
-    /* Buttons are action chips — lifted as a whole (brightness-preserving hue) so they stay prominent
-       and readable above the overlay, matching the card's text layer. */
-    filter: url(#ambient-tint-legible);
   }
+  /* Buttons use the same split as the card box: background + border on ::before (dimmed with the scene
+     via #ambient-tint), the LABEL lifted above the overlay (.hud-btn-lbl, #ambient-tint-legible) so it
+     stays readable while the chip's chrome darkens like every other panel. */
   .hud-btn {
-    background: #2a1a0a;
-    border: 1px solid #6b4a2a;
+    background: transparent;
+    border: 1px solid transparent;
     color: #a07840;
     font-family: var(--font-mono);
     font-size: 11px;
@@ -486,24 +486,48 @@
     z-index: 20;
     white-space: nowrap;
   }
+  .hud-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: #2a1a0a;
+    box-shadow: inset 0 0 0 1px #6b4a2a;
+    filter: url(#ambient-tint);
+    pointer-events: none;
+  }
+  .hud-btn-lbl {
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+    filter: url(#ambient-tint-legible);
+  }
   .hud-btn:hover {
-    border-color: #c8a060;
     color: #c8a060;
   }
+  .hud-btn:hover::before {
+    box-shadow: inset 0 0 0 1px #c8a060;
+  }
   .hud-btn--active {
-    background: #4a2010;
-    border-color: #ee8844;
     color: #ee8844;
   }
+  .hud-btn--active::before {
+    background: #4a2010;
+    box-shadow: inset 0 0 0 1px #ee8844;
+  }
   .hud-btn--active:hover {
-    background: #5a2814;
-    border-color: #ffaa66;
     color: #ffaa66;
+  }
+  .hud-btn--active:hover::before {
+    background: #5a2814;
+    box-shadow: inset 0 0 0 1px #ffaa66;
   }
   /* HEALTH button tint when the entity is damaged (overridden by --active when open). */
   .hud-btn--warn:not(.hud-btn--active) {
-    border-color: #b5532a;
     color: #ee8844;
+  }
+  .hud-btn--warn:not(.hud-btn--active)::before {
+    box-shadow: inset 0 0 0 1px #b5532a;
   }
   /* ── Text lines (description, progress, refund, etc.) ───────── */
   .text-lines {
