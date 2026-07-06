@@ -68,6 +68,9 @@ export interface Mob {
   eatProgress?: number;
   /** Target entity id when in Hunting state. */
   huntTargetId?: string;
+  /** Transient: DroppedItem id of a ground carcass (rotten_carcass) this scavenger is walking to / eating.
+   *  Set only while actively scavenging a carcass off the ground; cleared when eaten, gone, or interrupted. */
+  carcassTargetId?: string;
   /** Tick when the hunter can re-enter Hunting state after a failed hunt. */
   huntCooldownUntil?: number;
   /** Tick when the entity can re-enter Foraging after finding no REACHABLE food tile — stops a

@@ -145,7 +145,7 @@
     "volumeL"          : 3,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -164,7 +164,7 @@
     "volumeL"          : 35,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2328,7 +2328,7 @@
     "volumeL"          : 28,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2346,7 +2346,7 @@
     "volumeL"          : 80,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2364,7 +2364,7 @@
     "volumeL"          : 40,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2382,7 +2382,7 @@
     "volumeL"          : 8,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2400,7 +2400,7 @@
     "volumeL"          : 55,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2418,7 +2418,7 @@
     "volumeL"          : 65,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2436,7 +2436,7 @@
     "volumeL"          : 28,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2454,7 +2454,7 @@
     "volumeL"          : 2.5,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 225,
+    "decaySeconds"     : 450,
     "decaysTo"         : "rotten_carcass"
   },
   // ── Expansion-roster carcasses (DF/DCSS/D&D creatures) ───────────────────────
@@ -2476,7 +2476,7 @@
     "volumeL"          : 72,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2494,7 +2494,7 @@
     "volumeL"          : 150,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2512,7 +2512,7 @@
     "volumeL"          : 48,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2530,7 +2530,7 @@
     "volumeL"          : 18,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 270,
+    "decaySeconds"     : 540,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2548,7 +2548,7 @@
     "volumeL"          : 12,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 270,
+    "decaySeconds"     : 540,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2566,7 +2566,7 @@
     "volumeL"          : 38,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2584,7 +2584,7 @@
     "volumeL"          : 13,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 270,
+    "decaySeconds"     : 540,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2602,7 +2602,7 @@
     "volumeL"          : 85,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2620,7 +2620,7 @@
     "volumeL"          : 42,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2638,7 +2638,7 @@
     "volumeL"          : 60,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2656,7 +2656,7 @@
     "volumeL"          : 6,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 240,
+    "decaySeconds"     : 480,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2674,7 +2674,7 @@
     "volumeL"          : 2.5,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 210,
+    "decaySeconds"     : 420,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2692,7 +2692,7 @@
     "volumeL"          : 16,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 240,
+    "decaySeconds"     : 480,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2710,7 +2710,7 @@
     "volumeL"          : 14,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 240,
+    "decaySeconds"     : 480,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2728,7 +2728,7 @@
     "volumeL"          : 13,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 240,
+    "decaySeconds"     : 480,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2746,7 +2746,7 @@
     "volumeL"          : 24,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2764,7 +2764,7 @@
     "volumeL"          : 42,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2782,7 +2782,7 @@
     "volumeL"          : 50,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 300,
+    "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2800,7 +2800,7 @@
     "volumeL"          : 32,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 270,
+    "decaySeconds"     : 540,
     "decaysTo"         : "rotten_carcass"
   },
   {
@@ -2818,7 +2818,7 @@
     "volumeL"          : 34,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
-    "decaySeconds"     : 270,
+    "decaySeconds"     : 540,
     "decaysTo"         : "rotten_carcass"
   },
   // ── Butchery products ───────────────────────────────────────────────────────
@@ -3780,6 +3780,172 @@
       "staminaCost": 3
     },
     "onHitEffect": {"condition": "ensnared", "chance": 0.45, "durationHours": 0.25, "resist": "blunt_resistance"}
+  },
+  // ── Racial natural weapons (ADR-023) ──────────────────────────────────────
+  // Body weapons granted to PAWNS by supernatural/legendary racial traits (RacialTrait.naturalWeapons),
+  // swung only when unarmed (or forced unarmed by a trait's blocksSlots). Same schema/lookup as creature
+  // natural weapons; unbound (no body-plan `weapons` entry) so they stay always-available on a humanoid.
+  {
+    "id"               : "rending-claws",
+    "audio"            : "slash",
+    "charSpans"        : [ {"sheet": "items", "id": 0} ],
+    "name"             : "Rending Claws",
+    "type"             : "weapon",
+    "category"         : "natural_weapon",
+    "hidden"           : true,
+    "maxDurability"    : 100,
+    "deteriorationRate": 0,
+    "description"      : "Long curved claws that rake flesh open. A devastating unarmed strike that leaves bleeding wounds.",
+    "color"            : "#C8A064",
+    "amount"           : 0,
+    "weightKg"         : 0,
+    "volumeL"          : 0,
+    "weaponProperties" : {
+      "damage"          : 12,
+      "attackSpeed"     : 1,
+      "range"           : 1,
+      "damageType"      : "cutting",
+      "weight"          : 5,
+      "staminaCost"     : 2,
+      "armorPenetration": 0.2,
+      "critMod"         : 0.12
+    },
+    "onHitEffect": {"condition": "bloodletting", "chance": 0.25, "durationHours": 1.5, "resist": "cutting_resistance"}
+  },
+  {
+    "id"               : "goring-horns",
+    "audio"            : "pierce",
+    "charSpans"        : [ {"sheet": "items", "id": 0} ],
+    "name"             : "Goring Horns",
+    "type"             : "weapon",
+    "category"         : "natural_weapon",
+    "hidden"           : true,
+    "maxDurability"    : 100,
+    "deteriorationRate": 0,
+    "description"      : "A lowered head and a driving charge. Heavy horns that punch through and knock the target off their feet.",
+    "color"            : "#D8D0C0",
+    "amount"           : 0,
+    "weightKg"         : 0,
+    "volumeL"          : 0,
+    "weaponProperties" : {
+      "damage"          : 13,
+      "attackSpeed"     : 1,
+      "range"           : 1,
+      "damageType"      : "piercing",
+      "weight"          : 2,
+      "staminaCost"     : 3,
+      "armorPenetration": 0.15,
+      "critMod"         : 0.06
+    },
+    "onHitEffect": {"condition": "knockdown", "chance": 0.2, "durationHours": 0.3, "resist": "blunt_resistance"}
+  },
+  {
+    "id"               : "serpent-fangs",
+    "audio"            : "bite",
+    "charSpans"        : [ {"sheet": "items", "id": 1} ],
+    "name"             : "Serpent Fangs",
+    "type"             : "weapon",
+    "category"         : "natural_weapon",
+    "hidden"           : true,
+    "maxDurability"    : 100,
+    "deteriorationRate": 0,
+    "description"      : "Hollow fangs that sink venom with the bite. A crit-prone piercing strike with a strong chance to envenom.",
+    "color"            : "#7CB342",
+    "amount"           : 0,
+    "weightKg"         : 0,
+    "volumeL"          : 0,
+    "weaponProperties" : {
+      "damage"          : 8,
+      "attackSpeed"     : 1,
+      "range"           : 1,
+      "damageType"      : "piercing",
+      "weight"          : 3,
+      "staminaCost"     : 3,
+      "armorPenetration": 0.15,
+      "critMod"         : 0.08
+    },
+    "onHitEffect": {"condition": "envenomed", "chance": 0.5, "durationHours": 2.5, "resist": "poison_resistance"}
+  },
+  {
+    "id"               : "dragon-claws",
+    "audio"            : "slash",
+    "charSpans"        : [ {"sheet": "items", "id": 0} ],
+    "name"             : "Dragon Claws",
+    "type"             : "weapon",
+    "category"         : "natural_weapon",
+    "hidden"           : true,
+    "maxDurability"    : 100,
+    "deteriorationRate": 0,
+    "description"      : "Great draconic talons that shear through armor and flesh alike, leaving deep bleeding rents.",
+    "color"            : "#B87333",
+    "amount"           : 0,
+    "weightKg"         : 0,
+    "volumeL"          : 0,
+    "weaponProperties" : {
+      "damage"          : 16,
+      "attackSpeed"     : 1,
+      "range"           : 1,
+      "damageType"      : "cutting",
+      "weight"          : 4,
+      "staminaCost"     : 3,
+      "armorPenetration": 0.3,
+      "critMod"         : 0.14
+    },
+    "onHitEffect": {"condition": "bloodletting", "chance": 0.3, "durationHours": 2, "resist": "cutting_resistance"}
+  },
+  {
+    "id"               : "bloodsucking-fangs",
+    "audio"            : "bite",
+    "charSpans"        : [ {"sheet": "items", "id": 1} ],
+    "name"             : "Bloodsucking Fangs",
+    "type"             : "weapon",
+    "category"         : "natural_weapon",
+    "hidden"           : true,
+    "maxDurability"    : 100,
+    "deteriorationRate": 0,
+    "description"      : "A feeding bite that opens the vein and drinks. Little impact, but the wound won't clot and blood is drawn straight off.",
+    "color"            : "#C62828",
+    "amount"           : 0,
+    "weightKg"         : 0,
+    "volumeL"          : 0,
+    "weaponProperties" : {
+      "damage"          : 7,
+      "attackSpeed"     : 1,
+      "range"           : 1,
+      "damageType"      : "piercing",
+      "weight"          : 3,
+      "staminaCost"     : 2,
+      "armorPenetration": 0.1,
+      "critMod"         : 0.05
+    },
+    "onHitEffect": {"condition": "bloodletting", "chance": 0.5, "durationHours": 2, "resist": "piercing_resistance", "bloodDrain": 6}
+  },
+  {
+    "id"               : "flame-breath",
+    "audio"            : "pierce",
+    "charSpans"        : [ {"sheet": "items", "id": 49} ],
+    "name"             : "Flame Breath",
+    "type"             : "weapon",
+    "category"         : "natural_weapon",
+    "hidden"           : true,
+    "maxDurability"    : 100,
+    "deteriorationRate": 0,
+    "description"      : "A gout of dragonfire spat at a single foe — sears on contact and sets them alight. (Pass 1: single-target; the true cone is deferred.)",
+    "color"            : "#FF5722",
+    "amount"           : 0,
+    "weightKg"         : 0,
+    "volumeL"          : 0,
+    "weaponProperties" : {
+      "damage"          : 14,
+      "attackSpeed"     : 1,
+      "range"           : 1,
+      "damageType"      : "fire",
+      "weight"          : 2,
+      "staminaCost"     : 4,
+      "armorPenetration": 0.2,
+      "critMod"         : 0.05
+    },
+    "onHitEffect": {"condition": "burning", "chance": 0.7, "durationHours": 1.5, "resist": "fire_resistance"}
   },
   // ── Phase B: carry containers ─────────────────────────────────────────────
   {

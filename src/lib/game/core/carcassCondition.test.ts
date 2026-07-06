@@ -41,7 +41,7 @@ describe('carcass condition — per-unit rules', () => {
 
 describe('carcass condition — environmental decay over the whole stack (stepItemDecay)', () => {
   it('erodes every unit each tick and rots a unit to decaysTo when its condition hits 0', () => {
-    // rabbit_carcass: decaySeconds 300, decaysTo rotten_carcass. One near-dead unit + two fresh.
+    // rabbit_carcass: decaySeconds 600, decaysTo rotten_carcass. One near-dead unit + two fresh.
     let state = {
       turn: 0,
       droppedItems: [
@@ -58,8 +58,8 @@ describe('carcass condition — environmental decay over the whole stack (stepIt
     } as unknown as GameState;
 
     // Step enough ticks that the 1%-condition unit erodes to 0 and rots, but the fresh units survive
-    // (erosion ≈ 0.0056/tick at 60 tps over the 300s clock → ~180 ticks kills the 1-unit, ~18k a fresh one).
-    for (let i = 0; i < 250; i++) state = itemService.stepItemDecay(state);
+    // (erosion ≈ 0.0028/tick at 60 tps over the 600s clock → ~360 ticks kills the 1-unit, ~36k a fresh one).
+    for (let i = 0; i < 500; i++) state = itemService.stepItemDecay(state);
 
     const carcass = state.droppedItems!.find((d) => d.resourceId === 'rabbit_carcass');
     expect(carcass).toBeDefined();

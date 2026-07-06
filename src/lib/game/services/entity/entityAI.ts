@@ -1,6 +1,6 @@
 // Entity AI / FSM brain — per-tick stepping for hostile mobs and neutral animals (wander, flee,
 // hunt, forage, sleep) plus the feeding sub-steppers. Extracted from EntityService (P-4).
-import type { GameState, Mob, MobState, Pawn } from '../../core/types';
+import type { GameState, Mob, MobState, Pawn, DroppedItem } from '../../core/types';
 import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
 import { getAmbientLight, computeTileLightLevel, weatherSightMul } from '../EnvironmentService';
 import { effectiveVisionRange } from '../../core/vision';
@@ -66,7 +66,9 @@ import {
   FORAGE_COOLDOWN_SECONDS,
   FEEDING_STUCK_SECONDS,
   HUNT_GIVE_UP_SECONDS,
-  WILD_FORAGE_RESOURCE_IDS
+  WILD_FORAGE_RESOURCE_IDS,
+  CARCASS_SCAVENGE_RADIUS,
+  EAT_CARCASS_HUNGER_RESTORE
 } from './entityConstants';
 
 // ENGINE-PERFORMANCE-II §S5: cap how many mobs may be in an ACTIVE live-prey hunt at once, so a
@@ -83,6 +85,34 @@ let _huntSlots = 0;
 // time-based progress (eatProgress) advances by REAL elapsed time, not per-think — otherwise a throttled
 // grazer's "Eating" took N× too long. Module var (same pattern as _huntSlots); defaults to 1 for tests.
 let _thinkDtTicks = 1;
+// The only ground-carcass DroppedItem a mob scavenges: the fully-rotted carcass. Fresh carcasses are
+// still represented by the eatable mob-Corpse entity (scavenged via stepHunting) — so targeting only
+// `rotten_carcass` here means a single kill is never double-eaten (corpse AND drop) in the same window.
+const ROTTEN_CARCASS_ID = 'rotten_carcass';
+// Module-level per-tick accumulator: ground-carcass UNITS eaten this tick, keyed by DroppedItem id.
+// Applied to state.droppedItems after the mob loop (mirrors pendingMeatConsumption's post-loop apply).
+// Module-level — like _huntSlots/_thinkDtTicks — so this one leaf scavenge behaviour needn't thread a
+// new map through stepOne/stepHostile. Reset at the top of stepEntities.
+let _pendingDropConsumption = new Map<string, number>();
+/** Nearest rotten-carcass DroppedItem within CARCASS_SCAVENGE_RADIUS (Chebyshev) of the mob, ranked by
+ *  Manhattan distance (same metric the feeding gate uses for forage/prey). Linear scan of droppedItems,
+ *  gated upstream by hunger + cooldown so it isn't an every-tick cost. Null if none in range. */
+function findNearestCarcassDrop(state: GameState, mob: Mob): DroppedItem | null {
+  const drops = state.droppedItems;
+  if (!drops || drops.length === 0) return null;
+  let best: DroppedItem | null = null;
+  let bd = Infinity;
+  for (const d of drops) {
+    if (d.resourceId !== ROTTEN_CARCASS_ID || (d.quantity ?? 0) <= 0) continue;
+    if (chebyshev(mob.x, mob.y, d.x, d.y) > CARCASS_SCAVENGE_RADIUS) continue;
+    const md = manhattan(mob.x, mob.y, d.x, d.y);
+    if (md < bd) {
+      bd = md;
+      best = d;
+    }
+  }
+  return best;
+}
 function takeHuntSlot(): boolean {
   if (_huntSlots <= 0) return false;
   _huntSlots--;
@@ -253,6 +283,8 @@ export function stepEntities(state: GameState): GameState {
   const pendingDamage = new Map<string, number>();
   // Accumulates meat consumed from corpses this tick (corpseId → fraction eaten).
   const pendingMeatConsumption = new Map<string, number>();
+  // Reset the module-level ground-carcass consumption accumulator for this tick (dropId → units eaten).
+  _pendingDropConsumption = new Map<string, number>();
   // Accumulates grass-tile depletions from foraging animals this tick.
   const pendingTileDepletion: Array<{ x: number; y: number; id: string }> = [];
   // Accumulates mob state changes triggered by other mobs (e.g. prey forced into Attacking).
@@ -397,6 +429,24 @@ export function stepEntities(state: GameState): GameState {
       })
       .filter((d) => !(d.unitConditions && (d.quantity ?? 0) <= 0));
     if (touched) finalState = { ...finalState, droppedItems: drops };
+  }
+
+  // Apply ground-carcass (rotten_carcass) UNITS eaten by scavengers this tick: drop `eaten` whole units
+  // off the stack (top-first, mirroring consumeTop) and cull emptied stacks. Keyed by drop id, so it
+  // never collides with the corpse↔carcass sync above (that keys on `carcass-<mobId>-`).
+  if (_pendingDropConsumption.size > 0 && finalState.droppedItems?.length) {
+    const drops = finalState.droppedItems
+      .map((d) => {
+        const eaten = _pendingDropConsumption.get(d.id);
+        if (!eaten) return d;
+        return {
+          ...d,
+          quantity: Math.max(0, (d.quantity ?? 0) - eaten),
+          unitConditions: d.unitConditions ? d.unitConditions.slice(eaten) : d.unitConditions
+        };
+      })
+      .filter((d) => (d.quantity ?? 0) > 0);
+    finalState = { ...finalState, droppedItems: drops };
   }
 
   // Apply foraging tile depletions IN PLACE + mark them dirty (§D — ADR-002 amendment, like §C
@@ -797,6 +847,11 @@ export function stepHostile(
   // Predators (incl. omnivore predators like goblins/bears) hunt prey & corpses —
   // previously only strict carnivores could, so omnivore predators just starved.
   const canHunt = def.predator || def.diet === 'carnivore';
+  // Scavenging a ground carcass (rotten_carcass drop) — route to the dedicated stepper BEFORE the
+  // generic Eating/Foraging routing below (a scavenger's state is 'Eating' with no huntTargetId, which
+  // would otherwise misfire into stepForaging). The stepper owns the walk, the bite, and threat break-off.
+  if (mob.carcassTargetId) return stepScavengeCarcass(mob, inVision, aggressive, turn, state);
+
   if (mob.state === 'Hunting' || mob.state === 'Eating' || mob.state === 'Foraging') {
     // Snap back to aggro if a pawn enters vision while aggressive.
     if (inVision && aggressive) {
@@ -895,6 +950,13 @@ export function stepHostile(
         : null;
     const preyDist = prey ? manhattan(mob.x, mob.y, prey.x, prey.y) : Infinity;
 
+    // Nearest ground carcass (rotten_carcass drop) a scavenger will eat off the ground — the persistent
+    // food that used to just pile up uneaten. Scavengers only (canScavengeOrHunt).
+    const carcassDrop = canScavengeOrHunt ? findNearestCarcassDrop(state, mob) : null;
+    const carcassDist = carcassDrop
+      ? manhattan(mob.x, mob.y, carcassDrop.x, carcassDrop.y)
+      : Infinity;
+
     const tryHunt = (target: Mob): Mob | null => {
       // §S5: a LIVE-prey hunt is combat — gate it on the concurrent-hunt budget so a hunger wave doesn't
       // engage hundreds at once. Corpse-scavenging (target is a Corpse) is cheap, never gated.
@@ -910,6 +972,18 @@ export function stepHostile(
       return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
     };
     const enterForage = (): Mob => ({ ...mob, state: 'Foraging', stateSince: turn, path: [] });
+
+    // A ground carcass is free, no-combat food (no hunt slot needed) — take it when it's the nearest of
+    // the three sources. The scavenge stepper (dispatched next tick on carcassTargetId) owns the walk/eat.
+    if (carcassDrop && carcassDist <= forageDist && carcassDist <= preyDist) {
+      return {
+        ...mob,
+        state: 'Eating',
+        carcassTargetId: carcassDrop.id,
+        stateSince: turn,
+        path: []
+      };
+    }
 
     // Closest wins; a corpse/prey takes ties so an adjacent corpse isn't abandoned for an equidistant
     // bush. Each branch falls back to the other source when its first choice can't be taken.
@@ -979,6 +1053,27 @@ export function stepHostile(
           inVision.pos,
           state
         );
+      }
+      // Opportunistic hunt: a predator pounces on LIVE prey that has wandered within SIGHT, regardless of
+      // hunger — the old hunger-only trigger let hunters engage too late and starve. Throttled by the hunt
+      // cooldown so the O(prey) scan isn't re-run every tick (the ENGINE-PERFORMANCE O(N²) trap), gated by
+      // the §S5 concurrent-hunt budget (takeHuntSlot); the territory leash still reins in any over-chase.
+      if (!inVision && canHunt && huntCooldownExpired) {
+        const spotted = findNearestPrey(mob, allMobs, canHunt, state.worldMap);
+        if (
+          spotted &&
+          spotted.state !== 'Corpse' &&
+          dist(mob, spotted) <= visionRange &&
+          takeHuntSlot()
+        ) {
+          return { ...mob, state: 'Hunting', stateSince: turn, huntTargetId: spotted.id, path: [] };
+        }
+        // No pounce (nothing live in sight, or the hunt budget was full): back off a jittered interval
+        // before re-scanning — IN PLACE (ADR-002 cold scalar; carried through wanderStep's spread) — so
+        // this prey scan isn't an every-tick cost on every wandering predator.
+        mob.huntCooldownUntil =
+          turn +
+          ticksFromSeconds(HUNT_BUSY_BACKOFF_MIN_S + rng.random() * HUNT_BUSY_BACKOFF_JITTER_S);
       }
       return wanderStep(mob, def, state);
     }
@@ -1537,6 +1632,91 @@ export function stepForaging(
     };
   }
   return { ...mob, path: found.path, pathIndex: 0, nextCellCostLeft: undefined };
+}
+
+/**
+ * Advance a scavenger walking to / eating a ground carcass (a `rotten_carcass` DroppedItem). Mirrors the
+ * corpse-eating flow in stepHunting, but the food is a loose item on the ground rather than a Corpse
+ * entity. Units eaten are recorded in `_pendingDropConsumption` and applied to `state.droppedItems`
+ * after the mob loop. Dispatched from stepHostile whenever `carcassTargetId` is set.
+ */
+function stepScavengeCarcass(
+  mob: Mob,
+  inVision: { pawn: Pawn; pos: { x: number; y: number } } | null,
+  aggressive: boolean,
+  turn: number,
+  state: GameState
+): Mob {
+  // A pawn threat trumps the meal: an aggressive hunter breaks off to engage; others disengage and let
+  // the normal FSM re-decide next tick.
+  if (inVision && aggressive) {
+    return {
+      ...mob,
+      carcassTargetId: undefined,
+      eatProgress: undefined,
+      state: 'Wander',
+      stateSince: turn
+    };
+  }
+  const drop = (state.droppedItems ?? []).find(
+    (d) => d.id === mob.carcassTargetId && (d.quantity ?? 0) > 0
+  );
+  if (!drop) {
+    // Carcass gone (eaten by another scavenger / rotted fully away) — back to wandering.
+    return {
+      ...mob,
+      carcassTargetId: undefined,
+      eatProgress: undefined,
+      state: 'Wander',
+      stateSince: turn,
+      path: []
+    };
+  }
+  // Give up if the carcass can't be reached within the normal hunt window (e.g. across a river), so a
+  // marooned scavenger doesn't fixate on an unreachable pile forever.
+  if (turn - mob.stateSince > ticksFromSeconds(HUNT_GIVE_UP_SECONDS)) {
+    return {
+      ...mob,
+      carcassTargetId: undefined,
+      eatProgress: undefined,
+      state: 'Wander',
+      stateSince: turn,
+      huntCooldownUntil: turn + ticksFromSeconds(HUNT_COOLDOWN_SECONDS),
+      path: []
+    };
+  }
+  // Not yet at the carcass — walk to it (standing on the drop tile counts as "at it").
+  if (chebyshev(mob.x, mob.y, drop.x, drop.y) > 1) {
+    return moveToward({ ...mob, state: 'Eating' as MobState }, { x: drop.x, y: drop.y }, state);
+  }
+  // At the carcass — eat one unit over EAT_CORPSE_SECONDS (same bite cadence as a corpse).
+  const progress = (mob.eatProgress ?? 0) + (_thinkDtTicks * SECONDS_PER_TICK) / EAT_CORPSE_SECONDS;
+  if (progress >= 1) {
+    _pendingDropConsumption.set(drop.id, (_pendingDropConsumption.get(drop.id) ?? 0) + 1);
+    const newHunger = Math.max(0, mob.needs.hunger - EAT_CARCASS_HUNGER_RESTORE);
+    const stillHungry = newHunger > HUNGER_SATED_THRESHOLD;
+    const moreLeft = (drop.quantity ?? 0) - 1 > 0;
+    if (stillHungry && moreLeft) {
+      // Keep gnawing the same pile: reset the bite, hold position, keep the target locked.
+      return {
+        ...mob,
+        eatProgress: undefined,
+        needs: { ...mob.needs, hunger: newHunger, lastMeal: turn },
+        state: 'Eating' as MobState,
+        path: []
+      };
+    }
+    return {
+      ...mob,
+      carcassTargetId: undefined,
+      eatProgress: undefined,
+      needs: { ...mob.needs, hunger: newHunger, lastMeal: turn },
+      state: 'Wander',
+      stateSince: turn,
+      path: []
+    };
+  }
+  return { ...mob, eatProgress: progress, state: 'Eating' as MobState, path: [] };
 }
 
 /**

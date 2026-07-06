@@ -34,13 +34,23 @@ export function targetEntityCount(width: number, height: number): number {
 }
 
 // ── Lair lifecycle (ENTITIES_SPAWNING territory) ───────────────────────────────
-/** Lair maintenance (repopulate emptied lairs, grow new ones) runs once per in-game day — a full-map
+/** Lair maintenance (breed new hunters, grow new lairs) runs once per in-game day — a full-map
  *  lair scan amortised over the day is cheap. */
 export const LAIR_TICK_INTERVAL = ticksFromSeconds(300);
-/** Per-daily-check chance an EMPTIED (pack wiped) but un-destroyed lair re-occupies. ~12 days mean. */
-export const LAIR_REPOP_CHANCE = 0.08;
-/** Per-daily-check chance a NEW lair grows on an eligible grass/bush tile (toward the world cap). */
-export const LAIR_GROW_CHANCE = 0.06;
+/** A lair keeps BREEDING new hunters on its own weekly slot (staggered per-lair, see `lairWeekSlot`)
+ *  regardless of whether its current pack is alive — so a den left unaddressed grows into a threat.
+ *  The weekly breed probability is density-scaled: `LAIR_BREED_BASE * (1 - alive/LAIR_MAX_POP)`, so an
+ *  empty/small den fills reliably while a near-full one rarely adds — they don't flood the map. */
+export const LAIR_BREED_WEEK_DAYS = 7; // in-game days per breeding cycle (one weekly slot per lair)
+export const LAIR_BREED_BASE = 0.7; // weekly breed chance at an EMPTY lair; falls to 0 as it nears cap
+/** Per-lair population ceiling. A neglected, well-fed den can creep up toward this over in-game months/
+ *  years, becoming a real threat; wiping it resets it to a fresh starter pack. */
+export const LAIR_MAX_POP = 10;
+/** Minimum spacing (Chebyshev tiles) between a NEW grown lair and any existing lair — no clusters. */
+export const MIN_LAIR_SPACING = 10;
+/** Per-daily-check chance a NEW lair grows on an eligible grass/bush tile (toward the world cap).
+ *  Tuned to ~1 new lair per in-game month on average, still hard-capped by `maxLairCount`. */
+export const LAIR_GROW_CHANCE = 0.035;
 /** World lair ceiling, area-scaled (~1 per 6000 tiles). Growth tops up toward this after lairs are
  *  destroyed — never beyond it; so the map's danger density self-heals to its intended level. */
 export function maxLairCount(width: number, height: number): number {
@@ -68,7 +78,15 @@ export function populationCaps(
   // so the wilds stay survivable; the rest is prey/neutral wildlife. Tunable.
   return { total, hostile: Math.ceil(total * 0.25), neutral: total };
 }
-export const CORPSE_DECAY_TICKS = ticksFromSeconds(200); // corpse persists ~200s then vanishes
+export const CORPSE_DECAY_TICKS = ticksFromSeconds(400); // corpse persists ~400s (a fully-stripped one is
+// culled immediately in removeDead) — long enough that a scavenger reliably reaches a fresh kill to eat it.
+
+// ── Ground-carcass scavenging (a hungry hunter eats a rotten_carcass DroppedItem off the ground) ──────
+/** How far (Chebyshev tiles) a hungry scavenger will spot and head for a rotten carcass on the ground. */
+export const CARCASS_SCAVENGE_RADIUS = 20;
+/** Hunger restored when a mob finishes eating one unit of a ground carcass — on par with a corpse meal
+ *  (EAT_CORPSE_HUNGER_RESTORE 50), so a scavenged rotten carcass is "normal" nutrition, not a scrap. */
+export const EAT_CARCASS_HUNGER_RESTORE = 45;
 
 // Movement / FSM timings
 /** How long a startled animal freezes in place before it bolts into Fleeing. */

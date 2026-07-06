@@ -94,12 +94,14 @@ export function stepHunger(state: GameState): GameState {
     const def = getCreatureById(mob.creatureId);
     if (!def) continue;
 
-    // Diet affects how fast hunger accrues. `none` (e.g. shadow_wraith) never gets hungry.
+    // Diet affects how fast hunger accrues. `none` (e.g. shadow_wraith) never gets hungry. Carnivores
+    // (the hunters) burn slowest of the eaters: hunting is unreliable, so a fast clock had them starving
+    // between kills — a real meal (a corpse/carcass) then carries them a long way.
     const dietMult =
       def.diet === 'none'
         ? 0
         : def.diet === 'carnivore'
-          ? 1.0
+          ? 0.65
           : def.diet === 'herbivore'
             ? 0.5
             : 0.7; // omnivore
@@ -378,6 +380,10 @@ export function removeDead(state: GameState): GameState {
   const kept = mobs.filter((m) => {
     if (m.health <= 0 && m.state !== 'Corpse') return true; // becomes corpse below
     if (m.state === 'Corpse' && m.diedAt !== undefined) {
+      // A fully-scavenged corpse (no meat left) is culled at once — it's no longer food, so keeping it
+      // to its TTL would only pad the per-tick mobs[] array (the extended CORPSE_DECAY_TICKS buys time
+      // for INTACT kills to be reached, not for stripped ones to linger).
+      if ((m.intactness ?? 1) <= 0) return false;
       return state.turn - m.diedAt < CORPSE_DECAY_TICKS;
     }
     return true;

@@ -24,13 +24,17 @@ import {
   targetEntityCount,
   populationCaps,
   LAIR_TICK_INTERVAL,
-  LAIR_REPOP_CHANCE,
+  LAIR_BREED_WEEK_DAYS,
+  LAIR_BREED_BASE,
+  LAIR_MAX_POP,
+  MIN_LAIR_SPACING,
   LAIR_GROW_CHANCE,
   maxLairCount,
   STARTING_BUBBLE_RADIUS,
   STARTING_BUBBLE_TURNS,
   SEED_HUNGER_GRACE
 } from './entityConstants';
+import { chebyshev } from '../../core/distance';
 
 let idCounter = 0;
 
@@ -341,6 +345,46 @@ function spawnPackAt(
   return out;
 }
 
+/** Spawn `count` new hunters bound to an EXISTING lair — used by weekly growth to enlarge a living den.
+ *  Unlike a fresh pack, every new hunter spreads to nearby walkable land (the den tile is likely already
+ *  occupied by the current pack). */
+function spawnBoundMobs(
+  state: GameState,
+  def: CreatureDefinition,
+  lairX: number,
+  lairY: number,
+  lairId: string,
+  count: number
+): Mob[] {
+  const map = state.worldMap;
+  const range = def.lairRange ?? 40;
+  const out: Mob[] = [];
+  for (let i = 0; i < count; i++) {
+    let tx = lairX;
+    let ty = lairY;
+    const cand = findNearbyWalkable(state, lairX, lairY);
+    if (cand && isSpawnableTile(map[cand.y]?.[cand.x])) {
+      tx = cand.x;
+      ty = cand.y;
+    }
+    const mob = makeMob(def, tx, ty, state.turn, 0);
+    mob.lairId = lairId;
+    mob.lairX = lairX;
+    mob.lairY = lairY;
+    mob.lairRange = range;
+    out.push(mob);
+  }
+  return out;
+}
+
+/** Stable per-lair day-of-week slot (0..LAIR_BREED_WEEK_DAYS-1) from a hash of the lair id, so dens breed
+ *  on staggered days instead of all firing on one synchronized weekly tick. */
+function lairWeekSlot(lairId: string): number {
+  let h = 0;
+  for (let i = 0; i < lairId.length; i++) h = (h * 31 + lairId.charCodeAt(i)) | 0;
+  return ((h % LAIR_BREED_WEEK_DAYS) + LAIR_BREED_WEEK_DAYS) % LAIR_BREED_WEEK_DAYS;
+}
+
 /**
  * Seed one bound pack at every lair tile (resources.jsonc `lair: true`). Each pack is anchored to its
  * lair (stable `lairId`, `lairX/Y`, `lairRange` from the creature def) and stays leashed there — see
@@ -418,21 +462,34 @@ export function tickLairs(state: GameState): GameState {
 
   const byLair = creaturesByLair(lairIds);
   const newMobs: Mob[] = [];
+  const dayIndex = Math.floor(state.turn / LAIR_TICK_INTERVAL);
 
-  // Repopulate emptied lairs.
+  // Breed new hunters. A lair keeps producing its themed hunters on its OWN weekly slot (staggered by a
+  // hash of its id, so dens don't all breed on one synchronized tick) regardless of whether the current
+  // pack is alive. The weekly chance is DENSITY-SCALED — reliable at an empty/small den, ~0 as it nears
+  // LAIR_MAX_POP — so a neglected, well-fed den can creep up toward a real threat while the map as a whole
+  // doesn't flood. An emptied den returns as a fresh starter pack; a living one grows by a single hunter.
   for (const lt of lairTiles) {
-    if ((aliveByLair.get(lt.lairId) ?? 0) > 0) continue;
     if (inStartingBubble(state, lt.x, lt.y)) continue; // stay dormant inside the opening-game bubble
-    if (rng.random() >= LAIR_REPOP_CHANCE) continue;
+    if (dayIndex % LAIR_BREED_WEEK_DAYS !== lairWeekSlot(lt.lairId)) continue; // not this lair's day
+    const alive = aliveByLair.get(lt.lairId) ?? 0;
+    if (alive >= LAIR_MAX_POP) continue; // at the per-den ceiling
+    const breedChance = LAIR_BREED_BASE * (1 - alive / LAIR_MAX_POP);
+    if (rng.random() >= breedChance) continue;
     const cands = byLair.get(lt.resId);
     if (!cands || cands.length === 0) continue;
     const def = cands[Math.floor(rng.random() * cands.length)];
-    newMobs.push(...spawnPackAt(state, def, lt.x, lt.y, lt.lairId));
+    newMobs.push(
+      ...(alive === 0
+        ? spawnPackAt(state, def, lt.x, lt.y, lt.lairId)
+        : spawnBoundMobs(state, def, lt.x, lt.y, lt.lairId, 1))
+    );
   }
 
-  // Grow a new lair toward the world cap.
+  // Grow a NEW lair somewhere on the map (~1/month via LAIR_GROW_CHANCE), toward the world cap and no
+  // closer than MIN_LAIR_SPACING to an existing den.
   if (lairTiles.length < maxLairCount(w, h) && rng.random() < LAIR_GROW_CHANCE) {
-    const placed = tryPlaceNewLair(state);
+    const placed = tryPlaceNewLair(state, lairTiles);
     if (placed) {
       const cands = byLair.get(placed.resId);
       if (cands && cands.length > 0) {
@@ -457,7 +514,10 @@ export function tickLairs(state: GameState): GameState {
 /** Try to place ONE new lair on a random eligible grass/bush tile (a lair def's own spawn subterrains).
  *  Mutates the tile's resources IN PLACE + ships a tile delta (mirrors harvest.ts). Returns the placed
  *  tile, or null if no clean spot was found in a bounded number of tries. */
-function tryPlaceNewLair(state: GameState): { x: number; y: number; resId: string } | null {
+function tryPlaceNewLair(
+  state: GameState,
+  existingLairs: { x: number; y: number }[]
+): { x: number; y: number; resId: string } | null {
   const lairDefs = resourceObjectService.getAll().filter((r) => r.lair);
   if (lairDefs.length === 0) return null;
   const def = lairDefs[Math.floor(rng.random() * lairDefs.length)];
@@ -474,6 +534,8 @@ function tryPlaceNewLair(state: GameState): { x: number; y: number; resId: strin
     if (inStartingBubble(state, x, y)) continue; // no new dens on the doorstep during the first month
     if (!subs.includes(tile.subType)) continue;
     if (!isSpawnableTile(tile)) continue;
+    // Spacing: never grow a den within MIN_LAIR_SPACING (Chebyshev) of an existing one — no clusters.
+    if (existingLairs.some((l) => chebyshev(l.x, l.y, x, y) < MIN_LAIR_SPACING)) continue;
     const res = tile.resources;
     // Keep it clean: don't grow onto a tile already carrying a resource (incl. another lair).
     if (res && Object.keys(res).some((k) => (res[k] ?? 0) > 0)) continue;
