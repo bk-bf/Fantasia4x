@@ -268,6 +268,31 @@ limits, and personal-trait work mods (temperament *is* a work aptitude).
         horns→head, fangs→jaw) so a pawn loses its claws with its hands. bodyMod pills + hover on the
         trait card. Guarded by `traitRegistry.test.ts` (separation + `ANATOMY_NAME_RE` naming law +
         bodyMod payload) and `traitWounds.test.ts` (applier + hostParts data integrity).
+- **Phase 1c — post-audit revisions (2026-07-07, ADR-028):**
+  - [x] **Natural armor: `weightKg` → `carryPenalty` (fraction of carry capacity).** An absolute kg could
+        exceed a weak pawn's whole budget and encumber it forever while bare. Now natural armor REDUCES
+        `getCarryBudget` by a % (iron 0.15 · scaled 0.06 · fur 0.08 · dragon 0.12), clamped so capacity
+        stays ≥40% of base — a bare pawn is never encumbered, it just hauls less. `getCurrentCarryLoad`
+        no longer adds trait weight.
+  - [x] **`mythic` rarity tier** (between epic and legendary) + **tier-weighted selection**: the per-race
+        gate is one cumulative roll, rarest first (legendary 1.5% · mythic 1.5% · epic 3% · rare 9%), so a
+        higher tier is genuinely rarer — **iron skin moved rare→epic** and now lands ~1.1% (rarer than a
+        plain rare, "1 above rare / 2 below legendary"), its 18 armor justified by the higher tier + the
+        carry cost. Cyan card accent.
+  - [x] **Amphibious forked.** The old work-affinity trait → generic **`waterborn`** (common: fishing/
+        forage). New **`amphibious`** is a **mythic bundle** ("dragon-heritage lite" — gilled +
+        swift-swimmer + moist-skinned sub-capabilities, rolled per pawn; new `gilled`/`moist_skinned`
+        conditions).
+  - [x] **squeamish** dropped the nonsensical hunting penalty (hunting = combat) → `butchery 0.75 +
+        caretaking 0.85` (both gore-sensible). **stiff-jointed** renamed **Maladroit** (its "joints" name
+        implied a body mechanic it lacks; `joint` added to the naming-law blocklist).
+  - [x] **Destroyed-wound care bug.** A DESTROYED, no-longer-bleeding part (a lost limb) can't heal or be
+        dressed, yet counted as an untended wound — a medic tended it forever and it festered endlessly.
+        New `Wounds.isUncareable` (permanent OR destroyed+non-bleeding) gates `hasUntendedWound`,
+        `tendPatient`, and the infection loop. A still-bleeding stump is still an emergency.
+  - [x] **Wound-trait hover cites the real side.** The applier flips left/right per pawn, so the trait
+        card (given the pawn on the STATUS tab) resolves the pawn's ACTUAL permanent wound and shows
+        "left eye"; the race view stays side-agnostic ("eye").
 - **Phase 2 (TODO §7):** behavioral / needs / transformation.
 
 ## Locked decisions (2026-07-06)

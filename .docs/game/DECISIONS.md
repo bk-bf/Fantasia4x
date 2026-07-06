@@ -1036,12 +1036,19 @@ data edges.**
   wound tolerance; plus a body-weight delta → blood pool + encumbrance), so `heavy-boned` is `hpMult 1.4`
   on the skeleton, NOT a `+CON/blunt_resistance` fudge. This is the realism-first answer to "an armor/bone
   name must be backed by a body mechanic."
-- **Natural armor IS gear.** The granting condition carries `grantsNaturalArmor` (defense) +
-  `weightKg` + `mode`: `'replace'` occupies its blocked slot and competes best-of like a worn layer
-  (thick fur IS the bodyMid layer); `'stack'` ADDS to the worn soak (scaled hide under a cuirass).
-  Weight feeds `getCurrentCarryLoad` → the staged `encumbered` condition — the slowdown is emergent
-  (load ÷ STR), **never a hand-tuned flat DEX penalty**. The gear tab hovers natural gear with the same
-  `ItemStatTooltip` as real gear.
+- **Natural armor IS gear.** The granting condition carries `grantsNaturalArmor` (defense) + `mode` +
+  a **`carryPenalty`** (0–1): `'replace'` occupies its blocked slot and competes best-of like a worn
+  layer (thick fur IS the bodyMid layer); `'stack'` ADDS to the worn soak (scaled hide under a cuirass).
+  The armor is worn permanently, so it eats a **fraction of carry capacity** (`getCarryBudget` reduced,
+  clamped ≥40% of base) — **not** absolute added kg (rev 2026-07-07: a fixed weight could exceed a weak
+  pawn's whole budget and encumber it forever while bare). A bare pawn is never encumbered; it just
+  hauls less. Rarity is tier-gated so the strong ones are rare (iron skin at **epic**, ~1.1%).
+- **Rarity is tier-weighted.** A `mythic` tier sits between epic and legendary, and the per-race gate is
+  one cumulative roll (rarest first) so a higher tier is genuinely rarer. The Amphibious bundle is
+  mythic (a "dragon-heritage lite"); a plain work-affinity was forked off as the mundane `waterborn`.
+- **Uncareable wounds.** A PERMANENT scar or a DESTROYED non-bleeding part (a lost limb) can't heal or be
+  dressed; `Wounds.isUncareable` gates tending + infection so a lost limb doesn't spin an infinite
+  tend loop or fester endlessly (a still-bleeding stump is still an emergency).
 - **Natural weapons are limb-bound.** A trait's natural weapon lists `hostParts` on its condition
   (claws→hands, horns→head, fangs→jaw); `Combat.pawnNaturalWeaponIds` yields it only while a host part
   survives — a pawn loses its claws with its hands, exactly like a creature's part-gated `weapons`
