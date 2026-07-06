@@ -19,20 +19,25 @@
 
 let _seq = 0;
 
-/** Append ONE line to `.debug/crash.log` synchronously (dev only; a no-op in prod / SSR / no-XHR). */
+/** Append ONE line to `.debug/crash.log` (dev only; a no-op in prod / SSR / no-fetch).
+ *
+ * NON-BLOCKING: a `keepalive` fetch queued in the browser's network stack, so it never stalls the main
+ * thread (an earlier synchronous-XHR version risked ADDING to a freeze — the opposite of the point).
+ * For a FREEZE (which recovers) the request flushes once the thread unblocks; for a hard process kill
+ * nothing survives anyway. In practice the browser's own long-task Violation reporting is the more
+ * reliable signal; this file just adds a durable record for context-loss + JS exceptions. */
 export function crashBreadcrumb(turn: number, message: string): void {
-  // import.meta.env.DEV gates it to the dev server (where /api/log actually writes a file).
-  if (typeof XMLHttpRequest === 'undefined' || !import.meta.env.DEV) return;
+  if (typeof fetch === 'undefined' || !import.meta.env.DEV) return;
   try {
     const t = String(turn ?? 0).padStart(5, '0');
     const line = `[T${t}] [warn] #${++_seq} ${message}`;
-    const xhr = new XMLHttpRequest();
-    // `false` = SYNCHRONOUS: returns only once the server has appendFileSync'd the line, so it survives
-    // a GPU hang / process kill on the very next statement. That guarantee is the whole point.
-    xhr.open('POST', '/api/log', false);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.send(JSON.stringify({ entries: [{ category: 'crash', line }] }));
+    fetch('/api/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entries: [{ category: 'crash', line }] }),
+      keepalive: true
+    }).catch(() => {});
   } catch {
-    /* the breadcrumb must NEVER itself throw or block the game beyond the write attempt */
+    /* the breadcrumb must NEVER itself throw or block the game */
   }
 }
