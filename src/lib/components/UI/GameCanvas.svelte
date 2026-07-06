@@ -6,6 +6,7 @@
   import { wasdPan, debugMode } from '$lib/stores/uiPrefs';
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
   import { crashBreadcrumb } from '$lib/webgl/crashLog.js';
+  import { startFreezeWatchdog, beat, stopFreezeWatchdog } from '$lib/webgl/freezeWatchdog.js';
   import {
     applyTileToGrid,
     applyResourceToGrid,
@@ -3328,6 +3329,7 @@
     else rendererReady.set(false); // a remount must re-init WebGL before the game shows
     if (browser) {
       cancelAnimationFrame(animationId);
+      stopFreezeWatchdog();
       renderer?.dispose();
     }
   });
@@ -3542,6 +3544,10 @@
       // Wrap the whole frame so a JS exception (vs. a GPU hang) also lands in .debug/crash.log with its
       // stack, instead of only surfacing in the console the crash takes down. Rethrown after logging.
       try {
+        // Watchdog heartbeat: mark the main thread alive at the top of every frame. If beats stop,
+        // the off-thread watchdog worker logs the freeze WITH the last phase label below (the only
+        // logger that survives a main-thread freeze — see freezeWatchdog.ts).
+        beat('frame');
         // Real elapsed time drives interpolation so motion is smooth at the display
         // refresh rate regardless of how fast/slow the simulation ticks.
         const now = performance.now();
@@ -3615,6 +3621,7 @@
           _terrainDirty = false;
           _forceTerrainRebuild = false;
           _lastTerrainBuild = now;
+          beat('terrain-rebuild');
           redrawOverlayNow();
         }
         // Snow/ice layer repaint, coalesced on the same cadence (its changes are hourly-sim-driven, so
@@ -3622,6 +3629,7 @@
         if (_snowDirty && now - _lastSnowBuild >= TERRAIN_REBUILD_MIN_MS) {
           _snowDirty = false;
           _lastSnowBuild = now;
+          beat('snow-rebuild');
           repaintSnowNow();
         }
         // Gradual seasonal foliage flip — a budgeted slice of due trees each frame (turn-gated + capped),
@@ -3654,8 +3662,13 @@
               `→ heavy draw START: ${_heavyRenderReason} (prevVerts≈${renderer.getStats().vertexCount}, tile=${tileWidth.toFixed(1)}px)`
             );
           }
+          // The GL draw is the prime freeze suspect (mass re-vertex / GPU watchdog hang). Beat the
+          // exact reason so the watchdog names it if beginFrame/endFrame never returns.
+          beat(`gl-draw${_heavyRenderReason ? ':' + _heavyRenderReason : ''}`, get(gameState).turn);
           renderer.beginFrame();
           renderer.endFrame();
+          // Draw returned — mark idle so a subsequent rAF starvation isn't misattributed to the draw.
+          beat('idle');
           if (_heavyRenderReason) {
             const _hst = renderer.getStats();
             crashBreadcrumb(
@@ -3733,6 +3746,8 @@
         throw _frameErr; // still surface it; the rAF loop stops (it was crashing anyway)
       }
     }
+    // Start the off-thread freeze watchdog alongside the render loop (DEV-only, no-op in prod).
+    startFreezeWatchdog();
     frame();
   }
 
