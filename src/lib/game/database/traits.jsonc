@@ -6,8 +6,11 @@
 //           NEVER shown to the player as a label.
 //
 // Selection (Race.ts): each RACE rolls its identity — 85% mundane-only, ~10% one supernatural, ~5%
-// two, ~2–3% legendary — plus a mundane pool. Each PAWN then draws its guaranteed identity + 1–2 from
-// the race pool + 0–2 personal traits, so same-race pawns differ. Supernatural is a RARE race power.
+// two, ~2–3% legendary — plus a small mundane pool (3–4). Each PAWN then draws AT SPAWN up to 2 racial
+// (guaranteed identity first, then filled from the race pool) + up to 3 personal → ≤5 traits, so
+// same-race pawns differ. Supernatural is a RARE race power. NOTE: a handful of individual afflictions
+// (one-eyed / scarred / trembling-hands / bad-back / hard-of-hearing) live below with scope:"personal"
+// even though they sit under the racial section — the `scope` flag is authoritative, not the grouping.
 //
 // evolvesTo : GROUNDWORK for trait evolution — a mundane base names the higher-tier trait it can grow
 //   into (frost-loving → frost-born, adrenaline → berserker-blood). No runtime mechanic yet.
@@ -169,25 +172,25 @@
         "effects": {"perceptionPenalty": 2}
     },
     {
-        "id": "one-eyed", "scope": "racial", "tier": "mundane",
+        "id": "one-eyed", "scope": "personal", "tier": "mundane",
         "name": "One-Eyed", "description": "Half the field of view and no depth to it — a real handicap at range.",
         "flavorLine": "an old ruin of a socket sits where the second eye should be",
         "effects": {"perceptionPenalty": 2, "workSpeed": {"hunting": 0.9}}
     },
     {
-        "id": "hard-of-hearing", "scope": "racial", "tier": "mundane",
+        "id": "hard-of-hearing", "scope": "personal", "tier": "mundane",
         "name": "Hard-of-Hearing", "description": "Dull of ear — slow to notice what they can't see.",
         "flavorLine": "a shout must be a loud one to reach them",
         "effects": {"perceptionPenalty": 1}
     },
     {
-        "id": "bad-back", "scope": "racial", "tier": "mundane",
+        "id": "bad-back", "scope": "personal", "tier": "mundane",
         "name": "Bad Back", "description": "A trick spine that gives out under load — weak at heavy lifting.",
         "flavorLine": "they carry themselves with the careful stiffness of an old ache",
         "effects": {"strengthPenalty": 2, "workSpeed": {"mining": 0.9}}
     },
     {
-        "id": "trembling-hands", "scope": "racial", "tier": "mundane",
+        "id": "trembling-hands", "scope": "personal", "tier": "mundane",
         "name": "Trembling Hands", "description": "A fine tremor that ruins delicate work.",
         "flavorLine": "their hands never quite come to rest",
         "effects": {"dexterityPenalty": 1, "workSpeed": {"crafting": 0.85}, "workQuality": {"crafting": 0.9}}
@@ -211,7 +214,7 @@
         "effects": {"diseaseResistance": -0.15, "workSpeed": {"butchery": 0.8}}
     },
     {
-        "id": "scarred", "scope": "racial", "tier": "mundane",
+        "id": "scarred", "scope": "personal", "tier": "mundane",
         "name": "Scarred", "description": "Old wounds have toughened the mind if not the flesh — off-putting, but inured to pain.",
         "flavorLine": "a map of old hurts is written across their skin",
         "effects": {"charismaPenalty": 1, "mentalResistance": 0.15}

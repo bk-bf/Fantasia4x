@@ -247,15 +247,17 @@ function generateRaceTraitSets(archetype: Archetype): { guaranteed: Trait[]; poo
       if (t) guaranteed.push(t);
     }
   }
-  // Half the time a signature MUNDANE identity trait, so even plain races read as a "people".
-  if (rng.random() < 0.5) {
+  // Every race reads as a recognizable "people": if no supernatural/legendary rolled, give it ONE
+  // signature MUNDANE identity trait (a supernatural already IS the identity, so don't stack on it).
+  if (guaranteed.length === 0) {
     const t = draw(mundane);
     if (t) guaranteed.push(t);
   }
 
-  // Mundane variety pool each pawn draws 1–2 from.
+  // A SMALL mundane variety pool (3–4) each pawn draws from — keeps a race's identity tight and
+  // legible rather than a grab-bag of nine traits.
   const pool: Trait[] = [];
-  const target = rng.int(6, 9);
+  const target = rng.int(3, 4);
   let guard = 0;
   while (pool.length < target && guard++ < 300) {
     const t = draw(mundane);
@@ -265,10 +267,16 @@ function generateRaceTraitSets(archetype: Archetype): { guaranteed: Trait[]; poo
   return { guaranteed, pool };
 }
 
+/** Spawn caps (ADR-023): at most 2 racial + 3 personal traits, so a fresh pawn carries ≤5 traits.
+ *  (A future evolution/growth system can push past these — this is the AT-SPAWN budget.) */
+const MAX_RACIAL_TRAITS = 2;
+const MAX_PERSONAL_TRAITS = 3;
+
 /**
- * Draw ONE PAWN's combined trait set (ADR-023): the race's guaranteed identity (legendary bundles
- * expand their sub-capabilities PER PAWN, so two dragon-blooded differ) + 1–2 from the race's mundane
- * pool + 0–2 personal traits. Conflict groups (incl. base↔evolution) are honoured across the whole set.
+ * Draw ONE PAWN's combined trait set (ADR-023, capped at spawn): up to {@link MAX_RACIAL_TRAITS}
+ * racial (the race's guaranteed identity first — legendary bundles expand a sub-capability PER PAWN so
+ * two dragon-blooded differ — then filled from the race's mundane pool) + up to
+ * {@link MAX_PERSONAL_TRAITS} personal. Conflict groups (incl. base↔evolution) are honoured throughout.
  */
 export function drawPawnTraits(race: Race): Trait[] {
   const out: Trait[] = [];
@@ -277,38 +285,49 @@ export function drawPawnTraits(race: Race): Trait[] {
     banned.add(id);
     for (const g of CONFLICT_GROUPS) if (g.includes(id)) g.forEach((x) => banned.add(x));
   };
-  const take = (t: Trait) => {
-    if (banned.has(tid(t))) return;
+  let racialCount = 0;
+  const takeRacial = (t: Trait): boolean => {
+    if (racialCount >= MAX_RACIAL_TRAITS || banned.has(tid(t))) return false;
     ban(tid(t));
     out.push(t);
+    racialCount++;
+    return true;
   };
 
-  // Guaranteed racial identity — legendary bundles roll their sub-capabilities per pawn.
+  // Guaranteed racial identity FIRST (within the cap). A legendary bundle's banner takes one slot,
+  // then a rolled sub-capability fills the remaining slot (the rest are acquired later).
   for (const g of race.guaranteedTraits) {
+    if (racialCount >= MAX_RACIAL_TRAITS) break;
     if (g.tier === 'legendary' && g.subCapabilities?.length) {
-      take({ ...g, subCapabilities: undefined }); // banner (name + base effects)
-      const rolled = g.subCapabilities.filter(() => rng.random() < 0.6);
-      if (rolled.length === 0) rolled.push(rng.pick(g.subCapabilities));
-      for (const sub of rolled) take(sub);
+      takeRacial({ ...g, subCapabilities: undefined });
+      const subs = [...g.subCapabilities];
+      while (racialCount < MAX_RACIAL_TRAITS && subs.length > 0) {
+        takeRacial(subs.splice(rng.int(0, subs.length - 1), 1)[0]);
+      }
     } else {
-      take(g);
+      takeRacial(g);
     }
   }
-  // Draw up to `n` distinct unbanned traits from `arr`.
-  const drawN = (arr: Trait[], n: number) => {
-    const bag = arr.filter((t) => !banned.has(tid(t)));
-    let picked = 0;
-    let guard = 0;
-    while (picked < n && bag.length > 0 && guard++ < 100) {
-      const t = bag.splice(rng.int(0, bag.length - 1), 1)[0];
-      if (banned.has(tid(t))) continue;
-      take(t);
-      picked++;
+  // Fill any remaining racial slot(s) from the race's mundane pool (per-pawn variety).
+  {
+    const bag = race.racialTraitPool.filter((t) => !banned.has(tid(t)));
+    while (racialCount < MAX_RACIAL_TRAITS && bag.length > 0) {
+      takeRacial(bag.splice(rng.int(0, bag.length - 1), 1)[0]);
     }
-  };
-  drawN(race.racialTraitPool, rng.int(1, 2)); // per-pawn racial variety
-  const p = rng.random();
-  drawN(PERSONAL(), p < 0.45 ? 0 : p < 0.85 ? 1 : 2); // 0–2 personal quirks
+  }
+
+  // 0–3 personal quirks (weighted toward a couple), honouring personal conflict groups.
+  const r = rng.random();
+  const nPersonal = r < 0.2 ? 0 : r < 0.55 ? 1 : r < 0.85 ? 2 : 3;
+  const pbag = PERSONAL().filter((t) => !banned.has(tid(t)));
+  let personalCount = 0;
+  while (personalCount < nPersonal && pbag.length > 0) {
+    const t = pbag.splice(rng.int(0, pbag.length - 1), 1)[0];
+    if (banned.has(tid(t))) continue;
+    ban(tid(t));
+    out.push(t);
+    personalCount++;
+  }
   return out;
 }
 
