@@ -1048,7 +1048,11 @@ data edges.**
   mythic (a "dragon-heritage lite"); a plain work-affinity was forked off as the mundane `waterborn`.
 - **Uncareable wounds.** A PERMANENT scar or a DESTROYED non-bleeding part (a lost limb) can't heal or be
   dressed; `Wounds.isUncareable` gates tending + infection so a lost limb doesn't spin an infinite
-  tend loop or fester endlessly (a still-bleeding stump is still an emergency).
+  tend loop or fester endlessly (a still-bleeding stump is still an emergency). `recomputeWound` carries
+  `permanent` across merges so a scar can't heal off; the health tab renders it as an "old <type> scar".
+- **Physique gate.** A trait's optional `requires` (weight/height/build predicate) is checked per-pawn
+  in `drawPawnTraits` against the rolled physique, so a physically-contradictory trait can't land
+  (Gaunt never on a 250 kg mass, Stocky never on a wisp).
 - **Natural weapons are limb-bound.** A trait's natural weapon lists `hostParts` on its condition
   (claws→hands, horns→head, fangs→jaw); `Combat.pawnNaturalWeaponIds` yields it only while a host part
   survives — a pawn loses its claws with its hands, exactly like a creature's part-gated `weapons`

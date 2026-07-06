@@ -305,6 +305,17 @@ limits, and personal-trait work mods (temperament *is* a work aptitude).
         no longer names a specific body part (Frail's "thin-boned", Brawny's "muscle", Wan's "blood in
         their bones"…) — matching the §1 naming law, which forbids only body-touching kinds to reference
         anatomy. Applies to the flavor lines too.
+  - [x] **Physique gate (`requires`).** A trait can declare a physical prerequisite over the pawn's ROLLED
+        physique (weight / height / `build` = weight÷height), checked per-pawn in `drawPawnTraits`
+        (`pawnMeetsRequires`), so a physically-contradictory trait can't land: **Gaunt** requires
+        `build ≤ 0.55` (never on a 250 kg mass), **Stocky** requires `build ≥ 0.5` (never on a wisp).
+        `buildPawnFromRace` now rolls physique BEFORE the draw so the gate can read it. Extensible to
+        more traits + stat gates.
+  - [x] **Temperature-resistance traits rebalanced.** At `TEMP_RES_DEG_PER_UNIT = 20`, the old 0.15
+        cold/heat resistance was a ~3°C rounding error. The affinity traits now confer a meaningful
+        ~5–8°C: Frost-Loving/Heat-Hardy 0.15→0.35 (~7°C), Cold-Blooded −0.2→−0.35, Wan −0.15→−0.25. Bumped
+        the TRAIT values (not the global ×20, which would balloon gear/CON/frost-born into the 25° cap);
+        the change also coherently strengthens the trait's combat frost/fire resistance.
 - **Phase 2 (TODO §7):** behavioral / needs / transformation.
 
 ## Locked decisions (2026-07-06)
