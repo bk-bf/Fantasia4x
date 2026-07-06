@@ -669,6 +669,12 @@ export function stepHostile(
   // nocturnalAggro promotes neutral → aggressive at night; otherwise use the data value.
   const effectiveBehaviour = def.nocturnalAggro && isNight ? 'aggressive' : def.behaviour;
   const aggressive = effectiveBehaviour === 'aggressive';
+  // Placid = neither an aggressive hunter nor a territorial charger (aurochs, mammoth, elk…). It
+  // retaliates ONLY against the specific mob that attacked it (its huntTargetId, set by the prey FSM),
+  // and NEVER adopts a bystander pawn as a target. This is the guard that keeps a mammoth that was
+  // gored by a worg from turning on the colony once the worg dies (the Alerted/Attacking pawn-fallbacks
+  // below assume any mob in combat with no live prey is a pawn-hunter — untrue for a retaliating grazer).
+  const placid = !aggressive && !def.territorial;
 
   // Wounded entities flee regardless of state — EXCEPT while Exhausted (winded, physically can't run):
   // re-triggering Fleeing there drains the last dregs of stamina and bounces straight back to Exhausted,
@@ -993,7 +999,9 @@ export function stepHostile(
           p.position &&
           adjacent(mob, p.position)
       );
-      if (adjPawn) return { ...mob, state: 'Attacking', stateSince: turn };
+      // Placid grazers never escalate on a bystander pawn — they only fight the attacker they locked
+      // onto in the prey FSM (handled in Attacking/Hunting). An adjacent colonist is ignored here.
+      if (adjPawn && !placid) return { ...mob, state: 'Attacking', stateSince: turn };
       // Territorial leash: a NON-aggressive charger (neutral game — boar/aurochs/mammoth defending its
       // space) gives up once IT has strayed past the short TERRITORIAL_LEASH from where the charge began
       // (chaseAnchor), then heads back. Anchoring to the START tile — not the live pawn distance — is
@@ -1063,6 +1071,25 @@ export function stepHostile(
         // Prey broke contact — resume the hunt against IT (not the nearest pawn).
         return { ...mob, state: 'Hunting', stateSince: turn };
       }
+      // The locked prey (a MOB) is dead / stripped to a corpse / vanished. A placid grazer retaliates
+      // ONLY against the specific thing that attacked it. If that attacker was a MOB (e.g. a worg that
+      // has now died), it stands down to grazing rather than falling through to the nearest-pawn
+      // fallback and adopting a bystander colonist — the mammoth-wipes-the-colony bug. A grazer whose
+      // attacker is a PAWN (huntTargetId names a live colonist hunting it) is exempt: it keeps defending
+      // itself against that pawn via the fallback below. Real predators / territorial chargers also
+      // continue to the pawn engagement.
+      const attackerIsPawn =
+        mob.huntTargetId != null && state.pawns.some((p) => p.id === mob.huntTargetId);
+      if (placid && !attackerIsPawn)
+        return {
+          ...mob,
+          state: def.behaviour === 'passive' ? 'Grazing' : 'Wander',
+          stateSince: turn,
+          huntTargetId: undefined,
+          chaseAnchorX: undefined,
+          chaseAnchorY: undefined,
+          alertedPawn: undefined
+        };
       // Pawn engagement (or the prey just died / vanished): fall back to pawn-based logic, skipping
       // downed pawns unless we're a hungry finisher. No engageable pawn (e.g. our target just collapsed
       // and we won't finish it) → leave the body and wander; out of reach → re-close via Alerted.

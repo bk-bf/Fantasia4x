@@ -429,6 +429,41 @@ describe('prey reacts to a pawn hunter (same circuits as predator-prey)', () => 
     expect(state.mobs![0].state).toBe('Wander');
   });
 
+  it('a placid mammoth whose MOB attacker died stands down — never turns on a bystander pawn', () => {
+    // Colony-wipe repro: a worg gored the mammoth, so the prey FSM locked its huntTargetId onto the
+    // worg and forced it into Attacking (legit self-defence). The worg then died and vanished from the
+    // mob list. The mammoth (neutral + territorial:false → placid) must NOT inherit the nearest
+    // colonist as a fresh target via the pawn fallback — it stands down to grazing/wander and clears
+    // its target. A pawn that never touched it is off-limits.
+    const mammoth = makeAnimal('woolly_mammoth', {
+      state: 'Attacking',
+      huntTargetId: 'dead-worg' // attacker is gone from the mob list
+    });
+    const bystander = makeHunter({ currentState: 'Idle' }); // adjacent colonist, NOT the attacker
+    let state = stateWith([mammoth], [bystander]);
+    let everHostile = false;
+    for (let t = 1; t <= 10; t++) {
+      state = entityService.stepEntities({ ...state, turn: t });
+      const s = state.mobs![0].state;
+      if (s === 'Attacking' || s === 'Alerted') everHostile = true;
+    }
+    expect(everHostile).toBe(false);
+    expect(state.mobs![0].huntTargetId).toBeUndefined();
+  });
+
+  it('…but a placid mammoth a PAWN is hunting still defends itself against that pawn', () => {
+    // The stand-down is scoped to a lost MOB attacker. If the attacker IS a live colonist (huntTargetId
+    // names the pawn hunting it), the grazer keeps fighting back while that pawn is adjacent — hunting a
+    // mammoth still has consequences.
+    const mammoth = makeAnimal('woolly_mammoth', {
+      state: 'Attacking',
+      huntTargetId: 'hunter' // the adjacent pawn IS the attacker
+    });
+    let state = stateWith([mammoth], [makeHunter()]);
+    state = entityService.stepEntities({ ...state, turn: 1 });
+    expect(state.mobs![0].state).toBe('Attacking');
+  });
+
   it('a HUNGRY predator DOES finish off an adjacent collapsed pawn', () => {
     // Hungry wolf (carnivore predator) already engaged beside a downed pawn → it presses the attack.
     const wolf = makeAnimal('wolf', {
