@@ -189,7 +189,8 @@
             "safe"        : 100,
             "rateCritical": 0.0002,
             "rateMax"     : 0.0005,
-            "recovery"    : 0.0003,
+            // 1% severity recovered per in-game 30 min: 1 day = 300s → 30 min = 6.25s → 0.01/6.25.
+            "recovery"    : 0.0016,
             "onsetDelay"  : 300
         },
         "stages": [
