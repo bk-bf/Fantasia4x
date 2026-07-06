@@ -55,7 +55,7 @@ combat. One schema covers every example.
 | Tier             | Rarity (target)          | Payload                                                        |
 | ---------------- | ------------------------ | ------------------------------------------------------------- |
 | **mundane**      | majority (1–3 per race)  | small stat trade-offs, **incl. negatives** — the contrast layer |
-| **supernatural** | rare (~30% one, ~5% two) | ONE capability: natural weapon OR armor OR on-hit proc OR passive |
+| **supernatural** | rare (~10% one, ~5% two) | ONE capability: natural weapon OR armor OR on-hit proc OR passive |
 | **legendary**    | very rare (~2–3%)        | a *bundle* of sub-capabilities, **each rolled independently**  |
 
 Selection rewrite ([`generateRacialTraits`](../../../src/lib/game/core/Race.ts)): always roll
