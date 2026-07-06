@@ -20,16 +20,15 @@
     guaranteedCount?: number;
   } = $props();
 
-  // ── Rarity colour (tier → rarities.jsonc) ──────────────────────────────────
+  // ── Rarity colour + label (the trait's `rarity` IS a rarities.jsonc id) ─────
+  const RARITIES = raritiesData as { id: string; name: string; color: string }[];
   const RARITY_COLOR: Record<string, string> = Object.fromEntries(
-    (raritiesData as { id: string; color: string }[]).map((r) => [r.id, r.color])
+    RARITIES.map((r) => [r.id, r.color])
   );
-  const TIER_RARITY: Record<string, string> = {
-    mundane: 'common',
-    supernatural: 'epic',
-    legendary: 'legendary'
-  };
-  const rarityColor = (t: Trait) => RARITY_COLOR[TIER_RARITY[t.tier ?? 'mundane']] ?? '#9E9E9E';
+  const RARITY_LABEL: Record<string, string> = Object.fromEntries(
+    RARITIES.map((r) => [r.id, r.name])
+  );
+  const rarityColor = (t: Trait) => RARITY_COLOR[t.rarity ?? 'common'] ?? '#9E9E9E';
 
   const STAT_ABBR: Record<string, string> = {
     strength: 'STR',
@@ -55,11 +54,6 @@
     amulet: 'Amulet',
     ring: 'Ring',
     ring2: 'Ring'
-  };
-  const RARITY_LABEL: Record<string, string> = {
-    mundane: 'Common',
-    supernatural: 'Supernatural',
-    legendary: 'Legendary'
   };
 
   // A pill = a short LABEL + a VALUE, exactly like the health-tab StatPills (e.g. "STR +2").
@@ -212,7 +206,7 @@
   <HoverTip x={hovered.x} y={hovered.y}>
     <div class="tip-name" style="color: {rarityColor(t)}">{t.name}</div>
     <div class="tip-meta">
-      {RARITY_LABEL[t.tier ?? 'mundane']} · {t.scope === 'personal' ? 'personal' : 'racial'} trait
+      {RARITY_LABEL[t.rarity ?? 'common']} · {t.scope === 'personal' ? 'personal' : 'racial'} trait
     </div>
     <div class="tip-desc">{t.description}</div>
     {#if t.flavorLine}<div class="tip-flavor">“{t.flavorLine}”</div>{/if}

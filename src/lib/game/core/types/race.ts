@@ -39,9 +39,19 @@ export interface Trait {
    *  `racial`: physiology drawn from a race's pool (may be a shared identity trait).
    *  `personal`: temperament/aptitude an INDIVIDUAL pawn carries regardless of race. */
   scope?: 'racial' | 'personal';
-  /** INTERNAL rarity tier controlling SELECTION only — never surfaced as a user-facing label.
-   *  Absent ⇒ `mundane`. `supernatural`/`legendary` are rare race-identity powers. */
-  tier?: 'mundane' | 'supernatural' | 'legendary';
+  /** Rarity on the `rarities.jsonc` scale (TRAIT-SYSTEM-V2 §2). Absent ⇒ `common`. It is a BUDGET:
+   *  how many attribute categories a trait may touch and its polarity — common/uncommon are the mundane
+   *  pool, rare/epic are the rare race-identity capabilities, legendary is a rolled bundle. It also
+   *  drives the trait-card accent colour. */
+  rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  /** Trait category (TRAIT-SYSTEM-V2 §1) — determines the payload shape + validator path:
+   *  `stat` (core-stat deltas) · `attribute` (derived stats.jsonc, breadth gated by rarity) ·
+   *  `naturalGear` (a natural weapon/armor condition) · `passive` (aura/affinity/proc condition) ·
+   *  `wound` (a real injury at generation). Reserved (TODO): `behavioral` · `needs` · `transformation`. */
+  kind?: 'stat' | 'attribute' | 'naturalGear' | 'passive' | 'wound';
+  /** `wound`-kind payload (TRAIT-SYSTEM-V2 §4): injuries applied at pawn-gen (one-eyed → destroyed eye).
+   *  Capped non-lethal by the applier. `part` is a limbmap part id. (Applier is a follow-on slice.) */
+  wounds?: Array<{ part: string; severity: 'minor' | 'serious' | 'critical' | 'destroyed' }>;
   /** GROUNDWORK for trait evolution (not yet a runtime mechanic): the id of the higher-tier trait this
    *  one can grow into — e.g. mundane `frost-loving` → supernatural `frost-born`, `adrenaline` →
    *  `berserker-blood`. Lets a future system upgrade a pawn's trait along its line. */

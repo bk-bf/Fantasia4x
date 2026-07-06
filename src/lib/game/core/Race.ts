@@ -200,6 +200,8 @@ function generatePhysicalTraits(archetype: Archetype): Race['physicalTraits'] {
 const RACIAL = () => TRAIT_DATABASE.filter((t) => (t.scope ?? 'racial') === 'racial');
 const PERSONAL = () => TRAIT_DATABASE.filter((t) => t.scope === 'personal');
 const tid = (t: Trait) => t.id ?? t.name;
+/** common/uncommon are the "mundane" variety pool; rare/epic/legendary are the rare identity powers. */
+const isMundaneRarity = (r: Trait['rarity']) => (r ?? 'common') === 'common' || r === 'uncommon';
 
 /**
  * A RACE's trait identity (ADR-023, per-race rarity). Rolls the spec's rarity ONCE per race —
@@ -209,11 +211,11 @@ const tid = (t: Trait) => t.id ?? t.name;
  */
 function generateRaceTraitSets(archetype: Archetype): { guaranteed: Trait[]; pool: Trait[] } {
   const racial = RACIAL();
-  const byTier = (tier: NonNullable<Trait['tier']>) =>
-    racial.filter((t) => (t.tier ?? 'mundane') === tier);
-  const mundane = byTier('mundane');
-  const supernatural = byTier('supernatural');
-  const legendary = byTier('legendary');
+  // Rarity CLASSES (TRAIT-SYSTEM-V2 §2): common/uncommon = the mundane variety pool; rare/epic = the
+  // rare race-identity CAPABILITY; legendary = a rolled bundle.
+  const mundane = racial.filter((t) => isMundaneRarity(t.rarity));
+  const capability = racial.filter((t) => t.rarity === 'rare' || t.rarity === 'epic');
+  const legendary = racial.filter((t) => t.rarity === 'legendary');
   const themed = new Set(archetype.traits);
   const banned = new Set<string>();
   const ban = (id: string) => {
@@ -235,20 +237,20 @@ function generateRaceTraitSets(archetype: Archetype): { guaranteed: Trait[]; poo
   };
 
   const guaranteed: Trait[] = [];
-  // Rarity gate (per race): legendary is rarest; else a supernatural gate; else mundane-only.
+  // Rarity gate (per race): legendary is rarest; else a rare-capability gate; else mundane-only.
   if (legendary.length > 0 && rng.random() < 0.025) {
     const t = draw(legendary);
     if (t) guaranteed.push(t);
   } else {
     const s = rng.random();
-    const numSuper = s < 0.1 ? 1 : s < 0.15 ? 2 : 0; // ~10% one, ~5% two
-    for (let i = 0; i < numSuper; i++) {
-      const t = draw(supernatural);
+    const numCap = s < 0.1 ? 1 : s < 0.15 ? 2 : 0; // ~10% one, ~5% two
+    for (let i = 0; i < numCap; i++) {
+      const t = draw(capability);
       if (t) guaranteed.push(t);
     }
   }
-  // Every race reads as a recognizable "people": if no supernatural/legendary rolled, give it ONE
-  // signature MUNDANE identity trait (a supernatural already IS the identity, so don't stack on it).
+  // Every race reads as a recognizable "people": if no capability/legendary rolled, give it ONE
+  // signature MUNDANE identity trait (a capability already IS the identity, so don't stack on it).
   if (guaranteed.length === 0) {
     const t = draw(mundane);
     if (t) guaranteed.push(t);
@@ -298,7 +300,7 @@ export function drawPawnTraits(race: Race): Trait[] {
   // then a rolled sub-capability fills the remaining slot (the rest are acquired later).
   for (const g of race.guaranteedTraits) {
     if (racialCount >= MAX_RACIAL_TRAITS) break;
-    if (g.tier === 'legendary' && g.subCapabilities?.length) {
+    if (g.rarity === 'legendary' && g.subCapabilities?.length) {
       takeRacial({ ...g, subCapabilities: undefined });
       const subs = [...g.subCapabilities];
       while (racialCount < MAX_RACIAL_TRAITS && subs.length > 0) {
@@ -470,8 +472,7 @@ function pickFlavorLine(traits: Trait[]): string | null {
   if (withLine.length === 0) return null;
   const special = withLine.filter(
     (t) =>
-      t.tier === 'supernatural' ||
-      t.tier === 'legendary' ||
+      !isMundaneRarity(t.rarity) ||
       t.effects.blunt_resistance != null ||
       t.effects.cutting_resistance != null ||
       t.effects.piercing_resistance != null ||

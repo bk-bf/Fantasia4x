@@ -1,128 +1,132 @@
-// Trait Database (ADR-023). ONE list of traits, discriminated by two flags:
-//   scope : "racial"  — physiology drawn from a RACE's pool (mundane) or its identity (supernatural/
-//                        legendary). Feeds Race.generateRaceTraitSets.
-//           "personal"— temperament/aptitude an INDIVIDUAL pawn carries regardless of race.
-//   tier  : "mundane" (default) | "supernatural" | "legendary" — INTERNAL rarity for selection only,
-//           NEVER shown to the player as a label.
+// Trait Database (ADR-023 · TRAIT-SYSTEM-V2). ONE list, each trait tagged with:
+//   scope  : "racial" (physiology, drawn from a RACE's pool / identity) | "personal" (temperament, an
+//            INDIVIDUAL pawn carries regardless of race). NOTE: a few individual afflictions (one-eyed /
+//            scarred / trembling-hands / bad-back / hard-of-hearing) sit under the racial section but
+//            are scope:"personal" — the flag is authoritative, not the grouping.
+//   rarity : rarities.jsonc scale — common | uncommon | rare | epic | legendary. A BUDGET (§2): how
+//            many attribute categories it may touch + polarity. common/uncommon = the mundane pool;
+//            rare/epic = a rare race-identity CAPABILITY; legendary = a rolled bundle. Drives the card
+//            accent colour; NOT shown as a naked "supernatural" label.
+//   kind   : "stat" (core-stat deltas only) | "attribute" (derived stats.jsonc) | "naturalGear"
+//            (weapon/armor via a selfCondition) | "passive" (aura/affinity/proc condition) | "wound"
+//            (real injury at gen — applier is a follow-on). Reserved TODO: behavioral/needs/transformation.
+//   Enforced by traitRegistry.test.ts.
 //
-// Selection (Race.ts): each RACE rolls its identity — 85% mundane-only, ~10% one supernatural, ~5%
-// two, ~2–3% legendary — plus a small mundane pool (3–4). Each PAWN then draws AT SPAWN up to 2 racial
-// (guaranteed identity first, then filled from the race pool) + up to 3 personal → ≤5 traits, so
-// same-race pawns differ. Supernatural is a RARE race power. NOTE: a handful of individual afflictions
-// (one-eyed / scarred / trembling-hands / bad-back / hard-of-hearing) live below with scope:"personal"
-// even though they sit under the racial section — the `scope` flag is authoritative, not the grouping.
+// Selection (Race.ts): each RACE rolls its identity — ~85% mundane-only, ~15% a rare/epic capability,
+// ~2.5% legendary — plus a small mundane pool (3–4). Each PAWN draws AT SPAWN up to 2 racial (guaranteed
+// identity first, then the race pool) + up to 3 personal → ≤5 traits, so same-race pawns differ.
 //
-// evolvesTo : GROUNDWORK for trait evolution — a mundane base names the higher-tier trait it can grow
-//   into (frost-loving → frost-born, adrenaline → berserker-blood). No runtime mechanic yet.
+// evolvesTo : groundwork for trait evolution — a base names the higher-rarity trait it grows into
+//   (frost-loving → frost-born, adrenaline → berserker-blood). No runtime mechanic yet.
 //
 // effects keys (consumed): stat *Bonus/*Penalty (pawn-gen); workSpeed/workYield/workQuality (per
 //   work-category maps or {"all": x}); fire/cold/poison/disease/mental/lightning/shadow/wetness-
-//   Resistance + healRate (added on top of the matching stat); the three physical *_resistance keys
-//   (combat mitigation); nightVision (core/vision.ts). "selfCondition" links a supernatural/legendary
-//   trait to its permanent condition PILL (which carries grantsNaturalWeapon/grantsNaturalArmor).
-//   "blocksSlots"/"onHitEffect"/"weaponBonus"/"subCapabilities" are the ADR-023 additions.
+//   Resistance + healRate (added on top of the matching stat); the three physical *_resistance keys;
+//   nightVision. "selfCondition" links a capability trait to its permanent condition PILL (which carries
+//   grantsNaturalWeapon/grantsNaturalArmor). "blocksSlots"/"onHitEffect"/"weaponBonus"/"subCapabilities".
+//   §6 re-tune: illogical work bonuses + redundant flat stats on rare traits removed (no gamification).
 [
     // ══ RACIAL · MUNDANE — the physiology majority (small quirks, many negative) ═══
     // — small positives / trade-offs —
     {
-        "id": "sturdy", "scope": "racial", "tier": "mundane",
+        "id": "sturdy", "scope": "racial", "rarity": "common", "kind": "stat",
         "name": "Sturdy", "description": "Simply hardy — a body that holds up to hard use.",
         "flavorLine": "hard work and hard weather leave little mark on them",
         "effects": {"constitutionBonus": 2}
     },
     {
-        "id": "stocky", "scope": "racial", "tier": "mundane",
+        "id": "stocky", "scope": "racial", "rarity": "common", "kind": "stat",
         "name": "Stocky", "description": "Short, broad and heavy-boned — strong in the trunk, slow in the hand.",
         "flavorLine": "they are built low and broad, planted like fence-posts",
         "effects": {"constitutionBonus": 2, "dexterityPenalty": 1}
     },
     {
-        "id": "rangy", "scope": "racial", "tier": "mundane",
+        "id": "rangy", "scope": "racial", "rarity": "common", "kind": "stat",
         "name": "Rangy", "description": "Long-limbed and light — quick and reaching, but easily worn down.",
         "flavorLine": "all reach and sinew, they move with a loose, long-boned ease",
         "effects": {"dexterityBonus": 2, "constitutionPenalty": 1}
     },
     {
-        "id": "strong-backed", "scope": "racial", "tier": "mundane",
+        "id": "strong-backed", "scope": "racial", "rarity": "common", "kind": "stat",
         "name": "Strong-Backed", "description": "Powerful through the shoulders and spine.",
         "flavorLine": "they shoulder loads that would fold a lesser back",
-        "effects": {"strengthBonus": 2, "workSpeed": {"mining": 1.1}}
+        "effects": {"strengthBonus": 2}
     },
     {
-        "id": "keen-eyed", "scope": "racial", "tier": "mundane",
+        "id": "keen-eyed", "scope": "racial", "rarity": "common", "kind": "stat",
         "name": "Keen-Eyed", "description": "Sharp-sighted, missing little at a distance.",
         "flavorLine": "little escapes their eye across an open field",
         "effects": {"perceptionBonus": 2}
     },
     {
-        "id": "bright", "scope": "racial", "tier": "mundane",
+        "id": "bright", "scope": "racial", "rarity": "common", "kind": "stat",
         "name": "Bright", "description": "Quick to grasp and reason — though never robust with it.",
         "flavorLine": "understanding comes to them quickly, almost before the asking",
         "effects": {"intelligenceBonus": 2, "constitutionPenalty": 1}
     },
     {
-        "id": "thick-skinned", "scope": "racial", "tier": "mundane",
+        "id": "thick-skinned", "scope": "racial", "rarity": "common", "kind": "attribute",
         "name": "Thick-Skinned", "description": "Tough, calloused hide that shrugs off scrapes.",
         "flavorLine": "their weathered hide takes a cut without much complaint",
         "effects": {"cutting_resistance": 0.1, "blunt_resistance": 0.1},
         "evolvesTo": "scaled-hide"
     },
     {
-        "id": "feathered", "scope": "racial", "tier": "mundane",
+        "id": "feathered", "scope": "racial", "rarity": "common", "kind": "attribute",
         "name": "Feathered", "description": "Light down for insulation and grace.",
         "flavorLine": "a down of fine feathers softens their every movement",
-        "effects": {"dexterityBonus": 2, "constitutionPenalty": 1, "coldResistance": 0.15, "workSpeed": {"foraging": 1.1}}
+        "effects": {"dexterityBonus": 2, "constitutionPenalty": 1, "coldResistance": 0.15}
     },
     {
-        "id": "amphibious", "scope": "racial", "tier": "mundane",
+        "id": "amphibious", "scope": "racial", "rarity": "common", "kind": "attribute",
         "name": "Amphibious", "description": "Equally at home on land and in water.",
         "flavorLine": "water holds no fear for them; they breathe the shallows like air",
         "effects": {"constitutionBonus": 1, "workSpeed": {"fishing": 1.4, "foraging": 1.1}}
     },
     {
-        "id": "marsh-dweller", "scope": "racial", "tier": "mundane",
+        "id": "marsh-dweller", "scope": "racial", "rarity": "common", "kind": "attribute",
         "name": "Marsh Dweller", "description": "Bred in fetid swamps, inured to rot and fever.",
         "flavorLine": "fever and foul water that fell other folk barely slow them",
         "effects": {"constitutionBonus": 1, "poisonResistance": 0.2, "diseaseResistance": 0.2, "workYield": {"foraging": 1.15}}
     },
     // — evolution BASES (mundane seeds of a supernatural, ADR-023 evolvesTo) —
     {
-        "id": "frost-loving", "scope": "racial", "tier": "mundane",
+        "id": "frost-loving", "scope": "racial", "rarity": "uncommon", "kind": "attribute",
         "name": "Frost-Loving", "description": "Takes to the cold — comfortable where others shiver, but wilting in real heat.",
         "flavorLine": "a hard frost is to them no more than a crisp morning",
         "effects": {"coldResistance": 0.15, "fireResistance": -0.1},
         "evolvesTo": "frost-born"
     },
     {
-        "id": "warm-blooded", "scope": "racial", "tier": "mundane",
+        "id": "warm-blooded", "scope": "racial", "rarity": "uncommon", "kind": "attribute",
         "name": "Warm-Blooded", "description": "Runs hot — untroubled by heat, but quick to feel a chill.",
         "flavorLine": "the sun's worst never seems to trouble them",
         "effects": {"fireResistance": 0.15, "coldResistance": -0.1},
         "evolvesTo": "ever-warm"
     },
     {
-        "id": "adrenaline", "scope": "racial", "tier": "mundane",
+        "id": "adrenaline", "scope": "racial", "rarity": "uncommon", "kind": "attribute",
         "name": "Adrenaline", "description": "A quick fight-or-flight surge — a little stronger in a scrap, a little rasher.",
         "flavorLine": "danger sharpens rather than freezes them",
         "effects": {"strengthBonus": 1, "workSpeed": {"hunting": 1.1}},
         "evolvesTo": "berserker-blood"
     },
     {
-        "id": "heavy-boned", "scope": "racial", "tier": "mundane",
+        "id": "heavy-boned", "scope": "racial", "rarity": "uncommon", "kind": "attribute",
         "name": "Heavy-Boned", "description": "Dense, weighty bone — takes a knock well, but slow with it.",
         "flavorLine": "there is a solid, planted heft to their every step",
         "effects": {"constitutionBonus": 1, "blunt_resistance": 0.15, "dexterityPenalty": 1},
         "evolvesTo": "stone-bones"
     },
     {
-        "id": "night-owl", "scope": "racial", "tier": "mundane",
+        "id": "night-owl", "scope": "racial", "rarity": "uncommon", "kind": "attribute",
         "name": "Night-Owl", "description": "Sees passably by starlight; a little slow in the glare of noon.",
         "flavorLine": "the dark holds no terror for them",
         "effects": {"nightVision": 0.35},
         "evolvesTo": "nocturnal"
     },
     {
-        "id": "fast-healer", "scope": "racial", "tier": "mundane",
+        "id": "fast-healer", "scope": "racial", "rarity": "uncommon", "kind": "attribute",
         "name": "Fast-Healer", "description": "Cuts and scrapes close a touch quicker than most.",
         "flavorLine": "their small hurts are gone almost before they are noticed",
         "effects": {"healRate": 0.2},
@@ -130,103 +134,103 @@
     },
     // — mundane NEGATIVES (the contrast layer; weighted common) —
     {
-        "id": "frail", "scope": "racial", "tier": "mundane",
+        "id": "frail", "scope": "racial", "rarity": "common", "kind": "stat",
         "name": "Frail", "description": "Thin-boned and easily tired — the body gives out early.",
         "flavorLine": "there is a brittleness to them, as of a people worn thin",
         "effects": {"constitutionPenalty": 2}
     },
     {
-        "id": "dull", "scope": "racial", "tier": "mundane",
+        "id": "dull", "scope": "racial", "rarity": "common", "kind": "stat",
         "name": "Dull", "description": "Slow to reason and slower to learn.",
         "flavorLine": "new ideas reach them slowly, as through deep water",
         "effects": {"intelligencePenalty": 2}
     },
     {
-        "id": "clumsy", "scope": "racial", "tier": "mundane",
+        "id": "clumsy", "scope": "racial", "rarity": "common", "kind": "stat",
         "name": "Clumsy", "description": "Heavy-handed and graceless — fumbles fine work.",
         "flavorLine": "their hands are willing but forever fumbling",
         "effects": {"dexterityPenalty": 2}
     },
     {
-        "id": "sickly", "scope": "racial", "tier": "mundane",
+        "id": "sickly", "scope": "racial", "rarity": "common", "kind": "attribute",
         "name": "Sickly", "description": "Prone to fever and rot — every passing illness lingers.",
         "flavorLine": "every passing sickness seems to find them first",
         "effects": {"constitutionPenalty": 1, "diseaseResistance": -0.2}
     },
     {
-        "id": "thin-skinned", "scope": "racial", "tier": "mundane",
+        "id": "thin-skinned", "scope": "racial", "rarity": "common", "kind": "attribute",
         "name": "Thin-Skinned", "description": "Soft, delicate skin that marks and tears easily.",
         "flavorLine": "the slightest blow raises a welt on their tender skin",
         "effects": {"cutting_resistance": -0.15, "blunt_resistance": -0.1}
     },
     {
-        "id": "gaunt", "scope": "racial", "tier": "mundane",
+        "id": "gaunt", "scope": "racial", "rarity": "common", "kind": "stat",
         "name": "Gaunt", "description": "Wasted and spare of frame — light on their feet, but weak and fragile.",
         "flavorLine": "hunger-lean and hollow-cheeked, they carry no spare flesh",
         "effects": {"strengthPenalty": 1, "constitutionPenalty": 1, "dexterityBonus": 1}
     },
     {
-        "id": "nearsighted", "scope": "racial", "tier": "mundane",
+        "id": "nearsighted", "scope": "racial", "rarity": "common", "kind": "stat",
         "name": "Nearsighted", "description": "The far field blurs — poor at spotting and picking out detail at range.",
         "flavorLine": "the far hills are only a smear of colour to them",
         "effects": {"perceptionPenalty": 2}
     },
     {
-        "id": "one-eyed", "scope": "personal", "tier": "mundane",
+        "id": "one-eyed", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "One-Eyed", "description": "Half the field of view and no depth to it — a real handicap at range.",
         "flavorLine": "an old ruin of a socket sits where the second eye should be",
         "effects": {"perceptionPenalty": 2, "workSpeed": {"hunting": 0.9}}
     },
     {
-        "id": "hard-of-hearing", "scope": "personal", "tier": "mundane",
+        "id": "hard-of-hearing", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Hard-of-Hearing", "description": "Dull of ear — slow to notice what they can't see.",
         "flavorLine": "a shout must be a loud one to reach them",
         "effects": {"perceptionPenalty": 1}
     },
     {
-        "id": "bad-back", "scope": "personal", "tier": "mundane",
+        "id": "bad-back", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Bad Back", "description": "A trick spine that gives out under load — weak at heavy lifting.",
         "flavorLine": "they carry themselves with the careful stiffness of an old ache",
         "effects": {"strengthPenalty": 2, "workSpeed": {"mining": 0.9}}
     },
     {
-        "id": "trembling-hands", "scope": "personal", "tier": "mundane",
+        "id": "trembling-hands", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Trembling Hands", "description": "A fine tremor that ruins delicate work.",
         "flavorLine": "their hands never quite come to rest",
         "effects": {"dexterityPenalty": 1, "workSpeed": {"crafting": 0.85}, "workQuality": {"crafting": 0.9}}
     },
     {
-        "id": "brittle-boned", "scope": "racial", "tier": "mundane",
+        "id": "brittle-boned", "scope": "racial", "rarity": "common", "kind": "attribute",
         "name": "Brittle-Boned", "description": "Bones that crack under a hard blow — fragile where it counts.",
         "flavorLine": "their bones have a chalky, snap-prone lightness",
         "effects": {"constitutionPenalty": 1, "blunt_resistance": -0.15}
     },
     {
-        "id": "short-winded", "scope": "racial", "tier": "mundane",
+        "id": "short-winded", "scope": "racial", "rarity": "common", "kind": "attribute",
         "name": "Short-Winded", "description": "Tires fast — little stamina for sustained toil or a long chase.",
         "flavorLine": "they are blowing hard before the work is half done",
         "effects": {"constitutionPenalty": 1, "workSpeed": {"all": 0.95}}
     },
     {
-        "id": "weak-stomached", "scope": "racial", "tier": "mundane",
+        "id": "weak-stomached", "scope": "racial", "rarity": "common", "kind": "attribute",
         "name": "Weak-Stomached", "description": "A delicate gut — sickens on foul food and turns from bloody work.",
         "flavorLine": "a whiff of rot is enough to turn them green",
         "effects": {"diseaseResistance": -0.15, "workSpeed": {"butchery": 0.8}}
     },
     {
-        "id": "scarred", "scope": "personal", "tier": "mundane",
+        "id": "scarred", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Scarred", "description": "Old wounds have toughened the mind if not the flesh — off-putting, but inured to pain.",
         "flavorLine": "a map of old hurts is written across their skin",
         "effects": {"charismaPenalty": 1, "mentalResistance": 0.15}
     },
     {
-        "id": "cold-blooded", "scope": "racial", "tier": "mundane",
+        "id": "cold-blooded", "scope": "racial", "rarity": "common", "kind": "attribute",
         "name": "Cold-Blooded", "description": "Poor at holding heat — the cold bites them early and hard.",
         "flavorLine": "the chill sinks into them and will not let go",
         "effects": {"coldResistance": -0.2}
     },
     {
-        "id": "flat-footed", "scope": "racial", "tier": "mundane",
+        "id": "flat-footed", "scope": "racial", "rarity": "common", "kind": "stat",
         "name": "Flat-Footed", "description": "Heavy, graceless footing — slow to dodge and turn.",
         "flavorLine": "they meet the ground flat and heavy at every step",
         "effects": {"dexterityPenalty": 1}
@@ -234,99 +238,99 @@
 
     // ══ PERSONAL — temperament / aptitude, one INDIVIDUAL pawn at a time ═══════════
     {
-        "id": "industrious", "scope": "personal", "tier": "mundane",
+        "id": "industrious", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Industrious", "description": "Hardworking by nature — never idle for long.",
         "effects": {"workSpeed": {"all": 1.1}}
     },
     {
-        "id": "lazy", "scope": "personal", "tier": "mundane",
+        "id": "lazy", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Lazy", "description": "Does the least that will pass — dawdles at every task.",
         "effects": {"workSpeed": {"all": 0.9}}
     },
     {
-        "id": "meticulous", "scope": "personal", "tier": "mundane",
+        "id": "meticulous", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Meticulous", "description": "Careful and precise — slow, but the work is clean.",
         "effects": {"workSpeed": {"crafting": 1.05}, "workQuality": {"crafting": 1.2, "construction": 1.15}}
     },
     {
-        "id": "slapdash", "scope": "personal", "tier": "mundane",
+        "id": "slapdash", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Slapdash", "description": "Quick and careless — fast hands, shoddy results.",
         "effects": {"workSpeed": {"crafting": 1.1}, "workQuality": {"crafting": 0.85, "construction": 0.9}}
     },
     {
-        "id": "curious", "scope": "personal", "tier": "mundane",
+        "id": "curious", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Curious", "description": "Insatiably curious about the world.",
         "effects": {"intelligenceBonus": 1, "workSpeed": {"research": 1.2}}
     },
     {
-        "id": "incurious", "scope": "personal", "tier": "mundane",
+        "id": "incurious", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Incurious", "description": "Uninterested in the why of things — poor at study.",
         "effects": {"workSpeed": {"research": 0.85}}
     },
     {
-        "id": "loner", "scope": "personal", "tier": "mundane",
+        "id": "loner", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Loner", "description": "Prefers solitude; works best where no one else is near.",
         "effects": {"charismaPenalty": 1, "workSpeed": {"research": 1.15, "crafting": 1.1}}
     },
     {
-        "id": "gregarious", "scope": "personal", "tier": "mundane",
+        "id": "gregarious", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Gregarious", "description": "Warm and sociable — a steadying presence at the table.",
         "effects": {"charismaBonus": 2, "workSpeed": {"cooking": 1.1}}
     },
     {
-        "id": "ill-tempered", "scope": "personal", "tier": "mundane",
+        "id": "ill-tempered", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Ill-Tempered", "description": "Sour and abrasive — poor company at the best of times.",
         "effects": {"charismaPenalty": 2}
     },
     {
-        "id": "hot-headed", "scope": "personal", "tier": "mundane",
+        "id": "hot-headed", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Hot-Headed", "description": "Quick to anger — throws itself into a fight, careless of the odds.",
         "effects": {"strengthBonus": 1, "intelligencePenalty": 1, "workSpeed": {"hunting": 1.1}}
     },
     {
-        "id": "greenthumb", "scope": "personal", "tier": "mundane",
+        "id": "greenthumb", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Green Thumb", "description": "A knack for growing things.",
         "effects": {"workSpeed": {"planting": 1.2, "foraging": 1.1}, "workYield": {"planting": 1.15}}
     },
     {
-        "id": "squeamish", "scope": "personal", "tier": "mundane",
+        "id": "squeamish", "scope": "personal", "rarity": "common", "kind": "attribute",
         "name": "Squeamish", "description": "Turns from blood and gore — a poor hand at the butcher's block.",
         "effects": {"workSpeed": {"butchery": 0.8, "hunting": 0.9}}
     },
 
     // ══ RACIAL · SUPERNATURAL — RARE race powers, each worn as a permanent condition ══
     {
-        "id": "scaled-hide", "scope": "racial", "tier": "supernatural",
+        "id": "scaled-hide", "scope": "racial", "rarity": "rare", "kind": "naturalGear",
         "name": "Scaled Hide", "description": "Overlapping scales blunt cutting and piercing blows.",
         "flavorLine": "overlapping scales sheathe them like a coat of living mail",
         "selfCondition": "scaled",
-        "effects": {"constitutionBonus": 1, "cutting_resistance": 0.2, "piercing_resistance": 0.15}
+        "effects": {}
     },
     {
-        "id": "iron-skin", "scope": "racial", "tier": "supernatural",
+        "id": "iron-skin", "scope": "racial", "rarity": "rare", "kind": "naturalGear",
         "name": "Iron Skin", "description": "Metallic skin that sets hard as armor plate.",
         "flavorLine": "their skin sets hard as weathered stone, turning aside blows that would lay low softer folk",
         "selfCondition": "iron_skinned",
-        "effects": {"constitutionBonus": 2, "dexterityPenalty": 1, "workSpeed": {"mining": 1.1}}
+        "effects": {}
     },
     {
-        "id": "rending-claws", "scope": "racial", "tier": "supernatural",
+        "id": "rending-claws", "scope": "racial", "rarity": "rare", "kind": "naturalGear",
         "name": "Rending Claws", "description": "Curved claws for hands — devastating unarmed, but useless at a workbench.",
         "flavorLine": "in place of fingers they bear long, hooked claws that open flesh like cloth",
         "selfCondition": "clawed",
         "blocksSlots": ["mainHand", "gloves"],
-        "effects": {"strengthBonus": 1, "workSpeed": {"crafting": 0.75, "leatherworking": 0.8, "construction": 0.85}}
+        "effects": {"workSpeed": {"crafting": 0.75, "leatherworking": 0.8, "construction": 0.85}}
     },
     {
-        "id": "gore-horns", "scope": "racial", "tier": "supernatural",
+        "id": "gore-horns", "scope": "racial", "rarity": "rare", "kind": "naturalGear",
         "name": "Goring Horns", "description": "Heavy horns that punch through and knock foes flat — but nothing fits over the crown.",
         "flavorLine": "a heavy crown of horn sweeps back from their brow",
         "selfCondition": "horned",
         "blocksSlots": ["headOuter", "headBase"],
-        "effects": {"strengthBonus": 1}
+        "effects": {}
     },
     {
-        "id": "venomous", "scope": "racial", "tier": "supernatural",
+        "id": "venomous", "scope": "racial", "rarity": "rare", "kind": "naturalGear",
         "name": "Venom Glands", "description": "Toxins lace every strike — even a held blade carries the poison.",
         "flavorLine": "their touch carries a slow, patient poison",
         "selfCondition": "venomous",
@@ -334,15 +338,15 @@
         "effects": {"poisonResistance": 0.3}
     },
     {
-        "id": "thick-fur", "scope": "racial", "tier": "supernatural",
+        "id": "thick-fur", "scope": "racial", "rarity": "rare", "kind": "naturalGear",
         "name": "Thick Fur", "description": "A heavy pelt — natural armor and cold immunity, but stifling in heat, with no room for a mid layer.",
         "flavorLine": "a deep, shaggy pelt sheds the killing cold and turns a glancing blow",
         "selfCondition": "furred",
         "blocksSlots": ["bodyMid"],
-        "effects": {"constitutionBonus": 1, "coldResistance": 0.3, "fireResistance": -0.15}
+        "effects": {"coldResistance": 0.3, "fireResistance": -0.15}
     },
     {
-        "id": "flame-touched", "scope": "racial", "tier": "supernatural",
+        "id": "flame-touched", "scope": "racial", "rarity": "rare", "kind": "passive",
         "name": "Flame Touched", "description": "Smouldering skin — blows land alight, and neither fire nor frost bites deep.",
         "flavorLine": "warmth pours off their skin even in the deepest frost",
         "selfCondition": "flame_touched",
@@ -350,110 +354,110 @@
         "effects": {"fireResistance": 0.3, "coldResistance": 0.15}
     },
     {
-        "id": "photosynthetic", "scope": "racial", "tier": "supernatural",
+        "id": "photosynthetic", "scope": "racial", "rarity": "rare", "kind": "passive",
         "name": "Photosynthetic", "description": "Sunlit skin drinks daylight — under an open sky, hunger fades.",
         "flavorLine": "sunlight feeds them as surely as bread, greening their skin",
         "selfCondition": "photosynthesis",
-        "effects": {"constitutionBonus": 1, "workSpeed": {"foraging": 1.15, "planting": 1.15}, "workYield": {"planting": 1.15}}
+        "effects": {}
     },
     {
-        "id": "regenerative", "scope": "racial", "tier": "supernatural",
+        "id": "regenerative", "scope": "racial", "rarity": "rare", "kind": "passive",
         "name": "Regeneration", "description": "Torn flesh knits itself whole in days.",
         "flavorLine": "torn flesh knits itself whole within days",
         "selfCondition": "regenerating",
-        "effects": {"constitutionBonus": 1, "healRate": 0.6, "diseaseResistance": 0.15}
+        "effects": {"healRate": 0.6, "diseaseResistance": 0.15}
     },
     {
-        "id": "ever-warm", "scope": "racial", "tier": "supernatural",
+        "id": "ever-warm", "scope": "racial", "rarity": "rare", "kind": "passive",
         "name": "Ever-Warm", "description": "An inner furnace — neither killing cold nor searing heat can take hold.",
         "flavorLine": "an inner fire keeps them from ever truly feeling the cold — or the heat",
         "selfCondition": "ever_warm",
         "effects": {"fireResistance": 0.5, "coldResistance": 0.5}
     },
     {
-        "id": "frost-born", "scope": "racial", "tier": "supernatural",
+        "id": "frost-born", "scope": "racial", "rarity": "rare", "kind": "passive",
         "name": "Frost Born", "description": "Born of the deep winter — the killing cold is home, but real heat is agony.",
         "flavorLine": "the killing cold is to them no more than a brisk morning",
         "selfCondition": "frost_born",
-        "effects": {"coldResistance": 0.5, "wetnessResistance": 0.2, "fireResistance": -0.2, "workSpeed": {"fishing": 1.2, "hunting": 1.1}}
+        "effects": {"coldResistance": 0.5, "wetnessResistance": 0.2, "fireResistance": -0.2}
     },
     {
-        "id": "berserker-blood", "scope": "racial", "tier": "supernatural",
+        "id": "berserker-blood", "scope": "racial", "rarity": "epic", "kind": "passive",
         "name": "Berserker Blood", "description": "A battle-fury in the veins — devastating in a fight, but reckless and dull to reason.",
         "flavorLine": "a red fury waits just beneath their calm, eager to be loosed",
         "selfCondition": "berserker_blood",
         "weaponBonus": {"damage": 0.15},
-        "effects": {"strengthBonus": 2, "intelligencePenalty": 1, "workSpeed": {"hunting": 1.2, "butchery": 1.15}}
+        "effects": {"strengthBonus": 2, "intelligencePenalty": 1}
     },
     {
-        "id": "stone-bones", "scope": "racial", "tier": "supernatural",
+        "id": "stone-bones", "scope": "racial", "rarity": "epic", "kind": "passive",
         "name": "Stone Bones", "description": "Bones dense as quarried rock — near impossible to break, but ponderously slow.",
         "flavorLine": "their bones are dense as quarried rock, heavy and unyielding",
         "selfCondition": "stone_boned",
         "effects": {"constitutionBonus": 3, "strengthBonus": 1, "dexterityPenalty": 2, "blunt_resistance": 0.4}
     },
     {
-        "id": "nocturnal", "scope": "racial", "tier": "supernatural",
+        "id": "nocturnal", "scope": "racial", "rarity": "rare", "kind": "passive",
         "name": "Nocturnal", "description": "A creature of the night — sees in pitch dark as by day, but drowses under the sun.",
         "flavorLine": "they come alive under the stars and drowse beneath the sun",
         "selfCondition": "night_eyed",
-        "effects": {"dexterityBonus": 1, "perceptionBonus": 1, "nightVision": 1.0, "workSpeed": {"hunting": 1.2}}
+        "effects": {"dexterityBonus": 1, "perceptionBonus": 1, "nightVision": 1.0}
     },
 
     // ══ RACIAL · LEGENDARY — very rare; a bundle, each sub-capability rolled per pawn ══
     {
-        "id": "dragon-heritage", "scope": "racial", "tier": "legendary",
+        "id": "dragon-heritage", "scope": "racial", "rarity": "legendary", "kind": "passive",
         "name": "Dragon Heritage", "description": "An ancient draconic bloodline — no two dragon-blooded are ever quite alike.",
         "flavorLine": "the old draconic fire still smoulders in their blood",
-        "effects": {"strengthBonus": 2, "constitutionBonus": 1, "fireResistance": 0.25},
+        "effects": {"strengthBonus": 1, "fireResistance": 0.25},
         "subCapabilities": [
             {
-                "id": "dragon-scales", "scope": "racial", "name": "Dragon Scales", "description": "Armored scales impervious to flame.",
+                "id": "dragon-scales", "scope": "racial", "kind": "naturalGear", "name": "Dragon Scales", "description": "Armored scales impervious to flame.",
                 "selfCondition": "dragon_scaled",
                 "effects": {"fireResistance": 0.5}
             },
             {
-                "id": "dragon-claws", "scope": "racial", "name": "Dragon Claws", "description": "Talons that shear through armor.",
+                "id": "dragon-claws", "scope": "racial", "kind": "naturalGear", "name": "Dragon Claws", "description": "Talons that shear through armor.",
                 "selfCondition": "dragon_clawed", "effects": {}
             },
             {
-                "id": "dragon-eyes", "scope": "racial", "name": "Dragon Eyes", "description": "Slitted eyes that pierce the dark.",
+                "id": "dragon-eyes", "scope": "racial", "kind": "passive", "name": "Dragon Eyes", "description": "Slitted eyes that pierce the dark.",
                 "effects": {"perceptionBonus": 2, "nightVision": 1.0}
             },
             {
-                "id": "dragon-blood", "scope": "racial", "name": "Dragon Blood", "description": "Fireproof blood that mends wounds fast.",
+                "id": "dragon-blood", "scope": "racial", "kind": "passive", "name": "Dragon Blood", "description": "Fireproof blood that mends wounds fast.",
                 "selfCondition": "regenerating", "effects": {"healRate": 0.5, "fireResistance": 0.5}
             },
             {
-                "id": "dragon-might", "scope": "racial", "name": "Dragon's Might", "description": "Draconic strength behind every wielded blow.",
+                "id": "dragon-might", "scope": "racial", "kind": "passive", "name": "Dragon's Might", "description": "Draconic strength behind every wielded blow.",
                 "weaponBonus": {"damage": 0.2}, "effects": {"strengthBonus": 1}
             },
             {
-                "id": "fire-breath", "scope": "racial", "name": "Fire Breath", "description": "A gout of dragonfire that sears and sets alight.",
+                "id": "fire-breath", "scope": "racial", "kind": "naturalGear", "name": "Fire Breath", "description": "A gout of dragonfire that sears and sets alight.",
                 "selfCondition": "fire_breathing", "effects": {}
             }
         ]
     },
     {
-        "id": "vampiric", "scope": "racial", "tier": "legendary",
+        "id": "vampiric", "scope": "racial", "rarity": "legendary", "kind": "passive",
         "name": "Vampiric", "description": "The blood-curse — bloodsucking fangs, a hunger for blood, and a dread of the sun.",
         "flavorLine": "a cold hunger sits behind their eyes, and daylight is no friend to them",
         "effects": {"dexterityBonus": 1, "charismaBonus": 1, "nightVision": 0.5},
         "subCapabilities": [
             {
-                "id": "bloodsucking-fangs", "scope": "racial", "name": "Bloodsucking Fangs", "description": "Feeding fangs that open the vein and drink.",
+                "id": "bloodsucking-fangs", "scope": "racial", "kind": "naturalGear", "name": "Bloodsucking Fangs", "description": "Feeding fangs that open the vein and drink.",
                 "selfCondition": "fanged", "effects": {}
             },
             {
-                "id": "sun-cursed", "scope": "racial", "name": "Sun-Cursed", "description": "Daylight saps their strength under an open sky.",
+                "id": "sun-cursed", "scope": "racial", "kind": "passive", "name": "Sun-Cursed", "description": "Daylight saps their strength under an open sky.",
                 "selfCondition": "light_sensitive", "effects": {}
             },
             {
-                "id": "blood-hunger", "scope": "racial", "name": "Blood Hunger", "description": "A gnawing thirst that frays focus when unfed.",
+                "id": "blood-hunger", "scope": "racial", "kind": "passive", "name": "Blood Hunger", "description": "A gnawing thirst that frays focus when unfed.",
                 "selfCondition": "bloodthirst", "effects": {}
             },
             {
-                "id": "vampire-strength", "scope": "racial", "name": "Undying Vigor", "description": "Unnatural strength behind a wielded blade.",
+                "id": "vampire-strength", "scope": "racial", "kind": "passive", "name": "Undying Vigor", "description": "Unnatural strength behind a wielded blade.",
                 "weaponBonus": {"damage": 0.1}, "effects": {"strengthBonus": 1}
             }
         ]
