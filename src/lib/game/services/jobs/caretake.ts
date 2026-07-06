@@ -86,13 +86,13 @@ function shelterTendFactor(gs: GameState, x: number, y: number): number {
 /**
  * Apply ONE unit of care to `patient` using `medic`'s `medical_skill` (folds in sight × manipulation ×
  * consciousness) × mood × variance, plus the best stockpile medicine (consumed), the whole roll scaled
- * by the patient's shelter (heavy off-roof penalty). Priority: dress the SINGLE worst untended wound
- * (most bleeding first, severity as the tiebreak) — open wounds are the acute threat AND what feeds the
- * infection, so they go first; once none remain, a lingering `infection` is treated directly, its
- * severity cut by CARE_CONFIG.infectionTreatment × quality. One action per call so a mangled/infected
- * patient is tended progressively rather than fully healed in one instant pass — the caller (auto job /
- * drafted order) repeats until nothing remains. Exported for the job handler and tests. A botched roll
- * (< minTendQuality) does nothing.
+ * by the patient's shelter (heavy off-roof penalty). One visit dresses the SINGLE worst untended wound
+ * (most bleeding first, severity as the tiebreak) AND, if the patient is infected, cuts the `infection`
+ * severity by CARE_CONFIG.infectionTreatment × quality in the SAME tend — infection care rides along
+ * with dressing rather than waiting for every wound to close (the festering wound stays open for days,
+ * so it never would). One wound dressed per call so a mangled patient is tended progressively rather
+ * than fully healed in one pass — the caller (auto job / drafted order) repeats until nothing remains.
+ * Exported for the job handler and tests. A botched roll (< minTendQuality) does nothing.
  */
 export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameState {
   const turn = gs.turn;
@@ -130,49 +130,52 @@ export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameStat
   const quality = Math.max(0, Math.min(1, (skillRoll + (med?.quality ?? 0)) * shelter));
   if (quality < CARE_CONFIG.minTendQuality) return gs; // botched / hopeless in the field
 
-  // No untended wound left, but the infection lingers — treat it directly. A successful tend cuts
-  // severity by infectionTreatment × quality (on top of the passive immune recovery), so repeated
-  // tending clears an infection far faster than waiting it out. One dose of medicine per treatment.
-  if (!target) {
-    const conditions = (patient.conditions ?? []).flatMap((c) => {
-      if (c.id !== 'infection') return [c];
-      const nextSev = Math.max(0, c.severity - CARE_CONFIG.infectionTreatment * quality);
-      return nextSev > 0 ? [{ ...c, severity: nextSev }] : [];
-    });
-    let next: GameState = {
-      ...gs,
-      pawns: gs.pawns.map((p) => (p.id === patient.id ? { ...patient, conditions } : p))
-    };
-    if (med) next = consumeFromStockpiles(next, { [med.id]: 1 });
-    return next;
-  }
+  // Dress the worst untended wound (if any): stops its bleed and stamps the tend for faster healing.
+  const newLimbs = !target
+    ? limbs
+    : limbs.map((limb, li) => {
+        if (li !== target!.li) return limb;
+        const parts = limb.parts ?? [];
+        const newParts = parts.map((part, pi) =>
+          pi !== target!.pi
+            ? part
+            : {
+                ...part,
+                injuries: part.injuries.map((w, wi) =>
+                  // Dressing a wound STOPS its bleeding immediately (the reliable answer vs the lucky
+                  // clot roll) and stamps the tend for faster healing.
+                  wi === target!.wi
+                    ? { ...w, treatedAt: turn, treatmentQuality: quality, bleeding: 0 }
+                    : w
+                )
+              }
+        );
+        const bleedRate = newParts.reduce(
+          (s, p) => s + p.injuries.reduce((ps, x) => ps + x.bleeding, 0),
+          0
+        );
+        return { ...limb, parts: newParts, bleedRate };
+      });
 
-  const newLimbs = limbs.map((limb, li) => {
-    if (li !== target!.li) return limb;
-    const parts = limb.parts ?? [];
-    const newParts = parts.map((part, pi) =>
-      pi !== target!.pi
-        ? part
-        : {
-            ...part,
-            injuries: part.injuries.map((w, wi) =>
-              // Dressing a wound STOPS its bleeding immediately (the reliable answer vs the lucky clot
-              // roll) and stamps the tend for faster healing.
-              wi === target!.wi ? { ...w, treatedAt: turn, treatmentQuality: quality, bleeding: 0 } : w
-            )
-          }
-    );
-    const bleedRate = newParts.reduce(
-      (s, p) => s + p.injuries.reduce((ps, x) => ps + x.bleeding, 0),
-      0
-    );
-    return { ...limb, parts: newParts, bleedRate };
-  });
+  // Treat the infection in the SAME visit — NOT as an either/or with wound dressing. The wound that
+  // festered is open (serious+) for days and keeps re-triggering the tend, so if infection care only
+  // fired once every wound was closed it would never run and the % would sit flat. Every tend cuts
+  // severity by infectionTreatment × quality on top of the passive immune recovery.
+  const newConditions = !infected
+    ? patient.conditions
+    : (patient.conditions ?? []).flatMap((c) => {
+        if (c.id !== 'infection') return [c];
+        const nextSev = Math.max(0, c.severity - CARE_CONFIG.infectionTreatment * quality);
+        return nextSev > 0 ? [{ ...c, severity: nextSev }] : [];
+      });
+
   let next: GameState = {
     ...gs,
-    pawns: gs.pawns.map((p) => (p.id === patient.id ? { ...patient, limbs: newLimbs } : p))
+    pawns: gs.pawns.map((p) =>
+      p.id === patient.id ? { ...patient, limbs: newLimbs, conditions: newConditions } : p
+    )
   };
-  if (med) next = consumeFromStockpiles(next, { [med.id]: 1 }); // one dose per wound dressed
+  if (med) next = consumeFromStockpiles(next, { [med.id]: 1 }); // one dose per tend
   return next;
 }
 
