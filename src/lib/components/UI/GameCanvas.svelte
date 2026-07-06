@@ -161,7 +161,7 @@
   // MAP_W / MAP_H must match the generateWorld() call in gameState.ts
   const MAP_W = 240;
   const MAP_H = 160;
-  const MAX_TILE_W = 40;
+  const MAX_TILE_W = 64;
   const ZOOM_STEP = 2;
   const CAMERA_STORAGE_KEY = 'fantasia4x-camera';
   let saveCameraTimer: ReturnType<typeof setTimeout> | null = null;
@@ -559,9 +559,9 @@
       // selectMob), which re-enters this subscriber synchronously — clearing first makes that
       // re-entrant pass skip this block instead of looping on the same focus.
       uiState.clearMapFocus();
-      // Focus snaps to a comfortable zoom, not the manual-zoom ceiling (MAX_TILE_W), which is
-      // closer than you'd want auto-applied.
-      const targetZoom = Math.min(MAX_TILE_W, 24);
+      // Focus snaps to the max zoom-in ceiling so a jumped-to target lands as close as possible —
+      // a highlighted entity is otherwise hard to spot at a mid zoom.
+      const targetZoom = MAX_TILE_W;
       tileWidth = targetZoom;
       tileHeight = targetZoom;
       renderer.setTileSize(tileWidth, tileHeight);
