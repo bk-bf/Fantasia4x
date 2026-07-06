@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { TRAIT_DATABASE } from './Race';
 import { getTransientConditionDef } from './needs';
+import { PART_DEF_MAP } from './BodyParts';
 import raritiesData from '../database/rarities.jsonc';
 import type { Trait } from './types';
 
@@ -33,6 +34,22 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
         const cond = getTransientConditionDef(t.selfCondition!);
         const grants = !!(cond?.grantsNaturalWeapon?.length || cond?.grantsNaturalArmor);
         expect(grants, `${t.id} → ${t.selfCondition} grants nothing`).toBe(true);
+        // §3 natural armor IS gear: it must carry a weight (→ encumbrance) and a worn-gear mode.
+        if (cond?.grantsNaturalArmor) {
+          expect(cond.weightKg ?? 0, `${t.selfCondition} armor needs weightKg`).toBeGreaterThan(0);
+          expect(['replace', 'stack'], `${t.selfCondition} armor needs mode`).toContain(cond.mode);
+        }
+      }
+      if (t.kind === 'wound') {
+        // §4: the affliction IS the injury — a wounds payload, no stat fudge riding along.
+        expect(t.wounds?.length, `${t.id} wound-kind needs wounds[]`).toBeGreaterThan(0);
+        expect(Object.keys(t.effects ?? {}), `${t.id} wound-kind must carry no effects`).toEqual([]);
+        for (const w of t.wounds ?? []) {
+          const def = PART_DEF_MAP[w.part];
+          expect(def, `${t.id} wound part ${w.part} not in limbmap`).toBeTruthy();
+          // Non-lethal at spawn: never stamp a vital/critical part.
+          expect(def?.isVital || def?.isCritical, `${t.id} targets vital ${w.part}`).toBeFalsy();
+        }
       }
     }
   });
@@ -63,5 +80,29 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
     expect(ws('nocturnal')?.hunting).toBeUndefined();
     // amphibious→fishing is LOGICAL and stays
     expect(ws('amphibious')?.fishing).toBeGreaterThan(1);
+  });
+
+  it('§2 contrast layer: the six "shitty" two-category commons exist', () => {
+    const byId = Object.fromEntries(TRAIT_DATABASE.filter((t) => t.id).map((t) => [t.id!, t]));
+    for (const id of [
+      'sluggard',
+      'slow-mending',
+      'night-blind',
+      'thin-blooded',
+      'pox-marked',
+      'stiff-jointed'
+    ]) {
+      const t = byId[id];
+      expect(t, `${id} missing`).toBeTruthy();
+      expect(t.rarity ?? 'common', `${id} must be common`).toBe('common');
+      expect(t.kind, `${id} must be attribute-kind`).toBe('attribute');
+      // Two debuff axes: at least two negative payload entries (penalty / negative number / <1 mult).
+      const negatives = Object.entries(t.effects ?? {}).filter(([k, v]) =>
+        typeof v === 'number'
+          ? (k.endsWith('Penalty') && v > 0) || (!k.endsWith('Penalty') && v < 0)
+          : Object.values(v as Record<string, number>).some((m) => m < 1)
+      );
+      expect(negatives.length, `${id} needs ≥2 debuff axes`).toBeGreaterThanOrEqual(2);
+    }
   });
 });

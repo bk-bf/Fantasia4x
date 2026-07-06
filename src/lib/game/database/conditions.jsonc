@@ -983,12 +983,15 @@
         "charSpans": [ {"sheet": "font", "id": 3} ],
         "modifiers": {"moveSpeed": 0.4, "dexterity": 0.75}
     },
-    // ── Racial trait conditions (ADR-023) ────────────────────────────────────
-    // The legible pill for a supernatural/legendary body trait. Permanent ones are pushed by
-    // syncTransientConditions for every trait carrying the id as `selfCondition`; the trait's real
-    // payload (natural weapon/armor/on-hit proc/resistances) rides its RacialTrait fields, so these
-    // mostly carry description + a small tell. `photosynthesis`/`light_sensitive` are ENVIRONMENT-GATED
-    // (pushed only while active) and `burning` is a combat DoT applied via onHitEffect (conditionTimers).
+    // ── Racial trait conditions (ADR-023 · ADR-028) ──────────────────────────
+    // The legible pill for a rare/epic/legendary body trait — pushed by syncTransientConditions for
+    // every trait carrying the id as `selfCondition`, and the HUB for its combat capability:
+    // `grantsNaturalWeapon` (item ids) / `grantsNaturalArmor` (0–100 defense). Natural ARMOR is gear
+    // (TRAIT-SYSTEM-V2 §3): `weightKg` loads the carry budget (→ the staged `encumbered` condition,
+    // like worn plate) and `mode` decides how it meets worn armour — "stack" ADDS to the worn soak
+    // (armor under the clothes), "replace" competes best-of as the blocked slot's layer.
+    // `photosynthesis`/`light_sensitive` are ENVIRONMENT-GATED (pushed only while active) and
+    // `burning` is a combat DoT applied via onHitEffect (conditionTimers).
     {
         "id"                : "clawed",
         "name"              : "Clawed",
@@ -1009,6 +1012,8 @@
         "color"            : "#8B6F47",
         "charSpans"        : [ {"sheet": "items", "id": 145} ],
         "grantsNaturalArmor": 8,
+        "weightKg"         : 5,
+        "mode"             : "replace",
         "modifiers"        : {}
     },
     {
@@ -1020,6 +1025,8 @@
         "color"            : "#6B8E6B",
         "charSpans"        : [ {"sheet": "items", "id": 145} ],
         "grantsNaturalArmor": 12,
+        "weightKg"         : 4,
+        "mode"             : "stack",
         "modifiers"        : {}
     },
     {
@@ -1031,6 +1038,8 @@
         "color"            : "#9AA3AD",
         "charSpans"        : [ {"sheet": "items", "id": 145} ],
         "grantsNaturalArmor": 18,
+        "weightKg"         : 12,
+        "mode"             : "stack",
         "modifiers"        : {}
     },
     {
@@ -1042,6 +1051,8 @@
         "color"            : "#B87333",
         "charSpans"        : [ {"sheet": "items", "id": 145} ],
         "grantsNaturalArmor": 20,
+        "weightKg"         : 8,
+        "mode"             : "stack",
         "modifiers"        : {}
     },
     {

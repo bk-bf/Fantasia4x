@@ -5,6 +5,7 @@
 <script lang="ts">
   import type { Trait } from '$lib/game/core/types';
   import { workAxisLabel } from '$lib/components/util/pawnUtils';
+  import { partLabel } from '$lib/utils/bodyLabels';
   import { getTransientConditionDef } from '$lib/game/core/needs';
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
   import raritiesData from '$lib/game/database/rarities.jsonc';
@@ -64,6 +65,9 @@
     neg: '#c65a3a',
     neutral: '#b8965a'
   };
+  // The wound DATA names a canonical side (leftEye) but the applier may flip to the twin for
+  // variety — so the card shows the side-agnostic organ ("eye"); the health tab shows the real side.
+  const woundPartLabel = (id: string) => partLabel(id).replace(/^(left|right) /i, '');
   const axisShort = (name: string) =>
     name === 'workSpeed'
       ? 'spd'
@@ -81,6 +85,11 @@
       tags.push({ label: 'natural weapon', value: '', type: 'pos' });
     if (cond?.grantsNaturalArmor)
       tags.push({ label: 'nat armor', value: `+${cond.grantsNaturalArmor}`, type: 'pos' });
+    // §3 natural armor is GEAR — its weight loads the body (encumbrance), so it reads as a cost.
+    if (cond?.weightKg) tags.push({ label: 'weight', value: `${cond.weightKg} kg`, type: 'neg' });
+    // §4 wound-kind: the permanent injury stamped at generation (human part label, never the raw id).
+    for (const w of trait.wounds ?? [])
+      tags.push({ label: woundPartLabel(w.part), value: w.severity, type: 'neg' });
     if (trait.onHitEffect) tags.push({ label: 'on-hit', value: 'proc', type: 'pos' });
     if (trait.weaponBonus?.damage)
       tags.push({
@@ -215,7 +224,19 @@
         <span class="tip-lbl">Natural weapon</span>
         {nw.join(', ')}
       </div>{/if}
-    {#if na}<div class="tip-row"><span class="tip-lbl">Natural armor</span> +{na}</div>{/if}
+    {#if na}
+      {@const cw = t.selfCondition ? getTransientConditionDef(t.selfCondition)?.weightKg : undefined}
+      <div class="tip-row">
+        <span class="tip-lbl">Natural armor</span>
+        +{na} def{cw ? ` · ${cw} kg (loads the body like worn armour)` : ''}
+      </div>
+    {/if}
+    {#if t.wounds?.length}
+      <div class="tip-row neg">
+        <span class="tip-lbl">Old wound</span>
+        {t.wounds.map((w) => `${woundPartLabel(w.part)} (${w.severity})`).join(', ')}
+      </div>
+    {/if}
     {#if bl.length}
       <div class="tip-row neg"><span class="tip-lbl">Blocks gear</span> {bl.join(', ')}</div>
     {/if}

@@ -48,24 +48,45 @@
   // ADR-023: slots a racial body trait forbids (claws fill the hands, horns the crown…) — greyed out.
   const blocked = $derived(blockedSlots(pawn));
 
-  // ADR-023 natural gear: a trait's natural weapon/armor (resolved via its `selfCondition` grants).
-  // A blocking trait LOCKS its item into its primary blocked slot (claws in Main Hand, fur on Mid);
-  // a non-blocking one (fangs, scaled hide) surfaces as an innate BADGE that layers with worn gear.
-  type Nat = { name: string; sub: string };
+  // ADR-023 / TRAIT-SYSTEM-V2 §3 natural gear: a trait's natural weapon/armor (resolved via its
+  // `selfCondition` grants). A blocking trait LOCKS its item into its primary blocked slot (claws in
+  // Main Hand, fur on Mid); a non-blocking one (fangs, scaled hide) surfaces as an innate BADGE that
+  // layers with worn gear. `tip` feeds the same ItemStatTooltip real gear uses on hover — the weapon's
+  // actual item def, or a synthesized armor def carrying the condition's defense + weight.
+  type Nat = { name: string; sub: string; tip?: Item };
   const natural = $derived.by(() => {
     const occupants: Partial<Record<EquipmentSlot, Nat>> = {};
     const badges: Nat[] = [];
     for (const t of pawn.traits ?? []) {
       const cond = t.selfCondition ? getTransientConditionDef(t.selfCondition) : undefined;
       if (!cond) continue;
-      const weapons = (cond.grantsNaturalWeapon ?? [])
-        .map((id) => gameCoordinator.getItemById(id)?.name)
-        .filter((n): n is string => !!n);
+      const weaponDefs = (cond.grantsNaturalWeapon ?? [])
+        .map((id) => gameCoordinator.getItemById(id))
+        .filter((d): d is Item => !!d);
       const armor = cond.grantsNaturalArmor ?? 0;
-      if (!weapons.length && !armor) continue;
-      const entry: Nat = weapons.length
-        ? { name: weapons.join(', '), sub: 'natural weapon' }
-        : { name: t.name, sub: `natural armor +${armor}` };
+      if (!weaponDefs.length && !armor) continue;
+      const entry: Nat = weaponDefs.length
+        ? {
+            name: weaponDefs.map((d) => d.name).join(', '),
+            sub: 'natural weapon',
+            tip: weaponDefs[0]
+          }
+        : {
+            name: t.name,
+            sub: `+${armor} def${cond.weightKg ? ` · ${cond.weightKg} kg` : ''}`,
+            tip: {
+              id: `natural-armor:${t.id}`,
+              name: cond.name,
+              type: 'armor',
+              description: cond.description,
+              weightKg: cond.weightKg,
+              armorProperties: {
+                defense: armor,
+                armorType: 'natural',
+                armorLayer: cond.mode === 'replace' ? 'replaces the slot' : 'stacks with worn gear'
+              }
+            } as unknown as Item
+          };
       const primary = t.blocksSlots?.[0];
       if (primary) occupants[primary] = entry;
       else badges.push(entry);
@@ -107,7 +128,10 @@
         : isBlocked && !it
           ? "Blocked by a racial trait — this body can't wear gear here."
           : undefined}
-      onmouseenter={(e) => def && showTip(def, e)}
+      onmouseenter={(e) => {
+        const tip = def ?? nat?.tip;
+        if (tip) showTip(tip, e);
+      }}
       onmousemove={moveTip}
       onmouseleave={hideTip}
       role="presentation"
@@ -163,7 +187,14 @@
   <div class="innate-strip">
     <span class="innate-hdr">Innate</span>
     {#each natural.badges as b}
-      <span class="innate-badge" title="{b.name} — {b.sub} (innate)">{b.name} · {b.sub}</span>
+      <span
+        class="innate-badge"
+        title="{b.name} — {b.sub} (innate)"
+        onmouseenter={(e) => b.tip && showTip(b.tip, e)}
+        onmousemove={moveTip}
+        onmouseleave={hideTip}
+        role="presentation">{b.name} · {b.sub}</span
+      >
     {/each}
   </div>
 {/if}

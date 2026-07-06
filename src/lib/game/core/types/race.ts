@@ -49,9 +49,16 @@ export interface Trait {
    *  `naturalGear` (a natural weapon/armor condition) · `passive` (aura/affinity/proc condition) ·
    *  `wound` (a real injury at generation). Reserved (TODO): `behavioral` · `needs` · `transformation`. */
   kind?: 'stat' | 'attribute' | 'naturalGear' | 'passive' | 'wound';
-  /** `wound`-kind payload (TRAIT-SYSTEM-V2 §4): injuries applied at pawn-gen (one-eyed → destroyed eye).
-   *  Capped non-lethal by the applier. `part` is a limbmap part id. (Applier is a follow-on slice.) */
-  wounds?: Array<{ part: string; severity: 'minor' | 'serious' | 'critical' | 'destroyed' }>;
+  /** `wound`-kind payload (TRAIT-SYSTEM-V2 §4): PERMANENT healed-over injuries stamped at pawn-gen
+   *  (one-eyed → a destroyed eye) by `applyTraitWounds`, capped non-lethal. `part` is a limbmap part
+   *  id; a paired part (leftEye) may flip to its twin for variety. Effects flow through the body
+   *  model (capacities), never a stat fudge. */
+  wounds?: Array<{
+    part: string;
+    severity: 'minor' | 'serious' | 'critical' | 'destroyed';
+    /** Wound type from wounds.jsonc (default 'cut'); 'crush' reads as degenerative (bad back). */
+    type?: 'cut' | 'fracture' | 'puncture' | 'crush' | 'burn';
+  }>;
   /** GROUNDWORK for trait evolution (not yet a runtime mechanic): the id of the higher-tier trait this
    *  one can grow into — e.g. mundane `frost-loving` → supernatural `frost-born`, `adrenaline` →
    *  `berserker-blood`. Lets a future system upgrade a pawn's trait along its line. */

@@ -571,17 +571,26 @@ function partArmorReduction(defender: Pawn | Mob, partId: BodyPartId, armorPen: 
     const natural = getCreatureById(defender.creatureId)?.naturalArmor ?? 0;
     if (natural > bestDef) bestDef = natural;
   } else {
-    // ADR-023: racial natural armour (scaled hide / thick fur / dragon scales) opened to pawns — the
-    // best trait soak competes with worn armour exactly like a creature's hide. The soak MAGNITUDE
-    // lives on the trait's `selfCondition` DEF (`grantsNaturalArmor`), the same body-condition hub the
-    // health pill reads, so the two can't drift.
-    let natural = 0;
+    // ADR-023 / TRAIT-SYSTEM-V2 §3: racial natural armour opened to pawns. The soak MAGNITUDE lives on
+    // the trait's `selfCondition` DEF (`grantsNaturalArmor`), the same body-condition hub the health
+    // pill reads, so the two can't drift. The def's `mode` decides how it meets worn armour:
+    // 'replace' (thick fur — it IS the blocked slot's layer) competes best-of like a worn piece;
+    // 'stack' (scaled hide, iron skin — armor UNDER the clothes) ADDS its defense to the worn soak.
+    let naturalReplace = 0;
+    let naturalStack = 0;
     for (const t of defender.traits ?? []) {
       if (!t.selfCondition) continue;
-      const soak = getTransientConditionDef(t.selfCondition)?.grantsNaturalArmor ?? 0;
-      if (soak > natural) natural = soak;
+      const cond = getTransientConditionDef(t.selfCondition);
+      const soak = cond?.grantsNaturalArmor ?? 0;
+      if (soak <= 0) continue;
+      if (cond?.mode === 'replace') {
+        if (soak > naturalReplace) naturalReplace = soak;
+      } else {
+        naturalStack += soak;
+      }
     }
-    if (natural > bestDef) bestDef = natural;
+    if (naturalReplace > bestDef) bestDef = naturalReplace;
+    bestDef = Math.min(100, bestDef + naturalStack);
   }
   if (bestDef <= 0) return 0;
   // Per-part armour SHARE (limbmap) is the distribution — replaces the old flat core/peripheral split.

@@ -23,6 +23,7 @@ import {
 } from '../core/GameState';
 import { recipeService } from './RecipeService';
 import { buildingService } from './BuildingService';
+import { getTransientConditionDef } from '../core/needs';
 import {
   thermalAt,
   computeThermalAt,
@@ -751,6 +752,15 @@ export class ItemServiceImpl implements ItemService {
       if (!inst) continue;
       const def = this.getItemById(inst.itemId);
       weightKg += def?.weightKg ?? 0.5;
+    }
+
+    // TRAIT-SYSTEM-V2 §3: natural armor IS gear — a heavy pelt/plating weighs on the body exactly
+    // like worn armour (weight only, no pack volume), so its slowdown is the emergent staged
+    // `encumbered` condition, not a hand-tuned DEX penalty. Weight lives on the trait's
+    // `selfCondition` def (the ADR-023 condition hub).
+    for (const t of pawn.traits ?? []) {
+      if (!t.selfCondition) continue;
+      weightKg += getTransientConditionDef(t.selfCondition)?.weightKg ?? 0;
     }
 
     return { weightKg, volumeL };

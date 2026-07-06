@@ -1,8 +1,9 @@
-import type { Pawn, EntityNeeds, PawnState, Race, EntityStats, Trait } from '../core/types';
+import type { Pawn, EntityNeeds, PawnState, Race, EntityStats, Trait, Injury } from '../core/types';
 import { createPawnInventory, createPawnEquipment } from '../core/PawnEquipment';
 import { drawPawnTraits } from '../core/Race';
 import { createBodyPlanLimbs } from '../systems/Combat';
-import { DEFAULT_PLAN } from '../core/BodyParts';
+import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/BodyParts';
+import type { WoundSeverity } from '../core/Wounds';
 import { rng } from '../core/rng';
 
 // Module-level counter for sequential debug IDs across all generated pawns.
@@ -25,6 +26,98 @@ export function calcBloodRegenRate(stats: EntityStats): number {
 /** Blood pool derived from body weight and constitution. */
 export function calcMaxBloodVolume(physicalTraits: { weight: number }, stats: EntityStats): number {
   return Math.round(physicalTraits.weight * 1.4 + (stats.constitution - 10) * 2);
+}
+
+// ── TRAIT-SYSTEM-V2 §4: wound-granter traits ──────────────────────────────────
+// A `wound`-kind trait (one-eyed, hard-of-hearing, bad back) stamps a REAL, permanent, healed-over
+// injury on the freshly-rolled body — it shows in the health tab and flows through the body model
+// (a destroyed eye halves `sight`; a lost ear dulls `hearing`), never a hidden stat fudge.
+
+/** Accumulated damage as a fraction of the part's max HP per spawn severity (severityFromFrac bands). */
+const SPAWN_WOUND_DAMAGE_FRAC: Record<WoundSeverity, number> = {
+  minor: 0.2,
+  serious: 0.5,
+  critical: 0.8,
+  destroyed: 1
+};
+/** Chronic ache of a lesser permanent wound (a destroyed part is a long-healed stump — painless). */
+const SPAWN_WOUND_PAIN: Record<WoundSeverity, number> = {
+  minor: 0,
+  serious: 3,
+  critical: 6,
+  destroyed: 0
+};
+
+/** For a paired part (leftEye/rightEar…), flip to its twin half the time — variety, not a mechanic. */
+function maybeFlipPairedSide(partId: string): string {
+  const twin = partId.startsWith('left')
+    ? 'right' + partId.slice(4)
+    : partId.startsWith('right')
+      ? 'left' + partId.slice(5)
+      : undefined;
+  return twin && PART_DEF_MAP[twin] && rng.random() < 0.5 ? twin : partId;
+}
+
+/**
+ * Apply every drawn `wound`-kind trait's injuries to the pawn's (freshly built, privately owned)
+ * limb tree, then mirror the flat `injuries`/`pain` fields the way Combat does after a hit.
+ * NEVER LETHAL (locked decision 2026-07-06): vital/critical parts are refused outright, and
+ * `destroyed` is downgraded to `critical` on any part that CONTAINS others (no severed-container
+ * cascade — a newborn can't spawn dead) or on a pure bone (fracture-only).
+ */
+export function applyTraitWounds(pawn: Pawn): void {
+  const limbs = pawn.limbs;
+  if (!limbs) return;
+  let stamped = false;
+  for (const trait of pawn.traits ?? []) {
+    for (const spec of trait.wounds ?? []) {
+      const partId = maybeFlipPairedSide(spec.part);
+      const def = PART_DEF_MAP[partId];
+      if (!def || def.isVital || def.isCritical) continue; // heart/brain: never stampable
+      let severity = spec.severity;
+      if (severity === 'destroyed' && (containedParts(partId).size > 0 || def.skeleton)) {
+        severity = 'critical'; // no container cascade, no severed bones — the non-lethal cap
+      }
+      const limb = limbs.find((l) => l.parts?.some((p) => p.id === partId));
+      const part = limb?.parts?.find((p) => p.id === partId);
+      if (!limb || !part || part.isMissing) continue;
+      const damage = Math.round(part.maxHp * SPAWN_WOUND_DAMAGE_FRAC[severity] * 10) / 10;
+      const wound: Injury = {
+        bodyPart: partId,
+        type: spec.type ?? 'cut',
+        severity,
+        damage,
+        bleeding: 0, // healed over long ago
+        painContribution: SPAWN_WOUND_PAIN[severity],
+        infected: false,
+        clotProgress: 3, // fully clotted
+        inflictedAt: 0,
+        permanent: true
+      };
+      part.injuries.push(wound);
+      part.health = Math.max(0, part.maxHp - damage);
+      if (severity === 'destroyed') part.isMissing = true;
+      // Roll the limb's health up from its parts (same mass-weighted formula as Combat).
+      const partMaxTotal = (limb.parts ?? []).reduce((s, p) => s + p.maxHp, 0);
+      const partHealthTotal = (limb.parts ?? []).reduce((s, p) => s + p.health, 0);
+      if (partMaxTotal > 0) limb.health = Math.round((partHealthTotal / partMaxTotal) * 100);
+      stamped = true;
+    }
+  }
+  if (!stamped) return;
+  // Mirror the flat injuries list + pain total exactly like Combat._applyInjuryToEntity.
+  const flat: Injury[] = [];
+  let painTotal = 0;
+  for (const l of limbs) {
+    for (const p of l.parts ?? []) {
+      for (const w of p.injuries) {
+        flat.push(w);
+        painTotal += w.painContribution;
+      }
+    }
+  }
+  pawn.injuries = flat;
+  pawn.pain = Math.max(0, Math.min(100, Math.round(painTotal)));
 }
 
 /** Roll a single pawn from a specific race (stats within the race's ranges, traits copied,
@@ -76,6 +169,9 @@ export function buildPawnFromRace(race: Race, index: number): Pawn {
     // Pawns are the humanoid body plan (limbmap.jsonc) at bodyScale 1.0.
     limbs: createBodyPlanLimbs(DEFAULT_PLAN, 1)
   };
+
+  // TRAIT-SYSTEM-V2 §4: stamp any drawn wound-kind traits as real (permanent, healed) injuries.
+  applyTraitWounds(pawn);
 
   return pawn;
 }

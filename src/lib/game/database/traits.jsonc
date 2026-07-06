@@ -175,23 +175,29 @@
         "flavorLine": "the far hills are only a smear of colour to them",
         "effects": {"perceptionPenalty": 2}
     },
+    // — WOUND granters (§4): the affliction IS a real, permanent, healed-over injury applied at
+    //   generation (applyTraitWounds) — it shows in the health tab and its handicap flows through the
+    //   body model (sight/hearing capacities, part health, chronic ache), never a stat fudge. —
     {
-        "id": "one-eyed", "scope": "personal", "rarity": "common", "kind": "attribute",
-        "name": "One-Eyed", "description": "Half the field of view and no depth to it — a real handicap at range.",
+        "id": "one-eyed", "scope": "personal", "rarity": "common", "kind": "wound",
+        "name": "One-Eyed", "description": "One eye is a ruined socket — half the field of view and no depth to it.",
         "flavorLine": "an old ruin of a socket sits where the second eye should be",
-        "effects": {"perceptionPenalty": 2, "workSpeed": {"hunting": 0.9}}
+        "wounds": [{"part": "leftEye", "severity": "destroyed"}],
+        "effects": {}
     },
     {
-        "id": "hard-of-hearing", "scope": "personal", "rarity": "common", "kind": "attribute",
-        "name": "Hard-of-Hearing", "description": "Dull of ear — slow to notice what they can't see.",
+        "id": "hard-of-hearing", "scope": "personal", "rarity": "common", "kind": "wound",
+        "name": "Hard-of-Hearing", "description": "One ear long dead — slow to notice what they can't see.",
         "flavorLine": "a shout must be a loud one to reach them",
-        "effects": {"perceptionPenalty": 1}
+        "wounds": [{"part": "leftEar", "severity": "destroyed"}],
+        "effects": {}
     },
     {
-        "id": "bad-back", "scope": "personal", "rarity": "common", "kind": "attribute",
-        "name": "Bad Back", "description": "A trick spine that gives out under load — weak at heavy lifting.",
+        "id": "bad-back", "scope": "personal", "rarity": "common", "kind": "wound",
+        "name": "Bad Back", "description": "An old spinal injury that never truly mended — a constant, wearing ache.",
         "flavorLine": "they carry themselves with the careful stiffness of an old ache",
-        "effects": {"strengthPenalty": 2, "workSpeed": {"mining": 0.9}}
+        "wounds": [{"part": "spine", "severity": "serious", "type": "crush"}],
+        "effects": {}
     },
     {
         "id": "trembling-hands", "scope": "personal", "rarity": "common", "kind": "attribute",
@@ -234,6 +240,43 @@
         "name": "Flat-Footed", "description": "Heavy, graceless footing — slow to dodge and turn.",
         "flavorLine": "they meet the ground flat and heavy at every step",
         "effects": {"dexterityPenalty": 1}
+    },
+    // — "really shitty" commons (§2): each debuffs TWO categories — the deep negative contrast layer —
+    {
+        "id": "sluggard", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "name": "Sluggard", "description": "The body burns low — weak of arm and slow at every task.",
+        "flavorLine": "everything about them moves at the pace of cold honey",
+        "effects": {"strengthPenalty": 1, "workSpeed": {"all": 0.92}}
+    },
+    {
+        "id": "slow-mending", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "name": "Slow-Mending", "description": "Wounds linger and sickness digs in — a body poor at repairing itself.",
+        "flavorLine": "even a scratch stays angry on them for weeks",
+        "effects": {"healRate": -0.3, "diseaseResistance": -0.1}
+    },
+    {
+        "id": "night-blind", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "name": "Night-Blind", "description": "Nearly helpless once the light fails, and no great watcher by day.",
+        "flavorLine": "dusk closes on them like a drawn hood",
+        "effects": {"nightVision": -0.4, "perceptionPenalty": 1}
+    },
+    {
+        "id": "thin-blooded", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "name": "Thin-Blooded", "description": "Watery constitution that holds neither warmth nor vigor.",
+        "flavorLine": "the first frost of the year already sits in their bones",
+        "effects": {"constitutionPenalty": 1, "coldResistance": -0.15}
+    },
+    {
+        "id": "pox-marked", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "name": "Pox-Marked", "description": "Scarred by childhood plagues that never quite let go — unlovely and quick to sicken.",
+        "flavorLine": "old pocks stipple their face like hail-struck clay",
+        "effects": {"charismaPenalty": 1, "diseaseResistance": -0.15}
+    },
+    {
+        "id": "stiff-jointed", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "name": "Stiff-Jointed", "description": "Joints that seize and grind — clumsy hands and slow, aching craftwork.",
+        "flavorLine": "their knuckles crack like green firewood at every bend",
+        "effects": {"dexterityPenalty": 1, "workSpeed": {"crafting": 0.9}}
     },
 
     // ══ PERSONAL — temperament / aptitude, one INDIVIDUAL pawn at a time ═══════════

@@ -31,9 +31,12 @@ const OFF_SHELTER_TEND_MUL = 0.3;
  *  non-bleeding scratches self-close, so they don't count ("only minor wounds can be risked left
  *  untreated"). Shared by the auto caretake job and the player's drafted `tend` (emergency care) order. */
 export function hasUntendedWound(patient: Pawn, turn: number): boolean {
+  // Permanent (trait-stamped, healed-over) wounds are old scars — nothing to dress.
   return (patient.limbs ?? []).some((l) =>
     (l.parts ?? []).some((p) =>
-      p.injuries.some((w) => !isTended(w, turn) && (w.bleeding > 0 || w.severity !== 'minor'))
+      p.injuries.some(
+        (w) => !w.permanent && !isTended(w, turn) && (w.bleeding > 0 || w.severity !== 'minor')
+      )
     )
   );
 }
@@ -107,7 +110,7 @@ export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameStat
       const injuries = parts[pi].injuries;
       for (let wi = 0; wi < injuries.length; wi++) {
         const w = injuries[wi];
-        if (isTended(w, turn)) continue;
+        if (w.permanent || isTended(w, turn)) continue; // an old healed-over scar can't be dressed
         const rank = SEVERITY_RANK[w.severity] ?? 0;
         if (
           !target ||

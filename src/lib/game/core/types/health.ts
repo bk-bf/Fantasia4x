@@ -61,6 +61,14 @@ export interface TransientConditionDef extends ConditionGraphFields {
    *  trait-side copy that could drift). `clawed` grants rending-claws; `scaled` grants +12 armor; etc. */
   grantsNaturalWeapon?: string[];
   grantsNaturalArmor?: number;
+  /** TRAIT-SYSTEM-V2 §3 — natural armor IS GEAR: its mass in kg feeds the pawn's carry load
+   *  (ItemService.getCurrentCarryLoad) exactly like a worn piece, so a heavy hide's slowdown is the
+   *  emergent staged `encumbered` condition (load ÷ STR capacity), never a hand-tuned flat DEX penalty. */
+  weightKg?: number;
+  /** §3 — how natural armor interacts with worn gear: 'stack' (default) LAYERS — its defense ADDS to
+   *  the worn soak (scaled hide under a cuirass); 'replace' occupies its blocked slot and competes
+   *  best-of like a worn piece (thick fur IS the bodyMid layer). Read by Combat.partArmorReduction. */
+  mode?: 'replace' | 'stack';
   /** Data-driven onset for a NEED-threshold transient (e.g. `tired` at fatigue ≥ 100). The deriving
    *  code (pawn syncTransientConditions / mob entityLifecycle) reads the threshold from HERE rather than
    *  a hardcoded constant, so designers tune it in the data and pawns + mobs can't drift. The behavioural
@@ -123,6 +131,11 @@ export interface Injury {
    *  Rolled ~every 3 in-game hours against `blood_clotting` — a lucky natural stop. Dressing (treatedAt)
    *  short-circuits this to 0 bleed immediately. See Combat.rollWoundClotting / recomputeWound. */
   clotProgress?: number;
+  /** TRAIT-SYSTEM-V2 §4 — an OLD, healed-over wound stamped at pawn generation by a `wound`-kind trait
+   *  (one-eyed → a destroyed eye). Permanent: skipped by healing (never mends away), by infection
+   *  pressure (long since closed), and by caretaking (nothing to dress) — its effect flows purely
+   *  through the body model (capacities, part health). */
+  permanent?: boolean;
 }
 
 /** State of a single fine body part (organ, bone, sub-limb). */

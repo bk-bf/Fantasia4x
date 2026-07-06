@@ -619,7 +619,13 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
         // pawn can't infect to lethal during or right after a fight — it's the days-later neglect
         // threat. (Wounds from a pre-change save have no `inflictedAt` → their clock starts at load.)
         const age = gameState.turn - (w.inflictedAt ?? gameState.turn);
-        if (open && !isTended(w, gameState.turn) && age >= CARE_CONFIG.infectionIncubationTicks) {
+        // A PERMANENT (trait-stamped, healed-over) wound closed years ago — it never festers.
+        if (
+          open &&
+          !w.permanent &&
+          !isTended(w, gameState.turn) &&
+          age >= CARE_CONFIG.infectionIncubationTicks
+        ) {
           infectionPressure += CARE_CONFIG.infectionRiskPerWound;
         }
       }

@@ -310,12 +310,18 @@ export function healLimbs(
   let changed = false;
   const newLimbs = limbs.map((limb) => {
     const parts = limb.parts;
-    if (!parts || !parts.some((p) => p.injuries.length > 0)) return limb;
+    // PERMANENT (trait-stamped, healed-over) wounds never mend — and a limb carrying ONLY those must
+    // return the SAME ref (no per-tick object churn for a one-eyed pawn; ENGINE-PERFORMANCE).
+    if (!parts || !parts.some((p) => p.injuries.some((w) => !w.permanent))) return limb;
     const newParts = parts.map((part) => {
-      if (part.injuries.length === 0 || part.isMissing) return part;
+      if (part.isMissing || !part.injuries.some((w) => !w.permanent)) return part;
       let healed = 0;
       const newWounds: Injury[] = [];
       for (const w of part.injuries) {
+        if (w.permanent) {
+          newWounds.push(w); // carried as-is, forever
+          continue;
+        }
         const tended = isTended(w, turn);
         const tendBoost = tended
           ? 1 + CARE_CONFIG.treatedHealMultiplier * (w.treatmentQuality ?? 0)
@@ -372,14 +378,19 @@ export function healLimbsInPlace(
   let changed = false;
   for (const limb of limbs) {
     const parts = limb.parts;
-    if (!parts || !parts.some((p) => p.injuries.length > 0)) continue;
+    // Mirror healLimbs: permanent (trait-stamped) wounds never mend; skip limbs carrying only those.
+    if (!parts || !parts.some((p) => p.injuries.some((w) => !w.permanent))) continue;
     for (const part of parts) {
-      if (part.injuries.length === 0 || part.isMissing) continue;
+      if (part.isMissing || !part.injuries.some((w) => !w.permanent)) continue;
       let healed = 0;
       let write = 0;
       const inj = part.injuries;
       for (let read = 0; read < inj.length; read++) {
         const w = inj[read];
+        if (w.permanent) {
+          inj[write++] = w; // kept as-is, forever
+          continue;
+        }
         const tended = isTended(w, turn);
         const tendBoost = tended
           ? 1 + CARE_CONFIG.treatedHealMultiplier * (w.treatmentQuality ?? 0)
