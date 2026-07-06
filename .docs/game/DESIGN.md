@@ -53,12 +53,14 @@ A **pool of 15–25 procedural races** is prerolled per run (`Race.generateRaceP
   **2 racial + 3 personal** (temperament) traits, so same-race pawns differ. Rarity is a gate
   (~85% of races are mundane-only; rare/epic capabilities ~15%; legendary bundles ~2.5%) and a
   **budget** on the `rarities.jsonc` scale. Every trait has a `kind` fixing its payload: `stat`
-  (core-stat deltas) · `attribute` (derived stats, breadth gated by rarity) · `naturalGear` (a
-  condition-backed natural weapon/armor — armor carries defense + **weight → encumbrance**, and
-  either **stacks** with worn gear or **replaces** its blocked slot) · `passive` (aura/affinity/proc
-  condition) · `wound` (a real permanent injury at generation — one-eyed IS a destroyed eye, so the
-  handicap flows through the body model, never a stat fudge). Conflict prevention enforced; every
-  trait has a `flavorLine`.
+  (core-stat deltas) · `attribute` (derived stats, breadth gated by rarity) · `bodyMod` (reshapes the
+  limbmap body — dense/brittle bone → fracture budget, thick/thin hide → wound tolerance, + body weight)
+  · `naturalGear` (a condition-backed natural weapon/armor — armor carries defense + **weight →
+  encumbrance** and either stacks with or replaces a slot; a natural weapon is **bound to a limb** so a
+  pawn can lose its claws) · `passive` (aura/affinity/covering/proc condition) · `wound` (a real
+  permanent injury at generation — one-eyed IS a destroyed eye). `stat` and `attribute` are strictly
+  separated, and a **naming law** keeps abstract-stat names (Brawny, Watchful) from evoking a body
+  mechanic they don't have (ADR-028). Conflict prevention enforced; every trait has a `flavorLine`.
 - **Procedural lore** including an immersive `description` paragraph — assembled from authored trait
   `flavorLine`s + lore clause banks chosen by numeric buckets (stats/size/build): the poetry is
   authored, only the scaffolding is generated.

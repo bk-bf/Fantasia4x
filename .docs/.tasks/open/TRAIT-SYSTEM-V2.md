@@ -35,13 +35,31 @@ categories with rarity budgets**, and **conditions as a weather-style relationsh
 
 | `kind` | Payload | Meaning |
 | --- | --- | --- |
-| `stat` | `statMods: {strength:+2, dexterity:-1}` | flat core-stat deltas, baked at pawn-gen |
-| `attribute` | `attributeMods:[{category,stat,value}]` | modifies derived stats.jsonc stats; **breadth gated by rarity** (§2) |
-| `naturalGear` | `grants:{condition, mode:'replace'\|'stack', slot?}` | a natural weapon/armor condition that occupies-or-stacks a gear slot (§3) |
-| `passive` | `grants:{condition}` | a permanent full-body condition — aura / affinity / proc (§3) |
-| `wound` | `wounds:[{part, severity}]` | applies a real wound at generation (§4) |
+| `stat` | `effects: {strengthBonus:+2, …}` | flat core-stat deltas ONLY, baked at pawn-gen |
+| `attribute` | `effects: {workSpeed/resistances/nightVision/healRate}` | derived stats.jsonc mods ONLY — **never a core-stat rider**; breadth gated by rarity (§2) |
+| `bodyMod` | `bodyMods:[{target:'skeleton'\|'flesh'\|partId, hpMult?, weightKg?}]` | modifies the limbmap BODY at gen — bone/flesh HP + body weight (heavy bones → fractures harder; thin skin → wounds bite faster). Real mechanics, not a `blunt_resistance` fudge (§1a) |
+| `naturalGear` | `selfCondition` → `{grantsNaturalArmor, weightKg, mode}` / `{grantsNaturalWeapon, hostParts}` | a natural weapon/armor condition; armor stacks-or-replaces a slot (§3), a WEAPON is bound to limbmap `hostParts` so losing the limb loses it |
+| `passive` | `selfCondition` → a full-body condition | aura / affinity / covering (feathers) / proc (§3) |
+| `wound` | `wounds:[{part, severity, type?}]` | applies a real permanent wound at generation (§4) |
+
+**STRICT SEPARATION (ADR-028):** `stat` and `attribute` never mix, and a **naming law** applies — a
+`stat`/`attribute` trait's NAME must be mundane + generic and MUST NOT evoke a natural weapon/armor or a
+losable body part (bone/skin/hide/claw/horn/fang/eye/ear/feather…). Those names imply a body mechanic the
+abstract trait doesn't have; only the body-touching kinds (`bodyMod`/`naturalGear`/`passive`/`wound`) may
+carry an anatomical name. Enforced by `traitRegistry.test.ts` (`ANATOMY_NAME_RE`).
 
 **TODO kinds** (schema reserved, not built — §7): `behavioral`, `needs`, `transformation`.
+
+### 1a · `bodyMod` — intrinsic body-structure traits
+
+A `bodyMod` trait post-processes the pawn's own limb tree at generation (`applyTraitBodyMods`, the
+`applyTraitWounds` sibling), so the effect lives in the real body model instead of an abstract multiplier:
+`skeleton` targets scale bone maxHp = the **fracture budget** (dense vs brittle bone); `flesh` targets the
+soft parts' maxHp = **wound tolerance** (thick vs thin hide); `weightKg` adds body mass → the blood pool +
+the `encumbered` load (so heavy bones slow the pawn emergently, not via a hand-tuned DEX penalty). Full
+health is preserved (maxHp + health scale together), so capacities read normal until the part is hurt.
+Members: `heavy-boned`/`brittle-boned` (skeleton), `thick-skinned`/`thin-skinned` (flesh), `stone-bones`
+(epic, ×2.2 bone). Trait cards show a "bones +40%" pill; hover names the affected parts + the mechanic.
 
 - [x] `kind` + per-kind payload fields on the `Trait` type (`wounds` incl. optional wound `type`;
       condition-side `weightKg`/`mode`). Kept `scope`/`evolvesTo`; `tier` → `rarity` (§2).
@@ -82,9 +100,16 @@ Both grant a permanent condition (the ADR-023 hub). Split by how they interact w
   condition (load ÷ STR capacity), exactly like plate — so Iron Skin is `defense 18, weight 12`, and the
   slowdown is emergent + legible, not a hand-tuned `−1 DEX`.
 
-**`passive`** — a permanent full-body condition: resist/affinity (`ever_warm`, `frost_born`), a proc
-(`berserker_blood` — active only while `flags:["combat"]` state holds, §5), or an aura (affects nearby
-pawns — TODO). Carries `modifiers` + `flags`; no gear slot.
+**Natural WEAPONS are limb-bound (ADR-028).** A trait's natural weapon lists `hostParts` (limbmap part ids)
+on its granting condition — claws→`[leftHand,rightHand]`, horns→`[head]`, fangs→`[jaw]` — exactly like a
+creature's `weapons` on a limbmap part. `Combat.pawnNaturalWeaponIds` resolves the weapon only while at
+least one host part survives, so a pawn whose hands are gone loses the claws (falling through to the thrash
+fallback), mirroring the proven creature path (`enabledNaturalWeapons`). Natural ARMOR is already per-part
+(the `armor` share distributes the magnitude; a destroyed part drops its share), so it needed no change.
+
+**`passive`** — a permanent full-body condition: resist/affinity (`ever_warm`, `frost_born`), a covering
+(`feathered` → cold insulation, no armor value), a proc (`berserker_blood`), or an aura (TODO). Carries
+`modifiers` + `flags`; no gear slot.
 
 - [x] Condition schema: `weightKg` + `mode` next to `grantsNaturalArmor` (= the defense; slot stays on
       the trait's `blocksSlots` — no duplicate that could drift). Wired into
@@ -219,8 +244,19 @@ limits, and personal-trait work mods (temperament *is* a work aptitude).
         Non-lethal cap: vital/critical parts refused; destroyed-on-container/bone → critical.
         one-eyed → a destroyed eye (sight 0.35 via organBlend), hard-of-hearing → a destroyed ear
         (hearing 0.5), bad-back → a serious spine crush (chronic ache). Stat fudges dropped.
-  - [x] Six "shitty" 2-category-debuff commons (2026-07-06): sluggard, slow-mending, night-blind,
-        thin-blooded, pox-marked, stiff-jointed — registry-test enforced (≥2 debuff axes each).
+  - [x] Six "shitty" commons (2026-07-06): sluggard, slow-mending, night-blind, thin-blooded, pox-marked,
+        stiff-jointed — kind-clean negatives (re-homed to stat/attribute per the separation below).
+  - [x] `bodyMod` kind + naming law + limb-bound natural weapons (2026-07-07, ADR-028): new `bodyMod`
+        kind (`applyTraitBodyMods` — bone/flesh HP + weight); heavy/brittle-boned, thick/thin-skinned,
+        stone-bones moved off abstract stats onto the real body; feathered → `passive` covering. STRICT
+        `stat`≠`attribute` separation (core-stat riders stripped from every attribute trait: amphibious,
+        marsh-dweller, adrenaline, sickly, curious, loner…; ill-tempered/gregarious/hot-headed → `stat`).
+        Anatomical pure-stat names renamed to generic (strong-backed→Brawny, keen-eyed→Watchful,
+        nearsighted→Oblivious, flat-footed→Graceless, short-winded→Languid, weak-stomached→Delicate,
+        scarred→Stoic, warm-blooded→Heat-Hardy). Natural weapons bound to `hostParts` (claws→hands,
+        horns→head, fangs→jaw) so a pawn loses its claws with its hands. bodyMod pills + hover on the
+        trait card. Guarded by `traitRegistry.test.ts` (separation + `ANATOMY_NAME_RE` naming law +
+        bodyMod payload) and `traitWounds.test.ts` (applier + hostParts data integrity).
 - **Phase 2 (TODO §7):** behavioral / needs / transformation.
 
 ## Locked decisions (2026-07-06)

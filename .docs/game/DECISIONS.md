@@ -1020,17 +1020,28 @@ on top of 18 armor; `one-eyed` as a −PER number instead of a missing eye). And
 **Decision — every trait declares a `kind` that fixes its payload shape, and condition interactions are
 data edges.**
 
-- **`kind` taxonomy** (`stat` / `attribute` / `naturalGear` / `passive` / `wound`; reserved:
+- **`kind` taxonomy** (`stat` / `attribute` / `bodyMod` / `naturalGear` / `passive` / `wound`; reserved:
   `behavioral` / `needs` / `transformation`) with **rarity as a budget** on the full `rarities.jsonc`
-  scale: common/uncommon = the mundane pool (a "bad" common may debuff two categories — the contrast
-  layer), rare/epic must carry a real capability, legendary must bundle `subCapabilities`. Enforced by
-  `traitRegistry.test.ts` (which also regression-guards the gamification purge).
+  scale: common/uncommon = the mundane pool, rare/epic must carry a real capability, legendary must bundle
+  `subCapabilities`. `stat` and `attribute` are **strictly separated** — an `attribute` trait never carries
+  a core-stat rider — and a **naming law** forbids a `stat`/`attribute` name from evoking a natural
+  weapon/armor or a losable body part (only the body-touching kinds may). Enforced by `traitRegistry.test.ts`
+  (`ANATOMY_NAME_RE` + separation + regression-guards the gamification purge).
+- **`bodyMod` — traits that reshape the body, not a stat.** A dense/brittle skeleton or a thick/thin hide
+  is a real limbmap change (`applyTraitBodyMods` scales bone maxHp = the fracture budget, or flesh maxHp =
+  wound tolerance; plus a body-weight delta → blood pool + encumbrance), so `heavy-boned` is `hpMult 1.4`
+  on the skeleton, NOT a `+CON/blunt_resistance` fudge. This is the realism-first answer to "an armor/bone
+  name must be backed by a body mechanic."
 - **Natural armor IS gear.** The granting condition carries `grantsNaturalArmor` (defense) +
   `weightKg` + `mode`: `'replace'` occupies its blocked slot and competes best-of like a worn layer
   (thick fur IS the bodyMid layer); `'stack'` ADDS to the worn soak (scaled hide under a cuirass).
   Weight feeds `getCurrentCarryLoad` → the staged `encumbered` condition — the slowdown is emergent
   (load ÷ STR), **never a hand-tuned flat DEX penalty**. The gear tab hovers natural gear with the same
   `ItemStatTooltip` as real gear.
+- **Natural weapons are limb-bound.** A trait's natural weapon lists `hostParts` on its condition
+  (claws→hands, horns→head, fangs→jaw); `Combat.pawnNaturalWeaponIds` yields it only while a host part
+  survives — a pawn loses its claws with its hands, exactly like a creature's part-gated `weapons`
+  (`enabledNaturalWeapons`). Natural armor was already per-part (`armor` share), so it needed no change.
 - **Afflictions are real wounds.** A `wound`-kind trait stamps a PERMANENT, healed-over injury at
   generation (`applyTraitWounds`: bleeding 0, fully clotted, `Injury.permanent` — skipped by
   healing/infection/caretaking, and allocation-guarded so an all-permanent limb keeps its array ref).
