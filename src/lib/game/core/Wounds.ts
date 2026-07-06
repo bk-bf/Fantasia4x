@@ -167,7 +167,7 @@ export function recomputeWound(
   accumDamage: number,
   prev?: Pick<
     Injury,
-    'infected' | 'treatedAt' | 'treatmentQuality' | 'inflictedAt' | 'clotProgress'
+    'infected' | 'treatedAt' | 'treatmentQuality' | 'inflictedAt' | 'clotProgress' | 'permanent'
   >,
   turn?: number,
   maxHpOverride?: number
@@ -221,7 +221,11 @@ export function recomputeWound(
     treatmentQuality: prev?.treatmentQuality,
     clotProgress,
     // Age clock for the infection incubation gate: keep the original time as same-type hits stack.
-    inflictedAt: prev?.inflictedAt ?? turn
+    inflictedAt: prev?.inflictedAt ?? turn,
+    // A PERMANENT (trait-stamped scar) wound STAYS permanent across merges/recomputes — otherwise a
+    // same-type hit to the scarred part (or any recompute) would silently drop the flag and let the
+    // scar heal off. Once a scar, always a scar.
+    permanent: prev?.permanent
   };
 }
 

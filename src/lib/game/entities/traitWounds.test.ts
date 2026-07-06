@@ -4,9 +4,9 @@ import { TRAIT_DATABASE } from '../core/Race';
 import { createBodyPlanLimbs } from '../systems/Combat';
 import { lethalAnatomyCause, PART_DEF_MAP } from '../core/BodyParts';
 import { getTransientConditionDef } from '../core/needs';
-import { healLimbs } from '../core/Wounds';
+import { healLimbs, recomputeWound } from '../core/Wounds';
 import { itemService } from '../services/ItemService';
-import type { GameState, Pawn, Trait } from '../core/types';
+import type { GameState, Pawn, Trait, Injury } from '../core/types';
 
 /**
  * TRAIT-SYSTEM-V2 §4 wound granters + §3 natural-armor-as-gear.
@@ -68,6 +68,26 @@ describe('applyTraitWounds (§4 wound granters)', () => {
     expect(healed).toBe(pawn.limbs);
     const spineAfter = healed.flatMap((l) => l.parts ?? []).find((p) => p.id === 'spine');
     expect(spineAfter?.injuries[0]?.damage).toBe(spine?.injuries[0]?.damage);
+  });
+
+  it('a permanent scar STAYS permanent across a same-type re-hit (recomputeWound merge)', () => {
+    // The merge path rebuilds the Injury; it must carry `permanent` forward or the scar would heal off.
+    const scar: Injury = {
+      bodyPart: 'spine',
+      type: 'crush',
+      severity: 'serious',
+      damage: 20,
+      bleeding: 0,
+      painContribution: 3,
+      infected: false,
+      clotProgress: 3,
+      permanent: true
+    };
+    const merged = recomputeWound('spine', 'crush', 40, scar, 500, 40);
+    expect(merged.permanent).toBe(true);
+    // A fresh (non-permanent) wound stays non-permanent.
+    const fresh = recomputeWound('spine', 'crush', 10, undefined, 500, 40);
+    expect(fresh.permanent).toBeUndefined();
   });
 
   it('non-lethal cap: a destroyed CONTAINER downgrades to critical; a vital part is refused', () => {

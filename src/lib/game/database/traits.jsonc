@@ -51,20 +51,20 @@
     },
     {
         "id": "stocky", "scope": "racial", "rarity": "common", "kind": "stat",
-        "name": "Stocky", "description": "Short, broad and heavy-boned — strong in the trunk, slow in the hand.",
+        "name": "Stocky", "description": "Short, broad and solidly built — powerful, but never quick.",
         "flavorLine": "they are built low and broad, planted like fence-posts",
         "effects": {"constitutionBonus": 2, "dexterityPenalty": 1}
     },
     {
         "id": "rangy", "scope": "racial", "rarity": "common", "kind": "stat",
-        "name": "Rangy", "description": "Long-limbed and light — quick and reaching, but easily worn down.",
-        "flavorLine": "all reach and sinew, they move with a loose, long-boned ease",
+        "name": "Rangy", "description": "Lean and light — quick and far-reaching, but easily worn down.",
+        "flavorLine": "all reach and easy motion, they move with a loose, rangy grace",
         "effects": {"dexterityBonus": 2, "constitutionPenalty": 1}
     },
     {
         "id": "strong-backed", "scope": "racial", "rarity": "common", "kind": "stat",
-        "name": "Brawny", "description": "Powerfully built — raw muscle behind everything they lift and swing.",
-        "flavorLine": "they shoulder loads that would fold a lesser frame",
+        "name": "Brawny", "description": "Powerfully built — real force behind everything they lift and swing.",
+        "flavorLine": "they carry loads that would fold a lesser sort",
         "effects": {"strengthBonus": 2}
     },
     {
@@ -117,9 +117,9 @@
     },
     {
         "id": "adrenaline", "scope": "racial", "rarity": "uncommon", "kind": "attribute",
-        "name": "Adrenal", "description": "A quick fight-or-flight surge — sharper in a scrap, a little rasher.",
+        "name": "Adrenal", "description": "A quick fight-or-flight surge — danger sharpens them where it freezes others.",
         "flavorLine": "danger sharpens rather than freezes them",
-        "effects": {"workSpeed": {"hunting": 1.1}},
+        "effects": {"mentalResistance": 0.1},
         "evolvesTo": "berserker-blood"
     },
     {
@@ -147,8 +147,8 @@
     // — mundane NEGATIVES (the contrast layer; weighted common) —
     {
         "id": "frail", "scope": "racial", "rarity": "negative", "kind": "stat",
-        "name": "Frail", "description": "Thin-boned and easily tired — the body gives out early.",
-        "flavorLine": "there is a brittleness to them, as of a people worn thin",
+        "name": "Frail", "description": "Delicate and easily tired — gives out early under any real strain.",
+        "flavorLine": "there is a worn thinness to them, as of a people long stretched too far",
         "effects": {"constitutionPenalty": 2}
     },
     {
@@ -159,8 +159,8 @@
     },
     {
         "id": "clumsy", "scope": "racial", "rarity": "negative", "kind": "stat",
-        "name": "Clumsy", "description": "Heavy-handed and graceless — fumbles fine work.",
-        "flavorLine": "their hands are willing but forever fumbling",
+        "name": "Clumsy", "description": "Awkward and graceless — forever fumbling fine work.",
+        "flavorLine": "willing enough at a task, but forever fumbling it",
         "effects": {"dexterityPenalty": 2}
     },
     {
@@ -178,8 +178,8 @@
     },
     {
         "id": "gaunt", "scope": "racial", "rarity": "common", "kind": "stat",
-        "name": "Gaunt", "description": "Wasted and spare of frame — light on their feet, but weak and fragile.",
-        "flavorLine": "hunger-lean and hollow-cheeked, they carry no spare flesh",
+        "name": "Gaunt", "description": "Wasted and spare — light and quick, but weak and fragile.",
+        "flavorLine": "hunger-lean and hollow, they carry nothing to spare",
         "effects": {"strengthPenalty": 1, "constitutionPenalty": 1, "dexterityBonus": 1}
     },
     {
@@ -244,14 +244,14 @@
     },
     {
         "id": "flat-footed", "scope": "racial", "rarity": "negative", "kind": "stat",
-        "name": "Graceless", "description": "Heavy, graceless footing — slow to dodge and turn.",
+        "name": "Graceless", "description": "Heavy and graceless in motion — slow to dodge and turn.",
         "flavorLine": "they meet the ground flat and heavy at every step",
         "effects": {"dexterityPenalty": 1}
     },
     // — "really shitty" commons (§2): a deeper negative pull, kind-clean (two core OR two derived) —
     {
         "id": "sluggard", "scope": "racial", "rarity": "negative", "kind": "stat",
-        "name": "Sluggard", "description": "Leaden and slow — weak of arm and clumsy of hand.",
+        "name": "Sluggard", "description": "Leaden and slow — weak and clumsy at everything they set to.",
         "flavorLine": "everything about them moves at the pace of cold honey",
         "effects": {"strengthPenalty": 1, "dexterityPenalty": 1}
     },
@@ -269,19 +269,19 @@
     },
     {
         "id": "thin-blooded", "scope": "racial", "rarity": "negative", "kind": "attribute",
-        "name": "Wan", "description": "Watery, sluggish blood that holds neither warmth nor vigour against sickness.",
-        "flavorLine": "the first frost of the year already sits in their bones",
+        "name": "Wan", "description": "A pale, sluggish constitution that holds neither warmth nor vigour against sickness.",
+        "flavorLine": "the first frost of the year already sinks deep into them",
         "effects": {"coldResistance": -0.15, "diseaseResistance": -0.1}
     },
     {
         "id": "pox-marked", "scope": "racial", "rarity": "negative", "kind": "attribute",
-        "name": "Pox-Ridden", "description": "Never quite shed the childhood plagues — quick to sicken, slow to knit.",
-        "flavorLine": "old pocks stipple their skin like hail-struck clay",
+        "name": "Pox-Ridden", "description": "Never quite shed the childhood plagues — quick to sicken, slow to recover.",
+        "flavorLine": "old pockmarks stipple them like hail-struck clay",
         "effects": {"diseaseResistance": -0.15, "healRate": -0.1}
     },
     {
         "id": "stiff-jointed", "scope": "racial", "rarity": "negative", "kind": "attribute",
-        "name": "Maladroit", "description": "Awkward and heavy-handed at fine work — slow, fumbling craftwork.",
+        "name": "Maladroit", "description": "Awkward and inept at fine work — slow, fumbling craftwork.",
         "flavorLine": "delicate work seems to fight them at every turn",
         "effects": {"workSpeed": {"crafting": 0.85, "construction": 0.95}}
     },
@@ -344,7 +344,7 @@
     },
     {
         "id": "squeamish", "scope": "personal", "rarity": "negative", "kind": "attribute",
-        "name": "Squeamish", "description": "Turns from blood and gore — a poor hand at the butcher's block or a bloody sickbed.",
+        "name": "Squeamish", "description": "Turns from blood and gore — poor at the butcher's block or a bloody sickbed.",
         "effects": {"workSpeed": {"butchery": 0.75, "caretaking": 0.85}}
     },
 

@@ -353,8 +353,12 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
         missing: part.isMissing,
         bleedRate: partBleed > 0 ? partBleed : undefined,
         wounds: part.injuries.map((inj) => ({
-          text: `${inj.type} (${inj.severity})${inj.infected ? ' · infected' : ''}`,
-          warn: woundWarn(inj),
+          // A PERMANENT (trait-stamped) wound is an old, healed-over SCAR — it reads as such and never
+          // "warns" (it isn't deteriorating and can't be treated), distinct from an active injury.
+          text: inj.permanent
+            ? `old ${inj.type} scar`
+            : `${inj.type} (${inj.severity})${inj.infected ? ' · infected' : ''}`,
+          warn: !inj.permanent && woundWarn(inj),
           treated: inj.treatedAt != null // tended by a caretaker → green `+`
         }))
       });

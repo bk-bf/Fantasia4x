@@ -345,13 +345,10 @@
         "formula"    : "(1.0 + (STR − 10) × 0.05 + (INT − 10) × 0.01) × manipulation",
         "description": "ore per vein (× manipulation)"
     },
-    {
-        "id"         : "hunting_speed",
-        "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.04 + (DEX − 10) × 0.04) × manipulation × moving",
-        "description": "hunting speed — combat-driven: melee power (STR) + accuracy (DEX), × manipulation × moving"
-    },
+    // NOTE: there is deliberately NO `hunting_speed` work stat. Hunting IS combat (mark → chase →
+    // resolve as a fight → carcass), so its effectiveness is decided by the COMBAT stats (melee/ranged
+    // damage, hit_chance, attack_speed…), not a duplicate work-speed axis. getWorkModifiers falls back
+    // to a flat 1.0 speed for `hunting`; the real "how fast the hunt goes" is how fast the pawn kills.
     {
         "id"         : "butchery_speed",
         "category"   : "work",
