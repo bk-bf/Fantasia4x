@@ -21,6 +21,7 @@
   import MainMenu from '$lib/components/UI/MainMenu.svelte';
   import MainMenu2 from '$lib/components/UI/MainMenu2.svelte';
   import PauseMenu from '$lib/components/UI/PauseMenu.svelte';
+  import EventModalHost from '$lib/components/UI/EventModalHost.svelte';
   import AudioController from '$lib/components/UI/AudioController.svelte';
   import { get } from 'svelte/store';
   import { onMount } from 'svelte';
@@ -495,6 +496,12 @@
      Keyboard input is gated on the same flag (handleKeydown) so Space can't unpause behind it. -->
 {#if $appPhase === 'game' && pauseMenuOpen}
   <PauseMenu onResume={closePauseMenu} />
+{/if}
+
+<!-- World events (e.g. the season-boundary migrant wave). Gated like the other overlays so no modal
+     can flash before a real colony exists or during the boot warmup. -->
+{#if $appPhase === 'game' && $bootReveal}
+  <EventModalHost />
 {/if}
 
 {#if $appPhase === 'game' && !$bootReveal}

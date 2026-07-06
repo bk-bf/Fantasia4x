@@ -236,7 +236,11 @@ function mid(range: [number, number]): number {
   return (range[0] + range[1]) / 2;
 }
 
-function statBucket(value: number): string {
+export type StatBucket = 'mighty' | 'strong' | 'average' | 'frail';
+
+/** Bucket a raw stat value into a coarse tier — the single source of the mighty/strong/average/frail
+ *  thresholds, reused by the migrant-wave UI so it can describe a pawn without leaking the number. */
+export function statBucket(value: number): StatBucket {
   if (value >= 14) return 'mighty';
   if (value >= 12) return 'strong';
   if (value >= 9.5) return 'average';

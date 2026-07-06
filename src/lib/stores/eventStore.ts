@@ -1,37 +1,19 @@
-import { writable, derived } from 'svelte/store';
-import type { GameEvent, EventLog } from '$lib/game/core/Events';
+// Event store — a thin projection over the sim's `GameState.pendingEvent` (the sim is authoritative)
+// plus the resolution dispatch. The reusable seam for world events: EventModalHost reads
+// `currentEvent` and switches on `event.kind`; each event kind resolves through its own command.
 
-export const currentEvent = writable<GameEvent | null>(null);
-export const eventLog = writable<EventLog[]>([]);
-export const showEventModal = writable<boolean>(false);
+import { derived } from 'svelte/store';
+import { gameState } from './gameState';
+import type { PendingEvent } from '$lib/game/core/types';
 
-// Derived store for recent events (last 10)
-export const recentEvents = derived(eventLog, ($eventLog) => $eventLog.slice(-10).reverse());
+/** The world event awaiting a player decision, or null. Read-only — driven by the sim snapshot. */
+export const currentEvent = derived(
+  gameState,
+  ($gs) => (($gs?.pendingEvent ?? null) as PendingEvent | null)
+);
 
-// Function to add event to log
-export function addEventToLog(event: GameEvent, choiceMade?: string, outcome?: string) {
-  const logEntry: EventLog = {
-    id: crypto.randomUUID(),
-    eventId: event.id,
-    turn: 0, // Will be set by game state
-    title: event.title,
-    description: event.description,
-    choiceMade,
-    outcome: outcome || 'Auto-resolved',
-    timestamp: new Date()
-  };
-
-  eventLog.update((log) => [...log, logEntry]);
-}
-
-// Function to trigger event modal
-export function triggerEvent(event: GameEvent) {
-  currentEvent.set(event);
-  showEventModal.set(true);
-}
-
-// Function to close event modal
-export function closeEventModal() {
-  currentEvent.set(null);
-  showEventModal.set(false);
+/** Resolve a migrant wave: accept the candidates with these ids (empty = reject all). The sim places
+ *  the accepted pawns and clears the event, which closes the modal on the next snapshot. */
+export function commitMigrants(acceptedIds: string[]): void {
+  gameState.command({ type: 'commitMigrants', payload: { acceptedIds }, save: true });
 }

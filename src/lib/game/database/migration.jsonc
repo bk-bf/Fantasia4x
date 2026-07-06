@@ -1,0 +1,12 @@
+{
+  // Migrant wave tuning (see systems/migration.ts). At each season boundary (~every 3 months) up to
+  // `slots` hopefuls may seek to join the colony. Each slot independently rolls a migrant with
+  // probability `baseChance + perBuilding * <completed buildings>`, clamped to [minChance, maxChance].
+  // More buildings ⇒ higher chance of a full wave — a rough "how developed is this colony" heuristic
+  // (buildings are the only player-driven progress signal on the map today).
+  "slots": 3,
+  "baseChance": 0.15,
+  "perBuilding": 0.04,
+  "minChance": 0.1,
+  "maxChance": 0.85
+}

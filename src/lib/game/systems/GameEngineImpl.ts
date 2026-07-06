@@ -27,6 +27,7 @@ import { WORK_CATEGORIES } from '../core/Work';
 import buildingsData from '../database/buildings.jsonc';
 
 import { pawnStateMachineService, reapDeadPawns } from './PawnStateMachine';
+import { rollMigrantWave } from './migration';
 import { findNearestDepositPoint, depositInventory, pickUpFromTile } from './pawn/pawnHauling';
 import { nearestShelterTile } from './pawn/handlers/rescue';
 import { isAdjacent } from './pawn/pawnQueries';
@@ -158,6 +159,9 @@ export class GameEngineImpl implements GameEngine {
    *  season. Walkable-only because impassable tiles now carry no temperature (stripped at bake time);
    *  re-found when a new map loads or the cached tile is no longer walkable. */
   private tempProbe: { x: number; y: number } | undefined = undefined;
+  /** Set by processEnvironment on a real season transition; consumed by the end-of-turn event phase
+   *  so a migrant wave rolls once per season boundary while respecting the events-last turn order. */
+  private _seasonJustTransitioned = false;
   /** Hysteresis latch for the rain⇄snow weather phase (SEASONS_WEATHER ice) — held across ticks so
    *  precipitation doesn't flicker type in the −1…+1°C dead zone around freezing. */
   private weatherFreezing = false;
@@ -326,9 +330,14 @@ export class GameEngineImpl implements GameEngine {
       t('reapDead', () => {
         this.gameState = reapDeadPawns(this.gameState!);
       });
-      // (World-event phase removed — the previous random-event system was half-built spam, not
-      // gameplay. A proper event system is planned later; see core/Events.ts. The Chronicle now
-      // records combat, weather, and season changes only.)
+      // World-event phase (turn order: events last). Currently only the season-boundary migrant wave:
+      // roll it once when a season just transitioned, unless an event is already awaiting the player.
+      t('events', () => {
+        if (this._seasonJustTransitioned && !this.gameState!.pendingEvent) {
+          this.gameState = rollMigrantWave(this.gameState!);
+        }
+        this._seasonJustTransitioned = false;
+      });
       this.debugLogPawns();
 
       this.lastTurnProcessed = this.gameState.turn;
@@ -458,6 +467,8 @@ export class GameEngineImpl implements GameEngine {
       // Chronicle the turn of the season — skip the initial undefined→first-season assignment on a
       // fresh world (turn 0), which isn't a transition the player witnessed.
       if (prevSeason) {
+        // A real season boundary (~every 3 months): flag it so the events phase rolls a migrant wave.
+        this._seasonJustTransitioned = true;
         simLog.logActivity({
           turn: gs.turn,
           type: 'season',

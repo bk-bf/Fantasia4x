@@ -16,6 +16,7 @@ import type { CraftingInProgress } from './items';
 import type { ResearchProject, LoreItem } from './research';
 import type { Pawn, Mob, TamedAnimal } from './entities';
 import type { DeadPawnRecord } from './health';
+import type { PendingEvent } from './events';
 
 /** Colony-wide food policy (the food filter panel). `allowedFoodItemIds` is the explicit eat-list — an
  *  empty array means "eat nothing"; `undefined` falls back to the default (everything bar rotten food +
@@ -133,4 +134,7 @@ export interface GameState {
    * tool's maxDurability, one tool of that type breaks (consumed) and the counter resets.
    */
   toolWear?: Record<string, number>;
+  /** A world event awaiting a player decision (e.g. a migrant wave). Raised worker-side by the sim,
+   *  rendered by the UI's EventModalHost, and cleared by its resolution command. Undefined = none. */
+  pendingEvent?: PendingEvent;
 }

@@ -70,6 +70,7 @@ import { patchPathfindingWalkable } from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
 import { assignDraftMovePath } from '../services/draftMovePath';
 import { markTileDirty } from '../core/tileDeltas';
+import { simLog } from '../core/logSink';
 import type { SimCommand } from './simProtocol';
 
 /** Spiral out from (cx,cy) for the nearest walkable, un-occupied tile (worker-safe pawn placement). */
@@ -1037,6 +1038,49 @@ export const COMMANDS: Record<string, Cmd> = {
       return { ...pw, position: pos, path: [], pathIndex: 0 };
     });
     return { ...s, pawns: [...s.pawns, ...placed] };
+  },
+
+  /** Resolve a pending migrant wave: accept the candidates whose ids are in `acceptedIds` (place them
+   *  near the colony), drop the rest, and clear the event. An empty list = reject-all / dismiss. */
+  commitMigrants: (s, p: { acceptedIds?: string[] }) => {
+    const ev = s.pendingEvent;
+    if (!ev || ev.kind !== 'migrant-wave') return { ...s, pendingEvent: undefined };
+    const accepted = new Set(p.acceptedIds ?? []);
+    const chosen = ev.candidates.filter((c) => accepted.has(c.id));
+    if (chosen.length === 0) return { ...s, pendingEvent: undefined };
+
+    const w = s.worldMap[0]?.length ?? 0;
+    const h = s.worldMap.length;
+    const cx = Math.floor(w / 2);
+    const cy = Math.floor(h / 2);
+    const occupied = new Set<string>(
+      s.pawns.filter((pw) => pw.position).map((pw) => `${pw.position!.x},${pw.position!.y}`)
+    );
+    // Re-id to fresh, collision-free colony ids (candidates carried wave-unique `migrant-*` ids).
+    const existingIds = new Set(s.pawns.map((pw) => pw.id));
+    let n = s.pawns.length;
+    const placed = chosen.map((c) => {
+      let id = `pawn-${n++}`;
+      while (existingIds.has(id)) id = `pawn-${n++}`;
+      existingIds.add(id);
+      const pos = nearestFreeTile(s.worldMap, cx, cy, occupied) ?? { x: cx, y: cy };
+      occupied.add(`${pos.x},${pos.y}`);
+      return { ...c, id, position: pos, path: [], pathIndex: 0 };
+    });
+
+    simLog.logActivity({
+      turn: s.turn,
+      type: 'event',
+      actor: 'system',
+      action:
+        placed.length === 1
+          ? `${placed[0].name} joins the colony`
+          : `${placed.length} migrants join the colony`,
+      result: placed.map((pw) => pw.name).join(', '),
+      severity: 'success'
+    });
+
+    return { ...s, pawns: [...s.pawns, ...placed], pendingEvent: undefined };
   },
 
   /** Force-spawn `count` mobs (ignores caps / current count). Optional specific creature id. */

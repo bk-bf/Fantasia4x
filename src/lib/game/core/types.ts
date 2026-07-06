@@ -14,4 +14,5 @@ export * from './types/buildings';
 export * from './types/jobs';
 export * from './types/entities';
 export * from './types/research';
+export * from './types/events';
 export * from './types/gamestate';
