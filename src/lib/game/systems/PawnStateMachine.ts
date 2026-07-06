@@ -64,10 +64,17 @@ import {
   detectVitalEscalations,
   conditionsSig,
   syncFractureConditions,
+  getTransientConditionDef,
   COLLAPSE_CONSCIOUSNESS,
   RECOVER_CONSCIOUSNESS,
   TIRED_FATIGUE_THRESHOLD
 } from '../core/needs';
+import {
+  evaluatePredicate,
+  fireTriggers,
+  type GraphContext,
+  type FiredEdge
+} from '../core/conditionGraph';
 import {
   weatherEffects,
   diurnalTempDelta,
@@ -147,12 +154,10 @@ function approachExposure(current: number, target: number, recoveryMul: number):
 const WET_COLD_EXTRA = 0.8; // at 100% wet, cold exposure ×1.8 ("greatly lower cold resistance")
 const WET_HEAT_REDUCT = 0.6; // at 100% wet, heat exposure ×0.4 ("greatly raise fire resistance")
 const WIND_COLD_EXTRA = 0.6; // in a full gale (effWind 1), cold exposure ×1.6 — windchill bites harder
-// Fully soaked while genuinely cold → a per-second chance to catch a chill (accelerates hypothermia) —
-// the rain consequence. Gated on real cold exposure (cold > 0), never on a flat temp, so it can't seed
-// hypothermia while the cold-exposure meter is 0 (see the wet-chill block in tickConditions).
+// Wetness at/above which a soaked pawn evaluates the `wet` condition's graph triggers (the wet→
+// hypothermia chill edge). The chance (0.04/s) + severity (0.04) themselves now live on that edge in
+// conditions.jsonc (TRAIT-SYSTEM-V2 §5); this is just the "soaked enough" gate.
 const WET_SOAKED = 95;
-const WET_CHILL_CHANCE_PER_SEC = 0.04;
-const WET_CHILL_SEVERITY = 0.04;
 
 // COLLAPSE_CONSCIOUSNESS / RECOVER_CONSCIOUSNESS are the shared collapse band from core/needs — the SAME
 // thresholds Combat and the mob FSM (entityAI) use, so pawns and creatures down/recover identically.
@@ -492,20 +497,19 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
           }
         );
       }
-      // Fully soaked while the cold-exposure meter is MAXED (cold ≥ 100) → a chance to catch a chill
-      // that accelerates hypothermia — the "rain consequence" at 100% wetness. Gated on a FULL meter
-      // (not just `cold > 0`) so this can never apply hypothermia before the cold meter is full — the
-      // meter is the single source of truth for the condition (matching the driver's onset = 100).
-      // "Wet makes cold worse" is still modelled by WET_COLD_EXTRA amplifying cold exposure above, so
-      // a soaked pawn reaches a full meter (and hypothermia) sooner without the condition appearing early.
-      if (wetness >= WET_SOAKED && cold >= 100 && rng.chance(perTick(WET_CHILL_CHANCE_PER_SEC))) {
-        const idx = conditions.findIndex((c) => c.id === 'hypothermia');
-        if (idx === -1) conditions.push({ id: 'hypothermia', severity: WET_CHILL_SEVERITY });
-        else
-          conditions[idx] = {
-            ...conditions[idx],
-            severity: Math.min(1, conditions[idx].severity + WET_CHILL_SEVERITY)
-          };
+      // Fully soaked (wetness ≥ WET_SOAKED) → evaluate the `wet` condition's graph EDGES: its
+      // wet→hypothermia trigger (TRAIT-SYSTEM-V2 §5) rolls the chill-catch against the maxed cold meter
+      // + its per-second chance, seeding/escalating hypothermia. Behaviour-IDENTICAL to the former
+      // inline block (same WET_SOAKED gate, same cold≥100 predicate, same chance + severity from the
+      // edge, which carry the old WET_CHILL_* constants) — just declared in conditions.jsonc now.
+      if (wetness >= WET_SOAKED) {
+        const edges = fireTriggers(
+          getTransientConditionDef('wet')?.triggers,
+          buildGraphContext(pawn, gameState.turn),
+          (c) => rng.chance(perTick(c)),
+          false
+        );
+        for (const edge of edges) applyConditionEdge(conditions, edge);
       }
     }
   }
@@ -558,7 +562,10 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // conditionTimers). Eats HP each tick until it decrements away or is quenched; the bite is reduced
   // by fire resistance (so an Ever-Warm / Dragon-scaled pawn barely notices). Death cause = 'burning'.
   if ((pawn.conditionTimers?.burning ?? 0) > 0) {
-    const fireRes = Math.min(0.9, Math.max(0, pawnStatService.evaluateStat('fire_resistance', pawn)));
+    const fireRes = Math.min(
+      0.9,
+      Math.max(0, pawnStatService.evaluateStat('fire_resistance', pawn))
+    );
     bloodVolume = Math.max(0, bloodVolume - perTick(BURNING_DPS) * (1 - fireRes));
     if (bloodVolume <= 0) {
       const gs = {
@@ -574,8 +581,11 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // ── Photosynthesis (ADR-023) ───────────────────────────────────────────────
   // A photosynthetic pawn under a bright open sky drinks daylight — hunger quietly drains (the pill
   // itself is pushed by syncTransientConditions; hunger can't be filled by a modifier, so it's here).
-  if (pawn.needs && photosynthesisActive(pawn, gameState.turn)) {
-    pawn.needs.hunger = Math.max(0, pawn.needs.hunger - perTick(PHOTOSYNTHESIS_HUNGER_FILL_PER_SEC));
+  if (pawn.needs && envSelfConditionActive(pawn, 'photosynthesis', gameState.turn)) {
+    pawn.needs.hunger = Math.max(
+      0,
+      pawn.needs.hunger - perTick(PHOTOSYNTHESIS_HUNGER_FILL_PER_SEC)
+    );
   }
 
   // Check blood loss lethality
@@ -836,30 +846,48 @@ function reapBrokenGear(pawn: Pawn): Pawn | null {
 // Every supernatural/legendary body trait keeps a legible pill via its `selfCondition`. Most are
 // permanent while the trait is present; `photosynthesis`/`light_sensitive` are ENVIRONMENT-GATED
 // (need turn-of-day light + an open sky), so they're pushed only while active.
-const PHOTOSYNTHESIS_LIGHT = 0.95; // ambient light at/above which sunlit skin feeds
-const DAYLIGHT_SENSITIVE = 0.7; // ambient light at/above which the sun-cursed are seared
 const PHOTOSYNTHESIS_HUNGER_FILL_PER_SEC = 3.0; // hunger drained per second in bright open sky
 const BURNING_DPS = 2.5; // bloodVolume-equivalent HP burned per second while alight
 
-function hasSelfCondition(pawn: Pawn, id: string): boolean {
-  return (pawn.traits ?? []).some((t) => t.selfCondition === id);
+// TRAIT-SYSTEM-V2 §5: build the live-state context a condition's `activateWhen` predicate is
+// evaluated against (conditionGraph.evaluatePredicate). Only allocated when a pawn actually has an
+// env-gated self-condition (rare), so the common tick pays nothing.
+function buildGraphContext(pawn: Pawn, turn: number): GraphContext {
+  const maxBV = pawn.maxBloodVolume ?? 100;
+  return {
+    needs: (pawn.needs as unknown as Record<string, number>) ?? {},
+    bloodFrac: (pawn.bloodVolume ?? maxBV) / maxBV,
+    pain: pawn.pain ?? 0,
+    ambientLight: getAmbientLight(turn),
+    unsheltered: !(pawn.position && isRoofedTile(pawn.position.x, pawn.position.y)),
+    hasCondition: (id) =>
+      (pawn.transientConditions ?? []).includes(id) ||
+      (pawn.conditions ?? []).some((c) => c.id === id),
+    sourceSeverity: 0
+  };
 }
-function isUnsheltered(pawn: Pawn): boolean {
-  return !(pawn.position && isRoofedTile(pawn.position.x, pawn.position.y));
+
+/** Is a racial `selfCondition` currently active on the pawn? Permanent ones (no `activateWhen`) are
+ *  always active while the trait is present; environment-gated ones (photosynthesis/light_sensitive,
+ *  and future transformations) are active only while their `activateWhen` predicate holds. */
+function envSelfConditionActive(pawn: Pawn, condId: string, turn: number): boolean {
+  if (!(pawn.traits ?? []).some((t) => t.selfCondition === condId)) return false;
+  const def = getTransientConditionDef(condId);
+  if (!def?.activateWhen) return true;
+  return evaluatePredicate(def.activateWhen, buildGraphContext(pawn, turn));
 }
-function photosynthesisActive(pawn: Pawn, turn: number): boolean {
-  return (
-    hasSelfCondition(pawn, 'photosynthesis') &&
-    isUnsheltered(pawn) &&
-    getAmbientLight(turn) >= PHOTOSYNTHESIS_LIGHT
-  );
-}
-function lightSensitiveActive(pawn: Pawn, turn: number): boolean {
-  return (
-    hasSelfCondition(pawn, 'light_sensitive') &&
-    isUnsheltered(pawn) &&
-    getAmbientLight(turn) >= DAYLIGHT_SENSITIVE
-  );
+
+/** Apply a fired condition-graph edge to the pawn's persistent `conditions`: add the target if absent
+ *  (at `severity`), else escalate its severity. Matches the former inline WET_CHILL apply exactly. */
+function applyConditionEdge(conditions: { id: string; severity: number }[], edge: FiredEdge): void {
+  const sev = edge.severity ?? 0;
+  const idx = conditions.findIndex((c) => c.id === edge.to);
+  if (idx === -1) conditions.push({ id: edge.to, severity: sev });
+  else if (sev > 0)
+    conditions[idx] = {
+      ...conditions[idx],
+      severity: Math.min(1, conditions[idx].severity + sev)
+    };
 }
 
 /**
@@ -894,15 +922,22 @@ export function syncTransientConditions(pawn: Pawn, turn?: number): Pawn {
   if ((pawn.needs?.wetness ?? 0) >= WET_THRESHOLD) ids.push('wet');
 
   // ADR-023 racial self-conditions: the permanent pill for a supernatural/legendary body trait
-  // (clawed/furred/scaled/…). `photosynthesis`/`light_sensitive` are environment-gated below.
+  // (clawed/furred/scaled/…). Ones carrying an `activateWhen` (photosynthesis/light_sensitive, and
+  // future transformations) are ENVIRONMENT-GATED — pushed only while their predicate holds
+  // (TRAIT-SYSTEM-V2 §5), evaluated by conditionGraph. `envCtx` is built once, lazily, only if a pawn
+  // actually has a gated self-condition.
+  let envCtx: GraphContext | null = null;
   for (const t of pawn.traits ?? []) {
     const sc = t.selfCondition;
-    if (!sc || sc === 'photosynthesis' || sc === 'light_sensitive') continue;
-    if (!ids.includes(sc)) ids.push(sc);
-  }
-  if (turn != null) {
-    if (photosynthesisActive(pawn, turn) && !ids.includes('photosynthesis')) ids.push('photosynthesis');
-    if (lightSensitiveActive(pawn, turn) && !ids.includes('light_sensitive')) ids.push('light_sensitive');
+    if (!sc || ids.includes(sc)) continue;
+    const def = getTransientConditionDef(sc);
+    if (def?.activateWhen) {
+      if (turn == null) continue;
+      envCtx ??= buildGraphContext(pawn, turn);
+      if (evaluatePredicate(def.activateWhen, envCtx)) ids.push(sc);
+    } else {
+      ids.push(sc);
+    }
   }
 
   // Mood-based transient conditions (discrete ranges replace continuous morale calculation)
@@ -1154,20 +1189,23 @@ class PawnStateMachineImpl {
           : state.jobs;
         const durations = { ...(afterConditions.conditionTimers ?? {}) };
         durations.collapse = Math.max(durations.collapse ?? 0, 2);
-        const downed = syncTransientConditions({
-          ...afterConditions,
-          currentState: PAWN_STATE.COLLAPSED,
-          activeJob: undefined,
-          // Going down RELEASES the draft: an unconscious pawn can't be commanded, so drop the drafted
-          // flag + any attack/move order. Otherwise the draft-path loop kept crawling it toward its
-          // target at a fraction of a tile/s — a downed pawn dragging itself in to "attack" a wolf.
-          drafted: false,
-          draftTarget: undefined,
-          path: [],
-          isMoving: false,
-          hasReachedDestination: false,
-          conditionTimers: durations
-        }, gameState.turn);
+        const downed = syncTransientConditions(
+          {
+            ...afterConditions,
+            currentState: PAWN_STATE.COLLAPSED,
+            activeJob: undefined,
+            // Going down RELEASES the draft: an unconscious pawn can't be commanded, so drop the drafted
+            // flag + any attack/move order. Otherwise the draft-path loop kept crawling it toward its
+            // target at a fraction of a tile/s — a downed pawn dragging itself in to "attack" a wolf.
+            drafted: false,
+            draftTarget: undefined,
+            path: [],
+            isMoving: false,
+            hasReachedDestination: false,
+            conditionTimers: durations
+          },
+          gameState.turn
+        );
         state = {
           ...state,
           jobs,

@@ -642,9 +642,9 @@
         // (EnvironmentService.accrueWetness). Susceptibility differs only in FILL RATE, gated by the
         // `wetness_resistance` stat (fur/hide/fitness) — NOT a different threshold.
         "needOnset": {"need": "wetness", "atOrAbove": 100},
-        // TRAIT-SYSTEM-V2 §5: soaked + a maxed cold meter → a chance to catch a chill that seeds
-        // hypothermia (the WET_CHILL edge, values from PawnStateMachine constants). SCHEMA-ONLY so far —
-        // the tickConditions evaluator wiring (behaviour-identical) is the next increment.
+        // TRAIT-SYSTEM-V2 §5: soaked + a maxed cold meter → a per-second chance to catch a chill that
+        // seeds/escalates hypothermia (the former inline WET_CHILL). DRIVEN by tickConditions via
+        // conditionGraph.fireTriggers — behaviour-identical to the old hardcoded block.
         "flags": ["environmental", "cold-vector"],
         "triggers": [
             { "to": "hypothermia", "when": {"need": "coldExposure", "atOrAbove": 100}, "chance": 0.04, "severity": 0.04 }
@@ -1126,6 +1126,10 @@
         "color"      : "#7CBF4F",
         "floater"    : true,
         "charSpans"  : [ {"sheet": "font", "id": 15} ],
+        "flags"      : ["racial", "environmental"],
+        // TRAIT-SYSTEM-V2 §5: environment-gated — active (and draining hunger) only under an open sky
+        // in bright daylight. Read by syncTransientConditions via conditionGraph.evaluatePredicate.
+        "activateWhen": {"unsheltered": true, "meter": "ambientLight", "atOrAbove": 0.95},
         "modifiers"  : {}
     },
     {
@@ -1136,6 +1140,9 @@
         "color"      : "#E8E4D8",
         "floater"    : true,
         "charSpans"  : [ {"sheet": "font", "id": 15} ],
+        "flags"      : ["racial", "environmental"],
+        // TRAIT-SYSTEM-V2 §5: environment-gated — active only while unsheltered in daylight.
+        "activateWhen": {"unsheltered": true, "meter": "ambientLight", "atOrAbove": 0.7},
         "modifiers"  : {"strength": 0.85, "dexterity": 0.85, "perception": 0.85}
     },
     {
