@@ -122,8 +122,8 @@
         "lethalSeverity": 1.0,
         "driver": {
             "need"        : "thirst",
-            "onset"       : 70,
-            "safe"        : 40,
+            "onset"       : 100,
+            "safe"        : 100,
             "rateCritical": 0.0006,
             "rateMax"     : 0.0015,
             "recovery"    : 0.008,
@@ -185,8 +185,8 @@
         "floater": true,
         "driver": {
             "need"        : "hunger",
-            "onset"       : 70,
-            "safe"        : 40,
+            "onset"       : 100,
+            "safe"        : 100,
             "rateCritical": 0.0002,
             "rateMax"     : 0.0005,
             "recovery"    : 0.0003,

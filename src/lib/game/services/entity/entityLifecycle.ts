@@ -172,7 +172,7 @@ export function stepHunger(state: GameState): GameState {
     const condSigBefore = conditionsSig(conditions);
 
     // ── Need-driven conditions (malnutrition ← hunger) — the SAME data-driven model as pawns ──
-    // Malnutrition onsets at hunger 87 and accrues slowly (conditions.jsonc), so a starving mob keeps
+    // Malnutrition onsets only at a maxed hunger (100) and accrues slowly (conditions.jsonc), so a starving mob keeps
     // acting (trying to hunt/forage) for in-game DAYS, growing progressively weaker, and only dies
     // when malnutrition reaches lethal severity. The severe stage trips the FSM into Collapsed
     // (entityAI). Mobs carry no `thirst` need, so dehydration never onsets.
