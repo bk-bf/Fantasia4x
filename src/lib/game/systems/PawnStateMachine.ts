@@ -29,6 +29,7 @@ import {
   HEALING_CONFIG,
   CARE_CONFIG,
   isTended,
+  isUncareable,
   healLimbs,
   rollWoundClotting,
   CLOT_ROLL_INTERVAL,
@@ -619,10 +620,12 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
         // pawn can't infect to lethal during or right after a fight — it's the days-later neglect
         // threat. (Wounds from a pre-change save have no `inflictedAt` → their clock starts at load.)
         const age = gameState.turn - (w.inflictedAt ?? gameState.turn);
-        // A PERMANENT (trait-stamped, healed-over) wound closed years ago — it never festers.
+        // Uncareable wounds never fester: a PERMANENT scar closed years ago, and a DESTROYED part that
+        // has stopped bleeding is a closed stump — otherwise its 'destroyed' severity would drive
+        // infection forever (the pawn can't heal or dress a lost limb).
         if (
           open &&
-          !w.permanent &&
+          !isUncareable(w) &&
           !isTended(w, gameState.turn) &&
           age >= CARE_CONFIG.infectionIncubationTicks
         ) {

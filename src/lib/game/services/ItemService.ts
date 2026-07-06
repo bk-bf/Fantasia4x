@@ -715,6 +715,25 @@ export class ItemServiceImpl implements ItemService {
       });
     }
 
+    // TRAIT-SYSTEM-V2 §3 (ADR-028 rev): natural armor (iron skin, scaled hide…) is worn permanently, so
+    // it eats a FRACTION of the pawn's carry capacity — never adds absolute kg (which could exceed a
+    // weak pawn's whole budget and encumber it while bare). Summed penalties are clamped so capacity
+    // always stays a positive share of the base (a pawn is never immobilised by its own hide).
+    let carryPenalty = 0;
+    for (const t of pawn.traits ?? []) {
+      if (!t.selfCondition) continue;
+      carryPenalty += getTransientConditionDef(t.selfCondition)?.carryPenalty ?? 0;
+    }
+    const carryMult = Math.max(0.4, 1 - carryPenalty);
+    if (carryMult < 1) {
+      weight.gear -= weight.capacity * (1 - carryMult); // shown as a negative "natural armour" source
+      gearSources.push({
+        name: 'natural armour',
+        weightKg: -Math.round(weight.capacity * (1 - carryMult) * 10) / 10,
+        volumeL: 0
+      });
+    }
+
     weight.total = Math.max(1, weight.capacity + weight.gear);
     volume.total = Math.max(1, volume.capacity + volume.gear);
 
@@ -754,14 +773,9 @@ export class ItemServiceImpl implements ItemService {
       weightKg += def?.weightKg ?? 0.5;
     }
 
-    // TRAIT-SYSTEM-V2 §3: natural armor IS gear — a heavy pelt/plating weighs on the body exactly
-    // like worn armour (weight only, no pack volume), so its slowdown is the emergent staged
-    // `encumbered` condition, not a hand-tuned DEX penalty. Weight lives on the trait's
-    // `selfCondition` def (the ADR-023 condition hub).
-    for (const t of pawn.traits ?? []) {
-      if (!t.selfCondition) continue;
-      weightKg += getTransientConditionDef(t.selfCondition)?.weightKg ?? 0;
-    }
+    // TRAIT-SYSTEM-V2 §3 (ADR-028 rev): natural armor's burden is a CAPACITY reduction (getCarryBudget),
+    // NOT invisible added weight — so it can never exceed a pawn's whole capacity and encumber it while
+    // bare. Nothing to add to the load here.
 
     return { weightKg, volumeL };
   }

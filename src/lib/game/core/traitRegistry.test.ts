@@ -18,7 +18,7 @@ const STAT_KEYS = new Set([
 // body part — those imply a body-model mechanic the abstract trait lacks. Only body-touching kinds
 // (bodyMod/naturalGear/passive/wound) may carry an anatomical name.
 const ANATOMY_NAME_RE =
-  /\b(bone|boned|skin|skinned|hide|scale|scaled|shell|carapace|claw|clawed|horn|horned|fang|fanged|tusk|eyed|one-eyed|ear|winged|feather|feathered|furred|scaled)\b/i;
+  /\b(bone|boned|skin|skinned|hide|scale|scaled|shell|carapace|claw|clawed|horn|horned|fang|fanged|tusk|eyed|one-eyed|ear|winged|feather|feathered|furred|joint|jointed)\b/i;
 
 describe('TRAIT-SYSTEM-V2 trait registry', () => {
   it('every trait has a valid rarity + kind', () => {
@@ -67,9 +67,11 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
         const cond = getTransientConditionDef(t.selfCondition!);
         const grants = !!(cond?.grantsNaturalWeapon?.length || cond?.grantsNaturalArmor);
         expect(grants, `${t.id} → ${t.selfCondition} grants nothing`).toBe(true);
-        // §3 natural armor IS gear: it must carry a weight (→ encumbrance) and a worn-gear mode.
+        // §3 natural armor IS gear: it eats a carry-capacity fraction (0<p<1) and has a worn-gear mode.
         if (cond?.grantsNaturalArmor) {
-          expect(cond.weightKg ?? 0, `${t.selfCondition} armor needs weightKg`).toBeGreaterThan(0);
+          const p = cond.carryPenalty ?? 0;
+          expect(p, `${t.selfCondition} armor needs a carryPenalty`).toBeGreaterThan(0);
+          expect(p, `${t.selfCondition} carryPenalty must stay < 1`).toBeLessThan(1);
           expect(['replace', 'stack'], `${t.selfCondition} armor needs mode`).toContain(cond.mode);
         }
       }
@@ -87,9 +89,9 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
     }
   });
 
-  it('rarity budget: rare/epic are a real capability; legendary is a bundle', () => {
+  it('rarity budget: rare/epic/mythic are a real capability; mythic/legendary are bundles', () => {
     for (const t of TRAIT_DATABASE) {
-      if (t.rarity === 'rare' || t.rarity === 'epic') {
+      if (t.rarity === 'rare' || t.rarity === 'epic' || t.rarity === 'mythic') {
         const capable =
           !!t.selfCondition ||
           !!t.onHitEffect ||
@@ -98,8 +100,8 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
           (t.bodyMods?.length ?? 0) > 0; // an epic body transformation (stone bones) is a capability
         expect(capable, `${t.id} (${t.rarity}) carries no capability`).toBe(true);
       }
-      if (t.rarity === 'legendary')
-        expect((t.subCapabilities?.length ?? 0) > 0, `${t.id} legendary needs subCapabilities`).toBe(true);
+      if (t.rarity === 'legendary' || t.rarity === 'mythic')
+        expect((t.subCapabilities?.length ?? 0) > 0, `${t.id} ${t.rarity} needs subCapabilities`).toBe(true);
     }
     // every evolvesTo target exists
     const ids = new Set(ALL.map((t) => t.id));
@@ -115,8 +117,8 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
     expect(ws('feathered')?.foraging).toBeUndefined();
     expect(ws('berserker-blood')?.hunting).toBeUndefined();
     expect(ws('nocturnal')?.hunting).toBeUndefined();
-    // amphibious→fishing is LOGICAL and stays
-    expect(ws('amphibious')?.fishing).toBeGreaterThan(1);
+    // waterborn→fishing is LOGICAL and stays (the mundane water-affinity trait forked off amphibious)
+    expect(ws('waterborn')?.fishing).toBeGreaterThan(1);
   });
 
   it('flaw tier: every negative-rarity trait is a pure downside (no upside effect)', () => {

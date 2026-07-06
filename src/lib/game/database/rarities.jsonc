@@ -12,6 +12,9 @@
   { "id": "uncommon", "name": "Uncommon", "color": "#4CAF50", "poisonMult": 1.0 },
   { "id": "rare", "name": "Rare", "color": "#2196F3", "poisonMult": 0.7 },
   { "id": "epic", "name": "Epic", "color": "#9C27B0", "poisonMult": 0.45 },
+  // `mythic` (ADR-028): a trait tier between epic and legendary — a race-identity power rarer than epic
+  // (iron skin, the Amphibious bundle) but short of a full legendary bloodline. Cyan accent.
+  { "id": "mythic", "name": "Mythic", "color": "#26C6DA", "poisonMult": 0.3 },
   { "id": "legendary", "name": "Legendary", "color": "#FF9800", "poisonMult": 0.25 },
   // PRODUCTION-CHAIN-III §I — Famed: a named legend above Legendary (iridescent gold). A Famed item
   // rolls a generated name + history and a ×2–5 stat explosion; see core/famedNames.ts.

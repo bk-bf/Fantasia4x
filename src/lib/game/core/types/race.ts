@@ -43,7 +43,7 @@ export interface Trait {
    *  how many attribute categories a trait may touch and its polarity — common/uncommon are the mundane
    *  pool, rare/epic are the rare race-identity capabilities, legendary is a rolled bundle. It also
    *  drives the trait-card accent colour. */
-  rarity?: 'negative' | 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  rarity?: 'negative' | 'common' | 'uncommon' | 'rare' | 'epic' | 'mythic' | 'legendary';
   /** Trait category (TRAIT-SYSTEM-V2 §1) — determines the payload shape + validator path:
    *  `stat` (core-stat deltas) · `attribute` (derived stats.jsonc, breadth gated by rarity) ·
    *  `naturalGear` (a natural weapon/armor condition) · `passive` (aura/affinity/proc condition) ·

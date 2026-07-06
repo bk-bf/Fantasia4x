@@ -84,6 +84,18 @@ export function woundById(id: string): WoundDef | undefined {
 
 export type WoundSeverity = 'minor' | 'serious' | 'critical' | 'destroyed';
 
+/**
+ * A wound that no care or rest can ever resolve, so the tend/heal/infection loops must skip it:
+ *  - PERMANENT trait-stamped scars (one-eyed), and
+ *  - a DESTROYED part that is no longer bleeding — the limb is GONE; dressing does nothing and it can't
+ *    regrow, so counting it as "untended" makes a medic tend it forever (and its open severity would
+ *    otherwise fester indefinitely). A destroyed part that STILL bleeds is a live emergency and is cared
+ *    for normally until the stump stops.
+ */
+export function isUncareable(w: Pick<Injury, 'permanent' | 'severity' | 'bleeding'>): boolean {
+  return w.permanent === true || (w.severity === 'destroyed' && w.bleeding <= 0);
+}
+
 /** Severity from a wound's accumulated damage as a fraction of the part's max HP. */
 export function severityFromFrac(frac: number): WoundSeverity {
   if (frac >= 1.0) return 'destroyed';

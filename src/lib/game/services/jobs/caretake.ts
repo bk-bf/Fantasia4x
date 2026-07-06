@@ -12,7 +12,7 @@ import { itemService } from '../ItemService';
 import { buildingService } from '../BuildingService';
 import { isRoofedTile } from '../EnvironmentService';
 import { consumeFromStockpiles } from '../../core/GameState';
-import { CARE_CONFIG, isTended } from '../../core/Wounds';
+import { CARE_CONFIG, isTended, isUncareable } from '../../core/Wounds';
 import { rng } from '../../core/rng';
 import { PAWN_STATE } from '../../systems/pawn/pawnStates';
 
@@ -31,11 +31,12 @@ const OFF_SHELTER_TEND_MUL = 0.3;
  *  non-bleeding scratches self-close, so they don't count ("only minor wounds can be risked left
  *  untreated"). Shared by the auto caretake job and the player's drafted `tend` (emergency care) order. */
 export function hasUntendedWound(patient: Pawn, turn: number): boolean {
-  // Permanent (trait-stamped, healed-over) wounds are old scars — nothing to dress.
+  // Skip uncareable wounds — permanent scars AND a lost (destroyed, no-longer-bleeding) limb: dressing
+  // does nothing and it can't heal, so treating it as "untended" is what spun the infinite-tend loop.
   return (patient.limbs ?? []).some((l) =>
     (l.parts ?? []).some((p) =>
       p.injuries.some(
-        (w) => !w.permanent && !isTended(w, turn) && (w.bleeding > 0 || w.severity !== 'minor')
+        (w) => !isUncareable(w) && !isTended(w, turn) && (w.bleeding > 0 || w.severity !== 'minor')
       )
     )
   );
@@ -110,7 +111,8 @@ export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameStat
       const injuries = parts[pi].injuries;
       for (let wi = 0; wi < injuries.length; wi++) {
         const w = injuries[wi];
-        if (w.permanent || isTended(w, turn)) continue; // an old healed-over scar can't be dressed
+        // Skip scars + lost (non-bleeding destroyed) limbs — nothing to dress on either.
+        if (isUncareable(w) || isTended(w, turn)) continue;
         const rank = SEVERITY_RANK[w.severity] ?? 0;
         if (
           !target ||

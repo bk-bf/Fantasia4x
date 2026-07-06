@@ -226,11 +226,15 @@ function rollNegativeCount(): number {
  */
 function generateRaceTraitSets(archetype: Archetype): { guaranteed: Trait[]; pool: Trait[] } {
   const racial = RACIAL();
-  // Rarity CLASSES (TRAIT-SYSTEM-V2 §2): common/uncommon = the mundane variety pool; rare/epic = the
-  // rare race-identity CAPABILITY; legendary = a rolled bundle.
+  // Rarity CLASSES (TRAIT-SYSTEM-V2 §2 · ADR-028): common/uncommon = the mundane variety pool; the
+  // capability tiers rare < epic < mythic < legendary are each drawn at a DECREASING per-race rate, so a
+  // higher tier is genuinely harder to roll (iron skin at epic is much rarer than a plain rare).
   const mundane = racial.filter((t) => isMundaneRarity(t.rarity));
-  const capability = racial.filter((t) => t.rarity === 'rare' || t.rarity === 'epic');
-  const legendary = racial.filter((t) => t.rarity === 'legendary');
+  const byRarity = (r: Trait['rarity']) => racial.filter((t) => t.rarity === r);
+  const rare = byRarity('rare');
+  const epic = byRarity('epic');
+  const mythic = byRarity('mythic');
+  const legendary = byRarity('legendary');
   const themed = new Set(archetype.traits);
   const banned = new Set<string>();
   const ban = (id: string) => {
@@ -252,16 +256,26 @@ function generateRaceTraitSets(archetype: Archetype): { guaranteed: Trait[]; poo
   };
 
   const guaranteed: Trait[] = [];
-  // Rarity gate (per race): legendary is rarest; else a rare-capability gate; else mundane-only.
-  if (legendary.length > 0 && rng.random() < 0.025) {
+  // Per-race rarity gate — ONE roll into CUMULATIVE bands, rarest first, so a higher tier is strictly
+  // less likely (legendary 1.5% · mythic 1.5% · epic 3% · rare 9% → ~15% carry some capability, the rest
+  // mundane). Bands are kept TIGHT for the top tiers so each individual epic (e.g. Iron Skin) lands ~1%
+  // — rarer than a plain rare — despite the smaller pool. Rare occasionally grants a SECOND trait.
+  const r = rng.random();
+  if (legendary.length > 0 && r < 0.015) {
     const t = draw(legendary);
     if (t) guaranteed.push(t);
-  } else {
-    const s = rng.random();
-    const numCap = s < 0.1 ? 1 : s < 0.15 ? 2 : 0; // ~10% one, ~5% two
-    for (let i = 0; i < numCap; i++) {
-      const t = draw(capability);
-      if (t) guaranteed.push(t);
+  } else if (mythic.length > 0 && r < 0.03) {
+    const t = draw(mythic);
+    if (t) guaranteed.push(t);
+  } else if (epic.length > 0 && r < 0.06) {
+    const t = draw(epic);
+    if (t) guaranteed.push(t);
+  } else if (rare.length > 0 && r < 0.15) {
+    const t = draw(rare);
+    if (t) guaranteed.push(t);
+    if (rng.random() < 0.15) {
+      const t2 = draw(rare);
+      if (t2) guaranteed.push(t2);
     }
   }
   // Every race reads as a recognizable "people": if no capability/legendary rolled, give it ONE
@@ -315,7 +329,9 @@ export function drawPawnTraits(race: Race): Trait[] {
   // then a rolled sub-capability fills the remaining slot (the rest are acquired later).
   for (const g of race.guaranteedTraits) {
     if (racialCount >= MAX_RACIAL_TRAITS) break;
-    if (g.rarity === 'legendary' && g.subCapabilities?.length) {
+    // A legendary OR mythic BUNDLE takes one banner slot, then rolls a sub-capability per pawn (so two
+    // dragon-blooded / two amphibians differ); the rest are acquired later.
+    if ((g.rarity === 'legendary' || g.rarity === 'mythic') && g.subCapabilities?.length) {
       takeRacial({ ...g, subCapabilities: undefined });
       const subs = [...g.subCapabilities];
       while (racialCount < MAX_RACIAL_TRAITS && subs.length > 0) {

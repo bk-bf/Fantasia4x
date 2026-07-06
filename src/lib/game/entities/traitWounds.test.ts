@@ -144,12 +144,19 @@ describe('natural weapons bound to limbs (§3 hostParts)', () => {
   });
 });
 
-describe('natural armor as gear (§3 weight → carry load)', () => {
-  it("iron skin's 12 kg loads the carry budget like a worn cuirass", () => {
+describe('natural armor as gear (§3 carry-capacity penalty, not added weight)', () => {
+  it('iron skin REDUCES carry capacity by a fraction — never adds absolute load (no perpetual encumbrance)', () => {
     const bare = makePawn([]);
     const plated = makePawn([traitById('iron-skin')]);
-    const w0 = itemService.getCurrentCarryLoad(bare, {} as GameState).weightKg;
-    const w1 = itemService.getCurrentCarryLoad(plated, {} as GameState).weightKg;
-    expect(w1 - w0).toBe(12); // conditions.jsonc iron_skinned weightKg
+    // It must NOT add load (the old bug — a fixed kg could exceed a weak pawn's whole budget).
+    expect(itemService.getCurrentCarryLoad(plated, {} as GameState).weightKg).toBe(
+      itemService.getCurrentCarryLoad(bare, {} as GameState).weightKg
+    );
+    // Instead it shrinks the carry BUDGET (−15% for iron_skinned), and the budget stays positive.
+    const b0 = itemService.getCarryBudget(bare, {} as GameState).maxWeightKg;
+    const b1 = itemService.getCarryBudget(plated, {} as GameState).maxWeightKg;
+    expect(b1).toBeLessThan(b0);
+    expect(b1).toBeGreaterThan(0); // a bare pawn is never immobilised by its own hide
+    expect(b1 / b0).toBeGreaterThan(0.7); // ~0.85 for a −15% penalty
   });
 });

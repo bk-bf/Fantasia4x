@@ -89,9 +89,9 @@
         "evolvesTo": "scaled-hide"
     },
     {
-        "id": "amphibious", "scope": "racial", "rarity": "common", "kind": "attribute",
-        "name": "Amphibious", "description": "Equally at home on land and in water.",
-        "flavorLine": "water holds no fear for them; they breathe the shallows like air",
+        "id": "waterborn", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "name": "Waterborn", "description": "Raised by river and shore — a natural in and around the water.",
+        "flavorLine": "water holds no fear for them; they wade and swim like otters",
         "effects": {"workSpeed": {"fishing": 1.4, "foraging": 1.1}}
     },
     {
@@ -281,8 +281,8 @@
     },
     {
         "id": "stiff-jointed", "scope": "racial", "rarity": "negative", "kind": "attribute",
-        "name": "Stiff-Jointed", "description": "Joints that seize and grind — slow, aching craftwork.",
-        "flavorLine": "their knuckles crack like green firewood at every bend",
+        "name": "Maladroit", "description": "Awkward and heavy-handed at fine work — slow, fumbling craftwork.",
+        "flavorLine": "delicate work seems to fight them at every turn",
         "effects": {"workSpeed": {"crafting": 0.85, "construction": 0.95}}
     },
 
@@ -344,8 +344,8 @@
     },
     {
         "id": "squeamish", "scope": "personal", "rarity": "negative", "kind": "attribute",
-        "name": "Squeamish", "description": "Turns from blood and gore — a poor hand at the butcher's block.",
-        "effects": {"workSpeed": {"butchery": 0.8, "hunting": 0.9}}
+        "name": "Squeamish", "description": "Turns from blood and gore — a poor hand at the butcher's block or a bloody sickbed.",
+        "effects": {"workSpeed": {"butchery": 0.75, "caretaking": 0.85}}
     },
 
     // ══ RACIAL · SUPERNATURAL — RARE race powers, each worn as a permanent condition ══
@@ -365,8 +365,8 @@
         "effects": {}
     },
     {
-        "id": "iron-skin", "scope": "racial", "rarity": "rare", "kind": "naturalGear",
-        "name": "Iron Skin", "description": "Metallic skin that sets hard as armor plate.",
+        "id": "iron-skin", "scope": "racial", "rarity": "epic", "kind": "naturalGear",
+        "name": "Iron Skin", "description": "Metallic skin that sets hard as armor plate — a walking suit of plate, and rarer for it.",
         "flavorLine": "their skin sets hard as weathered stone, turning aside blows that would lay low softer folk",
         "selfCondition": "iron_skinned",
         "effects": {}
@@ -460,6 +460,26 @@
         "flavorLine": "they come alive under the stars and drowse beneath the sun",
         "selfCondition": "night_eyed",
         "effects": {"nightVision": 1.0}
+    },
+    {
+        "id": "amphibious", "scope": "racial", "rarity": "mythic", "kind": "passive",
+        "name": "Amphibious", "description": "A deep aquatic lineage — gilled, web-limbed and moist-skinned. At home in the water, but the dry air is unkind. A lesser cousin of the great bloodlines.",
+        "flavorLine": "their skin glistens even in the driest air, as if the river never quite let them go",
+        "effects": {"wetnessResistance": 0.2},
+        "subCapabilities": [
+            {
+                "id": "gilled", "scope": "racial", "kind": "passive", "name": "Gills", "description": "Slitted gills draw breath from water as easily as from air.",
+                "selfCondition": "gilled", "effects": {}
+            },
+            {
+                "id": "swift-swimmer", "scope": "racial", "kind": "attribute", "name": "Swift Swimmer", "description": "Webbed and powerful in the water — a deft, tireless fisher.",
+                "effects": {"workSpeed": {"fishing": 1.5}}
+            },
+            {
+                "id": "moist-skinned", "scope": "racial", "kind": "passive", "name": "Moist Skin", "description": "Permeable amphibian skin sheds water and cold, but parches and burns in dry heat.",
+                "selfCondition": "moist_skinned", "effects": {"wetnessResistance": 0.4, "coldResistance": 0.15, "fireResistance": -0.2}
+            }
+        ]
     },
 
     // ══ RACIAL · LEGENDARY — very rare; a bundle, each sub-capability rolled per pawn ══

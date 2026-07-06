@@ -73,13 +73,12 @@
           }
         : {
             name: t.name,
-            sub: `+${armor} def${cond.weightKg ? ` · ${cond.weightKg} kg` : ''}`,
+            sub: `+${armor} def${cond.carryPenalty ? ` · −${Math.round(cond.carryPenalty * 100)}% carry` : ''}`,
             tip: {
               id: `natural-armor:${t.id}`,
               name: cond.name,
               type: 'armor',
               description: cond.description,
-              weightKg: cond.weightKg,
               armorProperties: {
                 defense: armor,
                 armorType: 'natural',

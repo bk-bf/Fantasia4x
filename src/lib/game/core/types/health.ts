@@ -66,10 +66,12 @@ export interface TransientConditionDef extends ConditionGraphFields {
    *  paws). Combat resolves the weapon only while at least one host part survives — lose both hands and
    *  the claws go with them. Omitted ⇒ the weapon is unbound (always available; back-compat). */
   hostParts?: string[];
-  /** TRAIT-SYSTEM-V2 §3 — natural armor IS GEAR: its mass in kg feeds the pawn's carry load
-   *  (ItemService.getCurrentCarryLoad) exactly like a worn piece, so a heavy hide's slowdown is the
-   *  emergent staged `encumbered` condition (load ÷ STR capacity), never a hand-tuned flat DEX penalty. */
-  weightKg?: number;
+  /** TRAIT-SYSTEM-V2 §3 (ADR-028 rev) — natural armor's burden as a FRACTION (0–1) of the pawn's carry
+   *  CAPACITY it consumes: worn permanently, a heavy hide leaves less spare load. Applied by REDUCING
+   *  `getCarryBudget` (never by adding invisible kg — an absolute weight could exceed a weak pawn's whole
+   *  capacity and encumber it forever). Percentage-based, so it scales to the body and is always < 1:
+   *  a bare pawn is never encumbered, it just hauls proportionally less. iron skin ~0.15, scaled ~0.06. */
+  carryPenalty?: number;
   /** §3 — how natural armor interacts with worn gear: 'stack' (default) LAYERS — its defense ADDS to
    *  the worn soak (scaled hide under a cuirass); 'replace' occupies its blocked slot and competes
    *  best-of like a worn piece (thick fur IS the bodyMid layer). Read by Combat.partArmorReduction. */

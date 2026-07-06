@@ -987,9 +987,10 @@
     // The legible pill for a rare/epic/legendary body trait — pushed by syncTransientConditions for
     // every trait carrying the id as `selfCondition`, and the HUB for its combat capability:
     // `grantsNaturalWeapon` (item ids) / `grantsNaturalArmor` (0–100 defense). Natural ARMOR is gear
-    // (TRAIT-SYSTEM-V2 §3): `weightKg` loads the carry budget (→ the staged `encumbered` condition,
-    // like worn plate) and `mode` decides how it meets worn armour — "stack" ADDS to the worn soak
-    // (armor under the clothes), "replace" competes best-of as the blocked slot's layer.
+    // (TRAIT-SYSTEM-V2 §3): `carryPenalty` (0–1) eats that FRACTION of the pawn's carry CAPACITY (worn
+    // always → less spare load; never added kg, which could encumber a weak pawn while bare) and `mode`
+    // decides how it meets worn armour — "stack" ADDS to the worn soak (armor under the clothes),
+    // "replace" competes best-of as the blocked slot's layer.
     // `photosynthesis`/`light_sensitive` are ENVIRONMENT-GATED (pushed only while active) and
     // `burning` is a combat DoT applied via onHitEffect (conditionTimers).
     {
@@ -1013,7 +1014,7 @@
         "color"            : "#8B6F47",
         "charSpans"        : [ {"sheet": "items", "id": 145} ],
         "grantsNaturalArmor": 8,
-        "weightKg"         : 5,
+        "carryPenalty"     : 0.08,
         "mode"             : "replace",
         "modifiers"        : {}
     },
@@ -1026,7 +1027,7 @@
         "color"            : "#6B8E6B",
         "charSpans"        : [ {"sheet": "items", "id": 145} ],
         "grantsNaturalArmor": 12,
-        "weightKg"         : 4,
+        "carryPenalty"     : 0.06,
         "mode"             : "stack",
         "modifiers"        : {}
     },
@@ -1039,7 +1040,7 @@
         "color"            : "#9AA3AD",
         "charSpans"        : [ {"sheet": "items", "id": 145} ],
         "grantsNaturalArmor": 18,
-        "weightKg"         : 12,
+        "carryPenalty"     : 0.15,
         "mode"             : "stack",
         "modifiers"        : {}
     },
@@ -1052,7 +1053,7 @@
         "color"            : "#B87333",
         "charSpans"        : [ {"sheet": "items", "id": 145} ],
         "grantsNaturalArmor": 20,
-        "weightKg"         : 8,
+        "carryPenalty"     : 0.12,
         "mode"             : "stack",
         "modifiers"        : {}
     },
@@ -1123,6 +1124,26 @@
         "transient"  : true,
         "description": "A covering of fine down — natural insulation that holds warmth against the cold.",
         "color"      : "#C9B48A",
+        "charSpans"  : [ {"sheet": "items", "id": 145} ],
+        "modifiers"  : {}
+    },
+    {
+        "id"         : "gilled",
+        "name"       : "Gilled",
+        "flags": ["racial", "passive"],
+        "transient"  : true,
+        "description": "Slitted gills at the throat — breathes water as easily as air.",
+        "color"      : "#4FC3C7",
+        "charSpans"  : [ {"sheet": "items", "id": 195} ],
+        "modifiers"  : {}
+    },
+    {
+        "id"         : "moist_skinned",
+        "name"       : "Moist Skin",
+        "flags": ["racial", "passive"],
+        "transient"  : true,
+        "description": "Permeable, ever-damp amphibian skin — sheds water and cold, but parches and burns in dry heat.",
+        "color"      : "#7EC8A0",
         "charSpans"  : [ {"sheet": "items", "id": 145} ],
         "modifiers"  : {}
     },

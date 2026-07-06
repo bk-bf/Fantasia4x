@@ -3,7 +3,7 @@
      coloured accent (tier → rarities.jsonc colour), name, description, health-pill-style effect chips,
      and a cursor-following hover tooltip with the full breakdown. -->
 <script lang="ts">
-  import type { Trait } from '$lib/game/core/types';
+  import type { Trait, Pawn } from '$lib/game/core/types';
   import { workAxisLabel } from '$lib/components/util/pawnUtils';
   import { partLabel } from '$lib/utils/bodyLabels';
   import { getTransientConditionDef } from '$lib/game/core/needs';
@@ -13,12 +13,17 @@
 
   let {
     traits,
-    guaranteedCount = undefined
+    guaranteedCount = undefined,
+    pawn = undefined
   }: {
     traits: Trait[];
     /** When set (race view), the first N traits are the race's shared identity; the rest "vary" per
      *  pawn. Omitted for a pawn's own traits (they're just the pawn's traits). */
     guaranteedCount?: number;
+    /** The owning pawn (STATUS tab only). Lets a wound trait's hover cite the ACTUAL wounded side —
+     *  the applier flips left/right per pawn, so the trait data alone can't say which. Absent (race
+     *  view) ⇒ the hover stays side-agnostic. */
+    pawn?: Pawn;
   } = $props();
 
   // ── Rarity colour + label (the trait's `rarity` IS a rarities.jsonc id) ─────
@@ -68,6 +73,19 @@
   // The wound DATA names a canonical side (leftEye) but the applier may flip to the twin for
   // variety — so the card shows the side-agnostic organ ("eye"); the health tab shows the real side.
   const woundPartLabel = (id: string) => partLabel(id).replace(/^(left|right) /i, '');
+  const stripSide = (id: string) => id.replace(/^(left|right)/i, '').toLowerCase();
+  // The ACTUAL wounded part on THIS pawn for a trait's wound spec — the applier may have flipped the
+  // side, so match the pawn's real permanent wound by organ family (leftEye ↔ rightEye). Falls back to
+  // the spec's canonical part when there's no pawn (race view) or no match.
+  function actualWoundPart(specPart: string): string {
+    if (!pawn) return specPart;
+    const base = stripSide(specPart);
+    const hit = (pawn.injuries ?? []).find((w) => w.permanent && stripSide(w.bodyPart) === base);
+    return hit?.bodyPart ?? specPart;
+  }
+  // Hover label: the real sided part when we have the pawn (STATUS tab), else side-agnostic (race view).
+  const woundHoverLabel = (specPart: string) =>
+    pawn ? partLabel(actualWoundPart(specPart)) : woundPartLabel(specPart);
   // §1 bodyMod: human label for which parts a body-structure trait reshapes.
   const bodyModPartLabel = (target: string) =>
     target === 'skeleton' ? 'bones' : target === 'flesh' ? 'hide' : woundPartLabel(target);
@@ -103,8 +121,9 @@
       tags.push({ label: 'natural weapon', value: '', type: 'pos' });
     if (cond?.grantsNaturalArmor)
       tags.push({ label: 'nat armor', value: `+${cond.grantsNaturalArmor}`, type: 'pos' });
-    // §3 natural armor is GEAR — its weight loads the body (encumbrance), so it reads as a cost.
-    if (cond?.weightKg) tags.push({ label: 'weight', value: `${cond.weightKg} kg`, type: 'neg' });
+    // §3 natural armor is worn permanently — it eats a share of carry capacity, so it reads as a cost.
+    if (cond?.carryPenalty)
+      tags.push({ label: 'carry', value: `-${Math.round(cond.carryPenalty * 100)}%`, type: 'neg' });
     // §4 wound-kind: the permanent injury stamped at generation (human part label, never the raw id).
     for (const w of trait.wounds ?? [])
       tags.push({ label: woundPartLabel(w.part), value: w.severity, type: 'neg' });
@@ -255,16 +274,16 @@
         {nw.join(', ')}
       </div>{/if}
     {#if na}
-      {@const cw = t.selfCondition ? getTransientConditionDef(t.selfCondition)?.weightKg : undefined}
+      {@const cp = t.selfCondition ? getTransientConditionDef(t.selfCondition)?.carryPenalty : undefined}
       <div class="tip-row">
         <span class="tip-lbl">Natural armor</span>
-        +{na} def{cw ? ` · ${cw} kg (loads the body like worn armour)` : ''}
+        +{na} def{cp ? ` · −${Math.round(cp * 100)}% carry capacity (worn always)` : ''}
       </div>
     {/if}
     {#if t.wounds?.length}
       <div class="tip-row neg">
         <span class="tip-lbl">Old wound</span>
-        {t.wounds.map((w) => `${woundPartLabel(w.part)} (${w.severity})`).join(', ')}
+        {t.wounds.map((w) => `${woundHoverLabel(w.part)} (${w.severity})`).join(', ')}
       </div>
     {/if}
     {#if t.bodyMods?.length}

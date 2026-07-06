@@ -10,7 +10,7 @@
 <div class="traits-section">
   <div class="section-hdr">| TRAITS ({pawn.traits?.length || 0})</div>
   {#if pawn.traits && pawn.traits.length > 0}
-    <TraitCards traits={pawn.traits} />
+    <TraitCards traits={pawn.traits} {pawn} />
   {:else}
     <div class="empty-row"><span class="muted">no traits</span></div>
   {/if}
