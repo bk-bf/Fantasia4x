@@ -215,12 +215,22 @@ class SimWorkerBridge {
         for (const d of m.worldMapDelta) {
           const row = this.worldMap[d.y];
           if (row) {
-            row[d.x] = { ...row[d.x], ...d.tile };
             // ADR-026: record the coord so GameCanvas repaints ONLY this cell (no whole-map scan).
             // `k: 1` = snow/ice-only change → route to the snow channel, so a snow-onset wave
             // repaints just the blended snow layer instead of re-baking terrain+resource cells.
-            if (d.k === 1) markSnowRenderTileDirty(d.y, d.x);
-            else markRenderTileDirty(d.y, d.x);
+            if (d.k === 1) {
+              // PERF: a whole-map snow onset/melt ships ~one delta PER TILE in a single snapshot. The
+              // slim snow delta carries only snow/ice, so MUTATE the cached mirror tile in place rather
+              // than cloning a fresh full tile per delta — the spread allocated ~150k tiles/snapshot,
+              // whose GC + copy was an ~800ms main-thread stall (the snow "hiccup"). Safe: the mirror is
+              // the main thread's own copy (the worker owns its GameState separately), and snow repaint
+              // is driven by the dirty COORD below, not by tile identity. (ADR-002 hot-path exception.)
+              Object.assign(row[d.x], d.tile);
+              markSnowRenderTileDirty(d.y, d.x);
+            } else {
+              row[d.x] = { ...row[d.x], ...d.tile };
+              markRenderTileDirty(d.y, d.x);
+            }
           }
         }
       }

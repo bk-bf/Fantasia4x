@@ -250,7 +250,7 @@
   // renders in the same snow layer via the 'snow' delta kind). FIFO by insertion order.
   let _snowPendingChunks = new Map<string, { x: number; y: number }[]>();
   const SNOW_CHUNK_SIZE = 32; // MUST match GridRenderer.CHUNK_SIZE (a mismatch only costs extra rebuilds)
-  const SNOW_CHUNKS_PER_FRAME = 2; // repaint at most this many snow chunks per frame
+  const SNOW_CHUNKS_PER_FRAME = 1; // repaint at most this many snow chunks per frame (1 = one re-vertex/frame)
   // Crash observability: when a frame is about to issue an ABNORMALLY large GL draw (full-map
   // re-vertex, a big snow/terrain delta batch), this holds a human reason. The render section writes a
   // synchronous crash breadcrumb ("→ heavy draw START …") BEFORE the draw and ("✓ heavy draw OK …")
