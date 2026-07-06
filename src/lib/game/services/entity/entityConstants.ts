@@ -208,9 +208,11 @@ export const MOB_WIND_ONSET = 0.45; // effective wind a creature shrugs off befo
 export function sleepWakeThreshold(hunger: number): number {
   return hunger >= 70 ? 30 : 0;
 }
-/** Fatigue recovered per second while sleeping. Kept low (2.0) so animals sleep for a
- * substantial portion of their time rather than snapping back to full immediately. */
-export const SLEEP_RECOVERY_PER_SECOND = 2.0;
+/** Fatigue recovered per second while sleeping. Matched to the pawn GROUND recovery rate
+ * (FATIGUE_PER_SLEEPING_GROUND = 0.58) so animals rest for a realistic stretch instead of
+ * napping ~30s and snapping back to full: enter at SLEEP_FATIGUE_THRESHOLD (60) → wake at 0
+ * takes ~100s ≈ 8 in-game hours, roughly the pawn's ~9.9h night (72 / 0.58 ≈ 124s). */
+export const SLEEP_RECOVERY_PER_SECOND = 0.6;
 // The sleeping/eating hunger-rate now comes straight from the conditions.jsonc `sleeping`/`eating`
 // modifiers (transientNeedMultipliers), shared with pawns — no hardcoded SLEEP_HUNGER_RATE here.
 /** Hunger ceiling above which a mob won't enter sleep (mirrors pawn shouldPawnSleep: hunger < 87). */

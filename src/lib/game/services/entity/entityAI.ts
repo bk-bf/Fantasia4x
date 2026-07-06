@@ -704,12 +704,19 @@ export function stepHostile(
   const onHunt = mob.state === 'Hunting' || mob.state === 'Attacking' || mob.huntTargetId != null;
   const feeding = mob.state === 'Eating'; // finishing the kill / a corpse — don't drag it off its meal
   const desperate = mob.needs.hunger >= HUNGER_OVERSTRETCH_THRESHOLD;
+  // A locked target that is ASLEEP is a stationary free kill — exempt the hunter from the leash yank
+  // entirely so it walks the last tiles over and finishes it, instead of oscillating at the boundary
+  // (spot sleeper just outside → lunge → yanked home → re-lock → lunge…). Bounded by HUNT_GIVE_UP_SECONDS
+  // in stepHunting and by the fact that sleeping prey doesn't move, so there is no runaway over-roam.
+  const huntTgt = mob.huntTargetId ? allMobs.find((m) => m.id === mob.huntTargetId) : null;
+  const targetAsleep = huntTgt?.state === 'Sleeping';
   const leashReach =
     (mob.lairRange ?? Infinity) + (onHunt || feeding || desperate ? HUNT_OVERSTRETCH_TILES : 0);
   if (
     mob.lairId != null &&
     mob.state !== 'Fleeing' &&
     mob.state !== 'Exhausted' &&
+    !targetAsleep &&
     chebyshev(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) > leashReach
   ) {
     // NB: do NOT clear `path` here. moveToward→stepDirectional preserves nextCellCostLeft only when the
@@ -724,7 +731,11 @@ export function stepHostile(
         state: 'Wander',
         stateSince: turn,
         huntTargetId: undefined,
-        eatProgress: undefined
+        eatProgress: undefined,
+        // Stamp a hunt cooldown so the abandoned hunt goes STICKY: the Wander→Hunting re-entry gate
+        // (huntCooldownExpired) blocks an instant re-lock of the same prey, so the mob actually walks
+        // home instead of oscillating on the leash boundary every tick (the reported yoyo).
+        huntCooldownUntil: turn + ticksFromSeconds(HUNT_COOLDOWN_SECONDS)
       },
       { x: mob.lairX!, y: mob.lairY! },
       state
