@@ -30,8 +30,7 @@ import {
   effectiveTemperature,
   tileWetness,
   weatherEffects,
-  diurnalTempDelta,
-  WET_TILE_THRESHOLD
+  diurnalTempDelta
 } from './EnvironmentService';
 import itemsData from '../database/items.jsonc';
 import buildingsData from '../database/buildings.jsonc';
@@ -72,7 +71,22 @@ export const DETERIORATION_GLOBAL_SCALE = 0.02;
 // an actual furnace carrying a larger dryingBonus, no special-casing.
 const DRY_TEMP_FLOOR = 12; // °C below which ambient drying does not progress at all
 const DRY_TEMP_REF = 28; // °C at/above which ambient drying runs at full (open-air) speed
-const DRY_WET_DECAY = 2; // drying seconds lost per real second while the stack sits on a wet tile
+const DRY_WET_DECAY = 2; // drying seconds lost per real second on a fully saturated tile
+// Graded wetness gate (replaces the old hard ≥50% cliff, which made any tile at/above 50% wet reverse
+// at full speed — so spring rain locked out hay-making entirely). Drying runs at full speed up to
+// DRY_WET_DAMP, then ramps down through a stall (~70%) to reversing at DRY_WET_SOAK. A nearby fire
+// EVAPORATES moisture: DRY_HEAT_DEWATER wetness points are removed per °C of radiated warmth, so a lit
+// Stone Hearth (~+31°C one tile out → ~−15% wetness) beats ordinary rain, while a true storm still
+// debuffs and a saturated / waterside tile still ruins the goods.
+const DRY_WET_DAMP = 45; // effective wetness % up to which weather no longer slows drying
+const DRY_WET_SOAK = 95; // effective wetness % at/above which drying reverses at full DRY_WET_DECAY
+const DRY_HEAT_DEWATER = 0.5; // wetness % removed per °C of nearby fire warmth
+
+/** Effective (fire-dried) wetness a drying stack feels: nearby fire warmth evaporates surface moisture,
+ *  lowering the wetness the drying gate sees. Shared by the rate calc and the UI readout. */
+function dryingWetness(wetness: number, warmth: number): number {
+  return Math.max(0, wetness - warmth * DRY_HEAT_DEWATER);
+}
 
 type DryingRule = { itemId: string; seconds: number; mode: 'ambient' | 'fire-ring' };
 // Category-level drying rules (item-def `driesTo` overrides these; `driesTo: null` opts out). Mirrors
@@ -83,15 +97,19 @@ const CATEGORY_DRYING: Record<string, DryingRule> = {
 };
 
 /**
- * Ambient drying rate at a spot: drying-seconds gained per second of exposure. >0 cures, 0 = too cold,
- * <0 = reversing (the tile is wet — rain ruins drying goods). `bonus` is the tile's building
- * dryingBonus (1 = open ground). The SINGLE formula stepDrying + the UI dryness readout share so they
- * can't drift. Open-ground full-warmth rate = 1.
+ * Ambient drying rate at a spot: drying-seconds gained per second of exposure. >0 cures, 0 = stalled
+ * (too cold, or too wet to progress), <0 = reversing (a saturated tile — rain ruins drying goods).
+ * `wetness` is the raw tile wetness; `warmth` is nearby fire warmth (°C) which both raises `temp` AND
+ * evaporates moisture. `bonus` is the tile's building dryingBonus (1 = open ground). The SINGLE formula
+ * stepDrying + the UI dryness readout share so they can't drift. Open-ground full-warmth rate = 1.
  */
-function ambientDryRate(temp: number, wetness: number, bonus: number): number {
-  if (wetness >= WET_TILE_THRESHOLD) return -DRY_WET_DECAY;
-  const f = Math.max(0, Math.min(1, (temp - DRY_TEMP_FLOOR) / (DRY_TEMP_REF - DRY_TEMP_FLOOR)));
-  return f * bonus;
+function ambientDryRate(temp: number, wetness: number, bonus: number, warmth = 0): number {
+  const wet = dryingWetness(wetness, warmth);
+  // Signed wetness factor: +1 (dry) → 0 (stall ~DRY_WET_DAMP..SOAK midpoint) → −1 (saturated).
+  const wetF = Math.max(-1, Math.min(1, 1 - (2 * (wet - DRY_WET_DAMP)) / (DRY_WET_SOAK - DRY_WET_DAMP)));
+  if (wetF < 0) return wetF * DRY_WET_DECAY; // reversing, scaled by how saturated
+  const tempF = Math.max(0, Math.min(1, (temp - DRY_TEMP_FLOOR) / (DRY_TEMP_REF - DRY_TEMP_FLOOR)));
+  return tempF * wetF * bonus;
 }
 
 /** The drying rule for a stack's resource — the item def's `driesTo` first, then a category rule
@@ -143,7 +161,7 @@ function dryRateFor(d: DroppedItem, gameState: GameState, ctx: DryingCtx): numbe
   const thermal = thermalAt(d.x, d.y);
   const temp = effectiveTemperature(seasonBakedTemp(tile.terrainType, gameState.season), ctx.weatherTemp, thermal);
   const wet = tileWetness(tile.moisture ?? 0, gameState.weather, thermal);
-  return ambientDryRate(temp, wet, ctx.dryRacks.get(d.y + ',' + d.x) ?? 1);
+  return ambientDryRate(temp, wet, ctx.dryRacks.get(d.y + ',' + d.x) ?? 1, thermal.warmth);
 }
 
 /** Live drying readout for one stack, for the UI dryness meter + speed arrow (null = doesn't dry). */
@@ -1006,14 +1024,17 @@ export class ItemServiceImpl implements ItemService {
     const weatherTemp =
       weatherEffects(gameState.weather).tempDelta + diurnalTempDelta(gameState.turn, gameState.season);
     const temp = effectiveTemperature(seasonBakedTemp(tile.terrainType, gameState.season), weatherTemp, thermal);
-    const wetness = tileWetness(tile.moisture ?? 0, gameState.weather, thermal);
     let bonus = 1;
     for (const b of gameState.buildings ?? []) {
       if (b.status !== 'complete' || b.x !== d.x || b.y !== d.y) continue;
       bonus = Math.max(bonus, buildingService.getBuildingById(b.type)?.effects?.dryingBonus ?? 0);
     }
-    const rate = ambientDryRate(temp, wetness, bonus);
-    return { target, progress, rate, reason: rate < 0 ? 'wet' : rate === 0 ? 'cold' : undefined, temp, wetness, bonus };
+    const rate = ambientDryRate(temp, tileWetness(tile.moisture ?? 0, gameState.weather, thermal), bonus, thermal.warmth);
+    // Effective wetness the stack feels — a nearby fire evaporates surface moisture (dryingWetness).
+    const wetness = dryingWetness(tileWetness(tile.moisture ?? 0, gameState.weather, thermal), thermal.warmth);
+    // rate ≤ 0 is either too wet (reversing / wetness-stall) or too cold — report whichever is binding.
+    const reason = rate > 0 ? undefined : wetness >= DRY_WET_DAMP ? 'wet' : 'cold';
+    return { target, progress, rate, reason, temp, wetness, bonus };
   }
 
   /**
