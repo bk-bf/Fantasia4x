@@ -122,8 +122,6 @@ if [[ "$HMR_MODE" == "true" ]]; then
   # F4X_HMR drives vite.config (server.hmr); VITE_HMR is the client-visible mirror so the app can skip
   # the paused WORKER_WARMUP_MS reveal linger when you're iterating with hot-reload.
   HMR_ENV="F4X_HMR=true VITE_HMR=true"
-else
-  echo "HMR disabled (default) — pass --hmr to enable hot-reload."
 fi
 
 # Desktop-shell guard (vite.config.ts) blocks plain browsers by default. --browser lifts it; --profiler

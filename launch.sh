@@ -182,23 +182,46 @@ run_isolated_electron() {
   F4X_NS_SCRIPT_DIR="$SCRIPT_DIR" F4X_NS_PLAY="$PLAY" \
   unshare --user --map-root-user --net -- bash -s <<'NSEOF'
     set -u
+    log() { printf '  [ns %s] %s\n' "$(date +%T)" "$*" >&2; }
+    log "entered user+net namespace; bringing loopback up"
     ip link set lo up 2>/dev/null
+    if ip addr show lo 2>/dev/null | grep -q 'inet '; then
+      log "loopback is up"
+    else
+      log "WARNING: loopback has no IPv4 addr — the dev server won't be reachable in here"
+    fi
+    log "starting dev server: dev.sh $F4X_NS_SERVER_FLAG --port $F4X_NS_PORT"
     "$F4X_NS_SCRIPT_DIR/dev.sh" $F4X_NS_SERVER_FLAG --port "$F4X_NS_PORT" &
     SRV=$!
     cleanup_ns() { kill "$SRV" 2>/dev/null; wait 2>/dev/null; }
     trap 'cleanup_ns; exit 0' INT TERM
     # Wait (in-ns) for the dev server to answer — any HTTP status counts (the 403 guard still responds).
-    for _ in $(seq 1 120); do
-      curl -s -o /dev/null "http://127.0.0.1:$F4X_NS_PORT/" && break
+    # Bail early if the server process dies, and announce success/timeout, so a stall here is never silent.
+    log "waiting for dev server on http://127.0.0.1:$F4X_NS_PORT/ (up to 60s) …"
+    up=false
+    for i in $(seq 1 120); do
+      if ! kill -0 "$SRV" 2>/dev/null; then
+        log "ERROR: dev server (PID $SRV) exited before binding the port — see its output above. Aborting."
+        cleanup_ns; exit 1
+      fi
+      if curl -s -o /dev/null "http://127.0.0.1:$F4X_NS_PORT/"; then up=true; log "dev server answered (attempt $i)"; break; fi
       sleep 0.5
     done
+    if [[ "$up" != true ]]; then
+      log "ERROR: dev server never answered on 127.0.0.1:$F4X_NS_PORT within 60s — not launching a blank window. Aborting."
+      cleanup_ns; exit 1
+    fi
     cd "$F4X_NS_SHELL_DIR" || { cleanup_ns; exit 1; }
     # No session bus is reachable inside the net namespace; without this Chromium autolaunches one and
     # blocks ~25s per dbus-dependent probe ("Failed to connect to the bus: Did not receive a reply"),
     # which reads as a freeze at startup. `disabled:` is the GLib sentinel that suppresses autolaunch.
     export DBUS_SESSION_BUS_ADDRESS=disabled:
     # --no-sandbox: Chromium can't create its own sandbox nested inside this user namespace.
-    SPIKE_URL="http://127.0.0.1:$F4X_NS_PORT" F4X_PLAY="$F4X_NS_PLAY" ./node_modules/.bin/electron . --no-sandbox
+    # --enable-logging=stderr --v=1: stream Chromium's own startup logs to THIS terminal, so a stall
+    #   inside the shell shows which init step blocked instead of hanging silently.
+    log "launching electron → http://127.0.0.1:$F4X_NS_PORT (Chromium logging on stderr) …"
+    SPIKE_URL="http://127.0.0.1:$F4X_NS_PORT" F4X_PLAY="$F4X_NS_PLAY" ./node_modules/.bin/electron . --no-sandbox --enable-logging=stderr --v=1
+    log "electron exited (status $?)"
     cleanup_ns
 NSEOF
 }
