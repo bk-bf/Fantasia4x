@@ -50,6 +50,12 @@
     "infectionRiskPerWound"   :     0.0007,
     "infectionRiskMax"        :     0.0014,
     "infectionRecovery"       :     0.002,
+    // Infection severity removed by ONE successful tend (× tend quality) — the ACTIVE cure a
+    // caretaker applies once the festering wounds are dressed, stacked on top of the passive
+    // per-second immune recovery. A discrete per-tend cut (not a rate): at quality ~0.5 a tend
+    // clears ~0.17 severity, so a serious (0.5) infection needs a few tends — repeated care, not
+    // an instant cure. Bump toward 1.0 to make a single good tend near-curative.
+    "infectionTreatment"      :     0.35,
     "immuneResistBase"        :     0.35
   },
   "wounds" : [

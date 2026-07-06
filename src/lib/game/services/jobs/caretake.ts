@@ -38,15 +38,25 @@ export function hasUntendedWound(patient: Pawn, turn: number): boolean {
   );
 }
 
+/** Does this pawn carry an active infection worth treating? The `infection` condition is driven by
+ *  untended open wounds (see PawnStateMachine); a caretaker treats it directly (tendPatient) once the
+ *  festering wounds are dressed. An infected pawn is an auto-care target in its own right — so a
+ *  colonist whose wounds have all closed but who is still fighting off an infection keeps pulling a
+ *  medic until it clears, rather than being left to the slow passive immune recovery alone. */
+export function hasActiveInfection(patient: Pawn): boolean {
+  return (patient.conditions ?? []).some((c) => c.id === 'infection' && c.severity > 0);
+}
+
 /** A patient is tendable by the AUTO caretake job when it's holding still (resting/downed), not being
- *  carried, and has a wound worth dressing. The drafted emergency-care order skips the resting gate —
- *  a medic can be told to dress a standing colonist's wounds right now. */
+ *  carried, and has either a wound worth dressing OR an active infection to treat. The drafted
+ *  emergency-care order skips the resting gate — a medic can be told to dress a standing colonist's
+ *  wounds right now. */
 function needsTending(patient: Pawn, turn: number): boolean {
   if (patient.isAlive === false || !patient.position || patient.carriedBy) return false;
   const resting =
     patient.currentState === PAWN_STATE.SLEEPING || patient.currentState === PAWN_STATE.COLLAPSED;
   if (!resting) return false;
-  return hasUntendedWound(patient, turn);
+  return hasUntendedWound(patient, turn) || hasActiveInfection(patient);
 }
 
 /** Best medicine in the stockpile (highest `medicineQuality` with stock), or null. */
@@ -74,12 +84,15 @@ function shelterTendFactor(gs: GameState, x: number, y: number): number {
 }
 
 /**
- * Dress the SINGLE worst untended wound on `patient` (most bleeding first, severity as the tiebreak)
- * using `medic`'s `medical_skill` (folds in sight × manipulation × consciousness) × mood × variance,
- * plus the best stockpile medicine (consumed), the whole roll scaled by the patient's shelter (heavy
- * off-roof penalty). One wound per call so a mangled patient is tended progressively rather than fully
- * healed in one instant pass — the caller (auto job / drafted order) repeats until none remain.
- * Exported for the job handler and tests. A botched roll (< minTendQuality) does nothing.
+ * Apply ONE unit of care to `patient` using `medic`'s `medical_skill` (folds in sight × manipulation ×
+ * consciousness) × mood × variance, plus the best stockpile medicine (consumed), the whole roll scaled
+ * by the patient's shelter (heavy off-roof penalty). Priority: dress the SINGLE worst untended wound
+ * (most bleeding first, severity as the tiebreak) — open wounds are the acute threat AND what feeds the
+ * infection, so they go first; once none remain, a lingering `infection` is treated directly, its
+ * severity cut by CARE_CONFIG.infectionTreatment × quality. One action per call so a mangled/infected
+ * patient is tended progressively rather than fully healed in one instant pass — the caller (auto job /
+ * drafted order) repeats until nothing remains. Exported for the job handler and tests. A botched roll
+ * (< minTendQuality) does nothing.
  */
 export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameState {
   const turn = gs.turn;
@@ -105,7 +118,8 @@ export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameStat
       }
     }
   }
-  if (!target) return gs; // nothing left to dress
+  const infected = hasActiveInfection(patient);
+  if (!target && !infected) return gs; // nothing left to dress or treat
 
   const skill = pawnStatService.evaluateStat('medical_skill', medic);
   const mood = medic.state?.mood ?? 50;
@@ -115,6 +129,23 @@ export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameStat
   const skillRoll = skill * moodFactor * (0.6 + rng.random() * 0.4);
   const quality = Math.max(0, Math.min(1, (skillRoll + (med?.quality ?? 0)) * shelter));
   if (quality < CARE_CONFIG.minTendQuality) return gs; // botched / hopeless in the field
+
+  // No untended wound left, but the infection lingers — treat it directly. A successful tend cuts
+  // severity by infectionTreatment × quality (on top of the passive immune recovery), so repeated
+  // tending clears an infection far faster than waiting it out. One dose of medicine per treatment.
+  if (!target) {
+    const conditions = (patient.conditions ?? []).flatMap((c) => {
+      if (c.id !== 'infection') return [c];
+      const nextSev = Math.max(0, c.severity - CARE_CONFIG.infectionTreatment * quality);
+      return nextSev > 0 ? [{ ...c, severity: nextSev }] : [];
+    });
+    let next: GameState = {
+      ...gs,
+      pawns: gs.pawns.map((p) => (p.id === patient.id ? { ...patient, conditions } : p))
+    };
+    if (med) next = consumeFromStockpiles(next, { [med.id]: 1 });
+    return next;
+  }
 
   const newLimbs = limbs.map((limb, li) => {
     if (li !== target!.li) return limb;

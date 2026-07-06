@@ -53,6 +53,9 @@ export interface CareConfig {
   infectionRiskMax: number;
   /** Infection severity recovered PER SECOND when pressure is suppressed (all wounds tended/closed). */
   infectionRecovery: number;
+  /** Infection severity removed by ONE successful tend (× tend quality) — the active cure a caretaker
+   *  applies on top of the passive immune recovery. A discrete per-tend cut, NOT a per-second rate. */
+  infectionTreatment: number;
   /** Base immune resistance (added to CON scaling). */
   immuneResistBase: number;
 }
