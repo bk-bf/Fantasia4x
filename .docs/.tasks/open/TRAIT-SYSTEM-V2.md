@@ -179,9 +179,18 @@ limits, and personal-trait work mods (temperament *is* a work aptitude).
   - [x] First trigger edge wired: `wet → hypothermia` (the old inline WET_CHILL) now fires through
         `fireTriggers` from `conditions.jsonc` data — behaviour-identical (same gate/predicate/chance/
         severity, RNG order preserved; 111 sim + 6 wetness tests green).
-  - [ ] Migrate the remaining hardcoded interactions to the schema: shock (pain/blood — a deterministic
-        threshold edge, certainty preserved), untended-wound → infection, envenomed secondaries.
-  - [ ] Full `flags` taxonomy pass across all conditions (only a few annotated so far).
+  - [x] General trigger-firing pass in `tickConditions` — evaluates every active condition's edges
+        (timer-transients + persistent), handling PERSISTENT targets (severity, e.g. hypothermia) and
+        TRANSIENT targets (timer, e.g. nausea). Cheap-gated by `CONDITION_IDS_WITH_TRIGGERS` (zero work +
+        no alloc for pawns with no trigger-bearing condition). First new edge: `envenomed → nausea`.
+  - [x] Full `flags` taxonomy pass — all 69 conditions categorised (need/combat/environmental/disease/
+        racial/mood/magical/food/driver…). Data-integrity test asserts every trigger target resolves.
+  - [x] shock + infection: these are CONTINUOUS meter/wound-driven SEVERITY curves (shock SETs
+        `max(painSev,bloodSev)` with a pain-numbing mult; infection accrues from dynamic wound pressure),
+        NOT fixed-severity transition edges — a `fireTriggers` edge would ACCRUE, changing behaviour. So
+        they keep their exact functions and are flagged `driver` in the schema (graph-legible) rather
+        than force-fit into an edge. A future `severityDriver` schema (meter → set-severity) could fully
+        data-drive them; deferred (would risk the "preserve exactly" guarantee).
 - **Phase 1b — typed traits + data:** `kind` union + rarity budget (`rarities.jsonc` scale) + registry
   test; natural-armor-as-gear (encumbrance) + gear-pill UI; wound-granters (capped non-lethal); full
   traits.jsonc re-tune (§6); ±6 new "shitty" 2-category commons.
