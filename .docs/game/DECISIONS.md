@@ -1027,6 +1027,10 @@ data edges.**
   a core-stat rider — and a **naming law** forbids a `stat`/`attribute` name from evoking a natural
   weapon/armor or a losable body part (only the body-touching kinds may). Enforced by `traitRegistry.test.ts`
   (`ANATOMY_NAME_RE` + separation + regression-guards the gamification purge).
+- **`negative` — a FLAW tier + Gaussian flaw count.** Pure-downside traits carry `rarity:"negative"`,
+  are excluded from every positive pool (identity/variety/personal), and a pawn draws a bell-curve COUNT
+  of them (`round(|Gaussian(0, σ=1.25)|)`, clamped 0–4) — most pawns carry none/one, a four-flaw wretch
+  is ~0.6%. Independent of the ≤5 positive budget; conflict-group-honouring. `σ` is the one tuning knob.
 - **`bodyMod` — traits that reshape the body, not a stat.** A dense/brittle skeleton or a thick/thin hide
   is a real limbmap change (`applyTraitBodyMods` scales bone maxHp = the fracture budget, or flesh maxHp =
   wound tolerance; plus a body-weight delta → blood pool + encumbrance), so `heavy-boned` is `hpMult 1.4`

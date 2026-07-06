@@ -73,18 +73,29 @@ Traits adopt the **`rarities.jsonc` scale** (common → uncommon → rare → ep
 
 | Rarity | Attribute categories | Capability (naturalGear/passive) | Notes |
 | --- | --- | --- | --- |
-| common | 1 (a "bad" one may **debuff 2** — the contrast layer) | — | small; the mundane pool |
+| **negative** | pure downside | — | a FLAW (§2a) — drawn as a bell-curve count, never race identity |
+| common | 1 (trade-offs allowed) | — | small; the mundane variety pool |
 | uncommon | 1–2 (net-positive with a real cost) | — | a trade-off with teeth |
 | rare | ≤1 | 1 capability | the "one thing" supernatural tier |
 | epic | ≤2 | 1 capability **or** a proc condition | e.g. Berserker's combat proc |
 | legendary | bundle | multiple sub-capabilities, rolled per pawn | Dragon / Vampire |
 
 - **Core-stat (`stat`) mods** are separate from the attribute budget and stay tiny (±1–2), any rarity.
-- **"Really shitty" traits** = common `attribute` traits that debuff **two** categories (e.g. *Sluggard*:
-  −work +−physical; *Brittle*: −resistance +−capacity). Propose ~6 of these to deepen the negative pool.
 - [x] Budget enforced in `traitRegistry.test.ts` (kind↔payload, rare/epic must carry a capability,
-      legendary must bundle, the six shitty commons need ≥2 debuff axes). A separate `rarityBudget`
-      data table was skipped — the test IS the budget until a runtime consumer needs it.
+      legendary must bundle). A separate `rarityBudget` data table was skipped — the test IS the budget.
+
+### 2a · `negative` — the FLAW tier (ADR-028)
+
+Pure-downside traits (frail, clumsy, one-eyed, the afflictions, the "shitty" commons) carry
+`rarity:"negative"` and are pulled OUT of every positive pool (race identity, variety pool, personal
+draw). A pawn instead draws a **bell-curve COUNT** of flaws — `rollNegativeCount` = `round(|Gaussian(0,
+σ=1.25)|)` clamped 0–4 — from the whole flaw set (racial physiology + personal temperament + afflictions),
+honouring conflict groups (no dense + brittle bones). So most pawns carry none/one and a four-flaw wretch
+turns up ~once per 170 pawns: **0:31% · 1:46% · 2:19% · 3:4% · 4:0.6%**. Independent of the ≤5 positive
+budget (a very unlucky pawn can exceed 5 total traits). `σ` is the single tuning knob — lower for a
+cleaner colony, higher for a harsher world. Card accent = dark red ("Flaw"). Guarded by
+`traitRegistry.test.ts` (pure-downside + marquee flaws are `negative`) + `traitFlaws.test.ts` (bell-curve
+shape, cap 4, conflict integrity, never a race-pool member).
 
 ## 3 · Condition-granter model (natural gear + passive)
 
