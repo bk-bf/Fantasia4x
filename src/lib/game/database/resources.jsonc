@@ -42,7 +42,13 @@
     "displayName"     : "Heartwood Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
-    "charSpans"       : [ {"sheet": "plants", "id": 0}, {"sheet": "plants", "from": 2, "to": 14}, {"sheet": "plants", "from": 19, "to": 31}, {"sheet": "plants", "from": 33, "to": 52}, {"sheet": "plants", "from": 54, "to": 71} ],
+    "charSpans"       : [
+      {"sheet": "plants", "id": 0                      },
+      {"sheet": "plants",          "from":  2, "to": 14},
+      {"sheet": "plants",          "from": 19, "to": 31},
+      {"sheet": "plants",          "from": 33, "to": 52},
+      {"sheet": "plants",          "from": 54, "to": 71}
+    ],
     "fg"              : "#c757ad",
     "bg"              : "#17120a",
     "glow"            : { "color": [0.85, 0.42, 1.0], "radius": 3.0, "intensity": 0.5, "flicker": true },
@@ -127,7 +133,13 @@
     "displayName"     : "Ironwood Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
-    "charSpans"       : [ {"sheet": "plants", "id": 0}, {"sheet": "plants", "from": 2, "to": 14}, {"sheet": "plants", "from": 19, "to": 31}, {"sheet": "plants", "from": 33, "to": 52}, {"sheet": "plants", "from": 54, "to": 71} ],
+    "charSpans"       : [
+      {"sheet": "plants", "id": 0                      },
+      {"sheet": "plants",          "from":  2, "to": 14},
+      {"sheet": "plants",          "from": 19, "to": 31},
+      {"sheet": "plants",          "from": 33, "to": 52},
+      {"sheet": "plants",          "from": 54, "to": 71}
+    ],
     "fg"              : "#859ebd",
     "bg"              : "#17120a",
     "glow"            : { "color": [0.50, 0.70, 1.0], "radius": 3.0, "intensity": 0.5, "flicker": true },
@@ -169,7 +181,13 @@
     "displayName"     : "Emberwood Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
-    "charSpans"       : [ {"sheet": "plants", "id": 0}, {"sheet": "plants", "from": 2, "to": 14}, {"sheet": "plants", "from": 19, "to": 31}, {"sheet": "plants", "from": 33, "to": 52}, {"sheet": "plants", "from": 54, "to": 71} ],
+    "charSpans"       : [
+      {"sheet": "plants", "id": 0                      },
+      {"sheet": "plants",          "from":  2, "to": 14},
+      {"sheet": "plants",          "from": 19, "to": 31},
+      {"sheet": "plants",          "from": 33, "to": 52},
+      {"sheet": "plants",          "from": 54, "to": 71}
+    ],
     "fg"              : "#b5471f",
     "bg"              : "#17120a",
     "glow"            : { "color": [1.0, 0.55, 0.25], "radius": 3.0, "intensity": 0.5, "flicker": true },
@@ -497,7 +515,9 @@
     // leafless pool. Triggered by the SEASON (renderer rebuilds on season change), never by snow.
     "seasonVariants"  : {
       "autumn": {"detail": "#d9b13a"},
-      "winter": {"charSpans": [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ]}
+      "winter": {
+        "charSpans": [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ]
+      }
     },
     "fg"              : "#cdc8b8",
     "detail"          : "#b8c46b",
@@ -634,7 +654,9 @@
     "charSpans"       : [ {"sheet": "plants", "id": 5}, {"sheet": "plants", "id": 23}, {"sheet": "plants", "id": 25} ],
     "seasonVariants"  : {
       "autumn": {"detail": "#b06a24"},
-      "winter": {"charSpans": [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ]}
+      "winter": {
+        "charSpans": [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ]
+      }
     },
     "fg"              : "#6b4a2e",
     "detail"          : "#5c7a2e",
@@ -771,10 +793,18 @@
     "displayName"     : "Apple Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
-    "charSpans"       : [ {"sheet": "plants", "id": 0}, {"sheet": "plants", "from": 2, "to": 14}, {"sheet": "plants", "from": 19, "to": 31}, {"sheet": "plants", "from": 33, "to": 52}, {"sheet": "plants", "from": 54, "to": 71} ],
+    "charSpans"       : [
+      {"sheet": "plants", "id": 0                      },
+      {"sheet": "plants",          "from":  2, "to": 14},
+      {"sheet": "plants",          "from": 19, "to": 31},
+      {"sheet": "plants",          "from": 33, "to": 52},
+      {"sheet": "plants",          "from": 54, "to": 71}
+    ],
     "seasonVariants"  : {
       "autumn": {"detail": "#b3762e"},
-      "winter": {"charSpans": [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ]}
+      "winter": {
+        "charSpans": [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ]
+      }
     },
     "fg"              : "#6b4a2e",
     "detail"          : "#854240",
@@ -924,7 +954,9 @@
     "charSpans"       : [ {"sheet": "plants", "id": 39}, {"sheet": "plants", "id": 36} ],
     "seasonVariants"  : {
       "autumn": {"detail": "#c9a23c"},
-      "winter": {"charSpans": [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ]}
+      "winter": {
+        "charSpans": [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ]
+      }
     },
     "fg"              : "#6e5a44",
     "detail"          : "#80a159",
@@ -1193,10 +1225,15 @@
     "displayName"     : "Willow Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
-    "charSpans"       : [ {"sheet": "plants", "id": 33}, {"sheet": "plants", "id": 35}, {"sheet": "plants", "id": 50}, {"sheet": "plants", "id": 9} ],
+    "charSpans"       : [
+      {"sheet": "plants", "id": 33}, {"sheet": "plants", "id": 35}, {"sheet": "plants", "id": 50},
+      {"sheet": "plants", "id":  9}
+    ],
     "seasonVariants"  : {
       "autumn": {"detail": "#c2b455"},
-      "winter": {"charSpans": [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ]}
+      "winter": {
+        "charSpans": [ {"sheet": "plants", "id": 17}, {"sheet": "plants", "id": 18} ]
+      }
     },
     "fg"              : "#5c5238",
     "detail"          : "#9caa6b",
@@ -1339,9 +1376,7 @@
     "charSpans"       : [ {"sheet": "tiles", "id": 63} ],
     "fg"              : "#9e855e",
     "bg"              : "#17120a",
-    "spawn"           : {
-      "subterrains": {"cave": 0.07, "dirt": 0.015, "savanna": 0.02, "grass": 0.01}
-    },
+    "spawn"           : { "subterrains": {"cave": 0.07, "dirt": 0.015, "savanna": 0.02, "grass": 0.01} },
     "nodeAmountRange" : [5, 10],
     "designationTypes": ["harvest"],
     // ADR-009 bootstrap: surface stone is hand-SCAVENGED — no tool required (toolRequirement null),
@@ -1357,7 +1392,7 @@
         {"itemId": "small_stone", "min": 5, "max": 10, "skillId": "mining", "skillMultiplier": 0.2},
         {"itemId": "granite", "min": 0, "max": 5, "skillId": "mining", "skillMultiplier": 0.15},  // chance only: min 0
         {"itemId": "limestone", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.1},  // chance only: min 0
-        {"itemId": "flint_shard", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.1} // chance only: min 0
+        {"itemId": "flint_shard", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.1} // chance only: min 0
       ]
     }
   },
