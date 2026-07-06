@@ -247,7 +247,7 @@
   // of hitching on one big batch. `_snowIdx` is the cursor; everything before it is already painted.
   let _snowPending: { y: number; x: number }[] = [];
   let _snowIdx = 0;
-  const SNOW_TILES_PER_FRAME = 1500; // per-frame snow-repaint budget (accumulation AND melt)
+  const SNOW_TILES_PER_FRAME = 600; // per-frame snow-repaint budget (accumulation AND melt)
   // Crash observability: when a frame is about to issue an ABNORMALLY large GL draw (full-map
   // re-vertex, a big snow/terrain delta batch), this holds a human reason. The render section writes a
   // synchronous crash breadcrumb ("→ heavy draw START …") BEFORE the draw and ("✓ heavy draw OK …")

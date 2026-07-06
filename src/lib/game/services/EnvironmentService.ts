@@ -1116,12 +1116,12 @@ function snowWetFactor(wetness: number): number {
   return 0.4 + (Math.max(0, Math.min(100, wetness)) / 100) * 1.4;
 }
 /** Snow gained per in-game hour on a wet-neutral tile while it's snowing and below freezing. */
-const SNOW_ACCRUAL_PER_HOUR = 3.5;
+const SNOW_ACCRUAL_PER_HOUR = 1.75;
 /** Natural snow caps here (not 100): the in-game world tops out at the renderer's ~half-coverage look.
  *  The debug slider (devSetMapSnow) can still push past this to preview heavier cover. */
 const SNOW_NATURAL_MAX = 50;
 /** Snow lost per in-game hour once the tile is at/above 0°C. */
-const SNOW_MELT_PER_HOUR = 4;
+const SNOW_MELT_PER_HOUR = 2;
 /** Only re-bake/ship a tile when its snow crosses one of these buckets (keeps deltas bounded). */
 const SNOW_RENDER_STEP = 5;
 
