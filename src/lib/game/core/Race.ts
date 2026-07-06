@@ -218,6 +218,27 @@ function rollNegativeCount(): number {
   return Math.max(0, Math.min(MAX_NEGATIVE_TRAITS, Math.round(Math.abs(rng.gaussian(0, NEGATIVE_TRAIT_SIGMA)))));
 }
 
+/** A pawn's rolled base physique, for gating physically-contradictory traits (ADR-028 `requires`). */
+export interface PawnPhysique {
+  weight: number;
+  height: number;
+}
+/** True if the pawn's physique satisfies the trait's `requires` gate (or the trait has none / no
+ *  physique supplied). `build` = weight ÷ height (kg/cm) — the lean↔heavy axis, so Gaunt can't land on a
+ *  heavyset mass and Stocky can't land on a wisp. */
+export function pawnMeetsRequires(t: Trait, phys?: PawnPhysique): boolean {
+  const r = t.requires;
+  if (!r || !phys) return true;
+  const build = phys.height > 0 ? phys.weight / phys.height : 0;
+  if (r.minWeightKg != null && phys.weight < r.minWeightKg) return false;
+  if (r.maxWeightKg != null && phys.weight > r.maxWeightKg) return false;
+  if (r.minHeightCm != null && phys.height < r.minHeightCm) return false;
+  if (r.maxHeightCm != null && phys.height > r.maxHeightCm) return false;
+  if (r.minBuild != null && build < r.minBuild) return false;
+  if (r.maxBuild != null && build > r.maxBuild) return false;
+  return true;
+}
+
 /**
  * A RACE's trait identity (ADR-023, per-race rarity). Rolls the spec's rarity ONCE per race —
  * ~2.5% legendary, else ~10% one supernatural / ~5% two, else pure mundane — into `guaranteed`
@@ -308,17 +329,20 @@ const MAX_PERSONAL_TRAITS = 3;
  * racial (the race's guaranteed identity first — legendary bundles expand a sub-capability PER PAWN so
  * two dragon-blooded differ — then filled from the race's mundane pool) + up to
  * {@link MAX_PERSONAL_TRAITS} personal. Conflict groups (incl. base↔evolution) are honoured throughout.
+ * `physique` (the pawn's rolled weight/height) gates physically-contradictory traits (ADR-028 `requires`):
+ * a trait whose physique gate fails is skipped from this pawn — no Gaunt on a 250 kg mass.
  */
-export function drawPawnTraits(race: Race): Trait[] {
+export function drawPawnTraits(race: Race, physique?: PawnPhysique): Trait[] {
   const out: Trait[] = [];
   const banned = new Set<string>();
   const ban = (id: string) => {
     banned.add(id);
     for (const g of CONFLICT_GROUPS) if (g.includes(id)) g.forEach((x) => banned.add(x));
   };
+  const fits = (t: Trait) => pawnMeetsRequires(t, physique);
   let racialCount = 0;
   const takeRacial = (t: Trait): boolean => {
-    if (racialCount >= MAX_RACIAL_TRAITS || banned.has(tid(t))) return false;
+    if (racialCount >= MAX_RACIAL_TRAITS || banned.has(tid(t)) || !fits(t)) return false;
     ban(tid(t));
     out.push(t);
     racialCount++;
@@ -341,9 +365,9 @@ export function drawPawnTraits(race: Race): Trait[] {
       takeRacial(g);
     }
   }
-  // Fill any remaining racial slot(s) from the race's mundane pool (per-pawn variety).
+  // Fill any remaining racial slot(s) from the race's mundane pool (per-pawn variety). Physique-gated.
   {
-    const bag = race.racialTraitPool.filter((t) => !banned.has(tid(t)));
+    const bag = race.racialTraitPool.filter((t) => !banned.has(tid(t)) && fits(t));
     while (racialCount < MAX_RACIAL_TRAITS && bag.length > 0) {
       takeRacial(bag.splice(rng.int(0, bag.length - 1), 1)[0]);
     }
@@ -353,7 +377,7 @@ export function drawPawnTraits(race: Race): Trait[] {
   // Flaws (rarity 'negative') are excluded here — they're the separate Gaussian layer below.
   const r = rng.random();
   const nPersonal = r < 0.2 ? 0 : r < 0.55 ? 1 : r < 0.85 ? 2 : 3;
-  const pbag = PERSONAL().filter((t) => t.rarity !== 'negative' && !banned.has(tid(t)));
+  const pbag = PERSONAL().filter((t) => t.rarity !== 'negative' && !banned.has(tid(t)) && fits(t));
   let personalCount = 0;
   while (personalCount < nPersonal && pbag.length > 0) {
     const t = pbag.splice(rng.int(0, pbag.length - 1), 1)[0];
@@ -367,7 +391,7 @@ export function drawPawnTraits(race: Race): Trait[] {
   // (racial physiology + personal temperament + afflictions), honouring conflict groups + everything
   // already taken. Independent of the positive budget — MOST pawns get none/one, a rare wretch gets four.
   const nNeg = rollNegativeCount();
-  const nbag = NEGATIVE().filter((t) => !banned.has(tid(t)));
+  const nbag = NEGATIVE().filter((t) => !banned.has(tid(t)) && fits(t));
   let negCount = 0;
   while (negCount < nNeg && nbag.length > 0) {
     const t = nbag.splice(rng.int(0, nbag.length - 1), 1)[0];

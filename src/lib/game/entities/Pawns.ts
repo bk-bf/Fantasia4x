@@ -167,12 +167,15 @@ export function applyTraitBodyMods(pawn: Pawn): void {
  *  race identity stamped). Shared by single-race and mixed-colony generation. */
 export function buildPawnFromRace(race: Race, index: number): Pawn {
   const baseStats = rollStatsFromRanges(race.statRanges);
-  // ADR-023: each pawn draws its OWN trait set (guaranteed identity + 1–2 mundane pool + 0–2
-  // personal), so same-race pawns differ. Stats then fold in the drawn traits' bonuses.
-  const traits = drawPawnTraits(race);
-  const finalStats = applyRacialTraitBonuses(baseStats, traits);
+  // Roll the base physique FIRST — it gates physically-contradictory traits (ADR-028 `requires`: no
+  // Gaunt on a 250 kg mass), so the trait draw needs to know weight/height.
   const physicalTraits = rollPhysicalTraits(race.physicalTraits);
-  // TRAIT-SYSTEM-V2 §1: bodyMod weight (heavy bones) mass BEFORE the blood pool is derived from weight.
+  // ADR-023: each pawn draws its OWN trait set (guaranteed identity + 1–2 mundane pool + 0–2 personal,
+  // physique-gated), so same-race pawns differ. Stats then fold in the drawn traits' bonuses.
+  const traits = drawPawnTraits(race, physicalTraits);
+  const finalStats = applyRacialTraitBonuses(baseStats, traits);
+  // TRAIT-SYSTEM-V2 §1: bodyMod weight (heavy bones) mass folded in AFTER the draw (it doesn't change
+  // the base build the gate reads) but BEFORE the blood pool is derived from weight.
   physicalTraits.weight += traitBodyWeightDelta(traits);
   const maxBloodVolume = calcMaxBloodVolume(physicalTraits, finalStats);
   const maxStamina = calcMaxStamina(finalStats);

@@ -53,6 +53,7 @@
         "id": "stocky", "scope": "racial", "rarity": "common", "kind": "stat",
         "name": "Stocky", "description": "Short, broad and solidly built — powerful, but never quick.",
         "flavorLine": "they are built low and broad, planted like fence-posts",
+        "requires": {"minBuild": 0.5},
         "effects": {"constitutionBonus": 2, "dexterityPenalty": 1}
     },
     {
@@ -103,16 +104,16 @@
     // — evolution BASES (mundane seeds of a supernatural, ADR-023 evolvesTo) —
     {
         "id": "frost-loving", "scope": "racial", "rarity": "uncommon", "kind": "attribute",
-        "name": "Frost-Loving", "description": "Takes to the cold — comfortable where others shiver, but wilting in real heat.",
+        "name": "Frost-Loving", "description": "Takes to the cold — comfortable a good ~7°C past where others shiver, but wilting in real heat.",
         "flavorLine": "a hard frost is to them no more than a crisp morning",
-        "effects": {"coldResistance": 0.15, "fireResistance": -0.1},
+        "effects": {"coldResistance": 0.35, "fireResistance": -0.15},
         "evolvesTo": "frost-born"
     },
     {
         "id": "warm-blooded", "scope": "racial", "rarity": "uncommon", "kind": "attribute",
-        "name": "Heat-Hardy", "description": "Runs hot — untroubled by heat, but quick to feel a chill.",
+        "name": "Heat-Hardy", "description": "Runs hot — untroubled by heat a good ~7°C past the comfort of others, but quick to feel a chill.",
         "flavorLine": "the sun's worst never seems to trouble them",
-        "effects": {"fireResistance": 0.15, "coldResistance": -0.1},
+        "effects": {"fireResistance": 0.35, "coldResistance": -0.15},
         "evolvesTo": "ever-warm"
     },
     {
@@ -180,6 +181,7 @@
         "id": "gaunt", "scope": "racial", "rarity": "common", "kind": "stat",
         "name": "Gaunt", "description": "Wasted and spare — light and quick, but weak and fragile.",
         "flavorLine": "hunger-lean and hollow, they carry nothing to spare",
+        "requires": {"maxBuild": 0.55},
         "effects": {"strengthPenalty": 1, "constitutionPenalty": 1, "dexterityBonus": 1}
     },
     {
@@ -238,9 +240,9 @@
     },
     {
         "id": "cold-blooded", "scope": "racial", "rarity": "negative", "kind": "attribute",
-        "name": "Cold-Blooded", "description": "Poor at holding heat — the cold bites them early and hard.",
+        "name": "Cold-Blooded", "description": "Poor at holding heat — the cold bites them a good ~7°C sooner than most.",
         "flavorLine": "the chill sinks into them and will not let go",
-        "effects": {"coldResistance": -0.2}
+        "effects": {"coldResistance": -0.35}
     },
     {
         "id": "flat-footed", "scope": "racial", "rarity": "negative", "kind": "stat",
@@ -271,7 +273,7 @@
         "id": "thin-blooded", "scope": "racial", "rarity": "negative", "kind": "attribute",
         "name": "Wan", "description": "A pale, sluggish constitution that holds neither warmth nor vigour against sickness.",
         "flavorLine": "the first frost of the year already sinks deep into them",
-        "effects": {"coldResistance": -0.15, "diseaseResistance": -0.1}
+        "effects": {"coldResistance": -0.25, "diseaseResistance": -0.1}
     },
     {
         "id": "pox-marked", "scope": "racial", "rarity": "negative", "kind": "attribute",

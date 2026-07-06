@@ -78,6 +78,20 @@ export interface Trait {
    *  one can grow into — e.g. mundane `frost-loving` → supernatural `frost-born`, `adrenaline` →
    *  `berserker-blood`. Lets a future system upgrade a pawn's trait along its line. */
   evolvesTo?: string;
+  /** PHYSIQUE PREREQUISITE (ADR-028): the trait may only be drawn onto a pawn whose ROLLED physique fits
+   *  — so a physically contradictory trait can't land (Gaunt = "wasted, spare" never on a 250 kg mass;
+   *  Stocky = "short, broad" never on a wisp). Checked per-pawn in `drawPawnTraits` against the base
+   *  physicalTraits; a failing trait is skipped from that pawn's draw. `build` is weight ÷ height (kg/cm)
+   *  — the lean↔heavy axis (see Race.buildBucket). Absent ⇒ no physical gate. */
+  requires?: {
+    minWeightKg?: number;
+    maxWeightKg?: number;
+    minHeightCm?: number;
+    maxHeightCm?: number;
+    /** Min/max build density (weight ÷ height, kg/cm): lean builds ~0.3–0.45, heavyset ~0.7+. */
+    minBuild?: number;
+    maxBuild?: number;
+  };
   /** Permanent (or environment-gated) condition id kept on the pawn while this trait is present — its
    *  legible pill in the health panel AND the hub for its combat capability: the linked condition def
    *  carries `grantsNaturalWeapon`/`grantsNaturalArmor` (single source of truth, no trait-side copy).
