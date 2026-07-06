@@ -79,7 +79,7 @@ export interface Trait {
     constitutionPenalty?: number;
 
     // Work modifiers — each maps a workType (or "all") to a multiplier applied
-    // directly to the matching stats.jsonc output (see racial-traits.jsonc header).
+    // directly to the matching stats.jsonc output (see traits.jsonc header).
     // Consumed by PawnStatService.traitWorkMult.
     workSpeed?: Record<string, number>; // workType -> *_speed multiplier
     workYield?: Record<string, number>; // workType -> *_yield multiplier
@@ -110,7 +110,6 @@ export interface Trait {
     nightVision?: number;
   };
 }
-
 
 /** Procedurally-generated race lore — flavour only, no mechanical effect. */
 export interface RaceLore {

@@ -21,8 +21,9 @@ describe('Race overhaul — pool generation', () => {
       // 3–4 sentence paragraph — sanity-check it's real prose, not an empty template.
       expect(r.lore.description.length).toBeGreaterThan(120);
       expect(r.lore.description).toContain(r.name);
-      // ADR-023: mundane-majority selection rolls 1–3 mundane quirks, so a race can carry as few as one.
-      expect(r.traits.length).toBeGreaterThanOrEqual(1);
+      // ADR-023: a race has a mundane variety pool each pawn draws from (+ optional identity traits).
+      expect(r.racialTraitPool.length).toBeGreaterThanOrEqual(1);
+      expect(Array.isArray(r.guaranteedTraits)).toBe(true);
     }
   });
 

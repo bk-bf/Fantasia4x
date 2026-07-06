@@ -6,6 +6,7 @@
   import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
   import { qualityPrefix, qualityColor } from '$lib/game/core/itemQuality';
   import { blockedSlots } from '$lib/game/core/PawnEquipment';
+  import { getTransientConditionDef } from '$lib/game/core/needs';
 
   let {
     pawn,
@@ -47,6 +48,31 @@
   // ADR-023: slots a racial body trait forbids (claws fill the hands, horns the crown…) — greyed out.
   const blocked = $derived(blockedSlots(pawn));
 
+  // ADR-023 natural gear: a trait's natural weapon/armor (resolved via its `selfCondition` grants).
+  // A blocking trait LOCKS its item into its primary blocked slot (claws in Main Hand, fur on Mid);
+  // a non-blocking one (fangs, scaled hide) surfaces as an innate BADGE that layers with worn gear.
+  type Nat = { name: string; sub: string };
+  const natural = $derived.by(() => {
+    const occupants: Partial<Record<EquipmentSlot, Nat>> = {};
+    const badges: Nat[] = [];
+    for (const t of pawn.traits ?? []) {
+      const cond = t.selfCondition ? getTransientConditionDef(t.selfCondition) : undefined;
+      if (!cond) continue;
+      const weapons = (cond.grantsNaturalWeapon ?? [])
+        .map((id) => gameCoordinator.getItemById(id)?.name)
+        .filter((n): n is string => !!n);
+      const armor = cond.grantsNaturalArmor ?? 0;
+      if (!weapons.length && !armor) continue;
+      const entry: Nat = weapons.length
+        ? { name: weapons.join(', '), sub: 'natural weapon' }
+        : { name: t.name, sub: `natural armor +${armor}` };
+      const primary = t.blocksSlots?.[0];
+      if (primary) occupants[primary] = entry;
+      else badges.push(entry);
+    }
+    return { occupants, badges };
+  });
+
   // Hover popup — the same stat/ability breakdown shown on craftable cards (ItemStatTooltip),
   // portaled to the cursor while hovering a filled slot.
   let statTip: { item: Item; x: number; y: number } | null = $state(null);
@@ -68,13 +94,19 @@
     {@const maxDur = def?.maxDurability ?? 100}
     {@const qColor = it ? qualityColor(it.quality) : undefined}
     {@const isBlocked = blocked.has(slot)}
+    {@const nat = !it ? natural.occupants[slot] : undefined}
     <div
       class="slot-box"
       class:filled={!!it}
-      class:empty={!it && !isBlocked}
-      class:blocked={isBlocked && !it}
+      class:natural={!!nat}
+      class:empty={!it && !isBlocked && !nat}
+      class:blocked={isBlocked && !it && !nat}
       style="grid-area: {slot}"
-      title={isBlocked && !it ? 'Blocked by a racial trait — this body can\'t wear gear here.' : undefined}
+      title={nat
+        ? `${nat.name} — ${nat.sub} (innate; can't be unequipped)`
+        : isBlocked && !it
+          ? "Blocked by a racial trait — this body can't wear gear here."
+          : undefined}
       onmouseenter={(e) => def && showTip(def, e)}
       onmousemove={moveTip}
       onmouseleave={hideTip}
@@ -115,6 +147,9 @@
           disabled={loading}
           onclick={() => onUnequip(slot)}>✕</button
         >
+      {:else if nat}
+        <span class="nat-name">{nat.name}</span>
+        <span class="nat-sub">{nat.sub}</span>
       {:else if isBlocked}
         <span class="empty-mk blocked-mk">⊘</span>
       {:else}
@@ -123,6 +158,15 @@
     </div>
   {/each}
 </div>
+
+{#if natural.badges.length > 0}
+  <div class="innate-strip">
+    <span class="innate-hdr">Innate</span>
+    {#each natural.badges as b}
+      <span class="innate-badge" title="{b.name} — {b.sub} (innate)">{b.name} · {b.sub}</span>
+    {/each}
+  </div>
+{/if}
 
 {#if statTip}
   <ItemStatTooltip item={statTip.item} x={statTip.x} y={statTip.y} />
@@ -176,6 +220,50 @@
   }
   .blocked-mk {
     color: var(--text-muted);
+  }
+  /* ADR-023: a natural weapon/armor locked into a body-blocked slot — occupied, but not removable. */
+  .slot-box.natural {
+    border-color: var(--pos, #68b030);
+    border-style: solid;
+    background: color-mix(in srgb, var(--pos, #68b030) 12%, var(--bg));
+  }
+  .nat-name {
+    margin: auto 0 1px;
+    font-size: 11px;
+    color: var(--text);
+    text-align: center;
+    line-height: 1.15;
+  }
+  .nat-sub {
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--pos, #68b030);
+    text-align: center;
+  }
+
+  /* Innate weapons/armor that layer with worn gear (fangs, scaled hide) — badges under the doll. */
+  .innate-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px 8px;
+  }
+  .innate-hdr {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .innate-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--pos, #68b030) 14%, var(--bg-panel));
+    border: 1px solid color-mix(in srgb, var(--pos, #68b030) 40%, transparent);
+    color: var(--text);
+    white-space: nowrap;
   }
 
   .slot-lbl {

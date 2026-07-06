@@ -21,7 +21,9 @@
   // range a pawn actually rolls into). Mirrors applyRacialTraitBonuses' summation.
   function traitStatBonus(r: Race, stat: string): number {
     let b = 0;
-    for (const t of r.traits) {
+    // Only GUARANTEED identity traits shift the race's baseline every member shares; pool traits are
+    // per-pawn variety, so they don't move the race-wide stat range shown here.
+    for (const t of r.guaranteedTraits) {
       b += (t.effects as Record<string, number>)[`${stat}Bonus`] ?? 0;
       b -= (t.effects as Record<string, number>)[`${stat}Penalty`] ?? 0;
     }
@@ -122,10 +124,17 @@
     {/if}
   {/each}
 
-  <!-- Traits -->
-  <div class="section-hdr">| TRAITS ({race.traits.length})</div>
-  {#each race.traits as trait}
-    <div class="trait-name">{trait.name.toUpperCase()}</div>
+  <!-- Traits: guaranteed identity every member shares, then the pool pawns may individually draw. -->
+  <div class="section-hdr">
+    | TRAITS ({race.guaranteedTraits.length} identity + {race.racialTraitPool.length} possible)
+  </div>
+  {#each [...race.guaranteedTraits, ...race.racialTraitPool] as trait, i}
+    <div class="trait-name">
+      {trait.name.toUpperCase()}
+      {#if i < race.guaranteedTraits.length}<span class="always">· every member</span>{:else}<span
+          class="maybe">· some</span
+        >{/if}
+    </div>
     {#if trait.flavorLine}<div class="flavor">“{trait.flavorLine}”</div>{/if}
     <div class="effects">
       {#each Object.entries(trait.effects) as [name, value]}
@@ -219,6 +228,18 @@
     color: var(--accent-hi);
     letter-spacing: 0.04em;
     margin-top: 2px;
+  }
+  .always,
+  .maybe {
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .always {
+    color: var(--pos, #68b030);
+  }
+  .maybe {
+    color: var(--text-dim);
   }
   .flavor {
     padding: 0 8px 2px 16px;

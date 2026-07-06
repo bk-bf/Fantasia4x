@@ -1076,6 +1076,42 @@
         "modifiers"  : {"workEfficiency": 0.95}
     },
     {
+        "id"         : "frost_born",
+        "name"       : "Frost Born",
+        "transient"  : true,
+        "description": "Born of the deep winter — the killing cold is home, but real heat is agony.",
+        "color"      : "#7EC8E3",
+        "charSpans"  : [ {"sheet": "font", "id": 247} ],
+        "modifiers"  : {}
+    },
+    {
+        "id"         : "berserker_blood",
+        "name"       : "Berserker Blood",
+        "transient"  : true,
+        "description": "A battle-fury in the veins — devastating in a fight, but reckless and dull to reason.",
+        "color"      : "#C0392B",
+        "charSpans"  : [ {"sheet": "items", "id": 211} ],
+        "modifiers"  : {}
+    },
+    {
+        "id"         : "stone_boned",
+        "name"       : "Stone Bones",
+        "transient"  : true,
+        "description": "Bones dense as quarried rock — near impossible to break, but ponderously slow.",
+        "color"      : "#9E9E9E",
+        "charSpans"  : [ {"sheet": "items", "id": 145} ],
+        "modifiers"  : {}
+    },
+    {
+        "id"         : "night_eyed",
+        "name"       : "Night Eyes",
+        "transient"  : true,
+        "description": "Eyes made for the dark — sees in pitch black as by day, but drowsy under a bright sun.",
+        "color"      : "#5C6BC0",
+        "charSpans"  : [ {"sheet": "font", "id": 247} ],
+        "modifiers"  : {}
+    },
+    {
         "id"         : "photosynthesis",
         "name"       : "Photosynthetic",
         "transient"  : true,

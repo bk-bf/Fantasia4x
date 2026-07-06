@@ -440,7 +440,8 @@ function normalizeLegacyRace(race: GameState['race']): GameState['race'] {
     name: race?.name ?? fresh.name,
     statRanges: race?.statRanges ?? fresh.statRanges,
     physicalTraits: race?.physicalTraits ?? fresh.physicalTraits,
-    traits: race?.traits ?? fresh.traits,
+    guaranteedTraits: race?.guaranteedTraits ?? fresh.guaranteedTraits,
+    racialTraitPool: race?.racialTraitPool ?? fresh.racialTraitPool,
     population: race?.population ?? 0,
     discovered: true
   };

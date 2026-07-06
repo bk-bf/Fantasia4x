@@ -2,8 +2,65 @@
   import type { Pawn } from '$lib/game/core/types';
   import { formatEffectValue, workAxisLabel } from '$lib/components/util/pawnUtils';
   import { getTransientConditionDef } from '$lib/game/core/needs';
+  import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
 
   export let pawn: Pawn;
+
+  type TraitT = Pawn['traits'][number];
+
+  // Human labels — never leak slot ids / tier internals into the tooltip.
+  const SLOT_LABEL: Record<string, string> = {
+    mainHand: 'Main Hand',
+    offHand: 'Off Hand',
+    gloves: 'Hands',
+    headOuter: 'Helm',
+    headBase: 'Head',
+    bodyOuter: 'Outer',
+    bodyMid: 'Mid',
+    bodyBase: 'Base',
+    boots: 'Feet',
+    gorget: 'Neck',
+    belt: 'Belt',
+    back: 'Back',
+    amulet: 'Amulet',
+    ring: 'Ring',
+    ring2: 'Ring'
+  };
+  const RARITY_LABEL: Record<string, string> = {
+    mundane: 'Common',
+    supernatural: 'Supernatural',
+    legendary: 'Legendary'
+  };
+
+  function condName(t: TraitT): string | null {
+    return t.selfCondition ? (getTransientConditionDef(t.selfCondition)?.name ?? null) : null;
+  }
+  function naturalWeaponNames(t: TraitT): string[] {
+    const cond = t.selfCondition ? getTransientConditionDef(t.selfCondition) : undefined;
+    return (cond?.grantsNaturalWeapon ?? [])
+      .map((id) => gameCoordinator.getItemById(id)?.name)
+      .filter((n): n is string => !!n);
+  }
+  function naturalArmorOf(t: TraitT): number {
+    const cond = t.selfCondition ? getTransientConditionDef(t.selfCondition) : undefined;
+    return cond?.grantsNaturalArmor ?? 0;
+  }
+  function blockedLabels(t: TraitT): string[] {
+    return (t.blocksSlots ?? []).map((s) => SLOT_LABEL[s] ?? s);
+  }
+
+  // Hover tooltip — the card body is line-clamped, so the full description + linked condition /
+  // rarity / natural gear / blocked slots are surfaced here on inspection.
+  let hovered: { trait: TraitT; x: number; y: number } | null = null;
+  function showTip(trait: TraitT, e: MouseEvent) {
+    hovered = { trait, x: e.clientX, y: e.clientY };
+  }
+  function moveTip(e: MouseEvent) {
+    if (hovered) hovered = { ...hovered, x: e.clientX, y: e.clientY };
+  }
+  function hideTip() {
+    hovered = null;
+  }
 
   function getEffectTags(
     trait: Pawn['traits'][number]
@@ -19,7 +76,10 @@
       tags.push({ text: `+${cond.grantsNaturalArmor} natural armor`, type: 'pos' });
     if (trait.onHitEffect) tags.push({ text: 'on-hit effect', type: 'pos' });
     if (trait.weaponBonus?.damage)
-      tags.push({ text: `+${Math.round(trait.weaponBonus.damage * 100)}% weapon damage`, type: 'pos' });
+      tags.push({
+        text: `+${Math.round(trait.weaponBonus.damage * 100)}% weapon damage`,
+        type: 'pos'
+      });
     if (trait.blocksSlots?.length) tags.push({ text: 'blocks gear', type: 'neg' });
     for (const [effectName, effectValue] of Object.entries(trait.effects || {})) {
       if (effectName.includes('Bonus')) {
@@ -61,14 +121,17 @@
     <div class="cards-grid">
       {#each pawn.traits as trait}
         {@const tags = getEffectTags(trait)}
-        <div class="trait-card">
+        <div
+          class="trait-card"
+          role="presentation"
+          on:mouseenter={(e) => showTip(trait, e)}
+          on:mousemove={moveTip}
+          on:mouseleave={hideTip}
+        >
           <div class="card-accent"></div>
           <div class="card-body">
             <div class="card-header">
               <span class="card-name">{trait.name.toUpperCase()}</span>
-              {#if trait.tier === 'supernatural' || trait.tier === 'legendary'}
-                <span class="tier-badge" class:legendary={trait.tier === 'legendary'}>{trait.tier}</span>
-              {/if}
             </div>
             <div class="card-desc">{trait.description}</div>
             {#if tags.length > 0}
@@ -90,9 +153,34 @@
       {/each}
     </div>
   {:else}
-    <div class="empty-row"><span class="muted">no racial traits</span></div>
+    <div class="empty-row"><span class="muted">no traits</span></div>
   {/if}
 </div>
+
+{#if hovered}
+  {@const t = hovered.trait}
+  {@const cn = condName(t)}
+  {@const nw = naturalWeaponNames(t)}
+  {@const na = naturalArmorOf(t)}
+  {@const bl = blockedLabels(t)}
+  <div class="trait-tip" style="left:{hovered.x + 14}px; top:{hovered.y + 12}px">
+    <div class="tip-name">{t.name}</div>
+    <div class="tip-meta">
+      {RARITY_LABEL[t.tier ?? 'mundane']} · {t.scope === 'personal' ? 'personal' : 'racial'} trait
+    </div>
+    <div class="tip-desc">{t.description}</div>
+    {#if t.flavorLine}<div class="tip-flavor">“{t.flavorLine}”</div>{/if}
+    {#if cn}<div class="tip-row"><span class="tip-lbl">Condition</span> {cn}</div>{/if}
+    {#if nw.length}<div class="tip-row">
+        <span class="tip-lbl">Natural weapon</span>
+        {nw.join(', ')}
+      </div>{/if}
+    {#if na}<div class="tip-row"><span class="tip-lbl">Natural armor</span> +{na}</div>{/if}
+    {#if bl.length}
+      <div class="tip-row neg"><span class="tip-lbl">Blocks gear</span> {bl.join(', ')}</div>
+    {/if}
+  </div>
+{/if}
 
 <style>
   .traits-section {
@@ -159,20 +247,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  /* A supernatural/legendary pull is meant to read as special — flag the tier right in the header. */
-  .tier-badge {
-    flex-shrink: 0;
-    font-size: 9px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 0 4px;
-    border-radius: 2px;
-    color: var(--bg);
-    background: var(--accent-hi, #ffd24a);
-  }
-  .tier-badge.legendary {
-    background: #d08bff;
-  }
 
   .card-desc {
     color: var(--text-muted);
@@ -223,5 +297,54 @@
     color: var(--text-muted);
     font-style: italic;
     font-size: 12px;
+  }
+
+  /* Hover tooltip — full trait detail (the card body is line-clamped). */
+  .trait-tip {
+    position: fixed;
+    z-index: 60;
+    pointer-events: none;
+    max-width: 260px;
+    padding: 7px 9px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-hi);
+    border-radius: 3px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    font-size: 11px;
+    line-height: 1.35;
+  }
+  .tip-name {
+    color: var(--accent-hi);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  .tip-meta {
+    color: var(--text-dim);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 3px;
+  }
+  .tip-desc {
+    color: var(--text);
+  }
+  .tip-flavor {
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 3px;
+  }
+  .tip-row {
+    margin-top: 3px;
+    color: var(--text);
+  }
+  .tip-row.neg {
+    color: var(--neg);
+  }
+  .tip-lbl {
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    margin-right: 4px;
   }
 </style>

@@ -1,10 +1,11 @@
 import type { Race, Trait, RaceLore, RaceRelation } from './types';
-import raceDbData from '../database/racial-traits.jsonc';
+import traitDbData from '../database/traits.jsonc';
 import loreData from '../database/race-lore.jsonc';
 import { rng } from './rng';
 import { clamp } from './math';
 
-export const RACIAL_TRAIT_DATABASE: Trait[] = raceDbData as unknown as Trait[];
+/** The unified trait DB (racial + personal), ADR-023. */
+export const TRAIT_DATABASE: Trait[] = traitDbData as unknown as Trait[];
 
 type Size = Race['physicalTraits']['size'];
 
@@ -38,16 +39,24 @@ const LORE = loreData as unknown as {
 
 const STATS = ['strength', 'dexterity', 'intelligence', 'perception', 'charisma', 'constitution'];
 
-// Trait ids that may not co-occur on one race (mutually exclusive flavour / biology).
+// Trait ids that may not co-occur on one pawn/race (mutually exclusive biology / temperament, and
+// base↔evolution pairs so a pawn never carries both a seed trait and the power it grows into).
 const CONFLICT_GROUPS: string[][] = [
   ['stocky', 'rangy'],
   ['sturdy', 'frail'],
   ['bright', 'dull'],
-  ['thick-skinned', 'thin-skinned'],
-  ['loner', 'pack-hunter'],
-  ['flame-touched', 'frost-born'],
+  ['thick-skinned', 'thin-skinned', 'scaled-hide', 'iron-skin', 'thick-fur'], // one kind of hide
+  ['heavy-boned', 'stone-bones'],
+  ['frost-loving', 'frost-born', 'warm-blooded', 'ever-warm', 'cold-blooded', 'flame-touched'], // one thermal identity
+  ['adrenaline', 'berserker-blood'],
+  ['night-owl', 'nocturnal'],
+  ['fast-healer', 'regenerative'],
   ['nocturnal', 'photosynthetic'],
-  ['scaled-hide', 'iron-skin', 'thick-fur'] // one kind of hide per body
+  // personal temperament conflicts
+  ['industrious', 'lazy'],
+  ['meticulous', 'slapdash'],
+  ['curious', 'incurious'],
+  ['gregarious', 'loner', 'ill-tempered']
 ];
 
 function cap(s: string): string {
@@ -60,7 +69,7 @@ function cap(s: string): string {
 export function generateRace(archetype: Archetype = rng.pick(LORE.archetypes)): Race {
   const statRanges = generateStatRanges(archetype);
   const physicalTraits = generatePhysicalTraits(archetype);
-  const traits = generateRacialTraits(archetype);
+  const { guaranteed, pool } = generateRaceTraitSets(archetype);
 
   const lore: RaceLore = {
     ...generateLoreFields(archetype),
@@ -73,7 +82,8 @@ export function generateRace(archetype: Archetype = rng.pick(LORE.archetypes)): 
     archetype: archetype.name,
     statRanges,
     physicalTraits,
-    traits,
+    guaranteedTraits: guaranteed,
+    racialTraitPool: pool,
     lore,
     population: 0
   };
@@ -187,70 +197,119 @@ function generatePhysicalTraits(archetype: Archetype): Race['physicalTraits'] {
 
 // ─── Traits ──────────────────────────────────────────────────────────────────
 
-/**
- * Trait selection (ADR-023): a plain-humanoid MAJORITY (1–3 mundane quirks, often negative), then a
- * RARE supernatural gate, then a VERY-RARE legendary gate whose sub-capabilities are each rolled
- * independently — so a legendary-blooded race is never twice the same. Conflict groups + the ×3
- * archetype weighting still apply, shared across all tiers via one `banned` set.
- */
-function generateRacialTraits(archetype: Archetype): Trait[] {
-  const chosen: Trait[] = [];
-  const banned = new Set<string>();
-  const themed = new Set(archetype.traits);
+const RACIAL = () => TRAIT_DATABASE.filter((t) => (t.scope ?? 'racial') === 'racial');
+const PERSONAL = () => TRAIT_DATABASE.filter((t) => t.scope === 'personal');
+const tid = (t: Trait) => t.id ?? t.name;
 
+/**
+ * A RACE's trait identity (ADR-023, per-race rarity). Rolls the spec's rarity ONCE per race —
+ * ~2.5% legendary, else ~10% one supernatural / ~5% two, else pure mundane — into `guaranteed`
+ * (shared by every member of the race), then fills a `pool` of mundane traits each pawn draws from
+ * for individual variety. Archetype-themed ids are ×3-weighted; conflict groups are honoured.
+ */
+function generateRaceTraitSets(archetype: Archetype): { guaranteed: Trait[]; pool: Trait[] } {
+  const racial = RACIAL();
   const byTier = (tier: NonNullable<Trait['tier']>) =>
-    RACIAL_TRAIT_DATABASE.filter((t) => (t.tier ?? 'mundane') === tier);
+    racial.filter((t) => (t.tier ?? 'mundane') === tier);
   const mundane = byTier('mundane');
   const supernatural = byTier('supernatural');
   const legendary = byTier('legendary');
-
-  // Weighted pick of `count` distinct traits from one tier pool — archetype-themed ids ×3, honouring
-  // the shared bans + conflict groups.
-  const pickFrom = (pool: Trait[], count: number) => {
-    if (count <= 0 || pool.length === 0) return;
+  const themed = new Set(archetype.traits);
+  const banned = new Set<string>();
+  const ban = (id: string) => {
+    banned.add(id);
+    for (const g of CONFLICT_GROUPS) if (g.includes(id)) g.forEach((x) => banned.add(x));
+  };
+  // Weighted draw of ONE unbanned trait from a tier pool (archetype-themed ×3); bans it + conflicts.
+  const draw = (poolArr: Trait[]): Trait | null => {
     const weighted: Trait[] = [];
-    for (const t of pool) {
+    for (const t of poolArr) {
+      if (banned.has(tid(t))) continue;
       weighted.push(t);
       if (t.id && themed.has(t.id)) weighted.push(t, t);
     }
-    let picked = 0;
-    let guard = 0;
-    while (picked < count && guard < 200) {
-      guard++;
-      const t = rng.pick(weighted);
-      const tid = t.id ?? t.name;
-      if (banned.has(tid) || chosen.some((c) => (c.id ?? c.name) === tid)) continue;
-      chosen.push(t);
-      picked++;
-      banned.add(tid);
-      for (const group of CONFLICT_GROUPS) {
-        if (group.includes(tid)) group.forEach((g) => banned.add(g));
-      }
-    }
+    if (weighted.length === 0) return null;
+    const t = rng.pick(weighted);
+    ban(tid(t));
+    return t;
   };
 
-  // 1–3 mundane quirks — the plain-humanoid baseline.
-  pickFrom(mundane, rng.int(1, 3));
-
-  // Rare supernatural gate: ~65% none / ~30% one / ~5% two.
-  const r = rng.random();
-  pickFrom(supernatural, r < 0.65 ? 0 : r < 0.95 ? 1 : 2);
-
-  // Very-rare legendary gate (~3%): one bundle, each sub-capability rolled independently (≥1 kept).
-  if (legendary.length > 0 && rng.random() < 0.03) {
-    const parent = rng.pick(legendary);
-    const pid = parent.id ?? parent.name;
-    if (!banned.has(pid) && !chosen.some((c) => (c.id ?? c.name) === pid)) {
-      chosen.push({ ...parent, subCapabilities: undefined }); // banner: name + base effects
-      banned.add(pid);
-      const subs = parent.subCapabilities ?? [];
-      const rolled = subs.filter(() => rng.random() < 0.65);
-      if (rolled.length === 0 && subs.length > 0) rolled.push(rng.pick(subs));
-      for (const sub of rolled) chosen.push(sub);
+  const guaranteed: Trait[] = [];
+  // Rarity gate (per race): legendary is rarest; else a supernatural gate; else mundane-only.
+  if (legendary.length > 0 && rng.random() < 0.025) {
+    const t = draw(legendary);
+    if (t) guaranteed.push(t);
+  } else {
+    const s = rng.random();
+    const numSuper = s < 0.1 ? 1 : s < 0.15 ? 2 : 0; // ~10% one, ~5% two
+    for (let i = 0; i < numSuper; i++) {
+      const t = draw(supernatural);
+      if (t) guaranteed.push(t);
     }
   }
+  // Half the time a signature MUNDANE identity trait, so even plain races read as a "people".
+  if (rng.random() < 0.5) {
+    const t = draw(mundane);
+    if (t) guaranteed.push(t);
+  }
 
-  return chosen;
+  // Mundane variety pool each pawn draws 1–2 from.
+  const pool: Trait[] = [];
+  const target = rng.int(6, 9);
+  let guard = 0;
+  while (pool.length < target && guard++ < 300) {
+    const t = draw(mundane);
+    if (!t) break;
+    pool.push(t);
+  }
+  return { guaranteed, pool };
+}
+
+/**
+ * Draw ONE PAWN's combined trait set (ADR-023): the race's guaranteed identity (legendary bundles
+ * expand their sub-capabilities PER PAWN, so two dragon-blooded differ) + 1–2 from the race's mundane
+ * pool + 0–2 personal traits. Conflict groups (incl. base↔evolution) are honoured across the whole set.
+ */
+export function drawPawnTraits(race: Race): Trait[] {
+  const out: Trait[] = [];
+  const banned = new Set<string>();
+  const ban = (id: string) => {
+    banned.add(id);
+    for (const g of CONFLICT_GROUPS) if (g.includes(id)) g.forEach((x) => banned.add(x));
+  };
+  const take = (t: Trait) => {
+    if (banned.has(tid(t))) return;
+    ban(tid(t));
+    out.push(t);
+  };
+
+  // Guaranteed racial identity — legendary bundles roll their sub-capabilities per pawn.
+  for (const g of race.guaranteedTraits) {
+    if (g.tier === 'legendary' && g.subCapabilities?.length) {
+      take({ ...g, subCapabilities: undefined }); // banner (name + base effects)
+      const rolled = g.subCapabilities.filter(() => rng.random() < 0.6);
+      if (rolled.length === 0) rolled.push(rng.pick(g.subCapabilities));
+      for (const sub of rolled) take(sub);
+    } else {
+      take(g);
+    }
+  }
+  // Draw up to `n` distinct unbanned traits from `arr`.
+  const drawN = (arr: Trait[], n: number) => {
+    const bag = arr.filter((t) => !banned.has(tid(t)));
+    let picked = 0;
+    let guard = 0;
+    while (picked < n && bag.length > 0 && guard++ < 100) {
+      const t = bag.splice(rng.int(0, bag.length - 1), 1)[0];
+      if (banned.has(tid(t))) continue;
+      take(t);
+      picked++;
+    }
+  };
+  drawN(race.racialTraitPool, rng.int(1, 2)); // per-pawn racial variety
+  const p = rng.random();
+  drawN(PERSONAL(), p < 0.45 ? 0 : p < 0.85 ? 1 : 2); // 0–2 personal quirks
+  return out;
 }
 
 // ─── Lore + description ───────────────────────────────────────────────────────
@@ -339,10 +398,12 @@ export function generateRaceDescription(race: Race): string {
   // ("carved from…") and noun-phrase ("the first to wake…") origin forms.
   const s3 = `They are ${race.lore.origin}, and make their home among ${race.lore.homeland}.`;
 
-  // Sentence 4 — vocation + a defining quirk (authored flavorLine).
-  const vocCat = strongestWorkCategory(race.traits);
+  // Sentence 4 — vocation + a defining quirk (authored flavorLine). Drawn from the race's identity +
+  // pool (the traits any member might carry), since a race no longer has one fixed trait list.
+  const raceTraits = [...race.guaranteedTraits, ...race.racialTraitPool];
+  const vocCat = strongestWorkCategory(raceTraits);
   const vocP = vocCat && P.vocation[vocCat] ? rng.pick(P.vocation[vocCat]) : null;
-  const quirk = pickFlavorLine(race.traits);
+  const quirk = pickFlavorLine(raceTraits);
   let s4 = '';
   if (vocP && quirk) {
     // lead reads mid-sentence after the semicolon, so lowercase it ("…quarry; stranger still, …")

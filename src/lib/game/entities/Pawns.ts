@@ -1,12 +1,6 @@
-import type {
-  Pawn,
-  EntityNeeds,
-  PawnState,
-  Race,
-  EntityStats,
-  Trait
-} from '../core/types';
+import type { Pawn, EntityNeeds, PawnState, Race, EntityStats, Trait } from '../core/types';
 import { createPawnInventory, createPawnEquipment } from '../core/PawnEquipment';
+import { drawPawnTraits } from '../core/Race';
 import { createBodyPlanLimbs } from '../systems/Combat';
 import { DEFAULT_PLAN } from '../core/BodyParts';
 import { rng } from '../core/rng';
@@ -37,7 +31,10 @@ export function calcMaxBloodVolume(physicalTraits: { weight: number }, stats: En
  *  race identity stamped). Shared by single-race and mixed-colony generation. */
 export function buildPawnFromRace(race: Race, index: number): Pawn {
   const baseStats = rollStatsFromRanges(race.statRanges);
-  const finalStats = applyRacialTraitBonuses(baseStats, race.traits);
+  // ADR-023: each pawn draws its OWN trait set (guaranteed identity + 1–2 mundane pool + 0–2
+  // personal), so same-race pawns differ. Stats then fold in the drawn traits' bonuses.
+  const traits = drawPawnTraits(race);
+  const finalStats = applyRacialTraitBonuses(baseStats, traits);
   const physicalTraits = rollPhysicalTraits(race.physicalTraits);
   const maxBloodVolume = calcMaxBloodVolume(physicalTraits, finalStats);
   const maxStamina = calcMaxStamina(finalStats);
@@ -50,7 +47,7 @@ export function buildPawnFromRace(race: Race, index: number): Pawn {
     physicalTraits,
     raceId: race.id,
     raceName: race.name,
-    traits: race.traits,
+    traits,
     inventory: createPawnInventory(),
     equipment: createPawnEquipment(),
     needs: {
