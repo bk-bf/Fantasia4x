@@ -21,7 +21,7 @@ import { setSimLogSink, simLog, setVerboseLogging, type SimLogSink } from '../co
 import { applySimCommand } from './commands';
 import { projectSentEntity } from './entityProjection';
 import type { SimLogEvent, EntitySync } from './simProtocol';
-import { drainTileDeltas, clearTileDeltas } from '../core/tileDeltas';
+import { drainTileDeltasBudgeted, clearTileDeltas } from '../core/tileDeltas';
 import { carcassConditionByType } from '../core/carcassCondition';
 import { buildingsVisualSig } from '../core/buildingSig';
 import { gameLogger } from '../dev/gameLogger';
@@ -61,6 +61,10 @@ let terrainRev = 0;
 // (every snowable tile crossing a render bucket in one hourly tick) repaints ONLY that layer and
 // never bumps terrainRev (whose handler re-bakes terrain + resource cells — the snow-onset hiccup).
 let snowRev = 0;
+/** Max SNOW/ice tile deltas shipped to the main thread per flush — a whole-map onset/melt is spread
+ *  over this many per snapshot so the main-thread merge never stalls (see drainTileDeltasBudgeted). At
+ *  ~15 flushes/s this drains a full 150k-tile wave in a couple of seconds. */
+const SNOW_DELTA_BUDGET_PER_FLUSH = 3000;
 // §D: a SEPARATE, cheap signal for the 2D designation overlay. The dip-correlated trace showed the
 // dominant harvest dip was the full 38k-tile terrain rebuild, fired ~2×/s by designation churn —
 // even though buildGameGrid doesn't render designations (their icons are a separate 2D canvas). So
@@ -367,7 +371,12 @@ function publish(state: GameState, flush: boolean, commit = false) {
   // In-place tile mutations (resource regrowth) don't flip the worldMap ref — they accumulate as
   // deltas. A full worldMap send already carries them, so drain-and-discard in that case; otherwise
   // ship the deltas. Either way a visible terrain change must bump _terrainRev (renderer rebuild).
-  const tileDeltas = worldMapChanged ? (clearTileDeltas(), null) : drainTileDeltas();
+  // Cap SNOW deltas shipped per flush so a whole-map onset/melt (or the debug slider) staggers across
+  // snapshots instead of landing ~150k deltas in one postMessage (the ~800ms main-thread merge stall).
+  // Terrain deltas are never capped. See drainTileDeltasBudgeted.
+  const tileDeltas = worldMapChanged
+    ? (clearTileDeltas(), null)
+    : drainTileDeltasBudgeted(SNOW_DELTA_BUDGET_PER_FLUSH);
   const bSig = buildingsVisualSig(state.buildings);
   // Terrain rebuild trigger — designations AND standing-zone tints are DELIBERATELY excluded: both are
   // painted on GameCanvas's 2D overlay now (buildGameGrid renders neither), so their churn must not

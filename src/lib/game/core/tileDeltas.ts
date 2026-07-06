@@ -54,6 +54,30 @@ export function drainTileDeltas(): TileDelta[] | null {
   return out;
 }
 
+/**
+ * Drain ALL terrain deltas but at most `snowBudget` SNOW deltas, leaving the rest of the snow deltas
+ * queued for later flushes. A whole-map snow onset/melt (or the debug slider) marks ~one delta PER TILE
+ * in a single tick; shipping all ~150k in one snapshot cost ~800ms on the main thread (structured-clone
+ * deserialize + merge). Capping the snow deltas per flush spreads that wave across snapshots so no single
+ * postMessage is huge. Terrain deltas are NEVER held back (they're gameplay-latency-sensitive and few).
+ * Returns `null` when nothing was drained this flush. Snow deltas keep `snowRev` bumping each flush they
+ * ship, so the main thread stays triggered until the queue empties.
+ */
+export function drainTileDeltasBudgeted(snowBudget: number): TileDelta[] | null {
+  if (dirty.size === 0) return null;
+  const out: TileDelta[] = [];
+  let snow = 0;
+  for (const [key, d] of dirty) {
+    if (d.kind === 'snow') {
+      if (snow >= snowBudget) continue; // hold this snow delta for a later flush
+      snow++;
+    }
+    out.push(d);
+    dirty.delete(key); // safe to delete the current entry mid-iteration
+  }
+  return out.length ? out : null;
+}
+
 /** Discard pending deltas (a full worldMap send already carries the same changes). */
 export function clearTileDeltas(): void {
   dirty.clear();
