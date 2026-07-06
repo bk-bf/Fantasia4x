@@ -16,6 +16,7 @@ import type {
 import { itemService } from '../services/ItemService';
 import {
   getRangedWeapon,
+  isRangedWeaponProps,
   pickAmmo,
   hasViableAmmo,
   effectiveRangedRange,
@@ -1238,10 +1239,16 @@ class CombatServiceImpl implements CombatService {
     // state so it stacks onto the same target update.
     const afterEffect = this.applyOnHitEffect(next, target.id, isTargetMob, result.weaponId, pos);
 
+    // Spear KNOCKBACK: a landed reach-weapon hit may shove the target back one tile (STR-scaled). Not
+    // for a ranged shot (no `override`) — only a melee thrust in contact/reach drives someone back.
+    const afterKnock = override
+      ? afterEffect
+      : this.applyKnockback(afterEffect, attacker, target, isTargetMob, result.weaponId, apos);
+
     // Every landed blow chips condition: the attacker's weapon + the defender's struck armour.
     const armorLoss = this.computeArmorDamage(attacker, result.damageType, !!override);
     return {
-      state: this.applyGearWear(afterEffect, attacker, target, armorLoss),
+      state: this.applyGearWear(afterKnock, attacker, target, armorLoss),
       staminaCost: result.staminaCost
     };
   }
@@ -1308,6 +1315,87 @@ class CombatServiceImpl implements CombatService {
     this.emitConditionFloat(pos.x, pos.y, eff.condition, 39);
 
     return this.spliceEntity(state, targetId, updated as Pawn | Mob, isMob);
+  }
+
+  /** Melee reach in tiles for the entity's ACTIVE weapon: a mainHand melee weapon's `reach` (a reach-2
+   *  polearm strikes and holds one tile away), else 1 (adjacent). Mobs/natural weapons are always 1. A
+   *  ranged weapon's `reach` is its bow-butt melee fallback — not a pole reach — so it never extends here. */
+  private meleeReach(entity: Pawn | Mob): number {
+    if ('equipment' in entity && entity.equipment?.mainHand && hasUsableHand(entity)) {
+      const wp = itemService.getItemById(entity.equipment.mainHand.itemId)?.weaponProperties;
+      if (wp && !isRangedWeaponProps(wp)) return Math.max(1, wp.reach ?? 1);
+    }
+    return 1;
+  }
+
+  /**
+   * Spear KNOCKBACK: on a landed reach-weapon hit whose weapon carries `knockback`, roll a STR-scaled
+   * chance to shove the target one tile directly away from the attacker. The push only takes if the
+   * tile behind is in-bounds, walkable and unoccupied — otherwise the blow simply connects. On success
+   * the target is displaced and marked `staggered` (a brief footing-loss transient; the displacement
+   * itself is the real effect). Chance = base + STR advantage, cut by the target's knockdown_resistance.
+   */
+  private applyKnockback(
+    state: GameState,
+    attacker: Pawn | Mob,
+    target: Pawn | Mob,
+    isMob: boolean,
+    weaponId: string | undefined,
+    apos: { x: number; y: number }
+  ): GameState {
+    if (!weaponId) return state;
+    const base = itemService.getItemById(weaponId)?.weaponProperties?.knockback ?? 0;
+    if (base <= 0) return state;
+    const tgt = isMob
+      ? state.mobs?.find((m) => m.id === target.id)
+      : state.pawns.find((p) => p.id === target.id);
+    if (!tgt || tgt.isAlive === false) return state;
+    if (isMob && (tgt as Mob).state === 'Corpse') return state;
+
+    // +2% push chance per point of STR advantage; cut by the target's knockdown_resistance (bracing/mass).
+    const atkStr = attacker.stats.strength * conditionStatMultipliers(attacker).strength;
+    const defStr = tgt.stats.strength * conditionStatMultipliers(tgt).strength;
+    const resist = clamp(pawnStatService.evaluateStat('knockdown_resistance', tgt), 0, 0.9);
+    const chance = clamp((base + (atkStr - defStr) * 0.02) * (1 - resist), 0, 0.75);
+    if (rng.random() >= chance) return state;
+
+    // Push one tile along the attacker→target unit vector.
+    const tpos = this.entityPos(tgt);
+    const sx = Math.sign(tpos.x - apos.x);
+    const sy = Math.sign(tpos.y - apos.y);
+    if (sx === 0 && sy === 0) return state;
+    const nx = tpos.x + sx;
+    const ny = tpos.y + sy;
+    const map = state.worldMap;
+    if (ny < 0 || nx < 0 || ny >= map.length || nx >= (map[0]?.length ?? 0)) return state;
+    if (map[ny][nx]?.walkable === false) return state;
+    // Blocked if another living entity already stands on the destination tile.
+    const occupied =
+      state.pawns.some(
+        (p) => p.isAlive !== false && p.position?.x === nx && p.position?.y === ny
+      ) ||
+      (state.mobs?.some(
+        (m) => m.isAlive !== false && m.state !== 'Corpse' && m.x === nx && m.y === ny
+      ) ??
+        false);
+    if (occupied) return state;
+
+    // Displace + stamp the staggered marker (timed transient, decrements/clears like knockdown).
+    const timers = { ...(tgt.conditionTimers ?? {}) };
+    timers.staggered = Math.max(timers.staggered ?? 0, ticksFromGameHours(0.15));
+    const transientConditions = (tgt.transientConditions ?? []).includes('staggered')
+      ? tgt.transientConditions!
+      : [...(tgt.transientConditions ?? []), 'staggered'];
+    const moved = isMob
+      ? { ...(tgt as Mob), x: nx, y: ny, conditionTimers: timers, transientConditions }
+      : {
+          ...(tgt as Pawn),
+          position: { x: nx, y: ny },
+          conditionTimers: timers,
+          transientConditions
+        };
+    this.emitConditionFloat(nx, ny, 'staggered', 26);
+    return this.spliceEntity(state, target.id, moved as Pawn | Mob, isMob);
   }
 
   /** The worn-armour slot with the highest `defense` (the piece that takes a blow — mirrors
@@ -1830,9 +1918,10 @@ class CombatServiceImpl implements CombatService {
       if (this.isKnockedDown(pawn)) continue;
       if (this.isWinded(pawn)) continue; // out of breath — pass turns until stamina recovers
 
-      // RANGED-COMBAT: a ranged pawn acquires hostiles out to its weapon range, not just adjacent.
+      // RANGED-COMBAT: a ranged pawn acquires hostiles out to its weapon range; a melee pawn out to its
+      // weapon reach (a reach-2 polearm engages one tile away, not just adjacent).
       const rw = getRangedWeapon(pawn);
-      const acquireRange = rw ? effectiveRangedRange(pawn, rw) : 1;
+      const acquireRange = rw ? effectiveRangedRange(pawn, rw) : this.meleeReach(pawn);
 
       // Resolve the pawn's target: an explicit draft order, or — for an undrafted pawn the FSM has
       // put into Fighting — the nearest hostile within reach (melee adjacent, or ranged weapon range).
@@ -1912,9 +2001,10 @@ class CombatServiceImpl implements CombatService {
         continue; // out of range/sight/ammo → the FSM closes; never a melee swing at distance
       }
 
-      // ── Melee: requires adjacency. A ranged weapon in contact swings as a (weak) melee weapon via
-      //    its own melee profile (bow stave / crossbow stock / sling pommel) — no special bow-butt path. ──
-      if (tdist > 1) continue;
+      // ── Melee: requires the target within weapon reach (1 = adjacent; a reach-2 polearm strikes one
+      //    tile away). A ranged weapon in contact swings as a (weak) melee weapon via its own melee
+      //    profile (bow stave / crossbow stock / sling pommel) — no special bow-butt path. ──
+      if (tdist > this.meleeReach(pawn)) continue;
 
       // Attack cadence — scaled by attack_speed stat.
       const pawnAttackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', pawn));

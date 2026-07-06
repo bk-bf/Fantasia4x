@@ -944,18 +944,27 @@ export class GameEngineImpl implements GameEngine {
         const dx = Math.abs(pawn.position.x - tx);
         const dy = Math.abs(pawn.position.y - ty);
         // Stop distance, re-evaluated each tick:
-        //  • force-melee or a melee-only pawn → close to adjacency (1).
+        //  • melee → hold at weapon REACH (1 = adjacent; a reach-2 polearm halts one tile off so it can
+        //    strike without closing). A force-melee ranged pawn (rw set, mode 'melee') bow-butts at 1.
         //  • auto-ranged WITH ammo → hold at weapon range and shoot.
         //  • auto-ranged OUT of ammo → hold POSITION (Infinity): it never auto-closes — keeping a
         //    fragile shooter safe; engaging in melee is opt-in via "Target (melee)".
         const rw = getRangedWeapon(pawn);
         const rangedAuto = !!rw && target.mode !== 'melee';
+        const meleeReach = rw
+          ? 1
+          : Math.max(
+              1,
+              (pawn.equipment?.mainHand
+                ? itemService.getItemById(pawn.equipment.mainHand.itemId)?.weaponProperties?.reach
+                : undefined) ?? 1
+            );
         const stopDist =
           rangedAuto && !hasViableAmmo(pawn, rw!)
             ? Infinity
             : rangedAuto
               ? Math.max(1, Math.floor(effectiveRangedRange(pawn, rw!)))
-              : 1;
+              : meleeReach;
         if (Math.max(dx, dy) <= stopDist) {
           // In position (in weapon range / adjacent) — stop moving, let the combat tick attack.
           if (pawn.isMoving) {

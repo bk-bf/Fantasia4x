@@ -895,6 +895,44 @@
         "charSpans": [ {"sheet": "font", "id": 15} ],
         "modifiers": {"dexterity": 0.4, "moveSpeed": 0.0}
     },
+    // ── Weapon-signature on-hit effects (crafted-weapon `onHitEffect`) ────────
+    // Same timed-transient machinery as the creature effects above, but inflicted by HELD weapons: a
+    // spear shoves (knockback → the displacement is CODE in Combat.ts; this is its recovery-of-footing
+    // marker), a devastating warhammer rattles the skull, a great cleaver maims the legs. Onset chance
+    // is reduced by the matching resistance stat named on the weapon's onHitEffect.
+    {
+        "id": "staggered",
+        "audio": "knockdown",
+        "name": "Staggered",
+        "transient": true,
+        "description": "Shoved back off balance by a spear thrust — reeling for footing, slow and open for a beat before recovering.",
+        "color": "#E08840",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 15} ],
+        "modifiers": {"dexterity": 0.85, "moveSpeed": 0.9}
+    },
+    {
+        "id": "concussed",
+        "audio": "knockdown",
+        "name": "Concussed",
+        "transient": true,
+        "description": "Skull rung by a crushing hammer blow — vision swims and the head won't clear. Perception, dexterity and wakefulness all crater; a devastating follow-up is easy to land.",
+        "color": "#9C6AC0",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 19} ],
+        "modifiers": {"perception": 0.5, "dexterity": 0.6, "consciousness": 0.7, "workEfficiency": 0.5}
+    },
+    {
+        "id": "hamstrung",
+        "audio": "bloodletting",
+        "name": "Hamstrung",
+        "transient": true,
+        "description": "A deep cut to the leg — the tendon severed, the footing gone. Barely able to move and slow to react until it mends.",
+        "color": "#B5502E",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 3} ],
+        "modifiers": {"moveSpeed": 0.4, "dexterity": 0.75}
+    },
     // ── Magical buffs ("magical": true) — PRODUCTION-CHAIN-II §M ──────────────
     // Passive buffs granted by worn attuned gear (and, later, by MAGIC-SKILLS spells/skill nodes
     // through the SAME pipeline). Pushed into transientConditions by syncTransientConditions while the

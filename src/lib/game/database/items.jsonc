@@ -1942,11 +1942,11 @@
     "toolBoost": {"speed": 0.35, "yield": 0.2},
     "processingType": ["butchery", "cooking", "crafting", "woodcutting"],
     "weaponProperties": {
-      "damage"          : 6,
+      "damage"          : 7,
       "attackSpeed"     : 0.9,
       "range"           : 0,
-      "damMin"          : 3,
-      "damMax"          : 8,
+      "damMin"          : 4,
+      "damMax"          : 10,
       "reach"           : 1,
       "damageType"      : "cutting",
       "armorPenetration": 0.05,
@@ -2152,7 +2152,7 @@
     "durability"       : 30,
     "maxDurability"    : 30,
     "toolTierRequired" : 0,
-    "weaponProperties" : {"damage": 8, "attackSpeed": 1, "range": 1},
+    "weaponProperties" : {"damage": 10, "attackSpeed": 1, "range": 1, "reach": 2, "knockback": 0.2},
     "toolBoost"        : {"speed": 0.45},
     "processingType"   : ["hunting"]
   },
@@ -3864,11 +3864,11 @@
     "maxDurability": 40,
     "durabilityLossPerCombatHit": 2,
     "weaponProperties": {
-      "damage"          : 5,
+      "damage"          : 6,
       "attackSpeed"     : 1.0,
       "range"           : 0,
-      "damMin"          : 3,
-      "damMax"          : 7,
+      "damMin"          : 4,
+      "damMax"          : 8,
       "reach"           : 1,
       "damageType"      : "cutting",
       "armorPenetration": 0.05,
@@ -3916,11 +3916,11 @@
     "maxDurability": 35,
     "durabilityLossPerCombatHit": 1,
     "weaponProperties": {
-      "damage"          : 4,
+      "damage"          : 5,
       "attackSpeed"     : 1.5,
       "range"           : 0,
-      "damMin"          : 3,
-      "damMax"          : 6,
+      "damMin"          : 4,
+      "damMax"          : 7,
       "reach"           : 1,
       "damageType"      : "piercing",
       "armorPenetration": 0.1,
@@ -3946,11 +3946,11 @@
     "maxDurability": 50,
     "durabilityLossPerCombatHit": 2,
     "weaponProperties": {
-      "damage"          : 12,
+      "damage"          : 14,
       "attackSpeed"     : 0.9,
       "range"           : 0,
-      "damMin"          : 8,
-      "damMax"          : 16,
+      "damMin"          : 10,
+      "damMax"          : 19,
       "reach"           : 1,
       "damageType"      : "blunt",
       "bluntMod"        : 0.6,
@@ -3976,12 +3976,13 @@
     "maxDurability": 45,
     "durabilityLossPerCombatHit": 2,
     "weaponProperties": {
-      "damage"          : 7,
+      "damage"          : 8,
       "attackSpeed"     : 0.9,
       "range"           : 0,
-      "damMin"          : 5,
-      "damMax"          : 9,
-      "reach"           : 1,
+      "damMin"          : 6,
+      "damMax"          : 11,
+      "reach"           : 2,
+      "knockback"       : 0.2,
       "damageType"      : "piercing",
       "armorPenetration": 0.12,
       "staminaCost"     : 3
@@ -4006,11 +4007,11 @@
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "bronze_working",
     "weaponProperties": {
-      "damage"          : 6,
+      "damage"          : 7,
       "attackSpeed"     : 1.4,
       "range"           : 0,
-      "damMin"          : 4,
-      "damMax"          : 8,
+      "damMin"          : 5,
+      "damMax"          : 10,
       "reach"           : 1,
       "damageType"      : "piercing",
       "armorPenetration": 0.25,
@@ -4018,7 +4019,8 @@
       "critMod"         : 0.12,
       "staminaCost"     : 1,
       "twoHanded"       : false
-    }
+    },
+    "onHitEffect": {"condition": "bloodletting", "chance": 0.12, "durationHours": 1.5, "resist": "piercing_resistance"}
   },
   {
     "id": "leaf_blade_spear",
@@ -4038,12 +4040,13 @@
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "bronze_working",
     "weaponProperties": {
-      "damage"          : 10,
+      "damage"          : 12,
       "attackSpeed"     : 1.0,
       "range"           : 0,
-      "damMin"          : 7,
-      "damMax"          : 13,
-      "reach"           : 1,
+      "damMin"          : 8,
+      "damMax"          : 16,
+      "reach"           : 2,
+      "knockback"       : 0.25,
       "damageType"      : "piercing",
       "armorPenetration": 0.2,
       "accuracy"        : 4,
@@ -4070,18 +4073,19 @@
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "bronze_working",
     "weaponProperties": {
-      "damage"          : 11,
+      "damage"          : 13,
       "attackSpeed"     : 0.9,
       "range"           : 0,
-      "damMin"          : 8,
-      "damMax"          : 14,
+      "damMin"          : 10,
+      "damMax"          : 17,
       "reach"           : 1,
       "damageType"      : "cutting",
       "armorPenetration": 0.12,
       "critMod"         : 0.06,
       "staminaCost"     : 3,
       "twoHanded"       : false
-    }
+    },
+    "onHitEffect": {"condition": "bloodletting", "chance": 0.15, "durationHours": 1.5, "resist": "cutting_resistance"}
   },
   {
     "id": "self_bow",
@@ -4170,7 +4174,8 @@
       "armorPenetration": 0.10,
       "staminaCost"     : 2,
       "twoHanded"       : false
-    }
+    },
+    "onHitEffect": {"condition": "bloodletting", "chance": 0.15, "durationHours": 1.5, "resist": "cutting_resistance"}
   },
   {
     "id": "spatha",
@@ -4202,7 +4207,8 @@
       "critMod"         : 0.05,
       "staminaCost"     : 3,
       "twoHanded"       : false
-    }
+    },
+    "onHitEffect": {"condition": "bloodletting", "chance": 0.18, "durationHours": 2, "resist": "cutting_resistance"}
   },
   {
     "id": "bearded_axe",
@@ -4234,7 +4240,8 @@
       "critMod"         : 0.09,
       "staminaCost"     : 4,
       "twoHanded"       : false
-    }
+    },
+    "onHitEffect": {"condition": "bloodletting", "chance": 0.2, "durationHours": 2, "resist": "cutting_resistance"}
   },
   {
     "id": "framea",
@@ -4259,7 +4266,8 @@
       "range"           : 0,
       "damMin"          : 11,
       "damMax"          : 17,
-      "reach"           : 1,
+      "reach"           : 2,
+      "knockback"       : 0.3,
       "damageType"      : "piercing",
       "armorPenetration": 0.25,
       "accuracy"        : 6,
@@ -4285,11 +4293,11 @@
     "maxDurability": 50,
     "durabilityLossPerCombatHit": 2,
     "weaponProperties": {
-      "damage"          : 14,
+      "damage"          : 7,
       "attackSpeed"     : 0.8,
       "range"           : 0,
-      "damMin"          : 10,
-      "damMax"          : 20,
+      "damMin"          : 5,
+      "damMax"          : 10,
       "reach"           : 1,
       "damageType"      : "blunt",
       "bluntMod"        : 1.2,
@@ -4365,7 +4373,8 @@
       "accuracy"        : -1,
       "staminaCost"     : 4,
       "twoHanded"       : true
-    }
+    },
+    "onHitEffect": {"condition": "concussed", "chance": 0.2, "durationHours": 0.4, "resist": "blunt_resistance"}
   },
   {
     "id": "iron_greatsword",
@@ -4398,7 +4407,8 @@
       "armorDamage"     : 3,
       "staminaCost"     : 4,
       "twoHanded"       : true
-    }
+    },
+    "onHitEffect": {"condition": "bloodletting", "chance": 0.22, "durationHours": 2, "resist": "cutting_resistance"}
   },
   {
     "id": "steel_longsword",
@@ -4430,7 +4440,8 @@
       "critMod"         : 0.06,
       "staminaCost"     : 3,
       "twoHanded"       : false
-    }
+    },
+    "onHitEffect": {"condition": "bloodletting", "chance": 0.18, "durationHours": 2, "resist": "cutting_resistance"}
   },
   {
     "id": "steel_greatsword",
@@ -4463,7 +4474,8 @@
       "armorDamage"     : 4,
       "staminaCost"     : 4,
       "twoHanded"       : true
-    }
+    },
+    "onHitEffect": {"condition": "hamstrung", "chance": 0.22, "durationHours": 0.5, "resist": "cutting_resistance"}
   },
   {
     "id": "steel_pike",
@@ -4488,7 +4500,8 @@
       "range"           : 0,
       "damMin"          : 12,
       "damMax"          : 18,
-      "reach"           : 1,
+      "reach"           : 3,
+      "knockback"       : 0.35,
       "damageType"      : "piercing",
       "armorPenetration": 0.3,
       "accuracy"        : 7,
@@ -4565,7 +4578,8 @@
       "accuracy"        : -1,
       "staminaCost"     : 4,
       "twoHanded"       : true
-    }
+    },
+    "onHitEffect": {"condition": "concussed", "chance": 0.25, "durationHours": 0.5, "resist": "blunt_resistance"}
   },
   {
     "id": "steel_cleaver",
@@ -4598,7 +4612,8 @@
       "armorDamage"     : 1,
       "staminaCost"     : 4,
       "twoHanded"       : false
-    }
+    },
+    "onHitEffect": {"condition": "bloodletting", "chance": 0.22, "durationHours": 2, "resist": "cutting_resistance"}
   },
   {
     "id": "steel_greatcleaver",
@@ -4631,7 +4646,8 @@
       "armorDamage"     : 2,
       "staminaCost"     : 6,
       "twoHanded"       : true
-    }
+    },
+    "onHitEffect": {"condition": "hamstrung", "chance": 0.25, "durationHours": 0.5, "resist": "cutting_resistance"}
   },
   {
     "id": "steel_flail",
@@ -4698,7 +4714,8 @@
       "critMod"         : 0.14,
       "staminaCost"     : 1,
       "twoHanded"       : false
-    }
+    },
+    "onHitEffect": {"condition": "bloodletting", "chance": 0.15, "durationHours": 1.5, "resist": "piercing_resistance"}
   },
   {
     "id": "steel_stiletto",
@@ -4730,7 +4747,8 @@
       "critMod"         : 0.16,
       "staminaCost"     : 1,
       "twoHanded"       : false
-    }
+    },
+    "onHitEffect": {"condition": "bloodletting", "chance": 0.18, "durationHours": 1.5, "resist": "piercing_resistance"}
   },
   {
     "id": "iron_estoc",
@@ -4763,7 +4781,8 @@
       "finesse"         : true,
       "staminaCost"     : 4,
       "twoHanded"       : false
-    }
+    },
+    "onHitEffect": {"condition": "bloodletting", "chance": 0.2, "durationHours": 2.5, "resist": "piercing_resistance"}
   },
   {
     "id": "steel_rapier",
@@ -4796,7 +4815,8 @@
       "finesse"         : true,
       "staminaCost"     : 4,
       "twoHanded"       : false
-    }
+    },
+    "onHitEffect": {"condition": "bloodletting", "chance": 0.22, "durationHours": 2.5, "resist": "piercing_resistance"}
   },
   {
     "id": "war_bow",

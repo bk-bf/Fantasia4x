@@ -388,7 +388,8 @@ export interface Item {
     damageType?: DamageType; // cutting | piercing | blunt
     damMin?: number; // minimum damage roll (EQUIPMENT-EXPANSION)
     damMax?: number; // maximum damage roll (EQUIPMENT-EXPANSION)
-    reach?: number; // melee reach in tiles (1 = adjacent, 2 = pole-arm)
+    reach?: number; // melee reach in tiles (1 = adjacent, 2 = pole-arm); a reach>1 weapon strikes a tile away and its wielder holds at that distance
+    knockback?: number; // 0–1 BASE chance (before STR scaling) that a landed spear hit shoves the target back one tile — the displacement is code (Combat.performAttack), marked by the `staggered` condition. Reach polearms only.
     accuracy?: number; // added to hitChance formula
     armorPenetration?: number; // 0–1; fraction of armor reduction bypassed
     bluntMod?: number; // multiplier on knockdown chance (blunt weapons)
