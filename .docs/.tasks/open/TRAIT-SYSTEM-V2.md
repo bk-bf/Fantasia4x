@@ -293,6 +293,18 @@ limits, and personal-trait work mods (temperament *is* a work aptitude).
   - [x] **Wound-trait hover cites the real side.** The applier flips left/right per pawn, so the trait
         card (given the pawn on the STATUS tab) resolves the pawn's ACTUAL permanent wound and shows
         "left eye"; the race view stays side-agnostic ("eye").
+  - [x] **Permanent scars are bulletproof + read as scars.** `Injury.permanent` already blocked healing,
+        but the immutable `recomputeWound` (combat re-hit merge) rebuilt the wound and DROPPED the flag —
+        a same-type hit to a scarred part could heal it off. It now carries `permanent` forward ("once a
+        scar, always a scar"). The health tab renders a permanent wound as an "old <type> scar" (no warn,
+        untreatable), distinct from an active injury. Guarded by a merge test + the 500-tick heal test.
+  - [x] **`hunting_speed` stat removed.** Hunting IS combat (mark → chase → fight → carcass), so its
+        effectiveness comes from the COMBAT stats, not a duplicate work-speed axis; `getWorkModifiers`
+        falls back to a flat 1.0 for hunting. Adrenal dropped its (now-dead) hunting mod → `mental_res`.
+  - [x] **Mundane trait descriptions scrubbed of anatomy.** A `stat`/`attribute`/`negative` trait's prose
+        no longer names a specific body part (Frail's "thin-boned", Brawny's "muscle", Wan's "blood in
+        their bones"…) — matching the §1 naming law, which forbids only body-touching kinds to reference
+        anatomy. Applies to the flavor lines too.
 - **Phase 2 (TODO §7):** behavioral / needs / transformation.
 
 ## Locked decisions (2026-07-06)
