@@ -4,6 +4,10 @@
 // (common) is dicier, a finely-made one (rare+) is cleaner. Only applied to items that carry a
 // `rarity`; raw/unrated foods use a flat 1× (see pawnQueries.mealPoisonChance).
 [
+  // `negative` (ADR-028): a trait-only tier BELOW common — a pure-downside flaw (frail, clumsy,
+  // one-eyed…). Not rolled for items; pawns draw a bell-curve (Gaussian) COUNT of these, so most carry
+  // none and a rare wretch carries up to four. Dark-red accent on the trait card.
+  { "id": "negative", "name": "Flaw", "color": "#B4453F", "poisonMult": 1.5 },
   { "id": "common", "name": "Common", "color": "#9E9E9E", "poisonMult": 1.3 },
   { "id": "uncommon", "name": "Uncommon", "color": "#4CAF50", "poisonMult": 1.0 },
   { "id": "rare", "name": "Rare", "color": "#2196F3", "poisonMult": 0.7 },

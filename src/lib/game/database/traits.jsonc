@@ -3,10 +3,12 @@
 //            INDIVIDUAL pawn carries regardless of race). NOTE: a few individual afflictions (one-eyed /
 //            hard-of-hearing / bad-back + the temperament ones) sit under the racial section but are
 //            scope:"personal" — the flag is authoritative, not the grouping.
-//   rarity : rarities.jsonc scale — common | uncommon | rare | epic | legendary. A BUDGET (§2): how
-//            many attribute categories it may touch + polarity. common/uncommon = the mundane pool;
-//            rare/epic = a rare race-identity CAPABILITY; legendary = a rolled bundle. Drives the card
-//            accent colour; NOT shown as a naked "supernatural" label.
+//   rarity : rarities.jsonc scale — negative | common | uncommon | rare | epic | legendary. A BUDGET
+//            (§2): how many attribute categories it may touch + polarity. "negative" = a pure-downside
+//            FLAW (frail/clumsy/one-eyed…), drawn as an individual Gaussian-COUNT layer (Race.ts —
+//            most pawns get none, a rare wretch four), NEVER race identity. common/uncommon = the
+//            mundane variety pool; rare/epic = a rare race-identity CAPABILITY; legendary = a bundle.
+//            Drives the card accent colour (flaw = dark red); NOT shown as a naked "supernatural" label.
 //   kind   : the payload shape + validator path — STRICTLY separated (ADR-028, no mixing):
 //            "stat"       — ONLY core-stat *Bonus/*Penalty deltas (baked at pawn-gen).
 //            "attribute"  — ONLY derived stats.jsonc mods (workSpeed/Yield/Quality, resistances,
@@ -144,31 +146,31 @@
     },
     // — mundane NEGATIVES (the contrast layer; weighted common) —
     {
-        "id": "frail", "scope": "racial", "rarity": "common", "kind": "stat",
+        "id": "frail", "scope": "racial", "rarity": "negative", "kind": "stat",
         "name": "Frail", "description": "Thin-boned and easily tired — the body gives out early.",
         "flavorLine": "there is a brittleness to them, as of a people worn thin",
         "effects": {"constitutionPenalty": 2}
     },
     {
-        "id": "dull", "scope": "racial", "rarity": "common", "kind": "stat",
+        "id": "dull", "scope": "racial", "rarity": "negative", "kind": "stat",
         "name": "Dull", "description": "Slow to reason and slower to learn.",
         "flavorLine": "new ideas reach them slowly, as through deep water",
         "effects": {"intelligencePenalty": 2}
     },
     {
-        "id": "clumsy", "scope": "racial", "rarity": "common", "kind": "stat",
+        "id": "clumsy", "scope": "racial", "rarity": "negative", "kind": "stat",
         "name": "Clumsy", "description": "Heavy-handed and graceless — fumbles fine work.",
         "flavorLine": "their hands are willing but forever fumbling",
         "effects": {"dexterityPenalty": 2}
     },
     {
-        "id": "sickly", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "id": "sickly", "scope": "racial", "rarity": "negative", "kind": "attribute",
         "name": "Sickly", "description": "Prone to fever and rot — every passing illness lingers.",
         "flavorLine": "every passing sickness seems to find them first",
         "effects": {"diseaseResistance": -0.2}
     },
     {
-        "id": "thin-skinned", "scope": "racial", "rarity": "common", "kind": "bodyMod",
+        "id": "thin-skinned", "scope": "racial", "rarity": "negative", "kind": "bodyMod",
         "name": "Thin-Skinned", "description": "Soft, delicate flesh that marks and tears with little provocation.",
         "flavorLine": "the slightest blow raises a welt on their tender skin",
         "bodyMods": [{"target": "flesh", "hpMult": 0.85}],
@@ -181,7 +183,7 @@
         "effects": {"strengthPenalty": 1, "constitutionPenalty": 1, "dexterityBonus": 1}
     },
     {
-        "id": "nearsighted", "scope": "racial", "rarity": "common", "kind": "stat",
+        "id": "nearsighted", "scope": "racial", "rarity": "negative", "kind": "stat",
         "name": "Oblivious", "description": "Slow to notice things at any distance — poor at spotting and picking out detail.",
         "flavorLine": "the far hills are only a smear of colour to them",
         "effects": {"perceptionPenalty": 2}
@@ -189,41 +191,41 @@
     // — personal afflictions (WOUND granters, §4): the injury IS real, applied at gen (applyTraitWounds),
     //   so its handicap flows through the body model (sight/hearing capacities, part health) —
     {
-        "id": "one-eyed", "scope": "personal", "rarity": "common", "kind": "wound",
+        "id": "one-eyed", "scope": "personal", "rarity": "negative", "kind": "wound",
         "name": "One-Eyed", "description": "One eye is a ruined socket — half the field of view and no depth to it.",
         "flavorLine": "an old ruin of a socket sits where the second eye should be",
         "wounds": [{"part": "leftEye", "severity": "destroyed"}],
         "effects": {}
     },
     {
-        "id": "hard-of-hearing", "scope": "personal", "rarity": "common", "kind": "wound",
+        "id": "hard-of-hearing", "scope": "personal", "rarity": "negative", "kind": "wound",
         "name": "Hard-of-Hearing", "description": "One ear long dead — slow to notice what they can't see.",
         "flavorLine": "a shout must be a loud one to reach them",
         "wounds": [{"part": "leftEar", "severity": "destroyed"}],
         "effects": {}
     },
     {
-        "id": "bad-back", "scope": "personal", "rarity": "common", "kind": "wound",
+        "id": "bad-back", "scope": "personal", "rarity": "negative", "kind": "wound",
         "name": "Bad Back", "description": "An old spinal injury that never truly mended — a constant, wearing ache.",
         "flavorLine": "they carry themselves with the careful stiffness of an old ache",
         "wounds": [{"part": "spine", "severity": "serious", "type": "crush"}],
         "effects": {}
     },
     {
-        "id": "brittle-boned", "scope": "racial", "rarity": "common", "kind": "bodyMod",
+        "id": "brittle-boned", "scope": "racial", "rarity": "negative", "kind": "bodyMod",
         "name": "Brittle-Boned", "description": "Bones that crack under a hard blow — fragile where it counts.",
         "flavorLine": "their bones have a chalky, snap-prone lightness",
         "bodyMods": [{"target": "skeleton", "hpMult": 0.6}],
         "effects": {}
     },
     {
-        "id": "short-winded", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "id": "short-winded", "scope": "racial", "rarity": "negative", "kind": "attribute",
         "name": "Languid", "description": "Tires fast — little stamina for sustained toil or a long chase.",
         "flavorLine": "they are blowing hard before the work is half done",
         "effects": {"workSpeed": {"all": 0.95}}
     },
     {
-        "id": "weak-stomached", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "id": "weak-stomached", "scope": "racial", "rarity": "negative", "kind": "attribute",
         "name": "Delicate", "description": "A queasy constitution — sickens on foul food and turns from bloody work.",
         "flavorLine": "a whiff of rot is enough to turn them green",
         "effects": {"diseaseResistance": -0.15, "workSpeed": {"butchery": 0.8}}
@@ -235,50 +237,50 @@
         "effects": {"mentalResistance": 0.15}
     },
     {
-        "id": "cold-blooded", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "id": "cold-blooded", "scope": "racial", "rarity": "negative", "kind": "attribute",
         "name": "Cold-Blooded", "description": "Poor at holding heat — the cold bites them early and hard.",
         "flavorLine": "the chill sinks into them and will not let go",
         "effects": {"coldResistance": -0.2}
     },
     {
-        "id": "flat-footed", "scope": "racial", "rarity": "common", "kind": "stat",
+        "id": "flat-footed", "scope": "racial", "rarity": "negative", "kind": "stat",
         "name": "Graceless", "description": "Heavy, graceless footing — slow to dodge and turn.",
         "flavorLine": "they meet the ground flat and heavy at every step",
         "effects": {"dexterityPenalty": 1}
     },
     // — "really shitty" commons (§2): a deeper negative pull, kind-clean (two core OR two derived) —
     {
-        "id": "sluggard", "scope": "racial", "rarity": "common", "kind": "stat",
+        "id": "sluggard", "scope": "racial", "rarity": "negative", "kind": "stat",
         "name": "Sluggard", "description": "Leaden and slow — weak of arm and clumsy of hand.",
         "flavorLine": "everything about them moves at the pace of cold honey",
         "effects": {"strengthPenalty": 1, "dexterityPenalty": 1}
     },
     {
-        "id": "slow-mending", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "id": "slow-mending", "scope": "racial", "rarity": "negative", "kind": "attribute",
         "name": "Slow-Mending", "description": "Wounds linger and sickness digs in — a body poor at repairing itself.",
         "flavorLine": "even a scratch stays angry on them for weeks",
         "effects": {"healRate": -0.3, "diseaseResistance": -0.1}
     },
     {
-        "id": "night-blind", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "id": "night-blind", "scope": "racial", "rarity": "negative", "kind": "attribute",
         "name": "Night-Blind", "description": "Nearly helpless once the light fails.",
         "flavorLine": "dusk closes on them like a drawn hood",
         "effects": {"nightVision": -0.4}
     },
     {
-        "id": "thin-blooded", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "id": "thin-blooded", "scope": "racial", "rarity": "negative", "kind": "attribute",
         "name": "Wan", "description": "Watery, sluggish blood that holds neither warmth nor vigour against sickness.",
         "flavorLine": "the first frost of the year already sits in their bones",
         "effects": {"coldResistance": -0.15, "diseaseResistance": -0.1}
     },
     {
-        "id": "pox-marked", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "id": "pox-marked", "scope": "racial", "rarity": "negative", "kind": "attribute",
         "name": "Pox-Ridden", "description": "Never quite shed the childhood plagues — quick to sicken, slow to knit.",
         "flavorLine": "old pocks stipple their skin like hail-struck clay",
         "effects": {"diseaseResistance": -0.15, "healRate": -0.1}
     },
     {
-        "id": "stiff-jointed", "scope": "racial", "rarity": "common", "kind": "attribute",
+        "id": "stiff-jointed", "scope": "racial", "rarity": "negative", "kind": "attribute",
         "name": "Stiff-Jointed", "description": "Joints that seize and grind — slow, aching craftwork.",
         "flavorLine": "their knuckles crack like green firewood at every bend",
         "effects": {"workSpeed": {"crafting": 0.85, "construction": 0.95}}
@@ -291,7 +293,7 @@
         "effects": {"workSpeed": {"all": 1.1}}
     },
     {
-        "id": "lazy", "scope": "personal", "rarity": "common", "kind": "attribute",
+        "id": "lazy", "scope": "personal", "rarity": "negative", "kind": "attribute",
         "name": "Lazy", "description": "Does the least that will pass — dawdles at every task.",
         "effects": {"workSpeed": {"all": 0.9}}
     },
@@ -311,7 +313,7 @@
         "effects": {"workSpeed": {"research": 1.2}}
     },
     {
-        "id": "incurious", "scope": "personal", "rarity": "common", "kind": "attribute",
+        "id": "incurious", "scope": "personal", "rarity": "negative", "kind": "attribute",
         "name": "Incurious", "description": "Uninterested in the why of things — poor at study.",
         "effects": {"workSpeed": {"research": 0.85}}
     },
@@ -326,7 +328,7 @@
         "effects": {"charismaBonus": 2}
     },
     {
-        "id": "ill-tempered", "scope": "personal", "rarity": "common", "kind": "stat",
+        "id": "ill-tempered", "scope": "personal", "rarity": "negative", "kind": "stat",
         "name": "Ill-Tempered", "description": "Sour and abrasive — poor company at the best of times.",
         "effects": {"charismaPenalty": 2}
     },
@@ -341,7 +343,7 @@
         "effects": {"workSpeed": {"planting": 1.2, "foraging": 1.1}, "workYield": {"planting": 1.15}}
     },
     {
-        "id": "squeamish", "scope": "personal", "rarity": "common", "kind": "attribute",
+        "id": "squeamish", "scope": "personal", "rarity": "negative", "kind": "attribute",
         "name": "Squeamish", "description": "Turns from blood and gore — a poor hand at the butcher's block.",
         "effects": {"workSpeed": {"butchery": 0.8, "hunting": 0.9}}
     },

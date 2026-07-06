@@ -119,26 +119,30 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
     expect(ws('amphibious')?.fishing).toBeGreaterThan(1);
   });
 
-  it('§2 contrast layer: the six "shitty" commons exist as clean negative pulls', () => {
+  it('flaw tier: every negative-rarity trait is a pure downside (no upside effect)', () => {
+    for (const t of ALL) {
+      if (t.rarity !== 'negative') continue;
+      // A flaw's effects must contain NO positive term (no *Bonus, no >1 mult, no positive resistance).
+      for (const [k, v] of Object.entries(t.effects ?? {})) {
+        if (typeof v === 'number')
+          expect(
+            k.endsWith('Bonus') ? false : k.endsWith('Penalty') ? true : v <= 0,
+            `${t.id} (flaw) has an upside: ${k}=${v}`
+          ).toBe(true);
+        else
+          for (const m of Object.values(v as Record<string, number>))
+            expect(m, `${t.id} (flaw) work mult ${m} is an upside`).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it('flaw tier: the marquee flaws (afflictions + shitty commons) are rarity negative', () => {
     const byId = Object.fromEntries(TRAIT_DATABASE.filter((t) => t.id).map((t) => [t.id!, t]));
     for (const id of [
-      'sluggard',
-      'slow-mending',
-      'night-blind',
-      'thin-blooded',
-      'pox-marked',
-      'stiff-jointed'
+      'frail', 'clumsy', 'dull', 'one-eyed', 'hard-of-hearing', 'bad-back',
+      'sluggard', 'slow-mending', 'night-blind', 'thin-blooded', 'pox-marked', 'stiff-jointed'
     ]) {
-      const t = byId[id];
-      expect(t, `${id} missing`).toBeTruthy();
-      expect(t.rarity ?? 'common', `${id} must be common`).toBe('common');
-      // Kind-clean (no mixing — asserted globally above); carries at least one debuff.
-      const negatives = Object.entries(t.effects ?? {}).filter(([k, v]) =>
-        typeof v === 'number'
-          ? (k.endsWith('Penalty') && v > 0) || (!k.endsWith('Penalty') && v < 0)
-          : Object.values(v as Record<string, number>).some((m) => m < 1)
-      );
-      expect(negatives.length, `${id} needs a debuff`).toBeGreaterThanOrEqual(1);
+      expect(byId[id]?.rarity, `${id} must be a flaw`).toBe('negative');
     }
   });
 });

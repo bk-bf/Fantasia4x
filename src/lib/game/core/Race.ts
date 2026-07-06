@@ -46,10 +46,11 @@ const CONFLICT_GROUPS: string[][] = [
   ['sturdy', 'frail'],
   ['bright', 'dull'],
   ['thick-skinned', 'thin-skinned', 'scaled-hide', 'iron-skin', 'thick-fur'], // one kind of hide
-  ['heavy-boned', 'stone-bones'],
-  ['frost-loving', 'frost-born', 'warm-blooded', 'ever-warm', 'cold-blooded', 'flame-touched'], // one thermal identity
+  ['heavy-boned', 'stone-bones', 'brittle-boned'], // dense vs brittle bone — one skeleton
+  ['keen-eyed', 'nearsighted'], // one visual acuity
+  ['frost-loving', 'frost-born', 'warm-blooded', 'ever-warm', 'cold-blooded', 'flame-touched', 'thin-blooded'], // one thermal identity
   ['adrenaline', 'berserker-blood'],
-  ['night-owl', 'nocturnal'],
+  ['night-owl', 'nocturnal', 'night-blind'], // one night-sight identity
   ['fast-healer', 'regenerative'],
   ['nocturnal', 'photosynthetic'],
   // personal temperament conflicts
@@ -199,9 +200,23 @@ function generatePhysicalTraits(archetype: Archetype): Race['physicalTraits'] {
 
 const RACIAL = () => TRAIT_DATABASE.filter((t) => (t.scope ?? 'racial') === 'racial');
 const PERSONAL = () => TRAIT_DATABASE.filter((t) => t.scope === 'personal');
+/** Pure-downside FLAWS (rarity 'negative', either scope) — drawn as an individual Gaussian-count layer
+ *  (drawPawnTraits), never as race identity or a positive-pool pick. */
+const NEGATIVE = () => TRAIT_DATABASE.filter((t) => t.rarity === 'negative');
 const tid = (t: Trait) => t.id ?? t.name;
-/** common/uncommon are the "mundane" variety pool; rare/epic/legendary are the rare identity powers. */
+/** common/uncommon are the "mundane" variety pool; rare/epic/legendary are the rare identity powers.
+ *  'negative' is NOT mundane — flaws are excluded from every positive pool (identity, race pool, personal). */
 const isMundaneRarity = (r: Trait['rarity']) => (r ?? 'common') === 'common' || r === 'uncommon';
+
+/** Bell-curve COUNT of negative traits a pawn spawns with (ADR-028): a half-normal (|Gaussian|) rounded
+ *  and clamped to 0–4, so MOST pawns carry none or one flaw and a rare wretch carries four. σ tunes the
+ *  spread — at 1.25: ≈31% carry 0, 44% one, 21% two, ~4% three, ~0.5% four (a four-flaw wretch shows up
+ *  roughly once every ~200 pawns). Lower σ → cleaner colony; raise it for a harsher, more flawed world. */
+const NEGATIVE_TRAIT_SIGMA = 1.25;
+const MAX_NEGATIVE_TRAITS = 4;
+function rollNegativeCount(): number {
+  return Math.max(0, Math.min(MAX_NEGATIVE_TRAITS, Math.round(Math.abs(rng.gaussian(0, NEGATIVE_TRAIT_SIGMA)))));
+}
 
 /**
  * A RACE's trait identity (ADR-023, per-race rarity). Rolls the spec's rarity ONCE per race —
@@ -318,10 +333,11 @@ export function drawPawnTraits(race: Race): Trait[] {
     }
   }
 
-  // 0–3 personal quirks (weighted toward a couple), honouring personal conflict groups.
+  // 0–3 POSITIVE personal quirks (weighted toward a couple), honouring personal conflict groups.
+  // Flaws (rarity 'negative') are excluded here — they're the separate Gaussian layer below.
   const r = rng.random();
   const nPersonal = r < 0.2 ? 0 : r < 0.55 ? 1 : r < 0.85 ? 2 : 3;
-  const pbag = PERSONAL().filter((t) => !banned.has(tid(t)));
+  const pbag = PERSONAL().filter((t) => t.rarity !== 'negative' && !banned.has(tid(t)));
   let personalCount = 0;
   while (personalCount < nPersonal && pbag.length > 0) {
     const t = pbag.splice(rng.int(0, pbag.length - 1), 1)[0];
@@ -329,6 +345,20 @@ export function drawPawnTraits(race: Race): Trait[] {
     ban(tid(t));
     out.push(t);
     personalCount++;
+  }
+
+  // ADR-028 FLAW layer: a bell-curve (Gaussian) COUNT of negative traits, drawn from the whole flaw pool
+  // (racial physiology + personal temperament + afflictions), honouring conflict groups + everything
+  // already taken. Independent of the positive budget — MOST pawns get none/one, a rare wretch gets four.
+  const nNeg = rollNegativeCount();
+  const nbag = NEGATIVE().filter((t) => !banned.has(tid(t)));
+  let negCount = 0;
+  while (negCount < nNeg && nbag.length > 0) {
+    const t = nbag.splice(rng.int(0, nbag.length - 1), 1)[0];
+    if (banned.has(tid(t))) continue;
+    ban(tid(t));
+    out.push(t);
+    negCount++;
   }
   return out;
 }

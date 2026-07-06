@@ -89,6 +89,15 @@ export class SeededRng {
   pick<T>(arr: readonly T[]): T {
     return arr[Math.floor(this.next() * arr.length)];
   }
+
+  /** A normally-distributed sample (Box–Muller) with the given mean + standard deviation. Deterministic
+   *  on the seeded stream. Used for bell-curve counts like a pawn's number of negative traits. */
+  gaussian(mean = 0, sd = 1): number {
+    // Guard u1 away from 0 (log(0) = -Infinity); u1 ∈ (0,1].
+    const u1 = 1 - this.next();
+    const u2 = this.next();
+    return mean + sd * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  }
 }
 
 /**
