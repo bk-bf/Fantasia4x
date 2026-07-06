@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
   import { formatEffectValue, workAxisLabel } from '$lib/components/util/pawnUtils';
+  import { getTransientConditionDef } from '$lib/game/core/needs';
 
   export let pawn: Pawn;
 
@@ -8,6 +9,18 @@
     trait: Pawn['racialTraits'][number]
   ): { text: string; type: 'pos' | 'neg' | 'neutral' }[] {
     const tags: { text: string; type: 'pos' | 'neg' | 'neutral' }[] = [];
+    // ADR-023 capabilities — kept id-free (the prose description names the specifics; here we only
+    // summarise the mechanic, so no backend id ever leaks into the panel). Natural weapon/armor are
+    // resolved through the trait's `selfCondition` DEF — the single source both this panel and the
+    // health pill read.
+    const cond = trait.selfCondition ? getTransientConditionDef(trait.selfCondition) : undefined;
+    if (cond?.grantsNaturalWeapon?.length) tags.push({ text: 'natural weapon', type: 'pos' });
+    if (cond?.grantsNaturalArmor)
+      tags.push({ text: `+${cond.grantsNaturalArmor} natural armor`, type: 'pos' });
+    if (trait.onHitEffect) tags.push({ text: 'on-hit effect', type: 'pos' });
+    if (trait.weaponBonus?.damage)
+      tags.push({ text: `+${Math.round(trait.weaponBonus.damage * 100)}% weapon damage`, type: 'pos' });
+    if (trait.blocksSlots?.length) tags.push({ text: 'blocks gear', type: 'neg' });
     for (const [effectName, effectValue] of Object.entries(trait.effects || {})) {
       if (effectName.includes('Bonus')) {
         tags.push({
@@ -51,7 +64,12 @@
         <div class="trait-card">
           <div class="card-accent"></div>
           <div class="card-body">
-            <div class="card-header">{trait.name.toUpperCase()}</div>
+            <div class="card-header">
+              <span class="card-name">{trait.name.toUpperCase()}</span>
+              {#if trait.tier === 'supernatural' || trait.tier === 'legendary'}
+                <span class="tier-badge" class:legendary={trait.tier === 'legendary'}>{trait.tier}</span>
+              {/if}
+            </div>
             <div class="card-desc">{trait.description}</div>
             {#if tags.length > 0}
               <div class="card-tags">
@@ -127,13 +145,33 @@
   }
 
   .card-header {
+    display: flex;
+    align-items: center;
+    gap: 5px;
     color: var(--accent-hi);
     font-size: 12px;
     letter-spacing: 0.04em;
     font-weight: 600;
+    min-width: 0;
+  }
+  .card-name {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  /* A supernatural/legendary pull is meant to read as special — flag the tier right in the header. */
+  .tier-badge {
+    flex-shrink: 0;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0 4px;
+    border-radius: 2px;
+    color: var(--bg);
+    background: var(--accent-hi, #ffd24a);
+  }
+  .tier-badge.legendary {
+    background: #d08bff;
   }
 
   .card-desc {

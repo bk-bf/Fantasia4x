@@ -5,6 +5,7 @@
   import ItemStatTooltip from '$lib/components/UI/ItemStatTooltip.svelte';
   import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
   import { qualityPrefix, qualityColor } from '$lib/game/core/itemQuality';
+  import { blockedSlots } from '$lib/game/core/PawnEquipment';
 
   let {
     pawn,
@@ -43,6 +44,9 @@
     return pawn.equipment?.[slot];
   }
 
+  // ADR-023: slots a racial body trait forbids (claws fill the hands, horns the crown…) — greyed out.
+  const blocked = $derived(blockedSlots(pawn));
+
   // Hover popup — the same stat/ability breakdown shown on craftable cards (ItemStatTooltip),
   // portaled to the cursor while hovering a filled slot.
   let statTip: { item: Item; x: number; y: number } | null = $state(null);
@@ -63,11 +67,14 @@
     {@const def = it ? gameCoordinator.getItemById(it.itemId) : null}
     {@const maxDur = def?.maxDurability ?? 100}
     {@const qColor = it ? qualityColor(it.quality) : undefined}
+    {@const isBlocked = blocked.has(slot)}
     <div
       class="slot-box"
       class:filled={!!it}
-      class:empty={!it}
+      class:empty={!it && !isBlocked}
+      class:blocked={isBlocked && !it}
       style="grid-area: {slot}"
+      title={isBlocked && !it ? 'Blocked by a racial trait — this body can\'t wear gear here.' : undefined}
       onmouseenter={(e) => def && showTip(def, e)}
       onmousemove={moveTip}
       onmouseleave={hideTip}
@@ -108,6 +115,8 @@
           disabled={loading}
           onclick={() => onUnequip(slot)}>✕</button
         >
+      {:else if isBlocked}
+        <span class="empty-mk blocked-mk">⊘</span>
       {:else}
         <span class="empty-mk">—</span>
       {/if}
@@ -152,6 +161,21 @@
   .slot-box.filled {
     border-color: var(--accent);
     background: var(--bg-panel);
+  }
+  /* ADR-023: a racial trait forbids this slot — greyed and struck through, not equippable. */
+  .slot-box.blocked {
+    border-style: dashed;
+    opacity: 0.35;
+    background: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 4px,
+      var(--bg-active) 4px,
+      var(--bg-active) 5px
+    );
+  }
+  .blocked-mk {
+    color: var(--text-muted);
   }
 
   .slot-lbl {

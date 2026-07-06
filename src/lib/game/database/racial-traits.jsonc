@@ -1,279 +1,380 @@
-// Racial Trait Database
-// Each entry maps directly to the RacialTrait interface in types/race.ts.
-// Valid effects keys (everything else was pruned in the Race overhaul):
-//   stat *Bonus/*Penalty            — applied at pawn generation
-//   workSpeed/workYield/workQuality — per work-category maps (or {"all": x}), applied to the
-//                                     matching stats.jsonc output (*_speed / *_yield / *_quality)
-//   fire/cold/poison/disease/mentalResistance — added on top of the matching *_resistance stat
-//                                     (flows into condition onset + combat mitigation)
-//   damageReduction, blunt/cutting/piercing_resistance — combat damage mitigation
-// "flavorLine" is hand-authored prose woven into the procedural race description.
-// "id" is a stable kebab-case slug (referenced by race-lore archetype themes + conflict groups).
+// Racial Trait Database (ADR-023 — mundane majority, supernatural rarity, condition-backed)
+// Each entry maps to the RacialTrait interface in types/race.ts. Selection (Race.generateRacialTraits)
+// rolls 1–3 MUNDANE, then a rare SUPERNATURAL gate, then a very-rare LEGENDARY gate.
+//
+// Tiers:
+//   mundane      — small stat trade-offs (incl. NEGATIVES) + modest work mults. The contrast layer.
+//   supernatural — ONE capability, made legible by a `selfCondition` pill:
+//                    naturalWeapons  (unarmed item ids in items.jsonc; may block gear via blocksSlots)
+//                    naturalArmor    (per-part soak magnitude 0–100, opened to pawns in Combat)
+//                    onHitEffect     (procs on ANY landed melee hit — "rides your steel")
+//                    weaponBonus     (damage bonus only while a weapon is equipped)
+//   legendary    — a bundle whose `subCapabilities[]` are each rolled independently at selection.
+//
+// effects keys (only these are consumed): stat *Bonus/*Penalty (pawn-gen); workSpeed/workYield/
+//   workQuality (per work-category maps or {"all": x}); fire/cold/poison/disease/mental/lightning/
+//   shadow/wetness-Resistance + healRate (added on top of the matching stat, PawnStatService); the three
+//   physical *_resistance keys (folded into combat mitigation); nightVision (core/vision.ts).
+// "selfCondition"/"blocksSlots"/"naturalWeapons"/"naturalArmor"/"onHitEffect"/"weaponBonus"/
+// "subCapabilities" are the ADR-023 additions. "flavorLine" is prose woven into the race description.
 [
-    // ── Physical Traits ──────────────────────────────────────────────────────
+    // ══ MUNDANE — the majority pool (small quirks, often negative) ═════════════
     {
-        "id"         : "iron-skin",
-        "name"       : "Iron Skin",
-        "description": "Metallic skin that provides natural armor.",
-        "flavorLine" : "their skin sets hard as weathered stone, turning aside blows that would lay low softer folk",
-        "effects"    : {
-            "constitutionBonus": 3,
-            "damageReduction"  : 0.2,
-            "workSpeed"   : {"mining": 1.15, "construction": 1.1}
-        }
+        "id": "stocky", "tier": "mundane",
+        "name": "Stocky", "description": "Short, broad and heavy-boned — strong in the trunk, slow in the hand.",
+        "flavorLine": "they are built low and broad, planted like fence-posts",
+        "effects": {"constitutionBonus": 2, "dexterityPenalty": 1}
     },
     {
-        "id"         : "dragon-heritage",
-        "name"       : "Dragon Heritage",
-        "description": "Ancient draconic bloodline grants resilience and power.",
-        "flavorLine" : "the old draconic fire still smoulders in their blood",
-        "effects"    : {
-            "strengthBonus"    : 2,
-            "constitutionBonus": 2,
-            "fireResistance"   : 0.25,
-            "workSpeed"   : {"hunting": 1.2, "butchery": 1.15}
-        }
+        "id": "rangy", "tier": "mundane",
+        "name": "Rangy", "description": "Long-limbed and light — quick and reaching, but easily worn down.",
+        "flavorLine": "all reach and sinew, they move with a loose, long-boned ease",
+        "effects": {"dexterityBonus": 2, "constitutionPenalty": 1}
     },
     {
-        "id"         : "feathered",
-        "name"       : "Feathered",
-        "description": "Light feathers provide insulation and grace.",
-        "flavorLine" : "a down of fine feathers softens their every movement",
-        "effects"    : { "dexterityBonus": 2, "constitutionPenalty": 1, "coldResistance": 0.15, "workSpeed": {"foraging": 1.1} }
+        "id": "sturdy", "tier": "mundane",
+        "name": "Sturdy", "description": "Simply hardy — a body that holds up to hard use.",
+        "flavorLine": "hard work and hard weather leave little mark on them",
+        "effects": {"constitutionBonus": 2}
     },
     {
-        "id"         : "stone-bones",
-        "name"       : "Stone Bones",
-        "description": "Dense, stone-like bone structure.",
-        "flavorLine" : "their bones are dense as quarried rock, heavy and unyielding",
-        "effects"    : {"constitutionBonus": 4, "strengthBonus": 1, "dexterityPenalty": 2, "blunt_resistance": 0.6}
+        "id": "frail", "tier": "mundane",
+        "name": "Frail", "description": "Thin-boned and easily tired — the body gives out early.",
+        "flavorLine": "there is a brittleness to them, as of a people worn thin",
+        "effects": {"constitutionPenalty": 2}
     },
     {
-        "id"         : "crystalline-eyes",
-        "name"       : "Crystalline Eyes",
-        "description": "Crystal-like eyes that see magical auras.",
-        "flavorLine" : "their faceted eyes catch light that others never perceive",
-        "effects"    : { "perceptionBonus": 2, "intelligenceBonus": 1, "nightVision": 0.5, "workSpeed": {"research": 1.2} }
+        "id": "bright", "tier": "mundane",
+        "name": "Bright", "description": "Quick to grasp and reason — though never robust with it.",
+        "flavorLine": "understanding comes to them quickly, almost before the asking",
+        "effects": {"intelligenceBonus": 2, "constitutionPenalty": 1}
     },
     {
-        "id"         : "scaled-hide",
-        "name"       : "Scaled Hide",
-        "description": "Overlapping scales blunt cutting and piercing blows.",
-        "flavorLine" : "overlapping scales sheathe them like a coat of living mail",
-        "effects"    : { "constitutionBonus": 2, "cutting_resistance": 0.3, "piercing_resistance": 0.2 }
-    },
-    // ── Elemental Traits ─────────────────────────────────────────────────────
-    {
-        "id"         : "flame-touched",
-        "name"       : "Flame Touched",
-        "description": "Body radiates warmth, naturally immune to cold.",
-        "flavorLine" : "warmth pours off their skin even in the deepest frost",
-        "effects"    : { "fireResistance": 0.3, "coldResistance": 0.2, "workSpeed": {"metalworking": 1.3, "mining": 1.15}, "workQuality": {"metalworking": 1.15} }
+        "id": "dull", "tier": "mundane",
+        "name": "Dull", "description": "Slow to reason and slower to learn.",
+        "flavorLine": "new ideas reach them slowly, as through deep water",
+        "effects": {"intelligencePenalty": 2}
     },
     {
-        "id"         : "frost-born",
-        "name"       : "Frost Born",
-        "description": "Born in eternal winter, thrives in cold.",
-        "flavorLine" : "the killing cold is to them no more than a brisk morning",
-        "effects"    : { "coldResistance": 0.4, "workSpeed": {"fishing": 1.2, "hunting": 1.1} }
+        "id": "keen-eyed", "tier": "mundane",
+        "name": "Keen-Eyed", "description": "Sharp-sighted, missing little at a distance.",
+        "flavorLine": "little escapes their eye across an open field",
+        "effects": {"perceptionBonus": 2}
     },
     {
-        "id"         : "earth-bound",
-        "name"       : "Earth Bound",
-        "description": "Connected to the earth and stone.",
-        "flavorLine" : "generations bound to the deep places have made them masters of mine and quarry",
-        "effects"    : { "strengthBonus": 2, "workSpeed": {"mining": 1.4, "digging": 1.3}, "workYield": {"mining": 1.2, "digging": 1.2} }
+        "id": "strong-backed", "tier": "mundane",
+        "name": "Strong-Backed", "description": "Powerful through the shoulders and spine.",
+        "flavorLine": "they shoulder loads that would fold a lesser back",
+        "effects": {"strengthBonus": 2, "workSpeed": {"mining": 1.1}}
     },
     {
-        "id"         : "wind-walker",
-        "name"       : "Wind Walker",
-        "description": "Moves with the grace of the wind.",
-        "flavorLine" : "they cross open ground as lightly as a gust over grass",
-        "effects"    : { "dexterityBonus": 3, "workSpeed": {"hunting": 1.2, "foraging": 1.15} }
-    },
-    // ── Mystical Traits ──────────────────────────────────────────────────────
-    {
-        "id"         : "stargazer",
-        "name"       : "Stargazer",
-        "description": "Eyes that reflect the cosmos, naturally perceptive.",
-        "flavorLine" : "they read the turning sky as others read a familiar road",
-        "effects"    : { "perceptionBonus": 3, "intelligenceBonus": 1, "workSpeed": {"research": 1.25} }
+        "id": "gaunt", "tier": "mundane",
+        "name": "Gaunt", "description": "Wasted and spare of frame — light on their feet, but weak and fragile.",
+        "flavorLine": "hunger-lean and hollow-cheeked, they carry no spare flesh",
+        "effects": {"strengthPenalty": 1, "constitutionPenalty": 1, "dexterityBonus": 1}
     },
     {
-        "id"         : "dream-walker",
-        "name"       : "Dream Walker",
-        "description": "Can enter and manipulate dreams.",
-        "flavorLine" : "their thoughts wander into sleeping minds and return with strange counsel",
-        "effects"    : { "intelligenceBonus": 2, "charismaBonus": 1, "mentalResistance": 0.25, "workSpeed": {"research": 1.15} }
+        "id": "sickly", "tier": "mundane",
+        "name": "Sickly", "description": "Prone to fever and rot — every passing illness lingers.",
+        "flavorLine": "every passing sickness seems to find them first",
+        "effects": {"constitutionPenalty": 1, "diseaseResistance": -0.2}
     },
     {
-        "id"         : "void-touched",
-        "name"       : "Void Touched",
-        "description": "Touched by the emptiness between worlds.",
-        "flavorLine" : "a sliver of the void's silence sits behind their eyes",
-        "effects"    : { "intelligenceBonus": 2, "constitutionPenalty": 1, "mentalResistance": 0.3, "workSpeed": {"research": 1.3} }
-    },
-    // ── Biological Traits ────────────────────────────────────────────────────
-    {
-        "id"         : "keen-senses",
-        "name"       : "Keen Senses",
-        "description": "Extraordinarily sharp senses.",
-        "flavorLine" : "nothing crosses their range of sight or scent unnoticed",
-        "effects"    : {
-            "perceptionBonus": 2,
-            "dexterityBonus" : 1,
-            "workSpeed" : {"hunting": 1.3},
-            "workYield"      : {"foraging": 1.2}
-        }
+        "id": "ill-tempered", "tier": "mundane",
+        "name": "Ill-Tempered", "description": "Sour and abrasive — poor company at the best of times.",
+        "flavorLine": "a short temper and a sharp tongue keep others at arm's length",
+        "effects": {"charismaPenalty": 2}
     },
     {
-        "id"         : "regenerative",
-        "name"       : "Regenerative",
-        "description": "Naturally heals wounds over time.",
-        "flavorLine" : "torn flesh knits itself whole within days",
-        "effects"    : { "constitutionBonus": 2, "diseaseResistance": 0.2, "workSpeed": {"caretaking": 1.2} }
+        "id": "clumsy", "tier": "mundane",
+        "name": "Clumsy", "description": "Heavy-handed and graceless — fumbles fine work.",
+        "flavorLine": "their hands are willing but forever fumbling",
+        "effects": {"dexterityPenalty": 2}
     },
     {
-        "id"         : "venomous",
-        "name"       : "Venomous",
-        "description": "Natural toxins in saliva and claws.",
-        "flavorLine" : "their touch carries a slow, patient poison",
-        "effects"    : { "constitutionBonus": 1, "dexterityBonus": 1, "poisonResistance": 0.4, "workQuality": {"alchemy": 1.2} }
+        "id": "thick-skinned", "tier": "mundane",
+        "name": "Thick-Skinned", "description": "Tough, calloused hide that shrugs off scrapes.",
+        "flavorLine": "their weathered hide takes a cut without much complaint",
+        "effects": {"cutting_resistance": 0.1, "blunt_resistance": 0.1}
     },
     {
-        "id"         : "amphibious",
-        "name"       : "Amphibious",
-        "description": "Equally at home on land and in water.",
-        "flavorLine" : "water holds no fear for them; they breathe the shallows like air",
-        "effects"    : { "constitutionBonus": 1, "workSpeed": {"fishing": 1.5, "foraging": 1.1} }
+        "id": "thin-skinned", "tier": "mundane",
+        "name": "Thin-Skinned", "description": "Soft, delicate skin that marks and tears easily.",
+        "flavorLine": "the slightest blow raises a welt on their tender skin",
+        "effects": {"cutting_resistance": -0.15, "blunt_resistance": -0.1}
     },
     {
-        "id"         : "marsh-dweller",
-        "name"       : "Marsh Dweller",
-        "description": "Bred in fetid swamps, inured to rot and fever.",
-        "flavorLine" : "fever and foul water that fell other folk barely slow them",
-        "effects"    : { "constitutionBonus": 1, "poisonResistance": 0.3, "diseaseResistance": 0.3, "workYield": {"foraging": 1.15} }
-    },
-    // ── Social / Mental Traits ───────────────────────────────────────────────
-    {
-        "id"         : "hive-mind",
-        "name"       : "Hive Mind",
-        "description": "Shared consciousness with others of the same race.",
-        "flavorLine" : "a single shared will moves through all of them at once",
-        "effects"    : { "intelligenceBonus": 2, "charismaBonus": 1, "workSpeed": {"all": 1.1} }
+        "id": "stone-bones", "tier": "mundane",
+        "name": "Stone Bones", "description": "Dense, heavy bone — hard to break, slow to move.",
+        "flavorLine": "their bones are dense as quarried rock, heavy and unyielding",
+        "effects": {"constitutionBonus": 3, "dexterityPenalty": 2, "blunt_resistance": 0.3}
     },
     {
-        "id"         : "pack-hunter",
-        "name"       : "Pack Hunter",
-        "description": "Works better in groups, struggles alone.",
-        "flavorLine" : "they hunt as one body with many hands, driving prey to ground",
-        "effects"    : { "strengthBonus": 1, "dexterityBonus": 1, "workSpeed": {"hunting": 1.4, "butchery": 1.2} }
+        "id": "feathered", "tier": "mundane",
+        "name": "Feathered", "description": "Light down for insulation and grace.",
+        "flavorLine": "a down of fine feathers softens their every movement",
+        "effects": {"dexterityBonus": 2, "constitutionPenalty": 1, "coldResistance": 0.15, "workSpeed": {"foraging": 1.1}}
     },
     {
-        "id"         : "loner",
-        "name"       : "Loner",
-        "description": "Prefers solitude, works best alone.",
-        "flavorLine" : "they do their finest work where no other voice can reach them",
-        "effects"    : {
-            "intelligenceBonus": 2,
-            "charismaPenalty"  : 1,
-            "workSpeed"   : {"research": 1.3, "crafting": 1.2},
-            "workQuality" : {"crafting": 1.15}
-        }
-    },
-    // ── Exotic Traits ────────────────────────────────────────────────────────
-    {
-        "id"         : "shapeshifter",
-        "name"       : "Shapeshifter",
-        "description": "Can alter physical form slightly.",
-        "flavorLine" : "their features drift and resettle, never quite the same twice",
-        "effects"    : { "dexterityBonus": 2, "charismaBonus": 1, "workSpeed": {"all": 1.05} }
+        "id": "crystalline-eyes", "tier": "mundane",
+        "name": "Crystalline Eyes", "description": "Faceted eyes that gather what little light there is.",
+        "flavorLine": "their faceted eyes catch light that others never perceive",
+        "effects": {"perceptionBonus": 2, "intelligenceBonus": 1, "nightVision": 0.4, "workSpeed": {"research": 1.15}}
     },
     {
-        "id"         : "photosynthetic",
-        "name"       : "Photosynthetic",
-        "description": "Gains energy from sunlight.",
-        "flavorLine" : "sunlight feeds them as surely as bread, greening their skin",
-        "effects"    : { "constitutionBonus": 1, "workSpeed": {"foraging": 1.2, "planting": 1.15}, "workYield": {"planting": 1.2} }
+        "id": "wind-walker", "tier": "mundane",
+        "name": "Wind Walker", "description": "Moves with the grace of the wind.",
+        "flavorLine": "they cross open ground as lightly as a gust over grass",
+        "effects": {"dexterityBonus": 2, "workSpeed": {"hunting": 1.15, "foraging": 1.1}}
     },
     {
-        "id"         : "nocturnal",
-        "name"       : "Nocturnal",
-        "description": "Active during night, sluggish during day.",
-        "flavorLine" : "they come alive under the stars and drowse beneath the sun",
-        "effects"    : {
-            "dexterityBonus" : 1,
-            "perceptionBonus": 1,
-            "nightVision"    : 1.0,
-            "workSpeed" : {"hunting": 1.2, "foraging": 1.1}
-        }
+        "id": "stargazer", "tier": "mundane",
+        "name": "Stargazer", "description": "Eyes that reflect the cosmos, naturally perceptive.",
+        "flavorLine": "they read the turning sky as others read a familiar road",
+        "effects": {"perceptionBonus": 2, "intelligenceBonus": 1, "workSpeed": {"research": 1.2}}
     },
     {
-        "id"         : "ancient",
-        "name"       : "Ancient",
-        "description": "Extremely long-lived, wise but frail.",
-        "flavorLine" : "they carry the memory of ages in brittle, age-worn frames",
-        "effects"    : { "intelligenceBonus": 6, "constitutionPenalty": 2, "mentalResistance": 0.2, "workSpeed": {"research": 1.4} }
+        "id": "dream-walker", "tier": "mundane",
+        "name": "Dream Walker", "description": "Their thoughts wander sleeping minds.",
+        "flavorLine": "their thoughts wander into sleeping minds and return with strange counsel",
+        "effects": {"intelligenceBonus": 1, "charismaBonus": 1, "mentalResistance": 0.2, "workSpeed": {"research": 1.15}}
     },
     {
-        "id"         : "berserker-blood",
-        "name"       : "Berserker Blood",
-        "description": "Enters rage states when threatened.",
-        "flavorLine" : "a red fury waits just beneath their calm, eager to be loosed",
-        "effects"    : {
-            "strengthBonus"      : 3,
-            "constitutionBonus"  : 1,
-            "intelligencePenalty": 1,
-            "workSpeed"     : {"hunting": 1.3, "butchery": 1.2},
-            "workYield"     : {"butchery": 1.15}
-        }
-    },
-    // ── Mundane but Useful Traits ────────────────────────────────────────────
-    {
-        "id"         : "industrious",
-        "name"       : "Industrious",
-        "description": "Naturally hardworking and efficient.",
-        "flavorLine" : "idle hands are unknown to them; there is always work to be done",
-        "effects"    : { "constitutionBonus": 1, "workSpeed": {"all": 1.15} }
+        "id": "shapeshifter", "tier": "mundane",
+        "name": "Shapeshifter", "description": "Can alter physical form slightly.",
+        "flavorLine": "their features drift and resettle, never quite the same twice",
+        "effects": {"dexterityBonus": 1, "charismaBonus": 1, "workSpeed": {"all": 1.05}}
     },
     {
-        "id"         : "meticulous",
-        "name"       : "Meticulous",
-        "description": "Extremely careful and precise in all tasks.",
-        "flavorLine" : "they measure twice, thrice, and only then commit the cut",
-        "effects"    : {
-            "dexterityBonus"   : 2,
-            "intelligenceBonus": 1,
-            "workSpeed"   : {"crafting": 1.3, "research": 1.15},
-            "workQuality" : {"crafting": 1.25, "construction": 1.15}
-        }
+        "id": "ancient", "tier": "mundane",
+        "name": "Ancient", "description": "Long-lived and wise, but frail with age.",
+        "flavorLine": "they carry the memory of ages in brittle, age-worn frames",
+        "effects": {"intelligenceBonus": 3, "constitutionPenalty": 2, "mentalResistance": 0.2, "workSpeed": {"research": 1.25}}
     },
     {
-        "id"         : "robust",
-        "name"       : "Robust",
-        "description": "Naturally healthy and disease-resistant.",
-        "flavorLine" : "sickness finds little purchase in their hardy constitution",
-        "effects"    : { "constitutionBonus": 3, "diseaseResistance": 0.25, "workSpeed": {"all": 1.05} }
+        "id": "nocturnal", "tier": "mundane",
+        "name": "Nocturnal", "description": "Active by night, drowsy by day.",
+        "flavorLine": "they come alive under the stars and drowse beneath the sun",
+        "effects": {"dexterityBonus": 1, "perceptionBonus": 1, "nightVision": 1.0, "workSpeed": {"hunting": 1.15}}
     },
     {
-        "id"         : "curious",
-        "name"       : "Curious",
-        "description": "Insatiably curious about the world.",
-        "flavorLine" : "every closed door is to them a question demanding an answer",
-        "effects"    : { "intelligenceBonus": 3, "workSpeed": {"research": 1.25} }
+        "id": "berserker-blood", "tier": "mundane",
+        "name": "Berserker Blood", "description": "A red fury waits beneath the calm.",
+        "flavorLine": "a red fury waits just beneath their calm, eager to be loosed",
+        "effects": {"strengthBonus": 2, "intelligencePenalty": 1, "workSpeed": {"hunting": 1.2, "butchery": 1.15}}
     },
     {
-        "id"         : "hearthkeeper",
-        "name"       : "Hearthkeeper",
-        "description": "A people who live for the shared table and the warm hearth.",
-        "flavorLine" : "they hold the hearth sacred, and feed friend and stranger alike",
-        "effects"    : { "charismaBonus": 2, "workSpeed": {"cooking": 1.2}, "workQuality": {"cooking": 1.25} }
+        "id": "robust", "tier": "mundane",
+        "name": "Robust", "description": "Naturally healthy and disease-resistant.",
+        "flavorLine": "sickness finds little purchase in their hardy constitution",
+        "effects": {"constitutionBonus": 2, "diseaseResistance": 0.2}
     },
     {
-        "id"         : "tanner-caste",
-        "name"       : "Tanner Caste",
-        "description": "Generations of hide-work bred into hand and eye.",
-        "flavorLine" : "the curing of hides is to them an inherited art, not a chore",
-        "effects"    : { "dexterityBonus": 1, "workSpeed": {"leatherworking": 1.25, "butchery": 1.1}, "workQuality": {"leatherworking": 1.2, "butchery": 1.15} }
+        "id": "industrious", "tier": "mundane",
+        "name": "Industrious", "description": "Naturally hardworking and efficient.",
+        "flavorLine": "idle hands are unknown to them; there is always work to be done",
+        "effects": {"constitutionBonus": 1, "workSpeed": {"all": 1.1}}
+    },
+    {
+        "id": "meticulous", "tier": "mundane",
+        "name": "Meticulous", "description": "Careful and precise in all fine work.",
+        "flavorLine": "they measure twice, thrice, and only then commit the cut",
+        "effects": {"dexterityBonus": 2, "intelligenceBonus": 1, "workSpeed": {"crafting": 1.2}, "workQuality": {"crafting": 1.2, "construction": 1.15}}
+    },
+    {
+        "id": "curious", "tier": "mundane",
+        "name": "Curious", "description": "Insatiably curious about the world.",
+        "flavorLine": "every closed door is to them a question demanding an answer",
+        "effects": {"intelligenceBonus": 2, "workSpeed": {"research": 1.2}}
+    },
+    {
+        "id": "hearthkeeper", "tier": "mundane",
+        "name": "Hearthkeeper", "description": "A people who live for the shared table and warm hearth.",
+        "flavorLine": "they hold the hearth sacred, and feed friend and stranger alike",
+        "effects": {"charismaBonus": 2, "workSpeed": {"cooking": 1.15}, "workQuality": {"cooking": 1.2}}
+    },
+    {
+        "id": "tanner-caste", "tier": "mundane",
+        "name": "Tanner Caste", "description": "Generations of hide-work bred into hand and eye.",
+        "flavorLine": "the curing of hides is to them an inherited art, not a chore",
+        "effects": {"dexterityBonus": 1, "workSpeed": {"leatherworking": 1.2, "butchery": 1.1}, "workQuality": {"leatherworking": 1.15}}
+    },
+    {
+        "id": "earth-bound", "tier": "mundane",
+        "name": "Earth Bound", "description": "Connected to earth and stone.",
+        "flavorLine": "generations bound to the deep places have made them masters of mine and quarry",
+        "effects": {"strengthBonus": 1, "workSpeed": {"mining": 1.3, "digging": 1.25}, "workYield": {"mining": 1.15}}
+    },
+    {
+        "id": "keen-senses", "tier": "mundane",
+        "name": "Keen Senses", "description": "Extraordinarily sharp senses.",
+        "flavorLine": "nothing crosses their range of sight or scent unnoticed",
+        "effects": {"perceptionBonus": 2, "workSpeed": {"hunting": 1.2}, "workYield": {"foraging": 1.15}}
+    },
+    {
+        "id": "pack-hunter", "tier": "mundane",
+        "name": "Pack Hunter", "description": "Hunts as one body with many hands.",
+        "flavorLine": "they hunt as one body with many hands, driving prey to ground",
+        "effects": {"strengthBonus": 1, "dexterityBonus": 1, "workSpeed": {"hunting": 1.25, "butchery": 1.15}}
+    },
+    {
+        "id": "loner", "tier": "mundane",
+        "name": "Loner", "description": "Prefers solitude; works best alone.",
+        "flavorLine": "they do their finest work where no other voice can reach them",
+        "effects": {"intelligenceBonus": 2, "charismaPenalty": 1, "workSpeed": {"research": 1.2, "crafting": 1.15}}
+    },
+    {
+        "id": "amphibious", "tier": "mundane",
+        "name": "Amphibious", "description": "Equally at home on land and in water.",
+        "flavorLine": "water holds no fear for them; they breathe the shallows like air",
+        "effects": {"constitutionBonus": 1, "workSpeed": {"fishing": 1.4, "foraging": 1.1}}
+    },
+    {
+        "id": "marsh-dweller", "tier": "mundane",
+        "name": "Marsh Dweller", "description": "Bred in fetid swamps, inured to rot and fever.",
+        "flavorLine": "fever and foul water that fell other folk barely slow them",
+        "effects": {"constitutionBonus": 1, "poisonResistance": 0.2, "diseaseResistance": 0.2, "workYield": {"foraging": 1.15}}
+    },
+    {
+        "id": "frost-born", "tier": "mundane",
+        "name": "Frost Born", "description": "Born in eternal winter, thrives in cold.",
+        "flavorLine": "the killing cold is to them no more than a brisk morning",
+        "effects": {"coldResistance": 0.35, "workSpeed": {"fishing": 1.15, "hunting": 1.1}}
+    },
+
+    // ══ SUPERNATURAL — rare; ONE capability, worn as a legible condition ═══════
+    {
+        "id": "scaled-hide", "tier": "supernatural",
+        "name": "Scaled Hide", "description": "Overlapping scales blunt cutting and piercing blows.",
+        "flavorLine": "overlapping scales sheathe them like a coat of living mail",
+        "selfCondition": "scaled",
+        "effects": {"constitutionBonus": 1, "cutting_resistance": 0.2, "piercing_resistance": 0.15}
+    },
+    {
+        "id": "iron-skin", "tier": "supernatural",
+        "name": "Iron Skin", "description": "Metallic skin that sets hard as armor plate.",
+        "flavorLine": "their skin sets hard as weathered stone, turning aside blows that would lay low softer folk",
+        "selfCondition": "iron_skinned",
+        "effects": {"constitutionBonus": 2, "dexterityPenalty": 1, "workSpeed": {"mining": 1.1}}
+    },
+    {
+        "id": "rending-claws", "tier": "supernatural",
+        "name": "Rending Claws", "description": "Curved claws for hands — devastating unarmed, but useless at a workbench.",
+        "flavorLine": "in place of fingers they bear long, hooked claws that open flesh like cloth",
+        "selfCondition": "clawed",
+        "blocksSlots": ["mainHand", "gloves"],
+        "effects": {"strengthBonus": 1, "workSpeed": {"crafting": 0.75, "leatherworking": 0.8, "construction": 0.85}}
+    },
+    {
+        "id": "gore-horns", "tier": "supernatural",
+        "name": "Goring Horns", "description": "Heavy horns that punch through and knock foes flat — but nothing fits over the crown.",
+        "flavorLine": "a heavy crown of horn sweeps back from their brow",
+        "selfCondition": "horned",
+        "blocksSlots": ["headOuter", "headBase"],
+        "effects": {"strengthBonus": 1}
+    },
+    {
+        "id": "venomous", "tier": "supernatural",
+        "name": "Venom Glands", "description": "Toxins lace every strike — even a held blade carries the poison.",
+        "flavorLine": "their touch carries a slow, patient poison",
+        "selfCondition": "venomous",
+        "onHitEffect": {"condition": "envenomed", "chance": 0.35, "durationHours": 2, "resist": "poison_resistance"},
+        "effects": {"poisonResistance": 0.3}
+    },
+    {
+        "id": "thick-fur", "tier": "supernatural",
+        "name": "Thick Fur", "description": "A heavy pelt — natural armor and cold immunity, but stifling in heat, with no room for a mid layer.",
+        "flavorLine": "a deep, shaggy pelt sheds the killing cold and turns a glancing blow",
+        "selfCondition": "furred",
+        "blocksSlots": ["bodyMid"],
+        "effects": {"constitutionBonus": 1, "coldResistance": 0.3, "fireResistance": -0.15}
+    },
+    {
+        "id": "flame-touched", "tier": "supernatural",
+        "name": "Flame Touched", "description": "Smouldering skin — blows land alight, and neither fire nor frost bites deep.",
+        "flavorLine": "warmth pours off their skin even in the deepest frost",
+        "selfCondition": "flame_touched",
+        "onHitEffect": {"condition": "burning", "chance": 0.3, "durationHours": 1, "resist": "fire_resistance"},
+        "effects": {"fireResistance": 0.3, "coldResistance": 0.15}
+    },
+    {
+        "id": "photosynthetic", "tier": "supernatural",
+        "name": "Photosynthetic", "description": "Sunlit skin drinks daylight — under an open sky, hunger fades.",
+        "flavorLine": "sunlight feeds them as surely as bread, greening their skin",
+        "selfCondition": "photosynthesis",
+        "effects": {"constitutionBonus": 1, "workSpeed": {"foraging": 1.15, "planting": 1.15}, "workYield": {"planting": 1.15}}
+    },
+    {
+        "id": "regenerative", "tier": "supernatural",
+        "name": "Regeneration", "description": "Torn flesh knits itself whole in days.",
+        "flavorLine": "torn flesh knits itself whole within days",
+        "selfCondition": "regenerating",
+        "effects": {"constitutionBonus": 1, "healRate": 0.6, "diseaseResistance": 0.15}
+    },
+    {
+        "id": "ever-warm", "tier": "supernatural",
+        "name": "Ever-Warm", "description": "An inner furnace — neither killing cold nor searing heat can take hold.",
+        "flavorLine": "an inner fire keeps them from ever truly feeling the cold — or the heat",
+        "selfCondition": "ever_warm",
+        "effects": {"fireResistance": 0.5, "coldResistance": 0.5}
+    },
+
+    // ══ LEGENDARY — very rare; a bundle, each sub-capability rolled separately ══
+    {
+        "id": "dragon-heritage", "tier": "legendary",
+        "name": "Dragon Heritage", "description": "An ancient draconic bloodline — no two dragon-blooded are ever quite alike.",
+        "flavorLine": "the old draconic fire still smoulders in their blood",
+        "effects": {"strengthBonus": 2, "constitutionBonus": 1, "fireResistance": 0.25},
+        "subCapabilities": [
+            {
+                "id": "dragon-scales", "name": "Dragon Scales", "description": "Armored scales impervious to flame.",
+                "selfCondition": "dragon_scaled",
+                "effects": {"fireResistance": 0.5}
+            },
+            {
+                "id": "dragon-claws", "name": "Dragon Claws", "description": "Talons that shear through armor.",
+                "selfCondition": "dragon_clawed", "effects": {}
+            },
+            {
+                "id": "dragon-eyes", "name": "Dragon Eyes", "description": "Slitted eyes that pierce the dark.",
+                "effects": {"perceptionBonus": 2, "nightVision": 1.0}
+            },
+            {
+                "id": "dragon-blood", "name": "Dragon Blood", "description": "Fireproof blood that mends wounds fast.",
+                "selfCondition": "regenerating", "effects": {"healRate": 0.5, "fireResistance": 0.5}
+            },
+            {
+                "id": "dragon-might", "name": "Dragon's Might", "description": "Draconic strength behind every wielded blow.",
+                "weaponBonus": {"damage": 0.2}, "effects": {"strengthBonus": 1}
+            },
+            {
+                "id": "fire-breath", "name": "Fire Breath", "description": "A gout of dragonfire that sears and sets alight.",
+                "selfCondition": "fire_breathing", "effects": {}
+            }
+        ]
+    },
+    {
+        "id": "vampiric", "tier": "legendary",
+        "name": "Vampiric", "description": "The blood-curse — bloodsucking fangs, a hunger for blood, and a dread of the sun.",
+        "flavorLine": "a cold hunger sits behind their eyes, and daylight is no friend to them",
+        "effects": {"dexterityBonus": 1, "charismaBonus": 1, "nightVision": 0.5},
+        "subCapabilities": [
+            {
+                "id": "bloodsucking-fangs", "name": "Bloodsucking Fangs", "description": "Feeding fangs that open the vein and drink.",
+                "selfCondition": "fanged", "effects": {}
+            },
+            {
+                "id": "sun-cursed", "name": "Sun-Cursed", "description": "Daylight saps their strength under an open sky.",
+                "selfCondition": "light_sensitive", "effects": {}
+            },
+            {
+                "id": "blood-hunger", "name": "Blood Hunger", "description": "A gnawing thirst that frays focus when unfed.",
+                "selfCondition": "bloodthirst", "effects": {}
+            },
+            {
+                "id": "vampire-strength", "name": "Undying Vigor", "description": "Unnatural strength behind a wielded blade.",
+                "weaponBonus": {"damage": 0.1}, "effects": {"strengthBonus": 1}
+            }
+        ]
     }
 ]

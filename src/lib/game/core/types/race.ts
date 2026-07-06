@@ -1,5 +1,7 @@
 // Race, stats, and racial-trait types. Split out of core/types.ts (P-4); re-exported via the barrel.
 
+import type { EquipmentSlot } from './items';
+
 export interface EntityStats {
   strength: number;
   dexterity: number;
@@ -7,6 +9,21 @@ export interface EntityStats {
   perception: number;
   charisma: number;
   constitution: number;
+}
+
+/** On-hit condition proc carried by a trait (`onHitEffect`) or a natural-weapon item.
+ *  Same shape as an item's `onHitEffect` so Combat can apply either through one path. */
+export interface TraitOnHitEffect {
+  /** Transient condition id inflicted on a landed hit. */
+  condition: string;
+  /** 0–1 base trigger chance, cut by the target's `resist` stat. */
+  chance: number;
+  /** Duration in in-game hours (converted to ticks on apply). */
+  durationHours: number;
+  /** `*_resistance` stat id that reduces the trigger chance (and blood drain). */
+  resist?: string;
+  /** Optional bloodVolume drain on trigger (feeding / bleed weapons). */
+  bloodDrain?: number;
 }
 
 export interface RacialTrait {
@@ -18,10 +35,28 @@ export interface RacialTrait {
    *  (see Race.generateRaceDescription). Carries the prose flavour — e.g.
    *  "their skin sets hard as weathered stone". */
   flavorLine?: string;
+  /** Rarity tier controlling selection (ADR-023). Absent ⇒ treated as `mundane`.
+   *  `mundane`: small stat trade-offs (incl. negatives) — the contrast layer.
+   *  `supernatural`: ONE capability (natural weapon / armor / on-hit proc / passive).
+   *  `legendary`: a bundle whose `subCapabilities` are each rolled independently. */
+  tier?: 'mundane' | 'supernatural' | 'legendary';
+  /** Permanent (or environment-gated) condition id kept on the pawn while this trait is present — its
+   *  legible pill in the health panel AND the hub for its combat capability: the linked condition def
+   *  carries `grantsNaturalWeapon`/`grantsNaturalArmor` (single source of truth, no trait-side copy).
+   *  `photosynthesis`/`light_sensitive` are environment-gated (pushed only when active). */
+  selfCondition?: string;
+  /** Equipment slots the body forbids — greyed in the gear tab, blocked at equip. */
+  blocksSlots?: EquipmentSlot[];
+  /** Procs on ANY landed melee hit regardless of held weapon ("rides your steel"). */
+  onHitEffect?: TraitOnHitEffect;
+  /** Applies only while a weapon is equipped (Giant's Grip, Duelist's Blood). */
+  weaponBonus?: { damage?: number };
+  /** legendary only: sub-capabilities, each rolled independently at selection so two
+   *  legendary-blooded pawns are never identical. Expanded into the race's trait list. */
+  subCapabilities?: RacialTrait[];
   /** Only fields below are actually consumed somewhere — pawn-gen stat bonuses,
-   *  PawnStatService work mults + resistance stats, and Combat damage reduction.
-   *  The old grab-bag of unread effect keys (nightVision, telepathicRange, memoryBonus…)
-   *  was pruned in the Race overhaul. */
+   *  PawnStatService work mults + resistance stats + heal_rate, and Combat resistances.
+   *  The old grab-bag of unread effect keys (telepathicRange, memoryBonus…) was pruned. */
   effects: {
     // Stat bonuses/penalties — applied at pawn generation (applyRacialTraitBonuses).
     strengthBonus?: number;
@@ -44,19 +79,22 @@ export interface RacialTrait {
     workYield?: Record<string, number>; // workType -> *_yield multiplier
     workQuality?: Record<string, number>; // workType -> *_quality multiplier
 
-    // Resistance stats — added on top of the *_resistance formula by
-    // PawnStatService.evaluateStat, so they flow into condition onset
-    // (cold→hypothermia, fire→heat_stroke) and combat mitigation.
+    // Resistance / rate stats — added on top of the matching stat formula by
+    // PawnStatService.evaluateStat (RESISTANCE_TRAIT_KEY), so they flow into condition
+    // onset (cold→hypothermia, fire→heat_stroke), combat mitigation, and wound healing.
     fireResistance?: number;
     coldResistance?: number;
     poisonResistance?: number;
     diseaseResistance?: number;
     mentalResistance?: number;
+    /** Elemental resistances realigned with stats.jsonc (lightning/shadow/wetness). */
+    lightningResistance?: number;
+    shadowResistance?: number;
+    wetnessResistance?: number;
+    /** Wound-heal rate bonus, added on top of the `heal_rate` formula (Regeneration). */
+    healRate?: number;
 
-    // Combat — consumed by Combat.getRacialResistance.
-    /** General damage reduction applied before type-specific resistances. */
-    damageReduction?: number;
-    /** Physical damage resistances (0–1; stacks with damageReduction). */
+    /** Physical damage resistances (0–1), folded into the *_resistance stat in combat. */
     blunt_resistance?: number;
     cutting_resistance?: number;
     piercing_resistance?: number;

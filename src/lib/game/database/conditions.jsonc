@@ -933,6 +933,178 @@
         "charSpans": [ {"sheet": "font", "id": 3} ],
         "modifiers": {"moveSpeed": 0.4, "dexterity": 0.75}
     },
+    // ── Racial trait conditions (ADR-023) ────────────────────────────────────
+    // The legible pill for a supernatural/legendary body trait. Permanent ones are pushed by
+    // syncTransientConditions for every trait carrying the id as `selfCondition`; the trait's real
+    // payload (natural weapon/armor/on-hit proc/resistances) rides its RacialTrait fields, so these
+    // mostly carry description + a small tell. `photosynthesis`/`light_sensitive` are ENVIRONMENT-GATED
+    // (pushed only while active) and `burning` is a combat DoT applied via onHitEffect (conditionTimers).
+    {
+        "id"                : "clawed",
+        "name"              : "Clawed",
+        "transient"         : true,
+        "description"       : "Curved rending claws in place of fingers — a fearsome unarmed weapon, but far too clumsy to grip a crafted tool or weapon.",
+        "color"             : "#C8A064",
+        "charSpans"         : [ {"sheet": "items", "id": 223} ],
+        "grantsNaturalWeapon": ["rending-claws"],
+        "modifiers"         : {"dexterity": 0.95}
+    },
+    {
+        "id"               : "furred",
+        "name"             : "Thick Fur",
+        "transient"        : true,
+        "description"      : "A dense pelt — natural armor and warmth against the cold, but stifling in the heat, and no room for a mid body layer beneath it.",
+        "color"            : "#8B6F47",
+        "charSpans"        : [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 8,
+        "modifiers"        : {}
+    },
+    {
+        "id"               : "scaled",
+        "name"             : "Scaled Hide",
+        "transient"        : true,
+        "description"      : "Overlapping scales sheathe the body like a coat of living mail, turning aside cutting and piercing blows.",
+        "color"            : "#6B8E6B",
+        "charSpans"        : [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 12,
+        "modifiers"        : {}
+    },
+    {
+        "id"               : "iron_skinned",
+        "name"             : "Iron Skin",
+        "transient"        : true,
+        "description"      : "Skin set hard as armor plate — heavy natural armor that turns aside all but the most driving blows.",
+        "color"            : "#9AA3AD",
+        "charSpans"        : [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 18,
+        "modifiers"        : {}
+    },
+    {
+        "id"               : "dragon_scaled",
+        "name"             : "Dragon Scales",
+        "transient"        : true,
+        "description"      : "Armored draconic scales — heavy natural armor, and flesh that flame cannot touch.",
+        "color"            : "#B87333",
+        "charSpans"        : [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 20,
+        "modifiers"        : {}
+    },
+    {
+        "id"                : "horned",
+        "name"              : "Horned",
+        "transient"         : true,
+        "description"       : "Heavy goring horns crown the skull — a natural weapon, but nothing will fit over them.",
+        "color"             : "#D8D0C0",
+        "charSpans"         : [ {"sheet": "items", "id": 200} ],
+        "grantsNaturalWeapon": ["goring-horns"],
+        "modifiers"         : {}
+    },
+    {
+        "id"                : "dragon_clawed",
+        "name"              : "Dragon Claws",
+        "transient"         : true,
+        "description"       : "Great draconic talons that shear through armor and flesh alike.",
+        "color"             : "#C88A3A",
+        "charSpans"         : [ {"sheet": "items", "id": 223} ],
+        "grantsNaturalWeapon": ["dragon-claws"],
+        "modifiers"         : {}
+    },
+    {
+        "id"                : "fire_breathing",
+        "name"              : "Fire Breath",
+        "transient"         : true,
+        "description"       : "A furnace in the chest — able to spit a gout of searing dragonfire at a foe.",
+        "color"             : "#FF6A2B",
+        "charSpans"         : [ {"sheet": "font", "id": 15} ],
+        "grantsNaturalWeapon": ["flame-breath"],
+        "modifiers"         : {}
+    },
+    {
+        "id"                : "fanged",
+        "name"              : "Bloodsucking Fangs",
+        "transient"         : true,
+        "description"       : "Hollow feeding fangs that open the vein and drink — a bite that won't clot.",
+        "color"             : "#B02A37",
+        "charSpans"         : [ {"sheet": "items", "id": 216} ],
+        "grantsNaturalWeapon": ["bloodsucking-fangs"],
+        "modifiers"         : {}
+    },
+    {
+        "id"                : "venomous",
+        "name"              : "Venom Glands",
+        "transient"         : true,
+        "description"       : "Venom glands lace every strike — even a held weapon carries the slow, patient poison, and an unarmed bite sinks it straight into the wound.",
+        "color"             : "#7CB342",
+        "charSpans"         : [ {"sheet": "items", "id": 195} ],
+        "grantsNaturalWeapon": ["serpent-fangs"],
+        "modifiers"         : {}
+    },
+    {
+        "id"         : "flame_touched",
+        "name"       : "Flame-Touched",
+        "transient"  : true,
+        "description": "Skin that smoulders with inner heat — blows land alight, and neither fire nor frost bites deep.",
+        "color"      : "#FF7043",
+        "charSpans"  : [ {"sheet": "font", "id": 15} ],
+        "modifiers"  : {}
+    },
+    {
+        "id"         : "regenerating",
+        "name"       : "Regeneration",
+        "transient"  : true,
+        "description": "Torn flesh knits itself whole in days — wounds close far faster than any healer could manage.",
+        "color"      : "#E91E8C",
+        "charSpans"  : [ {"sheet": "font", "id": 3} ],
+        "modifiers"  : {}
+    },
+    {
+        "id"         : "ever_warm",
+        "name"       : "Ever-Warm",
+        "transient"  : true,
+        "description": "An inner furnace that never dies — neither killing cold nor searing heat can take hold.",
+        "color"      : "#FFB74D",
+        "charSpans"  : [ {"sheet": "font", "id": 15} ],
+        "modifiers"  : {}
+    },
+    {
+        "id"         : "bloodthirst",
+        "name"       : "Bloodthirst",
+        "transient"  : true,
+        "description": "A gnawing hunger for blood — focus frays and work comes harder while it goes unfed.",
+        "color"      : "#8B1A1A",
+        "charSpans"  : [ {"sheet": "items", "id": 84} ],
+        "modifiers"  : {"workEfficiency": 0.95}
+    },
+    {
+        "id"         : "photosynthesis",
+        "name"       : "Photosynthetic",
+        "transient"  : true,
+        "description": "Sunlit skin drinks the daylight — under a bright open sky, hunger quietly fades.",
+        "color"      : "#7CBF4F",
+        "floater"    : true,
+        "charSpans"  : [ {"sheet": "font", "id": 15} ],
+        "modifiers"  : {}
+    },
+    {
+        "id"         : "light_sensitive",
+        "name"       : "Light-Sensitive",
+        "transient"  : true,
+        "description": "Daylight sears — weak, clumsy and reeling whenever caught unsheltered under an open sky.",
+        "color"      : "#E8E4D8",
+        "floater"    : true,
+        "charSpans"  : [ {"sheet": "font", "id": 15} ],
+        "modifiers"  : {"strength": 0.85, "dexterity": 0.85, "perception": 0.85}
+    },
+    {
+        "id"         : "burning",
+        "name"       : "Burning",
+        "transient"  : true,
+        "description": "Wreathed in flame — the fire eats at flesh until it is smothered or burns out. Onset chance and the burn's bite are reduced by fire resistance.",
+        "color"      : "#FF5722",
+        "floater"    : true,
+        "charSpans"  : [ {"sheet": "font", "id": 15} ],
+        "modifiers"  : {"dexterity": 0.9, "moveSpeed": 0.9, "workEfficiency": 0.85}
+    },
     // ── Magical buffs ("magical": true) — PRODUCTION-CHAIN-II §M ──────────────
     // Passive buffs granted by worn attuned gear (and, later, by MAGIC-SKILLS spells/skill nodes
     // through the SAME pipeline). Pushed into transientConditions by syncTransientConditions while the

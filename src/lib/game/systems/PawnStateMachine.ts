@@ -78,6 +78,7 @@ import {
   effectiveTemperature,
   effectiveWindAt,
   seasonBakedTemp,
+  getAmbientLight,
   TURNS_PER_DAY
 } from '../services/EnvironmentService';
 import { calcBloodRegenRate } from '../entities/Pawns';
@@ -552,6 +553,31 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     bloodVolume = Math.min(maxBloodVolume, bloodVolume + perTick(calcBloodRegenRate(pawn.stats)));
   }
 
+  // ── Burning (ADR-023) ──────────────────────────────────────────────────────
+  // Fire DoT from flame-on-hit / dragonfire (the `burning` transient, applied via onHitEffect →
+  // conditionTimers). Eats HP each tick until it decrements away or is quenched; the bite is reduced
+  // by fire resistance (so an Ever-Warm / Dragon-scaled pawn barely notices). Death cause = 'burning'.
+  if ((pawn.conditionTimers?.burning ?? 0) > 0) {
+    const fireRes = Math.min(0.9, Math.max(0, pawnStatService.evaluateStat('fire_resistance', pawn)));
+    bloodVolume = Math.max(0, bloodVolume - perTick(BURNING_DPS) * (1 - fireRes));
+    if (bloodVolume <= 0) {
+      const gs = {
+        ...gameState,
+        pawns: gameState.pawns.map((p) =>
+          p.id === pawn.id ? { ...p, conditions, bloodVolume: 0, limbs } : p
+        )
+      };
+      return killPawn(gs.pawns.find((p) => p.id === pawn.id)!, 'burning', gs);
+    }
+  }
+
+  // ── Photosynthesis (ADR-023) ───────────────────────────────────────────────
+  // A photosynthetic pawn under a bright open sky drinks daylight — hunger quietly drains (the pill
+  // itself is pushed by syncTransientConditions; hunger can't be filled by a modifier, so it's here).
+  if (pawn.needs && photosynthesisActive(pawn, gameState.turn)) {
+    pawn.needs.hunger = Math.max(0, pawn.needs.hunger - perTick(PHOTOSYNTHESIS_HUNGER_FILL_PER_SEC));
+  }
+
   // Check blood loss lethality
   if (bloodVolume <= 0) {
     const updatedGs = {
@@ -806,11 +832,43 @@ function reapBrokenGear(pawn: Pawn): Pawn | null {
   };
 }
 
+// ── Racial self-conditions (ADR-023) ─────────────────────────────────────────
+// Every supernatural/legendary body trait keeps a legible pill via its `selfCondition`. Most are
+// permanent while the trait is present; `photosynthesis`/`light_sensitive` are ENVIRONMENT-GATED
+// (need turn-of-day light + an open sky), so they're pushed only while active.
+const PHOTOSYNTHESIS_LIGHT = 0.95; // ambient light at/above which sunlit skin feeds
+const DAYLIGHT_SENSITIVE = 0.7; // ambient light at/above which the sun-cursed are seared
+const PHOTOSYNTHESIS_HUNGER_FILL_PER_SEC = 3.0; // hunger drained per second in bright open sky
+const BURNING_DPS = 2.5; // bloodVolume-equivalent HP burned per second while alight
+
+function hasSelfCondition(pawn: Pawn, id: string): boolean {
+  return (pawn.racialTraits ?? []).some((t) => t.selfCondition === id);
+}
+function isUnsheltered(pawn: Pawn): boolean {
+  return !(pawn.position && isRoofedTile(pawn.position.x, pawn.position.y));
+}
+function photosynthesisActive(pawn: Pawn, turn: number): boolean {
+  return (
+    hasSelfCondition(pawn, 'photosynthesis') &&
+    isUnsheltered(pawn) &&
+    getAmbientLight(turn) >= PHOTOSYNTHESIS_LIGHT
+  );
+}
+function lightSensitiveActive(pawn: Pawn, turn: number): boolean {
+  return (
+    hasSelfCondition(pawn, 'light_sensitive') &&
+    isUnsheltered(pawn) &&
+    getAmbientLight(turn) >= DAYLIGHT_SENSITIVE
+  );
+}
+
 /**
  * Derive the pawn's transientConditions list from current state flags, needs, and durations.
- * Called after each tick so PawnService.calculateNeedsUpdate always reads fresh values.
+ * Called after each tick so PawnService.calculateNeedsUpdate always reads fresh values. `turn` is
+ * passed so environment-gated racial pills (photosynthesis / light_sensitive) can read the day/night
+ * light curve; omit it (tests) to skip those.
  */
-export function syncTransientConditions(pawn: Pawn): Pawn {
+export function syncTransientConditions(pawn: Pawn, turn?: number): Pawn {
   const ids: string[] = [];
   const isEating = pawn.state?.isEating || pawn.currentState === PAWN_STATE.EATING;
   const isSleeping = pawn.state?.isSleeping || pawn.currentState === PAWN_STATE.SLEEPING;
@@ -834,6 +892,18 @@ export function syncTransientConditions(pawn: Pawn): Pawn {
   // soaked + cold). The wetness meter still amplifies cold below the threshold; the `wet` tell shows only
   // at max — WET_THRESHOLD sourced from the `wet` condition's needOnset (data, shared with the gradient).
   if ((pawn.needs?.wetness ?? 0) >= WET_THRESHOLD) ids.push('wet');
+
+  // ADR-023 racial self-conditions: the permanent pill for a supernatural/legendary body trait
+  // (clawed/furred/scaled/…). `photosynthesis`/`light_sensitive` are environment-gated below.
+  for (const t of pawn.racialTraits ?? []) {
+    const sc = t.selfCondition;
+    if (!sc || sc === 'photosynthesis' || sc === 'light_sensitive') continue;
+    if (!ids.includes(sc)) ids.push(sc);
+  }
+  if (turn != null) {
+    if (photosynthesisActive(pawn, turn) && !ids.includes('photosynthesis')) ids.push('photosynthesis');
+    if (lightSensitiveActive(pawn, turn) && !ids.includes('light_sensitive')) ids.push('light_sensitive');
+  }
 
   // Mood-based transient conditions (discrete ranges replace continuous morale calculation)
   const mood = pawn.state?.mood ?? 50;
@@ -1068,7 +1138,9 @@ class PawnStateMachineImpl {
         }
         state = {
           ...state,
-          pawns: state.pawns.map((p) => (p.id === pawn.id ? syncTransientConditions(downed) : p))
+          pawns: state.pawns.map((p) =>
+            p.id === pawn.id ? syncTransientConditions(downed, gameState.turn) : p
+          )
         };
         continue;
       }
@@ -1095,7 +1167,7 @@ class PawnStateMachineImpl {
           isMoving: false,
           hasReachedDestination: false,
           conditionTimers: durations
-        });
+        }, gameState.turn);
         state = {
           ...state,
           jobs,
@@ -1112,7 +1184,7 @@ class PawnStateMachineImpl {
       // knockdown/collapse actually expires, then sync transientConditions, and move on.
       if (forCollapse.drafted) {
         const stepped = tickConditionTimers(forCollapse);
-        const synced = syncTransientConditions(stepped);
+        const synced = syncTransientConditions(stepped, gameState.turn);
         if (synced !== forCollapse) {
           state = {
             ...state,
@@ -1174,7 +1246,7 @@ class PawnStateMachineImpl {
         const afterCombat = pawnById(state.pawns, pawn.id);
         if (afterCombat) {
           const stepped = tickConditionTimers(afterCombat);
-          const synced = syncTransientConditions(stepped);
+          const synced = syncTransientConditions(stepped, gameState.turn);
           if (synced !== afterCombat) {
             state = {
               ...state,
@@ -1210,7 +1282,7 @@ class PawnStateMachineImpl {
       const updated = pawnById(state.pawns, pawn.id);
       if (updated) {
         let stepped = tickConditionTimers(updated);
-        const synced = syncTransientConditions(stepped);
+        const synced = syncTransientConditions(stepped, gameState.turn);
         if (synced !== stepped) {
           state = { ...state, pawns: state.pawns.map((p) => (p.id === pawn.id ? synced : p)) };
         } else if (stepped !== updated) {

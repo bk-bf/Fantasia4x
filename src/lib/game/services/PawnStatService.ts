@@ -449,7 +449,12 @@ const RESISTANCE_TRAIT_KEY: Record<string, keyof RacialTrait['effects']> = {
   fire_resistance: 'fireResistance',
   poison_resistance: 'poisonResistance',
   disease_resistance: 'diseaseResistance',
-  mental_resistance: 'mentalResistance'
+  mental_resistance: 'mentalResistance',
+  lightning_resistance: 'lightningResistance',
+  shadow_resistance: 'shadowResistance',
+  wetness_resistance: 'wetnessResistance',
+  // Not a resistance, but the same trait→stat additive bridge: Regeneration lifts heal_rate.
+  heal_rate: 'healRate'
 };
 
 function traitResistanceBonus(pawn: Pawn | Mob, statId: string): number {

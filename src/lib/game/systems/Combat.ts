@@ -11,7 +11,8 @@ import type {
   LimbId,
   Item,
   ItemInstance,
-  DroppedItem
+  DroppedItem,
+  TraitOnHitEffect
 } from '../core/types';
 import { itemService } from '../services/ItemService';
 import {
@@ -35,6 +36,7 @@ import {
   getConditionFloater,
   conditionAudio,
   conditionStatMultipliers,
+  getTransientConditionDef,
   COLLAPSE_CONSCIOUSNESS
 } from '../core/needs';
 import { getCreatureById } from '../core/Creatures';
@@ -394,10 +396,34 @@ function applyMeleeGrip(p: AttackProfile, grip: MeleeGrip): AttackProfile {
   return p;
 }
 
+/** A pawn's unarmed pool = its racial natural weapons ahead of the default fists/kick, so a
+ *  clawed/fanged race swings its body weapon when unarmed (or forced unarmed by a trait's
+ *  `blocksSlots`). ADR-023: the weapon ids live on the trait's `selfCondition` DEF
+ *  (`grantsNaturalWeapon`) — the body condition IS the source, so the health pill and the swing can't
+ *  drift. Empty racial set → the plain fists/kick default. */
+function pawnNaturalWeaponIds(attacker: Pawn): string[] {
+  const extra: string[] = [];
+  for (const t of attacker.racialTraits ?? []) {
+    if (!t.selfCondition) continue;
+    const grant = getTransientConditionDef(t.selfCondition)?.grantsNaturalWeapon;
+    if (grant) extra.push(...grant);
+  }
+  return extra.length > 0 ? [...extra, ...PAWN_NATURAL_WEAPON_IDS] : PAWN_NATURAL_WEAPON_IDS;
+}
+
+/** Summed racial `weaponBonus.damage` — a multiplier bonus that applies ONLY while a weapon is
+ *  equipped (Giant's Grip / Duelist's Blood). 0 for mobs and traitless pawns. */
+function weaponBonusDamage(attacker: Pawn | Mob): number {
+  if (!('racialTraits' in attacker)) return 0;
+  let bonus = 0;
+  for (const t of attacker.racialTraits ?? []) bonus += t.weaponBonus?.damage ?? 0;
+  return bonus;
+}
+
 /** Resolve the attack used for one swing. An equipped weapon wins; otherwise a
  *  weighted roll over the attacker's `natural_weapon` items (creature def, or a
- *  pawn's bare hands/feet); finally an unarmed fallback. Both gear paths resolve
- *  through the same ItemService lookup. */
+ *  pawn's racial/bare hands/feet); finally an unarmed fallback. Both gear paths
+ *  resolve through the same ItemService lookup. */
 function attackerProfile(attacker: Pawn | Mob): AttackProfile {
   // Conditions cripple the attacker's raw STR/DEX here (damage scales with STR, the to-hit with DEX),
   // so a shocked/frostbitten/envenomed fighter genuinely hits softer and misses more — not just "works
@@ -416,16 +442,19 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
       // §I: a Famed blade explodes those fields ×2–5 on top of its tier.
       const wp = scaleWeaponQuality(item.weaponProperties, mh.quality, mh.famedStatMult);
       const p = profileFromWeapon(str, dex, wp, item.name ?? 'weapon');
+      // ADR-023: a racial `weaponBonus` (Giant's Grip) rides the wielded weapon only.
+      const wb = weaponBonusDamage(attacker);
+      if (wb) p.baseDamage *= 1 + wb;
       return applyMeleeGrip(p, getGrip(attacker)); // BB grip: duelist/2H add offense (melee only)
     }
   }
 
-  // Natural weapons: ids from the creature def, or the pawn default set. Resolve
+  // Natural weapons: ids from the creature def, or the pawn's racial+default set. Resolve
   // each to its item and weighted-pick one for this swing.
   const ids =
     'creatureId' in attacker
       ? (getCreatureById(attacker.creatureId)?.naturalWeapons ?? [])
-      : PAWN_NATURAL_WEAPON_IDS;
+      : pawnNaturalWeaponIds(attacker);
   const candidates: WeaponCandidate[] = [];
   for (const id of ids) {
     const wp = itemService.getItemById(id)?.weaponProperties;
@@ -499,12 +528,9 @@ function physicalResistance(defender: Pawn | Mob, damageType: DamageType): numbe
     res += getCreatureById(defender.creatureId)?.resistances?.[damageType] ?? 0;
   }
 
-  // General, type-agnostic damage reduction trait (type-SPECIFIC resistances are already in the stat).
-  const traits = 'racialTraits' in defender ? (defender.racialTraits ?? []) : [];
-  for (const trait of traits) {
-    res += trait.effects.damageReduction ?? 0;
-  }
-
+  // Racial trait resistances (physical + elemental) are folded into the stat by evaluateStat above
+  // (PawnStatService.RESISTANCE_TRAIT_KEY) — no separate flat `damageReduction` layer anymore. The
+  // "armor-like" trait mitigation now lives in partArmorReduction as per-part `naturalArmor` soak.
   return clamp(res, 0, 0.9);
 }
 
@@ -543,6 +569,18 @@ function partArmorReduction(defender: Pawn | Mob, partId: BodyPartId, armorPen: 
   // thick-hided beast while an armour-piercing bodkin/pick still bites. The keystone of big-beast durability.
   if ('creatureId' in defender) {
     const natural = getCreatureById(defender.creatureId)?.naturalArmor ?? 0;
+    if (natural > bestDef) bestDef = natural;
+  } else {
+    // ADR-023: racial natural armour (scaled hide / thick fur / dragon scales) opened to pawns — the
+    // best trait soak competes with worn armour exactly like a creature's hide. The soak MAGNITUDE
+    // lives on the trait's `selfCondition` DEF (`grantsNaturalArmor`), the same body-condition hub the
+    // health pill reads, so the two can't drift.
+    let natural = 0;
+    for (const t of defender.racialTraits ?? []) {
+      if (!t.selfCondition) continue;
+      const soak = getTransientConditionDef(t.selfCondition)?.grantsNaturalArmor ?? 0;
+      if (soak > natural) natural = soak;
+    }
     if (natural > bestDef) bestDef = natural;
   }
   if (bestDef <= 0) return 0;
@@ -1237,7 +1275,14 @@ class CombatServiceImpl implements CombatService {
     // On-hit status effect: venom/bleed/screech/tongue natural weapons roll to inflict a timed
     // transient condition (mitigated by the defender's resistance stat). Applied to the post-injury
     // state so it stacks onto the same target update.
-    const afterEffect = this.applyOnHitEffect(next, target.id, isTargetMob, result.weaponId, pos);
+    const afterEffect = this.applyOnHitEffect(
+      next,
+      attacker,
+      target.id,
+      isTargetMob,
+      result.weaponId,
+      pos
+    );
 
     // Spear KNOCKBACK: a landed reach-weapon hit may shove the target back one tile (STR-scaled). Not
     // for a ranged shot (no `override`) — only a melee thrust in contact/reach drives someone back.
@@ -1254,22 +1299,44 @@ class CombatServiceImpl implements CombatService {
   }
 
   /**
-   * Roll a landed weapon's `onHitEffect` against the defender and, on success, apply the named
-   * condition as a timed transient (conditionTimers — same machinery as knockdown, so it surfaces in
-   * transientConditions and decrements/clears on its own). The trigger chance is reduced by the
-   * defender's `resist` stat (stats.jsonc); an optional `bloodDrain` also bleeds bloodVolume, feeding
-   * the blood_loss condition. No-op when the weapon has no effect or the target is already down.
+   * Apply every on-hit condition a landed melee blow can inflict: the held/natural weapon's own
+   * `onHitEffect` (rides the swung weapon) PLUS the attacker's racial trait `onHitEffect`s (ADR-023:
+   * Venom Glands / Flame-Touched "ride your steel", procing on ANY hit regardless of weapon). Each is
+   * rolled independently through the same machinery. No-op when nothing procs or the target is down.
    */
   private applyOnHitEffect(
     state: GameState,
+    attacker: Pawn | Mob,
     targetId: string,
     isMob: boolean,
     weaponId: string | undefined,
     pos: { x: number; y: number }
   ): GameState {
-    if (!weaponId) return state;
-    const eff = itemService.getItemById(weaponId)?.onHitEffect;
-    if (!eff) return state;
+    const effects: TraitOnHitEffect[] = [];
+    const weaponEff = weaponId ? itemService.getItemById(weaponId)?.onHitEffect : undefined;
+    if (weaponEff) effects.push(weaponEff);
+    if ('racialTraits' in attacker) {
+      for (const t of attacker.racialTraits ?? []) if (t.onHitEffect) effects.push(t.onHitEffect);
+    }
+    let s = state;
+    for (const eff of effects) s = this.applyOneOnHitEffect(s, eff, targetId, isMob, pos);
+    return s;
+  }
+
+  /**
+   * Roll ONE `onHitEffect` against the defender and, on success, apply the named condition as a timed
+   * transient (conditionTimers — same machinery as knockdown, so it surfaces in transientConditions and
+   * decrements/clears on its own). The trigger chance is reduced by the defender's `resist` stat
+   * (stats.jsonc); an optional `bloodDrain` also bleeds bloodVolume, feeding shock. No-op when the
+   * target is already down.
+   */
+  private applyOneOnHitEffect(
+    state: GameState,
+    eff: TraitOnHitEffect,
+    targetId: string,
+    isMob: boolean,
+    pos: { x: number; y: number }
+  ): GameState {
     const target = isMob
       ? state.mobs?.find((m) => m.id === targetId)
       : state.pawns.find((p) => p.id === targetId);

@@ -21,7 +21,8 @@ describe('Race overhaul — pool generation', () => {
       // 3–4 sentence paragraph — sanity-check it's real prose, not an empty template.
       expect(r.lore.description.length).toBeGreaterThan(120);
       expect(r.lore.description).toContain(r.name);
-      expect(r.racialTraits.length).toBeGreaterThanOrEqual(2);
+      // ADR-023: mundane-majority selection rolls 1–3 mundane quirks, so a race can carry as few as one.
+      expect(r.racialTraits.length).toBeGreaterThanOrEqual(1);
     }
   });
 

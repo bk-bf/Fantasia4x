@@ -52,6 +52,12 @@ export function transientNeedOnset(id: string): { need: string; atOrAbove: numbe
   return TRANSIENT_BY_ID.get(id)?.needOnset;
 }
 
+/** The full transient condition def for an id (or undefined). Lets combat + UI resolve a body
+ *  condition's ADR-023 grants (natural weapon / armor) from the condition itself — the pill is the hub. */
+export function getTransientConditionDef(id: string): TransientConditionDef | undefined {
+  return TRANSIENT_BY_ID.get(id);
+}
+
 /** Status-animation priority for a condition id (conditions.jsonc `priority`), default 0. When an entity
  *  has several glyph-animated states active, the renderer plays the highest-priority one (collapse > sleep
  *  > winded), so the most important state-to-know shows over its sprite. */

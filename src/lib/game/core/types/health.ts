@@ -55,6 +55,12 @@ export interface TransientConditionDef {
   /** Combat-SFX cue (audio/manifest.ts `COMBAT_SFX`) played the tick this condition latches in combat
    *  — e.g. knockdown/envenomed/ensnared. Backend ref only; read by Combat → simLog.pushCombatSound. */
   audio?: string;
+  /** ADR-023 body-trait grants: the natural-weapon item ids and/or per-part armor soak magnitude this
+   *  body condition confers. Combat resolves a pawn's unarmed weapons + naturalArmor by walking its
+   *  traits' `selfCondition` → this def, so the pill IS the single source of the capability (no
+   *  trait-side copy that could drift). `clawed` grants rending-claws; `scaled` grants +12 armor; etc. */
+  grantsNaturalWeapon?: string[];
+  grantsNaturalArmor?: number;
   /** Data-driven onset for a NEED-threshold transient (e.g. `tired` at fatigue ≥ 100). The deriving
    *  code (pawn syncTransientConditions / mob entityLifecycle) reads the threshold from HERE rather than
    *  a hardcoded constant, so designers tune it in the data and pawns + mobs can't drift. The behavioural
@@ -245,7 +251,8 @@ export interface DeadPawnRecord {
     | 'exhaustion_cascade'
     | 'infection'
     | 'hypothermia'
-    | 'heat_stroke';
+    | 'heat_stroke'
+    | 'burning';
   turn: number;
   stats: { strength: number; dexterity: number; intelligence: number };
 }

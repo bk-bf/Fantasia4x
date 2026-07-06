@@ -125,6 +125,14 @@ export function getEquipmentSlot(item: Item): EquipmentSlot | null {
   }
 }
 
+/** Equipment slots a pawn's racial traits forbid (ADR-023 `blocksSlots`) — a clawed/furred/horned
+ *  body can't wear gear there. The gear tab greys these; equip is refused. Empty for a plain pawn. */
+export function blockedSlots(pawn: Pawn): Set<EquipmentSlot> {
+  const set = new Set<EquipmentSlot>();
+  for (const t of pawn.racialTraits ?? []) for (const s of t.blocksSlots ?? []) set.add(s);
+  return set;
+}
+
 /** Slots that come as a PAIR: equipping an item whose canonical slot is the key fills the partner
  *  slot when the canonical one is already occupied and the partner is free (so a pawn wears two
  *  rings). Only rings pair today. */
@@ -164,6 +172,8 @@ export function equipDropToPawn(
   // occupancy-aware, sending a 2nd ring to the free `ring2` slot instead of swapping the first.
   const slot = targetSlot ?? resolveEquipSlot(pawn, item);
   if (!slot) return state;
+  // ADR-023: the body forbids this slot (claws fill the hands, horns the crown…) — refuse the equip.
+  if (blockedSlots(pawn).has(slot)) return state;
   const instance: ItemInstance = drop.instance ?? {
     instanceId: `${item.id}-${pawnId}-${Date.now()}`,
     itemId: item.id,
@@ -271,6 +281,7 @@ export function equipItem(pawn: Pawn, itemId: string): Pawn {
 
   const slot = resolveEquipSlot(pawn, item);
   if (!slot) return pawn;
+  if (blockedSlots(pawn).has(slot)) return pawn; // ADR-023: body forbids this slot
 
   let updatedPawn = { ...pawn };
 

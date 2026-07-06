@@ -38,12 +38,16 @@ const LORE = loreData as unknown as {
 
 const STATS = ['strength', 'dexterity', 'intelligence', 'perception', 'charisma', 'constitution'];
 
-// Trait ids that may not co-occur on one race (mutually exclusive flavour).
+// Trait ids that may not co-occur on one race (mutually exclusive flavour / biology).
 const CONFLICT_GROUPS: string[][] = [
+  ['stocky', 'rangy'],
+  ['sturdy', 'frail'],
+  ['bright', 'dull'],
+  ['thick-skinned', 'thin-skinned'],
+  ['loner', 'pack-hunter'],
   ['flame-touched', 'frost-born'],
-  ['hive-mind', 'loner'],
   ['nocturnal', 'photosynthetic'],
-  ['ancient', 'berserker-blood']
+  ['scaled-hide', 'iron-skin', 'thick-fur'] // one kind of hide per body
 ];
 
 function cap(s: string): string {
@@ -183,32 +187,69 @@ function generatePhysicalTraits(archetype: Archetype): Race['physicalTraits'] {
 
 // ─── Traits ──────────────────────────────────────────────────────────────────
 
+/**
+ * Trait selection (ADR-023): a plain-humanoid MAJORITY (1–3 mundane quirks, often negative), then a
+ * RARE supernatural gate, then a VERY-RARE legendary gate whose sub-capabilities are each rolled
+ * independently — so a legendary-blooded race is never twice the same. Conflict groups + the ×3
+ * archetype weighting still apply, shared across all tiers via one `banned` set.
+ */
 function generateRacialTraits(archetype: Archetype): RacialTrait[] {
   const chosen: RacialTrait[] = [];
-  const numTraits = rng.int(2, 4);
   const banned = new Set<string>();
-
-  // Weighted pool: archetype-themed trait ids appear extra times so they're favoured.
   const themed = new Set(archetype.traits);
-  const weighted: RacialTrait[] = [];
-  for (const t of RACIAL_TRAIT_DATABASE) {
-    weighted.push(t);
-    if (t.id && themed.has(t.id)) weighted.push(t, t); // ×3 weight
-  }
 
-  let guard = 0;
-  while (chosen.length < numTraits && guard < 100) {
-    guard++;
-    const t = rng.pick(weighted);
-    const tid = t.id ?? t.name;
-    if (banned.has(tid)) continue;
-    if (chosen.some((c) => (c.id ?? c.name) === tid)) continue;
-    chosen.push(t);
-    banned.add(tid);
-    for (const group of CONFLICT_GROUPS) {
-      if (group.includes(tid)) group.forEach((g) => banned.add(g));
+  const byTier = (tier: NonNullable<RacialTrait['tier']>) =>
+    RACIAL_TRAIT_DATABASE.filter((t) => (t.tier ?? 'mundane') === tier);
+  const mundane = byTier('mundane');
+  const supernatural = byTier('supernatural');
+  const legendary = byTier('legendary');
+
+  // Weighted pick of `count` distinct traits from one tier pool — archetype-themed ids ×3, honouring
+  // the shared bans + conflict groups.
+  const pickFrom = (pool: RacialTrait[], count: number) => {
+    if (count <= 0 || pool.length === 0) return;
+    const weighted: RacialTrait[] = [];
+    for (const t of pool) {
+      weighted.push(t);
+      if (t.id && themed.has(t.id)) weighted.push(t, t);
+    }
+    let picked = 0;
+    let guard = 0;
+    while (picked < count && guard < 200) {
+      guard++;
+      const t = rng.pick(weighted);
+      const tid = t.id ?? t.name;
+      if (banned.has(tid) || chosen.some((c) => (c.id ?? c.name) === tid)) continue;
+      chosen.push(t);
+      picked++;
+      banned.add(tid);
+      for (const group of CONFLICT_GROUPS) {
+        if (group.includes(tid)) group.forEach((g) => banned.add(g));
+      }
+    }
+  };
+
+  // 1–3 mundane quirks — the plain-humanoid baseline.
+  pickFrom(mundane, rng.int(1, 3));
+
+  // Rare supernatural gate: ~65% none / ~30% one / ~5% two.
+  const r = rng.random();
+  pickFrom(supernatural, r < 0.65 ? 0 : r < 0.95 ? 1 : 2);
+
+  // Very-rare legendary gate (~3%): one bundle, each sub-capability rolled independently (≥1 kept).
+  if (legendary.length > 0 && rng.random() < 0.03) {
+    const parent = rng.pick(legendary);
+    const pid = parent.id ?? parent.name;
+    if (!banned.has(pid) && !chosen.some((c) => (c.id ?? c.name) === pid)) {
+      chosen.push({ ...parent, subCapabilities: undefined }); // banner: name + base effects
+      banned.add(pid);
+      const subs = parent.subCapabilities ?? [];
+      const rolled = subs.filter(() => rng.random() < 0.65);
+      if (rolled.length === 0 && subs.length > 0) rolled.push(rng.pick(subs));
+      for (const sub of rolled) chosen.push(sub);
     }
   }
+
   return chosen;
 }
 
@@ -349,7 +390,8 @@ function pickFlavorLine(traits: RacialTrait[]): string | null {
   if (withLine.length === 0) return null;
   const special = withLine.filter(
     (t) =>
-      t.effects.damageReduction != null ||
+      t.tier === 'supernatural' ||
+      t.tier === 'legendary' ||
       t.effects.blunt_resistance != null ||
       t.effects.cutting_resistance != null ||
       t.effects.piercing_resistance != null ||
