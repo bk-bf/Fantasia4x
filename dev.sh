@@ -143,5 +143,11 @@ if [[ "$LEGACY_MENU_MODE" == "true" ]]; then
   LEGACY_ENV="VITE_LEGACY_MENU=true"
 fi
 
+# --config.fetch-retries=0: `pnpm exec` first runs an implicit dependency verify that resolves optional
+# native deps (detect-libc) against the npm registry. With network that's instant; but in launch.sh's
+# sandboxed net namespace (no network) the fetch fails ENETUNREACH and pnpm's default backoff (10s +
+# 60s) blocks dev-server startup for ~70s before giving up. Zero retries makes it fail fast and start
+# immediately. No-op on the host (the first fetch succeeds there, so retries never trigger). Must be the
+# `--config.X` form — `pnpm --fetch-retries=… exec` is rejected as an unknown option.
 # shellcheck disable=SC2086 -- $PROFILER_ENV/$DEBUG_ENV/$HMR_ENV/$BROWSER_ENV/$LEGACY_ENV are intentional VAR=val flag passthroughs
-exec env $PROFILER_ENV $DEBUG_ENV $HMR_ENV $BROWSER_ENV $LEGACY_ENV VITE_DEV_BRANCH="$BRANCH" VITE_DEV_COMMIT="$COMMIT" pnpm exec vite dev --host --port $PORT
+exec env $PROFILER_ENV $DEBUG_ENV $HMR_ENV $BROWSER_ENV $LEGACY_ENV VITE_DEV_BRANCH="$BRANCH" VITE_DEV_COMMIT="$COMMIT" pnpm --config.fetch-retries=0 exec vite dev --host --port $PORT

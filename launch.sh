@@ -217,10 +217,8 @@ run_isolated_electron() {
     # which reads as a freeze at startup. `disabled:` is the GLib sentinel that suppresses autolaunch.
     export DBUS_SESSION_BUS_ADDRESS=disabled:
     # --no-sandbox: Chromium can't create its own sandbox nested inside this user namespace.
-    # --enable-logging=stderr --v=1: stream Chromium's own startup logs to THIS terminal, so a stall
-    #   inside the shell shows which init step blocked instead of hanging silently.
-    log "launching electron → http://127.0.0.1:$F4X_NS_PORT (Chromium logging on stderr) …"
-    SPIKE_URL="http://127.0.0.1:$F4X_NS_PORT" F4X_PLAY="$F4X_NS_PLAY" ./node_modules/.bin/electron . --no-sandbox --enable-logging=stderr --v=1
+    log "launching electron → http://127.0.0.1:$F4X_NS_PORT …"
+    SPIKE_URL="http://127.0.0.1:$F4X_NS_PORT" F4X_PLAY="$F4X_NS_PLAY" ./node_modules/.bin/electron . --no-sandbox
     log "electron exited (status $?)"
     cleanup_ns
 NSEOF
