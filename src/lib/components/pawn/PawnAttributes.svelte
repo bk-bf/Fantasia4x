@@ -204,6 +204,50 @@
     return { formula: s.formula, vars, description: s.description };
   }
 
+  // ADR-023: trait contributions to a DERIVED stat (resistances/heal_rate are live-added by
+  // evaluateStat; work speed/yield/quality by getWorkModifiers) — surfaced in the tooltip breakdown
+  // the same way the work-priority table does. (Core-stat trait bonuses show in PawnStatBanner.)
+  const RES_KEY: Record<string, string> = {
+    cutting_resistance: 'cutting_resistance',
+    piercing_resistance: 'piercing_resistance',
+    blunt_resistance: 'blunt_resistance',
+    cold_resistance: 'coldResistance',
+    fire_resistance: 'fireResistance',
+    poison_resistance: 'poisonResistance',
+    disease_resistance: 'diseaseResistance',
+    mental_resistance: 'mentalResistance',
+    lightning_resistance: 'lightningResistance',
+    shadow_resistance: 'shadowResistance',
+    wetness_resistance: 'wetnessResistance',
+    heal_rate: 'healRate'
+  };
+  function traitMods(statId: string): { name: string; text: string; pos: boolean }[] {
+    const out: { name: string; text: string; pos: boolean }[] = [];
+    for (const t of pawn.traits ?? []) {
+      const e = (t.effects ?? {}) as Record<string, unknown>;
+      const rk = RES_KEY[statId];
+      if (rk && typeof e[rk] === 'number' && e[rk] !== 0) {
+        const v = e[rk] as number;
+        out.push({ name: t.name, text: `${v > 0 ? '+' : ''}${Math.round(v * 100)}%`, pos: v > 0 });
+      }
+      if (statId.endsWith('_speed') || statId.endsWith('_yield') || statId.endsWith('_quality')) {
+        const axis = statId.endsWith('_speed')
+          ? 'workSpeed'
+          : statId.endsWith('_yield')
+            ? 'workYield'
+            : 'workQuality';
+        const cat = statId.replace(/_(speed|yield|quality)$/, '');
+        const map = e[axis] as Record<string, number> | undefined;
+        const mul = map?.[cat] ?? map?.['all'];
+        if (typeof mul === 'number' && mul !== 1) {
+          const p = Math.round((mul - 1) * 100);
+          out.push({ name: t.name, text: `${p >= 0 ? '+' : ''}${p}%`, pos: p >= 0 });
+        }
+      }
+    }
+    return out;
+  }
+
   function fmtName(id: string): string {
     return id.replace(/_/g, ' ');
   }
@@ -330,6 +374,7 @@
       <div class="cat-hdr">{g.label}</div>
       <div class="grid">
         {#each g.cells as c (c.id)}
+          {@const tmods = traitMods(c.id)}
           <div class="cell" class:hl={c.hl} use:flipTip>
             <span class="nm">{c.name}</span>
             <span class="vl" style="color: {c.t.color}"
@@ -350,6 +395,17 @@
                 <span class="tip-avg">vs avg {c.base}{c.unit}</span>
               </div>
               <div class="tip-desc">{c.d.description}</div>
+              {#if tmods.length}
+                <div class="tip-traits">
+                  <span class="tip-thdr">TRAITS</span>
+                  {#each tmods as m}
+                    <div class="tip-tmod">
+                      <span class="tm-name" class:neg={!m.pos}>{m.name}</span>
+                      <span class="tm-val">{m.text}</span>
+                    </div>
+                  {/each}
+                </div>
+              {/if}
             </div>
           </div>
         {/each}
@@ -461,6 +517,30 @@
     border-top: 1px solid var(--border);
     color: var(--text-dim);
     font-style: italic;
+  }
+  .tip-traits {
+    margin-top: 5px;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+  }
+  .tip-thdr {
+    color: var(--text-dim);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+  }
+  .tip-tmod {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .tm-name {
+    color: var(--pos, #6bc);
+  }
+  .tm-name.neg {
+    color: var(--neg, #e08);
+  }
+  .tm-val {
+    color: var(--text);
   }
   .nm {
     color: var(--text-dim);

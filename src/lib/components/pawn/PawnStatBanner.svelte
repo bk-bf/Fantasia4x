@@ -22,16 +22,39 @@
 
   const eff = (base: number, mult: number) => Math.round(base * mult);
   const pct = (mult: number) => `${mult < 1 ? '−' : '+'}${Math.abs(Math.round((mult - 1) * 100))}%`;
+
+  // Trait contributions to a core stat (baked into pawn.stats at generation, so surfaced here for the
+  // hover breakdown — "+2 Sturdy, −1 Stocky"). ADR-023.
+  const STAT_KEY: Record<string, string> = {
+    STR: 'strength',
+    DEX: 'dexterity',
+    CON: 'constitution',
+    INT: 'intelligence',
+    PER: 'perception',
+    CHA: 'charisma'
+  };
+  function traitParts(lbl: string): string {
+    const key = STAT_KEY[lbl];
+    const parts: string[] = [];
+    for (const t of pawn.traits ?? []) {
+      const e = t.effects as Record<string, number> | undefined;
+      const net = (e?.[`${key}Bonus`] ?? 0) - (e?.[`${key}Penalty`] ?? 0);
+      if (net) parts.push(`${net > 0 ? '+' : '−'}${Math.abs(net)} ${t.name}`);
+    }
+    return parts.join(', ');
+  }
+  function statTitle(lbl: string, base: number, mult: number): string {
+    const tp = traitParts(lbl);
+    let s = `${lbl} ${base}`;
+    if (tp) s += `  (traits: ${tp})`;
+    if (mult !== 1) s += `  × ${mult.toFixed(2)} conditions = ${eff(base, mult)}`;
+    return tp || mult !== 1 ? s : '';
+  }
 </script>
 
 <div class="stats-grid">
   {#each cells as [lbl, base, mult]}
-    <div
-      class="stat-cell"
-      title={mult !== 1
-        ? `${lbl} ${base} × ${mult.toFixed(2)} (conditions) = ${eff(base, mult)}`
-        : ''}
-    >
+    <div class="stat-cell" title={statTitle(lbl, base, mult)}>
       <span class="stat-lbl">{lbl}</span>
       <span class="stat-val" class:penalized={mult < 1} class:boosted={mult > 1}>
         {eff(base, mult)}

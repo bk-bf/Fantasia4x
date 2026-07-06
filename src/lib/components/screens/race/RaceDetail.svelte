@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Race, RaceRelation } from '$lib/game/core/types';
-  import { workAxisLabel } from '$lib/components/util/pawnUtils';
   import StatBar from '$lib/components/UI/StatBar.svelte';
+  import TraitCards from '$lib/components/pawn/TraitCards.svelte';
 
   export let race: Race;
   export let knownRaces: Race[];
@@ -56,18 +56,6 @@
       (v): v is { other: Race; score: number; disposition: RaceRelation['disposition'] } => !!v
     )
     .sort((a, b) => b.score - a.score);
-
-  // Format a single trait effect entry the way the old screen did (kept verbatim).
-  function fmtEffect(name: string, value: unknown): string {
-    if (typeof value === 'number') {
-      if (name.includes('Bonus')) return `+${value} ${name.replace('Bonus', '').toLowerCase()}`;
-      if (name.includes('Penalty')) return `-${value} ${name.replace('Penalty', '').toLowerCase()}`;
-      if (value > 1) return `+${Math.round((value - 1) * 100)}% ${name}`;
-      if (value < 1 && value > 0) return `${Math.round(value * 100)}% ${name}`;
-      return `${name}: ${value}`;
-    }
-    return name;
-  }
 </script>
 
 <div class="detail">
@@ -124,34 +112,15 @@
     {/if}
   {/each}
 
-  <!-- Traits: guaranteed identity every member shares, then the pool pawns may individually draw. -->
+  <!-- Traits: guaranteed identity every member shares, then the pool pawns may individually draw.
+       Rendered by the SHARED TraitCards grid (same component the pawn status tab uses). -->
   <div class="section-hdr">
     | TRAITS ({race.guaranteedTraits.length} identity + {race.racialTraitPool.length} possible)
   </div>
-  {#each [...race.guaranteedTraits, ...race.racialTraitPool] as trait, i}
-    <div class="trait-name">
-      {trait.name.toUpperCase()}
-      {#if i < race.guaranteedTraits.length}<span class="always">· every member</span>{:else}<span
-          class="maybe">· some</span
-        >{/if}
-    </div>
-    {#if trait.flavorLine}<div class="flavor">“{trait.flavorLine}”</div>{/if}
-    <div class="effects">
-      {#each Object.entries(trait.effects) as [name, value]}
-        {#if value && typeof value === 'object'}
-          {#each Object.entries(value) as [cat, mul]}
-            <span class="eff {mul >= 1 ? 'pos' : 'neg'}"
-              >{mul >= 1 ? '+' : ''}{Math.round((mul - 1) * 100)}% {cat} {workAxisLabel(name)}</span
-            >
-          {/each}
-        {:else}
-          <span class="eff {name.includes('Penalty') ? 'neg' : 'pos'}"
-            >{fmtEffect(name, value)}</span
-          >
-        {/if}
-      {/each}
-    </div>
-  {/each}
+  <TraitCards
+    traits={[...race.guaranteedTraits, ...race.racialTraitPool]}
+    guaranteedCount={race.guaranteedTraits.length}
+  />
 
   <!-- Relations -->
   {#if relViews.length > 0}
@@ -222,44 +191,5 @@
   .val.small {
     font-style: italic;
     color: var(--text-muted);
-  }
-  .trait-name {
-    padding: 3px 8px 1px;
-    color: var(--accent-hi);
-    letter-spacing: 0.04em;
-    margin-top: 2px;
-  }
-  .always,
-  .maybe {
-    font-size: 9px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
-  .always {
-    color: var(--pos, #68b030);
-  }
-  .maybe {
-    color: var(--text-dim);
-  }
-  .flavor {
-    padding: 0 8px 2px 16px;
-    color: var(--text-muted);
-    font-style: italic;
-  }
-  .effects {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 10px;
-    padding: 2px 8px 4px 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  .eff {
-    font-size: 11px;
-  }
-  .pos {
-    color: var(--pos);
-  }
-  .neg {
-    color: var(--neg);
   }
 </style>
