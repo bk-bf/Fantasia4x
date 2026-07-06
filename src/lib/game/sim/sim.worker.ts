@@ -177,7 +177,7 @@ const PAWN_COLD = new Set<string>([
   'equipment',
   'stats',
   'physicalTraits',
-  'racialTraits',
+  'traits',
   'skills',
   'limbs',
   'injuries',

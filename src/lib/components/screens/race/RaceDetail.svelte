@@ -21,7 +21,7 @@
   // range a pawn actually rolls into). Mirrors applyRacialTraitBonuses' summation.
   function traitStatBonus(r: Race, stat: string): number {
     let b = 0;
-    for (const t of r.racialTraits) {
+    for (const t of r.traits) {
       b += (t.effects as Record<string, number>)[`${stat}Bonus`] ?? 0;
       b -= (t.effects as Record<string, number>)[`${stat}Penalty`] ?? 0;
     }
@@ -123,8 +123,8 @@
   {/each}
 
   <!-- Traits -->
-  <div class="section-hdr">| TRAITS ({race.racialTraits.length})</div>
-  {#each race.racialTraits as trait}
+  <div class="section-hdr">| TRAITS ({race.traits.length})</div>
+  {#each race.traits as trait}
     <div class="trait-name">{trait.name.toUpperCase()}</div>
     {#if trait.flavorLine}<div class="flavor">“{trait.flavorLine}”</div>{/if}
     <div class="effects">

@@ -842,7 +842,7 @@ const PHOTOSYNTHESIS_HUNGER_FILL_PER_SEC = 3.0; // hunger drained per second in 
 const BURNING_DPS = 2.5; // bloodVolume-equivalent HP burned per second while alight
 
 function hasSelfCondition(pawn: Pawn, id: string): boolean {
-  return (pawn.racialTraits ?? []).some((t) => t.selfCondition === id);
+  return (pawn.traits ?? []).some((t) => t.selfCondition === id);
 }
 function isUnsheltered(pawn: Pawn): boolean {
   return !(pawn.position && isRoofedTile(pawn.position.x, pawn.position.y));
@@ -895,7 +895,7 @@ export function syncTransientConditions(pawn: Pawn, turn?: number): Pawn {
 
   // ADR-023 racial self-conditions: the permanent pill for a supernatural/legendary body trait
   // (clawed/furred/scaled/…). `photosynthesis`/`light_sensitive` are environment-gated below.
-  for (const t of pawn.racialTraits ?? []) {
+  for (const t of pawn.traits ?? []) {
     const sc = t.selfCondition;
     if (!sc || sc === 'photosynthesis' || sc === 'light_sensitive') continue;
     if (!ids.includes(sc)) ids.push(sc);

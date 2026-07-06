@@ -7,7 +7,7 @@
  * Requirements: 4.1, 4.2
  */
 
-import type { GameState, Pawn, Item, Building, RacialTrait } from '../core/types';
+import type { GameState, Pawn, Item, Building, Trait } from '../core/types';
 import itemsData from '../database/items.jsonc';
 import buildingsData from '../database/buildings.jsonc';
 import { WORK_CATEGORIES } from '../core/Work';
@@ -66,7 +66,7 @@ export interface ModifierSystem {
   calculateEquipmentBonuses(pawn: Pawn): Record<string, ModifierResult>;
 
   // Trait Effect Calculations
-  calculateTraitEffects(trait: RacialTrait, pawn: Pawn): Record<string, ModifierResult>;
+  calculateTraitEffects(trait: Trait, pawn: Pawn): Record<string, ModifierResult>;
   calculateAllTraitEffects(pawn: Pawn): Record<string, ModifierResult>;
 
   // Unified Bonus Calculations
@@ -240,7 +240,7 @@ export class ModifierSystemImpl implements ModifierSystem {
   /**
    * Calculate trait effects for a pawn
    */
-  calculateTraitEffects(trait: RacialTrait, pawn: Pawn): Record<string, ModifierResult> {
+  calculateTraitEffects(trait: Trait, pawn: Pawn): Record<string, ModifierResult> {
     const effects: Record<string, ModifierResult> = {};
 
     Object.entries(trait.effects).forEach(([effectName, value]) => {
@@ -282,7 +282,7 @@ export class ModifierSystemImpl implements ModifierSystem {
   calculateAllTraitEffects(pawn: Pawn): Record<string, ModifierResult> {
     const allEffects: Record<string, ModifierResult> = {};
 
-    pawn.racialTraits.forEach((trait) => {
+    pawn.traits.forEach((trait) => {
       const traitEffects = this.calculateTraitEffects(trait, pawn);
 
       Object.entries(traitEffects).forEach(([effectName, result]) => {

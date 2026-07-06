@@ -36,7 +36,7 @@ function pawn(wetness = 0): Pawn {
     needs: { hunger: 10, fatigue: 10, sleep: 0, lastSleep: 0, lastMeal: 0, wetness },
     state: { health: 100, mood: 50, isWorking: false, isSleeping: false, isEating: false },
     conditions: [],
-    racialTraits: [],
+    traits: [],
     stats: { strength: 10, dexterity: 10, constitution: 10, perception: 10, intelligence: 10 },
     limbs: [],
     injuries: []

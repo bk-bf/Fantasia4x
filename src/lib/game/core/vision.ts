@@ -31,7 +31,7 @@ export function getNightVision(entity: Pawn | Mob): number {
     return getCreatureById(entity.creatureId)?.nightVision ?? 0;
   }
   let nv = 0;
-  for (const trait of entity.racialTraits ?? []) nv += trait.effects?.nightVision ?? 0;
+  for (const trait of entity.traits ?? []) nv += trait.effects?.nightVision ?? 0;
   return Math.min(1, Math.max(0, nv));
 }
 

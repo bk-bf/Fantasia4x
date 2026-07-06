@@ -403,7 +403,7 @@ function applyMeleeGrip(p: AttackProfile, grip: MeleeGrip): AttackProfile {
  *  drift. Empty racial set → the plain fists/kick default. */
 function pawnNaturalWeaponIds(attacker: Pawn): string[] {
   const extra: string[] = [];
-  for (const t of attacker.racialTraits ?? []) {
+  for (const t of attacker.traits ?? []) {
     if (!t.selfCondition) continue;
     const grant = getTransientConditionDef(t.selfCondition)?.grantsNaturalWeapon;
     if (grant) extra.push(...grant);
@@ -414,9 +414,9 @@ function pawnNaturalWeaponIds(attacker: Pawn): string[] {
 /** Summed racial `weaponBonus.damage` — a multiplier bonus that applies ONLY while a weapon is
  *  equipped (Giant's Grip / Duelist's Blood). 0 for mobs and traitless pawns. */
 function weaponBonusDamage(attacker: Pawn | Mob): number {
-  if (!('racialTraits' in attacker)) return 0;
+  if (!('traits' in attacker)) return 0;
   let bonus = 0;
-  for (const t of attacker.racialTraits ?? []) bonus += t.weaponBonus?.damage ?? 0;
+  for (const t of attacker.traits ?? []) bonus += t.weaponBonus?.damage ?? 0;
   return bonus;
 }
 
@@ -576,7 +576,7 @@ function partArmorReduction(defender: Pawn | Mob, partId: BodyPartId, armorPen: 
     // lives on the trait's `selfCondition` DEF (`grantsNaturalArmor`), the same body-condition hub the
     // health pill reads, so the two can't drift.
     let natural = 0;
-    for (const t of defender.racialTraits ?? []) {
+    for (const t of defender.traits ?? []) {
       if (!t.selfCondition) continue;
       const soak = getTransientConditionDef(t.selfCondition)?.grantsNaturalArmor ?? 0;
       if (soak > natural) natural = soak;
@@ -1315,8 +1315,8 @@ class CombatServiceImpl implements CombatService {
     const effects: TraitOnHitEffect[] = [];
     const weaponEff = weaponId ? itemService.getItemById(weaponId)?.onHitEffect : undefined;
     if (weaponEff) effects.push(weaponEff);
-    if ('racialTraits' in attacker) {
-      for (const t of attacker.racialTraits ?? []) if (t.onHitEffect) effects.push(t.onHitEffect);
+    if ('traits' in attacker) {
+      for (const t of attacker.traits ?? []) if (t.onHitEffect) effects.push(t.onHitEffect);
     }
     let s = state;
     for (const eff of effects) s = this.applyOneOnHitEffect(s, eff, targetId, isMob, pos);

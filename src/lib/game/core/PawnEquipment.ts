@@ -129,7 +129,7 @@ export function getEquipmentSlot(item: Item): EquipmentSlot | null {
  *  body can't wear gear there. The gear tab greys these; equip is refused. Empty for a plain pawn. */
 export function blockedSlots(pawn: Pawn): Set<EquipmentSlot> {
   const set = new Set<EquipmentSlot>();
-  for (const t of pawn.racialTraits ?? []) for (const s of t.blocksSlots ?? []) set.add(s);
+  for (const t of pawn.traits ?? []) for (const s of t.blocksSlots ?? []) set.add(s);
   return set;
 }
 

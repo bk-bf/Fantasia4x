@@ -275,7 +275,7 @@ function staffMage(staff: string, st: Partial<typeof baseStats>): Pawn {
     id: 'mage',
     isAlive: true,
     stats: { ...baseStats, ...st },
-    racialTraits: [],
+    traits: [],
     equipment: { mainHand: { instanceId: 'i', itemId: staff, durability: 150 } },
     limbs: limbs(),
     conditions: [],
@@ -292,7 +292,7 @@ function mob(creatureId: string, st: Partial<typeof baseStats>): Mob {
     entityClass: 'animal',
     isAlive: true,
     stats: { ...baseStats, dexterity: 2, ...st }, // low dodge → hits land
-    racialTraits: [],
+    traits: [],
     limbs: limbs(),
     conditions: [],
     pain: 0

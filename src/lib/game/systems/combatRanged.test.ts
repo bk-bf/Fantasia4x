@@ -52,7 +52,7 @@ function makeArcher(over: Partial<Pawn> = {}): Pawn {
     currentState: 'Fighting',
     combatStance: 'defensive',
     stats: { ...stats, dexterity: 20 },
-    racialTraits: [],
+    traits: [],
     equipment: { mainHand: { itemId: 'self_bow', durability: 80 } },
     inventory: {
       items: { flint_arrow: 20 },
@@ -87,7 +87,7 @@ function makeGoblin(over: Partial<Mob> = {}): Mob {
     health: 35,
     maxHealth: 35,
     stats: { ...stats, dexterity: 2 }, // low dodge → shots land
-    racialTraits: [],
+    traits: [],
     bloodVolume: 100,
     maxBloodVolume: 100,
     stamina: 50,

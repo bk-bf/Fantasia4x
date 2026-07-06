@@ -26,7 +26,7 @@ export interface TraitOnHitEffect {
   bloodDrain?: number;
 }
 
-export interface RacialTrait {
+export interface Trait {
   /** Stable kebab-case id (referenced by archetype themes + conflict groups). */
   id?: string;
   name: string;
@@ -35,11 +35,17 @@ export interface RacialTrait {
    *  (see Race.generateRaceDescription). Carries the prose flavour — e.g.
    *  "their skin sets hard as weathered stone". */
   flavorLine?: string;
-  /** Rarity tier controlling selection (ADR-023). Absent ⇒ treated as `mundane`.
-   *  `mundane`: small stat trade-offs (incl. negatives) — the contrast layer.
-   *  `supernatural`: ONE capability (natural weapon / armor / on-hit proc / passive).
-   *  `legendary`: a bundle whose `subCapabilities` are each rolled independently. */
+  /** Where the trait comes from (ADR-023). Absent ⇒ `racial`.
+   *  `racial`: physiology drawn from a race's pool (may be a shared identity trait).
+   *  `personal`: temperament/aptitude an INDIVIDUAL pawn carries regardless of race. */
+  scope?: 'racial' | 'personal';
+  /** INTERNAL rarity tier controlling SELECTION only — never surfaced as a user-facing label.
+   *  Absent ⇒ `mundane`. `supernatural`/`legendary` are rare race-identity powers. */
   tier?: 'mundane' | 'supernatural' | 'legendary';
+  /** GROUNDWORK for trait evolution (not yet a runtime mechanic): the id of the higher-tier trait this
+   *  one can grow into — e.g. mundane `frost-loving` → supernatural `frost-born`, `adrenaline` →
+   *  `berserker-blood`. Lets a future system upgrade a pawn's trait along its line. */
+  evolvesTo?: string;
   /** Permanent (or environment-gated) condition id kept on the pawn while this trait is present — its
    *  legible pill in the health panel AND the hub for its combat capability: the linked condition def
    *  carries `grantsNaturalWeapon`/`grantsNaturalArmor` (single source of truth, no trait-side copy).
@@ -51,9 +57,9 @@ export interface RacialTrait {
   onHitEffect?: TraitOnHitEffect;
   /** Applies only while a weapon is equipped (Giant's Grip, Duelist's Blood). */
   weaponBonus?: { damage?: number };
-  /** legendary only: sub-capabilities, each rolled independently at selection so two
-   *  legendary-blooded pawns are never identical. Expanded into the race's trait list. */
-  subCapabilities?: RacialTrait[];
+  /** legendary only: sub-capabilities, each rolled independently PER PAWN at pawn-gen so two
+   *  legendary-blooded pawns are never identical. Expanded into the pawn's trait list. */
+  subCapabilities?: Trait[];
   /** Only fields below are actually consumed somewhere — pawn-gen stat bonuses,
    *  PawnStatService work mults + resistance stats + heal_rate, and Combat resistances.
    *  The old grab-bag of unread effect keys (telepathicRange, memoryBonus…) was pruned. */
@@ -105,6 +111,7 @@ export interface RacialTrait {
   };
 }
 
+
 /** Procedurally-generated race lore — flavour only, no mechanical effect. */
 export interface RaceLore {
   /** Short heroic byname, e.g. "the Stoneborn". */
@@ -147,8 +154,12 @@ export interface Race {
     size: 'tiny' | 'small' | 'medium' | 'large' | 'huge';
   };
 
-  // Typed racial traits
-  racialTraits: RacialTrait[];
+  /** Traits EVERY member of the race shares — its identity (ADR-023). Holds any rare
+   *  supernatural/legendary the race rolled (the "scaled folk"), plus 0–1 signature mundane trait. */
+  guaranteedTraits: Trait[];
+  /** The menu of additional MUNDANE racial traits each pawn independently draws 1–2 from at
+   *  generation, so same-race pawns vary. Weighted toward the race's archetype. */
+  racialTraitPool: Trait[];
 
   /** Procedural lore (epithet, origin, immersive description …). */
   lore: RaceLore;

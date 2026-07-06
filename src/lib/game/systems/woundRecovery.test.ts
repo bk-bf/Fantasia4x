@@ -39,7 +39,7 @@ function makePawn(over: Partial<Pawn> = {}): Pawn {
     position: { x: 5, y: 5 },
     currentState: 'Sleeping',
     stats,
-    racialTraits: [],
+    traits: [],
     equipment: {},
     limbs: [
       { id: 'head', health: 100, bleedRate: 0, parts: [] },

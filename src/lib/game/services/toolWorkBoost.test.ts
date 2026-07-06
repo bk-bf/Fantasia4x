@@ -8,7 +8,7 @@ const base = (): Pawn =>
   ({
     limbs: [],
     injuries: [],
-    racialTraits: [],
+    traits: [],
     stats: {
       strength: 10,
       dexterity: 10,

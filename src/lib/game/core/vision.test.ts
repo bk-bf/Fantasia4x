@@ -13,7 +13,7 @@ import type { Pawn, Mob } from './types';
 // unchanged; darkness shortens it; night_vision restores it.
 
 const pawn = (per: number, traits: Array<{ effects: { nightVision?: number } }> = []): Pawn =>
-  ({ stats: { perception: per }, racialTraits: traits }) as unknown as Pawn;
+  ({ stats: { perception: per }, traits: traits }) as unknown as Pawn;
 
 describe('shared vision model', () => {
   it('baseVisionRange is the doubled sight formula round(4 + per*1.3)', () => {

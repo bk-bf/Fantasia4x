@@ -6,7 +6,7 @@ import type {
   TransientConditionDef,
   Item,
   ItemInstance,
-  RacialTrait
+  Trait
 } from '../core/types';
 import statsData from '../database/stats.jsonc';
 import conditionsData from '../database/conditions.jsonc';
@@ -423,7 +423,7 @@ function traitWorkMult(
 ): number {
   let mult = 1;
   // Mobs have no racial traits; only Pawns carry them.
-  const traits = 'racialTraits' in pawn ? pawn.racialTraits : [];
+  const traits = 'traits' in pawn ? pawn.traits : [];
   for (const trait of traits ?? []) {
     const map = trait.effects?.[key] as Record<string, number> | undefined;
     if (!map) continue;
@@ -441,7 +441,7 @@ function traitWorkMult(
 // race's biology flows into both combat mitigation AND condition onset — e.g. coldResistance
 // raises cold_resistance, which PawnStateMachine reads to slow HYPOTHERMIA onset. No new
 // condition machinery: it reuses the existing resistance→onset wiring.
-const RESISTANCE_TRAIT_KEY: Record<string, keyof RacialTrait['effects']> = {
+const RESISTANCE_TRAIT_KEY: Record<string, keyof Trait['effects']> = {
   cutting_resistance: 'cutting_resistance',
   piercing_resistance: 'piercing_resistance',
   blunt_resistance: 'blunt_resistance',
@@ -460,7 +460,7 @@ const RESISTANCE_TRAIT_KEY: Record<string, keyof RacialTrait['effects']> = {
 function traitResistanceBonus(pawn: Pawn | Mob, statId: string): number {
   const key = RESISTANCE_TRAIT_KEY[statId];
   if (!key) return 0;
-  const traits = 'racialTraits' in pawn ? pawn.racialTraits : [];
+  const traits = 'traits' in pawn ? pawn.traits : [];
   let bonus = 0;
   for (const trait of traits ?? []) {
     const v = trait.effects?.[key];
@@ -667,7 +667,7 @@ export class PawnStatServiceImpl implements PawnStatService {
   }
 
   temperatureTolerance(pawn: Pawn | Mob): TemperatureTolerance {
-    const { min: comfortMin, max: comfortMax } = comfortRange((pawn as Pawn).racialTraits);
+    const { min: comfortMin, max: comfortMax } = comfortRange((pawn as Pawn).traits);
     const gear = equippedTemperatureSources(pawn as Pawn);
     // Split each side's resistance into its sources (in degrees): the CON-derived stat base, any trait
     // resistance bonus, and EACH worn garment by name. `evaluateStat` already folds the trait bonus into

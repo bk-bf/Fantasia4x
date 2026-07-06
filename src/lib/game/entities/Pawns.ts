@@ -4,7 +4,7 @@ import type {
   PawnState,
   Race,
   EntityStats,
-  RacialTrait
+  Trait
 } from '../core/types';
 import { createPawnInventory, createPawnEquipment } from '../core/PawnEquipment';
 import { createBodyPlanLimbs } from '../systems/Combat';
@@ -37,7 +37,7 @@ export function calcMaxBloodVolume(physicalTraits: { weight: number }, stats: En
  *  race identity stamped). Shared by single-race and mixed-colony generation. */
 export function buildPawnFromRace(race: Race, index: number): Pawn {
   const baseStats = rollStatsFromRanges(race.statRanges);
-  const finalStats = applyRacialTraitBonuses(baseStats, race.racialTraits);
+  const finalStats = applyRacialTraitBonuses(baseStats, race.traits);
   const physicalTraits = rollPhysicalTraits(race.physicalTraits);
   const maxBloodVolume = calcMaxBloodVolume(physicalTraits, finalStats);
   const maxStamina = calcMaxStamina(finalStats);
@@ -50,7 +50,7 @@ export function buildPawnFromRace(race: Race, index: number): Pawn {
     physicalTraits,
     raceId: race.id,
     raceName: race.name,
-    racialTraits: race.racialTraits,
+    traits: race.traits,
     inventory: createPawnInventory(),
     equipment: createPawnEquipment(),
     needs: {
@@ -212,7 +212,7 @@ function rollStatsFromRanges(statRanges: Record<string, [number, number]>): Enti
   return stats as EntityStats;
 }
 
-function applyRacialTraitBonuses(baseStats: EntityStats, traits: RacialTrait[]): EntityStats {
+function applyRacialTraitBonuses(baseStats: EntityStats, traits: Trait[]): EntityStats {
   const modifiedStats = { ...baseStats };
 
   traits.forEach((trait) => {

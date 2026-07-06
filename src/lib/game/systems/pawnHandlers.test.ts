@@ -30,7 +30,7 @@ function makePawn(over: Partial<Pawn> = {}): Pawn {
       perception: 10,
       charisma: 10
     },
-    racialTraits: [],
+    traits: [],
     equipment: {},
     skills: {},
     inventory: { items: {}, instances: [] },

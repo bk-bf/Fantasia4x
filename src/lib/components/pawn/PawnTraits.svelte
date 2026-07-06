@@ -6,7 +6,7 @@
   export let pawn: Pawn;
 
   function getEffectTags(
-    trait: Pawn['racialTraits'][number]
+    trait: Pawn['traits'][number]
   ): { text: string; type: 'pos' | 'neg' | 'neutral' }[] {
     const tags: { text: string; type: 'pos' | 'neg' | 'neutral' }[] = [];
     // ADR-023 capabilities — kept id-free (the prose description names the specifics; here we only
@@ -56,10 +56,10 @@
 </script>
 
 <div class="traits-section">
-  <div class="section-hdr">| TRAITS ({pawn.racialTraits?.length || 0})</div>
-  {#if pawn.racialTraits && pawn.racialTraits.length > 0}
+  <div class="section-hdr">| TRAITS ({pawn.traits?.length || 0})</div>
+  {#if pawn.traits && pawn.traits.length > 0}
     <div class="cards-grid">
-      {#each pawn.racialTraits as trait}
+      {#each pawn.traits as trait}
         {@const tags = getEffectTags(trait)}
         <div class="trait-card">
           <div class="card-accent"></div>

@@ -69,7 +69,7 @@
       ['workYield', 'yield'],
       ['workQuality', 'quality']
     ];
-    for (const trait of pawn.racialTraits ?? []) {
+    for (const trait of pawn.traits ?? []) {
       for (const [key, axis] of axes) {
         const map = trait.effects?.[key] as Record<string, number> | undefined;
         const v = map?.[wc.id] ?? map?.['all'];

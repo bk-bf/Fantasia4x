@@ -30,7 +30,7 @@ function makePawn(over: Partial<Pawn> = {}): Pawn {
     position: { x: 5, y: 5 },
     currentState: 'Fighting',
     stats: { ...stats, dexterity: 20 },
-    racialTraits: [],
+    traits: [],
     equipment: {},
     limbs: [
       { id: 'head', health: 100, bleedRate: 0, parts: [] },
@@ -64,7 +64,7 @@ function makeGoblin(over: Partial<Mob> = {}): Mob {
     health: 35,
     maxHealth: 35,
     stats: { ...stats, dexterity: 4 },
-    racialTraits: [],
+    traits: [],
     bloodVolume: 100,
     maxBloodVolume: 100,
     stamina: 50,

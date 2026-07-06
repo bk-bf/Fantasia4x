@@ -4,7 +4,7 @@
 import type { EntityStats } from './race';
 import type { EntityNeeds, EntityCondition, Injury, LimbState } from './health';
 import type { PawnInventory, PawnEquipment, EquipmentSlot } from './items';
-import type { RacialTrait } from './race';
+import type { Trait } from './race';
 
 /** FSM state for a live entity. Hostile + neutral share one machine. */
 export type MobState =
@@ -211,8 +211,9 @@ export interface Pawn {
   raceId?: string;
   raceName?: string;
 
-  // Reference to racial traits for bonuses (denormalized copy from the pawn's race)
-  racialTraits: RacialTrait[];
+  /** The pawn's COMBINED trait set (ADR-023): its guaranteed racial identity traits + 1–2 drawn from
+   *  its race's mundane pool + 0–2 personal traits — rolled PER PAWN, so same-race pawns differ. */
+  traits: Trait[];
 
   skills: Record<string, number>; // skillId -> level
   currentWork?: string; // Current work category

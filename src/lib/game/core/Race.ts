@@ -1,10 +1,10 @@
-import type { Race, RacialTrait, RaceLore, RaceRelation } from './types';
+import type { Race, Trait, RaceLore, RaceRelation } from './types';
 import raceDbData from '../database/racial-traits.jsonc';
 import loreData from '../database/race-lore.jsonc';
 import { rng } from './rng';
 import { clamp } from './math';
 
-export const RACIAL_TRAIT_DATABASE: RacialTrait[] = raceDbData as unknown as RacialTrait[];
+export const RACIAL_TRAIT_DATABASE: Trait[] = raceDbData as unknown as Trait[];
 
 type Size = Race['physicalTraits']['size'];
 
@@ -60,7 +60,7 @@ function cap(s: string): string {
 export function generateRace(archetype: Archetype = rng.pick(LORE.archetypes)): Race {
   const statRanges = generateStatRanges(archetype);
   const physicalTraits = generatePhysicalTraits(archetype);
-  const racialTraits = generateRacialTraits(archetype);
+  const traits = generateRacialTraits(archetype);
 
   const lore: RaceLore = {
     ...generateLoreFields(archetype),
@@ -73,7 +73,7 @@ export function generateRace(archetype: Archetype = rng.pick(LORE.archetypes)): 
     archetype: archetype.name,
     statRanges,
     physicalTraits,
-    racialTraits,
+    traits,
     lore,
     population: 0
   };
@@ -193,12 +193,12 @@ function generatePhysicalTraits(archetype: Archetype): Race['physicalTraits'] {
  * independently — so a legendary-blooded race is never twice the same. Conflict groups + the ×3
  * archetype weighting still apply, shared across all tiers via one `banned` set.
  */
-function generateRacialTraits(archetype: Archetype): RacialTrait[] {
-  const chosen: RacialTrait[] = [];
+function generateRacialTraits(archetype: Archetype): Trait[] {
+  const chosen: Trait[] = [];
   const banned = new Set<string>();
   const themed = new Set(archetype.traits);
 
-  const byTier = (tier: NonNullable<RacialTrait['tier']>) =>
+  const byTier = (tier: NonNullable<Trait['tier']>) =>
     RACIAL_TRAIT_DATABASE.filter((t) => (t.tier ?? 'mundane') === tier);
   const mundane = byTier('mundane');
   const supernatural = byTier('supernatural');
@@ -206,9 +206,9 @@ function generateRacialTraits(archetype: Archetype): RacialTrait[] {
 
   // Weighted pick of `count` distinct traits from one tier pool — archetype-themed ids ×3, honouring
   // the shared bans + conflict groups.
-  const pickFrom = (pool: RacialTrait[], count: number) => {
+  const pickFrom = (pool: Trait[], count: number) => {
     if (count <= 0 || pool.length === 0) return;
-    const weighted: RacialTrait[] = [];
+    const weighted: Trait[] = [];
     for (const t of pool) {
       weighted.push(t);
       if (t.id && themed.has(t.id)) weighted.push(t, t);
@@ -340,9 +340,9 @@ export function generateRaceDescription(race: Race): string {
   const s3 = `They are ${race.lore.origin}, and make their home among ${race.lore.homeland}.`;
 
   // Sentence 4 — vocation + a defining quirk (authored flavorLine).
-  const vocCat = strongestWorkCategory(race.racialTraits);
+  const vocCat = strongestWorkCategory(race.traits);
   const vocP = vocCat && P.vocation[vocCat] ? rng.pick(P.vocation[vocCat]) : null;
-  const quirk = pickFlavorLine(race.racialTraits);
+  const quirk = pickFlavorLine(race.traits);
   let s4 = '';
   if (vocP && quirk) {
     // lead reads mid-sentence after the semicolon, so lowercase it ("…quarry; stranger still, …")
@@ -365,7 +365,7 @@ function comparativeKey(str: number, dex: number, con: number): string {
 }
 
 /** The work category with the strongest trait multiplier across speed/yield/quality. */
-function strongestWorkCategory(traits: RacialTrait[]): string | null {
+function strongestWorkCategory(traits: Trait[]): string | null {
   let best: string | null = null;
   let bestMul = 1.0;
   for (const t of traits) {
@@ -385,7 +385,7 @@ function strongestWorkCategory(traits: RacialTrait[]): string | null {
 }
 
 /** Prefer the flavor line of a trait carrying a special (resistance / damage reduction). */
-function pickFlavorLine(traits: RacialTrait[]): string | null {
+function pickFlavorLine(traits: Trait[]): string | null {
   const withLine = traits.filter((t) => t.flavorLine);
   if (withLine.length === 0) return null;
   const special = withLine.filter(

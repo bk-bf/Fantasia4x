@@ -22,7 +22,7 @@ describe('Race overhaul — pool generation', () => {
       expect(r.lore.description.length).toBeGreaterThan(120);
       expect(r.lore.description).toContain(r.name);
       // ADR-023: mundane-majority selection rolls 1–3 mundane quirks, so a race can carry as few as one.
-      expect(r.racialTraits.length).toBeGreaterThanOrEqual(1);
+      expect(r.traits.length).toBeGreaterThanOrEqual(1);
     }
   });
 

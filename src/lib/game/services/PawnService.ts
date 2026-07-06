@@ -780,7 +780,7 @@ export class PawnServiceImpl implements PawnService {
       baseRest *= 2.5;
     }
 
-    pawn.racialTraits.forEach((trait) => {
+    pawn.traits.forEach((trait) => {
       if ((trait.effects as any).fatigueRate) {
         baseRest *= (trait.effects as any).fatigueRate;
       }
@@ -814,7 +814,7 @@ export class PawnServiceImpl implements PawnService {
       baseHunger *= 1.4;
     }
 
-    pawn.racialTraits.forEach((trait) => {
+    pawn.traits.forEach((trait) => {
       switch (trait.name) {
         case 'Efficient Metabolism':
           baseHunger *= 0.7;

@@ -17,7 +17,7 @@ function pawn(needs: Partial<Pawn['needs']> = {}, state: Partial<Pawn['state']> 
     needs: { hunger: 10, fatigue: 10, thirst: 10, hygiene: 10, sleep: 0, lastSleep: 0, lastMeal: 0, ...needs },
     state: { health: 100, mood: 50, isWorking: false, isSleeping: false, isEating: false, ...state },
     conditions: [],
-    racialTraits: []
+    traits: []
   } as unknown as Pawn;
 }
 
