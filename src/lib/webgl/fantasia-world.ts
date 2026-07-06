@@ -566,7 +566,10 @@ export function applySnowToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
   let char = ' ';
   if (gc > 0 && !isSnowFeature(tile)) {
     const depth = gc * 1.3 + (f - 0.5) * 0.8 + (tileHash(tile.x, tile.y, 29) - 0.5) * 0.2;
-    if (depth > SNOW_SPRITE_MIN)
+    // Thin the sprite field by ~10% (uniform random drop, salt 17): fewer snow tiles overall while
+    // KEEPING the lvl1/2/3 balance, since the drop hits every level equally. Dropped cells fall back to
+    // wash-only. `< 0.9` keeps 90%; lower it to thin further.
+    if (depth > SNOW_SPRITE_MIN && tileHash(tile.x, tile.y, 17) < 0.9)
       char = SNOW_STAGE_CHARS[depth > SNOW_SPRITE_LG ? 2 : depth > SNOW_SPRITE_MID ? 1 : 0];
   }
   grid.setTile(tile.x, tile.y, {
