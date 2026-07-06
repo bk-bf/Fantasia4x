@@ -8,6 +8,7 @@
   import { getTransientConditionDef } from '$lib/game/core/needs';
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
   import raritiesData from '$lib/game/database/rarities.jsonc';
+  import HoverTip from '$lib/components/UI/HoverTip.svelte';
 
   let {
     traits,
@@ -207,11 +208,9 @@
   {@const nw = naturalWeaponNames(t)}
   {@const na = naturalArmorOf(t)}
   {@const bl = blockedLabels(t)}
-  <div
-    class="trait-tip"
-    style="left:{hovered.x + 14}px; top:{hovered.y + 12}px; --rarity: {rarityColor(t)}"
-  >
-    <div class="tip-name">{t.name}</div>
+  <!-- Routed through the shared HoverTip so it inherits the viewport flip/clamp (never clips an edge). -->
+  <HoverTip x={hovered.x} y={hovered.y}>
+    <div class="tip-name" style="color: {rarityColor(t)}">{t.name}</div>
     <div class="tip-meta">
       {RARITY_LABEL[t.tier ?? 'mundane']} · {t.scope === 'personal' ? 'personal' : 'racial'} trait
     </div>
@@ -226,7 +225,7 @@
     {#if bl.length}
       <div class="tip-row neg"><span class="tip-lbl">Blocks gear</span> {bl.join(', ')}</div>
     {/if}
-  </div>
+  </HoverTip>
 {/if}
 
 <style>
@@ -293,6 +292,7 @@
     line-height: 1.35;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
@@ -330,21 +330,8 @@
     font-weight: bold;
   }
 
-  .trait-tip {
-    position: fixed;
-    z-index: 60;
-    pointer-events: none;
-    max-width: 260px;
-    padding: 7px 9px;
-    background: var(--bg-panel);
-    border: 1px solid var(--rarity);
-    border-radius: 3px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
-    font-size: 11px;
-    line-height: 1.35;
-  }
+  /* Tooltip frame/position/clamping comes from the shared HoverTip; only the content is styled here. */
   .tip-name {
-    color: var(--accent-hi);
     font-weight: 600;
     letter-spacing: 0.03em;
   }
