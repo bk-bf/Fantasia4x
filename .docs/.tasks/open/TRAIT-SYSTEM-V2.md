@@ -191,9 +191,18 @@ limits, and personal-trait work mods (temperament *is* a work aptitude).
         they keep their exact functions and are flagged `driver` in the schema (graph-legible) rather
         than force-fit into an edge. A future `severityDriver` schema (meter → set-severity) could fully
         data-drive them; deferred (would risk the "preserve exactly" guarantee).
-- **Phase 1b — typed traits + data:** `kind` union + rarity budget (`rarities.jsonc` scale) + registry
-  test; natural-armor-as-gear (encumbrance) + gear-pill UI; wound-granters (capped non-lethal); full
-  traits.jsonc re-tune (§6); ±6 new "shitty" 2-category commons.
+- **Phase 1b — typed traits + data:**
+  - [x] `kind` union (`stat`/`attribute`/`naturalGear`/`passive`/`wound`) + `rarity` on the
+        `rarities.jsonc` scale (replaced the mundane/supernatural/legendary `tier`); selection + trait-card
+        UI now key on rarity; `traitRegistry.test.ts` enforces kind↔payload + rarity budget.
+  - [x] Full traits.jsonc §6 re-tune — illogical work bonuses (iron-skin mining, frost-born fishing,
+        strong-backed mining, feathered foraging, berserker/nocturnal hunting…) and redundant flat stats
+        on rare traits (iron-skin +CON/−DEX, scaled/regen/thick-fur/gore +CON/STR) removed. Logical links
+        kept (amphibious→fishing, claws→−crafting). Regression-guarded by the registry test.
+  - [ ] Natural-armor-as-gear (defense + weight → encumbrance) + gear-pill UI + armor-style hover.
+  - [ ] Wound-granters applier at pawn-gen (one-eyed → destroyed eye, capped non-lethal). `wounds` schema
+        + `kind:'wound'` are in place; the applier + converting the affliction data is the next slice.
+  - [ ] ±6 new "shitty" 2-category-debuff commons (the contrast layer).
 - **Phase 2 (TODO §7):** behavioral / needs / transformation.
 
 ## Locked decisions (2026-07-06)
