@@ -242,12 +242,15 @@
   // dedicated snow delta channel (_snowRev / drainSnowRenderTileDeltas) — never a terrain re-bake.
   let _snowGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
   let _snowDirty = false; // worker signalled snow/ice changes (coalesced like _terrainDirty)
-  // Snow repaint is BUDGETED: a whole-map onset/melt wave is queued here and drained a slice per frame
-  // (like the foliage transition) so the paint + snow-chunk re-vertex spreads over many frames instead
-  // of hitching on one big batch. `_snowIdx` is the cursor; everything before it is already painted.
-  let _snowPending: { y: number; x: number }[] = [];
-  let _snowIdx = 0;
-  const SNOW_TILES_PER_FRAME = 600; // per-frame snow-repaint budget (accumulation AND melt)
+  // Snow/ice repaint is BUDGETED BY CHUNK: a whole-map onset/melt wave is queued here grouped by the
+  // renderer's 32² chunks, and only a few chunks are repainted per frame. Budgeting by chunk (not by
+  // tile) is the key: a snow-chunk re-vertex rebuilds the WHOLE chunk whenever ANY cell in it changes,
+  // so a tile-by-tile drip would re-vertex the same 32² chunk once PER tile (the worst case). Grouping
+  // by chunk repaints each chunk exactly once → no redundant rebuilds, no hitch. Covers ice too (ice
+  // renders in the same snow layer via the 'snow' delta kind). FIFO by insertion order.
+  let _snowPendingChunks = new Map<string, { x: number; y: number }[]>();
+  const SNOW_CHUNK_SIZE = 32; // MUST match GridRenderer.CHUNK_SIZE (a mismatch only costs extra rebuilds)
+  const SNOW_CHUNKS_PER_FRAME = 2; // repaint at most this many snow chunks per frame
   // Crash observability: when a frame is about to issue an ABNORMALLY large GL draw (full-map
   // re-vertex, a big snow/terrain delta batch), this holds a human reason. The render section writes a
   // synchronous crash breadcrumb ("→ heavy draw START …") BEFORE the draw and ("✓ heavy draw OK …")
@@ -2174,8 +2177,7 @@
     _emitterMap = built.emitterMap;
     resourceGlowEmitters = built.emitters;
     clearRenderTileDeltas(); // a full repaint supersedes any pending per-tile coords (snow included)
-    _snowPending = []; // …including the budgeted snow queue — buildSnowOverlay already painted the fresh grid
-    _snowIdx = 0;
+    _snowPendingChunks.clear(); // …including the budgeted snow queue — buildSnowOverlay painted the fresh grid
     refreshEmitters();
 
     // Blueprint preview (if a placement tool is active across the rebuild) sits on top.
@@ -2292,54 +2294,51 @@
   }
 
   /** Drain the worker's snow-only coords (`k: 1` deltas: accumulateSnow bucket crossings, debug snow/ice
-   *  sliders) onto the pending queue. Cheap (moves coords) — the actual per-cell repaint is BUDGETED in
-   *  {@link repaintSnowNow} so an onset/melt wave never lands as one big batch. */
+   *  sliders) and BUCKET them by render chunk onto the pending queue. Cheap (moves coords) — the actual
+   *  per-cell repaint is budgeted a few chunks per frame in {@link repaintSnowNow} so an onset/melt wave
+   *  never lands as one big batch. Ice rides the same queue (it uses the 'snow' delta kind). */
   function _queueSnowDeltas() {
     const coords = drainSnowRenderTileDeltas();
     if (!coords || coords.length === 0) return;
-    // Compact any already-painted prefix before appending, so the queue can't grow unbounded across
-    // successive waves; the common case (empty queue) just adopts the drained array.
-    _snowPending = _snowIdx > 0 ? _snowPending.slice(_snowIdx).concat(coords) : _snowPending.concat(coords);
-    _snowIdx = 0;
+    const CS = SNOW_CHUNK_SIZE;
+    for (const c of coords) {
+      const key = Math.floor(c.x / CS) + ':' + Math.floor(c.y / CS);
+      let cells = _snowPendingChunks.get(key);
+      if (!cells) {
+        cells = [];
+        _snowPendingChunks.set(key, cells);
+      }
+      cells.push(c);
+    }
   }
 
   /**
-   * Incremental SNOW-layer repaint — the snow analogue of redrawOverlayNow's per-cell path, but
-   * BUDGETED: it paints at most {@link SNOW_TILES_PER_FRAME} queued cells per frame into the blended
-   * snow grid and invalidates only the snow chunks holding that slice. A whole-map snow onset/melt is
-   * queued (via {@link _queueSnowDeltas}) and spread across many frames, so neither the per-cell paint
-   * nor the snow-chunk re-vertex ever hitches on one big batch. Never touches the terrain/resource grids.
-   * O(1) when the queue is empty.
+   * SNOW/ice-layer repaint — BUDGETED BY CHUNK: each frame it repaints at most
+   * {@link SNOW_CHUNKS_PER_FRAME} pending chunks (FIFO) and marks only those chunks dirty, so each chunk
+   * re-vertexes exactly ONCE as the wave drains. A whole-map onset/melt is queued (via
+   * {@link _queueSnowDeltas}) and spread over many frames — no single-frame batch, and (crucially) no
+   * chunk rebuilt more than once. Never touches the terrain/resource grids. O(1) when the queue is empty.
    */
   function repaintSnowNow() {
     if (!renderer?.isReady() || !_snowGrid || worldMap.length === 0) return;
-    const P = _snowPending;
-    if (_snowIdx >= P.length) {
-      if (P.length) {
-        _snowPending = [];
-        _snowIdx = 0;
-      }
-      return;
-    }
-    beat(`snow:apply ${P.length - _snowIdx}`);
-    let budget = SNOW_TILES_PER_FRAME;
+    if (_snowPendingChunks.size === 0) return;
+    beat(`snow:chunks ${_snowPendingChunks.size}`);
     const due: { x: number; y: number }[] = [];
-    while (_snowIdx < P.length && budget > 0) {
-      const c = P[_snowIdx++];
-      const t = worldMap[c.y]?.[c.x];
-      if (t) {
-        applySnowToGrid(_snowGrid, t, hiddenMask);
-        due.push({ x: c.x, y: c.y });
-        budget--;
+    let chunks = SNOW_CHUNKS_PER_FRAME;
+    for (const [key, cells] of _snowPendingChunks) {
+      _snowPendingChunks.delete(key); // safe to delete the current entry mid-iteration
+      for (const c of cells) {
+        const t = worldMap[c.y]?.[c.x];
+        if (t) {
+          applySnowToGrid(_snowGrid, t, hiddenMask);
+          due.push({ x: c.x, y: c.y });
+        }
       }
+      if (--chunks <= 0) break;
     }
     if (due.length > 0) {
       renderer.setSnowGrid(_snowGrid, due);
       markRenderDirty();
-    }
-    if (_snowIdx >= _snowPending.length) {
-      _snowPending = [];
-      _snowIdx = 0;
     }
   }
 
@@ -3670,7 +3669,7 @@
           _lastSnowBuild = now;
           _queueSnowDeltas();
         }
-        if (_snowIdx < _snowPending.length) repaintSnowNow();
+        if (_snowPendingChunks.size > 0) repaintSnowNow();
         // Gradual seasonal foliage flip — a budgeted slice of due trees each frame (turn-gated + capped),
         // so a season boundary turns the forest over days instead of re-vertexing every tree at once.
         if (_foliagePending.length > 0) {

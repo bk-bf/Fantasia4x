@@ -1127,9 +1127,9 @@ const SNOW_RENDER_STEP = 5;
 
 // ── Ice (the tile's OWN moisture freezing in place — distinct from snow, which falls from the sky) ──
 /** Ice gained per in-game hour while below 0°C (gradual, like growth — wetness doesn't flash-freeze). */
-const ICE_FREEZE_PER_HOUR = 6;
+const ICE_FREEZE_PER_HOUR = 3;
 /** Ice lost per in-game hour once at/above 0°C (thaws a touch faster than it forms). */
-const ICE_MELT_PER_HOUR = 8;
+const ICE_MELT_PER_HOUR = 4;
 /** Only re-bake/ship a tile when its ice crosses one of these buckets (bounds deltas, like snow). */
 const ICE_RENDER_STEP = 5;
 /** °C below freezing at which ice forms at full rate; nearer 0 freezes slower (floor keeps it progressing). */
