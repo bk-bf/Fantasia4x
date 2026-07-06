@@ -48,8 +48,17 @@ A **pool of 15–25 procedural races** is prerolled per run (`Race.generateRaceP
 - Has an **archetype** (Mountain-born, Forest-kin, Deep-dwellers, Marsh-folk, Ember-kin…) that
   biases stat ranges, size, and trait selection (banks in `database/race-lore.jsonc`).
 - Stat ranges: base 8–15 biased by the archetype's focus/dump stats; each pawn rolls within them.
-- 2–4 racial traits (archetype-weighted) from `database/racial-traits.jsonc`; conflict prevention
-  enforced (e.g. Flame Touched ≠ Frost Born). Every trait has a `flavorLine`.
+- **Traits (ADR-023 + ADR-028, `database/traits.jsonc`).** Each race rolls an identity
+  (`guaranteedTraits`) + a small mundane pool; each PAWN then draws its own set at spawn — up to
+  **2 racial + 3 personal** (temperament) traits, so same-race pawns differ. Rarity is a gate
+  (~85% of races are mundane-only; rare/epic capabilities ~15%; legendary bundles ~2.5%) and a
+  **budget** on the `rarities.jsonc` scale. Every trait has a `kind` fixing its payload: `stat`
+  (core-stat deltas) · `attribute` (derived stats, breadth gated by rarity) · `naturalGear` (a
+  condition-backed natural weapon/armor — armor carries defense + **weight → encumbrance**, and
+  either **stacks** with worn gear or **replaces** its blocked slot) · `passive` (aura/affinity/proc
+  condition) · `wound` (a real permanent injury at generation — one-eyed IS a destroyed eye, so the
+  handicap flows through the body model, never a stat fudge). Conflict prevention enforced; every
+  trait has a `flavorLine`.
 - **Procedural lore** including an immersive `description` paragraph — assembled from authored trait
   `flavorLine`s + lore clause banks chosen by numeric buckets (stats/size/build): the poetry is
   authored, only the scaffolding is generated.

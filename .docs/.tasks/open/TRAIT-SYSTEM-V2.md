@@ -8,11 +8,15 @@
 
 ## Status
 
-**PROPOSAL — supersedes the "balance overhaul" section of RACIAL-TRAITS-OVERHAUL.** Nothing built yet.
-The ADR-023 data model (traits.jsonc, condition-backed supernatural traits, per-pawn draw, `evolvesTo`)
-stays; this re-shapes trait *payloads* into typed categories, gates their scope by rarity, turns
-natural armor into real gear, makes afflictions real wounds, and (Phase 2) turns condition interactions
-into a data-driven graph like weather.
+**Phases 1a + 1b DONE (2026-07-06) — ADR-028.** Supersedes the "balance overhaul" section of
+RACIAL-TRAITS-OVERHAUL. The ADR-023 data model (traits.jsonc, condition-backed supernatural traits,
+per-pawn draw, `evolvesTo`) stays; this re-shaped trait *payloads* into typed `kind` categories on the
+`rarities.jsonc` scale, turned natural armor into real gear (defense + weight → encumbrance;
+stack/replace vs worn), made afflictions real permanent wounds, purged the gamification, added the
+2-category-debuff commons, and shipped the condition relationship graph (flags/triggers/activateWhen)
+with the hardcoded interactions migrated behaviour-identical. `pnpm check` 0 errors; trait/wound/
+combat/encumbrance suites green (the 2 failing craft tests pre-date this work). **Phase 2 (§7
+behavioral/needs/transformation) remains TODO.**
 
 ## Evaluation of the current system
 
@@ -39,9 +43,9 @@ categories with rarity budgets**, and **conditions as a weather-style relationsh
 
 **TODO kinds** (schema reserved, not built — §7): `behavioral`, `needs`, `transformation`.
 
-- [ ] Add `kind` + the per-kind payload fields to the `Trait` type; a compile-time discriminated union
-      so each kind's payload is checked. Keep `scope`/`tier`/`evolvesTo` from ADR-023.
-- [ ] `traitRegistry.test.ts`: assert every trait's payload matches its `kind` and respects §2 budget.
+- [x] `kind` + per-kind payload fields on the `Trait` type (`wounds` incl. optional wound `type`;
+      condition-side `weightKg`/`mode`). Kept `scope`/`evolvesTo`; `tier` → `rarity` (§2).
+- [x] `traitRegistry.test.ts`: every trait's payload matches its `kind` + respects the §2 budget.
 
 ## 2 · Rarity → scope budget
 
@@ -60,7 +64,9 @@ Traits adopt the **`rarities.jsonc` scale** (common → uncommon → rare → ep
 - **Core-stat (`stat`) mods** are separate from the attribute budget and stay tiny (±1–2), any rarity.
 - **"Really shitty" traits** = common `attribute` traits that debuff **two** categories (e.g. *Sluggard*:
   −work +−physical; *Brittle*: −resistance +−capacity). Propose ~6 of these to deepen the negative pool.
-- [ ] Encode the budget as data (`rarityBudget` table) + enforce in `traitRegistry.test.ts`.
+- [x] Budget enforced in `traitRegistry.test.ts` (kind↔payload, rare/epic must carry a capability,
+      legendary must bundle, the six shitty commons need ≥2 debuff axes). A separate `rarityBudget`
+      data table was skipped — the test IS the budget until a runtime consumer needs it.
 
 ## 3 · Condition-granter model (natural gear + passive)
 
@@ -80,10 +86,12 @@ Both grant a permanent condition (the ADR-023 hub). Split by how they interact w
 (`berserker_blood` — active only while `flags:["combat"]` state holds, §5), or an aura (affects nearby
 pawns — TODO). Carries `modifiers` + `flags`; no gear slot.
 
-- [ ] Extend the condition schema with `defense`/`weight`/`slot`/`mode` (natural gear) + wire natural
-      armor into `itemService.getCurrentCarryLoad` + `partArmorReduction` (already pawn-open).
-- [ ] Gear-pill UI in `EquipmentDoll` (locked slot for `replace`, innate badge for `stack`) with an
-      armor-style hover — extends what's already there.
+- [x] Condition schema: `weightKg` + `mode` next to `grantsNaturalArmor` (= the defense; slot stays on
+      the trait's `blocksSlots` — no duplicate that could drift). Wired into
+      `itemService.getCurrentCarryLoad` (weight → `encumbered`) and `partArmorReduction`
+      ('stack' ADDS to the worn soak, 'replace' competes best-of like a worn layer).
+- [x] Gear-pill UI in `EquipmentDoll`: locked slot / innate badge hover the SAME `ItemStatTooltip` as
+      real gear (weapon = its item def; armor = a synthesized def with defense/weight/mode).
 
 ## 4 · Wound granters — afflictions are real wounds
 
@@ -93,8 +101,9 @@ shows in the health tab and flows through the body model (capacities), not a sta
 - `one-eyed` → `{part:'left_eye', severity:'destroyed'}` → `sight` capacity halved (real), PER falls out
   of the model, not a `−PER` fudge. `hard-of-hearing` → an ear; `bad-back` → a spine/torso wound; `scarred`
   → a healed scar (cosmetic + small `mental_resistance`).
-- [ ] `applyTraitWounds(pawn, traits)` in Pawns.ts, referencing `limbmap.jsonc` part ids +
-      `WoundSeverity`. Guard: never lethal at spawn (cap severity so a wound-trait can't kill a newborn).
+- [x] `applyTraitWounds(pawn)` in Pawns.ts: permanent healed-over injuries (`Injury.permanent` —
+      skipped by healing/infection/caretaking, allocation-guarded), paired-side flip for variety,
+      never lethal (vital/critical refused; destroyed-on-container/bone → critical). `traitWounds.test.ts`.
 
 ## 5 · Conditions as a relationship graph (weather-style)
 
@@ -129,10 +138,10 @@ may **trigger other conditions** with a chance, and may **activate on an environ
 (`applyShock`), untended-wound→infection, envenomed's secondary effects. `tickConditions` becomes a
 generic evaluator that walks each active condition's `triggers`/`activateWhen` against the graph.
 
-- [ ] Condition schema: `flags`, `triggers`, `activateWhen`. Predicate evaluator (need/meter/stat/env).
-- [ ] `conditionGraph.ts`: evaluate transitions each tick; replace the hardcoded blocks in
-      `tickConditions`. Guard against cycles + runaway chains (cap escalations/tick, like weather's
-      `stormCorner` step-down).
+- [x] Condition schema: `flags`, `triggers`, `activateWhen`. Predicate evaluator (need/meter/stat/env).
+- [x] `conditionGraph.ts`: evaluates transitions each tick; the hardcoded blocks in `tickConditions`
+      migrated behaviour-identical (wet→hypothermia, envenomed→nausea; shock/infection stay `driver`
+      curves — see Phase 1a notes).
 
 ## 6 · Re-audit — current traits mapped to kinds (the gamification purge)
 
@@ -199,10 +208,19 @@ limits, and personal-trait work mods (temperament *is* a work aptitude).
         strong-backed mining, feathered foraging, berserker/nocturnal hunting…) and redundant flat stats
         on rare traits (iron-skin +CON/−DEX, scaled/regen/thick-fur/gore +CON/STR) removed. Logical links
         kept (amphibious→fishing, claws→−crafting). Regression-guarded by the registry test.
-  - [ ] Natural-armor-as-gear (defense + weight → encumbrance) + gear-pill UI + armor-style hover.
-  - [ ] Wound-granters applier at pawn-gen (one-eyed → destroyed eye, capped non-lethal). `wounds` schema
-        + `kind:'wound'` are in place; the applier + converting the affliction data is the next slice.
-  - [ ] ±6 new "shitty" 2-category-debuff commons (the contrast layer).
+  - [x] Natural-armor-as-gear (2026-07-06): conditions carry `weightKg` + `mode` ('replace' competes
+        best-of like a worn layer; 'stack' ADDS to the worn soak — Combat.partArmorReduction); weight
+        loads `getCurrentCarryLoad` → the staged `encumbered` condition (no hand-tuned DEX penalty).
+        EquipmentDoll locked slots/badges now hover the SAME ItemStatTooltip as real gear (weapon =
+        its item def; armor = a synthesized def with defense/weight/mode). `check` + tests green.
+  - [x] Wound-granters applier (2026-07-06): `applyTraitWounds` in Pawns.ts stamps PERMANENT,
+        healed-over injuries at gen (bleeding 0, fully clotted, `permanent: true` — skipped by
+        healing/infection/caretaking, allocation-guarded so an all-permanent limb keeps its ref).
+        Non-lethal cap: vital/critical parts refused; destroyed-on-container/bone → critical.
+        one-eyed → a destroyed eye (sight 0.35 via organBlend), hard-of-hearing → a destroyed ear
+        (hearing 0.5), bad-back → a serious spine crush (chronic ache). Stat fudges dropped.
+  - [x] Six "shitty" 2-category-debuff commons (2026-07-06): sluggard, slow-mending, night-blind,
+        thin-blooded, pox-marked, stiff-jointed — registry-test enforced (≥2 debuff axes each).
 - **Phase 2 (TODO §7):** behavioral / needs / transformation.
 
 ## Locked decisions (2026-07-06)
@@ -217,5 +235,6 @@ limits, and personal-trait work mods (temperament *is* a work aptitude).
 
 ## Docs to sync on completion
 
-ADR (new ADR if the typed-trait + condition-graph model is locked), RACE-SYSTEM, game/DESIGN, ROADMAP;
-onboard the ADR into `codegraph.config.json` `adrRules`.
+- [x] All synced 2026-07-06: **ADR-028** in game/DECISIONS + registered in `codegraph.config.json`
+      `adrRules` (`checkable: false`); RACE-SYSTEM (superseded-model note), game/DESIGN (trait model
+      rewrite), ROADMAP (Trait system V2 row). Phase 2 docs re-sync when §7 lands.

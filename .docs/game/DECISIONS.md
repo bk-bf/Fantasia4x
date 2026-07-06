@@ -1005,3 +1005,44 @@ resource-chunk rebuilds/frame): ~0 on a steady pan when cached, but a nonzero va
 moment the overlay reverts to the per-frame rebuild path — the exact stutter, visible within one perf
 window. Registered in `codegraph.config.json` as `checkable: false` so `graph:check`'s `adr-coverage` rule
 accounts for it.
+
+### ADR-028 [GAME]: Typed Trait Kinds + Condition Relationship Graph (TRAIT-SYSTEM-V2)
+
+**Status:** Accepted (2026-07-06). Extends ADR-023 (condition-backed traits) and ADR-024 (body plans).
+Spec: `.docs/.tasks/open/TRAIT-SYSTEM-V2.md`.
+
+**Context.** Trait payloads were an untyped `effects` bag, so nothing enforced *what kind* of thing a
+trait could do — which produced gamification the design rejects (`iron-skin` stacking +CON/−DEX/+mining%
+on top of 18 armor; `one-eyed` as a −PER number instead of a missing eye). And every condition
+*interaction* (wet→hypothermia, pain/blood→shock, envenomed secondaries) was hardcoded in
+`tickConditions`, so designers couldn't author new ones.
+
+**Decision — every trait declares a `kind` that fixes its payload shape, and condition interactions are
+data edges.**
+
+- **`kind` taxonomy** (`stat` / `attribute` / `naturalGear` / `passive` / `wound`; reserved:
+  `behavioral` / `needs` / `transformation`) with **rarity as a budget** on the full `rarities.jsonc`
+  scale: common/uncommon = the mundane pool (a "bad" common may debuff two categories — the contrast
+  layer), rare/epic must carry a real capability, legendary must bundle `subCapabilities`. Enforced by
+  `traitRegistry.test.ts` (which also regression-guards the gamification purge).
+- **Natural armor IS gear.** The granting condition carries `grantsNaturalArmor` (defense) +
+  `weightKg` + `mode`: `'replace'` occupies its blocked slot and competes best-of like a worn layer
+  (thick fur IS the bodyMid layer); `'stack'` ADDS to the worn soak (scaled hide under a cuirass).
+  Weight feeds `getCurrentCarryLoad` → the staged `encumbered` condition — the slowdown is emergent
+  (load ÷ STR), **never a hand-tuned flat DEX penalty**. The gear tab hovers natural gear with the same
+  `ItemStatTooltip` as real gear.
+- **Afflictions are real wounds.** A `wound`-kind trait stamps a PERMANENT, healed-over injury at
+  generation (`applyTraitWounds`: bleeding 0, fully clotted, `Injury.permanent` — skipped by
+  healing/infection/caretaking, and allocation-guarded so an all-permanent limb keeps its array ref).
+  Never lethal: vital/critical parts refused; `destroyed` on a container/bone downgrades to critical.
+  One-eyed = a destroyed eye → `sight` capacity falls out of the body model, not a −PER fudge.
+- **Condition relationship graph** (weather-style): `flags` (taxonomy), `triggers`
+  (`{to, when, chance?, severity?/durationHours?, per}` — a **chance-less edge is deterministic**, which
+  is how the shock-from-pain/blood certainty is preserved), `activateWhen` (environment gating,
+  generalising photosynthesis/light-sensitivity). Pure allocation-free evaluator in `conditionGraph.ts`,
+  cheap-gated by `CONDITION_IDS_WITH_TRIGGERS`. Continuous meter-driven severities (shock, infection)
+  stay code and are flagged `driver` — forcing them into accruing edges would change behaviour.
+
+**Enforcement (NOT graph-checkable).** A data-schema + payload-shape invariant, not a call-edge one:
+guarded by `traitRegistry.test.ts`, `conditionGraph.test.ts`/`conditionGraphData.test.ts`, and
+`traitWounds.test.ts`. Registered in `codegraph.config.json` as `checkable: false`.
