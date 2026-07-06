@@ -5113,11 +5113,14 @@
                 });
               }
             } else if (it.type === 'tool') {
-              // A tool can be WIELDED in hand, or CARRIED in the pack so a weapon can stay in hand —
-              // a carried tool still grants its work boost (heldToolBoost reads inventory too).
+              // A tool equips to its canonical slot — a plain hand tool (axe/hammer) is WIELDED, but a
+              // worn carry bag (wicker frame → back, hide scrip → belt) goes to its own slot, not the
+              // hand. Either way it can also be CARRIED in the pack so a weapon keeps the hand — a
+              // carried tool still grants its work boost (heldToolBoost reads inventory too).
+              const handTool = slot === 'mainHand' || slot === 'offHand';
               entries.push({
-                label: `Equip ${name} → Main Hand`,
-                run: () => equipOrder('mainHand')
+                label: handTool ? `Equip ${name} → Main Hand` : `Equip ${name} → ${slotLabel(slot)}`,
+                run: () => equipOrder(handTool ? 'mainHand' : slot)
               });
               entries.push({
                 label: `Carry ${name} (inventory)`,

@@ -786,7 +786,7 @@
   {
     "id"              : "make_woven_basket",
     "station"         : "makers_bench",
-    "inputs"          : {"branch": 4, "cordage": 15},
+    "inputs"          : {"branch": 15, "cordage": 10},
     "outputs"         : {"woven_basket": 1},
     "workAmount"      : 2,
     "toolTierRequired": 0
