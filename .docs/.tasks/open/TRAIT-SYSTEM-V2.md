@@ -165,20 +165,26 @@ limits, and personal-trait work mods (temperament *is* a work aptitude).
 
 ## 8 · Phasing
 
-- **Phase 1 (data + moderate code):** trait `kind` + rarity budget + registry test; natural-armor-as-gear
-  (encumbrance) + gear-pill UI; wound-granters; full traits.jsonc re-tune (§6); ±6 new "shitty" 2-category
-  commons. No new engine loop.
-- **Phase 2 (engine):** condition `flags` + `triggers` + `activateWhen`; the graph evaluator; migrate the
-  hardcoded wet/shock/infection interactions to data.
-- **Phase 3 (TODO §7):** behavioral / needs / transformation.
+- **Phase 1a — condition graph INFRASTRUCTURE (build now):** condition `flags` + `triggers` +
+  `activateWhen` schema; a pure, unit-tested `conditionGraph` evaluator + predicate system; then wire it
+  into `tickConditions`, migrating the hardcoded interactions to data **behaviour-identical**. The
+  DETERMINISTIC certainties stay certain — shock still fires under its exact current pain/blood triggers,
+  just declared in the schema (a `chance`-less / threshold edge), not probabilistically. ⚠ hot path —
+  cross-check `ENGINE-PERFORMANCE.md`; the evaluator must allocate nothing per tick.
+- **Phase 1b — typed traits + data:** `kind` union + rarity budget (`rarities.jsonc` scale) + registry
+  test; natural-armor-as-gear (encumbrance) + gear-pill UI; wound-granters (capped non-lethal); full
+  traits.jsonc re-tune (§6); ±6 new "shitty" 2-category commons.
+- **Phase 2 (TODO §7):** behavioral / needs / transformation.
 
-## Open decisions (need your call before Phase 1)
+## Locked decisions (2026-07-06)
 
-- [ ] **Rarity scale:** adopt `rarities.jsonc` (common..legendary) as trait `tier`, or keep the 3-tier
-      mundane/supernatural/legendary + a budget table mapped onto it?
-- [ ] **Phase 2 now or later:** build the condition graph evaluator this pass, or land only the *schema*
-      (flags/triggers) as inert groundwork and keep interactions hardcoded until Phase 2?
-- [ ] **Wounds at spawn:** OK to give newborn pawns permanent wounds (one-eyed etc.), capped non-lethal?
+- [x] **Rarity scale:** traits adopt the full `rarities.jsonc` scale (common → uncommon → rare → epic →
+      legendary) as `tier`.
+- [x] **Condition graph:** build the infrastructure NOW, but **preserve the certainties** — deterministic
+      interactions (e.g. shock from pain/blood) keep firing under their current triggers, mapped through
+      the new schema as threshold (non-`chance`) edges rather than probabilistic rolls.
+- [x] **Wounds at spawn:** yes — wound-granting traits apply a real wound at generation, capped so it can
+      never be lethal to a newborn.
 
 ## Docs to sync on completion
 
