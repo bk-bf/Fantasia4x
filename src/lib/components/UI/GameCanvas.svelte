@@ -2293,14 +2293,19 @@
    */
   function repaintSnowNow() {
     if (!renderer?.isReady() || !_snowGrid || worldMap.length === 0) return;
+    // Fine-grained watchdog beats: split the snow repaint into its three distinct operations so a
+    // freeze names the exact one (drain vs. per-cell apply vs. chunk-dirty), not the whole batch.
+    beat('snow:drain');
     const coords = drainSnowRenderTileDeltas();
     if (!coords || coords.length === 0) return;
     if (coords.length > HEAVY_RENDER_TILES)
       _heavyRenderReason = `SNOW-BATCH ${coords.length} cells`;
+    beat(`snow:apply ${coords.length}`);
     for (const c of coords) {
       const t = worldMap[c.y]?.[c.x];
       if (t) applySnowToGrid(_snowGrid, t, hiddenMask);
     }
+    beat(`snow:setgrid ${coords.length}`);
     renderer.setSnowGrid(_snowGrid, coords);
     markRenderDirty();
   }
@@ -3629,12 +3634,14 @@
         if (_snowDirty && now - _lastSnowBuild >= TERRAIN_REBUILD_MIN_MS) {
           _snowDirty = false;
           _lastSnowBuild = now;
-          beat('snow-rebuild');
           repaintSnowNow();
         }
         // Gradual seasonal foliage flip — a budgeted slice of due trees each frame (turn-gated + capped),
         // so a season boundary turns the forest over days instead of re-vertexing every tree at once.
-        if (_foliagePending.length > 0) _processFoliageTransition();
+        if (_foliagePending.length > 0) {
+          beat(`foliage ${_foliagePending.length - _foliageIdx}`);
+          _processFoliageTransition();
+        }
         // Render-on-demand: when the scene is FROZEN skip the GL draw unless something visible changed.
         // The WebGL canvas retains its last frame, so a static map just stays on screen at ~0 render
         // cost. FROZEN = map-generation mode (a static terrain viewer) OR zoomed out past FREEZE_TILE_PX
@@ -3647,6 +3654,7 @@
           // Resource glyphs (trees/plants) draw at ALL zoom levels: the renderer caches them in chunked
           // VBOs (rebuilt only on change, same cadence as terrain), so a zoomed-out redraw is cheap and
           // panning stays smooth — no need to drop them and leave the map barren.
+          beat('gl:setgrids');
           renderer.setResourceOverlayGrid(_resourceGrid);
           renderer.setResourceTallOverlayGrid(_resourceTallGrid);
           renderer.setBuildingOverlayGrid(buildingOverlayGrid);
