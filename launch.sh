@@ -193,6 +193,10 @@ run_isolated_electron() {
       sleep 0.5
     done
     cd "$F4X_NS_SHELL_DIR" || { cleanup_ns; exit 1; }
+    # No session bus is reachable inside the net namespace; without this Chromium autolaunches one and
+    # blocks ~25s per dbus-dependent probe ("Failed to connect to the bus: Did not receive a reply"),
+    # which reads as a freeze at startup. `disabled:` is the GLib sentinel that suppresses autolaunch.
+    export DBUS_SESSION_BUS_ADDRESS=disabled:
     # --no-sandbox: Chromium can't create its own sandbox nested inside this user namespace.
     SPIKE_URL="http://127.0.0.1:$F4X_NS_PORT" F4X_PLAY="$F4X_NS_PLAY" ./node_modules/.bin/electron . --no-sandbox
     cleanup_ns
