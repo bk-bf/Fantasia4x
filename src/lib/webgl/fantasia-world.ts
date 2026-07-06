@@ -38,13 +38,15 @@ const ICE_VISIBLE_RENDER = 8;
 const SNOW_STAGE_CHARS: string[] = [44, 45, 46].map(
   (id) => resolveCharSpans([{ sheet: 'tiles', id }] as Parameters<typeof resolveCharSpans>[0])[0]
 );
-/** Snow-sprite thresholds on the LOCAL snow depth (coverage biased by the drift field — the SAME field
- *  the white wash uses, so sprites track the blanket). Below `MIN` a tile shows only the wash (no
- *  sprite); it takes the small→mid→large sprite as depth crosses MIN→MID→LG. Keyed to the field rather
- *  than a random hash so sprites CLUSTER at the drift centres and grow outward, instead of scattering. */
-const SNOW_SPRITE_MIN = 0.45;
-const SNOW_SPRITE_MID = 0.62;
-const SNOW_SPRITE_LG = 0.78;
+/** Snow-sprite thresholds on the LOCAL snow depth (`gc·1.3 + drift`, the SAME expression as the white
+ *  wash, so sprites track the blanket). Below `MIN` a tile shows only the wash (no sprite); it takes the
+ *  small→mid→large sprite as depth crosses MIN→MID→LG. Tuned against the in-game snow ceiling (natural
+ *  gc ≈ 0.5): at max coverage the drift centres reach the LG sprite and the mid-drifts the MID sprite,
+ *  so level-2/3 tiles are common, not rare. Keyed to the field (not a random hash) so sprites CLUSTER at
+ *  the drift centres and grow outward. */
+const SNOW_SPRITE_MIN = 0.4;
+const SNOW_SPRITE_MID = 0.6;
+const SNOW_SPRITE_LG = 0.82;
 
 /**
  * "Solid" = a cave/mineral_deposit mountain tile still carrying its wall/ore resource — impassable rock
@@ -525,40 +527,45 @@ export function applySnowToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
   const iceMax = tile.type === 'water' ? 0.4 : 0.4 / 3; // water full · dirt ⅓ (faint rime)
   const ai = ice >= ICE_VISIBLE_RENDER ? Math.min(1, ice / 100) * iceMax : 0;
   // Snow wash strength (alpha toward SNOW_WHITE) — same drift-field formula the baked path used.
-  // OBSTACLES (walls, trees, standing features) take NO snow wash: a mountain wall is a TERRAIN glyph
-  // drawn beneath this weather layer, so washing it would flatten the wall to a solid-white block
-  // instead of letting it poke out of the snow. gc = 0 here also skips the sprite below.
-  const feature = isSnowFeature(tile);
-  const gc = feature ? 0 : snowCover(tile);
+  // The wash is suppressed ONLY on SOLID wall tiles (mountain/cliff rock): that rock is a TERRAIN glyph
+  // drawn BENEATH this weather layer, so washing it would flatten the wall into a solid-white block.
+  // Trees, bushes and buildings draw ABOVE the wash, so they KEEP the snow blanket behind them and poke
+  // out over it — only their own SPRITE is skipped (below).
+  const gc = snowCover(tile);
   const f = snowField(tile.x, tile.y);
   const as =
-    gc > 0
+    gc > 0 && !tileSolidValue(tile)
       ? Math.max(
           0,
           Math.min(1, gc * 1.3 + (f - 0.5) * 0.8 + (tileHash(tile.x, tile.y, 41) - 0.5) * 0.2)
         )
       : 0;
   // Composite ice-under-snow into ONE colour+alpha: over the terrain T this must equal
-  // snow-over(ice-over(T)) = T·(1-ai)(1-as) + ICE·ai·(1-as) + SNOW·as.
-  const alpha = ai + as - ai * as;
-  if (alpha < 0.01) {
+  // snow-over(ice-over(T)) = T·(1-ai)(1-as) + ICE·ai·(1-as) + SNOW·as. Colour weights use the FULL
+  // alpha; only the RENDERED opacity is capped (below).
+  const alphaFull = ai + as - ai * as;
+  if (alphaFull < 0.01) {
     grid.removeTile(tile.x, tile.y);
     return;
   }
-  const iw = (ai * (1 - as)) / alpha; // ice weight of the combined wash colour
-  const sw = as / alpha; // snow weight
+  const iw = (ai * (1 - as)) / alphaFull; // ice weight of the combined wash colour
+  const sw = as / alphaFull; // snow weight
   const bg: [number, number, number] = [
     ICE_BLUE[0] * iw + SNOW_WHITE[0] * sw,
     ICE_BLUE[1] * iw + SNOW_WHITE[1] * sw,
     ICE_BLUE[2] * iw + SNOW_WHITE[2] * sw
   ];
-  // Snow sprite accent on open ground — appearance driven by the LOCAL snow depth (coverage biased by
-  // the drift field `f`, same field as the wash), NOT a random scatter hash: sprites cluster at the
-  // drift centres (cohesive with the densest wash) and MORPH small→mid→large as the blanket deepens.
-  // A small per-tile jitter softens the contour between stages. Obstacles (isSnowFeature) poke out bare.
+  // Cap the wash opacity at 0.95 so even the deepest snow leaves a hint of the ground/terrain beneath —
+  // no cell ever reads as a flat pure-white solid.
+  const alpha = Math.min(0.95, alphaFull);
+  // Snow sprite accent on open ground — appearance driven by the LOCAL snow depth (`gc·1.3 + drift`,
+  // the SAME expression as the wash), NOT a random scatter hash: sprites cluster at the drift centres
+  // (cohesive with the densest wash) and MORPH small→mid→large as the blanket deepens. A small per-tile
+  // jitter softens the contour between stages. Obstacles (isSnowFeature: trees/bushes/walls) poke out
+  // bare — the sprite is open-ground only.
   let char = ' ';
-  if (gc > 0) {
-    const depth = gc + (f - 0.5) * 0.6 + (tileHash(tile.x, tile.y, 29) - 0.5) * 0.2;
+  if (gc > 0 && !isSnowFeature(tile)) {
+    const depth = gc * 1.3 + (f - 0.5) * 0.8 + (tileHash(tile.x, tile.y, 29) - 0.5) * 0.2;
     if (depth > SNOW_SPRITE_MIN)
       char = SNOW_STAGE_CHARS[depth > SNOW_SPRITE_LG ? 2 : depth > SNOW_SPRITE_MID ? 1 : 0];
   }
