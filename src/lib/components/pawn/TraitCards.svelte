@@ -68,6 +68,24 @@
   // The wound DATA names a canonical side (leftEye) but the applier may flip to the twin for
   // variety — so the card shows the side-agnostic organ ("eye"); the health tab shows the real side.
   const woundPartLabel = (id: string) => partLabel(id).replace(/^(left|right) /i, '');
+  // §1 bodyMod: human label for which parts a body-structure trait reshapes.
+  const bodyModPartLabel = (target: string) =>
+    target === 'skeleton' ? 'bones' : target === 'flesh' ? 'hide' : woundPartLabel(target);
+  // Prose for a single bodyMod, explaining the mechanical change (fracture / wound tolerance).
+  function bodyModDesc(m: { target: string; hpMult?: number; weightKg?: number }): string {
+    const bits: string[] = [];
+    if (m.hpMult != null && m.hpMult !== 1) {
+      const pct = Math.round((m.hpMult - 1) * 100);
+      const signed = `${pct >= 0 ? '+' : ''}${pct}%`;
+      if (m.target === 'skeleton')
+        bits.push(pct >= 0 ? `${signed} bone — fractures far harder` : `${signed} bone — fractures easily`);
+      else if (m.target === 'flesh')
+        bits.push(pct >= 0 ? `${signed} flesh — a wound bites deeper before it tells` : `${signed} flesh — wounds bite faster`);
+      else bits.push(`${signed} part HP`);
+    }
+    if (m.weightKg) bits.push(`+${m.weightKg} kg body weight (loads the body, slows the pawn)`);
+    return bits.join('; ');
+  }
   const axisShort = (name: string) =>
     name === 'workSpeed'
       ? 'spd'
@@ -90,6 +108,18 @@
     // §4 wound-kind: the permanent injury stamped at generation (human part label, never the raw id).
     for (const w of trait.wounds ?? [])
       tags.push({ label: woundPartLabel(w.part), value: w.severity, type: 'neg' });
+    // §1 bodyMod: intrinsic body-structure change — one pill per part-group + a weight pill.
+    for (const m of trait.bodyMods ?? []) {
+      if (m.hpMult != null && m.hpMult !== 1) {
+        const pct = Math.round((m.hpMult - 1) * 100);
+        tags.push({
+          label: bodyModPartLabel(m.target),
+          value: `${pct >= 0 ? '+' : ''}${pct}%`,
+          type: pct >= 0 ? 'pos' : 'neg'
+        });
+      }
+      if (m.weightKg) tags.push({ label: 'weight', value: `+${m.weightKg} kg`, type: 'neg' });
+    }
     if (trait.onHitEffect) tags.push({ label: 'on-hit', value: 'proc', type: 'pos' });
     if (trait.weaponBonus?.damage)
       tags.push({
@@ -236,6 +266,14 @@
         <span class="tip-lbl">Old wound</span>
         {t.wounds.map((w) => `${woundPartLabel(w.part)} (${w.severity})`).join(', ')}
       </div>
+    {/if}
+    {#if t.bodyMods?.length}
+      {#each t.bodyMods as m}
+        <div class="tip-row">
+          <span class="tip-lbl">Body · {bodyModPartLabel(m.target)}</span>
+          {bodyModDesc(m)}
+        </div>
+      {/each}
     {/if}
     {#if bl.length}
       <div class="tip-row neg"><span class="tip-lbl">Blocks gear</span> {bl.join(', ')}</div>

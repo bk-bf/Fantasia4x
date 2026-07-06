@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { applyTraitWounds } from './Pawns';
+import { applyTraitWounds, applyTraitBodyMods } from './Pawns';
 import { TRAIT_DATABASE } from '../core/Race';
 import { createBodyPlanLimbs } from '../systems/Combat';
-import { lethalAnatomyCause } from '../core/BodyParts';
+import { lethalAnatomyCause, PART_DEF_MAP } from '../core/BodyParts';
+import { getTransientConditionDef } from '../core/needs';
 import { healLimbs } from '../core/Wounds';
 import { itemService } from '../services/ItemService';
 import type { GameState, Pawn, Trait } from '../core/types';
@@ -92,6 +93,54 @@ describe('applyTraitWounds (§4 wound granters)', () => {
     const brain = pawn.limbs!.flatMap((l) => l.parts ?? []).find((p) => p.id === 'brain');
     expect(brain?.injuries ?? []).toHaveLength(0); // vital: refused outright
     expect(lethalAnatomyCause(pawn.limbs)).toBeNull(); // the newborn lives
+  });
+});
+
+describe('applyTraitBodyMods (§1 bodyMod → limbmap)', () => {
+  const partMaxHp = (pawn: Pawn, id: string) =>
+    pawn.limbs!.flatMap((l) => l.parts ?? []).find((p) => p.id === id)?.maxHp;
+
+  it('heavy-boned scales the SKELETON maxHp (harder fractures) and leaves flesh untouched', () => {
+    const bare = makePawn([]);
+    const heavy = makePawn([traitById('heavy-boned')]);
+    applyTraitBodyMods(heavy);
+    // A bone part (ribcage) grows; a flesh part (chest) is unchanged.
+    expect(partMaxHp(heavy, 'ribcage')!).toBeGreaterThan(partMaxHp(bare, 'ribcage')!);
+    expect(partMaxHp(heavy, 'chest')).toBe(partMaxHp(bare, 'chest'));
+    // Full health preserved (maxHp and health scale together → capacity reads normal).
+    const rib = heavy.limbs!.flatMap((l) => l.parts ?? []).find((p) => p.id === 'ribcage')!;
+    expect(rib.health).toBe(rib.maxHp);
+  });
+
+  it('thin-skinned lowers FLESH maxHp (wounds bite faster) and leaves bone untouched', () => {
+    const bare = makePawn([]);
+    const thin = makePawn([traitById('thin-skinned')]);
+    applyTraitBodyMods(thin);
+    expect(partMaxHp(thin, 'chest')!).toBeLessThan(partMaxHp(bare, 'chest')!);
+    expect(partMaxHp(thin, 'ribcage')).toBe(partMaxHp(bare, 'ribcage'));
+  });
+
+  it('heavy-boned carries a body-weight delta in its payload (→ blood pool + encumbrance)', () => {
+    const heavy = traitById('heavy-boned');
+    const w = (heavy.bodyMods ?? []).reduce((s, m) => s + (m.weightKg ?? 0), 0);
+    expect(w).toBeGreaterThan(0);
+  });
+});
+
+describe('natural weapons bound to limbs (§3 hostParts)', () => {
+  it('every trait natural weapon names host parts that exist in the limbmap', () => {
+    for (const t of TRAIT_DATABASE.flatMap((x) => [x, ...(x.subCapabilities ?? [])])) {
+      if (!t.selfCondition) continue;
+      const cond = getTransientConditionDef(t.selfCondition);
+      if (!cond?.grantsNaturalWeapon?.length) continue;
+      for (const part of cond.hostParts ?? [])
+        expect(PART_DEF_MAP[part], `${t.selfCondition} hostPart ${part} not in limbmap`).toBeTruthy();
+    }
+  });
+
+  it('claws are hosted on the hands (lose both → the weapon has no surviving host)', () => {
+    const cond = getTransientConditionDef('clawed');
+    expect(cond?.hostParts).toEqual(['leftHand', 'rightHand']);
   });
 });
 

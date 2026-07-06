@@ -401,12 +401,30 @@ function applyMeleeGrip(p: AttackProfile, grip: MeleeGrip): AttackProfile {
  *  `blocksSlots`). ADR-023: the weapon ids live on the trait's `selfCondition` DEF
  *  (`grantsNaturalWeapon`) — the body condition IS the source, so the health pill and the swing can't
  *  drift. Empty racial set → the plain fists/kick default. */
+/** True if the pawn still has at least one of `partIds` present and not missing (host-part survival for
+ *  a trait natural weapon). Empty/absent host list ⇒ unbound, always available (back-compat). */
+function pawnHasHostPart(attacker: Pawn, partIds: string[] | undefined): boolean {
+  if (!partIds || partIds.length === 0) return true;
+  for (const limb of attacker.limbs ?? []) {
+    if (limb.isMissing) continue;
+    for (const part of limb.parts ?? []) {
+      if (!part.isMissing && partIds.includes(part.id)) return true;
+    }
+  }
+  return false;
+}
+
 function pawnNaturalWeaponIds(attacker: Pawn): string[] {
   const extra: string[] = [];
   for (const t of attacker.traits ?? []) {
     if (!t.selfCondition) continue;
-    const grant = getTransientConditionDef(t.selfCondition)?.grantsNaturalWeapon;
-    if (grant) extra.push(...grant);
+    const cond = getTransientConditionDef(t.selfCondition);
+    if (!cond?.grantsNaturalWeapon) continue;
+    // ADR-028: a trait natural weapon is bound to its host limbs (claws→hands, horns→head, fangs→jaw)
+    // just like a creature's — lose every host part and the weapon goes with it. Unbound (no hostParts)
+    // grants stay always-available. Skipped for un-modelled fixtures (empty limb tree).
+    if (hasModelledAnatomy(attacker) && !pawnHasHostPart(attacker, cond.hostParts)) continue;
+    extra.push(...cond.grantsNaturalWeapon);
   }
   return extra.length > 0 ? [...extra, ...PAWN_NATURAL_WEAPON_IDS] : PAWN_NATURAL_WEAPON_IDS;
 }

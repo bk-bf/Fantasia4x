@@ -47,8 +47,23 @@ export interface Trait {
   /** Trait category (TRAIT-SYSTEM-V2 §1) — determines the payload shape + validator path:
    *  `stat` (core-stat deltas) · `attribute` (derived stats.jsonc, breadth gated by rarity) ·
    *  `naturalGear` (a natural weapon/armor condition) · `passive` (aura/affinity/proc condition) ·
-   *  `wound` (a real injury at generation). Reserved (TODO): `behavioral` · `needs` · `transformation`. */
-  kind?: 'stat' | 'attribute' | 'naturalGear' | 'passive' | 'wound';
+   *  `wound` (a real injury at generation) · `bodyMod` (modifies the limbmap body directly — bone/flesh
+   *  HP + body weight, so a dense-boned pawn genuinely fractures harder, not a `blunt_resistance` fudge).
+   *  Reserved (TODO): `behavioral` · `needs` · `transformation`. */
+  kind?: 'stat' | 'attribute' | 'naturalGear' | 'passive' | 'wound' | 'bodyMod';
+  /** `bodyMod`-kind payload (TRAIT-SYSTEM-V2 §1 amendment): intrinsic structural changes stamped onto the
+   *  pawn's own limb tree at generation (`applyTraitBodyMods`), so the effect flows through the real body
+   *  model (fracture threshold, wound tolerance, blood pool, encumbrance) — never an abstract stat mult.
+   *  `target`: `'skeleton'` (all bones), `'flesh'` (all outer soft parts), or a specific limbmap part id. */
+  bodyMods?: Array<{
+    target: 'skeleton' | 'flesh' | string;
+    /** Scale matching parts' maxHp — skeleton ⇒ fracture budget (dense/brittle bone), flesh ⇒ how much
+     *  damage the padding takes before a wound escalates (thick/thin hide). Full health preserved. */
+    hpMult?: number;
+    /** Added to the pawn's body weight (kg) — feeds the blood pool + the `encumbered` load, so heavy
+     *  bones slow the pawn emergently rather than via a hand-tuned DEX penalty. */
+    weightKg?: number;
+  }>;
   /** `wound`-kind payload (TRAIT-SYSTEM-V2 §4): PERMANENT healed-over injuries stamped at pawn-gen
    *  (one-eyed → a destroyed eye) by `applyTraitWounds`, capped non-lethal. `part` is a limbmap part
    *  id; a paired part (leftEye) may flip to its twin for variety. Effects flow through the body

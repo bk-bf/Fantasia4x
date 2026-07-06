@@ -1001,6 +1001,7 @@
         "color"             : "#C8A064",
         "charSpans"         : [ {"sheet": "items", "id": 223} ],
         "grantsNaturalWeapon": ["rending-claws"],
+        "hostParts"         : ["leftHand", "rightHand"],
         "modifiers"         : {"dexterity": 0.95}
     },
     {
@@ -1064,6 +1065,7 @@
         "color"             : "#D8D0C0",
         "charSpans"         : [ {"sheet": "items", "id": 200} ],
         "grantsNaturalWeapon": ["goring-horns"],
+        "hostParts"         : ["head"],
         "modifiers"         : {}
     },
     {
@@ -1075,6 +1077,7 @@
         "color"             : "#C88A3A",
         "charSpans"         : [ {"sheet": "items", "id": 223} ],
         "grantsNaturalWeapon": ["dragon-claws"],
+        "hostParts"         : ["leftHand", "rightHand"],
         "modifiers"         : {}
     },
     {
@@ -1086,6 +1089,7 @@
         "color"             : "#FF6A2B",
         "charSpans"         : [ {"sheet": "font", "id": 15} ],
         "grantsNaturalWeapon": ["flame-breath"],
+        "hostParts"         : ["head"],
         "modifiers"         : {}
     },
     {
@@ -1097,6 +1101,7 @@
         "color"             : "#B02A37",
         "charSpans"         : [ {"sheet": "items", "id": 216} ],
         "grantsNaturalWeapon": ["bloodsucking-fangs"],
+        "hostParts"         : ["jaw"],
         "modifiers"         : {}
     },
     {
@@ -1108,7 +1113,18 @@
         "color"             : "#7CB342",
         "charSpans"         : [ {"sheet": "items", "id": 195} ],
         "grantsNaturalWeapon": ["serpent-fangs"],
+        "hostParts"         : ["jaw"],
         "modifiers"         : {}
+    },
+    {
+        "id"         : "feathered",
+        "name"       : "Feathered",
+        "flags": ["racial", "passive"],
+        "transient"  : true,
+        "description": "A covering of fine down — natural insulation that holds warmth against the cold.",
+        "color"      : "#C9B48A",
+        "charSpans"  : [ {"sheet": "items", "id": 145} ],
+        "modifiers"  : {}
     },
     {
         "id"         : "flame_touched",

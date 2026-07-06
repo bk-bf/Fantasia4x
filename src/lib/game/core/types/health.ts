@@ -61,6 +61,11 @@ export interface TransientConditionDef extends ConditionGraphFields {
    *  trait-side copy that could drift). `clawed` grants rending-claws; `scaled` grants +12 armor; etc. */
   grantsNaturalWeapon?: string[];
   grantsNaturalArmor?: number;
+  /** TRAIT-SYSTEM-V2 §3 (ADR-028) — limbmap part ids that HOST this condition's natural weapon, so a
+   *  pawn's claws/horns/fangs are bound to a limb exactly like a creature's (a wolf's `claw` on its
+   *  paws). Combat resolves the weapon only while at least one host part survives — lose both hands and
+   *  the claws go with them. Omitted ⇒ the weapon is unbound (always available; back-compat). */
+  hostParts?: string[];
   /** TRAIT-SYSTEM-V2 §3 — natural armor IS GEAR: its mass in kg feeds the pawn's carry load
    *  (ItemService.getCurrentCarryLoad) exactly like a worn piece, so a heavy hide's slowdown is the
    *  emergent staged `encumbered` condition (load ÷ STR capacity), never a hand-tuned flat DEX penalty. */

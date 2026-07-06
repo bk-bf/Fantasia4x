@@ -120,6 +120,49 @@ export function applyTraitWounds(pawn: Pawn): void {
   pawn.pain = Math.max(0, Math.min(100, Math.round(painTotal)));
 }
 
+/** Sum a drawn trait set's `bodyMod` body-weight deltas (heavy bones add mass). Applied to the rolled
+ *  weight BEFORE the blood pool is derived, so a heavy-boned pawn carries a proportionally larger pool. */
+function traitBodyWeightDelta(traits: Trait[]): number {
+  let delta = 0;
+  for (const t of traits)
+    for (const m of t.bodyMods ?? []) delta += m.weightKg ?? 0;
+  return delta;
+}
+
+/**
+ * Apply every drawn `bodyMod`-kind trait's structural changes to the pawn's (freshly built, privately
+ * owned) limb tree — scaling matching parts' maxHp so the effect lives in the real body model:
+ * `skeleton` targets raise/lower the fracture budget (dense vs brittle bone), `flesh` targets the
+ * wound tolerance of the soft padding (thick vs thin hide). Full health is preserved (maxHp and health
+ * scale together), so capacities read normal until the part is actually hurt. Body-weight deltas are
+ * folded in earlier (traitBodyWeightDelta), before the blood pool is derived.
+ */
+export function applyTraitBodyMods(pawn: Pawn): void {
+  const limbs = pawn.limbs;
+  if (!limbs) return;
+  for (const trait of pawn.traits ?? []) {
+    for (const m of trait.bodyMods ?? []) {
+      if (m.hpMult == null || m.hpMult === 1) continue;
+      for (const limb of limbs) {
+        for (const part of limb.parts ?? []) {
+          const def = PART_DEF_MAP[part.id];
+          if (!def) continue;
+          const matches =
+            m.target === 'skeleton'
+              ? def.skeleton === true
+              : m.target === 'flesh'
+                ? (def.hitWeight ?? 0) > 0
+                : part.id === m.target;
+          if (!matches) continue;
+          const full = part.health >= part.maxHp;
+          part.maxHp = Math.max(1, Math.round(part.maxHp * m.hpMult));
+          if (full) part.health = part.maxHp; // freshly generated → keep it topped up
+        }
+      }
+    }
+  }
+}
+
 /** Roll a single pawn from a specific race (stats within the race's ranges, traits copied,
  *  race identity stamped). Shared by single-race and mixed-colony generation. */
 export function buildPawnFromRace(race: Race, index: number): Pawn {
@@ -129,6 +172,8 @@ export function buildPawnFromRace(race: Race, index: number): Pawn {
   const traits = drawPawnTraits(race);
   const finalStats = applyRacialTraitBonuses(baseStats, traits);
   const physicalTraits = rollPhysicalTraits(race.physicalTraits);
+  // TRAIT-SYSTEM-V2 §1: bodyMod weight (heavy bones) mass BEFORE the blood pool is derived from weight.
+  physicalTraits.weight += traitBodyWeightDelta(traits);
   const maxBloodVolume = calcMaxBloodVolume(physicalTraits, finalStats);
   const maxStamina = calcMaxStamina(finalStats);
 
@@ -170,7 +215,9 @@ export function buildPawnFromRace(race: Race, index: number): Pawn {
     limbs: createBodyPlanLimbs(DEFAULT_PLAN, 1)
   };
 
-  // TRAIT-SYSTEM-V2 §4: stamp any drawn wound-kind traits as real (permanent, healed) injuries.
+  // TRAIT-SYSTEM-V2 §1: apply bodyMod structural changes (dense/brittle bone, thick/thin hide) to the
+  // limb tree, THEN stamp any wound-kind traits as real permanent injuries (against the adjusted maxHp).
+  applyTraitBodyMods(pawn);
   applyTraitWounds(pawn);
 
   return pawn;
