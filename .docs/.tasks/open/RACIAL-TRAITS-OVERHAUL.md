@@ -6,9 +6,12 @@
 
 ## Status
 
-**SPEC — not started.** Supersedes the trait payloads shipped in RACE-SYSTEM Phase 0. Full
-scope agreed with the user (data + selection + combat/equip wiring); aging + true breath-cone
-deferred to later phases.
+**Phases 1–3 DONE (2026-07-06).** Schema + conditions + data + selection + combat/equip wiring all
+landed; `pnpm check` clean, trait/combat/race `test:related` green (650 passed; the 2 failing
+`craftDropMerge`/`jobCraftByproducts` tests are pre-existing, unrelated). A 4000-race generation sweep
+reads 63% plain-humanoid / 34% supernatural / 3.3% legendary (avg 2.54 traits). Phase 4 (aging, breath
+cone, full vampiric feeding) remains deferred. Supersedes the trait payloads shipped in RACE-SYSTEM
+Phase 0.
 
 ## Problem
 
@@ -113,28 +116,35 @@ all express in the schema above.
 ## Phases
 
 ### Phase 1 — Schema + Conditions + Data
-- [ ] Extend `RacialTrait` in [`types/race.ts`](../../../src/lib/game/core/types/race.ts): `tier`,
-      `selfCondition`, `blocksSlots`, `naturalWeapons`, `naturalArmor`, `onHitEffect`, `weaponBonus`;
-      realign resistance keys with `stats.jsonc` (add lightning/shadow/wetness; drop dead keys / flat `damageReduction`).
-- [ ] Add self/combat conditions to [`conditions.jsonc`](../../../src/lib/game/database/conditions.jsonc)
-      (`clawed`, `furred`, `scaled`, `dragon_scaled`, `photosynthesis`, `light_sensitive`, `bloodthirst`, `burning`).
-- [ ] Add natural-weapon items to [`items.jsonc`](../../../src/lib/game/database/items.jsonc)
+- [x] Extend `RacialTrait` in [`types/race.ts`](../../../src/lib/game/core/types/race.ts): `tier`,
+      `selfCondition`, `blocksSlots`, `naturalWeapons`, `naturalArmor`, `onHitEffect`, `weaponBonus`,
+      `subCapabilities` + `TraitOnHitEffect`; realigned resistance keys with `stats.jsonc` (added
+      lightning/shadow/wetnessResistance + healRate; dropped flat `damageReduction`). Trait→stat bridge
+      (`RESISTANCE_TRAIT_KEY`) + `Combat.physicalResistance` + `Race.pickFlavorLine` updated to match.
+- [x] Added self/combat conditions to [`conditions.jsonc`](../../../src/lib/game/database/conditions.jsonc)
+      (`clawed`, `furred`, `scaled`, `dragon_scaled`, `horned`, `venomous`, `flame_touched`,
+      `regenerating`, `ever_warm`, `bloodthirst`, `photosynthesis`, `light_sensitive`, `burning`).
+- [x] Added natural-weapon items to [`items.jsonc`](../../../src/lib/game/database/items.jsonc)
       (rending-claws, goring-horns, serpent-fangs, dragon-claws, bloodsucking-fangs, flame-breath).
-- [ ] Rewrite [`racial-traits.jsonc`](../../../src/lib/game/database/racial-traits.jsonc) into the
-      three tiers; keep/repair the name-good existing ones (dragon-heritage→legendary, flame-touched,
-      photosynthetic, scaled-hide, iron-skin, venomous, regenerative).
+- [x] Rewrote [`racial-traits.jsonc`](../../../src/lib/game/database/racial-traits.jsonc) into the
+      three tiers (~37 mundane / 10 supernatural / 2 legendary bundles); kept every archetype-referenced
+      id for theming; dragon-heritage + new vampiric are legendary sub-capability bundles.
 
 ### Phase 2 — Selection
-- [ ] Rewrite `generateRacialTraits` for mundane-majority + rare supernatural + very-rare legendary;
-      legendary sub-capability rolls; conflict groups preserved.
+- [x] Rewrote `generateRacialTraits`: 1–3 mundane, then ~65/30/5 supernatural gate, then ~3% legendary
+      with per-sub rolls; conflict groups + ×3 archetype weighting preserved across one shared ban set.
+      `Race.test.ts` trait-count assertion relaxed 2→1.
 
 ### Phase 3 — Combat + Equip wiring
-- [ ] Pawn natural weapons from traits (fold into the pawn branch of `attackerProfile`, [`Combat.ts:400`](../../../src/lib/game/systems/Combat.ts)).
-- [ ] Pawn `naturalArmor` in `partArmorReduction` (open the `creatureId`-gated path to pawns).
-- [ ] Trait-level `onHitEffect` per-pawn hook; `weaponBonus` in the equipped-weapon branch.
-- [ ] `photosynthesis` + `light_sensitive` environment drivers in `syncTransientConditions`.
-- [ ] `blocksSlots` equip-guard (equip action in `GameEngineImpl`) + gear-tab greyed-slot surfacing.
-- [ ] `burning` DoT tick.
+- [x] Pawn natural weapons from traits (`pawnNaturalWeaponIds` in the pawn branch of `attackerProfile`).
+- [x] Pawn `naturalArmor` in `partArmorReduction` (opened the `creatureId`-gated path to pawns, best-of).
+- [x] Trait-level `onHitEffect` per-pawn hook (`applyOnHitEffect` now loops weapon + trait effects);
+      `weaponBonus` applied in the equipped-weapon branch.
+- [x] `photosynthesis` (hunger-fill in `tickConditions`) + `light_sensitive` drivers + permanent
+      `selfCondition` push in `syncTransientConditions` (threaded `turn` for the day/night light gate).
+- [x] `blocksSlots` equip-guard in `PawnEquipment.equipDropToPawn`/`equipItem` + gear-tab greyed-slot
+      surfacing (`EquipmentDoll.svelte`) + tier badge & capability tags in `PawnTraits.svelte`.
+- [x] `burning` DoT tick in `tickConditions` (fire-resistance-mitigated; `'burning'` death cause).
 
 ### Phase 4 — Deferred (separate)
 - [ ] Aging / `maturity` scaling.
@@ -143,14 +153,19 @@ all express in the schema above.
 
 ## Acceptance criteria
 
-- [ ] The median generated race reads as a plain humanoid with 1–3 small (often negative) quirks.
-- [ ] A supernatural pull is visibly distinct: a natural weapon, natural armor, or an on-hit proc
+- [x] The median generated race reads as a plain humanoid with 1–3 small (often negative) quirks
+      (4000-race sweep: 63% carry no supernatural/legendary pull; ~37-trait mundane pool skews negative).
+- [x] A supernatural pull is visibly distinct: a natural weapon (`rending-claws`/`goring-horns`),
+      natural armor (`scaled-hide`/`iron-skin`/`thick-fur`), or an on-hit proc (`venomous`/`flame-touched`)
       that changes how the pawn fights.
-- [ ] Every supernatural trait shows a legible pill in the health panel and, if it blocks gear, a
-      greyed slot in the gear tab — no hidden math.
-- [ ] Claws race is devastating unarmed but debuffed at the workbench; fur race trades a chest layer
-      and heat resistance for cold resistance + natural armor.
-- [ ] `pnpm check` + trait/combat `test:related` green; existing trait tests updated.
+- [x] Every supernatural trait shows a legible pill in the health panel (via `selfCondition` +
+      `syncTransientConditions`) and, if it blocks gear, a greyed slot in the gear tab — plus a tier badge
+      and capability tags on the trait card. No hidden math.
+- [x] Claws race is devastating unarmed (rending-claws in the unarmed pool) but debuffed at the workbench
+      (`blocksSlots` main-hand/gloves + −crafting/leatherworking work mults); fur race trades the `bodyMid`
+      layer + heat resistance (−0.15 fire) for cold resistance (+0.3) + natural armor.
+- [x] `pnpm check` clean; trait/combat/race `test:related` green (650 passed; `Race.test.ts` count
+      assertion updated 2→1). The only 2 failures (`craftDropMerge`/`jobCraftByproducts`) pre-date this work.
 
 ## Docs to sync on completion
 
