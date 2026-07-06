@@ -22,6 +22,11 @@ uniform float u_lightFlicker;
 // Overlay mode: 0 = opaque tile (background fills the cell), 1 = glyph-only
 // (transparent background) so entities composite over the terrain layer below.
 uniform float u_glyphOnly;
+// Background-only mode: 1 = draw ONLY the per-cell background wash, no glyph. Used to split the
+// snow/ice pass — the translucent WASH is drawn beneath the resource glyphs (so grass/tree/wall
+// glyphs render on top of it rather than being flattened to solid white), while the snow SPRITE is
+// drawn glyph-only in a later pass above the resources.
+uniform float u_bgOnly;
 
 out vec4 fragColor;
 
@@ -30,6 +35,14 @@ void main() {
     // (animated by the global flicker uniform), clamped to the same ceiling the
     // CPU lighting model used (MAX_LIGHT = 1.6).
     vec3 light = min(u_ambient + v_light * u_lightFlicker, vec3(1.6));
+
+    // Background-only pass (snow/ice WASH beneath the resource glyphs): emit just the per-cell wash at
+    // its own alpha, no glyph — so grass/tree/wall glyphs drawn on top stay visible instead of being
+    // buried under solid white. Return early; no glyph/outline sampling needed.
+    if (u_bgOnly > 0.5) {
+        fragColor = vec4(v_background.rgb * light, v_background.a);
+        return;
+    }
 
     vec4 sprite = texture(u_fontAtlas, v_texCoord);
 

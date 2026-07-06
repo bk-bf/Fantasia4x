@@ -98,9 +98,10 @@ export class WebGLRendererCore {
   // how items composite over terrain. (Floors and roofs stay baked in the terrain grid.)
   private buildingOverlayGrid: GameGrid | null = null;
   // Snow/ice weather layer — a sparse grid of per-cell translucent washes (backgroundAlpha) + snow
-  // sprites, drawn BLENDED right after the opaque terrain (before resources, so plants/trees/pawns
-  // poke out of the blanket). It has its OWN content version + chunk dirty stream (snowVersion /
-  // markSnowChunksDirty) so snow/ice bucket crossings never re-vertex terrain or resource chunks —
+  // sprites, drawn BLENDED above the short-resource overlay (buries grass/dirt) but below buildings/
+  // items/pawns/tall trees (which poke out of the blanket). It has its OWN content version + chunk
+  // dirty stream (snowVersion / markSnowChunksDirty) so snow/ice bucket crossings never re-vertex
+  // terrain or resource chunks —
   // decoupling weather churn from the ADR-026 terrain path entirely.
   private snowGrid: GameGrid | null = null;
   private snowVersion = 0;
@@ -489,53 +490,34 @@ export class WebGLRendererCore {
     this.stats.drawCalls++;
     this.stats.vertexCount += gridStats.tilesRendered * 6;
 
-    // Snow/ice weather pass — BLENDED, but NOT glyph-only (u_glyphOnly stays 0): each cell draws its
-    // background quad at the per-cell backgroundAlpha (the vec4 a_background), washing the terrain
-    // beneath toward white/ice-blue — the smooth snow blanket — while its glyph pixels (the snow
-    // sprites) render opaque. Chunk-cached under its own 'snow' layer + snowVersion, so it re-vertexes
-    // only on snow/ice changes and draws from cached VBOs every other frame, exactly like terrain.
-    if (this.snowGrid) {
-      gl.enable(gl.BLEND);
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-      const snowStats = this.gridRenderer.renderGrid(this.snowGrid, {
-        tileWidth: BASE_TILE_PX,
-        tileHeight: BASE_TILE_PX,
-        viewportX: this.viewTileX,
-        viewportY: this.viewTileY,
-        viewportWidth: viewportTilesW,
-        viewportHeight: viewportTilesH,
-        lightSampler: this.lightSampler ?? undefined,
-        lightTime,
-        pointLightActive: this.dynamicLight,
-        lightVersion: this.lightVersion,
-        litBounds: this.lightBounds,
-        cacheVersion: this.snowVersion,
-        chunkLayer: 'snow'
-      });
-      gl.disable(gl.BLEND);
-      this.stats.drawCalls++;
-      this.stats.vertexCount += snowStats.tilesRendered * 6;
-    }
-
-    // Overlay passes — glyph-only, alpha-blended on top of the terrain so the tile
-    // underneath keeps rendering and motion can be sub-tile. Draw order is
-    // terrain → buildings → items → entities: each is its own single-glyph grid, so a
-    // building composites OVER the floor/ground (its transparent pixels reveal it), an
-    // item OVER the building, and a pawn OVER everything — none overwriting the glyph below.
+    // Overlay passes — alpha-blended on top of the terrain so the tile underneath keeps rendering and
+    // motion can be sub-tile. Draw order is
+    //   terrain → snow WASH → resources(short) → snow SPRITES → buildings → items → entities → trees.
+    // The snow layer is drawn TWICE from its one cached VBO: the translucent WASH (background-only)
+    // sits BENEATH the resource glyphs so grass/bushes/mountain-walls render on top of it (never
+    // flattened to solid white); the snow SPRITES (glyph-only) sit ABOVE the resources so deep snow
+    // reads as snow tiles. Both stay BELOW buildings/items/pawns/tall-trees, which poke out.
     if (
       this.overlayGrid ||
       this.itemOverlayGrid ||
       this.buildingOverlayGrid ||
       this.resourceOverlayGrid ||
-      this.resourceTallOverlayGrid
+      this.resourceTallOverlayGrid ||
+      this.snowGrid
     ) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 1);
       const tOverlay = performance.now();
-      // Short resources first (grass/bushes over the ground; dense → viewport-culled), then buildings,
-      // items, entities. TALL resources (trees) LAST so the oversized canopy occludes pawns/mobs
-      // standing on tiles behind the tree.
+      // 1. Snow/ice WASH — background-only, BENEATH resources. u_bgOnly emits just the per-cell white/
+      //    ice wash (no glyph); resource glyphs drawn next composite on top, so a mountain wall keeps
+      //    its glyph instead of becoming a solid-white block. Reset u_bgOnly right after.
+      if (this.snowGrid) {
+        this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 1);
+        this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime);
+        this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 0);
+      }
+      // 2. Short resources (grass/bushes/ground-cover; dense → viewport-culled) over the wash.
       this.renderGlyphOverlay(
         this.resourceOverlayGrid,
         viewportTilesW,
@@ -544,6 +526,14 @@ export class WebGLRendererCore {
         true,
         'resource'
       );
+      // 3. Snow SPRITES — glyph-only (u_glyphOnly already 1), ABOVE resources: the 44/45/46 snow tiles
+      //    draw over the ground cover so deep snow buries grass, while the WASH beneath keeps light
+      //    snow translucent. Same cached 'snow' VBO as the wash pass — a pure re-draw, no re-vertex.
+      if (this.snowGrid) {
+        this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime);
+      }
+      // 4. Then buildings, items, entities. TALL resources (trees) LAST so the oversized canopy occludes
+      // pawns/mobs standing on tiles behind the tree.
       this.renderGlyphOverlay(this.buildingOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
       this.renderGlyphOverlay(this.itemOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
       this.renderGlyphOverlay(this.overlayGrid, viewportTilesW, viewportTilesH, lightTime);
@@ -561,6 +551,31 @@ export class WebGLRendererCore {
     } else {
       this.stats.overlayMs = 0;
     }
+  }
+
+  /** Draw the snow/ice grid from its cached 'snow' chunk VBO. Called TWICE per frame — once bg-only
+   *  (the wash, beneath resources) and once glyph-only (the sprites, above resources); the caller sets
+   *  the u_bgOnly / u_glyphOnly mode. Both calls reuse the same cached buffer (same snowVersion), so the
+   *  second is a pure re-draw with no re-vertex. */
+  private drawSnowGrid(viewportTilesW: number, viewportTilesH: number, lightTime: number): void {
+    if (!this.snowGrid || !this.gridRenderer) return;
+    const s = this.gridRenderer.renderGrid(this.snowGrid, {
+      tileWidth: BASE_TILE_PX,
+      tileHeight: BASE_TILE_PX,
+      viewportX: this.viewTileX,
+      viewportY: this.viewTileY,
+      viewportWidth: viewportTilesW,
+      viewportHeight: viewportTilesH,
+      lightSampler: this.lightSampler ?? undefined,
+      lightTime,
+      pointLightActive: this.dynamicLight,
+      lightVersion: this.lightVersion,
+      litBounds: this.lightBounds,
+      cacheVersion: this.snowVersion,
+      chunkLayer: 'snow'
+    });
+    this.stats.drawCalls++;
+    this.stats.vertexCount += s.tilesRendered * 6;
   }
 
   /** Render one glyph-only overlay grid (no-op when null). Caller sets up blend + u_glyphOnly.
