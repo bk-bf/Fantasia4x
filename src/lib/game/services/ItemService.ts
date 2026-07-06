@@ -191,6 +191,7 @@ const DETERIORATION_RATE_BY_CATEGORY: Record<string, number> = {
   wood: 0.04,
   fuel: 0.04,
   organic: 0.07,
+  hide: 0.07, // raw animal skins weather like other organics (each also sets its own rate)
   food: 0.08,
   meat: 0.08,
   storage: 0.02,

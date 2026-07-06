@@ -1320,7 +1320,7 @@
         }
       },
       "facing": {
-        "acceptsCategory": "organic",
+        "acceptsCategory": "hide",
         "quantity"       : 1,
         "variants"       : {
           "deer_hide": {"name": "Deer-Faced Round Shield"},
@@ -1825,7 +1825,7 @@
     "toolTierRequired": 0,
     "dynamicRecipe"   : {
       "hide": {
-        "acceptsCategory": "organic",
+        "acceptsCategory": "hide",
         "quantity"       : 2,
         "variants"       : {
           "deer_hide": {"name": "Deer-Hide Vest"},
@@ -1843,21 +1843,10 @@
   {
     "id"              : "make_padded_cap",
     "station"         : "makers_bench",
-    "inputs"          : {"cordage": 1},
+    "inputs"          : {"linen_cloth": 1, "plant_fiber": 2, "cordage": 1},
     "outputs"         : {"padded_cap": 1},
     "workAmount"      : 3,
-    "toolTierRequired": 0,
-    "dynamicRecipe"   : {
-      "hide": {
-        "acceptsCategory": "organic",
-        "quantity"       : 2,
-        "variants"       : {
-          "deer_hide"  : {"name": "Deer-Hide Cap"  },
-          "rabbit_pelt": {"name": "Rabbit-Pelt Cap"},
-          "wolf_hide"  : {"name": "Wolf-Hide Cap"  }
-        }
-      }
-    }
+    "toolTierRequired": 0
   },
   // ── Phase B: Tier 1 armour recipes ────────────────────────────────────────
   {
