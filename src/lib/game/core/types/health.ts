@@ -29,7 +29,7 @@ export interface EntityNeeds {
  * `pawn.transientConditions`; it appears/clears on its own when its cause does — no severity, no
  * stages. The persistent counterpart is {@link ConditionDef} (`"duration": "persistent"`).
  */
-export interface TransientConditionDef {
+export interface TransientConditionDef extends ConditionGraphFields {
   id: string;
   name: string;
   /** Discriminant against {@link ConditionDef}: `true` for a transient condition. Persistent
@@ -212,11 +212,63 @@ export interface ConditionDriver {
 }
 
 /**
+ * A threshold/probability predicate over a pawn's live state — the `when` gate on a condition edge
+ * (TRAIT-SYSTEM-V2 §5). All present comparisons must hold. Kept allocation-free to evaluate: it's a
+ * plain data bag read by `conditionGraph.evaluatePredicate`.
+ */
+export interface ConditionPredicate {
+  /** A `Pawn.needs` field / tracked meter: hunger|thirst|fatigue|wetness|coldExposure|heatExposure|hygiene. */
+  need?: string;
+  /** A derived quantity: 'bloodFrac' (0–1 of max), 'pain' (0–100), 'ambientLight' (0–1), 'severity'
+   *  (of the SOURCE condition, for escalation edges). */
+  meter?: 'bloodFrac' | 'pain' | 'ambientLight' | 'severity';
+  /** Threshold bounds on the chosen need/meter (any combination; all must hold). */
+  atOrAbove?: number;
+  atOrBelow?: number;
+  /** Environment gate — the pawn is under an open sky (no roof). */
+  unsheltered?: boolean;
+  /** Requires another condition present / absent on the pawn. */
+  hasCondition?: string;
+  lacksCondition?: string;
+}
+
+/**
+ * A weather-style relationship edge from one condition to another (TRAIT-SYSTEM-V2 §5). While the
+ * SOURCE condition is active and `when` holds, the edge may spawn/escalate `to`. Mirrors the
+ * `weather.jsonc` transition shape.
+ */
+export interface ConditionTrigger {
+  /** Target condition id to spawn or escalate. */
+  to: string;
+  /** Predicate that must hold for the edge to fire (omitted ⇒ always eligible). */
+  when?: ConditionPredicate;
+  /** Per-SECOND probability the edge fires while eligible. OMITTED ⇒ a DETERMINISTIC/certain edge that
+   *  fires every eligible tick — this is how the shock-from-pain/blood certainty is preserved. */
+  chance?: number;
+  /** Severity added to `to` when the edge fires (0–1). Omit ⇒ just ensure the target is present. */
+  severity?: number;
+  /** 'tick' (default) — evaluate every tick; 'onset' — only the tick the source first appears. */
+  per?: 'tick' | 'onset';
+}
+
+/** Fields shared by both condition shapes for the TRAIT-SYSTEM-V2 relationship graph. */
+export interface ConditionGraphFields {
+  /** Categorisation tags for querying, relationship rules, and UI grouping — e.g.
+   *  ["environmental","cold"], ["combat","bleed"], ["disease"], ["racial","aura"]. */
+  flags?: string[];
+  /** Outgoing edges: while active, these may trigger other conditions (probabilistic or deterministic). */
+  triggers?: ConditionTrigger[];
+  /** Environment gate — the condition is ACTIVE only while this predicate holds (generalises
+   *  `needOnset` + the photosynthesis / light_sensitive gating). */
+  activateWhen?: ConditionPredicate;
+}
+
+/**
  * A persistent condition (conditions.jsonc, `"duration": "persistent"`). Carries its own tracked
  * `severity` in `pawn.conditions` that worsens/recovers gradually across ticks and graduates through
  * {@link ConditionStage}s; can be lethal. The transient counterpart is {@link TransientConditionDef}.
  */
-export interface ConditionDef {
+export interface ConditionDef extends ConditionGraphFields {
   id: string;
   name: string;
   /** Discriminant against {@link TransientConditionDef}: persistent conditions omit `transient`

@@ -642,6 +642,13 @@
         // (EnvironmentService.accrueWetness). Susceptibility differs only in FILL RATE, gated by the
         // `wetness_resistance` stat (fur/hide/fitness) — NOT a different threshold.
         "needOnset": {"need": "wetness", "atOrAbove": 100},
+        // TRAIT-SYSTEM-V2 §5: soaked + a maxed cold meter → a chance to catch a chill that seeds
+        // hypothermia (the WET_CHILL edge, values from PawnStateMachine constants). SCHEMA-ONLY so far —
+        // the tickConditions evaluator wiring (behaviour-identical) is the next increment.
+        "flags": ["environmental", "cold-vector"],
+        "triggers": [
+            { "to": "hypothermia", "when": {"need": "coldExposure", "atOrAbove": 100}, "chance": 0.04, "severity": 0.04 }
+        ],
         "modifiers": {"dexterity": 0.95, "moveSpeed": 0.9, "workEfficiency": 0.95}
     },
     {
