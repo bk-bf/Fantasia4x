@@ -58,6 +58,21 @@ export function getTransientConditionDef(id: string): TransientConditionDef | un
   return TRANSIENT_BY_ID.get(id);
 }
 
+/** Any condition def (persistent OR transient) by id — for the TRAIT-SYSTEM-V2 §5 graph, whose edges
+ *  can be declared on either kind. */
+const CONDITION_BY_ID = new Map<string, ConditionDef | TransientConditionDef>(
+  ALL_CONDITION_DEFS.map((d) => [d.id, d])
+);
+export function getConditionDefById(id: string): ConditionDef | TransientConditionDef | undefined {
+  return CONDITION_BY_ID.get(id);
+}
+
+/** Precomputed set of condition ids whose def declares outgoing `triggers` — the cheap per-tick gate
+ *  so the graph trigger pass does work only for pawns that actually carry a trigger-bearing condition. */
+export const CONDITION_IDS_WITH_TRIGGERS: ReadonlySet<string> = new Set(
+  ALL_CONDITION_DEFS.filter((d) => (d.triggers?.length ?? 0) > 0).map((d) => d.id)
+);
+
 /** Status-animation priority for a condition id (conditions.jsonc `priority`), default 0. When an entity
  *  has several glyph-animated states active, the renderer plays the highest-priority one (collapse > sleep
  *  > winded), so the most important state-to-know shows over its sprite. */

@@ -65,6 +65,8 @@ import {
   conditionsSig,
   syncFractureConditions,
   getTransientConditionDef,
+  getConditionDefById,
+  CONDITION_IDS_WITH_TRIGGERS,
   COLLAPSE_CONSCIOUSNESS,
   RECOVER_CONSCIOUSNESS,
   TIRED_FATIGUE_THRESHOLD
@@ -86,6 +88,7 @@ import {
   effectiveWindAt,
   seasonBakedTemp,
   getAmbientLight,
+  ticksFromGameHours,
   TURNS_PER_DAY
 } from '../services/EnvironmentService';
 import { calcBloodRegenRate } from '../entities/Pawns';
@@ -677,7 +680,42 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // ── Shock ──────────────────────────────────────────────────────────────────
   // Severe pain OR heavy blood loss sends the body into shock — shared rule for pawns + mobs
   // (applyShock). This subsumes the old `blood_loss` condition: the worse of pain/blood drives it.
+  // NOTE: shock is a CONTINUOUS meter-driven severity (SET to max(painSev, bloodSev) each tick, with a
+  // pain-numbing multiplier), not a fixed-severity transition edge — so it keeps its exact function and
+  // is flagged `driver` in conditions.jsonc rather than expressed as a `fireTriggers` edge (which would
+  // ACCRUE, changing behaviour). Same for the infection accrual above.
   applyShock(conditions, pawn.pain ?? 0, 1 - bloodVolume / maxBloodVolume);
+
+  // ── Condition graph: trigger edges (TRAIT-SYSTEM-V2 §5) ─────────────────────
+  // While a trigger-bearing condition is active — a timer-based transient (e.g. envenomed) or a
+  // persistent one — roll its outgoing edges to spawn/escalate other conditions (envenomed → nausea).
+  // The wet→hypothermia edge is handled inline in the temperature block above (it needs the fresh
+  // in-tick cold meter). Cheap-gated by CONDITION_IDS_WITH_TRIGGERS so a pawn with no such condition
+  // does zero work + no allocation.
+  {
+    const timers = pawn.conditionTimers;
+    const timerHas =
+      !!timers &&
+      Object.entries(timers).some(([k, v]) => v > 0 && CONDITION_IDS_WITH_TRIGGERS.has(k));
+    const persistHas = conditions.some((c) => CONDITION_IDS_WITH_TRIGGERS.has(c.id));
+    if (timerHas || persistHas) {
+      const ctx = buildGraphContext(pawn, gameState.turn);
+      const roll = (chance: number) => rng.chance(perTick(chance));
+      if (timers) {
+        for (const [id, rem] of Object.entries(timers)) {
+          if (rem <= 0 || !CONDITION_IDS_WITH_TRIGGERS.has(id)) continue;
+          for (const e of fireTriggers(getConditionDefById(id)?.triggers, ctx, roll, false))
+            applyFiredEdge(pawn, conditions, e);
+        }
+      }
+      for (const c of conditions) {
+        if (!CONDITION_IDS_WITH_TRIGGERS.has(c.id)) continue;
+        ctx.sourceSeverity = c.severity;
+        for (const e of fireTriggers(getConditionDefById(c.id)?.triggers, ctx, roll, false))
+          applyFiredEdge(pawn, conditions, e);
+      }
+    }
+  }
 
   // ── Persist updated condition/blood state ──────────────────────────────────
   // ADR-002 amendment (hot per-tick, behind the worker): the common (non-lethal) path mutates the
@@ -888,6 +926,22 @@ function applyConditionEdge(conditions: { id: string; severity: number }[], edge
       ...conditions[idx],
       severity: Math.min(1, conditions[idx].severity + sev)
     };
+}
+
+/** Apply a fired edge whose target may be PERSISTENT (severity, via {@link applyConditionEdge}) or
+ *  TRANSIENT (a timer-based condition like nausea → stamped into `conditionTimers`, same machinery as a
+ *  weapon's onHitEffect). TRAIT-SYSTEM-V2 §5. */
+function applyFiredEdge(
+  pawn: Pawn,
+  conditions: { id: string; severity: number }[],
+  edge: FiredEdge
+): void {
+  if (getConditionDefById(edge.to)?.transient === true) {
+    const timers = (pawn.conditionTimers ??= {});
+    timers[edge.to] = Math.max(timers[edge.to] ?? 0, ticksFromGameHours(edge.durationHours ?? 1));
+  } else {
+    applyConditionEdge(conditions, edge);
+  }
 }
 
 /**

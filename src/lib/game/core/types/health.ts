@@ -245,8 +245,11 @@ export interface ConditionTrigger {
   /** Per-SECOND probability the edge fires while eligible. OMITTED ⇒ a DETERMINISTIC/certain edge that
    *  fires every eligible tick — this is how the shock-from-pain/blood certainty is preserved. */
   chance?: number;
-  /** Severity added to `to` when the edge fires (0–1). Omit ⇒ just ensure the target is present. */
+  /** For a PERSISTENT target: severity added to `to` when the edge fires (0–1). Omit ⇒ just ensure
+   *  the target is present. */
   severity?: number;
+  /** For a TRANSIENT target (timer-based, e.g. nausea): how long to stamp it, in in-game hours. */
+  durationHours?: number;
   /** 'tick' (default) — evaluate every tick; 'onset' — only the tick the source first appears. */
   per?: 'tick' | 'onset';
 }

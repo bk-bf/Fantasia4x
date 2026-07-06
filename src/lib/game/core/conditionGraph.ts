@@ -26,10 +26,12 @@ export interface GraphContext {
 
 const NONE: FiredEdge[] = [];
 
-/** An edge that fired this tick — the caller adds/escalates `to` by `severity` (or just ensures present). */
+/** An edge that fired this tick. The caller adds/escalates a PERSISTENT `to` by `severity`, or stamps a
+ *  TRANSIENT `to` (timer-based) for `durationHours` — or just ensures the target present. */
 export interface FiredEdge {
   to: string;
   severity?: number;
+  durationHours?: number;
 }
 
 function meterValue(p: ConditionPredicate, ctx: GraphContext): number | undefined {
@@ -82,7 +84,7 @@ export function fireTriggers(
     if (t.per === 'onset' && !isOnset) continue;
     if (!evaluatePredicate(t.when, ctx)) continue;
     if (t.chance !== undefined && !roll(t.chance)) continue;
-    (out ??= []).push({ to: t.to, severity: t.severity });
+    (out ??= []).push({ to: t.to, severity: t.severity, durationHours: t.durationHours });
   }
   return out ?? NONE;
 }
