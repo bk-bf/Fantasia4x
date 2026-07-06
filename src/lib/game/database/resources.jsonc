@@ -1708,8 +1708,8 @@
       "workAmount"     : 7,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "cabbage",      "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
-        {"itemId": "cabbage_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+        {"itemId": "cabbage",      "min": 10, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "cabbage_seed", "min":  1, "max":  2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
@@ -1736,8 +1736,8 @@
       "workAmount"     : 7,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "turnip",      "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
-        {"itemId": "turnip_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+        {"itemId": "turnip",      "min": 5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "turnip_seed", "min": 1, "max":  2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
@@ -1764,8 +1764,8 @@
       "workAmount"     : 7,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "onion",      "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
-        {"itemId": "onion_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+        {"itemId": "onion",      "min": 5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "onion_seed", "min": 1, "max":  2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
@@ -1792,8 +1792,8 @@
       "workAmount"     : 7,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "kale",      "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
-        {"itemId": "kale_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+        {"itemId": "kale",      "min": 10, "max": 20, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "kale_seed", "min":  1, "max":  2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
@@ -1820,8 +1820,8 @@
       "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "radish",      "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
-        {"itemId": "radish_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+        {"itemId": "radish",      "min": 10, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "radish_seed", "min":  1, "max":  2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
@@ -1848,8 +1848,8 @@
       "workAmount"     : 7,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "beans",     "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
-        {"itemId": "bean_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+        {"itemId": "beans",     "min": 15, "max": 35, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "bean_seed", "min":  1, "max":  2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
@@ -1876,8 +1876,8 @@
       "workAmount"     : 7,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "peas",     "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
-        {"itemId": "pea_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+        {"itemId": "peas",     "min": 10, "max": 30, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "pea_seed", "min":  1, "max":  2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
@@ -1904,8 +1904,8 @@
       "workAmount"     : 8,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "grapes",     "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15},
-        {"itemId": "grape_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+        {"itemId": "grapes",     "min": 20, "max": 50, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "grape_seed", "min":  1, "max":  2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
@@ -2238,7 +2238,7 @@
       "toolRequirement": {"workType": "mining", "minTier": 1},  // a pick — barehanded mining a solid wall was a bug
       "yields"         : [
         {"itemId": "granite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2},
-        {"itemId": "marble",  "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1},   // rare: prestige stone
+        {"itemId": "marble", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1},  // rare: prestige stone
         {"itemId": "flint_shard", "min": 0, "max": 10, "skillId": "mining", "skillMultiplier": 0.1}
         // coal + salt now come from mineral_deposit nodes (coal / rock_salt), not mountain walls
       ]
