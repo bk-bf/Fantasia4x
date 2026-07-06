@@ -44,8 +44,12 @@ export class GameGrid {
   private operationCount = 0;
   private operationStartTime = Date.now();
 
-  // Grid dimensions (for bounds checking)
+  // Grid dimensions (for bounds checking). Recomputed LAZILY: a removal can only shrink the bounds,
+  // and recomputing then is an O(n) scan of the whole tile Map — doing it on every removeTile turned a
+  // whole-map delta (e.g. a snow-thaw wave, ~195k removals) into O(n²) and froze the main thread. So a
+  // removal just flags the bounds stale; getBounds() rescans once, on demand (nothing reads it per-tick).
   private bounds: { min: Vec2; max: Vec2 } | null = null;
+  private boundsDirty = false;
 
   // Event listeners for reactive updates
   private listeners: ((event: GridUpdateEvent) => void)[] = [];
@@ -111,7 +115,7 @@ export class GameGrid {
 
     if (removed) {
       this.dirtyTiles.delete(key);
-      this.recalculateBounds();
+      this.boundsDirty = true; // shrink is O(n); defer to getBounds() instead of paying it per removal
       this.recordOperation();
     }
 
@@ -258,6 +262,7 @@ export class GameGrid {
     this.tiles.clear();
     this.dirtyTiles.clear();
     this.bounds = null;
+    this.boundsDirty = false; // empty grid → bounds are definitively null, nothing to reconcile
     this.recordOperation();
 
     if (hasListeners) {
@@ -272,6 +277,10 @@ export class GameGrid {
    * Get grid boundaries (min/max coordinates with tiles)
    */
   getBounds(): { min: Vec2; max: Vec2 } | null {
+    if (this.boundsDirty) {
+      this.recalculateBounds(); // pay the O(n) scan once, here, not per removal
+      this.boundsDirty = false;
+    }
     return this.bounds ? { ...this.bounds } : null;
   }
 
