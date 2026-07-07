@@ -222,7 +222,7 @@
         for (const [workType, mul] of Object.entries(value as Record<string, number>)) {
           const pct = Math.round((mul - 1) * 100);
           tags.push({
-            label: workType,
+            label: workType.replace(/_/g, ' '),
             value: `${pct >= 0 ? '+' : ''}${pct}% ${axisShort(name)}`,
             type: pct >= 0 ? 'pos' : 'neg'
           });
