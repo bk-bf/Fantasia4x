@@ -7,6 +7,7 @@
  */
 import type { GameState, Pawn, Mob, Building, PlacedBuilding, Job } from '../../core/types';
 import { transientNeedOnset } from '../../core/needs';
+import { isUncareable } from '../../core/Wounds';
 import BUILDINGS_DATABASE_RAW from '../../database/buildings.jsonc';
 import { jobService } from '../../services/JobService';
 import { pawnService } from '../../services/PawnService';
@@ -69,13 +70,23 @@ const RECOVER_BLEED_THRESHOLD = 1.5;
  */
 export function needsRecovery(pawn: Pawn): boolean {
   if (pawn.isAlive === false) return false;
-  if ((pawn.pain ?? 0) >= RECOVER_PAIN_THRESHOLD) return true;
+  // Only HEALABLE wounds should pull a pawn off work to lie down — an UNCAREABLE wound (a permanent
+  // trait-stamped scar, or a closed non-bleeding stump) can't be mended by rest OR tended by a caretaker
+  // (caretake.ts skips it too), so it must not register as "needs healing" and ping the pawn to Rest.
+  // A scar contributes chronic pain + a serious/critical severity that would otherwise trip the checks
+  // below every tick — so we skip it here, mirroring the isUncareable gate on infection + wound care.
   let bleed = 0;
+  let recoverablePain = 0;
   for (const l of pawn.limbs ?? []) {
     bleed += l.bleedRate ?? 0;
     for (const p of l.parts ?? [])
-      for (const w of p.injuries) if (w.severity !== 'minor') return true;
+      for (const w of p.injuries) {
+        if (isUncareable(w)) continue;
+        recoverablePain += w.painContribution ?? 0;
+        if (w.severity !== 'minor') return true;
+      }
   }
+  if (recoverablePain >= RECOVER_PAIN_THRESHOLD) return true;
   return bleed >= RECOVER_BLEED_THRESHOLD;
 }
 
