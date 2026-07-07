@@ -3,6 +3,7 @@
      panel, header line, label/value rows, and a separated MODIFIERS/ABILITIES block. -->
 <script lang="ts">
   import type { Item, Recipe } from '$lib/game/core/types';
+  import type { NaturalGearMeta } from '$lib/components/util/naturalGear';
   import { recipeService } from '$lib/game/services/RecipeService';
   import { getMaterialProperty } from '$lib/game/core/materialProperties';
   import { itemService } from '$lib/game/services/ItemService';
@@ -35,8 +36,19 @@
     /** Work category (labor) this craft belongs to — "Butchery" / "Leatherworking" / "General
      *  Crafting" / "Cooking" … Shown as the first row so the player knows which job performs it. */
     jobLabel?: string | null;
+    /** Natural-gear extras (innate / evolution stage / carry cost) — rendered in a NATURAL block.
+     *  Null for normal craftables, so their tooltip is unchanged. */
+    natural?: NaturalGearMeta | null;
   }
-  let { item, x, y, recipe = null, selectedIngredients = {}, jobLabel = null }: Props = $props();
+  let {
+    item,
+    x,
+    y,
+    recipe = null,
+    selectedIngredients = {},
+    jobLabel = null,
+    natural = null
+  }: Props = $props();
 
   // Per-material weapon/armour deltas for the chosen ingredient(s) (e.g. ash shaft → +3 accuracy).
   let deltas = $derived(
@@ -140,7 +152,8 @@
     if (ap) {
       if (ap.armorType) out.push({ label: 'Class', val: cap(ap.armorType) });
       const slot = ap.slot ?? ap.equipmentSlot;
-      if (slot) out.push({ label: 'Slot', val: cap(String(slot)) });
+      if (slot)
+        out.push({ label: 'Slot', val: cap(String(slot).replace(/([A-Z])/g, ' $1').trim()) });
       if (ap.armorLayer) out.push({ label: 'Layer', val: cap(ap.armorLayer) });
       if (ap.slashResistance) out.push({ label: 'Slash res.', val: pct(ap.slashResistance) });
       if (ap.crushResistance) out.push({ label: 'Crush res.', val: pct(ap.crushResistance) });
@@ -251,6 +264,26 @@
       <span>{r.val}</span>
     </div>
   {/each}
+
+  {#if natural}
+    <div class="tip-sep">NATURAL</div>
+    <div class="tip-row">
+      <span class="tip-lbl">Innate</span>
+      <span>Yes · can't be unequipped</span>
+    </div>
+    {#if natural.carryPenalty}
+      <div class="tip-row">
+        <span class="tip-lbl">Carry cost</span>
+        <span>−{Math.round(natural.carryPenalty * 100)}%</span>
+      </div>
+    {/if}
+    {#if natural.stage}
+      <div class="tip-row">
+        <span class="tip-lbl">Evolution</span>
+        <span>Stage {natural.stage}/3 · {natural.evolves ? 'grows with age' : 'apex'}</span>
+      </div>
+    {/if}
+  {/if}
 
   {#if farming}
     <div class="tip-sep">FARMING · {farming.crop}</div>

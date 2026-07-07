@@ -4,7 +4,7 @@
      and a cursor-following hover tooltip with the full breakdown. -->
 <script lang="ts">
   import type { Trait, Pawn, Item } from '$lib/game/core/types';
-  import { naturalGearForTrait } from '$lib/components/util/naturalGear';
+  import { naturalGearForTrait, type NaturalGearMeta } from '$lib/components/util/naturalGear';
   import { workAxisLabel } from '$lib/components/util/pawnUtils';
   import { partLabel, limbLabel } from '$lib/utils/bodyLabels';
   import { getTransientConditionDef } from '$lib/game/core/needs';
@@ -18,6 +18,8 @@
   import { gameState } from '$lib/stores/gameState';
   import StatTooltip from '$lib/components/pawn/StatTooltip.svelte';
   import { buildStatContext, computeStatView, isDerivedStat } from '$lib/components/util/statView';
+  import ConditionTooltip from '$lib/components/pawn/ConditionTooltip.svelte';
+  import { conditionViewForId } from '$lib/components/util/conditionInfo';
 
   // A trait resistance/rate effect key → its stats.jsonc DERIVED stat id, so the pill can open the SAME
   // attributes-tab tooltip for that stat. (nightVision has no stat → stays a plain pill.)
@@ -132,52 +134,20 @@
     value: string;
     type: 'pos' | 'neg' | 'neutral';
     tip?: string;
-    kind?: 'gear' | 'work' | 'attr';
+    kind?: 'gear' | 'work' | 'attr' | 'cond';
+    /** kind 'cond' — a granted/aura condition id + its "FROM" label; hover shows the shared ConditionTooltip. */
+    condId?: string;
+    condSource?: string;
     /** kind 'gear' — the natural weapon/armor item fed to ItemStatTooltip (the SAME gear-tab tooltip). */
     gearItem?: Item;
+    /** kind 'gear' — the innate / evolution-stage / carry-cost extras for the tooltip's NATURAL block. */
+    gearNatural?: NaturalGearMeta;
     workId?: string;
     statId?: string;
     /** Extra rows for an `info`-style hover (condition modifiers, wound detail, bodyMod prose…). */
     info?: { title?: string; desc?: string; rows?: { k: string; v: string }[] };
   };
 
-  // Human sentence for a condition's activateWhen predicate — "active while wet ≥ 50" etc.
-  const PRED_NEED_LABEL: Record<string, string> = {
-    wetness: 'wet',
-    coldExposure: 'cold',
-    heatExposure: 'hot',
-    hunger: 'hungry',
-    thirst: 'thirsty',
-    fatigue: 'tired',
-    hygiene: 'filthy'
-  };
-  function describePredicate(w: NonNullable<ReturnType<typeof getTransientConditionDef>>['activateWhen']): string {
-    if (!w) return '';
-    const bits: string[] = [];
-    if (w.need) bits.push(PRED_NEED_LABEL[w.need] ?? w.need);
-    if (w.meter === 'bloodFrac') bits.push('bleeding low');
-    else if (w.meter === 'pain') bits.push('in pain');
-    else if (w.meter === 'ambientLight') bits.push((w.atOrBelow ?? 1) <= 0.5 ? 'in the dark' : 'in daylight');
-    if (w.hasCondition) bits.push(getTransientConditionDef(w.hasCondition)?.name?.toLowerCase() ?? w.hasCondition.replace(/_/g, ' '));
-    if (w.unsheltered) bits.push('under open sky');
-    return bits.join(' + ');
-  }
-  // Tooltip text for a granted condition pill: description + live modifiers + when it's active.
-  function conditionTip(condId: string): string {
-    const cond = getTransientConditionDef(condId);
-    if (!cond) return '';
-    const mods = Object.entries(cond.modifiers ?? {})
-      .filter(([, v]) => typeof v === 'number' && v !== 1)
-      .map(([k, v]) => {
-        const pct = Math.round(((v as number) - 1) * 100);
-        return `${k.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').toLowerCase()} ${pct >= 0 ? '+' : ''}${pct}%`;
-      });
-    const when = cond.activateWhen ? `active while ${describePredicate(cond.activateWhen)}` : null;
-    const proc = cond.triggers?.length
-      ? 'can trigger: ' + cond.triggers.map((tr) => getTransientConditionDef(tr.to)?.name ?? tr.to.replace(/_/g, ' ')).join(', ')
-      : null;
-    return [cond.description, mods.join(' · '), when, proc].filter(Boolean).join('\n');
-  }
   // Pill tint per polarity — feeds the StatPills-style label/value colour-mix.
   const PILL_TINT: Record<Tag['type'], string> = {
     pos: '#6fae3a',
@@ -236,14 +206,17 @@
     // TAB uses (def, resistances, on-hit…). No separate nat-armor / carry / resistance pills — that whole
     // breakdown lives in the one gear tooltip, so the card isn't a pile of redundant pills.
     if (gear) {
-      tags.push({ label: '＋', value: gear.name.toLowerCase(), type: 'pos', kind: 'gear', gearItem: gear.item });
+      tags.push({ label: '＋', value: gear.name.toLowerCase(), type: 'pos', kind: 'gear', gearItem: gear.item, gearNatural: gear.natural });
     } else if (cond) {
-      // §6b passive covering/affinity (no gear granted): the "＋ <name>" pill shows the condition's tooltip.
+      // §6b passive covering/affinity (no gear granted): the "＋ <name>" pill opens the SAME condition
+      // tooltip the health tab uses (ConditionTooltip), not a re-derived one.
       tags.push({
         label: '＋',
         value: cond.name.toLowerCase(),
         type: 'pos',
-        tip: conditionTip(trait.selfCondition!)
+        kind: 'cond',
+        condId: trait.selfCondition,
+        condSource: `${trait.name} (racial trait)`
       });
     }
     // §6a: an aura radiates a condition to everyone within its (finite) radius.
@@ -253,7 +226,9 @@
         label: 'aura',
         value: `${(auraCond?.name ?? trait.aura.condition.replace(/_/g, ' ')).toLowerCase()} · ${trait.aura.radius} tiles · ${trait.aura.affects}`,
         type: trait.aura.affects === 'foes' ? 'neutral' : 'pos',
-        tip: auraCond ? conditionTip(trait.aura.condition) : undefined
+        kind: auraCond ? 'cond' : undefined,
+        condId: trait.aura.condition,
+        condSource: `${trait.name} — radiates to ${trait.aura.affects} within ${trait.aura.radius} tiles`
       });
     }
     // §3d grafts: the trait grows a real, losable limb.
@@ -318,13 +293,8 @@
         type: 'neg',
         tip: `This body can't wear: ${blockedLabels(trait).join(', ')}.`
       });
-    if (trait.stage)
-      tags.push({
-        label: 'stage',
-        value: `${trait.stage}/3`,
-        type: 'neutral',
-        tip: `Stage ${trait.stage} of 3${trait.evolvesTo ? ' — grows to the next stage with age.' : ' — the apex of its line.'}`
-      });
+    // §3 evolution stage is shown in the natural-gear tooltip's NATURAL block (via `gear.natural`),
+    // not as its own pill.
     for (const [name, value] of Object.entries(trait.effects || {})) {
       if (name.endsWith('Bonus') && typeof value === 'number') {
         const stat = name.replace('Bonus', '');
@@ -462,7 +432,19 @@
   {@const tag = hoveredPill.tag}
   {#if tag.kind === 'gear'}
     {#if tag.gearItem}
-      <ItemStatTooltip item={tag.gearItem} x={hoveredPill.x} y={hoveredPill.y} />
+      <ItemStatTooltip
+        item={tag.gearItem}
+        natural={tag.gearNatural}
+        x={hoveredPill.x}
+        y={hoveredPill.y}
+      />
+    {/if}
+  {:else if tag.kind === 'cond'}
+    {@const cview = tag.condId ? conditionViewForId(tag.condId, tag.condSource) : null}
+    {#if cview}
+      <HoverTip x={hoveredPill.x} y={hoveredPill.y}>
+        <ConditionTooltip view={cview} />
+      </HoverTip>
     {/if}
   {:else if tag.kind === 'work' && pawn && tag.workId}
     {@const wc = WORK_CATEGORIES.find((c) => c.id === tag.workId)}

@@ -6,7 +6,7 @@
   import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
   import { qualityPrefix, qualityColor } from '$lib/game/core/itemQuality';
   import { blockedSlots } from '$lib/game/core/PawnEquipment';
-  import { naturalGearForTrait } from '$lib/components/util/naturalGear';
+  import { naturalGearForTrait, type NaturalGearMeta } from '$lib/components/util/naturalGear';
 
   let {
     pawn,
@@ -53,7 +53,7 @@
   // Main Hand, fur on Mid); a non-blocking one (fangs, scaled hide) surfaces as an innate BADGE that
   // layers with worn gear. `tip` feeds the same ItemStatTooltip real gear uses on hover — the weapon's
   // actual item def, or a synthesized armor def carrying the condition's defense + weight.
-  type Nat = { name: string; sub: string; tip?: Item };
+  type Nat = { name: string; sub: string; tip?: Item; meta?: NaturalGearMeta };
   const natural = $derived.by(() => {
     const occupants: Partial<Record<EquipmentSlot, Nat>> = {};
     const badges: Nat[] = [];
@@ -61,7 +61,7 @@
       // Shared builder — the SAME tooltip-ready Item the trait card's gear pill uses (one source).
       const g = naturalGearForTrait(t);
       if (!g) continue;
-      const entry: Nat = { name: g.name, sub: g.sub, tip: g.item };
+      const entry: Nat = { name: g.name, sub: g.sub, tip: g.item, meta: g.natural };
       const primary = t.blocksSlots?.[0];
       if (primary) occupants[primary] = entry;
       else badges.push(entry);
@@ -71,9 +71,9 @@
 
   // Hover popup — the same stat/ability breakdown shown on craftable cards (ItemStatTooltip),
   // portaled to the cursor while hovering a filled slot.
-  let statTip: { item: Item; x: number; y: number } | null = $state(null);
-  function showTip(def: Item, e: MouseEvent) {
-    statTip = { item: def, x: e.clientX, y: e.clientY };
+  let statTip: { item: Item; natural?: NaturalGearMeta; x: number; y: number } | null = $state(null);
+  function showTip(def: Item, e: MouseEvent, natural?: NaturalGearMeta) {
+    statTip = { item: def, natural, x: e.clientX, y: e.clientY };
   }
   function moveTip(e: MouseEvent) {
     if (statTip) statTip = { ...statTip, x: e.clientX, y: e.clientY };
@@ -105,7 +105,7 @@
           : undefined}
       onmouseenter={(e) => {
         const tip = def ?? nat?.tip;
-        if (tip) showTip(tip, e);
+        if (tip) showTip(tip, e, def ? undefined : nat?.meta);
       }}
       onmousemove={moveTip}
       onmouseleave={hideTip}
@@ -165,7 +165,7 @@
       <span
         class="innate-badge"
         title="{b.name} — {b.sub} (innate)"
-        onmouseenter={(e) => b.tip && showTip(b.tip, e)}
+        onmouseenter={(e) => b.tip && showTip(b.tip, e, b.meta)}
         onmousemove={moveTip}
         onmouseleave={hideTip}
         role="presentation">{b.name} · {b.sub}</span
@@ -175,7 +175,7 @@
 {/if}
 
 {#if statTip}
-  <ItemStatTooltip item={statTip.item} x={statTip.x} y={statTip.y} />
+  <ItemStatTooltip item={statTip.item} natural={statTip.natural} x={statTip.x} y={statTip.y} />
 {/if}
 
 <style>

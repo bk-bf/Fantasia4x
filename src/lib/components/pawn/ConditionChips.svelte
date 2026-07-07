@@ -4,6 +4,7 @@
 <script lang="ts">
   import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
   import HoverTip from '$lib/components/UI/HoverTip.svelte';
+  import ConditionTooltip from './ConditionTooltip.svelte';
   import type { ConditionView } from '$lib/components/util/conditionInfo';
 
   let {
@@ -53,28 +54,7 @@
 
 {#if hovered}
   <HoverTip x={mx} y={my}>
-    <div class="tip-name" style="color: {hovered.color}">
-      {hovered.name.toUpperCase()}
-      {#if hovered.severityPct != null}
-        <span class="tip-sev"
-          >· {hovered.severityPct}%{hovered.stageLabel ? ` ${hovered.stageLabel}` : ''}</span
-        >
-      {/if}
-    </div>
-    {#if hovered.lifeThreatening}
-      <div class="tip-warn">⚠ life-threatening</div>
-    {/if}
-    <div class="tip-desc">{hovered.description}</div>
-    {#if hovered.sources.length > 0}
-      <div class="tip-hdr">FROM</div>
-      {#each hovered.sources as s}
-        <div class="tip-row">• {s}</div>
-      {/each}
-    {/if}
-    {#if hovered.effects.length > 0}
-      <div class="tip-hdr">EFFECT</div>
-      <div class="tip-row">{hovered.effects.join('  ·  ')}</div>
-    {/if}
+    <ConditionTooltip view={hovered} />
   </HoverTip>
 {/if}
 
@@ -125,34 +105,5 @@
     50% {
       opacity: 0.45;
     }
-  }
-
-  .tip-name {
-    font-weight: bold;
-    letter-spacing: 0.04em;
-  }
-  .tip-sev {
-    color: var(--text-muted);
-    font-weight: normal;
-  }
-  .tip-warn {
-    color: var(--neg, #ff5252);
-    font-size: 11px;
-    margin-top: 1px;
-  }
-  .tip-desc {
-    color: var(--text-muted);
-    font-style: italic;
-    margin: 3px 0;
-  }
-  .tip-hdr {
-    color: var(--text-dim);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    margin-top: 4px;
-  }
-  .tip-row {
-    color: var(--text);
-    font-size: 11px;
   }
 </style>

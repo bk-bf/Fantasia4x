@@ -297,3 +297,42 @@ export function getActiveConditionViews(entity: Pawn | Mob): ConditionView[] {
 
   return views;
 }
+
+/** Build a ConditionView for a single condition id straight from its DEF (no active instance required) —
+ *  for a trait's granted/self condition or an aura's condition, so the trait card reuses the SAME
+ *  ConditionTooltip the health tab shows. `sourceLabel` fills the "FROM" line (e.g. the granting trait). */
+export function conditionViewForId(condId: string, sourceLabel?: string): ConditionView | null {
+  const sources = sourceLabel ? [sourceLabel] : [];
+  const p = PERSISTENT.find((d) => d.id === condId);
+  if (p) {
+    const stage = p.stages[0];
+    return {
+      id: p.id,
+      name: p.name,
+      color: stage?.color ?? '#c8c8c8',
+      charSpans: p.charSpans,
+      description: p.description,
+      kind: 'persistent',
+      stageLabel: stage?.label,
+      lifeThreatening: stage?.lifeThreatening,
+      sources,
+      effects: effectLines(stage?.modifiers ?? {}),
+      modifiers: stage?.modifiers ?? {}
+    };
+  }
+  const t = TRANSIENT.find((d) => d.id === condId);
+  if (t) {
+    return {
+      id: t.id,
+      name: t.name,
+      color: t.color,
+      charSpans: t.charSpans,
+      description: t.description,
+      kind: 'transient',
+      sources,
+      effects: effectLines(t.modifiers),
+      modifiers: t.modifiers
+    };
+  }
+  return null;
+}

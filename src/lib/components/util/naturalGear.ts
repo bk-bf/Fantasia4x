@@ -6,6 +6,19 @@ import type { Item, Trait } from '$lib/game/core/types';
 import { getTransientConditionDef } from '$lib/game/core/needs';
 import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
 
+/** The natural-gear-only extras rendered in `ItemStatTooltip`'s NATURAL block — facts that aren't part
+ *  of a normal item: it's innate, its carry cost, and where it sits in its 3-stage evolution line. */
+export interface NaturalGearMeta {
+  /** Natural gear is always innate — it can't be unequipped. */
+  innate: true;
+  /** Position in the 3-stage evolution line (§3 natural-gear traits). */
+  stage?: 1 | 2 | 3;
+  /** True when it grows into a further stage with age; false when it's the apex of its line. */
+  evolves: boolean;
+  /** Fraction (0–1) of carry capacity this gear consumes. */
+  carryPenalty?: number;
+}
+
 export interface NaturalGear {
   /** Display name (weapon name, or the trait name for an armour covering). */
   name: string;
@@ -14,6 +27,8 @@ export interface NaturalGear {
   /** The item fed to `ItemStatTooltip` — the weapon's real def, or a synthesised armour def. */
   item: Item;
   kind: 'weapon' | 'armor';
+  /** Natural-gear extras (innate / evolution stage / carry cost) for the tooltip's NATURAL block. */
+  natural: NaturalGearMeta;
 }
 
 // Trait resistance effects → the armour-tooltip fields ItemStatTooltip already renders, so a covering's
@@ -32,6 +47,13 @@ export function naturalGearForTrait(t: Trait): NaturalGear | null {
   const cond = t.selfCondition ? getTransientConditionDef(t.selfCondition) : undefined;
   if (!cond) return null;
 
+  const natural: NaturalGearMeta = {
+    innate: true,
+    stage: t.stage,
+    evolves: !!t.evolvesTo,
+    carryPenalty: cond.carryPenalty
+  };
+
   const weaponDefs = (cond.grantsNaturalWeapon ?? [])
     .map((id) => gameCoordinator.getItemById(id))
     .filter((d): d is Item => !!d);
@@ -40,7 +62,8 @@ export function naturalGearForTrait(t: Trait): NaturalGear | null {
       name: weaponDefs.map((d) => d.name).join(', '),
       sub: 'natural weapon',
       item: weaponDefs[0],
-      kind: 'weapon'
+      kind: 'weapon',
+      natural
     };
   }
 
@@ -49,6 +72,8 @@ export function naturalGearForTrait(t: Trait): NaturalGear | null {
   const ap: Record<string, unknown> = {
     defense: armor,
     armorType: 'natural',
+    // The slot the covering occupies (e.g. "bodyMid") — surfaces as the tooltip's "Slot" row.
+    slot: t.blocksSlots?.[0],
     armorLayer: cond.mode === 'replace' ? 'replaces the slot' : 'stacks with worn gear'
   };
   // Fold the covering's resistances into the armour def so the ONE tooltip shows them.
@@ -66,6 +91,7 @@ export function naturalGearForTrait(t: Trait): NaturalGear | null {
       description: cond.description,
       armorProperties: ap
     } as unknown as Item,
-    kind: 'armor'
+    kind: 'armor',
+    natural
   };
 }
