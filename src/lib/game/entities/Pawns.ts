@@ -2,7 +2,7 @@ import type { Pawn, EntityNeeds, PawnState, Race, EntityStats, Trait, Injury } f
 import { createPawnInventory, createPawnEquipment } from '../core/PawnEquipment';
 import { drawPawnTraits } from '../core/Race';
 import { createBodyPlanLimbs } from '../systems/Combat';
-import { DEFAULT_PLAN, PART_DEF_MAP, containedParts, organsOf } from '../core/BodyParts';
+import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/BodyParts';
 import type { WoundSeverity } from '../core/Wounds';
 import { rng } from '../core/rng';
 
@@ -33,11 +33,17 @@ export function calcMaxBloodVolume(physicalTraits: { weight: number }, stats: En
 // injury on the freshly-rolled body — it shows in the health tab and flows through the body model
 // (a destroyed eye halves `sight`; a lost ear dulls `hearing`), never a hidden stat fudge.
 
-/** Accumulated damage as a fraction of the part's max HP per spawn severity (severityFromFrac bands). */
+/**
+ * How much of a part's max HP a PERMANENT trait-stamped SCAR shaves. A scar is healed-over tissue, NOT a
+ * fresh battle wound, so it takes only a small slice — at most ~10% (at `critical`) — never the 20–80% a
+ * COMBAT wound of the same severity band inflicts. So even a "critical" facial scar leaves the head near
+ * full (45 → ~40), not one blow from caving in. The tier's real teeth is the chronic PAIN below, not the
+ * HP dent. `destroyed` is the exception — a LOST part (eye/hand/whole limb, §5a) is fully gone.
+ */
 const SPAWN_WOUND_DAMAGE_FRAC: Record<WoundSeverity, number> = {
-  minor: 0.2,
-  serious: 0.5,
-  critical: 0.8,
+  minor: 0.03,
+  serious: 0.06,
+  critical: 0.1,
   destroyed: 1
 };
 /** Chronic ache of a lesser permanent wound (a destroyed part is a long-healed stump — painless). */
@@ -146,13 +152,6 @@ export function applyTraitWounds(pawn: Pawn): void {
         if (def.skeleton || holdsVital) severity = 'critical';
         else cascadeIds = contents;
       }
-      // A permanent scar on an OUTER flesh region that SHELTERS internal organs (head→brain,
-      // chest→heart/lungs, abdomen→liver/kidneys) is struck in combat — leaving it critically low (80%
-      // gone) means one blow caves it in and takes the organs, a death sentence from a starting scar.
-      // Cap such a region at `serious` (~50% HP). Limbs that wrap only bone (arms/legs) are uncapped —
-      // a withered arm at critical is fine, its loss isn't fatal.
-      if (spec.severity === 'critical' && (def.hitWeight ?? 0) > 0 && organsOf(partId).length > 0)
-        severity = 'serious';
       const limb = limbs.find((l) => l.parts?.some((p) => p.id === partId));
       const part = limb?.parts?.find((p) => p.id === partId);
       if (!limb || !part || part.isMissing) continue;
