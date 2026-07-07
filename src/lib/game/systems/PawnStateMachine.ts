@@ -91,9 +91,11 @@ import {
   effectiveWindAt,
   seasonBakedTemp,
   getAmbientLight,
+  computeTileLightLevel,
   ticksFromGameHours,
   TURNS_PER_DAY
 } from '../services/EnvironmentService';
+import { getNightVision, dampenLightByNightVision } from '../core/vision';
 import { calcBloodRegenRate } from '../entities/Pawns';
 import { rng } from '../core/rng';
 import { pawnById } from '../core/pawnIndex';
@@ -370,6 +372,11 @@ export function reapDeadPawns(gameState: GameState): GameState {
  * malnutrition progression, blood loss, critical limb checks.
  * Returns updated GameState (may trigger death via killPawn).
  */
+// §G Darkness: sight is dampened to the pawn's effective (night-vision-adjusted) tile light, floored so
+// pitch-black still leaves a sliver of sight; the info pill shows once effective light dips below ~full.
+const DARKNESS_SIGHT_FLOOR = 0.1;
+const DARKNESS_ONSET = 0.9;
+
 function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // ADR-002 amendment: operate on the LIVE conditions array in place (no per-tick `[...]` clone — it
   // was a top allocator for healthy pawns that never change, §C). conditions is a cold snapshot field
@@ -389,6 +396,20 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   const maxBloodVolume = pawn.maxBloodVolume ?? 100;
   let bloodVolume = pawn.bloodVolume ?? maxBloodVolume;
   const limbs = pawn.limbs ?? [];
+
+  // §G effective light on the pawn's tile, dampened by its night_vision (= tileLight + nv×(1−tileLight)),
+  // floored so pitch-black isn't fully blind. Stashed for the `sight` capacity (low light lowers sight
+  // EVERYWHERE — combat/craft/forage) and read by syncTransientConditions to surface the Darkness pill.
+  {
+    const pos = pawn.position;
+    const tileLight = pos
+      ? computeTileLightLevel(gameState.turn, gameState.buildings ?? [], pos.x, pos.y)
+      : 1;
+    pawn.effectiveLight = Math.max(
+      DARKNESS_SIGHT_FLOOR,
+      dampenLightByNightVision(tileLight, getNightVision(pawn))
+    );
+  }
 
   // ── Need-driven conditions (malnutrition ← hunger, dehydration ← thirst, …) ──
   // Onset/safe thresholds + accrual/recovery rates are authored on each condition's `driver` block
@@ -1050,6 +1071,9 @@ export function syncTransientConditions(pawn: Pawn, turn?: number): Pawn {
 
   // SEASONS_WEATHER: under a roof → sheltered (faster cold/heat recovery + storm-mood relief).
   if (pawn.position && isRoofedTile(pawn.position.x, pawn.position.y)) ids.push('sheltered');
+  // §G Darkness (info pill): low light is dampening sight — surfaced once effective light dips below ~full.
+  // The `sight` capacity does the actual reduction; the pill's tooltip shows the live sight × + night vision.
+  if ((pawn.effectiveLight ?? 1) < DARKNESS_ONSET) ids.push('darkness');
   // SEASONS_WEATHER: only FULLY soaked → wet (cold bites harder, heat less; chance of a chill when
   // soaked + cold). The wetness meter still amplifies cold below the threshold; the `wet` tell shows only
   // at max — WET_THRESHOLD sourced from the `wet` condition's needOnset (data, shared with the gradient).

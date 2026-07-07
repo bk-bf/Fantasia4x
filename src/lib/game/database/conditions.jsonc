@@ -654,6 +654,15 @@
         "modifiers": {"fatigueRate": 0.9}
     },
     {
+        "id": "darkness",
+        "name": "Darkness",
+        "flags": ["environmental", "light"],
+        "transient": true,
+        "description": "Low light dims what the pawn can make out — the sight capacity drops, and with it aim, fine-work quality, and foraging. A racial night_vision counters it (fully at 1.0); see the sight / night_vision stats in the attributes tab.",
+        "color": "#3b4a6b",
+        "modifiers": {}
+    },
+    {
         "id"         : "filthy",
         "name"       : "Filthy",
         "flags": ["need", "hygiene"],

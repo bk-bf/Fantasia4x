@@ -3,7 +3,7 @@
 import type { GameState, Mob, MobState, Pawn, DroppedItem } from '../../core/types';
 import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
 import { getAmbientLight, computeTileLightLevel, weatherSightMul } from '../EnvironmentService';
-import { effectiveVisionRange } from '../../core/vision';
+import { effectiveVisionRange, getNightVision, dampenLightByNightVision } from '../../core/vision';
 import { hasLineOfSight } from '../../core/lineOfSight';
 import { manhattan, chebyshev } from '../../core/distance';
 import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
@@ -580,6 +580,9 @@ export function stepOne(
   // computed ONCE here and threaded into the FSM (so darkness shortens detection without recomputing
   // the light per check). Daytime with nightVision 0 ≈ the old def.stats.visionRange.
   const tileLight = computeTileLightLevel(turn, state.buildings ?? [], mob.x, mob.y);
+  // §G stash the mob's effective (night-vision-dampened) light so its `sight` capacity dims in the dark
+  // too (combat aim), matching pawns. Floored so pitch-black isn't fully blind.
+  mob.effectiveLight = Math.max(0.1, dampenLightByNightVision(tileLight, getNightVision(mob)));
   // Weather shortens detection too (fog/storm/blizzard — SEASONS_WEATHER): folds into the shared
   // vision model so both this mob's sight and (via the same fn) pawn detection degrade in murk.
   const visionRange = effectiveVisionRange(mob, tileLight, weatherSightMul(state.weather?.type));

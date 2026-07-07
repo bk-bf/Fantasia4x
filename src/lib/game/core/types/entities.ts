@@ -142,6 +142,9 @@ export interface Mob {
   injuries?: Injury[];
   /** Aggregate pain score 0–100; exceeding 80 causes collapse. */
   pain?: number;
+  /** §G effective light on the mob's tile 0–1, already night-vision-dampened (mobs read their creature
+   *  def's nightVision). Stashed per tick; `sight` = eyeHealth × this. 1 = full light / full night vision. */
+  effectiveLight?: number;
   /** Radius in tiles within which this mob auto-engages hostiles. */
   aggroRange?: number;
   /** Milliseconds remaining until next auto-attack fires. */
@@ -263,6 +266,10 @@ export interface Pawn {
   injuries?: Injury[];
   /** Aggregate pain score 0–100; exceeding 80 causes collapse. */
   pain?: number;
+  /** §G effective light on the pawn's tile 0–1, already dampened by night_vision (= tileLight +
+   *  nv×(1−tileLight), floored). Stashed once per tick in tickConditions; `sight` = eyeHealth × this, so
+   *  low light lowers sight everywhere (the Darkness condition surfaces it). 1 = full light / full night vision. */
+  effectiveLight?: number;
   /** Milliseconds remaining until next auto-attack fires. */
   attackCooldown?: number;
   /** Radius in tiles within which this pawn auto-engages hostiles. */

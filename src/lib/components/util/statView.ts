@@ -45,7 +45,8 @@ const RES_KEY: Record<string, string> = {
   lightning_resistance: 'lightningResistance',
   shadow_resistance: 'shadowResistance',
   wetness_resistance: 'wetnessResistance',
-  heal_rate: 'healRate'
+  heal_rate: 'healRate',
+  night_vision: 'nightVision'
 };
 
 // Neutral reference pawn — all stats 10, average body, uninjured. Every stat is coloured by how far THIS
@@ -132,6 +133,11 @@ type Deriv = { formula: string; vars: { name: string; value: string }[]; descrip
 /** Symbolic formula + ONLY the variables it uses, filled with this pawn's numbers. Capacities have no
  *  real formula, so surface their organ breakdown (the description) + an injury note instead. */
 function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
+  // §G night_vision is grouped as a capacity but is trait-summed (not organ-derived), so skip the generic
+  // capacity boilerplate and show its own description + the racial contributions (via RES_KEY → traitMods).
+  if (s.id === 'night_vision') {
+    return { formula: 'Σ racial night-vision grants (capped at 1.0)', vars: [], description: s.description };
+  }
   if (s.id === 'carry_weight') {
     return {
       formula: 'bodyWeight × loadFraction + gear  (loadFraction = STR × 1.2%)',

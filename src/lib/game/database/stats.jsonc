@@ -574,7 +574,14 @@
         "category"   : "capacity",
         "primaryStat": "perception",
         "formula"    : "1.0",
-        "description": "weaker eye × 0.4 + avg eyes × 0.6 + 0.05 baseline"
+        "description": "weaker eye × 0.4 + avg eyes × 0.6 + 0.05 baseline, THEN × effective light — low light lowers it (see the Darkness condition), and night_vision negates that reduction"
+    },
+    {
+        "id"         : "night_vision",
+        "category"   : "capacity",
+        "primaryStat": "perception",
+        "formula"    : "1.0",
+        "description": "darkness immunity 0–1 — summed from racial traits (or a creature's own def), NOT organ- or core-stat-derived. 0 = full low-light sight penalty; 1 = sees in the dark as by day (fully negates it). The counter to the Darkness condition."
     },
     {
         "id"         : "hearing",
@@ -588,7 +595,7 @@
         "category": "capacity",
         "primaryStat": "constitution",
         "formula": "1.0",
-        "description": "brain × 0.5 + heart × 0.15 + lungs × 0.1 + sight × 0.1 + hearing × 0.05 + 0.1 baseline, reduced by pain"
+        "description": "brain × 0.6 + heart × 0.15 + lungs × 0.1 + hearing × 0.05 + 0.1 baseline, reduced by pain (a blind pawn is NOT less conscious, so sight no longer feeds this)"
     },
     {
         "id"         : "manipulation",

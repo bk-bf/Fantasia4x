@@ -36,7 +36,8 @@
     cutting_resistance: 'cutting_resistance',
     piercing_resistance: 'piercing_resistance',
     blunt_resistance: 'blunt_resistance',
-    healRate: 'heal_rate'
+    healRate: 'heal_rate',
+    nightVision: 'night_vision'
   };
   // Resistances a §3 covering folds into its gear tooltip — skip these as standalone pills on a gear trait.
   const GEAR_FOLDED_RES = new Set([

@@ -12,6 +12,8 @@ import statsData from '../database/stats.jsonc';
 import conditionsData from '../database/conditions.jsonc';
 import itemsData from '../database/items.jsonc';
 import { WORK_CATEGORIES } from '../core/Work';
+import { getNightVision } from '../core/vision';
+import { vlog } from '../core/logSink';
 import { combinedQualityMultiplier } from '../core/itemQuality';
 import {
   conditionStatMultipliers,
@@ -323,8 +325,9 @@ function calculateCapacityValue(
       const brain = organOne(/brain|synganglion/i); // mammalian brain OR an arachnid's synganglion
       const heart = organOne(/heart/i);
       const avgLung = organBlend(/lung/i, 0); // pure average across the lungs (book lungs included)
-      const baseCon = brain * 0.5 + heart * 0.15 + avgLung * 0.1 + 0.1;
-      const sightCap = capacities.sight ?? 1;
+      // Sight's old 0.1 weight is folded into the brain: a BLIND pawn is not less conscious, and this is
+      // what lets low light lower `sight` (Darkness) without dimming consciousness/everything else.
+      const baseCon = brain * 0.6 + heart * 0.15 + avgLung * 0.1 + 0.1;
       const hearingCap = capacities.hearing ?? 1;
       // Pain drives consciousness down (pain-shock): ~80 pain → ~0.3 consciousness,
       // which is the colony's downing threshold. Missing/damaged organs lower baseCon
@@ -345,10 +348,7 @@ function calculateCapacityValue(
       // §F8: heavy intoxication dims alertness (drunk → woozy, blackout → can collapse) — a
       // `consciousness` condition modifier, multiplied straight onto the capacity.
       value =
-        (baseCon + sightCap * 0.1 + hearingCap * 0.05) *
-        painMult *
-        bloodMult *
-        conditionConsciousnessMultiplier(pawn);
+        (baseCon + hearingCap * 0.05) * painMult * bloodMult * conditionConsciousnessMultiplier(pawn);
       break;
     }
     case 'pain': {
@@ -363,9 +363,18 @@ function calculateCapacityValue(
     }
     case 'sight': {
       // Every eye the plan has (a humanoid's 2, a spider's 8): the worst eye bottlenecks (×0.4), the rest
-      // compensate (×0.6). A 2-eye creature is identical to the old leftEye/rightEye read.
+      // compensate (×0.6). A 2-eye creature is identical to the old leftEye/rightEye read. Then LOW LIGHT
+      // dampens it (lightMultiplier = the pawn's effective light, already night-vision-adjusted) — this is
+      // what the Darkness condition surfaces. 1.0 = full daylight (or full night vision) → no dampening.
       const baseSight = organBlend(/eye/i, 0.4) + 0.05;
       value = baseSight * (lightMultiplier ?? 1.0);
+      break;
+    }
+    case 'night_vision': {
+      // Darkness immunity 0–1: summed from racial traits (pawns) or the creature def (mobs). NOT organ- or
+      // core-stat-derived — a real stats.jsonc stat so it's inspectable next to sight; it's the COUNTER to
+      // the light dampening on `sight` (feeds the pawn's effectiveLight, computed by the caller).
+      value = getNightVision(pawn);
       break;
     }
     case 'moving': {
@@ -602,22 +611,35 @@ export class PawnStatServiceImpl implements PawnStatService {
   // computeCapacities/tick; most entities are unwounded most ticks → cache hit → ~0.
   private _capCache = new Map<
     string,
-    { limbs: unknown; injuries: unknown; caps: Record<string, number> }
+    { limbs: unknown; injuries: unknown; light: number; caps: Record<string, number> }
   >();
+  // §G perf watch — light-dependent `sight` risks busting this hot-path cache (ENGINE-PERFORMANCE.md).
+  private _capHits = 0;
+  private _capMiss = 0;
 
   computeCapacities(pawn: Pawn | Mob, lightMultiplier?: number): Record<string, number> {
-    // Light varies per tile/time and feeds `sight` (→ consciousness), so light-affected calls
-    // (getWorkModifiers) can't share the cache — only the no-light path (evaluateStat + direct
-    // calls, the ~465/tick bulk) is cached.
-    if (lightMultiplier === undefined) {
-      const c = this._capCache.get(pawn.id);
-      if (c && c.limbs === pawn.limbs && c.injuries === pawn.injuries) return c.caps;
-      const caps = this._buildCapacities(pawn, undefined);
-      if (this._capCache.size > 2048) this._capCache.clear(); // bound memory across entity churn
-      this._capCache.set(pawn.id, { limbs: pawn.limbs, injuries: pawn.injuries, caps });
-      return caps;
+    // Sight is dampened by the pawn's effective (night-vision-adjusted) light: an explicit multiplier
+    // (work) wins, else the per-tick `effectiveLight` stashed on the entity, else full light (1).
+    const light = lightMultiplier ?? pawn.effectiveLight ?? 1;
+    // BUCKET to 0.1 so the day/night curve (which nudges light every tick) doesn't invalidate the cache
+    // every tick — it only misses a few times across a cycle, keeping the ~465 evals/tick cache-warm.
+    const lightBucket = Math.round(light * 10) / 10;
+    const c = this._capCache.get(pawn.id);
+    if (c && c.limbs === pawn.limbs && c.injuries === pawn.injuries && c.light === lightBucket) {
+      this._capHits++;
+      return c.caps;
     }
-    return this._buildCapacities(pawn, lightMultiplier);
+    this._capMiss++;
+    // Log the hit rate to .debug/perf.log every 4096 lookups (verbose-gated), so a cache regression from
+    // the light key is visible immediately — the thing you asked for to troubleshoot fast.
+    if ((this._capHits + this._capMiss) % 4096 === 0) {
+      const total = this._capHits + this._capMiss;
+      vlog('perf', 0, () => `capCache hit ${Math.round((this._capHits / total) * 100)}% (${this._capHits}/${total}), size ${this._capCache.size}`);
+    }
+    const caps = this._buildCapacities(pawn, light);
+    if (this._capCache.size > 2048) this._capCache.clear(); // bound memory across entity churn
+    this._capCache.set(pawn.id, { limbs: pawn.limbs, injuries: pawn.injuries, light: lightBucket, caps });
+    return caps;
   }
 
   estimateBloodRecoveryTicks(entity: Pawn | Mob): number | null {
@@ -654,6 +676,7 @@ export class PawnStatServiceImpl implements PawnStatService {
     const capacityIds = [
       'pain',
       'sight',
+      'night_vision',
       'hearing',
       'consciousness',
       'manipulation',

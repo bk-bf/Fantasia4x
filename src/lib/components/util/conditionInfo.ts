@@ -15,6 +15,7 @@ import type {
 import conditionsData from '$lib/game/database/conditions.jsonc';
 import { gameHoursFromTicks } from '$lib/game/services/EnvironmentService';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
+import { getNightVision } from '$lib/game/core/vision';
 import { workAxisLabel } from '$lib/components/util/pawnUtils';
 
 /** A remaining tick duration shown as coarse IN-GAME time — the unit the clock and HealthReadout use —
@@ -269,6 +270,12 @@ function transientSources(entity: Pawn | Mob, id: string): string[] {
       return [`Wetness ${r(n?.wetness)}/100`];
     case 'sheltered':
       return ['Standing under a roof'];
+    case 'darkness': {
+      // §G live readout: how much low light is dampening sight here, and the night-vision offset.
+      const el = Math.round((entity.effectiveLight ?? 1) * 100);
+      const nv = Math.round(getNightVision(entity) * 100);
+      return [`Sight × ${el}% in this light${nv > 0 ? ` (night vision +${nv}%)` : ''}`];
+    }
     case 'eating':
       return ['Currently eating'];
     case 'sleeping':
