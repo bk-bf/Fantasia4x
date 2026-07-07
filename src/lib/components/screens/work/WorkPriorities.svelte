@@ -14,6 +14,7 @@
     WORST_MARK,
     WORST_COLORS,
     rankWorkCells,
+    getPawnLaborLevel,
     stateColor,
     stateLabel,
     type CellRank
@@ -92,30 +93,20 @@
   ): { level: 0 | 1 | 2 | 3 | 4; inherited: boolean } {
     const ls = workAssignments[pawnId]?.laborSettings;
     if (ls && subId in ls) return { level: ls[subId] as 0 | 1 | 2 | 3 | 4, inherited: false };
-    return { level: getPawnLaborLevel(pawnId, catId), inherited: true };
+    return { level: getPawnLaborLevel(workAssignments[pawnId], catId), inherited: true };
   }
   function cycleSubjob(pawnId: string, catId: string, subId: string, dir: 1 | -1) {
     const cur = getSubjobLevel(pawnId, catId, subId).level;
     updatePawnLaborLevel(pawnId, subId, (((cur + dir + 5) % 5) as 0 | 1 | 2 | 3 | 4));
   }
 
-  function getPawnLaborLevel(pawnId: string, workId: string): 0 | 1 | 2 | 3 | 4 {
-    const laborSettings = workAssignments[pawnId]?.laborSettings;
-    if (laborSettings && workId in laborSettings) return laborSettings[workId] as 0 | 1 | 2 | 3 | 4;
-    const pri = workAssignments[pawnId]?.workPriorities?.[workId] ?? 0;
-    if (pri === 0) return 0;
-    if (pri <= 3) return 1;
-    if (pri <= 6) return 2;
-    if (pri <= 9) return 3;
-    return 4;
-  }
 
   function updatePawnLaborLevel(pawnId: string, workId: string, level: 0 | 1 | 2 | 3 | 4) {
     gameState.command({ type: 'setPawnLaborLevel', payload: { pawnId, workId, level } });
   }
 
   function cycleLevel(pawnId: string, workId: string, dir: 1 | -1 = 1) {
-    const cur = getPawnLaborLevel(pawnId, workId);
+    const cur = getPawnLaborLevel(workAssignments[pawnId], workId);
     updatePawnLaborLevel(pawnId, workId, (((cur + dir + 5) % 5) as 0 | 1 | 2 | 3 | 4));
   }
 
@@ -223,7 +214,7 @@
           <td class="name-cell">{pawn.name.toUpperCase()}</td>
           {#each columns as col}
             {#if col.kind === 'cat'}
-              {@const lvl = getPawnLaborLevel(pawn.id, col.catId)}
+              {@const lvl = getPawnLaborLevel(workAssignments[pawn.id], col.catId)}
               {@const rk = rankMap[pawn.id]?.[col.catId]}
               <td>
                 <button
@@ -308,7 +299,7 @@
     rank={rankMap[tip.pawnId][tip.workId]}
     level={tip.subId
       ? getSubjobLevel(tip.pawnId, tip.workId, tip.subId).level
-      : getPawnLaborLevel(tip.pawnId, tip.workId)}
+      : getPawnLaborLevel(workAssignments[tip.pawnId], tip.workId)}
     name={tip.label}
     x={tip.x}
     y={tip.y}

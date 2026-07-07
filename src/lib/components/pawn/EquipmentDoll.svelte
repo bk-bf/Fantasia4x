@@ -6,7 +6,7 @@
   import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
   import { qualityPrefix, qualityColor } from '$lib/game/core/itemQuality';
   import { blockedSlots } from '$lib/game/core/PawnEquipment';
-  import { getTransientConditionDef } from '$lib/game/core/needs';
+  import { naturalGearForTrait } from '$lib/components/util/naturalGear';
 
   let {
     pawn,
@@ -58,34 +58,10 @@
     const occupants: Partial<Record<EquipmentSlot, Nat>> = {};
     const badges: Nat[] = [];
     for (const t of pawn.traits ?? []) {
-      const cond = t.selfCondition ? getTransientConditionDef(t.selfCondition) : undefined;
-      if (!cond) continue;
-      const weaponDefs = (cond.grantsNaturalWeapon ?? [])
-        .map((id) => gameCoordinator.getItemById(id))
-        .filter((d): d is Item => !!d);
-      const armor = cond.grantsNaturalArmor ?? 0;
-      if (!weaponDefs.length && !armor) continue;
-      const entry: Nat = weaponDefs.length
-        ? {
-            name: weaponDefs.map((d) => d.name).join(', '),
-            sub: 'natural weapon',
-            tip: weaponDefs[0]
-          }
-        : {
-            name: t.name,
-            sub: `+${armor} def${cond.carryPenalty ? ` · −${Math.round(cond.carryPenalty * 100)}% carry` : ''}`,
-            tip: {
-              id: `natural-armor:${t.id}`,
-              name: cond.name,
-              type: 'armor',
-              description: cond.description,
-              armorProperties: {
-                defense: armor,
-                armorType: 'natural',
-                armorLayer: cond.mode === 'replace' ? 'replaces the slot' : 'stacks with worn gear'
-              }
-            } as unknown as Item
-          };
+      // Shared builder — the SAME tooltip-ready Item the trait card's gear pill uses (one source).
+      const g = naturalGearForTrait(t);
+      if (!g) continue;
+      const entry: Nat = { name: g.name, sub: g.sub, tip: g.item };
       const primary = t.blocksSlots?.[0];
       if (primary) occupants[primary] = entry;
       else badges.push(entry);

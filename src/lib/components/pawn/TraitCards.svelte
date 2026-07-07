@@ -3,13 +3,61 @@
      coloured accent (tier → rarities.jsonc colour), name, description, health-pill-style effect chips,
      and a cursor-following hover tooltip with the full breakdown. -->
 <script lang="ts">
-  import type { Trait, Pawn } from '$lib/game/core/types';
+  import type { Trait, Pawn, Item } from '$lib/game/core/types';
+  import { naturalGearForTrait } from '$lib/components/util/naturalGear';
   import { workAxisLabel } from '$lib/components/util/pawnUtils';
   import { partLabel, limbLabel } from '$lib/utils/bodyLabels';
   import { getTransientConditionDef } from '$lib/game/core/needs';
-  import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
   import raritiesData from '$lib/game/database/rarities.jsonc';
   import HoverTip from '$lib/components/UI/HoverTip.svelte';
+  import ItemStatTooltip from '$lib/components/UI/ItemStatTooltip.svelte';
+  import WorkCellTooltip from '$lib/components/screens/work/WorkCellTooltip.svelte';
+  import { WORK_CATEGORIES } from '$lib/game/core/Work';
+  import { pawnStatService } from '$lib/game/services/PawnStatService';
+  import { rankWorkCells, getPawnLaborLevel, type CellRank } from '$lib/utils/workUtils';
+  import { gameState } from '$lib/stores/gameState';
+  import statsData from '$lib/game/database/stats.jsonc';
+
+  // The REAL stats.jsonc description per derived-stat id (what the attributes tab shows), so a resistance
+  // pill reads the true source — NOT a hand-written duplicate. (Full formula/trend panel is a follow-up.)
+  const STAT_DESC: Record<string, string> = Object.fromEntries(
+    (statsData as { id: string; description: string }[]).map((s) => [s.id, s.description])
+  );
+
+  // A trait resistance/rate effect key → its stats.jsonc DERIVED stat id, so the pill can open the SAME
+  // attributes-tab tooltip for that stat. (nightVision has no stat → stays a plain pill.)
+  const EFFECT_TO_STAT: Record<string, string> = {
+    coldResistance: 'cold_resistance',
+    fireResistance: 'fire_resistance',
+    poisonResistance: 'poison_resistance',
+    diseaseResistance: 'disease_resistance',
+    mentalResistance: 'mental_resistance',
+    lightningResistance: 'lightning_resistance',
+    shadowResistance: 'shadow_resistance',
+    wetnessResistance: 'wetness_resistance',
+    cutting_resistance: 'cutting_resistance',
+    piercing_resistance: 'piercing_resistance',
+    blunt_resistance: 'blunt_resistance',
+    healRate: 'heal_rate'
+  };
+  // Resistances a §3 covering folds into its gear tooltip — skip these as standalone pills on a gear trait.
+  const GEAR_FOLDED_RES = new Set([
+    'coldResistance',
+    'fireResistance',
+    'cutting_resistance',
+    'piercing_resistance',
+    'blunt_resistance'
+  ]);
+
+  // What a core stat drives — the "attributes tab" answer, shown when a stat pill is hovered.
+  const STAT_DRIVES: Record<string, string> = {
+    strength: 'melee damage, carry weight, and heavy labour (mining, woodcutting, construction)',
+    dexterity: 'accuracy, dodge, attack & aim speed, and fine work (crafting, cooking)',
+    constitution: 'stamina, blood, healing, and cold / heat / poison resistance',
+    perception: 'ranged accuracy & range, foraging, research, and spotting threats',
+    intelligence: 'research, medicine, smithing quality, and alchemy',
+    charisma: 'social standing and speech'
+  };
 
   let {
     traits,
@@ -25,6 +73,18 @@
      *  view) ⇒ the hover stays side-agnostic. */
     pawn?: Pawn;
   } = $props();
+
+  // Real per-pawn work-cell medal ranking (identical to the work tab) so a work pill's WorkCellTooltip
+  // shows the true ★/▾ — computed once per pawn from the single work model.
+  let workRank = $derived.by<Record<string, CellRank>>(() => {
+    if (!pawn) return {};
+    const eff: Record<string, number> = {};
+    for (const wc of WORK_CATEGORIES) {
+      const m = pawnStatService.getWorkModifiers(pawn, wc.id);
+      eff[wc.id] = m.speed * (m.yield ?? 1) * (m.quality ?? 1);
+    }
+    return rankWorkCells(eff);
+  });
 
   // ── Rarity colour + label (the trait's `rarity` IS a rarities.jsonc id) ─────
   const RARITIES = raritiesData as { id: string; name: string; color: string }[];
@@ -65,7 +125,22 @@
   // A pill = a short LABEL + a VALUE, exactly like the health-tab StatPills (e.g. "STR +2").
   // `tip` (optional) = a hover tooltip on the PILL itself — used for a trait's granted condition
   // ("＋ hydro-vigor") so hovering the pill explains the condition (TRAIT-LIBRARY-EXPANSION §6b).
-  type Tag = { label: string; value: string; type: 'pos' | 'neg' | 'neutral'; tip?: string };
+  // `kind` routes a pill's HOVER to its own breakdown panel (not the card's flavor): a natural weapon
+  // opens the real item stat tooltip, a work pill the work-model breakdown, a stat pill the attribute
+  // breakdown. `info` pills carry ready-made rows. Plain pills (no kind) just show their `tip` text.
+  type Tag = {
+    label: string;
+    value: string;
+    type: 'pos' | 'neg' | 'neutral';
+    tip?: string;
+    kind?: 'gear' | 'work' | 'attr';
+    /** kind 'gear' — the natural weapon/armor item fed to ItemStatTooltip (the SAME gear-tab tooltip). */
+    gearItem?: Item;
+    workId?: string;
+    statId?: string;
+    /** Extra rows for an `info`-style hover (condition modifiers, wound detail, bodyMod prose…). */
+    info?: { title?: string; desc?: string; rows?: { k: string; v: string }[] };
+  };
 
   // Human sentence for a condition's activateWhen predicate — "active while wet ≥ 50" etc.
   const PRED_NEED_LABEL: Record<string, string> = {
@@ -156,10 +231,15 @@
   function getEffectTags(trait: Trait): Tag[] {
     const tags: Tag[] = [];
     // ADR-023 capabilities (id-free — the tooltip names the specifics).
+    const gear = naturalGearForTrait(trait);
     const cond = trait.selfCondition ? getTransientConditionDef(trait.selfCondition) : undefined;
-    // §6b: expose the granted condition as a live "＋ <name>" pill; hovering the pill shows the
-    // condition's own tooltip (description, modifiers, when it's active, what it can trigger).
-    if (cond) {
+    // §3 NATURAL GEAR: one "＋ <weapon/armor name>" pill; hovering shows the SAME ItemStatTooltip the GEAR
+    // TAB uses (def, resistances, on-hit…). No separate nat-armor / carry / resistance pills — that whole
+    // breakdown lives in the one gear tooltip, so the card isn't a pile of redundant pills.
+    if (gear) {
+      tags.push({ label: '＋', value: gear.name.toLowerCase(), type: 'pos', kind: 'gear', gearItem: gear.item });
+    } else if (cond) {
+      // §6b passive covering/affinity (no gear granted): the "＋ <name>" pill shows the condition's tooltip.
       tags.push({
         label: '＋',
         value: cond.name.toLowerCase(),
@@ -179,17 +259,20 @@
     }
     // §3d grafts: the trait grows a real, losable limb.
     for (const g of trait.grafts ?? [])
-      tags.push({ label: 'grows', value: limbLabel(g.limb), type: 'pos' });
-    if (cond?.grantsNaturalWeapon?.length)
-      tags.push({ label: 'natural weapon', value: '', type: 'pos' });
-    if (cond?.grantsNaturalArmor)
-      tags.push({ label: 'nat armor', value: `+${cond.grantsNaturalArmor}`, type: 'pos' });
-    // §3 natural armor is worn permanently — it eats a share of carry capacity, so it reads as a cost.
-    if (cond?.carryPenalty)
-      tags.push({ label: 'carry', value: `-${Math.round(cond.carryPenalty * 100)}%`, type: 'neg' });
+      tags.push({
+        label: 'grows',
+        value: limbLabel(g.limb),
+        type: 'pos',
+        tip: `Grows a real ${limbLabel(g.limb)} — a losable limb, and the trait's power goes with it.`
+      });
     // §4 wound-kind: the permanent injury stamped at generation (human part label, never the raw id).
     for (const w of trait.wounds ?? [])
-      tags.push({ label: woundPartLabel(w.part), value: w.severity, type: 'neg' });
+      tags.push({
+        label: woundPartLabel(w.part),
+        value: w.severity,
+        type: 'neg',
+        tip: `Old ${w.severity} ${woundHoverLabel(w.part)} — a permanent scar: it never heals and can't be treated.`
+      });
     // §1 bodyMod: intrinsic body-structure change — one pill per part-group + a weight pill.
     for (const m of trait.bodyMods ?? []) {
       if (m.hpMult != null && m.hpMult !== 1) {
@@ -197,38 +280,76 @@
         tags.push({
           label: bodyModPartLabel(m.target),
           value: `${pct >= 0 ? '+' : ''}${pct}%`,
-          type: pct >= 0 ? 'pos' : 'neg'
+          type: pct >= 0 ? 'pos' : 'neg',
+          tip: bodyModDesc(m)
         });
       }
-      if (m.weightKg) tags.push({ label: 'weight', value: `+${m.weightKg} kg`, type: 'neg' });
+      if (m.weightKg)
+        tags.push({
+          label: 'weight',
+          value: `+${m.weightKg} kg`,
+          type: 'neg',
+          tip: `+${m.weightKg} kg body weight — loads the body and slows the pawn.`
+        });
     }
-    if (trait.onHitEffect) tags.push({ label: 'on-hit', value: 'proc', type: 'pos' });
+    if (trait.onHitEffect) {
+      const oh = trait.onHitEffect;
+      const oc = oh.condition ? getTransientConditionDef(oh.condition) : undefined;
+      const inflict = oh.condition
+        ? `inflict ${(oc?.name ?? oh.condition.replace(/_/g, ' ')).toLowerCase()}`
+        : 'draw blood';
+      tags.push({
+        label: 'on-hit',
+        value: 'proc',
+        type: 'pos',
+        tip: `${Math.round(oh.chance * 100)}% chance to ${inflict} on any landed melee hit.`
+      });
+    }
     if (trait.weaponBonus?.damage)
       tags.push({
         label: 'weapon',
         value: `+${Math.round(trait.weaponBonus.damage * 100)}%`,
-        type: 'pos'
+        type: 'pos',
+        tip: `+${Math.round(trait.weaponBonus.damage * 100)}% damage with any wielded weapon.`
       });
-    if (trait.blocksSlots?.length) tags.push({ label: 'blocks', value: 'gear', type: 'neg' });
+    if (trait.blocksSlots?.length)
+      tags.push({
+        label: 'blocks',
+        value: 'gear',
+        type: 'neg',
+        tip: `This body can't wear: ${blockedLabels(trait).join(', ')}.`
+      });
+    if (trait.stage)
+      tags.push({
+        label: 'stage',
+        value: `${trait.stage}/3`,
+        type: 'neutral',
+        tip: `Stage ${trait.stage} of 3${trait.evolvesTo ? ' — grows to the next stage with age.' : ' — the apex of its line.'}`
+      });
     for (const [name, value] of Object.entries(trait.effects || {})) {
       if (name.endsWith('Bonus') && typeof value === 'number') {
         const stat = name.replace('Bonus', '');
-        tags.push({ label: STAT_ABBR[stat] ?? stat, value: `+${value}`, type: 'pos' });
+        tags.push({ label: STAT_ABBR[stat] ?? stat, value: `+${value}`, type: 'pos', kind: 'attr', statId: stat });
       } else if (name.endsWith('Penalty') && typeof value === 'number') {
         const stat = name.replace('Penalty', '');
         // A penalty is stored positive — render it SIGNED so it reads "CHA -1".
-        tags.push({ label: STAT_ABBR[stat] ?? stat, value: `-${value}`, type: 'neg' });
+        tags.push({ label: STAT_ABBR[stat] ?? stat, value: `-${value}`, type: 'neg', kind: 'attr', statId: stat });
       } else if (value && typeof value === 'object') {
         for (const [workType, mul] of Object.entries(value as Record<string, number>)) {
           const pct = Math.round((mul - 1) * 100);
           tags.push({
             label: workType.replace(/_/g, ' '),
             value: `${pct >= 0 ? '+' : ''}${pct}% ${axisShort(name)}`,
-            type: pct >= 0 ? 'pos' : 'neg'
+            type: pct >= 0 ? 'pos' : 'neg',
+            kind: workType === 'all' ? undefined : 'work',
+            workId: workType === 'all' ? undefined : workType
           });
         }
       } else if (typeof value === 'number' && value !== 0) {
-        // Resistances / nightVision / healRate — a 0-baseline stat shown as a signed percentage.
+        // A covering's resistance is already in its gear tooltip — don't also list it as its own pill.
+        if (gear && GEAR_FOLDED_RES.has(name)) continue;
+        // Resistances / nightVision / healRate — a 0-baseline stat shown as a signed percentage. Routed
+        // to the SAME attributes-tab stat tooltip (kind 'attr') via the derived stat id it maps to.
         const label = name
           .replace(/_/g, ' ')
           .replace(/([A-Z])/g, ' $1')
@@ -236,10 +357,13 @@
           .trim()
           .toLowerCase();
         const pct = Math.round(value * 100);
+        const sid = EFFECT_TO_STAT[name];
         tags.push({
           label,
           value: `${pct >= 0 ? '+' : ''}${pct}%`,
-          type: pct >= 0 ? 'pos' : 'neg'
+          type: pct >= 0 ? 'pos' : 'neg',
+          kind: sid ? 'attr' : undefined,
+          statId: sid
         });
       }
     }
@@ -247,32 +371,30 @@
   }
 
   // ── Tooltip data ───────────────────────────────────────────────────────────
-  function condName(t: Trait): string | null {
-    return t.selfCondition ? (getTransientConditionDef(t.selfCondition)?.name ?? null) : null;
-  }
-  function naturalWeaponNames(t: Trait): string[] {
-    const cond = t.selfCondition ? getTransientConditionDef(t.selfCondition) : undefined;
-    return (cond?.grantsNaturalWeapon ?? [])
-      .map((id) => gameCoordinator.getItemById(id)?.name)
-      .filter((n): n is string => !!n);
-  }
-  function naturalArmorOf(t: Trait): number {
-    const cond = t.selfCondition ? getTransientConditionDef(t.selfCondition) : undefined;
-    return cond?.grantsNaturalArmor ?? 0;
-  }
   function blockedLabels(t: Trait): string[] {
     return (t.blocksSlots ?? []).map((s) => SLOT_LABEL[s] ?? s);
   }
 
-  let hovered = $state<{ trait: Trait; x: number; y: number } | null>(null);
-  function showTip(trait: Trait, e: MouseEvent) {
-    hovered = { trait, x: e.clientX, y: e.clientY };
+  // TWO hover panels (never both): the CARD shows flavor; a PILL shows its own breakdown. A pill sits
+  // inside the card, so its hover suppresses the card panel — no more listing flavor + weapon detail twice.
+  let hoveredCard = $state<{ trait: Trait; x: number; y: number } | null>(null);
+  let hoveredPill = $state<{ tag: Tag; x: number; y: number } | null>(null);
+  function showCard(trait: Trait, e: MouseEvent) {
+    hoveredCard = { trait, x: e.clientX, y: e.clientY };
   }
-  function moveTip(e: MouseEvent) {
-    if (hovered) hovered = { ...hovered, x: e.clientX, y: e.clientY };
+  function moveCard(e: MouseEvent) {
+    if (hoveredCard) hoveredCard = { ...hoveredCard, x: e.clientX, y: e.clientY };
+    if (hoveredPill) hoveredPill = { ...hoveredPill, x: e.clientX, y: e.clientY };
   }
-  function hideTip() {
-    hovered = null;
+  function hideCard() {
+    hoveredCard = null;
+    hoveredPill = null;
+  }
+  function showPill(tag: Tag, e: MouseEvent) {
+    hoveredPill = { tag, x: e.clientX, y: e.clientY };
+  }
+  function hidePill() {
+    hoveredPill = null;
   }
 </script>
 
@@ -283,9 +405,9 @@
       class="trait-card"
       style="--rarity: {rarityColor(trait)}"
       role="presentation"
-      onmouseenter={(e) => showTip(trait, e)}
-      onmousemove={moveTip}
-      onmouseleave={hideTip}
+      onmouseenter={(e) => showCard(trait, e)}
+      onmousemove={moveCard}
+      onmouseleave={hideCard}
     >
       <div class="card-accent"></div>
       <div class="card-body">
@@ -305,7 +427,10 @@
                 class="chip"
                 class:warn={tag.type === 'neg'}
                 style="--pill: {PILL_TINT[tag.type]}"
-                title={tag.tip}
+                role="img"
+                aria-label="{tag.label} {tag.value}"
+                onmouseenter={(e) => showPill(tag, e)}
+                onmouseleave={hidePill}
                 ><span class="pill-k">{tag.label}</span>{#if tag.value}<span class="pill-v"
                     >{tag.value}</span
                   >{/if}</span
@@ -318,74 +443,60 @@
   {/each}
 </div>
 
-{#if hovered}
-  {@const t = hovered.trait}
-  {@const cn = condName(t)}
-  {@const nw = naturalWeaponNames(t)}
-  {@const na = naturalArmorOf(t)}
-  {@const bl = blockedLabels(t)}
-  <!-- Routed through the shared HoverTip so it inherits the viewport flip/clamp (never clips an edge). -->
-  <HoverTip x={hovered.x} y={hovered.y}>
+<!-- PANEL 1 — CARD hover shows ONLY flavor (name, rarity·scope, description, flavour). Suppressed while a
+     pill is hovered, so flavor never shows alongside a pill's breakdown. -->
+{#if hoveredCard && !hoveredPill}
+  {@const t = hoveredCard.trait}
+  <HoverTip x={hoveredCard.x} y={hoveredCard.y}>
     <div class="tip-name" style="color: {rarityColor(t)}">{t.name}</div>
     <div class="tip-meta">
       {RARITY_LABEL[t.rarity ?? 'common']} · {t.scope === 'personal' ? 'personal' : 'racial'} trait
     </div>
     <div class="tip-desc">{t.description}</div>
     {#if t.flavorLine}<div class="tip-flavor">“{t.flavorLine}”</div>{/if}
-    {#if cn}
-      {@const cdef = getTransientConditionDef(t.selfCondition!)}
-      <div class="tip-row"><span class="tip-lbl">Condition</span> {cn}</div>
-      {#if cdef?.description}<div class="tip-row">{cdef.description}</div>{/if}
-      {#if cdef?.activateWhen}<div class="tip-row">
-          <span class="tip-lbl">Active while</span>
-          {describePredicate(cdef.activateWhen)}
-        </div>{/if}
-    {/if}
-    {#if t.aura}
-      {@const acond = getTransientConditionDef(t.aura.condition)}
-      <div class="tip-row">
-        <span class="tip-lbl">Aura</span>
-        {acond?.name ?? t.aura.condition.replace(/_/g, ' ')} — {t.aura.affects} within {t.aura.radius} tiles
-      </div>
-    {/if}
-    {#if t.grafts?.length}
-      <div class="tip-row">
-        <span class="tip-lbl">Grows</span>
-        {t.grafts.map((g) => limbLabel(g.limb)).join(', ')} — a real limb: losable, and the trait's power goes with it
-      </div>
-    {/if}
-    {#if t.stage}
-      <div class="tip-row"><span class="tip-lbl">Stage</span> {t.stage} of 3{t.evolvesTo ? ' — can evolve further' : ' — the apex of its line'}</div>
-    {/if}
-    {#if nw.length}<div class="tip-row">
-        <span class="tip-lbl">Natural weapon</span>
-        {nw.join(', ')}
-      </div>{/if}
-    {#if na}
-      {@const cp = t.selfCondition ? getTransientConditionDef(t.selfCondition)?.carryPenalty : undefined}
-      <div class="tip-row">
-        <span class="tip-lbl">Natural armor</span>
-        +{na} def{cp ? ` · −${Math.round(cp * 100)}% carry capacity (worn always)` : ''}
-      </div>
-    {/if}
-    {#if t.wounds?.length}
-      <div class="tip-row neg">
-        <span class="tip-lbl">Old wound</span>
-        {t.wounds.map((w) => `${woundHoverLabel(w.part)} (${w.severity})`).join(', ')}
-      </div>
-    {/if}
-    {#if t.bodyMods?.length}
-      {#each t.bodyMods as m}
-        <div class="tip-row">
-          <span class="tip-lbl">Body · {bodyModPartLabel(m.target)}</span>
-          {bodyModDesc(m)}
-        </div>
-      {/each}
-    {/if}
-    {#if bl.length}
-      <div class="tip-row neg"><span class="tip-lbl">Blocks gear</span> {bl.join(', ')}</div>
-    {/if}
   </HoverTip>
+{/if}
+
+<!-- PANEL 2 — PILL hover routes to its own breakdown: a natural weapon → the real item stat tooltip; a
+     work pill → the work-model breakdown; a stat pill → the attribute breakdown; anything else → its detail. -->
+{#if hoveredPill}
+  {@const tag = hoveredPill.tag}
+  {#if tag.kind === 'gear'}
+    {#if tag.gearItem}
+      <ItemStatTooltip item={tag.gearItem} x={hoveredPill.x} y={hoveredPill.y} />
+    {/if}
+  {:else if tag.kind === 'work' && pawn && tag.workId}
+    {@const wc = WORK_CATEGORIES.find((c) => c.id === tag.workId)}
+    {#if wc}
+      <WorkCellTooltip
+        {pawn}
+        {wc}
+        mods={pawnStatService.getWorkModifiers(pawn, wc.id)}
+        rank={workRank[wc.id] ?? { best: -1, worst: -1 }}
+        level={getPawnLaborLevel($gameState.workAssignments?.[pawn.id], wc.id)}
+        x={hoveredPill.x}
+        y={hoveredPill.y}
+      />
+    {/if}
+  {:else if tag.kind === 'attr'}
+    {@const sid = tag.statId ?? ''}
+    {@const isCore = sid in STAT_DRIVES}
+    <HoverTip x={hoveredPill.x} y={hoveredPill.y}>
+      <div class="tip-name">
+        {(isCore ? sid : sid.replace(/_/g, ' ')).replace(/^./, (c) => c.toUpperCase())}<span class="tip-val">{tag.value}</span>
+      </div>
+      {#if isCore}<div class="tip-desc">Drives {STAT_DRIVES[sid]}.</div>
+      {:else if STAT_DESC[sid]}<div class="tip-desc">{STAT_DESC[sid]}</div>{/if}
+      {#if pawn && isCore}<div class="tip-row"><span class="tip-lbl">This pawn</span> {pawn.stats[sid as keyof typeof pawn.stats] ?? '—'}</div>{/if}
+    </HoverTip>
+  {:else}
+    <HoverTip x={hoveredPill.x} y={hoveredPill.y}>
+      <div class="tip-name" class:neg={tag.type === 'neg'}>
+        {tag.label}{#if tag.value}<span class="tip-val">{tag.value}</span>{/if}
+      </div>
+      {#if tag.tip}<div class="tip-desc" style="white-space: pre-line">{tag.tip}</div>{/if}
+    </HoverTip>
+  {/if}
 {/if}
 
 <style>
@@ -495,6 +606,15 @@
     font-weight: 600;
     letter-spacing: 0.03em;
   }
+  .tip-name.neg {
+    color: var(--neg);
+  }
+  /* Muted value appended to a pill-panel header (e.g. "Strength +2", "Crafting +15% spd"). */
+  .tip-val {
+    color: var(--text-muted);
+    font-weight: normal;
+    margin-left: 6px;
+  }
   .tip-meta {
     color: var(--text-dim);
     font-size: 10px;
@@ -513,9 +633,6 @@
   .tip-row {
     margin-top: 3px;
     color: var(--text);
-  }
-  .tip-row.neg {
-    color: var(--neg);
   }
   .tip-lbl {
     color: var(--text-dim);

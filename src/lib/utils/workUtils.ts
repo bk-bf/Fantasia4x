@@ -1,4 +1,18 @@
-import type { Pawn } from '$lib/game/core/types';
+import type { Pawn, WorkAssignment } from '$lib/game/core/types';
+
+/** A pawn's labor level (0–4) for a work id: a `laborSettings` override wins, else the legacy 0–12
+ *  `workPriorities` value bucketed. Single source (was inline in WorkPriorities) so the work tab AND the
+ *  trait card's WorkCellTooltip read the assigned level identically. */
+export function getPawnLaborLevel(a: WorkAssignment | undefined, workId: string): 0 | 1 | 2 | 3 | 4 {
+  const ls = a?.laborSettings;
+  if (ls && workId in ls) return ls[workId] as 0 | 1 | 2 | 3 | 4;
+  const pri = a?.workPriorities?.[workId] ?? 0;
+  if (pri === 0) return 0;
+  if (pri <= 3) return 1;
+  if (pri <= 6) return 2;
+  if (pri <= 9) return 3;
+  return 4;
+}
 
 export const LABOR_LABELS: Record<number, string> = {
   0: '—',
