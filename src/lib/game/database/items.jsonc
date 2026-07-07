@@ -3723,7 +3723,7 @@
       "staminaCost": 2,
       "critMod"    : 0.03
     },
-    "bleedWound": 0.6,
+    "bloodletting": 0.6,
     "onHitEffect": {
       "chance"       : 0.6,
       "durationHours": 2,
@@ -3810,7 +3810,7 @@
       "armorPenetration": 0.2,
       "critMod"         : 0.12
     },
-    "bleedWound": 0.25
+    "bloodletting": 0.25
   },
   {
     "id"               : "goring-horns",
@@ -3891,7 +3891,7 @@
       "armorPenetration": 0.3,
       "critMod"         : 0.14
     },
-    "bleedWound": 0.3
+    "bloodletting": 0.3
   },
   {
     "id"               : "bloodsucking-fangs",
@@ -3918,7 +3918,7 @@
       "armorPenetration": 0.1,
       "critMod"         : 0.05
     },
-    "bleedWound": 0.5,
+    "bloodletting": 0.5,
     "onHitEffect": {"chance": 0.5, "durationHours": 2, "resist": "piercing_resistance", "bloodDrain": 6}
   },
   {
@@ -3973,7 +3973,7 @@
     "description": "Great hooked talons that open flesh like cloth and leave wounds that will not close on their own.",
     "color": "#C8A064", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 16, "attackSpeed": 1, "range": 1, "damageType": "cutting", "weight": 5, "staminaCost": 3, "armorPenetration": 0.25, "critMod": 0.14},
-    "bleedWound": 0.3
+    "bloodletting": 0.3
   },
   {
     "id": "goring-fangs", "audio": "bite", "charSpans": [ {"sheet": "items", "id": 1} ],
@@ -3990,7 +3990,7 @@
     "description": "Immense sabre teeth that punch through and tear free — the wound bleeds until it is bound.",
     "color": "#E8E0D0", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 16, "attackSpeed": 1, "range": 1, "damageType": "piercing", "weight": 3, "staminaCost": 3, "armorPenetration": 0.25, "critMod": 0.14},
-    "bleedWound": 0.25
+    "bloodletting": 0.25
   },
   {
     "id": "great-horns", "audio": "pierce", "charSpans": [ {"sheet": "items", "id": 200} ],
@@ -4060,7 +4060,7 @@
     "description": "Immense sickle talons that disembowel — the rents they leave will not close unaided.",
     "color": "#C9B48A", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 16, "attackSpeed": 1, "range": 1, "damageType": "cutting", "weight": 3, "staminaCost": 4, "armorPenetration": 0.25, "critMod": 0.14},
-    "bleedWound": 0.3
+    "bloodletting": 0.3
   },
   {
     "id": "pecking-beak", "audio": "pierce", "charSpans": [ {"sheet": "items", "id": 1} ],
@@ -4360,7 +4360,7 @@
       "staminaCost"     : 1,
       "twoHanded"       : false
     },
-    "bleedWound": 0.12
+    "bloodletting": 0.12
   },
   {
     "id": "leaf_blade_spear",
@@ -4425,7 +4425,7 @@
       "staminaCost"     : 3,
       "twoHanded"       : false
     },
-    "bleedWound": 0.15
+    "bloodletting": 0.15
   },
   {
     "id": "self_bow",
@@ -4515,7 +4515,7 @@
       "staminaCost"     : 2,
       "twoHanded"       : false
     },
-    "bleedWound": 0.15
+    "bloodletting": 0.15
   },
   {
     "id": "spatha",
@@ -4548,7 +4548,7 @@
       "staminaCost"     : 3,
       "twoHanded"       : false
     },
-    "bleedWound": 0.18
+    "bloodletting": 0.18
   },
   {
     "id": "bearded_axe",
@@ -4581,7 +4581,7 @@
       "staminaCost"     : 4,
       "twoHanded"       : false
     },
-    "bleedWound": 0.2
+    "bloodletting": 0.2
   },
   {
     "id": "framea",
@@ -4748,7 +4748,7 @@
       "staminaCost"     : 4,
       "twoHanded"       : true
     },
-    "bleedWound": 0.22
+    "bloodletting": 0.22
   },
   {
     "id": "steel_longsword",
@@ -4781,7 +4781,7 @@
       "staminaCost"     : 3,
       "twoHanded"       : false
     },
-    "bleedWound": 0.18
+    "bloodletting": 0.18
   },
   {
     "id": "steel_greatsword",
@@ -4953,7 +4953,7 @@
       "staminaCost"     : 4,
       "twoHanded"       : false
     },
-    "bleedWound": 0.22
+    "bloodletting": 0.22
   },
   {
     "id": "steel_greatcleaver",
@@ -5055,7 +5055,7 @@
       "staminaCost"     : 1,
       "twoHanded"       : false
     },
-    "bleedWound": 0.15
+    "bloodletting": 0.15
   },
   {
     "id": "steel_stiletto",
@@ -5088,7 +5088,7 @@
       "staminaCost"     : 1,
       "twoHanded"       : false
     },
-    "bleedWound": 0.18
+    "bloodletting": 0.18
   },
   {
     "id": "iron_estoc",
@@ -5122,7 +5122,7 @@
       "staminaCost"     : 4,
       "twoHanded"       : false
     },
-    "bleedWound": 0.2
+    "bloodletting": 0.2
   },
   {
     "id": "steel_rapier",
@@ -5156,7 +5156,7 @@
       "staminaCost"     : 4,
       "twoHanded"       : false
     },
-    "bleedWound": 0.22
+    "bloodletting": 0.22
   },
   {
     "id": "war_bow",

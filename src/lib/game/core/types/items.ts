@@ -422,12 +422,12 @@ export interface Item {
   };
 
   /**
-   * TRAIT-LIBRARY-EXPANSION §3b — BLEED-WEAPON chance (0–1): on a landed hit that opens a bleeding
+   * TRAIT-LIBRARY-EXPANSION §3b — BLOODLETTING chance (0–1): on a landed hit that opens a bleeding
    * wound, this is the chance the wound is marked unclottable (`Injury.noSelfClot`) — it bleeds at
    * full rate until a caretaker DRESSES it. Raking claws, feeding fangs, and deep-cutting blades.
    * Replaces the retired `bloodletting` transient condition with a physical injury.
    */
-  bleedWound?: number;
+  bloodletting?: number;
 
   /**
    * On-hit status effect (venom/screech/tongue/blood-drain natural weapons). When a swing with this

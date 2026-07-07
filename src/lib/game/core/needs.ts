@@ -114,33 +114,43 @@ export function conditionsSig(conds: EntityCondition[]): string {
   return s;
 }
 
-/** Pain (0–100) at/above which the `shock` condition onsets; severity scales to 1 at pain 100. */
+/** Pain (0–100) at/above which `pain_shock` onsets; severity scales to 1 at pain 100. */
 export const SHOCK_PAIN_ONSET = 40;
-/** Fraction of blood lost (0–1) at which shock starts climbing from the blood side. */
+/** Fraction of blood lost (0–1) at which `hypovolemia` starts climbing. */
 export const SHOCK_BLOOD_ONSET = 0.35;
 
-/**
- * Set the `shock` condition's severity DIRECTLY from current pain OR blood loss — whichever is worse
- * (reflected, tracks the live values; not accumulating). This is the SINGLE low-blood/high-pain
- * indicator now that the redundant `blood_loss` condition is gone: a body bled past `SHOCK_BLOOD_ONSET`
- * goes into shock just as one in severe pain does. Mutates `conditions` in place. Shared by pawns
- * (PawnStateMachine.tickConditions) and mobs (entityLifecycle.stepHunger). Non-lethal here — pain/blood
- * loss already drive consciousness → collapse → death; shock layers its stat/work penalty on top.
- */
-export function applyShock(conditions: EntityCondition[], pain: number, bloodLossFrac = 0): void {
-  // §F8: a pain-numbing condition (drunk, painkillers) dulls the felt pain that drives shock — a
-  // sloshed pawn shrugs off a wound that would stagger a sober one. Blood-loss shock is unaffected.
-  const feltPain = pain * conditionPainMultiplier({ conditions });
-  const painSev = (feltPain - SHOCK_PAIN_ONSET) / (100 - SHOCK_PAIN_ONSET);
-  const bloodSev = (bloodLossFrac - SHOCK_BLOOD_ONSET) / (1 - SHOCK_BLOOD_ONSET);
-  const severity = Math.min(0.99, Math.max(0, painSev, bloodSev));
-  const idx = conditions.findIndex((c) => c.id === 'shock');
-  if (severity > 0) {
-    if (idx === -1) conditions.push({ id: 'shock', severity });
-    else conditions[idx] = { ...conditions[idx], severity };
+/** Set (add/update/clear) a reflected meter-driven condition's severity in place (capped 0–0.99). */
+function setReflectedSeverity(conditions: EntityCondition[], id: string, severity: number): void {
+  const sev = Math.min(0.99, Math.max(0, severity));
+  const idx = conditions.findIndex((c) => c.id === id);
+  if (sev > 0) {
+    if (idx === -1) conditions.push({ id, severity: sev });
+    else conditions[idx] = { ...conditions[idx], severity: sev };
   } else if (idx !== -1) {
     conditions.splice(idx, 1);
   }
+}
+
+/**
+ * Drive the TWO split crisis conditions from live pain and blood loss, SEPARATELY (2026-07-08 — the old
+ * unified `shock` conflated them into one confusing pill). Each REFLECTS (tracks, doesn't accumulate) its
+ * own driver:
+ *  - `pain_shock` from pain past `SHOCK_PAIN_ONSET` — dulled by painkillers/drink (§F8
+ *    `conditionPainMultiplier`: a sloshed pawn shrugs off a wound that would stagger a sober one);
+ *  - `hypovolemia` from blood lost past `SHOCK_BLOOD_ONSET` — unaffected by pain-numbing (it's emptiness,
+ *    not pain).
+ * Each carries HALF the old shock stat debuff; when BOTH fire they stack (× in `conditionStatMultipliers`)
+ * back to roughly the old unified crisis — now legible as two distinct causes. Mutates `conditions` in
+ * place; shared by pawns (PawnStateMachine.tickConditions) and mobs (entityLifecycle.stepHunger).
+ * Non-lethal here — pain/blood loss already drive consciousness → collapse → death; these layer the
+ * stat/work penalty on top. Signature unchanged so both callers are untouched.
+ */
+export function applyShock(conditions: EntityCondition[], pain: number, bloodLossFrac = 0): void {
+  const feltPain = pain * conditionPainMultiplier({ conditions });
+  const painSev = (feltPain - SHOCK_PAIN_ONSET) / (100 - SHOCK_PAIN_ONSET);
+  const bloodSev = (bloodLossFrac - SHOCK_BLOOD_ONSET) / (1 - SHOCK_BLOOD_ONSET);
+  setReflectedSeverity(conditions, 'pain_shock', painSev);
+  setReflectedSeverity(conditions, 'hypovolemia', bloodSev);
 }
 
 /** §F8: per-second severity the `intoxicated` condition sheds (drink wears off over a few minutes). */

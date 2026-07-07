@@ -36,7 +36,7 @@ describe('detectVitalEscalations', () => {
   });
 
   it('ignores non-vital conditions', () => {
-    expect(detectVitalEscalations(undefined, [{ id: 'shock', severity: 0.9 }])).toEqual([]);
+    expect(detectVitalEscalations(undefined, [{ id: 'pain_shock', severity: 0.9 }])).toEqual([]);
   });
 
   // Regression: dehydration is NOT a `floater` condition, so the floater snapshot

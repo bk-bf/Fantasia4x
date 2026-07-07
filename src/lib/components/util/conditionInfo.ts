@@ -120,6 +120,21 @@ function persistentSources(entity: Pawn | Mob, def: ConditionDef): string[] {
   }
   // No driver → sourced from wounds. Name the specific contributing injuries.
   switch (def.id) {
+    case 'pain_shock': {
+      // The pain HALF of the old unified shock — reflects live pain. Name the value + numbing.
+      const pain = Math.round(entity.pain ?? 0);
+      return [
+        `Reeling from pain (${pain}/100) — the pain half of shock. Painkillers or drink dull it.`
+      ];
+    }
+    case 'hypovolemia': {
+      // The blood-loss HALF of the old unified shock — reflects fraction of blood lost.
+      const maxBV = entity.maxBloodVolume ?? 100;
+      const lostPct = Math.round((1 - (entity.bloodVolume ?? maxBV) / maxBV) * 100);
+      return [
+        `Too much blood lost (${lostPct}% gone) — the blood-loss half of shock. Stop the bleeding.`
+      ];
+    }
     case 'blood_loss': {
       const bleeders = allInjuries(entity).filter((i) => (i.bleeding ?? 0) > 0);
       return bleeders.length
@@ -165,9 +180,13 @@ function transientSources(entity: Pawn | Mob, id: string): string[] {
       return ['Stamina spent in combat'];
     case 'bleeding': {
       const bleeders = allInjuries(entity).filter((i) => (i.bleeding ?? 0) > 0);
+      // Flag a BLOODLETTING wound (won't clot on its own — only dressing stops it) so the player knows
+      // which bleeds need a caretaker rather than time. Info-only pill (no stat effect).
       return bleeders.length
         ? bleeders.map(
-            (i) => `${prettyPart(i.bodyPart)} — ${i.type} (bleeding ${Math.round(i.bleeding * 10) / 10})`
+            (i) =>
+              `${prettyPart(i.bodyPart)} — ${i.type} (bleeding ${Math.round(i.bleeding * 10) / 10})` +
+              (i.bloodletting ? ' · bloodletting — won’t clot, needs dressing' : '')
           )
         : ['Open wounds seeping blood'];
     }

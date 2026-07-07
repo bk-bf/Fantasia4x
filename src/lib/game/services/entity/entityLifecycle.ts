@@ -281,8 +281,9 @@ export function stepHunger(state: GameState): GameState {
     if (limbs && ((mob.pain ?? 0) > 0 || conditions.some((c) => c.id === 'fractured')))
       syncFractureConditions(conditions, limbs);
 
-    // Severe pain OR heavy blood loss sends a mob into shock — SAME rule as pawns (applyShock); this
-    // subsumes the old blood_loss condition. mob.pain is kept current by combat + the heal block above.
+    // Pain-shock + hypovolemia (split 2026-07-08) — SAME rule as pawns (applyShock): pain drives
+    // `pain_shock`, blood loss drives `hypovolemia`, each half the old unified debuff. mob.pain is kept
+    // current by combat + the heal block above.
     applyShock(conditions, mob.pain ?? 0, 1 - bloodVolume / maxBV);
 
     // `tired` (Exhausted) transient — high fatigue crushes a creature's STR/DEX exactly as it does a

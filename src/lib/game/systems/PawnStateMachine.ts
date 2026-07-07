@@ -687,13 +687,11 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // of the manipulation/moving capacity hit — synced from the limbs each tick, cleared as bones knit.
   syncFractureConditions(conditions, limbs);
 
-  // ── Shock ──────────────────────────────────────────────────────────────────
-  // Severe pain OR heavy blood loss sends the body into shock — shared rule for pawns + mobs
-  // (applyShock). This subsumes the old `blood_loss` condition: the worse of pain/blood drives it.
-  // NOTE: shock is a CONTINUOUS meter-driven severity (SET to max(painSev, bloodSev) each tick, with a
-  // pain-numbing multiplier), not a fixed-severity transition edge — so it keeps its exact function and
-  // is flagged `driver` in conditions.jsonc rather than expressed as a `fireTriggers` edge (which would
-  // ACCRUE, changing behaviour). Same for the infection accrual above.
+  // ── Crisis: pain-shock + hypovolemia (split 2026-07-08) ──────────────────────
+  // `applyShock` drives the TWO conditions separately — `pain_shock` (pain past onset, dulled by
+  // painkillers) and `hypovolemia` (blood lost past onset), each HALF the old unified `shock` debuff.
+  // Both are CONTINUOUS meter-driven severities (SET each tick from the live driver, not accruing edges)
+  // → flagged `driver` in conditions.jsonc rather than `fireTriggers` edges. Same for infection above.
   applyShock(conditions, pawn.pain ?? 0, 1 - bloodVolume / maxBloodVolume);
 
   // ── Condition graph: trigger edges (TRAIT-SYSTEM-V2 §5) ─────────────────────

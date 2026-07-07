@@ -148,7 +148,7 @@ export interface Injury {
    *  advances clot stages on its own (rollWoundClotting skips it; clotRemaining stays 1), so it bleeds
    *  at full rate until a caretaker DRESSES it (treatedAt still zeroes the bleed). Replaces the retired
    *  `bloodletting` transient condition with a physical injury the health panel already shows. */
-  noSelfClot?: boolean;
+  bloodletting?: boolean;
 }
 
 /** State of a single fine body part (organ, bone, sub-limb). */

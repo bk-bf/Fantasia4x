@@ -84,7 +84,7 @@ describe('TRAIT-LIBRARY-EXPANSION mechanics', () => {
     expect(p.limbs!.find((l) => l.id === 'torso')!.isMissing).toBe(false);
   });
 
-  it('§3b bleed-wound: a noSelfClot wound never clots on its own and survives a recompute', () => {
+  it('§3b bleed-wound: a bloodletting wound never clots on its own and survives a recompute', () => {
     const limbs = createBodyPlanLimbs('humanoid', 1);
     const arm = limbs.find((l) => l.id === 'left_arm')!;
     const forearm = arm.parts!.find((x) => x.id === 'leftForearm')!;
@@ -96,7 +96,7 @@ describe('TRAIT-LIBRARY-EXPANSION mechanics', () => {
       bleeding: 2,
       painContribution: 3,
       infected: false,
-      noSelfClot: true
+      bloodletting: true
     };
     forearm.injuries.push(wound);
     // 200 guaranteed clot rolls (chance 1.0) — an ordinary wound would fully clot instantly
@@ -104,7 +104,7 @@ describe('TRAIT-LIBRARY-EXPANSION mechanics', () => {
     expect(wound.clotProgress ?? 0).toBe(0);
     // the flag survives the merge/recompute path (same sticky rule as `permanent`)
     const merged = recomputeWound('leftForearm', 'cut', 20, wound, 10, forearm.maxHp);
-    expect(merged.noSelfClot).toBe(true);
+    expect(merged.bloodletting).toBe(true);
     expect(merged.bleeding).toBeGreaterThan(0);
   });
 

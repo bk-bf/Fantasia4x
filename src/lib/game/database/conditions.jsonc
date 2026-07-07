@@ -336,67 +336,35 @@
         ]
     },
     {
-        "id": "shock",
+        "id": "pain_shock",
         "audio": "shock",
-        "name": "Shock",
+        "name": "Pain-Shock",
         "flags": ["combat", "crisis", "driver"],
         "charSpans": [ {"sheet": "font", "id": 19} ],
-        "description": "Severe pain OR heavy blood loss has sent the body into shock — the single low-blood/high-pain crisis. The fighter goes cold, clumsy and blind: strength, dexterity and perception crash, so they barely hit, barely dodge and barely hurt anything.",
+        "description": "Severe pain has driven the body into shock — HALF the old unified crisis, the pain half. Strength, dexterity, focus and footing all falter. When it stacks with Hypovolemia (blood-loss shock) the two together are the full crisis of old. Numbed by painkillers/drink.",
         "lethalSeverity": 1.0,
         "floater": true,
         "stages": [
-            {
-                "label"      : "mild",
-                "minSeverity": 0.0,
-                "color"      : "#b0bec5",
-                "modifiers"  : {
-                    "strength"      : 0.8 ,
-                    "dexterity"     : 0.8 ,
-                    "perception"    : 0.85,
-                    "workEfficiency": 0.8 ,
-                    "moveSpeed"     : 0.85
-                }
-            },
-            {
-                "label"      : "moderate",
-                "minSeverity": 0.3,
-                "color"      : "#90a4ae",
-                "modifiers"  : {
-                    "strength"      : 0.55,
-                    "dexterity"     : 0.5 ,
-                    "perception"    : 0.6 ,
-                    "workEfficiency": 0.5 ,
-                    "moveSpeed"     : 0.65
-                }
-            },
-            {
-                "label"          : "severe",
-                "minSeverity"    : 0.6,
-                "color"          : "#607d8b",
-                "lifeThreatening": true,
-                "modifiers"      : {
-                    "strength"      : 0.3 ,
-                    "dexterity"     : 0.25,
-                    "perception"    : 0.35,
-                    "constitution"  : 0.6 ,
-                    "workEfficiency": 0.2 ,
-                    "moveSpeed"     : 0.35
-                }
-            },
-            {
-                "label"          : "critical",
-                "minSeverity"    : 0.85,
-                "color"          : "#455a64",
-                "lifeThreatening": true,
-                "modifiers"      : {
-                    "strength"      : 0.15,
-                    "dexterity"     : 0.1 ,
-                    "perception"    : 0.2 ,
-                    "constitution"  : 0.4 ,
-                    "workEfficiency": 0.0 ,
-                    "moveSpeed"     : 0.0
-                }
-            }
+            { "label": "mild",     "minSeverity": 0.0,  "color": "#E0A050", "modifiers": {"strength": 0.9,  "dexterity": 0.9,  "perception": 0.925, "workEfficiency": 0.9,  "moveSpeed": 0.925} },
+            { "label": "moderate", "minSeverity": 0.3,  "color": "#D98A3A", "modifiers": {"strength": 0.775,"dexterity": 0.75, "perception": 0.8,   "workEfficiency": 0.75, "moveSpeed": 0.825} },
+            { "label": "severe",   "minSeverity": 0.6,  "color": "#C46A2A", "lifeThreatening": true, "modifiers": {"strength": 0.65, "dexterity": 0.625,"perception": 0.675, "constitution": 0.8, "workEfficiency": 0.6, "moveSpeed": 0.675} },
+            { "label": "critical", "minSeverity": 0.85, "color": "#A0501E", "lifeThreatening": true, "modifiers": {"strength": 0.575,"dexterity": 0.55, "perception": 0.6,   "constitution": 0.7, "workEfficiency": 0.5, "moveSpeed": 0.5} }
+        ]
+    },
+    {
+        "id": "hypovolemia",
+        "audio": "shock",
+        "name": "Hypovolemia",
+        "flags": ["combat", "crisis", "driver"],
+        "charSpans": [ {"sheet": "font", "id": 19} ],
+        "description": "Too much blood lost — the body runs cold, dim and clumsy: HALF the old unified crisis, the blood-loss half. Unaffected by painkillers (this is emptiness, not pain). When it stacks with Pain-Shock the two together are the full crisis of old.",
+        "lethalSeverity": 1.0,
+        "floater": true,
+        "stages": [
+            { "label": "mild",     "minSeverity": 0.0,  "color": "#b0bec5", "modifiers": {"strength": 0.9,  "dexterity": 0.9,  "perception": 0.925, "workEfficiency": 0.9,  "moveSpeed": 0.925} },
+            { "label": "moderate", "minSeverity": 0.3,  "color": "#90a4ae", "modifiers": {"strength": 0.775,"dexterity": 0.75, "perception": 0.8,   "workEfficiency": 0.75, "moveSpeed": 0.825} },
+            { "label": "severe",   "minSeverity": 0.6,  "color": "#607d8b", "lifeThreatening": true, "modifiers": {"strength": 0.65, "dexterity": 0.625,"perception": 0.675, "constitution": 0.8, "workEfficiency": 0.6, "moveSpeed": 0.675} },
+            { "label": "critical", "minSeverity": 0.85, "color": "#455a64", "lifeThreatening": true, "modifiers": {"strength": 0.575,"dexterity": 0.55, "perception": 0.6,   "constitution": 0.7, "workEfficiency": 0.5, "moveSpeed": 0.5} }
         ]
     },
     {
@@ -1717,7 +1685,7 @@
         "description": "Thin blood that handles loss badly — bleeding presses them toward shock far sooner than most.",
         "color": "#C62828", "floater": true, "charSpans": [ {"sheet": "items", "id": 84} ],
         "activateWhen": {"meter": "bloodFrac", "atOrBelow": 0.6},
-        "triggers": [ { "to": "shock", "chance": 0.02, "severity": 0.05 } ],
+        "triggers": [ { "to": "hypovolemia", "chance": 0.02, "severity": 0.05 } ],
         "modifiers": {}
     },
     {

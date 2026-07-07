@@ -290,9 +290,9 @@ interface AttackProfile {
   finesse: boolean;
   /** §M Arcane weapon (elemental staff): damage scales with INTELLIGENCE, not STRENGTH. */
   arcane: boolean;
-  /** §3b bleed-weapon chance (0–1, item-level `bleedWound`): a landed open wound is marked
-   *  unclottable (Injury.noSelfClot) at this chance — it bleeds until dressed. */
-  bleedWound?: number;
+  /** §3b bleed-weapon chance (0–1, item-level `bloodletting`): a landed open wound is marked
+   *  unclottable (Injury.bloodletting) at this chance — it bleeds until dressed. */
+  bloodletting?: number;
 }
 
 /**
@@ -314,7 +314,7 @@ type WeaponProps = NonNullable<Item['weaponProperties']>;
 interface WeaponCandidate {
   id: string;
   wp: WeaponProps;
-  bleed?: number;
+  bloodletting?: number;
 }
 
 /** Weighted pick over a candidate pool (weaponProperties.weight, default 1). */
@@ -471,7 +471,7 @@ function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
       // §I: a Famed blade explodes those fields ×2–5 on top of its tier.
       const wp = scaleWeaponQuality(item.weaponProperties, mh.quality, mh.famedStatMult);
       const p = profileFromWeapon(str, dex, wp, item.name ?? 'weapon');
-      p.bleedWound = item.bleedWound; // §3b: a deep-cutting blade leaves unclottable wounds
+      p.bloodletting = item.bloodletting; // §3b: a deep-cutting blade leaves unclottable wounds
       // ADR-023: a racial `weaponBonus` (Giant's Grip) rides the wielded weapon only.
       const wb = weaponBonusDamage(attacker);
       if (wb) p.baseDamage *= 1 + wb;
@@ -488,7 +488,7 @@ function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
   const candidates: WeaponCandidate[] = [];
   for (const id of ids) {
     const it = itemService.getItemById(id);
-    if (it?.weaponProperties) candidates.push({ id, wp: it.weaponProperties, bleed: it.bleedWound });
+    if (it?.weaponProperties) candidates.push({ id, wp: it.weaponProperties, bloodletting: it.bloodletting });
   }
   // Part-gating: a natural weapon is usable only while a surviving part enables it (a jaw to bite, a paw
   // to claw…). Unbound weapons stay always-available. Skipped for un-modelled fixtures (empty parts).
@@ -503,7 +503,7 @@ function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
   if (usable.length > 0) {
     const chosen = pickWeightedWeapon(usable);
     const p = profileFromWeapon(str, dex, chosen.wp, chosen.id);
-    p.bleedWound = chosen.bleed; // §3b: raking claws / feeding fangs leave unclottable wounds
+    p.bloodletting = chosen.bloodletting; // §3b: raking claws / feeding fangs leave unclottable wounds
     // A big beast hits proportionally harder: scale natural-weapon base damage by the creature's
     // `bodyScale`, SOFTENED so a mammoth (scale 3.5) maims (≈2.25×) without one-shotting a limb —
     // one field drives both its blood pool (entitySpawning) and its hitting power.
@@ -714,7 +714,7 @@ class CombatServiceImpl implements CombatService {
       critMod,
       finesse,
       arcane,
-      bleedWound
+      bloodletting
     } = override ? override.profile : attackerProfile(attacker, this.entityDistance(attacker, defender));
     // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw dexterity, so injury,
     // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
@@ -803,13 +803,13 @@ class CombatServiceImpl implements CombatService {
       bleeding: (woundDef.bleedMod > 0 || hpMissing >= 1.0) && hpMissing > 0 ? 1 : 0,
       painContribution: 0,
       infected: false,
-      // §3b bleed-weapon: at the weapon's `bleedWound` chance, the open wound never self-clots —
+      // §3b bleed-weapon: at the weapon's `bloodletting` chance, the open wound never self-clots —
       // it flows until a caretaker dresses it (the physical successor of `bloodletting`).
-      ...(bleedWound &&
+      ...(bloodletting &&
       woundDef.bleedMod > 0 &&
       hpMissing > 0 &&
-      rng.random() < bleedWound
-        ? { noSelfClot: true }
+      rng.random() < bloodletting
+        ? { bloodletting: true }
         : {})
     };
 
@@ -993,8 +993,8 @@ class CombatServiceImpl implements CombatService {
       // §3b: a bleed-weapon hit makes the (merged) wound unclottable — OR the flags so a raking-claw
       // follow-up on an ordinary cut upgrades it, and an ordinary hit never clears an existing flag.
       const mergePrev =
-        injury.noSelfClot && !prevW?.noSelfClot
-          ? { ...(prevW ?? { infected: false }), noSelfClot: true }
+        injury.bloodletting && !prevW?.bloodletting
+          ? { ...(prevW ?? { infected: false }), bloodletting: true }
           : prevW;
       const merged = recomputeWound(injury.bodyPart, injury.type, accum, mergePrev, state.turn, maxHp);
       const woundList =
