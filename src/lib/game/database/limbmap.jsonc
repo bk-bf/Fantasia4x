@@ -52,9 +52,14 @@
       // the organ and kills; breaking the BONE alone only cripples — a bone is never instant death.
       "head"        : {"size": 45, "bleedRatio": 0.04, "hitWeight": 13, "weapons": ["headbutt", "antler"], "armor": 0.8},
       "skull"       : {"size": 45, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "head"},
-      "jaw"         : {"size": 25, "bleedRatio": 0.02, "hitWeight": 2, "weapons": ["bite", "tusk", "tongue", "screech"], "armor": 0.5},
-      "mandible"     : {"size": 25, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "jaw"},
+      "jaw"         : {"size": 15, "bleedRatio": 0.02, "hitWeight": 2, "weapons": ["bite", "tusk", "tongue", "screech"], "armor": 0.5},
+      "mandible"     : {"size": 15, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "jaw"},
       "nose"        : {"size": 5, "bleedRatio": 0.01, "hitWeight": 0.4, "armor": 0.3},
+      // Facial soft-tissue features (no own skeleton — cartilage/skin over the skull, like the nose): a
+      // head is more than nose+eyes+jaw. Hittable + scarrable; forehead is broad + midline, cheeks paired.
+      "forehead"    : {"size": 12, "bleedRatio": 0.02, "hitWeight": 0.5, "armor": 0.4},
+      "leftCheek"   : {"size": 8, "bleedRatio": 0.015, "hitWeight": 0.3, "isPaired": true, "armor": 0.3},
+      "rightCheek"  : {"size": 8, "bleedRatio": 0.015, "hitWeight": 0.3, "isPaired": true, "armor": 0.3},
       "snout"       : {"size": 20, "bleedRatio": 0.02, "hitWeight": 3, "weapons": ["tusk", "bite"], "armor": 0.7},
       "rostrum"   : {"size": 20, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "snout"},
       "leftEye"     : {"size": 10, "bleedRatio": 0.01, "hitWeight": 0.2, "isPaired": true, "armor": 0.1},
@@ -134,7 +139,7 @@
         "rightLittleToe"   : {"size": 2, "bleedRatio": 0.002, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightFoot", "armor": 0.2}
       },
       "limbs": {
-        "head": ["head", "skull", "jaw", "mandible", "nose", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
+        "head": ["head", "skull", "forehead", "leftCheek", "rightCheek", "jaw", "mandible", "nose", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
         "torso": ["chest", "ribcage", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
         "left_arm": ["leftShoulder", "leftScapula", "leftUpperArm", "leftHumerus", "leftForearm", "leftUlna", "leftHand", "leftMetacarpus", "leftThumb", "leftIndexFinger", "leftMiddleFinger", "leftRingFinger", "leftLittleFinger"],
         "right_arm": ["rightShoulder", "rightScapula", "rightUpperArm", "rightHumerus", "rightForearm", "rightUlna", "rightHand", "rightMetacarpus", "rightThumb", "rightIndexFinger", "rightMiddleFinger", "rightRingFinger", "rightLittleFinger"],
@@ -347,7 +352,7 @@
         "rightWingPhalanx": {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightWingClaw"}
       },
       "limbs": {
-        "head": ["head", "skull", "jaw", "mandible", "nose", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
+        "head": ["head", "skull", "forehead", "leftCheek", "rightCheek", "jaw", "mandible", "nose", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
         "torso": ["chest", "ribcage", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
         "left_wing": ["leftWing", "leftWingHumerus", "leftWingClaw", "leftWingPhalanx", "leftWingtip", "leftCarpometacarpus"],
         "right_wing": ["rightWing", "rightWingHumerus", "rightWingClaw", "rightWingPhalanx", "rightWingtip", "rightCarpometacarpus"],
