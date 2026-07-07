@@ -98,6 +98,7 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
       if (t.rarity === 'rare' || t.rarity === 'epic' || t.rarity === 'mythic') {
         const capable =
           !!t.selfCondition ||
+          !!t.triggeredCondition || // a meter-triggered condition (berserker rage) is a capability
           !!t.onHitEffect ||
           !!t.weaponBonus ||
           !!t.aura || // §6a: an aura is a capability
@@ -105,8 +106,11 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
           (t.subCapabilities?.length ?? 0) > 0 ||
           (t.bodyMods?.length ?? 0) > 0 || // an epic body transformation (stone bones) is a capability
           // TRAIT-LIBRARY-EXPANSION §1/§2: a SIGNIFICANT stat/attribute payload (the ±3/±5 rungs and
-          // the significant combos deliberately sit at rare/epic) is a legitimate high-rarity pull.
-          ((t.kind === 'stat' || t.kind === 'attribute') && Object.keys(t.effects ?? {}).length > 0);
+          // the significant combos deliberately sit at rare/epic) is a legitimate high-rarity pull —
+          // as is an affinity passive's effects payload (ever-warm's resistances, nocturnal's night sight)
+          // now that those live on the TRAIT rather than an always-on selfCondition pill.
+          ((t.kind === 'stat' || t.kind === 'attribute' || t.kind === 'passive') &&
+            Object.keys(t.effects ?? {}).length > 0);
         expect(capable, `${t.id} (${t.rarity}) carries no capability`).toBe(true);
       }
       // A legendary/mythic PASSIVE banner is a rolled bundle; the §2d grand STAT pulls

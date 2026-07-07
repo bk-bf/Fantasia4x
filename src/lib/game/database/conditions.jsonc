@@ -1217,14 +1217,52 @@
         "modifiers"  : {"workEfficiency": 0.95}
     },
     {
-        "id"         : "berserker_blood",
-        "name"       : "Berserker Blood",
-        "flags"      : ["racial", "passive"],
+        "id"         : "berserk",
+        "name"       : "Berserk",
+        "flags"      : ["combat", "racial"],
         "transient"  : true,
-        "description": "A battle-fury in the veins, devastating in a fight, but reckless and dull to reason.",
+        "floater"    : true,
+        "description": "A red battle-fury loosed — devastating and hard to put down, but dull to reason and burning itself out.",
         "color"      : "#C0392B",
         "charSpans"  : [ {"sheet": "items", "id": 211} ],
-        "modifiers"  : {}
+        "priority"   : 60,
+        "modifiers"  : {"strength": 1.5, "intelligence": 0.9, "consciousness": 1.5},
+        "onExpiry"   : {"to": "berserk_spent", "durationHours": 0.5}
+    },
+    {
+        "id"         : "adrenal",
+        "name"       : "Adrenal Surge",
+        "flags"      : ["combat", "racial"],
+        "transient"  : true,
+        "floater"    : true,
+        "description": "Fight-or-flight floods the veins — stronger and steadier under pain, for a while.",
+        "color"      : "#E67E22",
+        "charSpans"  : [ {"sheet": "items", "id": 211} ],
+        "priority"   : 55,
+        "modifiers"  : {"strength": 1.2, "consciousness": 1.2},
+        "onExpiry"   : {"to": "adrenal_spent", "durationHours": 0.5}
+    },
+    {
+        "id"         : "berserk_spent",
+        "name"       : "Spent",
+        "flags"      : ["combat", "racial"],
+        "transient"  : true,
+        "floater"    : true,
+        "description": "Wrung out after the fury — muscles leaden, the body paying back what the rage borrowed.",
+        "color"      : "#7B241C",
+        "charSpans"  : [ {"sheet": "items", "id": 211} ],
+        "modifiers"  : {"strength": 0.75}
+    },
+    {
+        "id"         : "adrenal_spent",
+        "name"       : "Adrenal Crash",
+        "flags"      : ["combat", "racial"],
+        "transient"  : true,
+        "floater"    : true,
+        "description": "The surge fades to a shaky, sapped weariness as the body settles its debt.",
+        "color"      : "#A04000",
+        "charSpans"  : [ {"sheet": "items", "id": 211} ],
+        "modifiers"  : {"strength": 0.9}
     },
     {
         "id"         : "stone_boned",
@@ -1235,18 +1273,7 @@
         "color"      : "#9E9E9E",
         "charSpans"  : [ {"sheet": "items", "id": 145} ],
         "modifiers"  : {}
-    },
-    {
-        "id"         : "night_eyed",
-        "name"       : "Night Eyes",
-        "flags"      : ["racial", "passive"],
-        "transient"  : true,
-        "description": "Eyes made for the dark, sees in pitch black as by day, but drowsy under a bright sun.",
-        "color"      : "#5C6BC0",
-        "charSpans"  : [ {"sheet": "font", "id": 247} ],
-        "modifiers"  : {}
-    },
-    {
+    },    {
         "id"          : "photosynthesis",
         "name"        : "Photosynthetic",
         "transient"   : true,
@@ -1823,19 +1850,9 @@
         "description": "A stretched skin-membrane between limb and flank, lesser wings for long, safe leaps.",
         "color"      : "#8B6F47",
         "charSpans"  : [ {"sheet": "items", "id": 145} ],
+        "hostParts"  : ["leftWing", "rightWing"],
         "modifiers"  : {"moveSpeed": 1.15}
-    },
-    {
-        "id"         : "bioluminescent",
-        "name"       : "Lantern Organ",
-        "flags"      : ["racial", "utility-gear"],
-        "transient"  : true,
-        "description": "A soft living glow at the brow, its bearer carries their own faint light into the dark.",
-        "color"      : "#7EC8E3",
-        "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {}
-    },
-    {
+    },    {
         "id": "digging_clawed",
         "name": "Burrowing Claws",
         "flags": ["racial", "utility-gear"],
@@ -1887,18 +1904,7 @@
         "color"      : "#5C6BC0",
         "charSpans"  : [ {"sheet": "font", "id": 247} ],
         "modifiers"  : {}
-    },
-    {
-        "id"         : "many_eyed",
-        "name"       : "Many Eyes",
-        "flags"      : ["racial", "passive"],
-        "transient"  : true,
-        "description": "A crown of small patient eyes, the dark and the flanks hold no surprises.",
-        "color"      : "#5C6BC0",
-        "charSpans"  : [ {"sheet": "font", "id": 247} ],
-        "modifiers"  : {}
-    },
-    {
+    },    {
         "id"         : "ironclad_mind",
         "name"       : "Ironclad Mind",
         "flags"      : ["racial", "passive"],

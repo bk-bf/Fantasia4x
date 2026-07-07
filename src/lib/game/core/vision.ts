@@ -32,6 +32,21 @@ export function getNightVision(entity: Pawn | Mob): number {
   }
   let nv = 0;
   for (const trait of entity.traits ?? []) nv += trait.effects?.nightVision ?? 0;
+  // Anatomy gate: night-vision needs living eyes — a pawn whose eyes are all destroyed is blind in the
+  // dark regardless of racial trait. Only pawns that actually HAVE eyes (and any nightVision) pay the
+  // limb walk; a body plan with no eye parts is left ungated. (This is the "gated behind anatomy" the
+  // eye-themed traits — nocturnal / many-eyed / beast-eyed — resolve to, instead of an always-on pill.)
+  if (nv > 0 && entity.limbs?.length) {
+    let hasEye = false;
+    let hasLivingEye = false;
+    for (const limb of entity.limbs)
+      for (const part of limb.parts ?? []) {
+        if (!part.id.toLowerCase().includes('eye')) continue;
+        hasEye = true;
+        if (!part.isMissing && part.health > 0) hasLivingEye = true;
+      }
+    if (hasEye && !hasLivingEye) nv = 0;
+  }
   return Math.min(1, Math.max(0, nv));
 }
 

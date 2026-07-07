@@ -166,9 +166,10 @@
         "rarity"     : "uncommon",
         "kind"       : "passive",
         "name"       : "Adrenal",
-        "description": "A quick fight-or-flight surge, danger sharpens them where it freezes others.",
+        "description": "A quick fight-or-flight surge: pain in a fight floods the veins, stronger and steadier for a spell, then a crash.",
         "flavorLine" : "danger sharpens rather than freezes them",
         "effects"    : {"mentalResistance": 0.1},
+        "triggeredCondition": {"condition": "adrenal", "meter": "pain", "atOrAbove": 40, "durationHours": 0.25},
         "evolvesTo"  : "berserker-blood"
     },
     {
@@ -695,11 +696,10 @@
         "rarity"       : "epic",
         "kind"         : "passive",
         "name"         : "Berserker Blood",
-        "description"  : "A battle-fury in the veins, devastating in a fight, but reckless and dull to reason.",
+        "description"  : "A battle-fury in the veins: when the pain of a fight bites deep it looses a devastating red rage — then leaves the body spent.",
         "flavorLine"   : "a red fury waits just beneath their calm, eager to be loosed",
-        "selfCondition": "berserker_blood",
-        "weaponBonus"  : {"damage": 0.15},
-        "effects"      : {"strengthBonus": 2, "intelligencePenalty": 1}
+        "triggeredCondition": {"condition": "berserk", "meter": "pain", "atOrAbove": 40, "durationHours": 0.25},
+        "weaponBonus"  : {"damage": 0.15}
     },
     {
         "id"         : "stone-bones",
@@ -720,9 +720,7 @@
         "kind"         : "passive",
         "name"         : "Nocturnal",
         "description"  : "A creature of the night, sees in pitch dark as by day, but drowses under the sun.",
-        "flavorLine"   : "they come alive under the stars and drowse beneath the sun",
-        "selfCondition": "night_eyed",
-        "effects"      : {"nightVision": 1.0}
+        "flavorLine"   : "they come alive under the stars and drowse beneath the sun",        "effects"      : {"nightVision": 1.0}
     },
     {
         "id": "amphibious",
@@ -3028,18 +3026,21 @@
         "description": "A stretched skin-membrane between limb and flank, lesser wings for long, safe leaps. Nothing wears over it.",
         "flavorLine": "arms raised, a taut membrane spans to their hips",
         "selfCondition": "gliding_membrane",
+        "grafts": [
+            { "limb": "left_wing", "parts": ["leftWing", "leftWingHumerus", "leftWingtip", "leftCarpometacarpus"] },
+            { "limb": "right_wing", "parts": ["rightWing", "rightWingHumerus", "rightWingtip", "rightCarpometacarpus"] }
+        ],
         "blocksSlots": ["back"],
         "effects": {}
     },
     {
-        "id"           : "lantern-organ",
+        "id"           : "beast-eyed",
         "scope"        : "racial",
         "rarity"       : "uncommon",
         "kind"         : "passive",
-        "name"         : "Lantern Organ",
-        "description"  : "A soft living glow at the brow, its bearer carries their own faint light into the dark.",
-        "flavorLine"   : "a pale lamp of flesh glows above their eyes",
-        "selfCondition": "bioluminescent",
+        "name"         : "Beast Eyes",
+        "description"  : "Wide reflective beast-eyes with a tapetum sheen, they catch the faintest light and see well into the dark.",
+        "flavorLine"   : "their eyes flash green when the light catches them",
         "effects"      : {"nightVision": 0.4}
     },
     {
@@ -3085,7 +3086,7 @@
         "name"         : "Many-Eyed",
         "description"  : "A crown of small patient eyes, the dark and the flanks hold no surprises.",
         "flavorLine"   : "six small black eyes stud their brow like beads",
-        "selfCondition": "many_eyed",
+        "grafts"       : [ { "limb": "extra_eyes", "parts": ["anteriorLateralLeftEye", "anteriorLateralRightEye", "posteriorLateralLeftEye", "posteriorLateralRightEye"] } ],
         "effects"      : {"nightVision": 0.6, "perceptionBonus": 2}
     },
     // ═══════════════════════════════════════════════════════════════════════════
@@ -4114,9 +4115,7 @@
                 "scope"        : "racial",
                 "kind"         : "passive",
                 "name"         : "Many-Eyed",
-                "description"  : "A crown of small patient eyes, the dark and the flanks hold no surprises.",
-                "selfCondition": "many_eyed",
-                "effects"      : {"nightVision": 0.6, "perceptionBonus": 2}
+                "description"  : "A crown of small patient eyes, the dark and the flanks hold no surprises.",                "effects"      : {"nightVision": 0.6, "perceptionBonus": 2}
             },
             {
                 "id"         : "wall-crawler",
@@ -4199,9 +4198,7 @@
                 "scope"        : "racial",
                 "kind"         : "passive",
                 "name"         : "Umbral Sight",
-                "description"  : "Sees in pitch dark as by day, the shadow is their element.",
-                "selfCondition": "night_eyed",
-                "effects"      : {"nightVision": 1.0, "shadowResistance": 0.3}
+                "description"  : "Sees in pitch dark as by day, the shadow is their element.",                "effects"      : {"nightVision": 1.0, "shadowResistance": 0.3}
             },
             {
                 "id"           : "chilling-touch",

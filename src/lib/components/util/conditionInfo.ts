@@ -335,6 +335,18 @@ function transientSources(entity: Pawn | Mob, id: string): string[] {
       const eta = ticks && ticks > 0 ? `, wakes in ~${gameTimeLeft(ticks)}` : '';
       return [cause ? `Out cold — ${cause}${eta}` : `Recovering${eta}`];
     }
+    case 'berserk':
+    case 'adrenal': {
+      // Timed rage — the remaining fury before it burns out into the spent aftermath.
+      const t = entity.conditionTimers?.[id] ?? 0;
+      return [t > 0 ? `Raging — ${gameTimeLeft(t)} left` : 'Raging'];
+    }
+    case 'berserk_spent':
+    case 'adrenal_spent': {
+      // The exhaustion the rage borrowed against — counts down to full recovery.
+      const t = entity.conditionTimers?.[id] ?? 0;
+      return [t > 0 ? `Spent — ${gameTimeLeft(t)} to recover` : 'Spent'];
+    }
     default:
       // Mood conditions are pawn-only (mobs never sync them).
       if (id.startsWith('mood_'))

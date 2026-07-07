@@ -746,6 +746,9 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     }
   }
 
+  // Trait-driven meter triggers (berserker rage on pain) — stamp the timed condition on the rising edge.
+  stampTriggeredConditions(pawn);
+
   // ── Persist updated condition/blood state ──────────────────────────────────
   // ADR-002 amendment (hot per-tick, behind the worker): the common (non-lethal) path mutates the
   // live pawn IN PLACE rather than rebuilding the whole pawns array each pawn each tick — that
@@ -907,6 +910,28 @@ export function tickAuras(state: GameState): void {
 }
 
 /**
+ * Rising-edge stamp of a trait's meter-`triggeredCondition` (berserker rage on pain). Fires ONCE when
+ * the meter crosses the threshold — it won't re-stamp while the condition OR its `onExpiry` aftermath is
+ * still ticking (so a rage runs its fixed duration, then the spent debuff must clear before the next).
+ * Mutates `conditionTimers` in place (ADR-002 hot path); allocation-free for pawns with no such trait.
+ */
+function stampTriggeredConditions(pawn: Pawn): void {
+  const traits = pawn.traits;
+  if (!traits?.length) return;
+  for (const t of traits) {
+    const tc = t.triggeredCondition;
+    if (!tc) continue;
+    const meter = tc.meter === 'pain' ? (pawn.pain ?? 0) : 0;
+    if (meter < tc.atOrAbove) continue;
+    const timers = (pawn.conditionTimers ??= {});
+    if ((timers[tc.condition] ?? 0) > 0) continue; // already raging
+    const spent = getTransientConditionDef(tc.condition)?.onExpiry?.to;
+    if (spent && (timers[spent] ?? 0) > 0) continue; // still spent — no re-rage yet
+    timers[tc.condition] = ticksFromGameHours(tc.durationHours);
+  }
+}
+
+/**
  * Decrement temporary transient condition durations and remove expired ones.
  */
 function tickConditionTimers(pawn: Pawn): Pawn {
@@ -916,6 +941,12 @@ function tickConditionTimers(pawn: Pawn): Pawn {
   for (const [key, val] of Object.entries(durations)) {
     const remaining = val - 1;
     if (remaining > 0) next[key] = remaining;
+    else {
+      // Timer ran out — chain the def's `onExpiry` aftermath if it declares one (berserk → berserk_spent).
+      const onExp = getTransientConditionDef(key)?.onExpiry;
+      if (onExp)
+        next[onExp.to] = Math.max(next[onExp.to] ?? 0, ticksFromGameHours(onExp.durationHours));
+    }
   }
   const changed =
     Object.keys(next).length !== Object.keys(durations).length ||

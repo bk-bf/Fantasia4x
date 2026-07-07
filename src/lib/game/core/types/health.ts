@@ -90,6 +90,10 @@ export interface TransientConditionDef extends ConditionGraphFields {
    *  `string` because `core/` must not depend on `systems/`). First user: `collapse` → "Collapsed";
    *  the precedent for future condition-driven FSM states. */
   fsmState?: string;
+  /** Timed "aftermath" chain: when THIS condition's timer runs out, stamp `to` for `durationHours`
+   *  in-game hours. The generic primitive behind a rage → exhaustion trade-off (berserk → berserk_spent).
+   *  Stamped in `tickConditionTimers` at the tick the timer hits 0. */
+  onExpiry?: { to: string; durationHours: number };
   /** Info-only staging (e.g. `bleeding` → minor/severe/fatal). A transient normally has no stages;
    *  when present, the deriving code pushes `id:stageLabel` into `transientConditions` (like the
    *  persistent stage combos) and the chip picks colour/lethality from the matching stage. The stages'
