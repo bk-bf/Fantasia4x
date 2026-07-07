@@ -548,7 +548,7 @@ export function generateRaceDescription(race: Race): string {
         : 'steady';
   const gaitP = rng.pick(P.gait[gaitKey]);
   const compP = rng.pick(P.comparative[comparativeKey(str, dex, con)]);
-  const s1 = `The ${race.name}, ${race.lore.epithet}, are ${sizeP} — ${buildP}, ${gaitP} — ${compP}.`;
+  const s1 = `The ${race.name}, ${race.lore.epithet}, are ${sizeP}, ${buildP}, ${gaitP}, ${compP}.`;
 
   // Sentence 2 — temperament + mind + belief.
   const mindP = rng.pick(P.mind[statBucket(int)]);

@@ -807,7 +807,7 @@
   {
     "id": "runic_inscription",
     "name": "Runic Inscription",
-    "description": "Grinding attuned gems to mana-dust and binding it into stone, steel and cloth. The first magic age past steel — runed walls, infused workstations, and the magic-dust materials they make.",
+    "description": "Grinding attuned gems to mana-dust and binding it into stone, steel and cloth. The first magic age past steel, runed walls, infused workstations, and the magic-dust materials they make.",
     "category": "crafting",
     "tier": 3,
     "prerequisites": ["attunement"],
@@ -830,7 +830,7 @@
   {
     "id": "mythic_attunement",
     "name": "Mythic Attunement",
-    "description": "The deepest binding — drawing legend into matter. Mythic beast materials, capstone gear, and the rare reforging of an item into a Famed legend.",
+    "description": "The deepest binding, drawing legend into matter. Mythic beast materials, capstone gear, and the rare reforging of an item into a Famed legend.",
     "category": "crafting",
     "tier": 4,
     "prerequisites": ["runic_inscription"],

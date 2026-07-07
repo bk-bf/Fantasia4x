@@ -348,7 +348,7 @@
       "herb": {
         "acceptsCategory": "herb",
         "quantity"       : 2,
-        "default"        : {"name": "Herbal Tea", "description": "Herbs steeped in hot water — calming and restorative."}
+        "default"        : {"name": "Herbal Tea", "description": "Herbs steeped in hot water, calming and restorative."}
       }
     }
   },
@@ -2588,7 +2588,7 @@
       "filling1": {
         "acceptsCategories": ["meat", "fish", "vegetable", "fruit"],
         "quantity"         : 1,
-        "default"          : {"name": "Pie", "description": "Two fillings baked into a pastry crust — a hot meal in the hand."}
+        "default"          : {"name": "Pie", "description": "Two fillings baked into a pastry crust, a hot meal in the hand."}
       },
       "filling2": {
         "acceptsCategories": ["meat", "fish", "vegetable", "fruit"],

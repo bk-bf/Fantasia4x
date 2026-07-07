@@ -20,14 +20,14 @@
         "category"   : "combat",
         "primaryStat": "strength",
         "formula"    : "(1.0 + (STR − 10) × 0.01) × manipulation",
-        "description": "melee attack damage multiplier — STR is the muscle behind a blow (× manipulation). Breaking ARMOUR is its own stat (armor_damage); ranged damage is ranged_damage."
+        "description": "melee attack damage multiplier, STR is the muscle behind a blow (× manipulation). Breaking ARMOUR is its own stat (armor_damage); ranged damage is ranged_damage."
     },
     {
         "id"         : "armor_damage",
         "category"   : "combat",
         "primaryStat": "strength",
         "formula"    : "(1.0 + (STR − 10) × 0.02) × manipulation",
-        "description": "armour-breaking multiplier — how fast your blows wreck a foe's ARMOUR condition, SEPARATE from the flesh damage you deal through it (× manipulation). STR drives the force. Armour lost per landed hit = weapon.armorDamage × this: a hammer caves plate in a few blows, a mace dents it, a cleaver's edge barely scratches it (made to open flesh, not crack steel). Wreck the armour, then later blows land clean."
+        "description": "armour-breaking multiplier, how fast your blows wreck a foe's ARMOUR condition, SEPARATE from the flesh damage you deal through it (× manipulation). STR drives the force. Armour lost per landed hit = weapon.armorDamage × this: a hammer caves plate in a few blows, a mace dents it, a cleaver's edge barely scratches it (made to open flesh, not crack steel). Wreck the armour, then later blows land clean."
     },
     {
         "id"         : "hit_chance",
@@ -62,7 +62,7 @@
         "category"   : "combat",
         "primaryStat": "dexterity",
         "formula"    : "(1.0 + (DEX − 10) × 0.03) × manipulation",
-        "description": "attack cadence multiplier — higher = faster strikes (× manipulation)"
+        "description": "attack cadence multiplier, higher = faster strikes (× manipulation)"
     },
     {
         "id": "crit_chance",
@@ -86,49 +86,49 @@
         "category": "combat",
         "primaryStat": "perception",
         "formula": "(1.0 + (PER − 10) × 0.04) × sight × manipulation",
-        "description": "ranged hit accuracy — the PER PRECISION axis (deadeye), × sight × manipulation; Combat adds a LINEAR distance penalty + gear/ammo aimBonuses. The sniper stat — pairs with aim_range."
+        "description": "ranged hit accuracy, the PER PRECISION axis (deadeye), × sight × manipulation; Combat adds a LINEAR distance penalty + gear/ammo aimBonuses. The sniper stat, pairs with aim_range."
     },
     {
         "id": "aim_speed",
         "category": "combat",
         "primaryStat": "dexterity",
         "formula": "(1.0 + (DEX − 10) × 0.04) × manipulation",
-        "description": "ranged AIM cadence — the DEX SPEED axis (quick hands → fast loose), × manipulation. The shot gap is AIM time (this, lengthened by distance — far targets take longer to line up) PLUS span time (reload_speed, crossbows only); both shorten it. A ready quiver + bracers speed the aim further. The skirmisher/sling stat."
+        "description": "ranged AIM cadence, the DEX SPEED axis (quick hands → fast loose), × manipulation. The shot gap is AIM time (this, lengthened by distance, far targets take longer to line up) PLUS span time (reload_speed, crossbows only); both shorten it. A ready quiver + bracers speed the aim further. The skirmisher/sling stat."
     },
     {
         "id": "reload_speed",
         "category": "combat",
         "primaryStat": "dexterity",
         "formula": "(1.0 + (DEX − 10) × 0.03) × manipulation",
-        "description": "ranged RELOAD/spanning cadence — DEX works the crossbow's windlass/lever fast, × manipulation. Only weapons with a mechanical reload (crossbows) have a span step, so it's a crossbow stat: interval = aim time (aim_speed) + span time (reload_speed). Bows/slings have no span → unaffected. Same DEX SPEED axis as aim_speed — a deft shooter cycles a crossbow fast."
+        "description": "ranged RELOAD/spanning cadence, DEX works the crossbow's windlass/lever fast, × manipulation. Only weapons with a mechanical reload (crossbows) have a span step, so it's a crossbow stat: interval = aim time (aim_speed) + span time (reload_speed). Bows/slings have no span → unaffected. Same DEX SPEED axis as aim_speed, a deft shooter cycles a crossbow fast."
     },
     {
         "id": "aim_range",
         "category": "combat",
         "primaryStat": "perception",
         "formula": "(1.0 + (PER − 10) × 0.025) × sight",
-        "description": "ranged reach multiplier — the PER PRECISION axis (a sharp eye sights + holds a far mark), × sight; scales the weapon's base range, capped by visionRange (effectiveRange = min(vision, weaponRange × aim_range + gear)). The sniper stat — pairs with aim_accuracy."
+        "description": "ranged reach multiplier, the PER PRECISION axis (a sharp eye sights + holds a far mark), × sight; scales the weapon's base range, capped by visionRange (effectiveRange = min(vision, weaponRange × aim_range + gear)). The sniper stat, pairs with aim_accuracy."
     },
     {
         "id": "ranged_damage",
         "category": "combat",
         "primaryStat": "strength",
         "formula": "(1.0 + (STR − 10) × 0.01) × manipulation",
-        "description": "ranged attack damage multiplier — the DRAW/THROW power behind a shot (× manipulation). STR's ONLY ranged role: a bow's draw-weight and a thrown weapon's force scale with it (ammo damage × weapon drawPower × this). Crossbows & slings are MECHANICAL — they ignore it (the stock/cord does the work)."
+        "description": "ranged attack damage multiplier, the DRAW/THROW power behind a shot (× manipulation). STR's ONLY ranged role: a bow's draw-weight and a thrown weapon's force scale with it (ammo damage × weapon drawPower × this). Crossbows & slings are MECHANICAL, they ignore it (the stock/cord does the work)."
     },
     {
         "id": "heal_rate",
         "category": "physical",
         "primaryStat": "constitution",
         "formula": "(1.0 + (CON − 10) × 0.05) × blood_filtration",
-        "description": "wound recovery speed multiplier (× blood_filtration — kidneys drive recovery; NOT × consciousness: an unconscious body still knits, often harder). Boosted further by rest, food, and mood"
+        "description": "wound recovery speed multiplier (× blood_filtration, kidneys drive recovery; NOT × consciousness: an unconscious body still knits, often harder). Boosted further by rest, food, and mood"
     },
     {
         "id": "medical_skill",
         "category": "physical",
         "primaryStat": "intelligence",
         "formula": "(0.3 + (INT − 10) × 0.025 + (PER − 10) × 0.015) × manipulation × sight × consciousness",
-        "description": "caretaking ability 0–1 — a tend rolls treatment quality against this (× manipulation × sight × consciousness; mood applies on the roll)"
+        "description": "caretaking ability 0–1, a tend rolls treatment quality against this (× manipulation × sight × consciousness; mood applies on the roll)"
     },
     // ── Physical ──────────────────────────────────────────────────────────────────
     // Physical stats are multiplied by the body capacities that enable them:
@@ -157,14 +157,14 @@
         "category": "physical",
         "primaryStat": "constitution",
         "formula": "(2 + (CON − 10) × 0.15) × blood_filtration × blood_pumping",
-        "description": "stamina recovered PER SECOND while resting/winded (scaled to ticks by Combat.tickStaminaAndWinded; × blood_filtration × blood_pumping; injury slows it). ~2/s at CON 10 → a ~50 pool refills in ~25s; in-fight regen (×0.2) trails the ~2/s attack drain so long fights wind you (N-2 tuning dial). Fatigue divides this (up to ÷1.3 at fatigue 100) and multiplies attack stamina drain, so anything that raises fatigue — weather fatigueMul, conditions — indirectly saps stamina without double counting"
+        "description": "stamina recovered PER SECOND while resting/winded (scaled to ticks by Combat.tickStaminaAndWinded; × blood_filtration × blood_pumping; injury slows it). ~2/s at CON 10 → a ~50 pool refills in ~25s; in-fight regen (×0.2) trails the ~2/s attack drain so long fights wind you (N-2 tuning dial). Fatigue divides this (up to ÷1.3 at fatigue 100) and multiplies attack stamina drain, so anything that raises fatigue, weather fatigueMul, conditions, indirectly saps stamina without double counting"
     },
     {
         "id"         : "blood_volume",
         "category"   : "physical",
         "primaryStat": "constitution",
         "formula"    : "weight × 1.4 + (CON − 10) × 2",
-        "description": "total blood pool — physical property, not capacity-dependent"
+        "description": "total blood pool, physical property, not capacity-dependent"
     },
     {
         "id"         : "blood_regeneration",
@@ -178,7 +178,7 @@
         "category"   : "physical",
         "primaryStat": "constitution",
         "formula"    : "(1.0 + (CON − 10) × 0.05) × blood_filtration",
-        "description": "clotting ability — scales the per-roll chance a bleeding wound stops on its own (a lucky natural clot rolled ~every 3 in-game hours; × blood_filtration). A wound needs as many successful clots as its severity (minor 1, serious 2, critical+ 3); each cuts the bleed proportionally. A higher-CON pawn is likelier to clot before bleeding out — but dressing the wound (caretaking) is the reliable stop. Mirrors heal_rate as the recovery-axis counterpart."
+        "description": "clotting ability, scales the per-roll chance a bleeding wound stops on its own (a lucky natural clot rolled ~every 3 in-game hours; × blood_filtration). A wound needs as many successful clots as its severity (minor 1, serious 2, critical+ 3); each cuts the bleed proportionally. A higher-CON pawn is likelier to clot before bleeding out, but dressing the wound (caretaking) is the reliable stop. Mirrors heal_rate as the recovery-axis counterpart."
     },
     {
         "id": "hunger_rate",
@@ -192,7 +192,7 @@
         "category": "physical",
         "primaryStat": "constitution",
         "formula": "1.0 − (CON − 10) × 0.02",
-        "description": "fatigue accrual multiplier by fitness (CON 10 = 1.0×; fitter pawns tire slower). The base rate everything multiplies — scaled at runtime by work/combat, cold weather + night, and conditions (dehydration, hypothermia…)"
+        "description": "fatigue accrual multiplier by fitness (CON 10 = 1.0×; fitter pawns tire slower). The base rate everything multiplies, scaled at runtime by work/combat, cold weather + night, and conditions (dehydration, hypothermia…)"
     },
     {
         "id": "carry_weight",
@@ -205,7 +205,7 @@
         "carryLoadMin": 0.05,
         "carryLoadMax": 0.30,
         "formula": "bodyWeight × clamp(STR × carryLoadPerStrength, carryLoadMin, carryLoadMax)",
-        "description": "maximum carry weight in kg — a strength-scaled fraction of body mass (STR 10 ≈ 12%)"
+        "description": "maximum carry weight in kg, a strength-scaled fraction of body mass (STR 10 ≈ 12%)"
     },
     {
         "id"              : "carry_volume",
@@ -214,7 +214,7 @@
         // Volume in litres tracks frame size: ~13% of body mass, independent of strength.
         "carryVolumePerKg": 0.13,
         "formula"         : "bodyWeight × carryVolumePerKg",
-        "description"     : "maximum carry volume in litres — a fixed fraction of body mass (frame bulk)"
+        "description"     : "maximum carry volume in litres, a fixed fraction of body mass (frame bulk)"
     },
     // ── Resistance ────────────────────────────────────────────────────────────────
     // Physical & elemental resistances are INNATE — pure stat formulas, NOT dimmed by a
@@ -226,70 +226,70 @@
         "category"   : "resistance",
         "primaryStat": "dexterity",
         "formula"    : "(0.0 + (DEX − 10) × 0.01)",
-        "description": "cutting damage reduction — innate (stat-only, not dimmed by a daze)"
+        "description": "cutting damage reduction, innate (stat-only, not dimmed by a daze)"
     },
     {
         "id"         : "piercing_resistance",
         "category"   : "resistance",
         "primaryStat": "constitution",
         "formula"    : "(0.0 + (CON − 10) × 0.008)",
-        "description": "piercing damage reduction — innate (stat-only, not dimmed by a daze)"
+        "description": "piercing damage reduction, innate (stat-only, not dimmed by a daze)"
     },
     {
         "id"         : "blunt_resistance",
         "category"   : "resistance",
         "primaryStat": "constitution",
         "formula"    : "(0.0 + (CON − 10) × 0.008 + (STR − 10) × 0.004)",
-        "description": "blunt damage reduction — innate (stat-only, not dimmed by a daze)"
+        "description": "blunt damage reduction, innate (stat-only, not dimmed by a daze)"
     },
     {
         "id": "fire_resistance",
         "category": "resistance",
         "primaryStat": "constitution",
         "formula": "(0.0 + (CON − 10) × 0.01)",
-        "description": "fire damage reduction — innate (stat-only); also slows HEAT-STROKE onset from hot weather/temperature (SEASONS_WEATHER) — reduces heat exposure before the condition driver"
+        "description": "fire damage reduction, innate (stat-only); also slows HEAT-STROKE onset from hot weather/temperature (SEASONS_WEATHER), reduces heat exposure before the condition driver"
     },
     {
         "id": "cold_resistance",
         "category": "resistance",
         "primaryStat": "constitution",
         "formula": "(0.0 + (CON − 10) × 0.01)",
-        "description": "cold damage reduction — innate (stat-only); also slows HYPOTHERMIA onset from cold weather/temperature (SEASONS_WEATHER) — reduces cold exposure before the condition driver"
+        "description": "cold damage reduction, innate (stat-only); also slows HYPOTHERMIA onset from cold weather/temperature (SEASONS_WEATHER), reduces cold exposure before the condition driver"
     },
     {
         "id": "wetness_resistance",
         "category": "resistance",
         "primaryStat": "constitution",
         "formula": "(0.0 + (CON − 10) × 0.015)",
-        "description": "how well the body sheds water (fur/hide/fitness) — innate (stat-only). Does NOT change the `wet` onset (a full 100 meter, same for all); it slows how FAST the wetness meter FILLS on wet ground, so a hardy/woolly creature soaks slower and a frail one fast (SEASONS_WEATHER)"
+        "description": "how well the body sheds water (fur/hide/fitness), innate (stat-only). Does NOT change the `wet` onset (a full 100 meter, same for all); it slows how FAST the wetness meter FILLS on wet ground, so a hardy/woolly creature soaks slower and a frail one fast (SEASONS_WEATHER)"
     },
     {
         "id"         : "lightning_resistance",
         "category"   : "resistance",
         "primaryStat": "dexterity",
         "formula"    : "(0.0 + (DEX − 10) × 0.01)",
-        "description": "lightning damage reduction — innate (stat-only, not dimmed by a daze)"
+        "description": "lightning damage reduction, innate (stat-only, not dimmed by a daze)"
     },
     {
         "id"         : "shadow_resistance",
         "category"   : "resistance",
         "primaryStat": "intelligence",
         "formula"    : "(0.0 + (INT − 10) × 0.01)",
-        "description": "shadow damage reduction — innate (stat-only, not dimmed by a daze)"
+        "description": "shadow damage reduction, innate (stat-only, not dimmed by a daze)"
     },
     {
         "id"         : "poison_resistance",
         "category"   : "resistance",
         "primaryStat": "constitution",
         "formula"    : "(0.0 + (CON − 10) × 0.015) × blood_filtration",
-        "description": "toxin mitigation (× blood_filtration — kidneys/liver clear toxins; not dimmed by a daze)"
+        "description": "toxin mitigation (× blood_filtration, kidneys/liver clear toxins; not dimmed by a daze)"
     },
     {
         "id"         : "disease_resistance",
         "category"   : "resistance",
         "primaryStat": "constitution",
         "formula"    : "(0.0 + (CON − 10) × 0.01) × blood_filtration",
-        "description": "disease resistance (× blood_filtration — organ-based immune clearance; not dimmed by a daze)"
+        "description": "disease resistance (× blood_filtration, organ-based immune clearance; not dimmed by a daze)"
     },
     {
         "id"         : "mental_resistance",
@@ -470,28 +470,28 @@
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "(1.0 + (DEX − 10) × 0.04 + (PER − 10) × 0.03) × manipulation × sight",
-        "description": "repair speed — careful patching of worn structure favours a deft, sharp-eyed hand (× manipulation × sight), NOT raw muscle. A construction subjob (falls back to the construction skill)."
+        "description": "repair speed, careful patching of worn structure favours a deft, sharp-eyed hand (× manipulation × sight), NOT raw muscle. A construction subjob (falls back to the construction skill)."
     },
     {
         "id"         : "repair_quality",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "(1.0 + (DEX − 10) × 0.04 + (INT − 10) × 0.02) × manipulation × sight × consciousness",
-        "description": "repair quality — how soundly the structure is restored (× manipulation × sight × consciousness)."
+        "description": "repair quality, how soundly the structure is restored (× manipulation × sight × consciousness)."
     },
     {
         "id"         : "deconstruct_speed",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "(1.0 + (STR − 10) × 0.05 + (CON − 10) × 0.02) × manipulation × moving",
-        "description": "demolition speed — brute teardown favours raw muscle and stamina (× manipulation × moving). Throughput is speed-only; it has no own quality stat (inherits the category's only for the work-tab readout)."
+        "description": "demolition speed, brute teardown favours raw muscle and stamina (× manipulation × moving). Throughput is speed-only; it has no own quality stat (inherits the category's only for the work-tab readout)."
     },
     {
         "id"         : "refuel_speed",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "(1.0 + (STR − 10) × 0.03 + (CON − 10) × 0.03) × moving × manipulation",
-        "description": "refuel speed — hauling fuel to a fire/station, a carrying chore (× moving × manipulation). Speed-only throughput; no own quality stat."
+        "description": "refuel speed, hauling fuel to a fire/station, a carrying chore (× moving × manipulation). Speed-only throughput; no own quality stat."
     },
     {
         "id"         : "alchemy_speed",
@@ -535,7 +535,7 @@
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "(1.0 + (DEX − 10) × 0.05 + (CON − 10) × 0.02) × moving × manipulation",
-        "description": "fetch speed — nimble shuttle runs of reserved inputs to a station favour quick hands (× moving × manipulation); no quality axis."
+        "description": "fetch speed, nimble shuttle runs of reserved inputs to a station favour quick hands (× moving × manipulation); no quality axis."
     },
     {
         "id"         : "planting_speed",
