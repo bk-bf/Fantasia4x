@@ -71,6 +71,7 @@ import {
   CONDITION_IDS_WITH_TRIGGERS,
   COLLAPSE_CONSCIOUSNESS,
   RECOVER_CONSCIOUSNESS,
+  FSM_STATE_BY_CONDITION,
   TIRED_FATIGUE_THRESHOLD
 } from '../core/needs';
 import {
@@ -1296,55 +1297,58 @@ class PawnStateMachineImpl {
       }
       const consciousness = pawnStatService.computeCapacities(afterConditions).consciousness ?? 1;
 
-      if (afterConditions.currentState === PAWN_STATE.COLLAPSED) {
+      // COLLAPSE — driven by the `collapse` condition, not a hardcoded state (data-driven link, see
+      // FSM_STATE_BY_CONDITION / the def's `fsmState`). This heavy block runs ONLY when the pawn is
+      // already down or crosses the collapse threshold this tick — a healthy pawn skips it entirely,
+      // so the PEACE path stays allocation-free (ENGINE-PERFORMANCE).
+      const wasCollapsed = afterConditions.currentState === PAWN_STATE.COLLAPSED;
+      if (wasCollapsed || consciousness < COLLAPSE_CONSCIOUSNESS) {
+        // Onset/clear the collapse condition from consciousness (its application rule; hysteresis band
+        // so a body teetering at the floor doesn't flicker). This is the CAUSE — the FSM state below is
+        // then derived from the condition it stamps.
         const durations = { ...(afterConditions.conditionTimers ?? {}) };
-        let downed: Pawn;
-        if (consciousness >= RECOVER_CONSCIOUSNESS) {
-          delete durations.collapse; // recovered — stand back up
-          downed = {
-            ...afterConditions,
-            currentState: PAWN_STATE.IDLE,
-            conditionTimers: durations
-          };
+        let jobs = state.jobs;
+        if (wasCollapsed) {
+          if (consciousness >= RECOVER_CONSCIOUSNESS) delete durations.collapse; // recovered
+          else durations.collapse = Math.max(durations.collapse ?? 0, 2); // stay down
         } else {
-          durations.collapse = Math.max(durations.collapse ?? 0, 2); // keep it active
-          downed = { ...afterConditions, conditionTimers: durations };
+          // Enter collapse: stamp the condition and release the claimed job.
+          durations.collapse = Math.max(durations.collapse ?? 0, 2);
+          jobs = (state.jobs ?? []).some((j) => j.claimedBy === afterConditions.id)
+            ? (state.jobs ?? []).map((j) =>
+                j.claimedBy === afterConditions.id ? { ...j, claimedBy: null } : j
+              )
+            : state.jobs;
         }
-        state = {
-          ...state,
-          pawns: state.pawns.map((p) =>
-            p.id === pawn.id ? syncTransientConditions(downed, gameState.turn) : p
-          )
-        };
-        continue;
-      }
-
-      if (consciousness < COLLAPSE_CONSCIOUSNESS) {
-        // Enter collapse: drop the job, halt, and go down.
-        const jobs = (state.jobs ?? []).some((j) => j.claimedBy === afterConditions.id)
-          ? (state.jobs ?? []).map((j) =>
-              j.claimedBy === afterConditions.id ? { ...j, claimedBy: null } : j
-            )
-          : state.jobs;
-        const durations = { ...(afterConditions.conditionTimers ?? {}) };
-        durations.collapse = Math.max(durations.collapse ?? 0, 2);
-        const downed = syncTransientConditions(
-          {
-            ...afterConditions,
-            currentState: PAWN_STATE.COLLAPSED,
-            activeJob: undefined,
-            // Going down RELEASES the draft: an unconscious pawn can't be commanded, so drop the drafted
-            // flag + any attack/move order. Otherwise the draft-path loop kept crawling it toward its
-            // target at a fraction of a tile/s — a downed pawn dragging itself in to "attack" a wolf.
-            drafted: false,
-            draftTarget: undefined,
-            path: [],
-            isMoving: false,
-            hasReachedDestination: false,
-            conditionTimers: durations
-          },
+        // Materialise conditions from the timers, then read the data-driven forced FSM state from the
+        // active conditions — the FSM never hardcodes the `collapse` id / Collapsed state.
+        const synced = syncTransientConditions(
+          { ...afterConditions, conditionTimers: durations },
           gameState.turn
         );
+        let forced: string | undefined;
+        for (const id of synced.transientConditions ?? []) {
+          if (FSM_STATE_BY_CONDITION[id]) {
+            forced = FSM_STATE_BY_CONDITION[id];
+            break;
+          }
+        }
+        const downed: Pawn = forced
+          ? {
+              ...synced,
+              currentState: forced,
+              activeJob: undefined,
+              // Going down RELEASES the draft: an unconscious pawn can't be commanded, so drop the
+              // drafted flag + any attack/move order. Otherwise the draft-path loop kept crawling it
+              // toward its target at a fraction of a tile/s — a downed pawn dragging itself in to
+              // "attack" a wolf.
+              drafted: false,
+              draftTarget: undefined,
+              path: [],
+              isMoving: false,
+              hasReachedDestination: false
+            }
+          : { ...synced, currentState: PAWN_STATE.IDLE }; // recovered — stand back up
         state = {
           ...state,
           jobs,

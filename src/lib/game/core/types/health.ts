@@ -85,6 +85,11 @@ export interface TransientConditionDef extends ConditionGraphFields {
    *  glyph float (the ↓/Zzz over the sprite), the HIGHEST priority wins so the most important state shows
    *  (e.g. `collapse` must beat `winded`). Default 0 (no glyph / lowest). Read via `conditionPriority`. */
   priority?: number;
+  /** When active, forces the pawn's FSM into this state and gates all other behaviour — the
+   *  data-driven link between a condition and FSM incapacitation. Value is a PAWN_STATE name (typed
+   *  `string` because `core/` must not depend on `systems/`). First user: `collapse` → "Collapsed";
+   *  the precedent for future condition-driven FSM states. */
+  fsmState?: string;
   /** Info-only staging (e.g. `bleeding` → minor/severe/fatal). A transient normally has no stages;
    *  when present, the deriving code pushes `id:stageLabel` into `transientConditions` (like the
    *  persistent stage combos) and the chip picks colour/lethality from the matching stage. The stages'

@@ -564,7 +564,13 @@
         // Status-animation priority — the downed ↓ glyph beats every other state tell (winded, sleeping):
         // being out of the fight is the most important thing to read at a glance.
         "priority": 100,
-        "modifiers": {"dexterity": 0.1, "strength": 0.3, "moveSpeed": 0.0, "workEfficiency": 0.0}
+        // Data-driven link: while active this condition forces the pawn's FSM into COLLAPSED and gates
+        // all other behaviour (PawnStateMachine reads `fsmState` instead of hardcoding the state).
+        "fsmState": "Collapsed",
+        // Being down is enforced by the FSM (dropped job, released draft, action gate) — so the only
+        // modifier that carries weight is zeroing evasion, so a downed body is trivially hit. The old
+        // dexterity/strength/moveSpeed/workEfficiency cuts were dead weight the FSM already covers.
+        "modifiers": {"dodge": 0.0}
     },
     {
         "id"         : "eating",

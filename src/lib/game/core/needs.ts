@@ -58,6 +58,13 @@ export function getTransientConditionDef(id: string): TransientConditionDef | un
   return TRANSIENT_BY_ID.get(id);
 }
 
+/** Condition id → the FSM state it forces while active (the def's `fsmState`), precomputed once. The
+ *  data-driven link between a condition and FSM incapacitation: the pawn FSM reads this to drive its
+ *  state from the condition instead of hardcoding it. Today: `collapse` → "Collapsed". */
+export const FSM_STATE_BY_CONDITION: Record<string, string> = Object.fromEntries(
+  [...TRANSIENT_BY_ID.values()].filter((d) => d.fsmState).map((d) => [d.id, d.fsmState!])
+);
+
 /** Any condition def (persistent OR transient) by id — for the TRAIT-SYSTEM-V2 §5 graph, whose edges
  *  can be declared on either kind. */
 const CONDITION_BY_ID = new Map<string, ConditionDef | TransientConditionDef>(
