@@ -560,7 +560,9 @@
         "description": "Overwhelmed by pain, incapacitated and out of the fight, a body on the ground. Recovers only as the pain subsides.",
         "color": "#b71c1c",
         "floater": true,
-        "charSpans": [ {"sheet": "font", "id": 19} ],
+        // CP437 25 = ↓ down arrow — matches the red collapse floater (WorldEffectsLayer), tinted red by
+        // the pill via the condition's `color`.
+        "charSpans": [ {"sheet": "font", "id": 25} ],
         // Status-animation priority — the downed ↓ glyph beats every other state tell (winded, sleeping):
         // being out of the fight is the most important thing to read at a glance.
         "priority": 100,
