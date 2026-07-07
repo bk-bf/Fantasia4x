@@ -2,7 +2,7 @@ import type { Pawn, EntityNeeds, PawnState, Race, EntityStats, Trait, Injury } f
 import { createPawnInventory, createPawnEquipment } from '../core/PawnEquipment';
 import { drawPawnTraits } from '../core/Race';
 import { createBodyPlanLimbs } from '../systems/Combat';
-import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/BodyParts';
+import { DEFAULT_PLAN, PART_DEF_MAP, containedParts, organsOf } from '../core/BodyParts';
 import type { WoundSeverity } from '../core/Wounds';
 import { rng } from '../core/rng';
 
@@ -146,6 +146,13 @@ export function applyTraitWounds(pawn: Pawn): void {
         if (def.skeleton || holdsVital) severity = 'critical';
         else cascadeIds = contents;
       }
+      // A permanent scar on an OUTER flesh region that SHELTERS internal organs (head→brain,
+      // chest→heart/lungs, abdomen→liver/kidneys) is struck in combat — leaving it critically low (80%
+      // gone) means one blow caves it in and takes the organs, a death sentence from a starting scar.
+      // Cap such a region at `serious` (~50% HP). Limbs that wrap only bone (arms/legs) are uncapped —
+      // a withered arm at critical is fine, its loss isn't fatal.
+      if (spec.severity === 'critical' && (def.hitWeight ?? 0) > 0 && organsOf(partId).length > 0)
+        severity = 'serious';
       const limb = limbs.find((l) => l.parts?.some((p) => p.id === partId));
       const part = limb?.parts?.find((p) => p.id === partId);
       if (!limb || !part || part.isMissing) continue;

@@ -625,12 +625,12 @@
     },
     {
         "id": "wild-swinging", "scope": "personal", "rarity": "negative", "kind": "attribute",
-        "name": "Wild-Swinging", "description": "All effort and no aim — half their swings meet air.",
+        "name": "Wild-Swinging", "description": "All effort and no control — half their swings meet only air.",
         "effects": {"combatMods": {"hit_chance": 0.9, "crit_chance": 0.85}}
     },
     {
         "id": "hapless-fighter", "scope": "personal", "rarity": "negative", "kind": "attribute",
-        "name": "Hapless", "description": "They could miss a barn from the inside.",
+        "name": "Hapless", "description": "With a blade in hand, they could miss a barn from the inside.",
         "effects": {"combatMods": {"hit_chance": 0.6, "crit_chance": 0.6}}
     },
     {
@@ -710,7 +710,7 @@
     },
     {
         "id": "point-blank", "scope": "personal", "rarity": "negative", "kind": "attribute",
-        "name": "Point-Blank Only", "description": "If they can't touch it they can't hit it.",
+        "name": "Point-Blank Only", "description": "Give them a bow and they still need to be near enough to touch — nothing they loose carries.",
         "effects": {"combatMods": {"aim_range": 0.6, "aim_speed": 0.8}}
     },
     // ── §1 · WORK specialists — one 4-card set per work type (speed + yield/quality) so pawns can

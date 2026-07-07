@@ -54,7 +54,7 @@
       "skull"       : {"size": 45, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "head"},
       "jaw"         : {"size": 25, "bleedRatio": 0.02, "hitWeight": 2, "weapons": ["bite", "tusk", "tongue", "screech"], "armor": 0.5},
       "mandible"     : {"size": 25, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "jaw"},
-      "nose"        : {"size": 15, "bleedRatio": 0.01, "hitWeight": 0.4, "armor": 0.3},
+      "nose"        : {"size": 5, "bleedRatio": 0.01, "hitWeight": 0.4, "armor": 0.3},
       "snout"       : {"size": 20, "bleedRatio": 0.02, "hitWeight": 3, "weapons": ["tusk", "bite"], "armor": 0.7},
       "rostrum"   : {"size": 20, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "snout"},
       "leftEye"     : {"size": 10, "bleedRatio": 0.01, "hitWeight": 0.2, "isPaired": true, "armor": 0.1},
