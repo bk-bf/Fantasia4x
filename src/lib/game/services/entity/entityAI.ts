@@ -580,9 +580,10 @@ export function stepOne(
   // computed ONCE here and threaded into the FSM (so darkness shortens detection without recomputing
   // the light per check). Daytime with nightVision 0 ≈ the old def.stats.visionRange.
   const tileLight = computeTileLightLevel(turn, state.buildings ?? [], mob.x, mob.y);
-  // §G stash the mob's effective (night-vision-dampened) light so its `sight` capacity dims in the dark
-  // too (combat aim), matching pawns. Floored so pitch-black isn't fully blind.
-  mob.effectiveLight = Math.max(0.1, dampenLightByNightVision(tileLight, getNightVision(mob)));
+  // §G stash the mob's sight multiplier (night-vision-dampened light) so its `sight` dims in the dark too
+  // (combat aim), matching pawns: no penalty at ≥50% light, then a linear ramp to a floor.
+  const mel = dampenLightByNightVision(tileLight, getNightVision(mob));
+  mob.effectiveLight = mel >= 0.5 ? 1 : Math.max(0.1, mel / 0.5);
   // Weather shortens detection too (fog/storm/blizzard — SEASONS_WEATHER): folds into the shared
   // vision model so both this mob's sight and (via the same fn) pawn detection degrade in murk.
   const visionRange = effectiveVisionRange(mob, tileLight, weatherSightMul(state.weather?.type));

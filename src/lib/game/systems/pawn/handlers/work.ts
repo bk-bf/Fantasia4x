@@ -7,8 +7,6 @@ import { perTick } from '../../../core/time';
 import { jobService, BASE_WORK_RATE } from '../../../services/JobService';
 import { pawnStatService } from '../../../services/PawnStatService';
 import { pathfinderService } from '../../../services/PathfinderService';
-import { computeTileLightLevel } from '../../../services/EnvironmentService';
-import { dampenLightByNightVision, getNightVision } from '../../../core/vision';
 import { PAWN_STATE } from '../pawnStates';
 import { isAdjacent } from '../pawnQueries';
 import { allowedTilesForPawn, nearestAllowedTile } from '../zoneConfine';
@@ -23,8 +21,7 @@ import {
   tryStartHunt,
   tryAssignPath,
   repathStuckMover,
-  tryWanderStep,
-  lightWorkMultiplier
+  tryWanderStep
 } from '../pawnHelpers';
 import { checkNeedInterrupts, selectIdleNeed, applyNeed } from '../needSelection';
 import {
@@ -481,41 +478,16 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     return jobService.releaseJob(pawn.id, jobId, goIdle(pawn, gameState));
   }
 
-  // §G light → sight → work speed. Only sight-dependent jobs are affected (jobs.jsonc
-  // `lightAffected`, default true) — carrying jobs (haul/fetch/refuel) shrug off the dark. For an
-  // affected job, compute the pawn's tile light lazily from the day/night ambient + nearby fire
-  // emitters (computeTileLightLevel — the same value the HUD shows; only this one tile is sampled,
-  // no map scan). It scales the `sight` capacity every `*_speed` formula multiplies by, so darkness
-  // (night, away from a fire) slows the work down to lightWorkMultiplier's 0.4 floor.
-  // A pawn's night_vision (racial trait) dampens the darkness penalty here too, so a nocturnal pawn
-  // neither sees worse nor works slower at night — the same dial used for vision range (core/vision).
-  const lightAffected = jobService.isJobLightAffected(activeJob.type);
-  const rawLight =
-    lightAffected && pawn.position
-      ? computeTileLightLevel(
-          gameState.turn,
-          gameState.buildings ?? [],
-          pawn.position.x,
-          pawn.position.y
-        )
-      : 1;
-  const lightSightFactor = lightWorkMultiplier(
-    dampenLightByNightVision(rawLight, getNightVision(pawn))
-  );
-
-  // Wire work speed into job advancement. getWorkModifiers (stats.jsonc) is the SINGLE
-  // source: `*_speed` formula × body capacities × trait workSpeed × condition/status state,
-  // with the light factor folded in via the `sight` capacity (so don't re-apply it here).
+  // §G light → sight → work. Darkness now flows through the `sight` capacity itself (dampened per tick to
+  // the pawn's night-vision-adjusted effectiveLight, no penalty ≥50% light), and work `*_speed`/quality
+  // formulas AVERAGE their capacities — so low light only shaves work by sight's SHARE (e.g. 1/2 or 1/3),
+  // never to zero, and needs no separate light factor or 0.4 floor here. Sight-less jobs (haul/fetch →
+  // moving+manipulation) are naturally unaffected in the dark.
   const workCategory = jobService.getJobWorkCategory(activeJob, gameState);
   // Subjobs (build/repair/demolish/refuel, haul/fetch) read their OWN `*_speed` when stats.jsonc
   // defines one, falling back per-axis to the parent category — so a repair runs at repair_speed.
   const workStatKey = jobService.getJobWorkStatKey(activeJob, gameState);
-  const workSpeedMult = pawnStatService.getWorkModifiers(
-    pawn,
-    workStatKey,
-    lightSightFactor,
-    workCategory
-  ).speed;
+  const workSpeedMult = pawnStatService.getWorkModifiers(pawn, workStatKey, undefined, workCategory).speed;
   let workPoints =
     activeJob.type === 'construct' || activeJob.type === 'deconstruct'
       ? // construction scales by its own skill on top of the work-speed formula.

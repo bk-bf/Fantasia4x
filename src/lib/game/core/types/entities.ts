@@ -266,9 +266,9 @@ export interface Pawn {
   injuries?: Injury[];
   /** Aggregate pain score 0–100; exceeding 80 causes collapse. */
   pain?: number;
-  /** §G effective light on the pawn's tile 0–1, already dampened by night_vision (= tileLight +
-   *  nv×(1−tileLight), floored). Stashed once per tick in tickConditions; `sight` = eyeHealth × this, so
-   *  low light lowers sight everywhere (the Darkness condition surfaces it). 1 = full light / full night vision. */
+  /** §G the pawn's SIGHT MULTIPLIER from light 0–1 (night-vision folded in): 1.0 at ≥50% effective light
+   *  (no penalty), a linear ramp to a floor below that. Stashed once per tick in tickConditions; `sight` =
+   *  eyeHealth × this, so darkness lowers sight everywhere (the Darkness condition surfaces it). */
   effectiveLight?: number;
   /** Milliseconds remaining until next auto-attack fires. */
   attackCooldown?: number;

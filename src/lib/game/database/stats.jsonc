@@ -307,8 +307,8 @@
         "id"         : "foraging_speed",
         "category"   : "work",
         "primaryStat": "perception",
-        "formula"    : "(1.0 + (PER − 10) × 0.05 + (CON − 10) × 0.02) × sight × moving",
-        "description": "foraging work speed (× sight × moving)"
+        "formula"    : "(1.0 + (PER − 10) × 0.05 + (CON − 10) × 0.02) × ((sight + moving) / 2)",
+        "description": "foraging work speed (× ((sight + moving) / 2))"
     },
     {
         "id"         : "foraging_yield",
@@ -321,8 +321,8 @@
         "id"         : "woodcutting_speed",
         "category"   : "work",
         "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.04 + (CON − 10) × 0.02) × manipulation × moving",
-        "description": "woodcutting speed (× manipulation × moving)"
+        "formula"    : "(1.0 + (STR − 10) × 0.04 + (CON − 10) × 0.02) × ((manipulation + moving) / 2)",
+        "description": "woodcutting speed (× ((manipulation + moving) / 2))"
     },
     {
         "id"         : "woodcutting_yield",
@@ -335,8 +335,8 @@
         "id"         : "mining_speed",
         "category"   : "work",
         "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.04 + (CON − 10) × 0.02) × manipulation × moving",
-        "description": "mining speed (× manipulation × moving)"
+        "formula"    : "(1.0 + (STR − 10) × 0.04 + (CON − 10) × 0.02) × ((manipulation + moving) / 2)",
+        "description": "mining speed (× ((manipulation + moving) / 2))"
     },
     {
         "id"         : "mining_yield",
@@ -367,15 +367,15 @@
         "id"         : "butchery_quality",
         "category"   : "work",
         "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05) × manipulation × sight",
-        "description": "cut quality (× manipulation × sight)"
+        "formula"    : "(1.0 + (DEX − 10) × 0.05) × ((manipulation + sight) / 2)",
+        "description": "cut quality (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "fishing_speed",
         "category"   : "work",
         "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (PER − 10) × 0.03) × sight × manipulation",
-        "description": "fishing speed (× sight × manipulation)"
+        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (PER − 10) × 0.03) × ((sight + manipulation) / 2)",
+        "description": "fishing speed (× ((sight + manipulation) / 2))"
     },
     {
         "id"         : "fishing_yield",
@@ -388,50 +388,50 @@
         "id"         : "crafting_speed",
         "category"   : "work",
         "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × manipulation × sight",
-        "description": "crafting speed (× manipulation × sight)"
+        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × ((manipulation + sight) / 2)",
+        "description": "crafting speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "crafting_quality",
         "category"   : "work",
         "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (INT − 10) × 0.03) × manipulation × sight × consciousness",
-        "description": "item quality (× manipulation × sight × consciousness)"
+        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (INT − 10) × 0.03) × ((manipulation + sight + consciousness) / 3)",
+        "description": "item quality (× ((manipulation + sight + consciousness) / 3))"
     },
     {
         "id"         : "metalworking_speed",
         "category"   : "work",
         "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.04 + (INT − 10) × 0.02) × manipulation × sight",
-        "description": "smithing speed (× manipulation × sight)"
+        "formula"    : "(1.0 + (STR − 10) × 0.04 + (INT − 10) × 0.02) × ((manipulation + sight) / 2)",
+        "description": "smithing speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "metalworking_quality",
         "category"   : "work",
         "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.04) × manipulation × sight × consciousness",
-        "description": "metal purity / edge retention (× manipulation × sight × consciousness)"
+        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.04) × ((manipulation + sight + consciousness) / 3)",
+        "description": "metal purity / edge retention (× ((manipulation + sight + consciousness) / 3))"
     },
     {
         "id"         : "leatherworking_speed",
         "category"   : "work",
         "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × manipulation × sight",
-        "description": "leatherwork speed (× manipulation × sight)"
+        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × ((manipulation + sight) / 2)",
+        "description": "leatherwork speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "leatherworking_quality",
         "category"   : "work",
         "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × manipulation × sight",
-        "description": "leather quality (× manipulation × sight)"
+        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × ((manipulation + sight) / 2)",
+        "description": "leather quality (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "digging_speed",
         "category"   : "work",
         "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (INT − 10) × 0.02) × manipulation × moving",
-        "description": "digging speed (× manipulation × moving)"
+        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (INT − 10) × 0.02) × ((manipulation + moving) / 2)",
+        "description": "digging speed (× ((manipulation + moving) / 2))"
     },
     {
         "id"         : "digging_yield",
@@ -444,22 +444,22 @@
         "id"         : "research_speed",
         "category"   : "work",
         "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.05 + (PER − 10) × 0.02) × sight × consciousness",
-        "description": "research speed (× sight × consciousness)"
+        "formula"    : "(1.0 + (INT − 10) × 0.05 + (PER − 10) × 0.02) × ((sight + consciousness) / 2)",
+        "description": "research speed (× ((sight + consciousness) / 2))"
     },
     {
         "id"         : "construction_speed",
         "category"   : "work",
         "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.04 + (INT − 10) × 0.02) × manipulation × moving",
-        "description": "construction speed (× manipulation × moving)"
+        "formula"    : "(1.0 + (STR − 10) × 0.04 + (INT − 10) × 0.02) × ((manipulation + moving) / 2)",
+        "description": "construction speed (× ((manipulation + moving) / 2))"
     },
     {
         "id"         : "construction_quality",
         "category"   : "work",
         "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.02) × manipulation × sight",
-        "description": "building durability (× manipulation × sight)"
+        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.02) × ((manipulation + sight) / 2)",
+        "description": "building durability (× ((manipulation + sight) / 2))"
     },
     // ── Construction SUBJOBS (Work-tab right-click expand). Keyed by job-type id; resolved per-axis with
     //    a fallback to the parent `construction_*` (so `construct`/Build inherits — no entry needed), and
@@ -469,64 +469,64 @@
         "id"         : "repair_speed",
         "category"   : "work",
         "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (PER − 10) × 0.03) × manipulation × sight",
-        "description": "repair speed, careful patching of worn structure favours a deft, sharp-eyed hand (× manipulation × sight), NOT raw muscle. A construction subjob (falls back to the construction skill)."
+        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (PER − 10) × 0.03) × ((manipulation + sight) / 2)",
+        "description": "repair speed, careful patching of worn structure favours a deft, sharp-eyed hand (× ((manipulation + sight) / 2)), NOT raw muscle. A construction subjob (falls back to the construction skill)."
     },
     {
         "id"         : "repair_quality",
         "category"   : "work",
         "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (INT − 10) × 0.02) × manipulation × sight × consciousness",
-        "description": "repair quality, how soundly the structure is restored (× manipulation × sight × consciousness)."
+        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (INT − 10) × 0.02) × ((manipulation + sight + consciousness) / 3)",
+        "description": "repair quality, how soundly the structure is restored (× ((manipulation + sight + consciousness) / 3))."
     },
     {
         "id"         : "deconstruct_speed",
         "category"   : "work",
         "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.05 + (CON − 10) × 0.02) × manipulation × moving",
-        "description": "demolition speed, brute teardown favours raw muscle and stamina (× manipulation × moving). Throughput is speed-only; it has no own quality stat (inherits the category's only for the work-tab readout)."
+        "formula"    : "(1.0 + (STR − 10) × 0.05 + (CON − 10) × 0.02) × ((manipulation + moving) / 2)",
+        "description": "demolition speed, brute teardown favours raw muscle and stamina (× ((manipulation + moving) / 2)). Throughput is speed-only; it has no own quality stat (inherits the category's only for the work-tab readout)."
     },
     {
         "id"         : "refuel_speed",
         "category"   : "work",
         "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.03 + (CON − 10) × 0.03) × moving × manipulation",
-        "description": "refuel speed, hauling fuel to a fire/station, a carrying chore (× moving × manipulation). Speed-only throughput; no own quality stat."
+        "formula"    : "(1.0 + (STR − 10) × 0.03 + (CON − 10) × 0.03) × ((moving + manipulation) / 2)",
+        "description": "refuel speed, hauling fuel to a fire/station, a carrying chore (× ((moving + manipulation) / 2)). Speed-only throughput; no own quality stat."
     },
     {
         "id"         : "alchemy_speed",
         "category"   : "work",
         "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.05 + (PER − 10) × 0.02) × sight × manipulation",
-        "description": "brewing speed (× sight × manipulation)"
+        "formula"    : "(1.0 + (INT − 10) × 0.05 + (PER − 10) × 0.02) × ((sight + manipulation) / 2)",
+        "description": "brewing speed (× ((sight + manipulation) / 2))"
     },
     {
         "id"         : "alchemy_quality",
         "category"   : "work",
         "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.06 + (PER − 10) × 0.02) × sight × manipulation × consciousness",
-        "description": "potion potency (× sight × manipulation × consciousness)"
+        "formula"    : "(1.0 + (INT − 10) × 0.06 + (PER − 10) × 0.02) × ((sight + manipulation + consciousness) / 3)",
+        "description": "potion potency (× ((sight + manipulation + consciousness) / 3))"
     },
     {
         "id"         : "cooking_speed",
         "category"   : "work",
         "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.04 + (DEX − 10) × 0.03) × manipulation × sight",
-        "description": "cooking speed (× manipulation × sight)"
+        "formula"    : "(1.0 + (INT − 10) × 0.04 + (DEX − 10) × 0.03) × ((manipulation + sight) / 2)",
+        "description": "cooking speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "cooking_quality",
         "category"   : "work",
         "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.05 + (DEX − 10) × 0.03) × manipulation × sight × consciousness",
-        "description": "meal nutrition / taste (× manipulation × sight × consciousness)"
+        "formula"    : "(1.0 + (INT − 10) × 0.05 + (DEX − 10) × 0.03) × ((manipulation + sight + consciousness) / 3)",
+        "description": "meal nutrition / taste (× ((manipulation + sight + consciousness) / 3))"
     },
     {
         "id"         : "hauling_speed",
         "category"   : "work",
         "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.04 + (CON − 10) × 0.02) × moving × manipulation",
-        "description": "hauling speed (× moving × manipulation)"
+        "formula"    : "(1.0 + (STR − 10) × 0.04 + (CON − 10) × 0.02) × ((moving + manipulation) / 2)",
+        "description": "hauling speed (× ((moving + manipulation) / 2))"
     },
     {
         // Hauling SUBJOB: fetch (carry a reserved input to a workstation). `haul`/Haul inherits hauling
@@ -534,15 +534,15 @@
         "id"         : "fetch_speed",
         "category"   : "work",
         "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (CON − 10) × 0.02) × moving × manipulation",
-        "description": "fetch speed, nimble shuttle runs of reserved inputs to a station favour quick hands (× moving × manipulation); no quality axis."
+        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (CON − 10) × 0.02) × ((moving + manipulation) / 2)",
+        "description": "fetch speed, nimble shuttle runs of reserved inputs to a station favour quick hands (× ((moving + manipulation) / 2)); no quality axis."
     },
     {
         "id"         : "planting_speed",
         "category"   : "work",
         "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × manipulation × sight",
-        "description": "planting speed (× manipulation × sight)"
+        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × ((manipulation + sight) / 2)",
+        "description": "planting speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "planting_yield",
@@ -555,8 +555,8 @@
         "id"         : "caretaking_speed",
         "category"   : "work",
         "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.05 + (DEX − 10) × 0.02) × manipulation × sight",
-        "description": "treatment speed (× manipulation × sight)"
+        "formula"    : "(1.0 + (INT − 10) × 0.05 + (DEX − 10) × 0.02) × ((manipulation + sight) / 2)",
+        "description": "treatment speed (× ((manipulation + sight) / 2))"
     },
     // ── Body Capacities ───────────────────────────────────────────────────────────
     // Derived from specific organ health (not parent limb health).

@@ -372,10 +372,11 @@ export function reapDeadPawns(gameState: GameState): GameState {
  * malnutrition progression, blood loss, critical limb checks.
  * Returns updated GameState (may trigger death via killPawn).
  */
-// §G Darkness: sight is dampened to the pawn's effective (night-vision-adjusted) tile light, floored so
-// pitch-black still leaves a sliver of sight; the info pill shows once effective light dips below ~full.
+// §G Darkness only bites BELOW 50% effective light — at/above it there's NO penalty (so a rising sun
+// doesn't nag with "88% dark" at 8am). Below 0.5, sight ramps linearly 1.0→floor. `effectiveLight` stores
+// the resulting SIGHT MULTIPLIER (1.0 = no darkness), night-vision already folded in.
+const DARKNESS_ONSET = 0.5;
 const DARKNESS_SIGHT_FLOOR = 0.1;
-const DARKNESS_ONSET = 0.9;
 
 function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // ADR-002 amendment: operate on the LIVE conditions array in place (no per-tick `[...]` clone — it
@@ -405,10 +406,8 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     const tileLight = pos
       ? computeTileLightLevel(gameState.turn, gameState.buildings ?? [], pos.x, pos.y)
       : 1;
-    pawn.effectiveLight = Math.max(
-      DARKNESS_SIGHT_FLOOR,
-      dampenLightByNightVision(tileLight, getNightVision(pawn))
-    );
+    const el = dampenLightByNightVision(tileLight, getNightVision(pawn));
+    pawn.effectiveLight = el >= DARKNESS_ONSET ? 1 : Math.max(DARKNESS_SIGHT_FLOOR, el / DARKNESS_ONSET);
   }
 
   // ── Need-driven conditions (malnutrition ← hunger, dehydration ← thirst, …) ──
@@ -1071,9 +1070,9 @@ export function syncTransientConditions(pawn: Pawn, turn?: number): Pawn {
 
   // SEASONS_WEATHER: under a roof → sheltered (faster cold/heat recovery + storm-mood relief).
   if (pawn.position && isRoofedTile(pawn.position.x, pawn.position.y)) ids.push('sheltered');
-  // §G Darkness (info pill): low light is dampening sight — surfaced once effective light dips below ~full.
-  // The `sight` capacity does the actual reduction; the pill's tooltip shows the live sight × + night vision.
-  if ((pawn.effectiveLight ?? 1) < DARKNESS_ONSET) ids.push('darkness');
+  // §G Darkness (info pill): shown only when low light is actually dampening sight (effectiveLight, the
+  // sight multiplier, < 1 — i.e. below 50% light). The pill's tooltip shows the live sight × + night vision.
+  if ((pawn.effectiveLight ?? 1) < 0.999) ids.push('darkness');
   // SEASONS_WEATHER: only FULLY soaked → wet (cold bites harder, heat less; chance of a chill when
   // soaked + cold). The wetness meter still amplifies cold below the threshold; the `wet` tell shows only
   // at max — WET_THRESHOLD sourced from the `wet` condition's needOnset (data, shared with the gradient).
