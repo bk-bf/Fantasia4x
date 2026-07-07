@@ -1126,3 +1126,68 @@ data edges.**
 guarded by `traitRegistry.test.ts`, `conditionGraph.test.ts`/`conditionGraphData.test.ts`,
 `traitWounds.test.ts`, and `traitExpansion.test.ts` (combatMods/grafts/amputation/bleed-wound/aura).
 Registered in `codegraph.config.json` as `checkable: false`.
+
+### ADR-029 [GAME]: Anatomy-Bound Natural Gear + Layered Subtractive Armour + Unified On-Hit Procs
+
+**Status:** Accepted (2026-07-08) — supersedes ADR-024's natural-armour model (share × scalar →
+per-part additive + layered subtractive) and refactors the natural-gear *condition* indirection of
+ADR-023/028 (gear moves onto the trait/anatomy; conditions become trigger-only).
+
+**Context.** An audit of traits/conditions/natural items found four schema smells. (1) Natural weapons
+AND armour are granted through an intermediate `selfCondition` (`grantsNaturalWeapon`/
+`grantsNaturalArmor`) — a hand-maintained restatement of a binding the anatomy already carries
+(`part.weapons`): 33 weapon + 16 armour conditions, whose `hostParts` duplicate the part-gate for the
+28 weapon ids not listed on any part. (2) Worn armour was **best-of, body-wide**: `partArmorReduction`
+kept the single highest `defense` across ALL worn slots and applied it to any hit — a breastplate
+stopped a headshot — with **no slot→part coverage map anywhere**. (3) On-hit procs split across
+encodings — structured `onHitEffect` (stamps a condition) vs a bare `bloodletting` field (flips a wound
+flag) vs `weaponProperties.knockback` — with `item.onHitEffect`/`TraitOnHitEffect` declared twice.
+(4) Natural weapon = a real Item; natural armour = a bare number synthesised into a fake item for
+display. `part.armor` was a 0–1 *share* × a scalar magnitude, so realistic belly-softness was an
+accidental proportional artefact, un-tunable without restructuring limbs.
+
+**Decision.**
+
+- **Natural weapons bind to anatomy, not conditions.** A trait `grafts` the part (existing
+  `applyTraitGrafts`); `part.weapons` (limbmap) is the single source AND host-gate — losing the part
+  loses the weapon for free. The parallel `grantsNaturalWeapon`/`hostParts` restatement is retired.
+  Natural weapons stay real `natural_weapon` Items (stats + procs); the vestigial `maxDurability`/
+  `deteriorationRate`/`weightKg`/`volumeL` boilerplate is stripped.
+- **Natural armour is per-part, additive, and unified pawn ↔ creature.** One field on BOTH `Trait`
+  and `CreatureDefinition`: `armorMods: [{target, defense}]` (`target` = a part id, a limb group, or
+  `all`), with `naturalArmor: n` kept as uniform sugar for `{target:'all', defense:n}`.
+  `cond.grantsNaturalArmor` is deleted. limbmap `part.armor` is reinterpreted from a hidden 0–1 share
+  into an **explicit, tunable absolute intrinsic** — belly-softness is authored (`abdomen` low,
+  `chest` higher), not a proportional side-effect, and retunable without touching limb structure.
+- **Layered SUBTRACTIVE mitigation (CDDA-style, deterministic).** `partArmorReduction` is rewritten:
+  roll the struck part, then walk the covering layers **outermost → in**; each piece subtracts its
+  effective defense `defense × (1 − armorPen)` from the running damage; the remainder passes to the
+  next layer down, then to flesh. Wound TYPE comes from the weapon's `damageType`; SEVERITY from the
+  leftover damage; then `onHitWound` procs roll. Full-stop is intrinsic (damage − defense ≤ 0 ⇒ no
+  wound). No RNG deflect, no sharp→blunt downgrade, no coverage roll.
+- **Coverage is binary and PER-ITEM.** `armorProperties.covers: [partId…]` names the parts a piece
+  protects — a mail shirt covers the shoulders, a leather vest (same `bodyMid` slot) does not. The
+  **slot** sets the layer order (`Outer → Mid → Base`) + equip-conflict; **`covers`** sets the parts.
+  Natural armour's `armorMods.target` is the same coverage notion. No CDDA coverage % / RNG slip.
+- **Conditions are trigger-only.** With weapon/armour off conditions, the always-on natural-gear pills
+  are gone; a transient condition must carry a dynamic trigger (`activateWhen` / host-gate / meter
+  `triggeredCondition` / combat-stamp). Continues the ADR-028 "no always-on condition" invariant.
+- **On-hit procs = two structured lists sharing one shape.** `onHitEffect` → **`onHitCondition`**
+  (stamps a transient condition: venom/burn/knockdown). NEW **`onHitWound: [{wound, chance}]`**
+  (inflicts a wound-flag — `bloodletting`/`infected`/… over the 7 wound types), retiring the bare
+  `bloodletting` field and unifying the two hybrid feeders (`proboscis`/`bloodsucking-fangs`).
+  `item.onHitCondition`/`TraitOnHitEffect` fold into ONE named type.
+- **Exposure.** The gear-tab tooltip gains a **"Covers:"** row + per-part defense (so "def 3" reads
+  "def 3 → head, neck"); the health/body view shows each part's TOTAL armour (intrinsic + natural +
+  worn), so the layered result is legible.
+
+**Consequences.** A combat rewrite + data migration: `partArmorReduction` (subtractive/layered), every
+limbmap `part.armor` (share→absolute intrinsic), `creature.naturalArmor` + the nat-armour conditions →
+`armorMods`, a `covers` list on armour items, and a `pnpm threat` re-derive of the creatures.jsonc
+annotations. Bigger, but phased (coverage map + soak first). Natural gear finally has ONE model each:
+weapon = Item + `part.weapons`; armour = per-part additive layer.
+
+**Enforcement (NOT graph-checkable).** Data-schema + combat-runtime invariants, not call edges —
+guarded by `partArmorReduction` unit tests (coverage, layering, full-stop, AP), `traitRegistry.test.ts`
+(armorMods/covers shape), and the proc tests. Registered in `codegraph.config.json` as
+`checkable: false`.
