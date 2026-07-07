@@ -4190,13 +4190,13 @@
                 "effects"      : {}
             },
             {
-                "id": "static-aura",
-                "scope": "racial",
-                "kind": "passive",
-                "name": "Battle-Cadence",
-                "description": "The charge jumps to friends within a few strides (never further), they act a beat faster.",
-                "aura": {"condition": "quickness", "radius": 4, "affects": "allies"},
-                "effects": {}
+                "id"         : "static-aura",
+                "scope"      : "racial",
+                "kind"       : "passive",
+                "name"       : "Battle-Cadence",
+                "description": "The charge jumps to friends within a few strides, they act a beat faster.",
+                "aura"       : {"condition": "quickness", "radius": 4, "affects": "allies"},
+                "effects"    : {}
             }
         ]
     },
