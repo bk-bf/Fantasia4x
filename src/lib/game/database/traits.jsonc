@@ -2090,7 +2090,7 @@
         "rarity"     : "common",
         "kind"       : "stat",
         "name"       : "Solid",
-        "description": "Built for force over finesse, a little.",
+        "description": "Built for force over finesse.",
         "effects"    : {"strengthBonus": 1, "dexterityPenalty": 1}
     },
     {
