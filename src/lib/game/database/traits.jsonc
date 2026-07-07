@@ -648,9 +648,7 @@
         "kind"         : "passive",
         "name"         : "Flame Touched",
         "description"  : "Smouldering skin, blows land alight, and neither fire nor frost bites deep.",
-        "flavorLine"   : "warmth pours off their skin even in the deepest frost",
-        "selfCondition": "flame_touched",
-        "onHitEffect"  : {"condition": "burning", "chance": 0.3, "durationHours": 1, "resist": "fire_resistance"},
+        "flavorLine"   : "warmth pours off their skin even in the deepest frost",        "onHitEffect"  : {"condition": "burning", "chance": 0.3, "durationHours": 1, "resist": "fire_resistance"},
         "effects"      : {"fireResistance": 0.3, "coldResistance": 0.15}
     },
     {
@@ -671,9 +669,7 @@
         "kind"         : "passive",
         "name"         : "Regeneration",
         "description"  : "Torn flesh knits itself whole in days.",
-        "flavorLine"   : "torn flesh knits itself whole within days",
-        "selfCondition": "regenerating",
-        "effects"      : {"healRate": 0.6, "diseaseResistance": 0.15}
+        "flavorLine"   : "torn flesh knits itself whole within days",        "effects"      : {"healRate": 0.6, "diseaseResistance": 0.15}
     },
     {
         "id"           : "ever-warm",
@@ -682,9 +678,7 @@
         "kind"         : "passive",
         "name"         : "Ever-Warm",
         "description"  : "An inner furnace, neither killing cold nor searing heat can take hold.",
-        "flavorLine"   : "an inner fire keeps them from ever truly feeling the cold, or the heat",
-        "selfCondition": "ever_warm",
-        "effects"      : {"fireResistance": 0.5, "coldResistance": 0.5}
+        "flavorLine"   : "an inner fire keeps them from ever truly feeling the cold, or the heat",        "effects"      : {"fireResistance": 0.5, "coldResistance": 0.5}
     },
     {
         "id"           : "frost-born",
@@ -693,9 +687,7 @@
         "kind"         : "passive",
         "name"         : "Frost Born",
         "description"  : "Born of the deep winter, the killing cold is home, but real heat is agony.",
-        "flavorLine"   : "the killing cold is to them no more than a brisk morning",
-        "selfCondition": "frost_born",
-        "effects"      : {"coldResistance": 0.5, "wetnessResistance": 0.2, "fireResistance": -0.2}
+        "flavorLine"   : "the killing cold is to them no more than a brisk morning",        "effects"      : {"coldResistance": 0.5, "wetnessResistance": 0.2, "fireResistance": -0.2}
     },
     {
         "id"           : "berserker-blood",
@@ -812,9 +804,7 @@
                 "scope"        : "racial",
                 "kind"         : "passive",
                 "name"         : "Dragon Blood",
-                "description"  : "Fireproof blood that mends wounds fast.",
-                "selfCondition": "regenerating",
-                "effects"      : {"healRate": 0.5, "fireResistance": 0.5}
+                "description"  : "Fireproof blood that mends wounds fast.",                "effects"      : {"healRate": 0.5, "fireResistance": 0.5}
             },
             {
                 "id"         : "dragon-might",
@@ -972,9 +962,7 @@
         "rarity"       : "uncommon",
         "kind"         : "passive",
         "name"         : "Hardy Gut",
-        "description"  : "They'll eat what dropped a stronger stomach and ask for more.",
-        "selfCondition": "hardy_gut",
-        "effects"      : {"poisonResistance": 0.15, "diseaseResistance": 0.15}
+        "description"  : "They'll eat what dropped a stronger stomach and ask for more.",        "effects"      : {"poisonResistance": 0.15, "diseaseResistance": 0.15}
     },
     {
         "id"           : "plagueproof",
@@ -982,9 +970,7 @@
         "rarity"       : "rare",
         "kind"         : "passive",
         "name"         : "Plagueproof",
-        "description"  : "Venom and pestilence pass through them like water through a grate.",
-        "selfCondition": "plagueproof",
-        "effects"      : {"poisonResistance": 0.5, "diseaseResistance": 0.5}
+        "description"  : "Venom and pestilence pass through them like water through a grate.",        "effects"      : {"poisonResistance": 0.5, "diseaseResistance": 0.5}
     },
     {
         "id"           : "weak-gutted",
@@ -4008,9 +3994,7 @@
                 "scope"        : "racial",
                 "kind"         : "passive",
                 "name"         : "Fungal Knit",
-                "description"  : "The mycelium stitches torn flesh, wounds close unnaturally fast.",
-                "selfCondition": "regenerating",
-                "effects"      : {"healRate": 0.5}
+                "description"  : "The mycelium stitches torn flesh, wounds close unnaturally fast.",                "effects"      : {"healRate": 0.5}
             },
             {
                 "id"           : "toxin-immune",
@@ -4364,9 +4348,7 @@
                 "scope"        : "racial",
                 "kind"         : "passive",
                 "name"         : "Verdant Knit",
-                "description"  : "Green vigor stitches torn flesh whole.",
-                "selfCondition": "regenerating",
-                "effects"      : {"healRate": 0.4}
+                "description"  : "Green vigor stitches torn flesh whole.",                "effects"      : {"healRate": 0.4}
             }
         ]
     },
@@ -4470,9 +4452,7 @@
                 "scope"        : "racial",
                 "kind"         : "passive",
                 "name"         : "Unquiet Flesh",
-                "description"  : "It will not die cleanly, wounds close whether it wills them to or not.",
-                "selfCondition": "regenerating",
-                "effects"      : {"healRate": 0.4}
+                "description"  : "It will not die cleanly, wounds close whether it wills them to or not.",                "effects"      : {"healRate": 0.4}
             },
             {
                 "id"         : "dread-visage",

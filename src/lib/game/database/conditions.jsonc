@@ -1207,36 +1207,6 @@
         "modifiers"  : {}
     },
     {
-        "id": "flame_touched",
-        "name": "Flame-Touched",
-        "flags": ["racial", "passive"],
-        "transient": true,
-        "description": "Skin that smoulders with inner heat, blows land alight, and neither fire nor frost bites deep.",
-        "color": "#FF7043",
-        "charSpans": [ {"sheet": "font", "id": 15} ],
-        "modifiers": {}
-    },
-    {
-        "id"         : "regenerating",
-        "name"       : "Regeneration",
-        "flags"      : ["racial", "passive"],
-        "transient"  : true,
-        "description": "Torn flesh knits itself whole in days, wounds close far faster than any healer could manage.",
-        "color"      : "#E91E8C",
-        "charSpans"  : [ {"sheet": "font", "id": 3} ],
-        "modifiers"  : {}
-    },
-    {
-        "id"         : "ever_warm",
-        "name"       : "Ever-Warm",
-        "flags"      : ["racial", "passive"],
-        "transient"  : true,
-        "description": "An inner furnace that never dies, neither killing cold nor searing heat can take hold.",
-        "color"      : "#FFB74D",
-        "charSpans"  : [ {"sheet": "font", "id": 15} ],
-        "modifiers"  : {}
-    },
-    {
         "id"         : "bloodthirst",
         "name"       : "Bloodthirst",
         "flags"      : ["racial", "need"],
@@ -1245,16 +1215,6 @@
         "color"      : "#8B1A1A",
         "charSpans"  : [ {"sheet": "items", "id": 84} ],
         "modifiers"  : {"workEfficiency": 0.95}
-    },
-    {
-        "id"         : "frost_born",
-        "name"       : "Frost Born",
-        "flags"      : ["racial", "passive"],
-        "transient"  : true,
-        "description": "Born of the deep winter, the killing cold is home, but real heat is agony.",
-        "color"      : "#7EC8E3",
-        "charSpans"  : [ {"sheet": "font", "id": 247} ],
-        "modifiers"  : {}
     },
     {
         "id"         : "berserker_blood",
@@ -1898,26 +1858,6 @@
         "modifiers"  : {}
     },
     // ── Passive affinity pills (resistances live on the TRAIT; the pill is the readout) ──
-    {
-        "id"         : "hardy_gut",
-        "name"       : "Hardy Gut",
-        "flags"      : ["racial", "passive"],
-        "transient"  : true,
-        "description": "An iron constitution of the gut, eats what fells other folk and asks for more.",
-        "color"      : "#8B6F47",
-        "charSpans"  : [ {"sheet": "items", "id": 84} ],
-        "modifiers"  : {}
-    },
-    {
-        "id"         : "plagueproof",
-        "name"       : "Plagueproof",
-        "flags"      : ["racial", "passive"],
-        "transient"  : true,
-        "description": "Venom and pestilence pass through them like water through a grate.",
-        "color"      : "#7CB342",
-        "charSpans"  : [ {"sheet": "items", "id": 84} ],
-        "modifiers"  : {}
-    },
     {
         "id"         : "toxin_immune",
         "name"       : "Toxin-Immune",
