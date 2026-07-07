@@ -1068,7 +1068,48 @@ data edges.**
   generalising photosynthesis/light-sensitivity). Pure allocation-free evaluator in `conditionGraph.ts`,
   cheap-gated by `CONDITION_IDS_WITH_TRIGGERS`. Continuous meter-driven severities (shock, infection)
   stay code and are flagged `driver` — forcing them into accruing edges would change behaviour.
+- **TRAIT-LIBRARY-EXPANSION (2026-07-07, spec `.docs/.tasks/open/TRAIT-LIBRARY-EXPANSION.md`)** — the
+  methodical build-out of the pool (~300 new traits) plus the mechanics it forced:
+  - **`effects.combatMods`** — combat statId → multiplier, applied by `PawnStatService.evaluateStat`
+    to combat-category stats only (the combat twin of `workSpeed`). Combos always pair two axes;
+    never a lone stat.
+  - **Resistances are earned, never abstract** — an `attribute`-kind trait may NOT carry a resistance
+    key (registry-enforced); resistance lives only on `naturalGear` coverings (fur/scale/chitin/
+    plumage) and `passive` affinities. The old thermal/toxin attribute traits were re-kinded passive.
+  - **Bleed-wounds replace `bloodletting`** — item-level `bleedWound` (0–1 chance) marks a landed open
+    wound `Injury.noSelfClot`: it never advances clot stages (skipped by `rollWoundClotting`,
+    `clotRemaining` stays 1) and bleeds at full rate until DRESSED. The retired transient condition's
+    users (claws/talons/fangs/feeding weapons + deep-cutting blades) were repointed.
+  - **Breath weapons are reach procs** — natural weapons may carry `reach` (dragonfire reach 3 =
+    spear-like ranged strike; `meleeReach`/`attackerProfile` are reach-aware) + `knockback`, deal FIRE
+    (a real burn wound) and proc the `burning` DoT. TODO: upgrade reach-3 to a true AoE cone.
+  - **`feasted` shared blood-feast** — any successful `bloodDrain` stamps a strong ~30-min buff on the
+    FEEDER (pawn or mob), non-refreshing while active (the anti-perma-keep cooldown).
+  - **À-la-carte body composition** — a trait may `grafts` limbs (with parts from the GLOBAL limbmap
+    catalog) onto a pawn's humanoid tree (`applyTraitGrafts`): wings/tail are REAL limbs — hittable
+    (`rollBodyPartOf` rolls the plan table minus lost parts plus grafted extras), losable, and the
+    hosts for the trait's gear. No `*-kin` whole-plan swap — a winged pawn keeps its humanoid feet.
+  - **Utility natural gear** — `naturalGear` whose condition grants a host-gated BENEFIT instead of
+    armor (wings → `moveSpeed` while a wing survives; `syncTransientConditions` drops the pill when
+    every host part is gone) at a slot cost (`blocksSlots`).
+  - **Amputation wounds** — a wound spec with `amputate: true` removes the whole (non-vital) limb at
+    generation; a destroyed non-vital container (hand/foot) takes its contents. Head/torso stay whole
+    (the same non-lethal cap).
+  - **Auras (§6a)** — `trait.aura {condition, radius, affects, lingerSeconds}`: a THROTTLED pass
+    (`tickAuras`, every ~3 s, early-out without bearers) stamps the condition as a lingering timer on
+    pawns/mobs within a FINITE radius. Auras exist only as heritage sub-capabilities, in ONE
+    mutual-exclusion conflict group (≤1 aura per pawn).
+  - **Eleven heritage trees + the cursed lineage** — Stoneblood/Echoborn/Sporeborn/Shellblood/
+    Spiderblood/Stormborn/Shadeborn/Colossus/Wildblooded/Farseer/**Blighted** (the dark mirror,
+    housing the all-stats grand curses as sub-capabilities; the grand BLESSINGS are epic/mythic/
+    legendary single stat traits). Shared lines across trees (§4.0) — e.g. Adrenal rides
+    Ursine/Colossus/Berserker; **creatures can carry the S1 rung** (`CreatureDefinition.traits`,
+    resolved at spawn — orc_reaver → Adrenal).
+  - **`stage` (1|2|3) + 3-link `evolvesTo` chains** on every gear line — data flags for the future
+    age/ritual evolution walk (registry-tested for ordered chains). `evolutionTrigger` itself waits
+    on the age system.
 
 **Enforcement (NOT graph-checkable).** A data-schema + payload-shape invariant, not a call-edge one:
-guarded by `traitRegistry.test.ts`, `conditionGraph.test.ts`/`conditionGraphData.test.ts`, and
-`traitWounds.test.ts`. Registered in `codegraph.config.json` as `checkable: false`.
+guarded by `traitRegistry.test.ts`, `conditionGraph.test.ts`/`conditionGraphData.test.ts`,
+`traitWounds.test.ts`, and `traitExpansion.test.ts` (combatMods/grafts/amputation/bleed-wound/aura).
+Registered in `codegraph.config.json` as `checkable: false`.

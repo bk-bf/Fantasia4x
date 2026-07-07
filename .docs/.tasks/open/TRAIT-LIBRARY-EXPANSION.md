@@ -2,7 +2,11 @@
 
 > **Related:** [TRAIT-SYSTEM-V2](TRAIT-SYSTEM-V2.md) · [DECISIONS.md — ADR-028](../../game/DECISIONS.md) · [ROADMAP](ROADMAP.md)
 
-**Status:** proposal / not yet implemented. Nothing here is wired — this is the spec to react to.
+**Status:** ✅ **IMPLEMENTED 2026-07-07** (single pass, per §8.2) — gates: `pnpm check` 0 errors,
+full suite 865/868 (the 3 failures are the pre-existing `split_firewood` craft tests, present on the
+baseline). ~300 new traits, ~65 new conditions, ~19 new natural-weapon items; mechanics in
+`traitExpansion.test.ts`. Deferred (per spec): `evolutionTrigger` (waits on the age system) and the
+reserved hooks (diet flags / sleepless / beast-speech / silk). ADR-028 extended in DECISIONS.md.
 The complaint it answers: *"I see the same kinds of traits often, and it gets tiresome."* The fix is
 breadth (many more mundane variety pulls so two same-race pawns rarely twin) **and** depth (staged
 natural gear, eleven new heritage trees, à-la-carte body composition, a scar/lost-limb layer, and
@@ -959,53 +963,66 @@ One positive + one negative per affliction, each tied to a lineage. **Your two f
 Ordered roughly cheapest → most involved. Data-only additions (new trait/condition/item entries) are
 **not** listed — they're the bulk, but they need no code.
 
-- [ ] **Resistance-sourcing rule** — `attribute`-kind traits may not carry a resistance key; assert it in
+- [x] **Resistance-sourcing rule** — `attribute`-kind traits may not carry a resistance key; assert it in
       `traitRegistry.test.ts` (resistances allowed only on `naturalGear`/`passive`). Relocate the existing
       `marsh-dweller` (today an `attribute` with poison/disease) → `passive`.
-- [ ] **`combatMods` channel** (§1 combat) — add `effects.combatMods?: Record<string, number>` and apply
+      ✅ 2026-07-07 — registry test added; thermal/toxin attribute traits re-kinded `passive` (incl. marsh-dweller).
+- [x] **`combatMods` channel** (§1 combat) — add `effects.combatMods?: Record<string, number>` and apply
       it in `PawnStatService` exactly like `traitWorkMult` does for `workSpeed` (multiply the matching
       stats.jsonc combat output). Small, mirrors an existing path.
-- [ ] **`stage` field + 3-link `evolvesTo`** (§3a) — add `stage?: 1|2|3`; extend the `evolvesTo` test to
+      ✅ 2026-07-07 — `traitCombatMult` in PawnStatService.evaluateStat (combat stats only); registry-checked ids.
+- [x] **`stage` field + 3-link `evolvesTo`** (§3a) — add `stage?: 1|2|3`; extend the `evolvesTo` test to
       allow 3-link chains. Data + a test tweak.
-- [ ] **`frostbite` wound type** (§5b) — add to the wound `type` union + `wounds.jsonc`; the "old ⟨type⟩
+      ✅ 2026-07-07 — `Trait.stage 1|2|3`; every gear line chained; registry test asserts ordered chains.
+- [x] **`frostbite` wound type** (§5b) — add to the wound `type` union + `wounds.jsonc`; the "old ⟨type⟩
       scar" readout already handles arbitrary types. Trivial.
-- [ ] **Bleed as a wound, not a condition** (§3b) — add a **bleed flag/type** to the wound model so a
+      ✅ 2026-07-07 — `frostbite`/`scorch` already in wounds.jsonc; Injury + trait-wound type unions extended; scar variants shipped.
+- [x] **Bleed as a wound, not a condition** (§3b) — add a **bleed flag/type** to the wound model so a
       claw/talon/sabre-fang inflicts a wound whose `bleedRate` won't self-clot until tended; **retire the
       transient `bloodletting` condition** and repoint every user (claws, talons, `thorn-skin`, feeding
       weapons) at the bleed-wound.
-- [ ] **Breath weapon proc + `reach`** (§3b) — a special-attack proc that deals fire damage, **inflicts a
+      ✅ 2026-07-07 — item-level `bleedWound` chance → `Injury.noSelfClot` (clot-proof until dressed); `bloodletting` retired, all 16 users repointed.
+- [x] **Breath weapon proc + `reach`** (§3b) — a special-attack proc that deals fire damage, **inflicts a
       `burn` wound**, rolls **knockback**, and applies `burning` (DoT over N turns, stage-scaled); plus a
       **`reach`** field on natural weapons (dragonfire reach 3 = spear-like short-ranged). **TODO:** later
       upgrade `reach 3` to an **AoE cone**.
-- [ ] **`Feasted` buff + shared blood-feast** (§4.0) — one condition def granting a strong ~30-min buff on
+      ✅ 2026-07-07 — reach-aware meleeReach/attackerProfile; ember(1)/flame(2, knockback)/dragonfire(3, knockback) + burning DoT + real burn wounds. Cone still TODO.
+- [x] **`Feasted` buff + shared blood-feast** (§4.0) — one condition def granting a strong ~30-min buff on
       a successful blood-draining bite (`bloodsucking-fangs`/`proboscis`/vampiric); needs a cooldown +
       tuning so it can't be perma-kept.
-- [ ] **Utility natural-gear** (§3e) — `naturalGear` whose `selfCondition` grants a **utility/movement**
+      ✅ 2026-07-07 — stamped on the feeder on a successful drain, 0.5 h, non-refreshing while active.
+- [x] **Utility natural-gear** (§3e) — `naturalGear` whose `selfCondition` grants a **utility/movement**
       benefit + a **slot cost** instead of `grantsNaturalArmor` (wings→moveSpeed/back-slot, webbing,
       prehensile tail…). Losable with the host part. New condition fields for the non-defensive grant.
-- [ ] **À-la-carte body composition — dissolve the pawn body-plan category** (§3d, replaces the old
+      ✅ 2026-07-07 — host-gated condition benefits (wings/tail/burrowing claws/gill frills…); pill + benefit drop with the host part.
+- [x] **À-la-carte body composition — dissolve the pawn body-plan category** (§3d, replaces the old
       `race.limbMap` idea) — let a `bodyMod`/`naturalGear` trait **graft a limb + its parts** onto a pawn's
       humanoid body tree from the global `PART_DEF_MAP` (wings/beak/tail/webbed-feet), *without* importing
       the rest of that creature's anatomy. A grafted part is a real limb (losable, labelled via
       `bodyLabels.ts`). Extends the partially-implemented composition already in code; this is the
       structural centrepiece.
-- [ ] **Creatures carry lineage traits** (§4.0) — add shared-line trait ids (e.g. Adrenaline S1) to
+      ✅ 2026-07-07 — `Trait.grafts` + `applyTraitGrafts`; live hit roll `rollBodyPartOf` (plan minus lost parts plus grafts).
+- [x] **Creatures carry lineage traits** (§4.0) — add shared-line trait ids (e.g. Adrenaline S1) to
       `creatures.jsonc` mobs like `orc_reaver`; the creature side already reads the trait pool for natural
       gear, so this is mostly data + confirming the creature path applies `stat`/`passive` effects.
-- [ ] **Cursed-lineage rarity** (§2d/§4.10) — let the race-identity roll draw a negative-polarity
+      ✅ 2026-07-07 — `CreatureDefinition.traits` resolved at spawn; orc_reaver carries Adrenal S1.
+- [x] **Cursed-lineage rarity** (§2d/§4.10) — let the race-identity roll draw a negative-polarity
       legendary/mythic banner (`Blighted`); today `negative` is filtered from race pools. Contained change
       to `generateRaceTraitSets` + the flaw test's "no negative in a race pool" assumption.
-- [ ] **Trait-card condition pill + tooltip** (§6b UI) — surface a trait's granted `selfCondition`/
+      ✅ 2026-07-07 — pure data: the Blighted banner IS a legendary-rarity heritage (rides the same 1.5% band); grand curses live as its sub-capabilities.
+- [x] **Trait-card condition pill + tooltip** (§6b UI) — surface a trait's granted `selfCondition`/
       `activateWhen` conditions as a live pill on the pawn-tab trait card (*"＋ hydro-vigor"*) with the
       condition tooltip on hover. Reuses the health panel's existing pill row.
-- [ ] **Aura system** (§6a) — `aura?: { condition, radius, affects, lingerSeconds }` on `Trait`; a
+      ✅ 2026-07-07 — TraitCards shows a '＋ <condition>' chip with a hover tooltip (description · modifiers · active-while · can-trigger) + aura/grows/stage rows.
+- [x] **Aura system** (§6a) — `aura?: { condition, radius, affects, lingerSeconds }` on `Trait`; a
       **throttled** (every few seconds, not per-tick) radius query via `SpatialIndexService` that stamps a
       transient condition with a **linger tail**; aura traits sit in a **mutual-exclusion conflict group**.
       Gate on `ENGINE-PERFORMANCE.md`. The most involved item — but cheap given the throttle + rarity.
-- [ ] **`evolutionTrigger { minAgeYears }` + ritual gate** (§3a/§4.0 age-driven progression) — waits on
+      ✅ 2026-07-07 — `tickAuras` (PawnStateMachine): 3 s cadence, linger-timer stamping, allies+foes, early-out; auras heritage-only + one exclusion group.
+- [ ] ⏸ **`evolutionTrigger { minAgeYears }` + ritual gate** *(DEFERRED — waits on the age system, per spec)* (§3a/§4.0 age-driven progression) — waits on
       the age system; walks `stage N → N+1` (age and/or ritual) by swapping a trait for its `evolvesTo`,
       so the player can actively pursue a lineage. Spec now, wire with age.
-- [ ] **Reserved hooks** (referenced by a few heritages, not required first pass): diet flags
+- [ ] ⏸ **Reserved hooks** *(DEFERRED — park until the owning systems exist, per spec)* (referenced by a few heritages, not required first pass): diet flags
       (`decomposer`/`carrion-fed` eat rot), `sleepless` (reduced sleep need), `beast-speech`
       (animal-handling), silk `produces` (needs organ-aware butchery). Park until the owning systems exist.
 
