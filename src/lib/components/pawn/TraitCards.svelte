@@ -16,13 +16,8 @@
   import { pawnStatService } from '$lib/game/services/PawnStatService';
   import { rankWorkCells, getPawnLaborLevel, type CellRank } from '$lib/utils/workUtils';
   import { gameState } from '$lib/stores/gameState';
-  import statsData from '$lib/game/database/stats.jsonc';
-
-  // The REAL stats.jsonc description per derived-stat id (what the attributes tab shows), so a resistance
-  // pill reads the true source — NOT a hand-written duplicate. (Full formula/trend panel is a follow-up.)
-  const STAT_DESC: Record<string, string> = Object.fromEntries(
-    (statsData as { id: string; description: string }[]).map((s) => [s.id, s.description])
-  );
+  import StatTooltip from '$lib/components/pawn/StatTooltip.svelte';
+  import { buildStatContext, computeStatView, isDerivedStat } from '$lib/components/util/statView';
 
   // A trait resistance/rate effect key → its stats.jsonc DERIVED stat id, so the pill can open the SAME
   // attributes-tab tooltip for that stat. (nightVision has no stat → stays a plain pill.)
@@ -85,6 +80,10 @@
     }
     return rankWorkCells(eff);
   });
+
+  // Per-pawn stat context (capacities/carry/conditions) for the attributes-tab tooltip, computed once
+  // and reused by any hovered stat/resistance pill. Null in the race view (no pawn).
+  let statCtx = $derived(pawn ? buildStatContext(pawn) : null);
 
   // ── Rarity colour + label (the trait's `rarity` IS a rarities.jsonc id) ─────
   const RARITIES = raritiesData as { id: string; name: string; color: string }[];
@@ -480,15 +479,23 @@
     {/if}
   {:else if tag.kind === 'attr'}
     {@const sid = tag.statId ?? ''}
-    {@const isCore = sid in STAT_DRIVES}
-    <HoverTip x={hoveredPill.x} y={hoveredPill.y}>
-      <div class="tip-name">
-        {(isCore ? sid : sid.replace(/_/g, ' ')).replace(/^./, (c) => c.toUpperCase())}<span class="tip-val">{tag.value}</span>
-      </div>
-      {#if isCore}<div class="tip-desc">Drives {STAT_DRIVES[sid]}.</div>
-      {:else if STAT_DESC[sid]}<div class="tip-desc">{STAT_DESC[sid]}</div>{/if}
-      {#if pawn && isCore}<div class="tip-row"><span class="tip-lbl">This pawn</span> {pawn.stats[sid as keyof typeof pawn.stats] ?? '—'}</div>{/if}
-    </HoverTip>
+    {@const view = pawn && statCtx && isDerivedStat(sid) ? computeStatView(sid, pawn, statCtx) : null}
+    {#if view}
+      <!-- Resistance / heal_rate: the IDENTICAL attributes-tab panel (shared StatTooltip). -->
+      <HoverTip x={hoveredPill.x} y={hoveredPill.y}>
+        <div class="tip-name" style="text-transform: capitalize">
+          {view.name}<span class="tip-val">{tag.value}</span>
+        </div>
+        <StatTooltip {view} />
+      </HoverTip>
+    {:else}
+      <!-- Core stat (STR/DEX) — no stats.jsonc formula panel; show what it drives + this pawn's value. -->
+      <HoverTip x={hoveredPill.x} y={hoveredPill.y}>
+        <div class="tip-name">{sid.charAt(0).toUpperCase() + sid.slice(1)}<span class="tip-val">{tag.value}</span></div>
+        {#if STAT_DRIVES[sid]}<div class="tip-desc">Drives {STAT_DRIVES[sid]}.</div>{/if}
+        {#if pawn}<div class="tip-row"><span class="tip-lbl">This pawn</span> {pawn.stats[sid as keyof typeof pawn.stats] ?? '—'}</div>{/if}
+      </HoverTip>
+    {/if}
   {:else}
     <HoverTip x={hoveredPill.x} y={hoveredPill.y}>
       <div class="tip-name" class:neg={tag.type === 'neg'}>
