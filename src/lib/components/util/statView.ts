@@ -198,6 +198,11 @@ function traitMods(statId: string, pawn: Pawn): { name: string; text: string; po
       const v = e[rk] as number;
       out.push({ name: t.name, text: `${v > 0 ? '+' : ''}${Math.round(v * 100)}%`, pos: v > 0 });
     }
+    const cm = (e.combatMods as Record<string, number> | undefined)?.[statId];
+    if (typeof cm === 'number' && cm !== 1) {
+      const p = Math.round((cm - 1) * 100);
+      out.push({ name: t.name, text: `${p >= 0 ? '+' : ''}${p}%`, pos: p >= 0 });
+    }
     if (statId.endsWith('_speed') || statId.endsWith('_yield') || statId.endsWith('_quality')) {
       const axis = statId.endsWith('_speed')
         ? 'workSpeed'

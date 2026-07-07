@@ -224,7 +224,7 @@
       const auraCond = getTransientConditionDef(trait.aura.condition);
       tags.push({
         label: 'aura',
-        value: `${(auraCond?.name ?? trait.aura.condition.replace(/_/g, ' ')).toLowerCase()} · ${trait.aura.radius} tiles · ${trait.aura.affects}`,
+        value: (auraCond?.name ?? trait.aura.condition.replace(/_/g, ' ')).toLowerCase(),
         type: trait.aura.affects === 'foes' ? 'neutral' : 'pos',
         kind: auraCond ? 'cond' : undefined,
         condId: trait.aura.condition,
@@ -303,6 +303,19 @@
         const stat = name.replace('Penalty', '');
         // A penalty is stored positive — render it SIGNED so it reads "CHA -1".
         tags.push({ label: STAT_ABBR[stat] ?? stat, value: `-${value}`, type: 'neg', kind: 'attr', statId: stat });
+      } else if (name === 'combatMods' && value && typeof value === 'object') {
+        // §1 combat combos: each key is a stats.jsonc COMBAT stat (hit_chance, dodge…) → its pill routes
+        // to the SAME attributes-tab tooltip (kind 'attr'), value is a bare signed % (no "combat mods" tail).
+        for (const [statId, mul] of Object.entries(value as Record<string, number>)) {
+          const pct = Math.round((mul - 1) * 100);
+          tags.push({
+            label: statId.replace(/_/g, ' '),
+            value: `${pct >= 0 ? '+' : ''}${pct}%`,
+            type: pct >= 0 ? 'pos' : 'neg',
+            kind: 'attr',
+            statId
+          });
+        }
       } else if (value && typeof value === 'object') {
         for (const [workType, mul] of Object.entries(value as Record<string, number>)) {
           const pct = Math.round((mul - 1) * 100);
