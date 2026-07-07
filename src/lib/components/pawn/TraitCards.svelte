@@ -125,7 +125,7 @@
 
   // A pill = a short LABEL + a VALUE, exactly like the health-tab StatPills (e.g. "STR +2").
   // `tip` (optional) = a hover tooltip on the PILL itself — used for a trait's granted condition
-  // ("＋ hydro-vigor") so hovering the pill explains the condition (TRAIT-LIBRARY-EXPANSION §6b).
+  // ("COND hydro-vigor") so hovering the pill explains the condition (TRAIT-LIBRARY-EXPANSION §6b).
   // `kind` routes a pill's HOVER to its own breakdown panel (not the card's flavor): a natural weapon
   // opens the real item stat tooltip, a work pill the work-model breakdown, a stat pill the attribute
   // breakdown. `info` pills carry ready-made rows. Plain pills (no kind) just show their `tip` text.
@@ -138,6 +138,9 @@
     /** kind 'cond' — a granted/aura condition id + its "FROM" label; hover shows the shared ConditionTooltip. */
     condId?: string;
     condSource?: string;
+    /** kind 'cond' — the granting trait's own effect lines, folded into the condition tooltip's grant
+     *  list so they aren't ALSO shown as separate pills next to the COND pill. */
+    condGrants?: string[];
     /** kind 'gear' — the natural weapon/armor item fed to ItemStatTooltip (the SAME gear-tab tooltip). */
     gearItem?: Item;
     /** kind 'gear' — the innate / evolution-stage / carry-cost extras for the tooltip's NATURAL block. */
@@ -202,22 +205,42 @@
     // ADR-023 capabilities (id-free — the tooltip names the specifics).
     const gear = naturalGearForTrait(trait);
     const cond = trait.selfCondition ? getTransientConditionDef(trait.selfCondition) : undefined;
-    // §3 NATURAL GEAR: one "＋ <weapon/armor name>" pill; hovering shows the SAME ItemStatTooltip the GEAR
-    // TAB uses (def, resistances, on-hit…). No separate nat-armor / carry / resistance pills — that whole
-    // breakdown lives in the one gear tooltip, so the card isn't a pile of redundant pills.
+    // A pure condition-granting trait (no natural gear): its `effects` ARE the condition's grant, so they
+    // fold into the ONE COND tooltip (via condGrants) instead of showing as separate pills beside it.
+    const isCondTrait = !gear && !!cond;
+    let condTag: Tag | undefined;
+    const grantLines: string[] = [];
+    // Route an effect either to a standalone pill (normal trait) or into the COND tooltip's grant list.
+    const emit = (label: string, value: string, type: Tag['type'], extra: Partial<Tag> = {}) => {
+      if (isCondTrait) grantLines.push(`${label} ${value}`.replace(/^./, (c) => c.toUpperCase()));
+      else tags.push({ label, value, type, ...extra });
+    };
+    // §3 NATURAL GEAR: one abbreviation pill (NAT WEAP / NAT ARM); hovering shows the SAME ItemStatTooltip
+    // the GEAR TAB uses (def, resistances, on-hit…). No separate nat-armor / carry / resistance pills —
+    // that whole breakdown lives in the one gear tooltip, so the card isn't a pile of redundant pills.
     if (gear) {
-      tags.push({ label: '＋', value: gear.name.toLowerCase(), type: 'pos', kind: 'gear', gearItem: gear.item, gearNatural: gear.natural });
-    } else if (cond) {
-      // §6b passive covering/affinity (no gear granted): the "＋ <name>" pill opens the SAME condition
-      // tooltip the health tab uses (ConditionTooltip), not a re-derived one.
       tags.push({
-        label: '＋',
+        label: gear.kind === 'weapon' ? 'NAT WEAP' : 'NAT ARM',
+        value: gear.name.toLowerCase(),
+        type: 'pos',
+        kind: 'gear',
+        gearItem: gear.item,
+        gearNatural: gear.natural
+      });
+    } else if (cond) {
+      // §6b passive covering/affinity (no gear granted): one "COND <name>" pill opening the SAME condition
+      // tooltip the health tab uses (ConditionTooltip). What it grants + what triggers it live IN that
+      // tooltip (condGrants + the def's activateWhen), not as separate pills.
+      condTag = {
+        label: 'COND',
         value: cond.name.toLowerCase(),
         type: 'pos',
         kind: 'cond',
         condId: trait.selfCondition,
-        condSource: `${trait.name} (racial trait)`
-      });
+        condSource: `${trait.name} (racial trait)`,
+        condGrants: []
+      };
+      tags.push(condTag);
     }
     // §6a: an aura radiates a condition to everyone within its (finite) radius.
     if (trait.aura) {
@@ -298,20 +321,17 @@
     for (const [name, value] of Object.entries(trait.effects || {})) {
       if (name.endsWith('Bonus') && typeof value === 'number') {
         const stat = name.replace('Bonus', '');
-        tags.push({ label: STAT_ABBR[stat] ?? stat, value: `+${value}`, type: 'pos', kind: 'attr', statId: stat });
+        emit(STAT_ABBR[stat] ?? stat, `+${value}`, 'pos', { kind: 'attr', statId: stat });
       } else if (name.endsWith('Penalty') && typeof value === 'number') {
         const stat = name.replace('Penalty', '');
         // A penalty is stored positive — render it SIGNED so it reads "CHA -1".
-        tags.push({ label: STAT_ABBR[stat] ?? stat, value: `-${value}`, type: 'neg', kind: 'attr', statId: stat });
+        emit(STAT_ABBR[stat] ?? stat, `-${value}`, 'neg', { kind: 'attr', statId: stat });
       } else if (name === 'combatMods' && value && typeof value === 'object') {
         // §1 combat combos: each key is a stats.jsonc COMBAT stat (hit_chance, dodge…) → its pill routes
         // to the SAME attributes-tab tooltip (kind 'attr'), value is a bare signed % (no "combat mods" tail).
         for (const [statId, mul] of Object.entries(value as Record<string, number>)) {
           const pct = Math.round((mul - 1) * 100);
-          tags.push({
-            label: statId.replace(/_/g, ' '),
-            value: `${pct >= 0 ? '+' : ''}${pct}%`,
-            type: pct >= 0 ? 'pos' : 'neg',
+          emit(statId.replace(/_/g, ' '), `${pct >= 0 ? '+' : ''}${pct}%`, pct >= 0 ? 'pos' : 'neg', {
             kind: 'attr',
             statId
           });
@@ -319,13 +339,12 @@
       } else if (value && typeof value === 'object') {
         for (const [workType, mul] of Object.entries(value as Record<string, number>)) {
           const pct = Math.round((mul - 1) * 100);
-          tags.push({
-            label: workType.replace(/_/g, ' '),
-            value: `${pct >= 0 ? '+' : ''}${pct}% ${axisShort(name)}`,
-            type: pct >= 0 ? 'pos' : 'neg',
-            kind: workType === 'all' ? undefined : 'work',
-            workId: workType === 'all' ? undefined : workType
-          });
+          emit(
+            workType.replace(/_/g, ' '),
+            `${pct >= 0 ? '+' : ''}${pct}% ${axisShort(name)}`,
+            pct >= 0 ? 'pos' : 'neg',
+            { kind: workType === 'all' ? undefined : 'work', workId: workType === 'all' ? undefined : workType }
+          );
         }
       } else if (typeof value === 'number' && value !== 0) {
         // A covering's resistance is already in its gear tooltip — don't also list it as its own pill.
@@ -340,15 +359,14 @@
           .toLowerCase();
         const pct = Math.round(value * 100);
         const sid = EFFECT_TO_STAT[name];
-        tags.push({
-          label,
-          value: `${pct >= 0 ? '+' : ''}${pct}%`,
-          type: pct >= 0 ? 'pos' : 'neg',
+        emit(label, `${pct >= 0 ? '+' : ''}${pct}%`, pct >= 0 ? 'pos' : 'neg', {
           kind: sid ? 'attr' : undefined,
           statId: sid
         });
       }
     }
+    // Fold the granting trait's effect lines into its COND tooltip (they're the condition's grant).
+    if (condTag) condTag.condGrants = grantLines;
     return tags;
   }
 
@@ -453,7 +471,7 @@
       />
     {/if}
   {:else if tag.kind === 'cond'}
-    {@const cview = tag.condId ? conditionViewForId(tag.condId, tag.condSource) : null}
+    {@const cview = tag.condId ? conditionViewForId(tag.condId, tag.condSource, tag.condGrants) : null}
     {#if cview}
       <HoverTip x={hoveredPill.x} y={hoveredPill.y}>
         <ConditionTooltip view={cview} />

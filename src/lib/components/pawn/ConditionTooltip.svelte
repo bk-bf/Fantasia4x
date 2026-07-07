@@ -23,6 +23,10 @@
     <div class="tip-row">• {s}</div>
   {/each}
 {/if}
+{#if view.trigger}
+  <div class="tip-hdr">WHEN</div>
+  <div class="tip-row">{view.trigger}</div>
+{/if}
 {#if view.effects.length > 0}
   <div class="tip-hdr">EFFECT</div>
   <div class="tip-row">{view.effects.join('  ·  ')}</div>

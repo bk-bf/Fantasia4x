@@ -55,6 +55,9 @@ export interface ConditionView {
    *  base stat (strength/…) plus workEfficiency / moveSpeed / hungerRate / fatigueRate / dodge /
    *  hitChance. For numeric consumers (e.g. the work-tab speed breakdown). */
   modifiers: ConditionModifiers;
+  /** Human "when is this active" line for a trigger-gated condition (a transient's `activateWhen`),
+   *  e.g. "While wet ≥ 50". Undefined for always-on / driver-based conditions. */
+  trigger?: string;
 }
 
 // Base-stat penalties first (the headline "stat loss"), then the throughput/combat multipliers.
@@ -84,6 +87,42 @@ function effectLines(mods: ConditionModifiers): string[] {
     out.push(`${label} ${d > 0 ? '+' : '−'}${Math.abs(d)}%`);
   }
   return out;
+}
+
+// A predicate need/meter → the short noun shown in the "WHEN" line (matches the need-bar vocabulary).
+const PREDICATE_FIELD_LABEL: Record<string, string> = {
+  wetness: 'wet',
+  coldExposure: 'cold',
+  heatExposure: 'heat',
+  hygiene: 'filth',
+  hunger: 'hunger',
+  thirst: 'thirst',
+  fatigue: 'fatigue',
+  bloodFrac: 'blood',
+  pain: 'pain',
+  ambientLight: 'light',
+  severity: 'severity'
+};
+
+/** Human "when is this active" line from a transient's `activateWhen` predicate (e.g. hydro_vigor →
+ *  "While wet ≥ 50", emberheart → "While Burning"). Undefined when always-on (no predicate). */
+function triggerLine(p?: TransientConditionDef['activateWhen']): string | undefined {
+  if (!p) return undefined;
+  const parts: string[] = [];
+  if (p.unsheltered) parts.push('in the open');
+  const field = p.need ?? p.meter;
+  if (field && (p.atOrAbove != null || p.atOrBelow != null)) {
+    const label = PREDICATE_FIELD_LABEL[field] ?? field.replace(/([A-Z])/g, ' $1').toLowerCase();
+    // bloodFrac / ambientLight are 0–1 fractions → show as a percent; needs/pain are already 0–100.
+    const pctScale = p.meter === 'bloodFrac' || p.meter === 'ambientLight';
+    const fmt = (n: number) => (pctScale ? `${Math.round(n * 100)}%` : `${n}`);
+    if (p.atOrAbove != null) parts.push(`${label} ≥ ${fmt(p.atOrAbove)}`);
+    if (p.atOrBelow != null) parts.push(`${label} ≤ ${fmt(p.atOrBelow)}`);
+  }
+  const condName = (id: string) => ALL.find((d) => d.id === id)?.name ?? id.replace(/_/g, ' ');
+  if (p.hasCondition) parts.push(condName(p.hasCondition));
+  if (p.lacksCondition) parts.push(`no ${condName(p.lacksCondition)}`);
+  return parts.length ? `While ${parts.join(', ')}` : undefined;
 }
 
 const r = (v: number | undefined) => Math.round(v ?? 0);
@@ -291,7 +330,8 @@ export function getActiveConditionViews(entity: Pawn | Mob): ConditionView[] {
       lifeThreatening: stage?.lifeThreatening,
       sources: transientSources(entity, baseId),
       effects: effectLines(mods),
-      modifiers: mods
+      modifiers: mods,
+      trigger: triggerLine(def.activateWhen)
     });
   }
 
@@ -301,8 +341,15 @@ export function getActiveConditionViews(entity: Pawn | Mob): ConditionView[] {
 /** Build a ConditionView for a single condition id straight from its DEF (no active instance required) —
  *  for a trait's granted/self condition or an aura's condition, so the trait card reuses the SAME
  *  ConditionTooltip the health tab shows. `sourceLabel` fills the "FROM" line (e.g. the granting trait). */
-export function conditionViewForId(condId: string, sourceLabel?: string): ConditionView | null {
+export function conditionViewForId(
+  condId: string,
+  sourceLabel?: string,
+  grantLines?: string[]
+): ConditionView | null {
   const sources = sourceLabel ? [sourceLabel] : [];
+  // The granting trait's own effects (fire/cold res…) folded in as the condition's grant, ahead of the
+  // condition's own modifiers — so the ONE tooltip carries everything the pill's pills used to.
+  const grants = grantLines ?? [];
   const p = PERSISTENT.find((d) => d.id === condId);
   if (p) {
     const stage = p.stages[0];
@@ -316,7 +363,7 @@ export function conditionViewForId(condId: string, sourceLabel?: string): Condit
       stageLabel: stage?.label,
       lifeThreatening: stage?.lifeThreatening,
       sources,
-      effects: effectLines(stage?.modifiers ?? {}),
+      effects: [...grants, ...effectLines(stage?.modifiers ?? {})],
       modifiers: stage?.modifiers ?? {}
     };
   }
@@ -330,8 +377,9 @@ export function conditionViewForId(condId: string, sourceLabel?: string): Condit
       description: t.description,
       kind: 'transient',
       sources,
-      effects: effectLines(t.modifiers),
-      modifiers: t.modifiers
+      effects: [...grants, ...effectLines(t.modifiers)],
+      modifiers: t.modifiers,
+      trigger: triggerLine(t.activateWhen)
     };
   }
   return null;
