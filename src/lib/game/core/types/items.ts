@@ -69,6 +69,9 @@ export interface PawnEquipment {
   gloves?: ItemInstance;
   boots?: ItemInstance;
   gorget?: ItemInstance;
+  pauldrons?: ItemInstance; // ADR-029 shoulder armour (covers leftShoulder/rightShoulder)
+  bracers?: ItemInstance; // ADR-029 arm armour (upper arms + forearms)
+  greaves?: ItemInstance; // ADR-029 leg armour (upper + lower legs)
   ring?: ItemInstance;
   ring2?: ItemInstance; // §M second ring slot — two rings can be worn at once (occupancy-resolved on equip)
   amulet?: ItemInstance; // §M neck slot for attuned amulets (distinct from the `gorget` neck armour)
@@ -95,6 +98,9 @@ export type EquipmentSlot =
   | 'gloves'
   | 'boots'
   | 'gorget'
+  | 'pauldrons'
+  | 'bracers'
+  | 'greaves'
   | 'ring'
   | 'ring2'
   | 'amulet'
@@ -502,6 +508,9 @@ export interface Item {
 
   armorProperties?: {
     defense: number;
+    /** ADR-029: the body parts this piece protects (limbmap part ids). Binary coverage — a mail shirt
+     *  lists the shoulders, a plain vest does not. Omitted ⇒ the slot's default parts (SLOT_COVERAGE). */
+    covers?: string[];
     armorType?: 'light' | 'medium' | 'heavy' | 'shield';
     slot?:
       | 'head'

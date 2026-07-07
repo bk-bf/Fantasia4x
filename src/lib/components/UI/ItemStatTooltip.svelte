@@ -2,8 +2,10 @@
      before crafting. Reuses the work-tab job-priority tooltip format (WorkCellTooltip): portaled
      panel, header line, label/value rows, and a separated MODIFIERS/ABILITIES block. -->
 <script lang="ts">
-  import type { Item, Recipe } from '$lib/game/core/types';
+  import type { Item, Recipe, EquipmentSlot } from '$lib/game/core/types';
   import type { NaturalGearMeta } from '$lib/components/util/naturalGear';
+  import { coveredParts } from '$lib/game/core/armorCoverage';
+  import { partLabel } from '$lib/utils/bodyLabels';
   import { recipeService } from '$lib/game/services/RecipeService';
   import { getMaterialProperty } from '$lib/game/core/materialProperties';
   import { itemService } from '$lib/game/services/ItemService';
@@ -97,6 +99,21 @@
   }
 
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  // ADR-029: the parts a worn piece protects, as a concise side-agnostic list ("chest, shoulder, forearm").
+  const coversSummary = (parts: string[]): string => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const p of parts) {
+      const label = partLabel(p)
+        .replace(/^(left|right)\s+/i, '')
+        .toLowerCase();
+      if (!seen.has(label)) {
+        seen.add(label);
+        out.push(label);
+      }
+    }
+    return out.join(', ');
+  };
   const pct = (n: number) => `${n > 0 ? '+' : ''}${Math.round(n * 100)}%`;
   const signed = (n: number) => `${n > 0 ? '+' : ''}${n}`;
 
@@ -158,6 +175,9 @@
       const slot = ap.slot ?? ap.equipmentSlot;
       if (slot)
         out.push({ label: 'Slot', val: cap(String(slot).replace(/([A-Z])/g, ' $1').trim()) });
+      // ADR-029: which body parts this piece actually protects (a breastplate ≠ head cover).
+      const covers = slot ? coveredParts(item, slot as EquipmentSlot) : [];
+      if (covers.length) out.push({ label: 'Covers', val: coversSummary(covers) });
       if (ap.armorLayer) out.push({ label: 'Layer', val: cap(ap.armorLayer) });
       if (ap.slashResistance) out.push({ label: 'Slash res.', val: pct(ap.slashResistance) });
       if (ap.crushResistance) out.push({ label: 'Crush res.', val: pct(ap.crushResistance) });

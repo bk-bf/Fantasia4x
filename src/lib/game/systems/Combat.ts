@@ -77,6 +77,7 @@ import {
   DEFAULT_PLAN,
   BONE_FRACTION
 } from '../core/BodyParts';
+import { coversPart, ARMOUR_SLOTS, SLOT_LAYER } from '../core/armorCoverage';
 
 /** Armour share for a body part with no explicit `armor` in limbmap (shouldn't happen for rollable
  *  parts, which all carry one). Mid value so an unannotated part is neither bare nor fully plated. */
@@ -568,70 +569,73 @@ function physicalResistance(defender: Pawn | Mob, damageType: DamageType): numbe
   return clamp(res, 0, 0.9);
 }
 
-function partArmorReduction(defender: Pawn | Mob, partId: BodyPartId, armorPen: number): number {
+function partArmorReduction(
+  defender: Pawn | Mob,
+  partId: BodyPartId,
+  armorPen: number,
+  rawDamage: number
+): number {
   const def = PART_DEF_MAP[partId];
-  if (!def) return 0;
-  // Best 0–100 defence value protecting this part: the strongest worn armour layer (pawns) OR the
-  // creature's natural hide/scale/chitin (mobs). They compete — take whichever is higher.
-  let bestDef = 0;
+  if (!def || rawDamage <= 0) return 0;
+  const ap1 = 1 - armorPen;
+  let dmg = rawDamage;
+  // ADR-029: layered SUBTRACTIVE mitigation — each covering layer subtracts its effective defense
+  // (`defense × (1 − armorPen)`, in DAMAGE POINTS) from the running damage; the remainder passes inward.
+  // Armour can FULLY negate a weak hit (a 3-dmg punch does nothing to a bear's hide) — damage comes from
+  // finding a low-armour part (eye/throat/belly) or out-powering the plate. Worn pieces only count where
+  // they COVER the struck part (`coversPart`), walked outermost→in; the natural hide is the innermost layer.
   if ('equipment' in defender && defender.equipment) {
-    // Combine armor from all body-slot instances (pick the best defense across worn slots).
-    const bodySlots = [
-      'bodyOuter',
-      'bodyMid',
-      'bodyBase',
-      'headBase',
-      'headOuter',
-      'gloves',
-      'boots',
-      'gorget'
-    ] as const;
-    for (const slot of bodySlots) {
+    const worn: { layer: number; defense: number }[] = [];
+    for (const slot of ARMOUR_SLOTS) {
       const inst = (defender.equipment as Record<string, ItemInstance | undefined>)[slot];
       if (!inst) continue;
-      const baseAp = itemService.getItemById(inst.itemId)?.armorProperties;
-      if (!baseAp) continue;
-      // §Q: a Masterwork breastplate absorbs more — scale armour value by the stamped tier.
-      // §I: a Famed piece explodes that value ×2–5 on top of its tier.
-      const candidate = scaleArmorQuality(baseAp, inst.quality, inst.famedStatMult);
-      if (candidate.defense > bestDef) bestDef = candidate.defense;
+      const item = itemService.getItemById(inst.itemId);
+      const baseAp = item?.armorProperties;
+      if (!item || !baseAp || !coversPart(item, slot, partId)) continue;
+      // §Q/§I: Masterwork/Famed scale the armour value by the stamped tier before it soaks.
+      const scaled = scaleArmorQuality(baseAp, inst.quality, inst.famedStatMult);
+      worn.push({ layer: SLOT_LAYER[slot] ?? 1, defense: scaled.defense });
+    }
+    worn.sort((a, b) => a.layer - b.layer);
+    for (const w of worn) {
+      dmg -= w.defense * ap1;
+      if (dmg <= 0) return 1;
     }
   }
-  // Creature natural armour (hide/scale/chitin) — the `naturalArmor` MAGNITUDE, distributed across the
-  // body by each part's `armor` SHARE (limbmap): a thick-hided back soaks fully, a soft belly barely.
-  // Behaves like worn armour, so a 0-armorPen attack (bare fists, raking claws) barely scratches a
-  // thick-hided beast while an armour-piercing bodkin/pick still bites. The keystone of big-beast durability.
+  const natural = naturalArmorPoints(defender, def.armor ?? DEFAULT_ARMOR_SHARE, partId);
+  if (natural > 0) {
+    dmg -= natural * ap1;
+    if (dmg <= 0) return 1;
+  }
+  return clamp((rawDamage - dmg) / rawDamage, 0, 1);
+}
+
+/** Natural-armour DAMAGE POINTS at a part: a creature's hide (`naturalArmor`) or a pawn's racial traits,
+ *  the scalar distributed by the part's `share`, PLUS any explicit per-part `armorMods` (ADR-029).
+ *  (`grantsNaturalArmor` on a trait's selfCondition is read transitionally until the data migrates.) */
+function naturalArmorPoints(defender: Pawn | Mob, share: number, partId: BodyPartId): number {
+  let scalar = 0;
+  let mods = 0;
   if ('creatureId' in defender) {
-    const natural = getCreatureById(defender.creatureId)?.naturalArmor ?? 0;
-    if (natural > bestDef) bestDef = natural;
+    const c = getCreatureById(defender.creatureId);
+    scalar = c?.naturalArmor ?? 0;
+    for (const m of c?.armorMods ?? [])
+      if (armorModHits(defender, m.target, partId)) mods += m.defense;
   } else {
-    // ADR-023 / TRAIT-SYSTEM-V2 §3: racial natural armour opened to pawns. The soak MAGNITUDE lives on
-    // the trait's `selfCondition` DEF (`grantsNaturalArmor`), the same body-condition hub the health
-    // pill reads, so the two can't drift. The def's `mode` decides how it meets worn armour:
-    // 'replace' (thick fur — it IS the blocked slot's layer) competes best-of like a worn piece;
-    // 'stack' (scaled hide, iron skin — armor UNDER the clothes) ADDS its defense to the worn soak.
-    let naturalReplace = 0;
-    let naturalStack = 0;
     for (const t of defender.traits ?? []) {
-      if (!t.selfCondition) continue;
-      const cond = getTransientConditionDef(t.selfCondition);
-      const soak = cond?.grantsNaturalArmor ?? 0;
-      if (soak <= 0) continue;
-      if (cond?.mode === 'replace') {
-        if (soak > naturalReplace) naturalReplace = soak;
-      } else {
-        naturalStack += soak;
-      }
+      if (t.selfCondition) scalar += getTransientConditionDef(t.selfCondition)?.grantsNaturalArmor ?? 0;
+      scalar += t.naturalArmor ?? 0;
+      for (const m of t.armorMods ?? [])
+        if (armorModHits(defender, m.target, partId)) mods += m.defense;
     }
-    if (naturalReplace > bestDef) bestDef = naturalReplace;
-    bestDef = Math.min(100, bestDef + naturalStack);
   }
-  if (bestDef <= 0) return 0;
-  // Per-part armour SHARE (limbmap) is the distribution — replaces the old flat core/peripheral split.
-  // A destroyed part is gone, so its armour goes with it automatically (it can't be rolled as the target).
-  const share = def.armor ?? DEFAULT_ARMOR_SHARE;
-  const base = (bestDef / 100) * share;
-  return clamp(base * (1 - armorPen), 0, 0.9);
+  return scalar * share + mods;
+}
+
+/** Does an `armorMods` target — a part id, a limb-group id, or `'all'` — apply to `partId`? */
+function armorModHits(defender: Pawn | Mob, target: string, partId: BodyPartId): boolean {
+  if (target === 'all' || target === partId) return true;
+  return limbOfPart(defender, partId)?.id === target;
 }
 
 function currentPartHealth(defender: Pawn | Mob, partId: BodyPartId, defMaxHp: number): number {
@@ -781,10 +785,13 @@ class CombatServiceImpl implements CombatService {
         : str;
     const raw =
       override && !override.strScaled ? baseDamage : (baseDamage * powerStat) / STAT_SCALE;
-    const armorRed = partArmorReduction(defender, partId, armorPen);
+    const armorRed = partArmorReduction(defender, partId, armorPen, raw);
     const physRes = physicalResistance(defender, damageType);
     const mitigated = raw * (1 - armorRed) * (1 - physRes);
-    const final = Math.max(1, Math.round(mitigated * (crit ? CRIT_MULTIPLIER : 1)));
+    const scaled = mitigated * (crit ? CRIT_MULTIPLIER : 1);
+    // ADR-029: armour can FULLY stop a weak hit — 0 damage (was floored at 1). A 0 means the blow
+    // clanged off; the wound below is a no-op (severity/bleed/fracture all gate on hpMissing > 0).
+    const final = scaled <= 0 ? 0 : Math.max(1, Math.round(scaled));
 
     const prevHealth = currentPartHealth(defender, partId, partMaxHp);
     const newHealth = Math.max(0, prevHealth - final);

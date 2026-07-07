@@ -170,6 +170,10 @@ export interface CreatureDefinition {
    * Omitted = bare flesh (0). Final reduction still clamps 0–0.9, so nothing is ever immune.
    */
   naturalArmor?: number;
+  /** ADR-029: per-part natural armour (carapace back-heavy, soft belly…). Same shape as `Trait.armorMods`
+   *  — `target` = a limbmap part id / limb group / `'all'`; `defense` adds absolute soak. `naturalArmor`
+   *  above is the uniform-`'all'` sugar. */
+  armorMods?: Array<{ target: string; defense: number }>;
   /**
    * Body-size multiplier (default 1.0). Scales the creature's blood/health POOL at spawn
    * (entitySpawning) and softly scales its natural-weapon damage (attackerProfile) — one field that
@@ -280,6 +284,8 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     biomeWeights: (raw.biomeWeights as Record<string, number>) ?? {},
     lootTable: (raw.lootTable as CreatureLootEntry[]) ?? [],
     naturalWeapons: (raw.naturalWeapons as string[]) ?? [],
+    armorMods:
+      (raw.armorMods as Array<{ target: string; defense: number }> | undefined) ?? undefined,
     traits: (raw.traits as string[] | undefined) ?? undefined,
     resistances: (raw.resistances as Partial<Record<DamageType, number>> | undefined) ?? undefined,
     naturalArmor: (raw.naturalArmor as number | undefined) ?? undefined,

@@ -92,6 +92,12 @@ export interface Trait {
    *  (`applyTraitGrafts`). A grafted wing/tail/beak is a REAL limb: hittable, losable, and the host
    *  for the trait's natural gear (`hostParts`), so shearing the wing removes the benefit. */
   grafts?: Array<{ limb: string; parts: string[] }>;
+  /** ADR-029: per-part natural armour. `target` = a limbmap part id, a limb-group id, or `'all'`;
+   *  `defense` adds absolute soak to those parts (subtractive, layered under worn gear). Unified with
+   *  `CreatureDefinition.armorMods`; the scalar `naturalArmor` is sugar for `[{target:'all', defense:n}]`. */
+  armorMods?: Array<{ target: string; defense: number }>;
+  /** ADR-029 sugar: uniform natural armour = `armorMods: [{target:'all', defense:n}]`. */
+  naturalArmor?: number;
   /** §6a auras: while this trait's bearer stands, pawns/mobs within `radius` tiles carry `condition`.
    *  Applied on a THROTTLED cadence with a linger tail (the condition is stamped as a timer of
    *  `lingerSeconds`, so it fades a few seconds after leaving the zone — and the pass never runs
