@@ -5,7 +5,8 @@
 **Status:** proposal / not yet implemented. Nothing here is wired — this is the spec to react to.
 The complaint it answers: *"I see the same kinds of traits often, and it gets tiresome."* The fix is
 breadth (many more mundane variety pulls so two same-race pawns rarely twin) **and** depth (staged
-natural gear, ten new heritage trees, a scar/lost-limb layer, and condition-proc/aura traits).
+natural gear, eleven new heritage trees, à-la-carte body composition, a scar/lost-limb layer, and
+condition-proc/aura traits).
 
 Everything below uses the **real** `Trait` schema (`core/types/race.ts`) and the real effect keys, so a
 "yes to this block" translates to `traits.jsonc` almost mechanically. Where a proposal needs code that
@@ -104,6 +105,43 @@ can be a new combo card.
 > **Blightpicker** `blightpicker` — `attribute` · `negative` · `personal`
 > `effects → workSpeed.foraging 0.60, workYield.foraging 0.50` · magnitude: significant
 > *"slow to the harvest and clumsy with it — most of it spoils in the basket"*
+
+### WORK · Specialists — one 4-card set per work type
+
+Craftsmanship and Gathering above are the **template**; every work type in `stats.jsonc` gets the same
+2-positive / 2-negative treatment so a pawn can be a genuine **specialist** (a born tanner, a hopeless
+smith). Convention keeps the table terse: **➕moderate** = both axes ×1.15 (`uncommon`); **➕significant**
+= speed ×1.4, 2nd axis ×1.5 (`rare`); **➖moderate** = both ×0.9 (`negative`); **➖significant** = speed
+×0.6, 2nd ×0.5 (`negative`). The **fold-in** column names an already-implemented trait that collapses
+into this structure — *adjust its effects to match the convention* rather than keeping a one-off.
+
+| work type · axes | ➕ moderate `id` | ➕ significant `id` | ➖ moderate `id` | ➖ significant `id` | folds in (adjust) |
+|---|---|---|---|---|---|
+| **Foraging** speed+yield | Forager `forager` | Bountiful Hand `bountiful-hand` | Wasteful `wasteful-gatherer` | Blightpicker `blightpicker` | *(template above)* |
+| **Crafting** speed+quality | Handy `handy` | Master Artisan `master-artisan` | Ham-Fisted `ham-fisted` | Botcher `botcher` | `meticulous`, `slapdash` |
+| **Woodcutting** speed+yield | Timberwright `timberwright` | Master Feller `master-feller` | Green-Handed `green-handed` | Splinterer `splinterer` | — |
+| **Mining** speed+yield | Pitworker `pitworker` | Master Miner `master-miner` | Rock-Shy `rock-shy` | Seam-Waster `seam-waster` | — |
+| **Butchery** speed+yield | Skinner `skinner` | Master Butcher `master-butcher` | Heavy Cleaver `heavy-cleaver` | Gutspiller `gutspiller` | `weak-stomached`, `squeamish` (butchery half) |
+| **Fishing** speed+yield | Angler `angler` | Master Fisher `master-fisher` | Line-Shy `line-shy` | Netloser `netloser` | `waterborn` (→ fishing specialist) |
+| **Metalworking** speed+quality | Smith `smith-hand` | Mastersmith `mastersmith` | Heavy-Handed Smith `heavy-smith` | Slagmaker `slagmaker` | — |
+| **Leatherworking** speed+quality | Tanner `tanner` | Master Tanner `master-tanner` | Rough-Tanner `rough-tanner` | Hide-Ruiner `hide-ruiner` | — |
+| **Digging** speed+yield | Ditcher `ditcher` | Master Digger `master-digger` | Slow-Spade `slow-spade` | Spoil-Heaper `spoil-heaper` | — |
+| **Research** speed (+alchemy speed) | Scholar `scholar` | Savant `savant` | Incurious `incurious` | Dullard `dullard` | `curious`, `incurious`, `loner` |
+| **Construction** speed+quality | Builder `builder-hand` | Master Builder `master-builder` | Sloppy Builder `sloppy-builder` | Ruin-Raiser `ruin-raiser` | `stiff-jointed` (construction) |
+| **Alchemy** speed+quality | Brewer `brewer` | Master Alchemist `master-alchemist` | Ham-Handed Brewer `ham-brewer` | Reeking Still `reeking-still` | — |
+| **Cooking** speed+quality | Cook `cook-hand` | Master Cook `master-cook` | Slop-Cook `slop-cook` | Poison-Pot `poison-pot` | — |
+| **Planting** speed+yield | Grower `grower` | Master Grower `master-grower` | Black Thumb `black-thumb` | Crop-Blighter `crop-blighter` | `greenthumb` (→ planting specialist) |
+| **Hauling** speed (+fetch speed) | Porter `porter` | Packmule `packmule` | Dawdler `dawdler` | Dead-Weight `dead-weight` | — |
+| **Repair** speed+quality | Tinker `tinker` | Master Tinker `master-tinker` | Bodger `bodger` | Wrecker `wrecker` | — |
+| **Caretaking** speed+healRate | Nurturing `nurturing` | Field Surgeon `field-surgeon` | Heavy-Handed `heavy-handed-care` | Unsteady Hands `unsteady-hands` | `squeamish` (caretaking half) |
+
+> **Single-axis work types** (research/hauling have only a speed stat) pair with a **sibling** work type
+> to honour the combo rule — `scholar` = research + alchemy speed (the studious mind), `porter` = hauling
+> + fetch speed (the tireless carrier) — rather than buffing one lone axis.
+> **Broad multipliers stay** their own thing: `industrious`/`lazy` (`workSpeed.all`) and `short-winded`
+> (`all 0.95`) are *generalist* traits, deliberately weaker per-task than a specialist — they don't fold
+> into one work type, and stacking a specialist on a generalist is intended (a born smith who is also
+> hardworking).
 
 ### PHYSICAL · Recovery — *relocated*
 
@@ -309,7 +347,7 @@ Ids are stat-prefixed so they never collide.
 | `con-plus-5` | Indomitable | rare | `constitutionBonus 5` |
 | `con-minus-1` | Soft | negative | `constitutionPenalty 1` |
 | `con-minus-3` | Infirm | negative | `constitutionPenalty 3` |
-| `con-minus-5` | Broken-Bodied | negative | `constitutionPenalty 5` |
+| `con-minus-5` | Decrepit | negative | `constitutionPenalty 5` |
 
 **Perception**
 
@@ -414,7 +452,7 @@ Every core stat moves together. This is the top of the ladder and the brief's ex
 
 ---
 
-## §3 · Natural-gear expansion — staged weapons & armor, and creature heritages
+## §3 · Natural-gear expansion — staged weapons & armor, and à-la-carte body composition
 
 Two goals from the brief: (1) every natural weapon/armor **type** a creature can carry becomes available
 to pawns, with a couple of tweaks, so you can play a *real* ursine / avian / arachnid / amphibian pawn;
@@ -438,9 +476,10 @@ proposal makes the groundwork real:
   `stage N → N+1` by swapping the trait for its `evolvesTo`. This is the "age drives evolution" hook —
   spec it now, wire it when the age system lands.
 - **Binding:** stage weapons bind to `hostParts` the humanoid body has (`jaw`, `head`, `leftHand`/
-  `rightHand`). Weapons that need a part the humanoid plan lacks (`tail`, `wing`, `beak`, `maw`) either
-  ride **unbound** (the existing ADR-023 racial-pawn-weapon trick — always available, no host part) or,
-  better, the race takes a **non-humanoid `limbMap`** (the plans already exist — see §3d).
+  `rightHand`). Weapons that need a part the humanoid plan lacks (`tail`, `wing`, `beak`, `maw`) come with
+  a trait that **grafts that part** onto the pawn (§3d body composition), so the weapon binds to a real,
+  losable host part — not an unbound always-on hack. (The old ADR-023 unbound trick still works as a
+  fallback, but grafting is the model going forward.)
 
 ### §3b · Weapon lines (3 stages each)
 
@@ -449,14 +488,30 @@ Rarity climbs with the stage. `hostParts` and `blocksSlots` shown once per line.
 
 | line | S1 (uncommon) | S2 (rare) | S3 (epic) | hostParts · blocks · weapon dmg/type |
 |------|---------------|-----------|-----------|--------------------------------------|
-| **Claws** | Budding Claws `budding-claws` → wpn `blunt-claws` d7 cut | **Rending Claws `rending-claws`** → `rending-claws` d12 cut | Ripping Talons `ripping-talons` → `ripping-talons` d16 cut, bloodletting 0.3 | hands · blocks mainHand+gloves · crafting penalty scales down the line |
-| **Fangs** | Jagged Teeth `jagged-teeth` → `bite` d11 pierce | Goring Fangs `goring-fangs` → `goring-fangs` d13 pierce | Sabre Fangs `sabre-fangs` → `sabre-fangs` d16 pierce, bloodletting 0.25 | jaw · — |
+| **Claws** | Budding Claws `budding-claws` → wpn `blunt-claws` d7 cut | **Rending Claws `rending-claws`** → `rending-claws` d12 cut, **bleed-wound** | Ripping Talons `ripping-talons` → `ripping-talons` d16 cut, **bleed-wound** | hands · blocks mainHand+gloves · crafting penalty scales down the line |
+| **Fangs** | Jagged Teeth `jagged-teeth` → `bite` d11 pierce | Goring Fangs `goring-fangs` → `goring-fangs` d13 pierce | Sabre Fangs `sabre-fangs` → `sabre-fangs` d16 pierce, **bleed-wound** | jaw · — |
 | **Horns** | Nub Horns `nub-horns` → `headbutt` d6 blunt | **Goring Horns `gore-horns`** → `goring-horns` d13 pierce, knockdown 0.2 | Great Horns `great-horns` → `great-horns` d16 pierce, knockdown 0.4 | head · blocks headOuter+headBase |
 | **Tusks** | Small Tusks `small-tusks` → `boar_tusk` d9 pierce | Tusks `boar-tusks` → `tusk` d13 pierce | Great Tusks `great-tusks` → `great-tusks` d16 pierce, knockdown 0.3 | jaw/snout · — |
 | **Venom bite** | Mild Venom `mild-venom` → `serpent-fangs`, envenomed 0.2 | **Venom Glands `venomous`** → `serpent-fangs`, envenomed 0.35 | Deathly Venom `deathly-venom` → `deathly-fangs`, envenomed 0.6 + potent | jaw · poisonResistance climbs 0.15→0.3→0.5 |
-| **Ember breath** | Ember Breath `ember-breath` → `ember-breath` d8 fire, burning 0.3 | Flame Breath `flame-breath-r` → `flame-breath` d14 fire, burning 0.7 | Dragonfire `dragonfire` → `dragonfire` d20 fire, burning 0.9 | head · fireResistance climbs · S2/S3 sit under Dragon Heritage (§4) too |
-| **Talons** (avian) | Raking Talons `raking-talons` → `talon` d9 cut | Hooked Talons `hooked-talons` → d13 cut | Raptor Talons `raptor-talons` → d16 cut, bloodletting | feet (avian plan) or unbound · kick-slot |
+| **Breath weapon** ⚡ | Ember Breath `ember-breath` → `ember-breath` d8 fire, reach 1 | Flame Breath `flame-breath-r` → `flame-breath` d14 fire, reach 2, knockback | Dragonfire `dragonfire` → `dragonfire` d20 fire, **reach 3** (spear-like), knockback | head · special proc — see callout · fireResistance climbs |
+| **Talons** (avian) | Raking Talons `raking-talons` → `talon` d9 cut | Hooked Talons `hooked-talons` → d13 cut | Raptor Talons `raptor-talons` → d16 cut, **bleed-wound** | feet (avian plan) or unbound · kick-slot |
 | **Beak / Peck** (avian) | Pecking Beak `pecking-beak` → `peck` d4 pierce | Tearing Beak `tearing-beak` → d9 pierce | Rending Beak `rending-beak` → d13 pierce | beak (avian plan) or unbound |
+
+> **Breath weapon rework (⚡, per your note).** The old "just a fire weapon" line becomes a **special proc**:
+> on a chance each combat round the breath fires an attack that (1) deals fire damage, (2) **inflicts a
+> real burn wound** (not just numbers — a `burn`-type wound on the struck part), (3) has a **knockback
+> chance**, and (4) applies the persistent **`burning`** condition (periodic fire damage over an
+> appropriate number of in-game turns, scaled by stage). It carries **`reach`** so it out-ranges melee —
+> `ember-breath` reach 1, `flame-breath` reach 2, `dragonfire` **reach 3**, which behaves like a spear
+> (effectively a short-range *ranged* attack). `reach` on a natural weapon is new (§7). **TODO:** polish
+> `reach 3` into a proper **AoE cone** later — for now a single-target spear-line is sufficient.
+>
+> **Bleed as a wound, not a condition (per your note).** Claws/talons/sabre-fangs no longer apply the
+> ephemeral `bloodletting` *condition*; instead they inflict a **bleed-flagged wound** — a wound
+> type/flag whose `bleedRate` won't clot on its own until tended (mirrors the real bleeding-wound model,
+> and reads in the health panel as a proper injury). This replaces the transient condition everywhere it
+> was used (claws, talons, `thorn-skin`, `proboscis`/feeding). New wound behaviour (§7); the old
+> `bloodletting` condition is retired.
 
 > New weapon items needed (all `category:"natural_weapon"`, `hidden`, `amount:0`, unbound unless a plan
 > hosts them): `blunt-claws`, `ripping-talons`, `goring-fangs`, `sabre-fangs`, `great-horns`,
@@ -471,7 +526,7 @@ Rarity climbs with the stage. `hostParts` and `blocksSlots` shown once per line.
 |------|---------------|-----------|-----------|------------------------|
 | **Hide → scale → plate** | Thick Hide `thick-hide` → armor 6 | **Scaled Hide `scaled-hide`** → armor 12 | **Iron Skin `iron-skin`** → armor 18 | stack · carryPenalty 0.03→0.06→0.15 |
 | **Fur** | Downy Coat `downy-coat` → armor 3, coldRes 0.15 | **Thick Fur `thick-fur`** → armor 8, coldRes 0.3, fireRes −0.15 | Winter Mane `winter-mane` → armor 12, coldRes 0.45, fireRes −0.2 | replace · blocks bodyMid |
-| **Chitin** | Chitin Plates `chitin-plates` → armor 8 | Carapace `carapace` → armor 14 | Ironshell `ironshell` → armor 20 | stack · carryPenalty 0.05→0.1→0.18 · arachnid heritage |
+| **Chitin / carapace** | Chitin Plates `chitin-plates` → armor 8 | Carapace `carapace` → armor 14 | Ironshell `ironshell` → armor 20 | stack · carryPenalty 0.05→0.1→0.18 · **crustacean** heritage (§4.4a) — this is the shell line, **NOT** arachnid |
 | **Feathered coat** | **Feathered `feathered`** (passive, coldRes 0.2, no armor) | Plumed Coat `plumed-coat` → armor 4, coldRes 0.3 | Storm Plumage `storm-plumage` → armor 7, coldRes 0.4, wetnessRes 0.3 | replace · light (low carryPenalty) |
 
 > **bodyMod lines stay separate** (they change bone/flesh HP + weight, not an armor soak): the existing
@@ -481,57 +536,76 @@ Rarity climbs with the stage. `hostParts` and `blocksSlots` shown once per line.
 > reading as the same thing. Skeleton density (`brittle-boned`/`heavy-boned`/`stone-bones`) is already a
 > clean 3-rung bodyMod line — it just needs the `stage` flag to join this section formally.
 
-### §3d · Creature-body heritage packages (play a *real* beast-kin)
+### §3d · À-la-carte body composition (pawns build their own limbmap)
 
-Each maps one `creatures.jsonc` body plan onto a pawn heritage — a `passive` banner (small always-on
-affinity) + `subCapabilities` drawing the plan's signature staged weapon/armor. These sit at
-**rare/epic** (a notch below the §4 legendaries, above a lone naturalGear trait). Two build paths:
+**Revised per your note — no `*-kin` whole-plan swap, and no "cheap vs true-form" fork.** A pawn is
+**not** an avian or an arachnid; it is a *person* who happens to have grown wings, or a beak, or a
+feather coat. The fix: **dissolve the creature body-plan category for pawns.** `limbmap.jsonc` already
+merges every plan's parts into ONE global `PART_DEF_MAP`, so a `leftWing` or a `beak` is addressable
+regardless of which creature plan declared it. The creature `limbMap` names (`avian`, `arachnid`…) are
+just a **heuristic** so designers needn't hand-author each beast's body — pawns don't need that
+shortcut, because their body is assembled from **traits, one part at a time**.
 
-- **Cheap (ships on today's engine):** humanoid `limbMap`, gear granted **unbound** (the `rending-claws`
-  trick). Works immediately; slightly odd that a "beak" rides a humanoid jaw.
-- **True-form (recommended, needs one flag):** give the race its own `limbMap` (`avian`, `arachnid`,
-  `amphibian`, `quadruped`…). The plans **already exist** in `limbmap.jsonc`; the only gap is that pawn
-  generation hard-defaults to `"humanoid"` — expose a `race.limbMap` override (§7). Then talons bind to
-  real talon parts, a lost wing really removes flight, etc. This is the payoff that makes them *feel*
-  like the creature, not a costume.
+> **New plumbing (§7):** a `bodyMod`/`naturalGear` trait may **graft a limb + its parts** onto the pawn's
+> body tree at generation, pulling from the global part map — e.g. `+left_wing/+right_wing` (with the
+> wing bones), `+beak`, `+tail`. It does **not** import the rest of that creature's anatomy. So a
+> feather-coated pawn gets **wings + a beak + a feather coat but keeps its humanoid hands and feet** — or
+> any mix. This is the partially-implemented direction already in the code; this section finishes it.
+> Because a grafted wing is a *real* limb, losing it in combat really removes flight (see §3e), and the
+> label routes through `bodyLabels.ts` like any part.
 
-> **Ursine** `ursine-kin` — `passive` · `rare` · `racial` · plan `quadruped`(or humanoid+unbound)
-> `effects → constitutionBonus 1, coldResistance 0.15`
-> `subCapabilities →` Claws line S2 (`rending-claws`), Fur line S2 (`thick-fur`), bodyMod `heavy-boned`
-> *"broad, heavy and slow to anger — and terrible once it is roused"*
+**Consequence — distinct races, not creature archetypes.** A race's identity is a *curated handful* of
+these part/covering/weapon traits, mixed — a "skyfolk" race might roll wings + hollow bones + a beak but
+still have hands and a human face; a "shellback" race takes a carapace + crushing claws but a normal
+head. Because each race draws a different subset (and each pawn varies within it), two feather-folk are
+never identical, and no race collapses into "the bird creature." The thematic clusters below are just
+**recognisable groupings** of shareable parts (so the player instinctively reads "bear-blooded"), not
+fixed packages — see **§4.0** for how clusters are shared across lineages and gated by age/ritual, and
+how a pawn can sit at a **crossroads** between two.
 
-> **Avian** `avian-kin` — `passive` · `rare` · `racial` · plan `avian`
-> `effects → dexterityBonus 1, perceptionBonus 1, coldResistance 0.1`
-> `subCapabilities →` Talons S2, Beak S2, Feathered line S1/S2, `hollow-boned` (new bodyMod: skeleton
-> hpMult 0.8, weightKg −6 → light, fragile, an emergent flight/speed hook)
-> `blocksSlots → [hands… ]` if wing-armed · *"light-boned and sharp-eyed, at home on the high crags"*
+| cluster (reads as) | signature grafts / coverings / weapons (all individually shareable traits) |
+|---|---|
+| **Ursine / bear-blooded** | Claws S2, Fur S2, `heavy-boned`, `constitutionBonus`; shares **Adrenaline line** (§4.0) |
+| **Avian / sky-blooded** | `+wings` (utility gear, §3e), `+beak`, Feather coat, `hollow-boned` (skeleton hpMult 0.8, weightKg −6) |
+| **Crustacean / shell-blooded** | Carapace armor line (§3c), Crushing Claws, `heavy-boned` — the **shell** line (was mis-labelled arachnid) |
+| **Arachnid / spider-blooded** | Venom bite, **Webbing** (utility/control, §3e), `many-eyed` (nightVision), silk *(produces hook, stretch)* |
+| **Amphibian / mire-blooded** | `moist-skinned`, `+webbed feet`, Maw-bite, `hydro-vigor` wet-trigger (§6b) |
+| **Serpentine / scale-blooded** | Venom bite S2/S3, `scaled-hide`, cold-blooded trigger (§6b) |
+| **Bovine / horn-blooded** | Horns line, Hooves (kick), Thick Hide, `constitutionBonus` |
 
-> **Arachnid** `arachnid-kin` — `passive` · `epic` · `racial` · plan `arachnid`
-> `effects → dexterityBonus 1, poisonResistance 0.2, nightVision 0.3`
-> `subCapabilities →` Chitin armor line S2 (`carapace`), Venom bite S2 (`venomous`), `many-eyed`
-> (passive → nightVision, ties to the 8-eye plan), *silk* (new work hook — see note)
-> *"eight patient eyes and a bite that waits"* · **note:** silk-gland → butcher yield isn't organ-aware
-> yet (`limbmap.jsonc:298` TODO) — silk as a *produces* hook is a stretch goal.
+### §3e · Utility natural-gear (slot-cost, non-defensive)
 
-> **Amphibian** `amphibian-kin` — `passive` · `rare` · `racial` · plan `amphibian`
-> `effects → wetnessResistance 0.3, coldResistance 0.15, fireResistance −0.2`
-> `subCapabilities →` `moist-skinned` (exists), Web-Claws (Claws S1 rebound to web-feet), Maw-Bite
-> (Fangs S2 on the `maw` part), and the **wet-triggered** combat buff from §6b (`hydro-vigor`)
-> *"at home in the mire; the dry air is the enemy"* · lesser cousin of mythic `amphibious`.
+**New per your note.** Natural "armor" needn't grant *defense* — it can be a natural apparatus that
+grants a **utility** benefit at the cost of an **equipment slot**, and (being a real body part / worn
+covering) can be **cut off** in combat, removing the benefit. Same `naturalGear` + `selfCondition`
+machinery, but the condition grants a stat/movement benefit instead of `grantsNaturalArmor`. This is a
+whole new *kind* of natural gear worth several traits:
 
-> **Serpentine** `serpent-kin` — `passive` · `epic` · `racial` · plan `serpentine`
-> `effects → poisonResistance 0.3, coldResistance −0.2, fireResistance 0.15` (cold-blooded)
-> `subCapabilities →` Venom bite S2/S3, `scaled-hide` S2, **cold-blooded trigger** from §6b (sluggish in
-> cold, quick in heat) · *"a coiled patience, and a bite that ends the argument"*
+> **Wings** `wings` — `naturalGear` · `rare` · `racial` · *the flagship*
+> `selfCondition → winged` (grants a large `moveSpeed` buff, **no** defense) · `blocksSlots → [backpack]`
+> host `left_wing`/`right_wing` (grafted, §3d) — **cut a wing off and the movement bonus is gone**
+> *"the ground is a place they visit, not one they belong to"* · 3-staged: `budding-wings` → `wings` → `great-wings`
 
-> **Bovine / Cervine** `horned-kin` — `passive` · `rare` · `racial` · plan `quadruped_hooved`
-> `effects → constitutionBonus 2, strengthBonus 1`
-> `subCapabilities →` Horns S2 (`gore-horns`) or Tusks, Hooves (kick weapon), Thick Hide S1
-> *"placid until crowded, and then all horn and shoulder"*
+More slot-cost utility apparatus in the same shape (each trades a slot, none boost defense, each losable):
+
+| trait `id` | slot cost | grants | reads as |
+|---|---|---|---|
+| Wings `wings` | backpack | big `moveSpeed` (flight/glide) | skyfolk |
+| Prehensile Tail `prehensile-tail` | belt | `carry_weight`↑ + `dodge`↑ (balance) | monkey-kin |
+| Gliding Membrane `patagium` | back/cloak | fall-safe + `moveSpeed`↑ (lesser wings) | flying-squirrel-kin |
+| Spinnerets `spinnerets` | belt | **Webbing** — a ranged `ensnared` control shot (arachnid) | spider-blooded |
+| Lantern Organ `bioluminescence` | — (head) | self-`nightVision` + a small light radius | deep-kin |
+| Burrowing Claws `digging-claws` | gloves | `workSpeed.digging`↑ + `workSpeed.mining`↑ | mole-kin |
+| Gill Frills `gills-frill` | neck | breathe underwater + `workSpeed.fishing`↑ | deep-kin |
+
+> These make the **back/belt/cloak slots** a real trade-off (a winged pawn can't wear a pack; a
+> tailed pawn gives up the belt), and give combat a new stake — hamstringing a courier by **shearing its
+> wing**. Balance lever: the bigger the utility, the more it costs a slot and the more fragile the host
+> part.
 
 ---
 
-## §4 · Ten legendary / mythic heritage trees
+## §4 · Eleven legendary / mythic heritage trees
 
 Same shape as `dragon-heritage` / `vampiric`: a `passive` **banner** (rarity `legendary` or `mythic`,
 small always-on `effects`) carrying a `subCapabilities` array; the race rolls the banner (~1.5% legendary
@@ -542,12 +616,45 @@ frost-born, berserker, nocturnal, regeneration, photosynthesis, iron-skin). Insp
 > **Legend:** each sub-cap line is `name` `id` — `kind` → key mechanic. `⟨new⟩` = needs a new condition/
 > weapon/aura (collected in §7). `⟨exists⟩` = reuses a live condition/weapon.
 
+### §4.0 · Shared trait lines, lineage crossroads & connectivity
+
+**The goal is distinct RACES, not creature archetypes.** The heritage trees below are **not** silos —
+their sub-capabilities and the §3 part/gear lines are **shared building blocks**, so lineages overlap in
+recognisable, logical ways. A trait can belong to several lineages at once:
+
+- **Adrenaline → Berserker-Blood is a shared line.** It belongs to the **Beast / Ursine** cluster (§3d)
+  **and** the **Colossus** and **Warborn** lineages — the "sees red and hits harder" instinct is common
+  to all of them, so drawing it doesn't lock a pawn into one tree.
+- **Creatures can carry lineage traits too.** Certain `creatures.jsonc` mobs get the **stage-1 variant**
+  of a shared line — e.g. `orc_reaver` gets **Adrenaline (S1 only, for now)**, so a reaver berserks. This
+  reuses the same trait data on the creature side (creatures already read the trait pool for natural
+  gear); just add the id to the creature's trait list.
+- **A blood-feast is shared across all bloodsucking lineages.** Any pawn with a **blood-draining bite**
+  (`bloodsucking-fangs`, stirge-kin `proboscis`, vampiric) triggers the **`Feasted`** buff on a
+  successful feed — a strong, temporary boost lasting **~30 in-game minutes** (a real fed-on-the-kill
+  high). Because it's powerful it needs careful tuning (duration, magnitude, and a cooldown so it can't
+  be perma-kept). `Feasted` is one shared condition def reused by every feeding weapon.
+
+**Progression is a tree the player climbs — later age- and ritual-gated.** A pawn does not get a whole
+lineage at once. It starts with the banner + S1 pieces; advancing to S2/S3 sub-capabilities is gated
+(eventually) by **age** and **ritual**, so the player can *actively pursue* a pawn's evolution down a
+lineage rather than it being a spawn roll. This is what makes `evolvesTo` + `stage` (§3a) matter.
+
+**Crossroads = the player's "spec" moment.** Because lines are shared, a pawn can become eligible for
+**two lineages at once** (a bear-blooded pawn who also carries adrenaline sits between Ursine and
+Berserker; a feather-and-venom pawn between Avian and Arachnid). At that fork the **player chooses** which
+way to build the pawn — the build-diversity payoff. Mutually-exclusive picks (and the aura exclusions in
+§6a) are enforced by **conflict groups** so a pawn can't grab every powerful line at once.
+
 ### §4.1 · Stoneblood *(legendary)* — DnD earth-genasi / stone-giant · CoQ crystalline
 
 > **Stoneblood** `stoneblood-heritage` — `passive` · `legendary` · `racial`
 > `effects → constitutionBonus 1, blunt_resistance 0.15`
 > *"their veins run with a slow, mineral patience; the earth knows them as kin"*
-- Living Granite `granite-skin` — `naturalGear` → `grantsNaturalArmor 18`, mode stack ⟨new cond `granite_skinned`⟩
+- Living Granite `granite-skin` — `naturalGear` **3-stage** (its own progression, not an iron-skin reskin):
+  Pebbled Skin `pebbled-skin` (armor 10) → Granite Hide `granite-hide` (armor 18) → Living Rock
+  `living-rock` (armor 26, + `moveSpeed`↓, near bleed-immune, mineral & heavy) ⟨new conds; escalates
+  *past* iron-skin and pairs with the `stone-bones` bodyMod for a true rock body⟩
 - Quarried Bones `stone-bones` — `bodyMod` → skeleton hpMult 2.2, weightKg 18 ⟨exists⟩
 - Crushing Grip `crushing-grip` — `passive` → `weaponBonus.damage 0.2`, `strengthBonus 1`
 - Tremor Sense `tremor-sense` — `passive` → `perceptionBonus 2` (feels footfalls; a PER pill) ⟨new cond⟩
@@ -562,7 +669,7 @@ frost-born, berserker, nocturnal, regeneration, photosynthesis, iron-skin). Insp
 - Leathery Wings `membrane-wings` — `naturalGear` → light glide; blocks `bodyMid`; DEX flavour ⟨new, needs plan/unbound⟩
 - Piercing Screech `piercing-screech` — `naturalGear` → weapon `screech`, disoriented onHit ⟨exists⟩
 - Hollow Bones `hollow-boned` — `bodyMod` → skeleton hpMult 0.8, weightKg −6 (fast, fragile) ⟨new⟩
-- Night-Hunter `night-hunter` — `attribute` → `workSpeed.foraging 1.2` at night flavour, `perceptionBonus 1`
+- Nightgleaner `nightgleaner` — `attribute` → `workSpeed.foraging 1.2, nightVision 0.2` (gleans the dark forest floor; a *forage* boost, not a hunt one)
 
 ### §4.3 · Sporeborn *(legendary)* — CDDA fungal mutations · CoQ
 
@@ -575,16 +682,32 @@ frost-born, berserker, nocturnal, regeneration, photosynthesis, iron-skin). Insp
 - Decomposer `decomposer` — `passive` → eats rot/`organic` without sickness (diet hook) ⟨new, needs diet flag⟩
 - Rootling `rootling` — `passive` → `selfCondition photosynthesis` (feeds in sun) ⟨exists cond⟩
 
-### §4.4 · Carapaced *(legendary)* — CoQ / CDDA insectoid
+### §4.4a · Crustacean *(legendary)* — the SHELL line (CoQ / CDDA carapace)
 
-> **Carapaced** `carapaced-heritage` — `passive` · `legendary` · `racial`
-> `effects → dexterityBonus 1, poisonResistance 0.2`
-> *"a chitin-cased thing that does not tire the way soft folk do"*
-- Ironshell `ironshell` — `naturalGear` → `grantsNaturalArmor 20`, stack ⟨new cond, §3c⟩
-- Scything Blades `scything-arms` — `naturalGear` → weapon `scythe-limb` d15 cut, hostParts hands; blocks mainHand ⟨new wpn⟩
-- Compound Eyes `compound-eyes` — `passive` → `nightVision 0.6, perceptionBonus 2` ⟨new cond⟩
-- Tireless `tireless` — `attribute` → `workSpeed.all 1.15` (chitin doesn't fatigue) + low fatigue flavour
-- Venom Bite `venomous` — `naturalGear` → envenomed onHit ⟨exists⟩
+The armored, shell-cased line — **separated from the spider theme per your note.** All shell + crush, no
+venom, no web.
+
+> **Crustacean** `crustacean-heritage` — `passive` · `legendary` · `racial`
+> `effects → constitutionBonus 1, blunt_resistance 0.15`
+> *"cased in plate it grew itself; slow, patient, and very hard to open"*
+- Ironshell `ironshell` — `naturalGear` → Carapace armor line S3 (§3c), `grantsNaturalArmor 20`, stack ⟨§3c⟩
+- Crushing Claws `crushing-claws` — `naturalGear` → weapon `crusher-claw` d15 blunt, knockdown onHit; hostParts hands; blocks mainHand ⟨new wpn⟩
+- Ponderous Plating `ponderous-plating` — `bodyMod` → skeleton hpMult 1.6, weightKg 14 (heavy, `moveSpeed`↓)
+- Tireless `tireless` — `attribute` → `workSpeed.all 1.15` (the shell doesn't tire) + low fatigue flavour
+- Amphibious Shell `shell-gills` — `naturalGear` → `+gill frills` (§3e), breathe underwater
+
+### §4.4b · Arachnid *(legendary)* — the SPIDER line (venom + web + eyes)
+
+The spider theme — **venom and webbing**, per your note. No heavy shell (that's Crustacean above).
+
+> **Arachnid** `arachnid-heritage` — `passive` · `legendary` · `racial`
+> `effects → dexterityBonus 1, poisonResistance 0.2, nightVision 0.3`
+> *"eight patient eyes, a quiet bite, and a thread for every corner"*
+- Venom Bite `venomous` — `naturalGear` → Venom-bite line (§3b), envenomed onHit ⟨exists⟩
+- Webbing `spinnerets` — `naturalGear` utility (§3e) → ranged `ensnared` control shot; belt slot ⟨new wpn/cond⟩
+- Many-Eyed `many-eyed` — `passive` → `nightVision 0.6, perceptionBonus 2` (the 8-eye plan) ⟨new cond⟩
+- Silk-Spinner `silk-spinner` — `passive` → silk `produces` hook *(stretch — butcher/produce not organ-aware yet, `limbmap.jsonc:298`)*
+- Wall-Crawler `wall-crawler` — `attribute` → `moveSpeed`↑ on rough terrain flavour + `dexterityBonus 1`
 
 ### §4.5 · Stormborn *(mythic)* — DnD storm-genasi · CoQ electrical
 
@@ -595,7 +718,7 @@ frost-born, berserker, nocturnal, regeneration, photosynthesis, iron-skin). Insp
 - Grounded `lightning-ward` — `attribute` → `lightningResistance 0.6`
 - Quickened `quickened-reflexes` — `stat` → `dexterityBonus 3`
 - Storm-Fed `storm-fed` — `passive` → thrives in rain/storm (a **hot/wet trigger** buff, §6b) ⟨new cond⟩
-- Static Aura `static-aura` — `passive` **aura** (§6a) → allies gain minor `quickness` ⟨exists buff `quickness` + new aura⟩
+- Static Aura `static-aura` — `passive` **aura** (§6a, **radius 4** — finite, not colony-wide) → allies **within 4 tiles** gain minor `quickness` ⟨exists buff `quickness` + new aura⟩
 
 ### §4.6 · Shadeborn *(legendary)* — DnD shadar-kai/shadow · CoQ umbral
 
@@ -618,7 +741,7 @@ frost-born, berserker, nocturnal, regeneration, photosynthesis, iron-skin). Insp
 - Massive Frame `massive-frame` — `bodyMod` → flesh hpMult 1.3, weightKg 30 (huge blood pool, encumbering)
 - Titan Bones `stone-bones` — `bodyMod` → skeleton hpMult 2.2 ⟨exists⟩
 - Ground-Shaker `ground-shaker` — `naturalGear` → weapon `slam` d13, knockdown onHit ⟨exists wpn⟩
-- Long Reach `long-reach` — `attribute` → `strengthBonus 3` (net brute)
+- Long Reach `long-reach` — `stat` → `strengthBonus 3`; `requires → { minHeightCm: 300 }` (a true reach advantage is only real on a 3m+ frame — an actual giant, not a tall pawn)
 
 ### §4.8 · Wildblooded *(legendary)* — DnD fey/dryad · CoQ verdant
 
@@ -656,11 +779,12 @@ heritage (see §2d acquisition note / §8). Self-immune to what it spreads — a
 - Unquiet Flesh `unquiet-flesh` — `passive` → `selfCondition regenerating` (it will not die cleanly) ⟨exists⟩
 - Dread Visage `dread-visage` — `stat` → `charismaPenalty 4` (no one trusts it)
 
-> **Design read on §4:** three of these (Sporeborn, Shadeborn, Farseer, Stormborn, Blighted) lean on the
-> **aura** system from §6a, which is genuinely new. Trees that avoid auras (Stoneblood, Colossus,
-> Carapaced, Wildblooded, Echoborn) are buildable on **today's** engine using only existing
-> `naturalGear`/`bodyMod`/`stat` mechanics + the §3 staged gear. If you want to ship a first batch before
-> the aura work, those five are the no-new-runtime set.
+> **Design read on §4:** several trees (Sporeborn, Shadeborn, Farseer, Stormborn, Blighted) carry an
+> **aura** (§6a) — now a rare, lineage-gated, **mutually-exclusive S3** capability (≤1 aura per pawn,
+> never a spawn roll). The rest (Stoneblood, Colossus, Crustacean, Arachnid, Wildblooded, Echoborn) lean
+> only on `naturalGear`/`bodyMod`/`stat` + the §3 staged gear + §3d body composition. Per §8.2 the whole
+> set ships in one pass. Sub-caps are **shared** across trees where logical (§4.0) — e.g. Adrenaline sits
+> under Ursine/Colossus/Berserker alike.
 
 ---
 
@@ -751,14 +875,22 @@ like bad-back) is a fourth variant for torso/back. The readout is automatic. Eff
 Auras (a pawn radiating a condition to nearby pawns) **do not exist today** — only environmental heat
 radiates to *tiles*. This is genuinely new runtime (§7). Proposed shape: a `passive` trait carries
 
-> `aura → { condition: <id>, radius: <tiles>, affects: 'allies' | 'foes' | 'all' }`
+> `aura → { condition: <id>, radius: <tiles>, affects: 'allies' | 'foes' | 'all', lingerSeconds?: <n> }`
 
-and each tick the pawn stamps that transient condition onto every pawn within `radius` (via the existing
-`SpatialIndexService` nearest/within query, ADR-008 — **must** go through the interface, not inline). The
-radiated conditions **reuse the magical buff/debuff library** already in `conditions.jsonc`
+and periodically the pawn stamps that transient condition onto every pawn within `radius` (via the
+existing `SpatialIndexService` within-radius query, ADR-008 — **must** go through the interface, not
+inline). The radiated conditions **reuse the magical buff/debuff library** already in `conditions.jsonc`
 (`might`, `insight`, `vigor`, `quickness`, `keen_senses`, `fortitude`, `grace`; debuffs `disoriented`,
-`nausea`). Five archetypes, each a lineage banner-adjacent power (positive = buff allies, mirror = debuff
-foes):
+`nausea`). Both `allies` **and** `foes` variants are wanted.
+
+> **⚠ Balance (per your note — auras are OP if unchecked).** Auras must be **very rare and lineage-gated**:
+> only reachable as a **late (S3) sub-capability** of a heritage tree, earned through the §4.0 age/ritual
+> progression — never a spawn roll. They live in a **mutual-exclusion conflict group** (a pawn may carry
+> **at most one** aura), and are excluded from other stacking power-combos so a pawn can't become a
+> walking buff-stack. **Finite radius always** (3–5 tiles; never colony-wide). One aura-bearer should feel
+> like a rallying banner, not an "I win" button.
+
+Five archetypes, each a lineage banner-adjacent power (positive = buff allies, mirror = debuff foes):
 
 > **Warlord's Presence** `aura-might` — `passive` · `epic` · racial · lineage: Colossus/Warborn
 > `aura → { condition: might, radius: 4, affects: allies }` — nearby allies fight harder
@@ -776,10 +908,13 @@ foes):
 > **Spore Cloud** `aura-spore` — `passive` · `rare` · racial · lineage: Sporeborn/Blighted
 > `aura → { condition: nausea, radius: 3, affects: foes }` — foes sicken near them *(the §4 plague auras)*
 
-> **⚠ Perf gate:** an aura = a per-tick radius query + per-neighbour condition write on the sim hot path.
-> Cross-check `ENGINE-PERFORMANCE.md` **before** building it — cap aura-bearers, reuse the spatial index's
-> existing query (no new allocation per tick), and stamp via the transient-condition path (no immutable
-> spread). This is the one part of the whole expansion with a real per-tick cost.
+> **⚠ Perf gate (resolved approach, your §8.4 call):** an aura need **not** be recomputed every tick. Run
+> the radius query on a **throttled cadence** (e.g. every few seconds), and give the applied condition a
+> **`lingerSeconds` tail** so it fades a couple of seconds *after* a target leaves the zone rather than
+> being re-stamped/cleared each tick — a lingering effect that is both nicer feel and far cheaper. Combined
+> with the rarity/exclusion gating above (few bearers, ≤1 aura each), the per-tick cost is negligible.
+> Still cross-check `ENGINE-PERFORMANCE.md` when wiring, reuse the spatial index's existing query (no new
+> per-tick allocation), and stamp via the transient-condition path (no immutable spread).
 
 ### §6b · Trigger-conditioned traits — **data-only** (fits the existing graph)
 
@@ -810,56 +945,85 @@ One positive + one negative per affliction, each tied to a lineage. **Your two f
 > data. The only schema touch is confirming the graph's predicate set covers each `need`/`meter` used
 > (it does, per the conditions map). This is the cheapest, highest-variety section to ship.
 
+> **UI exposure (per your note).** A trait that grants a `selfCondition` must **surface it on the pawn
+> tab's trait card as a live pill** — e.g. Hydro-Vigor shows *"＋ hydro-vigor"* while wet — and **hovering
+> the pill shows the condition's tooltip** (its name + description + current modifiers). This makes the
+> trigger legible ("why did this pawn just get faster?") instead of an invisible stat swing. The
+> transient-condition pill row already exists in the health panel; this wires the trait card's granted
+> `selfCondition`/`activateWhen` conditions into that same pill+tooltip surface (small UI plumbing, §7).
+
 ---
 
 ## §7 · New plumbing (everything that isn't pure data)
 
-Ordered cheapest → most involved. Data-only additions (new trait/condition/item entries) are **not**
-listed — they're the bulk, but they need no code.
+Ordered roughly cheapest → most involved. Data-only additions (new trait/condition/item entries) are
+**not** listed — they're the bulk, but they need no code.
 
-- [ ] **Resistance-sourcing rule** — `attribute`-kind traits may not carry a resistance key; move the
-      assertion into `traitRegistry.test.ts` (resistances allowed only on `naturalGear`/`passive`). Also
-      relocate/flag the existing `marsh-dweller` (today an `attribute` with poison/disease) → `passive`.
+- [ ] **Resistance-sourcing rule** — `attribute`-kind traits may not carry a resistance key; assert it in
+      `traitRegistry.test.ts` (resistances allowed only on `naturalGear`/`passive`). Relocate the existing
+      `marsh-dweller` (today an `attribute` with poison/disease) → `passive`.
 - [ ] **`combatMods` channel** (§1 combat) — add `effects.combatMods?: Record<string, number>` and apply
       it in `PawnStatService` exactly like `traitWorkMult` does for `workSpeed` (multiply the matching
       stats.jsonc combat output). Small, mirrors an existing path.
-- [ ] **`stage` field + 3-link `evolvesTo`** (§3) — add `stage?: 1|2|3`; extend the `evolvesTo` test to
+- [ ] **`stage` field + 3-link `evolvesTo`** (§3a) — add `stage?: 1|2|3`; extend the `evolvesTo` test to
       allow 3-link chains. Data + a test tweak.
 - [ ] **`frostbite` wound type** (§5b) — add to the wound `type` union + `wounds.jsonc`; the "old ⟨type⟩
       scar" readout already handles arbitrary types. Trivial.
-- [ ] **`race.limbMap` override** (§3d true-form) — let a race declare a non-`humanoid` plan so beast-kin
-      bind real talons/wings/maw. The plans already exist; only pawn-gen's hard `"humanoid"` default and a
-      few humanoid-part assumptions need the override threaded through.
+- [ ] **Bleed as a wound, not a condition** (§3b) — add a **bleed flag/type** to the wound model so a
+      claw/talon/sabre-fang inflicts a wound whose `bleedRate` won't self-clot until tended; **retire the
+      transient `bloodletting` condition** and repoint every user (claws, talons, `thorn-skin`, feeding
+      weapons) at the bleed-wound.
+- [ ] **Breath weapon proc + `reach`** (§3b) — a special-attack proc that deals fire damage, **inflicts a
+      `burn` wound**, rolls **knockback**, and applies `burning` (DoT over N turns, stage-scaled); plus a
+      **`reach`** field on natural weapons (dragonfire reach 3 = spear-like short-ranged). **TODO:** later
+      upgrade `reach 3` to an **AoE cone**.
+- [ ] **`Feasted` buff + shared blood-feast** (§4.0) — one condition def granting a strong ~30-min buff on
+      a successful blood-draining bite (`bloodsucking-fangs`/`proboscis`/vampiric); needs a cooldown +
+      tuning so it can't be perma-kept.
+- [ ] **Utility natural-gear** (§3e) — `naturalGear` whose `selfCondition` grants a **utility/movement**
+      benefit + a **slot cost** instead of `grantsNaturalArmor` (wings→moveSpeed/back-slot, webbing,
+      prehensile tail…). Losable with the host part. New condition fields for the non-defensive grant.
+- [ ] **À-la-carte body composition — dissolve the pawn body-plan category** (§3d, replaces the old
+      `race.limbMap` idea) — let a `bodyMod`/`naturalGear` trait **graft a limb + its parts** onto a pawn's
+      humanoid body tree from the global `PART_DEF_MAP` (wings/beak/tail/webbed-feet), *without* importing
+      the rest of that creature's anatomy. A grafted part is a real limb (losable, labelled via
+      `bodyLabels.ts`). Extends the partially-implemented composition already in code; this is the
+      structural centrepiece.
+- [ ] **Creatures carry lineage traits** (§4.0) — add shared-line trait ids (e.g. Adrenaline S1) to
+      `creatures.jsonc` mobs like `orc_reaver`; the creature side already reads the trait pool for natural
+      gear, so this is mostly data + confirming the creature path applies `stat`/`passive` effects.
 - [ ] **Cursed-lineage rarity** (§2d/§4.10) — let the race-identity roll draw a negative-polarity
-      legendary/mythic banner (today `negative` is filtered from race pools). Contained change to
-      `generateRaceTraitSets` + the flaw test's "no negative in a race pool" assumption.
-- [ ] **`evolutionTrigger { minAgeYears }`** (§3a age hook) — waits on the age system; walks
-      `stage N → N+1` by swapping a trait for its `evolvesTo`. Spec now, wire with age.
-- [ ] **Aura system** (§6a) — `aura?: { condition, radius, affects }` on `Trait`; a per-tick pass that
-      queries `SpatialIndexService` for pawns in radius and stamps the transient condition. **Real
-      per-tick cost — gate on `ENGINE-PERFORMANCE.md` (see §6a).** The single most involved item.
-- [ ] **Reserved hooks** (referenced by a few heritages, not required for a first pass): diet flags
+      legendary/mythic banner (`Blighted`); today `negative` is filtered from race pools. Contained change
+      to `generateRaceTraitSets` + the flaw test's "no negative in a race pool" assumption.
+- [ ] **Trait-card condition pill + tooltip** (§6b UI) — surface a trait's granted `selfCondition`/
+      `activateWhen` conditions as a live pill on the pawn-tab trait card (*"＋ hydro-vigor"*) with the
+      condition tooltip on hover. Reuses the health panel's existing pill row.
+- [ ] **Aura system** (§6a) — `aura?: { condition, radius, affects, lingerSeconds }` on `Trait`; a
+      **throttled** (every few seconds, not per-tick) radius query via `SpatialIndexService` that stamps a
+      transient condition with a **linger tail**; aura traits sit in a **mutual-exclusion conflict group**.
+      Gate on `ENGINE-PERFORMANCE.md`. The most involved item — but cheap given the throttle + rarity.
+- [ ] **`evolutionTrigger { minAgeYears }` + ritual gate** (§3a/§4.0 age-driven progression) — waits on
+      the age system; walks `stage N → N+1` (age and/or ritual) by swapping a trait for its `evolvesTo`,
+      so the player can actively pursue a lineage. Spec now, wire with age.
+- [ ] **Reserved hooks** (referenced by a few heritages, not required first pass): diet flags
       (`decomposer`/`carrion-fed` eat rot), `sleepless` (reduced sleep need), `beast-speech`
-      (animal-handling). Park until the owning systems exist.
+      (animal-handling), silk `produces` (needs organ-aware butchery). Park until the owning systems exist.
 
-## §8 · Open decisions (need your call)
+## §8 · Decisions — RESOLVED
 
-1. **Cursed-lineage acquisition (§2d/§4.10).** Recommend **option 1** — grand curses ride the
-   race-identity roll as negative legendaries (`Blighted`), the true dark mirror of `dragon-heritage`. The
-   alternative (a rare "major flaw" on the individual layer) is simpler but story-flat. Your call sets
-   whether §4.10 and the `all-minus-3/5` curses are race-level or individual.
-2. **Ship batching.** A no-new-runtime first wave is available *today*: all of §1 except `combatMods`
-   (or include the small `combatMods` add), §2a–c, §3 staged gear as data (minus age auto-evolve), §5
-   scars/limbs (minus `frostbite`), §6b trigger traits, and the five aura-free heritages of §4. Auras
-   (§6a) + true-form limbMaps + cursed lineages form a second wave. Want me to tag every entry with a
-   wave?
-3. **True-form vs unbound gear (§3d).** Beast-kin as real non-humanoid limbMaps (they *feel* like the
-   creature, lose flight when a wing is torn) vs the cheap unbound-weapon path (ships now, slightly odd).
-   Recommend true-form for the flagship four (ursine/avian/arachnid/amphibian), unbound for the rest.
-4. **Aura scope & radius.** Allies-only, foes-only, or both? Fixed radius (4) or per-trait? And the perf
-   ceiling — how many simultaneous aura-bearers is acceptable on the tick?
-5. **How many of §1's 40 to actually mint.** The doc specs the full matrix; you may want only the
-   moderate/​significant rungs that read distinct in play and drop redundant middle pulls.
-6. **Naming pass.** ~130 new names here obey the ADR-028 naming law (no anatomy on stat/attribute
-   traits) but haven't been checked against the live `traits.jsonc` ids for collisions — I'll dedup at
-   implementation. Flag any names you dislike now.
+All six are settled per your review; the resolutions are baked into the sections above.
+
+1. ✅ **Blighted / cursed lineage (§2d/§4.10).** Implement it — the dark mirror of legendary heritage. The
+   grand curses ride the race-identity roll as a negative-polarity `Blighted` banner (§7 cursed-lineage
+   rarity), not an individual flaw.
+2. ✅ **Ship batching — none.** Implement the whole spec in one pass (no wave-tagging).
+3. ✅ **Body composition (§3d).** Dissolve the creature body-plan category for pawns; a pawn pieces
+   together its own limbmap by **grafting individual parts** from the global part map via traits (wings +
+   beak + feather coat but keeps humanoid feet) — no `*-kin` whole-plan swap. This is the structural
+   centrepiece (§7).
+4. ✅ **Auras — both, and lingering (§6a).** Both `allies` and `foes` variants; application/removal is
+   **throttled with a couple-second linger tail** after a target leaves the zone (nicer feel + eases
+   perf), and auras are rare, lineage-gated, and mutually exclusive.
+5. ✅ **Mint all of §1.** Ship the full attribute-combo + per-work-type matrix.
+6. ✅ **Naming.** Names obey the ADR-028 naming law; dedup against live `traits.jsonc` ids at
+   implementation. (`Broken-Bodied` → `Decrepit`, `Night-Hunter` → `Nightgleaner` already fixed.)
