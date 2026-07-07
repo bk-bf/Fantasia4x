@@ -57,8 +57,8 @@ describe('craft output drop merge (non-stockpile station)', () => {
     // One stack each (merged), not two.
     expect(fw).toHaveLength(1);
     expect(branch).toHaveLength(1);
-    // Quantities accumulate: split_firewood yields 3 firewood + 2 branch per run, ×2 runs.
-    expect(fw[0].quantity).toBe(6);
+    // Quantities accumulate: split_firewood yields 6 firewood + 2 branch per run, ×2 runs.
+    expect(fw[0].quantity).toBe(12);
     expect(branch[0].quantity).toBe(4);
     // Both staged inputs consumed.
     expect((gs.droppedItems ?? []).some((d) => d.resourceId === 'pine_log')).toBe(false);

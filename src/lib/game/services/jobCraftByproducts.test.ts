@@ -58,7 +58,7 @@ function makeState(): GameState {
 }
 
 describe('craft completion emits recipe byproducts as station drops (Stage C + ADR-016)', () => {
-  it('split_firewood ×2 yields 6 green_firewood (primary) + 4 branch (byproduct) on the station', () => {
+  it('split_firewood ×2 yields 12 green_firewood (primary) + 4 branch (byproduct) on the station', () => {
     let gs = jobService.generateJobs(makeState());
     const craftJob = gs.jobs.find((j) => j.type === 'craft');
     expect(craftJob).toBeDefined();
@@ -68,7 +68,7 @@ describe('craft completion emits recipe byproducts as station drops (Stage C + A
     const drops = gs.droppedItems ?? [];
     const fw = drops.find((d) => d.resourceId === 'green_firewood' && d.x === 5 && d.y === 5);
     const branch = drops.find((d) => d.resourceId === 'branch' && d.x === 5 && d.y === 5);
-    expect(fw?.quantity).toBe(6); // 3 per craft × quantity 2
+    expect(fw?.quantity).toBe(12); // 6 per craft × quantity 2
     expect(branch?.quantity).toBe(4); // 2 per craft × quantity 2
     // Staged input consumed; queue drained.
     expect(drops.some((d) => d.reservedFor === 'cq1')).toBe(false);
