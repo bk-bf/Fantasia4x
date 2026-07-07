@@ -148,6 +148,11 @@ export interface Mob {
   attackCooldown?: number;
   /** Remaining turns for timer-based transient conditions (e.g. knockdown). */
   conditionTimers?: Record<string, number>;
+  /** TRAIT-LIBRARY-EXPANSION §4.0 shared lines: trait defs this creature carries (resolved from the
+   *  creature def's `traits` id list at spawn — e.g. orc_reaver's Adrenal S1). Mobs get the
+   *  stat/resistance/weaponBonus/combatMods effects through the same `'traits' in entity` reads as
+   *  pawns; pawn-only machinery (selfCondition pills, trait draw) ignores them. */
+  traits?: Trait[];
   /** Player has queued this mob for hunting — drafted pawns with hunting work will prioritise it. */
   markedForHunt?: boolean;
   /** Player has tagged this mob for attention (generic marker, not task-specific). */

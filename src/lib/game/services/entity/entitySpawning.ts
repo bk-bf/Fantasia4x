@@ -6,6 +6,7 @@ import { getAmbientLight } from '../EnvironmentService';
 import { calcMaxStamina } from '../../entities/Pawns';
 import { createBodyPlanLimbs } from '../../systems/Combat';
 import { DEFAULT_PLAN } from '../../core/BodyParts';
+import { TRAIT_DATABASE } from '../../core/Race';
 import { rng } from '../../core/rng';
 import { findNearbyWalkable } from './entityHelpers';
 import { isSpawnableTile } from '../../core/Terrains';
@@ -762,6 +763,12 @@ export function makeMob(
     pain: 0,
     aggroRange: def.behaviour === 'aggressive' ? 8 : 3,
     attackCooldown: 0,
-    conditionTimers: {}
+    conditionTimers: {},
+    // §4.0 shared lineage lines: resolve the creature def's trait ids to full Trait defs (an
+    // orc_reaver carries Adrenal S1) — the stat/resistance/weaponBonus/combatMods effects flow
+    // through the same `'traits' in entity` reads as a pawn's.
+    ...(def.traits?.length
+      ? { traits: def.traits.map((id) => TRAIT_DATABASE.find((t) => t.id === id)).filter((t) => !!t) }
+      : {})
   };
 }

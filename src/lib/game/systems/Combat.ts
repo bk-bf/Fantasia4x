@@ -63,6 +63,7 @@ import { isWitnessedByColony } from '../core/vision';
 import {
   PART_DEF_MAP,
   rollBodyPart,
+  rollBodyPartOf,
   createDefaultBodyParts,
   createBodyPlanLimbs,
   parentLimbOf,
@@ -190,6 +191,10 @@ const COLLAPSE_KEEPALIVE_TURNS = 2;
  * the per-weapon weight/stamina/crit (kicks rarer, costlier, harder) live on the items.
  */
 const PAWN_NATURAL_WEAPON_IDS = ['fists', 'kick'];
+/** §4.0 shared blood-feast: the buff stamped on a feeder after a successful blood DRAIN, and how long
+ *  it holds (~30 in-game minutes). Non-refreshing while active (the anti-perma-keep cooldown). */
+const FEASTED_CONDITION = 'feasted';
+const FEASTED_DURATION_HOURS = 0.5;
 /** Base attack interval in ticks — scaled by attack_speed stat.
  *  60 TPS: 120 ticks = 2.0s = 1 attack / 2s (base).
  *  Fast attackers (DEX 20) floor at 72 ticks = 1.2s.
@@ -285,6 +290,9 @@ interface AttackProfile {
   finesse: boolean;
   /** §M Arcane weapon (elemental staff): damage scales with INTELLIGENCE, not STRENGTH. */
   arcane: boolean;
+  /** §3b bleed-weapon chance (0–1, item-level `bleedWound`): a landed open wound is marked
+   *  unclottable (Injury.noSelfClot) at this chance — it bleeds until dressed. */
+  bleedWound?: number;
 }
 
 /**
@@ -302,10 +310,11 @@ export interface RangedOverride {
 
 type WeaponProps = NonNullable<Item['weaponProperties']>;
 
-/** One natural-weapon candidate this swing could roll: its item id + properties. */
+/** One natural-weapon candidate this swing could roll: its item id + properties (+ §3b bleed chance). */
 interface WeaponCandidate {
   id: string;
   wp: WeaponProps;
+  bleed?: number;
 }
 
 /** Weighted pick over a candidate pool (weaponProperties.weight, default 1). */
@@ -441,8 +450,10 @@ function weaponBonusDamage(attacker: Pawn | Mob): number {
 /** Resolve the attack used for one swing. An equipped weapon wins; otherwise a
  *  weighted roll over the attacker's `natural_weapon` items (creature def, or a
  *  pawn's racial/bare hands/feet); finally an unarmed fallback. Both gear paths
- *  resolve through the same ItemService lookup. */
-function attackerProfile(attacker: Pawn | Mob): AttackProfile {
+ *  resolve through the same ItemService lookup. `distTiles` (§3b breath weapons):
+ *  when the target stands beyond arm's reach, only natural weapons whose `reach`
+ *  covers the gap may be rolled — a reach-3 dragonfire strikes where claws can't. */
+function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
   // Conditions cripple the attacker's raw STR/DEX here (damage scales with STR, the to-hit with DEX),
   // so a shocked/frostbitten/envenomed fighter genuinely hits softer and misses more — not just "works
   // slower". Dodge/crit/attack-speed already flow through evaluateStat, which applies the same penalty.
@@ -460,6 +471,7 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
       // §I: a Famed blade explodes those fields ×2–5 on top of its tier.
       const wp = scaleWeaponQuality(item.weaponProperties, mh.quality, mh.famedStatMult);
       const p = profileFromWeapon(str, dex, wp, item.name ?? 'weapon');
+      p.bleedWound = item.bleedWound; // §3b: a deep-cutting blade leaves unclottable wounds
       // ADR-023: a racial `weaponBonus` (Giant's Grip) rides the wielded weapon only.
       const wb = weaponBonusDamage(attacker);
       if (wb) p.baseDamage *= 1 + wb;
@@ -475,8 +487,8 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
       : pawnNaturalWeaponIds(attacker);
   const candidates: WeaponCandidate[] = [];
   for (const id of ids) {
-    const wp = itemService.getItemById(id)?.weaponProperties;
-    if (wp) candidates.push({ id, wp });
+    const it = itemService.getItemById(id);
+    if (it?.weaponProperties) candidates.push({ id, wp: it.weaponProperties, bleed: it.bleedWound });
   }
   // Part-gating: a natural weapon is usable only while a surviving part enables it (a jaw to bite, a paw
   // to claw…). Unbound weapons stay always-available. Skipped for un-modelled fixtures (empty parts).
@@ -485,9 +497,13 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
     const enabled = enabledNaturalWeapons(attacker.limbs);
     usable = candidates.filter((c) => enabled.has(c.id) || !BOUND_NATURAL_WEAPONS.has(c.id));
   }
+  // §3b reach gate: beyond arm's reach only a natural weapon whose `reach` covers the gap can strike
+  // (dragonfire reach 3 behaves like a spear); adjacent keeps the full pool.
+  if (distTiles > 1) usable = usable.filter((c) => (c.wp.reach ?? 1) >= distTiles);
   if (usable.length > 0) {
     const chosen = pickWeightedWeapon(usable);
     const p = profileFromWeapon(str, dex, chosen.wp, chosen.id);
+    p.bleedWound = chosen.bleed; // §3b: raking claws / feeding fangs leave unclottable wounds
     // A big beast hits proportionally harder: scale natural-weapon base damage by the creature's
     // `bodyScale`, SOFTENED so a mammoth (scale 3.5) maims (≈2.25×) without one-shotting a limb —
     // one field drives both its blood pool (entitySpawning) and its hitting power.
@@ -697,8 +713,9 @@ class CombatServiceImpl implements CombatService {
       staminaCost,
       critMod,
       finesse,
-      arcane
-    } = override ? override.profile : attackerProfile(attacker);
+      arcane,
+      bleedWound
+    } = override ? override.profile : attackerProfile(attacker, this.entityDistance(attacker, defender));
     // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw dexterity, so injury,
     // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
     // `defDex × 2` term (dodge ≈ 1.0 at DEX 10 → 20).
@@ -732,8 +749,10 @@ class CombatServiceImpl implements CombatService {
       };
     }
 
-    // Roll a hit location from the DEFENDER's own body plan (a wolf rolls paws/tail, not fingers).
-    const partId = rollBodyPart(planOf(defender));
+    // Roll a hit location from the DEFENDER's own LIVE body tree (a wolf rolls paws/tail, not fingers;
+    // §3d a pawn's GRAFTED wings/tail are hittable; an already-severed part can't be struck again).
+    // Falls back to the static plan table for entities without a modelled tree (test fixtures).
+    const partId = rollBodyPartOf(defender.limbs, planOf(defender));
     const partDef = PART_DEF_MAP[partId]!;
     // The defender's part may be bodyScale-scaled; severity/fracture use its ACTUAL maxHp.
     const partMaxHp =
@@ -783,7 +802,15 @@ class CombatServiceImpl implements CombatService {
       // Bleed cue: an open-wound type (cut/puncture) OR any hit that blows the part off (stump gush).
       bleeding: (woundDef.bleedMod > 0 || hpMissing >= 1.0) && hpMissing > 0 ? 1 : 0,
       painContribution: 0,
-      infected: false
+      infected: false,
+      // §3b bleed-weapon: at the weapon's `bleedWound` chance, the open wound never self-clots —
+      // it flows until a caretaker dresses it (the physical successor of `bloodletting`).
+      ...(bleedWound &&
+      woundDef.bleedMod > 0 &&
+      hpMissing > 0 &&
+      rng.random() < bleedWound
+        ? { noSelfClot: true }
+        : {})
     };
 
     // Knockdown/stun: blunt hits roll chance from damage vs constitution, PLUS the weapon's flat
@@ -963,7 +990,13 @@ class CombatServiceImpl implements CombatService {
       const wIdx = prev.injuries.findIndex((w) => w.type === injury.type);
       const prevW = wIdx >= 0 ? prev.injuries[wIdx] : undefined;
       const accum = Math.min((prevW?.damage ?? 0) + injury.damage, maxHp);
-      const merged = recomputeWound(injury.bodyPart, injury.type, accum, prevW, state.turn, maxHp);
+      // §3b: a bleed-weapon hit makes the (merged) wound unclottable — OR the flags so a raking-claw
+      // follow-up on an ordinary cut upgrades it, and an ordinary hit never clears an existing flag.
+      const mergePrev =
+        injury.noSelfClot && !prevW?.noSelfClot
+          ? { ...(prevW ?? { infected: false }), noSelfClot: true }
+          : prevW;
+      const merged = recomputeWound(injury.bodyPart, injury.type, accum, mergePrev, state.turn, maxHp);
       const woundList =
         wIdx >= 0
           ? prev.injuries.map((w, i) => (i === wIdx ? merged : w))
@@ -1346,7 +1379,7 @@ class CombatServiceImpl implements CombatService {
       for (const t of attacker.traits ?? []) if (t.onHitEffect) effects.push(t.onHitEffect);
     }
     let s = state;
-    for (const eff of effects) s = this.applyOneOnHitEffect(s, eff, targetId, isMob, pos);
+    for (const eff of effects) s = this.applyOneOnHitEffect(s, eff, targetId, isMob, pos, attacker);
     return s;
   }
 
@@ -1362,7 +1395,8 @@ class CombatServiceImpl implements CombatService {
     eff: TraitOnHitEffect,
     targetId: string,
     isMob: boolean,
-    pos: { x: number; y: number }
+    pos: { x: number; y: number },
+    attacker?: Pawn | Mob
   ): GameState {
     const target = isMob
       ? state.mobs?.find((m) => m.id === targetId)
@@ -1380,21 +1414,28 @@ class CombatServiceImpl implements CombatService {
     const chance = clamp(eff.chance * (1 - resistFrac), 0, 1);
     if (rng.random() >= chance) return state;
 
-    const timers = { ...(target.conditionTimers ?? {}) };
-    timers[eff.condition] = Math.max(
-      timers[eff.condition] ?? 0,
-      ticksFromGameHours(eff.durationHours)
-    );
-    const transientConditions = (target.transientConditions ?? []).includes(eff.condition)
-      ? target.transientConditions!
-      : [...(target.transientConditions ?? []), eff.condition];
+    // Target-side condition (optional — §3b: a pure feeding proc carries only bloodDrain).
+    let timers = target.conditionTimers ?? {};
+    let transientConditions = target.transientConditions ?? [];
+    if (eff.condition) {
+      timers = { ...timers };
+      timers[eff.condition] = Math.max(
+        timers[eff.condition] ?? 0,
+        ticksFromGameHours(eff.durationHours)
+      );
+      if (!transientConditions.includes(eff.condition))
+        transientConditions = [...transientConditions, eff.condition];
+    }
 
     // Optional blood drain (proboscis/feeding) → reduce bloodVolume; the low blood now drives `shock`
     // in tickConditions/stepHunger (the old `blood_loss` condition is gone), so no condition write here.
     let bloodVolume = target.bloodVolume;
+    let fed = false;
     if (eff.bloodDrain && eff.bloodDrain > 0) {
       const maxBV = target.maxBloodVolume ?? 100;
-      bloodVolume = Math.max(0, (target.bloodVolume ?? maxBV) - eff.bloodDrain * (1 - resistFrac));
+      const before = target.bloodVolume ?? maxBV;
+      bloodVolume = Math.max(0, before - eff.bloodDrain * (1 - resistFrac));
+      fed = bloodVolume < before;
     }
 
     const updated = {
@@ -1403,23 +1444,73 @@ class CombatServiceImpl implements CombatService {
       transientConditions,
       bloodVolume
     };
-    // The on-hit condition (envenomed / bloodletting / disoriented / ensnared) just triggered →
-    // pop its data-driven floater. Third tier (below the damage number AND any bleed/knockdown cue
-    // from the same hit) so a weapon's on-hit label doesn't pile onto either of them.
-    this.emitConditionFloat(pos.x, pos.y, eff.condition, 39);
+    // The on-hit condition (envenomed / disoriented / ensnared…) just triggered → pop its data-driven
+    // floater. Third tier (below the damage number AND any bleed/knockdown cue from the same hit) so a
+    // weapon's on-hit label doesn't pile onto either of them.
+    if (eff.condition) this.emitConditionFloat(pos.x, pos.y, eff.condition, 39);
 
-    return this.spliceEntity(state, targetId, updated as Pawn | Mob, isMob);
+    let s = this.spliceEntity(state, targetId, updated as Pawn | Mob, isMob);
+    // §4.0 shared blood-feast: a successful DRAIN feeds the drinker — stamp the strong, ~30-min
+    // `feasted` buff on the ATTACKER. Non-refreshing (only while absent), so it can't be perma-kept
+    // by chain-feeding; it must lapse before another feed rearms it. Shared by every feeding weapon
+    // (bloodsucking fangs / proboscis / vampiric bites), pawn and mob alike.
+    if (fed && attacker && attacker.isAlive !== false) {
+      const feastDef = getTransientConditionDef(FEASTED_CONDITION);
+      const already = (attacker.conditionTimers ?? {})[FEASTED_CONDITION] ?? 0;
+      if (feastDef && already <= 0) {
+        const isAtkMob = 'entityClass' in attacker;
+        const live = isAtkMob
+          ? s.mobs?.find((m) => m.id === attacker.id)
+          : s.pawns.find((p) => p.id === attacker.id);
+        if (live && live.isAlive !== false) {
+          const atkTimers = { ...(live.conditionTimers ?? {}) };
+          atkTimers[FEASTED_CONDITION] = ticksFromGameHours(FEASTED_DURATION_HOURS);
+          const atkTransient = (live.transientConditions ?? []).includes(FEASTED_CONDITION)
+            ? live.transientConditions!
+            : [...(live.transientConditions ?? []), FEASTED_CONDITION];
+          const apos = this.entityPos(live);
+          this.emitConditionFloat(apos.x, apos.y, FEASTED_CONDITION, 39);
+          s = this.spliceEntity(
+            s,
+            live.id,
+            { ...live, conditionTimers: atkTimers, transientConditions: atkTransient } as Pawn | Mob,
+            isAtkMob
+          );
+        }
+      }
+    }
+    return s;
   }
 
   /** Melee reach in tiles for the entity's ACTIVE weapon: a mainHand melee weapon's `reach` (a reach-2
-   *  polearm strikes and holds one tile away), else 1 (adjacent). Mobs/natural weapons are always 1. A
-   *  ranged weapon's `reach` is its bow-butt melee fallback — not a pole reach — so it never extends here. */
+   *  polearm strikes and holds one tile away), else the LONGEST reach among its usable natural weapons
+   *  (§3b: a reach-3 dragonfire engages like a spear), else 1 (adjacent). A ranged weapon's `reach` is
+   *  its bow-butt melee fallback — not a pole reach — so it never extends here. */
   private meleeReach(entity: Pawn | Mob): number {
     if ('equipment' in entity && entity.equipment?.mainHand && hasUsableHand(entity)) {
       const wp = itemService.getItemById(entity.equipment.mainHand.itemId)?.weaponProperties;
       if (wp && !isRangedWeaponProps(wp)) return Math.max(1, wp.reach ?? 1);
     }
-    return 1;
+    // Natural weapons (unarmed): the longest reach among the granted set — host-part-gated for pawns.
+    const ids =
+      'creatureId' in entity
+        ? (getCreatureById(entity.creatureId)?.naturalWeapons ?? [])
+        : pawnNaturalWeaponIds(entity);
+    let reach = 1;
+    for (const id of ids) {
+      const r = itemService.getItemById(id)?.weaponProperties?.reach ?? 1;
+      if (r > reach) reach = r;
+    }
+    return reach;
+  }
+
+  /** Chebyshev tile distance between two combatants (1 = adjacent); 1 when either has no position
+   *  (entityPos returns −1/−1 for an unplaced pawn — test fixtures fight "in contact"). */
+  private entityDistance(a: Pawn | Mob, b: Pawn | Mob): number {
+    const ap = this.entityPos(a);
+    const bp = this.entityPos(b);
+    if (ap.x < 0 || ap.y < 0 || bp.x < 0 || bp.y < 0) return 1;
+    return Math.max(1, Math.max(Math.abs(ap.x - bp.x), Math.abs(ap.y - bp.y)));
   }
 
   /**

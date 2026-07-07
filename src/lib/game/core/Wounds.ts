@@ -138,9 +138,14 @@ function clotsNeeded(severity: Injury['severity']): number {
   return severity === 'minor' ? 1 : severity === 'serious' ? 2 : 3; // critical / destroyed → 3
 }
 /** Fraction of the base bleed still flowing given clot progress: 1.0 fresh → 0 once fully clotted OR
- *  dressed. A DRESSED wound (treatedAt set) stops bleeding immediately — caretaking is the reliable stop. */
-function clotRemaining(w: Pick<Injury, 'severity' | 'clotProgress' | 'treatedAt'>): number {
+ *  dressed. A DRESSED wound (treatedAt set) stops bleeding immediately — caretaking is the reliable stop.
+ *  A BLEED-WOUND (`noSelfClot`, §3b — raking claws / feeding fangs) never tapers on its own: it flows at
+ *  full rate until dressed. */
+function clotRemaining(
+  w: Pick<Injury, 'severity' | 'clotProgress' | 'treatedAt' | 'noSelfClot'>
+): number {
   if (w.treatedAt != null) return 0;
+  if (w.noSelfClot) return 1;
   const need = clotsNeeded(w.severity);
   return Math.max(0, (need - (w.clotProgress ?? 0)) / need);
 }
@@ -167,7 +172,13 @@ export function recomputeWound(
   accumDamage: number,
   prev?: Pick<
     Injury,
-    'infected' | 'treatedAt' | 'treatmentQuality' | 'inflictedAt' | 'clotProgress' | 'permanent'
+    | 'infected'
+    | 'treatedAt'
+    | 'treatmentQuality'
+    | 'inflictedAt'
+    | 'clotProgress'
+    | 'permanent'
+    | 'noSelfClot'
   >,
   turn?: number,
   maxHpOverride?: number
@@ -185,7 +196,12 @@ export function recomputeWound(
   const clotProgress = prev?.clotProgress ?? 0;
   // Bleed = base × clot-remaining: a fresh wound bleeds full, then tapers as it clots (rolled
   // separately) and stops once dressed or fully clotted — decoupled from the (now weeks-slow) tissue heal.
-  const remaining = clotRemaining({ severity, clotProgress, treatedAt: prev?.treatedAt });
+  const remaining = clotRemaining({
+    severity,
+    clotProgress,
+    treatedAt: prev?.treatedAt,
+    noSelfClot: prev?.noSelfClot
+  });
   return {
     bodyPart,
     type,
@@ -225,7 +241,9 @@ export function recomputeWound(
     // A PERMANENT (trait-stamped scar) wound STAYS permanent across merges/recomputes — otherwise a
     // same-type hit to the scarred part (or any recompute) would silently drop the flag and let the
     // scar heal off. Once a scar, always a scar.
-    permanent: prev?.permanent
+    permanent: prev?.permanent,
+    // A bleed-wound stays unclottable across merges (same sticky-flag rule as `permanent`).
+    noSelfClot: prev?.noSelfClot
   };
 }
 
@@ -288,6 +306,7 @@ export function rollWoundClotting(limbs: LimbState[], clotChance: number, turn: 
     for (const part of limb.parts ?? []) {
       for (const w of part.injuries) {
         if (w.bleeding <= 0 || w.treatedAt != null) continue; // already dry or dressed
+        if (w.noSelfClot) continue; // §3b bleed-wound: never clots on its own — only dressing stops it
         if ((w.clotProgress ?? 0) >= clotsNeeded(w.severity)) continue; // fully clotted
         if (rng.random() < clotChance) {
           w.clotProgress = (w.clotProgress ?? 0) + 1;

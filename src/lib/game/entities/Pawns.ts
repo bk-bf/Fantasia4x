@@ -59,11 +59,41 @@ function maybeFlipPairedSide(partId: string): string {
 }
 
 /**
+ * TRAIT-LIBRARY-EXPANSION §3d — à-la-carte body composition: graft the limbs a trait declares
+ * (`grafts: [{limb, parts}]`) onto the pawn's (freshly built, privately owned) limb tree, pulling part
+ * defs from the GLOBAL limbmap catalog (any plan's parts are addressable — avian wings, quadruped tail…).
+ * A grafted limb is a REAL limb: hittable (rollBodyPartOf reads the live tree), losable, and the host
+ * for the trait's natural gear. Runs BEFORE bodyMods/wounds so those apply to the full body. Idempotent
+ * per limb id (two wing traits can't double-graft).
+ */
+export function applyTraitGrafts(pawn: Pawn): void {
+  const limbs = pawn.limbs;
+  if (!limbs) return;
+  for (const trait of pawn.traits ?? []) {
+    for (const g of trait.grafts ?? []) {
+      if (limbs.some((l) => l.id === g.limb)) continue; // already present (plan or earlier graft)
+      const parts = g.parts
+        .filter((pid) => PART_DEF_MAP[pid])
+        .map((pid) => {
+          const def = PART_DEF_MAP[pid]!;
+          const maxHp = Math.max(1, Math.round(def.maxHp));
+          return { id: pid, health: maxHp, maxHp, isMissing: false, injuries: [] };
+        });
+      if (parts.length === 0) continue;
+      limbs.push({ id: g.limb, health: 100, isMissing: false, bleedRate: 0, parts });
+    }
+  }
+}
+
+/**
  * Apply every drawn `wound`-kind trait's injuries to the pawn's (freshly built, privately owned)
  * limb tree, then mirror the flat `injuries`/`pain` fields the way Combat does after a hit.
  * NEVER LETHAL (locked decision 2026-07-06): vital/critical parts are refused outright, and
  * `destroyed` is downgraded to `critical` on any part that CONTAINS others (no severed-container
  * cascade — a newborn can't spawn dead) or on a pure bone (fracture-only).
+ * §5a lost limbs: a spec with `amputate: true` instead removes the WHOLE parent limb (a true old
+ * amputation — every part missing, limb.isMissing, one permanent stump wound on the named part);
+ * refused on limbs holding a vital/critical organ (head/torso stay whole — the same non-lethal cap).
  */
 export function applyTraitWounds(pawn: Pawn): void {
   const limbs = pawn.limbs;
@@ -72,11 +102,49 @@ export function applyTraitWounds(pawn: Pawn): void {
   for (const trait of pawn.traits ?? []) {
     for (const spec of trait.wounds ?? []) {
       const partId = maybeFlipPairedSide(spec.part);
+      if (spec.amputate) {
+        const limb = limbs.find((l) => l.parts?.some((p) => p.id === partId));
+        if (!limb || limb.isMissing) continue;
+        // Non-lethal cap: never amputate a limb whose parts include a vital/critical organ.
+        if ((limb.parts ?? []).some((p) => PART_DEF_MAP[p.id]?.isVital || PART_DEF_MAP[p.id]?.isCritical))
+          continue;
+        for (const p of limb.parts ?? []) {
+          p.health = 0;
+          p.isMissing = true;
+        }
+        const stumpPart = limb.parts?.find((p) => p.id === partId);
+        stumpPart?.injuries.push({
+          bodyPart: partId,
+          type: spec.type ?? 'cut',
+          severity: 'destroyed',
+          damage: stumpPart.maxHp,
+          bleeding: 0, // an OLD amputation — long since healed over
+          painContribution: 0,
+          infected: false,
+          clotProgress: 3,
+          inflictedAt: 0,
+          permanent: true
+        });
+        limb.health = 0;
+        limb.isMissing = true;
+        limb.bleedRate = 0;
+        stamped = true;
+        continue;
+      }
       const def = PART_DEF_MAP[partId];
       if (!def || def.isVital || def.isCritical) continue; // heart/brain: never stampable
       let severity = spec.severity;
+      // Non-lethal cap on `destroyed`: a pure bone can't sever, and a container whose closure holds a
+      // VITAL organ is downgraded (a newborn can't spawn dead). A container of only NON-vital parts
+      // (a hand with its fingers, a foot with its toes — §5a) may be destroyed: its contents go with it.
+      let cascadeIds: Set<string> | null = null;
       if (severity === 'destroyed' && (containedParts(partId).size > 0 || def.skeleton)) {
-        severity = 'critical'; // no container cascade, no severed bones — the non-lethal cap
+        const contents = containedParts(partId);
+        const holdsVital = [...contents].some(
+          (id) => PART_DEF_MAP[id]?.isVital || PART_DEF_MAP[id]?.isCritical
+        );
+        if (def.skeleton || holdsVital) severity = 'critical';
+        else cascadeIds = contents;
       }
       const limb = limbs.find((l) => l.parts?.some((p) => p.id === partId));
       const part = limb?.parts?.find((p) => p.id === partId);
@@ -97,6 +165,15 @@ export function applyTraitWounds(pawn: Pawn): void {
       part.injuries.push(wound);
       part.health = Math.max(0, part.maxHp - damage);
       if (severity === 'destroyed') part.isMissing = true;
+      // §5a: a destroyed non-vital container takes its contents with it (a lost hand takes the fingers).
+      if (cascadeIds) {
+        for (const p of limb.parts ?? []) {
+          if (cascadeIds.has(p.id) && !p.isMissing) {
+            p.health = 0;
+            p.isMissing = true;
+          }
+        }
+      }
       // Roll the limb's health up from its parts (same mass-weighted formula as Combat).
       const partMaxTotal = (limb.parts ?? []).reduce((s, p) => s + p.maxHp, 0);
       const partHealthTotal = (limb.parts ?? []).reduce((s, p) => s + p.health, 0);
@@ -218,8 +295,10 @@ export function buildPawnFromRace(race: Race, index: number): Pawn {
     limbs: createBodyPlanLimbs(DEFAULT_PLAN, 1)
   };
 
+  // §3d graft trait-declared limbs (wings/tail/beak) FIRST so bodyMods/wounds see the full body, then
   // TRAIT-SYSTEM-V2 §1: apply bodyMod structural changes (dense/brittle bone, thick/thin hide) to the
   // limb tree, THEN stamp any wound-kind traits as real permanent injuries (against the adjusted maxHp).
+  applyTraitGrafts(pawn);
   applyTraitBodyMods(pawn);
   applyTraitWounds(pawn);
 

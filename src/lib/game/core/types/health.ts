@@ -118,8 +118,9 @@ export type BodyPartId = string;
 
 export interface Injury {
   bodyPart: BodyPartId;
-  /** Wound type id from wounds.jsonc (cut | puncture | crush | burn). One wound per type per part. */
-  type: 'cut' | 'fracture' | 'puncture' | 'crush' | 'burn';
+  /** Wound type id from wounds.jsonc. One wound per type per part. `frostbite`/`scorch` are the
+   *  frost/lightning wounds (already in wounds.jsonc); also the elemental scar variants (§5b). */
+  type: 'cut' | 'fracture' | 'puncture' | 'crush' | 'burn' | 'frostbite' | 'scorch';
   severity: 'minor' | 'serious' | 'critical' | 'destroyed';
   /** Accumulated HP of damage this wound has dealt to the part (same-type hits stack here). */
   damage: number;
@@ -143,6 +144,11 @@ export interface Injury {
    *  pressure (long since closed), and by caretaking (nothing to dress) — its effect flows purely
    *  through the body model (capacities, part health). */
   permanent?: boolean;
+  /** TRAIT-LIBRARY-EXPANSION §3b — a BLEED-WOUND (raking claws / feeding fangs): the wound never
+   *  advances clot stages on its own (rollWoundClotting skips it; clotRemaining stays 1), so it bleeds
+   *  at full rate until a caretaker DRESSES it (treatedAt still zeroes the bleed). Replaces the retired
+   *  `bloodletting` transient condition with a physical injury the health panel already shows. */
+  noSelfClot?: boolean;
 }
 
 /** State of a single fine body part (organ, bone, sub-limb). */

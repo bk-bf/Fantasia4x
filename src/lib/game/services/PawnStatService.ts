@@ -48,6 +48,7 @@ STATS.forEach((st) => {
 });
 
 const WORK_STAT_IDS = new Set(STATS.filter((s) => s.category === 'work').map((s) => s.id));
+const COMBAT_STAT_IDS = new Set(STATS.filter((s) => s.category === 'combat').map((s) => s.id));
 
 // ── Tool work boosts (additive) ───────────────────────────────────────────────
 // A held tool ADDS its `toolBoost.speed` / `toolBoost.yield` to the matching work category's speed /
@@ -436,6 +437,22 @@ function traitWorkMult(
   return mult;
 }
 
+// ── Trait combat multipliers (TRAIT-LIBRARY-EXPANSION §1) ───────────────────
+// `effects.combatMods` maps a COMBAT statId (hit_chance, dodge, knockdown_resistance, attack_speed,
+// crit_chance, aim_speed, reload_speed, aim_range) to a multiplier on the matching stats.jsonc combat
+// output — the combat twin of traitWorkMult, so a "Sure-Handed" pawn genuinely lands more blows.
+function traitCombatMult(pawn: Pawn | Mob, statId: string): number {
+  if (!COMBAT_STAT_IDS.has(statId)) return 1;
+  const traits = 'traits' in pawn ? pawn.traits : undefined;
+  if (!traits || traits.length === 0) return 1;
+  let mult = 1;
+  for (const trait of traits) {
+    const v = trait.effects?.combatMods?.[statId];
+    if (typeof v === 'number') mult *= v;
+  }
+  return mult;
+}
+
 // ── Racial resistance bonuses (Race overhaul) ────────────────────────────────
 // Trait resistance effects add on top of the matching *_resistance stat formula, so a
 // race's biology flows into both combat mitigation AND condition onset — e.g. coldResistance
@@ -663,7 +680,12 @@ export class PawnStatServiceImpl implements PawnStatService {
     if (!def) return 1.0;
     const capacities =
       def.category === 'capacity' ? this.computeCapacities(pawn) : this.computeCapacities(pawn);
-    return evaluateFormula(def.formula, pawn, capacities) + traitResistanceBonus(pawn, statId);
+    // Trait combatMods multiply a combat stat's formula output (×1 for every other category);
+    // trait resistances stay an ADDITIVE bridge on the 0-baseline resistance stats.
+    return (
+      evaluateFormula(def.formula, pawn, capacities) * traitCombatMult(pawn, statId) +
+      traitResistanceBonus(pawn, statId)
+    );
   }
 
   temperatureTolerance(pawn: Pawn | Mob): TemperatureTolerance {

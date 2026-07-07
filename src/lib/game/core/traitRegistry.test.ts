@@ -65,7 +65,11 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
       if (t.kind === 'naturalGear') {
         expect(t.selfCondition, `${t.id} naturalGear needs selfCondition`).toBeTruthy();
         const cond = getTransientConditionDef(t.selfCondition!);
-        const grants = !!(cond?.grantsNaturalWeapon?.length || cond?.grantsNaturalArmor);
+        // §3e: UTILITY gear grants no weapon/armor — it's a host-gated benefit (wings → moveSpeed
+        // while a wing survives). Valid iff the condition binds host parts AND carries modifiers.
+        const utility =
+          !!cond?.hostParts?.length && Object.keys(cond?.modifiers ?? {}).length > 0;
+        const grants = !!(cond?.grantsNaturalWeapon?.length || cond?.grantsNaturalArmor) || utility;
         expect(grants, `${t.id} → ${t.selfCondition} grants nothing`).toBe(true);
         // §3 natural armor IS gear: it eats a carry-capacity fraction (0<p<1) and has a worn-gear mode.
         if (cond?.grantsNaturalArmor) {
@@ -89,23 +93,76 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
     }
   });
 
-  it('rarity budget: rare/epic/mythic are a real capability; mythic/legendary are bundles', () => {
+  it('rarity budget: rare/epic/mythic are a real capability; heritage bundles carry subCapabilities', () => {
     for (const t of TRAIT_DATABASE) {
       if (t.rarity === 'rare' || t.rarity === 'epic' || t.rarity === 'mythic') {
         const capable =
           !!t.selfCondition ||
           !!t.onHitEffect ||
           !!t.weaponBonus ||
+          !!t.aura || // §6a: an aura is a capability
+          (t.grafts?.length ?? 0) > 0 || // §3d: growing a real limb is a capability
           (t.subCapabilities?.length ?? 0) > 0 ||
-          (t.bodyMods?.length ?? 0) > 0; // an epic body transformation (stone bones) is a capability
+          (t.bodyMods?.length ?? 0) > 0 || // an epic body transformation (stone bones) is a capability
+          // TRAIT-LIBRARY-EXPANSION §1/§2: a SIGNIFICANT stat/attribute payload (the ±3/±5 rungs and
+          // the significant combos deliberately sit at rare/epic) is a legitimate high-rarity pull.
+          ((t.kind === 'stat' || t.kind === 'attribute') && Object.keys(t.effects ?? {}).length > 0);
         expect(capable, `${t.id} (${t.rarity}) carries no capability`).toBe(true);
       }
-      if (t.rarity === 'legendary' || t.rarity === 'mythic')
+      // A legendary/mythic PASSIVE banner is a rolled bundle; the §2d grand STAT pulls
+      // (Paragon Blood / Godtouched) are deliberate single traits — exempt.
+      if ((t.rarity === 'legendary' || t.rarity === 'mythic') && t.kind !== 'stat')
         expect((t.subCapabilities?.length ?? 0) > 0, `${t.id} ${t.rarity} needs subCapabilities`).toBe(true);
     }
     // every evolvesTo target exists
     const ids = new Set(ALL.map((t) => t.id));
     for (const t of ALL) if (t.evolvesTo) expect(ids.has(t.evolvesTo), `evolvesTo ${t.evolvesTo}`).toBe(true);
+    // §3a stage chains are ordered: a staged trait's evolvesTo target is the NEXT stage.
+    const byId = new Map(ALL.map((t) => [t.id, t]));
+    for (const t of ALL) {
+      if (t.stage && t.evolvesTo) {
+        const next = byId.get(t.evolvesTo);
+        expect(next?.stage, `${t.id} (S${t.stage}) evolvesTo ${t.evolvesTo} must be S${t.stage + 1}`).toBe(t.stage + 1);
+      }
+    }
+  });
+
+  it('TRAIT-LIBRARY-EXPANSION resistance-sourcing rule: an abstract attribute trait never grants a resistance', () => {
+    // Resistances come only from §3 coverings (naturalGear) and passive affinities — a plain
+    // attribute combo drives work/combat stats, nightVision or healRate, never a resistance.
+    const RESISTANCE_KEYS = [
+      'fireResistance', 'coldResistance', 'poisonResistance', 'diseaseResistance',
+      'mentalResistance', 'lightningResistance', 'shadowResistance', 'wetnessResistance',
+      'blunt_resistance', 'cutting_resistance', 'piercing_resistance'
+    ];
+    for (const t of ALL) {
+      if (t.kind !== 'attribute') continue;
+      for (const k of RESISTANCE_KEYS)
+        expect(
+          (t.effects as Record<string, unknown>)?.[k],
+          `${t.id} (attribute) grants resistance ${k} — make it a covering or passive affinity`
+        ).toBeUndefined();
+    }
+  });
+
+  it('§1 combatMods only name real combat stats; §6a auras name real conditions with finite radius', () => {
+    const COMBAT_STAT_IDS = new Set([
+      'melee_damage', 'armor_damage', 'hit_chance', 'dodge', 'knockdown_resistance', 'vision_range',
+      'attack_speed', 'crit_chance', 'aim_accuracy', 'aim_speed', 'reload_speed', 'aim_range', 'ranged_damage'
+    ]);
+    for (const t of ALL) {
+      for (const k of Object.keys(t.effects?.combatMods ?? {}))
+        expect(COMBAT_STAT_IDS.has(k), `${t.id} combatMods names unknown combat stat ${k}`).toBe(true);
+      if (t.aura) {
+        expect(getTransientConditionDef(t.aura.condition), `${t.id} aura condition ${t.aura.condition} missing`).toBeTruthy();
+        expect(t.aura.radius, `${t.id} aura radius must be finite and small`).toBeGreaterThan(0);
+        expect(t.aura.radius, `${t.id} aura radius must be finite and small`).toBeLessThanOrEqual(6);
+      }
+      // §3d grafts reference real limbmap parts.
+      for (const g of t.grafts ?? [])
+        for (const pid of g.parts)
+          expect(PART_DEF_MAP[pid], `${t.id} grafts unknown part ${pid}`).toBeTruthy();
+    }
   });
 
   it('§6 gamification purge: the illogical work bonuses are gone', () => {

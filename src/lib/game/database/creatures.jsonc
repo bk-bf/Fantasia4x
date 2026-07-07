@@ -840,6 +840,8 @@
         "foodOverflow"  : 0.25,
         "carcassItemId" : "orc_reaver_carcass",
         "naturalWeapons": ["fists", "slam"],
+        // TRAIT-LIBRARY-EXPANSION §4.0 shared lines: reavers carry the S1 Adrenal rung (only S1 for now).
+        "traits"        : ["adrenaline"],
         "limbMap"        : "humanoid"
     },
     {

@@ -906,18 +906,9 @@
             "fatigueRate"   : 1.3
         }
     },
-    {
-        "id": "bloodletting",
-        "audio": "bloodletting",
-        "name": "Bleeding Out",
-        "flags": ["combat", "bleed"],
-        "transient": true,
-        "description": "A feeding wound that won't clot — light-headed and shaky as blood seeps away, hands and feet going slack. Onset chance is reduced by piercing resistance (CON); a successful bite also drains blood directly (→ shock).",
-        "color": "#C62828",
-        "floater": true,
-        "charSpans": [ {"sheet": "font", "id": 3} ],
-        "modifiers": {"dexterity": 0.7, "strength": 0.8, "perception": 0.8, "moveSpeed": 0.8, "workEfficiency": 0.85}
-    },
+    // (RETIRED — TRAIT-LIBRARY-EXPANSION §3b: `bloodletting` is now a PHYSICAL bleed-wound. A
+    // bleed-weapon (item `bleedWound` chance) marks the inflicted injury `noSelfClot`: it bleeds at
+    // full rate until a caretaker dresses it — a real wound in the health panel, not a timed pill.)
     {
         "id": "disoriented",
         "audio": "disoriented",
@@ -1264,6 +1255,538 @@
         "floater"    : true,
         "charSpans"  : [ {"sheet": "font", "id": 15} ],
         "modifiers"  : {"dexterity": 0.9, "moveSpeed": 0.9, "workEfficiency": 0.85}
+    },
+    // ── TRAIT-LIBRARY-EXPANSION §4.0: the shared blood-feast buff ─────────────
+    // Stamped on ANY feeder (pawn or mob) whose blood-draining bite lands its drain (Combat
+    // applyOneOnHitEffect). Strong but short (~30 in-game min) and NON-REFRESHING while active —
+    // it must lapse before another feed rearms it (the anti-perma-keep cooldown).
+    {
+        "id": "feasted",
+        "name": "Feasted",
+        "flags": ["racial", "buff"],
+        "transient": true,
+        "description": "Gorged on fresh blood — a hot, swollen vigor floods the body for a time. Stronger, quicker, tireless while it lasts.",
+        "color": "#C62828",
+        "floater": true,
+        "charSpans": [ {"sheet": "items", "id": 84} ],
+        "modifiers": {"strength": 1.2, "dexterity": 1.15, "constitution": 1.15, "moveSpeed": 1.1, "workEfficiency": 1.1}
+    },
+    // ── TRAIT-LIBRARY-EXPANSION §3b/§3c: staged natural-gear conditions ──────
+    // One pill per stage of each weapon/armor line (the trait's selfCondition). Armor carries
+    // grantsNaturalArmor + carryPenalty + mode; weapons carry grantsNaturalWeapon + hostParts.
+    {
+        "id": "thick_hided", "name": "Thick Hide", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A dense, calloused hide — a light natural armor under anything worn.",
+        "color": "#8B6F47", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 6, "carryPenalty": 0.03, "mode": "stack", "modifiers": {}
+    },
+    {
+        "id": "downy_coated", "name": "Downy Coat", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A soft insulating under-fur — a whisper of natural armor and real warmth.",
+        "color": "#C9B48A", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 3, "carryPenalty": 0.02, "mode": "replace", "modifiers": {}
+    },
+    {
+        "id": "winter_maned", "name": "Winter Mane", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A deep shaggy winter pelt — heavy natural armor and warmth, stifling in any heat.",
+        "color": "#8B6F47", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 12, "carryPenalty": 0.1, "mode": "replace", "modifiers": {}
+    },
+    {
+        "id": "chitin_plated", "name": "Chitin Plates", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Hard chitin plates over the shoulders and back — a crustacean's first shell.",
+        "color": "#B5502E", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 8, "carryPenalty": 0.05, "mode": "stack", "modifiers": {}
+    },
+    {
+        "id": "carapaced", "name": "Carapace", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A jointed carapace cases the torso — serious natural armor, worn always.",
+        "color": "#B5502E", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 14, "carryPenalty": 0.1, "mode": "stack", "modifiers": {}
+    },
+    {
+        "id": "ironshelled", "name": "Ironshell", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A shell dense as wrought iron — armor that rivals plate, and nearly as heavy to live in.",
+        "color": "#9AA3AD", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 20, "carryPenalty": 0.18, "mode": "stack", "modifiers": {}
+    },
+    {
+        "id": "plumed", "name": "Plumed Coat", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A full coat of stiff feathers — light natural armor and fine insulation.",
+        "color": "#C9B48A", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 4, "carryPenalty": 0.03, "mode": "replace", "modifiers": {}
+    },
+    {
+        "id": "storm_plumed", "name": "Storm Plumage", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Dense oiled storm-feathers that shed rain and turn a glancing blow.",
+        "color": "#7EC8E3", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 7, "carryPenalty": 0.05, "mode": "replace", "modifiers": {}
+    },
+    {
+        "id": "pebbled_skinned", "name": "Pebbled Skin", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Skin studded with mineral nodules — the first setting of a stone hide.",
+        "color": "#9E9E9E", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 10, "carryPenalty": 0.08, "mode": "stack", "modifiers": {}
+    },
+    {
+        "id": "granite_hided", "name": "Granite Hide", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A hide set hard as quarried granite — heavy living armor.",
+        "color": "#9E9E9E", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 18, "carryPenalty": 0.14, "mode": "stack", "modifiers": {}
+    },
+    {
+        "id": "living_rock", "name": "Living Rock", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Flesh gone to living stone — armor beyond any forged plate, mineral-slow and near-bloodless.",
+        "color": "#9E9E9E", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 26, "carryPenalty": 0.2, "mode": "stack",
+        "modifiers": {"moveSpeed": 0.9}
+    },
+    {
+        "id": "thorn_skinned", "name": "Thorned Skin", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A bark-like skin studded with woody thorns — light armor that punishes a grappler. (TODO: defender-side thorn reflection.)",
+        "color": "#7CBF4F", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "grantsNaturalArmor": 6, "carryPenalty": 0.04, "mode": "stack", "modifiers": {}
+    },
+    {
+        "id": "blunt_clawed", "name": "Budding Claws", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Short hardened claw-nubs on the fingertips — a scraping unarmed strike.",
+        "color": "#C8A064", "charSpans": [ {"sheet": "items", "id": 223} ],
+        "grantsNaturalWeapon": ["blunt-claws"], "hostParts": ["leftHand", "rightHand"], "modifiers": {}
+    },
+    {
+        "id": "taloned", "name": "Ripping Talons", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Great hooked talons in place of hands — devastating unarmed, hopeless at a bench, and the wounds they leave will not close unaided.",
+        "color": "#C8A064", "charSpans": [ {"sheet": "items", "id": 223} ],
+        "grantsNaturalWeapon": ["ripping-talons"], "hostParts": ["leftHand", "rightHand"],
+        "modifiers": {"dexterity": 0.92}
+    },
+    {
+        "id": "jag_toothed", "name": "Jagged Teeth", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A mouth of jagged, uneven teeth — a real bite in a fight.",
+        "color": "#E8E0D0", "charSpans": [ {"sheet": "items", "id": 216} ],
+        "grantsNaturalWeapon": ["bite"], "hostParts": ["jaw"], "modifiers": {}
+    },
+    {
+        "id": "fanged_goring", "name": "Goring Fangs", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Long driving fangs — a deep, punching bite.",
+        "color": "#D8D0C0", "charSpans": [ {"sheet": "items", "id": 216} ],
+        "grantsNaturalWeapon": ["goring-fangs"], "hostParts": ["jaw"], "modifiers": {}
+    },
+    {
+        "id": "sabre_fanged", "name": "Sabre Fangs", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Immense sabre teeth — a bite that opens wounds no clot will close.",
+        "color": "#E8E0D0", "charSpans": [ {"sheet": "items", "id": 216} ],
+        "grantsNaturalWeapon": ["sabre-fangs"], "hostParts": ["jaw"], "modifiers": {}
+    },
+    {
+        "id": "nub_horned", "name": "Nub Horns", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Short bony horn-nubs at the brow — a driving headbutt.",
+        "color": "#D8D0C0", "charSpans": [ {"sheet": "items", "id": 200} ],
+        "grantsNaturalWeapon": ["headbutt"], "hostParts": ["head"], "modifiers": {}
+    },
+    {
+        "id": "great_horned", "name": "Great Horns", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A massive sweeping crown of horn — a goring charge that hurls foes off their feet. Nothing fits over it.",
+        "color": "#D8D0C0", "charSpans": [ {"sheet": "items", "id": 200} ],
+        "grantsNaturalWeapon": ["great-horns"], "hostParts": ["head"], "modifiers": {}
+    },
+    {
+        "id": "small_tusked", "name": "Small Tusks", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A pair of short tusks jutting from the jaw — a boar's worry-and-gore.",
+        "color": "#E8E0D0", "charSpans": [ {"sheet": "items", "id": 200} ],
+        "grantsNaturalWeapon": ["boar_tusk"], "hostParts": ["jaw"], "modifiers": {}
+    },
+    {
+        "id": "tusked", "name": "Tusks", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Heavy curved tusks — a deep goring strike.",
+        "color": "#E8E0D0", "charSpans": [ {"sheet": "items", "id": 200} ],
+        "grantsNaturalWeapon": ["tusk"], "hostParts": ["jaw"], "modifiers": {}
+    },
+    {
+        "id": "great_tusked", "name": "Great Tusks", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Immense curved tusks that punch deep and toss the struck aside.",
+        "color": "#E8E0D0", "charSpans": [ {"sheet": "items", "id": 200} ],
+        "grantsNaturalWeapon": ["great-tusks"], "hostParts": ["jaw"], "modifiers": {}
+    },
+    {
+        "id": "mild_venomous", "name": "Weak Venom", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Small venom sacs behind the teeth — a bite that sometimes sickens.",
+        "color": "#7CB342", "charSpans": [ {"sheet": "items", "id": 195} ],
+        "grantsNaturalWeapon": ["serpent-fangs"], "hostParts": ["jaw"], "modifiers": {}
+    },
+    {
+        "id": "deathly_venomous", "name": "Deathly Venom", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Glands running with a killing venom — few shrug off the bite, and even a held blade carries it.",
+        "color": "#7CB342", "charSpans": [ {"sheet": "items", "id": 195} ],
+        "grantsNaturalWeapon": ["deathly-fangs"], "hostParts": ["jaw"], "modifiers": {}
+    },
+    {
+        "id": "ember_breathing", "name": "Ember Breath", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A smouldering heat in the throat — able to spit a short gout of embers.",
+        "color": "#FF8A50", "charSpans": [ {"sheet": "font", "id": 15} ],
+        "grantsNaturalWeapon": ["ember-breath"], "hostParts": ["head"], "modifiers": {}
+    },
+    {
+        "id": "dragonfire_breathing", "name": "Dragonfire", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A true furnace in the chest — a roaring lance of dragonfire that strikes tiles away, burns deep and hurls foes back.",
+        "color": "#FF4500", "charSpans": [ {"sheet": "font", "id": 15} ],
+        "grantsNaturalWeapon": ["dragonfire"], "hostParts": ["head"], "modifiers": {}
+    },
+    {
+        "id": "raking_taloned", "name": "Raking Talons", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Curved raptor talons on the feet — a raking, slashing kick.",
+        "color": "#C9B48A", "charSpans": [ {"sheet": "items", "id": 223} ],
+        "grantsNaturalWeapon": ["talon"], "hostParts": ["leftFoot", "rightFoot", "leftTalon", "rightTalon"], "modifiers": {}
+    },
+    {
+        "id": "hook_taloned", "name": "Hooked Talons", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Long hooked talons that seize and shear — a raptor's killing stroke.",
+        "color": "#C9B48A", "charSpans": [ {"sheet": "items", "id": 223} ],
+        "grantsNaturalWeapon": ["hooked-talons"], "hostParts": ["leftFoot", "rightFoot", "leftTalon", "rightTalon"], "modifiers": {}
+    },
+    {
+        "id": "raptor_taloned", "name": "Raptor Talons", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Immense sickle talons that disembowel — the rents they leave will not close unaided.",
+        "color": "#C9B48A", "charSpans": [ {"sheet": "items", "id": 223} ],
+        "grantsNaturalWeapon": ["raptor-talons"], "hostParts": ["leftFoot", "rightFoot", "leftTalon", "rightTalon"], "modifiers": {}
+    },
+    {
+        "id": "pecking_beaked", "name": "Pecking Beak", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A hard, horn-cased mouth — a jabbing peck of a bite.",
+        "color": "#E0B83A", "charSpans": [ {"sheet": "items", "id": 216} ],
+        "grantsNaturalWeapon": ["pecking-beak"], "hostParts": ["jaw", "beak"], "modifiers": {}
+    },
+    {
+        "id": "tearing_beaked", "name": "Tearing Beak", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A heavy hooked beak that tears rather than pecks.",
+        "color": "#E0B83A", "charSpans": [ {"sheet": "items", "id": 216} ],
+        "grantsNaturalWeapon": ["tearing-beak"], "hostParts": ["jaw", "beak"], "modifiers": {}
+    },
+    {
+        "id": "rending_beaked", "name": "Rending Beak", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A great shearing beak that strips flesh from bone.",
+        "color": "#E0B83A", "charSpans": [ {"sheet": "items", "id": 216} ],
+        "grantsNaturalWeapon": ["rending-beak"], "hostParts": ["jaw", "beak"], "modifiers": {}
+    },
+    {
+        "id": "crusher_clawed", "name": "Crushing Claws", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Massive shell-plated pincers for hands — a crushing grip, useless with a crafted tool.",
+        "color": "#B5502E", "charSpans": [ {"sheet": "items", "id": 223} ],
+        "grantsNaturalWeapon": ["crusher-claw"], "hostParts": ["leftHand", "rightHand"],
+        "modifiers": {"dexterity": 0.92}
+    },
+    {
+        "id": "spinnerets_organ", "name": "Spinnerets", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Silk-spinning organs at the waist — a flung lash of webbing that snares a foe in place.",
+        "color": "#D8D8D8", "charSpans": [ {"sheet": "items", "id": 195} ],
+        "grantsNaturalWeapon": ["web-shot"], "hostParts": ["abdomen"], "modifiers": {}
+    },
+    {
+        "id": "shock_touched", "name": "Shock Touch", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "Static crawls the skin — a crackling discharge rides every unarmed strike.",
+        "color": "#E0B83A", "charSpans": [ {"sheet": "font", "id": 21} ],
+        "grantsNaturalWeapon": ["shock-strike"], "hostParts": ["leftHand", "rightHand"], "modifiers": {}
+    },
+    {
+        "id": "chill_touched", "name": "Chilling Touch", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A grave-cold grip — unarmed blows frost-burn where they land.",
+        "color": "#7EC8E3", "charSpans": [ {"sheet": "font", "id": 247} ],
+        "grantsNaturalWeapon": ["chill-strike"], "hostParts": ["leftHand", "rightHand"], "modifiers": {}
+    },
+    {
+        "id": "ground_shaking", "name": "Ground-Shaker", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A colossal body-slam that flattens whatever it lands on.",
+        "color": "#9E9E9E", "charSpans": [ {"sheet": "items", "id": 211} ],
+        "grantsNaturalWeapon": ["slam"], "hostParts": ["chest"], "modifiers": {}
+    },
+    {
+        "id": "screech_throated", "name": "Piercing Screech", "flags": ["racial", "natural-gear"], "transient": true,
+        "description": "A throat built to shriek — a piercing screech that scrambles the senses.",
+        "color": "#AB47BC", "charSpans": [ {"sheet": "font", "id": 19} ],
+        "grantsNaturalWeapon": ["screech"], "hostParts": ["jaw"], "modifiers": {}
+    },
+    // ── §3e utility natural gear: slot-cost apparatus, host-gated, no defense ──
+    {
+        "id": "budding_winged", "name": "Budding Wings", "flags": ["racial", "utility-gear"], "transient": true,
+        "description": "Small, half-grown wings — enough for bounding, gliding strides. Lost with the wings.",
+        "color": "#C9B48A", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "hostParts": ["leftWing", "rightWing"],
+        "modifiers": {"moveSpeed": 1.15}
+    },
+    {
+        "id": "winged", "name": "Wings", "flags": ["racial", "utility-gear"], "transient": true,
+        "description": "True working wings — the ground is a place they visit. Shear a wing off and the speed goes with it.",
+        "color": "#C9B48A", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "hostParts": ["leftWing", "rightWing"],
+        "modifiers": {"moveSpeed": 1.35}
+    },
+    {
+        "id": "great_winged", "name": "Great Wings", "flags": ["racial", "utility-gear"], "transient": true,
+        "description": "Vast, powerful wings — near-flight, faster than any runner.",
+        "color": "#C9B48A", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "hostParts": ["leftWing", "rightWing"],
+        "modifiers": {"moveSpeed": 1.5}
+    },
+    {
+        "id": "prehensile_tailed", "name": "Prehensile Tail", "flags": ["racial", "utility-gear"], "transient": true,
+        "description": "A strong grasping tail — a third point of balance that makes them hard to catch flat.",
+        "color": "#8B6F47", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "hostParts": ["tail"],
+        "modifiers": {"dodge": 1.1}
+    },
+    {
+        "id": "gliding_membrane", "name": "Gliding Membrane", "flags": ["racial", "utility-gear"], "transient": true,
+        "description": "A stretched skin-membrane between limb and flank — lesser wings for long, safe leaps.",
+        "color": "#8B6F47", "charSpans": [ {"sheet": "items", "id": 145} ],
+        "modifiers": {"moveSpeed": 1.15}
+    },
+    {
+        "id": "bioluminescent", "name": "Lantern Organ", "flags": ["racial", "utility-gear"], "transient": true,
+        "description": "A soft living glow at the brow — its bearer carries their own faint light into the dark.",
+        "color": "#7EC8E3", "charSpans": [ {"sheet": "font", "id": 2} ],
+        "modifiers": {}
+    },
+    {
+        "id": "digging_clawed", "name": "Burrowing Claws", "flags": ["racial", "utility-gear"], "transient": true,
+        "description": "Broad spade-like digging claws — born to move earth, cramped around a crafted tool.",
+        "color": "#8B6F47", "charSpans": [ {"sheet": "items", "id": 223} ],
+        "grantsNaturalWeapon": ["blunt-claws"], "hostParts": ["leftHand", "rightHand"], "modifiers": {}
+    },
+    {
+        "id": "gill_frilled", "name": "Gill Frills", "flags": ["racial", "utility-gear"], "transient": true,
+        "description": "Feathery gill-frills at the throat — breathes water as easily as air.",
+        "color": "#4FC3C7", "charSpans": [ {"sheet": "items", "id": 195} ],
+        "modifiers": {}
+    },
+    // ── Passive affinity pills (resistances live on the TRAIT; the pill is the readout) ──
+    {
+        "id": "hardy_gut", "name": "Hardy Gut", "flags": ["racial", "passive"], "transient": true,
+        "description": "An iron constitution of the gut — eats what fells other folk and asks for more.",
+        "color": "#8B6F47", "charSpans": [ {"sheet": "items", "id": 84} ], "modifiers": {}
+    },
+    {
+        "id": "plagueproof", "name": "Plagueproof", "flags": ["racial", "passive"], "transient": true,
+        "description": "Venom and pestilence pass through them like water through a grate.",
+        "color": "#7CB342", "charSpans": [ {"sheet": "items", "id": 84} ], "modifiers": {}
+    },
+    {
+        "id": "toxin_immune", "name": "Toxin-Immune", "flags": ["racial", "passive"], "transient": true,
+        "description": "The mycelial partner in the flesh eats poisons before they bite.",
+        "color": "#7CB342", "charSpans": [ {"sheet": "items", "id": 84} ], "modifiers": {}
+    },
+    {
+        "id": "tremor_sense", "name": "Tremor Sense", "flags": ["racial", "passive"], "transient": true,
+        "description": "Reads the ground's tremors through the soles — little moves nearby unnoticed.",
+        "color": "#9E9E9E", "charSpans": [ {"sheet": "font", "id": 247} ], "modifiers": {}
+    },
+    {
+        "id": "echo_sighted", "name": "Echolocation", "flags": ["racial", "passive"], "transient": true,
+        "description": "Reads the dark by its echoes — a shout paints the whole room.",
+        "color": "#5C6BC0", "charSpans": [ {"sheet": "font", "id": 247} ], "modifiers": {}
+    },
+    {
+        "id": "many_eyed", "name": "Many Eyes", "flags": ["racial", "passive"], "transient": true,
+        "description": "A crown of small patient eyes — the dark and the flanks hold no surprises.",
+        "color": "#5C6BC0", "charSpans": [ {"sheet": "font", "id": 247} ], "modifiers": {}
+    },
+    {
+        "id": "ironclad_mind", "name": "Ironclad Mind", "flags": ["racial", "passive"], "transient": true,
+        "description": "A mind walled like a fortress — dread and madness find no purchase.",
+        "color": "#A060D0", "charSpans": [ {"sheet": "font", "id": 19} ], "modifiers": {}
+    },
+    {
+        "id": "lightning_warded", "name": "Grounded", "flags": ["racial", "passive"], "transient": true,
+        "description": "The storm's charge slides off them and into the earth.",
+        "color": "#E0B83A", "charSpans": [ {"sheet": "font", "id": 21} ], "modifiers": {}
+    },
+    // ── TRAIT-LIBRARY-EXPANSION §6b: trigger-conditioned trait pills ──────────
+    // Each is a trait's selfCondition, ACTIVE only while its `activateWhen` predicate holds (the
+    // buff/debuff form) or carrying a `triggers` edge that fires a follow-up while active (the
+    // proc form: Anemic → shock is the flagship). Pure data — the condition graph already
+    // evaluates every predicate/meter used here.
+    {
+        "id": "hydro_vigor", "name": "Hydro-Vigor", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Water is home — soaked through, they move with a slick, sudden speed.",
+        "color": "#4FC3C7", "floater": true, "charSpans": [ {"sheet": "items", "id": 195} ],
+        "activateWhen": {"need": "wetness", "atOrAbove": 50},
+        "modifiers": {"dodge": 1.2, "moveSpeed": 1.15}
+    },
+    {
+        "id": "waterlogged", "name": "Waterlogged", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Soaks like felt — heavy, cold and slow whenever truly wet.",
+        "color": "#4FC3C7", "floater": true, "charSpans": [ {"sheet": "items", "id": 195} ],
+        "activateWhen": {"need": "wetness", "atOrAbove": 50},
+        "modifiers": {"fatigueRate": 1.3, "moveSpeed": 0.85}
+    },
+    {
+        "id": "coldsurge", "name": "Coldsurge", "flags": ["racial", "trigger"], "transient": true,
+        "description": "The deep cold wakes something — quicker and surer the harder it bites.",
+        "color": "#7EC8E3", "floater": true, "charSpans": [ {"sheet": "font", "id": 247} ],
+        "activateWhen": {"need": "coldExposure", "atOrAbove": 60},
+        "modifiers": {"dexterity": 1.15, "moveSpeed": 1.1}
+    },
+    {
+        "id": "frostbrittle", "name": "Frostbrittle", "flags": ["racial", "trigger"], "transient": true,
+        "description": "The cold sinks in fast and deep — chill turns dangerous sooner than it should.",
+        "color": "#7EC8E3", "floater": true, "charSpans": [ {"sheet": "font", "id": 247} ],
+        "activateWhen": {"need": "coldExposure", "atOrAbove": 40},
+        "triggers": [ { "to": "hypothermia", "chance": 0.02, "severity": 0.02 } ],
+        "modifiers": {}
+    },
+    {
+        "id": "sun_fueled", "name": "Sun-Fueled", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Heat feeds them — stronger and steadier under a punishing sun.",
+        "color": "#FFB74D", "floater": true, "charSpans": [ {"sheet": "font", "id": 15} ],
+        "activateWhen": {"need": "heatExposure", "atOrAbove": 40},
+        "modifiers": {"strength": 1.1, "workEfficiency": 1.05}
+    },
+    {
+        "id": "heat_faint", "name": "Heat-Faint", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Wilts in real heat — the sun presses toward collapse faster than most.",
+        "color": "#FFB74D", "floater": true, "charSpans": [ {"sheet": "font", "id": 15} ],
+        "activateWhen": {"need": "heatExposure", "atOrAbove": 40},
+        "triggers": [ { "to": "heat_stroke", "chance": 0.02, "severity": 0.02 } ],
+        "modifiers": {}
+    },
+    {
+        "id": "nightbloom", "name": "Nightbloom", "flags": ["racial", "trigger"], "transient": true,
+        "description": "They come alive in the dark — quicker, surer, harder to touch.",
+        "color": "#5C6BC0", "floater": true, "charSpans": [ {"sheet": "font", "id": 247} ],
+        "activateWhen": {"meter": "ambientLight", "atOrBelow": 0.3},
+        "modifiers": {"dodge": 1.15, "hitChance": 1.1}
+    },
+    {
+        "id": "nyctophobic", "name": "Night-Fear", "flags": ["racial", "trigger"], "transient": true,
+        "description": "The dark unmans them — jumpy, scattered and slow once the light fails.",
+        "color": "#5C6BC0", "floater": true, "charSpans": [ {"sheet": "font", "id": 19} ],
+        "activateWhen": {"meter": "ambientLight", "atOrBelow": 0.3},
+        "modifiers": {"consciousness": 0.85}
+    },
+    {
+        "id": "storm_fed", "name": "Storm-Fed", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Thrives when the sky turns — wind and storm quicken the blood.",
+        "color": "#E0B83A", "floater": true, "charSpans": [ {"sheet": "font", "id": 21} ],
+        "activateWhen": {"hasCondition": "windchilled"},
+        "modifiers": {"dexterity": 1.1, "moveSpeed": 1.1}
+    },
+    {
+        "id": "wind_cowed", "name": "Wind-Cowed", "flags": ["racial", "trigger"], "transient": true,
+        "description": "A hard wind cows them — hunched and slow until it drops.",
+        "color": "#9AA3AD", "floater": true, "charSpans": [ {"sheet": "font", "id": 19} ],
+        "activateWhen": {"hasCondition": "windchilled"},
+        "modifiers": {"moveSpeed": 0.85}
+    },
+    {
+        "id": "filth_thriving", "name": "Filth-Thriving", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Muck agrees with them — grime seems to settle them into their work.",
+        "color": "#8B6F47", "floater": true, "charSpans": [ {"sheet": "items", "id": 84} ],
+        "activateWhen": {"need": "hygiene", "atOrAbove": 80},
+        "modifiers": {"workEfficiency": 1.05}
+    },
+    {
+        "id": "fastidious_gag", "name": "Fastidious", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Cannot bear their own filth — gags and sickens when left unwashed.",
+        "color": "#8B6F47", "floater": true, "charSpans": [ {"sheet": "font", "id": 19} ],
+        "activateWhen": {"need": "hygiene", "atOrAbove": 80},
+        "triggers": [ { "to": "nausea", "chance": 0.01, "durationHours": 1 } ],
+        "modifiers": {}
+    },
+    {
+        "id": "pain_maddened", "name": "Pain-Maddened", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Hurt wakes the fury — the worse the wound, the harder they hit.",
+        "color": "#C0392B", "floater": true, "charSpans": [ {"sheet": "items", "id": 211} ],
+        "activateWhen": {"meter": "pain", "atOrAbove": 40},
+        "modifiers": {"strength": 1.2, "hitChance": 1.1}
+    },
+    {
+        "id": "faint_hearted", "name": "Faint-Hearted", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Pain unmakes them — the head swims at hurts other folk fight through.",
+        "color": "#C0392B", "floater": true, "charSpans": [ {"sheet": "font", "id": 19} ],
+        "activateWhen": {"meter": "pain", "atOrAbove": 40},
+        "modifiers": {"consciousness": 0.85}
+    },
+    {
+        "id": "bloodfrenzy", "name": "Bloodfrenzy", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Bled near-white, they only fight harder — a terrible dying speed.",
+        "color": "#C62828", "floater": true, "charSpans": [ {"sheet": "items", "id": 84} ],
+        "activateWhen": {"meter": "bloodFrac", "atOrBelow": 0.6},
+        "modifiers": {"dexterity": 1.2, "strength": 1.1}
+    },
+    {
+        "id": "anemic_shock", "name": "Anemic", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Thin blood that handles loss badly — bleeding presses them toward shock far sooner than most.",
+        "color": "#C62828", "floater": true, "charSpans": [ {"sheet": "items", "id": 84} ],
+        "activateWhen": {"meter": "bloodFrac", "atOrBelow": 0.6},
+        "triggers": [ { "to": "shock", "chance": 0.02, "severity": 0.05 } ],
+        "modifiers": {}
+    },
+    {
+        "id": "feverburn", "name": "Feverburn", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Their fevers burn HOT — the body cooks an infection out where others waste under it.",
+        "color": "#FF7043", "floater": true, "charSpans": [ {"sheet": "font", "id": 15} ],
+        "activateWhen": {"hasCondition": "infection"},
+        "modifiers": {"constitution": 1.15}
+    },
+    {
+        "id": "septic_prone", "name": "Septic", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Wounds go bad in them — once rot sets in, it digs deep and fast.",
+        "color": "#7CB342", "floater": true, "charSpans": [ {"sheet": "font", "id": 19} ],
+        "activateWhen": {"hasCondition": "infection"},
+        "triggers": [ { "to": "infection", "chance": 0.02, "severity": 0.01 } ],
+        "modifiers": {}
+    },
+    {
+        "id": "venom_adapted", "name": "Venom-Adapted", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Old blood remembers old poisons — venom in the veins barely slows them.",
+        "color": "#7CB342", "floater": true, "charSpans": [ {"sheet": "items", "id": 195} ],
+        "activateWhen": {"hasCondition": "envenomed"},
+        "modifiers": {"strength": 1.25, "dexterity": 1.25}
+    },
+    {
+        "id": "thin_veined", "name": "Thin-Veined", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Venom races through them — a bite that would slow another lays them low.",
+        "color": "#7CB342", "floater": true, "charSpans": [ {"sheet": "font", "id": 19} ],
+        "activateWhen": {"hasCondition": "envenomed"},
+        "triggers": [ { "to": "nausea", "chance": 0.03, "durationHours": 2 } ],
+        "modifiers": {}
+    },
+    {
+        "id": "emberheart", "name": "Emberheart", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Fire is an old friend — flame on the skin hurts less and is shaken off sooner.",
+        "color": "#FF7043", "floater": true, "charSpans": [ {"sheet": "font", "id": 15} ],
+        "activateWhen": {"hasCondition": "burning"},
+        "modifiers": {"pain": 0.8}
+    },
+    {
+        "id": "tinder_skin", "name": "Tinder-Skin", "flags": ["racial", "trigger"], "transient": true,
+        "description": "They catch like dry grass — once alight, the fire clings and clings.",
+        "color": "#FF5722", "floater": true, "charSpans": [ {"sheet": "font", "id": 15} ],
+        "activateWhen": {"hasCondition": "burning"},
+        "triggers": [ { "to": "burning", "chance": 0.05, "durationHours": 0.3 } ],
+        "modifiers": {}
+    },
+    {
+        "id": "camel_bodied", "name": "Spare-Fed", "flags": ["racial", "trigger"], "transient": true,
+        "description": "Runs long on little — hunger barely slows the stride.",
+        "color": "#E0B83A", "floater": true, "charSpans": [ {"sheet": "items", "id": 84} ],
+        "activateWhen": {"need": "hunger", "atOrAbove": 70},
+        "modifiers": {"fatigueRate": 0.85}
+    },
+    {
+        "id": "ravenous_hunger", "name": "Ravenous", "flags": ["racial", "trigger"], "transient": true,
+        "description": "An engine that must be fed — hunger wastes them faster than most.",
+        "color": "#E0B83A", "floater": true, "charSpans": [ {"sheet": "font", "id": 19} ],
+        "activateWhen": {"need": "hunger", "atOrAbove": 70},
+        "triggers": [ { "to": "malnutrition", "chance": 0.01, "severity": 0.01 } ],
+        "modifiers": {}
+    },
+    {
+        "id": "weak_gutted", "name": "Weak Gut", "flags": ["racial", "trigger"], "transient": true,
+        "description": "A gut that turns at the first foul thing — quick to sicken when hunger forces bad food down.",
+        "color": "#8B6F47", "floater": true, "charSpans": [ {"sheet": "font", "id": 19} ],
+        "activateWhen": {"need": "hunger", "atOrAbove": 70},
+        "triggers": [ { "to": "nausea", "chance": 0.015, "durationHours": 1.5 } ],
+        "modifiers": {}
     },
     // ── Magical buffs ("magical": true) — PRODUCTION-CHAIN-II §M ──────────────
     // Passive buffs granted by worn attuned gear (and, later, by MAGIC-SKILLS spells/skill nodes

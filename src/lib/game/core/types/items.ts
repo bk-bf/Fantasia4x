@@ -422,6 +422,14 @@ export interface Item {
   };
 
   /**
+   * TRAIT-LIBRARY-EXPANSION §3b — BLEED-WEAPON chance (0–1): on a landed hit that opens a bleeding
+   * wound, this is the chance the wound is marked unclottable (`Injury.noSelfClot`) — it bleeds at
+   * full rate until a caretaker DRESSES it. Raking claws, feeding fangs, and deep-cutting blades.
+   * Replaces the retired `bloodletting` transient condition with a physical injury.
+   */
+  bleedWound?: number;
+
+  /**
    * On-hit status effect (venom/screech/tongue/blood-drain natural weapons). When a swing with this
    * weapon LANDS, roll `chance` (reduced by the defender's `resist` stat) to inflict `condition` as a
    * timed transient (via conditionTimers, like knockdown) for `durationHours`. `resist` names a
@@ -430,7 +438,7 @@ export interface Item {
    * bloodVolume on a successful trigger, feeding the blood_loss condition.
    */
   onHitEffect?: {
-    condition: string;
+    condition?: string; // optional (§3b): a pure feeding proc carries only bloodDrain — the roll gates the drain (+ the attacker's `feasted` buff), stamping no target condition
     chance: number; // 0–1 base trigger chance on a landed hit
     durationHours: number; // how long the condition lasts, in IN-GAME hours (converted to ticks on apply)
     resist?: string; // stat id mitigating the chance (e.g. "poison_resistance")

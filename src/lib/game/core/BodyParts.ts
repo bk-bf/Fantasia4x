@@ -276,6 +276,61 @@ for (const [plan, limbs] of Object.entries(PLAN_DEFS)) {
   PLAN_OUTER[plan] = outer;
   PLAN_TOTAL_W[plan] = outer.reduce((s, o) => s + o.w, 0);
 }
+// Per-plan membership set (ALL part ids, outer + internal) — lets rollBodyPartOf spot GRAFTED parts
+// (present in a live tree but foreign to its plan) without a per-roll scan of the plan lists.
+const PLAN_PART_SET: Record<string, Set<string>> = {};
+for (const [plan, limbs] of Object.entries(PLAN_DEFS)) {
+  PLAN_PART_SET[plan] = new Set(Object.values(limbs).flat());
+}
+
+/**
+ * Weighted random outer body part for an entity's LIVE body (TRAIT-LIBRARY-EXPANSION §3d): the
+ * PLAN's hit table minus parts/limbs the tree has actually LOST (a severed part can't be struck
+ * again), plus any GRAFTED parts the tree carries beyond its plan (a pawn's wings/tail are
+ * hittable). Sparse trees (test fixtures with on-demand parts) keep the full plan table — a part
+ * absent from the tree is simply unhurt, not gone. Falls back to the plain plan roll when nothing
+ * survives.
+ */
+export function rollBodyPartOf(
+  limbs: LimbState[] | undefined,
+  plan: string = DEFAULT_PLAN
+): BodyPartId {
+  if (!limbs || limbs.length === 0) return rollBodyPart(plan);
+  const planKey = PLAN_OUTER[plan] ? plan : DEFAULT_PLAN;
+  const planParts = PLAN_PART_SET[planKey];
+  // Collect what the live tree says is GONE, and what it carries beyond the plan (grafts).
+  let missing: Set<string> | null = null;
+  let extra: { id: BodyPartId; w: number }[] | null = null;
+  for (const l of limbs) {
+    for (const p of l.parts ?? []) {
+      if (l.isMissing || p.isMissing) {
+        (missing ??= new Set()).add(p.id);
+      } else if (!planParts.has(p.id)) {
+        const w = PART_DEF_MAP[p.id]?.hitWeight ?? 0;
+        if (w > 0) (extra ??= []).push({ id: p.id, w });
+      }
+    }
+  }
+  if (!missing && !extra) return rollBodyPart(planKey); // the common whole-bodied case — zero alloc
+  const outer = PLAN_OUTER[planKey];
+  let total = 0;
+  for (const o of outer) if (!missing?.has(o.id)) total += o.w;
+  if (extra) for (const e of extra) total += e.w;
+  if (total <= 0) return rollBodyPart(planKey);
+  let r = rng.random() * total;
+  for (const o of outer) {
+    if (missing?.has(o.id)) continue;
+    r -= o.w;
+    if (r <= 0) return o.id;
+  }
+  if (extra) {
+    for (const e of extra) {
+      r -= e.w;
+      if (r <= 0) return e.id;
+    }
+  }
+  return rollBodyPart(planKey);
+}
 
 /** Weighted random outer body part for a body plan (defaults to humanoid). */
 export function rollBodyPart(plan: string = DEFAULT_PLAN): BodyPartId {

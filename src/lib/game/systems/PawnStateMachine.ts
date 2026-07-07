@@ -16,6 +16,7 @@
 import type {
   GameState,
   Pawn,
+  Mob,
   PlacedBuilding,
   ConditionDef,
   ConditionStage,
@@ -50,7 +51,7 @@ import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
 import { simLog } from '../core/logSink';
 import { gameLogger } from '../dev/gameLogger';
-import { perTick } from '../core/time';
+import { perTick, SECONDS_PER_TICK } from '../core/time';
 import {
   driveNeedConditions,
   decayIntoxication,
@@ -828,6 +829,64 @@ export function healWounds(pawn: Pawn, turn = 0, buildings?: PlacedBuilding[]): 
 
 // ===== HAULING HELPERS =====
 
+// ── Auras (TRAIT-LIBRARY-EXPANSION §6a) ──────────────────────────────────────
+// A pawn carrying an `aura` trait radiates a transient condition to pawns/mobs within `radius` tiles.
+// THROTTLED (every AURA_INTERVAL_TICKS, never per-tick) and LINGERING: each pass stamps the condition
+// as a conditionTimers entry of `lingerSeconds`, so a target that leaves the zone keeps the buff for a
+// few seconds and then it fades on its own — no per-tick removal bookkeeping, near-zero peace-tick cost
+// (a single every-3s scan that early-outs when no pawn carries an aura, the overwhelming default:
+// auras are rare, lineage-gated, mutually exclusive S3 capabilities).
+const AURA_INTERVAL_TICKS = 180; // ~3 s at 60 TPS
+const AURA_DEFAULT_LINGER_SECONDS = 8;
+
+/** Stamp `condId` on an entity as a lingering timer (in-place — the FSM's hot-phase convention;
+ *  syncTransientConditions re-derives the pawn pill, mobs get the id pushed directly). */
+function stampAuraCondition(target: Pawn | Mob, condId: string, lingerTicks: number): void {
+  const timers = (target.conditionTimers ??= {});
+  timers[condId] = Math.max(timers[condId] ?? 0, lingerTicks);
+  if (!(target.transientConditions ?? []).includes(condId)) {
+    (target.transientConditions ??= []).push(condId);
+  }
+}
+
+/** One throttled aura pass over the colony. Exported for tests. */
+export function tickAuras(state: GameState): void {
+  if (state.turn % AURA_INTERVAL_TICKS !== 0) return;
+  for (const emitter of state.pawns) {
+    if (emitter.isAlive === false || !emitter.position) continue;
+    const traits = emitter.traits;
+    if (!traits || traits.length === 0) continue;
+    for (const t of traits) {
+      const aura = t.aura;
+      if (!aura || !getTransientConditionDef(aura.condition)) continue;
+      const lingerTicks = Math.max(
+        AURA_INTERVAL_TICKS + 1, // always outlives the gap to the next pass (no flicker)
+        Math.round((aura.lingerSeconds ?? AURA_DEFAULT_LINGER_SECONDS) / SECONDS_PER_TICK)
+      );
+      const ex = emitter.position.x;
+      const ey = emitter.position.y;
+      if (aura.affects !== 'foes') {
+        for (const p of state.pawns) {
+          if (p.id === emitter.id || p.isAlive === false || !p.position) continue;
+          if (
+            Math.max(Math.abs(p.position.x - ex), Math.abs(p.position.y - ey)) <= aura.radius
+          ) {
+            stampAuraCondition(p, aura.condition, lingerTicks);
+          }
+        }
+      }
+      if (aura.affects !== 'allies') {
+        for (const m of state.mobs ?? []) {
+          if (m.isAlive === false || m.state === 'Corpse') continue;
+          if (Math.max(Math.abs(m.x - ex), Math.abs(m.y - ey)) <= aura.radius) {
+            stampAuraCondition(m, aura.condition, lingerTicks);
+          }
+        }
+      }
+    }
+  }
+}
+
 /**
  * Decrement temporary transient condition durations and remove expired ones.
  */
@@ -914,6 +973,19 @@ function buildGraphContext(pawn: Pawn, turn: number): GraphContext {
   };
 }
 
+/** §3e utility-gear host gate: does the pawn still have at least one of `partIds` present and not
+ *  missing? Mirrors Combat's weapon host-part survival check, for selfCondition PILLS (wings →
+ *  moveSpeed only while a wing survives). */
+function hasLivingPart(pawn: Pawn, partIds: string[]): boolean {
+  for (const limb of pawn.limbs ?? []) {
+    if (limb.isMissing) continue;
+    for (const part of limb.parts ?? []) {
+      if (!part.isMissing && partIds.includes(part.id)) return true;
+    }
+  }
+  return false;
+}
+
 /** Is a racial `selfCondition` currently active on the pawn? Permanent ones (no `activateWhen`) are
  *  always active while the trait is present; environment-gated ones (photosynthesis/light_sensitive,
  *  and future transformations) are active only while their `activateWhen` predicate holds. */
@@ -988,12 +1060,15 @@ export function syncTransientConditions(pawn: Pawn, turn?: number): Pawn {
   // (clawed/furred/scaled/…). Ones carrying an `activateWhen` (photosynthesis/light_sensitive, and
   // future transformations) are ENVIRONMENT-GATED — pushed only while their predicate holds
   // (TRAIT-SYSTEM-V2 §5), evaluated by conditionGraph. `envCtx` is built once, lazily, only if a pawn
-  // actually has a gated self-condition.
+  // actually has a gated self-condition. §3e utility gear: a condition bound to host parts (wings →
+  // moveSpeed) is HOST-GATED — shear both wings off and the pill (and its benefit) goes with them.
   let envCtx: GraphContext | null = null;
   for (const t of pawn.traits ?? []) {
     const sc = t.selfCondition;
     if (!sc || ids.includes(sc)) continue;
     const def = getTransientConditionDef(sc);
+    if (def?.hostParts?.length && pawn.limbs?.length && !hasLivingPart(pawn, def.hostParts))
+      continue;
     if (def?.activateWhen) {
       if (turn == null) continue;
       envCtx ??= buildGraphContext(pawn, turn);
@@ -1151,6 +1226,9 @@ class PawnStateMachineImpl {
   tick(gameState: GameState): GameState {
     // Periodic map snapshot every 60 turns (~1 s at 60 TPS).
     if (gameState.turn % 60 === 0) gameLogger.logMapSnap(gameState);
+
+    // §6a auras — throttled radiating buffs/debuffs (no-op most ticks; early-outs without aura pawns).
+    tickAuras(gameState);
 
     let state = gameState;
     for (const pawn of state.pawns) {

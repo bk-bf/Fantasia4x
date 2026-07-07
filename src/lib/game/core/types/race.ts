@@ -14,8 +14,10 @@ export interface EntityStats {
 /** On-hit condition proc carried by a trait (`onHitEffect`) or a natural-weapon item.
  *  Same shape as an item's `onHitEffect` so Combat can apply either through one path. */
 export interface TraitOnHitEffect {
-  /** Transient condition id inflicted on a landed hit. */
-  condition: string;
+  /** Transient condition id inflicted on a landed hit. Optional (TRAIT-LIBRARY-EXPANSION §3b): a
+   *  feeding weapon may carry only a `bloodDrain` — the roll still gates the drain (and the attacker's
+   *  `feasted` buff), it just stamps no condition on the target (the physical bleed-wound is the mark). */
+  condition?: string;
   /** 0–1 base trigger chance, cut by the target's `resist` stat. */
   chance: number;
   /** Duration in in-game hours (converted to ticks on apply). */
@@ -71,13 +73,36 @@ export interface Trait {
   wounds?: Array<{
     part: string;
     severity: 'minor' | 'serious' | 'critical' | 'destroyed';
-    /** Wound type from wounds.jsonc (default 'cut'); 'crush' reads as degenerative (bad back). */
-    type?: 'cut' | 'fracture' | 'puncture' | 'crush' | 'burn';
+    /** Wound type from wounds.jsonc (default 'cut'); 'crush' reads as degenerative (bad back);
+     *  'burn'/'frostbite' are the elemental scar variants (TRAIT-LIBRARY-EXPANSION §5b). */
+    type?: 'cut' | 'fracture' | 'puncture' | 'crush' | 'burn' | 'frostbite' | 'scorch';
+    /** §5a lost limbs: destroy the WHOLE parent limb (a true old amputation — every part missing,
+     *  limb.isMissing), not just the named part. Refused on limbs holding a vital organ. */
+    amputate?: boolean;
   }>;
   /** GROUNDWORK for trait evolution (not yet a runtime mechanic): the id of the higher-tier trait this
    *  one can grow into — e.g. mundane `frost-loving` → supernatural `frost-born`, `adrenaline` →
    *  `berserker-blood`. Lets a future system upgrade a pawn's trait along its line. */
   evolvesTo?: string;
+  /** TRAIT-LIBRARY-EXPANSION §3a: this trait's rung on its 3-stage natural-gear line (S1 budding →
+   *  S3 apex), chained by `evolvesTo`. Data flag only for now — a later age/ritual system walks it. */
+  stage?: 1 | 2 | 3;
+  /** §3d à-la-carte body composition: limbs (with their parts, from the GLOBAL limbmap part catalog —
+   *  any plan's parts are addressable) GRAFTED onto the pawn's body tree at generation
+   *  (`applyTraitGrafts`). A grafted wing/tail/beak is a REAL limb: hittable, losable, and the host
+   *  for the trait's natural gear (`hostParts`), so shearing the wing removes the benefit. */
+  grafts?: Array<{ limb: string; parts: string[] }>;
+  /** §6a auras: while this trait's bearer stands, pawns/mobs within `radius` tiles carry `condition`.
+   *  Applied on a THROTTLED cadence with a linger tail (the condition is stamped as a timer of
+   *  `lingerSeconds`, so it fades a few seconds after leaving the zone — and the pass never runs
+   *  per-tick). Aura traits sit in one mutual-exclusion conflict group (≤1 aura per pawn). */
+  aura?: {
+    condition: string;
+    radius: number;
+    affects: 'allies' | 'foes' | 'all';
+    /** Seconds the stamped condition lingers per application (default 8). */
+    lingerSeconds?: number;
+  };
   /** PHYSIQUE PREREQUISITE (ADR-028): the trait may only be drawn onto a pawn whose ROLLED physique fits
    *  — so a physically contradictory trait can't land (Gaunt = "wasted, spare" never on a 250 kg mass;
    *  Stocky = "short, broad" never on a wisp). Checked per-pawn in `drawPawnTraits` against the base
@@ -130,6 +155,12 @@ export interface Trait {
     workSpeed?: Record<string, number>; // workType -> *_speed multiplier
     workYield?: Record<string, number>; // workType -> *_yield multiplier
     workQuality?: Record<string, number>; // workType -> *_quality multiplier
+
+    /** TRAIT-LIBRARY-EXPANSION §1: combat-stat multipliers — combat statId (hit_chance, dodge,
+     *  knockdown_resistance, attack_speed, crit_chance, aim_speed, reload_speed, aim_range) → a
+     *  multiplier on the matching stats.jsonc combat output, exactly as `workSpeed` multiplies a work
+     *  stat. Consumed by PawnStatService.evaluateStat (combat-category stats only). */
+    combatMods?: Record<string, number>;
 
     // Resistance / rate stats — added on top of the matching stat formula by
     // PawnStatService.evaluateStat (RESISTANCE_TRAIT_KEY), so they flow into condition

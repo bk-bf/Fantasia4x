@@ -149,6 +149,10 @@ export interface CreatureDefinition {
   lootTable: CreatureLootEntry[];
   /** Natural melee attacks — ids of `natural_weapon` items in items.jsonc. */
   naturalWeapons: string[];
+  /** TRAIT-LIBRARY-EXPANSION §4.0 shared lines: trait ids (traits.jsonc) this creature carries —
+   *  the S1 rung of a shared lineage line (orc_reaver → adrenaline). Resolved to Trait defs at spawn;
+   *  mobs get the stat/resistance/weaponBonus/combatMods effects, never the pawn-only machinery. */
+  traits?: string[];
   /**
    * §M elemental (and physical) damage resistances/vulnerabilities, keyed by DamageType. Each value
    * is added on top of the stat-derived resistance in Combat.physicalResistance (positive = resists,
@@ -276,6 +280,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     biomeWeights: (raw.biomeWeights as Record<string, number>) ?? {},
     lootTable: (raw.lootTable as CreatureLootEntry[]) ?? [],
     naturalWeapons: (raw.naturalWeapons as string[]) ?? [],
+    traits: (raw.traits as string[] | undefined) ?? undefined,
     resistances: (raw.resistances as Partial<Record<DamageType, number>> | undefined) ?? undefined,
     naturalArmor: (raw.naturalArmor as number | undefined) ?? undefined,
     bodyScale: (raw.bodyScale as number | undefined) ?? undefined,

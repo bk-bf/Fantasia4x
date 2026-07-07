@@ -5,7 +5,7 @@
 <script lang="ts">
   import type { Trait, Pawn } from '$lib/game/core/types';
   import { workAxisLabel } from '$lib/components/util/pawnUtils';
-  import { partLabel } from '$lib/utils/bodyLabels';
+  import { partLabel, limbLabel } from '$lib/utils/bodyLabels';
   import { getTransientConditionDef } from '$lib/game/core/needs';
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
   import raritiesData from '$lib/game/database/rarities.jsonc';
@@ -63,7 +63,47 @@
   };
 
   // A pill = a short LABEL + a VALUE, exactly like the health-tab StatPills (e.g. "STR +2").
-  type Tag = { label: string; value: string; type: 'pos' | 'neg' | 'neutral' };
+  // `tip` (optional) = a hover tooltip on the PILL itself — used for a trait's granted condition
+  // ("＋ hydro-vigor") so hovering the pill explains the condition (TRAIT-LIBRARY-EXPANSION §6b).
+  type Tag = { label: string; value: string; type: 'pos' | 'neg' | 'neutral'; tip?: string };
+
+  // Human sentence for a condition's activateWhen predicate — "active while wet ≥ 50" etc.
+  const PRED_NEED_LABEL: Record<string, string> = {
+    wetness: 'wet',
+    coldExposure: 'cold',
+    heatExposure: 'hot',
+    hunger: 'hungry',
+    thirst: 'thirsty',
+    fatigue: 'tired',
+    hygiene: 'filthy'
+  };
+  function describePredicate(w: NonNullable<ReturnType<typeof getTransientConditionDef>>['activateWhen']): string {
+    if (!w) return '';
+    const bits: string[] = [];
+    if (w.need) bits.push(PRED_NEED_LABEL[w.need] ?? w.need);
+    if (w.meter === 'bloodFrac') bits.push('bleeding low');
+    else if (w.meter === 'pain') bits.push('in pain');
+    else if (w.meter === 'ambientLight') bits.push((w.atOrBelow ?? 1) <= 0.5 ? 'in the dark' : 'in daylight');
+    if (w.hasCondition) bits.push(getTransientConditionDef(w.hasCondition)?.name?.toLowerCase() ?? w.hasCondition.replace(/_/g, ' '));
+    if (w.unsheltered) bits.push('under open sky');
+    return bits.join(' + ');
+  }
+  // Tooltip text for a granted condition pill: description + live modifiers + when it's active.
+  function conditionTip(condId: string): string {
+    const cond = getTransientConditionDef(condId);
+    if (!cond) return '';
+    const mods = Object.entries(cond.modifiers ?? {})
+      .filter(([, v]) => typeof v === 'number' && v !== 1)
+      .map(([k, v]) => {
+        const pct = Math.round(((v as number) - 1) * 100);
+        return `${k.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').toLowerCase()} ${pct >= 0 ? '+' : ''}${pct}%`;
+      });
+    const when = cond.activateWhen ? `active while ${describePredicate(cond.activateWhen)}` : null;
+    const proc = cond.triggers?.length
+      ? 'can trigger: ' + cond.triggers.map((tr) => getTransientConditionDef(tr.to)?.name ?? tr.to.replace(/_/g, ' ')).join(', ')
+      : null;
+    return [cond.description, mods.join(' · '), when, proc].filter(Boolean).join('\n');
+  }
   // Pill tint per polarity — feeds the StatPills-style label/value colour-mix.
   const PILL_TINT: Record<Tag['type'], string> = {
     pos: '#6fae3a',
@@ -117,6 +157,29 @@
     const tags: Tag[] = [];
     // ADR-023 capabilities (id-free — the tooltip names the specifics).
     const cond = trait.selfCondition ? getTransientConditionDef(trait.selfCondition) : undefined;
+    // §6b: expose the granted condition as a live "＋ <name>" pill; hovering the pill shows the
+    // condition's own tooltip (description, modifiers, when it's active, what it can trigger).
+    if (cond) {
+      tags.push({
+        label: '＋',
+        value: cond.name.toLowerCase(),
+        type: 'pos',
+        tip: conditionTip(trait.selfCondition!)
+      });
+    }
+    // §6a: an aura radiates a condition to everyone within its (finite) radius.
+    if (trait.aura) {
+      const auraCond = getTransientConditionDef(trait.aura.condition);
+      tags.push({
+        label: 'aura',
+        value: `${(auraCond?.name ?? trait.aura.condition.replace(/_/g, ' ')).toLowerCase()} · ${trait.aura.radius} tiles · ${trait.aura.affects}`,
+        type: trait.aura.affects === 'foes' ? 'neutral' : 'pos',
+        tip: auraCond ? conditionTip(trait.aura.condition) : undefined
+      });
+    }
+    // §3d grafts: the trait grows a real, losable limb.
+    for (const g of trait.grafts ?? [])
+      tags.push({ label: 'grows', value: limbLabel(g.limb), type: 'pos' });
     if (cond?.grantsNaturalWeapon?.length)
       tags.push({ label: 'natural weapon', value: '', type: 'pos' });
     if (cond?.grantsNaturalArmor)
@@ -242,6 +305,7 @@
                 class="chip"
                 class:warn={tag.type === 'neg'}
                 style="--pill: {PILL_TINT[tag.type]}"
+                title={tag.tip}
                 ><span class="pill-k">{tag.label}</span>{#if tag.value}<span class="pill-v"
                     >{tag.value}</span
                   >{/if}</span
@@ -268,7 +332,31 @@
     </div>
     <div class="tip-desc">{t.description}</div>
     {#if t.flavorLine}<div class="tip-flavor">“{t.flavorLine}”</div>{/if}
-    {#if cn}<div class="tip-row"><span class="tip-lbl">Condition</span> {cn}</div>{/if}
+    {#if cn}
+      {@const cdef = getTransientConditionDef(t.selfCondition!)}
+      <div class="tip-row"><span class="tip-lbl">Condition</span> {cn}</div>
+      {#if cdef?.description}<div class="tip-row">{cdef.description}</div>{/if}
+      {#if cdef?.activateWhen}<div class="tip-row">
+          <span class="tip-lbl">Active while</span>
+          {describePredicate(cdef.activateWhen)}
+        </div>{/if}
+    {/if}
+    {#if t.aura}
+      {@const acond = getTransientConditionDef(t.aura.condition)}
+      <div class="tip-row">
+        <span class="tip-lbl">Aura</span>
+        {acond?.name ?? t.aura.condition.replace(/_/g, ' ')} — {t.aura.affects} within {t.aura.radius} tiles
+      </div>
+    {/if}
+    {#if t.grafts?.length}
+      <div class="tip-row">
+        <span class="tip-lbl">Grows</span>
+        {t.grafts.map((g) => limbLabel(g.limb)).join(', ')} — a real limb: losable, and the trait's power goes with it
+      </div>
+    {/if}
+    {#if t.stage}
+      <div class="tip-row"><span class="tip-lbl">Stage</span> {t.stage} of 3{t.evolvesTo ? ' — can evolve further' : ' — the apex of its line'}</div>
+    {/if}
     {#if nw.length}<div class="tip-row">
         <span class="tip-lbl">Natural weapon</span>
         {nw.join(', ')}
