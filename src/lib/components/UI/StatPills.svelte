@@ -31,21 +31,11 @@
 
 <script lang="ts">
   import HoverTip from '$lib/components/UI/HoverTip.svelte';
+  import { createPinnable } from '$lib/components/util/pinnable.svelte';
 
   let { pills }: { pills: StatPillView[] } = $props();
 
-  let hovered = $state<StatPillView | null>(null);
-  let mx = $state(0);
-  let my = $state(0);
-  function enter(p: StatPillView, e: MouseEvent) {
-    hovered = p;
-    mx = e.clientX;
-    my = e.clientY;
-  }
-  function move(e: MouseEvent) {
-    mx = e.clientX;
-    my = e.clientY;
-  }
+  const pin = createPinnable<StatPillView>();
 </script>
 
 {#if pills.length > 0}
@@ -56,11 +46,15 @@
         class="stat-pill"
         class:warn={p.warn}
         style="--pill: {p.color ?? '#b8965a'}"
-        role="img"
+        role="button"
+        tabindex="0"
         aria-label="{p.label} {p.value}"
-        onmouseenter={(e) => enter(p, e)}
-        onmousemove={move}
-        onmouseleave={() => (hovered = null)}
+        onmouseenter={(e) => pin.open(p, p.label + ':' + i, e)}
+        onmousemove={(e) => pin.move(e)}
+        onmouseleave={() => pin.close()}
+        onclick={(e) => pin.toggle(p, p.label + ':' + i, e)}
+        onkeydown={(e) =>
+          (e.key === 'Enter' || e.key === ' ') && pin.toggle(p, p.label + ':' + i, e)}
       >
         <span class="pill-k">{p.label}</span><span class="pill-v">{p.value}</span>
       </div>
@@ -68,16 +62,17 @@
   </div>
 {/if}
 
-{#if hovered}
-  <HoverTip x={mx} y={my}>
-    <div class="tip-name" style="color: {hovered.color ?? '#e8c870'}">
-      {(hovered.title ?? hovered.label).toUpperCase()}<span class="tip-val">{hovered.value}</span>
+{#if pin.active}
+  {@const h = pin.active}
+  <HoverTip x={pin.x} y={pin.y} pinned={pin.pinned}>
+    <div class="tip-name" style="color: {h.color ?? '#e8c870'}">
+      {(h.title ?? h.label).toUpperCase()}<span class="tip-val">{h.value}</span>
     </div>
-    {#if hovered.desc}<div class="tip-desc">{hovered.desc}</div>{/if}
-    {#if hovered.formula}<div class="tip-formula">{hovered.formula}</div>{/if}
-    {#if hovered.rows && hovered.rows.length > 0}
+    {#if h.desc}<div class="tip-desc">{h.desc}</div>{/if}
+    {#if h.formula}<div class="tip-formula">{h.formula}</div>{/if}
+    {#if h.rows && h.rows.length > 0}
       <div class="tip-hdr">FROM</div>
-      {#each hovered.rows as r (r.label)}
+      {#each h.rows as r (r.label)}
         <div class="tip-row">
           <span class="tip-rk">{r.label}</span><span class="tip-rv">{r.value}</span>
         </div>

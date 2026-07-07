@@ -15,6 +15,9 @@
   /** Cursor position in viewport coords (clientX/clientY). */
   export let x: number;
   export let y: number;
+  /** Pinned (clicked) — the panel stops following the cursor and becomes pointer-interactive so its
+   *  contents (and nested tooltips later) are reachable. Dismissal is handled by the pin controller. */
+  export let pinned = false;
 
   let node: HTMLElement;
   let raf = 0;
@@ -80,7 +83,7 @@
   $: (x, y, schedule());
 </script>
 
-<div class="tip" use:portal style="left:{x + GAP}px; top:{y + GAP}px;">
+<div class="tip" class:pinned use:portal data-pin-panel style="left:{x + GAP}px; top:{y + GAP}px;">
   <!-- Text layer lifted above the day/night+weather overlay (#ambient-tint-legible) while the tip's
        background + frame are dimmed beneath it (.tip::before, #ambient-tint) — so the tooltip folds
        under the overlay like the panels/cards instead of floating over it at full brightness. The SVG
@@ -110,6 +113,14 @@
     line-height: 1.4;
     color: var(--text);
     pointer-events: none;
+  }
+  /* Pinned: the panel is frozen and clickable (nested content reachable), with a faint accent outline
+     so it reads as "stuck" rather than a passing hover. */
+  .tip.pinned {
+    pointer-events: auto;
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.55),
+      0 0 0 1px var(--accent, #e8c870);
   }
   /* Dimmed chrome layer: tooltip background + inset frame, darkened with the day/night+weather scene. */
   .tip::before {

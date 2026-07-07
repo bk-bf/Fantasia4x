@@ -21,22 +21,11 @@
   import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
   import HoverTip from '$lib/components/UI/HoverTip.svelte';
   import { buildItemInfo, type ItemInfoView } from '$lib/components/util/itemInfo';
+  import { createPinnable } from '$lib/components/util/pinnable.svelte';
 
   let { pills }: { pills: ItemPillView[] } = $props();
 
-  let hovered = $state<ItemInfoView | null>(null);
-  let mx = $state(0);
-  let my = $state(0);
-
-  function enter(itemId: string, e: MouseEvent) {
-    hovered = buildItemInfo(itemId);
-    mx = e.clientX;
-    my = e.clientY;
-  }
-  function move(e: MouseEvent) {
-    mx = e.clientX;
-    my = e.clientY;
-  }
+  const pin = createPinnable<ItemInfoView>();
 </script>
 
 {#if pills.length > 0}
@@ -47,11 +36,16 @@
         class="item-pill"
         class:dim={p.dim}
         style="--pill: {info.color}"
-        role="img"
+        role="button"
+        tabindex="0"
         aria-label={info.name}
-        onmouseenter={(e) => enter(p.itemId, e)}
-        onmousemove={move}
-        onmouseleave={() => (hovered = null)}
+        onmouseenter={(e) => pin.open(buildItemInfo(p.itemId), p.itemId + ':' + i, e)}
+        onmousemove={(e) => pin.move(e)}
+        onmouseleave={() => pin.close()}
+        onclick={(e) => pin.toggle(buildItemInfo(p.itemId), p.itemId + ':' + i, e)}
+        onkeydown={(e) =>
+          (e.key === 'Enter' || e.key === ' ') &&
+          pin.toggle(buildItemInfo(p.itemId), p.itemId + ':' + i, e)}
       >
         {#if info.charSpans}
           <SpriteIcon charSpans={info.charSpans} tint={info.color} px={9} />
@@ -64,33 +58,34 @@
   </div>
 {/if}
 
-{#if hovered}
-  <HoverTip x={mx} y={my}>
-    <div class="tip-name" style="color: {hovered.color}">{hovered.name.toUpperCase()}</div>
-    {#if hovered.description}
-      <div class="tip-desc">{hovered.description}</div>
+{#if pin.active}
+  {@const h = pin.active}
+  <HoverTip x={pin.x} y={pin.y} pinned={pin.pinned}>
+    <div class="tip-name" style="color: {h.color}">{h.name.toUpperCase()}</div>
+    {#if h.description}
+      <div class="tip-desc">{h.description}</div>
     {/if}
-    {#if hovered.freshness || hovered.condition != null}
+    {#if h.freshness || h.condition != null}
       <div class="tip-row tip-life">
-        {#if hovered.freshness}<span>fresh ~{hovered.freshness}</span>{/if}
-        {#if hovered.condition != null}<span>cond {hovered.condition}</span>{/if}
+        {#if h.freshness}<span>fresh ~{h.freshness}</span>{/if}
+        {#if h.condition != null}<span>cond {h.condition}</span>{/if}
       </div>
     {/if}
-    {#if hovered.farming}
-      <div class="tip-hdr">FARMING · {hovered.farming.crop}</div>
-      {#each hovered.farming.rows as r}
+    {#if h.farming}
+      <div class="tip-hdr">FARMING · {h.farming.crop}</div>
+      {#each h.farming.rows as r}
         <div class="tip-row tip-farm"><span class="tip-dim">{r.label}</span><span>{r.val}</span></div>
       {/each}
     {/if}
-    {#if hovered.craftedInto.length > 0}
+    {#if h.craftedInto.length > 0}
       <div class="tip-hdr">CRAFTS INTO</div>
-      <div class="tip-row">{hovered.craftedInto.join(' · ')}</div>
+      <div class="tip-row">{h.craftedInto.join(' · ')}</div>
     {/if}
-    {#if hovered.buildsInto.length > 0}
+    {#if h.buildsInto.length > 0}
       <div class="tip-hdr">BUILDS</div>
-      <div class="tip-row">{hovered.buildsInto.join(' · ')}</div>
+      <div class="tip-row">{h.buildsInto.join(' · ')}</div>
     {/if}
-    {#if hovered.craftedInto.length === 0 && hovered.buildsInto.length === 0}
+    {#if h.craftedInto.length === 0 && h.buildsInto.length === 0}
       <div class="tip-row tip-dim">— not used in any recipe</div>
     {/if}
   </HoverTip>

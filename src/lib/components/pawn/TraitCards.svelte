@@ -19,7 +19,8 @@
   import StatTooltip from '$lib/components/pawn/StatTooltip.svelte';
   import { buildStatContext, computeStatView, isDerivedStat } from '$lib/components/util/statView';
   import ConditionTooltip from '$lib/components/pawn/ConditionTooltip.svelte';
-  import { conditionViewForId } from '$lib/components/util/conditionInfo';
+  import { conditionViewForId, traitGrantLines } from '$lib/components/util/conditionInfo';
+  import { createPinnable } from '$lib/components/util/pinnable.svelte';
 
   // A trait resistance/rate effect key → its stats.jsonc DERIVED stat id, so the pill can open the SAME
   // attributes-tab tooltip for that stat. (nightVision has no stat → stays a plain pill.)
@@ -206,15 +207,9 @@
     const gear = naturalGearForTrait(trait);
     const cond = trait.selfCondition ? getTransientConditionDef(trait.selfCondition) : undefined;
     // A pure condition-granting trait (no natural gear): its `effects` ARE the condition's grant, so they
-    // fold into the ONE COND tooltip (via condGrants) instead of showing as separate pills beside it.
+    // fold into the ONE COND tooltip (via traitGrantLines) instead of showing as separate pills beside it.
+    // That SAME formatter feeds the active-condition icon tooltip, so both render identically.
     const isCondTrait = !gear && !!cond;
-    let condTag: Tag | undefined;
-    const grantLines: string[] = [];
-    // Route an effect either to a standalone pill (normal trait) or into the COND tooltip's grant list.
-    const emit = (label: string, value: string, type: Tag['type'], extra: Partial<Tag> = {}) => {
-      if (isCondTrait) grantLines.push(`${label} ${value}`.replace(/^./, (c) => c.toUpperCase()));
-      else tags.push({ label, value, type, ...extra });
-    };
     // §3 NATURAL GEAR: one abbreviation pill (NAT WEAP / NAT ARM); hovering shows the SAME ItemStatTooltip
     // the GEAR TAB uses (def, resistances, on-hit…). No separate nat-armor / carry / resistance pills —
     // that whole breakdown lives in the one gear tooltip, so the card isn't a pile of redundant pills.
@@ -231,16 +226,15 @@
       // §6b passive covering/affinity (no gear granted): one "COND <name>" pill opening the SAME condition
       // tooltip the health tab uses (ConditionTooltip). What it grants + what triggers it live IN that
       // tooltip (condGrants + the def's activateWhen), not as separate pills.
-      condTag = {
+      tags.push({
         label: 'COND',
         value: cond.name.toLowerCase(),
         type: 'pos',
         kind: 'cond',
         condId: trait.selfCondition,
         condSource: `${trait.name} (racial trait)`,
-        condGrants: []
-      };
-      tags.push(condTag);
+        condGrants: traitGrantLines(trait)
+      });
     }
     // §6a: an aura radiates a condition to everyone within its (finite) radius.
     if (trait.aura) {
@@ -317,56 +311,63 @@
         tip: `This body can't wear: ${blockedLabels(trait).join(', ')}.`
       });
     // §3 evolution stage is shown in the natural-gear tooltip's NATURAL block (via `gear.natural`),
-    // not as its own pill.
-    for (const [name, value] of Object.entries(trait.effects || {})) {
-      if (name.endsWith('Bonus') && typeof value === 'number') {
-        const stat = name.replace('Bonus', '');
-        emit(STAT_ABBR[stat] ?? stat, `+${value}`, 'pos', { kind: 'attr', statId: stat });
-      } else if (name.endsWith('Penalty') && typeof value === 'number') {
-        const stat = name.replace('Penalty', '');
-        // A penalty is stored positive — render it SIGNED so it reads "CHA -1".
-        emit(STAT_ABBR[stat] ?? stat, `-${value}`, 'neg', { kind: 'attr', statId: stat });
-      } else if (name === 'combatMods' && value && typeof value === 'object') {
-        // §1 combat combos: each key is a stats.jsonc COMBAT stat (hit_chance, dodge…) → its pill routes
-        // to the SAME attributes-tab tooltip (kind 'attr'), value is a bare signed % (no "combat mods" tail).
-        for (const [statId, mul] of Object.entries(value as Record<string, number>)) {
-          const pct = Math.round((mul - 1) * 100);
-          emit(statId.replace(/_/g, ' '), `${pct >= 0 ? '+' : ''}${pct}%`, pct >= 0 ? 'pos' : 'neg', {
-            kind: 'attr',
-            statId
+    // not as its own pill. A COND trait's effects are folded into its condition tooltip (condGrants
+    // above), so they DON'T also show as standalone pills — skip the whole effect→pill loop for it.
+    if (!isCondTrait)
+      for (const [name, value] of Object.entries(trait.effects || {})) {
+        if (name.endsWith('Bonus') && typeof value === 'number') {
+          const stat = name.replace('Bonus', '');
+          tags.push({ label: STAT_ABBR[stat] ?? stat, value: `+${value}`, type: 'pos', kind: 'attr', statId: stat });
+        } else if (name.endsWith('Penalty') && typeof value === 'number') {
+          const stat = name.replace('Penalty', '');
+          // A penalty is stored positive — render it SIGNED so it reads "CHA -1".
+          tags.push({ label: STAT_ABBR[stat] ?? stat, value: `-${value}`, type: 'neg', kind: 'attr', statId: stat });
+        } else if (name === 'combatMods' && value && typeof value === 'object') {
+          // §1 combat combos: each key is a stats.jsonc COMBAT stat (hit_chance, dodge…) → its pill routes
+          // to the SAME attributes-tab tooltip (kind 'attr'), value is a bare signed % (no "combat mods" tail).
+          for (const [statId, mul] of Object.entries(value as Record<string, number>)) {
+            const pct = Math.round((mul - 1) * 100);
+            tags.push({
+              label: statId.replace(/_/g, ' '),
+              value: `${pct >= 0 ? '+' : ''}${pct}%`,
+              type: pct >= 0 ? 'pos' : 'neg',
+              kind: 'attr',
+              statId
+            });
+          }
+        } else if (value && typeof value === 'object') {
+          for (const [workType, mul] of Object.entries(value as Record<string, number>)) {
+            const pct = Math.round((mul - 1) * 100);
+            tags.push({
+              label: workType.replace(/_/g, ' '),
+              value: `${pct >= 0 ? '+' : ''}${pct}% ${axisShort(name)}`,
+              type: pct >= 0 ? 'pos' : 'neg',
+              kind: workType === 'all' ? undefined : 'work',
+              workId: workType === 'all' ? undefined : workType
+            });
+          }
+        } else if (typeof value === 'number' && value !== 0) {
+          // A covering's resistance is already in its gear tooltip — don't also list it as its own pill.
+          if (gear && GEAR_FOLDED_RES.has(name)) continue;
+          // Resistances / nightVision / healRate — a 0-baseline stat shown as a signed percentage. Routed
+          // to the SAME attributes-tab stat tooltip (kind 'attr') via the derived stat id it maps to.
+          const label = name
+            .replace(/_/g, ' ')
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/resistance/i, 'res')
+            .trim()
+            .toLowerCase();
+          const pct = Math.round(value * 100);
+          const sid = EFFECT_TO_STAT[name];
+          tags.push({
+            label,
+            value: `${pct >= 0 ? '+' : ''}${pct}%`,
+            type: pct >= 0 ? 'pos' : 'neg',
+            kind: sid ? 'attr' : undefined,
+            statId: sid
           });
         }
-      } else if (value && typeof value === 'object') {
-        for (const [workType, mul] of Object.entries(value as Record<string, number>)) {
-          const pct = Math.round((mul - 1) * 100);
-          emit(
-            workType.replace(/_/g, ' '),
-            `${pct >= 0 ? '+' : ''}${pct}% ${axisShort(name)}`,
-            pct >= 0 ? 'pos' : 'neg',
-            { kind: workType === 'all' ? undefined : 'work', workId: workType === 'all' ? undefined : workType }
-          );
-        }
-      } else if (typeof value === 'number' && value !== 0) {
-        // A covering's resistance is already in its gear tooltip — don't also list it as its own pill.
-        if (gear && GEAR_FOLDED_RES.has(name)) continue;
-        // Resistances / nightVision / healRate — a 0-baseline stat shown as a signed percentage. Routed
-        // to the SAME attributes-tab stat tooltip (kind 'attr') via the derived stat id it maps to.
-        const label = name
-          .replace(/_/g, ' ')
-          .replace(/([A-Z])/g, ' $1')
-          .replace(/resistance/i, 'res')
-          .trim()
-          .toLowerCase();
-        const pct = Math.round(value * 100);
-        const sid = EFFECT_TO_STAT[name];
-        emit(label, `${pct >= 0 ? '+' : ''}${pct}%`, pct >= 0 ? 'pos' : 'neg', {
-          kind: sid ? 'attr' : undefined,
-          statId: sid
-        });
       }
-    }
-    // Fold the granting trait's effect lines into its COND tooltip (they're the condition's grant).
-    if (condTag) condTag.condGrants = grantLines;
     return tags;
   }
 
@@ -377,24 +378,19 @@
 
   // TWO hover panels (never both): the CARD shows flavor; a PILL shows its own breakdown. A pill sits
   // inside the card, so its hover suppresses the card panel — no more listing flavor + weapon detail twice.
+  // The card panel is hover-only; the pill panel is PINNABLE (click sticks it — prep for nested tooltips).
   let hoveredCard = $state<{ trait: Trait; x: number; y: number } | null>(null);
-  let hoveredPill = $state<{ tag: Tag; x: number; y: number } | null>(null);
+  const pill = createPinnable<Tag>();
   function showCard(trait: Trait, e: MouseEvent) {
     hoveredCard = { trait, x: e.clientX, y: e.clientY };
   }
   function moveCard(e: MouseEvent) {
     if (hoveredCard) hoveredCard = { ...hoveredCard, x: e.clientX, y: e.clientY };
-    if (hoveredPill) hoveredPill = { ...hoveredPill, x: e.clientX, y: e.clientY };
+    pill.move(e);
   }
   function hideCard() {
     hoveredCard = null;
-    hoveredPill = null;
-  }
-  function showPill(tag: Tag, e: MouseEvent) {
-    hoveredPill = { tag, x: e.clientX, y: e.clientY };
-  }
-  function hidePill() {
-    hoveredPill = null;
+    pill.close();
   }
 </script>
 
@@ -422,15 +418,19 @@
         <div class="card-desc">{trait.description}</div>
         {#if tags.length > 0}
           <div class="card-tags">
-            {#each tags as tag}
+            {#each tags as tag, ti}
+              {@const pk = (trait.id ?? trait.name) + ':' + ti}
               <span
                 class="chip"
                 class:warn={tag.type === 'neg'}
                 style="--pill: {PILL_TINT[tag.type]}"
-                role="img"
+                role="button"
+                tabindex="0"
                 aria-label="{tag.label} {tag.value}"
-                onmouseenter={(e) => showPill(tag, e)}
-                onmouseleave={hidePill}
+                onmouseenter={(e) => pill.open(tag, pk, e)}
+                onmouseleave={() => pill.close()}
+                onclick={(e) => pill.toggle(tag, pk, e)}
+                onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && pill.toggle(tag, pk, e)}
                 ><span class="pill-k">{tag.label}</span>{#if tag.value}<span class="pill-v"
                     >{tag.value}</span
                   >{/if}</span
@@ -445,7 +445,7 @@
 
 <!-- PANEL 1 — CARD hover shows ONLY flavor (name, rarity·scope, description, flavour). Suppressed while a
      pill is hovered, so flavor never shows alongside a pill's breakdown. -->
-{#if hoveredCard && !hoveredPill}
+{#if hoveredCard && !pill.active}
   {@const t = hoveredCard.trait}
   <HoverTip x={hoveredCard.x} y={hoveredCard.y}>
     <div class="tip-name" style="color: {rarityColor(t)}">{t.name}</div>
@@ -459,21 +459,22 @@
 
 <!-- PANEL 2 — PILL hover routes to its own breakdown: a natural weapon → the real item stat tooltip; a
      work pill → the work-model breakdown; a stat pill → the attribute breakdown; anything else → its detail. -->
-{#if hoveredPill}
-  {@const tag = hoveredPill.tag}
+{#if pill.active}
+  {@const tag = pill.active}
   {#if tag.kind === 'gear'}
     {#if tag.gearItem}
       <ItemStatTooltip
         item={tag.gearItem}
         natural={tag.gearNatural}
-        x={hoveredPill.x}
-        y={hoveredPill.y}
+        x={pill.x}
+        y={pill.y}
+        pinned={pill.pinned}
       />
     {/if}
   {:else if tag.kind === 'cond'}
     {@const cview = tag.condId ? conditionViewForId(tag.condId, tag.condSource, tag.condGrants) : null}
     {#if cview}
-      <HoverTip x={hoveredPill.x} y={hoveredPill.y}>
+      <HoverTip x={pill.x} y={pill.y} pinned={pill.pinned}>
         <ConditionTooltip view={cview} />
       </HoverTip>
     {/if}
@@ -486,8 +487,9 @@
         mods={pawnStatService.getWorkModifiers(pawn, wc.id)}
         rank={workRank[wc.id] ?? { best: -1, worst: -1 }}
         level={getPawnLaborLevel($gameState.workAssignments?.[pawn.id], wc.id)}
-        x={hoveredPill.x}
-        y={hoveredPill.y}
+        x={pill.x}
+        y={pill.y}
+        pinned={pill.pinned}
       />
     {/if}
   {:else if tag.kind === 'attr'}
@@ -495,7 +497,7 @@
     {@const view = pawn && statCtx && isDerivedStat(sid) ? computeStatView(sid, pawn, statCtx) : null}
     {#if view}
       <!-- Resistance / heal_rate: the IDENTICAL attributes-tab panel (shared StatTooltip). -->
-      <HoverTip x={hoveredPill.x} y={hoveredPill.y}>
+      <HoverTip x={pill.x} y={pill.y} pinned={pill.pinned}>
         <div class="tip-name" style="text-transform: capitalize">
           {view.name}<span class="tip-val">{tag.value}</span>
         </div>
@@ -503,14 +505,14 @@
       </HoverTip>
     {:else}
       <!-- Core stat (STR/DEX) — no stats.jsonc formula panel; show what it drives + this pawn's value. -->
-      <HoverTip x={hoveredPill.x} y={hoveredPill.y}>
+      <HoverTip x={pill.x} y={pill.y} pinned={pill.pinned}>
         <div class="tip-name">{sid.charAt(0).toUpperCase() + sid.slice(1)}<span class="tip-val">{tag.value}</span></div>
         {#if STAT_DRIVES[sid]}<div class="tip-desc">Drives {STAT_DRIVES[sid]}.</div>{/if}
         {#if pawn}<div class="tip-row"><span class="tip-lbl">This pawn</span> {pawn.stats[sid as keyof typeof pawn.stats] ?? '—'}</div>{/if}
       </HoverTip>
     {/if}
   {:else}
-    <HoverTip x={hoveredPill.x} y={hoveredPill.y}>
+    <HoverTip x={pill.x} y={pill.y} pinned={pill.pinned}>
       <div class="tip-name" class:neg={tag.type === 'neg'}>
         {tag.label}{#if tag.value}<span class="tip-val">{tag.value}</span>{/if}
       </div>

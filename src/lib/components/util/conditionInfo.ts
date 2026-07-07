@@ -6,6 +6,7 @@
 import type {
   Pawn,
   Mob,
+  Trait,
   ConditionDef,
   TransientConditionDef,
   ConditionModifiers,
@@ -14,6 +15,7 @@ import type {
 import conditionsData from '$lib/game/database/conditions.jsonc';
 import { gameHoursFromTicks } from '$lib/game/services/EnvironmentService';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
+import { workAxisLabel } from '$lib/components/util/pawnUtils';
 
 /** A remaining tick duration shown as coarse IN-GAME time — the unit the clock and HealthReadout use —
  *  days, hours, or in-game minutes under an hour. Never "turns"/ticks. */
@@ -85,6 +87,62 @@ function effectLines(mods: ConditionModifiers): string[] {
     if (v == null || v === 1) continue;
     const d = Math.round((v - 1) * 100);
     out.push(`${label} ${d > 0 ? '+' : '−'}${Math.abs(d)}%`);
+  }
+  return out;
+}
+
+// Trait effect formatting — the ONE source for a granting trait's grant lines, used by BOTH the trait's
+// COND pill tooltip and the active-condition ICON tooltip so the two render identically.
+const GRANT_STAT_ABBR: Record<string, string> = {
+  strength: 'STR',
+  dexterity: 'DEX',
+  intelligence: 'INT',
+  perception: 'PER',
+  charisma: 'CHA',
+  constitution: 'CON'
+};
+const grantAxis = (name: string): string =>
+  name === 'workSpeed'
+    ? 'spd'
+    : name === 'workYield'
+      ? 'yld'
+      : name === 'workQuality'
+        ? 'qual'
+        : workAxisLabel(name);
+
+/** A trait's `effects` as human grant lines ("Fire res +50%", "STR +2", "Fishing +30% spd"). For an
+ *  affinity trait the resistances live HERE (on the trait, not its condition), so folding these in is
+ *  what lets the condition's own tooltip show what it grants. */
+export function traitGrantLines(trait: Trait): string[] {
+  const out: string[] = [];
+  const cap = (s: string) => s.replace(/^./, (c) => c.toUpperCase());
+  for (const [name, value] of Object.entries(trait.effects ?? {})) {
+    if (name.endsWith('Bonus') && typeof value === 'number') {
+      const stat = name.replace('Bonus', '');
+      out.push(`${GRANT_STAT_ABBR[stat] ?? stat} +${value}`);
+    } else if (name.endsWith('Penalty') && typeof value === 'number') {
+      const stat = name.replace('Penalty', '');
+      out.push(`${GRANT_STAT_ABBR[stat] ?? stat} -${value}`);
+    } else if (name === 'combatMods' && value && typeof value === 'object') {
+      for (const [statId, mul] of Object.entries(value as Record<string, number>)) {
+        const p = Math.round((mul - 1) * 100);
+        out.push(cap(`${statId.replace(/_/g, ' ')} ${p >= 0 ? '+' : ''}${p}%`));
+      }
+    } else if (value && typeof value === 'object') {
+      for (const [workType, mul] of Object.entries(value as Record<string, number>)) {
+        const p = Math.round((mul - 1) * 100);
+        out.push(cap(`${workType.replace(/_/g, ' ')} ${p >= 0 ? '+' : ''}${p}% ${grantAxis(name)}`));
+      }
+    } else if (typeof value === 'number' && value !== 0) {
+      const label = name
+        .replace(/_/g, ' ')
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/resistance/i, 'res')
+        .trim()
+        .toLowerCase();
+      const p = Math.round(value * 100);
+      out.push(cap(`${label} ${p >= 0 ? '+' : ''}${p}%`));
+    }
   }
   return out;
 }
@@ -319,6 +377,14 @@ export function getActiveConditionViews(entity: Pawn | Mob): ConditionView[] {
     const stage = stageLabel ? def.stages?.find((s) => s.label === stageLabel) : undefined;
     if (stageLabel && !stage) continue; // combo whose base isn't a staged transient — skip
     const mods = stage?.modifiers ?? def.modifiers;
+    // An affinity condition's grant lives on the GRANTING TRAIT (ever_warm's +50% res), not the
+    // condition — fold those in so this icon tooltip matches the trait's COND pill tooltip. Skip gear
+    // conditions (claws/fur): their breakdown is the gear tooltip, not a stat list here.
+    const isGearCond = !!(def.grantsNaturalWeapon?.length || def.grantsNaturalArmor);
+    const grantingTrait = isGearCond
+      ? undefined
+      : (entity as Pawn).traits?.find((t) => t.selfCondition === baseId);
+    const grants = grantingTrait ? traitGrantLines(grantingTrait) : [];
     views.push({
       id: def.id,
       name: def.name,
@@ -328,8 +394,11 @@ export function getActiveConditionViews(entity: Pawn | Mob): ConditionView[] {
       kind: 'transient',
       stageLabel: stage?.label,
       lifeThreatening: stage?.lifeThreatening,
-      sources: transientSources(entity, baseId),
-      effects: effectLines(mods),
+      sources: [
+        ...(grantingTrait ? [`${grantingTrait.name} (racial trait)`] : []),
+        ...transientSources(entity, baseId)
+      ],
+      effects: [...grants, ...effectLines(mods)],
       modifiers: mods,
       trigger: triggerLine(def.activateWhen)
     });

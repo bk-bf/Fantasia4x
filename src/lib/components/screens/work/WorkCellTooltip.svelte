@@ -27,8 +27,11 @@
     name?: string;
     x: number;
     y: number;
+    /** Pinned (clicked open) — the panel becomes pointer-interactive; dismissal is handled by the pin
+     *  controller. Defaults false so plain-hover callers are unchanged. */
+    pinned?: boolean;
   }
-  let { pawn, wc, mods, rank, level, name, x, y }: Props = $props();
+  let { pawn, wc, mods, rank, level, name, x, y, pinned = false }: Props = $props();
 
   // The work screen lives inside `.overlay-panel`, which sets `filter` (making it
   // the containing block for fixed positioning) and `overflow: hidden`. Both would
@@ -114,7 +117,7 @@
   );
 </script>
 
-<div class="tip" use:portal {style}>
+<div class="tip" class:pinned use:portal data-pin-panel {style}>
   <div class="tip-hdr">
     <span class="tip-name">{name ?? wc.name}</span>
     <span class="tip-eff" style="color:{getEfficiencyColor(eff)}">{Math.round(eff * 100)}%</span>
@@ -197,6 +200,13 @@
     font-size: 12px;
     color: var(--text);
     pointer-events: none;
+  }
+  /* Pinned: frozen + clickable (nested content reachable), with a faint accent outline. */
+  .tip.pinned {
+    pointer-events: auto;
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.55),
+      0 0 0 1px var(--accent, #e8c870);
   }
   .tip-hdr {
     display: flex;

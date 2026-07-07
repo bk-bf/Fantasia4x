@@ -6,6 +6,7 @@
   import HoverTip from '$lib/components/UI/HoverTip.svelte';
   import ConditionTooltip from './ConditionTooltip.svelte';
   import type { ConditionView } from '$lib/components/util/conditionInfo';
+  import { createPinnable } from '$lib/components/util/pinnable.svelte';
 
   let {
     views,
@@ -13,19 +14,7 @@
     iconPx = 14
   }: { views: ConditionView[]; showHeader?: boolean; iconPx?: number } = $props();
 
-  let hovered = $state<ConditionView | null>(null);
-  let mx = $state(0);
-  let my = $state(0);
-
-  function enter(v: ConditionView, e: MouseEvent) {
-    hovered = v;
-    mx = e.clientX;
-    my = e.clientY;
-  }
-  function move(e: MouseEvent) {
-    mx = e.clientX;
-    my = e.clientY;
-  }
+  const pin = createPinnable<ConditionView>();
 </script>
 
 {#if views.length > 0}
@@ -36,11 +25,14 @@
         class="cond-chip"
         class:threatening={v.lifeThreatening}
         style="border-color: {v.color}; color: {v.color}"
-        role="img"
+        role="button"
+        tabindex="0"
         aria-label={v.name}
-        onmouseenter={(e) => enter(v, e)}
-        onmousemove={move}
-        onmouseleave={() => (hovered = null)}
+        onmouseenter={(e) => pin.open(v, v.kind + ':' + v.id, e)}
+        onmousemove={(e) => pin.move(e)}
+        onmouseleave={() => pin.close()}
+        onclick={(e) => pin.toggle(v, v.kind + ':' + v.id, e)}
+        onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && pin.toggle(v, v.kind + ':' + v.id, e)}
       >
         {#if v.charSpans}
           <SpriteIcon charSpans={v.charSpans} tint={v.color} px={iconPx} />
@@ -52,9 +44,9 @@
   </div>
 {/if}
 
-{#if hovered}
-  <HoverTip x={mx} y={my}>
-    <ConditionTooltip view={hovered} />
+{#if pin.active}
+  <HoverTip x={pin.x} y={pin.y} pinned={pin.pinned}>
+    <ConditionTooltip view={pin.active} />
   </HoverTip>
 {/if}
 

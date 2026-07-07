@@ -39,6 +39,9 @@
     /** Natural-gear extras (innate / evolution stage / carry cost) — rendered in a NATURAL block.
      *  Null for normal craftables, so their tooltip is unchanged. */
     natural?: NaturalGearMeta | null;
+    /** Pinned (clicked open) — the panel becomes pointer-interactive; dismissal is handled by the pin
+     *  controller. Defaults false so plain-hover callers are unchanged. */
+    pinned?: boolean;
   }
   let {
     item,
@@ -47,7 +50,8 @@
     recipe = null,
     selectedIngredients = {},
     jobLabel = null,
-    natural = null
+    natural = null,
+    pinned = false
   }: Props = $props();
 
   // Per-material weapon/armour deltas for the chosen ingredient(s) (e.g. ash shaft → +3 accuracy).
@@ -241,7 +245,7 @@
   );
 </script>
 
-<div class="tip" use:portal {style}>
+<div class="tip" class:pinned use:portal data-pin-panel {style}>
   <div class="tip-hdr">
     <span class="tip-name">{item.name}</span>
     <span class="tip-eff">{headline}</span>
@@ -349,6 +353,13 @@
     font-size: 12px;
     color: var(--text);
     pointer-events: none;
+  }
+  /* Pinned: frozen + clickable (nested content reachable), with a faint accent outline. */
+  .tip.pinned {
+    pointer-events: auto;
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.55),
+      0 0 0 1px var(--accent, #e8c870);
   }
   .tip-hdr {
     display: flex;
