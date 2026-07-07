@@ -981,7 +981,7 @@ Ordered roughly cheapest → most involved. Data-only additions (new trait/condi
       claw/talon/sabre-fang inflicts a wound whose `bleedRate` won't self-clot until tended; **retire the
       transient `bloodletting` condition** and repoint every user (claws, talons, `thorn-skin`, feeding
       weapons) at the bleed-wound.
-      ✅ 2026-07-07 — item-level `bleedWound` chance → `Injury.noSelfClot` (clot-proof until dressed); `bloodletting` retired, all 16 users repointed.
+      ✅ 2026-07-07 — item-level `bloodletting` chance (renamed 2026-07-08 from `bleedWound`) → `Injury.bloodletting` (clot-proof until dressed); the `bloodletting` *condition* retired, all users repointed; the info-only `bleeding` pill lists + flags them.
 - [x] **Breath weapon proc + `reach`** (§3b) — a special-attack proc that deals fire damage, **inflicts a
       `burn` wound**, rolls **knockback**, and applies `burning` (DoT over N turns, stage-scaled); plus a
       **`reach`** field on natural weapons (dragonfire reach 3 = spear-like short-ranged). **TODO:** later

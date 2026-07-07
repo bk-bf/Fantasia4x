@@ -1076,10 +1076,23 @@ data edges.**
   - **Resistances are earned, never abstract** — an `attribute`-kind trait may NOT carry a resistance
     key (registry-enforced); resistance lives only on `naturalGear` coverings (fur/scale/chitin/
     plumage) and `passive` affinities. The old thermal/toxin attribute traits were re-kinded passive.
-  - **Bleed-wounds replace `bloodletting`** — item-level `bleedWound` (0–1 chance) marks a landed open
-    wound `Injury.noSelfClot`: it never advances clot stages (skipped by `rollWoundClotting`,
-    `clotRemaining` stays 1) and bleeds at full rate until DRESSED. The retired transient condition's
-    users (claws/talons/fangs/feeding weapons + deep-cutting blades) were repointed.
+  - **Bloodletting = a non-clotting wound, not a condition** (renamed 2026-07-08 from `bleedWound`,
+    which misleadingly implied "wounds that bleed" — most cut/pierce wounds already do). Item-level
+    `bloodletting` (0–1 chance) marks a landed open wound `Injury.bloodletting`: it never advances clot
+    stages (skipped by `rollWoundClotting`, `clotRemaining` stays 1) and bleeds at full rate until
+    DRESSED — a real injury, not a timed pill. Ordinary wounds are UNTOUCHED (they clot as before); only
+    the flagged minority don't. The retired `bloodletting` *condition*'s users (claws/talons/fangs/
+    feeding weapons + deep-cutting blades) were repointed to the weapon field. The info-only `bleeding`
+    pill (empty modifiers — never a gamey stat hit) already lists the seeping wounds and now flags which
+    are bloodletting ("won't clot, needs dressing").
+  - **Shock split into `pain_shock` + `hypovolemia`** (2026-07-08) — the old unified `shock` conflated
+    "in agony" and "bled white" into one confusing pill. `applyShock` now drives two reflected
+    meter-conditions independently: `pain_shock` from pain past onset (dulled by painkillers/drink) and
+    `hypovolemia` from blood lost past onset (unaffected by numbing — it's emptiness). Each carries HALF
+    the old shock stat debuff (`newMult = (1+old)/2`); when both fire they stack (× in
+    `conditionStatMultipliers`) back to ≈ the old crisis, now legible as two distinct causes. Signature
+    unchanged, so both the pawn and mob tick callers are untouched; non-lethal (collapse/death still runs
+    off consciousness, not these).
   - **Breath weapons are reach procs** — natural weapons may carry `reach` (dragonfire reach 3 =
     spear-like ranged strike; `meleeReach`/`attackerProfile` are reach-aware) + `knockback`, deal FIRE
     (a real burn wound) and proc the `burning` DoT. TODO: upgrade reach-3 to a true AoE cone.
