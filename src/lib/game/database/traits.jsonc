@@ -39,7 +39,7 @@
 //   workQuality; fire/cold/poison/disease/mental/lightning/shadow/wetnessResistance + healRate; the three
 //   physical *_resistance keys; nightVision. "selfCondition" links a capability trait to its permanent
 //   condition PILL (which carries grantsNaturalWeapon/grantsNaturalArmor/hostParts). "bodyMods" is the
-//   bodyMod payload; "wounds" the wound payload; "blocksSlots"/"onHitEffect"/"weaponBonus"/"subCapabilities".
+//   bodyMod payload; "wounds" the wound payload; "blocksSlots"/"onHitCondition"/"weaponBonus"/"subCapabilities".
 [
     // ══ RACIAL · MUNDANE — the physiology majority (small quirks, many negative) ═══
     // — small positives / trade-offs (pure core-stat → generic names) —
@@ -571,7 +571,8 @@
         "name"         : "Scaled Hide",
         "description"  : "Overlapping scales blunt cutting and piercing blows.",
         "flavorLine"   : "overlapping scales sheathe them like a coat of living mail",
-        "selfCondition": "scaled",
+        "naturalArmor": 12,
+        "carryPenalty": 0.06,
         "effects"      : {}
     },
     {
@@ -583,7 +584,8 @@
         "name"         : "Iron Skin",
         "description"  : "Metallic skin that sets hard as armor plate, a walking suit of plate, and rarer for it.",
         "flavorLine"   : "their skin sets hard as weathered stone, turning aside blows that would lay low softer folk",
-        "selfCondition": "iron_skinned",
+        "naturalArmor": 18,
+        "carryPenalty": 0.15,
         "effects"      : {}
     },
     {
@@ -596,9 +598,10 @@
         "name"         : "Rending Claws",
         "description"  : "Curved claws for hands, devastating unarmed, but useless at a workbench.",
         "flavorLine"   : "in place of fingers they bear long, hooked claws that open flesh like cloth",
-        "selfCondition": "clawed",
+        "naturalWeapons": ["rending-claws"],
         "blocksSlots"  : ["mainHand", "gloves"],
-        "effects"      : { "workSpeed": {"crafting": 0.75, "leatherworking": 0.8, "construction": 0.85} }
+        // dexterityPenalty folds the retired `clawed` condition's DEX ×0.95 (clumsy claw-hands).
+        "effects"      : { "dexterityPenalty": 1, "workSpeed": {"crafting": 0.75, "leatherworking": 0.8, "construction": 0.85} }
     },
     {
         "id"           : "gore-horns",
@@ -610,7 +613,7 @@
         "name"         : "Goring Horns",
         "description"  : "Heavy horns that punch through and knock foes flat, but nothing fits over the crown.",
         "flavorLine"   : "a heavy crown of horn sweeps back from their brow",
-        "selfCondition": "horned",
+        "naturalWeapons": ["goring-horns"],
         "blocksSlots"  : ["headOuter", "headBase"],
         "effects"      : {}
     },
@@ -624,8 +627,8 @@
         "name"         : "Venom Glands",
         "description"  : "Toxins lace every strike, even a held blade carries the poison.",
         "flavorLine"   : "their touch carries a slow, patient poison",
-        "selfCondition": "venomous",
-        "onHitEffect"  : {"condition": "envenomed", "chance": 0.35, "durationHours": 2, "resist": "poison_resistance"},
+        "naturalWeapons": ["serpent-fangs"],
+        "onHitCondition"  : {"condition": "envenomed", "chance": 0.35, "durationHours": 2, "resist": "poison_resistance"},
         "effects"      : {"poisonResistance": 0.3}
     },
     {
@@ -638,7 +641,8 @@
         "name": "Thick Fur",
         "description": "A heavy pelt, natural armor and cold immunity, but stifling in heat, with no room for a mid layer.",
         "flavorLine": "a deep, shaggy pelt sheds the killing cold and turns a glancing blow",
-        "selfCondition": "furred",
+        "naturalArmor": 8,
+        "carryPenalty": 0.08,
         "blocksSlots": ["bodyMid"],
         "effects": {"coldResistance": 0.3, "fireResistance": -0.15}
     },
@@ -649,7 +653,7 @@
         "kind"         : "passive",
         "name"         : "Flame Touched",
         "description"  : "Smouldering skin, blows land alight, and neither fire nor frost bites deep.",
-        "flavorLine"   : "warmth pours off their skin even in the deepest frost",        "onHitEffect"  : {"condition": "burning", "chance": 0.3, "durationHours": 1, "resist": "fire_resistance"},
+        "flavorLine"   : "warmth pours off their skin even in the deepest frost",        "onHitCondition"  : {"condition": "burning", "chance": 0.3, "durationHours": 1, "resist": "fire_resistance"},
         "effects"      : {"fireResistance": 0.3, "coldResistance": 0.15}
     },
     {
@@ -777,7 +781,8 @@
                 "kind"         : "naturalGear",
                 "name"         : "Dragon Scales",
                 "description"  : "Armored scales impervious to flame.",
-                "selfCondition": "dragon_scaled",
+                "naturalArmor": 20,
+                "carryPenalty": 0.12,
                 "effects"      : {"fireResistance": 0.5}
             },
             {
@@ -786,7 +791,7 @@
                 "kind"         : "naturalGear",
                 "name"         : "Dragon Claws",
                 "description"  : "Talons that shear through armor.",
-                "selfCondition": "dragon_clawed",
+                "naturalWeapons": ["dragon-claws"],
                 "effects"      : {}
             },
             {
@@ -819,7 +824,7 @@
                 "kind"         : "naturalGear",
                 "name"         : "Fire Breath",
                 "description"  : "A gout of dragonfire that sears and sets alight.",
-                "selfCondition": "fire_breathing",
+                "naturalWeapons": ["flame-breath"],
                 "effects"      : {}
             }
         ]
@@ -840,7 +845,7 @@
                 "kind"         : "naturalGear",
                 "name"         : "Bloodsucking Fangs",
                 "description"  : "Feeding fangs that open the vein and drink.",
-                "selfCondition": "fanged",
+                "naturalWeapons": ["bloodsucking-fangs"],
                 "effects"      : {}
             },
             {
@@ -2573,7 +2578,7 @@
         "name"         : "Budding Claws",
         "description"  : "Short hardened claw-nubs, a scraping unarmed strike, the seed of a claw line.",
         "flavorLine"   : "their fingertips end in hard little hooks",
-        "selfCondition": "blunt_clawed",
+        "naturalWeapons": ["blunt-claws"],
         "evolvesTo"    : "rending-claws",
         "effects"      : {}
     },
@@ -2586,9 +2591,10 @@
         "name": "Ripping Talons",
         "description": "Great hooked talons in place of hands, devastating unarmed, hopeless at a bench, and the wounds they leave will not close unaided.",
         "flavorLine": "their hands are a raptor's killing tools",
-        "selfCondition": "taloned",
+        "naturalWeapons": ["ripping-talons"],
         "blocksSlots": ["mainHand", "gloves"],
-        "effects": { "workSpeed": {"crafting": 0.7, "leatherworking": 0.75, "construction": 0.8} }
+        // dexterityPenalty folds the retired `taloned` condition's DEX ×0.92 (killing tools, not hands).
+        "effects": { "dexterityPenalty": 1, "workSpeed": {"crafting": 0.7, "leatherworking": 0.75, "construction": 0.8} }
     },
     {
         "id"           : "jagged-teeth",
@@ -2599,7 +2605,7 @@
         "name"         : "Jagged Teeth",
         "description"  : "A mouth of jagged, uneven teeth, a real bite in a fight.",
         "flavorLine"   : "their smile is a fence of broken points",
-        "selfCondition": "jag_toothed",
+        "naturalWeapons": ["bite"],
         "evolvesTo"    : "goring-fangs",
         "effects"      : {}
     },
@@ -2612,7 +2618,7 @@
         "name"         : "Goring Fangs",
         "description"  : "Long driving fangs, a deep, punching bite.",
         "flavorLine"   : "long fangs show when they speak in anger",
-        "selfCondition": "fanged_goring",
+        "naturalWeapons": ["goring-fangs"],
         "evolvesTo"    : "sabre-fangs",
         "effects"      : {}
     },
@@ -2625,7 +2631,7 @@
         "name"         : "Sabre Fangs",
         "description"  : "Immense sabre teeth, a bite that opens wounds no clot will close.",
         "flavorLine"   : "twin sabre teeth reach past their chin",
-        "selfCondition": "sabre_fanged",
+        "naturalWeapons": ["sabre-fangs"],
         "effects"      : {}
     },
     {
@@ -2637,7 +2643,7 @@
         "name"         : "Nub Horns",
         "description"  : "Short bony horn-nubs at the brow, a driving headbutt.",
         "flavorLine"   : "hard nubs of horn sit above their brow",
-        "selfCondition": "nub_horned",
+        "naturalWeapons": ["headbutt"],
         "evolvesTo"    : "gore-horns",
         "effects"      : {}
     },
@@ -2650,7 +2656,7 @@
         "name": "Great Horns",
         "description": "A massive sweeping crown of horn, a goring charge that hurls foes flat. Nothing fits over it.",
         "flavorLine": "a crown of horn sweeps back the length of their skull",
-        "selfCondition": "great_horned",
+        "naturalWeapons": ["great-horns"],
         "blocksSlots": ["headOuter", "headBase"],
         "effects": {}
     },
@@ -2663,7 +2669,7 @@
         "name"         : "Small Tusks",
         "description"  : "A pair of short tusks jutting from the jaw, a boar's worry-and-gore.",
         "flavorLine"   : "small tusks lift their lip at the corners",
-        "selfCondition": "small_tusked",
+        "naturalWeapons": ["boar_tusk"],
         "evolvesTo"    : "tusks",
         "effects"      : {}
     },
@@ -2676,7 +2682,7 @@
         "name"         : "Tusks",
         "description"  : "Heavy curved tusks, a deep goring strike.",
         "flavorLine"   : "heavy tusks curve up past their nose",
-        "selfCondition": "tusked",
+        "naturalWeapons": ["tusk"],
         "evolvesTo"    : "great-tusks",
         "effects"      : {}
     },
@@ -2689,7 +2695,7 @@
         "name"         : "Great Tusks",
         "description"  : "Immense curved tusks that punch deep and toss the struck aside.",
         "flavorLine"   : "tusks like a mammoth's calves frame their face",
-        "selfCondition": "great_tusked",
+        "naturalWeapons": ["great-tusks"],
         "effects"      : {}
     },
     {
@@ -2701,9 +2707,9 @@
         "name"         : "Weak Venom",
         "description"  : "Small venom sacs behind the teeth, a bite that sometimes sickens.",
         "flavorLine"   : "their bite leaves a numb, spreading ache",
-        "selfCondition": "mild_venomous",
+        "naturalWeapons": ["serpent-fangs"],
         "evolvesTo"    : "venomous",
-        "onHitEffect"  : {
+        "onHitCondition"  : {
             "condition"    : "envenomed",
             "chance"       : 0.2,
             "durationHours": 1.5,
@@ -2720,8 +2726,8 @@
         "name": "Deathly Venom",
         "description": "Glands running with a killing venom, few shrug off the bite, and even a held blade carries it.",
         "flavorLine": "green-black stains follow the lines of their teeth",
-        "selfCondition": "deathly_venomous",
-        "onHitEffect": {"condition": "envenomed", "chance": 0.6, "durationHours": 3, "resist": "poison_resistance"},
+        "naturalWeapons": ["deathly-fangs"],
+        "onHitCondition": {"condition": "envenomed", "chance": 0.6, "durationHours": 3, "resist": "poison_resistance"},
         "effects": {"poisonResistance": 0.5}
     },
     {
@@ -2733,7 +2739,7 @@
         "name": "Ember Breath",
         "description": "A smouldering heat in the throat, a short spat gout of embers that sears and can catch cloth alight.",
         "flavorLine": "their breath shimmers like air over a forge",
-        "selfCondition": "ember_breathing",
+        "naturalWeapons": ["ember-breath"],
         "evolvesTo": "searing-breath",
         "effects": {"fireResistance": 0.15}
     },
@@ -2746,7 +2752,7 @@
         "name": "Searing Breath",
         "description": "A true gout of flame spat a spear-length out, burns deep, knocks the target back, and sets them alight.",
         "flavorLine": "a furnace-glow rises in their throat before they strike",
-        "selfCondition": "fire_breathing",
+        "naturalWeapons": ["flame-breath"],
         "evolvesTo": "dragonfire-breath",
         "effects": {"fireResistance": 0.3}
     },
@@ -2759,7 +2765,7 @@
         "name": "Dragonfire",
         "description": "A roaring lance of dragonfire striking three tiles out like a spear, a true burn, a hurled target, a lingering blaze. (TODO: a real AoE cone later.)",
         "flavorLine": "when they open their jaws the light of a kiln pours out",
-        "selfCondition": "dragonfire_breathing",
+        "naturalWeapons": ["dragonfire"],
         "effects": {"fireResistance": 0.5}
     },
     {
@@ -2771,7 +2777,7 @@
         "name"         : "Raking Talons",
         "description"  : "Curved raptor talons on the feet, a raking, slashing kick.",
         "flavorLine"   : "their toes end in curved raptor hooks",
-        "selfCondition": "raking_taloned",
+        "naturalWeapons": ["talon"],
         "evolvesTo"    : "hooked-talons",
         "blocksSlots"  : ["boots"],
         "effects"      : {}
@@ -2785,7 +2791,7 @@
         "name"         : "Hooked Talons",
         "description"  : "Long hooked talons that seize and shear, a raptor's killing stroke.",
         "flavorLine"   : "walking, they click like a hawk on slate",
-        "selfCondition": "hook_taloned",
+        "naturalWeapons": ["hooked-talons"],
         "evolvesTo"    : "raptor-talons",
         "blocksSlots"  : ["boots"],
         "effects"      : {}
@@ -2799,7 +2805,7 @@
         "name"         : "Raptor Talons",
         "description"  : "Immense sickle talons that disembowel, the rents they leave will not close unaided.",
         "flavorLine"   : "each foot carries a sickle the length of a hand",
-        "selfCondition": "raptor_taloned",
+        "naturalWeapons": ["raptor-talons"],
         "blocksSlots"  : ["boots"],
         "effects"      : {}
     },
@@ -2812,7 +2818,7 @@
         "name"         : "Pecking Beak",
         "description"  : "A hard, horn-cased mouth, a jabbing peck of a bite.",
         "flavorLine"   : "their mouth has set into a hard, bird-like case",
-        "selfCondition": "pecking_beaked",
+        "naturalWeapons": ["pecking-beak"],
         "evolvesTo"    : "tearing-beak",
         "effects"      : {}
     },
@@ -2825,7 +2831,7 @@
         "name"         : "Tearing Beak",
         "description"  : "A heavy hooked beak that tears rather than pecks.",
         "flavorLine"   : "a raptor's hook has replaced their mouth",
-        "selfCondition": "tearing_beaked",
+        "naturalWeapons": ["tearing-beak"],
         "evolvesTo"    : "rending-beak",
         "effects"      : {}
     },
@@ -2838,7 +2844,7 @@
         "name"         : "Rending Beak",
         "description"  : "A great shearing beak that strips flesh from bone.",
         "flavorLine"   : "their beak could shear a sapling",
-        "selfCondition": "rending_beaked",
+        "naturalWeapons": ["rending-beak"],
         "effects"      : {}
     },
     // ── §3c · Armor coverings (resistance rides the covering, never an abstract number) ──
@@ -2851,7 +2857,8 @@
         "name"         : "Thick Hide",
         "description"  : "A dense, calloused hide, a light natural armor under anything worn.",
         "flavorLine"   : "their hide takes a switch-stroke without a mark",
-        "selfCondition": "thick_hided",
+        "naturalArmor": 6,
+        "carryPenalty": 0.03,
         "evolvesTo"    : "scaled-hide",
         "effects"      : {}
     },
@@ -2864,7 +2871,8 @@
         "name"         : "Downy Coat",
         "description"  : "A soft insulating under-fur, a whisper of armor and real warmth.",
         "flavorLine"   : "a fine pale down covers them to the wrists",
-        "selfCondition": "downy_coated",
+        "naturalArmor": 3,
+        "carryPenalty": 0.02,
         "evolvesTo"    : "thick-fur",
         "effects"      : {"coldResistance": 0.15}
     },
@@ -2877,7 +2885,8 @@
         "name": "Winter Mane",
         "description": "A deep shaggy winter pelt, heavy natural armor and real cold immunity, stifling in any heat, no room for a mid layer.",
         "flavorLine": "they wade the deep snow bare-armed and unbothered",
-        "selfCondition": "winter_maned",
+        "naturalArmor": 12,
+        "carryPenalty": 0.1,
         "blocksSlots": ["bodyMid"],
         "effects": {"coldResistance": 0.45, "fireResistance": -0.2}
     },
@@ -2890,7 +2899,8 @@
         "name"         : "Chitin Plates",
         "description"  : "Hard chitin plates over the shoulders and back, a first shell.",
         "flavorLine"   : "plates of dark shell ridge their shoulders",
-        "selfCondition": "chitin_plated",
+        "naturalArmor": 8,
+        "carryPenalty": 0.05,
         "evolvesTo"    : "carapace",
         "effects"      : {}
     },
@@ -2903,7 +2913,8 @@
         "name"         : "Carapace",
         "description"  : "A jointed carapace cases the torso, serious natural armor, worn always.",
         "flavorLine"   : "a jointed shell cases them from neck to hip",
-        "selfCondition": "carapaced",
+        "naturalArmor": 14,
+        "carryPenalty": 0.1,
         "evolvesTo"    : "ironshell",
         "effects"      : {}
     },
@@ -2916,7 +2927,8 @@
         "name"         : "Ironshell",
         "description"  : "A shell dense as wrought iron, armor that rivals plate, and nearly as heavy to live in.",
         "flavorLine"   : "blades ring off them as off a boiler",
-        "selfCondition": "ironshelled",
+        "naturalArmor": 20,
+        "carryPenalty": 0.18,
         "effects"      : {}
     },
     {
@@ -2928,7 +2940,8 @@
         "name"         : "Plumed Coat",
         "description"  : "A full coat of stiff feathers, light natural armor and fine insulation.",
         "flavorLine"   : "stiff banded plumage coats their arms and back",
-        "selfCondition": "plumed",
+        "naturalArmor": 4,
+        "carryPenalty": 0.03,
         "evolvesTo"    : "storm-plumage",
         "effects"      : {"coldResistance": 0.3}
     },
@@ -2941,7 +2954,8 @@
         "name"         : "Storm Plumage",
         "description"  : "Dense oiled storm-feathers that shed rain and cold and turn a glancing blow.",
         "flavorLine"   : "rain beads and rolls off them like off a gull's back",
-        "selfCondition": "storm_plumed",
+        "naturalArmor": 7,
+        "carryPenalty": 0.05,
         "effects"      : {"coldResistance": 0.4, "wetnessResistance": 0.3}
     },
     // ── §3e · Utility natural gear — slot-cost apparatus, host-gated, no defense. A grafted wing
@@ -3051,7 +3065,7 @@
         "name"         : "Burrowing Claws",
         "description"  : "Broad spade-like digging claws, born to move earth, cramped around a crafted tool.",
         "flavorLine"   : "their hands are made spades, nails like trowel-blades",
-        "selfCondition": "digging_clawed",
+        "naturalWeapons": ["blunt-claws"],
         "blocksSlots"  : ["gloves"],
         "effects"      : { "workSpeed": {"digging": 1.4, "mining": 1.2} }
     },
@@ -3852,7 +3866,8 @@
                 "stage"        : 1,
                 "name"         : "Pebbled Skin",
                 "description"  : "Skin studded with mineral nodules, the first setting of a stone hide.",
-                "selfCondition": "pebbled_skinned",
+                "naturalArmor": 10,
+                "carryPenalty": 0.08,
                 "evolvesTo"    : "granite-hide",
                 "effects"      : {}
             },
@@ -3863,7 +3878,8 @@
                 "stage"        : 2,
                 "name"         : "Granite Hide",
                 "description"  : "A hide set hard as quarried granite, heavy living armor.",
-                "selfCondition": "granite_hided",
+                "naturalArmor": 18,
+                "carryPenalty": 0.14,
                 "evolvesTo"    : "living-rock",
                 "effects"      : {}
             },
@@ -3874,7 +3890,8 @@
                 "stage"        : 3,
                 "name"         : "Living Rock",
                 "description"  : "Flesh gone to living stone, armor beyond forged plate, mineral-slow.",
-                "selfCondition": "living_rock",
+                "naturalArmor": 26,
+                "carryPenalty": 0.28,
                 "effects"      : {}
             },
             {
@@ -3940,7 +3957,7 @@
                 "kind"         : "naturalGear",
                 "name"         : "Piercing Screech",
                 "description"  : "A shriek that scrambles the senses of whatever it strikes.",
-                "selfCondition": "screech_throated",
+                "naturalWeapons": ["screech"],
                 "effects"      : {}
             },
             {
@@ -4034,7 +4051,8 @@
                 "stage"        : 3,
                 "name"         : "Ironshell",
                 "description"  : "A shell dense as wrought iron, armor that rivals plate.",
-                "selfCondition": "ironshelled",
+                "naturalArmor": 20,
+                "carryPenalty": 0.18,
                 "effects"      : {}
             },
             {
@@ -4043,9 +4061,10 @@
                 "kind"         : "naturalGear",
                 "name"         : "Crushing Claws",
                 "description"  : "Massive shell-plated pincers, a crushing grip, useless with a crafted tool.",
-                "selfCondition": "crusher_clawed",
+                "naturalWeapons": ["crusher-claw"],
                 "blocksSlots"  : ["mainHand", "gloves"],
-                "effects"      : { "workSpeed": {"crafting": 0.75, "leatherworking": 0.8} }
+                // dexterityPenalty folds the retired `crusher_clawed` condition's DEX ×0.92 (pincers).
+                "effects"      : { "dexterityPenalty": 1, "workSpeed": {"crafting": 0.75, "leatherworking": 0.8} }
             },
             {
                 "id"         : "ponderous-plating",
@@ -4091,8 +4110,8 @@
                 "kind"         : "naturalGear",
                 "name"         : "Venom Bite",
                 "description"  : "Venom glands behind the teeth, a patient poisoned bite.",
-                "selfCondition": "venomous",
-                "onHitEffect"  : {
+                "naturalWeapons": ["serpent-fangs"],
+                "onHitCondition"  : {
                     "condition"    : "envenomed",
                     "chance"       : 0.35,
                     "durationHours": 2,
@@ -4106,7 +4125,7 @@
                 "kind"         : "naturalGear",
                 "name"         : "Webbing",
                 "description"  : "Spinnerets at the waist, a flung lash of silk that snares a foe in place.",
-                "selfCondition": "spinnerets_organ",
+                "naturalWeapons": ["web-shot"],
                 "blocksSlots"  : ["belt"],
                 "effects"      : {}
             },
@@ -4143,7 +4162,7 @@
                 "kind"         : "naturalGear",
                 "name"         : "Shock Touch",
                 "description"  : "A crackling discharge rides every unarmed strike, scorches and staggers.",
-                "selfCondition": "shock_touched",
+                "naturalWeapons": ["shock-strike"],
                 "effects"      : {}
             },
             {
@@ -4206,7 +4225,7 @@
                 "kind"         : "naturalGear",
                 "name"         : "Chilling Touch",
                 "description"  : "A grave-cold grip, unarmed blows frost-burn where they land.",
-                "selfCondition": "chill_touched",
+                "naturalWeapons": ["chill-strike"],
                 "effects"      : {}
             },
             {
@@ -4281,7 +4300,7 @@
                 "kind"         : "naturalGear",
                 "name"         : "Ground-Shaker",
                 "description"  : "A colossal body-slam that flattens whatever it lands on.",
-                "selfCondition": "ground_shaking",
+                "naturalWeapons": ["slam"],
                 "effects"      : {}
             },
             {
@@ -4329,7 +4348,8 @@
                 "kind"         : "naturalGear",
                 "name"         : "Thorned Skin",
                 "description"  : "Bark-like skin studded with woody thorns, light armor that punishes a grappler.",
-                "selfCondition": "thorn_skinned",
+                "naturalArmor": 6,
+                "carryPenalty": 0.04,
                 "effects"      : {}
             },
             {

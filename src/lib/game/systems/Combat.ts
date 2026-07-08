@@ -411,32 +411,23 @@ function applyMeleeGrip(p: AttackProfile, grip: MeleeGrip): AttackProfile {
  *  `blocksSlots`). ADR-023: the weapon ids live on the trait's `selfCondition` DEF
  *  (`grantsNaturalWeapon`) — the body condition IS the source, so the health pill and the swing can't
  *  drift. Empty racial set → the plain fists/kick default. */
-/** True if the pawn still has at least one of `partIds` present and not missing (host-part survival for
- *  a trait natural weapon). Empty/absent host list ⇒ unbound, always available (back-compat). */
-function pawnHasHostPart(attacker: Pawn, partIds: string[] | undefined): boolean {
-  if (!partIds || partIds.length === 0) return true;
-  for (const limb of attacker.limbs ?? []) {
-    if (limb.isMissing) continue;
-    for (const part of limb.parts ?? []) {
-      if (!part.isMissing && partIds.includes(part.id)) return true;
-    }
-  }
-  return false;
-}
-
 function pawnNaturalWeaponIds(attacker: Pawn): string[] {
+  // ADR-029: a pawn's natural-weapon ids live on its TRAITS (`naturalWeapons`, the mirror of a
+  // creature's def list). Anatomy-gating happens downstream in attackerProfile via the SAME
+  // `enabledNaturalWeapons`/`BOUND_NATURAL_WEAPONS` filter creatures use — every natural weapon id is
+  // listed on its host part in limbmap (jaw→bite, head→goring-horns…), so losing the part loses the
+  // weapon with no separate hostParts bookkeeping.
   const extra: string[] = [];
   for (const t of attacker.traits ?? []) {
-    if (!t.selfCondition) continue;
-    const cond = getTransientConditionDef(t.selfCondition);
-    if (!cond?.grantsNaturalWeapon) continue;
-    // ADR-028: a trait natural weapon is bound to its host limbs (claws→hands, horns→head, fangs→jaw)
-    // just like a creature's — lose every host part and the weapon goes with it. Unbound (no hostParts)
-    // grants stay always-available. Skipped for un-modelled fixtures (empty limb tree).
-    if (hasModelledAnatomy(attacker) && !pawnHasHostPart(attacker, cond.hostParts)) continue;
-    extra.push(...cond.grantsNaturalWeapon);
+    for (const id of t.naturalWeapons ?? []) if (!extra.includes(id)) extra.push(id);
   }
   return extra.length > 0 ? [...extra, ...PAWN_NATURAL_WEAPON_IDS] : PAWN_NATURAL_WEAPON_IDS;
+}
+
+/** A weapon item's bloodletting proc chance (ADR-029 `onHitWound` list; 0 when absent). */
+function bloodlettingChance(item: Item | undefined): number | undefined {
+  const c = item?.onHitWound?.find((w) => w.wound === 'bloodletting')?.chance;
+  return c && c > 0 ? c : undefined;
 }
 
 /** Summed racial `weaponBonus.damage` — a multiplier bonus that applies ONLY while a weapon is
@@ -472,7 +463,7 @@ function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
       // §I: a Famed blade explodes those fields ×2–5 on top of its tier.
       const wp = scaleWeaponQuality(item.weaponProperties, mh.quality, mh.famedStatMult);
       const p = profileFromWeapon(str, dex, wp, item.name ?? 'weapon');
-      p.bloodletting = item.bloodletting; // §3b: a deep-cutting blade leaves unclottable wounds
+      p.bloodletting = bloodlettingChance(item); // §3b: a deep-cutting blade leaves unclottable wounds
       // ADR-023: a racial `weaponBonus` (Giant's Grip) rides the wielded weapon only.
       const wb = weaponBonusDamage(attacker);
       if (wb) p.baseDamage *= 1 + wb;
@@ -489,7 +480,8 @@ function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
   const candidates: WeaponCandidate[] = [];
   for (const id of ids) {
     const it = itemService.getItemById(id);
-    if (it?.weaponProperties) candidates.push({ id, wp: it.weaponProperties, bloodletting: it.bloodletting });
+    if (it?.weaponProperties)
+      candidates.push({ id, wp: it.weaponProperties, bloodletting: bloodlettingChance(it) });
   }
   // Part-gating: a natural weapon is usable only while a surviving part enables it (a jaw to bite, a paw
   // to claw…). Unbound weapons stay always-available. Skipped for un-modelled fixtures (empty parts).
@@ -610,9 +602,9 @@ function partArmorReduction(
   return clamp((rawDamage - dmg) / rawDamage, 0, 1);
 }
 
-/** Natural-armour DAMAGE POINTS at a part: a creature's hide (`naturalArmor`) or a pawn's racial traits,
- *  the scalar distributed by the part's `share`, PLUS any explicit per-part `armorMods` (ADR-029).
- *  (`grantsNaturalArmor` on a trait's selfCondition is read transitionally until the data migrates.) */
+/** Natural-armour DAMAGE POINTS at a part: a creature's hide (`naturalArmor`) or a pawn's racial traits
+ *  (ADR-029 `naturalArmor` sugar), the scalar distributed by the part's `share`, PLUS any explicit
+ *  per-part `armorMods` (carapace back-heavy, soft belly). */
 function naturalArmorPoints(defender: Pawn | Mob, share: number, partId: BodyPartId): number {
   let scalar = 0;
   let mods = 0;
@@ -623,7 +615,6 @@ function naturalArmorPoints(defender: Pawn | Mob, share: number, partId: BodyPar
       if (armorModHits(defender, m.target, partId)) mods += m.defense;
   } else {
     for (const t of defender.traits ?? []) {
-      if (t.selfCondition) scalar += getTransientConditionDef(t.selfCondition)?.grantsNaturalArmor ?? 0;
       scalar += t.naturalArmor ?? 0;
       for (const m of t.armorMods ?? [])
         if (armorModHits(defender, m.target, partId)) mods += m.defense;
@@ -636,6 +627,49 @@ function naturalArmorPoints(defender: Pawn | Mob, share: number, partId: BodyPar
 function armorModHits(defender: Pawn | Mob, target: string, partId: BodyPartId): boolean {
   if (target === 'all' || target === partId) return true;
   return limbOfPart(defender, partId)?.id === target;
+}
+
+/** Total armour DAMAGE POINTS protecting a part (worn covering pieces + natural hide) — the "how plated
+ *  is this spot" scan behind ADR-029 aimed targeting. Mirrors partArmorReduction's layer collection
+ *  without running the subtraction. */
+function partArmorPoints(defender: Pawn | Mob, partId: BodyPartId): number {
+  const def = PART_DEF_MAP[partId];
+  if (!def) return 0;
+  let pts = 0;
+  if ('equipment' in defender && defender.equipment) {
+    for (const slot of ARMOUR_SLOTS) {
+      const inst = (defender.equipment as Record<string, ItemInstance | undefined>)[slot];
+      if (!inst) continue;
+      const item = itemService.getItemById(inst.itemId);
+      if (!item?.armorProperties || !coversPart(item, slot, partId)) continue;
+      pts += scaleArmorQuality(item.armorProperties, inst.quality, inst.famedStatMult).defense;
+    }
+  }
+  return pts + naturalArmorPoints(defender, def.armor ?? DEFAULT_ARMOR_SHARE, partId);
+}
+
+/** ADR-029 skill-biased hit location (the CDDA crit-zone loop): roll the struck part as usual, but at a
+ *  DEX-driven precision chance the attacker rolls two extra candidate locations and takes the LEAST
+ *  ARMOURED — a skilled fighter works the gaps (eye/throat/belly) instead of clanging off the plate.
+ *  dex 10 ≈ 6% proc, dex 18 ≈ 30%, capped at 45%; condition-crippled DEX aims worse automatically. */
+function aimedBodyPart(attacker: Pawn | Mob, defender: Pawn | Mob): BodyPartId {
+  const plan = planOf(defender);
+  const first = rollBodyPartOf(defender.limbs, plan);
+  const sm = conditionStatMultipliers(attacker);
+  const dex = (attacker.stats?.dexterity ?? 10) * sm.dexterity;
+  const precision = clamp((dex - 8) * 0.03, 0, 0.45);
+  if (precision <= 0 || rng.random() >= precision) return first;
+  let best = first;
+  let bestArmor = partArmorPoints(defender, first);
+  for (let i = 0; i < 2; i++) {
+    const cand = rollBodyPartOf(defender.limbs, plan);
+    const a = partArmorPoints(defender, cand);
+    if (a < bestArmor) {
+      best = cand;
+      bestArmor = a;
+    }
+  }
+  return best;
 }
 
 function currentPartHealth(defender: Pawn | Mob, partId: BodyPartId, defMaxHp: number): number {
@@ -756,7 +790,10 @@ class CombatServiceImpl implements CombatService {
     // Roll a hit location from the DEFENDER's own LIVE body tree (a wolf rolls paws/tail, not fingers;
     // §3d a pawn's GRAFTED wings/tail are hittable; an already-severed part can't be struck again).
     // Falls back to the static plan table for entities without a modelled tree (test fixtures).
-    const partId = rollBodyPartOf(defender.limbs, planOf(defender));
+    // ADR-029 skill-biased location: under the SUBTRACTIVE model an armoured part can fully negate a
+    // weak hit, so a skilled fighter must FIND THE GAP — at a DEX-driven precision chance, the attacker
+    // rolls extra candidate locations and takes the least-armoured one (eye/throat/belly over plate).
+    const partId = aimedBodyPart(attacker, defender);
     const partDef = PART_DEF_MAP[partId]!;
     // The defender's part may be bodyScale-scaled; severity/fracture use its ACTUAL maxHp.
     const partMaxHp =
@@ -1367,9 +1404,9 @@ class CombatServiceImpl implements CombatService {
 
   /**
    * Apply every on-hit condition a landed melee blow can inflict: the held/natural weapon's own
-   * `onHitEffect` (rides the swung weapon) PLUS the attacker's racial trait `onHitEffect`s (ADR-023:
-   * Venom Glands / Flame-Touched "ride your steel", procing on ANY hit regardless of weapon). Each is
-   * rolled independently through the same machinery. No-op when nothing procs or the target is down.
+   * `onHitCondition` (rides the swung weapon) PLUS the attacker's racial trait `onHitCondition`s
+   * (ADR-023: Venom Glands / Flame-Touched "ride your steel", procing on ANY hit regardless of weapon).
+   * Each is rolled independently through the same machinery. No-op when nothing procs / target is down.
    */
   private applyOnHitEffect(
     state: GameState,
@@ -1380,10 +1417,10 @@ class CombatServiceImpl implements CombatService {
     pos: { x: number; y: number }
   ): GameState {
     const effects: TraitOnHitEffect[] = [];
-    const weaponEff = weaponId ? itemService.getItemById(weaponId)?.onHitEffect : undefined;
+    const weaponEff = weaponId ? itemService.getItemById(weaponId)?.onHitCondition : undefined;
     if (weaponEff) effects.push(weaponEff);
     if ('traits' in attacker) {
-      for (const t of attacker.traits ?? []) if (t.onHitEffect) effects.push(t.onHitEffect);
+      for (const t of attacker.traits ?? []) if (t.onHitCondition) effects.push(t.onHitCondition);
     }
     let s = state;
     for (const eff of effects) s = this.applyOneOnHitEffect(s, eff, targetId, isMob, pos, attacker);
@@ -1428,7 +1465,7 @@ class CombatServiceImpl implements CombatService {
       timers = { ...timers };
       timers[eff.condition] = Math.max(
         timers[eff.condition] ?? 0,
-        ticksFromGameHours(eff.durationHours)
+        ticksFromGameHours(eff.durationHours ?? 1)
       );
       if (!transientConditions.includes(eff.condition))
         transientConditions = [...transientConditions, eff.condition];

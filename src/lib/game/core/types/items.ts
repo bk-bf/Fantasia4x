@@ -2,6 +2,7 @@
 // via the barrel.
 
 import type { DamageType } from './health';
+import type { OnHitCondition, OnHitWound } from './race';
 
 /**
  * PRODUCTION-CHAIN-II §Q discrete craft-quality tier (R8). 0=Crude, 1=Standard (unmarked baseline),
@@ -428,28 +429,20 @@ export interface Item {
   };
 
   /**
-   * TRAIT-LIBRARY-EXPANSION §3b — BLOODLETTING chance (0–1): on a landed hit that opens a bleeding
-   * wound, this is the chance the wound is marked unclottable (`Injury.noSelfClot`) — it bleeds at
-   * full rate until a caretaker DRESSES it. Raking claws, feeding fangs, and deep-cutting blades.
-   * Replaces the retired `bloodletting` transient condition with a physical injury.
+   * ADR-029: on-hit WOUND procs — flags stamped on the physical wound a landed hit opens (the INJURY
+   * layer, parallel to `onHitCondition`'s condition layer). `{wound:'bloodletting', chance:0.3}` marks
+   * the open wound unclottable (`Injury.bloodletting`) — it bleeds at full rate until a caretaker
+   * DRESSES it. Raking claws, feeding fangs, deep-cutting blades. Replaces the bare `bloodletting`.
    */
-  bloodletting?: number;
+  onHitWound?: OnHitWound[];
 
   /**
-   * On-hit status effect (venom/screech/tongue/blood-drain natural weapons). When a swing with this
+   * ADR-029: on-hit CONDITION proc (venom/screech/tongue/blood-drain weapons). When a swing with this
    * weapon LANDS, roll `chance` (reduced by the defender's `resist` stat) to inflict `condition` as a
-   * timed transient (via conditionTimers, like knockdown) for `durationHours`. `resist` names a
-   * 0-baseline `*_resistance` stat in stats.jsonc (poison/piercing/mental/blunt) whose value is the
-   * fraction by which the trigger chance is cut. `bloodDrain` (optional) also bleeds the victim's
-   * bloodVolume on a successful trigger, feeding the blood_loss condition.
+   * timed transient (via conditionTimers, like knockdown) for `durationHours`. ONE named type shared
+   * with a trait's `onHitCondition` — Combat applies both through one path.
    */
-  onHitEffect?: {
-    condition?: string; // optional (§3b): a pure feeding proc carries only bloodDrain — the roll gates the drain (+ the attacker's `feasted` buff), stamping no target condition
-    chance: number; // 0–1 base trigger chance on a landed hit
-    durationHours: number; // how long the condition lasts, in IN-GAME hours (converted to ticks on apply)
-    resist?: string; // stat id mitigating the chance (e.g. "poison_resistance")
-    bloodDrain?: number; // blood volume drained on trigger (proboscis/feeding bites)
-  };
+  onHitCondition?: OnHitCondition;
 
   /** Combat-SFX archetype (audio/manifest.ts `COMBAT_SFX`) played on each swing of this weapon or
    *  natural weapon — e.g. "slash" / "blunt" / "pierce" / "bow" / "bite" / "venom". Backend ref only;

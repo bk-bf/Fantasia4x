@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { applyTraitWounds, applyTraitBodyMods } from './Pawns';
 import { TRAIT_DATABASE } from '../core/Race';
 import { createBodyPlanLimbs } from '../systems/Combat';
-import { lethalAnatomyCause, PART_DEF_MAP } from '../core/BodyParts';
+import { lethalAnatomyCause, PART_DEF_MAP, BOUND_NATURAL_WEAPONS } from '../core/BodyParts';
 import { getTransientConditionDef } from '../core/needs';
 import { healLimbs, recomputeWound } from '../core/Wounds';
 import { itemService } from '../services/ItemService';
@@ -147,20 +147,21 @@ describe('applyTraitBodyMods (§1 bodyMod → limbmap)', () => {
   });
 });
 
-describe('natural weapons bound to limbs (§3 hostParts)', () => {
-  it('every trait natural weapon names host parts that exist in the limbmap', () => {
+describe('natural weapons bound to limbs (ADR-029 part.weapons)', () => {
+  it('every trait natural weapon id is bound to a limbmap part (the anatomy IS the host-gate)', () => {
     for (const t of TRAIT_DATABASE.flatMap((x) => [x, ...(x.subCapabilities ?? [])])) {
-      if (!t.selfCondition) continue;
-      const cond = getTransientConditionDef(t.selfCondition);
-      if (!cond?.grantsNaturalWeapon?.length) continue;
-      for (const part of cond.hostParts ?? [])
-        expect(PART_DEF_MAP[part], `${t.selfCondition} hostPart ${part} not in limbmap`).toBeTruthy();
+      for (const id of t.naturalWeapons ?? [])
+        expect(
+          BOUND_NATURAL_WEAPONS.has(id),
+          `${t.id} weapon ${id} not listed on any part.weapons`
+        ).toBe(true);
     }
   });
 
   it('claws are hosted on the hands (lose both → the weapon has no surviving host)', () => {
-    const cond = getTransientConditionDef('clawed');
-    expect(cond?.hostParts).toEqual(['leftHand', 'rightHand']);
+    // rending-claws rides the hand parts — enabledNaturalWeapons drops it when both hands are gone.
+    expect(PART_DEF_MAP['leftHand']?.weapons).toContain('rending-claws');
+    expect(PART_DEF_MAP['rightHand']?.weapons).toContain('rending-claws');
   });
 });
 

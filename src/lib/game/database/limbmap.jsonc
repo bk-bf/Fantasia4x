@@ -50,9 +50,9 @@
       // weapons + armour, and HOLDS the vital organ (brain in the head). The bone is the hidden `skeleton`
       // beneath: fracture-only, never struck directly. Tearing the FLESH apart (head/chest → limb gone) takes
       // the organ and kills; breaking the BONE alone only cripples — a bone is never instant death.
-      "head"        : {"size": 45, "bleedRatio": 0.04, "hitWeight": 13, "weapons": ["headbutt", "antler"], "armor": 0.8},
+      "head"        : {"size": 45, "bleedRatio": 0.04, "hitWeight": 13, "weapons": ["headbutt", "antler", "goring-horns", "great-horns", "flame-breath", "ember-breath", "dragonfire"], "armor": 0.8},
       "skull"       : {"size": 45, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "head"},
-      "jaw"         : {"size": 15, "bleedRatio": 0.02, "hitWeight": 2, "weapons": ["bite", "tusk", "tongue", "screech"], "armor": 0.5},
+      "jaw"         : {"size": 15, "bleedRatio": 0.02, "hitWeight": 2, "weapons": ["bite", "tusk", "tongue", "screech", "goring-fangs", "sabre-fangs", "boar_tusk", "great-tusks", "serpent-fangs", "deathly-fangs", "bloodsucking-fangs"], "armor": 0.5},
       "mandible"     : {"size": 15, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "jaw"},
       "nose"        : {"size": 5, "bleedRatio": 0.01, "hitWeight": 0.4, "armor": 0.3},
       // Facial soft-tissue features (no own skeleton — cartilage/skin over the skull, like the nose): a
@@ -72,7 +72,7 @@
       // cut/puncture/crush like any flesh, but it is NOT bone, so it never fractures. The skeleton beneath
       // it is the `ribcage` (below): heavy blows crack THAT, not the wall. (See Combat's fracture routing.)
       "chest"       : {"size": 80, "bleedRatio": 0.12, "hitWeight": 32, "weapons": ["charge", "slam"], "armor": 1},
-      "abdomen"     : {"size": 70, "bleedRatio": 0.1, "hitWeight": 24, "armor": 0.5},
+      "abdomen"     : {"size": 70, "bleedRatio": 0.1, "hitWeight": 24, "weapons": ["web-shot"], "armor": 0.5},
       // The ribcage — the thorax SKELETON. Internal (hitWeight 0 → never struck directly), `skeleton: true`
       // so it can ONLY take fractures (no cut/puncture/crush). A heavy hit to the `chest` routes its fracture
       // roll here; size matches the chest so the break threshold is unchanged. Severed with the chest.
@@ -93,7 +93,7 @@
         // engine binds one bone per flesh segment (skeletonPartOf). Splitting them — so one can break while
         // the other holds — needs that 1:1 routing relaxed; applies to the quadruped/avian analogues too.
         "leftUlna"  : {"size": 35, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftForearm"},
-        "leftHand"         : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "weapons": ["fists", "claw"], "armor": 0.4},
+        "leftHand"         : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "weapons": ["fists", "claw", "rending-claws", "dragon-claws", "blunt-claws", "ripping-talons", "crusher-claw", "shock-strike", "chill-strike"], "armor": 0.4},
         "leftMetacarpus"     : {"size": 30, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftHand"},
         "leftThumb"        : {"size": 5, "bleedRatio": 0.005, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftHand", "armor": 0.5},
         "leftIndexFinger"  : {"size": 3, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftHand", "armor": 0.2},
@@ -106,7 +106,7 @@
         "rightHumerus": {"size": 45, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightUpperArm"},
         "rightForearm"     : {"size": 35, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "armor": 0.5},
         "rightUlna" : {"size": 35, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightForearm"},
-        "rightHand"        : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "weapons": ["fists", "claw"], "armor": 0.4},
+        "rightHand"        : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "weapons": ["fists", "claw", "rending-claws", "dragon-claws", "blunt-claws", "ripping-talons", "crusher-claw", "shock-strike", "chill-strike"], "armor": 0.4},
         "rightMetacarpus"    : {"size": 30, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightHand"},
         "rightThumb"       : {"size": 5, "bleedRatio": 0.005, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightHand", "armor": 0.5},
         "rightIndexFinger" : {"size": 3, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightHand", "armor": 0.2},
@@ -119,7 +119,7 @@
         "leftFemur" : {"size": 60, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftUpperLeg"},
         "leftLowerLeg"     : {"size": 50, "bleedRatio": 0.06, "hitWeight": 4.5, "isPaired": true, "armor": 0.5},
         "leftTibia" : {"size": 50, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftLowerLeg"},
-        "leftFoot"         : {"size": 30, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "weapons": ["kick"], "armor": 0.4},
+        "leftFoot"         : {"size": 30, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "weapons": ["kick", "talon", "hooked-talons", "raptor-talons"], "armor": 0.4},
         "leftMetatarsus"     : {"size": 30, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftFoot"},
         "leftBigToe"       : {"size": 3, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftFoot", "armor": 0.2},
         "leftSecondToe"    : {"size": 2, "bleedRatio": 0.002, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftFoot", "armor": 0.2},
@@ -132,7 +132,7 @@
         "rightFemur": {"size": 60, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightUpperLeg"},
         "rightLowerLeg"    : {"size": 50, "bleedRatio": 0.06, "hitWeight": 4.5, "isPaired": true, "armor": 0.5},
         "rightTibia": {"size": 50, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightLowerLeg"},
-        "rightFoot"        : {"size": 30, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "weapons": ["kick"], "armor": 0.4},
+        "rightFoot"        : {"size": 30, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "weapons": ["kick", "talon", "hooked-talons", "raptor-talons"], "armor": 0.4},
         "rightMetatarsus"    : {"size": 30, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightFoot"},
         "rightBigToe"      : {"size": 3, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightFoot", "armor": 0.2},
         "rightSecondToe"   : {"size": 2, "bleedRatio": 0.002, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightFoot", "armor": 0.2},
@@ -246,7 +246,7 @@
     "avian": {
       "// note": "Birds/bats — the WINGS are flesh outer (leftWing/leftWingtip) over the wing bones (humerus + carpometacarpus); the LEGS are flesh over femur/tibiotarsus/tarsometatarsus (bird-specific bones).",
       "parts": {
-        "beak"          : {"size": 18, "bleedRatio": 0.02, "hitWeight": 3, "weapons": ["peck", "bite", "proboscis"], "armor": 0.6},
+        "beak"          : {"size": 18, "bleedRatio": 0.02, "hitWeight": 3, "weapons": ["peck", "bite", "proboscis", "pecking-beak", "tearing-beak", "rending-beak"], "armor": 0.6},
         "premaxilla"      : {"size": 18, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "beak"},
         "leftWing"      : {"size": 35, "bleedRatio": 0.04, "hitWeight": 3, "isPaired": true, "armor": 0.4},
         "leftWingHumerus"  : {"size": 35, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftWing"},
@@ -260,13 +260,13 @@
         "leftThighFemur" : {"size": 35, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftThigh"},
         "leftShank"     : {"size": 28, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "armor": 0.5},
         "leftTibiotarsus" : {"size": 28, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftShank"},
-        "leftTalon"     : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "weapons": ["claw", "kick"], "armor": 0.4},
+        "leftTalon"     : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "weapons": ["claw", "kick", "talon", "hooked-talons", "raptor-talons"], "armor": 0.4},
         "leftTarsometatarsus" : {"size": 18, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftTalon"},
         "rightThigh"    : {"size": 35, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "armor": 0.6},
         "rightThighFemur": {"size": 35, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightThigh"},
         "rightShank"    : {"size": 28, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "armor": 0.5},
         "rightTibiotarsus": {"size": 28, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightShank"},
-        "rightTalon"    : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "weapons": ["claw", "kick"], "armor": 0.4},
+        "rightTalon"    : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "weapons": ["claw", "kick", "talon", "hooked-talons", "raptor-talons"], "armor": 0.4},
         "rightTarsometatarsus": {"size": 18, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightTalon"},
         "tailFeathers"  : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1, "armor": 0.5}
       },

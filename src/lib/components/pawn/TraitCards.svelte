@@ -118,6 +118,9 @@
     bodyBase: 'Base',
     boots: 'Feet',
     gorget: 'Neck',
+    pauldrons: 'Shoulders',
+    bracers: 'Arms',
+    greaves: 'Legs',
     belt: 'Belt',
     back: 'Back',
     amulet: 'Amulet',
@@ -284,8 +287,8 @@
           tip: `+${m.weightKg} kg body weight — loads the body and slows the pawn.`
         });
     }
-    if (trait.onHitEffect) {
-      const oh = trait.onHitEffect;
+    if (trait.onHitCondition) {
+      const oh = trait.onHitCondition;
       const oc = oh.condition ? getTransientConditionDef(oh.condition) : undefined;
       const inflict = oh.condition
         ? `inflict ${(oc?.name ?? oh.condition.replace(/_/g, ' ')).toLowerCase()}`

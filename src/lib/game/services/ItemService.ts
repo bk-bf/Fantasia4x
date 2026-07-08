@@ -23,7 +23,6 @@ import {
 } from '../core/GameState';
 import { recipeService } from './RecipeService';
 import { buildingService } from './BuildingService';
-import { getTransientConditionDef } from '../core/needs';
 import {
   thermalAt,
   computeThermalAt,
@@ -715,15 +714,12 @@ export class ItemServiceImpl implements ItemService {
       });
     }
 
-    // TRAIT-SYSTEM-V2 §3 (ADR-028 rev): natural armor (iron skin, scaled hide…) is worn permanently, so
+    // ADR-029 (was ADR-028 rev): natural armor (iron skin, scaled hide…) is worn permanently, so
     // it eats a FRACTION of the pawn's carry capacity — never adds absolute kg (which could exceed a
     // weak pawn's whole budget and encumber it while bare). Summed penalties are clamped so capacity
     // always stays a positive share of the base (a pawn is never immobilised by its own hide).
     let carryPenalty = 0;
-    for (const t of pawn.traits ?? []) {
-      if (!t.selfCondition) continue;
-      carryPenalty += getTransientConditionDef(t.selfCondition)?.carryPenalty ?? 0;
-    }
+    for (const t of pawn.traits ?? []) carryPenalty += t.carryPenalty ?? 0;
     const carryMult = Math.max(0.4, 1 - carryPenalty);
     if (carryMult < 1) {
       weight.gear -= weight.capacity * (1 - carryMult); // shown as a negative "natural armour" source

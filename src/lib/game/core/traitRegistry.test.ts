@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { TRAIT_DATABASE } from './Race';
 import { getTransientConditionDef } from './needs';
-import { PART_DEF_MAP } from './BodyParts';
+import { PART_DEF_MAP, BOUND_NATURAL_WEAPONS } from './BodyParts';
 import raritiesData from '../database/rarities.jsonc';
 import type { Trait } from './types';
 
@@ -63,20 +63,27 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
           ).toBe(true);
       }
       if (t.kind === 'naturalGear') {
-        expect(t.selfCondition, `${t.id} naturalGear needs selfCondition`).toBeTruthy();
-        const cond = getTransientConditionDef(t.selfCondition!);
-        // §3e: UTILITY gear grants no weapon/armor — it's a host-gated benefit (wings → moveSpeed
-        // while a wing survives). Valid iff the condition binds host parts AND carries modifiers.
+        // ADR-029: gear lives on the TRAIT — a natural weapon list, an armour magnitude (scalar or
+        // per-part armorMods), or a host-gated UTILITY selfCondition (wings → moveSpeed while a wing
+        // survives). The old condition indirection (grantsNaturalWeapon/grantsNaturalArmor) is retired.
+        const utilityCond = t.selfCondition ? getTransientConditionDef(t.selfCondition) : undefined;
         const utility =
-          !!cond?.hostParts?.length && Object.keys(cond?.modifiers ?? {}).length > 0;
-        const grants = !!(cond?.grantsNaturalWeapon?.length || cond?.grantsNaturalArmor) || utility;
-        expect(grants, `${t.id} → ${t.selfCondition} grants nothing`).toBe(true);
-        // §3 natural armor IS gear: it eats a carry-capacity fraction (0<p<1) and has a worn-gear mode.
-        if (cond?.grantsNaturalArmor) {
-          const p = cond.carryPenalty ?? 0;
-          expect(p, `${t.selfCondition} armor needs a carryPenalty`).toBeGreaterThan(0);
-          expect(p, `${t.selfCondition} carryPenalty must stay < 1`).toBeLessThan(1);
-          expect(['replace', 'stack'], `${t.selfCondition} armor needs mode`).toContain(cond.mode);
+          !!utilityCond?.hostParts?.length && Object.keys(utilityCond?.modifiers ?? {}).length > 0;
+        const grants =
+          !!t.naturalWeapons?.length || !!t.naturalArmor || !!t.armorMods?.length || utility;
+        expect(grants, `${t.id} naturalGear grants nothing`).toBe(true);
+        // §3 natural armor IS gear: it eats a carry-capacity fraction (0<p<1).
+        if (t.naturalArmor || t.armorMods?.length) {
+          const p = t.carryPenalty ?? 0;
+          expect(p, `${t.id} armor needs a carryPenalty`).toBeGreaterThan(0);
+          expect(p, `${t.id} carryPenalty must stay < 1`).toBeLessThan(1);
+        }
+        // ADR-029: every natural weapon id must be a real item AND be bound to a limbmap part
+        // (part.weapons is the source + host-gate — an unbound id would be un-hosted/ungated).
+        for (const id of t.naturalWeapons ?? []) {
+          expect(BOUND_NATURAL_WEAPONS.has(id), `${t.id} weapon ${id} not bound to any part`).toBe(
+            true
+          );
         }
       }
       if (t.kind === 'wound') {
@@ -99,7 +106,10 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
         const capable =
           !!t.selfCondition ||
           !!t.triggeredCondition || // a meter-triggered condition (berserker rage) is a capability
-          !!t.onHitEffect ||
+          !!t.onHitCondition ||
+          !!t.naturalWeapons?.length || // ADR-029: a natural weapon is a capability
+          !!t.naturalArmor ||
+          !!t.armorMods?.length ||
           !!t.weaponBonus ||
           !!t.aura || // §6a: an aura is a capability
           (t.grafts?.length ?? 0) > 0 || // §3d: growing a real limb is a capability

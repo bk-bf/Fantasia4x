@@ -11,9 +11,10 @@ export interface EntityStats {
   constitution: number;
 }
 
-/** On-hit condition proc carried by a trait (`onHitEffect`) or a natural-weapon item.
- *  Same shape as an item's `onHitEffect` so Combat can apply either through one path. */
-export interface TraitOnHitEffect {
+/** ADR-029: on-hit CONDITION proc — the ONE shape shared by a trait's `onHitCondition` (procs on any
+ *  landed hit, "rides your steel") and a weapon item's `onHitCondition` (rides that weapon's swings).
+ *  Combat collects both into one list and applies them through one path. */
+export interface OnHitCondition {
   /** Transient condition id inflicted on a landed hit. Optional (TRAIT-LIBRARY-EXPANSION §3b): a
    *  feeding weapon may carry only a `bloodDrain` — the roll still gates the drain (and the attacker's
    *  `feasted` buff), it just stamps no condition on the target (the physical bleed-wound is the mark). */
@@ -21,11 +22,22 @@ export interface TraitOnHitEffect {
   /** 0–1 base trigger chance, cut by the target's `resist` stat. */
   chance: number;
   /** Duration in in-game hours (converted to ticks on apply). */
-  durationHours: number;
+  durationHours?: number;
   /** `*_resistance` stat id that reduces the trigger chance (and blood drain). */
   resist?: string;
   /** Optional bloodVolume drain on trigger (feeding / bleed weapons). */
   bloodDrain?: number;
+}
+/** @deprecated ADR-029 rename — use {@link OnHitCondition}. */
+export type TraitOnHitEffect = OnHitCondition;
+
+/** ADR-029: on-hit WOUND proc — flags the physical wound a landed hit opened (parallel to
+ *  `OnHitCondition`, but writes to the INJURY layer, not conditionTimers). `wound` names an
+ *  `Injury` flag: `bloodletting` (never self-clots until dressed) / `infected` (festers). */
+export interface OnHitWound {
+  wound: 'bloodletting' | 'infected';
+  /** 0–1 chance per landed OPEN wound. */
+  chance: number;
 }
 
 export interface Trait {
@@ -123,11 +135,18 @@ export interface Trait {
     minBuild?: number;
     maxBuild?: number;
   };
-  /** Permanent (or environment-gated) condition id kept on the pawn while this trait is present — its
-   *  legible pill in the health panel AND the hub for its combat capability: the linked condition def
-   *  carries `grantsNaturalWeapon`/`grantsNaturalArmor` (single source of truth, no trait-side copy).
-   *  `photosynthesis`/`light_sensitive` are environment-gated (pushed only when active). */
+  /** Trigger-gated condition id kept on the pawn while this trait is present AND its gate holds —
+   *  `activateWhen`-gated (photosynthesis/hydro_vigor) or host-part-gated (wings' gliding_membrane).
+   *  ADR-029: natural weapons/armour no longer route through here — they live on the trait itself
+   *  (`naturalWeapons` / `naturalArmor` / `armorMods`), so a condition always has a dynamic trigger. */
   selfCondition?: string;
+  /** ADR-029: natural-weapon item ids this body swings (mirror of `CreatureDefinition.naturalWeapons`).
+   *  Anatomy-gated for free: each id must be listed in a surviving part's `weapons` (limbmap) —
+   *  lose the jaw and the bite goes with it. Rolled per swing alongside the fists/kick defaults. */
+  naturalWeapons?: string[];
+  /** ADR-029: fraction (0–1) of carry capacity a permanent natural covering consumes (was the armour
+   *  condition's `carryPenalty`). */
+  carryPenalty?: number;
   /** A meter-triggered timed condition (NOT always-on): when the bearer's `meter` (e.g. `pain`) reaches
    *  `atOrAbove`, stamp `condition` for `durationHours` in-game hours — a rising-edge one-shot that won't
    *  re-fire while the condition (or its `onExpiry` aftermath) is still active. Drives berserker rage:
@@ -136,7 +155,7 @@ export interface Trait {
   /** Equipment slots the body forbids — greyed in the gear tab, blocked at equip. */
   blocksSlots?: EquipmentSlot[];
   /** Procs on ANY landed melee hit regardless of held weapon ("rides your steel"). */
-  onHitEffect?: TraitOnHitEffect;
+  onHitCondition?: OnHitCondition;
   /** Applies only while a weapon is equipped (Giant's Grip, Duelist's Blood). */
   weaponBonus?: { damage?: number };
   /** legendary only: sub-capabilities, each rolled independently PER PAWN at pawn-gen so two

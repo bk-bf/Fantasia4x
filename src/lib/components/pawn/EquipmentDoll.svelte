@@ -32,6 +32,9 @@
     { slot: 'offHand', label: 'Off Hand' },
     { slot: 'bodyMid', label: 'Mid' },
     { slot: 'bodyBase', label: 'Base' },
+    { slot: 'pauldrons', label: 'Shoulders' },
+    { slot: 'bracers', label: 'Arms' },
+    { slot: 'greaves', label: 'Legs' },
     { slot: 'gloves', label: 'Hands' },
     { slot: 'belt', label: 'Belt' },
     { slot: 'boots', label: 'Feet' },
@@ -186,7 +189,8 @@
       'headOuter headBase  gorget'
       'mainHand  bodyOuter offHand'
       'mainHand  bodyMid   offHand'
-      'gloves    bodyBase  belt'
+      'pauldrons bodyBase  bracers'
+      'gloves    greaves   belt'
       'boots     back      amulet'
       'ring      ring2     .';
     gap: 4px;

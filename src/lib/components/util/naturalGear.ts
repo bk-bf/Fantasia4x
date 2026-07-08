@@ -1,9 +1,8 @@
-// naturalGear.ts — single source for turning a trait's §3 natural weapon/armor (resolved via its
-// `selfCondition` grants) into a real `Item`, so the SAME `ItemStatTooltip` the gear tab uses on hover
-// can render it. Used by EquipmentDoll (the gear doll) AND TraitCards (the trait card), so the natural
-// weapon/armor breakdown is built ONCE, never re-derived per screen.
+// naturalGear.ts — single source for turning a trait's §3 natural weapon/armor (ADR-029: read straight
+// off the trait — `naturalWeapons` / `naturalArmor` / `armorMods`) into a real `Item`, so the SAME
+// `ItemStatTooltip` the gear tab uses on hover can render it. Used by EquipmentDoll (the gear doll)
+// AND TraitCards (the trait card), so the breakdown is built ONCE, never re-derived per screen.
 import type { Item, Trait } from '$lib/game/core/types';
-import { getTransientConditionDef } from '$lib/game/core/needs';
 import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
 
 /** The natural-gear-only extras rendered in `ItemStatTooltip`'s NATURAL block — facts that aren't part
@@ -41,20 +40,18 @@ const RES_TO_ARMOR: Record<string, string> = {
   blunt_resistance: 'crushResistance'
 };
 
-/** The natural weapon/armor a trait grants (via its `selfCondition`), as a tooltip-ready `Item`, or null
- *  if the trait grants no natural gear. Weapons win when a trait grants both (rare). */
+/** The natural weapon/armor a trait grants (ADR-029: `naturalWeapons` / `naturalArmor` / `armorMods`
+ *  on the trait itself), as a tooltip-ready `Item`, or null if the trait grants no natural gear.
+ *  Weapons win when a trait grants both (rare). */
 export function naturalGearForTrait(t: Trait): NaturalGear | null {
-  const cond = t.selfCondition ? getTransientConditionDef(t.selfCondition) : undefined;
-  if (!cond) return null;
-
   const natural: NaturalGearMeta = {
     innate: true,
     stage: t.stage,
     evolves: !!t.evolvesTo,
-    carryPenalty: cond.carryPenalty
+    carryPenalty: t.carryPenalty
   };
 
-  const weaponDefs = (cond.grantsNaturalWeapon ?? [])
+  const weaponDefs = (t.naturalWeapons ?? [])
     .map((id) => gameCoordinator.getItemById(id))
     .filter((d): d is Item => !!d);
   if (weaponDefs.length) {
@@ -67,14 +64,16 @@ export function naturalGearForTrait(t: Trait): NaturalGear | null {
     };
   }
 
-  const armor = cond.grantsNaturalArmor ?? 0;
+  // Armour magnitude: the uniform scalar, else the strongest explicit per-part mod (carapace back).
+  const armor = t.naturalArmor ?? Math.max(0, ...(t.armorMods ?? []).map((m) => m.defense));
   if (!armor) return null;
   const ap: Record<string, unknown> = {
     defense: armor,
     armorType: 'natural',
     // The slot the covering occupies (e.g. "bodyMid") — surfaces as the tooltip's "Slot" row.
     slot: t.blocksSlots?.[0],
-    armorLayer: cond.mode === 'replace' ? 'replaces the slot' : 'stacks with worn gear'
+    // ADR-029 layered subtractive model: natural hide is always the INNERMOST layer under worn gear.
+    armorLayer: 'innermost natural layer'
   };
   // Fold the covering's resistances into the armour def so the ONE tooltip shows them.
   for (const [k, v] of Object.entries(t.effects ?? {})) {
@@ -83,12 +82,12 @@ export function naturalGearForTrait(t: Trait): NaturalGear | null {
   }
   return {
     name: t.name,
-    sub: `+${armor} def${cond.carryPenalty ? ` · −${Math.round(cond.carryPenalty * 100)}% carry` : ''}`,
+    sub: `+${armor} def${t.carryPenalty ? ` · −${Math.round(t.carryPenalty * 100)}% carry` : ''}`,
     item: {
       id: `natural-armor:${t.id}`,
-      name: cond.name,
+      name: t.name,
       type: 'armor',
-      description: cond.description,
+      description: t.description,
       armorProperties: ap
     } as unknown as Item,
     kind: 'armor',

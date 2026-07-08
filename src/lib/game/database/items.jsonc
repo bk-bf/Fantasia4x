@@ -3347,13 +3347,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "Bare knuckles. Frequent, cheap, weak.",
     "color"            : "#C8A064",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"     : 3,
       "attackSpeed": 1,
@@ -3372,13 +3368,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "A booted heel. Rarer than a jab, hits harder, staggers, tires faster.",
     "color"            : "#C8A064",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"     : 5,
       "attackSpeed": 1,
@@ -3398,13 +3390,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "Teeth. Crit-prone piercing attack.",
     "color"            : "#D8D0C0",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"          : 11,
       "attackSpeed"     : 1,
@@ -3424,13 +3412,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "Raking claws. Fast cutting swipes that open wounds.",
     "color"            : "#D8D0C0",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"          : 10,
       "attackSpeed"     : 1,
@@ -3450,13 +3434,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "A heavy body blow. Big blunt hit, strong knockdown.",
     "color"            : "#A05030",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"          : 13,
       "attackSpeed"     : 1,
@@ -3476,13 +3456,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "Goring tusks. Deep piercing wounds.",
     "color"            : "#C8A080",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"          : 13,
       "attackSpeed"     : 1,
@@ -3502,13 +3478,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "A full-body charge. Heavy blunt impact, brutal knockdown.",
     "color"            : "#C8A080",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"          : 12,
       "attackSpeed"     : 1,
@@ -3528,13 +3500,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "Short, curved boar tusks. Goring slashes, far less reach than a great beast's tusks.",
     "color"            : "#C8A080",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"          : 9,
       "attackSpeed"     : 1,
@@ -3554,13 +3522,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "A low, barrelling charge. Solid blunt impact, but nothing like a bull's.",
     "color"            : "#C8A080",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"          : 8,
       "attackSpeed"     : 1,
@@ -3580,13 +3544,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "Sharp antler points. Piercing gore.",
     "color"            : "#B09878",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"          : 11,
       "attackSpeed"     : 1,
@@ -3605,13 +3565,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "A skull-first ram. Blunt and staggering.",
     "color"            : "#D0D0C0",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"     : 6,
       "attackSpeed": 1,
@@ -3630,13 +3586,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "A sharp beak jab. Tiny but quick.",
     "color"            : "#E8C880",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"     : 4,
       "attackSpeed": 1,
@@ -3654,13 +3606,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "A chilling incorporeal blow that ignores flesh and rattles the bone.",
     "color"            : "#A0C0E0",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"     : 11,
       "attackSpeed": 1,
@@ -3680,13 +3628,9 @@
     "type": "weapon",
     "category": "natural_weapon",
     "hidden": true,
-    "maxDurability": 100,
-    "deteriorationRate": 0,
     "description": "Fangs that sink venom with the wound. Crit-prone piercing strike with a chance to envenom (vipers, spiders).",
     "color": "#7CB342",
     "amount": 0,
-    "weightKg": 0,
-    "volumeL": 0,
     "weaponProperties": {
       "damage"          : 9,
       "attackSpeed"     : 1,
@@ -3697,7 +3641,7 @@
       "armorPenetration": 0.15,
       "critMod"         : 0.08
     },
-    "onHitEffect": {"condition": "envenomed", "chance": 0.5, "durationHours": 2.5, "resist": "poison_resistance"}
+    "onHitCondition": {"condition": "envenomed", "chance": 0.5, "durationHours": 2.5, "resist": "poison_resistance"}
   },
   {
     "id": "proboscis",
@@ -3707,13 +3651,9 @@
     "type": "weapon",
     "category": "natural_weapon",
     "hidden": true,
-    "maxDurability": 100,
-    "deteriorationRate": 0,
     "description": "A blood-drinking feeding stab. Little impact, but the wound won't clot, it bleeds and saps blood directly (stirges).",
     "color": "#C62828",
     "amount": 0,
-    "weightKg": 0,
-    "volumeL": 0,
     "weaponProperties": {
       "damage"     : 4,
       "attackSpeed": 1,
@@ -3723,8 +3663,8 @@
       "staminaCost": 2,
       "critMod"    : 0.03
     },
-    "bloodletting": 0.6,
-    "onHitEffect": {
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.6} ],
+    "onHitCondition": {
       "chance"       : 0.6,
       "durationHours": 2,
       "resist"       : "piercing_resistance",
@@ -3739,13 +3679,9 @@
     "type": "weapon",
     "category": "natural_weapon",
     "hidden": true,
-    "maxDurability": 100,
-    "deteriorationRate": 0,
     "description": "An ear-splitting cry. Barely a blow, but it scrambles the senses of those who hear it (harpies).",
     "color": "#AB47BC",
     "amount": 0,
-    "weightKg": 0,
-    "volumeL": 0,
     "weaponProperties": {
       "damage"     : 1,
       "attackSpeed": 1,
@@ -3754,7 +3690,7 @@
       "weight"     : 1,
       "staminaCost": 2
     },
-    "onHitEffect": {"condition": "disoriented", "chance": 0.5, "durationHours": 0.5, "resist": "mental_resistance"}
+    "onHitCondition": {"condition": "disoriented", "chance": 0.5, "durationHours": 0.5, "resist": "mental_resistance"}
   },
   {
     "id": "tongue",
@@ -3764,13 +3700,9 @@
     "type": "weapon",
     "category": "natural_weapon",
     "hidden": true,
-    "maxDurability": 100,
-    "deteriorationRate": 0,
     "description": "A long, sticky tongue that lashes out and holds, pins the target in place for a beat (bullywugs).",
     "color": "#8D6E63",
     "amount": 0,
-    "weightKg": 0,
-    "volumeL": 0,
     "weaponProperties": {
       "damage"     : 2,
       "attackSpeed": 1,
@@ -3779,7 +3711,7 @@
       "weight"     : 1,
       "staminaCost": 3
     },
-    "onHitEffect": {"condition": "ensnared", "chance": 0.45, "durationHours": 0.25, "resist": "blunt_resistance"}
+    "onHitCondition": {"condition": "ensnared", "chance": 0.45, "durationHours": 0.25, "resist": "blunt_resistance"}
   },
   // ── Racial natural weapons (ADR-023) ──────────────────────────────────────
   // Body weapons granted to PAWNS by supernatural/legendary racial traits (RacialTrait.naturalWeapons),
@@ -3793,13 +3725,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "Long curved claws that rake flesh open. A devastating unarmed strike that leaves bleeding wounds.",
     "color"            : "#C8A064",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"          : 12,
       "attackSpeed"     : 1,
@@ -3810,7 +3738,7 @@
       "armorPenetration": 0.2,
       "critMod"         : 0.12
     },
-    "bloodletting": 0.25
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.25} ]
   },
   {
     "id"               : "goring-horns",
@@ -3820,13 +3748,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "A lowered head and a driving charge. Heavy horns that punch through and knock the target off their feet.",
     "color"            : "#D8D0C0",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"          : 13,
       "attackSpeed"     : 1,
@@ -3837,7 +3761,7 @@
       "armorPenetration": 0.15,
       "critMod"         : 0.06
     },
-    "onHitEffect": {"condition": "knockdown", "chance": 0.2, "durationHours": 0.3, "resist": "blunt_resistance"}
+    "onHitCondition": {"condition": "knockdown", "chance": 0.2, "durationHours": 0.3, "resist": "blunt_resistance"}
   },
   {
     "id"               : "serpent-fangs",
@@ -3847,13 +3771,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "Hollow fangs that sink venom with the bite. A crit-prone piercing strike with a strong chance to envenom.",
     "color"            : "#7CB342",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"          : 8,
       "attackSpeed"     : 1,
@@ -3864,7 +3784,7 @@
       "armorPenetration": 0.15,
       "critMod"         : 0.08
     },
-    "onHitEffect": {"condition": "envenomed", "chance": 0.5, "durationHours": 2.5, "resist": "poison_resistance"}
+    "onHitCondition": {"condition": "envenomed", "chance": 0.5, "durationHours": 2.5, "resist": "poison_resistance"}
   },
   {
     "id"               : "dragon-claws",
@@ -3874,13 +3794,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "Great draconic talons that shear through armor and flesh alike, leaving deep bleeding rents.",
     "color"            : "#B87333",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"          : 16,
       "attackSpeed"     : 1,
@@ -3891,7 +3807,7 @@
       "armorPenetration": 0.3,
       "critMod"         : 0.14
     },
-    "bloodletting": 0.3
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.3} ]
   },
   {
     "id"               : "bloodsucking-fangs",
@@ -3901,13 +3817,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "A feeding bite that opens the vein and drinks. Little impact, but the wound won't clot and blood is drawn straight off.",
     "color"            : "#C62828",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"          : 7,
       "attackSpeed"     : 1,
@@ -3918,8 +3830,8 @@
       "armorPenetration": 0.1,
       "critMod"         : 0.05
     },
-    "bloodletting": 0.5,
-    "onHitEffect": {"chance": 0.5, "durationHours": 2, "resist": "piercing_resistance", "bloodDrain": 6}
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.5} ],
+    "onHitCondition": {"chance": 0.5, "durationHours": 2, "resist": "piercing_resistance", "bloodDrain": 6}
   },
   {
     "id"               : "flame-breath",
@@ -3929,13 +3841,9 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "maxDurability"    : 100,
-    "deteriorationRate": 0,
     "description"      : "A gout of dragonfire spat at a single foe, sears on contact and sets them alight. (Pass 1: single-target; the true cone is deferred.)",
     "color"            : "#FF5722",
     "amount"           : 0,
-    "weightKg"         : 0,
-    "volumeL"          : 0,
     "weaponProperties" : {
       "damage"          : 14,
       "attackSpeed"     : 1,
@@ -3948,7 +3856,7 @@
       "armorPenetration": 0.2,
       "critMod"         : 0.05
     },
-    "onHitEffect": {"condition": "burning", "chance": 0.7, "durationHours": 1.5, "resist": "fire_resistance"}
+    "onHitCondition": {"condition": "burning", "chance": 0.7, "durationHours": 1.5, "resist": "fire_resistance"}
   },
   // ── TRAIT-LIBRARY-EXPANSION §3b staged natural weapons ─────────────────────
   // New rungs of the staged weapon lines (claws/fangs/horns/tusks/venom/breath/talons/beak) plus the
@@ -3961,7 +3869,6 @@
   {
     "id": "blunt-claws", "audio": "slash", "charSpans": [ {"sheet": "items", "id": 0} ],
     "name": "Budding Claws", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "Short, hardened claw-nubs, a scraping unarmed strike, the first stage of a claw line.",
     "color": "#C8A064", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 7, "attackSpeed": 1, "range": 1, "damageType": "cutting", "weight": 5, "staminaCost": 2, "armorPenetration": 0.1, "critMod": 0.08}
@@ -3969,16 +3876,14 @@
   {
     "id": "ripping-talons", "audio": "slash", "charSpans": [ {"sheet": "items", "id": 0} ],
     "name": "Ripping Talons", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "Great hooked talons that open flesh like cloth and leave wounds that will not close on their own.",
     "color": "#C8A064", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 16, "attackSpeed": 1, "range": 1, "damageType": "cutting", "weight": 5, "staminaCost": 3, "armorPenetration": 0.25, "critMod": 0.14},
-    "bloodletting": 0.3
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.3} ]
   },
   {
     "id": "goring-fangs", "audio": "bite", "charSpans": [ {"sheet": "items", "id": 1} ],
     "name": "Goring Fangs", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "Long driving fangs, a deep, punching bite.",
     "color": "#D8D0C0", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 13, "attackSpeed": 1, "range": 1, "damageType": "piercing", "weight": 3, "staminaCost": 3, "armorPenetration": 0.2, "critMod": 0.1}
@@ -3986,61 +3891,54 @@
   {
     "id": "sabre-fangs", "audio": "bite", "charSpans": [ {"sheet": "items", "id": 1} ],
     "name": "Sabre Fangs", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "Immense sabre teeth that punch through and tear free, the wound bleeds until it is bound.",
     "color": "#E8E0D0", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 16, "attackSpeed": 1, "range": 1, "damageType": "piercing", "weight": 3, "staminaCost": 3, "armorPenetration": 0.25, "critMod": 0.14},
-    "bloodletting": 0.25
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.25} ]
   },
   {
     "id": "great-horns", "audio": "pierce", "charSpans": [ {"sheet": "items", "id": 200} ],
     "name": "Great Horns", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "A massive sweeping crown of horn, a goring charge that hurls the target off their feet.",
     "color": "#D8D0C0", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 16, "attackSpeed": 1, "range": 1, "damageType": "piercing", "weight": 2, "staminaCost": 4, "armorPenetration": 0.2, "critMod": 0.08},
-    "onHitEffect": {"condition": "knockdown", "chance": 0.4, "durationHours": 0.3, "resist": "blunt_resistance"}
+    "onHitCondition": {"condition": "knockdown", "chance": 0.4, "durationHours": 0.3, "resist": "blunt_resistance"}
   },
   {
     "id": "great-tusks", "audio": "pierce", "charSpans": [ {"sheet": "items", "id": 200} ],
     "name": "Great Tusks", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "Heavy curved tusks that punch deep and toss the struck aside.",
     "color": "#E8E0D0", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 16, "attackSpeed": 1, "range": 1, "damageType": "piercing", "weight": 2, "staminaCost": 4, "armorPenetration": 0.25, "critMod": 0.06},
-    "onHitEffect": {"condition": "knockdown", "chance": 0.3, "durationHours": 0.3, "resist": "blunt_resistance"}
+    "onHitCondition": {"condition": "knockdown", "chance": 0.3, "durationHours": 0.3, "resist": "blunt_resistance"}
   },
   {
     "id": "deathly-fangs", "audio": "bite", "charSpans": [ {"sheet": "items", "id": 195} ],
     "name": "Deathly Fangs", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "Long hollow fangs running with a killing venom, few shrug off the bite.",
     "color": "#7CB342", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 10, "attackSpeed": 1, "range": 1, "damageType": "piercing", "weight": 3, "staminaCost": 3, "armorPenetration": 0.2, "critMod": 0.1},
-    "onHitEffect": {"condition": "envenomed", "chance": 0.6, "durationHours": 3, "resist": "poison_resistance"}
+    "onHitCondition": {"condition": "envenomed", "chance": 0.6, "durationHours": 3, "resist": "poison_resistance"}
   },
   {
     "id": "ember-breath", "audio": "pierce", "charSpans": [ {"sheet": "items", "id": 49} ],
     "name": "Ember Breath", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "A short spat gout of embers, sears a burn at arm's reach and can catch clothes alight.",
     "color": "#FF8A50", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 8, "attackSpeed": 1, "range": 1, "damageType": "fire", "weight": 2, "staminaCost": 3, "armorPenetration": 0.15, "critMod": 0.04},
-    "onHitEffect": {"condition": "burning", "chance": 0.3, "durationHours": 0.5, "resist": "fire_resistance"}
+    "onHitCondition": {"condition": "burning", "chance": 0.3, "durationHours": 0.5, "resist": "fire_resistance"}
   },
   {
     "id": "dragonfire", "audio": "pierce", "charSpans": [ {"sheet": "items", "id": 49} ],
     "name": "Dragonfire", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "A roaring lance of dragonfire that strikes three tiles out like a spear, sears a true burn, hurls the target back, and leaves them alight. (TODO: upgrade to a proper AoE cone.)",
     "color": "#FF4500", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 20, "attackSpeed": 1, "range": 1, "reach": 3, "knockback": 0.35, "damageType": "fire", "weight": 2, "staminaCost": 5, "armorPenetration": 0.3, "critMod": 0.08},
-    "onHitEffect": {"condition": "burning", "chance": 0.9, "durationHours": 1, "resist": "fire_resistance"}
+    "onHitCondition": {"condition": "burning", "chance": 0.9, "durationHours": 1, "resist": "fire_resistance"}
   },
   {
     "id": "talon", "audio": "slash", "charSpans": [ {"sheet": "items", "id": 0} ],
     "name": "Raking Talons", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "Curved raptor talons on the feet, a raking, slashing kick.",
     "color": "#C9B48A", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 9, "attackSpeed": 1, "range": 1, "damageType": "cutting", "weight": 3, "staminaCost": 3, "armorPenetration": 0.15, "critMod": 0.08}
@@ -4048,7 +3946,6 @@
   {
     "id": "hooked-talons", "audio": "slash", "charSpans": [ {"sheet": "items", "id": 0} ],
     "name": "Hooked Talons", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "Long hooked talons that seize and shear, a raptor's killing stroke.",
     "color": "#C9B48A", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 13, "attackSpeed": 1, "range": 1, "damageType": "cutting", "weight": 3, "staminaCost": 3, "armorPenetration": 0.2, "critMod": 0.12}
@@ -4056,16 +3953,14 @@
   {
     "id": "raptor-talons", "audio": "slash", "charSpans": [ {"sheet": "items", "id": 0} ],
     "name": "Raptor Talons", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "Immense sickle talons that disembowel, the rents they leave will not close unaided.",
     "color": "#C9B48A", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 16, "attackSpeed": 1, "range": 1, "damageType": "cutting", "weight": 3, "staminaCost": 4, "armorPenetration": 0.25, "critMod": 0.14},
-    "bloodletting": 0.3
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.3} ]
   },
   {
     "id": "pecking-beak", "audio": "pierce", "charSpans": [ {"sheet": "items", "id": 1} ],
     "name": "Pecking Beak", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "A hard horn-cased mouth, a jabbing peck of a bite.",
     "color": "#E0B83A", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 4, "attackSpeed": 1, "range": 1, "damageType": "piercing", "weight": 3, "staminaCost": 2, "armorPenetration": 0.1, "critMod": 0.05}
@@ -4073,7 +3968,6 @@
   {
     "id": "tearing-beak", "audio": "pierce", "charSpans": [ {"sheet": "items", "id": 1} ],
     "name": "Tearing Beak", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "A heavy hooked beak that tears rather than pecks.",
     "color": "#E0B83A", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 9, "attackSpeed": 1, "range": 1, "damageType": "piercing", "weight": 2, "staminaCost": 2, "armorPenetration": 0.15, "critMod": 0.08}
@@ -4081,7 +3975,6 @@
   {
     "id": "rending-beak", "audio": "pierce", "charSpans": [ {"sheet": "items", "id": 1} ],
     "name": "Rending Beak", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "A great shearing beak that strips flesh from bone.",
     "color": "#E0B83A", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 13, "attackSpeed": 1, "range": 1, "damageType": "piercing", "weight": 2, "staminaCost": 3, "armorPenetration": 0.2, "critMod": 0.1}
@@ -4089,25 +3982,22 @@
   {
     "id": "crusher-claw", "audio": "blunt", "charSpans": [ {"sheet": "items", "id": 0} ],
     "name": "Crushing Claw", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "A massive shell-plated pincer, a slow crushing grip that caves armor and bone alike.",
     "color": "#B5502E", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 15, "attackSpeed": 1, "range": 1, "damageType": "blunt", "bluntMod": 1.3, "weight": 4, "staminaCost": 4, "armorPenetration": 0.2, "critMod": 0.06},
-    "onHitEffect": {"condition": "knockdown", "chance": 0.25, "durationHours": 0.3, "resist": "blunt_resistance"}
+    "onHitCondition": {"condition": "knockdown", "chance": 0.25, "durationHours": 0.3, "resist": "blunt_resistance"}
   },
   {
     "id": "web-shot", "audio": "pierce", "charSpans": [ {"sheet": "items", "id": 195} ],
     "name": "Webbing", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "A flung lash of sticky silk that snares the target in place, control, not damage.",
     "color": "#D8D8D8", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 1, "attackSpeed": 1, "range": 1, "reach": 2, "damageType": "blunt", "bluntMod": 0, "weight": 2, "staminaCost": 3, "armorPenetration": 0, "critMod": 0},
-    "onHitEffect": {"condition": "ensnared", "chance": 0.5, "durationHours": 0.2, "resist": "blunt_resistance"}
+    "onHitCondition": {"condition": "ensnared", "chance": 0.5, "durationHours": 0.2, "resist": "blunt_resistance"}
   },
   {
     "id": "chill-strike", "audio": "pierce", "charSpans": [ {"sheet": "font", "id": 247} ],
     "name": "Chilling Touch", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "A grave-cold grip that frost-burns flesh where it lands.",
     "color": "#7EC8E3", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 9, "attackSpeed": 1, "range": 1, "damageType": "frost", "weight": 3, "staminaCost": 3, "armorPenetration": 0.15, "critMod": 0.08}
@@ -4115,11 +4005,10 @@
   {
     "id": "shock-strike", "audio": "pierce", "charSpans": [ {"sheet": "font", "id": 21} ],
     "name": "Shock Touch", "type": "weapon", "category": "natural_weapon", "hidden": true,
-    "maxDurability": 100, "deteriorationRate": 0,
     "description": "A crackling static discharge that scorches and staggers.",
     "color": "#E0B83A", "amount": 0, "weightKg": 0, "volumeL": 0,
     "weaponProperties": {"damage": 10, "attackSpeed": 1, "range": 1, "damageType": "lightning", "weight": 3, "staminaCost": 3, "armorPenetration": 0.2, "critMod": 0.08},
-    "onHitEffect": {"condition": "staggered", "chance": 0.4, "durationHours": 0.1, "resist": "lightning_resistance"}
+    "onHitCondition": {"condition": "staggered", "chance": 0.4, "durationHours": 0.1, "resist": "lightning_resistance"}
   },
   // ── Phase B: carry containers ─────────────────────────────────────────────
   {
@@ -4360,7 +4249,7 @@
       "staminaCost"     : 1,
       "twoHanded"       : false
     },
-    "bloodletting": 0.12
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.12} ]
   },
   {
     "id": "leaf_blade_spear",
@@ -4425,7 +4314,7 @@
       "staminaCost"     : 3,
       "twoHanded"       : false
     },
-    "bloodletting": 0.15
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.15} ]
   },
   {
     "id": "self_bow",
@@ -4515,7 +4404,7 @@
       "staminaCost"     : 2,
       "twoHanded"       : false
     },
-    "bloodletting": 0.15
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.15} ]
   },
   {
     "id": "spatha",
@@ -4548,7 +4437,7 @@
       "staminaCost"     : 3,
       "twoHanded"       : false
     },
-    "bloodletting": 0.18
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.18} ]
   },
   {
     "id": "bearded_axe",
@@ -4581,7 +4470,7 @@
       "staminaCost"     : 4,
       "twoHanded"       : false
     },
-    "bloodletting": 0.2
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.2} ]
   },
   {
     "id": "framea",
@@ -4714,7 +4603,7 @@
       "staminaCost"     : 4,
       "twoHanded"       : true
     },
-    "onHitEffect": {"condition": "concussed", "chance": 0.2, "durationHours": 0.4, "resist": "blunt_resistance"}
+    "onHitCondition": {"condition": "concussed", "chance": 0.2, "durationHours": 0.4, "resist": "blunt_resistance"}
   },
   {
     "id": "iron_greatsword",
@@ -4748,7 +4637,7 @@
       "staminaCost"     : 4,
       "twoHanded"       : true
     },
-    "bloodletting": 0.22
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.22} ]
   },
   {
     "id": "steel_longsword",
@@ -4781,7 +4670,7 @@
       "staminaCost"     : 3,
       "twoHanded"       : false
     },
-    "bloodletting": 0.18
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.18} ]
   },
   {
     "id": "steel_greatsword",
@@ -4815,7 +4704,7 @@
       "staminaCost"     : 4,
       "twoHanded"       : true
     },
-    "onHitEffect": {"condition": "hamstrung", "chance": 0.22, "durationHours": 0.5, "resist": "cutting_resistance"}
+    "onHitCondition": {"condition": "hamstrung", "chance": 0.22, "durationHours": 0.5, "resist": "cutting_resistance"}
   },
   {
     "id": "steel_pike",
@@ -4919,7 +4808,7 @@
       "staminaCost"     : 4,
       "twoHanded"       : true
     },
-    "onHitEffect": {"condition": "concussed", "chance": 0.25, "durationHours": 0.5, "resist": "blunt_resistance"}
+    "onHitCondition": {"condition": "concussed", "chance": 0.25, "durationHours": 0.5, "resist": "blunt_resistance"}
   },
   {
     "id": "steel_cleaver",
@@ -4953,7 +4842,7 @@
       "staminaCost"     : 4,
       "twoHanded"       : false
     },
-    "bloodletting": 0.22
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.22} ]
   },
   {
     "id": "steel_greatcleaver",
@@ -4987,7 +4876,7 @@
       "staminaCost"     : 6,
       "twoHanded"       : true
     },
-    "onHitEffect": {"condition": "hamstrung", "chance": 0.25, "durationHours": 0.5, "resist": "cutting_resistance"}
+    "onHitCondition": {"condition": "hamstrung", "chance": 0.25, "durationHours": 0.5, "resist": "cutting_resistance"}
   },
   {
     "id": "steel_flail",
@@ -5055,7 +4944,7 @@
       "staminaCost"     : 1,
       "twoHanded"       : false
     },
-    "bloodletting": 0.15
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.15} ]
   },
   {
     "id": "steel_stiletto",
@@ -5088,7 +4977,7 @@
       "staminaCost"     : 1,
       "twoHanded"       : false
     },
-    "bloodletting": 0.18
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.18} ]
   },
   {
     "id": "iron_estoc",
@@ -5122,7 +5011,7 @@
       "staminaCost"     : 4,
       "twoHanded"       : false
     },
-    "bloodletting": 0.2
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.2} ]
   },
   {
     "id": "steel_rapier",
@@ -5156,7 +5045,7 @@
       "staminaCost"     : 4,
       "twoHanded"       : false
     },
-    "bloodletting": 0.22
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.22} ]
   },
   {
     "id": "war_bow",
@@ -6061,6 +5950,9 @@
       "slot"           : "bodyMid",
       "equipmentSlot"  : "bodyMid",
       "armorLayer"     : "mail",
+      // ADR-029: a hauberk's skirt-and-sleeve reach — unlike a vest (slot default: chest+abdomen), the
+      // mail also covers the shoulders, upper arms and hips. This IS the mail-shirt vs vest difference.
+      "covers"         : ["chest", "abdomen", "leftShoulder", "rightShoulder", "leftUpperArm", "rightUpperArm", "leftHip", "rightHip"],
       "armorValue"     : 22,
       "fatiguePerTurn" : 0.60,
       "movementPenalty": 0.05
@@ -6170,6 +6062,273 @@
       "fatiguePerTurn" : 0.10,
       "movementPenalty": 0.0
     }
+  },
+  // ── ADR-029 limb armour (pauldrons / bracers / greaves) — one set per tech age, derived from that
+  //    age's chest piece at ~1/3 its defense. Coverage comes from the slot defaults (SLOT_COVERAGE):
+  //    pauldrons→shoulders, bracers→arms, greaves→legs. Sprite ids are PLACEHOLDERS (items/12).
+  {
+    "id": "rawhide_shoulder_pads",
+    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "name": "Rawhide Shoulder-Pads",
+    "type": "armor",
+    "category": "primitive",
+    "deteriorationRate": 0.01,
+    "description": "Stiff folds of dried hide lashed over the shoulders with cord. Crude, but blunts a falling blade.",
+    "color": "#C8A050",
+    "amount": 0,
+    "weightKg": 1.2,
+    "volumeL": 1.5,
+    "tier": 0,
+    "maxDurability": 35,
+    "durabilityLossPerCombatHit": 5,
+    "armorProperties": { "defense": 2, "armorType": "light", "slot": "pauldrons", "equipmentSlot": "pauldrons", "armorValue": 2, "fatiguePerTurn": 0.05, "movementPenalty": 0.0 }
+  },
+  {
+    "id": "rawhide_arm_wraps",
+    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "name": "Rawhide Arm-Wraps",
+    "type": "armor",
+    "category": "primitive",
+    "deteriorationRate": 0.01,
+    "description": "Strips of dried hide wound from wrist to elbow. The first thing between a forearm and a wolf's teeth.",
+    "color": "#C8A050",
+    "amount": 0,
+    "weightKg": 1.0,
+    "volumeL": 1.2,
+    "tier": 0,
+    "maxDurability": 35,
+    "durabilityLossPerCombatHit": 5,
+    "armorProperties": { "defense": 2, "armorType": "light", "slot": "bracers", "equipmentSlot": "bracers", "armorValue": 2, "fatiguePerTurn": 0.05, "movementPenalty": 0.0 }
+  },
+  {
+    "id": "rawhide_leg_wraps",
+    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "name": "Rawhide Leg-Wraps",
+    "type": "armor",
+    "category": "primitive",
+    "deteriorationRate": 0.01,
+    "description": "Dried hide bound around thigh and shin. Stiff-legged walking, but a briar or a blade bites shallower.",
+    "color": "#C8A050",
+    "amount": 0,
+    "weightKg": 1.4,
+    "volumeL": 1.6,
+    "tier": 0,
+    "maxDurability": 35,
+    "durabilityLossPerCombatHit": 5,
+    "armorProperties": { "defense": 2, "armorType": "light", "slot": "greaves", "equipmentSlot": "greaves", "armorValue": 2, "fatiguePerTurn": 0.05, "movementPenalty": 0.0 }
+  },
+  {
+    "id": "boiled_leather_spaulders",
+    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "name": "Boiled Leather Spaulders",
+    "type": "armor",
+    "category": "leather",
+    "deteriorationRate": 0.008,
+    "description": "Hardened leather cups moulded over the shoulders, laced to a harness.",
+    "color": "#8B4513",
+    "amount": 0,
+    "weightKg": 1.4,
+    "volumeL": 1.5,
+    "tier": 1,
+    "maxDurability": 60,
+    "durabilityLossPerCombatHit": 4,
+    "armorProperties": { "defense": 4, "armorType": "medium", "slot": "pauldrons", "equipmentSlot": "pauldrons", "armorValue": 4, "fatiguePerTurn": 0.08, "movementPenalty": 0.0 }
+  },
+  {
+    "id": "boiled_leather_bracers",
+    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "name": "Boiled Leather Bracers",
+    "type": "armor",
+    "category": "leather",
+    "deteriorationRate": 0.008,
+    "description": "Hardened leather sheaths buckled over the forearms — an archer's and a brawler's standby.",
+    "color": "#8B4513",
+    "amount": 0,
+    "weightKg": 1.2,
+    "volumeL": 1.2,
+    "tier": 1,
+    "maxDurability": 60,
+    "durabilityLossPerCombatHit": 4,
+    "armorProperties": { "defense": 4, "armorType": "medium", "slot": "bracers", "equipmentSlot": "bracers", "armorValue": 4, "fatiguePerTurn": 0.08, "movementPenalty": 0.0 }
+  },
+  {
+    "id": "boiled_leather_greaves",
+    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "name": "Boiled Leather Greaves",
+    "type": "armor",
+    "category": "leather",
+    "deteriorationRate": 0.008,
+    "description": "Hardened leather shells strapped over shin and thigh.",
+    "color": "#8B4513",
+    "amount": 0,
+    "weightKg": 1.6,
+    "volumeL": 1.6,
+    "tier": 1,
+    "maxDurability": 60,
+    "durabilityLossPerCombatHit": 4,
+    "armorProperties": { "defense": 4, "armorType": "medium", "slot": "greaves", "equipmentSlot": "greaves", "armorValue": 4, "fatiguePerTurn": 0.08, "movementPenalty": 0.0 }
+  },
+  {
+    "id": "cast_bronze_pauldrons",
+    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "name": "Cast Bronze Pauldrons",
+    "type": "armor",
+    "category": "metal",
+    "deteriorationRate": 0.008,
+    "description": "Domed bronze shoulder-plates cast in a sand mould and pinned to a leather yoke.",
+    "color": "#CD7F32",
+    "amount": 0,
+    "weightKg": 2.2,
+    "volumeL": 1.5,
+    "tier": 1,
+    "maxDurability": 80,
+    "durabilityLossPerCombatHit": 4,
+    "researchRequired": "bronze_working",
+    "armorProperties": { "defense": 5, "armorType": "heavy", "slot": "pauldrons", "equipmentSlot": "pauldrons", "armorValue": 5, "fatiguePerTurn": 0.12, "movementPenalty": 0.0 }
+  },
+  {
+    "id": "cast_bronze_bracers",
+    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "name": "Cast Bronze Bracers",
+    "type": "armor",
+    "category": "metal",
+    "deteriorationRate": 0.008,
+    "description": "Split bronze tubes clasped around the forearms, edges rolled so they don't bite the wrist.",
+    "color": "#CD7F32",
+    "amount": 0,
+    "weightKg": 1.8,
+    "volumeL": 1.2,
+    "tier": 1,
+    "maxDurability": 80,
+    "durabilityLossPerCombatHit": 4,
+    "researchRequired": "bronze_working",
+    "armorProperties": { "defense": 5, "armorType": "heavy", "slot": "bracers", "equipmentSlot": "bracers", "armorValue": 5, "fatiguePerTurn": 0.12, "movementPenalty": 0.0 }
+  },
+  {
+    "id": "cast_bronze_greaves",
+    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "name": "Cast Bronze Greaves",
+    "type": "armor",
+    "category": "metal",
+    "deteriorationRate": 0.008,
+    "description": "Bronze shin-plates in the old hoplite pattern, sprung to grip the calf.",
+    "color": "#CD7F32",
+    "amount": 0,
+    "weightKg": 2.6,
+    "volumeL": 1.6,
+    "tier": 1,
+    "maxDurability": 80,
+    "durabilityLossPerCombatHit": 4,
+    "researchRequired": "bronze_working",
+    "armorProperties": { "defense": 5, "armorType": "heavy", "slot": "greaves", "equipmentSlot": "greaves", "armorValue": 5, "fatiguePerTurn": 0.12, "movementPenalty": 0.0 }
+  },
+  {
+    "id": "iron_pauldrons",
+    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "name": "Riveted Iron Pauldrons",
+    "type": "armor",
+    "category": "metal",
+    "deteriorationRate": 0.008,
+    "description": "Overlapping iron shoulder-plates riveted to a leather harness.",
+    "color": "#777777",
+    "amount": 0,
+    "weightKg": 2.8,
+    "volumeL": 1.5,
+    "tier": 2,
+    "maxDurability": 130,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired": "iron_working",
+    "armorProperties": { "defense": 8, "armorType": "heavy", "slot": "pauldrons", "equipmentSlot": "pauldrons", "armorValue": 8, "fatiguePerTurn": 0.15, "movementPenalty": 0.0 }
+  },
+  {
+    "id": "iron_bracers",
+    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "name": "Riveted Iron Bracers",
+    "type": "armor",
+    "category": "metal",
+    "deteriorationRate": 0.008,
+    "description": "Iron splints riveted to leather backing, buckled from wrist to elbow.",
+    "color": "#777777",
+    "amount": 0,
+    "weightKg": 2.2,
+    "volumeL": 1.2,
+    "tier": 2,
+    "maxDurability": 130,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired": "iron_working",
+    "armorProperties": { "defense": 8, "armorType": "heavy", "slot": "bracers", "equipmentSlot": "bracers", "armorValue": 8, "fatiguePerTurn": 0.15, "movementPenalty": 0.0 }
+  },
+  {
+    "id": "iron_greaves",
+    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "name": "Riveted Iron Greaves",
+    "type": "armor",
+    "category": "metal",
+    "deteriorationRate": 0.008,
+    "description": "Iron shin-plates over padded hose, strapped behind the calf.",
+    "color": "#777777",
+    "amount": 0,
+    "weightKg": 3.2,
+    "volumeL": 1.6,
+    "tier": 2,
+    "maxDurability": 130,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired": "iron_working",
+    "armorProperties": { "defense": 8, "armorType": "heavy", "slot": "greaves", "equipmentSlot": "greaves", "armorValue": 8, "fatiguePerTurn": 0.15, "movementPenalty": 0.0 }
+  },
+  {
+    "id": "steel_pauldrons",
+    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "name": "Steel Pauldrons",
+    "type": "armor",
+    "category": "metal",
+    "deteriorationRate": 0.006,
+    "description": "Fluted steel shoulder-plates, articulated so the arm still swings a full arc.",
+    "color": "#B0B8C0",
+    "amount": 0,
+    "weightKg": 3.0,
+    "volumeL": 1.5,
+    "tier": 3,
+    "maxDurability": 200,
+    "durabilityLossPerCombatHit": 4,
+    "researchRequired": "steel_making",
+    "armorProperties": { "defense": 11, "armorType": "heavy", "slot": "pauldrons", "equipmentSlot": "pauldrons", "armorValue": 11, "fatiguePerTurn": 0.18, "movementPenalty": 0.0 }
+  },
+  {
+    "id": "steel_vambraces",
+    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "name": "Steel Vambraces",
+    "type": "armor",
+    "category": "metal",
+    "deteriorationRate": 0.006,
+    "description": "Hinged steel forearm-guards that close like a clamshell and lock at the wrist.",
+    "color": "#B0B8C0",
+    "amount": 0,
+    "weightKg": 2.4,
+    "volumeL": 1.2,
+    "tier": 3,
+    "maxDurability": 200,
+    "durabilityLossPerCombatHit": 4,
+    "researchRequired": "steel_making",
+    "armorProperties": { "defense": 11, "armorType": "heavy", "slot": "bracers", "equipmentSlot": "bracers", "armorValue": 11, "fatiguePerTurn": 0.18, "movementPenalty": 0.0 }
+  },
+  {
+    "id": "steel_greaves",
+    "charSpans": [ {"sheet": "items", "id": 12} ],
+    "name": "Steel Greaves",
+    "type": "armor",
+    "category": "metal",
+    "deteriorationRate": 0.006,
+    "description": "Full steel leg-plates, shin and knee-cop in one articulated piece.",
+    "color": "#B0B8C0",
+    "amount": 0,
+    "weightKg": 3.6,
+    "volumeL": 1.6,
+    "tier": 3,
+    "maxDurability": 200,
+    "durabilityLossPerCombatHit": 4,
+    "researchRequired": "steel_making",
+    "armorProperties": { "defense": 11, "armorType": "heavy", "slot": "greaves", "equipmentSlot": "greaves", "armorValue": 11, "fatiguePerTurn": 0.18, "movementPenalty": 0.0 }
   },
   // ── Phase B: raw materials ────────────────────────────────────────────────
   {

@@ -396,13 +396,10 @@ export function getActiveConditionViews(entity: Pawn | Mob): ConditionView[] {
     const stage = stageLabel ? def.stages?.find((s) => s.label === stageLabel) : undefined;
     if (stageLabel && !stage) continue; // combo whose base isn't a staged transient — skip
     const mods = stage?.modifiers ?? def.modifiers;
-    // An affinity condition's grant lives on the GRANTING TRAIT (ever_warm's +50% res), not the
-    // condition — fold those in so this icon tooltip matches the trait's COND pill tooltip. Skip gear
-    // conditions (claws/fur): their breakdown is the gear tooltip, not a stat list here.
-    const isGearCond = !!(def.grantsNaturalWeapon?.length || def.grantsNaturalArmor);
-    const grantingTrait = isGearCond
-      ? undefined
-      : (entity as Pawn).traits?.find((t) => t.selfCondition === baseId);
+    // An affinity condition's grant lives on the GRANTING TRAIT, not the condition — fold those in so
+    // this icon tooltip matches the trait's COND pill tooltip. (ADR-029: gear no longer routes through
+    // conditions, so every remaining self-condition is an affinity/utility pill — no gear skip needed.)
+    const grantingTrait = (entity as Pawn).traits?.find((t) => t.selfCondition === baseId);
     const grants = grantingTrait ? traitGrantLines(grantingTrait) : [];
     views.push({
       id: def.id,

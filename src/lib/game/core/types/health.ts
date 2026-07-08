@@ -55,27 +55,10 @@ export interface TransientConditionDef extends ConditionGraphFields {
   /** Combat-SFX cue (audio/manifest.ts `COMBAT_SFX`) played the tick this condition latches in combat
    *  — e.g. knockdown/envenomed/ensnared. Backend ref only; read by Combat → simLog.pushCombatSound. */
   audio?: string;
-  /** ADR-023 body-trait grants: the natural-weapon item ids and/or per-part armor soak magnitude this
-   *  body condition confers. Combat resolves a pawn's unarmed weapons + naturalArmor by walking its
-   *  traits' `selfCondition` → this def, so the pill IS the single source of the capability (no
-   *  trait-side copy that could drift). `clawed` grants rending-claws; `scaled` grants +12 armor; etc. */
-  grantsNaturalWeapon?: string[];
-  grantsNaturalArmor?: number;
-  /** TRAIT-SYSTEM-V2 §3 (ADR-028) — limbmap part ids that HOST this condition's natural weapon, so a
-   *  pawn's claws/horns/fangs are bound to a limb exactly like a creature's (a wolf's `claw` on its
-   *  paws). Combat resolves the weapon only while at least one host part survives — lose both hands and
-   *  the claws go with them. Omitted ⇒ the weapon is unbound (always available; back-compat). */
+  /** Limbmap part ids that HOST this utility condition's benefit (wings → gliding_membrane's
+   *  moveSpeed), so the pill (and its effect) drops when every host part is gone. ADR-029: natural
+   *  weapons/armour no longer live on conditions — this gate now serves utility conditions only. */
   hostParts?: string[];
-  /** TRAIT-SYSTEM-V2 §3 (ADR-028 rev) — natural armor's burden as a FRACTION (0–1) of the pawn's carry
-   *  CAPACITY it consumes: worn permanently, a heavy hide leaves less spare load. Applied by REDUCING
-   *  `getCarryBudget` (never by adding invisible kg — an absolute weight could exceed a weak pawn's whole
-   *  capacity and encumber it forever). Percentage-based, so it scales to the body and is always < 1:
-   *  a bare pawn is never encumbered, it just hauls proportionally less. iron skin ~0.15, scaled ~0.06. */
-  carryPenalty?: number;
-  /** §3 — how natural armor interacts with worn gear: 'stack' (default) LAYERS — its defense ADDS to
-   *  the worn soak (scaled hide under a cuirass); 'replace' occupies its blocked slot and competes
-   *  best-of like a worn piece (thick fur IS the bodyMid layer). Read by Combat.partArmorReduction. */
-  mode?: 'replace' | 'stack';
   /** Data-driven onset for a NEED-threshold transient (e.g. `tired` at fatigue ≥ 100). The deriving
    *  code (pawn syncTransientConditions / mob entityLifecycle) reads the threshold from HERE rather than
    *  a hardcoded constant, so designers tune it in the data and pawns + mobs can't drift. The behavioural
