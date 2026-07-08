@@ -132,7 +132,7 @@ function combatPills(entity: Pawn | Mob): StatPillView[] {
       label: 'Precision',
       value: `${Math.round(s('hit_precision') * 100)}%`,
       color: COMBAT_TINT,
-      desc: 'chance to strike true: a crit aimed at the least-armoured part in reach (weapons add their own)',
+      desc: 'chance to strike true — a telling hit that finds a gap (weapons add their own)',
       formula: formula('hit_precision'),
       rows: rows('hit_precision')
     },

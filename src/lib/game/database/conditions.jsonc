@@ -765,7 +765,7 @@
         "id": "intoxicated",
         "name": "Intoxicated",
         "flags": ["food", "drink"],
-        "description": "Warm and merry from drink (§F8). Drink lifts the mood and dulls pain, but the more that goes down the unsteadier the hands, eyes and feet, until it wears off. Severity rises with each cup and decays over time.",
+        "description": "Warm and merry from drink. Drink lifts the mood and dulls pain, but the more that goes down the unsteadier the hands, eyes and feet, until it wears off. Severity rises with each cup and decays over time.",
         "color": "#D8A52A",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 247} ],

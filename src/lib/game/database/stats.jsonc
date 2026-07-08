@@ -20,7 +20,7 @@
         "category": "combat",
         "primaryStat": "dexterity",
         "formula": "(0.05 + (DEX − 10) × 0.005 + (PER − 10) × 0.0025) × consciousness × sight",
-        "description": "THE decisive fighting stat under layered armour (ADR-029): per landed swing, the chance to strike TRUE — a critical (×damage) that is ALSO aimed at the least-armoured part in reach (eye/throat/belly instead of clanging off plate). Raw damage grinds; precision finds the gap. 0–1 (× consciousness × sight — a dazed or dim-sighted fighter can't pick openings); weapons add their own critMod on top (a stiletto finds gaps a maul never will)."
+        "description": "chance per landed blow to strike true — a telling hit that finds a gap (an eye, the throat, a soft belly) instead of glancing off (× consciousness × sight); weapons add their own bonus on top"
     },
     {
         "id"         : "melee_damage",
