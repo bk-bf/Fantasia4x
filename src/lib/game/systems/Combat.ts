@@ -376,10 +376,18 @@ const MELEE_ACCURACY_WEIGHT = 2;
  * recentre it on a sane baseline: ~60% at parity, with DEX and dodge as meaningful ± edges around it.
  */
 const BASE_MELEE_HIT = 60;
-/** Hit-chance points per point of attacker DEX above 10 (a deft fighter lands more). */
-const DEX_HIT_WEIGHT = 2;
+/** Hit-chance points per point of attacker DEX above 10 (a deft fighter lands more). Kept SYMMETRIC
+ *  with the defender's dodge term (dodge gains ~0.02/DEX × DODGE_HIT_WEIGHT 50 = ~1 hit removed per
+ *  defender DEX) so a parity fight stays ~60% hit / 40% dodge at ANY stat magnitude — without this the
+ *  inflated stat scale (PAWN-GROWTH) let attacker DEX outrun evasion and dodges all but vanished. */
+const DEX_HIT_WEIGHT = 1;
 /** Hit-chance points removed per +1.0 of defender `dodge` above the 1.0 baseline (a nimble target evades). */
 const DODGE_HIT_WEIGHT = 50;
+/** Dodge lost per point of a defender's NATURAL armour — a thick hide / heavy plating is dead weight that
+ *  evades worse (bear armour 32 → −0.32 dodge ≈ +16 hit%; a mammoth's 55 makes it all but unmissable),
+ *  so heavy animals can't slip a blow the way a bare-hided one can. Worn armour is separate — it already
+ *  drags dodge through the staged `encumbered` condition (conditionDodgeMult). */
+const NATURAL_ARMOR_DODGE_DRAG = 0.01;
 /** Default projectile particle style per ammo bucket when the ammo item doesn't author its own. */
 const PROJECTILE_BY_CATEGORY: Record<string, string> = {
   arrow: 'arrow',
@@ -606,6 +614,15 @@ function partArmorReduction(
   return clamp((rawDamage - through) / rawDamage, 0, 1);
 }
 
+/** A defender's raw natural-armour scalar (hide/plate "weight") — a mob's `naturalArmor` or the sum of a
+ *  pawn's trait `naturalArmor`. Drives the innate dodge drag (heavy hide = sluggish), NOT per-part soak. */
+function entityNaturalArmor(defender: Pawn | Mob): number {
+  if ('creatureId' in defender) return getCreatureById(defender.creatureId)?.naturalArmor ?? 0;
+  let s = 0;
+  for (const t of defender.traits ?? []) s += t.naturalArmor ?? 0;
+  return s;
+}
+
 /** Natural-armour DAMAGE POINTS at a part: a creature's hide (`naturalArmor`) or a pawn's racial traits
  *  (ADR-029 `naturalArmor` sugar), the scalar distributed by the part's `share`, PLUS any explicit
  *  per-part `armorMods` (carapace back-heavy, soft belly). */
@@ -759,8 +776,11 @@ class CombatServiceImpl implements CombatService {
     // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw dexterity, so injury,
     // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
     // `defDex × 2` term (dodge ≈ 1.0 at DEX 10 → 20).
+    // Natural-armour weight is an innate dodge drag (heavy-hided beasts evade worse) — subtracted from
+    // the base dodge before condition/shield scaling, floored at 0.
+    const armorDrag = entityNaturalArmor(defender) * NATURAL_ARMOR_DODGE_DRAG;
     const defDodge =
-      pawnStatService.evaluateStat('dodge', defender) *
+      Math.max(0, pawnStatService.evaluateStat('dodge', defender) - armorDrag) *
       this.conditionDodgeMult(defender) * // injuries, winded, AND encumbrance (heavy load = easier to hit)
       (getGrip(defender) === 'shield' ? SHIELD_DODGE_MULT : 1); // BB: a shield raises evasion, not a block
 

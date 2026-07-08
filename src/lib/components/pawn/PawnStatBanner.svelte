@@ -60,17 +60,19 @@
   {#each cells as [lbl, base, mult, key]}
     <div class="stat-cell" class:fav={isFav(key)} title={statTitle(lbl, base, mult)}>
       <span class="stat-lbl">{lbl}</span>
-      <span class="stat-val" class:penalized={mult < 1} class:boosted={mult > 1}>
-        {eff(base, mult)}
+      <span class="stat-val-row">
+        <span class="stat-val" class:penalized={mult < 1} class:boosted={mult > 1}>
+          {eff(base, mult)}
+        </span>
+        {#if isFav(key)}
+          <span class="fav-star" title="a natural talent — grows faster and further">★</span>
+        {/if}
+        {#if capOf(key) != null}
+          <span class="stat-cap" title={`grows toward a cap of ${capOf(key)}`}>/{capOf(key)}</span>
+        {/if}
       </span>
-      {#if capOf(key) != null}
-        <span class="stat-cap" title={`grows toward a cap of ${capOf(key)}`}>/{capOf(key)}</span>
-      {/if}
       {#if mult !== 1}
         <span class="stat-delta" class:neg={mult < 1}>{pct(mult)}</span>
-      {/if}
-      {#if isFav(key)}
-        <span class="fav-star" title="a natural talent — grows faster and further">★</span>
       {/if}
     </div>
   {/each}
@@ -92,18 +94,21 @@
     gap: 1px;
     padding: 2px 0;
   }
-  /* PAWN-GROWTH: dim growth ceiling under the live value ("18 /72"). */
+  /* PAWN-GROWTH: value, ★, and growth cap sit on one baseline-aligned row ("18 ★ /72"). */
+  .stat-val-row {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  /* Dim growth ceiling to the right of the live value. */
   .stat-cap {
     font-size: 9px;
     line-height: 1;
     color: var(--text-dim);
     opacity: 0.7;
   }
-  /* Favoured ("talent") stat: a small star pinned to the cell's bottom-right corner. */
+  /* Favoured ("talent") stat: a small star right next to the value. */
   .fav-star {
-    position: absolute;
-    right: 1px;
-    bottom: 0;
     font-size: 9px;
     line-height: 1;
     color: var(--accent-hi, #f0c060);
