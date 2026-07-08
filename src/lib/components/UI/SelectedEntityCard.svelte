@@ -70,6 +70,9 @@
     /** §M Mood drivers for the toggleable MOOD popup. `undefined` hides the MOOD button (entity has
      *  no mood model — mobs/resources). Distinct from `mood` (the header's numeric value). */
     moodModel?: MoodModel;
+    /** Per-part natural armour for the toggleable GEAR popup (creatures only). `undefined` hides the
+     *  GEAR button — an unarmoured creature (no hide worth reading) has no model. */
+    armor?: ArmorModel;
     /** Called when a non-selected hover card is clicked (to select the entity). */
     onSelect?: () => void;
   }
@@ -131,6 +134,25 @@
     /** Damaged limbs only — intact, full-health, non-bleeding limbs are omitted. */
     limbs: HealthLimb[];
   }
+
+  /** One hittable body part with its total natural armour points (natural-armour scalar × the part's
+   *  share, plus any per-part armour mods). `weak` flags the thin spots relative to this creature. */
+  export interface ArmorPart {
+    label: string; // "throat"
+    armor: number; // rounded armour points soaked at this part
+    weak?: boolean; // a thin spot for this creature (well below its thickest plating)
+  }
+
+  /** Natural armour grouped by limb for the GEAR popup. */
+  export interface ArmorLimb {
+    label: string; // "Head"
+    parts: ArmorPart[];
+  }
+
+  /** Whole-creature natural-armour map rendered by the GEAR popup. */
+  export interface ArmorModel {
+    limbs: ArmorLimb[];
+  }
 </script>
 
 <script lang="ts">
@@ -141,6 +163,8 @@
   import { healthToggle } from './gameCanvas/healthToggle.svelte';
   import MoodPanel from './gameCanvas/MoodPanel.svelte';
   import { moodToggle } from './gameCanvas/moodToggle.svelte';
+  import ArmorPanel from './gameCanvas/ArmorPanel.svelte';
+  import { armorToggle } from './gameCanvas/armorToggle.svelte';
 
   // `embedded`: render as an in-flow flex item instead of self-anchoring to the canvas.
   // Used when a parent (e.g. the building row, which also hosts the fuel-settings panel)
@@ -299,7 +323,12 @@
     <MoodPanel mood={model.moodModel} open={moodToggle.open} />
   {/if}
 
-  {#if (model.buttons && model.buttons.length > 0) || ((model.health || model.moodModel) && model.selected)}
+  {#if model.armor}
+    <!-- GEAR opens the creature's natural-armour map above the card, mirroring HEALTH. -->
+    <ArmorPanel armor={model.armor} open={armorToggle.open} />
+  {/if}
+
+  {#if (model.buttons && model.buttons.length > 0) || ((model.health || model.moodModel || model.armor) && model.selected)}
     <div class="btn-col">
       {#if model.health && model.selected}
         <!-- NT-U1: HEALTH button only on the SELECTED card; the pop-up still shows on hover when the
@@ -333,6 +362,21 @@
           }}
         >
           <span class="hud-btn-lbl">MOOD</span>
+        </button>
+      {/if}
+      {#if model.armor && model.selected}
+        <!-- GEAR button — only on the SELECTED card; opens the creature's natural-armour map. -->
+        <button
+          class="hud-btn"
+          class:hud-btn--active={armorToggle.open}
+          onmousedown={(e) => e.stopPropagation()}
+          onmouseup={(e) => e.stopPropagation()}
+          onclick={(e) => {
+            e.stopPropagation();
+            armorToggle.open = !armorToggle.open;
+          }}
+        >
+          <span class="hud-btn-lbl">GEAR</span>
         </button>
       {/if}
       {#each model.buttons ?? [] as btn (btn.label)}

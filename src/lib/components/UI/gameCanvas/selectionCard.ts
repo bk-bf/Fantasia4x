@@ -25,8 +25,12 @@ import type {
   MoodModel,
   HealthLimb,
   HealthPart,
-  HealthWound
+  HealthWound,
+  ArmorModel,
+  ArmorLimb,
+  ArmorPart
 } from '$lib/components/UI/SelectedEntityCard.svelte';
+import { PART_DEF_MAP } from '$lib/game/core/BodyParts.js';
 import type { StatPillView, StatPillRow } from '$lib/components/UI/StatPills.svelte';
 import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService';
 
@@ -392,6 +396,50 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
   };
 }
 
+/** Default armour share for a part with no explicit `armor` field (mirrors Combat.DEFAULT_ARMOR_SHARE). */
+const DEFAULT_ARMOR_SHARE = 0.5;
+
+/**
+ * ADR-029: per-part natural-armour map for the creature GEAR pop-up. For every HITTABLE body part
+ * (hitWeight > 0) computes the armour points a blow must chew through — `naturalArmor × the part's
+ * share`, plus any per-part `armorMods` (carapace back-heavy, soft belly) targeting that part / its
+ * limb / `all`. Grouped by limb; the thinnest spots (well below the creature's thickest plating) are
+ * flagged `weak` so the reader can find the gap without being told where it is. Returns `undefined`
+ * for an unarmoured creature (no hide worth reading) — that hides the GEAR button entirely.
+ */
+export function buildArmorModel(mob: Mob, def: CreatureDefinition): ArmorModel | undefined {
+  const scalar = def.naturalArmor ?? 0;
+  const mods = def.armorMods ?? [];
+  if (scalar <= 0 && mods.length === 0) return undefined;
+
+  let thickest = 0;
+  const raw: { label: string; parts: { label: string; armor: number }[] }[] = [];
+  for (const limb of mob.limbs ?? []) {
+    const parts: { label: string; armor: number }[] = [];
+    for (const part of limb.parts ?? []) {
+      const pdef = PART_DEF_MAP[part.id];
+      if (!pdef || pdef.hitWeight <= 0) continue; // internal-only parts are never struck directly
+      let armor = scalar * (pdef.armor ?? DEFAULT_ARMOR_SHARE);
+      for (const m of mods)
+        if (m.target === 'all' || m.target === part.id || m.target === limb.id) armor += m.defense;
+      parts.push({ label: partLabel(part.id), armor });
+      if (armor > thickest) thickest = armor;
+    }
+    if (parts.length) raw.push({ label: limbLabel(limb.id), parts });
+  }
+  if (!raw.length) return undefined;
+
+  // A spot ≤ 40% of the thickest plating reads as a thin patch — relative so it scales with any hide.
+  const weakCut = thickest * 0.4;
+  const limbs: ArmorLimb[] = raw.map((r) => ({
+    label: r.label,
+    parts: r.parts.map(
+      (p): ArmorPart => ({ label: p.label, armor: Math.round(p.armor), weak: p.armor <= weakCut })
+    )
+  }));
+  return { limbs };
+}
+
 /** Debug `#id` suffix shown next to entity names when VITE_DEBUG_MODE is on. */
 export function entityDebugLabel(entity: { id: string; debugId?: number }): string {
   if (import.meta.env.VITE_DEBUG_MODE !== 'true') return '';
@@ -712,6 +760,8 @@ export function buildMobCard(
     pos: selected ? { x: mob.x, y: mob.y } : undefined,
     // Built for hover cards too so the shared HEALTH toggle works on hover, not just selection.
     health: buildHealthModel(mob),
+    // GEAR: creature-only per-limb natural-armour map (undefined for unarmoured beasts → no button).
+    armor: buildArmorModel(mob, def),
     buttons: selected
       ? ([
           {
