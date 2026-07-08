@@ -1163,13 +1163,16 @@ accidental proportional artefact, un-tunable without restructuring limbs.
   re-balancing every plan.)*
 - **Layered SUBTRACTIVE mitigation (CDDA-style, deterministic).** `partArmorReduction` is rewritten:
   roll the struck part, then walk the covering layers **outermost → in**; each piece subtracts its
-  effective defense `defense × (1 − armorPen)` from the running damage; the remainder passes to the
-  next layer down, then to flesh. Wound TYPE comes from the weapon's `damageType`; SEVERITY from the
+  FULL defense (damage points) from the running damage; the remainder passes to the next layer down,
+  then to flesh. **`armorPenetration` is a flat BYPASS fraction**: that share of the weapon's damage
+  ignores armour entirely (a 0.25-AP bodkin always lands 25% through any plate); only the remaining
+  share is blockable. Wound TYPE comes from the weapon's `damageType`; SEVERITY from the
   leftover damage; then `onHitWound` procs roll. Full-stop is intrinsic (damage − defense ≤ 0 ⇒ no
   wound). No RNG deflect, no sharp→blunt downgrade, no coverage roll. **Skill-biased location** (the
-  CDDA crit-zone loop) completes it: at a DEX-driven precision chance (`(dex−8)×3%`, cap 45%) the
-  attacker rolls two extra candidate locations and takes the least-armoured — full negation is
-  beaten by finding the gap (eye/throat/belly), not by grinding raw damage through plate.
+  CDDA crit-zone loop) completes it: at the attacker's full CRIT chance (the `crit_chance` stat +
+  weapon critMod — one chance, two payoffs) the attacker rolls two extra candidate locations and
+  takes the least-armoured — full negation is beaten by finding the gap (eye/throat/belly) or a
+  piercing weapon's bypass, not by grinding raw damage through plate.
 - **Coverage is binary and PER-ITEM.** `armorProperties.covers: [partId…]` names the parts a piece
   protects — a mail shirt covers the shoulders, a leather vest (same `bodyMid` slot) does not. The
   **slot** sets the layer order (`Outer → Mid → Base`) + equip-conflict; **`covers`** sets the parts.
