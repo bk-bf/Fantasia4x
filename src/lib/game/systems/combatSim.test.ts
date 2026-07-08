@@ -22,6 +22,12 @@ const stats = {
   charisma: 10
 };
 
+// The combat rebalance made bare fists claw-tier (8 dmg), so a full-strength pawn now BEATS a passive
+// goblin to death. The down-not-kill / collapse tests below need the low-damage regime they were built
+// for, so they use a deliberately weak (STR 5) attacker — raw ≈ 8 × 0.5 = 4, matching the old
+// str14 × fists3 ≈ 4.2 — which downs via cumulative pain instead of destroying a limb.
+const weakStats = { ...stats, strength: 5, dexterity: 20 };
+
 function makePawn(over: Partial<Pawn> = {}): Pawn {
   return {
     id: 'p1',
@@ -106,7 +112,7 @@ describe('combat sim (headless tickCombat)', () => {
     // never directly struck, so the only resolution is cumulative pain/shock → COLLAPSE. Combat collapse
     // now DOWNS a mob into the recoverable Collapsed state (not instant death — that's blood-0/vital only,
     // handled in entityLifecycle, which tickCombat doesn't run). So we assert it's downed, not killed.
-    let state = makeState([makePawn()], [makeGoblin({ state: 'Wander' })]);
+    let state = makeState([makePawn({ stats: weakStats })], [makeGoblin({ state: 'Wander' })]);
     let accumulated = false;
     let maxPain = 0;
     let downed = false;
@@ -135,7 +141,7 @@ describe('combat sim (headless tickCombat)', () => {
     // took a 3-dmg blunt punch and INSTANTLY died — a collapse mis-counted as a kill. Combat collapse must
     // DOWN a mob (recoverable Collapsed), never kill it; death is blood-0 / destroyed-vital ONLY.
     const shocked = makeGoblin({ state: 'Wander', bloodVolume: 22, pain: 40 }); // ~78% blood lost → faint
-    let state = makeState([makePawn()], [shocked]);
+    let state = makeState([makePawn({ stats: weakStats })], [shocked]);
     let sawCollapsed = false;
     for (let t = 0; t < 600; t++) {
       state = { ...state, turn: t };
@@ -154,7 +160,9 @@ describe('combat sim (headless tickCombat)', () => {
     // by index (handleFreshCombatCorpses, etc.) — that ONLY works if tickCombat never writes through to
     // its input. Drive a pawn beating a passive goblin until it DOWNS (Collapsed — the status-change the
     // clone must isolate now that collapse no longer instant-kills) and assert the input is untouched.
-    let state = makeState([makePawn()], [makeGoblin({ state: 'Wander' })]);
+    // Weak (STR 5) attacker so the beating DOWNS the goblin (pain → Collapsed) as the isolation vehicle,
+    // instead of killing it — buffed fists would otherwise beat this passive target to death.
+    let state = makeState([makePawn({ stats: weakStats })], [makeGoblin({ state: 'Wander' })]);
     let validated = false;
     for (let t = 0; t < 12000 && !validated; t++) {
       const input = { ...state, turn: t };

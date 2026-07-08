@@ -262,12 +262,19 @@ export function buildPawnFromRace(race: Race, index: number): Pawn {
   physicalTraits.weight += traitBodyWeightDelta(traits);
   const maxBloodVolume = calcMaxBloodVolume(physicalTraits, finalStats);
   const maxStamina = calcMaxStamina(finalStats);
+  // PAWN-GROWTH: talent-star fav stats + per-stat growth ceilings, a rolled adult age, and a fixed
+  // random birthday (age++ + a doubled growth offer land on it).
+  const { maxStats, favStats } = rollGrowthProfile(finalStats, race.statRanges);
 
   const pawn: Pawn = {
     id: `pawn-${index}`,
     debugId: _pawnDebugIdCounter++,
     name: generatePawnName(),
     stats: finalStats,
+    maxStats,
+    favStats,
+    age: rng.int(16, 45),
+    birthDayOfYear: rng.int(0, 359),
     physicalTraits,
     raceId: race.id,
     raceName: race.name,
@@ -438,6 +445,49 @@ function rollStatsFromRanges(statRanges: Record<string, [number, number]>): Enti
   });
 
   return stats as EntityStats;
+}
+
+/** The six core-attribute keys. */
+const STAT_KEYS: (keyof EntityStats)[] = [
+  'strength',
+  'dexterity',
+  'intelligence',
+  'perception',
+  'charisma',
+  'constitution'
+];
+
+/**
+ * PAWN-GROWTH: roll a pawn's two favoured ("talent-star") stats + per-stat growth ceilings. Favoured
+ * stats are drawn weighted toward the race's strongest stats (widest [min,max] = its focus), then get
+ * the highest caps (~85–100); the rest cap ~62–82. Every cap sits at least +15 above the rolled stat so
+ * there's always room to grow. Caps are what a stat can climb to over many growth events.
+ */
+function rollGrowthProfile(
+  finalStats: EntityStats,
+  statRanges: Record<string, [number, number]>
+): { maxStats: EntityStats; favStats: [keyof EntityStats, keyof EntityStats] } {
+  // Weight fav selection toward the race's focus stats (wider range ⇒ higher weight), so a warlike
+  // race tends to favour STR/CON — but any stat can be a pawn's talent.
+  const pool: (keyof EntityStats)[] = [];
+  for (const stat of STAT_KEYS) {
+    const [min, max] = statRanges[stat] ?? [10, 15];
+    const weight = 1 + Math.max(0, Math.round((max - min + (max - 18)) / 3)); // focus stats weigh more
+    for (let i = 0; i < weight; i++) pool.push(stat);
+  }
+  const favA = rng.pick(pool);
+  let favB = rng.pick(pool);
+  let guard = 0;
+  while (favB === favA && guard++ < 20) favB = rng.pick(STAT_KEYS);
+  const favStats: [keyof EntityStats, keyof EntityStats] = [favA, favB];
+
+  const maxStats = {} as EntityStats;
+  for (const stat of STAT_KEYS) {
+    const isFav = stat === favA || stat === favB;
+    const base = isFav ? rng.int(85, 100) : rng.int(62, 82);
+    maxStats[stat] = Math.max(base, finalStats[stat] + 15);
+  }
+  return { maxStats, favStats };
 }
 
 function applyRacialTraitBonuses(baseStats: EntityStats, traits: Trait[]): EntityStats {

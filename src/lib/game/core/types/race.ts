@@ -11,6 +11,23 @@ export interface EntityStats {
   constitution: number;
 }
 
+/** A core-attribute key — the six fields of {@link EntityStats}. */
+export type StatKey = keyof EntityStats;
+
+/**
+ * PAWN-GROWTH: one unresolved "growth" offer awaiting the player's pick-two. A pawn banks these as it
+ * survives seasons (4/year, on a random day within each season) plus a guaranteed one on its birthday
+ * (rolls DOUBLED). Every core stat gets an independent 0..+3 roll (0..+6 on a birthday), biased upward
+ * on the pawn's two favoured stats; the player then ACCEPTS two of them, each capped at that stat's
+ * `maxStats`. Battle-Brothers-style: talent stars mark the stats that roll big.
+ */
+export interface GrowthOffer {
+  /** 'season' (4/year) or 'birthday' (guaranteed, doubled). Drives the offer's flavour + doubled math. */
+  kind: 'season' | 'birthday';
+  /** Per-stat rolled gain on offer (already doubled for a birthday). Player accepts exactly two. */
+  rolls: Partial<Record<StatKey, number>>;
+}
+
 /** ADR-029: on-hit CONDITION proc — the ONE shape shared by a trait's `onHitCondition` (procs on any
  *  landed hit, "rides your steel") and a weapon item's `onHitCondition` (rides that weapon's swings).
  *  Combat collects both into one list and applies them through one path. */

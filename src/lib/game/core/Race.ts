@@ -211,21 +211,23 @@ function dispositionFor(score: number): RaceRelation['disposition'] {
 // ─── Stats / physique ────────────────────────────────────────────────────────
 
 function generateStatRanges(archetype: Archetype): Record<string, [number, number]> {
+  // PAWN-GROWTH: the roll curve is shifted up ~1.5× so ~30 is now the "strong" stat that ~20 used to
+  // be — pawns start nearer a beast's tier, and growth events lift them toward the ~70–100 caps.
   const ranges: Record<string, [number, number]> = {};
   for (const stat of STATS) {
-    let min = rng.int(8, 10);
-    let max = rng.int(12, 15);
+    let min = rng.int(12, 15);
+    let max = rng.int(18, 22);
     if (archetype.statFocus.includes(stat)) {
-      min += rng.int(2, 3);
-      max += rng.int(2, 4);
+      min += rng.int(3, 5);
+      max += rng.int(6, 9); // a focused stat tops out around ~30
     } else if (archetype.statDump.includes(stat)) {
-      min = Math.max(5, min - rng.int(2, 3));
-      max = Math.max(9, max - rng.int(2, 3));
+      min = Math.max(8, min - rng.int(3, 5));
+      max = Math.max(13, max - rng.int(3, 5));
     } else if (rng.random() < 0.25) {
       // mild incidental specialisation on a non-themed stat
-      const shift = rng.random() < 0.5 ? 2 : -2;
-      min = Math.max(5, min + shift);
-      max = Math.max(min + 2, max + shift);
+      const shift = rng.random() < 0.5 ? 3 : -3;
+      min = Math.max(8, min + shift);
+      max = Math.max(min + 3, max + shift);
     }
     ranges[stat] = [min, max];
   }

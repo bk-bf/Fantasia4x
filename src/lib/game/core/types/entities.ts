@@ -1,7 +1,7 @@
 // Live entities (mobs/animals) and the Pawn model. Split out of core/types.ts (P-4); re-exported
 // via the barrel.
 
-import type { EntityStats } from './race';
+import type { EntityStats, StatKey, GrowthOffer } from './race';
 import type { EntityNeeds, EntityCondition, Injury, LimbState } from './health';
 import type { PawnInventory, PawnEquipment, EquipmentSlot } from './items';
 import type { Trait } from './race';
@@ -39,6 +39,9 @@ export interface Mob {
   debugId?: number;
   creatureId: string;
   entityClass: 'mob' | 'animal';
+  /** Age in whole years, rolled at spawn (display-only flavour for the entity card — creatures don't
+   *  grow). */
+  age?: number;
   x: number;
   y: number;
   health: number;
@@ -203,6 +206,24 @@ export interface Pawn {
   pinnedItems?: string[];
   // Individual stats (rolled from race ranges)
   stats: EntityStats;
+
+  // ===== PAWN-GROWTH: age + Battle-Brothers-style stat growth =====
+  /** Per-stat ceilings this pawn can grow toward (rolled at generation, race-derived, ~70–100 on
+   *  favoured stats). A growth accept never lifts a stat above its cap. */
+  maxStats?: EntityStats;
+  /** The pawn's two favoured ("talent-star") stats: higher caps AND biased to roll bigger gains. */
+  favStats?: [StatKey, StatKey];
+  /** Age in whole years (rolled at generation; +1 each birthday). Shown in the Status tab. */
+  age?: number;
+  /** Fixed birthday as a 0-indexed day-of-year (0..359). On this day each year age++ and a guaranteed
+   *  DOUBLED growth offer is banked. */
+  birthDayOfYear?: number;
+  /** Absolute season index (dayIndex/DAYS_PER_SEASON) in which this pawn last banked its seasonal
+   *  growth — gates the "one seasonal growth per season" guarantee. */
+  lastGrowthSeason?: number;
+  /** Unresolved growth offers (season + birthday), oldest first. The player accepts two stats per
+   *  offer in the Status tab; a non-empty queue shows a badge. */
+  pendingGrowth?: GrowthOffer[];
 
   // NEW: Individual physical traits
   physicalTraits: {

@@ -729,6 +729,8 @@ export function makeMob(
     debugId: idCounter++,
     creatureId: def.id,
     entityClass: def.entityClass,
+    // PAWN-GROWTH: a rolled age (display-only flavour — creatures don't grow like pawns).
+    age: rng.int(1, 12),
     x,
     y,
     health: scaledHealth,

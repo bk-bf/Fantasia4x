@@ -21,6 +21,7 @@ import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
 import { pawnService } from '../services/PawnService';
+import { pawnGrowthService } from '../services/PawnGrowthService';
 import { buildingService } from '../services/BuildingService';
 import { researchService } from '../services/ResearchService';
 import { WORK_CATEGORIES } from '../core/Work';
@@ -64,6 +65,7 @@ import type { Pawn } from '../core/types';
 import { rng } from '../core/rng';
 import {
   seasonForTurn,
+  dayIndexForTurn,
   recomputeWorldTemperature,
   seasonBakedTemp,
   advanceWeatherForDay,
@@ -162,6 +164,8 @@ export class GameEngineImpl implements GameEngine {
   /** Set by processEnvironment on a real season transition; consumed by the end-of-turn event phase
    *  so a migrant wave rolls once per season boundary while respecting the events-last turn order. */
   private _seasonJustTransitioned = false;
+  /** PAWN-GROWTH: absolute day index last processed for the per-day growth cadence (fires once/day). */
+  private _lastGrowthDay: number | undefined = undefined;
   /** Hysteresis latch for the rain⇄snow weather phase (SEASONS_WEATHER ice) — held across ticks so
    *  precipitation doesn't flicker type in the −1…+1°C dead zone around freezing. */
   private weatherFreezing = false;
@@ -309,6 +313,7 @@ export class GameEngineImpl implements GameEngine {
       t('buildings', () => this.processBuildings());
       t('passiveProd', () => this.processPassiveProduction());
       t('pawns', () => this.processPawns());
+      t('growth', () => this.processGrowth());
       t('resourceRegrowth', () => this.processResourceRegrowth());
       t('cropGrowth', () => this.processCropGrowth());
       t('wildGrowth', () => this.processWildGrowth());
@@ -1246,6 +1251,25 @@ export class GameEngineImpl implements GameEngine {
    *  unreachable (the caller's own adjacency check then acts / the order waits). */
   private _draftWalk(gs: GameState, pawn: Pawn, tx: number, ty: number): GameState {
     return tryAssignPath(pawn, tx, ty, gs) ?? gs;
+  }
+
+  /**
+   * PAWN-GROWTH: run the seasonal/birthday stat-growth cadence once per in-game day. Gated on the
+   * whole-day boundary (`dayIndexForTurn`) so the ~4-offers-a-year logic fires exactly once per day,
+   * not every tick. First tick just latches the current day (no burst).
+   */
+  private processGrowth(): void {
+    const gs = this.gameState;
+    if (!gs) return;
+    const day = dayIndexForTurn(gs.turn);
+    if (this._lastGrowthDay === undefined) {
+      this._lastGrowthDay = day;
+      return;
+    }
+    if (day === this._lastGrowthDay) return;
+    // Process each elapsed day (normally exactly one) so a large tick jump can't skip a birthday.
+    for (let d = this._lastGrowthDay + 1; d <= day; d++) pawnGrowthService.processDay(gs, d);
+    this._lastGrowthDay = day;
   }
 
   private processPawns(): void {

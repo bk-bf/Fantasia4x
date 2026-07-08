@@ -11,14 +11,18 @@
   // EFFECTIVE value so the banner matches the crippled body the sim actually uses, with a signed
   // delta + a tooltip naming the base × multiplier — that's the "stat loss" surfaced on the pawn tab.
   $: sm = conditionStatMultipliers(pawn);
+  // PAWN-GROWTH: 4th tuple field is the stat key — drives the ★ (favoured) marker + growth cap lookup.
   $: cells = [
-    ['STR', pawn.stats.strength, sm.strength],
-    ['DEX', pawn.stats.dexterity, sm.dexterity],
-    ['CON', pawn.stats.constitution, sm.constitution],
-    ['INT', pawn.stats.intelligence, sm.intelligence],
-    ['PER', pawn.stats.perception, sm.perception],
-    ['CHA', pawn.stats.charisma, 1]
+    ['STR', pawn.stats.strength, sm.strength, 'strength'],
+    ['DEX', pawn.stats.dexterity, sm.dexterity, 'dexterity'],
+    ['CON', pawn.stats.constitution, sm.constitution, 'constitution'],
+    ['INT', pawn.stats.intelligence, sm.intelligence, 'intelligence'],
+    ['PER', pawn.stats.perception, sm.perception, 'perception'],
+    ['CHA', pawn.stats.charisma, 1, 'charisma']
   ] as const;
+  const isFav = (key: string) => pawn.favStats?.[0] === key || pawn.favStats?.[1] === key;
+  const capOf = (key: string) =>
+    pawn.maxStats?.[key as keyof typeof pawn.maxStats] as number | undefined;
 
   const eff = (base: number, mult: number) => Math.round(base * mult);
   const pct = (mult: number) => `${mult < 1 ? '−' : '+'}${Math.abs(Math.round((mult - 1) * 100))}%`;
@@ -53,14 +57,20 @@
 </script>
 
 <div class="stats-grid">
-  {#each cells as [lbl, base, mult]}
-    <div class="stat-cell" title={statTitle(lbl, base, mult)}>
+  {#each cells as [lbl, base, mult, key]}
+    <div class="stat-cell" class:fav={isFav(key)} title={statTitle(lbl, base, mult)}>
       <span class="stat-lbl">{lbl}</span>
       <span class="stat-val" class:penalized={mult < 1} class:boosted={mult > 1}>
         {eff(base, mult)}
       </span>
+      {#if capOf(key) != null}
+        <span class="stat-cap" title={`grows toward a cap of ${capOf(key)}`}>/{capOf(key)}</span>
+      {/if}
       {#if mult !== 1}
         <span class="stat-delta" class:neg={mult < 1}>{pct(mult)}</span>
+      {/if}
+      {#if isFav(key)}
+        <span class="fav-star" title="a natural talent — grows faster and further">★</span>
       {/if}
     </div>
   {/each}
@@ -75,11 +85,31 @@
     border-bottom: 1px solid var(--border);
   }
   .stat-cell {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 1px;
     padding: 2px 0;
+  }
+  /* PAWN-GROWTH: dim growth ceiling under the live value ("18 /72"). */
+  .stat-cap {
+    font-size: 9px;
+    line-height: 1;
+    color: var(--text-dim);
+    opacity: 0.7;
+  }
+  /* Favoured ("talent") stat: a small star pinned to the cell's bottom-right corner. */
+  .fav-star {
+    position: absolute;
+    right: 1px;
+    bottom: 0;
+    font-size: 9px;
+    line-height: 1;
+    color: var(--accent-hi, #f0c060);
+  }
+  .stat-cell.fav .stat-lbl {
+    color: var(--accent-hi, #f0c060);
   }
   .stat-lbl {
     color: var(--text-dim);

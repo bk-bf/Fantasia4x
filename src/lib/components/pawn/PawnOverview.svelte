@@ -13,9 +13,20 @@
   import PawnStance from './PawnStance.svelte';
   import PawnRestPolicy from './PawnRestPolicy.svelte';
   import PawnForceWork from './PawnForceWork.svelte';
+  import PawnGrowthPanel from './PawnGrowthPanel.svelte';
+  import { DAYS_PER_SEASON } from '$lib/game/services/EnvironmentService';
 
   export let pawn: Pawn;
   export let gameState: GameState;
+
+  // PAWN-GROWTH: name the pawn's fixed birthday (season + day within it) for the AGE row's tooltip.
+  const SEASONS = ['Spring', 'Summer', 'Autumn', 'Winter'];
+  $: birthdayLabel =
+    pawn.birthDayOfYear != null
+      ? `born ${SEASONS[Math.floor(pawn.birthDayOfYear / DAYS_PER_SEASON)]} day ${
+          (pawn.birthDayOfYear % DAYS_PER_SEASON) + 1
+        }`
+      : '';
 
   $: taskSummary = getPawnTaskSummary(pawn, gameState);
   $: moveSpeed = pawnService.getMoveSpeed(pawn);
@@ -49,10 +60,18 @@
 <div class="pawn-overview">
   <div class="section-hdr">| STATUS</div>
 
+  <!-- PAWN-GROWTH: pending growth offer(s) surface here for the pick-two. -->
+  <PawnGrowthPanel {pawn} />
+
   <div class="row">
     <span class="lbl">RACE</span>
     <span class="val race-val" title={race?.lore?.epithet ?? ''}>{raceLabel}</span>
   </div>
+  {#if pawn.age != null}
+    <div class="row">
+      <span class="lbl">AGE</span><span class="val" title={birthdayLabel}>{pawn.age} yrs</span>
+    </div>
+  {/if}
   <div class="row">
     <span class="lbl">STATE</span>
     <span class="val" style="color: {stateColor(pawn.currentState)}"

@@ -629,6 +629,11 @@ export function buildPawnCard(
     stats,
     conditionViews: getActiveConditionViews(pawn),
     bars,
+    // PAWN-GROWTH: nudge the player to the Status tab when a growth offer is waiting.
+    note:
+      (pawn.pendingGrowth?.length ?? 0) > 0
+        ? `★ growth ready${pawn.pendingGrowth!.length > 1 ? ` (${pawn.pendingGrowth!.length})` : ''}`
+        : undefined,
     // (No `job` line: it just repeated the [state] tag next to the name — replaced by the WETNESS bar.)
     // Only show a bar for states that also draw one above the pawn's head (Working / eat / drink /
     // wash). Moving/Idle/Sleeping have no in-place task to complete, so no bar.
@@ -756,7 +761,7 @@ export function buildMobCard(
     bars,
     note: `${def.entityClass === 'mob' ? '⚔ hostile' : '◆ neutral'} · ${def.behaviour}${
       def.tameable ? ' · tameable' : ''
-    }`,
+    }${mob.age != null ? ` · ${mob.age} yrs` : ''}`,
     pos: selected ? { x: mob.x, y: mob.y } : undefined,
     // Built for hover cards too so the shared HEALTH toggle works on hover, not just selection.
     health: buildHealthModel(mob),

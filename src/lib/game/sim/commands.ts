@@ -31,7 +31,8 @@ import type {
   ZonePriority,
   FoodSettings,
   ItemInstance,
-  DesignationType
+  DesignationType,
+  StatKey
 } from '../core/types';
 import { isHarvestableTileNow } from '../services/jobs/filters';
 import { findAdjacentApproach, isAdjacent } from '../systems/pawn/pawnQueries';
@@ -57,6 +58,7 @@ import { researchService } from '../services/ResearchService';
 import { devSpawnLooseItems, devDestroyAllItems } from '../dev/devWorld';
 import { gameLogger } from '../dev/gameLogger';
 import { generatePawns } from '../entities/Pawns';
+import { pawnGrowthService } from '../services/PawnGrowthService';
 import { devSpawnMobs } from '../services/entity/entitySpawning';
 import {
   makeWeather,
@@ -184,6 +186,14 @@ export const COMMANDS: Record<string, Cmd> = {
   },
 
   // ── pawns ──────────────────────────────────────────────────────────────────
+  /** PAWN-GROWTH: accept the player's pick-two on a pawn's oldest pending growth offer — raise the two
+   *  chosen stats by their rolled gains (capped at each stat's `maxStats`) and drop the offer. */
+  applyPawnGrowth: (s, p: { pawnId: string; stats: StatKey[] }) => ({
+    ...s,
+    pawns: s.pawns.map((pw) =>
+      pw.id === p.pawnId ? pawnGrowthService.applyGrowthChoice(pw, p.stats) : pw
+    )
+  }),
   /** Set or clear (`target: null`) a pawn's draft target. For a MOVE target the A* path is computed
    *  right here so the preview line traces the real route immediately — even while paused (the
    *  per-tick draft pass would otherwise be the first to path it). */
