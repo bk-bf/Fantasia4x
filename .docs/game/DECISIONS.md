@@ -1155,16 +1155,21 @@ accidental proportional artefact, un-tunable without restructuring limbs.
   `deteriorationRate`/`weightKg`/`volumeL` boilerplate is stripped.
 - **Natural armour is per-part, additive, and unified pawn ↔ creature.** One field on BOTH `Trait`
   and `CreatureDefinition`: `armorMods: [{target, defense}]` (`target` = a part id, a limb group, or
-  `all`), with `naturalArmor: n` kept as uniform sugar for `{target:'all', defense:n}`.
-  `cond.grantsNaturalArmor` is deleted. limbmap `part.armor` is reinterpreted from a hidden 0–1 share
-  into an **explicit, tunable absolute intrinsic** — belly-softness is authored (`abdomen` low,
-  `chest` higher), not a proportional side-effect, and retunable without touching limb structure.
+  `all`), with `naturalArmor: n` kept as uniform sugar. `cond.grantsNaturalArmor` is deleted.
+  *(As shipped:* the scalar still distributes by the limbmap `part.armor` share — points at a part =
+  `naturalArmor × share + Σ armorMods` — so a uniform hide keeps its soft belly for free, and
+  `armorMods` is the explicit, intentional per-part override (carapace back 20 / belly 4) that makes
+  weak spots authored rather than accidental. A full share→absolute re-author was judged not worth
+  re-balancing every plan.)*
 - **Layered SUBTRACTIVE mitigation (CDDA-style, deterministic).** `partArmorReduction` is rewritten:
   roll the struck part, then walk the covering layers **outermost → in**; each piece subtracts its
   effective defense `defense × (1 − armorPen)` from the running damage; the remainder passes to the
   next layer down, then to flesh. Wound TYPE comes from the weapon's `damageType`; SEVERITY from the
   leftover damage; then `onHitWound` procs roll. Full-stop is intrinsic (damage − defense ≤ 0 ⇒ no
-  wound). No RNG deflect, no sharp→blunt downgrade, no coverage roll.
+  wound). No RNG deflect, no sharp→blunt downgrade, no coverage roll. **Skill-biased location** (the
+  CDDA crit-zone loop) completes it: at a DEX-driven precision chance (`(dex−8)×3%`, cap 45%) the
+  attacker rolls two extra candidate locations and takes the least-armoured — full negation is
+  beaten by finding the gap (eye/throat/belly), not by grinding raw damage through plate.
 - **Coverage is binary and PER-ITEM.** `armorProperties.covers: [partId…]` names the parts a piece
   protects — a mail shirt covers the shoulders, a leather vest (same `bodyMid` slot) does not. The
   **slot** sets the layer order (`Outer → Mid → Base`) + equip-conflict; **`covers`** sets the parts.

@@ -90,7 +90,13 @@ const items = parseJsonc(fs.readFileSync(ITEMS, 'utf8'));
 const WEAPONS = new Map();
 for (const it of items) {
   if (it.category === 'natural_weapon' && it.weaponProperties) {
-    WEAPONS.set(it.id, { ...it.weaponProperties, onHitEffect: it.onHitEffect });
+    // ADR-029: procs live in `onHitCondition` (condition layer) + `onHitWound` (injury layer —
+    // bloodletting rides there now, folded into the same danger bump).
+    WEAPONS.set(it.id, {
+      ...it.weaponProperties,
+      onHitCondition: it.onHitCondition,
+      onHitWound: it.onHitWound
+    });
   }
 }
 
@@ -114,7 +120,10 @@ function model(c) {
     crit = Math.max(0, Math.min(CRIT_CAP, crit));
     dmgW += raw * (1 + crit * 0.5) * wt;
     wsum += wt;
-    if (w.onHitEffect) effBump = Math.max(effBump, ONHIT_BUMP[w.onHitEffect.condition] ?? 1);
+    if (w.onHitCondition)
+      effBump = Math.max(effBump, ONHIT_BUMP[w.onHitCondition.condition] ?? 1);
+    if (w.onHitWound?.some((x) => x.wound === 'bloodletting'))
+      effBump = Math.max(effBump, ONHIT_BUMP.bloodletting);
   }
   const dmgPerLanded = wsum > 0 ? dmgW / wsum : 0;
   const hit = Math.max(5, Math.min(95, BASE_MELEE_HIT + (dex - 10) * DEX_HIT_WEIGHT)) / 100;
