@@ -3347,17 +3347,18 @@
     "type"             : "weapon",
     "category"         : "natural_weapon",
     "hidden"           : true,
-    "description"      : "Bare knuckles. Frequent, cheap, weak.",
+    "description"      : "Bare knuckles. Frequent and cheap, and a knuckle drives into an eye or a throat as surely as a claw.",
     "color"            : "#C8A064",
     "amount"           : 0,
     "weaponProperties" : {
-      "damage"     : 3,
-      "attackSpeed": 1,
-      "range"      : 1,
-      "damageType" : "blunt",
-      "bluntMod"   : 0.4,
-      "weight"     : 4,
-      "staminaCost": 1
+      "damage"          : 8,
+      "attackSpeed"     : 1,
+      "range"           : 1,
+      "damageType"      : "blunt",
+      "bluntMod"        : 0.4,
+      "weight"          : 4,
+      "staminaCost"     : 1,
+      "armorPenetration": 0.1
     }
   },
   {
@@ -3372,14 +3373,15 @@
     "color"            : "#C8A064",
     "amount"           : 0,
     "weaponProperties" : {
-      "damage"     : 5,
-      "attackSpeed": 1,
-      "range"      : 1,
-      "damageType" : "blunt",
-      "bluntMod"   : 0.9,
-      "weight"     : 1,
-      "staminaCost": 3,
-      "critMod"    : 0.02
+      "damage"          : 9,
+      "attackSpeed"     : 1,
+      "range"           : 1,
+      "damageType"      : "blunt",
+      "bluntMod"        : 0.9,
+      "weight"          : 1,
+      "staminaCost"     : 3,
+      "critMod"         : 0.02,
+      "armorPenetration": 0.15
     }
   },
   {
@@ -3394,7 +3396,7 @@
     "color"            : "#D8D0C0",
     "amount"           : 0,
     "weaponProperties" : {
-      "damage"          : 11,
+      "damage"          : 9,
       "attackSpeed"     : 1,
       "range"           : 1,
       "damageType"      : "piercing",
@@ -3416,7 +3418,7 @@
     "color"            : "#D8D0C0",
     "amount"           : 0,
     "weaponProperties" : {
-      "damage"          : 10,
+      "damage"          : 8,
       "attackSpeed"     : 1,
       "range"           : 1,
       "damageType"      : "cutting",
