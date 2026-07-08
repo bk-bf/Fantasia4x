@@ -11,7 +11,7 @@ Phases B–E not started. Two entity classes share the infrastructure: hostile m
 and neutral animals (food/taming/mounts).
 
 **Spawn model REVISED → lair / territory system (implemented).** The original "DF-like edge
-spawner, no territory" plan (the superseded [MOB-SPAWNING](../archive/MOB-SPAWNING.md) stub) was
+spawner, no territory" plan (the superseded MOB-SPAWNING stub, doc deleted) was
 replaced: hostile packs now live in **lairs** — rare `lair: true` resource tiles they are bound to
 and leashed within — while only **free-roaming wildlife** (prey/neutral) is seeded across the open
 map. See "Spawn Model" below; this is the part the lair switch rewrote.
@@ -34,7 +34,7 @@ Both use the same `Mob` type and FSM infrastructure. Class is determined by
 
 The map carries **two distinct populations**, seeded and maintained separately
 (`services/entity/entitySpawning.ts`). This replaced the original "DF-like edge spawner, no
-territory" design — see the superseded [MOB-SPAWNING](../archive/MOB-SPAWNING.md) stub.
+territory" design — the superseded MOB-SPAWNING stub (doc deleted).
 
 ### 1. Free-roaming wildlife (prey + neutral roamers)
 

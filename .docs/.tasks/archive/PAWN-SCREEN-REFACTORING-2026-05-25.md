@@ -2,7 +2,7 @@
 
 # PAWN-SCREEN-REFACTORING
 
-> **Related:** [ui/ARCHITECTURE](../../ui/ARCHITECTURE.md) · [ROADMAP](../open/ROADMAP.md)
+> **Related:** [ROADMAP](../open/ROADMAP.md)
 
 ## Goal
 

@@ -1,14 +1,5 @@
-/* filepath: src/lib/game/services/EnvironmentService.ts */
-/**
- * EnvironmentService — Day/Night ambient light & tint (Phase A)
- *
- * Computes per-turn ambient brightness and colour tint driven by the
- * sinusoidal day/night curve specified in LIVING-WORLD.md §Subsystem 1.
- *
- * No mutable state — all methods are pure functions of turn (and, for seasons/weather,
- * of the season/weather scalars in GameState). Phase B (seasons + temperature) and
- * Phase C (weather) live in the lower half of this file.
- */
+// Day/night ambient light, seasons, temperature, and weather.
+// Pure functions of turn (and the season/weather scalars in GameState).
 
 import { TICKS_PER_SECOND } from '../core/time';
 import { vlog } from '../core/logSink';
@@ -22,67 +13,35 @@ import weatherData from '../database/weather.jsonc';
 import type { SeededRng } from '../core/rng';
 import type { Season, WeatherState, WeatherType, WorldTile, PlacedBuilding } from '../core/types';
 
-// In-game seconds per day. The simulation `turn` counts ticks, so a full day is
-// TURNS_PER_DAY × TICKS_PER_SECOND ticks long.
+// In-game seconds per day; `turn` counts ticks, so a day is TURNS_PER_DAY × TICKS_PER_SECOND ticks.
 export const TURNS_PER_DAY = 300;
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 
-/** Ticks in one IN-GAME hour — the unit the clock and HealthReadout show. Author/display condition
- *  durations in in-game hours via these instead of raw ticks/"turns" (750 = 300×60 / 24). */
+/** Ticks in one in-game hour — author/display condition durations in hours via these, not raw ticks. */
 export const TICKS_PER_GAME_HOUR = TICKS_PER_DAY / 24;
-/** In-game hours → ticks (for authoring a duration in the JSON-friendly unit). */
 export const ticksFromGameHours = (hours: number): number =>
   Math.round(hours * TICKS_PER_GAME_HOUR);
-/** Ticks → in-game hours (for displaying a remaining-time as the clock's unit). */
 export const gameHoursFromTicks = (ticks: number): number => ticks / TICKS_PER_GAME_HOUR;
 
-/**
- * Map turn (ticks) → fractional time-of-day in [0, 1).
- * 0.0 = midnight, 0.25 = 06:00, 0.5 = noon, 0.75 = 18:00.
- */
+/** Fractional time-of-day in [0, 1): 0 = midnight, 0.25 = 06:00, 0.5 = noon. */
 export function getTimeOfDay(turn: number): number {
   return (turn % TICKS_PER_DAY) / TICKS_PER_DAY;
 }
 
-/**
- * Ambient brightness in [0.15, 1.0], interpolated from AMBIENT_KEYFRAMES.
- *
- * The curve deliberately keeps full daylight through the afternoon and only
- * begins to fall off around 19:00, reaching night levels near 22:00 — so the
- * world does not darken too early. Midnight floors at 0.15 so glyphs stay
- * readable. Both the WebGL map and the HTML panels read from this single
- * value, keeping their brightness in lock-step.
- */
+/** Ambient brightness in [0.15, 1.0]. Midnight floors at 0.15 so glyphs stay readable;
+ *  both the WebGL map and the HTML panels read this single value. */
 export function getAmbientLight(turn: number): number {
   const { a, b, f } = resolveKeyframes(getTimeOfDay(turn));
   return lerp(a.light, b.light, f);
 }
 
-/**
- * Unified ambient keyframes — t = timeOfDay (0.0 = midnight, 0.5 = noon).
- * t=0.00 and t=1.00 carry the same values so the day wraps seamlessly.
- *
- * `light` — scalar brightness [0.15, 1.0]; drives BOTH the WebGL ambient and
- *           the panel brightness (panels remap it with a higher floor), so the
- *           map and the sidebars dim and brighten together.
- * `tint`  — RGB multiplier used by the WebGL fragment shader (can go cool/blue).
- * `cssSp` — CSS sepia() for panel elements (0 = unchanged, 1 = full amber-brown).
- * `cssHr` — CSS hue-rotate() in degrees for panel elements.
- *
- * CSS params intentionally stay in the WARM range (hue-rotate ≤ 0°, i.e. shifting
- * amber toward orange/red) so transitions NEVER pass through pink on the hue wheel.
- * Night is handled with brightness-only — panels stay brownish, just dimmer.
- */
+// Ambient keyframes — t = timeOfDay; first/last carry the same values so the day wraps.
 interface AmbientKeyframe {
   t: number;
   /** Scalar brightness [0.15, 1.0] — drives WebGL u_ambient AND panel dimming. */
   light: number;
-  /**
-   * NORMALISED colour (brightest channel ≈ 1.0) — carries HUE only, never
-   * brightness. The shader multiplies it by `light`, so brightness comes
-   * solely from `light`; keeping tint normalised means the brightest channel
-   * never falls below `light` (0.15 floor) and glyphs stay visible at night.
-   */
+  /** NORMALISED colour (brightest channel ≈ 1.0) — hue only, never brightness. The shader
+   *  multiplies it by `light`, so glyphs never fall below the 0.15 floor at night. */
   tint: [number, number, number];
 }
 
@@ -115,7 +74,6 @@ function lerpTint(
   return [lerp(a[0], b[0], f), lerp(a[1], b[1], f), lerp(a[2], b[2], f)];
 }
 
-/** Find the two surrounding keyframes and return an interpolation factor [0,1]. */
 function resolveKeyframes(t: number): { a: AmbientKeyframe; b: AmbientKeyframe; f: number } {
   for (let i = 0; i < AMBIENT_KEYFRAMES.length - 1; i++) {
     const a = AMBIENT_KEYFRAMES[i];
@@ -128,31 +86,15 @@ function resolveKeyframes(t: number): { a: AmbientKeyframe; b: AmbientKeyframe; 
   return { a: last, b: last, f: 0 };
 }
 
-/**
- * Ambient colour tint as an RGB triple used by the WebGL fragment shader.
- * Linearly interpolated between keyframes — no hard phase boundaries.
- */
+/** Ambient RGB tint for the WebGL fragment shader, interpolated between keyframes. */
 export function getAmbientTint(turn: number): [number, number, number] {
   const { a, b, f } = resolveKeyframes(getTimeOfDay(turn));
   return lerpTint(a.tint, b.tint, f);
 }
 
-/**
- * Per-channel RGB multiplier for HTML panels.
- *
- * Applied via an SVG `feColorMatrix` (see +page.svelte) so panels are tinted by
- * the same hue the map uses — cool blue at night, warm amber at dawn/dusk — by
- * multiplying each colour channel directly. This avoids the pink artifact CSS
- * `hue-rotate` produces when rotating amber toward blue.
- *
- * Brightness and hue are computed SEPARATELY so the colour stays visible even
- * when the scene is dim. If hue were multiplied by `light`, night would crush
- * all channels toward the floor and wash the blue out — which is exactly what
- * looked "too subtle". Instead:
- *   - `bright` dims with `light` but floors at PANEL_BRIGHT_FLOOR for legibility.
- *   - `sat` mixes white→tint at a constant strength, so the hue reads clearly
- *     at any brightness. PANEL_SAT tunes how strong the tint is.
- */
+// Per-channel RGB multiplier for HTML panels (applied via SVG feColorMatrix in +page.svelte).
+// Brightness and hue are computed SEPARATELY: multiplying hue by `light` would crush the tint
+// at night. Brightness floors at PANEL_BRIGHT_FLOOR; PANEL_SAT sets constant tint strength.
 const PANEL_BRIGHT_FLOOR = 0.45;
 const PANEL_SAT = 0.8;
 export function getPanelTint(turn: number): [number, number, number] {
@@ -173,11 +115,8 @@ export interface AmbientState {
   panelTint: [number, number, number];
 }
 
-/**
- * Compute total light (ambient + point sources) at a tile centre.
- * Mirrors the renderer's LightingService.sample() logic so UI numbers match
- * what the player sees on the map.
- */
+/** Total light (ambient + point sources) at a tile centre — mirrors LightingService.sample()
+ *  so UI numbers match what the player sees on the map. */
 export function computeTileLightLevel(
   turn: number,
   buildings: { type: string; status: string; lit?: boolean; x: number; y: number }[],
@@ -187,7 +126,6 @@ export function computeTileLightLevel(
   const ambient = getAmbientLight(turn);
   let point = 0;
   for (const b of buildings) {
-    // Same data-driven emitter resolution the renderer uses, so UI light numbers match the map.
     const light = buildingLight(b);
     if (!light) continue;
     const dx = x - b.x;
@@ -202,7 +140,7 @@ export function computeTileLightLevel(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Phase B — Seasons & Temperature (SEASONS_WEATHER Subsystems 2 & 3)
+// Seasons & temperature
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface SeasonDef {
@@ -212,27 +150,25 @@ export interface SeasonDef {
   regrowthMultiplier: number;
   /** Per-day chance the sky turns to precipitation (rain in warm seasons, snow in winter). */
   precipitation: number;
-  /** Normalised RGB hue multiplied into the ambient tint (Subsystem 2 palette). */
+  /** Normalised RGB hue multiplied into the ambient tint. */
   tint: [number, number, number];
 }
 
-// Data-driven (database/seasons.jsonc): the year cycle, its length, and each season's parameters.
+// Data-driven from database/seasons.jsonc.
 interface SeasonFileEntry extends SeasonDef {
   id: Season;
   label: string;
 }
 const SEASON_FILE = seasonsData as unknown as { daysPerSeason: number; seasons: SeasonFileEntry[] };
 
-/** Days in one season. One full year = DAYS_PER_SEASON × (number of seasons) in-game days. */
 export const DAYS_PER_SEASON = SEASON_FILE.daysPerSeason;
-/** The year cycle order (from seasons.jsonc). */
 const SEASON_ORDER: Season[] = SEASON_FILE.seasons.map((s) => s.id);
-/** The year cycle order, exported for the debug menu / pickers. */
+/** Year cycle order, exported for the debug menu / pickers. */
 export const SEASON_IDS: Season[] = SEASON_ORDER;
 export const SEASONS: Record<Season, SeasonDef> = Object.fromEntries(
   SEASON_FILE.seasons.map((s) => [s.id, s])
 ) as unknown as Record<Season, SeasonDef>;
-/** Human-readable season names (Chronicle / HUD), from seasons.jsonc. */
+/** Human-readable season names (Chronicle / HUD). */
 export const SEASON_LABELS: Record<Season, string> = Object.fromEntries(
   SEASON_FILE.seasons.map((s) => [s.id, s.label])
 ) as unknown as Record<Season, string>;
@@ -254,10 +190,8 @@ export function seasonForTurn(turn: number): { season: Season; seasonDay: number
   };
 }
 
-/**
- * Seasonal regrowth-rate multiplier (×1.2 spring … ×0.3 winter). Resource regrowth *cooldowns*
- * are DIVIDED by this when set, so a higher rate ⇒ a shorter cooldown ⇒ faster regrowth.
- */
+/** Seasonal regrowth-rate multiplier. Regrowth *cooldowns* are DIVIDED by this —
+ *  higher rate ⇒ shorter cooldown ⇒ faster regrowth. */
 export function seasonRegrowthMultiplier(season: Season | undefined): number {
   return season ? SEASONS[season].regrowthMultiplier : 1;
 }
@@ -267,31 +201,21 @@ export function biomeBaseTemp(terrainType: string): number {
   return BIOMES[terrainType]?.baseTemp ?? DEFAULT_BIOME_TEMP;
 }
 
-/** The season-baked tile temperature = biome baseline + season offset. The SINGLE formula the bake
- *  (`recomputeWorldTemperature`) writes into `tile.temperature`; also used to TEST whether a tile is
- *  already baked for the current season (GameEngineImpl), so a reloaded all-zero map gets re-baked
- *  even when the season hasn't changed. */
+/** Season-baked tile temperature = biome baseline + season offset. The single formula the bake writes
+ *  into `tile.temperature`, and the test for whether a tile is already baked for the current season. */
 export function seasonBakedTemp(terrainType: string, season: Season | undefined): number {
   return biomeBaseTemp(terrainType) + (season ? SEASONS[season].tempOffset : 0);
 }
 
 /**
- * Recompute every WALKABLE tile's temperature IN PLACE for the given season (PERF-1: never
- * `worldMap.map()`, never flip the worldMap ref → no terrain rebuild / re-clone). Impassable tiles
- * are stripped (`temperature = undefined`) — they carry no temperature. Returns the mean over walkable
- * land (the HUD topbar value).
- *
- * `temperature` is a worker-only field (dropped from the slim worldMapDelta — PERF-2),
- * so this deliberately does NOT call `markTileDirty`: there is nothing for the renderer
- * to receive. The need-rate hot path (PawnService) reads the cached value; the live
- * weather delta is added there, not baked here, so weather changes never touch 38k tiles.
+ * Recompute every WALKABLE tile's temperature IN PLACE for the given season — never rebuild the
+ * worldMap or flip its ref (perf). Impassable tiles are stripped (`temperature = undefined`).
+ * Returns the mean over walkable land (the HUD topbar value).
+ * Deliberately no `markTileDirty`: `temperature` is worker-only and never ships to the renderer.
+ * The weather delta is added at read time, not baked, so weather changes never touch every tile.
  */
 export function recomputeWorldTemperature(worldMap: WorldTile[][], season: Season): number {
   const offset = SEASONS[season].tempOffset;
-  // Temperature is a property of WALKABLE land only. Impassable terrain (cliff faces, open water) is
-  // STRIPPED — nothing ever stands there, so a baked value would just be a misleading cold-air reading
-  // that also dragged the HUD mean far below the temperatures the player reads on every accessible
-  // tile. Snow (the one consumer that paints impassable peaks) recomputes a biome temp on demand.
   let walkSum = 0;
   let walkCount = 0;
   let staleBefore = 0; // walkable tiles with no cached temp BEFORE this bake (never baked / reloaded)
@@ -312,10 +236,7 @@ export function recomputeWorldTemperature(worldMap: WorldTile[][], season: Seaso
       if (temp > maxAfter) maxAfter = temp;
     }
   }
-  // TEMP-BAKE: confirms the season bake actually ran over the LIVE worldMap and what it produced. If you
-  // change season and still see cold pawns, watch staleBefore — a non-zero count on a settled map means
-  // walkable tiles were un-baked between seasons (the real bug). min/max can legitimately go below 0 in
-  // autumn/winter now, so there is no "must be positive" invariant any more.
+  // Non-zero staleBefore on a settled map means walkable tiles were un-baked between seasons (a bug).
   vlog(
     'system',
     0,
@@ -323,26 +244,19 @@ export function recomputeWorldTemperature(worldMap: WorldTile[][], season: Seaso
       `TEMP-BAKE season=${season} offset=${offset} walkable=${walkCount} staleBefore=${staleBefore} ` +
       `after[min=${minAfter} max=${maxAfter}]`
   );
-  // Average baked tile temperature over WALKABLE land (biome + season, no weather) — the topbar adds
-  // the weather delta. Falls back to the season offset if a map somehow has no walkable tiles.
   return walkCount > 0 ? walkSum / walkCount : offset;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Diurnal temperature swing (day/night) — SEASONS_WEATHER Subsystem 3 amendment.
+// Diurnal temperature swing (day/night)
 // ─────────────────────────────────────────────────────────────────────────────
-//
-// Open-air temperature is coldest just before dawn and warmest mid-afternoon (it LAGS solar noon,
-// like real air temperature). This is a single global scalar of time-of-day, folded into the same
-// delta slot as the weather term in `effectiveTemperature`/`tileTemperature` — so it costs nothing
-// per pawn (PERF-3) and never bakes into the 38k-tile worldMap (PERF-1/2: `tile.temperature` stays the
-// season-baked mean). Because it rides that slot it is damped by a roof's `weatherProtection` and
-// pulled toward NEUTRAL_TEMP by insulation, so shelter flattens the night chill automatically.
+// A single global scalar of time-of-day, folded into the same delta slot as the weather term in
+// `effectiveTemperature`/`tileTemperature` — free per pawn, never baked into the worldMap, and
+// damped by roofs/insulation like weather, so shelter flattens the night chill automatically.
 
-/** Peak °C the open-air temperature rises above / falls below the season-baked mean (×season scale). */
+/** Peak °C the open-air temperature deviates from the season-baked mean (×season scale). */
 const DIURNAL_AMPLITUDE = 7;
-/** Per-season amplitude scaling — clear, dry summers swing hard (desert nights); winter's cloud
- *  blanket damps the day/night swing. */
+/** Per-season amplitude scaling — summers swing hard, winter's cloud blanket damps it. */
 const DIURNAL_SEASON_SCALE: Record<Season, number> = {
   spring: 1.0,
   summer: 1.2,
@@ -350,8 +264,8 @@ const DIURNAL_SEASON_SCALE: Record<Season, number> = {
   winter: 0.6
 };
 
-/** Normalised diurnal curve (−1 coldest … +1 warmest), phase-lagged behind the light curve: trough at
- *  pre-dawn (~05:00), crest mid-afternoon (~15:00). t = timeOfDay (0 = midnight). Wraps at t=0/1. */
+/** Normalised diurnal curve (−1 coldest … +1 warmest), phase-lagged behind the light curve:
+ *  trough pre-dawn, crest mid-afternoon. Wraps at t=0/1. */
 const DIURNAL_KEYFRAMES: { t: number; v: number }[] = [
   { t: 0.0, v: -0.55 }, // 00:00 — still cooling through the night
   { t: 0.21, v: -1.0 }, // 05:00 — coldest, just before dawn
@@ -372,18 +286,15 @@ function diurnalCurve(t: number): number {
   return DIURNAL_KEYFRAMES[DIURNAL_KEYFRAMES.length - 1].v;
 }
 
-/**
- * °C the open-air temperature deviates from the season-baked mean at this turn, from the diurnal
- * day/night cycle — coldest pre-dawn, warmest mid-afternoon; amplitude scales by season. Added to the
- * weather delta in `effectiveTemperature`/`tileTemperature`, so a roof + insulation flatten it.
- */
+/** °C the open-air temperature deviates from the season-baked mean at this turn (diurnal cycle).
+ *  Rides the weather-delta slot, so roofs + insulation flatten it. */
 export function diurnalTempDelta(turn: number, season: Season | undefined): number {
   const scale = season ? DIURNAL_SEASON_SCALE[season] : 1;
   return diurnalCurve(getTimeOfDay(turn)) * DIURNAL_AMPLITUDE * scale;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Phase C — Weather (SEASONS_WEATHER Subsystem 4)
+// Weather
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface WeatherEffects {
@@ -410,8 +321,8 @@ export type WeatherOverlayKind =
   | 'snowdust'
   | 'foggy_rain';
 
-// Data-driven (database/weather.jsonc): every weather id + its effects/visuals (`types`), plus the two
-// orthogonal Markov chains (`precip` × `wind`) whose product derives the active type via `grid`.
+// Data-driven from database/weather.jsonc: weather types plus two orthogonal Markov chains
+// (`precip` × `wind`) whose product derives the active type via `grid`.
 interface WeatherTransition {
   to: string;
   /** Fixed per-roll weight (a probability before normalisation; the leftover weight = "stays put"). */
@@ -490,9 +401,8 @@ const DEFAULT_PRECIP = PRECIP_CHAIN.default;
 const DEFAULT_WIND_LEVEL = WIND_CHAIN.default;
 const SEASON_WINDY_CELL = '$season_windy';
 
-/** Reverse map: a derived display id → the (precip, windLevel) cell that produces it. Used to recover
- *  the two axes from a state that only carries `type` (legacy saves / debug / menu backdrop). The
- *  season-windy cells are keyed by the literal `$season_windy`, since they apply in every season. */
+/** Reverse map: derived display id → the (precip, windLevel) cell that produces it — recovers the
+ *  axes from a state that only carries `type`. Season-windy cells key on the literal `$season_windy`. */
 const REVERSE_GRID: Record<string, { precip: string; windLevel: string }> = (() => {
   const out: Record<string, { precip: string; windLevel: string }> = {};
   for (const precip of Object.keys(WEATHER_GRID)) {
@@ -507,12 +417,8 @@ const REVERSE_GRID: Record<string, { precip: string; windLevel: string }> = (() 
 /** Wet precip families that FALL AS SNOW when the air is below freezing (temperature-driven phase). */
 const WET_PRECIP = new Set(['drizzle', 'rain', 'heavy_rain']);
 
-/**
- * Derive the displayed weather id from the (precip, wind) pair for a season. When `freezing`, a wet
- * precip family (drizzle/rain/heavy_rain) falls as SNOW instead — so it routes through the grid's `snow`
- * row (calm/breezy → snow, windy → winter_windy, gale → blizzard). This is the temperature-driven
- * rain⇄snow phase: the Markov chain only tracks how MUCH moisture; the air temp decides rain vs snow.
- */
+/** Displayed weather id for a (precip, wind) pair. When `freezing`, wet precip routes through the
+ *  grid's `snow` row — the Markov chain tracks how MUCH moisture; air temp decides rain vs snow. */
 function deriveWeatherType(
   precip: string,
   windLevel: string,
@@ -524,12 +430,8 @@ function deriveWeatherType(
   return cell === SEASON_WINDY_CELL ? `${season}_windy` : cell;
 }
 
-/**
- * Re-derive a weather state's DISPLAY type from the current freezing flag without advancing the Markov
- * chain — the live intraday rain⇄snow switch. Returns the (possibly snow-mapped) type; the engine
- * reassigns `weather.type` only when it actually changes, so a spell that straddles 0°C snows overnight
- * and rains by afternoon without churning the snapshot.
- */
+/** Re-derive the DISPLAY type from the freezing flag without advancing the Markov chain — the live
+ *  intraday rain⇄snow switch. The engine reassigns `weather.type` only when it actually changes. */
 export function rederiveWeatherType(
   weather: WeatherState,
   season: Season,
@@ -541,8 +443,8 @@ export function rederiveWeatherType(
   return deriveWeatherType(precip, windLevel, season, freezing);
 }
 
-/** Hysteresis band for the rain⇄snow phase — snow takes over below −1°C, rain above +1°C, and the
- *  prior phase HOLDS in the −1…+1 dead zone so precipitation doesn't flicker type around freezing. */
+/** Hysteresis band for rain⇄snow: the prior phase HOLDS in the −1…+1°C dead zone so precipitation
+ *  doesn't flicker type around freezing. */
 const FREEZE_SNOW_BELOW = -1;
 const FREEZE_RAIN_ABOVE = 1;
 export function weatherFreezing(globalTemp: number, prevFreezing: boolean): boolean {
@@ -561,21 +463,20 @@ function axesFromType(type: string | undefined): { precip: string; windLevel: st
   return (type && REVERSE_GRID[type]) || { precip: DEFAULT_PRECIP, windLevel: DEFAULT_WIND_LEVEL };
 }
 
-/** Precip-ladder climax (the top rung, `heavy_rain`) flips the wet chain into its `falling` descent;
- *  `dry` resets the climb; off-ladder precip (snow/fog/heat_wave) carries the prior phase forward. */
+/** Top ladder rung flips the wet chain into its `falling` descent; `dry` resets the climb;
+ *  off-ladder precip carries the prior phase forward. */
 function precipPhaseFor(precip: string, prev: 'rising' | 'falling'): 'rising' | 'falling' {
   if (precip === DEFAULT_PRECIP) return 'rising';
   if (precip === PRECIP_LADDER[PRECIP_LADDER.length - 1]) return 'falling';
   return prev;
 }
 
-/** Step one rung toward index 0 (the calm/dry end) of a ladder; a no-op if already there or off-ladder. */
+/** Step one rung toward the calm/dry end; no-op if already there or off-ladder. */
 function ladderDown(ladder: string[], id: string): string {
   const i = ladder.indexOf(id);
   return i > 0 ? ladder[i - 1] : id;
 }
 
-/** Resolve a weather def by id, falling back to the default (clear) for unknown/undefined. */
 function weatherDef(type?: string): WeatherDef {
   return WEATHER[type ?? DEFAULT_WEATHER] ?? WEATHER[DEFAULT_WEATHER];
 }
@@ -583,10 +484,8 @@ function weatherDef(type?: string): WeatherDef {
 /** All weather ids in declaration order (for the debug menu / pickers). */
 export const WEATHER_IDS: string[] = WEATHER_FILE.types.map((t) => t.id);
 
-/** Build a sticky WeatherState for a given display type (debug / menu backdrop): both chains' spells
- *  run effectively forever so the daily roll won't change it until the player does. The two axes are
- *  recovered from the type and the ambient wind is seeded to the middle of its level's band, so a debug
- *  storm immediately looks/feels stormy. */
+/** Sticky WeatherState for a display type (debug / menu backdrop): both chains' spells run
+ *  effectively forever, and wind is seeded mid-band so a debug storm feels stormy immediately. */
 export function makeWeather(type: string): WeatherState {
   const def = weatherDef(type);
   const { precip, windLevel } = axesFromType(def.id);
@@ -604,16 +503,14 @@ export function makeWeather(type: string): WeatherState {
   };
 }
 
-/** Gameplay effects for a weather state (defaults to the fallback weather when undefined). */
 export function weatherEffects(weather?: WeatherState): WeatherEffects {
   return weatherDef(weather?.type);
 }
 
-/** Human-readable weather names (Chronicle / HUD), keyed by id — from weather.jsonc. */
+/** Human-readable weather names (Chronicle / HUD), keyed by id. */
 export const WEATHER_LABELS: Record<string, string> = Object.fromEntries(
   WEATHER_FILE.types.map((t) => [t.id, t.label])
 );
-/** Display label for a weather id (falls back through the default). */
 export function weatherLabel(type?: string): string {
   return weatherDef(type).label;
 }
@@ -623,32 +520,25 @@ export function weatherOverlayKind(type?: string): WeatherOverlayKind {
   return weatherDef(type).overlay;
 }
 
-/** Inherent windiness 0–1 for a weather id (default by overlay kind). The WeatherCanvas combines this
- *  with the live ambient `wind` to set the overlay slant. */
+/** Inherent windiness 0–1 for a weather id (default by overlay kind). */
 export function weatherWindStrength(type?: string): number {
   const def = weatherDef(type);
   return def.windStrength ?? (def.heavy ? 0.6 : 0.2);
 }
 
-/**
- * Effective AMBIENT wind 0–1 for a weather state — the single source of truth shared by the visual
- * overlay slant (WeatherCanvas) and gameplay (windchill). The stronger of the weather type's inherent
- * `windStrength` and the live drifting `wind` scalar, so a debug gale feels windy immediately even
- * before the ambient walk catches up. This is the OPEN-FIELD value; shelter (roof/lee) is applied on
- * top by `effectiveWindAt`.
- */
+/** Ambient wind 0–1 — single source of truth for overlay slant AND windchill: the stronger of the
+ *  type's inherent `windStrength` and the drifting `wind` scalar. Open-field value; shelter applies
+ *  on top in `effectiveWindAt`. */
 export function ambientWind(weather?: WeatherState): number {
   return Math.max(0, Math.min(1, Math.max(weatherWindStrength(weather?.type), weather?.wind ?? 0)));
 }
 
-/** Below this wind the world reads "calm" — no degree word in the weather readout or the tile HUD. This
- *  is a DISPLAY threshold (when wind is worth mentioning), distinct from and lower than needs' WIND_ONSET
- *  (when wind actually chills a pawn): the world can read "slightly windy" while a pawn there is unbothered. */
+/** DISPLAY threshold (when wind is worth mentioning) — deliberately lower than needs' WIND_ONSET
+ *  (when wind actually chills a pawn); the world can read "slightly windy" while pawns are unbothered. */
 export const WIND_DISPLAY_ONSET = 0.2;
-/** Five wind degrees (slightly→extremely) — shared by the weather readout and the tile HUD so both agree. */
+/** Wind degree words — shared by the weather readout and the tile HUD so both agree. */
 export const WIND_DEGREE_WORDS = ['slightly', 'somewhat', 'fairly', 'very', 'extremely'] as const;
-/** Wind 0–1 → degree word (slightly…extremely), or '' when below the display onset (calm). 0.16-wide
- *  bands from the onset; used for both the open-field ambient readout and a tile's effective-wind line. */
+/** Wind 0–1 → degree word, or '' when below the display onset (calm). */
 export function windDegreeWord(wind: number): string {
   if (wind < WIND_DISPLAY_ONSET) return '';
   return WIND_DEGREE_WORDS[Math.min(4, Math.floor((wind - WIND_DISPLAY_ONSET) / 0.16))];
@@ -672,12 +562,8 @@ export function weatherPanelSaturation(type?: string): number {
 /** Blizzard-level wash the panels are clamped to whenever the world should feel bleak. */
 const BLEAK_PANEL_SAT = 0.7;
 
-/**
- * Effective side-panel saturation. Each weather carries its own `panelSaturation` (rain/storm/fog
- * bleak, the mild windy variants barely so) — that's the daytime look. WINTER additionally clamps to
- * a blizzard-level wash so the whole cold season feels bleak regardless of weather. Non-winter weather
- * just uses its own value, so a light breeze barely desaturates while a storm still does.
- */
+/** Effective side-panel saturation: the weather's own `panelSaturation`, additionally clamped to a
+ *  blizzard-level wash in winter so the whole cold season feels bleak regardless of weather. */
 export function effectivePanelSaturation(
   season: Season | undefined,
   weather: WeatherState | undefined
@@ -711,19 +597,18 @@ const DENSITY_DEFAULT: Record<WeatherOverlayKind, number> = {
   foggy_rain: 110
 };
 
-/** Overlay particle fall speed (px/sec) for a weather id — from weather.jsonc, default by overlay kind. */
+/** Overlay particle fall speed (px/sec), default by overlay kind. */
 export function weatherFallSpeed(type?: string): number {
   const def = weatherDef(type);
   return def.fallSpeed ?? FALL_SPEED_DEFAULT[def.overlay] ?? 680;
 }
 
-/** Overlay particle count per megapixel for a weather id — from weather.jsonc, default by overlay kind. */
+/** Overlay particle count per megapixel, default by overlay kind. */
 export function weatherDensity(type?: string): number {
   const def = weatherDef(type);
   return def.density ?? DENSITY_DEFAULT[def.overlay] ?? 160;
 }
 
-/** Chronicle severity for a weather onset (from weather.jsonc). */
 export function weatherChronicleSeverity(type: WeatherType): 'info' | 'warning' {
   return weatherDef(type).severity;
 }
@@ -743,27 +628,19 @@ export function heatExposure(temp: number, comfortMax: number): number {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Thermal field — fire warmth + roof shelter (SEASONS_WEATHER)
+// Thermal field — fire warmth + roof shelter
 // ─────────────────────────────────────────────────────────────────────────────
-//
-// Fires (`effects.warmth`) radiate heat to nearby tiles; roofs (`effects.roof`) shelter the tiles
-// under them — their `thermalInsulation` holds the interior near a neutral baseline and their
-// `weatherProtection` keeps weather (temperature delta + rain) out. Effective temperature at a pawn:
-//
+// Effective temperature at a pawn:
 //   outdoor   = tileTemp + weatherDelta·(1 − weatherProtection)   // roof blocks the weather swing
 //   insulated = NEUTRAL + (outdoor − NEUTRAL)·(1 − insulation)     // roof holds interior near neutral
 //   effective = insulated + Σ fire warmth                          // fires heat the interior on top
-//
 // The worker rebuilds a lightweight field once per tick (rebuildThermalField) so the per-pawn query
-// (thermalAt) is O(fires)+O(1) — see GameEngineImpl.processEnvironment. The renderer/HUD, which has
-// no field, computes one tile on demand from the buildings array (computeThermalAt).
+// (thermalAt) is O(fires)+O(1). The renderer/HUD computes one tile on demand (computeThermalAt).
 
-/** °C produced at a fire's centre per unit of `effects.warmth` (0–1). A hearth (warmth 0.6) on
- *  reference fuel now throws ~+36°C at its tile, falling off linearly across its light radius — sitting
- *  by a fire actually warms you, instead of the old ~+15 that a stiff breeze erased. */
+/** °C at a fire's centre per unit of `effects.warmth` (0–1), falling off linearly over its light radius. */
 const WARMTH_SCALE = 60;
-/** Fuel heat rating that yields a fire's full rated warmth (seasoned firewood, fuelHeat 2). Hotter
- *  fuel (charcoal/coke) radiates proportionally more, green wood less — clamped to [0.4×, 2×]. */
+/** Fuel heat rating that yields full rated warmth; hotter fuel radiates proportionally more,
+ *  green wood less — clamped to [0.4×, 2×]. */
 const WARMTH_REFERENCE_HEAT = 2;
 /** Interior temperature (°C) a fully-insulated roof tends toward. */
 const NEUTRAL_TEMP = 15;
@@ -805,8 +682,7 @@ function buildingWarmth(b: {
   if (!warmth || !def?.lightRadius) return null;
   const needsFuel = (def.maxFuel ?? 0) > 0;
   if (needsFuel && b.lit !== true) return null;
-  // §C: a fuelled fire radiates in proportion to the heat of the fuel it was stoked with (coke roasts,
-  // green wood barely warms). Fuel-free warmth buildings keep their full rated output.
+  // A fuelled fire radiates in proportion to its stoked fuel's heat; fuel-free warmth buildings keep full output.
   const heatScale = needsFuel
     ? Math.max(0.4, Math.min(2, (b.fireHeat ?? WARMTH_REFERENCE_HEAT) / WARMTH_REFERENCE_HEAT))
     : 1;
@@ -833,10 +709,9 @@ function buildingShelter(b: {
 let fireSources: FireSource[] = [];
 let shelterTiles = new Map<string, { insulation: number; weatherProtection: number }>();
 
-// §M grove thermal auras (emberwood warms, moonwood cools). These are STATIC resources, so the
-// (expensive) full-map scan is cached and only redone when the worldMap REFERENCE changes (map gen /
-// load) — never per tick. A negative `degrees` cools, mirroring how thermalAt sums fire warmth.
-// (Caveat: harvesting a grove to 0 leaves its aura until the next worldMap rebuild — rare + minor.)
+// Grove thermal auras (emberwood warms, moonwood cools — negative `degrees`). Static resources, so the
+// full-map scan is cached and redone only when the worldMap REFERENCE changes — never per tick.
+// Caveat: harvesting a grove to 0 leaves its aura until the next worldMap rebuild (rare + minor).
 let groveSources: FireSource[] = [];
 let groveMapRef: WorldTile[][] | null = null;
 
@@ -857,8 +732,8 @@ function scanGroveThermal(worldMap: WorldTile[][]): FireSource[] {
   return out;
 }
 
-/** Rebuild the thermal field from current buildings — once per tick (O(buildings)). `worldMap` (when
- *  passed) folds in the cached §M grove auras (re-scanned only on a worldMap ref change). */
+/** Rebuild the thermal field from current buildings — once per tick (O(buildings)). `worldMap`
+ *  (when passed) folds in the cached grove auras. */
 export function rebuildThermalField(
   buildings: PlacedBuilding[] | undefined,
   worldMap?: WorldTile[][]
@@ -883,7 +758,6 @@ export function rebuildThermalField(
       );
     }
   }
-  // Fold in §M grove auras (re-scan only when the map reference changes — groves are static).
   if (worldMap && worldMap !== groveMapRef) {
     groveMapRef = worldMap;
     groveSources = scanGroveThermal(worldMap);
@@ -921,8 +795,7 @@ export function isRoofedTile(x: number, y: number): boolean {
 const GROVE_SCAN_RADIUS = 8;
 
 /** On-demand thermal sample from a buildings array (renderer/HUD has no prebuilt field). When
- *  `worldMap` is supplied, §M grove auras within a small local window are folded in too, so the HUD's
- *  tile-temp readout matches the gameplay field (a cheap ±GROVE_SCAN_RADIUS window, not a full scan). */
+ *  `worldMap` is supplied, grove auras within ±GROVE_SCAN_RADIUS fold in so the HUD matches the sim. */
 export function computeThermalAt(
   x: number,
   y: number,

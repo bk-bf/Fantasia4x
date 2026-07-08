@@ -10,14 +10,7 @@ import {
 } from '../core/wildGrowth';
 import type { GameState, Job, WorldTile } from '../core/types';
 
-/**
- * Gradual wild-plant regrowth (`regrowsFromZero` — berry bushes, wild grain, grass). A harvest resets
- * the node to growth 0% (bare soil revealed, subType untouched — never forced to barren dirt), then
- * `processWildGrowth` climbs growth 0→100 over the interaction's `regrowthTurns` and restores the count
- * at maturity. This locks in: (1) harvest zeroes growth + drops the count + enrols the tile (no binary
- * cooldown set), (2) the pass advances growth in place and restores the count at 100% then leaves the
- * work-list, (3) deltas ship only on a visual bucket change (not every tick).
- */
+// A harvest resets a `regrowsFromZero` node to growth 0; processWildGrowth climbs 0→100 in place and restores the count at maturity.
 function tile(over: Partial<WorldTile>): WorldTile {
   return {
     x: 0,
@@ -81,8 +74,7 @@ describe('gradual wild-plant regrowth (regrowsFromZero)', () => {
   });
 
   it('climbs growth in place while immature, then restores the count + leaves the work-list at maturity', () => {
-    // Full maturity is regrowthTurns × TICKS_PER_SECOND (tens of thousands of ticks), so assert the
-    // climb over a window, then jump growth to the cusp to exercise the maturity branch directly.
+    // Full maturity takes tens of thousands of ticks — assert the climb over a window, then jump to the cusp.
     const r = tile({
       subType: 'savanna',
       resources: { wild_barley: 0 },

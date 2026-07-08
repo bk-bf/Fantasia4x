@@ -1,41 +1,15 @@
 // resources.jsonc — Harvestable world resource node definitions.
-//
-// Schema:
-//   id               — unique resource key
-//   displayName      — label shown in UI
-//   objectSubType    — render category (can align with a subterrain key for visual consistency)
-//   charSpans        — glyph source: [{sheet,from,to}] range | [{sheet,id}] single tile | [{literal}] char
-//   fg / bg          — [r, g, b] render colours (0–1)
-//   color            — hex colour for UI elements
-//   spawn.subterrains  — map of subterrain id → per-tile spawn probability (0–1)
-//   nodeAmountRange  — [min, max] nodes per cluster when the tile is chosen for spawning
-//   designationTypes — which zone types ("harvest" | "forage" | "scavenge") can queue jobs here
-//   interaction:
-//     action           — verb shown in job queue display
-//     workCategory     — skill domain: foraging | woodcutting | mining
-//     workAmount       — total work-points to complete this interaction, authored DIRECTLY (1:1,
-//                        like a building's `workAmount` in buildings.jsonc — no hidden multiplier).
-//                        At the base rate (1 pt/sec, speed 1) it takes `workAmount` sim-seconds,
-//                        i.e. ≈ workAmount × 4.8 in-game minutes (a day = 300 sim-sec = 1440 in-game
-//                        min). Stats/tools/skills scale the effective rate via getWorkModifiers.
-//     toolRequirement  — null = bare hands allowed | {workType, minTier} = tool required
-//     yields[]:
-//       skillMultiplier  — bonus items granted per level of skillId
-//       regrowthTurns    — turns until this yield refills on a persistent node
-//       _TODO            — design placeholder; item or production chain not yet implemented
-//     persistent       — true: node survives harvest (regrows); absent: node is consumed
-//     harvestDepletes  — true: removes only this yield; the node itself stays
+// charSpans: glyph source — [{sheet,from,to}] range | [{sheet,id}] tile | [{literal}] char.
+// spawn.subterrains: subterrain id → per-tile spawn chance. Placement is first-match-wins in array
+//   order, so rare defs (groves, lairs) are listed before common fillers (trees, grass).
+// interaction.workAmount: total work-points, 1 pt/sec at base rate (a day ≈ 300 turns).
+// toolRequirement: null = bare hands | {workType, minTier}; tier 0 = any tool of that workType.
+// yields[].skillMultiplier: bonus items per skill level; regrowthTurns: refill delay (persistent nodes).
+// persistent: node regrows; harvestDepletes: yield-only removal; harvestSubType: subterrain left after harvest.
 [
   // ─────────────────────────────────────────────────────────────────────────
-  // PRODUCTION-CHAIN-II §M — ANCIENT-WOOD GROVES (listed FIRST on purpose)
+  // ANCIENT-WOOD GROVES — rare; listed first so common trees/grass don’t claim their tiles
   // ─────────────────────────────────────────────────────────────────────────
-  // Pass-1 scatter is first-match-wins in array order (ResourceGeneratorService): the first def
-  // whose roll succeeds on a tile claims it and breaks. The common trees + grass patches that
-  // follow are FAR more probable, so a grove listed after them on a contested grassy subtype
-  // (grass/deep_grass/tall_grass) almost never gets rolled — that starved moonwood to ~1/15th of
-  // its intended rate. Listing the (very low-probability) groves FIRST gives each species a fair,
-  // independent shot, so all four spawn reliably. Probabilities are tuned for ~10–15 of each per
-  // 240×160 map — uncommon and worth seeking, but reliably findable.
   {
     "id"              : "heartwood_grove",
     "roofSupport"     : true,
@@ -225,17 +199,10 @@
     }
   },
   // ─────────────────────────────────────────────────────────────────────────
-  // LAIRS / NESTS (ENTITIES_SPAWNING territory) — `lair: true` — listed FIRST (same reason as the
-  // groves above): Pass-1 scatter is first-match-wins, so a lair listed AFTER the common
-  // trees/grass (grass_patch alone claims 92% of grass tiles) almost never gets rolled — that
-  // starved them (swamp_nest → 0). Listed first, each lair type gets a fair, independent shot.
-  // Probabilities are therefore TINY (no longer suppressed) — a den is a rare landmark, the SOLE
-  // source of laired hostiles. Each placed tile seeds ONE bound pack of a creature whose `lair`
-  // (creatures.jsonc) matches its id; the pack stays leashed within `lairRange`.
-  // Destructible: the DESTROY button marks it for the "harvest" path, which consumes the
-  // (non-persistent) node and razes the den (stopping its repopulation/growth).
-  // TODO: drop loot on destroy — a cleared den should reward the player (hoarded bones/goods, a
-  // trophy, a rare material).
+  // LAIRS / NESTS — `lair: true`; rare, listed first. Each placed tile seeds one bound pack of the
+  // creature whose `lair` (creatures.jsonc) matches this id. DESTROY razes the den via the harvest
+  // path (non-persistent node).
+  // ─────────────────────────────────────────────────────────────────────────
   {
     "id"              : "wolf_den",
     "displayName"     : "Wolf Den",
@@ -349,12 +316,8 @@
     }
   },
   // ─────────────────────────────────────────────────────────────────────────
-  // WOODCUTTING
+  // WOODCUTTING — living trees: woodcut (axe) fells for logs; forage (bare hands) regrows quickly
   // ─────────────────────────────────────────────────────────────────────────
-  // Standard living tree — primary source of wood and bark.
-  // Two interaction modes:
-  //   woodcut  — axe required (tier 1); fells the tree; harvestDepletes:true
-  //   forage   — bare hands; gathers surface materials; node stays and regrows quickly
   {
     "id"              : "pine_tree",
     "roofSupport"     : true,
@@ -511,8 +474,7 @@
     "subterrain"      : "tree",
     "walkable"        : false,
     "charSpans"       : [ {"sheet": "plants", "id": 26}, {"sheet": "plants", "id": 24} ],
-    // Season variants: autumn recolours the canopy (detail = light canopy pixels); winter swaps to the
-    // leafless pool. Triggered by the SEASON (renderer rebuilds on season change), never by snow.
+    // seasonVariants: autumn recolours the canopy; winter swaps to the leafless pool (season-driven, not snow)
     "seasonVariants"  : {
       "autumn": {"detail": "#d9b13a"},
       "winter": {
@@ -784,9 +746,7 @@
       }
     ]
   },
-  // Wild apple tree — a fruit-bearing broadleaf. FORAGE it standing to pick apples (sustainable, the
-  // fruit regrows); WOODCUT it to fell for apple_log + a final pick of the apples still on the boughs.
-  // The wild counterpart of the cultivated crop_apples orchard (mirrors wild_grapevine ↔ crop_grapes).
+  // Forage picks apples sustainably; woodcut fells for apple_log (wild counterpart of crop_apples).
   {
     "id"              : "apple_tree",
     "roofSupport"     : true,
@@ -1217,8 +1177,6 @@
       }
     ]
   },
-  // Wet-loving broadleaf with drooping boughs — favours riverbanks and damp ground. Deciduous, so it
-  // goes leafless (seasonVariants.winter) in winter like the other broadleaves.
   {
     "id"              : "willow_tree",
     "roofSupport"     : true,
@@ -1363,9 +1321,7 @@
   },
   // ─────────────────────────────────────────────────────────────────────────
   // MINING — SURFACE DEPOSITS
-  // All require a mining tool. Found in rocky and mountain terrain.
   // ─────────────────────────────────────────────────────────────────────────
-  // Common surface rock — most accessible stone source. Chance of bonus flint.
   {
     "id"              : "stone_outcrop",
     "roofSupport"     : true,
@@ -1379,10 +1335,7 @@
     "spawn"           : { "subterrains": {"cave": 0.07, "dirt": 0.015, "savanna": 0.02, "grass": 0.01} },
     "nodeAmountRange" : [5, 10],
     "designationTypes": ["harvest"],
-    // ADR-009 bootstrap: surface stone is hand-SCAVENGED — no tool required (toolRequirement null),
-    // so a fresh colony can gather the small_stone / flint primitives its first tools need before
-    // it has any tools. Deeper ore (coal, clay deposits) stays pick-gated. Mining skill still
-    // boosts yield; with no toolRequirement the harvest is also exempt from R4 tool gating.
+    // Hand-scavenged (no tool) so a fresh colony can bootstrap its first tools; deeper deposits stay pick-gated.
     "interaction"     : {
       "action"         : "scavenge",
       "workCategory"   : "mining",
@@ -1390,16 +1343,15 @@
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "small_stone", "min": 5, "max": 10, "skillId": "mining", "skillMultiplier": 0.2},
-        {"itemId": "granite", "min": 0, "max": 5, "skillId": "mining", "skillMultiplier": 0.15},  // chance only: min 0
-        {"itemId": "limestone", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.1},  // chance only: min 0
-        {"itemId": "flint_shard", "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.1} // chance only: min 0
+        {"itemId": "granite", "min": 0, "max": 5, "skillId": "mining", "skillMultiplier": 0.15},
+        {"itemId": "limestone", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.1},
+        {"itemId": "flint_shard", "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.1}
       ]
     }
   },
   // ─────────────────────────────────────────────────────────────────────────
   // FORAGING — PLANTS
   // ─────────────────────────────────────────────────────────────────────────
-  // Colourful herbaceous patches — primary herb source in open biomes.
   {
     "id"              : "wildflower_patch",
     "displayName"     : "Wildflower Patch",
@@ -1431,10 +1383,9 @@
         {"itemId": "mint_seed",  "min": 0, "max": 1, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
-      "regrowthTurns"  : 1200 // ~4 days at 300 turns/day
+      "regrowthTurns"  : 1200
     }
   },
-  // Dead fallen logs — quick low-effort wood, no axe needed. Often overlooked early resource.
   {
     "id"              : "fallen_logs",
     "displayName"     : "Fallen Logs",
@@ -1456,15 +1407,13 @@
       "toolRequirement": {
         "workType": "woodcutting",
         "minTier" : 0
-      },  // tier-0 = any woodcutting tool, including stone chopper
+      },
       "yields"         : [
         {"itemId": "branch",       "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.1 },
         {"itemId": "dry_firewood", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
       ]
     }
   },
-  // Rare arcane crystal formation — deep mountain/cave occurrence only.
-  // TODO: magic_crystal item properties TBD. High rarity is intentional.
   {
     "id"              : "amethyst_node",
     "displayName"     : "Amethyst Crystals",
@@ -1476,8 +1425,6 @@
     "bg"              : "#17120a",
     "glow"            : { "color": [0.66, 0.42, 0.84], "radius": 1.8, "intensity": 0.08, "flicker": false },
     "spawn"           : {
-      // Intentionally sparse — these are high-value arcane nodes. Matches the other crystal nodes
-      // (cave/rocky/cliff) so the seven minerals spawn at comparable rates.
       "subterrains": {"cave": 0.007}
     },
     "nodeAmountRange" : [1, 3],
@@ -1486,14 +1433,13 @@
       "action"         : "scavenge",
       "workCategory"   : "mining",
       "workAmount"     : 15,
-      "toolRequirement": {"workType": "mining", "minTier": 2},  // requires a proper mining pick
+      "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [
         {"itemId": "amethyst",         "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.1 },
         {"itemId": "infused_amethyst", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.05}
       ]
     }
   },
-  // Low scrubby brush — good plant fiber source in arid/transitional zones.
   {
     "id"              : "scrub_patch",
     "displayName"     : "Scrub Patch",
@@ -1516,10 +1462,9 @@
         {"itemId": "plant_fiber", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.15}
       ],
       "persistent"     : true,
-      "regrowthTurns"  : 2100 // ~1 week at 300 turns/day
+      "regrowthTurns"  : 2100
     }
   },
-  // Leftover tree stump — strip for bark and wood scraps using a basic crafting tool.
   {
     "id"              : "tree_stump",
     "displayName"     : "Tree Stump",
@@ -1545,7 +1490,6 @@
       ]
     }
   },
-  // Fungal patch — yields herbs; thrives in damp/shaded subterrains.
   {
     "id"              : "mushroom_patch",
     "displayName"     : "Mushroom Patch",
@@ -1569,10 +1513,9 @@
         {"itemId": "mint_seed", "min": 0, "max": 1, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
-      "regrowthTurns"  : 120 // ~5 days
+      "regrowthTurns"  : 120
     }
   },
-  // Dead standing tree — rotted, easier and faster to fell than a living tree.
   {
     "id"              : "dead_tree",
     "roofSupport"     : true,
@@ -1598,13 +1541,10 @@
       ]
     }
   },
-  // Wetland & savanna ground cover (mud_deposit, bog_deposit, fire_clay, blue_clay,
-  // savanna, moss) lives in the GROUND COVER block at the end of this file so all
-  // rarer wetland resources get first pick per tile.
   // ─────────────────────────────────────────────────────────────────────────
   // FORAGING — BERRIES & GRAINS
+  // (wetland & savanna ground cover lives in the GROUND COVER block at the end of this file)
   // ─────────────────────────────────────────────────────────────────────────
-  // Berry bush — reliable persistent food source; dense in bush subterrain.
   {
     "id"              : "berry_bush",
     "displayName"     : "Berry Bush",
@@ -1630,10 +1570,9 @@
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
-      "regrowthTurns"  : 2400 // ~8 days at 300 turns/day; growth climbs 0→100 over this span
+      "regrowthTurns"  : 2400
     }
   },
-  // Wild barley — primary primitive grain in open savanna zones.
   {
     "id"              : "wild_barley",
     "displayName"     : "Wild Barley",
@@ -1656,10 +1595,9 @@
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
-      "regrowthTurns"  : 3000 // ~10 days at 300 turns/day; growth climbs 0→100 over this span
+      "regrowthTurns"  : 3000
     }
   },
-  // Wild rye — mixed grain and fibre source; grows in taller, damper grasses.
   {
     "id"              : "wild_rye",
     "displayName"     : "Wild Rye",
@@ -1683,12 +1621,10 @@
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
-      "regrowthTurns"  : 3000 // ~10 days at 300 turns/day; growth climbs 0→100 over this span
+      "regrowthTurns"  : 3000
     }
   },
-  // Wild greens — uncultivated brassicas/roots; the wild source of vegetable seed (cabbage/turnip/onion).
-  // Each wild crop is its own plant: it drops its OWN vegetable + that vegetable's seed (no grab-bag).
-  // Wild cabbage — leafy wild brassica; the wild source of cabbage.
+  // Wild crops each drop their OWN vegetable + that vegetable’s seed (no grab-bag).
   {
     "id"              : "wild_cabbage",
     "displayName"     : "Wild Cabbage",
@@ -1713,10 +1649,9 @@
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
-      "regrowthTurns"  : 2400 // ~8 days at 300 turns/day
+      "regrowthTurns"  : 2400
     }
   },
-  // Wild turnip — a fat wild taproot; the wild source of turnip.
   {
     "id"              : "wild_turnip",
     "displayName"     : "Wild Turnip",
@@ -1741,10 +1676,9 @@
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
-      "regrowthTurns"  : 2200 // ~7 days at 300 turns/day
+      "regrowthTurns"  : 2200
     }
   },
-  // Wild onion — pungent wild allium; the wild source of onion.
   {
     "id"              : "wild_onion",
     "displayName"     : "Wild Onion",
@@ -1769,10 +1703,9 @@
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
-      "regrowthTurns"  : 2400 // ~8 days at 300 turns/day
+      "regrowthTurns"  : 2400
     }
   },
-  // Wild kale — frost-hardy wild brassica; the wild source of kale.
   {
     "id"              : "wild_kale",
     "displayName"     : "Wild Kale",
@@ -1797,10 +1730,9 @@
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
-      "regrowthTurns"  : 2200 // ~7 days at 300 turns/day
+      "regrowthTurns"  : 2200
     }
   },
-  // Wild radish — fast peppery wild root; the wild source of radish.
   {
     "id"              : "wild_radish",
     "displayName"     : "Wild Radish",
@@ -1825,10 +1757,9 @@
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
-      "regrowthTurns"  : 2000 // ~7 days at 300 turns/day
+      "regrowthTurns"  : 2000
     }
   },
-  // Wild beans — climbing wild legume; the wild source of beans.
   {
     "id"              : "wild_beans",
     "displayName"     : "Wild Beans",
@@ -1853,10 +1784,9 @@
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
-      "regrowthTurns"  : 2600 // ~9 days at 300 turns/day
+      "regrowthTurns"  : 2600
     }
   },
-  // Wild peas — scrambling wild vetch; the wild source of peas.
   {
     "id"              : "wild_peas",
     "displayName"     : "Wild Peas",
@@ -1881,10 +1811,9 @@
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
-      "regrowthTurns"  : 2500 // ~8 days at 300 turns/day
+      "regrowthTurns"  : 2500
     }
   },
-  // Wild grapevine — tangled wild vine; the wild source of grape cuttings (and a few berries).
   {
     "id"              : "wild_grapevine",
     "displayName"     : "Wild Grapevine",
@@ -1909,15 +1838,12 @@
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
-      "regrowthTurns"  : 2800 // ~9 days at 300 turns/day
+      "regrowthTurns"  : 2800
     }
   },
   // ─────────────────────────────────────────────────────────────────────────
   // MINING — ORE VEINS  (mountain / mineral_deposit subterrain)
-  // All require minTier 2 mining. Yield items are placeholders — smelting
-  // chains are not yet designed. See _TODO fields.
   // ─────────────────────────────────────────────────────────────────────────
-  // Most common mountain ore. Will form the backbone of the iron-age tech tier.
   {
     "id"              : "malachite",
     "displayName"     : "Malachite",
@@ -1936,7 +1862,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
+      "harvestSubType" : "cave",
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "malachite", "min": 2, "max": 6, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -1960,7 +1886,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
+      "harvestSubType" : "cave",
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "chalcopyrite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -1984,7 +1910,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
+      "harvestSubType" : "cave",
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "azurite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -2008,7 +1934,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
+      "harvestSubType" : "cave",
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "cassiterite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -2032,7 +1958,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
+      "harvestSubType" : "cave",
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "hematite", "min": 2, "max": 6, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -2056,7 +1982,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
+      "harvestSubType" : "cave",
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "magnetite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -2080,7 +2006,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
+      "harvestSubType" : "cave",
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "limonite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -2104,7 +2030,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
+      "harvestSubType" : "cave",
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "galena", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -2128,7 +2054,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
+      "harvestSubType" : "cave",
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "native_gold", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -2152,7 +2078,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
+      "harvestSubType" : "cave",
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "electrum", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -2176,7 +2102,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
+      "harvestSubType" : "cave",
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "coal", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
@@ -2200,17 +2126,15 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
+      "harvestSubType" : "cave",
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "salt", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
   // ─────────────────────────────────────────────────────────────────────────
-  // TERRAIN WALLS — stone_outcrop still gets first pick (placed earlier);
-  // these fill the remaining ~92% of rocky/cliff tiles as the default identity.
+  // TERRAIN WALLS — fill the remaining mountain tiles as the default identity
   // ─────────────────────────────────────────────────────────────────────────
-  // Walkable rocky mountain floor — minable for stone.
   {
     "id"              : "mountain_wall",
     "roofSupport"     : true,
@@ -2222,29 +2146,23 @@
     "charSpans"       : [ {"sheet": "plants", "id": 210} ],
     "fg"              : "#9e855e",
     "bg"              : "#17120a",
-    // Shares the mountain (cave) floor pool with cliff_wall. Pass-1 rolls each def SEQUENTIALLY and
-    // independently (see ResourceGeneratorService) — mountain_wall is rolled first, cliff_wall on the
-    // ~42% that miss. So 0.58 here + 0.98 on cliff_wall yields a ~58/41 placed mix (old rocky:cliff
-    // band ratio, granite a bit more common than sandstone) AND ~99% total wall coverage — keeping the
-    // mountain interior solid so the line-of-sight fog silhouette stays tight.
+    // Rolled before cliff_wall: 0.58 here + 0.98 on the misses ≈ 58/41 mix, ~99% wall coverage.
     "spawn"           : { "subterrains": {"cave": 0.58} },
     "nodeAmountRange" : [4, 8],
     "designationTypes": ["harvest"],
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
+      "harvestSubType" : "cave",
       "workAmount"     : 30,
-      "toolRequirement": {"workType": "mining", "minTier": 1},  // a pick — barehanded mining a solid wall was a bug
+      "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [
         {"itemId": "granite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2},
-        {"itemId": "marble", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1},  // rare: prestige stone
+        {"itemId": "marble", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1},
         {"itemId": "flint_shard", "min": 0, "max": 10, "skillId": "mining", "skillMultiplier": 0.1}
-        // coal + salt now come from mineral_deposit nodes (coal / rock_salt), not mountain walls
       ]
     }
   },
-  // Impassable cliff face — mine to open passage; yields dressed stone.
   {
     "id"              : "cliff_wall",
     "roofSupport"     : true,
@@ -2262,7 +2180,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "harvestSubType" : "cave",  // mined-out mountain rock reveals walkable cave floor (soil-under-crops)
+      "harvestSubType" : "cave",
       "workAmount"     : 36,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [
@@ -2273,16 +2191,13 @@
           "max"            : 2,
           "skillId"        : "mining",
           "skillMultiplier": 0.15
-        } // sedimentary cliff: roofing slate
+        }
       ]
     }
   },
   // ─────────────────────────────────────────────────────────────────────────
-  // GROUND COVER — placed last so all rarer resources get first pick per tile.
-  // High spawn rates fill unclaimed grass tiles; if a tree/bush/etc. already
-  // claimed the tile the break exits before these entries are reached.
+  // GROUND COVER — placed last so all rarer resources get first pick per tile
   // ─────────────────────────────────────────────────────────────────────────
-  // Ordinary grass stand — cut for plant fibre (dry it into hay on a rack); a flint sickle doubles speed.
   {
     "id"              : "grass_patch",
     "displayName"     : "Grass Patch",
@@ -2305,7 +2220,7 @@
       ],
       "persistent"     : true,
       "regrowsFromZero": true,
-      "regrowthTurns"  : 600 // ~2 days at 300 turns/day; growth climbs 0→100 over this span
+      "regrowthTurns"  : 600
     },
     "interactions"    : [
       {
@@ -2322,8 +2237,6 @@
         "regrowthTurns"  : 600
       },
       {
-        // §F dig: strip the sod for its soil. Returns the cut yield + the tier's soil (poor) + subsoil
-        // dirt, then leaves bare dirt (subType → dirt, fertility 0). The harvest-vs-cut twin.
         "designationType": "dig",
         "action"         : "dig",
         "workCategory"   : "digging",
@@ -2339,7 +2252,6 @@
       }
     ]
   },
-  // Taller grass stand — same harvest profile as grass_patch, matches tall_grass subterrain.
   {
     "id"              : "tall_grass_patch",
     "displayName"     : "Tall Grass",
@@ -2379,7 +2291,6 @@
         "regrowthTurns"  : 700
       },
       {
-        // §F dig → loam (50%) + subsoil dirt; strips to bare dirt.
         "designationType": "dig",
         "action"         : "dig",
         "workCategory"   : "digging",
@@ -2395,7 +2306,6 @@
       }
     ]
   },
-  // Dense grass stand — matches deep_grass subterrain, slightly higher yield.
   {
     "id"              : "deep_grass_patch",
     "displayName"     : "Deep Grass",
@@ -2435,7 +2345,6 @@
         "regrowthTurns"  : 800
       },
       {
-        // §F dig → rich soil (75%) + subsoil dirt; strips to bare dirt. The best soil you can dig.
         "designationType": "dig",
         "action"         : "dig",
         "workCategory"   : "digging",
@@ -2451,8 +2360,6 @@
       }
     ]
   },
-  // Savanna — dry plains identity (was baked into the savanna subterrain); gather it
-  // for sand and dry grass, leaving bare dirt behind.
   {
     "id"              : "savanna",
     "displayName"     : "Savanna",
@@ -2472,8 +2379,6 @@
       "yields"         : [ {"itemId": "sand", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.1} ]
     }
   },
-  // Moss — damp swamp ground identity (was baked into the moss subterrain); a forage
-  // source of healing woundwort, plant fibre and absorbent sphagnum. Regrows like grass.
   {
     "id"              : "moss",
     "displayName"     : "Moss",
@@ -2500,8 +2405,6 @@
       "regrowthTurns"  : 900
     }
   },
-  // Mud deposit — muddy swamp identity (subterrain renders as dirt underneath); dug
-  // for raw clay, leaving bare dirt behind.
   {
     "id"              : "mud_deposit",
     "displayName"     : "Mud",
@@ -2516,13 +2419,11 @@
     "interaction"     : {
       "action"         : "dig",
       "workCategory"   : "mining",
-      "workAmount"     : 45,  // slow bare-handed — a digging_stick or stone_spade is much faster
+      "workAmount"     : 45,
       "toolRequirement": null,
       "yields"         : [ {"itemId": "blue_clay", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.08} ]
     }
   },
-  // Bog deposit — waterlogged swamp identity; worst bare-handed digging surface,
-  // but yields clay, peat fuel and fibre. Reveals bare dirt when dug out.
   {
     "id"              : "bog_deposit",
     "displayName"     : "Bog",
@@ -2537,7 +2438,7 @@
     "interaction"     : {
       "action"         : "dig",
       "workCategory"   : "mining",
-      "workAmount"     : 54,  // waterlogged — worst bare-handed digging condition
+      "workAmount"     : 54,
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "blue_clay",   "min": 0, "max": 1, "skillId": "mining",   "skillMultiplier": 0.06},
@@ -2546,9 +2447,7 @@
       ]
     }
   },
-  // Fire clay — RARE refractory seam on the clay subterrain; the heat-resistant clay
-  // that gates the Pottery tier (advanced kiln, fire bricks). Placed before blue_clay
-  // so it gets first pick on clay tiles; rest of the subterrain fills with blue_clay.
+  // Rare refractory seam — placed before blue_clay so it gets first pick on clay tiles.
   {
     "id"              : "fire_clay",
     "displayName"     : "Fire Clay",
@@ -2563,13 +2462,11 @@
     "interaction"     : {
       "action"         : "dig",
       "workCategory"   : "mining",
-      "workAmount"     : 66,  // dense refractory clay — tools strongly preferable
+      "workAmount"     : 66,
       "toolRequirement": null,
       "yields"         : [ {"itemId": "fire_clay", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.1} ]
     }
   },
-  // Blue clay — common earthenware clay; the bulk ceramics/construction supply that
-  // fills the rest of the clay subterrain (plus pockets in mud/bog/riverbank banks).
   {
     "id"              : "blue_clay",
     "displayName"     : "Blue Clay",
@@ -2584,14 +2481,11 @@
     "interaction"     : {
       "action"         : "dig",
       "workCategory"   : "mining",
-      "workAmount"     : 54,  // slow bare-handed — a digging_stick or stone_spade is much faster
+      "workAmount"     : 54,
       "toolRequirement": null,
       "yields"         : [ {"itemId": "blue_clay", "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.1} ]
     }
   },
-  // Riverbank sediment — the diggable shore ringing every waterbody. Same tile as the `riverbank`
-  // subterrain (so it reads seamlessly), but digging it turns up a random mix of clay + sand. Loose
-  // sediment, so quicker to dig than solid clay; bare-handed works, a spade is faster.
   {
     "id"              : "riverbank_deposit",
     "displayName"     : "Riverbank",
@@ -2615,13 +2509,9 @@
     }
   },
   // ═══════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-II §M — crystal nodes (typed) + ancient-wood groves
+  // CRYSTAL NODES — normal crystal (1–2) + occasional magic-infused (0–1); deliberately NOT on
+  // mineral_deposit, so they stay out of the ore/coal/salt vein pool
   // ═══════════════════════════════════════════════════════════════════════════
-  // Crystal nodes — one per mineral (amethyst is the `amethyst_node` in the mining section above). Each
-  // mostly yields its NORMAL crystal (1–2) plus an occasional MAGIC-INFUSED crystal (0–1). Rarity
-  // comes from the sparse spawn + the 0-floor infused roll, not from the uniform min/max engine.
-  // All share the `crystal_formation` render subterrain; mined with a tier-2 pick. They deliberately
-  // do NOT spawn on `mineral_deposit`, so they stay out of the ore/coal/salt vein pool.
   {
     "id"              : "ruby_node",
     "displayName"     : "Ruby Crystals",
@@ -2767,13 +2657,10 @@
     }
   },
   // ═══════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-II §F — CULTIVATED CROPS (sown by the `plant` job in a grow zone)
+  // CULTIVATED CROPS — never spawn naturally; the plant job places one on a grow-zone tile (seed
+  // matches crop.seedItem, soil tier ≥ crop.minSoil), then it matures over crop.growthTurns scaled
+  // by fertility × wetness at plant time. Annuals deplete on harvest; berries/herbs persist and regrow.
   // ═══════════════════════════════════════════════════════════════════════════
-  // These never spawn naturally (empty `spawn.subterrains`). The plant job places one on a grow-zone
-  // tile when the zone's seed matches `crop.seedItem` and the tile's soil tier ≥ `crop.minSoil`; it
-  // then grows via the regrowth cooldown (`crop.growthTurns`, scaled by fertility × wetness at plant
-  // time) until mature + harvestable. Reaping (harvest) routes to the `planting` labour. Annuals
-  // deplete on harvest (replant); berries/herbs are perennial (persistent → regrow).
   {
     "id"              : "crop_wheat",
     "displayName"     : "Wheat",

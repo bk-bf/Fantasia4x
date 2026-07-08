@@ -2,7 +2,7 @@
 
 # SCREEN-REFACTORING
 
-> **Related:** [ROADMAP](ROADMAP.md) · [ui/ARCHITECTURE](../../ui/ARCHITECTURE.md)
+> **Related:** [ROADMAP](ROADMAP.md)
 
 ## Scope (revised 2026-05-28)
 

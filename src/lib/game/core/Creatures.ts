@@ -2,32 +2,17 @@ import creaturesData from '../database/creatures.jsonc';
 import { resolveCharSpans, type CharSpan } from './Terrains';
 import type { DamageType } from './types/health';
 
-/**
- * Creatures.ts — Entity (mob + animal) definitions loaded from the DB.
- *
- * ENTITIES_SPAWNING spec, Phase A. All rosters live in
- * `database/creatures.jsonc` — never hardcode a creature in a service. This
- * module loads that file, resolves glyph charSpans once at startup, and exposes
- * typed lookups. EntityService consumes these definitions to spawn `Mob`s.
- */
+// Entity (mob + animal) definitions loaded from database/creatures.jsonc — never
+// hardcode a creature in a service. EntityService consumes these to spawn Mobs.
 
 export type EntityClass = 'mob' | 'animal';
 export type EntityBehaviour = 'passive' | 'neutral' | 'aggressive';
 export type EntityDiet = 'herbivore' | 'carnivore' | 'omnivore' | 'none';
-/**
- * Item categories (matching the `category` field in items.jsonc) an entity will eat when
- * foraging wild food or scavenging a corpse:
- * - `food`    — wild forage (berries, herbs, mushrooms) and prepared meals.
- * - `meat`    — butchered cuts (rabbit meat, venison…).
- * - `organic` — raw carcasses/remains.
- */
+/** Item categories (items.jsonc `category`) an entity eats: `food` = wild forage/meals,
+ *  `meat` = butchered cuts, `organic` = raw carcasses/remains. */
 export type FoodCategory = 'food' | 'meat' | 'organic';
-/**
- * Governs how deeply an entity uses game systems.
- * - `primitive`: food-only needs, eats directly from tile/corpse (no item spawns), no mood.
- * - `sapient`:   full pawn-equivalent systems — abilities, mood, cooked food, beverages.
- *   Sapient creatures spawn as `Pawn` instances (isPlayerControlled: false), not as `Mob`.
- */
+/** `primitive` = food-only needs, eats from tile/corpse, no mood; `sapient` = full
+ *  pawn-equivalent systems — spawns as `Pawn` (isPlayerControlled: false), not `Mob`. */
 export type EntityIntelligence = 'primitive' | 'sapient';
 
 export interface CreatureStats {
@@ -36,28 +21,24 @@ export interface CreatureStats {
   str: number;
   /** Agility → move speed, dodge, hit chance. */
   dex: number;
-  /** Durability → maxHealth (= con × 5). */
+  /** Durability → maxHealth. */
   con: number;
-  /** Awareness → vision range (= round(2 + per × 0.65)). */
+  /** Awareness → vision range. */
   per: number;
   // ── Derived (computed in toDefinition(); do not set in JSON) ─────────
-  /** = con × 5 */
   health: number;
-  /** = floor(1.5 + dex × 0.35) — tiles per second */
+  /** Tiles per second. */
   speed: number;
-  /** = round(2 + per × 0.65) — tile detection radius */
+  /** Tile detection radius. */
   visionRange: number;
-  /** = round(visionRange × 1.45) */
   fleeRange: number;
   /** Alias for str; used by legacy spawn code. */
   strength: number;
 }
 
-// Natural attacks are now first-class items (category 'natural_weapon' in
-// items.jsonc). A creature's `naturalWeapons` is a list of those item ids, resolved
-// — like crafted weapons — through ItemService in Combat. Per-swing weight, stamina,
-// crit and damage live on each item's weaponProperties. STR scaling differentiates a
-// shared attack (a wolf's `bite` hits harder than a rabbit's).
+// Natural attacks are first-class items (category 'natural_weapon' in items.jsonc),
+// resolved through ItemService in Combat like crafted weapons; STR scaling
+// differentiates a shared attack across species.
 
 export interface CreatureLootEntry {
   itemId: string;
@@ -81,141 +62,82 @@ export interface CreatureDefinition {
   bg: [number, number, number];
   stats: CreatureStats;
   behaviour: EntityBehaviour;
-  /** Governs hunger-accrual rate only (carnivore 1.0 / omnivore 0.7 / herbivore 0.5 /
-   *  none 0 — never gets hungry). Does NOT determine what this creature eats —
-   *  see `eats`/`grazes`. */
+  /** Governs hunger-accrual rate ONLY (carnivore 1.0 / omnivore 0.7 / herbivore 0.5 / none 0).
+   *  Does NOT determine what this creature eats — see `eats`/`grazes`. */
   diet: EntityDiet;
-  /**
-   * Item categories (from items.jsonc `category`) this creature will forage or scavenge when
-   * hungry — `food` (wild forage/meals), `meat` and `organic` (carcasses). Authored per
-   * creature in creatures.jsonc so individual species can be tuned independently (e.g. a
-   * future bear could prioritise honey) even when they share the same `diet`. If omitted,
-   * defaults from `diet`: herbivore → [food]; carnivore → [meat, organic];
-   * omnivore → [food, meat, organic].
-   */
+  /** Item categories this creature forages/scavenges when hungry. If omitted, defaults from
+   *  `diet`: herbivore → [food]; carnivore → [meat, organic]; omnivore → all three. */
   eats: FoodCategory[];
-  /**
-   * True if this creature also grazes plain grass tiles (no item involved) — the herbivore
-   * staple. Authored per creature; if omitted, defaults to `diet === 'herbivore'`.
-   */
+  /** Also grazes plain grass tiles (no item involved). Defaults to `diet === 'herbivore'`. */
   grazes: boolean;
-  /**
-   * True if this creature hunts and frightens prey. This — not `diet` — is the
-   * sole flag that marks something as a threat: a passive omnivore (chicken)
-   * is not a predator, while a neutral omnivore (bear) is.
-   */
+  /** Hunts and frightens prey. This — not `diet` — is the sole flag marking a threat:
+   *  a passive omnivore (chicken) is not a predator, a neutral omnivore (bear) is. */
   predator: boolean;
-  /**
-   * Depth of systems this creature uses.
-   * `primitive` = animals; `sapient` = humanoid NPCs (spawn as Pawn, not Mob).
-   */
+  /** `primitive` = animals; `sapient` = humanoid NPCs (spawn as Pawn, not Mob). */
   intelligence: EntityIntelligence;
   nocturnalAggro: boolean;
-  /** Only spawns at night (e.g. shadow_wraith). */
+  /** Only spawns at night. */
   nightOnly: boolean;
   /** Inclusive pack-size range to spawn together. */
   pack: [number, number];
   tameable: boolean;
-  /** 1.0 = easy to tame, 0.3 = hard. Used in Phase C. */
+  /** 1.0 = easy to tame, 0.3 = hard. */
   tameResistance: number;
   mountable: boolean;
-  /**
-   * When true, predatory mobs will hunt this creature and it will flee from them.
-   * Typically set on passive/neutral animals; absent on hostile mobs.
-   */
+  /** Predatory mobs hunt this creature and it flees from them. Set on passive/neutral animals. */
   huntable: boolean;
   canSteal: boolean;
   chargesWhenWounded: boolean;
-  /**
-   * Whether a `neutral` creature defends its personal space — charging a pawn that wanders within
-   * half its vision range (boar/bear/wolf). Defaults to TRUE. Set FALSE on placid herbivores
-   * (aurochs, mammoth) that ignore an approaching pawn and only fight back once actually attacked.
-   * Has no effect on `passive` (always flees) or `aggressive` (always charges) creatures.
-   */
+  /** A `neutral` creature defends its personal space (charges within half vision range).
+   *  Defaults TRUE; set FALSE on placid herbivores. No effect on passive/aggressive creatures. */
   territorial: boolean;
-  /** 0–1 darkness immunity (§G). 0 = sight/work scale fully with light (normal); 1 = sees and works
-   *  at full range/speed regardless of darkness (nocturnal predators). Defaults to 0. */
+  /** 0–1 darkness immunity: 0 = sight/work scale fully with light; 1 = full range/speed
+   *  regardless of darkness (nocturnal predators). Defaults to 0. */
   nightVision: number;
-  /** Husbandry product (Phase D), when present. */
+  /** Husbandry product, when present. */
   produces?: CreatureProduces;
-  /**
-   * Item ID of the carcass dropped when this creature dies.
-   * Maps to an item in items.jsonc (e.g. "wolf_carcass").
-   * Absent on creatures that leave no physical remains (shadow_wraith, etc.).
-   */
+  /** Item id of the carcass dropped on death (items.jsonc). Absent = no physical remains. */
   carcassItemId?: string;
   /** biome id → relative spawn weight (terrains.jsonc biome ids). */
   biomeWeights: Record<string, number>;
   lootTable: CreatureLootEntry[];
   /** Natural melee attacks — ids of `natural_weapon` items in items.jsonc. */
   naturalWeapons: string[];
-  /** TRAIT-LIBRARY-EXPANSION §4.0 shared lines: trait ids (traits.jsonc) this creature carries —
-   *  the S1 rung of a shared lineage line (orc_reaver → adrenaline). Resolved to Trait defs at spawn;
-   *  mobs get the stat/resistance/weaponBonus/combatMods effects, never the pawn-only machinery. */
+  /** Trait ids (traits.jsonc) this creature carries. Mobs get only the
+   *  stat/resistance/weaponBonus/combatMods effects, never the pawn-only machinery. */
   traits?: string[];
-  /**
-   * §M elemental (and physical) damage resistances/vulnerabilities, keyed by DamageType. Each value
-   * is added on top of the stat-derived resistance in Combat.physicalResistance (positive = resists,
-   * NEGATIVE = vulnerable). Thematic per creature (a frost-adapted beast resists `frost` but takes more
-   * `fire`); omitted = the creature relies purely on its CON/DEX-derived baseline. Final resist is
-   * still clamped 0–0.9, so a vulnerability can pull a creature's resistance down to 0 but not below.
-   */
+  /** Per-DamageType resist added on top of the stat-derived baseline (positive = resists,
+   *  NEGATIVE = vulnerable). Final resist still clamps 0–0.9, so a vulnerability can pull
+   *  resistance to 0 but not below. */
   resistances?: Partial<Record<DamageType, number>>;
-  /**
-   * Natural armour (hide / scale / chitin), a flat 0–100 defence value used EXACTLY like a worn
-   * armour layer in Combat.partArmorReduction: torso/head get the full value, limbs 0.3×, and it is
-   * reduced by the attacker's `armorPen`. The keystone of big-beast durability — a 0-armorPen attack
-   * (bare fists, claws) is almost fully soaked by a thick hide, while an armour-piercing bodkin/pick
-   * still bites. Stacks with worn equipment by taking the BEST defence (mobs carry no equipment).
-   * Omitted = bare flesh (0). Final reduction still clamps 0–0.9, so nothing is ever immune.
-   */
+  /** Natural armour (hide/scale/chitin): flat 0–100 defence used exactly like a worn armour
+   *  layer (torso/head full value, limbs 0.3×), reduced by attacker `armorPen`; best-of with
+   *  worn equipment. Omitted = bare flesh (0). Final reduction clamps 0–0.9. */
   naturalArmor?: number;
-  /** ADR-029: per-part natural armour (carapace back-heavy, soft belly…). Same shape as `Trait.armorMods`
-   *  — `target` = a limbmap part id / limb group / `'all'`; `defense` adds absolute soak. `naturalArmor`
-   *  above is the uniform-`'all'` sugar. */
+  /** Per-part natural armour — `target` = limbmap part id / limb group / `'all'`; `defense`
+   *  adds absolute soak. `naturalArmor` above is the uniform-`'all'` sugar. */
   armorMods?: Array<{ target: string; defense: number }>;
-  /**
-   * Body-size multiplier (default 1.0). Scales the creature's blood/health POOL at spawn
-   * (entitySpawning) and softly scales its natural-weapon damage (attackerProfile) — one field that
-   * makes a woolly mammoth (≈3.5) both soak a whole squad's hits AND maim with a tusk, while a wolf
-   * (≈1.1) stays roughly human-scaled. Does NOT rescale the shared body-part HP table (Combat keeps a
-   * single anatomy); durability comes from the larger blood pool + naturalArmor instead. Omitted = 1.0.
-   */
+  /** Body-size multiplier (default 1.0). Scales blood/health pool at spawn and softly scales
+   *  natural-weapon damage. Does NOT rescale the shared body-part HP table. */
   bodyScale?: number;
-  /** Body plan from limbmap.jsonc (humanoid | quadruped | avian | serpentine | arachnid |
-   *  winged_humanoid | amorphous) — picks the creature's anatomy so a wolf carries paws + a tail
-   *  instead of a humanoid's fingers/toes. Omitted = "humanoid". Drives ONLY structure + hit locations;
-   *  per-limb HP = bodyScale × the plan's default sizes, and the blood pool stays health × bodyScale. */
+  /** Body plan from limbmap.jsonc (omitted = "humanoid"). Drives structure + hit locations;
+   *  per-limb HP = bodyScale × the plan's default sizes. */
   limbMap?: string;
-  /** Spawn-gate overrides (ENTITIES_SPAWNING). The default gate restricts spawns to walkable
-   *  forest/plains/swamp land (isSpawnableTile). These let specific creatures bend that:
-   *  - `spawnsInMountain`: spawn on ANY mountain tile, even non-walkable rock — for incorporeal
-   *    dwellers (shadow wraith) that don't eat, so being walled in is acceptable.
-   *  - `maxMountainDistance`: still spawn on normal spawnable land, but only within this many tiles
-   *    of a mountain tile — for mountain-edge grazers (mountain goat) that would otherwise be filtered
-   *    out entirely now that mountains aren't spawnable. */
+  /** Spawn-gate overrides. `spawnsInMountain`: may spawn on ANY mountain tile, even
+   *  non-walkable rock (incorporeal dwellers that don't eat). `maxMountainDistance`: only
+   *  spawn on normal land within this many tiles of a mountain (mountain-edge grazers). */
   spawnsInMountain?: boolean;
   maxMountainDistance?: number;
-  /**
-   * Territory / lair binding (ENTITIES_SPAWNING territory). When set, this creature is a LAIRED
-   * hostile: it spawns ONLY at tiles bearing the matching `lair` resource (resources.jsonc, lair:true),
-   * bound to one as its pack's anchor, and only wanders/aggros within `lairRange` tiles of it. Creatures
-   * with no `lair` are free roamers (prey/neutral wildlife) seeded across the map as before.
-   *   `lairRange`   — leash radius in tiles (tight for dangerous packs, wide ~80–100 for far-rangers).
-   *   `hungerRate`  — multiplier on hunger accrual (default 1); tight lairs run low so a leashed pack
-   *                   isn't stuck on a starvation clock.
-   *   `foodOverflow`— 0–1 buffer that lowers the hunt threshold, so a leashed predator hunts
-   *                   opportunistically before it's fully hungry (prey that wanders into its turf).
-   */
+  /** When set, a LAIRED hostile: spawns only at tiles bearing the matching `lair` resource
+   *  (resources.jsonc, lair:true) and only wanders/aggros within `lairRange` tiles of it.
+   *  `hungerRate` = hunger multiplier (default 1); `foodOverflow` = 0–1 buffer that lowers
+   *  the hunt threshold so a leashed predator hunts opportunistically. */
   lair?: string;
   lairRange?: number;
   hungerRate?: number;
   foodOverflow?: number;
-  /**
-   * Ambient vocalisation ARCHETYPE id (e.g. "fowl", "canine", "beast") — drives the spatial creature
-   * SFX layer (AudioController + audio/manifest.ts `CREATURE_SFX`). Many creatures share an archetype.
-   * Backend reference only (never shown in UI). Omitted = the creature is silent.
-   */
+  /** Ambient vocalisation archetype id (audio/manifest.ts CREATURE_SFX); shared across
+   *  creatures. Backend reference only. Omitted = silent. */
   audio?: string;
 }
 
@@ -238,8 +160,7 @@ function defaultEatsForDiet(diet: EntityDiet): FoodCategory[] {
 
 function toDefinition(raw: RawCreature): CreatureDefinition {
   const rs = raw.stats as { str: number; dex: number; con: number; per: number };
-  // ×2 — MUST mirror baseVisionRange() in core/vision.ts (doubled sight range). Feeds the precomputed
-  // def.stats.visionRange + fleeRange so a creature's flee distance scales with its doubled detection.
+  // MUST mirror baseVisionRange() in core/vision.ts (doubled sight range); fleeRange scales with it.
   const visionRange = Math.round(4 + rs.per * 1.3);
   const stats: CreatureStats = {
     str: rs.str,

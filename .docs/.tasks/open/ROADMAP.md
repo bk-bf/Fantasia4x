@@ -2,7 +2,7 @@
 
 # ROADMAP
 
-> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [PRODUCTION-CHAIN-III](PRODUCTION-CHAIN-III.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) · [DISTRIBUTION](DISTRIBUTION.md) · archived: [PRODUCTION-CHAIN-II](../archive/PRODUCTION-CHAIN-II-2026-06-21.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [RANGED-COMBAT](../archive/RANGED-COMBAT-2026-06-21.md) · [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) · [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md) · [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
+> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [PRODUCTION-CHAIN-III](PRODUCTION-CHAIN-III.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [ENGINE-PERFORMANCE](../archive/ENGINE-PERFORMANCE.md) · [DISTRIBUTION](DISTRIBUTION.md). [TRAITS](TRAITS.md) · archived: [PRODUCTION-CHAIN-II](../archive/PRODUCTION-CHAIN-II-2026-06-21.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [RANGED-COMBAT](../archive/RANGED-COMBAT-2026-06-21.md) · [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) · [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md)
 
 ## Status Key
 
@@ -30,7 +30,7 @@ All critical architectural debt resolved. Core survival loop is functional.
 | ------------------------------------------------------------------------ | ------ | ---------------------------------------------------------------------------------------- |
 | Screen refactoring (WorkScreen only)                                     | [x]    | archived: `SCREEN-REFACTORING-2026-06-03.md`                                             |
 | **Survival consequences** (starvation death, collapse, injuries, health) | [x]    | archived: `SURVIVAL-HEALTH-2026-05-30.md`                                                |
-| Production chains (primitives → Maker's Bench, then full expansion)      | [x]    | archived: `PRODUCTION-CHAINS-2026-05-28.md` + `PRODUCTION-CHAIN-EXPANSION-2026-06-12.md` |
+| Production chains (primitives → Maker's Bench, then full expansion)      | [x]    | archived: `PRODUCTION-CHAIN-EXPANSION-2026-06-12.md` (original CHAINS design doc deleted, superseded) |
 | Healthcare jobs                                                          | [x]    | delivered as caretaking/healing in `COMBAT-SYSTEM` (archived)                            |
 | Cooking as a dedicated job                                               | [x] 2026-06-20 | Food-producing craft jobs now route to the `cooking` labor category (dynamic `recipe-output` source in `jobs.jsonc`/`JobService`) so the Cooking work-tab slider drives them and `cooking_speed`/`cooking_quality` (§F) apply. `jobRegistry.test.ts` guards the mapping. |
 
@@ -108,7 +108,7 @@ Layer, Research Enhancement, and the deferred Entity Spawning C–E content.
 | Building-work integration (bonus stacking)                                                                    | [ ]                 | Analysis in `game/ARCHITECTURE.md`                                                |
 | **Migrant wave + world-event foundation** (colony growth: at each season boundary ~every 3 months roll 0–3 hopefuls, count weighted by completed buildings; per-candidate accept/reject shown with **vague ability blurbs, no raw stats**; free reject) | [x] 2026-07-06 | First real consumer of the long-stubbed event system (`core/Events.ts`). Reusable seam: sim raises `GameState.pendingEvent` (one-shot snapshot field) → `EventModalHost` dispatches by `kind` → resolution command clears it. Roll in `systems/migration.ts` (+ `database/migration.jsonc` tuning) at the engine's events phase (turn order: events last); `commitMigrants` places accepted pawns; blurbs via `utils/pawnBlurb.ts` reusing `statBucket`. `check` green. |
 | AI event generation expansion (build on the migrant-wave `pendingEvent` seam)                                 | [ ]                 | —                                                                                 |
-| **Sim perf scaling** (500+ entities, 1000×1000 maps)                                                          | [ ] superseded      | now driven by [ENGINE-PERFORMANCE.md](ENGINE-PERFORMANCE.md) (premise corrected: the worker→main **snapshot** was the ceiling, not O(n²) perception); archived: `SIMULATION-PERF-2026-05-30.md` (Phase 1+1.5 [x]) |
+| **Sim perf scaling** (500+ entities, 1000×1000 maps)                                                          | [ ] superseded      | now driven by [ENGINE-PERFORMANCE.md](../archive/ENGINE-PERFORMANCE.md) (premise corrected: the worker→main **snapshot** was the ceiling, not O(n²) perception); early SIMULATION-PERF spec deleted (superseded) |
 | **Unified work model** (single stats.jsonc speed/yield/quality; ModifierSystem work-eff removed)              | [x] 2026-06-13      | ADR-015 in `game/DECISIONS.md`; no separate spec                                  |
 | **Work-driven pawn hunting** (mark-to-hunt → chase → resolve as combat → carcass → butchery; prey fight-back) | [x] 2026-06-13      | reuses COMBAT + ENTITIES circuits; no separate spec                               |
 | **Data-driven colony jobs** (`database/jobs.jsonc` + `JobService` handler registry; no hardcoded job switches) | [x] 2026-06-13      | ADR-017 in `game/DECISIONS.md`; drift-guarded by `jobRegistry.test.ts`            |
@@ -140,9 +140,9 @@ See `.tasks/archive/` for full specs.
 | GameEngine refactoring Phase 1                                                | 2026-05-25 | `GAMEENGINE-REFACTORING-2026-05-25.md`  |
 | PawnScreen refactoring                                                        | 2026-05-25 | `PAWN-SCREEN-REFACTORING-2026-05-25.md` |
 | DF-like migration design                                                      | 2026-05-28 | `DF-MIGRATION-2026-05-28.md`            |
-| Production chains design                                                      | 2026-05-28 | `PRODUCTION-CHAINS-2026-05-28.md`       |
+| Production chains design                                                      | 2026-05-28 | doc deleted (superseded by EXPANSION)       |
 | Fog of War (deferred to Living World)                                         | 2026-05-28 | `FOG-OF-WAR-DEFERRED-2026-05-28.md`     |
-| Sim perf Phase 1+1.5 (60 TPS stable, 100+ FPS, rAF-accumulator, campfire fix) | 2026-05-30 | `SIMULATION-PERF-2026-05-30.md`         |
+| Sim perf Phase 1+1.5 (60 TPS stable, 100+ FPS, rAF-accumulator, campfire fix) | 2026-05-30 | doc deleted (superseded by ENGINE-PERFORMANCE)         |
 | Screen refactoring (WorkScreen split into sub-components)                     | 2026-06-03 | `SCREEN-REFACTORING-2026-06-03.md`      |
 | Survival consequences (starvation, collapse, injuries, health)                | 2026-05-30 | `SURVIVAL-HEALTH-2026-05-30.md`         |
 | Production & early-survival expansion (§A–§G, §1–§6; durability, recipes)      | 2026-06-12 | `PRODUCTION-CHAIN-EXPANSION-2026-06-12.md` |
@@ -151,4 +151,4 @@ See `.tasks/archive/` for full specs.
 | Combat System (stances, natural/crafted weapons, crit, wounds, pain→collapse, healing, caretaking) | 2026-06-11 | `COMBAT-SYSTEM-2026-06-11.md` |
 | Ranged Combat (ammunition, aim cadence, distance/cover, data-driven `blocksSight` LoS, recovery, bow-butt) | 2026-06-21 | `RANGED-COMBAT-2026-06-21.md` |
 | Production Chain II (§Q item quality, §M magic resources/passive-buff gear + arcane staves, §L pawn-carts, §F farming/soil + F8 food chain: mill/bake/brew, staged alcohol mood-good, food poisoning) | 2026-06-21 | `PRODUCTION-CHAIN-II-2026-06-21.md` |
-| Mob spawning (superseded — folded into ENTITIES_SPAWNING; spawn model later switched to lairs) | — | `MOB-SPAWNING.md` |
+| Mob spawning (superseded — folded into ENTITIES_SPAWNING; spawn model later switched to lairs) | — | doc deleted (superseded) |

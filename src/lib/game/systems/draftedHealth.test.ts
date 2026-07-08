@@ -2,9 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { pawnStateMachineService } from './PawnStateMachine';
 import type { GameState, Pawn } from '../core/types';
 
-// R2 — drafted pawns must still run the health simulation (bleed/heal/collapse/death); only the
-// behavioural state machine is skipped. Before the fix, a drafted pawn was immortal short of a
-// destroyed vital part.
+// Drafted pawns must still run the health sim (bleed/heal/collapse/death); only the FSM is skipped.
 function makePawn(over: Partial<Pawn> = {}): Pawn {
   return {
     id: 'p1',

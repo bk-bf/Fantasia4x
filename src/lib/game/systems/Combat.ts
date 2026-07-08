@@ -1,4 +1,3 @@
-// src/lib/game/systems/Combat.ts
 import type {
   GameState,
   Pawn,
@@ -58,8 +57,7 @@ import {
   weatherSightMul
 } from '../services/EnvironmentService';
 import { isWitnessedByColony } from '../core/vision';
-// P-4: the body-part anatomy table + selection helpers moved to core/BodyParts. Re-export the two
-// symbols external code imported from Combat (PawnHealth, EntityService, Pawns) so they're unchanged.
+// Re-exported below for callers that import these via Combat.
 import {
   PART_DEF_MAP,
   rollBodyPart,
@@ -79,13 +77,11 @@ import {
 } from '../core/BodyParts';
 import { coversPart, ARMOUR_SLOTS, SLOT_LAYER } from '../core/armorCoverage';
 
-/** Armour share for a body part with no explicit `armor` in limbmap (shouldn't happen for rollable
- *  parts, which all carry one). Mid value so an unannotated part is neither bare nor fully plated. */
+/** Armour share for a part with no explicit `armor` in limbmap — mid value, neither bare nor plated. */
 const DEFAULT_ARMOR_SHARE = 0.5;
 export { PART_DEF_MAP, createDefaultBodyParts, createBodyPlanLimbs };
 
-/** The limb (in this entity's OWN tree) that holds a given part — replaces the old global parentLimb,
- *  which can't exist now that a part's parent limb varies by body plan (heart ⊂ torso vs ⊂ body). */
+/** The limb in this entity's OWN tree that holds a given part (a part's parent limb varies by body plan). */
 function limbOfPart(entity: Pawn | Mob, partId: BodyPartId): LimbState | undefined {
   return (entity.limbs ?? []).find((l) => (l.parts ?? []).some((p) => p.id === partId));
 }
@@ -96,14 +92,12 @@ function planOf(entity: Pawn | Mob): string {
   return DEFAULT_PLAN;
 }
 
-/** Is the entity's anatomy actually modelled (limbs carry parts)? Sparse test fixtures use empty parts;
- *  for those we skip part-gating so they behave as before. */
+/** Is the anatomy actually modelled (limbs carry parts)? Sparse test fixtures use empty parts and skip part-gating. */
 function hasModelledAnatomy(entity: Pawn | Mob): boolean {
   return (entity.limbs ?? []).some((l) => (l.parts?.length ?? 0) > 0);
 }
 
-/** Can this entity still hold a hand weapon? True unless it HAS hand parts and they're all gone — so a
- *  pawn who loses both hands drops to natural attacks, while un-modelled fixtures stay able. */
+/** Can still hold a hand weapon — false only when hands are modelled and all gone. */
 function hasUsableHand(entity: Pawn | Mob): boolean {
   let sawHand = false;
   for (const limb of entity.limbs ?? []) {
@@ -117,54 +111,41 @@ function hasUsableHand(entity: Pawn | Mob): boolean {
   return !sawHand; // no modelled hands → don't block; modelled-but-all-gone → can't wield
 }
 
-// conditions.jsonc holds persistent and transient conditions; combat only needs the
-// transient ones (winded → dodge) — pick them out by the `duration` discriminant.
+// Combat only needs the transient conditions (winded → dodge).
 const TRANSIENT_CONDITIONS_DB = (
   conditionsData as unknown as Array<ConditionDef | TransientConditionDef>
 ).filter((d): d is TransientConditionDef => d.transient === true);
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
-// (Bleed/clot constants + the wound-derivation/clotting fns moved to core/Wounds.ts so the per-tick
-//  services can drive them without a services→systems hop — ADR-008.)
-/** Bone-fracture roll on a hit to a boned part. Blunt cracks bone FAR more readily (× the weapon's
- *  bluntMod) — that's a bludgeon's signature; a cut/thrust only fractures on a deep blow. The chance
- *  scales with how hard the hit lands vs the part's boneHp, capped so it's never a sure thing. A broken
- *  bone cripples the limb (manipulation/moving + the graded `fractured` condition) without severing it. */
+/** Bone-fracture roll on a hit to a boned part: blunt cracks bone far more readily (× bluntMod);
+ *  chance scales with the blow vs the part's boneHp, capped. A broken bone cripples without severing. */
 const FRACTURE_BLUNT_BASE = 0.6;
 const FRACTURE_OTHER_BASE = 0.12;
 const FRACTURE_BLUNT_CAP = 0.85;
 const FRACTURE_OTHER_CAP = 0.3;
-/** Every blow lands a DOUBLE wound: a crush/cut on the outer flesh AND a fracture on the bone beneath —
- *  and their depths are INDEPENDENT. The bone takes a share of the blow's RAW force by damage class: blunt
- *  shock drives through to the bone (× the weapon's bluntMod — a maul's signature), a cut/thrust mostly
- *  parts flesh and barely loads the bone. The bone is shielded by worn ARMOUR (it stops the impact) but
- *  NOT by the flesh's own toughness — so a tough-hided beast can take a shallow flesh wound yet a cracked
- *  bone from a hammer, while a deep blade cut leaves the bone intact. */
+/** Every blow lands a DOUBLE wound: a flesh crush/cut plus an INDEPENDENT load on the bone beneath.
+ *  The bone takes a share of the RAW force by damage class (blunt drives through, × bluntMod), shielded
+ *  by worn armour but NOT by the flesh's own toughness. */
 const BONE_TRANSFER_BLUNT = 0.7;
 const BONE_TRANSFER_OTHER = 0.2;
 /** ± spread on the transmitted bone load, so flesh and bone depth vary independently per blow. */
 const BONE_DAMAGE_VARIANCE = 0.4;
-/** Organ-penetration roll on a hit to a body cavity (abdomen/chest/head) — the soft-tissue twin of the
- *  fracture roll. A blow into the cavity can reach an organ inside INDEPENDENTLY of the flesh wound, so a
- *  battered low-HP abdomen with pristine kidneys is the norm, not a guaranteed gut-out. Penetrating wounds
- *  (a thrust, a deep slash) find organs readily; blunt force ruptures a solid organ only on a hard hit
- *  through the intact wall (rarer, capped low). Organs sit DEEPER than bone and a blow can pass between
- *  them, so these chances/transfers are below the fracture ones. The all-or-nothing cascade still applies
- *  separately when the cavity is actually destroyed (cascadeSeveredContents). Tunable, in HP/force terms. */
+/** Organ-penetration roll on a hit to a body cavity — the soft-tissue twin of the fracture roll, also
+ *  independent of the flesh wound. Penetrating wounds find organs readily; blunt only on a hard hit.
+ *  Organs sit deeper than bone, so chances/transfers sit below the fracture ones. The all-or-nothing
+ *  cascade when the cavity itself is destroyed (cascadeSeveredContents) is separate. */
 const ORGAN_PENETRATE_BASE = 1.0;
 const ORGAN_BLUNT_BASE = 0.18;
 const ORGAN_PENETRATE_CAP = 0.5;
 const ORGAN_BLUNT_CAP = 0.18;
-/** Share of the blow's RAW force that drives inward to an organ, by damage class — penetrating (a thrust)
- *  carries deep, blunt only partly transmits through the wall. Shielded by worn armour, like bone. */
+/** Share of the blow's RAW force driven inward to an organ, by damage class; shielded by worn armour. */
 const ORGAN_TRANSFER_PENETRATING = 0.55;
 const ORGAN_TRANSFER_BLUNT = 0.25;
-/** ± spread on the transmitted organ load, so organ depth varies independently per blow (mirrors bone). */
+/** ± spread on the transmitted organ load (mirrors bone). */
 const ORGAN_DAMAGE_VARIANCE = 0.4;
 /** Stats are on a ~5–22 scale; this divisor keeps damage in a sensible range. */
 const STAT_SCALE = 10;
-/** How strongly a creature's `bodyScale` boosts its natural-weapon damage (softened, see attackerProfile):
- *  damageMult = 1 + (bodyScale − 1) × this. 0.5 → a mammoth (3.5) hits ≈2.25×, a wolf (1.1) ≈1.05×. */
+/** How strongly `bodyScale` boosts natural-weapon damage: damageMult = 1 + (bodyScale − 1) × this. */
 const NATURAL_DAMAGE_BODYSCALE_FACTOR = 0.5;
 /** Mob base damage when it has no weapon. */
 const MOB_BASE_DAMAGE = 5;
@@ -172,36 +153,22 @@ const MOB_BASE_DAMAGE = 5;
 const CRIT_MULTIPLIER = 1.5;
 /** Upper bound on total crit chance (base stat + weapon critMod). */
 const CRIT_CHANCE_CAP = 0.6;
-// COLLAPSE_CONSCIOUSNESS (the down threshold) is now the single shared constant in core/needs — both
-// pawns and mobs go DOWN into the recoverable `collapse` condition at the same band (no instant kill).
-// How long a blunt knockdown keeps an entity prone, SCALED BY THE BLOW. Timers decrement once per tick
-// (a "turn" IS a tick; 750 ticks = 1 in-game hour). The old flat 2 turns (~0.03 s real at 1×, a single
-// frame at combat speed) was gone before you could see it and never cost the target an attack. Now it
-// FLOORS at one attack interval — see BASE/MIN_ATTACK_INTERVAL_TICKS — so it reliably costs the next
-// swing (floor ≈ 6 in-game min), plus extra turns per point of blunt damage dealt, capped so a single
-// huge hit (or a swarm refreshing it) can't near-permanently stun-lock. All three are tunable.
+// COLLAPSE_CONSCIOUSNESS (the down threshold) is the shared constant in core/needs — pawns and mobs
+// go DOWN into the recoverable `collapse` condition at the same band (no instant kill).
+// Blunt knockdown duration scales with the blow; floors at one attack interval so it reliably costs
+// the target its next swing, capped so a huge hit (or a swarm refreshing it) can't stun-lock.
 const KNOCKDOWN_FLOOR_TURNS = 72;
 const KNOCKDOWN_TURNS_PER_DAMAGE = 4;
 const KNOCKDOWN_MAX_TURNS = 240;
-/** Initial keepalive for the `collapse` timer: the state machines REFRESH it each tick while the entity
- *  stays unconscious and clear it on recovery, so this is just a short floor, NOT the real down-time. */
+/** Keepalive floor for the `collapse` timer — the state machines refresh it each tick while
+ *  unconscious and clear it on recovery; NOT the real down-time. */
 const COLLAPSE_KEEPALIVE_TURNS = 2;
-/**
- * A pawn's innate attacks — ids of `natural_weapon` items in items.jsonc. Bare hands
- * are deliberately weak vs crafted gear so equipping a real weapon is a clear upgrade;
- * the per-weapon weight/stamina/crit (kicks rarer, costlier, harder) live on the items.
- */
+/** A pawn's innate attacks — ids of `natural_weapon` items; deliberately weak vs crafted gear. */
 const PAWN_NATURAL_WEAPON_IDS = ['fists', 'kick'];
-/** §4.0 shared blood-feast: the buff stamped on a feeder after a successful blood DRAIN, and how long
- *  it holds (~30 in-game minutes). Non-refreshing while active (the anti-perma-keep cooldown). */
+/** Buff stamped on a feeder after a successful blood DRAIN; non-refreshing while active. */
 const FEASTED_CONDITION = 'feasted';
 const FEASTED_DURATION_HOURS = 0.5;
-/** Base attack interval in ticks — scaled by attack_speed stat.
- *  60 TPS: 120 ticks = 2.0s = 1 attack / 2s (base).
- *  Fast attackers (DEX 20) floor at 72 ticks = 1.2s.
- *  (Halved 2026-06-14, then halved AGAIN 2026-06-15 — at 100+ TPS combat resolved before the player
- *  could read it; swings should land at a watchable pace. May go to 1/4 of the original later.)
- */
+/** Base attack interval in ticks, scaled by the attack_speed stat. */
 const BASE_ATTACK_INTERVAL_TICKS = 120;
 /** Minimum ticks between attacks regardless of attack_speed (caps the fastest attacker). */
 const MIN_ATTACK_INTERVAL_TICKS = 72;
@@ -213,10 +180,8 @@ const WINDED = 'winded';
  *  sustained melee drains down to winded; a winded/resting entity recovers at the full rate. */
 const COMBAT_REGEN_FRACTION = 0.2;
 
-/** Max fatigue penalty on stamina: at fatigue 0 → 1.0×, at fatigue 100 → 1.3× (linear between).
- *  Recovery is DIVIDED by this and drain MULTIPLIED, so a tired entity recovers slower AND tires
- *  faster. This is the SINGLE indirect channel by which anything that raises the fatigue need
- *  (weather fatigueMul, conditions, …) also degrades stamina — no double counting on stamina itself. */
+/** Fatigue penalty on stamina: 1.0× at fatigue 0 → 1.3× at 100. Recovery is DIVIDED by this, drain
+ *  MULTIPLIED — the single channel by which fatigue degrades stamina (no double counting). */
 const FATIGUE_STAMINA_MAX = 1.3;
 function fatigueStaminaFactor(e: Pawn | Mob): number {
   const fatigue = Math.max(0, Math.min(100, e.needs?.fatigue ?? 0));
@@ -240,20 +205,14 @@ export interface HitResult {
   staminaCost: number;
   partRemainingHp?: number;
   partMaxHp?: number;
-  /** Secondary BONE wound this swing also inflicted (a fracture roll succeeded) — applied alongside the
-   *  soft-tissue injury. Cripples the limb if it breaks the bone; does not sever. */
+  /** Secondary BONE wound (fracture roll succeeded), applied alongside the soft-tissue injury. */
   fractureInjury?: Injury | null;
-  /** Secondary ORGAN wound this swing also inflicted (an organ-penetration roll succeeded) — a deep blow
-   *  that reached an organ inside the struck cavity (kidney/liver/heart/lung), applied alongside the flesh
-   *  injury. Drives the matching capacity loss (blood_filtration, breathing…); does not sever the limb. */
+  /** Secondary ORGAN wound (organ-penetration roll succeeded), applied alongside the flesh injury. */
   organInjury?: Injury | null;
 }
 
 export interface CombatService {
-  /**
-   * Advance all active combats one tick (mob-vs-pawn, mob-vs-mob, pawn-vs-mob).
-   * Called from GameEngineImpl after Entity Step (Phase C wiring).
-   */
+  /** Advance all active combats one tick; called from GameEngineImpl after the entity step. */
   tickCombat(state: GameState, dtMs: number): GameState;
   /** Pure hit resolution: roll to-hit, pick body part, compute damage & injury. */
   resolveHit(attacker: Pawn | Mob, defender: Pawn | Mob, state: GameState): HitResult;
@@ -262,14 +221,11 @@ export interface CombatService {
   applyInjury(pawnId: string, injury: Injury, state: GameState, knockdown?: boolean): GameState;
   /** Apply an already-resolved Injury to a mob, updating limb tree + conditions. */
   applyInjuryToMob(mobId: string, injury: Injury, state: GameState, knockdown?: boolean): GameState;
-  /** Deferred — stub; wired by MAGIC-SKILLS spec. */
+  /** Stub — not implemented yet. */
   triggerSkill(skillId: string, casterId: string, targetId: string, state: GameState): GameState;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-// recomputeWound / recomputeWoundInPlace / rollWoundClotting moved to core/Wounds.ts (ADR-008 layering);
-// Combat imports recomputeWound below for damage application.
 
 interface AttackProfile {
   str: number;
@@ -289,18 +245,14 @@ interface AttackProfile {
   critMod: number;
   /** Finesse weapon (rapier): melee damage scales with PERCEPTION, not STRENGTH. */
   finesse: boolean;
-  /** §M Arcane weapon (elemental staff): damage scales with INTELLIGENCE, not STRENGTH. */
+  /** Arcane weapon (elemental staff): damage scales with INTELLIGENCE, not STRENGTH. */
   arcane: boolean;
-  /** §3b bleed-weapon chance (0–1, item-level `bloodletting`): a landed open wound is marked
-   *  unclottable (Injury.bloodletting) at this chance — it bleeds until dressed. */
+  /** Chance (0–1) a landed open wound is marked unclottable — it bleeds until dressed. */
   bloodletting?: number;
 }
 
-/**
- * RANGED-COMBAT: a precomputed attack used in place of `attackerProfile` for a ranged shot (or the
- * bow-butt fallback). Carries the resolved profile plus the ranged-only hit modifier and STR-scaling
- * flag so `resolveHit` stays a single code path. (§VI-1: built once per shot, not per tick.)
- */
+/** Precomputed attack used in place of `attackerProfile` for a ranged shot, so `resolveHit`
+ *  stays a single code path. Built once per shot. */
 export interface RangedOverride {
   profile: AttackProfile;
   /** Additive hit-chance points: ammo accuracy − distance penalty×100 − cover×100. */
@@ -311,7 +263,7 @@ export interface RangedOverride {
 
 type WeaponProps = NonNullable<Item['weaponProperties']>;
 
-/** One natural-weapon candidate this swing could roll: its item id + properties (+ §3b bleed chance). */
+/** One natural-weapon candidate this swing could roll. */
 interface WeaponCandidate {
   id: string;
   wp: WeaponProps;
@@ -364,29 +316,18 @@ const TWOHAND_DAMAGE_MULT = 1.15;
 const TWOHAND_ARMOR_PEN = 0.05;
 /** Multiplier a shield applies to the WEARER's dodge (no active block — BB-style, defence = dodge). */
 const SHIELD_DODGE_MULT = 1.25;
-// Weight on a weapon's flat `accuracy` in the melee hit roll. The raw weapon spread (spear/rapier high,
-// hammer/flail/cleaver low) was only ~±7 against a ~48-pt base (DEX×3) + ~20-pt dodge term, so the
-// "accurate vs. brutish weapon" axis barely moved hit chance. ×2 makes it bite without re-touching every
-// weapon. Ranged uses `hitMod` (rangedAccuracyMod), not this term, so launchers are unaffected.
+// Weight on a weapon's flat `accuracy` in the melee hit roll — ×2 so the accurate-vs-brutish weapon
+// axis actually moves hit chance. Ranged uses `hitMod` instead, so launchers are unaffected.
 const MELEE_ACCURACY_WEIGHT = 2;
-/**
- * Melee hit chance = BASE + DEX edge − dodge edge (+ weapon accuracy / hitMod), × condition. The old
- * formula had NO base term (`DEX×3 − dodge×20`), so at parity (DEX 10 vs dodge 1.0) it gave just ~10%
- * — melee was a ~80%-whiff slog where no fight ever resolved (confirmed in the combat chronicle). These
- * recentre it on a sane baseline: ~60% at parity, with DEX and dodge as meaningful ± edges around it.
- */
+/** Melee hit chance = BASE + DEX edge − dodge edge (+ weapon accuracy), × condition — ~60% at parity. */
 const BASE_MELEE_HIT = 60;
-/** Hit-chance points per point of attacker DEX above 10 (a deft fighter lands more). Kept SYMMETRIC
- *  with the defender's dodge term (dodge gains ~0.02/DEX × DODGE_HIT_WEIGHT 50 = ~1 hit removed per
- *  defender DEX) so a parity fight stays ~60% hit / 40% dodge at ANY stat magnitude — without this the
- *  inflated stat scale (PAWN-GROWTH) let attacker DEX outrun evasion and dodges all but vanished. */
+/** Hit-chance points per attacker DEX above 10. Kept SYMMETRIC with the defender's dodge term so a
+ *  parity fight stays ~60% hit / 40% dodge at any stat magnitude. */
 const DEX_HIT_WEIGHT = 1;
-/** Hit-chance points removed per +1.0 of defender `dodge` above the 1.0 baseline (a nimble target evades). */
+/** Hit-chance points removed per +1.0 of defender `dodge` above the 1.0 baseline. */
 const DODGE_HIT_WEIGHT = 50;
-/** Dodge lost per point of a defender's NATURAL armour — a thick hide / heavy plating is dead weight that
- *  evades worse (bear armour 32 → −0.32 dodge ≈ +16 hit%; a mammoth's 55 makes it all but unmissable),
- *  so heavy animals can't slip a blow the way a bare-hided one can. Worn armour is separate — it already
- *  drags dodge through the staged `encumbered` condition (conditionDodgeMult). */
+/** Dodge lost per point of NATURAL armour — heavy hide is dead weight that evades worse. Worn armour
+ *  is separate: it drags dodge through the staged `encumbered` condition. */
 const NATURAL_ARMOR_DODGE_DRAG = 0.01;
 /** Default projectile particle style per ammo bucket when the ammo item doesn't author its own. */
 const PROJECTILE_BY_CATEGORY: Record<string, string> = {
@@ -396,9 +337,8 @@ const PROJECTILE_BY_CATEGORY: Record<string, string> = {
 };
 /** Min ticks between repeated "No ammo" floats for the same pawn — avoids per-tick spam. */
 const NOAMMO_NOTIFY_COOLDOWN = 90;
-// Encumbrance is no longer a combat-local hook: worn-armour + pack load drives the staged `encumbered`
-// CONDITION (PawnStateMachine.tickConditions → driveEncumbrance), whose dodge/hitChance/fatigue
-// modifiers flow through conditionDodgeMult / conditionHitMult below — one unified model.
+// Encumbrance is not a combat-local hook: the staged `encumbered` condition's dodge/hitChance
+// modifiers flow through conditionDodgeMult / conditionHitMult below.
 
 /** Apply the MELEE grip's offensive modifier to a built profile (duelist + two-hand add offense; a
  *  shield trades offense for the defender-side dodge bonus, applied separately in resolveHit). */

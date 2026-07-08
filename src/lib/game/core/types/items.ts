@@ -1,52 +1,40 @@
-// Items, recipes, inventory, and equipment types. Split out of core/types.ts (P-4); re-exported
-// via the barrel.
+// Items, recipes, inventory, and equipment types.
 
 import type { DamageType } from './health';
 import type { OnHitCondition, OnHitWound } from './race';
 
 /**
- * PRODUCTION-CHAIN-II §Q discrete craft-quality tier (R8). 0=Crude, 1=Standard (unmarked baseline),
- * 2=Fine, 3=Superior, 4=Masterwork, 5=Legendary. Rolled from the `crafting_quality` work-axis at
- * craft completion and stamped per-stack/per-instance, like durability. See `core/itemQuality.ts`
- * for the tier table, roll, and the multiplier/prefix/colour helpers.
+ * Discrete craft-quality tier: 0=Crude, 1=Standard (unmarked baseline), 2=Fine, 3=Superior,
+ * 4=Masterwork, 5=Legendary. Rolled at craft completion and stamped per-stack/per-instance, like
+ * durability. See `core/itemQuality.ts` for the tier table, roll, and multiplier/prefix/colour helpers.
  */
 export type ItemQuality = 0 | 1 | 2 | 3 | 4 | 5;
 
 export interface ItemInstance {
-  instanceId: string; // unique stable ID
+  instanceId: string;
   itemId: string; // references Item definition
-  durability: number; // current durability (same field everywhere — ground/inventory/equipped)
-  /**
-   * Per-instance display name override for `dynamicName` items (R10) — e.g. a pawn carcass carries
-   * "Vale's Carcass" so its identity survives being hauled into and stored in the stockpile, instead
-   * of collapsing into the generic counted def name. Undefined for ordinary tracked items.
-   */
+  durability: number; // same field everywhere — ground/inventory/equipped
+  /** Per-instance display name override for `dynamicName` items (e.g. a pawn carcass keeps
+   *  "Vale's Carcass" through hauling/storage). Undefined for ordinary tracked items. */
   name?: string;
-  /**
-   * §Q craft-quality tier (R8). Stamped at craft completion from the crafter's `crafting_quality`
-   * axis and carried for the life of the item; readers (Combat weapon/armor, PawnStatService tool
-   * boost) scale the item's quality-relevant stats by `qualityMultiplier(quality)`. Undefined =
-   * Standard (×1.0) — uncrafted / world-spawned items and bulk materials carry no quality.
-   */
+  /** Craft-quality tier, carried for the life of the item; readers scale quality-relevant stats by
+   *  `qualityMultiplier(quality)`. Undefined = Standard (×1.0) — uncrafted / world-spawned items and
+   *  bulk materials carry no quality. */
   quality?: ItemQuality;
   /**
-   * PRODUCTION-CHAIN-III §I — Famed: a named legend ABOVE the §Q tier scale. Set on the
-   * vanishingly-rare craft roll (the tail above Legendary, skill/station-scaled — see `rollFamed`)
-   * or a high-level mob drop. When `famed`, the item carries a generated `famedName`/`famedHistory`,
-   * a per-stat explosion multiplier (`famedStatMult`, ×2–5, layered over the §Q tier), and
-   * `famedEnchants` (1–3 condition ids granted while equipped, reusing `grantsConditions`).
+   * Famed: a named legend ABOVE the quality tier scale, set on a vanishingly-rare craft roll (see
+   * `rollFamed`) or a high-level mob drop. Carries a generated `famedName`/`famedHistory`, a per-stat
+   * explosion multiplier (`famedStatMult`, ×2–5, layered over the quality tier), and `famedEnchants`
+   * (1–3 condition ids granted while equipped, reusing `grantsConditions`).
    */
   famed?: boolean;
   famedName?: string;
   famedHistory?: string;
   famedStatMult?: number;
   famedEnchants?: string[];
-  /**
-   * Liquid-container fill (waterskin/flask/jug): UNITS of this container def's `container.holds` item
-   * currently inside (0 / undefined = empty). For water (1 L/unit) it's the litres held. Drives the
-   * fill bar and how much the container can dispense (drinking / a recipe's `water` input). Only
-   * meaningful on `container` items.
-   */
+  /** Liquid-container fill: UNITS of this container def's `container.holds` item currently inside
+   *  (0 / undefined = empty; water is 1 L/unit, so for water it's the litres held). Drives the fill
+   *  bar and how much the container can dispense. Only meaningful on `container` items. */
   contents?: number;
 }
 
@@ -70,22 +58,22 @@ export interface PawnEquipment {
   gloves?: ItemInstance;
   boots?: ItemInstance;
   gorget?: ItemInstance;
-  pauldrons?: ItemInstance; // ADR-029 shoulder armour (covers leftShoulder/rightShoulder)
-  bracers?: ItemInstance; // ADR-029 arm armour (upper arms + forearms)
-  greaves?: ItemInstance; // ADR-029 leg armour (upper + lower legs)
+  pauldrons?: ItemInstance; // shoulder armour (covers leftShoulder/rightShoulder)
+  bracers?: ItemInstance; // arm armour (upper arms + forearms)
+  greaves?: ItemInstance; // leg armour (upper + lower legs)
   ring?: ItemInstance;
-  ring2?: ItemInstance; // §M second ring slot — two rings can be worn at once (occupancy-resolved on equip)
-  amulet?: ItemInstance; // §M neck slot for attuned amulets (distinct from the `gorget` neck armour)
+  ring2?: ItemInstance; // second ring slot — two rings can be worn at once (occupancy-resolved on equip)
+  amulet?: ItemInstance; // neck slot for attuned amulets (distinct from the `gorget` neck armour)
   belt?: ItemInstance;
   back?: ItemInstance;
 }
 
-/** @deprecated Use ItemInstance directly — EquippedItem kept for backward compat during migration. */
+/** @deprecated Use ItemInstance directly. */
 export interface EquippedItem {
   itemId: string;
   durability: number;
   maxDurability: number;
-  bonuses?: Record<string, number>; // Applied bonuses
+  bonuses?: Record<string, number>;
 }
 
 export type EquipmentSlot =
@@ -109,17 +97,15 @@ export type EquipmentSlot =
   | 'back';
 
 /**
- * Defines a single dynamic ingredient slot in a recipe.
- * Any item whose `category` matches `acceptsCategory` is a valid substitute;
- * the chosen ingredient drives the output item's display name, description,
- * and optional stat tweaks.
+ * A single dynamic ingredient slot in a recipe. Any item whose `category` matches is a valid
+ * substitute; the chosen ingredient drives the output item's display name, description, and
+ * optional stat tweaks.
  */
 export interface DynamicIngredientSlot {
   /** Items with this `category` are accepted in this slot (e.g. "meat"). Single-category shorthand. */
   acceptsCategory?: string;
   /** Items in ANY of these categories are accepted (e.g. a stew slot taking meat/fish/vegetable/legume).
-   *  Use this for mixed-ingredient dishes; `acceptsCategory` is the single-category shorthand. Read both
-   *  through `recipeService.slotCategories(slot)` so callers never branch. */
+   *  Read both fields through `recipeService.slotCategories(slot)` so callers never branch. */
   acceptsCategories?: string[];
   /** Units consumed from the chosen ingredient */
   quantity: number;
@@ -139,20 +125,11 @@ export interface DynamicIngredientSlot {
   default?: { name?: string; description?: string };
 }
 
-// Fixed: Remove duplicate Tool interface - Item interface covers this
 /**
- * A crafting recipe (PRODUCTION-CHAIN-EXPANSION recipe-registry refactor). Recipes are
- * first-class: items are pure materials; a recipe transforms `inputs` → `outputs` (the primary
- * product plus any byproducts) at a `station`. Authored in `recipes.jsonc`, and also
- * *synthesised* from an item's legacy inline `craftingCost`/`workshopType` fields during
- * migration so both sources work behind one accessor.
- */
-/**
- * §M material properties — a dynamic build/craft material (oak vs pine plank, granite vs marble
- * block, silk vs linen cloth) shifts the finished building's / item's stats. Authored in
- * `materialProperties.jsonc`, keyed by material item id; the chosen material for a `category:` cost
- * slot looks its entry up. `building` mods adjust a placed building's stats; `item` mods the crafted
- * output. Multipliers default to 1 (neutral), additive deltas to 0.
+ * Material properties — a dynamic build/craft material (oak vs pine plank, granite vs marble block)
+ * shifts the finished building's / item's stats. Authored in `materialProperties.jsonc`, keyed by
+ * material item id. `building` mods adjust a placed building's stats; `item` mods the crafted output.
+ * Multipliers default to 1 (neutral), additive deltas to 0.
  */
 export interface MaterialStatMods {
   durability?: number; // ×maxDurability (item) / ÷conditionDecayPerTurn (building); 1 = neutral
@@ -180,16 +157,16 @@ export interface Recipe {
   inputAlternatives?: Record<string, number>[];
   /** Produced items: the primary product plus any byproducts (e.g. log → firewood + branches). */
   outputs: Record<string, number>;
-  /** Total work points (legacy `craftingTime`). */
+  /** Total work points. */
   workAmount: number;
   toolTierRequired?: number;
-  /** ADR-009 step 2 — per-recipe craft-tool gate (overrides the recipe's station `toolRequirement`).
-   *  A pawn must carry a qualifying tool to work this recipe. Omitted = inherit the station's. */
+  /** Per-recipe craft-tool gate (overrides the recipe's station `toolRequirement`). A pawn must
+   *  carry a qualifying tool to work this recipe. Omitted = inherit the station's. */
   toolRequirement?: { workType: string; minTier: number };
   researchRequired?: string | null;
   populationRequired?: number;
   buildingRequired?: string | null;
-  /** Variant-output slot — folds in the legacy `dynamicRecipe` system (e.g. spit_meat, stew). */
+  /** Variant-output slot (e.g. spit_meat, stew). */
   dynamicRecipe?: Record<string, DynamicIngredientSlot>;
   /**
    * Per-slot, per-material stat deltas applied to the crafted output.
@@ -200,10 +177,10 @@ export interface Recipe {
   /** True when synthesised from an item's inline fields rather than authored in recipes.jsonc. */
   synthesized?: boolean;
   /**
-   * ADR-016 passive furnaces: when true (or when the station is a known furnace), the recipe is
-   * produced PASSIVELY — inputs (and fuel) are loaded onto the station and it transforms them
-   * over time without a pawn working it, gated by the station being lit/hot. No craft job is
-   * generated; see GameEngineImpl.processPassiveProduction. Defaults from the station type.
+   * When true (or when the station is a known furnace), the recipe is produced PASSIVELY — inputs
+   * (and fuel) are loaded onto the station and it transforms them over time without a pawn working
+   * it, gated by the station being lit/hot. No craft job is generated; see
+   * GameEngineImpl.processPassiveProduction. Defaults from the station type.
    */
   passive?: boolean;
 }
@@ -213,12 +190,12 @@ export interface Item {
   name: string;
   amount: number;
   /**
-   * R10: the item's display name is derived per-instance from a subject (e.g. a pawn corpse →
+   * The item's display name is derived per-instance from a subject (e.g. a pawn corpse →
    * "Bjorn's Corpse"). Spawners pass the subject to `itemService.makeDynamicName`, which stores the
    * result on the `DroppedItem.name`; renderers resolve via `itemService.getItemDisplayName`.
    */
   dynamicName?: boolean;
-  description?: string; // Optional description for lore or flavor text
+  description?: string;
   /** Sprite-sheet glyph(s) for card/inventory icons (same shape as Building.charSpans). */
   charSpans?: Array<{ sheet?: string; id?: number; from?: number; to?: number; literal?: string }>;
   properties?: Record<string, any>;
@@ -235,13 +212,11 @@ export interface Item {
     max: number;
   }>;
   /**
-   * Dynamic recipe slots — each key is a slot name (e.g. "meat").
-   * Any item whose `category` matches `acceptsCategory` can fill that slot;
-   * the chosen item determines the output's name, description, and optional stat bonus.
+   * Dynamic recipe slots — each key is a slot name (e.g. "meat"); any item whose `category` matches
+   * can fill it, and the chosen item determines the output's name, description, and stat bonus.
    */
   dynamicRecipe?: Record<string, DynamicIngredientSlot>;
 
-  // Unified categorization
   type: 'material' | 'tool' | 'weapon' | 'armor' | 'consumable' | 'currency';
   category: string; // wood, iron, harvesting, combat, head, etc.
   /** Internal item never surfaced as a player resource (e.g. natural weapons like fists/claws).
@@ -252,11 +227,10 @@ export interface Item {
   emoji?: string;
   color?: string;
 
-  // Resource properties (from search results pattern)
   maxValue?: number; // Stack limit
   passiveGeneration?: number; // Auto-generation rate
 
-  // Embedded crafting requirements (like building system)
+  // Crafting requirements
   craftingCost?: Record<string, number>;
   /**
    * Alternative ingredient sets — crafting can use ANY ONE of these instead of craftingCost.
@@ -266,9 +240,9 @@ export interface Item {
   craftingTime?: number;
   toolTierRequired?: number;
   buildingRequired?: string | null;
-  workshopType?: string | null; // Phase 5d: building type required to craft (e.g. 'forge')
+  workshopType?: string | null; // building type required to craft (e.g. 'forge')
   populationRequired?: number;
-  // Phase 6: fuel / container / cooking properties
+  // Fuel / container / cooking properties
   fuelValue?: number; // fuel units added when used as campfire fuel
   /** Burn-longevity multiplier (≥1, default 1): how much SLOWER a station burns while fed this fuel,
    *  independent of `fuelValue` (bulk) and `fuelHeat` (temperature). Dense seasoned fuel (charcoal,
@@ -284,15 +258,13 @@ export interface Item {
   durability?: number;
   maxDurability?: number;
   effects?: Record<string, number>;
-  // ── PRODUCTION-CHAIN-EXPANSION §B: wear & deterioration ──
-  // Both wear sources draw down the same `maxDurability` pool (default 100 when unset):
+  // Wear & deterioration — both sources draw down the same `maxDurability` pool (default 100):
   //   • tools lose `durabilityLossPerAction` per work action,
   //   • any durable good loses `deteriorationRate` per tick while loose/unsheltered.
-  // Lifespan of an exposed stack ≈ maxDurability / deteriorationRate ticks.
   /** Durability spent per work action when used as a tool (scaled by tier). */
   durabilityLossPerAction?: number;
   /** Tool tier (1 = primitive stone, higher = better materials). A colony owning a tier-N tool meets
-   *  a `toolTierRequired: N` build/craft gate (see `colonyToolTier`) and the R4 harvest tool gate. */
+   *  a `toolTierRequired: N` build/craft gate (see `colonyToolTier`) and the harvest tool gate. */
   tier?: number;
   /**
    * Additive work boost while this tool is held (equipped or carried). `speed`/`yield` are ADDED to
@@ -303,37 +275,37 @@ export interface Item {
   toolBoost?: { speed?: number; yield?: number };
   /** Per-tick durability lost to elemental exposure while a stack is loose/unsheltered. */
   deteriorationRate?: number;
-  // ── §2: heat rating when burned as fuel (gates high-heat stations) ──
+  // Heat rating when burned as fuel (gates high-heat stations)
   fuelHeat?: number;
 
   // Food properties
-  nutrition?: number; // Dedicated nutrition value for food items
+  nutrition?: number;
 
-  /** §F8: alcohol mood-good. The one-shot mood lift granted when this drink is consumed; its presence
-   *  marks the item as alcoholic (also applies a short `intoxicated` condition). 0/absent = sober. */
+  /** Alcohol: the one-shot mood lift granted when this drink is consumed; its presence marks the
+   *  item as alcoholic (also applies a short `intoxicated` condition). 0/absent = sober. */
   intoxication?: number;
 
-  /** §F8 food poisoning: per-serving probability (0–1) this food gives a pawn nausea/dysentery when
+  /** Food poisoning: per-serving probability (0–1) this food gives a pawn nausea/dysentery when
    *  eaten. Absent ⇒ a sane default by category (raw meat high, crops/foraged mild, drinks low).
-   *  Routed through the eater's `poison_resistance` (CON) and, for cooked dishes, scaled by the item's
-   *  `rarity` → rarities.jsonc `poisonMult` (a low-grade cooked meal is dicier). See pawnQueries. */
+   *  Routed through the eater's `poison_resistance` (CON) and, for cooked dishes, scaled by the
+   *  item's `rarity` → rarities.jsonc `poisonMult`. See pawnQueries. */
   poisonChance?: number;
 
-  /** §F8 meal buff: a transient condition stamped on the eater when this cooked meal is consumed (via
+  /** Meal buff: a transient condition stamped on the eater when this cooked meal is consumed (via
    *  pawnQueries.applyMealBuff → conditionTimers, like nausea/intoxication). `condition` is a
-   *  conditions.jsonc id (well_fed/hearty_meal/nourished/fortified/refreshed/soothed); `seconds` is its
-   *  duration in authored seconds (≈12.5s = 1 in-game hr). Cooked dishes only — raw food carries none. */
+   *  conditions.jsonc id; `seconds` is its duration in authored seconds (≈12.5s = 1 in-game hr).
+   *  Cooked dishes only — raw food carries none. */
   mealBuff?: { condition: string; seconds: number };
 
-  /** Medicine quality 0–1 — added to a tend's treatment quality when consumed (COMBAT-SYSTEM caretaking). */
+  /** Medicine quality 0–1 — added to a tend's treatment quality when consumed. */
   medicineQuality?: number;
 
   // Weight & volume for inventory capacity system
   weightKg?: number;
   volumeL?: number;
   /**
-   * Bonus carry capacity granted while equipped (belt/back pouches, and PRODUCTION-CHAIN-II §L
-   * wheelbarrow/handcart held in hand). Raises the pawn's normal weight/volume carry budget.
+   * Bonus carry capacity granted while equipped (belt/back pouches, or a wheelbarrow/handcart held
+   * in hand). Raises the pawn's normal weight/volume carry budget.
    */
   inventoryBonus?: { weightKg: number; volumeL: number };
   /**
@@ -345,7 +317,7 @@ export interface Item {
   container?: { holds: string; capacityL: number };
   /** Durability lost per combat hit when this item is equipped. */
   durabilityLossPerCombatHit?: number;
-  // Future SEASONS_WEATHER stubs (no logic yet, just typed):
+  // Typed stubs — no logic reads these yet:
   weatherResistance?: number;
   coldProtection?: number;
   heatProtection?: number;
@@ -367,23 +339,21 @@ export interface Item {
   level?: number;
   rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
-  // ── PRODUCTION-CHAIN-II §M: magical materials & passive-buff gear ──
   /**
    * Transient condition id(s) (conditions.jsonc, `magical: true`) granted while this item is worn.
-   * Wired by `PawnStateMachine.syncTransientConditions`: each tick it pushes a worn item's
-   * `grantsConditions` onto the pawn's `transientConditions`, so the buff applies through the
-   * existing condition `modifiers` pipeline and auto-clears on unequip. No bespoke stat-bonus system.
+   * Synced each tick by `PawnStateMachine.syncTransientConditions` into the pawn's
+   * `transientConditions`, so the buff applies through the existing condition `modifiers` pipeline
+   * and auto-clears on unequip. No bespoke stat-bonus system.
    */
   grantsConditions?: string[];
   /**
-   * PRODUCTION-CHAIN-III §G: for a CONSUMABLE potion, how many turns its `grantsConditions` buff
-   * lasts once drunk. The active "drink → push timed condition into `conditionTimers`" use-action
-   * reuses Combat's on-hit timer mechanic (see ENGINE/Combat `conditionTimers`/`transientConditions`).
-   * Absent on worn gear (that buff is passive-while-equipped, no timer).
+   * For a CONSUMABLE potion: how many turns its `grantsConditions` buff lasts once drunk (pushed as
+   * a timed condition into `conditionTimers`). Absent on worn gear — that buff is
+   * passive-while-equipped, no timer.
    */
   conditionDurationTurns?: number;
-  /** §M magic-material affinity hook (e.g. "lunar"|"fire"|"earth") — quality/flavour edge now; a
-   *  mana/affinity bonus consumed by MAGIC-SKILLS later. Carried by ancient `magic_wood` species. */
+  /** Magic-material affinity hook (e.g. "lunar"|"fire"|"earth") — quality/flavour edge now; a
+   *  mana/affinity bonus later. Carried by ancient `magic_wood` species. */
   affinity?: string;
 
   // Item-specific properties
@@ -391,10 +361,9 @@ export interface Item {
     damage: number; // canonical base damage (before STR scaling); the one field the combat formula reads
     attackSpeed: number;
     range: number;
-    // ── COMBAT-SYSTEM additions ──────────────────────────────────────────
     damageType?: DamageType; // cutting | piercing | blunt
-    damMin?: number; // minimum damage roll (EQUIPMENT-EXPANSION)
-    damMax?: number; // maximum damage roll (EQUIPMENT-EXPANSION)
+    damMin?: number; // minimum damage roll
+    damMax?: number; // maximum damage roll
     reach?: number; // melee reach in tiles (1 = adjacent, 2 = pole-arm); a reach>1 weapon strikes a tile away and its wielder holds at that distance
     knockback?: number; // 0–1 BASE chance (before STR scaling) that a landed spear hit shoves the target back one tile — the displacement is code (Combat.performAttack), marked by the `staggered` condition. Reach polearms only.
     accuracy?: number; // added to hitChance formula
@@ -403,12 +372,11 @@ export interface Item {
     stunChance?: number; // 0–1 FLAT chance to stun (knock down) the target on a hit, regardless of damage type — maces/hammers/heavy stocks. Adds on top of the blunt damage-based knockdown.
     armorDamage?: number; // armour CONDITION stripped per landed hit (× the attacker's armor_damage stat), SEPARATE from flesh damage. Hammers high, maces mid, cleavers ~0. Omitted = a sensible default by damageType (blunt > piercing > cutting).
     finesse?: boolean; // a FINESSE weapon (rapier/estoc): melee damage scales with PERCEPTION (precision/timing — finding the gap) instead of STRENGTH. Lets a high-PER duelist hit hard in melee, not just at range.
-    arcane?: boolean; // §M an ARCANE weapon (elemental staff): damage scales with INTELLIGENCE instead of STRENGTH (mirrors `finesse`→PER). The INT caster's "finesse" — wits drive the blast, not muscle.
-    channeled?: boolean; // §M a CHANNELED ranged weapon (staff): fires with NO ammo, paying its `staminaCost` as MANA each shot, and is NOT self-consumed/dropped like a thrown weapon (it stays in hand). Bottoming out stamina latches `winded` = out of mana.
+    arcane?: boolean; // an ARCANE weapon (elemental staff): damage scales with INTELLIGENCE instead of STRENGTH (mirrors `finesse`→PER).
+    channeled?: boolean; // a CHANNELED ranged weapon (staff): fires with NO ammo, paying its `staminaCost` as MANA each shot, and is NOT self-consumed/dropped like a thrown weapon (it stays in hand). Bottoming out stamina latches `winded` = out of mana.
     critMod?: number; // added to the wielder's base hit_precision (0–1)
     twoHanded?: boolean; // requires both mainHand and offHand slots
-    tags?: string[]; // ability grants from COMBAT-SYSTEM
-    // ── RANGED-COMBAT additions ──────────────────────────────────────────
+    tags?: string[]; // ability grants
     ammoCategory?: string; // links a ranged weapon to its ammo (e.g. "arrow" | "bolt" | "sling_stone"); omit = no ammo (thrown weapons self-consume)
     reload?: number; // mechanical SPANNING multiplier on the aim_speed cadence (default 0→1×); a crossbow at 3 fires a third as often as a bow. See rangedCombat.aimIntervalTicks.
     strScaled?: boolean; // does damage scale with STR? (default true; crossbows/slings set false — mechanical advantage)
@@ -423,22 +391,22 @@ export interface Item {
     /** Visual: particle style for a THROWN weapon's flight ("spear"|"stone"). Launchers take theirs
      *  from the ammo instead; omitted = a sensible default by category. Purely cosmetic. */
     projectile?: string;
-    // ── Natural-weapon additions (innate attacks rolled per swing) ───────
+    // Natural-weapon fields (innate attacks rolled per swing):
     weight?: number; // relative roll frequency among an entity's natural weapons (default 1)
     staminaCost?: number; // stamina drained by this attack (default ATTACK_STAMINA_COST)
   };
 
   /**
-   * ADR-029: on-hit WOUND procs — flags stamped on the physical wound a landed hit opens (the INJURY
-   * layer, parallel to `onHitCondition`'s condition layer). `{wound:'bloodletting', chance:0.3}` marks
-   * the open wound unclottable (`Injury.bloodletting`) — it bleeds at full rate until a caretaker
-   * DRESSES it. Raking claws, feeding fangs, deep-cutting blades. Replaces the bare `bloodletting`.
+   * On-hit WOUND procs — flags stamped on the physical wound a landed hit opens (the INJURY layer,
+   * parallel to `onHitCondition`'s condition layer). `{wound:'bloodletting', chance:0.3}` marks the
+   * open wound unclottable (`Injury.bloodletting`) — it bleeds at full rate until a caretaker
+   * DRESSES it. Raking claws, feeding fangs, deep-cutting blades.
    */
   onHitWound?: OnHitWound[];
 
   /**
-   * ADR-029: on-hit CONDITION proc (venom/screech/tongue/blood-drain weapons). When a swing with this
-   * weapon LANDS, roll `chance` (reduced by the defender's `resist` stat) to inflict `condition` as a
+   * On-hit CONDITION proc (venom/screech/tongue/blood-drain weapons). When a swing with this weapon
+   * LANDS, roll `chance` (reduced by the defender's `resist` stat) to inflict `condition` as a
    * timed transient (via conditionTimers, like knockdown) for `durationHours`. ONE named type shared
    * with a trait's `onHitCondition` — Combat applies both through one path.
    */
@@ -450,9 +418,8 @@ export interface Item {
   audio?: string;
 
   /**
-   * RANGED-COMBAT: tags an item as ammunition. Any ammo feeds any ranged weapon sharing its
-   * `ammoCategory` (better ammo = better result — the dynamic-material philosophy). Ammo is a
-   * bulk consumable in pawn inventory, not an ItemInstance.
+   * Tags an item as ammunition. Any ammo feeds any ranged weapon sharing its `ammoCategory`
+   * (better ammo = better result). Ammo is a bulk consumable in pawn inventory, not an ItemInstance.
    */
   ammoProperties?: {
     ammoCategory: string; // "arrow" | "bolt" | "sling_stone"; matched against a weapon's weaponProperties.ammoCategory
@@ -466,29 +433,26 @@ export interface Item {
   };
 
   /**
-   * RANGED-COMBAT: a worn item that speeds drawing AMMUNITION (a faster nock), NOT an ammo container —
-   * ammo rides normal inventory by design (ADR/closeout: a quiver-only capacity gate was rejected as
-   * unrealistic; arrows carry in a pack fine). The slot it occupies (`armorProperties.equipmentSlot`)
-   * still drives a realistic loadout trade-off: a BACK quiver blocks a backpack (bows lose general
-   * carry); a BELT quiver leaves the back free (crossbowmen keep carry). Carry rides the normal
-   * `inventoryBonus` (belt/back) channel.
+   * A worn item that speeds drawing AMMUNITION (a faster nock), NOT an ammo container — ammo rides
+   * normal inventory by design. The slot it occupies (`armorProperties.equipmentSlot`) still drives
+   * a realistic loadout trade-off: a BACK quiver blocks a backpack (bows lose general carry); a BELT
+   * quiver leaves the back free. Carry rides the normal `inventoryBonus` (belt/back) channel.
    */
   quiver?: {
     ammoCategory: string; // which ammo bucket this quiver speeds ("arrow" | "bolt")
     /**
      * Fast-draw bonus folded into the `aim_speed` cadence (NOT a new stat) when this quiver's
-     * `ammoCategory` matches the equipped weapon — nocking from a ready quiver beats fumbling a shaft
-     * out of a pack. Storage stays universal (ammo rides general inventory); the quiver only sells
-     * SPEED. Better/later quivers draw faster. See `rangedCombat.drawSpeedModifier`.
+     * `ammoCategory` matches the equipped weapon — nocking from a ready quiver beats fumbling a
+     * shaft out of a pack. See `rangedCombat.drawSpeedModifier`.
      */
     drawSpeed: number;
   };
 
   /**
-   * RANGED-COMBAT: flat aim boosts contributed by an EQUIPPED item — both a ranged weapon's own
-   * "personality" (a war bow boosts `range`, a short bow `speed`, a crossbow `accuracy`) and worn
-   * marksman gear (bracers/hood/cloak). Summed across ALL equipped slots in the ranged combat path
-   * (equipment doesn't reach the stat engine, so these are read directly, NOT via `evaluateStat`).
+   * Flat aim boosts contributed by an EQUIPPED item — both a ranged weapon's own "personality" (a
+   * war bow boosts `range`, a short bow `speed`, a crossbow `accuracy`) and worn marksman gear
+   * (bracers/hood/cloak). Summed across ALL equipped slots in the ranged combat path (equipment
+   * doesn't reach the stat engine, so these are read directly, NOT via `evaluateStat`).
    *   accuracy — flat hit-chance points added to the shot.
    *   speed    — fractional aim-cadence bonus (0.2 = aim 20% faster), stacks on the `aim_speed` stat.
    *   range    — flat tiles of effective reach added (still capped by visionRange).
@@ -501,8 +465,8 @@ export interface Item {
 
   armorProperties?: {
     defense: number;
-    /** ADR-029: the body parts this piece protects (limbmap part ids). Binary coverage — a mail shirt
-     *  lists the shoulders, a plain vest does not. Omitted ⇒ the slot's default parts (SLOT_COVERAGE). */
+    /** The body parts this piece protects (limbmap part ids). Binary coverage — a mail shirt lists
+     *  the shoulders, a plain vest does not. Omitted ⇒ the slot's default parts (SLOT_COVERAGE). */
     covers?: string[];
     armorType?: 'light' | 'medium' | 'heavy' | 'shield';
     slot?:
@@ -546,8 +510,8 @@ export interface Item {
     fullBodyProtection?: number;
 
     // Environmental bonuses
-    coldResistance?: number; // 0–1: reduces cold exposure (hypothermia) while worn (SEASONS_WEATHER)
-    heatResistance?: number; // 0–1: reduces heat exposure (heat stroke) while worn (SEASONS_WEATHER)
+    coldResistance?: number; // 0–1: reduces cold exposure (hypothermia) while worn
+    heatResistance?: number; // 0–1: reduces heat exposure (heat stroke) while worn
     stealthBonus?: number;
     terrainBonus?: number;
 
@@ -567,16 +531,16 @@ export interface Item {
 }
 
 export interface CraftingInProgress {
-  item: Item; // The item being crafted
-  quantity: number; // How many are being crafted
+  item: Item;
+  quantity: number;
   startedAt: number;
   /** For dynamic recipes: maps slot key (e.g. "meat") → chosen itemId */
   selectedIngredients?: Record<string, string>;
-  // Phase 5d: work-based crafting (produced by craftItem, consumed by JobService)
+  // Work-based crafting (produced by craftItem, consumed by JobService)
   id: string; // unique id for job correlation
-  workRequired: number; // recipe.workAmount × quantity (ADR-016)
+  workRequired: number; // recipe.workAmount × quantity
   workDone: number; // accumulated work points
-  // ADR-016 reserve-and-fetch:
+  // Reserve-and-fetch:
   /** Resolved input cost (× quantity) that must be physically staged on the station. */
   inputs: Record<string, number>;
   /** Queued without its inputs reserved yet (materials not in stock). A pending order generates no

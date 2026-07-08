@@ -1,10 +1,4 @@
-<!--
-  ArmorPanel — pop-up natural-armour readout for a selected creature (forked from HealthPanel). Floats
-  above the info card; the parent owns the open/close toggle (`open`) and the GEAR button that flips it.
-  Read-only: shows how thick the beast's hide is over each body part so the player can read where the
-  plating is heavy and where it is thin. The soft spots are marked but not spelled out — reading the map
-  is the point.
--->
+<!-- Pop-up natural-armour readout for a selected creature; parent owns the open/close toggle. -->
 <script lang="ts">
   import type { ArmorModel } from '$lib/components/UI/SelectedEntityCard.svelte';
   import { autohideScroll } from '$lib/actions/autohideScroll';
@@ -36,7 +30,6 @@
 </div>
 
 <style>
-  /* Pop-up framing copied from HealthPanel so the HUD pop-ups match. */
   .armor-panel {
     position: absolute;
     bottom: calc(100% + 4px);
@@ -103,7 +96,7 @@
     justify-content: space-between;
     padding-left: 8px;
   }
-  /* A thin spot in the hide reads brighter/greener — the gap the player wants, without a caption saying so. */
+  /* Thin spots read brighter/greener — marked, never captioned. */
   .armor-row.weak {
     color: #7fbf5f;
   }

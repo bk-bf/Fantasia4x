@@ -1,24 +1,19 @@
 /**
- * Pawn DISPLAY stats — the `{ value, sources[] }` ability map the UI renders (pawnStats store,
- * attribute panels). Moved out of entities/Pawns.ts: it enriches via ModifierSystem (systems), and
- * an entities-layer module must not reach up into systems. Pure presentation support — the sim
- * never reads these values.
+ * Pawn DISPLAY stats — the `{ value, sources[] }` ability map the UI renders.
+ * Pure presentation support: the sim never reads these values.
  */
 import type { GameState, Pawn } from '../core/types';
 import { modifierSystem } from './ModifierSystem';
 
-// UPDATED: Use ModifierSystem for complex calculations
 export function calculatePawnStats(
   pawn: Pawn,
   gameState?: GameState
 ): Record<string, { value: number; sources: string[] }> {
   const stats: Record<string, { value: number; sources: string[] }> = {};
 
-  // If we have gameState, use ModifierSystem for equipment + trait effect display stats.
-  // (Work speed/yield/quality is NOT here — it lives solely in stats.jsonc via
-  // pawnStatService.getWorkModifiers; see ADR in DECISIONS.md.)
+  // Work speed/yield/quality is NOT here — it lives solely in stats.jsonc via
+  // pawnStatService.getWorkModifiers.
   if (gameState) {
-    // Use ModifierSystem for equipment bonuses
     const equipmentResults = modifierSystem.calculateEquipmentBonuses(pawn);
     Object.entries(equipmentResults).forEach(([effectName, result]) => {
       stats[effectName] = {
@@ -27,7 +22,6 @@ export function calculatePawnStats(
       };
     });
 
-    // Use ModifierSystem for trait effects
     const traitResults = modifierSystem.calculateAllTraitEffects(pawn);
     Object.entries(traitResults).forEach(([effectName, result]) => {
       stats[effectName] = {
@@ -37,22 +31,18 @@ export function calculatePawnStats(
     });
   }
 
-  // Calculate base stats for simple derived abilities
   const baseStats = getBaseStats(pawn);
-  const totalStats = getTotalStats(baseStats, {}, {}); // Simplified since ModifierSystem handles bonuses
+  const totalStats = getTotalStats(baseStats, {}, {}); // ModifierSystem handles bonuses above
 
-  // Add skills (not handled by ModifierSystem)
   addSkillAbilities(stats, pawn);
 
-  // Keep only basic derived abilities that don't conflict with ModifierSystem
+  // Only basic derived abilities that don't conflict with ModifierSystem
   addBasicPhysicalAbilities(stats, totalStats);
   addBasicMentalAbilities(stats, totalStats);
   addBasicSurvivalAbilities(stats, totalStats);
 
   return stats;
 }
-
-// --- Helper functions ---
 
 function getBaseStats(pawn: Pawn) {
   return {
@@ -89,12 +79,10 @@ function getTotalStats(
   };
 }
 
-// SIMPLIFIED: Only basic derived stats, not work efficiencies
 function addBasicPhysicalAbilities(
   abilities: Record<string, { value: number; sources: string[] }>,
   totalStats: { [k: string]: number }
 ) {
-  // Only basic derived stats that don't conflict with ModifierSystem
   const carryCapacity = 50 + totalStats.strength * 2;
   addAbility(
     abilities,
@@ -124,7 +112,6 @@ function addBasicMentalAbilities(
   abilities: Record<string, { value: number; sources: string[] }>,
   totalStats: { [k: string]: number }
 ) {
-  // Only basic derived stats
   const learningSpeed = 1.0 + (totalStats.intelligence - 10) * 0.05;
   addAbility(
     abilities,
@@ -178,7 +165,6 @@ function addBasicSurvivalAbilities(
   abilities: Record<string, { value: number; sources: string[] }>,
   totalStats: { [k: string]: number }
 ) {
-  // Only basic derived stats
   const healthRegenRate = 0.5 + (totalStats.constitution - 10) * 0.1;
   addAbility(
     abilities,

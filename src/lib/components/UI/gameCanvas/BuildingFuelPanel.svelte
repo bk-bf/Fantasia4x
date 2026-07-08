@@ -1,9 +1,4 @@
-<!--
-  BuildingFuelPanel — per-building refuel settings UI (P-4, extracted from GameCanvas).
-  Self-contained: given the selected building + colonist list, it edits that building's
-  `fuelSettings` directly via gameState.updateWithSave. The parent owns the open/close toggle
-  (passed as `open`) and the FUEL button that flips it.
--->
+<!-- Per-building refuel settings pop-up; parent owns the open/close toggle. -->
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState.js';
   import type { FuelSettings, PlacedBuilding, Pawn, Item } from '$lib/game/core/types.js';
@@ -32,22 +27,17 @@
     0,
     Math.min(100, selectedFuelSettings.refuelThresholdPct ?? 30)
   );
-  // Effective burn-list (shares fuelRules' resolution): an untouched building falls back to the
-  // sensible default set (no rope/planks/magic logs/brine); an explicit list — even empty — is honoured.
+  // Untouched building falls back to the default burn-list; an explicit list — even empty — is honoured.
   $: allowedFuelSet = resolveAllowedFuelIds(selectedFuelSettings);
   $: selectedRefuelPawnFilters = selectedFuelSettings.allowedRefuelPawnIds ?? [];
 
-  // Refuel requirements (source of truth: fuelRules) shown so the player understands WHY a fire won't
-  // refuel — it needs a pinch of tinder + any allowed fuel in the stockpile (a single type is fine).
   $: refuelReq = getRefuelRequirements(building.type);
   $: tinderName = itemService.getItemById(refuelReq.tinderItemId)?.name ?? refuelReq.tinderItemId;
-  // Tinder is reserved to LIGHT the fire — never burned as bulk fuel (planRefuel skips it), so it
-  // isn't a toggleable fuel-bed choice. Hide it from the filter and flag it as always-consumed below.
+  // Tinder lights the fire, never burns as bulk fuel — so it's hidden from the filter, not toggleable.
   $: fuelFilterItems = FUEL_ITEMS.filter((item) => item.id !== refuelReq.tinderItemId);
   $: tinderStock = ($gameState.stockpile ?? {})[refuelReq.tinderItemId] ?? 0;
   $: maxFuel = buildingService.getBuildingById(building.type)?.maxFuel ?? 60;
   $: wantsFuel = (building.fuel ?? 0) / Math.max(maxFuel, 1) < selectedFuelThresholdPct / 100;
-  // Below threshold but no valid plan = the stockpile can't satisfy the requirement right now.
   $: cannotRefuel = wantsFuel && planRefuel($gameState, building) === null;
 
   function updateSelectedBuildingFuelSettings(updates: Partial<FuelSettings>) {
@@ -62,16 +52,13 @@
     updateSelectedBuildingFuelSettings({ refuelThresholdPct: Math.max(0, Math.min(100, nextPct)) });
   }
 
-  // Every fuel-filter action writes an EXPLICIT id list (the new allow-list), so the building is from
-  // then on under manual control — there's no longer an "empty = all" sentinel to fight.
+  // Every fuel-filter action writes an EXPLICIT id list — no "empty = all" sentinel.
 
-  // Burn-everything (emergency) — explicitly includes the normally-excluded rope/planks/magic/brine.
   function allowAllFuels() {
     updateSelectedBuildingFuelSettings({ allowedFuelItemIds: FUEL_ITEMS.map((item) => item.id) });
   }
 
-  // Reset to the sensible default burn-list. Prefer the building's OWN default (e.g. a campfire/hearth
-  // burns everyday wood/turf, not logs/bark — those stay manual); fall back to the global default set.
+  // Prefer the building's own default burn-list; fall back to the global default set.
   function resetFuelToDefault() {
     const def = buildingService.getBuildingById(building.type);
     const ids = def?.defaultAllowedFuelItemIds?.length
@@ -80,7 +67,6 @@
     updateSelectedBuildingFuelSettings({ allowedFuelItemIds: ids });
   }
 
-  // Burn nothing — empty explicit list. Refuel then reports "can't refuel" until something is re-checked.
   function clearFuelItemFilters() {
     updateSelectedBuildingFuelSettings({ allowedFuelItemIds: [] });
   }
@@ -141,8 +127,6 @@
     fuel settings
   </div>
 
-  <!-- Refuel requirements — makes it clear WHY a fire won't refuel (it needs a pinch of tinder + any
-       allowed fuel in stock; a single fuel type is fine). -->
   <div class="fuel-settings-block">
     <div class="fuel-settings-label">refuel needs</div>
     <div class="fuel-req">
@@ -241,7 +225,7 @@
     position: absolute;
     bottom: calc(100% + 4px);
     left: 0;
-    /* width matches the info card — capped at 300px (same as tile-hud--building max-width) */
+    /* width matches the info card's 300px cap */
     width: 100%;
     max-width: 300px;
     opacity: 0;
@@ -254,8 +238,7 @@
     color: #d4a860;
     font-size: 10px;
     z-index: 20;
-    /* Day/night hue + weather desaturation, matching the info card and chrome panels
-       (see +page.svelte #ambient-tint). */
+    /* Day/night hue + weather desaturation, matching the other chrome panels. */
     filter: url(#ambient-tint);
     transition:
       opacity 140ms ease,

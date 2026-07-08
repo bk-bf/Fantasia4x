@@ -1,8 +1,5 @@
-// Body-part anatomy — now DATA-DRIVEN from limbmap.jsonc (body plans per creature category) instead of
-// a single hardcoded humanoid table, so a wolf carries paws + a tail, not fingers + toes. This module
-// loads the catalog into PART_DEF_MAP, builds per-plan limb trees + hit-roll tables, and scales each
-// part's HP by bodyScale at build time (HP = round(default size × bodyScale)). Combat.ts re-exports the
-// public surface so existing importers are unchanged.
+// Body-part anatomy, data-driven from limbmap.jsonc (one body plan per creature category). Loads the
+// part catalog, builds per-plan limb trees + hit-roll tables, and scales part HP by bodyScale.
 import type { BodyPartId, LimbId, BodyPartState, LimbState } from './types';
 import { rng } from './rng';
 import limbmapRaw from '../database/limbmap.jsonc';
@@ -19,18 +16,15 @@ export interface BodyPartDef {
   /** Default-scale bone HP (BONE_FRACTION × maxHp). Presence = "this part has a skeleton" (can fracture);
    *  the runtime BREAK threshold uses BONE_FRACTION × the part's SCALED maxHp, not this default. */
   boneHp?: number;
-  /** This part IS bone (a distinct skeletal element like the ribcage, not a bone-bearing flesh limb): it
-   *  is internal (hitWeight 0 → never struck directly) and takes ONLY fractures. A hit on the flesh part
-   *  that CONTAINS it routes its fracture roll here — see `skeletonPartOf` + Combat. Implies a boneHp. */
+  /** This part IS bone: internal (hitWeight 0, never struck directly), takes ONLY fractures. A hit on
+   *  the flesh part that CONTAINS it routes its fracture roll here (see `skeletonPartOf`). */
   skeleton?: boolean;
   /** Destroying this part is instant death regardless of limb-aggregate HP (a caved-in skull). */
   isCritical?: boolean;
-  /** Natural-weapon ids this part can wield (jaw → bite, paw → claw, hoof → kick…). A creature can use
-   *  one of its `naturalWeapons` ONLY while it still has a non-missing part that enables it. */
+  /** Natural-weapon ids this part enables (jaw → bite); usable only while a non-missing part enables it. */
   weapons?: string[];
-  /** Natural-armour SHARE for this part (0–1+): how much of the creature's `naturalArmor` magnitude
-   *  protects it. The plan sets the DISTRIBUTION (armoured back/carapace ~1.0, soft belly ~0.5, exposed
-   *  eyes ~0.1); the creature sets the strength. A destroyed part takes its armour with it. */
+  /** Natural-armour share 0–1+: the plan sets the distribution, the creature's `naturalArmor` the strength.
+   *  A destroyed part takes its armour with it. */
   armor?: number;
 }
 
@@ -57,8 +51,8 @@ type LimbMapFile = {
 
 const LIMBMAP = limbmapRaw as unknown as LimbMapFile;
 
-// Merge the shared catalog + every plan's own parts into ONE flat part catalog (a plan's `limbs` may
-// reference parts declared by another plan — quadruped_hooved reuses quadruped's leg segments).
+// One flat part catalog: shared + every plan's own parts (a plan's `limbs` may reference parts
+// declared by another plan).
 const ALL_PARTS: Record<string, CatalogPart> = { ...LIMBMAP.shared.parts };
 for (const block of Object.values(LIMBMAP.plans)) {
   if (block.parts) Object.assign(ALL_PARTS, block.parts);
@@ -79,18 +73,15 @@ export const PART_DEF_MAP: Partial<Record<BodyPartId, BodyPartDef>> = {};
 for (const [id, p] of Object.entries(ALL_PARTS)) {
   PART_DEF_MAP[id as BodyPartId] = {
     id: id as BodyPartId,
-    // The ONE bone type — a hidden `skeleton` element (leftUlna, ribcage, skull, femur…) — is PURE
-    // bone: never struck directly, only fractured, so its whole HP IS the fracture budget (BONE_FRACTION
-    // of the flesh part it mirrors) and it breaks when chipped to 0. Flesh parts keep their full size.
+    // A `skeleton` part is pure bone: its whole HP IS the fracture budget (BONE_FRACTION of the flesh
+    // part it mirrors) and it breaks when chipped to 0. Flesh parts keep their full size.
     maxHp: p.skeleton ? Math.max(1, Math.round(p.size * BONE_FRACTION)) : p.size,
     bleedRatio: p.bleedRatio,
     hitWeight: p.hitWeight,
     containedIn: p.containedIn as BodyPartId | undefined,
     isPaired: p.isPaired ?? false,
     isVital: p.isVital ?? false,
-    // There is ONE bone type: a distinct `skeleton` element (hidden, fracture-only). It carries a boneHp;
-    // its whole HP IS that budget (see maxHp above). Flesh parts never fracture directly — they route to
-    // the skeleton child they wrap (skeletonPartOf).
+    // Flesh parts never fracture directly — they route to the skeleton child they wrap (skeletonPartOf).
     boneHp: p.skeleton ? Math.round(p.size * BONE_FRACTION) : undefined,
     skeleton: p.skeleton ?? undefined,
     isCritical: p.critical ?? undefined,
@@ -99,34 +90,28 @@ for (const [id, p] of Object.entries(ALL_PARTS)) {
   };
 }
 
-// Every natural-weapon id that is bound to SOME body part. A weapon NOT in this set is "unbound" and
-// stays always-available (back-compat / abstract attacks); a bound weapon needs a surviving enabling part.
+// Natural-weapon ids bound to SOME body part. An unbound weapon stays always-available; a bound one
+// needs a surviving enabling part.
 export const BOUND_NATURAL_WEAPONS = new Set<string>();
 for (const def of Object.values(PART_DEF_MAP)) {
   for (const w of def?.weapons ?? []) BOUND_NATURAL_WEAPONS.add(w);
 }
 
-// Flesh part id → the distinct skeletal part it WRAPS (a `skeleton` part's `containedIn`). A hit on the
-// flesh part routes its fracture roll to this bone (e.g. chest → ribcage).
+// Flesh part id → the skeletal part it WRAPS; a hit on the flesh routes its fracture roll to this bone.
 const SKELETON_OF: Partial<Record<BodyPartId, BodyPartId>> = {};
 for (const def of Object.values(PART_DEF_MAP)) {
   if (def?.skeleton && def.containedIn) SKELETON_OF[def.containedIn] = def.id;
 }
 
-/** Which part a hit on `partId` should FRACTURE: the distinct skeletal element it wraps (chest → ribcage),
- *  else the part itself when it's a bone-bearing limb (forearm → forearm), else undefined (no skeleton →
- *  can't fracture: eyes, soft abdomen, organs). Single source of truth for Combat's fracture targeting. */
+/** Which part a hit on `partId` should FRACTURE: the skeleton child the flesh wraps (chest → ribcage),
+ *  or undefined for soft parts with no skeleton (eyes, organs — can't fracture). Combat's single source
+ *  of truth for fracture targeting. */
 export function skeletonPartOf(partId: BodyPartId): BodyPartId | undefined {
-  // Every fracturable part is a flesh outer wrapping a hidden `skeleton` child — a hit on the flesh routes
-  // its fracture here. A soft part with no skeleton child (eye, soft abdomen, organ) → undefined (can't
-  // fracture). Bones are never struck directly, so this is only ever called with the flesh part.
   return SKELETON_OF[partId];
 }
 
-// Container part id → the soft internal organs it directly holds: its `containedIn` children that are
-// INTERNAL (hitWeight 0, never struck directly) and not the hidden skeleton element. The soft-tissue
-// analogue of SKELETON_OF — abdomen → [liver, stomach, kidneys], chest → [heart, lungs, spine], head →
-// [brain]. External sub-parts (fingers, toes — hitWeight > 0) are excluded: they're hit on their own.
+// Container part id → the soft internal organs it directly holds (contained, hitWeight 0, non-skeleton).
+// External sub-parts (fingers, toes — hitWeight > 0) are excluded: they're hit on their own.
 const ORGANS_OF: Partial<Record<BodyPartId, BodyPartId[]>> = {};
 for (const def of Object.values(PART_DEF_MAP)) {
   if (def?.containedIn && !def.skeleton && def.hitWeight === 0) {
@@ -134,20 +119,14 @@ for (const def of Object.values(PART_DEF_MAP)) {
   }
 }
 
-/** The soft internal organs a deep hit on `partId` could PENETRATE to (abdomen → liver/stomach/kidneys;
- *  chest → heart/lungs/spine; head → brain) — the direct contained, internal (hitWeight 0), non-skeleton
- *  parts. Empty for a part with no organs. Single source of truth for Combat's organ-penetration roll —
- *  the soft-tissue twin of `skeletonPartOf`. NOT the destruction cascade (that takes ALL contents at once
- *  when the cavity is gone); this is the graded "a thrust reached an organ" roll on a non-fatal blow. */
+/** The soft internal organs a deep hit on `partId` could PENETRATE to (chest → heart/lungs/spine). NOT
+ *  the destruction cascade — this is the graded "a thrust reached an organ" roll on a non-fatal blow. */
 export function organsOf(partId: BodyPartId): BodyPartId[] {
   return ORGANS_OF[partId] ?? [];
 }
 
-/** Fracture damage that BREAKS a bone part, scaled to its actual (per-creature) HP. There is ONE bone
- *  type: a hidden `skeleton` element whose whole HP IS its break budget — it breaks when chipped to 0.
- *  Single source of truth for the break threshold across Combat / Wounds / needs, so the bone HP bar, the
- *  wound-severity label, and the `fractured` condition all move together. (Kept as a function so a future
- *  partial-budget bone would have one place to change.) */
+/** Fracture damage that BREAKS a bone part, scaled to its actual (per-creature) HP — a skeleton part's
+ *  whole HP is its budget. The one break threshold shared by Combat / Wounds / needs. */
 export function boneBreakBudget(def: BodyPartDef | undefined, scaledMaxHp: number): number {
   return def?.skeleton ? scaledMaxHp : BONE_FRACTION * scaledMaxHp;
 }
@@ -170,11 +149,9 @@ export function containedParts(parentId: BodyPartId): Set<BodyPartId> {
   return out;
 }
 
-/** Parts whose containment closure holds a VITAL/CRITICAL organ (chest → heart; skull → brain).
- *  Destroying such a container — severed OR caved in to ≤0 HP — takes the organ with it, so the body
- *  must read as dead even before the cascade has zeroed that organ (the per-tick reaper doesn't run the
- *  cascade, and an old save can load a 0-HP chest with a still-intact heart). Precomputed from the
- *  static topology. */
+/** Parts whose containment closure holds a VITAL/CRITICAL organ (chest → heart). Destroying the
+ *  container must read as dead even before the cascade zeroes the organ inside (the per-tick reaper
+ *  doesn't cascade; a save can carry a 0-HP chest with an intact heart). */
 const CONTAINER_OF_VITAL = new Set<BodyPartId>();
 for (const id of Object.keys(PART_DEF_MAP) as BodyPartId[]) {
   for (const child of containedParts(id)) {
@@ -186,10 +163,9 @@ for (const id of Object.keys(PART_DEF_MAP) as BodyPartId[]) {
   }
 }
 
-/** When a container part is severed, its contents go with it: destroy every part nested inside
- *  `severedId` (set health 0 + isMissing). Returns the new parts array and whether the cascade took a
- *  VITAL organ (heart/lung/brain) — i.e. a gut-out of the chest that the caller must treat as lethal.
- *  Pure: returns the original array unchanged when nothing is contained / already gone. */
+/** Severed container takes its contents with it: destroys every part nested inside `severedId` and
+ *  reports whether a VITAL organ went (caller must treat as lethal). Pure — returns the original array
+ *  when nothing changed. */
 export function cascadeSeveredContents(
   parts: BodyPartState[],
   severedId: BodyPartId
@@ -208,21 +184,10 @@ export function cascadeSeveredContents(
 }
 
 /**
- * Canonical lethal-anatomy check — the SINGLE source of truth for "is this body dead?", shared by the
- * combat hit resolver (immediate kill on the fatal blow) and the per-tick pawn/mob reapers (the
- * guaranteed safety net). Previously three call sites disagreed: combat killed on a severed (`isMissing`)
- * vital, while the reapers only checked the `isCritical` flag on the HEAD plus head/torso aggregate HP —
- * so a CRUSHED torso vital (heart driven to 0 HP without being severed) killed nobody, leaving a
- * heart-and-lungs-gone jackal walking around. One rule now:
- *   • any VITAL (`isVital` — heart/brain) or CRITICAL (`isCritical` — the amorphous vital core; a BONE is
- *     never critical) part that is missing OR at ≤0 HP — HP-based, so a caved-in (crushed) organ counts; OR
- *   • a CONTAINER of a vital organ (chest → heart, head → brain) that is missing OR at ≤0 HP — tearing the
- *     flesh container apart takes the organ and kills (breaking the BONE inside — skull/ribcage — does not);
- *     even when the cascade hasn't yet zeroed the heart inside it (the per-tick reaper doesn't cascade;
- *     a pre-fix save can carry a 0-HP chest with a pristine heart — the "walking corpse" bug); OR
- *   • the head or torso ROOT limb reduced to ≤0 aggregate HP.
- * Returns the death cause for logging, or null. (Blood-loss death stays separate — driven per-tick from
- * bloodVolume ≤ 0.)
+ * The SINGLE "is this body dead?" rule, shared by the combat hit resolver and the per-tick reapers.
+ * Dead when: a vital/critical part — or a container of one — is missing OR at ≤0 HP (HP-based, so a
+ * crushed organ counts; a broken bone never kills, only flesh-container destruction does), or the
+ * head/torso root limb hits ≤0 aggregate HP. Blood-loss death is separate (bloodVolume ≤ 0).
  */
 export function lethalAnatomyCause(limbs: LimbState[] | undefined): 'critical_limb' | null {
   if (!limbs) return null;
@@ -241,9 +206,8 @@ export function lethalAnatomyCause(limbs: LimbState[] | undefined): 'critical_li
   return null;
 }
 
-/** Natural-weapon ids currently usable given a limb tree: the union of `weapons` over every non-missing
- *  part (a destroyed jaw can't bite; one surviving front paw still claws). Unbound weapons aren't listed
- *  here — callers treat them as always-available via BOUND_NATURAL_WEAPONS. */
+/** Natural-weapon ids currently usable: union of `weapons` over non-missing parts (a destroyed jaw
+ *  can't bite). Unbound weapons aren't listed — callers treat them as always-available. */
 export function enabledNaturalWeapons(limbs: LimbState[] | undefined): Set<string> {
   const out = new Set<string>();
   for (const limb of limbs ?? []) {

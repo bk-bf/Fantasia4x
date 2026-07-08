@@ -1,8 +1,8 @@
 <!-- LOC cap: 300 (created: 2026-05-25) -->
 
-# ARCHITECTURE [GAME]
+# ARCHITECTURE
 
-> **Related:** [DESIGN](DESIGN.md) · [DECISIONS](DECISIONS.md) · [PHILOSOPHY](PHILOSOPHY.md) · [ui/ARCHITECTURE](../ui/ARCHITECTURE.md) · [ROADMAP](../.tasks/open/ROADMAP.md) · [SIMULATION-PERF](../.tasks/archive/SIMULATION-PERF-2026-05-30.md)
+> **Related:** [DESIGN](DESIGN.md) · [DECISIONS](DECISIONS.md) · [ROADMAP](../.tasks/open/ROADMAP.md) · [ENGINE-PERFORMANCE](../.tasks/archive/ENGINE-PERFORMANCE.md)
 
 ## Layer Map
 
@@ -114,13 +114,50 @@ Gemini API calls live exclusively in `src/routes/api/`. Client code calls the ro
 
 ## Performance & Observability
 
-`processGameTurn()` is one tick. The sim runs in a **Web Worker** (`sim/sim.worker.ts`, ADR-021) at `TICKS_PER_SECOND = 60`; the worker owns the canonical `GameState` and the main thread is a **read-only projection** fed by per-flush snapshots. Player/dev actions are serializable **commands** posted to the worker (`sim/commands.ts`). Full detail: [ENGINE-PERFORMANCE](../.tasks/open/ENGINE-PERFORMANCE.md).
+`processGameTurn()` is one tick. The sim runs in a **Web Worker** (`sim/sim.worker.ts`, ADR-021) at `TICKS_PER_SECOND = 60`; the worker owns the canonical `GameState` and the main thread is a **read-only projection** fed by per-flush snapshots. Player/dev actions are serializable **commands** posted to the worker (`sim/commands.ts`). Full detail: [ENGINE-PERFORMANCE](../.tasks/archive/ENGINE-PERFORMANCE.md).
 
 - **Worker→main snapshot (the perf-critical path, ADR-021 W2/W2b — ENGINE-PERFORMANCE §B).** Cloning the whole `GameState` every flush was ~32% of worker time. Now: a **sectional diff** (only top-level fields whose ref changed) + **per-entity slim/resync** for pawns/mobs (slim hot-field projection every flush; heavy cold fields full-resynced ~every 8th flush), reassembled on a per-id mirror in `simWorkerClient`. Took the heavy stress case to **80–100 TPS @4×**. Protocol in `sim/simProtocol.ts` (`EntitySync`).
 - **Profiling is browser-native** (the custom in-game profiler was retired — it scaled with entity count and couldn't see the worker boundary). Capture with the **Firefox Profiler** on the `--profiler` sandbox, read headless via `scripts/profile-self.mjs` (JS self-time per worker function) or `pq`. See ENGINE-PERFORMANCE §10.
 - **Gated logging** (`core/log.ts`) — hot-path modules do `import { gatedConsole as console } from '../core/log'` to silence per-tick `log`/`debug`/`info`/`warn` (errors stay live). Hot-path logging was ~75% of per-tick cost before this. New per-tick code must use the shim, not the global `console`.
 
+## UI Layer
+
+### Component tree
+
+```
+src/routes/+page.svelte              ← root; screen router driven by the uiState store
+└── src/lib/components/
+    ├── UI/          shell + shared widgets (MainScreen, ResourceSidebar, GameControls,
+    │                ActivityLogOverlay, HoverTip, ItemStatTooltip, SpriteIcon, StatBar…)
+    ├── screens/     one component per screen (Pawn/Work/Crafting/Exploration/Building/
+    │                Research/Race) + per-screen subdirectories (screens/work/…)
+    ├── pawn/        PawnScreen sub-components (attributes, health, needs, traits,
+    │                equipment doll, inventory, shared tooltips)
+    └── util/        component-side computation modules (statView, conditionInfo,
+                     naturalGear, pawnUtils) — shared by multiple components
+```
+
+### Screen navigation
+
+Screens switch via the `uiState` store, not SvelteKit routing: `uiState.setScreen('pawn')`.
+
+### Stores
+
+| Store        | File                   | Purpose                                                     |
+| ------------ | ---------------------- | ----------------------------------------------------------- |
+| `gameState`  | `stores/gameState.ts`  | Main-thread projection of worker state + persistence        |
+| `uiState`    | `stores/uiState.ts`    | Active screen and UI navigation state                       |
+| `eventStore` | `stores/eventStore.ts` | Event queue shown to the player                             |
+| `log`        | `stores/Log.ts`        | Activity log messages (never `console.log` for player-facing events) |
+| `worldState` | `stores/worldState.ts` | Map and world data                                          |
+
+### Component rules
+
+- **200-line limit** per component; extract sub-components when exceeded.
+- **Reuse the shared components** (StatBar, HoverTip, ItemStatTooltip, StatTooltip, ConditionTooltip, WorkCellTooltip, SelectedEntityCard…) — never hand-roll a duplicate panel/tooltip/bar.
+- Components do not call services or `GameEngineImpl` directly — route through store actions.
+- **Svelte 5 runes** (`$state`/`$derived`/`$effect`/`$props`), not legacy `$:` syntax.
+
 ## Known Architectural Debt
 
 - `Items.ts` and `Buildings.ts` historically mixed data with business logic; extraction to services is ongoing. New code must not add logic to data files.
-- `WorkScreen.svelte`, `ExplorationScreen.svelte`, `CraftingScreen.svelte` remain oversized — see `.tasks/open/SCREEN-REFACTORING.md`.

@@ -1,11 +1,5 @@
-// Background-maintained cache of the EXPLORE tab's "every discovered resource node" ledger.
-//
-// The scan is O(map) — on a big forested 500×500 map that's tens of thousands of nodes plus a sort,
-// which is too slow to run synchronously when the tab is clicked open (the component used to build it
-// on mount, so every open paid the full cost). Instead this store keeps the rows cached and rebuilds
-// them lazily in the BACKGROUND: a turn-bucket dirty flag marks the cache stale, and the actual scan
-// runs in idle time, throttled. Opening the tab then just reads a ready array — no work on the click
-// path. Kept warm from game start by being imported in +page.svelte (see refreshDiscoveredResources).
+// Cached ledger of every discovered resource node (EXPLORE tab). The scan is O(map) — too slow for
+// the tab-open click path — so rows rebuild in idle time, gated by a turn-bucket dirty flag.
 import { writable, get } from 'svelte/store';
 import { gameState } from './gameState';
 import { uiState } from './uiState';
@@ -56,8 +50,7 @@ function buildRows(worldMap: WorldTile[][]): ResourceRow[] {
   return out;
 }
 
-// Throttle: rebuild at most once per REFRESH_TURNS-turn bucket — resource discovery/harvest/regrow
-// only meaningfully shifts the ledger across turns, so a per-tick rebuild would be wasted work.
+// Rebuild at most once per REFRESH_TURNS-turn bucket — the ledger only shifts meaningfully across turns.
 const REFRESH_TURNS = 15;
 let builtBucket = -1;
 let scheduled = false;
@@ -74,16 +67,14 @@ function rebuildNow() {
   discoveredResources.set(buildRows(s.worldMap ?? []));
 }
 
-// ENGINE-PERFORMANCE-II §R3: only maintain the ledger while the EXPLORE tab is OPEN. The scan is
-// O(map) (562k tiles at 750²) and was running every 15 turns *regardless* of whether anyone was
-// looking — ~33% of the render thread in the trace, pure waste 99% of the time (the tab is usually
-// closed). Closed ⇒ no rebuilds; opening the tab rebuilds once if stale, then keeps it fresh.
+// Only maintain the ledger while the EXPLORE tab is OPEN — closed means no rebuilds; opening
+// rebuilds once if stale, then keeps it fresh.
 let exploreOpen = false;
 
-// Marked dirty when the turn advances into a new bucket; the scan itself is deferred to idle time so
-// it never blocks a frame or the sim. Coalesced via `scheduled` so a burst of turns books one rebuild.
+// Scan is deferred to idle time so it never blocks a frame or the sim; coalesced via `scheduled`
+// so a burst of turns books one rebuild.
 function maybeScheduleRebuild(turn: number) {
-  if (!exploreOpen) return; // §R3: don't scan the map for a tab nobody's looking at.
+  if (!exploreOpen) return;
   const bucket = Math.floor(turn / REFRESH_TURNS);
   if (bucket === builtBucket || scheduled) return;
   scheduled = true;
@@ -93,12 +84,10 @@ function maybeScheduleRebuild(turn: number) {
   });
 }
 
-// Self-maintaining subscription: maintains the cache while the EXPLORE tab is open, and on every turn
-// advance (gated above). Lives for the app's lifetime — there is one gameState.
+// App-lifetime subscription — there is one gameState.
 gameState.subscribe((s) => maybeScheduleRebuild(s.turn ?? 0));
 
-// Rebuild on the EXPLORE tab opening (if the cache is stale), so the first frame of the tab is fresh
-// without paying the scan continuously while it's closed.
+// Rebuild on the EXPLORE tab opening if the cache is stale.
 uiState.subscribe((s) => {
   const open = s.currentScreen === 'exploration';
   if (open && !exploreOpen) {
@@ -108,9 +97,8 @@ uiState.subscribe((s) => {
   exploreOpen = open;
 });
 
-/** Force a synchronous rebuild *only if the cache has never been built* — the EXPLORE tab calls this
- *  on mount as a safety net so a first open before the idle warm-up still shows data (subsequent opens
- *  and all updates come from the background rebuild). */
+/** Synchronous rebuild only if the cache has never been built — mount-time safety net so a first
+ *  open before the idle warm-up still shows data. */
 export function ensureDiscoveredResources(): void {
   if (builtBucket === -1) rebuildNow();
 }

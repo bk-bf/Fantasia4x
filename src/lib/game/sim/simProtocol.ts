@@ -1,26 +1,19 @@
 /**
- * simProtocol — the message contract between the main thread and the sim worker (ADR-021).
+ * simProtocol — the message contract between the main thread and the sim worker.
  *
  * The worker owns the canonical GameState. The main thread sends serializable **commands**
  * (player/dev actions) and lifecycle control; the worker replies with per-tick **snapshots** (the
  * minimal set the renderer/HUD need) + occasional full-state for saving. Everything here must be
  * structured-cloneable — NO functions (that's the whole reason commands are named, not closures).
- *
- * Migration note (W3): until every command is serializable + the worker tick loop exists, the
- * SAME command registry (`commands.ts`) is dispatched on the MAIN thread (behaviour-preserving), so
- * the game keeps working at every step. The worker cutover flips the dispatch target only.
  */
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
 
 /**
- * Per-entity sync for pawns/mobs (W2b). Cloning whole pawns/mobs every flush dominated the boundary
- * (deep limbs/skills/inventory/equipment trees on ~290 entities). Instead each flush sends a SLIM
- * projection (every field EXCEPT the heavy/static cold ones — see ENTITY_COLD_FIELDS in the worker),
- * which keeps position/needs/state/combat-scalars fresh at the flush rate; the heavy cold fields are
- * re-sent in FULL on a periodic resync (`{ full }`). The bridge keeps a per-id mirror and merges
- * slim upserts onto it, so the cold fields persist between resyncs (≤ resync-interval stale) and no
- * field is ever undefined (a newly-seen id is always sent full). `order` re-establishes array order;
- * `removed` reaps despawned ids.
+ * Per-entity sync for pawns/mobs, so whole deep entities aren't cloned every flush. Each flush
+ * sends a SLIM projection (every field except the heavy/static cold ones); cold fields ship on
+ * change or in FULL (`{ full }`). The bridge keeps a per-id mirror and merges slim upserts onto
+ * it, so cold fields persist and no field is ever undefined (a newly-seen id is always sent full).
+ * `order` re-establishes array order; `removed` reaps despawned ids.
  */
 export type EntitySync<T extends { id: string }> =
   | { full: T[] }
@@ -32,7 +25,7 @@ export interface SimCommand {
   type: string;
   /** Plain, structured-cloneable args (ids, quantities, settings…). */
   payload?: unknown;
-  /** Mirror of the old updateWithSave vs update split — persist after applying. */
+  /** Persist after applying. */
   save?: boolean;
 }
 
@@ -45,12 +38,9 @@ export type MainToWorker =
   | { kind: 'requestSave' };
 
 /**
- * A buffered sim-log/feedback call forwarded worker→main. The sim emits chronicle entries + floating
- * combat text through `simLog` (core/logSink), whose real implementation lives in the store layer
- * (DOM/stores — main-thread only). In the worker that sink can't run, so calls are captured as
- * `{ method, args }` and replayed against the real sink on the main thread. All args are
- * structured-cloneable (ids, names, numbers, CombatTurnEntry). Buffered per batch to avoid a
- * postMessage per swing.
+ * A buffered sim-log/feedback call forwarded worker→main. The real log sink lives in the store
+ * layer (main-thread only), so worker calls are captured as `{ method, args }` and replayed
+ * against it. Buffered per batch to avoid a postMessage per swing.
  */
 export interface SimLogEvent {
   m: string;
@@ -60,27 +50,23 @@ export interface SimLogEvent {
 /** Worker → main. */
 export type WorkerToMain =
   | { kind: 'ready' }
-  // W2 sectional diff: `state` carries ONLY the top-level GameState fields whose ref changed since
-  // the last flush (the bridge reassembles the full state from its mirror), EXCLUDING pawns/mobs/
-  // worldMap. pawns/mobs ride in their own per-entity `EntitySync` (W2b); worldMap is sent
-  // separately, only when its ref changes. `_terrainRev` rides inside `state`.
+  // Sectional diff: `state` carries ONLY the top-level GameState fields whose ref changed since
+  // the last flush (the bridge reassembles the full state from its mirror). pawns/mobs ride in
+  // their own per-entity `EntitySync`; worldMap is sent separately, only when its ref changes.
   | {
       kind: 'snapshot';
       state: Partial<GameState>;
       pawns: EntitySync<Pawn>;
       mobs: EntitySync<Mob>;
-      // Dropped items ride their own per-id sync (like pawns/mobs) so only stacks whose object ref
-      // changed ship each flush — instead of re-cloning the whole array (with its growing per-unit
-      // carcass `unitConditions`) every flush. Drops are sent WHOLE (the autosave persists this
-      // projection), so the panels read the small `_carcassCondition` summary inside `state` rather
-      // than re-scanning the arrays. Reconstructed into `droppedItems` by the bridge.
+      // Dropped items ride their own per-id sync so only stacks whose object ref changed ship each
+      // flush. Drops are sent WHOLE (the autosave persists this projection); reconstructed into
+      // `droppedItems` by the bridge.
       drops?: EntitySync<DroppedItem>;
       worldMap?: GameState['worldMap'];
-      // Changed-tile deltas (ADR-021 §4c): sent INSTEAD of the full worldMap when only a few tiles
-      // were mutated in place (e.g. resource regrowth). Each tile is a SLIM projection (§D — only the
-      // fields the main thread reads, to shrink the clone during harvest); the bridge MERGES it onto
-      // its cached full tile. Mutually exclusive with `worldMap` (a full send already carries changes).
-      // (The worker-internal accumulator type is the full `TileDelta` in core/tileDeltas.ts.)
+      // Changed-tile deltas: sent INSTEAD of the full worldMap when only a few tiles were mutated
+      // in place (e.g. resource regrowth). Each tile is a SLIM projection (only the fields the main
+      // thread reads); the bridge MERGES it onto its cached full tile. Mutually exclusive with
+      // `worldMap` (a full send already carries changes).
       worldMapDelta?: Array<{ y: number; x: number; tile: Partial<WorldTile> }>;
       flush: boolean;
       // True when the snapshot is a COMMAND result or the pause hand-off (not a sim tick). The bridge
@@ -93,15 +79,14 @@ export type WorkerToMain =
   | { kind: 'error'; error: string };
 
 /**
- * The minimal per-tick render set (W2). NOT the whole GameState — sending pawns/mobs/worldMap every
- * tick would dominate the boundary. Hot position data is a packed `Float32Array` (transferable) so
- * the clone cost stays flat as entity counts grow; the rest is small structured data the HUD reads.
- * Exact fields filled in W2 once the renderer's read surface is enumerated.
+ * The minimal per-tick render set. NOT the whole GameState — sending pawns/mobs/worldMap every
+ * tick would dominate the boundary. Hot position data is a packed `Float32Array` (transferable)
+ * so the clone cost stays flat as entity counts grow.
  */
 export interface RenderSnapshot {
   turn: number;
-  /** Interleaved [id-index, x, y, …] or parallel arrays — finalised in W2 (transferable). */
+  /** Interleaved [id-index, x, y, …] or parallel arrays (transferable). */
   entityPositions: Float32Array;
-  /** Small structured side-channel (selected entity, resource totals, alerts…) — TBD in W2. */
+  /** Small structured side-channel (selected entity, resource totals, alerts…). */
   hud: unknown;
 }

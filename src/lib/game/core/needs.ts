@@ -1,9 +1,4 @@
-/**
- * needs.ts — Shared need/condition helpers used by both PawnService and EntityService.
- *
- * Extracted so the condition-stage multiplier logic is defined once and applied
- * consistently to any living entity (pawn or mob) that carries PawnCondition[].
- */
+/** needs.ts — shared need/condition helpers for any living entity (pawn or mob). */
 
 import type {
   EntityCondition,
@@ -22,7 +17,7 @@ import { simLog } from './logSink';
 const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
 /** Raw mixed list (persistent + transient shapes) for id-keyed lookups across both kinds. */
 const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | TransientConditionDef>;
-/** Transient condition defs keyed by id — for id→modifiers/needOnset lookups (used by the helpers below). */
+/** Transient condition defs keyed by id — for id→modifiers/needOnset lookups. */
 const TRANSIENT_BY_ID = new Map<string, TransientConditionDef>(
   (
     ALL_CONDITION_DEFS.filter(
@@ -31,42 +26,30 @@ const TRANSIENT_BY_ID = new Map<string, TransientConditionDef>(
   ).map((d) => [d.id, d])
 );
 
-/**
- * The ONE collapse threshold pair, shared by every consumer so pawns and mobs collapse/recover on the
- * SAME consciousness band (was duplicated in Combat, PawnStateMachine and entityConstants — they drifted).
- * `consciousness` (computeCapacities) folds pain + blood loss + organ damage, so downing has one cause.
- * Hysteresis: drop below COLLAPSE_CONSCIOUSNESS, stand back up once consciousness climbs back past
- * RECOVER_CONSCIOUSNESS. The gap is INTENTIONALLY tiny — just enough to stop a body teetering exactly at
- * the floor from flickering up/down. A body should wake as soon as the thing that downed it (pain / blood
- * loss) eases back past the trigger, NOT have to recover all the way to near-full (the old 0.45 band meant
- * a pawn collapsed at pain ~80 only woke at pain ~65, which read as "stays down until healed").
- * The `collapse` transient condition (conditions.jsonc) is kept in lockstep with the down state on BOTH
- * entity kinds (refreshed while down, cleared on recovery).
- */
+/** The ONE collapse/recover consciousness pair shared by pawns and mobs. Hysteresis gap is
+ *  INTENTIONALLY tiny — just enough to stop flicker; a body wakes as soon as the cause eases. */
 export const COLLAPSE_CONSCIOUSNESS = 0.3;
 export const RECOVER_CONSCIOUSNESS = 0.32;
 
-/** The need + cutoff at which a NEED-threshold transient onsets, declared in conditions.jsonc (`needOnset`),
- *  e.g. `tired` → fatigue ≥ 100. Read by the deriving code so the threshold lives in DATA, not constants. */
+/** The need + cutoff at which a NEED-threshold transient onsets (conditions.jsonc `needOnset`),
+ *  e.g. `tired` → fatigue ≥ 100. */
 export function transientNeedOnset(id: string): { need: string; atOrAbove: number } | undefined {
   return TRANSIENT_BY_ID.get(id)?.needOnset;
 }
 
-/** The full transient condition def for an id (or undefined). Lets combat + UI resolve a body
- *  condition's ADR-023 grants (natural weapon / armor) from the condition itself — the pill is the hub. */
+/** The full transient condition def for an id (or undefined) — lets combat + UI resolve a body
+ *  condition's grants (natural weapon / armor) from the condition itself. */
 export function getTransientConditionDef(id: string): TransientConditionDef | undefined {
   return TRANSIENT_BY_ID.get(id);
 }
 
-/** Condition id → the FSM state it forces while active (the def's `fsmState`), precomputed once. The
- *  data-driven link between a condition and FSM incapacitation: the pawn FSM reads this to drive its
- *  state from the condition instead of hardcoding it. Today: `collapse` → "Collapsed". */
+/** Condition id → the FSM state it forces while active (the def's `fsmState`), precomputed once.
+ *  e.g. `collapse` → "Collapsed". */
 export const FSM_STATE_BY_CONDITION: Record<string, string> = Object.fromEntries(
   [...TRANSIENT_BY_ID.values()].filter((d) => d.fsmState).map((d) => [d.id, d.fsmState!])
 );
 
-/** Any condition def (persistent OR transient) by id — for the TRAIT-SYSTEM-V2 §5 graph, whose edges
- *  can be declared on either kind. */
+/** Any condition def (persistent OR transient) by id — condition-graph edges can be declared on either kind. */
 const CONDITION_BY_ID = new Map<string, ConditionDef | TransientConditionDef>(
   ALL_CONDITION_DEFS.map((d) => [d.id, d])
 );
@@ -80,40 +63,26 @@ export const CONDITION_IDS_WITH_TRIGGERS: ReadonlySet<string> = new Set(
   ALL_CONDITION_DEFS.filter((d) => (d.triggers?.length ?? 0) > 0).map((d) => d.id)
 );
 
-/** Status-animation priority for a condition id (conditions.jsonc `priority`), default 0. When an entity
- *  has several glyph-animated states active, the renderer plays the highest-priority one (collapse > sleep
- *  > winded), so the most important state-to-know shows over its sprite. */
+/** Status-animation priority for a condition id (conditions.jsonc `priority`), default 0 — the
+ *  renderer plays the highest-priority animated state (collapse > sleep > winded). */
 export function conditionPriority(id: string): number {
   return TRANSIENT_BY_ID.get(id)?.priority ?? 0;
 }
 
-/**
- * Fatigue at/above which the `tired` (Exhausted) transient shows — sourced from the `tired` condition's
- * `needOnset` in conditions.jsonc (single source of truth), shared by pawns and mobs. Distinct from the
- * SEEK-REST threshold (pawn 72 / mob 60): a body normally rests long before this, so the debuff only bites
- * when something keeps it awake to the exhaustion ceiling. Falls back to 100 if the data is ever missing.
- */
+/** Fatigue at/above which the `tired` transient shows (from conditions.jsonc `needOnset`).
+ *  Distinct from the seek-rest threshold — the debuff only bites when something keeps a body awake. */
 export const TIRED_FATIGUE_THRESHOLD = transientNeedOnset('tired')?.atOrAbove ?? 100;
 
-/**
- * If a (bare) transient/combat condition `id` is opted-in to floating text (`"floater": true` in
- * conditions.jsonc), return its display name + colour; otherwise undefined. For transient ids only
- * (`"winded"`, `"knockdown"`, …) — persistent conditions float via {@link emitPersistentConditionFloaters}
- * at their application site, keyed on the stage they reach, so they're not handled here.
- */
+/** Display name + colour for a transient condition opted into floating text (`"floater": true`), else
+ *  undefined. Transient ids only — persistent conditions float via {@link emitPersistentConditionFloaters}. */
 export function getConditionFloater(id: string): { name: string; color: string } | undefined {
   const def = ALL_CONDITION_DEFS.find((d) => d.id === id);
   if (!def || !(def as TransientConditionDef).floater) return undefined;
   return { name: def.name, color: (def as TransientConditionDef).color ?? '#dddddd' };
 }
 
-/**
- * Cheap content signature of a condition list (id+severity per entry, in order) — for detecting
- * whether a tick's in-place mutations actually changed anything, so the caller can give `conditions`
- * a NEW array ref ONLY on change. That ref flip is what the worker's per-field ref-diff keys on to
- * re-ship the (cold) conditions to the UI; an unchanged tick keeps the ref and ships nothing. Empty
- * list → '' with no allocation, so healthy entities (the common case) pay nothing.
- */
+/** Cheap content signature of a condition list — the caller flips the `conditions` array ref ONLY on
+ *  change (the worker's ref-diff keys on that). Empty list → '' with no allocation (hot path). */
 export function conditionsSig(conds: EntityCondition[]): string {
   if (conds.length === 0) return '';
   let s = '';
@@ -139,18 +108,9 @@ function setReflectedSeverity(conditions: EntityCondition[], id: string, severit
 }
 
 /**
- * Drive the TWO split crisis conditions from live pain and blood loss, SEPARATELY (2026-07-08 — the old
- * unified `shock` conflated them into one confusing pill). Each REFLECTS (tracks, doesn't accumulate) its
- * own driver:
- *  - `pain_shock` from pain past `SHOCK_PAIN_ONSET` — dulled by painkillers/drink (§F8
- *    `conditionPainMultiplier`: a sloshed pawn shrugs off a wound that would stagger a sober one);
- *  - `hypovolemia` from blood lost past `SHOCK_BLOOD_ONSET` — unaffected by pain-numbing (it's emptiness,
- *    not pain).
- * Each carries HALF the old shock stat debuff; when BOTH fire they stack (× in `conditionStatMultipliers`)
- * back to roughly the old unified crisis — now legible as two distinct causes. Mutates `conditions` in
- * place; shared by pawns (PawnStateMachine.tickConditions) and mobs (entityLifecycle.stepHunger).
- * Non-lethal here — pain/blood loss already drive consciousness → collapse → death; these layer the
- * stat/work penalty on top. Signature unchanged so both callers are untouched.
+ * Drive `pain_shock` (from pain, dulled by painkillers/drink) and `hypovolemia` (from blood loss,
+ * unaffected by numbing) — each REFLECTS its driver rather than accumulating. Mutates `conditions` in
+ * place; shared by pawns and mobs. Non-lethal here — pain/blood loss already drive consciousness → collapse.
  */
 export function applyShock(conditions: EntityCondition[], pain: number, bloodLossFrac = 0): void {
   const feltPain = pain * conditionPainMultiplier({ conditions });
@@ -160,14 +120,11 @@ export function applyShock(conditions: EntityCondition[], pain: number, bloodLos
   setReflectedSeverity(conditions, 'hypovolemia', bloodSev);
 }
 
-/** §F8: per-second severity the `intoxicated` condition sheds (drink wears off over a few minutes). */
+/** Per-second severity the `intoxicated` condition sheds (drink wears off over a few minutes). */
 const INTOX_DECAY_PER_SEC = 0.002;
 
-/**
- * Decay the (persistent, staged) `intoxicated` condition one tick — drink wears off over time. Drinking
- * pushes severity UP ({@link pawnQueries.applyIntoxication}); this drains it back down, dropping through
- * the stages (blackout → drunk → merry → tipsy) and clearing at 0. Pawns only (mobs don't drink).
- */
+/** Decay the `intoxicated` condition one tick — drains severity back down through the stages,
+ *  clearing at 0. Pawns only (mobs don't drink). */
 export function decayIntoxication(conditions: EntityCondition[]): void {
   const idx = conditions.findIndex((c) => c.id === 'intoxicated');
   if (idx === -1) return;
@@ -176,11 +133,8 @@ export function decayIntoxication(conditions: EntityCondition[]): void {
   else conditions[idx] = { ...conditions[idx], severity: next };
 }
 
-/**
- * Aggregate one modifier KEY's multiplier across an entity's active conditions (persistent stages ×
- * transient defs). Identity 1 when nothing relevant is active (early-out on the hot path). Used for the
- * non-stat capacity/feel keys (`pain`, `consciousness`) that don't flow through conditionStatMultipliers.
- */
+/** Aggregate one modifier KEY's multiplier across active conditions (persistent stages × transient
+ *  defs). Identity 1 when nothing relevant is active — early-out on the hot path. */
 function conditionModifierProduct(
   entity: { conditions?: EntityCondition[]; transientConditions?: string[] },
   key: keyof ConditionModifiers
@@ -200,8 +154,7 @@ function conditionModifierProduct(
   return mult;
 }
 
-/** `pain` multiplier (< 1 numbs felt pain — alcohol/painkillers). Applied to the shock driver and to
- *  PawnStatService's pain → consciousness chokepoint, so a drunk pawn staves off pain-shock + stays up. */
+/** `pain` multiplier (< 1 numbs felt pain — alcohol/painkillers). */
 export function conditionPainMultiplier(entity: {
   conditions?: EntityCondition[];
   transientConditions?: string[];
@@ -209,8 +162,7 @@ export function conditionPainMultiplier(entity: {
   return conditionModifierProduct(entity, 'pain');
 }
 
-/** `consciousness` multiplier (< 1 dims alertness — heavy drink, etc.). Applied to the consciousness
- *  capacity in PawnStatService: enough cups and a pawn goes woozy, then blacks out (collapse). */
+/** `consciousness` multiplier (< 1 dims alertness — heavy drink, etc.). */
 export function conditionConsciousnessMultiplier(entity: {
   conditions?: EntityCondition[];
   transientConditions?: string[];
@@ -218,12 +170,8 @@ export function conditionConsciousnessMultiplier(entity: {
   return conditionModifierProduct(entity, 'consciousness');
 }
 
-/**
- * Snapshot the current stage label of every FLAGGED persistent condition on an entity, keyed by id
- * (e.g. `shock → "moderate"`). Taken BEFORE a tick mutates `conditions` so
- * {@link emitPersistentConditionFloaters} can tell which conditions newly appeared or changed stage.
- * Returns undefined when nothing flagged is present — the common case allocates nothing (hot path).
- */
+/** Snapshot the stage label of every floater-flagged persistent condition, taken BEFORE a tick mutates
+ *  `conditions` (for {@link emitPersistentConditionFloaters}). Undefined when nothing flagged — no allocation. */
 export function snapshotConditionStages(
   conditions: EntityCondition[]
 ): Map<string, string> | undefined {
@@ -237,13 +185,8 @@ export function snapshotConditionStages(
   return snap;
 }
 
-/**
- * Pop a floating label ("Name (stage)", in the stage colour) for each FLAGGED persistent condition
- * that newly appeared OR graduated to a different stage since `prevStages` (from
- * {@link snapshotConditionStages}). Shared by pawns + mobs so shock/infection/thermia surface
- * identically for every living entity (mobs don't run the transient-condition sync). Re-derives stage
- * downgrades too (recovery), which is the desired "status changed" cue.
- */
+/** Pop a floating "Name (stage)" label for each flagged persistent condition that newly appeared or
+ *  changed stage since `prevStages`. Shared by pawns + mobs; downgrades (recovery) float too. */
 export function emitPersistentConditionFloaters(
   prevStages: Map<string, string> | undefined,
   next: EntityCondition[],
@@ -266,23 +209,17 @@ export function emitPersistentConditionFloaters(
   }
 }
 
-/** Combat-SFX cue id for a condition (conditions.jsonc `audio`), or undefined. Read by Combat to fire
- *  a sound the tick a combat condition latches (knockdown/envenomed/shock/…). */
+/** Combat-SFX cue id for a condition (conditions.jsonc `audio`), or undefined. */
 export function conditionAudio(id: string): string | undefined {
   return ALL_CONDITION_DEFS.find((d) => d.id === id)?.audio;
 }
 
-/** Vital conditions that raise a colony-wide chronicle alert when they worsen a stage (a starving or
- *  dehydrating colonist is an emergency the player should be told about, not just a floating label). */
+/** Vital conditions that raise a colony-wide chronicle alert when they worsen a stage. */
 const VITAL_ALERT_IDS = new Set(['malnutrition', 'dehydration']);
 
-/**
- * Snapshot the stage label of every VITAL condition (malnutrition/dehydration) on an entity, taken
- * BEFORE a tick mutates `conditions`, for {@link detectVitalEscalations}. This is DELIBERATELY separate
- * from {@link snapshotConditionStages}, which only captures `floater`-flagged conditions — dehydration
- * is NOT a floater, so reusing that snapshot left its prev-stage perpetually unknown and the alert
- * re-fired EVERY tick (chronicle spam). Returns undefined when no vital condition is present.
- */
+/** Snapshot vital-condition stage labels BEFORE a tick mutates `conditions`, for
+ *  {@link detectVitalEscalations}. DELIBERATELY separate from {@link snapshotConditionStages} — vitals
+ *  aren't all floaters, and reusing that snapshot made the alert re-fire every tick. */
 export function snapshotVitalStages(
   conditions: EntityCondition[]
 ): Map<string, string> | undefined {
@@ -295,13 +232,9 @@ export function snapshotVitalStages(
   return snap;
 }
 
-/**
- * Detect which vital conditions (malnutrition/dehydration) just ESCALATED to a worse stage since
- * `prevStages` (from {@link snapshotVitalStages} — NOT the floater snapshot) — for the chronicle/bugle
- * alert. Only UPWARD graduations past the benign baseline stage (index 0 = "hungry"/"thirsty", which
- * every pawn hits routinely) count; recovery (downgrade) and the baseline never alert. Returns
- * `{id, stageLabel}` per escalation. Pure — the caller (PawnStateMachine) emits the sink event.
- */
+/** Detect vital conditions that just ESCALATED to a worse stage since `prevStages` (from
+ *  {@link snapshotVitalStages}). Only upward graduations past the benign baseline stage count;
+ *  recovery never alerts. Pure — the caller emits the sink event. */
 export function detectVitalEscalations(
   prevStages: Map<string, string> | undefined,
   next: EntityCondition[]
@@ -349,19 +282,16 @@ export function getConditionLabel(condition: EntityCondition): string {
 }
 
 /**
- * Advance or recover ONE need-driven condition per its conditions.jsonc `driver`, mutating the live
- * `conditions` array IN PLACE (ADR-002 hot-path amendment — the common case, need below onset and the
- * condition absent, allocates nothing). Rates are authored per-second; `perTick()` scales them to one
- * tick.
+ * Advance or recover ONE need-driven condition per its conditions.jsonc `driver`, mutating `conditions`
+ * IN PLACE BY DESIGN (hot path — the common case allocates nothing). Rates are authored per-second;
+ * `perTick()` scales them to one tick.
  */
 export function applyConditionDriver(
   conditions: EntityCondition[],
   def: ConditionDef,
   needVal: number,
   recoveryMul = 1,
-  // Elapsed real ticks this call represents. 1 for per-tick callers (pawns, in-bubble mobs); an
-  // off-bubble mob only reaches here on its throttled think-tick, so it passes AI_THROTTLE_TICKS to
-  // accrue/recover at the same per-tick rate over the ticks it skipped (matches the bars in stepHunger).
+  // Elapsed real ticks this call represents (off-bubble mobs pass their throttle interval).
   // The onset *delay* is wall-clock and does NOT scale — only the post-onset accrual/recovery does.
   tickScale = 1
 ): void {
@@ -370,12 +300,8 @@ export function applyConditionDriver(
   if (needVal >= d.onset) {
     const rate = perTick(needVal >= 100 ? d.rateMax : d.rateCritical) * tickScale;
     if (idx === -1) {
-      // Onset delay: seed a NEGATIVE severity so the condition only crosses 0 — becoming visible,
-      // stat-affecting and lethal-eligible — after the need has held at/above onset for `onsetDelay`
-      // seconds. Severity climbs by rateMax/sec at a maxed need, so seeding -(onsetDelay·rateMax)
-      // means a maxed need takes exactly `onsetDelay` s to begin (longer at a partial need). A negative
-      // severity matches no stage, so it stays hidden everywhere (display skips severity ≤ 0, stage
-      // lookups return undefined → no modifiers/floaters/lethal) until it surfaces.
+      // Onset delay: seed a NEGATIVE severity so the condition only surfaces after the need has held
+      // at/above onset for `onsetDelay` seconds — negative severity matches no stage, so it stays hidden.
       conditions.push({ id: def.id, severity: -(d.onsetDelay ?? 0) * d.rateMax + rate });
     } else
       conditions[idx] = {
@@ -385,7 +311,7 @@ export function applyConditionDriver(
     return;
   }
   if (needVal < d.safe && idx !== -1) {
-    // `recoveryMul` accelerates recovery (e.g. a sheltered pawn warms/cools faster — SEASONS_WEATHER).
+    // `recoveryMul` accelerates recovery (e.g. a sheltered pawn warms/cools faster).
     const newSeverity = conditions[idx].severity - perTick(d.recovery) * recoveryMul * tickScale;
     if (newSeverity <= 0) conditions.splice(idx, 1);
     else conditions[idx] = { ...conditions[idx], severity: newSeverity };
@@ -393,18 +319,14 @@ export function applyConditionDriver(
 }
 
 /**
- * Drive EVERY need-based condition (malnutrition ← hunger, dehydration ← thirst, …) for one living
- * entity by its `driver`, mutating `conditions` in place. Returns the id of the first condition that
- * reached its lethal severity this tick (also its death cause), else `null`. Shared by pawns
- * (PawnStateMachine.tickConditions) and mobs (entityLifecycle.stepHunger) so starvation/thirst is ONE
- * data-driven model for every living entity — no hardcoded thresholds. Entities lacking a given need
- * (mobs have no `thirst`) simply never onset that condition.
+ * Drive EVERY need-based condition (malnutrition ← hunger, dehydration ← thirst, …) by its `driver`,
+ * mutating `conditions` in place. Returns the id of the first condition to reach lethal severity this
+ * tick, else `null`. Shared by pawns and mobs; entities lacking a need simply never onset that condition.
  */
 export function driveNeedConditions(
   conditions: EntityCondition[],
   needVals: Record<string, number> | undefined,
-  // Off-bubble mobs call this once per throttled think-tick — pass AI_THROTTLE_TICKS so malnutrition
-  // accrues/recovers at the real per-tick rate over the skipped ticks. Pawns omit it (per-tick → 1).
+  // Off-bubble mobs pass their throttle interval so accrual matches the skipped ticks; pawns omit (1).
   tickScale = 1
 ): string | null {
   for (const def of CONDITIONS_DB) {
@@ -419,12 +341,9 @@ export function driveNeedConditions(
 }
 
 /**
- * Drive the temperature-exposure conditions (SEASONS_WEATHER): hypothermia ← cold exposure,
- * heat stroke ← heat exposure. `coldExposure`/`heatExposure` are 0–100 "need-like" values (degrees
- * past the pawn's comfort range, after resistance) computed by the caller — see
- * EnvironmentService.coldExposure/heatExposure + PawnStateMachine.tickConditions. Mutates
- * `conditions` in place; returns the first lethal condition id this tick, else `null`. Two scalar
- * params (no per-pawn object allocation), reusing the same `applyConditionDriver` onset/recovery model.
+ * Drive the temperature-exposure conditions (hypothermia ← cold, heat stroke ← heat).
+ * `coldExposure`/`heatExposure` are 0–100 need-like values (degrees past comfort, after resistance)
+ * computed by the caller. Mutates in place; returns the first lethal condition id this tick, else `null`.
  */
 export function driveTemperatureConditions(
   conditions: EntityCondition[],
@@ -448,19 +367,13 @@ export function driveTemperatureConditions(
 }
 
 /** Load ratio below which a pawn is unencumbered; ratio at/above which encumbrance is maxed.
- *  The floor sits at FULL capacity (1.0): a pawn carrying anything up to its limit is fine, and
- *  encumbrance only bites once it's OVER capacity (matches the UI "past ~100% encumbers" copy). */
+ *  Encumbrance only bites OVER capacity (matches the UI "past ~100% encumbers" copy). */
 export const ENC_BURDEN_START = 1.0;
 export const ENC_OVERLOAD_FULL = 1.4;
 
-/**
- * Set the `encumbered` condition's severity DIRECTLY from the carry-load ratio (load ÷ weight
- * capacity). Unlike need/temperature conditions this is INSTANTANEOUS — a pawn is encumbered *now*
- * because of what it bears, not after sustained exposure — so severity snaps to the load each tick
- * (like combat's `blood_loss`), not accruing via `applyConditionDriver`. severity 0 at/below
- * `ENC_BURDEN_START`, 1 at `ENC_OVERLOAD_FULL`. Mutates `conditions` in place (ADR-002 hot path:
- * nothing allocated while the pawn is light + the condition absent).
- */
+/** Set the `encumbered` condition's severity DIRECTLY from the carry-load ratio — INSTANTANEOUS
+ *  (snaps each tick), not accrued via `applyConditionDriver`. severity 0 at/below `ENC_BURDEN_START`,
+ *  1 at `ENC_OVERLOAD_FULL`. Mutates in place; the common (light) case allocates nothing. */
 export function driveEncumbrance(conditions: EntityCondition[], loadRatio: number): void {
   const sev = Math.min(
     1,
@@ -476,21 +389,14 @@ export function driveEncumbrance(conditions: EntityCondition[], loadRatio: numbe
     conditions[idx] = { ...conditions[idx], severity: sev };
 }
 
-/** Effective wind below which a pawn feels no windchill; wind at/above which it's maxed (extreme).
- *  Onset sits at the "somewhat windy" degree (see EnvironmentService.windDegreeWord) so a merely
- *  "slightly windy" world — the calm baseline ambient wind drifts around here — never chills a pawn;
- *  windchill only bites once the wind picks up past slight. */
+/** Effective wind below which a pawn feels no windchill; wind at/above which it's maxed. Onset sits
+ *  past the calm baseline ambient wind so a merely "slightly windy" world never chills a pawn. */
 export const WIND_ONSET = 0.36;
 export const WIND_FULL = 1.0;
 
-/**
- * Set the `windchilled` condition's severity DIRECTLY from the tile's effective wind 0–1 (after roof
- * + lee shelter — see EnvironmentService.effectiveWindAt). Like `driveEncumbrance` this is
- * INSTANTANEOUS, not accrued: a pawn is windblown *now* by what's blowing on it, so severity snaps to
- * the wind each tick. severity 0 at/below `WIND_ONSET`, 1 at `WIND_FULL`; the five stages
- * (slightly→extremely windy) live in conditions.jsonc. Mutates `conditions` in place (ADR-002 hot
- * path: nothing allocated while it's calm + the condition absent).
- */
+/** Set the `windchilled` condition's severity DIRECTLY from the tile's effective wind 0–1 (after
+ *  roof + lee shelter) — INSTANTANEOUS like `driveEncumbrance`, not accrued. Stages live in
+ *  conditions.jsonc. Mutates in place; the common (calm) case allocates nothing. */
 export function driveWindchill(
   conditions: EntityCondition[],
   effWind: number,

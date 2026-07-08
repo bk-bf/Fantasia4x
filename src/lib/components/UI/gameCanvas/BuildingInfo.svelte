@@ -1,10 +1,4 @@
-<!--
-  BuildingInfo — the colour-coded, structured building readout shared by the HOVER panel and the
-  CLICKED building panel, so the two can't drift (the clicked card used to be a plain `lines[]` wall of
-  text in SelectedEntityCard; now both render this). `detailed` adds the click-only sections the hover
-  omits: comfort/beauty, refund, the refuel requirement, and the "won't refuel" warning. The action
-  buttons + fuel/storage config fly-outs + the EnvReadout stay in the parent.
--->
+<!-- Building readout shared by the hover panel and the clicked card, so the two can't drift. -->
 <script lang="ts">
   import { buildingService } from '$lib/game/services/BuildingService';
   import { itemService } from '$lib/game/services/ItemService';
@@ -45,7 +39,7 @@
       : `complete${building.deconstructQueued ? ' ⊢ demolish' : ''}`
   );
   const isBin = $derived(((bDef?.effects?.storageStacks ?? 0) as number) > 0 && !isBlueprint);
-  // §M amenity: def + chosen-material comfort/beauty (what a couch/silk build is worth nearby).
+  // Amenity = def comfort/beauty + the chosen material's contribution.
   const amenity = $derived.by(() => {
     const mm = building.materials
       ? aggregateMaterialMods(Object.values(building.materials), 'building')
@@ -55,7 +49,6 @@
       beauty: (bDef?.effects?.beauty ?? 0) + (mm?.beauty ?? 0)
     };
   });
-  // Refuel requirement + "won't refuel" flag (just tinder + any fuel — no distinct-type gate).
   const refuel = $derived.by(() => {
     if (!detailed || isBlueprint || building.deconstructQueued || bDef?.maxFuel === undefined)
       return null;

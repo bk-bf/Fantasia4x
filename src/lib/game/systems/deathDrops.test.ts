@@ -3,8 +3,7 @@ import { killPawn, reapDeadPawns } from './PawnStateMachine';
 import { itemService } from '../services/ItemService';
 import type { GameState, Pawn } from '../core/types';
 
-// R10 — a slain pawn drops its carried goods, equipped gear, and a (dynamic-named) corpse on the
-// death tile so permadeath doesn't delete the colony's economy.
+// A slain pawn drops its carried goods, equipped gear, and a dynamic-named corpse on the death tile.
 function makePawn(): Pawn {
   return {
     id: 'p1',
@@ -54,8 +53,7 @@ describe('R10 death drops', () => {
   });
 });
 
-// NT-2 — the end-of-turn reaper finalises combat deaths (which bypass killPawn) and removes
-// every dead pawn from pawns[] so they leave the UI; the death survives in deadPawns + the corpse.
+// The end-of-turn reaper finalises combat deaths (which bypass killPawn) and removes dead pawns from pawns[].
 describe('NT-2 reapDeadPawns', () => {
   it('finalises a combat death (corpse + gear) and reaps the pawn from pawns[]', () => {
     const pawn = makePawn();

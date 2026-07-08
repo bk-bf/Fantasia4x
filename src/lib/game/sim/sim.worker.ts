@@ -1,14 +1,10 @@
 /// <reference lib="webworker" />
 /**
- * sim.worker.ts — the simulation worker (ADR-021, sim→Worker decouple, W1–W4).
- *
- * Owns the canonical GameState and runs the whole tick loop OFF the render thread, so the main
- * thread renders at the display rate regardless of sim cost. The engine's per-tick output and
- * command commits (decoupled via injected sinks in W0) become postMessages here.
- *
- * Protocol: see simProtocol.ts. Commands arrive as serializable {type,payload} (W3 registry);
- * state goes back as full-ish snapshots (worldMap omitted when unchanged — it's the big part and
- * rarely changes). WASM (W1) inits in the worker. Save (W4) = post the full state on request.
+ * sim.worker.ts — the simulation worker. Owns the canonical GameState and runs the whole tick
+ * loop OFF the render thread, so the main thread renders at the display rate regardless of sim
+ * cost. Protocol: see simProtocol.ts. Commands arrive as serializable {type,payload}; state goes
+ * back as snapshots (worldMap omitted when unchanged). WASM inits in the worker; save = post the
+ * full state on request.
  */
 import { isClientRuntime } from '../core/runtime';
 import { pathfinderService } from '../services/PathfinderService';
@@ -28,51 +24,39 @@ import { gameLogger } from '../dev/gameLogger';
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
-// W5 — batch governed by a WALL-CLOCK budget, not a tick count (a fixed step cap locks the worker
-// ~360ms with no snapshots posted → stutter). Run ticks until the budget is spent, then yield so
+// Batch governed by a WALL-CLOCK budget, not a tick count (a fixed step cap can lock the worker
+// with no snapshots posted → stutter). Run ticks until the budget is spent, then yield so
 // snapshots keep flowing. The budget must be ≥ ~one tick-cost so a backlogged worker runs ticks
-// BACK-TO-BACK and actually uses its capacity: at 8ms (< the ~12ms heavy tick) every batch did
-// exactly 1 tick then idled until the 16ms timer → pinned ~62 TPS at EVERY speed, so the speed
-// control did nothing. At ~16ms a backlogged batch runs ~2 ticks (≈the compute ceiling, ~83 TPS /
-// ~1.4× under 150-pawn load — high speeds are compute-bound on one core, unreachable by any budget),
-// while 1× still self-limits to 60 TPS via the accumulator. Light load drains fully → true 4×.
+// BACK-TO-BACK and actually uses its capacity; 1× still self-limits via the accumulator.
 const BATCH_BUDGET_MS = 16;
 const MAX_STEPS_PER_BATCH = 120; // hard safety only; the budget is the real limiter
 // Cap carried backlog so high speed CARRIES across batches (drives more ticks) without spiralling
-// into ever-longer locked catch-up. ~9 ticks (150ms) of slack, then we're best-effort behind realtime.
+// into ever-longer locked catch-up; past the cap we're best-effort behind realtime.
 const MAX_BACKLOG_MS = 150;
 
 let speed = 1;
 let paused = true;
-// perf sampler (~1 Hz): a low-rate TPS/load line into the unified log's `perf` category, so the
-// agent can fetch `.debug/perf.log` without the retired per-tick firehose. Cheap (one entry/sec).
+// perf sampler (~1 Hz): a low-rate TPS/load line into the `perf` log category. Cheap (one entry/sec).
 let perfTicksAccum = 0;
 let perfWindowStart = 0;
 let accMs = 0;
 let lastBatch = 0;
 let loop: ReturnType<typeof setInterval> | null = null;
 let lastWorldMap: GameState['worldMap'] | null = null;
-// Terrain-rebuild signal: structured-clone gives the main thread NEW refs for designations/buildings/
-// zoneTiles every snapshot, defeating its ref-based "did terrain change?" check (→ a 90ms rebuild
-// every throttle window = freeze frames). In the worker, immutable updates preserve unchanged refs,
-// so we compute a reliable revision here and the renderer rebuilds terrain only when it actually bumps.
+// Terrain-rebuild signal: structured-clone gives the main thread NEW refs every snapshot, defeating
+// its ref-based "did terrain change?" check. In the worker, immutable updates preserve unchanged
+// refs, so a reliable revision is computed here and the renderer rebuilds terrain only when it bumps.
 let terrainRev = 0;
-// Snow/ice weather revision — a SEPARATE signal for the blended snow layer, so a snow-onset wave
-// (every snowable tile crossing a render bucket in one hourly tick) repaints ONLY that layer and
-// never bumps terrainRev (whose handler re-bakes terrain + resource cells — the snow-onset hiccup).
+// Snow/ice revision — a SEPARATE signal so a whole-map snow-onset wave repaints ONLY the blended
+// snow layer and never bumps terrainRev (whose handler re-bakes terrain + resource cells).
 let snowRev = 0;
-/** Max SNOW/ice tile deltas shipped to the main thread per flush — a whole-map onset/melt is spread
- *  over this many per snapshot so the main-thread merge never stalls (see drainTileDeltasBudgeted). At
- *  ~15 flushes/s this drains a full 150k-tile wave in a couple of seconds. */
+/** Max SNOW/ice tile deltas shipped per flush — a whole-map onset/melt is spread over several
+ *  snapshots so the main-thread merge never stalls (see drainTileDeltasBudgeted). */
 const SNOW_DELTA_BUDGET_PER_FLUSH = 3000;
-// §D: a SEPARATE, cheap signal for the 2D designation overlay. The dip-correlated trace showed the
-// dominant harvest dip was the full 38k-tile terrain rebuild, fired ~2×/s by designation churn —
-// even though buildGameGrid doesn't render designations (their icons are a separate 2D canvas). So
-// designations get their own revision and never force a terrain rebuild.
+// A SEPARATE, cheap signal for the 2D designation overlay: designation churn must never force the
+// full terrain rebuild (their icons are drawn on a separate 2D canvas).
 let designationRev = 0;
-// TEMP §D: count what TRIGGERS a terrain-rev bump per SNAP window, so we know whether the harvest
-// terrain rebuilds come from designations (now decoupled), tile deltas (regrowth/depletion), or
-// buildings/zones. Reset each [SNAP] log. Remove with the probe.
+// Probe counters: what TRIGGERED a terrain-rev bump per [SNAP] window (see SNAP_SIZE_LOG).
 let _trigWM = 0,
   _trigDelta = 0,
   _trigBSig = 0,

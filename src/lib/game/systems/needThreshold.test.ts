@@ -36,9 +36,7 @@ describe('rest-source distance', () => {
 });
 
 describe('D8: fatigue lookahead reads REST sources, hunger reads FOOD sources', () => {
-  // A queued job sits next to a bed but far from the campfire. The fatigue interrupt must
-  // see a SHORT rest distance; the hunger interrupt a LONG food distance. Before the fix
-  // both used the food distance, so the fatigue threshold was modulated by the wrong source.
+  // Queued job sits next to a bed but far from the campfire: fatigue sees a short rest distance, hunger a long food distance.
   const gs = makeState({
     jobs: [{ id: 'j1', type: 'haul', targetX: 1, targetY: 0, claimedBy: null } as any],
     buildings: [bed(2, 0), campfire(40, 0)],

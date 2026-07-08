@@ -1,11 +1,4 @@
-<!--
-  BuildingRepairPanel — per-building repair settings UI. Cloned from BuildingFuelPanel's shape (same
-  chrome/positioning/toggle pattern): a pause toggle, a condition THRESHOLD slider, the allowed-MATERIAL
-  checklist (the "flat pool" — any allowed item counts toward the proportional repair cost; e.g. a thatch
-  roof lists hay + branch + plant_fiber so fiber can stand in for hay), and the allowed-COLONIST list.
-  Self-contained: edits the building's `repairSettings` via gameState.command. The parent owns the
-  open/close toggle (`open`) and the REPAIR button that flips it.
--->
+<!-- Per-building repair settings pop-up; parent owns the open/close toggle. -->
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState.js';
   import type { RepairSettings, PlacedBuilding, Pawn, Item } from '$lib/game/core/types.js';
@@ -28,18 +21,15 @@
 
   $: repairSettings = (building.repairSettings ?? {}) as RepairSettings;
   $: repairThresholdPct = Math.max(0, Math.min(100, repairSettings.repairThresholdPct ?? 30));
-  // Effective allowed-material set (shares repairRules' resolution): an untouched building falls back
-  // to its default repair set; an explicit list — even empty — is honoured.
+  // Untouched building falls back to its default repair set; an explicit list — even empty — is honoured.
   $: allowedMaterialSet = resolveAllowedRepairIds(building);
   $: selectedRepairPawnFilters = repairSettings.allowedRepairPawnIds ?? [];
 
-  // The materials this building can be repaired with (its default set), shown in the checklist.
   $: materialItems = getDefaultAllowedRepairIds(building.type)
     .map((id) => itemService.getItemById(id))
     .filter((it): it is Item => !!it);
   $: condition = Math.round(building.condition ?? 100);
   $: unitsNeeded = repairUnitsNeeded(building);
-  // Below threshold but no valid plan = the stock can't satisfy the proportional cost right now.
   $: cannotRepair =
     condition < repairThresholdPct && unitsNeeded > 0 && planRepair($gameState, building) === null;
 
@@ -57,8 +47,6 @@
     });
   }
 
-  // "Apply to all": push THIS building's threshold onto every building, so you don't re-set the same
-  // condition % by hand for each one.
   function applyThresholdToAll() {
     gameState.command({
       type: 'setAllBuildingsRepairThreshold',
@@ -67,7 +55,6 @@
     });
   }
 
-  // Reset to the building's default repair-material set (build-cost items + def substitutes).
   function resetMaterialsToDefault() {
     updateSelectedBuildingRepairSettings({
       allowedMaterialItemIds: getDefaultAllowedRepairIds(building.type)

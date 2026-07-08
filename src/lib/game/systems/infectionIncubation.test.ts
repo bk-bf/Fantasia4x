@@ -3,9 +3,7 @@ import { pawnStateMachineService } from './PawnStateMachine';
 import { CARE_CONFIG } from '../core/Wounds';
 import type { GameState, Pawn, Injury } from '../core/types';
 
-// Infection incubation: a fresh open+untended wound must NOT fester until it is
-// `infectionIncubationTicks` old (~2.5 in-game days). Before this, infection accrued from the moment
-// of injury and could go lethal during/just-after a fight. Now it's a days-later neglect threat.
+// A fresh open+untended wound must not fester until it is `infectionIncubationTicks` old (~2.5 in-game days).
 
 function makePawn(injury: Injury): Pawn {
   return {

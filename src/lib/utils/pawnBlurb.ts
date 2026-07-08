@@ -1,6 +1,5 @@
-// Vague, non-numeric ability descriptions for a pawn — used by the migrant-wave modal so the player
-// judges a hopeful by natural language ("keen-eyed", "sickly") rather than raw stat numbers. The
-// mighty/strong/average/frail thresholds come from core/Race.ts's `statBucket` (single source).
+// Vague, non-numeric ability descriptions for a pawn (migrant-wave modal). Thresholds come from
+// core/Race.ts's `statBucket` — single source.
 
 import type { Pawn } from '$lib/game/core/types';
 import { statBucket } from '$lib/game/core/Race';
@@ -40,10 +39,7 @@ export interface PawnBlurb {
   weaknesses: string[];
 }
 
-/**
- * Describe a pawn's abilities in vague natural language — up to three standout strengths (highest
- * `strong`/`mighty` stats first) and any glaring frailties. Never exposes numbers.
- */
+/** Up to three standout strengths (highest first) and any glaring frailties. Never exposes numbers. */
 export function describePawnAbilities(pawn: Pawn): PawnBlurb {
   const stats = pawn.stats;
   const ranked = STATS.map((k) => {

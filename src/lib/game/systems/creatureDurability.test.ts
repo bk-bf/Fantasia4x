@@ -6,12 +6,7 @@ import { getCreatureById } from '../core/Creatures';
 import { rng } from '../core/rng';
 import type { GameState, Mob, Pawn } from '../core/types';
 
-/**
- * Big-creature combat fix (creatures.jsonc `naturalArmor` + `bodyScale`, the natural-weapon AP/bleed
- * pass): a thick-hided beast soaks low-armorPen attacks, an AP weapon bites through, the blood pool
- * scales with body size, and a big beast's natural weapon hits proportionally harder. Drives the REAL
- * combatService.resolveHit / entitySpawning.makeMob — no mocks.
- */
+// naturalArmor soaks low-AP attacks, AP bites through, and bodyScale scales blood pool + natural-weapon damage. Drives the real resolveHit/makeMob — no mocks.
 const baseStats = {
   strength: 10,
   dexterity: 2, // low dodge → most swings land, so totals are comparable
@@ -110,8 +105,7 @@ describe('big-creature durability (naturalArmor + bodyScale)', () => {
     const mammoth = makeCreature('woolly_mammoth');
     const unarmoured = makeCreature('giant_rat');
 
-    // Low-AP (bone knife 0.1) vs high-AP (bronze punch dagger 0.25). For each weapon, the
-    // fraction of damage that survives the hide = vsMammoth / vsBareFlesh.
+    // For each weapon, the fraction of damage surviving the hide = vsMammoth / vsBareFlesh.
     const lowAp = makeArmedPawn('bone_knife');
     const highAp = makeArmedPawn('bronze_punch_dagger');
 

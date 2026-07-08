@@ -1,13 +1,11 @@
-// Human-readable labels for body limb/part IDS. The raw ids (limbmap.jsonc keys — `front_right_leg`,
-// `frontRightUpperLeg`, `tail`…) are BACKEND REFERENCE ONLY and must never reach the UI. Every screen
-// that shows anatomy routes through here so a new body plan can't leak snake_case/camelCase ids into a
-// panel. See AGENTS.md "Never leak ids in the UI".
+// Human-readable labels for body limb/part ids. Raw ids must never reach the UI — every screen
+// that shows anatomy routes through here.
 
-/** snake_case OR camelCase id → "Title Case Words" (handles both delimiters + acronym-free ids). */
+/** snake_case OR camelCase id → "Title Case Words". */
 function humanize(id: string): string {
   return id
-    .replace(/_/g, ' ') // snake_case → spaces
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2') // camelCase → spaces
+    .replace(/_/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/\b\w/g, (c) => c.toUpperCase());

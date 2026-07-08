@@ -5,13 +5,7 @@ import { pawnStatService } from '../services/PawnStatService';
 import { syncFractureConditions } from '../core/needs';
 import type { EntityCondition, LimbState, Pawn } from '../core/types';
 
-/**
- * Bone fractures (COMBAT-SYSTEM): heavy/blunt trauma can BREAK a limb's bone — a structural wound that
- * cripples the limb (manipulation/moving + a graded `fractured` condition crushing STR/DEX) WITHOUT severing
- * it. (Death comes from tearing the FLESH container apart, not breaking the bone.) These lock the
- * deterministic data + wiring (the RNG fracture
- * roll itself lives in Combat.performAttack).
- */
+// Heavy/blunt trauma can break a limb's bone — cripples without severing; the RNG fracture roll itself lives in Combat.performAttack.
 describe('fracture anatomy + wound data', () => {
   it('there is ONE bone type: every bone is a hidden skeleton element whose whole HP is its break budget', () => {
     // The forearm is a SOFT segment wrapping its real bone, the ulna (proper anatomy — no `*Bone` names).
@@ -19,8 +13,7 @@ describe('fracture anatomy + wound data', () => {
     expect(ulna.skeleton).toBe(true);
     expect(ulna.boneHp).toBeGreaterThan(0);
     expect(ulna.boneHp!).toBe(ulna.maxHp); // pure bone: whole HP IS the fracture budget
-    // The bone keeps its anatomical name: the `skull` IS the (hidden) bone; the `head` is the flesh outer
-    // that wraps it. No `bone: true`, no lazy `skullBone`/`jawBone`.
+    // The `skull` IS the hidden bone; the `head` is the flesh outer that wraps it.
     const skull = PART_DEF_MAP['skull']!;
     expect(skull.skeleton).toBe(true);
     expect(skull.boneHp!).toBe(skull.maxHp);
@@ -55,8 +48,7 @@ describe('fracture anatomy + wound data', () => {
   });
 
   it('no BONE is instant-death: a broken skull/ribcage cripples, only tearing the flesh container kills', () => {
-    // Bones are never `critical` — breaking one cripples the limb, it does not instantly kill. Death comes
-    // from destroying the FLESH container (head/chest) that holds the vital organ (brain/heart).
+    // Bones are never `critical` — death comes from destroying the flesh container holding the vital organ.
     expect(PART_DEF_MAP['skull']!.isCritical).toBeUndefined();
     expect(PART_DEF_MAP['ribcage']!.isCritical).toBeUndefined();
     expect(PART_DEF_MAP['leftForearm']!.isCritical).toBeUndefined();
@@ -114,8 +106,7 @@ describe('broken bone effects', () => {
 
   it('syncFractureConditions drives a GRADED `fractured` condition from bone damage, clearing on heal', () => {
     const conditions: EntityCondition[] = [];
-    // The ulna is a pure skeleton element → its whole maxHp (35) IS the break budget; a 35-damage
-    // fracture (HP chipped to 0) is fully broken.
+    // The ulna's whole maxHp (35) is the break budget, so 35 damage = fully broken.
     const limbs = [
       {
         id: 'left_arm',

@@ -2,7 +2,7 @@
 
 # DECISIONS [GAME]
 
-> **Related:** [ARCHITECTURE](ARCHITECTURE.md) · [DESIGN](DESIGN.md) · [PHILOSOPHY](PHILOSOPHY.md)
+> **Related:** [ARCHITECTURE](ARCHITECTURE.md) · [DESIGN](DESIGN.md)
 
 ADR-001 [GAME]: Layered Architecture with Singleton Services (2026-05-25, Accepted)
 ADR-002 [GAME]: GameStateManager as Only Mutation Surface (2026-05-25, Accepted)
@@ -334,7 +334,7 @@ adjustedThreshold = baseThreshold
 
 - **Date**: 2026-05-30
 - **Status**: Accepted
-- **Spec**: [.tasks/archive/SIMULATION-PERF-2026-05-30.md](../.tasks/archive/SIMULATION-PERF-2026-05-30.md)
+- **Spec**: superseded SIMULATION-PERF spec (deleted; see [ENGINE-PERFORMANCE](../.tasks/archive/ENGINE-PERFORMANCE.md))
 
 #### Context
 
@@ -1009,7 +1009,7 @@ accounts for it.
 ### ADR-028 [GAME]: Typed Trait Kinds + Condition Relationship Graph (TRAIT-SYSTEM-V2)
 
 **Status:** Accepted (2026-07-06). Extends ADR-023 (condition-backed traits) and ADR-024 (body plans).
-Spec: `.docs/.tasks/open/TRAIT-SYSTEM-V2.md`.
+Spec: `.docs/.tasks/open/TRAITS.md`.
 
 **Context.** Trait payloads were an untyped `effects` bag, so nothing enforced *what kind* of thing a
 trait could do — which produced gamification the design rejects (`iron-skin` stacking +CON/−DEX/+mining%
@@ -1068,7 +1068,7 @@ data edges.**
   generalising photosynthesis/light-sensitivity). Pure allocation-free evaluator in `conditionGraph.ts`,
   cheap-gated by `CONDITION_IDS_WITH_TRIGGERS`. Continuous meter-driven severities (shock, infection)
   stay code and are flagged `driver` — forcing them into accruing edges would change behaviour.
-- **TRAIT-LIBRARY-EXPANSION (2026-07-07, spec `.docs/.tasks/open/TRAIT-LIBRARY-EXPANSION.md`)** — the
+- **TRAIT-LIBRARY-EXPANSION (2026-07-07, spec `.docs/.tasks/open/TRAITS.md`)** — the
   methodical build-out of the pool (~300 new traits) plus the mechanics it forced:
   - **`effects.combatMods`** — combat statId → multiplier, applied by `PawnStatService.evaluateStat`
     to combat-category stats only (the combat twin of `workSpeed`). Combos always pair two axes;

@@ -137,27 +137,21 @@
   } from '$lib/components/UI/gameCanvas/selectionCard';
   import { overlayDroppedItems, overlayBuildings } from '$lib/components/UI/gameCanvas/overlay';
   import { buildingsVisualSig } from '$lib/game/core/buildingSig';
-  // Shared with the `movePawnsLine` command so the live drag preview's dots land exactly where the
-  // pawns will (same Achtung-style spacing + nearest-free-tile snap).
+  // Shared with `movePawnsLine` so the drag preview's dots land exactly where the pawns will.
   import { lineFormationTargets } from '$lib/game/sim/commands';
   import type { ItemPillView } from '$lib/components/UI/ItemPills.svelte';
   import itemsData from '$lib/game/database/items.jsonc';
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
 
-  // Main-menu backdrop mode (rendered behind MainMenu). A live but non-interactive atmospheric view:
-  // no hover/click/pan/zoom/keys, no HUD, a static centred framing, and it does NOT drive the
-  // boot-reveal sequence or the player's saved camera. Entities still animate (never frozen).
+  // Main-menu backdrop mode: live but non-interactive (no input/HUD, static framing);
+  // does not drive the boot-reveal or the player's saved camera. Entities still animate.
   export let menuPreview = false;
   /** Backdrop zoom multiplier over the cover-fit floor — a closer, more detailed title-screen shot. */
   const MENU_PREVIEW_ZOOM = 2;
   /** One-shot guard so the backdrop's first painted frame flips `menuPreviewRendered` exactly once. */
   let _previewPainted = false;
-  // Per-building refuel settings UI now lives in gameCanvas/BuildingFuelPanel.svelte (fuel items,
-  // filters, threshold). Sprite-sheet cache + HUD-icon action live in gameCanvas/{spriteSheets,
-  // hudSpriteIcon}.
 
-  // Tile size range for zoom (square cells for CoQ sprite-mode)
   // MAP_W / MAP_H must match the generateWorld() call in gameState.ts
   const MAP_W = 240;
   const MAP_H = 160;
@@ -173,8 +167,8 @@
   let tileHeight = 8;
   // Publish the zoom (tile px size) so the out-of-canvas weather overlay can scale particle density.
   $: cameraTileSize.set(tileWidth);
-  // Publish the zoom RANGE too: the floor (fitTileSize) shrinks as the map grows, so the weather
-  // overlay scales density/size against the REAL per-map range rather than a hardcoded tile span.
+  // Publish the zoom RANGE too: the floor shrinks as the map grows, so the weather overlay scales
+  // against the real per-map range rather than a hardcoded tile span.
   $: cameraZoomRange.set({ min: fitTileSize, max: MAX_TILE_W });
   // Publish the visible tile rectangle (top-left tile + tiles across) for the spatial creature-SFX
   // layer. Re-runs on pan (viewX/viewY) and zoom (tileWidth/tileHeight); read on a throttled tick.
@@ -188,16 +182,13 @@
   function computeFitTileSize(canvasW: number, canvasH: number): number {
     const mapW = worldMap.length > 0 ? worldMap[0].length : MAP_W;
     const mapH = worldMap.length > 0 ? worldMap.length : MAP_H;
-    // COVER fit (Math.max): the zoom-out floor FILLS the canvas — the map's binding axis (width, for a
-    // square map on a wide screen) maps edge-to-edge so no empty out-of-map area ("aether") ever shows.
-    // The other axis overflows the viewport, so you can pan along it; the bound axis is pinned (no pan
-    // needed there). CONTAIN (Math.min) was tried but left letterbox bars, which the user dislikes.
+    // COVER fit (Math.max): the zoom-out floor FILLS the canvas so no empty out-of-map area ever
+    // shows; the unbound axis overflows the viewport and pans. Never switch to contain (letterboxes).
     return Math.max(canvasW / mapW, canvasH / mapH);
   }
 
   let canvas: HTMLCanvasElement;
   let designCanvas: HTMLCanvasElement;
-  // HUD sprite icons + their shared-cache painting live in gameCanvas/{hudSpriteIcon,spriteSheets}.
   // Current day/night ambient, mirrored from the WebGL renderer so the Canvas2D
   // designation overlay can be darkened/tinted to match the lit scene beneath it.
   let _ambientLight = 1;
@@ -209,12 +200,9 @@
   let errorMsg = '';
   let worldMap: WorldTile[][] = [];
 
-  // Interior-mountain "fog" mask: tiles buried inside a massif / sealed in a pocket render blank in the
-  // terrain pass, and must NOT leak through the other render paths either — glow emitters on them are
-  // dropped, hovering them shows no info panel, and an explore-tab jump can't drop a highlight on them.
-  // ADR-026: the mask STATE (mask + the solid/exterior grids it derives from) is persisted so it can be
-  // updated LOCALLY when a tile's solidness flips (mining) — never re-BFS'd whole-map on a delta.
-  // `hiddenMask` aliases `_maskState.mask` (same ref; updateHiddenMaskAt mutates it in place).
+  // Interior-mountain fog mask: buried tiles render blank and must NOT leak via emitters, hover, or
+  // jump-highlights. Updated LOCALLY when a tile's solidness flips (mining) — never re-BFS'd
+  // whole-map. `hiddenMask` aliases `_maskState.mask` (same ref, mutated in place).
   let _maskState: HiddenMaskState | null = null;
   let hiddenMask: boolean[][] = [];
   const isHiddenTile = (x: number, y: number): boolean => hiddenMask[y]?.[x] ?? false;
@@ -224,52 +212,38 @@
   let _prevBuildingsSig = '';
   let _prevDesignations: unknown;
   let _prevZoneTiles: unknown;
-  let _prevTerrainRev: number | undefined; // ADR-021: worker-sent terrain revision (see unsubState)
-  let _prevDesignationRev: number | undefined; // §D: worker-sent designation revision → cheap 2D overlay redraw (no terrain rebuild)
-  // ADR-026 incremental terrain: the terrain GameGrid is PERSISTENT. A full rebuild (buildGameGrid, 562k
-  // setTile) is reserved for `_fullRebuildTerrain` only — first build or a genuine new-map load (worldMap
-  // ARRAY ref replaced). Every routine change (harvest/regrowth/mining via worldMapDelta, building
-  // placement, blueprint preview) repaints ONLY the affected tiles, driven by the changed-coord channel
-  // (mainTileDeltas) — never a whole-map scan or rebuild (the FPS crater that ADR-026 forbids).
+  let _prevTerrainRev: number | undefined; // worker-sent terrain revision (see unsubState)
+  let _prevDesignationRev: number | undefined; // worker-sent designation revision → cheap 2D overlay redraw (no terrain rebuild)
+  // The terrain GameGrid is PERSISTENT: full rebuild only on first build or a genuine new-map load
+  // (worldMap ARRAY ref replaced). Every routine change repaints ONLY the affected tiles via
+  // mainTileDeltas — never a whole-map scan or rebuild (an FPS crater).
   let _terrainGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
-  // Transparent resource layers (built in _fullRebuildTerrain, patched per dirty tile incrementally,
-  // kept in lock-step with _terrainGrid). Short = grass/bushes/ore/crops (drawn beneath entities);
-  // tall = trees (drawn ABOVE entities so a pawn on the tile behind a tree is occluded by the canopy).
+  // Transparent resource layers, patched per dirty tile in lock-step with _terrainGrid. Short =
+  // grass/bushes/ore/crops (beneath entities); tall = trees (above, so the canopy occludes pawns).
   let _resourceGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
   let _resourceTallGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
-  // Blended snow/ice weather layer (per-cell wash + sprites), drawn between terrain and resources.
-  // Kept OUT of the terrain grid so a snow/ice change repaints only this grid's affected cells via the
-  // dedicated snow delta channel (_snowRev / drainSnowRenderTileDeltas) — never a terrain re-bake.
+  // Snow/ice layer, drawn between terrain and resources. Kept OUT of the terrain grid so a snow
+  // change repaints only this grid's cells via the snow delta channel — never a terrain re-bake.
   let _snowGrid: import('$lib/webgl/game-grid.js').GameGrid | null = null;
   let _snowDirty = false; // worker signalled snow/ice changes (coalesced like _terrainDirty)
-  // Snow/ice repaint is BUDGETED BY CHUNK: a whole-map onset/melt wave is queued here grouped by the
-  // renderer's 32² chunks, and only a few chunks are repainted per frame. Budgeting by chunk (not by
-  // tile) is the key: a snow-chunk re-vertex rebuilds the WHOLE chunk whenever ANY cell in it changes,
-  // so a tile-by-tile drip would re-vertex the same 32² chunk once PER tile (the worst case). Grouping
-  // by chunk repaints each chunk exactly once → no redundant rebuilds, no hitch. Covers ice too (ice
-  // renders in the same snow layer via the 'snow' delta kind). FIFO by insertion order.
+  // Snow/ice repaint is BUDGETED BY CHUNK (not tile): a re-vertex rebuilds the whole 32² chunk when
+  // ANY cell changes, so a tile-by-tile drip would rebuild the same chunk once per tile. Covers ice
+  // too ('snow' delta kind). FIFO by insertion order.
   let _snowPendingChunks = new Map<string, { x: number; y: number }[]>();
   const SNOW_CHUNK_SIZE = 32; // MUST match GridRenderer.CHUNK_SIZE (a mismatch only costs extra rebuilds)
   const SNOW_CHUNKS_PER_FRAME = 1; // repaint at most this many snow chunks per frame (1 = one re-vertex/frame)
-  // Crash observability: when a frame is about to issue an ABNORMALLY large GL draw (full-map
-  // re-vertex, a big snow/terrain delta batch), this holds a human reason. The render section writes a
-  // synchronous crash breadcrumb ("→ heavy draw START …") BEFORE the draw and ("✓ heavy draw OK …")
-  // AFTER — so if the GPU hard-hangs mid-draw (killing DevTools), .debug/crash.log ends on the START
-  // line, naming the exact trigger. Only large frames pay the sync-log cost.
+  // Abnormally large GL draws get a synchronous crash breadcrumb before/after — if the GPU
+  // hard-hangs mid-draw, .debug/crash.log ends on the START line naming the trigger.
   let _heavyRenderReason = '';
   const HEAVY_RENDER_TILES = 4000; // above this many re-vertexed cells in one frame → breadcrumb it
   let _lastSnowBuild = 0;
   let _prevSnowRev: number | undefined; // worker-sent snow revision (see unsubState)
-  // Season the resource overlay is painted with (drives resources.jsonc seasonVariants — leafless
-  // winter trees, autumn recolours). Set to the current season on the first build (a load shows the
-  // correct look instantly); a season BOUNDARY crossing during play flips the foliage GRADUALLY (below).
+  // Season the resource overlay is painted with (seasonVariants). Set on first build; a season
+  // boundary crossing during play flips the foliage GRADUALLY (below).
   let _renderSeason: import('$lib/game/core/types.js').Season | undefined;
-  // ── Gradual seasonal foliage transition ──────────────────────────────────────────────────────────
-  // At a season boundary, each affected tree flips to the new look at its OWN random game-time offset,
-  // spread over FOLIAGE_WINDOW_TURNS — so the forest turns over days instead of every tree re-vertexing
-  // in one frame (perf) and the change reads as foliage gradually turning (realism). `_foliagePending`
-  // is sorted by flipTurn so the scheduler processes only the DUE prefix each frame; `_renderSeason`
-  // already holds the target, so each due tree just repaints via the shared incremental resource path.
+  // Gradual seasonal foliage: each tree flips at its own random offset over FOLIAGE_WINDOW_TURNS so
+  // the forest turns over days instead of re-vertexing in one frame. `_foliagePending` is sorted by
+  // flipTurn; the scheduler processes only the DUE prefix each frame.
   const TURNS_PER_GAME_DAY = 300 * TICKS_PER_SECOND; // matches the GameControls calendar (300 s/day)
   const FOLIAGE_WINDOW_TURNS = 4 * TURNS_PER_GAME_DAY; // spread the flip across ~4 in-game days (tunable)
   const FOLIAGE_FLIPS_PER_FRAME = 48; // per-frame repaint budget while a transition is in progress
@@ -282,27 +256,20 @@
   let _prevBuildingsById = new Map<string, { x: number; y: number; sig: string }>();
   // Blueprint preview tiles painted last frame — repainted (cleared) when the preview moves/ends.
   let _prevBlueprintTiles = new Set<string>();
-  // §M grove-glow emitters keyed "y,x" so a delta upserts/deletes one tile's emitter (no full re-scan).
+  // Grove-glow emitters keyed "y,x" so a delta upserts/deletes one tile's emitter (no full re-scan).
   let _emitterMap = new Map<string, import('$lib/game/services/LightingService.js').LightEmitter>();
-  // Terrain rebuild is O(map) (38k-tile vertex buffer). worldMap churns every tick from
-  // resource regrowth/harvest, which would rebuild it every frame (~60ms). Those changes are
-  // invisible if they lag a fraction of a second, so coalesce sim-driven terrain rebuilds to
+  // Terrain rebuild is O(map) and worldMap churns every tick, so sim-driven rebuilds coalesce to
   // TERRAIN_REBUILD_MIN_MS; player-driven changes (buildings/designations/zones) stay immediate.
   let _terrainDirty = false;
   let _lastTerrainBuild = 0;
   const TERRAIN_REBUILD_MIN_MS = 500;
-  // Set when the whole world is REPLACED (regen / size change / restore — see worldGenRev). Forces the
-  // next frame's terrain rebuild to bypass the throttle above, so a player-driven regen repaints
-  // immediately (hidden behind the Custom Map overlay) instead of up to 500ms later.
+  // Set when the whole world is REPLACED (regen / size change / restore — see worldGenRev):
+  // bypasses the rebuild throttle so a regen repaints immediately.
   let _forceTerrainRebuild = false;
 
-  // Render-on-demand. The rAF loop draws the terrain (all visible chunks) EVERY frame; at the zoom-out
-  // floor of a big map that rasterizes ~1M tiles/frame even when nothing changes — the sub-20 FPS on
-  // the static custom-map / zoomed-out view. When the scene is FROZEN — sim paused, OR zoomed out past
-  // FREEZE_TILE_PX (entity motion sub-pixel) — we skip the GL draw unless something VISIBLE changed
-  // (`_renderDirty`, set by the event-driven repaint primitives: camera/zoom, terrain rebuild,
-  // selection/designation, regen, resize, pause toggle). So a static map is drawn once then costs
-  // nothing. Unfrozen (running + zoomed in) draws every frame exactly as before — normal play unchanged.
+  // Render-on-demand: when the scene is FROZEN (sim paused, or zoomed out past FREEZE_TILE_PX) skip
+  // the GL draw unless something VISIBLE changed (`_renderDirty`, set by the event-driven repaint
+  // primitives) — a static map draws once then costs nothing. Unfrozen draws every frame.
   let _renderDirty = true;
   const FREEZE_TILE_PX = 4; // below this on-screen tile size, entity motion is imperceptible → freeze
   const markRenderDirty = () => {
@@ -335,28 +302,22 @@
   let cameraFollowPawnId: string | null = null;
   let cameraFollowMobId: string | null = null;
 
-  // Entity-overlay layer: pawns are drawn into their own sparse grid rendered as
-  // a glyph-only pass ON TOP of the terrain (see renderer setOverlayGrid). This
-  // keeps the terrain tile beneath a pawn intact and lets us interpolate motion
-  // every animation frame, independent of the simulation tick rate.
+  // Pawns draw into their own sparse glyph-only grid on top of the terrain: keeps the tile beneath
+  // intact and lets motion interpolate every frame, independent of the sim tick rate.
   const pawnOverlayGrid: GameGrid = new GameGridClass();
-  // Dropped/stored items get their OWN overlay grid, rendered beneath the pawn
-  // overlay (terrain → items → entities). Keeping items out of pawnOverlayGrid is
-  // what stops a pawn from blanking the item glyph on the tile it walks over.
+  // Items get their OWN overlay grid beneath the pawn overlay — keeping them out of pawnOverlayGrid
+  // is what stops a pawn from blanking the item glyph on the tile it walks over.
   const itemOverlayGrid: GameGrid = new GameGridClass();
-  // Completed buildings get their OWN overlay grid too, rendered between the terrain and the item
-  // overlay (terrain+floor → buildings → items → pawns). A building is a glyph-only alpha pass like
-  // items, so the floor/ground baked in the terrain grid shows through the building sprite's
-  // transparent pixels instead of being blanked out by a baked opaque cell.
+  // Buildings get their own glyph-only alpha pass (terrain+floor → buildings → items → pawns) so the
+  // baked floor shows through a sprite's transparent pixels.
   const buildingOverlayGrid: GameGrid = new GameGridClass();
   // Per-pawn rendered position in float world-tile coords, eased toward the
   // simulation's authoritative sub-tile position each frame for smooth 60fps motion.
   const pawnRenderPos = new Map<string, { x: number; y: number }>();
   const mobRenderPos = new Map<string, { x: number; y: number }>();
   let lastFrameTime = 0;
-  // DEBUG gate for the menu-backdrop frame profiler ([MENU-PERF]): ON only when Debug mode is enabled
-  // (Settings toggle → $debugMode) or a --debug/--log build flag is set. So normal --play and shipped
-  // builds run NONE of the measurement (zero cost). `subscribe` keeps it live with the settings toggle.
+  // Menu-backdrop frame profiler gate: ON only with Debug mode or a --debug/--log build, so shipped
+  // builds run NONE of the measurement.
   const _DBG_BUILD =
     import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_LOG === 'true';
   let _menuPerfOn = _DBG_BUILD;
@@ -368,28 +329,21 @@
   // Follow-camera smoothing constant (seconds). Slightly looser than pawn motion
   // so the camera trails gently rather than rigidly locking to the pawn.
   const FOLLOW_SMOOTH_TAU = 0.12;
-  // Smooth keyboard/arrow panning: holding a direction glides the camera (like a mouse-drag) instead of
-  // jumping a fixed step of tiles per keypress. The velocity eases toward the held direction's target speed
-  // and glides to a stop on release, driven per-frame by updateKeyboardPan (mirrors the follow camera).
+  // Keyboard panning glides: velocity eases toward the held direction and glides to a stop on
+  // release, driven per-frame by updateKeyboardPan.
   const PAN_SPEED = 24; // tiles/sec at full glide
   const PAN_SMOOTH_TAU = 0.09; // velocity ease-in / ease-out time constant (seconds)
-  // Where the followed entity sits vertically in the viewport (fraction from the top). Slightly above
-  // centre (just under 0.5) — keeps it near the middle while leaving a little extra room below for the
-  // selected-entity HUD card.
+  // Vertical viewport fraction for the followed entity — just above centre, leaving room below for
+  // the selected-entity HUD card.
   const FOLLOW_VERTICAL = 0.42;
 
-  // World-effect overlay positions (Zzz, progress bars, campfire sparks) are computed
-  // in the rAF frame() loop via updateWorldEffectOverlays(). Using $: reactive blocks
-  // here caused 60fps Svelte store updates and DOM re-renders whenever viewX/viewY
-  // changed (every frame during camera follow), scaling with sleeping-pawn count and
-  // tanking FPS at night when everyone was asleep.
+  // World-effect overlay positions are computed in the rAF loop, NOT via $: blocks — reactive here
+  // meant 60fps store/DOM updates during camera follow, tanking FPS with many sleepers.
   let _glyphFloatKey = ''; // unified sleep/rest/collapse/campfire glyph floats
   let _progressOverlayKey = '';
   let _particleOverlayKey = '';
-  // Lair particle-effect tiles, CACHED. Scanning the visible tile-rect every frame is O(map) when
-  // zoomed out (the whole map is "visible") — a serious per-frame tax. Lairs change only on
-  // regen/grow/destroy, so we scan the full map rarely (worldMap swap + a slow timer) and just
-  // project this small list each frame.
+  // Lair particle tiles CACHED: scanning the visible rect per frame is O(map) when zoomed out.
+  // Lairs change rarely, so scan rarely (worldMap swap + slow timer) and project the list per frame.
   let _lairTiles: { x: number; y: number; effect: string }[] = [];
   let _lairScanAt = 0;
   let _healthOverlayKey = '';
@@ -420,12 +374,8 @@
   // Peak thrust distance, in tiles — how far "into" the target tile the attacker reaches.
   const LUNGE_DISTANCE = 0.4;
 
-  /**
-   * Sub-tile pixel offset for an attacker's lunge this frame: a quick out-and-back
-   * thrust toward the struck tile. Returns {x:0,y:0} when the attacker has no active
-   * lunge. The sine curve peaks at the lunge midpoint and returns to 0 at the TTL,
-   * so the glyph snaps back to its resting position well before the next swing.
-   */
+  // Sub-tile lunge offset this frame: an out-and-back sine thrust toward the struck tile;
+  // {0,0} when the attacker has no active lunge.
   function lungeOffset(id: string, now: number): { x: number; y: number } {
     for (let i = attackLungeList.length - 1; i >= 0; i--) {
       const e = attackLungeList[i];
@@ -438,7 +388,6 @@
     return { x: 0, y: 0 };
   }
 
-  // Phase 4: buildings and designations overlay
   let buildings: PlacedBuilding[] = [];
   let designations: Record<string, DesignationType> = {};
   // Standing-zone membership (stockpile…), separate from one-shot action orders above so a

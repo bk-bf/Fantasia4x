@@ -1,4 +1,4 @@
-// PRODUCTION-CHAIN-II §M — passive magical buffs via conditions (the MAGIC-SKILLS foundation).
+// Passive magical buffs via conditions: gear grants transient magical conditions while worn.
 import { describe, it, expect } from 'vitest';
 import { syncTransientConditions } from './PawnStateMachine';
 import { equipItem } from '../core/PawnEquipment';
@@ -144,7 +144,7 @@ describe('§M item & recipe integrity', () => {
   });
 });
 
-// §M arcane staves — INT-scaled channeled elemental ranged weapons over two workbench tiers.
+// Arcane staves — INT-scaled channeled elemental ranged weapons over two workbench tiers.
 const T1_STAVES = ['ember_staff', 'frost_staff', 'spark_staff'] as const;
 const T2_STAVES = ['pyre_staff', 'rime_staff', 'tempest_staff'] as const;
 const STAFF_ELEMENT: Record<string, string> = {
@@ -199,7 +199,7 @@ describe('§M arcane staves', () => {
   });
 });
 
-// §M regalia — combo & head jewelry (the magic-vs-armour loadout fork).
+// Regalia — combo & head jewelry (the magic-vs-armour loadout fork).
 const REGALIA: Record<string, { slot: string; conds: string[] }> = {
   scholars_circlet: { slot: 'headOuter', conds: ['insight'] },
   champions_crown: { slot: 'headOuter', conds: ['might', 'quickness'] },
@@ -253,7 +253,7 @@ describe('§M regalia (combo & head jewelry)', () => {
   });
 });
 
-// ── Combat wiring: INT-scaled arcane damage + elemental resistance over resolveHit ──
+// Combat wiring: INT-scaled arcane damage + elemental resistance over resolveHit.
 const baseStats = {
   strength: 10,
   dexterity: 10,

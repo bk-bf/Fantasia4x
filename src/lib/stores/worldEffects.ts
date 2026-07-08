@@ -1,12 +1,8 @@
-// World-space effects layer store.
-// GameCanvas writes overlay positions here; WorldEffectsLayer reads and renders them.
-// Add new effect types here to extend the system (weather, particle effects, etc.)
+// World-space effects layer store: GameCanvas writes overlay positions, WorldEffectsLayer renders.
 import { writable } from 'svelte/store';
 
-/** One anchored, looping-animation "glyph float" pinned to a tile/entity — the family that used to
- *  be four parallel arrays (Zzz of sleep, ✚ of recovery, ↓ of collapse, campfire sparks). They are
- *  identical plumbing (project tile→screen, scale with zoom, render a CSS glyph cluster); only `kind`
- *  selects the inner glyphs + animation in WorldEffectsLayer. One array, one setter, one diff-key. */
+/** Anchored, looping glyph float pinned to a tile/entity (sleep Zzz, recovery ✚, campfire sparks…);
+ *  `kind` selects the inner glyphs + animation in WorldEffectsLayer. */
 export type GlyphFloatKind = 'sleep' | 'rest' | 'collapse' | 'winded' | 'campfire';
 export interface GlyphFloat {
   id: string;
@@ -66,8 +62,6 @@ export interface FloatingTextOverlay {
 }
 
 export interface WorldEffectsState {
-  /** Anchored looping glyph floats — sleep Zzz / recovery ✚ / collapse ↓ / campfire sparks, one array
-   *  discriminated by `kind` (was four parallel arrays). */
   glyphFloats: GlyphFloat[];
   progressOverlays: ProgressOverlay[];
   particleOverlays: ParticleOverlay[];
@@ -75,9 +69,6 @@ export interface WorldEffectsState {
   healthOverlays: HealthOverlay[];
   draftTargetOverlays: DraftTargetOverlay[];
   floatingTextOverlays: FloatingTextOverlay[];
-  // Future effects — add here and handle in WorldEffectsLayer:
-  // weather: 'none' | 'rain' | 'snow';
-  // particleEffects: ParticleEffect[];
 }
 
 function createWorldEffectsStore() {

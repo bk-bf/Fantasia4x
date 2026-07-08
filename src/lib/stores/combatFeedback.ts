@@ -1,16 +1,8 @@
-// Transient combat-feedback channel.
-//
-// combatService (systems layer) pushes world-space events here on each resolved
-// hit/miss/dodge. GameCanvas reads them every animation frame, converts the live
-// tile coordinate to a screen position, and forwards a screen-space list to
-// `worldEffects` for WorldEffectsLayer to render as rising/fading floating text.
-//
-// Events self-prune after FLOAT_TTL_MS so the list never grows unbounded even if
-// nothing reads it (e.g. the canvas is unmounted). Positions are world tile
-// coordinates — never pixels — so the renderer stays the single owner of camera math.
+// Transient floating-combat-text channel: combatService pushes world-space events per resolved
+// hit/miss/dodge; GameCanvas converts to screen space for WorldEffectsLayer. Positions are world
+// TILE coordinates, never pixels — the renderer owns camera math. Self-prunes after FLOAT_TTL_MS.
 import { writable } from 'svelte/store';
-// P-3: the kind enum now lives in the sim's core sink so Combat can reference it without
-// importing this store. Re-exported here for the renderer (GameCanvas) which reads this channel.
+// Kind enum lives in the core sink so Combat can reference it without importing this store.
 import type { CombatTextKind } from '$lib/game/core/logSink';
 
 export type { CombatTextKind };
@@ -23,17 +15,14 @@ export interface CombatTextEvent {
   kind: CombatTextKind;
   /** Explicit CSS colour for data-driven `kind: 'condition'` labels (overrides the per-kind class). */
   color?: string;
-  /** Extra vertical pixel offset on top of the tile→screen position (stacks a secondary cue
-   *  below its sibling damage number rather than overlapping it). */
+  /** Extra vertical px offset — stacks a secondary cue below its sibling damage number. */
   dy?: number;
-  /** Wall-clock spawn time (Date.now); drives the rise/fade animation lifetime. */
   spawnTime: number;
 }
 
-/** Lifetime of a floating-text label, in ms. Must match the CSS animation duration. */
+/** Label lifetime in ms. Must match the CSS animation duration. */
 export const FLOAT_TTL_MS = 900;
 
-/** Hard cap so a long brawl can't accumulate hundreds of simultaneous labels. */
 const MAX_ACTIVE = 60;
 
 function createCombatFeedbackStore() {
@@ -43,13 +32,11 @@ function createCombatFeedbackStore() {
 
   return {
     subscribe,
-    /** Push a world-space combat label. Auto-prunes expired and over-cap entries. */
     push(evt: Omit<CombatTextEvent, 'id' | 'spawnTime'>) {
       const now = Date.now();
       update((list) => {
         const live = list.filter((e) => now - e.spawnTime < FLOAT_TTL_MS);
         live.push({ ...evt, id: `cbt-${now}-${seq++}`, spawnTime: now });
-        // Drop oldest if we blow past the cap.
         return live.length > MAX_ACTIVE ? live.slice(live.length - MAX_ACTIVE) : live;
       });
     },

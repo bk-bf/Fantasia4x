@@ -3,11 +3,7 @@ import { driveEncumbrance, getConditionCurrentStage } from '../core/needs';
 import { itemService } from '../services/ItemService';
 import type { EntityCondition, GameState, Pawn } from '../core/types';
 
-/**
- * Unified load model: worn armour + pack weight ÷ a STR-scaled capacity drives the staged `encumbered`
- * condition (set DIRECTLY from the ratio, not accrued). Armour fills the WEIGHT budget but adds VOLUME
- * (pockets). Replaces the old combat-only armour-encumbrance hook.
- */
+// Worn armour + pack weight over a STR-scaled capacity drives the staged `encumbered` condition (set directly from the ratio).
 describe('driveEncumbrance (load → staged condition)', () => {
   it('adds nothing up to full capacity, onsets only OVER 1.0, clears when unburdened again', () => {
     const c: EntityCondition[] = [];
@@ -53,8 +49,7 @@ describe('driveEncumbrance (load → staged condition)', () => {
     const c: EntityCondition[] = [];
     driveEncumbrance(c, 1.5);
     const stage = getConditionCurrentStage(c.find((x) => x.id === 'encumbered')!);
-    // Evasion + aim now flow through the DEX penalty (the stat the dodge/hit formulas read), plus a
-    // STR hit; movement is its own modifier.
+    // Evasion + aim flow through the DEX penalty; movement is its own modifier.
     expect(stage!.modifiers.dexterity).toBeLessThan(1); // easier to hit + worse aim
     expect(stage!.modifiers.strength).toBeLessThan(1); // weaker under the load
     expect(stage!.modifiers.moveSpeed).toBeLessThan(1); // slower

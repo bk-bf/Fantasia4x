@@ -2,18 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { pawnStateMachineService } from './PawnStateMachine';
 import type { GameState, Pawn } from '../core/types';
 
-/**
- * Per-handler behaviour locks for the PawnStateMachine (hotspot report, step 6 — written BEFORE the
- * handler-split refactor so any accidental behaviour change is caught). They drive the public
- * `tick()` (handlers are module-private) and assert the deterministic, no-pathfinder branches:
- *
- *  - In the test/node env the WASM pathfinder is never initialised, so `pathfinderService.isReady()`
- *    is false and `tryAssignPath` returns null. That makes the "can't path / eat-in-place / stay put"
- *    branches the deterministic ones to pin.
- *
- * Behaviour pinned here: Idle→Hungry / →Hauling / job-pickup guard, Working release/idle paths,
- * Hungry eat-in-place / no-food→Idle.
- */
+// Drives the public tick(); the WASM pathfinder is never initialised in tests, so the "can't path / eat-in-place / stay put" branches are the deterministic ones pinned here.
 function makePawn(over: Partial<Pawn> = {}): Pawn {
   return {
     id: 'p1',
@@ -200,8 +189,7 @@ describe('PawnStateMachine handler behaviour locks', () => {
     });
 
     it('does NOT eat from the ethereal aggregate when no physical drop is reachable', () => {
-      // Aggregate says there's food, but there's no DroppedItem to fetch — the pawn must not consume it
-      // out of thin air (the bug). It waits (Idle) and the aggregate is untouched.
+      // Aggregate says there's food but no DroppedItem exists — the pawn must not consume it out of thin air.
       const gs = makeState({
         pawns: [makePawn({ currentState: 'Hungry', needs: needs({ hunger: 85 }) })],
         droppedItems: [],

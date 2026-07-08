@@ -1,14 +1,3 @@
-<!--
-  WeatherCanvas — fullscreen rain/snow particle overlay (SEASONS_WEATHER Subsystem 5).
-
-  A 2D-canvas particle system (the standard, glitch-free way to do precipitation): rain = short
-  translucent slanted line segments; snow = drifting dots. Driven by the global `currentWeather`
-  store; idles (no draws) when it's clear. Self-contained — mounted once inside WorldEffectsLayer.
-
-  Perf: this is the ONLY thing here that runs per animation frame, and only while it's actually
-  raining/snowing. One canvas, a few hundred line/arc draws batched into a single path → trivial next
-  to the WebGL terrain. It does NOT touch the sim worker or the terrain renderer.
--->
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { browser } from '$app/environment';
@@ -32,8 +21,7 @@
   let ctx: CanvasRenderingContext2D | null = null;
   let raf = 0;
   let lastT = 0;
-  // DEBUG gate for the [WX-PERF] frame profiler: ON only with Debug mode (Settings → $debugMode) or a
-  // --debug/--log build flag. Normal --play and shipped builds run none of the measurement (zero cost).
+  // [WX-PERF] profiler gate: only in debug mode or debug/log builds — zero cost otherwise.
   const _DBG_BUILD =
     import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_LOG === 'true';
   let _wxDbg = _DBG_BUILD;
@@ -42,9 +30,7 @@
   let ro: ResizeObserver | undefined;
   let reduceMotion = false;
 
-  // Live ambient brightness/hue, mirrored from the day/night cycle (honours the debug time-of-day
-  // override). The fog overlay multiplies its colour by these so it dims and cools at night instead
-  // of washing the dark map white. Updated from the gameState turn below.
+  // Ambient light/tint from the day/night cycle; fog/leaf colours multiply by these so they dim at night.
   let ambLight = 1;
   let ambTint: [number, number, number] = [1, 1, 1];
   const unsubAmbient = gameState.subscribe((gs) => {
@@ -60,9 +46,7 @@
   let density = 160; // particles per megapixel, from weather.jsonc
   let particleColor: [number, number, number] = [200, 120, 60]; // leaves/dust tint, from weather.jsonc
 
-  // Effective overlay slant (px of horizontal travel per px fallen) and snow/dust sideways drift
-  // (px/sec) — both derived from windStrength so a windy day visibly leans the precipitation and a
-  // storm drives it near-horizontal. Negative = leftward (matches the seeding in makeParticle).
+  // Wind-derived slant (px sideways per px fallen) and sideways drift (px/sec); negative = leftward.
   const rainSlant = () => -(0.12 + windStrength * 0.8);
   const sideDrift = () => 8 + windStrength * 120;
   const isDots = () => mode === 'snow' || mode === 'dust' || mode === 'snowdust';
@@ -71,12 +55,8 @@
   // foggy_rain composites rain drops (in `parts`) with a separate, small pool of slow fog blobs.
   let fogBlobs: Particle[] = [];
 
-  // Zoom-reactive "in the clouds" feel, scaled against the REAL per-map zoom range (not a hardcoded
-  // tile span): `zoomMin` is the zoom-out floor (fitTileSize — smaller on bigger maps, ~1px on a 750²
-  // map) and `zoomMax` the zoom-in ceiling, both from cameraZoomRange. `zoomInFrac` is therefore 0 at
-  // each map's OWN fully-zoomed-out extreme and 1 fully zoomed in — so on M/L maps, which zoom out far
-  // past where an S map bottoms out, the weather keeps scaling instead of flat-lining at an old fixed
-  // floor. The pool grows/shrinks by the delta (reconcile) so the change is gradual, not a pop.
+  // zoomInFrac: 0 at the active map's own fully-zoomed-out extreme, 1 fully zoomed in — measured
+  // against the real per-map zoom range so big maps keep scaling past a small map's floor.
   let tileSize = 8; // current zoom (px per tile), from the camera store
   let zoomMin = 8; // zoom-out floor (fitTileSize), from cameraZoomRange
   let zoomMax = 40; // zoom-in ceiling (MAX_TILE_W), from cameraZoomRange
@@ -85,31 +65,21 @@
     return Math.max(0, Math.min(1, (tileSize - zoomMin) / span));
   };
 
-  // Particle SIZE multiplier: rain streaks / snow specks / dust / leaves all shrink as you zoom OUT,
-  // so far-out on a big map they read as a fine mist rather than a sparse scatter of screen-huge blobs
-  // (a 12px streak was 12 tiles wide at the zoom-out floor). UNCAPPED at the small end against the real
-  // range, so the L/750² far-zoom genuinely gets smaller than the S/250² floor ever does.
+  // Particles shrink as you zoom out so far-out weather reads as fine mist, not screen-huge blobs.
   const sizeMul = () => 0.3 + zoomInFrac() * 1.0; // ~0.3× fully out → 1.3× fully in
 
-  // Particle COUNT multiplier: DENSER as you zoom out (frac → 0). Crucially this rises in lock-step
-  // with the shrink above — smaller particles cost proportionally less fillrate, so packing in more of
-  // them keeps the per-frame draw cost bounded while the look gets visibly denser. (See targetCount's
-  // fillrate-aware cap, which is what actually guards §R5's perf budget.)
+  // Count rises as size shrinks — smaller particles cost less fillrate, so density can grow while
+  // the per-frame draw cost stays bounded (see targetCount's fillrate-aware cap).
   const densityMul = () => 0.8 + (1 - zoomInFrac()) * 1.6; // 0.8× fully in → 2.4× fully out
 
-  // EXTREME zoom-out gate: below SUBPIXEL_TILE px/tile the whole map is on screen and individual drops
-  // are sub-pixel — you read weather as a faint haze, not distinct particles. There, the PER-PARTICLE
-  // overhead (the draw-loop iteration + path/arc setup per particle, which does NOT shrink with size)
-  // dominates the frame, so 2400 invisible specks just tank FPS for no visual gain (the zoom-out FPS
-  // crater). Hard-attenuate the count from 1× at SUBPIXEL_TILE down to a 0.2× floor as tiles vanish.
-  const SUBPIXEL_TILE = 4; // px per tile (matches GameCanvas's FREEZE_TILE_PX — the static-view threshold)
+  // Below SUBPIXEL_TILE px/tile drops are sub-pixel and per-particle overhead (not fillrate) dominates
+  // the frame — hard-attenuate the count down to a 0.2× floor to avoid the zoom-out FPS crater.
+  const SUBPIXEL_TILE = 4; // px per tile (matches GameCanvas's FREEZE_TILE_PX)
   const subpixelAtten = () => Math.max(0.2, Math.min(1, tileSize / SUBPIXEL_TILE));
 
-  // §R5: render the weather into a buffer at this fraction of the (CSS-pixel) canvas size, then let the
-  // browser upscale it for display. Weather is soft/blurry, so the resolution drop is invisible — but
-  // the per-frame full-screen ops (clear + vignette fill) cost ~RENDER_SCALE² as much fillrate (~64%
-  // less at 0.6). Drawing stays in CSS coordinates via a matching ctx transform, so sizes / density /
-  // fall speed are all preserved exactly.
+  // Render into a buffer at this fraction of the CSS-pixel size (browser upscales; weather is soft so
+  // the drop is invisible, but full-screen ops cost ~RENDER_SCALE² the fillrate). Drawing stays in CSS
+  // coords via a matching ctx transform.
   const RENDER_SCALE = 0.6;
 
   interface Particle {
@@ -129,18 +99,15 @@
     const cw = Math.floor(canvas.clientWidth);
     const ch = Math.floor(canvas.clientHeight);
     if (cw <= 0 || ch <= 0) return;
-    // §R5: buffer is RENDER_SCALE × the CSS size; we draw in CSS coords and the matching ctx transform
-    // rasterizes into the smaller buffer (the browser upscales it for display).
     const bw = Math.max(1, Math.round(cw * RENDER_SCALE));
     const bh = Math.max(1, Math.round(ch * RENDER_SCALE));
     if (canvas.width !== bw) canvas.width = bw;
     if (canvas.height !== bh) canvas.height = bh;
-    // Setting canvas.width/height resets the context — (re)apply the draw-in-CSS-coords transform.
+    // Setting canvas.width/height resets the context — reapply the draw-in-CSS-coords transform.
     ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
   }
 
-  // CSS-pixel drawing dimensions (the coordinate space all the particle code works in — the ctx
-  // transform maps it into the RENDER_SCALE buffer).
+  // CSS-pixel drawing dimensions (all particle code works in CSS coords).
   const cssW = () => (canvas ? canvas.width / RENDER_SCALE : 0);
   const cssH = () => (canvas ? canvas.height / RENDER_SCALE : 0);
 
@@ -158,13 +125,10 @@
     };
   }
 
-  /** Reseed a particle's fields IN PLACE for the current mode (no allocation — called every frame on
-   *  respawn, so it must not churn garbage; see the per-frame-allocation trap in ENGINE-PERFORMANCE). */
+  /** Reseed a particle's fields IN PLACE — called every frame on respawn, so it must not allocate. */
   function setParticle(p: Particle, w: number, h: number, atTop: boolean): void {
     if (isRain()) {
-      // Drops slant LEFT as they fall, drifting `|slant| × height` px over a full descent. Seed them
-      // across a width extended by that slant so they still cover the bottom-right corner — otherwise
-      // the coverage is a left-leaning parallelogram with a triangular gap bottom-right.
+      // Seed across a width extended by the slant so drops still cover the bottom-right corner.
       p.x = Math.random() * (w + Math.abs(rainSlant()) * h);
       p.y = atTop ? -20 - Math.random() * 40 : Math.random() * h;
       p.len = 9 + Math.random() * 13 + windStrength * 12;
@@ -174,22 +138,20 @@
       return;
     }
     if (mode === 'leaves') {
-      // Tumbling leaves/petals: slow fall, strong sideways wind drift, a rotation/sway phase. Seeded
-      // across an extended width (like rain) so the wind-blown corner stays covered.
+      // Leaves: extended seed width (like rain) so the wind-blown corner stays covered.
       p.x = Math.random() * (w + sideDrift() * 2);
       p.y = atTop ? -20 - Math.random() * 40 : Math.random() * h;
-      p.len = 2 + Math.random() * 2; // half-length of the leaf (~⅓ smaller, less distracting)
+      p.len = 2 + Math.random() * 2; // half-length of the leaf
       p.spd = fallSpeed * (0.6 + Math.random() * 0.8);
       p.r = 2 + Math.random() * 2;
       p.ph = Math.random() * TWO_PI;
       return;
     }
-    // dots: snow / snowdust / dust — a falling, wind-drifting speck. Dust is finer than snow.
+    // dots: snow / snowdust / dust — a falling, wind-drifting speck.
     p.x = Math.random() * (w + sideDrift() * 1.5); // extend for the sideways drift's covered corner
     p.y = atTop ? -10 - Math.random() * 30 : Math.random() * h;
     p.len = 0;
     p.spd = fallSpeed * (0.6 + Math.random() * 0.9);
-    // snow/snowdust ~⅓ smaller (less distracting); dust (summer pollen) a touch larger for visibility.
     p.r = mode === 'dust' ? 0.8 + Math.random() * 1.5 : 0.67 + Math.random() * 1.47;
     p.ph = Math.random() * TWO_PI;
   }
@@ -207,15 +169,11 @@
     const w = cssW();
     const h = cssH();
     if (w <= 0 || h <= 0) return 0;
-    // Fog is a handful of big soft blobs, not a per-pixel particle field (no zoom scaling).
-    // More, larger, overlapping blobs read as continuous haze rather than a scatter of distinct discs.
+    // Fog is a handful of big overlapping blobs, not a per-pixel particle field (no zoom scaling).
     if (mode === 'fog') return Math.min(40, Math.max(10, Math.round((w * h) / 95_000)));
     const perPx = density / 1_000_000; // density is per-megapixel for readable data values
-    // §R5 fillrate-aware cap: the per-frame draw cost is roughly count × particle-size, so as the
-    // particles shrink (sizeMul → 0.3 zoomed out) we can afford proportionally MORE of them for the
-    // same budget. Dividing the old flat 1600 cap by sizeMul lets the count climb to ~2400 at the
-    // far-zoom on big maps (denser) while keeping total fillrate bounded BELOW the old worst case
-    // (each particle is ~0.3× the size). Clamped so it never explodes if sizeMul gets tiny.
+    // Fillrate-aware cap: draw cost ≈ count × particle size, so shrinking particles afford more of
+    // them for the same budget; clamped so it never explodes if sizeMul gets tiny.
     const cap = Math.min(2400, Math.round(1600 / Math.max(0.45, sizeMul())));
     const want = Math.min(cap, Math.floor(w * h * perPx * (0.5 + intensity) * densityMul()));
     // Sub-pixel zoom-out: cut the count hard (per-particle overhead, not fillrate, is the cost there).
@@ -309,21 +267,15 @@
       }
       ctx.fill();
     } else if (mode === 'leaves') {
-      // Tumbling leaves/petals in the type's particleColor (green spring, red/orange autumn). Each
-      // drifts hard sideways on the wind, bobs, and rotates — drawn as a small rotated ellipse.
-      // - sizeMul() shrinks them as you zoom out (dense fine flurry, not big blobs).
-      // - colour is multiplied by ambient day/night light so they sit UNDER the brightness and don't
-      //   glow at night (foliage goes dark like the scene).
-      // - `swirl` (windStrength × intensity) drives gusts: an extreme dry gale whips them sideways
-      //   and tosses them up/down, so strong wind reads as chaotic swirl rather than a steady fall.
+      // Tumbling leaves/petals in the type's particleColor, dimmed by ambient light so they don't glow
+      // at night; `swirl` (wind × intensity) makes strong wind read as chaotic swirl, not steady fall.
       const drift = sideDrift();
-      const scale = sizeMul(); // shrink leaves as you zoom out (dense fine flurry, not big blobs)
+      const scale = sizeMul();
       const swirl = windStrength * Math.max(0.3, intensity);
       const cr = Math.round(particleColor[0] * ambLight * ambTint[0]);
       const cg = Math.round(particleColor[1] * ambLight * ambTint[1]);
       const cb = Math.round(particleColor[2] * ambLight * ambTint[2]);
-      // Colour/alpha are constant for the whole frame — build the fillStyle string ONCE here, not once
-      // per leaf inside the loop (that churned hundreds of identical strings per frame → GC stutter).
+      // Build the fillStyle string ONCE per frame, not per leaf — per-leaf string churn caused GC stutter.
       ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${0.55 + 0.35 * intensity})`;
       for (const p of parts) {
         p.ph += dt * (1.8 + swirl * 2.6); // faster tumble in high wind
@@ -347,8 +299,7 @@
     } else if (mode === 'fog') {
       renderFog(w, h, parts, dt, 1);
     }
-    // DEBUG: weather frame profiler — logs hiccup gaps + a ~2s summary so the weather stutter can be
-    // correlated with the GameCanvas [MENU-PERF] terrain numbers. Debug-mode gated.
+    // DEBUG: frame profiler — logs hiccup gaps + a ~2s summary. Debug-mode gated.
     if (_wxDbg) wxProfile(_wxGap, performance.now() - _wxT0);
   }
 
@@ -387,13 +338,8 @@
     }
   }
 
-  /**
-   * Draw the rolling-haze layer (a faint flat veil + many big, soft, OVERLAPPING radial blobs).
-   * Shared by `fog` (blobs = `parts`) and the veil under `foggy_rain` (blobs = `fogBlobs`, lighter
-   * via `alphaScale`). Two slow sines (bank-wide gust + per-blob phase) plus a radius "breathing"
-   * keep it morphing so it reads as drifting haze, not a ring of discs. Colour is the midway blend
-   * between pale daytime haze and the ambient-dimmed colour, so night fog stays visible but muted.
-   */
+  /** Rolling-haze layer (flat veil + big soft radial blobs), shared by `fog` (blobs = `parts`) and
+   *  the lighter veil under `foggy_rain` (blobs = `fogBlobs`, scaled by `alphaScale`). */
   function renderFog(w: number, h: number, blobs: Particle[], dt: number, alphaScale: number) {
     if (!ctx) return;
     fogTime += dt;
@@ -440,9 +386,7 @@
   }
 
   const unsub = currentWeather.subscribe((wx) => {
-    // Data-driven: the overlay kind and all visual params come from weather.jsonc, so a new weather
-    // type renders the right overlay with no code change here. The slant strength is the type's
-    // inherent windStrength combined with the live ambient `wind` (so plain rain on a windy day leans).
+    // Overlay kind and all visual params come from weather.jsonc — a new weather type needs no code here.
     const next: Mode = weatherOverlayKind(wx?.type);
     intensity = Math.max(0.2, Math.min(1, wx?.intensity ?? 0));
     windStrength = ambientWind(wx ?? undefined);
@@ -466,15 +410,12 @@
     }
   });
 
-  // Camera zoom → more (and finer) particles as you zoom out. Reconcile (grow/shrink the delta) every
-  // step so the density ramps smoothly while scrolling, with no respawn pop. (Particle SIZE is applied
-  // at draw time from sizeMul(), so it re-scales every frame without needing a reconcile.)
+  // Reconcile on every zoom step so density ramps smoothly with no respawn pop (size re-scales at draw time).
   const unsubZoom = cameraTileSize.subscribe((ts) => {
     tileSize = ts;
     if (mode !== 'none') reconcile();
   });
-  // The zoom RANGE itself shifts when the map size changes (a new game / map regen): re-anchor the
-  // floor/ceiling so zoomInFrac is measured against the active map's real range.
+  // The zoom range shifts when the map size changes — re-anchor the floor/ceiling.
   const unsubZoomRange = cameraZoomRange.subscribe((r) => {
     zoomMin = r.min;
     zoomMax = r.max;

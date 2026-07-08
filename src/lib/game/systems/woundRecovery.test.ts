@@ -16,12 +16,7 @@ import { buildHealthModel } from '../../components/UI/gameCanvas/selectionCard';
 import { rng } from '../core/rng';
 import type { GameState, Injury, Pawn } from '../core/types';
 
-/**
- * Wounds, bleeding & recovery overhaul — locks in: wounds only mend at full rate while RESTING (active
- * pawns barely knit); an untended SERIOUS wound stalls (needs dressing) while a minor one self-closes;
- * dressing quality is shelter-gated; caretaking is a real job; mobs heal wounds off over time; and a
- * fully-healed part drops out of the body model. Drives the REAL services — no mocks.
- */
+// Wounds mend at full rate only while resting; untended serious wounds stall; dressing quality is shelter-gated. Drives the real services — no mocks.
 const stats = {
   strength: 12,
   dexterity: 12,
@@ -257,8 +252,7 @@ describe('wound recovery & bleeding', () => {
       gs = { ...gs, turn: i };
       gs = stepHunger(gs);
     }
-    // Attacking → the heal pass is skipped, so the chip wound persists (an out-regenerating tanky
-    // creature was the "mammoth insta-heals" stalemate).
+    // Attacking → the heal pass is skipped, so the chip wound persists.
     expect(woundDamage(gs.mobs![0] as unknown as Pawn, 'chest')).toBe(before);
   });
 
@@ -315,8 +309,7 @@ describe('wound recovery & bleeding', () => {
       state([makePawn()])
     ).pawns[0];
     expect(buildHealthModel(pawn).limbs.length).toBeGreaterThan(0);
-    // Drive the wound to full closure directly (tissue heal is weeks-slow now; this isolates the
-    // snap-to-full + auto-hide logic from the balance rate). Big baseHeal → wound cleared, part snaps to max.
+    // Big baseHeal drives the wound to full closure directly, isolating snap-to-full + auto-hide from the balance rate.
     pawn = { ...pawn, limbs: healLimbs(pawn.limbs!, 50, 1, false) };
     expect(
       buildHealthModel(pawn).limbs.find((l) => l.label.toLowerCase().includes('torso'))

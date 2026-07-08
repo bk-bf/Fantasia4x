@@ -3,14 +3,7 @@ import { gameEngine } from './GameEngineImpl';
 import { drainTileDeltas, clearTileDeltas } from '../core/tileDeltas';
 import type { GameState, WorldTile } from '../core/types';
 
-/**
- * Regression guard for the in-place / delta rewrite of `processResourceRegrowth` (ADR-002 amendment
- * + ADR-021 §4c). The old code rebuilt the whole worldMap (and flipped its ref → full re-clone) every
- * tick a cooldown expired — the harvest-time TPS collapse. It now mutates only the expired tiles in
- * place and ships them as worldMap deltas. This locks in: (1) resources restore + cooldown clears,
- * (2) the worldMap array ref is NOT replaced, (3) exactly the changed tiles are emitted as deltas,
- * (4) compound per-yield keys partial- vs full-restore correctly.
- */
+// processResourceRegrowth must mutate only expired tiles in place and ship them as worldMap deltas — never replace the worldMap ref.
 function tile(over: Partial<WorldTile>): WorldTile {
   return {
     x: 0,

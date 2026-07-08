@@ -1,20 +1,13 @@
-// Pawn stat definitions — non-work stats only.
-// Work stats are defined in Work.ts (WORK_CATEGORIES) and computed by ModifierSystem.
-// "category"  — UI grouping: "combat" | "physical" | "resistance" | "capacity"
-// "formula"   — expression evaluated at runtime; tokens:
-//                 STR DEX CON PER INT CHA weight height  (base stats / physique)
-//                 consciousness manipulation sight moving blood_pumping blood_filtration
-//                 breathing digestion talking hearing pain (body capacities, 0–1)
-//               All non-capacity formulas multiply by relevant capacities so that
-//               limb damage cascades into stat reduction (RimWorld-style).
-//               Example: dodge = (1.0 + (DEX−10)×0.02) × moving
+// Pawn stat definitions. Work-category definitions live in Work.ts (WORK_CATEGORIES).
+// "category" — UI grouping: "combat" | "physical" | "resistance" | "capacity" | "work"
+// "formula"  — expression evaluated at runtime; tokens:
+//                STR DEX CON PER INT CHA weight height  (base stats / physique)
+//                consciousness manipulation sight moving blood_pumping blood_filtration
+//                breathing digestion talking hearing pain  (body capacities, 0–1)
+//              Non-capacity formulas multiply by relevant capacities so limb damage
+//              cascades into stat reduction. Example: dodge = (1.0 + (DEX−10)×0.02) × moving
 [
     // ── Combat ────────────────────────────────────────────────────────────────────
-    // All combat stats are multiplied by relevant body capacities:
-    //   manipulation = ability to swing weapon / aim
-    //   sight        = ability to see target
-    //   moving       = ability to evade
-    //   consciousness = mental clarity for threat detection / balance
     {
         "id": "hit_precision",
         "category": "combat",
@@ -71,16 +64,8 @@
         "formula"    : "(1.0 + (DEX − 10) × 0.03) × manipulation",
         "description": "attack cadence multiplier, higher = faster strikes (× manipulation)"
     },
-    // ── Ranged (RANGED-COMBAT) — ONE attribute per formula, STR stays MELEE-only (clean build space).
-    //    TWO ranged axes: PER = PRECISION (aim_accuracy + aim_range — the sniper: hits true at distance);
-    //    DEX = SPEED (aim_speed + reload_speed — the skirmisher: high rate of fire, fast crossbow cycle).
-    //    So PER-only = sniper, DEX-only = a fast sling/skirmisher, PER+DEX = the complete shooter; STR is
-    //    melee (and throw power for hybrids), never an aiming stat. Each is a ~1.0-baseline multiplier
-    //    Combat turns into hit points / cadence / effective tiles, + a LINEAR distance term (farther =
-    //    less accurate AND slower to aim). Interval = AIM time (aim_speed) + SPAN time (reload_speed,
-    //    crossbow crank only). Gear + the weapon add flat `aimBonuses` (read directly — equipment doesn't
-    //    reach the stat engine); all fold in body capacities, so a wounded/dim-sighted archer aims worse.
-    //    (Loose heuristic only — finer build identity, e.g. a DEX+PER sling specialist, comes from TRAITS.)
+    // ── Ranged — PER = precision axis (aim_accuracy + aim_range), DEX = speed axis (aim_speed +
+    //    reload_speed); STR is melee/throw power only, never an aiming stat.
     {
         "id": "aim_accuracy",
         "category": "combat",
@@ -131,13 +116,6 @@
         "description": "caretaking ability 0–1, a tend rolls treatment quality against this (× manipulation × sight × consciousness; mood applies on the roll)"
     },
     // ── Physical ──────────────────────────────────────────────────────────────────
-    // Physical stats are multiplied by the body capacities that enable them:
-    //   manipulation = can physically interact (carry, wield)
-    //   moving       = can locomote (speed, stamina)
-    //   blood_pumping = heart drives stamina
-    //   blood_filtration = kidneys drive recovery
-    //   digestion    = stomach/liver drive food tolerance
-    //   consciousness = mental drive for endurance
     {
         "id"         : "movement_speed",
         "category"   : "physical",
@@ -198,9 +176,7 @@
         "id": "carry_weight",
         "category": "capacity",
         "primaryStat": "strength",
-        // Realistic: a fraction of the pawn's OWN body mass, scaling with strength (porters bear a higher
-        // % than weaklings). loadFraction = clamp(STR × 0.012, 0.05, 0.30). Belt/back containers add on top.
-        // NB: computed in ItemService.getCarryCapacityBreakdown (body mass + gear), not the formula engine.
+        // Computed in ItemService.getCarryCapacityBreakdown (body mass + gear), not the formula engine.
         "carryLoadPerStrength": 0.012,
         "carryLoadMin": 0.05,
         "carryLoadMax": 0.30,
@@ -211,16 +187,12 @@
         "id"              : "carry_volume",
         "category"        : "capacity",
         "primaryStat"     : "constitution",
-        // Volume in litres tracks frame size: ~13% of body mass, independent of strength.
+        // Also computed in ItemService.getCarryCapacityBreakdown, not the formula engine.
         "carryVolumePerKg": 0.13,
         "formula"         : "bodyWeight × carryVolumePerKg",
         "description"     : "maximum carry volume in litres, a fixed fraction of body mass (frame bulk)"
     },
     // ── Resistance ────────────────────────────────────────────────────────────────
-    // Physical & elemental resistances are INNATE — pure stat formulas, NOT dimmed by a
-    // transient daze (groggy flesh isn't more cuttable). Two exceptions fold a capacity:
-    // knockdown & mental resistance × consciousness (a dazed balance/mind gives out), and
-    // poison/disease × blood_filtration (kidneys/liver clear toxins — organ-based, not a daze).
     {
         "id"         : "cutting_resistance",
         "category"   : "resistance",
@@ -299,10 +271,7 @@
         "description": "mental resistance (× consciousness)"
     },
     // ── Work ──────────────────────────────────────────────────────────────────────
-    // Each work type has speed, yield (production amount), and quality modifiers.
-    // Speed    = how fast the pawn completes work (× relevant capacities).
-    // Yield    = how much resource is produced per completion.
-    // Quality  = output quality / durability / potency (× precision capacities).
+    // Per work type: speed (completion rate), yield (amount per completion), quality (output grade).
     {
         "id"         : "foraging_speed",
         "category"   : "work",
@@ -345,10 +314,8 @@
         "formula"    : "(1.0 + (STR − 10) × 0.05 + (INT − 10) × 0.01) × manipulation",
         "description": "ore per vein (× manipulation)"
     },
-    // NOTE: there is deliberately NO `hunting_speed` work stat. Hunting IS combat (mark → chase →
-    // resolve as a fight → carcass), so its effectiveness is decided by the COMBAT stats (melee/ranged
-    // damage, hit_chance, attack_speed…), not a duplicate work-speed axis. getWorkModifiers falls back
-    // to a flat 1.0 speed for `hunting`; the real "how fast the hunt goes" is how fast the pawn kills.
+    // Deliberately NO `hunting_speed`: hunting resolves as combat, so combat stats decide it;
+    // getWorkModifiers falls back to a flat 1.0 speed for `hunting`.
     {
         "id"         : "butchery_speed",
         "category"   : "work",
@@ -461,10 +428,8 @@
         "formula"    : "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.02) × ((manipulation + sight) / 2)",
         "description": "building durability (× ((manipulation + sight) / 2))"
     },
-    // ── Construction SUBJOBS (Work-tab right-click expand). Keyed by job-type id; resolved per-axis with
-    //    a fallback to the parent `construction_*` (so `construct`/Build inherits — no entry needed), and
-    //    they share the construction SKILL. Distinct attributes give per-pawn variety: a brute demolishes,
-    //    a deft/sharp-eyed pawn repairs.
+    // ── Construction SUBJOBS — keyed by job-type id, resolved per-axis with fallback to the parent
+    //    `construction_*` (so `construct`/Build inherits, no entry needed); all share the construction skill.
     {
         "id"         : "repair_speed",
         "category"   : "work",
@@ -529,8 +494,7 @@
         "description": "hauling speed (× ((moving + manipulation) / 2))"
     },
     {
-        // Hauling SUBJOB: fetch (carry a reserved input to a workstation). `haul`/Haul inherits hauling
-        // (no entry). Fetch favours quick hands over load-bearing — nimble shuttle runs.
+        // Hauling SUBJOB — `haul`/Haul itself inherits hauling_* (no entry needed).
         "id"         : "fetch_speed",
         "category"   : "work",
         "primaryStat": "dexterity",
@@ -559,8 +523,7 @@
         "description": "treatment speed (× ((manipulation + sight) / 2))"
     },
     // ── Body Capacities ───────────────────────────────────────────────────────────
-    // Derived from specific organ health (not parent limb health).
-    // Paired organs use partial-function logic: one destroyed ≠ 0, but severe penalty.
+    // Derived from organ health (not parent limb health); paired organs: one destroyed ≠ 0.
     // Order matters: pain, sight, hearing must be computed before consciousness.
     {
         "id"         : "pain",

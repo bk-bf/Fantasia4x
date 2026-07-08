@@ -16,8 +16,8 @@ gated by other specs (SOCIAL-LAYER, an other-faction entity source).
 > **Trait model superseded (2026-07-06, ADR-028):** `racial-traits.jsonc` → `traits.jsonc` with
 > `scope` (racial/personal), `rarity` (rarities.jsonc scale) and typed `kind` payloads; per-pawn draw
 > (≤2 racial + ≤3 personal); natural armor as gear (weight → encumbrance); afflictions as real
-> permanent wounds. See [TRAIT-SYSTEM-V2](TRAIT-SYSTEM-V2.md) +
-> [RACIAL-TRAITS-OVERHAUL](RACIAL-TRAITS-OVERHAUL.md).
+> permanent wounds. See [TRAITS](TRAITS.md).
+
 
 ---
 

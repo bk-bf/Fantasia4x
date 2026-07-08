@@ -3,11 +3,7 @@ import { get } from 'svelte/store';
 import { activityLog, logCombatSwing, logCombatKill, __resetCombatSessions } from './Log';
 import type { CombatTurnEntry } from '$lib/game/core/Events';
 
-/**
- * Regression guard for the combat-log spam fix (COMBAT-SYSTEM): an engagement is
- * ONE Chronicle entry that accretes every swing, not a fresh "engaged in combat"
- * line each time the attacker re-touches the defender.
- */
+// An engagement is ONE Chronicle entry that accretes every swing, not a fresh line per re-touch.
 function swing(turn: number, hit: boolean, damage = 0): CombatTurnEntry {
   return { turn, attackerName: 'Goblin #2', defenderName: 'Wren', hit, damage };
 }

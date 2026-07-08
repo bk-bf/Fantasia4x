@@ -1,8 +1,8 @@
 <!-- LOC cap: 250 (created: 2026-05-25) -->
 
-# DESIGN [GAME]
+# DESIGN
 
-> **Related:** [ARCHITECTURE](ARCHITECTURE.md) · [DECISIONS](DECISIONS.md) · [PHILOSOPHY](PHILOSOPHY.md) · [ROADMAP](../.tasks/open/ROADMAP.md) · [PRODUCTION-CHAINS](../.tasks/open/PRODUCTION-CHAINS.md)
+> **Related:** [ARCHITECTURE](ARCHITECTURE.md) · [DECISIONS](DECISIONS.md) · [ROADMAP](../.tasks/open/ROADMAP.md) · [TRAITS](../.tasks/open/TRAITS.md)
 
 ## Core Gameplay Loop
 
@@ -201,3 +201,18 @@ A combat-depth pass built on the per-part model — see ADR-024; it partially un
 ### Hunting (work-driven)
 
 A player marks a huntable animal (`markedForHunt`); a pawn whose hunting labour comes up chases it and **resolves the kill through the same combat system** — `handleHunting` flips the quarry into the shared prey "fight-back" state, so a boar gores the hunter and a cornered deer kicks back exactly like predator-vs-prey (reuses the `EntityService` hunt circuits + `combatService`, not a parallel code path). The kill drops a carcass → butchery → meat. Hunting is **fearless** (no auto-flee) — a colonist death is a normal consequence of picking too big a target.
+
+## UI Design
+
+Retro terminal aesthetic throughout — the interface reads like a monochrome CRT terminal running a
+management program, tinted in the Caves-of-Qud greyscale + two-colour style.
+
+**Rules:**
+
+- **Monospace font only** — no proportional fonts anywhere.
+- **Dark background, bright foreground**; ASCII box-drawing (`┌─┐ │ └─┘`) for panels and borders.
+- **ALL-CAPS labels**, normal-case values; progress bars use ASCII fill (`█░`).
+- No rounded corners, gradients, drop shadows, or icon fonts.
+- Colour is for status: green = healthy/positive, amber = warning, red = critical; `var(--text-dim)` for secondary.
+- Fixed resource sidebar; main content switches by active screen; activity log is an overlay.
+- **Never leak backend ids or dev jargon** into any label/tooltip — human names only, tone implies rather than instructs (see AGENTS.md).

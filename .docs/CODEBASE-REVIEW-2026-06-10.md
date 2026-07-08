@@ -13,7 +13,7 @@ tracks architecture debt + whatever the gates flag.
 [ENGINE-PERFORMANCE-II](.tasks/archive/ENGINE-PERFORMANCE-II.md) (victory 2026-06-22 — 500² map at 120 FPS / 60 TPS @1×,
 ~120 TPS @4×, via the entity complexity bubble + ADR-026 incremental-only terrain),
 [SEASONS_WEATHER](.tasks/archive/SEASONS_WEATHER-2026-06-17.md), [PRODUCTION-CHAIN-II](.tasks/archive/PRODUCTION-CHAIN-II-2026-06-21.md),
-[RANGED-COMBAT](.tasks/archive/RANGED-COMBAT-2026-06-21.md), [MOB-SPAWNING](.tasks/archive/MOB-SPAWNING.md), plus
+[RANGED-COMBAT](.tasks/archive/RANGED-COMBAT-2026-06-21.md), plus
 ADR-018..ADR-026, the audio subsystem, main menu + app-shell hardening, the terrain/art rework (bi-colour glyphs,
 trees, ore veins, ice), and the temperature/connectivity bug arcs logged in BUGS.md.
 

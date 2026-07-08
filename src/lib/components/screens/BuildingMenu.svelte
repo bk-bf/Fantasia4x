@@ -21,9 +21,8 @@
   let buildings: PlacedBuilding[] = [];
   let completedResearch: string[] = [];
 
-  // UI section grouping. Derived from each building's id/effects/category via classify()
-  // below — kept here so the engine `category` field (read by ModifierSystem/BuildingService
-  // for work bonuses) is never repurposed just to drive the menu layout.
+  // UI-only section grouping via classify() — the engine `category` field (used for work
+  // bonuses) is never repurposed to drive the menu layout.
   const SECTION_ORDER = [
     'FIRE & COOKING',
     'WORKSHOPS',
@@ -44,8 +43,8 @@
   function classify(b: Building): string {
     const e = (b.effects ?? {}) as Record<string, number | boolean>;
     if (b.id === 'campfire' || b.id === 'hearth' || e.isFire) return 'FIRE & COOKING';
-    if (e.farming) return 'FARMING & SOIL'; // §F: compost bin + Soil-Works terraform builds
-    if (e.cooking) return 'KITCHEN & BREWING'; // §F8: quern, oven, fermenter
+    if (e.farming) return 'FARMING & SOIL';
+    if (e.cooking) return 'KITCHEN & BREWING';
     if (e.smeltingEnabled || e.smithingEnabled) return 'SMELTING & FORGE';
     if (
       e.butcheringEnabled ||
@@ -66,7 +65,6 @@
     return 'OTHER';
   }
 
-  // All building defs from every category (no research filter — show all, lock none)
   const ALL_BUILDING_DEFS: Building[] = [
     'housing',
     'production',
@@ -86,8 +84,7 @@
   $: allBuildingsInProgress = buildings.filter((b) => b.status !== 'complete');
   $: campfires = buildings.filter((b) => b.type === 'campfire' && b.status === 'complete');
 
-  // Only show unlocked buildings — locked buildings are hidden entirely
-  // DEBUG `_devResearchGateOff`: show research-locked buildings too (toggle in the DEBUG tab).
+  // Locked buildings are hidden entirely; `_devResearchGateOff` (DEBUG tab) shows them too.
   $: unlockedDefs = ALL_BUILDING_DEFS.filter(
     (b) =>
       // Engine-placed defs (e.g. the natural mountain_roof) never appear in the menu.
@@ -97,15 +94,12 @@
         completedResearch.includes(b.researchRequired as string))
   );
 
-  // Grouped unlocked buildings — one pass via classify(), ordered by SECTION_ORDER,
-  // empty sections dropped.
   $: sections = SECTION_ORDER.map((label) => ({
     label,
     defs: unlockedDefs.filter((b) => classify(b) === label)
   })).filter((s) => s.defs.length > 0);
 
-  // Which tab is active ('ZONES' or a category). Restored across tab toggles; the guard falls back to
-  // the first category if the remembered section no longer exists.
+  // Active tab ('ZONES' or a section); falls back if the remembered section no longer exists.
   let selectedSection = persisted('building.section', '');
   $: if (
     selectedSection !== 'ZONES' &&
@@ -117,7 +111,6 @@
   $: persist('building.section', selectedSection);
   $: activeSection = sections.find((s) => s.label === selectedSection) ?? sections[0];
 
-  // Live search across every section (bypasses tabs/ZONES while a query is present).
   let searchQuery = '';
   $: searchTerm = searchQuery.trim().toLowerCase();
   $: displayedDefs = searchTerm
@@ -127,11 +120,8 @@
   // Legacy compat
   $: availableBuildings = unlockedDefs;
 
-  // Show AVAILABLE (unreserved, stored) stock — the same number the build affordability gate
-  // (resolveBuildingCost → availableAggregateFromDrops) actually spends. The raw `stockpile` mirror
-  // counts reserved stacks too (locked by queued crafts / placed-building material reservations), so
-  // displaying it made a card read "Branch (88)" yet show MISSING — the count looked sufficient but
-  // wasn't spendable. ADR-016.
+  // Show AVAILABLE (unreserved) stock — the same number the affordability gate spends.
+  // The raw `stockpile` mirror counts reserved stacks too, so it reads sufficient but isn't spendable.
   $: availStock = availableAggregateFromDrops($gameState?.droppedItems);
   $: getItemAmount = (itemId: string): number => availStock[itemId] ?? 0;
 
@@ -150,7 +140,6 @@
   };
 
   // Player's material pick per building def for `category:` cost slots: buildingId → costKey → itemId.
-  // Eventually these picks will drive durability/beauty; for now they just choose which stock is spent.
   let selectedMaterials: Record<string, Record<string, string>> = {};
   function setMaterial(buildingId: string, costKey: string, itemId: string) {
     const forBuilding = { ...(selectedMaterials[buildingId] ?? {}) };
@@ -167,13 +156,11 @@
       .sort((a, b) => (getItemAmount(b.id) > 0 ? 1 : 0) - (getItemAmount(a.id) > 0 ? 1 : 0));
   }
 
-  // MISSING vs BLOCKED: resolveBuildingCost handles concrete + `category:*` slots and reads
-  // physical AVAILABLE stock (ADR-016 droppedItems), so it's the real affordability signal —
-  // the stockpile mirror double-counts reserved stacks and can't resolve category slots.
+  // resolveBuildingCost reads physical AVAILABLE stock and resolves `category:*` slots —
+  // the stockpile mirror double-counts reserved stacks and can't, so don't use it here.
   $: canAfford = (building: Building): boolean =>
     !!$gameState && buildingService.resolveBuildingCost(building.id, $gameState) !== null;
 
-  // Full build check (affordability + research/tools/population/uniqueness) against real state.
   $: canBuild = (building: Building): boolean =>
     !!$gameState && !!race && buildingService.canBuildBuilding(building.id, $gameState);
 
@@ -197,7 +184,7 @@
       return;
     }
 
-    // ADR-016: placeBuilding RESERVES the cost (pawns fetch it to the site); consumed on
+    // placeBuilding RESERVES the cost (pawns fetch it to the site); consumed on
     // construction completion, not here. (0,0) — abstract/off-map.
     gameState.command({
       type: 'placeBuilding',
@@ -252,7 +239,6 @@
     return requirements;
   }
 
-  // Buildings special properties
   function getBuildingSpecialProperties(building: Building): string[] {
     const properties = [];
 
@@ -292,7 +278,6 @@
     <BackButton />
   </div>
 
-  <!-- Building groups + ZONES as a tab. Sticky filter bar so tabs/search stay reachable on scroll. -->
   {#if sections.length > 0}
     <div class="filter-bar">
       <div class="filter-bar-tabs">
@@ -313,8 +298,7 @@
       />
     </div>
 
-    <!-- Active construction queue — drag chips to reorder (= haul priority). Sits between the filter
-         tabs and the building cards. -->
+    <!-- Active construction queue — drag chips to reorder (= haul priority) -->
     {#if allBuildingsInProgress.length > 0}
       <div class="build-jobs queue-top">
         <div class="jobs-hdr">| ACTIVE BUILD JOBS ({allBuildingsInProgress.length})</div>
@@ -379,8 +363,6 @@
             {#if Object.keys(building.buildingCost).length === 0}
               <span class="muted-text">free</span>
             {:else}
-              <!-- Concrete item costs render as solid item-coloured pills (hover → item card).
-                   `category:` slots stay as material-picker selects below them. -->
               {@const costPills = Object.entries(building.buildingCost)
                 .filter(([id]) => !id.startsWith('category:'))
                 .map(([id, n]) => {
@@ -419,7 +401,6 @@
     {/if}
   {/if}
 
-  <!-- Campfire fuel — compact chips, same footer as the build jobs -->
   {#if campfires.length > 0}
     <div class="build-jobs">
       <div class="jobs-hdr">| FIRES ({campfires.length})</div>
@@ -457,7 +438,6 @@
     padding: 5px 8px;
   }
 
-  /* Sticky filter + search bar — stays pinned while the card grid scrolls under it. */
   .filter-bar {
     position: sticky;
     top: 0;
@@ -497,11 +477,9 @@
     gap: 2px;
     align-items: center;
   }
-  /* Category material-picker rows sit just under the concrete-cost pills. */
   .cost-cat {
     margin-top: 2px;
   }
-  /* §M chosen-material stat effect line under the picker. */
   .mat-effect {
     display: block;
     color: #7e9fbf;
@@ -513,7 +491,6 @@
     color: var(--accent);
   }
 
-  /* Material picker for `category:` cost slots — retro terminal select (fuel-panel concept). */
   .mat-select {
     background: var(--bg);
     border: 1px solid var(--border);
@@ -544,13 +521,12 @@
     color: var(--neg);
   }
 
-  /* ── Active build jobs / fires (compact chips) ── */
   .build-jobs {
     padding: 4px 8px 8px;
     border-top: 1px solid var(--border);
     margin-top: 4px;
   }
-  /* The build queue moved between the tabs and the cards — separator below it, not above. */
+  /* Queue sits between tabs and cards — separator below, not above. */
   .build-jobs.queue-top {
     padding: 5px 8px;
     border-top: none;
@@ -591,7 +567,6 @@
   .job-chip.drag-over:hover {
     border-color: var(--accent-hi);
   }
-  /* Paused build — dimmed, construction halted, progress held. */
   .job-chip.paused {
     border-style: dotted;
     opacity: 0.6;

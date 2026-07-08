@@ -1,8 +1,5 @@
-// Migrant-wave roll (worker-safe, pure). Called from the engine's end-of-turn event phase when a
-// season boundary was just crossed. Rolls 0–`slots` hopefuls — each slot's chance scales with how
-// many buildings the colony has completed — generates them as full pawns (sim-authoritative), and
-// parks them on `GameState.pendingEvent` for the player to accept/reject. Returns state unchanged
-// when the wave is empty (no modal), so a barren early colony isn't nagged.
+// Migrant-wave roll (pure, worker-safe): called at season boundaries; arrival chance scales with
+// completed buildings. Parks candidates on `GameState.pendingEvent`; empty wave returns state unchanged.
 
 import type { GameState } from '../core/types';
 import { rng } from '../core/rng';
@@ -18,16 +15,10 @@ const CFG = config as {
   maxChance: number;
 };
 
-/** Number of completed buildings on the map — the colony-development heuristic that weights the roll. */
 function completedBuildings(state: GameState): number {
   return (state.buildings ?? []).filter((b) => b.status === 'complete').length;
 }
 
-/**
- * Roll a migrant wave. Each of `CFG.slots` slots independently rolls an arrival with probability
- * `base + perBuilding * completedBuildings`, clamped to `[min, max]`. Sets `pendingEvent` when ≥ 1
- * migrant is drawn; otherwise returns the state untouched.
- */
 export function rollMigrantWave(state: GameState): GameState {
   const built = completedBuildings(state);
   const p = Math.min(CFG.maxChance, Math.max(CFG.minChance, CFG.baseChance + CFG.perBuilding * built));
@@ -36,9 +27,8 @@ export function rollMigrantWave(state: GameState): GameState {
   for (let i = 0; i < CFG.slots; i++) if (rng.chance(p)) count++;
   if (count === 0) return state;
 
-  // Each candidate is a fully-rolled pawn from the colony's race pool. Re-id with a wave-unique key so
-  // it can't be confused with a live `pawn-N` id while it sits in the pending event (commit reassigns
-  // to a fresh colony id).
+  // Re-id with a wave-unique key so a candidate can't be confused with a live `pawn-N` id while it
+  // sits in the pending event (commit reassigns a fresh colony id).
   const candidates = generateColonyPawns(state.racePool, count).map((pw, i) => ({
     ...pw,
     id: `migrant-${state.turn}-${i}`

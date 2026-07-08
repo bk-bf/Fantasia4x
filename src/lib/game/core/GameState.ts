@@ -23,11 +23,8 @@ const TOOL_TIER_BY_ID: Map<string, number> = new Map(
 
 const BUILDING_DEFS = buildingsData as unknown as Building[];
 
-// §F storage bins — buildings whose `effects.storageStacks` (> 1) turn their tile into a DENSE store
-// that holds several distinct stored piles instead of the usual one, AND act as a stockpile slot on
-// their own (no drawn zone needed). Precomputed once: defs are static, so the per-tile/per-tick checks
-// below stay O(buildings) with O(1) lookups rather than rescanning every def. Other storage buildings
-// just add a `storageStacks` to their effects to opt in. `preservation` (0–1) slows food spoilage.
+// Storage bins — buildings whose `effects.storageStacks` (> 1) let their tile hold several distinct
+// stored piles AND act as a stockpile slot on their own (no drawn zone needed). Precomputed once.
 const STORAGE_BIN_STACKS = new Map<string, number>(
   BUILDING_DEFS.filter((d) => (d.effects?.storageStacks ?? 0) > 0).map((d) => [
     d.id,
@@ -38,8 +35,7 @@ function binStacksForType(type: string): number {
   return STORAGE_BIN_STACKS.get(type) ?? 0;
 }
 // A specialized store's allow-list (categories OR item ids); only types that actually restrict appear.
-// The category MATCHING lives in the services layer (it needs item defs); core only needs to know the
-// list and whether a tile is filtered (so the generic fallback never dumps into a specialized bin).
+// Category MATCHING lives in the services layer — core only knows the list / whether a tile is filtered.
 const STORAGE_BIN_FILTER = new Map<string, string[]>(
   BUILDING_DEFS.filter((d) => (d.storageFilter?.length ?? 0) > 0).map((d) => [d.id, d.storageFilter!])
 );
@@ -63,16 +59,13 @@ export class GameStateManager {
     console.warn(
       '[GameState] DEPRECATED: advanceTurn() called directly. Use GameEngine.processGameTurn() instead.'
     );
-    // For backward compatibility, just increment turn
     this.state.turn += 1;
   }
 
-  // KEEP: Utility methods for item management
   private addToItemArray(_itemId: string, _amount: number): void {
     // Deprecated — stockpile is the single source of truth. No-op.
   }
 
-  // KEEP: Public utility methods
   addResource(resourceId: string, amount: number): void {
     this.state = addToStockpileZone(this.state, null, { [resourceId]: amount });
   }
@@ -99,7 +92,7 @@ export class GameStateManager {
     return true;
   }
 
-  // ===== PHASE 4: STOCKPILE =====
+  // ===== STOCKPILE =====
 
   addToStockpile(id: string, amount: number): void {
     this.state = addToStockpileZone(this.state, null, { [id]: amount });
@@ -109,7 +102,7 @@ export class GameStateManager {
     return this.state.stockpile?.[id] ?? 0;
   }
 
-  // ===== PHASE 4: WORLD RESOURCE DEPLETION =====
+  // ===== WORLD RESOURCE DEPLETION =====
 
   depleteWorldResource(x: number, y: number, id: string, amount: number): boolean {
     const map = this.state.worldMap;
@@ -126,7 +119,7 @@ export class GameStateManager {
     return true;
   }
 
-  // ===== PHASE 4: PLACED BUILDINGS =====
+  // ===== PLACED BUILDINGS =====
 
   addBuilding(building: PlacedBuilding): void {
     this.state.buildings = [...(this.state.buildings ?? []), building];
@@ -142,13 +135,11 @@ export class GameStateManager {
     this.state.buildings = (this.state.buildings ?? []).filter((b) => b.id !== id);
   }
 
-  /** Count complete buildings of a given type (replaces legacy buildingCounts[type]) */
   getCompleteBuildingCount(type: string): number {
     return (this.state.buildings ?? []).filter((b) => b.type === type && b.status === 'complete')
       .length;
   }
 
-  /** Update a pawn by id using an updater function */
   updatePawn(
     pawnId: string,
     updater: (pawn: NonNullable<GameState['pawns'][number]>) => GameState['pawns'][number]
@@ -156,7 +147,7 @@ export class GameStateManager {
     this.state.pawns = this.state.pawns.map((p) => (p.id === pawnId ? updater(p) : p));
   }
 
-  // ===== PHASE 5a: JOB POOL =====
+  // ===== JOB POOL =====
 
   addJob(job: Job): void {
     const jobs = this.state.jobs ?? [];

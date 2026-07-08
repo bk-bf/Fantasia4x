@@ -1,11 +1,5 @@
-/**
- * P-3: wire the simulation layer's log/feedback sink to the real Svelte stores.
- *
- * The sim (Combat, EntityService, pawn state machine) emits through `simLog` (core/logSink),
- * which defaults to a no-op. This module — in the store layer, where importing stores is legal —
- * registers an implementation that delegates to the chronicle (`Log`) and the combat-feedback
- * channel. Imported for its side effect from `stores/gameState.ts`, so it runs before any tick.
- */
+// Wires the sim's log/feedback sink (core/logSink, default no-op) to the real Svelte stores.
+// Imported for its side effect from `stores/gameState.ts`, so it runs before any tick.
 import { setSimLogSink, type SimLogSink } from '$lib/game/core/logSink';
 import { logActivity, logDiag, logEntityDeath, logCombatSwing, logCombatKill } from './Log';
 import { combatFeedback } from './combatFeedback';
@@ -15,11 +9,8 @@ import { projectiles } from './projectiles';
 import { requestThreatPause, requestDeathPause } from './gameState';
 import { threatPulse, alertPulse } from './uiState';
 
-/**
- * The real (DOM/store-backed) sink. Exported so the sim-worker bridge can replay buffered
- * `simlog` events against the exact same implementation — under the worker the sim runs off-thread
- * and forwards its sink calls here rather than registering this directly (it can't reach the DOM).
- */
+/** The real (store-backed) sink. Exported so the sim-worker bridge can replay buffered `simlog`
+ *  events against it — the off-thread sim can't reach the DOM, so it forwards sink calls here. */
 export const realSimLogSink: SimLogSink = {
   logActivity,
   logEvent: logDiag,
@@ -30,8 +21,7 @@ export const realSimLogSink: SimLogSink = {
   pushCombatSound: (req) => combatSounds.push(req),
   pushProjectile: (req) => projectiles.push(req),
   logEntityDeath,
-  // A mob just spotted a colonist: auto-pause (if enabled), drop a PULSING chronicle alert, and bump the
-  // pulse signal so the Chronicle's restore button flashes while minimised.
+  // Mob spotted a colonist: auto-pause (if enabled) + pulsing chronicle alert.
   threatAlert: (mobId, mobName, pawnName, turn, focusX, focusY) => {
     requestThreatPause();
     logActivity({
@@ -49,8 +39,7 @@ export const realSimLogSink: SimLogSink = {
     });
     threatPulse.set(Date.now());
   },
-  // A colonist's malnutrition/dehydration just worsened a stage: pulsing chronicle warning + the
-  // colony-alert bugle (alertPulse). No auto-pause — it's a warning, not an ambush.
+  // Malnutrition/dehydration worsened a stage: pulsing warning + alert bugle. No auto-pause.
   vitalAlert: (_pawnId, pawnName, vital, stageLabel, turn, focusX, focusY) => {
     const label = vital === 'malnutrition' ? 'Malnutrition' : 'Dehydration';
     logActivity({
@@ -68,9 +57,8 @@ export const realSimLogSink: SimLogSink = {
     });
     alertPulse.set(Date.now());
   },
-  // A colonist died: auto-pause (if enabled) + pulsing chronicle alert + the colony-alert bugle. The
-  // per-path death LOG (killPawn / combat) already wrote the narrative entry; this adds the pulse +
-  // pause so the player can't miss a permadeath. Fired once from the shared finaliser.
+  // Colonist died: auto-pause + pulse + bugle. The per-path death log already wrote the narrative
+  // entry; this only makes the permadeath unmissable. Fired once from the shared finaliser.
   pawnDeath: (pawnId, pawnName, cause, turn, focusX, focusY) => {
     requestDeathPause();
     logActivity({

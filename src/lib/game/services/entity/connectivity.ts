@@ -1,21 +1,10 @@
-/* filepath: src/lib/game/services/entity/connectivity.ts */
 /**
- * Walkable-connectivity components (ADR-008-adjacent — but a slow LABELLING pass, not a per-query spatial
- * service like A-star / nearest / fog, so it lives worker-side in TS like the thermal field + wild-growth).
- *
- * A cheap periodic flood-fill stamps every walkable tile with a component id, so AI target selection can
- * reject an UNREACHABLE goal in O(1) — a forager only eyes food in its OWN component, a hunter only
- * reachable prey — instead of the old "pick nearest → A* → fail → sweep the whole region" (the 78%-fail
- * perf cliff on a big, disconnected map). It also reads cleaner: targeting knows reachability up front.
- *
- * Connectivity matches the WASM A* EXACTLY: 8-connected, with diagonal CORNER-CUT prevention (a diagonal
- * links only when at least one of the two orthogonal neighbours is walkable — see spatial-core find_path).
- * So `reachable()` never over-reports vs. what A* can actually walk; the per-call A* node cap remains the
- * backstop for the rare stale label (a passage mined / ice thawed between rebuilds).
- *
- * Rebuilt on a SLOW cadence — connectivity only changes on mining a wall, build/deconstruct, or ice
- * freeze/thaw, all infrequent — plus immediately on a worldMap REF change (new map / load). Single-
- * threaded sim ⇒ a module singleton is safe (same pattern as rebuildThermalField / wildGrowth).
+ * Walkable-connectivity components: a periodic flood-fill stamps every walkable tile with a
+ * component id, so AI target selection rejects an UNREACHABLE goal in O(1) instead of paying a
+ * failed region-sweeping A* per candidate. Matches the WASM A* exactly (8-connected, diagonal
+ * corner-cut prevention), so `reachable()` never over-reports; the per-call A* node cap remains
+ * the backstop for a stale label between rebuilds. Rebuilt on a slow cadence plus immediately on
+ * a worldMap REF change (new map / load). Single-threaded sim ⇒ a module singleton is safe.
  */
 import type { WorldTile } from '../../core/types';
 
@@ -25,9 +14,8 @@ let _h = 0;
 let _ref: WorldTile[][] | null = null;
 let _builtTurn = -1e9;
 
-/** Ticks between full rebuilds. Connectivity changes are rare + slow, so this only bounds how quickly a
- *  freshly-mined passage / thawed crossing is recognised (≈5s at 1×). The flood is O(map), done off-tick
- *  cadence; the A* node cap covers the gap between rebuilds. */
+/** Ticks between full rebuilds. Connectivity changes are rare (mining/build/freeze-thaw), so this
+ *  only bounds how quickly a fresh passage is recognised; the A* node cap covers the gap. */
 const REBUILD_TICKS = 300;
 
 /** Full flood-fill relabel of every walkable component (O(map); each tile visited once). */

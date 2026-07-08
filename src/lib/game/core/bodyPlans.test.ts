@@ -13,11 +13,7 @@ import { rng } from './rng';
 import { pawnStatService } from '../services/PawnStatService';
 import type { Mob } from './types';
 
-/**
- * Body plans (limbmap.jsonc): each creature category gets an anatomy that fits it — a wolf carries paws
- * + a tail, not a humanoid's fingers/toes — and per-limb HP scales with bodyScale (the map supplies
- * STRUCTURE + default sizes only; it never sets the blood pool).
- */
+// Body plans (limbmap.jsonc): plan-appropriate anatomy per creature category; the map supplies structure + default part sizes only.
 describe('body plans', () => {
   it('the humanoid plan is the 6-limb arms/legs body with fingers + toes', () => {
     const limbs = createBodyPlanLimbs(DEFAULT_PLAN, 1);
@@ -43,13 +39,11 @@ describe('body plans', () => {
     expect(ids).not.toContain('left_arm');
     const partIds = limbs.flatMap((l) => l.parts!.map((p) => p.id));
     expect(partIds).toContain('frontLeftPaw');
-    expect(partIds.some((p) => /Finger|Toe/.test(p))).toBe(false); // no humanoid digits on a beast
+    expect(partIds.some((p) => /Finger|Toe/.test(p))).toBe(false);
   });
 
   it('each plan carries a brain-like + heart-like organ so the capacity model resolves', () => {
-    // The capacity resolver is plan-agnostic (matches organs by pattern), so a plan may use its own
-    // anatomy's names — a spider's `synganglion` for the brain, `tubularHeart` for the heart — as long as
-    // SOME part fills each role. (Mammalian plans use the literal `brain`/`heart`; both satisfy this.)
+    // the resolver matches organs by pattern, so a plan may use its own anatomy's names (synganglion, tubularHeart).
     for (const plan of [
       'humanoid',
       'quadruped',
@@ -121,13 +115,11 @@ describe('body plans', () => {
   });
 
   it('the skull is the BONE (skeleton), the head is the flesh that holds the brain; a broken skull is not death', () => {
-    // The skull is the hidden cranium bone — never struck directly, fracture-only, NOT critical (breaking
-    // a bone cripples, it does not instantly kill). The head is the flesh outer that wraps it.
     const skull = PART_DEF_MAP['skull']!;
     expect(skull.skeleton).toBe(true);
     expect(skull.isCritical).toBeUndefined(); // a bone is never instant-death
     expect(skull.containedIn).toBe('head');
-    expect(PART_DEF_MAP['head']!.skeleton).toBeUndefined(); // head is flesh
+    expect(PART_DEF_MAP['head']!.skeleton).toBeUndefined();
     // The brain lives in the FLESH head, so tearing the head apart (not cracking the skull) is what kills.
     expect(PART_DEF_MAP['brain']!.containedIn).toBe('head');
     expect(PART_DEF_MAP['brain']!.isVital).toBe(true);
@@ -187,18 +179,13 @@ describe('body plans', () => {
         'frontLeftPaw'
       ]);
       const w = enabledNaturalWeapons(limbs);
-      expect(w.has('bite')).toBe(false); // mouth gone
+      expect(w.has('bite')).toBe(false);
       expect(w.has('claw')).toBe(true); // the OTHER front paw still claws
     });
   });
 });
 
-/**
- * Lethal anatomy — the SINGLE death rule shared by combat + the per-tick pawn/mob reapers. Regression
- * for the "heart-and-lungs-gone jackal still walking around" report: a CRUSHED vital organ (HP driven
- * to 0 without being severed) must be lethal, which the old `isMissing`-only / head-`isCritical`-only
- * checks missed.
- */
+// The single death rule shared by combat + the per-tick reapers; a CRUSHED vital (0 HP, not severed) must be lethal.
 describe('lethalAnatomyCause', () => {
   const torsoOf = (limbs: ReturnType<typeof createBodyPlanLimbs>) =>
     limbs.find((l) => l.id === 'torso')!;
@@ -235,16 +222,14 @@ describe('lethalAnatomyCause', () => {
   });
 
   it('a CHEST caved to 0 HP is lethal even with a still-intact heart — the walking-corpse bug', () => {
-    // Finn's case: chest (container of the heart) beaten to 0 by mixed wounds, heart never zeroed by
-    // the cascade (loaded from a pre-fix save / reaper path), torso aggregate still > 0.
     const limbs = createBodyPlanLimbs(DEFAULT_PLAN, 1);
     const torso = torsoOf(limbs);
     const chest = torso.parts!.find((p) => p.id === 'chest')!;
     const heart = torso.parts!.find((p) => p.id === 'heart')!;
     chest.health = 0; // caved in, not severed
     expect(chest.isMissing).toBe(false);
-    expect(heart.health).toBeGreaterThan(0); // heart still pristine
-    expect(torso.health).toBeGreaterThan(0); // aggregate still alive
+    expect(heart.health).toBeGreaterThan(0);
+    expect(torso.health).toBeGreaterThan(0);
     expect(lethalAnatomyCause(limbs)).toBe('critical_limb');
   });
 
@@ -255,12 +240,7 @@ describe('lethalAnatomyCause', () => {
   });
 });
 
-/**
- * Limbmap audit fixes: the viper's venom is a real organ (the venom_bite is bound to the VENOM GLANDS, not
- * the fangs — destroy them and the venomous strike goes with them), the snake has kidneys (so its
- * blood_filtration resolves instead of silently reading 100%), and an amorphous body can actually use the
- * weapon it's designed for (the grimeling's `claw`, previously enabled by no part → a dead weapon).
- */
+// Limbmap audit: venom_bite is bound to the venom glands (not the fangs), the snake has kidneys, and an amorphous body enables its listed weapon.
 describe('species-specific organ + weapon wiring', () => {
   const kill = (
     limbs: ReturnType<typeof createBodyPlanLimbs>,

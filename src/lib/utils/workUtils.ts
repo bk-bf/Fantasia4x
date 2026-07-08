@@ -1,8 +1,7 @@
 import type { Pawn, WorkAssignment } from '$lib/game/core/types';
 
 /** A pawn's labor level (0–4) for a work id: a `laborSettings` override wins, else the legacy 0–12
- *  `workPriorities` value bucketed. Single source (was inline in WorkPriorities) so the work tab AND the
- *  trait card's WorkCellTooltip read the assigned level identically. */
+ *  `workPriorities` value bucketed. Single source for the work tab and WorkCellTooltip. */
 export function getPawnLaborLevel(a: WorkAssignment | undefined, workId: string): 0 | 1 | 2 | 3 | 4 {
   const ls = a?.laborSettings;
   if (ls && workId in ls) return ls[workId] as 0 | 1 | 2 | 3 | 4;
@@ -76,9 +75,7 @@ export function needBar(val: number): string {
   return '█'.repeat(f) + '░'.repeat(10 - f);
 }
 
-// ── Best / worst job markers ────────────────────────────────────────────────
-// A small medal star sits in the bottom-right of a pawn's three best jobs
-// (gold → silver → bronze), and a down-chevron marks their two weakest jobs.
+// Best/worst job markers: medal star on a pawn's three best jobs, chevron on the two weakest.
 export const STAR_MARK = '★';
 export const STAR_COLORS = ['#ffd24a', '#cbd2d8', '#cd7f32']; // gold, silver, bronze
 export const STAR_TIERS = ['Best job', '2nd best', '3rd best'] as const;
@@ -93,10 +90,7 @@ export interface CellRank {
   worst: number; // 0=worst, 1=2nd worst, -1 none
 }
 
-/**
- * Rank a pawn's work efficiencies, tagging the top three and bottom two.
- * Top medals win ties over bottom markers so a cell never carries both.
- */
+/** Tag the top three and bottom two work efficiencies; medals win so a cell never carries both. */
 export function rankWorkCells(effByWork: Record<string, number>): Record<string, CellRank> {
   const ids = Object.keys(effByWork);
   const result: Record<string, CellRank> = {};
