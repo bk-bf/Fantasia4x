@@ -211,8 +211,9 @@ export interface Pawn {
   /** Per-stat ceilings this pawn can grow toward (rolled at generation, race-derived, ~70–100 on
    *  favoured stats). A growth accept never lifts a stat above its cap. */
   maxStats?: EntityStats;
-  /** The pawn's two favoured ("talent-star") stats: higher caps AND biased to roll bigger gains. */
-  favStats?: [StatKey, StatKey];
+  /** The pawn's favoured ("talent-star") stats — a rolled 0–2 of them: higher caps AND biased to roll
+   *  bigger growth gains. Some pawns have no innate talent; a rare few have two. */
+  favStats?: StatKey[];
   /** Age in whole years (rolled at generation; +1 each birthday). Shown in the Status tab. */
   age?: number;
   /** Fixed birthday as a 0-indexed day-of-year (0..359). On this day each year age++ and a guaranteed

@@ -20,7 +20,7 @@
     ['PER', pawn.stats.perception, sm.perception, 'perception'],
     ['CHA', pawn.stats.charisma, 1, 'charisma']
   ] as const;
-  const isFav = (key: string) => pawn.favStats?.[0] === key || pawn.favStats?.[1] === key;
+  const isFav = (key: string) => pawn.favStats?.includes(key as keyof typeof pawn.stats) ?? false;
   const capOf = (key: string) =>
     pawn.maxStats?.[key as keyof typeof pawn.maxStats] as number | undefined;
 

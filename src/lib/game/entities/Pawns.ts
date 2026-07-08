@@ -458,15 +458,15 @@ const STAT_KEYS: (keyof EntityStats)[] = [
 ];
 
 /**
- * PAWN-GROWTH: roll a pawn's two favoured ("talent-star") stats + per-stat growth ceilings. Favoured
- * stats are drawn weighted toward the race's strongest stats (widest [min,max] = its focus), then get
- * the highest caps (~85–100); the rest cap ~62–82. Every cap sits at least +15 above the rolled stat so
- * there's always room to grow. Caps are what a stat can climb to over many growth events.
+ * PAWN-GROWTH: roll a pawn's favoured ("talent-star") stats (a random 0–2 of them) + per-stat growth
+ * ceilings. Favoured stats are drawn weighted toward the race's strongest stats (widest [min,max] = its
+ * focus), then get the highest caps (~85–100); the rest cap ~62–82. Every cap sits at least +15 above
+ * the rolled stat so there's always room to grow. Caps are what a stat can climb to over many events.
  */
 function rollGrowthProfile(
   finalStats: EntityStats,
   statRanges: Record<string, [number, number]>
-): { maxStats: EntityStats; favStats: [keyof EntityStats, keyof EntityStats] } {
+): { maxStats: EntityStats; favStats: (keyof EntityStats)[] } {
   // Weight fav selection toward the race's focus stats (wider range ⇒ higher weight), so a warlike
   // race tends to favour STR/CON — but any stat can be a pawn's talent.
   const pool: (keyof EntityStats)[] = [];
@@ -475,15 +475,18 @@ function rollGrowthProfile(
     const weight = 1 + Math.max(0, Math.round((max - min + (max - 18)) / 3)); // focus stats weigh more
     for (let i = 0; i < weight; i++) pool.push(stat);
   }
-  const favA = rng.pick(pool);
-  let favB = rng.pick(pool);
+  // 0–2 favoured stats: some pawns have no innate talent, most have one, a few have two.
+  const favCount = rng.int(0, 2);
+  const favStats: (keyof EntityStats)[] = [];
   let guard = 0;
-  while (favB === favA && guard++ < 20) favB = rng.pick(STAT_KEYS);
-  const favStats: [keyof EntityStats, keyof EntityStats] = [favA, favB];
+  while (favStats.length < favCount && guard++ < 40) {
+    const pick = rng.pick(pool);
+    if (!favStats.includes(pick)) favStats.push(pick);
+  }
 
   const maxStats = {} as EntityStats;
   for (const stat of STAT_KEYS) {
-    const isFav = stat === favA || stat === favB;
+    const isFav = favStats.includes(stat);
     const base = isFav ? rng.int(85, 100) : rng.int(62, 82);
     maxStats[stat] = Math.max(base, finalStats[stat] + 15);
   }
