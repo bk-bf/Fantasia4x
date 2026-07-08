@@ -129,12 +129,12 @@ function combatPills(entity: Pawn | Mob): StatPillView[] {
       rows: rows('dodge')
     },
     {
-      label: 'Crit',
-      value: `${Math.round(s('crit_chance') * 100)}%`,
+      label: 'Precision',
+      value: `${Math.round(s('hit_precision') * 100)}%`,
       color: COMBAT_TINT,
-      desc: 'base crit chance (weapons add their own)',
-      formula: formula('crit_chance'),
-      rows: rows('crit_chance')
+      desc: 'chance to strike true: a crit aimed at the least-armoured part in reach (weapons add their own)',
+      formula: formula('hit_precision'),
+      rows: rows('hit_precision')
     },
     {
       label: 'Armor',

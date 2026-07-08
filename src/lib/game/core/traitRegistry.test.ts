@@ -162,7 +162,7 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
   it('§1 combatMods only name real combat stats; §6a auras name real conditions with finite radius', () => {
     const COMBAT_STAT_IDS = new Set([
       'melee_damage', 'armor_damage', 'hit_chance', 'dodge', 'knockdown_resistance', 'vision_range',
-      'attack_speed', 'crit_chance', 'aim_accuracy', 'aim_speed', 'reload_speed', 'aim_range', 'ranged_damage'
+      'attack_speed', 'hit_precision', 'aim_accuracy', 'aim_speed', 'reload_speed', 'aim_range', 'ranged_damage'
     ]);
     for (const t of ALL) {
       for (const k of Object.keys(t.effects?.combatMods ?? {}))

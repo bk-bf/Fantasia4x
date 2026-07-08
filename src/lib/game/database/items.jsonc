@@ -3338,7 +3338,7 @@
   // don't appear in the equip picker). Shared and reused across creatures: STR
   // scaling (baseDamage × STR / 10 in Combat) makes a wolf's bite hit harder than a
   // rabbit's. weaponProperties: weight = relative roll frequency per swing,
-  // staminaCost = stamina drained, critMod = added to the attacker's crit_chance.
+  // staminaCost = stamina drained, critMod = added to the attacker's hit_precision.
   {
     "id"               : "fists",
     "audio"            : "blunt",

@@ -285,7 +285,7 @@ interface AttackProfile {
   weaponId: string;
   /** Stamina this particular attack drains. */
   staminaCost: number;
-  /** Crit chance this attack adds on top of the attacker's base crit_chance stat. */
+  /** Crit chance this attack adds on top of the attacker's base hit_precision stat. */
   critMod: number;
   /** Finesse weapon (rapier): melee damage scales with PERCEPTION, not STRENGTH. */
   finesse: boolean;
@@ -569,13 +569,14 @@ function partArmorReduction(
 ): number {
   const def = PART_DEF_MAP[partId];
   if (!def || rawDamage <= 0) return 0;
-  const ap1 = 1 - armorPen;
-  let dmg = rawDamage;
-  // ADR-029: layered SUBTRACTIVE mitigation — each covering layer subtracts its effective defense
-  // (`defense × (1 − armorPen)`, in DAMAGE POINTS) from the running damage; the remainder passes inward.
-  // Armour can FULLY negate a weak hit (a 3-dmg punch does nothing to a bear's hide) — damage comes from
-  // finding a low-armour part (eye/throat/belly) or out-powering the plate. Worn pieces only count where
-  // they COVER the struck part (`coversPart`), walked outermost→in; the natural hide is the innermost layer.
+  // ADR-029: layered SUBTRACTIVE mitigation. `armorPen` is a flat BYPASS fraction — that share of the
+  // weapon's damage IGNORES armour entirely (a bodkin's 25% slips through any plate); only the
+  // remaining (1 − armorPen) share is blockable, and each covering layer subtracts its FULL defense
+  // (in DAMAGE POINTS) from it, outermost → in, remainder passing inward. Armour can fully negate the
+  // blockable share (a 3-dmg punch does nothing to a bear's hide) — damage comes from finding a
+  // low-armour part (eye/throat/belly), a piercing weapon's bypass, or out-powering the plate. Worn
+  // pieces only count where they COVER the struck part (`coversPart`); natural hide is the innermost layer.
+  let blockable = rawDamage * (1 - armorPen);
   if ('equipment' in defender && defender.equipment) {
     const worn: { layer: number; defense: number }[] = [];
     for (const slot of ARMOUR_SLOTS) {
@@ -590,16 +591,19 @@ function partArmorReduction(
     }
     worn.sort((a, b) => a.layer - b.layer);
     for (const w of worn) {
-      dmg -= w.defense * ap1;
-      if (dmg <= 0) return 1;
+      blockable -= w.defense;
+      if (blockable <= 0) {
+        blockable = 0;
+        break;
+      }
     }
   }
-  const natural = naturalArmorPoints(defender, def.armor ?? DEFAULT_ARMOR_SHARE, partId);
-  if (natural > 0) {
-    dmg -= natural * ap1;
-    if (dmg <= 0) return 1;
+  if (blockable > 0) {
+    const natural = naturalArmorPoints(defender, def.armor ?? DEFAULT_ARMOR_SHARE, partId);
+    if (natural > 0) blockable = Math.max(0, blockable - natural);
   }
-  return clamp((rawDamage - dmg) / rawDamage, 0, 1);
+  const through = rawDamage * armorPen + blockable;
+  return clamp((rawDamage - through) / rawDamage, 0, 1);
 }
 
 /** Natural-armour DAMAGE POINTS at a part: a creature's hide (`naturalArmor`) or a pawn's racial traits
@@ -648,16 +652,14 @@ function partArmorPoints(defender: Pawn | Mob, partId: BodyPartId): number {
   return pts + naturalArmorPoints(defender, def.armor ?? DEFAULT_ARMOR_SHARE, partId);
 }
 
-/** ADR-029 skill-biased hit location (the CDDA crit-zone loop): roll the struck part as usual, but at a
- *  DEX-driven precision chance the attacker rolls two extra candidate locations and takes the LEAST
- *  ARMOURED — a skilled fighter works the gaps (eye/throat/belly) instead of clanging off the plate.
- *  dex 10 ≈ 6% proc, dex 18 ≈ 30%, capped at 45%; condition-crippled DEX aims worse automatically. */
-function aimedBodyPart(attacker: Pawn | Mob, defender: Pawn | Mob): BodyPartId {
+/** ADR-029 skill-biased hit location (the CDDA crit-zone loop): roll the struck part as usual, but at
+ *  `precision` — the attacker's full crit chance (`hit_precision` stat + weapon critMod, computed by the
+ *  caller) — roll two extra candidate locations and take the LEAST ARMOURED: a skilled fighter works
+ *  the gaps (eye/throat/belly) instead of clanging off the plate. One chance, two payoffs: a "crit"
+ *  is both the damage spike AND the eye for openings; capacity-dimmed sight/consciousness aim worse. */
+function aimedBodyPart(defender: Pawn | Mob, precision: number): BodyPartId {
   const plan = planOf(defender);
   const first = rollBodyPartOf(defender.limbs, plan);
-  const sm = conditionStatMultipliers(attacker);
-  const dex = (attacker.stats?.dexterity ?? 10) * sm.dexterity;
-  const precision = clamp((dex - 8) * 0.03, 0, 0.45);
   if (precision <= 0 || rng.random() >= precision) return first;
   let best = first;
   let bestArmor = partArmorPoints(defender, first);
@@ -790,24 +792,26 @@ class CombatServiceImpl implements CombatService {
     // Roll a hit location from the DEFENDER's own LIVE body tree (a wolf rolls paws/tail, not fingers;
     // §3d a pawn's GRAFTED wings/tail are hittable; an already-severed part can't be struck again).
     // Falls back to the static plan table for entities without a modelled tree (test fixtures).
-    // ADR-029 skill-biased location: under the SUBTRACTIVE model an armoured part can fully negate a
-    // weak hit, so a skilled fighter must FIND THE GAP — at a DEX-driven precision chance, the attacker
-    // rolls extra candidate locations and takes the least-armoured one (eye/throat/belly over plate).
-    const partId = aimedBodyPart(attacker, defender);
-    const partDef = PART_DEF_MAP[partId]!;
-    // The defender's part may be bodyScale-scaled; severity/fracture use its ACTUAL maxHp.
-    const partMaxHp =
-      limbOfPart(defender, partId)?.parts?.find((p) => p.id === partId)?.maxHp ?? partDef.maxHp;
-
-    // Crit: base crit_chance stat (DEX/PER + capacities) plus this weapon's critMod.
+    // Crit: base hit_precision stat (DEX/PER + capacities) plus this weapon's critMod.
     // A crit multiplies the post-mitigation damage — so a high-crit build with a
     // high-crit weapon spikes hard.
     const critChance = clamp(
-      pawnStatService.evaluateStat('crit_chance', attacker) + critMod,
+      pawnStatService.evaluateStat('hit_precision', attacker) + critMod,
       0,
       CRIT_CHANCE_CAP
     );
     const crit = rng.random() < critChance;
+
+    // ADR-029 skill-biased location: under the SUBTRACTIVE model an armoured part can fully negate a
+    // weak hit, so a skilled fighter must FIND THE GAP — at the SAME hit_precision that governs crits
+    // (stats.jsonc: DEX/PER × consciousness × sight, + the weapon's critMod, so a crit-prone stiletto
+    // finds gaps more often), the attacker rolls extra candidate locations and takes the least-armoured
+    // one (eye/throat/belly over plate).
+    const partId = aimedBodyPart(defender, critChance);
+    const partDef = PART_DEF_MAP[partId]!;
+    // The defender's part may be bodyScale-scaled; severity/fracture use its ACTUAL maxHp.
+    const partMaxHp =
+      limbOfPart(defender, partId)?.parts?.find((p) => p.id === partId)?.maxHp ?? partDef.maxHp;
 
     // Damage: baseDamage × str / STAT_SCALE, then armour + resistance reduce it,
     // then the crit multiplier. STAT_SCALE=10 matches the real stat range (5–22).

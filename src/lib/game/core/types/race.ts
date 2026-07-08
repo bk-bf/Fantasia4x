@@ -187,7 +187,7 @@ export interface Trait {
     workQuality?: Record<string, number>; // workType -> *_quality multiplier
 
     /** TRAIT-LIBRARY-EXPANSION §1: combat-stat multipliers — combat statId (hit_chance, dodge,
-     *  knockdown_resistance, attack_speed, crit_chance, aim_speed, reload_speed, aim_range) → a
+     *  knockdown_resistance, attack_speed, hit_precision, aim_speed, reload_speed, aim_range) → a
      *  multiplier on the matching stats.jsonc combat output, exactly as `workSpeed` multiplies a work
      *  stat. Consumed by PawnStatService.evaluateStat (combat-category stats only). */
     combatMods?: Record<string, number>;

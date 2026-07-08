@@ -448,7 +448,7 @@ function traitWorkMult(
 
 // ── Trait combat multipliers (TRAIT-LIBRARY-EXPANSION §1) ───────────────────
 // `effects.combatMods` maps a COMBAT statId (hit_chance, dodge, knockdown_resistance, attack_speed,
-// crit_chance, aim_speed, reload_speed, aim_range) to a multiplier on the matching stats.jsonc combat
+// hit_precision, aim_speed, reload_speed, aim_range) to a multiplier on the matching stats.jsonc combat
 // output — the combat twin of traitWorkMult, so a "Sure-Handed" pawn genuinely lands more blows.
 function traitCombatMult(pawn: Pawn | Mob, statId: string): number {
   if (!COMBAT_STAT_IDS.has(statId)) return 1;

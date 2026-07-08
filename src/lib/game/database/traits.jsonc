@@ -993,7 +993,7 @@
         "kind"       : "attribute",
         "name"       : "Sure-Handed",
         "description": "Their blows land where they mean them to, and land hard.",
-        "effects"    : { "combatMods": {"hit_chance": 1.15, "crit_chance": 1.2} }
+        "effects"    : { "combatMods": {"hit_chance": 1.15, "hit_precision": 1.2} }
     },
     {
         "id"         : "killer-instinct",
@@ -1002,7 +1002,7 @@
         "kind"       : "attribute",
         "name"       : "Killer Instinct",
         "description": "They find the gap in any guard on the first exchange.",
-        "effects"    : { "combatMods": {"hit_chance": 1.4, "crit_chance": 1.6} }
+        "effects"    : { "combatMods": {"hit_chance": 1.4, "hit_precision": 1.6} }
     },
     {
         "id"         : "wild-swinging",
@@ -1011,7 +1011,7 @@
         "kind"       : "attribute",
         "name"       : "Wild-Swinging",
         "description": "All effort and no control, half their swings meet only air.",
-        "effects"    : { "combatMods": {"hit_chance": 0.9, "crit_chance": 0.85} }
+        "effects"    : { "combatMods": {"hit_chance": 0.9, "hit_precision": 0.85} }
     },
     {
         "id"         : "hapless-fighter",
@@ -1020,7 +1020,7 @@
         "kind"       : "attribute",
         "name"       : "Hapless",
         "description": "With a blade in hand, they could miss a barn from the inside.",
-        "effects"    : { "combatMods": {"hit_chance": 0.6, "crit_chance": 0.6} }
+        "effects"    : { "combatMods": {"hit_chance": 0.6, "hit_precision": 0.6} }
     },
     {
         "id"         : "light-footed",
@@ -1065,7 +1065,7 @@
         "kind"       : "attribute",
         "name"       : "Quick-Striking",
         "description": "Two blows landed for every one returned.",
-        "effects"    : { "combatMods": {"attack_speed": 1.15, "crit_chance": 1.2} }
+        "effects"    : { "combatMods": {"attack_speed": 1.15, "hit_precision": 1.2} }
     },
     {
         "id"         : "whirlwind",
@@ -1074,7 +1074,7 @@
         "kind"       : "attribute",
         "name"       : "Whirlwind",
         "description": "A blur of edges that never seems to pause for breath.",
-        "effects"    : { "combatMods": {"attack_speed": 1.5, "crit_chance": 1.5} }
+        "effects"    : { "combatMods": {"attack_speed": 1.5, "hit_precision": 1.5} }
     },
     {
         "id"         : "ponderous",
@@ -1083,7 +1083,7 @@
         "kind"       : "attribute",
         "name"       : "Ponderous",
         "description": "They wind up a swing like they're splitting logs.",
-        "effects"    : { "combatMods": {"attack_speed": 0.9, "crit_chance": 0.9} }
+        "effects"    : { "combatMods": {"attack_speed": 0.9, "hit_precision": 0.9} }
     },
     {
         "id"         : "lumbering-fighter",
@@ -1092,7 +1092,7 @@
         "kind"       : "attribute",
         "name"       : "Lumbering",
         "description": "By the time their blow arrives the fight has moved on.",
-        "effects"    : { "combatMods": {"attack_speed": 0.6, "crit_chance": 0.75} }
+        "effects"    : { "combatMods": {"attack_speed": 0.6, "hit_precision": 0.75} }
     },
     {
         "id"         : "fast-hands",

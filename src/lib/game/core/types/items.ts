@@ -405,7 +405,7 @@ export interface Item {
     finesse?: boolean; // a FINESSE weapon (rapier/estoc): melee damage scales with PERCEPTION (precision/timing — finding the gap) instead of STRENGTH. Lets a high-PER duelist hit hard in melee, not just at range.
     arcane?: boolean; // §M an ARCANE weapon (elemental staff): damage scales with INTELLIGENCE instead of STRENGTH (mirrors `finesse`→PER). The INT caster's "finesse" — wits drive the blast, not muscle.
     channeled?: boolean; // §M a CHANNELED ranged weapon (staff): fires with NO ammo, paying its `staminaCost` as MANA each shot, and is NOT self-consumed/dropped like a thrown weapon (it stays in hand). Bottoming out stamina latches `winded` = out of mana.
-    critMod?: number; // added to the wielder's base crit_chance (0–1)
+    critMod?: number; // added to the wielder's base hit_precision (0–1)
     twoHanded?: boolean; // requires both mainHand and offHand slots
     tags?: string[]; // ability grants from COMBAT-SYSTEM
     // ── RANGED-COMBAT additions ──────────────────────────────────────────

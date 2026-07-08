@@ -207,7 +207,7 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('lands critical hits for a high-crit attacker (stat + weapon critMod)', () => {
-    // High DEX/PER pawn → high base crit_chance; low-dodge target → mostly hits.
+    // High DEX/PER pawn → high base hit_precision; low-dodge target → mostly hits.
     const attacker = makePawn({ stats: { ...stats, dexterity: 22, perception: 22 } });
     const defender = makeGoblin({ stats: { ...stats, dexterity: 1 } });
     const empty = makeState([], []);
