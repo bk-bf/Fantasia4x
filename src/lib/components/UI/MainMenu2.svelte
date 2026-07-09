@@ -194,17 +194,12 @@
     font-family: var(--font-display); /* same engraved serif as the FANTASIA wordmark */
     font-size: clamp(18px, 2vw, 30px);
     letter-spacing: 0.1em;
-    /* Black outline hugging the glyphs so they read over the busy map (8-way so edges fill, not just
-       corners). */
+    /* Thin black outline hugging the glyphs so they read over the busy map. */
     text-shadow:
-      -4px -4px 0 #000,
-      4px -4px 0 #000,
-      -4px 4px 0 #000,
-      4px 4px 0 #000,
-      0 -4px 0 #000,
-      0 4px 0 #000,
-      -4px 0 0 #000,
-      4px 0 0 #000;
+      -1px -1px 0 rgba(0, 0, 0, 0.95),
+      1px -1px 0 rgba(0, 0, 0, 0.95),
+      -1px 1px 0 rgba(0, 0, 0, 0.95),
+      1px 1px 0 rgba(0, 0, 0, 0.95);
   }
 
   /* Version + tileset credit, in the cursive script (kept) — kept small, a disclaimer never the slogan. */
@@ -214,16 +209,12 @@
     color: var(--text);
     font-size: clamp(13px, 1.15vw, 17px);
     letter-spacing: 0.04em;
-    /* Black outline to match the slogan above it. */
+    /* Thin black outline to match the slogan above it. */
     text-shadow:
-      -4px -4px 0 #000,
-      4px -4px 0 #000,
-      -4px 4px 0 #000,
-      4px 4px 0 #000,
-      0 -4px 0 #000,
-      0 4px 0 #000,
-      -4px 0 0 #000,
-      4px 0 0 #000;
+      -1px -1px 0 rgba(0, 0, 0, 0.95),
+      1px -1px 0 rgba(0, 0, 0, 0.95),
+      -1px 1px 0 rgba(0, 0, 0, 0.95),
+      1px 1px 0 rgba(0, 0, 0, 0.95);
   }
 
   .menu {
