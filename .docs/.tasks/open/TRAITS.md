@@ -6,7 +6,7 @@
 
 > **Related:** [game/DESIGN](../../game/DESIGN.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-023 · ADR-028 · ADR-029) · [ROADMAP](ROADMAP.md) · [RACE-SYSTEM](RACE-SYSTEM.md)
 
-## §0 · THE CONTRACT — traits are pure granters
+## §0 · Traits are pure granters
 
 **A trait GRANTS things; it never carries the granted thing's stats, procs, or effects itself.**
 The granted object is defined in its own database file and is the single source of truth for
