@@ -99,19 +99,22 @@ lineage); **`feral-adrenaline`** is a new terminal copy (same adrenal-on-pain, n
 
 Permanent, powerful, with reversed-shelter / raw-diet costs baked in.
 
-- [ ] Beast Claws → Rending Claws → Ripping Talons (existing claw line)
-- [ ] Thick Hide (armor + cold covering)
-- [ ] **Savage Bite** (fang natural weapon)
-- [ ] **Bestial Might** (+STR/+CON — guaranteed lineage stat baseline)
-- [ ] **Feral Adrenaline** (terminal adrenal split)
-- [ ] Pack Fury (combat bonus near allies — **moved from werewolf**)
-- [ ] **Beast Eyes** (nightVision, **capped at stage 2**)
-- [ ] **Keen Nose** (perception / tracking attribute)
-- [ ] **Iron Gut** (eats carrion/rotten without sickness — turns the raw diet into a perk)
+- [x] Rending Claws → Ripping Talons (existing claw line, tagged `lineage:["beast","werewolf"]`; Rending
+      Claws is the standalone **gateway** — `lineageExclusive:false` + `awakens`). *(a lower Beast-Claws S1
+      awaits its own claw weapon item.)*
+- [x] Thick Fur (armor + cold covering, tagged)
+- [x] **Bestial Might** (+STR/+CON — guaranteed lineage stat baseline; `stat` kind)
+- [x] **Feral Surge** (terminal adrenal split — `triggeredCondition:"adrenal"`, no evolvesTo)
+- [x] **Feral Manner** (−) −CHA (`stat` kind, negative)
+- [x] **Beast Blood** — the `beast-heritage` lineage marker (parent)
+- [ ] **Savage Bite** (fang natural weapon — needs a new fang item)
+- [ ] Pack Fury (combat bonus near allies — **moved from werewolf**; needs a proximity-combat hook)
+- [ ] **Beast Eyes** (nightVision, **capped at stage 2** — staged eye graft like Spider Eyes)
+- [ ] **Keen Senses** (tracking attribute)
+- [ ] **Iron Gut** (eats carrion/rotten without sickness — needs a food-poisoning gate)
 - [ ] **Bounding Gait** (+move speed)
-- [ ] **Carnivore's Gut** (−) raw meat/carcass only; plants nauseate
-- [ ] **Feral Manner** (−) −CHA, spooks tame animals
-- [ ] **Can't Settle** (−) *reversed shelter* — debuff under a roof, rests best in the open
+- [ ] **Carnivore's Gut** (−) raw meat/carcass only; plants nauseate — needs the eat diet-gate
+- [ ] **Can't Settle** (−) *reversed shelter* — needs the shelter-need reversal
 
 ### Werewolf — the transform lineage
 
@@ -181,8 +184,13 @@ Ordered by which lineage forces it:
       accrual+decay / awaken→evolve→grow), `applyGainedTrait`, wired into `PawnGrowthService`, seeded at
       pawn-gen; `lineages.test.ts` (5). `check` 0 err, tests green. **Remaining**: deed-source increment
       hooks + info-panel meter reveal (moved to Phase 2, where the Beast content consumes the deeds).
-- [ ] **Phase 2** — Beast lineage end-to-end: parent + 15 member traits (§5), deed-source hooks, meter
-      reveal UI (born + awakened paths, evolve/grow at growth events).
+- [-] **Phase 2** — Beast lineage. **Done**: parent `beast-heritage` + 6 core members (claw line + fur
+      tagged, Bestial Might, Feral Surge, Feral Manner), Rending Claws as the standalone gateway, the EAT
+      deed hook (`recordMealDeeds` → ateRawMeat/ateCarcass/ateCanineMeat), awaken + grow integration tests
+      (`lineages.test.ts`, 7). `check` 0 err, full suite green. **Remaining**: the mechanic-heavy members
+      (savage bite, pack fury, beast eyes, iron gut, carnivore gut, can't-settle, bounding gait, keen
+      senses) + their subsystems; the KILL/ENV deed hooks (unarmedBigKill, moonlight, sleep-unsheltered,
+      raw-diet-days); the info-panel meter reveal UI.
 - [ ] **Phase 3** — Werewolf (moon phase, transform, blood meter, lose-control hunt).
 - [ ] **Phase 4** — Vampiric (feeding).
 - [ ] **Phase 5** — Amphibian + Arachnid content + silk/silver.
