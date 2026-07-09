@@ -6,8 +6,10 @@ import {
   AWAKENING_DEFS,
   LINEAGE_DEFS
 } from './Lineages';
+import { feedOnVictim, sateBloodHunger } from './Lineages';
 import { rng } from './rng';
 import { drawPawnTraits } from './Culture';
+import { createBodyPlanLimbs } from '../systems/Combat';
 import type { Culture, Pawn, Trait } from './types';
 
 // LINEAGES §4 foundation — the awakening-meter mechanism + growth-event decision logic. Content
@@ -218,5 +220,38 @@ describe('LINEAGES §4 awakening meters', () => {
     }
     expect(evolved, 'evolve should fire within 200 seeds at 10% chance').toBe(true);
     void p;
+  });
+});
+
+// ── LINEAGES-II §2 — the vampiric feeding primitive ──────────────────────────
+describe('vampiric feeding (feedOnVictim)', () => {
+  it('stamps a small neck puncture + drains blood on the victim, and sates the feeder', () => {
+    const feeder = {
+      id: 'vamp', isAlive: true, needs: { bloodHunger: 100 },
+      conditionTimers: { bloodthirst: 500 }
+    } as unknown as Pawn;
+    const victim = {
+      id: 'meal', isAlive: true, bloodVolume: 100, maxBloodVolume: 100,
+      limbs: createBodyPlanLimbs('humanoid', 1)
+    } as unknown as Pawn;
+    feedOnVictim(feeder, victim, 1000);
+    // Victim: lighter by 12 blood, with a real (bleeding, clottable) puncture on the neck.
+    expect(victim.bloodVolume).toBe(88);
+    const neck = victim.limbs!.flatMap((l) => l.parts ?? []).find((p) => p.id === 'neck')!;
+    const bite = neck.injuries.find((w) => w.type === 'puncture')!;
+    expect(bite).toBeTruthy();
+    expect(bite.permanent).toBeUndefined(); // it heals like any wound
+    // Feeder: sated — the meter resets and the bloodthirst rage lifts (control returns next tick).
+    expect(feeder.needs!.bloodHunger).toBe(0);
+    expect(feeder.conditionTimers!.bloodthirst).toBeUndefined();
+  });
+
+  it('sateBloodHunger resets the meter and lifts the rage (the werewolf devour path)', () => {
+    const wolf = {
+      id: 'wolf', needs: { bloodHunger: 100 }, conditionTimers: { bloodthirst: 300 }
+    } as unknown as Pawn;
+    sateBloodHunger(wolf);
+    expect(wolf.needs!.bloodHunger).toBe(0);
+    expect(wolf.conditionTimers!.bloodthirst).toBeUndefined();
   });
 });

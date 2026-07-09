@@ -438,17 +438,25 @@ export function drawPawnTraits(culture: Culture, physique?: PawnPhysique): Trait
     return true;
   };
 
-  // Guaranteed cultural identity FIRST (within the cap). A legendary bundle's banner takes one slot,
-  // then a rolled sub-capability fills the remaining slot (the rest are acquired later).
+  // Guaranteed cultural identity FIRST (within the cap). LINEAGES: a lineage MARKER (Stoneblood,
+  // Dragon Heritage…) takes one slot, then ONE random member of that lineage fills the next — so two
+  // stoneblood pawns are born different, and the REST of the tree is grown later at seasonal growth
+  // events (lineageGrowthEvent), not granted up front. (Replaces the old nested-subCapability expansion.)
   for (const g of culture.guaranteedTraits) {
     if (culturalCount >= MAX_CULTURAL_TRAITS) break;
-    // A legendary OR mythic BUNDLE takes one banner slot, then rolls a sub-capability per pawn (so two
-    // dragon-blooded / two amphibians differ); the rest are acquired later.
-    if ((g.rarity === 'legendary' || g.rarity === 'mythic') && g.subCapabilities?.length) {
-      takeCultural({ ...g, subCapabilities: undefined });
-      const subs = [...g.subCapabilities];
-      while (culturalCount < MAX_CULTURAL_TRAITS && subs.length > 0) {
-        takeCultural(subs.splice(rng.int(0, subs.length - 1), 1)[0]);
+    if ((g.rarity === 'legendary' || g.rarity === 'mythic') && g.lineage?.length) {
+      takeCultural(g);
+      const lineageId = g.lineage[0];
+      const pool = TRAIT_DATABASE.filter(
+        (t) =>
+          t.id !== g.id &&
+          t.lineage?.includes(lineageId) &&
+          (t.stage ?? 1) === 1 && // higher stages are reached by EVOLUTION, never granted at birth
+          !banned.has(tid(t)) &&
+          fits(t)
+      );
+      while (culturalCount < MAX_CULTURAL_TRAITS && pool.length > 0) {
+        if (takeCultural(pool.splice(rng.int(0, pool.length - 1), 1)[0])) break; // ONE member
       }
     } else {
       takeCultural(g);

@@ -330,6 +330,9 @@
         "posteriorMedianRightEye": {"size": 4, "bleedRatio": 0.005, "hitWeight": 0.05, "isPaired": true, "containedIn": "cephalothorax", "armor": 0.1},
         "posteriorLateralLeftEye": {"size": 4, "bleedRatio": 0.005, "hitWeight": 0.05, "isPaired": true, "containedIn": "cephalothorax", "armor": 0.1},
         "posteriorLateralRightEye":{"size": 4, "bleedRatio": 0.005, "hitWeight": 0.05, "isPaired": true, "containedIn": "cephalothorax", "armor": 0.1},
+        // Graftable silk organ (LINEAGES-II §3 — the Silk Spinners trait): hittable, losable, and the
+        // source of the slow raw-silk trickle while it lives.
+        "spinneret"              : {"size": 8, "bleedRatio": 0.01, "hitWeight": 0.3, "armor": 0.1},
         "tubularHeart"           : {"size": 18, "bleedRatio": 0.08, "hitWeight": 0, "isVital": true, "containedIn": "opisthosoma"},
         "leftBookLung"           : {"size": 22, "bleedRatio": 0.05, "hitWeight": 0, "isPaired": true, "containedIn": "opisthosoma"},
         "rightBookLung"          : {"size": 22, "bleedRatio": 0.05, "hitWeight": 0, "isPaired": true, "containedIn": "opisthosoma"},

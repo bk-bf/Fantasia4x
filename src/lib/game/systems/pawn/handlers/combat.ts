@@ -15,6 +15,7 @@ import {
 } from '../pawnHelpers';
 import { getRangedWeapon, effectiveRangedRange } from '../../rangedCombat';
 import { checkNeedInterrupts } from '../needSelection';
+import { feedOnVictim, sateBloodHunger } from '../../../core/Lineages';
 
 /**
  * FIGHTING: engage the hostile. Defensive pawns stand their ground (the threat is
@@ -148,4 +149,93 @@ export function handleHunting(pawn: Pawn, gameState: GameState): GameState {
   const afterPath = tryAssignPath(pawn, target.x, target.y, gameState);
   if (afterPath) return afterPath;
   return haltMovement(pawn, gameState); // unreachable this tick — hold; needs will free it
+}
+
+/**
+ * BLOOD HUNT (LINEAGES-II): bloodthirst has the body — an UNCONTROLLABLE hunt the conditions pass
+ * forces the pawn into (and out of) via the `bloodthirst` condition's `fsmState`; the draft is refused
+ * while it holds. The pawn chases the NEAREST living thing — colonist or beast — and:
+ *   • vampiric (`bloodNeedKind: 'humanoid'`) + a pawn victim in reach → FEEDS (neck puncture + blood
+ *     drain, victim survives), sated, control returns next tick;
+ *   • otherwise stands in melee and lets combatService.tickCombat land swings (its BloodHunt branch
+ *     targets the quarry); a quarry that drops is DEVOURED on the spot — sated the same way.
+ * No need interrupts here: the hunger outranks hunger.
+ */
+export function handleBloodHunt(pawn: Pawn, gameState: GameState): GameState {
+  if (!pawn.position) return gameState;
+  // The conditions pass releases us when bloodthirst lifts; hold still if it already has this tick.
+  if ((pawn.conditionTimers?.bloodthirst ?? 0) <= 0) return haltMovement(pawn, gameState);
+  const px = pawn.position.x;
+  const py = pawn.position.y;
+
+  // Devour a quarry that just dropped (werewolf's satisfaction — the vampire feeds on the living).
+  const corpse = (gameState.mobs ?? []).find(
+    (m) => m.id === pawn.huntTargetId && (m.isAlive === false || m.state === 'Corpse')
+  );
+  if (corpse && chebyshev(px, py, corpse.x, corpse.y) <= 1) {
+    sateBloodHunger(pawn); // mutates the live pawn (FSM convention); released next tick
+    return haltMovement(pawn, gameState);
+  }
+
+  // Current quarry, else acquire the NEAREST living thing (mob or another pawn) within 30 tiles.
+  let mobT = (gameState.mobs ?? []).find(
+    (m) => m.id === pawn.huntTargetId && m.isAlive !== false && m.state !== 'Corpse'
+  );
+  let pawnT = gameState.pawns.find(
+    (p) => p.id === pawn.huntTargetId && p.id !== pawn.id && p.isAlive !== false
+  );
+  if (!mobT && !pawnT) {
+    let best: { x: number; y: number; id: string; isMob: boolean } | undefined;
+    let bestD = 31;
+    for (const m of gameState.mobs ?? []) {
+      if (m.isAlive === false || m.state === 'Corpse') continue;
+      const d = chebyshev(px, py, m.x, m.y);
+      if (d < bestD) { bestD = d; best = { x: m.x, y: m.y, id: m.id, isMob: true }; }
+    }
+    for (const p of gameState.pawns) {
+      if (p.id === pawn.id || p.isAlive === false || !p.position) continue;
+      const d = chebyshev(px, py, p.position.x, p.position.y);
+      if (d < bestD) { bestD = d; best = { x: p.position.x, y: p.position.y, id: p.id, isMob: false }; }
+    }
+    if (!best) return haltMovement(pawn, gameState); // nothing alive in range — pace and rage
+    pawn.huntTargetId = best.id; // live-pawn mutation (FSM convention)
+    mobT = best.isMob
+      ? (gameState.mobs ?? []).find((m) => m.id === best!.id)
+      : undefined;
+    pawnT = best.isMob ? undefined : gameState.pawns.find((p) => p.id === best!.id);
+  }
+
+  const tx = mobT ? mobT.x : pawnT!.position!.x;
+  const ty = mobT ? mobT.y : pawnT!.position!.y;
+  const adjacent = chebyshev(px, py, tx, ty) <= 1;
+
+  if (adjacent) {
+    // A vampiric hunter DRINKS from a pawn victim rather than beating it down.
+    if (pawn.bloodNeedKind === 'humanoid' && pawnT) {
+      feedOnVictim(pawn, pawnT, gameState.turn);
+      return haltMovement(pawn, gameState);
+    }
+    // Otherwise plant and trade blows (tickCombat's BloodHunt branch swings at the quarry); a mob
+    // quarry is cornered into fighting back, exactly as the work-driven hunt does.
+    const halted = haltMovement(pawn, gameState);
+    if (mobT && mobT.state !== 'Attacking') {
+      return {
+        ...halted,
+        mobs: (halted.mobs ?? []).map((m) =>
+          m.id === mobT!.id
+            ? { ...m, state: 'Attacking', stateSince: gameState.turn, huntTargetId: pawn.id, path: [] }
+            : m
+        )
+      };
+    }
+    return halted;
+  }
+
+  // Chase — re-path when the quarry drifts off the current path's end.
+  const pathEnd = pawn.path?.length ? pawn.path[pawn.path.length - 1] : null;
+  const drifted = !pathEnd || chebyshev(pathEnd.x, pathEnd.y, tx, ty) > 1.5;
+  if ((pawn.path?.length ?? 0) > 0 && !drifted) return gameState;
+  const afterPath = tryAssignPath(pawn, tx, ty, gameState);
+  if (afterPath) return afterPath;
+  return haltMovement(pawn, gameState);
 }

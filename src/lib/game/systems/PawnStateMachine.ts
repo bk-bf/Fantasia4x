@@ -36,6 +36,7 @@ import {
   CLOT_ROLL_INTERVAL,
   BASE_CLOT_CHANCE
 } from '../core/Wounds';
+import { feedOnVictim } from '../core/Lineages';
 import { lethalAnatomyCause } from '../core/BodyParts';
 import conditionsData from '../database/conditions.jsonc';
 import buildingsData from '../database/buildings.jsonc';
@@ -124,7 +125,7 @@ import {
   handleDrinking,
   handleWashing
 } from './pawn/handlers/needs';
-import { handleFighting, handleFleeing, handleHunting } from './pawn/handlers/combat';
+import { handleFighting, handleFleeing, handleHunting, handleBloodHunt } from './pawn/handlers/combat';
 // Re-exported for external consumers that imported them from this module historically.
 export { PAWN_STATE, type PawnStateName };
 export { resetUnreachableJobs } from './pawn/pawnHelpers';
@@ -751,22 +752,100 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // Trait-driven meter triggers (berserker rage on pain) — stamp the timed condition on the rising edge.
   stampTriggeredConditions(pawn);
 
-  // LINEAGES §4 — hourly environmental deed accrual, ONLY for pawns carrying an awakening meter (rare)
-  // on a sparse ~1-in-game-hour cadence (750 ticks): allocation-free and invisible on the common path.
-  if (pawn.lineagePaths?.length && gameState.turn % 750 === 0) {
-    if ((pawn.needs?.wetness ?? 0) >= 50) {
-      const deeds = (pawn.deeds ??= {});
-      deeds.wetHours = (deeds.wetHours ?? 0) + 1; // "keep your skin soaked" (amphibian)
+  // LINEAGES-II — bloodthirst SEIZES the body (the collapse `fsmState` precedent): while the condition
+  // holds, the pawn is forced into the uncontrollable hunt and the draft is refused every tick; when it
+  // lifts (fed, or the rage burned out), control returns. Gated on the cached bloodNeedKind (rare pawns).
+  if (pawn.bloodNeedKind && pawn.isAlive !== false) {
+    const thirsting = (pawn.conditionTimers?.bloodthirst ?? 0) > 0;
+    if (thirsting && pawn.currentState !== PAWN_STATE.COLLAPSED) {
+      if (pawn.currentState !== PAWN_STATE.BLOOD_HUNT) {
+        pawn.currentState = PAWN_STATE.BLOOD_HUNT;
+        pawn.activeJob = undefined;
+        pawn.huntTargetId = undefined;
+        pawn.path = [];
+        pawn.isMoving = false;
+      }
+      if (pawn.drafted) {
+        pawn.drafted = false; // the hunger does not answer to orders
+        pawn.draftTarget = undefined;
+      }
+    } else if (!thirsting && pawn.currentState === PAWN_STATE.BLOOD_HUNT) {
+      pawn.currentState = PAWN_STATE.IDLE; // sated / burned out — the pawn comes back to itself
+      pawn.huntTargetId = undefined;
     }
-    // "Stand under open moonlight" (werewolf): a full-moon NIGHT hour spent under the open sky.
-    if (
-      isFullMoon(dayIndexForTurn(gameState.turn)) &&
-      getAmbientLight(gameState.turn) < 0.35 &&
-      pawn.position &&
-      !isRoofedTile(pawn.position.x, pawn.position.y)
-    ) {
-      const deeds = (pawn.deeds ??= {});
-      deeds.moonlightHours = (deeds.moonlightHours ?? 0) + 1;
+  }
+
+  // LINEAGES §4 / LINEAGES-II — hourly cadence (750 ticks ≈ 1 in-game hour), ONLY for pawns carrying an
+  // awakening meter or a blood need (rare): allocation-free and invisible on the common path.
+  if (gameState.turn % 750 === 0) {
+    if (pawn.lineagePaths?.length) {
+      if ((pawn.needs?.wetness ?? 0) >= 50) {
+        const deeds = (pawn.deeds ??= {});
+        deeds.wetHours = (deeds.wetHours ?? 0) + 1; // "keep your skin soaked" (amphibian)
+      }
+      // Hours on the water: standing in deep swamp, or wading the shore (a water tile alongside).
+      if (pawn.position) {
+        const { x, y } = pawn.position;
+        const isWaterish = (t?: { type?: string; terrainType?: string }) =>
+          !!t && (t.type === 'water' || t.terrainType === 'river' || t.terrainType === 'lake');
+        const here = gameState.worldMap[y]?.[x];
+        const onWater =
+          here?.terrainType === 'swamp' ||
+          isWaterish(here) ||
+          isWaterish(gameState.worldMap[y]?.[x + 1]) ||
+          isWaterish(gameState.worldMap[y]?.[x - 1]) ||
+          isWaterish(gameState.worldMap[y + 1]?.[x]) ||
+          isWaterish(gameState.worldMap[y - 1]?.[x]);
+        if (onWater) {
+          const deeds = (pawn.deeds ??= {});
+          deeds.waterHours = (deeds.waterHours ?? 0) + 1; // "stay on water / deep-swamp tiles"
+        }
+      }
+      // Night hours under the open sky: every hour counts toward the farseer's sky-watching; the same
+      // hour ALSO counts as moonlight when the moon is full (werewolf).
+      if (
+        getAmbientLight(gameState.turn) < 0.35 &&
+        pawn.position &&
+        !isRoofedTile(pawn.position.x, pawn.position.y)
+      ) {
+        const deeds = (pawn.deeds ??= {});
+        deeds.starlitHours = (deeds.starlitHours ?? 0) + 1; // "watch the night sky" (farseer)
+        if (isFullMoon(dayIndexForTurn(gameState.turn)))
+          deeds.moonlightHours = (deeds.moonlightHours ?? 0) + 1; // "stand under open moonlight" (werewolf)
+      }
+    }
+    // Silk trickle (LINEAGES-II §3): a living grafted spinneret spins 1 raw silk every ~6 in-game
+    // hours straight into the pawn's pack (gated on the cached flag — rare pawns only).
+    if (pawn.silkSpinner && gameState.turn % 4500 === 0 && pawn.inventory) {
+      const alive = (pawn.limbs ?? []).some((l) =>
+        l.parts?.some((p) => p.id === 'spinneret' && !p.isMissing && p.health > 0)
+      );
+      if (alive) {
+        pawn.inventory.items['raw_silk'] = (pawn.inventory.items['raw_silk'] ?? 0) + 1;
+        pawn.inventory.weightKg += itemService.getItemById('raw_silk')?.weightKg ?? 0;
+      }
+    }
+    // Blood hunger (LINEAGES-II §1/§2): fills ~2/hour → full in ~2 in-game days of neglect.
+    if (pawn.bloodNeedKind && pawn.isAlive !== false && pawn.needs) {
+      const hunger = Math.min(100, (pawn.needs.bloodHunger ?? 0) + 2);
+      pawn.needs.bloodHunger = hunger;
+      // Vampiric ROUTINE feeding: at 70+ the pawn helps itself to the nearest colonist within 12 tiles
+      // (a neck puncture + a blood drain — the victim wakes lighter). Kept abstract in v1: no walk-up.
+      if (pawn.bloodNeedKind === 'humanoid' && hunger >= 70 && pawn.position) {
+        const victim = gameState.pawns.find(
+          (v) =>
+            v.id !== pawn.id &&
+            v.isAlive !== false &&
+            v.position &&
+            Math.abs(v.position.x - pawn.position!.x) + Math.abs(v.position.y - pawn.position!.y) <= 12
+        );
+        if (victim) feedOnVictim(pawn, victim, gameState.turn);
+      }
+      // Unfed to the brim → the bloodthirst rage seizes the pawn (refreshed while the meter stays full).
+      if ((pawn.needs.bloodHunger ?? 0) >= 100) {
+        const timers = (pawn.conditionTimers ??= {});
+        timers.bloodthirst = Math.max(timers.bloodthirst ?? 0, ticksFromGameHours(6));
+      }
     }
   }
 
@@ -1282,7 +1361,8 @@ const STATE_HANDLERS: Record<string, PawnHandler> = {
   [PAWN_STATE.WASHING]: handleWashing,
   [PAWN_STATE.FIGHTING]: handleFighting,
   [PAWN_STATE.FLEEING]: handleFleeing,
-  [PAWN_STATE.HUNTING]: handleHunting
+  [PAWN_STATE.HUNTING]: handleHunting,
+  [PAWN_STATE.BLOOD_HUNT]: handleBloodHunt
 };
 
 function tickPawn(pawn: Pawn, gameState: GameState): GameState {

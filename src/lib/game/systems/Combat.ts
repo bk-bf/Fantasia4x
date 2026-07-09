@@ -1174,6 +1174,13 @@ class CombatServiceImpl implements CombatService {
       (updated as Mob).huntTargetId = undefined;
     }
 
+    // LINEAGES-II §4: a crushing blow ENDURED feeds the crustacean awakening (meter-pawns only — the
+    // lineagePaths gate keeps this off every ordinary hit).
+    if (entityType === 'pawn' && (updated as Pawn).lineagePaths?.length && injury.type === 'crush') {
+      const deeds = ((updated as Pawn).deeds ??= {});
+      deeds.bluntHitsTaken = (deeds.bluntHitsTaken ?? 0) + 1;
+    }
+
     return this.spliceEntity(state, entity.id, updated, entityType === 'mob');
   }
 
@@ -2183,6 +2190,12 @@ class CombatServiceImpl implements CombatService {
         if (!target) continue;
       } else if (pawn.currentState === 'Fighting') {
         target = this.nearestHostileInRange(pawn, mobs, acquireRange);
+      } else if (pawn.currentState === 'BloodHunt' && pawn.huntTargetId) {
+        // LINEAGES-II: the lose-control hunt swings at its acquired quarry — beast OR colonist.
+        target =
+          mobs.find((m) => m.id === pawn.huntTargetId && m.isAlive !== false && m.state !== 'Corpse') ??
+          state.pawns.find((p) => p.id === pawn.huntTargetId && p.id !== pawn.id && p.isAlive !== false);
+        if (!target) continue;
       } else if (pawn.currentState === 'Hunting' && pawn.huntTargetId) {
         // Work-driven hunt: swing at the marked quarry (a neutral animal isn't a
         // "hostile", so it must be targeted explicitly rather than via nearestAdjacentHostile).

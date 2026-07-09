@@ -1083,14 +1083,20 @@
         "modifiers"  : {}
     },
     {
+        // LINEAGES-II §1/§2 — stamped when `needs.bloodHunger` hits 100. `fsmState` SEIZES the pawn
+        // into the uncontrollable hunt (the collapse precedent): draft refused, the FSM chases and
+        // devours/drains the nearest living thing — colonists included — until fed.
         "id"         : "bloodthirst",
         "name"       : "Bloodthirst",
-        "flags"      : ["racial", "need"],
+        "flags"      : ["cultural", "need"],
         "transient"  : true,
-        "description": "A gnawing hunger for blood, focus frays and work comes harder while it goes unfed.",
+        "floater"    : true,
+        "priority"   : 65,
+        "fsmState"   : "BloodHunt",
+        "description": "The hunger has the reins now — whatever is nearest and alive will do.",
         "color"      : "#8B1A1A",
         "charSpans"  : [ {"sheet": "items", "id": 84} ],
-        "modifiers"  : {"workEfficiency": 0.95}
+        "modifiers"  : {"strength": 1.2, "intelligence": 0.7}
     },
     {
         "id"         : "berserk",
@@ -1344,6 +1350,19 @@
         "modifiers"  : {"strength": 1.1}
     },
     {
+        // Torpid Blood (amphibian) — ACTIVE while cold exposure builds: the cold-blooded body slows,
+        // sluggish hands and feet until it warms.
+        "id"         : "cold_torpor",
+        "name"       : "Torpid",
+        "flags"      : ["cultural", "environmental"],
+        "transient"  : true,
+        "description": "The cold has reached the blood — everything moves as if through deep water.",
+        "color"      : "#6a9ac0",
+        "charSpans"  : [ {"sheet": "font", "id": 247} ],
+        "activateWhen": {"need": "coldExposure", "atOrAbove": 30},
+        "modifiers"  : {"dexterity": 0.85, "moveSpeed": 0.85, "workEfficiency": 0.9}
+    },
+    {
         // Parched Skin — ACTIVE while the amphibian's skin has gone dry (low wetness): the body wilts
         // until it is soaked again.
         "id"         : "parched_skin",
@@ -1385,6 +1404,8 @@
         "description": "Reads the dark by its echoes, a shout paints the whole room.",
         "color"      : "#5C6BC0",
         "charSpans"  : [ {"sheet": "font", "id": 247} ],
+        // §0: the echolocation TRAIT's dark-sight lives here on its pill (condition `grants`).
+        "grants"     : {"nightVision": 1.0},
         "modifiers"  : {}
     },    {
         "id"         : "ironclad_mind",

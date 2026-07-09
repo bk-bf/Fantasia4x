@@ -15,7 +15,20 @@
     // parent is the CLEAN marker `arachnid-blood`, not the old `arachnid-heritage` subCapability
     // bundle — that bundle flattens into this lineage with the old-heritage pass (LINEAGES-II).
     { "id": "arachnid",  "name": "Arachnid",  "parent": "arachnid-blood",  "description": "Spider blood — venom, extra eyes, and a hunter's patience." },
-    { "id": "vampiric",  "name": "Vampiric",  "parent": "vampiric-heritage",  "description": "The blood-curse — a mighty pawn that must feed on its own kind." }
+    { "id": "vampiric",  "name": "Vampiric",  "parent": "vampiric-heritage",  "description": "The blood-curse — a mighty pawn that must feed on its own kind." },
+    // ── The flattened old heritages (LINEAGES-II §4) — born-in via a Culture's guaranteed marker;
+    //    farseer/crustacean are also awakenable (dormant Path-B meters on Spider Eyes / Gills). ──
+    { "id": "dragon",      "name": "Dragon",      "parent": "dragon-heritage",      "description": "The old draconic fire — scale, claw and breath." },
+    { "id": "stoneblood",  "name": "Stoneblood",  "parent": "stoneblood-heritage",  "description": "The mountain's patience — stone skin and unbreakable bone." },
+    { "id": "echoborn",    "name": "Echoborn",    "parent": "echoborn-heritage",    "description": "Cave-blood that sees with its ears." },
+    { "id": "sporeborn",   "name": "Sporeborn",   "parent": "sporeborn-heritage",   "description": "A mycelial partner in the flesh." },
+    { "id": "crustacean",  "name": "Shellblood",  "parent": "crustacean-heritage",  "description": "Tide-blood — plate for skin and a crushing grip." },
+    { "id": "stormborn",   "name": "Stormborn",   "parent": "stormborn-heritage",   "description": "A charge in the blood — the sky's quickness and temper." },
+    { "id": "shadeborn",   "name": "Shadeborn",   "parent": "shadeborn-heritage",   "description": "Dusk-blood at home in the dark places." },
+    { "id": "colossus",    "name": "Colossus",    "parent": "colossus-heritage",    "description": "Giant's blood — the frame keeps trying to become what it remembers." },
+    { "id": "wildblooded", "name": "Wildblooded", "parent": "wildblooded-heritage", "description": "Green blood — the growing world mends them like a garden." },
+    { "id": "farseer",     "name": "Farseer",     "parent": "farseer-heritage",     "description": "The line that watches, and is seldom surprised." },
+    { "id": "blighted",    "name": "Blighted",    "parent": "blighted-heritage",    "description": "A poisoned inheritance that endures what should kill it." }
   ],
   // `deed` is the pawn.deeds counter incremented at the source event; `range` is [min,max] for the
   // per-pawn rolled target. `label` surfaces in the awakening-meter tooltip (player-facing).
@@ -44,6 +57,10 @@
     { "id": "trap-prey",       "lineage": "arachnid", "deed": "ensnaredKills",  "range": [10, 20], "label": "Kill ensnared / slowed prey" },
     { "id": "cull-crawlers",   "lineage": "arachnid", "deed": "kill:arachnid",  "range": [10, 20], "label": "Kill spiders & insects" },
     // ── Vampiric ──
-    { "id": "first-blood",     "lineage": "vampiric", "deed": "drewHumanoidBlood", "range": [10, 20], "label": "Draw humanoid blood" }
+    { "id": "first-blood",     "lineage": "vampiric", "deed": "drewHumanoidBlood", "range": [10, 20], "label": "Draw humanoid blood" },
+    // ── Farseer (Path B on Spider Eyes) ──
+    { "id": "sky-watching",    "lineage": "farseer", "deed": "starlitHours", "range": [50, 100], "label": "Watch the night sky" },
+    // ── Crustacean (Path B on Gills) ──
+    { "id": "endure-blows",    "lineage": "crustacean", "deed": "bluntHitsTaken", "range": [25, 50], "label": "Endure crushing blows" }
   ]
 }

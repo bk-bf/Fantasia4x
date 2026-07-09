@@ -9,6 +9,7 @@
 import lineagesRaw from '../database/lineages.jsonc';
 import traitDbData from '../database/traits.jsonc';
 import { rng } from './rng';
+import { recomputeWound } from './Wounds';
 import type { Pawn, Trait } from './types';
 import type { LineagePath } from './types/culture';
 
@@ -131,6 +132,40 @@ function gainableMembers(pawn: Pawn, lineage: string): Trait[] {
     if (t.stage && t.stage > 1) return false;
     return true;
   });
+}
+
+/**
+ * LINEAGES-II §2 — one vampiric feeding: a small puncture on the victim's neck (a real wound, bleeds a
+ * little until it clots or is dressed) + a blood drain, and the feeder's blood hunger resets. Mutates
+ * both live pawns in place (the FSM convention). Used by the routine hourly feed AND the lose-control
+ * hunt; the werewolf's carcass-devour path resets the same meter through `sateBloodHunger`.
+ */
+export function feedOnVictim(feeder: Pawn, victim: Pawn, turn: number): void {
+  const limb = victim.limbs?.find((l) => l.parts?.some((p) => p.id === 'neck'));
+  const part = limb?.parts?.find((p) => p.id === 'neck');
+  if (part && !part.isMissing) {
+    const existing = part.injuries.find((w) => w.type === 'puncture' && !w.permanent);
+    const accum = Math.min((existing?.damage ?? 0) + 2, part.maxHp);
+    const wound = recomputeWound('neck', 'puncture', accum, existing, turn, part.maxHp);
+    if (existing) Object.assign(existing, wound);
+    else part.injuries.push(wound);
+    part.health = Math.max(0, part.health - 2);
+    limb!.bleedRate = (limb!.parts ?? []).reduce(
+      (s, p) => s + p.injuries.reduce((a, w) => a + w.bleeding, 0),
+      0
+    );
+    // Keep the flat injuries mirror in step (rare event — the rebuild is fine here).
+    victim.injuries = (victim.limbs ?? []).flatMap((l) => l.parts ?? []).flatMap((p) => p.injuries);
+  }
+  const maxBV = victim.maxBloodVolume ?? 100;
+  victim.bloodVolume = Math.max(15, (victim.bloodVolume ?? maxBV) - 12);
+  sateBloodHunger(feeder);
+}
+
+/** Reset a pawn's blood hunger and lift the bloodthirst rage (fed — control returns next tick). */
+export function sateBloodHunger(pawn: Pawn): void {
+  if (pawn.needs) pawn.needs.bloodHunger = 0;
+  if (pawn.conditionTimers?.bloodthirst) delete pawn.conditionTimers.bloodthirst;
 }
 
 export interface LineageGrowthResult {

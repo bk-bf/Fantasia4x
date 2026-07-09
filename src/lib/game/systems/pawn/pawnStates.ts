@@ -23,7 +23,10 @@ export const PAWN_STATE = {
   // Downed by cumulative pain — out of the fight until pain subsides.
   COLLAPSED: 'Collapsed',
   // Carrying a downed colonist to shelter (player rescue order). See handlers/rescue.ts.
-  RESCUING: 'Rescuing'
+  RESCUING: 'Rescuing',
+  // LINEAGES-II: bloodthirst has the body — an UNCONTROLLABLE hunt (draft refused, like Collapsed)
+  // that chases and devours/drains the nearest living thing until fed. See handlers/combat.ts.
+  BLOOD_HUNT: 'BloodHunt'
 } as const;
 
 export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];

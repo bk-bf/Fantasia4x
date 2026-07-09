@@ -82,6 +82,18 @@
     <span class="desc">{wetDesc(wetnessPct)}</span>
   </div>
 
+  {#if needs.bloodHunger !== undefined}
+    {@const bhPct = Math.round(needs.bloodHunger)}
+    <div class="need-row">
+      <span class="lbl">BLOODLUST</span>
+      <span class="block-bar" style="color: {getNeedColor(bhPct)}">{blockBar(bhPct)}</span>
+      <span class="val" style="color: {getNeedColor(bhPct)}">{bhPct}/100</span>
+      <span class="desc"
+        >{bhPct < 40 ? 'sated' : bhPct < 70 ? 'stirring' : bhPct < 100 ? 'ravenous' : 'frenzied'}</span
+      >
+    </div>
+  {/if}
+
   {#if pawn.maxBloodVolume}
     {@const maxBV = pawn.maxBloodVolume}
     {@const curBV = pawn.bloodVolume ?? maxBV}

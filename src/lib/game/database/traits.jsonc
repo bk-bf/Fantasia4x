@@ -133,7 +133,7 @@
         "id"         : "marsh-dweller",
         "scope"      : "cultural",
         "rarity"     : "common",
-        "kind"       : "passive",
+        "kind"       : "attribute",
         "name"       : "Marsh Dweller",
         "description": "Bred in fetid swamps, inured to rot and fever.",
         "flavorLine" : "fever and foul water that fell other folk barely slow them",
@@ -342,7 +342,7 @@
         "id"         : "weak-stomached",
         "scope"      : "cultural",
         "rarity"     : "negative",
-        "kind"       : "passive",
+        "kind"       : "attribute",
         "name"       : "Delicate",
         "description": "A queasy constitution, sickens on foul food and turns from bloody work.",
         "flavorLine" : "a whiff of rot is enough to turn them green",
@@ -393,7 +393,7 @@
         "id"         : "slow-mending",
         "scope"      : "cultural",
         "rarity"     : "negative",
-        "kind"       : "passive",
+        "kind"       : "attribute",
         "name"       : "Slow-Mending",
         "description": "Wounds linger and sickness digs in, a body poor at repairing itself.",
         "flavorLine" : "even a scratch stays angry on them for weeks",
@@ -423,7 +423,7 @@
         "id"         : "pox-marked",
         "scope"      : "cultural",
         "rarity"     : "negative",
-        "kind"       : "passive",
+        "kind"       : "attribute",
         "name"       : "Pox-Ridden",
         "description": "Never quite shed the childhood plagues, quick to sicken, slow to recover.",
         "flavorLine" : "old pockmarks stipple them like hail-struck clay",
@@ -873,6 +873,52 @@
         "effects"     : {"constitutionBonus": 2}
     },
     {
+        "id"          : "murk-eyes",
+        "scope"       : "cultural",
+        "rarity"      : "rare",
+        "kind"        : "attribute",
+        "lineage"     : ["amphibian"],
+        "name"        : "Murk Eyes",
+        "description" : "Eyes made for silted water and moonless bogs, the murk is no curtain to them.",
+        "effects"     : {"nightVision": 0.5}
+    },
+    {
+        "id"           : "torpid-blood",
+        "scope"        : "cultural",
+        "rarity"       : "negative",
+        "kind"         : "passive",
+        "lineage"      : ["amphibian"],
+        "name"         : "Torpid Blood",
+        "description"  : "Cold-running blood that thickens in the chill — winter makes them slow as pond water.",
+        "flavorLine"   : "on frosty mornings they move like the half-asleep",
+        "selfCondition": "cold_torpor",
+        "effects"      : {}
+    },
+    {
+        "id"             : "amphibian-palate",
+        "scope"          : "cultural",
+        "rarity"         : "negative",
+        "kind"           : "passive",
+        "lineage"        : ["amphibian"],
+        "name"           : "Amphibian Palate",
+        "description"    : "A gut tuned to the water's table — only fish sits right; the land's food passes untouched.",
+        "flavorLine"     : "they trade their bread for the smallest perch",
+        "dietRestriction": "aquatic",
+        "effects"        : {}
+    },
+    {
+        "id"          : "silk-spinners",
+        "scope"       : "cultural",
+        "rarity"      : "rare",
+        "kind"        : "bodyMod",
+        "lineage"     : ["arachnid"],
+        "name"        : "Silk Spinners",
+        "description" : "Spinneret glands grown low on the back, a slow, steady thread of raw silk, as long as they live.",
+        "flavorLine"  : "their clothes never fray where the pale thread binds them",
+        "grafts"      : [ { "limb": "spinnerets", "parts": ["spinneret"] } ],
+        "effects"     : {}
+    },
+    {
         "id"           : "parched-skin",
         "scope"        : "cultural",
         "rarity"       : "negative",
@@ -1023,7 +1069,7 @@
         "description"  : "A battle-fury in the veins: when the pain of a fight bites deep it looses a devastating red rage — then leaves the body spent.",
         "flavorLine"   : "a red fury waits just beneath their calm, eager to be loosed",
         "triggeredCondition": "berserk",
-        "effects"      : {"combatMods": {"melee_damage": 1.15}}
+        "effects"      : {}
     },
     {
         "id"         : "stone-bones",
@@ -1046,155 +1092,19 @@
         "description"  : "A creature of the night, sees in pitch dark as by day, but drowses under the sun.",
         "flavorLine"   : "they come alive under the stars and drowse beneath the sun",        "effects"      : {"nightVision": 1.0}
     },
-    {
-        "id": "amphibious",
-        "scope": "cultural",
-        "rarity": "mythic",
-        "kind": "passive",
-        "name": "Amphibious",
-        "description": "A deep aquatic lineage, gilled, web-limbed and moist-skinned. At home in the water, but the dry air is unkind. A lesser cousin of the great bloodlines.",
-        "flavorLine": "their skin glistens even in the driest air, as if the river never quite let them go",
-        "effects": {}, "resistances": {"wetness": 0.2},
-        "subCapabilities": [
-            {
-                "id"           : "gilled",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Gills",
-                "description"  : "Slitted gills draw breath from water as easily as from air.",
-                "selfCondition": "gilled",
-                "effects"      : {}
-            },
-            {
-                "id"         : "swift-swimmer",
-                "scope"      : "cultural",
-                "kind"       : "attribute",
-                "name"       : "Swift Swimmer",
-                "description": "Webbed and powerful in the water, a deft, tireless fisher.",
-                "effects"    : { "workSpeed": {"fishing": 1.5} }
-            },
-            {
-                "id"           : "moist-skinned",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Moist Skin",
-                "description"  : "Permeable amphibian skin sheds water and cold, but parches and burns in dry heat.",
-                "selfCondition": "moist_skinned",
-                "effects": {}, "resistances": {"wetness": 0.4, "cold": 0.15, "fire": -0.2}
-            }
-        ]
-    },
     // ══ CULTURAL · LEGENDARY — very rare; a bundle, each sub-capability rolled per pawn ══
     {
-        "id"             : "dragon-heritage",
-        "scope"          : "cultural",
-        "rarity"         : "legendary",
-        "kind"           : "passive",
-        "name"           : "Dragon Heritage",
-        "description"    : "An ancient draconic bloodline, no two dragon-blooded are ever quite alike.",
-        "flavorLine"     : "the old draconic fire still smoulders in their blood",
-        "effects": {}, "resistances": {"fire": 0.25},
-        "subCapabilities": [
-            {
-                "id"           : "dragon-scales",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "name"         : "Dragon Scales",
-                "description"  : "Armored scales impervious to flame.",
-                "naturalArmor": 20,
-                "carryPenalty": 0.12,
-                "effects": {}, "resistances": {"fire": 0.5}
-            },
-            {
-                "id"           : "dragon-claws",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "name"         : "Dragon Claws",
-                "description"  : "Talons that shear through armor.",
-                "naturalWeapons": ["dragon-claws"],
-                "effects"      : {}
-            },
-            {
-                "id"         : "dragon-eyes",
-                "scope"      : "cultural",
-                "kind"       : "passive",
-                "name"       : "Dragon Eyes",
-                "description": "Slitted eyes that pierce the dark.",
-                "effects"    : {"nightVision": 1.0}
-            },
-            {
-                "id"           : "dragon-blood",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Dragon Blood",
-                "description"  : "Fireproof blood that mends wounds fast.",                "effects": {"healRate": 0.5}, "resistances": {"fire": 0.5}
-            },
-            {
-                "id"         : "dragon-might",
-                "scope"      : "cultural",
-                "kind"       : "passive",
-                "name"       : "Dragon's Might",
-                "description": "Draconic strength behind every wielded blow.",
-                "effects"    : {"strengthBonus": 1, "combatMods": {"melee_damage": 1.2}}
-            },
-            {
-                "id"           : "fire-breath",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "name"         : "Fire Breath",
-                "description"  : "A gout of dragonfire that sears and sets alight.",
-                "naturalWeapons": ["flame-breath"],
-                "effects"      : {}
-            }
-        ]
+        "id"          : "dragon-heritage",
+        "scope"       : "cultural",
+        "rarity"      : "legendary",
+        "kind"        : "passive",
+        "lineage"     : ["dragon"],
+        "name"        : "Dragon Heritage",
+        "description" : "An ancient draconic bloodline, no two dragon-blooded are ever quite alike.",
+        "flavorLine"  : "the old draconic fire still smoulders in their blood",
+        "effects"     : {}, "resistances": {"fire": 0.25}
     },
-    {
-        "id"             : "vampiric",
-        "scope"          : "cultural",
-        "rarity"         : "legendary",
-        "kind"           : "passive",
-        "name"           : "Vampiric",
-        "description"    : "The blood-curse, bloodsucking fangs, a hunger for blood, and a dread of the sun.",
-        "flavorLine"     : "a cold hunger sits behind their eyes, and daylight is no friend to them",
-        "effects"        : {"nightVision": 0.5},
-        "subCapabilities": [
-            {
-                "id"           : "bloodsucking-fangs",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "name"         : "Bloodsucking Fangs",
-                "description"  : "Feeding fangs that open the vein and drink.",
-                "naturalWeapons": ["bloodsucking-fangs"],
-                "effects"      : {}
-            },
-            {
-                "id"           : "sun-cursed",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Sun-Cursed",
-                "description"  : "Daylight saps their strength under an open sky.",
-                "selfCondition": "light_sensitive",
-                "effects"      : {}
-            },
-            {
-                "id"           : "blood-hunger",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Blood Hunger",
-                "description"  : "A gnawing thirst that frays focus when unfed.",
-                "selfCondition": "bloodthirst",
-                "effects"      : {}
-            },
-            {
-                "id"         : "vampire-strength",
-                "scope"      : "cultural",
-                "kind"       : "passive",
-                "name"       : "Undying Vigor",
-                "description": "Unnatural strength behind a wielded blade.",
-                "effects"    : {"strengthBonus": 1, "combatMods": {"melee_damage": 1.1}}
-            }
-        ]
-    },
+
     // ═══════════════════════════════════════════════════════════════════════════
     // ══ TRAIT-LIBRARY-EXPANSION (spec: .docs/.tasks/open/TRAIT-LIBRARY-EXPANSION.md) ══
     // §1 · Attribute-combo traits — never a lone axis: every combo pairs two logically-linked
@@ -3411,13 +3321,13 @@
         "kind": "passive",
         "lineage": ["amphibian"],
         "lineageExclusive": false,
-        "awakens": ["keep-soaked", "the-angler", "submerge", "eat-aquatic"],
+        "awakens": ["keep-soaked", "the-angler", "submerge", "eat-aquatic", "endure-blows"],
         "name": "Gill Frills",
         "description": "Feathery gill-frills at the throat, breathes water as easily as air, and a natural at wet work. Nothing closes around that neck.",
         "flavorLine": "feathered slits at their throat flare when they wade in",
         "selfCondition": "gill_frilled",
         "blocksSlots": ["gorget"],
-        "effects": { "workSpeed": {"fishing": 1.3} }
+        "effects": {}
     },
     {
         "id"         : "hollow-boned",
@@ -3439,7 +3349,7 @@
         "evolvesTo"    : "spider-eyes",
         "lineage"      : ["arachnid"],
         "lineageExclusive": false,
-        "awakens"      : ["venom-kills", "eat-vermin", "trap-prey", "cull-crawlers"],
+        "awakens"      : ["venom-kills", "eat-vermin", "trap-prey", "cull-crawlers", "sky-watching"],
         "name"         : "Extra Eye",
         "description"  : "A single dark spider's eye set above the brow, watching the dark and the edges of sight.",
         "flavorLine"   : "a third small black eye studs their brow, ever open",
@@ -3455,7 +3365,7 @@
         "evolvesTo"    : "spider-eyes-greater",
         "lineage"      : ["arachnid"],
         "lineageExclusive": false,
-        "awakens"      : ["venom-kills", "eat-vermin", "trap-prey", "cull-crawlers"],
+        "awakens"      : ["venom-kills", "eat-vermin", "trap-prey", "cull-crawlers", "sky-watching"],
         "name"         : "Spider Eyes",
         "description"  : "A pair of extra spider's eyes above the brow, the dark and the flanks holding no surprises.",
         "flavorLine"   : "four small black eyes stud their brow like beads",
@@ -4222,628 +4132,844 @@
     // radius, throttled + lingering application.
     // ═══════════════════════════════════════════════════════════════════════════
     {
-        "id"             : "stoneblood-heritage",
-        "scope"          : "cultural",
-        "rarity"         : "legendary",
-        "kind"           : "passive",
-        "name"           : "Stoneblood",
-        "description"    : "An earthen bloodline, mineral-patient, granite-hided, and the mountain remembers them.",
-        "flavorLine"     : "their veins run with a slow, mineral patience; the earth knows them as kin",
-        "effects": {"constitutionBonus": 1}, "resistances": {"blunt": 0.15},
-        "subCapabilities": [
-            {
-                "id"           : "pebbled-skin",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "stage"        : 1,
-                "name"         : "Pebbled Skin",
-                "description"  : "Skin studded with mineral nodules, the first setting of a stone hide.",
-                "naturalArmor": 10,
-                "carryPenalty": 0.08,
-                "evolvesTo"    : "granite-hide",
-                "effects"      : {}
-            },
-            {
-                "id"           : "granite-hide",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "stage"        : 2,
-                "name"         : "Granite Hide",
-                "description"  : "A hide set hard as quarried granite, heavy living armor.",
-                "naturalArmor": 18,
-                "carryPenalty": 0.14,
-                "evolvesTo"    : "living-rock",
-                "effects"      : {}
-            },
-            {
-                "id"           : "living-rock",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "stage"        : 3,
-                "name"         : "Living Rock",
-                "description"  : "Flesh gone to living stone, armor beyond forged plate, mineral-slow.",
-                "naturalArmor": 26,
-                "carryPenalty": 0.28,
-                "effects"      : {}
-            },
-            {
-                "id"         : "quarried-bones",
-                "scope"      : "cultural",
-                "kind"       : "bodyMod",
-                "name"       : "Quarried Bones",
-                "description": "Bones dense as cut rock, near impossible to break, ponderously heavy.",
-                "bodyMods"   : [ {"target": "skeleton", "hpMult": 2.2, "weightKg": 18} ],
-                "effects"    : {}
-            },
-            {
-                "id"         : "crushing-grip",
-                "scope"      : "cultural",
-                "kind"       : "passive",
-                "name"       : "Crushing Grip",
-                "description": "A grip that splits hafts, stone weight behind every wielded blow.",
-                "effects"    : {"strengthBonus": 1, "combatMods": {"melee_damage": 1.2}}
-            },
-            {
-                "id"           : "tremor-sense",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Tremor Sense",
-                "description"  : "Reads the ground's tremors through the soles, little moves nearby unnoticed.",
-                "selfCondition": "tremor_sense",
-                "effects"      : {"perceptionBonus": 2}
-            },
-            {
-                "id"         : "aura-fortitude",
-                "scope"      : "cultural",
-                "kind"       : "passive",
-                "name"       : "Guardian's Aura",
-                "description": "A mountain's stillness radiates from them, friends within a few strides stand firmer.",
-                "aura"       : {"condition": "fortitude", "radius": 4, "affects": "allies"},
-                "effects"    : {}
-            }
-        ]
+        "id"          : "stoneblood-heritage",
+        "scope"       : "cultural",
+        "rarity"      : "legendary",
+        "kind"        : "passive",
+        "lineage"     : ["stoneblood"],
+        "name"        : "Stoneblood",
+        "description" : "Blood that runs slow and heavy as wet mortar — the mountain's patience in a walking body.",
+        "flavorLine"  : "they stand so still that birds land on them",
+        "effects"     : {}, "resistances": {"blunt": 0.15}
     },
     {
-        "id": "echoborn-heritage",
+        "id"          : "stone-vigor",
+        "scope"       : "cultural",
+        "rarity"      : "rare",
+        "kind"        : "stat",
+        "lineage"     : ["stoneblood"],
+        "name"        : "Stone Vigor",
+        "description" : "A constitution like bedrock, weather and want wear it down slowly, if at all.",
+        "effects"     : {"constitutionBonus": 2}
+    },
+
+    {
+        "id"          : "echoborn-heritage",
+        "scope"       : "cultural",
+        "rarity"      : "mythic",
+        "kind"        : "passive",
+        "lineage"     : ["echoborn"],
+        "name"        : "Echoborn",
+        "description" : "A cave-line that traded bright eyes for ears that see — the dark holds no secrets from them.",
+        "flavorLine"  : "they tilt their head at sounds no one else has noticed",
+        "effects"     : {}
+    },
+
+    {
+        "id"          : "sporeborn-heritage",
+        "scope"       : "cultural",
+        "rarity"      : "legendary",
+        "kind"        : "passive",
+        "lineage"     : ["sporeborn"],
+        "name"        : "Sporeborn",
+        "description" : "A mycelial partner threaded through the flesh — what poisons others feeds the quiet thing inside.",
+        "flavorLine"  : "in damp weather they smell faintly of turned earth",
+        "effects"     : {}, "resistances": {"poison": 0.3, "disease": 0.3}
+    },
+
+    {
+        "id"          : "crustacean-heritage",
+        "scope"       : "cultural",
+        "rarity"      : "legendary",
+        "kind"        : "passive",
+        "lineage"     : ["crustacean"],
+        "name"        : "Shellblood",
+        "description" : "A tide-line inheritance — plate where skin should be, and a grip that does not open until it means to.",
+        "flavorLine"  : "salt air calms them like a hearth calms other folk",
+        "effects"     : {}, "resistances": {"blunt": 0.15}
+    },
+    {
+        "id"          : "shell-vigor",
+        "scope"       : "cultural",
+        "rarity"      : "rare",
+        "kind"        : "stat",
+        "lineage"     : ["crustacean"],
+        "name"        : "Tidal Vigor",
+        "description" : "A deep, armored constitution that shrugs off what would flatten softer folk.",
+        "effects"     : {"constitutionBonus": 2}
+    },
+
+    {
+        "id"          : "stormborn-heritage",
+        "scope"       : "cultural",
+        "rarity"      : "mythic",
+        "kind"        : "passive",
+        "lineage"     : ["stormborn"],
+        "name"        : "Stormborn",
+        "description" : "Blood with a charge in it — quick as a whipcrack, and the sky's temper never quite leaves them.",
+        "flavorLine"  : "their hair lifts a little before the thunder speaks",
+        "effects"     : {}, "resistances": {"lightning": 0.3}
+    },
+
+    {
+        "id"          : "shadeborn-heritage",
+        "scope"       : "cultural",
+        "rarity"      : "legendary",
+        "kind"        : "passive",
+        "lineage"     : ["shadeborn"],
+        "name"        : "Shadeborn",
+        "description" : "A dusk-line at home in the dark places — the shadow is kin, and the noon sun a stranger.",
+        "flavorLine"  : "lamplight never seems to reach their face first",
+        "effects"     : {}, "resistances": {"shadow": 0.3}
+    },
+
+    {
+        "id"          : "colossus-heritage",
+        "scope"       : "cultural",
+        "rarity"      : "mythic",
+        "kind"        : "passive",
+        "lineage"     : ["colossus"],
+        "name"        : "Colossus",
+        "description" : "Giant's blood, thinned but never gone — the frame keeps trying to become what it remembers.",
+        "flavorLine"  : "doorways were not made with them in mind",
+        "effects"     : {}
+    },
+
+    {
+        "id"          : "wildblooded-heritage",
+        "scope"       : "cultural",
+        "rarity"      : "legendary",
+        "kind"        : "passive",
+        "lineage"     : ["wildblooded"],
+        "name"        : "Wildblooded",
+        "description" : "Green blood under the skin — the growing world claims them as its own and mends them like a garden.",
+        "flavorLine"  : "cut flowers last longer in their hands",
+        "effects"     : {}, "resistances": {"disease": 0.2}
+    },
+
+    {
+        "id"          : "farseer-heritage",
+        "scope"       : "cultural",
+        "rarity"      : "mythic",
+        "kind"        : "passive",
+        "lineage"     : ["farseer"],
+        "name"        : "Farseer",
+        "description" : "A line that watches — the sky, the road, the long consequences — and is seldom surprised.",
+        "flavorLine"  : "they answer questions a breath before they are asked",
+        "effects"     : {}, "resistances": {"mental": 0.3}
+    },
+
+    {
+        "id"          : "blighted-heritage",
+        "scope"       : "cultural",
+        "rarity"      : "legendary",
+        "kind"        : "passive",
+        "lineage"     : ["blighted"],
+        "name"        : "Blighted",
+        "description" : "A poisoned inheritance — the body endures what should kill it, and pays for the privilege.",
+        "flavorLine"  : "sickness passes through the village and leaves their door alone",
+        "effects"     : {}, "resistances": {"poison": 0.4, "disease": 0.4}
+    },
+
+    // ══ LINEAGES-II §4 — members flattened out of the old heritage bundles (each was a nested
+    //    subCapability; now a top-level trait its lineage GROWS at seasonal growth events) ══
+    {
+        "id"           : "gilled",
+        "rarity"      : "rare",
+        "lineage"     : ["amphibian"],
+        "scope"        : "cultural",
+        "kind"         : "passive",
+        "name"         : "Gills",
+        "description"  : "Slitted gills draw breath from water as easily as from air.",
+        "selfCondition": "gilled",
+        "effects"      : {}
+    },
+    {
+        "id"         : "swift-swimmer",
+        "rarity"      : "rare",
+        "lineage"     : ["amphibian"],
+        "scope"      : "cultural",
+        "kind"       : "attribute",
+        "name"       : "Swift Swimmer",
+        "description": "Webbed and powerful in the water, a deft, tireless fisher.",
+        "effects"    : { "workSpeed": {"fishing": 1.5} }
+    },
+    {
+        "id"           : "moist-skinned",
+        "rarity"      : "rare",
+        "lineage"     : ["amphibian"],
+        "scope"        : "cultural",
+        "kind"         : "passive",
+        "name"         : "Moist Skin",
+        "description"  : "Permeable amphibian skin sheds water and cold, but parches and burns in dry heat.",
+        "selfCondition": "moist_skinned",
+        "effects": {}, "resistances": {"wetness": 0.4, "cold": 0.15, "fire": -0.2}
+    },
+    {
+        // The vampiric feeding need (LINEAGES-II §2): the blood-hunger meter fills over days; the pawn
+        // feeds on a nearby colonist of its own accord (neck puncture + blood drain). Left unfed, the
+        // `bloodthirst` condition is stamped by the meter at 100 and the pawn hunts uncontrollably.
+        "id"           : "blood-hunger",
+        "rarity"       : "negative",
+        "lineage"      : ["vampiric"],
+        "scope"        : "cultural",
+        "kind"         : "passive",
+        "name"         : "Blood Hunger",
+        "description"  : "A thirst no cup answers — it must come warm, from a living vein.",
+        "flavorLine"   : "they watch sleeping folk the way the hungry watch bread",
+        "bloodNeed"    : "humanoid",
+        "effects"      : {}
+    },
+    {
+        // The werewolf's twin (LINEAGES-II §1): sated by killing and devouring — raw meat and whole
+        // carcasses push the meter back down. A stocked corpse larder is legitimate counter-play.
+        "id"           : "carcass-hunger",
+        "rarity"       : "negative",
+        "lineage"      : ["werewolf"],
+        "scope"        : "cultural",
+        "kind"         : "passive",
+        "name"         : "Red Hunger",
+        "description"  : "A hunger that bread never touches — it wants the kill, and it keeps its own count.",
+        "flavorLine"   : "they eat their meat rare, then raw, then warm",
+        "bloodNeed"    : "carcass",
+        "effects"      : {}
+    },
+    {
+        "id"           : "webbing",
+        "rarity"      : "epic",
+        "lineage"     : ["arachnid"],
+        "scope"        : "cultural",
+        "kind"         : "naturalGear",
+        "name"         : "Webbing",
+        "description"  : "Spinnerets at the waist, a flung lash of silk that snares a foe in place.",
+        "naturalWeapons": ["web-shot"],
+        "blocksSlots"  : ["belt"],
+        "effects"      : {}
+    },
+    {
+        "id"           : "dragon-scales",
+        "rarity"      : "epic",
+        "lineage"     : ["dragon"],
+        "scope"        : "cultural",
+        "kind"         : "naturalGear",
+        "name"         : "Dragon Scales",
+        "description"  : "Armored scales impervious to flame.",
+        "naturalArmor": 20,
+        "carryPenalty": 0.12,
+        "effects": {}, "resistances": {"fire": 0.5}
+    },
+    {
+        "id"           : "dragon-claws",
+        "rarity"      : "rare",
+        "lineage"     : ["dragon"],
+        "scope"        : "cultural",
+        "kind"         : "naturalGear",
+        "name"         : "Dragon Claws",
+        "description"  : "Talons that shear through armor.",
+        "naturalWeapons": ["dragon-claws"],
+        "effects"      : {}
+    },
+    {
+        "id"         : "dragon-eyes",
+        "rarity"      : "epic",
+        "lineage"     : ["dragon"],
+        "scope"      : "cultural",
+        "kind"        : "attribute",
+        "name"       : "Dragon Eyes",
+        "description": "Slitted eyes that pierce the dark.",
+        "effects"    : {"nightVision": 1.0}
+    },
+    {
+        "id"           : "dragon-blood",
+        "rarity"      : "epic",
+        "lineage"     : ["dragon"],
+        "scope"        : "cultural",
+        "kind"        : "attribute",
+        "name"         : "Dragon Blood",
+        "description"  : "Fireproof blood that mends wounds fast.",                "effects": {"healRate": 0.5}, "resistances": {"fire": 0.5}
+    },
+    {
+        "id"         : "dragon-might",
+        "rarity"      : "epic",
+        "lineage"     : ["dragon"],
+        "scope"      : "cultural",
+        "kind"        : "stat",
+        "name"       : "Dragon's Might",
+        "description": "Draconic strength behind every wielded blow.",
+        "effects": {"strengthBonus": 2}
+    },
+    {
+        "id"           : "fire-breath",
+        "rarity"      : "epic",
+        "lineage"     : ["dragon"],
+        "scope"        : "cultural",
+        "kind"         : "naturalGear",
+        "name"         : "Fire Breath",
+        "description"  : "A gout of dragonfire that sears and sets alight.",
+        "naturalWeapons": ["flame-breath"],
+        "effects"      : {}
+    },
+    {
+        "id"           : "pebbled-skin",
+        "rarity"      : "uncommon",
+        "lineage"     : ["stoneblood"],
+        "evolvesTo"   : "granite-hide",
+        "stage"       : 1,
+        "scope"        : "cultural",
+        "kind"         : "naturalGear",
+        "stage"        : 1,
+        "name"         : "Pebbled Skin",
+        "description"  : "Skin studded with mineral nodules, the first setting of a stone hide.",
+        "naturalArmor": 10,
+        "carryPenalty": 0.08,
+        "evolvesTo"    : "granite-hide",
+        "effects"      : {}
+    },
+    {
+        "id"           : "granite-hide",
+        "rarity"      : "rare",
+        "lineage"     : ["stoneblood"],
+        "evolvesTo"   : "living-rock",
+        "stage"       : 2,
+        "scope"        : "cultural",
+        "kind"         : "naturalGear",
+        "stage"        : 2,
+        "name"         : "Granite Hide",
+        "description"  : "A hide set hard as quarried granite, heavy living armor.",
+        "naturalArmor": 18,
+        "carryPenalty": 0.14,
+        "evolvesTo"    : "living-rock",
+        "effects"      : {}
+    },
+    {
+        "id"           : "living-rock",
+        "rarity"      : "epic",
+        "lineage"     : ["stoneblood"],
+        "stage"       : 3,
+        "scope"        : "cultural",
+        "kind"         : "naturalGear",
+        "stage"        : 3,
+        "name"         : "Living Rock",
+        "description"  : "Flesh gone to living stone, armor beyond forged plate, mineral-slow.",
+        "naturalArmor": 26,
+        "carryPenalty": 0.28,
+        "effects"      : {}
+    },
+    {
+        "id"         : "quarried-bones",
+        "rarity"      : "rare",
+        "lineage"     : ["stoneblood"],
+        "scope"      : "cultural",
+        "kind"       : "bodyMod",
+        "name"       : "Quarried Bones",
+        "description": "Bones dense as cut rock, near impossible to break, ponderously heavy.",
+        "bodyMods"   : [ {"target": "skeleton", "hpMult": 2.2, "weightKg": 18} ],
+        "effects"    : {}
+    },
+    {
+        "id"         : "crushing-grip",
+        "rarity"      : "epic",
+        "lineage"     : ["stoneblood"],
+        "scope"      : "cultural",
+        "kind"        : "stat",
+        "name"       : "Crushing Grip",
+        "description": "A grip that splits hafts, stone weight behind every wielded blow.",
+        "effects": {"strengthBonus": 2}
+    },
+    {
+        "id"           : "tremor-sense",
+        "rarity"      : "rare",
+        "lineage"     : ["stoneblood"],
+        "scope"        : "cultural",
+        "kind"         : "passive",
+        "name"         : "Tremor Sense",
+        "description"  : "Reads the ground's tremors through the soles, little moves nearby unnoticed.",
+        "selfCondition": "tremor_sense",
+        "effects": {}
+    },
+    {
+        "id"         : "aura-fortitude",
+        "rarity"      : "epic",
+        "lineage"     : ["stoneblood"],
+        "scope"      : "cultural",
+        "kind"       : "passive",
+        "name"       : "Guardian's Aura",
+        "description": "A mountain's stillness radiates from them, friends within a few strides stand firmer.",
+        "aura"       : {"condition": "fortitude", "radius": 4, "affects": "allies"},
+        "effects"    : {}
+    },
+    {
+        "id"           : "echolocation",
+        "rarity"      : "epic",
+        "lineage"     : ["echoborn"],
+        "scope"        : "cultural",
+        "kind"         : "passive",
+        "name"         : "Echolocation",
+        "description"  : "Sees blind, the dark is a map, not a wall.",
+        "selfCondition": "echo_sighted",
+        "effects": {}
+    },
+    {
+        "id"           : "piercing-screech",
+        "rarity"      : "rare",
+        "lineage"     : ["echoborn"],
+        "scope"        : "cultural",
+        "kind"         : "naturalGear",
+        "name"         : "Piercing Screech",
+        "description"  : "A shriek that scrambles the senses of whatever it strikes.",
+        "naturalWeapons": ["screech"],
+        "effects"      : {}
+    },
+    {
+        "id"         : "echo-hollow-bones",
+        "rarity"      : "rare",
+        "lineage"     : ["echoborn"],
+        "scope"      : "cultural",
+        "kind"       : "bodyMod",
+        "name"       : "Hollow Bones",
+        "description": "Air-cored bone, a fast, fragile frame.",
+        "bodyMods"   : [ {"target": "skeleton", "hpMult": 0.8, "weightKg": -6} ],
+        "effects"    : {}
+    },
+    {
+        "id"         : "nightgleaner",
+        "rarity"      : "rare",
+        "lineage"     : ["echoborn"],
+        "scope"      : "cultural",
+        "kind"       : "attribute",
+        "name"       : "Nightgleaner",
+        "description": "Gleans the dark forest floor as ably as others do the noon field.",
+        "effects"    : { "workSpeed": {"foraging": 1.2}, "nightVision": 0.2 }
+    },
+    {
+        "id": "aura-insight",
+        "rarity"      : "epic",
+        "lineage"     : ["echoborn"],
         "scope": "cultural",
-        "rarity": "mythic",
         "kind": "passive",
-        "name": "Echoborn",
-        "description": "A cave-deep bloodline that reads the dark by its echoes, no two echoborn hear the world alike.",
-        "flavorLine": "they read the dark by its echoes; a shout paints them the whole room",
-        "effects": {"perceptionBonus": 1, "nightVision": 0.5},
-        "subCapabilities": [
-            {
-                "id"           : "echolocation",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Echolocation",
-                "description"  : "Sees blind, the dark is a map, not a wall.",
-                "selfCondition": "echo_sighted",
-                "effects"      : {"nightVision": 1.0}
-            },
-            {
-                "id"           : "piercing-screech",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "name"         : "Piercing Screech",
-                "description"  : "A shriek that scrambles the senses of whatever it strikes.",
-                "naturalWeapons": ["screech"],
-                "effects"      : {}
-            },
-            {
-                "id"         : "echo-hollow-bones",
-                "scope"      : "cultural",
-                "kind"       : "bodyMod",
-                "name"       : "Hollow Bones",
-                "description": "Air-cored bone, a fast, fragile frame.",
-                "bodyMods"   : [ {"target": "skeleton", "hpMult": 0.8, "weightKg": -6} ],
-                "effects"    : {}
-            },
-            {
-                "id"         : "nightgleaner",
-                "scope"      : "cultural",
-                "kind"       : "attribute",
-                "name"       : "Nightgleaner",
-                "description": "Gleans the dark forest floor as ably as others do the noon field.",
-                "effects"    : { "workSpeed": {"foraging": 1.2}, "nightVision": 0.2 }
-            },
-            {
-                "id": "aura-insight",
-                "scope": "cultural",
-                "kind": "passive",
-                "name": "Watchful Aura",
-                "description": "Their unease is contagious in the best way, friends within a few strides spot trouble sooner.",
-                "aura": {"condition": "keen_senses", "radius": 5, "affects": "allies"},
-                "effects": {}
-            }
-        ]
+        "name": "Watchful Aura",
+        "description": "Their unease is contagious in the best way, friends within a few strides spot trouble sooner.",
+        "aura": {"condition": "keen_senses", "radius": 5, "affects": "allies"},
+        "effects": {}
     },
     {
-        "id": "sporeborn-heritage",
+        "id"         : "spore-cloud",
+        "rarity"      : "epic",
+        "lineage"     : ["sporeborn"],
+        "scope"      : "cultural",
+        "kind"       : "passive",
+        "name"       : "Spore Cloud",
+        "description": "A haze of spores hangs about them, foes that press close sicken.",
+        "aura"       : {"condition": "nausea", "radius": 3, "affects": "foes"},
+        "effects"    : {}
+    },
+    {
+        "id"           : "fungal-knit",
+        "rarity"      : "rare",
+        "lineage"     : ["sporeborn"],
+        "scope"        : "cultural",
+        "kind"        : "attribute",
+        "name"         : "Fungal Knit",
+        "description"  : "The mycelium stitches torn flesh, wounds close unnaturally fast.",                "effects"      : {"healRate": 0.5}
+    },
+    {
+        "id"           : "toxin-immune",
+        "rarity"      : "epic",
+        "lineage"     : ["sporeborn"],
+        "scope"        : "cultural",
+        "kind"         : "passive",
+        "name"         : "Toxin-Immune",
+        "description"  : "The partner in the flesh eats poisons before they bite.",
+        "selfCondition": "toxin_immune",
+        "effects": {}, "resistances": {"poison": 0.5, "disease": 0.5}
+    },
+    {
+        "id"           : "rootling",
+        "rarity"      : "rare",
+        "lineage"     : ["sporeborn"],
+        "scope"        : "cultural",
+        "kind"         : "passive",
+        "name"         : "Rootling",
+        "description"  : "Feeds in the sun like a standing green thing.",
+        "selfCondition": "photosynthesis",
+        "effects"      : {}
+    },
+    {
+        "id"           : "shell-ironshell",
+        "rarity"      : "epic",
+        "lineage"     : ["crustacean"],
+        "scope"        : "cultural",
+        "kind"         : "naturalGear",
+        "stage"        : 3,
+        "name"         : "Ironshell",
+        "description"  : "A shell dense as wrought iron, armor that rivals plate.",
+        "naturalArmor": 20,
+        "carryPenalty": 0.18,
+        "effects"      : {}
+    },
+    {
+        "id"           : "crushing-claws",
+        "rarity"      : "epic",
+        "lineage"     : ["crustacean"],
+        "scope"        : "cultural",
+        "kind"         : "naturalGear",
+        "name"         : "Crushing Claws",
+        "description"  : "Massive shell-plated pincers, a crushing grip, useless with a crafted tool.",
+        "naturalWeapons": ["crusher-claw"],
+        // Unstaged (not a stage-3 line), so it blocks gloves only — mainHand/offHand stay free.
+        "blocksSlots"  : ["gloves"],
+        // dexterityPenalty folds the retired `crusher_clawed` condition's DEX ×0.92 (pincers).
+        "effects"      : { "dexterityPenalty": 1, "workSpeed": {"crafting": 0.75, "leatherworking": 0.8} }
+    },
+    {
+        "id"         : "ponderous-plating",
+        "rarity"      : "rare",
+        "lineage"     : ["crustacean"],
+        "scope"      : "cultural",
+        "kind"       : "bodyMod",
+        "name"       : "Ponderous Plating",
+        "description": "Shell anchored to heavy bone, hard to break, a real load to carry.",
+        "bodyMods"   : [ {"target": "skeleton", "hpMult": 1.6, "weightKg": 14} ],
+        "effects"    : {}
+    },
+    {
+        "id"         : "tireless",
+        "rarity"      : "epic",
+        "lineage"     : ["crustacean"],
+        "scope"      : "cultural",
+        "kind"       : "attribute",
+        "name"       : "Tireless",
+        "description": "The shell doesn't tire the way soft folk do, steady work, all day.",
+        "effects"    : { "workSpeed": {"all": 1.15} }
+    },
+    {
+        "id"           : "shell-gills",
+        "rarity"      : "rare",
+        "lineage"     : ["crustacean"],
+        "scope"        : "cultural",
+        "kind"         : "passive",
+        "name"         : "Shell-Gills",
+        "description"  : "Gill-frills under the shell rim, breathes water as easily as air.",
+        "selfCondition": "gill_frilled",
+        "effects"      : {}
+    },
+    {
+        "id"           : "shock-touch",
+        "rarity"      : "rare",
+        "lineage"     : ["stormborn"],
+        "scope"        : "cultural",
+        "kind"         : "naturalGear",
+        "name"         : "Shock Touch",
+        "description"  : "A crackling discharge rides every unarmed strike, scorches and staggers.",
+        "naturalWeapons": ["shock-strike"],
+        "effects"      : {}
+    },
+    {
+        "id"           : "lightning-ward",
+        "rarity"      : "epic",
+        "lineage"     : ["stormborn"],
+        "scope"        : "cultural",
+        "kind"         : "passive",
+        "name"         : "Grounded",
+        "description"  : "The storm's charge slides off them and into the earth.",
+        "selfCondition": "lightning_warded",
+        "effects": {}, "resistances": {"lightning": 0.6}
+    },
+    {
+        "id"         : "quickened-reflexes",
+        "rarity"      : "epic",
+        "lineage"     : ["stormborn"],
+        "scope"      : "cultural",
+        "kind"       : "stat",
+        "name"       : "Quickened",
+        "description": "Nerves that fire like the storm itself.",
+        "effects"    : {"dexterityBonus": 3}
+    },
+    {
+        "id"           : "tempest-fed",
+        "rarity"      : "rare",
+        "lineage"     : ["stormborn"],
+        "scope"        : "cultural",
+        "kind"         : "passive",
+        "name"         : "Storm-Fed",
+        "description"  : "Thrives when the sky turns, wind and storm quicken the blood.",
+        "selfCondition": "storm_fed",
+        "effects"      : {}
+    },
+    {
+        "id"         : "static-aura",
+        "rarity"      : "epic",
+        "lineage"     : ["stormborn"],
+        "scope"      : "cultural",
+        "kind"       : "passive",
+        "name"       : "Battle-Cadence",
+        "description": "The charge jumps to friends within a few strides, they act a beat faster.",
+        "aura"       : {"condition": "quickness", "radius": 4, "affects": "allies"},
+        "effects"    : {}
+    },
+    {
+        "id"           : "umbral-sight",
+        "rarity"      : "epic",
+        "lineage"     : ["shadeborn"],
+        "scope"        : "cultural",
+        "kind"        : "attribute",
+        "name"         : "Umbral Sight",
+        "description"  : "Sees in pitch dark as by day, the shadow is their element.",                "effects": {"nightVision": 1.0}, "resistances": {"shadow": 0.3}
+    },
+    {
+        "id"           : "chilling-touch",
+        "rarity"      : "rare",
+        "lineage"     : ["shadeborn"],
+        "scope"        : "cultural",
+        "kind"         : "naturalGear",
+        "name"         : "Chilling Touch",
+        "description"  : "A grave-cold grip, unarmed blows frost-burn where they land.",
+        "naturalWeapons": ["chill-strike"],
+        "effects"      : {}
+    },
+    {
+        "id"         : "dread-aura",
+        "rarity"      : "epic",
+        "lineage"     : ["shadeborn"],
+        "scope"      : "cultural",
+        "kind"       : "passive",
+        "name"       : "Dread Presence",
+        "description": "A cold wrongness hangs about them, foes that press close reel and falter.",
+        "aura"       : {"condition": "disoriented", "radius": 4, "affects": "foes"},
+        "effects"    : {}
+    },
+    {
+        "id"           : "sun-frail",
+        "rarity"      : "negative",
+        "lineage"     : ["shadeborn"],
+        "scope"        : "cultural",
+        "kind"         : "passive",
+        "name"         : "Sunless",
+        "description"  : "Daylight saps them under an open sky, the cost of the dark's favor.",
+        "selfCondition": "light_sensitive",
+        "effects"      : {}
+    },
+    {
+        "id"         : "shadowmeld",
+        "rarity"      : "epic",
+        "lineage"     : ["shadeborn"],
+        "scope"      : "cultural",
+        "kind"       : "stat",
+        "name"       : "Shadowmeld",
+        "description": "Moves as if the dark itself were greasing the way.",
+        "effects"    : {"dexterityBonus": 2}
+    },
+    {
+        "id"         : "giants-grip",
+        "rarity"      : "epic",
+        "lineage"     : ["colossus"],
+        "scope"      : "cultural",
+        "kind"        : "attribute",
+        "name"       : "Giant's Grip",
+        "description": "Any wielded weapon lands like a felling maul.",
+        "effects"    : {"combatMods": {"melee_damage": 1.3}}
+    },
+    {
+        "id"         : "massive-frame",
+        "rarity"      : "epic",
+        "lineage"     : ["colossus"],
+        "scope"      : "cultural",
+        "kind"       : "bodyMod",
+        "name"       : "Massive Frame",
+        "description": "A frame of oxen mass, a huge blood pool, and a load to move.",
+        "bodyMods"   : [ {"target": "flesh", "hpMult": 1.3, "weightKg": 30} ],
+        "effects"    : {}
+    },
+    {
+        "id"         : "titan-bones",
+        "rarity"      : "epic",
+        "lineage"     : ["colossus"],
+        "scope"      : "cultural",
+        "kind"       : "bodyMod",
+        "name"       : "Titan Bones",
+        "description": "Bones like bridge-beams, near impossible to break.",
+        "bodyMods"   : [ {"target": "skeleton", "hpMult": 2.2, "weightKg": 18} ],
+        "effects"    : {}
+    },
+    {
+        "id"           : "ground-shaker",
+        "rarity"      : "rare",
+        "lineage"     : ["colossus"],
+        "scope"        : "cultural",
+        "kind"         : "naturalGear",
+        "name"         : "Ground-Shaker",
+        "description"  : "A colossal body-slam that flattens whatever it lands on.",
+        "naturalWeapons": ["slam"],
+        "effects"      : {}
+    },
+    {
+        "id"         : "long-reach",
+        "rarity"      : "epic",
+        "lineage"     : ["colossus"],
+        "scope"      : "cultural",
+        "kind"       : "stat",
+        "name"       : "Long Reach",
+        "description": "An arm-span only a true giant owns, three metres of frame behind it.",
+        "requires"   : {"minHeightCm": 300},
+        "effects"    : {"strengthBonus": 3}
+    },
+    {
+        "id": "aura-might",
+        "rarity"      : "epic",
+        "lineage"     : ["colossus"],
         "scope": "cultural",
-        "rarity": "legendary",
         "kind": "passive",
-        "name": "Sporeborn",
-        "description": "A quiet mycelial partner shares their flesh, and its appetites. No two sporeborn fruit alike.",
-        "flavorLine": "a quiet mycelial partner shares their flesh, and their hungers",
-        "effects": {}, "resistances": {"poison": 0.3, "disease": 0.3},
-        "subCapabilities": [
-            {
-                "id"         : "spore-cloud",
-                "scope"      : "cultural",
-                "kind"       : "passive",
-                "name"       : "Spore Cloud",
-                "description": "A haze of spores hangs about them, foes that press close sicken.",
-                "aura"       : {"condition": "nausea", "radius": 3, "affects": "foes"},
-                "effects"    : {}
-            },
-            {
-                "id"           : "fungal-knit",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Fungal Knit",
-                "description"  : "The mycelium stitches torn flesh, wounds close unnaturally fast.",                "effects"      : {"healRate": 0.5}
-            },
-            {
-                "id"           : "toxin-immune",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Toxin-Immune",
-                "description"  : "The partner in the flesh eats poisons before they bite.",
-                "selfCondition": "toxin_immune",
-                "effects": {}, "resistances": {"poison": 0.5, "disease": 0.5}
-            },
-            {
-                "id"           : "rootling",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Rootling",
-                "description"  : "Feeds in the sun like a standing green thing.",
-                "selfCondition": "photosynthesis",
-                "effects"      : {}
-            }
-        ]
+        "name": "Warlord's Presence",
+        "description": "Standing near them feels like standing behind a wall, friends within a few strides fight harder.",
+        "aura": {"condition": "might", "radius": 4, "affects": "allies"},
+        "effects": {}
     },
     {
-        "id"             : "crustacean-heritage",
-        "scope"          : "cultural",
-        "rarity"         : "legendary",
-        "kind"           : "passive",
-        "name"           : "Shellblood",
-        "description"    : "The SHELL line, cased in plate it grew itself; slow, patient, and very hard to open.",
-        "flavorLine"     : "cased in plate it grew itself; slow, patient, and very hard to open",
-        "effects": {"constitutionBonus": 1}, "resistances": {"blunt": 0.15},
-        "subCapabilities": [
-            {
-                "id"           : "shell-ironshell",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "stage"        : 3,
-                "name"         : "Ironshell",
-                "description"  : "A shell dense as wrought iron, armor that rivals plate.",
-                "naturalArmor": 20,
-                "carryPenalty": 0.18,
-                "effects"      : {}
-            },
-            {
-                "id"           : "crushing-claws",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "name"         : "Crushing Claws",
-                "description"  : "Massive shell-plated pincers, a crushing grip, useless with a crafted tool.",
-                "naturalWeapons": ["crusher-claw"],
-                // Unstaged (not a stage-3 line), so it blocks gloves only — mainHand/offHand stay free.
-                "blocksSlots"  : ["gloves"],
-                // dexterityPenalty folds the retired `crusher_clawed` condition's DEX ×0.92 (pincers).
-                "effects"      : { "dexterityPenalty": 1, "workSpeed": {"crafting": 0.75, "leatherworking": 0.8} }
-            },
-            {
-                "id"         : "ponderous-plating",
-                "scope"      : "cultural",
-                "kind"       : "bodyMod",
-                "name"       : "Ponderous Plating",
-                "description": "Shell anchored to heavy bone, hard to break, a real load to carry.",
-                "bodyMods"   : [ {"target": "skeleton", "hpMult": 1.6, "weightKg": 14} ],
-                "effects"    : {}
-            },
-            {
-                "id"         : "tireless",
-                "scope"      : "cultural",
-                "kind"       : "attribute",
-                "name"       : "Tireless",
-                "description": "The shell doesn't tire the way soft folk do, steady work, all day.",
-                "effects"    : { "workSpeed": {"all": 1.15} }
-            },
-            {
-                "id"           : "shell-gills",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Shell-Gills",
-                "description"  : "Gill-frills under the shell rim, breathes water as easily as air.",
-                "selfCondition": "gill_frilled",
-                "effects"      : {}
-            }
-        ]
+        "id"           : "sunfed",
+        "rarity"      : "rare",
+        "lineage"     : ["wildblooded"],
+        "scope"        : "cultural",
+        "kind"         : "passive",
+        "name"         : "Sunfed",
+        "description"  : "Feeds in the sun like a standing green thing.",
+        "selfCondition": "photosynthesis",
+        "effects"      : {}
     },
     {
-        "id": "arachnid-heritage",
-        "scope": "cultural",
-        "rarity": "legendary",
-        "kind": "passive",
-        "name": "Spiderblood",
-        "description": "The SPIDER line, eight patient eyes, a quiet venomous bite, and a thread for every corner.",
-        "flavorLine": "eight patient eyes, a quiet bite, and a thread for every corner",
-        "effects": {"dexterityBonus": 1, "nightVision": 0.3}, "resistances": {"poison": 0.2},
-        "subCapabilities": [
-            {
-                "id"           : "arachnid-venom",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "name"         : "Venom Bite",
-                "description"  : "Venom glands behind the teeth, a patient poisoned bite.",
-                "naturalWeapons": ["serpent-fangs"],
-                "effects": {}, "resistances": {"poison": 0.3}
-            },
-            {
-                "id"           : "webbing",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "name"         : "Webbing",
-                "description"  : "Spinnerets at the waist, a flung lash of silk that snares a foe in place.",
-                "naturalWeapons": ["web-shot"],
-                "blocksSlots"  : ["belt"],
-                "effects"      : {}
-            },
-            {
-                "id"           : "arachnid-many-eyed",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Many-Eyed",
-                "description"  : "A crown of small patient eyes, the dark and the flanks hold no surprises.",                "effects"      : {"nightVision": 0.6, "perceptionBonus": 2}
-            },
-            {
-                "id"         : "wall-crawler",
-                "scope"      : "cultural",
-                "kind"       : "stat",
-                "name"       : "Wall-Crawler",
-                "description": "At ease on rock, wall and bough, quick anywhere a spider would be.",
-                "effects"    : {"dexterityBonus": 1}
-            }
-        ]
+        "id"           : "thorn-skin",
+        "rarity"      : "rare",
+        "lineage"     : ["wildblooded"],
+        "scope"        : "cultural",
+        "kind"         : "naturalGear",
+        "name"         : "Thorned Skin",
+        "description"  : "Bark-like skin studded with woody thorns, light armor that punishes a grappler.",
+        "naturalArmor": 6,
+        "carryPenalty": 0.04,
+        "effects"      : {}
     },
     {
-        "id"             : "stormborn-heritage",
-        "scope"          : "cultural",
-        "rarity"         : "mythic",
-        "kind"           : "passive",
-        "name"           : "Stormborn",
-        "description"    : "Static crawls their skin; the hair of a room stands when they enter.",
-        "flavorLine"     : "static crawls their skin; the hair of a room stands when they enter",
-        "effects": {"dexterityBonus": 1}, "resistances": {"lightning": 0.3},
-        "subCapabilities": [
-            {
-                "id"           : "shock-touch",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "name"         : "Shock Touch",
-                "description"  : "A crackling discharge rides every unarmed strike, scorches and staggers.",
-                "naturalWeapons": ["shock-strike"],
-                "effects"      : {}
-            },
-            {
-                "id"           : "lightning-ward",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Grounded",
-                "description"  : "The storm's charge slides off them and into the earth.",
-                "selfCondition": "lightning_warded",
-                "effects": {}, "resistances": {"lightning": 0.6}
-            },
-            {
-                "id"         : "quickened-reflexes",
-                "scope"      : "cultural",
-                "kind"       : "stat",
-                "name"       : "Quickened",
-                "description": "Nerves that fire like the storm itself.",
-                "effects"    : {"dexterityBonus": 3}
-            },
-            {
-                "id"           : "tempest-fed",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Storm-Fed",
-                "description"  : "Thrives when the sky turns, wind and storm quicken the blood.",
-                "selfCondition": "storm_fed",
-                "effects"      : {}
-            },
-            {
-                "id"         : "static-aura",
-                "scope"      : "cultural",
-                "kind"       : "passive",
-                "name"       : "Battle-Cadence",
-                "description": "The charge jumps to friends within a few strides, they act a beat faster.",
-                "aura"       : {"condition": "quickness", "radius": 4, "affects": "allies"},
-                "effects"    : {}
-            }
-        ]
+        "id"         : "fey-charm",
+        "rarity"      : "epic",
+        "lineage"     : ["wildblooded"],
+        "scope"      : "cultural",
+        "kind"       : "stat",
+        "name"       : "Fey Charm",
+        "description": "An old-wood glamour, folk agree before they've heard the ask.",
+        "effects"    : {"charismaBonus": 3}
     },
     {
-        "id"             : "shadeborn-heritage",
-        "scope"          : "cultural",
-        "rarity"         : "legendary",
-        "kind"           : "passive",
-        "name"           : "Shadeborn",
-        "description"    : "The light seems to lean away from them; they are most present at dusk.",
-        "flavorLine"     : "the light seems to lean away from them; they are most present at dusk",
-        "effects": {"nightVision": 0.5}, "resistances": {"shadow": 0.3},
-        "subCapabilities": [
-            {
-                "id"           : "umbral-sight",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Umbral Sight",
-                "description"  : "Sees in pitch dark as by day, the shadow is their element.",                "effects": {"nightVision": 1.0}, "resistances": {"shadow": 0.3}
-            },
-            {
-                "id"           : "chilling-touch",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "name"         : "Chilling Touch",
-                "description"  : "A grave-cold grip, unarmed blows frost-burn where they land.",
-                "naturalWeapons": ["chill-strike"],
-                "effects"      : {}
-            },
-            {
-                "id"         : "dread-aura",
-                "scope"      : "cultural",
-                "kind"       : "passive",
-                "name"       : "Dread Presence",
-                "description": "A cold wrongness hangs about them, foes that press close reel and falter.",
-                "aura"       : {"condition": "disoriented", "radius": 4, "affects": "foes"},
-                "effects"    : {}
-            },
-            {
-                "id"           : "sun-frail",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Sunless",
-                "description"  : "Daylight saps them under an open sky, the cost of the dark's favor.",
-                "selfCondition": "light_sensitive",
-                "effects"      : {}
-            },
-            {
-                "id"         : "shadowmeld",
-                "scope"      : "cultural",
-                "kind"       : "stat",
-                "name"       : "Shadowmeld",
-                "description": "Moves as if the dark itself were greasing the way.",
-                "effects"    : {"dexterityBonus": 2}
-            }
-        ]
+        "id"           : "verdant-knit",
+        "rarity"      : "rare",
+        "lineage"     : ["wildblooded"],
+        "scope"        : "cultural",
+        "kind"        : "attribute",
+        "name"         : "Verdant Knit",
+        "description"  : "Green vigor stitches torn flesh whole.",                "effects"      : {"healRate": 0.4}
     },
     {
-        "id"             : "colossus-heritage",
-        "scope"          : "cultural",
-        "rarity"         : "mythic",
-        "kind"           : "passive",
-        "name"           : "Colossus",
-        "description"    : "Carved on a larger scale than the rest of us, and never letting you forget it.",
-        "flavorLine"     : "they were carved on a larger scale than the rest of us, and never let you forget it",
-        "requires"       : {"minHeightCm": 200},
-        "effects"        : {"strengthBonus": 2, "constitutionBonus": 1},
-        "subCapabilities": [
-            {
-                "id"         : "giants-grip",
-                "scope"      : "cultural",
-                "kind"       : "passive",
-                "name"       : "Giant's Grip",
-                "description": "Any wielded weapon lands like a felling maul.",
-                "effects"    : {"combatMods": {"melee_damage": 1.3}}
-            },
-            {
-                "id"         : "massive-frame",
-                "scope"      : "cultural",
-                "kind"       : "bodyMod",
-                "name"       : "Massive Frame",
-                "description": "A frame of oxen mass, a huge blood pool, and a load to move.",
-                "bodyMods"   : [ {"target": "flesh", "hpMult": 1.3, "weightKg": 30} ],
-                "effects"    : {}
-            },
-            {
-                "id"         : "titan-bones",
-                "scope"      : "cultural",
-                "kind"       : "bodyMod",
-                "name"       : "Titan Bones",
-                "description": "Bones like bridge-beams, near impossible to break.",
-                "bodyMods"   : [ {"target": "skeleton", "hpMult": 2.2, "weightKg": 18} ],
-                "effects"    : {}
-            },
-            {
-                "id"           : "ground-shaker",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "name"         : "Ground-Shaker",
-                "description"  : "A colossal body-slam that flattens whatever it lands on.",
-                "naturalWeapons": ["slam"],
-                "effects"      : {}
-            },
-            {
-                "id"         : "long-reach",
-                "scope"      : "cultural",
-                "kind"       : "stat",
-                "name"       : "Long Reach",
-                "description": "An arm-span only a true giant owns, three metres of frame behind it.",
-                "requires"   : {"minHeightCm": 300},
-                "effects"    : {"strengthBonus": 3}
-            },
-            {
-                "id": "aura-might",
-                "scope": "cultural",
-                "kind": "passive",
-                "name": "Warlord's Presence",
-                "description": "Standing near them feels like standing behind a wall, friends within a few strides fight harder.",
-                "aura": {"condition": "might", "radius": 4, "affects": "allies"},
-                "effects": {}
-            }
-        ]
+        "id"           : "ironclad-mind",
+        "rarity"      : "epic",
+        "lineage"     : ["farseer"],
+        "scope"        : "cultural",
+        "kind"         : "passive",
+        "name"         : "Ironclad Mind",
+        "description"  : "A mind walled like a fortress, dread and madness find no purchase.",
+        "selfCondition": "ironclad_mind",
+        "effects": {}, "resistances": {"mental": 0.5, "shadow": 0.2}
     },
     {
-        "id"             : "wildblooded-heritage",
-        "scope"          : "cultural",
-        "rarity"         : "legendary",
-        "kind"           : "passive",
-        "name"           : "Wildblooded",
-        "description"    : "Green things lean toward them; something older than speech looks out of their eyes.",
-        "flavorLine"     : "green things lean toward them; something older than speech looks out of their eyes",
-        "effects": {"charismaBonus": 1}, "resistances": {"disease": 0.2},
-        "subCapabilities": [
-            {
-                "id"           : "sunfed",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Sunfed",
-                "description"  : "Feeds in the sun like a standing green thing.",
-                "selfCondition": "photosynthesis",
-                "effects"      : {}
-            },
-            {
-                "id"           : "thorn-skin",
-                "scope"        : "cultural",
-                "kind"         : "naturalGear",
-                "name"         : "Thorned Skin",
-                "description"  : "Bark-like skin studded with woody thorns, light armor that punishes a grappler.",
-                "naturalArmor": 6,
-                "carryPenalty": 0.04,
-                "effects"      : {}
-            },
-            {
-                "id"         : "fey-charm",
-                "scope"      : "cultural",
-                "kind"       : "stat",
-                "name"       : "Fey Charm",
-                "description": "An old-wood glamour, folk agree before they've heard the ask.",
-                "effects"    : {"charismaBonus": 3}
-            },
-            {
-                "id"           : "verdant-knit",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Verdant Knit",
-                "description"  : "Green vigor stitches torn flesh whole.",                "effects"      : {"healRate": 0.4}
-            }
-        ]
+        "id"         : "keen-intellect",
+        "rarity"      : "epic",
+        "lineage"     : ["farseer"],
+        "scope"      : "cultural",
+        "kind"       : "stat",
+        "name"       : "Keen Intellect",
+        "description": "Thought that cuts straight through.",
+        "effects"    : {"intelligenceBonus": 3}
     },
     {
-        "id"             : "farseer-heritage",
-        "scope"          : "cultural",
-        "rarity"         : "mythic",
-        "kind"           : "passive",
-        "name"           : "Farseer",
-        "description"    : "Their attention arrives a moment before they do; secrets feel unsafe near them.",
-        "flavorLine"     : "their attention arrives a moment before they do; secrets feel unsafe near them",
-        "effects": {"intelligenceBonus": 1}, "resistances": {"mental": 0.3},
-        "subCapabilities": [
-            {
-                "id"           : "ironclad-mind",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Ironclad Mind",
-                "description"  : "A mind walled like a fortress, dread and madness find no purchase.",
-                "selfCondition": "ironclad_mind",
-                "effects": {}, "resistances": {"mental": 0.5, "shadow": 0.2}
-            },
-            {
-                "id"         : "keen-intellect",
-                "scope"      : "cultural",
-                "kind"       : "stat",
-                "name"       : "Keen Intellect",
-                "description": "Thought that cuts straight through.",
-                "effects"    : {"intelligenceBonus": 3}
-            },
-            {
-                "id"         : "unnerving-aura",
-                "scope"      : "cultural",
-                "kind"       : "passive",
-                "name"       : "Unnerving Presence",
-                "description": "Being watched by them is a weight, foes that press close scatter and falter.",
-                "aura"       : {"condition": "disoriented", "radius": 4, "affects": "foes"},
-                "effects"    : {}
-            },
-            {
-                "id"         : "foreknowing",
-                "scope"      : "cultural",
-                "kind"       : "stat",
-                "name"       : "Foreknowing",
-                "description": "Threats announce themselves to them early.",
-                "effects"    : {"perceptionBonus": 2}
-            }
-        ]
+        "id"         : "unnerving-aura",
+        "rarity"      : "epic",
+        "lineage"     : ["farseer"],
+        "scope"      : "cultural",
+        "kind"       : "passive",
+        "name"       : "Unnerving Presence",
+        "description": "Being watched by them is a weight, foes that press close scatter and falter.",
+        "aura"       : {"condition": "disoriented", "radius": 4, "affects": "foes"},
+        "effects"    : {}
     },
     {
-        "id": "blighted-heritage",
-        "scope": "cultural",
-        "rarity": "legendary",
-        "kind": "passive",
-        "name": "Blighted",
-        "description": "The dark mirror of the great bloodlines, something in the blood went wrong generations back, and settled in to stay. It thrives in its own rot.",
-        "flavorLine": "something in the blood went wrong generations back, and settled in to stay",
-        "effects": {}, "resistances": {"poison": 0.4, "disease": 0.4},
-        "subCapabilities": [
-            {
-                "id"         : "accursed-blood-3",
-                "scope"      : "cultural",
-                "kind"       : "stat",
-                "name"       : "Blighted Lineage",
-                "description": "The curse in full, markedly worse at everything.",
-                "effects"    : {
-                    "strengthPenalty"    : 3,
-                    "dexterityPenalty"   : 3,
-                    "constitutionPenalty": 3,
-                    "intelligencePenalty": 3,
-                    "perceptionPenalty"  : 3,
-                    "charismaPenalty"    : 3
-                }
-            },
-            {
-                "id"         : "accursed-blood-5",
-                "scope"      : "cultural",
-                "kind"       : "stat",
-                "name"       : "Accursed Blood",
-                "description": "The curse at its deepest, ruined at everything, and still walking.",
-                "effects"    : {
-                    "strengthPenalty"    : 5,
-                    "dexterityPenalty"   : 5,
-                    "constitutionPenalty": 5,
-                    "intelligencePenalty": 5,
-                    "perceptionPenalty"  : 5,
-                    "charismaPenalty"    : 5
-                }
-            },
-            {
-                "id"         : "plague-vector",
-                "scope"      : "cultural",
-                "kind"       : "passive",
-                "name"       : "Plague-Vector",
-                "description": "A walking pestilence, foes that press close begin to sicken.",
-                "aura"       : {"condition": "nausea", "radius": 3, "affects": "foes"},
-                "effects"    : {}
-            },
-            {
-                "id"           : "unquiet-flesh",
-                "scope"        : "cultural",
-                "kind"         : "passive",
-                "name"         : "Unquiet Flesh",
-                "description"  : "It will not die cleanly, wounds close whether it wills them to or not.",                "effects"      : {"healRate": 0.4}
-            },
-            {
-                "id"         : "dread-visage",
-                "scope"      : "cultural",
-                "kind"       : "stat",
-                "name"       : "Dread Visage",
-                "description": "No one trusts it, and no one is wrong to.",
-                "effects"    : {"charismaPenalty": 4}
-            }
-        ]
+        "id"         : "foreknowing",
+        "rarity"      : "rare",
+        "lineage"     : ["farseer"],
+        "scope"      : "cultural",
+        "kind"       : "stat",
+        "name"       : "Foreknowing",
+        "description": "Threats announce themselves to them early.",
+        "effects"    : {"perceptionBonus": 2}
+    },
+    {
+        "id"         : "accursed-blood-3",
+        "rarity"      : "rare",
+        "lineage"     : ["blighted"],
+        "scope"      : "cultural",
+        "kind"       : "stat",
+        "name"       : "Blighted Lineage",
+        "description": "The curse in full, markedly worse at everything.",
+        "effects"    : {
+            "strengthPenalty"    : 3,
+            "dexterityPenalty"   : 3,
+            "constitutionPenalty": 3,
+            "intelligencePenalty": 3,
+            "perceptionPenalty"  : 3,
+            "charismaPenalty"    : 3
+        }
+    },
+    {
+        "id"         : "accursed-blood-5",
+        "rarity"      : "epic",
+        "lineage"     : ["blighted"],
+        "scope"      : "cultural",
+        "kind"       : "stat",
+        "name"       : "Accursed Blood",
+        "description": "The curse at its deepest, ruined at everything, and still walking.",
+        "effects"    : {
+            "strengthPenalty"    : 5,
+            "dexterityPenalty"   : 5,
+            "constitutionPenalty": 5,
+            "intelligencePenalty": 5,
+            "perceptionPenalty"  : 5,
+            "charismaPenalty"    : 5
+        }
+    },
+    {
+        "id"         : "plague-vector",
+        "rarity"      : "epic",
+        "lineage"     : ["blighted"],
+        "scope"      : "cultural",
+        "kind"       : "passive",
+        "name"       : "Plague-Vector",
+        "description": "A walking pestilence, foes that press close begin to sicken.",
+        "aura"       : {"condition": "nausea", "radius": 3, "affects": "foes"},
+        "effects"    : {}
+    },
+    {
+        "id"           : "unquiet-flesh",
+        "rarity"      : "rare",
+        "lineage"     : ["blighted"],
+        "scope"        : "cultural",
+        "kind"        : "attribute",
+        "name"         : "Unquiet Flesh",
+        "description"  : "It will not die cleanly, wounds close whether it wills them to or not.",                "effects"      : {"healRate": 0.4}
+    },
+    {
+        "id"         : "dread-visage",
+        "rarity"      : "rare",
+        "lineage"     : ["blighted"],
+        "scope"      : "cultural",
+        "kind"       : "stat",
+        "name"       : "Dread Visage",
+        "description": "No one trusts it, and no one is wrong to.",
+        "effects"    : {"charismaPenalty": 4}
     }
 ]

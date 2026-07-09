@@ -111,6 +111,7 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
         const capable =
           !!t.selfCondition ||
           !!t.triggeredCondition || // a meter-triggered condition (berserker rage) is a capability
+          !!t.lineage?.length || // LINEAGES: a marker's capability is the tree it opens
           !!t.naturalWeapons?.length || // ADR-029: a natural weapon is a capability
           !!t.naturalArmor ||
           !!t.armorMods?.length ||
@@ -160,6 +161,22 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
           (t.effects as Record<string, unknown>)?.[k],
           `${t.id} carries resistance ${k} in effects — move it to the \`resistances\` block`
         ).toBeUndefined();
+  });
+
+  it('TRAITS §0: a granter kind carries NO effects — the granted object has the numbers (claw family exempt)', () => {
+    // Owner exemption: a hand-REPLACEMENT's manipulation cost/benefit stays on the gear trait (claws,
+    // pincers, plating) — everything else routes through the weapon item / condition / part grants.
+    const EXEMPT = new Set([
+      'rending-claws', 'ripping-talons', 'crushing-claws', 'burrowing-claws', 'chitin-plating'
+    ]);
+    for (const t of ALL) {
+      if (!['naturalGear', 'passive', 'wound', 'bodyMod'].includes(t.kind ?? '')) continue;
+      if (EXEMPT.has(t.id ?? '')) continue;
+      expect(
+        Object.keys(t.effects ?? {}),
+        `${t.id} (${t.kind}) carries effects — move them onto the granted object`
+      ).toEqual([]);
+    }
   });
 
   it('TRAITS §0: a trait never carries a weapon proc or a raw damage rider (procs live on the weapon item)', () => {

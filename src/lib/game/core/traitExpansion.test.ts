@@ -124,22 +124,32 @@ describe('TRAIT-LIBRARY-EXPANSION mechanics', () => {
     expect(near2.conditionTimers?.might ?? 0).toBe(0);
   });
 
-  it('§4 heritages: the eleven banners exist at legendary/mythic with rolled sub-capabilities', () => {
-    const banners = [
-      'stoneblood-heritage', 'echoborn-heritage', 'sporeborn-heritage', 'crustacean-heritage',
-      'arachnid-heritage', 'stormborn-heritage', 'shadeborn-heritage', 'colossus-heritage',
-      'wildblooded-heritage', 'farseer-heritage', 'blighted-heritage'
+  it('§4 heritages (LINEAGES-II §4 flatten): each marker is a pure lineage identity with a member pool', () => {
+    // The old nested-subCapability bundles are GONE — a heritage is now a legendary/mythic MARKER
+    // (`lineage` set, no payload) whose members are top-level traits tagged with its lineage id,
+    // grown at seasonal growth events.
+    const markers: Array<[string, string]> = [
+      ['stoneblood-heritage', 'stoneblood'], ['echoborn-heritage', 'echoborn'],
+      ['sporeborn-heritage', 'sporeborn'], ['crustacean-heritage', 'crustacean'],
+      ['stormborn-heritage', 'stormborn'], ['shadeborn-heritage', 'shadeborn'],
+      ['colossus-heritage', 'colossus'], ['wildblooded-heritage', 'wildblooded'],
+      ['farseer-heritage', 'farseer'], ['blighted-heritage', 'blighted'],
+      ['dragon-heritage', 'dragon']
     ];
-    for (const id of banners) {
+    for (const [id, lineage] of markers) {
       const t = TRAIT_DATABASE.find((x) => x.id === id);
       expect(t, id).toBeTruthy();
       expect(t!.rarity === 'legendary' || t!.rarity === 'mythic', `${id} rarity`).toBe(true);
-      expect((t!.subCapabilities?.length ?? 0) > 0, `${id} subCaps`).toBe(true);
+      expect(t!.lineage?.includes(lineage), `${id} lineage tag`).toBe(true);
+      expect(t!.subCapabilities, `${id} must carry NO nested bundle`).toBeUndefined();
+      expect(Object.keys(t!.effects ?? {}), `${id} must be a pure marker`).toEqual([]);
+      const members = TRAIT_DATABASE.filter((m) => m.id !== id && m.lineage?.includes(lineage));
+      expect(members.length, `${lineage} needs a member pool to grow`).toBeGreaterThan(0);
     }
-    // the Blighted dark mirror houses the §2d grand curses
-    const blighted = TRAIT_DATABASE.find((x) => x.id === 'blighted-heritage')!;
-    const subIds = (blighted.subCapabilities ?? []).map((s) => s.id);
-    expect(subIds).toContain('accursed-blood-3');
-    expect(subIds).toContain('accursed-blood-5');
+    // the Blighted dark mirror still houses the §2d grand curses — as top-level lineage members
+    const accursed3 = TRAIT_DATABASE.find((x) => x.id === 'accursed-blood-3');
+    const accursed5 = TRAIT_DATABASE.find((x) => x.id === 'accursed-blood-5');
+    expect(accursed3?.lineage).toContain('blighted');
+    expect(accursed5?.lineage).toContain('blighted');
   });
 });

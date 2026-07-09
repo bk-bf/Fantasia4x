@@ -312,6 +312,8 @@ export function applyMealBuff(p: Pawn, meal: MealPortion[]): void {
 export function pawnDietAllows(pawn: Pawn, def: { id?: string; category?: string } | undefined): boolean {
   const restriction = (pawn.traits ?? []).find((t) => t.dietRestriction)?.dietRestriction;
   if (!restriction || !def) return true;
+  // aquatic (Amphibian Palate): only fish register as food.
+  if (restriction === 'aquatic') return def.category === 'fish';
   // carnivore: meat category (raw/salted/dried flesh) or a whole carcass.
   return def.category === 'meat' || isCarcass(def);
 }
@@ -319,6 +321,13 @@ export function pawnDietAllows(pawn: Pawn, def: { id?: string; category?: string
 /** LINEAGES §4 — carnivore meat/carcass eating feeds the Beast/Werewolf awakening deeds. Raw meat is the
  *  `meat` category (cooked dishes are `food`); a carcass is `isCarcass`; canine meat also feeds werewolf. */
 const CANINE_MEAT_IDS = new Set(['wolf_meat', 'worg_meat']);
+/** Vermin flesh — spiders, rats and blood-drinkers (the arachnid's table). */
+const VERMIN_IDS = new Set([
+  'rat_meat',
+  'giant_rat_carcass',
+  'stirge_carcass',
+  'thornwood_spider_carcass'
+]);
 export function recordMealDeeds(p: Pawn, meal: MealPortion[]): void {
   for (const { id, units } of meal) {
     const def = ITEM_DEF_BY_ID.get(id);
@@ -327,5 +336,17 @@ export function recordMealDeeds(p: Pawn, meal: MealPortion[]): void {
     if (isCarcass(def)) deeds.ateCarcass = (deeds.ateCarcass ?? 0) + units;
     else if (def.category === 'meat') deeds.ateRawMeat = (deeds.ateRawMeat ?? 0) + units;
     if (CANINE_MEAT_IDS.has(id)) deeds.ateCanineMeat = (deeds.ateCanineMeat ?? 0) + units;
+    if (def.category === 'fish') deeds.ateFish = (deeds.ateFish ?? 0) + units; // amphibian
+    if (VERMIN_IDS.has(id)) deeds.ateInsect = (deeds.ateInsect ?? 0) + units; // arachnid
+    // LINEAGES-II §1 — the werewolf's Red Hunger is FED by this meal: raw meat pushes the meter down,
+    // a whole carcass slams it down. (The bloodthirst rage lifts once the meter leaves 100.)
+    if (p.bloodNeedKind === 'carcass' && p.needs?.bloodHunger !== undefined) {
+      const relief = isCarcass(def) ? 80 * units : def.category === 'meat' ? 20 * units : 0;
+      if (relief > 0) {
+        p.needs.bloodHunger = Math.max(0, p.needs.bloodHunger - relief);
+        if (p.needs.bloodHunger < 100 && p.conditionTimers?.bloodthirst)
+          delete p.conditionTimers.bloodthirst;
+      }
+    }
   }
 }

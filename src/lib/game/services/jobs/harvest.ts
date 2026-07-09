@@ -154,6 +154,18 @@ export function complete(job: Job, gs: GameState): GameState {
   );
   const yieldEntries = Object.entries(yields);
 
+  // LINEAGES §4 — a harvest that lands FISH is a fishing action: it feeds the amphibian awakening
+  // ("the angler"). Gated on the pawn actually carrying a meter (rare).
+  if (pawn?.lineagePaths?.length) {
+    const caughtFish = yieldEntries.some(
+      ([itemId, qty]) => qty > 0 && itemService.getItemById(itemId)?.category === 'fish'
+    );
+    if (caughtFish) {
+      const deeds = (pawn.deeds ??= {});
+      deeds.fishedCount = (deeds.fishedCount ?? 0) + 1;
+    }
+  }
+
   // Update the harvested tile IN PLACE + mark it dirty (§D — ADR-002 amendment, mirroring §C
   // regrowth). Harvest completion is per-tick-hot during mass harvest; the old code rebuilt the
   // ENTIRE 38k-tile worldMap via `.map()` to change this one tile, flipping the worldMap ref every

@@ -152,10 +152,17 @@ export interface Trait {
    *  one trait from a given `conflictGroup` (robust-skin branch vs ranged branch), so the tree forks
    *  per pawn. Checked when GROWING a member trait at a growth event. */
   conflictGroup?: string;
-  /** LINEAGES §5 — a hard diet gate (Carnivore's Gut): the pawn will only EAT matching food.
-   *  'carnivore' = raw meat + carcasses only; plants/bread simply aren't food to this body. Filtered in
+  /** LINEAGES §5 — a hard diet gate: the pawn will only EAT matching food. 'carnivore' (Carnivore's
+   *  Gut) = raw meat + carcasses only; 'aquatic' (Amphibian Palate) = fish only. Filtered in
    *  selectFoodForMeal + the food-drop fetch, so a mismatched larder genuinely starves the pawn. */
-  dietRestriction?: 'carnivore';
+  dietRestriction?: 'carnivore' | 'aquatic';
+  /** LINEAGES-II §1/§2 — this trait saddles the pawn with a BLOOD HUNGER need (`needs.bloodHunger`,
+   *  fills over days). 'carcass' (werewolf): sated by eating raw meat/carcasses. 'humanoid' (vampiric):
+   *  sated by drinking a colonist's blood — the pawn feeds on a nearby colonist of its own accord (a
+   *  neck puncture + blood drain on the victim). Let it hit 100 and `bloodthirst` seizes the body: a
+   *  drafted-uncontrollable HUNT (the collapse `fsmState` precedent) that devours/drains the nearest
+   *  living thing — colonists included — until fed. */
+  bloodNeed?: 'carcass' | 'humanoid';
   /** TRAIT-LIBRARY-EXPANSION §3a: this trait's rung on its 3-stage natural-gear line (S1 budding →
    *  S3 apex), chained by `evolvesTo`. Data flag only for now — a later age/ritual system walks it. */
   stage?: 1 | 2 | 3;

@@ -21,6 +21,10 @@ export interface EntityNeeds {
   coldExposure?: number;
   /** SEASONS_WEATHER: tracked heat exposure 0-100 (mirror of `coldExposure`); drives heat stroke. */
   heatExposure?: number;
+  /** LINEAGES-II §1/§2 — blood hunger 0–100, only on pawns whose trait carries `bloodNeed`. Fills over
+   *  days (hourly cadence); sated by carcass-eating (werewolf) or feeding on a colonist (vampiric).
+   *  At 100 the `bloodthirst` condition seizes the pawn into the lose-control hunt. */
+  bloodHunger?: number;
 }
 
 /**

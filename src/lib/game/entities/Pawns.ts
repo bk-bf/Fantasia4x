@@ -261,6 +261,13 @@ export function applyGainedTrait(pawn: Pawn, trait: Trait): void {
         if (typeof per === 'number') pawn.stats.perception += per;
       }
   }
+  // LINEAGES-II §3: gained spinnerets start the silk trickle.
+  if (trait.grafts?.some((g) => g.parts.includes('spinneret'))) pawn.silkSpinner = true;
+  // LINEAGES-II: a gained blood-need trait (grown into a lineage later in life) starts its meter.
+  if (trait.bloodNeed) {
+    pawn.bloodNeedKind = trait.bloodNeed;
+    if (pawn.needs && pawn.needs.bloodHunger === undefined) pawn.needs.bloodHunger = 0;
+  }
   // BodyMod HP scaling for THIS trait only (applyTraitBodyMods multiplies per trait → not idempotent).
   for (const m of trait.bodyMods ?? []) {
     if (m.hpMult == null || m.hpMult === 1) continue;
@@ -353,6 +360,15 @@ export function buildPawnFromCulture(culture: Culture, index: number): Pawn {
   // LINEAGES §4: a standalone gateway trait (claws/spider-eyes/… drawn without a lineage parent) seeds
   // its awakening meters, so the pawn can grow into a lineage through committed play.
   seedAwakeningPaths(pawn);
+  // LINEAGES-II §1/§2: cache the blood need so the per-tick paths gate on ONE field (not a trait scan).
+  const bloodNeed = (pawn.traits ?? []).find((t) => t.bloodNeed)?.bloodNeed;
+  if (bloodNeed) {
+    pawn.bloodNeedKind = bloodNeed;
+    if (pawn.needs) pawn.needs.bloodHunger = 0;
+  }
+  // LINEAGES-II §3: cache the grafted-spinnerets flag (same one-field gate for the hourly silk trickle).
+  if ((pawn.traits ?? []).some((t) => t.grafts?.some((g) => g.parts.includes('spinneret'))))
+    pawn.silkSpinner = true;
 
   return pawn;
 }

@@ -232,6 +232,12 @@ export interface Pawn {
    *  toward one lineage; the player steers by which deeds the pawn performs, and the first to fill grants
    *  that lineage's parent at a growth event. Absent for pawns with no gateway (or already awakened). */
   lineagePaths?: LineagePath[];
+  /** LINEAGES-II §1/§2 — cached from the trait carrying `bloodNeed` (set at pawn-gen / trait gain), so
+   *  the per-tick paths gate on ONE field instead of scanning traits. Absent ⇒ no blood hunger. */
+  bloodNeedKind?: 'carcass' | 'humanoid';
+  /** LINEAGES-II §3 — cached "has grafted spinnerets" (set at pawn-gen / trait gain): the hourly silk
+   *  trickle gates on this ONE field; the LIVING-part check only runs for flagged pawns. */
+  silkSpinner?: boolean;
 
   // NEW: Individual physical traits
   physicalTraits: {
