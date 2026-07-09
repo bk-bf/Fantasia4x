@@ -4,7 +4,7 @@
 
 # TRAITS — the trait system, single source of truth
 
-> **Related:** [game/DESIGN](../../game/DESIGN.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-023 · ADR-028 · ADR-029) · [ROADMAP](ROADMAP.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [LINEAGES](LINEAGES.md) (the mutation-tree successor to the nested-`subCapabilities` heritage bundle)
+> **Related:** [game/DESIGN](../../game/DESIGN.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-023 · ADR-028 · ADR-029) · [ROADMAP](ROADMAP.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [LINEAGES (done)](../archive/LINEAGES-2026-07-09.md) · [LINEAGES-II](LINEAGES-II.md) (heritage flatten + transforms)
 
 ## §0 · Traits are pure granters
 
@@ -68,11 +68,12 @@ permanency → distinct `*_scar` wound entries + an organic close-time scar roll
       nightVision (live, self-gating on eye loss) + perception (baked at gen); 3 evolving stages. No
       `effects` rider. New "part grants an effect" mechanism ([BodyParts.ts] `grants`).
 - [x] **`nocturnal`/`regenerative` → `attribute` kind** (the legal home for nightVision/healRate).
-- [ ] **Remaining derived/stat riders** (nightVision/healRate/work/core-stat on the heritage banners +
-      subcaps, `beast-eyed`, `gill-frills`) → folded into the **[LINEAGES](LINEAGES.md) heritage flatten**
-      (Phase 2): subcaps become top-level lineage traits with proper kinds; stat baselines become
-      guaranteed `stat` traits; eye traits graft like Spider Eyes. The "no rider on a granter kind" ban
-      lands then, with the naturalGear-claw exception (claws keep their work effects, owner decision).
+- [ ] **Remaining derived/stat riders** (nightVision/healRate/work/core-stat on the OLD heritage banners +
+      subcaps) → folded into the **[LINEAGES-II §4](LINEAGES-II.md) old-heritage flatten**: subcaps become
+      top-level lineage traits with proper kinds; stat baselines become guaranteed `stat` traits. (The
+      NEW lineages already conform — `beast-eyed` is now the attribute Beast-Eyes line, `gill-frills` is
+      the amphibian gateway.) The "no rider on a granter kind" ban lands then, with the naturalGear-claw
+      exception (claws keep their work effects, owner decision).
 - Note: the **claw work/DEX effects** (`rending`/`ripping`/`crushing`/`burrowing`) are INTENTIONAL — the
       owner chose to keep a hand-replacement's manipulation effects on the gear trait; not a violation.
 
