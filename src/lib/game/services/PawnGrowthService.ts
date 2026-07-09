@@ -11,9 +11,11 @@
 //
 // Aging is realistic (1 year = 4 seasons = 360 days); only the growth cadence is seasonal.
 
-import type { GameState, Pawn, EntityStats, StatKey, GrowthOffer } from '$lib/game/core/types';
+import type { GameState, Pawn, EntityStats, StatKey, GrowthOffer, Trait } from '$lib/game/core/types';
 import { rng } from '$lib/game/core/rng';
 import { DAYS_PER_SEASON } from '$lib/game/services/EnvironmentService';
+import { advanceAwakeningMeters, lineageGrowthEvent } from '$lib/game/core/Lineages';
+import { applyGainedTrait } from '$lib/game/entities/Pawns';
 
 const STAT_KEYS: StatKey[] = [
   'strength',
@@ -33,7 +35,9 @@ function rollGain(isFav: boolean): number {
   return r < 0.35 ? 0 : r < 0.7 ? 1 : r < 0.9 ? 2 : 3;
 }
 
-/** Build + bank one growth offer (every stat rolled, so the pick-two screen shows all six). */
+/** Build + bank one growth offer (every stat rolled, so the pick-two screen shows all six). LINEAGES §3:
+ *  each growth EVENT is also a lineage-progression moment — awaken a full meter, else evolve a stage,
+ *  else grow a new member trait. */
 function bankOffer(pawn: Pawn, kind: GrowthOffer['kind'], doubled: boolean): void {
   const rolls: Partial<Record<StatKey, number>> = {};
   for (const stat of STAT_KEYS) {
@@ -41,6 +45,7 @@ function bankOffer(pawn: Pawn, kind: GrowthOffer['kind'], doubled: boolean): voi
     rolls[stat] = rollGain(isFav) * (doubled ? 2 : 1);
   }
   (pawn.pendingGrowth ??= []).push({ kind, rolls });
+  lineageGrowthEvent(pawn, (t: Trait) => applyGainedTrait(pawn, t));
 }
 
 class PawnGrowthService {
@@ -57,6 +62,8 @@ class PawnGrowthService {
 
     for (const pawn of gs.pawns ?? []) {
       if (pawn.isAlive === false) continue;
+      // LINEAGES §4: fold the day's deeds into any awakening meters (and decay stalled ones).
+      advanceAwakeningMeters(pawn, dayIndex);
       // Lazy init: treat the (partial) spawn season as already-accounted, so growth only starts after
       // the pawn has SURVIVED a full season — the first offer lands in the next season.
       if (pawn.lastGrowthSeason === undefined) {

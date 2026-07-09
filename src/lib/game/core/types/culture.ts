@@ -28,6 +28,30 @@ export interface GrowthOffer {
   rolls: Partial<Record<StatKey, number>>;
 }
 
+/**
+ * LINEAGES §4 — one active awakening meter on a pawn, seeded by a standalone gateway trait. It tracks
+ * progress toward a single lineage via a deed; fill it (through committed play) and the lineage's parent
+ * is granted at the next growth event. A gateway seeds ≥2 of these (one per candidate lineage) so the
+ * player picks a path by which deeds they perform; whichever fills first wins.
+ */
+export interface LineagePath {
+  /** The awakening-condition id (`database/lineages.jsonc`) this meter follows. */
+  condition: string;
+  /** The lineage awakened when the meter fills (its parent trait granted). */
+  lineage: string;
+  /** The `pawn.deeds` counter key this reads. */
+  deed: string;
+  /** Rolled fill target (within the condition's range) — high, so awakening is a committed project. */
+  target: number;
+  /** Current meter 0..target. Grows with fresh deeds; DECAYS toward 0 on idle days (commit or lose it). */
+  value: number;
+  /** Deed count already folded into `value` — lets the meter measure only NEW deeds, and decay below
+   *  the (monotonic) raw deed total. */
+  seen: number;
+  /** Absolute day index the meter last advanced — a grace window before decay begins. */
+  lastFedDay: number;
+}
+
 /** ADR-029 / TRAITS §0: on-hit CONDITION proc — carried by a WEAPON item's `onHitCondition` only
  *  (including the natural fang/breath items a trait grants). Traits no longer carry procs, so the same
  *  bite behaves identically however it was granted. Rolled per landed hit in Combat.applyOnHitEffect. */
@@ -111,6 +135,23 @@ export interface Trait {
    *  one can grow into — e.g. mundane `frost-loving` → supernatural `frost-born`, `adrenaline` →
    *  `berserker-blood`. Lets a future system upgrade a pawn's trait along its line. */
   evolvesTo?: string;
+  /** LINEAGES §2 — the ancestral-blood lineages this trait belongs to (an ARRAY: Feral Adrenaline is
+   *  `["beast","werewolf"]`, both pools draw it). A pawn that carries the lineage's parent marker can
+   *  GROW any trait whose `lineage` includes its lineage id, at a seasonal growth event. */
+  lineage?: string[];
+  /** LINEAGES §2 — if `false`, this trait may roll STANDALONE from the Culture pool with no lineage
+   *  parent (the gateway traits: claws, spider-eyes, gills, venom, fur). Default (absent) = true: it is
+   *  only reachable through its lineage. A standalone gateway can still only EVOLVE its own stage until
+   *  it awakens (§4) — it can't grow new lineage traits without the parent. */
+  lineageExclusive?: boolean;
+  /** LINEAGES §4 — awakening-condition ids a STANDALONE gateway carries (from `database/lineages.jsonc`).
+   *  At pawn-gen the gateway seeds an awakening meter toward EACH condition's lineage (≥2, so the player
+   *  chooses a path by which deeds the pawn does); the first to fill grants that lineage's parent. */
+  awakens?: string[];
+  /** LINEAGES §2 — a mutually-exclusive lineage BRANCH tag: a pawn growing its lineage may hold at most
+   *  one trait from a given `conflictGroup` (robust-skin branch vs ranged branch), so the tree forks
+   *  per pawn. Checked when GROWING a member trait at a growth event. */
+  conflictGroup?: string;
   /** TRAIT-LIBRARY-EXPANSION §3a: this trait's rung on its 3-stage natural-gear line (S1 budding →
    *  S3 apex), chained by `evolvesTo`. Data flag only for now — a later age/ritual system walks it. */
   stage?: 1 | 2 | 3;

@@ -1,7 +1,7 @@
 // Live entities (mobs/animals) and the Pawn model. Split out of core/types.ts (P-4); re-exported
 // via the barrel.
 
-import type { EntityStats, StatKey, GrowthOffer } from './culture';
+import type { EntityStats, StatKey, GrowthOffer, LineagePath } from './culture';
 import type { EntityNeeds, EntityCondition, Injury, LimbState } from './health';
 import type { PawnInventory, PawnEquipment, EquipmentSlot } from './items';
 import type { Trait } from './culture';
@@ -225,6 +225,13 @@ export interface Pawn {
   /** Unresolved growth offers (season + birthday), oldest first. The player accepts two stats per
    *  offer in the Status tab; a non-empty queue shows a badge. */
   pendingGrowth?: GrowthOffer[];
+  /** LINEAGES §4 — running deed counters (`ateRawMeat`, `kill:wolf`, `moonlightHours`…), incremented at
+   *  the source event. The awakening meters read these. Sparse; absent until the pawn does a tracked deed. */
+  deeds?: Record<string, number>;
+  /** LINEAGES §4 — active awakening meters seeded by a standalone gateway trait. Each tracks progress
+   *  toward one lineage; the player steers by which deeds the pawn performs, and the first to fill grants
+   *  that lineage's parent at a growth event. Absent for pawns with no gateway (or already awakened). */
+  lineagePaths?: LineagePath[];
 
   // NEW: Individual physical traits
   physicalTraits: {

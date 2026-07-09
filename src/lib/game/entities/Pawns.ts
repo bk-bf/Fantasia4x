@@ -4,6 +4,7 @@ import { drawPawnTraits } from '../core/Culture';
 import { createBodyPlanLimbs } from '../systems/Combat';
 import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/BodyParts';
 import { SCARRING_CONFIG, makeScarInjury } from '../core/Wounds';
+import { seedAwakeningPaths } from '../core/Lineages';
 import { rng } from '../core/rng';
 
 // Module-level counter for sequential debug IDs across all generated pawns.
@@ -231,6 +232,56 @@ export function applyTraitBodyMods(pawn: Pawn): void {
   }
 }
 
+/**
+ * LINEAGES §3 — apply a trait GAINED after generation (lineage growth / stage evolution) to a pawn whose
+ * `traits` already includes it. Live-read effects (resistances, nightVision, work/combat mults) need
+ * nothing — being in `traits` is enough. This bakes the ONE-SHOT effects that generation would have:
+ * core-stat deltas, grafted limbs (+ their part-granted core stats), and bodyMod HP scaling. Mutates in
+ * place (the growth path already mutates the pawn per-day).
+ */
+export function applyGainedTrait(pawn: Pawn, trait: Trait): void {
+  // Core-stat bonus/penalty from effects (as applyCulturalTraitBonuses does at gen; uncapped identity).
+  for (const [k, v] of Object.entries(trait.effects ?? {})) {
+    if (typeof v !== 'number') continue;
+    if (k.endsWith('Bonus')) {
+      const s = k.replace('Bonus', '').toLowerCase() as keyof EntityStats;
+      if (pawn.stats[s] !== undefined) pawn.stats[s] += v;
+    } else if (k.endsWith('Penalty')) {
+      const s = k.replace('Penalty', '').toLowerCase() as keyof EntityStats;
+      if (pawn.stats[s] !== undefined) pawn.stats[s] = Math.max(1, pawn.stats[s] + v);
+    }
+  }
+  // Grafts — applyTraitGrafts is idempotent per limb id, so running the all-traits pass only adds the
+  // new limb; then credit this trait's grafted parts' core-stat grants (spider-eyes → +perception).
+  if (trait.grafts?.length) {
+    applyTraitGrafts(pawn);
+    for (const g of trait.grafts)
+      for (const pid of g.parts) {
+        const per = PART_DEF_MAP[pid]?.grants?.perceptionBonus;
+        if (typeof per === 'number') pawn.stats.perception += per;
+      }
+  }
+  // BodyMod HP scaling for THIS trait only (applyTraitBodyMods multiplies per trait → not idempotent).
+  for (const m of trait.bodyMods ?? []) {
+    if (m.hpMult == null || m.hpMult === 1) continue;
+    for (const limb of pawn.limbs ?? [])
+      for (const part of limb.parts ?? []) {
+        const def = PART_DEF_MAP[part.id];
+        if (!def) continue;
+        const matches =
+          m.target === 'skeleton'
+            ? def.skeleton === true
+            : m.target === 'flesh'
+              ? (def.hitWeight ?? 0) > 0
+              : part.id === m.target;
+        if (!matches) continue;
+        const full = part.health >= part.maxHp;
+        part.maxHp = Math.max(1, Math.round(part.maxHp * m.hpMult));
+        if (full) part.health = part.maxHp;
+      }
+  }
+}
+
 /** Roll a single pawn from a specific culture (stats within the culture's ranges, traits copied,
  *  culture identity stamped). Shared by single-culture and mixed-colony generation. */
 export function buildPawnFromCulture(culture: Culture, index: number): Pawn {
@@ -299,6 +350,9 @@ export function buildPawnFromCulture(culture: Culture, index: number): Pawn {
   applyTraitGrafts(pawn);
   applyTraitBodyMods(pawn);
   applyTraitWounds(pawn);
+  // LINEAGES §4: a standalone gateway trait (claws/spider-eyes/… drawn without a lineage parent) seeds
+  // its awakening meters, so the pawn can grow into a lineage through committed play.
+  seedAwakeningPaths(pawn);
 
   return pawn;
 }
