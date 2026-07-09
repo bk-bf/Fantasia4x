@@ -1,30 +1,39 @@
-<!-- LOC cap: 200 (created: 2026-05-25) -->
+<!-- LOC cap: none — append-only decision log, one entry per locked ADR (created: 2026-05-25; cap lifted 2026-07-09) -->
 
 # DECISIONS [GAME]
 
 > **Related:** [ARCHITECTURE](ARCHITECTURE.md) · [DESIGN](DESIGN.md)
 
 ADR-001 [GAME]: Layered Architecture with Singleton Services (2026-05-25, Accepted)
-ADR-002 [GAME]: GameStateManager as Only Mutation Surface (2026-05-25, Accepted)
-ADR-003 [GAME]: ModifierSystem for All Stat Calculations (2026-05-25, Accepted)
-ADR-004 [GAME]: AI Generation Server-Side Only (2026-05-25, Accepted)
-ADR-005 [GAME]: LocalStorage Persistence via Store (2026-05-25, Accepted)
+ADR-002 [GAME]: GameStateManager as Only Mutation Surface (2026-05-25, Accepted — amended: hot-path mutable-in-place)
+ADR-003 [GAME]: ModifierSystem for All Stat Calculations (2026-05-25, Accepted — superseded by ADR-015 for work)
+ADR-004 [GAME]: AI Generation Server-Side Only (2026-05-25, Abandoned — never built)
+ADR-005 [GAME]: Save Persistence via saveManager (IndexedDB) (2026-05-25, Accepted — amended 2026-07-09)
 ADR-006 [GAME]: Data Files Contain Definitions, Not Logic (2026-05-25, Accepted)
 ADR-007 [GAME]: SvelteKit + WebGL2 over Godot for Merged Project (2026-05-26, Accepted)
 ADR-008 [GAME]: Rust/WASM Spatial Core via wasm-pack (2026-05-26, Accepted)
+ADR-009 [GAME]: Hardcore Production Chain Design (2026-05-26, Accepted)
+ADR-010 [GAME]: Dynamic Need-Priority Interruption via Proximity + Urgency Formula (2026-05-29, Accepted)
 ADR-011 [GAME]: Gated Hot-Path Logging + On-Demand Tick Profiler (2026-05-30, Accepted)
 ADR-012 [GAME]: Combat Wound Model — Merge-and-Escalate + Capacity-Driven Downing (2026-06-11, Accepted)
-ADR-013 [GAME]: Deferred Combat Depth — Tissue Layers, Nerves & Arteries (2026-06-11, Deferred)
-ADR-014 [GAME]: Hard Tile Occupancy via Central OccupancyService (2026-06-12, Accepted)
+ADR-013 [GAME]: Deferred Combat Depth — Tissue Layers, Nerves & Arteries (2026-06-11, Deferred — partially superseded by ADR-024)
+ADR-014 [GAME]: Hard Tile Occupancy via Central OccupancyService (2026-06-12, Accepted — amended by ADR-021)
 ADR-015 [GAME]: Single Work Model in stats.jsonc — supersedes ADR-003 for work (2026-06-13, Accepted)
 ADR-016 [GAME]: Physical Production — reserve-and-fetch crafting (2026-06-13, Accepted)
 ADR-017 [GAME]: Data-driven colony jobs (jobs.jsonc registry) (2026-06-13, Accepted)
 ADR-018 [GAME]: Perception via Target Persistence + Push Alerting (2026-06-14, Corrected — premise falsified; demoted to deferred AI feature)
 ADR-019 [GAME]: Line of Sight via `blocksSight` Occluder + WASM Raycast (2026-06-14, Accepted — design, impl deferred)
-ADR-020 [GAME]: Sim Scaling Strategy — Wrapper-Agnostic Ladder, wrapper decision deferred (2026-06-14, Accepted — superseded by ADR-021 for the concrete plan)
+ADR-020 [GAME]: Sim Scaling Strategy — Wrapper-Agnostic Ladder (2026-06-14, Accepted — ladder superseded by ADR-021; wrapper resolved by ADR-030)
 ADR-021 [GAME]: Sim/Render Decouple — soft-body pathfinding, terrain cache, MAX_STEPS cap, sim→Worker (2026-06-14, Accepted)
 ADR-022 [GAME]: Throttled job-board reconcile (not event-driven) — emission-derived board, 6-tick cadence (2026-06-16, Accepted)
 ADR-023 [GAME]: Procedural race pool + pawn `raceId` — `racePool` canonical, `race` = home alias (2026-06-17, Accepted)
+ADR-024 [GAME]: Data-Driven Body Plans + Part-Bound Natural Weapons & Armour (2026-06-20, Accepted)
+ADR-025 [GAME]: Graded Wind via `windchilled` + Per-Pawn Upwind Wind-Shadow (2026-06-20, Accepted)
+ADR-026 [GAME]: Incremental-Only Terrain — No Full-Map Rebuild on a Delta (2026-06-22, Accepted)
+ADR-027 [GAME]: Dense Glyph Overlays Render via the Cached Chunk Path (2026-07-05, Accepted)
+ADR-028 [GAME]: Typed Trait Kinds + Condition Relationship Graph (TRAIT-SYSTEM-V2) (2026-07-06, Accepted)
+ADR-029 [GAME]: Anatomy-Bound Natural Gear + Layered Subtractive Armour + Unified On-Hit Procs (2026-07-08, Accepted)
+ADR-030 [GAME]: Desktop Wrapper — Electron over Tauri (2026-07-09, Accepted)
 
 ---
 
@@ -118,22 +127,22 @@ No manual flat-sum arithmetic for stats. Bonus sources are inspectable by the UI
 ### ADR-004 [GAME]: AI Generation Server-Side Only
 
 - **Date**: 2026-05-25
-- **Status**: Accepted
+- **Status**: **Abandoned (2026-07-09)** — scaffolded at project start, never implemented, and no LLM generation is planned. The `generate-character`/`generate-event` API routes were empty one-line stubs with no callers, `@google/generative-ai` was imported nowhere, and the dep + stubs have been removed. Kept as a record of the discarded direction.
 
-#### Decision
+#### Original decision (never built)
 
-Gemini API calls (`@google/generative-ai`) live exclusively in `src/routes/api/`. Client-side code calls the SvelteKit API route via `fetch`. This keeps API keys out of the browser bundle and centralises prompt logic.
+Gemini API calls (`@google/generative-ai`) were to live exclusively in `src/routes/api/`, with client-side code calling the SvelteKit API route via `fetch` to keep API keys out of the browser bundle. This was never wired up; race/pawn/event generation is fully procedural (ADR-023).
 
 ---
 
-### ADR-005 [GAME]: LocalStorage Persistence via Store
+### ADR-005 [GAME]: Save Persistence via saveManager (IndexedDB)
 
 - **Date**: 2026-05-25
-- **Status**: Accepted
+- **Status**: Accepted — **amended 2026-07-09** (moved localStorage → IndexedDB; owner is `saveManager.ts`, not `gameState.ts`)
 
 #### Decision
 
-The Svelte `gameState` store in `src/lib/stores/gameState.ts` handles serialisation/deserialisation to `localStorage['fantasia4x-save']`. No other code reads or writes this key.
+`src/lib/stores/saveManager.ts` is the sole persistence layer. Saves live in **IndexedDB** (`DB_NAME = 'fantasia4x'`); the legacy `localStorage['fantasia4x-save']` key (`LS_SAVE_KEY`) is a **pre-IDB migration fallback only** — read once to import an old save, never the live write path. No other code owns save serialisation. (`localStorage` is still used for lightweight UI prefs in `uiPrefs.ts` — a separate concern.)
 
 ---
 
@@ -167,7 +176,7 @@ Fantasia4x (SvelteKit + WebGL2) and Celestia (Godot 4) are being merged into a s
 
 #### Decision
 
-Stay in SvelteKit + WebGL2, targeting desktop distribution via Tauri. Celestia's game logic (pawn state machine, needs, mood, work priorities) will be ported into TypeScript services. Pure spatial computation (pathfinding, fog of war, spatial queries) will be implemented in Rust and compiled to WASM via wasm-pack, exposed through TypeScript service interfaces (see ADR-008).
+Stay in SvelteKit + WebGL2, targeting desktop distribution via a webview wrapper (Tauri was the initial assumption; **the wrapper was later settled on Electron — see ADR-030**). Celestia's game logic (pawn state machine, needs, mood, work priorities) will be ported into TypeScript services. Pure spatial computation (pathfinding, fog of war, spatial queries) will be implemented in Rust and compiled to WASM via wasm-pack, exposed through TypeScript service interfaces (see ADR-008).
 
 #### Rationale
 
@@ -232,7 +241,7 @@ Tool gating shipped in two steps. **Step 1** (R4) gated at job-claim on **colony
 
 Phase 3 of the DF migration ports the full pawn state machine from Celestia, meaning all entities (50 player pawns + enemies + animals + allies) run concurrent pathfinding requests every turn. Total mobile entities easily reach 200–400. This is at or above the threshold where a TypeScript implementation becomes a measurable bottleneck, and the state machine is being built now — deferring to a later rewrite is costlier than doing it correctly once.
 
-Additionally, the project targets desktop distribution via Tauri, whose backend is Rust. The toolchain overlap makes Rust the natural fit.
+Additionally, the project was (at the time) targeting Tauri, whose backend is Rust, making the toolchain overlap a natural fit. **The wrapper later became Electron (ADR-030), so the Tauri-synergy rationale below is moot** — but the Rust/WASM decision stands on its own: WASM runs ~identically under any webview, so the spatial core is wrapper-agnostic.
 
 #### Decision
 
@@ -640,8 +649,9 @@ lower-frequency consumer, never per entity.
 
 - **Date**: 2026-06-14
 - **Status**: Accepted — **the ladder's "step 1: kill O(n²) perception" was the wrong target**
-  (ADR-018 falsified). The wrapper-agnostic principle and the deferred wrapper/SAB/Rust decisions
-  stand; the concrete ordered plan is **superseded by ADR-021** with the real bottlenecks.
+  (ADR-018 falsified). The wrapper-agnostic principle and the deferred SAB/Rust decisions
+  stand; the concrete ordered plan is **superseded by ADR-021** with the real bottlenecks. The
+  **wrapper choice ("Tauri vs Electron: explicitly OPEN" below) has since been resolved to Electron — see ADR-030.**
 - **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) §5, §6
 
 #### Context
@@ -1199,3 +1209,26 @@ weapon = Item + `part.weapons`; armour = per-part additive layer.
 guarded by `partArmorReduction` unit tests (coverage, layering, full-stop, AP), `traitRegistry.test.ts`
 (armorMods/covers shape), and the proc tests. Registered in `codegraph.config.json` as
 `checkable: false`.
+
+### ADR-030 [GAME]: Desktop Wrapper — Electron over Tauri
+
+**Status:** Accepted (2026-07-09). Resolves the wrapper question left OPEN by ADR-020; updates the
+"via Tauri" framing in ADR-007/008.
+
+**Context.** ADR-020 deferred the desktop wrapper (Tauri vs Electron) to the DISTRIBUTION milestone,
+noting the sim is single-thread JS either way so the choice hinges on engine uniformity vs bundle
+size. Cross-engine TPS spikes in `desktop-spike/` measured the shipped-engine spread that mattered:
+Electron's uniform Chromium/**V8** runs the sim materially faster than Tauri's Linux WebView
+(WebKitGTK/**JSC**) — the sim is JS-execution-bound, and V8 wins that by a wide margin. Tauri's tiny
+bundle + Rust synergy don't offset a sim that runs slower on the exact platform most players use.
+
+**Decision.** **Ship on Electron.** Dev and the desktop build target Electron (root `package.json`
+builds via `electron` + `electron-builder`, `main: electron/main.cjs`); the Tauri spike is kept only
+as a cross-engine test canary in `desktop-spike/tauri`. WASM (spatial core, ADR-008) and the Web
+Worker sim (ADR-021) are wrapper-agnostic and unaffected — they were designed to run under any
+webview, so nothing in the sim/render architecture changes with this choice.
+
+**Consequences.** Uniform V8 across all platforms (no three-engine perf spread to test against),
+Node available in the shell, at the cost of a larger bundle / +150–250 MB RAM (accepted — a desktop
+colony sim, not a web page). The ADR-020 rejection of *forking* Chromium still holds; using stock
+Electron does not. Not graph-checkable — a distribution/runtime decision, not a call-edge invariant.

@@ -65,7 +65,6 @@
 		"vitest": "^2.1.9"
 	},
 	"dependencies": {
-		"@google/generative-ai": "^0.24.1",
 		"howler": "^2.2.4",
 		"simplex-noise": "^4.0.3",
 		"uuid": "^11.1.0"
