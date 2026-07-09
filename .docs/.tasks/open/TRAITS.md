@@ -4,7 +4,7 @@
 
 # TRAITS — the trait system, single source of truth
 
-> **Related:** [game/DESIGN](../../game/DESIGN.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-023 · ADR-028 · ADR-029) · [ROADMAP](ROADMAP.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [LINEAGES (done)](../archive/LINEAGES-2026-07-09.md) · [LINEAGES-II](LINEAGES-II.md) (heritage flatten + transforms)
+> **Related:** [game/DESIGN](../../game/DESIGN.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-023 · ADR-028 · ADR-029) · [ROADMAP](ROADMAP.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [LINEAGES (done)](../archive/LINEAGES-2026-07-09.md) · [LINEAGES-II](../archive/LINEAGES-II-2026-07-10.md) (heritage flatten + transforms)
 
 ## §0 · Traits are pure granters
 
@@ -28,26 +28,21 @@ granted it, and effects double-apply.
 (`bodyMod`/`naturalGear`/`passive`/`wound`). One primary `kind` per trait; a legendary bundle
 composes several via `subCapabilities` (each sub-cap obeys its own kind's contract).
 
-### §0a · Open decision 1 — where natural-armor resistances live
+### §0a · Decision 1 — where natural-armor resistances live (RESOLVED 2026-07-09)
 
-A covering's cold/fire/physical resistance currently sits in the TRAIT's `effects` (violation).
-A limbmap armor part is a single scalar (`armor: 0.4`) with no typed resistance slots, so the
-granted object has nowhere to carry them yet. Options:
+- [x] **Owner decision (a-variant)**: resistances live in a dedicated typed `resistances` block **on
+      the trait** (physically tied to the covering/affinity, lost with the trait) — never in the
+      generic `effects` bag. Read by `PawnStatService.traitResistanceBonus`; `effects.*Resistance` is
+      banned by `traitRegistry`. (The literal limbmap-part variant was rejected: limbmap parts are
+      SHARED anatomy, so a part-level resistance would leak to every creature on that body plan.)
 
-- [ ] (a) add typed resistance fields to limbmap armor/part defs (fur part carries `coldResistance`)
-- [ ] (b) route covering resistances through a granted **condition** (`passive`-style, conditions.jsonc carries them)
-- [ ] (c) something else — owner decides
+### §0b · Decision 2 — wound permanency routing (RESOLVED 2026-07-09)
 
-### §0b · Open decision 2 — wound permanency routing
-
-`wounds.jsonc` has no `permanent` field; permanency is hardcoded in the applier
-(`applyTraitWounds` stamps `permanent: true`, damage fractions in `SPAWN_WOUND_DAMAGE_FRAC` in
-`Pawns.ts`). A wound TYPE can't be inherently permanent (a `cut` is transient in combat, permanent
-as an old scar), so permanency must ride the graft:
-
-- [ ] (a) `permanent?: boolean` (+ optional damage fraction) on the trait's `wounds[]` spec, propagated into the stamped wound — recommended
-- [ ] (b) distinct "scar" wound entries in `wounds.jsonc`
-- [ ] owner decides, then migrate `applyTraitWounds` accordingly
+- [x] **Owner decision (b)**: distinct `*_scar` wound entries in `wounds.jsonc` (permanently uncareable),
+      PLUS the organic scarring mechanic — `canScar`/`scarChanceMult`/`scarType` on wound defs, a
+      close-time scar roll (peak-severity based, tend-reduced, infection-doubled, locked config in
+      `scarring`), and `applyTraitWounds` stamping scar types from data (`SPAWN_WOUND_*` hardcodes
+      deleted).
 
 ### §0c · Migration ledger (violations found 2026-07-08 · §0a/§0b closed 2026-07-09)
 
@@ -68,12 +63,12 @@ permanency → distinct `*_scar` wound entries + an organic close-time scar roll
       nightVision (live, self-gating on eye loss) + perception (baked at gen); 3 evolving stages. No
       `effects` rider. New "part grants an effect" mechanism ([BodyParts.ts] `grants`).
 - [x] **`nocturnal`/`regenerative` → `attribute` kind** (the legal home for nightVision/healRate).
-- [ ] **Remaining derived/stat riders** (nightVision/healRate/work/core-stat on the OLD heritage banners +
-      subcaps) → folded into the **[LINEAGES-II §4](LINEAGES-II.md) old-heritage flatten**: subcaps become
-      top-level lineage traits with proper kinds; stat baselines become guaranteed `stat` traits. (The
-      NEW lineages already conform — `beast-eyed` is now the attribute Beast-Eyes line, `gill-frills` is
-      the amphibian gateway.) The "no rider on a granter kind" ban lands then, with the naturalGear-claw
-      exception (claws keep their work effects, owner decision).
+- [x] **Remaining derived/stat riders CLOSED (2026-07-10)** — the
+      **[LINEAGES-II §4](../archive/LINEAGES-II-2026-07-10.md) old-heritage flatten** landed: all 14
+      bundles → pure markers + top-level lineage members with proper kinds; stat baselines are `stat`
+      members; `subCapabilities` no longer exists in the data. The "granter kind carries no effects"
+      ban is live in `traitRegistry` with the naturalGear-claw exemption (claws keep their work
+      effects, owner decision). **The §0c ledger is EMPTY — §0 is fully enforced.**
 - Note: the **claw work/DEX effects** (`rending`/`ripping`/`crushing`/`burrowing`) are INTENTIONAL — the
       owner chose to keep a hand-replacement's manipulation effects on the gear trait; not a violation.
 
