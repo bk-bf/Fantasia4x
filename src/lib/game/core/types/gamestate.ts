@@ -1,6 +1,6 @@
 // The root GameState shape. Split out of core/types.ts (P-4); re-exported via the barrel.
 
-import type { Race, RaceRelation } from './race';
+import type { Culture, CultureRelation } from './culture';
 import type { WorldTile } from './world';
 import type { Season, WeatherState } from './environment';
 import type {
@@ -29,13 +29,13 @@ export interface GameState {
   /** Deterministic RNG seed (P0-2). Persisted so a loaded save replays identically. */
   seed: number;
   turn: number;
-  /** The colony's primary / "home" race. Back-compat alias for `racePool[0]`; the
-   *  pool is canonical now that colonies are mixed (Race overhaul). */
-  race: Race;
-  /** Prerolled pool of 15–25 procedural races — the known-races pokédex backing store. */
-  racePool: Race[];
-  /** Stub procedural inter-race relations (data + pokédex display only; no mood wiring yet). */
-  raceRelations: RaceRelation[];
+  /** The colony's primary / "home" culture. Back-compat alias for `culturePool[0]`; the
+   *  pool is canonical now that colonies are mixed (Culture overhaul). */
+  culture: Culture;
+  /** Prerolled pool of 15–25 procedural cultures — the known-cultures pokédex backing store. */
+  culturePool: Culture[];
+  /** Stub procedural inter-culture relations (data + pokédex display only; no mood wiring yet). */
+  cultureRelations: CultureRelation[];
   worldMap: WorldTile[][];
   /** Living-world (SEASONS_WEATHER Phase B): current season + 0-indexed day within it. */
   season?: Season;

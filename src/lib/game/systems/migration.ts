@@ -29,11 +29,11 @@ export function rollMigrantWave(state: GameState): GameState {
 
   // Re-id with a wave-unique key so a candidate can't be confused with a live `pawn-N` id while it
   // sits in the pending event (commit reassigns a fresh colony id).
-  const candidates = generateColonyPawns(state.racePool, count).map((pw, i) => ({
+  const candidates = generateColonyPawns(state.culturePool, count).map((pw, i) => ({
     ...pw,
     id: `migrant-${state.turn}-${i}`
   }));
-  if (candidates.length === 0) return state; // empty race pool — nothing to offer
+  if (candidates.length === 0) return state; // empty culture pool — nothing to offer
 
 
 

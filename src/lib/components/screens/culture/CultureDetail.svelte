@@ -1,11 +1,11 @@
 <script lang="ts">
-  import type { Race, RaceRelation } from '$lib/game/core/types';
+  import type { Culture, CultureRelation } from '$lib/game/core/types';
   import StatBar from '$lib/components/UI/StatBar.svelte';
   import TraitCards from '$lib/components/pawn/TraitCards.svelte';
 
-  export let race: Race;
-  export let knownRaces: Race[];
-  export let relations: RaceRelation[];
+  export let culture: Culture;
+  export let knownCultures: Culture[];
+  export let relations: CultureRelation[];
   export let headcount = 0;
 
   const STAT_ORDER = [
@@ -17,12 +17,12 @@
     'charisma'
   ];
 
-  // Sum of racial-trait stat bonuses for a given stat (so the screen can show the effective
-  // range a pawn actually rolls into). Mirrors applyRacialTraitBonuses' summation.
-  function traitStatBonus(r: Race, stat: string): number {
+  // Sum of cultural-trait stat bonuses for a given stat (so the screen can show the effective
+  // range a pawn actually rolls into). Mirrors applyCulturalTraitBonuses' summation.
+  function traitStatBonus(r: Culture, stat: string): number {
     let b = 0;
-    // Only GUARANTEED identity traits shift the race's baseline every member shares; pool traits are
-    // per-pawn variety, so they don't move the race-wide stat range shown here.
+    // Only GUARANTEED identity traits shift the culture's baseline every member shares; pool traits are
+    // per-pawn variety, so they don't move the culture-wide stat range shown here.
     for (const t of r.guaranteedTraits) {
       b += (t.effects as Record<string, number>)[`${stat}Bonus`] ?? 0;
       b -= (t.effects as Record<string, number>)[`${stat}Penalty`] ?? 0;
@@ -36,7 +36,7 @@
     return '#9E9E9E';
   }
 
-  const DISPOSITION_COLOR: Record<RaceRelation['disposition'], string> = {
+  const DISPOSITION_COLOR: Record<CultureRelation['disposition'], string> = {
     allied: '#4CAF50',
     friendly: '#8BC34A',
     neutral: '#9E9E9E',
@@ -44,60 +44,60 @@
     hostile: '#E53935'
   };
 
-  // Relations from this race to OTHER known races (never reveal undiscovered ones).
+  // Relations from this culture to OTHER known cultures (never reveal undiscovered ones).
   $: relViews = relations
-    .filter((rel) => rel.a === race.id || rel.b === race.id)
+    .filter((rel) => rel.a === culture.id || rel.b === culture.id)
     .map((rel) => {
-      const otherId = rel.a === race.id ? rel.b : rel.a;
-      const other = knownRaces.find((r) => r.id === otherId);
+      const otherId = rel.a === culture.id ? rel.b : rel.a;
+      const other = knownCultures.find((r) => r.id === otherId);
       return other ? { other, score: rel.score, disposition: rel.disposition } : null;
     })
     .filter(
-      (v): v is { other: Race; score: number; disposition: RaceRelation['disposition'] } => !!v
+      (v): v is { other: Culture; score: number; disposition: CultureRelation['disposition'] } => !!v
     )
     .sort((a, b) => b.score - a.score);
 </script>
 
 <div class="detail">
   <!-- Lore -->
-  <div class="section-hdr">| {race.name.toUpperCase()} — {race.lore.epithet}</div>
-  <p class="lore-desc">{race.lore.description}</p>
-  <div class="row"><span class="lbl">ARCHETYPE</span><span class="val">{race.archetype}</span></div>
+  <div class="section-hdr">| {culture.name.toUpperCase()} — {culture.lore.epithet}</div>
+  <p class="lore-desc">{culture.lore.description}</p>
+  <div class="row"><span class="lbl">ARCHETYPE</span><span class="val">{culture.archetype}</span></div>
   <div class="row"><span class="lbl">COLONY</span><span class="val">{headcount} living</span></div>
   <div class="row">
-    <span class="lbl">HOMELAND</span><span class="val">{race.lore.homeland}</span>
+    <span class="lbl">HOMELAND</span><span class="val">{culture.lore.homeland}</span>
   </div>
   <div class="row">
-    <span class="lbl">TEMPERAMENT</span><span class="val">{race.lore.temperament}</span>
+    <span class="lbl">TEMPERAMENT</span><span class="val">{culture.lore.temperament}</span>
   </div>
   <div class="row">
-    <span class="lbl">BELIEF</span><span class="val small">{race.lore.belief}</span>
+    <span class="lbl">BELIEF</span><span class="val small">{culture.lore.belief}</span>
   </div>
 
   <!-- Physique ranges -->
   <div class="section-hdr">| PHYSIQUE <span class="hint">(rolled per pawn)</span></div>
   <div class="row">
-    <span class="lbl">BUILD</span><span class="val">{race.physicalTraits.size}</span>
+    <span class="lbl">BUILD</span><span class="val">{culture.physicalTraits.size}</span>
   </div>
   <div class="row">
     <span class="lbl">HEIGHT</span>
     <span class="val"
-      >{race.physicalTraits.heightRange[0]}–{race.physicalTraits.heightRange[1]} cm</span
+      >{culture.physicalTraits.heightRange[0]}–{culture.physicalTraits.heightRange[1]} cm</span
     >
   </div>
   <div class="row">
     <span class="lbl">WEIGHT</span>
     <span class="val"
-      >{race.physicalTraits.weightRange[0]}–{race.physicalTraits.weightRange[1]} kg</span
+      >{culture.physicalTraits.weightRange[0]}–{culture.physicalTraits.weightRange[1]} kg</span
     >
   </div>
 
   <!-- Stat ranges + trait boosts -->
   <div class="section-hdr">| STATS <span class="hint">(each pawn rolls in range)</span></div>
   {#each STAT_ORDER as stat}
-    {#if race.statRanges[stat]}
-      {@const range = race.statRanges[stat]}
-      {@const bonus = traitStatBonus(race, stat)}
+    {#if culture.statRanges[stat]}
+      {@const range = culture.statRanges[stat]}
+      {@const bonus = traitStatBonus(culture, stat)}
       {@const effMax = range[1] + bonus}
       {@const avg = (range[0] + range[1]) / 2 + bonus}
       <StatBar
@@ -115,11 +115,11 @@
   <!-- Traits: guaranteed identity every member shares, then the pool pawns may individually draw.
        Rendered by the SHARED TraitCards grid (same component the pawn status tab uses). -->
   <div class="section-hdr">
-    | TRAITS ({race.guaranteedTraits.length} identity + {race.racialTraitPool.length} possible)
+    | TRAITS ({culture.guaranteedTraits.length} identity + {culture.culturalTraitPool.length} possible)
   </div>
   <TraitCards
-    traits={[...race.guaranteedTraits, ...race.racialTraitPool]}
-    guaranteedCount={race.guaranteedTraits.length}
+    traits={[...culture.guaranteedTraits, ...culture.culturalTraitPool]}
+    guaranteedCount={culture.guaranteedTraits.length}
   />
 
   <!-- Relations -->

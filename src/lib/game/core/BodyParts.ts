@@ -30,7 +30,7 @@ export interface BodyPartDef {
    *  night vision + perception). This is how a GRAFTED organ pays out its buff without routing through a
    *  condition: `nightVision` is summed live over the entity's LIVING parts (vision.ts) — lose the eye,
    *  lose the sight; `perceptionBonus` (a core stat) is baked in once at pawn-gen from the grafted parts
-   *  (applyRacialTraitBonuses). Only a part unique to the granting body carries it, so it never leaks to
+   *  (applyCulturalTraitBonuses). Only a part unique to the granting body carries it, so it never leaks to
    *  a plain humanoid eye. Conditional benefits (gills only help when wet) still use a hostParts condition. */
   grants?: { nightVision?: number; perceptionBonus?: number };
 }

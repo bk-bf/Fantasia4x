@@ -1829,7 +1829,7 @@ export function stepHunting(
 
   if (adjacent(mob, preyPos)) {
     if (prey.state === 'Corpse') {
-      // Only start eating if meat remains (guards against race with pendingMeatConsumption).
+      // Only start eating if meat remains (guards against culture with pendingMeatConsumption).
       if ((prey.intactness ?? 1.0) <= 0) {
         const restState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
         return {

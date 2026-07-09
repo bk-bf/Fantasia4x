@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { gameState, currentRace } from '$lib/stores/gameState';
+  import { gameState, currentCulture } from '$lib/stores/gameState';
   import { addToStockpileZone, availableAggregateFromDrops } from '$lib/game/core/GameState';
   import { uiState } from '$lib/stores/uiState';
   import BackButton from '$lib/components/UI/BackButton.svelte';
@@ -17,7 +17,7 @@
   import type { PlacedBuilding } from '$lib/game/core/types';
   import type { Building } from '$lib/game/core/types';
 
-  let race: any = null;
+  let culture: any = null;
   let buildings: PlacedBuilding[] = [];
   let completedResearch: string[] = [];
 
@@ -162,10 +162,10 @@
     !!$gameState && buildingService.resolveBuildingCost(building.id, $gameState) !== null;
 
   $: canBuild = (building: Building): boolean =>
-    !!$gameState && !!race && buildingService.canBuildBuilding(building.id, $gameState);
+    !!$gameState && !!culture && buildingService.canBuildBuilding(building.id, $gameState);
 
-  const unsubscribeRace = currentRace.subscribe((value) => {
-    race = value;
+  const unsubscribeCulture = currentCulture.subscribe((value) => {
+    culture = value;
   });
 
   const unsubscribeGame = gameState.subscribe((state) => {
@@ -174,7 +174,7 @@
   });
 
   onDestroy(() => {
-    unsubscribeRace();
+    unsubscribeCulture();
     unsubscribeGame();
   });
 

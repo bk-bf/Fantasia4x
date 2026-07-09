@@ -48,7 +48,7 @@
     return pawn.equipment?.[slot];
   }
 
-  // ADR-023: slots a racial body trait forbids (claws fill the hands, horns the crown…) — greyed out.
+  // ADR-023: slots a cultural body trait forbids (claws fill the hands, horns the crown…) — greyed out.
   const blocked = $derived(blockedSlots(pawn));
 
   // ADR-023 / TRAIT-SYSTEM-V2 §3 natural gear: a trait's natural weapon/armor (resolved via its
@@ -104,7 +104,7 @@
       title={nat
         ? `${nat.name} — ${nat.sub} (innate; can't be unequipped)`
         : isBlocked && !it
-          ? "Blocked by a racial trait — this body can't wear gear here."
+          ? "Blocked by a cultural trait — this body can't wear gear here."
           : undefined}
       onmouseenter={(e) => {
         const tip = def ?? nat?.tip;
@@ -216,7 +216,7 @@
     border-color: var(--accent);
     background: var(--bg-panel);
   }
-  /* ADR-023: a racial trait forbids this slot — greyed and struck through, not equippable. */
+  /* ADR-023: a cultural trait forbids this slot — greyed and struck through, not equippable. */
   .slot-box.blocked {
     border-style: dashed;
     opacity: 0.35;

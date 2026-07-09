@@ -2,7 +2,7 @@
 // re-exported via the barrel.
 
 import type { ItemInstance, ItemQuality } from './items';
-import type { EntityStats } from './race';
+import type { EntityStats } from './culture';
 
 /** Celestia-compatible 5-level labor priority. 0 = disabled. */
 export type LaborLevel = 0 | 1 | 2 | 3 | 4;

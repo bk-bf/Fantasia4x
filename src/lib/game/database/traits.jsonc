@@ -1,13 +1,13 @@
 // Trait Database (ADR-023 · TRAIT-SYSTEM-V2 · ADR-028). ONE list, each trait tagged with:
-//   scope  : "racial" (physiology, drawn from a RACE's pool / identity) | "personal" (temperament, an
-//            INDIVIDUAL pawn carries regardless of race). NOTE: a few individual afflictions (one-eyed /
-//            hard-of-hearing / bad-back + the temperament ones) sit under the racial section but are
+//   scope  : "cultural" (physiology, drawn from a CULTURE's pool / identity) | "personal" (temperament, an
+//            INDIVIDUAL pawn carries regardless of culture). NOTE: a few individual afflictions (one-eyed /
+//            hard-of-hearing / bad-back + the temperament ones) sit under the cultural section but are
 //            scope:"personal" — the flag is authoritative, not the grouping.
 //   rarity : rarities.jsonc scale — negative | common | uncommon | rare | epic | legendary. A BUDGET
 //            (§2): how many attribute categories it may touch + polarity. "negative" = a pure-downside
-//            FLAW (frail/clumsy/one-eyed…), drawn as an individual Gaussian-COUNT layer (Race.ts —
-//            most pawns get none, a rare wretch four), NEVER race identity. common/uncommon = the
-//            mundane variety pool; rare/epic = a rare race-identity CAPABILITY; legendary = a bundle.
+//            FLAW (frail/clumsy/one-eyed…), drawn as an individual Gaussian-COUNT layer (Culture.ts —
+//            most pawns get none, a rare wretch four), NEVER culture identity. common/uncommon = the
+//            mundane variety pool; rare/epic = a rare culture-identity CAPABILITY; legendary = a bundle.
 //            Drives the card accent colour (flaw = dark red); NOT shown as a naked "supernatural" label.
 //   kind   : the payload shape + validator path — STRICTLY separated (ADR-028, no mixing):
 //            "stat"       — ONLY core-stat *Bonus/*Penalty deltas (baked at pawn-gen).
@@ -28,9 +28,9 @@
 //   — those imply a body-model mechanic the abstract trait does NOT have, misleading the player. Only
 //   bodyMod/naturalGear/passive/wound traits (which DO touch the body) may carry an anatomical name.
 //
-// Selection (Race.ts): each RACE rolls its identity — ~85% mundane-only, ~15% a rare/epic capability,
-// ~2.5% legendary — plus a small mundane pool (3–4). Each PAWN draws AT SPAWN up to 2 racial (guaranteed
-// identity first, then the race pool) + up to 3 personal → ≤5 traits, so same-race pawns differ.
+// Selection (Culture.ts): each CULTURE rolls its identity — ~85% mundane-only, ~15% a rare/epic capability,
+// ~2.5% legendary — plus a small mundane pool (3–4). Each PAWN draws AT SPAWN up to 2 cultural (guaranteed
+// identity first, then the culture pool) + up to 3 personal → ≤5 traits, so same-culture pawns differ.
 //
 // evolvesTo : groundwork for trait evolution — a base names the higher-rarity trait it grows into
 //   (frost-loving → frost-born, adrenaline → berserker-blood). No runtime mechanic yet.
@@ -41,11 +41,11 @@
 //   condition PILL (which carries grantsNaturalWeapon/grantsNaturalArmor/hostParts). "bodyMods" is the
 //   bodyMod payload; "wounds" the wound payload; "blocksSlots"/"onHitCondition"/"weaponBonus"/"subCapabilities".
 [
-    // ══ RACIAL · MUNDANE — the physiology majority (small quirks, many negative) ═══
+    // ══ CULTURAL · MUNDANE — the physiology majority (small quirks, many negative) ═══
     // — small positives / trade-offs (pure core-stat → generic names) —
     {
         "id"         : "sturdy",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "stat",
         "name"       : "Sturdy",
@@ -55,7 +55,7 @@
     },
     {
         "id"         : "stocky",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "stat",
         "name"       : "Stocky",
@@ -66,7 +66,7 @@
     },
     {
         "id"         : "rangy",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "stat",
         "name"       : "Rangy",
@@ -76,7 +76,7 @@
     },
     {
         "id"         : "strong-backed",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "stat",
         "name"       : "Brawny",
@@ -86,7 +86,7 @@
     },
     {
         "id"         : "keen-eyed",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "stat",
         "name"       : "Watchful",
@@ -96,7 +96,7 @@
     },
     {
         "id"         : "bright",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "stat",
         "name"       : "Bright",
@@ -107,7 +107,7 @@
     // — bodyMod: intrinsic body-structure (real limbmap changes, §1) —
     {
         "id"         : "thick-skinned",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "bodyMod",
         "name"       : "Thick-Skinned",
@@ -119,7 +119,7 @@
     },
     {
         "id"         : "waterborn",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "attribute",
         "name"       : "Waterborn",
@@ -129,7 +129,7 @@
     },
     {
         "id"         : "marsh-dweller",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "passive",
         "name"       : "Marsh Dweller",
@@ -140,7 +140,7 @@
     // — evolution BASES (mundane seeds of a supernatural, ADR-023 evolvesTo) —
     {
         "id": "frost-loving",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "uncommon",
         "kind": "passive",
         "name": "Frost-Loving",
@@ -151,7 +151,7 @@
     },
     {
         "id": "warm-blooded",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "uncommon",
         "kind": "passive",
         "name": "Heat-Hardy",
@@ -162,7 +162,7 @@
     },
     {
         "id"         : "adrenaline",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "passive",
         "name"       : "Adrenal",
@@ -174,7 +174,7 @@
     },
     {
         "id"         : "heavy-boned",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "bodyMod",
         "stage"      : 1,
@@ -187,7 +187,7 @@
     },
     {
         "id"         : "night-owl",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "attribute",
         "name"       : "Night-Owl",
@@ -198,7 +198,7 @@
     },
     {
         "id"         : "fast-healer",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "attribute",
         "name"       : "Fast-Healer",
@@ -210,7 +210,7 @@
     // — mundane NEGATIVES (the contrast layer; weighted common) —
     {
         "id"         : "frail",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Frail",
@@ -220,7 +220,7 @@
     },
     {
         "id"         : "dull",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Dull",
@@ -230,7 +230,7 @@
     },
     {
         "id"         : "clumsy",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Clumsy",
@@ -240,7 +240,7 @@
     },
     {
         "id"         : "sickly",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "passive",
         "name"       : "Sickly",
@@ -250,7 +250,7 @@
     },
     {
         "id"         : "thin-skinned",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "bodyMod",
         "name"       : "Thin-Skinned",
@@ -261,7 +261,7 @@
     },
     {
         "id"         : "gaunt",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "stat",
         "name"       : "Gaunt",
@@ -272,7 +272,7 @@
     },
     {
         "id"         : "nearsighted",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Oblivious",
@@ -317,7 +317,7 @@
     },
     {
         "id"         : "brittle-boned",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "bodyMod",
         "name"       : "Brittle-Boned",
@@ -328,7 +328,7 @@
     },
     {
         "id"         : "short-winded",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "attribute",
         "name"       : "Languid",
@@ -338,7 +338,7 @@
     },
     {
         "id"         : "weak-stomached",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "passive",
         "name"       : "Delicate",
@@ -358,7 +358,7 @@
     },
     {
         "id"         : "cold-blooded",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "passive",
         "name"       : "Cold-Blooded",
@@ -368,7 +368,7 @@
     },
     {
         "id"         : "flat-footed",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Graceless",
@@ -379,7 +379,7 @@
     // — "really shitty" commons (§2): a deeper negative pull, kind-clean (two core OR two derived) —
     {
         "id"         : "sluggard",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Sluggard",
@@ -389,7 +389,7 @@
     },
     {
         "id"         : "slow-mending",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "passive",
         "name"       : "Slow-Mending",
@@ -399,7 +399,7 @@
     },
     {
         "id"         : "night-blind",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "attribute",
         "name"       : "Night-Blind",
@@ -409,7 +409,7 @@
     },
     {
         "id"         : "thin-blooded",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "passive",
         "name"       : "Wan",
@@ -419,7 +419,7 @@
     },
     {
         "id"         : "pox-marked",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "passive",
         "name"       : "Pox-Ridden",
@@ -429,7 +429,7 @@
     },
     {
         "id"         : "stiff-jointed",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "attribute",
         "name"       : "Maladroit",
@@ -546,11 +546,11 @@
         "description": "Turns from blood and gore, poor at the butcher's block or a bloody sickbed.",
         "effects"    : { "workSpeed": {"butchery": 0.75, "caretaking": 0.85} }
     },
-    // ══ RACIAL · SUPERNATURAL — RARE race powers, each worn as a permanent condition ══
+    // ══ CULTURAL · SUPERNATURAL — RARE culture powers, each worn as a permanent condition ══
     // Coverings (feathers/fur) that grant a resistance are `passive`; armour/weapons are `naturalGear`.
     {
         "id"           : "feathered",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "passive",
         "stage"        : 1,
@@ -563,7 +563,7 @@
     },
     {
         "id"           : "scaled-hide",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "naturalGear",
         "stage"        : 2,
@@ -577,7 +577,7 @@
     },
     {
         "id"           : "iron-skin",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "epic",
         "kind"         : "naturalGear",
         "stage"        : 3,
@@ -590,7 +590,7 @@
     },
     {
         "id"           : "rending-claws",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "naturalGear",
         "stage"        : 2,
@@ -607,7 +607,7 @@
     },
     {
         "id"           : "gore-horns",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "naturalGear",
         "stage"        : 2,
@@ -621,7 +621,7 @@
     },
     {
         "id"           : "venomous",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "naturalGear",
         "stage"        : 2,
@@ -635,7 +635,7 @@
     },
     {
         "id": "thick-fur",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "rare",
         "kind": "naturalGear",
         "stage": 2,
@@ -650,7 +650,7 @@
     },
     {
         "id"           : "flame-touched",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "passive",
         "name"         : "Flame Touched",
@@ -660,7 +660,7 @@
     },
     {
         "id"           : "photosynthetic",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "passive",
         "name"         : "Photosynthetic",
@@ -671,7 +671,7 @@
     },
     {
         "id"           : "regenerative",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "attribute",
         "name"         : "Regeneration",
@@ -680,7 +680,7 @@
     },
     {
         "id"           : "ever-warm",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "passive",
         "name"         : "Ever-Warm",
@@ -689,7 +689,7 @@
     },
     {
         "id"           : "frost-born",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "passive",
         "name"         : "Frost Born",
@@ -698,7 +698,7 @@
     },
     {
         "id"           : "berserker-blood",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "epic",
         "kind"         : "passive",
         "name"         : "Berserker Blood",
@@ -710,7 +710,7 @@
     },
     {
         "id"         : "stone-bones",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "epic",
         "kind"       : "bodyMod",
         "stage"      : 2,
@@ -722,7 +722,7 @@
     },
     {
         "id"           : "nocturnal",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "attribute",
         "name"         : "Nocturnal",
@@ -731,7 +731,7 @@
     },
     {
         "id": "amphibious",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "mythic",
         "kind": "passive",
         "name": "Amphibious",
@@ -741,7 +741,7 @@
         "subCapabilities": [
             {
                 "id"           : "gilled",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Gills",
                 "description"  : "Slitted gills draw breath from water as easily as from air.",
@@ -750,7 +750,7 @@
             },
             {
                 "id"         : "swift-swimmer",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "attribute",
                 "name"       : "Swift Swimmer",
                 "description": "Webbed and powerful in the water, a deft, tireless fisher.",
@@ -758,7 +758,7 @@
             },
             {
                 "id"           : "moist-skinned",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Moist Skin",
                 "description"  : "Permeable amphibian skin sheds water and cold, but parches and burns in dry heat.",
@@ -767,10 +767,10 @@
             }
         ]
     },
-    // ══ RACIAL · LEGENDARY — very rare; a bundle, each sub-capability rolled per pawn ══
+    // ══ CULTURAL · LEGENDARY — very rare; a bundle, each sub-capability rolled per pawn ══
     {
         "id"             : "dragon-heritage",
-        "scope"          : "racial",
+        "scope"          : "cultural",
         "rarity"         : "legendary",
         "kind"           : "passive",
         "name"           : "Dragon Heritage",
@@ -780,7 +780,7 @@
         "subCapabilities": [
             {
                 "id"           : "dragon-scales",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "name"         : "Dragon Scales",
                 "description"  : "Armored scales impervious to flame.",
@@ -790,7 +790,7 @@
             },
             {
                 "id"           : "dragon-claws",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "name"         : "Dragon Claws",
                 "description"  : "Talons that shear through armor.",
@@ -799,7 +799,7 @@
             },
             {
                 "id"         : "dragon-eyes",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "passive",
                 "name"       : "Dragon Eyes",
                 "description": "Slitted eyes that pierce the dark.",
@@ -807,14 +807,14 @@
             },
             {
                 "id"           : "dragon-blood",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Dragon Blood",
                 "description"  : "Fireproof blood that mends wounds fast.",                "effects": {"healRate": 0.5}, "resistances": {"fire": 0.5}
             },
             {
                 "id"         : "dragon-might",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "passive",
                 "name"       : "Dragon's Might",
                 "description": "Draconic strength behind every wielded blow.",
@@ -823,7 +823,7 @@
             },
             {
                 "id"           : "fire-breath",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "name"         : "Fire Breath",
                 "description"  : "A gout of dragonfire that sears and sets alight.",
@@ -834,7 +834,7 @@
     },
     {
         "id"             : "vampiric",
-        "scope"          : "racial",
+        "scope"          : "cultural",
         "rarity"         : "legendary",
         "kind"           : "passive",
         "name"           : "Vampiric",
@@ -844,7 +844,7 @@
         "subCapabilities": [
             {
                 "id"           : "bloodsucking-fangs",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "name"         : "Bloodsucking Fangs",
                 "description"  : "Feeding fangs that open the vein and drink.",
@@ -853,7 +853,7 @@
             },
             {
                 "id"           : "sun-cursed",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Sun-Cursed",
                 "description"  : "Daylight saps their strength under an open sky.",
@@ -862,7 +862,7 @@
             },
             {
                 "id"           : "blood-hunger",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Blood Hunger",
                 "description"  : "A gnawing thirst that frays focus when unfed.",
@@ -871,7 +871,7 @@
             },
             {
                 "id"         : "vampire-strength",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "passive",
                 "name"       : "Undying Vigor",
                 "description": "Unnatural strength behind a wielded blade.",
@@ -927,7 +927,7 @@
     },
     {
         "id"         : "gloomwise",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "attribute",
         "name"       : "Gloomwise",
@@ -936,7 +936,7 @@
     },
     {
         "id"         : "duskwalker",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "attribute",
         "name"       : "Duskwalker",
@@ -945,7 +945,7 @@
     },
     {
         "id"         : "dusk-wary",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "attribute",
         "name"       : "Dusk-Wary",
@@ -954,7 +954,7 @@
     },
     {
         "id"         : "lightbound",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "attribute",
         "name"       : "Lightbound",
@@ -964,7 +964,7 @@
     // ── §1 · PASSIVE affinities (resistance is legitimate here — never on an abstract attribute) ──
     {
         "id"           : "hardy-gut",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "passive",
         "name"         : "Hardy Gut",
@@ -972,7 +972,7 @@
     },
     {
         "id"           : "plagueproof",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "passive",
         "name"         : "Plagueproof",
@@ -980,7 +980,7 @@
     },
     {
         "id"           : "weak-gutted",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "negative",
         "kind"         : "passive",
         "name"         : "Weak Gut",
@@ -1000,7 +1000,7 @@
     },
     {
         "id"         : "killer-instinct",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "epic",
         "kind"       : "attribute",
         "name"       : "Killer Instinct",
@@ -1036,7 +1036,7 @@
     },
     {
         "id"         : "untouchable",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "epic",
         "kind"       : "attribute",
         "name"       : "Untouchable",
@@ -1072,7 +1072,7 @@
     },
     {
         "id"         : "whirlwind",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "epic",
         "kind"       : "attribute",
         "name"       : "Whirlwind",
@@ -1108,7 +1108,7 @@
     },
     {
         "id"         : "rapid-loose",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "attribute",
         "name"       : "Rapid Loose",
@@ -1135,7 +1135,7 @@
     },
     {
         "id"         : "long-ranging",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "attribute",
         "name"       : "Long-Ranging",
@@ -1144,7 +1144,7 @@
     },
     {
         "id"         : "sharpshooter",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "attribute",
         "name"       : "Sharpshooter",
@@ -1747,7 +1747,7 @@
     // ═══════════════════════════════════════════════════════════════════════════
     {
         "id"         : "str-plus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "stat",
         "name"       : "Strapping",
@@ -1756,7 +1756,7 @@
     },
     {
         "id"         : "str-plus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Powerful",
@@ -1765,7 +1765,7 @@
     },
     {
         "id"         : "str-plus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "stat",
         "name"       : "Mighty",
@@ -1775,7 +1775,7 @@
     },
     {
         "id"         : "str-minus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Slight",
@@ -1784,7 +1784,7 @@
     },
     {
         "id"         : "str-minus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Feeble",
@@ -1793,7 +1793,7 @@
     },
     {
         "id"         : "str-minus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Enfeebled",
@@ -1802,7 +1802,7 @@
     },
     {
         "id"         : "dex-plus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "stat",
         "name"       : "Nimble",
@@ -1811,7 +1811,7 @@
     },
     {
         "id"         : "dex-plus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Deft",
@@ -1820,7 +1820,7 @@
     },
     {
         "id"         : "dex-plus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "stat",
         "name"       : "Quicksilver",
@@ -1830,7 +1830,7 @@
     },
     {
         "id"         : "dex-minus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Awkward",
@@ -1839,7 +1839,7 @@
     },
     {
         "id"         : "dex-minus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Fumbling",
@@ -1848,7 +1848,7 @@
     },
     {
         "id"         : "dex-minus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Palsied",
@@ -1857,7 +1857,7 @@
     },
     {
         "id"         : "con-plus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "stat",
         "name"       : "Robust",
@@ -1866,7 +1866,7 @@
     },
     {
         "id"         : "con-plus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Rugged",
@@ -1875,7 +1875,7 @@
     },
     {
         "id"         : "con-plus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "stat",
         "name"       : "Indomitable",
@@ -1885,7 +1885,7 @@
     },
     {
         "id"         : "con-minus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Soft",
@@ -1894,7 +1894,7 @@
     },
     {
         "id"         : "con-minus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Infirm",
@@ -1903,7 +1903,7 @@
     },
     {
         "id"         : "con-minus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Decrepit",
@@ -1912,7 +1912,7 @@
     },
     {
         "id"         : "per-plus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "stat",
         "name"       : "Attentive",
@@ -1921,7 +1921,7 @@
     },
     {
         "id"         : "per-plus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Perceptive",
@@ -1930,7 +1930,7 @@
     },
     {
         "id"         : "per-plus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "stat",
         "name"       : "Uncanny",
@@ -1940,7 +1940,7 @@
     },
     {
         "id"         : "per-minus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Inattentive",
@@ -1949,7 +1949,7 @@
     },
     {
         "id"         : "per-minus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Absent",
@@ -1958,7 +1958,7 @@
     },
     {
         "id"         : "per-minus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Heedless",
@@ -1967,7 +1967,7 @@
     },
     {
         "id"         : "int-plus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "stat",
         "name"       : "Clever",
@@ -1976,7 +1976,7 @@
     },
     {
         "id"         : "int-plus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Brilliant",
@@ -1985,7 +1985,7 @@
     },
     {
         "id"         : "int-plus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "stat",
         "name"       : "Genius",
@@ -1995,7 +1995,7 @@
     },
     {
         "id"         : "int-minus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Simple",
@@ -2004,7 +2004,7 @@
     },
     {
         "id"         : "int-minus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Dim",
@@ -2013,7 +2013,7 @@
     },
     {
         "id"         : "int-minus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Witless",
@@ -2022,7 +2022,7 @@
     },
     {
         "id"         : "cha-plus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "stat",
         "name"       : "Affable",
@@ -2031,7 +2031,7 @@
     },
     {
         "id"         : "cha-plus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Charming",
@@ -2040,7 +2040,7 @@
     },
     {
         "id"         : "cha-plus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "stat",
         "name"       : "Magnetic",
@@ -2050,7 +2050,7 @@
     },
     {
         "id"         : "cha-minus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Aloof",
@@ -2059,7 +2059,7 @@
     },
     {
         "id"         : "cha-minus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Off-Putting",
@@ -2068,7 +2068,7 @@
     },
     {
         "id"         : "cha-minus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Repellent",
@@ -2078,7 +2078,7 @@
     // ── §2b · Stat trade-offs (+N / −N: net-neutral, cheap, shaped) ─────────────
     {
         "id"         : "str-for-dex-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "common",
         "kind"       : "stat",
         "name"       : "Solid",
@@ -2087,7 +2087,7 @@
     },
     {
         "id"         : "str-for-dex-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Bruiser",
@@ -2096,7 +2096,7 @@
     },
     {
         "id"         : "str-for-dex-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "stat",
         "name"       : "Juggernaut",
@@ -2105,7 +2105,7 @@
     },
     {
         "id"         : "dex-for-str-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Willowy",
@@ -2114,7 +2114,7 @@
     },
     {
         "id"         : "con-for-int-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Bull-Headed",
@@ -2123,7 +2123,7 @@
     },
     {
         "id"         : "int-for-con-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Bookish",
@@ -2132,7 +2132,7 @@
     },
     {
         "id"         : "per-for-cha-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Watchful Recluse",
@@ -2141,7 +2141,7 @@
     },
     {
         "id"         : "cha-for-per-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Glad-Hander",
@@ -2150,7 +2150,7 @@
     },
     {
         "id"         : "str-for-int-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Brute",
@@ -2159,7 +2159,7 @@
     },
     {
         "id"         : "int-for-cha-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Cold Intellect",
@@ -2169,7 +2169,7 @@
     // ── §2c · Two-stat combined swings (both up, or both down) ──────────────────
     {
         "id"         : "str-dex-plus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Athletic",
@@ -2178,7 +2178,7 @@
     },
     {
         "id"         : "str-dex-plus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "stat",
         "name"       : "Warrior-Built",
@@ -2187,7 +2187,7 @@
     },
     {
         "id"         : "str-dex-plus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "epic",
         "kind"       : "stat",
         "name"       : "Peerless Physique",
@@ -2197,7 +2197,7 @@
     },
     {
         "id"         : "str-dex-minus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Ungainly",
@@ -2206,7 +2206,7 @@
     },
     {
         "id"         : "str-dex-minus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Feeble & Fumbling",
@@ -2215,7 +2215,7 @@
     },
     {
         "id"         : "str-dex-minus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Wretched Frame",
@@ -2224,7 +2224,7 @@
     },
     {
         "id"         : "con-str-plus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Hardy Stock",
@@ -2233,7 +2233,7 @@
     },
     {
         "id"         : "con-str-plus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "stat",
         "name"       : "Ox-Strong",
@@ -2242,7 +2242,7 @@
     },
     {
         "id"         : "con-str-plus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "epic",
         "kind"       : "stat",
         "name"       : "Titanic",
@@ -2252,7 +2252,7 @@
     },
     {
         "id"         : "con-str-minus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Poor Stock",
@@ -2261,7 +2261,7 @@
     },
     {
         "id"         : "con-str-minus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Wasted Frame",
@@ -2270,7 +2270,7 @@
     },
     {
         "id"         : "con-str-minus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Ruinous Frame",
@@ -2279,7 +2279,7 @@
     },
     {
         "id"         : "int-per-plus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Observant",
@@ -2288,7 +2288,7 @@
     },
     {
         "id"         : "int-per-plus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "stat",
         "name"       : "Studious",
@@ -2297,7 +2297,7 @@
     },
     {
         "id"         : "int-per-plus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "epic",
         "kind"       : "stat",
         "name"       : "All-Seeing",
@@ -2307,7 +2307,7 @@
     },
     {
         "id"         : "int-per-minus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Distracted",
@@ -2316,7 +2316,7 @@
     },
     {
         "id"         : "int-per-minus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Muddled",
@@ -2325,7 +2325,7 @@
     },
     {
         "id"         : "int-per-minus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Senseless",
@@ -2334,7 +2334,7 @@
     },
     {
         "id"         : "cha-int-plus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Personable",
@@ -2343,7 +2343,7 @@
     },
     {
         "id"         : "cha-int-plus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "stat",
         "name"       : "Silver-Tongued",
@@ -2352,7 +2352,7 @@
     },
     {
         "id"         : "cha-int-plus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "epic",
         "kind"       : "stat",
         "name"       : "Statecraft",
@@ -2362,7 +2362,7 @@
     },
     {
         "id"         : "cha-int-minus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Tactless",
@@ -2371,7 +2371,7 @@
     },
     {
         "id"         : "cha-int-minus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Boorish",
@@ -2380,7 +2380,7 @@
     },
     {
         "id"         : "cha-int-minus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Insufferable",
@@ -2389,7 +2389,7 @@
     },
     {
         "id"         : "per-dex-plus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Sharp",
@@ -2398,7 +2398,7 @@
     },
     {
         "id"         : "per-dex-plus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "stat",
         "name"       : "Dead-Shot",
@@ -2407,7 +2407,7 @@
     },
     {
         "id"         : "per-dex-plus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "epic",
         "kind"       : "stat",
         "name"       : "Peerless Shot",
@@ -2417,7 +2417,7 @@
     },
     {
         "id"         : "per-dex-minus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Unsteady",
@@ -2426,7 +2426,7 @@
     },
     {
         "id"         : "per-dex-minus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Shaky",
@@ -2435,7 +2435,7 @@
     },
     {
         "id"         : "per-dex-minus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Hopeless Shot",
@@ -2444,7 +2444,7 @@
     },
     {
         "id"         : "con-int-plus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "stat",
         "name"       : "Tempered",
@@ -2453,7 +2453,7 @@
     },
     {
         "id"         : "con-int-plus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "rare",
         "kind"       : "stat",
         "name"       : "Sage-Wrought",
@@ -2462,7 +2462,7 @@
     },
     {
         "id"         : "con-int-plus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "epic",
         "kind"       : "stat",
         "name"       : "Enduring Mind",
@@ -2472,7 +2472,7 @@
     },
     {
         "id"         : "con-int-minus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Frayed",
@@ -2481,7 +2481,7 @@
     },
     {
         "id"         : "con-int-minus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Worn Through",
@@ -2490,7 +2490,7 @@
     },
     {
         "id"         : "con-int-minus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Broken Vessel",
@@ -2501,7 +2501,7 @@
     //    inline under the Blighted heritage as its sub-capabilities — the dark mirror, §4) ──
     {
         "id"         : "all-plus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "epic",
         "kind"       : "stat",
         "name"       : "Blessed Stock",
@@ -2518,7 +2518,7 @@
     },
     {
         "id"         : "all-plus-3",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "mythic",
         "kind"       : "stat",
         "name"       : "Paragon Blood",
@@ -2535,7 +2535,7 @@
     },
     {
         "id"         : "all-plus-5",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "legendary",
         "kind"       : "stat",
         "name"       : "Godtouched",
@@ -2552,7 +2552,7 @@
     },
     {
         "id"         : "all-minus-1",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "negative",
         "kind"       : "stat",
         "name"       : "Ill-Made",
@@ -2574,7 +2574,7 @@
     // ═══════════════════════════════════════════════════════════════════════════
     {
         "id"           : "budding-claws",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "naturalGear",
         "stage"        : 1,
@@ -2587,7 +2587,7 @@
     },
     {
         "id": "ripping-talons",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "epic",
         "kind": "naturalGear",
         "stage": 3,
@@ -2602,7 +2602,7 @@
     },
     {
         "id"           : "jagged-teeth",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "naturalGear",
         "stage"        : 1,
@@ -2615,7 +2615,7 @@
     },
     {
         "id"           : "goring-fangs",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "naturalGear",
         "stage"        : 2,
@@ -2628,7 +2628,7 @@
     },
     {
         "id"           : "sabre-fangs",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "epic",
         "kind"         : "naturalGear",
         "stage"        : 3,
@@ -2640,7 +2640,7 @@
     },
     {
         "id"           : "nub-horns",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "naturalGear",
         "stage"        : 1,
@@ -2653,7 +2653,7 @@
     },
     {
         "id": "great-horns",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "epic",
         "kind": "naturalGear",
         "stage": 3,
@@ -2666,7 +2666,7 @@
     },
     {
         "id"           : "small-tusks",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "naturalGear",
         "stage"        : 1,
@@ -2679,7 +2679,7 @@
     },
     {
         "id"           : "tusks",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "naturalGear",
         "stage"        : 2,
@@ -2692,7 +2692,7 @@
     },
     {
         "id"           : "great-tusks",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "epic",
         "kind"         : "naturalGear",
         "stage"        : 3,
@@ -2704,7 +2704,7 @@
     },
     {
         "id"           : "mild-venom",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "naturalGear",
         "stage"        : 1,
@@ -2723,7 +2723,7 @@
     },
     {
         "id": "deathly-venom",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "epic",
         "kind": "naturalGear",
         "stage": 3,
@@ -2736,7 +2736,7 @@
     },
     {
         "id": "ember-breath",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "rare",
         "kind": "naturalGear",
         "stage": 1,
@@ -2749,7 +2749,7 @@
     },
     {
         "id": "searing-breath",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "epic",
         "kind": "naturalGear",
         "stage": 2,
@@ -2762,7 +2762,7 @@
     },
     {
         "id": "dragonfire-breath",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "epic",
         "kind": "naturalGear",
         "stage": 3,
@@ -2774,7 +2774,7 @@
     },
     {
         "id"           : "raking-talons",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "naturalGear",
         "stage"        : 1,
@@ -2788,7 +2788,7 @@
     },
     {
         "id"           : "hooked-talons",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "naturalGear",
         "stage"        : 2,
@@ -2802,7 +2802,7 @@
     },
     {
         "id"           : "raptor-talons",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "epic",
         "kind"         : "naturalGear",
         "stage"        : 3,
@@ -2815,7 +2815,7 @@
     },
     {
         "id"           : "pecking-beak",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "naturalGear",
         "stage"        : 1,
@@ -2828,7 +2828,7 @@
     },
     {
         "id"           : "tearing-beak",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "naturalGear",
         "stage"        : 2,
@@ -2841,7 +2841,7 @@
     },
     {
         "id"           : "rending-beak",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "epic",
         "kind"         : "naturalGear",
         "stage"        : 3,
@@ -2854,7 +2854,7 @@
     // ── §3c · Armor coverings (resistance rides the covering, never an abstract number) ──
     {
         "id"           : "thick-hide",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "naturalGear",
         "stage"        : 1,
@@ -2868,7 +2868,7 @@
     },
     {
         "id"           : "downy-coat",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "naturalGear",
         "stage"        : 1,
@@ -2882,7 +2882,7 @@
     },
     {
         "id": "winter-mane",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "epic",
         "kind": "naturalGear",
         "stage": 3,
@@ -2896,7 +2896,7 @@
     },
     {
         "id"           : "chitin-plates",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "naturalGear",
         "stage"        : 1,
@@ -2910,7 +2910,7 @@
     },
     {
         "id"           : "carapace",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "naturalGear",
         "stage"        : 2,
@@ -2924,7 +2924,7 @@
     },
     {
         "id"           : "ironshell",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "epic",
         "kind"         : "naturalGear",
         "stage"        : 3,
@@ -2937,7 +2937,7 @@
     },
     {
         "id"           : "plumed-coat",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "naturalGear",
         "stage"        : 2,
@@ -2951,7 +2951,7 @@
     },
     {
         "id"           : "storm-plumage",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "epic",
         "kind"         : "naturalGear",
         "stage"        : 3,
@@ -2966,7 +2966,7 @@
     //    is a REAL limb (§3d): hittable, losable — shear it and the benefit goes with it. ──
     {
         "id"           : "budding-wings",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "naturalGear",
         "stage"        : 1,
@@ -2985,7 +2985,7 @@
     },
     {
         "id": "wings",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "epic",
         "kind": "naturalGear",
         "stage": 2,
@@ -3004,7 +3004,7 @@
     },
     {
         "id": "great-wings",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "epic",
         "kind": "naturalGear",
         "stage": 3,
@@ -3022,7 +3022,7 @@
     },
     {
         "id": "prehensile-tail",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "rare",
         "kind": "naturalGear",
         "name": "Prehensile Tail",
@@ -3037,7 +3037,7 @@
     },
     {
         "id": "gliding-membrane",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "rare",
         "kind": "passive",
         "name": "Gliding Membrane",
@@ -3053,7 +3053,7 @@
     },
     {
         "id"           : "beast-eyed",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "passive",
         "name"         : "Beast Eyes",
@@ -3063,7 +3063,7 @@
     },
     {
         "id"           : "burrowing-claws",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "naturalGear",
         "name"         : "Burrowing Claws",
@@ -3075,7 +3075,7 @@
     },
     {
         "id": "gill-frills",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "rare",
         "kind": "passive",
         "name": "Gill Frills",
@@ -3087,7 +3087,7 @@
     },
     {
         "id"         : "hollow-boned",
-        "scope"      : "racial",
+        "scope"      : "cultural",
         "rarity"     : "uncommon",
         "kind"       : "bodyMod",
         "name"       : "Hollow-Boned",
@@ -3098,7 +3098,7 @@
     },
     {
         "id"           : "spider-eyes-lesser",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "bodyMod",
         "stage"        : 1,
@@ -3111,7 +3111,7 @@
     },
     {
         "id"           : "spider-eyes",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "bodyMod",
         "stage"        : 2,
@@ -3124,7 +3124,7 @@
     },
     {
         "id"           : "spider-eyes-greater",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "epic",
         "kind"         : "bodyMod",
         "stage"        : 3,
@@ -3622,7 +3622,7 @@
     // ═══════════════════════════════════════════════════════════════════════════
     {
         "id"           : "hydro-vigor",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "passive",
         "name"         : "Hydro-Vigor",
@@ -3633,7 +3633,7 @@
     },
     {
         "id"           : "waterlogged",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "negative",
         "kind"         : "passive",
         "name"         : "Waterlogged",
@@ -3643,7 +3643,7 @@
     },
     {
         "id"           : "coldsurge",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "passive",
         "name"         : "Coldsurge",
@@ -3654,7 +3654,7 @@
     },
     {
         "id"           : "frostbrittle",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "negative",
         "kind"         : "passive",
         "name"         : "Frostbrittle",
@@ -3664,7 +3664,7 @@
     },
     {
         "id"           : "sun-fueled",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "passive",
         "name"         : "Sun-Fueled",
@@ -3675,7 +3675,7 @@
     },
     {
         "id"           : "heat-faint",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "negative",
         "kind"         : "passive",
         "name"         : "Heat-Faint",
@@ -3685,7 +3685,7 @@
     },
     {
         "id"           : "nightbloom",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "passive",
         "name"         : "Nightbloom",
@@ -3706,7 +3706,7 @@
     },
     {
         "id"           : "storm-fed",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "passive",
         "name"         : "Storm-Fed",
@@ -3727,7 +3727,7 @@
     },
     {
         "id"           : "filth-thriving",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "passive",
         "name"         : "Filth-Thriving",
@@ -3748,7 +3748,7 @@
     },
     {
         "id"           : "pain-maddened",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "passive",
         "name"         : "Pain-Maddened",
@@ -3769,7 +3769,7 @@
     },
     {
         "id"           : "bloodfrenzy",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "rare",
         "kind"         : "passive",
         "name"         : "Bloodfrenzy",
@@ -3780,7 +3780,7 @@
     },
     {
         "id": "anemic",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "negative",
         "kind": "passive",
         "name": "Anemic",
@@ -3790,7 +3790,7 @@
     },
     {
         "id"           : "feverburn",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "passive",
         "name"         : "Feverburn",
@@ -3801,7 +3801,7 @@
     },
     {
         "id"           : "septic-prone",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "negative",
         "kind"         : "passive",
         "name"         : "Septic",
@@ -3811,7 +3811,7 @@
     },
     {
         "id"           : "venom-adapted",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "passive",
         "name"         : "Venom-Adapted",
@@ -3822,17 +3822,17 @@
     },
     {
         "id"           : "thin-veined",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "negative",
         "kind"         : "passive",
         "name"         : "Thin-Veined",
-        "description"  : "Venom races through them, a bite that would slow another lays them low.",
+        "description"  : "Venom cultures through them, a bite that would slow another lays them low.",
         "selfCondition": "thin_veined",
         "effects"      : {}
     },
     {
         "id"           : "emberheart",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "passive",
         "name"         : "Emberheart",
@@ -3843,7 +3843,7 @@
     },
     {
         "id"           : "tinder-skin",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "negative",
         "kind"         : "passive",
         "name"         : "Tinder-Skin",
@@ -3853,7 +3853,7 @@
     },
     {
         "id"           : "camel-bodied",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "uncommon",
         "kind"         : "passive",
         "name"         : "Spare-Fed",
@@ -3864,7 +3864,7 @@
     },
     {
         "id"           : "ravenous",
-        "scope"        : "racial",
+        "scope"        : "cultural",
         "rarity"       : "negative",
         "kind"         : "passive",
         "name"         : "Ravenous",
@@ -3882,7 +3882,7 @@
     // ═══════════════════════════════════════════════════════════════════════════
     {
         "id"             : "stoneblood-heritage",
-        "scope"          : "racial",
+        "scope"          : "cultural",
         "rarity"         : "legendary",
         "kind"           : "passive",
         "name"           : "Stoneblood",
@@ -3892,7 +3892,7 @@
         "subCapabilities": [
             {
                 "id"           : "pebbled-skin",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "stage"        : 1,
                 "name"         : "Pebbled Skin",
@@ -3904,7 +3904,7 @@
             },
             {
                 "id"           : "granite-hide",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "stage"        : 2,
                 "name"         : "Granite Hide",
@@ -3916,7 +3916,7 @@
             },
             {
                 "id"           : "living-rock",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "stage"        : 3,
                 "name"         : "Living Rock",
@@ -3927,7 +3927,7 @@
             },
             {
                 "id"         : "quarried-bones",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "bodyMod",
                 "name"       : "Quarried Bones",
                 "description": "Bones dense as cut rock, near impossible to break, ponderously heavy.",
@@ -3936,7 +3936,7 @@
             },
             {
                 "id"         : "crushing-grip",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "passive",
                 "name"       : "Crushing Grip",
                 "description": "A grip that splits hafts, stone weight behind every wielded blow.",
@@ -3945,7 +3945,7 @@
             },
             {
                 "id"           : "tremor-sense",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Tremor Sense",
                 "description"  : "Reads the ground's tremors through the soles, little moves nearby unnoticed.",
@@ -3954,7 +3954,7 @@
             },
             {
                 "id"         : "aura-fortitude",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "passive",
                 "name"       : "Guardian's Aura",
                 "description": "A mountain's stillness radiates from them, friends within a few strides stand firmer.",
@@ -3965,7 +3965,7 @@
     },
     {
         "id": "echoborn-heritage",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "mythic",
         "kind": "passive",
         "name": "Echoborn",
@@ -3975,7 +3975,7 @@
         "subCapabilities": [
             {
                 "id"           : "echolocation",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Echolocation",
                 "description"  : "Sees blind, the dark is a map, not a wall.",
@@ -3984,7 +3984,7 @@
             },
             {
                 "id"           : "piercing-screech",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "name"         : "Piercing Screech",
                 "description"  : "A shriek that scrambles the senses of whatever it strikes.",
@@ -3993,7 +3993,7 @@
             },
             {
                 "id"         : "echo-hollow-bones",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "bodyMod",
                 "name"       : "Hollow Bones",
                 "description": "Air-cored bone, a fast, fragile frame.",
@@ -4002,7 +4002,7 @@
             },
             {
                 "id"         : "nightgleaner",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "attribute",
                 "name"       : "Nightgleaner",
                 "description": "Gleans the dark forest floor as ably as others do the noon field.",
@@ -4010,7 +4010,7 @@
             },
             {
                 "id": "aura-insight",
-                "scope": "racial",
+                "scope": "cultural",
                 "kind": "passive",
                 "name": "Watchful Aura",
                 "description": "Their unease is contagious in the best way, friends within a few strides spot trouble sooner.",
@@ -4021,7 +4021,7 @@
     },
     {
         "id": "sporeborn-heritage",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "legendary",
         "kind": "passive",
         "name": "Sporeborn",
@@ -4031,7 +4031,7 @@
         "subCapabilities": [
             {
                 "id"         : "spore-cloud",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "passive",
                 "name"       : "Spore Cloud",
                 "description": "A haze of spores hangs about them, foes that press close sicken.",
@@ -4040,14 +4040,14 @@
             },
             {
                 "id"           : "fungal-knit",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Fungal Knit",
                 "description"  : "The mycelium stitches torn flesh, wounds close unnaturally fast.",                "effects"      : {"healRate": 0.5}
             },
             {
                 "id"           : "toxin-immune",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Toxin-Immune",
                 "description"  : "The partner in the flesh eats poisons before they bite.",
@@ -4056,7 +4056,7 @@
             },
             {
                 "id"           : "rootling",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Rootling",
                 "description"  : "Feeds in the sun like a standing green thing.",
@@ -4067,7 +4067,7 @@
     },
     {
         "id"             : "crustacean-heritage",
-        "scope"          : "racial",
+        "scope"          : "cultural",
         "rarity"         : "legendary",
         "kind"           : "passive",
         "name"           : "Shellblood",
@@ -4077,7 +4077,7 @@
         "subCapabilities": [
             {
                 "id"           : "shell-ironshell",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "stage"        : 3,
                 "name"         : "Ironshell",
@@ -4088,7 +4088,7 @@
             },
             {
                 "id"           : "crushing-claws",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "name"         : "Crushing Claws",
                 "description"  : "Massive shell-plated pincers, a crushing grip, useless with a crafted tool.",
@@ -4100,7 +4100,7 @@
             },
             {
                 "id"         : "ponderous-plating",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "bodyMod",
                 "name"       : "Ponderous Plating",
                 "description": "Shell anchored to heavy bone, hard to break, a real load to carry.",
@@ -4109,7 +4109,7 @@
             },
             {
                 "id"         : "tireless",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "attribute",
                 "name"       : "Tireless",
                 "description": "The shell doesn't tire the way soft folk do, steady work, all day.",
@@ -4117,7 +4117,7 @@
             },
             {
                 "id"           : "shell-gills",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Shell-Gills",
                 "description"  : "Gill-frills under the shell rim, breathes water as easily as air.",
@@ -4128,7 +4128,7 @@
     },
     {
         "id": "arachnid-heritage",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "legendary",
         "kind": "passive",
         "name": "Spiderblood",
@@ -4138,7 +4138,7 @@
         "subCapabilities": [
             {
                 "id"           : "arachnid-venom",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "name"         : "Venom Bite",
                 "description"  : "Venom glands behind the teeth, a patient poisoned bite.",
@@ -4153,7 +4153,7 @@
             },
             {
                 "id"           : "webbing",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "name"         : "Webbing",
                 "description"  : "Spinnerets at the waist, a flung lash of silk that snares a foe in place.",
@@ -4163,14 +4163,14 @@
             },
             {
                 "id"           : "arachnid-many-eyed",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Many-Eyed",
                 "description"  : "A crown of small patient eyes, the dark and the flanks hold no surprises.",                "effects"      : {"nightVision": 0.6, "perceptionBonus": 2}
             },
             {
                 "id"         : "wall-crawler",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "stat",
                 "name"       : "Wall-Crawler",
                 "description": "At ease on rock, wall and bough, quick anywhere a spider would be.",
@@ -4180,7 +4180,7 @@
     },
     {
         "id"             : "stormborn-heritage",
-        "scope"          : "racial",
+        "scope"          : "cultural",
         "rarity"         : "mythic",
         "kind"           : "passive",
         "name"           : "Stormborn",
@@ -4190,7 +4190,7 @@
         "subCapabilities": [
             {
                 "id"           : "shock-touch",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "name"         : "Shock Touch",
                 "description"  : "A crackling discharge rides every unarmed strike, scorches and staggers.",
@@ -4199,7 +4199,7 @@
             },
             {
                 "id"           : "lightning-ward",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Grounded",
                 "description"  : "The storm's charge slides off them and into the earth.",
@@ -4208,7 +4208,7 @@
             },
             {
                 "id"         : "quickened-reflexes",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "stat",
                 "name"       : "Quickened",
                 "description": "Nerves that fire like the storm itself.",
@@ -4216,7 +4216,7 @@
             },
             {
                 "id"           : "tempest-fed",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Storm-Fed",
                 "description"  : "Thrives when the sky turns, wind and storm quicken the blood.",
@@ -4225,7 +4225,7 @@
             },
             {
                 "id"         : "static-aura",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "passive",
                 "name"       : "Battle-Cadence",
                 "description": "The charge jumps to friends within a few strides, they act a beat faster.",
@@ -4236,7 +4236,7 @@
     },
     {
         "id"             : "shadeborn-heritage",
-        "scope"          : "racial",
+        "scope"          : "cultural",
         "rarity"         : "legendary",
         "kind"           : "passive",
         "name"           : "Shadeborn",
@@ -4246,14 +4246,14 @@
         "subCapabilities": [
             {
                 "id"           : "umbral-sight",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Umbral Sight",
                 "description"  : "Sees in pitch dark as by day, the shadow is their element.",                "effects": {"nightVision": 1.0}, "resistances": {"shadow": 0.3}
             },
             {
                 "id"           : "chilling-touch",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "name"         : "Chilling Touch",
                 "description"  : "A grave-cold grip, unarmed blows frost-burn where they land.",
@@ -4262,7 +4262,7 @@
             },
             {
                 "id"         : "dread-aura",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "passive",
                 "name"       : "Dread Presence",
                 "description": "A cold wrongness hangs about them, foes that press close reel and falter.",
@@ -4271,7 +4271,7 @@
             },
             {
                 "id"           : "sun-frail",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Sunless",
                 "description"  : "Daylight saps them under an open sky, the cost of the dark's favor.",
@@ -4280,7 +4280,7 @@
             },
             {
                 "id"         : "shadowmeld",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "stat",
                 "name"       : "Shadowmeld",
                 "description": "Moves as if the dark itself were greasing the way.",
@@ -4290,7 +4290,7 @@
     },
     {
         "id"             : "colossus-heritage",
-        "scope"          : "racial",
+        "scope"          : "cultural",
         "rarity"         : "mythic",
         "kind"           : "passive",
         "name"           : "Colossus",
@@ -4301,7 +4301,7 @@
         "subCapabilities": [
             {
                 "id"         : "giants-grip",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "passive",
                 "name"       : "Giant's Grip",
                 "description": "Any wielded weapon lands like a felling maul.",
@@ -4310,7 +4310,7 @@
             },
             {
                 "id"         : "massive-frame",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "bodyMod",
                 "name"       : "Massive Frame",
                 "description": "A frame of oxen mass, a huge blood pool, and a load to move.",
@@ -4319,7 +4319,7 @@
             },
             {
                 "id"         : "titan-bones",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "bodyMod",
                 "name"       : "Titan Bones",
                 "description": "Bones like bridge-beams, near impossible to break.",
@@ -4328,7 +4328,7 @@
             },
             {
                 "id"           : "ground-shaker",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "name"         : "Ground-Shaker",
                 "description"  : "A colossal body-slam that flattens whatever it lands on.",
@@ -4337,7 +4337,7 @@
             },
             {
                 "id"         : "long-reach",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "stat",
                 "name"       : "Long Reach",
                 "description": "An arm-span only a true giant owns, three metres of frame behind it.",
@@ -4346,7 +4346,7 @@
             },
             {
                 "id": "aura-might",
-                "scope": "racial",
+                "scope": "cultural",
                 "kind": "passive",
                 "name": "Warlord's Presence",
                 "description": "Standing near them feels like standing behind a wall, friends within a few strides fight harder.",
@@ -4357,7 +4357,7 @@
     },
     {
         "id"             : "wildblooded-heritage",
-        "scope"          : "racial",
+        "scope"          : "cultural",
         "rarity"         : "legendary",
         "kind"           : "passive",
         "name"           : "Wildblooded",
@@ -4367,7 +4367,7 @@
         "subCapabilities": [
             {
                 "id"           : "sunfed",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Sunfed",
                 "description"  : "Feeds in the sun like a standing green thing.",
@@ -4376,7 +4376,7 @@
             },
             {
                 "id"           : "thorn-skin",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "naturalGear",
                 "name"         : "Thorned Skin",
                 "description"  : "Bark-like skin studded with woody thorns, light armor that punishes a grappler.",
@@ -4386,7 +4386,7 @@
             },
             {
                 "id"         : "fey-charm",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "stat",
                 "name"       : "Fey Charm",
                 "description": "An old-wood glamour, folk agree before they've heard the ask.",
@@ -4394,7 +4394,7 @@
             },
             {
                 "id"           : "verdant-knit",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Verdant Knit",
                 "description"  : "Green vigor stitches torn flesh whole.",                "effects"      : {"healRate": 0.4}
@@ -4403,7 +4403,7 @@
     },
     {
         "id"             : "farseer-heritage",
-        "scope"          : "racial",
+        "scope"          : "cultural",
         "rarity"         : "mythic",
         "kind"           : "passive",
         "name"           : "Farseer",
@@ -4413,7 +4413,7 @@
         "subCapabilities": [
             {
                 "id"           : "ironclad-mind",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Ironclad Mind",
                 "description"  : "A mind walled like a fortress, dread and madness find no purchase.",
@@ -4422,7 +4422,7 @@
             },
             {
                 "id"         : "keen-intellect",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "stat",
                 "name"       : "Keen Intellect",
                 "description": "Thought that cuts straight through.",
@@ -4430,7 +4430,7 @@
             },
             {
                 "id"         : "unnerving-aura",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "passive",
                 "name"       : "Unnerving Presence",
                 "description": "Being watched by them is a weight, foes that press close scatter and falter.",
@@ -4439,7 +4439,7 @@
             },
             {
                 "id"         : "foreknowing",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "stat",
                 "name"       : "Foreknowing",
                 "description": "Threats announce themselves to them early.",
@@ -4449,7 +4449,7 @@
     },
     {
         "id": "blighted-heritage",
-        "scope": "racial",
+        "scope": "cultural",
         "rarity": "legendary",
         "kind": "passive",
         "name": "Blighted",
@@ -4459,7 +4459,7 @@
         "subCapabilities": [
             {
                 "id"         : "accursed-blood-3",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "stat",
                 "name"       : "Blighted Lineage",
                 "description": "The curse in full, markedly worse at everything.",
@@ -4474,7 +4474,7 @@
             },
             {
                 "id"         : "accursed-blood-5",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "stat",
                 "name"       : "Accursed Blood",
                 "description": "The curse at its deepest, ruined at everything, and still walking.",
@@ -4489,7 +4489,7 @@
             },
             {
                 "id"         : "plague-vector",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "passive",
                 "name"       : "Plague-Vector",
                 "description": "A walking pestilence, foes that press close begin to sicken.",
@@ -4498,14 +4498,14 @@
             },
             {
                 "id"           : "unquiet-flesh",
-                "scope"        : "racial",
+                "scope"        : "cultural",
                 "kind"         : "passive",
                 "name"         : "Unquiet Flesh",
                 "description"  : "It will not die cleanly, wounds close whether it wills them to or not.",                "effects"      : {"healRate": 0.4}
             },
             {
                 "id"         : "dread-visage",
-                "scope"      : "racial",
+                "scope"      : "cultural",
                 "kind"       : "stat",
                 "name"       : "Dread Visage",
                 "description": "No one trusts it, and no one is wrong to.",

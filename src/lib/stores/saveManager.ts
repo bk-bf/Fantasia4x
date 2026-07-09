@@ -106,7 +106,7 @@ export function ensureActiveSave(): string {
 
 /** Small per-save summary shown by the picker — read without hydrating the full save. */
 export interface SaveMeta {
-  raceName: string;
+  cultureName: string;
   day: number;
   season: string;
   population: number;
@@ -122,7 +122,7 @@ export interface SaveEntry {
 const TICKS_PER_DAY = 300 * TICKS_PER_SECOND; // TURNS_PER_DAY (EnvironmentService) × ticks/sec
 function buildMeta(state: GameState, kind: 'auto' | 'manual'): SaveMeta {
   return {
-    raceName: state.race?.name ?? 'Unknown',
+    cultureName: state.culture?.name ?? 'Unknown',
     day: Math.floor((state.turn ?? 0) / TICKS_PER_DAY) + 1,
     season: state.season ?? 'spring',
     population: state.pawns?.length ?? 0,

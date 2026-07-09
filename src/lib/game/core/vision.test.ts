@@ -40,7 +40,7 @@ describe('shared vision model', () => {
     expect(nightOwl).toBe(day);
   });
 
-  it('getNightVision: pawn sums racial traits (clamped 0–1)', () => {
+  it('getNightVision: pawn sums cultural traits (clamped 0–1)', () => {
     expect(getNightVision(pawn(10))).toBe(0);
     expect(getNightVision(pawn(10, [{ effects: { nightVision: 0.4 } }]))).toBeCloseTo(0.4);
     expect(

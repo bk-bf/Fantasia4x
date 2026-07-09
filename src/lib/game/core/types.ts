@@ -7,7 +7,7 @@
 
 export * from './types/world';
 export * from './types/environment';
-export * from './types/race';
+export * from './types/culture';
 export * from './types/health';
 export * from './types/items';
 export * from './types/buildings';

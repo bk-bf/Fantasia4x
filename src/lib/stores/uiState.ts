@@ -4,7 +4,7 @@ import { writable } from 'svelte/store';
 type Screen =
   | 'main'
   | 'pawns'
-  | 'race'
+  | 'culture'
   | 'building'
   | 'crafting'
   | 'research'

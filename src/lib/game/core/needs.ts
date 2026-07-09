@@ -420,7 +420,7 @@ export const COMFORT_MIN_DEFAULT = 5;
 export const COMFORT_MAX_DEFAULT = 30;
 
 /**
- * A pawn/entity's comfortable temperature range, shifted by racial traits. Outside this band cold
+ * A pawn/entity's comfortable temperature range, shifted by cultural traits. Outside this band cold
  * tires and heat starves (PawnService need-rate) and drives hypothermia / heat stroke.
  */
 export function comfortRange(traits: ReadonlyArray<{ name: string }> | undefined): {

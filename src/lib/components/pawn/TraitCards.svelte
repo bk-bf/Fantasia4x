@@ -1,4 +1,4 @@
-<!-- Shared trait-card grid used by both the pawn STATUS tab and the RACE detail tab. -->
+<!-- Shared trait-card grid used by both the pawn STATUS tab and the CULTURE detail tab. -->
 <script lang="ts">
   import type { Trait, Pawn, Item } from '$lib/game/core/types';
   import { naturalGearForTrait, type NaturalGearMeta } from '$lib/components/util/naturalGear';
@@ -60,10 +60,10 @@
     pawn = undefined
   }: {
     traits: Trait[];
-    /** When set (race view), the first N traits are the race's shared identity; the rest vary per pawn. */
+    /** When set (culture view), the first N traits are the culture's shared identity; the rest vary per pawn. */
     guaranteedCount?: number;
     /** The owning pawn (STATUS tab only). Lets a wound trait's hover cite the actual wounded side —
-     *  the applier flips left/right per pawn. Absent (race view) the hover stays side-agnostic. */
+     *  the applier flips left/right per pawn. Absent (culture view) the hover stays side-agnostic. */
     pawn?: Pawn;
   } = $props();
 
@@ -78,7 +78,7 @@
     return rankWorkCells(eff);
   });
 
-  // Per-pawn stat context for the attributes-tab tooltip; null in the race view (no pawn).
+  // Per-pawn stat context for the attributes-tab tooltip; null in the culture view (no pawn).
   let statCtx = $derived(pawn ? buildStatContext(pawn) : null);
 
   // The trait's `rarity` is a rarities.jsonc id.
@@ -160,7 +160,7 @@
     const hit = (pawn.injuries ?? []).find((w) => w.permanent && stripSide(w.bodyPart) === base);
     return hit?.bodyPart ?? specPart;
   }
-  // Hover label: the real sided part when we have the pawn (STATUS tab), else side-agnostic (race view).
+  // Hover label: the real sided part when we have the pawn (STATUS tab), else side-agnostic (culture view).
   const woundHoverLabel = (specPart: string) =>
     pawn ? partLabel(actualWoundPart(specPart)) : woundPartLabel(specPart);
   // Human label for which parts a body-structure trait reshapes.
@@ -217,7 +217,7 @@
         type: 'pos',
         kind: 'cond',
         condId: trait.selfCondition,
-        condSource: `${trait.name} (racial trait)`,
+        condSource: `${trait.name} (cultural trait)`,
         condGrants: traitGrantLines(trait)
       });
     }
@@ -435,7 +435,7 @@
   <HoverTip x={hoveredCard.x} y={hoveredCard.y}>
     <div class="tip-name" style="color: {rarityColor(t)}">{t.name}</div>
     <div class="tip-meta">
-      {RARITY_LABEL[t.rarity ?? 'common']} · {t.scope === 'personal' ? 'personal' : 'racial'} trait
+      {RARITY_LABEL[t.rarity ?? 'common']} · {t.scope === 'personal' ? 'personal' : 'cultural'} trait
     </div>
     <div class="tip-desc">{t.description}</div>
     {#if t.flavorLine}<div class="tip-flavor">“{t.flavorLine}”</div>{/if}

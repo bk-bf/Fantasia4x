@@ -6,7 +6,7 @@ import { getAmbientLight } from '../EnvironmentService';
 import { calcMaxStamina } from '../../entities/Pawns';
 import { createBodyPlanLimbs } from '../../systems/Combat';
 import { DEFAULT_PLAN } from '../../core/BodyParts';
-import { TRAIT_DATABASE } from '../../core/Race';
+import { TRAIT_DATABASE } from '../../core/Culture';
 import { rng } from '../../core/rng';
 import { findNearbyWalkable } from './entityHelpers';
 import { isSpawnableTile } from '../../core/Terrains';

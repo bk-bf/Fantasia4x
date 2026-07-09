@@ -1,13 +1,13 @@
-import type { Race, Trait, RaceLore, RaceRelation } from './types';
+import type { Culture, Trait, CultureLore, CultureRelation } from './types';
 import traitDbData from '../database/traits.jsonc';
-import loreData from '../database/race-lore.jsonc';
+import loreData from '../database/culture-lore.jsonc';
 import { rng } from './rng';
 import { clamp } from './math';
 
-/** The unified trait DB (racial + personal), ADR-023. */
+/** The unified trait DB (cultural + personal), ADR-023. */
 export const TRAIT_DATABASE: Trait[] = traitDbData as unknown as Trait[];
 
-type Size = Race['physicalTraits']['size'];
+type Size = Culture['physicalTraits']['size'];
 
 interface Archetype {
   name: string;
@@ -39,7 +39,7 @@ const LORE = loreData as unknown as {
 
 const STATS = ['strength', 'dexterity', 'intelligence', 'perception', 'charisma', 'constitution'];
 
-// Trait ids that may not co-occur on one pawn/race (mutually exclusive biology / temperament, and
+// Trait ids that may not co-occur on one pawn/culture (mutually exclusive biology / temperament, and
 // base↔evolution pairs so a pawn never carries both a seed trait and the power it grows into).
 const CONFLICT_GROUPS: string[][] = [
   ['stocky', 'rangy'],
@@ -141,53 +141,53 @@ function cap(s: string): string {
 
 // ─── Public API ────────────────────────────────────────────────────────────
 
-/** Generate one procedural race biased toward a (random or given) archetype. */
-export function generateRace(archetype: Archetype = rng.pick(LORE.archetypes)): Race {
+/** Generate one procedural culture biased toward a (random or given) archetype. */
+export function generateCulture(archetype: Archetype = rng.pick(LORE.archetypes)): Culture {
   const statRanges = generateStatRanges(archetype);
   const physicalTraits = generatePhysicalTraits(archetype);
-  const { guaranteed, pool } = generateRaceTraitSets(archetype);
+  const { guaranteed, pool } = generateCultureTraitSets(archetype);
 
-  const lore: RaceLore = {
+  const lore: CultureLore = {
     ...generateLoreFields(archetype),
-    description: '' // filled below once the full race is assembled
+    description: '' // filled below once the full culture is assembled
   };
 
-  const race: Race = {
-    id: slugify(generateRaceName()),
+  const culture: Culture = {
+    id: slugify(generateCultureName()),
     name: '', // set together with id below for uniqueness
     archetype: archetype.name,
     statRanges,
     physicalTraits,
     guaranteedTraits: guaranteed,
-    racialTraitPool: pool,
+    culturalTraitPool: pool,
     lore,
     population: 0
   };
   // name == capitalised id stem; keep them in sync so the slug is derivable from the name.
-  race.name = cap(race.id.split('-')[0]);
-  race.lore.description = generateRaceDescription(race);
-  return race;
+  culture.name = cap(culture.id.split('-')[0]);
+  culture.lore.description = generateCultureDescription(culture);
+  return culture;
 }
 
-/** Preroll a pool of 15–25 distinct races (the known-races pokédex backing store). */
-export function generateRacePool(count = rng.int(15, 25)): Race[] {
-  const pool: Race[] = [];
+/** Preroll a pool of 15–25 distinct cultures (the known-cultures pokédex backing store). */
+export function generateCulturePool(count = rng.int(15, 25)): Culture[] {
+  const pool: Culture[] = [];
   const usedIds = new Set<string>();
   let guard = 0;
   while (pool.length < count && guard < count * 20) {
     guard++;
-    const race = generateRace();
-    if (usedIds.has(race.id)) continue;
-    usedIds.add(race.id);
-    pool.push(race);
+    const culture = generateCulture();
+    if (usedIds.has(culture.id)) continue;
+    usedIds.add(culture.id);
+    pool.push(culture);
   }
   return pool;
 }
 
-/** Stub procedural inter-race relations — symmetric, data + pokédex display only (no mood
+/** Stub procedural inter-culture relations — symmetric, data + pokédex display only (no mood
  *  wiring this pass). Same-archetype pairs skew friendly; the rest are mild noise. */
-export function generateRaceRelations(pool: Race[]): RaceRelation[] {
-  const relations: RaceRelation[] = [];
+export function generateCultureRelations(pool: Culture[]): CultureRelation[] {
+  const relations: CultureRelation[] = [];
   for (let i = 0; i < pool.length; i++) {
     for (let j = i + 1; j < pool.length; j++) {
       const a = pool[i];
@@ -200,7 +200,7 @@ export function generateRaceRelations(pool: Race[]): RaceRelation[] {
   return relations;
 }
 
-function dispositionFor(score: number): RaceRelation['disposition'] {
+function dispositionFor(score: number): CultureRelation['disposition'] {
   if (score >= 60) return 'allied';
   if (score >= 20) return 'friendly';
   if (score > -20) return 'neutral';
@@ -244,7 +244,7 @@ const SIZE_BOX: Record<Size, { height: [number, number]; weight: [number, number
 
 /**
  * Size category for an actual height (cm). Size is a *description* of height, so a pawn's category
- * follows its real height — a 200 cm pawn reads `large`, regardless of its race's nominal size box
+ * follows its real height — a 200 cm pawn reads `large`, regardless of its culture's nominal size box
  * (the per-pawn height roll can land outside that box). Thresholds are the SIZE_BOX upper bounds.
  */
 export function sizeFromHeight(cm: number): Size {
@@ -255,7 +255,7 @@ export function sizeFromHeight(cm: number): Size {
   return 'huge';
 }
 
-function generatePhysicalTraits(archetype: Archetype): Race['physicalTraits'] {
+function generatePhysicalTraits(archetype: Archetype): Culture['physicalTraits'] {
   const sizes: Size[] = ['tiny', 'small', 'medium', 'large', 'huge'];
   // 75% honour the archetype's size bias, else fully random for variety.
   const size =
@@ -275,14 +275,14 @@ function generatePhysicalTraits(archetype: Archetype): Race['physicalTraits'] {
 
 // ─── Traits ──────────────────────────────────────────────────────────────────
 
-const RACIAL = () => TRAIT_DATABASE.filter((t) => (t.scope ?? 'racial') === 'racial');
+const CULTURAL = () => TRAIT_DATABASE.filter((t) => (t.scope ?? 'cultural') === 'cultural');
 const PERSONAL = () => TRAIT_DATABASE.filter((t) => t.scope === 'personal');
 /** Pure-downside FLAWS (rarity 'negative', either scope) — drawn as an individual Gaussian-count layer
- *  (drawPawnTraits), never as race identity or a positive-pool pick. */
+ *  (drawPawnTraits), never as culture identity or a positive-pool pick. */
 const NEGATIVE = () => TRAIT_DATABASE.filter((t) => t.rarity === 'negative');
 const tid = (t: Trait) => t.id ?? t.name;
 /** common/uncommon are the "mundane" variety pool; rare/epic/legendary are the rare identity powers.
- *  'negative' is NOT mundane — flaws are excluded from every positive pool (identity, race pool, personal). */
+ *  'negative' is NOT mundane — flaws are excluded from every positive pool (identity, culture pool, personal). */
 const isMundaneRarity = (r: Trait['rarity']) => (r ?? 'common') === 'common' || r === 'uncommon';
 
 /** Bell-curve COUNT of negative traits a pawn spawns with (ADR-028): a half-normal (|Gaussian|) rounded
@@ -317,18 +317,18 @@ export function pawnMeetsRequires(t: Trait, phys?: PawnPhysique): boolean {
 }
 
 /**
- * A RACE's trait identity (ADR-023, per-race rarity). Rolls the spec's rarity ONCE per race —
+ * A CULTURE's trait identity (ADR-023, per-culture rarity). Rolls the spec's rarity ONCE per culture —
  * ~2.5% legendary, else ~10% one supernatural / ~5% two, else pure mundane — into `guaranteed`
- * (shared by every member of the race), then fills a `pool` of mundane traits each pawn draws from
+ * (shared by every member of the culture), then fills a `pool` of mundane traits each pawn draws from
  * for individual variety. Archetype-themed ids are ×3-weighted; conflict groups are honoured.
  */
-function generateRaceTraitSets(archetype: Archetype): { guaranteed: Trait[]; pool: Trait[] } {
-  const racial = RACIAL();
+function generateCultureTraitSets(archetype: Archetype): { guaranteed: Trait[]; pool: Trait[] } {
+  const cultural = CULTURAL();
   // Rarity CLASSES (TRAIT-SYSTEM-V2 §2 · ADR-028): common/uncommon = the mundane variety pool; the
-  // capability tiers rare < epic < mythic < legendary are each drawn at a DECREASING per-race rate, so a
+  // capability tiers rare < epic < mythic < legendary are each drawn at a DECREASING per-culture rate, so a
   // higher tier is genuinely harder to roll (iron skin at epic is much rarer than a plain rare).
-  const mundane = racial.filter((t) => isMundaneRarity(t.rarity));
-  const byRarity = (r: Trait['rarity']) => racial.filter((t) => t.rarity === r);
+  const mundane = cultural.filter((t) => isMundaneRarity(t.rarity));
+  const byRarity = (r: Trait['rarity']) => cultural.filter((t) => t.rarity === r);
   const rare = byRarity('rare');
   const epic = byRarity('epic');
   const mythic = byRarity('mythic');
@@ -354,7 +354,7 @@ function generateRaceTraitSets(archetype: Archetype): { guaranteed: Trait[]; poo
   };
 
   const guaranteed: Trait[] = [];
-  // Per-race rarity gate — ONE roll into CUMULATIVE bands, rarest first, so a higher tier is strictly
+  // Per-culture rarity gate — ONE roll into CUMULATIVE bands, rarest first, so a higher tier is strictly
   // less likely (legendary 1.5% · mythic 1.5% · epic 3% · rare 9% → ~15% carry some capability, the rest
   // mundane). Bands are kept TIGHT for the top tiers so each individual epic (e.g. Iron Skin) lands ~1%
   // — rarer than a plain rare — despite the smaller pool. Rare occasionally grants a SECOND trait.
@@ -376,14 +376,14 @@ function generateRaceTraitSets(archetype: Archetype): { guaranteed: Trait[]; poo
       if (t2) guaranteed.push(t2);
     }
   }
-  // Every race reads as a recognizable "people": if no capability/legendary rolled, give it ONE
+  // Every culture reads as a recognizable "people": if no capability/legendary rolled, give it ONE
   // signature MUNDANE identity trait (a capability already IS the identity, so don't stack on it).
   if (guaranteed.length === 0) {
     const t = draw(mundane);
     if (t) guaranteed.push(t);
   }
 
-  // A SMALL mundane variety pool (3–4) each pawn draws from — keeps a race's identity tight and
+  // A SMALL mundane variety pool (3–4) each pawn draws from — keeps a culture's identity tight and
   // legible rather than a grab-bag of nine traits.
   const pool: Trait[] = [];
   const target = rng.int(3, 4);
@@ -396,20 +396,20 @@ function generateRaceTraitSets(archetype: Archetype): { guaranteed: Trait[]; poo
   return { guaranteed, pool };
 }
 
-/** Spawn caps (ADR-023): at most 2 racial + 3 personal traits, so a fresh pawn carries ≤5 traits.
+/** Spawn caps (ADR-023): at most 2 cultural + 3 personal traits, so a fresh pawn carries ≤5 traits.
  *  (A future evolution/growth system can push past these — this is the AT-SPAWN budget.) */
-const MAX_RACIAL_TRAITS = 2;
+const MAX_CULTURAL_TRAITS = 2;
 const MAX_PERSONAL_TRAITS = 3;
 
 /**
- * Draw ONE PAWN's combined trait set (ADR-023, capped at spawn): up to {@link MAX_RACIAL_TRAITS}
- * racial (the race's guaranteed identity first — legendary bundles expand a sub-capability PER PAWN so
- * two dragon-blooded differ — then filled from the race's mundane pool) + up to
+ * Draw ONE PAWN's combined trait set (ADR-023, capped at spawn): up to {@link MAX_CULTURAL_TRAITS}
+ * cultural (the culture's guaranteed identity first — legendary bundles expand a sub-capability PER PAWN so
+ * two dragon-blooded differ — then filled from the culture's mundane pool) + up to
  * {@link MAX_PERSONAL_TRAITS} personal. Conflict groups (incl. base↔evolution) are honoured throughout.
  * `physique` (the pawn's rolled weight/height) gates physically-contradictory traits (ADR-028 `requires`):
  * a trait whose physique gate fails is skipped from this pawn — no Gaunt on a 250 kg mass.
  */
-export function drawPawnTraits(race: Race, physique?: PawnPhysique): Trait[] {
+export function drawPawnTraits(culture: Culture, physique?: PawnPhysique): Trait[] {
   const out: Trait[] = [];
   const banned = new Set<string>();
   const ban = (id: string) => {
@@ -417,36 +417,36 @@ export function drawPawnTraits(race: Race, physique?: PawnPhysique): Trait[] {
     for (const g of CONFLICT_GROUPS) if (g.includes(id)) g.forEach((x) => banned.add(x));
   };
   const fits = (t: Trait) => pawnMeetsRequires(t, physique);
-  let racialCount = 0;
-  const takeRacial = (t: Trait): boolean => {
-    if (racialCount >= MAX_RACIAL_TRAITS || banned.has(tid(t)) || !fits(t)) return false;
+  let culturalCount = 0;
+  const takeCultural = (t: Trait): boolean => {
+    if (culturalCount >= MAX_CULTURAL_TRAITS || banned.has(tid(t)) || !fits(t)) return false;
     ban(tid(t));
     out.push(t);
-    racialCount++;
+    culturalCount++;
     return true;
   };
 
-  // Guaranteed racial identity FIRST (within the cap). A legendary bundle's banner takes one slot,
+  // Guaranteed cultural identity FIRST (within the cap). A legendary bundle's banner takes one slot,
   // then a rolled sub-capability fills the remaining slot (the rest are acquired later).
-  for (const g of race.guaranteedTraits) {
-    if (racialCount >= MAX_RACIAL_TRAITS) break;
+  for (const g of culture.guaranteedTraits) {
+    if (culturalCount >= MAX_CULTURAL_TRAITS) break;
     // A legendary OR mythic BUNDLE takes one banner slot, then rolls a sub-capability per pawn (so two
     // dragon-blooded / two amphibians differ); the rest are acquired later.
     if ((g.rarity === 'legendary' || g.rarity === 'mythic') && g.subCapabilities?.length) {
-      takeRacial({ ...g, subCapabilities: undefined });
+      takeCultural({ ...g, subCapabilities: undefined });
       const subs = [...g.subCapabilities];
-      while (racialCount < MAX_RACIAL_TRAITS && subs.length > 0) {
-        takeRacial(subs.splice(rng.int(0, subs.length - 1), 1)[0]);
+      while (culturalCount < MAX_CULTURAL_TRAITS && subs.length > 0) {
+        takeCultural(subs.splice(rng.int(0, subs.length - 1), 1)[0]);
       }
     } else {
-      takeRacial(g);
+      takeCultural(g);
     }
   }
-  // Fill any remaining racial slot(s) from the race's mundane pool (per-pawn variety). Physique-gated.
+  // Fill any remaining cultural slot(s) from the culture's mundane pool (per-pawn variety). Physique-gated.
   {
-    const bag = race.racialTraitPool.filter((t) => !banned.has(tid(t)) && fits(t));
-    while (racialCount < MAX_RACIAL_TRAITS && bag.length > 0) {
-      takeRacial(bag.splice(rng.int(0, bag.length - 1), 1)[0]);
+    const bag = culture.culturalTraitPool.filter((t) => !banned.has(tid(t)) && fits(t));
+    while (culturalCount < MAX_CULTURAL_TRAITS && bag.length > 0) {
+      takeCultural(bag.splice(rng.int(0, bag.length - 1), 1)[0]);
     }
   }
 
@@ -465,7 +465,7 @@ export function drawPawnTraits(race: Race, physique?: PawnPhysique): Trait[] {
   }
 
   // ADR-028 FLAW layer: a bell-curve (Gaussian) COUNT of negative traits, drawn from the whole flaw pool
-  // (racial physiology + personal temperament + afflictions), honouring conflict groups + everything
+  // (cultural physiology + personal temperament + afflictions), honouring conflict groups + everything
   // already taken. Independent of the positive budget — MOST pawns get none/one, a rare wretch gets four.
   const nNeg = rollNegativeCount();
   const nbag = NEGATIVE().filter((t) => !banned.has(tid(t)) && fits(t));
@@ -482,7 +482,7 @@ export function drawPawnTraits(race: Race, physique?: PawnPhysique): Trait[] {
 
 // ─── Lore + description ───────────────────────────────────────────────────────
 
-function generateLoreFields(archetype: Archetype): Omit<RaceLore, 'description'> {
+function generateLoreFields(archetype: Archetype): Omit<CultureLore, 'description'> {
   return {
     epithet: rng.pick(archetype.epithets),
     origin: rng.pick(archetype.origins),
@@ -515,7 +515,7 @@ export function statBucket(value: number): StatBucket {
   return 'frail';
 }
 
-function buildBucket(phys: Race['physicalTraits']): string {
+function buildBucket(phys: Culture['physicalTraits']): string {
   const density = mid(phys.weightRange) / mid(phys.heightRange); // kg per cm
   if (density >= 0.7) return 'heavyset';
   if (density >= 0.52) return 'sturdy';
@@ -525,13 +525,13 @@ function buildBucket(phys: Race['physicalTraits']): string {
 }
 
 /**
- * Build a 3–4 sentence immersive race description. Principle: the poetry is *authored*
+ * Build a 3–4 sentence immersive culture description. Principle: the poetry is *authored*
  * (trait flavorLines + lore clause banks); the numbers only choose which clause/variant
  * to use and which traits to weave in — so the result is always grammatical and on-theme.
  */
-export function generateRaceDescription(race: Race): string {
+export function generateCultureDescription(culture: Culture): string {
   const P = LORE.phrases;
-  const sr = race.statRanges;
+  const sr = culture.statRanges;
   const str = mid(sr.strength ?? [10, 10]);
   const dex = mid(sr.dexterity ?? [10, 10]);
   const con = mid(sr.constitution ?? [10, 10]);
@@ -540,17 +540,17 @@ export function generateRaceDescription(race: Race): string {
   const cha = mid(sr.charisma ?? [10, 10]);
 
   // Sentence 1 — physique.
-  const sizeP = rng.pick(P.size[SIZE_BUCKET[race.physicalTraits.size]]);
-  const buildP = rng.pick(P.build[buildBucket(race.physicalTraits)]);
+  const sizeP = rng.pick(P.size[SIZE_BUCKET[culture.physicalTraits.size]]);
+  const buildP = rng.pick(P.build[buildBucket(culture.physicalTraits)]);
   const gaitKey =
     dex >= 12
       ? 'quick'
-      : dex < 9.5 || buildBucket(race.physicalTraits) === 'heavyset'
+      : dex < 9.5 || buildBucket(culture.physicalTraits) === 'heavyset'
         ? 'slow'
         : 'steady';
   const gaitP = rng.pick(P.gait[gaitKey]);
   const compP = rng.pick(P.comparative[comparativeKey(str, dex, con)]);
-  const s1 = `The ${race.name}, ${race.lore.epithet}, are ${sizeP}, ${buildP}, ${gaitP}, ${compP}.`;
+  const s1 = `The ${culture.name}, ${culture.lore.epithet}, are ${sizeP}, ${buildP}, ${gaitP}, ${compP}.`;
 
   // Sentence 2 — temperament + mind + belief.
   const mindP = rng.pick(P.mind[statBucket(int)]);
@@ -560,18 +560,18 @@ export function generateRaceDescription(race: Race): string {
   if (cha >= 12) extras.push(rng.pick(P.charisma.high));
   else if (cha < 9.5) extras.push(rng.pick(P.charisma.low));
   const mindClause = [mindP, ...extras].join(', ');
-  const s2 = `${cap(race.lore.temperament)} by nature, ${mindClause}; they hold ${race.lore.belief}.`;
+  const s2 = `${cap(culture.lore.temperament)} by nature, ${mindClause}; they hold ${culture.lore.belief}.`;
 
   // Sentence 3 — origin + homeland. "They are {origin}" reads well for both the participial
   // ("carved from…") and noun-phrase ("the first to wake…") origin forms.
-  const s3 = `They are ${race.lore.origin}, and make their home among ${race.lore.homeland}.`;
+  const s3 = `They are ${culture.lore.origin}, and make their home among ${culture.lore.homeland}.`;
 
-  // Sentence 4 — vocation + a defining quirk (authored flavorLine). Drawn from the race's identity +
-  // pool (the traits any member might carry), since a race no longer has one fixed trait list.
-  const raceTraits = [...race.guaranteedTraits, ...race.racialTraitPool];
-  const vocCat = strongestWorkCategory(raceTraits);
+  // Sentence 4 — vocation + a defining quirk (authored flavorLine). Drawn from the culture's identity +
+  // pool (the traits any member might carry), since a culture no longer has one fixed trait list.
+  const cultureTraits = [...culture.guaranteedTraits, ...culture.culturalTraitPool];
+  const vocCat = strongestWorkCategory(cultureTraits);
   const vocP = vocCat && P.vocation[vocCat] ? rng.pick(P.vocation[vocCat]) : null;
-  const quirk = pickFlavorLine(raceTraits);
+  const quirk = pickFlavorLine(cultureTraits);
   let s4 = '';
   if (vocP && quirk) {
     // lead reads mid-sentence after the semicolon, so lowercase it ("…quarry; stranger still, …")
@@ -639,7 +639,7 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, '');
 }
 
-function generateRaceName(): string {
+function generateCultureName(): string {
   const prefixes = [
     'Astra',
     'Zeph',

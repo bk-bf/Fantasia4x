@@ -1032,9 +1032,9 @@ export const COMMANDS: Record<string, Cmd> = {
     );
   },
 
-  /** Spawn `count` fresh pawns of the colony's race, placed on walkable tiles near map centre. */
+  /** Spawn `count` fresh pawns of the colony's culture, placed on walkable tiles near map centre. */
   devSpawnPawns: (s, p: { count?: number }) => {
-    const pawns = generatePawns(s.race, p.count ?? 1);
+    const pawns = generatePawns(s.culture, p.count ?? 1);
     const w = s.worldMap[0]?.length ?? 0;
     const h = s.worldMap.length;
     const cx = Math.floor(w / 2);
@@ -1172,7 +1172,7 @@ export const COMMANDS: Record<string, Cmd> = {
       (s.pawns ?? []).filter((pw) => pw.position).map((pw) => `${pw.position!.x},${pw.position!.y}`)
     );
     const pos = nearestFreeTile(s.worldMap, p.x, p.y, occupied) ?? { x: p.x, y: p.y };
-    const [body] = generatePawns(s.race, 1);
+    const [body] = generatePawns(s.culture, 1);
     const revived = { ...body, name, position: pos, path: [], pathIndex: 0 };
     return {
       ...s,

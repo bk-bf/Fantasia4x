@@ -29,7 +29,7 @@ import type {
 } from '$lib/game/core/types';
 import { generateColonyPawns } from '$lib/game/entities/Pawns';
 import { pawnService } from '$lib/game/services/PawnService';
-import { generateRace, generateRacePool, generateRaceRelations } from '$lib/game/core/Race';
+import { generateCulture, generateCulturePool, generateCultureRelations } from '$lib/game/core/Culture';
 import { itemService } from '$lib/game/services/ItemService';
 import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
@@ -94,11 +94,11 @@ let simAccumulatorMs = 0;
 export const initialGameState: GameState = {
   seed: freshSeed(), // P0-2: deterministic sim seed; reseeded from the save on load
   turn: ticksFromSeconds(100), // 08:00 — turn counts ticks; 100 in-game s × TICKS_PER_SECOND (TURNS_PER_DAY=300 s)
-  // race == racePool[0] (home race); both are filled by bootstrapColony on a fresh run. The
+  // culture == culturePool[0] (home culture); both are filled by bootstrapColony on a fresh run. The
   // single placeholder here is discarded once the pool is generated against the run's seed.
-  race: generateRace(),
-  racePool: [],
-  raceRelations: [],
+  culture: generateCulture(),
+  culturePool: [],
+  cultureRelations: [],
   pawns: [],
   worldMap: [], // generated lazily in the async init (D7)
   /** Living-world (SEASONS_WEATHER): start in spring, clear skies. */
@@ -393,81 +393,81 @@ function applyMigrations(state: GameState): GameState {
   return state;
 }
 
-// ===== RACE POOL HELPERS (Race overhaul) =====
+// ===== CULTURE POOL HELPERS (Culture overhaul) =====
 
-/** Ensure the state has a prerolled race pool + relations. Idempotent.
- *  - Fresh run (no pool, no pawns): generate a full pool, relations, and a home race.
+/** Ensure the state has a prerolled culture pool + relations. Idempotent.
+ *  - Fresh run (no pool, no pawns): generate a full pool, relations, and a home culture.
  *  - Legacy save (no pool, but pawns exist): synthesize a single-entry pool from the
- *    existing `race`, normalising it to the new shape, and tag pawns to it. */
-function ensureRacePool(state: GameState): GameState {
-  if (state.racePool && state.racePool.length > 0) {
+ *    existing `culture`, normalising it to the new shape, and tag pawns to it. */
+function ensureCulturePool(state: GameState): GameState {
+  if (state.culturePool && state.culturePool.length > 0) {
     // Backfill relations if a pool exists but relations were never generated.
-    if (!state.raceRelations || state.raceRelations.length === 0) {
-      return { ...state, raceRelations: generateRaceRelations(state.racePool) };
+    if (!state.cultureRelations || state.cultureRelations.length === 0) {
+      return { ...state, cultureRelations: generateCultureRelations(state.culturePool) };
     }
     return state;
   }
 
   const legacyAndPopulated = state.pawns && state.pawns.length > 0;
   if (legacyAndPopulated) {
-    const home = normalizeLegacyRace(state.race);
+    const home = normalizeLegacyCulture(state.culture);
     const pawns = state.pawns.map((p) => ({
       ...p,
-      raceId: p.raceId ?? home.id,
-      raceName: p.raceName ?? home.name
+      cultureId: p.cultureId ?? home.id,
+      cultureName: p.cultureName ?? home.name
     }));
-    return { ...state, race: home, racePool: [home], raceRelations: [], pawns };
+    return { ...state, culture: home, culturePool: [home], cultureRelations: [], pawns };
   }
 
-  const racePool = generateRacePool();
+  const culturePool = generateCulturePool();
   return {
     ...state,
-    race: racePool[0],
-    racePool,
-    raceRelations: generateRaceRelations(racePool)
+    culture: culturePool[0],
+    culturePool,
+    cultureRelations: generateCultureRelations(culturePool)
   };
 }
 
-/** Bring a pre-overhaul race up to the new shape (archetype/lore/unique id) so old saves
+/** Bring a pre-overhaul culture up to the new shape (archetype/lore/unique id) so old saves
  *  still render in the pokédex without a procedural lore paragraph. */
-function normalizeLegacyRace(race: GameState['race']): GameState['race'] {
-  if (race?.lore?.description && race.archetype) return { ...race, discovered: true };
-  const fresh = generateRace();
+function normalizeLegacyCulture(culture: GameState['culture']): GameState['culture'] {
+  if (culture?.lore?.description && culture.archetype) return { ...culture, discovered: true };
+  const fresh = generateCulture();
   return {
     ...fresh,
     // keep the player's existing identity + ranges; only fill the missing new fields.
-    id: race?.id && race.id !== 'player' ? race.id : fresh.id,
-    name: race?.name ?? fresh.name,
-    statRanges: race?.statRanges ?? fresh.statRanges,
-    physicalTraits: race?.physicalTraits ?? fresh.physicalTraits,
-    guaranteedTraits: race?.guaranteedTraits ?? fresh.guaranteedTraits,
-    racialTraitPool: race?.racialTraitPool ?? fresh.racialTraitPool,
-    population: race?.population ?? 0,
+    id: culture?.id && culture.id !== 'player' ? culture.id : fresh.id,
+    name: culture?.name ?? fresh.name,
+    statRanges: culture?.statRanges ?? fresh.statRanges,
+    physicalTraits: culture?.physicalTraits ?? fresh.physicalTraits,
+    guaranteedTraits: culture?.guaranteedTraits ?? fresh.guaranteedTraits,
+    culturalTraitPool: culture?.culturalTraitPool ?? fresh.culturalTraitPool,
+    population: culture?.population ?? 0,
     discovered: true
   };
 }
 
-/** Mark every race that has a colony pawn as discovered, and refresh per-race headcounts. */
-function markColonyRacesDiscovered(state: GameState): GameState {
+/** Mark every culture that has a colony pawn as discovered, and refresh per-culture headcounts. */
+function markColonyCulturesDiscovered(state: GameState): GameState {
   const counts = new Map<string, number>();
   for (const p of state.pawns) {
-    if (p.raceId) counts.set(p.raceId, (counts.get(p.raceId) ?? 0) + 1);
+    if (p.cultureId) counts.set(p.cultureId, (counts.get(p.cultureId) ?? 0) + 1);
   }
-  const racePool = state.racePool.map((r) => ({
+  const culturePool = state.culturePool.map((r) => ({
     ...r,
     discovered: r.discovered || counts.has(r.id),
     population: counts.get(r.id) ?? r.population
   }));
-  return { ...state, racePool, race: racePool.find((r) => r.id === state.race?.id) ?? racePool[0] };
+  return { ...state, culturePool, culture: culturePool.find((r) => r.id === state.culture?.id) ?? culturePool[0] };
 }
 
-/** Pokédex hook: flag a race as encountered. Called by future faction/visitor encounters —
+/** Pokédex hook: flag a culture as encountered. Called by future faction/visitor encounters —
  *  no such entity source exists yet, so this is currently exercised only by colony bootstrap. */
-export function discoverRace(state: GameState, raceId: string): GameState {
-  if (!state.racePool.some((r) => r.id === raceId && !r.discovered)) return state;
+export function discoverCulture(state: GameState, cultureId: string): GameState {
+  if (!state.culturePool.some((r) => r.id === cultureId && !r.discovered)) return state;
   return {
     ...state,
-    racePool: state.racePool.map((r) => (r.id === raceId ? { ...r, discovered: true } : r))
+    culturePool: state.culturePool.map((r) => (r.id === cultureId ? { ...r, discovered: true } : r))
   };
 }
 
@@ -706,9 +706,9 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
   }
 
   // A GENERATE is a fresh deterministic run (see seed reseed above), so ROLL A NEW COLONY rather than
-  // carrying the previous race/pawns over from the store — the old code re-placed `base.pawns` (same
-  // pawns, new positions), so every regenerate produced the same colonists. Clear the race pool +
-  // pawns so ensureRacePool re-rolls the whole pool from the (reseeded) rng — seed → world AND colony,
+  // carrying the previous culture/pawns over from the store — the old code re-placed `base.pawns` (same
+  // pawns, new positions), so every regenerate produced the same colonists. Clear the culture pool +
+  // pawns so ensureCulturePool re-rolls the whole pool from the (reseeded) rng — seed → world AND colony,
   // fully deterministic — then draw fresh pawns across it (same colony size) and re-derive work.
   const colonySize = base.pawns.length || 5;
   let next: GameState = {
@@ -716,16 +716,16 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
     seed: s,
     worldMap: newWorld,
     mobs: [],
-    racePool: [],
-    raceRelations: [],
+    culturePool: [],
+    cultureRelations: [],
     pawns: []
   };
-  next = ensureRacePool(next);
+  next = ensureCulturePool(next);
   next = {
     ...next,
-    pawns: spawnPawnsOnMap(generateColonyPawns(next.racePool, colonySize), newWorld)
+    pawns: spawnPawnsOnMap(generateColonyPawns(next.culturePool, colonySize), newWorld)
   };
-  next = markColonyRacesDiscovered(next);
+  next = markColonyCulturesDiscovered(next);
   next = workService.ensureDefaultWorkAssignments(next);
   if (dev) next = applyDevWorld(next, itemQty);
   next = entityService.seedInitialEntities(next);
@@ -884,20 +884,20 @@ function resetGame() {
   // generateWorld already scatters resources internally — no second generateResources (see BUGS.md:
   // the double scatter stacked a hidden blocking tree under a crop on ~2000 tiles).
   const world = generateWorld(240, 160, seed);
-  // Fresh mixed colony: regenerate the race pool + relations, draw pawns across it, then run
-  // the same spawn/work/entity bootstrap the load path uses (Race overhaul).
+  // Fresh mixed colony: regenerate the culture pool + relations, draw pawns across it, then run
+  // the same spawn/work/entity bootstrap the load path uses (Culture overhaul).
   let fresh: GameState = {
     ...initialGameState,
     seed,
     worldMap: world,
     pawns: [],
-    racePool: [],
-    raceRelations: []
+    culturePool: [],
+    cultureRelations: []
   };
-  fresh = ensureRacePool(fresh);
-  fresh = { ...fresh, pawns: generateColonyPawns(fresh.racePool, 5) };
+  fresh = ensureCulturePool(fresh);
+  fresh = { ...fresh, pawns: generateColonyPawns(fresh.culturePool, 5) };
   fresh = { ...fresh, pawns: spawnPawnsOnMap(fresh.pawns, world) };
-  fresh = markColonyRacesDiscovered(fresh);
+  fresh = markColonyCulturesDiscovered(fresh);
   fresh = workService.ensureDefaultWorkAssignments(fresh);
   fresh = entityService.seedInitialEntities(fresh);
   loadStateIntoWorker(fresh);
@@ -1295,9 +1295,9 @@ export const savedStateReady: Promise<void> = (async () => {
     resourceGeneratorService.generateResources(baseState.worldMap, Date.now());
   }
 
-  // Race overhaul: ensure a prerolled race pool + relations exist (migrates legacy single-race
+  // Culture overhaul: ensure a prerolled culture pool + relations exist (migrates legacy single-culture
   // saves) BEFORE pawn generation so a fresh colony can be drawn mixed from the pool.
-  baseState = ensureRacePool(baseState);
+  baseState = ensureCulturePool(baseState);
 
   // Pawn generation — ONLY on a genuinely fresh boot (no save on disk). A LOADED save with an empty
   // roster is a colony wiped out by permadeath: we leave it empty so the UI shows GAME OVER (see
@@ -1305,8 +1305,8 @@ export const savedStateReady: Promise<void> = (async () => {
   // that lost members stays shrunk. (The old `length < 5` backfill silently undid permadeath on
   // every reload/HMR, spawning strangers next to the persisted corpses. Removed.)
   if (!savedState && (!baseState.pawns || baseState.pawns.length === 0)) {
-    // Fresh colony — fully mixed: each pawn rolled from a random pool race.
-    baseState = { ...baseState, pawns: generateColonyPawns(baseState.racePool, 5) };
+    // Fresh colony — fully mixed: each pawn rolled from a random pool culture.
+    baseState = { ...baseState, pawns: generateColonyPawns(baseState.culturePool, 5) };
   }
 
   // Spawn pawns that have no map position yet
@@ -1314,8 +1314,8 @@ export const savedStateReady: Promise<void> = (async () => {
     baseState = { ...baseState, pawns: spawnPawnsOnMap(baseState.pawns, baseState.worldMap) };
   }
 
-  // Flag colony races as discovered + set per-race headcounts for the pokédex.
-  baseState = markColonyRacesDiscovered(baseState);
+  // Flag colony cultures as discovered + set per-culture headcounts for the pokédex.
+  baseState = markColonyCulturesDiscovered(baseState);
 
   // Give any pawn without a work assignment explicit default labor settings — ONCE.
   // (Replaces the old per-tick workService.ensureBasicWorkAssignments — see D4.)
@@ -1433,14 +1433,14 @@ export const currentTurn = derived(gameState, ($gameState) => $gameState.turn);
 export const currentSeason = derived(gameState, ($gameState) => $gameState.season ?? 'spring');
 export const currentWeather = derived(gameState, ($gameState) => $gameState.weather);
 export const currentAvgTemperature = derived(gameState, ($gameState) => $gameState.avgTemperature);
-export const currentRace = derived(gameState, ($gameState) => $gameState.race);
-/** The full prerolled race pool (pokédex backing store). */
-export const racePool = derived(gameState, ($gameState) => $gameState.racePool ?? []);
-/** Procedural inter-race relations (stub — data + pokédex display only). */
-export const raceRelations = derived(gameState, ($gameState) => $gameState.raceRelations ?? []);
-/** Known (encountered) races — what the Race-tab pokédex lists. */
-export const discoveredRaces = derived(gameState, ($gameState) =>
-  ($gameState.racePool ?? []).filter((r) => r.discovered)
+export const currentCulture = derived(gameState, ($gameState) => $gameState.culture);
+/** The full prerolled culture pool (pokédex backing store). */
+export const culturePool = derived(gameState, ($gameState) => $gameState.culturePool ?? []);
+/** Procedural inter-culture relations (stub — data + pokédex display only). */
+export const cultureRelations = derived(gameState, ($gameState) => $gameState.cultureRelations ?? []);
+/** Known (encountered) cultures — what the Culture-tab pokédex lists. */
+export const discoveredCultures = derived(gameState, ($gameState) =>
+  ($gameState.culturePool ?? []).filter((r) => r.discovered)
 );
 export const pawnStats = derived(gameState, ($gameState) => $gameState.pawnStats || {});
 

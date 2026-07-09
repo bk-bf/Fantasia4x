@@ -1,8 +1,8 @@
 // Vague, non-numeric ability descriptions for a pawn (migrant-wave modal). Thresholds come from
-// core/Race.ts's `statBucket` — single source.
+// core/Culture.ts's `statBucket` — single source.
 
 import type { Pawn } from '$lib/game/core/types';
-import { statBucket } from '$lib/game/core/Race';
+import { statBucket } from '$lib/game/core/Culture';
 
 const STATS = [
   'strength',

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { currentStockpile, currentRace, gameState } from '$lib/stores/gameState';
+  import { currentStockpile, currentCulture, gameState } from '$lib/stores/gameState';
   import {
     collapsedResourceCategories,
     hideEmptyResourceCategories,
@@ -34,8 +34,8 @@
 
   // ── Live state ────────────────────────────────────────────────────────────
   const stockpile = $derived($currentStockpile as StockItem[]);
-  const race = $derived($currentRace);
-  // POPULATION reflects the live pawn count (race.population is stale).
+  const culture = $derived($currentCulture);
+  // POPULATION reflects the live pawn count (culture.population is stale).
   const population = $derived($gameState?.pawns?.length ?? 0);
   // Per-carcass-type average condition (0–100) — the INTACT bar's source. Computed worker-side and
   // shipped on the snapshot (`_carcassCondition`) so the per-unit arrays never cross the boundary.
@@ -188,14 +188,14 @@
       aria-label="Expand resources"
       onclick={() => resourcesMinimized.set(false)}>›</button
     >
-  {:else if race}
+  {:else if culture}
     <!-- Sticky header block: Kingdom + Resources header never scroll away. -->
     <div class="sticky-top">
       <div class="section-hdr">| KINGDOM</div>
       <div class="rows">
         <div class="row">
           <span class="lbl">SETTLEMENT</span>
-          <span class="val hi">{race.name}</span>
+          <span class="val hi">{culture.name}</span>
         </div>
         <div class="row">
           <span class="lbl">POPULATION</span>

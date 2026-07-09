@@ -29,8 +29,8 @@ export const SHEET = {
   CROPS: 0xe700,
   /** creatures.bmp           – creature / monster sprites  (U+E800–E8FF) */
   CREATURES: 0xe800,
-  /** races.bmp               – playable race sprites       (U+E900–E9FF) */
-  RACES: 0xe900
+  /** cultures.bmp               – playable culture sprites       (U+E900–E9FF) */
+  CULTURES: 0xe900
 } as const;
 
 /**

@@ -38,7 +38,7 @@ export function baseVisionRange(perception: number): number {
 }
 
 /** This entity's 0–1 night-vision (darkness immunity). Mobs read it from their creature def; pawns
- *  sum it across their racial traits. Default 0 (normal — full darkness penalty). */
+ *  sum it across their cultural traits. Default 0 (normal — full darkness penalty). */
 export function getNightVision(entity: Pawn | Mob): number {
   if ('creatureId' in entity) {
     // Mobs: the creature-def value PLUS anything its living parts grant (arachnid eyes).
@@ -50,7 +50,7 @@ export function getNightVision(entity: Pawn | Mob): number {
   // eye simply stops contributing, no separate anatomy check needed.
   nv += livingPartNightVision(entity);
   // Anatomy gate for TRAIT night-vision: a pawn whose eyes are all destroyed is blind in the dark
-  // regardless of racial trait. Only pawns that actually HAVE eyes (and any nightVision) pay the limb
+  // regardless of cultural trait. Only pawns that actually HAVE eyes (and any nightVision) pay the limb
   // walk; a body plan with no eye parts is left ungated. (Part-granted NV above already self-gates.)
   if (nv > 0 && entity.limbs?.length) {
     let hasEye = false;

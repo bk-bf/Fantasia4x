@@ -643,7 +643,7 @@ export async function extendAtlasWithSheet(
  *   y=1728 bitlands_workshops.bmp U+E600 + index
  *   y=2016 bitlands_crops.bmp     U+E700 + index
  *   y=2304 creatures.bmp           U+E800 + index
- *   y=2592 races.bmp               U+E900 + index
+ *   y=2592 cultures.bmp               U+E900 + index
  *
  * Total texture: 192×2880 px.  All sheets use tileW=12, tileH=18.
  *
@@ -661,7 +661,7 @@ export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): 
     { url: '/tilesets/bitlands_workshops.bmp', puaBase: 0xe600 },
     { url: '/tilesets/bitlands_crops.bmp', puaBase: 0xe700 },
     { url: '/tilesets/creatures.bmp', puaBase: 0xe800 },
-    { url: '/tilesets/races.bmp', puaBase: 0xe900 }
+    { url: '/tilesets/cultures.bmp', puaBase: 0xe900 }
   ];
 
   const results = await Promise.allSettled(

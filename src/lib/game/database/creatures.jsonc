@@ -100,7 +100,7 @@
         "name"          : "Goblin",
         "threatLevel"   : 3,    // DPS 4.4 | effHP 37 | skirmisher (fists+kick waste STR 20 — see notes)
         "entityClass"   : "mob",
-        "charSpans"     : [ {"sheet": "races", "id": 49} ],
+        "charSpans"     : [ {"sheet": "cultures", "id": 49} ],
         "fg"            : [0.4, 0.65, 0.3],
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"str": 20, "dex": 8, "con": 7, "per": 9},
@@ -344,7 +344,7 @@
     // ── EXPANSION ROSTER (DF / DCSS / D&D inspired) ──────────────────────────────
     // Natural weapons reuse the existing natural_weapon items where they fit; only `venom_bite` is
     // new. Sprite ids (charSpans) are PLACEHOLDERS reusing thematically-close existing creatures
-    // (and races/49 for humanoid raiders) — TODO: assign distinct creatures.bmp indices + art.
+    // (and cultures/49 for humanoid raiders) — TODO: assign distinct creatures.bmp indices + art.
     // Carcasses reuse the standard carcass item structure; TODO: per-carcass butchery yields
     // (new hides/meats) are NOT wired yet — see recipes.jsonc.
     // ── Grazers & game (neutral/passive prey) ────────────────────────────────────
@@ -768,7 +768,7 @@
         "name"          : "Kobold Skulker",
         "threatLevel"   : 3,    // DPS 4.2 | effHP 30 | skirmisher
         "entityClass"   : "mob",
-        "charSpans"     : [ {"sheet": "races", "id": 64} ],
+        "charSpans"     : [ {"sheet": "cultures", "id": 64} ],
         "fg"            : [0.6, 0.4, 0.25],
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"str": 14, "dex": 12, "con": 6, "per": 11},
@@ -821,7 +821,7 @@
         "name"          : "Orc Reaver",
         "threatLevel"   : 8,    // DPS 8.5 | effHP 91 | skirmisher (fists+slam waste STR 30 — weakest elite, see notes)
         "entityClass"   : "mob",
-        "charSpans"     : [ {"sheet": "races", "id": 32} ],
+        "charSpans"     : [ {"sheet": "cultures", "id": 32} ],
         "fg"            : [0.4, 0.55, 0.35],
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"str": 30, "dex": 9, "con": 13, "per": 8},

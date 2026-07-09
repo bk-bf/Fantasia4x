@@ -72,7 +72,7 @@
 <div class="row">
   <button class="main" onclick={activate}>
     <div class="top">
-      <span class="race">{save.meta.raceName}</span>
+      <span class="culture">{save.meta.cultureName}</span>
       <span class="badge" class:auto={save.meta.kind === 'auto'}>
         {save.meta.kind === 'auto' ? 'Autosave' : 'Manual'}
       </span>
@@ -161,7 +161,7 @@
     /* Leave room for the absolutely-positioned ✕ (top-right) so the right-aligned badge can't clip it. */
     padding-right: 22px;
   }
-  .race {
+  .culture {
     color: var(--accent-hi);
     font-size: 15px;
     font-weight: 700;

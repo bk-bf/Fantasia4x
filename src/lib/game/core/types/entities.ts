@@ -1,10 +1,10 @@
 // Live entities (mobs/animals) and the Pawn model. Split out of core/types.ts (P-4); re-exported
 // via the barrel.
 
-import type { EntityStats, StatKey, GrowthOffer } from './race';
+import type { EntityStats, StatKey, GrowthOffer } from './culture';
 import type { EntityNeeds, EntityCondition, Injury, LimbState } from './health';
 import type { PawnInventory, PawnEquipment, EquipmentSlot } from './items';
-import type { Trait } from './race';
+import type { Trait } from './culture';
 
 /** FSM state for a live entity. Hostile + neutral share one machine. */
 export type MobState =
@@ -204,11 +204,11 @@ export interface Pawn {
   /** Player-pinned item ids (by resourceId/itemId). A pinned carried item is never deposited during
    *  hauling — the pawn keeps it indefinitely — and pinned items sort to the top of the gear lists. */
   pinnedItems?: string[];
-  // Individual stats (rolled from race ranges)
+  // Individual stats (rolled from culture ranges)
   stats: EntityStats;
 
   // ===== PAWN-GROWTH: age + Battle-Brothers-style stat growth =====
-  /** Per-stat ceilings this pawn can grow toward (rolled at generation, race-derived, ~70–100 on
+  /** Per-stat ceilings this pawn can grow toward (rolled at generation, culture-derived, ~70–100 on
    *  favoured stats). A growth accept never lifts a stat above its cap. */
   maxStats?: EntityStats;
   /** The pawn's favoured ("talent-star") stats — a rolled 0–2 of them: higher caps AND biased to roll
@@ -230,19 +230,19 @@ export interface Pawn {
   physicalTraits: {
     height: number; // in cm
     weight: number; // in kg
-    size: string; // inherited from race
+    size: string; // inherited from culture
   };
 
   // NEW: Needs and state tracking
   needs: EntityNeeds;
   state: PawnState;
 
-  // Race identity — which pool race this pawn was drawn from (mixed colonies).
-  raceId?: string;
-  raceName?: string;
+  // Culture identity — which pool culture this pawn was drawn from (mixed colonies).
+  cultureId?: string;
+  cultureName?: string;
 
-  /** The pawn's COMBINED trait set (ADR-023): its guaranteed racial identity traits + 1–2 drawn from
-   *  its race's mundane pool + 0–2 personal traits — rolled PER PAWN, so same-race pawns differ. */
+  /** The pawn's COMBINED trait set (ADR-023): its guaranteed cultural identity traits + 1–2 drawn from
+   *  its culture's mundane pool + 0–2 personal traits — rolled PER PAWN, so same-culture pawns differ. */
   traits: Trait[];
 
   skills: Record<string, number>; // skillId -> level

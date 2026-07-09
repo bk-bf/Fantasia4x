@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { gameState, currentRace } from '$lib/stores/gameState';
+  import { gameState, currentCulture } from '$lib/stores/gameState';
   import BuildCard from '$lib/components/UI/BuildCard.svelte';
   import ItemPills, { type ItemPillView } from '$lib/components/UI/ItemPills.svelte';
   import FilterTabs from '$lib/components/UI/FilterTabs.svelte';
@@ -87,7 +87,7 @@
     return parts.length ? parts.join(' · ') : null;
   }
 
-  let race: any = null;
+  let culture: any = null;
   let craftingQueue: any[] = [];
   let completedResearch: string[] = [];
   let currentPopulation = 0;
@@ -335,8 +335,8 @@
     ? craftEntries.filter((e) => e.name.toLowerCase().includes(searchTerm))
     : (activeCat?.entries ?? []);
 
-  const unsubscribeRace = currentRace.subscribe((value) => {
-    race = value;
+  const unsubscribeCulture = currentCulture.subscribe((value) => {
+    culture = value;
     currentPopulation = value?.population || 0;
   });
 
@@ -347,7 +347,7 @@
   });
 
   onDestroy(() => {
-    unsubscribeRace();
+    unsubscribeCulture();
     unsubscribeGame();
   });
 

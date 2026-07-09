@@ -62,7 +62,7 @@
   );
   let skill = $derived(pawn.skills?.[wc.id] ?? 0);
 
-  // Racial-trait contributions to this job, read straight from the explicit trait data
+  // Cultural-trait contributions to this job, read straight from the explicit trait data
   // (workSpeed / workYield / workQuality). Shown as a true +/- percentage.
   type TraitMod = { name: string; axis: string; pct: number };
   let traitMods = $derived.by(() => {

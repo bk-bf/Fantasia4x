@@ -1,4 +1,4 @@
-// Race, stats, and racial-trait types. Split out of core/types.ts (P-4); re-exported via the barrel.
+// Culture, stats, and cultural-trait types. Split out of core/types.ts (P-4); re-exported via the barrel.
 
 import type { EquipmentSlot } from './items';
 
@@ -62,17 +62,17 @@ export interface Trait {
   id?: string;
   name: string;
   description: string;
-  /** Hand-authored evocative fragment woven into a race's procedural description
-   *  (see Race.generateRaceDescription). Carries the prose flavour — e.g.
+  /** Hand-authored evocative fragment woven into a culture's procedural description
+   *  (see Culture.generateCultureDescription). Carries the prose flavour — e.g.
    *  "their skin sets hard as weathered stone". */
   flavorLine?: string;
-  /** Where the trait comes from (ADR-023). Absent ⇒ `racial`.
-   *  `racial`: physiology drawn from a race's pool (may be a shared identity trait).
-   *  `personal`: temperament/aptitude an INDIVIDUAL pawn carries regardless of race. */
-  scope?: 'racial' | 'personal';
+  /** Where the trait comes from (ADR-023). Absent ⇒ `cultural`.
+   *  `cultural`: physiology drawn from a culture's pool (may be a shared identity trait).
+   *  `personal`: temperament/aptitude an INDIVIDUAL pawn carries regardless of culture. */
+  scope?: 'cultural' | 'personal';
   /** Rarity on the `rarities.jsonc` scale (TRAIT-SYSTEM-V2 §2). Absent ⇒ `common`. It is a BUDGET:
    *  how many attribute categories a trait may touch and its polarity — common/uncommon are the mundane
-   *  pool, rare/epic are the rare race-identity capabilities, legendary is a rolled bundle. It also
+   *  pool, rare/epic are the rare culture-identity capabilities, legendary is a rolled bundle. It also
    *  drives the trait-card accent colour. */
   rarity?: 'negative' | 'common' | 'uncommon' | 'rare' | 'epic' | 'mythic' | 'legendary';
   /** Trait category (TRAIT-SYSTEM-V2 §1) — determines the payload shape + validator path:
@@ -161,7 +161,7 @@ export interface Trait {
    *  — so a physically contradictory trait can't land (Gaunt = "wasted, spare" never on a 250 kg mass;
    *  Stocky = "short, broad" never on a wisp). Checked per-pawn in `drawPawnTraits` against the base
    *  physicalTraits; a failing trait is skipped from that pawn's draw. `build` is weight ÷ height (kg/cm)
-   *  — the lean↔heavy axis (see Race.buildBucket). Absent ⇒ no physical gate. */
+   *  — the lean↔heavy axis (see Culture.buildBucket). Absent ⇒ no physical gate. */
   requires?: {
     minWeightKg?: number;
     maxWeightKg?: number;
@@ -201,7 +201,7 @@ export interface Trait {
    *  PawnStatService work mults + resistance stats + heal_rate, and Combat resistances.
    *  The old grab-bag of unread effect keys (telepathicRange, memoryBonus…) was pruned. */
   effects: {
-    // Stat bonuses/penalties — applied at pawn generation (applyRacialTraitBonuses).
+    // Stat bonuses/penalties — applied at pawn generation (applyCulturalTraitBonuses).
     strengthBonus?: number;
     dexterityBonus?: number;
     intelligenceBonus?: number;
@@ -254,8 +254,8 @@ export interface Trait {
   };
 }
 
-/** Procedurally-generated race lore — flavour only, no mechanical effect. */
-export interface RaceLore {
+/** Procedurally-generated culture lore — flavour only, no mechanical effect. */
+export interface CultureLore {
   /** Short heroic byname, e.g. "the Stoneborn". */
   epithet: string;
   /** Origin myth fragment. */
@@ -266,19 +266,19 @@ export interface RaceLore {
   temperament: string;
   /** Cultural belief / value. */
   belief: string;
-  /** The immersive multi-sentence description (Race.generateRaceDescription). */
+  /** The immersive multi-sentence description (Culture.generateCultureDescription). */
   description: string;
 }
 
-/** Stub inter-race relationship (data + pokédex display only this pass; no mood wiring). */
-export interface RaceRelation {
-  a: string; // race id
-  b: string; // race id
+/** Stub inter-culture relationship (data + pokédex display only this pass; no mood wiring). */
+export interface CultureRelation {
+  a: string; // culture id
+  b: string; // culture id
   score: number; // -100 (hostile) .. +100 (allied), symmetric
   disposition: 'allied' | 'friendly' | 'neutral' | 'wary' | 'hostile';
 }
 
-export interface Race {
+export interface Culture {
   /** Unique kebab-case slug (was hardcoded 'player' pre-overhaul). */
   id: string;
   name: string;
@@ -296,17 +296,17 @@ export interface Race {
     size: 'tiny' | 'small' | 'medium' | 'large' | 'huge';
   };
 
-  /** Traits EVERY member of the race shares — its identity (ADR-023). Holds any rare
-   *  supernatural/legendary the race rolled (the "scaled folk"), plus 0–1 signature mundane trait. */
+  /** Traits EVERY member of the culture shares — its identity (ADR-023). Holds any rare
+   *  supernatural/legendary the culture rolled (the "scaled folk"), plus 0–1 signature mundane trait. */
   guaranteedTraits: Trait[];
-  /** The menu of additional MUNDANE racial traits each pawn independently draws 1–2 from at
-   *  generation, so same-race pawns vary. Weighted toward the race's archetype. */
-  racialTraitPool: Trait[];
+  /** The menu of additional MUNDANE cultural traits each pawn independently draws 1–2 from at
+   *  generation, so same-culture pawns vary. Weighted toward the culture's archetype. */
+  culturalTraitPool: Trait[];
 
   /** Procedural lore (epithet, origin, immersive description …). */
-  lore: RaceLore;
+  lore: CultureLore;
 
-  /** Pokédex flag — true once the colony hosts this race or it's been encountered. */
+  /** Pokédex flag — true once the colony hosts this culture or it's been encountered. */
   discovered?: boolean;
 
   population: number;

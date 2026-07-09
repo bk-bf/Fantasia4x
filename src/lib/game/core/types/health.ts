@@ -300,7 +300,7 @@ export interface ConditionTrigger {
 /** Fields shared by both condition shapes for the TRAIT-SYSTEM-V2 relationship graph. */
 export interface ConditionGraphFields {
   /** Categorisation tags for querying, relationship rules, and UI grouping — e.g.
-   *  ["environmental","cold"], ["combat","bleed"], ["disease"], ["racial","aura"]. */
+   *  ["environmental","cold"], ["combat","bleed"], ["disease"], ["cultural","aura"]. */
   flags?: string[];
   /** Outgoing edges: while active, these may trigger other conditions (probabilistic or deterministic). */
   triggers?: ConditionTrigger[];

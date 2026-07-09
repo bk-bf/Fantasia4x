@@ -411,7 +411,7 @@ export function getActiveConditionViews(entity: Pawn | Mob): ConditionView[] {
       stageLabel: stage?.label,
       lifeThreatening: stage?.lifeThreatening,
       sources: [
-        ...(grantingTrait ? [`${grantingTrait.name} (racial trait)`] : []),
+        ...(grantingTrait ? [`${grantingTrait.name} (cultural trait)`] : []),
         ...transientSources(entity, baseId)
       ],
       effects: [...grants, ...effectLines(mods)],

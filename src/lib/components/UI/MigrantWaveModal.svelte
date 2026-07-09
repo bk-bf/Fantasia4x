@@ -48,7 +48,7 @@
           <div class="card-head">
             <div class="who">
               <span class="name">{c.name}</span>
-              <span class="race">{c.raceName}</span>
+              <span class="culture">{c.cultureName}</span>
             </div>
             <button class="toggle" class:on={isAccepted(c.id)} onclick={() => toggle(c.id)}>
               {isAccepted(c.id) ? '✓ Welcome' : '✕ Turn away'}
@@ -154,7 +154,7 @@
     font-size: 14px;
     font-weight: 600;
   }
-  .race {
+  .culture {
     color: var(--text-muted);
     font-size: 11px;
     letter-spacing: 0.06em;

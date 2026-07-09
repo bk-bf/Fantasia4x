@@ -1,6 +1,6 @@
-import type { Pawn, EntityNeeds, PawnState, Race, EntityStats, Trait, Injury } from '../core/types';
+import type { Pawn, EntityNeeds, PawnState, Culture, EntityStats, Trait, Injury } from '../core/types';
 import { createPawnInventory, createPawnEquipment } from '../core/PawnEquipment';
-import { drawPawnTraits } from '../core/Race';
+import { drawPawnTraits } from '../core/Culture';
 import { createBodyPlanLimbs } from '../systems/Combat';
 import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/BodyParts';
 import { SCARRING_CONFIG, makeScarInjury } from '../core/Wounds';
@@ -231,17 +231,17 @@ export function applyTraitBodyMods(pawn: Pawn): void {
   }
 }
 
-/** Roll a single pawn from a specific race (stats within the race's ranges, traits copied,
- *  race identity stamped). Shared by single-race and mixed-colony generation. */
-export function buildPawnFromRace(race: Race, index: number): Pawn {
-  const baseStats = rollStatsFromRanges(race.statRanges);
+/** Roll a single pawn from a specific culture (stats within the culture's ranges, traits copied,
+ *  culture identity stamped). Shared by single-culture and mixed-colony generation. */
+export function buildPawnFromCulture(culture: Culture, index: number): Pawn {
+  const baseStats = rollStatsFromRanges(culture.statRanges);
   // Roll the base physique FIRST — it gates physically-contradictory traits (ADR-028 `requires`: no
   // Gaunt on a 250 kg mass), so the trait draw needs to know weight/height.
-  const physicalTraits = rollPhysicalTraits(race.physicalTraits);
+  const physicalTraits = rollPhysicalTraits(culture.physicalTraits);
   // ADR-023: each pawn draws its OWN trait set (guaranteed identity + 1–2 mundane pool + 0–2 personal,
-  // physique-gated), so same-race pawns differ. Stats then fold in the drawn traits' bonuses.
-  const traits = drawPawnTraits(race, physicalTraits);
-  const finalStats = applyRacialTraitBonuses(baseStats, traits);
+  // physique-gated), so same-culture pawns differ. Stats then fold in the drawn traits' bonuses.
+  const traits = drawPawnTraits(culture, physicalTraits);
+  const finalStats = applyCulturalTraitBonuses(baseStats, traits);
   // TRAIT-SYSTEM-V2 §1: bodyMod weight (heavy bones) mass folded in AFTER the draw (it doesn't change
   // the base build the gate reads) but BEFORE the blood pool is derived from weight.
   physicalTraits.weight += traitBodyWeightDelta(traits);
@@ -249,7 +249,7 @@ export function buildPawnFromRace(race: Race, index: number): Pawn {
   const maxStamina = calcMaxStamina(finalStats);
   // PAWN-GROWTH: talent-star fav stats + per-stat growth ceilings, a rolled adult age, and a fixed
   // random birthday (age++ + a doubled growth offer land on it).
-  const { maxStats, favStats } = rollGrowthProfile(finalStats, race.statRanges);
+  const { maxStats, favStats } = rollGrowthProfile(finalStats, culture.statRanges);
 
   const pawn: Pawn = {
     id: `pawn-${index}`,
@@ -261,8 +261,8 @@ export function buildPawnFromRace(race: Race, index: number): Pawn {
     age: rng.int(16, 45),
     birthDayOfYear: rng.int(0, 359),
     physicalTraits,
-    raceId: race.id,
-    raceName: race.name,
+    cultureId: culture.id,
+    cultureName: culture.name,
     traits,
     inventory: createPawnInventory(),
     equipment: createPawnEquipment(),
@@ -303,15 +303,15 @@ export function buildPawnFromRace(race: Race, index: number): Pawn {
   return pawn;
 }
 
-/** Generate `count` pawns from a single race (back-compat: extra-pawn backfill path). */
-export function generatePawns(race: Race, count = 3): Pawn[] {
-  return Array.from({ length: count }, (_, i) => buildPawnFromRace(race, i));
+/** Generate `count` pawns from a single culture (back-compat: extra-pawn backfill path). */
+export function generatePawns(culture: Culture, count = 3): Pawn[] {
+  return Array.from({ length: count }, (_, i) => buildPawnFromCulture(culture, i));
 }
 
-/** Generate a fully-mixed starting colony: each pawn is rolled from a random pool race. */
-export function generateColonyPawns(racePool: Race[], count = 5): Pawn[] {
-  if (racePool.length === 0) return [];
-  return Array.from({ length: count }, (_, i) => buildPawnFromRace(rng.pick(racePool), i));
+/** Generate a fully-mixed starting colony: each pawn is rolled from a random pool culture. */
+export function generateColonyPawns(culturePool: Culture[], count = 5): Pawn[] {
+  if (culturePool.length === 0) return [];
+  return Array.from({ length: count }, (_, i) => buildPawnFromCulture(rng.pick(culturePool), i));
 }
 
 // UPDATED: Simplified categorization focused on basic abilities
@@ -444,7 +444,7 @@ const STAT_KEYS: (keyof EntityStats)[] = [
 
 /**
  * PAWN-GROWTH: roll a pawn's favoured ("talent-star") stats (a random 0–2 of them) + per-stat growth
- * ceilings. Favoured stats are drawn weighted toward the race's strongest stats (widest [min,max] = its
+ * ceilings. Favoured stats are drawn weighted toward the culture's strongest stats (widest [min,max] = its
  * focus), then get the highest caps (~85–100); the rest cap ~62–82. Every cap sits at least +15 above
  * the rolled stat so there's always room to grow. Caps are what a stat can climb to over many events.
  */
@@ -452,8 +452,8 @@ function rollGrowthProfile(
   finalStats: EntityStats,
   statRanges: Record<string, [number, number]>
 ): { maxStats: EntityStats; favStats: (keyof EntityStats)[] } {
-  // Weight fav selection toward the race's focus stats (wider range ⇒ higher weight), so a warlike
-  // race tends to favour STR/CON — but any stat can be a pawn's talent.
+  // Weight fav selection toward the culture's focus stats (wider range ⇒ higher weight), so a warlike
+  // culture tends to favour STR/CON — but any stat can be a pawn's talent.
   const pool: (keyof EntityStats)[] = [];
   for (const stat of STAT_KEYS) {
     const [min, max] = statRanges[stat] ?? [10, 15];
@@ -478,7 +478,7 @@ function rollGrowthProfile(
   return { maxStats, favStats };
 }
 
-function applyRacialTraitBonuses(baseStats: EntityStats, traits: Trait[]): EntityStats {
+function applyCulturalTraitBonuses(baseStats: EntityStats, traits: Trait[]): EntityStats {
   const modifiedStats = { ...baseStats };
 
   traits.forEach((trait) => {
@@ -507,8 +507,8 @@ function applyRacialTraitBonuses(baseStats: EntityStats, traits: Trait[]): Entit
   return modifiedStats;
 }
 
-function rollPhysicalTraits(racePhysicalTraits: any): any {
-  const { heightRange, weightRange, size } = racePhysicalTraits;
+function rollPhysicalTraits(culturePhysicalTraits: any): any {
+  const { heightRange, weightRange, size } = culturePhysicalTraits;
 
   return {
     height: heightRange[0] + Math.floor(rng.random() * (heightRange[1] - heightRange[0] + 1)),

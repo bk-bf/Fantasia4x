@@ -5,7 +5,7 @@ import { itemService } from '../ItemService';
 import { buildingService } from '../BuildingService';
 
 // Crafting DISCIPLINES — the work categories a `craft` job can route to (instead of the generic
-// `crafting`), based on its station. Each has its own `*_speed`/`_quality` stats + tools + racial
+// `crafting`), based on its station. Each has its own `*_speed`/`_quality` stats + tools + cultural
 // traits, so a smith ≠ tanner ≠ brewer ≠ butcher ≠ generalist. Cooking is included (a prepared meal
 // always routes here regardless of station). Guards `toolRequirement.workType` routing.
 export const CRAFT_DISCIPLINES = new Set([

@@ -354,11 +354,11 @@ function applyMeleeGrip(p: AttackProfile, grip: MeleeGrip): AttackProfile {
   return p;
 }
 
-/** A pawn's unarmed pool = its racial natural weapons ahead of the default fists/kick, so a
- *  clawed/fanged race swings its body weapon when unarmed (or forced unarmed by a trait's
+/** A pawn's unarmed pool = its cultural natural weapons ahead of the default fists/kick, so a
+ *  clawed/fanged culture swings its body weapon when unarmed (or forced unarmed by a trait's
  *  `blocksSlots`). ADR-023: the weapon ids live on the trait's `selfCondition` DEF
  *  (`grantsNaturalWeapon`) — the body condition IS the source, so the health pill and the swing can't
- *  drift. Empty racial set → the plain fists/kick default. */
+ *  drift. Empty cultural set → the plain fists/kick default. */
 function pawnNaturalWeaponIds(attacker: Pawn): string[] {
   // ADR-029: a pawn's natural-weapon ids live on its TRAITS (`naturalWeapons`, the mirror of a
   // creature's def list). Anatomy-gating happens downstream in attackerProfile via the SAME
@@ -378,7 +378,7 @@ function bloodlettingChance(item: Item | undefined): number | undefined {
   return c && c > 0 ? c : undefined;
 }
 
-/** Summed racial `weaponBonus.damage` — a multiplier bonus that applies ONLY while a weapon is
+/** Summed cultural `weaponBonus.damage` — a multiplier bonus that applies ONLY while a weapon is
  *  equipped (Giant's Grip / Duelist's Blood). 0 for mobs and traitless pawns. */
 function weaponBonusDamage(attacker: Pawn | Mob): number {
   if (!('traits' in attacker)) return 0;
@@ -389,7 +389,7 @@ function weaponBonusDamage(attacker: Pawn | Mob): number {
 
 /** Resolve the attack used for one swing. An equipped weapon wins; otherwise a
  *  weighted roll over the attacker's `natural_weapon` items (creature def, or a
- *  pawn's racial/bare hands/feet); finally an unarmed fallback. Both gear paths
+ *  pawn's cultural/bare hands/feet); finally an unarmed fallback. Both gear paths
  *  resolve through the same ItemService lookup. `distTiles` (§3b breath weapons):
  *  when the target stands beyond arm's reach, only natural weapons whose `reach`
  *  covers the gap may be rolled — a reach-3 dragonfire strikes where claws can't. */
@@ -412,14 +412,14 @@ function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
       const wp = scaleWeaponQuality(item.weaponProperties, mh.quality, mh.famedStatMult);
       const p = profileFromWeapon(str, dex, wp, item.name ?? 'weapon');
       p.bloodletting = bloodlettingChance(item); // §3b: a deep-cutting blade leaves unclottable wounds
-      // ADR-023: a racial `weaponBonus` (Giant's Grip) rides the wielded weapon only.
+      // ADR-023: a cultural `weaponBonus` (Giant's Grip) rides the wielded weapon only.
       const wb = weaponBonusDamage(attacker);
       if (wb) p.baseDamage *= 1 + wb;
       return applyMeleeGrip(p, getGrip(attacker)); // BB grip: duelist/2H add offense (melee only)
     }
   }
 
-  // Natural weapons: ids from the creature def, or the pawn's racial+default set. Resolve
+  // Natural weapons: ids from the creature def, or the pawn's cultural+default set. Resolve
   // each to its item and weighted-pick one for this swing.
   const ids =
     'creatureId' in attacker
@@ -477,12 +477,12 @@ function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
 
 /**
  * Compute the defender's physical damage resistance for a given damage type.
- * Sources: racial trait general damageReduction + type-specific resistance + base stat contribution.
+ * Sources: cultural trait general damageReduction + type-specific resistance + base stat contribution.
  * Clamped 0–0.90 (can never fully negate damage from this layer alone).
  */
 // Damage type → the resistance stat shown in the attributes tab. ONE source of truth: combat soaks
 // exactly the value the player sees (no hidden inline copy that could drift). `evaluateStat` folds the
-// stat formula + racial-trait resistance bonus; any condition that saps the underlying stat flows
+// stat formula + cultural-trait resistance bonus; any condition that saps the underlying stat flows
 // through automatically (and matches the tab).
 const DAMAGE_RESISTANCE_STAT: Record<DamageType, string> = {
   cutting: 'cutting_resistance',
@@ -494,7 +494,7 @@ const DAMAGE_RESISTANCE_STAT: Record<DamageType, string> = {
 };
 
 function physicalResistance(defender: Pawn | Mob, damageType: DamageType): number {
-  // Base = the attributes-tab resistance stat (formula + racial-trait bonus), not a duplicated formula.
+  // Base = the attributes-tab resistance stat (formula + cultural-trait bonus), not a duplicated formula.
   let res = pawnStatService.evaluateStat(DAMAGE_RESISTANCE_STAT[damageType], defender);
 
   // §M per-creature resistances/vulnerabilities (creatures.jsonc) — thematic on top (negative =
@@ -503,7 +503,7 @@ function physicalResistance(defender: Pawn | Mob, damageType: DamageType): numbe
     res += getCreatureById(defender.creatureId)?.resistances?.[damageType] ?? 0;
   }
 
-  // Racial trait resistances (physical + elemental) are folded into the stat by evaluateStat above
+  // Cultural trait resistances (physical + elemental) are folded into the stat by evaluateStat above
   // (PawnStatService.RESISTANCE_TRAIT_KEY) — no separate flat `damageReduction` layer anymore. The
   // "armor-like" trait mitigation now lives in partArmorReduction as per-part `naturalArmor` soak.
   return clamp(res, 0, 0.9);
@@ -563,7 +563,7 @@ function entityNaturalArmor(defender: Pawn | Mob): number {
   return s;
 }
 
-/** Natural-armour DAMAGE POINTS at a part: a creature's hide (`naturalArmor`) or a pawn's racial traits
+/** Natural-armour DAMAGE POINTS at a part: a creature's hide (`naturalArmor`) or a pawn's cultural traits
  *  (ADR-029 `naturalArmor` sugar), the scalar distributed by the part's `share`, PLUS any explicit
  *  per-part `armorMods` (carapace back-heavy, soft belly). */
 function naturalArmorPoints(defender: Pawn | Mob, share: number, partId: BodyPartId): number {
@@ -1368,7 +1368,7 @@ class CombatServiceImpl implements CombatService {
 
   /**
    * Apply every on-hit condition a landed melee blow can inflict: the held/natural weapon's own
-   * `onHitCondition` (rides the swung weapon) PLUS the attacker's racial trait `onHitCondition`s
+   * `onHitCondition` (rides the swung weapon) PLUS the attacker's cultural trait `onHitCondition`s
    * (ADR-023: Venom Glands / Flame-Touched "ride your steel", procing on ANY hit regardless of weapon).
    * Each is rolled independently through the same machinery. No-op when nothing procs / target is down.
    */

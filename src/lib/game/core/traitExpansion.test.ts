@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { TRAIT_DATABASE } from './Race';
+import { TRAIT_DATABASE } from './Culture';
 import { rng } from './rng';
 import { createBodyPlanLimbs } from './BodyParts';
 import { rollWoundClotting, recomputeWound } from './Wounds';

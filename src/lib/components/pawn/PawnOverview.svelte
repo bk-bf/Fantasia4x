@@ -9,7 +9,7 @@
     getPawnTaskSummary
   } from '$lib/components/util/pawnUtils';
   import { pawnService } from '$lib/game/services/PawnService';
-  import { sizeFromHeight } from '$lib/game/core/Race';
+  import { sizeFromHeight } from '$lib/game/core/Culture';
   import PawnStance from './PawnStance.svelte';
   import PawnRestPolicy from './PawnRestPolicy.svelte';
   import PawnForceWork from './PawnForceWork.svelte';
@@ -30,10 +30,10 @@
 
   $: taskSummary = getPawnTaskSummary(pawn, gameState);
   $: moveSpeed = pawnService.getMoveSpeed(pawn);
-  // Race overhaul: surface the pawn's race + archetype (colonies are mixed now).
-  $: race = gameState.racePool?.find((r) => r.id === pawn.raceId);
-  $: raceLabel = pawn.raceName
-    ? `${pawn.raceName}${race?.archetype ? ` · ${race.archetype}` : ''}`
+  // Culture overhaul: surface the pawn's culture + archetype (colonies are mixed now).
+  $: culture = gameState.culturePool?.find((r) => r.id === pawn.cultureId);
+  $: cultureLabel = pawn.cultureName
+    ? `${pawn.cultureName}${culture?.archetype ? ` · ${culture.archetype}` : ''}`
     : 'unknown';
 
   function stateColor(state: string | undefined): string {
@@ -64,8 +64,8 @@
   <PawnGrowthPanel {pawn} />
 
   <div class="row">
-    <span class="lbl">RACE</span>
-    <span class="val race-val" title={race?.lore?.epithet ?? ''}>{raceLabel}</span>
+    <span class="lbl">CULTURE</span>
+    <span class="val culture-val" title={culture?.lore?.epithet ?? ''}>{cultureLabel}</span>
   </div>
   {#if pawn.age != null}
     <div class="row">
@@ -157,7 +157,7 @@
     margin-left: auto;
     text-align: right;
   }
-  .race-val {
+  .culture-val {
     color: var(--accent-hi);
     font-weight: bold;
     letter-spacing: 0.03em;

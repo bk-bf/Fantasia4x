@@ -371,7 +371,7 @@ function calculateCapacityValue(
       break;
     }
     case 'night_vision': {
-      // Darkness immunity 0–1: summed from racial traits (pawns) or the creature def (mobs). NOT organ- or
+      // Darkness immunity 0–1: summed from cultural traits (pawns) or the creature def (mobs). NOT organ- or
       // core-stat-derived — a real stats.jsonc stat so it's inspectable next to sight; it's the COUNTER to
       // the light dampening on `sight` (feeds the pawn's effectiveLight, computed by the caller).
       value = getNightVision(pawn);
@@ -432,7 +432,7 @@ function traitWorkMult(
   fallbackType?: string
 ): number {
   let mult = 1;
-  // Mobs have no racial traits; only Pawns carry them.
+  // Mobs have no cultural traits; only Pawns carry them.
   const traits = 'traits' in pawn ? pawn.traits : [];
   for (const trait of traits ?? []) {
     const map = trait.effects?.[key] as Record<string, number> | undefined;
@@ -462,9 +462,9 @@ function traitCombatMult(pawn: Pawn | Mob, statId: string): number {
   return mult;
 }
 
-// ── Racial resistance bonuses (Race overhaul) ────────────────────────────────
+// ── Cultural resistance bonuses (Culture overhaul) ────────────────────────────────
 // Trait resistance effects add on top of the matching *_resistance stat formula, so a
-// race's biology flows into both combat mitigation AND condition onset — e.g. coldResistance
+// culture's biology flows into both combat mitigation AND condition onset — e.g. coldResistance
 // raises cold_resistance, which PawnStateMachine reads to slow HYPOTHERMIA onset. No new
 // condition machinery: it reuses the existing resistance→onset wiring.
 const RESISTANCE_TRAIT_KEY: Record<string, keyof Trait['effects']> = {
@@ -561,7 +561,7 @@ export interface TempToleranceSource {
 /** A pawn's effective temperature comfort, with resistance folded in as degrees. The cold meter (and
  *  the cold fatigue penalty) start below `coldOnset`; the heat meter / hunger penalty above `heatOnset`. */
 export interface TemperatureTolerance {
-  /** Bare comfort band (race/trait), before resistance. */
+  /** Bare comfort band (culture/trait), before resistance. */
   comfortMin: number;
   comfortMax: number;
   /** Net degrees of headroom resistance buys on each side (clamped to [0, cap]). */

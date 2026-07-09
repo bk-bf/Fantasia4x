@@ -1,6 +1,6 @@
 // Research and lore types. Split out of core/types.ts (P-4); re-exported via the barrel.
 
-import type { EntityStats } from './race';
+import type { EntityStats } from './culture';
 
 export interface ResearchProject {
   id: string;

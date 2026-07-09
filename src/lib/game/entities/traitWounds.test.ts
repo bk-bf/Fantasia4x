@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { applyTraitWounds, applyTraitBodyMods } from './Pawns';
-import { TRAIT_DATABASE } from '../core/Race';
+import { TRAIT_DATABASE } from '../core/Culture';
 import { createBodyPlanLimbs } from '../systems/Combat';
 import { lethalAnatomyCause, PART_DEF_MAP, BOUND_NATURAL_WEAPONS } from '../core/BodyParts';
 import { getTransientConditionDef } from '../core/needs';

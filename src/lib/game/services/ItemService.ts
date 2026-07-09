@@ -36,7 +36,7 @@ import itemsData from '../database/items.jsonc';
 import buildingsData from '../database/buildings.jsonc';
 import { SECONDS_PER_TICK } from '../core/time';
 import { chebyshev } from '../core/distance';
-import { sizeFromHeight } from '../core/Race';
+import { sizeFromHeight } from '../core/Culture';
 // Gated console shim (ADR-011): per-tick/per-action log/debug/info/warn are silent unless
 // gameDebug(true); console.error still surfaces.
 import { gatedConsole as console } from '../core/log';
@@ -200,7 +200,7 @@ const DETERIORATION_RATE_BY_CATEGORY: Record<string, number> = {
 
 /** Itemised carry-budget breakdown for the UI (see ItemService.getCarryCapacityBreakdown). */
 export interface CarryCapacityBreakdown {
-  /** Size category derived from the pawn's actual height (a description of height, not the race box). */
+  /** Size category derived from the pawn's actual height (a description of height, not the culture box). */
   size: string;
   /** Height in cm (shown for context — carry is driven by body mass, not height). */
   height: number;

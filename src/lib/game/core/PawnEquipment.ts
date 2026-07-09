@@ -125,7 +125,7 @@ export function getEquipmentSlot(item: Item): EquipmentSlot | null {
   }
 }
 
-/** Equipment slots a pawn's racial traits forbid (ADR-023 `blocksSlots`) — a clawed/furred/horned
+/** Equipment slots a pawn's cultural traits forbid (ADR-023 `blocksSlots`) — a clawed/furred/horned
  *  body can't wear gear there. The gear tab greys these; equip is refused. Empty for a plain pawn. */
 export function blockedSlots(pawn: Pawn): Set<EquipmentSlot> {
   const set = new Set<EquipmentSlot>();

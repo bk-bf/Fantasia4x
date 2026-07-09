@@ -57,7 +57,7 @@ const W = (n: number): string => String.fromCodePoint(0xe600 + n);
 const CROP = (n: number): string => String.fromCodePoint(0xe700 + n);
 /** creatures.bmp index → PUA Unicode char (U+E800 + n) */
 const CR = (n: number): string => String.fromCodePoint(0xe800 + n);
-/** races.bmp index → PUA Unicode char (U+E900 + n) */
+/** cultures.bmp index → PUA Unicode char (U+E900 + n) */
 const RA = (n: number): string => String.fromCodePoint(0xe900 + n);
 
 // ── CharSpan resolver ─────────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ export interface CharSpan {
     | 'workshops'
     | 'crops'
     | 'creatures'
-    | 'races';
+    | 'cultures';
   from?: number;
   to?: number;
   id?: number;
@@ -90,7 +90,7 @@ const SHEET_FN: Record<string, SheetFn> = {
   workshops: W,
   crops: CROP,
   creatures: CR,
-  races: RA
+  cultures: RA
 };
 
 export function resolveCharSpans(spans: CharSpan[]): string[] {

@@ -1,7 +1,7 @@
 // Items, recipes, inventory, and equipment types.
 
 import type { DamageType } from './health';
-import type { OnHitCondition, OnHitWound } from './race';
+import type { OnHitCondition, OnHitWound } from './culture';
 
 /**
  * Discrete craft-quality tier: 0=Crude, 1=Standard (unmarked baseline), 2=Fine, 3=Superior,

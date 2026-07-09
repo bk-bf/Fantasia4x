@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TRAIT_DATABASE } from './Race';
+import { TRAIT_DATABASE } from './Culture';
 import { getTransientConditionDef } from './needs';
 import { PART_DEF_MAP, BOUND_NATURAL_WEAPONS } from './BodyParts';
 import raritiesData from '../database/rarities.jsonc';

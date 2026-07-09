@@ -83,7 +83,7 @@ export function buildProfilerScenario(opts: ProfilerScenarioOpts = {}): GameStat
   const nextTile = () => tiles[ti++ % tiles.length];
 
   // ── Pawns: many, with varied needs so they spread across work / eat / sleep / drink. ──
-  const pawns: Pawn[] = generatePawns(initialGameState.race, pawnCount);
+  const pawns: Pawn[] = generatePawns(initialGameState.culture, pawnCount);
   pawns.forEach((p, i) => {
     p.position = { ...nextTile() };
     const r = i % 4;

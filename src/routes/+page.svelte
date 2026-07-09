@@ -2,7 +2,7 @@
 <script lang="ts">
   import '../app.css';
   import MainScreen from '$lib/components/UI/MainScreen.svelte';
-  import RaceScreen from '$lib/components/screens/RaceScreen.svelte';
+  import CultureScreen from '$lib/components/screens/CultureScreen.svelte';
   import PawnScreen from '$lib/components/screens/PawnScreen.svelte';
   import BuildingMenu from '$lib/components/screens/BuildingMenu.svelte';
   import ResearchScreen from '$lib/components/screens/ResearchScreen.svelte';
@@ -220,7 +220,7 @@
     { key: 'building', label: 'BUILDINGS', fkey: 'F4' },
     { key: 'crafting', label: 'CRAFTING', fkey: 'F5' },
     { key: 'exploration', label: 'EXPLORE', fkey: 'F6' },
-    { key: 'race', label: 'RACE', fkey: 'F7' },
+    { key: 'culture', label: 'CULTURE', fkey: 'F7' },
     { key: 'research', label: 'RESEARCH', fkey: 'F8', needsResearch: true },
     { key: 'entities', label: 'ENTITIES', fkey: 'F9' },
     ...(debugEnabled ? [{ key: 'debug', label: 'DEBUG', fkey: 'F10' }] : [])
@@ -445,8 +445,8 @@
                 <CraftingScreen />
               {:else if currentScreen === 'exploration'}
                 <ExplorationScreen />
-              {:else if currentScreen === 'race'}
-                <RaceScreen />
+              {:else if currentScreen === 'culture'}
+                <CultureScreen />
               {:else if currentScreen === 'research'}
                 <ResearchScreen />
               {:else if currentScreen === 'entities'}

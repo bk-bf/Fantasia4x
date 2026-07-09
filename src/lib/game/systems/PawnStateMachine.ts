@@ -1001,7 +1001,7 @@ function reapBrokenGear(pawn: Pawn): Pawn | null {
   };
 }
 
-// ── Racial self-conditions (ADR-023) ─────────────────────────────────────────
+// ── Cultural self-conditions (ADR-023) ─────────────────────────────────────────
 // Every supernatural/legendary body trait keeps a legible pill via its `selfCondition`. Most are
 // permanent while the trait is present; `photosynthesis`/`light_sensitive` are ENVIRONMENT-GATED
 // (need turn-of-day light + an open sky), so they're pushed only while active.
@@ -1039,7 +1039,7 @@ function hasLivingPart(pawn: Pawn, partIds: string[]): boolean {
   return false;
 }
 
-/** Is a racial `selfCondition` currently active on the pawn? Permanent ones (no `activateWhen`) are
+/** Is a cultural `selfCondition` currently active on the pawn? Permanent ones (no `activateWhen`) are
  *  always active while the trait is present; environment-gated ones (photosynthesis/light_sensitive,
  *  and future transformations) are active only while their `activateWhen` predicate holds. */
 function envSelfConditionActive(pawn: Pawn, condId: string, turn: number): boolean {
@@ -1081,7 +1081,7 @@ function applyFiredEdge(
 /**
  * Derive the pawn's transientConditions list from current state flags, needs, and durations.
  * Called after each tick so PawnService.calculateNeedsUpdate always reads fresh values. `turn` is
- * passed so environment-gated racial pills (photosynthesis / light_sensitive) can read the day/night
+ * passed so environment-gated cultural pills (photosynthesis / light_sensitive) can read the day/night
  * light curve; omit it (tests) to skip those.
  */
 export function syncTransientConditions(pawn: Pawn, turn?: number): Pawn {
@@ -1112,7 +1112,7 @@ export function syncTransientConditions(pawn: Pawn, turn?: number): Pawn {
   // at max — WET_THRESHOLD sourced from the `wet` condition's needOnset (data, shared with the gradient).
   if ((pawn.needs?.wetness ?? 0) >= WET_THRESHOLD) ids.push('wet');
 
-  // ADR-023 racial self-conditions: the permanent pill for a supernatural/legendary body trait
+  // ADR-023 cultural self-conditions: the permanent pill for a supernatural/legendary body trait
   // (clawed/furred/scaled/…). Ones carrying an `activateWhen` (photosynthesis/light_sensitive, and
   // future transformations) are ENVIRONMENT-GATED — pushed only while their predicate holds
   // (TRAIT-SYSTEM-V2 §5), evaluated by conditionGraph. `envCtx` is built once, lazily, only if a pawn

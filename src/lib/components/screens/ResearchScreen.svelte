@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { gameState, currentRace } from '$lib/stores/gameState';
+  import { gameState, currentCulture } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import { researchService } from '$lib/game/services/ResearchService';
   import { buildingService } from '$lib/game/services/BuildingService';
@@ -7,7 +7,7 @@
   import { onDestroy } from 'svelte';
   import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
 
-  let race: any = null;
+  let culture: any = null;
   let availableResearch: any[] = [];
   let completedResearch: string[] = [];
   let currentResearch: any = null;
@@ -17,8 +17,8 @@
 
   $: getInventoryAmount = (itemId: string): number => $gameState?.stockpile?.[itemId] ?? 0;
 
-  const unsubscribeRace = currentRace.subscribe((value) => {
-    race = value;
+  const unsubscribeCulture = currentCulture.subscribe((value) => {
+    culture = value;
   });
 
   const unsubscribeGame = gameState.subscribe((state) => {
@@ -26,14 +26,14 @@
     currentResearch = state.currentResearch || null;
     discoveredLore = state.discoveredLore || [];
 
-    if (race) {
+    if (culture) {
       // ✅ Use service method instead
       availableResearch = researchService.getAvailableResearch(state);
     }
   });
 
   onDestroy(() => {
-    unsubscribeRace();
+    unsubscribeCulture();
     unsubscribeGame();
   });
 

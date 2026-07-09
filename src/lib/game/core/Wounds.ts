@@ -200,7 +200,7 @@ export function isTended(w: Injury, turn: number): boolean {
 // pawn state machine can drive bleed/clot/heal recompute without a services→systems layer hop (ADR-008).
 /** Scales per-part bleed (bleeding = bleedRatio × this × bleedMod × wound-frac × clot-remaining, per
  *  second). Tuned so a SERIOUS wound bleeds out over several in-game HOURS — long enough that the
- *  periodic clot rolls + a caretaker dressing are a real race, not an instant death. */
+ *  periodic clot rolls + a caretaker dressing are a real culture, not an instant death. */
 const BLEED_CONSTANT = 32;
 /** Effective bleedMod of a DESTROYED (severed / blown-off) part's open stump, regardless of how it was
  *  removed. Blunt crush wounds don't bleed (bleedMod 0) — their payoff is raw damage that craters limbs —

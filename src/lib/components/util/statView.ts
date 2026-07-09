@@ -134,9 +134,9 @@ type Deriv = { formula: string; vars: { name: string; value: string }[]; descrip
  *  real formula, so surface their organ breakdown (the description) + an injury note instead. */
 function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   // §G night_vision is grouped as a capacity but is trait-summed (not organ-derived), so skip the generic
-  // capacity boilerplate and show its own description + the racial contributions (via RES_KEY → traitMods).
+  // capacity boilerplate and show its own description + the cultural contributions (via RES_KEY → traitMods).
   if (s.id === 'night_vision') {
-    return { formula: 'Σ racial night-vision grants (capped at 1.0)', vars: [], description: s.description };
+    return { formula: 'Σ cultural night-vision grants (capped at 1.0)', vars: [], description: s.description };
   }
   if (s.id === 'carry_weight') {
     return {
