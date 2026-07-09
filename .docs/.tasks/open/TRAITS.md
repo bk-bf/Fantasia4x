@@ -4,7 +4,7 @@
 
 # TRAITS — the trait system, single source of truth
 
-> **Related:** [game/DESIGN](../../game/DESIGN.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-023 · ADR-028 · ADR-029) · [ROADMAP](ROADMAP.md) · [RACE-SYSTEM](RACE-SYSTEM.md)
+> **Related:** [game/DESIGN](../../game/DESIGN.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-023 · ADR-028 · ADR-029) · [ROADMAP](ROADMAP.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [LINEAGES](LINEAGES.md) (the mutation-tree successor to the nested-`subCapabilities` heritage bundle)
 
 ## §0 · Traits are pure granters
 
@@ -49,25 +49,32 @@ as an old scar), so permanency must ride the graft:
 - [ ] (b) distinct "scar" wound entries in `wounds.jsonc`
 - [ ] owner decides, then migrate `applyTraitWounds` accordingly
 
-### §0c · Migration ledger (violations found 2026-07-08)
+### §0c · Migration ledger (violations found 2026-07-08 · §0a/§0b closed 2026-07-09)
 
-18 granter traits carry effects/procs directly. Fix after §0a/§0b are decided (except the
-weapon-proc dedup, already done):
+Owner decisions: §0a resistances → a dedicated `resistances` block on the trait (NOT `effects`); §0b
+permanency → distinct `*_scar` wound entries + an organic close-time scar roll (`canScar`).
 
-- [x] **Venom double-proc** — `mild-venom`/`venomous`/`arachnid-venom`/`deathly-venom` carried a
-      trait `onHitCondition` duplicating the fang weapon's own proc (envenom rolled twice per bite).
-      Trait procs removed; the weapon item is the single proc source (2026-07-08).
-- [ ] `poisonResistance` on the venom traits (self-immunity) → §0a route (condition) or drop
-- [ ] Covering resistances: `thick-fur`, `dragon-scales`, `downy-coat`, `winter-mane`, `plumed-coat`,
-      `storm-plumage`, `ember-breath`/`searing-breath`/`dragonfire-breath` (fireResistance) → §0a
-- [ ] Work/stat riders on gear traits: `rending-claws`, `ripping-talons`, `crushing-claws`
-      (dexterityPenalty + crafting mults), `burrowing-claws` (digging/mining mults) → split into the
-      gear trait + a separate `attribute` trait, or fold into the granted condition
-- [ ] `many-eyed` (passive) carries `nightVision` + `perceptionBonus` in effects → move onto its condition
-- [ ] `flame-touched` (passive) carries a trait-level `onHitCondition` with no weapon → decide the
-      canonical home for "rides any held blade" procs (condition-carried?), then remove the trait field
-- [ ] When the ledger is empty: delete `onHitCondition`/`weaponBonus` from the `Trait` type and the
-      trait-proc loop in `Combat.applyOnHitEffect`; add a registry-test assertion so violations can't return
+- [x] **Venom double-proc** — `mild-venom`/`venomous`/`arachnid-venom`/`deathly-venom` carried a trait
+      `onHitCondition` duplicating the fang weapon's proc. Removed; the weapon item is the single source.
+- [x] **`flame-touched` proc dropped** — no weapon behind it; the "blows land alight" clause left the
+      description too. `onHitCondition` deleted from the `Trait` type + the trait-proc loop in
+      `Combat.applyOnHitEffect`. Banned by `traitRegistry` (§0 forbidden-fields test).
+- [x] **`weaponBonus` folded** → `combatMods.melee_damage` (Combat's `weaponBonusDamage` now reads it);
+      field deleted from the `Trait` type + banned by `traitRegistry`.
+- [x] **All resistances → the `resistances` block** (30 traits: coverings, affinities, heritages) —
+      read by `PawnStatService.traitResistanceBonus`; `effects.*Resistance` banned by `traitRegistry`.
+      (Covering resistances stay physically on the trait per §0a decision (a), not on a condition.)
+- [x] **`many-eyed` → the Spider Eyes line** — grafts arachnid eyes whose `grants` (limbmap) carry the
+      nightVision (live, self-gating on eye loss) + perception (baked at gen); 3 evolving stages. No
+      `effects` rider. New "part grants an effect" mechanism ([BodyParts.ts] `grants`).
+- [x] **`nocturnal`/`regenerative` → `attribute` kind** (the legal home for nightVision/healRate).
+- [ ] **Remaining derived/stat riders** (nightVision/healRate/work/core-stat on the heritage banners +
+      subcaps, `beast-eyed`, `gill-frills`) → folded into the **[LINEAGES](LINEAGES.md) heritage flatten**
+      (Phase 2): subcaps become top-level lineage traits with proper kinds; stat baselines become
+      guaranteed `stat` traits; eye traits graft like Spider Eyes. The "no rider on a granter kind" ban
+      lands then, with the naturalGear-claw exception (claws keep their work effects, owner decision).
+- Note: the **claw work/DEX effects** (`rending`/`ripping`/`crushing`/`burrowing`) are INTENTIONAL — the
+      owner chose to keep a hand-replacement's manipulation effects on the gear trait; not a violation.
 
 ## §1 · Taxonomy rules (ADR-028)
 
