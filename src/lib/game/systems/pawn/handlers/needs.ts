@@ -19,6 +19,7 @@ import {
   applyIntoxication,
   applyFoodPoisoning,
   applyMealBuff,
+  recordMealDeeds,
   SAFE_HUNGER,
   type MealPortion
 } from '../pawnQueries';
@@ -98,6 +99,7 @@ function startEatingFromInventory(
     applyIntoxication(p, intoxication); // §F8: a drink in the meal lifts mood + makes the pawn tipsy
     applyFoodPoisoning(p, meal, poisonRes); // §F8: a tainted serving may bring on nausea/dysentery
     applyMealBuff(p, meal); // §F8: a cooked dish grants its meal buff (well_fed/hearty_meal/…)
+    recordMealDeeds(p, meal); // LINEAGES §4: carnivore eating feeds Beast/Werewolf awakening deeds
     p.activeJob = {
       type: 'need' as const,
       targetX: p.position?.x ?? 0,

@@ -597,6 +597,11 @@
         "kind"         : "naturalGear",
         "stage"        : 2,
         "evolvesTo"    : "ripping-talons",
+        // LINEAGES: a beast/werewolf gateway — may roll standalone (lineageExclusive:false), seeding an
+        // awakening meter toward EITHER bloodline; the deeds the pawn does decide which it turns into.
+        "lineage"      : ["beast", "werewolf"],
+        "lineageExclusive": false,
+        "awakens"      : ["devour-raw-meat", "devour-carcass", "wild-kills", "moon-bathing", "cull-canines", "night-hunter"],
         "name"         : "Rending Claws",
         "description"  : "Curved claws for hands, devastating unarmed, but useless at a workbench.",
         "flavorLine"   : "in place of fingers they bear long, hooked claws that open flesh like cloth",
@@ -606,6 +611,54 @@
         "blocksSlots"  : ["gloves"],
         // dexterityPenalty folds the retired `clawed` condition's DEX ×0.95 (clumsy claw-hands).
         "effects"      : { "dexterityPenalty": 1, "workSpeed": {"crafting": 0.75, "leatherworking": 0.8, "construction": 0.85} }
+    },
+    // ══ LINEAGE · BEAST (LINEAGES §5) — feral-predator blood: always-on power at the cost of a wild
+    //    life. The parent is the identity marker a pawn holds once born into or awakened to the line;
+    //    members are tagged `lineage:["beast"]` and grown at seasonal growth events. (Claw line + fur are
+    //    tagged in place above; the mechanic-heavy members — savage bite, pack fury, beast eyes, carnivore
+    //    gut, reversed shelter — land with their subsystems in a later pass.) ══
+    {
+        "id"          : "beast-heritage",
+        "scope"       : "cultural",
+        "rarity"      : "legendary",
+        "kind"        : "passive",
+        "lineage"     : ["beast"],
+        "name"        : "Beast Blood",
+        "description" : "An old predator's blood runs in them — the body remembers the hunt, and answers to it.",
+        "flavorLine"  : "something older and hungrier than a person looks out from behind their eyes",
+        "effects"     : {}
+    },
+    {
+        "id"          : "bestial-might",
+        "scope"       : "cultural",
+        "rarity"      : "rare",
+        "kind"        : "stat",
+        "lineage"     : ["beast"],
+        "name"        : "Bestial Might",
+        "description" : "Raw animal power in the shoulders and back, more than any frame that size should hold.",
+        "effects"     : {"strengthBonus": 2, "constitutionBonus": 1}
+    },
+    {
+        "id"          : "feral-adrenaline",
+        "scope"       : "cultural",
+        "rarity"      : "uncommon",
+        "kind"        : "passive",
+        "lineage"     : ["beast", "werewolf"],
+        "name"        : "Feral Surge",
+        "description" : "Cornered or bloodied, the body floods with a wild strength that does not think, only acts.",
+        "flavorLine"  : "hurt them and something wakes up",
+        "triggeredCondition": "adrenal",
+        "effects"     : {}
+    },
+    {
+        "id"          : "feral-manner",
+        "scope"       : "cultural",
+        "rarity"      : "negative",
+        "kind"        : "stat",
+        "lineage"     : ["beast"],
+        "name"        : "Feral Manner",
+        "description" : "They hold themselves like a thing half-tamed — folk keep their distance, and animals bolt.",
+        "effects"     : {"charismaPenalty": 2}
     },
     {
         "id"           : "gore-horns",
@@ -641,6 +694,7 @@
         "kind": "naturalGear",
         "stage": 2,
         "evolvesTo": "winter-mane",
+        "lineage": ["beast", "werewolf"],
         "name": "Thick Fur",
         "description": "A heavy pelt, natural armor and cold immunity, but stifling in heat, with no room for a mid layer.",
         "flavorLine": "a deep, shaggy pelt sheds the killing cold and turns a glancing blow",
@@ -2589,6 +2643,7 @@
         "rarity": "epic",
         "kind": "naturalGear",
         "stage": 3,
+        "lineage": ["beast", "werewolf"],
         "name": "Ripping Talons",
         "description": "Great hooked talons in place of hands, devastating unarmed, hopeless at a bench, and the wounds they leave will not close unaided.",
         "flavorLine": "their hands are a raptor's killing tools",

@@ -49,7 +49,7 @@ const CONFLICT_GROUPS: string[][] = [
   ['heavy-boned', 'stone-bones', 'brittle-boned'], // dense vs brittle bone — one skeleton
   ['keen-eyed', 'nearsighted'], // one visual acuity
   ['frost-loving', 'frost-born', 'warm-blooded', 'ever-warm', 'cold-blooded', 'flame-touched', 'thin-blooded'], // one thermal identity
-  ['adrenaline', 'berserker-blood'],
+  ['adrenaline', 'berserker-blood', 'feral-adrenaline'], // one adrenal identity (staged vs terminal)
   ['night-owl', 'nocturnal', 'night-blind'], // one night-sight identity
   ['fast-healer', 'regenerative'],
   ['nocturnal', 'photosynthetic'],

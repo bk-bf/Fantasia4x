@@ -85,6 +85,50 @@ describe('LINEAGES §4 awakening meters', () => {
     void [parent, member];
   });
 
+  it('Beast content: a FULL meter awakens the pawn → beast-heritage + a first beast member', () => {
+    // Real Beast content now exists (beast-heritage parent + members tagged lineage:["beast"]).
+    const gateway: Trait = {
+      id: 'rending-claws', name: 'Rending Claws', description: '', kind: 'naturalGear',
+      lineageExclusive: false, lineage: ['beast', 'werewolf']
+    } as Trait;
+    const applied: Trait[] = [];
+    const p = pawn({
+      traits: [gateway],
+      stats: { strength: 10, constitution: 10, charisma: 10, perception: 10, dexterity: 10, intelligence: 10 },
+      lineagePaths: [
+        { condition: 'devour-raw-meat', lineage: 'beast', deed: 'ateRawMeat', target: 5, value: 5, seen: 5, lastFedDay: 0 }
+      ]
+    });
+    const res = lineageGrowthEvent(p, (t) => applied.push(t));
+    expect(res.kind).toBe('awaken');
+    expect(res.lineage).toBe('beast');
+    expect(res.added).toContain('beast-heritage');
+    expect(res.added.length).toBe(2); // parent + first member (the payoff)
+    expect(p.traits!.some((t) => t.id === 'beast-heritage')).toBe(true);
+    expect(p.lineagePaths).toBeUndefined(); // turned — no more awakening
+    expect(applied.length).toBe(2); // both granted traits had their effects applied
+  });
+
+  it('Beast content: a born beast pawn GROWS a new member at a growth event', () => {
+    const parent: Trait = { id: 'beast-heritage', name: 'Beast Blood', description: '', kind: 'passive', lineage: ['beast'] } as Trait;
+    let grew = false;
+    for (let seed = 1; seed < 300 && !grew; seed++) {
+      rng.reseed(seed);
+      const p = pawn({
+        traits: [{ ...parent }],
+        stats: { strength: 10, constitution: 10, charisma: 10, perception: 10, dexterity: 10, intelligence: 10 }
+      });
+      const res = lineageGrowthEvent(p, () => {});
+      if (res.kind === 'grow') {
+        grew = true;
+        expect(res.lineage).toBe('beast');
+        // the grown trait is a real beast member and is now on the pawn
+        expect(p.traits!.length).toBe(2);
+      }
+    }
+    expect(grew, 'a born beast pawn should grow a member within 300 seeds').toBe(true);
+  });
+
   it('a staged trait EVOLVES to its next rung at a growth event', () => {
     // spider-eyes-lesser (S1) → spider-eyes (S2) is a real staged line in traits.jsonc.
     const s1: Trait = { id: 'spider-eyes-lesser', name: 'Extra Eye', description: '', kind: 'bodyMod', stage: 1, evolvesTo: 'spider-eyes' } as Trait;

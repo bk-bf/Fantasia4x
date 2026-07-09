@@ -128,8 +128,9 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
         expect(capable, `${t.id} (${t.rarity}) carries no capability`).toBe(true);
       }
       // A legendary/mythic PASSIVE banner is a rolled bundle; the §2d grand STAT pulls
-      // (Paragon Blood / Godtouched) are deliberate single traits — exempt.
-      if ((t.rarity === 'legendary' || t.rarity === 'mythic') && t.kind !== 'stat')
+      // (Paragon Blood / Godtouched) are deliberate single traits — exempt. LINEAGES: a lineage marker
+      // (`lineage` set) is the flat-model successor to the subCapability bundle — also exempt.
+      if ((t.rarity === 'legendary' || t.rarity === 'mythic') && t.kind !== 'stat' && !t.lineage)
         expect((t.subCapabilities?.length ?? 0) > 0, `${t.id} ${t.rarity} needs subCapabilities`).toBe(true);
     }
     // every evolvesTo target exists

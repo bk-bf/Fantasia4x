@@ -14,7 +14,7 @@ import { consumeFromStockpiles } from '../../core/GameState';
 import { manhattan } from '../../core/distance';
 import { ticksFromSeconds } from '../../core/time';
 import { rng } from '../../core/rng';
-import { edibleNutrition, resolveAllowedFoodIds } from '../../services/foodRules';
+import { edibleNutrition, resolveAllowedFoodIds, isCarcass } from '../../services/foodRules';
 
 // ── §F8 alcohol (mood good) ──────────────────────────────────────────────────────────────────────
 /** Drink intoxication → `intoxicated` severity: each point of mood-lift adds 1/40 severity (an ale ≈
@@ -296,5 +296,19 @@ export function applyMealBuff(p: Pawn, meal: MealPortion[]): void {
       ...(p.conditionTimers ?? {}),
       [buff.condition]: Math.max(p.conditionTimers?.[buff.condition] ?? 0, dur)
     };
+  }
+}
+
+/** LINEAGES §4 — carnivore meat/carcass eating feeds the Beast/Werewolf awakening deeds. Raw meat is the
+ *  `meat` category (cooked dishes are `food`); a carcass is `isCarcass`; canine meat also feeds werewolf. */
+const CANINE_MEAT_IDS = new Set(['wolf_meat', 'worg_meat']);
+export function recordMealDeeds(p: Pawn, meal: MealPortion[]): void {
+  for (const { id, units } of meal) {
+    const def = ITEM_DEF_BY_ID.get(id);
+    if (!def) continue;
+    const deeds = (p.deeds ??= {});
+    if (isCarcass(def)) deeds.ateCarcass = (deeds.ateCarcass ?? 0) + units;
+    else if (def.category === 'meat') deeds.ateRawMeat = (deeds.ateRawMeat ?? 0) + units;
+    if (CANINE_MEAT_IDS.has(id)) deeds.ateCanineMeat = (deeds.ateCanineMeat ?? 0) + units;
   }
 }
