@@ -13,17 +13,26 @@ The werewolf is a normal humanoid whose power is locked behind a `werewolf` tran
 full-moon nights. Members exist and are shared with Beast (claws, fangs, fur, eyes, feral surge); this
 adds the transform machinery:
 
-- [ ] **Moon phase** — a lunar cycle derived from `dayIndex` (e.g. 30-day month; full moon a 2–3-day
-      window). Open question: pure function of day-of-year vs a separate counter.
+- [x] **Moon phase** — DONE 2026-07-09: a proper lunar counter in `EnvironmentService` — a pure function
+      of the absolute day (deterministic, save/load-safe, no drifting state). `LUNAR_CYCLE_DAYS = 30`
+      (3 moons a season, 12 a year), 8 named phases, `isFullMoon` = a 3-night window (days 14–16).
+      **Topbar**: a celestial readout next to the time of day tracks the sun (☀ up 06:00–18:59 / ☾ down)
+      and shows the moon's phase, gold-highlighted on a full moon. Covered by `environment.test.ts`.
+- [x] **`moonlightHours` deed** — LIVE: full-moon night hours under the open sky accrue on the hourly
+      env cadence in PawnStateMachine (beside `wetHours`), so the werewolf's signature awakening path
+      works today.
 - [ ] **Transform condition** (`werewolf`) — `activateWhen` full-moon night; on activate: gear slots
       blocked/taken over by natural weapons + armor, stat swing (Lupine Might +STR), Night Eyes S3
       while transformed (S1 capped otherwise — the stage-cap override needs a hook).
 - [ ] **Moonlit Claws / Lunar Aggression** — transform-gated members.
 - [ ] **Blood meter** — a new need kept full by killing + eating fresh carcasses; drained → `bloodthirst`
-      fires a **lose-control hunt mode**: the pawn hunts and devours anything nearby *including
-      colonists* until fed. Open question: temporary hostile mob vs drafted-uncontrollable pawn.
-- [ ] **Deed hooks** — `moonlightHours` (night + unsheltered + full moon, hourly cadence beside the
-      existing wetHours accrual in PawnStateMachine), `nightKills` (kill at low ambient light).
+      fires the **lose-control hunt mode**. DECIDED: the pawn stays a pawn — a **drafted-uncontrollable
+      pawn**, built off the collapse precedent: a condition can already force an FSM state via its
+      `fsmState` field (health.ts — `collapse` → `Collapsed` is the first user, documented as "the
+      precedent for future condition-driven FSM states"). `bloodthirst` gets `fsmState: <hunt state>`;
+      while active the player's draft/move commands are refused (as with a collapsed pawn) and the FSM
+      hunts + devours the nearest prey — *including colonists* — until fed, then control returns.
+- [ ] **`nightKills` deed hook** (kill at low ambient light).
 - [ ] Wanderlust — still deferred (wants a recreation/fun need that doesn't exist yet).
 
 ## §2 · Vampiric — the feeding subsystem
@@ -70,9 +79,21 @@ into the lineage model:
       by owner decision).
 - [ ] Farseer / Crustacean awakening deeds (the dormant Path-B meters on Spider Eyes / Gills).
 
-## §5 · Deferred design questions (carried from LINEAGES §8)
+## §5 · Design questions — ALL RESOLVED 2026-07-09 (owner decisions)
 
-- [ ] Moon-phase model: day-of-year cycle vs separate lunar counter?
-- [ ] Lose-control hunt: temporary hostile `mob` vs drafted-uncontrollable pawn?
-- [ ] How many awakening meters may a pawn carry at once (two gateways = up to 4 paths — cap or allow)?
-- [ ] `rawDietDays` deed (needs per-day diet tracking) — worth the state, or drop it from the beast pool?
+- [x] **Moon-phase model** → a proper lunar counter, implemented (§1): pure function of the absolute day,
+      30-day cycle, exposed in the topbar next to the time of day together with the sun's state.
+- [x] **Lose-control hunt** → a **drafted-uncontrollable pawn**, building off the collapse mechanic —
+      the one precedent of a state overriding player control (`fsmState` on conditions). See §1.
+- [x] **Awakening meters per pawn** → no hard meter cap; the TRAITS decide. Exclusivity implemented:
+  - One meter per LINEAGE per gateway — `seedAwakeningPaths` rolls ONE random condition from the
+    gateway's pool per candidate lineage (a claws pawn gets one beast + one werewolf meter, and which
+    deed each tracks varies pawn to pawn), deduped by lineage across gateways.
+  - **≤ 2 gateway traits per pawn** at the draw (`Culture.drawPawnTraits`), the second at ~1-in-20 —
+    two competing lines (up to 4 meters) is an exceptional pawn. Never a third. Guarded by
+    `lineages.test.ts`.
+  - **One parent lineage, ever**: awakening clears all meters and excludes every other line; an
+    awakened (or born-in) pawn cannot go through another awakening (yet).
+- [x] **`rawDietDays`** → not tracked as days (no per-day diet state). The "all-raw diet" awakening
+      counts MEALS on the existing `ateRawMeat` counter with a long-haul target (~3 raw meals a day ×
+      a season and a half ⇒ range [220, 300]) — `raw-living` in `lineages.jsonc` updated.
