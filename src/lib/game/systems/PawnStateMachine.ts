@@ -1040,6 +1040,7 @@ function buildGraphContext(pawn: Pawn, turn: number): GraphContext {
     pain: pawn.pain ?? 0,
     ambientLight: getAmbientLight(turn),
     unsheltered: !(pawn.position && isRoofedTile(pawn.position.x, pawn.position.y)),
+    fullMoon: isFullMoon(dayIndexForTurn(turn)),
     hasCondition: (id) =>
       (pawn.transientConditions ?? []).includes(id) ||
       (pawn.conditions ?? []).some((c) => c.id === id),

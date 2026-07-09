@@ -741,9 +741,35 @@
         "kind"        : "passive",
         "lineage"     : ["werewolf"],
         "name"        : "Wolf Blood",
-        "description" : "An old moon-marked blood — most days it sleeps, but it is never gone.",
+        "description" : "An old moon-marked blood — most days it sleeps, but on full-moon nights the wolf takes the body.",
         "flavorLine"  : "on bright nights they stand a long time looking at the moon",
+        "selfCondition": "werewolf",
         "effects"     : {}
+    },
+    {
+        "id"           : "moonlit-claws",
+        "scope"        : "cultural",
+        "rarity"       : "rare",
+        "kind"         : "naturalGear",
+        "lineage"      : ["werewolf"],
+        "name"         : "Moonlit Claws",
+        "description"  : "Claws that only come out with the change — pale, long, and sharper than any waking hand.",
+        "flavorLine"   : "by day their nails are only a little too long",
+        "naturalWeapons": ["moonlit-claws"],
+        "naturalWeaponsWhen": "werewolf",
+        "effects"      : {}
+    },
+    {
+        "id"           : "lunar-aggression",
+        "scope"        : "cultural",
+        "rarity"       : "epic",
+        "kind"         : "passive",
+        "lineage"      : ["werewolf"],
+        "name"         : "Lunar Aggression",
+        "description"  : "The change carries a fury with it — harder blows under the moon, and no patience left for tools.",
+        "flavorLine"   : "on those nights they do not answer to their name",
+        "selfCondition": "lunar_aggression",
+        "effects"      : {}
     },
     {
         "id"          : "amphibian-heritage",

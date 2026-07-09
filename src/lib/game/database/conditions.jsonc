@@ -1273,6 +1273,39 @@
         "charSpans"  : [ {"sheet": "items", "id": 195} ],
         "modifiers"  : {}
     },
+    // ── LINEAGES-II §1 — the werewolf transform ─────────────────────────────────────────────────────
+    {
+        // ACTIVE only on full-moon nights (fullMoon + dark), via the marker trait's selfCondition. The
+        // condition IS the transform: the stat swing, the full dark-sight (grants), and the gate the
+        // transform-only claws check (`naturalWeaponsWhen: "werewolf"`). Lifts at moonset on its own.
+        "id"         : "werewolf",
+        "name"       : "Transformed",
+        "flags"      : ["cultural", "transform"],
+        "transient"  : true,
+        "floater"    : true,
+        "description": "The wolf has the body now — stronger and faster than anything human, and not entirely listening.",
+        "color"      : "#B0B0E8",
+        "charSpans"  : [ {"sheet": "creatures", "id": 251} ],
+        "priority"   : 70,
+        "activateWhen": {"fullMoon": true, "meter": "ambientLight", "atOrBelow": 0.35},
+        "modifiers"  : {"strength": 1.4, "constitution": 1.2, "moveSpeed": 1.2, "intelligence": 0.8},
+        "grants"     : {"nightVision": 1.0}
+    },
+    {
+        // Lunar Aggression — a deeper fury RIDING the transform (requires it active): harder blows,
+        // little patience for work.
+        "id"         : "lunar_aggression",
+        "name"       : "Lunar Fury",
+        "flags"      : ["cultural", "combat"],
+        "transient"  : true,
+        "floater"    : true,
+        "description": "Under the full moon the blood runs hot and the hands want violence, not tools.",
+        "color"      : "#C05A3A",
+        "charSpans"  : [ {"sheet": "items", "id": 211} ],
+        "priority"   : 40,
+        "activateWhen": {"hasCondition": "werewolf"},
+        "modifiers"  : {"strength": 1.15, "workEfficiency": 0.6}
+    },
     // ── LINEAGES §5 — lineage-trait conditions (the granted object carries the numbers, §0) ──────────
     {
         "id"         : "bounding_gait",

@@ -82,6 +82,10 @@ export interface TransientConditionDef extends ConditionGraphFields {
    *  the granting trait: when the pawn's `meter` reaches `atOrAbove`, stamp this condition for
    *  `durationHours` (rising-edge — see `stampTriggeredConditions`). Berserk/Adrenal fire on pain. */
   selfTrigger?: { meter: 'pain'; atOrAbove: number; durationHours: number };
+  /** LINEAGES-II §1 — ADDITIVE grants the condition confers while active, mirroring a body part's
+   *  `grants` (limbmap). `nightVision` is summed into `getNightVision` alongside traits and living
+   *  parts — the werewolf transform's full dark-sight while the condition holds, gone at moonset. */
+  grants?: { nightVision?: number };
   /** Info-only staging (e.g. `bleeding` → minor/severe/fatal). A transient normally has no stages;
    *  when present, the deriving code pushes `id:stageLabel` into `transientConditions` (like the
    *  persistent stage combos) and the chip picks colour/lethality from the matching stage. The stages'
@@ -270,6 +274,9 @@ export interface ConditionPredicate {
   atOrBelow?: number;
   /** Environment gate — the pawn is under an open sky (no roof). */
   unsheltered?: boolean;
+  /** Celestial gate (LINEAGES-II §1) — true requires the full-moon window (the 3-night peak of the
+   *  lunar cycle); false requires any other phase. The werewolf transform's trigger. */
+  fullMoon?: boolean;
   /** Requires another condition present / absent on the pawn. */
   hasCondition?: string;
   lacksCondition?: string;

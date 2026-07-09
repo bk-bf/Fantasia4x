@@ -9,6 +9,7 @@
 import type { Pawn, Mob } from './types';
 import { getCreatureById } from './Creatures';
 import { PART_DEF_MAP } from './BodyParts';
+import { getTransientConditionDef } from './needs';
 
 /** Night vision granted by the entity's LIVING body parts (a spider's extra eyes — `grants.nightVision`
  *  in limbmap). Summed over non-missing parts, so losing an eye reduces the sight — the part IS the gate. */
@@ -49,6 +50,13 @@ export function getNightVision(entity: Pawn | Mob): number {
   // Part-granted night vision (Spider Eyes): summed over LIVING parts, so it self-gates — a destroyed
   // eye simply stops contributing, no separate anatomy check needed.
   nv += livingPartNightVision(entity);
+  // Condition-granted night vision (LINEAGES-II §1 — the werewolf transform's full dark-sight while
+  // the condition holds). Rare: skipped entirely for entities with no active transient conditions.
+  if (entity.transientConditions?.length)
+    for (const id of entity.transientConditions) {
+      const g = getTransientConditionDef(id)?.grants?.nightVision;
+      if (g) nv += g;
+    }
   // Anatomy gate for TRAIT night-vision: a pawn whose eyes are all destroyed is blind in the dark
   // regardless of cultural trait. Only pawns that actually HAVE eyes (and any nightVision) pay the limb
   // walk; a body plan with no eye parts is left ungated. (Part-granted NV above already self-gates.)

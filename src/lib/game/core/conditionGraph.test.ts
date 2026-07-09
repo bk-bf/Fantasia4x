@@ -9,6 +9,7 @@ function ctx(over: Partial<GraphContext> = {}): GraphContext {
     pain: 0,
     ambientLight: 1,
     unsheltered: false,
+    fullMoon: false,
     hasCondition: () => false,
     sourceSeverity: 0,
     ...over

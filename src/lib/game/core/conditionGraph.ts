@@ -18,6 +18,8 @@ export interface GraphContext {
   ambientLight: number;
   /** True when the pawn is under an open sky (no roof). */
   unsheltered: boolean;
+  /** True during the lunar cycle's 3-night full-moon window (LINEAGES-II §1 — the werewolf gate). */
+  fullMoon: boolean;
   /** Whether a condition id is currently present on the pawn. */
   hasCondition: (id: string) => boolean;
   /** Severity 0–1 of the SOURCE condition (for `meter: 'severity'` escalation edges). */
@@ -54,6 +56,7 @@ function meterValue(p: ConditionPredicate, ctx: GraphContext): number | undefine
 export function evaluatePredicate(p: ConditionPredicate | undefined, ctx: GraphContext): boolean {
   if (!p) return true;
   if (p.unsheltered !== undefined && p.unsheltered !== ctx.unsheltered) return false;
+  if (p.fullMoon !== undefined && p.fullMoon !== ctx.fullMoon) return false;
   if (p.hasCondition !== undefined && !ctx.hasCondition(p.hasCondition)) return false;
   if (p.lacksCondition !== undefined && ctx.hasCondition(p.lacksCondition)) return false;
   const v = meterValue(p, ctx);

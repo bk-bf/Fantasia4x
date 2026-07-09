@@ -3738,6 +3738,31 @@
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.25} ]
   },
   {
+    // LINEAGES-II §1 — the werewolf's transform claws: only swung while the `werewolf` condition
+    // holds (the trait carries `naturalWeaponsWhen`); stronger than any waking claw.
+    "id": "moonlit-claws",
+    "audio": "slash",
+    "charSpans": [ {"sheet": "items", "id": 0} ],
+    "name": "Moonlit Claws",
+    "type": "weapon",
+    "category": "natural_weapon",
+    "hidden": true,
+    "description": "Claws that only come out under a full moon, long, pale and wickedly sharp. They open flesh like wet cloth.",
+    "color": "#D8D8F0",
+    "amount": 0,
+    "weaponProperties": {
+      "damage"          : 16,
+      "attackSpeed"     : 1.1,
+      "range"           : 1,
+      "damageType"      : "cutting",
+      "weight"          : 5,
+      "staminaCost"     : 2,
+      "armorPenetration": 0.3,
+      "critMod"         : 0.15
+    },
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.35} ]
+  },
+  {
     "id": "goring-horns",
     "audio": "pierce",
     "charSpans": [ {"sheet": "items", "id": 0} ],

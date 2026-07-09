@@ -93,7 +93,7 @@
         // engine binds one bone per flesh segment (skeletonPartOf). Splitting them — so one can break while
         // the other holds — needs that 1:1 routing relaxed; applies to the quadruped/avian analogues too.
         "leftUlna"  : {"size": 35, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftForearm"},
-        "leftHand"         : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "weapons": ["fists", "claw", "rending-claws", "dragon-claws", "blunt-claws", "ripping-talons", "crusher-claw", "shock-strike", "chill-strike"], "armor": 0.4},
+        "leftHand"         : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "weapons": ["fists", "claw", "rending-claws", "moonlit-claws", "dragon-claws", "blunt-claws", "ripping-talons", "crusher-claw", "shock-strike", "chill-strike"], "armor": 0.4},
         "leftMetacarpus"     : {"size": 30, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftHand"},
         "leftThumb"        : {"size": 5, "bleedRatio": 0.005, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftHand", "armor": 0.5},
         "leftIndexFinger"  : {"size": 3, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftHand", "armor": 0.2},
@@ -106,7 +106,7 @@
         "rightHumerus": {"size": 45, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightUpperArm"},
         "rightForearm"     : {"size": 35, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "armor": 0.5},
         "rightUlna" : {"size": 35, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightForearm"},
-        "rightHand"        : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "weapons": ["fists", "claw", "rending-claws", "dragon-claws", "blunt-claws", "ripping-talons", "crusher-claw", "shock-strike", "chill-strike"], "armor": 0.4},
+        "rightHand"        : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "weapons": ["fists", "claw", "rending-claws", "moonlit-claws", "dragon-claws", "blunt-claws", "ripping-talons", "crusher-claw", "shock-strike", "chill-strike"], "armor": 0.4},
         "rightMetacarpus"    : {"size": 30, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightHand"},
         "rightThumb"       : {"size": 5, "bleedRatio": 0.005, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightHand", "armor": 0.5},
         "rightIndexFinger" : {"size": 3, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightHand", "armor": 0.2},

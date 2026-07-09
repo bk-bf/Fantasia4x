@@ -367,6 +367,14 @@ function pawnNaturalWeaponIds(attacker: Pawn): string[] {
   // weapon with no separate hostParts bookkeeping.
   const extra: string[] = [];
   for (const t of attacker.traits ?? []) {
+    // LINEAGES-II §1: a transform-gated weapon set only exists while its condition holds (Moonlit
+    // Claws under the `werewolf` transform).
+    if (
+      t.naturalWeaponsWhen &&
+      !(attacker.transientConditions ?? []).includes(t.naturalWeaponsWhen) &&
+      !((attacker.conditionTimers?.[t.naturalWeaponsWhen] ?? 0) > 0)
+    )
+      continue;
     for (const id of t.naturalWeapons ?? []) if (!extra.includes(id)) extra.push(id);
   }
   return extra.length > 0 ? [...extra, ...PAWN_NATURAL_WEAPON_IDS] : PAWN_NATURAL_WEAPON_IDS;
@@ -381,7 +389,7 @@ function bloodlettingChance(item: Item | undefined): number | undefined {
 /** LINEAGES §4: credit a PAWN's kill toward its awakening deeds, by the victim's creature family and
  *  whether the killing blow was unarmed (fists / a natural weapon, not a crafted one). Mobs never accrue
  *  deeds (they don't grow lineages). Cheap: a couple of map lookups on a kill event. */
-function creditKillDeeds(attacker: Pawn | Mob, victim: Mob, weaponId?: string): void {
+function creditKillDeeds(attacker: Pawn | Mob, victim: Mob, weaponId?: string, turn?: number): void {
   if ('creatureId' in attacker) return; // attacker is a mob → no deeds
   const def = getCreatureById(victim.creatureId);
   if (!def) return;
@@ -396,6 +404,8 @@ function creditKillDeeds(attacker: Pawn | Mob, victim: Mob, weaponId?: string): 
   const timers = victim.conditionTimers;
   if (timers?.envenomed && timers.envenomed > 0) bump('venomKills');
   if (timers?.ensnared && timers.ensnared > 0) bump('ensnaredKills');
+  // Werewolf: a kill made in the dark (LINEAGES-II §1 nightKills).
+  if (turn !== undefined && getAmbientLight(turn) < 0.35) bump('nightKills');
 }
 
 /** Summed wielded-weapon damage bonus from traits' `combatMods.melee_damage` (Giant's Grip, Dragon's
@@ -1364,7 +1374,8 @@ class CombatServiceImpl implements CombatService {
     }
     // LINEAGES §4: a pawn's kill feeds the Beast/Werewolf/Arachnid awakening deeds (regardless of whether
     // the colony saw it). By creature family + whether the killing blow was unarmed (fists / natural weapon).
-    if (justDied && isTargetMob && 'traits' in attacker) creditKillDeeds(attacker, target as Mob, result.weaponId);
+    if (justDied && isTargetMob && 'traits' in attacker)
+      creditKillDeeds(attacker, target as Mob, result.weaponId, turn);
     // On-hit status effect: venom/bleed/screech/tongue natural weapons roll to inflict a timed
     // transient condition (mitigated by the defender's resistance stat). Applied to the post-injury
     // state so it stacks onto the same target update.

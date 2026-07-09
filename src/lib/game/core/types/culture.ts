@@ -223,6 +223,10 @@ export interface Trait {
    *  Anatomy-gated for free: each id must be listed in a surviving part's `weapons` (limbmap) —
    *  lose the jaw and the bite goes with it. Rolled per swing alongside the fists/kick defaults. */
   naturalWeapons?: string[];
+  /** LINEAGES-II §1 — a TRANSFORM gate on this trait's natural weapons: they are only swung while the
+   *  named condition is active on the pawn (Moonlit Claws exist only under the `werewolf` transform).
+   *  Absent ⇒ the weapons are always available (anatomy permitting). */
+  naturalWeaponsWhen?: string;
   /** ADR-029: fraction (0–1) of carry capacity a permanent natural covering consumes (was the armour
    *  condition's `carryPenalty`). */
   carryPenalty?: number;
