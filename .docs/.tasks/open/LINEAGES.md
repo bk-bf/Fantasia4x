@@ -74,7 +74,9 @@ single meter).
       awakening def's `range`.
 - [x] **Regression** — the meter decays past a grace window (`advanceAwakeningMeters`, per day); paused
       while actively progressing.
-- [ ] **Reveal** — shown in the info panel only while being fed (like the drying meter). *(Phase 2 UI)*
+- [x] **Reveal** — `AwakeningMeters.svelte` in the pawn NEEDS panel shows each meter (lineage · %/READY ·
+      the deed label) only while `value > 0`; hidden when it lapses to empty. A FULL meter LOCKS (never
+      decays) until the growth event consumes it.
 - [x] **No creature-awakening** — awakening comes ONLY from a born parent or a standalone gateway (no
       lineage-S1 on creatures; `seedAwakeningPaths` only seeds from a pawn's own gateway traits).
 
@@ -184,13 +186,15 @@ Ordered by which lineage forces it:
       accrual+decay / awaken→evolve→grow), `applyGainedTrait`, wired into `PawnGrowthService`, seeded at
       pawn-gen; `lineages.test.ts` (5). `check` 0 err, tests green. **Remaining**: deed-source increment
       hooks + info-panel meter reveal (moved to Phase 2, where the Beast content consumes the deeds).
-- [-] **Phase 2** — Beast lineage. **Done**: parent `beast-heritage` + 6 core members (claw line + fur
-      tagged, Bestial Might, Feral Surge, Feral Manner), Rending Claws as the standalone gateway, the EAT
-      deed hook (`recordMealDeeds` → ateRawMeat/ateCarcass/ateCanineMeat), awaken + grow integration tests
-      (`lineages.test.ts`, 7). `check` 0 err, full suite green. **Remaining**: the mechanic-heavy members
-      (savage bite, pack fury, beast eyes, iron gut, carnivore gut, can't-settle, bounding gait, keen
-      senses) + their subsystems; the KILL/ENV deed hooks (unarmedBigKill, moonlight, sleep-unsheltered,
-      raw-diet-days); the info-panel meter reveal UI.
+- [-] **Phase 2** — Beast lineage, a complete visible slice. **Done**: parent `beast-heritage` + 6 core
+      members (claw line + fur tagged, Bestial Might, Feral Surge, Feral Manner), Rending Claws as the
+      standalone gateway; the EAT deed hook (`recordMealDeeds` → ateRawMeat/ateCarcass/ateCanineMeat) and
+      KILL deed hook (`creditKillDeeds` → unarmedBigKill/kill:canine/kill:arachnid); the meter LOCK at
+      full; the info-panel meter reveal (`AwakeningMeters.svelte`); awaken/grow/lock tests (`lineages.test`,
+      8). `check` 0 err, full suite green. **Remaining**: the mechanic-heavy members (savage bite, pack
+      fury, beast eyes, iron/carnivore gut, can't-settle, bounding gait, keen senses) + their subsystems;
+      the ENV deed hooks (moonlight, water/wetness hours, sleep-unsheltered, raw-diet-days — for
+      werewolf/amphibian); night/venom/ensnared kill refinements.
 - [ ] **Phase 3** — Werewolf (moon phase, transform, blood meter, lose-control hunt).
 - [ ] **Phase 4** — Vampiric (feeding).
 - [ ] **Phase 5** — Amphibian + Arachnid content + silk/silver.
