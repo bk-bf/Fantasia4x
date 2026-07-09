@@ -1103,6 +1103,7 @@
         "charSpans"  : [ {"sheet": "items", "id": 211} ],
         "priority"   : 60,
         "modifiers"  : {"strength": 1.5, "intelligence": 0.9, "consciousness": 1.5},
+        "selfTrigger": {"meter": "pain", "atOrAbove": 40, "durationHours": 0.25},
         "onExpiry"   : {"to": "berserk_spent", "durationHours": 0.5}
     },
     {
@@ -1116,6 +1117,7 @@
         "charSpans"  : [ {"sheet": "items", "id": 211} ],
         "priority"   : 55,
         "modifiers"  : {"strength": 1.2, "consciousness": 1.2},
+        "selfTrigger": {"meter": "pain", "atOrAbove": 40, "durationHours": 0.25},
         "onExpiry"   : {"to": "adrenal_spent", "durationHours": 0.5}
     },
     {

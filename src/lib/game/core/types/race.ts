@@ -183,11 +183,11 @@ export interface Trait {
   /** ADR-029: fraction (0–1) of carry capacity a permanent natural covering consumes (was the armour
    *  condition's `carryPenalty`). */
   carryPenalty?: number;
-  /** A meter-triggered timed condition (NOT always-on): when the bearer's `meter` (e.g. `pain`) reaches
-   *  `atOrAbove`, stamp `condition` for `durationHours` in-game hours — a rising-edge one-shot that won't
-   *  re-fire while the condition (or its `onExpiry` aftermath) is still active. Drives berserker rage:
-   *  pain → `berserk`. Stamped by `stampTriggeredConditions` in the per-tick condition pass. */
-  triggeredCondition?: { condition: string; meter: string; atOrAbove: number; durationHours: number };
+  /** Makes the bearer ELIGIBLE for a meter-triggered timed condition (berserker rage → `berserk`).
+   *  Just names the condition — the trigger REQUIREMENTS (which meter, the threshold, the duration)
+   *  live on the condition def's `selfTrigger`, not here (a trait grants, the condition defines when).
+   *  Fired rising-edge by `stampTriggeredConditions` in the per-tick condition pass. */
+  triggeredCondition?: string;
   /** Equipment slots the body forbids — greyed in the gear tab, blocked at equip. */
   blocksSlots?: EquipmentSlot[];
   /** Procs on ANY landed melee hit regardless of held weapon ("rides your steel"). */

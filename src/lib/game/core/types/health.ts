@@ -77,6 +77,11 @@ export interface TransientConditionDef extends ConditionGraphFields {
    *  in-game hours. The generic primitive behind a rage → exhaustion trade-off (berserk → berserk_spent).
    *  Stamped in `tickConditionTimers` at the tick the timer hits 0. */
   onExpiry?: { to: string; durationHours: number };
+  /** The meter edge that fires THIS condition, when a pawn is eligible for it (a trait names the
+   *  condition via `triggeredCondition`). The trigger REQUIREMENTS live here on the condition, not on
+   *  the granting trait: when the pawn's `meter` reaches `atOrAbove`, stamp this condition for
+   *  `durationHours` (rising-edge — see `stampTriggeredConditions`). Berserk/Adrenal fire on pain. */
+  selfTrigger?: { meter: 'pain'; atOrAbove: number; durationHours: number };
   /** Info-only staging (e.g. `bleeding` → minor/severe/fatal). A transient normally has no stages;
    *  when present, the deriving code pushes `id:stageLabel` into `transientConditions` (like the
    *  persistent stage combos) and the chip picks colour/lethality from the matching stage. The stages'

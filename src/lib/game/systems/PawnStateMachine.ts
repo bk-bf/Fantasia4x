@@ -919,15 +919,18 @@ function stampTriggeredConditions(pawn: Pawn): void {
   const traits = pawn.traits;
   if (!traits?.length) return;
   for (const t of traits) {
-    const tc = t.triggeredCondition;
-    if (!tc) continue;
-    const meter = tc.meter === 'pain' ? (pawn.pain ?? 0) : 0;
-    if (meter < tc.atOrAbove) continue;
+    const conditionId = t.triggeredCondition;
+    if (!conditionId) continue;
+    const def = getTransientConditionDef(conditionId);
+    const trig = def?.selfTrigger; // the requirements live on the CONDITION, not the trait
+    if (!trig) continue;
+    const meter = trig.meter === 'pain' ? (pawn.pain ?? 0) : 0;
+    if (meter < trig.atOrAbove) continue;
     const timers = (pawn.conditionTimers ??= {});
-    if ((timers[tc.condition] ?? 0) > 0) continue; // already raging
-    const spent = getTransientConditionDef(tc.condition)?.onExpiry?.to;
+    if ((timers[conditionId] ?? 0) > 0) continue; // already raging
+    const spent = def?.onExpiry?.to;
     if (spent && (timers[spent] ?? 0) > 0) continue; // still spent — no re-rage yet
-    timers[tc.condition] = ticksFromGameHours(tc.durationHours);
+    timers[conditionId] = ticksFromGameHours(trig.durationHours);
   }
 }
 

@@ -169,7 +169,7 @@
         "description": "A quick fight-or-flight surge: pain in a fight floods the veins, stronger and steadier for a spell, then a crash.",
         "flavorLine" : "danger sharpens rather than freezes them",
         "effects": {}, "resistances": {"mental": 0.1},
-        "triggeredCondition": {"condition": "adrenal", "meter": "pain", "atOrAbove": 40, "durationHours": 0.25},
+        "triggeredCondition": "adrenal",
         "evolvesTo"  : "berserker-blood"
     },
     {
@@ -599,7 +599,9 @@
         "description"  : "Curved claws for hands, devastating unarmed, but useless at a workbench.",
         "flavorLine"   : "in place of fingers they bear long, hooked claws that open flesh like cloth",
         "naturalWeapons": ["rending-claws"],
-        "blocksSlots"  : ["mainHand", "gloves"],
+        // Stage 2: blocks gloves only — still clumsy enough to grip a weapon. Tools work from the
+        // inventory, so mainHand stays free. Apex (stage 3) blocks the weapon hands, see ripping-talons.
+        "blocksSlots"  : ["gloves"],
         // dexterityPenalty folds the retired `clawed` condition's DEX ×0.95 (clumsy claw-hands).
         "effects"      : { "dexterityPenalty": 1, "workSpeed": {"crafting": 0.75, "leatherworking": 0.8, "construction": 0.85} }
     },
@@ -671,7 +673,7 @@
         "id"           : "regenerative",
         "scope"        : "racial",
         "rarity"       : "rare",
-        "kind"         : "passive",
+        "kind"         : "attribute",
         "name"         : "Regeneration",
         "description"  : "Torn flesh knits itself whole in days.",
         "flavorLine"   : "torn flesh knits itself whole within days",        "effects": {"healRate": 0.6}, "resistances": {"disease": 0.15}
@@ -702,7 +704,7 @@
         "name"         : "Berserker Blood",
         "description"  : "A battle-fury in the veins: when the pain of a fight bites deep it looses a devastating red rage — then leaves the body spent.",
         "flavorLine"   : "a red fury waits just beneath their calm, eager to be loosed",
-        "triggeredCondition": {"condition": "berserk", "meter": "pain", "atOrAbove": 40, "durationHours": 0.25},
+        "triggeredCondition": "berserk",
         "weaponBonus"  : {"damage": 0.15},
         "effects"      : {}
     },
@@ -722,7 +724,7 @@
         "id"           : "nocturnal",
         "scope"        : "racial",
         "rarity"       : "rare",
-        "kind"         : "passive",
+        "kind"         : "attribute",
         "name"         : "Nocturnal",
         "description"  : "A creature of the night, sees in pitch dark as by day, but drowses under the sun.",
         "flavorLine"   : "they come alive under the stars and drowse beneath the sun",        "effects"      : {"nightVision": 1.0}
@@ -2593,7 +2595,8 @@
         "description": "Great hooked talons in place of hands, devastating unarmed, hopeless at a bench, and the wounds they leave will not close unaided.",
         "flavorLine": "their hands are a raptor's killing tools",
         "naturalWeapons": ["ripping-talons"],
-        "blocksSlots": ["mainHand", "gloves"],
+        // Stage 3 apex: the talons are too big to grip anything — no gloves, and no weapon/shield either.
+        "blocksSlots": ["gloves", "mainHand", "offHand"],
         // dexterityPenalty folds the retired `taloned` condition's DEX ×0.92 (killing tools, not hands).
         "effects": { "dexterityPenalty": 1, "workSpeed": {"crafting": 0.7, "leatherworking": 0.75, "construction": 0.8} }
     },
@@ -4090,7 +4093,8 @@
                 "name"         : "Crushing Claws",
                 "description"  : "Massive shell-plated pincers, a crushing grip, useless with a crafted tool.",
                 "naturalWeapons": ["crusher-claw"],
-                "blocksSlots"  : ["mainHand", "gloves"],
+                // Unstaged (not a stage-3 line), so it blocks gloves only — mainHand/offHand stay free.
+                "blocksSlots"  : ["gloves"],
                 // dexterityPenalty folds the retired `crusher_clawed` condition's DEX ×0.92 (pincers).
                 "effects"      : { "dexterityPenalty": 1, "workSpeed": {"crafting": 0.75, "leatherworking": 0.8} }
             },
