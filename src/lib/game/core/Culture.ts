@@ -418,8 +418,20 @@ export function drawPawnTraits(culture: Culture, physique?: PawnPhysique): Trait
   };
   const fits = (t: Trait) => pawnMeetsRequires(t, physique);
   let culturalCount = 0;
+  // LINEAGES §4 — awakening-gateway cap: a standalone gateway trait (claws/fur/venom/gills/spider-eyes,
+  // `lineageExclusive:false` + `awakens`) seeds lineage meters at pawn-gen. A pawn may carry at most TWO
+  // gateways, and the second is deliberately VERY rare (~1-in-20 when it comes up) — so two competing
+  // lines (up to 4 meters) is an exceptional pawn, not a common roll.
+  const isGateway = (t: Trait) => t.lineageExclusive === false && (t.awakens?.length ?? 0) > 0;
+  let gatewayCount = 0;
+  const GATEWAY_SECOND_CHANCE = 0.05;
   const takeCultural = (t: Trait): boolean => {
     if (culturalCount >= MAX_CULTURAL_TRAITS || banned.has(tid(t)) || !fits(t)) return false;
+    if (isGateway(t)) {
+      if (gatewayCount >= 2) return false; // never a third line
+      if (gatewayCount === 1 && rng.random() >= GATEWAY_SECOND_CHANCE) return false;
+      gatewayCount++;
+    }
     ban(tid(t));
     out.push(t);
     culturalCount++;

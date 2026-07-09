@@ -8,6 +8,12 @@ import {
   SEASONS,
   seasonForTurn,
   dayIndexForTurn,
+  LUNAR_CYCLE_DAYS,
+  MOON_PHASES,
+  moonPhaseIndex,
+  moonPhaseName,
+  isFullMoon,
+  isSunUp,
   recomputeWorldTemperature,
   biomeBaseTemp,
   seasonRegrowthMultiplier,
@@ -620,5 +626,38 @@ describe('EnvironmentService — environment tint (Subsystem 2/5)', () => {
 
   it('clear weather + no season is neutral white', () => {
     expect(getEnvironmentTint(undefined, undefined)).toEqual([1, 1, 1]);
+  });
+});
+
+// ── Lunar counter (LINEAGES-II §1) — the moon is a pure function of the absolute day ──
+describe('lunar cycle', () => {
+  it('cycles through all 8 phases over one 30-day month, starting at New Moon', () => {
+    expect(moonPhaseName(0)).toBe('New Moon');
+    const seen = new Set<string>();
+    for (let d = 0; d < LUNAR_CYCLE_DAYS; d++) seen.add(moonPhaseName(d));
+    expect(seen.size).toBe(MOON_PHASES.length);
+    // Deterministic wrap: day N and day N+cycle agree (save/load-safe, no drifting counter).
+    expect(moonPhaseIndex(7)).toBe(moonPhaseIndex(7 + LUNAR_CYCLE_DAYS * 3));
+  });
+
+  it('the full moon is a 3-night window mid-cycle (days 14–16), dark before and after', () => {
+    expect(isFullMoon(13)).toBe(false);
+    expect(isFullMoon(14)).toBe(true);
+    expect(isFullMoon(15)).toBe(true);
+    expect(isFullMoon(16)).toBe(true);
+    expect(isFullMoon(17)).toBe(false);
+    // Exactly 3 full-moon days per cycle.
+    let full = 0;
+    for (let d = 0; d < LUNAR_CYCLE_DAYS; d++) if (isFullMoon(d)) full++;
+    expect(full).toBe(3);
+  });
+
+  it('the sun tracks the HUD hours: up 06:00–18:59, down at night', () => {
+    expect(isSunUp(5)).toBe(false);
+    expect(isSunUp(6)).toBe(true);
+    expect(isSunUp(12)).toBe(true);
+    expect(isSunUp(18)).toBe(true);
+    expect(isSunUp(19)).toBe(false);
+    expect(isSunUp(23)).toBe(false);
   });
 });

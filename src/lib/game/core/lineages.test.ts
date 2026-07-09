@@ -7,7 +7,8 @@ import {
   LINEAGE_DEFS
 } from './Lineages';
 import { rng } from './rng';
-import type { Pawn, Trait } from './types';
+import { drawPawnTraits } from './Culture';
+import type { Culture, Pawn, Trait } from './types';
 
 // LINEAGES §4 foundation — the awakening-meter mechanism + growth-event decision logic. Content
 // (beast-heritage etc.) lands in Phase 2; here we exercise the mechanism with real awakening data.
@@ -45,6 +46,39 @@ describe('LINEAGES §4 awakening meters', () => {
     expect(beast.target).toBeLessThanOrEqual(80);
   });
 
+  it('a many-condition gateway still seeds ONE meter per lineage (a random condition each)', () => {
+    // The real Rending Claws gateway lists 6 conditions (3 beast + 3 werewolf) → exactly 2 meters,
+    // and WHICH deed each meter tracks varies pawn to pawn.
+    const fullClaws: Trait = {
+      name: 'Rending Claws', description: '', kind: 'naturalGear', lineageExclusive: false,
+      awakens: ['devour-raw-meat', 'devour-carcass', 'wild-kills', 'moon-bathing', 'cull-canines', 'night-hunter']
+    } as Trait;
+    const p = pawn({ traits: [fullClaws] });
+    seedAwakeningPaths(p);
+    expect(p.lineagePaths?.length).toBe(2);
+    expect(p.lineagePaths!.map((x) => x.lineage).sort()).toEqual(['beast', 'werewolf']);
+    // The rolled condition genuinely varies with the stream.
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 30; seed++) {
+      rng.reseed(seed);
+      const q = pawn({ traits: [fullClaws] });
+      seedAwakeningPaths(q);
+      seen.add(q.lineagePaths!.find((x) => x.lineage === 'beast')!.condition);
+    }
+    expect(seen.size).toBeGreaterThan(1);
+  });
+
+  it('two gateways with overlapping lineages DEDUPE by lineage (claws + fur ⇒ still 2 meters)', () => {
+    const fur: Trait = {
+      name: 'Thick Fur', description: '', kind: 'naturalGear', lineageExclusive: false,
+      awakens: ['devour-carcass', 'sleep-wild', 'moon-bathing', 'eat-canine']
+    } as Trait;
+    const p = pawn({ traits: [clawGateway, fur] });
+    seedAwakeningPaths(p);
+    expect(p.lineagePaths?.length).toBe(2); // beast + werewolf once each, not four bars
+    expect(new Set(p.lineagePaths!.map((x) => x.lineage)).size).toBe(2);
+  });
+
   it('meter fills from fresh deeds and DECAYS when the deed stalls', () => {
     const p = pawn({ traits: [clawGateway], deeds: {} });
     seedAwakeningPaths(p);
@@ -60,6 +94,28 @@ describe('LINEAGES §4 awakening meters', () => {
     // Idle past the grace window → decays.
     advanceAwakeningMeters(p, 110);
     expect(beast.value).toBeLessThan(10);
+  });
+
+  it('gateway draw cap: at most TWO gateways per pawn, and a second is rare (~1 in 20)', () => {
+    // A culture whose pool is nothing but gateways — without the cap every pawn would draw two.
+    const gw = (id: string, lineages: string[]): Trait =>
+      ({ id, name: id, description: '', kind: 'naturalGear', lineage: lineages,
+         lineageExclusive: false, awakens: ['devour-raw-meat', 'moon-bathing'], effects: {} }) as Trait;
+    const culture = {
+      guaranteedTraits: [],
+      culturalTraitPool: [gw('gw-a', ['beast']), gw('gw-b', ['werewolf']), gw('gw-c', ['amphibian'])],
+      statRanges: {}
+    } as unknown as Culture;
+    let twos = 0;
+    for (let seed = 1; seed <= 300; seed++) {
+      rng.reseed(seed);
+      const drawn = drawPawnTraits(culture);
+      const gateways = drawn.filter((t) => t.lineageExclusive === false).length;
+      expect(gateways).toBeLessThanOrEqual(2); // never a third competing line
+      if (gateways === 2) twos++;
+    }
+    expect(twos).toBeGreaterThan(0); // possible…
+    expect(twos / 300).toBeLessThan(0.2); // …but genuinely rare
   });
 
   it('a FULL meter LOCKS — it never decays, even after long idle (awaits the growth event)', () => {

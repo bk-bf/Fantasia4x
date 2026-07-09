@@ -17,7 +17,10 @@
     weatherLabel as getWeatherLabel,
     ambientWind,
     windDegreeWord,
-    windDirLabel
+    windDirLabel,
+    dayIndexForTurn,
+    moonPhaseName,
+    isSunUp
   } from '$lib/game/services/EnvironmentService';
   import { TICKS_PER_SECOND } from '$lib/game/core/time';
   import { onMount, onDestroy } from 'svelte';
@@ -110,6 +113,11 @@
 
   $: gameDate = turnToGameDate(currentTurnValue);
   $: dayPhase = hourToDayPhase(gameDate.hour);
+
+  // Celestial readout (LINEAGES-II §1): the sun's state + the lunar counter's phase, next to the time
+  // of day. The full moon matters — moon-marked pawns answer to it.
+  $: moonName = moonPhaseName(dayIndexForTurn(currentTurnValue));
+  $: sunUp = isSunUp(gameDate.hour);
 
   // ===== SEASON & WEATHER READOUT (SEASONS_WEATHER) — labels are data-driven (seasons/weather.jsonc) =====
   $: weatherLabel = getWeatherLabel($currentWeather?.type);
@@ -210,6 +218,11 @@
       >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span
     >
     <span class="bi phase" title="Time of day">{dayPhase}</span>
+    <span
+      class="bi celestial"
+      class:fullmoon={moonName === 'Full Moon'}
+      title="The sun is {sunUp ? 'up' : 'down'} · {moonName}">{sunUp ? '☀' : '☾'} {moonName}</span
+    >
     <span class="bi season" title="Season · average map temperature · weather · wind"
       >{SEASON_LABELS[$currentSeason] ?? $currentSeason}{tempLabel ? ` ${tempLabel}` : ''} · {weatherLabel}{windLabel
         ? ` · ${windLabel}`
@@ -309,6 +322,14 @@
   .bi.phase {
     color: var(--text-dim);
     letter-spacing: 0.02em;
+  }
+  .bi.celestial {
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .bi.celestial.fullmoon {
+    color: #e8d878; /* the full moon stands out — moon-marked pawns answer to it */
   }
   .bi.turn {
     color: var(--text-muted);

@@ -93,7 +93,9 @@ import {
   getAmbientLight,
   computeTileLightLevel,
   ticksFromGameHours,
-  TURNS_PER_DAY
+  TURNS_PER_DAY,
+  dayIndexForTurn,
+  isFullMoon
 } from '../services/EnvironmentService';
 import { getNightVision, dampenLightByNightVision } from '../core/vision';
 import { calcBloodRegenRate } from '../entities/Pawns';
@@ -755,6 +757,16 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     if ((pawn.needs?.wetness ?? 0) >= 50) {
       const deeds = (pawn.deeds ??= {});
       deeds.wetHours = (deeds.wetHours ?? 0) + 1; // "keep your skin soaked" (amphibian)
+    }
+    // "Stand under open moonlight" (werewolf): a full-moon NIGHT hour spent under the open sky.
+    if (
+      isFullMoon(dayIndexForTurn(gameState.turn)) &&
+      getAmbientLight(gameState.turn) < 0.35 &&
+      pawn.position &&
+      !isRoofedTile(pawn.position.x, pawn.position.y)
+    ) {
+      const deeds = (pawn.deeds ??= {});
+      deeds.moonlightHours = (deeds.moonlightHours ?? 0) + 1;
     }
   }
 

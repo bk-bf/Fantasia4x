@@ -190,6 +190,51 @@ export function seasonForTurn(turn: number): { season: Season; seasonDay: number
   };
 }
 
+// ── Lunar cycle (LINEAGES-II §1) ─────────────────────────────────────────────
+// A proper lunar counter, pure function of the absolute day (deterministic across save/load — no
+// separate mutable state to drift). 30-day month ⇒ 3 moons a season, 12 a year; the FULL MOON is a
+// 3-night window mid-cycle — the werewolf transform gate and the `moonlightHours` awakening deed both
+// read it. Surfaced in the topbar next to the time of day (sun up/down + the moon's phase).
+export const LUNAR_CYCLE_DAYS = 30;
+/** The 8 phase names, in cycle order. Player-facing (topbar + tooltips). */
+export const MOON_PHASES = [
+  'New Moon',
+  'Waxing Crescent',
+  'First Quarter',
+  'Waxing Gibbous',
+  'Full Moon',
+  'Waning Gibbous',
+  'Last Quarter',
+  'Waning Crescent'
+] as const;
+/** Day-in-cycle boundaries for each phase (start day, inclusive). Full Moon spans days 14–16. */
+const MOON_PHASE_STARTS = [0, 2, 7, 10, 14, 17, 22, 25];
+
+/** The moon's phase for an absolute day index (0–7 into {@link MOON_PHASES}). */
+export function moonPhaseIndex(dayIndex: number): number {
+  const cycleDay = ((dayIndex % LUNAR_CYCLE_DAYS) + LUNAR_CYCLE_DAYS) % LUNAR_CYCLE_DAYS;
+  for (let i = MOON_PHASE_STARTS.length - 1; i >= 0; i--)
+    if (cycleDay >= MOON_PHASE_STARTS[i]) return i;
+  return 0;
+}
+/** Player-facing phase name for an absolute day index. */
+export function moonPhaseName(dayIndex: number): (typeof MOON_PHASES)[number] {
+  return MOON_PHASES[moonPhaseIndex(dayIndex)];
+}
+/** True during the 3-day full-moon window — the werewolf gate. */
+export function isFullMoon(dayIndex: number): boolean {
+  return moonPhaseIndex(dayIndex) === 4;
+}
+
+// Sun state for the topbar (and anything hour-gated): tracks the ambient keyframes — dawn glow starts
+// ~06:00, sunset dimming begins ~18:43 — rounded to whole HUD hours.
+export const SUNRISE_HOUR = 6;
+export const SUNSET_HOUR = 19;
+/** Is the sun up at this in-game hour (0–23)? */
+export function isSunUp(hour: number): boolean {
+  return hour >= SUNRISE_HOUR && hour < SUNSET_HOUR;
+}
+
 /** Seasonal regrowth-rate multiplier. Regrowth *cooldowns* are DIVIDED by this —
  *  higher rate ⇒ shorter cooldown ⇒ faster regrowth. */
 export function seasonRegrowthMultiplier(season: Season | undefined): number {

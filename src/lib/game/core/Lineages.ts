@@ -65,19 +65,31 @@ const DECAY_PER_DAY = 0.5;
 
 /**
  * At pawn-gen: for every STANDALONE gateway trait the pawn carries (`lineageExclusive === false` with
- * `awakens`) — and only while the pawn does NOT already belong to that lineage — seed one awakening meter
- * per candidate condition (≥2 lineages), each with a target rolled in the condition's range.
+ * `awakens`) — and only while the pawn does NOT already belong to a lineage — seed ONE awakening meter
+ * per candidate lineage, with a RANDOM condition drawn from the gateway's pool for that lineage. So a
+ * claws pawn gets one beast meter + one werewolf meter (which deed each tracks varies pawn to pawn),
+ * never a bar per condition. Deduped by lineage across gateways: claws + fur still yield one beast +
+ * one werewolf meter. With the ≤2-gateways draw cap (Culture.ts) the practical maximum is 4 meters —
+ * and a pawn that awakens is done: ONE parent lineage, all other meters cleared, no second awakening.
  */
 export function seedAwakeningPaths(pawn: Pawn, dayIndex = 0): void {
   if (pawnLineage(pawn)) return; // already a member — no awakening
   const paths: LineagePath[] = [];
+  const seededLineages = new Set<string>();
   for (const t of pawn.traits ?? []) {
     if (t.lineageExclusive !== false || !t.awakens?.length) continue;
+    // Group this gateway's conditions by the lineage they awaken, then roll ONE per lineage.
+    const byLineage = new Map<string, AwakeningDef[]>();
     for (const condId of t.awakens) {
       const a = AWAKENING_BY_ID.get(condId);
-      if (!a) continue;
+      if (!a || seededLineages.has(a.lineage)) continue;
+      (byLineage.get(a.lineage) ?? byLineage.set(a.lineage, []).get(a.lineage)!).push(a);
+    }
+    for (const [lineage, pool] of byLineage) {
+      const a = pool[rng.int(0, pool.length - 1)];
       const target = a.range[0] + Math.round(rng.random() * (a.range[1] - a.range[0]));
-      paths.push({ condition: condId, lineage: a.lineage, deed: a.deed, target, value: 0, seen: 0, lastFedDay: dayIndex });
+      seededLineages.add(lineage);
+      paths.push({ condition: a.id, lineage, deed: a.deed, target, value: 0, seen: 0, lastFedDay: dayIndex });
     }
   }
   if (paths.length) pawn.lineagePaths = paths;

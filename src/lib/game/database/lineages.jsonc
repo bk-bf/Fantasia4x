@@ -24,7 +24,9 @@
     { "id": "devour-raw-meat", "lineage": "beast", "deed": "ateRawMeat",     "range": [40, 80], "label": "Eat raw meat" },
     { "id": "devour-carcass",  "lineage": "beast", "deed": "ateCarcass",     "range": [12, 24], "label": "Devour a raw carcass" },
     { "id": "wild-kills",      "lineage": "beast", "deed": "unarmedBigKill", "range": [8, 16],  "label": "Land an unarmed killing blow on big game" },
-    { "id": "raw-living",      "lineage": "beast", "deed": "rawDietDays",    "range": [30, 60], "label": "Live on an all-raw diet" },
+    // "All-raw diet" is counted in MEALS, not tracked days (no per-day diet state): ~3 raw meals a day
+    // for a season and a half ⇒ a 220–300 raw-meat-meals target on the same ateRawMeat counter.
+    { "id": "raw-living",      "lineage": "beast", "deed": "ateRawMeat",     "range": [220, 300], "label": "Live on raw flesh alone" },
     { "id": "sleep-wild",      "lineage": "beast", "deed": "sleptUnsheltered", "range": [20, 40], "label": "Sleep in the open wild" },
     // ── Werewolf ──
     { "id": "moon-bathing",    "lineage": "werewolf", "deed": "moonlightHours", "range": [40, 80], "label": "Stand under open moonlight" },
