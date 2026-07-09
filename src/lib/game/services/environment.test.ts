@@ -14,6 +14,7 @@ import {
   moonPhaseName,
   isFullMoon,
   isSunUp,
+  sunPhaseName,
   recomputeWorldTemperature,
   biomeBaseTemp,
   seasonRegrowthMultiplier,
@@ -659,5 +660,14 @@ describe('lunar cycle', () => {
     expect(isSunUp(18)).toBe(true);
     expect(isSunUp(19)).toBe(false);
     expect(isSunUp(23)).toBe(false);
+  });
+
+  it('the sun has an arc — sunrise → rising → high → sinking → sunset, nothing at night', () => {
+    expect(sunPhaseName(6)).toBe('Sunrise');
+    expect(sunPhaseName(8)).toBe('Rising Sun');
+    expect(sunPhaseName(12)).toBe('High Sun');
+    expect(sunPhaseName(15)).toBe('Sinking Sun');
+    expect(sunPhaseName(18)).toBe('Sunset');
+    expect(sunPhaseName(22)).toBeUndefined(); // the moon holds the slot at night
   });
 });

@@ -234,6 +234,16 @@ export const SUNSET_HOUR = 19;
 export function isSunUp(hour: number): boolean {
   return hour >= SUNRISE_HOUR && hour < SUNSET_HOUR;
 }
+/** The sun's arc across the sky, the daytime twin of the moon's phase (topbar celestial readout).
+ *  Undefined while the sun is down (the moon takes the slot). */
+export function sunPhaseName(hour: number): string | undefined {
+  if (!isSunUp(hour)) return undefined;
+  if (hour <= 7) return 'Sunrise'; // 06–07 — the dawn glow keyframes
+  if (hour <= 10) return 'Rising Sun'; // 08–10
+  if (hour <= 13) return 'High Sun'; // 11–13 — the zenith plateau
+  if (hour <= 16) return 'Sinking Sun'; // 14–16
+  return 'Sunset'; // 17–18 — dimming begins ~18:43
+}
 
 /** Seasonal regrowth-rate multiplier. Regrowth *cooldowns* are DIVIDED by this —
  *  higher rate ⇒ shorter cooldown ⇒ faster regrowth. */

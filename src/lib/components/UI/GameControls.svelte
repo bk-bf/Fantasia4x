@@ -20,6 +20,7 @@
     windDirLabel,
     dayIndexForTurn,
     moonPhaseName,
+    sunPhaseName,
     isSunUp
   } from '$lib/game/services/EnvironmentService';
   import { TICKS_PER_SECOND } from '$lib/game/core/time';
@@ -118,6 +119,7 @@
   // of day. The full moon matters — moon-marked pawns answer to it.
   $: moonName = moonPhaseName(dayIndexForTurn(currentTurnValue));
   $: sunUp = isSunUp(gameDate.hour);
+  $: sunPhase = sunPhaseName(gameDate.hour);
 
   // ===== SEASON & WEATHER READOUT (SEASONS_WEATHER) — labels are data-driven (seasons/weather.jsonc) =====
   $: weatherLabel = getWeatherLabel($currentWeather?.type);
@@ -218,10 +220,12 @@
       >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span
     >
     <span class="bi phase" title="Time of day">{dayPhase}</span>
+    <!-- The sun's arc while it's up (tonight's moon in the tooltip); the moon's phase at night. -->
     <span
       class="bi celestial"
-      class:fullmoon={moonName === 'Full Moon'}
-      title="The sun is {sunUp ? 'up' : 'down'} · {moonName}">{sunUp ? '☀' : '☾'} {moonName}</span
+      class:fullmoon={!sunUp && moonName === 'Full Moon'}
+      title={sunUp ? `${sunPhase} · tonight: ${moonName}` : `The moon is out · ${moonName}`}
+      >{sunUp ? `☀ ${sunPhase}` : `☾ ${moonName}`}</span
     >
     <span class="bi season" title="Season · average map temperature · weather · wind"
       >{SEASON_LABELS[$currentSeason] ?? $currentSeason}{tempLabel ? ` ${tempLabel}` : ''} · {weatherLabel}{windLabel
