@@ -3,7 +3,7 @@ import { createPawnInventory, createPawnEquipment } from '../core/PawnEquipment'
 import { drawPawnTraits } from '../core/Race';
 import { createBodyPlanLimbs } from '../systems/Combat';
 import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/BodyParts';
-import type { WoundSeverity } from '../core/Wounds';
+import { SCARRING_CONFIG, makeScarInjury } from '../core/Wounds';
 import { rng } from '../core/rng';
 
 // Module-level counter for sequential debug IDs across all generated pawns.
@@ -32,27 +32,6 @@ export function calcMaxBloodVolume(physicalTraits: { weight: number }, stats: En
 // A `wound`-kind trait (one-eyed, hard-of-hearing, bad back) stamps a REAL, permanent, healed-over
 // injury on the freshly-rolled body — it shows in the health tab and flows through the body model
 // (a destroyed eye halves `sight`; a lost ear dulls `hearing`), never a hidden stat fudge.
-
-/**
- * How much of a part's max HP a PERMANENT trait-stamped SCAR shaves. A scar is healed-over tissue, NOT a
- * fresh battle wound, so it takes only a small slice — at most ~10% (at `critical`) — never the 20–80% a
- * COMBAT wound of the same severity band inflicts. So even a "critical" facial scar leaves the head near
- * full (45 → ~40), not one blow from caving in. The tier's real teeth is the chronic PAIN below, not the
- * HP dent. `destroyed` is the exception — a LOST part (eye/hand/whole limb, §5a) is fully gone.
- */
-const SPAWN_WOUND_DAMAGE_FRAC: Record<WoundSeverity, number> = {
-  minor: 0.03,
-  serious: 0.06,
-  critical: 0.1,
-  destroyed: 1
-};
-/** Chronic ache of a lesser permanent wound (a destroyed part is a long-healed stump — painless). */
-const SPAWN_WOUND_PAIN: Record<WoundSeverity, number> = {
-  minor: 0,
-  serious: 3,
-  critical: 6,
-  destroyed: 0
-};
 
 /** For a paired part (leftEye/rightEar…), flip to its twin half the time — variety, not a mechanic. */
 function maybeFlipPairedSide(partId: string): string {
@@ -155,21 +134,27 @@ export function applyTraitWounds(pawn: Pawn): void {
       const limb = limbs.find((l) => l.parts?.some((p) => p.id === partId));
       const part = limb?.parts?.find((p) => p.id === partId);
       if (!limb || !part || part.isMissing) continue;
-      const damage = Math.round(part.maxHp * SPAWN_WOUND_DAMAGE_FRAC[severity] * 10) / 10;
-      const wound: Injury = {
-        bodyPart: partId,
-        type: spec.type ?? 'cut',
-        severity,
-        damage,
-        bleeding: 0, // healed over long ago
-        painContribution: SPAWN_WOUND_PAIN[severity],
-        infected: false,
-        clotProgress: 3, // fully clotted
-        inflictedAt: 0,
-        permanent: true
-      };
+      const baseType = spec.type ?? 'cut';
+      // Lesser severities become a proper SCAR entry ("Old Scar"/"Old Burn"…, §0b); a `destroyed` part is
+      // a lost STUMP, not a scar, so it keeps the base wound type. Both draw HP/pain from SCARRING_CONFIG.
+      const wound: Injury =
+        severity === 'destroyed'
+          ? {
+              bodyPart: partId,
+              type: baseType,
+              severity,
+              peakSeverity: severity,
+              damage: Math.round(part.maxHp * SCARRING_CONFIG.damageFrac.destroyed * 10) / 10,
+              bleeding: 0,
+              painContribution: SCARRING_CONFIG.pain.destroyed,
+              infected: false,
+              clotProgress: 3,
+              inflictedAt: 0,
+              permanent: true
+            }
+          : makeScarInjury(partId, baseType, severity, part.maxHp);
       part.injuries.push(wound);
-      part.health = Math.max(0, part.maxHp - damage);
+      part.health = Math.max(0, part.maxHp - wound.damage);
       if (severity === 'destroyed') part.isMissing = true;
       // §5a: a destroyed non-vital container takes its contents with it (a lost hand takes the fingers).
       if (cascadeIds) {
@@ -510,6 +495,13 @@ function applyRacialTraitBonuses(baseStats: EntityStats, traits: Trait[]): Entit
         }
       }
     });
+    // TRAITS §0 — a bodyMod trait's GRAFTED parts pay out their own core-stat bonus (spider eyes → +1
+    // perception), baked here from the part catalog rather than a rider on the trait's effects.
+    for (const g of trait.grafts ?? [])
+      for (const partId of g.parts) {
+        const per = PART_DEF_MAP[partId]?.grants?.perceptionBonus;
+        if (typeof per === 'number') modifiedStats.perception += per;
+      }
   });
 
   return modifiedStats;

@@ -468,29 +468,42 @@ function traitCombatMult(pawn: Pawn | Mob, statId: string): number {
 // raises cold_resistance, which PawnStateMachine reads to slow HYPOTHERMIA onset. No new
 // condition machinery: it reuses the existing resistance→onset wiring.
 const RESISTANCE_TRAIT_KEY: Record<string, keyof Trait['effects']> = {
-  cutting_resistance: 'cutting_resistance',
-  piercing_resistance: 'piercing_resistance',
-  blunt_resistance: 'blunt_resistance',
-  cold_resistance: 'coldResistance',
-  fire_resistance: 'fireResistance',
-  poison_resistance: 'poisonResistance',
-  disease_resistance: 'diseaseResistance',
-  mental_resistance: 'mentalResistance',
-  lightning_resistance: 'lightningResistance',
-  shadow_resistance: 'shadowResistance',
-  wetness_resistance: 'wetnessResistance',
-  // Not a resistance, but the same trait→stat additive bridge: Regeneration lifts heal_rate.
+  // Not a resistance, but the same trait→stat additive bridge: Regeneration lifts heal_rate. (The
+  // typed resistances themselves now live in `trait.resistances` — see RESISTANCE_BLOCK_KEY below.)
   heal_rate: 'healRate'
 };
 
+/** TRAITS §0a — the resistance-stat id → the short key on `trait.resistances` (the dedicated covering /
+ *  affinity block that replaced the forbidden `effects.*Resistance` riders). */
+const RESISTANCE_BLOCK_KEY: Record<string, keyof NonNullable<Trait['resistances']>> = {
+  cutting_resistance: 'cutting',
+  piercing_resistance: 'piercing',
+  blunt_resistance: 'blunt',
+  cold_resistance: 'cold',
+  fire_resistance: 'fire',
+  poison_resistance: 'poison',
+  disease_resistance: 'disease',
+  mental_resistance: 'mental',
+  lightning_resistance: 'lightning',
+  shadow_resistance: 'shadow',
+  wetness_resistance: 'wetness'
+};
+
 function traitResistanceBonus(pawn: Pawn | Mob, statId: string): number {
-  const key = RESISTANCE_TRAIT_KEY[statId];
-  if (!key) return 0;
+  const effKey = RESISTANCE_TRAIT_KEY[statId];
+  const blockKey = RESISTANCE_BLOCK_KEY[statId];
+  if (!effKey && !blockKey) return 0;
   const traits = 'traits' in pawn ? pawn.traits : [];
   let bonus = 0;
   for (const trait of traits ?? []) {
-    const v = trait.effects?.[key];
-    if (typeof v === 'number') bonus += v;
+    if (effKey) {
+      const v = trait.effects?.[effKey];
+      if (typeof v === 'number') bonus += v;
+    }
+    if (blockKey) {
+      const v = trait.resistances?.[blockKey];
+      if (typeof v === 'number') bonus += v;
+    }
   }
   return bonus;
 }

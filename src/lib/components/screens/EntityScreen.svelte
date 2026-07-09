@@ -7,6 +7,7 @@
   import FollowButton from '../UI/FollowButton.svelte';
   import SearchBar from '../UI/SearchBar.svelte';
   import { limbLabel, partLabel } from '$lib/utils/bodyLabels';
+  import { woundById } from '$lib/game/core/Wounds';
   import { persisted, persist } from '$lib/stores/uiPersist';
 
   let mobs = $derived(($gameState.mobs ?? []).filter((m) => m.state !== 'Corpse'));
@@ -205,8 +206,9 @@
                             {#if part.injuries.length > 0}
                               <span class="expand-part-badges">
                                 {#each part.injuries as injury}
-                                  <span class="part-badge" title="{injury.severity} {injury.type}"
-                                    >{injury.type.toUpperCase()} · {injury.severity}</span
+                                  {@const wName = woundById(injury.type)?.name ?? injury.type}
+                                  <span class="part-badge" title="{injury.severity} {wName}"
+                                    >{wName.toUpperCase()} · {injury.severity}</span
                                   >
                                 {/each}
                               </span>

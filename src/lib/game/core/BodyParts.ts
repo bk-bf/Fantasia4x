@@ -26,6 +26,13 @@ export interface BodyPartDef {
   /** Natural-armour share 0–1+: the plan sets the distribution, the creature's `naturalArmor` the strength.
    *  A destroyed part takes its armour with it. */
   armor?: number;
+  /** TRAITS §0 — permanent effects the part itself confers on whoever has it (a spider's extra eyes grant
+   *  night vision + perception). This is how a GRAFTED organ pays out its buff without routing through a
+   *  condition: `nightVision` is summed live over the entity's LIVING parts (vision.ts) — lose the eye,
+   *  lose the sight; `perceptionBonus` (a core stat) is baked in once at pawn-gen from the grafted parts
+   *  (applyRacialTraitBonuses). Only a part unique to the granting body carries it, so it never leaks to
+   *  a plain humanoid eye. Conditional benefits (gills only help when wet) still use a hostParts condition. */
+  grants?: { nightVision?: number; perceptionBonus?: number };
 }
 
 interface CatalogPart {
@@ -39,6 +46,7 @@ interface CatalogPart {
   critical?: boolean;
   weapons?: string[];
   armor?: number;
+  grants?: { nightVision?: number; perceptionBonus?: number };
 }
 interface PlanBlock {
   parts?: Record<string, CatalogPart>;
@@ -86,7 +94,8 @@ for (const [id, p] of Object.entries(ALL_PARTS)) {
     skeleton: p.skeleton ?? undefined,
     isCritical: p.critical ?? undefined,
     weapons: p.weapons,
-    armor: p.armor
+    armor: p.armor,
+    grants: p.grants
   };
 }
 

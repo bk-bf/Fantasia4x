@@ -54,7 +54,12 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
   it('kind matches payload: bodyMod modifies the body, naturalGear links a granting condition', () => {
     for (const t of ALL) {
       if (t.kind === 'bodyMod') {
-        expect(t.bodyMods?.length, `${t.id} bodyMod needs bodyMods[]`).toBeGreaterThan(0);
+        // A bodyMod reshapes the body — either by tuning existing parts (bodyMods[]) or by GRAFTING
+        // new limbs/parts (grafts[], e.g. Spider Eyes). Needs at least one of the two.
+        expect(
+          (t.bodyMods?.length ?? 0) + (t.grafts?.length ?? 0),
+          `${t.id} bodyMod needs bodyMods[] or grafts[]`
+        ).toBeGreaterThan(0);
         expect(Object.keys(t.effects ?? {}), `${t.id} bodyMod must carry no effects`).toEqual([]);
         for (const m of t.bodyMods ?? [])
           expect(
@@ -117,10 +122,11 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
           (t.bodyMods?.length ?? 0) > 0 || // an epic body transformation (stone bones) is a capability
           // TRAIT-LIBRARY-EXPANSION §1/§2: a SIGNIFICANT stat/attribute payload (the ±3/±5 rungs and
           // the significant combos deliberately sit at rare/epic) is a legitimate high-rarity pull —
-          // as is an affinity passive's effects payload (ever-warm's resistances, nocturnal's night sight)
-          // now that those live on the TRAIT rather than an always-on selfCondition pill.
+          // as is an affinity passive's payload (nocturnal's night sight) or a covering/affinity's typed
+          // resistances (ever-warm), now that those live on the TRAIT (effects / the resistances block).
           ((t.kind === 'stat' || t.kind === 'attribute' || t.kind === 'passive') &&
-            Object.keys(t.effects ?? {}).length > 0);
+            (Object.keys(t.effects ?? {}).length > 0 ||
+              Object.keys(t.resistances ?? {}).length > 0));
         expect(capable, `${t.id} (${t.rarity}) carries no capability`).toBe(true);
       }
       // A legendary/mythic PASSIVE banner is a rolled bundle; the §2d grand STAT pulls

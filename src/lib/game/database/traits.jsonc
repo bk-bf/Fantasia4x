@@ -135,7 +135,7 @@
         "name"       : "Marsh Dweller",
         "description": "Bred in fetid swamps, inured to rot and fever.",
         "flavorLine" : "fever and foul water that fell other folk barely slow them",
-        "effects"    : { "poisonResistance": 0.2, "diseaseResistance": 0.2, "workYield": {"foraging": 1.15} }
+        "effects": {"workYield": {"foraging": 1.15}}, "resistances": {"poison": 0.2, "disease": 0.2}
     },
     // — evolution BASES (mundane seeds of a supernatural, ADR-023 evolvesTo) —
     {
@@ -146,7 +146,7 @@
         "name": "Frost-Loving",
         "description": "Takes to the cold, comfortable a good ~7°C past where others shiver, but wilting in real heat.",
         "flavorLine": "a hard frost is to them no more than a crisp morning",
-        "effects": {"coldResistance": 0.35, "fireResistance": -0.15},
+        "effects": {}, "resistances": {"cold": 0.35, "fire": -0.15},
         "evolvesTo": "frost-born"
     },
     {
@@ -157,7 +157,7 @@
         "name": "Heat-Hardy",
         "description": "Runs hot, untroubled by heat a good ~7°C past the comfort of others, but quick to feel a chill.",
         "flavorLine": "the sun's worst never seems to trouble them",
-        "effects": {"fireResistance": 0.35, "coldResistance": -0.15},
+        "effects": {}, "resistances": {"fire": 0.35, "cold": -0.15},
         "evolvesTo": "ever-warm"
     },
     {
@@ -168,7 +168,7 @@
         "name"       : "Adrenal",
         "description": "A quick fight-or-flight surge: pain in a fight floods the veins, stronger and steadier for a spell, then a crash.",
         "flavorLine" : "danger sharpens rather than freezes them",
-        "effects"    : {"mentalResistance": 0.1},
+        "effects": {}, "resistances": {"mental": 0.1},
         "triggeredCondition": {"condition": "adrenal", "meter": "pain", "atOrAbove": 40, "durationHours": 0.25},
         "evolvesTo"  : "berserker-blood"
     },
@@ -246,7 +246,7 @@
         "name"       : "Sickly",
         "description": "Prone to fever and rot, every passing illness lingers.",
         "flavorLine" : "every passing sickness seems to find them first",
-        "effects"    : {"diseaseResistance": -0.2}
+        "effects": {}, "resistances": {"disease": -0.2}
     },
     {
         "id"         : "thin-skinned",
@@ -344,7 +344,7 @@
         "name"       : "Delicate",
         "description": "A queasy constitution, sickens on foul food and turns from bloody work.",
         "flavorLine" : "a whiff of rot is enough to turn them green",
-        "effects"    : { "diseaseResistance": -0.15, "workSpeed": {"butchery": 0.8} }
+        "effects": {"workSpeed": {"butchery": 0.8}}, "resistances": {"disease": -0.15}
     },
     {
         "id"         : "scarred",
@@ -354,7 +354,7 @@
         "name"       : "Stoic",
         "description": "Old hardships have toughened the mind, hard to rattle, inured to pain.",
         "flavorLine" : "little in the world seems able to shake them anymore",
-        "effects"    : {"mentalResistance": 0.15}
+        "effects": {}, "resistances": {"mental": 0.15}
     },
     {
         "id"         : "cold-blooded",
@@ -364,7 +364,7 @@
         "name"       : "Cold-Blooded",
         "description": "Poor at holding heat, the cold bites them a good ~7°C sooner than most.",
         "flavorLine" : "the chill sinks into them and will not let go",
-        "effects"    : {"coldResistance": -0.35}
+        "effects": {}, "resistances": {"cold": -0.35}
     },
     {
         "id"         : "flat-footed",
@@ -395,7 +395,7 @@
         "name"       : "Slow-Mending",
         "description": "Wounds linger and sickness digs in, a body poor at repairing itself.",
         "flavorLine" : "even a scratch stays angry on them for weeks",
-        "effects"    : {"healRate": -0.3, "diseaseResistance": -0.1}
+        "effects": {"healRate": -0.3}, "resistances": {"disease": -0.1}
     },
     {
         "id"         : "night-blind",
@@ -415,7 +415,7 @@
         "name"       : "Wan",
         "description": "A pale, sluggish constitution that holds neither warmth nor vigour against sickness.",
         "flavorLine" : "the first frost of the year already sinks deep into them",
-        "effects"    : {"coldResistance": -0.25, "diseaseResistance": -0.1}
+        "effects": {}, "resistances": {"cold": -0.25, "disease": -0.1}
     },
     {
         "id"         : "pox-marked",
@@ -425,7 +425,7 @@
         "name"       : "Pox-Ridden",
         "description": "Never quite shed the childhood plagues, quick to sicken, slow to recover.",
         "flavorLine" : "old pockmarks stipple them like hail-struck clay",
-        "effects"    : {"diseaseResistance": -0.15, "healRate": -0.1}
+        "effects": {"healRate": -0.1}, "resistances": {"disease": -0.15}
     },
     {
         "id"         : "stiff-jointed",
@@ -559,7 +559,7 @@
         "description"  : "A covering of fine down, natural insulation against the cold.",
         "flavorLine"   : "a down of fine feathers softens their every movement",
         "selfCondition": "feathered",
-        "effects"      : {"coldResistance": 0.2}
+        "effects": {}, "resistances": {"cold": 0.2}
     },
     {
         "id"           : "scaled-hide",
@@ -629,7 +629,7 @@
         "flavorLine"   : "their touch carries a slow, patient poison",
         "naturalWeapons": ["serpent-fangs"],
         "onHitCondition"  : {"condition": "envenomed", "chance": 0.35, "durationHours": 2, "resist": "poison_resistance"},
-        "effects"      : {"poisonResistance": 0.3}
+        "effects": {}, "resistances": {"poison": 0.3}
     },
     {
         "id": "thick-fur",
@@ -644,7 +644,7 @@
         "naturalArmor": 8,
         "carryPenalty": 0.08,
         "blocksSlots": ["bodyMid"],
-        "effects": {"coldResistance": 0.3, "fireResistance": -0.15}
+        "effects": {}, "resistances": {"cold": 0.3, "fire": -0.15}
     },
     {
         "id"           : "flame-touched",
@@ -654,7 +654,7 @@
         "name"         : "Flame Touched",
         "description"  : "Smouldering skin, blows land alight, and neither fire nor frost bites deep.",
         "flavorLine"   : "warmth pours off their skin even in the deepest frost",        "onHitCondition"  : {"condition": "burning", "chance": 0.3, "durationHours": 1, "resist": "fire_resistance"},
-        "effects"      : {"fireResistance": 0.3, "coldResistance": 0.15}
+        "effects": {}, "resistances": {"fire": 0.3, "cold": 0.15}
     },
     {
         "id"           : "photosynthetic",
@@ -674,7 +674,7 @@
         "kind"         : "passive",
         "name"         : "Regeneration",
         "description"  : "Torn flesh knits itself whole in days.",
-        "flavorLine"   : "torn flesh knits itself whole within days",        "effects"      : {"healRate": 0.6, "diseaseResistance": 0.15}
+        "flavorLine"   : "torn flesh knits itself whole within days",        "effects": {"healRate": 0.6}, "resistances": {"disease": 0.15}
     },
     {
         "id"           : "ever-warm",
@@ -683,7 +683,7 @@
         "kind"         : "passive",
         "name"         : "Ever-Warm",
         "description"  : "An inner furnace, neither killing cold nor searing heat can take hold.",
-        "flavorLine"   : "an inner fire keeps them from ever truly feeling the cold, or the heat",        "effects"      : {"fireResistance": 0.5, "coldResistance": 0.5}
+        "flavorLine"   : "an inner fire keeps them from ever truly feeling the cold, or the heat",        "effects": {}, "resistances": {"fire": 0.5, "cold": 0.5}
     },
     {
         "id"           : "frost-born",
@@ -692,7 +692,7 @@
         "kind"         : "passive",
         "name"         : "Frost Born",
         "description"  : "Born of the deep winter, the killing cold is home, but real heat is agony.",
-        "flavorLine"   : "the killing cold is to them no more than a brisk morning",        "effects"      : {"coldResistance": 0.5, "wetnessResistance": 0.2, "fireResistance": -0.2}
+        "flavorLine"   : "the killing cold is to them no more than a brisk morning",        "effects": {}, "resistances": {"cold": 0.5, "wetness": 0.2, "fire": -0.2}
     },
     {
         "id"           : "berserker-blood",
@@ -703,7 +703,8 @@
         "description"  : "A battle-fury in the veins: when the pain of a fight bites deep it looses a devastating red rage — then leaves the body spent.",
         "flavorLine"   : "a red fury waits just beneath their calm, eager to be loosed",
         "triggeredCondition": {"condition": "berserk", "meter": "pain", "atOrAbove": 40, "durationHours": 0.25},
-        "weaponBonus"  : {"damage": 0.15}
+        "weaponBonus"  : {"damage": 0.15},
+        "effects"      : {}
     },
     {
         "id"         : "stone-bones",
@@ -734,7 +735,7 @@
         "name": "Amphibious",
         "description": "A deep aquatic lineage, gilled, web-limbed and moist-skinned. At home in the water, but the dry air is unkind. A lesser cousin of the great bloodlines.",
         "flavorLine": "their skin glistens even in the driest air, as if the river never quite let them go",
-        "effects": {"wetnessResistance": 0.2},
+        "effects": {}, "resistances": {"wetness": 0.2},
         "subCapabilities": [
             {
                 "id"           : "gilled",
@@ -760,7 +761,7 @@
                 "name"         : "Moist Skin",
                 "description"  : "Permeable amphibian skin sheds water and cold, but parches and burns in dry heat.",
                 "selfCondition": "moist_skinned",
-                "effects"      : {"wetnessResistance": 0.4, "coldResistance": 0.15, "fireResistance": -0.2}
+                "effects": {}, "resistances": {"wetness": 0.4, "cold": 0.15, "fire": -0.2}
             }
         ]
     },
@@ -773,7 +774,7 @@
         "name"           : "Dragon Heritage",
         "description"    : "An ancient draconic bloodline, no two dragon-blooded are ever quite alike.",
         "flavorLine"     : "the old draconic fire still smoulders in their blood",
-        "effects"        : {"fireResistance": 0.25},
+        "effects": {}, "resistances": {"fire": 0.25},
         "subCapabilities": [
             {
                 "id"           : "dragon-scales",
@@ -783,7 +784,7 @@
                 "description"  : "Armored scales impervious to flame.",
                 "naturalArmor": 20,
                 "carryPenalty": 0.12,
-                "effects"      : {"fireResistance": 0.5}
+                "effects": {}, "resistances": {"fire": 0.5}
             },
             {
                 "id"           : "dragon-claws",
@@ -807,7 +808,7 @@
                 "scope"        : "racial",
                 "kind"         : "passive",
                 "name"         : "Dragon Blood",
-                "description"  : "Fireproof blood that mends wounds fast.",                "effects"      : {"healRate": 0.5, "fireResistance": 0.5}
+                "description"  : "Fireproof blood that mends wounds fast.",                "effects": {"healRate": 0.5}, "resistances": {"fire": 0.5}
             },
             {
                 "id"         : "dragon-might",
@@ -965,7 +966,7 @@
         "rarity"       : "uncommon",
         "kind"         : "passive",
         "name"         : "Hardy Gut",
-        "description"  : "They'll eat what dropped a stronger stomach and ask for more.",        "effects"      : {"poisonResistance": 0.15, "diseaseResistance": 0.15}
+        "description"  : "They'll eat what dropped a stronger stomach and ask for more.",        "effects": {}, "resistances": {"poison": 0.15, "disease": 0.15}
     },
     {
         "id"           : "plagueproof",
@@ -973,7 +974,7 @@
         "rarity"       : "rare",
         "kind"         : "passive",
         "name"         : "Plagueproof",
-        "description"  : "Venom and pestilence pass through them like water through a grate.",        "effects"      : {"poisonResistance": 0.5, "diseaseResistance": 0.5}
+        "description"  : "Venom and pestilence pass through them like water through a grate.",        "effects": {}, "resistances": {"poison": 0.5, "disease": 0.5}
     },
     {
         "id"           : "weak-gutted",
@@ -2715,7 +2716,7 @@
             "durationHours": 1.5,
             "resist"       : "poison_resistance"
         },
-        "effects"      : {"poisonResistance": 0.15}
+        "effects": {}, "resistances": {"poison": 0.15}
     },
     {
         "id": "deathly-venom",
@@ -2728,7 +2729,7 @@
         "flavorLine": "green-black stains follow the lines of their teeth",
         "naturalWeapons": ["deathly-fangs"],
         "onHitCondition": {"condition": "envenomed", "chance": 0.6, "durationHours": 3, "resist": "poison_resistance"},
-        "effects": {"poisonResistance": 0.5}
+        "effects": {}, "resistances": {"poison": 0.5}
     },
     {
         "id": "ember-breath",
@@ -2741,7 +2742,7 @@
         "flavorLine": "their breath shimmers like air over a forge",
         "naturalWeapons": ["ember-breath"],
         "evolvesTo": "searing-breath",
-        "effects": {"fireResistance": 0.15}
+        "effects": {}, "resistances": {"fire": 0.15}
     },
     {
         "id": "searing-breath",
@@ -2754,7 +2755,7 @@
         "flavorLine": "a furnace-glow rises in their throat before they strike",
         "naturalWeapons": ["flame-breath"],
         "evolvesTo": "dragonfire-breath",
-        "effects": {"fireResistance": 0.3}
+        "effects": {}, "resistances": {"fire": 0.3}
     },
     {
         "id": "dragonfire-breath",
@@ -2766,7 +2767,7 @@
         "description": "A roaring lance of dragonfire striking three tiles out like a spear, a true burn, a hurled target, a lingering blaze. (TODO: a real AoE cone later.)",
         "flavorLine": "when they open their jaws the light of a kiln pours out",
         "naturalWeapons": ["dragonfire"],
-        "effects": {"fireResistance": 0.5}
+        "effects": {}, "resistances": {"fire": 0.5}
     },
     {
         "id"           : "raking-talons",
@@ -2874,7 +2875,7 @@
         "naturalArmor": 3,
         "carryPenalty": 0.02,
         "evolvesTo"    : "thick-fur",
-        "effects"      : {"coldResistance": 0.15}
+        "effects": {}, "resistances": {"cold": 0.15}
     },
     {
         "id": "winter-mane",
@@ -2888,7 +2889,7 @@
         "naturalArmor": 12,
         "carryPenalty": 0.1,
         "blocksSlots": ["bodyMid"],
-        "effects": {"coldResistance": 0.45, "fireResistance": -0.2}
+        "effects": {}, "resistances": {"cold": 0.45, "fire": -0.2}
     },
     {
         "id"           : "chitin-plates",
@@ -2943,7 +2944,7 @@
         "naturalArmor": 4,
         "carryPenalty": 0.03,
         "evolvesTo"    : "storm-plumage",
-        "effects"      : {"coldResistance": 0.3}
+        "effects": {}, "resistances": {"cold": 0.3}
     },
     {
         "id"           : "storm-plumage",
@@ -2956,7 +2957,7 @@
         "flavorLine"   : "rain beads and rolls off them like off a gull's back",
         "naturalArmor": 7,
         "carryPenalty": 0.05,
-        "effects"      : {"coldResistance": 0.4, "wetnessResistance": 0.3}
+        "effects": {}, "resistances": {"cold": 0.4, "wetness": 0.3}
     },
     // ── §3e · Utility natural gear — slot-cost apparatus, host-gated, no defense. A grafted wing
     //    is a REAL limb (§3d): hittable, losable — shear it and the benefit goes with it. ──
@@ -3093,15 +3094,42 @@
         "effects"    : {}
     },
     {
-        "id"           : "many-eyed",
+        "id"           : "spider-eyes-lesser",
+        "scope"        : "racial",
+        "rarity"       : "uncommon",
+        "kind"         : "bodyMod",
+        "stage"        : 1,
+        "evolvesTo"    : "spider-eyes",
+        "name"         : "Extra Eye",
+        "description"  : "A single dark spider's eye set above the brow, watching the dark and the edges of sight.",
+        "flavorLine"   : "a third small black eye studs their brow, ever open",
+        "grafts"       : [ { "limb": "extra_eyes", "parts": ["anteriorMedianLeftEye"] } ],
+        "effects"      : {}
+    },
+    {
+        "id"           : "spider-eyes",
         "scope"        : "racial",
         "rarity"       : "rare",
-        "kind"         : "passive",
-        "name"         : "Many-Eyed",
-        "description"  : "A crown of small patient eyes, the dark and the flanks hold no surprises.",
+        "kind"         : "bodyMod",
+        "stage"        : 2,
+        "evolvesTo"    : "spider-eyes-greater",
+        "name"         : "Spider Eyes",
+        "description"  : "A pair of extra spider's eyes above the brow, the dark and the flanks holding no surprises.",
+        "flavorLine"   : "four small black eyes stud their brow like beads",
+        "grafts"       : [ { "limb": "extra_eyes", "parts": ["anteriorMedianLeftEye", "anteriorMedianRightEye"] } ],
+        "effects"      : {}
+    },
+    {
+        "id"           : "spider-eyes-greater",
+        "scope"        : "racial",
+        "rarity"       : "epic",
+        "kind"         : "bodyMod",
+        "stage"        : 3,
+        "name"         : "Arachnid Eyes",
+        "description"  : "A full crown of six eyes, as an arachnid bears, nothing crosses their sight unseen, in light or dark.",
         "flavorLine"   : "six small black eyes stud their brow like beads",
-        "grafts"       : [ { "limb": "extra_eyes", "parts": ["anteriorLateralLeftEye", "anteriorLateralRightEye", "posteriorLateralLeftEye", "posteriorLateralRightEye"] } ],
-        "effects"      : {"nightVision": 0.6, "perceptionBonus": 2}
+        "grafts"       : [ { "limb": "extra_eyes", "parts": ["anteriorMedianLeftEye", "anteriorMedianRightEye", "anteriorLateralLeftEye", "anteriorLateralRightEye"] } ],
+        "effects"      : {}
     },
     // ═══════════════════════════════════════════════════════════════════════════
     // §5a · Lost limbs — the destroyed-limb pulls (wound kind, permanent, non-lethal).
@@ -3703,7 +3731,7 @@
         "description"  : "Muck agrees with them, grime seems to settle them into their work.",
         "flavorLine"   : "they are never happier than knee-deep in the midden",
         "selfCondition": "filth_thriving",
-        "effects"      : {"diseaseResistance": 0.15}
+        "effects": {}, "resistances": {"disease": 0.15}
     },
     {
         "id"           : "fastidious",
@@ -3857,7 +3885,7 @@
         "name"           : "Stoneblood",
         "description"    : "An earthen bloodline, mineral-patient, granite-hided, and the mountain remembers them.",
         "flavorLine"     : "their veins run with a slow, mineral patience; the earth knows them as kin",
-        "effects"        : {"constitutionBonus": 1, "blunt_resistance": 0.15},
+        "effects": {"constitutionBonus": 1}, "resistances": {"blunt": 0.15},
         "subCapabilities": [
             {
                 "id"           : "pebbled-skin",
@@ -3996,7 +4024,7 @@
         "name": "Sporeborn",
         "description": "A quiet mycelial partner shares their flesh, and its appetites. No two sporeborn fruit alike.",
         "flavorLine": "a quiet mycelial partner shares their flesh, and their hungers",
-        "effects": {"poisonResistance": 0.3, "diseaseResistance": 0.3},
+        "effects": {}, "resistances": {"poison": 0.3, "disease": 0.3},
         "subCapabilities": [
             {
                 "id"         : "spore-cloud",
@@ -4021,7 +4049,7 @@
                 "name"         : "Toxin-Immune",
                 "description"  : "The partner in the flesh eats poisons before they bite.",
                 "selfCondition": "toxin_immune",
-                "effects"      : {"poisonResistance": 0.5, "diseaseResistance": 0.5}
+                "effects": {}, "resistances": {"poison": 0.5, "disease": 0.5}
             },
             {
                 "id"           : "rootling",
@@ -4042,7 +4070,7 @@
         "name"           : "Shellblood",
         "description"    : "The SHELL line, cased in plate it grew itself; slow, patient, and very hard to open.",
         "flavorLine"     : "cased in plate it grew itself; slow, patient, and very hard to open",
-        "effects"        : {"constitutionBonus": 1, "blunt_resistance": 0.15},
+        "effects": {"constitutionBonus": 1}, "resistances": {"blunt": 0.15},
         "subCapabilities": [
             {
                 "id"           : "shell-ironshell",
@@ -4102,7 +4130,7 @@
         "name": "Spiderblood",
         "description": "The SPIDER line, eight patient eyes, a quiet venomous bite, and a thread for every corner.",
         "flavorLine": "eight patient eyes, a quiet bite, and a thread for every corner",
-        "effects": {"dexterityBonus": 1, "poisonResistance": 0.2, "nightVision": 0.3},
+        "effects": {"dexterityBonus": 1, "nightVision": 0.3}, "resistances": {"poison": 0.2},
         "subCapabilities": [
             {
                 "id"           : "arachnid-venom",
@@ -4117,7 +4145,7 @@
                     "durationHours": 2,
                     "resist"       : "poison_resistance"
                 },
-                "effects"      : {"poisonResistance": 0.3}
+                "effects": {}, "resistances": {"poison": 0.3}
             },
             {
                 "id"           : "webbing",
@@ -4154,7 +4182,7 @@
         "name"           : "Stormborn",
         "description"    : "Static crawls their skin; the hair of a room stands when they enter.",
         "flavorLine"     : "static crawls their skin; the hair of a room stands when they enter",
-        "effects"        : {"lightningResistance": 0.3, "dexterityBonus": 1},
+        "effects": {"dexterityBonus": 1}, "resistances": {"lightning": 0.3},
         "subCapabilities": [
             {
                 "id"           : "shock-touch",
@@ -4172,7 +4200,7 @@
                 "name"         : "Grounded",
                 "description"  : "The storm's charge slides off them and into the earth.",
                 "selfCondition": "lightning_warded",
-                "effects"      : {"lightningResistance": 0.6}
+                "effects": {}, "resistances": {"lightning": 0.6}
             },
             {
                 "id"         : "quickened-reflexes",
@@ -4210,14 +4238,14 @@
         "name"           : "Shadeborn",
         "description"    : "The light seems to lean away from them; they are most present at dusk.",
         "flavorLine"     : "the light seems to lean away from them; they are most present at dusk",
-        "effects"        : {"shadowResistance": 0.3, "nightVision": 0.5},
+        "effects": {"nightVision": 0.5}, "resistances": {"shadow": 0.3},
         "subCapabilities": [
             {
                 "id"           : "umbral-sight",
                 "scope"        : "racial",
                 "kind"         : "passive",
                 "name"         : "Umbral Sight",
-                "description"  : "Sees in pitch dark as by day, the shadow is their element.",                "effects"      : {"nightVision": 1.0, "shadowResistance": 0.3}
+                "description"  : "Sees in pitch dark as by day, the shadow is their element.",                "effects": {"nightVision": 1.0}, "resistances": {"shadow": 0.3}
             },
             {
                 "id"           : "chilling-touch",
@@ -4331,7 +4359,7 @@
         "name"           : "Wildblooded",
         "description"    : "Green things lean toward them; something older than speech looks out of their eyes.",
         "flavorLine"     : "green things lean toward them; something older than speech looks out of their eyes",
-        "effects"        : {"charismaBonus": 1, "diseaseResistance": 0.2},
+        "effects": {"charismaBonus": 1}, "resistances": {"disease": 0.2},
         "subCapabilities": [
             {
                 "id"           : "sunfed",
@@ -4377,7 +4405,7 @@
         "name"           : "Farseer",
         "description"    : "Their attention arrives a moment before they do; secrets feel unsafe near them.",
         "flavorLine"     : "their attention arrives a moment before they do; secrets feel unsafe near them",
-        "effects"        : {"intelligenceBonus": 1, "mentalResistance": 0.3},
+        "effects": {"intelligenceBonus": 1}, "resistances": {"mental": 0.3},
         "subCapabilities": [
             {
                 "id"           : "ironclad-mind",
@@ -4386,7 +4414,7 @@
                 "name"         : "Ironclad Mind",
                 "description"  : "A mind walled like a fortress, dread and madness find no purchase.",
                 "selfCondition": "ironclad_mind",
-                "effects"      : {"mentalResistance": 0.5, "shadowResistance": 0.2}
+                "effects": {}, "resistances": {"mental": 0.5, "shadow": 0.2}
             },
             {
                 "id"         : "keen-intellect",
@@ -4423,7 +4451,7 @@
         "name": "Blighted",
         "description": "The dark mirror of the great bloodlines, something in the blood went wrong generations back, and settled in to stay. It thrives in its own rot.",
         "flavorLine": "something in the blood went wrong generations back, and settled in to stay",
-        "effects": {"poisonResistance": 0.4, "diseaseResistance": 0.4},
+        "effects": {}, "resistances": {"poison": 0.4, "disease": 0.4},
         "subCapabilities": [
             {
                 "id"         : "accursed-blood-3",

@@ -8,6 +8,19 @@
 
 import type { Pawn, Mob } from './types';
 import { getCreatureById } from './Creatures';
+import { PART_DEF_MAP } from './BodyParts';
+
+/** Night vision granted by the entity's LIVING body parts (a spider's extra eyes — `grants.nightVision`
+ *  in limbmap). Summed over non-missing parts, so losing an eye reduces the sight — the part IS the gate. */
+function livingPartNightVision(entity: Pawn | Mob): number {
+  let nv = 0;
+  for (const limb of entity.limbs ?? [])
+    for (const part of limb.parts ?? []) {
+      if (part.isMissing || part.health <= 0) continue;
+      nv += PART_DEF_MAP[part.id]?.grants?.nightVision ?? 0;
+    }
+  return nv;
+}
 
 /** Vision can't drop below this fraction of its base, even in pitch dark — you can always make out
  *  the next couple of tiles. (Work uses its own 0.4 floor in lightWorkMultiplier.) */
@@ -28,14 +41,17 @@ export function baseVisionRange(perception: number): number {
  *  sum it across their racial traits. Default 0 (normal — full darkness penalty). */
 export function getNightVision(entity: Pawn | Mob): number {
   if ('creatureId' in entity) {
-    return getCreatureById(entity.creatureId)?.nightVision ?? 0;
+    // Mobs: the creature-def value PLUS anything its living parts grant (arachnid eyes).
+    return Math.min(1, Math.max(0, (getCreatureById(entity.creatureId)?.nightVision ?? 0) + livingPartNightVision(entity)));
   }
   let nv = 0;
   for (const trait of entity.traits ?? []) nv += trait.effects?.nightVision ?? 0;
-  // Anatomy gate: night-vision needs living eyes — a pawn whose eyes are all destroyed is blind in the
-  // dark regardless of racial trait. Only pawns that actually HAVE eyes (and any nightVision) pay the
-  // limb walk; a body plan with no eye parts is left ungated. (This is the "gated behind anatomy" the
-  // eye-themed traits — nocturnal / many-eyed / beast-eyed — resolve to, instead of an always-on pill.)
+  // Part-granted night vision (Spider Eyes): summed over LIVING parts, so it self-gates — a destroyed
+  // eye simply stops contributing, no separate anatomy check needed.
+  nv += livingPartNightVision(entity);
+  // Anatomy gate for TRAIT night-vision: a pawn whose eyes are all destroyed is blind in the dark
+  // regardless of racial trait. Only pawns that actually HAVE eyes (and any nightVision) pay the limb
+  // walk; a body plan with no eye parts is left ungated. (Part-granted NV above already self-gates.)
   if (nv > 0 && entity.limbs?.length) {
     let hasEye = false;
     let hasLivingEye = false;

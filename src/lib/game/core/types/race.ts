@@ -127,6 +127,25 @@ export interface Trait {
   armorMods?: Array<{ target: string; defense: number }>;
   /** ADR-029 sugar: uniform natural armour = `armorMods: [{target:'all', defense:n}]`. */
   naturalArmor?: number;
+  /** TRAITS §0a — typed resistances carried by a natural covering / affinity, in a DEDICATED field (the
+   *  §0-legal home; a resistance in the generic `effects` bag is forbidden). Each is a 0–1 fraction (may
+   *  be negative — a covering can be a heat trap) that adds on top of the matching `*_resistance` stat,
+   *  exactly as the old `effects.*Resistance` riders did — so it feeds BOTH combat mitigation AND
+   *  condition onset (cold→hypothermia, fire→heat-stroke). Physically tied to the granting trait: present
+   *  it when the trait is present, gone with the trait. Read by PawnStatService.traitResistanceBonus. */
+  resistances?: {
+    cold?: number;
+    fire?: number;
+    poison?: number;
+    disease?: number;
+    mental?: number;
+    lightning?: number;
+    shadow?: number;
+    wetness?: number;
+    cutting?: number;
+    piercing?: number;
+    blunt?: number;
+  };
   /** §6a auras: while this trait's bearer stands, pawns/mobs within `radius` tiles carry `condition`.
    *  Applied on a THROTTLED cadence with a linger tail (the condition is stamped as a timer of
    *  `lingerSeconds`, so it fades a few seconds after leaving the zone — and the pass never runs

@@ -111,9 +111,29 @@ export type BodyPartId = string;
 export interface Injury {
   bodyPart: BodyPartId;
   /** Wound type id from wounds.jsonc. One wound per type per part. `frostbite`/`scorch` are the
-   *  frost/lightning wounds (already in wounds.jsonc); also the elemental scar variants (§5b). */
-  type: 'cut' | 'fracture' | 'puncture' | 'crush' | 'burn' | 'frostbite' | 'scorch';
+   *  frost/lightning wounds; the `*_scar` variants are the PERMANENT healed-over marks (TRAITS §0b) —
+   *  reached by the organic close-time scar roll (healLimbs) or stamped by a `wound`-kind trait. */
+  type:
+    | 'cut'
+    | 'fracture'
+    | 'puncture'
+    | 'crush'
+    | 'burn'
+    | 'frostbite'
+    | 'scorch'
+    | 'cut_scar'
+    | 'puncture_scar'
+    | 'crush_scar'
+    | 'fracture_scar'
+    | 'burn_scar'
+    | 'frostbite_scar'
+    | 'scorch_scar';
   severity: 'minor' | 'serious' | 'critical' | 'destroyed';
+  /** TRAITS §0b — the WORST severity this wound ever reached. Severity decays back toward `minor` as the
+   *  wound mends (recomputeWound re-derives it from remaining damage), so the close-time scar roll reads
+   *  this peak (the blow that nearly took the limb is the one that marks it), not the faded final band.
+   *  Stamped/raised in recomputeWound(InPlace); absent on a scar means "always was this severity". */
+  peakSeverity?: 'minor' | 'serious' | 'critical' | 'destroyed';
   /** Accumulated HP of damage this wound has dealt to the part (same-type hits stack here). */
   damage: number;
   /** Blood volume drained per turn; clots below CLOT_FLOOR or via herbal_kit. */

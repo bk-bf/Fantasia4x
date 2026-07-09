@@ -48,6 +48,21 @@ describe('shared vision model', () => {
     ).toBe(1); // clamped
   });
 
+  it('Spider Eyes: grafted arachnid eyes grant night vision from the PART, self-gating on damage', () => {
+    // spider-eyes-greater grafts 4 eyes @ 0.15 each → 0.6 night vision, sourced from the parts (no
+    // trait effect). Losing eyes removes the sight; all eyes gone → 0.
+    const eye = (id: string, hp = 4) => ({ id, health: hp, maxHp: 4, isMissing: false, injuries: [] });
+    const spiderEyed = (parts: ReturnType<typeof eye>[]) =>
+      ({ stats: { perception: 10 }, traits: [], limbs: [{ id: 'extra_eyes', parts }] }) as unknown as Pawn;
+    const fourEyes = ['anteriorMedianLeftEye', 'anteriorMedianRightEye', 'anteriorLateralLeftEye', 'anteriorLateralRightEye'];
+    expect(getNightVision(spiderEyed(fourEyes.map((id) => eye(id))))).toBeCloseTo(0.6);
+    // Two eyes destroyed → only the two living ones count (0.3).
+    const halfBlind = fourEyes.map((id, i) => (i < 2 ? { ...eye(id), isMissing: true } : eye(id)));
+    expect(getNightVision(spiderEyed(halfBlind))).toBeCloseTo(0.3);
+    // All eyes gone → blind in the dark.
+    expect(getNightVision(spiderEyed(fourEyes.map((id) => ({ ...eye(id), isMissing: true }))))).toBe(0);
+  });
+
   it('pawns and mobs use the SAME range at full light (unified)', () => {
     const p = effectiveVisionRange(pawn(12), 1);
     const m = effectiveVisionRange({ creatureId: 'nope', stats: { perception: 12 } } as unknown as Mob, 1);

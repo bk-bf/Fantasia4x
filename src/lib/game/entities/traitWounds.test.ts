@@ -62,7 +62,8 @@ describe('applyTraitWounds (§4 wound granters)', () => {
     const spine = pawn.limbs!.flatMap((l) => l.parts ?? []).find((p) => p.id === 'spine');
     expect(spine?.injuries[0]?.permanent).toBe(true);
     expect(spine?.injuries[0]?.severity).toBe('serious');
-    expect(spine?.injuries[0]?.type).toBe('crush');
+    // §0b: a trait-stamped lesser wound becomes its permanent SCAR variant ('crush' → 'crush_scar').
+    expect(spine?.injuries[0]?.type).toBe('crush_scar');
     // The heal loop must skip it entirely — SAME limb array ref back (no per-tick churn).
     const healed = healLimbs(pawn.limbs!, 1, 1000, true);
     expect(healed).toBe(pawn.limbs);

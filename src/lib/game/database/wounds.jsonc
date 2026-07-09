@@ -58,14 +58,38 @@
     "infectionTreatment"      :     0.35,
     "immuneResistBase"        :     0.35
   },
+  // Scarring (TRAITS §0b) — a wound that fully mends may leave a PERMANENT scar (its `scarType` entry
+  // below). Rolled ONCE, at the moment the wound closes (healLimbs drop point):
+  //   chance = baseChanceBySeverity[PEAK severity] × wound scarChanceMult
+  //            × (1 − tendReduction × treatmentQuality) × (infected ? infectedMult : 1), capped.
+  // Peak severity (Injury.peakSeverity) is used because severity decays as the wound heals — the wound
+  // that nearly took the limb is the one that marks it. One scar per type per part.
+  // damageFrac/pain also drive trait-stamped spawn scars (applyTraitWounds) — the old hardcoded
+  // SPAWN_WOUND_DAMAGE_FRAC/SPAWN_WOUND_PAIN tables now live here. A scar is healed-over tissue, NOT a
+  // fresh battle wound, so it shaves at most ~10% of the part (`destroyed` = the part is simply gone);
+  // its real teeth is the chronic pain.
+  "scarring": {
+    "baseChanceBySeverity": { "minor": 0.02, "serious": 0.08, "critical": 0.2 },
+    "tendReduction"       : 0.7,
+    "infectedMult"        : 2.0,
+    "chanceCap"           : 0.35,
+    "damageFrac"          : { "minor": 0.03, "serious": 0.06, "critical": 0.1, "destroyed": 1 },
+    "pain"                : { "minor": 0, "serious": 3, "critical": 6, "destroyed": 0 }
+  },
   "wounds" : [
+    // Per wound: `scarType` names the permanent scar entry this wound leaves (also the entry a
+    // wound-kind trait stamps at pawn-gen); `canScar` gates the organic close-time roll (fracture:
+    // trait-stamp only — a knitted bone doesn't convert on its own); `scarChanceMult` scales the
+    // roll (burns scar worst, bruising mostly fades).
     {
       "id"            : "cut",
       "name"          : "Cut",
       "fromDamageType": "cutting",
       "bleedMod"      : 1.0,
       "painPerDamage" : 0.6,
-      "healDifficulty": 1.0
+      "healDifficulty": 1.0,
+      "canScar"       : true,
+      "scarType"      : "cut_scar"
     },
     {
       "id"            : "puncture",
@@ -73,7 +97,10 @@
       "fromDamageType": "piercing",
       "bleedMod"      : 0.5,
       "painPerDamage" : 0.7,
-      "healDifficulty": 1.2
+      "healDifficulty": 1.2,
+      "canScar"       : true,
+      "scarChanceMult": 0.8,
+      "scarType"      : "puncture_scar"
     },
     {
       "id"            : "crush",
@@ -84,7 +111,10 @@
       // A severed/blown-off limb DOES gush (the open stump) — see SEVERED_STUMP_BLEED_MOD in Combat.
       "bleedMod"      : 0.0,
       "painPerDamage" : 0.9,
-      "healDifficulty": 1.4
+      "healDifficulty": 1.4,
+      "canScar"       : true,
+      "scarChanceMult": 0.6,
+      "scarType"      : "crush_scar"
     },
     {
       // Bone fracture — a SECONDARY wound from heavy (esp. blunt) trauma, tracked apart from the soft-
@@ -97,7 +127,11 @@
       "bleedMod"      : 0.0,
       "painPerDamage" : 1.2,
       "healDifficulty": 4.0,
-      "structural"    : true
+      "structural"    : true,
+      // A knitted bone leaves no skin scar — no organic close-time roll. A trait may still stamp a
+      // permanent old-fracture (degenerative bad back) via `scarType`.
+      "canScar"       : false,
+      "scarType"      : "fracture_scar"
     },
     {
       "id"            : "burn",
@@ -105,7 +139,10 @@
       "fromDamageType": "fire",
       "bleedMod"      : 0.0,
       "painPerDamage" : 1.1,
-      "healDifficulty": 2.0
+      "healDifficulty": 2.0,
+      "canScar"       : true,
+      "scarChanceMult": 2.0,
+      "scarType"      : "burn_scar"
     },
     {
       "id"            : "frostbite",
@@ -113,7 +150,10 @@
       "fromDamageType": "frost",
       "bleedMod"      : 0.0,
       "painPerDamage" : 0.9,
-      "healDifficulty": 1.8
+      "healDifficulty": 1.8,
+      "canScar"       : true,
+      "scarChanceMult": 1.5,
+      "scarType"      : "frostbite_scar"
     },
     {
       "id"            : "scorch",
@@ -121,7 +161,72 @@
       "fromDamageType": "lightning",
       "bleedMod"      : 0.0,
       "painPerDamage" : 1.0,
-      "healDifficulty": 1.5
+      "healDifficulty": 1.5,
+      "canScar"       : true,
+      "scarChanceMult": 1.2,
+      "scarType"      : "scorch_scar"
+    },
+    // ── Scars (TRAITS §0b) — permanent, healed-over marks. Reached two ways: an organic close-time
+    // roll converts a mended wound into its `scarType`, and a `wound`-kind trait stamps one at pawn-gen.
+    // Uncareable (skipped by heal/tend/infection), so they never mend away. `fromDamageType: "none"`:
+    // never auto-mapped from a live hit. Low bleed/pain — the tissue closed long ago; the chronic ache
+    // rides on the scarring.pain table, not painPerDamage.
+    {
+      "id"            : "cut_scar",
+      "name"          : "Old Scar",
+      "fromDamageType": "none",
+      "bleedMod"      : 0.0,
+      "painPerDamage" : 0.0,
+      "healDifficulty": 1.0
+    },
+    {
+      "id"            : "puncture_scar",
+      "name"          : "Old Puncture",
+      "fromDamageType": "none",
+      "bleedMod"      : 0.0,
+      "painPerDamage" : 0.0,
+      "healDifficulty": 1.0
+    },
+    {
+      "id"            : "crush_scar",
+      "name"          : "Old Crush Mark",
+      "fromDamageType": "none",
+      "bleedMod"      : 0.0,
+      "painPerDamage" : 0.0,
+      "healDifficulty": 1.0
+    },
+    {
+      "id"            : "fracture_scar",
+      "name"          : "Old Break",
+      "fromDamageType": "none",
+      "bleedMod"      : 0.0,
+      "painPerDamage" : 0.0,
+      "healDifficulty": 1.0,
+      "structural"    : true
+    },
+    {
+      "id"            : "burn_scar",
+      "name"          : "Old Burn",
+      "fromDamageType": "none",
+      "bleedMod"      : 0.0,
+      "painPerDamage" : 0.0,
+      "healDifficulty": 1.0
+    },
+    {
+      "id"            : "frostbite_scar",
+      "name"          : "Old Frostbite",
+      "fromDamageType": "none",
+      "bleedMod"      : 0.0,
+      "painPerDamage" : 0.0,
+      "healDifficulty": 1.0
+    },
+    {
+      "id"            : "scorch_scar",
+      "name"          : "Old Lightning Scar",
+      "fromDamageType": "none",
+      "bleedMod"      : 0.0,
+      "painPerDamage" : 0.0,
+      "healDifficulty": 1.0
     }
   ]
 }

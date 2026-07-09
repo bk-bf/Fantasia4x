@@ -20,6 +20,32 @@ export interface WoundDef {
   /** Bone/structural wound (fracture): destroying it BREAKS the limb (cripples function) rather than
    *  SEVERING it. Excluded from the isMissing trigger; drives the boneBroken flag instead. */
   structural?: boolean;
+  /** TRAITS §0b — this wound may leave a PERMANENT scar when it fully mends (the organic close-time
+   *  roll in healLimbs). `false`/absent ⇒ never converts on its own (fractures knit clean; scar defs
+   *  are terminal). */
+  canScar?: boolean;
+  /** Multiplier on the scar-formation chance (burns scar worst = 2.0, bruising fades = 0.6). Default 1. */
+  scarChanceMult?: number;
+  /** The permanent scar wound id this wound leaves — both the organic roll and a `wound`-kind trait
+   *  stamp this entry (e.g. `cut` → `cut_scar`). A scar def points at itself / omits it (terminal). */
+  scarType?: string;
+}
+
+/** TRAITS §0b scarring model (wounds.jsonc `scarring`). Governs both the organic close-time roll and the
+ *  magnitude of trait-stamped spawn scars (the old hardcoded SPAWN_WOUND_* tables now live here). */
+export interface ScarringConfig {
+  /** Base scar chance by the wound's PEAK severity (no `destroyed` — a lost part is a stump, not a scar). */
+  baseChanceBySeverity: Record<'minor' | 'serious' | 'critical', number>;
+  /** A perfectly dressed wound scars at `1 − tendReduction` of base (× treatmentQuality). */
+  tendReduction: number;
+  /** Multiplier if the wound ever festered. */
+  infectedMult: number;
+  /** Hard ceiling on the rolled chance. */
+  chanceCap: number;
+  /** Fraction of the part's maxHp a scar permanently shaves, by severity (healed-over ⇒ small). */
+  damageFrac: Record<WoundSeverity, number>;
+  /** Chronic pain a scar contributes, by severity (a lost stump is long-numb ⇒ 0). */
+  pain: Record<WoundSeverity, number>;
 }
 
 export interface HealingConfig {
@@ -63,12 +89,14 @@ export interface CareConfig {
 const data = woundsRaw as unknown as {
   healing: HealingConfig;
   care: CareConfig;
+  scarring: ScarringConfig;
   wounds: WoundDef[];
 };
 
 export const WOUND_DEFS: WoundDef[] = data.wounds;
 export const HEALING_CONFIG: HealingConfig = data.healing;
 export const CARE_CONFIG: CareConfig = data.care;
+export const SCARRING_CONFIG: ScarringConfig = data.scarring;
 
 const BY_DAMAGE_TYPE = new Map<string, WoundDef>(WOUND_DEFS.map((w) => [w.fromDamageType, w]));
 const BY_ID = new Map<string, WoundDef>(WOUND_DEFS.map((w) => [w.id, w]));
@@ -102,6 +130,62 @@ export function severityFromFrac(frac: number): WoundSeverity {
   if (frac >= 0.7) return 'critical';
   if (frac >= 0.4) return 'serious';
   return 'minor';
+}
+
+const SEVERITY_RANK: Record<WoundSeverity, number> = {
+  minor: 0,
+  serious: 1,
+  critical: 2,
+  destroyed: 3
+};
+/** The worse of two severity bands (drives Injury.peakSeverity — the mark tracks the worst it ever was). */
+export function maxSeverity(a: WoundSeverity, b: WoundSeverity): WoundSeverity {
+  return SEVERITY_RANK[a] >= SEVERITY_RANK[b] ? a : b;
+}
+
+/** TRAITS §0b — build a PERMANENT scar Injury of `baseType`'s scar variant at the given PEAK severity.
+ *  Shared by the organic close-time roll (healLimbs) and trait-stamped spawn scars (applyTraitWounds), so
+ *  the scar's HP shave + chronic ache come from one data table (SCARRING_CONFIG) rather than a hardcode. */
+export function makeScarInjury(
+  partId: BodyPartId,
+  baseType: Injury['type'],
+  peak: WoundSeverity,
+  maxHp: number,
+  inflictedAt = 0
+): Injury {
+  const scarType = (woundById(baseType)?.scarType ?? baseType) as Injury['type'];
+  const damage = Math.round(maxHp * (SCARRING_CONFIG.damageFrac[peak] ?? 0) * 10) / 10;
+  return {
+    bodyPart: partId,
+    type: scarType,
+    severity: peak,
+    peakSeverity: peak,
+    damage,
+    bleeding: 0, // healed over long ago
+    painContribution: SCARRING_CONFIG.pain[peak] ?? 0,
+    infected: false,
+    clotProgress: 3, // fully clotted
+    inflictedAt,
+    permanent: true
+  };
+}
+
+/** TRAITS §0b — roll whether a fully-mended wound leaves a scar. Chance = base(peak) × the wound's
+ *  scarChanceMult × tend reduction × infection bump, capped. Returns the scar Injury or null. */
+function rollScarOnHeal(w: Injury, maxHp: number): Injury | null {
+  const wd = woundById(w.type);
+  if (!wd?.canScar) return null;
+  const peak = w.peakSeverity ?? w.severity;
+  const base = SCARRING_CONFIG.baseChanceBySeverity[peak as 'minor' | 'serious' | 'critical'];
+  if (!base) return null; // no scar band for this peak (e.g. a wound that never got past nothing)
+  const tendFactor = 1 - SCARRING_CONFIG.tendReduction * (w.treatmentQuality ?? 0);
+  const infectFactor = w.infected ? SCARRING_CONFIG.infectedMult : 1;
+  const chance = Math.min(
+    SCARRING_CONFIG.chanceCap,
+    base * (wd.scarChanceMult ?? 1) * tendFactor * infectFactor
+  );
+  if (rng.random() >= chance) return null;
+  return makeScarInjury(w.bodyPart, w.type, peak, maxHp, w.inflictedAt);
 }
 
 /** Is this wound currently under active treatment? A higher-quality tend lasts proportionally longer
@@ -179,6 +263,7 @@ export function recomputeWound(
     | 'clotProgress'
     | 'permanent'
     | 'bloodletting'
+    | 'peakSeverity'
   >,
   turn?: number,
   maxHpOverride?: number
@@ -193,6 +278,8 @@ export function recomputeWound(
   const denom = wd?.structural ? boneBreakBudget(partDef, maxHp) : maxHp;
   const frac = denom > 0 ? Math.min(accumDamage / denom, 1) : 0;
   const severity = severityFromFrac(frac);
+  // §0b: track the WORST band the wound ever hit — the close-time scar roll reads this, not the faded final.
+  const peakSeverity = maxSeverity(prev?.peakSeverity ?? severity, severity);
   const clotProgress = prev?.clotProgress ?? 0;
   // Bleed = base × clot-remaining: a fresh wound bleeds full, then tapers as it clots (rolled
   // separately) and stops once dressed or fully clotted — decoupled from the (now weeks-slow) tissue heal.
@@ -243,7 +330,8 @@ export function recomputeWound(
     // scar heal off. Once a scar, always a scar.
     permanent: prev?.permanent,
     // A bleed-wound stays unclottable across merges (same sticky-flag rule as `permanent`).
-    bloodletting: prev?.bloodletting
+    bloodletting: prev?.bloodletting,
+    peakSeverity
   };
 }
 
@@ -265,7 +353,9 @@ export function recomputeWoundInPlace(
   // Structural wounds measure against the bone BREAK budget; soft wounds against the part's full HP.
   const denom = wd?.structural ? boneBreakBudget(partDef, maxHp) : maxHp;
   const frac = denom > 0 ? Math.min(accumDamage / denom, 1) : 0;
-  w.severity = severityFromFrac(frac);
+  const sev = severityFromFrac(frac);
+  w.peakSeverity = maxSeverity(w.peakSeverity ?? sev, sev); // §0b: never lower than the worst it hit
+  w.severity = sev;
   w.damage = accumDamage;
   const remaining = clotRemaining(w);
   // Destroyed part → open-stump gush regardless of wound type (mirrors recomputeWound).
@@ -334,12 +424,15 @@ const UNTENDED_SERIOUS_HEAL_MUL = 0.15;
  * the same ref if nothing changed). Shared by pawns (`healWounds`) and mobs (entityLifecycle's natural
  * heal-off) so both use one mend formula. `untendedSeriousStalls` gates the severity rule (pawns true,
  * mobs false — animals can't dress wounds). A part with no wounds left snaps back to full HP (UI auto-hide).
+ * `canScar` (TRAITS §0b, pawns only) rolls a PERMANENT scar as a wound closes — the mark keeps a small
+ * HP shave + chronic ache; mobs pass false (no scar churn on the hot cull-bound path).
  */
 export function healLimbs(
   limbs: LimbState[],
   baseHeal: number,
   turn: number,
-  untendedSeriousStalls: boolean
+  untendedSeriousStalls: boolean,
+  canScar = false
 ): LimbState[] {
   if (baseHeal <= 0) return limbs;
   let changed = false;
@@ -366,14 +459,25 @@ export function healLimbs(
         const heal = (baseHeal / (woundById(w.type)?.healDifficulty ?? 1)) * tendBoost;
         const newDamage = w.damage - heal;
         if (newDamage <= 0.05) {
-          healed += w.damage; // fully mended — drop the wound
+          // Fully mended — either drop it, or (§0b) leave a permanent scar with a small HP shave.
+          const scar = canScar ? rollScarOnHeal(w, part.maxHp) : null;
+          if (scar) {
+            healed += w.damage - scar.damage; // recovered all but the scar's permanent deficit
+            newWounds.push(scar);
+          } else {
+            healed += w.damage;
+          }
           continue;
         }
         healed += heal;
         newWounds.push(recomputeWound(part.id, w.type, newDamage, w, turn, part.maxHp));
       }
+      // Permanent wounds (scars, stumps) keep the part below full HP — it never rebounds over the deficit.
+      const permanentDamage = newWounds.reduce((s, w) => (w.permanent ? s + w.damage : s), 0);
       const health =
-        newWounds.length === 0 ? part.maxHp : Math.min(part.maxHp, part.health + healed);
+        newWounds.length === 0
+          ? part.maxHp
+          : Math.min(part.maxHp - permanentDamage, part.health + healed);
       // Un-break the bone once the fracture has knit below boneHp (scaled to the part's maxHp).
       const hasBone = PART_DEF_MAP[part.id]?.boneHp != null;
       const fractureW = newWounds.find((w) => woundById(w.type)?.structural);

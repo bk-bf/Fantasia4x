@@ -822,7 +822,7 @@ export function healWounds(pawn: Pawn, turn = 0, buildings?: PlacedBuilding[]): 
   const baseHeal = HEALING_CONFIG.baseHealPerTick * healRate * mult; // part HP / tick, per wound
   if (baseHeal <= 0) return pawn;
 
-  const newLimbs = healLimbs(limbs, baseHeal, turn, true);
+  const newLimbs = healLimbs(limbs, baseHeal, turn, true, true); // pawns scar (§0b)
   if (newLimbs === limbs) return pawn;
 
   let painTotal = 0;
