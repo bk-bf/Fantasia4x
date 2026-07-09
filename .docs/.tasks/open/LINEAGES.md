@@ -27,18 +27,18 @@ seasonal growth events. This replaces the closed nested-`subCapabilities` bundle
 
 Replaces the nested `subCapabilities` on heritage banners. Each is orthogonal:
 
-- [ ] **`lineage?: string[]`** — the lineage pools this trait belongs to (an **array** — Feral Adrenaline
+- [x] **`lineage?: string[]`** — the lineage pools this trait belongs to (an **array** — Feral Adrenaline
       is `["beast","werewolf"]`, both draw it). A member pawn can gain any trait whose `lineage` includes
-      its lineage id.
-- [ ] **`lineageExclusive?: boolean`** (default `true`) — if `false`, the trait can roll **standalone**
+      its lineage id. *(field added; content tagging in Phase 2)*
+- [x] **`lineageExclusive?: boolean`** (default `true`) — if `false`, the trait can roll **standalone**
       from the Culture pool with no parent (the gateway traits: claws, spider-eyes, gills, venom, fur).
-- [ ] **`awakens?: string[]`** — candidate **awakening conditions** (§4) a standalone gateway carries. A
+- [x] **`awakens?: string[]`** — candidate **awakening conditions** (§4) a standalone gateway carries. A
       trait can be a lineage member without being standalone, and standalone without awakening (Feral
       Adrenaline is a shared pool trait, not a gateway).
-- [ ] **`conflictGroup`** on branches (already exists on traits) — mutually-exclusive lineage forks
-      (robust-skin branch vs ranged branch) so a lineage genuinely diverges per pawn.
+- [x] **`conflictGroup?: string`** on branches — mutually-exclusive lineage forks (robust-skin branch vs
+      ranged branch) so a lineage genuinely diverges per pawn. Checked in `gainableMembers`.
 - [ ] Parent marker traits (`beast-heritage`…) shrink to identity markers; their old `effects`/stat
-      riders move onto guaranteed `stat`-kind member traits (kills the last "stat rider on a passive").
+      riders move onto guaranteed `stat`-kind member traits (kills the last "stat rider on a passive"). *(Phase 2)*
 
 ## §3 · Growth-event hook
 
@@ -46,11 +46,14 @@ Every pawn already banks ~4 growth offers/year (3 seasonal + 1 doubled birthday,
 [PawnGrowthService.processDay](../../../src/lib/game/services/PawnGrowthService.ts)). Lineage progression
 rides the SAME event. On each growth event, in priority order:
 
-- [ ] **Awakening meter full?** → grant the lineage parent (the pawn "turns"), grant its **first** lineage
+- [x] **Awakening meter full?** → grant the lineage parent (the pawn "turns"), grant its **first** lineage
       trait immediately (the payoff — awakening must feel rewarding, not anticlimactic), clear the meter.
-- [ ] Else **evolve a staged trait** the pawn has (S1→S2→S3 via `evolvesTo`) — ~10%, checked first /
+- [x] Else **evolve a staged trait** the pawn has (S1→S2→S3 via `evolvesTo`) — ~10%, checked first /
       slightly favoured over new-trait gain.
-- [ ] Else, **if the pawn has a lineage parent**, gain a *new* member trait from that lineage — ~10%.
+- [x] Else, **if the pawn has a lineage parent**, gain a *new* member trait from that lineage — ~10%.
+
+*Implemented: `Lineages.lineageGrowthEvent`, called from `PawnGrowthService.bankOffer` at each growth
+event; a newly-granted trait's one-shot effects (stat/graft/bodyMod) applied by `Pawns.applyGainedTrait`.*
 
 A standalone gateway with no parent can only evolve its own stage (no new-trait gain) until it awakens.
 
@@ -60,20 +63,20 @@ A standalone gateway tracks progress toward **≥2 lineages at once**; the playe
 pawn performs, and whichever meter fills first is the one that awakens (choice of path, not a pre-assigned
 single meter).
 
-- [ ] **Deeds** — a new `pawn.deeds: Record<string, number>` counter map, incremented at the source
-      event (there is no kill/meal counter today — pawns only track `skills`):
+- [x] **Deeds** — `pawn.deeds: Record<string, number>` counter map (field added). Increment hooks at the
+      source event are **Phase 2** (paired with the Beast content that consumes them):
   - raw-meat / carcass eating → in the eat handler (food is meat-category + not cooked; the cooked flag
     already exists on items).
   - kills by creature type → Combat death path (`attacker.deeds['kill:wolf']++`).
   - environment ticks → moonlight (unsheltered + low `ambientLight` + **full-moon phase**, §6), high
     wetness (`needs.wetness > threshold`), water/deep-swamp tile, low-light lurking.
-- [ ] **Targets** roll per pawn within a **high** range (≈2 seasons of deliberate play) so awakening is a
-      committed project, not incidental.
-- [ ] **Regression** — the meter decays a little each day the deed wasn't advanced (track `lastFedDay`),
-      after a grace period; paused while actively progressing. Stop committing → lose progress.
-- [ ] **Reveal** — shown in the info panel only while being fed (like the drying meter), hidden otherwise.
-- [ ] **No creature-awakening** — awakening comes ONLY from a born parent or a standalone gateway. No
-      lineage-S1 on creatures; no pawn awakens to anything without a gateway. Other builds are their own fun.
+- [x] **Targets** roll per pawn within a **high** range (≈2 seasons) — `seedAwakeningPaths` rolls in the
+      awakening def's `range`.
+- [x] **Regression** — the meter decays past a grace window (`advanceAwakeningMeters`, per day); paused
+      while actively progressing.
+- [ ] **Reveal** — shown in the info panel only while being fed (like the drying meter). *(Phase 2 UI)*
+- [x] **No creature-awakening** — awakening comes ONLY from a born parent or a standalone gateway (no
+      lineage-S1 on creatures; `seedAwakeningPaths` only seeds from a pawn's own gateway traits).
 
 **Awakening deeds by lineage** (each gateway maps to ≥2):
 
@@ -173,9 +176,13 @@ Ordered by which lineage forces it:
 
 ## §7 · Build order (acceptance gates)
 
-- [ ] **Phase 0** — finish the §0 trait-schema cleanup (procs, weaponBonus, registry bans, TRAITS ledger).
-- [ ] **Phase 1** — foundation (§6 foundation bullet). `check` + tests green.
-- [ ] **Phase 2** — Beast lineage end-to-end (born + awakened paths, evolve/grow at growth events).
+- [x] **Phase 0** — §0 trait-schema cleanup (procs, weaponBonus, registry bans, TRAITS ledger). 2026-07-09.
+- [-] **Phase 1** — foundation: schema flags, `lineages.jsonc` data, `Lineages.ts` (seed / meter
+      accrual+decay / awaken→evolve→grow), `applyGainedTrait`, wired into `PawnGrowthService`, seeded at
+      pawn-gen; `lineages.test.ts` (5). `check` 0 err, tests green. **Remaining**: deed-source increment
+      hooks + info-panel meter reveal (moved to Phase 2, where the Beast content consumes the deeds).
+- [ ] **Phase 2** — Beast lineage end-to-end: parent + 15 member traits (§5), deed-source hooks, meter
+      reveal UI (born + awakened paths, evolve/grow at growth events).
 - [ ] **Phase 3** — Werewolf (moon phase, transform, blood meter, lose-control hunt).
 - [ ] **Phase 4** — Vampiric (feeding).
 - [ ] **Phase 5** — Amphibian + Arachnid content + silk/silver.
