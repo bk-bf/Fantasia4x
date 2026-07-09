@@ -11,7 +11,7 @@ import type {
   Item,
   ItemInstance,
   DroppedItem,
-  TraitOnHitEffect
+  OnHitCondition
 } from '../core/types';
 import { itemService } from '../services/ItemService';
 import {
@@ -378,12 +378,16 @@ function bloodlettingChance(item: Item | undefined): number | undefined {
   return c && c > 0 ? c : undefined;
 }
 
-/** Summed cultural `weaponBonus.damage` — a multiplier bonus that applies ONLY while a weapon is
- *  equipped (Giant's Grip / Duelist's Blood). 0 for mobs and traitless pawns. */
+/** Summed wielded-weapon damage bonus from traits' `combatMods.melee_damage` (Giant's Grip, Dragon's
+ *  Might…). Each is a multiplier (1.15 = +15%); we sum the deltas so two traits stack additively, as
+ *  before. Applied only while a weapon is equipped. 0 for mobs and traitless pawns. */
 function weaponBonusDamage(attacker: Pawn | Mob): number {
   if (!('traits' in attacker)) return 0;
   let bonus = 0;
-  for (const t of attacker.traits ?? []) bonus += t.weaponBonus?.damage ?? 0;
+  for (const t of attacker.traits ?? []) {
+    const m = t.effects?.combatMods?.melee_damage;
+    if (typeof m === 'number') bonus += m - 1;
+  }
   return bonus;
 }
 
@@ -1368,9 +1372,9 @@ class CombatServiceImpl implements CombatService {
 
   /**
    * Apply every on-hit condition a landed melee blow can inflict: the held/natural weapon's own
-   * `onHitCondition` (rides the swung weapon) PLUS the attacker's cultural trait `onHitCondition`s
-   * (ADR-023: Venom Glands / Flame-Touched "ride your steel", procing on ANY hit regardless of weapon).
-   * Each is rolled independently through the same machinery. No-op when nothing procs / target is down.
+   * `onHitCondition` (rides the swung weapon — including the natural fang/breath items a trait grants).
+   * TRAITS §0: procs live ONLY on the weapon item now, never on the trait, so a venom bite behaves the
+   * same however it was granted. No-op when nothing procs / target is down.
    */
   private applyOnHitEffect(
     state: GameState,
@@ -1380,15 +1384,9 @@ class CombatServiceImpl implements CombatService {
     weaponId: string | undefined,
     pos: { x: number; y: number }
   ): GameState {
-    const effects: TraitOnHitEffect[] = [];
     const weaponEff = weaponId ? itemService.getItemById(weaponId)?.onHitCondition : undefined;
-    if (weaponEff) effects.push(weaponEff);
-    if ('traits' in attacker) {
-      for (const t of attacker.traits ?? []) if (t.onHitCondition) effects.push(t.onHitCondition);
-    }
-    let s = state;
-    for (const eff of effects) s = this.applyOneOnHitEffect(s, eff, targetId, isMob, pos, attacker);
-    return s;
+    if (!weaponEff) return state;
+    return this.applyOneOnHitEffect(state, weaponEff, targetId, isMob, pos, attacker);
   }
 
   /**
@@ -1400,7 +1398,7 @@ class CombatServiceImpl implements CombatService {
    */
   private applyOneOnHitEffect(
     state: GameState,
-    eff: TraitOnHitEffect,
+    eff: OnHitCondition,
     targetId: string,
     isMob: boolean,
     pos: { x: number; y: number },

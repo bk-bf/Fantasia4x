@@ -268,26 +268,6 @@
           tip: `+${m.weightKg} kg body weight — loads the body and slows the pawn.`
         });
     }
-    if (trait.onHitCondition) {
-      const oh = trait.onHitCondition;
-      const oc = oh.condition ? getTransientConditionDef(oh.condition) : undefined;
-      const inflict = oh.condition
-        ? `inflict ${(oc?.name ?? oh.condition.replace(/_/g, ' ')).toLowerCase()}`
-        : 'draw blood';
-      tags.push({
-        label: 'on-hit',
-        value: 'proc',
-        type: 'pos',
-        tip: `${Math.round(oh.chance * 100)}% chance to ${inflict} on any landed melee hit.`
-      });
-    }
-    if (trait.weaponBonus?.damage)
-      tags.push({
-        label: 'weapon',
-        value: `+${Math.round(trait.weaponBonus.damage * 100)}%`,
-        type: 'pos',
-        tip: `+${Math.round(trait.weaponBonus.damage * 100)}% damage with any wielded weapon.`
-      });
     if (trait.blocksSlots?.length)
       tags.push({
         label: 'blocks',

@@ -28,9 +28,9 @@ export interface GrowthOffer {
   rolls: Partial<Record<StatKey, number>>;
 }
 
-/** ADR-029: on-hit CONDITION proc — the ONE shape shared by a trait's `onHitCondition` (procs on any
- *  landed hit, "rides your steel") and a weapon item's `onHitCondition` (rides that weapon's swings).
- *  Combat collects both into one list and applies them through one path. */
+/** ADR-029 / TRAITS §0: on-hit CONDITION proc — carried by a WEAPON item's `onHitCondition` only
+ *  (including the natural fang/breath items a trait grants). Traits no longer carry procs, so the same
+ *  bite behaves identically however it was granted. Rolled per landed hit in Combat.applyOnHitEffect. */
 export interface OnHitCondition {
   /** Transient condition id inflicted on a landed hit. Optional (TRAIT-LIBRARY-EXPANSION §3b): a
    *  feeding weapon may carry only a `bloodDrain` — the roll still gates the drain (and the attacker's
@@ -45,8 +45,6 @@ export interface OnHitCondition {
   /** Optional bloodVolume drain on trigger (feeding / bleed weapons). */
   bloodDrain?: number;
 }
-/** @deprecated ADR-029 rename — use {@link OnHitCondition}. */
-export type TraitOnHitEffect = OnHitCondition;
 
 /** ADR-029: on-hit WOUND proc — flags the physical wound a landed hit opened (parallel to
  *  `OnHitCondition`, but writes to the INJURY layer, not conditionTimers). `wound` names an
@@ -190,10 +188,6 @@ export interface Trait {
   triggeredCondition?: string;
   /** Equipment slots the body forbids — greyed in the gear tab, blocked at equip. */
   blocksSlots?: EquipmentSlot[];
-  /** Procs on ANY landed melee hit regardless of held weapon ("rides your steel"). */
-  onHitCondition?: OnHitCondition;
-  /** Applies only while a weapon is equipped (Giant's Grip, Duelist's Blood). */
-  weaponBonus?: { damage?: number };
   /** legendary only: sub-capabilities, each rolled independently PER PAWN at pawn-gen so two
    *  legendary-blooded pawns are never identical. Expanded into the pawn's trait list. */
   subCapabilities?: Trait[];

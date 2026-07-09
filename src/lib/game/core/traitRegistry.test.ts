@@ -111,11 +111,9 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
         const capable =
           !!t.selfCondition ||
           !!t.triggeredCondition || // a meter-triggered condition (berserker rage) is a capability
-          !!t.onHitCondition ||
           !!t.naturalWeapons?.length || // ADR-029: a natural weapon is a capability
           !!t.naturalArmor ||
           !!t.armorMods?.length ||
-          !!t.weaponBonus ||
           !!t.aura || // §6a: an aura is a capability
           (t.grafts?.length ?? 0) > 0 || // §3d: growing a real limb is a capability
           (t.subCapabilities?.length ?? 0) > 0 ||
@@ -147,21 +145,30 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
     }
   });
 
-  it('TRAIT-LIBRARY-EXPANSION resistance-sourcing rule: an abstract attribute trait never grants a resistance', () => {
-    // Resistances come only from §3 coverings (naturalGear) and passive affinities — a plain
-    // attribute combo drives work/combat stats, nightVision or healRate, never a resistance.
+  it('TRAITS §0: resistances live in the `resistances` block, never in `effects`', () => {
+    // §0a: a resistance is carried by the dedicated `resistances` block on coverings/affinities — NEVER
+    // smuggled into the generic `effects` bag (where it read as a free-floating pawn-wide stat rider).
     const RESISTANCE_KEYS = [
       'fireResistance', 'coldResistance', 'poisonResistance', 'diseaseResistance',
       'mentalResistance', 'lightningResistance', 'shadowResistance', 'wetnessResistance',
       'blunt_resistance', 'cutting_resistance', 'piercing_resistance'
     ];
-    for (const t of ALL) {
-      if (t.kind !== 'attribute') continue;
+    for (const t of ALL)
       for (const k of RESISTANCE_KEYS)
         expect(
           (t.effects as Record<string, unknown>)?.[k],
-          `${t.id} (attribute) grants resistance ${k} — make it a covering or passive affinity`
+          `${t.id} carries resistance ${k} in effects — move it to the \`resistances\` block`
         ).toBeUndefined();
+  });
+
+  it('TRAITS §0: a trait never carries a weapon proc or a raw damage rider (procs live on the weapon item)', () => {
+    // §0 forbidden fields: the old trait-level `onHitCondition` (venom/flame "rides your steel" — a
+    // double-proc that duplicated the fang weapon's own proc) and `weaponBonus` (folded into
+    // `combatMods.melee_damage`). The Trait type no longer declares them; assert no DATA smuggles them.
+    for (const t of ALL) {
+      const raw = t as unknown as Record<string, unknown>;
+      expect('onHitCondition' in raw, `${t.id} carries a trait onHitCondition — procs belong on the weapon item`).toBe(false);
+      expect('weaponBonus' in raw, `${t.id} carries weaponBonus — fold it into combatMods.melee_damage`).toBe(false);
     }
   });
 

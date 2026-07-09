@@ -39,7 +39,9 @@
 //   workQuality; fire/cold/poison/disease/mental/lightning/shadow/wetnessResistance + healRate; the three
 //   physical *_resistance keys; nightVision. "selfCondition" links a capability trait to its permanent
 //   condition PILL (which carries grantsNaturalWeapon/grantsNaturalArmor/hostParts). "bodyMods" is the
-//   bodyMod payload; "wounds" the wound payload; "blocksSlots"/"onHitCondition"/"weaponBonus"/"subCapabilities".
+//   bodyMod payload; "wounds" the wound payload; "blocksSlots"/"subCapabilities". (§0: procs live on the
+//   weapon item, never the trait; a wielded-damage bonus is combatMods.melee_damage; resistances are the
+//   `resistances` block — NOT effects.)
 [
     // ══ CULTURAL · MUNDANE — the physiology majority (small quirks, many negative) ═══
     // — small positives / trade-offs (pure core-stat → generic names) —
@@ -630,7 +632,6 @@
         "description"  : "Toxins lace every strike, even a held blade carries the poison.",
         "flavorLine"   : "their touch carries a slow, patient poison",
         "naturalWeapons": ["serpent-fangs"],
-        "onHitCondition"  : {"condition": "envenomed", "chance": 0.35, "durationHours": 2, "resist": "poison_resistance"},
         "effects": {}, "resistances": {"poison": 0.3}
     },
     {
@@ -654,8 +655,8 @@
         "rarity"       : "rare",
         "kind"         : "passive",
         "name"         : "Flame Touched",
-        "description"  : "Smouldering skin, blows land alight, and neither fire nor frost bites deep.",
-        "flavorLine"   : "warmth pours off their skin even in the deepest frost",        "onHitCondition"  : {"condition": "burning", "chance": 0.3, "durationHours": 1, "resist": "fire_resistance"},
+        "description"  : "Smouldering skin that neither fire nor frost bites deep.",
+        "flavorLine"   : "warmth pours off their skin even in the deepest frost",
         "effects": {}, "resistances": {"fire": 0.3, "cold": 0.15}
     },
     {
@@ -705,8 +706,7 @@
         "description"  : "A battle-fury in the veins: when the pain of a fight bites deep it looses a devastating red rage — then leaves the body spent.",
         "flavorLine"   : "a red fury waits just beneath their calm, eager to be loosed",
         "triggeredCondition": "berserk",
-        "weaponBonus"  : {"damage": 0.15},
-        "effects"      : {}
+        "effects"      : {"combatMods": {"melee_damage": 1.15}}
     },
     {
         "id"         : "stone-bones",
@@ -818,8 +818,7 @@
                 "kind"       : "passive",
                 "name"       : "Dragon's Might",
                 "description": "Draconic strength behind every wielded blow.",
-                "weaponBonus": {"damage": 0.2},
-                "effects"    : {"strengthBonus": 1}
+                "effects"    : {"strengthBonus": 1, "combatMods": {"melee_damage": 1.2}}
             },
             {
                 "id"           : "fire-breath",
@@ -875,8 +874,7 @@
                 "kind"       : "passive",
                 "name"       : "Undying Vigor",
                 "description": "Unnatural strength behind a wielded blade.",
-                "weaponBonus": {"damage": 0.1},
-                "effects"    : {"strengthBonus": 1}
+                "effects"    : {"strengthBonus": 1, "combatMods": {"melee_damage": 1.1}}
             }
         ]
     },
@@ -2713,12 +2711,6 @@
         "flavorLine"   : "their bite leaves a numb, spreading ache",
         "naturalWeapons": ["serpent-fangs"],
         "evolvesTo"    : "venomous",
-        "onHitCondition"  : {
-            "condition"    : "envenomed",
-            "chance"       : 0.2,
-            "durationHours": 1.5,
-            "resist"       : "poison_resistance"
-        },
         "effects": {}, "resistances": {"poison": 0.15}
     },
     {
@@ -2731,7 +2723,6 @@
         "description": "Glands running with a killing venom, few shrug off the bite, and even a held blade carries it.",
         "flavorLine": "green-black stains follow the lines of their teeth",
         "naturalWeapons": ["deathly-fangs"],
-        "onHitCondition": {"condition": "envenomed", "chance": 0.6, "durationHours": 3, "resist": "poison_resistance"},
         "effects": {}, "resistances": {"poison": 0.5}
     },
     {
@@ -3940,8 +3931,7 @@
                 "kind"       : "passive",
                 "name"       : "Crushing Grip",
                 "description": "A grip that splits hafts, stone weight behind every wielded blow.",
-                "weaponBonus": {"damage": 0.2},
-                "effects"    : {"strengthBonus": 1}
+                "effects"    : {"strengthBonus": 1, "combatMods": {"melee_damage": 1.2}}
             },
             {
                 "id"           : "tremor-sense",
@@ -4143,12 +4133,6 @@
                 "name"         : "Venom Bite",
                 "description"  : "Venom glands behind the teeth, a patient poisoned bite.",
                 "naturalWeapons": ["serpent-fangs"],
-                "onHitCondition"  : {
-                    "condition"    : "envenomed",
-                    "chance"       : 0.35,
-                    "durationHours": 2,
-                    "resist"       : "poison_resistance"
-                },
                 "effects": {}, "resistances": {"poison": 0.3}
             },
             {
@@ -4305,8 +4289,7 @@
                 "kind"       : "passive",
                 "name"       : "Giant's Grip",
                 "description": "Any wielded weapon lands like a felling maul.",
-                "weaponBonus": {"damage": 0.3},
-                "effects"    : {}
+                "effects"    : {"combatMods": {"melee_damage": 1.3}}
             },
             {
                 "id"         : "massive-frame",
