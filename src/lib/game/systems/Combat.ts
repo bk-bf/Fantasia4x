@@ -392,6 +392,10 @@ function creditKillDeeds(attacker: Pawn | Mob, victim: Mob, weaponId?: string): 
   const item = weaponId ? itemService.getItemById(weaponId) : undefined;
   const unarmed = !weaponId || item?.category === 'natural_weapon';
   if (unarmed && (def.bodyScale ?? 1) >= 1.3) bump('unarmedBigKill'); // beast
+  // Arachnid hunter's-patience deeds: the prey died while envenomed / while held fast.
+  const timers = victim.conditionTimers;
+  if (timers?.envenomed && timers.envenomed > 0) bump('venomKills');
+  if (timers?.ensnared && timers.ensnared > 0) bump('ensnaredKills');
 }
 
 /** Summed wielded-weapon damage bonus from traits' `combatMods.melee_damage` (Giant's Grip, Dragon's
@@ -1478,6 +1482,18 @@ class CombatServiceImpl implements CombatService {
     // by chain-feeding; it must lapse before another feed rearms it. Shared by every feeding weapon
     // (bloodsucking fangs / proboscis / vampiric bites), pawn and mob alike.
     if (fed && attacker && attacker.isAlive !== false) {
+      // LINEAGES §4: a PAWN drinking HUMANOID blood feeds the vampiric awakening deed.
+      if (!('creatureId' in attacker)) {
+        const humanoidTarget =
+          !isMob ||
+          ['humanoid', 'winged_humanoid'].includes(
+            getCreatureById((updated as Mob).creatureId)?.limbMap ?? ''
+          );
+        if (humanoidTarget) {
+          const deeds = ((attacker as Pawn).deeds ??= {});
+          deeds.drewHumanoidBlood = (deeds.drewHumanoidBlood ?? 0) + 1;
+        }
+      }
       const feastDef = getTransientConditionDef(FEASTED_CONDITION);
       const already = (attacker.conditionTimers ?? {})[FEASTED_CONDITION] ?? 0;
       if (feastDef && already <= 0) {

@@ -749,6 +749,15 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // Trait-driven meter triggers (berserker rage on pain) — stamp the timed condition on the rising edge.
   stampTriggeredConditions(pawn);
 
+  // LINEAGES §4 — hourly environmental deed accrual, ONLY for pawns carrying an awakening meter (rare)
+  // on a sparse ~1-in-game-hour cadence (750 ticks): allocation-free and invisible on the common path.
+  if (pawn.lineagePaths?.length && gameState.turn % 750 === 0) {
+    if ((pawn.needs?.wetness ?? 0) >= 50) {
+      const deeds = (pawn.deeds ??= {});
+      deeds.wetHours = (deeds.wetHours ?? 0) + 1; // "keep your skin soaked" (amphibian)
+    }
+  }
+
   // ── Persist updated condition/blood state ──────────────────────────────────
   // ADR-002 amendment (hot per-tick, behind the worker): the common (non-lethal) path mutates the
   // live pawn IN PLACE rather than rebuilding the whole pawns array each pawn each tick — that

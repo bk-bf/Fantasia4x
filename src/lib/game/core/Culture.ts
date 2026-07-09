@@ -114,7 +114,7 @@ const CONFLICT_GROUPS: string[][] = [
   ['heavy-boned', 'stone-bones', 'brittle-boned', 'hollow-boned'], // one skeleton density
   ['budding-wings', 'wings', 'great-wings', 'gliding-membrane'], // one back
   // §6a auras — a pawn carries AT MOST ONE aura (balance: rare, lineage-gated, exclusive).
-  ['aura-fortitude', 'aura-insight', 'spore-cloud', 'static-aura', 'dread-aura', 'aura-might', 'plague-vector', 'unnerving-aura'],
+  ['aura-fortitude', 'aura-insight', 'spore-cloud', 'static-aura', 'dread-aura', 'aura-might', 'plague-vector', 'unnerving-aura', 'pack-fury'],
   // §6b trigger pairs — a pawn is never both the blessed and cursed side of one affliction.
   ['hydro-vigor', 'waterlogged'],
   ['coldsurge', 'frostbrittle'],

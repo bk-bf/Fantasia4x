@@ -136,6 +136,7 @@ export function selectFoodForMeal(
     const def = ITEM_DEF_BY_ID.get(id);
     const nutrition = edibleNutrition(def); // carcass-aware (raw carcasses derive nutrition from mass)
     if (def?.category !== 'food' && nutrition <= 0) continue;
+    if (!pawnDietAllows(pawn, def)) continue; // LINEAGES §5: a carnivore doesn't see plants as food
     options.push({ id, available: amount, nutrition });
   }
 
@@ -173,7 +174,12 @@ export function findNearestFoodDrops(
   if (!pos) return [];
   const cands = (gs.droppedItems ?? []).filter(
     (d) =>
-      d.stored && d.quantity > 0 && !d.reservedFor && !d.forbidden && isAllowedFoodId(gs, d.resourceId)
+      d.stored &&
+      d.quantity > 0 &&
+      !d.reservedFor &&
+      !d.forbidden &&
+      isAllowedFoodId(gs, d.resourceId) &&
+      pawnDietAllows(pawn, ITEM_DEF_BY_ID.get(d.resourceId)) // LINEAGES §5: never fetch off-diet food
   );
   cands.sort((a, b) => manhattan(a.x, a.y, pos.x, pos.y) - manhattan(b.x, b.y, pos.x, pos.y));
   return cands
@@ -297,6 +303,17 @@ export function applyMealBuff(p: Pawn, meal: MealPortion[]): void {
       [buff.condition]: Math.max(p.conditionTimers?.[buff.condition] ?? 0, dur)
     };
   }
+}
+
+/** LINEAGES §5 — a pawn's hard diet gate (Carnivore's Gut). No restriction ⇒ eats anything edible;
+ *  'carnivore' ⇒ only raw meat + carcasses register as food at all. Applied in meal selection AND the
+ *  food-drop fetch, so a carnivore never hauls bread it can't stomach (and can starve in a plant larder —
+ *  the intended tension). */
+export function pawnDietAllows(pawn: Pawn, def: { id?: string; category?: string } | undefined): boolean {
+  const restriction = (pawn.traits ?? []).find((t) => t.dietRestriction)?.dietRestriction;
+  if (!restriction || !def) return true;
+  // carnivore: meat category (raw/salted/dried flesh) or a whole carcass.
+  return def.category === 'meat' || isCarcass(def);
 }
 
 /** LINEAGES §4 — carnivore meat/carcass eating feeds the Beast/Werewolf awakening deeds. Raw meat is the

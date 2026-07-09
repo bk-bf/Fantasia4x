@@ -12,7 +12,9 @@
     { "id": "beast",     "name": "Beast",     "parent": "beast-heritage",     "description": "Feral predator blood — always-on power at the cost of a wild life." },
     { "id": "werewolf",  "name": "Werewolf",  "parent": "werewolf-heritage",  "description": "Moon-touched blood that turns on full-moon nights." },
     { "id": "amphibian", "name": "Amphibian", "parent": "amphibian-heritage", "description": "Deep aquatic lineage, at home in water, parched in dry air." },
-    { "id": "arachnid",  "name": "Arachnid",  "parent": "arachnid-heritage",  "description": "Spider blood — venom, extra eyes, and a hunter's patience." },
+    // parent is the CLEAN marker `arachnid-blood`, not the old `arachnid-heritage` subCapability
+    // bundle — that bundle flattens into this lineage with the old-heritage pass (LINEAGES-II).
+    { "id": "arachnid",  "name": "Arachnid",  "parent": "arachnid-blood",  "description": "Spider blood — venom, extra eyes, and a hunter's patience." },
     { "id": "vampiric",  "name": "Vampiric",  "parent": "vampiric-heritage",  "description": "The blood-curse — a mighty pawn that must feed on its own kind." }
   ],
   // `deed` is the pawn.deeds counter incremented at the source event; `range` is [min,max] for the

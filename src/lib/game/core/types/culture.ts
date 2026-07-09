@@ -152,6 +152,10 @@ export interface Trait {
    *  one trait from a given `conflictGroup` (robust-skin branch vs ranged branch), so the tree forks
    *  per pawn. Checked when GROWING a member trait at a growth event. */
   conflictGroup?: string;
+  /** LINEAGES §5 — a hard diet gate (Carnivore's Gut): the pawn will only EAT matching food.
+   *  'carnivore' = raw meat + carcasses only; plants/bread simply aren't food to this body. Filtered in
+   *  selectFoodForMeal + the food-drop fetch, so a mismatched larder genuinely starves the pawn. */
+  dietRestriction?: 'carnivore';
   /** TRAIT-LIBRARY-EXPANSION §3a: this trait's rung on its 3-stage natural-gear line (S1 budding →
    *  S3 apex), chained by `evolvesTo`. Data flag only for now — a later age/ritual system walks it. */
   stage?: 1 | 2 | 3;

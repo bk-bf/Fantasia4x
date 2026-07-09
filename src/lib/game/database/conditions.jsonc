@@ -1273,6 +1273,56 @@
         "charSpans"  : [ {"sheet": "items", "id": 195} ],
         "modifiers"  : {}
     },
+    // ── LINEAGES §5 — lineage-trait conditions (the granted object carries the numbers, §0) ──────────
+    {
+        "id"         : "bounding_gait",
+        "name"       : "Bounding Gait",
+        "flags"      : ["cultural", "passive"],
+        "transient"  : true,
+        "description": "A loping, ground-eating stride, faster across country than any walk.",
+        "color"      : "#8fbf5a",
+        "charSpans"  : [ {"sheet": "font", "id": 62} ],
+        "modifiers"  : {"moveSpeed": 1.15}
+    },
+    {
+        // Can't Settle — ACTIVE while the pawn is under a roof (the reversed-shelter cost): rest sours
+        // and work drags indoors; step outside and it lifts.
+        "id"         : "restless_under_roof",
+        "name"       : "Restless",
+        "flags"      : ["cultural", "passive"],
+        "transient"  : true,
+        "description": "Walls press close and sleep comes thin — the body wants open sky over its head.",
+        "color"      : "#c8a030",
+        "charSpans"  : [ {"sheet": "font", "id": 126} ],
+        "activateWhen": {"unsheltered": false},
+        "modifiers"  : {"fatigueRate": 1.2, "workEfficiency": 0.95}
+    },
+    {
+        // Pack Fury — stamped on ALLIES within the bearer's aura radius while a fight is on.
+        "id"         : "pack_fury",
+        "name"       : "Pack Fury",
+        "flags"      : ["cultural", "combat"],
+        "transient"  : true,
+        "floater"    : true,
+        "description": "A packmate's ferocity beside them puts iron in the arm and fire in the blood.",
+        "color"      : "#c05a3a",
+        "charSpans"  : [ {"sheet": "items", "id": 211} ],
+        "priority"   : 30,
+        "modifiers"  : {"strength": 1.1}
+    },
+    {
+        // Parched Skin — ACTIVE while the amphibian's skin has gone dry (low wetness): the body wilts
+        // until it is soaked again.
+        "id"         : "parched_skin",
+        "name"       : "Parched",
+        "flags"      : ["cultural", "environmental"],
+        "transient"  : true,
+        "description": "Amphibian skin gone papery and tight — strength and quickness drain until it is soaked again.",
+        "color"      : "#c8a030",
+        "charSpans"  : [ {"sheet": "font", "id": 247} ],
+        "activateWhen": {"need": "wetness", "atOrBelow": 10},
+        "modifiers"  : {"strength": 0.9, "dexterity": 0.9}
+    },
     // ── Passive affinity pills (resistances live on the TRAIT; the pill is the readout) ──
     {
         "id"         : "toxin_immune",
