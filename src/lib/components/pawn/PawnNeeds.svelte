@@ -3,6 +3,7 @@
   import { getNeedColor, getNeedDescription } from '$lib/components/util/pawnUtils';
   import { getActiveConditionViews } from '$lib/components/util/conditionInfo';
   import ConditionChips from './ConditionChips.svelte';
+  import AwakeningMeters from './AwakeningMeters.svelte';
 
   export let pawn: Pawn;
   export let gameState: GameState;
@@ -122,6 +123,8 @@
   {/if}
 
   <ConditionChips views={conditionViews} />
+
+  <AwakeningMeters {pawn} />
 
   <!-- TODO: draft-control mode will re-enable direct REST/EAT/WORK/IDLE commands later.
   <div class="btn-row">

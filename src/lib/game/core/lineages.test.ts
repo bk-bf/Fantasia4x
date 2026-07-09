@@ -62,6 +62,18 @@ describe('LINEAGES §4 awakening meters', () => {
     expect(beast.value).toBeLessThan(10);
   });
 
+  it('a FULL meter LOCKS — it never decays, even after long idle (awaits the growth event)', () => {
+    const p = pawn({ traits: [clawGateway], deeds: {} });
+    seedAwakeningPaths(p);
+    const beast = p.lineagePaths!.find((x) => x.lineage === 'beast')!;
+    p.deeds!.ateRawMeat = beast.target; // fill it exactly
+    advanceAwakeningMeters(p, 100);
+    expect(beast.value).toBe(beast.target);
+    // Many idle days later → still full (locked), not decayed.
+    advanceAwakeningMeters(p, 500);
+    expect(beast.value).toBe(beast.target);
+  });
+
   it('a full meter AWAKENS the pawn: grants the lineage parent + its first member', () => {
     // Inject a minimal beast lineage into the pool via the pawn's own gateway → parent + member.
     const parent: Trait = { id: 'beast-heritage', name: 'Beast', description: '', kind: 'passive' } as Trait;

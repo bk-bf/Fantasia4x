@@ -91,6 +91,7 @@ export function advanceAwakeningMeters(pawn: Pawn, dayIndex: number): void {
   const paths = pawn.lineagePaths;
   if (!paths?.length) return;
   for (const p of paths) {
+    if (p.value >= p.target) continue; // LOCKED at full — never decays; awaits the next growth event
     const now = pawn.deeds?.[p.deed] ?? 0;
     const fresh = now - p.seen;
     if (fresh > 0) {
