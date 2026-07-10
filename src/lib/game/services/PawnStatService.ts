@@ -40,6 +40,7 @@ const TRANSIENT_CONDITIONS_DB = ALL_CONDITION_DEFS.filter(
   (d): d is TransientConditionDef => d.transient === true
 );
 const ITEMS_DB = itemsData as unknown as Item[];
+const ITEM_BY_ID = new Map(ITEMS_DB.map((i) => [i.id, i]));
 
 // ── Stat definitions loaded from JSONC ────────────────────────────────────
 type StatDef = {
@@ -474,6 +475,17 @@ function traitCombatMult(pawn: Pawn | Mob, statId: string): number {
   return mult;
 }
 
+// ── Equipped-weapon attack speed (weapon → attack_speed stat) ────────────────
+// The equipped mainHand weapon's own `attackSpeed` multiplies the attack_speed stat, so a heavy maul
+// (0.65) genuinely swings slower and a dagger (1.5) faster — the wired path from a weapon's heft into
+// cadence (Combat's attack interval reads this stat). 1.0 when unarmed / no weapon / for mobs, and for
+// natural attacks (every natural weapon sits at 1.0), so nothing there shifts.
+function equippedWeaponSpeedMult(pawn: Pawn | Mob): number {
+  const mh = (pawn as Pawn).equipment?.mainHand;
+  if (!mh) return 1;
+  return ITEM_BY_ID.get(mh.itemId)?.weaponProperties?.attackSpeed ?? 1;
+}
+
 // ── Cultural resistance bonuses (Culture overhaul) ────────────────────────────────
 // Trait resistance effects add on top of the matching *_resistance stat formula, so a
 // culture's biology flows into both combat mitigation AND condition onset — e.g. coldResistance
@@ -738,7 +750,9 @@ export class PawnStatServiceImpl implements PawnStatService {
     // Trait combatMods multiply a combat stat's formula output (×1 for every other category);
     // trait resistances stay an ADDITIVE bridge on the 0-baseline resistance stats.
     return (
-      evaluateFormula(def.formula, pawn, capacities, skill) * traitCombatMult(pawn, statId) +
+      evaluateFormula(def.formula, pawn, capacities, skill) *
+        traitCombatMult(pawn, statId) *
+        (statId === 'attack_speed' ? equippedWeaponSpeedMult(pawn) : 1) +
       traitResistanceBonus(pawn, statId)
     );
   }

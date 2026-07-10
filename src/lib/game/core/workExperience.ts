@@ -22,19 +22,22 @@ export const MAX_WORK_LEVEL = 50;
  *  fixtures), so their work modifiers stay neutral rather than novice-crippled. */
 export const NEUTRAL_WORK_LEVEL = 25;
 
-/** Work categories that carry an experience level. Hunting is excluded — it resolves as combat,
- *  so combat stats (not a work skill) decide it. */
+/** Work categories that are NOT learned skills (no experience level): hunting resolves as combat,
+ *  hauling is carry-capacity + movement driven. Kept in sync with `workUtils.NON_SKILL_TASKS` (UI). */
+export const NON_SKILL_CATEGORIES = new Set(['hunting', 'hauling']);
+
+/** Work categories that carry an experience level (everything except the non-skill tasks above). */
 export const SKILL_CATEGORIES: readonly string[] = WORK_CATEGORIES.filter(
-  (c) => c.id !== 'hunting'
+  (c) => !NON_SKILL_CATEGORIES.has(c.id)
 ).map((c) => c.id);
 
 /** Subjob stat prefix → the parent category whose skill LEVEL it trains and reads (mirrors the
- *  per-axis stats.jsonc fallback: a repair runs at `repair_speed` but on the construction skill). */
+ *  per-axis stats.jsonc fallback: a repair runs at `repair_speed` but on the construction skill).
+ *  `fetch`'s parent `hauling` is NOT a skill, so fetch has no entry here — it reads no level. */
 const SUBJOB_SKILL_PARENT: Record<string, string> = {
   repair: 'construction',
   deconstruct: 'construction',
-  refuel: 'construction',
-  fetch: 'hauling'
+  refuel: 'construction'
 };
 
 /** The skill category behind a work-stat prefix (`repair` → `construction`, `crafting` → itself). */

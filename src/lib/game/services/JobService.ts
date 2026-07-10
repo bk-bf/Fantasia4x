@@ -18,7 +18,7 @@
 import type { DesignationType, DroppedItem, GameState, Job, JobDef, Pawn } from '../core/types';
 import { manhattan } from '../core/distance';
 import { WORK_CATEGORIES } from '../core/Work';
-import { applyWorkXp, workXpForJob } from '../core/workExperience';
+import { applyWorkXp, workXpForJob, SKILL_CATEGORIES } from '../core/workExperience';
 import jobsData from '../database/jobs.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
 import { itemService } from './ItemService';
@@ -396,12 +396,13 @@ class JobServiceImpl {
 
   /** WORK-EXPERIENCE: finishing a colony job teaches its work category — the ONE learn-by-doing
    *  hook (every job type completes through _completeJob). XP scales with the job's authored work;
-   *  levels 1–50 drive the work stats via the SKILL token. Hunting resolves as combat (no work
-   *  skill); passive furnace output has no pawn and never reaches here. */
+   *  levels 1–50 drive the work stats via the SKILL token. Only LEARNED skills gain XP: hunting
+   *  (combat) and hauling (carry + movement) are not skills; passive furnace output has no pawn and
+   *  never reaches here. */
   private _grantWorkXp(job: Job, state: GameState): GameState {
     if (!job.claimedBy) return state;
     const category = this.getJobWorkCategory(job, state);
-    if (!category || category === 'hunting') return state;
+    if (!category || !SKILL_CATEGORIES.includes(category)) return state;
     const idx = state.pawns.findIndex((p) => p.id === job.claimedBy);
     if (idx < 0) return state;
     const next = applyWorkXp(state.pawns[idx], category, workXpForJob(job.workRequired));

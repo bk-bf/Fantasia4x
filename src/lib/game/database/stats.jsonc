@@ -67,7 +67,7 @@
         "category"   : "combat",
         "primaryStat": "dexterity",
         "formula"    : "(1.0 + (DEX − 10) × 0.03) × manipulation",
-        "description": "attack cadence multiplier, higher = faster strikes (× manipulation)"
+        "description": "attack cadence multiplier, higher = faster strikes (× manipulation, × the equipped weapon's own attackSpeed — a light blade darts, a heavy maul swings slow)"
     },
     // ── Ranged — PER = precision axis (aim_accuracy + aim_range), DEX = speed axis (aim_speed +
     //    reload_speed); STR is melee/throw power only, never an aiming stat.
@@ -489,19 +489,25 @@
         "description": "meal nutrition / taste (× ((manipulation + sight + consciousness) / 3))"
     },
     {
+        // WORK-EXPERIENCE: hauling is NOT a learned skill (no SKILL token, no experience level) —
+        // it's carrying, driven by carry capacity (STR) and movement (DEX), so core stats are the
+        // FULL driver here, not a tertiary supplement. × ((moving + manipulation) / 2): legs to walk,
+        // hands to hold.
         "id"         : "hauling_speed",
         "category"   : "work",
         "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((moving + manipulation) / 2)",
-        "description": "hauling speed (× ((moving + manipulation) / 2))"
+        "formula"    : "(1.0 + (STR − 10) × 0.03 + (DEX − 10) × 0.02) × ((moving + manipulation) / 2)",
+        "description": "hauling speed — carry capacity (STR) + movement (DEX), × ((moving + manipulation) / 2)"
     },
     {
         // Hauling SUBJOB — `haul`/Haul itself inherits hauling_* (no entry needed).
+        // Hauling subjob — also a non-skill carry task (no SKILL token). Nimble shuttle runs favour
+        // movement (DEX) over load (STR), the inverse lean of bulk hauling.
         "id"         : "fetch_speed",
         "category"   : "work",
         "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((moving + manipulation) / 2)",
-        "description": "fetch speed, nimble shuttle runs of reserved inputs to a station favour quick hands (× ((moving + manipulation) / 2)); no quality axis."
+        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (STR − 10) × 0.02) × ((moving + manipulation) / 2)",
+        "description": "fetch speed, nimble shuttle runs of reserved inputs to a station favour movement over load (× ((moving + manipulation) / 2)); no quality axis."
     },
     {
         "id"         : "planting_speed",
