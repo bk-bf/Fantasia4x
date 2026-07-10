@@ -116,10 +116,15 @@ Green: `pnpm check` 0 errors (732 files), the combat/spawn suites + new `lootPoo
   into `ItemInstance`s); combat treats a geared mob like a pawn; gear wears/shatters (`applyGearWear`
   generalised to `Pawn|Mob` via CoW `spliceEntity`); `dropCarcass`→`dropMobGear` drops survivors with
   their instance. Id/slot typos fail loud at load. `equipment` in `MOB_COLD`.
-- [x] **§2c wielding requirement (the "special pawn" gate).** `weaponProperties.wieldRequirement:
-  {strength}`; `attackerProfile` → `applyWieldRequirement` penalises an under-strength wielder by the
-  STR shortfall — `−3 accuracy/pt`, `×(1+0.15·shortfall)` stamina, `×(1−0.04·shortfall)` damage (floor
-  0.5×). Applies to pawns AND mobs (an orc clears its own bar; a colonist looting an orc cleaver doesn't).
+- [x] **§2c wielding requirement (the "special pawn" gate) — wired via a CONDITION.**
+  `weaponProperties.wieldRequirement: {strength}`; a pawn below the bar is driven the staged
+  **`overmatched`** condition (`conditions.jsonc` — unwieldy/overmatched/flailing) each tick from the
+  STR shortfall (`needs.driveWieldStrain`, called in `PawnStateMachine` beside `driveEncumbrance`). Its
+  modifiers (hitChance/strength/dodge/fatigueRate) flow into combat through the SAME
+  `conditionStatMultipliers`/`conditionHitMult`/`conditionNeedMultipliers` reads as encumbrance — so
+  softer blows, worse aim, easier to hit, and faster fatigue (drains stamina in a fight), no inline
+  combat math. **Player-visible** (a pill + floater), which also closes the legibility TODO. Clears on
+  unequip / a strong enough pawn. (Mobs always meet their own bar, so only looting colonists get it.)
 - [x] **§2c example CREATURE gear + pools authored** (`items.jsonc` + `lootpool.jsonc`, wired to
   `orc_reaver`/`goblin`): ORC `orc_cleaver`/`orc_maul`/`orc_serrated_axe` (heavy, `wieldRequirement`
   16–22, high `armorDamage`) + `orc_scrap_plate`; GOBLIN `goblin_shank`/`goblin_hooked_spear`/`goblin_net`
@@ -133,8 +138,9 @@ Green: `pnpm check` 0 errors (732 files), the combat/spawn suites + new `lootPoo
 - [ ] **Threat model sees equipment** — `threat-model.mjs` scores natural weapons only, so an armed orc
   reads weaker than it fights. Fold the lootpool's expected weapon into the estimate (or accept the
   annotation is "unarmed baseline" and note it). Low priority — the annotations are informational.
-- [ ] **Wield-penalty legibility (UI)** — surface *why* a pawn swings badly (a "too heavy" marker on the
-  weapon/pawn) so the player learns to assign heavy loot to bruisers. Deferred to a UI pass.
+- [x] **Wield-penalty legibility** — solved by the condition move: an under-strength wielder shows the
+  `overmatched` pill + floater, so the player sees *why* the pawn swings badly (assign heavy loot to
+  bruisers). (Was deferred; the `conditions.jsonc` wiring gave it for free.)
 - [ ] Add an **ADR** for the variant-gear system (mob equipment, lootpool loader, per-spawn stat rolls,
   wielding requirement, monster-vs-human gear split) when the data lands and the design locks.
 
@@ -323,7 +329,7 @@ Everything else reuses existing `items.jsonc` ids. ✅ = authored 2026-07-11.
 **Phase 2 acceptance:**
 - [x] Engine: two spawns of the same creature differ in stats/armour — ALL creatures now roll from `statRanges` bands (converted 2026-07-11; midpoints = old values, `threat:check` unchanged).
 - [x] Engine: a geared humanoid fights with its weapon + worn armour and drops a subset on death (drawLoadout → equip → dropMobGear; combat reads `equipment` unchanged). Live on `goblin` (`goblin_warband`) + `orc_reaver` (`orc_warband`).
-- [x] Engine: an under-strength colonist wielding looted monster gear is visibly punished (`wieldRequirement` — accuracy/stamina/damage; `wieldRequirement.test.ts`), while the monster wields it freely.
+- [x] Engine: an under-strength colonist wielding looted monster gear is visibly punished via the `overmatched` condition (aim/damage/dodge/fatigue + a pill; `wieldRequirement.test.ts`), while the monster wields it freely.
 - [ ] Data: the full 5×3 ladders authored into `creatures.jsonc` + `lootpool.jsonc` + remaining §2f items; a playtest confirms goblins read weird/annoying, orcs read heavy, and orc loot only pays off on a strong pawn.
 
 ---
