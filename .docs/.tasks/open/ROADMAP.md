@@ -65,6 +65,7 @@ Layer, Research Enhancement, and the deferred Entity Spawning C–E content.
 | 8  | **Social Layer** (relationships, mood depth, death mood events, pawn traits)                                                                                                                                           | [ ]            | [SOCIAL-LAYER.md](SOCIAL-LAYER.md)                                                                        |
 | 9  | **Research Enhancement** (three-tier, lore-item driven; after item DB)                                                                                                                                                 | [ ]            | [RESEARCH-ENHANCEMENT.md](RESEARCH-ENHANCEMENT.md)                                                        |
 | 10 | **Magic & Skills** (depth layer; **deferred behind Entity Spawning C–E**)                                                                                                                                              | [ ] deferred   | [MAGIC-SKILLS.md](MAGIC-SKILLS.md)                                                                        |
+| 11 | **Stealth** (size-driven sneak value vs creature detection; hit-and-run assassin; beast stealth↔armour split; melee + ranged precision classes) — Phase 1 pawns only                                                    | [ ] design locked 2026-07-10 | [STEALTH.md](STEALTH.md)                                                                    |
 
 ### Spec Dependency Matrix
 
