@@ -210,6 +210,33 @@ export interface PawnState {
   isEating: boolean;
 }
 
+/** A single player-issued order — the discriminated union that drives both the drafted executor
+ *  (`_processDraftOrders`) and, when the pawn is undrafted, the FSM (`handleIdle`). Used as the
+ *  `draftTarget` head and as the `manualQueue` entries. `forceJob`/`forceConsume`/`drink` are the
+ *  "force a colony job / eat this / drink now" verbs (DRAFTED-JOB-ORDERS §3.1). */
+export type PawnOrder =
+  | { type: 'move'; x: number; y: number }
+  | {
+      type: 'attack';
+      targetId: string;
+      targetType: 'pawn' | 'mob';
+      /** How to engage: 'melee' forces a ranged pawn to close and swing; 'ranged'/undefined =
+       *  auto (shoot from range if it has a ranged weapon + viable ammo, else close to melee). */
+      mode?: 'ranged' | 'melee';
+    }
+  | { type: 'haul'; x: number; y: number }
+  | { type: 'equip'; dropId: string; x: number; y: number; slot?: EquipmentSlot | 'inventory' }
+  | { type: 'rescue'; victimId: string; auto?: boolean }
+  | { type: 'tend'; patientId: string; nextTendTurn?: number }
+  /** Claim + work a specific ALREADY-GENERATED colony job to completion (harvest/craft/build/
+   *  demolish/repair/refuel/plant/haul). Drafted: hand-driven in the executor; undrafted: claimed in
+   *  `handleIdle` and run by the normal FSM work loop. */
+  | { type: 'forceJob'; jobId: string }
+  /** Eat a specific edible dropped item now, regardless of hunger level. FSM-driven (undrafted). */
+  | { type: 'forceConsume'; dropId: string; x: number; y: number }
+  /** Drink from the colony water at a tile now, regardless of thirst level. FSM-driven (undrafted). */
+  | { type: 'drink'; x: number; y: number };
+
 export interface Pawn {
   id: string;
   /** Sequential integer shown in debug mode next to the entity name. */
@@ -391,20 +418,14 @@ export interface Pawn {
    *  For `tend`, the pawn walks adjacent to `patientId` and dresses its untended wounds ONE AT A TIME
    *  (worst/most-bleeding first, the same `tendPatient` the auto caretake job runs), pacing each tend
    *  off its `caretaking` work speed via `nextTendTurn`, then clears once no untended wound remains. */
-  draftTarget?:
-    | { type: 'move'; x: number; y: number }
-    | {
-        type: 'attack';
-        targetId: string;
-        targetType: 'pawn' | 'mob';
-        /** How to engage: 'melee' forces a ranged pawn to close and swing; 'ranged'/undefined =
-         *  auto (shoot from range if it has a ranged weapon + viable ammo, else close to melee). */
-        mode?: 'ranged' | 'melee';
-      }
-    | { type: 'haul'; x: number; y: number }
-    | { type: 'equip'; dropId: string; x: number; y: number; slot?: EquipmentSlot | 'inventory' }
-    | { type: 'rescue'; victimId: string; auto?: boolean }
-    | { type: 'tend'; patientId: string; nextTendTurn?: number };
+  draftTarget?: PawnOrder;
+
+  /** Pending MANUAL orders queued behind `draftTarget` (the active head). Shift-issuing an order
+   *  appends here instead of replacing the head; when the head completes, `advancePawnOrders` pops the
+   *  next entry into `draftTarget`. Reuses the same `PawnOrder` schema as the head. This is the "manual
+   *  queue"; it always takes precedence over the pawn's AUTOMATIC pipeline (selectJobForPawn / jobQueue)
+   *  and is only skipped when empty. Shared by drafted and undrafted pawns (DRAFTED-JOB-ORDERS §9). */
+  manualQueue?: PawnOrder[];
 
   /** 0–1 fill for the on-map progress bar during a drafted `tend` (emergency care). The drafted tend is
    *  a draftTarget, not a WORKING job, so it has no `activeJob.progress`; this synthetic value (elapsed ÷

@@ -1,6 +1,6 @@
 /** pawn/handlers/work — work state handlers, extracted from PawnStateMachine (hotspot step 2). Each
  *  is a plain (pawn, gameState) => GameState function; the dispatcher wires them into the table. */
-import type { GameState, Pawn } from '../../../core/types';
+import type { GameState, Pawn, Job } from '../../../core/types';
 import { gameLogger } from '../../../dev/gameLogger';
 import { manhattan } from '../../../core/distance';
 import { perTick } from '../../../core/time';
@@ -32,6 +32,38 @@ import {
 } from '../pawnHauling';
 import { addInstanceToInventory } from '../../../core/PawnEquipment';
 import { aggregateFromDrops } from '../../../core/GameState';
+import { advancePawnOrders } from '../pawnHelpers';
+import { handleForcedConsume, handleForcedDrink } from './needs';
+
+/** DRAFTED-JOB-ORDERS §3.4: shared work-advance core. Compute the pawn's work-speed for `job` (a raw
+ *  colony `Job` or the pawn's `activeJob` both satisfy the work-key shape) and advance that job by one
+ *  tick's worth of work-points. The job auto-completes inside `advanceJob` when workDone reaches
+ *  workRequired. Used by BOTH the FSM `handleWorking` and the drafted `forceJob` executor so the
+ *  work-speed math lives in ONE place. */
+export function advanceJobOneTick(
+  pawn: Pawn,
+  job: {
+    type: string;
+    targetX: number;
+    targetY: number;
+    resourceId?: string;
+    craftQueueId?: string;
+  },
+  jobId: string,
+  gameState: GameState
+): GameState {
+  // Subjobs (build/repair/demolish/refuel, haul/fetch) read their OWN `*_speed` when stats.jsonc
+  // defines one, falling back per-axis to the parent category — so a repair runs at repair_speed.
+  const workCategory = jobService.getJobWorkCategory(job, gameState);
+  const workStatKey = jobService.getJobWorkStatKey(job, gameState);
+  // WORK-EXPERIENCE: the pawn's experience level is already folded into the work-speed multiplier
+  // (the SKILL token), so there's no separate skill term here (that would double-count it).
+  const workSpeedMult = pawnStatService.getWorkModifiers(pawn, workStatKey, undefined, workCategory)
+    .speed;
+  const workPoints = BASE_WORK_RATE * workSpeedMult;
+  // workPoints is authored PER SECOND; deliver one tick's worth so an N-second job takes N seconds.
+  return jobService.advanceJob(jobId, perTick(workPoints), gameState);
+}
 
 export function handleHauling(pawn: Pawn, gameState: GameState): GameState {
   // ADR-016 fetch-carry: items picked up for a craft order go to that order's station tile
@@ -154,10 +186,46 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   // Don't pick jobs until the pathfinder is ready — prevents endless pick/release cycles
   if (!pathfinderService.isReady()) return gameState;
 
+  // ── MANUAL orders (DRAFTED-JOB-ORDERS §8) ──────────────────────────────────────────────────────
+  // The manual-queue head (`draftTarget`) is honoured HERE — after survival needs (selectIdleNeed,
+  // above) but BEFORE autonomous job selection, and ignoring work-zone confinement (the player ordered
+  // it explicitly). Eat/drink/equip route to their own handlers; a `forceJob` pins the forced job as
+  // `forcedJob` and falls through to the shared claim/path code below. Non-undrafted orders (move/
+  // attack/haul/rescue/tend belong to the drafted executor) are dropped so they can't stall an idler.
+  const order = pawn.draftTarget;
+  let forcedJob: Job | undefined;
+  if (order) {
+    if (order.type === 'forceConsume') return handleForcedConsume(pawn, gameState, order);
+    if (order.type === 'drink') return handleForcedDrink(pawn, gameState, order);
+    if (order.type === 'equip') return handleForcedEquip(pawn, gameState, order);
+    if (order.type === 'forceJob') {
+      forcedJob = (gameState.jobs ?? []).find(
+        (j) => j.id === order.jobId && (j.claimedBy === null || j.claimedBy === pawn.id)
+      );
+      // Job gone / taken by someone else, or tool-gated with no tool anywhere in stock: drop the order
+      // (advance the queue) rather than loop claiming-and-releasing forever. A tool that DOES exist is
+      // fetched by the normal tool-fetch detour below.
+      const toolReq = forcedJob ? jobService.requiredToolForJob(forcedJob, gameState) : null;
+      const toolBlocked =
+        !!toolReq &&
+        !jobService.pawnHasToolFor(pawn, toolReq.workType, toolReq.minTier) &&
+        !jobService.findStockToolDropFor(
+          gameState,
+          toolReq.workType,
+          toolReq.minTier,
+          pawn.position ?? undefined
+        );
+      if (!forcedJob || toolBlocked) return mutatePawn(gameState, pawn.id, advancePawnOrders);
+    } else {
+      return mutatePawn(gameState, pawn.id, advancePawnOrders);
+    }
+  }
+
   // Restriction zones: a confined (non-drafted) pawn may only claim jobs whose target tile lies inside
   // its allowed area, so it never grabs out-of-zone work and then churns failing to path there. Built
   // once here (only for confined pawns) so the isReachable predicate is O(1) per candidate.
-  const allowedZone = pawn.drafted ? null : allowedTilesForPawn(gameState, pawn.id);
+  // A forced job overrides confinement — the player pointed at that tile explicitly.
+  const allowedZone = pawn.drafted || forcedJob ? null : allowedTilesForPawn(gameState, pawn.id);
 
   // If confined and currently OUTSIDE the allowed area (zone freshly drawn away from the pawn), march it
   // back IN before considering any work — drawing a restriction zone should walk the pawn there, not
@@ -187,16 +255,21 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   };
 
   // Job-target selection (which job + the need-lookahead queue preview) is decided by JobService;
-  // the handler injects the pawn-system reachability memory and only applies the result (P-4b).
-  const { job, queuePreview } = jobService.selectJobForPawn(pawn, gameState, {
-    isReachable: (id) => !isJobUnreachableForPawn(pawn.id, id, gameState.turn) && jobInZone(id),
-    queueSize: JOB_QUEUE_SIZE
-  });
+  // the handler injects the pawn-system reachability memory and only applies the result (P-4b). A
+  // forced job (DRAFTED-JOB-ORDERS §8) skips selection/hunt/wander entirely — it IS the chosen job.
+  const { job, queuePreview } = forcedJob
+    ? { job: forcedJob, queuePreview: pawn.jobQueue ?? [] }
+    : jobService.selectJobForPawn(pawn, gameState, {
+        isReachable: (id) => !isJobUnreachableForPawn(pawn.id, id, gameState.turn) && jobInZone(id),
+        queueSize: JOB_QUEUE_SIZE
+      });
 
-  // Hunting competes with normal work by labor level: a player-marked huntable mob is
-  // pursued when the pawn's hunting priority is at least as high as its best available job.
-  const hunt = tryStartHunt(pawn, gameState, job ?? null);
-  if (hunt) return hunt;
+  if (!forcedJob) {
+    // Hunting competes with normal work by labor level: a player-marked huntable mob is
+    // pursued when the pawn's hunting priority is at least as high as its best available job.
+    const hunt = tryStartHunt(pawn, gameState, job ?? null);
+    if (hunt) return hunt;
+  }
 
   // Nothing to do right now — amble about rather than stand frozen. Keeps idlers from
   // permanently camping a build-site approach tile (the construct deadlock) and reads as
@@ -452,6 +525,16 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
   const jobInPool = (gameState.jobs ?? []).find((j) => j.id === jobId);
   if (!jobInPool) return goIdle(pawn, gameState);
 
+  // DRAFTED-JOB-ORDERS §8 — preempt immediately: a pending MANUAL order (draftTarget) that isn't the
+  // forced job we're currently on yanks the pawn off this autonomous job NOW (release the claim, drop to
+  // IDLE) so handleIdle runs the order next tick. A survival need still outranks even that (handled by
+  // checkNeedInterrupts below / selectIdleNeed in handleIdle).
+  const order = pawn.draftTarget;
+  const runningForcedJob = order?.type === 'forceJob' && order.jobId === jobId;
+  if (order && !runningForcedJob) {
+    return jobService.releaseJob(pawn.id, jobId, goIdle(pawn, gameState));
+  }
+
   // Dynamic need interruption: weighs urgency against proximity to food/shelter vs job target.
   // The threshold is adjusted by work priority (high-priority jobs resist interruption more)
   // and job-queue lookahead (if no upcoming task passes near food, eat sooner).
@@ -483,18 +566,7 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
   // formulas AVERAGE their capacities — so low light only shaves work by sight's SHARE (e.g. 1/2 or 1/3),
   // never to zero, and needs no separate light factor or 0.4 floor here. Sight-less jobs (haul/fetch →
   // moving+manipulation) are naturally unaffected in the dark.
-  const workCategory = jobService.getJobWorkCategory(activeJob, gameState);
-  // Subjobs (build/repair/demolish/refuel, haul/fetch) read their OWN `*_speed` when stats.jsonc
-  // defines one, falling back per-axis to the parent category — so a repair runs at repair_speed.
-  const workStatKey = jobService.getJobWorkStatKey(activeJob, gameState);
-  const workSpeedMult = pawnStatService.getWorkModifiers(pawn, workStatKey, undefined, workCategory).speed;
-  // WORK-EXPERIENCE: every job advances at the base rate × the work-speed multiplier — the pawn's
-  // experience level is already folded into that multiplier (the SKILL token), so the old
-  // `skill_construction` special-case would double-count it.
-  const workPoints = BASE_WORK_RATE * workSpeedMult;
-  // workPoints is authored as work-points PER SECOND; deliver one tick's worth so
-  // a job authored as N seconds of work still takes N seconds of real time.
-  const afterAdvance = jobService.advanceJob(jobId, perTick(workPoints), gameState);
+  const afterAdvance = advanceJobOneTick(pawn, activeJob, jobId, gameState);
   const jobStillExists = (afterAdvance.jobs ?? []).some((j) => j.id === jobId);
 
   if (!jobStillExists) {
@@ -544,12 +616,16 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
       return mutatePawn(afterPickup, pawn.id, (p) => {
         p.currentState = PAWN_STATE.HAULING;
         p.activeJob = undefined;
+        // DRAFTED-JOB-ORDERS §9: this was a forced job — advance the manual queue (deliver first, then
+        // the next order runs once handleIdle sees it after hauling).
+        if (runningForcedJob) advancePawnOrders(p);
       });
     }
 
     return mutatePawn(afterPickup, pawn.id, (p) => {
       p.currentState = PAWN_STATE.IDLE;
       p.activeJob = undefined;
+      if (runningForcedJob) advancePawnOrders(p); // §9: forced job done → advance the manual queue
     });
   }
 

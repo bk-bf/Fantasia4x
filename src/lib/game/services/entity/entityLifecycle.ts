@@ -3,6 +3,7 @@
 import type { GameState, Mob, MobState, DroppedItem, ItemInstance } from '../../core/types';
 import { getCreatureById } from '../../core/Creatures';
 import { getLootPool } from '../../core/LootPools';
+import { itemService } from '../ItemService';
 import { rng } from '../../core/rng';
 import { SECONDS_PER_TICK, perTick } from '../../core/time';
 import {
@@ -360,6 +361,13 @@ export function dropCarcass(state: GameState, mob: Mob): GameState {
   // Fold the corpse's remaining mass (mob.intactness, eaten down by scavengers) onto the carcass as its
   // starting CONDITION — a half-stripped corpse drops a half-condition carcass (less butchery yield).
   const condition = Math.round(Math.max(0, Math.min(1, mob.intactness ?? 1)) * 100);
+  // §2g: a `dynamicName` carcass (T5 boss trophy) reads the slain beast's name — "Old Fang's Carcass" —
+  // like a pawn corpse. The per-drop name override is resolved by getItemDisplayName; a static carcass
+  // keeps the def name. (A per-spawn PROCEDURAL boss name is a later boss-naming feature; today this
+  // reads the creature def's — already a distinctive name for an authored boss.)
+  const carcassName = itemService.getItemById(carcassId)?.dynamicName
+    ? itemService.makeDynamicName(carcassId, def?.name ?? mob.creatureId)
+    : undefined;
   const drop: DroppedItem = {
     id,
     resourceId: carcassId,
@@ -367,6 +375,7 @@ export function dropCarcass(state: GameState, mob: Mob): GameState {
     y: mob.y,
     quantity: 1,
     unitConditions: [condition],
+    ...(carcassName ? { name: carcassName } : {}),
     // A wild kill is not colony-made — forbid hauling by default so pawns don't trek into danger to
     // retrieve it. The player allows it (per stack) from the carcass's info card once it's safe.
     forbidden: true

@@ -138,6 +138,26 @@
     "buildingState": {"isUnique": false, "maxCount": 2}
   },
   {
+    "id": "flensing_table",
+    "ageTier": "bronze:1",
+    "name": "Flensing Table",
+    "color": "#9E4A3A",
+    "charSpans": [ {"sheet": "buildings", "id": 39} ],
+    "transparentBg": true,
+    "description": "A broad iron-topped table with flensing hooks, gambrels and a keen array of blades. Strips a great carcass to the last scrap — 45% more from every kill, and the only spot that renders an elite beast's prime hide and rarer humours whole (CREATURE-COMBAT-OVERHAUL §2g).",
+    "category": "production",
+    "buildingCost": {"category:log": 4, "iron_bar": 4, "cordage": 4},
+    "workAmount": 40,
+    "toolTierRequired": 2,
+    "toolRequirement": {"workType": "butchery", "minTier": 2},
+    "populationRequired": 1,
+    "researchRequired": null,
+    "upkeepCost": {},
+    "effects": {"butcheringEnabled": true, "butcheryYieldBonus": 0.45},
+    "storageCapacity": {},
+    "buildingState": {"isUnique": false, "maxCount": 2}
+  },
+  {
     "id": "chopping_block",
     "ageTier": "primitive:2",
     "name": "Splitting Stump",

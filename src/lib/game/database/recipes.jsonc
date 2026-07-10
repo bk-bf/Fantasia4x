@@ -2795,12 +2795,34 @@
     "toolTierRequired": 0
   },
   {
+    // §2h: the owlbear is an effective T3-4 beast, so a full butcher (at a flensing_table, tool-tier 2)
+    // also extracts a magical reagent (owlbear_bile) — "old creature wired into the new economy".
     "id"              : "make_owlbear_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"owlbear_carcass": 1},
-    "outputs"         : {"owlbear_meat": 16, "owlbear_pelt": 2, "large_bones": 16, "sinew": 14},
+    "outputs"         : {"owlbear_meat": 16, "owlbear_pelt": 2, "owlbear_bile": 1, "large_bones": 16, "sinew": 14},
     "workAmount"      : 60,
     "toolTierRequired": 0
+  },
+  {
+    // §2g T5 boss butchery: a legendary dire wolf yields trophy meat, prime magical pelt, and TWO
+    // magical drops (§2h) — the reward for clearing the boss. Best done at the flensing_table.
+    "id"              : "make_great_wolf",
+    "station"         : "butcher_spot",
+    "inputs"          : {"great_wolf_carcass": 1},
+    "outputs"         : {"wolf_meat": 14, "dire_wolf_pelt": 3, "alpha_ichor": 2, "large_bones": 12, "sinew": 10},
+    "workAmount"      : 70,
+    "toolTierRequired": 1
+  },
+  {
+    // §2h magical-beast gear: a cured dire-wolf pelt worked at the weaving frame → the Direwolf Warcloak
+    // (grants Might while worn). The crafted twin of a boss famed-drop; the tool-tier gate keeps it late.
+    "id"              : "make_direwolf_warcloak",
+    "station"         : "weaving_frame",
+    "inputs"          : {"dire_wolf_pelt": 2, "cordage": 3},
+    "outputs"         : {"direwolf_warcloak": 1},
+    "workAmount"      : 40,
+    "toolTierRequired": 1
   },
   {
     "id"              : "make_sabretooth_meat",

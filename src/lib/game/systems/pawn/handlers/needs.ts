@@ -47,6 +47,7 @@ import {
   transitionTo,
   goIdle,
   mutatePawn,
+  advancePawnOrders,
   DRINK_NEED_RELIEF,
   WASH_NEED_RELIEF,
   DRINK_TURNS,
@@ -247,6 +248,89 @@ export function handleDrinking(pawn: Pawn, gameState: GameState): GameState {
 
 /** §D: wash at the reached target over WASH_TURNS (not instant). Hygiene relief is spread evenly
  *  across the duration; washing is a longer chore than drinking. */
+/** DRAFTED-JOB-ORDERS §8: force-eat a SPECIFIC dropped item NOW (an undrafted manual order, run
+ *  regardless of hunger). Walk to the drop's tile (IDLE arrival re-enters handleIdle); on adjacency
+ *  grab that item into the pack, clear the order, and start eating it as a normal timed meal. If the
+ *  drop is gone or unreachable, just drop the order and let the queue advance. */
+export function handleForcedConsume(
+  pawn: Pawn,
+  gameState: GameState,
+  order: { dropId: string; x: number; y: number }
+): GameState {
+  const drop = (gameState.droppedItems ?? []).find(
+    (d) => d.id === order.dropId && (d.quantity ?? 0) > 0
+  );
+  if (!drop || !pawn.position) return mutatePawn(gameState, pawn.id, advancePawnOrders);
+
+  const onOrAdjacent =
+    (pawn.position.x === drop.x && pawn.position.y === drop.y) ||
+    isAdjacent(pawn.position.x, pawn.position.y, drop.x, drop.y);
+  if (!onOrAdjacent) {
+    const afterPath = tryAssignPath(pawn, drop.x, drop.y, gameState);
+    if (afterPath) {
+      return mutatePawn(afterPath, pawn.id, (p) => {
+        p.currentState = PAWN_STATE.MOVING_TO_NEED;
+        p.activeJob = {
+          type: 'need' as const,
+          targetX: drop.x,
+          targetY: drop.y,
+          progress: 0,
+          timeRequired: EATING_TURNS,
+          turnsInState: 0,
+          targetState: PAWN_STATE.IDLE // arrive → IDLE → handleIdle re-runs the order (now adjacent)
+        };
+      });
+    }
+    return mutatePawn(gameState, pawn.id, advancePawnOrders); // unreachable — abandon
+  }
+
+  // Adjacent: grab this item (budget-limited), then eat whatever serving that yields.
+  const grabbed = pickUpFromTile(gameState, pawn.id, drop.x, drop.y, {
+    dropId: order.dropId,
+    radius: 1
+  });
+  const p2 = grabbed.pawns.find((p) => p.id === pawn.id);
+  const meal = p2 ? selectFoodFromInventory(p2, grabbed) : [];
+  if (meal.length === 0) return mutatePawn(grabbed, pawn.id, advancePawnOrders); // nothing edible grabbed
+  const cleared = mutatePawn(grabbed, pawn.id, advancePawnOrders); // one-shot order — drop it before eating
+  const eater = cleared.pawns.find((p) => p.id === pawn.id)!;
+  return startEatingFromInventory(eater, cleared, meal, 'forced');
+}
+
+/** DRAFTED-JOB-ORDERS §8: force-drink at a water tile NOW (undrafted manual order, regardless of
+ *  thirst). Walk to the tile; on adjacency clear the order and start the timed DRINKING need. */
+export function handleForcedDrink(
+  pawn: Pawn,
+  gameState: GameState,
+  order: { x: number; y: number }
+): GameState {
+  if (!pawn.position) return mutatePawn(gameState, pawn.id, advancePawnOrders);
+  const onOrAdjacent =
+    (pawn.position.x === order.x && pawn.position.y === order.y) ||
+    isAdjacent(pawn.position.x, pawn.position.y, order.x, order.y);
+  if (!onOrAdjacent) {
+    const afterPath = tryAssignPath(pawn, order.x, order.y, gameState);
+    if (afterPath) {
+      return mutatePawn(afterPath, pawn.id, (p) => {
+        p.currentState = PAWN_STATE.MOVING_TO_NEED;
+        p.activeJob = {
+          type: 'need' as const,
+          targetX: order.x,
+          targetY: order.y,
+          progress: 0,
+          timeRequired: DRINK_TURNS,
+          turnsInState: 0,
+          targetState: PAWN_STATE.IDLE
+        };
+      });
+    }
+    return mutatePawn(gameState, pawn.id, advancePawnOrders);
+  }
+  const cleared = mutatePawn(gameState, pawn.id, advancePawnOrders); // one-shot — drop before drinking
+  const drinker = cleared.pawns.find((p) => p.id === pawn.id)!;
+  return handleDrinking(drinker, cleared);
+}
+
 export function handleWashing(pawn: Pawn, gameState: GameState): GameState {
   const activeJob = pawn.activeJob;
   const turnsInState = (activeJob?.turnsInState ?? 0) + 1;

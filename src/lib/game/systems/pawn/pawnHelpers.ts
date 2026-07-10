@@ -771,6 +771,20 @@ export function mutatePawn(gs: GameState, id: string, mutate: (p: Pawn) => void)
   return gs;
 }
 
+/** DRAFTED-JOB-ORDERS §9: the active manual order (`draftTarget`) just finished/cleared — pop the next
+ *  queued order into the head, or clear both when the manual queue is empty (⇒ the automatic pipeline
+ *  resumes). Mutates the pawn IN PLACE; call inside a `mutatePawn` callback or on a live pawn ref. */
+export function advancePawnOrders(p: Pawn): void {
+  const q = p.manualQueue ?? [];
+  if (q.length > 0) {
+    p.draftTarget = q[0];
+    p.manualQueue = q.length > 1 ? q.slice(1) : undefined;
+  } else {
+    p.draftTarget = undefined;
+    p.manualQueue = undefined;
+  }
+}
+
 // ── P0 perception pre-filter (ENGINE-PERFORMANCE §6 / ADR-018) ────────────────
 // findCombatThreat / findNearestHuntTarget each run once per pawn per tick, and each
 // used to scan ALL mobs — most of them neutral animals — re-deriving the predicate

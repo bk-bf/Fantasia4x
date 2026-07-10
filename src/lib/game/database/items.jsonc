@@ -2331,6 +2331,96 @@
     "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
+  // ── CREATURE MAGICAL DROPS + BOSS CARCASS (CREATURE-COMBAT-OVERHAUL §2g/§2h) ──────────────────────
+  // T5 boss trophy: a DYNAMIC-name carcass ("Old Fang's Carcass", like a pawn corpse) — dropCarcass sets
+  // the name from the slain beast. Butchers (§2g pool) into prime hide + a magical reagent. The magical
+  // materials (§2h) are wild-drop only, feeding the alchemy + magical-gear sinks. Numbers want a balance pass.
+  {
+    "id"               : "great_wolf_carcass",
+    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "name"             : "Great Wolf Carcass",
+    "dynamicName"      : true,
+    "type"             : "material",
+    "category"         : "carcass",
+    "maxDurability"    : 100,
+    "deteriorationRate": 0.05,
+    "description"      : "The body of a legendary dire wolf, near the size of a horse. A trophy — and a great deal of prime hide.",
+    "color"            : "#9aa0b4",
+    "amount"           : 0,
+    "weightKg"         : 55,
+    "volumeL"          : 70,
+    "gatheringTypes"   : ["hunting"],
+    "processingType"   : ["butchery"],
+    "decaySeconds"     : 900,
+    "decaysTo"         : "rotten_carcass"
+  },
+  {
+    "id"               : "dire_wolf_pelt",
+    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "name"             : "Dire Wolf Pelt",
+    "type"             : "material",
+    "category"         : "hide",
+    "maxDurability"    : 120,
+    "deteriorationRate": 0.01,
+    "description"      : "A vast grey pelt, thick as a bearskin and stranger to the touch. Cured and worked, it holds a moonlit chill.",
+    "color"            : "#8a90a6",
+    "amount"           : 0,
+    "weightKg"         : 6,
+    "volumeL"          : 8
+  },
+  {
+    "id"               : "alpha_ichor",
+    "charSpans"        : [ {"sheet": "items", "id": 1} ],
+    "name"             : "Alpha Ichor",
+    "type"             : "material",
+    "category"         : "reagent",
+    "maxDurability"    : 40,
+    "deteriorationRate": 0.03,
+    "description"      : "Dark, near-black blood drawn hot from a pack-leader's heart. The alchemists say it still runs when the beast is long dead.",
+    "color"            : "#5a1020",
+    "amount"           : 0,
+    "weightKg"         : 0.5,
+    "volumeL"          : 0.4
+  },
+  {
+    "id"               : "owlbear_bile",
+    "charSpans"        : [ {"sheet": "items", "id": 1} ],
+    "name"             : "Owlbear Bile",
+    "type"             : "material",
+    "category"         : "reagent",
+    "maxDurability"    : 40,
+    "deteriorationRate": 0.03,
+    "description"      : "A viscous amber humour from an owlbear's gut. Foul, potent, and prized by anyone brewing something that hardens flesh.",
+    "color"            : "#b08a2a",
+    "amount"           : 0,
+    "weightKg"         : 0.4,
+    "volumeL"          : 0.3
+  },
+  {
+    "id"               : "direwolf_warcloak",
+    "charSpans"        : [ {"sheet": "items", "id": 138} ],
+    "name"             : "Direwolf Warcloak",
+    "type"             : "armor",
+    "category"         : "leather",
+    "grantsConditions" : ["might"],
+    "description"      : "A cloak of cured dire-wolf pelt, worked at a magical loom. It sits on the shoulders like a living thing and lends the wearer a beast's strength.",
+    "color"            : "#7a809a",
+    "amount"           : 0,
+    "weightKg"         : 4,
+    "volumeL"          : 5,
+    "maxDurability"    : 160,
+    "deteriorationRate": 0.006,
+    "armorProperties"  : {
+      "defense"        : 5,
+      "armorType"      : "light",
+      "slot"           : "back",
+      "equipmentSlot"  : "back",
+      "armorLayer"     : "cloth",
+      "armorValue"     : 5,
+      "fatiguePerTurn" : 0.1,
+      "movementPenalty": 0.01
+    }
+  },
   {
     "id"               : "bear_carcass",
     "charSpans"        : [ {"sheet": "items", "id": 138} ],

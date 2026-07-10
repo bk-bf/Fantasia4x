@@ -66,6 +66,44 @@
         "foodOverflow"  : 0.3,
         "carcassItemId" : "wolf_carcass",
         "naturalWeapons": ["bite", "claw"],
+        "species"        : "wolf",
+        "tier"           : 2,
+        "limbMap"        : "quadruped"
+    },
+    {
+        // §2b T5 BOSS (wolf line) — the reference authored boss: a lone legendary dire wolf. Range-rolled
+        // like any creature, but a huge band; drops a DYNAMIC-name trophy carcass (§2g) that butchers into
+        // prime pelt + magical drops (§2h). Escalation-only in play (Phase 3) — not a routine spawn.
+        "id"            : "old_fang",
+        "audio"            : "canine",
+        "name"          : "Old Fang, the Grey King",
+        "threatLevel"   : 35,    // DPS 50.8 | effHP 210 | bruiser
+        "entityClass"   : "animal",
+        "charSpans"     : [ {"sheet": "creatures", "id": 251} ],
+        "fg"            : [0.62, 0.64, 0.72],
+        "bg"            : [0.0, 0.0, 0.0],
+        "statRanges"    : {"str": [40, 50], "dex": [13, 17], "con": [18, 24], "per": [12, 16]},
+        "naturalArmorRange": [24, 34],
+        "bodyScale"     : 2.0,
+        "behaviour"     : "aggressive",
+        "diet"          : "carnivore",
+        "eats"          : ["meat", "organic"],
+        "grazes"        : false,
+        "predator"      : true,
+        "intelligence"  : "primitive",
+        "nocturnalAggro": true,
+        "nightVision"   : 0.95,
+        "pack"          : [1, 1],
+        "biomeWeights"  : {"forest": 1.0, "mountain": 0.6},
+        "lair"          : "wolf_den",
+        "lairRange"     : 40,
+        "hungerRate"    : 0.3,
+        "foodOverflow"  : 0.4,
+        "carcassItemId" : "great_wolf_carcass",
+        "naturalWeapons": ["sabre-fangs", "rending-claws"],
+        "species"        : "wolf",
+        "tier"           : 5,
+        "variantOf"      : "wolf",
         "limbMap"        : "quadruped"
     },
     {
