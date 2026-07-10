@@ -24,6 +24,29 @@
 //
 // Loader validates every `id` against ItemService and every slot key against EquipmentSlot at load;
 // an unknown id/slot throws so a typo can't silently ship an unarmed raider. `pnpm check`/tests guard.
+//
+// EXAMPLE monster pools below draw CREATURE gear (items.jsonc §2c), NOT human craftables — the human
+// bronze/iron/steel pools drafted in the spec are for KINGDOMS-TRADE caravan guards (kingdom pawns),
+// authored there. Wire more pools as the §2e ladder is filled. Numbers want a balance pass.
 {
-  "pools": {}
+  "pools": {
+    "goblin_warband": {
+      "dropChance": 0.4,
+      "conditionRange": [0.3, 0.7],
+      "quality": [[0, 3], [1, 2]],
+      "slots": {
+        "mainHand":  {"chance": 0.85, "pick": [{"id": "goblin_shank", "w": 3}, {"id": "goblin_hooked_spear", "w": 2}, {"id": "goblin_net", "w": 1}]},
+        "bodyOuter": {"chance": 0.4,  "pick": [{"id": "goblin_scrap_vest", "w": 1}]}
+      }
+    },
+    "orc_warband": {
+      "dropChance": 0.55,
+      "conditionRange": [0.4, 0.85],
+      "quality": [[0, 2], [1, 3]],
+      "slots": {
+        "mainHand": {"chance": 1.0,  "pick": [{"id": "orc_serrated_axe", "w": 3}, {"id": "orc_cleaver", "w": 2}, {"id": "orc_maul", "w": 2}]},
+        "bodyMid":  {"chance": 0.55, "pick": [{"id": "orc_scrap_plate", "w": 1}]}
+      }
+    }
+  }
 }

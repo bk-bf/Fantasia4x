@@ -469,6 +469,10 @@ function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
       // ADR-023: a cultural `weaponBonus` (Giant's Grip) rides the wielded weapon only.
       const wb = weaponBonusDamage(attacker);
       if (wb) p.baseDamage *= 1 + wb;
+      // §2c wielding requirement: a crude, massive weapon (orc greataxe) punishes an under-strength
+      // wielder. The penalty is carried by the `overmatched` CONDITION (driven per-tick from the
+      // wieldRequirement shortfall in PawnStateMachine) — it flows into `str`/`dex` (conditionStat-
+      // Multipliers) and the to-hit (conditionHitMult) here automatically, so no inline math is needed.
       return applyMeleeGrip(p, getGrip(attacker)); // BB grip: duelist/2H add offense (melee only)
     }
   }

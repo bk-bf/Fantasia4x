@@ -100,9 +100,19 @@ for (const it of items) {
   }
 }
 
+// A creature authors EITHER a fixed `stats` block OR a symmetric `statRanges` band (an individual rolls
+// within it at spawn — CREATURE-COMBAT-OVERHAUL §2a). The model uses the band MIDPOINT (the intended
+// average) so the ranking tracks the typical individual.
+function midStats(c) {
+  if (c.stats) return c.stats;
+  const sr = c.statRanges ?? {};
+  const mid = (r, f) => (Array.isArray(r) ? Math.round((r[0] + r[1]) / 2) : f);
+  return { str: mid(sr.str, 10), dex: mid(sr.dex, 10), con: mid(sr.con, 10), per: mid(sr.per, 10) };
+}
+
 // ── Per-creature model ──────────────────────────────────────────────────────────
 function model(c) {
-  const { str, dex, con, per } = c.stats;
+  const { str, dex, con, per } = midStats(c);
   const scale = c.bodyScale ?? 1;
   const arm = c.naturalArmor ?? 0;
   const wpns = c.naturalWeapons ?? [];

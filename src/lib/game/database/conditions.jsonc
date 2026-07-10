@@ -50,6 +50,33 @@
         ]
     },
     {
+        "id": "overmatched",
+        "name": "Overmatched",
+        "flags": ["physical", "weapon"],
+        "description": "Straining to control a weapon heavier than the body can master — a crude orc slab in a mortal grip. Swings go wide, blows land soft, and the effort drains fast; only raw muscle tames such a thing. Severity = how far the wielder's strength falls short of the weapon's (driven directly, not over time).",
+        "lethalSeverity": 99,
+        "stages": [
+            {
+                "label"      : "unwieldy",
+                "minSeverity": 0.0,
+                "color"      : "#C8A064",
+                "modifiers"  : {"hitChance": 0.85, "strength": 0.95, "fatigueRate": 1.25}
+            },
+            {
+                "label"      : "overmatched",
+                "minSeverity": 0.35,
+                "color"      : "#D08040",
+                "modifiers"  : {"hitChance": 0.68, "strength": 0.86, "dodge": 0.9, "fatigueRate": 1.5}
+            },
+            {
+                "label"      : "flailing",
+                "minSeverity": 0.7,
+                "color"      : "#C04030",
+                "modifiers"  : {"hitChance": 0.5, "strength": 0.75, "dodge": 0.8, "fatigueRate": 1.8}
+            }
+        ]
+    },
+    {
         "id": "windchilled",
         "name": "Windchilled",
         "flags": ["environmental", "wind"],

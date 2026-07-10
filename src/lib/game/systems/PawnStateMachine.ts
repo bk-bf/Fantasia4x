@@ -58,6 +58,7 @@ import {
   decayIntoxication,
   driveTemperatureConditions,
   driveEncumbrance,
+  driveWieldStrain,
   driveWindchill,
   getConditionFloater,
   applyShock,
@@ -125,7 +126,12 @@ import {
   handleDrinking,
   handleWashing
 } from './pawn/handlers/needs';
-import { handleFighting, handleFleeing, handleHunting, handleBloodHunt } from './pawn/handlers/combat';
+import {
+  handleFighting,
+  handleFleeing,
+  handleHunting,
+  handleBloodHunt
+} from './pawn/handlers/combat';
 // Re-exported for external consumers that imported them from this module historically.
 export { PAWN_STATE, type PawnStateName };
 export { resetUnreachableJobs } from './pawn/pawnHelpers';
@@ -410,7 +416,8 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
       ? computeTileLightLevel(gameState.turn, gameState.buildings ?? [], pos.x, pos.y)
       : 1;
     const el = dampenLightByNightVision(tileLight, getNightVision(pawn));
-    pawn.effectiveLight = el >= DARKNESS_ONSET ? 1 : Math.max(DARKNESS_SIGHT_FLOOR, el / DARKNESS_ONSET);
+    pawn.effectiveLight =
+      el >= DARKNESS_ONSET ? 1 : Math.max(DARKNESS_SIGHT_FLOOR, el / DARKNESS_ONSET);
   }
 
   // ── Need-driven conditions (malnutrition ← hunger, dehydration ← thirst, …) ──
@@ -557,6 +564,18 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     const cap = itemService.getCarryCapacityBreakdown(pawn).weight.total;
     const load = itemService.getCurrentCarryLoad(pawn, gameState).weightKg;
     driveEncumbrance(conditions, cap > 0 ? load / cap : 0);
+  }
+
+  // ── Weapon strain ← a mainHand weapon too heavy for the wielder (§2c) ──────
+  // A crude monster weapon carries a `wieldRequirement.strength`; a pawn below it is `overmatched`
+  // (staged debuff — worse aim, softer blows, faster fatigue), set DIRECTLY from the RAW-STR shortfall
+  // (raw, not conditioned, so the condition can't feed back into its own severity). Clears on unequip.
+  {
+    const mhReq = pawn.equipment?.mainHand
+      ? itemService.getItemById(pawn.equipment.mainHand.itemId)?.weaponProperties?.wieldRequirement
+          ?.strength
+      : undefined;
+    driveWieldStrain(conditions, mhReq ? mhReq - pawn.stats.strength : 0);
   }
 
   // ── Clotting ────────────────────────────────────────────────────────────────
@@ -837,7 +856,8 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
             v.id !== pawn.id &&
             v.isAlive !== false &&
             v.position &&
-            Math.abs(v.position.x - pawn.position!.x) + Math.abs(v.position.y - pawn.position!.y) <= 12
+            Math.abs(v.position.x - pawn.position!.x) + Math.abs(v.position.y - pawn.position!.y) <=
+              12
         );
         if (victim) feedOnVictim(pawn, victim, gameState.turn);
       }
@@ -990,9 +1010,7 @@ export function tickAuras(state: GameState): void {
       if (aura.affects !== 'foes') {
         for (const p of state.pawns) {
           if (p.id === emitter.id || p.isAlive === false || !p.position) continue;
-          if (
-            Math.max(Math.abs(p.position.x - ex), Math.abs(p.position.y - ey)) <= aura.radius
-          ) {
+          if (Math.max(Math.abs(p.position.x - ex), Math.abs(p.position.y - ey)) <= aura.radius) {
             stampAuraCondition(p, aura.condition, lingerTicks);
           }
         }
@@ -1468,7 +1486,8 @@ class PawnStateMachineImpl {
         const durations = { ...(afterConditions.conditionTimers ?? {}) };
         let jobs = state.jobs;
         if (wasCollapsed) {
-          if (consciousness >= RECOVER_CONSCIOUSNESS) delete durations.collapse; // recovered
+          if (consciousness >= RECOVER_CONSCIOUSNESS)
+            delete durations.collapse; // recovered
           else durations.collapse = Math.max(durations.collapse ?? 0, 2); // stay down
         } else {
           // Enter collapse: stamp the condition and release the claimed job.

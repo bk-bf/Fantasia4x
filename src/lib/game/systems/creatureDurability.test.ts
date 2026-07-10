@@ -121,10 +121,14 @@ describe('big-creature durability (naturalArmor + bodyScale)', () => {
     const mammoth = makeMob(getCreatureById('woolly_mammoth')!, 0, 0, 0);
     const rat = makeMob(getCreatureById('giant_rat')!, 0, 0, 0);
 
-    // con 24 × 5 × bodyScale 3.5 = 420; the rat has no bodyScale → con 4 × 5 = 20.
-    expect(mammoth.maxBloodVolume).toBe(420);
-    expect(mammoth.maxHealth).toBe(420);
-    expect(rat.maxBloodVolume).toBe(20);
+    // §2a stats now ROLL from the def band at spawn, so the pool derives from the ROLLED con:
+    // pool = con × 5 × bodyScale (mammoth 3.5; rat has no bodyScale). Con lands in the def range
+    // (mammoth [21,27] → mid 24; rat [3,5] → mid 4), so the pool tracks the individual, not a constant.
+    expect(mammoth.maxBloodVolume).toBe(Math.round(mammoth.stats.constitution * 5 * 3.5));
+    expect(mammoth.maxHealth).toBe(mammoth.maxBloodVolume);
+    expect(rat.maxBloodVolume).toBe(rat.stats.constitution * 5);
+    // bodyScale really enlarges it: the mammoth's pool is ~3.5× a same-con creature's.
+    expect(mammoth.maxBloodVolume).toBeGreaterThan(mammoth.stats.constitution * 5 * 3);
   });
 
   it('a big beast hits harder — bodyScale scales its natural-weapon damage', () => {

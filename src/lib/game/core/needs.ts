@@ -389,6 +389,28 @@ export function driveEncumbrance(conditions: EntityCondition[], loadRatio: numbe
     conditions[idx] = { ...conditions[idx], severity: sev };
 }
 
+/** STRENGTH shortfall (weapon `wieldRequirement.strength` − wielder STR) at which weapon-strain is
+ *  maxed. A STR-8 pawn on a STR-22 orc slab (shortfall 14) is fully overmatched. */
+export const WIELD_STRAIN_FULL = 14;
+
+/** Set the `overmatched` condition's severity DIRECTLY from a wielder's strength shortfall vs the
+ *  equipped weapon's `wieldRequirement` (CREATURE-COMBAT-OVERHAUL §2c) — INSTANTANEOUS, like
+ *  `driveEncumbrance`. `shortfall` ≤ 0 (meets the bar / no requirement) clears it. The staged condition
+ *  carries the whole debuff (hitChance/strength/dodge/fatigueRate), flowing through the same
+ *  conditionStatMultipliers/conditionHitMult combat reads as encumbrance — so the penalty is data-driven
+ *  AND player-visible (a pill), not inline combat math. Mutates in place; the common case allocates nothing. */
+export function driveWieldStrain(conditions: EntityCondition[], shortfall: number): void {
+  const sev = Math.min(1, Math.max(0, shortfall / WIELD_STRAIN_FULL));
+  const idx = conditions.findIndex((c) => c.id === 'overmatched');
+  if (sev <= 0) {
+    if (idx !== -1) conditions.splice(idx, 1);
+    return;
+  }
+  if (idx === -1) conditions.push({ id: 'overmatched', severity: sev });
+  else if (Math.abs(conditions[idx].severity - sev) > 1e-3)
+    conditions[idx] = { ...conditions[idx], severity: sev };
+}
+
 /** Effective wind below which a pawn feels no windchill; wind at/above which it's maxed. Onset sits
  *  past the calm baseline ambient wind so a merely "slightly windy" world never chills a pawn. */
 export const WIND_ONSET = 0.36;

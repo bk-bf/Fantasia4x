@@ -118,9 +118,10 @@ export interface CreatureDefinition {
    *  adds absolute soak. `naturalArmor` above is the uniform-`'all'` sugar. */
   armorMods?: Array<{ target: string; defense: number }>;
   // ── CREATURE-COMBAT-OVERHAUL §2 variant ladder ────────────────────────────
-  /** §2a per-spawn stat spread: when present, the named core stats roll uniformly in [min,max] at
-   *  spawn (seeded), giving intra-tier individual variation; absent stats use the fixed `stats` value.
-   *  Base creatures omit it (fixed stats); variants author a band centred on the tier baseline (±~5). */
+  /** §2a per-spawn stat spread — the CANONICAL stat source: every creature authors SYMMETRIC bands and
+   *  an individual rolls uniformly within them at spawn (seeded), so two of a kind differ. The def's
+   *  fixed `stats` above is DERIVED as the band midpoint (`creatureMidStats`) for display / threat model
+   *  / spawn fallback. (A legacy fixed `stats` block in the JSON is still honoured if present.) */
   statRanges?: Partial<Record<'str' | 'dex' | 'con' | 'per', [number, number]>>;
   /** §2a per-spawn natural-armour spread, rolled like `statRanges`; absent = fixed `naturalArmor`. */
   naturalArmorRange?: [number, number];
@@ -174,8 +175,30 @@ function defaultEatsForDiet(diet: EntityDiet): FoodCategory[] {
   }
 }
 
+/** The def's canonical (midpoint) stats. Creatures author EITHER a fixed `stats` block OR a `statRanges`
+ *  band (CREATURE-COMBAT-OVERHAUL §2a — an individual rolls within the band at spawn); when only ranges
+ *  are given, the def's `stats` is the band MIDPOINT, used for display, the threat model, and the spawn
+ *  fallback. Ranges are authored SYMMETRIC so the midpoint is the intended average. */
+function creatureMidStats(raw: RawCreature): {
+  str: number;
+  dex: number;
+  con: number;
+  per: number;
+} {
+  if (raw.stats) return raw.stats as { str: number; dex: number; con: number; per: number };
+  const sr = raw.statRanges as CreatureDefinition['statRanges'] | undefined;
+  const mid = (r: [number, number] | undefined, fallback: number) =>
+    r ? Math.round((r[0] + r[1]) / 2) : fallback;
+  return {
+    str: mid(sr?.str, 10),
+    dex: mid(sr?.dex, 10),
+    con: mid(sr?.con, 10),
+    per: mid(sr?.per, 10)
+  };
+}
+
 function toDefinition(raw: RawCreature): CreatureDefinition {
-  const rs = raw.stats as { str: number; dex: number; con: number; per: number };
+  const rs = creatureMidStats(raw);
   // MUST mirror baseVisionRange() in core/vision.ts (doubled sight range); fleeRange scales with it.
   const visionRange = Math.round(4 + rs.per * 1.3);
   const stats: CreatureStats = {

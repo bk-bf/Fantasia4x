@@ -394,6 +394,16 @@ export interface Item {
     // Natural-weapon fields (innate attacks rolled per swing):
     weight?: number; // relative roll frequency among an entity's natural weapons (default 1)
     staminaCost?: number; // stamina drained by this attack (default ATTACK_STAMINA_COST)
+    /**
+     * CREATURE-COMBAT-OVERHAUL §2c — wielding requirement (Battle-Brothers "heavy" weapons). A crude,
+     * massive orc weapon needs raw muscle to swing WELL: a wielder with STR below `strength` still CAN
+     * equip it but is driven the staged **`overmatched`** condition (PawnStateMachine `driveWieldStrain`,
+     * scaled by the shortfall) — worse aim (hitChance), softer blows + less force (strength), harder to
+     * dodge, and faster fatigue (drains stamina in a fight). An orc clears its own weapon's bar; a scrawny
+     * colonist who loots it flails, and the condition shows as a pill so the player sees WHY. Absent =
+     * anyone wields it fine. Gates by CAPABILITY, not by looting — you must field a STRONG pawn.
+     */
+    wieldRequirement?: { strength?: number };
   };
 
   /**
