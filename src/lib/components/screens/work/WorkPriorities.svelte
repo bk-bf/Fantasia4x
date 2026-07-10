@@ -13,6 +13,7 @@
     STAR_COLORS,
     WORST_MARK,
     WORST_COLORS,
+    NON_SKILL_TASKS,
     rankWorkCells,
     getPawnLaborLevel,
     stateColor,
@@ -136,10 +137,18 @@
     for (const pawn of pawns) {
       const eff: Record<string, number> = {};
       for (const wc of WORK_CATEGORIES) {
+        // Non-skill tasks (hunting = combat, hauling = carrying) are excluded from the best/weakest
+        // medal ranking — they're not learned skills, so ranking them alongside crafts is nonsense
+        // (and hunting, being combat-driven, was topping every colonist). Leaving them out of `eff`
+        // also stops them diluting the real skills' ranking.
+        if (wc.id in NON_SKILL_TASKS) continue;
         const m = modMap[pawn.id]?.[wc.id];
         eff[wc.id] = m ? m.speed * (m.yield ?? 1) * (m.quality ?? 1) : 0;
       }
-      map[pawn.id] = rankWorkCells(eff);
+      const ranked = rankWorkCells(eff);
+      // Give the excluded tasks a neutral (unranked) entry so cell/tooltip lookups still resolve.
+      for (const id of Object.keys(NON_SKILL_TASKS)) ranked[id] = { best: -1, worst: -1 };
+      map[pawn.id] = ranked;
     }
     return map;
   });

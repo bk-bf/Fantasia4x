@@ -744,26 +744,6 @@ export class PawnStatServiceImpl implements PawnStatService {
   }
 
   /**
-   * Hunting proficiency — the hunt resolves as COMBAT, so instead of a work formula (there is no
-   * `hunting_speed`) or an experience level, it composes the pawn's combat aptitude: the better of
-   * its melee game (hit_chance + attack_speed) or ranged game (aim_accuracy + aim_speed), plus
-   * true-strike precision (hit_precision, normalised to its healthy baseline) and movement — a
-   * quick, sure-handed, sharp-eyed pawn hunts well. Stealth joins the mix when STEALTH lands.
-   * All components already fold in capacities/conditions via evaluateStat, so a wounded or slow
-   * pawn hunts worse through the existing model.
-   */
-  private _huntingAptitude(pawn: Pawn | Mob): number {
-    const melee =
-      (this.evaluateStat('hit_chance', pawn) + this.evaluateStat('attack_speed', pawn)) / 2;
-    const ranged =
-      (this.evaluateStat('aim_accuracy', pawn) + this.evaluateStat('aim_speed', pawn)) / 2;
-    // hit_precision is a small CHANCE (0.05 at baseline), not a ~1.0 multiplier — normalise it.
-    const precision = this.evaluateStat('hit_precision', pawn) / 0.05;
-    const movement = this.evaluateStat('movement_speed', pawn);
-    return (Math.max(melee, ranged) + precision + movement) / 3;
-  }
-
-  /**
    * WORK-EXPERIENCE: the SKILL token behind a work stat id for THIS pawn — its experience level in
    * the stat's category (subjobs read their parent's: `repair_speed` → construction) and the
    * resulting factor (levelBase × the style weight for the stat's axis). Null for non-work ids.
@@ -889,17 +869,12 @@ export class PawnStatServiceImpl implements PawnStatService {
     const finesseSkill = skillBase * styleFinesseWeight(workStyle);
     // Base = SKILL × stat-supplement formula × body capacities. Layer explicit trait multipliers on
     // top. Transient state (conditions/transient conditions) applies to throughput → speed only.
-    // Hunting is the exception: it has no work formula OR experience level — the hunt resolves as
-    // COMBAT, so its proficiency composes the pawn's combat aptitude instead (_huntingAptitude).
     const stateMult = pawnStateWorkMultiplier(pawn);
-    const rawSpeed =
-      workType === 'hunting'
-        ? this._huntingAptitude(pawn)
-        : evaluateFormula(formulaFor('speed'), pawn, capacities, speedSkill) +
-          (toolBoost?.speed ?? 0);
     const speed = Math.max(
       0.1,
-      rawSpeed * traitWorkMult(pawn, 'workSpeed', workType, fallbackType) * stateMult
+      (evaluateFormula(formulaFor('speed'), pawn, capacities, speedSkill) + (toolBoost?.speed ?? 0)) *
+        traitWorkMult(pawn, 'workSpeed', workType, fallbackType) *
+        stateMult
     );
     // yield / quality are present only for jobs that define them (in the subjob OR its parent).
     const axis = (kind: 'yield' | 'quality', traitKey: 'workYield' | 'workQuality') => {

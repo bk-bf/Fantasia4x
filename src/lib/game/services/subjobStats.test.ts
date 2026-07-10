@@ -79,23 +79,6 @@ describe('per-subjob work stats', () => {
     ).not.toBeNull();
   });
 
-  it('hunting proficiency composes combat aptitude, not a flat 1.0 or a work level', () => {
-    // Hunting has no work formula/experience level — it reads the pawn's combat stats
-    // (best of melee/ranged + precision + movement), so a deft sharp-eyed pawn out-hunts a clod.
-    const clod = pawn({ dexterity: 6, perception: 6 });
-    const deadeye = pawn({ dexterity: 18, perception: 18 });
-    const clodHunt = pawnStatService.getWorkModifiers(clod, 'hunting').speed;
-    const deadeyeHunt = pawnStatService.getWorkModifiers(deadeye, 'hunting').speed;
-    expect(deadeyeHunt).toBeGreaterThan(clodHunt);
-    expect(clodHunt).not.toBe(1.0); // the old flat fallback is gone
-    // and the pawn's work LEVELS play no part in it
-    const leveled = pawn({}, { skills: { crafting: 50, construction: 50 } });
-    const green = pawn({});
-    expect(pawnStatService.getWorkModifiers(leveled, 'hunting').speed).toBeCloseTo(
-      pawnStatService.getWorkModifiers(green, 'hunting').speed
-    );
-  });
-
   it('getJobWorkStatKey returns the subjob id for splittable categories, else the category', () => {
     expect(jobService.getJobWorkStatKey(job('repair'))).toBe('repair');
     expect(jobService.getJobWorkStatKey(job('construct'))).toBe('construct');

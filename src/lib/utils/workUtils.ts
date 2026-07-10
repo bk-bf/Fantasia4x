@@ -28,6 +28,28 @@ export const LABOR_COLORS: Record<number, string> = {
   4: '#f44'
 };
 export const LVL_NAMES = ['Off', 'Low', 'Normal', 'High', 'Urgent'] as const;
+
+// Work categories that are NOT learned skills — their effectiveness comes from other systems, so
+// they're excluded from the "best/weakest skill" medal ranking and the cell tooltip shows their
+// driving stats (not a speed/yield/quality). Hunting resolves as combat + haul; hauling is carrying.
+// `stats` are the derived stats.jsonc ids surfaced in the tooltip (carry_weight/volume are special-
+// cased there since they're not plain stat ids).
+export const NON_SKILL_TASKS: Record<string, { label: string; statId: string }[]> = {
+  hunting: [
+    { label: 'Hit chance', statId: 'hit_chance' },
+    { label: 'Attack speed', statId: 'attack_speed' },
+    { label: 'Aim accuracy', statId: 'aim_accuracy' },
+    { label: 'Aim speed', statId: 'aim_speed' },
+    { label: 'Precision', statId: 'hit_precision' },
+    { label: 'Movement', statId: 'movement_speed' }
+  ],
+  hauling: [
+    { label: 'Carry weight', statId: 'carry_weight' },
+    { label: 'Carry volume', statId: 'carry_volume' },
+    { label: 'Movement', statId: 'movement_speed' }
+  ]
+};
+
 export const ABBR: Record<string, string> = {
   foraging: 'FRG',
   woodcutting: 'WOD',

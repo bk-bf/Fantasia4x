@@ -11,6 +11,7 @@
     STAR_TIERS,
     WORST_COLORS,
     WORST_TIERS,
+    NON_SKILL_TASKS,
     type CellRank
   } from '$lib/utils/workUtils';
 
@@ -18,7 +19,8 @@
     pawn: Pawn;
     wc: WorkCategory;
     /** speed / yield / quality from pawnStatService.getWorkModifiers — the single work model.
-     * yield/quality are null for jobs that don't have that axis (e.g. hauling = speed only). */
+     * yield/quality are null for jobs that don't have that axis (e.g. hauling = speed only).
+     * Hunting isn't a work skill: `speed` carries its combat RATING and yield/quality are null. */
     mods: { speed: number; yield: number | null; quality: number | null };
     rank: CellRank;
     level: 0 | 1 | 2 | 3 | 4;
@@ -48,8 +50,28 @@
   const mult = (n: number) => `×${n.toFixed(2)}`;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+  // Non-skill tasks (hunting = combat + haul, hauling = carrying) aren't learned work skills — no
+  // speed/yield/quality, no experience level, no medal. The cell lists the DRIVING stats instead.
+  let nonSkill = $derived(NON_SKILL_TASKS[wc.id]);
+  let relevantStats = $derived.by(() => {
+    if (!nonSkill) return [];
+    const carry = nonSkill.some((s) => s.statId.startsWith('carry_'))
+      ? itemService.getCarryCapacityBreakdown(pawn)
+      : null;
+    return nonSkill.map((s) => {
+      if (s.statId === 'carry_weight')
+        return { label: s.label, text: `${Math.round(carry!.weight.total)} kg` };
+      if (s.statId === 'carry_volume')
+        return { label: s.label, text: `${Math.round(carry!.volume.total)} L` };
+      const v = pawnStatService.evaluateStat(s.statId, pawn);
+      // hit_precision is a small chance (~0.05), not a ~1.0 multiplier — show it raw.
+      return { label: s.label, text: s.statId === 'hit_precision' ? v.toFixed(3) : mult(v) };
+    });
+  });
+
   // Single headline efficiency = product of the axes this job actually has (absent
   // axes are null → treated as 1). An average pawn reads 100%. Drives medal ranking too.
+  // (Suppressed for non-skill tasks — they have no single "efficiency".)
   let eff = $derived(mods.speed * (mods.yield ?? 1) * (mods.quality ?? 1));
 
   let stats = $derived(
@@ -120,7 +142,9 @@
 <div class="tip" class:pinned use:portal data-pin-panel {style}>
   <div class="tip-hdr">
     <span class="tip-name">{name ?? wc.name}</span>
-    <span class="tip-eff" style="color:{getEfficiencyColor(eff)}">{Math.round(eff * 100)}%</span>
+    {#if !nonSkill}
+      <span class="tip-eff" style="color:{getEfficiencyColor(eff)}">{Math.round(eff * 100)}%</span>
+    {/if}
   </div>
 
   {#if rank.best >= 0}
@@ -129,39 +153,57 @@
     <div class="tip-rank" style="color:{WORST_COLORS[rank.worst]}">▾ {WORST_TIERS[rank.worst]}</div>
   {/if}
 
-  <div class="tip-row">
-    <span class="tip-lbl">Speed</span>
-    <span style="color:{getEfficiencyColor(mods.speed)}">{mult(mods.speed)}</span>
-  </div>
-  {#if mods.yield !== null}
-    <div class="tip-row">
-      <span class="tip-lbl">Yield</span>
-      <span style="color:{getEfficiencyColor(mods.yield)}">{mult(mods.yield)}</span>
+  {#if nonSkill}
+    <div class="tip-note">
+      {wc.id === 'hunting'
+        ? 'Combat task — resolves as a normal fight, then the carcass is hauled.'
+        : 'Carrying task — driven by carry capacity and movement, not a learned skill.'}
     </div>
-  {/if}
-  {#if mods.quality !== null}
+    {#each relevantStats as s}
+      <div class="tip-row">
+        <span class="tip-lbl">{s.label}</span>
+        <span>{s.text}</span>
+      </div>
+    {/each}
     <div class="tip-row">
-      <span class="tip-lbl">Quality</span>
-      <span style="color:{getEfficiencyColor(mods.quality)}">{mult(mods.quality)}</span>
+      <span class="tip-lbl">Assigned</span>
+      <span style="color:{LABOR_COLORS[level]}">{LVL_NAMES[level]}</span>
+    </div>
+  {:else}
+    <div class="tip-row">
+      <span class="tip-lbl">Speed</span>
+      <span style="color:{getEfficiencyColor(mods.speed)}">{mult(mods.speed)}</span>
+    </div>
+    {#if mods.yield !== null}
+      <div class="tip-row">
+        <span class="tip-lbl">Yield</span>
+        <span style="color:{getEfficiencyColor(mods.yield)}">{mult(mods.yield)}</span>
+      </div>
+    {/if}
+    {#if mods.quality !== null}
+      <div class="tip-row">
+        <span class="tip-lbl">Quality</span>
+        <span style="color:{getEfficiencyColor(mods.quality)}">{mult(mods.quality)}</span>
+      </div>
+    {/if}
+
+    <div class="tip-row">
+      <span class="tip-lbl">Assigned</span>
+      <span style="color:{LABOR_COLORS[level]}">{LVL_NAMES[level]}</span>
+    </div>
+    {#each stats as s}
+      <div class="tip-row">
+        <span class="tip-lbl">{s.label}</span>
+        <span>{s.val}</span>
+      </div>
+    {/each}
+    <div class="tip-row">
+      <span class="tip-lbl">Skill</span>
+      <span>{skill}</span>
     </div>
   {/if}
 
-  <div class="tip-row">
-    <span class="tip-lbl">Assigned</span>
-    <span style="color:{LABOR_COLORS[level]}">{LVL_NAMES[level]}</span>
-  </div>
-  {#each stats as s}
-    <div class="tip-row">
-      <span class="tip-lbl">{s.label}</span>
-      <span>{s.val}</span>
-    </div>
-  {/each}
-  <div class="tip-row">
-    <span class="tip-lbl">Skill</span>
-    <span>{skill}</span>
-  </div>
-
-  {#if toolMod || traitMods.length > 0 || condMods.length > 0}
+  {#if !nonSkill && (toolMod || traitMods.length > 0 || condMods.length > 0)}
     <div class="tip-sep">MODIFIERS</div>
     {#if toolMod}
       <div class="tip-mod">
@@ -236,6 +278,12 @@
   }
   .tip-lbl {
     color: var(--text-dim);
+  }
+  .tip-note {
+    color: var(--text-muted, #778);
+    font-size: 10px;
+    line-height: 1.35;
+    margin-bottom: 3px;
   }
   .tip-sep {
     margin-top: 4px;
