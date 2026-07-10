@@ -326,6 +326,116 @@ Everything else reuses existing `items.jsonc` ids. ✅ = authored 2026-07-11.
       proc for spider/viper T3+ can reuse `venom_bite` with a bumped `onHitCondition` on a variant weapon
       id (`greater-venom-bite`).
 
+### 2g. Carcasses & the butchery economy (every variant → a carcass → drops)
+
+**Engine + reference slice — ✅ LANDED 2026-07-11** (`pnpm check`/`threat:check`/`graph:check` green,
++ `haulForbidden.test.ts` dynamic-carcass case): the **dynamic-name boss carcass** hook
+(`dropCarcass` sets "Old Fang's Carcass" from the slain beast when the carcass item is `dynamicName`),
+a **T5 boss creature** `old_fang` (wolf line, `great_wolf_carcass` dynamic trophy), the **magical drop
+items** (`alpha_ichor`/`owlbear_bile` reagents, `dire_wolf_pelt`), a **§2h magical gear** piece
+(`direwolf_warcloak`, grants Might, crafted from the pelt), the boss + owlbear **butcher recipes**
+(owlbear now drops `owlbear_bile` — an old creature wired into the new economy), and the **T2 butcher
+building** `flensing_table` (+45% yield, tool-tier 2). The rest of the roster (below) is bulk data.
+
+
+Every new creature needs a `carcassItemId`. The pattern already exists (`wolf_carcass` etc.: `category:
+"carcass"`, `processingType: ["butchery"]`, `decaysTo: "rotten_carcass"`, weight/decay scaled to body
+size). A butcher recipe (`station: butcher_spot`, `inputs: {carcass:1}`, `outputs: {meat, hide, bones,
+sinew}`) turns it into materials; higher butcher buildings (`dressing_stone` +25%) yield more.
+
+**Carcass-per-tier (proposal):**
+- **T1–T2** reuse the LINE's base carcass (a `dire_wolf` butchers into more of the same `wolf_meat`/
+  `wolf_pelt` — bigger `quantity`, not new item types). One carcass item per SPECIES, tier scales yield.
+- **T3–T4 (elites)** get a **distinct carcass** (`cave_bear_carcass`) yielding a **prime hide/pelt**
+  variant (`cave_bear_pelt` — a better armour material) + more meat + **the first magical drop** (§2h).
+- **T5 (boss)** gets a **dynamic-name carcass** (`dynamicName: true`, like `pawn_carcass` → "Old Fang's
+  Carcass") so the trophy reads as the named beast; butchers into the boss hide + **multiple §2h magical
+  drops** + a **famed**-tier material.
+
+**Butcher DROP POOLS by tier** (what a butcher run yields — author as the recipe `outputs`):
+
+| tier | meat | hide/structural | magical (§2h) |
+| ---- | ---- | --------------- | ------------- |
+| T1-2 | base meat ×n, small/medium bones, sinew | base pelt/hide | — |
+| T3 | prime meat ×n | **prime pelt** + bones | 1 minor reagent (a gland/ichor), low chance |
+| T4 | prime meat ×n, **rich fat** | prime pelt + **great bone** (haft material) | 1–2 reagents + a chance of a trait-organ |
+| T5 (boss) | trophy meat | boss hide + a **famed bone/fang** | **2–3** guaranteed magical drops incl. an enchant material |
+
+**Butcher BUILDINGS per tier** (extend the existing `butcher_spot` T0 / `dressing_stone` T1 +25%):
+- [ ] **`flensing_table`** (T2, +45% yield, tool-tier 2, some metal) — needed to fully process elite
+      carcasses (a big cave-bear hide is wasted on a raw spot); gate the prime-pelt/magical yields behind it.
+- [ ] **`sanguinary_altar`** (T3, magical) — the only station that extracts the **enchant materials +
+      trait-organs** from a T5 boss carcass intact (a mundane butcher just gets meat + a ruined hide from
+      a boss). Ties the boss reward to a mid-game building investment. Costs `mana_crystal`/`gem_dust`
+      (PRODUCTION-CHAIN-IIII).
+
+**New equipment & furniture from creature materials (new + OLD wired in):**
+- [ ] **New from new creatures:** `cave_bear_pelt` → a heavy fur cloak/armour (warmth + armour);
+      `direwolf_pelt` → a light fur cloak; `great_fang`/`great_bone` → bone weapons/hafts;
+      **boss hides** → the §2h magical-beast gear.
+- [ ] **Old creatures wired in:** many existing carcasses still have **no butcher recipe** (`bear`,
+      `owlbear`, `sabretooth`, `mire_crocodile`, `orc_reaver`, `harpy`, `bullywug`… — the standing TODO in
+      `recipes.jsonc`). Author them now, in the same tiered pool shape, and add the **furniture** they
+      unlock: `bear_hide` → a **bear-rug** (beauty) + heavy bedroll; `mire_crocodile` → croc-leather
+      (armour); antler/horn/tusk → trophy wall-mounts (beauty) + tool handles. This is the "old ones
+      respect the new economy" pass — the whole roster becomes butcherable into the material web.
+
+### 2h. T4-5 MAGICAL DROPS — the beast-magic economy (design)
+
+T4-5 creatures drop, on butchery, **1–3 "magical-level" materials** beyond hide/meat. Three sinks (the
+user's three ideas), each a distinct item category so the player learns what a drop is *for*:
+
+**(i) Alchemical reagents** — organs/essences that are potion inputs (with a rare-material from
+PRODUCTION-CHAIN-IIII):
+
+| drop | from | potion | effect |
+| ---- | ---- | ------ | ------ |
+| `alpha_ichor` | dire wolf / alpha | + `bloodroot` → **Bloodrage Draught** | temporary `adrenaline`-like combat condition |
+| `owlbear_bile` | owlbear / cave bear | + `emberbloom` → **Ironhide Tonic** | temporary damage-resistance condition |
+| `venom_sac` | great spider / viper | + `nightshade_bolete` → **weapon venom** | coats a weapon → `envenomed` on-hit for a while |
+| `wraith_essence` | wraith king | + `voidshard` → **Shadeform Philtre** | brief invisibility / night-move (ties STEALTH) |
+
+**(ii) Trait-granters on consumption** — a rare organ eaten (or distilled + drunk) grants a PERMANENT
+trait, drawing from the existing `traits.jsonc` combat/body lines. Steeply limited (one-use, rare drop,
+maybe a risk of a flaw):
+
+| drop | eat / distil → | grants |
+| ---- | -------------- | ------ |
+| `alpha_heart` | **Heart of the Pack** | `feral-adrenaline` (or a bespoke `pack-sense`) |
+| `direwolf_hackles` | distil → **Beastblood Elixir** (+ `mandrake`) | `thick-hide` / a `nightVision` bump |
+| `sabretooth_glands` | **Predator's Gift** | `killer-instinct` |
+| `owlbear_pineal` | **Third Eye** (+ `witch_morel`) | `keen-senses` / a perception trait |
+
+Grants ride the existing trait system (a `wound`/`bodyMod`-kind trait or a stat trait); the granularity
+question is whether it's guaranteed or a roll, and whether it can also roll a FLAW (a Faustian bargain —
+fits the tone). **Recommendation:** guaranteed grant for the *named* organ (you earned it by clearing a
+boss); the risky ones (`voidshard` distillations) roll a flaw.
+
+**(iii) Magical-beast gear** — a boss hide/bone + a PRODUCTION-CHAIN-IIII rare material (magical
+lumber/crystal) crafts **late-stage gear with a powerful granted condition AND a steep `wieldRequirement`**
+(§2c) — the crafted twin of the Phase-4b famed drop:
+
+| gear | material | grants (worn) | wieldRequirement |
+| ---- | -------- | ------------- | ---------------- |
+| **Direwolf Warcloak** | `direwolf_pelt` + `witchwood_log` | a `moonlit-claws`-style night buff | STR — (cloak, light) |
+| **Cave-Bear Plate** | boss hide + `frostheart_timber` | strong armour + a `iron-skin` condition | high (heavy) |
+| **Fang-Reaver** (weapon) | `great_fang` + `soulwood_heart` | bleed-on-hit + an `adrenaline` grant | steep (STR ~22) |
+| **Wraithbone Blade** | wraith bone + `voidshard` | armour-pierce + fear on-hit; **a curse condition** | steep + the curse cost |
+
+These use the existing worn-gear condition-grant path (§M `grantsConditions`) + the `wieldRequirement`
+(§2c) so a magical weapon is only usable by a bruiser — and the strongest carry a downside (`voidshard`
+curse), so power has a price. **No new mechanics** — reagents are items + recipes; trait-granters reuse
+the trait system's grant path; magical gear reuses `grantsConditions` + `wieldRequirement`.
+
+**Open (magical drops):**
+- [ ] Trait-grant granularity — guaranteed vs rolled, and can it roll a FLAW (Faustian)? (rec: named =
+      guaranteed, `voidshard` distillations = flaw risk).
+- [ ] Do reagents/organs spoil (decaySeconds) like meat, or keep as "preserved" materials? (rec: organs
+      keep once extracted at the `sanguinary_altar`; raw they spoil).
+- [ ] Boss drop is BUTCHERED (this §2h path) vs the Phase-4b **famed ground-drop** (`rollFamed`) — do both
+      fire (a boss gives a famed item AND a butcherable magical carcass), or pick one? (rec: both — the
+      famed weapon on the ground, the carcass for the crafting/alchemy economy).
+
 **Phase 2 acceptance:**
 - [x] Engine: two spawns of the same creature differ in stats/armour — ALL creatures now roll from `statRanges` bands (converted 2026-07-11; midpoints = old values, `threat:check` unchanged).
 - [x] Engine: a geared humanoid fights with its weapon + worn armour and drops a subset on death (drawLoadout → equip → dropMobGear; combat reads `equipment` unchanged). Live on `goblin` (`goblin_warband`) + `orc_reaver` (`orc_warband`).
