@@ -34,9 +34,11 @@ nesting in a frostheart stand).
 - **Rare resources** — `resources.jsonc` groves (`heartwood_grove`… — `glow`, `spawn.subterrains`
   weights, `yields[]` with `regrowthTurns`, `persistent`/`harvestDepletes`), `native_gold`, gems, and
   the `lair: true` dens. New attractors are just more entries in this file.
-- **Foraging / woodcut / mining** — `designationTypes` + `interaction.workCategory` already route a node
-  to the right job (`foraging`/`woodcutting`/`mining`). A **new `dig` action** is the only genuinely new
-  interaction (buried treasure); the rest reuse existing categories.
+- **Foraging / woodcut / mining / DIG** — `designationTypes` + `interaction.workCategory` already route a
+  node to the right job (`foraging`/`woodcutting`/`mining`), **including a full `dig` action** — the
+  `dig` designationType + `dig` action + `digging` workCategory (with `digging_speed`/`digging_yield`
+  stats + the `digging_stick` tool) already exist and are used by clay/soil nodes (`resources.jsonc`).
+  So buried treasure (§1e) needs **NO new interaction** — every attractor family reuses an existing verb.
 - **Alchemy foundation** — Production-Chain-III shipped alchemy + `gem_dust` + the §M magic-gear/staff
   path. Reagents plug into new potion recipes at the existing alchemy station.
 - **Lair placement** — `entitySpawning.ts` seeds lairs by `spawn.subterrains` weight only today; Phase 3b
@@ -96,21 +98,21 @@ Mineable crystal vents/geodes — rarer than ore, the enchanting/`gem_dust`++ ti
 | `star_geode` | mountain/impact | `star_shard` + a gem roll | the §2h enchant material; rare |
 | `voidshard_cluster` | deep mountain/cave | `voidshard` | a "cursed" reagent — powerful gear + a downside condition |
 
-### 1e. Diggable treasure (`dig` — NEW interaction)
+### 1e. Diggable treasure (reuse the EXISTING `dig` action)
 
-Buried caches surfaced by a **new `dig` designation** (workCategory `mining` or a new `excavation`).
-Often placed **under/beside a lair** — the classic dragon-on-its-hoard: clear the guardian, then dig the
-prize. One-shot (non-persistent), high variance.
+Buried caches surfaced by the **existing `dig` designation** — the same `dig`/`digging` verb that already
+digs clay + soil (`resources.jsonc`), so a treasure node is just a resource entry with
+`designationTypes: ["dig"]`, `interaction.action: "dig"`, `workCategory: "digging"`, and a treasure
+`yields[]`. **No new interaction, workCategory, or tool** (the `digging_stick` already gates it — a barrow
+opens with a digging stick, fitting the primitive-tech feel; a later `shovel` upgrade is optional polish,
+NOT required). Often placed **under/beside a lair** — the dragon-on-its-hoard: clear the guardian, then
+dig the prize. One-shot (`persistent: false`), high variance.
 
 | id | where | yields |
 | -- | ----- | ------ |
 | `barrow_cache` | plains/forest mound | bones, grave-goods (bronze/iron gear at rolled condition), a **famed** roll |
 | `buried_hoard` | near a lair | `native_gold`, gems, `gold_ingot`, a rare reagent |
 | `sunken_relic` | swamp | an ancient item / §2h enchant material; a curse risk (`voidshard`-adjacent) |
-
-**Open:** is `dig` a new `workCategory` + tool (`shovel`), or does it fold into `mining`? *Recommendation:
-fold into `mining` for now (a pick digs a barrow); a dedicated shovel/`excavation` category is a later
-polish, not worth a new tool + job wiring for the first pass.*
 
 ---
 
@@ -149,8 +151,8 @@ thing guarding it*.
       regrow, crystals/treasure deplete).
 - [ ] `items.jsonc`: the material items (`bloodroot`, `witchwood_log`, `mana_crystal`, `soulwood_heart`,
       `star_shard`, `voidshard`, treasure items…) with `value` (KINGDOMS-TRADE) + category.
-- [ ] `dig`: fold into `mining` for `1e` (a pick surfaces a barrow) — one `interaction.action: "dig"` or
-      reuse `"mine"`; no new job.
+- [ ] `1e` treasure nodes reuse the EXISTING `dig`/`digging` verb (like clay/soil) — just author the
+      resource entries with `designationTypes: ["dig"]` + a treasure `yields[]`; no new interaction/job/tool.
 
 ### Phase B — Alchemy + enchanting economy
 - [ ] Potion recipes (reagent + creature drop) at the alchemy station; the granted conditions/§2h
