@@ -67,7 +67,13 @@
       "leftEar"     : {"size": 10, "bleedRatio": 0.005, "hitWeight": 0.2, "isPaired": true, "armor": 0.2},
       "rightEar"    : {"size": 10, "bleedRatio": 0.005, "hitWeight": 0.2, "isPaired": true, "armor": 0.2},
       // The throat — soft (armor 0) and bleeds hard (carotid/trachea); the target a gorget guards.
+      // Shared by EVERY standard-bodied plan (not just humanoids) — the classic "gap" on an armoured
+      // beast: a wolf's throat is as bare as a man's (CREATURE-COMBAT-OVERHAUL §1a).
       "neck"        : {"size": 20, "bleedRatio": 0.06, "hitWeight": 2, "armor": 0},
+      // The carotid — a real organ INSIDE the neck (hitWeight 0, found only by the organ-penetration
+      // roll on a neck hit). Not vital: nicking it doesn't kill outright, it opens a hard bleed-out
+      // (small size → wounds hit high severity fast; big bleedRatio → they gush).
+      "carotidArtery": {"size": 8, "bleedRatio": 0.12, "hitWeight": 0, "containedIn": "neck"},
       // The chest is the SOFT outer wall of the thorax (pecs/skin) wrapping the ribcage — it takes
       // cut/puncture/crush like any flesh, but it is NOT bone, so it never fractures. The skeleton beneath
       // it is the `ribcage` (below): heavy blows crack THAT, not the wall. (See Combat's fracture routing.)
@@ -83,6 +89,10 @@
     "humanoid": {
       "// note": "Each limb SEGMENT is soft tissue (cut/puncture/crush) wrapping its named bone (scapula/humerus/ulna/metacarpus, ilium/femur/tibia/metatarsus; hitWeight 0, fracture-only) — a hit on the flesh routes its fracture to the bone within. Same model as chest→ribcage.",
       "parts": {
+        // The groin — the femoral weak point below armour coverage (CREATURE-COMBAT-OVERHAUL §1a):
+        // near-bare (armor 0.1), bleeds hard, and holds the femoral artery for the penetration roll.
+        "groin"            : {"size": 15, "bleedRatio": 0.05, "hitWeight": 1.5, "armor": 0.1},
+        "femoralArtery"    : {"size": 8, "bleedRatio": 0.1, "hitWeight": 0, "containedIn": "groin"},
         "leftShoulder"     : {"size": 40, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "armor": 0.7},
         "leftScapula" : {"size": 40, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftShoulder"},
         "leftUpperArm"     : {"size": 45, "bleedRatio": 0.05, "hitWeight": 2, "isPaired": true, "armor": 0.6},
@@ -141,8 +151,8 @@
         "rightLittleToe"   : {"size": 2, "bleedRatio": 0.002, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightFoot", "armor": 0.2}
       },
       "limbs": {
-        "head": ["head", "skull", "forehead", "leftCheek", "rightCheek", "jaw", "mandible", "nose", "neck", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
-        "torso": ["chest", "ribcage", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
+        "head": ["head", "skull", "forehead", "leftCheek", "rightCheek", "jaw", "mandible", "nose", "neck", "carotidArtery", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
+        "torso": ["chest", "ribcage", "abdomen", "groin", "femoralArtery", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
         "left_arm": ["leftShoulder", "leftScapula", "leftUpperArm", "leftHumerus", "leftForearm", "leftUlna", "leftHand", "leftMetacarpus", "leftThumb", "leftIndexFinger", "leftMiddleFinger", "leftRingFinger", "leftLittleFinger"],
         "right_arm": ["rightShoulder", "rightScapula", "rightUpperArm", "rightHumerus", "rightForearm", "rightUlna", "rightHand", "rightMetacarpus", "rightThumb", "rightIndexFinger", "rightMiddleFinger", "rightRingFinger", "rightLittleFinger"],
         "left_leg": ["leftHip", "leftIlium", "leftUpperLeg", "leftFemur", "leftLowerLeg", "leftTibia", "leftFoot", "leftMetatarsus", "leftBigToe", "leftSecondToe", "leftMiddleToe", "leftFourthToe", "leftLittleToe"],
@@ -188,7 +198,7 @@
         "caudalVertebrae"              : {"size": 30, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "tail"}
       },
       "limbs": {
-        "head": ["head", "skull", "jaw", "mandible", "snout", "rostrum", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
+        "head": ["head", "skull", "jaw", "mandible", "snout", "rostrum", "neck", "carotidArtery", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
         "torso": ["chest", "ribcage", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
         "front_left_leg": ["frontLeftShoulder", "frontLeftScapula", "frontLeftUpperLeg", "frontLeftHumerus", "frontLeftLowerLeg", "frontLeftUlna", "frontLeftPaw", "frontLeftMetacarpus"],
         "front_right_leg": ["frontRightShoulder", "frontRightScapula", "frontRightUpperLeg", "frontRightHumerus", "frontRightLowerLeg", "frontRightUlna", "frontRightPaw", "frontRightMetacarpus"],
@@ -210,7 +220,7 @@
         "hindRightDistalPhalanx"  : {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindRightHoof"}
       },
       "limbs": {
-        "head": ["head", "skull", "jaw", "mandible", "snout", "rostrum", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
+        "head": ["head", "skull", "jaw", "mandible", "snout", "rostrum", "neck", "carotidArtery", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
         "torso": ["chest", "ribcage", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
         "front_left_leg": ["frontLeftShoulder", "frontLeftScapula", "frontLeftUpperLeg", "frontLeftHumerus", "frontLeftLowerLeg", "frontLeftUlna", "frontLeftHoof", "frontLeftDistalPhalanx"],
         "front_right_leg": ["frontRightShoulder", "frontRightScapula", "frontRightUpperLeg", "frontRightHumerus", "frontRightLowerLeg", "frontRightUlna", "frontRightHoof", "frontRightDistalPhalanx"],
@@ -234,7 +244,7 @@
         "hindRightWebMetatarsus"  : {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindRightWebFoot"}
       },
       "limbs": {
-        "head": ["head", "skull", "maw", "maxilla", "snout", "rostrum", "leftEye", "rightEye", "brain"],
+        "head": ["head", "skull", "maw", "maxilla", "snout", "rostrum", "neck", "carotidArtery", "leftEye", "rightEye", "brain"],
         "torso": ["chest", "ribcage", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
         "front_left_leg": ["frontLeftShoulder", "frontLeftScapula", "frontLeftUpperLeg", "frontLeftHumerus", "frontLeftLowerLeg", "frontLeftUlna", "frontLeftWebFoot", "frontLeftWebMetacarpus"],
         "front_right_leg": ["frontRightShoulder", "frontRightScapula", "frontRightUpperLeg", "frontRightHumerus", "frontRightLowerLeg", "frontRightUlna", "frontRightWebFoot", "frontRightWebMetacarpus"],
@@ -271,7 +281,7 @@
         "tailFeathers"  : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1, "armor": 0.5}
       },
       "limbs": {
-        "head": ["head", "skull", "beak", "premaxilla", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
+        "head": ["head", "skull", "beak", "premaxilla", "neck", "carotidArtery", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
         "torso": ["chest", "ribcage", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
         "left_wing": ["leftWing", "leftWingHumerus", "leftWingtip", "leftCarpometacarpus"],
         "right_wing": ["rightWing", "rightWingHumerus", "rightWingtip", "rightCarpometacarpus"],
@@ -296,7 +306,7 @@
         "hindKidney"     : {"size": 14, "bleedRatio": 0.02, "hitWeight": 0, "containedIn": "hindBody"}
       },
       "limbs": {
-        "head": ["head", "skull", "fangs", "leftVenomGland", "rightVenomGland", "leftEye", "rightEye", "brain"],
+        "head": ["head", "skull", "fangs", "leftVenomGland", "rightVenomGland", "neck", "carotidArtery", "leftEye", "rightEye", "brain"],
         "body": ["foreBody", "foreVertebrae", "midBody", "midVertebrae", "hindBody", "hindVertebrae", "heart", "leftLung", "liver", "stomach", "foreKidney", "hindKidney"],
         "tail": ["tail", "caudalVertebrae"]
       }
@@ -360,8 +370,8 @@
         "rightWingPhalanx": {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightWingClaw"}
       },
       "limbs": {
-        "head": ["head", "skull", "forehead", "leftCheek", "rightCheek", "jaw", "mandible", "nose", "neck", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
-        "torso": ["chest", "ribcage", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
+        "head": ["head", "skull", "forehead", "leftCheek", "rightCheek", "jaw", "mandible", "nose", "neck", "carotidArtery", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
+        "torso": ["chest", "ribcage", "abdomen", "groin", "femoralArtery", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
         "left_wing": ["leftWing", "leftWingHumerus", "leftWingClaw", "leftWingPhalanx", "leftWingtip", "leftCarpometacarpus"],
         "right_wing": ["rightWing", "rightWingHumerus", "rightWingClaw", "rightWingPhalanx", "rightWingtip", "rightCarpometacarpus"],
         "left_leg": ["leftThigh", "leftThighFemur", "leftShank", "leftTibiotarsus", "leftTalon", "leftTarsometatarsus"],

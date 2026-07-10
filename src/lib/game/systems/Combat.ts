@@ -143,6 +143,21 @@ const ORGAN_TRANSFER_PENETRATING = 0.55;
 const ORGAN_TRANSFER_BLUNT = 0.25;
 /** ± spread on the transmitted organ load (mirrors bone). */
 const ORGAN_DAMAGE_VARIANCE = 0.4;
+/** ADR-031: precision finds the vital DIRECTLY — the organ-penetration and fracture chances are each
+ *  multiplied by (1 + precision × K), where precision is the attacker's full crit chance (hit_precision
+ *  stat + the weapon's critMod, the same number that drives crits and gap-aiming). A deft fighter (or a
+ *  crit-prone stiletto) beats armour by PLACEMENT — the kidney thrust, the cracked femur — while the
+ *  existing caps still bound the result. hit_precision runs ~0.05 base → ~0.11 high DEX/PER, so organ
+ *  routing gains ~+30–65% and fractures ~+20–45% at the top end. Organs weigh heavier than bone:
+ *  precision is a blade guided into a gap more than force driven through it. */
+const K_PRECISION_ORGAN = 6;
+const K_PRECISION_FRACTURE = 4;
+/** ADR-031 natural-hide degradation: blows chip a creature's per-part hide the same way they wreck worn
+ *  armour (weapon `armorDamage` × the attacker's `armor_damage` stat — one wear model for both). The
+ *  wear is PER-FIGHT scratch, not permanent maiming: it expires once no chip has landed for this many
+ *  ticks (~an in-game hour, mirroring MOB_CLOT_ROLL_INTERVAL — the beast's hide "settles" as it
+ *  recovers), so a sustained fight progressively opens a tank up but a fled bear resets. */
+const HIDE_WEAR_RESET_TICKS = 750;
 /** Stats are on a ~5–22 scale; this divisor keeps damage in a sensible range. */
 const STAT_SCALE = 10;
 /** How strongly `bodyScale` boosts natural-weapon damage: damageMult = 1 + (bodyScale − 1) × this. */
@@ -389,7 +404,12 @@ function bloodlettingChance(item: Item | undefined): number | undefined {
 /** LINEAGES §4: credit a PAWN's kill toward its awakening deeds, by the victim's creature family and
  *  whether the killing blow was unarmed (fists / a natural weapon, not a crafted one). Mobs never accrue
  *  deeds (they don't grow lineages). Cheap: a couple of map lookups on a kill event. */
-function creditKillDeeds(attacker: Pawn | Mob, victim: Mob, weaponId?: string, turn?: number): void {
+function creditKillDeeds(
+  attacker: Pawn | Mob,
+  victim: Mob,
+  weaponId?: string,
+  turn?: number
+): void {
   if ('creatureId' in attacker) return; // attacker is a mob → no deeds
   const def = getCreatureById(victim.creatureId);
   if (!def) return;
@@ -547,7 +567,8 @@ function partArmorReduction(
   defender: Pawn | Mob,
   partId: BodyPartId,
   armorPen: number,
-  rawDamage: number
+  rawDamage: number,
+  turn?: number
 ): number {
   const def = PART_DEF_MAP[partId];
   if (!def || rawDamage <= 0) return 0;
@@ -581,7 +602,7 @@ function partArmorReduction(
     }
   }
   if (blockable > 0) {
-    const natural = naturalArmorPoints(defender, def.armor ?? DEFAULT_ARMOR_SHARE, partId);
+    const natural = naturalArmorPoints(defender, def.armor ?? DEFAULT_ARMOR_SHARE, partId, turn);
     if (natural > 0) blockable = Math.max(0, blockable - natural);
   }
   const through = rawDamage * armorPen + blockable;
@@ -599,8 +620,15 @@ function entityNaturalArmor(defender: Pawn | Mob): number {
 
 /** Natural-armour DAMAGE POINTS at a part: a creature's hide (`naturalArmor`) or a pawn's cultural traits
  *  (ADR-029 `naturalArmor` sugar), the scalar distributed by the part's `share`, PLUS any explicit
- *  per-part `armorMods` (carapace back-heavy, soft belly). */
-function naturalArmorPoints(defender: Pawn | Mob, share: number, partId: BodyPartId): number {
+ *  per-part `armorMods` (carapace back-heavy, soft belly). ADR-031: when `turn` is given, a mob's
+ *  ACTIVE per-part hide wear (`hideWear`, chipped by blows this fight) is subtracted — worn-down hide
+ *  soaks less until the fight ends and the wear expires. Floored at 0. */
+function naturalArmorPoints(
+  defender: Pawn | Mob,
+  share: number,
+  partId: BodyPartId,
+  turn?: number
+): number {
   let scalar = 0;
   let mods = 0;
   if ('creatureId' in defender) {
@@ -608,14 +636,26 @@ function naturalArmorPoints(defender: Pawn | Mob, share: number, partId: BodyPar
     scalar = c?.naturalArmor ?? 0;
     for (const m of c?.armorMods ?? [])
       if (armorModHits(defender, m.target, partId)) mods += m.defense;
-  } else {
-    for (const t of defender.traits ?? []) {
-      scalar += t.naturalArmor ?? 0;
-      for (const m of t.armorMods ?? [])
-        if (armorModHits(defender, m.target, partId)) mods += m.defense;
+    let pts = scalar * share + mods;
+    if (turn != null && pts > 0) {
+      const wear = activeHideWear(defender as Mob, partId, turn);
+      if (wear > 0) pts = Math.max(0, pts - wear);
     }
+    return pts;
+  }
+  for (const t of defender.traits ?? []) {
+    scalar += t.naturalArmor ?? 0;
+    for (const m of t.armorMods ?? [])
+      if (armorModHits(defender, m.target, partId)) mods += m.defense;
   }
   return scalar * share + mods;
+}
+
+/** A mob's live hide wear at a part — 0 unless a chip landed within the reset window (per-fight scratch). */
+function activeHideWear(mob: Mob, partId: BodyPartId, turn: number): number {
+  if (!mob.hideWear || mob.hideWearAt == null) return 0;
+  if (turn - mob.hideWearAt > HIDE_WEAR_RESET_TICKS) return 0; // fight over — hide has settled
+  return mob.hideWear[partId] ?? 0;
 }
 
 /** Does an `armorMods` target — a part id, a limb-group id, or `'all'` — apply to `partId`? */
@@ -627,7 +667,7 @@ function armorModHits(defender: Pawn | Mob, target: string, partId: BodyPartId):
 /** Total armour DAMAGE POINTS protecting a part (worn covering pieces + natural hide) — the "how plated
  *  is this spot" scan behind ADR-029 aimed targeting. Mirrors partArmorReduction's layer collection
  *  without running the subtraction. */
-function partArmorPoints(defender: Pawn | Mob, partId: BodyPartId): number {
+function partArmorPoints(defender: Pawn | Mob, partId: BodyPartId, turn?: number): number {
   const def = PART_DEF_MAP[partId];
   if (!def) return 0;
   let pts = 0;
@@ -640,7 +680,7 @@ function partArmorPoints(defender: Pawn | Mob, partId: BodyPartId): number {
       pts += scaleArmorQuality(item.armorProperties, inst.quality, inst.famedStatMult).defense;
     }
   }
-  return pts + naturalArmorPoints(defender, def.armor ?? DEFAULT_ARMOR_SHARE, partId);
+  return pts + naturalArmorPoints(defender, def.armor ?? DEFAULT_ARMOR_SHARE, partId, turn);
 }
 
 /** ADR-029 skill-biased hit location (the CDDA crit-zone loop): roll the struck part as usual, but at
@@ -648,15 +688,15 @@ function partArmorPoints(defender: Pawn | Mob, partId: BodyPartId): number {
  *  caller) — roll two extra candidate locations and take the LEAST ARMOURED: a skilled fighter works
  *  the gaps (eye/throat/belly) instead of clanging off the plate. One chance, two payoffs: a "crit"
  *  is both the damage spike AND the eye for openings; capacity-dimmed sight/consciousness aim worse. */
-function aimedBodyPart(defender: Pawn | Mob, precision: number): BodyPartId {
+function aimedBodyPart(defender: Pawn | Mob, precision: number, turn?: number): BodyPartId {
   const plan = planOf(defender);
   const first = rollBodyPartOf(defender.limbs, plan);
   if (precision <= 0 || rng.random() >= precision) return first;
   let best = first;
-  let bestArmor = partArmorPoints(defender, first);
+  let bestArmor = partArmorPoints(defender, first, turn);
   for (let i = 0; i < 2; i++) {
     const cand = rollBodyPartOf(defender.limbs, plan);
-    const a = partArmorPoints(defender, cand);
+    const a = partArmorPoints(defender, cand, turn);
     if (a < bestArmor) {
       best = cand;
       bestArmor = a;
@@ -728,7 +768,7 @@ class CombatServiceImpl implements CombatService {
   resolveHit(
     attacker: Pawn | Mob,
     defender: Pawn | Mob,
-    _state: GameState,
+    state: GameState,
     override?: RangedOverride
   ): HitResult {
     const {
@@ -746,7 +786,9 @@ class CombatServiceImpl implements CombatService {
       finesse,
       arcane,
       bloodletting
-    } = override ? override.profile : attackerProfile(attacker, this.entityDistance(attacker, defender));
+    } = override
+      ? override.profile
+      : attackerProfile(attacker, this.entityDistance(attacker, defender));
     // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw dexterity, so injury,
     // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
     // `defDex × 2` term (dodge ≈ 1.0 at DEX 10 → 20).
@@ -801,7 +843,7 @@ class CombatServiceImpl implements CombatService {
     // (stats.jsonc: DEX/PER × consciousness × sight, + the weapon's critMod, so a crit-prone stiletto
     // finds gaps more often), the attacker rolls extra candidate locations and takes the least-armoured
     // one (eye/throat/belly over plate).
-    const partId = aimedBodyPart(defender, critChance);
+    const partId = aimedBodyPart(defender, critChance, state.turn);
     const partDef = PART_DEF_MAP[partId]!;
     // The defender's part may be bodyScale-scaled; severity/fracture use its ACTUAL maxHp.
     const partMaxHp =
@@ -820,7 +862,7 @@ class CombatServiceImpl implements CombatService {
         : str;
     const raw =
       override && !override.strScaled ? baseDamage : (baseDamage * powerStat) / STAT_SCALE;
-    const armorRed = partArmorReduction(defender, partId, armorPen, raw);
+    const armorRed = partArmorReduction(defender, partId, armorPen, raw, state.turn);
     const physRes = physicalResistance(defender, damageType);
     const mitigated = raw * (1 - armorRed) * (1 - physRes);
     const scaled = mitigated * (crit ? CRIT_MULTIPLIER : 1);
@@ -847,10 +889,7 @@ class CombatServiceImpl implements CombatService {
       infected: false,
       // §3b bleed-weapon: at the weapon's `bloodletting` chance, the open wound never self-clots —
       // it flows until a caretaker dresses it (the physical successor of `bloodletting`).
-      ...(bloodletting &&
-      woundDef.bleedMod > 0 &&
-      hpMissing > 0 &&
-      rng.random() < bloodletting
+      ...(bloodletting && woundDef.bleedMod > 0 && hpMissing > 0 && rng.random() < bloodletting
         ? { bloodletting: true }
         : {})
     };
@@ -890,8 +929,12 @@ class CombatServiceImpl implements CombatService {
         Math.round(raw * transfer * (1 - armorRed) * (crit ? CRIT_MULTIPLIER : 1) * variance)
       );
       // Chance scales with how hard the BONE was loaded (not the flesh crush), capped so it's never sure.
+      // ADR-031: precision (the same critChance driving crits/gap-aiming) multiplies it — a placed blow
+      // lands square on the bone.
       const fractureChance = clamp(
-        (isBlunt ? FRACTURE_BLUNT_BASE : FRACTURE_OTHER_BASE) * (boneDamage / boneHp),
+        (isBlunt ? FRACTURE_BLUNT_BASE : FRACTURE_OTHER_BASE) *
+          (boneDamage / boneHp) *
+          (1 + critChance * K_PRECISION_FRACTURE),
         0,
         isBlunt ? FRACTURE_BLUNT_CAP : FRACTURE_OTHER_CAP
       );
@@ -927,8 +970,12 @@ class CombatServiceImpl implements CombatService {
       );
       // Chance scales with that inward force vs the CAVITY's mass (a small thrust into a big torso rarely
       // finds an organ; a hard deep blow does), capped so an organ hit is never a sure thing.
+      // ADR-031: precision multiplies it — the deft thrust is GUIDED to the kidney/carotid, so a skilled
+      // fighter beats a tank's hide by placement where a mook's identical force glances off.
       const organChance = clamp(
-        (isPenetrating ? ORGAN_PENETRATE_BASE : ORGAN_BLUNT_BASE) * (organDamage / partMaxHp),
+        (isPenetrating ? ORGAN_PENETRATE_BASE : ORGAN_BLUNT_BASE) *
+          (organDamage / partMaxHp) *
+          (1 + critChance * K_PRECISION_ORGAN),
         0,
         isPenetrating ? ORGAN_PENETRATE_CAP : ORGAN_BLUNT_CAP
       );
@@ -1038,7 +1085,14 @@ class CombatServiceImpl implements CombatService {
         injury.bloodletting && !prevW?.bloodletting
           ? { ...(prevW ?? { infected: false }), bloodletting: true }
           : prevW;
-      const merged = recomputeWound(injury.bodyPart, injury.type, accum, mergePrev, state.turn, maxHp);
+      const merged = recomputeWound(
+        injury.bodyPart,
+        injury.type,
+        accum,
+        mergePrev,
+        state.turn,
+        maxHp
+      );
       const woundList =
         wIdx >= 0
           ? prev.injuries.map((w, i) => (i === wIdx ? merged : w))
@@ -1176,7 +1230,11 @@ class CombatServiceImpl implements CombatService {
 
     // LINEAGES-II §4: a crushing blow ENDURED feeds the crustacean awakening (meter-pawns only — the
     // lineagePaths gate keeps this off every ordinary hit).
-    if (entityType === 'pawn' && (updated as Pawn).lineagePaths?.length && injury.type === 'crush') {
+    if (
+      entityType === 'pawn' &&
+      (updated as Pawn).lineagePaths?.length &&
+      injury.type === 'crush'
+    ) {
       const deeds = ((updated as Pawn).deeds ??= {});
       deeds.bluntHitsTaken = (deeds.bluntHitsTaken ?? 0) + 1;
     }
@@ -1403,10 +1461,44 @@ class CombatServiceImpl implements CombatService {
 
     // Every landed blow chips condition: the attacker's weapon + the defender's struck armour.
     const armorLoss = this.computeArmorDamage(attacker, result.damageType, !!override);
+    let worn = this.applyGearWear(afterKnock, attacker, target, armorLoss);
+    // ADR-031: the same blow chips a creature's NATURAL hide at the struck part (per-fight wear,
+    // subtracted from its soak by naturalArmorPoints) — the attrition counter to a subtractive tank.
+    if (isTargetMob && armorLoss > 0 && result.bodyPart) {
+      worn = this.chipNaturalHide(worn, target.id, result.bodyPart, armorLoss, turn);
+    }
     return {
-      state: this.applyGearWear(afterKnock, attacker, target, armorLoss),
+      state: worn,
       staminaCost: result.staminaCost
     };
+  }
+
+  /** ADR-031 natural-hide degradation: accumulate `loss` armour points of PER-FIGHT wear on the struck
+   *  part of a mob's hide, capped at that part's full natural soak (wear can open the hide fully, never
+   *  push it negative). Stale wear from a previous fight (outside HIDE_WEAR_RESET_TICKS) is discarded
+   *  before the new chip. Event-rate (landed hits only) and routed through spliceEntity, so it respects
+   *  the copy-on-write combat path — a peace tick allocates nothing. */
+  private chipNaturalHide(
+    state: GameState,
+    mobId: string,
+    partId: BodyPartId,
+    loss: number,
+    turn: number
+  ): GameState {
+    const mob = state.mobs?.find((m) => m.id === mobId);
+    if (!mob || mob.isAlive === false || mob.state === 'Corpse') return state;
+    const partDef = PART_DEF_MAP[partId];
+    if (!partDef) return state;
+    // Full (un-worn) soak at this part — the wear ceiling. No natural armour here → nothing to chip.
+    const base = naturalArmorPoints(mob, partDef.armor ?? DEFAULT_ARMOR_SHARE, partId);
+    if (base <= 0) return state;
+    const stale = mob.hideWearAt == null || turn - mob.hideWearAt > HIDE_WEAR_RESET_TICKS;
+    const prev = stale ? 0 : (mob.hideWear?.[partId] ?? 0);
+    const next = Math.min(base, prev + loss);
+    if (next === prev && !stale) return state;
+    const hideWear = stale || !mob.hideWear ? {} : { ...mob.hideWear };
+    hideWear[partId] = next;
+    return this.spliceEntity(state, mobId, { ...mob, hideWear, hideWearAt: turn }, true);
   }
 
   /**
@@ -1530,7 +1622,9 @@ class CombatServiceImpl implements CombatService {
           s = this.spliceEntity(
             s,
             live.id,
-            { ...live, conditionTimers: atkTimers, transientConditions: atkTransient } as Pawn | Mob,
+            { ...live, conditionTimers: atkTimers, transientConditions: atkTransient } as
+              | Pawn
+              | Mob,
             isAtkMob
           );
         }
@@ -2193,8 +2287,12 @@ class CombatServiceImpl implements CombatService {
       } else if (pawn.currentState === 'BloodHunt' && pawn.huntTargetId) {
         // LINEAGES-II: the lose-control hunt swings at its acquired quarry — beast OR colonist.
         target =
-          mobs.find((m) => m.id === pawn.huntTargetId && m.isAlive !== false && m.state !== 'Corpse') ??
-          state.pawns.find((p) => p.id === pawn.huntTargetId && p.id !== pawn.id && p.isAlive !== false);
+          mobs.find(
+            (m) => m.id === pawn.huntTargetId && m.isAlive !== false && m.state !== 'Corpse'
+          ) ??
+          state.pawns.find(
+            (p) => p.id === pawn.huntTargetId && p.id !== pawn.id && p.isAlive !== false
+          );
         if (!target) continue;
       } else if (pawn.currentState === 'Hunting' && pawn.huntTargetId) {
         // Work-driven hunt: swing at the marked quarry (a neutral animal isn't a

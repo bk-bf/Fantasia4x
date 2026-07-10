@@ -154,6 +154,13 @@ export interface Mob {
   attackCooldown?: number;
   /** Remaining turns for timer-based transient conditions (e.g. knockdown). */
   conditionTimers?: Record<string, number>;
+  /** ADR-031 per-fight natural-hide wear: struck part id → armour points chipped off its natural soak
+   *  (blunt/high-armorDamage blows erode a tank's hide so a sustained fight opens it up). Combat-internal
+   *  scratch — expires HIDE_WEAR_RESET_TICKS after `hideWearAt`, never rendered, dropped from the
+   *  snapshot projection. Written only on landed hits (no per-tick cost). */
+  hideWear?: Record<string, number>;
+  /** Tick of the last hide chip — wear older than the reset window reads as zero (fight over). */
+  hideWearAt?: number;
   /** TRAIT-LIBRARY-EXPANSION §4.0 shared lines: trait defs this creature carries (resolved from the
    *  creature def's `traits` id list at spawn — e.g. orc_reaver's Adrenal S1). Mobs get the
    *  stat/resistance/weaponBonus/combatMods effects through the same `'traits' in entity` reads as

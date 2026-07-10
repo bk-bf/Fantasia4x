@@ -73,6 +73,8 @@
         "bg": [0.0, 0.0, 0.0],
         "stats": {"str": 44, "dex": 5, "con": 18, "per": 6},
         "naturalArmor": 32,
+        // §1c soft belly: the classic kill on armoured megafauna — abdomen soak 16 → 6.
+        "armorMods": [{"target": "abdomen", "defense": -10}],
         "bodyScale": 1.8,
         "nightVision": 0.7,
         "behaviour": "neutral",
@@ -475,6 +477,8 @@
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"str": 12, "dex": 8, "con": 9, "per": 10},
         "naturalArmor"  : 50,
+        // §1c: quill-plated above, bare underside — abdomen soak 25 → 8 (the way past the quills).
+        "armorMods"     : [{"target": "abdomen", "defense": -17}],
         "bodyScale"     : 1.2,
         "nightVision"   : 0.6,
         "behaviour"     : "passive",
@@ -556,6 +560,8 @@
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"str": 40, "dex": 10, "con": 16, "per": 12},
         "naturalArmor"  : 30,
+        // §1c soft belly (mirrors the bear): abdomen soak 15 → 6.
+        "armorMods"     : [{"target": "abdomen", "defense": -9}],
         "bodyScale"     : 2.0,
         "nightVision"   : 0.7,
         "behaviour"     : "aggressive",
@@ -613,6 +619,8 @@
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"str": 44, "dex": 8, "con": 16, "per": 9},
         "naturalArmor"  : 45,
+        // §1c: osteoderm-plated back, soft underbelly — abdomen soak 22.5 → 8.5.
+        "armorMods"     : [{"target": "abdomen", "defense": -14}],
         "bodyScale"     : 1.8,
         "nightVision"   : 0.6,
         "behaviour"     : "neutral",
@@ -744,6 +752,8 @@
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"str": 16, "dex": 13, "con": 7, "per": 11},
         "naturalArmor"  : 22,
+        // §1c: hardened cephalothorax carapace (soak 22 → 28); the opisthosoma stays the soft spot.
+        "armorMods"     : [{"target": "cephalothorax", "defense": 6}],
         "bodyScale"     : 1.1,
         "nightVision"   : 0.85,
         "behaviour"     : "neutral",

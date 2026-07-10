@@ -46,8 +46,9 @@ const ACTIVE_JOB_DROP = new Set([
 ]);
 // state: the HUD reads `mood` + `health`; the FSM booleans are redundant with top-level `currentState`.
 const STATE_DROP = new Set(['isWorking', 'isSleeping', 'isEating']);
-// Top-level pawn fields dropped wholesale — worker-only.
-const ENTITY_DROP = ['jobQueue'] as const;
+// Top-level entity fields dropped wholesale — worker-only (jobQueue: pawn FSM lookahead;
+// hideWear/hideWearAt: ADR-031 per-fight hide-wear combat scratch on mobs, never rendered).
+const ENTITY_DROP = ['jobQueue', 'hideWear', 'hideWearAt'] as const;
 
 /** Copy `src` minus the `drop` keys into a NEW object (never mutates the source/canonical nested obj). */
 function omit(src: Record<string, unknown>, drop: Set<string>): Record<string, unknown> {
