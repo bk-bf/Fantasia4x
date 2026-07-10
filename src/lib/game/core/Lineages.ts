@@ -34,11 +34,9 @@ const LINEAGE_BY_ID = new Map(LINEAGE_DEFS.map((l) => [l.id, l]));
 const AWAKENING_BY_ID = new Map(AWAKENING_DEFS.map((a) => [a.id, a]));
 const PARENT_TRAIT_IDS = new Set(LINEAGE_DEFS.map((l) => l.parent));
 
-// Flat trait catalog (top-level + subcaps) keyed by id — the pool lineage growth draws from.
-const ALL_TRAITS: Trait[] = (traitDbData as unknown as Trait[]).flatMap((t) => [
-  t,
-  ...(t.subCapabilities ?? [])
-]);
+// The trait catalog keyed by id — the pool lineage growth draws from. FLAT since the LINEAGES-II
+// heritage flatten (no nested bundles exist; `traitExpansion.test.ts` guards against their return).
+const ALL_TRAITS: Trait[] = traitDbData as unknown as Trait[];
 const TRAIT_BY_ID = new Map(ALL_TRAITS.filter((t) => t.id).map((t) => [t.id as string, t]));
 
 export function lineageDef(id: string): LineageDef | undefined {

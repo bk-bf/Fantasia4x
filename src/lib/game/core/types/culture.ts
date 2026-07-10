@@ -131,9 +131,10 @@ export interface Trait {
      *  limb.isMissing), not just the named part. Refused on limbs holding a vital organ. */
     amputate?: boolean;
   }>;
-  /** GROUNDWORK for trait evolution (not yet a runtime mechanic): the id of the higher-tier trait this
-   *  one can grow into — e.g. mundane `frost-loving` → supernatural `frost-born`, `adrenaline` →
-   *  `berserker-blood`. Lets a future system upgrade a pawn's trait along its line. */
+  /** The id of the higher-tier trait this one grows into — e.g. mundane `frost-loving` → supernatural
+   *  `frost-born`, `adrenaline` → `berserker-blood`. LIVE mechanic (LINEAGES §3): at a seasonal growth
+   *  event, `lineageGrowthEvent` may EVOLVE a staged trait to this target (~10%, favoured over gaining
+   *  a new lineage member), swapping the trait and applying the new rung's one-shot effects. */
   evolvesTo?: string;
   /** LINEAGES §2 — the ancestral-blood lineages this trait belongs to (an ARRAY: Feral Adrenaline is
    *  `["beast","werewolf"]`, both pools draw it). A pawn that carries the lineage's parent marker can
@@ -244,9 +245,6 @@ export interface Trait {
   triggeredCondition?: string;
   /** Equipment slots the body forbids — greyed in the gear tab, blocked at equip. */
   blocksSlots?: EquipmentSlot[];
-  /** legendary only: sub-capabilities, each rolled independently PER PAWN at pawn-gen so two
-   *  legendary-blooded pawns are never identical. Expanded into the pawn's trait list. */
-  subCapabilities?: Trait[];
   /** Only fields below are actually consumed somewhere — pawn-gen stat bonuses,
    *  PawnStatService work mults + resistance stats + heal_rate, and Combat resistances.
    *  The old grab-bag of unread effect keys (telepathicRange, memoryBonus…) was pruned. */

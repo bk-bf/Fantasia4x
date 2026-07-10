@@ -8,13 +8,13 @@
   // one-eyed…). Not rolled for items; pawns draw a bell-curve (Gaussian) COUNT of these, so most carry
   // none and a rare wretch carries up to four. Dark-red accent on the trait card.
   { "id": "negative", "name": "Flaw", "color": "#B4453F", "poisonMult": 1.5 },
-  { "id": "common", "name": "Common", "color": "#9E9E9E", "poisonMult": 1.3 },
-  { "id": "uncommon", "name": "Uncommon", "color": "#4CAF50", "poisonMult": 1.0 },
-  { "id": "rare", "name": "Rare", "color": "#2196F3", "poisonMult": 0.7 },
-  { "id": "epic", "name": "Epic", "color": "#9C27B0", "poisonMult": 0.45 },
+  { "id": "common", "name": "Plain", "color": "#9E9E9E", "poisonMult": 1.3 },
+  { "id": "uncommon", "name": "Notable", "color": "#4CAF50", "poisonMult": 1.0 },
+  { "id": "rare", "name": "Storied", "color": "#2196F3", "poisonMult": 0.7 },
+  { "id": "epic", "name": "Fabled", "color": "#9C27B0", "poisonMult": 0.45 },
   // `mythic` (ADR-028): a trait tier between epic and legendary — a race-identity power rarer than epic
   // (iron skin, the Amphibious bundle) but short of a full legendary bloodline. Cyan accent.
-  { "id": "mythic", "name": "Mythic", "color": "#26C6DA", "poisonMult": 0.3 },
+  { "id": "mythic", "name": "Wondrous", "color": "#26C6DA", "poisonMult": 0.3 },
   { "id": "legendary", "name": "Legendary", "color": "#FF9800", "poisonMult": 0.25 },
   // PRODUCTION-CHAIN-III §I — Famed: a named legend above Legendary (iridescent gold). A Famed item
   // rolls a generated name + history and a ×2–5 stat explosion; see core/famedNames.ts.

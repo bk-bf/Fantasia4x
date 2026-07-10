@@ -6,7 +6,8 @@ import raritiesData from '../database/rarities.jsonc';
 import type { Trait } from './types';
 
 // Every trait + legendary sub-capability.
-const ALL: Trait[] = TRAIT_DATABASE.flatMap((t) => [t, ...(t.subCapabilities ?? [])]);
+// The catalog is FLAT since the LINEAGES-II heritage flatten (no nested bundles).
+const ALL: Trait[] = TRAIT_DATABASE;
 const RARITY_IDS = new Set((raritiesData as { id: string }[]).map((r) => r.id));
 const KINDS = new Set(['stat', 'attribute', 'naturalGear', 'passive', 'wound', 'bodyMod']);
 const STAT_KEYS = new Set([
@@ -105,7 +106,7 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
     }
   });
 
-  it('rarity budget: rare/epic/mythic are a real capability; heritage bundles carry subCapabilities', () => {
+  it('rarity budget: rare/epic/mythic are a real capability; legendary/mythic are lineage markers', () => {
     for (const t of TRAIT_DATABASE) {
       if (t.rarity === 'rare' || t.rarity === 'epic' || t.rarity === 'mythic') {
         const capable =
@@ -117,7 +118,6 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
           !!t.armorMods?.length ||
           !!t.aura || // §6a: an aura is a capability
           (t.grafts?.length ?? 0) > 0 || // §3d: growing a real limb is a capability
-          (t.subCapabilities?.length ?? 0) > 0 ||
           (t.bodyMods?.length ?? 0) > 0 || // an epic body transformation (stone bones) is a capability
           // TRAIT-LIBRARY-EXPANSION §1/§2: a SIGNIFICANT stat/attribute payload (the ±3/±5 rungs and
           // the significant combos deliberately sit at rare/epic) is a legitimate high-rarity pull —
@@ -128,11 +128,11 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
               Object.keys(t.resistances ?? {}).length > 0));
         expect(capable, `${t.id} (${t.rarity}) carries no capability`).toBe(true);
       }
-      // A legendary/mythic PASSIVE banner is a rolled bundle; the §2d grand STAT pulls
-      // (Paragon Blood / Godtouched) are deliberate single traits — exempt. LINEAGES: a lineage marker
-      // (`lineage` set) is the flat-model successor to the subCapability bundle — also exempt.
-      if ((t.rarity === 'legendary' || t.rarity === 'mythic') && t.kind !== 'stat' && !t.lineage)
-        expect((t.subCapabilities?.length ?? 0) > 0, `${t.id} ${t.rarity} needs subCapabilities`).toBe(true);
+      // LINEAGES flat model: a legendary/mythic non-stat trait must be a lineage MARKER (`lineage`
+      // set — the tree it opens IS the capability). The §2d grand STAT pulls (Paragon Blood /
+      // Godtouched) are deliberate single traits — exempt. Nested bundles no longer exist.
+      if ((t.rarity === 'legendary' || t.rarity === 'mythic') && t.kind !== 'stat')
+        expect(!!t.lineage?.length, `${t.id} ${t.rarity} must be a lineage marker`).toBe(true);
     }
     // every evolvesTo target exists
     const ids = new Set(ALL.map((t) => t.id));

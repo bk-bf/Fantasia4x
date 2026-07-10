@@ -9,8 +9,7 @@ import { syncTransientConditions, tickAuras } from '../systems/PawnStateMachine'
 import type { Pawn, GameState, Injury, Trait } from './types';
 
 const byId = (id: string): Trait => {
-  const all = TRAIT_DATABASE.flatMap((t) => [t, ...(t.subCapabilities ?? [])]);
-  const t = all.find((x) => x.id === id);
+  const t = TRAIT_DATABASE.find((x) => x.id === id);
   if (!t) throw new Error(`trait ${id} missing`);
   return t;
 };
@@ -141,7 +140,12 @@ describe('TRAIT-LIBRARY-EXPANSION mechanics', () => {
       expect(t, id).toBeTruthy();
       expect(t!.rarity === 'legendary' || t!.rarity === 'mythic', `${id} rarity`).toBe(true);
       expect(t!.lineage?.includes(lineage), `${id} lineage tag`).toBe(true);
-      expect(t!.subCapabilities, `${id} must carry NO nested bundle`).toBeUndefined();
+      // The field is gone from the Trait type (flat model, compile-enforced) — this guards the DATA:
+      // raw jsonc could still smuggle a nested bundle past the compiler.
+      expect(
+        (t as unknown as Record<string, unknown>).subCapabilities,
+        `${id} must carry NO nested bundle`
+      ).toBeUndefined();
       expect(Object.keys(t!.effects ?? {}), `${id} must be a pure marker`).toEqual([]);
       const members = TRAIT_DATABASE.filter((m) => m.id !== id && m.lineage?.includes(lineage));
       expect(members.length, `${lineage} needs a member pool to grow`).toBeGreaterThan(0);

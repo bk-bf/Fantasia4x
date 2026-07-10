@@ -150,7 +150,7 @@ describe('applyTraitBodyMods (§1 bodyMod → limbmap)', () => {
 
 describe('natural weapons bound to limbs (ADR-029 part.weapons)', () => {
   it('every trait natural weapon id is bound to a limbmap part (the anatomy IS the host-gate)', () => {
-    for (const t of TRAIT_DATABASE.flatMap((x) => [x, ...(x.subCapabilities ?? [])])) {
+    for (const t of TRAIT_DATABASE) {
       for (const id of t.naturalWeapons ?? [])
         expect(
           BOUND_NATURAL_WEAPONS.has(id),

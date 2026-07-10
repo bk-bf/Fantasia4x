@@ -39,9 +39,10 @@
 //   workQuality; fire/cold/poison/disease/mental/lightning/shadow/wetnessResistance + healRate; the three
 //   physical *_resistance keys; nightVision. "selfCondition" links a capability trait to its permanent
 //   condition PILL (which carries grantsNaturalWeapon/grantsNaturalArmor/hostParts). "bodyMods" is the
-//   bodyMod payload; "wounds" the wound payload; "blocksSlots"/"subCapabilities". (§0: procs live on the
+//   bodyMod payload; "wounds" the wound payload; "blocksSlots" the gear gate. (§0: procs live on the
 //   weapon item, never the trait; a wielded-damage bonus is combatMods.melee_damage; resistances are the
-//   `resistances` block — NOT effects.)
+//   `resistances` block — NOT effects. LINEAGES-II: the catalog is FLAT — no nested bundles; a
+//   legendary/mythic marker's tree is its `lineage`-tagged members, grown at seasonal growth events.)
 [
     // ══ CULTURAL · MUNDANE — the physiology majority (small quirks, many negative) ═══
     // — small positives / trade-offs (pure core-stat → generic names) —
@@ -4124,12 +4125,13 @@
         "effects"      : {}
     },
     // ═══════════════════════════════════════════════════════════════════════════
-    // §4 · Eleven heritage trees (TRAIT-LIBRARY-EXPANSION) — same shape as dragon-heritage /
-    // vampiric: a passive BANNER (legendary/mythic) + subCapabilities rolled one-per-pawn at spawn
-    // (the rest are the future age/ritual growth pool, §4.0). Sub-capability LINES are shared
-    // across trees where logical (adrenaline rides Ursine/Colossus/Berserker alike), and AURAS
-    // appear ONLY here — rare, lineage-gated, mutually exclusive (one conflict group), finite
-    // radius, throttled + lingering application.
+    // §4 · The eleven heritage LINEAGES (flattened, LINEAGES-II) — each is a pure MARKER trait
+    // (legendary/mythic, `lineage` set) whose members are top-level traits tagged with the lineage id.
+    // A born-in pawn gets the marker + ONE random S1 member (Culture.drawPawnTraits); the rest of the
+    // tree is grown at seasonal growth events (lineageGrowthEvent). Member LINES are shared across
+    // lineages where logical (adrenaline rides beast/werewolf alike), and AURAS appear ONLY here —
+    // rare, lineage-gated, mutually exclusive (one conflict group), finite radius, throttled +
+    // lingering application.
     // ═══════════════════════════════════════════════════════════════════════════
     {
         "id"          : "stoneblood-heritage",

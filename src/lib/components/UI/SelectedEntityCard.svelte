@@ -165,6 +165,7 @@
   import { moodToggle } from './gameCanvas/moodToggle.svelte';
   import ArmorPanel from './gameCanvas/ArmorPanel.svelte';
   import { armorToggle } from './gameCanvas/armorToggle.svelte';
+  import { debugMode } from '$lib/stores/uiPrefs';
 
   // `embedded`: render as an in-flow flex item instead of self-anchoring to the canvas.
   // Used when a parent (e.g. the building row, which also hosts the fuel-settings panel)
@@ -323,8 +324,8 @@
     <MoodPanel mood={model.moodModel} open={moodToggle.open} />
   {/if}
 
-  {#if model.armor}
-    <!-- GEAR opens the creature's natural-armour map above the card, mirroring HEALTH. -->
+  {#if model.armor && $debugMode}
+    <!-- GEAR opens the creature's natural-armour map above the card, mirroring HEALTH. Debug-only. -->
     <ArmorPanel armor={model.armor} open={armorToggle.open} />
   {/if}
 
@@ -364,8 +365,8 @@
           <span class="hud-btn-lbl">MOOD</span>
         </button>
       {/if}
-      {#if model.armor && model.selected}
-        <!-- GEAR button — only on the SELECTED card; opens the creature's natural-armour map. -->
+      {#if model.armor && model.selected && $debugMode}
+        <!-- GEAR button — only on the SELECTED card; opens the creature's natural-armour map. Debug-only. -->
         <button
           class="hud-btn"
           class:hud-btn--active={armorToggle.open}
