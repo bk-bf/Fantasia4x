@@ -894,7 +894,7 @@
         "hungerRate"    : 0.4,
         "foodOverflow"  : 0.3,
         "carcassItemId" : "bullywug_carcass",
-        "naturalWeapons": ["fists", "bite", "tongue"],
+        "naturalWeapons": ["claw", "bite", "tongue"],
         "limbMap"        : "amphibian"
     }
 ]
