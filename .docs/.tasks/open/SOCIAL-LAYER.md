@@ -2,7 +2,7 @@
 
 # PAWN SOCIAL LAYER — Relationships, Family, Conversation & Mood
 
-> **Related:** [ROADMAP](ROADMAP.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) (world social layer — kingdoms, visitors, caravans, the `trade` attribute) · [RACE-SYSTEM](RACE-SYSTEM.md) (Phase 1 = culture→relationship baseline) · [TRAITS](TRAITS.md) (social traits are personal traits, not a new file) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [PRODUCTION-CHAIN-III (archived)](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) (§F royalty/prestige gear) · [game/DESIGN](../../game/DESIGN.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) (world social layer — kingdoms, visitors, caravans, the `trade` attribute) · [RACE-SYSTEM](RACE-SYSTEM.md) (Phase 1 = culture→relationship baseline) · [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) (social traits are personal traits, not a new file) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [PRODUCTION-CHAIN-III (archived)](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) (§F royalty/prestige gear) · [game/DESIGN](../../game/DESIGN.md)
 
 ## Status
 
@@ -42,7 +42,7 @@ reference feel; the assembly and stage machinery below is ours.
   the equipment aggregator). This spec is where it comes alive.
 - **Traits** — social-affecting traits are **personal traits in `traits.jsonc`** (ADR-028), not a new
   `Traits.ts`. Mood/relationship modifiers ride `passive` (condition-backed) or `attribute` kinds per
-  the [TRAITS](TRAITS.md) contract. **Do not** add a parallel trait file.
+  the [TRAITS](../archive/TRAITS-2026-07-10.md) contract. **Do not** add a parallel trait file.
 
 ---
 

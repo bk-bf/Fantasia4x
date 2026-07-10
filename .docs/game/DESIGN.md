@@ -2,7 +2,7 @@
 
 # DESIGN
 
-> **Related:** [ARCHITECTURE](ARCHITECTURE.md) · [DECISIONS](DECISIONS.md) · [ROADMAP](../.tasks/open/ROADMAP.md) · [TRAITS](../.tasks/open/TRAITS.md)
+> **Related:** [ARCHITECTURE](ARCHITECTURE.md) · [DECISIONS](DECISIONS.md) · [ROADMAP](../.tasks/open/ROADMAP.md) · [TRAITS](../.tasks/archive/TRAITS-2026-07-10.md)
 
 ## Core Gameplay Loop
 

@@ -1,6 +1,6 @@
 # CREATURE-COMBAT-OVERHAUL
 
-> **Related:** [ENTITIES_SPAWNING (archived — spawn/lair record)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [ANIMAL-HUSBANDRY](./ANIMAL-HUSBANDRY.md) · [PRODUCTION-CHAIN-III-TAILS](./PRODUCTION-CHAIN-III-TAILS.md) (§I crafted-famed path) · [TRAITS.md](./TRAITS.md) · [ROADMAP.md](./ROADMAP.md) · [../../game/DECISIONS.md](../../game/DECISIONS.md) (ADR-029 layered subtractive armour) · data: `database/limbmap.jsonc`, `database/creatures.jsonc`, `database/traits.jsonc`, `database/items.jsonc`
+> **Related:** [ENTITIES_SPAWNING (archived — spawn/lair record)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [ANIMAL-HUSBANDRY](./ANIMAL-HUSBANDRY.md) · [PRODUCTION-CHAIN-III-TAILS](./PRODUCTION-CHAIN-III-TAILS.md) (§I crafted-famed path) · [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) · [ROADMAP.md](./ROADMAP.md) · [../../game/DECISIONS.md](../../game/DECISIONS.md) (ADR-029 layered subtractive armour) · data: `database/limbmap.jsonc`, `database/creatures.jsonc`, `database/traits.jsonc`, `database/items.jsonc`
 
 Rebalance + expansion of creature combat. Fixes the armour **invincible↔trivial binary** (keeping armour subtractive), gives aimed attacks real targets, and adds an elite/variant ladder, humanoid gear, and lair-driven escalation so combat has cross-creature progression.
 
@@ -37,7 +37,7 @@ Add low-armour, high-bleed parts over vital structures so precision has somewher
 - [ ] **Throat/neck** on `quadruped`, `quadruped_hooved`, `amphibian`, `avian`, `serpentine` plans (humanoid/winged_humanoid already have `neck`). Proposed stats mirroring the humanoid neck: `size ~18–20, bleedRatio 0.06, hitWeight 2, armor 0`, in the `head` limb group, sitting over the airway (carotid/trachea → hard bleed).
 - [ ] **Groin/femoral** on `humanoid` + `winged_humanoid`: `size ~15, bleedRatio 0.05, hitWeight 1.5, armor 0.1`, in the `torso` (or a `pelvis`) group — the femoral-artery weak point beneath armour coverage gaps.
 - [ ] Route these through `bodyLabels.ts` so no snake_case id leaks into the health panel.
-- **Open:** should throat/groin hits carry an organ-penetration route (carotid/femoral = fast bleed-out) beyond raw `bleedRatio`, or is high bleedRatio enough? (see 1b — they already sit over organs / bleed hard).
+- **Open:** should throat/groin hits carry an organ-penetration route (carotid/femoral = fast bleed-out) beyond raw `bleedRatio`, // A: yes
 
 ### 1b. Precision directly raises organ-hit & fracture chance
 
@@ -59,14 +59,14 @@ Give the existing-but-unused `armorMods` its first users so aimed attacks have a
 
 The "wreck it, then it lands" loop, extended to creature hide.
 
-- [ ] Give a mob an erodable **per-fight effective-armour pool** seeded from `naturalArmor`; blunt / high-`armorDamage` blows chip it (via the `armor_damage` stat), so a sustained fight progressively opens a tank up.
+- [ ] Give a mob an erodable **per-fight effective-armour pool** seeded from `naturalArmor`; blunt / high-`armorDamage` blows chip it (via the `armor_damage` stat), so a sustained fight progressively opens a tank up. // use the craftable gear durability as reference/fork
 - [ ] Resets on disengage / out of combat (per-fight, not permanent maiming).
-- **Open:** should hide degradation be per-part or a single creature-wide pool? Per-part is truer but heavier; creature-wide is simpler and reads clearly.
+- **Open:** should hide degradation be per-part or a single creature-wide pool? Per-part is truer but heavier; creature-wide is simpler and reads clearly. // A: per part
 - **Perf:** cross-check `ENGINE-PERFORMANCE.md` — this touches the combat hot path; the pool must be a scalar on the mob, mutated in place, no per-tick allocation.
 
 **Phase 1 acceptance:**
-- [ ] A high-PER pawn kills a bear meaningfully faster than a low-PER pawn of equal STR (placement + organ routing).
-- [ ] A long fight against a tank visibly "opens up" (hide degradation) rather than staying at 0-through.
+- [ ] A high precision or damage pawn kills a bear meaningfully faster than a low precision or low damage pawn of equal STR (placement + organ routing).
+- [ ] A long fight against a tank visibly "opens up" (hide degradation) rather than staying at 0-through. //yes, but crafted armor and weapon durability also deteriorates, so its a race 
 - [ ] Throat/groin/belly show as human labels, never raw ids.
 - [ ] `pnpm check` + combat `test:related` green; no TPS regression in `perf.log`.
 
@@ -76,7 +76,7 @@ The "wreck it, then it lands" loop, extended to creature hide.
 
 ### 2a. Spawn-time stat/armour ranges (elites only)
 
-- [ ] Extend the creature def with optional `statRanges` / `naturalArmorRange` (`[min,max]`), rolled at spawn in `entitySpawning.ts` (today `def.stats` is used verbatim at `~L705`). **Only** elite/miniboss defs set ranges; base creatures keep fixed stats.
+- [ ] Extend the creature def with optional `statRanges` / `naturalArmorRange` (`[min,max]`), rolled at spawn in `entitySpawning.ts` (today `def.stats` is used verbatim at `~L705`). 
 - [ ] Deterministic per-spawn roll (seeded — no `Math.random`; vary by spawn index/turn per project rules).
 
 ### 2b. Hand-authored miniboss defs
@@ -130,7 +130,7 @@ Proposed structure + concrete pools (item ids exist in `items.jsonc`):
 - [ ] Humanoid creature defs reference a pool id (`lootPool: "warband_bronze"`).
 - [ ] At spawn: draw the loadout, put it in `equipment` (worn armour then feeds Phase-1 subtractive soak per part; the weapon drives `attackerProfile`).
 - [ ] On death: roll `dropChance` per equipped piece → `droppedItems`.
-- **Open:** do worn pieces roll a **quality/condition** (§Q) so drops aren't all Standard, and should a fight damage them below full durability before dropping?
+- **Open:** do worn pieces roll a **quality/condition** (§Q) so drops aren't all Standard, and should a fight damage them below full durability before dropping? // A: roll a quality and condition, fight should damage them, eg wire durability up for them as well 
 
 ### 2d. Natural-gear upgrades for elites
 

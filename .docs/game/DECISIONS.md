@@ -1019,7 +1019,7 @@ accounts for it.
 ### ADR-028 [GAME]: Typed Trait Kinds + Condition Relationship Graph (TRAIT-SYSTEM-V2)
 
 **Status:** Accepted (2026-07-06). Extends ADR-023 (condition-backed traits) and ADR-024 (body plans).
-Spec: `.docs/.tasks/open/TRAITS.md`.
+Spec: `.docs/.tasks/archive/TRAITS-2026-07-10.md`.
 
 **Context.** Trait payloads were an untyped `effects` bag, so nothing enforced *what kind* of thing a
 trait could do — which produced gamification the design rejects (`iron-skin` stacking +CON/−DEX/+mining%
@@ -1078,7 +1078,7 @@ data edges.**
   generalising photosynthesis/light-sensitivity). Pure allocation-free evaluator in `conditionGraph.ts`,
   cheap-gated by `CONDITION_IDS_WITH_TRIGGERS`. Continuous meter-driven severities (shock, infection)
   stay code and are flagged `driver` — forcing them into accruing edges would change behaviour.
-- **TRAIT-LIBRARY-EXPANSION (2026-07-07, spec `.docs/.tasks/open/TRAITS.md`)** — the
+- **TRAIT-LIBRARY-EXPANSION (2026-07-07, spec `.docs/.tasks/archive/TRAITS-2026-07-10.md`)** — the
   methodical build-out of the pool (~300 new traits) plus the mechanics it forced:
   - **`effects.combatMods`** — combat statId → multiplier, applied by `PawnStatService.evaluateStat`
     to combat-category stats only (the combat twin of `workSpeed`). Combos always pair two axes;

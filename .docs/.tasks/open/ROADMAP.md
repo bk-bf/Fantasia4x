@@ -2,7 +2,7 @@
 
 # ROADMAP
 
-> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [TRAITS](TRAITS.md) · [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [PRODUCTION-CHAIN-III-TAILS](PRODUCTION-CHAIN-III-TAILS.md) · [STEALTH](STEALTH.md) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md)
+> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) · [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [PRODUCTION-CHAIN-III-TAILS](PRODUCTION-CHAIN-III-TAILS.md) · [STEALTH](STEALTH.md) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md)
 
 Everything in one table: **remaining work in priority order first** (owner sequence, set 2026-07-10),
 then the **completed record** below it. Full specs for shipped work live in `.tasks/archive/`.
@@ -10,18 +10,18 @@ Status: `[ ]` not started · `[-]` in progress · `[~]` deferred · `[x]` done.
 
 | # | Item | Status | Spec / archive |
 |---|------|--------|----------------|
-| **1** | **Finish Traits** (Phase 2 hooks) | `[ ]` | [TRAITS](TRAITS.md) — age + `evolvesTo` evolution audited **live**; only small refinements/hooks left |
-| **2** | **Creature Combat Overhaul** | `[ ]` | [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) — armour-binary fix → elite ladder + gear drops → lair evolution (+ §4 traps/turrets & famed boss-drop) |
-| **3** | **Kingdoms & Trade** | `[ ]` | [KINGDOMS-TRADE](KINGDOMS-TRADE.md) — = RACE Phase 2; code `faction`→`kingdom` rename part of this |
-| **4** | **Finish Race → Culture System** | `[ ]` | [RACE-SYSTEM](RACE-SYSTEM.md) — Ph0 done; rename `Race`→`Culture`; Ph1 wiring waits on #5 |
-| **5** | **Social Layer** | `[ ]` | [SOCIAL-LAYER](SOCIAL-LAYER.md) — relationships/family/conversation/mood; unblocks RACE Ph1 + prestige/trade |
-| **6** | **Rest from Production Chain III** | `[ ]` | [PRODUCTION-CHAIN-III-TAILS](PRODUCTION-CHAIN-III-TAILS.md) — §G drink-use action + §I famed craft-stamp/display |
-| **7** | **Stealth** | `[ ]` | [STEALTH](STEALTH.md) — design locked; needs an encounter balance re-pass |
-| **8** | **Drafted Job/Need Orders** | `[ ]` | [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) — design locked; small, self-contained |
-| **9** | **Rest from Entity Spawning** | `[ ]` | [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) — taming → husbandry → mounts → animal hauling |
-| **10** | **Magic III** | `[~]` | _unspecced_ — magic depth-layer already met by shipped [LINEAGES](../archive/LINEAGES-2026-07-09.md) + [LINEAGES-II](../archive/LINEAGES-II-2026-07-10.md); no spec written/planned yet |
-| **11** | **Research Enhancement** | `[~]` | [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) — **deferred, not for now; always last** |
+| **1** | **Creature Combat Overhaul** | `[ ]` | [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) — armour-binary fix → elite ladder + gear drops → lair evolution (+ §4 traps/turrets & famed boss-drop) |
+| **2** | **Kingdoms & Trade** | `[ ]` | [KINGDOMS-TRADE](KINGDOMS-TRADE.md) — = RACE Phase 2; code `faction`→`kingdom` rename part of this |
+| **3** | **Finish Race → Culture System** | `[ ]` | [RACE-SYSTEM](RACE-SYSTEM.md) — Ph0 done; rename `Race`→`Culture`; Ph1 wiring waits on #4 |
+| **4** | **Social Layer** | `[ ]` | [SOCIAL-LAYER](SOCIAL-LAYER.md) — relationships/family/conversation/mood; unblocks RACE Ph1 + prestige/trade |
+| **5** | **Rest from Production Chain III** | `[ ]` | [PRODUCTION-CHAIN-III-TAILS](PRODUCTION-CHAIN-III-TAILS.md) — §G drink-use action + §I famed craft-stamp/display |
+| **6** | **Stealth** | `[ ]` | [STEALTH](STEALTH.md) — design locked; needs an encounter balance re-pass |
+| **7** | **Drafted Job/Need Orders** | `[ ]` | [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) — design locked; small, self-contained |
+| **8** | **Rest from Entity Spawning** | `[ ]` | [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) — taming → husbandry → mounts → animal hauling |
+| **9** | **Magic III** | `[~]` | _unspecced_ — magic depth-layer already met by shipped [LINEAGES](../archive/LINEAGES-2026-07-09.md) + [LINEAGES-II](../archive/LINEAGES-II-2026-07-10.md); no spec written/planned yet |
+| **10** | **Research Enhancement** | `[~]` | [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) — **deferred, not for now; always last** |
 | — | *loose ends, no spec:* building-work bonus stacking · AI event generation (migrant-wave `pendingEvent` seam) | `[ ]` | do opportunistically |
+| — | **Traits — Phase 2 close-out** (age + `evolvesTo` evolution live; ritual gate superseded by lineage; breath-AoE / reserve hooks / formal Phase-2 kinds consciously deferred, §7) | `[x]` 2026-07-10 | [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) |
 | — | **Combat System** (stances, weapons/crit, wounds, pain→collapse, healing, caretaking) | `[x]` 2026-06-11 | [COMBAT-SYSTEM-2026-06-11.md](../archive/COMBAT-SYSTEM-2026-06-11.md) · ADR-012/013 |
 | — | **Entity Spawning A–B** (mobs/animals, lair/territory spawn, hunger/diet, pawn hunting + butchery) | `[x]` 2026-07-10 | [ENTITIES_SPAWNING-2026-07-10.md](../archive/ENTITIES_SPAWNING-2026-07-10.md) |
 | — | **Production Chain Expansion** (smelting, forges, mining, fuel/heat, leather, survival) | `[x]` 2026-06-12 | [PRODUCTION-CHAIN-EXPANSION-2026-06-12.md](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) |
@@ -35,8 +35,8 @@ Status: `[ ]` not started · `[-]` in progress · `[~]` deferred · `[x]` done.
 | — | **Distribution** (Electron wrapper, adapter-static + IndexedDB saves, electron-builder + CI release matrix) | `[x]` 2026-07-10 | [DISTRIBUTION-2026-07-10.md](../archive/DISTRIBUTION-2026-07-10.md) |
 | — | **Lineages** (ancestral-blood mutation trees; born/awaken via deed meters; grow/evolve at growth events) | `[x]` 2026-07-09 | [LINEAGES-2026-07-09.md](../archive/LINEAGES-2026-07-09.md) |
 | — | **Lineages II** (werewolf transform + lunar counter; blood meter → BloodHunt; vampiric feeding; heritage flatten) | `[x]` 2026-07-10 | [LINEAGES-II-2026-07-10.md](../archive/LINEAGES-II-2026-07-10.md) |
-| — | **Trait system V2** (condition-backed capabilities, typed `kind` taxonomy, per-pawn draw ≤2 racial + ≤3 personal) | `[x]` 2026-07-06 | [TRAITS](TRAITS.md) · ADR-028 |
-| — | **Trait §0 cleanup + Culture rename** (traits are pure granters; `Race`→`Culture` throughout code+UI) | `[x]` 2026-07-09 | [TRAITS](TRAITS.md) |
+| — | **Trait system V2** (condition-backed capabilities, typed `kind` taxonomy, per-pawn draw ≤2 racial + ≤3 personal) | `[x]` 2026-07-06 | [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) · ADR-028 |
+| — | **Trait §0 cleanup + Culture rename** (traits are pure granters; `Race`→`Culture` throughout code+UI) | `[x]` 2026-07-09 | [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) |
 | — | **Race overhaul Ph0** (procedural race pool, mixed colonies, lore, `raceRelations` stub, known-races pokédex) | `[x]` 2026-06-17 | [RACE-SYSTEM](RACE-SYSTEM.md) · ADR-023 |
 | — | **Work experience system** (per-pawn 1–50 exp/work-category → speed/yield/quality; learn-by-doing) | `[x]` 2026-07-10 | [WORK-EXPERIENCE-2026-07-10.md](../archive/WORK-EXPERIENCE-2026-07-10.md) |
 | — | **Migrant wave + world-event foundation** (season-boundary hopefuls; the `pendingEvent` seam) | `[x]` 2026-07-06 | `core/Events.ts`; `systems/migration.ts` |

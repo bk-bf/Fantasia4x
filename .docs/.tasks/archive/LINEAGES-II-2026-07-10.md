@@ -4,7 +4,7 @@
 
 # LINEAGES-II — transforms, feeding, and the deep lineage content ✅ COMPLETE 2026-07-10
 
-> **Related:** [LINEAGES (archived)](LINEAGES-2026-07-09.md) · [TRAITS](../open/TRAITS.md) · [game/DESIGN](../../game/DESIGN.md) · [ROADMAP](../open/ROADMAP.md)
+> **Related:** [LINEAGES (archived)](LINEAGES-2026-07-09.md) · [TRAITS](TRAITS-2026-07-10.md) · [game/DESIGN](../../game/DESIGN.md) · [ROADMAP](../open/ROADMAP.md)
 
 ## §1 · Werewolf — the transform subsystem
 
