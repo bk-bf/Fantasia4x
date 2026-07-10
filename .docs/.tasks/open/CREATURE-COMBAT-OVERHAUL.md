@@ -37,7 +37,7 @@ Add low-armour, high-bleed parts over vital structures so precision has somewher
 - [x] **Throat/neck** on `quadruped`, `quadruped_hooved`, `amphibian`, `avian`, `serpentine` plans (humanoid/winged_humanoid already have `neck`) — done 2026-07-10 by adding the SHARED `neck` part (size 20, bleedRatio 0.06, hitWeight 2, armor 0) to each plan's `head` limb.
 - [x] **Groin/femoral** on `humanoid` + `winged_humanoid`: `size 15, bleedRatio 0.05, hitWeight 1.5, armor 0.1`, in the `torso` group — done 2026-07-10.
 - [x] Route these through `bodyLabels.ts` so no snake_case id leaks into the health panel — `partLabel`'s humanizer covers the new ids ("Neck", "Groin", "Carotid Artery"); no new mapping needed.
-- [x] **Open (answered: yes):** throat/groin carry an explicit organ-penetration route — each holds a small, non-vital, high-`bleedRatio` artery organ (`carotidArtery` 0.12 / `femoralArtery` 0.1, hitWeight 0) reachable only by the organ roll: nicking it opens a severe bleed-out, not an instant kill.
+- [x] **Open (answered: yes):** throat/groin carry an explicit organ-penetration route — each holds a small, non-vital, high-`bleedRatio` artery organ (`carotidArtery` 0.12 / `femoralArtery` 0.1, hitWeight 0, flagged `artery`) reachable only by the organ roll. Nicking it opens an **unclottable** bleed (`bloodletting` — flows until dressed, never self-clots), so a slit throat is a slow bleed-out kill, not an instant one (2026-07-10; `artery` flag on the part def, `PART_DEF_MAP[chosen.id].artery` → `organInjury.bloodletting = true` in `resolveHit`; carried through `recomputeWound` on merge). Guarded by bodyPlans.test.ts.
 
 ### 1b. Precision directly raises organ-hit & fracture chance
 
@@ -72,147 +72,219 @@ The "wreck it, then it lands" loop, extended to creature hide.
 
 ---
 
-## Phase 2 — Elite/variant ladder (hand-authored minibosses) + gear drops
+## Phase 2 — Species variant ladder (5 tiers × 3 variants) + gear drops
 
-### 2a. Spawn-time stat/armour ranges (elites only)
+**What "the ladder" IS (answering the confusion).** An elite is **not a flag on the base creature** —
+it is a **whole new `creatures.jsonc` entry** with its own name, vibe, stat band, natural/worn gear and
+spawn weight. Every **species** (wolf, worg, bear, orc…) becomes a **ladder of 5 TIERS**, and each tier
+holds **3 sibling VARIANTS** (15 creature entries per species). Tiers are power rungs; the base creature
+you have today sits at **T2** (the "standard adult"). **T1** is chaff (young/lean/lone — spawns most),
+**T3–T4** are the "minibosses" (veterans, pack-leaders, apex individuals), **T5** is a rare authored
+**boss** (the Phase-4b famed-drop source). The three variants within a tier are flavour siblings (coat,
+temperament, tactics) that each roll their own `statRanges` band, so no two are identical.
 
-- [ ] Extend the creature def with optional `statRanges` / `naturalArmorRange` (`[min,max]`), rolled at spawn in `entitySpawning.ts` (today `def.stats` is used verbatim at `~L705`). 
-- [ ] Deterministic per-spawn roll (seeded — no `Math.random`; vary by spawn index/turn per project rules).
+Every creature carries a `statRanges` band centred on its tier's baseline, with siblings offset **±~5
+core stats** stronger/weaker so an individual encounter varies. The base creatures gain a `statRanges`
+too (centred on their CURRENT values — those become the T2 midpoint).
 
-**Proposed schema (2026-07-10, awaiting approval):** two optional creature-def fields; a base creature
-simply doesn't author them, so "elites only" needs no flag:
+Ladder metadata on each entry: `species` (groups the whole ladder), `tier` (1–5), `variantOf` (→ the
+base id, for Phase-3 escalation lookups).
 
-```jsonc
-"statRanges"       : {"str": [30, 36], "dex": [12, 14], "con": [12, 15]},  // absent stats stay fixed
-"naturalArmorRange": [12, 18]                                              // overrides naturalArmor
-```
+### 2a–2d Engine work — ✅ LANDED (2026-07-10; DATA left empty per the brief)
 
-Rolled once at spawn (seeded from spawn tile + turn + pack index, same convention as the existing
-spawn rolls), written onto the Mob's `stats`/a per-mob `naturalArmor` override field. `pnpm threat`
-annotations for range-rolled creatures use the band midpoint.
+The schema + logic are built and green (`pnpm check` 0 errors, 96 files/730 tests, +`lootPools.test.ts`
++ artery wiring tests, `threat:check`/`graph:check` ✓). **Only the DATA (creature entries, item entries,
+lootpool contents) is left to author** — see the concept ladders below.
 
-### 2b. Hand-authored miniboss defs
+- [x] **§2a per-spawn stat spread.** `CreatureDefinition.statRanges` (`{str/dex/con/per: [min,max]}`) +
+  `naturalArmorRange` (`[min,max]`). Rolled once at spawn in `makeMob` (seeded `rng`), else the fixed
+  `stats`/`naturalArmor`. The health/blood pool now tracks the ROLLED con. `naturalArmorOverride` is
+  written on the Mob and read by combat (`entityNaturalArmor`/`naturalArmorPoints`), dropped from the
+  snapshot. Base creatures with no band behave exactly as before.
+- [x] **§2b ladder metadata.** `species`/`tier`/`variantOf` fields on `CreatureDefinition` (schema +
+  loader passthrough; consumed by Phase-3 escalation + spawn weighting).
+- [x] **§2c gear system.** New `database/lootpool.jsonc` (**pools EMPTY** — schema documented in-file) +
+  `core/LootPools.ts` loader with a PURE, unit-tested `drawLoadout` (per-slot chance gate → weighted
+  pick → quality-table roll) + `rollCondition`. `Mob.equipment?: PawnEquipment` added; `makeMob` draws
+  the loadout, rolls each piece's **quality** (weighted table) + **condition** (`conditionRange` × item
+  max durability) into `ItemInstance`s. Combat already treats a geared mob like a pawn (`'equipment' in
+  entity` — weapon → `attackerProfile`, worn armour → `partArmorReduction`). `applyGearWear` /
+  `bestArmorSlot` / `decrEquipDurability` generalised to `Pawn | Mob` (routed through the CoW
+  `spliceEntity`), so a mob's gear wears down and **shatters** in a fight. On death, `dropCarcass` →
+  `dropMobGear` rolls each surviving piece's `dropChance` → a `DroppedItem` carrying its `instance`
+  (quality + worn durability). Item-id typos fail loud at load (`validateLootItemIds`); slot typos fail
+  in the loader. `equipment` added to `MOB_COLD` (ships on change to the entity card).
+- [x] **§2d natural-gear upgrades** are just data on the variant entries' `naturalWeapons` list — every
+  ladder rung below references only weapons that already exist in `items.jsonc` unless flagged **(NEW)**.
 
-Each is a `creatures.jsonc` entry: boosted base stats + a range band + `traits` (from the `traits.jsonc` combat ladder) + upgraded natural weapons + a loot pool ref. Proposed first set:
+**Remaining engine TODO (small, deferred until data exists):**
+- [ ] **Spawn weighting by tier** — the spawner (`pickSpawnCreature`/`findSpawnTile`) currently weights
+  by `biomeWeights` only. Add a per-tier rarity multiplier (T1 common → T5 boss ≈ never from the plain
+  spawner; T5 arrives via Phase-3 escalation) so higher tiers are appropriately rare. One weighting hook.
+- [ ] **`pnpm threat` coverage** — the threat model reads fixed `stats`; teach it to use the
+  `statRanges` midpoint for ranged creatures (else `threat:check` will flag every new variant). One
+  reader change (`scripts/threat-model.mjs`).
+- [ ] Add an **ADR** (precision + hide-degradation is ADR-031; the variant-gear system — mob equipment,
+  lootpool loader, per-spawn stat rolls — should get its own ADR when the data lands and the design locks).
 
-- [ ] **Dire Wolf** / **Alpha Worg** (wolf/worg line): `sabre-fangs`, +`naturalArmor`, traits ~ S2 speed/precision (`attack_speed 1.5`, `hit_precision 1.5`), pack-leader.
-- [ ] **Orc Warlord** (orc_reaver line): steel-tier loadout from lootpool, S2/S3 `hit_chance`/`dodge` traits, `adrenaline`.
-- [ ] **Goblin Boss** / **Kobold Chief** (humanoid low tier): bronze/iron loadout, S1–S2 traits.
-- [ ] **Cave Bear / Elder Owlbear** (bear/owlbear line): `great-horns`/`dragon-claws`-class upgrade, higher hide + belly `armorMods`.
-- **Open:** which creature lines get minibosses first? (proposed: wolf, worg, orc, goblin, kobold, bear — the recurring threats.)
+---
 
-**Proposed miniboss defs (2026-07-10, awaiting approval).** Seven `creatures.jsonc` entries. Every
-referenced natural weapon (`sabre-fangs`, `rending-claws`, `dragon-claws`, `rending-beak`) and trait
-(`quick-striking`/`whirlwind` = S1/S2 attack-speed+precision, `sure-handed`/`killer-instinct` = S1/S2
-hit+precision, `light-footed` = S1 dodge, `adrenaline`) **already exists** — no new items or traits.
-Carcasses reuse the base line's carcass item (a Dire Wolf butchers like a big wolf). Sprites reuse the
-line's charSpans until distinct art exists (same placeholder convention as the expansion roster).
-`variantOf` is the Phase-3 escalation link (base id → its elite). threatLevel derived via `pnpm threat`
-at implementation time. Stat bands ≈ base × 1.25–1.5 with the range giving ±10–15% individual spread:
+### 2e. Concept ladders (DnD / Battle-Brothers inspired) — fill these into data
 
-| id | line (`variantOf`) | plan | scale | statRanges (str/dex/con/per) | armour range | naturalWeapons | traits | lootPool |
-| -- | ----------------- | ---- | ----- | ---------------------------- | ------------ | -------------- | ------ | -------- |
-| `dire_wolf` | wolf | quadruped | 1.5 | 30–36 / 12–14 / 12–15 / 10 | 12–18 | `sabre-fangs`, `claw` | `quick-striking` | — |
-| `alpha_worg` | worg | quadruped | 1.6 | 26–32 / 14–17 / 13–16 / 14 | 10–16 | `sabre-fangs`, `rending-claws` | `whirlwind` | — |
-| `orc_warlord` | orc_reaver | humanoid | 1.3 | 36–42 / 11–13 / 16–19 / 10 | 16–20 | `fists`, `slam` (disarmed fallback) | `killer-instinct`, `adrenaline` | `warlord_steel` |
-| `goblin_boss` | goblin | humanoid | 1.1 | 26–30 / 10–12 / 10–12 / 10 | 8–12 | `fists`, `kick` | `sure-handed` | `warband_bronze` |
-| `kobold_chief` | kobold_skulker | humanoid | 1.0 | 18–22 / 14–17 / 8–10 / 13 | 4–8 | `fists`, `bite` | `light-footed` | `warband_bronze` |
-| `cave_bear` | bear | quadruped | 2.2 | 50–58 / 5–7 / 20–24 / 6 | 38–46 | `rending-claws`, `slam` | — | — |
-| `elder_owlbear` | owlbear | quadruped | 2.4 | 46–54 / 10–12 / 19–22 / 13 | 36–42 | `dragon-claws`, `rending-beak`, `slam` | — | — |
+**Legend.** Tier role → spawn frequency: **T1** very common · **T2** common (≈ today's base) · **T3**
+uncommon · **T4** rare · **T5** boss (escalation-only). Natural-weapon rungs use existing `items.jsonc`
+ids unless **(NEW)**. Humanoid tiers reference a **lootpool** (below); beasts upgrade natural weapons +
+`naturalArmorRange` instead. Stat bands: centre on the tier baseline (T2 = the current base values),
+each sibling offset ±~5 on its signature stat.
 
-Shared fields: `behaviour: "aggressive"`, `pack: [1,1]` (a leader spawns WITH its line's normal pack
-via the Phase-3 escalation, not as its own herd), the base line's `lair`/`biomeWeights`/`diet`, belly
-`armorMods` carried over where the line has one (cave_bear −14, elder_owlbear −11 — scaled with the
-bigger hide). Names are player-facing: "Dire Wolf", "Alpha Worg", "Orc Warlord", "Goblin Boss",
-"Kobold Chief", "Cave Bear", "Elder Owlbear".
+#### Lootpool ladder (humanoid tiers) — `database/lootpool.jsonc`
 
-### 2c. Humanoid gear — `database/lootpool.jsonc`
+Five pools mirror the material tech ladder; slot keys are real `EquipmentSlot` ids; `quality` /
+`conditionRange` / `dropChance` documented in-file. All item ids exist in `items.jsonc` unless **(NEW)**.
 
-New data file: weighted pools, per-slot **draw chance** so a first-tier spawn is only partly kitted (reflects their state), a per-item **drop chance** on death (gear damaged in the fight). Drops hook into the existing `droppedItems` ground system.
+| pool | tier | quality mix | mainHand pool | bodyOuter | headOuter | dropChance |
+| ---- | ---- | ----------- | ------------- | --------- | --------- | ---------- |
+| `scavenger_scraps` | T1 | Crude 50 / Std 50 | `bone_knife`, `flint_handaxe`, `stone_spear` | `wicker_vest`, `raw_hide_vest` | `padded_cap` | 0.45 |
+| `warband_bronze` | T2 | Crude 25 / Std 65 / Fine 10 | `cast_bronze_hatchet`, `short_seax`, `framea` | `raw_hide_vest`, `boiled_leather_jerkin` | `leather_coif` | 0.5 |
+| `warband_iron` | T3 | Std 70 / Fine 25 / Mw 5 | `bearded_axe`, `iron_mace`, `spatha` | `boiled_leather_jerkin`, `scale_cuirass` | `iron_nasal_helm` | 0.55 |
+| `champion_steel` | T4 | Std 30 / Fine 50 / Mw 20 | `steel_greatsword`, `steel_warhammer` | `mail_hauberk`, `plate_cuirass` | `great_helm` | 0.7 |
+| `warlord_regalia` | T5 | Fine 40 / Mw 60 | `steel_greatsword`, `steel_warhammer` + **(NEW)** a named signature weapon | `plate_cuirass` | `great_helm` | 0.85 + a **famed** roll (Phase-4b) |
 
-Proposed structure + concrete pools (item ids exist in `items.jsonc`):
+`conditionRange` widens down-ladder (scavengers ≈ [0.35,0.7]; champions ≈ [0.6,0.95]). Each humanoid
+variant's def just sets `"lootPool": "<pool>"`.
 
-```jsonc
-{
-  "pools": {
-    "scavenger_scraps": {              // kobold_skulker (T1)
-      "mainHand": {"chance": 0.9,  "pick": [{"id":"bone_knife","w":3},{"id":"flint_handaxe","w":2},{"id":"stone_spear","w":1}]},
-      "body":     {"chance": 0.35, "pick": [{"id":"wicker_vest","w":2},{"id":"raw_hide_vest","w":1}]},
-      "head":     {"chance": 0.15, "pick": [{"id":"padded_cap","w":1}]},
-      "dropChance": 0.5
-    },
-    "warband_bronze": {                // gnoll_marauder / goblin (T2)
-      "mainHand": {"chance": 0.95, "pick": [{"id":"cast_bronze_hatchet","w":2},{"id":"short_seax","w":2},{"id":"framea","w":1}]},
-      "body":     {"chance": 0.6,  "pick": [{"id":"raw_hide_vest","w":2},{"id":"boiled_leather_jerkin","w":1}]},
-      "head":     {"chance": 0.4,  "pick": [{"id":"leather_coif","w":1}]},
-      "dropChance": 0.55
-    },
-    "reaver_iron": {                   // orc_reaver (T3)
-      "mainHand": {"chance": 1.0,  "pick": [{"id":"bearded_axe","w":2},{"id":"iron_mace","w":2},{"id":"spatha","w":1}]},
-      "body":     {"chance": 0.8,  "pick": [{"id":"boiled_leather_jerkin","w":2},{"id":"scale_cuirass","w":1}]},
-      "head":     {"chance": 0.6,  "pick": [{"id":"iron_nasal_helm","w":1}]},
-      "dropChance": 0.6
-    },
-    "warlord_steel": {                 // orc warlord (miniboss)
-      "mainHand": {"chance": 1.0,  "pick": [{"id":"steel_greatsword","w":1},{"id":"steel_warhammer","w":1}]},
-      "body":     {"chance": 1.0,  "pick": [{"id":"mail_hauberk","w":2},{"id":"plate_cuirass","w":1}]},
-      "head":     {"chance": 0.9,  "pick": [{"id":"great_helm","w":1}]},
-      "dropChance": 0.8
-    }
-  }
-}
-```
+#### Wolf — `species: "wolf"` (quadruped · forest/plains · beast, no lootpool)
 
-- [ ] Add `lootpool.jsonc` + loader.
-- [ ] Humanoid creature defs reference a pool id (`lootPool: "warband_bronze"`).
-- [ ] At spawn: draw the loadout, put it in `equipment` (worn armour then feeds Phase-1 subtractive soak per part; the weapon drives `attackerProfile`).
-- [ ] On death: roll `dropChance` per equipped piece → `droppedItems`.
-- [x] **Open (answered):** pieces roll quality AND condition; fights damage them (durability wired for mobs too).
+Natural-weapon rungs: `bite`+`claw` → `sabre-fangs` (T3+) → `rending-claws` (T4) → `dragon-claws` (T5).
+`naturalArmorRange` climbs 4–8 (T1) → 20–30 (T5). DnD dire-wolf / winter-wolf lineage.
 
-**Proposed quality/condition + wiring (2026-07-10, awaiting approval).** All item ids in the draft
-pools above already exist in `items.jsonc` — the pools need no new items.
+| tier | variants (name · vibe) |
+| ---- | ---------------------- |
+| T1 | **Wolf Pup** (half-grown, trails the pack) · **Scrawny Wolf** (lean starving-season straggler) · **Grey Yearling** (untested, first winter) |
+| T2 | **Grey Wolf** (the base) · **Timber Wolf** (bigger northern coat, +CON) · **Moor Runner** (lean plains-courser, +DEX) |
+| T3 | **Pack Alpha** (leads & steadies the pack; `sabre-fangs`) · **Scarred Hunter** (one-eyed, vicious; +STR) · **Dire Wolf** (oversized DnD dire; bodyScale↑) |
+| T4 | **Bloodmoon Alpha** (nocturnal terror, `rending-claws`) · **Direwolf Matriarch** (runs a full pack) · **Frost-Fang** (winter-wolf, minor `frost` resist) |
+| T5 | **Old Fang, the Grey King** — a lone legendary dire wolf, last of a broken pack; `dragon-claws`-class bite, thick hide, **famed** fang/hide drop |
 
-- **Mob equipment:** add `equipment?: PawnEquipment` to `Mob`. `attackerProfile` and
-  `partArmorReduction` already branch on `'equipment' in attacker/defender`, so an armed mob swings
-  its weapon and soaks through its worn armour with **zero combat-code changes** once the field exists.
-- **Loader:** `core/LootPools.ts` mirroring `Creatures.ts` (parse, validate ids against ItemService,
-  `getLootPoolById`).
-- **Quality (§Q):** each pool carries a quality weight table; the drawn instance stamps `quality`:
-  - `scavenger_scraps`: Crude 50 / Standard 50
-  - `warband_bronze`: Crude 25 / Standard 65 / Fine 10
-  - `reaver_iron`: Standard 70 / Fine 25 / Masterwork 5
-  - `warlord_steel`: Standard 30 / Fine 50 / Masterwork 20
-- **Condition:** spawn `durability` rolled at **40–85%** of the item's max (this gear has lived a hard
-  life), seeded like the stat ranges. During a fight the existing `applyGearWear` extends to mob
-  defenders/attackers (today `bestArmorSlot`/`decrEquipDurability` are pawn-typed) — so the piece that
-  soaked the fight drops damaged, and a shattered piece (0) is simply gone before the drop roll.
-- **On death:** per equipped piece, roll the pool's `dropChance` → push a `DroppedItem` carrying the
-  instance's `quality` + remaining `durability` (needs `DroppedItem` to carry instance fields — today
-  drops are id+qty; carcass condition already rides `_carcassCondition`, gear needs the §Q instance).
+*Extends to:* **worg** (darker, `nocturnalAggro`, goblin-allied — swap names to Worg/War-Worg/Winter
+Warg/Shadowmane), **jackal** (smaller, pack-heavy, cap at T3).
 
-### 2d. Natural-gear upgrades for elites
+#### Bear — `species: "bear"` (quadruped · mountain/forest · beast)
 
-- [ ] Map base→upgraded natural weapons per line (`claw`→`rending-claws`→`dragon-claws`; `bite`→`sabre-fangs`; `tusk`→`great-tusks`; `peck`→`rending-beak`). Elites swap via their `naturalWeapons` list (already supported). *All upgrade items already exist in `items.jsonc` — this is just the miniboss defs' lists (2b table).*
-- [ ] Consider new natural gear (Phase 2 stretch): a natural **ranged** option (spit / quill-volley — only `web-shot`/breath exist), **constrict** for serpents, **trample** for megafauna, reusable `armorMods` presets (carapace / bony-plate / blubber).
+Rungs: `claw`+`slam` → `rending-claws` (T3) → `dragon-claws` (T4-5); keep the belly `armorMods` and grow
+it with the hide. `naturalArmorRange` 20–28 → 45–55. Owlbear + sabretooth reuse this shape.
 
-**Proposed stretch items (2026-07-10, awaiting approval — these ARE new items, three `natural_weapon`
-entries in `items.jsonc`):**
+| tier | variants |
+| ---- | -------- |
+| T1 | **Bear Cub** (rare, only with a mother) · **Yearling Bear** (lean, spring-thin) · **Sun Bear** (smaller forest bruin) |
+| T2 | **Brown Bear** (the base) · **Black Bear** (forest, +DEX) · **Grizzly** (bigger, +STR/CON) |
+| T3 | **Cave Bear** (huge Pleistocene bruiser; `rending-claws`) · **Scarred Grizzly** (old, mean, +STR) · **Ridgeback** (thick-hided, +armour) |
+| T4 | **Elder Cave Bear** (apex; `dragon-claws`) · **Ironhide Bruin** (armour band top) · **Bloodclaw** (berserk, `feral-adrenaline`) |
+| T5 | **Ursa Magna, the Mountain's Weight** — a titanic cave bear that dens in a peak; famed hide/claw drop |
 
-- [ ] `quill-volley` (quillback line): piercing, `reach 3` (engages like `web-shot`/breath — the
-      existing natural-reach path, no ranged-circuit dependency), damage ~6, low weight so the bite
-      still dominates in contact; hosted on the quadruped `tail`/back part.
-- [ ] `constrict` (serpentine): blunt, damage ~8, `onHitCondition: ensnared` (existing condition,
-      ~0.35 chance, resist `blunt_resistance`); hosted on `foreBody`.
-- [ ] `trample` (megafauna — mammoth/aurochs elites): blunt, damage ~14, `stunChance 0.25`,
-      `knockback 0.4`, heavy `armorDamage` (it CRUSHES — feeds Phase-1 hide/armour wear); hosted on
-      the front-leg parts, weight low (an occasional roll, not the standard swing).
-- Reusable `armorMods` presets: skip — per-creature `armorMods` entries (Phase 1c) are one line each;
-  a preset indirection isn't worth the schema.
+*Extends to:* **owlbear** (add `rending-beak`, aggressive, cap the ladder one rung meaner), **sabretooth**
+(feline: `sabre-fangs` line, glass-cannon lean — high DEX/DPS, lower hide).
+
+#### Boar / megafauna — `species: "boar"` (quadruped_hooved · beast)
+
+Rungs: `boar_tusk`+`boar_charge` → `great-tusks` (T3+) → `trample` **(NEW)** at T4-5. Ungulate ladder;
+the same shape scales up through aurochs → mammoth as their own species' T-high rungs.
+
+| tier | variants |
+| ---- | -------- |
+| T1 | **Piglet Sounder** (weak, numerous) · **Scrub Boar** (lean) · **Young Tusker** |
+| T2 | **Wild Boar** (base) · **Razorback** (+DEX charge) · **Bristleback** (+CON) |
+| T3 | **Elder Tusker** (`great-tusks`, `chargesWhenWounded`) · **Irontusk** (+armour) · **Grey Sow-Mother** (leads a big sounder) |
+| T4 | **Direboar** (huge, `trample` **(NEW)**) · **Blackmane Tusker** (apex charger) · **Bog Colossus** (swamp, tanky) |
+| T5 | **Old Gouge, the Field-Ruiner** — a legendary direboar; famed tusk drop |
+
+*Extends to:* **aurochs**/**elk** (T-high herd bruisers — `charge`/`antler`, `trample` at the top),
+**woolly_mammoth** (its own species; base sits at T4, a **Tuskfather** boss at T5).
+
+#### Goblin — `species: "goblin"` (humanoid · geared · goblinoid)
+
+Gear-driven ladder — natural weapons stay `fists`/`kick`; power comes from the **lootpool** rung + traits
+(`sure-handed`, `light-footed`, `adrenaline`, `killer-instinct` — all exist). DnD/BB goblin warband feel.
+
+| tier | variants · lootpool · trait |
+| ---- | -------------------------- |
+| T1 | **Goblin Sneak** · `scavenger_scraps` · — · **Goblin Whelp** · `scavenger_scraps` · — · **Cave Goblin** · `scavenger_scraps` · `light-footed` |
+| T2 | **Goblin Raider** (base) · `warband_bronze` · — · **Goblin Cutter** · `warband_bronze` · `sure-handed` · **Goblin Skirmisher** · `warband_bronze` · `light-footed` |
+| T3 | **Goblin Bloodrager** · `warband_iron` · `adrenaline` · **Goblin Slinker** · `warband_iron` · `light-footed` · **Goblin Boss** · `warband_iron` · `sure-handed` |
+| T4 | **Goblin Warchief** · `champion_steel` · `killer-instinct` · **Hobgoblin Champion** · `champion_steel` · `sure-handed` · **Goblin Shaman-Guard** · `champion_steel` · `adrenaline` |
+| T5 | **Grukk the Skull-Throne** — a warlord atop a warren; `warlord_regalia`, famed drop |
+
+*Extends to:* **kobold_skulker** (smaller/faster, `scavenger_scraps`→`warband_bronze`, cap at T3–T4,
+`canSteal`), and the humanoid-plan raiders generally.
+
+#### Orc — `species: "orc"` (humanoid · geared · orc)
+
+The heavy-humanoid ladder: high STR/CON, steel-tier lootpool at the top. `orc_reaver` (base) sits at T2.
+
+| tier | variants · lootpool · trait |
+| ---- | -------------------------- |
+| T1 | **Orc Whelp** · `warband_bronze` · — · **Orc Grunt** · `warband_bronze` · — · **Orc Scavenger** · `scavenger_scraps` · — |
+| T2 | **Orc Reaver** (base) · `warband_iron` · `adrenaline` · **Orc Marauder** · `warband_iron` · — · **Orc Berserker** · `warband_iron` · `feral-adrenaline` |
+| T3 | **Orc Veteran** · `champion_steel` · `killer-instinct` · **Orc Ironhide** · `champion_steel` · `iron-skin` · **Orc Slayer** · `champion_steel` · `whirlwind` |
+| T4 | **Orc Warlord** · `champion_steel` · `killer-instinct`+`adrenaline` · **Orc Blackguard** · `champion_steel` · `sure-handed` · **Orc Chosen** · `warlord_regalia` · `iron-skin` |
+| T5 | **Gorthag the Iron Tide** — a warlord who leads warband raids on the colony; `warlord_regalia`, famed drop, the marquee Phase-3 escalation threat |
+
+*Extends to:* **gnoll_marauder** (canine-humanoid: keep `claw`/`bite` natural weapons ALONGSIDE a lighter
+lootpool — a gnoll fights with teeth AND a looted axe; cap at T4, pack-heavy, `feral-adrenaline`).
+
+#### Thornwood Spider — `species: "thornwood_spider"` (arachnid · beast)
+
+Rungs: `venom_bite` → a stronger venom proc (higher `onHitCondition` chance/duration) at T3+; keep the
+hardened `cephalothorax` `armorMods`, grow it. Web-caster identity via the existing `web-shot`.
+
+| tier | variants |
+| ---- | -------- |
+| T1 | **Spiderling** (swarm, weak) · **Web-Scuttler** · **Thorn Hatchling** |
+| T2 | **Thornwood Spider** (base) · **Ambush Weaver** (+DEX) · **Bristle Spider** (+armour) |
+| T3 | **Broodmother** (spawns spiderlings on the field — new AI, or just a big pack) · **Venomfang Stalker** (stronger venom) · **Carapace Lurker** (armour band top) |
+| T4 | **Great Weaver** (huge, `web-shot` + strong venom) · **Dread Broodmother** · **Chitin Horror** (near-immune belly excepted) |
+| T5 | **Ma'akthil, the Deep Weaver** — a colossal spider queen in a web-choked lair; famed silk/chitin drop |
+
+#### The remaining roster (extend by archetype)
+
+Each remaining base creature adopts the ladder of its **archetype** (same rung shape, re-skinned names +
+tuned bands). Author the full 5×3 only for the ones you want as recurring threats; harmless prey can stay
+1–2 tiers.
+
+| base creature | archetype ladder | boss (T5) concept |
+| ------------- | ---------------- | ----------------- |
+| worg, jackal | Wolf | Worg: **Skoll, the Sun-Chaser** |
+| owlbear, sabretooth | Bear (feline lean for cat) | Owlbear: **The Hooting Death** |
+| aurochs, elk | Boar/megafauna | Aurochs: **Grand-Horn** |
+| woolly_mammoth | Boar/megafauna (starts T4) | **The Tuskfather** |
+| kobold_skulker | Goblin (light) | **Meepo's Heir** |
+| gnoll_marauder | Orc (with natural weapons) | **Hyaenghar the Laughing** |
+| mire_crocodile | Bear (amphibian, ambush) | **The Mere-Wyrm** |
+| marsh_viper | Serpentine (venom + `constrict` **(NEW)** at T4) | **The Fen-Coil** |
+| harpy, hippogriff | Avian (`rending-beak`/`raptor-talons` rungs) | Harpy: **The Shrieking Matron** |
+| bullywug, grimeling | swamp skirmisher (light) | cap at T3–T4 |
+| shadow_wraith | Amorphous (fire-vuln; `spectral_strike`→stronger) | **The Hollow King** |
+| quillback | tank (add `quill-volley` **(NEW)** at T3+) | cap at T3 |
+| deer, rabbit, goat, chicken, hoarfowl, stirge, olm | prey — 1–2 tiers only, no boss | — |
+
+### 2f. New items to author (flagged **(NEW)** above)
+
+Small, concrete additions — everything else reuses existing `items.jsonc` ids:
+
+- [ ] **Natural weapons** (`natural_weapon` category): `trample` (megafauna T4-5 — blunt ~14,
+      `stunChance 0.25`, `knockback 0.4`, high `armorDamage`, front-leg hosted), `constrict` (serpentine
+      T4 — blunt ~8, `onHitCondition: ensnared` ~0.35, `foreBody` hosted), `quill-volley` (quillback T3+
+      — piercing ~6, `reach 3` via the existing natural-reach path, tail hosted). A "stronger venom"
+      proc for spider/viper T3+ can reuse `venom_bite` with a bumped `onHitCondition` on a variant weapon
+      id (`greater-venom-bite`).
+- [ ] **Crafted (lootpool) gear:** the ladder above uses only existing item ids EXCEPT the T5
+      `warlord_regalia` "signature weapon" — one authored named weapon per boss line (or defer to the
+      Phase-4b famed roll, which needs no new base item). Author 0–2 as desired.
 
 **Phase 2 acceptance:**
-- [ ] Two spawns of the same miniboss differ in stats/armour (range roll).
-- [ ] A geared humanoid fights with its weapon and is protected by its worn armour on the covered parts; killing it drops a subset of that gear.
-- [ ] First-tier humanoids look under-equipped; warlords look kitted.
+- [x] Engine: two spawns of the same range-rolled creature differ in stats/armour (statRanges + naturalArmorRange). *(mechanism tested; visible once bands are authored)*
+- [x] Engine: a geared humanoid fights with its weapon + worn armour and drops a subset on death (drawLoadout → equip → dropMobGear; combat reads `equipment` unchanged). *(mechanism tested; visible once pools are filled)*
+- [ ] Data: the ladders above are authored into `creatures.jsonc` + `lootpool.jsonc`; first-tier humanoids look under-equipped, warlords kitted; `pnpm threat:check` green (needs the statRanges-midpoint reader).
 
 ---
 

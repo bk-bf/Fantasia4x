@@ -94,7 +94,10 @@ effective handling skill against the creature's **`wilderness`**.
 - **Per-feeding success roll** — pawn's effective handling skill vs `creature.wilderness`. Pawn skill
   builds from:
   - base `taming` skill (+ CHA/empathy),
-  - **favorite-food** match (new `favoriteFood` field per creature — the right food is a big multiplier),
+  - **favorite-food** match — new **`favoriteTameFood`** field per creature: a **list** of item ids
+    (from `items.jsonc`) that creature will accept for taming, and feeding one is a big multiplier.
+    Wolves/worgs → basically all raw meats; a rabbit → a vegetable/forage item; etc. (a mis-matched
+    food still works but far weaker),
   - **kingdom relationship** (friendlier toward the creature's `kingdom` → easier to tame its beasts).
 - Each feeding consumes 1 food item. On success: entity → `Tamed`, `TamedAnimal` with owner `pawnId`,
   added to `GameState.tamedAnimals[]`.
@@ -104,7 +107,8 @@ effective handling skill against the creature's **`wilderness`**.
 
 - [ ] Add `taming` work category (`core/Work.ts`) + `feed` job (`jobs.jsonc` + `JobService` handler +
       `Job['type']`).
-- [ ] Rename `tameResistance` → `wilderness`; add `favoriteFood` to `CreatureDefinition`.
+- [ ] Rename `tameResistance` → `wilderness`; add `favoriteTameFood: string[]` to `CreatureDefinition`
+      and populate it across `creatures.jsonc` (wolf/worg raw meats, rabbit a veggie, …).
 - [ ] `EntityService.attemptTame(pawnId, entityId, state)` — per-feeding roll (skill vs `wilderness`,
       folding favorite-food + kingdom-relationship modifiers).
 - [ ] Promote entity to `TamedAnimal` on success; gate feed-taming by `intelligence` tier
@@ -193,19 +197,20 @@ Pure speculation.
 - **Aggression:** creatures attack pawns only on **hostile-kingdom** or **self-defence** — never from
   predation/hunger. Killing decays relations with the victim's kingdom (prey learn to fear the colony).
 - **`wilderness`** is a straight **rename of `tameResistance`** (one difficulty axis).
+- **`favoriteTameFood`** is an explicit **per-creature list** of accepted `items.jsonc` ids (wolf/worg
+  raw meats, rabbit a veggie), not derived from `diet`/`eats`.
 - **Feed-tame gate** is the **`intelligence` tier** (`primitive`/`animal` tame; `sentient` recruit-only).
 - **Caravans** are strong cross-map fighting marches (edge spawn/despawn); attacking → kingdom hostile
   + massive relation penalty; draft animals flee, combat animals fight; ~2/3 casualties → rout.
+- **`favoriteTameFood`** is an explicit per-creature list of `items.jsonc` ids.
+- **Creature `kingdom` grouping:** a shared **`beast`** kingdom (wolves, worgs, bears, and the rest of
+  the wildlife), a **`goblinoid`** kingdom (orcs + goblins), and **kobolds** get their **own** kingdom.
+  `beast` is a non-culture *wilderness* polity; `goblinoid`/`kobold` are culture-derived like the rest.
 
 ## Open Questions
 
-- [ ] **`favoriteFood` source** — new explicit field, or derived from `diet`/`eats` (e.g. first
-      preferred entry)?
 - [ ] **Relation-decay tuning** — per-kill penalty size, and does it differ by species intelligence /
       whether the kill was self-defence vs a hunt? Does a kingdom relation ever *recover* over time?
-- [ ] **Which creatures get which `kingdom`** — how many wilderness polities (one per species? per
-      pack-type: wolves+worgs share a "beast" kingdom, orcs+goblins+kobolds a "goblinoid" one?), and
-      are these part of the ~20 KINGDOMS-TRADE kingdoms or a separate wildlife set?
 - [ ] Cart mechanic model: vehicle entity on map vs equippable cart (budget override) vs deployable
       site + batch-haul job?
 - [ ] Do tamed animals persist across saves? (yes — serialise `tamedAnimals[]`)

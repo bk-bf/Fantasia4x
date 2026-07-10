@@ -1,12 +1,18 @@
-<!-- DRAFTED-JOB-ORDERS — expand the drafted-pawn world right-click menu so the player can force a single
+<!-- DRAFTED-JOB-ORDERS — expand the pawn world right-click menu so the player can force a single
      colony job (harvest/craft/build/demolish/repair…) or a need (consume/drink) on the clicked tile.
-     Design locked with the user 2026-07-10; NOT yet built. -->
+     Core force-a-job/need design locked with the user 2026-07-10; NOT yet built.
+     2026-07-10 expansion (§8–§11, proposed — confirm before building): the same menu on a plain
+     SELECTED (undrafted) pawn, a Shift-to-queue priority queue, and adjacency-tolerant pickup/equip. -->
 
-# DRAFTED-JOB-ORDERS — Force a Job or Need from the Draft Right-Click Menu
+# DRAFTED-JOB-ORDERS — Force a Job or Need from the Pawn Right-Click Menu
 
 > **Related:** [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-017 jobs, ADR-016 physical production) · [ROADMAP](ROADMAP.md) · [ui/ARCHITECTURE](../../ui/ARCHITECTURE.md)
 
-**Status:** Design locked (2026-07-10), unimplemented. Single phase, all verbs at once.
+**Status:** Core (§1–§7) design locked (2026-07-10), unimplemented. Expansion (§8–§11) proposed 2026-07-10, pending confirmation:
+
+- **§8 Menu without draft** — the same right-click verbs on a plain *selected* pawn, so you never draft just to hand it a job/need/gear; undrafted orders route through the FSM (survival needs still preempt).
+- **§9 Shift-to-queue** — Shift while picking a verb appends to a per-pawn order queue instead of replacing, so several manual orders run in sequence.
+- **§10 Adjacency pickup/equip** — being on a *neighbouring* tile is enough to pick up / equip a dropped item, instead of standing exactly on it.
 
 ---
 
@@ -104,3 +110,85 @@ No new service, no new `JobDef`, no command-layer change, no ADR (uses the exist
 - [ ] Every menu label is a human `JobDef`/item name — **no raw ids** leak.
 - [ ] Undrafting a pawn mid-force releases its claimed job back to the pool.
 - [ ] `pnpm check` clean; `pnpm test:related` on the four touched files green.
+
+---
+
+# EXPANSION (2026-07-10) — Menu-without-draft, Shift-queue, Adjacency pickup
+
+> Proposed 2026-07-10, **confirm before building.** Three additions the player asked for. §8 and §9 are
+> intertwined (both hang off a per-pawn *order queue*); §10 is an independent localised gate relax.
+
+## 8. Menu without draft — force a job/need/gear on a plain SELECTED pawn
+
+**The gap this closes:** today the "force this task" verbs only appear when the selected pawn is
+*drafted* — the whole equip/haul/consume/move block is gated behind `if (selectedPawn?.drafted)`
+([GameCanvas.svelte:4961](../../../src/lib/components/UI/GameCanvas.svelte#L4961)). So to hand a pawn
+one manual job you must draft it (which also rips it out of the autonomous FSM — no auto-eat/sleep,
+combat engage, etc.). The player wants to select a pawn and assign work/task/need/gear **without
+drafting**, leaving it otherwise autonomous.
+
+### 8.1 Two execution paths, one menu
+
+The menu is identical; **who runs the order differs by `pawn.drafted`**:
+
+| | Drafted pawn | Selected (undrafted) pawn |
+| --- | --- | --- |
+| Executor | `_processDraftOrders` (hand-driven, §3.3) | the **FSM** — [`handleIdle`](../../../src/lib/game/systems/pawn/handlers/work.ts#L137) |
+| Autonomy | fully suppressed (skips the behavioural state machine, [PawnStateMachine.ts:1525](../../../src/lib/game/systems/PawnStateMachine.ts#L1525)) | **preserved** — survival needs, combat interrupt, collapse still fire |
+| `forceJob` mechanism | claim + drive the shared work-advance helper (§3.4) tick-by-tick | just **claim that `job.id` in `handleIdle` instead of `selectJobForPawn`** → the normal MovingToResource→Working→complete path runs it; no hand-driven loop |
+
+- [ ] **Ungate the menu.** In [`handleContextMenu`](../../../src/lib/components/UI/GameCanvas.svelte#L4884), open the force-a-task verb set for **any** selected pawn, not only a drafted one. A drafted pawn additionally keeps its move/attack-order verbs; an undrafted pawn's menu is the work/craft/build/consume/drink/equip/haul subset (no "Move here" / attack — those stay draft-only, since ordering an autonomous pawn to walk somewhere-and-then-wander is meaningless).
+- [ ] **Undrafted execution lives in the FSM, not the draft executor.** The forced order is honoured inside [`handleIdle`](../../../src/lib/game/systems/pawn/handlers/work.ts#L137) at the natural priority slot: **after** `selectIdleNeed` (line 140 — a starving/exhausted/threatened pawn still eats/sleeps/flees first, then resumes the order) and **before** `selectJobForPawn` (line 191 — the manual order beats autonomous labor priority).
+- [ ] **`forceJob` (undrafted)** — when the order head is a `forceJob`, `handleIdle` calls `jobService.claimJob(pawn.id, order.jobId, gs)` for that specific id (skipping `selectJobForPawn`) and falls into the existing claim→`activeJob`→MovingToResource path. The pawn walks, works, and completes it through **the normal FSM work loop** — §3.4's shared helper is a *drafted-only* need. On completion the queue drains (§9).
+- [ ] **`forceConsume` / `drink` (undrafted)** — these bypass the hunger/thirst gate (the pawn may be forced to eat/drink while not needy). `handleIdle` sees the order head and routes to the **same** `grabFoodAt`+`startEatingFromInventory` / `handleDrinking` helpers the drafted arms use (§3.3), just invoked from the FSM instead of `_processDraftOrders`. So consume/drink logic is shared across the two executors; only `forceJob` diverges.
+- [ ] **Interrupt semantics.** A forced order issued to a pawn that is **already working** an autonomous job must preempt it: at the top of the tick (or in `handleWorking`), a pawn whose order head doesn't match its `activeJob` releases the active job (`releaseJob`) and drops to Idle, so `handleIdle` picks up the forced order next tick. *Decision to confirm:* preempt-immediately (recommended — the player issued a manual override) vs finish-current-then-switch.
+- [ ] **Clearing an undrafted order.** Since there's no undraft gesture, the menu needs a **Cancel order** entry (and/or re-issuing replaces it — §9 plain-click semantics). Clearing must `releaseJob` any force-claimed job.
+
+## 9. Shift-to-queue — a manual priority queue
+
+**The gap:** one manual order at a time — assign, wait for completion, assign the next. The player wants
+to **Shift+pick several verbs in sequence** and have the pawn run them front-to-back.
+
+- [ ] **Order queue field.** Add `pawn.orderQueue?: PawnOrder[]` (FIFO). `PawnOrder` is the existing `draftTarget` union (§3.1) — reuse the type; the queue holds the same arms. The **active** order stays `draftTarget` (the head); `orderQueue` is the pending tail. When the head clears (order completes/cancels), pop `orderQueue[0]` into `draftTarget`. *Alternative to weigh:* collapse to a single `pawn.orders: PawnOrder[]` where the head is `orders[0]` — cleaner semantics but a churny rename of `draftTarget` across the renderer ([GameCanvas.svelte:1911](../../../src/lib/components/UI/GameCanvas.svelte#L1911)) and executor; the head+tail split above minimises blast radius. **This queue is shared by drafted and undrafted pawns** — Shift-queuing works for both.
+- [ ] **Menu gesture.** A verb clicked **without Shift** → *replace*: clear `orderQueue` and set the order as the new head. **With Shift held** → *append* to the queue tail. The `equipMenu` entry `run()` closures read the modifier (capture `e.shiftKey` at menu-open, or read a live `shiftHeld` flag) and choose replace-vs-append.
+- [ ] **Command layer.** [`setPawnDraftTarget`](../../../src/lib/game/sim/commands.ts#L190) currently replaces. Add an `append?: boolean` to its payload (Shift ⇒ true): append pushes onto `orderQueue`; absent/false clears the queue and sets the head. No new command needed.
+- [ ] **Drain on completion.** Every place that today clears `draftTarget` on order completion (the `clearHaul`/`clearEquip`/rescue/tend/forceJob-complete points, and the undrafted `handleIdle` job-complete) must instead **advance the queue**: pop the next `orderQueue` entry into `draftTarget`, or clear if empty. Factor this into one `advancePawnOrders(pawn, gs)` helper so no callsite forgets the tail.
+- [ ] **Consistent with §2 "no auto-chaining".** The queue is *manual* — the player explicitly Shift-stacks each order. Completing one order still never *auto*-grabs a nearby job; it only advances to the next **player-queued** entry.
+- [ ] **Renderer (optional first cut).** The on-map order line already draws `draftTarget` ([GameCanvas.svelte:1911](../../../src/lib/components/UI/GameCanvas.svelte#L1911)); extend it to faintly chain the queued targets (head bright, tail dimmed) so a stacked queue is visible. Not required for the mechanic.
+
+## 10. Adjacency-tolerant pickup / equip
+
+**The gap:** picking up or equipping a dropped item requires standing **exactly on** its tile, so the pawn
+squeezes onto the item; the player wants an **adjacent** tile to suffice.
+
+Most of the codebase already tolerates adjacency — `pickUpFromTile` grabs from the *target* tile
+regardless of where the pawn stands ([pawnHauling.ts:65](../../../src/lib/game/systems/pawn/pawnHauling.ts#L65)),
+and the FSM eat path already accepts `isAdjacent || same tile`
+([needs.ts:331-332](../../../src/lib/game/systems/pawn/handlers/needs.ts#L331)). The exact-tile
+requirement survives only in the **drafted executor's** haul/equip arms:
+
+- [ ] **Haul pickup gate** — [GameEngineImpl.ts:1056](../../../src/lib/game/systems/GameEngineImpl.ts#L1056): `pawn.position === target` → `isAdjacent(pawn, target) || same tile`. `pickUpFromTile` already pulls from `(target.x,target.y)`, so relaxing the gate is enough (optionally pass `radius: 1` so a pawn stopped one tile off still scans the stack).
+- [ ] **Equip gate** — [GameEngineImpl.ts:1077](../../../src/lib/game/systems/GameEngineImpl.ts#L1077): same relax; `equipDropToPawn`/`carryDropToInventory` act on `dropId` regardless of pawn position, so an adjacency gate suffices.
+- [ ] **Stop the walk at adjacency.** The walk toward an item tile must halt on a neighbour, not route onto it. The draft equip walk currently targets the drop tile directly — reuse `_draftWalk`'s adjacent-approach routing (as `forceJob` does) so the pawn stops beside the item.
+- [ ] **Audit the instant pickup command.** The menu's "Pick up N" calls [`pickUpItemFromTile`](../../../src/lib/components/UI/GameCanvas.svelte#L5092) — confirm whether it position-gates or already teleport-picks; relax if it enforces exact-tile. (The eat path needs no change — already adjacency-tolerant.)
+
+## 11. Expansion — files touched & acceptance
+
+| File | Change (expansion) |
+| --- | --- |
+| [core/types/entities.ts](../../../src/lib/game/core/types/entities.ts#L394) | `pawn.orderQueue?: PawnOrder[]`; `PawnOrder` alias for the order union |
+| [components/UI/GameCanvas.svelte](../../../src/lib/components/UI/GameCanvas.svelte#L4961) | ungate the verb menu for undrafted selection; Shift ⇒ append; optional queued-order overlay |
+| [sim/commands.ts](../../../src/lib/game/sim/commands.ts#L190) | `setPawnDraftTarget` payload gains `append?: boolean` |
+| [systems/pawn/handlers/work.ts](../../../src/lib/game/systems/pawn/handlers/work.ts#L137) | `handleIdle`: honour the undrafted forced-order head (claim its `jobId` / route consume-drink) before `selectJobForPawn`; preempt a mismatched `activeJob` |
+| [systems/pawn/handlers/needs.ts](../../../src/lib/game/systems/pawn/handlers/needs.ts#L121) | forced consume/drink bypass the hunger/thirst gate when invoked as an order |
+| [systems/GameEngineImpl.ts](../../../src/lib/game/systems/GameEngineImpl.ts#L1056) | relax haul/equip pickup gates to adjacency; shared `advancePawnOrders` on completion |
+
+**Expansion acceptance criteria:**
+
+- [ ] Selecting an **undrafted** pawn and right-clicking a designated resource / supplied craft / build site / edible drop / water tile offers the same verbs a drafted pawn gets (minus move/attack) — **without drafting**.
+- [ ] The undrafted pawn walks over and completes the forced job through the normal FSM work loop, then returns to autonomous work; a critical hunger/fatigue/threat still **interrupts** the forced order and resumes it afterwards.
+- [ ] **Shift+picking** several verbs queues them; the pawn runs them in order, draining one per completion. A plain pick **replaces** the queue.
+- [ ] Shift-queue works for both drafted and undrafted pawns.
+- [ ] A pawn standing on **any tile adjacent to** a dropped item can pick it up / equip it — no need to stand on the item.
+- [ ] Cancelling/replacing an undrafted order releases any force-claimed job back to the pool.
+- [ ] `pnpm check` clean; `pnpm test:related` on the touched files green.
