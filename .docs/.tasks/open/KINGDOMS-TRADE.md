@@ -2,7 +2,7 @@
 
 # KINGDOMS, VISITORS & TRADE — the world social layer
 
-> **Related:** [ROADMAP](ROADMAP.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) (pawn-to-pawn layer; shares culture-disposition + prestige) · [RACE-SYSTEM](RACE-SYSTEM.md) (Phase 2 encounter-pokédex is this spec) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) (visitor/caravan entities on the map) · [game/DESIGN](../../game/DESIGN.md) · ADR-023 in [game/DECISIONS](../../game/DECISIONS.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) (pawn-to-pawn layer; shares culture-disposition + prestige) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) (caravans are kingdom pawns + war/pack beasts; creatures' `kingdom` flag; taming) · [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) (§2c lootpool system — caravan guards draw the human `guard_*` pools) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) (the right-click-a-pawn menu the trade action reuses) · [RACE-SYSTEM](RACE-SYSTEM.md) (Phase 2 encounter-pokédex is this spec) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) (visitor/caravan entities on the map) · [game/DESIGN](../../game/DESIGN.md) · ADR-023 in [game/DECISIONS](../../game/DECISIONS.md)
 
 ## Status
 
@@ -70,6 +70,10 @@ interface KingdomLore {
 - **~20 kingdoms** generated at world start. Some **always-hostile** (raiding parties) — hostile to the
   colony *and* to other kingdoms, never tradeable.
 - **Relation graph** drives who raids, who sends friendly visitors, who trades.
+- **Fixed roster, mutable facets.** The ~20 kingdoms and their `cultureMix` are **fixed** for the game
+  (kingdoms are downstream from the existing `culturePool` — no new cultures minted on contact). But a
+  kingdom's **leader, `wealthBand`, and famed items drift** at runtime — the mutable half that makes
+  learned knowledge go stale (§2). Full war/succession/birth-death is deferred.
 
 **Naming note:** the system is spelled **kingdoms** (renamed wholesale from the earlier "factions"
 working name, 2026-07-10). Culture = a people (`pawn.cultureId`); kingdom = a polity built from cultures.
@@ -100,6 +104,12 @@ The player does **not** see a kingdom's full sheet up front. Knowledge is *earne
 - **Kingdoms tab** — new screen, forked from `CultureDetail.svelte`: list (gated) + a detail pane that
   renders only the **revealed** tiers, with locked tiers shown as "unknown" teasers. Learning about a
   kingdom through play is itself a reward.
+- **Knowledge goes stale.** The mutable tiers (leader, wealth band, famed items — the parts that
+  *change* at runtime, §1) **decay** if the colony stops interacting: after **~a month** without contact
+  the last-known values render **greyed out** ("as last you knew") rather than dropping back to a "?"
+  teaser — you still see the stale figure, just flagged out of date. Re-contact refreshes it. So there's
+  always a reason to keep contact fresh rather than "completing" a kingdom once and never talking to it
+  again. Immutable tiers (name, capital, history) don't rot.
 - This is **RACE-SYSTEM Phase 2**: first contact flips a kingdom visible; positive interaction grows it.
 
 ---
@@ -111,8 +121,22 @@ The player does **not** see a kingdom's full sheet up front. Knowledge is *earne
   knowledge (§2) and pawn-level relationship points ([SOCIAL-LAYER §1](SOCIAL-LAYER.md)) with the
   visitors. Hostile kingdoms instead send **raids** (combat, not this spec's job beyond the trigger).
 - **Trade caravan** — a neutral-or-better kingdom sends a caravan **~bi-weekly** (tunable cadence,
-  weighted by `kingdomRelations` — friendlier kingdoms visit more often). Arrival opens the trade
-  screen (§4). Caravan composition (goods, wealth) reflects the kingdom's `wealthBand`.
+  weighted by `kingdomRelations` — friendlier kingdoms visit more often). The caravan is a **spawned
+  party of that kingdom's pawns + war/pack beasts** that marches across the map (full model in
+  [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) — attacking it is an act of war). Reaching the trader opens
+  the trade action (§4).
+- **Caravan guards use the human `guard_*` lootpools** (`database/lootpool.jsonc` — the loadout system
+  built by [CREATURE-COMBAT-OVERHAUL §2c](CREATURE-COMBAT-OVERHAUL.md): per-slot draw, rolled quality +
+  condition, drop-on-death). Five rungs of existing human craftables — `guard_scraps` / `guard_bronze` /
+  `guard_iron` / `guard_steel` / `guard_royal` (concrete slot tables in that spec) — scaled to the
+  kingdom's `wealthBand`. Human gear carries **no `wieldRequirement`** (monster gear is what gates on
+  strength), so guard loot from a caravan fight is usable by any colonist — one more reason attacking a
+  rich caravan is tempting, and an act of war.
+- **Colony wealth & relationship pull better trade.** Higher colony **wealth** and a friendlier
+  `kingdomRelations` both raise **caravan frequency and visitor count** — a reputation loop.
+  Additionally, **colony wealth sets the ceiling on goods quality**: a caravan only bothers hauling its
+  top-tier wares to a colony rich enough to afford them; a poor colony sees only low-tier stock even
+  from a wealthy kingdom.
 
 ---
 
@@ -121,6 +145,18 @@ The player does **not** see a kingdom's full sheet up front. Knowledge is *earne
 - **Item value** — add an economic **`value`** field to `items.jsonc` (base value; effective value
   scales with quality / material / Famed, mirroring the prestige multiplier). Needed to price every
   tradeable good.
+- **Barter unit** — trade is **item-to-item barter** (goods for goods, running balance). **Gold ingots**
+  (already in `items.jsonc`) serve as an optional **intermediate / store of value** — a good to top up
+  or settle a lopsided trade — precisely because their `value` is **stable, independent of the trading
+  pawn's `trade` skill and of `kingdomRelations`** (skill/relation shift *other* goods' effective
+  prices, gold anchors). Not a hard currency; just the most liquid barter good.
+- **Manual trigger via the pawn menu** — trading is **player-initiated**, not auto-on-arrival. The
+  caravan's **trader/royal pawn** carries a floating **"?" indicator** above its head marking it as an
+  interaction target. Right-clicking it reuses the [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md)
+  right-click-a-pawn menu, which offers a **Trade** verb → opens the trade screen. **No designated
+  diplomat role** — the deal is negotiated by **whichever colony pawn is currently highlighted** (the
+  DRAFTED-JOB-ORDERS selection), so *that* pawn's `trade` attribute is what prices the barter. Sending
+  your best talker is the player's call, not an assigned slot.
 - **Trade screen** — new UI: colony inventory vs caravan inventory, a running balance, confirm-to-barter.
   **Selection is not commitment** — the player assembles an offer and presses a TRADE button; nothing
   auto-executes.
@@ -142,27 +178,45 @@ The player does **not** see a kingdom's full sheet up front. Knowledge is *earne
 
 ### Phase B — Knowledge & Kingdoms tab
 - [ ] Hidden `knowledge` xp + tiered `KingdomLore` reveal; `gainKingdomKnowledge(kingdomId, amount)`.
-- [ ] Kingdoms tab (fork `CultureDetail.svelte`) — gated list + tier-gated detail pane.
+- [ ] Mutable facets (leader/wealth/famed items) **drift** at runtime; revealed knowledge of them goes
+      **stale after ~a month** without contact (last-contact timestamp per kingdom) — immutable tiers don't rot.
+- [ ] Kingdoms tab (fork `CultureDetail.svelte`) — gated list + tier-gated detail pane; stale mutable
+      values render **greyed** ("as last you knew"), refreshed on re-contact.
 
 ### Phase C — Visitors & caravans
 - [ ] Visitor arrival event + entity spawn; positive-interaction → knowledge + pawn relationship.
-- [ ] Trade caravan on ~bi-weekly cadence weighted by `kingdomRelations`.
+- [ ] Trade caravan on ~bi-weekly cadence, frequency & visitor count weighted by `kingdomRelations`
+      **and colony wealth**; caravan = kingdom-pawn party + war/pack beasts ([ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md)).
+- [ ] Colony wealth **caps** the goods-quality tier a caravan carries.
 
 ### Phase D — Trade
 - [ ] `value` field across `items.jsonc`; effective-value helper (quality/material/Famed).
+- [ ] Item-to-item barter with **gold ingots** as the stable intermediate (skill/relation-independent
+      value).
 - [ ] `trade` stat (`social` category) + `prestige` `FORMULA_VARS` token wiring.
+- [ ] Trader/royal pawn carries a **"?" interaction marker**; a **Trade** verb on the
+      [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) right-click menu opens the screen.
 - [ ] Trade screen (offer assembly → confirm; no auto-execute).
 
 ---
 
+## Resolved (2026-07-10)
+
+- **Kingdoms are fixed** (no procedural birth/death or full diplomacy layer yet) — **but the mutable
+  facets drift at runtime**: leaders, famed items, and wealth band change over time. That drift is what
+  makes revealed knowledge **go stale** (§2) and gives a reason to keep contact current. Full runtime
+  war/succession is deferred.
+- **Kingdoms are downstream from cultures** — the ~20 draw from the existing `culturePool`; contact
+  does **not** mint new cultures.
+- **Trade is item-to-item barter**, with **gold ingots as a stable intermediate** (value independent of
+  `trade` skill and `kingdomRelations`) — §4.
+- **Colony wealth + relationship attract better/more caravans & visitors**, and **wealth caps the goods
+  quality** a caravan will offer — §3.
+- **No designated diplomat role** — the barter is priced by **whichever pawn is highlighted** in the
+  DRAFTED-JOB-ORDERS menu when Trade is picked; sending your best `trade` talker is the player's call (§4).
+- **Staleness = greyed after ~a month** of no contact — last-known values shown greyed ("as last you
+  knew"), not dropped to a "?" teaser; re-contact refreshes them (§2).
+
 ## Open Questions
 
-- [ ] Are kingdoms fixed for the game, or do relations/wealth/leaders **drift** at runtime (wars,
-      succession)? (RACE-SYSTEM currently assumes fixed; runtime drift = a diplomacy layer.)
-- [ ] Do the ~20 kingdoms all draw from the existing `culturePool`, or can kingdoms introduce **new**
-      cultures on contact (growing the culture pokédex too)?
-- [ ] Trade unit — pure barter (item↔item balance), or a currency (gold ingots already exist in
-      `items.jsonc`)?
-- [ ] Does colony **prestige/wealth** attract better caravans and more visitors (a reputation loop)?
-- [ ] Should a **leader/diplomat** pawn be a designated role (best `trade`/prestige) rather than
-      whoever happens to greet the caravan?
+_None outstanding — the design surface is resolved. Remaining work is the Implementation Plan above._
