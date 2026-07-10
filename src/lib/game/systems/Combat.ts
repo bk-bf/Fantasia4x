@@ -612,7 +612,8 @@ function partArmorReduction(
 /** A defender's raw natural-armour scalar (hide/plate "weight") — a mob's `naturalArmor` or the sum of a
  *  pawn's trait `naturalArmor`. Drives the innate dodge drag (heavy hide = sluggish), NOT per-part soak. */
 function entityNaturalArmor(defender: Pawn | Mob): number {
-  if ('creatureId' in defender) return getCreatureById(defender.creatureId)?.naturalArmor ?? 0;
+  if ('creatureId' in defender)
+    return defender.naturalArmorOverride ?? getCreatureById(defender.creatureId)?.naturalArmor ?? 0;
   let s = 0;
   for (const t of defender.traits ?? []) s += t.naturalArmor ?? 0;
   return s;
@@ -633,7 +634,8 @@ function naturalArmorPoints(
   let mods = 0;
   if ('creatureId' in defender) {
     const c = getCreatureById(defender.creatureId);
-    scalar = c?.naturalArmor ?? 0;
+    // §2a: an individual elite's rolled hide toughness (naturalArmorOverride) supersedes the def scalar.
+    scalar = defender.naturalArmorOverride ?? c?.naturalArmor ?? 0;
     for (const m of c?.armorMods ?? [])
       if (armorModHits(defender, m.target, partId)) mods += m.defense;
     let pts = scalar * share + mods;
@@ -1004,7 +1006,12 @@ class CombatServiceImpl implements CombatService {
             damage: organDamage,
             bleeding: 0,
             painContribution: 0,
-            infected: false
+            infected: false,
+            // ADR-031: a nicked ARTERY (carotid/femoral) never self-clots — it flows until a caretaker
+            // dresses it (the physical successor of `bloodletting`), so finding the throat/femoral is a
+            // slow bleed-out kill. Only matters when the wound actually bleeds (a piercing/cutting hit;
+            // a blunt crush has bleedMod 0 so the flag is inert). recomputeWound carries the flag on merge.
+            ...(PART_DEF_MAP[chosen.id]?.artery ? { bloodletting: true } : {})
           };
         }
       }
@@ -1735,8 +1742,8 @@ class CombatServiceImpl implements CombatService {
   }
 
   /** The worn-armour slot with the highest `defense` (the piece that takes a blow — mirrors
-   *  partArmorReduction's best-of selection). Null if the pawn wears no armour. */
-  private bestArmorSlot(pawn: Pawn): string | null {
+   *  partArmorReduction's best-of selection). Null if the entity wears no armour. Pawn OR geared mob. */
+  private bestArmorSlot(entity: Pawn | Mob): string | null {
     const slots = [
       'bodyOuter',
       'bodyMid',
@@ -1747,7 +1754,8 @@ class CombatServiceImpl implements CombatService {
       'boots',
       'gorget'
     ];
-    const eq = pawn.equipment as Record<string, ItemInstance | undefined>;
+    const eq = entity.equipment as Record<string, ItemInstance | undefined> | undefined;
+    if (!eq) return null;
     let best: string | null = null;
     let bestDef = 0;
     for (const s of slots) {
@@ -1762,51 +1770,71 @@ class CombatServiceImpl implements CombatService {
     return best;
   }
 
-  /** Immutably reduce one equipped instance's durability by `loss` (floored at 0). */
-  private decrEquipDurability(pawn: Pawn, slot: string, loss: number): Pawn {
-    const eq = pawn.equipment as Record<string, ItemInstance | undefined>;
-    const inst = eq[slot];
-    if (!inst) return pawn;
+  /** Immutably reduce one equipped instance's durability by `loss` (floored at 0). Pawn OR mob. */
+  private decrEquipDurability<T extends Pawn | Mob>(entity: T, slot: string, loss: number): T {
+    const eq = entity.equipment as Record<string, ItemInstance | undefined> | undefined;
+    const inst = eq?.[slot];
+    if (!eq || !inst) return entity;
     const dur = Math.max(0, (inst.durability ?? 0) - loss);
     // Condition 0 = the item SHATTERS: remove it from the slot so it's no longer worn/usable (mirrors
     // the tool-wear break in harvest.ts — a worn-out item must leave the equipment doll, not linger at
     // cond 0). Covers both the attacker's mainHand weapon and the defender's struck armour.
     if (dur <= 0) {
-      const next = { ...pawn.equipment } as Record<string, ItemInstance | undefined>;
+      const next = { ...eq };
       delete next[slot];
-      return { ...pawn, equipment: next };
+      return { ...entity, equipment: next };
     }
-    return { ...pawn, equipment: { ...pawn.equipment, [slot]: { ...inst, durability: dur } } };
+    return { ...entity, equipment: { ...eq, [slot]: { ...inst, durability: dur } } };
   }
 
   /** ON A HIT: wear the attacker's main-hand weapon and the defender's struck armour piece by their
-   *  `durabilityLossPerCombatHit` (pawns only — mobs carry no gear). One gated pawns-array rebuild. */
+   *  `durabilityLossPerCombatHit` (pawns AND geared humanoid mobs, §2c). Routed through `spliceEntity`
+   *  so it rides the copy-on-write combat path (no unconditional array rebuild); no-op when neither side
+   *  carries wearing gear. */
   private applyGearWear(
     state: GameState,
     attacker: Pawn | Mob,
     defender: Pawn | Mob,
     armorLoss: number
   ): GameState {
-    // The attacker's weapon wears from use (its own durability/hit); the defender's struck armour
-    // takes `armorLoss` condition — driven by the WEAPON's armorDamage × the attacker's armor_damage
-    // stat (computed by the caller), so a hammer caves plate fast and a cleaver barely scratches it.
+    let next = state;
+    // The attacker's weapon wears from use (its own durabilityLossPerCombatHit).
     const weaponInst = 'equipment' in attacker ? attacker.equipment?.mainHand : undefined;
     const weaponLoss = weaponInst
       ? (itemService.getItemById(weaponInst.itemId)?.durabilityLossPerCombatHit ?? 0)
       : 0;
-    const armorSlot =
-      armorLoss > 0 && 'equipment' in defender ? this.bestArmorSlot(defender as Pawn) : null;
-    if (weaponLoss <= 0 && !armorSlot) return state;
-    return {
-      ...state,
-      pawns: state.pawns.map((p) => {
-        if (weaponLoss > 0 && p.id === attacker.id)
-          return this.decrEquipDurability(p, 'mainHand', weaponLoss);
-        if (armorSlot && p.id === defender.id)
-          return this.decrEquipDurability(p, armorSlot, armorLoss);
-        return p;
-      })
-    };
+    if (weaponLoss > 0) {
+      const isMob = 'creatureId' in attacker;
+      const live = isMob
+        ? next.mobs?.find((m) => m.id === attacker.id)
+        : next.pawns.find((p) => p.id === attacker.id);
+      if (live?.equipment?.mainHand) {
+        next = this.spliceEntity(
+          next,
+          live.id,
+          this.decrEquipDurability(live, 'mainHand', weaponLoss),
+          isMob
+        );
+      }
+    }
+    // The defender's struck armour takes `armorLoss` — the WEAPON's armorDamage × the attacker's
+    // armor_damage stat (computed by the caller), so a hammer caves plate fast, a cleaver barely scratches.
+    if (armorLoss > 0 && 'equipment' in defender) {
+      const isMob = 'creatureId' in defender;
+      const live = isMob
+        ? next.mobs?.find((m) => m.id === defender.id)
+        : next.pawns.find((p) => p.id === defender.id);
+      const slot = live ? this.bestArmorSlot(live) : null;
+      if (live && slot) {
+        next = this.spliceEntity(
+          next,
+          live.id,
+          this.decrEquipDurability(live, slot, armorLoss),
+          isMob
+        );
+      }
+    }
+    return next;
   }
 
   /** Default armour condition stripped per hit, by damage type, when a weapon doesn't author its own

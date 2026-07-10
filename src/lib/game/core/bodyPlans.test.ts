@@ -5,6 +5,7 @@ import {
   parentLimbOf,
   enabledNaturalWeapons,
   lethalAnatomyCause,
+  organsOf,
   BOUND_NATURAL_WEAPONS,
   PART_DEF_MAP,
   DEFAULT_PLAN
@@ -263,6 +264,26 @@ describe('species-specific organ + weapon wiring', () => {
       bloodVolume: 100,
       maxBloodVolume: 100
     }) as unknown as Mob;
+
+  it('ADR-031: the neck holds an unclottable carotid the organ roll can find (across beast plans)', () => {
+    // The soft `neck` gap is on every standard beast plan; its only organ is the carotid, flagged
+    // `artery` so a penetrating hit opens an unclottable (bloodletting) bleed rather than an instant kill.
+    for (const plan of ['humanoid', 'quadruped', 'avian', 'amphibian', 'serpentine']) {
+      const parts = createBodyPlanLimbs(plan, 1).flatMap((l) => l.parts!.map((p) => p.id));
+      expect(parts).toContain('neck');
+      expect(parts).toContain('carotidArtery');
+    }
+    expect(organsOf('neck')).toContain('carotidArtery');
+    expect(PART_DEF_MAP['carotidArtery']!.artery).toBe(true);
+    expect(PART_DEF_MAP['carotidArtery']!.isVital).toBe(false); // a slit throat is a slow kill, not instant
+  });
+
+  it('ADR-031: the humanoid groin holds an unclottable femoral artery', () => {
+    const parts = createBodyPlanLimbs('humanoid', 1).flatMap((l) => l.parts!.map((p) => p.id));
+    expect(parts).toContain('groin');
+    expect(organsOf('groin')).toContain('femoralArtery');
+    expect(PART_DEF_MAP['femoralArtery']!.artery).toBe(true);
+  });
 
   it('a viper carries venom glands + kidneys, with venom_bite bound to the glands (not the fangs)', () => {
     const parts = createBodyPlanLimbs('serpentine', 1).flatMap((l) => l.parts!.map((p) => p.id));

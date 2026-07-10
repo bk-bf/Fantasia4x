@@ -8,6 +8,9 @@ import { createBodyPlanLimbs } from '../../systems/Combat';
 import { DEFAULT_PLAN } from '../../core/BodyParts';
 import { TRAIT_DATABASE } from '../../core/Culture';
 import { rng } from '../../core/rng';
+import { getLootPool, drawLoadout, rollCondition, validateLootItemIds } from '../../core/LootPools';
+import { itemService } from '../ItemService';
+import type { PawnEquipment, ItemInstance } from '../../core/types';
 import { findNearbyWalkable } from './entityHelpers';
 import { isSpawnableTile } from '../../core/Terrains';
 import { resourceObjectService } from '../ResourceObjectService';
@@ -700,15 +703,29 @@ export function makeMob(
   // HP table is intentionally NOT rescaled; naturalArmor + this larger pool carry it). RANGED note: this
   // is the same field that softly scales its natural-weapon damage in Combat.attackerProfile.
   const bodyScale = def.bodyScale ?? 1;
-  const scaledHealth = Math.round(def.stats.health * bodyScale);
+  // §2a per-spawn stat spread: a named core stat rolls uniformly in its [min,max] band (seeded), else
+  // the fixed def value. Base creatures author no `statRanges` → identical to before (fixed stats).
+  const sr = def.statRanges;
   const stats: EntityStats = {
-    strength: def.stats.str,
-    dexterity: def.stats.dex,
-    perception: def.stats.per,
-    constitution: def.stats.con,
+    strength: rollStatRange(sr?.str, def.stats.str),
+    dexterity: rollStatRange(sr?.dex, def.stats.dex),
+    perception: rollStatRange(sr?.per, def.stats.per),
+    constitution: rollStatRange(sr?.con, def.stats.con),
     intelligence: def.behaviour === 'passive' ? 4 : 8,
     charisma: 5
   };
+  // Blood/health pool tracks the ROLLED constitution (con×5), so a tougher individual soaks more — for a
+  // base creature (no range) this equals the old def.stats.health.
+  const scaledHealth = Math.round(stats.constitution * 5 * bodyScale);
+  // §2a per-spawn natural-armour spread (individual elites vary in hide toughness); absent = fixed.
+  const naturalArmorOverride = def.naturalArmorRange
+    ? Math.round(
+        def.naturalArmorRange[0] +
+          rng.random() * (def.naturalArmorRange[1] - def.naturalArmorRange[0])
+      )
+    : undefined;
+  // §2c a geared humanoid draws its worn loadout (quality + condition rolled) from its lootpool.
+  const equipment = def.lootPool ? equipFromLootPool(def.lootPool) : undefined;
   // ENGINE-PERFORMANCE-II §S5: STAGGER initial hunger across mobs. Spawning every mob at hunger 0 made
   // them all cross HUNGER_EAT_THRESHOLD on the SAME tick → a synchronized hunt→combat wave that collapsed
   // TPS (the engagement-wave spike). A uniform spread over [0, threshold) desyncs the first hunt: each
@@ -770,7 +787,47 @@ export function makeMob(
     // orc_reaver carries Adrenal S1) — the stat/resistance/weaponBonus/combatMods effects flow
     // through the same `'traits' in entity` reads as a pawn's.
     ...(def.traits?.length
-      ? { traits: def.traits.map((id) => TRAIT_DATABASE.find((t) => t.id === id)).filter((t) => !!t) }
-      : {})
+      ? {
+          traits: def.traits.map((id) => TRAIT_DATABASE.find((t) => t.id === id)).filter((t) => !!t)
+        }
+      : {}),
+    // §2a/§2c spawn-rolled extras (omitted for a plain base creature).
+    ...(naturalArmorOverride !== undefined ? { naturalArmorOverride } : {}),
+    ...(equipment ? { equipment } : {})
   };
 }
+
+/** §2a: roll a core stat from its optional [min,max] band (seeded), else the fixed value. */
+function rollStatRange(range: [number, number] | undefined, fallback: number): number {
+  if (!range) return fallback;
+  return Math.round(range[0] + rng.random() * (range[1] - range[0]));
+}
+
+/** §2c: build a mob's worn equipment from a lootpool — draw the loadout, then stamp each drawn piece
+ *  with a rolled quality tier + a worn starting durability (conditionRange × the item's max). Returns
+ *  undefined when the pool is missing/empty so a mob without gear carries no `equipment` field. */
+function equipFromLootPool(poolId: string): PawnEquipment | undefined {
+  const pool = getLootPool(poolId);
+  if (!pool) return undefined;
+  const pieces = drawLoadout(pool, rng);
+  if (pieces.length === 0) return undefined;
+  const eq: Record<string, ItemInstance> = {};
+  for (const p of pieces) {
+    const item = itemService.getItemById(p.itemId);
+    if (!item) continue; // defensive — ids are validated at load (validateLootItemIds)
+    const maxDur = item.maxDurability ?? 100;
+    const inst: ItemInstance = {
+      instanceId: `loot-${p.itemId}-${idCounter}-${Math.floor(rng.random() * 1e6)}`,
+      itemId: p.itemId,
+      durability: Math.max(1, Math.round(maxDur * rollCondition(pool, rng))),
+      quality: p.quality
+    };
+    eq[p.slot] = inst;
+  }
+  return Object.keys(eq).length > 0 ? (eq as PawnEquipment) : undefined;
+}
+
+// Validate every lootpool item id against ItemService at module load — a typo must fail loud, not
+// silently ship an unarmed raider. (LootPools validates slot keys; item-id validation needs
+// ItemService, which lives in this layer.) No-op while the pools are empty.
+validateLootItemIds((id) => itemService.getItemById(id) != null);

@@ -1,7 +1,9 @@
 // Entity lifecycle — hunger/fatigue/blood-loss tick, death → corpse conversion, carcass drops, and
 // corpse decay. Extracted from EntityService (P-4).
-import type { GameState, Mob, MobState, DroppedItem } from '../../core/types';
+import type { GameState, Mob, MobState, DroppedItem, ItemInstance } from '../../core/types';
 import { getCreatureById } from '../../core/Creatures';
+import { getLootPool } from '../../core/LootPools';
+import { rng } from '../../core/rng';
 import { SECONDS_PER_TICK, perTick } from '../../core/time';
 import {
   conditionNeedMultipliers,
@@ -371,7 +373,45 @@ export function dropCarcass(state: GameState, mob: Mob): GameState {
   };
   let next: GameState = { ...state, droppedItems: [...(state.droppedItems ?? []), drop] };
   next = absorbDropIfOnStockpileTile(next, id);
+  // §2c: a geared humanoid drops a subset of its worn kit (each piece rolls the pool's dropChance),
+  // carrying the rolled quality + the durability it was worn down to in the fight.
+  next = dropMobGear(next, mob, def);
   return next;
+}
+
+/** CREATURE-COMBAT-OVERHAUL §2c — drop a mob's worn equipment on death. Each equipped, non-shattered
+ *  piece independently rolls the lootpool's `dropChance`; a survivor lands on the ground as a tracked
+ *  DroppedItem carrying its ItemInstance (quality + remaining durability). Forbidden by default like a
+ *  wild carcass, so pawns don't trek into danger to retrieve it. No-op for an unarmed mob. */
+function dropMobGear(
+  state: GameState,
+  mob: Mob,
+  def: ReturnType<typeof getCreatureById>
+): GameState {
+  if (!mob.equipment || !def?.lootPool) return state;
+  const pool = getLootPool(def.lootPool);
+  if (!pool) return state;
+  const drops: DroppedItem[] = [];
+  for (const [slot, inst] of Object.entries(mob.equipment) as [
+    string,
+    ItemInstance | undefined
+  ][]) {
+    if (!inst || inst.durability <= 0) continue; // empty slot or shattered mid-fight — nothing to drop
+    if (rng.random() >= pool.dropChance) continue;
+    drops.push({
+      id: `loot-drop-${mob.id}-${slot}-${state.turn}`,
+      resourceId: inst.itemId,
+      x: mob.x,
+      y: mob.y,
+      quantity: 1,
+      instance: inst,
+      quality: inst.quality,
+      durability: inst.durability,
+      forbidden: true
+    });
+  }
+  if (drops.length === 0) return state;
+  return { ...state, droppedItems: [...(state.droppedItems ?? []), ...drops] };
 }
 
 export function removeDead(state: GameState): GameState {

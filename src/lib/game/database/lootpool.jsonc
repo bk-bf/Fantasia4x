@@ -1,0 +1,29 @@
+// lootpool.jsonc — weighted weapon/armour loadouts for GEARED humanoid creatures
+// (CREATURE-COMBAT-OVERHAUL §2c). Data-only: pools live here, drawn by core/LootPools.ts at spawn.
+//
+// A creature def references a pool by id (`"lootPool": "warband_bronze"`). At spawn the mob draws
+// ONE piece per slot (each slot has its own `chance`, so a first-tier raider is only partly kitted),
+// rolls the piece's QUALITY (weighted `quality` table) and CONDITION (`conditionRange` × the item's
+// max durability), and equips it. Combat then treats the mob exactly like an armed/armoured pawn.
+// On death, each equipped piece independently rolls `dropChance` and lands on the ground carrying its
+// rolled quality + remaining durability (a fight wears gear DOWN before it drops).
+//
+// SCHEMA (all pools EMPTY for now — fill with concrete loadouts per the spec's §2c tables):
+//   "<poolId>": {
+//     "dropChance"    : 0.5,               // per-piece chance to drop on death (0–1)
+//     "conditionRange": [0.4, 0.85],       // spawn durability as a fraction of the item's max (worn gear)
+//     "quality"       : [[1, 5], [2, 3], [3, 1]],  // weighted [ItemQuality 0–5, weight]; omit → all Standard(1)
+//     "slots": {
+//       "mainHand" : {"chance": 0.9, "pick": [{"id": "bone_knife", "w": 3}, {"id": "stone_spear", "w": 1}]},
+//       "bodyOuter": {"chance": 0.35, "pick": [{"id": "raw_hide_vest", "w": 1}]},
+//       "headOuter": {"chance": 0.15, "pick": [{"id": "padded_cap", "w": 1}]}
+//       // slot keys are real EquipmentSlot ids (mainHand/offHand/bodyBase/bodyMid/bodyOuter/headBase/
+//       // headOuter/gloves/boots/gorget/pauldrons/bracers/greaves/…); item ids reference items.jsonc.
+//     }
+//   }
+//
+// Loader validates every `id` against ItemService and every slot key against EquipmentSlot at load;
+// an unknown id/slot throws so a typo can't silently ship an unarmed raider. `pnpm check`/tests guard.
+{
+  "pools": {}
+}

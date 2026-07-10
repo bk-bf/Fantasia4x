@@ -26,6 +26,10 @@ export interface BodyPartDef {
   /** Natural-armour share 0–1+: the plan sets the distribution, the creature's `naturalArmor` the strength.
    *  A destroyed part takes its armour with it. */
   armor?: number;
+  /** ADR-031: a major vessel (carotid/femoral). A penetrating organ-hit that finds it opens an
+   *  UNCLOTTABLE bleed (`bloodletting` — flows until dressed), so a throat/groin thrust is a slow-kill
+   *  rather than the instant kill a vital organ would be. */
+  artery?: boolean;
   /** TRAITS §0 — permanent effects the part itself confers on whoever has it (a spider's extra eyes grant
    *  night vision + perception). This is how a GRAFTED organ pays out its buff without routing through a
    *  condition: `nightVision` is summed live over the entity's LIVING parts (vision.ts) — lose the eye,
@@ -46,6 +50,7 @@ interface CatalogPart {
   critical?: boolean;
   weapons?: string[];
   armor?: number;
+  artery?: boolean;
   grants?: { nightVision?: number; perceptionBonus?: number };
 }
 interface PlanBlock {
@@ -95,6 +100,7 @@ for (const [id, p] of Object.entries(ALL_PARTS)) {
     isCritical: p.critical ?? undefined,
     weapons: p.weapons,
     armor: p.armor,
+    artery: p.artery ?? undefined,
     grants: p.grants
   };
 }

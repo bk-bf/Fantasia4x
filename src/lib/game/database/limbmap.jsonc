@@ -72,8 +72,9 @@
       "neck"        : {"size": 20, "bleedRatio": 0.06, "hitWeight": 2, "armor": 0},
       // The carotid — a real organ INSIDE the neck (hitWeight 0, found only by the organ-penetration
       // roll on a neck hit). Not vital: nicking it doesn't kill outright, it opens a hard bleed-out
-      // (small size → wounds hit high severity fast; big bleedRatio → they gush).
-      "carotidArtery": {"size": 8, "bleedRatio": 0.12, "hitWeight": 0, "containedIn": "neck"},
+      // (small size → wounds hit high severity fast; big bleedRatio → they gush). `artery` → the wound
+      // is UNCLOTTABLE (bleeds until dressed), so a slit throat is a slow kill, not an instant one.
+      "carotidArtery": {"size": 8, "bleedRatio": 0.12, "hitWeight": 0, "containedIn": "neck", "artery": true},
       // The chest is the SOFT outer wall of the thorax (pecs/skin) wrapping the ribcage — it takes
       // cut/puncture/crush like any flesh, but it is NOT bone, so it never fractures. The skeleton beneath
       // it is the `ribcage` (below): heavy blows crack THAT, not the wall. (See Combat's fracture routing.)
@@ -92,7 +93,7 @@
         // The groin — the femoral weak point below armour coverage (CREATURE-COMBAT-OVERHAUL §1a):
         // near-bare (armor 0.1), bleeds hard, and holds the femoral artery for the penetration roll.
         "groin"            : {"size": 15, "bleedRatio": 0.05, "hitWeight": 1.5, "armor": 0.1},
-        "femoralArtery"    : {"size": 8, "bleedRatio": 0.1, "hitWeight": 0, "containedIn": "groin"},
+        "femoralArtery"    : {"size": 8, "bleedRatio": 0.1, "hitWeight": 0, "containedIn": "groin", "artery": true},
         "leftShoulder"     : {"size": 40, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "armor": 0.7},
         "leftScapula" : {"size": 40, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftShoulder"},
         "leftUpperArm"     : {"size": 45, "bleedRatio": 0.05, "hitWeight": 2, "isPaired": true, "armor": 0.6},

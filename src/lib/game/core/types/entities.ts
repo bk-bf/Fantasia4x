@@ -161,6 +161,15 @@ export interface Mob {
   hideWear?: Record<string, number>;
   /** Tick of the last hide chip — wear older than the reset window reads as zero (fight over). */
   hideWearAt?: number;
+  // ── CREATURE-COMBAT-OVERHAUL §2 variant gear ──────────────────────────────
+  /** §2c a geared humanoid's worn loadout (drawn from its creature def's `lootPool` at spawn). Combat
+   *  reads it exactly like a pawn's (via `'equipment' in entity`): the weapon drives the attack profile,
+   *  worn armour soaks per covered part, pieces wear on hit and drop on death. Cold snapshot field. */
+  equipment?: PawnEquipment;
+  /** §2a per-spawn natural armour, rolled from the def's `naturalArmorRange`; overrides the def scalar
+   *  in combat when present (individual elites vary in hide toughness). Worker-only — dropped from the
+   *  snapshot projection. */
+  naturalArmorOverride?: number;
   /** TRAIT-LIBRARY-EXPANSION §4.0 shared lines: trait defs this creature carries (resolved from the
    *  creature def's `traits` id list at spawn — e.g. orc_reaver's Adrenal S1). Mobs get the
    *  stat/resistance/weaponBonus/combatMods effects through the same `'traits' in entity` reads as

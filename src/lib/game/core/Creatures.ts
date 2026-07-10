@@ -117,6 +117,22 @@ export interface CreatureDefinition {
   /** Per-part natural armour — `target` = limbmap part id / limb group / `'all'`; `defense`
    *  adds absolute soak. `naturalArmor` above is the uniform-`'all'` sugar. */
   armorMods?: Array<{ target: string; defense: number }>;
+  // ── CREATURE-COMBAT-OVERHAUL §2 variant ladder ────────────────────────────
+  /** §2a per-spawn stat spread: when present, the named core stats roll uniformly in [min,max] at
+   *  spawn (seeded), giving intra-tier individual variation; absent stats use the fixed `stats` value.
+   *  Base creatures omit it (fixed stats); variants author a band centred on the tier baseline (±~5). */
+  statRanges?: Partial<Record<'str' | 'dex' | 'con' | 'per', [number, number]>>;
+  /** §2a per-spawn natural-armour spread, rolled like `statRanges`; absent = fixed `naturalArmor`. */
+  naturalArmorRange?: [number, number];
+  /** §2c lootpool id (database/lootpool.jsonc) — a geared humanoid draws a weapon/armour loadout at
+   *  spawn (quality + condition rolled) and drops a subset on death. Omitted = unarmed/natural only. */
+  lootPool?: string;
+  /** §2b ladder metadata. `species` groups a creature's whole 5-tier ladder (every wolf variant shares
+   *  species `"wolf"`); `tier` 1–5 is the power rung (5 = boss); `variantOf` links to the base creature
+   *  id for Phase-3 lair escalation. A base creature is its own species, tier 1, no `variantOf`. */
+  species?: string;
+  tier?: number;
+  variantOf?: string;
   /** Body-size multiplier (default 1.0). Scales blood/health pool at spawn and softly scales
    *  natural-weapon damage. Does NOT rescale the shared body-part HP table. */
   bodyScale?: number;
@@ -207,6 +223,12 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     naturalWeapons: (raw.naturalWeapons as string[]) ?? [],
     armorMods:
       (raw.armorMods as Array<{ target: string; defense: number }> | undefined) ?? undefined,
+    statRanges: (raw.statRanges as CreatureDefinition['statRanges'] | undefined) ?? undefined,
+    naturalArmorRange: (raw.naturalArmorRange as [number, number] | undefined) ?? undefined,
+    lootPool: (raw.lootPool as string | undefined) ?? undefined,
+    species: (raw.species as string | undefined) ?? undefined,
+    tier: (raw.tier as number | undefined) ?? undefined,
+    variantOf: (raw.variantOf as string | undefined) ?? undefined,
     traits: (raw.traits as string[] | undefined) ?? undefined,
     resistances: (raw.resistances as Partial<Record<DamageType, number>> | undefined) ?? undefined,
     naturalArmor: (raw.naturalArmor as number | undefined) ?? undefined,
