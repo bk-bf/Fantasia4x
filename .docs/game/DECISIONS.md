@@ -1232,3 +1232,44 @@ webview, so nothing in the sim/render architecture changes with this choice.
 Node available in the shell, at the cost of a larger bundle / +150–250 MB RAM (accepted — a desktop
 colony sim, not a web page). The ADR-020 rejection of *forking* Chromium still holds; using stock
 Electron does not. Not graph-checkable — a distribution/runtime decision, not a call-edge invariant.
+
+### ADR-031 [GAME]: Precision-Routed Vitals + Per-Fight Natural-Hide Degradation
+
+**Status:** Accepted (2026-07-10). Extends ADR-029's subtractive armour with its two counters
+(CREATURE-COMBAT-OVERHAUL Phase 1).
+
+**Context.** Under ADR-029, a tank's flat per-part soak made armour a binary: a weak weapon did 0
+through a bear's hide forever, a strong one went near-full — nothing in between, no way to *earn* a
+kill. The locked decision: keep armour subtractive and high; dissolve the binary with counters
+(placement, attrition) and soft targets, not by shaving the scalars or going percentage-based.
+
+**Decision.** Three interlocking rules in `systems/Combat.ts` + `database/limbmap.jsonc`:
+
+1. **Soft targets everywhere.** The shared `neck` (armor 0, hard bleed) joins every standard beast
+   plan's head limb, and humanoids gain a `groin` (armor 0.1); each holds a non-vital artery organ
+   (`carotidArtery`/`femoralArtery`, small + high `bleedRatio`) reachable ONLY by the
+   organ-penetration roll — nicking one opens a severe bleed-out rather than an instant kill.
+   ADR-029's gap-aiming now has a real gap on every body.
+2. **Precision routes to vitals.** The organ-penetration and fracture chances are each multiplied by
+   `(1 + critChance × K)` (`K_PRECISION_ORGAN 6`, `K_PRECISION_FRACTURE 4`), where critChance is the
+   attacker's `hit_precision` stat + weapon `critMod` — the same number driving crits and gap-aiming.
+   Existing caps still bound the rolls. A deft fighter (or crit-prone stiletto) beats armour by
+   placement; armour stays a wall to mooks. Organs weigh heavier than bone by design (a guided blade
+   finds a kidney more readily than it cracks a femur).
+3. **Hide wears down per fight.** Every landed hit chips the struck part's natural soak by the SAME
+   armour-wear number worn gear takes (`weapon.armorDamage × armor_damage stat` — one wear model),
+   accumulated in `Mob.hideWear[partId]` (capped at the part's full soak) and subtracted by
+   `naturalArmorPoints` while fresh. Wear EXPIRES `HIDE_WEAR_RESET_TICKS` (750, ~an in-game hour,
+   mirroring the mob clot cadence) after the last chip — per-fight attrition, not permanent maiming.
+   So a long fight against a tank is a durability race: your weapon and armour wear down (ADR-029
+   gear wear) while its hide opens up.
+
+**Perf (ENGINE-PERFORMANCE cross-checked).** All new work is event-rate (landed hits only): the chip
+routes through `spliceEntity` (copy-on-write combat path), wear reads are a Record lookup inside the
+existing per-hit armour math, and a peace tick allocates nothing. `hideWear`/`hideWearAt` are dropped
+from the sent snapshot (`entityProjection.ts` ENTITY_DROP) — worker-only scratch.
+
+**Consequences.** Signature tanks got their first `armorMods` (soft bellies on bear/owlbear/croc/
+quillback, hardened cephalothorax on the thornwood spider), so aimed attacks have authored weak
+points. Not graph-checkable — combat-runtime math + data-schema, not a call-edge invariant; guarded
+by the combat suite (`combatSim`, `creatureDurability`, `entityProjection` tests).

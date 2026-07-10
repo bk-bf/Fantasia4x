@@ -2,7 +2,7 @@
 
 # ANIMAL HUSBANDRY — Taming, Husbandry, Mounts & Animal Hauling
 
-> **Related:** [ROADMAP](ROADMAP.md) · [ENTITIES_SPAWNING (archived — Phases A–B record)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) · [PRODUCTION-CHAIN-II §L logistics (archived)](../archive/PRODUCTION-CHAIN-II-2026-06-21.md#l--bulk-logistics-wheelbarrows-carts-roads) · [PRODUCTION-CHAIN-III §E (archived — carcass yields, wool source)](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) (kingdoms own the caravans + the creatures' `kingdom` flag; hostility derives from `kingdomRelations`) · [ENTITIES_SPAWNING (archived — Phases A–B record)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) · [PRODUCTION-CHAIN-II §L logistics (archived)](../archive/PRODUCTION-CHAIN-II-2026-06-21.md#l--bulk-logistics-wheelbarrows-carts-roads) · [PRODUCTION-CHAIN-III §E (archived — carcass yields, wool source)](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
 
 ## Status
 
@@ -19,25 +19,79 @@ them rather than re-stating them.
 
 ---
 
-## Phase C — Taming
+## Kingdom belonging — the unifying model (shared with [KINGDOMS-TRADE](KINGDOMS-TRADE.md))
 
-Pawn with `taming` job approaches a target animal carrying an acceptable food item. Taming chance per
-turn:
+Every entity **belongs to a kingdom**, and that single fact replaces the two mechanics that are
+currently hardcoded per-creature: *who is hostile* and *who sends caravans*.
 
-```
-chance = (pawn.empathy + pawn.skills.taming × 2) / 100
-        × foodQualityMod
-        × creature.tameResistance  // 1.0 = easy, 0.3 = hard
-```
+- **New `kingdom` field on every `CreatureDefinition`** (`creatures.jsonc`). A kingdom id from the
+  KINGDOMS-TRADE pool — including "wilderness" polities for beasts (a wolf-pack kingdom, an orc horde,
+  a goblin warren). Wolves, worgs, orcs, goblins, kobolds each belong to one.
+- **Hostility is *derived from `kingdomRelations`*, not the hardcoded `behaviour: "aggressive"` /
+  `nocturnalAggro` flags.** Whether a creature attacks a colony pawn on sight comes from the
+  colony↔its-kingdom relation, so the same roster can be friend or foe per game. (The current
+  `behaviour`/`nocturnalAggro` fields become the *default/fallback* disposition for unaffiliated
+  wildlife — see Open Questions on how predation coexists with this.)
+- **Predation stays a separate axis.** A carnivore still hunts prey to *eat* (its `diet`/`predator`/
+  hunger drive), independent of political hostility — a wolf-kingdom at peace with the colony still
+  eats deer, and may still get dangerous when starving. Kingdom relation governs *pawn-directed*
+  aggression only.
+- **Progressively more intelligent variants appear later.** A kingdom's spawn roster escalates its
+  `intelligence` tier over game progress / rising contact — early `primitive` beasts, later
+  `animal`- and pawn-level `sentient` members. Intelligence gates *how you win them over*: beasts are
+  **tamed** (below); pawn-level members are **recruited/negotiated** via the KINGDOMS-TRADE social
+  path, not fed.
 
-Food quality mods: `raw_meat` ×0.8, `cooked_meat` ×1.2, preferred_food ×1.5 (per creature def). Taming
-consumes 1 food item per attempt. Taming fails immediately if the pawn attacks while the animal is not
-Exhausted → recommend: weaken first (combat), then tame while Exhausted. On success: entity → `Tamed`,
-assigned to pawn, added to `GameState.tamedAnimals[]` with owner `pawnId`.
+### Caravans are kingdom pawns (data-wired, cross-links KINGDOMS-TRADE §3)
 
-- [ ] Add `taming` work category (`core/Work.ts`).
-- [ ] `EntityService.attemptTame(pawnId, entityId, state)` — per-turn chance roll.
-- [ ] Promote entity to `TamedAnimal` on success.
+A trade caravan is **literally a spawned party of that kingdom's entities** — humanoid, pawn-level
+`intelligence`, defined in `creatures.jsonc` like any creature (stats, natural weapons, loot pool,
+abilities). Composition: a **trader/royal** lead + **strong guards** + any **pack/draft animals**
+carrying the goods. The trade goods are **physically on the caravan** (real items on the entities, per
+the physical-production model), not a virtual shop.
+
+- **Arrival likelihood is relation-weighted**, highest → lowest: kingdoms whose members have standing
+  **pawn-level relationships** with the colony → **friendly** kingdoms → **neutral** kingdoms.
+  **Hostile kingdoms never send caravans or visitors** (they send raids — KINGDOMS-TRADE §3).
+- **Caravan animals carry their caravan's `kingdom`.** They are pre-owned tamed entities wired via
+  data — a `TamedAnimal` whose owner is the *kingdom*, not a colony `pawnId`. This spec's data model
+  (below) must **track that kingdom-belonging flag** on caravan animals so the colony can't treat a
+  visiting caravan's ox as huntable/tameable stock, and so capturing one (if the caravan is attacked)
+  transfers ownership correctly.
+
+- [ ] Add `kingdom` to `CreatureDefinition` + resolve it against the KINGDOMS-TRADE kingdom pool.
+- [ ] Move pawn-directed hostility off `behaviour`/`nocturnalAggro` onto a `kingdomRelations` lookup
+      (keep the flags as fallback for unaffiliated wildlife).
+- [ ] `TamedAnimal.ownerKingdomId?` (nullable) alongside `ownerPawnId` — caravan stock reads the former.
+
+---
+
+## Phase C — Taming (feed-to-tame)
+
+Taming is an **active feeding job**, not a passive proximity roll. A pawn on the `feed` job carries a
+food item to a target creature and feeds it over repeated visits; each feeding rolls the pawn's
+effective handling skill against the creature's **`wilderness`**.
+
+- **New `wilderness` stat on `creatures.jsonc`** — how hard the creature is to win over (higher =
+  wilder, harder). This is the tame-difficulty axis (see Open Questions: replace vs. augment the
+  existing `tameResistance`).
+- **New `feed` colony job** (`jobs.jsonc`) — new behaviour: steer a pawn to fetch an acceptable food
+  item, approach the target, and feed it; repeats until tamed or the creature flees/dies.
+- **Per-feeding success roll** — pawn's effective handling skill vs `creature.wilderness`. Pawn skill
+  builds from:
+  - base `taming` skill (+ CHA/empathy),
+  - **favorite-food** match (new `favoriteFood` field per creature — the right food is a big multiplier),
+  - **kingdom relationship** (friendlier toward the creature's `kingdom` → easier to tame its beasts).
+- Each feeding consumes 1 food item. On success: entity → `Tamed`, `TamedAnimal` with owner `pawnId`,
+  added to `GameState.tamedAnimals[]`. Pawn-level `intelligence` creatures are **not** feed-tamed —
+  route them to recruitment/diplomacy (KINGDOMS-TRADE).
+
+- [ ] Add `taming` work category (`core/Work.ts`) + `feed` job (`jobs.jsonc` + `JobService` handler +
+      `Job['type']`).
+- [ ] Add `wilderness` + `favoriteFood` to `CreatureDefinition`.
+- [ ] `EntityService.attemptTame(pawnId, entityId, state)` — per-feeding roll (skill vs `wilderness`,
+      folding favorite-food + kingdom-relationship modifiers).
+- [ ] Promote entity to `TamedAnimal` on success; gate feed-taming to non-`sentient` intelligence.
 
 ## Phase D — Husbandry
 
@@ -119,6 +173,20 @@ Pure speculation.
 
 ## Open Questions
 
+- [ ] **Predation vs kingdom-hostility** — how do the two aggression drives coexist? A wolf at peace
+      with the colony still hunts (hunger) and may still be dangerous; a "hostile-kingdom" beast
+      attacks pawns on sight. Is predation a hunger-gated override on top of the relation lookup, or
+      does relation only suppress *unprovoked* pawn aggression while hunting/defence always fire?
+- [ ] **`wilderness` vs existing `tameResistance`** — is `wilderness` a rename/replacement of the
+      current `tameResistance` (0.3–0.9) field, or a second, separate axis (e.g. difficulty vs.
+      flight-risk)?
+- [ ] **Intelligence gate** — where's the line between feed-tameable "beast" and
+      recruit/negotiate-only "pawn-level"? By `intelligence` tier exactly, or a per-creature
+      `tameable` flag as today?
+- [ ] **Capturing caravan animals** — if the player attacks a caravan, do its `ownerKingdomId` animals
+      become huntable/tameable stock, or do they flee/despawn with the routed caravan?
+- [ ] **`favoriteFood` source** — new explicit field, or derived from `diet`/`eats` (e.g. first
+      preferred entry)?
 - [ ] Cart mechanic model: vehicle entity on map vs equippable cart (budget override) vs deployable
       site + batch-haul job?
 - [ ] Do tamed animals persist across saves? (yes — serialise `tamedAnimals[]`)
