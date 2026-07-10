@@ -1247,9 +1247,11 @@ kill. The locked decision: keep armour subtractive and high; dissolve the binary
 
 1. **Soft targets everywhere.** The shared `neck` (armor 0, hard bleed) joins every standard beast
    plan's head limb, and humanoids gain a `groin` (armor 0.1); each holds a non-vital artery organ
-   (`carotidArtery`/`femoralArtery`, small + high `bleedRatio`) reachable ONLY by the
-   organ-penetration roll — nicking one opens a severe bleed-out rather than an instant kill.
-   ADR-029's gap-aiming now has a real gap on every body.
+   (`carotidArtery`/`femoralArtery`, small + high `bleedRatio`, flagged `artery`) reachable ONLY by
+   the organ-penetration roll — nicking one opens an **unclottable** bleed (`bloodletting`: flows
+   until a caretaker dresses it, never self-clots), so a slit throat is a slow bleed-out kill rather
+   than the instant kill a vital organ (brain/heart) would be. ADR-029's gap-aiming now has a real
+   gap on every body.
 2. **Precision routes to vitals.** The organ-penetration and fracture chances are each multiplied by
    `(1 + critChance × K)` (`K_PRECISION_ORGAN 6`, `K_PRECISION_FRACTURE 4`), where critChance is the
    attacker's `hit_precision` stat + weapon `critMod` — the same number driving crits and gap-aiming.

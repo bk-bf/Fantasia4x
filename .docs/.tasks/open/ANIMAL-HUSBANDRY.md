@@ -27,15 +27,18 @@ currently hardcoded per-creature: *who is hostile* and *who sends caravans*.
 - **New `kingdom` field on every `CreatureDefinition`** (`creatures.jsonc`). A kingdom id from the
   KINGDOMS-TRADE pool — including "wilderness" polities for beasts (a wolf-pack kingdom, an orc horde,
   a goblin warren). Wolves, worgs, orcs, goblins, kobolds each belong to one.
-- **Hostility is *derived from `kingdomRelations`*, not the hardcoded `behaviour: "aggressive"` /
-  `nocturnalAggro` flags.** Whether a creature attacks a colony pawn on sight comes from the
-  colony↔its-kingdom relation, so the same roster can be friend or foe per game. (The current
-  `behaviour`/`nocturnalAggro` fields become the *default/fallback* disposition for unaffiliated
-  wildlife — see Open Questions on how predation coexists with this.)
-- **Predation stays a separate axis.** A carnivore still hunts prey to *eat* (its `diet`/`predator`/
-  hunger drive), independent of political hostility — a wolf-kingdom at peace with the colony still
-  eats deer, and may still get dangerous when starving. Kingdom relation governs *pawn-directed*
-  aggression only.
+- **Hostility toward pawns is *derived from `kingdomRelations`*, not the hardcoded
+  `behaviour: "aggressive"` / `nocturnalAggro` flags.** A creature attacks a colony pawn on sight in
+  exactly two cases: (a) its kingdom is **hostile** to the colony, or (b) **self-defence** — it (or a
+  packmate) was attacked. Nothing else makes a creature attack a pawn.
+- **Predation never targets pawns.** A carnivore hunts *other animals* to eat (its `diet`/`predator`/
+  hunger drive) but does **not** attack pawns from hunger or starvation. This is deliberate: if hungry
+  predators mobbed pawns, pawns would kill them in self-defence and the colony's relations would be
+  punished for something it didn't start — unfair. Predation stays an animal-vs-animal axis.
+- **Killing worsens relations with the victim's kingdom.** Every kill decays the colony↔that-kingdom
+  score. So hunting deer and rabbits steadily sours relations with *their* kingdoms — which reads
+  in-world as prey **learning to identify the colony as a dangerous predator**: they flee sooner and
+  more readily the more you hunt them. Over-hunting a species makes it skittish and scarce near you.
 - **Progressively more intelligent variants appear later.** A kingdom's spawn roster escalates its
   `intelligence` tier over game progress / rising contact — early `primitive` beasts, later
   `animal`- and pawn-level `sentient` members. Intelligence gates *how you win them over*: beasts are
@@ -46,23 +49,35 @@ currently hardcoded per-creature: *who is hostile* and *who sends caravans*.
 
 A trade caravan is **literally a spawned party of that kingdom's entities** — humanoid, pawn-level
 `intelligence`, defined in `creatures.jsonc` like any creature (stats, natural weapons, loot pool,
-abilities). Composition: a **trader/royal** lead + **strong guards** + any **pack/draft animals**
-carrying the goods. The trade goods are **physically on the caravan** (real items on the entities, per
-the physical-production model), not a virtual shop.
+abilities). Composition: a **trader/royal** lead + **strong guards** + **pack/draft animals** carrying
+goods + **combat animals** (war beasts). The trade goods are **physically on the caravan** (real items
+on the entities, per the physical-production model), not a virtual shop.
 
 - **Arrival likelihood is relation-weighted**, highest → lowest: kingdoms whose members have standing
   **pawn-level relationships** with the colony → **friendly** kingdoms → **neutral** kingdoms.
   **Hostile kingdoms never send caravans or visitors** (they send raids — KINGDOMS-TRADE §3).
+- **They march across the map.** A caravan spawns at a **map edge** and travels the full map to the
+  colony, **fighting through whatever's in its way** — so it must be genuinely strong (well-equipped
+  guards + war beasts). Reaching the colony is not guaranteed; an unlucky caravan can run into a boss
+  creature or an elite pack and be wiped before it arrives.
+- **Robbing is meant to be hard, and it's an act of war.** Attacking a caravan **immediately flips its
+  kingdom hostile** — a massive `kingdomRelations` penalty. Under attack, caravan animals split by
+  role: **pack/draft** stock flees, **combat** beasts fight. If the colony destroys **~2/3** of the
+  caravan, the remainder **routes** (retreats toward the map edge). An occasional caravan-war crossing
+  the map is intended content, not a failure state.
 - **Caravan animals carry their caravan's `kingdom`.** They are pre-owned tamed entities wired via
-  data — a `TamedAnimal` whose owner is the *kingdom*, not a colony `pawnId`. This spec's data model
-  (below) must **track that kingdom-belonging flag** on caravan animals so the colony can't treat a
-  visiting caravan's ox as huntable/tameable stock, and so capturing one (if the caravan is attacked)
-  transfers ownership correctly.
+  data — a `TamedAnimal` whose owner is the *kingdom*, not a colony `pawnId`. The data model (below)
+  must **track that kingdom-belonging flag** so the colony can't treat a visiting caravan's ox as
+  huntable/tameable stock, and so ownership resolves correctly if the caravan is broken.
 
 - [ ] Add `kingdom` to `CreatureDefinition` + resolve it against the KINGDOMS-TRADE kingdom pool.
-- [ ] Move pawn-directed hostility off `behaviour`/`nocturnalAggro` onto a `kingdomRelations` lookup
-      (keep the flags as fallback for unaffiliated wildlife).
-- [ ] `TamedAnimal.ownerKingdomId?` (nullable) alongside `ownerPawnId` — caravan stock reads the former.
+- [ ] Move pawn-directed hostility off `behaviour`/`nocturnalAggro` onto a `kingdomRelations` lookup;
+      creatures attack pawns only on **hostile-kingdom** or **self-defence** (keep flags as fallback
+      for unaffiliated wildlife). Every kill applies a relation penalty to the victim's kingdom.
+- [ ] `TamedAnimal.ownerKingdomId?` (nullable) alongside `ownerPawnId` — caravan stock reads the
+      former; distinguish **draft** (flees when attacked) from **combat** (fights) roles.
+- [ ] Caravan as a cross-map fighting march: edge spawn/despawn, ~2/3-casualty rout, attack →
+      kingdom-hostile (spec'd in KINGDOMS-TRADE §3; this spec owns the animal roles).
 
 ---
 
@@ -72,9 +87,8 @@ Taming is an **active feeding job**, not a passive proximity roll. A pawn on the
 food item to a target creature and feeds it over repeated visits; each feeding rolls the pawn's
 effective handling skill against the creature's **`wilderness`**.
 
-- **New `wilderness` stat on `creatures.jsonc`** — how hard the creature is to win over (higher =
-  wilder, harder). This is the tame-difficulty axis (see Open Questions: replace vs. augment the
-  existing `tameResistance`).
+- **`wilderness` stat on `creatures.jsonc`** — **renames the existing `tameResistance`** into one
+  tame-difficulty axis (higher = wilder, harder to win over; migrate current 0.3–0.9 values).
 - **New `feed` colony job** (`jobs.jsonc`) — new behaviour: steer a pawn to fetch an acceptable food
   item, approach the target, and feed it; repeats until tamed or the creature flees/dies.
 - **Per-feeding success roll** — pawn's effective handling skill vs `creature.wilderness`. Pawn skill
@@ -83,15 +97,18 @@ effective handling skill against the creature's **`wilderness`**.
   - **favorite-food** match (new `favoriteFood` field per creature — the right food is a big multiplier),
   - **kingdom relationship** (friendlier toward the creature's `kingdom` → easier to tame its beasts).
 - Each feeding consumes 1 food item. On success: entity → `Tamed`, `TamedAnimal` with owner `pawnId`,
-  added to `GameState.tamedAnimals[]`. Pawn-level `intelligence` creatures are **not** feed-tamed —
-  route them to recruitment/diplomacy (KINGDOMS-TRADE).
+  added to `GameState.tamedAnimals[]`.
+- **The feed-tame gate is the `intelligence` tier** (not the old `tameable` boolean):
+  `primitive`/`animal` → feed-tameable; **`sentient` (pawn-level) → recruit/negotiate only** via the
+  KINGDOMS-TRADE social path. This is the same tier that escalates a kingdom's roster over time.
 
 - [ ] Add `taming` work category (`core/Work.ts`) + `feed` job (`jobs.jsonc` + `JobService` handler +
       `Job['type']`).
-- [ ] Add `wilderness` + `favoriteFood` to `CreatureDefinition`.
+- [ ] Rename `tameResistance` → `wilderness`; add `favoriteFood` to `CreatureDefinition`.
 - [ ] `EntityService.attemptTame(pawnId, entityId, state)` — per-feeding roll (skill vs `wilderness`,
       folding favorite-food + kingdom-relationship modifiers).
-- [ ] Promote entity to `TamedAnimal` on success; gate feed-taming to non-`sentient` intelligence.
+- [ ] Promote entity to `TamedAnimal` on success; gate feed-taming by `intelligence` tier
+      (`sentient` → recruit-only).
 
 ## Phase D — Husbandry
 
@@ -171,22 +188,24 @@ Pure speculation.
 1. Needs → 2. Work → 3. Completions → 4. Exploration → 5. ENTITY STEP (stepEntities + stepHusbandry) → 6. Events
 ```
 
+## Resolved (2026-07-10)
+
+- **Aggression:** creatures attack pawns only on **hostile-kingdom** or **self-defence** — never from
+  predation/hunger. Killing decays relations with the victim's kingdom (prey learn to fear the colony).
+- **`wilderness`** is a straight **rename of `tameResistance`** (one difficulty axis).
+- **Feed-tame gate** is the **`intelligence` tier** (`primitive`/`animal` tame; `sentient` recruit-only).
+- **Caravans** are strong cross-map fighting marches (edge spawn/despawn); attacking → kingdom hostile
+  + massive relation penalty; draft animals flee, combat animals fight; ~2/3 casualties → rout.
+
 ## Open Questions
 
-- [ ] **Predation vs kingdom-hostility** — how do the two aggression drives coexist? A wolf at peace
-      with the colony still hunts (hunger) and may still be dangerous; a "hostile-kingdom" beast
-      attacks pawns on sight. Is predation a hunger-gated override on top of the relation lookup, or
-      does relation only suppress *unprovoked* pawn aggression while hunting/defence always fire?
-- [ ] **`wilderness` vs existing `tameResistance`** — is `wilderness` a rename/replacement of the
-      current `tameResistance` (0.3–0.9) field, or a second, separate axis (e.g. difficulty vs.
-      flight-risk)?
-- [ ] **Intelligence gate** — where's the line between feed-tameable "beast" and
-      recruit/negotiate-only "pawn-level"? By `intelligence` tier exactly, or a per-creature
-      `tameable` flag as today?
-- [ ] **Capturing caravan animals** — if the player attacks a caravan, do its `ownerKingdomId` animals
-      become huntable/tameable stock, or do they flee/despawn with the routed caravan?
 - [ ] **`favoriteFood` source** — new explicit field, or derived from `diet`/`eats` (e.g. first
       preferred entry)?
+- [ ] **Relation-decay tuning** — per-kill penalty size, and does it differ by species intelligence /
+      whether the kill was self-defence vs a hunt? Does a kingdom relation ever *recover* over time?
+- [ ] **Which creatures get which `kingdom`** — how many wilderness polities (one per species? per
+      pack-type: wolves+worgs share a "beast" kingdom, orcs+goblins+kobolds a "goblinoid" one?), and
+      are these part of the ~20 KINGDOMS-TRADE kingdoms or a separate wildlife set?
 - [ ] Cart mechanic model: vehicle entity on map vs equippable cart (budget override) vs deployable
       site + batch-haul job?
 - [ ] Do tamed animals persist across saves? (yes — serialise `tamedAnimals[]`)
