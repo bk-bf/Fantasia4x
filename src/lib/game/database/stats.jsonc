@@ -314,8 +314,10 @@
         "formula"    : "SKILL × (1.0 + (INT − 10) × 0.0015 + (PER − 10) × 0.0015) × manipulation",
         "description": "ore per vein (× manipulation)"
     },
-    // Deliberately NO `hunting_speed`: hunting resolves as combat, so combat stats decide it;
-    // getWorkModifiers falls back to a flat 1.0 speed for `hunting`.
+    // Deliberately NO `hunting_speed`: hunting resolves as combat, so combat stats decide it.
+    // getWorkModifiers composes `hunting` proficiency from the combat stats instead (best of
+    // melee/ranged + hit_precision + movement — PawnStatService._huntingAptitude), so the work
+    // grid ranks hunters by actual combat aptitude, not a flat 1.0.
     {
         "id"         : "butchery_speed",
         "category"   : "work",
