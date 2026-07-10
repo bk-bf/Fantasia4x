@@ -2,7 +2,7 @@
 
 # RACE SYSTEM — Procedural Pool, Lore & Relations
 
-> **Related:** [ROADMAP](ROADMAP.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · ADR-023 in [game/DECISIONS](../game/DECISIONS.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [FACTIONS-TRADE](FACTIONS-TRADE.md) (Phase 2's other-faction entity source) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · ADR-023 in [game/DECISIONS](../game/DECISIONS.md)
 
 ## Status
 
@@ -68,10 +68,11 @@ Wire the `raceRelations` stub into actual gameplay via the social layer.
 - [ ] Acceptance: two pawns of mutually-`hostile` races start with a negative relationship; a
       regression test asserts the baseline seeding.
 
-## Phase 2 — Encounter-Driven Pokédex  `[ ]` **blocked on an other-faction entity source**
+## Phase 2 — Encounter-Driven Pokédex  `[ ]` **owned by [FACTIONS-TRADE](FACTIONS-TRADE.md)**
 
 Today the pokédex is populated only by the colony's own races; nothing in the world introduces a
-*new* race. This phase makes the pokédex grow through play.
+*new* race. This phase makes the pokédex grow through play. **The other-faction entity source is now
+specced** — visitors/caravans in [FACTIONS-TRADE](FACTIONS-TRADE.md) §3 are the encounter trigger.
 
 - [ ] Define the encounter source (visitors / caravans / rival settlements / migrant-join events) —
       coordinate with ENTITIES_SPAWNING and any future faction layer; pick the lightest that fits.
