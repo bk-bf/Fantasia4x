@@ -36,6 +36,7 @@ import type { GameState, WorldTile } from '$lib/game/core/types';
 import type { ActivityLogEntry } from '$lib/game/core/Events';
 import { TICKS_PER_SECOND } from '$lib/game/core/time';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '$lib/game/core/Terrains';
+import { ensureWorkSkills } from '$lib/game/core/workExperience';
 import { autosaveEnabled } from './uiPrefs';
 
 // ── constants ──────────────────────────────────────────────────────────────
@@ -409,6 +410,7 @@ export async function loadSave(id?: string): Promise<GameState | null> {
     if (world) {
       const state = hydrateState(dyn, world);
       migrateLoadedTerrain(state.worldMap); // pre-rework saves: cliff/rocky → cave (one-time)
+      ensureWorkSkills(state.pawns ?? []); // pre-WORK-EXPERIENCE saves: seed levels + work style
       return state;
     }
   } catch (err) {

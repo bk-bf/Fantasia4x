@@ -258,7 +258,15 @@ export interface Pawn {
    *  its culture's mundane pool + 0–2 personal traits — rolled PER PAWN, so same-culture pawns differ. */
   traits: Trait[];
 
-  skills: Record<string, number>; // skillId -> level
+  /** WORK-EXPERIENCE: experience LEVEL (1–50) per work category id — the BASE driver of the
+   *  `*_speed`/`*_yield`/`*_quality` work stats (via the `SKILL` formula token). Seeded at pawn-gen
+   *  (`seedWorkLevels`), raised by completing jobs (JobService → `applyWorkXp`). */
+  skills: Record<string, number>;
+  /** WORK-EXPERIENCE: XP progress within the CURRENT level, per work category (resets on level-up). */
+  skillXp?: Record<string, number>;
+  /** WORK-EXPERIENCE: innate speed↔finesse work style ∈ [−1, 1], fixed at generation.
+   *  −1 = fast but rough, +1 = slow but fine; the rare near-0 all-rounder is good at both. */
+  workStyle?: number;
   currentWork?: string; // Current work category
   workLocation?: string; // Current work location
 

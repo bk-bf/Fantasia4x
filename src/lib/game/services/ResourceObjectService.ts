@@ -22,12 +22,6 @@ export {
   type ToolRequirement
 } from '../core/resourceObjectDefs';
 
-const WORK_STAT_FALLBACK: Record<string, keyof Pawn['stats']> = {
-  foraging: 'perception',
-  woodcutting: 'strength',
-  mining: 'strength'
-};
-
 class ResourceObjectServiceImpl {
   getAll(): ResourceObjectDef[] {
     return RESOURCE_OBJECT_DEFS;
@@ -138,21 +132,23 @@ class ResourceObjectServiceImpl {
     for (const y of interaction.yields) {
       if (availableItemIds && !availableItemIds.has(y.itemId)) continue;
       const roll = this.randomInt(y.min, y.max);
-      const skill = this.getSkillLevel(pawn, y.skillId, interaction.workCategory);
-      const multiplier = Math.max(1, 1 + skill * y.skillMultiplier);
+      // WORK-EXPERIENCE: the old per-yield `skillId × skillMultiplier` bonus path is retired — the
+      // pawn's experience level already drives yield through the SAME `*_yield` axis as everything
+      // else (statYieldMult above, via the SKILL token), so a second skill multiplier here would
+      // double-count the level (ADR-015: one work model). The def fields stay parsed but unread.
       // Yield multiplier produces a float (e.g. roll 3 × 1.2 = 3.6) — round UP so a bonus
       // never silently rounds away.
-      const amount = Math.max(0, Math.ceil(roll * multiplier * statYieldMult * growthMult));
+      const amount = Math.max(0, Math.ceil(roll * statYieldMult * growthMult));
       // YIELD-DBG: per-item harvest breakdown (config the build sees + every multiplier). A kept
       // debug tool — gated behind gameDebug() so it's off by default but toggleable when probing
       // yields (grep YIELD-DBG .debug/pawns.log). See dev-memory: yield-dbg-debug-tool.
-      // statx already includes trait workYield (folded into getWorkModifiers).
+      // statx already includes level SKILL + trait workYield (folded into getWorkModifiers).
       if (isGameDebug()) {
         gameLogger.log(
           0,
           'JOB-EVT',
           () =>
-            `YIELD-DBG ${resourceId}/${interaction.workCategory} ${y.itemId} cfg[${y.min}-${y.max}] roll=${roll} skillx${multiplier.toFixed(2)} statx${statYieldMult.toFixed(2)} -> ${amount}`
+            `YIELD-DBG ${resourceId}/${interaction.workCategory} ${y.itemId} cfg[${y.min}-${y.max}] roll=${roll} statx${statYieldMult.toFixed(2)} -> ${amount}`
         );
       }
       if (amount > 0) {
@@ -166,19 +162,6 @@ class ResourceObjectServiceImpl {
     }
 
     return result;
-  }
-
-  private getSkillLevel(pawn: Pawn | undefined, skillId: string, workCategory: string): number {
-    if (!pawn) return 0;
-
-    const explicit = pawn.skills?.[skillId] ?? 0;
-    if (explicit > 0) return explicit;
-
-    const statKey = WORK_STAT_FALLBACK[workCategory];
-    if (!statKey) return 0;
-
-    const statValue = pawn.stats?.[statKey] ?? 10;
-    return Math.max(0, (statValue - 10) / 4);
   }
 
   private randomInt(min: number, max: number): number {

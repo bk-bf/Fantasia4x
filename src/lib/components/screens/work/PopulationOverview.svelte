@@ -52,8 +52,10 @@
     >{Math.round(pawn.needs.hygiene ?? 0)}%</span
   >
 </div>
-<div class="section-hdr sub">| ATTRIBUTES</div>
-<PawnAttributes {pawn} {highlightCategory} />
+<!-- WORK-EXPERIENCE UI split: the Work screen shows only the work skills (incl. caretaking
+     speed/quality); the body stats live on the pawn Attributes tab. -->
+<div class="section-hdr sub">| WORK SKILLS</div>
+<PawnAttributes {pawn} {highlightCategory} categories={['work']} />
 
 <style>
   .section-hdr {

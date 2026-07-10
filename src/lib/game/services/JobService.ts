@@ -18,6 +18,7 @@
 import type { DesignationType, DroppedItem, GameState, Job, JobDef, Pawn } from '../core/types';
 import { manhattan } from '../core/distance';
 import { WORK_CATEGORIES } from '../core/Work';
+import { applyWorkXp, workXpForJob } from '../core/workExperience';
 import jobsData from '../database/jobs.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
 import { itemService } from './ItemService';
@@ -390,7 +391,24 @@ class JobServiceImpl {
     const jobs = (gameState.jobs ?? []).filter((j) => j.id !== job.id);
     const state: GameState = { ...gameState, jobs };
     const handler = this.handlers[job.type as JobPoolType];
-    return handler ? handler.complete(job, state) : state;
+    return this._grantWorkXp(job, handler ? handler.complete(job, state) : state);
+  }
+
+  /** WORK-EXPERIENCE: finishing a colony job teaches its work category — the ONE learn-by-doing
+   *  hook (every job type completes through _completeJob). XP scales with the job's authored work;
+   *  levels 1–50 drive the work stats via the SKILL token. Hunting resolves as combat (no work
+   *  skill); passive furnace output has no pawn and never reaches here. */
+  private _grantWorkXp(job: Job, state: GameState): GameState {
+    if (!job.claimedBy) return state;
+    const category = this.getJobWorkCategory(job, state);
+    if (!category || category === 'hunting') return state;
+    const idx = state.pawns.findIndex((p) => p.id === job.claimedBy);
+    if (idx < 0) return state;
+    const next = applyWorkXp(state.pawns[idx], category, workXpForJob(job.workRequired));
+    if (!next) return state; // already a master of this craft
+    const pawns = [...state.pawns];
+    pawns[idx] = next;
+    return { ...state, pawns };
   }
 
   // ------------------------------------------------------------------ //

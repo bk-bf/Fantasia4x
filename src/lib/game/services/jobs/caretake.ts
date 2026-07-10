@@ -27,6 +27,10 @@ const SEVERITY_RANK: Record<string, number> = { minor: 1, serious: 2, critical: 
 /** Dressing quality multiplier when the patient is NOT under a roof — a field dressing barely helps. */
 const OFF_SHELTER_TEND_MUL = 0.3;
 
+/** WORK-EXPERIENCE: maps the level-driven `caretaking_quality` axis (≈0.6–2.5) into the 0–1 tend
+ *  band the old `medical_skill` stat produced (mid-level ≈ 1.0 × this ≈ the old baseline 0.3). */
+const TEND_SKILL_SCALE = 0.35;
+
 /** Does this pawn carry a wound worth dressing — untended AND (bleeding or serious+)? Minor
  *  non-bleeding scratches self-close, so they don't count ("only minor wounds can be risked left
  *  untreated"). Shared by the auto caretake job and the player's drafted `tend` (emergency care) order. */
@@ -88,8 +92,9 @@ function shelterTendFactor(gs: GameState, x: number, y: number): number {
 }
 
 /**
- * Apply ONE unit of care to `patient` using `medic`'s `medical_skill` (folds in sight × manipulation ×
- * consciousness) × mood × variance, plus the best stockpile medicine (consumed), the whole roll scaled
+ * Apply ONE unit of care to `patient` using `medic`'s caretaking work skill (WORK-EXPERIENCE: the
+ * level-driven `caretaking_quality` axis, which folds in sight × manipulation × consciousness)
+ * × mood × variance, plus the best stockpile medicine (consumed), the whole roll scaled
  * by the patient's shelter (heavy off-roof penalty). One visit dresses the SINGLE worst untended wound
  * (most bleeding first, severity as the tiebreak) AND, if the patient is infected, cuts the `infection`
  * severity by CARE_CONFIG.infectionTreatment × quality in the SAME tend — infection care rides along
@@ -126,7 +131,10 @@ export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameStat
   const infected = hasActiveInfection(patient);
   if (!target && !infected) return gs; // nothing left to dress or treat
 
-  const skill = pawnStatService.evaluateStat('medical_skill', medic);
+  // WORK-EXPERIENCE: the caretaking_quality axis runs ≈0.6 (novice) – ≈2.5 (finesse master);
+  // TEND_SKILL_SCALE maps it back into the 0–1 tend band the old `medical_skill` stat produced
+  // (competent mid-level ≈ 0.35 ≈ the old INT-10 baseline).
+  const skill = pawnStatService.evaluateStat('caretaking_quality', medic) * TEND_SKILL_SCALE;
   const mood = medic.state?.mood ?? 50;
   const moodFactor = Math.max(0.3, Math.min(1.2, 0.6 + (mood / 100) * 0.6));
   const med = bestMedicine(gs);

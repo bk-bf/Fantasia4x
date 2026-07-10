@@ -125,22 +125,23 @@ export function complete(job: Job, gs: GameState): GameState {
   if (!job.craftQueueId) return gs;
   const entry = (gs.craftingQueue ?? []).find((e) => e.id === job.craftQueueId);
   if (!entry) return gs;
-  // §Q (R8): roll the output's quality tier from the working pawn's quality work-axis (stats.jsonc) —
-  // skill stat plus the sight/manipulation/consciousness capacities, so a wounded or in-the-dark
-  // worker produces worse work through the existing model. Passive furnace production has no working
-  // pawn (handled by completeCraftOrder's undefined default → Standard).
-  // The quality axis is the DISCIPLINE's `*_quality` (cooking for a meal, metalworking at an anvil,
-  // leatherworking at a tannery, alchemy at a lab, butchery at a butcher spot, else generic crafting) —
-  // same resolution JobService uses for the labor category, so priority and quality can't drift. A
-  // skilled cook also stretches ingredients into more nourishing portions (tier scales meal yield).
-  let quality: ItemQuality | undefined;
+  // §Q (R8): roll the output's quality tier from the working pawn's quality work-axis (stats.jsonc —
+  // WORK-EXPERIENCE: experience-level driven, plus the sight/manipulation/consciousness capacities,
+  // so a wounded or in-the-dark worker produces worse work through the existing model). Passive
+  // furnace production has no working pawn (handled by completeCraftOrder's undefined default →
+  // Standard). The quality axis is the DISCIPLINE's `*_quality` (cooking for a meal, metalworking at
+  // an anvil, leatherworking at a tannery, alchemy at a lab, butchery at a butcher spot, else generic
+  // crafting) — same resolution JobService uses for the labor category, so priority and quality can't
+  // drift. A skilled cook also stretches ingredients into more nourishing portions (tier scales meal
+  // yield). The ROLL is handed down as a closure so a batch rolls EACH unit separately (Phase B).
+  let rollQuality: (() => ItemQuality) | undefined;
   const pawn = job.claimedBy ? gs.pawns.find((p) => p.id === job.claimedBy) : undefined;
   if (pawn) {
     const discipline = craftWorkCategory(entry);
     const axis = pawnStatService.getWorkModifiers(pawn, discipline, undefined, 'crafting').quality ?? 1;
-    quality = rollCraftQuality(axis, () => rng.random());
+    rollQuality = () => rollCraftQuality(axis, () => rng.random());
   }
-  let state = completeCraftOrder(entry, gs, quality);
+  let state = completeCraftOrder(entry, gs, rollQuality);
   // ADR-009 step 2: wear the WORKING pawn's craft tool (e.g. the knife used at a butcher spot /
   // tannery). Only the pawn-worked path wears a tool — passive furnace production has no pawn.
   const req = recipeService.toolRequirementForRecipe(recipeService.getRecipeForItem(entry.item.id));
@@ -161,7 +162,7 @@ const QUALITY_STAMPED_TYPES = new Set(['weapon', 'armor', 'tool']);
 export function completeCraftOrder(
   entry: CraftingInProgress,
   gs: GameState,
-  quality?: ItemQuality
+  rollQuality?: () => ItemQuality
 ): GameState {
   // Recipe registry (Stage C): a craft completion runs the producing recipe once per queued
   // unit and emits ALL its outputs — the primary product plus any byproducts (e.g. splitting
@@ -192,12 +193,12 @@ export function completeCraftOrder(
       const whole = Math.floor(scaled);
       qty = whole + (rng.random() < scaled - whole ? 1 : 0);
     }
-    // §F cooked-meal quality: FOOD outputs are scaled by the rolled quality tier (cooking_quality →
+    // §F cooked-meal quality: FOOD outputs are scaled by a rolled quality tier (cooking_quality →
     // 0.8×–1.8× via qualityMultiplier) — bulk food carries no per-unit identity, so meal quality
     // lands as nourishment YIELD at cook time rather than a per-stack tier. The fractional remainder
     // is an rng "carry" so even single-portion meals benefit on average (not just batches).
-    if (quality !== undefined && itemService.getItemById(outId)?.category === 'food') {
-      const scaled = qty * qualityMultiplier(quality);
+    if (rollQuality && itemService.getItemById(outId)?.category === 'food') {
+      const scaled = qty * qualityMultiplier(rollQuality());
       const whole = Math.floor(scaled);
       qty = Math.max(1, whole + (rng.random() < scaled - whole ? 1 : 0));
     }
@@ -225,9 +226,9 @@ export function completeCraftOrder(
     const next = [...(state.droppedItems ?? [])];
     for (const [outId, qty] of Object.entries(outputs)) {
       if (qty <= 0) continue;
-      // §Q: stamp the rolled tier onto instance-bearing equipment/tools only; bulk byproducts go plain.
+      // §Q: stamp rolled tiers onto instance-bearing equipment/tools only; bulk byproducts go plain.
       const stamp =
-        quality !== undefined &&
+        rollQuality !== undefined &&
         QUALITY_STAMPED_TYPES.has(itemService.getItemById(outId)?.type ?? '');
       // §F8: the PRIMARY output of a mixed-ingredient dish gets a composed per-instance name
       // ("Venison & Cabbage Stew"). A named drop won't fold into a counted pile (GameState.ts) — each
@@ -264,6 +265,31 @@ export function completeCraftOrder(
           continue;
         }
       }
+      if (stamp) {
+        // WORK-EXPERIENCE Phase B: a batch rolls EACH unit's tier separately — a ×3 order can come
+        // out 1 Crude + 2 Standard instead of three copies of one lucky roll. One drop per rolled
+        // tier (same-tier units share a stack; quality-bearing drops never fold into loose piles).
+        const byTier = new Map<ItemQuality, number>();
+        for (let i = 0; i < qty; i++) {
+          const q = rollQuality!();
+          byTier.set(q, (byTier.get(q) ?? 0) + 1);
+        }
+        for (const [q, n] of byTier) {
+          const id = `craft-${outId}-${station.x}-${station.y}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
+          next.push({
+            id,
+            resourceId: outId,
+            x: station.x,
+            y: station.y,
+            quantity: n,
+            quality: q,
+            ...(matDur !== 1 ? { matDur } : {}),
+            ...(dishName ? { name: dishName } : {})
+          });
+          newDropIds.push(id);
+        }
+        continue;
+      }
       const id = `craft-${outId}-${station.x}-${station.y}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
       next.push({
         id,
@@ -271,8 +297,6 @@ export function completeCraftOrder(
         x: station.x,
         y: station.y,
         quantity: qty,
-        ...(stamp ? { quality } : {}),
-        ...(stamp && matDur !== 1 ? { matDur } : {}),
         ...(dishName ? { name: dishName } : {})
       });
       newDropIds.push(id);

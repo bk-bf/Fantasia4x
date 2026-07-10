@@ -24,6 +24,13 @@ import {
 } from '../core/needs';
 import { equippedTemperatureSources, type WornThermalSource } from '../core/PawnEquipment';
 import { SECONDS_PER_TICK } from '../core/time';
+import {
+  levelBase,
+  styleSpeedWeight,
+  styleFinesseWeight,
+  workSkillCategory,
+  NEUTRAL_WORK_LEVEL
+} from '../core/workExperience';
 
 // conditions.jsonc holds both persistent conditions (severity/stages) and transient ones
 // (re-derived each tick); split them by the `duration` discriminant — see the file header.
@@ -134,7 +141,10 @@ const FORMULA_VARS = [
   'digestion',
   'talking',
   'hearing',
-  'pain'
+  'pain',
+  // WORK-EXPERIENCE: the work stats' experience-level base — levelBase(level) × style weight,
+  // resolved per work category + axis by getWorkModifiers/evaluateStat. 1.0 in non-work formulas.
+  'SKILL'
 ] as const;
 const FORMULA_VAR_RE = new RegExp('\\b(?:' + FORMULA_VARS.join('|') + ')\\b', 'g');
 
@@ -180,7 +190,8 @@ function compileFormula(formula: string): ((...vars: number[]) => number) | null
 function evaluateFormula(
   formula: string | undefined,
   p: Pawn | Mob,
-  capacities: Record<string, number> = {}
+  capacities: Record<string, number> = {},
+  skill = 1.0
 ): number {
   if (!formula) return 1.0;
   const fn = compileFormula(formula);
@@ -211,7 +222,8 @@ function evaluateFormula(
     capacities.digestion ?? 1,
     capacities.talking ?? 1,
     capacities.hearing ?? 1,
-    capacities.pain ?? 0
+    capacities.pain ?? 0,
+    skill
   );
   return isFinite(v) ? Math.round(v * 1000) / 1000 : 1.0;
 }
@@ -605,6 +617,9 @@ export interface PawnStatService {
     lightMultiplier?: number,
     fallbackType?: string
   ): { speed: number; yield: number | null; quality: number | null };
+  /** WORK-EXPERIENCE: the SKILL token behind a work stat id — the pawn's experience level in that
+   *  category and the resulting formula factor (levelBase × style weight). Null for non-work ids. */
+  workSkillInfo(statId: string, pawn: Pawn | Mob): { level: number; factor: number } | null;
   /** The held tool (equipped or carried) contributing the work boost for `workType`, with its additive
    *  speed/yield amounts (already quality-scaled) — for itemising the bonus in the work tooltip. Null
    *  when the pawn holds no boosting tool for that category. */
@@ -716,12 +731,31 @@ export class PawnStatServiceImpl implements PawnStatService {
     if (!def) return 1.0;
     const capacities =
       def.category === 'capacity' ? this.computeCapacities(pawn) : this.computeCapacities(pawn);
+    // WORK-EXPERIENCE: work stats need their SKILL token resolved (level × style weight) so the
+    // stand-alone read (UI stat tables, caretake tend roll) matches getWorkModifiers.
+    const skill =
+      def.category === 'work' ? (this.workSkillInfo(statId, pawn)?.factor ?? 1) : 1;
     // Trait combatMods multiply a combat stat's formula output (×1 for every other category);
     // trait resistances stay an ADDITIVE bridge on the 0-baseline resistance stats.
     return (
-      evaluateFormula(def.formula, pawn, capacities) * traitCombatMult(pawn, statId) +
+      evaluateFormula(def.formula, pawn, capacities, skill) * traitCombatMult(pawn, statId) +
       traitResistanceBonus(pawn, statId)
     );
+  }
+
+  /**
+   * WORK-EXPERIENCE: the SKILL token behind a work stat id for THIS pawn — its experience level in
+   * the stat's category (subjobs read their parent's: `repair_speed` → construction) and the
+   * resulting factor (levelBase × the style weight for the stat's axis). Null for non-work ids.
+   */
+  workSkillInfo(statId: string, pawn: Pawn | Mob): { level: number; factor: number } | null {
+    const m = /^(.+)_(speed|yield|quality)$/.exec(statId);
+    if (!m || !WORK_STAT_IDS.has(statId)) return null;
+    const category = workSkillCategory(m[1]);
+    const level = pawn.skills?.[category] ?? NEUTRAL_WORK_LEVEL;
+    const workStyle = (pawn as Pawn).workStyle;
+    const weight = m[2] === 'speed' ? styleSpeedWeight(workStyle) : styleFinesseWeight(workStyle);
+    return { level, factor: levelBase(level) * weight };
   }
 
   temperatureTolerance(pawn: Pawn | Mob): TemperatureTolerance {
@@ -821,12 +855,24 @@ export class PawnStatServiceImpl implements PawnStatService {
     const formulaFor = (axis: string): string | undefined =>
       (STAT_MAP[`${workType}_${axis}`] ?? (fallbackType ? STAT_MAP[`${fallbackType}_${axis}`] : undefined))
         ?.formula;
-    // Base = stat formula × body capacities. Layer explicit trait multipliers on top.
-    // Transient state (conditions/transient conditions) applies to throughput → speed only.
+    // WORK-EXPERIENCE: the SKILL token — the pawn's experience level in the job's category (a subjob
+    // reads its parent's level) × the innate speed↔finesse style split. Entities with no seeded
+    // skills (mobs, minimal fixtures) act at the neutral level (levelBase ≈ 1.0). Core stats only
+    // nudge the formulas' small supplements now; the level is the base driver.
+    const level =
+      pawn.skills?.[workType] ??
+      (fallbackType ? pawn.skills?.[fallbackType] : undefined) ??
+      NEUTRAL_WORK_LEVEL;
+    const skillBase = levelBase(level);
+    const workStyle = (pawn as Pawn).workStyle;
+    const speedSkill = skillBase * styleSpeedWeight(workStyle);
+    const finesseSkill = skillBase * styleFinesseWeight(workStyle);
+    // Base = SKILL × stat-supplement formula × body capacities. Layer explicit trait multipliers on
+    // top. Transient state (conditions/transient conditions) applies to throughput → speed only.
     const stateMult = pawnStateWorkMultiplier(pawn);
     const speed = Math.max(
       0.1,
-      (evaluateFormula(formulaFor('speed'), pawn, capacities) + (toolBoost?.speed ?? 0)) *
+      (evaluateFormula(formulaFor('speed'), pawn, capacities, speedSkill) + (toolBoost?.speed ?? 0)) *
         traitWorkMult(pawn, 'workSpeed', workType, fallbackType) *
         stateMult
     );
@@ -838,7 +884,7 @@ export class PawnStatServiceImpl implements PawnStatService {
       const toolAdd = kind === 'yield' ? (toolBoost?.yield ?? 0) : 0;
       return Math.max(
         0.1,
-        (evaluateFormula(formula, pawn, capacities) + toolAdd) *
+        (evaluateFormula(formula, pawn, capacities, finesseSkill) + toolAdd) *
           traitWorkMult(pawn, traitKey, workType, fallbackType)
       );
     };

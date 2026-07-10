@@ -165,7 +165,11 @@
         </div>
         <PawnTraits pawn={selectedPawn} />
       {:else if activeTab === 'attributes'}
-        <PawnAttributes pawn={selectedPawn} />
+        <!-- WORK-EXPERIENCE UI split: the body only — the work skills live on the Work screen. -->
+        <PawnAttributes
+          pawn={selectedPawn}
+          categories={['physical', 'capacity', 'combat', 'resistance']}
+        />
       {:else if activeTab === 'gear'}
         <PawnEquipment pawn={selectedPawn} />
       {/if}

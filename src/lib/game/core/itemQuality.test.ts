@@ -33,34 +33,37 @@ describe('rollCraftQuality', () => {
   });
 
   it('a poor/rushed craft floors near Crude–Standard; a master craft reaches the top tiers', () => {
-    expect(meanTier(0.7)).toBeLessThan(1.2); // Crude/Standard band
-    expect(meanTier(1.8)).toBeGreaterThan(3.5); // Masterwork-ish
+    expect(meanTier(0.7)).toBeLessThan(1.2); // novice: Crude/Standard band
+    expect(meanTier(2.0)).toBeGreaterThan(3.5); // master (levelBase 2.0): Masterwork-ish
   });
 
-  it('Legendary is reachable for a master but rare for a journeyman', () => {
+  it('Legendary is reachable for a master but rare for a mid-level crafter', () => {
     const rolls = (axis: number) => {
       const rand = mulberry32(99);
       let legendary = 0;
       for (let i = 0; i < 4000; i++) if (rollCraftQuality(axis, rand) === 5) legendary++;
       return legendary / 4000;
     };
-    expect(rolls(1.0)).toBeLessThan(0.02); // journeyman almost never
-    expect(rolls(1.9)).toBeGreaterThan(0.1); // master regularly
+    expect(rolls(1.0)).toBeLessThan(0.02); // competent mid-level almost never
+    expect(rolls(2.1)).toBeGreaterThan(0.1); // master with a finesse edge regularly
   });
 
   it('maps the axis to the expected band at neutral jitter (rand=0.5: jitter 0, no long tail)', () => {
+    // WORK-EXPERIENCE bands: the axis is levelBase(level 1–50) × style — novice ≈ 0.6 rolls Crude,
+    // a competent mid-level ≈ 1.0 rolls Standard, a master ≈ 2.0 rolls Masterwork; Legendary needs
+    // the top of the curve (finesse-leaning master ≈ 2.5) or the jitter/long-tail.
     const mid = () => 0.5;
-    expect(rollCraftQuality(0.5, mid)).toBe(0); // Crude — injured/dark/rushed
-    expect(rollCraftQuality(1.0, mid)).toBe(1); // Standard — average crafter
-    expect(rollCraftQuality(1.25, mid)).toBe(2); // Fine — skilled
-    expect(rollCraftQuality(1.5, mid)).toBe(3); // Superior — expert
-    expect(rollCraftQuality(1.7, mid)).toBe(4); // Masterwork
-    expect(rollCraftQuality(2.0, mid)).toBe(5); // Legendary
+    expect(rollCraftQuality(0.6, mid)).toBe(0); // Crude — fresh novice
+    expect(rollCraftQuality(1.0, mid)).toBe(1); // Standard — competent mid-level
+    expect(rollCraftQuality(1.4, mid)).toBe(2); // Fine — seasoned artisan
+    expect(rollCraftQuality(1.7, mid)).toBe(3); // Superior — expert
+    expect(rollCraftQuality(2.0, mid)).toBe(4); // Masterwork — master
+    expect(rollCraftQuality(2.3, mid)).toBe(5); // Legendary — finesse-leaning master
   });
 
   it('jitter can push an identical crafter a band up or down', () => {
-    expect(rollCraftQuality(1.0, () => 0)).toBe(0); // 1.0 − 0.18 = 0.82 < 0.85 → Crude
-    expect(rollCraftQuality(1.05, () => 0.999)).toBeGreaterThanOrEqual(2); // +0.18 → Fine+
+    expect(rollCraftQuality(0.9, () => 0)).toBe(0); // 0.9 − 0.18 = 0.72 < 0.8 → Crude
+    expect(rollCraftQuality(1.1, () => 0.999)).toBeGreaterThanOrEqual(2); // +0.18 → Fine+
   });
 
   it('clamps to 0..5', () => {
@@ -193,17 +196,32 @@ describe('stamp on craft output', () => {
 
   it('stamps the rolled tier on an instance-bearing tool output', () => {
     const order = makeOrder('stone_axe');
-    const gs = completeCraftOrder(order, baseState(order), 3);
+    const gs = completeCraftOrder(order, baseState(order), () => 3);
     const drop = (gs.droppedItems ?? []).find((d) => d.resourceId === 'stone_axe');
     expect(drop?.quality).toBe(3);
   });
 
   it('does NOT stamp quality on a bulk material output', () => {
     const order = makeOrder('branch');
-    const gs = completeCraftOrder(order, baseState(order), 3);
+    const gs = completeCraftOrder(order, baseState(order), () => 3);
     const drop = (gs.droppedItems ?? []).find((d) => d.resourceId === 'branch');
     expect(drop).toBeDefined();
     expect(drop?.quality).toBeUndefined();
+  });
+
+  // WORK-EXPERIENCE Phase B: a batch rolls EACH unit separately — one drop per rolled tier.
+  it('a ×3 batch rolls per unit and splits into per-tier stacks', () => {
+    const order = makeOrder('stone_axe');
+    (order as { quantity: number }).quantity = 3;
+    const seq = [0, 1, 1]; // Crude, Standard, Standard
+    let i = 0;
+    const gs = completeCraftOrder(order, baseState(order), () => seq[i++ % seq.length] as 0 | 1);
+    const drops = (gs.droppedItems ?? []).filter((d) => d.resourceId === 'stone_axe');
+    expect(drops).toHaveLength(2);
+    const crude = drops.find((d) => d.quality === 0);
+    const standard = drops.find((d) => d.quality === 1);
+    expect(crude?.quantity).toBe(1);
+    expect(standard?.quantity).toBe(2);
   });
 
   it('passive production (no quality) leaves the output unstamped', () => {

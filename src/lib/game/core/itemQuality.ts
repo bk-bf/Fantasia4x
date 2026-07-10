@@ -57,24 +57,28 @@ const clampTier = (n: number): ItemQuality =>
   Math.max(0, Math.min(5, Math.round(n))) as ItemQuality;
 
 /**
- * Roll a quality tier from the pawn's `crafting_quality` work-axis (1.0 = average crafter, higher =
- * skilled, lower = injured/dark/rushed — the axis already folds in DEX/INT and the sight/manipulation/
- * consciousness capacities, so dim light or wounds depress it through the existing model).
+ * Roll a quality tier from the pawn's `*_quality` work-axis. WORK-EXPERIENCE: the axis is now
+ * EXPERIENCE-LEVEL driven (levelBase: novice ≈ 0.6, competent mid-level ≈ 1.0, master ≈ 2.0, × the
+ * pawn's speed↔finesse style weight; core stats are only a small supplement) and still folds in the
+ * sight/manipulation/consciousness capacities, so dim light or wounds depress it as before.
  *
- * Thresholds map the axis to a tier; a ±0.18 jitter keeps identical crafters from being deterministic;
- * a small skill-scaled long tail makes Legendary reachable for masters but rare for journeymen.
+ * Thresholds map the axis to a tier — a fresh novice turns out Crude/Standard, a competent
+ * mid-level crafter Standard, and Masterwork+ is EARNED: a finesse-leaning master clears it
+ * reliably, Legendary needs the top of the curve plus a good day. A ±0.18 jitter keeps identical
+ * crafters from being deterministic; a small skill-scaled long tail gives strong crafters an
+ * occasional band-up surprise.
  */
 export function rollCraftQuality(craftingQualityAxis: number, rand: () => number): ItemQuality {
   let score = craftingQualityAxis + (rand() * 2 - 1) * 0.18;
-  // Master-crafter long tail: above-average skill gets a small chance to bump one band up.
+  // Skilled-crafter long tail: above-average skill gets a small chance to bump one band up.
   if (craftingQualityAxis > 1.0 && rand() < 0.04 + (craftingQualityAxis - 1.0) * 0.12) {
     score += 0.25;
   }
-  if (score < 0.85) return 0; // Crude
-  if (score < 1.12) return 1; // Standard
-  if (score < 1.38) return 2; // Fine
-  if (score < 1.62) return 3; // Superior
-  if (score < 1.9) return 4; // Masterwork
+  if (score < 0.8) return 0; // Crude
+  if (score < 1.2) return 1; // Standard
+  if (score < 1.55) return 2; // Fine
+  if (score < 1.85) return 3; // Superior
+  if (score < 2.15) return 4; // Masterwork
   return 5; // Legendary
 }
 

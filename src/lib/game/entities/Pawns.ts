@@ -5,6 +5,7 @@ import { createBodyPlanLimbs } from '../systems/Combat';
 import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/BodyParts';
 import { SCARRING_CONFIG, makeScarInjury } from '../core/Wounds';
 import { seedAwakeningPaths } from '../core/Lineages';
+import { seedWorkLevels, rollWorkStyle } from '../core/workExperience';
 import { rng } from '../core/rng';
 
 // Module-level counter for sequential debug IDs across all generated pawns.
@@ -338,7 +339,10 @@ export function buildPawnFromCulture(culture: Culture, index: number): Pawn {
       isEating: false
     },
     currentState: 'Idle',
-    skills: {},
+    // WORK-EXPERIENCE: per-category experience levels (bell-curve + 0–2 talent categories) and the
+    // innate speed↔finesse style — the base drivers of the work stats (core stats are supplements).
+    skills: seedWorkLevels(),
+    workStyle: rollWorkStyle(),
     // Survival & Health
     isAlive: true,
     maxBloodVolume,

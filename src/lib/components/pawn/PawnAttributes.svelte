@@ -6,6 +6,7 @@
   import type { Pawn } from '$lib/game/core/types';
   import statsData from '$lib/game/database/stats.jsonc';
   import PawnStatBanner from './PawnStatBanner.svelte';
+  import PawnSkillBanner from './PawnSkillBanner.svelte';
   import StatTooltip from './StatTooltip.svelte';
   import {
     buildStatContext,
@@ -18,6 +19,10 @@
   /** Soft-highlight the stats related to this work category (its *_speed/yield/quality plus the
    *  capacities those formulas use). Set by clicking a column in the work-priority grid. */
   export let highlightCategory: string | null = null;
+  /** WORK-EXPERIENCE UI split: which stats.jsonc categories this instance renders. The pawn
+   *  Attributes tab shows the body (physical/capacity/combat/resistance); the Work screen's pawn
+   *  detail shows only the work skills — no more identical table in both places. */
+  export let categories: string[] = ['physical', 'capacity', 'combat', 'resistance', 'work'];
 
   const STATS = statsData as unknown as StatDef[];
   const CAPACITY_IDS = STATS.filter((s) => s.category === 'capacity').map((s) => s.id);
@@ -88,7 +93,7 @@
     return { destroy: () => cell.removeEventListener('mouseenter', onEnter) };
   }
 
-  $: grouped = CATEGORY_ORDER.map((cat) => ({
+  $: grouped = CATEGORY_ORDER.filter((cat) => categories.includes(cat)).map((cat) => ({
     cat,
     label: CATEGORY_LABEL[cat] ?? cat.toUpperCase(),
     stats: STATS.filter((s) => s.category === cat)
@@ -111,7 +116,12 @@
 </script>
 
 <div class="attrs">
+  <!-- Core attributes show on EVERY view (they still supplement the work formulas); the work view
+       adds the experience-level banner (WORK-EXPERIENCE) between them and the skills table. -->
   <PawnStatBanner {pawn} />
+  {#if categories.includes('work')}
+    <PawnSkillBanner {pawn} />
+  {/if}
 
   {#each catRows as g}
     <div class="cat">

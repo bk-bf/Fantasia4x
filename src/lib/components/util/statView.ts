@@ -187,6 +187,12 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   add('CHA', st.charisma);
   add('weight', pawn.physicalTraits?.weight ?? 70);
   add('height', pawn.physicalTraits?.height ?? 170);
+  // WORK-EXPERIENCE: the SKILL token = the pawn's experience level in this work category × its
+  // speed↔finesse style weight — shown with the level so the number is legible.
+  if (/\bSKILL\b/.test(s.formula)) {
+    const info = pawnStatService.workSkillInfo(s.id, pawn);
+    if (info) vars.push({ name: 'SKILL', value: `${round2(info.factor)} (Lv ${info.level})` });
+  }
   for (const [cap, cv] of Object.entries(ctx.capacities)) add(cap, Math.round(cv * 100) / 100);
   const cm = conditionMult(s.id, ctx);
   if (cm !== 1) vars.push({ name: 'conditions', value: '×' + round2(cm) });

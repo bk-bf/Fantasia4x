@@ -488,12 +488,10 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
   // defines one, falling back per-axis to the parent category — so a repair runs at repair_speed.
   const workStatKey = jobService.getJobWorkStatKey(activeJob, gameState);
   const workSpeedMult = pawnStatService.getWorkModifiers(pawn, workStatKey, undefined, workCategory).speed;
-  let workPoints =
-    activeJob.type === 'construct' || activeJob.type === 'deconstruct'
-      ? // construction scales by its own skill on top of the work-speed formula.
-        Math.max(1, pawn.skills['skill_construction'] ?? 0) * workSpeedMult
-      : // harvest/craft/haul advance at the base rate × the same work-speed multiplier.
-        BASE_WORK_RATE * workSpeedMult;
+  // WORK-EXPERIENCE: every job advances at the base rate × the work-speed multiplier — the pawn's
+  // experience level is already folded into that multiplier (the SKILL token), so the old
+  // `skill_construction` special-case would double-count it.
+  const workPoints = BASE_WORK_RATE * workSpeedMult;
   // workPoints is authored as work-points PER SECOND; deliver one tick's worth so
   // a job authored as N seconds of work still takes N seconds of real time.
   const afterAdvance = jobService.advanceJob(jobId, perTick(workPoints), gameState);
