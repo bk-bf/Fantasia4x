@@ -2,7 +2,7 @@
 
 # RACE SYSTEM — Procedural Pool, Lore & Relations
 
-> **Related:** [ROADMAP](ROADMAP.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [FACTIONS-TRADE](FACTIONS-TRADE.md) (Phase 2's other-faction entity source) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · ADR-023 in [game/DECISIONS](../game/DECISIONS.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) (Phase 2's other-kingdom entity source) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · ADR-023 in [game/DECISIONS](../game/DECISIONS.md)
 
 ## Status
 
@@ -11,7 +11,7 @@ pool, mixed colonies, procedural lore/description, trait-DB cleanup + condition 
 known-races pokédex, and the `raceRelations` data stub. This spec records that foundation and
 **lays out the forward phases** it deliberately stubbed — relations→social wiring, encounter-driven
 pokédex population, and content/variety expansion. Phases 1–3 are **not started** and several are
-gated by other specs (SOCIAL-LAYER, an other-faction entity source).
+gated by other specs (SOCIAL-LAYER, an other-kingdom entity source).
 
 > **Trait model superseded (2026-07-06, ADR-028):** `racial-traits.jsonc` → `traits.jsonc` with
 > `scope` (racial/personal), `rarity` (rarities.jsonc scale) and typed `kind` payloads; per-pawn draw
@@ -68,14 +68,14 @@ Wire the `raceRelations` stub into actual gameplay via the social layer.
 - [ ] Acceptance: two pawns of mutually-`hostile` races start with a negative relationship; a
       regression test asserts the baseline seeding.
 
-## Phase 2 — Encounter-Driven Pokédex  `[ ]` **owned by [FACTIONS-TRADE](FACTIONS-TRADE.md)**
+## Phase 2 — Encounter-Driven Pokédex  `[ ]` **owned by [KINGDOMS-TRADE](KINGDOMS-TRADE.md)**
 
 Today the pokédex is populated only by the colony's own races; nothing in the world introduces a
-*new* race. This phase makes the pokédex grow through play. **The other-faction entity source is now
-specced** — visitors/caravans in [FACTIONS-TRADE](FACTIONS-TRADE.md) §3 are the encounter trigger.
+*new* race. This phase makes the pokédex grow through play. **The other-kingdom entity source is now
+specced** — visitors/caravans in [KINGDOMS-TRADE](KINGDOMS-TRADE.md) §3 are the encounter trigger.
 
 - [ ] Define the encounter source (visitors / caravans / rival settlements / migrant-join events) —
-      coordinate with ENTITIES_SPAWNING and any future faction layer; pick the lightest that fits.
+      coordinate with ENTITIES_SPAWNING and any future kingdom layer; pick the lightest that fits.
 - [ ] On first contact, call `discoverRace(state, id)` → the race appears in the pokédex with its
       full lore even though no colonist is of that race.
 - [ ] Optional: a "first encountered: turn N / where" line on the pokédex entry.
@@ -107,5 +107,5 @@ Pure content depth on the existing generator — do opportunistically.
 
 ## Non-Goals
 
-- Diplomacy / inter-faction warfare (separate future system; relations here are pawn-flavour only).
+- Diplomacy / inter-kingdom warfare (separate future system; relations here are pawn-flavour only).
 - Race-locked tech or buildings (research stays race-agnostic per current design).

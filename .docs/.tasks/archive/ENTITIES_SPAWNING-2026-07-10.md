@@ -6,9 +6,12 @@
 
 ## Status
 
-**Phases A and A.5 complete.** `Mob` type, `EntityService`, `Creatures.ts`, rendering, click/hover HUD cards, ENTITIES tab, hunger/diet/starvation/eatProgress — all done.
-Phases B–E not started. Two entity classes share the infrastructure: hostile mobs (threat)
-and neutral animals (food/taming/mounts).
+**[x] ARCHIVED 2026-07-10 — Phases A / A.5 / B shipped; forward work (C–E) moved out.** `Mob` type,
+`EntityService`, `Creatures.ts`, lair/territory spawn model, rendering, HUD cards, ENTITIES tab,
+hunger/diet/starvation, and **pawn hunting + butchery** (Phase B — done as work-driven hunting,
+2026-06-13; the checkbox below was left stale) are all delivered. This file is the historical record
+of that layer. **The remaining forward content — Phase C taming, D husbandry, E mounts, and the
+hauling/logistics progression notes — moved to [ANIMAL-HUSBANDRY](../open/ANIMAL-HUSBANDRY.md).**
 
 **Spawn model REVISED → lair / territory system (implemented).** The original "DF-like edge
 spawner, no territory" plan (the superseded MOB-SPAWNING stub, doc deleted) was

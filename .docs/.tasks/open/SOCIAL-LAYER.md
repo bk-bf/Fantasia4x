@@ -2,14 +2,14 @@
 
 # PAWN SOCIAL LAYER — Relationships, Family, Conversation & Mood
 
-> **Related:** [ROADMAP](ROADMAP.md) · [FACTIONS-TRADE](FACTIONS-TRADE.md) (world social layer — factions, visitors, caravans, the `trade` attribute) · [RACE-SYSTEM](RACE-SYSTEM.md) (Phase 1 = culture→relationship baseline) · [TRAITS](TRAITS.md) (social traits are personal traits, not a new file) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [PRODUCTION-CHAIN-III](PRODUCTION-CHAIN-III.md) (§F royalty/prestige gear) · [game/DESIGN](../../game/DESIGN.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) (world social layer — kingdoms, visitors, caravans, the `trade` attribute) · [RACE-SYSTEM](RACE-SYSTEM.md) (Phase 1 = culture→relationship baseline) · [TRAITS](TRAITS.md) (social traits are personal traits, not a new file) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [PRODUCTION-CHAIN-III (archived)](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) (§F royalty/prestige gear) · [game/DESIGN](../../game/DESIGN.md)
 
 ## Status
 
 Not started. Follows combat (there must be injury/death/rescue for pawns to react to).
 **Scope split (2026-07-10):** this spec is the *pawn-to-pawn* layer. The *world* layer —
-factions, visitors, trade caravans, and the `trade` attribute — moved to
-[FACTIONS-TRADE](FACTIONS-TRADE.md). The two share the culture-disposition seam and the prestige stat.
+kingdoms, visitors, trade caravans, and the `trade` attribute — moved to
+[KINGDOMS-TRADE](KINGDOMS-TRADE.md). The two share the culture-disposition seam and the prestige stat.
 
 ---
 
@@ -28,7 +28,7 @@ reference feel; the assembly and stage machinery below is ours.
 - **Culture disposition** — `GameState.cultureRelations` (`CultureRelation{a,b,score −100..+100,
   disposition}`, `core/Culture.ts`) is generated but has **no gameplay effect**. This spec is the
   consumer: it seeds starting pawn relationships (RACE-SYSTEM Phase 1). *Cultures* = a pawn's people
-  (`pawn.cultureId`); *factions* = political groups, in [FACTIONS-TRADE](FACTIONS-TRADE.md).
+  (`pawn.cultureId`); *kingdoms* = political groups, in [KINGDOMS-TRADE](KINGDOMS-TRADE.md).
 - **Chronicle** — `logActivity(ActivityLogEntry)` via the `SimLogSink` sim→UI seam
   (`core/logSink.ts` → `stores/simLogBridge.ts`). The combat **engagement-session** pattern
   (`stores/Log.ts:332+`) coalesces a whole brawl into one expandable entry — reuse it to coalesce a
@@ -192,8 +192,8 @@ tick. This is the heartbeat that makes relationships move and the map feel alive
   + `CATEGORY_ORDER`/`CATEGORY_LABEL` must gain `social`).
 - **Effects:** a standing **mood** band (ragged → finely-equipped) feeding the modifier list (§7); a
   weight in social-event rolls and (later) leader/diplomat selection. The **`trade` attribute**
-  (CHA + prestige + talking) consumes this but is defined in [FACTIONS-TRADE](FACTIONS-TRADE.md).
-- Ties the [PRODUCTION-CHAIN-III §F](PRODUCTION-CHAIN-III.md) royalty/regalia line (ceremonial plate,
+  (CHA + prestige + talking) consumes this but is defined in [KINGDOMS-TRADE](KINGDOMS-TRADE.md).
+- Ties the [PRODUCTION-CHAIN-III §F (archived)](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) royalty/regalia line (ceremonial plate,
   regal robes — already in `items.jsonc`) to a real effect: the encumbrance-vs-bearing fork.
 
 ---

@@ -2,7 +2,7 @@
 
 # ROADMAP
 
-> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [PRODUCTION-CHAIN-III](PRODUCTION-CHAIN-III.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [FACTIONS-TRADE](FACTIONS-TRADE.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [ENGINE-PERFORMANCE](../archive/ENGINE-PERFORMANCE.md) · [DISTRIBUTION](DISTRIBUTION.md) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md). [TRAITS](TRAITS.md) · archived: [PRODUCTION-CHAIN-II](../archive/PRODUCTION-CHAIN-II-2026-06-21.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [RANGED-COMBAT](../archive/RANGED-COMBAT-2026-06-21.md) · [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) · [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md)
+> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [TRAITS](TRAITS.md) · [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [PRODUCTION-CHAIN-III-TAILS](PRODUCTION-CHAIN-III-TAILS.md) · [STEALTH](STEALTH.md) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · Magic (no spec yet — superseded by [LINEAGES](../archive/LINEAGES-2026-07-09.md) + [LINEAGES-II](../archive/LINEAGES-II-2026-07-10.md)) · archived: [DISTRIBUTION](../archive/DISTRIBUTION-2026-07-10.md) · [ENTITIES_SPAWNING](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [PRODUCTION-CHAIN-III](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) · [ENGINE-PERFORMANCE](../archive/ENGINE-PERFORMANCE.md) · [PRODUCTION-CHAIN-II](../archive/PRODUCTION-CHAIN-II-2026-06-21.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [RANGED-COMBAT](../archive/RANGED-COMBAT-2026-06-21.md) · [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) · [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md)
 
 ## Status Key
 
@@ -36,23 +36,36 @@ All critical architectural debt resolved. Core survival loop is functional.
 
 ---
 
-## Phase 3 — Depth Features (re-prioritised 2026-06-11)
+## Phase 3 — Depth Features (re-prioritised 2026-07-10)
 
-**Dev model: skateboard → bike → motorcycle → car → truck.** Each step must be a
-**complete, playable experience**, not a perfected feature. So we sequence the items
-that round out the playable loop first and **defer content-expansion features** —
-things that mostly add *more stuff* on top of an already-working loop (e.g. taming /
-mounts / breeding) — even when they're spec'd, because they don't make the current
-slice more complete. Combat, the Entity Spawning world layer, the production chain, and
-the **equipment / inventory loadout** are now done; focus shifts to the **Living World**
-layer (seasons / weather / fog of war), with **Ranged Combat** sequenced just after it.
-**Magic & Skills is pushed back to last** in Phase 3 — behind Ranged Combat, Social
-Layer, Research Enhancement, and the deferred Entity Spawning C–E content.
+**Dev model: skateboard → bike → motorcycle → car → truck** — each step a **complete, playable
+experience**, not a perfected feature. Combat, Entity Spawning A–B, the production chain, equipment,
+Living World, and Ranged Combat are all **done**. The remaining Phase-3 work was re-ordered
+**2026-07-10** to the owner's preferred sequence (below), heading toward the itch.io alpha.
+
+### Active priority order (owner sequence, 2026-07-10)
+
+| # | Item | Spec | Note |
+| - | ---- | ---- | ---- |
+| 1 | **Finish Traits** (Phase 2 hooks) | [TRAITS](TRAITS.md) | Age/growth-event + `evolvesTo` evolution audited **LIVE** — remaining is a small grab-bag of refinements/hooks, not a blocked feature |
+| 2 | **Creature Combat Overhaul** | [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) | armour-binary fix → elite ladder + gear drops → lair evolution; **§4** = the migrated PROD-CHAIN-III combat tails (traps/turrets, famed boss-drop) |
+| 3 | **Kingdoms & Trade** | [KINGDOMS-TRADE](KINGDOMS-TRADE.md) | = RACE-SYSTEM Phase 2. Spec renamed wholesale from "Factions" 2026-07-10; the **code** `faction`→`kingdom` rename is part of implementing this item. Leans on the SOCIAL prestige slice (#5) |
+| 4 | **Finish Race System** = **Culture System** | [RACE-SYSTEM](RACE-SYSTEM.md) | **rename `Race`→`Culture` across all vars/methods/UI** (partly done: `core/Culture.ts`/`cultureId` exist). Phase-1 relations→social wiring waits on #5 |
+| 5 | **Social Layer** | [SOCIAL-LAYER](SOCIAL-LAYER.md) | pawn relationships/family/conversation/mood; unblocks RACE Ph1 + the prestige/trade attribute |
+| 6 | **Rest from Production Chain III** | [PRODUCTION-CHAIN-III-TAILS](PRODUCTION-CHAIN-III-TAILS.md) | §G drink-use action + §I famed craft-stamp/display (data already shipped) |
+| 7 | **Stealth** | [STEALTH](STEALTH.md) | size-driven sneak build; needs an encounter balance re-pass |
+| 8 | **Drafted Job/Need Orders** | [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) | force a job/consume/drink from the draft menu; small, self-contained |
+| 9 | **Rest from Entity Spawning** | [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) | taming → husbandry → mounts → animal hauling (deferred content) |
+| 10 | **Magic** (future "Magic III") | _no spec yet_ | The old MAGIC-SKILLS plan is **superseded by [LINEAGES](../archive/LINEAGES-2026-07-09.md) + [LINEAGES-II](../archive/LINEAGES-II-2026-07-10.md)** (both shipped). A "Magic III" will come eventually, but **the spec isn't even written/planned yet** — sits just ahead of research |
+| 11 | **Research Enhancement** | [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) | **Deferred — not being implemented for now; always last.** Three-tier research; requirements only, no design doc |
+
+> The historical Wave/dependency tables below are kept for reference; the list above supersedes their
+> ordering.
 
 | #  | Item                                                                                                                                                                                                                   | Status         | Spec                                                                                                      |
 | -- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
 | —  | **Combat System** (stances, weapons/crit, wounds, pain→collapse, healing, caretaking)                                                                                                                                  | [x] 2026-06-11 | archived: [COMBAT-SYSTEM-2026-06-11.md](../archive/COMBAT-SYSTEM-2026-06-11.md) · ADR-012/013             |
-| —  | **Entity Spawning** Phase A–B (mobs, animals, hunting, foraging, butchering)                                                                                                                                           | [x]            | [ENTITIES_SPAWNING.md](ENTITIES_SPAWNING.md)                                                              |
+| —  | **Entity Spawning** Phase A–B (mobs, animals, hunting, foraging, butchering)                                                                                                                                           | [x]            | archived: [ENTITIES_SPAWNING-2026-07-10.md](../archive/ENTITIES_SPAWNING-2026-07-10.md)                   |
 | 1  | **Production Chain Expansion** (smelting, forges, mining, fuel/heat, leather, survival)                                                                                                                                | [x] 2026-06-12 | archived: [PRODUCTION-CHAIN-EXPANSION-2026-06-12.md](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) |
 | 2  | **Equipment Expansion** (layered armour slots, mainHand/offHand, weight/volume inventory, durability, material-bonus crafting)                                                                                         | [x] 2026-06-13 | archived: [EQUIPMENT-EXPANSION.md](../archive/EQUIPMENT-EXPANSION.md)                                     |
 | 2b | **Physical Production** (reserve-and-fetch crafting: items always physical, haul inputs to workstation, output on station; retire `gs.item`; passive furnaces; building-material hauling; carry budget; tool gating) | [x] 2026-06-13 | archived: [PHYSICAL-PRODUCTION-2026-06-13.md](../archive/PHYSICAL-PRODUCTION-2026-06-13.md) · ADR-016     |
@@ -60,12 +73,12 @@ Layer, Research Enhancement, and the deferred Entity Spawning C–E content.
 | 3  | **Living World** (seasons, temperature, weather + particle overlays, wind, snow cover, atmosphere)                                                                                                                      | [x] 2026-06-17 (fog-of-war Phase D → ENGINE-PERF/WASM spatial) | archived: [SEASONS_WEATHER-2026-06-17.md](../archive/SEASONS_WEATHER-2026-06-17.md)                       |
 | 4  | **Ranged Combat** (ammunition, line-of-sight, bows/sling/crossbow)                                                                                                                                                     | [x] 2026-06-21 | archived: [RANGED-COMBAT-2026-06-21.md](../archive/RANGED-COMBAT-2026-06-21.md)                            |
 | 5  | **Production Chain II** (craft-quality prefixes, magical resources/stat-gear, bulk logistics carts, farming/food/brewing) — second items/buildings/resources pass                                                       | [x] 2026-06-21 | archived: [PRODUCTION-CHAIN-II-2026-06-21.md](../archive/PRODUCTION-CHAIN-II-2026-06-21.md) — §Q (quality, R8) + §M (magical gear → passive buff conditions, MAGIC-SKILLS Phase 0) 2026-06-18; §L pawn-pushed carts 2026-06-20 (roads + draft animals → ENTITIES C–D); §F farming/soil + F8 food chain (mill/bake/brew, alcohol staged mood-good, food poisoning) 2026-06-21. Deferred: meal-variety mood + joy drinking → SOCIAL-LAYER; dairy/manure → ENTITIES C–D |
-| 6  | **Entity Spawning** Phase C–E (taming, mounts, breeding) — **deferred** content expansion                                                                                                                              | [ ] (A–B [x])  | [ENTITIES_SPAWNING.md](ENTITIES_SPAWNING.md)                                                              |
-| 7  | **Production Chain III** (medieval-depth pass + **magic ages** replacing HSK high-tech: workstation tiers & infused variants, wall ladder → magic-dust concrete, resin/bone glue, carcass yields + beast hides + wool/leather split, armour loadouts chain/plate/beast/bone, alchemy/potions, defence buildings, **Famed items**) — benchmarked vs Hardcore SK + VilesMods (~35 % of in-ceiling target) | [~] data + §I combat stat-explosion done (2026-06-21); deferred: §G drink-use, §H combat traps/turrets, §I craft-roll stamp/display/boss-drop | [PRODUCTION-CHAIN-III.md](PRODUCTION-CHAIN-III.md)                                                        |
+| 6  | **Entity Spawning** Phase C–E (taming, mounts, breeding) — **deferred** content expansion; A–B [x] archived, C–E re-homed → **ANIMAL-HUSBANDRY**                                                                        | [ ] (A–B [x])  | [ANIMAL-HUSBANDRY.md](ANIMAL-HUSBANDRY.md) · [A–B record](../archive/ENTITIES_SPAWNING-2026-07-10.md)     |
+| 7  | **Production Chain III** (medieval-depth pass + **magic ages**: workstation tiers, wall ladder, resin/glue, carcass/hides, armour loadouts, alchemy, defence, **Famed items**) — **[x] data/foundations archived**; tails split → PRODUCTION-CHAIN-III-TAILS (§G/§I) + CREATURE-COMBAT §4 (§H/boss-drop) | [x] data archived; tails re-homed | [full record](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) · [TAILS](PRODUCTION-CHAIN-III-TAILS.md) |
 | 8  | **Social Layer** (pawn-to-pawn: relationships + stages, family trees + ~10% starting kin, procedural conversations → chronicle + floaters, romance [children TODO], beauty stat, prestige exposure, mood depth) — reworked 2026-07-10 | [ ]            | [SOCIAL-LAYER.md](SOCIAL-LAYER.md)                                                                        |
-| 8b | **Factions, Visitors & Trade** (world layer: ~20 procedural factions on a culture-mix spectrum, hidden-knowledge progressive-lore pokédex, visitor/raid events, ~bi-weekly trade caravans + trade screen, item `value`, `trade` attribute) — split from SOCIAL-LAYER 2026-07-10; **is RACE-SYSTEM Phase 2** | [ ]            | [FACTIONS-TRADE.md](FACTIONS-TRADE.md)                                                                    |
-| 9  | **Research Enhancement** (three-tier, lore-item driven; after item DB)                                                                                                                                                 | [ ]            | [RESEARCH-ENHANCEMENT.md](RESEARCH-ENHANCEMENT.md)                                                        |
-| 10 | **Magic & Skills** (depth layer; **deferred behind Entity Spawning C–E**)                                                                                                                                              | [ ] deferred   | [MAGIC-SKILLS.md](MAGIC-SKILLS.md)                                                                        |
+| 8b | **Kingdoms, Visitors & Trade** (world layer: ~20 procedural kingdoms on a culture-mix spectrum, hidden-knowledge progressive-lore pokédex, visitor/raid events, ~bi-weekly trade caravans + trade screen, item `value`, `trade` attribute) — split from SOCIAL-LAYER 2026-07-10, renamed Factions→Kingdoms; **is RACE-SYSTEM Phase 2** | [ ]            | [KINGDOMS-TRADE.md](KINGDOMS-TRADE.md)                                                                    |
+| 9  | **Research Enhancement** (three-tier, lore-item driven; after item DB)                                                                                                                                                 | [ ] **deferred — not for now, always last** | [RESEARCH-ENHANCEMENT.md](RESEARCH-ENHANCEMENT.md)                          |
+| 10 | **Magic** — the old "Magic & Skills" depth-layer plan is **[~] superseded by LINEAGES + LINEAGES-II** (both shipped); a future "Magic III" is intended but **unspecced/unplanned**                                     | [~] superseded | archived: [LINEAGES-2026-07-09.md](../archive/LINEAGES-2026-07-09.md) · [LINEAGES-II-2026-07-10.md](../archive/LINEAGES-II-2026-07-10.md) |
 | 11 | **Stealth** (size-driven sneak value vs creature detection; hit-and-run assassin; beast stealth↔armour split; melee + ranged precision classes) — Phase 1 pawns only                                                    | [ ] design locked 2026-07-10 | [STEALTH.md](STEALTH.md)                                                                    |
 
 ### Spec Dependency Matrix
@@ -85,8 +98,8 @@ Layer, Research Enhancement, and the deferred Entity Spawning C–E content.
 | PRODUCTION-CHAIN-II [x]        | §L animal carts: ENTITIES C–D                       | EQUIPMENT [x] (§Q rides materialBonuses); SEASONS [x] (§F crop seasons); ENTITIES D (manure/dairy); RESEARCH (§M gate) | closes R8 (item quality); MAGIC-SKILLS (§M foci/heartwood materials) |
 | MAGIC-SKILLS                   | COMBAT-SYSTEM                                       | RESEARCH (nodes 3+5 only); EQUIPMENT (staff items); PRODUCTION-CHAIN-II §M (foci materials) | COMBAT depth (skills + spells)                                   |
 | SOCIAL-LAYER (pawn layer)      | COMBAT                                              | RACE-SYSTEM [x] Ph0 (`cultureRelations` baseline)  | RACE-SYSTEM Ph1 (cross-culture friction baseline)                |
-| FACTIONS-TRADE (world layer)   | RACE-SYSTEM [x] Ph0 (culture generator to fork)     | SOCIAL-LAYER (prestige stat, pawn-interaction xp)  | RACE-SYSTEM Ph2 (encounter pokédex); colony economy              |
-| RACE-SYSTEM (fwd Ph1–3)        | Ph1: SOCIAL-LAYER · Ph2: FACTIONS-TRADE (visitors)  | —                                                  | SOCIAL-LAYER (cross-culture friction baseline)                   |
+| KINGDOMS-TRADE (world layer)   | RACE-SYSTEM [x] Ph0 (culture generator to fork)     | SOCIAL-LAYER (prestige stat, pawn-interaction xp)  | RACE-SYSTEM Ph2 (encounter pokédex); colony economy              |
+| RACE-SYSTEM (fwd Ph1–3)        | Ph1: SOCIAL-LAYER · Ph2: KINGDOMS-TRADE (visitors)  | —                                                  | SOCIAL-LAYER (cross-culture friction baseline)                   |
 | ENTITIES_SPAWNING Phase C–E    | COMBAT (Phase E); Phase A                           | —                                                  | —                                                                |
 | DISTRIBUTION             | Phase 3 complete                                    | —                                                  | —                                                                |
 
@@ -132,10 +145,10 @@ Layer, Research Enhancement, and the deferred Entity Spawning C–E content.
 
 | Item                                                    | Status         | Spec                                                   |
 | ------------------------------------------------------- | -------------- | ------------------------------------------------------ |
-| Viability spike (WASM + saves in desktop window) — **A/B'd Electron vs Tauri** | [x] **done → Electron chosen** | [DISTRIBUTION.md](DISTRIBUTION.md) Phase A · `desktop-spike/` |
-| **App shell — main menu + hardening** (title screen: New/Load/Settings/Exit; deferred sim boot; runtime debug-mode pref → DEBUG tab; selection/context-menu/zoom/drag suppression) | [x] 2026-06-21 | [DISTRIBUTION.md](DISTRIBUTION.md) Phase B0 — menu skipped only by `--debug` (+ the `--profiler` sandbox); `./launch.sh --electron --play` mirrors the player binary for clean playtest |
-| Adapter-static migration + AI endpoint decision (now targeting **Electron**) | [ ] — **/api confirmed dev-only** (no runtime server dependency → static build is unblocked) | [DISTRIBUTION.md](DISTRIBUTION.md) Phase B |
-| Linux / Windows / macOS release bundles + CI matrix     | [ ]            | [DISTRIBUTION.md](DISTRIBUTION.md) Phase C |
+| Viability spike (WASM + saves in desktop window) — **A/B'd Electron vs Tauri** | [x] **done → Electron chosen** | archived: [DISTRIBUTION-2026-07-10.md](../archive/DISTRIBUTION-2026-07-10.md) Phase A · `desktop-spike/` |
+| **App shell — main menu + hardening** (title screen; deferred sim boot; runtime debug-mode; input suppression) | [x] 2026-06-21 | archived: [DISTRIBUTION-2026-07-10.md](../archive/DISTRIBUTION-2026-07-10.md) Phase B0 |
+| Adapter-static migration + save persistence (**Electron**) | [x] `adapter-static` + IndexedDB saves (`saveManager.ts`) | archived: [DISTRIBUTION-2026-07-10.md](../archive/DISTRIBUTION-2026-07-10.md) Phase B |
+| Linux / Windows release bundles + CI matrix | [x] `electron-builder` + `build.yml` (AppImage/deb/NSIS, tag → GitHub Release) | archived: [DISTRIBUTION-2026-07-10.md](../archive/DISTRIBUTION-2026-07-10.md) Phase C |
 
 ---
 
@@ -160,3 +173,6 @@ See `.tasks/archive/` for full specs.
 | Ranged Combat (ammunition, aim cadence, distance/cover, data-driven `blocksSight` LoS, recovery, bow-butt) | 2026-06-21 | `RANGED-COMBAT-2026-06-21.md` |
 | Production Chain II (§Q item quality, §M magic resources/passive-buff gear + arcane staves, §L pawn-carts, §F farming/soil + F8 food chain: mill/bake/brew, staged alcohol mood-good, food poisoning) | 2026-06-21 | `PRODUCTION-CHAIN-II-2026-06-21.md` |
 | Mob spawning (superseded — folded into ENTITIES_SPAWNING; spawn model later switched to lairs) | — | doc deleted (superseded) |
+| Distribution (Electron wrapper, adapter-static + IndexedDB saves, electron-builder + CI release matrix) | 2026-07-10 | `DISTRIBUTION-2026-07-10.md` |
+| Entity Spawning A–B (mobs/animals, lair/territory spawn model, hunger/diet, pawn hunting + butchery); C–E → ANIMAL-HUSBANDRY | 2026-07-10 | `ENTITIES_SPAWNING-2026-07-10.md` |
+| Production Chain III (§A–§I data/foundations — magic ages, walls, glue, hides, armour, alchemy, defence, Famed foundation); tails → PRODUCTION-CHAIN-III-TAILS + CREATURE-COMBAT §4 | 2026-07-10 | `PRODUCTION-CHAIN-III-2026-07-10.md` |

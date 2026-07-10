@@ -3,7 +3,7 @@
 
 # STEALTH — Sneak Value, Detection Rolls & the Hit-and-Run Assassin
 
-> **Related:** [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md) (ADR-031 draft below) · [ROADMAP](ROADMAP.md) · [TRAITS](TRAITS.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md)
+> **Related:** [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md) (ADR-031 draft below) · [ROADMAP](ROADMAP.md) · [TRAITS](TRAITS.md) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [ENGINE-PERFORMANCE](../archive/ENGINE-PERFORMANCE.md)
 
 **Status:** Design locked (2026-07-10), unimplemented. Phase 1 = **pawns only**. Phase 2 (screen-invisible
 stealthy creatures) is scoped at the end but deferred.

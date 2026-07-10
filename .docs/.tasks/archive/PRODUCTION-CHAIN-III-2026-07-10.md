@@ -6,6 +6,17 @@
 
 ## Status
 
+**[x] ARCHIVED 2026-07-10 — data/foundations shipped; the interaction/hot-path tails were re-homed.**
+This file is the historical record of Pass III. The deferred tails moved out (2026-07-10):
+
+- **Combat tails → [CREATURE-COMBAT-OVERHAUL](../open/CREATURE-COMBAT-OVERHAUL.md) §4** — §H combat
+  traps + auto-fire turrets (gate on mobs-attack-buildings), and the §I **boss-drop** hook (gates on
+  the elite/miniboss ladder). They live with the combat code they need.
+- **Non-combat tails → [PRODUCTION-CHAIN-III-TAILS](../open/PRODUCTION-CHAIN-III-TAILS.md)** — the §G
+  active drink→timed-condition use-action, and the §I craft-roll stamp + famed-name display override.
+
+Original status follows.
+
 **[~] Largely implemented (data + safe foundations) — green at `pnpm check` (0 errors) + 549 tests.**
 All 8 Implementation-Order steps landed their content (2026-06-21):
 

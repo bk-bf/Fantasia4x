@@ -1,6 +1,6 @@
 # CREATURE-COMBAT-OVERHAUL
 
-> **Related:** [ENTITIES_SPAWNING.md](./ENTITIES_SPAWNING.md) · [TRAITS.md](./TRAITS.md) · [ROADMAP.md](./ROADMAP.md) · [../../game/DECISIONS.md](../../game/DECISIONS.md) (ADR-029 layered subtractive armour) · data: `database/limbmap.jsonc`, `database/creatures.jsonc`, `database/traits.jsonc`, `database/items.jsonc`
+> **Related:** [ENTITIES_SPAWNING (archived — spawn/lair record)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [ANIMAL-HUSBANDRY](./ANIMAL-HUSBANDRY.md) · [PRODUCTION-CHAIN-III-TAILS](./PRODUCTION-CHAIN-III-TAILS.md) (§I crafted-famed path) · [TRAITS.md](./TRAITS.md) · [ROADMAP.md](./ROADMAP.md) · [../../game/DECISIONS.md](../../game/DECISIONS.md) (ADR-029 layered subtractive armour) · data: `database/limbmap.jsonc`, `database/creatures.jsonc`, `database/traits.jsonc`, `database/items.jsonc`
 
 Rebalance + expansion of creature combat. Fixes the armour **invincible↔trivial binary** (keeping armour subtractive), gives aimed attacks real targets, and adds an elite/variant ladder, humanoid gear, and lair-driven escalation so combat has cross-creature progression.
 
@@ -163,11 +163,50 @@ Proposed structure + concrete pools (item ids exist in `items.jsonc`):
 
 ---
 
+## Phase 4 — Defence structures & famed boss-drops (migrated from PRODUCTION-CHAIN-III)
+
+Combat tails carried over from the archived [PRODUCTION-CHAIN-III](../archive/PRODUCTION-CHAIN-III-2026-07-10.md)
+because they need combat code that doesn't exist yet — they belong with this overhaul, not the items pass.
+
+### 4a. Combat traps + auto-fire turrets (PROD-CHAIN-III §H)
+
+The item/building data already ships (fortification `palisade`/`barricade`/`gatehouse` done); what's
+missing is the **damage** behaviour. Today's `trapEnabled`/`catchChance` mechanic *catches food animals*
+— it does not damage hostiles, and buildings can't be attacked.
+
+- [ ] **Trap-damages-mob path** (new combat code): spike pit, caltrops, bear-trap, and **rune trap**
+      (gem-dust glyph → pushes a `disoriented`/`ensnared` debuff on trigger, reusing the on-hit effect
+      pipeline). Gated behind **mobs-attack-buildings** (below).
+- [ ] **Stationary auto-fire weapons** — `ballista`/`scorpion`/`springald` (draw bolt ammo) + `arcane_turret`
+      (draws `gem_dust`, elemental bolt via §M + the ranged circuit): a "fire at nearest hostile in range,
+      consume ammo" turret behaviour that doesn't exist yet. Lean: auto-fire, unmanned, with a range/cadence cap.
+- [ ] **Barricade cover** already reuses the ranged `rangedCoverPenalty` seam (no new math) — done in data.
+- **Hard blocker:** all of 4a gates on **mobs-attack-buildings** (a mob AI + combat target-selection change,
+  not yet built). Ties into Phase 3's lair-raid loop.
+
+### 4b. Famed boss-drop hook (PROD-CHAIN-III §I)
+
+The `famed` tier, instance fields, name/history generator, and stat/enchant math all ship; the crafted
+path (craft-roll stamp + display) lives in [PRODUCTION-CHAIN-III-TAILS](PRODUCTION-CHAIN-III-TAILS.md).
+The **boss-drop** path is the combat half:
+
+- [ ] Very high-level mobs (Phase 2 minibosses → a rare authored **boss**) can drop a **famed** item on
+      death — roll `rollFamed` (identity + stat-mult + enchants) and place it in `droppedItems`. The only
+      way to obtain a famed item without a master crafter, and the reward for clearing a hard lair/boss.
+- **Depends on:** Phase 2 elite/miniboss ladder (the drop source) + the Phase 2c drop-on-death hook.
+
+**Phase 4 acceptance:**
+- [ ] A trap/turret damages a hostile mob (once mobs-attack-buildings lands); an auto-fire ballista looses
+      at an in-range hostile and consumes a bolt.
+- [ ] A cleared boss/miniboss can drop a named famed item to the ground.
+
+---
+
 ## Sequencing & cross-cutting
 
 - **Order:** Phase 1 (mechanics — unblocks everything) → Phase 2 (content ladder + gear) → Phase 3 (world loop). Each phase is independently shippable.
 - **ADR:** the hide-degradation + precision-organ routing are non-obvious combat rules → add an **ADR** to `DECISIONS.md` and onboard it into `codegraph.config.json` `adrRules` (per AGENTS.md) when Phase 1 lands.
-- **Docs to touch on completion:** `DESIGN.md` (combat mechanics), `ENTITIES_SPAWNING.md` (range rolls, lootpool, lair escalation), `TRAITS.md` (elite trait grants), `ROADMAP.md` (feature entry).
+- **Docs to touch on completion:** `DESIGN.md` (combat mechanics), the archived `ENTITIES_SPAWNING` record + `ANIMAL-HUSBANDRY.md` (range rolls, lootpool, lair escalation), `TRAITS.md` (elite trait grants), `ROADMAP.md` (feature entry).
 
 ## Open questions (rolled up for refinement)
 

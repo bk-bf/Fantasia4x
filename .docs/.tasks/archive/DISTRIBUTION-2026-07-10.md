@@ -302,7 +302,16 @@ dev = Firefox (SpiderMonkey). Consequences this spec must respect:
 
 ## Status
 
-Phase A (viability spike) **done → Electron chosen**. Phase B0 (app shell: main menu + input
-hardening) **done 2026-06-21**. `/api` confirmed dev-only, so adapter-static is unblocked. Remaining:
-Phase B (adapter-static migration, save adapter, Electron-process hardening) → Phase C (packaging +
-CI matrix). No packaged build cut yet — playtest via `./launch.sh --electron --play`.
+**[x] COMPLETE — archived 2026-07-10.** Shipped via the Electron pipeline; this spec is a record, not
+open work. Actual delivered state (the Tauri-flavoured checklists above are superseded by the Electron
+implementation, not followed verbatim):
+
+- **Phase A** — viability spike done, **Electron chosen** (A/B vs Tauri, 2026-06-15).
+- **Phase B0** — app shell (main menu + input hardening) done 2026-06-21.
+- **Phase B** — `adapter-static` configured (`svelte.config.js`); saves persist via **IndexedDB**
+  (`stores/saveManager.ts`, with a one-time `localStorage` migration) — the Electron equivalent of the
+  spec's Tauri-`fs` `SaveAdapter` design, which is moot under Chromium/userData persistence; Electron
+  process shell (`desktop-spike/electron/main.js` + `preload.cjs`).
+- **Phase C** — packaging via **`electron-builder`** (`package`/`dist` scripts) + a full CI **release**
+  matrix (`.github/workflows/build.yml`: Ubuntu → AppImage/`.deb`, Windows → NSIS; a `v*` tag cuts a
+  GitHub Release with a git-cliff changelog).

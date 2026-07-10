@@ -156,11 +156,23 @@ ignore them, and `recomputeWound` carries `permanent` forward. Elemental variant
 - Bleed-as-wound (`Injury.bloodletting`, clot-proof until dressed; the old condition retired).
 - `Feasted` shared blood-feast buff (0.5 h, non-refreshing).
 
-**Deferred:**
+**Deferred** (audited 2026-07-10 — the "waits on the age system" blocker is **stale**; see below):
 
-- [ ] `evolutionTrigger {minAgeYears}` + ritual gate — waits on the age system; walks `stage N → N+1`
-      by swapping a trait for its `evolvesTo` (the player pursues a lineage; crossroads = spec moment).
+> **Age + growth-event infrastructure is LIVE, and generic `evolvesTo` stage-walking already runs on
+> it.** Pawns carry `age`/`birthDayOfYear`/`pendingGrowth` (`core/types/entities.ts`), aging is real
+> (1 yr = 4 seasons = 360 days), and `PawnGrowthService.processDay` fires the seasonal/birthday cadence
+> once per in-game day (`GameEngineImpl.processGrowth`). Trait evolution is **already wired**:
+> `lineageGrowthEvent` (`core/Lineages.ts`) does the EVOLVE step — finds a staged trait, swaps it for
+> its `evolvesTo`, applies effects — on every growth event. So the mechanism the spec was "waiting on"
+> exists. What remains is refinement + a grab-bag of content hooks.
+
+- [ ] `evolutionTrigger {minAgeYears}` + ritual gate — the *only* genuinely open part of trait
+      evolution: making it **age/ritual-gated + deliberate** rather than today's random `EVOLVE_CHANCE`
+      at any growth event. **Decide whether this refinement is even wanted** — the generic path may be
+      good enough.
 - [ ] Breath `reach 3` → a proper AoE cone.
 - [ ] Reserved hooks: diet flags (decomposer/carrion-fed), `sleepless`, `beast-speech`, silk
       `produces` (needs organ-aware butchery).
-- [ ] Phase 2 kinds: `behavioral` / `needs` / `transformation`.
+- [ ] Phase 2 kinds: `behavioral` / `needs` / `transformation` — **partly delivered**: LINEAGES-II
+      shipped a `needs`-style blood meter (`bloodthirst`) and a `transformation` (werewolf full-moon).
+      What's left is generalising them into formal reusable trait `kind`s (vs the lineage-bespoke wiring).
