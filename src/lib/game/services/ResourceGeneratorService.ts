@@ -7,9 +7,9 @@
 import type { WorldTile } from '../core/types';
 import type { ResourceObjectDef } from './ResourceObjectService';
 import { resourceObjectService, isGrowableResource } from './ResourceObjectService';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '../core/Terrains';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar, isSpawnableTile } from '../core/Terrains';
 import { makeSeededRng } from '../core/rng';
-import { STARTING_BUBBLE_RADIUS } from './entity/entityConstants';
+import { STARTING_BUBBLE_RADIUS, MIN_LAIR_SPACING } from './entity/entityConstants';
 
 /**
  * Subterrains whose resources form CLUSTERS rather than per-tile scatter: each connected blob of
@@ -17,6 +17,12 @@ import { STARTING_BUBBLE_RADIUS } from './entity/entityConstants';
  * for the whole blob. These subterrains are also never empty.
  */
 const CLUSTERED_SUBTYPES = new Set(['mineral_deposit']);
+
+// §3b lair-guardian placement: how far from an attractor a guardian den may sit (nearest empty spawnable
+// tile wins → "adjacent"), and the chance an eligible attractor neighbourhood gets one (usually, but some
+// groves stay unguarded free finds).
+const GUARD_SEARCH_RADIUS = 6;
+const GUARD_CHANCE = 0.55;
 
 /** Deterministic integer-range RNG: the shared seeded xorshift float gen (core/rng) scaled to
  *  [min, max] inclusive. Same sequence as before — the float gen is byte-identical to the old inline
@@ -79,6 +85,11 @@ class ResourceGeneratorServiceImpl {
     // Pass 2 — clusters: each connected blob of a clustered subterrain (mineral_deposit) is a
     // single-resource deposit (a whole hematite vein / coal seam), not a mix scattered per tile.
     this.fillResourceClusters(worldMap, defs, rng);
+
+    // Pass 3 — lair guardians (PRODUCTION-CHAIN-IIII §3b): den a matching lair ADJACENT to placed
+    // rare-material attractors, so a dangerous pack guards the reward. Runs last so every attractor is
+    // already down; consumes rng after passes 1-2 so their placement is byte-identical for a given seed.
+    this.placeLairGuardians(worldMap, defs, rng, cx, cy, lairFreeR2);
   }
 
   /**
@@ -164,6 +175,108 @@ class ResourceGeneratorServiceImpl {
         }
       }
     }
+  }
+
+  /**
+   * PRODUCTION-CHAIN-IIII §3b — den a matching lair ADJACENT to each placed attractor resource. For every
+   * lair def that declares `lairAttractors`, a placed attractor (a witchwood/soulwood grove, a frostheart
+   * pine, a bonewood snag) has a chance to get one of its guardian lairs on the nearest empty, spawnable,
+   * out-of-spawn-bubble tile within GUARD_SEARCH_RADIUS. "Tier matches tier" reads through the existing
+   * lair→creature bind (a predator_den by a soulwood grove seeds the bear/owlbear line). Adjacent, not on:
+   * the grove tile is untouched, so a bold player can risk-harvest under the pack's aggro or clear the den.
+   */
+  private placeLairGuardians(
+    worldMap: WorldTile[][],
+    defs: ResourceObjectDef[],
+    rng: (min: number, max: number) => number,
+    cx: number,
+    cy: number,
+    bubbleR2: number
+  ): void {
+    // attractor resource id → guardian lair defs drawn to it
+    const wantedBy = new Map<string, ResourceObjectDef[]>();
+    for (const d of defs) {
+      if (!d.lair || !d.lairAttractors?.length) continue;
+      for (const a of d.lairAttractors) {
+        const arr = wantedBy.get(a);
+        if (arr) arr.push(d);
+        else wantedBy.set(a, [d]);
+      }
+    }
+    if (wantedBy.size === 0) return;
+
+    const lairIds = new Set(defs.filter((d) => d.lair).map((d) => d.id));
+    const h = worldMap.length;
+    const w = worldMap[0]?.length ?? 0;
+
+    const hasLairNear = (x: number, y: number, r: number): boolean => {
+      for (let dy = -r; dy <= r; dy++) {
+        const row = worldMap[y + dy];
+        if (!row) continue;
+        for (let dx = -r; dx <= r; dx++) {
+          const t = row[x + dx];
+          if (!t) continue;
+          for (const id in t.resources) if (lairIds.has(id)) return true;
+        }
+      }
+      return false;
+    };
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const res = worldMap[y][x].resources;
+        let guardians: ResourceObjectDef[] | undefined;
+        for (const id in res) {
+          const m = wantedBy.get(id);
+          if (m) {
+            guardians = m;
+            break;
+          }
+        }
+        if (!guardians) continue;
+        // usually guarded, but not always (some rare finds stay free)
+        if (rng(0, 100000) / 100000 >= GUARD_CHANCE) continue;
+        // one guardian per neighbourhood — don't stack a den next to an already-denned attractor
+        if (hasLairNear(x, y, MIN_LAIR_SPACING)) continue;
+        const spot = this.findGuardSpot(worldMap, x, y, cx, cy, bubbleR2);
+        if (!spot) continue;
+        const g = guardians.length === 1 ? guardians[0] : guardians[rng(0, guardians.length - 1)];
+        this.placeResource(spot, g, rng);
+      }
+    }
+  }
+
+  /** Nearest empty, spawnable (walkable forest/plains/swamp), out-of-bubble land tile within
+   *  GUARD_SEARCH_RADIUS of the attractor at (ax,ay) — the "adjacent" den spot (never ON the attractor). */
+  private findGuardSpot(
+    worldMap: WorldTile[][],
+    ax: number,
+    ay: number,
+    cx: number,
+    cy: number,
+    bubbleR2: number
+  ): WorldTile | null {
+    let best: WorldTile | null = null;
+    let bestD = Infinity;
+    for (let dy = -GUARD_SEARCH_RADIUS; dy <= GUARD_SEARCH_RADIUS; dy++) {
+      const row = worldMap[ay + dy];
+      if (!row) continue;
+      for (let dx = -GUARD_SEARCH_RADIUS; dx <= GUARD_SEARCH_RADIUS; dx++) {
+        if (dx === 0 && dy === 0) continue; // never on the attractor
+        const t = row[ax + dx];
+        if (!t || !isSpawnableTile(t)) continue;
+        if (Object.keys(t.resources).length > 0) continue; // empty tile only (don't clobber a resource)
+        const bdx = t.x - cx;
+        const bdy = t.y - cy;
+        if (bdx * bdx + bdy * bdy <= bubbleR2) continue; // keep guardians out of the start bubble
+        const d = dx * dx + dy * dy;
+        if (d < bestD) {
+          bestD = d;
+          best = t;
+        }
+      }
+    }
+    return best;
   }
 
   /** 4-neighbours of (x,y) in a seeded-random order, so grown clusters take organic shapes. */

@@ -111,6 +111,11 @@ export interface ResourceObjectDef {
   /** Lair/nest tile: at world-gen each placed lair tile seeds ONE bound pack of a creature
    *  whose `lair` matches this id. Not harvestable (designationTypes: []). */
   lair?: boolean;
+  /** PRODUCTION-CHAIN-IIII §3b / CREATURE-COMBAT-OVERHAUL §3b — rare-material attractor resource ids this
+   *  lair GUARDS. A world-gen post-pass (`placeLairGuardians`) dens one of these lairs ADJACENT to a
+   *  placed attractor (a witchwood grove, …) so a dangerous pack guards the reward (the node stays
+   *  harvestable — the den sits beside it, not on it). Only meaningful on a `lair` def. */
+  lairAttractors?: string[];
   /** Ambient particle effect rendered over the tile (WorldEffectsLayer), e.g. "smoke". Visual only. */
   particleEffect?: string;
   /** Primary interaction (also used when `interactions` is absent). */
