@@ -261,7 +261,7 @@
     "displayName" : "Riverbank",
     "walkable"    : true,
     "movementCost": 1.4,
-    "charSpans"   : [ {"literal": "#"} ],
+    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
     "fg"          : "#947021",
     "bg"          : "#17120a",
     "biomes"      : { "river": [null, null] }

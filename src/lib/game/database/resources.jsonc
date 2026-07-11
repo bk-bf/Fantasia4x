@@ -2758,7 +2758,7 @@
     "displayName"     : "Riverbank",
     "subterrain"      : "riverbank",
     "walkable"        : true,
-    "charSpans"       : [ {"literal": "#"} ],
+    "charSpans"       : [ {"sheet": "tiles", "from": 64, "to": 71} ],
     "fg"              : "#947021",
     "bg"              : "#17120a",
     "spawn"           : { "subterrains": {"riverbank": 0.6} },
