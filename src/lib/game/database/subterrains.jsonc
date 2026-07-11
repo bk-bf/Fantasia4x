@@ -31,7 +31,7 @@
     "biomes"      : { "plains": [null, -0.4] }
   },
   {
-    "id"          : "grass",        // soil tier 1 (25%) — Poor Soil; the grass_patch resource paints the green on top
+    "id"          : "grass",  // soil tier 1 (25%) — Poor Soil; the grass_patch resource paints the green on top
     "displayName" : "Poor Soil",
     "walkable"    : true,
     "movementCost": 1,
@@ -58,7 +58,7 @@
     "biomes"      : { "deep_forest": [0.55, null] }
   },
   {
-    "id"          : "deep_grass",   // soil tier 3 (75%) — Rich Soil; the deep_grass_patch resource paints the green
+    "id"          : "deep_grass",  // soil tier 3 (75%) — Rich Soil; the deep_grass_patch resource paints the green
     "displayName" : "Rich Soil",
     "walkable"    : true,
     "movementCost": 1.5,
@@ -71,7 +71,7 @@
     "biomes"      : { "forest": [null, 0.97] }
   },
   {
-    "id"          : "tall_grass",   // soil tier 2 (50%) — Loam; the tall_grass_patch resource paints the green
+    "id"          : "tall_grass",  // soil tier 2 (50%) — Loam; the tall_grass_patch resource paints the green
     "displayName" : "Loam",
     "walkable"    : true,
     "movementCost": 1.3,
@@ -221,7 +221,7 @@
     "displayName" : "Quicksand",
     "walkable"    : true,
     "movementCost": 25,
-    "charSpans"   : [ {"literal": "."} ],
+    "charSpans"   : [ {"sheet": "tiles", "from": 35, "to": 37} ],
     "fg"          : "#b38540",
     "bg"          : "#17120a",
     "biomes"      : { "swamp": [0.7, null] }
@@ -293,14 +293,16 @@
     "biomes"      : { "mountain": [null, 0.57] }
   },
   {
-    "id"          : "mineral_deposit",
-    "displayName" : "Mineral Deposit",
-    "walkable"    : true,
+    "id": "mineral_deposit",
+    "displayName": "Mineral Deposit",
+    "walkable": true,
     "movementCost": 2.8,
-    "charSpans"   : [ {"sheet": "plants", "id": 210} ],  // mountain-wall rock base; ore resources paint a small glowing coloured vein on top
-    "fg"          : "#9e855e",
-    "bg"          : "#17120a",
-    "biomes"      : { "mountain": [0.57, null] }
+    "charSpans": [
+      {"sheet": "plants", "id": 210}
+    ],  // mountain-wall rock base; ore resources paint a small glowing coloured vein on top
+    "fg": "#9e855e",
+    "bg": "#17120a",
+    "biomes": { "mountain": [0.57, null] }
   },
   {
     "id"          : "crystal_formation",

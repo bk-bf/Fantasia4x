@@ -2603,7 +2603,7 @@
     "displayName"     : "Quicksand",
     "subterrain"      : "quicksand",
     "walkable"        : true,
-    "charSpans"       : [ {"literal": "."} ],
+    "charSpans"       : [ {"sheet": "tiles", "from": 35, "to": 37} ],
     "fg"              : "#b38540",
     "bg"              : "#17120a",
     "spawn"           : { "subterrains": {"quicksand": 0.9} },
