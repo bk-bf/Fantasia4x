@@ -133,6 +133,29 @@ Green: `pnpm check` 0 errors (732 files), the combat/spawn suites + new `lootPoo
 - [x] **§2d natural-gear upgrades** are data on each variant's `naturalWeapons` list.
 
 **Remaining engine TODO (small, deferred until the full ladder data exists):**
+- [x] **Day-1 boss/elite guard** — landed 2026-07-11: `seedInitialEntities` (the "one pack of each
+  distinct creature" initial seed) now caps at COMMON tiers (`(c.tier ?? 2) < 3`), so a fresh map never
+  seeds a T3-T5 elite/boss of a non-laired species (fixed a day-1 `great_boar` roaming). Elites emerge
+  later via the weighted ambient spawner; bosses only via Phase-3 escalation.
+- [x] **Visual tier ramp** — landed 2026-07-11 (`GameCanvas` mob render): glyph `scale` by tier
+  (T1 0.5 → T2 1 → T5 1.4) + a per-tier brightness/warmth tint (`TIER_GLYPH_SCALE`/`TIER_GLYPH_TINT`),
+  so a Wolf Pup reads apart from a Dire Wolf from a boss at a glance. Un-laddered creatures = T2 baseline.
+- [x] **Hover/card name "`<Species>, <Variant>`"** — landed 2026-07-11 (`selectionCard.mobDisplayName`):
+  a ladder creature shows "Boar, Razorback"; a T5 boss shows its rolled legend name; a base whose name
+  IS the species label (or an un-laddered creature) shows its plain name.
+- [x] **Every creature ≥2 variants** — landed 2026-07-11: the 25 un-laddered bases were stamped
+  `species`/`tier:2` and each got ONE sibling (young T1 / elder T3), so the roster is **128 creatures**,
+  every species has ≥2 members, and the hover variant slot is never empty. Guarded by `variantLadder.test.ts`.
+- [x] **Shared-lair species fairness + griffon aerie** — landed 2026-07-11: the ladder bound 13 bear +
+  13 spider variants to `predator_den`, and the lair pick (`pickWeightedByTier`, tier-weighted over the
+  whole mixed pool) let those two species own 41% each of every den — starving hippogriff/owlbear/
+  sabretooth to ~6% (hippogriffs, being lair-only, all but vanished). Fix: `pickSpeciesThenTier` picks a
+  SPECIES uniformly THEN the individual by tier — restoring ~25% each — applied to the 3 lair callers
+  (seed / breed / grow); the ambient spawner keeps the flat `pickWeightedByTier`. Plus hippogriffs got
+  their OWN `griffon_aerie` lair (mirrors `harpy_roost`), off the crowded predator den entirely. Guarded
+  by `variantLadder.test.ts` (species-fairness + aerie occupancy).
+- [x] **Swamp lair rarity** — landed 2026-07-11: `swamp_nest` spawn weights bumped ~13× (bog 0.0026 …)
+  so small swamps reliably seed 1-2 nests — the swamp reads as the contested danger zone, not safe.
 - [x] **Spawn weighting by tier** — landed 2026-07-11: `TIER_SPAWN_WEIGHT` (1.6/1.0/0.3/0.1/**0**) +
   `pickWeightedByTier` replace the uniform pick in all four spawn paths (ambient `pickSpawnCreature`,
   den seeding, den breeding, new-lair growth). **T5 weight 0** = a boss NEVER ambient-spawns; it waits
