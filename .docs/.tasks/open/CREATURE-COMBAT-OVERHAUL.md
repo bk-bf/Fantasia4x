@@ -494,24 +494,24 @@ the trait system's grant path; magical gear reuses `grantsConditions` + `wieldRe
 
 ## Phase 3 — Lair evolution + resource gating
 
-### 3a. Lair-age escalation
+### 3a. Lair-age escalation — ✅ LANDED (2026-07-11)
 
-- [ ] A lair left alive (and "fed" — kills/decay accrued) rolls a chance over time to spawn a **next-tier** variant (base → elite → miniboss), capped by biome tier.
-- [ ] Clearing / damaging the lair resets or lowers its escalation clock.
-- **Open:** cap escalation at miniboss, or allow a rare authored **boss** at the top? Does clearing fully reset, or leave a "scarred" faster-regrow lair?
-
-**Proposed mechanics (2026-07-10, awaiting approval — updated to the 5-tier ladder):** the ladder is
-DATA — every variant carries `species` + `tier` + `variantOf` (§2b), so escalation is a lookup (pick a
-same-`species` entry one tier up), no hand-written switch. Lair state (wherever the lair record lives —
-the tile resource + spawn bookkeeping from ENTITIES_SPAWNING) gains `escalation: number` (0 = the lair's
-base tier). It accrues from AGE (slow drip per in-game day alive) and FEEDING (a kill by the lair's pack
-bumps it); past a threshold, the NEXT respawn from that lair replaces one spawn with a next-tier variant
-and resets the accumulator. Killing the lair's pack knocks the accumulator down; destroying the lair
-deletes it outright.
-**Recommendations on the opens:** escalation climbs T1→T4 organically; **T5 (the boss) only from a
-long-ignored, well-fed lair** — the Phase-4b famed-drop source arriving as a world event, not a routine
-spawn. Clearing fully resets (a "scarred" faster-regrow lair is a nice later wrinkle, not worth the
-extra state now).
+- [x] A lair left alive climbs a per-den escalation LEVEL over time and breeds UP its ladder
+      (base → elite → miniboss → boss). `GameState.lairEscalation: Record<lairId, level>` (sparse, sim-
+      internal); in the daily `tickLairs` a living, un-cleared den outside the starting bubble rolls
+      `LAIR_ESCALATION_CHANCE` (0.07/day ≈ one level per ~2 weeks) to climb, capped at `LAIR_MAX_ESCALATION`
+      (3). Breeding then uses `pickEscalatedCreature(pool, level, bossAlive)` — species-first (lair-mate
+      fairness), targeting tier `2 + level`, so escalated dens spawn T3/T4 individuals into the growing pack.
+- [x] Clearing resets: a wiped pack (alive 0) drops the den's level to base next tick; a destroyed den
+      (tile gone) drops out of the map entirely. **Resolved (fully reset)** — no "scarred" state.
+- [x] **Resolved (boss at the top):** T5 is unlocked ONLY at max escalation AND when no boss is already
+      bound to the den; spawning it **resets the den to base** (it "spends" the buildup), so a maxed,
+      long-ignored lair produces a lone boss as a climax rather than a boss flood — the Phase-4b famed-drop
+      source arriving as a world event, exactly as recommended. Bosses still never ambient-spawn
+      (`TIER_SPAWN_WEIGHT[5] = 0`); escalation is their ONLY route. Guarded by `lairEscalation.test.ts`.
+- **Deferred:** the "FEEDING" accelerator (a kill by the lair's pack bumps the clock) is NOT wired — that
+      needs a combat kill-attribution hook to the lair. Age-driven accrual alone satisfies "an ignored
+      lair escalates over time"; feeding is a later flavour add.
 
 ### 3b. Resource-gated lairs — ✅ LANDED (2026-07-11)
 
@@ -519,7 +519,7 @@ extra state now).
       as a world-gen post-pass (`ResourceGeneratorService.placeLairGuardians`, runs after the scatter so
       every attractor is down and passes 1-2 stay byte-identical per seed): a lair def declares
       `lairAttractors: string[]` (the attractor resource ids it guards) and each placed attractor rolls
-      `GUARD_CHANCE` (0.55) to den ONE of its guardian lairs on the nearest empty, spawnable,
+      `GUARD_CHANCE` (0.4) to den ONE of its guardian lairs on the nearest empty, spawnable,
       out-of-spawn-bubble tile within `GUARD_SEARCH_RADIUS` (6), skipping if a lair already dens within
       `MIN_LAIR_SPACING`. Wired to the §1c timber: `predator_den`←witchwood/soulwood (spiders, bear/owlbear),
       `wolf_den`←frostheart_pine (frost wolves), `goblin_warren`+`swamp_nest`←bonewood_snag. **Tier-matches-tier**
@@ -535,8 +535,12 @@ extra state now).
       pure data. `escalation`-driven boss-guards wait on Phase 3a.
 
 **Phase 3 acceptance:**
-- [ ] An ignored lair demonstrably escalates its spawns over time. *(3a — not built)*
+- [x] An ignored lair demonstrably escalates its spawns over time. *(3a landed 2026-07-11 — `lairEscalation` + `pickEscalatedCreature` in `tickLairs`; climbs to a boss, resets on clear; `lairEscalation.test.ts`)*
 - [x] Rare-resource nodes tend to be guarded; clearing the guardian opens the node. *(3b landed 2026-07-11 — `lairAttractors` + `placeLairGuardians`; adjacent, so the node stays harvestable)*
+
+**→ Phase 3 COMPLETE (2026-07-11).** Both halves landed; the world loop (dangerous dens guard rewards +
+ignored dens escalate toward bosses) is live. Phase 4 (defence structures + famed boss ground-drop) is
+next, but 4a is hard-blocked on a **mobs-attack-buildings** system that doesn't exist yet.
 
 ---
 
@@ -613,4 +617,4 @@ The **boss-drop** path is the combat half:
 - [x] Phase 1d: **per-part**; reset = wear expires ~an in-game hour (750 ticks) after the last chip.
 - [x] Phase 2b: which creature lines first → superseded by the **5-tier × 3-variant ladder for every species** (§2e); author wolf + orc + goblin ladders first (concepts ready, engine live).
 - [x] Phase 2c: **yes** — drops roll quality + condition, and fights degrade mob gear pre-drop (landed 2026-07-10/11; live on goblin/orc_reaver). Monster gear is CREATURE-specific with `wieldRequirement` on orc iron; human `guard_*` pools moved to KINGDOMS-TRADE caravan guards.
-- [~] Phase 3: lair-on vs lair-adjacent to resources → **resolved ADJACENT** (3b landed 2026-07-11). Escalation cap (T5 only from a long-ignored fed lair) still open — Phase 3a not built.
+- [x] Phase 3: lair-on vs lair-adjacent to resources → **resolved ADJACENT** (3b, 2026-07-11). Escalation cap → **resolved**: climbs T2→T5, T5 (boss) only at max escalation on a long-ignored den, and spawning it resets the den (3a, 2026-07-11). Clearing fully resets (no "scarred" state). Feeding-by-kill accelerator deferred.
