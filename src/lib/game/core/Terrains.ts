@@ -11,7 +11,13 @@ import type { WorldTile } from './types';
 
 export interface BiomeDef {
   displayName: string;
-  densityRange: [number, number];
+  /** This biome's slice of the elevation axis (0–1). ABSENT on a variant biome (one with a `parent`):
+   *  a variant isn't placed by density — pickBiome skips it — it's promoted onto its parent's interior
+   *  by WorldGenerator's variant pass. */
+  densityRange?: [number, number];
+  /** Parent biome id. A variant inherits its parent's subterrain membership, spawnability, and (via
+   *  subterrain) resources, while still able to carry its own distinct subterrains. */
+  parent?: string;
   /** Baseline temperature in conceptual °C (SEASONS_WEATHER Subsystem 3). */
   baseTemp?: number;
   /** Baseline wetness 0–100% (SEASONS_WEATHER display; weather adds on top). */
@@ -149,14 +155,18 @@ const DEFAULT_BIOME_CONFIG: Record<
   string,
   { densityRange: [number, number]; baseTemp: number; baseMoisture: number }
 > = Object.fromEntries(
-  Object.entries(BIOMES).map(([id, d]) => [
-    id,
-    {
-      densityRange: [d.densityRange[0], d.densityRange[1]] as [number, number],
-      baseTemp: d.baseTemp ?? 0,
-      baseMoisture: d.baseMoisture ?? 0
-    }
-  ])
+  // Variant biomes (no densityRange) are excluded — they have no elevation band the Custom Map menu
+  // could edit; they're promoted onto their parent's interior by the world generator instead.
+  Object.entries(BIOMES)
+    .filter(([, d]) => d.densityRange)
+    .map(([id, d]) => [
+      id,
+      {
+        densityRange: [d.densityRange![0], d.densityRange![1]] as [number, number],
+        baseTemp: d.baseTemp ?? 0,
+        baseMoisture: d.baseMoisture ?? 0
+      }
+    ])
 );
 
 // Biomes ordered low→high along the elevation axis (by default range start). Density bands are laid
@@ -172,7 +182,8 @@ export function getBiomeConfig(): BiomeConfigEntry[] {
     return {
       id,
       displayName: d.displayName,
-      share: d.densityRange[1] - d.densityRange[0],
+      // DENSITY_ORDER only holds non-variant biomes, so densityRange is always present here.
+      share: d.densityRange![1] - d.densityRange![0],
       baseTemp: d.baseTemp ?? 0,
       baseMoisture: d.baseMoisture ?? 0
     };
@@ -266,8 +277,12 @@ export const SUBTERRAIN_FALLBACK: SubterrainDef = {
  * (null = unbounded). Ranges are non-overlapping so the first match is unique.
  */
 export function pickSubterrain(biomeName: string, detailNoise: number): string {
+  // A variant biome inherits its parent's subterrain membership: where the subterrain declares the
+  // variant id, that wins; otherwise it falls back to the parent's range. So a deep_forest tile can use
+  // every forest subterrain AND any subterrain that carves out a deep_forest-only band.
+  const parent = BIOMES[biomeName]?.parent;
   for (const [id, def] of Object.entries(SUBTERRAINS)) {
-    const range = def.biomes?.[biomeName];
+    const range = def.biomes?.[biomeName] ?? (parent ? def.biomes?.[parent] : undefined);
     if (!range) continue;
     const [min, max] = range;
     if ((min === null || detailNoise >= min) && (max === null || detailNoise < max)) {
@@ -351,7 +366,9 @@ export function terrainBlocksSight(walkable: boolean, subType: string): boolean 
 /** True only for walkable forest/plains/swamp land — the single gate for pawn AND creature spawning. */
 export function isSpawnableTile(tile: WorldTile | undefined | null): boolean {
   if (!tile || !tile.walkable) return false;
-  if (!SPAWNABLE_BIOMES.has(tile.terrainType)) return false;
+  // A variant is spawnable if its parent is (deep_forest inherits forest's spawnability).
+  const biome = tile.terrainType;
+  if (!SPAWNABLE_BIOMES.has(biome) && !SPAWNABLE_BIOMES.has(BIOMES[biome]?.parent ?? '')) return false;
   if (WATER_SUBTYPES.has(tile.subType)) return false;
   return true;
 }
@@ -362,6 +379,8 @@ export function isSpawnableTile(tile: WorldTile | undefined | null): boolean {
  */
 export function pickBiome(density: number): string | null {
   for (const [name, def] of Object.entries(BIOMES)) {
+    // Variant biomes carry no densityRange — they're promoted onto a parent's interior, not placed here.
+    if (!def.densityRange) continue;
     if (density >= def.densityRange[0] && density < def.densityRange[1]) return name;
   }
   return null;

@@ -2,6 +2,7 @@
 import { createNoise2D } from 'simplex-noise';
 import type { WorldTile } from '../core/types';
 import {
+  BIOMES,
   SUBTERRAINS,
   SUBTERRAIN_FALLBACK,
   pickBiome,
@@ -185,6 +186,10 @@ export function generateWorld(
   // would otherwise leave the riverbank ring stranded as "banks with no river".
   if (opts?.tidyWater !== false) tidyWaterbodies(world);
 
+  // Phase 5·1: promote the deep interior of parent biomes to their nested variants (deep_forest…),
+  // before moisture so a variant tile bakes its own baseMoisture.
+  promoteBiomeVariants(world, detailNoise);
+
   // Phase 5a: distribute base tile wetness outward from water (spider-web falloff).
   assignMoisture(world, detailNoise);
 
@@ -293,6 +298,99 @@ function tidyWaterbodies(world: WorldTile[][]): void {
     }
   }
   for (const t of ring) setTileSubtype(t, 'riverbank');
+}
+
+// ── Biome variant promotion (nested cores, Phase 5·1) ───────────────────────────────────────────────
+// Tiles this many steps in from a parent biome's boundary promote to its variant. Only large blobs HAVE
+// an interior this deep, so a variant is always a rare core nested inside a real forest/mountain — never
+// a random scattered patch. Tunable: lower = more/larger cores, higher = rarer.
+const VARIANT_DEPTH = 5;
+
+/**
+ * Promote the deep interior of each parent biome's blobs to its nested variant (deep_forest inside
+ * forest, …). Data-driven off BIOMES `parent`: distance-transform inward from the biome boundary — any
+ * non-parent tile, any water tile, and the map edge count as a boundary at distance 0 — then flip every
+ * parent tile at least VARIANT_DEPTH steps in to the variant, re-picking its subterrain (which inherits
+ * the parent's plus any variant-only subterrain). Legacy `type` is left as the parent tile already had
+ * it. Runs after the waterbody tidy so water/riverbank boundaries are final.
+ */
+function promoteBiomeVariants(
+  world: WorldTile[][],
+  detailNoise: (x: number, y: number) => number
+): void {
+  const h = world.length;
+  const w = world[0]?.length ?? 0;
+  if (w === 0) return;
+
+  // parent biome id → variant biome id (first variant of a parent wins).
+  const variantOf = new Map<string, string>();
+  for (const [id, def] of Object.entries(BIOMES)) {
+    if (def.parent && !variantOf.has(def.parent)) variantOf.set(def.parent, id);
+  }
+  if (variantOf.size === 0) return;
+
+  const INF = 1e9;
+  const ORTHO = 1;
+  const DIAG = Math.SQRT2;
+  const dist = new Float64Array(w * h);
+
+  for (const [parent, variant] of variantOf) {
+    // Seed: INF inside the parent blob (away from the map edge), 0 on every boundary (non-parent tile,
+    // water, or a tile on the map border).
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const t = world[y][x];
+        const interior =
+          t.terrainType === parent &&
+          !WATER_SUBS.has(t.subType) &&
+          x > 0 &&
+          y > 0 &&
+          x < w - 1 &&
+          y < h - 1;
+        dist[y * w + x] = interior ? INF : 0;
+      }
+    }
+    // Two-pass chamfer distance transform (same shape as assignMoisture).
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        let d = dist[i];
+        if (x > 0) d = Math.min(d, dist[i - 1] + ORTHO);
+        if (y > 0) d = Math.min(d, dist[i - w] + ORTHO);
+        if (x > 0 && y > 0) d = Math.min(d, dist[i - w - 1] + DIAG);
+        if (x < w - 1 && y > 0) d = Math.min(d, dist[i - w + 1] + DIAG);
+        dist[i] = d;
+      }
+    }
+    for (let y = h - 1; y >= 0; y--) {
+      for (let x = w - 1; x >= 0; x--) {
+        const i = y * w + x;
+        let d = dist[i];
+        if (x < w - 1) d = Math.min(d, dist[i + 1] + ORTHO);
+        if (y < h - 1) d = Math.min(d, dist[i + w] + ORTHO);
+        if (x < w - 1 && y < h - 1) d = Math.min(d, dist[i + w + 1] + DIAG);
+        if (x > 0 && y < h - 1) d = Math.min(d, dist[i + w - 1] + DIAG);
+        dist[i] = d;
+      }
+    }
+    // Promote the deep interior, re-picking the subterrain so any variant-only subterrain lights up.
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (dist[y * w + x] < VARIANT_DEPTH) continue;
+        const t = world[y][x];
+        t.terrainType = variant;
+        const detail = detailNoise(x * DETAIL_FREQUENCY, y * DETAIL_FREQUENCY);
+        const newSub = pickSubterrain(variant, detail);
+        if (newSub === t.subType) continue;
+        const sub = SUBTERRAINS[newSub] ?? SUBTERRAIN_FALLBACK;
+        t.subType = newSub;
+        t.ascii = pickChar(sub, t.x, t.y);
+        t.walkable = sub.walkable;
+        t.movementCost = sub.movementCost;
+        t.blocksSight = sub.blocksSight ?? false;
+      }
+    }
+  }
 }
 
 // Organic ± jitter on the baked moisture so the damp bands aren't perfectly smooth contours.
