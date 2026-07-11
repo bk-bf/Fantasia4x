@@ -187,7 +187,10 @@ export function computeTileLightLevel(
       }
     }
   }
-  return Math.max(0.1, ambient + point);
+  // Light is a 0–1 fraction (1 = fully lit): floor at 0.1 (never pitch black for gameplay), and CAP at
+  // 1.0 — ambient + point glows can sum past full (a grove/lamp cluster in daylight), which reads as a
+  // nonsensical >100% in the HUD and gives no extra sight/work benefit beyond fully lit.
+  return Math.min(1, Math.max(0.1, ambient + point));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
