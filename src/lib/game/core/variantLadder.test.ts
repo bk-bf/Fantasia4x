@@ -4,7 +4,12 @@ import { getLootPool, validateLootItemIds } from './LootPools';
 import { itemService } from '../services/ItemService';
 import { isBodyPlan } from './BodyParts';
 import { generateBossName } from './BossNames';
-import { makeMob, TIER_SPAWN_WEIGHT, pickWeightedByTier } from '../services/entity/entitySpawning';
+import {
+  makeMob,
+  TIER_SPAWN_WEIGHT,
+  pickWeightedByTier,
+  pickSpeciesThenTier
+} from '../services/entity/entitySpawning';
 
 // CREATURE-COMBAT-OVERHAUL §2e ladder-integrity guard: every creature's data references resolve, the
 // ladder metadata is coherent, and the tier spawn weights keep T5 bosses out of ambient spawning.
@@ -73,6 +78,17 @@ describe('§2e variant-ladder data integrity', () => {
     }
   });
 
+  it('EVERY creature has a species, and every species has ≥2 variants (the hover slot is never empty)', () => {
+    const bySpecies = new Map<string, number>();
+    for (const c of CREATURES) {
+      expect(c.species, `${c.id} must belong to a species`).toBeTruthy();
+      bySpecies.set(c.species!, (bySpecies.get(c.species!) ?? 0) + 1);
+    }
+    for (const [species, n] of bySpecies) {
+      expect(n, `species "${species}" needs ≥2 variants`).toBeGreaterThanOrEqual(2);
+    }
+  });
+
   it('§2e T5 bosses roll a UNIQUE procedural legend name; the def keeps a generic name', () => {
     const n = generateBossName('wolf');
     expect(n).toMatch(/^.+, the .+ .+$/); // "<personal>, the <adj> <noun>"
@@ -99,5 +115,33 @@ describe('§2e variant-ladder data integrity', () => {
       const picked = pickWeightedByTier(mixed);
       expect(picked?.tier, picked?.id).not.toBe(5);
     }
+  });
+
+  it('pickSpeciesThenTier is FAIR across species at a shared lair (fixes hippogriff dilution) + never T5', () => {
+    // A shared lair pool (predator_den) with a deep species (bear, 13) and a shallow one (owlbear, 2):
+    // species-first makes each species ~equally likely regardless of ladder depth — old pickWeightedByTier
+    // gave bear ~41% and owlbear ~6%. Sample and confirm the shallow species gets a real share.
+    const pool = CREATURES.filter((c) => c.lair === 'predator_den' && !c.nightOnly);
+    const speciesSet = new Set(pool.map((c) => c.species!));
+    const counts = new Map<string, number>();
+    for (let i = 0; i < 6000; i++) {
+      const p = pickSpeciesThenTier(pool)!;
+      expect(p.tier, p.id).not.toBe(5); // T5 never
+      counts.set(p.species!, (counts.get(p.species!) ?? 0) + 1);
+    }
+    // Every species shows up; the shallow owlbear's share is near the fair 1/|species|, not swamped.
+    const fair = 1 / speciesSet.size;
+    for (const sp of speciesSet) {
+      expect((counts.get(sp) ?? 0) / 6000, `species ${sp} fair-ish`).toBeGreaterThan(fair * 0.5);
+    }
+  });
+
+  it('hippogriffs have their OWN griffon_aerie lair (no longer diluted by bears/spiders)', () => {
+    const aerie = CREATURES.filter((c) => c.lair === 'griffon_aerie');
+    expect(aerie.map((c) => c.id).sort()).toEqual(['hippogriff', 'royal_hippogriff']);
+    // …and no hippogriff is left on predator_den.
+    expect(CREATURES.some((c) => c.species === 'hippogriff' && c.lair === 'predator_den')).toBe(
+      false
+    );
   });
 });

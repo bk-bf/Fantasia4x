@@ -413,7 +413,7 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   {
     const pos = pawn.position;
     const tileLight = pos
-      ? computeTileLightLevel(gameState.turn, gameState.buildings ?? [], pos.x, pos.y)
+      ? computeTileLightLevel(gameState.turn, gameState.buildings ?? [], pos.x, pos.y, gameState.worldMap)
       : 1;
     const el = dampenLightByNightVision(tileLight, getNightVision(pawn));
     pawn.effectiveLight =

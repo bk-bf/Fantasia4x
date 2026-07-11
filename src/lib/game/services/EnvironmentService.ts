@@ -115,13 +115,47 @@ export interface AmbientState {
   panelTint: [number, number, number];
 }
 
+// §M grove glow → gameplay light. Mirrors the thermal grove cache (groveSources): a sparse list of
+// glowing-resource point-lights, rescanned only when the worldMap REF changes (never per-tick — see
+// ENGINE-PERFORMANCE). Lets computeTileLightLevel fold grove glow into the gameplay/HUD light value, so
+// a pawn/mob beside a glowing grove reads the brighter tile (work-in-dark, night vision, nocturnal aggro)
+// — not just the renderer halo. Staleness on harvest-to-depletion matches the thermal cache exactly.
+interface GroveLight {
+  x: number;
+  y: number;
+  intensity: number;
+  radius: number;
+}
+let groveLightSources: GroveLight[] = [];
+let groveLightMapRef: WorldTile[][] | null = null;
+
+function scanGroveLight(worldMap: WorldTile[][]): GroveLight[] {
+  const out: GroveLight[] = [];
+  for (let y = 0; y < worldMap.length; y++) {
+    const row = worldMap[y];
+    for (let x = 0; x < row.length; x++) {
+      const res = row[x]?.resources;
+      if (!res) continue;
+      for (const id in res) {
+        if ((res[id] ?? 0) <= 0) continue;
+        const glow = resourceObjectService.getById(id)?.glow;
+        if (glow && glow.radius > 0)
+          out.push({ x, y, intensity: glow.intensity, radius: glow.radius });
+      }
+    }
+  }
+  return out;
+}
+
 /** Total light (ambient + point sources) at a tile centre — mirrors LightingService.sample()
- *  so UI numbers match what the player sees on the map. */
+ *  so UI numbers match what the player sees on the map. When `worldMap` is supplied, glowing groves
+ *  fold in (rescanned only on map-ref change) so the gameplay light matches the rendered aura. */
 export function computeTileLightLevel(
   turn: number,
   buildings: { type: string; status: string; lit?: boolean; x: number; y: number }[],
   x: number,
-  y: number
+  y: number,
+  worldMap?: WorldTile[][]
 ): number {
   const ambient = getAmbientLight(turn);
   let point = 0;
@@ -134,6 +168,23 @@ export function computeTileLightLevel(
     if (dist < light.radius) {
       const falloff = (1 - dist / light.radius) * (1 - dist / light.radius);
       point += light.intensity * falloff;
+    }
+  }
+  // Grove glow contributes to the gameplay light like a building lamp (cached scan, ref-invalidated).
+  if (worldMap) {
+    if (worldMap !== groveLightMapRef) {
+      groveLightMapRef = worldMap;
+      groveLightSources = scanGroveLight(worldMap);
+    }
+    for (let i = 0; i < groveLightSources.length; i++) {
+      const s = groveLightSources[i];
+      const dx = x - s.x;
+      const dy = y - s.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < s.radius) {
+        const falloff = (1 - dist / s.radius) * (1 - dist / s.radius);
+        point += s.intensity * falloff;
+      }
     }
   }
   return Math.max(0.1, ambient + point);

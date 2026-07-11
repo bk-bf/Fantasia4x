@@ -339,6 +339,27 @@ export function pickWeightedByTier(pool: CreatureDefinition[]): CreatureDefiniti
   return undefined;
 }
 
+/** SPECIES-first pick for a MIXED-species pool (a shared lair): choose a SPECIES uniformly, then the
+ *  individual within it by tier weight (`pickWeightedByTier`). This keeps every species EQUALLY likely
+ *  no matter how deep its ladder is — without it, a species with 13 variants (bear/spider) drowned out
+ *  its lair-mates with only 2 (hippogriff/owlbear/sabretooth): 41% vs ~6% of every `predator_den` seed.
+ *  A creature with no `species` is its own singleton group. Falls back to a whole-pool weighted pick if
+ *  the chosen species yields nothing (e.g. a boss-only group), so it still returns a non-boss when one
+ *  exists — and returns undefined only when the whole pool is empty/all-boss (preserves the T5-never rule). */
+export function pickSpeciesThenTier(pool: CreatureDefinition[]): CreatureDefinition | undefined {
+  if (pool.length === 0) return undefined;
+  const bySpecies = new Map<string, CreatureDefinition[]>();
+  for (const c of pool) {
+    const key = c.species ?? c.id;
+    const arr = bySpecies.get(key);
+    if (arr) arr.push(c);
+    else bySpecies.set(key, [c]);
+  }
+  const keys = [...bySpecies.keys()];
+  const key = keys[Math.floor(rng.random() * keys.length)];
+  return pickWeightedByTier(bySpecies.get(key)!) ?? pickWeightedByTier(pool);
+}
+
 /** Spawn one bound pack of `def` anchored at (lairX,lairY) with the given lairId. The first mob sits
  *  on the lair tile, the rest spread to adjacent spawnable land. Every member is leashed to the lair. */
 function spawnPackAt(
@@ -444,7 +465,7 @@ function seedLairs(state: GameState, hungerGrace = 0): Mob[] {
       if (inStartingBubble(state, x, y)) continue;
       const candidates = byLair.get(lairResId);
       if (!candidates || candidates.length === 0) continue;
-      const def = pickWeightedByTier(candidates); // §2e tier rarity (T5 never seeds a den)
+      const def = pickSpeciesThenTier(candidates); // §2e species-first + tier rarity (fair to every lair-mate; T5 never seeds a den)
       if (!def) continue;
       seeded.push(...spawnPackAt(state, def, x, y, `lair-${lairResId}-${x}-${y}`, hungerGrace));
     }
@@ -508,7 +529,7 @@ export function tickLairs(state: GameState): GameState {
     if (rng.random() >= breedChance) continue;
     const cands = byLair.get(lt.resId);
     if (!cands || cands.length === 0) continue;
-    const def = pickWeightedByTier(cands); // §2e tier rarity (T5 never breeds ambiently)
+    const def = pickSpeciesThenTier(cands); // §2e species-first + tier rarity (T5 never breeds ambiently)
     if (!def) continue;
     newMobs.push(
       ...(alive === 0
@@ -523,7 +544,7 @@ export function tickLairs(state: GameState): GameState {
     const placed = tryPlaceNewLair(state, lairTiles);
     if (placed) {
       const cands = byLair.get(placed.resId);
-      const def = cands && cands.length > 0 ? pickWeightedByTier(cands) : undefined; // §2e tier rarity
+      const def = cands && cands.length > 0 ? pickSpeciesThenTier(cands) : undefined; // §2e species-first + tier rarity
       if (def) {
         newMobs.push(
           ...spawnPackAt(

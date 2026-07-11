@@ -99,7 +99,7 @@ export const FLEE_DISTANCE = 6;
  *  threat detection. Defensive pawns ignore this (they only react to adjacent hostiles). */
 export function pawnVisionTiles(pawn: Pawn, gs: GameState): number {
   const light = pawn.position
-    ? computeTileLightLevel(gs.turn, gs.buildings ?? [], pawn.position.x, pawn.position.y)
+    ? computeTileLightLevel(gs.turn, gs.buildings ?? [], pawn.position.x, pawn.position.y, gs.worldMap)
     : 1;
   return effectiveVisionRange(pawn, light);
 }

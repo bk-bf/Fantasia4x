@@ -307,6 +307,9 @@ const FERTILITY_PCT_BY_SUBTYPE: Record<string, number> = {
   grass: 25,
   tall_grass: 50,
   deep_grass: 75,
+  // deep_forest mossy old-growth floor — rich leaf-mould, same Rich Soil tier as deep_grass (kept below
+  // terra_preta so that stays the unique 100% peak). Without this it read as barren 0% (the fertility bug).
+  mossy_ground: 75,
   terra_preta: 100
 };
 

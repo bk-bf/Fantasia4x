@@ -663,7 +663,8 @@
         environmentService.ambientTurn($gameState ?? { turn: 0 }),
         $gameState?.buildings ?? [],
         hoverTile.x,
-        hoverTile.y
+        hoverTile.y,
+        $gameState?.worldMap
       )
     : 1.0;
   // Hover entity IDs — updated imperatively using render positions so that
@@ -894,7 +895,7 @@
     const thermal = computeThermalAt(t.x, t.y, buildings, worldMap);
     const envTurn = environmentService.ambientTurn($gameState ?? { turn: 0 });
     return {
-      light: computeTileLightLevel(envTurn, buildings, t.x, t.y),
+      light: computeTileLightLevel(envTurn, buildings, t.x, t.y, worldMap),
       // Round for the readout only — a thermal aura (embertree warmth, fire) adds a fractional °C
       // that must not leak decimals into the HUD. The sim keeps the un-rounded tileTemperature.
       // Uses the ambient turn so the diurnal day/night swing matches the visible time of day.
