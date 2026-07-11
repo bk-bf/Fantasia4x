@@ -26,7 +26,7 @@
     "fg"              : "#c757ad",
     "bg"              : "#17120a",
     "glow"            : { "color": [0.85, 0.42, 1.0], "radius": 3.0, "intensity": 0.5, "flicker": true },
-    "spawn"           : { "subterrains": {"deep_grass": 0.0014, "grass": 0.0006, "dirt": 0.0003} },
+    "spawn"           : { "subterrains": {"deep_grass": 0.0007, "grass": 0.00035} },
     "nodeAmountRange" : [2, 4],
     "designationTypes": ["woodcut", "forage"],
     "interaction"     : {
@@ -69,7 +69,7 @@
     "bg"              : "#17120a",
     "glow"            : { "color": [1.0, 0.97, 0.8], "radius": 3.0, "intensity": 0.5, "flicker": true },
     "thermal"         : {"degrees": -5, "radius": 5},
-    "spawn"           : { "subterrains": {"deep_grass": 0.0016, "grass": 0.0006, "tall_grass": 0.0004} },
+    "spawn"           : { "subterrains": {"deep_grass": 0.0008, "tall_grass": 0.0004} },
     "nodeAmountRange" : [2, 4],
     "designationTypes": ["woodcut", "forage"],
     "interaction"     : {
@@ -117,7 +117,7 @@
     "fg"              : "#859ebd",
     "bg"              : "#17120a",
     "glow"            : { "color": [0.50, 0.70, 1.0], "radius": 3.0, "intensity": 0.5, "flicker": true },
-    "spawn"           : { "subterrains": {"deep_grass": 0.0014, "dirt": 0.0005} },
+    "spawn"           : { "subterrains": {"deep_grass": 0.0007, "grass": 0.00035} },
     "nodeAmountRange" : [2, 4],
     "designationTypes": ["woodcut", "forage"],
     "interaction"     : {
@@ -166,7 +166,7 @@
     "bg"              : "#17120a",
     "glow"            : { "color": [1.0, 0.55, 0.25], "radius": 3.0, "intensity": 0.5, "flicker": true },
     "thermal"         : {"degrees": 5, "radius": 5},
-    "spawn"           : { "subterrains": {"savanna": 0.005, "dirt": 0.0007} },
+    "spawn"           : { "subterrains": {"savanna": 0.0025, "dirt": 0.00035} },
     "nodeAmountRange" : [2, 4],
     "designationTypes": ["woodcut", "forage"],
     "interaction"     : {
@@ -192,6 +192,94 @@
           "skillMultiplier": 0.15,
           "regrowthTurns"  : 4200
         },
+        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
+      ],
+      "persistent"     : true,
+      "harvestDepletes": true
+    }
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // PRODUCTION-CHAIN-IIII §1c — DEEP-FOREST MAGICAL TIMBER. Rarer than the four groves above and found
+  // ONLY in the old-growth floor of a deep_forest core (keyed to the `ancient_grove` subterrain, which
+  // only the variant produces). soulwood is listed first (rarest) so it gets its independent roll before
+  // witchwood on a shared old-growth tile. Higher woodcut tier + workAmount than the common groves.
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    "id"              : "soulwood_grove",
+    "roofSupport"     : true,
+    "displayName"     : "Soulwood Tree",
+    "subterrain"      : "tree",
+    "walkable"        : false,
+    "charSpans"       : [
+      {"sheet": "plants", "id": 0                      },
+      {"sheet": "plants",          "from":  2, "to": 14},
+      {"sheet": "plants",          "from": 19, "to": 31},
+      {"sheet": "plants",          "from": 33, "to": 52},
+      {"sheet": "plants",          "from": 54, "to": 71}
+    ],
+    "fg"              : "#b58a3c",
+    "bg"              : "#17120a",
+    "glow"            : { "color": [0.95, 0.78, 0.35], "radius": 3.5, "intensity": 0.6, "flicker": true },
+    "spawn"           : { "subterrains": {"ancient_grove": 0.015} },
+    "nodeAmountRange" : [1, 2],
+    "designationTypes": ["woodcut", "forage"],
+    "interaction"     : {
+      "designationType": "woodcut",
+      "action"         : "woodcut",
+      "workCategory"   : "woodcutting",
+      "workAmount"     : 30,
+      "toolRequirement": {"workType": "woodcutting", "minTier": 3},
+      "yields"         : [
+        {
+          "itemId"         : "soulwood_heart",
+          "min"            : 1,
+          "max"            : 2,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.2,
+          "regrowthTurns"  : 12000
+        },
+        {"itemId": "branch", "min": 4, "max": 10, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
+        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
+      ],
+      "persistent"     : true,
+      "harvestDepletes": true
+    }
+  },
+  {
+    "id"              : "witchwood_grove",
+    "roofSupport"     : true,
+    "displayName"     : "Witchwood Tree",
+    "subterrain"      : "tree",
+    "walkable"        : false,
+    "charSpans"       : [
+      {"sheet": "plants", "id": 0                      },
+      {"sheet": "plants",          "from":  2, "to": 14},
+      {"sheet": "plants",          "from": 19, "to": 31},
+      {"sheet": "plants",          "from": 33, "to": 52},
+      {"sheet": "plants",          "from": 54, "to": 71}
+    ],
+    "fg"              : "#6a3d8f",
+    "bg"              : "#17120a",
+    "glow"            : { "color": [0.55, 0.32, 0.85], "radius": 3.0, "intensity": 0.5, "flicker": true },
+    "spawn"           : { "subterrains": {"ancient_grove": 0.06} },
+    "nodeAmountRange" : [2, 3],
+    "designationTypes": ["woodcut", "forage"],
+    "interaction"     : {
+      "designationType": "woodcut",
+      "action"         : "woodcut",
+      "workCategory"   : "woodcutting",
+      "workAmount"     : 24,
+      "toolRequirement": {"workType": "woodcutting", "minTier": 3},
+      "yields"         : [
+        {
+          "itemId"         : "witchwood_log",
+          "min"            : 2,
+          "max"            : 3,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.2,
+          "regrowthTurns"  : 8000
+        },
+        {"itemId": "branch", "min": 4, "max": 10, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
         {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
       ],
       "persistent"     : true,
@@ -1449,7 +1537,7 @@
     "fg"              : "#5a8c3a",
     "bg"              : "#17120a",
     "spawn"           : {
-      "subterrains": {"savanna": 0.01, "tall_grass": 0.008, "moss": 0.006, "grass": 0.006, "mud": 0.004, "dirt": 0.004}
+      "subterrains": {"deep_grass": 0.012, "savanna": 0.01, "tall_grass": 0.008, "grass": 0.006, "moss": 0.006, "mud": 0.004, "dirt": 0.004}
     },
     "nodeAmountRange" : [3, 7],
     "designationTypes": ["harvest"],
@@ -1499,7 +1587,7 @@
     "fg"              : "#db8554",
     "bg"              : "#17120a",
     "spawn"           : {
-      "subterrains": {"tree": 0.03, "deep_grass": 0.024, "moss": 0.016, "mud": 0.012, "dirt": 0.005}
+      "subterrains": {"deep_grass": 0.03, "terra_preta": 0.03}
     },
     "nodeAmountRange" : [2, 5],
     "designationTypes": ["harvest"],
@@ -1555,7 +1643,7 @@
     "detail"          : "#5a8c3a",
     "bg"              : "#17120a",
     "spawn"           : {
-      "subterrains": {"bush": 0.12, "deep_grass": 0.04, "grass": 0.03, "moss": 0.02, "scrubland": 0.015}
+      "subterrains": {"deep_grass": 0.08, "grass": 0.025, "moss": 0.02, "scrubland": 0.015}
     },
     "nodeAmountRange" : [3, 7],
     "designationTypes": ["harvest"],

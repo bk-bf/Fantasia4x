@@ -64,14 +64,22 @@ describe('dropCarcass', () => {
     else expect(out.droppedItems ?? []).toHaveLength(0);
   });
 
-  it('§2g: a T5 boss drops a DYNAMIC-name trophy carcass reading the slain beast', () => {
-    // old_fang → great_wolf_carcass (dynamicName) → the drop carries "Old Fang, the Grey King's Carcass".
-    const mob = { id: 'b1', creatureId: 'old_fang', x: 7, y: 7, intactness: 1 } as unknown as Mob;
+  it('§2g/§2e: a T5 boss drops a DYNAMIC-name trophy carcass reading its rolled legend name', () => {
+    // A boss (great_wolf → great_wolf_carcass, dynamicName) carries its per-spawn procedural `name`
+    // ("Skarn, the Old Fang") → the drop reads "<that>'s Great Wolf Carcass".
+    const mob = {
+      id: 'b1',
+      creatureId: 'great_wolf',
+      name: 'Skarn, the Old Fang',
+      x: 7,
+      y: 7,
+      intactness: 1
+    } as unknown as Mob;
     const boss = (dropCarcass(stateWithDrops([]), mob).droppedItems ?? []).find((d) =>
       d.id.startsWith('carcass-b1')
     )!;
     expect(boss.resourceId).toBe('great_wolf_carcass');
-    expect(boss.name).toContain('Old Fang');
+    expect(boss.name).toContain('Skarn, the Old Fang');
     // A STATIC carcass (wolf → wolf_carcass) carries no per-drop name override.
     const wolf = { id: 'w1', creatureId: 'wolf', x: 7, y: 7, intactness: 1 } as unknown as Mob;
     const plain = (dropCarcass(stateWithDrops([]), wolf).droppedItems ?? []).find((d) =>

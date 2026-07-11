@@ -816,7 +816,7 @@
     // Mobs: a HUNT group.
     const names = mobs
       .filter((m) => markedSet.has(m.id))
-      .map((m) => getCreatureById(m.creatureId)?.name ?? 'creature');
+      .map((m) => m.name ?? getCreatureById(m.creatureId)?.name ?? 'creature');
     return {
       name: `${n} entit${plural ? 'ies' : 'y'} selected`,
       status,

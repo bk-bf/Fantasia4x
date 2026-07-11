@@ -38,6 +38,10 @@ export interface Mob {
   /** Sequential integer shown in debug mode next to the entity name. */
   debugId?: number;
   creatureId: string;
+  /** Per-spawn display name override. Set only on T5 bosses — a procedurally rolled legend name
+   *  ("Skarn, the Old Fang", core/BossNames) so every boss is unique; ordinary mobs leave it undefined
+   *  and read the creature def's generic name. Cold snapshot field (rolled once at spawn). */
+  name?: string;
   entityClass: 'mob' | 'animal';
   /** Age in whole years, rolled at spawn (display-only flavour for the entity card — creatures don't
    *  grow). */

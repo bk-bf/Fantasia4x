@@ -14,10 +14,14 @@
   // subterrains (a subterrain that declares the variant id wins for variant tiles) and thus distinct
   // resources. It reads as the variant everywhere biome identity is shown (hover panel) + spawn-gated.
   "biomes": [
-    { "id": "forest",   "displayName": "Forest",   "densityRange": [0.52, 0.6 ], "color": "#2E7D32", "baseTemp": 9 , "baseMoisture": 50 },
+    // plains/forest boundary set to 0.493 (not 0.52) so the midland reads ~60% plains / ~40% forest by
+    // ACTUAL tile count — the fBm density field clusters near 0.5, so band WIDTH ≠ tile fraction (a 0.52
+    // split measured 70/30). swamp + mountain bands are unchanged. Deep-forest cores are carved from the
+    // forest interior afterward (variant promotion), so they come out of forest's 40%, not on top of it.
+    { "id": "forest",   "displayName": "Forest",   "densityRange": [0.493, 0.6], "color": "#2E7D32", "baseTemp": 9 , "baseMoisture": 50 },
     { "id": "deep_forest", "displayName": "Deep Forest", "parent": "forest", "color": "#1B4D1E", "baseTemp": 8, "baseMoisture": 55 },
     { "id": "swamp",    "displayName": "Swamp",    "densityRange": [0   , 0.28], "color": "#4E342E", "baseTemp": 12, "baseMoisture": 80 },
-    { "id": "plains",   "displayName": "Plains",   "densityRange": [0.28, 0.52], "color": "#8BC34A", "baseTemp": 10, "baseMoisture": 30 },
+    { "id": "plains",   "displayName": "Plains",   "densityRange": [0.28, 0.493], "color": "#8BC34A", "baseTemp": 10, "baseMoisture": 30 },
     { "id": "mountain", "displayName": "Mountain", "densityRange": [0.6 , 1   ], "color": "#757575", "baseTemp": 6 , "baseMoisture": 15 }
   ]
 }

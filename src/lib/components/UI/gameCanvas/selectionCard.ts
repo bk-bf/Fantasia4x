@@ -531,7 +531,8 @@ export function growthIndicator(dir: GrowthDirection): {
     return {
       glyph: '↓',
       color: GROW_FALL,
-      title: 'growth falling — the crop is cold, dry, snowed-on or over its heat limit and slowly dying'
+      title:
+        'growth falling — the crop is cold, dry, snowed-on or over its heat limit and slowly dying'
     };
   if (dir === 'mature')
     return { glyph: '✓', color: DRY_FAST, title: 'fully grown — ready to harvest' };
@@ -751,7 +752,8 @@ export function buildMobCard(
   // starving creature shows the crippled body combat actually uses — not the raw creatures.jsonc stat.
   const effStats = coreStats(mob);
   return {
-    name: def.name + entityDebugLabel(mob),
+    // A T5 boss shows its rolled legend name (mob.name); ordinary mobs show the def name.
+    name: (mob.name ?? def.name) + entityDebugLabel(mob),
     status: mob.state,
     selected,
     dismissable: selected,

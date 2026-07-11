@@ -1269,8 +1269,9 @@ class CombatServiceImpl implements CombatService {
   /** Display name for the Chronicle / floating text. */
   private entityName(e: Pawn | Mob): string {
     if ('entityClass' in e) {
-      const def = getCreatureById(e.creatureId);
-      return def ? `${def.name} #${e.debugId ?? e.id.slice(-4)}` : e.id;
+      // A T5 boss carries a procedural legend name (e.name); ordinary mobs read the def name.
+      const base = e.name ?? getCreatureById(e.creatureId)?.name;
+      return base ? `${base} #${e.debugId ?? e.id.slice(-4)}` : e.id;
     }
     return e.name;
   }

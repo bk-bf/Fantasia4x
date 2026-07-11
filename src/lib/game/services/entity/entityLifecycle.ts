@@ -366,7 +366,7 @@ export function dropCarcass(state: GameState, mob: Mob): GameState {
   // keeps the def name. (A per-spawn PROCEDURAL boss name is a later boss-naming feature; today this
   // reads the creature def's — already a distinctive name for an authored boss.)
   const carcassName = itemService.getItemById(carcassId)?.dynamicName
-    ? itemService.makeDynamicName(carcassId, def?.name ?? mob.creatureId)
+    ? itemService.makeDynamicName(carcassId, mob.name ?? def?.name ?? mob.creatureId)
     : undefined;
   const drop: DroppedItem = {
     id,

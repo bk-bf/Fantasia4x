@@ -74,9 +74,9 @@
         // §2b T5 BOSS (wolf line) — the reference authored boss: a lone legendary dire wolf. Range-rolled
         // like any creature, but a huge band; drops a DYNAMIC-name trophy carcass (§2g) that butchers into
         // prime pelt + magical drops (§2h). Escalation-only in play (Phase 3) — not a routine spawn.
-        "id"            : "old_fang",
+        "id"            : "great_wolf",
         "audio"            : "canine",
-        "name"          : "Old Fang, the Grey King",
+        "name"          : "Great Wolf",
         "threatLevel"   : 35,    // DPS 50.8 | effHP 210 | bruiser
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 251} ],
@@ -1721,9 +1721,9 @@
         "traits": ["feral-adrenaline"]
     },
     {
-        "id": "ursa_magna",
+        "id": "great_bear",
         "audio": "beast",
-        "name": "Ursa Magna, the Mountain's Weight",
+        "name": "Great Bear",
         "threatLevel"   : 58,    // DPS 64.3 | effHP 421 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -2074,9 +2074,9 @@
         "limbMap": "quadruped_hooved"
     },
     {
-        "id": "old_gouge",
+        "id": "great_boar",
         "audio": "boar",
-        "name": "Old Gouge, the Field-Ruiner",
+        "name": "Great Boar",
         "threatLevel"   : 32,    // DPS 37.7 | effHP 241 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2476,9 +2476,9 @@
         "traits": ["adrenaline"]
     },
     {
-        "id": "grukk",
+        "id": "goblin_warlord",
         "audio": "goblinoid",
-        "name": "Grukk the Skull-Throne",
+        "name": "Goblin Warlord",
         "threatLevel"   : 12,    // DPS 15.0 | effHP 98 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2892,9 +2892,9 @@
         "traits": ["iron-skin"]
     },
     {
-        "id": "gorthag",
+        "id": "orc_warboss",
         "audio": "goblinoid",
-        "name": "Gorthag the Iron Tide",
+        "name": "Orc Warboss",
         "threatLevel"   : 19,    // DPS 21.3 | effHP 165 | bruiser
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -3287,9 +3287,9 @@
         "armorMods": [{"target": "cephalothorax", "defense": 10}]
     },
     {
-        "id": "maakthil",
+        "id": "spider_queen",
         "audio": "insect",
-        "name": "Ma'akthil, the Deep Weaver",
+        "name": "Spider Queen",
         "threatLevel"   : 25,    // DPS 26.4 | effHP 220 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],

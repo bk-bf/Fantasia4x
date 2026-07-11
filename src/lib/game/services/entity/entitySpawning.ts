@@ -9,6 +9,7 @@ import { DEFAULT_PLAN } from '../../core/BodyParts';
 import { TRAIT_DATABASE } from '../../core/Culture';
 import { rng } from '../../core/rng';
 import { getLootPool, drawLoadout, rollCondition, validateLootItemIds } from '../../core/LootPools';
+import { generateBossName } from '../../core/BossNames';
 import { itemService } from '../ItemService';
 import type { PawnEquipment, ItemInstance } from '../../core/types';
 import { findNearbyWalkable } from './entityHelpers';
@@ -815,7 +816,10 @@ export function makeMob(
       : {}),
     // §2a/§2c spawn-rolled extras (omitted for a plain base creature).
     ...(naturalArmorOverride !== undefined ? { naturalArmorOverride } : {}),
-    ...(equipment ? { equipment } : {})
+    ...(equipment ? { equipment } : {}),
+    // §2e T5 bosses get a procedurally rolled legend name (mirrors the pawn name system) so every boss
+    // is unique — the creature def keeps a generic name ("Great Wolf") for menus / the threat table.
+    ...(def.tier === 5 ? { name: generateBossName(def.species) } : {})
   };
 }
 

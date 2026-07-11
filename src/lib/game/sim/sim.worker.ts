@@ -179,6 +179,8 @@ const MOB_COLD = new Set<string>([
   // §2c a geared humanoid's worn loadout — cold (changes only on gear wear/shatter), read by the
   // selected-entity card. Ships on change like the pawn `equipment` cold field.
   'equipment',
+  // §2e a T5 boss's rolled legend name — set once at spawn, read by the card/hover/log. Cold.
+  'name',
   // ENGINE-PERFORMANCE-II §S4: per-frame the renderer reads only x/y/id/state/isAlive/eatProgress/
   // health/maxHealth/creatureId/path off a mob; these scalars are worker-AI- or selected-card-only and
   // change rarely for a typical idle mob, so ship them ONLY on change (the selected card reads the

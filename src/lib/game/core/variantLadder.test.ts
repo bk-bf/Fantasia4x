@@ -3,7 +3,8 @@ import { CREATURES, getCreatureById } from './Creatures';
 import { getLootPool, validateLootItemIds } from './LootPools';
 import { itemService } from '../services/ItemService';
 import { isBodyPlan } from './BodyParts';
-import { TIER_SPAWN_WEIGHT, pickWeightedByTier } from '../services/entity/entitySpawning';
+import { generateBossName } from './BossNames';
+import { makeMob, TIER_SPAWN_WEIGHT, pickWeightedByTier } from '../services/entity/entitySpawning';
 
 // CREATURE-COMBAT-OVERHAUL §2e ladder-integrity guard: every creature's data references resolve, the
 // ladder metadata is coherent, and the tier spawn weights keep T5 bosses out of ambient spawning.
@@ -70,6 +71,21 @@ describe('§2e variant-ladder data integrity', () => {
       ).toHaveLength(1);
       expect(ladder.length, `${species} ladder size`).toBeGreaterThanOrEqual(12);
     }
+  });
+
+  it('§2e T5 bosses roll a UNIQUE procedural legend name; the def keeps a generic name', () => {
+    const n = generateBossName('wolf');
+    expect(n).toMatch(/^.+, the .+ .+$/); // "<personal>, the <adj> <noun>"
+    const samples = new Set(Array.from({ length: 200 }, () => generateBossName('wolf')));
+    expect(samples.size).toBeGreaterThan(20); // distinct across rolls
+
+    const bossDef = CREATURES.find((c) => c.tier === 5 && c.species === 'wolf')!;
+    expect(bossDef.name).toBe('Great Wolf'); // renamed off the old hand-authored "Old Fang…"
+    const boss = makeMob(bossDef, 0, 0, 0);
+    expect(boss.name, 'boss carries a per-spawn override').toBeTruthy();
+    expect(boss.name).not.toBe(bossDef.name);
+    const wolf = makeMob(getCreatureById('wolf')!, 0, 0, 0);
+    expect(wolf.name).toBeUndefined(); // a non-boss reads the def name
   });
 
   it('tier spawn weights: T5 bosses NEVER come from a weighted ambient pick (escalation-only)', () => {

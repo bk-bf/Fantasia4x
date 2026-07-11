@@ -23,8 +23,9 @@ import {
 } from './entityConstants';
 
 export function entityName(mob: Mob): string {
-  const def = getCreatureById(mob.creatureId);
-  return def ? `${def.name} #${mob.debugId ?? mob.id.slice(-4)}` : mob.id.slice(-6);
+  // A T5 boss carries its own procedural legend name (mob.name); ordinary mobs read the def name.
+  const base = mob.name ?? getCreatureById(mob.creatureId)?.name;
+  return base ? `${base} #${mob.debugId ?? mob.id.slice(-4)}` : mob.id.slice(-6);
 }
 
 export function edibleResourceOnTile(
@@ -115,7 +116,7 @@ export function findReachableFoodTile(
   }
   for (const c of candidates) {
     if (c.x === mob.x && c.y === mob.y) return { target: c, path: [] };
-    const path = pathTo(state, mob.x, mob.y, c.x, c.y, mob.id, "forage");
+    const path = pathTo(state, mob.x, mob.y, c.x, c.y, mob.id, 'forage');
     if (path.length) return { target: c, path };
   }
   return null;
@@ -413,7 +414,7 @@ export function fleeToSafety(mob: Mob, threats: { x: number; y: number }[], stat
     const reached = chebyshev(dest.x, dest.y, mob.x, mob.y) <= FLEE_REACHED_DIST;
     const stillSafe = minThreatDist(dest.x, dest.y) > fleeDistance / 2;
     if (!reached && stillSafe) {
-      const path = pathTo(state, mob.x, mob.y, dest.x, dest.y, mob.id, "flee");
+      const path = pathTo(state, mob.x, mob.y, dest.x, dest.y, mob.id, 'flee');
       // nextCellCostLeft preserved (MOVE-1): the new path's first step is a neighbour of this tile.
       if (path.length > 0) return { ...mob, path, pathIndex: 0 };
     }
@@ -445,13 +446,9 @@ export function fleeToSafety(mob: Mob, threats: { x: number; y: number }[], stat
       ? { x: c.tx, y: c.ty }
       : findNearbyWalkable(state, c.tx, c.ty, mob.id);
     // Skip a heading whose safe point isn't in the mob's component (unpathable) before spending an A*.
-    if (
-      !goal ||
-      (goal.x === mob.x && goal.y === mob.y) ||
-      !reachable(mob.x, mob.y, goal.x, goal.y)
-    )
+    if (!goal || (goal.x === mob.x && goal.y === mob.y) || !reachable(mob.x, mob.y, goal.x, goal.y))
       continue;
-    const path = pathTo(state, mob.x, mob.y, goal.x, goal.y, mob.id, "flee2");
+    const path = pathTo(state, mob.x, mob.y, goal.x, goal.y, mob.id, 'flee2');
     if (path.length > 0) return { ...mob, fleeDest: goal, path, pathIndex: 0 };
   }
 
@@ -524,7 +521,7 @@ export function approachForMelee(
   const repathDue = pathExhausted || (targetMoved && (turn - mob.stateSince) % 10 === 0);
   if (!repathDue) return { kind: 'hold' };
   const approachTile = bestApproachTile(state, mob, targetPos, mob.id) ?? targetPos;
-  const path = pathTo(state, mob.x, mob.y, approachTile.x, approachTile.y, mob.id, "approach");
+  const path = pathTo(state, mob.x, mob.y, approachTile.x, approachTile.y, mob.id, 'approach');
   if (!path.length) return { kind: 'unreachable' };
   return { kind: 'repath', path };
 }

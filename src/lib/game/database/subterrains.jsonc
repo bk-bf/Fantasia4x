@@ -36,7 +36,24 @@
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
     "fg"          : "#785e3d",
     "bg"          : "#17120a",
-    "biomes"      : { "forest": [-0.3, 0.18], "plains": [-0.4, 0.18] }
+    // PLAINS-ONLY now (distinctiveness): forest no longer uses the poor grass tier — its grassy band is
+    // deep_grass (Rich Soil) instead, so a forest reads as lush and a plain as open grassland.
+    "biomes"      : { "plains": [-0.4, 0.18] }
+  },
+  {
+    // PRODUCTION-CHAIN-IIII §1c — old-growth floor found ONLY in the deep_forest core (a distinct
+    // subterrain the variant carves out: listed before deep_grass so it wins in its detail band, and it
+    // declares only deep_forest so normal forest never shows it). Its exclusivity is what lets the rare
+    // magical timber (witchwood/soulwood) spawn in the deep core and nowhere else — resources key off
+    // subterrain, so a deep_forest-only subterrain gives a deep_forest-only resource.
+    "id"          : "ancient_grove",
+    "displayName" : "Old-Growth Floor",
+    "walkable"    : true,
+    "movementCost": 1.7,
+    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
+    "fg"          : "#3f5226",
+    "bg"          : "#0f1408",
+    "biomes"      : { "deep_forest": [0.55, null] }
   },
   {
     "id"          : "deep_grass",   // soil tier 3 (75%) — Rich Soil; the deep_grass_patch resource paints the green
@@ -46,7 +63,9 @@
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
     "fg"          : "#634d30",
     "bg"          : "#17120a",
-    "biomes"      : { "forest": [0.25, 0.97] }
+    // FOREST-ONLY, and extended down over the whole forest grassy band (was [0.25,0.97]) now that plain
+    // grass has left the forest — deep_grass is the defining forest soil (also inherited by deep_forest).
+    "biomes"      : { "forest": [-0.3, 0.97] }
   },
   {
     "id"          : "tall_grass",   // soil tier 2 (50%) — Loam; the tall_grass_patch resource paints the green
