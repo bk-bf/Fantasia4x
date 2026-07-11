@@ -80,12 +80,21 @@ Grow in shade/damp (swamp, forest floor, later caves). Potion reagents + **trait
 Beyond the four groves — even rarer, ancient magical timber. **Apex lairs den in these** (a boss guards
 an ancient stand). Yield high-tier magical lumber for §2h gear + roofs/beauty furniture.
 
-| id | biome | lumber | attracts |
-| -- | ----- | ------ | -------- |
-| `witchwood_grove` | deep forest | `witchwood_log` — enchant-holding wands/hafts | thornwood spiders, night things |
-| `soulwood_grove` | ancient forest, map-rare | `soulwood_heart` — the §2h famed-haft material | a T4-5 **boss** lair (bear/owlbear line) |
-| `frostheart_pine` | mountain/tundra | `frostheart_timber` — frost-tinged gear | frost beasts (winter wolves, hoarfowl) |
-| `bonewood_snag` | swamp | `bonewood` — pale, light, takes venom well | goblin/bullywug dens |
+| id | biome | lumber | attracts | status |
+| -- | ----- | ------ | -------- | ------ |
+| `witchwood_grove` | deep forest | `witchwood_log` — enchant-holding wands/hafts | thornwood spiders, night things | ✅ done (~4.7/world) |
+| `soulwood_grove` | ancient forest, map-rare | `soulwood_heart` — the §2h famed-haft material | a T4-5 **boss** lair (bear/owlbear line) | ✅ done (~1.1/world) |
+| `frostheart_pine` | mountain/tundra | `frostheart_timber` — frost-tinged gear | frost beasts (winter wolves, hoarfowl) | ⬜ pending |
+| `bonewood_snag` | swamp | `bonewood` — pale, light, takes venom well | goblin/bullywug dens | ⬜ pending |
+
+> **Implemented (2026-07-11):** the deep-forest pair (`witchwood_grove`/`soulwood_grove`) ship as
+> `woodcut` nodes gated to a new **`deep_forest`-only subterrain** `ancient_grove` (verified to appear
+> ONLY in deep-forest cores), so they spawn nowhere else — soulwood listed first (rarest) for its own
+> roll. Items `witchwood_log`/`soulwood_heart` added (`magic_wood`, tier-3 woodcut, long regrowth).
+> Prereq shipped this pass: the **biome-variant system** (`parent` field + distance-transform interior
+> promotion in `WorldGenerator`) that makes `deep_forest` a nested core of a real forest — the
+> `attracts` column (lairs) is CREATURE-COMBAT Phase 3b, still pending. `frostheart_pine` (mountain) and
+> `bonewood_snag` (swamp) don't need the variant and remain to author.
 
 ### 1d. Crystal spawns (`mining`, mineral formations)
 
@@ -146,6 +155,9 @@ thing guarding it*.
 ## Implementation Plan
 
 ### Phase A — Rare-material resources + gather
+- [~] **§1c deep-forest timber done** — `witchwood_grove`/`soulwood_grove` + `ancient_grove` subterrain
+      + `witchwood_log`/`soulwood_heart` items (2026-07-11), riding the new biome-variant system. Rest of
+      §1c (`frostheart_pine`, `bonewood_snag`) + families §1a/§1b/§1d/§1e still to author.
 - [ ] `resources.jsonc`: the ~15 attractor nodes above (spawn weights ~grove-rare↓; biome/subterrain
       keyed; `glow` on the magical ones; `yields` + `regrowthTurns`; groves `persistent`, crops/mushrooms
       regrow, crystals/treasure deplete).

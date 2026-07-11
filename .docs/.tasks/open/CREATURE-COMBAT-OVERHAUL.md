@@ -159,6 +159,14 @@ T2 1×, T3 0.3×, T4 0.1×, **T5 0** = escalation-only, wired into all four spaw
 den seeding, den breeding, new-lair growth). The kobold/gnoll bases are pool-wired (`kobold_scraps` /
 `gnoll_pack`); their full ladders + the remaining-roster archetype ladders stay future data.
 
+**T5 bosses roll PROCEDURAL legend names (2026-07-11)** — the six boss defs carry GENERIC ids/names
+(`great_wolf` "Great Wolf" … `spider_queen` "Spider Queen"); each spawn rolls a unique
+"`<personal>, the <adjective> <noun>`" name (`core/BossNames.generateBossName`, seeded, mirroring the
+pawn name-list system) onto `Mob.name` — the noun bank is species-keyed (a wolf king is a Fang/Howl, a
+spider queen a Weaver/Silk). All name readers (card/hover/combat-log/chronicle + the dynamic carcass)
+prefer `mob.name`; the def name is the menu/threat-table fallback. So "Old Fang" is now one of ~millions
+of possible rolls, not a fixed hero.
+
 **Legend.** Tier role → spawn frequency: **T1** very common · **T2** common (≈ today's base) · **T3**
 uncommon · **T4** rare · **T5** boss (escalation-only). Natural-weapon rungs use existing `items.jsonc`
 ids unless **(NEW)**. Beasts upgrade natural weapons + `naturalArmorRange`; monster humanoids reference
@@ -210,7 +218,7 @@ Natural-weapon rungs: `bite`+`claw` → `sabre-fangs` (T3+) → `rending-claws` 
 | T2 | **Grey Wolf** (the base) · **Timber Wolf** (bigger northern coat, +CON) · **Moor Runner** (lean plains-courser, +DEX) |
 | T3 | **Pack Alpha** (leads & steadies the pack; `sabre-fangs`) · **Scarred Hunter** (one-eyed, vicious; +STR) · **Dire Wolf** (oversized DnD dire; bodyScale↑) |
 | T4 | **Bloodmoon Alpha** (nocturnal terror, `rending-claws`) · **Direwolf Matriarch** (runs a full pack) · **Frost-Fang** (winter-wolf, minor `frost` resist) |
-| T5 | **Old Fang, the Grey King** — a lone legendary dire wolf, last of a broken pack; `dragon-claws`-class bite, thick hide, **famed** fang/hide drop |
+| T5 | **`great_wolf`** "Great Wolf" — a lone legendary dire wolf; rolls a procedural legend name at spawn (§2e naming, e.g. "Skarn, the Old Fang"); dynamic trophy carcass, **famed** fang/hide drop |
 
 *Extends to:* **worg** (darker, `nocturnalAggro`, goblin-allied — swap names to Worg/War-Worg/Winter
 Warg/Shadowmane), **jackal** (smaller, pack-heavy, cap at T3).
@@ -226,7 +234,7 @@ it with the hide. `naturalArmorRange` 20–28 → 45–55. Owlbear + sabretooth 
 | T2 | **Brown Bear** (the base) · **Black Bear** (forest, +DEX) · **Grizzly** (bigger, +STR/CON) |
 | T3 | **Cave Bear** (huge Pleistocene bruiser; `rending-claws`) · **Scarred Grizzly** (old, mean, +STR) · **Ridgeback** (thick-hided, +armour) |
 | T4 | **Elder Cave Bear** (apex; `dragon-claws`) · **Ironhide Bruin** (armour band top) · **Bloodclaw** (berserk, `feral-adrenaline`) |
-| T5 | **Ursa Magna, the Mountain's Weight** — a titanic cave bear that dens in a peak; famed hide/claw drop |
+| T5 | **`great_bear`** "Great Bear" — a titanic cave bear that dens in a peak; procedural legend name; famed hide/claw drop |
 
 *Extends to:* **owlbear** (add `rending-beak`, aggressive, cap the ladder one rung meaner), **sabretooth**
 (feline: `sabre-fangs` line, glass-cannon lean — high DEX/DPS, lower hide).
@@ -242,7 +250,7 @@ the same shape scales up through aurochs → mammoth as their own species' T-hig
 | T2 | **Wild Boar** (base) · **Razorback** (+DEX charge) · **Bristleback** (+CON) |
 | T3 | **Elder Tusker** (`great-tusks`, `chargesWhenWounded`) · **Irontusk** (+armour) · **Grey Sow-Mother** (leads a big sounder) |
 | T4 | **Direboar** (huge, `trample` **(NEW)**) · **Blackmane Tusker** (apex charger) · **Bog Colossus** (swamp, tanky) |
-| T5 | **Old Gouge, the Field-Ruiner** — a legendary direboar; famed tusk drop |
+| T5 | **`great_boar`** "Great Boar" — a legendary direboar; procedural legend name; famed tusk drop |
 
 *Extends to:* **aurochs**/**elk** (T-high herd bruisers — `charge`/`antler`, `trample` at the top),
 **woolly_mammoth** (its own species; base sits at T4, a **Tuskfather** boss at T5).
@@ -260,7 +268,7 @@ horrible in numbers, and their kit makes fights ANNOYING (poison, nets, hooks) r
 | T2 | **Goblin Raider** (base ✅ wired) · `goblin_warband` · — · **Goblin Cutter** · `goblin_warband` · `sure-handed` · **Goblin Netter** · `goblin_warband` (net-weighted) · `light-footed` |
 | T3 | **Goblin Bloodrager** · `goblin_warren` · `adrenaline` · **Goblin Slinker** · `goblin_warren` (`goblin_poison_bow` **(NEW)**) · `light-footed` · **Goblin Boss** · `goblin_warren` · `sure-handed` |
 | T4 | **Goblin Warchief** · `goblin_warren` · `killer-instinct` · **Hobgoblin Champion** (bigger frame, the one goblin that hits hard) · `goblin_warren` · `sure-handed` · **Goblin Firecaller** (`goblin_firepot` **(NEW)** thrown) · `goblin_warren` · `adrenaline` |
-| T5 | **Grukk the Skull-Throne** — a warlord atop a warren; best warren kit + a named signature, famed drop |
+| T5 | **`goblin_warlord`** "Goblin Warlord" — a warlord atop a warren; procedural legend name; best warren kit, famed drop |
 
 *Extends to:* **kobold_skulker** (smaller/faster: `kobold_scraps` → `kobold_trappers` — darts, slings,
 trap-spears; cap at T3–T4, `canSteal`).
@@ -277,7 +285,7 @@ colonist to be worth looting. `orc_reaver` (base ✅ wired to `orc_warband`) sit
 | T2 | **Orc Reaver** (base) · `orc_warband` · `adrenaline` · **Orc Marauder** · `orc_warband` · — · **Orc Berserker** · `orc_warband` (cleaver-weighted) · `feral-adrenaline` |
 | T3 | **Orc Veteran** · `orc_warhost` · `killer-instinct` · **Orc Ironhide** · `orc_warhost` (`orc_warplate` **(NEW)**) · `iron-skin` · **Orc Slayer** · `orc_warhost` · `whirlwind` |
 | T4 | **Orc Warlord** · `orc_warhost` · `killer-instinct`+`adrenaline` · **Orc Blackguard** · `orc_warhost` (`orc_iron_slab` shield **(NEW)**) · `sure-handed` · **Orc Chosen** · `orc_warlord` · `iron-skin` |
-| T5 | **Gorthag the Iron Tide** — leads warband raids on the colony; `orc_warlord` pool + a named signature (`wieldRequirement` ~24 — only your strongest can ever swing it), famed drop, the marquee Phase-3 escalation threat |
+| T5 | **`orc_warboss`** "Orc Warboss" — leads warband raids; procedural legend name; `orc_warlord_hoard` pool + `iron_tide_greataxe` signature (`wieldRequirement` 24 — only your strongest can swing it), famed drop, the marquee Phase-3 escalation threat |
 
 *Extends to:* **gnoll_marauder** (canine-humanoid: keeps `claw`/`bite` natural weapons ALONGSIDE
 `gnoll_pack`/`gnoll_reavers` bone-and-hide gear **(NEW)** — a gnoll fights with teeth AND a bone cleaver;
@@ -294,7 +302,7 @@ hardened `cephalothorax` `armorMods`, grow it. Web-caster identity via the exist
 | T2 | **Thornwood Spider** (base) · **Ambush Weaver** (+DEX) · **Bristle Spider** (+armour) |
 | T3 | **Broodmother** (spawns spiderlings on the field — new AI, or just a big pack) · **Venomfang Stalker** (stronger venom) · **Carapace Lurker** (armour band top) |
 | T4 | **Great Weaver** (huge, `web-shot` + strong venom) · **Dread Broodmother** · **Chitin Horror** (near-immune belly excepted) |
-| T5 | **Ma'akthil, the Deep Weaver** — a colossal spider queen in a web-choked lair; famed silk/chitin drop |
+| T5 | **`spider_queen`** "Spider Queen" — a colossal spider queen in a web-choked lair; procedural legend name; famed silk/chitin drop |
 
 #### The remaining roster (extend by archetype)
 
@@ -328,7 +336,7 @@ Everything else reuses existing `items.jsonc` ids. ✅ = authored 2026-07-11.
       (reach 2, bleed), `goblin_net` (ensnare), `goblin_scrap_vest`.
 - [x] **Higher-tier monster gear** — landed 2026-07-11: `orc_greataxe` (STR 24) + `orc_iron_slab`
       (shield) + `orc_warplate` (`orc_warhost` pool) + **`iron_tide_greataxe`** ("The Iron Tide",
-      Gorthag's named signature, STR 24, in `orc_warlord_hoard` — pool renamed from `orc_warlord` to
+      the Orc Warboss's named signature, STR 24, in `orc_warlord_hoard` — pool renamed from `orc_warlord` to
       avoid colliding with the creature id); `goblin_poison_bow` (envenoms; a REAL bow — colonist-
       shootable loot; the goblin itself swings it in melee since mobs have no ranged path) +
       `goblin_firepot` (fire, `goblin_warren` pool); `kobold_trap_spear` (reach-2 ensnare) + the
@@ -344,7 +352,7 @@ Everything else reuses existing `items.jsonc` ids. ✅ = authored 2026-07-11.
 
 **Engine + reference slice — ✅ LANDED 2026-07-11** (`pnpm check`/`threat:check`/`graph:check` green,
 + `haulForbidden.test.ts` dynamic-carcass case): the **dynamic-name boss carcass** hook
-(`dropCarcass` sets "Old Fang's Carcass" from the slain beast when the carcass item is `dynamicName`),
+(`dropCarcass` sets e.g. "Skarn, the Old Fang's Carcass" from the slain beast's ROLLED name when the carcass item is `dynamicName`),
 a **T5 boss creature** `old_fang` (wolf line, `great_wolf_carcass` dynamic trophy), the **magical drop
 items** (`alpha_ichor`/`owlbear_bile` reagents, `dire_wolf_pelt`), a **§2h magical gear** piece
 (`direwolf_warcloak`, grants Might, crafted from the pelt), the boss + owlbear **butcher recipes**
@@ -362,7 +370,7 @@ sinew}`) turns it into materials; higher butcher buildings (`dressing_stone` +25
   `wolf_pelt` — bigger `quantity`, not new item types). One carcass item per SPECIES, tier scales yield.
 - **T3–T4 (elites)** get a **distinct carcass** (`cave_bear_carcass`) yielding a **prime hide/pelt**
   variant (`cave_bear_pelt` — a better armour material) + more meat + **the first magical drop** (§2h).
-- **T5 (boss)** gets a **dynamic-name carcass** (`dynamicName: true`, like `pawn_carcass` → "Old Fang's
+- **T5 (boss)** gets a **dynamic-name carcass** (`dynamicName: true`, like `pawn_carcass` → "Skarn, the Old Fang's
   Carcass") so the trophy reads as the named beast; butchers into the boss hide + **multiple §2h magical
   drops** + a **famed**-tier material.
 
