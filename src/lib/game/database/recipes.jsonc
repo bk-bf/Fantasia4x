@@ -796,13 +796,11 @@
   // carcass for just the meat OR the hide OR the bones). The separate hide/pelt/bone butcher recipes
   // were removed — those outputs now ride the single meat recipe per carcass.
   //
-  // TODO (expansion roster — DF/DCSS/D&D creatures): the new carcasses added in items.jsonc
-  // (aurochs, woolly_mammoth, hippogriff, hoarfowl, quillback, worg, jackal, owlbear, sabretooth,
-  // mire_crocodile, marsh_viper, stirge, grimeling, giant_olm, thornwood_spider, kobold_skulker,
-  // gnoll_marauder, orc_reaver, harpy, bullywug) have NO butchery recipe yet — deliberately, to
-  // avoid a flood of new meat/hide/bone item types in this pass. They can be hunted + decay but not
-  // processed. Wire per-carcass yields (likely reusing existing meat/hide/bone items at first, then
-  // adding distinctive products like ivory, mammoth_wool, venom, chitin, feathers) when scoped.
+  // §2g (CREATURE-COMBAT-OVERHAUL, 2026-07-11): the whole roster is now butcherable — the expansion
+  // carcasses got recipes here (humanoid-kin yield bones/sinew, NO meat; the viper keeps its venom
+  // sac), elite T3-4 carcasses process at the flensing_table, and T5 boss trophies split into a
+  // mundane RENDER (butcher_spot) vs the full magical FLENSE (sanguinary_altar). The ONE deliberate
+  // exception: grimeling (an ooze leaves nothing to flense — no recipe, decay only).
   {
     "id"              : "make_wolf_meat",
     "station"         : "butcher_spot",
@@ -2804,15 +2802,189 @@
     "workAmount"      : 60,
     "toolTierRequired": 0
   },
+  // ── §2g ELITE butchery (flensing_table) — T3-4 carcasses give prime pelts + the first magical drops.
   {
-    // §2g T5 boss butchery: a legendary dire wolf yields trophy meat, prime magical pelt, and TWO
-    // magical drops (§2h) — the reward for clearing the boss. Best done at the flensing_table.
-    "id"              : "make_great_wolf",
+    "id"              : "make_dire_wolf",
+    "station"         : "flensing_table",
+    "inputs"          : {"dire_wolf_carcass": 1},
+    "outputs"         : {"wolf_meat": 10, "dire_wolf_pelt": 2, "alpha_ichor": 1, "large_bones": 10, "sinew": 8},
+    "workAmount"      : 50,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "make_cave_bear",
+    "station"         : "flensing_table",
+    "inputs"          : {"cave_bear_carcass": 1},
+    "outputs"         : {"bear_meat": 22, "cave_bear_pelt": 2, "owlbear_bile": 1, "large_bones": 18, "sinew": 16, "animal_fat": 3},
+    "workAmount"      : 80,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "make_direboar",
+    "station"         : "flensing_table",
+    "inputs"          : {"direboar_carcass": 1},
+    "outputs"         : {"boar_meat": 16, "boar_hide": 4, "great_tusk": 1, "large_bones": 14, "sinew": 10, "animal_fat": 4},
+    "workAmount"      : 60,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "make_broodmother",
+    "station"         : "flensing_table",
+    "inputs"          : {"broodmother_carcass": 1},
+    "outputs"         : {"raw_silk": 8, "venom_sac": 1, "small_bones": 3},
+    "workAmount"      : 45,
+    "toolTierRequired": 2
+  },
+  // ── §2g T5 BOSS butchery — TWO recipes per trophy: a mundane RENDER at the butcher spot (meat +
+  // bones, the rare humours ruined) vs the full FLENSE at the sanguinary_altar (prime pelt + 2-3
+  // magical drops incl. an enchant material). The altar investment is what makes a boss kill pay.
+  {
+    "id"              : "render_great_wolf",
     "station"         : "butcher_spot",
     "inputs"          : {"great_wolf_carcass": 1},
-    "outputs"         : {"wolf_meat": 14, "dire_wolf_pelt": 3, "alpha_ichor": 2, "large_bones": 12, "sinew": 10},
+    "outputs"         : {"wolf_meat": 14, "large_bones": 10},
+    "workAmount"      : 60,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "flense_great_wolf",
+    "station"         : "sanguinary_altar",
+    "inputs"          : {"great_wolf_carcass": 1},
+    "outputs"         : {"wolf_meat": 14, "dire_wolf_pelt": 3, "alpha_ichor": 2, "great_fang": 1, "large_bones": 10, "sinew": 8},
+    "workAmount"      : 80,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "render_great_bear",
+    "station"         : "butcher_spot",
+    "inputs"          : {"great_bear_carcass": 1},
+    "outputs"         : {"bear_meat": 26, "large_bones": 16},
+    "workAmount"      : 80,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "flense_great_bear",
+    "station"         : "sanguinary_altar",
+    "inputs"          : {"great_bear_carcass": 1},
+    "outputs"         : {"bear_meat": 26, "cave_bear_pelt": 3, "owlbear_bile": 2, "great_bone": 2, "great_fang": 1, "animal_fat": 5},
+    "workAmount"      : 100,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "render_great_boar",
+    "station"         : "butcher_spot",
+    "inputs"          : {"great_boar_carcass": 1},
+    "outputs"         : {"boar_meat": 20, "large_bones": 14},
     "workAmount"      : 70,
     "toolTierRequired": 1
+  },
+  {
+    "id"              : "flense_great_boar",
+    "station"         : "sanguinary_altar",
+    "inputs"          : {"great_boar_carcass": 1},
+    "outputs"         : {"boar_meat": 20, "boar_hide": 5, "great_tusk": 2, "great_bone": 2, "animal_fat": 6},
+    "workAmount"      : 90,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "render_great_weaver",
+    "station"         : "butcher_spot",
+    "inputs"          : {"great_weaver_carcass": 1},
+    "outputs"         : {"raw_silk": 6, "small_bones": 4},
+    "workAmount"      : 60,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "flense_great_weaver",
+    "station"         : "sanguinary_altar",
+    "inputs"          : {"great_weaver_carcass": 1},
+    "outputs"         : {"raw_silk": 14, "venom_sac": 3, "great_fang": 1},
+    "workAmount"      : 80,
+    "toolTierRequired": 2
+  },
+  // ── §2g "old ones wired in": the roster's remaining carcasses become butcherable. Humanoid-kin
+  // yield NO meat (bones/sinew only — the colony doesn't eat people-shaped things); the viper's venom
+  // gland survives the knife. Grimelings stay unbutcherable (an ooze leaves nothing to flense).
+  {
+    "id"              : "make_goblin_remains",
+    "station"         : "butcher_spot",
+    "inputs"          : {"goblin_carcass": 1},
+    "outputs"         : {"medium_bones": 4, "sinew": 3},
+    "workAmount"      : 15,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_kobold_remains",
+    "station"         : "butcher_spot",
+    "inputs"          : {"kobold_skulker_carcass": 1},
+    "outputs"         : {"small_bones": 4, "sinew": 2},
+    "workAmount"      : 12,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_gnoll_remains",
+    "station"         : "butcher_spot",
+    "inputs"          : {"gnoll_marauder_carcass": 1},
+    "outputs"         : {"medium_bones": 5, "sinew": 4},
+    "workAmount"      : 18,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_orc_remains",
+    "station"         : "butcher_spot",
+    "inputs"          : {"orc_reaver_carcass": 1},
+    "outputs"         : {"medium_bones": 6, "sinew": 5},
+    "workAmount"      : 20,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_harpy_remains",
+    "station"         : "butcher_spot",
+    "inputs"          : {"harpy_carcass": 1},
+    "outputs"         : {"small_bones": 5, "sinew": 3},
+    "workAmount"      : 15,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_bullywug_remains",
+    "station"         : "butcher_spot",
+    "inputs"          : {"bullywug_carcass": 1},
+    "outputs"         : {"small_bones": 4, "sinew": 3},
+    "workAmount"      : 15,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_viper_remains",
+    "station"         : "butcher_spot",
+    "inputs"          : {"marsh_viper_carcass": 1},
+    "outputs"         : {"venom_sac": 1, "small_bones": 2, "sinew": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_stirge_remains",
+    "station"         : "butcher_spot",
+    "inputs"          : {"stirge_carcass": 1},
+    "outputs"         : {"small_bones": 2, "sinew": 1},
+    "workAmount"      : 8,
+    "toolTierRequired": 0
+  },
+  // ── §2h magical-beast gear (boss materials + magical timber → condition-granting gear, §2c-gated).
+  {
+    "id"              : "make_cave_bear_plate",
+    "station"         : "anvil",
+    "inputs"          : {"cave_bear_pelt": 3, "iron_bar": 2, "sinew": 6},
+    "outputs"         : {"cave_bear_plate": 1},
+    "workAmount"      : 60,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "make_fang_reaver",
+    "station"         : "makers_bench",
+    "inputs"          : {"great_fang": 1, "heartwood_log": 1, "sinew": 4},
+    "outputs"         : {"fang_reaver": 1},
+    "workAmount"      : 50,
+    "toolTierRequired": 2
   },
   {
     // §2h magical-beast gear: a cured dire-wolf pelt worked at the weaving frame → the Direwolf Warcloak

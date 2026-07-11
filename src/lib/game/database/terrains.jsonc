@@ -4,8 +4,18 @@
   // the need-rate calc. Only WALKABLE land carries a temperature — impassable cliff/water is stripped
   // at bake time — so mountain's baseTemp describes its walkable rock/cave interior (insulated, milder
   // than the old cold-air value), not exposed peaks. baseMoisture: biome baseline wetness 0–100%.
+  //
+  // VARIANTS (`parent`): a biome may declare a parent instead of a densityRange. It is NOT placed by the
+  // elevation axis — pickBiome skips it — but promoted onto the DEEP INTERIOR of its parent's blobs by
+  // WorldGenerator's variant-promotion pass (a distance-transform inward from the biome boundary), so it
+  // always reads as a rare core nested inside a real forest/mountain, never a random scattered patch. A
+  // variant INHERITS its parent's subterrain membership (pickSubterrain falls back to the parent) and,
+  // because resources key off subterrain, its parent's resources too — while still able to carry DISTINCT
+  // subterrains (a subterrain that declares the variant id wins for variant tiles) and thus distinct
+  // resources. It reads as the variant everywhere biome identity is shown (hover panel) + spawn-gated.
   "biomes": [
     { "id": "forest",   "displayName": "Forest",   "densityRange": [0.52, 0.6 ], "color": "#2E7D32", "baseTemp": 9 , "baseMoisture": 50 },
+    { "id": "deep_forest", "displayName": "Deep Forest", "parent": "forest", "color": "#1B4D1E", "baseTemp": 8, "baseMoisture": 55 },
     { "id": "swamp",    "displayName": "Swamp",    "densityRange": [0   , 0.28], "color": "#4E342E", "baseTemp": 12, "baseMoisture": 80 },
     { "id": "plains",   "displayName": "Plains",   "densityRange": [0.28, 0.52], "color": "#8BC34A", "baseTemp": 10, "baseMoisture": 30 },
     { "id": "mountain", "displayName": "Mountain", "densityRange": [0.6 , 1   ], "color": "#757575", "baseTemp": 6 , "baseMoisture": 15 }

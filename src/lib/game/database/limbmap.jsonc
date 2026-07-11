@@ -169,7 +169,7 @@
         "frontLeftHumerus" : {"size": 45, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontLeftUpperLeg"},
         "frontLeftLowerLeg"     : {"size": 38, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "armor": 0.5},
         "frontLeftUlna" : {"size": 38, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontLeftLowerLeg"},
-        "frontLeftPaw"          : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "weapons": ["claw", "slam"], "armor": 0.4},
+        "frontLeftPaw"          : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "weapons": ["claw", "slam", "trample"], "armor": 0.4},
         "frontLeftMetacarpus"      : {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontLeftPaw"},
         "frontRightShoulder"    : {"size": 40, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "armor": 0.7},
         "frontRightScapula": {"size": 40, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontRightShoulder"},
@@ -177,7 +177,7 @@
         "frontRightHumerus": {"size": 45, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontRightUpperLeg"},
         "frontRightLowerLeg"    : {"size": 38, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "armor": 0.5},
         "frontRightUlna": {"size": 38, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontRightLowerLeg"},
-        "frontRightPaw"         : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "weapons": ["claw", "slam"], "armor": 0.4},
+        "frontRightPaw"         : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "weapons": ["claw", "slam", "trample"], "armor": 0.4},
         "frontRightMetacarpus"     : {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontRightPaw"},
         "hindLeftHaunch"        : {"size": 55, "bleedRatio": 0.05, "hitWeight": 4, "isPaired": true, "armor": 0.7},
         "hindLeftIlium"    : {"size": 55, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindLeftHaunch"},
@@ -195,7 +195,7 @@
         "hindRightTibia" : {"size": 40, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindRightLowerLeg"},
         "hindRightPaw"          : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "weapons": ["kick"], "armor": 0.4},
         "hindRightMetatarsus"      : {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindRightPaw"},
-        "tail"                  : {"size": 30, "bleedRatio": 0.03, "hitWeight": 1.5, "weapons": ["slam"], "armor": 0.5},
+        "tail"                  : {"size": 30, "bleedRatio": 0.03, "hitWeight": 1.5, "weapons": ["slam", "quill-volley"], "armor": 0.5},
         "caudalVertebrae"              : {"size": 30, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "tail"}
       },
       "limbs": {
@@ -211,9 +211,9 @@
     "quadruped_hooved": {
       "// note": "Ungulates (deer, elk, goat, aurochs, boar) — the quadruped frame with HOOVES instead of paws.",
       "parts": {
-        "frontLeftHoof"      : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "weapons": ["slam"], "armor": 0.6},
+        "frontLeftHoof"      : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "weapons": ["slam", "trample"], "armor": 0.6},
         "frontLeftDistalPhalanx"  : {"size": 20, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontLeftHoof"},
-        "frontRightHoof"     : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "weapons": ["slam"], "armor": 0.6},
+        "frontRightHoof"     : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "weapons": ["slam", "trample"], "armor": 0.6},
         "frontRightDistalPhalanx" : {"size": 20, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontRightHoof"},
         "hindLeftHoof"       : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "weapons": ["kick"], "armor": 0.6},
         "hindLeftDistalPhalanx"   : {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindLeftHoof"},
@@ -295,9 +295,9 @@
       // note": "Snake-kin (viper) — a fanged head + 3-segment body (fore/mid/hind, each flesh over its vertebrae) + tail. Venom is a real organ: the paired VENOM GLANDS behind the eyes carry the venom_bite, so destroying them takes the venomous strike with it (the fangs keep a plain bite). Snakes keep ONE functional lung (the right; the left is vestigial) and staggered kidneys (excretion → blood_filtration). No mammalian `spine` — the vertebrae ARE the skeleton.
       "parts": {
         "fangs"          : {"size": 14, "bleedRatio": 0.01, "hitWeight": 2, "weapons": ["bite"], "armor": 0.4},
-        "leftVenomGland" : {"size": 12, "bleedRatio": 0.02, "hitWeight": 0, "isPaired": true, "containedIn": "head", "weapons": ["venom_bite"]},
-        "rightVenomGland": {"size": 12, "bleedRatio": 0.02, "hitWeight": 0, "isPaired": true, "containedIn": "head", "weapons": ["venom_bite"]},
-        "foreBody"       : {"size": 70, "bleedRatio": 0.12, "hitWeight": 20, "armor": 0.8},
+        "leftVenomGland" : {"size": 12, "bleedRatio": 0.02, "hitWeight": 0, "isPaired": true, "containedIn": "head", "weapons": ["venom_bite", "greater-venom-bite"]},
+        "rightVenomGland": {"size": 12, "bleedRatio": 0.02, "hitWeight": 0, "isPaired": true, "containedIn": "head", "weapons": ["venom_bite", "greater-venom-bite"]},
+        "foreBody"       : {"size": 70, "bleedRatio": 0.12, "hitWeight": 20, "weapons": ["constrict"], "armor": 0.8},
         "foreVertebrae"  : {"size": 70, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "foreBody"},
         "midBody"        : {"size": 65, "bleedRatio": 0.1, "hitWeight": 18, "armor": 0.8},
         "midVertebrae"   : {"size": 65, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "midBody"},
@@ -327,8 +327,8 @@
         "legHindRightA"          : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "armor": 0.5},
         "legHindRightB"          : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "armor": 0.5},
         "synganglion"            : {"size": 18, "bleedRatio": 0.05, "hitWeight": 0, "isVital": true, "containedIn": "cephalothorax"},
-        "leftVenomGland"         : {"size": 12, "bleedRatio": 0.03, "hitWeight": 0, "isPaired": true, "containedIn": "cephalothorax", "weapons": ["venom_bite"]},
-        "rightVenomGland"        : {"size": 12, "bleedRatio": 0.03, "hitWeight": 0, "isPaired": true, "containedIn": "cephalothorax", "weapons": ["venom_bite"]},
+        "leftVenomGland"         : {"size": 12, "bleedRatio": 0.03, "hitWeight": 0, "isPaired": true, "containedIn": "cephalothorax", "weapons": ["venom_bite", "greater-venom-bite"]},
+        "rightVenomGland"        : {"size": 12, "bleedRatio": 0.03, "hitWeight": 0, "isPaired": true, "containedIn": "cephalothorax", "weapons": ["venom_bite", "greater-venom-bite"]},
         "suckingStomach"         : {"size": 12, "bleedRatio": 0.03, "hitWeight": 0, "containedIn": "cephalothorax"},
         // grants (TRAITS §0): each extra eye adds night vision (summed live over living eyes — lose an
         // eye, lose the sight); the forward median-left eye also carries the +1 perception the Spider

@@ -314,6 +314,26 @@ function creaturesByLair(lairIds: Set<string>): Map<string, CreatureDefinition[]
   return byLair;
 }
 
+/** §2e tier spawn rarity: relative pick weight by ladder `tier` (1 = chaff … 5 = boss). Untiered
+ *  creatures count as the T2 baseline. **T5 is 0** — a boss NEVER arrives via the ambient spawner or a
+ *  fresh den; it is Phase-3 escalation-only (until that lands, bosses exist for dev-spawn/testing). */
+export const TIER_SPAWN_WEIGHT: Record<number, number> = { 1: 1.6, 2: 1.0, 3: 0.3, 4: 0.1, 5: 0 };
+
+/** Weighted pick over a creature pool by ladder tier (seeded rng). Returns undefined when the pool is
+ *  empty or all-zero-weight (e.g. only bosses). Replaces the old uniform `pool[floor(random*len)]` in
+ *  every spawn path, so T1 chaff dominates, elites are rare, and T5 never ambient-spawns. */
+export function pickWeightedByTier(pool: CreatureDefinition[]): CreatureDefinition | undefined {
+  let total = 0;
+  for (const c of pool) total += TIER_SPAWN_WEIGHT[c.tier ?? 2] ?? 1;
+  if (total <= 0) return undefined;
+  let r = rng.random() * total;
+  for (const c of pool) {
+    r -= TIER_SPAWN_WEIGHT[c.tier ?? 2] ?? 1;
+    if (r <= 0) return c;
+  }
+  return undefined;
+}
+
 /** Spawn one bound pack of `def` anchored at (lairX,lairY) with the given lairId. The first mob sits
  *  on the lair tile, the rest spread to adjacent spawnable land. Every member is leashed to the lair. */
 function spawnPackAt(
@@ -419,7 +439,8 @@ function seedLairs(state: GameState, hungerGrace = 0): Mob[] {
       if (inStartingBubble(state, x, y)) continue;
       const candidates = byLair.get(lairResId);
       if (!candidates || candidates.length === 0) continue;
-      const def = candidates[Math.floor(rng.random() * candidates.length)];
+      const def = pickWeightedByTier(candidates); // §2e tier rarity (T5 never seeds a den)
+      if (!def) continue;
       seeded.push(...spawnPackAt(state, def, x, y, `lair-${lairResId}-${x}-${y}`, hungerGrace));
     }
   }
@@ -482,7 +503,8 @@ export function tickLairs(state: GameState): GameState {
     if (rng.random() >= breedChance) continue;
     const cands = byLair.get(lt.resId);
     if (!cands || cands.length === 0) continue;
-    const def = cands[Math.floor(rng.random() * cands.length)];
+    const def = pickWeightedByTier(cands); // §2e tier rarity (T5 never breeds ambiently)
+    if (!def) continue;
     newMobs.push(
       ...(alive === 0
         ? spawnPackAt(state, def, lt.x, lt.y, lt.lairId)
@@ -496,8 +518,8 @@ export function tickLairs(state: GameState): GameState {
     const placed = tryPlaceNewLair(state, lairTiles);
     if (placed) {
       const cands = byLair.get(placed.resId);
-      if (cands && cands.length > 0) {
-        const def = cands[Math.floor(rng.random() * cands.length)];
+      const def = cands && cands.length > 0 ? pickWeightedByTier(cands) : undefined; // §2e tier rarity
+      if (def) {
         newMobs.push(
           ...spawnPackAt(
             state,
@@ -628,7 +650,7 @@ export function pickSpawnCreature(
     (c) => !c.lair && (!c.nightOnly || isNight) && (!preyOnly || !c.predator)
   );
   if (pool.length === 0) return undefined;
-  return pool[Math.floor(rng.random() * pool.length)];
+  return pickWeightedByTier(pool); // §2e tier rarity: T1 chaff common, elites rare, T5 never
 }
 
 /** Any mountain tile within Chebyshev radius `r` of (x, y)? Used to keep mountain-edge grazers near
