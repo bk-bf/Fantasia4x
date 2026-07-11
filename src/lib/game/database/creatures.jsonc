@@ -42,7 +42,7 @@
         "id"            : "wolf",
         "audio"            : "canine",
         "name"          : "Wolf",
-        "threatLevel"   : 5,    // DPS 6.6 | effHP 47 | skirmisher
+        "threatLevel"   : 3,    // DPS 6.6 | effHP 47 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 251} ],
         "fg"            : [0.7, 0.72, 0.78],
@@ -77,7 +77,7 @@
         "id"            : "great_wolf",
         "audio"            : "canine",
         "name"          : "Great Wolf",
-        "threatLevel"   : 35,    // DPS 50.8 | effHP 210 | bruiser
+        "threatLevel"   : 19,    // DPS 50.8 | effHP 210 | bruiser
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 251} ],
         "fg"            : [0.62, 0.64, 0.72],
@@ -110,7 +110,7 @@
         "id": "bear",  // add anchor to beehives for bears, so they hang around and protect beehives from pawns
         "audio": "beast",
         "name": "Bear",
-        "threatLevel": 17,    // DPS 13.2 | effHP 226 | bruiser
+        "threatLevel": 10,    // DPS 13.2 | effHP 226 | bruiser
         "entityClass": "animal",
         "charSpans": [ {"sheet": "creatures", "id": 126} ],
         "fg": [0.55, 0.4, 0.25],
@@ -146,7 +146,7 @@
         "id"            : "goblin",
         "audio"            : "goblinoid",
         "name"          : "Goblin",
-        "threatLevel"   : 3,    // DPS 4.4 | effHP 37 | skirmisher
+        "threatLevel"   : 2,    // DPS 4.4 | effHP 37 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "cultures", "id": 49} ],
         "fg"            : [0.4, 0.65, 0.3],
@@ -179,9 +179,11 @@
     },
     {
         "id"            : "giant_rat",
+        "species": "giant_rat",
+        "tier": 2,
         "audio"            : "rustle",
         "name"          : "Giant Rat",
-        "threatLevel"   : 2,    // DPS 3.1 | effHP 20 | skirmisher
+        "threatLevel"   : 1,    // DPS 3.1 | effHP 20 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 205} ],
         "fg"            : [0.55, 0.45, 0.4],
@@ -202,9 +204,11 @@
     },
     {
         "id"              : "shadow_wraith",
+        "species": "shadow_wraith",
+        "tier": 2,
         "audio"              : "wraith",
         "name"            : "Shadow Wraith",
-        "threatLevel"     : 7,    // DPS 12.6 | effHP 50 | glass-cannon
+        "threatLevel"     : 4,    // DPS 12.6 | effHP 50 | glass-cannon
         "entityClass"     : "mob",
         "charSpans"       : [ {"sheet": "creatures", "id": 173} ],
         "fg"              : [0.45, 0.3, 0.65],
@@ -234,9 +238,11 @@
     // ── Neutral ─────────────────────────────────────────────────────────
     {
         "id"            : "deer",
+        "species": "deer",
+        "tier": 2,
         "audio"            : "grunt",
         "name"          : "Deer",
-        "threatLevel"   : 3,    // DPS 3.2 | effHP 38 | skirmisher
+        "threatLevel"   : 2,    // DPS 3.2 | effHP 38 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 66} ],
         "fg"            : [1.0, 1.0, 1.0],
@@ -259,6 +265,8 @@
     },
     {
         "id"            : "rabbit",
+        "species": "rabbit",
+        "tier": 2,
         "audio"            : "critter",
         "name"          : "Rabbit",
         "threatLevel"   : 1,    // DPS 0.9 | effHP 10 | harmless
@@ -284,7 +292,7 @@
         "id"                : "boar",
         "audio"                : "boar",
         "name"              : "Wild Boar",
-        "threatLevel"       : 6,    // DPS 6.7 | effHP 75 | skirmisher
+        "threatLevel"       : 4,    // DPS 6.7 | effHP 75 | skirmisher
         "entityClass"       : "animal",
         "charSpans"         : [ {"sheet": "creatures", "id": 248} ],
         "fg"                : [1.0, 1.0, 1.0],
@@ -313,9 +321,11 @@
     },
     {
         "id"            : "elk",
+        "species": "elk",
+        "tier": 2,
         "audio"            : "grunt",
         "name"          : "Elk",
-        "threatLevel"   : 8,    // DPS 7.9 | effHP 86 | skirmisher
+        "threatLevel"   : 4,    // DPS 7.9 | effHP 86 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 78} ],
         "fg"            : [1.0, 1.0, 1.0],
@@ -341,9 +351,11 @@
     },
     {
         "id": "mountain_goat",
+        "species": "mountain_goat",
+        "tier": 2,
         "audio": "goat",
         "name": "Mountain Goat",
-        "threatLevel": 2,    // DPS 2.0 | effHP 25 | harmless
+        "threatLevel": 1,    // DPS 2.0 | effHP 25 | harmless
         "entityClass": "animal",
         "charSpans": [ {"sheet": "creatures", "id": 74} ],
         "fg": [1.0, 1.0, 1.0],
@@ -371,6 +383,8 @@
     },
     {
         "id"            : "wild_chicken",
+        "species": "wild_chicken",
+        "tier": 2,
         "audio"            : "fowl",
         "name"          : "Wild Chicken",
         "threatLevel"   : 1,    // DPS 0.2 | effHP 5 | harmless
@@ -405,9 +419,11 @@
     // ── Grazers & game (neutral/passive prey) ────────────────────────────────────
     {
         "id"                : "aurochs",
+        "species": "aurochs",
+        "tier": 2,
         "audio"                : "beast",
         "name"              : "Aurochs",
-        "threatLevel"       : 22,    // DPS 18.1 | effHP 260 | bruiser
+        "threatLevel"       : 12,    // DPS 18.1 | effHP 260 | bruiser
         "entityClass"       : "animal",
         "charSpans"         : [ {"sheet": "creatures", "id": 156} ],
         "fg"                : [0.45, 0.32, 0.2],
@@ -434,9 +450,11 @@
     },
     {
         "id"                : "woolly_mammoth",
+        "species": "woolly_mammoth",
+        "tier": 2,
         "audio"                : "beast",
         "name"              : "Woolly Mammoth",
-        "threatLevel"       : 58,    // DPS 33.3 | effHP 814 | bruiser
+        "threatLevel"       : 33,    // DPS 33.3 | effHP 814 | bruiser
         "entityClass"       : "animal",
         "charSpans"         : [ {"sheet": "creatures", "id": 158} ],
         "fg"                : [0.4, 0.28, 0.18],
@@ -464,9 +482,11 @@
     },
     {
         "id"            : "hippogriff",
+        "species": "hippogriff",
+        "tier": 2,
         "audio"            : "raptor",
         "name"          : "Hippogriff",
-        "threatLevel"   : 9,    // DPS 10.0 | effHP 95 | skirmisher
+        "threatLevel"   : 5,    // DPS 10.0 | effHP 95 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 22} ],
         "fg"            : [0.7, 0.55, 0.3],
@@ -495,9 +515,11 @@
     },
     {
         "id"            : "hoarfowl",
+        "species": "hoarfowl",
+        "tier": 2,
         "audio"            : "fowl",
         "name"          : "Hoarfowl",
-        "threatLevel"   : 3,    // DPS 2.4 | effHP 40 | harmless
+        "threatLevel"   : 1,    // DPS 2.4 | effHP 40 | harmless
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 35} ],
         "fg"            : [0.85, 0.8, 0.7],
@@ -521,9 +543,11 @@
     },
     {
         "id"            : "quillback",
+        "species": "quillback",
+        "tier": 2,
         "audio"            : "critter",
         "name"          : "Quillback",
-        "threatLevel"   : 5,    // DPS 3.4 | effHP 96 | tank
+        "threatLevel"   : 3,    // DPS 3.4 | effHP 96 | tank
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 153} ],
         "fg"            : [0.5, 0.4, 0.3],
@@ -548,9 +572,11 @@
     // ── Predators (neutral/aggressive) ───────────────────────────────────────────
     {
         "id"            : "worg",
+        "species": "worg",
+        "tier": 2,
         "audio"            : "canine",
         "name"          : "Worg",
-        "threatLevel"   : 6,    // DPS 6.6 | effHP 68 | skirmisher
+        "threatLevel"   : 3,    // DPS 6.6 | effHP 68 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 114} ],
         "fg"            : [0.35, 0.33, 0.4],
@@ -576,9 +602,11 @@
     },
     {
         "id"            : "jackal",
+        "species": "jackal",
+        "tier": 2,
         "audio"            : "canine",
         "name"          : "Jackal",
-        "threatLevel"   : 4,    // DPS 5.3 | effHP 35 | skirmisher
+        "threatLevel"   : 2,    // DPS 5.3 | effHP 35 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 251} ],
         "fg"            : [0.6, 0.5, 0.3],
@@ -604,9 +632,11 @@
     },
     {
         "id"            : "owlbear",
+        "species": "owlbear",
+        "tier": 2,
         "audio"            : "beast",
         "name"          : "Owlbear",
-        "threatLevel"   : 20,    // DPS 18.0 | effHP 217 | bruiser
+        "threatLevel"   : 11,    // DPS 18.0 | effHP 217 | bruiser
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 168} ],
         "fg"            : [0.55, 0.42, 0.28],
@@ -635,9 +665,11 @@
     },
     {
         "id"            : "sabretooth",
+        "species": "sabretooth",
+        "tier": 2,
         "audio"            : "beast",
         "name"          : "Sabretooth Cat",
-        "threatLevel"   : 12,    // DPS 16.1 | effHP 96 | skirmisher
+        "threatLevel"   : 7,    // DPS 16.1 | effHP 96 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 130} ],
         "fg"            : [0.7, 0.6, 0.35],
@@ -663,9 +695,11 @@
     },
     {
         "id"            : "mire_crocodile",
+        "species": "mire_crocodile",
+        "tier": 2,
         "audio"            : "reptile",
         "name"          : "Mire Crocodile",
-        "threatLevel"   : 21,    // DPS 17.2 | effHP 238 | bruiser
+        "threatLevel"   : 12,    // DPS 17.2 | effHP 238 | bruiser
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 120} ],
         "fg"            : [0.3, 0.4, 0.25],
@@ -694,9 +728,11 @@
     },
     {
         "id"            : "marsh_viper",
+        "species": "marsh_viper",
+        "tier": 2,
         "audio"            : "reptile",
         "name"          : "Marsh Viper",
-        "threatLevel"   : 3,    // DPS 3.8 | effHP 25 | skirmisher
+        "threatLevel"   : 1,    // DPS 3.8 | effHP 25 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 238} ],
         "fg"            : [0.35, 0.55, 0.3],
@@ -723,6 +759,8 @@
     // ── Swamp & monstrous (low-intelligence threats) ─────────────────────────────
     {
         "id"            : "stirge",
+        "species": "stirge",
+        "tier": 2,
         "audio"            : "insect",
         "name"          : "Stirge",
         "threatLevel"   : 1,    // DPS 1.3 | effHP 15 | harmless
@@ -748,9 +786,11 @@
     },
     {
         "id"            : "grimeling",
+        "species": "grimeling",
+        "tier": 2,
         "audio"            : "goblinoid",
         "name"          : "Grimeling",
-        "threatLevel"   : 4,    // DPS 3.8 | effHP 58 | skirmisher
+        "threatLevel"   : 2,    // DPS 3.8 | effHP 58 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 231} ],
         "fg"            : [0.3, 0.35, 0.2],
@@ -773,9 +813,11 @@
     },
     {
         "id"            : "giant_olm",
+        "species": "giant_olm",
+        "tier": 2,
         "audio"            : "frog",
         "name"          : "Giant Olm",
-        "threatLevel"   : 3,    // DPS 2.8 | effHP 40 | harmless
+        "threatLevel"   : 2,    // DPS 2.8 | effHP 40 | harmless
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 196} ],
         "fg"            : [0.85, 0.75, 0.75],
@@ -798,7 +840,7 @@
         "id"            : "thornwood_spider",
         "audio"            : "insect",
         "name"          : "Thornwood Spider",
-        "threatLevel"   : 5,    // DPS 7.6 | effHP 48 | skirmisher
+        "threatLevel"   : 3,    // DPS 7.6 | effHP 48 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 190} ],
         "fg"            : [0.4, 0.25, 0.3],
@@ -829,9 +871,11 @@
     // ── Intelligent raiders (entityClass "mob" — drive aggression) ───────────────
     {
         "id"            : "kobold_skulker",
+        "species": "kobold_skulker",
+        "tier": 2,
         "audio"            : "goblinoid",
         "name"          : "Kobold Skulker",
-        "threatLevel"   : 3,    // DPS 4.2 | effHP 30 | skirmisher
+        "threatLevel"   : 2,    // DPS 4.2 | effHP 30 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "cultures", "id": 64} ],
         "fg"            : [0.6, 0.4, 0.25],
@@ -857,9 +901,11 @@
     },
     {
         "id"            : "gnoll_marauder",
+        "species": "gnoll_marauder",
+        "tier": 2,
         "audio"            : "canine",
         "name"          : "Gnoll Marauder",
-        "threatLevel"   : 7,    // DPS 9.4 | effHP 61 | skirmisher
+        "threatLevel"   : 4,    // DPS 9.4 | effHP 61 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "creatures", "id": 252} ],
         "fg"            : [0.6, 0.5, 0.35],
@@ -888,7 +934,7 @@
         "id"            : "orc_reaver",
         "audio"            : "goblinoid",
         "name"          : "Orc Reaver",
-        "threatLevel"   : 8,    // DPS 8.5 | effHP 91 | skirmisher
+        "threatLevel"   : 5,    // DPS 8.5 | effHP 91 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "cultures", "id": 32} ],
         "fg"            : [0.4, 0.55, 0.35],
@@ -921,9 +967,11 @@
     },
     {
         "id"            : "harpy",
+        "species": "harpy",
+        "tier": 2,
         "audio"            : "raptor",
         "name"          : "Harpy",
-        "threatLevel"   : 4,    // DPS 4.7 | effHP 47 | skirmisher
+        "threatLevel"   : 2,    // DPS 4.7 | effHP 47 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "creatures", "id": 235} ],
         "fg"            : [0.7, 0.5, 0.55],
@@ -948,9 +996,11 @@
     },
     {
         "id"            : "bullywug",
+        "species": "bullywug",
+        "tier": 2,
         "audio"            : "frog",
         "name"          : "Bullywug",
-        "threatLevel"   : 4,    // DPS 4.7 | effHP 49 | skirmisher
+        "threatLevel"   : 2,    // DPS 4.7 | effHP 49 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "creatures", "id": 1} ],
         "fg"            : [0.35, 0.5, 0.3],
@@ -1016,7 +1066,7 @@
         "id": "scrawny_wolf",
         "audio": "canine",
         "name": "Scrawny Wolf",
-        "threatLevel"   : 3,    // DPS 4.2 | effHP 27 | skirmisher
+        "threatLevel"   : 2,    // DPS 4.2 | effHP 27 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
         "fg": [0.7, 0.72, 0.78],
@@ -1049,7 +1099,7 @@
         "id": "grey_yearling",
         "audio": "canine",
         "name": "Grey Yearling",
-        "threatLevel"   : 4,    // DPS 5.4 | effHP 35 | skirmisher
+        "threatLevel"   : 2,    // DPS 5.4 | effHP 35 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
         "fg": [0.7, 0.72, 0.78],
@@ -1082,7 +1132,7 @@
         "id": "timber_wolf",
         "audio": "canine",
         "name": "Timber Wolf",
-        "threatLevel"   : 7,    // DPS 7.2 | effHP 72 | skirmisher
+        "threatLevel"   : 4,    // DPS 7.2 | effHP 72 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
         "fg": [0.7, 0.72, 0.78],
@@ -1115,7 +1165,7 @@
         "id": "moor_runner",
         "audio": "canine",
         "name": "Moor Runner",
-        "threatLevel"   : 5,    // DPS 8.1 | effHP 42 | glass-cannon
+        "threatLevel"   : 3,    // DPS 8.1 | effHP 42 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
         "fg": [0.7, 0.72, 0.78],
@@ -1148,7 +1198,7 @@
         "id": "pack_alpha",
         "audio": "canine",
         "name": "Pack Alpha",
-        "threatLevel"   : 13,    // DPS 21.7 | effHP 88 | glass-cannon
+        "threatLevel"   : 8,    // DPS 21.7 | effHP 88 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
         "fg": [0.7, 0.72, 0.78],
@@ -1182,7 +1232,7 @@
         "id": "scarred_hunter",
         "audio": "canine",
         "name": "Scarred Hunter",
-        "threatLevel"   : 12,    // DPS 19.9 | effHP 78 | glass-cannon
+        "threatLevel"   : 7,    // DPS 19.9 | effHP 78 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
         "fg": [0.7, 0.72, 0.78],
@@ -1215,7 +1265,7 @@
         "id": "dire_wolf",
         "audio": "canine",
         "name": "Dire Wolf",
-        "threatLevel"   : 16,    // DPS 26.1 | effHP 105 | glass-cannon
+        "threatLevel"   : 9,    // DPS 26.1 | effHP 105 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
         "fg": [0.7, 0.72, 0.78],
@@ -1249,7 +1299,7 @@
         "id": "bloodmoon_alpha",
         "audio": "canine",
         "name": "Bloodmoon Alpha",
-        "threatLevel"   : 24,    // DPS 38.6 | effHP 136 | glass-cannon
+        "threatLevel"   : 13,    // DPS 38.6 | effHP 136 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
         "fg": [0.7, 0.72, 0.78],
@@ -1283,7 +1333,7 @@
         "id": "direwolf_matriarch",
         "audio": "canine",
         "name": "Direwolf Matriarch",
-        "threatLevel"   : 25,    // DPS 37.4 | effHP 162 | bruiser
+        "threatLevel"   : 14,    // DPS 37.4 | effHP 162 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
         "fg": [0.7, 0.72, 0.78],
@@ -1316,7 +1366,7 @@
         "id": "frost_fang",
         "audio": "canine",
         "name": "Frost-Fang",
-        "threatLevel"   : 21,    // DPS 36.2 | effHP 120 | glass-cannon
+        "threatLevel"   : 12,    // DPS 36.2 | effHP 120 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
         "fg": [0.7, 0.72, 0.78],
@@ -1351,7 +1401,7 @@
         "id": "bear_cub",
         "audio": "beast",
         "name": "Bear Cub",
-        "threatLevel"   : 3,    // DPS 3.2 | effHP 32 | skirmisher
+        "threatLevel"   : 2,    // DPS 3.2 | effHP 32 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
         "fg": [0.55, 0.4, 0.25],
@@ -1384,7 +1434,7 @@
         "id": "yearling_bear",
         "audio": "beast",
         "name": "Yearling Bear",
-        "threatLevel"   : 7,    // DPS 7.6 | effHP 78 | skirmisher
+        "threatLevel"   : 4,    // DPS 7.6 | effHP 78 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
         "fg": [0.55, 0.4, 0.25],
@@ -1417,7 +1467,7 @@
         "id": "sun_bear",
         "audio": "beast",
         "name": "Sun Bear",
-        "threatLevel"   : 9,    // DPS 9.7 | effHP 91 | skirmisher
+        "threatLevel"   : 5,    // DPS 9.7 | effHP 91 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
         "fg": [0.55, 0.4, 0.25],
@@ -1451,7 +1501,7 @@
         "id": "black_bear",
         "audio": "beast",
         "name": "Black Bear",
-        "threatLevel"   : 13,    // DPS 13.9 | effHP 136 | skirmisher
+        "threatLevel"   : 8,    // DPS 13.9 | effHP 136 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
         "fg": [0.55, 0.4, 0.25],
@@ -1485,7 +1535,7 @@
         "id": "grizzly",
         "audio": "beast",
         "name": "Grizzly",
-        "threatLevel"   : 17,    // DPS 15.2 | effHP 200 | bruiser
+        "threatLevel"   : 10,    // DPS 15.2 | effHP 200 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
         "fg": [0.55, 0.4, 0.25],
@@ -1519,7 +1569,7 @@
         "id": "cave_bear",
         "audio": "beast",
         "name": "Cave Bear",
-        "threatLevel"   : 29,    // DPS 31.9 | effHP 242 | bruiser
+        "threatLevel"   : 16,    // DPS 31.9 | effHP 242 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
         "fg": [0.55, 0.4, 0.25],
@@ -1553,7 +1603,7 @@
         "id": "scarred_grizzly",
         "audio": "beast",
         "name": "Scarred Grizzly",
-        "threatLevel"   : 26,    // DPS 31.0 | effHP 210 | bruiser
+        "threatLevel"   : 15,    // DPS 31.0 | effHP 210 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
         "fg": [0.55, 0.4, 0.25],
@@ -1587,7 +1637,7 @@
         "id": "ridgeback_bear",
         "audio": "beast",
         "name": "Ridgeback",
-        "threatLevel"   : 19,    // DPS 16.0 | effHP 230 | bruiser
+        "threatLevel"   : 11,    // DPS 16.0 | effHP 230 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
         "fg": [0.55, 0.4, 0.25],
@@ -1621,7 +1671,7 @@
         "id": "elder_cave_bear",
         "audio": "beast",
         "name": "Elder Cave Bear",
-        "threatLevel"   : 43,    // DPS 50.3 | effHP 313 | bruiser
+        "threatLevel"   : 24,    // DPS 50.3 | effHP 313 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
         "fg": [0.55, 0.4, 0.25],
@@ -1655,7 +1705,7 @@
         "id": "ironhide_bruin",
         "audio": "beast",
         "name": "Ironhide Bruin",
-        "threatLevel"   : 34,    // DPS 33.1 | effHP 312 | bruiser
+        "threatLevel"   : 19,    // DPS 33.1 | effHP 312 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
         "fg": [0.55, 0.4, 0.25],
@@ -1689,7 +1739,7 @@
         "id": "bloodclaw_bear",
         "audio": "beast",
         "name": "Bloodclaw",
-        "threatLevel"   : 35,    // DPS 40.0 | effHP 265 | bruiser
+        "threatLevel"   : 19,    // DPS 40.0 | effHP 265 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
         "fg": [0.55, 0.4, 0.25],
@@ -1724,7 +1774,7 @@
         "id": "great_bear",
         "audio": "beast",
         "name": "Great Bear",
-        "threatLevel"   : 58,    // DPS 64.3 | effHP 421 | bruiser
+        "threatLevel"   : 33,    // DPS 64.3 | effHP 421 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
         "fg": [0.7, 0.55, 0.4],
@@ -1787,7 +1837,7 @@
         "id": "scrub_boar",
         "audio": "boar",
         "name": "Scrub Boar",
-        "threatLevel"   : 3,    // DPS 4.6 | effHP 35 | skirmisher
+        "threatLevel"   : 2,    // DPS 4.6 | effHP 35 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
         "fg": [1.0, 1.0, 1.0],
@@ -1816,7 +1866,7 @@
         "id": "young_tusker",
         "audio": "boar",
         "name": "Young Tusker",
-        "threatLevel"   : 4,    // DPS 5.8 | effHP 44 | skirmisher
+        "threatLevel"   : 2,    // DPS 5.8 | effHP 44 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
         "fg": [1.0, 1.0, 1.0],
@@ -1845,7 +1895,7 @@
         "id": "razorback",
         "audio": "boar",
         "name": "Razorback",
-        "threatLevel"   : 7,    // DPS 9.2 | effHP 56 | skirmisher
+        "threatLevel"   : 4,    // DPS 9.2 | effHP 56 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
         "fg": [1.0, 1.0, 1.0],
@@ -1874,7 +1924,7 @@
         "id": "bristleback",
         "audio": "boar",
         "name": "Bristleback",
-        "threatLevel"   : 7,    // DPS 7.2 | effHP 88 | skirmisher
+        "threatLevel"   : 4,    // DPS 7.2 | effHP 88 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
         "fg": [1.0, 1.0, 1.0],
@@ -1903,7 +1953,7 @@
         "id": "elder_tusker",
         "audio": "boar",
         "name": "Elder Tusker",
-        "threatLevel"   : 13,    // DPS 17.6 | effHP 101 | skirmisher
+        "threatLevel"   : 7,    // DPS 17.6 | effHP 101 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
         "fg": [1.0, 1.0, 1.0],
@@ -1932,7 +1982,7 @@
         "id": "irontusk",
         "audio": "boar",
         "name": "Irontusk",
-        "threatLevel"   : 13,    // DPS 18.1 | effHP 105 | skirmisher
+        "threatLevel"   : 8,    // DPS 18.1 | effHP 105 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
         "fg": [1.0, 1.0, 1.0],
@@ -1961,7 +2011,7 @@
         "id": "grey_sow",
         "audio": "boar",
         "name": "Grey Sow-Mother",
-        "threatLevel"   : 10,    // DPS 9.7 | effHP 113 | tank
+        "threatLevel"   : 6,    // DPS 9.7 | effHP 113 | tank
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
         "fg": [1.0, 1.0, 1.0],
@@ -1990,7 +2040,7 @@
         "id": "direboar",
         "audio": "boar",
         "name": "Direboar",
-        "threatLevel"   : 21,    // DPS 28.9 | effHP 152 | bruiser
+        "threatLevel"   : 12,    // DPS 28.9 | effHP 152 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
         "fg": [1.0, 1.0, 1.0],
@@ -2019,7 +2069,7 @@
         "id": "blackmane_tusker",
         "audio": "boar",
         "name": "Blackmane Tusker",
-        "threatLevel"   : 20,    // DPS 28.5 | effHP 135 | glass-cannon
+        "threatLevel"   : 11,    // DPS 28.5 | effHP 135 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
         "fg": [1.0, 1.0, 1.0],
@@ -2048,7 +2098,7 @@
         "id": "bog_colossus",
         "audio": "boar",
         "name": "Bog Colossus",
-        "threatLevel"   : 21,    // DPS 23.2 | effHP 190 | bruiser
+        "threatLevel"   : 12,    // DPS 23.2 | effHP 190 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
         "fg": [1.0, 1.0, 1.0],
@@ -2077,7 +2127,7 @@
         "id": "great_boar",
         "audio": "boar",
         "name": "Great Boar",
-        "threatLevel"   : 32,    // DPS 37.7 | effHP 241 | bruiser
+        "threatLevel"   : 18,    // DPS 37.7 | effHP 241 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
         "fg": [0.6, 0.5, 0.4],
@@ -2106,7 +2156,7 @@
         "id": "goblin_sneak",
         "audio": "goblinoid",
         "name": "Goblin Sneak",
-        "threatLevel"   : 3,    // DPS 4.0 | effHP 25 | skirmisher
+        "threatLevel"   : 1,    // DPS 4.0 | effHP 25 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2139,7 +2189,7 @@
         "id": "goblin_whelp",
         "audio": "goblinoid",
         "name": "Goblin Whelp",
-        "threatLevel"   : 2,    // DPS 2.8 | effHP 25 | harmless
+        "threatLevel"   : 1,    // DPS 2.8 | effHP 25 | harmless
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2172,7 +2222,7 @@
         "id": "cave_goblin",
         "audio": "goblinoid",
         "name": "Cave Goblin",
-        "threatLevel"   : 3,    // DPS 4.0 | effHP 30 | skirmisher
+        "threatLevel"   : 2,    // DPS 4.0 | effHP 30 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2206,7 +2256,7 @@
         "id": "goblin_cutter",
         "audio": "goblinoid",
         "name": "Goblin Cutter",
-        "threatLevel"   : 4,    // DPS 5.3 | effHP 35 | skirmisher
+        "threatLevel"   : 2,    // DPS 5.3 | effHP 35 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2240,7 +2290,7 @@
         "id": "goblin_netter",
         "audio": "goblinoid",
         "name": "Goblin Netter",
-        "threatLevel"   : 4,    // DPS 5.5 | effHP 35 | skirmisher
+        "threatLevel"   : 2,    // DPS 5.5 | effHP 35 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2274,7 +2324,7 @@
         "id": "goblin_bloodrager",
         "audio": "goblinoid",
         "name": "Goblin Bloodrager",
-        "threatLevel"   : 5,    // DPS 7.3 | effHP 45 | skirmisher
+        "threatLevel"   : 3,    // DPS 7.3 | effHP 45 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2308,7 +2358,7 @@
         "id": "goblin_slinker",
         "audio": "goblinoid",
         "name": "Goblin Slinker",
-        "threatLevel"   : 4,    // DPS 7.2 | effHP 35 | glass-cannon
+        "threatLevel"   : 2,    // DPS 7.2 | effHP 35 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2342,7 +2392,7 @@
         "id": "goblin_boss",
         "audio": "goblinoid",
         "name": "Goblin Boss",
-        "threatLevel"   : 6,    // DPS 7.8 | effHP 50 | skirmisher
+        "threatLevel"   : 3,    // DPS 7.8 | effHP 50 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2376,7 +2426,7 @@
         "id": "goblin_warchief",
         "audio": "goblinoid",
         "name": "Goblin Warchief",
-        "threatLevel"   : 7,    // DPS 9.5 | effHP 60 | skirmisher
+        "threatLevel"   : 4,    // DPS 9.5 | effHP 60 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2410,7 +2460,7 @@
         "id": "hobgoblin_champion",
         "audio": "goblinoid",
         "name": "Hobgoblin Champion",
-        "threatLevel"   : 10,    // DPS 12.1 | effHP 95 | skirmisher
+        "threatLevel"   : 6,    // DPS 12.1 | effHP 95 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2445,7 +2495,7 @@
         "id": "goblin_firecaller",
         "audio": "goblinoid",
         "name": "Goblin Firecaller",
-        "threatLevel"   : 5,    // DPS 8.1 | effHP 45 | glass-cannon
+        "threatLevel"   : 3,    // DPS 8.1 | effHP 45 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2479,7 +2529,7 @@
         "id": "goblin_warlord",
         "audio": "goblinoid",
         "name": "Goblin Warlord",
-        "threatLevel"   : 12,    // DPS 15.0 | effHP 98 | skirmisher
+        "threatLevel"   : 7,    // DPS 15.0 | effHP 98 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.5, 0.75, 0.35],
@@ -2514,7 +2564,7 @@
         "id": "orc_whelp",
         "audio": "goblinoid",
         "name": "Orc Whelp",
-        "threatLevel"   : 5,    // DPS 5.9 | effHP 55 | skirmisher
+        "threatLevel"   : 3,    // DPS 5.9 | effHP 55 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2548,7 +2598,7 @@
         "id": "orc_grunt",
         "audio": "goblinoid",
         "name": "Orc Grunt",
-        "threatLevel"   : 6,    // DPS 7.3 | effHP 66 | skirmisher
+        "threatLevel"   : 4,    // DPS 7.3 | effHP 66 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2582,7 +2632,7 @@
         "id": "orc_scavenger",
         "audio": "goblinoid",
         "name": "Orc Scavenger",
-        "threatLevel"   : 6,    // DPS 7.6 | effHP 58 | skirmisher
+        "threatLevel"   : 3,    // DPS 7.6 | effHP 58 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2616,7 +2666,7 @@
         "id": "orc_marauder",
         "audio": "goblinoid",
         "name": "Orc Marauder",
-        "threatLevel"   : 8,    // DPS 9.7 | effHP 84 | skirmisher
+        "threatLevel"   : 5,    // DPS 9.7 | effHP 84 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2650,7 +2700,7 @@
         "id": "orc_berserker",
         "audio": "goblinoid",
         "name": "Orc Berserker",
-        "threatLevel"   : 9,    // DPS 11.7 | effHP 78 | skirmisher
+        "threatLevel"   : 5,    // DPS 11.7 | effHP 78 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2685,7 +2735,7 @@
         "id": "orc_veteran",
         "audio": "goblinoid",
         "name": "Orc Veteran",
-        "threatLevel"   : 11,    // DPS 12.9 | effHP 104 | skirmisher
+        "threatLevel"   : 6,    // DPS 12.9 | effHP 104 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2720,7 +2770,7 @@
         "id": "orc_ironhide",
         "audio": "goblinoid",
         "name": "Orc Ironhide",
-        "threatLevel"   : 11,    // DPS 10.7 | effHP 117 | skirmisher
+        "threatLevel"   : 6,    // DPS 10.7 | effHP 117 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2755,7 +2805,7 @@
         "id": "orc_slayer",
         "audio": "goblinoid",
         "name": "Orc Slayer",
-        "threatLevel"   : 12,    // DPS 15.4 | effHP 98 | skirmisher
+        "threatLevel"   : 7,    // DPS 15.4 | effHP 98 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2790,7 +2840,7 @@
         "id": "orc_warlord",
         "audio": "goblinoid",
         "name": "Orc Warlord",
-        "threatLevel"   : 14,    // DPS 16.6 | effHP 126 | skirmisher
+        "threatLevel"   : 8,    // DPS 16.6 | effHP 126 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2825,7 +2875,7 @@
         "id": "orc_blackguard",
         "audio": "goblinoid",
         "name": "Orc Blackguard",
-        "threatLevel"   : 13,    // DPS 16.5 | effHP 115 | skirmisher
+        "threatLevel"   : 8,    // DPS 16.5 | effHP 115 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2860,7 +2910,7 @@
         "id": "orc_chosen",
         "audio": "goblinoid",
         "name": "Orc Chosen",
-        "threatLevel"   : 15,    // DPS 17.3 | effHP 133 | skirmisher
+        "threatLevel"   : 8,    // DPS 17.3 | effHP 133 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2895,7 +2945,7 @@
         "id": "orc_warboss",
         "audio": "goblinoid",
         "name": "Orc Warboss",
-        "threatLevel"   : 19,    // DPS 21.3 | effHP 165 | bruiser
+        "threatLevel"   : 11,    // DPS 21.3 | effHP 165 | bruiser
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.5, 0.6, 0.4],
@@ -2962,7 +3012,7 @@
         "id": "web_scuttler",
         "audio": "insect",
         "name": "Web-Scuttler",
-        "threatLevel"   : 2,    // DPS 4.3 | effHP 20 | skirmisher
+        "threatLevel"   : 1,    // DPS 4.3 | effHP 20 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
         "fg": [0.4, 0.25, 0.3],
@@ -2994,7 +3044,7 @@
         "id": "thorn_hatchling",
         "audio": "insect",
         "name": "Thorn Hatchling",
-        "threatLevel"   : 4,    // DPS 6.4 | effHP 27 | glass-cannon
+        "threatLevel"   : 2,    // DPS 6.4 | effHP 27 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
         "fg": [0.4, 0.25, 0.3],
@@ -3026,7 +3076,7 @@
         "id": "ambush_weaver",
         "audio": "insect",
         "name": "Ambush Weaver",
-        "threatLevel"   : 4,    // DPS 6.4 | effHP 37 | skirmisher
+        "threatLevel"   : 2,    // DPS 6.4 | effHP 37 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
         "fg": [0.4, 0.25, 0.3],
@@ -3059,7 +3109,7 @@
         "id": "bristle_spider",
         "audio": "insect",
         "name": "Bristle Spider",
-        "threatLevel"   : 6,    // DPS 8.7 | effHP 52 | skirmisher
+        "threatLevel"   : 3,    // DPS 8.7 | effHP 52 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
         "fg": [0.4, 0.25, 0.3],
@@ -3092,7 +3142,7 @@
         "id": "broodmother",
         "audio": "insect",
         "name": "Broodmother",
-        "threatLevel"   : 7,    // DPS 7.8 | effHP 84 | skirmisher
+        "threatLevel"   : 4,    // DPS 7.8 | effHP 84 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
         "fg": [0.4, 0.25, 0.3],
@@ -3125,7 +3175,7 @@
         "id": "venomfang_stalker",
         "audio": "insect",
         "name": "Venomfang Stalker",
-        "threatLevel"   : 9,    // DPS 17.7 | effHP 48 | glass-cannon
+        "threatLevel"   : 5,    // DPS 17.7 | effHP 48 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
         "fg": [0.4, 0.25, 0.3],
@@ -3158,7 +3208,7 @@
         "id": "carapace_lurker",
         "audio": "insect",
         "name": "Carapace Lurker",
-        "threatLevel"   : 8,    // DPS 9.6 | effHP 81 | skirmisher
+        "threatLevel"   : 5,    // DPS 9.6 | effHP 81 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
         "fg": [0.4, 0.25, 0.3],
@@ -3191,7 +3241,7 @@
         "id": "great_weaver",
         "audio": "insect",
         "name": "Great Weaver",
-        "threatLevel"   : 14,    // DPS 16.7 | effHP 119 | skirmisher
+        "threatLevel"   : 8,    // DPS 16.7 | effHP 119 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
         "fg": [0.4, 0.25, 0.3],
@@ -3224,7 +3274,7 @@
         "id": "dread_broodmother",
         "audio": "insect",
         "name": "Dread Broodmother",
-        "threatLevel"   : 15,    // DPS 16.4 | effHP 144 | skirmisher
+        "threatLevel"   : 9,    // DPS 16.4 | effHP 144 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
         "fg": [0.4, 0.25, 0.3],
@@ -3257,7 +3307,7 @@
         "id": "chitin_horror",
         "audio": "insect",
         "name": "Chitin Horror",
-        "threatLevel"   : 14,    // DPS 13.5 | effHP 145 | skirmisher
+        "threatLevel"   : 8,    // DPS 13.5 | effHP 145 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
         "fg": [0.4, 0.25, 0.3],
@@ -3290,7 +3340,7 @@
         "id": "spider_queen",
         "audio": "insect",
         "name": "Spider Queen",
-        "threatLevel"   : 25,    // DPS 26.4 | effHP 220 | bruiser
+        "threatLevel"   : 14,    // DPS 26.4 | effHP 220 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
         "fg": [0.55, 0.35, 0.5],
@@ -3318,5 +3368,767 @@
         "variantOf": "thornwood_spider",
         "limbMap": "arachnid",
         "armorMods": [{"target": "cephalothorax", "defense": 10}]
+    }
+    ,
+    // ═══ §2e: a second variant for every remaining creature (2026-07-11) ══════════════════
+    // Each un-laddered base got `species`/`tier:2` stamped; here is ONE sibling apiece (young T1 /
+    // elder T3) so every species has >=2 members and the hover "<Species>, <Variant>" never shows
+    // an empty variant slot. Fields copied from the base; charSpans reuse the base sprite (placeholder).
+    {
+        "id": "dire_rat",
+        "audio": "rustle",
+        "name": "Dire Rat",
+        "threatLevel"   : 3,    // DPS 7.6 | effHP 48 | skirmisher
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 205}],
+        "fg": [0.55, 0.45, 0.4],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [13, 15], "dex": [14, 17], "con": [4, 7], "per": [6, 8]},
+        "bodyScale": 1.6,
+        "nightVision": 0.85,
+        "behaviour": "passive",
+        "diet": "omnivore",
+        "eats": ["food", "meat", "organic"],
+        "grazes": false,
+        "intelligence": "primitive",
+        "nocturnalAggro": false,
+        "pack": [1, 4],
+        "biomeWeights": {"plains": 1.0, "swamp": 0.8, "forest": 0.6},
+        "carcassItemId": "giant_rat_carcass",
+        "naturalWeapons": ["bite"],
+        "species": "giant_rat",
+        "tier": 3,
+        "variantOf": "giant_rat",
+        "limbMap": "quadruped"
+    },
+    {
+        "id": "greater_wraith",
+        "audio": "wraith",
+        "name": "Greater Wraith",
+        "threatLevel"   : 8,    // DPS 24.2 | effHP 85 | glass-cannon
+        "entityClass": "mob",
+        "charSpans": [{"sheet": "creatures", "id": 173}],
+        "fg": [0.45, 0.3, 0.65],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [36, 47], "dex": [13, 18], "con": [12, 14], "per": [13, 16]},
+        "bodyScale": 1.3,
+        "nightVision": 1.0,
+        "behaviour": "aggressive",
+        "diet": "none",
+        "eats": [],
+        "grazes": false,
+        "predator": true,
+        "intelligence": "primitive",
+        "nocturnalAggro": false,
+        "nightOnly": true,
+        "spawnsInMountain": true,
+        "pack": [1, 1],
+        "tameable": false,
+        "mountable": false,
+        "biomeWeights": {"mountain": 1.0},
+        "naturalWeapons": ["spectral_strike"],
+        "resistances": {"fire": -0.35, "frost": 0.6, "lightning": 0.4},
+        "species": "shadow_wraith",
+        "tier": 3,
+        "variantOf": "shadow_wraith",
+        "limbMap": "amorphous"
+    },
+    {
+        "id": "fawn",
+        "audio": "grunt",
+        "name": "Fawn",
+        "threatLevel"   : 1,    // DPS 0.8 | effHP 11 | harmless
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 66}],
+        "fg": [1.0, 1.0, 1.0],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [4, 4], "dex": [6, 8], "con": [2, 4], "per": [8, 12]},
+        "naturalArmor": 2,
+        "bodyScale": 0.72,
+        "nightVision": 0.6,
+        "behaviour": "passive",
+        "diet": "herbivore",
+        "eats": ["food"],
+        "grazes": true,
+        "huntable": true,
+        "intelligence": "primitive",
+        "pack": [3, 8],
+        "biomeWeights": {"forest": 1.0, "plains": 1.0},
+        "carcassItemId": "deer_carcass",
+        "naturalWeapons": ["kick"],
+        "species": "deer",
+        "tier": 1,
+        "variantOf": "deer",
+        "limbMap": "quadruped_hooved"
+    },
+    {
+        "id": "rabbit_kit",
+        "audio": "critter",
+        "name": "Rabbit Kit",
+        "threatLevel"   : 1,    // DPS 0.2 | effHP 4 | harmless
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 76}],
+        "fg": [1.0, 1.0, 1.0],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [1, 1], "dex": [8, 10], "con": [1, 1], "per": [6, 8]},
+        "bodyScale": 0.7,
+        "nightVision": 0.65,
+        "behaviour": "passive",
+        "diet": "herbivore",
+        "eats": ["food"],
+        "grazes": true,
+        "huntable": true,
+        "intelligence": "primitive",
+        "pack": [1, 5],
+        "biomeWeights": {"plains": 1.0, "forest": 0.8, "mountain": 0.4},
+        "carcassItemId": "rabbit_carcass",
+        "naturalWeapons": ["bite"],
+        "species": "rabbit",
+        "tier": 1,
+        "variantOf": "rabbit",
+        "limbMap": "quadruped"
+    },
+    {
+        "id": "great_elk",
+        "audio": "grunt",
+        "name": "Great Elk",
+        "threatLevel"   : 9,    // DPS 17.0 | effHP 159 | bruiser
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 78}],
+        "fg": [1.0, 1.0, 1.0],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [19, 24], "dex": [16, 22], "con": [14, 16], "per": [23, 31]},
+        "naturalArmor": 16,
+        "bodyScale": 1.82,
+        "nightVision": 0.6,
+        "behaviour": "passive",
+        "diet": "herbivore",
+        "eats": ["food"],
+        "grazes": true,
+        "huntable": true,
+        "intelligence": "primitive",
+        "pack": [3, 8],
+        "tameable": true,
+        "tameResistance": 0.4,
+        "mountable": true,
+        "biomeWeights": {"forest": 0.8, "mountain": 0.6},
+        "carcassItemId": "elk_carcass",
+        "naturalWeapons": ["kick", "antler"],
+        "species": "elk",
+        "tier": 3,
+        "variantOf": "elk",
+        "limbMap": "quadruped_hooved"
+    },
+    {
+        "id": "goat_kid",
+        "audio": "goat",
+        "name": "Goat Kid",
+        "threatLevel"   : 1,    // DPS 0.6 | effHP 9 | harmless
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 74}],
+        "fg": [1.0, 1.0, 1.0],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [4, 6], "dex": [5, 6], "con": [2, 3], "per": [8, 10]},
+        "bodyScale": 0.6,
+        "nightVision": 0.4,
+        "behaviour": "passive",
+        "diet": "herbivore",
+        "eats": ["food"],
+        "grazes": true,
+        "huntable": true,
+        "intelligence": "primitive",
+        "maxMountainDistance": 6,
+        "pack": [3, 8],
+        "tameable": true,
+        "tameResistance": 0.8,
+        "mountable": false,
+        "produces": {"itemId": "milk", "qty": 2, "intervalSeconds": 300},
+        "biomeWeights": {"plains": 0.8, "forest": 0.8, "swamp": 0.4},
+        "carcassItemId": "mountain_goat_carcass",
+        "naturalWeapons": ["headbutt"],
+        "species": "mountain_goat",
+        "tier": 1,
+        "variantOf": "mountain_goat",
+        "limbMap": "quadruped_hooved"
+    },
+    {
+        "id": "chick",
+        "audio": "fowl",
+        "name": "Chick",
+        "threatLevel"   : 1,    // DPS 0.1 | effHP 3 | harmless
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 75}],
+        "fg": [1.0, 1.0, 1.0],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [1, 1], "dex": [4, 4], "con": [1, 1], "per": [2, 3]},
+        "bodyScale": 0.6,
+        "nightVision": 0.1,
+        "behaviour": "passive",
+        "diet": "omnivore",
+        "eats": ["food", "meat", "organic"],
+        "grazes": false,
+        "huntable": true,
+        "intelligence": "primitive",
+        "pack": [3, 8],
+        "tameable": true,
+        "tameResistance": 0.8,
+        "mountable": false,
+        "produces": {"itemId": "egg", "qty": 1, "intervalSeconds": 200},
+        "biomeWeights": {"plains": 1.0},
+        "carcassItemId": "wild_chicken_carcass",
+        "naturalWeapons": ["peck"],
+        "species": "wild_chicken",
+        "tier": 1,
+        "variantOf": "wild_chicken",
+        "limbMap": "avian"
+    },
+    {
+        "id": "elder_aurochs",
+        "audio": "beast",
+        "name": "Elder Aurochs",
+        "threatLevel"   : 23,    // DPS 30.9 | effHP 484 | bruiser
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 156}],
+        "fg": [0.45, 0.32, 0.2],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [46, 58], "dex": [6, 9], "con": [21, 26], "per": [9, 12]},
+        "naturalArmor": 46,
+        "bodyScale": 2.4,
+        "nightVision": 0.4,
+        "behaviour": "neutral",
+        "territorial": false,
+        "diet": "herbivore",
+        "grazes": true,
+        "huntable": true,
+        "intelligence": "primitive",
+        "chargesWhenWounded": true,
+        "pack": [2, 5],
+        "tameable": true,
+        "tameResistance": 0.7,
+        "produces": {"itemId": "milk", "qty": 3, "intervalSeconds": 300},
+        "biomeWeights": {"plains": 1.0, "forest": 0.5},
+        "carcassItemId": "aurochs_carcass",
+        "naturalWeapons": ["tusk", "charge"],
+        "species": "aurochs",
+        "tier": 3,
+        "variantOf": "aurochs",
+        "limbMap": "quadruped_hooved"
+    },
+    {
+        "id": "bull_mammoth",
+        "audio": "beast",
+        "name": "Bull Mammoth",
+        "threatLevel"   : 58,    // DPS 50.4 | effHP 1535 | bruiser
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 158}],
+        "fg": [0.4, 0.28, 0.18],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [61, 79], "dex": [4, 6], "con": [26, 34], "per": [8, 10]},
+        "naturalArmor": 69,
+        "bodyScale": 4.02,
+        "nightVision": 0.3,
+        "behaviour": "neutral",
+        "territorial": false,
+        "diet": "herbivore",
+        "grazes": true,
+        "huntable": true,
+        "intelligence": "primitive",
+        "chargesWhenWounded": true,
+        "pack": [2, 4],
+        "tameable": true,
+        "tameResistance": 0.85,
+        "biomeWeights": {"plains": 1.0, "forest": 0.3},
+        "carcassItemId": "woolly_mammoth_carcass",
+        "naturalWeapons": ["tusk", "slam"],
+        "resistances": {"frost": 0.5, "fire": -0.2},
+        "species": "woolly_mammoth",
+        "tier": 3,
+        "variantOf": "woolly_mammoth",
+        "limbMap": "quadruped"
+    },
+    {
+        "id": "royal_hippogriff",
+        "audio": "raptor",
+        "name": "Royal Hippogriff",
+        "threatLevel"   : 11,    // DPS 21.1 | effHP 183 | bruiser
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 22}],
+        "fg": [0.7, 0.55, 0.3],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [28, 36], "dex": [19, 24], "con": [12, 15], "per": [19, 24]},
+        "naturalArmor": 32,
+        "bodyScale": 1.88,
+        "nightVision": 0.5,
+        "behaviour": "neutral",
+        "diet": "carnivore",
+        "huntable": true,
+        "predator": true,
+        "intelligence": "primitive",
+        "pack": [1, 2],
+        "tameable": true,
+        "tameResistance": 0.8,
+        "mountable": true,
+        "biomeWeights": {"plains": 0.8, "forest": 0.8},
+        "lair": "predator_den",
+        "lairRange": 70,
+        "hungerRate": 0.5,
+        "foodOverflow": 0.3,
+        "carcassItemId": "hippogriff_carcass",
+        "naturalWeapons": ["claw", "peck", "kick"],
+        "species": "hippogriff",
+        "tier": 3,
+        "variantOf": "hippogriff",
+        "limbMap": "avian"
+    },
+    {
+        "id": "hoarfowl_chick",
+        "audio": "fowl",
+        "name": "Hoarfowl Chick",
+        "threatLevel"   : 1,    // DPS 0.7 | effHP 12 | harmless
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 35}],
+        "fg": [0.85, 0.8, 0.7],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [5, 7], "dex": [4, 6], "con": [4, 4], "per": [5, 7]},
+        "bodyScale": 0.6,
+        "nightVision": 0.2,
+        "behaviour": "passive",
+        "diet": "omnivore",
+        "huntable": true,
+        "intelligence": "primitive",
+        "pack": [3, 7],
+        "tameable": true,
+        "tameResistance": 0.7,
+        "produces": {"itemId": "egg", "qty": 1, "intervalSeconds": 220},
+        "biomeWeights": {"plains": 1.0, "swamp": 0.4},
+        "carcassItemId": "hoarfowl_carcass",
+        "naturalWeapons": ["peck", "kick"],
+        "resistances": {"frost": 0.4, "fire": -0.15},
+        "species": "hoarfowl",
+        "tier": 1,
+        "variantOf": "hoarfowl",
+        "limbMap": "avian"
+    },
+    {
+        "id": "elder_quillback",
+        "audio": "critter",
+        "name": "Elder Quillback",
+        "threatLevel"   : 7,    // DPS 6.8 | effHP 252 | tank
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 153}],
+        "fg": [0.5, 0.4, 0.3],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [14, 19], "dex": [9, 12], "con": [11, 14], "per": [12, 15]},
+        "naturalArmor": 68,
+        "armorMods": [{"target": "abdomen", "defense": -17}],
+        "bodyScale": 1.56,
+        "nightVision": 0.6,
+        "behaviour": "passive",
+        "diet": "herbivore",
+        "grazes": true,
+        "huntable": true,
+        "intelligence": "primitive",
+        "pack": [1, 3],
+        "biomeWeights": {"forest": 0.9, "swamp": 0.6},
+        "carcassItemId": "quillback_carcass",
+        "naturalWeapons": ["bite"],
+        "species": "quillback",
+        "tier": 3,
+        "variantOf": "quillback",
+        "limbMap": "quadruped"
+    },
+    {
+        "id": "alpha_worg",
+        "audio": "canine",
+        "name": "Alpha Worg",
+        "threatLevel"   : 7,    // DPS 14.4 | effHP 126 | skirmisher
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 114}],
+        "fg": [0.35, 0.33, 0.4],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [22, 28], "dex": [14, 20], "con": [13, 15], "per": [14, 20]},
+        "naturalArmor": 7,
+        "bodyScale": 1.69,
+        "nightVision": 0.95,
+        "behaviour": "neutral",
+        "diet": "carnivore",
+        "predator": true,
+        "intelligence": "primitive",
+        "nocturnalAggro": true,
+        "pack": [2, 5],
+        "biomeWeights": {"forest": 1.0, "plains": 0.8},
+        "lair": "wolf_den",
+        "lairRange": 50,
+        "hungerRate": 0.5,
+        "foodOverflow": 0.3,
+        "carcassItemId": "worg_carcass",
+        "naturalWeapons": ["bite", "claw"],
+        "species": "worg",
+        "tier": 3,
+        "variantOf": "worg",
+        "limbMap": "quadruped"
+    },
+    {
+        "id": "jackal_pup",
+        "audio": "canine",
+        "name": "Jackal Pup",
+        "threatLevel"   : 1,    // DPS 1.7 | effHP 16 | harmless
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 251}],
+        "fg": [0.6, 0.5, 0.3],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [7, 9], "dex": [7, 9], "con": [3, 4], "per": [6, 7]},
+        "naturalArmor": 3,
+        "bodyScale": 0.77,
+        "nightVision": 0.85,
+        "behaviour": "neutral",
+        "diet": "carnivore",
+        "predator": true,
+        "intelligence": "primitive",
+        "nocturnalAggro": true,
+        "pack": [3, 6],
+        "biomeWeights": {"plains": 1.0, "swamp": 0.5},
+        "lair": "wolf_den",
+        "lairRange": 60,
+        "hungerRate": 0.5,
+        "foodOverflow": 0.35,
+        "carcassItemId": "jackal_carcass",
+        "naturalWeapons": ["bite", "claw"],
+        "species": "jackal",
+        "tier": 1,
+        "variantOf": "jackal",
+        "limbMap": "quadruped"
+    },
+    {
+        "id": "elder_owlbear",
+        "audio": "beast",
+        "name": "Elder Owlbear",
+        "threatLevel"   : 22,    // DPS 33.2 | effHP 400 | bruiser
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 168}],
+        "fg": [0.55, 0.42, 0.28],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [46, 58], "dex": [12, 14], "con": [18, 23], "per": [13, 18]},
+        "naturalArmor": 39,
+        "armorMods": [{"target": "abdomen", "defense": -9}],
+        "bodyScale": 2.5,
+        "nightVision": 0.7,
+        "behaviour": "aggressive",
+        "diet": "carnivore",
+        "predator": true,
+        "intelligence": "primitive",
+        "pack": [1, 1],
+        "tameable": true,
+        "tameResistance": 0.9,
+        "biomeWeights": {"forest": 1.0},
+        "lair": "predator_den",
+        "lairRange": 28,
+        "hungerRate": 0.3,
+        "foodOverflow": 0.45,
+        "carcassItemId": "owlbear_carcass",
+        "naturalWeapons": ["claw", "bite", "slam"],
+        "species": "owlbear",
+        "tier": 3,
+        "variantOf": "owlbear",
+        "limbMap": "quadruped"
+    },
+    {
+        "id": "dire_sabretooth",
+        "audio": "beast",
+        "name": "Dire Sabretooth",
+        "threatLevel"   : 15,    // DPS 35.9 | effHP 181 | bruiser
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 130}],
+        "fg": [0.7, 0.6, 0.35],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [38, 49], "dex": [19, 24], "con": [14, 16], "per": [16, 22]},
+        "naturalArmor": 22,
+        "bodyScale": 1.95,
+        "nightVision": 0.9,
+        "behaviour": "neutral",
+        "diet": "carnivore",
+        "predator": true,
+        "intelligence": "primitive",
+        "nocturnalAggro": true,
+        "pack": [1, 2],
+        "biomeWeights": {"forest": 0.8, "swamp": 0.6},
+        "lair": "predator_den",
+        "lairRange": 30,
+        "hungerRate": 0.35,
+        "foodOverflow": 0.4,
+        "carcassItemId": "sabretooth_carcass",
+        "naturalWeapons": ["bite", "claw"],
+        "species": "sabretooth",
+        "tier": 3,
+        "variantOf": "sabretooth",
+        "limbMap": "quadruped"
+    },
+    {
+        "id": "elder_crocodile",
+        "audio": "reptile",
+        "name": "Elder Crocodile",
+        "threatLevel"   : 24,    // DPS 31.7 | effHP 483 | bruiser
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 120}],
+        "fg": [0.3, 0.4, 0.25],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [49, 65], "dex": [9, 12], "con": [18, 23], "per": [10, 13]},
+        "naturalArmor": 58,
+        "armorMods": [{"target": "abdomen", "defense": -14}],
+        "bodyScale": 2.25,
+        "nightVision": 0.6,
+        "behaviour": "neutral",
+        "diet": "carnivore",
+        "predator": true,
+        "intelligence": "primitive",
+        "pack": [1, 1],
+        "biomeWeights": {"swamp": 1.0},
+        "lair": "swamp_nest",
+        "lairRange": 24,
+        "hungerRate": 0.3,
+        "foodOverflow": 0.4,
+        "carcassItemId": "mire_crocodile_carcass",
+        "naturalWeapons": ["bite", "slam"],
+        "resistances": {"frost": -0.3, "fire": 0.15},
+        "species": "mire_crocodile",
+        "tier": 3,
+        "variantOf": "mire_crocodile",
+        "limbMap": "amphibian"
+    },
+    {
+        "id": "giant_viper",
+        "audio": "reptile",
+        "name": "Giant Viper",
+        "threatLevel"   : 4,    // DPS 9.6 | effHP 56 | skirmisher
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 238}],
+        "fg": [0.35, 0.55, 0.3],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [10, 13], "dex": [17, 23], "con": [6, 9], "per": [14, 20]},
+        "bodyScale": 1.4,
+        "nightVision": 0.7,
+        "behaviour": "neutral",
+        "diet": "carnivore",
+        "predator": true,
+        "intelligence": "primitive",
+        "nocturnalAggro": true,
+        "pack": [1, 2],
+        "biomeWeights": {"swamp": 1.0, "plains": 0.4},
+        "lair": "swamp_nest",
+        "lairRange": 30,
+        "hungerRate": 0.3,
+        "foodOverflow": 0.4,
+        "carcassItemId": "marsh_viper_carcass",
+        "naturalWeapons": ["venom_bite"],
+        "resistances": {"frost": -0.3, "fire": 0.15},
+        "species": "marsh_viper",
+        "tier": 3,
+        "variantOf": "marsh_viper",
+        "limbMap": "serpentine"
+    },
+    {
+        "id": "stirgeling",
+        "audio": "insect",
+        "name": "Stirgeling",
+        "threatLevel"   : 1,    // DPS 0.4 | effHP 6 | harmless
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 163}],
+        "fg": [0.6, 0.2, 0.25],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [3, 4], "dex": [7, 9], "con": [1, 2], "per": [5, 6]},
+        "bodyScale": 0.6,
+        "nightVision": 0.75,
+        "behaviour": "aggressive",
+        "diet": "carnivore",
+        "predator": true,
+        "intelligence": "primitive",
+        "pack": [3, 6],
+        "biomeWeights": {"swamp": 1.0, "forest": 0.4},
+        "lair": "swamp_nest",
+        "lairRange": 40,
+        "hungerRate": 0.3,
+        "foodOverflow": 0.4,
+        "carcassItemId": "stirge_carcass",
+        "naturalWeapons": ["proboscis"],
+        "species": "stirge",
+        "tier": 1,
+        "variantOf": "stirge",
+        "limbMap": "avian"
+    },
+    {
+        "id": "grime_horror",
+        "audio": "goblinoid",
+        "name": "Grime Horror",
+        "threatLevel"   : 5,    // DPS 7.4 | effHP 120 | tank
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 231}],
+        "fg": [0.3, 0.35, 0.2],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [24, 32], "dex": [6, 8], "con": [11, 14], "per": [7, 10]},
+        "naturalArmor": 22,
+        "bodyScale": 1.49,
+        "nightVision": 0.5,
+        "behaviour": "aggressive",
+        "diet": "none",
+        "predator": true,
+        "intelligence": "primitive",
+        "pack": [1, 3],
+        "biomeWeights": {"swamp": 1.0},
+        "lair": "swamp_nest",
+        "lairRange": 28,
+        "carcassItemId": "grimeling_carcass",
+        "naturalWeapons": ["claw"],
+        "species": "grimeling",
+        "tier": 3,
+        "variantOf": "grimeling",
+        "limbMap": "amorphous"
+    },
+    {
+        "id": "elder_olm",
+        "audio": "frog",
+        "name": "Elder Olm",
+        "threatLevel"   : 3,    // DPS 5.7 | effHP 72 | skirmisher
+        "entityClass": "animal",
+        "charSpans": [{"sheet": "creatures", "id": 196}],
+        "fg": [0.85, 0.75, 0.75],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [14, 19], "dex": [8, 11], "con": [9, 12], "per": [4, 7]},
+        "bodyScale": 1.3,
+        "nightVision": 0.9,
+        "behaviour": "passive",
+        "diet": "carnivore",
+        "huntable": true,
+        "intelligence": "primitive",
+        "pack": [1, 2],
+        "biomeWeights": {"swamp": 1.0},
+        "carcassItemId": "giant_olm_carcass",
+        "naturalWeapons": ["bite"],
+        "resistances": {"frost": 0.3, "fire": -0.25},
+        "species": "giant_olm",
+        "tier": 3,
+        "variantOf": "giant_olm",
+        "limbMap": "amphibian"
+    },
+    {
+        "id": "kobold_trapper",
+        "audio": "goblinoid",
+        "name": "Kobold Trapper",
+        "threatLevel"   : 3,    // DPS 7.7 | effHP 44 | skirmisher
+        "entityClass": "mob",
+        "charSpans": [{"sheet": "cultures", "id": 64}],
+        "fg": [0.6, 0.4, 0.25],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [16, 21], "dex": [13, 18], "con": [6, 9], "per": [13, 16]},
+        "bodyScale": 1.1,
+        "nightVision": 0.8,
+        "behaviour": "aggressive",
+        "diet": "omnivore",
+        "predator": true,
+        "intelligence": "primitive",
+        "canSteal": true,
+        "pack": [3, 6],
+        "biomeWeights": {"forest": 0.8, "swamp": 0.8},
+        "lair": "goblin_warren",
+        "lairRange": 60,
+        "hungerRate": 0.6,
+        "foodOverflow": 0.3,
+        "carcassItemId": "kobold_skulker_carcass",
+        "naturalWeapons": ["fists", "bite"],
+        "lootPool": "kobold_scraps",
+        "species": "kobold_skulker",
+        "tier": 3,
+        "variantOf": "kobold_skulker",
+        "limbMap": "humanoid"
+    },
+    {
+        "id": "gnoll_reaver",
+        "audio": "canine",
+        "name": "Gnoll Reaver",
+        "threatLevel"   : 7,    // DPS 17.2 | effHP 100 | skirmisher
+        "entityClass": "mob",
+        "charSpans": [{"sheet": "creatures", "id": 252}],
+        "fg": [0.6, 0.5, 0.35],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [34, 44], "dex": [13, 16], "con": [12, 14], "per": [12, 14]},
+        "naturalArmor": 16,
+        "bodyScale": 1.32,
+        "nightVision": 0.7,
+        "behaviour": "aggressive",
+        "diet": "carnivore",
+        "predator": true,
+        "intelligence": "primitive",
+        "pack": [3, 6],
+        "biomeWeights": {"plains": 1.0, "forest": 0.5},
+        "lair": "goblin_warren",
+        "lairRange": 70,
+        "hungerRate": 0.6,
+        "foodOverflow": 0.3,
+        "carcassItemId": "gnoll_marauder_carcass",
+        "naturalWeapons": ["claw", "bite"],
+        "lootPool": "gnoll_pack",
+        "species": "gnoll_marauder",
+        "tier": 3,
+        "variantOf": "gnoll_marauder",
+        "limbMap": "humanoid"
+    },
+    {
+        "id": "harpy_matron",
+        "audio": "raptor",
+        "name": "Harpy Matron",
+        "threatLevel"   : 5,    // DPS 9.9 | effHP 80 | skirmisher
+        "entityClass": "mob",
+        "charSpans": [{"sheet": "creatures", "id": 235}],
+        "fg": [0.7, 0.5, 0.55],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [22, 27], "dex": [18, 23], "con": [9, 12], "per": [15, 20]},
+        "naturalArmor": 11,
+        "bodyScale": 1.32,
+        "nightVision": 0.5,
+        "behaviour": "aggressive",
+        "diet": "carnivore",
+        "predator": true,
+        "intelligence": "primitive",
+        "pack": [2, 4],
+        "biomeWeights": {"plains": 0.8, "forest": 0.6},
+        "lair": "harpy_roost",
+        "lairRange": 85,
+        "hungerRate": 0.7,
+        "foodOverflow": 0.3,
+        "carcassItemId": "harpy_carcass",
+        "naturalWeapons": ["claw", "peck", "screech"],
+        "species": "harpy",
+        "tier": 3,
+        "variantOf": "harpy",
+        "limbMap": "winged_humanoid"
+    },
+    {
+        "id": "bullywug_brute",
+        "audio": "frog",
+        "name": "Bullywug Brute",
+        "threatLevel"   : 4,    // DPS 8.4 | effHP 81 | skirmisher
+        "entityClass": "mob",
+        "charSpans": [{"sheet": "creatures", "id": 1}],
+        "fg": [0.35, 0.5, 0.3],
+        "bg": [0.0, 0.0, 0.0],
+        "statRanges": {"str": [21, 26], "dex": [12, 14], "con": [10, 13], "per": [10, 13]},
+        "naturalArmor": 13,
+        "bodyScale": 1.2,
+        "nightVision": 0.6,
+        "behaviour": "aggressive",
+        "diet": "omnivore",
+        "predator": true,
+        "intelligence": "primitive",
+        "pack": [3, 5],
+        "biomeWeights": {"swamp": 1.0},
+        "lair": "swamp_nest",
+        "lairRange": 35,
+        "hungerRate": 0.4,
+        "foodOverflow": 0.3,
+        "carcassItemId": "bullywug_carcass",
+        "naturalWeapons": ["claw", "bite", "tongue"],
+        "species": "bullywug",
+        "tier": 3,
+        "variantOf": "bullywug",
+        "limbMap": "amphibian"
     }
 ]

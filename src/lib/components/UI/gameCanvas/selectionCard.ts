@@ -714,6 +714,19 @@ export function buildPawnCard(
   };
 }
 
+/** §2e display name for a mob: a T5 boss shows its rolled legend `name`; a laddered variant shows
+ *  "<Species>, <Variant>" (the group + the individual); an un-laddered creature (or one whose name IS
+ *  the species label, like the base wolf) shows its plain name. Species id → Title Case. */
+export function mobDisplayName(mob: Mob, def: CreatureDefinition): string {
+  if (mob.name) return mob.name; // a T5 boss's procedural legend name
+  if (!def.species) return def.name; // un-laddered — no variant slot
+  const speciesLabel = def.species
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+  return speciesLabel === def.name ? def.name : `${speciesLabel}, ${def.name}`;
+}
+
 export function buildMobCard(
   mob: Mob,
   def: CreatureDefinition,
@@ -752,8 +765,10 @@ export function buildMobCard(
   // starving creature shows the crippled body combat actually uses — not the raw creatures.jsonc stat.
   const effStats = coreStats(mob);
   return {
-    // A T5 boss shows its rolled legend name (mob.name); ordinary mobs show the def name.
-    name: (mob.name ?? def.name) + entityDebugLabel(mob),
+    // §2e name: a T5 boss shows its rolled legend name (mob.name). Every other ladder creature reads
+    // "<Species>, <Variant>" ("Boar, Razorback") so the group + the individual both show; a species
+    // whose name IS the species label (base wolf) or an un-laddered creature just shows its own name.
+    name: mobDisplayName(mob, def) + entityDebugLabel(mob),
     status: mob.state,
     selected,
     dismissable: selected,

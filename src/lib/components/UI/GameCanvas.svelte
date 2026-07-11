@@ -151,6 +151,10 @@
   export let menuPreview = false;
   /** Backdrop zoom multiplier over the cover-fit floor — a closer, more detailed title-screen shot. */
   const MENU_PREVIEW_ZOOM = 2;
+  // §2e ladder visual tier ramp (indexed by creature `tier` 1–5). Chaff render small + washed-out,
+  // elites/bosses larger + brighter, so tier reads at a glance. T2 is the neutral baseline (1× / ×1).
+  const TIER_GLYPH_SCALE: Record<number, number> = { 1: 0.5, 2: 1, 3: 1.15, 4: 1.3, 5: 1.4 };
+  const TIER_GLYPH_TINT: Record<number, number> = { 1: 0.72, 2: 1, 3: 1.1, 4: 1.2, 5: 1.35 };
   /** One-shot guard so the backdrop's first painted frame flips `menuPreviewRendered` exactly once. */
   let _previewPainted = false;
 
@@ -1598,12 +1602,24 @@
       const isSelected =
         mob.id === selectedMobId || (markedKind === 'mob' && markedSet.has(mob.id));
       const mLunge = lungeOffset(mob.id, nowMs);
+      // §2e visual tier ramp: chaff render SMALL, elites/bosses LARGER, and a per-tier brightness/warmth
+      // tint so a Wolf Pup reads apart from a Dire Wolf from an Old Fang at a glance. Un-laddered
+      // creatures (no `tier`) render at the neutral T2 baseline (scale unset = 1×, tint ×1).
+      const mTier = def.tier;
+      const mScale = mTier != null ? TIER_GLYPH_SCALE[mTier] : undefined;
+      const mTint = mTier != null ? TIER_GLYPH_TINT[mTier] : 1;
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: def.chars[0],
         foreground: isSelected
           ? { r: 1.0, g: 0.9, b: 0.1 }
-          : { r: def.fg[0], g: def.fg[1], b: def.fg[2] },
+          : {
+              r: Math.min(1, def.fg[0] * mTint),
+              // T5 gets a faint warm (gold) shift on top of the brightness bump — an apex tell.
+              g: Math.min(1, def.fg[1] * mTint),
+              b: Math.min(1, def.fg[2] * mTint * (mTier === 5 ? 0.85 : 1))
+            },
         background: { r: 0, g: 0, b: 0 },
+        ...(mScale != null && mScale !== 1 ? { scale: mScale } : {}),
         position: { x: cellX, y: cellY },
         animationOffset: {
           x: (rm.x - cellX) * BASE_TILE_PX + mLunge.x,

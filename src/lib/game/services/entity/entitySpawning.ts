@@ -226,8 +226,12 @@ export function seedInitialEntities(
   // Free-roaming pool EXCLUDES laired hostiles — those come only from their lair tiles (seedLairs).
   // So this area-scaled seeding is now pure wildlife (prey + neutral roamers). The menu-preview's
   // `preyOnly` additionally drops any free-roaming predator so the backdrop never spawns a hunt.
+  // §2e: the initial seed places ONE pack of EACH distinct creature (variety), which would otherwise
+  // put a T3-T5 ELITE/BOSS on a fresh map (a day-1 direboar/great_boar for a non-laired species). Cap
+  // the initial roster at COMMON tiers (T1-T2 + un-laddered, `tier ?? 2`); elites emerge later via the
+  // tier-weighted ambient spawner, and bosses only via Phase-3 lair escalation.
   const dayCreatures = CREATURES.filter(
-    (c) => !c.nightOnly && !c.lair && (!preyOnly || !c.predator)
+    (c) => !c.nightOnly && !c.lair && (c.tier ?? 2) < 3 && (!preyOnly || !c.predator)
   );
   if (dayCreatures.length === 0) return state;
 

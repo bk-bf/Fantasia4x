@@ -238,7 +238,14 @@
           "skillMultiplier": 0.2,
           "regrowthTurns"  : 12000
         },
-        {"itemId": "branch", "min": 4, "max": 10, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
+        {
+          "itemId"         : "branch",
+          "min"            : 4,
+          "max"            : 10,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.15,
+          "regrowthTurns"  : 4200
+        },
         {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
       ],
       "persistent"     : true,
@@ -279,7 +286,101 @@
           "skillMultiplier": 0.2,
           "regrowthTurns"  : 8000
         },
-        {"itemId": "branch", "min": 4, "max": 10, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
+        {
+          "itemId"         : "branch",
+          "min"            : 4,
+          "max"            : 10,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.15,
+          "regrowthTurns"  : 4200
+        },
+        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
+      ],
+      "persistent"     : true,
+      "harvestDepletes": true
+    }
+  },
+  {
+    // §1c frostheart_pine — mountain frost-pine (grows on the cold mountain-interior `cave` floor; no
+    // tundra biome yet, so the mountain is its home). Yields frostheart_timber for frost-tinged gear.
+    "id"              : "frostheart_pine",
+    "roofSupport"     : true,
+    "displayName"     : "Frostheart Pine",
+    "subterrain"      : "tree",
+    "walkable"        : false,
+    "charSpans"       : [ {"sheet": "plants", "id": 2}, {"sheet": "plants", "id": 3}, {"sheet": "plants", "id": 21} ],
+    "fg"              : "#bcd8e0",
+    "bg"              : "#17120a",
+    "glow"            : { "color": [0.7, 0.85, 0.95], "radius": 2.5, "intensity": 0.4, "flicker": true },
+    "thermal"         : {"degrees": -6, "radius": 5},
+    "spawn"           : { "subterrains": {"cave": 0.001} },
+    "nodeAmountRange" : [2, 3],
+    "designationTypes": ["woodcut", "forage"],
+    "interaction"     : {
+      "designationType": "woodcut",
+      "action"         : "woodcut",
+      "workCategory"   : "woodcutting",
+      "workAmount"     : 22,
+      "toolRequirement": {"workType": "woodcutting", "minTier": 3},
+      "yields"         : [
+        {
+          "itemId"         : "frostheart_timber",
+          "min"            : 2,
+          "max"            : 3,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.2,
+          "regrowthTurns"  : 8000
+        },
+        {
+          "itemId"         : "branch",
+          "min"            : 4,
+          "max"            : 10,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.15,
+          "regrowthTurns"  : 4200
+        },
+        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
+      ],
+      "persistent"     : true,
+      "harvestDepletes": true
+    }
+  },
+  {
+    // §1c bonewood_snag — a pale standing dead tree in the swamp. Light timber that "takes venom well".
+    "id"              : "bonewood_snag",
+    "roofSupport"     : true,
+    "displayName"     : "Bonewood Snag",
+    "subterrain"      : "tree",
+    "walkable"        : false,
+    "charSpans"       : [ {"sheet": "plants", "from": 164, "to": 166} ],
+    "fg"              : "#d8d0c0",
+    "bg"              : "#17120a",
+    "spawn"           : { "subterrains": {"bog": 0.004, "mud": 0.003, "moss": 0.002} },
+    "nodeAmountRange" : [2, 3],
+    "designationTypes": ["woodcut", "forage"],
+    "interaction"     : {
+      "designationType": "woodcut",
+      "action"         : "woodcut",
+      "workCategory"   : "woodcutting",
+      "workAmount"     : 18,
+      "toolRequirement": {"workType": "woodcutting", "minTier": 2},
+      "yields"         : [
+        {
+          "itemId"         : "bonewood",
+          "min"            : 2,
+          "max"            : 3,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.2,
+          "regrowthTurns"  : 7000
+        },
+        {
+          "itemId"         : "branch",
+          "min"            : 3,
+          "max"            : 8,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.15,
+          "regrowthTurns"  : 4200
+        },
         {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
       ],
       "persistent"     : true,
@@ -369,7 +470,10 @@
     "charSpans"       : [ {"sheet": "crops", "id": 197} ],
     "fg"              : "#668057",
     "bg"              : "#17120a",
-    "spawn"           : { "subterrains": {"bog": 0.0002, "mud": 0.00018, "clay": 0.00015} },
+    // Swamps are SMALL, so a grove-rare weight left most maps with zero swamp lairs — the swamp read as
+    // safe, not the contested danger zone it should be. Bumped ~13x so a modest bog reliably seeds 1-2
+    // nests (bog/mud are the swamp core; per-tile probability x the swamp's few-hundred tiles ~ 1-2).
+    "spawn"           : { "subterrains": {"bog": 0.0026, "mud": 0.0022, "clay": 0.0018} },
     "nodeAmountRange" : [1, 1],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -1430,10 +1534,10 @@
       "workAmount"     : 18,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "small_stone", "min": 5, "max": 10, "skillId": "mining", "skillMultiplier": 0.2},
-        {"itemId": "granite", "min": 0, "max": 5, "skillId": "mining", "skillMultiplier": 0.15},
-        {"itemId": "limestone", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.1},
-        {"itemId": "flint_shard", "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.1}
+        {"itemId": "small_stone", "min": 5, "max": 10, "skillId": "mining", "skillMultiplier": 0.2 },
+        {"itemId": "granite",     "min": 0, "max":  5, "skillId": "mining", "skillMultiplier": 0.15},
+        {"itemId": "limestone",   "min": 0, "max":  2, "skillId": "mining", "skillMultiplier": 0.1 },
+        {"itemId": "flint_shard", "min": 1, "max":  3, "skillId": "mining", "skillMultiplier": 0.1 }
       ]
     }
   },
@@ -1479,7 +1583,7 @@
     "displayName"     : "Fallen Logs",
     "subterrain"      : "fallen_logs",
     "walkable"        : true,
-    "charSpans"       : [ {"sheet": "plants", "id": 209} ],
+    "charSpans"       : [ {"sheet": "items", "id": 225} ],
     "renderScale"     : 0.5,
     "fg"              : "#8f5717",
     "bg"              : "#17120a",
@@ -1492,10 +1596,7 @@
       "action"         : "gather",
       "workCategory"   : "foraging",
       "workAmount"     : 3,
-      "toolRequirement": {
-        "workType": "woodcutting",
-        "minTier" : 0
-      },
+      "toolRequirement": {"workType": "woodcutting", "minTier": 0},
       "yields"         : [
         {"itemId": "branch",       "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.1 },
         {"itemId": "dry_firewood", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
@@ -1512,9 +1613,7 @@
     "fg"              : "#a161d1",
     "bg"              : "#17120a",
     "glow"            : { "color": [0.66, 0.42, 0.84], "radius": 1.8, "intensity": 0.08, "flicker": false },
-    "spawn"           : {
-      "subterrains": {"cave": 0.007}
-    },
+    "spawn"           : { "subterrains": {"cave": 0.007} },
     "nodeAmountRange" : [1, 3],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -1537,7 +1636,15 @@
     "fg"              : "#5a8c3a",
     "bg"              : "#17120a",
     "spawn"           : {
-      "subterrains": {"deep_grass": 0.012, "savanna": 0.01, "tall_grass": 0.008, "grass": 0.006, "moss": 0.006, "mud": 0.004, "dirt": 0.004}
+      "subterrains": {
+        "deep_grass": 0.012,
+        "savanna"   : 0.01 ,
+        "tall_grass": 0.008,
+        "grass"     : 0.006,
+        "moss"      : 0.006,
+        "mud"       : 0.004,
+        "dirt"      : 0.004
+      }
     },
     "nodeAmountRange" : [3, 7],
     "designationTypes": ["harvest"],
@@ -1586,9 +1693,7 @@
     "charSpans"       : [ {"sheet": "tiles", "id": 123} ],
     "fg"              : "#db8554",
     "bg"              : "#17120a",
-    "spawn"           : {
-      "subterrains": {"deep_grass": 0.03, "terra_preta": 0.03}
-    },
+    "spawn"           : { "subterrains": {"deep_grass": 0.03, "terra_preta": 0.03} },
     "nodeAmountRange" : [2, 5],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -1642,9 +1747,7 @@
     "fg"              : "#b83b3b",
     "detail"          : "#5a8c3a",
     "bg"              : "#17120a",
-    "spawn"           : {
-      "subterrains": {"deep_grass": 0.08, "grass": 0.025, "moss": 0.02, "scrubland": 0.015}
-    },
+    "spawn"           : { "subterrains": {"deep_grass": 0.08, "grass": 0.025, "moss": 0.02, "scrubland": 0.015} },
     "nodeAmountRange" : [3, 7],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -2245,8 +2348,8 @@
       "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [
-        {"itemId": "granite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2},
-        {"itemId": "marble", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1},
+        {"itemId": "granite",     "min": 2, "max":  5, "skillId": "mining", "skillMultiplier": 0.2},
+        {"itemId": "marble",      "min": 0, "max":  1, "skillId": "mining", "skillMultiplier": 0.1},
         {"itemId": "flint_shard", "min": 0, "max": 10, "skillId": "mining", "skillMultiplier": 0.1}
       ]
     }
@@ -2272,14 +2375,8 @@
       "workAmount"     : 36,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [
-        {"itemId": "sandstone", "min": 3, "max": 6, "skillId": "mining", "skillMultiplier": 0.2},
-        {
-          "itemId"         : "slate",
-          "min"            : 0,
-          "max"            : 2,
-          "skillId"        : "mining",
-          "skillMultiplier": 0.15
-        }
+        {"itemId": "sandstone", "min": 3, "max": 6, "skillId": "mining", "skillMultiplier": 0.2 },
+        {"itemId": "slate",     "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.15}
       ]
     }
   },
@@ -2468,6 +2565,27 @@
     }
   },
   {
+    // Ground-cover for the quicksand subterrain — you can still scrape sand from it (every subterrain has
+    // a corresponding resource). Slow, unpleasant work, matching the tile's high movement cost.
+    "id"              : "quicksand",
+    "displayName"     : "Quicksand",
+    "subterrain"      : "quicksand",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "."} ],
+    "fg"              : "#b38540",
+    "bg"              : "#17120a",
+    "spawn"           : { "subterrains": {"quicksand": 0.9} },
+    "nodeAmountRange" : [2, 4],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "gather",
+      "workCategory"   : "foraging",
+      "workAmount"     : 10,
+      "toolRequirement": null,
+      "yields"         : [ {"itemId": "sand", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.1} ]
+    }
+  },
+  {
     "id"              : "moss",
     "displayName"     : "Moss",
     "subterrain"      : "moss",
@@ -2502,7 +2620,7 @@
     "subterrain"      : "mossy_ground",
     "walkable"        : true,
     "grazing"         : true,
-    "charSpans"       : [ {"sheet": "tiles", "id": 43} ],
+    "charSpans"       : [ {"sheet": "tiles", "from": 72, "to": 79} ],
     "fg"              : "#3f6b1e",
     "bg"              : "#0f1408",
     "spawn"           : { "subterrains": {"mossy_ground": 0.9} },

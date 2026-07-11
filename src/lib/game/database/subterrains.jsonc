@@ -310,14 +310,5 @@
     "charSpans"   : [ {"sheet": "tiles", "from": 48, "to": 55} ],
     "fg"          : "#66d6c9",
     "bg"          : "#17120a"
-  },
-  {
-    "id"          : "arcane_glade",
-    "displayName" : "Arcane Glade",
-    "walkable"    : true,
-    "movementCost": 1.5,
-    "charSpans"   : [ {"sheet": "tiles", "from": 40, "to": 42}, {"sheet": "tiles", "from": 56, "to": 57} ],
-    "fg"          : "#db80c9",
-    "bg"          : "#17120a"
   }
 ]
