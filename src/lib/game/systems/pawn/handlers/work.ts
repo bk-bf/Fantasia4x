@@ -16,6 +16,7 @@ import {
   transitionTo,
   goIdle,
   mutatePawn,
+  advancePawnOrders,
   isJobUnreachableForPawn,
   markJobUnreachable,
   tryStartHunt,
@@ -30,10 +31,60 @@ import {
   findNearestDepositPoint,
   opportunisticHaulPickup
 } from '../pawnHauling';
-import { addInstanceToInventory } from '../../../core/PawnEquipment';
+import {
+  addInstanceToInventory,
+  equipDropToPawn,
+  carryDropToInventory
+} from '../../../core/PawnEquipment';
 import { aggregateFromDrops } from '../../../core/GameState';
-import { advancePawnOrders } from '../pawnHelpers';
 import { handleForcedConsume, handleForcedDrink } from './needs';
+
+/** DRAFTED-JOB-ORDERS §8: force-equip / carry a specific dropped item NOW (an undrafted manual order).
+ *  Walk to the drop's tile (IDLE arrival re-enters handleIdle); on adjacency wear/wield it into `slot`
+ *  (or carry one unit in the pack when slot === 'inventory'), then advance the manual queue. */
+function handleForcedEquip(
+  pawn: Pawn,
+  gameState: GameState,
+  order: {
+    dropId: string;
+    x: number;
+    y: number;
+    slot?: import('../../../core/types/items').EquipmentSlot | 'inventory';
+  }
+): GameState {
+  const drop = (gameState.droppedItems ?? []).find(
+    (d) => d.id === order.dropId && (d.quantity ?? 0) > 0
+  );
+  if (!drop || !pawn.position) return mutatePawn(gameState, pawn.id, advancePawnOrders);
+
+  const onOrAdjacent =
+    (pawn.position.x === drop.x && pawn.position.y === drop.y) ||
+    isAdjacent(pawn.position.x, pawn.position.y, drop.x, drop.y);
+  if (!onOrAdjacent) {
+    const afterPath = tryAssignPath(pawn, drop.x, drop.y, gameState);
+    if (afterPath) {
+      return mutatePawn(afterPath, pawn.id, (p) => {
+        p.currentState = PAWN_STATE.MOVING_TO_NEED;
+        p.activeJob = {
+          type: 'need' as const,
+          targetX: drop.x,
+          targetY: drop.y,
+          progress: 0,
+          timeRequired: 1,
+          turnsInState: 0,
+          targetState: PAWN_STATE.IDLE // arrive → IDLE → handleIdle re-runs the order (now adjacent)
+        };
+      });
+    }
+    return mutatePawn(gameState, pawn.id, advancePawnOrders); // unreachable — abandon
+  }
+
+  const equipped =
+    order.slot === 'inventory'
+      ? carryDropToInventory(gameState, pawn.id, order.dropId)
+      : equipDropToPawn(gameState, pawn.id, order.dropId, order.slot);
+  return mutatePawn(equipped, pawn.id, advancePawnOrders);
+}
 
 /** DRAFTED-JOB-ORDERS §3.4: shared work-advance core. Compute the pawn's work-speed for `job` (a raw
  *  colony `Job` or the pawn's `activeJob` both satisfy the work-key shape) and advance that job by one
@@ -58,8 +109,12 @@ export function advanceJobOneTick(
   const workStatKey = jobService.getJobWorkStatKey(job, gameState);
   // WORK-EXPERIENCE: the pawn's experience level is already folded into the work-speed multiplier
   // (the SKILL token), so there's no separate skill term here (that would double-count it).
-  const workSpeedMult = pawnStatService.getWorkModifiers(pawn, workStatKey, undefined, workCategory)
-    .speed;
+  const workSpeedMult = pawnStatService.getWorkModifiers(
+    pawn,
+    workStatKey,
+    undefined,
+    workCategory
+  ).speed;
   const workPoints = BASE_WORK_RATE * workSpeedMult;
   // workPoints is authored PER SECOND; deliver one tick's worth so an N-second job takes N seconds.
   return jobService.advanceJob(jobId, perTick(workPoints), gameState);

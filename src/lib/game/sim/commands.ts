@@ -22,6 +22,7 @@ import type {
   GameState,
   Pawn,
   Job,
+  PawnOrder,
   EquipmentSlot,
   CraftingInProgress,
   ZoneInstanceType,
@@ -194,21 +195,59 @@ export const COMMANDS: Record<string, Cmd> = {
       pw.id === p.pawnId ? pawnGrowthService.applyGrowthChoice(pw, p.stats) : pw
     )
   }),
-  /** Set or clear (`target: null`) a pawn's draft target. For a MOVE target the A* path is computed
-   *  right here so the preview line traces the real route immediately — even while paused (the
-   *  per-tick draft pass would otherwise be the first to path it). */
-  setPawnDraftTarget: (s, p: { pawnId: string; target: unknown }) => {
-    let gs: GameState = {
-      ...s,
-      pawns: s.pawns.map((pw) =>
-        pw.id === p.pawnId ? { ...pw, draftTarget: (p.target as never) ?? undefined } : pw
-      )
-    };
-    const t = p.target as { type?: string; x?: number; y?: number } | null;
-    if (t && t.type === 'move' && typeof t.x === 'number' && typeof t.y === 'number') {
+  /** Set, QUEUE (`append: true` — Shift), or clear (`target: null`) a pawn's order (DRAFTED-JOB-ORDERS
+   *  §8/§9). The active order is `draftTarget` (the manual-queue head); `append` pushes behind it into
+   *  `manualQueue` instead of replacing. A plain set replaces the head and clears the pending queue. A
+   *  clear drops all orders, releases any job this pawn had force-claimed, and idles it (§6). For a MOVE
+   *  target the A* path is computed right here so the preview line traces the real route immediately —
+   *  even while paused (the per-tick draft pass would otherwise be the first to path it). */
+  setPawnDraftTarget: (s, p: { pawnId: string; target: unknown; append?: boolean }) => {
+    const target = (p.target as PawnOrder | null) ?? null;
+    let gs: GameState;
+    if (p.append && target) {
+      // Shift-queue: append behind the active head (or become the head if there is none yet).
+      gs = {
+        ...s,
+        pawns: s.pawns.map((pw) => {
+          if (pw.id !== p.pawnId) return pw;
+          return pw.draftTarget
+            ? { ...pw, manualQueue: [...(pw.manualQueue ?? []), target] }
+            : { ...pw, draftTarget: target };
+        })
+      };
+    } else if (target) {
+      // Replace: new head, drop the pending queue.
+      gs = {
+        ...s,
+        pawns: s.pawns.map((pw) =>
+          pw.id === p.pawnId ? { ...pw, draftTarget: target, manualQueue: undefined } : pw
+        )
+      };
+    } else {
+      // Clear: drop all orders, release any force-claimed job back to the pool, and idle the pawn.
+      const jobs = (s.jobs ?? []).some((j) => j.claimedBy === p.pawnId)
+        ? s.jobs.map((j) => (j.claimedBy === p.pawnId ? { ...j, claimedBy: null } : j))
+        : s.jobs;
+      gs = {
+        ...s,
+        jobs,
+        pawns: s.pawns.map((pw) =>
+          pw.id === p.pawnId
+            ? {
+                ...pw,
+                draftTarget: undefined,
+                manualQueue: undefined,
+                activeJob: undefined,
+                currentState: 'Idle' as never
+              }
+            : pw
+        )
+      };
+    }
+    if (target && target.type === 'move') {
       const pawn = gs.pawns.find((pw) => pw.id === p.pawnId);
       if (pawn && pawn.position && pawn.currentState !== 'Collapsed') {
-        gs = assignDraftMovePath(gs, pawn, t.x, t.y);
+        gs = assignDraftMovePath(gs, pawn, target.x, target.y);
       }
     }
     return gs;
@@ -221,6 +260,7 @@ export const COMMANDS: Record<string, Cmd> = {
             ...pw,
             drafted: !pw.drafted,
             draftTarget: undefined,
+            manualQueue: undefined,
             activeJob: undefined,
             currentState: 'Idle' as never
           }
@@ -239,6 +279,7 @@ export const COMMANDS: Record<string, Cmd> = {
               ...pw,
               drafted: draft,
               draftTarget: undefined,
+              manualQueue: undefined,
               activeJob: undefined,
               currentState: 'Idle' as never
             }

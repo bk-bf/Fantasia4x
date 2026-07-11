@@ -97,6 +97,8 @@
   import { cropGrowthDirection } from '$lib/game/core/cropHealth.js';
   import { isHarvestableTileNow, MIN_FORAGE_GROWTH } from '$lib/game/services/jobs/filters.js';
   import { itemService } from '$lib/game/services/ItemService.js';
+  import { jobService } from '$lib/game/services/JobService.js';
+  import { isEdibleFood } from '$lib/game/services/foodRules.js';
   import { getEquipmentSlot } from '$lib/game/core/PawnEquipment.js';
   import { getRangedWeapon } from '$lib/game/systems/rangedCombat.js';
   import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
@@ -4957,162 +4959,174 @@
       }
     }
 
-    // ── Draft mode: right-click issues orders ────────────────────────────────
-    if (selectedPawn?.drafted) {
-      // Issue an attack order; `mode` forces melee/ranged (undefined = auto).
-      const issueAttack = (
-        targetId: string,
-        targetType: 'pawn' | 'mob',
-        mode?: 'ranged' | 'melee'
-      ) =>
-        gameState.command({
-          type: 'setPawnDraftTarget',
-          payload: {
-            pawnId: selectedPawn.id,
-            target: { type: 'attack', targetId, targetType, mode }
-          },
-          save: true
-        });
-      // A pawn holding a ranged weapon gets a ranged/melee choice; a melee-only pawn just attacks.
-      const canShoot = !!getRangedWeapon(selectedPawn as never);
-      const offerAttack = (targetId: string, targetType: 'pawn' | 'mob') => {
-        if (!canShoot) {
-          issueAttack(targetId, targetType);
-          return;
-        }
-        equipMenu = {
-          x: e.clientX,
-          y: e.clientY,
-          entries: [
-            { label: 'Target (ranged)', run: () => issueAttack(targetId, targetType, 'ranged') },
-            { label: 'Target (melee)', run: () => issueAttack(targetId, targetType, 'melee') }
-          ]
-        };
-      };
-
-      const targetMob = mobs.find(
-        (m) => m.x === hoverTileX && m.y === hoverTileY && m.isAlive !== false
-      );
-      if (targetMob) {
-        offerAttack(targetMob.id, 'mob');
-        return;
-      }
-      const targetPawn = pawns.find(
-        (p) =>
-          p.id !== selectedPawn.id &&
-          p.position?.x === hoverTileX &&
-          p.position?.y === hoverTileY &&
-          p.isAlive !== false
-      );
-      if (targetPawn) {
-        offerAttack(targetPawn.id, 'pawn');
-        return;
-      }
+    // ── Selected pawn: right-click issues orders (DRAFTED-JOB-ORDERS §8) ──────────────────────────
+    // Works for a DRAFTED pawn (attack/move + force-a-task/gear) or a plain SELECTED undrafted pawn
+    // (force a colony job / eat / drink / equip — routed through the FSM, no move/attack). Holding
+    // Shift appends the verb to the pawn's MANUAL QUEUE instead of replacing the head (§9).
+    if (selectedPawn) {
+      const isDrafted = !!selectedPawn.drafted;
       const pawnId = selectedPawn.id;
-      // Capture the clicked tile NOW — `hoverTileX/Y` track the cursor and change (or reset to -1)
-      // the moment the cursor moves onto the menu, so a deferred "Move here" must use these snapshots.
+      const shift = e.shiftKey;
+      // Capture the clicked tile NOW — hoverTileX/Y track the cursor and reset when it moves onto the menu.
       const tileX = hoverTileX;
       const tileY = hoverTileY;
-      // This branch only runs for a SINGLE selected pawn on a tile that carries a menu (items here, or
-      // an attack target above) — group moves and empty-tile moves go through the right-drag aim. So
-      // "Move here" is just the selected pawn.
-      const issueMove = () => {
+      // Issue (Shift ⇒ queue) a manual order. Attack/move never queue (append: false).
+      const issueOrder = (target: unknown, append = shift) =>
         gameState.command({
           type: 'setPawnDraftTarget',
-          payload: { pawnId, target: { type: 'move', x: tileX, y: tileY } },
+          payload: { pawnId, target, append },
           save: true
         });
-      };
 
-      // Any item on the tile opens a menu (equip / pick-up / haul entries + a Move option), so the
-      // menu never silently loses to a move order. Empty tile → move straight away.
+      // ── Attack (DRAFTED only — an undrafted pawn stays autonomous and can't be aimed). ──
+      if (isDrafted) {
+        const issueAttack = (
+          targetId: string,
+          targetType: 'pawn' | 'mob',
+          mode?: 'ranged' | 'melee'
+        ) => issueOrder({ type: 'attack', targetId, targetType, mode }, false);
+        const canShoot = !!getRangedWeapon(selectedPawn as never);
+        const offerAttack = (targetId: string, targetType: 'pawn' | 'mob') => {
+          if (!canShoot) {
+            issueAttack(targetId, targetType);
+            return;
+          }
+          equipMenu = {
+            x: e.clientX,
+            y: e.clientY,
+            entries: [
+              { label: 'Target (ranged)', run: () => issueAttack(targetId, targetType, 'ranged') },
+              { label: 'Target (melee)', run: () => issueAttack(targetId, targetType, 'melee') }
+            ]
+          };
+        };
+        const targetMob = mobs.find((m) => m.x === tileX && m.y === tileY && m.isAlive !== false);
+        if (targetMob) {
+          offerAttack(targetMob.id, 'mob');
+          return;
+        }
+        const targetPawn = pawns.find(
+          (p) =>
+            p.id !== pawnId &&
+            p.position?.x === tileX &&
+            p.position?.y === tileY &&
+            p.isAlive !== false
+        );
+        if (targetPawn) {
+          offerAttack(targetPawn.id, 'pawn');
+          return;
+        }
+      }
+
+      const issueMove = () => issueOrder({ type: 'move', x: tileX, y: tileY }, false);
+
+      // ── Force-a-task / gear / need entries (shared drafted + undrafted). ──
+      const entries: { label: string; run: () => void }[] = [];
+
+      // Force an ALREADY-GENERATED colony job on this tile (harvest/craft/build/demolish/repair…).
+      // Labelled by its JobDef — never the raw job id/type (id-leak rule). Duplicate labels collapse.
+      const seenJobLabels = new Set<string>();
+      for (const j of $gameState?.jobs ?? []) {
+        if (j.targetX !== tileX || j.targetY !== tileY) continue;
+        const label = jobService.getJobLabel(j.type) ?? j.type;
+        if (seenJobLabels.has(label)) continue;
+        seenJobLabels.add(label);
+        const jobId = j.id;
+        entries.push({ label, run: () => issueOrder({ type: 'forceJob', jobId }) });
+      }
+
+      // Items on the tile → equip / carry / pick-up (+ force-eat for an edible, undrafted only).
       const tileItems = droppedItems.filter(
         (d) => d.x === tileX && d.y === tileY && d.quantity > 0
       );
-      if (tileItems.length > 0) {
-        const entries: { label: string; run: () => void }[] = [];
-        for (const d of tileItems) {
-          const it = itemService.getItemById(d.resourceId);
-          if (!it) continue;
-          const name = itemService.getItemDisplayName(d);
-          const slot = getEquipmentSlot(it);
-          if (slot) {
-            // Equippable gear → ORDER the drafted pawn to walk to the item and equip it (handled by the
-            // 'equip' draft target in _processDraftOrders), not an instant teleport-equip. `target` picks
-            // the destination: a specific equipment slot, 'inventory' (carry), or undefined (auto-resolve).
-            const equipOrder = (target?: EquipmentSlot | 'inventory') =>
-              gameState.command({
-                type: 'setPawnDraftTarget',
-                payload: {
-                  pawnId,
-                  target: { type: 'equip', dropId: d.id, x: tileX, y: tileY, slot: target }
-                },
-                save: true
-              });
-            if (it.type === 'weapon') {
-              // A one-handed weapon may go in EITHER hand; a two-hander only in the main hand.
-              entries.push({
-                label: `Equip ${name} → Main Hand`,
-                run: () => equipOrder('mainHand')
-              });
-              if (!it.weaponProperties?.twoHanded) {
-                entries.push({
-                  label: `Equip ${name} → Off Hand`,
-                  run: () => equipOrder('offHand')
-                });
-              }
-            } else if (it.type === 'tool') {
-              // A tool equips to its canonical slot — a plain hand tool (axe/hammer) is WIELDED, but a
-              // worn carry bag (wicker frame → back, hide scrip → belt) goes to its own slot, not the
-              // hand. Either way it can also be CARRIED in the pack so a weapon keeps the hand — a
-              // carried tool still grants its work boost (heldToolBoost reads inventory too).
-              const handTool = slot === 'mainHand' || slot === 'offHand';
-              entries.push({
-                label: handTool ? `Equip ${name} → Main Hand` : `Equip ${name} → ${slotLabel(slot)}`,
-                run: () => equipOrder(handTool ? 'mainHand' : slot)
-              });
-              entries.push({
-                label: `Carry ${name} (inventory)`,
-                run: () => equipOrder('inventory')
-              });
-            } else {
-              // Armour / shields / rings → their canonical slot (undefined = auto-resolve, so a 2nd
-              // ring still pairs into the free ring slot instead of swapping the first).
-              entries.push({
-                label: `Equip ${name} → ${slotLabel(slot)}`,
-                run: () => equipOrder()
-              });
+      for (const d of tileItems) {
+        const it = itemService.getItemById(d.resourceId);
+        if (!it) continue;
+        const name = itemService.getItemDisplayName(d);
+        const slot = getEquipmentSlot(it);
+        if (slot) {
+          // Equippable gear → ORDER the pawn to walk to the item and equip it (the 'equip' order —
+          // executor for drafted, handleForcedEquip for undrafted), not an instant teleport-equip.
+          const equipOrder = (target?: EquipmentSlot | 'inventory') =>
+            issueOrder({ type: 'equip', dropId: d.id, x: tileX, y: tileY, slot: target });
+          if (it.type === 'weapon') {
+            // A one-handed weapon may go in EITHER hand; a two-hander only in the main hand.
+            entries.push({ label: `Equip ${name} → Main Hand`, run: () => equipOrder('mainHand') });
+            if (!it.weaponProperties?.twoHanded) {
+              entries.push({ label: `Equip ${name} → Off Hand`, run: () => equipOrder('offHand') });
             }
-            continue;
-          }
-          // Non-equippable → three pick-up tiers into the pawn's inventory.
-          const qty = Math.floor(d.quantity);
-          entries.push({
-            label: `Pick up 1 ${name}`,
-            run: () => gameState.pickUpItemFromTile(pawnId, d.id, 1)
-          });
-          if (qty > 1) {
+          } else if (it.type === 'tool') {
+            // A tool equips to its canonical slot — a plain hand tool (axe/hammer) is WIELDED, but a
+            // worn carry bag (wicker frame → back, hide scrip → belt) goes to its own slot, not the
+            // hand. Either way it can also be CARRIED in the pack so a weapon keeps the hand — a
+            // carried tool still grants its work boost (heldToolBoost reads inventory too).
+            const handTool = slot === 'mainHand' || slot === 'offHand';
             entries.push({
-              label: `Pick up X ${name}…`,
-              run: () => {
-                qtyPrompt = {
-                  pawnId,
-                  dropId: d.id,
-                  name,
-                  max: qty,
-                  value: qty,
-                  x: e.clientX,
-                  y: e.clientY
-                };
-              }
+              label: handTool ? `Equip ${name} → Main Hand` : `Equip ${name} → ${slotLabel(slot)}`,
+              run: () => equipOrder(handTool ? 'mainHand' : slot)
             });
             entries.push({
-              label: `Pick up all ${name} (×${qty})`,
-              run: () => gameState.pickUpItemFromTile(pawnId, d.id, qty)
+              label: `Carry ${name} (inventory)`,
+              run: () => equipOrder('inventory')
             });
+          } else {
+            // Armour / shields / rings → their canonical slot (undefined = auto-resolve, so a 2nd
+            // ring still pairs into the free ring slot instead of swapping the first).
+            entries.push({ label: `Equip ${name} → ${slotLabel(slot)}`, run: () => equipOrder() });
           }
+          continue;
         }
-        // Haul the loose stack to a stockpile (multi-trip), if one exists and this tile isn't one.
+        // Non-equippable → three pick-up tiers into the pawn's inventory (instant, never queued).
+        const qty = Math.floor(d.quantity);
+        entries.push({
+          label: `Pick up 1 ${name}`,
+          run: () => gameState.pickUpItemFromTile(pawnId, d.id, 1)
+        });
+        if (qty > 1) {
+          entries.push({
+            label: `Pick up X ${name}…`,
+            run: () => {
+              qtyPrompt = {
+                pawnId,
+                dropId: d.id,
+                name,
+                max: qty,
+                value: qty,
+                x: e.clientX,
+                y: e.clientY
+              };
+            }
+          });
+          entries.push({
+            label: `Pick up all ${name} (×${qty})`,
+            run: () => gameState.pickUpItemFromTile(pawnId, d.id, qty)
+          });
+        }
+        // Force-eat an edible item — a need, so undrafted-only (needs run through the FSM).
+        if (!isDrafted && isEdibleFood(it)) {
+          entries.push({
+            label: `Eat ${name}`,
+            run: () => issueOrder({ type: 'forceConsume', dropId: d.id, x: tileX, y: tileY })
+          });
+        }
+      }
+
+      // Drink at a water tile — a need, undrafted-only.
+      if (!isDrafted) {
+        const wt = worldMap[tileY]?.[tileX];
+        if (
+          wt &&
+          (wt.type === 'water' || wt.terrainType === 'river' || wt.terrainType === 'lake')
+        ) {
+          entries.push({
+            label: 'Drink',
+            run: () => issueOrder({ type: 'drink', x: tileX, y: tileY })
+          });
+        }
+      }
+
+      // Haul the loose stack to a stockpile — DRAFTED only (undrafted pawns auto-haul via the job pool).
+      if (isDrafted) {
         const looseHere = tileItems.some((d) => !d.stored && !d.reservedFor);
         const tileIsStockpile =
           (zoneTiles[`${tileX},${tileY}`] ?? []).includes('stockpile') ||
@@ -5125,17 +5139,37 @@
             run: () => gameState.haulTileToStockpile(pawnId, tileX, tileY)
           });
         }
-        equipMenu = {
-          x: e.clientX,
-          y: e.clientY,
-          entries: [...entries, { label: 'Move here', run: issueMove }]
-        };
-        return;
       }
 
-      // Empty tile — move straight away.
-      issueMove();
-      return;
+      // Cancel any player order/designation on this tile (preserves the old right-click-to-cancel
+      // gesture now that the force menu takes over the click).
+      if (designationService.getDesignation(tileX, tileY, $gameState)) {
+        entries.push({
+          label: 'Cancel order here',
+          run: () => {
+            gameState.command({
+              type: 'clearActionDesignation',
+              payload: { x: tileX, y: tileY },
+              save: true
+            });
+            redrawOverlay();
+          }
+        });
+      }
+
+      // Drafted pawns always get a "Move here" fallback so the menu never silently loses to a move.
+      if (isDrafted) entries.push({ label: 'Move here', run: issueMove });
+
+      if (entries.length > 0) {
+        equipMenu = { x: e.clientX, y: e.clientY, entries };
+        return;
+      }
+      // No entries. A drafted pawn on an empty tile just moves; an undrafted pawn falls through to the
+      // designation-clear handling below (right-click an empty designated tile still cancels it).
+      if (isDrafted) {
+        issueMove();
+        return;
+      }
     }
 
     if (designationMode) {

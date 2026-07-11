@@ -517,7 +517,9 @@ export function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState 
     if (targetState === PAWN_STATE.HUNGRY) {
       // Arrived at the food stockpile — pick a serving up into the pack, then re-evaluate as HUNGRY
       // (eat here / carry to a campfire). If the stack vanished before arrival, drop to Idle to re-pick.
-      return grabFoodAt(gameState, pawn, activeJob.targetX, activeJob.targetY) ?? goIdle(pawn, gameState);
+      return (
+        grabFoodAt(gameState, pawn, activeJob.targetX, activeJob.targetY) ?? goIdle(pawn, gameState)
+      );
     }
     if (targetState === PAWN_STATE.EATING) {
       // Arrived at the campfire carrying food — eat it from the pack (the campfire's faster recovery).
@@ -645,10 +647,13 @@ export function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
   // quality without dwarfing it. Material choice feeds in via amenityAt (the building's `materials`).
   const pos = pawn.position;
   const amenityBonus = pos
-    ? Math.min(0.4, (() => {
-        const a = amenityAt(gameState.buildings, pos.x, pos.y);
-        return (a.comfort + a.beauty) * 0.15;
-      })())
+    ? Math.min(
+        0.4,
+        (() => {
+          const a = amenityAt(gameState.buildings, pos.x, pos.y);
+          return (a.comfort + a.beauty) * 0.15;
+        })()
+      )
     : 0;
   const fatigueRecovery = FATIGUE_PER_SLEEPING_GROUND + shelterBonus + amenityBonus;
   const sleepDuration = restBuilding ? SLEEPING_TURNS : SLEEPING_TURNS_GROUND; // for progress bar only

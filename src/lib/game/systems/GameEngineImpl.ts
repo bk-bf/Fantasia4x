@@ -61,7 +61,8 @@ import { occupancyService } from '../services/OccupancyService';
 import { assignDraftMovePath } from '../services/draftMovePath';
 import { isGameDebug, gatedConsole } from '../core/log';
 import type { WorkCategory } from '../core/types';
-import type { Pawn } from '../core/types';
+import type { Pawn, PawnOrder } from '../core/types';
+import { advanceJobOneTick } from './pawn/handlers/work';
 import { rng } from '../core/rng';
 import {
   seasonForTurn,
@@ -136,6 +137,19 @@ const DRYING_INTERVAL_TICKS = 60;
 const JOB_GENERATION_INTERVAL_TICKS = 6;
 /** How many ticks to accumulate before logging the per-phase ms breakdown to perf.log (verbose only). */
 const PHASE_LOG_TICKS = 120;
+
+/** DRAFTED-JOB-ORDERS §9: an active drafted order just finished — pop the next MANUAL-queue entry into
+ *  the head (or clear both when empty). Returns the immutable `{ draftTarget, manualQueue }` patch to
+ *  spread onto the pawn (the drafted executor rebuilds pawn objects rather than mutating in place). */
+function popOrder(p: Pawn): {
+  draftTarget: PawnOrder | undefined;
+  manualQueue: PawnOrder[] | undefined;
+} {
+  const q = p.manualQueue ?? [];
+  return q.length > 0
+    ? { draftTarget: q[0], manualQueue: q.length > 1 ? q.slice(1) : undefined }
+    : { draftTarget: undefined, manualQueue: undefined };
+}
 
 export class GameEngineImpl implements GameEngine {
   private gameState: GameState | null = null;
@@ -896,7 +910,7 @@ export class GameEngineImpl implements GameEngine {
           gs = {
             ...gs,
             pawns: gs.pawns.map((p) =>
-              p.id === pawn.id ? { ...p, draftTarget: undefined, hasReachedDestination: true } : p
+              p.id === pawn.id ? { ...p, ...popOrder(p), hasReachedDestination: true } : p
             )
           };
           continue;
@@ -927,7 +941,7 @@ export class GameEngineImpl implements GameEngine {
           if (!mob || mob.isAlive === false) {
             gs = {
               ...gs,
-              pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, draftTarget: undefined } : p))
+              pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, ...popOrder(p) } : p))
             };
             continue;
           }
@@ -938,7 +952,7 @@ export class GameEngineImpl implements GameEngine {
           if (!tp || tp.isAlive === false) {
             gs = {
               ...gs,
-              pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, draftTarget: undefined } : p))
+              pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, ...popOrder(p) } : p))
             };
             continue;
           }
@@ -1013,7 +1027,7 @@ export class GameEngineImpl implements GameEngine {
         const clearHaul = () => {
           gs = {
             ...gs,
-            pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, draftTarget: undefined } : p))
+            pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, ...popOrder(p) } : p))
           };
         };
         const walkTo = (tx: number, ty: number) => {
@@ -1052,29 +1066,41 @@ export class GameEngineImpl implements GameEngine {
             walkTo(dp.x, dp.y);
           }
         } else if (srcHasLoose) {
-          // Pickup phase — walk to the source and grab a budget-load of loose goods.
-          if (pawn.position.x === target.x && pawn.position.y === target.y) {
+          // Pickup phase — walk ADJACENT to the source and grab a budget-load of loose goods. Standing
+          // on a neighbouring tile suffices (radius 1 scan), so the pawn needn't stand on the stack
+          // (DRAFTED-JOB-ORDERS §10).
+          const atSrc =
+            (pawn.position.x === target.x && pawn.position.y === target.y) ||
+            isAdjacent(pawn.position.x, pawn.position.y, target.x, target.y);
+          if (atSrc) {
             gs = pawnService.assignPath(pawn.id, [], gs);
+            // radius 0: pickUpFromTile grabs from the TARGET tile regardless of where the pawn stands,
+            // so an adjacent pawn still takes exactly this stack (no over-grab of neighbouring stacks).
             gs = pickUpFromTile(gs, pawn.id, target.x, target.y, { looseOnly: true });
           } else {
-            walkTo(target.x, target.y);
+            gs = this._draftWalk(gs, pawn, target.x, target.y);
           }
         } else {
           clearHaul(); // nothing carried and the source is clear — done
         }
       } else if (target.type === 'equip') {
-        // Drafted "fetch + equip": walk to the drop's tile, then equip one unit on arrival and clear
-        // the order. Mirrors the haul pickup phase (select-then-act, not an instant teleport-equip).
+        // Drafted "fetch + equip": walk ADJACENT to the drop's tile, then equip one unit and advance the
+        // manual queue. Select-then-act (not an instant teleport-equip). Standing on ANY neighbouring
+        // tile is enough — no need to squeeze onto the item (DRAFTED-JOB-ORDERS §10).
         const drop = (gs.droppedItems ?? []).find((d) => d.id === target.dropId && d.quantity > 0);
         const clearEquip = () => {
           gs = {
             ...gs,
-            pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, draftTarget: undefined } : p))
+            pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, ...popOrder(p) } : p))
           };
         };
+        const atDrop =
+          !!drop &&
+          ((pawn.position.x === drop.x && pawn.position.y === drop.y) ||
+            isAdjacent(pawn.position.x, pawn.position.y, drop.x, drop.y));
         if (!drop) {
           clearEquip(); // the item is gone (taken / decayed) — abandon the order
-        } else if (pawn.position.x === drop.x && pawn.position.y === drop.y) {
+        } else if (atDrop) {
           gs = pawnService.assignPath(pawn.id, [], gs);
           // `slot === 'inventory'` carries one unit in the pack as a TRACKED instance (a tool kept off
           // the hand — instances are what the tool boost/gate read, and they survive deposits); an
@@ -1083,30 +1109,9 @@ export class GameEngineImpl implements GameEngine {
             target.slot === 'inventory'
               ? carryDropToInventory(gs, pawn.id, target.dropId)
               : equipDropToPawn(gs, pawn.id, target.dropId, target.slot);
-          gs = {
-            ...gs,
-            pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, draftTarget: undefined } : p))
-          };
+          clearEquip();
         } else {
-          const grids = buildPathfindingGridsSoftBlocked(
-            gs.worldMap,
-            blocked,
-            pawn.position.x,
-            pawn.position.y,
-            drop.x,
-            drop.y
-          );
-          const path = pathfinderService.findPath(
-            grids.walkable,
-            grids.costs,
-            grids.width,
-            grids.height,
-            pawn.position.x,
-            pawn.position.y,
-            drop.x,
-            drop.y
-          );
-          if (path && path.length > 0) gs = pawnService.assignPath(pawn.id, path, gs);
+          gs = this._draftWalk(gs, pawn, drop.x, drop.y); // routes to an adjacent approach tile
         }
       } else if (target.type === 'rescue') {
         // Drafted "carry to shelter": walk to the COLLAPSED victim, pick it up as CARGO (a named
@@ -1120,7 +1125,7 @@ export class GameEngineImpl implements GameEngine {
             pawns: gs.pawns.map((p) =>
               // `auto` rescues commandeered an idle pawn (rescuePawn command) — hand it back when done.
               p.id === pawn.id
-                ? { ...p, draftTarget: undefined, drafted: target.auto ? false : p.drafted }
+                ? { ...p, ...popOrder(p), drafted: target.auto ? false : p.drafted }
                 : p
             )
           };
@@ -1176,7 +1181,7 @@ export class GameEngineImpl implements GameEngine {
           gs = {
             ...gs,
             pawns: gs.pawns.map((p) =>
-              p.id === pawn.id ? { ...p, draftTarget: undefined, tendProgress: undefined } : p
+              p.id === pawn.id ? { ...p, ...popOrder(p), tendProgress: undefined } : p
             )
           };
         };
@@ -1196,7 +1201,9 @@ export class GameEngineImpl implements GameEngine {
           Math.max(
             1,
             Math.ceil(
-              (TEND_WORK / (BASE_WORK_RATE * (pawnStatService.getWorkModifiers(medic, 'caretaking').speed || 1))) *
+              (TEND_WORK /
+                (BASE_WORK_RATE *
+                  (pawnStatService.getWorkModifiers(medic, 'caretaking').speed || 1))) *
                 TICKS_PER_SECOND
             )
           );
@@ -1239,6 +1246,43 @@ export class GameEngineImpl implements GameEngine {
           }
         } else {
           gs = this._draftWalk(gs, pawn, patient.position.x, patient.position.y);
+        }
+      } else if (target.type === 'forceJob') {
+        // Force-work an ALREADY-GENERATED colony job to completion (DRAFTED-JOB-ORDERS §3.3). A drafted
+        // pawn doesn't run handleWorking, so the work loop is hand-driven here through the SHARED
+        // advance helper (advanceJobOneTick). One order = one job: on completion the manual queue
+        // advances (popOrder). Walks to an adjacent approach tile via _draftWalk (correct for an
+        // unwalkable resource/building/station target).
+        const job = (gs.jobs ?? []).find((j) => j.id === target.jobId);
+        const dropOrder = () => {
+          let next = gs;
+          if (job && job.claimedBy === pawn.id) next = jobService.releaseJob(pawn.id, job.id, next);
+          gs = {
+            ...next,
+            pawns: next.pawns.map((p) => (p.id === pawn.id ? { ...p, ...popOrder(p) } : p))
+          };
+        };
+        if (!job) {
+          dropOrder(); // completed / cancelled — advance the queue
+        } else {
+          const atSite =
+            (job.targetX === 0 && job.targetY === 0) || // abstract building placed off-map
+            (pawn.position.x === job.targetX && pawn.position.y === job.targetY) ||
+            isAdjacent(pawn.position.x, pawn.position.y, job.targetX, job.targetY);
+          if (!atSite) {
+            gs = this._draftWalk(gs, pawn, job.targetX, job.targetY);
+          } else {
+            gs = pawnService.assignPath(pawn.id, [], gs); // stop at the work tile
+            gs = jobService.claimJob(pawn.id, job.id, gs);
+            gs = advanceJobOneTick(pawn, job, job.id, gs);
+            if (!(gs.jobs ?? []).some((j) => j.id === job.id)) {
+              // Job finished this tick — advance the manual queue.
+              gs = {
+                ...gs,
+                pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, ...popOrder(p) } : p))
+              };
+            }
+          }
         }
       }
     }
@@ -1410,7 +1454,10 @@ export class GameEngineImpl implements GameEngine {
       // §D burn-longevity: denser fuel (high `burnDuration` → high `burnFactor`) drains slower, so a
       // tank of charcoal/coke outlasts one of green wood and pawns refuel far less often.
       const burnFactor = b.burnFactor ?? 1;
-      const newFuel = Math.max(0, (b.fuel ?? 0) - perTick(buildingDef.fuelConsumptionRate / burnFactor));
+      const newFuel = Math.max(
+        0,
+        (b.fuel ?? 0) - perTick(buildingDef.fuelConsumptionRate / burnFactor)
+      );
       const newLit = newFuel > 0;
       if (newFuel === b.fuel && newLit === b.lit) return b;
       changed = true;
