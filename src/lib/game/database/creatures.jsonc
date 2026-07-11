@@ -42,6 +42,7 @@
         "id"            : "wolf",
         "audio"            : "canine",
         "name"          : "Wolf",
+        "flavor": "Lean and grey, it drifts at the treeline where the pack's eyes catch the last of the light.",
         "threatLevel"   : 3,    // DPS 6.6 | effHP 47 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 251} ],
@@ -77,6 +78,7 @@
         "id"            : "great_wolf",
         "audio"            : "canine",
         "name"          : "Great Wolf",
+        "flavor": "A wolf grown to legend — shoulders like a bull's, a jaw that has cracked antler and shield alike.",
         "threatLevel"   : 19,    // DPS 50.8 | effHP 210 | bruiser
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 251} ],
@@ -110,6 +112,7 @@
         "id": "bear",  // add anchor to beehives for bears, so they hang around and protect beehives from pawns
         "audio": "beast",
         "name": "Bear",
+        "flavor": "Slow to wake and slower to forgive; it suffers a trespasser only so long as the trespasser keeps still.",
         "threatLevel": 10,    // DPS 13.2 | effHP 226 | bruiser
         "entityClass": "animal",
         "charSpans": [ {"sheet": "creatures", "id": 126} ],
@@ -146,6 +149,7 @@
         "id"            : "goblin",
         "audio"            : "goblinoid",
         "name"          : "Goblin",
+        "flavor": "Small, quick-fingered and mean, it fights dirty because it has never once fought fair.",
         "threatLevel"   : 2,    // DPS 4.4 | effHP 37 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "cultures", "id": 49} ],
@@ -183,6 +187,7 @@
         "tier": 2,
         "audio"            : "rustle",
         "name"          : "Giant Rat",
+        "flavor": "Bloated on middens and carrion, bold only in numbers, gone at the first raised stick.",
         "threatLevel"   : 1,    // DPS 3.1 | effHP 20 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 205} ],
@@ -208,6 +213,7 @@
         "tier": 2,
         "audio"              : "wraith",
         "name"            : "Shadow Wraith",
+        "flavor": "A cold that walks — where it passes the frost blooms and the torch gutters low.",
         "threatLevel"     : 4,    // DPS 12.6 | effHP 50 | glass-cannon
         "entityClass"     : "mob",
         "charSpans"       : [ {"sheet": "creatures", "id": 173} ],
@@ -242,6 +248,7 @@
         "tier": 2,
         "audio"            : "grunt",
         "name"          : "Deer",
+        "flavor": "All ears and trembling flank, it grazes with its head up, ready to be gone before you finish the thought.",
         "threatLevel"   : 2,    // DPS 3.2 | effHP 38 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 66} ],
@@ -269,6 +276,7 @@
         "tier": 2,
         "audio"            : "critter",
         "name"          : "Rabbit",
+        "flavor": "A heartbeat with legs, forever one shadow away from bolting down its hole.",
         "threatLevel"   : 1,    // DPS 0.9 | effHP 10 | harmless
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 76} ],
@@ -292,6 +300,7 @@
         "id"                : "boar",
         "audio"                : "boar",
         "name"              : "Wild Boar",
+        "flavor": "A barrel of muscle on trotters; corner it and it comes through you, not around.",
         "threatLevel"       : 4,    // DPS 6.7 | effHP 75 | skirmisher
         "entityClass"       : "animal",
         "charSpans"         : [ {"sheet": "creatures", "id": 248} ],
@@ -325,6 +334,7 @@
         "tier": 2,
         "audio"            : "grunt",
         "name"          : "Elk",
+        "flavor": "It carries its crown of antler like a burden and a warning both.",
         "threatLevel"   : 4,    // DPS 7.9 | effHP 86 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 78} ],
@@ -355,6 +365,7 @@
         "tier": 2,
         "audio": "goat",
         "name": "Mountain Goat",
+        "flavor": "It keeps to ledges no wolf will follow, chewing the thin grass of the high places.",
         "threatLevel": 1,    // DPS 2.0 | effHP 25 | harmless
         "entityClass": "animal",
         "charSpans": [ {"sheet": "creatures", "id": 74} ],
@@ -387,6 +398,7 @@
         "tier": 2,
         "audio"            : "fowl",
         "name"          : "Wild Chicken",
+        "flavor": "It scratches the dirt, startles at its own shadow, and lays where it pleases.",
         "threatLevel"   : 1,    // DPS 0.2 | effHP 5 | harmless
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 75} ],
@@ -423,6 +435,7 @@
         "tier": 2,
         "audio"                : "beast",
         "name"              : "Aurochs",
+        "flavor": "The wild ox of the old plains — placid at pasture, a landslide when roused.",
         "threatLevel"       : 12,    // DPS 18.1 | effHP 260 | bruiser
         "entityClass"       : "animal",
         "charSpans"         : [ {"sheet": "creatures", "id": 156} ],
@@ -454,6 +467,7 @@
         "tier": 2,
         "audio"                : "beast",
         "name"              : "Woolly Mammoth",
+        "flavor": "A hill of hair and tusk that remembers the cold ages; the ground keeps its footfalls.",
         "threatLevel"       : 33,    // DPS 33.3 | effHP 814 | bruiser
         "entityClass"       : "animal",
         "charSpans"         : [ {"sheet": "creatures", "id": 158} ],
@@ -486,6 +500,7 @@
         "tier": 2,
         "audio"            : "raptor",
         "name"          : "Hippogriff",
+        "flavor": "Eagle before, horse behind — it stoops from the ridge-wind on prey it has watched for hours.",
         "threatLevel"   : 5,    // DPS 10.0 | effHP 95 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 22} ],
@@ -519,6 +534,7 @@
         "tier": 2,
         "audio"            : "fowl",
         "name"          : "Hoarfowl",
+        "flavor": "A fat frost-feathered bird that fears little but the flames of a cook-fire.",
         "threatLevel"   : 1,    // DPS 2.4 | effHP 40 | harmless
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 35} ],
@@ -547,6 +563,7 @@
         "tier": 2,
         "audio"            : "critter",
         "name"          : "Quillback",
+        "flavor": "A shuffling pincushion; patient grazers learn to leave its bristled back well alone.",
         "threatLevel"   : 3,    // DPS 3.4 | effHP 96 | tank
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 153} ],
@@ -576,6 +593,7 @@
         "tier": 2,
         "audio"            : "canine",
         "name"          : "Worg",
+        "flavor": "Bigger and blacker than any true wolf, and it hunts men by preference, not hunger.",
         "threatLevel"   : 3,    // DPS 6.6 | effHP 68 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 114} ],
@@ -606,6 +624,7 @@
         "tier": 2,
         "audio"            : "canine",
         "name"          : "Jackal",
+        "flavor": "It laughs in the dark and takes what braver hunters have already killed.",
         "threatLevel"   : 2,    // DPS 5.3 | effHP 35 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 251} ],
@@ -636,6 +655,7 @@
         "tier": 2,
         "audio"            : "beast",
         "name"          : "Owlbear",
+        "flavor": "The temper of a bear behind the fixed, staring hate of an owl — a thing that should not be, and is.",
         "threatLevel"   : 11,    // DPS 18.0 | effHP 217 | bruiser
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 168} ],
@@ -669,6 +689,7 @@
         "tier": 2,
         "audio"            : "beast",
         "name"          : "Sabretooth Cat",
+        "flavor": "Long fangs made for one deep, killing bite; it wastes no second lunge.",
         "threatLevel"   : 7,    // DPS 16.1 | effHP 96 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 130} ],
@@ -699,6 +720,7 @@
         "tier": 2,
         "audio"            : "reptile",
         "name"          : "Mire Crocodile",
+        "flavor": "A drifting log until the water breaks — then a hundredweight of jaw takes you under.",
         "threatLevel"   : 12,    // DPS 17.2 | effHP 238 | bruiser
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 120} ],
@@ -732,6 +754,7 @@
         "tier": 2,
         "audio"            : "reptile",
         "name"          : "Marsh Viper",
+        "flavor": "A green ribbon in the reeds; the bite is small, the walk home long and cold.",
         "threatLevel"   : 1,    // DPS 3.8 | effHP 25 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 238} ],
@@ -763,6 +786,7 @@
         "tier": 2,
         "audio"            : "insect",
         "name"          : "Stirge",
+        "flavor": "A gorging thing on ragged wings that drinks its fill and drops away bloated.",
         "threatLevel"   : 1,    // DPS 1.3 | effHP 15 | harmless
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 163} ],
@@ -790,6 +814,7 @@
         "tier": 2,
         "audio"            : "goblinoid",
         "name"          : "Grimeling",
+        "flavor": "A crawling knot of bog-muck and spite that keeps moving after it should be dead.",
         "threatLevel"   : 2,    // DPS 3.8 | effHP 58 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 231} ],
@@ -817,6 +842,7 @@
         "tier": 2,
         "audio"            : "frog",
         "name"          : "Giant Olm",
+        "flavor": "Blind and pale in the black pools, it has never once needed the sun.",
         "threatLevel"   : 2,    // DPS 2.8 | effHP 40 | harmless
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 196} ],
@@ -840,6 +866,7 @@
         "id"            : "thornwood_spider",
         "audio"            : "insect",
         "name"          : "Thornwood Spider",
+        "flavor": "It waits in the barbed dark where the web-strands are strung thick as a snare.",
         "threatLevel"   : 3,    // DPS 7.6 | effHP 48 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 190} ],
@@ -875,6 +902,7 @@
         "tier": 2,
         "audio"            : "goblinoid",
         "name"          : "Kobold Skulker",
+        "flavor": "It fights with traps and other men's blades and runs the instant the odds turn.",
         "threatLevel"   : 2,    // DPS 4.2 | effHP 30 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "cultures", "id": 64} ],
@@ -905,6 +933,7 @@
         "tier": 2,
         "audio"            : "canine",
         "name"          : "Gnoll Marauder",
+        "flavor": "A hyena that walks upright and hungers upward, laughing as it comes.",
         "threatLevel"   : 4,    // DPS 9.4 | effHP 61 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "creatures", "id": 252} ],
@@ -934,6 +963,7 @@
         "id"            : "orc_reaver",
         "audio"            : "goblinoid",
         "name"          : "Orc Reaver",
+        "flavor": "Broad, brutal and unbothered by pain, it swings iron too heavy for a man to lift.",
         "threatLevel"   : 5,    // DPS 8.5 | effHP 91 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "cultures", "id": 32} ],
@@ -971,6 +1001,7 @@
         "tier": 2,
         "audio"            : "raptor",
         "name"          : "Harpy",
+        "flavor": "A woman's shriek from a bird's throat, dropping talon-first out of the sun.",
         "threatLevel"   : 2,    // DPS 4.7 | effHP 47 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "creatures", "id": 235} ],
@@ -1000,6 +1031,7 @@
         "tier": 2,
         "audio"            : "frog",
         "name"          : "Bullywug",
+        "flavor": "A frog grown to the size of a man's malice, croaking war in the reed-beds.",
         "threatLevel"   : 2,    // DPS 4.7 | effHP 49 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "creatures", "id": 1} ],
@@ -1033,6 +1065,7 @@
         "id": "wolf_pup",
         "audio": "canine",
         "name": "Wolf Pup",
+        "flavor": "Ears too big, legs too long — all play and hunger until the pack teaches it teeth.",
         "threatLevel"   : 1,    // DPS 2.2 | effHP 15 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1066,6 +1099,7 @@
         "id": "scrawny_wolf",
         "audio": "canine",
         "name": "Scrawny Wolf",
+        "flavor": "Ribs showing under a dull coat; a hungry season's runt, still dangerous when cornered.",
         "threatLevel"   : 2,    // DPS 4.2 | effHP 27 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1099,6 +1133,7 @@
         "id": "grey_yearling",
         "audio": "canine",
         "name": "Grey Yearling",
+        "flavor": "Past its first winter and finding its place in the order of the hunt.",
         "threatLevel"   : 2,    // DPS 5.4 | effHP 35 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1132,6 +1167,7 @@
         "id": "timber_wolf",
         "audio": "canine",
         "name": "Timber Wolf",
+        "flavor": "Thick-coated and deep-chested, the steady killer at the heart of the pack.",
         "threatLevel"   : 4,    // DPS 7.2 | effHP 72 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1165,6 +1201,7 @@
         "id": "moor_runner",
         "audio": "canine",
         "name": "Moor Runner",
+        "flavor": "Built long and light for the open moor, it runs its quarry down over the miles.",
         "threatLevel"   : 3,    // DPS 8.1 | effHP 42 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1198,6 +1235,7 @@
         "id": "pack_alpha",
         "audio": "canine",
         "name": "Pack Alpha",
+        "flavor": "The one the others watch — first to the throat, first to the kill.",
         "threatLevel"   : 8,    // DPS 21.7 | effHP 88 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1232,6 +1270,7 @@
         "id": "scarred_hunter",
         "audio": "canine",
         "name": "Scarred Hunter",
+        "flavor": "Old wounds map every fight it has walked away from.",
         "threatLevel"   : 7,    // DPS 19.9 | effHP 78 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1265,6 +1304,7 @@
         "id": "dire_wolf",
         "audio": "canine",
         "name": "Dire Wolf",
+        "flavor": "A wolf out of the deep forest's memory, standing tall as a man's chest.",
         "threatLevel"   : 9,    // DPS 26.1 | effHP 105 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1299,6 +1339,7 @@
         "id": "bloodmoon_alpha",
         "audio": "canine",
         "name": "Bloodmoon Alpha",
+        "flavor": "It runs hardest under a red moon, and the whole pack runs with it.",
         "threatLevel"   : 13,    // DPS 38.6 | effHP 136 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1333,6 +1374,7 @@
         "id": "direwolf_matriarch",
         "audio": "canine",
         "name": "Direwolf Matriarch",
+        "flavor": "Grey-muzzled and merciless, she has led the pack longer than most men live.",
         "threatLevel"   : 14,    // DPS 37.4 | effHP 162 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1366,6 +1408,7 @@
         "id": "frost_fang",
         "audio": "canine",
         "name": "Frost-Fang",
+        "flavor": "Its breath smokes and its coat rimes white; the cold is a companion, not a foe.",
         "threatLevel"   : 12,    // DPS 36.2 | effHP 120 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1401,6 +1444,7 @@
         "id": "bear_cub",
         "audio": "beast",
         "name": "Bear Cub",
+        "flavor": "Round and clumsy and curious — and never, ever far from its mother.",
         "threatLevel"   : 2,    // DPS 3.2 | effHP 32 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1434,6 +1478,7 @@
         "id": "yearling_bear",
         "audio": "beast",
         "name": "Yearling Bear",
+        "flavor": "Newly turned out on its own and still learning what it is allowed to take.",
         "threatLevel"   : 4,    // DPS 7.6 | effHP 78 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1467,6 +1512,7 @@
         "id": "sun_bear",
         "audio": "beast",
         "name": "Sun Bear",
+        "flavor": "Small for its kind, with a pale blaze at the throat and a taste for honey and grubs.",
         "threatLevel"   : 5,    // DPS 9.7 | effHP 91 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1501,6 +1547,7 @@
         "id": "black_bear",
         "audio": "beast",
         "name": "Black Bear",
+        "flavor": "Shy of open ground; it would sooner climb than stand, until it cannot.",
         "threatLevel"   : 8,    // DPS 13.9 | effHP 136 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1535,6 +1582,7 @@
         "id": "grizzly",
         "audio": "beast",
         "name": "Grizzly",
+        "flavor": "It fears nothing that walks and turns from nothing that charges.",
         "threatLevel"   : 10,    // DPS 15.2 | effHP 200 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1569,6 +1617,7 @@
         "id": "cave_bear",
         "audio": "beast",
         "name": "Cave Bear",
+        "flavor": "A giant of the old caves, jaws that once cracked the bones of its own dead.",
         "threatLevel"   : 16,    // DPS 31.9 | effHP 242 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1603,6 +1652,7 @@
         "id": "scarred_grizzly",
         "audio": "beast",
         "name": "Scarred Grizzly",
+        "flavor": "Every winter has taken something from it and left it meaner.",
         "threatLevel"   : 15,    // DPS 31.0 | effHP 210 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1637,6 +1687,7 @@
         "id": "ridgeback_bear",
         "audio": "beast",
         "name": "Ridgeback",
+        "flavor": "A ridge of stiff hair runs down a back plated thick as bark.",
         "threatLevel"   : 11,    // DPS 16.0 | effHP 230 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1671,6 +1722,7 @@
         "id": "elder_cave_bear",
         "audio": "beast",
         "name": "Elder Cave Bear",
+        "flavor": "Ancient and enormous, it has outlived whole tribes that hunted it.",
         "threatLevel"   : 24,    // DPS 50.3 | effHP 313 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1705,6 +1757,7 @@
         "id": "ironhide_bruin",
         "audio": "beast",
         "name": "Ironhide Bruin",
+        "flavor": "Its hide has turned spear and arrow so long the scars have made armour of it.",
         "threatLevel"   : 19,    // DPS 33.1 | effHP 312 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1739,6 +1792,7 @@
         "id": "bloodclaw_bear",
         "audio": "beast",
         "name": "Bloodclaw",
+        "flavor": "It kills past its hunger, and the reddened claws never quite come clean.",
         "threatLevel"   : 19,    // DPS 40.0 | effHP 265 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1774,6 +1828,7 @@
         "id": "great_bear",
         "audio": "beast",
         "name": "Great Bear",
+        "flavor": "The bear the old songs warned of — a moving mountain of muscle and wrath.",
         "threatLevel"   : 33,    // DPS 64.3 | effHP 421 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1808,6 +1863,7 @@
         "id": "piglet",
         "audio": "boar",
         "name": "Piglet",
+        "flavor": "Striped and squealing, it keeps to the sow's flank and bolts at a footfall.",
         "threatLevel"   : 1,    // DPS 2.0 | effHP 15 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -1837,6 +1893,7 @@
         "id": "scrub_boar",
         "audio": "boar",
         "name": "Scrub Boar",
+        "flavor": "Lean and low, rooting the scrub for anything a snout can turn up.",
         "threatLevel"   : 2,    // DPS 4.6 | effHP 35 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -1866,6 +1923,7 @@
         "id": "young_tusker",
         "audio": "boar",
         "name": "Young Tusker",
+        "flavor": "Its tusks are just through, and it is far too eager to use them.",
         "threatLevel"   : 2,    // DPS 5.8 | effHP 44 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -1895,6 +1953,7 @@
         "id": "razorback",
         "audio": "boar",
         "name": "Razorback",
+        "flavor": "A ridge of bristle stands along its spine when the temper rises — and it rises easily.",
         "threatLevel"   : 4,    // DPS 9.2 | effHP 56 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -1924,6 +1983,7 @@
         "id": "bristleback",
         "audio": "boar",
         "name": "Bristleback",
+        "flavor": "Broad and heavy through the shoulder, armoured in matted hide and gristle.",
         "threatLevel"   : 4,    // DPS 7.2 | effHP 88 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -1953,6 +2013,7 @@
         "id": "elder_tusker",
         "audio": "boar",
         "name": "Elder Tusker",
+        "flavor": "Old and solitary and past all patience, its tusks worn to yellow scythes.",
         "threatLevel"   : 7,    // DPS 17.6 | effHP 101 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -1982,6 +2043,7 @@
         "id": "irontusk",
         "audio": "boar",
         "name": "Irontusk",
+        "flavor": "Tusks like ploughshares, and a hide that has stopped answering to fear.",
         "threatLevel"   : 8,    // DPS 18.1 | effHP 105 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2011,6 +2073,7 @@
         "id": "grey_sow",
         "audio": "boar",
         "name": "Grey Sow-Mother",
+        "flavor": "She herds a squealing brood, and there is nothing in the wood she will not gore for it.",
         "threatLevel"   : 6,    // DPS 9.7 | effHP 113 | tank
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2040,6 +2103,7 @@
         "id": "direboar",
         "audio": "boar",
         "name": "Direboar",
+        "flavor": "A boar the size of a bullock, and it charges the way an avalanche falls.",
         "threatLevel"   : 12,    // DPS 28.9 | effHP 152 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2069,6 +2133,7 @@
         "id": "blackmane_tusker",
         "audio": "boar",
         "name": "Blackmane Tusker",
+        "flavor": "A black crest bristling to the shoulder; fast for its bulk and quicker to anger.",
         "threatLevel"   : 11,    // DPS 28.5 | effHP 135 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2098,6 +2163,7 @@
         "id": "bog_colossus",
         "audio": "boar",
         "name": "Bog Colossus",
+        "flavor": "It wallows in the deep mire, plated in dried mud, huge and slow and unstoppable.",
         "threatLevel"   : 12,    // DPS 23.2 | effHP 190 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2127,6 +2193,7 @@
         "id": "great_boar",
         "audio": "boar",
         "name": "Great Boar",
+        "flavor": "The tusker of nightmare and boast, that levels saplings where it turns.",
         "threatLevel"   : 18,    // DPS 37.7 | effHP 241 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2156,6 +2223,7 @@
         "id": "goblin_sneak",
         "audio": "goblinoid",
         "name": "Goblin Sneak",
+        "flavor": "It would rather stab a back than face a front, and usually gets the chance.",
         "threatLevel"   : 1,    // DPS 4.0 | effHP 25 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2189,6 +2257,7 @@
         "id": "goblin_whelp",
         "audio": "goblinoid",
         "name": "Goblin Whelp",
+        "flavor": "Barely weaned off carrion, throwing itself into the fray to prove its teeth.",
         "threatLevel"   : 1,    // DPS 2.8 | effHP 25 | harmless
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2222,6 +2291,7 @@
         "id": "cave_goblin",
         "audio": "goblinoid",
         "name": "Cave Goblin",
+        "flavor": "Pale and wide-eyed from a life underground, it flinches from daylight and little else.",
         "threatLevel"   : 2,    // DPS 4.0 | effHP 30 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2256,6 +2326,7 @@
         "id": "goblin_cutter",
         "audio": "goblinoid",
         "name": "Goblin Cutter",
+        "flavor": "It has learned which way a knife goes in and takes an ugly joy in the lesson.",
         "threatLevel"   : 2,    // DPS 5.3 | effHP 35 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2290,6 +2361,7 @@
         "id": "goblin_netter",
         "audio": "goblinoid",
         "name": "Goblin Netter",
+        "flavor": "It fights with weighted net and hooked stick, and prefers its prey tangled.",
         "threatLevel"   : 2,    // DPS 5.5 | effHP 35 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2324,6 +2396,7 @@
         "id": "goblin_bloodrager",
         "audio": "goblinoid",
         "name": "Goblin Bloodrager",
+        "flavor": "Work it into a froth and it forgets to be a coward.",
         "threatLevel"   : 3,    // DPS 7.3 | effHP 45 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2358,6 +2431,7 @@
         "id": "goblin_slinker",
         "audio": "goblinoid",
         "name": "Goblin Slinker",
+        "flavor": "Quick, low and greasy, gone before the blade falls where it stood.",
         "threatLevel"   : 2,    // DPS 7.2 | effHP 35 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2392,6 +2466,7 @@
         "id": "goblin_boss",
         "audio": "goblinoid",
         "name": "Goblin Boss",
+        "flavor": "It rules a warren by being meaner than the next goblin, and no more.",
         "threatLevel"   : 3,    // DPS 7.8 | effHP 50 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2426,6 +2501,7 @@
         "id": "goblin_warchief",
         "audio": "goblinoid",
         "name": "Goblin Warchief",
+        "flavor": "It has clawed to the top of the heap and dares the pack to try its luck.",
         "threatLevel"   : 4,    // DPS 9.5 | effHP 60 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2460,6 +2536,7 @@
         "id": "hobgoblin_champion",
         "audio": "goblinoid",
         "name": "Hobgoblin Champion",
+        "flavor": "Bigger and better-drilled than the rabble it leads, and it knows it.",
         "threatLevel"   : 6,    // DPS 12.1 | effHP 95 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2495,6 +2572,7 @@
         "id": "goblin_firecaller",
         "audio": "goblinoid",
         "name": "Goblin Firecaller",
+        "flavor": "It hoards fire-pots and burning tricks, cackling at every flame it sets.",
         "threatLevel"   : 3,    // DPS 8.1 | effHP 45 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2529,6 +2607,7 @@
         "id": "goblin_warlord",
         "audio": "goblinoid",
         "name": "Goblin Warlord",
+        "flavor": "Cunning enough to bind a hundred squabbling goblins to one purpose — usually a raid.",
         "threatLevel"   : 7,    // DPS 15.0 | effHP 98 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2564,6 +2643,7 @@
         "id": "orc_whelp",
         "audio": "goblinoid",
         "name": "Orc Whelp",
+        "flavor": "Young and untried, all snarl and no scars, hungry to earn the second.",
         "threatLevel"   : 3,    // DPS 5.9 | effHP 55 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2598,6 +2678,7 @@
         "id": "orc_grunt",
         "audio": "goblinoid",
         "name": "Orc Grunt",
+        "flavor": "The bulk of any warband — strong, blunt and utterly without doubt.",
         "threatLevel"   : 4,    // DPS 7.3 | effHP 66 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2632,6 +2713,7 @@
         "id": "orc_scavenger",
         "audio": "goblinoid",
         "name": "Orc Scavenger",
+        "flavor": "It picks the field after the fighting for anything an iron-shod boot has left.",
         "threatLevel"   : 3,    // DPS 7.6 | effHP 58 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2666,6 +2748,7 @@
         "id": "orc_marauder",
         "audio": "goblinoid",
         "name": "Orc Marauder",
+        "flavor": "It raids for the joy of it, and counts a burned steading a good day.",
         "threatLevel"   : 5,    // DPS 9.7 | effHP 84 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2700,6 +2783,7 @@
         "id": "orc_berserker",
         "audio": "goblinoid",
         "name": "Orc Berserker",
+        "flavor": "It works itself past pain and past sense and comes on regardless.",
         "threatLevel"   : 5,    // DPS 11.7 | effHP 78 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2735,6 +2819,7 @@
         "id": "orc_veteran",
         "audio": "goblinoid",
         "name": "Orc Veteran",
+        "flavor": "Notched blade, notched tusks — it has buried better fighters than you.",
         "threatLevel"   : 6,    // DPS 12.9 | effHP 104 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2770,6 +2855,7 @@
         "id": "orc_ironhide",
         "audio": "goblinoid",
         "name": "Orc Ironhide",
+        "flavor": "Hide toughened to a boiled-leather thickness that shrugs off the first blow, and the second.",
         "threatLevel"   : 6,    // DPS 10.7 | effHP 117 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2805,6 +2891,7 @@
         "id": "orc_slayer",
         "audio": "goblinoid",
         "name": "Orc Slayer",
+        "flavor": "It fights in a whirl of iron, meaning to be surrounded.",
         "threatLevel"   : 7,    // DPS 15.4 | effHP 98 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2840,6 +2927,7 @@
         "id": "orc_warlord",
         "audio": "goblinoid",
         "name": "Orc Warlord",
+        "flavor": "It leads from the front of the charge because nothing has yet stopped it there.",
         "threatLevel"   : 8,    // DPS 16.6 | effHP 126 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2875,6 +2963,7 @@
         "id": "orc_blackguard",
         "audio": "goblinoid",
         "name": "Orc Blackguard",
+        "flavor": "Sworn to its warboss and to the killing, in that order.",
         "threatLevel"   : 8,    // DPS 16.5 | effHP 115 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2910,6 +2999,7 @@
         "id": "orc_chosen",
         "audio": "goblinoid",
         "name": "Orc Chosen",
+        "flavor": "Marked out by scar and rite as the one the tribe throws at its worst problems.",
         "threatLevel"   : 8,    // DPS 17.3 | effHP 133 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2945,6 +3035,7 @@
         "id": "orc_warboss",
         "audio": "goblinoid",
         "name": "Orc Warboss",
+        "flavor": "It holds the warband by the throat of its own strength, and points that strength at you.",
         "threatLevel"   : 11,    // DPS 21.3 | effHP 165 | bruiser
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2980,6 +3071,7 @@
         "id": "spiderling",
         "audio": "insect",
         "name": "Spiderling",
+        "flavor": "A scatter of them across the web, each no bigger than a thumbnail and just as sharp.",
         "threatLevel"   : 1,    // DPS 2.0 | effHP 8 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3012,6 +3104,7 @@
         "id": "web_scuttler",
         "audio": "insect",
         "name": "Web-Scuttler",
+        "flavor": "It races the strands to whatever has blundered in, quicker than a falling stone.",
         "threatLevel"   : 1,    // DPS 4.3 | effHP 20 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3044,6 +3137,7 @@
         "id": "thorn_hatchling",
         "audio": "insect",
         "name": "Thorn Hatchling",
+        "flavor": "Small and venom-quick, its bite runs colder than its size should allow.",
         "threatLevel"   : 2,    // DPS 6.4 | effHP 27 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3076,6 +3170,7 @@
         "id": "ambush_weaver",
         "audio": "insect",
         "name": "Ambush Weaver",
+        "flavor": "It strings a trip-line snare and waits, still as bark, for the thread to twitch.",
         "threatLevel"   : 2,    // DPS 6.4 | effHP 37 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3109,6 +3204,7 @@
         "id": "bristle_spider",
         "audio": "insect",
         "name": "Bristle Spider",
+        "flavor": "Stiff hairs bristle from a swollen body; it stands its ground where lesser kin flee.",
         "threatLevel"   : 3,    // DPS 8.7 | effHP 52 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3142,6 +3238,7 @@
         "id": "broodmother",
         "audio": "insect",
         "name": "Broodmother",
+        "flavor": "She guards a bulging egg-sac and answers any shadow with fang and web.",
         "threatLevel"   : 4,    // DPS 7.8 | effHP 84 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3175,6 +3272,7 @@
         "id": "venomfang_stalker",
         "audio": "insect",
         "name": "Venomfang Stalker",
+        "flavor": "It does not spin — it hunts, and its bite is a great deal worse than a snare.",
         "threatLevel"   : 5,    // DPS 17.7 | effHP 48 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3208,6 +3306,7 @@
         "id": "carapace_lurker",
         "audio": "insect",
         "name": "Carapace Lurker",
+        "flavor": "Plated dark and low, it lets blows glance off and closes at its own pace.",
         "threatLevel"   : 5,    // DPS 9.6 | effHP 81 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3241,6 +3340,7 @@
         "id": "great_weaver",
         "audio": "insect",
         "name": "Great Weaver",
+        "flavor": "It has strung a whole hollow in silk and killed everything else that lived there.",
         "threatLevel"   : 8,    // DPS 16.7 | effHP 119 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3274,6 +3374,7 @@
         "id": "dread_broodmother",
         "audio": "insect",
         "name": "Dread Broodmother",
+        "flavor": "Ancient and swollen, she has seeded the wood with a hundred hungry broods.",
         "threatLevel"   : 9,    // DPS 16.4 | effHP 144 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3307,6 +3408,7 @@
         "id": "chitin_horror",
         "audio": "insect",
         "name": "Chitin Horror",
+        "flavor": "So thickly armoured it barely resembles a spider — more a walking shield with fangs.",
         "threatLevel"   : 8,    // DPS 13.5 | effHP 145 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3340,6 +3442,7 @@
         "id": "spider_queen",
         "audio": "insect",
         "name": "Spider Queen",
+        "flavor": "The heart of the web-choked dark, and everything that skitters answers to her.",
         "threatLevel"   : 14,    // DPS 26.4 | effHP 220 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3378,6 +3481,7 @@
         "id": "dire_rat",
         "audio": "rustle",
         "name": "Dire Rat",
+        "flavor": "Grown to the size of a dog on rich filth, and long past bolting from a stick.",
         "threatLevel"   : 3,    // DPS 7.6 | effHP 48 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 205}],
@@ -3405,6 +3509,7 @@
         "id": "greater_wraith",
         "audio": "wraith",
         "name": "Greater Wraith",
+        "flavor": "The cold of it reaches ahead into the room; where it lingers, nothing living stays.",
         "threatLevel"   : 8,    // DPS 24.2 | effHP 85 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "creatures", "id": 173}],
@@ -3437,6 +3542,7 @@
         "id": "fawn",
         "audio": "grunt",
         "name": "Fawn",
+        "flavor": "Dapple-coated and wobble-legged, it freezes where its mother left it and hopes.",
         "threatLevel"   : 1,    // DPS 0.8 | effHP 11 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 66}],
@@ -3465,6 +3571,7 @@
         "id": "rabbit_kit",
         "audio": "critter",
         "name": "Rabbit Kit",
+        "flavor": "Blind-new and no bigger than a fist, it barely knows to be afraid yet.",
         "threatLevel"   : 1,    // DPS 0.2 | effHP 4 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 76}],
@@ -3492,6 +3599,7 @@
         "id": "great_elk",
         "audio": "grunt",
         "name": "Great Elk",
+        "flavor": "A stag out of legend, its antlers spanning wider than a man stands tall.",
         "threatLevel"   : 9,    // DPS 17.0 | effHP 159 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 78}],
@@ -3523,6 +3631,7 @@
         "id": "goat_kid",
         "audio": "goat",
         "name": "Goat Kid",
+        "flavor": "It skitters the ledges after its dam, sure-footed before it is sure of anything else.",
         "threatLevel"   : 1,    // DPS 0.6 | effHP 9 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 74}],
@@ -3555,6 +3664,7 @@
         "id": "chick",
         "audio": "fowl",
         "name": "Chick",
+        "flavor": "A ball of down on toothpick legs, peeping after whatever moves.",
         "threatLevel"   : 1,    // DPS 0.1 | effHP 3 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 75}],
@@ -3586,6 +3696,7 @@
         "id": "elder_aurochs",
         "audio": "beast",
         "name": "Elder Aurochs",
+        "flavor": "Grey about the muzzle and vast through the shoulder, the herd-bull no wolf tests twice.",
         "threatLevel"   : 23,    // DPS 30.9 | effHP 484 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 156}],
@@ -3618,6 +3729,7 @@
         "id": "bull_mammoth",
         "audio": "beast",
         "name": "Bull Mammoth",
+        "flavor": "The great tusker of the herd, so huge the plain seems to tilt as it turns.",
         "threatLevel"   : 58,    // DPS 50.4 | effHP 1535 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 158}],
@@ -3650,6 +3762,7 @@
         "id": "royal_hippogriff",
         "audio": "raptor",
         "name": "Royal Hippogriff",
+        "flavor": "A prince of the crag-winds, plumage bright, its stoop swift as a loosed arrow.",
         "threatLevel"   : 11,    // DPS 21.1 | effHP 183 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 22}],
@@ -3684,6 +3797,7 @@
         "id": "hoarfowl_chick",
         "audio": "fowl",
         "name": "Hoarfowl Chick",
+        "flavor": "A puff of frost-white down that hasn't yet learned the cold is meant to be feared.",
         "threatLevel"   : 1,    // DPS 0.7 | effHP 12 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 35}],
@@ -3713,6 +3827,7 @@
         "id": "elder_quillback",
         "audio": "critter",
         "name": "Elder Quillback",
+        "flavor": "Grown huge and slow behind a fortress of quills nothing cares to test.",
         "threatLevel"   : 7,    // DPS 6.8 | effHP 252 | tank
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 153}],
@@ -3741,6 +3856,7 @@
         "id": "alpha_worg",
         "audio": "canine",
         "name": "Alpha Worg",
+        "flavor": "The one the worg-pack circles, blacker and crueller than any of them.",
         "threatLevel"   : 7,    // DPS 14.4 | effHP 126 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 114}],
@@ -3772,6 +3888,7 @@
         "id": "jackal_pup",
         "audio": "canine",
         "name": "Jackal Pup",
+        "flavor": "Yipping and underfoot, it learns to scavenge long before it learns to hunt.",
         "threatLevel"   : 1,    // DPS 1.7 | effHP 16 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -3803,6 +3920,7 @@
         "id": "elder_owlbear",
         "audio": "beast",
         "name": "Elder Owlbear",
+        "flavor": "Grizzled and enormous, its hate has had a lifetime to deepen.",
         "threatLevel"   : 22,    // DPS 33.2 | effHP 400 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 168}],
@@ -3836,6 +3954,7 @@
         "id": "dire_sabretooth",
         "audio": "beast",
         "name": "Dire Sabretooth",
+        "flavor": "A great cat the size of a horse, its fangs the length of a forearm.",
         "threatLevel"   : 15,    // DPS 35.9 | effHP 181 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 130}],
@@ -3867,6 +3986,7 @@
         "id": "elder_crocodile",
         "audio": "reptile",
         "name": "Elder Crocodile",
+        "flavor": "Moss-backed and log-still, it has taken game from this bank longer than the village has stood.",
         "threatLevel"   : 24,    // DPS 31.7 | effHP 483 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 120}],
@@ -3899,6 +4019,7 @@
         "id": "giant_viper",
         "audio": "reptile",
         "name": "Giant Viper",
+        "flavor": "Thick as a man's arm and swift as a whip; there is no walking off this one's bite.",
         "threatLevel"   : 4,    // DPS 9.6 | effHP 56 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 238}],
@@ -3930,6 +4051,7 @@
         "id": "stirgeling",
         "audio": "insect",
         "name": "Stirgeling",
+        "flavor": "A newly-fledged blood-drinker, all appetite and no weight, easily swatted.",
         "threatLevel"   : 1,    // DPS 0.4 | effHP 6 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 163}],
@@ -3959,6 +4081,7 @@
         "id": "grime_horror",
         "audio": "goblinoid",
         "name": "Grime Horror",
+        "flavor": "A wallowing mound of bog-rot and malice that closes its wounds as fast as they open.",
         "threatLevel"   : 5,    // DPS 7.4 | effHP 120 | tank
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 231}],
@@ -3987,6 +4110,7 @@
         "id": "elder_olm",
         "audio": "frog",
         "name": "Elder Olm",
+        "flavor": "Old past guessing in the lightless pools, pale as a drowned thing.",
         "threatLevel"   : 3,    // DPS 5.7 | effHP 72 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 196}],
@@ -4013,6 +4137,7 @@
         "id": "kobold_trapper",
         "audio": "goblinoid",
         "name": "Kobold Trapper",
+        "flavor": "It seeds the ground with snares and deadfalls and lets the trap do the killing.",
         "threatLevel"   : 3,    // DPS 7.7 | effHP 44 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 64}],
@@ -4044,6 +4169,7 @@
         "id": "gnoll_reaver",
         "audio": "canine",
         "name": "Gnoll Reaver",
+        "flavor": "Bigger, bloodier and hungrier than the pack it runs at the head of.",
         "threatLevel"   : 7,    // DPS 17.2 | effHP 100 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "creatures", "id": 252}],
@@ -4075,6 +4201,7 @@
         "id": "harpy_matron",
         "audio": "raptor",
         "name": "Harpy Matron",
+        "flavor": "She leads the roost's stooping, shrieking mob and screams loudest of them all.",
         "threatLevel"   : 5,    // DPS 9.9 | effHP 80 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "creatures", "id": 235}],
@@ -4105,6 +4232,7 @@
         "id": "bullywug_brute",
         "audio": "frog",
         "name": "Bullywug Brute",
+        "flavor": "Bloated and broad, it throngs the reeds bellowing war in a chorus of croaks.",
         "threatLevel"   : 4,    // DPS 8.4 | effHP 81 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "creatures", "id": 1}],

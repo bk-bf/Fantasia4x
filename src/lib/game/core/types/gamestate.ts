@@ -125,6 +125,11 @@ export interface GameState {
   deadPawns?: DeadPawnRecord[];
   /** ENTITIES_SPAWNING Phase A: live hostile mobs + neutral animals on the map. */
   mobs?: Mob[];
+  /** CREATURE-COMBAT-OVERHAUL §3a lair-age escalation: per-lair escalation LEVEL (0 = base tier), keyed
+   *  by `lairId` (`lair-<resId>-<x>-<y>`). Accrues by age while the den lives (tickLairs), biases its
+   *  breeds toward higher tiers, unlocks a T5 boss at max; resets to 0 when the pack is cleared or the
+   *  den's tile destroyed. Sparse (only non-zero levels stored). Sim-internal. */
+  lairEscalation?: Record<string, number>;
   /** ENTITIES_SPAWNING Phase C: animals tamed and bound to a pawn. */
   tamedAnimals?: TamedAnimal[];
   /** Accumulated decay-seconds per item type in the stockpile (for stepItemDecay). */

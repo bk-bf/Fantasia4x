@@ -34,6 +34,8 @@
   export interface SelectedEntityModel {
     /** Display name shown in the header. */
     name: string;
+    /** One-line flavour blurb — shown truncated under the header, full text as the name's hover title. */
+    flavor?: string;
     /** Bracketed status label, e.g. the current state. */
     status?: string;
     /** Gold-highlighted "selected/locked" styling. */
@@ -223,7 +225,7 @@
     <div class="tile-hud-body">
     <div class="pawn-header">
       <div class="pawn-meta">
-        <span class="pawn-name">{model.name}</span>
+        <span class="pawn-name" title={model.flavor}>{model.name}</span>
         {#if model.status}<span class="pawn-state">[{model.status}]</span>{/if}
         {#if model.dismissable}<span class="pawn-dismiss" title="Press Esc to deselect">◈</span
           >{/if}
@@ -234,6 +236,10 @@
         >
       {/if}
     </div>
+
+    {#if model.flavor}
+      <div class="pawn-flavor" title={model.flavor}>{model.flavor}</div>
+    {/if}
 
     {#if body}
       {@render body()}
@@ -490,6 +496,17 @@
     color: #c8a060;
     font-weight: bold;
     font-size: 13px;
+  }
+  /* Truncated flavour teaser — one line, ellipsised; full text lives on the name's hover title. */
+  .pawn-flavor {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-style: italic;
+    font-size: 11px;
+    color: #9a7a48;
+    margin-bottom: 2px;
   }
   .pawn-state {
     color: #7a6030;

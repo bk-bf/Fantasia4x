@@ -769,6 +769,7 @@ export function buildMobCard(
     // "<Species>, <Variant>" ("Boar, Razorback") so the group + the individual both show; a species
     // whose name IS the species label (base wolf) or an un-laddered creature just shows its own name.
     name: mobDisplayName(mob, def) + entityDebugLabel(mob),
+    flavor: def.flavor,
     status: mob.state,
     selected,
     dismissable: selected,

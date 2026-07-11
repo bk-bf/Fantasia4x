@@ -34,12 +34,15 @@ import {
   LAIR_MAX_POP,
   MIN_LAIR_SPACING,
   LAIR_GROW_CHANCE,
+  LAIR_ESCALATION_CHANCE,
+  LAIR_MAX_ESCALATION,
   maxLairCount,
   STARTING_BUBBLE_RADIUS,
   STARTING_BUBBLE_TURNS,
   SEED_HUNGER_GRACE
 } from './entityConstants';
 import { chebyshev } from '../../core/distance';
+import { getCreatureById } from '../../core/Creatures';
 
 let idCounter = 0;
 
@@ -360,6 +363,45 @@ export function pickSpeciesThenTier(pool: CreatureDefinition[]): CreatureDefinit
   return pickWeightedByTier(bySpecies.get(key)!) ?? pickWeightedByTier(pool);
 }
 
+/**
+ * CREATURE-COMBAT §3a escalated breed pick. An escalated den (level ≥ 1) breeds UP its ladder: species-
+ * first (fairness), then the variant of the group closest to the target tier `2 + level` (preferring the
+ * highest tier ≤ target). A **T5 boss** is only reachable at `LAIR_MAX_ESCALATION` AND when no boss is
+ * already bound to this den (`bossAlive`) — so the marquee threat is a rare climax, not a boss flood.
+ * `level ≤ 0` falls back to the normal tier-weighted pick.
+ */
+export function pickEscalatedCreature(
+  pool: CreatureDefinition[],
+  level: number,
+  bossAlive: boolean
+): CreatureDefinition | undefined {
+  if (level <= 0 || pool.length === 0) return pickSpeciesThenTier(pool);
+  const target = level >= LAIR_MAX_ESCALATION && !bossAlive ? 5 : Math.min(2 + level, 4);
+  // species-first for the same lair-mate fairness as pickSpeciesThenTier
+  const bySpecies = new Map<string, CreatureDefinition[]>();
+  for (const c of pool) {
+    const k = c.species ?? c.id;
+    const arr = bySpecies.get(k);
+    if (arr) arr.push(c);
+    else bySpecies.set(k, [c]);
+  }
+  const keys = [...bySpecies.keys()];
+  const group = bySpecies.get(keys[Math.floor(rng.random() * keys.length)])!;
+  // Closest tier to target, preferring the highest tier that does NOT exceed it (a den at target T4 that
+  // has no T4 variant falls to T3, not up to a T5 boss).
+  let best: CreatureDefinition | undefined;
+  let bestScore = Infinity;
+  for (const c of group) {
+    const t = c.tier ?? 2;
+    const score = t <= target ? target - t : t - target + 100;
+    if (score < bestScore) {
+      bestScore = score;
+      best = c;
+    }
+  }
+  return best ?? pickSpeciesThenTier(pool);
+}
+
 /** Spawn one bound pack of `def` anchored at (lairX,lairY) with the given lairId. The first mob sits
  *  on the lair tile, the rest spread to adjacent spawnable land. Every member is leashed to the lair. */
 function spawnPackAt(
@@ -503,12 +545,29 @@ export function tickLairs(state: GameState): GameState {
     }
   }
 
-  // Alive bound-mob count per lairId.
+  // Alive bound-mob count per lairId (+ which lairs already have a living T5 boss, so §3a never breeds a
+  // second one on top).
   const aliveByLair = new Map<string, number>();
+  const bossByLair = new Set<string>();
   for (const m of state.mobs ?? []) {
     if (m.lairId && m.isAlive !== false && m.state !== 'Corpse') {
       aliveByLair.set(m.lairId, (aliveByLair.get(m.lairId) ?? 0) + 1);
+      if ((getCreatureById(m.creatureId)?.tier ?? 2) >= 5) bossByLair.add(m.lairId);
     }
+  }
+
+  // §3a lair-age escalation: rebuild the per-lair level map from the LIVE lairs (so a destroyed den's
+  // entry is dropped). A living, un-cleared den outside the bubble climbs one level on a daily roll; a
+  // cleared den (pack wiped) resets to base. Only non-zero levels are kept, so the map stays sparse.
+  const prevEsc = state.lairEscalation ?? {};
+  const esc: Record<string, number> = {};
+  for (const lt of lairTiles) {
+    if (inStartingBubble(state, lt.x, lt.y)) continue; // dormant dens don't escalate
+    const alive = aliveByLair.get(lt.lairId) ?? 0;
+    let level = prevEsc[lt.lairId] ?? 0;
+    if (alive === 0) level = 0; // cleared → reset to base
+    else if (level < LAIR_MAX_ESCALATION && rng.random() < LAIR_ESCALATION_CHANCE) level += 1;
+    if (level > 0) esc[lt.lairId] = level;
   }
 
   const byLair = creaturesByLair(lairIds);
@@ -529,13 +588,26 @@ export function tickLairs(state: GameState): GameState {
     if (rng.random() >= breedChance) continue;
     const cands = byLair.get(lt.resId);
     if (!cands || cands.length === 0) continue;
-    const def = pickSpeciesThenTier(cands); // §2e species-first + tier rarity (T5 never breeds ambiently)
+    // §3a: an escalated den breeds UP its ladder (pickEscalatedCreature); a base den keeps the normal
+    // tier-weighted pick. A repopulate-from-empty (alive === 0) already reset to base above, so it seeds
+    // a fresh starter pack, never an escalated one — you cleared it, it's back to base.
+    const level = esc[lt.lairId] ?? 0;
+    const def =
+      level > 0
+        ? pickEscalatedCreature(cands, level, bossByLair.has(lt.lairId))
+        : pickSpeciesThenTier(cands);
     if (!def) continue;
     newMobs.push(
       ...(alive === 0
         ? spawnPackAt(state, def, lt.x, lt.y, lt.lairId)
         : spawnBoundMobs(state, def, lt.x, lt.y, lt.lairId, 1))
     );
+    // Spawning the boss SPENDS the buildup: reset this den to base so it must re-accrue for the next one
+    // (prevents a maxed den flooding bosses as they die).
+    if ((def.tier ?? 2) >= 5) {
+      delete esc[lt.lairId];
+      bossByLair.add(lt.lairId);
+    }
   }
 
   // Grow a NEW lair somewhere on the map (~1/month via LAIR_GROW_CHANCE), toward the world cap and no
@@ -559,8 +631,16 @@ export function tickLairs(state: GameState): GameState {
     }
   }
 
-  if (newMobs.length === 0) return state; // worldMap mutations (if any) shipped via markTileDirty
-  return { ...state, mobs: [...(state.mobs ?? []), ...newMobs] };
+  // Escalation map changed if any level was added/removed/bumped vs last tick.
+  const prevKeys = Object.keys(prevEsc);
+  const escChanged =
+    prevKeys.length !== Object.keys(esc).length ||
+    prevKeys.some((k) => prevEsc[k] !== esc[k]) ||
+    Object.keys(esc).some((k) => esc[k] !== prevEsc[k]);
+
+  if (newMobs.length === 0 && !escChanged) return state; // worldMap mutations shipped via markTileDirty
+  const mobs = newMobs.length ? [...(state.mobs ?? []), ...newMobs] : state.mobs;
+  return { ...state, mobs, lairEscalation: esc };
 }
 
 /** Try to place ONE new lair on a random eligible grass/bush tile (a lair def's own spawn subterrains).

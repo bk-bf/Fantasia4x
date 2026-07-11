@@ -51,6 +51,12 @@ export const MIN_LAIR_SPACING = 10;
 /** Per-daily-check chance a NEW lair grows on an eligible grass/bush tile (toward the world cap).
  *  Tuned to ~1 new lair per in-game month on average, still hard-capped by `maxLairCount`. */
 export const LAIR_GROW_CHANCE = 0.035;
+/** CREATURE-COMBAT §3a lair-age escalation. Per-daily-check chance a LIVING, un-cleared den (outside the
+ *  starting bubble) climbs ONE escalation level — so a neglected den's breeds tier up over time. ~0.07/day
+ *  ≈ one level per ~2 in-game weeks, so reaching the boss (max level) takes ~6 weeks of neglect. */
+export const LAIR_ESCALATION_CHANCE = 0.07;
+/** Max escalation level. Base den ≈ T2, so +3 reaches T5 (boss). Breeds target tier `2 + level`. */
+export const LAIR_MAX_ESCALATION = 3;
 /** World lair ceiling, area-scaled (~1 per 6000 tiles). Growth tops up toward this after lairs are
  *  destroyed — never beyond it; so the map's danger density self-heals to its intended level. */
 export function maxLairCount(width: number, height: number): number {

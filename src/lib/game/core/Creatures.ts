@@ -55,6 +55,8 @@ export interface CreatureProduces {
 export interface CreatureDefinition {
   id: string;
   name: string;
+  /** One-line in-world flavour blurb — shown truncated in the info panel, full text on name hover. */
+  flavor?: string;
   entityClass: EntityClass;
   /** Resolved glyph char array (from charSpans in the DB). */
   chars: string[];
@@ -217,6 +219,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
   return {
     id: raw.id as string,
     name: raw.name as string,
+    flavor: (raw.flavor as string | undefined) ?? undefined,
     entityClass: raw.entityClass as EntityClass,
     chars: resolveCharSpans((raw.charSpans ?? []) as CharSpan[]),
     fg: raw.fg as [number, number, number],
