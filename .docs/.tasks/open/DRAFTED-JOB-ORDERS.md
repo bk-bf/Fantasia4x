@@ -8,7 +8,25 @@
 
 > **Related:** [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-017 jobs, ADR-016 physical production) · [ROADMAP](ROADMAP.md) · [ui/ARCHITECTURE](../../ui/ARCHITECTURE.md)
 
-**Status:** Core (§1–§7) design locked (2026-07-10), unimplemented. Expansion (§8–§11) proposed 2026-07-10, pending confirmation:
+**Status:** ✅ **IMPLEMENTED 2026-07-11** (core §1–§7 + expansion §8–§11). `pnpm check` clean, ESLint
+clean, all related tests green (+ new `sim/manualQueue.test.ts`, 7 tests). One pre-existing,
+unrelated suite failure (`recipeService.test.ts` `green_firewood` data drift) is not from this work.
+
+**Deviations from the written design** (drafted-skip forced them, all consistent with intent):
+
+- **`forceConsume` / `drink` are FSM-driven / undrafted-only.** A drafted pawn has its `activeJob`
+  nuked every tick ([PawnStateMachine.ts:1422](../../../src/lib/game/systems/PawnStateMachine.ts#L1422))
+  and skips the behavioural FSM, so EATING/DRINKING can't progress while drafted. The menu therefore
+  offers Eat/Drink only for an **undrafted** pawn (they route through `handleForcedConsume`/
+  `handleForcedDrink` in the FSM). §3.3's drafted consume/drink executor arms were not built.
+- **Haul-to-stockpile stays drafted-only** in the menu (an undrafted pawn already auto-hauls via the
+  job pool, so a manual undrafted haul verb would be redundant; the FSM drops non-work manual orders).
+- **Added a "Cancel order here" menu entry** when the tile carries a designation, so the old
+  right-click-to-cancel gesture survives now that the force menu owns the click.
+
+Original notes below (design of record).
+
+**Status (original):** Core (§1–§7) design locked (2026-07-10). Expansion (§8–§11) proposed 2026-07-10:
 
 - **§8 Menu without draft** — the same right-click verbs on a plain *selected* pawn, so you never draft just to hand it a job/need/gear; undrafted orders route through the FSM (survival needs still preempt).
 - **§9 Shift-to-queue** — Shift while picking a verb appends to a per-pawn order queue instead of replacing, so several manual orders run in sequence.
@@ -102,14 +120,14 @@ No new service, no new `JobDef`, no command-layer change, no ADR (uses the exist
 
 ## 7. Acceptance criteria
 
-- [ ] Drafting a pawn and right-clicking a **designated** resource tile offers a "Harvest/Chop/Mine/Forage" entry; pressing it walks the pawn over and fells/mines it to completion, then clears the order.
-- [ ] Right-clicking a **workbench with a supplied queued craft** offers "Craft"; the pawn works that order at its station.
-- [ ] Right-clicking an **unfinished, supplied construction site** offers "Build"; the pawn completes it. Demolish/repair likewise when those jobs exist.
-- [ ] Right-clicking a tile with an **edible dropped item** offers "Consume *&lt;name&gt;*"; the pawn walks over, picks it up, and eats it regardless of hunger level.
-- [ ] Right-clicking a **water tile** offers "Drink"; the pawn drinks.
-- [ ] Every menu label is a human `JobDef`/item name — **no raw ids** leak.
-- [ ] Undrafting a pawn mid-force releases its claimed job back to the pool.
-- [ ] `pnpm check` clean; `pnpm test:related` on the four touched files green.
+- [x] Drafting a pawn and right-clicking a **designated** resource tile offers a "Harvest" entry; pressing it walks the pawn over and fells/mines it to completion, then clears the order.
+- [x] Right-clicking a **workbench with a supplied queued craft** offers "Craft"; the pawn works that order at its station.
+- [x] Right-clicking an **unfinished, supplied construction site** offers "Build"; the pawn completes it. Demolish/repair likewise when those jobs exist.
+- [x] Right-clicking a tile with an **edible dropped item** offers "Eat *&lt;name&gt;*"; the pawn walks over, picks it up, and eats it regardless of hunger level. *(Undrafted only — see Deviations.)*
+- [x] Right-clicking a **water tile** offers "Drink"; the pawn drinks. *(Undrafted only.)*
+- [x] Every menu label is a human `JobDef`/item name — **no raw ids** leak.
+- [x] Undrafting a pawn mid-force releases its claimed job back to the pool (drafted release via the state machine; cancel/replace/undraft release via the command).
+- [x] `pnpm check` clean; `pnpm test:related` on the touched files green.
 
 ---
 
@@ -188,10 +206,10 @@ requirement survives only in the **drafted executor's** haul/equip arms:
 
 **Expansion acceptance criteria:**
 
-- [ ] Selecting an **undrafted** pawn and right-clicking a designated resource / supplied craft / build site / edible drop / water tile offers the same verbs a drafted pawn gets (minus move/attack) — **without drafting**.
-- [ ] The undrafted pawn walks over and completes the forced job through the normal FSM work loop, then returns to autonomous work; a critical hunger/fatigue/threat still **interrupts** the forced order and resumes it afterwards.
-- [ ] **Shift+picking** several verbs queues them; the pawn runs them in order, draining one per completion. A plain pick **replaces** the queue.
-- [ ] Shift-queue works for both drafted and undrafted pawns.
-- [ ] A pawn standing on **any tile adjacent to** a dropped item can pick it up / equip it — no need to stand on the item.
-- [ ] Cancelling/replacing an undrafted order releases any force-claimed job back to the pool.
-- [ ] `pnpm check` clean; `pnpm test:related` on the touched files green.
+- [x] Selecting an **undrafted** pawn and right-clicking a designated resource / supplied craft / build site / edible drop / water tile offers the same verbs a drafted pawn gets (minus move/attack) — **without drafting**.
+- [x] The undrafted pawn walks over and completes the forced job through the normal FSM work loop (`handleIdle` pins the forced job before `selectJobForPawn`), then returns to autonomous work; a critical hunger/fatigue/threat still **interrupts** the forced order (survival needs sit above it) and it resumes afterwards.
+- [x] **Shift+picking** several verbs queues them (`manualQueue`); the pawn runs them in order, draining one per completion (`advancePawnOrders`). A plain pick **replaces** the queue.
+- [x] Shift-queue works for both drafted (executor drains via `popOrder`) and undrafted (FSM drains via `advancePawnOrders`) pawns.
+- [x] A pawn standing on **any tile adjacent to** a dropped item can pick it up / equip it — the drafted haul/equip gates relax to `isAdjacent` and stop the walk at an approach tile (the FSM eat path already tolerated adjacency).
+- [x] Cancelling (`target: null`) or replacing an undrafted order releases any force-claimed job back to the pool (command) — and the in-progress case is also released by `handleWorking`'s preempt.
+- [x] `pnpm check` clean; ESLint clean; full suite green apart from one pre-existing, unrelated `recipeService` data-drift failure; new `sim/manualQueue.test.ts` (7 tests) green.
