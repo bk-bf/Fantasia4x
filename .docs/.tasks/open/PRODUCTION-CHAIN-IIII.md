@@ -88,7 +88,7 @@ an ancient stand). Yield high-tier magical lumber for §2h gear + roofs/beauty f
 | `bonewood_snag` | swamp | `bonewood` — pale, light, takes venom well | goblin/bullywug dens | ⬜ pending |
 
 > **Implemented (2026-07-11):** the deep-forest pair (`witchwood_grove`/`soulwood_grove`) ship as
-> `woodcut` nodes gated to a new **`deep_forest`-only subterrain** `ancient_grove` (verified to appear
+> `woodcut` nodes gated to a new **`deep_forest`-only subterrain** `mossy_ground` (verified to appear
 > ONLY in deep-forest cores), so they spawn nowhere else — soulwood listed first (rarest) for its own
 > roll. Items `witchwood_log`/`soulwood_heart` added (`magic_wood`, tier-3 woodcut, long regrowth).
 > Prereq shipped this pass: the **biome-variant system** (`parent` field + distance-transform interior
