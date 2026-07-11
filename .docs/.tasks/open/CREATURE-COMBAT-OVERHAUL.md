@@ -133,8 +133,10 @@ Green: `pnpm check` 0 errors (732 files), the combat/spawn suites + new `lootPoo
 - [x] **§2d natural-gear upgrades** are data on each variant's `naturalWeapons` list.
 
 **Remaining engine TODO (small, deferred until the full ladder data exists):**
-- [ ] **Spawn weighting by tier** — the spawner weights by `biomeWeights` only. Add a per-tier rarity
-  multiplier (T1 common → T5 boss = escalation-only) so higher tiers are appropriately rare. One hook.
+- [x] **Spawn weighting by tier** — landed 2026-07-11: `TIER_SPAWN_WEIGHT` (1.6/1.0/0.3/0.1/**0**) +
+  `pickWeightedByTier` replace the uniform pick in all four spawn paths (ambient `pickSpawnCreature`,
+  den seeding, den breeding, new-lair growth). **T5 weight 0** = a boss NEVER ambient-spawns; it waits
+  for Phase-3 escalation (dev-spawnable meanwhile). Guarded by `variantLadder.test.ts`.
 - [ ] **Threat model sees equipment** — `threat-model.mjs` scores natural weapons only, so an armed orc
   reads weaker than it fights. Fold the lootpool's expected weapon into the estimate (or accept the
   annotation is "unarmed baseline" and note it). Low priority — the annotations are informational.
@@ -146,7 +148,16 @@ Green: `pnpm check` 0 errors (732 files), the combat/spawn suites + new `lootPoo
 
 ---
 
-### 2e. Concept ladders (DnD / Battle-Brothers inspired) — fill these into data
+### 2e. Concept ladders (DnD / Battle-Brothers inspired) — ✅ LANDED as data (2026-07-11)
+
+**All six specced ladders are AUTHORED in `creatures.jsonc`** — 71 new entries (wolf/bear/boar/goblin/
+orc/thornwood_spider, each 5 tiers: 3+3+3+3 variants + 1 boss; bases stamped `species`/`tier: 2`), every
+one range-rolled, threat-annotated (`pnpm threat` — all 103 creatures ✓), and guarded by
+`variantLadder.test.ts` (weapons/carcasses/pools/variantOf/statRanges/ladder-shape all resolve).
+**Tier spawn rarity is live** (`TIER_SPAWN_WEIGHT` + `pickWeightedByTier` in `entitySpawning` — T1 1.6×,
+T2 1×, T3 0.3×, T4 0.1×, **T5 0** = escalation-only, wired into all four spawn paths: ambient spawner,
+den seeding, den breeding, new-lair growth). The kobold/gnoll bases are pool-wired (`kobold_scraps` /
+`gnoll_pack`); their full ladders + the remaining-roster archetype ladders stay future data.
 
 **Legend.** Tier role → spawn frequency: **T1** very common · **T2** common (≈ today's base) · **T3**
 uncommon · **T4** rare · **T5** boss (escalation-only). Natural-weapon rungs use existing `items.jsonc`
@@ -315,16 +326,19 @@ Everything else reuses existing `items.jsonc` ids. ✅ = authored 2026-07-11.
       (STR 22), `orc_serrated_axe` (STR 16), `orc_scrap_plate`.
 - [x] **Goblin gear** (light, status procs, no bar): `goblin_shank` (envenom), `goblin_hooked_spear`
       (reach 2, bleed), `goblin_net` (ensnare), `goblin_scrap_vest`.
-- [ ] **Higher-tier monster gear**: `orc_greataxe` + `orc_iron_slab` (shield) + `orc_warplate`
-      (`orc_warhost`), a named T5 signature per boss line (or defer to the Phase-4b famed roll);
-      `goblin_poison_bow` + `goblin_firepot` (`goblin_warren`); `kobold_trap_spear` + darts/sling
-      (`kobold_*`); `gnoll_bone_cleaver` + `gnoll_flint_axe` (STR 14, `gnoll_*`).
-- [ ] **Natural weapons** (`natural_weapon` category): `trample` (megafauna T4-5 — blunt ~14,
-      `stunChance 0.25`, `knockback 0.4`, high `armorDamage`, front-leg hosted), `constrict` (serpentine
-      T4 — blunt ~8, `onHitCondition: ensnared` ~0.35, `foreBody` hosted), `quill-volley` (quillback T3+
-      — piercing ~6, `reach 3` via the existing natural-reach path, tail hosted). A "stronger venom"
-      proc for spider/viper T3+ can reuse `venom_bite` with a bumped `onHitCondition` on a variant weapon
-      id (`greater-venom-bite`).
+- [x] **Higher-tier monster gear** — landed 2026-07-11: `orc_greataxe` (STR 24) + `orc_iron_slab`
+      (shield) + `orc_warplate` (`orc_warhost` pool) + **`iron_tide_greataxe`** ("The Iron Tide",
+      Gorthag's named signature, STR 24, in `orc_warlord_hoard` — pool renamed from `orc_warlord` to
+      avoid colliding with the creature id); `goblin_poison_bow` (envenoms; a REAL bow — colonist-
+      shootable loot; the goblin itself swings it in melee since mobs have no ranged path) +
+      `goblin_firepot` (fire, `goblin_warren` pool); `kobold_trap_spear` (reach-2 ensnare) + the
+      existing `sling` (`kobold_scraps`/`kobold_trappers`); `gnoll_bone_cleaver` (STR 14, bleed) +
+      `gnoll_flint_axe` (`gnoll_pack`). Other boss lines defer their signature to the Phase-4b famed roll.
+- [x] **Natural weapons** — landed 2026-07-11, all four part-hosted in `limbmap.jsonc` (lose the part,
+      lose the weapon): `trample` (blunt 14, stun/knockback/armorDamage 8; front paws + front hooves),
+      `constrict` (blunt 8, ensnare 0.35; serpentine `foreBody`), `quill-volley` (piercing 6, reach 3;
+      quadruped `tail`), `greater-venom-bite` ("Virulent Bite" — piercing 12, envenom 0.65/3.5h; both
+      plans' venom glands, so destroying the glands still takes the venom).
 
 ### 2g. Carcasses & the butchery economy (every variant → a carcass → drops)
 
@@ -362,23 +376,25 @@ sinew}`) turns it into materials; higher butcher buildings (`dressing_stone` +25
 | T5 (boss) | trophy meat | boss hide + a **famed bone/fang** | **2–3** guaranteed magical drops incl. an enchant material |
 
 **Butcher BUILDINGS per tier** (extend the existing `butcher_spot` T0 / `dressing_stone` T1 +25%):
-- [ ] **`flensing_table`** (T2, +45% yield, tool-tier 2, some metal) — needed to fully process elite
-      carcasses (a big cave-bear hide is wasted on a raw spot); gate the prime-pelt/magical yields behind it.
-- [ ] **`sanguinary_altar`** (T3, magical) — the only station that extracts the **enchant materials +
-      trait-organs** from a T5 boss carcass intact (a mundane butcher just gets meat + a ruined hide from
-      a boss). Ties the boss reward to a mid-game building investment. Costs `mana_crystal`/`gem_dust`
-      (PRODUCTION-CHAIN-IIII).
+- [x] **`flensing_table`** (T2, +45% yield, tool-tier 2, iron) — landed 2026-07-11; the elite (T3-4)
+      carcass recipes are STATIONED there, so prime pelts + the first magical drops literally require it.
+- [x] **`sanguinary_altar`** (runed:1, worked block + gem dust, unique) — landed 2026-07-11 as a
+      STATION GATE: every T5 boss carcass has TWO recipes — a mundane `render_*` at the butcher_spot
+      (meat + bones, the humours ruined) and the full `flense_*` ONLY at the altar (prime pelt, 2-3
+      magical drops, a `great_fang`/`great_bone` enchant material). `mana_crystal` cost deferred to
+      PRODUCTION-CHAIN-IIII (uses `gem_dust` now).
 
 **New equipment & furniture from creature materials (new + OLD wired in):**
-- [ ] **New from new creatures:** `cave_bear_pelt` → a heavy fur cloak/armour (warmth + armour);
-      `direwolf_pelt` → a light fur cloak; `great_fang`/`great_bone` → bone weapons/hafts;
-      **boss hides** → the §2h magical-beast gear.
-- [ ] **Old creatures wired in:** many existing carcasses still have **no butcher recipe** (`bear`,
-      `owlbear`, `sabretooth`, `mire_crocodile`, `orc_reaver`, `harpy`, `bullywug`… — the standing TODO in
-      `recipes.jsonc`). Author them now, in the same tiered pool shape, and add the **furniture** they
-      unlock: `bear_hide` → a **bear-rug** (beauty) + heavy bedroll; `mire_crocodile` → croc-leather
-      (armour); antler/horn/tusk → trophy wall-mounts (beauty) + tool handles. This is the "old ones
-      respect the new economy" pass — the whole roster becomes butcherable into the material web.
+- [x] **New from new creatures** — landed 2026-07-11: `cave_bear_pelt` → **Cave-Bear Plate** (heavy,
+      grants Fortitude, anvil recipe); `dire_wolf_pelt` → **Direwolf Warcloak** (grants Might);
+      `great_fang` + `heartwood_log` → **Fang-Reaver** (STR 22, grants Might, heavy bleed); plus the
+      `great_bone`/`great_tusk`/`venom_sac` materials for later recipes.
+- [x] **Old creatures wired in** — landed 2026-07-11: the whole roster is now butcherable (bear/owlbear/
+      sabretooth/croc/mammoth etc. already had recipes; the missing NINE got them — goblin/kobold/gnoll/
+      orc/harpy/bullywug yield bones + sinew and **no meat** (the colony doesn't eat people-shaped
+      things), the marsh viper keeps its `venom_sac`; grimeling stays unbutcherable on realism grounds —
+      an ooze leaves nothing). Owlbear now yields `owlbear_bile`. **Furniture:** `bear_rug` (comfort +
+      beauty, 2× bear_pelt) + `trophy_mount` (beauty, great_tusk) landed in `buildings.jsonc`.
 
 ### 2h. T4-5 MAGICAL DROPS — the beast-magic economy (design)
 
@@ -440,7 +456,8 @@ the trait system's grant path; magical gear reuses `grantsConditions` + `wieldRe
 - [x] Engine: two spawns of the same creature differ in stats/armour — ALL creatures now roll from `statRanges` bands (converted 2026-07-11; midpoints = old values, `threat:check` unchanged).
 - [x] Engine: a geared humanoid fights with its weapon + worn armour and drops a subset on death (drawLoadout → equip → dropMobGear; combat reads `equipment` unchanged). Live on `goblin` (`goblin_warband`) + `orc_reaver` (`orc_warband`).
 - [x] Engine: an under-strength colonist wielding looted monster gear is visibly punished via the `overmatched` condition (aim/damage/dodge/fatigue + a pill; `wieldRequirement.test.ts`), while the monster wields it freely.
-- [ ] Data: the full 5×3 ladders authored into `creatures.jsonc` + `lootpool.jsonc` + remaining §2f items; a playtest confirms goblins read weird/annoying, orcs read heavy, and orc loot only pays off on a strong pawn.
+- [x] Data LANDED (2026-07-11): six full 5-tier ladders (71 variants + 6 stamped bases + old_fang) in `creatures.jsonc`; 7 lootpools; all §2f gear + natural weapons; tiered carcasses + butcher recipes + `flensing_table`/`sanguinary_altar`; tier spawn weights (T5 escalation-only). Gates: `pnpm check` 0 errors, `threat:check` 103/103, `graph:check` ✓, `variantLadder.test.ts` + full related suite green.
+- [ ] Playtest: goblins read weird/annoying, orcs read heavy, orc loot only pays off on a strong pawn; balance pass on the authored numbers.
 
 ---
 

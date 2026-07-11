@@ -10,7 +10,7 @@ Status: `[ ]` not started · `[-]` in progress · `[~]` deferred · `[x]` done.
 
 | # | Item | Status | Spec / archive |
 |---|------|--------|----------------|
-| **1** | **Creature Combat Overhaul** | `[~]` | [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) — Ph1 armour-binary fix DONE; Ph2 engine (statRanges, gear+wield-condition, carcass/butcher/magical-drop economy) DONE, ladder DATA pending; → lair evolution (+ §4 traps/turrets & famed boss-drop) |
+| **1** | **Creature Combat Overhaul** | `[~]` | [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) — Ph1 mechanics + Ph2 engine AND DATA done 2026-07-11 (6 ladders/71 variants, monster gear+pools, tiered butchery, tier spawn weights); next: balance playtest → Ph3 lair evolution (+ §4 traps/turrets & famed boss-drop) |
 | **1b** | **Rare materials & magical economy** | `[ ]` | [PRODUCTION-CHAIN-IIII](PRODUCTION-CHAIN-IIII.md) — mystical crops/mushrooms/rare trees/crystals/diggable treasure that gate lairs + feed alchemy & magical-beast gear (consumes CREATURE-COMBAT Ph3b + §2h) |
 | **2** | **Kingdoms & Trade** | `[ ]` | [KINGDOMS-TRADE](KINGDOMS-TRADE.md) — = RACE Phase 2; code `faction`→`kingdom` rename part of this |
 | **3** | **Finish Race → Culture System** | `[ ]` | [RACE-SYSTEM](RACE-SYSTEM.md) — Ph0 done; rename `Race`→`Culture`; Ph1 wiring waits on #4 |
