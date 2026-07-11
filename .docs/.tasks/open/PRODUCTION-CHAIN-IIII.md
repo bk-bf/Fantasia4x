@@ -174,8 +174,12 @@ thing guarding it*.
 - [ ] `mana_crystal` → refined gem-dust → arcane turret/rune-trap fuel (ties CREATURE-COMBAT §4a).
 
 ### Phase C — Lair attraction (in CREATURE-COMBAT-OVERHAUL Phase 3b)
-- [ ] `lairAttractors` proximity bias in `entitySpawning`; tier-matches-tier; adjacent placement; treasure
-      under the lair.
+- [x] **`lairAttractors` proximity bias — LANDED 2026-07-11** (in `ResourceGeneratorService.placeLairGuardians`,
+      NOT `entitySpawning` — lair TILES are placed at world-gen, not seed time). Adjacent placement ✅ (den beside
+      the node, harvestable); tier-matches-tier ✅ via the lair→creature bind (predator_den←witchwood/soulwood,
+      wolf_den←frostheart_pine, goblin_warren+swamp_nest←bonewood_snag). See CREATURE-COMBAT §3b for detail +
+      the tier caveat (boss-guards need Phase 3a escalation).
+- [ ] Treasure UNDER the lair (dig after clearing) — waits on §1e treasure nodes (not yet authored).
 
 ## Open questions
 - [ ] Reagent stability vs spoilage — do mystical crops/mushrooms rot (decaySeconds) like food, or keep?

@@ -513,14 +513,30 @@ long-ignored, well-fed lair** — the Phase-4b famed-drop source arriving as a w
 spawn. Clearing fully resets (a "scarred" faster-regrow lair is a nice later wrinkle, not worth the
 extra state now).
 
-### 3b. Resource-gated lairs
+### 3b. Resource-gated lairs — ✅ LANDED (2026-07-11)
 
-- [ ] Bias lair placement toward **rare map resources** so a dangerous lair "guards" a reward; clearing it unlocks access.
-- **Open:** lair sits **on** the resource (blocks harvest until cleared) or **adjacent** (contested but harvestable at risk)? *Recommendation: **adjacent** — a blocked node is a binary gate (clear or nothing); an adjacent lair lets a bold player risk-harvest under the pack's aggro range, which is the more interesting decision and needs no new blocking rule.*
+- [x] Bias lair placement toward **rare map resources** so a dangerous lair "guards" a reward. Implemented
+      as a world-gen post-pass (`ResourceGeneratorService.placeLairGuardians`, runs after the scatter so
+      every attractor is down and passes 1-2 stay byte-identical per seed): a lair def declares
+      `lairAttractors: string[]` (the attractor resource ids it guards) and each placed attractor rolls
+      `GUARD_CHANCE` (0.55) to den ONE of its guardian lairs on the nearest empty, spawnable,
+      out-of-spawn-bubble tile within `GUARD_SEARCH_RADIUS` (6), skipping if a lair already dens within
+      `MIN_LAIR_SPACING`. Wired to the §1c timber: `predator_den`←witchwood/soulwood (spiders, bear/owlbear),
+      `wolf_den`←frostheart_pine (frost wolves), `goblin_warren`+`swamp_nest`←bonewood_snag. **Tier-matches-tier**
+      rides the existing lair→creature bind (a predator_den by a soulwood grove seeds the bear/owlbear line).
+      Verified: ~45% of attractors guarded (frostheart-in-mountain often has no spawnable adjacent tile),
+      0 dens ON a node, 0 dens in the spawn bubble.
+- [x] **Resolved (adjacent):** the den sits BESIDE the node (`findGuardSpot` excludes the attractor tile),
+      so the grove stays harvestable — a bold player can risk-harvest under the pack's aggro or clear the den
+      first. No new blocking rule.
+- **Not yet:** the *tier* of the seeded guardian is still the normal weighted pick (T5 boss stays
+      escalation-only — Phase 3a), so a soulwood grove is guarded by a den that can *grow* toward a boss, not
+      one that spawns a boss on day one. Extending `lairAttractors` to the classic groves / ore / gems is
+      pure data. `escalation`-driven boss-guards wait on Phase 3a.
 
 **Phase 3 acceptance:**
-- [ ] An ignored lair demonstrably escalates its spawns over time.
-- [ ] Rare-resource nodes tend to be guarded; clearing the guardian opens the node.
+- [ ] An ignored lair demonstrably escalates its spawns over time. *(3a — not built)*
+- [x] Rare-resource nodes tend to be guarded; clearing the guardian opens the node. *(3b landed 2026-07-11 — `lairAttractors` + `placeLairGuardians`; adjacent, so the node stays harvestable)*
 
 ---
 
@@ -597,4 +613,4 @@ The **boss-drop** path is the combat half:
 - [x] Phase 1d: **per-part**; reset = wear expires ~an in-game hour (750 ticks) after the last chip.
 - [x] Phase 2b: which creature lines first → superseded by the **5-tier × 3-variant ladder for every species** (§2e); author wolf + orc + goblin ladders first (concepts ready, engine live).
 - [x] Phase 2c: **yes** — drops roll quality + condition, and fights degrade mob gear pre-drop (landed 2026-07-10/11; live on goblin/orc_reaver). Monster gear is CREATURE-specific with `wieldRequirement` on orc iron; human `guard_*` pools moved to KINGDOMS-TRADE caravan guards.
-- [ ] Phase 3: escalation cap (recommendation: T5 only from a long-ignored fed lair); lair-on vs lair-adjacent to resources (recommendation: adjacent).
+- [~] Phase 3: lair-on vs lair-adjacent to resources → **resolved ADJACENT** (3b landed 2026-07-11). Escalation cap (T5 only from a long-ignored fed lair) still open — Phase 3a not built.
