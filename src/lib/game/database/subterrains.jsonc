@@ -52,9 +52,9 @@
     "displayName" : "Mossy Forest Ground",
     "walkable"    : true,
     "movementCost": 1.7,
-    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
-    "fg"          : "#3f5226",
-    "bg"          : "#0f1408",
+    "charSpans"   : [ {"sheet": "tiles", "from": 72, "to": 79} ],
+    "fg"          : "#45986a",
+    "bg"          : "#17120a",
     "biomes"      : { "deep_forest": [0.55, null] }
   },
   {
@@ -181,7 +181,7 @@
     "displayName" : "Moss",
     "walkable"    : true,
     "movementCost": 1.5,
-    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — moss resource paints the visual
+    "charSpans"   : [ {"sheet": "tiles", "from": 72, "to": 79} ],  // grass tile — moss resource paints the visual
     "fg"          : "#754d17",
     "bg"          : "#17120a",
     "biomes"      : { "swamp": [0.5, 0.7] }
