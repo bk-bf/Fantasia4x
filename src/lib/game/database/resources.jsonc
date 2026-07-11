@@ -200,9 +200,9 @@
   },
   // ─────────────────────────────────────────────────────────────────────────
   // PRODUCTION-CHAIN-IIII §1c — DEEP-FOREST MAGICAL TIMBER. Rarer than the four groves above and found
-  // ONLY in the old-growth floor of a deep_forest core (keyed to the `ancient_grove` subterrain, which
+  // ONLY in the mossy floor of a deep_forest core (keyed to the `mossy_ground` subterrain, which
   // only the variant produces). soulwood is listed first (rarest) so it gets its independent roll before
-  // witchwood on a shared old-growth tile. Higher woodcut tier + workAmount than the common groves.
+  // witchwood on a shared mossy tile. Higher woodcut tier + workAmount than the common groves.
   // ─────────────────────────────────────────────────────────────────────────
   {
     "id"              : "soulwood_grove",
@@ -220,7 +220,7 @@
     "fg"              : "#b58a3c",
     "bg"              : "#17120a",
     "glow"            : { "color": [0.95, 0.78, 0.35], "radius": 3.5, "intensity": 0.6, "flicker": true },
-    "spawn"           : { "subterrains": {"ancient_grove": 0.015} },
+    "spawn"           : { "subterrains": {"mossy_ground": 0.015} },
     "nodeAmountRange" : [1, 2],
     "designationTypes": ["woodcut", "forage"],
     "interaction"     : {
@@ -261,7 +261,7 @@
     "fg"              : "#6a3d8f",
     "bg"              : "#17120a",
     "glow"            : { "color": [0.55, 0.32, 0.85], "radius": 3.0, "intensity": 0.5, "flicker": true },
-    "spawn"           : { "subterrains": {"ancient_grove": 0.06} },
+    "spawn"           : { "subterrains": {"mossy_ground": 0.06} },
     "nodeAmountRange" : [2, 3],
     "designationTypes": ["woodcut", "forage"],
     "interaction"     : {
@@ -2488,6 +2488,34 @@
         {"itemId": "woundwort",     "min": 0, "max": 1, "skillId": "foraging", "skillMultiplier": 0.1},
         {"itemId": "plant_fiber",   "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1},
         {"itemId": "sphagnum_moss", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1}
+      ],
+      "persistent"     : true,
+      "regrowthTurns"  : 900
+    }
+  },
+  {
+    // Ground-cover for the deep_forest mossy floor (mossy_ground subterrain) — the counterpart of
+    // deep_grass_patch/moss/savanna: paints the mossy visual and gives a forage yield, so a mossy_ground
+    // tile is never bare (the rare witchwood/soulwood groves roll first; this fills the rest).
+    "id"              : "forest_moss",
+    "displayName"     : "Forest Moss",
+    "subterrain"      : "mossy_ground",
+    "walkable"        : true,
+    "grazing"         : true,
+    "charSpans"       : [ {"sheet": "tiles", "id": 43} ],
+    "fg"              : "#3f6b1e",
+    "bg"              : "#0f1408",
+    "spawn"           : { "subterrains": {"mossy_ground": 0.9} },
+    "nodeAmountRange" : [3, 6],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "gather",
+      "workCategory"   : "foraging",
+      "workAmount"     : 12,
+      "toolRequirement": null,
+      "yields"         : [
+        {"itemId": "sphagnum_moss", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.1},
+        {"itemId": "plant_fiber",   "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1}
       ],
       "persistent"     : true,
       "regrowthTurns"  : 900
