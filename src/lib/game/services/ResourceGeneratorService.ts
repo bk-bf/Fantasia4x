@@ -22,7 +22,7 @@ const CLUSTERED_SUBTYPES = new Set(['mineral_deposit']);
 // tile wins → "adjacent"), and the chance an eligible attractor neighbourhood gets one (usually, but some
 // groves stay unguarded free finds).
 const GUARD_SEARCH_RADIUS = 6;
-const GUARD_CHANCE = 0.55;
+const GUARD_CHANCE = 0.4;
 
 /** Deterministic integer-range RNG: the shared seeded xorshift float gen (core/rng) scaled to
  *  [min, max] inclusive. Same sequence as before — the float gen is byte-identical to the old inline

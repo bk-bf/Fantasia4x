@@ -409,8 +409,10 @@
     "charSpans"       : [ {"sheet": "crops", "id": 83} ],
     "fg"              : "#808799",
     "bg"              : "#17120a",
+    // Base plains/forest scatter HALVED (§3b): frost-pine guardians now den wolves near the mountains, so
+    // random forest/plains dens are rarer to keep total lairs from over-inflating (see placeLairGuardians).
     "spawn"           : {
-      "subterrains": {"grass": 0.00006, "deep_grass": 0.00009, "tall_grass": 0.00007, "dirt": 0.00006}
+      "subterrains": {"grass": 0.00003, "deep_grass": 0.000045, "tall_grass": 0.000035, "dirt": 0.00003}
     },
     "nodeAmountRange" : [1, 1],
     "designationTypes": ["harvest"],
@@ -434,7 +436,10 @@
     "charSpans"       : [ {"sheet": "plants", "id": 167} ],
     "fg"              : "#8c4a3d",
     "bg"              : "#17120a",
-    "spawn"           : { "subterrains": {"deep_grass": 0.00008, "grass": 0.00005, "moss": 0.00015} },
+    // Forest base scatter cut to ~40% (§3b): the deep-forest groves now den most predator packs as
+    // guardians, so random forest dens are rarer — keeps forests from over-filling with lairs. Swamp
+    // (moss) weight kept (no grove guardians there).
+    "spawn"           : { "subterrains": {"deep_grass": 0.00003, "grass": 0.00002, "moss": 0.00015} },
     "nodeAmountRange" : [1, 1],
     "designationTypes": ["harvest"],
     "interaction"     : {

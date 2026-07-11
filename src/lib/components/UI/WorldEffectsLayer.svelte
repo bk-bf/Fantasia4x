@@ -809,9 +809,9 @@
   .lair-bloodmist .fog {
     background: radial-gradient(
       circle,
-      rgba(165, 40, 32, 0.6) 0%,
-      rgba(120, 30, 26, 0.4) 38%,
-      rgba(80, 22, 20, 0.16) 62%,
+      rgba(165, 40, 32, 0.3) 0%,
+      rgba(120, 30, 26, 0.2) 38%,
+      rgba(80, 22, 20, 0.08) 62%,
       rgba(60, 18, 16, 0) 80%
     );
     filter: blur(7px);
@@ -834,15 +834,15 @@
   }
   @keyframes blood-seethe {
     0% {
-      opacity: 0.42;
+      opacity: 0.22;
       transform: translate(0, 0) scale(0.96);
     }
     50% {
-      opacity: 0.72;
+      opacity: 0.38;
       transform: translate(-6px, -4px) scale(1.14);
     }
     100% {
-      opacity: 0.42;
+      opacity: 0.22;
       transform: translate(5px, 2px) scale(0.96);
     }
   }
