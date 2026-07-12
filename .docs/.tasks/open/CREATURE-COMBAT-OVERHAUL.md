@@ -431,7 +431,33 @@ sinew}`) turns it into materials; higher butcher buildings (`dressing_stone` +25
       an ooze leaves nothing). Owlbear now yields `owlbear_bile`. **Furniture:** `bear_rug` (comfort +
       beauty, 2× bear_pelt) + `trophy_mount` (beauty, great_tusk) landed in `buildings.jsonc`.
 
-### 2h. T4-5 MAGICAL DROPS — the beast-magic economy (design)
+### 2h. T4-5 MAGICAL DROPS — the beast-magic economy
+
+**Core LANDED 2026-07-12** (`pnpm check` 0 errors, `threat:check` 128/128, `graph:check` 0 errors,
+`consumeItem.test.ts` + `lootPools.test.ts` green). **Correction to the old "no new mechanics" note
+below: there WAS a new mechanic — item consumption did not exist.** The old `useConsumable` read
+`pawn.state.health`/`.mood` (fields absent on the current pawn model) and `conditionDurationTurns` was
+read by nothing, so even the pre-existing attribute potions couldn't be drunk. What landed:
+
+- [x] **Consumption runtime** — `entities/Pawns.applyConsumable(pawn, itemId, rand)`: (i) a potion's
+      `grantsConditions` + `conditionDurationTurns` → `conditionTimers` (like a meal buff); (ii) an
+      organ's new `grantsTraitOnConsume` → push the trait + bake via `applyGainedTrait`, THEN roll a
+      **Faustian flaw** (a curated pure-penalty negative trait, `Lineages.rollFlawTrait`) + bake it too.
+      Clones stats/traits so the in-place bake never mutates the caller; a duplicate organ is a no-op
+      (returns the same ref → stock isn't spent). Wired through the existing `useConsumableItem` command
+      (the dead `useConsumable` was deleted). **This also revived the 4 pre-existing attribute potions.**
+- [x] **Player trigger** — a `PawnConsumables.svelte` "| CONSUMABLES" section on the pawn panel lists
+      colony-stock potions/organs with a **DRINK/EAT** button (EAT disabled → "GAINED" once the pawn holds
+      the trait). Draws from colony stock, buffs the selected pawn.
+- [x] **(i) reagent potions** — `bloodrage_draught` (`alpha_ichor`→`adrenal`) + `ironhide_tonic`
+      (`owlbear_bile`→`fortitude`), brewed at `alchemy_lab`. Shadeform Philtre + weapon-venom **deferred**
+      (need `voidshard` [PROD-CHAIN-IIII] / a weapon-coating mechanic).
+- [x] **(ii) trait-organs** — `alpha_heart`→`feral-adrenaline`, `direwolf_hackles`→`thick-hide`,
+      `sabretooth_glands`→`killer-instinct`, `owlbear_pineal`→`keen-senses` (all EXISTING traits — no new
+      trait authored). Sourced from the `flense_great_wolf`/`flense_great_bear` altar recipes; don't spoil.
+- [x] **(iii) magical gear** — already done (`direwolf_warcloak`/`cave_bear_plate`/`fang_reaver` ride the
+      wired `grantsConditions`+`wieldRequirement`). **Wraithbone Blade deferred** — needs `voidshard` + a
+      wraith T5 boss (only `greater_wraith` exists), neither present.
 
 T4-5 creatures drop, on butchery, **1–3 "magical-level" materials** beyond hide/meat. Three sinks (the
 user's three ideas), each a distinct item category so the player learns what a drop is *for*:
@@ -631,7 +657,9 @@ only new code is stamping the famed roll onto the drawn instance at spawn.
 - [x] A **humanoid** boss spawns wielding a named famed weapon, fights with it, and drops it on death via
       the existing gear-drop path (`famed` lootpool flag → `rollFamedIdentity` at spawn → `dropMobGear`).
       *(mechanics landed 2026-07-12; needs a playtest to confirm the drop reads as a trophy.)*
-- [ ] A **beast** boss's famed material drops out of its butcherable §2h carcass instead. *(§2h in progress)*
+- [x] A **beast** boss's famed material drops out of its butcherable §2h carcass instead — landed
+      2026-07-12: the `flense_great_wolf`/`great_bear`/`great_boar`/`great_weaver` altar recipes yield the
+      reagents + trait-organs + `great_fang`; those feed the §2h consumption/crafting economy.
 
 ---
 
