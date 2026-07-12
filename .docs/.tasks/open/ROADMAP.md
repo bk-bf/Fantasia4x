@@ -2,7 +2,7 @@
 
 # ROADMAP
 
-> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) · [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [PRODUCTION-CHAIN-III-TAILS](PRODUCTION-CHAIN-III-TAILS.md) · [STEALTH](STEALTH.md) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md)
+> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) · [CREATURE-COMBAT-OVERHAUL](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [PRODUCTION-CHAIN-III-TAILS](PRODUCTION-CHAIN-III-TAILS.md) · [STEALTH](STEALTH.md) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md)
 
 Everything in one table: **remaining work in priority order first** (owner sequence, set 2026-07-10),
 then the **completed record** below it. Full specs for shipped work live in `.tasks/archive/`.
@@ -10,7 +10,7 @@ Status: `[ ]` not started · `[-]` in progress · `[~]` deferred · `[x]` done.
 
 | # | Item | Status | Spec / archive |
 |---|------|--------|----------------|
-| **1** | **Creature Combat Overhaul** | `[~]` | [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) — Ph1 mechanics + Ph2 engine AND DATA done 2026-07-11 (6 ladders/71 variants, monster gear+pools, tiered butchery, tier spawn weights); next: balance playtest → Ph3 lair evolution (+ §4 traps/turrets & famed boss-drop) |
+| **1** | **Creature Combat Overhaul** | `[x]` | [CREATURE-COMBAT-OVERHAUL (archived)](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) — Ph1–3 + Ph4b famed boss-gear done 2026-07-12 (6 ladders/71 variants, monster gear+pools, tiered butchery, lair escalation + attraction, §2h magical drops). Remaining open items are playtest-only; **§4a traps/turrets deferred** (out of scope — blocks on a mobs-attack-buildings system that doesn't exist) |
 | **1b** | **Rare materials & magical economy** | `[ ]` | [PRODUCTION-CHAIN-IIII](PRODUCTION-CHAIN-IIII.md) — mystical crops/mushrooms/rare trees/crystals/diggable treasure that gate lairs + feed alchemy & magical-beast gear (consumes CREATURE-COMBAT Ph3b + §2h) |
 | **2** | **Kingdoms & Trade** | `[ ]` | [KINGDOMS-TRADE](KINGDOMS-TRADE.md) — = RACE Phase 2; code `faction`→`kingdom` rename part of this |
 | **3** | **Finish Race → Culture System** | `[ ]` | [RACE-SYSTEM](RACE-SYSTEM.md) — Ph0 done; rename `Race`→`Culture`; Ph1 wiring waits on #4 |

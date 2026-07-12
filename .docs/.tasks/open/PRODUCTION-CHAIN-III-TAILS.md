@@ -2,7 +2,7 @@
 
 # PRODUCTION-CHAIN-III — Remaining Tails (drink-use action + famed craft display)
 
-> **Related:** [ROADMAP](ROADMAP.md) · [PRODUCTION-CHAIN-III (archived — full Pass III record)](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) · [CREATURE-COMBAT-OVERHAUL §4](CREATURE-COMBAT-OVERHAUL.md) (the combat tails — §H traps/turrets + §I boss-drop — moved there) · [game/DESIGN](../../game/DESIGN.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [PRODUCTION-CHAIN-III (archived — full Pass III record)](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) · [CREATURE-COMBAT-OVERHAUL §4](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) (the combat tails — §H traps/turrets + §I boss-drop — moved there) · [game/DESIGN](../../game/DESIGN.md)
 
 ## Status
 
@@ -10,7 +10,7 @@
 [PRODUCTION-CHAIN-III](../archive/PRODUCTION-CHAIN-III-2026-07-10.md): all 8 chapters' **data +
 foundations shipped** (2026-06-21). Only the **non-combat interaction/display tails** remain here; the
 **combat tails** (§H combat traps + auto-fire turrets, §I boss-drop hook) moved to
-[CREATURE-COMBAT-OVERHAUL §4](CREATURE-COMBAT-OVERHAUL.md). Everything below is small, data + a thin
+[CREATURE-COMBAT-OVERHAUL §4](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md). Everything below is small, data + a thin
 interaction/UI layer — no new subsystems.
 
 ---
@@ -46,7 +46,7 @@ tested** (`famedNames.test.ts`). Missing: the craft-side stamp and the display.
       pipeline; confirm it flows for famed instances.
 
 > The **boss-drop** path (the other way to obtain a famed item) is a combat concern and lives with the
-> elite/miniboss ladder in [CREATURE-COMBAT-OVERHAUL §4](CREATURE-COMBAT-OVERHAUL.md).
+> elite/miniboss ladder in [CREATURE-COMBAT-OVERHAUL §4](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md).
 
 ---
 

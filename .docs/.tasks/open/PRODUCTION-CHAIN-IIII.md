@@ -2,11 +2,11 @@
 
 # PRODUCTION-CHAIN-IIII — Rare materials, mystical flora & the magical drop economy
 
-> **Related:** [ROADMAP](ROADMAP.md) · [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) (Phase 3b lairs-guard-rare-materials consumes this; §2h magical drops feed it) · [PRODUCTION-CHAIN-III (archived)](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) (alchemy/gem-dust/§M magic foundation) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) (foraging/crops) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · data: `database/resources.jsonc`, `items.jsonc`, `recipes.jsonc`
+> **Related:** [ROADMAP](ROADMAP.md) · [CREATURE-COMBAT-OVERHAUL](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) (Phase 3b lairs-guard-rare-materials consumes this; §2h magical drops feed it) · [PRODUCTION-CHAIN-III (archived)](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) (alchemy/gem-dust/§M magic foundation) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) (foraging/crops) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · data: `database/resources.jsonc`, `items.jsonc`, `recipes.jsonc`
 
 ## Status
 
-Not started (design). Split out because **[CREATURE-COMBAT-OVERHAUL Phase 3b](CREATURE-COMBAT-OVERHAUL.md)**
+Not started (design). Split out because **[CREATURE-COMBAT-OVERHAUL Phase 3b](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md)**
 wants lairs to spawn near **rare materials** so a dangerous den "guards a reward" — but the map's only
 rare materials today are **ore veins, the four magical groves** (heartwood/moonwood/ironwood/emberwood),
 **native gold, and gems**. That's too thin a lattice to hang lair placement on, and there's no
@@ -128,7 +128,7 @@ dig the prize. One-shot (`persistent: false`), high variance.
 ## 2 · The economy these feed
 
 The point of the rare materials is a **two-input high tier**: a rare *natural* material (this spec) +
-a **creature magical drop** ([CREATURE-COMBAT-OVERHAUL §2h](CREATURE-COMBAT-OVERHAUL.md)) combine into
+a **creature magical drop** ([CREATURE-COMBAT-OVERHAUL §2h](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md)) combine into
 the powerful late-game outputs. Neither alone suffices — you must both *find the grove* and *kill the
 thing guarding it*.
 

@@ -2,7 +2,7 @@
 
 # KINGDOMS, VISITORS & TRADE — the world social layer
 
-> **Related:** [ROADMAP](ROADMAP.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) (pawn-to-pawn layer; shares culture-disposition + prestige) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) (caravans are kingdom pawns + war/pack beasts; creatures' `kingdom` flag; taming) · [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) (§2c lootpool system — caravan guards draw the human `guard_*` pools) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) (the right-click-a-pawn menu the trade action reuses) · [RACE-SYSTEM](RACE-SYSTEM.md) (Phase 2 encounter-pokédex is this spec) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) (visitor/caravan entities on the map) · [game/DESIGN](../../game/DESIGN.md) · ADR-023 in [game/DECISIONS](../../game/DECISIONS.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) (pawn-to-pawn layer; shares culture-disposition + prestige) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) (caravans are kingdom pawns + war/pack beasts; creatures' `kingdom` flag; taming) · [CREATURE-COMBAT-OVERHAUL](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) (§2c lootpool system — caravan guards draw the human `guard_*` pools) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) (the right-click-a-pawn menu the trade action reuses) · [RACE-SYSTEM](RACE-SYSTEM.md) (Phase 2 encounter-pokédex is this spec) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) (visitor/caravan entities on the map) · [game/DESIGN](../../game/DESIGN.md) · ADR-023 in [game/DECISIONS](../../game/DECISIONS.md)
 
 ## Status
 
@@ -126,7 +126,7 @@ The player does **not** see a kingdom's full sheet up front. Knowledge is *earne
   [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) — attacking it is an act of war). Reaching the trader opens
   the trade action (§4).
 - **Caravan guards use the human `guard_*` lootpools** (`database/lootpool.jsonc` — the loadout system
-  built by [CREATURE-COMBAT-OVERHAUL §2c](CREATURE-COMBAT-OVERHAUL.md): per-slot draw, rolled quality +
+  built by [CREATURE-COMBAT-OVERHAUL §2c](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md): per-slot draw, rolled quality +
   condition, drop-on-death). Five rungs of existing human craftables — `guard_scraps` / `guard_bronze` /
   `guard_iron` / `guard_steel` / `guard_royal` (concrete slot tables in that spec) — scaled to the
   kingdom's `wealthBand`. Human gear carries **no `wieldRequirement`** (monster gear is what gates on

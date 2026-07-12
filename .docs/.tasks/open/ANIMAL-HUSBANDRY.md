@@ -2,7 +2,7 @@
 
 # ANIMAL HUSBANDRY — Taming, Husbandry, Mounts & Animal Hauling
 
-> **Related:** [ROADMAP](ROADMAP.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) (kingdoms own the caravans + the creatures' `kingdom` flag; hostility derives from `kingdomRelations`) · [ENTITIES_SPAWNING (archived — Phases A–B record)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL.md) · [PRODUCTION-CHAIN-II §L logistics (archived)](../archive/PRODUCTION-CHAIN-II-2026-06-21.md#l--bulk-logistics-wheelbarrows-carts-roads) · [PRODUCTION-CHAIN-III §E (archived — carcass yields, wool source)](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) (kingdoms own the caravans + the creatures' `kingdom` flag; hostility derives from `kingdomRelations`) · [ENTITIES_SPAWNING (archived — Phases A–B record)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [CREATURE-COMBAT-OVERHAUL](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) · [PRODUCTION-CHAIN-II §L logistics (archived)](../archive/PRODUCTION-CHAIN-II-2026-06-21.md#l--bulk-logistics-wheelbarrows-carts-roads) · [PRODUCTION-CHAIN-III §E (archived — carcass yields, wool source)](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
 
 ## Status
 
