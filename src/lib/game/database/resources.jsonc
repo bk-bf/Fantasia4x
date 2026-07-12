@@ -394,6 +394,359 @@
     }
   },
   // ─────────────────────────────────────────────────────────────────────────
+  // PRODUCTION-CHAIN-IIII §1a/§1b — mystical flora: wild magical crops & fungi. Forage nodes, biome-keyed,
+  // grove-rare↓, slow regrowth. Alchemy reagents that also draw prey→predators→lairs. Listed early (with
+  // the §1c trees) so they get first pick on their subterrains before common ground-cover claims a tile.
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    // §1a bloodroot — a red taproot of plains/forest verges; vitality/regen reagent.
+    "id"              : "bloodroot",
+    "displayName"     : "Bloodroot",
+    "subterrain"      : "bush",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "crops", "from": 197, "to": 201} ],
+    "fg"              : "#8a1c22",
+    "detail"          : "#5a8c3a",
+    "bg"              : "#17120a",
+    "spawn"           : { "subterrains": {"deep_grass": 0.008, "grass": 0.005, "tall_grass": 0.004} },
+    "nodeAmountRange" : [2, 4],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "forage",
+      "workCategory"   : "foraging",
+      "workAmount"     : 10,
+      "toolRequirement": null,
+      "yields"         : [ {"itemId": "bloodroot", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15} ],
+      "persistent"     : true,
+      "regrowthTurns"  : 3600
+    }
+  },
+  {
+    // §1a dreamleaf — silver-backed leaves of forest & swamp margins; sleep/calm reagent.
+    "id"              : "dreamleaf",
+    "displayName"     : "Dreamleaf",
+    "subterrain"      : "bush",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "crops", "from": 197, "to": 201} ],
+    "fg"              : "#9fb6a6",
+    "detail"          : "#c8d0c0",
+    "bg"              : "#17120a",
+    "spawn"           : { "subterrains": {"deep_grass": 0.006, "moss": 0.005, "bog": 0.004} },
+    "nodeAmountRange" : [2, 4],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "forage",
+      "workCategory"   : "foraging",
+      "workAmount"     : 10,
+      "toolRequirement": null,
+      "yields"         : [ {"itemId": "dreamleaf", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15} ],
+      "persistent"     : true,
+      "regrowthTurns"  : 3600
+    }
+  },
+  {
+    // §1a mandrake — a screaming forked root of the deep forest edge; painkiller + trait-elixir base.
+    "id"              : "mandrake",
+    "displayName"     : "Mandrake",
+    "subterrain"      : "bush",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "crops", "from": 197, "to": 201} ],
+    "fg"              : "#c8b27a",
+    "detail"          : "#7a5a3a",
+    "bg"              : "#17120a",
+    "spawn"           : { "subterrains": {"terra_preta": 0.006, "deep_grass": 0.003} },
+    "nodeAmountRange" : [1, 3],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "forage",
+      "workCategory"   : "foraging",
+      "workAmount"     : 14,
+      "toolRequirement": null,
+      "yields"         : [ {"itemId": "mandrake", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1} ],
+      "persistent"     : true,
+      "regrowthTurns"  : 5000
+    }
+  },
+  {
+    // §1a emberbloom — a smouldering coal-red flower of the mountain heights; fire-affinity reagent.
+    "id"              : "emberbloom",
+    "displayName"     : "Emberbloom",
+    "subterrain"      : "rocky",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "crops", "from": 197, "to": 201} ],
+    "fg"              : "#d1461e",
+    "detail"          : "#f0a020",
+    "bg"              : "#17120a",
+    "glow"            : { "color": [0.82, 0.3, 0.12], "radius": 1.8, "intensity": 0.2, "flicker": true },
+    "spawn"           : { "subterrains": {"cave": 0.004} },
+    "nodeAmountRange" : [1, 3],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "forage",
+      "workCategory"   : "foraging",
+      "workAmount"     : 12,
+      "toolRequirement": null,
+      "yields"         : [ {"itemId": "emberbloom", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1} ],
+      "persistent"     : true,
+      "regrowthTurns"  : 4200
+    }
+  },
+  {
+    // §1b glowcap — a cold-lit fungus of dark swamp & forest floor; light-craft + night-sight reagent.
+    "id"              : "glowcap",
+    "displayName"     : "Glowcap",
+    "subterrain"      : "mushroom_patch",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "tiles", "id": 123} ],
+    "fg"              : "#5fb8c8",
+    "bg"              : "#17120a",
+    "glow"            : { "color": [0.37, 0.72, 0.78], "radius": 2.2, "intensity": 0.3, "flicker": true },
+    "spawn"           : { "subterrains": {"bog": 0.006, "moss": 0.005, "terra_preta": 0.004} },
+    "nodeAmountRange" : [2, 4],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "forage",
+      "workCategory"   : "foraging",
+      "workAmount"     : 8,
+      "toolRequirement": null,
+      "yields"         : [ {"itemId": "glowcap", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15} ],
+      "persistent"     : true,
+      "regrowthTurns"  : 3000
+    }
+  },
+  {
+    // §1b nightshade_bolete — a black-weeping toxic bolete of the swamp; venom reagent.
+    "id"              : "nightshade_bolete",
+    "displayName"     : "Nightshade Bolete",
+    "subterrain"      : "mushroom_patch",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "tiles", "id": 123} ],
+    "fg"              : "#4a2c5a",
+    "bg"              : "#17120a",
+    "spawn"           : { "subterrains": {"bog": 0.005, "mud": 0.004} },
+    "nodeAmountRange" : [1, 3],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "forage",
+      "workCategory"   : "foraging",
+      "workAmount"     : 9,
+      "toolRequirement": null,
+      "yields"         : [ {"itemId": "nightshade_bolete", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1} ],
+      "persistent"     : true,
+      "regrowthTurns"  : 3600
+    }
+  },
+  {
+    // §1b witch_morel — a shape-shifting honeycombed cap of the damp forest; the enchant catalyst.
+    "id"              : "witch_morel",
+    "displayName"     : "Witch's Morel",
+    "subterrain"      : "mushroom_patch",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "tiles", "id": 123} ],
+    "fg"              : "#7a5a3a",
+    "bg"              : "#17120a",
+    "spawn"           : { "subterrains": {"terra_preta": 0.005, "deep_grass": 0.003} },
+    "nodeAmountRange" : [1, 3],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "forage",
+      "workCategory"   : "foraging",
+      "workAmount"     : 11,
+      "toolRequirement": null,
+      "yields"         : [ {"itemId": "witch_morel", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1} ],
+      "persistent"     : true,
+      "regrowthTurns"  : 4200
+    }
+  },
+  {
+    // §1b spore_of_madness — a drifting-spore puffball of the deep swamp; rare frenzy reagent.
+    "id"              : "spore_of_madness",
+    "displayName"     : "Spore of Madness",
+    "subterrain"      : "mushroom_patch",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "tiles", "id": 123} ],
+    "fg"              : "#8a8574",
+    "bg"              : "#17120a",
+    "glow"            : { "color": [0.5, 0.48, 0.42], "radius": 1.5, "intensity": 0.15, "flicker": true },
+    "spawn"           : { "subterrains": {"quicksand": 0.004, "bog": 0.0018} },
+    "nodeAmountRange" : [1, 2],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "forage",
+      "workCategory"   : "foraging",
+      "workAmount"     : 12,
+      "toolRequirement": null,
+      "yields"         : [ {"itemId": "spore_of_madness", "min": 1, "max": 1, "skillId": "foraging", "skillMultiplier": 0.1} ],
+      "persistent"     : true,
+      "regrowthTurns"  : 5000
+    }
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // PRODUCTION-CHAIN-IIII §1d — crystal formations: mined mineral rarities (rarer than ore). Deplete on
+  // harvest (no regrowth). Cluster in the mountain interior; the enchant/gem-dust++ tier.
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    // §1d mana_crystal_vent — a humming violet vein deep in the mountain; grinds into rich gem-dust.
+    "id"              : "mana_crystal_vent",
+    "displayName"     : "Mana Crystal Vent",
+    "subterrain"      : "crystal_formation",
+    "walkable"        : false,
+    "blocksSight"     : true,
+    "charSpans"       : [ {"sheet": "tiles", "from": 48, "to": 55} ],
+    "fg"              : "#a060e0",
+    "bg"              : "#17120a",
+    "glow"            : { "color": [0.63, 0.38, 0.88], "radius": 2.4, "intensity": 0.3, "flicker": true },
+    "spawn"           : { "subterrains": {"cave": 0.006} },
+    "nodeAmountRange" : [1, 3],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "scavenge",
+      "workCategory"   : "mining",
+      "workAmount"     : 20,
+      "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields"         : [
+        {"itemId": "mana_crystal", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.1 },
+        {"itemId": "small_stone",  "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.05}
+      ]
+    }
+  },
+  {
+    // §1d star_geode — a fallen-star geode in the high rock; an enchant material + a gem roll.
+    "id"              : "star_geode",
+    "displayName"     : "Star Geode",
+    "subterrain"      : "crystal_formation",
+    "walkable"        : false,
+    "blocksSight"     : true,
+    "charSpans"       : [ {"sheet": "tiles", "from": 48, "to": 55} ],
+    "fg"              : "#c8d0ff",
+    "bg"              : "#17120a",
+    "glow"            : { "color": [0.78, 0.82, 1.0], "radius": 2.0, "intensity": 0.25, "flicker": true },
+    "spawn"           : { "subterrains": {"cave": 0.0018} },
+    "nodeAmountRange" : [1, 2],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "scavenge",
+      "workCategory"   : "mining",
+      "workAmount"     : 24,
+      "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields"         : [
+        {"itemId": "star_shard",       "min": 1, "max": 1, "skillId": "mining", "skillMultiplier": 0.08},
+        {"itemId": "infused_amethyst", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.05}
+      ]
+    }
+  },
+  {
+    // §1d voidshard_cluster — a light-drinking black cluster in the deep dark; a cursed reagent (rarest).
+    "id"              : "voidshard_cluster",
+    "displayName"     : "Voidshard Cluster",
+    "subterrain"      : "crystal_formation",
+    "walkable"        : false,
+    "blocksSight"     : true,
+    "charSpans"       : [ {"sheet": "tiles", "from": 48, "to": 55} ],
+    "fg"              : "#2a2035",
+    "bg"              : "#0a0810",
+    "glow"            : { "color": [0.16, 0.1, 0.24], "radius": 1.6, "intensity": 0.14, "flicker": true },
+    "spawn"           : { "subterrains": {"cave": 0.0008} },
+    "nodeAmountRange" : [1, 1],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "scavenge",
+      "workCategory"   : "mining",
+      "workAmount"     : 30,
+      "toolRequirement": {"workType": "mining", "minTier": 3},
+      "yields"         : [ {"itemId": "voidshard", "min": 1, "max": 1, "skillId": "mining", "skillMultiplier": 0.06} ]
+    }
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // PRODUCTION-CHAIN-IIII §1e — diggable treasure: buried caches surfaced by the EXISTING dig verb (like
+  // clay/soil). One-shot (persistent:false, deplete), high variance. `buried_hoard` is also denned near a
+  // lair at world-gen (ResourceGeneratorService.placeBuriedHoards) — clear the guardian, then dig.
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    // §1e barrow_cache — an old grave-mound of the plains & forest; bones + grave-goods.
+    "id"              : "barrow_cache",
+    "displayName"     : "Barrow Mound",
+    "subterrain"      : "dirt",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "plants", "id": 209} ],
+    "renderScale"     : 0.6,
+    "fg"              : "#6b5a3a",
+    "bg"              : "#17120a",
+    "spawn"           : { "subterrains": {"deep_grass": 0.0015, "grass": 0.001, "dirt": 0.0008} },
+    "nodeAmountRange" : [1, 1],
+    "designationTypes": ["dig"],
+    "interaction"     : {
+      "designationType": "dig",
+      "action"         : "dig",
+      "workCategory"   : "digging",
+      "workAmount"     : 40,
+      "toolRequirement": null,
+      "yields"         : [
+        {"itemId": "large_bones",         "min": 2, "max": 5, "skillId": "digging", "skillMultiplier": 0.1 },
+        {"itemId": "native_gold",         "min": 1, "max": 3, "skillId": "digging", "skillMultiplier": 0.1 },
+        {"itemId": "cast_bronze_hatchet", "min": 0, "max": 1, "skillId": "digging", "skillMultiplier": 0.05}
+      ],
+      "persistent"     : false,
+      "harvestDepletes": true
+    }
+  },
+  {
+    // §1e buried_hoard — a hoard buried near a den; gold, gems, a rare reagent.
+    "id"              : "buried_hoard",
+    "displayName"     : "Disturbed Earth",
+    "subterrain"      : "dirt",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "plants", "id": 209} ],
+    "renderScale"     : 0.6,
+    "fg"              : "#8a7a4a",
+    "bg"              : "#17120a",
+    "spawn"           : { "subterrains": {"dirt": 0.0008} },
+    "nodeAmountRange" : [1, 1],
+    "designationTypes": ["dig"],
+    "interaction"     : {
+      "designationType": "dig",
+      "action"         : "dig",
+      "workCategory"   : "digging",
+      "workAmount"     : 44,
+      "toolRequirement": null,
+      "yields"         : [
+        {"itemId": "native_gold",  "min": 3, "max": 6, "skillId": "digging", "skillMultiplier": 0.1 },
+        {"itemId": "amethyst",     "min": 1, "max": 2, "skillId": "digging", "skillMultiplier": 0.08},
+        {"itemId": "mana_crystal", "min": 0, "max": 1, "skillId": "digging", "skillMultiplier": 0.05}
+      ],
+      "persistent"     : false,
+      "harvestDepletes": true
+    }
+  },
+  {
+    // §1e sunken_relic — a drowned relic in the swamp; an enchant material, with a curse risk (voidshard).
+    "id"              : "sunken_relic",
+    "displayName"     : "Sunken Cairn",
+    "subterrain"      : "mud",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "plants", "id": 209} ],
+    "renderScale"     : 0.6,
+    "fg"              : "#4a5a4a",
+    "bg"              : "#17120a",
+    "spawn"           : { "subterrains": {"bog": 0.0012, "mud": 0.0008} },
+    "nodeAmountRange" : [1, 1],
+    "designationTypes": ["dig"],
+    "interaction"     : {
+      "designationType": "dig",
+      "action"         : "dig",
+      "workCategory"   : "digging",
+      "workAmount"     : 46,
+      "toolRequirement": null,
+      "yields"         : [
+        {"itemId": "star_shard",  "min": 0, "max": 1, "skillId": "digging", "skillMultiplier": 0.06},
+        {"itemId": "voidshard",   "min": 0, "max": 1, "skillId": "digging", "skillMultiplier": 0.05},
+        {"itemId": "large_bones", "min": 1, "max": 2, "skillId": "digging", "skillMultiplier": 0.1 }
+      ],
+      "persistent"     : false,
+      "harvestDepletes": true
+    }
+  },
+  // ─────────────────────────────────────────────────────────────────────────
   // LAIRS / NESTS — `lair: true`; rare, listed first. Each placed tile seeds one bound pack of the
   // creature whose `lair` (creatures.jsonc) matches this id. DESTROY razes the den via the harvest
   // path (non-persistent node).

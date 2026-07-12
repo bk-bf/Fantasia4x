@@ -300,18 +300,26 @@ export function applyGainedTrait(pawn: Pawn, trait: Trait): void {
  *        `applyGainedTrait`, THEN rolls a Faustian flaw (a curated negative trait) and bakes that too.
  * Clones `stats`/`traits` before baking so the in-place `applyGainedTrait` never mutates the caller's
  * pawn. A duplicate organ (pawn already has the trait) is a no-op — returns the original ref.
+ *
+ * `durationMult` (PROD-CHAIN-IIII §G) scales a timed buff's length — the caller passes the drinker's
+ * alchemy work-quality so a trained alchemist draws a longer effect out of the same draught. 1 = no scale.
  */
-export function applyConsumable(pawn: Pawn, itemId: string, rand: () => number): Pawn {
+export function applyConsumable(
+  pawn: Pawn,
+  itemId: string,
+  rand: () => number,
+  durationMult = 1
+): Pawn {
   const def = itemDefById(itemId);
   if (!def) return pawn;
   const next: Pawn = { ...pawn, stats: { ...pawn.stats }, traits: [...(pawn.traits ?? [])] };
   let changed = false;
 
-  // (i) Timed potion buff.
+  // (i) Timed potion buff. §G: the duration scales with the drinker's alchemy proficiency.
   if (def.grantsConditions?.length && def.conditionDurationTurns) {
     const timers = { ...(next.conditionTimers ?? {}) };
-    for (const cid of def.grantsConditions)
-      timers[cid] = Math.max(timers[cid] ?? 0, def.conditionDurationTurns);
+    const duration = Math.round(def.conditionDurationTurns * durationMult);
+    for (const cid of def.grantsConditions) timers[cid] = Math.max(timers[cid] ?? 0, duration);
     next.conditionTimers = timers;
     changed = true;
   }

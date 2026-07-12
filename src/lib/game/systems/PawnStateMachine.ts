@@ -1271,6 +1271,10 @@ export function syncTransientConditions(pawn: Pawn, turn?: number): Pawn {
       if (!inst) continue;
       const granted = itemService.getItemById(inst.itemId)?.grantsConditions;
       if (granted) for (const cid of granted) if (!ids.includes(cid)) ids.push(cid);
+      // §I: a Famed instance carries 1–3 per-instance enchant conditions ON TOP of the def's — grant
+      // those while equipped too, through the same transient-condition path.
+      if (inst.famed && inst.famedEnchants)
+        for (const cid of inst.famedEnchants) if (!ids.includes(cid)) ids.push(cid);
     }
   }
 

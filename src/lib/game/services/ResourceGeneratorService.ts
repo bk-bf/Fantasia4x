@@ -23,6 +23,9 @@ const CLUSTERED_SUBTYPES = new Set(['mineral_deposit']);
 // groves stay unguarded free finds).
 const GUARD_SEARCH_RADIUS = 6;
 const GUARD_CHANCE = 0.4;
+// §1e buried treasure: chance a lair (den or §3b guardian) gets a `buried_hoard` denned on the nearest
+// empty tile beside it — "clear the guardian, then dig the prize" (adjacent, so it's diggable under aggro).
+const HOARD_CHANCE = 0.35;
 
 /** Deterministic integer-range RNG: the shared seeded xorshift float gen (core/rng) scaled to
  *  [min, max] inclusive. Same sequence as before — the float gen is byte-identical to the old inline
@@ -90,6 +93,11 @@ class ResourceGeneratorServiceImpl {
     // rare-material attractors, so a dangerous pack guards the reward. Runs last so every attractor is
     // already down; consumes rng after passes 1-2 so their placement is byte-identical for a given seed.
     this.placeLairGuardians(worldMap, defs, rng, cx, cy, lairFreeR2);
+
+    // Pass 4 — buried treasure (PRODUCTION-CHAIN-IIII §1e/Phase C): den a `buried_hoard` beside some
+    // lairs (dens AND the §3b guardians just placed), the dragon-on-its-hoard — clear the pack, then dig.
+    // Runs last so both die-cast passes are already down; rng consumed after pass 3 keeps them stable.
+    this.placeBuriedHoards(worldMap, defs, rng, cx, cy, lairFreeR2);
   }
 
   /**
@@ -242,6 +250,43 @@ class ResourceGeneratorServiceImpl {
         if (!spot) continue;
         const g = guardians.length === 1 ? guardians[0] : guardians[rng(0, guardians.length - 1)];
         this.placeResource(spot, g, rng);
+      }
+    }
+  }
+
+  /**
+   * §1e/Phase C — for each lair tile, roll `HOARD_CHANCE` to den a `buried_hoard` on the nearest empty
+   * tile beside it (reusing `findGuardSpot`). The one-resource-per-tile map model can't put the hoard ON
+   * the den tile, so it sits ADJACENT (diggable under the pack's aggro, or after clearing) — the same
+   * "beside, not on" placement the §3b guardians use. No-op if the `buried_hoard` def isn't loaded.
+   */
+  private placeBuriedHoards(
+    worldMap: WorldTile[][],
+    defs: ResourceObjectDef[],
+    rng: (min: number, max: number) => number,
+    cx: number,
+    cy: number,
+    bubbleR2: number
+  ): void {
+    const hoard = defs.find((d) => d.id === 'buried_hoard');
+    if (!hoard) return;
+    const lairIds = new Set(defs.filter((d) => d.lair).map((d) => d.id));
+    if (lairIds.size === 0) return;
+    const h = worldMap.length;
+    const w = worldMap[0]?.length ?? 0;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const res = worldMap[y][x].resources;
+        let isLair = false;
+        for (const id in res)
+          if (lairIds.has(id)) {
+            isLair = true;
+            break;
+          }
+        if (!isLair) continue;
+        if (rng(0, 100000) / 100000 >= HOARD_CHANCE) continue;
+        const spot = this.findGuardSpot(worldMap, x, y, cx, cy, bubbleR2);
+        if (spot) this.placeResource(spot, hoard, rng);
       }
     }
   }

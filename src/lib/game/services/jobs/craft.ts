@@ -3,14 +3,16 @@
 // producing recipe: destroy staged inputs, spawn outputs on the station tile, apply mold wear, drain
 // the queue. `completeCraftOrder` is also called directly for passive furnace production. Extracted
 // from JobService (P-4 handler split).
-import type { CraftingInProgress, GameState, Job, ItemQuality } from '../../core/types';
+import type { CraftingInProgress, GameState, Job, ItemQuality, ItemInstance } from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
 import { gatedConsole as console } from '../../core/log';
 import { itemService } from '../ItemService';
 import { recipeService } from '../RecipeService';
 import { pawnStatService } from '../PawnStatService';
+import { buildingService } from '../BuildingService';
 import { craftWorkCategory } from './craftDiscipline';
 import { rollCraftQuality, qualityMultiplier } from '../../core/itemQuality';
+import { rollFamed, rollFamedIdentity } from '../../core/famedNames';
 import { aggregateMaterialMods } from '../../core/materialProperties';
 import {
   absorbDropIfOnStockpileTile,
@@ -135,13 +137,23 @@ export function complete(job: Job, gs: GameState): GameState {
   // drift. A skilled cook also stretches ingredients into more nourishing portions (tier scales meal
   // yield). The ROLL is handed down as a closure so a batch rolls EACH unit separately (Phase B).
   let rollQuality: (() => ItemQuality) | undefined;
+  // §I: the vanishingly-rare Famed roll ABOVE the quality tiers — only a pawn-worked craft can hit it
+  // (passive furnaces never Famed), and only a master, boosted at an arcane/infused station. Returns the
+  // legend identity when it hits, else null.
+  let rollFamedFn: (() => ReturnType<typeof rollFamedIdentity> | null) | undefined;
   const pawn = job.claimedBy ? gs.pawns.find((p) => p.id === job.claimedBy) : undefined;
   if (pawn) {
     const discipline = craftWorkCategory(entry);
     const axis = pawnStatService.getWorkModifiers(pawn, discipline, undefined, 'crafting').quality ?? 1;
     rollQuality = () => rollCraftQuality(axis, () => rng.random());
+    const stationEffects = (entry.stationType
+      ? ((buildingService.getBuildingById(entry.stationType)?.effects ?? {}) as Record<string, unknown>)
+      : {}) as Record<string, unknown>;
+    const arcane = !!stationEffects.arcane;
+    rollFamedFn = () =>
+      rollFamed(axis, arcane, () => rng.random()) ? rollFamedIdentity(() => rng.random()) : null;
   }
-  let state = completeCraftOrder(entry, gs, rollQuality);
+  let state = completeCraftOrder(entry, gs, rollQuality, rollFamedFn);
   // ADR-009 step 2: wear the WORKING pawn's craft tool (e.g. the knife used at a butcher spot /
   // tannery). Only the pawn-worked path wears a tool — passive furnace production has no pawn.
   const req = recipeService.toolRequirementForRecipe(recipeService.getRecipeForItem(entry.item.id));
@@ -162,7 +174,8 @@ const QUALITY_STAMPED_TYPES = new Set(['weapon', 'armor', 'tool']);
 export function completeCraftOrder(
   entry: CraftingInProgress,
   gs: GameState,
-  rollQuality?: () => ItemQuality
+  rollQuality?: () => ItemQuality,
+  rollFamedFn?: () => ReturnType<typeof rollFamedIdentity> | null
 ): GameState {
   // Recipe registry (Stage C): a craft completion runs the producing recipe once per queued
   // unit and emits ALL its outputs — the primary product plus any byproducts (e.g. splitting
@@ -269,10 +282,15 @@ export function completeCraftOrder(
         // WORK-EXPERIENCE Phase B: a batch rolls EACH unit's tier separately — a ×3 order can come
         // out 1 Crude + 2 Standard instead of three copies of one lucky roll. One drop per rolled
         // tier (same-tier units share a stack; quality-bearing drops never fold into loose piles).
+        // §I: each unit also rolls the Famed tail; a Famed unit peels out into its OWN unique drop
+        // (name/history/stat-mult/enchants), never folded into a tier stack.
         const byTier = new Map<ItemQuality, number>();
+        const famedUnits: Array<{ q: ItemQuality; id: ReturnType<typeof rollFamedIdentity> }> = [];
         for (let i = 0; i < qty; i++) {
           const q = rollQuality!();
-          byTier.set(q, (byTier.get(q) ?? 0) + 1);
+          const identity = outId === itemId ? (rollFamedFn?.() ?? null) : null;
+          if (identity) famedUnits.push({ q, id: identity });
+          else byTier.set(q, (byTier.get(q) ?? 0) + 1);
         }
         for (const [q, n] of byTier) {
           const id = `craft-${outId}-${station.x}-${station.y}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
@@ -285,6 +303,34 @@ export function completeCraftOrder(
             quality: q,
             ...(matDur !== 1 ? { matDur } : {}),
             ...(dishName ? { name: dishName } : {})
+          });
+          newDropIds.push(id);
+        }
+        for (const { q, id: identity } of famedUnits) {
+          const id = `craft-${outId}-${station.x}-${station.y}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
+          // A Famed unit rides a full ItemInstance (like a mob's famed drop via dropMobGear) — an
+          // instance-bearing drop never stack-merges, so the legend keeps its unique identity through
+          // haul/stockpile and carries straight onto the equipped/carried instance on pickup.
+          const instance: ItemInstance = {
+            instanceId: `famed-${outId}-${station.x}-${station.y}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`,
+            itemId: outId,
+            durability: Math.round((itemService.getItemById(outId)?.maxDurability ?? 100) * matDur),
+            quality: q,
+            famed: true,
+            famedName: identity.famedName,
+            famedHistory: identity.famedHistory,
+            famedStatMult: identity.famedStatMult,
+            famedEnchants: identity.famedEnchants
+          };
+          next.push({
+            id,
+            resourceId: outId,
+            x: station.x,
+            y: station.y,
+            quantity: 1,
+            quality: q,
+            instance,
+            ...(matDur !== 1 ? { matDur } : {})
           });
           newDropIds.push(id);
         }

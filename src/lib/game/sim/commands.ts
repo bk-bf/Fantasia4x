@@ -56,6 +56,7 @@ import { designationService } from '../services/DesignationService';
 import { buildingService } from '../services/BuildingService';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
+import { pawnStatService } from '../services/PawnStatService';
 import { researchService } from '../services/ResearchService';
 import { devSpawnLooseItems, devDestroyAllItems } from '../dev/devWorld';
 import { gameLogger } from '../dev/gameLogger';
@@ -599,9 +600,13 @@ export const COMMANDS: Record<string, Cmd> = {
     if (((s.stockpile ?? {})[p.itemId] ?? 0) < 1) return s;
     const pawns = s.pawns.slice();
     const before = pawns[idx];
+    // §G: a timed draught lasts longer for a skilled alchemist — pass the drinker's alchemy work-quality
+    // (~0.8–1.8) as the duration multiplier. Trait-organs ignore it (no timed condition).
+    const alchemyQuality =
+      pawnStatService.getWorkModifiers(before, 'alchemy', undefined, 'crafting').quality ?? 1;
     // §2h: apply the drink/eat effect (timed condition and/or trait grant + Faustian flaw). If nothing
     // applied (e.g. a duplicate organ), keep the item — don't burn stock for a no-op.
-    pawns[idx] = applyConsumable(before, p.itemId, () => rng.random());
+    pawns[idx] = applyConsumable(before, p.itemId, () => rng.random(), alchemyQuality);
     if (pawns[idx] === before) return s;
     return consumeFromStockpiles({ ...s, pawns }, { [p.itemId]: 1 });
   },

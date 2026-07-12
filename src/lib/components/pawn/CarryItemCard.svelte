@@ -15,6 +15,9 @@
     durability = null,
     maxDurability = null,
     contents = null,
+    famed = false,
+    famedHistory = null,
+    famedEnchants = null,
     pinned = false,
     onPin = null,
     onDrop,
@@ -29,6 +32,10 @@
     maxDurability?: number | null;
     /** Liquid-container fill (ItemInstance.contents): units of `def.container.holds` held inside. */
     contents?: number | null;
+    /** §I Famed identity (a named legend above the quality scale) — surfaced on the card face. */
+    famed?: boolean;
+    famedHistory?: string | null;
+    famedEnchants?: string[] | null;
     pinned?: boolean;
     onPin?: (() => void) | null;
     onDrop: () => void;
@@ -44,6 +51,12 @@
   let prefix = $derived(qualityPrefix(quality));
   let hasPrefix = $derived(!!prefix && !!qColor && name.startsWith(`${prefix} `));
   let baseName = $derived(hasPrefix ? name.slice(prefix.length + 1) : name);
+
+  // §I Famed: a legend outshines the quality tint (gold name) and surfaces its history + enchant list.
+  // Enchant ids are humanised inline (capitalise, `_`→space) so no backend token leaks into the card.
+  const humanize = (id: string) =>
+    id.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  let enchantLabels = $derived((famedEnchants ?? []).map(humanize).join(', '));
 
   // Stat panel portaled to the cursor while hovering the name (same UX as EquipmentDoll).
   let tip: { x: number; y: number } | null = $state(null);
@@ -82,11 +95,18 @@
     {#if def.charSpans}
       <SpriteIcon charSpans={def.charSpans} tint={qColor ?? def.color ?? null} px={16} />
     {/if}
-    <span class="name-text"
+    <span class="name-text" class:famed style="{famed ? 'color:var(--accent-hi, #ffd24a)' : ''}"
       >{#if hasPrefix}<span class="rarity" style="color:{qColor}">{prefix}</span
         >&nbsp;{/if}{baseName}</span
     >
   </span>
+
+  {#if famed}
+    <div class="famed-id">
+      {#if famedHistory}<div class="famed-hist">{famedHistory}</div>{/if}
+      {#if enchantLabels}<div class="famed-ench">✦ {enchantLabels}</div>{/if}
+    </div>
+  {/if}
 
   <div class="meta">
     {#if qty != null}<span class="qty">×{qty}</span>{/if}
@@ -140,6 +160,24 @@
     color: var(--accent, #0f0);
   }
   .card.pinned .name {
+    color: var(--accent-hi, #ffd24a);
+  }
+  .name-text.famed {
+    font-weight: bold;
+    letter-spacing: 0.02em;
+  }
+
+  /* §I Famed identity block — the legend's history + enchant list under the name. */
+  .famed-id {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.62rem;
+    line-height: 1.25;
+    color: var(--text-dim, #888);
+  }
+  .famed-hist {
+    font-style: italic;
+  }
+  .famed-ench {
     color: var(--accent-hi, #ffd24a);
   }
 

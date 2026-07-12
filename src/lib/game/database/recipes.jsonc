@@ -2996,6 +2996,16 @@
     "workAmount"      : 40,
     "toolTierRequired": 1
   },
+  // PRODUCTION-CHAIN-IIII §2 — crystal enchant gear: a star-shard (§1d) set with an owlbear pineal (§2h
+  // beast drop) and bound with witch's morel → the Stargazer's Circlet (grants keen senses while worn).
+  {
+    "id"              : "make_stargazer_circlet",
+    "station"         : "attunement_altar",
+    "inputs"          : {"star_shard": 1, "owlbear_pineal": 1, "witch_morel": 2},
+    "outputs"         : {"stargazer_circlet": 1},
+    "workAmount"      : 50,
+    "toolTierRequired": 2
+  },
   {
     "id"              : "make_sabretooth_meat",
     "station"         : "butcher_spot",
@@ -3203,6 +3213,17 @@
     ],
     "outputs"          : {"gem_dust": 2},
     "workAmount"       : 20,
+    "toolTierRequired" : 1
+  },
+  // PRODUCTION-CHAIN-IIII §1d — a mined mana_crystal grinds into a richer yield of gem-dust than any cut
+  // gem (the "refined gem-dust++" sink for the crystal-vent tier).
+  {
+    "id"               : "grind_mana_crystal",
+    "station"          : "lapidary_bench",
+    "researchRequired" : "runic_inscription",
+    "inputs"           : {"mana_crystal": 1},
+    "outputs"          : {"gem_dust": 4},
+    "workAmount"       : 22,
     "toolTierRequired" : 1
   },
   {
@@ -3413,6 +3434,40 @@
     "inputs"          : {"owlbear_bile": 1, "woundwort": 1, "glassware": 1},
     "outputs"         : {"ironhide_tonic": 1},
     "workAmount"      : 30,
+    "toolTierRequired": 1
+  },
+  // PRODUCTION-CHAIN-IIII §2 — mystical-flora draughts: a foraged crop/fungus (§1a/§1b) is the potency,
+  // brewed at the alchemy_lab into a timed condition. Duration scales with the drinker's alchemy (§G).
+  {
+    "id"              : "brew_vigor_draught",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"bloodroot": 2, "woundwort": 1, "glassware": 1},
+    "outputs"         : {"vigor_draught": 1},
+    "workAmount"      : 28,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_calming_draught",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"dreamleaf": 2, "woundwort": 1, "glassware": 1},
+    "outputs"         : {"calming_draught": 1},
+    "workAmount"      : 28,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_nightglow_draught",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"glowcap": 2, "woundwort": 1, "glassware": 1},
+    "outputs"         : {"nightglow_draught": 1},
+    "workAmount"      : 28,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_frenzy_draught",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"spore_of_madness": 1, "mandrake": 1, "glassware": 1},
+    "outputs"         : {"frenzy_draught": 1},
+    "workAmount"      : 32,
     "toolTierRequired": 1
   },
   // ════════════════════════════════════════════════════════════════════════════════════════════

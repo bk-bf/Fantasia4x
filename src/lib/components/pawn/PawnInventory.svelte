@@ -90,6 +90,9 @@
               durability={inst.durability}
               maxDurability={def.maxDurability ?? 100}
               contents={inst.contents ?? null}
+              famed={inst.famed ?? false}
+              famedHistory={inst.famedHistory ?? null}
+              famedEnchants={inst.famedEnchants ?? null}
               onDrop={() => dropInstance(inst)}
             />
           {:else}
