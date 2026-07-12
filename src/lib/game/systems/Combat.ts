@@ -57,6 +57,7 @@ import {
   weatherSightMul
 } from '../services/EnvironmentService';
 import { isWitnessedByColony } from '../core/vision';
+import { kingdomService } from '../services/KingdomService';
 // Re-exported below for callers that import these via Combat.
 import {
   PART_DEF_MAP,
@@ -1320,6 +1321,16 @@ class CombatServiceImpl implements CombatService {
   ): { state: GameState; staminaCost: number } {
     const result = this.resolveHit(attacker, target, state, override);
     const pos = this.entityPos(target);
+
+    // KINGDOMS-TRADE §3: a colonist raising a hand against a kingdom's party member is an act of
+    // war — the sending kingdom flips hostile immediately (relation floored; -200 clamps to -100).
+    if (!('entityClass' in attacker) && 'entityClass' in target && (target as Mob).kingdomId) {
+      const kid = (target as Mob).kingdomId!;
+      const rel = kingdomService.colonyRelationTo(state, kid);
+      if (rel && rel.score > -100) {
+        state = kingdomService.adjustColonyRelation(state, kid, -200);
+      }
+    }
 
     // Visual lunge: thrust the attacker glyph toward the struck tile and snap it back
     // (renderer-only; emitted for hit AND miss so the swing reads regardless of outcome).

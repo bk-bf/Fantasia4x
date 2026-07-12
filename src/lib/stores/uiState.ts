@@ -5,6 +5,7 @@ type Screen =
   | 'main'
   | 'pawns'
   | 'culture'
+  | 'kingdoms'
   | 'building'
   | 'crafting'
   | 'research'
@@ -53,6 +54,9 @@ interface UIState {
   /** Custom Map popup (biome-tuning sliders) open? Rendered at the page root, outside the filtered
    *  header, so it stacks above the WebGL canvas (a `filter` on `.game-header` traps fixed children). */
   customMapOpen: boolean;
+  /** KINGDOMS-TRADE §4: open barter session — which caravan (party) and which colony pawn is
+   *  negotiating (their `trade` stat prices the deal). null = trade screen closed. */
+  tradeSession: { partyId: string; pawnId: string } | null;
 }
 
 function createUIState() {
@@ -73,7 +77,8 @@ function createUIState() {
     blueprintMaterials: null,
     pawnScreenTab: null,
     debugBrush: null,
-    customMapOpen: false
+    customMapOpen: false,
+    tradeSession: null
   };
 
   const { subscribe, set, update } = writable(initialState);
@@ -149,6 +154,11 @@ function createUIState() {
 
     setPawnTab: (tab: 'status' | 'attributes' | 'gear' | null) =>
       update((state) => ({ ...state, pawnScreenTab: tab })),
+
+    openTrade: (partyId: string, pawnId: string) =>
+      update((state) => ({ ...state, tradeSession: { partyId, pawnId } })),
+
+    closeTrade: () => update((state) => ({ ...state, tradeSession: null })),
 
     activateBlueprint: (buildingId: string, materials: Record<string, string> | null = null) =>
       update((state) => ({

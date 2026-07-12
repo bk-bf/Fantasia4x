@@ -243,6 +243,10 @@ export interface Item {
 
   maxValue?: number; // Stack limit
   passiveGeneration?: number; // Auto-generation rate
+  /** KINGDOMS-TRADE §4: base economic value (barter pricing + colony wealth). Optional — items
+   *  without an authored value fall back to the core/itemValue.ts heuristic (type/tier/category).
+   *  Effective value scales with quality/material/Famed at the instance level. */
+  value?: number;
 
   // Crafting requirements
   craftingCost?: Record<string, number>;

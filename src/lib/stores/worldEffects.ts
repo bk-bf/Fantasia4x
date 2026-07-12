@@ -3,7 +3,7 @@ import { writable } from 'svelte/store';
 
 /** Anchored, looping glyph float pinned to a tile/entity (sleep Zzz, recovery ✚, campfire sparks…);
  *  `kind` selects the inner glyphs + animation in WorldEffectsLayer. */
-export type GlyphFloatKind = 'sleep' | 'rest' | 'collapse' | 'winded' | 'campfire';
+export type GlyphFloatKind = 'sleep' | 'rest' | 'collapse' | 'winded' | 'campfire' | 'trade';
 export interface GlyphFloat {
   id: string;
   left: number;

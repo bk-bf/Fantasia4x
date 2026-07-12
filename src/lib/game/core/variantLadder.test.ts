@@ -81,6 +81,10 @@ describe('§2e variant-ladder data integrity', () => {
   it('EVERY creature has a species, and every species has ≥2 variants (the hover slot is never empty)', () => {
     const bySpecies = new Map<string, number>();
     for (const c of CREATURES) {
+      // KINGDOMS-TRADE party units (kingdom_trader/guard/visitor/pack_beast) are deliberately
+      // un-laddered: they never ambient-spawn (empty biomeWeights, party-spawned only) and carry no
+      // species, which selectionCard already renders without a variant slot.
+      if (c.id.startsWith('kingdom_')) continue;
       expect(c.species, `${c.id} must belong to a species`).toBeTruthy();
       bySpecies.set(c.species!, (bySpecies.get(c.species!) ?? 0) + 1);
     }

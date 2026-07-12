@@ -3,6 +3,8 @@
   import '../app.css';
   import MainScreen from '$lib/components/UI/MainScreen.svelte';
   import CultureScreen from '$lib/components/screens/CultureScreen.svelte';
+  import KingdomScreen from '$lib/components/screens/KingdomScreen.svelte';
+  import TradeModal from '$lib/components/UI/trade/TradeModal.svelte';
   import PawnScreen from '$lib/components/screens/PawnScreen.svelte';
   import BuildingMenu from '$lib/components/screens/BuildingMenu.svelte';
   import ResearchScreen from '$lib/components/screens/ResearchScreen.svelte';
@@ -221,9 +223,10 @@
     { key: 'crafting', label: 'CRAFTING', fkey: 'F5' },
     { key: 'exploration', label: 'EXPLORE', fkey: 'F6' },
     { key: 'culture', label: 'CULTURE', fkey: 'F7' },
-    { key: 'research', label: 'RESEARCH', fkey: 'F8', needsResearch: true },
-    { key: 'entities', label: 'ENTITIES', fkey: 'F9' },
-    ...(debugEnabled ? [{ key: 'debug', label: 'DEBUG', fkey: 'F10' }] : [])
+    { key: 'kingdoms', label: 'KINGDOMS', fkey: 'F8' },
+    { key: 'research', label: 'RESEARCH', fkey: 'F9', needsResearch: true },
+    { key: 'entities', label: 'ENTITIES', fkey: 'F10' },
+    ...(debugEnabled ? [{ key: 'debug', label: 'DEBUG', fkey: 'F11' }] : [])
   ];
 
   function toggle(key: string) {
@@ -349,7 +352,7 @@
         uiState.setScreen('main');
         return;
       }
-      if (n >= 2 && n <= 10) {
+      if (n >= 2 && n <= 11) {
         e.preventDefault();
         const tab = NAV_TABS[n - 2];
         if (tab) toggle(tab.key);
@@ -447,6 +450,8 @@
                 <ExplorationScreen />
               {:else if currentScreen === 'culture'}
                 <CultureScreen />
+              {:else if currentScreen === 'kingdoms'}
+                <KingdomScreen />
               {:else if currentScreen === 'research'}
                 <ResearchScreen />
               {:else if currentScreen === 'entities'}
@@ -502,6 +507,12 @@
      can flash before a real colony exists or during the boot warmup. -->
 {#if $appPhase === 'game' && $bootReveal}
   <EventModalHost />
+{/if}
+
+<!-- KINGDOMS-TRADE §4: the barter screen — opened from the caravan trader's right-click Trade verb;
+     self-closes if the caravan departs. Gated like the event host. -->
+{#if $appPhase === 'game' && $bootReveal}
+  <TradeModal />
 {/if}
 
 {#if $appPhase === 'game' && !$bootReveal}

@@ -937,7 +937,7 @@ function rollStatRange(range: [number, number] | undefined, fallback: number): n
 /** §2c: build a mob's worn equipment from a lootpool — draw the loadout, then stamp each drawn piece
  *  with a rolled quality tier + a worn starting durability (conditionRange × the item's max). Returns
  *  undefined when the pool is missing/empty so a mob without gear carries no `equipment` field. */
-function equipFromLootPool(poolId: string): PawnEquipment | undefined {
+export function equipFromLootPool(poolId: string): PawnEquipment | undefined {
   const pool = getLootPool(poolId);
   if (!pool) return undefined;
   const pieces = drawLoadout(pool, rng);

@@ -91,6 +91,12 @@
         <span class="spark s4">*</span>
         <span class="spark s5">·</span>
       </div>
+    {:else if float.kind === 'trade'}
+      <!-- KINGDOMS-TRADE §4: the caravan trader's interaction mark — a gold "?" bobbing overhead,
+           the tell that this figure can be approached (right-click → Trade). -->
+      <div class="trade-float" style={xf}>
+        <span class="trade-mark">?</span>
+      </div>
     {/if}
   {/each}
 
@@ -303,6 +309,38 @@
     100% {
       opacity: 0;
       transform: translateY(-20px) scale(0.85);
+    }
+  }
+
+  /* ── Trade mark — the caravan trader's persistent gold "?" (KINGDOMS-TRADE §4): a gentle bob,
+     NOT the rising fade of the status tells, because it's a standing invitation, not a state. ── */
+
+  .trade-float {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    display: flex;
+    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) scale(...) */
+  }
+
+  .trade-mark {
+    color: #f0c040;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: bold;
+    animation: trade-bob 1.6s ease-in-out infinite;
+    text-shadow: 0 0 4px #630;
+    will-change: transform;
+  }
+
+  @keyframes trade-bob {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
     }
   }
 

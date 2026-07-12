@@ -42,7 +42,8 @@ import {
   consumeFromStockpiles,
   releaseReservation,
   reserveForOrder,
-  absorbDropIfOnStockpileTile
+  absorbDropIfOnStockpileTile,
+  availableAggregateFromDrops
 } from '../core/GameState';
 import { equipItem, unequipItem, equipDropToPawn } from '../core/PawnEquipment';
 import { rng } from '../core/rng';
@@ -63,6 +64,7 @@ import { gameLogger } from '../dev/gameLogger';
 import { generatePawns, applyConsumable } from '../entities/Pawns';
 import { pawnGrowthService } from '../services/PawnGrowthService';
 import { devSpawnMobs } from '../services/entity/entitySpawning';
+import { kingdomService, KNOWLEDGE_XP } from '../services/KingdomService';
 import {
   makeWeather,
   tileWetness,
@@ -1164,6 +1166,104 @@ export const COMMANDS: Record<string, Cmd> = {
     });
 
     return { ...s, pawns: [...s.pawns, ...placed], pendingEvent: undefined };
+  },
+
+  /** KINGDOMS-TRADE §3: dismiss the arrival announcement — the party is already on the map. */
+  acknowledgeKingdomArrival: (s) =>
+    s.pendingEvent?.kind === 'kingdom-arrival' ? { ...s, pendingEvent: undefined } : s,
+
+  /** KINGDOMS-TRADE §4: commit a barter deal with a caravan. `give` leaves the colony stockpile,
+   *  `receive` leaves the caravan's stock; the caravan only accepts a deal whose received value
+   *  (priced by the negotiating pawn's `trade` stat + relations; gold anchors) covers what it hands
+   *  over. Completing a deal deepens contact (knowledge xp) and warms relations. */
+  executeTrade: (
+    s,
+    p: {
+      partyId: string;
+      pawnId: string;
+      give: { itemId: string; qty: number }[];
+      receive: { itemId: string; qty: number }[];
+    }
+  ) => {
+    const party = (s.kingdomParties ?? []).find((pt) => pt.id === p.partyId);
+    if (!party || party.kind !== 'caravan') return s;
+    const pawn = s.pawns.find((pw) => pw.id === p.pawnId && pw.isAlive !== false);
+    if (!pawn) return s;
+
+    // Merge duplicate lines, then validate both sides against actual stock.
+    const giveMap: Record<string, number> = {};
+    for (const l of p.give) {
+      if (l.qty <= 0) return s;
+      giveMap[l.itemId] = (giveMap[l.itemId] ?? 0) + l.qty;
+    }
+    const receiveMap: Record<string, number> = {};
+    for (const l of p.receive) {
+      if (l.qty <= 0) return s;
+      receiveMap[l.itemId] = (receiveMap[l.itemId] ?? 0) + l.qty;
+    }
+    if (Object.keys(giveMap).length === 0 && Object.keys(receiveMap).length === 0) return s;
+    // Validate against UNRESERVED stored stock (ADR-016) — the raw stockpile mirror counts stacks
+    // already reserved for craft orders, which consumeFromStockpiles will rightly refuse to touch.
+    const available = availableAggregateFromDrops(s.droppedItems ?? []);
+    for (const [id, qty] of Object.entries(giveMap)) {
+      if ((available[id] ?? 0) < qty) return s;
+    }
+    for (const [id, qty] of Object.entries(receiveMap)) {
+      if ((party.stock.find((g) => g.itemId === id)?.qty ?? 0) < qty) return s;
+    }
+
+    // Price the deal from the caravan's side — the trading pawn's skill narrows the spread.
+    const tradeStat = pawnStatService.evaluateStat('trade', pawn);
+    const sumValue = (map: Record<string, number>, side: 'give' | 'receive') =>
+      Object.entries(map).reduce(
+        (sum, [itemId, qty]) =>
+          sum +
+          kingdomService.effectiveTradePrice(s, party.kingdomId, { itemId, qty }, side, tradeStat) *
+            qty,
+        0
+      );
+    if (sumValue(giveMap, 'give') < sumValue(receiveMap, 'receive')) return s;
+
+    // Move the goods.
+    let next: GameState = s;
+    if (Object.keys(giveMap).length > 0) next = consumeFromStockpiles(next, giveMap);
+    if (Object.keys(receiveMap).length > 0) next = addToStockpileZone(next, null, receiveMap);
+    const stock = party.stock.map((g) => ({ ...g }));
+    for (const [id, qty] of Object.entries(receiveMap)) {
+      const line = stock.find((g) => g.itemId === id);
+      if (line) line.qty -= qty;
+    }
+    for (const [id, qty] of Object.entries(giveMap)) {
+      const line = stock.find((g) => g.itemId === id);
+      if (line) line.qty += qty;
+      else stock.push({ itemId: id, qty });
+    }
+    next = {
+      ...next,
+      kingdomParties: (next.kingdomParties ?? []).map((pt) =>
+        pt.id === party.id ? { ...pt, stock: stock.filter((g) => g.qty > 0) } : pt
+      )
+    };
+
+    // A completed deal is the deepest contact there is — knowledge + goodwill.
+    next = kingdomService.recordContact(
+      next,
+      party.kingdomId,
+      Math.round(KNOWLEDGE_XP.tradeCompleted * Math.max(0.5, tradeStat))
+    );
+    next = kingdomService.adjustColonyRelation(next, party.kingdomId, 4);
+
+    const kingdomName =
+      (next.kingdoms ?? []).find((k) => k.id === party.kingdomId)?.name ?? 'a kingdom';
+    simLog.logActivity({
+      turn: s.turn,
+      type: 'event',
+      actor: pawn.name,
+      action: `struck a bargain with the caravan from ${kingdomName}`,
+      result: '',
+      severity: 'success'
+    });
+    return next;
   },
 
   /** Force-spawn `count` mobs (ignores caps / current count). Optional specific creature id. */

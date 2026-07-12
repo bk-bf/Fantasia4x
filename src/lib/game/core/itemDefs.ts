@@ -15,6 +15,11 @@ export function itemDefById(id: string): Item | undefined {
   return (_byId ??= new Map(ITEMS_DATABASE.map((i) => [i.id, i]))).get(id);
 }
 
+/** The full static item DB (read-only) — for whole-catalogue scans (caravan stock, wealth). */
+export function allItemDefs(): readonly Item[] {
+  return ITEMS_DATABASE;
+}
+
 /**
  * `category:<cat>` cost/slot match. Real item categories match by `item.category`; the special
  * pseudo-category **`plank`** matches ANY sawn plank (pine/oak/birch/ash/yew + magic-wood planks),

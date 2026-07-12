@@ -4,9 +4,14 @@
   // the game while a decision is pending, and restores play once it resolves (unless the player had
   // already paused). Mount once, near the other global overlays in +page.svelte.
   import { get } from 'svelte/store';
-  import { currentEvent, commitMigrants } from '$lib/stores/eventStore';
+  import {
+    currentEvent,
+    commitMigrants,
+    acknowledgeKingdomArrival
+  } from '$lib/stores/eventStore';
   import { gameState } from '$lib/stores/gameState';
   import MigrantWaveModal from './MigrantWaveModal.svelte';
+  import KingdomArrivalModal from './KingdomArrivalModal.svelte';
 
   let pausedByEvent = false;
   let prevId: string | null = null;
@@ -29,4 +34,6 @@
 
 {#if $currentEvent?.kind === 'migrant-wave'}
   <MigrantWaveModal event={$currentEvent} onResolve={commitMigrants} />
+{:else if $currentEvent?.kind === 'kingdom-arrival'}
+  <KingdomArrivalModal event={$currentEvent} onResolve={acknowledgeKingdomArrival} />
 {/if}

@@ -25,5 +25,21 @@ export interface MigrantWaveEvent {
   candidates: Pawn[];
 }
 
+/**
+ * KINGDOMS-TRADE §3: a kingdom's party (friendly visitors, or a trade caravan) has arrived on the
+ * map. The party is already spawned when this fires — the modal announces who came; resolution just
+ * acknowledges (trading itself is player-initiated later, via the trader's right-click Trade verb).
+ */
+export interface KingdomArrivalEvent {
+  kind: 'kingdom-arrival';
+  id: string;
+  /** Sim turn the party arrived on. */
+  turn: number;
+  kingdomId: string;
+  partyKind: 'visitor' | 'caravan';
+  /** The spawned party (GameState.kingdomParties) this event announces. */
+  partyId: string;
+}
+
 /** A world event awaiting a player decision. Discriminated by `kind`. */
-export type PendingEvent = MigrantWaveEvent;
+export type PendingEvent = MigrantWaveEvent | KingdomArrivalEvent;

@@ -1,6 +1,7 @@
 // The root GameState shape. Split out of core/types.ts (P-4); re-exported via the barrel.
 
 import type { Culture, CultureRelation } from './culture';
+import type { Kingdom, KingdomParty, KingdomRelation } from './kingdom';
 import type { WorldTile } from './world';
 import type { Season, WeatherState } from './environment';
 import type {
@@ -36,6 +37,15 @@ export interface GameState {
   culturePool: Culture[];
   /** Stub procedural inter-culture relations (data + pokédex display only; no mood wiring yet). */
   cultureRelations: CultureRelation[];
+  /** KINGDOMS-TRADE: the world's ~20 political kingdoms, generated downstream from culturePool.
+   *  Fixed roster; mutable facets (leader/wealth/famed items) drift at runtime. */
+  kingdoms?: Kingdom[];
+  /** KINGDOMS-TRADE: symmetric kingdom↔kingdom + colony↔kingdom relations (COLONY_RELATION_ID). */
+  kingdomRelations?: KingdomRelation[];
+  /** KINGDOMS-TRADE: visiting parties (visitors/caravans) currently on the map. */
+  kingdomParties?: KingdomParty[];
+  /** KINGDOMS-TRADE: earliest turn the next visitor/caravan may arrive (cadence clock). */
+  nextKingdomVisitTurn?: number;
   worldMap: WorldTile[][];
   /** Living-world (SEASONS_WEATHER Phase B): current season + 0-indexed day within it. */
   season?: Season;

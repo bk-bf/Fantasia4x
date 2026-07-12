@@ -30,6 +30,7 @@ import type {
 import { generateColonyPawns } from '$lib/game/entities/Pawns';
 import { pawnService } from '$lib/game/services/PawnService';
 import { generateCulture, generateCulturePool, generateCultureRelations } from '$lib/game/core/Culture';
+import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/Kingdom';
 import { itemService } from '$lib/game/services/ItemService';
 import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
@@ -428,6 +429,33 @@ function ensureCulturePool(state: GameState): GameState {
   };
 }
 
+/** Ensure the state has a prerolled kingdom pool + relations (KINGDOMS-TRADE). Idempotent.
+ *  Must run AFTER ensureCulturePool — kingdoms are downstream from the culture pool (no new
+ *  cultures are minted; each kingdom is a weighted mix of pool cultures). Old saves arrive with
+ *  `kingdoms` undefined and get a fresh pool here. */
+function ensureKingdomPool(state: GameState): GameState {
+  if (state.kingdoms && state.kingdoms.length > 0) {
+    // Backfill relations if a pool exists but relations were never generated.
+    if (!state.kingdomRelations || state.kingdomRelations.length === 0) {
+      return {
+        ...state,
+        kingdomRelations: generateKingdomRelations(
+          state.kingdoms,
+          state.cultureRelations,
+          state.culture.id
+        )
+      };
+    }
+    return state;
+  }
+  const kingdoms = generateKingdomPool(state.culturePool);
+  return {
+    ...state,
+    kingdoms,
+    kingdomRelations: generateKingdomRelations(kingdoms, state.cultureRelations, state.culture.id)
+  };
+}
+
 /** Bring a pre-overhaul culture up to the new shape (archetype/lore/unique id) so old saves
  *  still render in the pokédex without a procedural lore paragraph. */
 function normalizeLegacyCulture(culture: GameState['culture']): GameState['culture'] {
@@ -461,8 +489,9 @@ function markColonyCulturesDiscovered(state: GameState): GameState {
   return { ...state, culturePool, culture: culturePool.find((r) => r.id === state.culture?.id) ?? culturePool[0] };
 }
 
-/** Pokédex hook: flag a culture as encountered. Called by future faction/visitor encounters —
- *  no such entity source exists yet, so this is currently exercised only by colony bootstrap. */
+/** Pokédex hook: flag a culture as encountered. NOTE: kingdom visitor/caravan encounters discover
+ *  cultures SIM-SIDE via KingdomService.recordContact (worker-safe — it can't import this store);
+ *  this UI-side reducer remains for any future main-thread discovery trigger. */
 export function discoverCulture(state: GameState, cultureId: string): GameState {
   if (!state.culturePool.some((r) => r.id === cultureId && !r.discovered)) return state;
   return {
@@ -718,9 +747,12 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
     mobs: [],
     culturePool: [],
     cultureRelations: [],
+    kingdoms: [],
+    kingdomRelations: [],
     pawns: []
   };
   next = ensureCulturePool(next);
+  next = ensureKingdomPool(next);
   next = {
     ...next,
     pawns: spawnPawnsOnMap(generateColonyPawns(next.culturePool, colonySize), newWorld)
@@ -892,9 +924,12 @@ function resetGame() {
     worldMap: world,
     pawns: [],
     culturePool: [],
-    cultureRelations: []
+    cultureRelations: [],
+    kingdoms: [],
+    kingdomRelations: []
   };
   fresh = ensureCulturePool(fresh);
+  fresh = ensureKingdomPool(fresh);
   fresh = { ...fresh, pawns: generateColonyPawns(fresh.culturePool, 5) };
   fresh = { ...fresh, pawns: spawnPawnsOnMap(fresh.pawns, world) };
   fresh = markColonyCulturesDiscovered(fresh);
@@ -1299,6 +1334,9 @@ export const savedStateReady: Promise<void> = (async () => {
   // saves) BEFORE pawn generation so a fresh colony can be drawn mixed from the pool.
   baseState = ensureCulturePool(baseState);
 
+  // KINGDOMS-TRADE: kingdoms are downstream from the culture pool — generate (or migrate) after it.
+  baseState = ensureKingdomPool(baseState);
+
   // Pawn generation — ONLY on a genuinely fresh boot (no save on disk). A LOADED save with an empty
   // roster is a colony wiped out by permadeath: we leave it empty so the UI shows GAME OVER (see
   // `isGameOver`) instead of resurrecting it. We also do NOT top up an under-5 roster — a colony
@@ -1441,6 +1479,13 @@ export const cultureRelations = derived(gameState, ($gameState) => $gameState.cu
 /** Known (encountered) cultures — what the Culture-tab pokédex lists. */
 export const discoveredCultures = derived(gameState, ($gameState) =>
   ($gameState.culturePool ?? []).filter((r) => r.discovered)
+);
+/** KINGDOMS-TRADE: the full kingdom pool + relation graph (colony rows keyed COLONY_RELATION_ID). */
+export const kingdoms = derived(gameState, ($gameState) => $gameState.kingdoms ?? []);
+export const kingdomRelations = derived(gameState, ($gameState) => $gameState.kingdomRelations ?? []);
+/** Kingdoms the colony has a relationship with — what the Kingdoms-tab pokédex lists. */
+export const discoveredKingdoms = derived(gameState, ($gameState) =>
+  ($gameState.kingdoms ?? []).filter((k) => k.discovered)
 );
 export const pawnStats = derived(gameState, ($gameState) => $gameState.pawnStats || {});
 

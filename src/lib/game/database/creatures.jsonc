@@ -187,7 +187,7 @@
         "tier": 2,
         "audio"            : "rustle",
         "name"          : "Plague Rat",
-        "flavor": "Bloated on middens and bold only in the swarm, it scatters the moment the numbers turn. Barely worth the arrow, though a starving camp has boiled worse.",
+        "flavor": "Bloated on middens and bold only in the swarm, it scatters the moment the numbers turn. Even the cook-pot takes it grudgingly, and only once the stores run thin.",
         "threatLevel"   : 1,    // DPS 3.1 | effHP 20 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 205} ],
@@ -276,7 +276,7 @@
         "tier": 2,
         "audio"            : "critter",
         "name"          : "Cottontail",
-        "flavor": "A nervous scrap of fur that lives one bound from its burrow. Little more than a mouthful — but a mouthful comes easy.",
+        "flavor": "A nervous scrap of fur that lives one bound from its burrow, gone down the hole at a passing shadow. A quiet snare puts one in the evening stew before it ever knows the hand was there.",
         "threatLevel"   : 1,    // DPS 0.9 | effHP 10 | harmless
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 76} ],
@@ -398,7 +398,7 @@
         "tier": 2,
         "audio"            : "fowl",
         "name"          : "Junglefowl",
-        "flavor": "A flighty bird that scratches the dirt and lays where it wanders. No threat and no mystery — just eggs, and a bird for the pot when it stops laying.",
+        "flavor": "A flighty bird that scratches the dirt and lays where it wanders, forever startled by its own shadow. A coop keeps it laying; a lean week ends it in the pot.",
         "threatLevel"   : 1,    // DPS 0.2 | effHP 5 | harmless
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 75} ],
@@ -624,7 +624,7 @@
         "tier": 2,
         "audio"            : "canine",
         "name"          : "Golden Jackal",
-        "flavor": "It yips in the dark and grows brave in numbers, snatching what stronger killers leave. Quick and slight; little danger, and little reward beyond a thin hide.",
+        "flavor": "It yips in the dark and grows brave in numbers, snatching what stronger killers leave. Quick and slight, it rarely stands to fight — and rarely leaves more than a thin, dust-coloured hide.",
         "threatLevel"   : 2,    // DPS 5.3 | effHP 35 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 251} ],
@@ -786,7 +786,7 @@
         "tier": 2,
         "audio"            : "insect",
         "name"          : "Fen Stirge",
-        "flavor": "A ragged-winged bloodsucker that gorges and drops away swollen; one is a nuisance, a swarm a slow bleeding. Nothing on it worth keeping but the quiet after.",
+        "flavor": "A ragged-winged bloodsucker that gorges and drops away swollen; one is a nuisance, a swarm a slow bleeding. Struck down it bursts to a red smear, leaving only the quiet after.",
         "threatLevel"   : 1,    // DPS 1.3 | effHP 15 | harmless
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 163} ],
@@ -814,7 +814,7 @@
         "tier": 2,
         "audio"            : "goblinoid",
         "name"          : "Bog Ooze",
-        "flavor": "A crawling knot of bog-rot and ill will that keeps moving well past when it ought to stop. Little to salvage from a thing made of mud — only the trouble its ending spares you.",
+        "flavor": "A crawling knot of bog-rot and ill will that keeps moving well past when it ought to stop. Cut it down and it slumps back into the muck it rose from, taking its trouble with it.",
         "threatLevel"   : 2,    // DPS 3.8 | effHP 58 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 231} ],
@@ -902,7 +902,7 @@
         "tier": 2,
         "audio"            : "goblinoid",
         "name"          : "Cave Kobold",
-        "flavor": "A small, skulking thief that fights with trap and stolen knife and bolts the instant the odds sour. Its scavenged scraps are poor pickings — but pickings all the same.",
+        "flavor": "A small, skulking thief that fights with trap and stolen knife and bolts the instant the odds sour. Whatever it has filched off better warriors comes loose with the corpse.",
         "threatLevel"   : 1,    // DPS 3.1 | effHP 30 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "cultures", "id": 64} ],
@@ -1065,7 +1065,7 @@
         "id": "wolf_pup",
         "audio": "canine",
         "name": "Wolf Pup",
-        "flavor": "All ears and clumsy paws, it tumbles after the pack with more hunger than harm. Scarce worth a blade — and its yelping tends to bring the grown ones running.",
+        "flavor": "All ears and clumsy paws, it tumbles after the pack with more hunger than harm. Raise a blade to it and its yelping brings the grown ones back at a dead run.",
         "threatLevel"   : 1,    // DPS 2.2 | effHP 15 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1893,7 +1893,7 @@
         "id": "scrub_boar",
         "audio": "boar",
         "name": "Scrub Boar",
-        "flavor": "Lean and low, forever rooting the scrub for whatever a snout turns up. Little threat unless cornered, and honest meat for the taking.",
+        "flavor": "Lean and low, forever rooting the scrub for whatever a snout turns up. It would sooner crash off into the brush than fight, and falls into honest meat for a ready spear.",
         "threatLevel"   : 2,    // DPS 4.6 | effHP 35 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -1923,7 +1923,7 @@
         "id": "young_tusker",
         "audio": "boar",
         "name": "Young Tusker",
-        "flavor": "Its tusks are freshly through and it is far too eager to try them. More bluster than danger yet — a clean kill and a modest hide.",
+        "flavor": "Its tusks are freshly through and it is far too eager to try them, all squeal and no weight behind the swing. A clean kill for a steady spear, and hide enough to cure.",
         "threatLevel"   : 2,    // DPS 5.8 | effHP 44 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2257,7 +2257,7 @@
         "id": "goblin_whelp",
         "audio": "goblinoid",
         "name": "Goblin Whelp",
-        "flavor": "Barely off the carrion pile, it flings itself into the fray to prove teeth it hasn't grown. Poor pickings and poorer sport — but they never come one at a time.",
+        "flavor": "Barely off the carrion pile, it flings itself into the fray to prove teeth it has not yet grown. One is nothing; they are never one, and the swarm carries a weight the whelp cannot.",
         "threatLevel"   : 1,    // DPS 2.8 | effHP 25 | harmless
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2291,7 +2291,7 @@
         "id": "cave_goblin",
         "audio": "goblinoid",
         "name": "Cave Goblin",
-        "flavor": "Pale and saucer-eyed from a life under stone, it flinches at daylight and little else. Quick on its feet in the dark; the scraps it carries are barely worth the chase.",
+        "flavor": "Pale and saucer-eyed from a life under stone, it flinches at daylight and little else. Fleet in the dark, it is gone with its stolen scraps before a slow hand can close the gap.",
         "threatLevel"   : 2,    // DPS 3.9 | effHP 30 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -3481,7 +3481,7 @@
         "id": "dire_rat",
         "audio": "rustle",
         "name": "Dire Rat",
-        "flavor": "Grown to the size of a hound on rich filth, and long past bolting from a raised stick. More nuisance than menace, but a nuisance with teeth — and a hide not quite worthless.",
+        "flavor": "Grown to the size of a hound on rich filth, and long past bolting from a raised stick. It holds its ground behind a mouthful of teeth, and its coarse hide will at least turn a draught.",
         "threatLevel"   : 3,    // DPS 7.6 | effHP 48 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 205}],
@@ -3571,7 +3571,7 @@
         "id": "rabbit_kit",
         "audio": "critter",
         "name": "Rabbit Kit",
-        "flavor": "Blind-new and no bigger than a fist, it scarcely knows yet to be afraid. Hardly worth the effort, save to a truly empty pot.",
+        "flavor": "Blind-new and no bigger than a fist, it scarcely knows yet to be afraid. It fits whole in one hand, bones and all — a single mouthful for the truly desperate.",
         "threatLevel"   : 1,    // DPS 0.2 | effHP 4 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 76}],
@@ -3664,7 +3664,7 @@
         "id": "chick",
         "audio": "fowl",
         "name": "Chick",
-        "flavor": "A ball of down on toothpick legs, peeping after whatever moves. No threat, no lore — only a bird in the making, and an egg-layer if it lives.",
+        "flavor": "A ball of down on toothpick legs, peeping after whatever moves and tripping over its own feet. Give it a season and it lays; take it now and there is barely a bite on it.",
         "threatLevel"   : 1,    // DPS 0.1 | effHP 3 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 75}],
@@ -3888,7 +3888,7 @@
         "id": "jackal_pup",
         "audio": "canine",
         "name": "Jackal Pup",
-        "flavor": "Yipping and underfoot, it learns to scavenge long before it learns to hunt. Little danger and less reward, save one fewer mouth in the pack.",
+        "flavor": "Yipping and underfoot, it learns to scavenge long before it learns to hunt, and runs at the first raised hand. Its dying only thins a hungry pack by a single mouth.",
         "threatLevel"   : 1,    // DPS 1.7 | effHP 16 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -4051,7 +4051,7 @@
         "id": "stirgeling",
         "audio": "insect",
         "name": "Stirgeling",
-        "flavor": "A newly-fledged blood-drinker, all appetite and no weight, swatted from the air with a stick. A pest and no more; the only gain in its dying is one less bite in the night.",
+        "flavor": "A newly-fledged blood-drinker, all appetite and no weight, that a walking-stick swats from the air. Its ending buys nothing but one fewer bite come nightfall.",
         "threatLevel"   : 1,    // DPS 0.4 | effHP 6 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 163}],
@@ -4081,7 +4081,7 @@
         "id": "grime_horror",
         "audio": "goblinoid",
         "name": "Grime Horror",
-        "flavor": "A wallowing mound of bog-rot and malice that seals its own wounds as fast as they open. Patience beats it where blades will not — and there is little to take but the peace of its passing.",
+        "flavor": "A wallowing mound of bog-rot and malice that seals its own wounds as fast as they open. Patience beats it where blades will not; when it finally sags, it leaves the marsh a little cleaner and nothing else.",
         "threatLevel"   : 5,    // DPS 7.4 | effHP 120 | tank
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 231}],
@@ -4110,7 +4110,7 @@
         "id": "elder_olm",
         "audio": "frog",
         "name": "Elder Olm",
-        "flavor": "Old past guessing in the lightless pools, pale as a drowned thing and just as blind. Slow and no great danger; the cold flesh feeds those unbothered by how it looks.",
+        "flavor": "Old past guessing in the lightless pools, pale as a drowned thing and just as blind. It neither flees nor fights with much conviction; the wan flesh feeds those unbothered by the look of it.",
         "threatLevel"   : 3,    // DPS 5.7 | effHP 72 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 196}],
@@ -4287,8 +4287,6 @@
         "territorial"   : false,
         "biomeWeights"  : {},
         "naturalWeapons": ["fists", "kick"],
-        "species"        : "kingdom_trader",
-        "tier"           : 1,
         "limbMap"        : "humanoid"
     },
     {
@@ -4315,8 +4313,6 @@
         "biomeWeights"  : {},
         "naturalWeapons": ["fists", "kick"],
         "lootPool"      : "guard_iron",
-        "species"        : "kingdom_guard",
-        "tier"           : 2,
         "limbMap"        : "humanoid"
     },
     {
@@ -4342,8 +4338,6 @@
         "territorial"   : false,
         "biomeWeights"  : {},
         "naturalWeapons": ["fists", "kick"],
-        "species"        : "kingdom_visitor",
-        "tier"           : 1,
         "limbMap"        : "humanoid"
     },
     {
@@ -4371,8 +4365,6 @@
         "territorial"   : false,
         "biomeWeights"  : {},
         "naturalWeapons": ["kick"],
-        "species"        : "kingdom_pack_beast",
-        "tier"           : 1,
         "limbMap"        : "quadruped"
     }
 ]

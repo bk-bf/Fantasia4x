@@ -23,6 +23,7 @@ import {
   RECOVER_CONSCIOUSNESS
 } from '../core/needs';
 import { equippedTemperatureSources, type WornThermalSource } from '../core/PawnEquipment';
+import { socialService } from './SocialService';
 import { SECONDS_PER_TICK } from '../core/time';
 import {
   levelBase,
@@ -143,6 +144,9 @@ const FORMULA_VARS = [
   'talking',
   'hearing',
   'pain',
+  // KINGDOMS-TRADE §4: standing prestige from worn regalia (SocialService.getPrestige). Computed
+  // ONLY when a formula references it (see evaluateFormula) — 0 on every hot-path call.
+  'prestige',
   // WORK-EXPERIENCE: the work stats' experience-level base — levelBase(level) × style weight,
   // resolved per work category + axis by getWorkModifiers/evaluateStat. 1.0 in non-work formulas.
   'SKILL'
@@ -164,6 +168,18 @@ const BROKEN_BONE_FUNCTION_MULT = 0.4;
 // Formulas come from a fixed stats.jsonc set, so this turns the per-call regex+compile+parse into a
 // one-time cost + a plain function call. Invalid/unknown-token formulas cache as null → 1.0.
 const _formulaCache = new Map<string, ((...vars: number[]) => number) | null>();
+// Whether a formula references `prestige` — cached so the hot path never re-scans the string
+// (prestige walks the whole equipment doll; only the social formulas should ever pay for it).
+const _formulaUsesPrestige = new Map<string, boolean>();
+
+function formulaUsesPrestige(formula: string): boolean {
+  let uses = _formulaUsesPrestige.get(formula);
+  if (uses === undefined) {
+    uses = formula.includes('prestige');
+    _formulaUsesPrestige.set(formula, uses);
+  }
+  return uses;
+}
 
 function compileFormula(formula: string): ((...vars: number[]) => number) | null {
   const cached = _formulaCache.get(formula);
@@ -204,6 +220,9 @@ function evaluateFormula(
   // Active conditions scale the RAW attributes here, so every stat formula (combat, work, capacities-
   // adjacent) sees a crippled body — a severe shock/hypothermia genuinely guts STR/DEX, not just work.
   const sm = conditionStatMultipliers(p);
+  // Prestige scans the whole equipment doll — pay for it only when the formula asks (trade/social
+  // stats), never on the ~328×/tick work/combat formulas.
+  const prestige = formulaUsesPrestige(formula) ? socialService.getPrestige(p) : 0;
   const v = fn(
     (s?.strength ?? 10) * sm.strength,
     (s?.dexterity ?? 10) * sm.dexterity,
@@ -224,6 +243,7 @@ function evaluateFormula(
     capacities.talking ?? 1,
     capacities.hearing ?? 1,
     capacities.pain ?? 0,
+    prestige,
     skill
   );
   return isFinite(v) ? Math.round(v * 1000) / 1000 : 1.0;

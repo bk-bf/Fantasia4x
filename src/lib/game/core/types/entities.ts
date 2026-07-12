@@ -192,6 +192,14 @@ export interface Mob {
   lairX?: number;
   lairY?: number;
   lairRange?: number;
+  // ── Kingdom parties (KINGDOMS-TRADE) ─────────────────────────────────────
+  /** Kingdom this entity belongs to (visitor/caravan member). Harming it sours
+   *  colony↔kingdom relations. Undefined = unaffiliated wildlife/monster. */
+  kingdomId?: string;
+  /** The visiting party (GameState.kingdomParties) this entity marched in with. */
+  partyId?: string;
+  /** Role within the party — the `trader` is the interaction target for barter. */
+  partyRole?: 'trader' | 'guard' | 'visitor' | 'pack';
 }
 
 /** An animal tamed and bound to an owning pawn (Phase C+). */

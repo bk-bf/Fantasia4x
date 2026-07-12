@@ -15,3 +15,8 @@ export const currentEvent = derived(
 export function commitMigrants(acceptedIds: string[]): void {
   gameState.command({ type: 'commitMigrants', payload: { acceptedIds }, save: true });
 }
+
+/** KINGDOMS-TRADE: dismiss the arrival announcement (the party is already on the map). */
+export function acknowledgeKingdomArrival(): void {
+  gameState.command({ type: 'acknowledgeKingdomArrival', payload: {}, save: true });
+}

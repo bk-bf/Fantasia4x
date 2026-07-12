@@ -1790,6 +1790,9 @@
         prio = prioWinded;
         kind = 'winded';
       }
+      // KINGDOMS-TRADE §4: the caravan trader carries a standing gold "?" — the interaction tell
+      // (right-click → Trade). Beats the status tells: the invitation is the point of the visit.
+      if (m.partyRole === 'trader') kind = 'trade';
       if (kind) {
         const o = glyphOf(m.id, m.x, m.y, kind);
         if (onScreen(o)) newGlyphs.push(o);
@@ -4994,6 +4997,38 @@
           payload: { pawnId, target, append },
           save: true
         });
+
+      // ── KINGDOMS-TRADE §4: the caravan's trader is an interaction target (the "?" mark). Right-
+      // clicking it with a selected pawn offers Trade — THAT pawn negotiates, so their `trade` stat
+      // prices the barter. Checked before the drafted-attack block so the trader isn't auto-targeted;
+      // a drafted pawn can still choose to attack — and the kingdom will answer for it. ──
+      {
+        const traderMob = mobs.find(
+          (m) =>
+            m.x === tileX &&
+            m.y === tileY &&
+            m.isAlive !== false &&
+            m.partyRole === 'trader' &&
+            m.partyId
+        );
+        if (traderMob) {
+          const entries: { label: string; run: () => void }[] = [
+            {
+              label: `Trade — ${selectedPawn.name} negotiates`,
+              run: () => uiState.openTrade(traderMob.partyId!, pawnId)
+            }
+          ];
+          if (isDrafted) {
+            entries.push({
+              label: 'Attack — their kingdom will not forgive it',
+              run: () =>
+                issueOrder({ type: 'attack', targetId: traderMob.id, targetType: 'mob' }, false)
+            });
+          }
+          equipMenu = { x: e.clientX, y: e.clientY, entries };
+          return;
+        }
+      }
 
       // ── Attack (DRAFTED only — an undrafted pawn stays autonomous and can't be aimed). ──
       if (isDrafted) {

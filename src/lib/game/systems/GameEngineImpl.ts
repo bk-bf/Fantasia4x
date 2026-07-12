@@ -29,6 +29,7 @@ import buildingsData from '../database/buildings.jsonc';
 
 import { pawnStateMachineService, reapDeadPawns } from './PawnStateMachine';
 import { rollMigrantWave } from './migration';
+import { kingdomService } from '../services/KingdomService';
 import { findNearestDepositPoint, depositInventory, pickUpFromTile } from './pawn/pawnHauling';
 import { nearestShelterTile } from './pawn/handlers/rescue';
 import { isAdjacent } from './pawn/pawnQueries';
@@ -356,6 +357,11 @@ export class GameEngineImpl implements GameEngine {
           this.gameState = rollMigrantWave(this.gameState!);
         }
         this._seasonJustTransitioned = false;
+        // KINGDOMS-TRADE: once per in-game day — facet drift, party upkeep, arrival scheduling.
+        // Daily-gated, so it adds zero per-tick cost on the hot path.
+        if (this.gameState!.turn % (TURNS_PER_DAY * TICKS_PER_SECOND) === 0) {
+          this.gameState = kingdomService.processKingdomsDaily(this.gameState!);
+        }
       });
       this.debugLogPawns();
 
