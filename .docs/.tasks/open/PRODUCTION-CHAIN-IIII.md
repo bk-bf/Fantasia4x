@@ -182,7 +182,7 @@ thing guarding it*.
 - [ ] Treasure UNDER the lair (dig after clearing) — waits on §1e treasure nodes (not yet authored).
 
 ## Open questions
-- [ ] Reagent stability vs spoilage — do mystical crops/mushrooms rot (decaySeconds) like food, or keep?
-- [ ] Are magical trees `roofSupport`/beauty like the existing groves (furniture use), or lumber-only?
-- [ ] Curse mechanics for `voidshard`/`sunken_relic` — a persistent downside condition on the wielder, or
-      a one-time event? (Ties to the §2h "powerful conditions, steep costs" theme.)
+- [ ] Reagent stability vs spoilage — do mystical crops/mushrooms rot (decaySeconds) like food, or keep? //dont spoil
+- [ ] Are magical trees `roofSupport`/beauty like the existing groves (furniture use), or lumber-only? //dont understand this question
+- [ ] Curse mechanics for `voidshard`/`sunken_relic` — a persistent downside condition on the wielder, or 
+      a one-time event? (Ties to the §2h "powerful conditions, steep costs" theme.) // persistent, spend after use, can roll negatives, 1 positive + 1 negative or if lucky just 1 positive

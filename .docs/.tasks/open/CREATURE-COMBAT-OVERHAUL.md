@@ -160,14 +160,16 @@ Green: `pnpm check` 0 errors (732 files), the combat/spawn suites + new `lootPoo
   `pickWeightedByTier` replace the uniform pick in all four spawn paths (ambient `pickSpawnCreature`,
   den seeding, den breeding, new-lair growth). **T5 weight 0** = a boss NEVER ambient-spawns; it waits
   for Phase-3 escalation (dev-spawnable meanwhile). Guarded by `variantLadder.test.ts`.
-- [ ] **Threat model sees equipment** — `threat-model.mjs` scores natural weapons only, so an armed orc
-  reads weaker than it fights. Fold the lootpool's expected weapon into the estimate (or accept the
-  annotation is "unarmed baseline" and note it). Low priority — the annotations are informational.
+- [ ] **Threat model sees equipment** (decided: DO it) — `threat-model.mjs` scores natural weapons only,
+  so an armed orc reads weaker than it fights. Fold the lootpool's expected weapon (the pool's highest-
+  `chance`/weight mainHand pick, scaled by its tier's typical quality) into the estimate so a geared
+  humanoid's annotation reflects how it actually fights, not an unarmed baseline.
 - [x] **Wield-penalty legibility** — solved by the condition move: an under-strength wielder shows the
   `overmatched` pill + floater, so the player sees *why* the pawn swings badly (assign heavy loot to
   bruisers). (Was deferred; the `conditions.jsonc` wiring gave it for free.)
-- [ ] Add an **ADR** for the variant-gear system (mob equipment, lootpool loader, per-spawn stat rolls,
-  wielding requirement, monster-vs-human gear split) when the data lands and the design locks.
+- [x] ~~Add an ADR for the variant-gear system~~ — **decided: no ADR.** ADR-031 already covers the
+  subtractive-armour core; the gear/lootpool/stat-roll/wieldRequirement design is captured in full here
+  and doesn't warrant a separate ADR.
 
 ---
 
@@ -474,21 +476,26 @@ These use the existing worn-gear condition-grant path (§M `grantsConditions`) +
 curse), so power has a price. **No new mechanics** — reagents are items + recipes; trait-granters reuse
 the trait system's grant path; magical gear reuses `grantsConditions` + `wieldRequirement`.
 
-**Open (magical drops):**
-- [ ] Trait-grant granularity — guaranteed vs rolled, and can it roll a FLAW (Faustian)? (rec: named =
-      guaranteed, `voidshard` distillations = flaw risk).
-- [ ] Do reagents/organs spoil (decaySeconds) like meat, or keep as "preserved" materials? (rec: organs
-      keep once extracted at the `sanguinary_altar`; raw they spoil).
-- [ ] Boss drop is BUTCHERED (this §2h path) vs the Phase-4b **famed ground-drop** (`rollFamed`) — do both
-      fire (a boss gives a famed item AND a butcherable magical carcass), or pick one? (rec: both — the
-      famed weapon on the ground, the carcass for the crafting/alchemy economy).
+**Resolved (magical drops):**
+- [x] **Trait-grant granularity → guaranteed grant + Faustian flaw.** The named organ's trait is
+      GUARANTEED (you earned it by clearing the boss), but consuming/distilling it also **rolls a flaw** —
+      the power always comes with a bargain (a `wound`/stat downside from `traits.jsonc`). Faustian tone
+      confirmed: no free lunch.
+- [x] **Reagents/organs do NOT spoil — only their raw materials do.** An extracted reagent/organ/essence
+      is a preserved material (no `decaySeconds`); what spoils is the raw **carcass/meat** it came out of.
+      So you must butcher/extract before the carcass rots, but the extracted drop then keeps indefinitely.
+- [x] **Boss drop route is by boss ARCHETYPE, not both.** A **humanoid** boss (orc/goblin/gnoll/kobold
+      warlord) drops its famed GEAR via the §4b spawn-with-famed-gear path (it fights with the item, then
+      drops it). A **beast** boss (wolf/worg/bear/spider/boar) yields its magical materials via this §2h
+      **butcher** path (dynamic-name carcass → reagents/organs/famed material at the `sanguinary_altar`).
+      One route per boss, chosen by what the creature IS — humanoids carry gear, beasts are butchered.
 
 **Phase 2 acceptance:**
 - [x] Engine: two spawns of the same creature differ in stats/armour — ALL creatures now roll from `statRanges` bands (converted 2026-07-11; midpoints = old values, `threat:check` unchanged).
 - [x] Engine: a geared humanoid fights with its weapon + worn armour and drops a subset on death (drawLoadout → equip → dropMobGear; combat reads `equipment` unchanged). Live on `goblin` (`goblin_warband`) + `orc_reaver` (`orc_warband`).
 - [x] Engine: an under-strength colonist wielding looted monster gear is visibly punished via the `overmatched` condition (aim/damage/dodge/fatigue + a pill; `wieldRequirement.test.ts`), while the monster wields it freely.
 - [x] Data LANDED (2026-07-11): six full 5-tier ladders (71 variants + 6 stamped bases + old_fang) in `creatures.jsonc`; 7 lootpools; all §2f gear + natural weapons; tiered carcasses + butcher recipes + `flensing_table`/`sanguinary_altar`; tier spawn weights (T5 escalation-only). Gates: `pnpm check` 0 errors, `threat:check` 103/103, `graph:check` ✓, `variantLadder.test.ts` + full related suite green.
-- [ ] Playtest: goblins read weird/annoying, orcs read heavy, orc loot only pays off on a strong pawn; balance pass on the authored numbers.
+- **Non-blocking (passive playtest, NOT a spec gate):** goblins read weird/annoying, orcs read heavy, orc loot only pays off on a strong pawn. The authored numbers get a balance pass tuned *during play* — detected passively while playing, not a gate on closing this spec.
 
 ---
 
@@ -539,8 +546,9 @@ the trait system's grant path; magical gear reuses `grantsConditions` + `wieldRe
 - [x] Rare-resource nodes tend to be guarded; clearing the guardian opens the node. *(3b landed 2026-07-11 — `lairAttractors` + `placeLairGuardians`; adjacent, so the node stays harvestable)*
 
 **→ Phase 3 COMPLETE (2026-07-11).** Both halves landed; the world loop (dangerous dens guard rewards +
-ignored dens escalate toward bosses) is live. Phase 4 (defence structures + famed boss ground-drop) is
-next, but 4a is hard-blocked on a **mobs-attack-buildings** system that doesn't exist yet.
+ignored dens escalate toward bosses) is live. Phase 4 narrows to just **4b (famed boss gear — spawn-with,
+drop-on-death)**; 4a (traps/turrets) is **out of scope** here, hard-blocked on a **mobs-attack-buildings**
+system that doesn't exist yet.
 
 ---
 
@@ -549,7 +557,11 @@ next, but 4a is hard-blocked on a **mobs-attack-buildings** system that doesn't 
 Combat tails carried over from the archived [PRODUCTION-CHAIN-III](../archive/PRODUCTION-CHAIN-III-2026-07-10.md)
 because they need combat code that doesn't exist yet — they belong with this overhaul, not the items pass.
 
-### 4a. Combat traps + auto-fire turrets (PROD-CHAIN-III §H)
+### 4a. Combat traps + auto-fire turrets (PROD-CHAIN-III §H) — ⏸ OUT OF SCOPE for this spec
+
+**Skipped for this overhaul's closure** — all of 4a hard-blocks on a **mobs-attack-buildings** system that
+doesn't exist yet, so it can't ship here. The design shape below is preserved as the target to build
+toward once that system lands (tracked separately); it does NOT gate closing CREATURE-COMBAT-OVERHAUL.
 
 The item/building data already ships (fortification `palisade`/`barricade`/`gatehouse` done); what's
 missing is the **damage** behaviour. Today's `trapEnabled`/`catchChance` mechanic *catches food animals*
@@ -586,21 +598,37 @@ mobs-attack-buildings regardless, so this is the shape to build toward, not a bu
   - `springald` from the original §H list: fold into `scorpion` (two mid-tier bolt-throwers is one too
     many at this roster size).
 
-### 4b. Famed boss-drop hook (PROD-CHAIN-III §I)
+### 4b. Famed boss gear — spawn-with, fight-with, drop-on-death (PROD-CHAIN-III §I)
 
-The `famed` tier, instance fields, name/history generator, and stat/enchant math all ship; the crafted
-path (craft-roll stamp + display) lives in [PRODUCTION-CHAIN-III-TAILS](PRODUCTION-CHAIN-III-TAILS.md).
-The **boss-drop** path is the combat half:
+**This is the only Phase-4 work that ships here (4a is out of scope).** The `famed` tier, instance
+fields, name/history generator, and stat/enchant math all ship; the crafted path (craft-roll stamp +
+display) lives in [PRODUCTION-CHAIN-III-TAILS](PRODUCTION-CHAIN-III-TAILS.md).
 
-- [ ] Very high-level mobs (Phase 2 minibosses → a rare authored **boss**) can drop a **famed** item on
-      death — roll `rollFamed` (identity + stat-mult + enchants) and place it in `droppedItems`. The only
-      way to obtain a famed item without a master crafter, and the reward for clearing a hard lair/boss.
-- **Depends on:** Phase 2 elite/miniboss ladder (the drop source) + the Phase 2c drop-on-death hook.
+**Design (locked): a humanoid boss SPAWNS already wielding its famed item and FIGHTS with it, then drops
+it on death — reusing the existing §2c equipment pipeline, NOT a separate death-time `droppedItems` roll.**
+So the famed weapon rides the same draw→equip→wear→`dropMobGear` path every geared mob already uses; the
+only new code is stamping the famed roll onto the drawn instance at spawn.
+
+- [ ] **`famed` flag on a lootpool pick** in [lootpool.jsonc](../../../src/lib/game/database/lootpool.jsonc)
+      — extend a slot's `pick` entry with an optional `"famed": true` (schema + `drawLoadout` in
+      `core/LootPools.ts`). When `drawLoadout` draws a famed-flagged pick, it runs `rollFamed` (identity +
+      stat-mult + enchants) and stamps the result onto the `ItemInstance` it creates, instead of a plain
+      instance. Everything downstream is unchanged.
+- [ ] **Boss pools carry the famed signature.** The humanoid boss lootpools set their signature mainHand
+      pick `famed: true` with `chance: 1.0` (guaranteed on the boss) and the pool's `dropChance: 1.0` (the
+      famed piece always survives to drop) — e.g. `orc_warlord_hoard`'s `iron_tide_greataxe`. The boss
+      spawns wielding the named famed weapon, fights with it (gear wears mid-fight as usual), and it lands
+      via the existing `dropMobGear`.
+- [ ] **Beast bosses do NOT use this path** — a wolf/bear/spider boss has no gear; its famed material comes
+      out of the §2h **butcher** route instead (routed by archetype, §2h resolution). One route per boss.
+- **Depends on:** Phase 2 boss ladder (the source, landed) + the Phase 2c draw/equip/`dropMobGear` hook
+      (landed). Only the `famed`-flag stamp is new.
 
 **Phase 4 acceptance:**
-- [ ] A trap/turret damages a hostile mob (once mobs-attack-buildings lands); an auto-fire ballista looses
-      at an in-range hostile and consumes a bolt.
-- [ ] A cleared boss/miniboss can drop a named famed item to the ground.
+- [ ] *(4a — deferred, not a gate)* A trap/turret damages a hostile mob once mobs-attack-buildings lands.
+- [ ] A **humanoid** boss spawns wielding a named famed weapon, fights with it, and drops it on death via
+      the existing gear-drop path (`famed` lootpool flag → `rollFamed` at spawn → `dropMobGear`).
+- [ ] A **beast** boss's famed material drops out of its butcherable §2h carcass instead.
 
 ---
 
