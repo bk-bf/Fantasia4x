@@ -2559,6 +2559,24 @@
     "grantsConditions" : ["berserk"],
     "conditionDurationTurns": 600
   },
+  // ── PRODUCTION-CHAIN-IIII §2 — weapon coating: brushed onto a pawn's mainHand (applyWeaponCoating),
+  //    it lends the blade a timed on-hit envenom proc ON TOP of the weapon's own. Wears off by time. ──
+  {
+    "id"                 : "venom_coating",
+    "charSpans"          : [ {"sheet": "items", "id": 71} ],
+    "name"               : "Venom Coating",
+    "type"               : "consumable",
+    "category"           : "reagent",
+    "maxDurability"      : 120,
+    "deteriorationRate"  : 0.005,
+    "description"        : "A thick black paste of rendered venom-sac and nightshade, brushed along an edge. It clings to the steel and rides the next cut into the wound.",
+    "color"              : "#2a2410",
+    "amount"             : 0,
+    "weightKg"           : 0.2,
+    "volumeL"            : 0.2,
+    "coatingEffect"      : {"condition": "envenomed", "chance": 0.6, "durationHours": 2.5, "resist": "poison_resistance"},
+    "coatingDurationHours": 6
+  },
   {
     "id"               : "direwolf_warcloak",
     "charSpans"        : [ {"sheet": "items", "id": 138} ],

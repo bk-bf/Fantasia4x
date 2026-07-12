@@ -36,6 +36,20 @@ export interface ItemInstance {
    *  (0 / undefined = empty; water is 1 L/unit, so for water it's the litres held). Drives the fill
    *  bar and how much the container can dispense. Only meaningful on `container` items. */
   contents?: number;
+  /**
+   * PRODUCTION-CHAIN-IIII §2 — a temporary weapon COATING applied to this instance (a venom/oil rubbed
+   * on the blade). While unexpired it grants an EXTRA `onHitCondition` (read from the coating item's
+   * `coatingEffect`) ON TOP of the weapon's own procs — Combat.applyOnHitEffect applies both. Time-based:
+   * `expiresAtTurn` is the game turn it wears off. Re-coating overwrites. Only meaningful on weapons.
+   */
+  coating?: WeaponCoating;
+}
+
+/** A timed weapon coating stamped on an {@link ItemInstance} — `itemId` names the coating consumable
+ *  whose `coatingEffect` is the granted on-hit proc; `expiresAtTurn` is when it dries off. */
+export interface WeaponCoating {
+  itemId: string;
+  expiresAtTurn: number;
 }
 
 export interface PawnInventory {
@@ -428,6 +442,15 @@ export interface Item {
    * with a trait's `onHitCondition` — Combat applies both through one path.
    */
   onHitCondition?: OnHitCondition;
+
+  /**
+   * PRODUCTION-CHAIN-IIII §2 — marks a consumable as a weapon COATING. `coatingEffect` is the on-hit
+   * proc it lends the coated weapon (e.g. `envenomed`); `coatingDurationHours` is how long the coating
+   * lasts on the blade once applied (in-game hours → an `expiresAtTurn` on the instance). The player
+   * applies it to a pawn's mainHand via the `applyWeaponCoating` command (like drinking a potion).
+   */
+  coatingEffect?: OnHitCondition;
+  coatingDurationHours?: number;
 
   /** Combat-SFX archetype (audio/manifest.ts `COMBAT_SFX`) played on each swing of this weapon or
    *  natural weapon — e.g. "slash" / "blunt" / "pierce" / "bow" / "bite" / "venom". Backend ref only;

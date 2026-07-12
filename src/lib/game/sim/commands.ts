@@ -66,6 +66,7 @@ import { devSpawnMobs } from '../services/entity/entitySpawning';
 import {
   makeWeather,
   tileWetness,
+  ticksFromGameHours,
   ICE_WALKABLE,
   ICE_WATER_MOVE_COST
 } from '../services/EnvironmentService';
@@ -608,6 +609,27 @@ export const COMMANDS: Record<string, Cmd> = {
     // applied (e.g. a duplicate organ), keep the item — don't burn stock for a no-op.
     pawns[idx] = applyConsumable(before, p.itemId, () => rng.random(), alchemyQuality);
     if (pawns[idx] === before) return s;
+    return consumeFromStockpiles({ ...s, pawns }, { [p.itemId]: 1 });
+  },
+
+  /** §2 weapon coating: brush a colony-stock coating onto THIS pawn's mainHand weapon, stamping a timed
+   *  `coating` on the instance (its on-hit proc rides the blade until `expiresAtTurn`). No-op — keeps the
+   *  item — if the pawn holds no mainHand weapon or the id isn't a coating. Re-coating overwrites. */
+  applyWeaponCoating: (s, p: { pawnId: string; itemId: string }) => {
+    const idx = s.pawns.findIndex((pw) => pw.id === p.pawnId);
+    if (idx === -1) return s;
+    if (((s.stockpile ?? {})[p.itemId] ?? 0) < 1) return s;
+    const pawn = s.pawns[idx];
+    const mh = pawn.equipment?.mainHand;
+    if (!mh) return s; // nothing equipped to coat
+    const def = itemService.getItemById(p.itemId);
+    if (!def?.coatingEffect) return s; // not a coating
+    const expiresAtTurn = s.turn + ticksFromGameHours(def.coatingDurationHours ?? 6);
+    const pawns = s.pawns.slice();
+    pawns[idx] = {
+      ...pawn,
+      equipment: { ...pawn.equipment, mainHand: { ...mh, coating: { itemId: p.itemId, expiresAtTurn } } }
+    };
     return consumeFromStockpiles({ ...s, pawns }, { [p.itemId]: 1 });
   },
 

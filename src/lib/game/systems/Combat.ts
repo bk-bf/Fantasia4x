@@ -1527,9 +1527,21 @@ class CombatServiceImpl implements CombatService {
     weaponId: string | undefined,
     pos: { x: number; y: number }
   ): GameState {
+    const effects: OnHitCondition[] = [];
     const weaponEff = weaponId ? itemService.getItemById(weaponId)?.onHitCondition : undefined;
-    if (!weaponEff) return state;
-    return this.applyOneOnHitEffect(state, weaponEff, targetId, isMob, pos, attacker);
+    if (weaponEff) effects.push(weaponEff);
+    // PRODUCTION-CHAIN-IIII §2 weapon coating: a coated mainHand weapon lends an EXTRA on-hit proc (the
+    // coating item's `coatingEffect`) ON TOP of the weapon's own, while unexpired. Only the equipped
+    // weapon actually swung can be coated (weaponId === mainHand.itemId excludes natural weapons).
+    const mh = 'equipment' in attacker ? attacker.equipment?.mainHand : undefined;
+    if (mh?.coating && mh.itemId === weaponId && mh.coating.expiresAtTurn > state.turn) {
+      const coatEff = itemService.getItemById(mh.coating.itemId)?.coatingEffect;
+      if (coatEff) effects.push(coatEff);
+    }
+    if (effects.length === 0) return state;
+    let s = state;
+    for (const eff of effects) s = this.applyOneOnHitEffect(s, eff, targetId, isMob, pos, attacker);
+    return s;
   }
 
   /**

@@ -7,6 +7,7 @@
   import { qualityPrefix, qualityColor } from '$lib/game/core/itemQuality';
   import { blockedSlots } from '$lib/game/core/PawnEquipment';
   import { naturalGearForTrait, type NaturalGearMeta } from '$lib/components/util/naturalGear';
+  import { gameState } from '$lib/stores/gameState';
 
   let {
     pawn,
@@ -143,6 +144,12 @@
             style="width: {Math.max(0, Math.min(100, (it.durability / maxDur) * 100))}%"
           ></div>
         </div>
+        {#if it.coating && it.coating.expiresAtTurn > $gameState.turn}
+          {@const cDef = gameCoordinator.getItemById(it.coating.itemId)}
+          <span class="coated-badge" title="Coated: {cDef?.name ?? 'active'} — an on-hit effect until it wears off."
+            >☣ COATED</span
+          >
+        {/if}
         <button
           class="unequip"
           title="Unequip {def.name}"
@@ -317,6 +324,14 @@
   }
   .dur-fill.low {
     background: var(--neg);
+  }
+  /* §2 weapon coating — a small badge on a coated (equipped) weapon slot while the coating is active. */
+  .coated-badge {
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    color: #b98fe6;
+    text-align: center;
+    line-height: 1;
   }
 
   .empty-mk {

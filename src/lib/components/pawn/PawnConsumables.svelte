@@ -8,11 +8,14 @@
 
   let { pawn }: { pawn: Pawn } = $props();
 
-  // A stock item is "consumable here" if it's drinkable for a timed buff OR grants a trait on eating.
+  // A stock item is "usable here" if it's drinkable for a timed buff, grants a trait on eating, OR is a
+  // weapon coating (brushed onto the pawn's mainHand).
   function isConsumable(def: Item | undefined): boolean {
     if (!def) return false;
     return (
-      (!!def.grantsConditions?.length && !!def.conditionDurationTurns) || !!def.grantsTraitOnConsume
+      (!!def.grantsConditions?.length && !!def.conditionDurationTurns) ||
+      !!def.grantsTraitOnConsume ||
+      !!def.coatingEffect
     );
   }
 
@@ -22,9 +25,12 @@
       .map(([id, qty]) => {
         const def = itemService.getItemById(id) as Item;
         const traitId = def.grantsTraitOnConsume;
-        // An organ whose trait the pawn already carries is a no-op (the command won't spend it).
+        const isCoating = !!def.coatingEffect;
+        // An organ whose trait the pawn already carries is a no-op (the command won't spend it); a
+        // coating needs a mainHand weapon to brush onto.
         const alreadyGained = !!traitId && (pawn.traits ?? []).some((t) => t.id === traitId);
-        return { id, qty, def, isOrgan: !!traitId, alreadyGained };
+        const noWeapon = isCoating && !pawn.equipment?.mainHand;
+        return { id, qty, def, isOrgan: !!traitId, isCoating, alreadyGained, noWeapon };
       })
       .sort((a, b) => a.def.name.localeCompare(b.def.name))
   );
@@ -32,6 +38,14 @@
   function use(itemId: string) {
     gameState.command({
       type: 'useConsumableItem',
+      payload: { pawnId: pawn.id, itemId },
+      save: true
+    });
+  }
+
+  function coat(itemId: string) {
+    gameState.command({
+      type: 'applyWeaponCoating',
       payload: { pawnId: pawn.id, itemId },
       save: true
     });
@@ -46,19 +60,32 @@
         <div class="row" title={row.def.description ?? ''}>
           <span class="name">{row.def.name}</span>
           <span class="qty">×{row.qty}</span>
-          <button
-            class="use"
-            class:organ={row.isOrgan}
-            disabled={row.alreadyGained}
-            title={row.alreadyGained
-              ? 'This pawn already carries this gift.'
-              : row.isOrgan
-                ? 'Eat — a permanent gift, and a flaw with it.'
-                : 'Drink — a buff for a while.'}
-            onclick={() => use(row.id)}
-          >
-            {row.alreadyGained ? 'GAINED' : row.isOrgan ? 'EAT' : 'DRINK'}
-          </button>
+          {#if row.isCoating}
+            <button
+              class="use coating"
+              disabled={row.noWeapon}
+              title={row.noWeapon
+                ? 'No mainHand weapon to coat — equip one first.'
+                : 'Coat — brush it onto this pawn’s weapon for a while.'}
+              onclick={() => coat(row.id)}
+            >
+              COAT
+            </button>
+          {:else}
+            <button
+              class="use"
+              class:organ={row.isOrgan}
+              disabled={row.alreadyGained}
+              title={row.alreadyGained
+                ? 'This pawn already carries this gift.'
+                : row.isOrgan
+                  ? 'Eat — a permanent gift, and a flaw with it.'
+                  : 'Drink — a buff for a while.'}
+              onclick={() => use(row.id)}
+            >
+              {row.alreadyGained ? 'GAINED' : row.isOrgan ? 'EAT' : 'DRINK'}
+            </button>
+          {/if}
         </div>
       {/each}
     </div>
@@ -112,12 +139,20 @@
     border-color: var(--accent-hi, #ffd24a);
     color: var(--accent-hi, #ffd24a);
   }
+  .use.coating {
+    border-color: #9c6ad6;
+    color: #b98fe6;
+  }
   .use:hover:not(:disabled) {
     background: var(--accent, #0f0);
     color: var(--bg, #000);
   }
   .use.organ:hover:not(:disabled) {
     background: var(--accent-hi, #ffd24a);
+  }
+  .use.coating:hover:not(:disabled) {
+    background: #9c6ad6;
+    color: var(--bg, #000);
   }
   .use:disabled {
     border-color: var(--text-dim, #666);

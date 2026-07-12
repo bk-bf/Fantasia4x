@@ -3470,6 +3470,15 @@
     "workAmount"      : 32,
     "toolTierRequired": 1
   },
+  // §2 weapon coating — rendered venom-sac + nightshade → a paste brushed onto a blade (applyWeaponCoating).
+  {
+    "id"              : "brew_venom_coating",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"venom_sac": 1, "nightshade_bolete": 1, "glassware": 1},
+    "outputs"         : {"venom_coating": 2},
+    "workAmount"      : 30,
+    "toolTierRequired": 1
+  },
   // ════════════════════════════════════════════════════════════════════════════════════════════
   // PRODUCTION-CHAIN-III §B.3 — Magic recipe families gated to the infused capstone stations
   // ════════════════════════════════════════════════════════════════════════════════════════════
