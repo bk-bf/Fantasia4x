@@ -951,7 +951,10 @@ function equipFromLootPool(poolId: string): PawnEquipment | undefined {
       instanceId: `loot-${p.itemId}-${idCounter}-${Math.floor(rng.random() * 1e6)}`,
       itemId: p.itemId,
       durability: Math.max(1, Math.round(maxDur * rollCondition(pool, rng))),
-      quality: p.quality
+      quality: p.quality,
+      // §4b: a famed boss weapon spawns already carrying its rolled legend (name/history/×2–5 stat
+      // mult/enchants) — combat reads `famedStatMult`, and death drops the whole instance via dropMobGear.
+      ...(p.famed ? { famed: true, ...p.famed } : {})
     };
     eq[p.slot] = inst;
   }

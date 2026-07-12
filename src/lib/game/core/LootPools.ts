@@ -3,12 +3,20 @@
 // PURE weighted-draw logic (no ItemService/rng singleton dependency — the caller passes an rng and
 // resolves item durability), so the draw is unit-testable in isolation.
 import lootpoolRaw from '../database/lootpool.jsonc';
+import { rollFamedIdentity } from './famedNames';
 import type { EquipmentSlot, ItemQuality } from './types/items';
+
+/** The rolled legend identity stamped onto a `famed` loot piece at spawn (§4b). */
+export type FamedIdentity = ReturnType<typeof rollFamedIdentity>;
 
 /** One weighted item candidate for a slot. */
 export interface LootPick {
   id: string; // items.jsonc id
   w?: number; // weight (default 1)
+  /** §4b: mark this pick as Famed — when drawn, `drawLoadout` rolls a legend identity (name/history/
+   *  ×2–5 stat mult/enchants) and the spawn stamps it onto the instance. Reserved for BOSS pools (a
+   *  guaranteed `chance:1` pick + `dropChance:1`) so a famed item only comes off a cleared boss. */
+  famed?: boolean;
 }
 
 /** A per-slot draw: `chance` this slot is filled at all, then a weighted pick among `pick`. */
@@ -88,6 +96,9 @@ export interface DrawnPiece {
   slot: EquipmentSlot;
   itemId: string;
   quality: ItemQuality;
+  /** §4b: present when the drawn pick was `famed`-flagged — the rolled legend identity to stamp onto
+   *  the spawned ItemInstance (`famed:true` + these fields). */
+  famed?: FamedIdentity;
 }
 
 /** Minimal rng surface (matches core/rng). */
@@ -96,15 +107,15 @@ export interface Rng {
 }
 
 /** Weighted pick from a `LootPick[]` (weight default 1); null when the list is empty. */
-function weightedPick(picks: LootPick[], rng: Rng): string | null {
+function weightedPick(picks: LootPick[], rng: Rng): LootPick | null {
   const total = picks.reduce((s, p) => s + Math.max(0, p.w ?? 1), 0);
   if (total <= 0) return null;
   let r = rng.random() * total;
   for (const p of picks) {
     r -= Math.max(0, p.w ?? 1);
-    if (r <= 0) return p.id;
+    if (r <= 0) return p;
   }
-  return picks[picks.length - 1].id;
+  return picks[picks.length - 1];
 }
 
 /** Roll a quality tier from the pool's weighted table (default Standard = 1). */
@@ -131,9 +142,17 @@ export function drawLoadout(pool: LootPool, rng: Rng): DrawnPiece[] {
   for (const [slot, def] of Object.entries(pool.slots)) {
     if (!def) continue;
     if (rng.random() >= def.chance) continue;
-    const itemId = weightedPick(def.pick, rng);
-    if (!itemId) continue;
-    out.push({ slot: slot as EquipmentSlot, itemId, quality: rollQuality(pool, rng) });
+    const picked = weightedPick(def.pick, rng);
+    if (!picked) continue;
+    // §4b: a famed-flagged pick rolls its legend identity here (pure — deterministic given the rng),
+    // which the spawn stamps onto the ItemInstance. Only boss pools flag a pick famed.
+    const famed = picked.famed ? rollFamedIdentity(() => rng.random()) : undefined;
+    out.push({
+      slot: slot as EquipmentSlot,
+      itemId: picked.id,
+      quality: rollQuality(pool, rng),
+      ...(famed ? { famed } : {})
+    });
   }
   return out;
 }

@@ -22,6 +22,12 @@
 //     }
 //   }
 //
+// §4b FAMED (boss pools only): a pick may carry `"famed": true`. When drawn, the spawn rolls a legend
+// identity (name/history/×2–5 stat mult/enchants, `core/famedNames.rollFamedIdentity`) onto the instance,
+// so the boss FIGHTS with it (combat reads `famedStatMult`) and drops it on death via `dropMobGear`.
+// Reserve it for a guaranteed BOSS signature: `chance:1` on the slot + `dropChance:1` on the pool, so a
+// famed item only ever comes off a cleared boss. Beast bosses (no gear) route through the §2h butcher path.
+//
 // Loader validates every `id` against ItemService and every slot key against EquipmentSlot at load;
 // an unknown id/slot throws so a typo can't silently ship an unarmed raider. `pnpm check`/tests guard.
 //
@@ -73,9 +79,32 @@
       "conditionRange": [0.6, 0.95],
       "quality": [[1, 2], [2, 3], [4, 1]],
       "slots": {
-        "mainHand": {"chance": 1.0, "pick": [{"id": "orc_greataxe", "w": 2}, {"id": "iron_tide_greataxe", "w": 1}]},
+        "mainHand": {"chance": 1.0, "pick": [{"id": "orc_greataxe", "w": 1}]},
         "offHand":  {"chance": 0.5, "pick": [{"id": "orc_iron_slab", "w": 1}]},
         "bodyMid":  {"chance": 1.0, "pick": [{"id": "orc_warplate", "w": 1}]}
+      }
+    },
+    // §4b BOSS pools — the famed signature is guaranteed (chance 1) and always drops (dropChance 1).
+    // `iron_tide_greataxe` ("The Iron Tide") is the Orc Warboss's base; the famed roll layers a rolled
+    // legend name + ×2–5 stat mult + enchants on top, so every Warboss axe is a unique legend.
+    "orc_warboss_hoard": {
+      "dropChance": 1.0,
+      "conditionRange": [0.7, 1.0],
+      "quality": [[2, 2], [4, 2], [5, 1]],
+      "slots": {
+        "mainHand": {"chance": 1.0, "pick": [{"id": "iron_tide_greataxe", "w": 1, "famed": true}]},
+        "offHand":  {"chance": 0.6, "pick": [{"id": "orc_iron_slab", "w": 1}]},
+        "bodyMid":  {"chance": 1.0, "pick": [{"id": "orc_warplate", "w": 1}]}
+      }
+    },
+    "goblin_warlord_hoard": {
+      "dropChance": 1.0,
+      "conditionRange": [0.6, 0.95],
+      "quality": [[1, 2], [2, 3], [3, 1]],
+      "slots": {
+        "mainHand":  {"chance": 1.0, "pick": [{"id": "goblin_hooked_spear", "w": 1, "famed": true}]},
+        "offHand":   {"chance": 0.5, "pick": [{"id": "goblin_net", "w": 1}]},
+        "bodyOuter": {"chance": 1.0, "pick": [{"id": "goblin_scrap_vest", "w": 1}]}
       }
     },
     "kobold_scraps": {

@@ -150,7 +150,7 @@
         "audio"            : "goblinoid",
         "name"          : "Goblin",
         "flavor": "Small, quick-fingered and mean, it fights dirty because it has never once fought fair.",
-        "threatLevel"   : 2,    // DPS 4.4 | effHP 37 | skirmisher
+        "threatLevel"   : 2,    // DPS 4.3 | effHP 37 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "cultures", "id": 49} ],
         "fg"            : [0.4, 0.65, 0.3],
@@ -903,7 +903,7 @@
         "audio"            : "goblinoid",
         "name"          : "Kobold Skulker",
         "flavor": "It fights with traps and other men's blades and runs the instant the odds turn.",
-        "threatLevel"   : 2,    // DPS 4.2 | effHP 30 | skirmisher
+        "threatLevel"   : 1,    // DPS 3.1 | effHP 30 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "cultures", "id": 64} ],
         "fg"            : [0.6, 0.4, 0.25],
@@ -934,7 +934,7 @@
         "audio"            : "canine",
         "name"          : "Gnoll Marauder",
         "flavor": "A hyena that walks upright and hungers upward, laughing as it comes.",
-        "threatLevel"   : 4,    // DPS 9.4 | effHP 61 | skirmisher
+        "threatLevel"   : 5,    // DPS 12.7 | effHP 61 | glass-cannon
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "creatures", "id": 252} ],
         "fg"            : [0.6, 0.5, 0.35],
@@ -964,7 +964,7 @@
         "audio"            : "goblinoid",
         "name"          : "Orc Reaver",
         "flavor": "Broad, brutal and unbothered by pain, it swings iron too heavy for a man to lift.",
-        "threatLevel"   : 5,    // DPS 8.5 | effHP 91 | skirmisher
+        "threatLevel"   : 8,    // DPS 23.2 | effHP 91 | glass-cannon
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "cultures", "id": 32} ],
         "fg"            : [0.4, 0.55, 0.35],
@@ -2224,7 +2224,7 @@
         "audio": "goblinoid",
         "name": "Goblin Sneak",
         "flavor": "It would rather stab a back than face a front, and usually gets the chance.",
-        "threatLevel"   : 1,    // DPS 4.0 | effHP 25 | skirmisher
+        "threatLevel"   : 1,    // DPS 3.9 | effHP 25 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2292,7 +2292,7 @@
         "audio": "goblinoid",
         "name": "Cave Goblin",
         "flavor": "Pale and wide-eyed from a life underground, it flinches from daylight and little else.",
-        "threatLevel"   : 2,    // DPS 4.0 | effHP 30 | skirmisher
+        "threatLevel"   : 2,    // DPS 3.9 | effHP 30 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2327,7 +2327,7 @@
         "audio": "goblinoid",
         "name": "Goblin Cutter",
         "flavor": "It has learned which way a knife goes in and takes an ugly joy in the lesson.",
-        "threatLevel"   : 2,    // DPS 5.3 | effHP 35 | skirmisher
+        "threatLevel"   : 2,    // DPS 5.2 | effHP 35 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2362,7 +2362,7 @@
         "audio": "goblinoid",
         "name": "Goblin Netter",
         "flavor": "It fights with weighted net and hooked stick, and prefers its prey tangled.",
-        "threatLevel"   : 2,    // DPS 5.5 | effHP 35 | skirmisher
+        "threatLevel"   : 2,    // DPS 5.3 | effHP 35 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2397,7 +2397,7 @@
         "audio": "goblinoid",
         "name": "Goblin Bloodrager",
         "flavor": "Work it into a froth and it forgets to be a coward.",
-        "threatLevel"   : 3,    // DPS 7.3 | effHP 45 | skirmisher
+        "threatLevel"   : 3,    // DPS 7.8 | effHP 45 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2432,7 +2432,7 @@
         "audio": "goblinoid",
         "name": "Goblin Slinker",
         "flavor": "Quick, low and greasy, gone before the blade falls where it stood.",
-        "threatLevel"   : 2,    // DPS 7.2 | effHP 35 | glass-cannon
+        "threatLevel"   : 3,    // DPS 7.7 | effHP 35 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2467,7 +2467,7 @@
         "audio": "goblinoid",
         "name": "Goblin Boss",
         "flavor": "It rules a warren by being meaner than the next goblin, and no more.",
-        "threatLevel"   : 3,    // DPS 7.8 | effHP 50 | skirmisher
+        "threatLevel"   : 3,    // DPS 8.3 | effHP 50 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2502,7 +2502,7 @@
         "audio": "goblinoid",
         "name": "Goblin Warchief",
         "flavor": "It has clawed to the top of the heap and dares the pack to try its luck.",
-        "threatLevel"   : 4,    // DPS 9.5 | effHP 60 | skirmisher
+        "threatLevel"   : 4,    // DPS 10.2 | effHP 60 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2537,7 +2537,7 @@
         "audio": "goblinoid",
         "name": "Hobgoblin Champion",
         "flavor": "Bigger and better-drilled than the rabble it leads, and it knows it.",
-        "threatLevel"   : 6,    // DPS 12.1 | effHP 95 | skirmisher
+        "threatLevel"   : 5,    // DPS 11.2 | effHP 95 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2573,7 +2573,7 @@
         "audio": "goblinoid",
         "name": "Goblin Firecaller",
         "flavor": "It hoards fire-pots and burning tricks, cackling at every flame it sets.",
-        "threatLevel"   : 3,    // DPS 8.1 | effHP 45 | glass-cannon
+        "threatLevel"   : 3,    // DPS 8.7 | effHP 45 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.4, 0.65, 0.3],
@@ -2608,7 +2608,7 @@
         "audio": "goblinoid",
         "name": "Goblin Warlord",
         "flavor": "Cunning enough to bind a hundred squabbling goblins to one purpose — usually a raid.",
-        "threatLevel"   : 7,    // DPS 15.0 | effHP 98 | skirmisher
+        "threatLevel"   : 8,    // DPS 20.0 | effHP 98 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
         "fg": [0.5, 0.75, 0.35],
@@ -2631,7 +2631,7 @@
         "foodOverflow": 0.25,
         "carcassItemId": "goblin_carcass",
         "naturalWeapons": ["fists", "kick"],
-        "lootPool": "goblin_warren",
+        "lootPool": "goblin_warlord_hoard",
         "species": "goblin",
         "tier": 5,
         "variantOf": "goblin",
@@ -2644,7 +2644,7 @@
         "audio": "goblinoid",
         "name": "Orc Whelp",
         "flavor": "Young and untried, all snarl and no scars, hungry to earn the second.",
-        "threatLevel"   : 3,    // DPS 5.9 | effHP 55 | skirmisher
+        "threatLevel"   : 5,    // DPS 17.8 | effHP 55 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2679,7 +2679,7 @@
         "audio": "goblinoid",
         "name": "Orc Grunt",
         "flavor": "The bulk of any warband — strong, blunt and utterly without doubt.",
-        "threatLevel"   : 4,    // DPS 7.3 | effHP 66 | skirmisher
+        "threatLevel"   : 6,    // DPS 20.9 | effHP 66 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2714,7 +2714,7 @@
         "audio": "goblinoid",
         "name": "Orc Scavenger",
         "flavor": "It picks the field after the fighting for anything an iron-shod boot has left.",
-        "threatLevel"   : 3,    // DPS 7.6 | effHP 58 | skirmisher
+        "threatLevel"   : 3,    // DPS 6.7 | effHP 58 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2749,7 +2749,7 @@
         "audio": "goblinoid",
         "name": "Orc Marauder",
         "flavor": "It raids for the joy of it, and counts a burned steading a good day.",
-        "threatLevel"   : 5,    // DPS 9.7 | effHP 84 | skirmisher
+        "threatLevel"   : 8,    // DPS 26.5 | effHP 84 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2784,7 +2784,7 @@
         "audio": "goblinoid",
         "name": "Orc Berserker",
         "flavor": "It works itself past pain and past sense and comes on regardless.",
-        "threatLevel"   : 5,    // DPS 11.7 | effHP 78 | skirmisher
+        "threatLevel"   : 9,    // DPS 31.9 | effHP 78 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2820,7 +2820,7 @@
         "audio": "goblinoid",
         "name": "Orc Veteran",
         "flavor": "Notched blade, notched tusks — it has buried better fighters than you.",
-        "threatLevel"   : 6,    // DPS 12.9 | effHP 104 | skirmisher
+        "threatLevel"   : 13,    // DPS 48.1 | effHP 104 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2856,7 +2856,7 @@
         "audio": "goblinoid",
         "name": "Orc Ironhide",
         "flavor": "Hide toughened to a boiled-leather thickness that shrugs off the first blow, and the second.",
-        "threatLevel"   : 6,    // DPS 10.7 | effHP 117 | skirmisher
+        "threatLevel"   : 12,    // DPS 39.9 | effHP 117 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2892,7 +2892,7 @@
         "audio": "goblinoid",
         "name": "Orc Slayer",
         "flavor": "It fights in a whirl of iron, meaning to be surrounded.",
-        "threatLevel"   : 7,    // DPS 15.4 | effHP 98 | skirmisher
+        "threatLevel"   : 14,    // DPS 57.3 | effHP 98 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2928,7 +2928,7 @@
         "audio": "goblinoid",
         "name": "Orc Warlord",
         "flavor": "It leads from the front of the charge because nothing has yet stopped it there.",
-        "threatLevel"   : 8,    // DPS 16.6 | effHP 126 | skirmisher
+        "threatLevel"   : 16,    // DPS 59.4 | effHP 126 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -2964,7 +2964,7 @@
         "audio": "goblinoid",
         "name": "Orc Blackguard",
         "flavor": "Sworn to its warboss and to the killing, in that order.",
-        "threatLevel"   : 8,    // DPS 16.5 | effHP 115 | skirmisher
+        "threatLevel"   : 15,    // DPS 60.3 | effHP 115 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -3000,7 +3000,7 @@
         "audio": "goblinoid",
         "name": "Orc Chosen",
         "flavor": "Marked out by scar and rite as the one the tribe throws at its worst problems.",
-        "threatLevel"   : 8,    // DPS 17.3 | effHP 133 | skirmisher
+        "threatLevel"   : 19,    // DPS 76.5 | effHP 133 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.4, 0.55, 0.35],
@@ -3036,7 +3036,7 @@
         "audio": "goblinoid",
         "name": "Orc Warboss",
         "flavor": "It holds the warband by the throat of its own strength, and points that strength at you.",
-        "threatLevel"   : 11,    // DPS 21.3 | effHP 165 | bruiser
+        "threatLevel"   : 29,    // DPS 132.9 | effHP 165 | bruiser
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
         "fg": [0.5, 0.6, 0.4],
@@ -3060,7 +3060,7 @@
         "foodOverflow": 0.25,
         "carcassItemId": "orc_reaver_carcass",
         "naturalWeapons": ["fists", "slam"],
-        "lootPool": "orc_warlord_hoard",
+        "lootPool": "orc_warboss_hoard",
         "species": "orc",
         "tier": 5,
         "variantOf": "orc_reaver",
@@ -4138,7 +4138,7 @@
         "audio": "goblinoid",
         "name": "Kobold Trapper",
         "flavor": "It seeds the ground with snares and deadfalls and lets the trap do the killing.",
-        "threatLevel"   : 3,    // DPS 7.7 | effHP 44 | skirmisher
+        "threatLevel"   : 2,    // DPS 5.4 | effHP 44 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 64}],
         "fg": [0.6, 0.4, 0.25],
@@ -4170,7 +4170,7 @@
         "audio": "canine",
         "name": "Gnoll Reaver",
         "flavor": "Bigger, bloodier and hungrier than the pack it runs at the head of.",
-        "threatLevel"   : 7,    // DPS 17.2 | effHP 100 | skirmisher
+        "threatLevel"   : 8,    // DPS 21.4 | effHP 100 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "creatures", "id": 252}],
         "fg": [0.6, 0.5, 0.35],

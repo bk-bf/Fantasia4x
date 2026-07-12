@@ -58,4 +58,24 @@ describe('lootpool draw', () => {
     const drawn = drawLoadout(noQual, seq([0.0, 0.0]));
     expect(drawn[0].quality).toBe(1);
   });
+
+  it('§4b: a famed-flagged pick rolls a legend identity onto the drawn piece', () => {
+    // A guaranteed boss signature: chance 1, single famed pick, dropChance 1.
+    const bossPool: LootPool = {
+      dropChance: 1,
+      slots: { mainHand: { chance: 1, pick: [{ id: 'iron_tide', w: 1, famed: true }] } }
+    };
+    const drawn = drawLoadout(bossPool, seq([0.0, 0.0, 0.5]));
+    expect(drawn).toHaveLength(1);
+    expect(drawn[0].itemId).toBe('iron_tide');
+    expect(drawn[0].famed).toBeDefined();
+    expect(drawn[0].famed?.famedName).toBeTruthy();
+    expect(drawn[0].famed?.famedStatMult).toBeGreaterThanOrEqual(2);
+    expect(drawn[0].famed?.famedEnchants.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('§4b: an unflagged pick carries no famed identity (the common case)', () => {
+    const drawn = drawLoadout(POOL, seq([0.1, 0.0, 0.0, 0.9]));
+    expect(drawn[0].famed).toBeUndefined();
+  });
 });
