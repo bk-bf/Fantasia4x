@@ -41,7 +41,7 @@
     {
         "id"            : "wolf",
         "audio"            : "canine",
-        "name"          : "Wolf",
+        "name"          : "Grey Wolf",
         "flavor": "Lean and grey, it drifts at the treeline where the pack's eyes catch the last of the light.",
         "threatLevel"   : 3,    // DPS 6.6 | effHP 47 | skirmisher
         "entityClass"   : "animal",
@@ -111,7 +111,7 @@
     {
         "id": "bear",  // add anchor to beehives for bears, so they hang around and protect beehives from pawns
         "audio": "beast",
-        "name": "Bear",
+        "name": "Brown Bear",
         "flavor": "Slow to wake and slower to forgive; it suffers a trespasser only so long as the trespasser keeps still.",
         "threatLevel": 10,    // DPS 13.2 | effHP 226 | bruiser
         "entityClass": "animal",
@@ -148,7 +148,7 @@
     {
         "id"            : "goblin",
         "audio"            : "goblinoid",
-        "name"          : "Goblin",
+        "name"          : "Goblin Raider",
         "flavor": "Small, quick-fingered and mean, it fights dirty because it has never once fought fair.",
         "threatLevel"   : 2,    // DPS 4.3 | effHP 37 | skirmisher
         "entityClass"   : "mob",
@@ -186,7 +186,7 @@
         "species": "giant_rat",
         "tier": 2,
         "audio"            : "rustle",
-        "name"          : "Giant Rat",
+        "name"          : "Plague Rat",
         "flavor": "Bloated on middens and carrion, bold only in numbers, gone at the first raised stick.",
         "threatLevel"   : 1,    // DPS 3.1 | effHP 20 | skirmisher
         "entityClass"   : "animal",
@@ -212,7 +212,7 @@
         "species": "shadow_wraith",
         "tier": 2,
         "audio"              : "wraith",
-        "name"            : "Shadow Wraith",
+        "name"            : "Gloamling",
         "flavor": "A cold that walks — where it passes the frost blooms and the torch gutters low.",
         "threatLevel"     : 4,    // DPS 12.6 | effHP 50 | glass-cannon
         "entityClass"     : "mob",
@@ -247,7 +247,7 @@
         "species": "deer",
         "tier": 2,
         "audio"            : "grunt",
-        "name"          : "Deer",
+        "name"          : "Red Deer",
         "flavor": "All ears and trembling flank, it grazes with its head up, ready to be gone before you finish the thought.",
         "threatLevel"   : 2,    // DPS 3.2 | effHP 38 | skirmisher
         "entityClass"   : "animal",
@@ -275,7 +275,7 @@
         "species": "rabbit",
         "tier": 2,
         "audio"            : "critter",
-        "name"          : "Rabbit",
+        "name"          : "Cottontail",
         "flavor": "A heartbeat with legs, forever one shadow away from bolting down its hole.",
         "threatLevel"   : 1,    // DPS 0.9 | effHP 10 | harmless
         "entityClass"   : "animal",
@@ -333,7 +333,7 @@
         "species": "elk",
         "tier": 2,
         "audio"            : "grunt",
-        "name"          : "Elk",
+        "name"          : "Woodland Elk",
         "flavor": "It carries its crown of antler like a burden and a warning both.",
         "threatLevel"   : 4,    // DPS 7.9 | effHP 86 | skirmisher
         "entityClass"   : "animal",
@@ -364,7 +364,7 @@
         "species": "mountain_goat",
         "tier": 2,
         "audio": "goat",
-        "name": "Mountain Goat",
+        "name": "Bighorn",
         "flavor": "It keeps to ledges no wolf will follow, chewing the thin grass of the high places.",
         "threatLevel": 1,    // DPS 2.0 | effHP 25 | harmless
         "entityClass": "animal",
@@ -397,7 +397,7 @@
         "species": "wild_chicken",
         "tier": 2,
         "audio"            : "fowl",
-        "name"          : "Wild Chicken",
+        "name"          : "Junglefowl",
         "flavor": "It scratches the dirt, startles at its own shadow, and lays where it pleases.",
         "threatLevel"   : 1,    // DPS 0.2 | effHP 5 | harmless
         "entityClass"   : "animal",
@@ -434,7 +434,7 @@
         "species": "aurochs",
         "tier": 2,
         "audio"                : "beast",
-        "name"              : "Aurochs",
+        "name"              : "Wild Ox",
         "flavor": "The wild ox of the old plains — placid at pasture, a landslide when roused.",
         "threatLevel"       : 12,    // DPS 18.1 | effHP 260 | bruiser
         "entityClass"       : "animal",
@@ -466,7 +466,7 @@
         "species": "woolly_mammoth",
         "tier": 2,
         "audio"                : "beast",
-        "name"              : "Woolly Mammoth",
+        "name"              : "Grey Tusker",
         "flavor": "A hill of hair and tusk that remembers the cold ages; the ground keeps its footfalls.",
         "threatLevel"       : 33,    // DPS 33.3 | effHP 814 | bruiser
         "entityClass"       : "animal",
@@ -499,7 +499,7 @@
         "species": "hippogriff",
         "tier": 2,
         "audio"            : "raptor",
-        "name"          : "Hippogriff",
+        "name"          : "Windrider",
         "flavor": "Eagle before, horse behind — it stoops from the ridge-wind on prey it has watched for hours.",
         "threatLevel"   : 5,    // DPS 10.0 | effHP 95 | skirmisher
         "entityClass"   : "animal",
@@ -533,7 +533,7 @@
         "species": "hoarfowl",
         "tier": 2,
         "audio"            : "fowl",
-        "name"          : "Hoarfowl",
+        "name"          : "Snowcock",
         "flavor": "A fat frost-feathered bird that fears little but the flames of a cook-fire.",
         "threatLevel"   : 1,    // DPS 2.4 | effHP 40 | harmless
         "entityClass"   : "animal",
@@ -562,7 +562,7 @@
         "species": "quillback",
         "tier": 2,
         "audio"            : "critter",
-        "name"          : "Quillback",
+        "name"          : "Spineback",
         "flavor": "A shuffling pincushion; patient grazers learn to leave its bristled back well alone.",
         "threatLevel"   : 3,    // DPS 3.4 | effHP 96 | tank
         "entityClass"   : "animal",
@@ -592,7 +592,7 @@
         "species": "worg",
         "tier": 2,
         "audio"            : "canine",
-        "name"          : "Worg",
+        "name"          : "Grey Worg",
         "flavor": "Bigger and blacker than any true wolf, and it hunts men by preference, not hunger.",
         "threatLevel"   : 3,    // DPS 6.6 | effHP 68 | skirmisher
         "entityClass"   : "animal",
@@ -623,7 +623,7 @@
         "species": "jackal",
         "tier": 2,
         "audio"            : "canine",
-        "name"          : "Jackal",
+        "name"          : "Golden Jackal",
         "flavor": "It laughs in the dark and takes what braver hunters have already killed.",
         "threatLevel"   : 2,    // DPS 5.3 | effHP 35 | skirmisher
         "entityClass"   : "animal",
@@ -654,7 +654,7 @@
         "species": "owlbear",
         "tier": 2,
         "audio"            : "beast",
-        "name"          : "Owlbear",
+        "name"          : "Tawny Owlbear",
         "flavor": "The temper of a bear behind the fixed, staring hate of an owl — a thing that should not be, and is.",
         "threatLevel"   : 11,    // DPS 18.0 | effHP 217 | bruiser
         "entityClass"   : "animal",
@@ -719,7 +719,7 @@
         "species": "mire_crocodile",
         "tier": 2,
         "audio"            : "reptile",
-        "name"          : "Mire Crocodile",
+        "name"          : "Bog Lurker",
         "flavor": "A drifting log until the water breaks — then a hundredweight of jaw takes you under.",
         "threatLevel"   : 12,    // DPS 17.2 | effHP 238 | bruiser
         "entityClass"   : "animal",
@@ -753,7 +753,7 @@
         "species": "marsh_viper",
         "tier": 2,
         "audio"            : "reptile",
-        "name"          : "Marsh Viper",
+        "name"          : "Fen Adder",
         "flavor": "A green ribbon in the reeds; the bite is small, the walk home long and cold.",
         "threatLevel"   : 1,    // DPS 3.8 | effHP 25 | skirmisher
         "entityClass"   : "animal",
@@ -785,7 +785,7 @@
         "species": "stirge",
         "tier": 2,
         "audio"            : "insect",
-        "name"          : "Stirge",
+        "name"          : "Bloodwing",
         "flavor": "A gorging thing on ragged wings that drinks its fill and drops away bloated.",
         "threatLevel"   : 1,    // DPS 1.3 | effHP 15 | harmless
         "entityClass"   : "animal",
@@ -813,7 +813,7 @@
         "species": "grimeling",
         "tier": 2,
         "audio"            : "goblinoid",
-        "name"          : "Grimeling",
+        "name"          : "Muck Crawler",
         "flavor": "A crawling knot of bog-muck and spite that keeps moving after it should be dead.",
         "threatLevel"   : 2,    // DPS 3.8 | effHP 58 | skirmisher
         "entityClass"   : "animal",
@@ -841,7 +841,7 @@
         "species": "giant_olm",
         "tier": 2,
         "audio"            : "frog",
-        "name"          : "Giant Olm",
+        "name"          : "Cave Salamander",
         "flavor": "Blind and pale in the black pools, it has never once needed the sun.",
         "threatLevel"   : 2,    // DPS 2.8 | effHP 40 | harmless
         "entityClass"   : "animal",
@@ -865,7 +865,7 @@
     {
         "id"            : "thornwood_spider",
         "audio"            : "insect",
-        "name"          : "Thornwood Spider",
+        "name"          : "Bramble Weaver",
         "flavor": "It waits in the barbed dark where the web-strands are strung thick as a snare.",
         "threatLevel"   : 3,    // DPS 7.6 | effHP 48 | skirmisher
         "entityClass"   : "animal",
@@ -901,7 +901,7 @@
         "species": "kobold_skulker",
         "tier": 2,
         "audio"            : "goblinoid",
-        "name"          : "Kobold Skulker",
+        "name"          : "Cave Kobold",
         "flavor": "It fights with traps and other men's blades and runs the instant the odds turn.",
         "threatLevel"   : 1,    // DPS 3.1 | effHP 30 | skirmisher
         "entityClass"   : "mob",
@@ -932,7 +932,7 @@
         "species": "gnoll_marauder",
         "tier": 2,
         "audio"            : "canine",
-        "name"          : "Gnoll Marauder",
+        "name"          : "Pack Gnoll",
         "flavor": "A hyena that walks upright and hungers upward, laughing as it comes.",
         "threatLevel"   : 5,    // DPS 12.7 | effHP 61 | glass-cannon
         "entityClass"   : "mob",
@@ -1000,7 +1000,7 @@
         "species": "harpy",
         "tier": 2,
         "audio"            : "raptor",
-        "name"          : "Harpy",
+        "name"          : "Screamer",
         "flavor": "A woman's shriek from a bird's throat, dropping talon-first out of the sun.",
         "threatLevel"   : 2,    // DPS 4.7 | effHP 47 | skirmisher
         "entityClass"   : "mob",
@@ -1030,7 +1030,7 @@
         "species": "bullywug",
         "tier": 2,
         "audio"            : "frog",
-        "name"          : "Bullywug",
+        "name"          : "Bog Croaker",
         "flavor": "A frog grown to the size of a man's malice, croaking war in the reed-beds.",
         "threatLevel"   : 2,    // DPS 4.7 | effHP 49 | skirmisher
         "entityClass"   : "mob",
