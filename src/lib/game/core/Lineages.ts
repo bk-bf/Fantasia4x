@@ -45,6 +45,37 @@ export function lineageDef(id: string): LineageDef | undefined {
 export function awakeningLabel(conditionId: string): string | undefined {
   return AWAKENING_BY_ID.get(conditionId)?.label;
 }
+
+/** Look up a trait def by id (the same flat catalog lineage growth draws from). Used by the §2h
+ *  trait-organ consume path to resolve a `grantsTraitOnConsume` id into the full Trait to bake. */
+export function getTraitById(id: string): Trait | undefined {
+  return TRAIT_BY_ID.get(id);
+}
+
+// §2h(ii): the Faustian flaw pool — a curated set of pure stat/attribute PENALTY negative traits a
+// consumed beast-organ can inflict alongside its trait grant. Curated (NOT "any negative trait") so the
+// flaw is always a clean stat hit `applyGainedTrait` can bake, never a graft/wound/bodyMod needing
+// special handling. Missing ids are silently dropped.
+const FLAW_POOL: Trait[] = [
+  'feral-manner',
+  'wild-swinging',
+  'clumsy',
+  'nearsighted',
+  'flat-footed',
+  'sluggard',
+  'short-winded',
+  'slow-mending',
+  'night-blind',
+  'frail'
+]
+  .map((id) => TRAIT_BY_ID.get(id))
+  .filter((t): t is Trait => !!t);
+
+/** Roll one Faustian flaw (a curated pure-penalty negative trait), or undefined if the pool is empty. */
+export function rollFlawTrait(rand: () => number): Trait | undefined {
+  if (FLAW_POOL.length === 0) return undefined;
+  return FLAW_POOL[Math.floor(rand() * FLAW_POOL.length) % FLAW_POOL.length];
+}
 /** The lineage id whose parent marker this pawn holds, or undefined (not a lineage member). */
 export function pawnLineage(pawn: Pawn): string | undefined {
   for (const t of pawn.traits ?? [])

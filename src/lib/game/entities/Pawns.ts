@@ -4,7 +4,8 @@ import { drawPawnTraits } from '../core/Culture';
 import { createBodyPlanLimbs } from '../systems/Combat';
 import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/BodyParts';
 import { SCARRING_CONFIG, makeScarInjury } from '../core/Wounds';
-import { seedAwakeningPaths } from '../core/Lineages';
+import { seedAwakeningPaths, getTraitById, rollFlawTrait } from '../core/Lineages';
+import { itemDefById } from '../core/itemDefs';
 import { seedWorkLevels, rollWorkStyle } from '../core/workExperience';
 import { rng } from '../core/rng';
 
@@ -288,6 +289,50 @@ export function applyGainedTrait(pawn: Pawn, trait: Trait): void {
         if (full) part.health = part.maxHp;
       }
   }
+}
+
+/**
+ * §2h — apply a CONSUMED item's effects to a pawn, returning a NEW pawn (or the same ref if nothing
+ * applied, so the caller can skip decrementing stock). Two sinks, both reusing existing systems:
+ *   (i)  a timed potion buff — `grantsConditions` + `conditionDurationTurns` stamped onto
+ *        `conditionTimers` (exactly like a cooked-meal buff), applying through the condition pipeline.
+ *   (ii) a beast-organ trait grant — `grantsTraitOnConsume` pushes the trait + bakes it via
+ *        `applyGainedTrait`, THEN rolls a Faustian flaw (a curated negative trait) and bakes that too.
+ * Clones `stats`/`traits` before baking so the in-place `applyGainedTrait` never mutates the caller's
+ * pawn. A duplicate organ (pawn already has the trait) is a no-op — returns the original ref.
+ */
+export function applyConsumable(pawn: Pawn, itemId: string, rand: () => number): Pawn {
+  const def = itemDefById(itemId);
+  if (!def) return pawn;
+  const next: Pawn = { ...pawn, stats: { ...pawn.stats }, traits: [...(pawn.traits ?? [])] };
+  let changed = false;
+
+  // (i) Timed potion buff.
+  if (def.grantsConditions?.length && def.conditionDurationTurns) {
+    const timers = { ...(next.conditionTimers ?? {}) };
+    for (const cid of def.grantsConditions)
+      timers[cid] = Math.max(timers[cid] ?? 0, def.conditionDurationTurns);
+    next.conditionTimers = timers;
+    changed = true;
+  }
+
+  // (ii) Permanent trait grant + Faustian flaw.
+  if (def.grantsTraitOnConsume) {
+    const trait = getTraitById(def.grantsTraitOnConsume);
+    const alreadyHas = next.traits.some((t) => t.id === trait?.id);
+    if (trait && !alreadyHas) {
+      next.traits.push(trait);
+      applyGainedTrait(next, trait);
+      const flaw = rollFlawTrait(rand);
+      if (flaw && !next.traits.some((t) => t.id === flaw.id)) {
+        next.traits.push(flaw);
+        applyGainedTrait(next, flaw);
+      }
+      changed = true;
+    }
+  }
+
+  return changed ? next : pawn;
 }
 
 /** Roll a single pawn from a specific culture (stats within the culture's ranges, traits copied,

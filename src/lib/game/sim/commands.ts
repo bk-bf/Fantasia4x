@@ -44,7 +44,8 @@ import {
   reserveForOrder,
   absorbDropIfOnStockpileTile
 } from '../core/GameState';
-import { equipItem, unequipItem, useConsumable, equipDropToPawn } from '../core/PawnEquipment';
+import { equipItem, unequipItem, equipDropToPawn } from '../core/PawnEquipment';
+import { rng } from '../core/rng';
 import { pickUpFromTile } from '../systems/pawn/pawnHauling';
 import { PAWN_STATE } from '../systems/pawn/pawnStates';
 import { killPawn } from '../systems/PawnStateMachine';
@@ -58,7 +59,7 @@ import { recipeService } from '../services/RecipeService';
 import { researchService } from '../services/ResearchService';
 import { devSpawnLooseItems, devDestroyAllItems } from '../dev/devWorld';
 import { gameLogger } from '../dev/gameLogger';
-import { generatePawns } from '../entities/Pawns';
+import { generatePawns, applyConsumable } from '../entities/Pawns';
 import { pawnGrowthService } from '../services/PawnGrowthService';
 import { devSpawnMobs } from '../services/entity/entitySpawning';
 import {
@@ -597,7 +598,11 @@ export const COMMANDS: Record<string, Cmd> = {
     if (idx === -1) return s;
     if (((s.stockpile ?? {})[p.itemId] ?? 0) < 1) return s;
     const pawns = s.pawns.slice();
-    pawns[idx] = useConsumable(pawns[idx], p.itemId);
+    const before = pawns[idx];
+    // §2h: apply the drink/eat effect (timed condition and/or trait grant + Faustian flaw). If nothing
+    // applied (e.g. a duplicate organ), keep the item — don't burn stock for a no-op.
+    pawns[idx] = applyConsumable(before, p.itemId, () => rng.random());
+    if (pawns[idx] === before) return s;
     return consumeFromStockpiles({ ...s, pawns }, { [p.itemId]: 1 });
   },
 

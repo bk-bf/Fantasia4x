@@ -2396,6 +2396,103 @@
     "weightKg"         : 0.4,
     "volumeL"          : 0.3
   },
+  // §2h(ii) TRAIT-ORGANS — a rare boss/elite drop, eaten raw for a permanent gift with a price (a Faustian
+  // flaw rolls alongside). `grantsTraitOnConsume` points at an existing traits.jsonc trait; they don't
+  // spoil once extracted at the altar. Consumed via the pawn panel's USE action (useConsumableItem).
+  {
+    "id"               : "alpha_heart",
+    "charSpans"        : [ {"sheet": "items", "id": 1} ],
+    "name"             : "Alpha's Heart",
+    "type"             : "consumable",
+    "category"         : "reagent",
+    "maxDurability"    : 60,
+    "deteriorationRate": 0.01,
+    "description"      : "The dark, heavy heart of a pack-leader, still warm hours after the kill. Old hunters swallowed one raw to borrow the beast's fury — and were never quite themselves again.",
+    "color"            : "#5a1020",
+    "amount"           : 0,
+    "weightKg"         : 0.6,
+    "volumeL"          : 0.5,
+    "grantsTraitOnConsume": "feral-adrenaline"
+  },
+  {
+    "id"               : "direwolf_hackles",
+    "charSpans"        : [ {"sheet": "items", "id": 1} ],
+    "name"             : "Direwolf Hackles",
+    "type"             : "consumable",
+    "category"         : "reagent",
+    "maxDurability"    : 60,
+    "deteriorationRate": 0.01,
+    "description"      : "A ridge of coarse iron-grey hackles torn from a direwolf's nape. Chewed and swallowed, they leave the flesh strangely tough — and the mind a little wilder.",
+    "color"            : "#8a90a6",
+    "amount"           : 0,
+    "weightKg"         : 0.3,
+    "volumeL"          : 0.3,
+    "grantsTraitOnConsume": "thick-hide"
+  },
+  {
+    "id"               : "sabretooth_glands",
+    "charSpans"        : [ {"sheet": "items", "id": 1} ],
+    "name"             : "Sabretooth Glands",
+    "type"             : "consumable",
+    "category"         : "reagent",
+    "maxDurability"    : 60,
+    "deteriorationRate": 0.01,
+    "description"      : "Swollen scent-glands from behind a great cat's jaw, reeking of the kill. Something in them sharpens the urge to finish what you start.",
+    "color"            : "#7a4a2a",
+    "amount"           : 0,
+    "weightKg"         : 0.3,
+    "volumeL"          : 0.3,
+    "grantsTraitOnConsume": "killer-instinct"
+  },
+  {
+    "id"               : "owlbear_pineal",
+    "charSpans"        : [ {"sheet": "items", "id": 1} ],
+    "name"             : "Owlbear Third Eye",
+    "type"             : "consumable",
+    "category"         : "reagent",
+    "maxDurability"    : 60,
+    "deteriorationRate": 0.01,
+    "description"      : "A pale, pearl-like gland from deep in an owlbear's skull. Those who dare eat it speak of the world turning suddenly sharp and loud, and never wholly quiet again.",
+    "color"            : "#c0b090",
+    "amount"           : 0,
+    "weightKg"         : 0.2,
+    "volumeL"          : 0.2,
+    "grantsTraitOnConsume": "keen-senses"
+  },
+  // §2h(i) BEAST-REAGENT POTIONS — brewed from a boss reagent at the alchemy_lab, drunk for a timed buff
+  // (grantsConditions + conditionDurationTurns → conditionTimers, like a meal buff). Consumed via USE.
+  {
+    "id"               : "bloodrage_draught",
+    "charSpans"        : [ {"sheet": "items", "id": 71} ],
+    "name"             : "Bloodrage Draught",
+    "type"             : "consumable",
+    "category"         : "drink",
+    "maxDurability"    : 200,
+    "deteriorationRate": 0.005,
+    "description"      : "A hot, coppery draught that sets the pulse hammering. For a while fear falls away and the arm swings faster and harder.",
+    "color"            : "#8a1818",
+    "amount"           : 0,
+    "weightKg"         : 0.3,
+    "volumeL"          : 0.3,
+    "grantsConditions" : ["adrenal"],
+    "conditionDurationTurns": 1200
+  },
+  {
+    "id"               : "ironhide_tonic",
+    "charSpans"        : [ {"sheet": "items", "id": 71} ],
+    "name"             : "Ironhide Tonic",
+    "type"             : "consumable",
+    "category"         : "drink",
+    "maxDurability"    : 200,
+    "deteriorationRate": 0.005,
+    "description"      : "A thick amber tonic that settles heavy in the gut. For a while the flesh holds firm and the body tires slow.",
+    "color"            : "#b0801a",
+    "amount"           : 0,
+    "weightKg"         : 0.3,
+    "volumeL"          : 0.3,
+    "grantsConditions" : ["fortitude"],
+    "conditionDurationTurns": 1200
+  },
   {
     "id"               : "direwolf_warcloak",
     "charSpans"        : [ {"sheet": "items", "id": 138} ],

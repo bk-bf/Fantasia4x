@@ -352,6 +352,13 @@ export interface Item {
    * passive-while-equipped, no timer.
    */
   conditionDurationTurns?: number;
+  /**
+   * §2h(ii): consuming one of this item (a rare beast organ) PERMANENTLY grants this `traits.jsonc`
+   * trait to the eater (pushed to `pawn.traits` + baked via `applyGainedTrait`) AND rolls a random
+   * `negative` trait as a Faustian flaw — power with a price. Applied by `entities/Pawns.applyConsumable`
+   * via the `useConsumableItem` command. One-shot; a no-op if the pawn already carries the trait.
+   */
+  grantsTraitOnConsume?: string;
   /** Magic-material affinity hook (e.g. "lunar"|"fire"|"earth") — quality/flavour edge now; a
    *  mana/affinity bonus later. Carried by ancient `magic_wood` species. */
   affinity?: string;

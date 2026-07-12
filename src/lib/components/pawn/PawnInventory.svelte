@@ -6,6 +6,7 @@
   import { gameState } from '$lib/stores/gameState';
   import CarryItemCard from './CarryItemCard.svelte';
   import CarryCapacity from './CarryCapacity.svelte';
+  import PawnConsumables from './PawnConsumables.svelte';
 
   export let pawn: Pawn;
 
@@ -126,6 +127,8 @@
     </div>
   {/if}
 </div>
+
+<PawnConsumables {pawn} />
 
 <style>
   .inv-section {

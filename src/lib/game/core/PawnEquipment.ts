@@ -445,35 +445,9 @@ export function removeItemFromInventory(pawn: Pawn, itemId: string, quantity: nu
   return updatedPawn;
 }
 
-// Update useConsumable to consume from global storage
-export function useConsumable(pawn: Pawn, itemId: string): Pawn {
-  const item = itemDefById(itemId);
-  if (!item || item.type !== 'consumable') return pawn;
-  // Stock availability is checked + decremented by the caller against the colony stockpile (not
-  // pawn.inventory.items, which is the pawn's carried goods — INV-1).
-
-  let updatedPawn = { ...pawn };
-
-  // Apply consumable effects (don't remove from inventory here -
-  // let the game state handle global inventory reduction)
-  Object.entries(item.effects || {}).forEach(([effect, value]) => {
-    if (typeof value === 'number') {
-      switch (effect) {
-        case 'healthRestore':
-          updatedPawn.state.health = Math.min(100, (updatedPawn.state.health ?? 100) + value);
-          break;
-        case 'energyBoost':
-          updatedPawn.needs.fatigue = Math.max(0, updatedPawn.needs.fatigue - value * 10);
-          break;
-        case 'morale':
-          updatedPawn.state.mood = Math.min(100, updatedPawn.state.mood + value * 20);
-          break;
-      }
-    }
-  });
-
-  return updatedPawn;
-}
+// §2h: item consumption moved to `entities/Pawns.applyConsumable` (timed potion buffs + beast-organ
+// trait grants), driven by the `useConsumableItem` command. The old stub here read `pawn.state.health`/
+// `.mood` — fields that don't exist on the current pawn model, so it was dead.
 
 // Calculate total equipment bonuses for a pawn
 export function getEquipmentBonuses(pawn: Pawn): Record<string, number> {

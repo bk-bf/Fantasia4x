@@ -2850,7 +2850,7 @@
     "id"              : "flense_great_wolf",
     "station"         : "sanguinary_altar",
     "inputs"          : {"great_wolf_carcass": 1},
-    "outputs"         : {"wolf_meat": 14, "dire_wolf_pelt": 3, "alpha_ichor": 2, "great_fang": 1, "large_bones": 10, "sinew": 8},
+    "outputs"         : {"wolf_meat": 14, "dire_wolf_pelt": 3, "alpha_ichor": 2, "alpha_heart": 1, "direwolf_hackles": 1, "great_fang": 1, "large_bones": 10, "sinew": 8},
     "workAmount"      : 80,
     "toolTierRequired": 2
   },
@@ -2866,7 +2866,7 @@
     "id"              : "flense_great_bear",
     "station"         : "sanguinary_altar",
     "inputs"          : {"great_bear_carcass": 1},
-    "outputs"         : {"bear_meat": 26, "cave_bear_pelt": 3, "owlbear_bile": 2, "great_bone": 2, "great_fang": 1, "animal_fat": 5},
+    "outputs"         : {"bear_meat": 26, "cave_bear_pelt": 3, "owlbear_bile": 2, "owlbear_pineal": 1, "sabretooth_glands": 1, "great_bone": 2, "great_fang": 1, "animal_fat": 5},
     "workAmount"      : 100,
     "toolTierRequired": 2
   },
@@ -3395,6 +3395,24 @@
     "inputs"          : {"woundwort": 2, "gem_dust": 1, "glassware": 1},
     "outputs"         : {"tonic_of_fortitude": 1},
     "workAmount"      : 24,
+    "toolTierRequired": 1
+  },
+  // §2h(i) beast-reagent potions — a boss reagent IS the potency (replaces gem_dust), brewed into a
+  // timed combat draught. The reagent only comes off a T4-5 beast (butchered at the sanguinary_altar).
+  {
+    "id"              : "brew_bloodrage_draught",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"alpha_ichor": 1, "woundwort": 1, "glassware": 1},
+    "outputs"         : {"bloodrage_draught": 1},
+    "workAmount"      : 30,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_ironhide_tonic",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"owlbear_bile": 1, "woundwort": 1, "glassware": 1},
+    "outputs"         : {"ironhide_tonic": 1},
+    "workAmount"      : 30,
     "toolTierRequired": 1
   },
   // ════════════════════════════════════════════════════════════════════════════════════════════
