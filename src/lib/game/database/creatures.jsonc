@@ -42,7 +42,7 @@
         "id"            : "wolf",
         "audio"            : "canine",
         "name"          : "Grey Wolf",
-        "flavor": "Lean and grey, it drifts at the treeline where the pack's eyes catch the last of the light.",
+        "flavor": "Grey shapes at the treeline, patient and pack-wise; alone one is little, but they seldom come alone. The winter pelt tans well — if you can drop it before the others close.",
         "threatLevel"   : 3,    // DPS 6.6 | effHP 47 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 251} ],
@@ -78,7 +78,7 @@
         "id"            : "great_wolf",
         "audio"            : "canine",
         "name"          : "Great Wolf",
-        "flavor": "A wolf grown to legend — shoulders like a bull's, a jaw that has cracked antler and shield alike.",
+        "flavor": "The wolf of firelit warnings, grown to the size of a pony and older than any living pack. What can be cut from such a beast is worth more than its weight in common hide — but few return to do the cutting.",
         "threatLevel"   : 19,    // DPS 50.8 | effHP 210 | bruiser
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 251} ],
@@ -112,7 +112,7 @@
         "id": "bear",  // add anchor to beehives for bears, so they hang around and protect beehives from pawns
         "audio": "beast",
         "name": "Brown Bear",
-        "flavor": "Slow to wake and slower to forgive; it suffers a trespasser only so long as the trespasser keeps still.",
+        "flavor": "Slow to rouse and terrible once roused; the thick hide turns a careless blow, though the belly does not. A single one yields hide and meat enough to keep a household a season.",
         "threatLevel": 10,    // DPS 13.2 | effHP 226 | bruiser
         "entityClass": "animal",
         "charSpans": [ {"sheet": "creatures", "id": 126} ],
@@ -149,7 +149,7 @@
         "id"            : "goblin",
         "audio"            : "goblinoid",
         "name"          : "Goblin Raider",
-        "flavor": "Small, quick-fingered and mean, it fights dirty because it has never once fought fair.",
+        "flavor": "Runty and vicious, it fights with whatever cruel little blade it has scavenged, edged with something that stings long after the cut. Kill enough and their nasty gear is yours — weak as it is.",
         "threatLevel"   : 2,    // DPS 4.3 | effHP 37 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "cultures", "id": 49} ],
@@ -187,7 +187,7 @@
         "tier": 2,
         "audio"            : "rustle",
         "name"          : "Plague Rat",
-        "flavor": "Bloated on middens and carrion, bold only in numbers, gone at the first raised stick.",
+        "flavor": "Bloated on middens and bold only in the swarm, it scatters the moment the numbers turn. Barely worth the arrow, though a starving camp has boiled worse.",
         "threatLevel"   : 1,    // DPS 3.1 | effHP 20 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 205} ],
@@ -213,7 +213,7 @@
         "tier": 2,
         "audio"              : "wraith",
         "name"            : "Grave Shade",
-        "flavor": "A cold that walks — where it passes the frost blooms and the torch gutters low.",
+        "flavor": "A knot of cold that drifts through solid rock and leaves frost where it lingers; steel bites it poorly, but living flame makes it flinch. It falls fast once struck, and leaves nothing behind but the chill.",
         "threatLevel"     : 4,    // DPS 12.6 | effHP 50 | glass-cannon
         "entityClass"     : "mob",
         "charSpans"       : [ {"sheet": "creatures", "id": 173} ],
@@ -248,7 +248,7 @@
         "tier": 2,
         "audio"            : "grunt",
         "name"          : "Red Deer",
-        "flavor": "All ears and trembling flank, it grazes with its head up, ready to be gone before you finish the thought.",
+        "flavor": "It grazes with its head forever coming up, gone at a snapped twig — the keen-eyed ones are hard to stalk. Clean venison and a soft hide reward the patient.",
         "threatLevel"   : 2,    // DPS 3.2 | effHP 38 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 66} ],
@@ -276,7 +276,7 @@
         "tier": 2,
         "audio"            : "critter",
         "name"          : "Cottontail",
-        "flavor": "A heartbeat with legs, forever one shadow away from bolting down its hole.",
+        "flavor": "A nervous scrap of fur that lives one bound from its burrow. Little more than a mouthful — but a mouthful comes easy.",
         "threatLevel"   : 1,    // DPS 0.9 | effHP 10 | harmless
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 76} ],
@@ -300,7 +300,7 @@
         "id"                : "boar",
         "audio"                : "boar",
         "name"              : "Wild Boar",
-        "flavor": "A barrel of muscle on trotters; corner it and it comes through you, not around.",
+        "flavor": "A slab of muscle on trotters that answers a wound with a charge, tusks first. Dangerous to corner, but the meat is rich and the hide stubborn enough to be worth the curing.",
         "threatLevel"       : 4,    // DPS 6.7 | effHP 75 | skirmisher
         "entityClass"       : "animal",
         "charSpans"         : [ {"sheet": "creatures", "id": 248} ],
@@ -334,7 +334,7 @@
         "tier": 2,
         "audio"            : "grunt",
         "name"          : "Woodland Elk",
-        "flavor": "It carries its crown of antler like a burden and a warning both.",
+        "flavor": "Broad through the shoulder and crowned in antler, it would sooner flee than fight — until the flight is cut off. Meat, hide and bone in plenty, and the calm-handed sometimes break one to the saddle.",
         "threatLevel"   : 4,    // DPS 7.9 | effHP 86 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 78} ],
@@ -365,7 +365,7 @@
         "tier": 2,
         "audio": "goat",
         "name": "Bighorn",
-        "flavor": "It keeps to ledges no wolf will follow, chewing the thin grass of the high places.",
+        "flavor": "It picks along ledges that would kill a wolf, cropping what little grows up there. Easily kept for its milk, once you catch one off the rocks.",
         "threatLevel": 1,    // DPS 2.0 | effHP 25 | harmless
         "entityClass": "animal",
         "charSpans": [ {"sheet": "creatures", "id": 74} ],
@@ -398,7 +398,7 @@
         "tier": 2,
         "audio"            : "fowl",
         "name"          : "Junglefowl",
-        "flavor": "It scratches the dirt, startles at its own shadow, and lays where it pleases.",
+        "flavor": "A flighty bird that scratches the dirt and lays where it wanders. No threat and no mystery — just eggs, and a bird for the pot when it stops laying.",
         "threatLevel"   : 1,    // DPS 0.2 | effHP 5 | harmless
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 75} ],
@@ -435,7 +435,7 @@
         "tier": 2,
         "audio"                : "beast",
         "name"              : "Wild Ox",
-        "flavor": "The wild ox of the old plains — placid at pasture, a landslide when roused.",
+        "flavor": "The great wild ox the old herders never quite tamed; it ignores you until it doesn't, and then a ton of horn and muscle is on you. One carcass feeds a camp — one broken to the yoke changes a season.",
         "threatLevel"       : 12,    // DPS 18.1 | effHP 260 | bruiser
         "entityClass"       : "animal",
         "charSpans"         : [ {"sheet": "creatures", "id": 156} ],
@@ -467,7 +467,7 @@
         "tier": 2,
         "audio"                : "beast",
         "name"              : "Grey Tusker",
-        "flavor": "A hill of hair and tusk that remembers the cold ages; the ground keeps its footfalls.",
+        "flavor": "A walking relic of the ice-times, its shaggy hide shrugging off frost and near everything else — only fire troubles it. Bring one down and there is ivory, meat and hide for a whole holdfast, if a whole warband survives the trying.",
         "threatLevel"       : 33,    // DPS 33.3 | effHP 814 | bruiser
         "entityClass"       : "animal",
         "charSpans"         : [ {"sheet": "creatures", "id": 158} ],
@@ -500,7 +500,7 @@
         "tier": 2,
         "audio"            : "raptor",
         "name"          : "Grey Hippogriff",
-        "flavor": "Eagle before, horse behind — it stoops from the ridge-wind on prey it has watched for hours.",
+        "flavor": "Eagle to the fore and horse behind, it watches from the crags and stoops faster than a loosed arrow. Prized alive as a mount by those bold enough to gentle it; prized dead for feathers and hide by those who cannot.",
         "threatLevel"   : 5,    // DPS 10.0 | effHP 95 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 22} ],
@@ -534,7 +534,7 @@
         "tier": 2,
         "audio"            : "fowl",
         "name"          : "Snow Hoarfowl",
-        "flavor": "A fat frost-feathered bird that fears little but the flames of a cook-fire.",
+        "flavor": "A plump frost-feathered fowl of the cold north, untroubled by winter and wary only of the cook-fire. Kept for its eggs, taken for its down.",
         "threatLevel"   : 1,    // DPS 2.4 | effHP 40 | harmless
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 35} ],
@@ -563,7 +563,7 @@
         "tier": 2,
         "audio"            : "critter",
         "name"          : "Barbed Quillback",
-        "flavor": "A shuffling pincushion; patient grazers learn to leave its bristled back well alone.",
+        "flavor": "A shuffling fortress of quills that only the reckless grapple; the wise go for the soft underside. Its spines are worth the harvesting, once you find the way past them.",
         "threatLevel"   : 3,    // DPS 3.4 | effHP 96 | tank
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 153} ],
@@ -593,7 +593,7 @@
         "tier": 2,
         "audio"            : "canine",
         "name"          : "Grey Worg",
-        "flavor": "Bigger and blacker than any true wolf, and it hunts men by preference, not hunger.",
+        "flavor": "Blacker and broader than any honest wolf, it hunts men from choice rather than hunger — and hunts them well by dark. The pelt is fine and deep, reason enough to hunt it back.",
         "threatLevel"   : 3,    // DPS 6.6 | effHP 68 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 114} ],
@@ -624,7 +624,7 @@
         "tier": 2,
         "audio"            : "canine",
         "name"          : "Golden Jackal",
-        "flavor": "It laughs in the dark and takes what braver hunters have already killed.",
+        "flavor": "It yips in the dark and grows brave in numbers, snatching what stronger killers leave. Quick and slight; little danger, and little reward beyond a thin hide.",
         "threatLevel"   : 2,    // DPS 5.3 | effHP 35 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 251} ],
@@ -655,7 +655,7 @@
         "tier": 2,
         "audio"            : "beast",
         "name"          : "Tawny Owlbear",
-        "flavor": "The temper of a bear behind the fixed, staring hate of an owl — a thing that should not be, and is.",
+        "flavor": "A thing that should not be — a bear's fury behind an owl's flat, staring hate — and it charges on sight. Its coarse hide and cruel beak fetch a grim price, and the maddest few even try to raise one.",
         "threatLevel"   : 11,    // DPS 18.0 | effHP 217 | bruiser
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 168} ],
@@ -689,7 +689,7 @@
         "tier": 2,
         "audio"            : "beast",
         "name"          : "Sabretooth Cat",
-        "flavor": "Long fangs made for one deep, killing bite; it wastes no second lunge.",
+        "flavor": "A great cat built around a single killing bite; it commits to one lunge and rarely needs a second. Fast and sharp-eyed, hard to catch flat-footed — but the striped hide is a trophy worth the risk.",
         "threatLevel"   : 7,    // DPS 16.1 | effHP 96 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 130} ],
@@ -720,7 +720,7 @@
         "tier": 2,
         "audio"            : "reptile",
         "name"          : "Bog Lurker",
-        "flavor": "A drifting log until the water breaks — then a hundredweight of jaw takes you under.",
+        "flavor": "A drifting log in the reeds until the water erupts and the jaws close; its plated back turns steel, its belly far less so. Sluggish in the cold, and its thick hide makes leather worth the wading.",
         "threatLevel"   : 12,    // DPS 17.2 | effHP 238 | bruiser
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 120} ],
@@ -754,7 +754,7 @@
         "tier": 2,
         "audio"            : "reptile",
         "name"          : "Fen Adder",
-        "flavor": "A green ribbon in the reeds; the bite is small, the walk home long and cold.",
+        "flavor": "A green ribbon in the reeds whose bite is small and whose venom is not — the wound outlasts the walk home. Slight and cold-slowed; kill it for safety more than gain.",
         "threatLevel"   : 1,    // DPS 3.8 | effHP 25 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 238} ],
@@ -786,7 +786,7 @@
         "tier": 2,
         "audio"            : "insect",
         "name"          : "Fen Stirge",
-        "flavor": "A gorging thing on ragged wings that drinks its fill and drops away bloated.",
+        "flavor": "A ragged-winged bloodsucker that gorges and drops away swollen; one is a nuisance, a swarm a slow bleeding. Nothing on it worth keeping but the quiet after.",
         "threatLevel"   : 1,    // DPS 1.3 | effHP 15 | harmless
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 163} ],
@@ -814,7 +814,7 @@
         "tier": 2,
         "audio"            : "goblinoid",
         "name"          : "Bog Ooze",
-        "flavor": "A crawling knot of bog-muck and spite that keeps moving after it should be dead.",
+        "flavor": "A crawling knot of bog-rot and ill will that keeps moving well past when it ought to stop. Little to salvage from a thing made of mud — only the trouble its ending spares you.",
         "threatLevel"   : 2,    // DPS 3.8 | effHP 58 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 231} ],
@@ -842,7 +842,7 @@
         "tier": 2,
         "audio"            : "frog",
         "name"          : "Cave Salamander",
-        "flavor": "Blind and pale in the black pools, it has never once needed the sun.",
+        "flavor": "Blind and pale in the lightless pools, it has never once wanted the sun. Sluggish and harmless; the soft flesh is edible, if you can stomach a thing so wan.",
         "threatLevel"   : 2,    // DPS 2.8 | effHP 40 | harmless
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 196} ],
@@ -866,7 +866,7 @@
         "id"            : "thornwood_spider",
         "audio"            : "insect",
         "name"          : "Bramble Weaver",
-        "flavor": "It waits in the barbed dark where the web-strands are strung thick as a snare.",
+        "flavor": "It strings the barbed thickets with snare-silk and waits, hard-shelled above and venom-fanged below. The silk and the venom-glands both fetch coin from those who know their use.",
         "threatLevel"   : 3,    // DPS 7.6 | effHP 48 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 190} ],
@@ -902,7 +902,7 @@
         "tier": 2,
         "audio"            : "goblinoid",
         "name"          : "Cave Kobold",
-        "flavor": "It fights with traps and other men's blades and runs the instant the odds turn.",
+        "flavor": "A small, skulking thief that fights with trap and stolen knife and bolts the instant the odds sour. Its scavenged scraps are poor pickings — but pickings all the same.",
         "threatLevel"   : 1,    // DPS 3.1 | effHP 30 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "cultures", "id": 64} ],
@@ -933,7 +933,7 @@
         "tier": 2,
         "audio"            : "canine",
         "name"          : "Pack Gnoll",
-        "flavor": "A hyena that walks upright and hungers upward, laughing as it comes.",
+        "flavor": "A hyena that walks upright and laughs as it comes, hungry for anything weaker than itself. It swings a looted bone cleaver — crude, but yours if you leave it standing over its corpse.",
         "threatLevel"   : 5,    // DPS 12.7 | effHP 61 | glass-cannon
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "creatures", "id": 252} ],
@@ -963,7 +963,7 @@
         "id"            : "orc_reaver",
         "audio"            : "goblinoid",
         "name"          : "Orc Reaver",
-        "flavor": "Broad, brutal and unbothered by pain, it swings iron too heavy for a man to lift.",
+        "flavor": "Broad, scarred and heedless of pain, it swings iron too heavy for most men to lift — and only a strong hand turns that iron back on its kin. Kill one and the warband only grows angrier.",
         "threatLevel"   : 8,    // DPS 23.2 | effHP 91 | glass-cannon
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "cultures", "id": 32} ],
@@ -1001,7 +1001,7 @@
         "tier": 2,
         "audio"            : "raptor",
         "name"          : "Screamer",
-        "flavor": "A woman's shriek from a bird's throat, dropping talon-first out of the sun.",
+        "flavor": "A woman's shriek from a carrion-bird's throat, dropping talon-first out of the sun's glare. Cunning enough to mob a lone traveller, brittle enough to fall to one good shot.",
         "threatLevel"   : 2,    // DPS 4.7 | effHP 47 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "creatures", "id": 235} ],
@@ -1031,7 +1031,7 @@
         "tier": 2,
         "audio"            : "frog",
         "name"          : "Bog Croaker",
-        "flavor": "A frog grown to the size of a man's malice, croaking war in the reed-beds.",
+        "flavor": "Frog-folk of the reed-beds, croaking their war-songs in a chorus meant to unnerve before the spears come. Simple and swamp-bound — dangerous in a mob, wretched alone.",
         "threatLevel"   : 2,    // DPS 4.7 | effHP 49 | skirmisher
         "entityClass"   : "mob",
         "charSpans"     : [ {"sheet": "creatures", "id": 1} ],
@@ -1065,7 +1065,7 @@
         "id": "wolf_pup",
         "audio": "canine",
         "name": "Wolf Pup",
-        "flavor": "Ears too big, legs too long — all play and hunger until the pack teaches it teeth.",
+        "flavor": "All ears and clumsy paws, it tumbles after the pack with more hunger than harm. Scarce worth a blade — and its yelping tends to bring the grown ones running.",
         "threatLevel"   : 1,    // DPS 2.2 | effHP 15 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1099,7 +1099,7 @@
         "id": "scrawny_wolf",
         "audio": "canine",
         "name": "Scrawny Wolf",
-        "flavor": "Ribs showing under a dull coat; a hungry season's runt, still dangerous when cornered.",
+        "flavor": "A hard winter's runt, ribs plain under a dull coat, dangerous only when there is no room left to run. The pelt is thin, but a pelt is a pelt.",
         "threatLevel"   : 2,    // DPS 4.2 | effHP 27 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1133,7 +1133,7 @@
         "id": "grey_yearling",
         "audio": "canine",
         "name": "Grey Yearling",
-        "flavor": "Past its first winter and finding its place in the order of the hunt.",
+        "flavor": "Past its first winter and still learning its place at the kill, bold beyond its strength. It will trade blows a wiser wolf would not, and leaves a serviceable hide.",
         "threatLevel"   : 2,    // DPS 5.4 | effHP 35 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1167,7 +1167,7 @@
         "id": "timber_wolf",
         "audio": "canine",
         "name": "Timber Wolf",
-        "flavor": "Thick-coated and deep-chested, the steady killer at the heart of the pack.",
+        "flavor": "Deep-chested and thick-furred, the dependable killer at the heart of the pack. Neither swift nor armoured, but it endures — and the winter coat tans into something fine.",
         "threatLevel"   : 4,    // DPS 7.2 | effHP 72 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1201,7 +1201,7 @@
         "id": "moor_runner",
         "audio": "canine",
         "name": "Moor Runner",
-        "flavor": "Built long and light for the open moor, it runs its quarry down over the miles.",
+        "flavor": "Bred long and light for the open moor, it runs its quarry down over the miles and strikes hard when it closes — with little left to soak a blow in return.",
         "threatLevel"   : 3,    // DPS 8.1 | effHP 42 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1235,7 +1235,7 @@
         "id": "pack_alpha",
         "audio": "canine",
         "name": "Pack Alpha",
-        "flavor": "The one the others watch — first to the throat, first to the kill.",
+        "flavor": "The wolf the others give way to, first to the throat and quickest to the kill. Put it down swiftly, for it hits far harder than it can take — and its hide is the pack's finest.",
         "threatLevel"   : 8,    // DPS 21.7 | effHP 88 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1270,7 +1270,7 @@
         "id": "scarred_hunter",
         "audio": "canine",
         "name": "Scarred Hunter",
-        "flavor": "Old wounds map every fight it has walked away from.",
+        "flavor": "Old wounds map every fight it has survived, and it fights like a beast with nothing left to lose. Swift and savage, no tougher for the scars — a worthy pelt for a hard kill.",
         "threatLevel"   : 7,    // DPS 19.9 | effHP 78 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1304,7 +1304,7 @@
         "id": "dire_wolf",
         "audio": "canine",
         "name": "Dire Wolf",
-        "flavor": "A wolf out of the deep forest's memory, standing tall as a man's chest.",
+        "flavor": "A wolf out of the deep-wood's memory, tall as a man's chest and faster than its size has any right to be. It deals a great deal of hurt and takes little; the great dark pelt is prize enough.",
         "threatLevel"   : 9,    // DPS 26.1 | effHP 105 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1339,7 +1339,7 @@
         "id": "bloodmoon_alpha",
         "audio": "canine",
         "name": "Bloodmoon Alpha",
-        "flavor": "It runs hardest under a red moon, and the whole pack runs with it.",
+        "flavor": "They say it runs hardest under a red moon, and the whole pack runs mad behind it. A whirl of fang that must be dropped fast, before it opens the whole hunting party.",
         "threatLevel"   : 13,    // DPS 38.6 | effHP 136 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1374,7 +1374,7 @@
         "id": "direwolf_matriarch",
         "audio": "canine",
         "name": "Direwolf Matriarch",
-        "flavor": "Grey-muzzled and merciless, she has led the pack longer than most men live.",
+        "flavor": "Grey-muzzled and merciless, she has led the pack through more winters than most men see. Neither swift nor soft any longer — a slow, sure, hard-hided fight, and a matriarch's pelt to show for it.",
         "threatLevel"   : 14,    // DPS 37.4 | effHP 162 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1408,7 +1408,7 @@
         "id": "frost_fang",
         "audio": "canine",
         "name": "Frost-Fang",
-        "flavor": "Its breath smokes and its coat rimes white; the cold is a companion, not a foe.",
+        "flavor": "Its breath smokes and its coat rimes white; the deep cold is kin to it, and only fire tells. Quick and cutting but thin-skinned — and the frosted pelt keeps a strange chill long after.",
         "threatLevel"   : 12,    // DPS 36.2 | effHP 120 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -1444,7 +1444,7 @@
         "id": "bear_cub",
         "audio": "beast",
         "name": "Bear Cub",
-        "flavor": "Round and clumsy and curious — and never, ever far from its mother.",
+        "flavor": "Round, clumsy and endlessly curious — and never once out of its mother's reckoning. Small game at a large risk: the sow is always nearer than she looks.",
         "threatLevel"   : 2,    // DPS 3.2 | effHP 32 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1478,7 +1478,7 @@
         "id": "yearling_bear",
         "audio": "beast",
         "name": "Yearling Bear",
-        "flavor": "Newly turned out on its own and still learning what it is allowed to take.",
+        "flavor": "Newly turned out to fend for itself and still unsure what it may take. Manageable for a careful hunter, with hide and meat enough to be worth the stalk.",
         "threatLevel"   : 4,    // DPS 7.6 | effHP 78 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1512,7 +1512,7 @@
         "id": "sun_bear",
         "audio": "beast",
         "name": "Sun Bear",
-        "flavor": "Small for its kind, with a pale blaze at the throat and a taste for honey and grubs.",
+        "flavor": "Small for a bear, marked with a pale throat-blaze and a weakness for honey and grubs. The armoured back turns a spear where the soft belly will not.",
         "threatLevel"   : 5,    // DPS 9.7 | effHP 91 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1547,7 +1547,7 @@
         "id": "black_bear",
         "audio": "beast",
         "name": "Black Bear",
-        "flavor": "Shy of open ground; it would sooner climb than stand, until it cannot.",
+        "flavor": "Shy of open ground and quicker to climb than to stand — until standing is all that's left. A thick pelt and a season's meat reward the hunter who forces the matter.",
         "threatLevel"   : 8,    // DPS 13.9 | effHP 136 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1582,7 +1582,7 @@
         "id": "grizzly",
         "audio": "beast",
         "name": "Grizzly",
-        "flavor": "It fears nothing that walks and turns from nothing that charges.",
+        "flavor": "It fears nothing afoot and turns from nothing that charges; the hide sheds glancing blows, the belly does not. One brings down meat, fat and a hide worth a whole winter's warmth.",
         "threatLevel"   : 10,    // DPS 15.2 | effHP 200 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1617,7 +1617,7 @@
         "id": "cave_bear",
         "audio": "beast",
         "name": "Cave Bear",
-        "flavor": "A giant of the old caves, jaws that once cracked the bones of its own dead.",
+        "flavor": "A giant out of the deep caves, its jaws remembered in the gnawed bones of its own dead. Thickly hided and hard to fell — but a single carcass keeps a hall in meat and fur.",
         "threatLevel"   : 16,    // DPS 31.9 | effHP 242 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1652,7 +1652,7 @@
         "id": "scarred_grizzly",
         "audio": "beast",
         "name": "Scarred Grizzly",
-        "flavor": "Every winter has taken something from it and left it meaner.",
+        "flavor": "Every winter has taken something from it and given back only spite. A heavy, plodding, punishing fight — and the battered hide is all the tougher for the scars.",
         "threatLevel"   : 15,    // DPS 31.0 | effHP 210 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1687,7 +1687,7 @@
         "id": "ridgeback_bear",
         "audio": "beast",
         "name": "Ridgeback",
-        "flavor": "A ridge of stiff hair runs down a back plated thick as bark.",
+        "flavor": "A stiff ridge of hair runs down a back plated thick as old bark, and little short of a spear-thrust reaches through it. Slow to bleed and slower to fall — the hide alone is armour half-made.",
         "threatLevel"   : 11,    // DPS 16.0 | effHP 230 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1722,7 +1722,7 @@
         "id": "elder_cave_bear",
         "audio": "beast",
         "name": "Elder Cave Bear",
-        "flavor": "Ancient and enormous, it has outlived whole tribes that hunted it.",
+        "flavor": "Ancient and enormous, it has outlasted whole tribes that dared to hunt it. To fell one is a saga in itself, and its vast hide and ivory claws the proof of the telling.",
         "threatLevel"   : 24,    // DPS 50.3 | effHP 313 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1757,7 +1757,7 @@
         "id": "ironhide_bruin",
         "audio": "beast",
         "name": "Ironhide Bruin",
-        "flavor": "Its hide has turned spear and arrow so long the scars have made armour of it.",
+        "flavor": "Its hide has turned so many spears that the scars have hardened into armour of their own. Blows glance and slide; you will not out-batter it, only outlast it — and the hide is worth every hour.",
         "threatLevel"   : 19,    // DPS 33.1 | effHP 312 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1792,7 +1792,7 @@
         "id": "bloodclaw_bear",
         "audio": "beast",
         "name": "Bloodclaw",
-        "flavor": "It kills past its hunger, and the reddened claws never quite come clean.",
+        "flavor": "It kills long past its hunger, and the caked red never quite leaves its claws. Wound it and it only worsens; drop it clean, or not at all — the claws alone are a grim trophy.",
         "threatLevel"   : 19,    // DPS 40.0 | effHP 265 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1828,7 +1828,7 @@
         "id": "great_bear",
         "audio": "beast",
         "name": "Great Bear",
-        "flavor": "The bear the old songs warned of — a moving mountain of muscle and wrath.",
+        "flavor": "The bear the old songs raised to frighten children — a moving mountain of muscle and ancient wrath. What it leaves behind is more than meat and fur; such a beast carries something rarer in its bones.",
         "threatLevel"   : 33,    // DPS 64.3 | effHP 421 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 126}],
@@ -1863,7 +1863,7 @@
         "id": "piglet",
         "audio": "boar",
         "name": "Piglet",
-        "flavor": "Striped and squealing, it keeps to the sow's flank and bolts at a footfall.",
+        "flavor": "Striped and squealing, it keeps hard to the sow's flank and bolts at a footfall. Barely a meal — and the sow will make you pay for it.",
         "threatLevel"   : 1,    // DPS 2.0 | effHP 15 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -1893,7 +1893,7 @@
         "id": "scrub_boar",
         "audio": "boar",
         "name": "Scrub Boar",
-        "flavor": "Lean and low, rooting the scrub for anything a snout can turn up.",
+        "flavor": "Lean and low, forever rooting the scrub for whatever a snout turns up. Little threat unless cornered, and honest meat for the taking.",
         "threatLevel"   : 2,    // DPS 4.6 | effHP 35 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -1923,7 +1923,7 @@
         "id": "young_tusker",
         "audio": "boar",
         "name": "Young Tusker",
-        "flavor": "Its tusks are just through, and it is far too eager to use them.",
+        "flavor": "Its tusks are freshly through and it is far too eager to try them. More bluster than danger yet — a clean kill and a modest hide.",
         "threatLevel"   : 2,    // DPS 5.8 | effHP 44 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -1953,7 +1953,7 @@
         "id": "razorback",
         "audio": "boar",
         "name": "Razorback",
-        "flavor": "A ridge of bristle stands along its spine when the temper rises — and it rises easily.",
+        "flavor": "A ridge of bristle stands along its spine when the temper rises, and it rises at nothing. It comes fast when it comes; the hide is coarse but stubborn, worth the curing.",
         "threatLevel"   : 4,    // DPS 9.2 | effHP 56 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -1983,7 +1983,7 @@
         "id": "bristleback",
         "audio": "boar",
         "name": "Bristleback",
-        "flavor": "Broad and heavy through the shoulder, armoured in matted hide and gristle.",
+        "flavor": "Broad through the shoulder and matted in hide and gristle thick enough to blunt a spear. It soaks more than it deals, and gives back good leather for the effort.",
         "threatLevel"   : 4,    // DPS 7.2 | effHP 88 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2013,7 +2013,7 @@
         "id": "elder_tusker",
         "audio": "boar",
         "name": "Elder Tusker",
-        "flavor": "Old and solitary and past all patience, its tusks worn to yellow scythes.",
+        "flavor": "Old, solitary and long past patience, its tusks worn to yellow scythes. A stubborn kill — but the ivory and the heavy hide reward a hunter who stands their ground.",
         "threatLevel"   : 7,    // DPS 17.6 | effHP 101 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2043,7 +2043,7 @@
         "id": "irontusk",
         "audio": "boar",
         "name": "Irontusk",
-        "flavor": "Tusks like ploughshares, and a hide that has stopped answering to fear.",
+        "flavor": "Tusks like ploughshares and a hide that stopped answering to fear seasons ago. Hard to wound and harder to turn, but there is fine ivory in that ugly head.",
         "threatLevel"   : 8,    // DPS 18.1 | effHP 105 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2073,7 +2073,7 @@
         "id": "grey_sow",
         "audio": "boar",
         "name": "Grey Sow-Mother",
-        "flavor": "She herds a squealing brood, and there is nothing in the wood she will not gore for it.",
+        "flavor": "She herds a squealing brood, and there is nothing in the wood she will not gore to keep it. Slow to fell and quick to anger — a thick hide and a great deal of meat for the patient.",
         "threatLevel"   : 6,    // DPS 9.7 | effHP 113 | tank
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2103,7 +2103,7 @@
         "id": "direboar",
         "audio": "boar",
         "name": "Direboar",
-        "flavor": "A boar the size of a bullock, and it charges the way an avalanche falls.",
+        "flavor": "A boar the size of a bullock that charges the way an avalanche falls, trampling what its tusks miss. It costs blood to bring down and repays it in ivory, hide and meat.",
         "threatLevel"   : 12,    // DPS 28.9 | effHP 152 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2133,7 +2133,7 @@
         "id": "blackmane_tusker",
         "audio": "boar",
         "name": "Blackmane Tusker",
-        "flavor": "A black crest bristling to the shoulder; fast for its bulk and quicker to anger.",
+        "flavor": "A black crest bristling to the shoulder, fast for its bulk and faster still to rage. It hits like a landslide but bleeds freely — end it quickly, and the great tusks are yours.",
         "threatLevel"   : 11,    // DPS 28.5 | effHP 135 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2163,7 +2163,7 @@
         "id": "bog_colossus",
         "audio": "boar",
         "name": "Bog Colossus",
-        "flavor": "It wallows in the deep mire, plated in dried mud, huge and slow and unstoppable.",
+        "flavor": "It wallows the deep mire caked in dried mud thick as a shield, huge and slow and hard to stop. Wading it down is grim work, rewarded with hide and tusk enough to justify it.",
         "threatLevel"   : 12,    // DPS 23.2 | effHP 190 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2193,7 +2193,7 @@
         "id": "great_boar",
         "audio": "boar",
         "name": "Great Boar",
-        "flavor": "The tusker of nightmare and boast, that levels saplings where it turns.",
+        "flavor": "The tusker of hunters' boasts and hunters' nightmares, that fells saplings where it merely turns. Few beasts yield so grand a trophy — to the fewer still standing when it falls.",
         "threatLevel"   : 18,    // DPS 37.7 | effHP 241 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 248}],
@@ -2223,7 +2223,7 @@
         "id": "goblin_sneak",
         "audio": "goblinoid",
         "name": "Goblin Sneak",
-        "flavor": "It would rather stab a back than face a front, and usually gets the chance.",
+        "flavor": "It would sooner sink a blade in a back than face a front, and usually contrives to. Its scavenged gear is mean and poison-smeared, but it comes free with the corpse.",
         "threatLevel"   : 1,    // DPS 3.9 | effHP 25 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2257,7 +2257,7 @@
         "id": "goblin_whelp",
         "audio": "goblinoid",
         "name": "Goblin Whelp",
-        "flavor": "Barely weaned off carrion, throwing itself into the fray to prove its teeth.",
+        "flavor": "Barely off the carrion pile, it flings itself into the fray to prove teeth it hasn't grown. Poor pickings and poorer sport — but they never come one at a time.",
         "threatLevel"   : 1,    // DPS 2.8 | effHP 25 | harmless
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2291,7 +2291,7 @@
         "id": "cave_goblin",
         "audio": "goblinoid",
         "name": "Cave Goblin",
-        "flavor": "Pale and wide-eyed from a life underground, it flinches from daylight and little else.",
+        "flavor": "Pale and saucer-eyed from a life under stone, it flinches at daylight and little else. Quick on its feet in the dark; the scraps it carries are barely worth the chase.",
         "threatLevel"   : 2,    // DPS 3.9 | effHP 30 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2326,7 +2326,7 @@
         "id": "goblin_cutter",
         "audio": "goblinoid",
         "name": "Goblin Cutter",
-        "flavor": "It has learned which way a knife goes in and takes an ugly joy in the lesson.",
+        "flavor": "It has learned exactly which way a knife goes in and takes an ugly pride in the knowing. A steadier hand than most of its kin — and a nastier little blade to strip from it.",
         "threatLevel"   : 2,    // DPS 5.2 | effHP 35 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2361,7 +2361,7 @@
         "id": "goblin_netter",
         "audio": "goblinoid",
         "name": "Goblin Netter",
-        "flavor": "It fights with weighted net and hooked stick, and prefers its prey tangled.",
+        "flavor": "It fights with weighted net and hooked stick and likes its prey tangled before it strikes. Ungovernable in a pack; the net alone is a curiosity worth lifting.",
         "threatLevel"   : 2,    // DPS 5.3 | effHP 35 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2396,7 +2396,7 @@
         "id": "goblin_bloodrager",
         "audio": "goblinoid",
         "name": "Goblin Bloodrager",
-        "flavor": "Work it into a froth and it forgets to be a coward.",
+        "flavor": "Work it into a froth and it forgets, for a while, that it is a coward. Frenzy makes it brave, not strong — cut it down before the froth peaks.",
         "threatLevel"   : 3,    // DPS 7.8 | effHP 45 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2431,7 +2431,7 @@
         "id": "goblin_slinker",
         "audio": "goblinoid",
         "name": "Goblin Slinker",
-        "flavor": "Quick, low and greasy, gone before the blade falls where it stood.",
+        "flavor": "Quick, low and greased with river-mud, gone from where the blade falls before it lands. It stings and slips away; corner it, for it cannot take what it dishes out.",
         "threatLevel"   : 3,    // DPS 7.7 | effHP 35 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2466,7 +2466,7 @@
         "id": "goblin_boss",
         "audio": "goblinoid",
         "name": "Goblin Boss",
-        "flavor": "It rules a warren by being meaner than the next goblin, and no more.",
+        "flavor": "It rules its warren by being meaner than the next goblin, and no cleverer. Kill it and the warren squabbles — and its hoarded gear falls to the victor.",
         "threatLevel"   : 3,    // DPS 8.3 | effHP 50 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2501,7 +2501,7 @@
         "id": "goblin_warchief",
         "audio": "goblinoid",
         "name": "Goblin Warchief",
-        "flavor": "It has clawed to the top of the heap and dares the pack to try its luck.",
+        "flavor": "It clawed to the top of the heap and dares the pack to test the claim. Sharper and deadlier than the rabble it drives, with the best of their scavenged iron on its own belt.",
         "threatLevel"   : 4,    // DPS 10.2 | effHP 60 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2536,7 +2536,7 @@
         "id": "hobgoblin_champion",
         "audio": "goblinoid",
         "name": "Hobgoblin Champion",
-        "flavor": "Bigger and better-drilled than the rabble it leads, and it knows it.",
+        "flavor": "Taller and better-drilled than the rabble it leads, and insufferably aware of it. It fights with a discipline the others lack — and carries gear actually worth the taking.",
         "threatLevel"   : 5,    // DPS 11.2 | effHP 95 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2572,7 +2572,7 @@
         "id": "goblin_firecaller",
         "audio": "goblinoid",
         "name": "Goblin Firecaller",
-        "flavor": "It hoards fire-pots and burning tricks, cackling at every flame it sets.",
+        "flavor": "It hoards fire-pots and burning tricks and cackles at every flame it sets. Deadly at a distance and useless up close — close the gap fast, before the whole warren is alight.",
         "threatLevel"   : 3,    // DPS 8.7 | effHP 45 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2607,7 +2607,7 @@
         "id": "goblin_warlord",
         "audio": "goblinoid",
         "name": "Goblin Warlord",
-        "flavor": "Cunning enough to bind a hundred squabbling goblins to one purpose — usually a raid.",
+        "flavor": "Cunning enough to bind a hundred squabbling goblins to a single purpose, usually your undoing. The best gear of the whole warband hangs off its frame, and it did not gather that by being weak.",
         "threatLevel"   : 8,    // DPS 20.0 | effHP 98 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 49}],
@@ -2643,7 +2643,7 @@
         "id": "orc_whelp",
         "audio": "goblinoid",
         "name": "Orc Whelp",
-        "flavor": "Young and untried, all snarl and no scars, hungry to earn the second.",
+        "flavor": "Young and untried, all snarl and no scars, hungry to earn its first. Strong for its age already; the crude iron it carries wants a strong arm to swing in turn.",
         "threatLevel"   : 5,    // DPS 17.8 | effHP 55 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2678,7 +2678,7 @@
         "id": "orc_grunt",
         "audio": "goblinoid",
         "name": "Orc Grunt",
-        "flavor": "The bulk of any warband — strong, blunt and utterly without doubt.",
+        "flavor": "The plain bulk of any warband — strong, blunt and wholly without doubt. Its heavy iron is honest loot, though only a stout arm turns it to use.",
         "threatLevel"   : 6,    // DPS 20.9 | effHP 66 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2713,7 +2713,7 @@
         "id": "orc_scavenger",
         "audio": "goblinoid",
         "name": "Orc Scavenger",
-        "flavor": "It picks the field after the fighting for anything an iron-shod boot has left.",
+        "flavor": "It picks the field after the fighting for whatever an iron boot has left behind. Weaker than its kin and more poorly armed, but a corpse that hides fewer surprises.",
         "threatLevel"   : 3,    // DPS 6.7 | effHP 58 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2748,7 +2748,7 @@
         "id": "orc_marauder",
         "audio": "goblinoid",
         "name": "Orc Marauder",
-        "flavor": "It raids for the joy of it, and counts a burned steading a good day.",
+        "flavor": "It raids for the sheer joy of it and counts a burned steading a fine day's work. Strong and mean, with weighty iron worth taking — if you have the shoulders to lift it.",
         "threatLevel"   : 8,    // DPS 26.5 | effHP 84 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2783,7 +2783,7 @@
         "id": "orc_berserker",
         "audio": "goblinoid",
         "name": "Orc Berserker",
-        "flavor": "It works itself past pain and past sense and comes on regardless.",
+        "flavor": "It works itself past pain and past sense and comes on regardless of its wounds. Frenzy makes it relentless, not durable — weather the storm and it falls like any other.",
         "threatLevel"   : 9,    // DPS 31.9 | effHP 78 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2819,7 +2819,7 @@
         "id": "orc_veteran",
         "audio": "goblinoid",
         "name": "Orc Veteran",
-        "flavor": "Notched blade, notched tusks — it has buried better fighters than you.",
+        "flavor": "Notched blade, notched tusks — it has buried better fighters than the one before it now. Its gear is well-used and well-kept, a proper prize for a proper fight.",
         "threatLevel"   : 13,    // DPS 48.1 | effHP 104 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2855,7 +2855,7 @@
         "id": "orc_ironhide",
         "audio": "goblinoid",
         "name": "Orc Ironhide",
-        "flavor": "Hide toughened to a boiled-leather thickness that shrugs off the first blow, and the second.",
+        "flavor": "Hide boiled to a leather thickness that shrugs the first blow and the second alike. A grinding kill — but that same hide, and its heavy iron, are worth the grind.",
         "threatLevel"   : 12,    // DPS 39.9 | effHP 117 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2891,7 +2891,7 @@
         "id": "orc_slayer",
         "audio": "goblinoid",
         "name": "Orc Slayer",
-        "flavor": "It fights in a whirl of iron, meaning to be surrounded.",
+        "flavor": "It fights in a whirl of iron and means to be surrounded, the better to reach everyone at once. Keep it single and keep it moving; its blades are a fine prize once it stills.",
         "threatLevel"   : 14,    // DPS 57.3 | effHP 98 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2927,7 +2927,7 @@
         "id": "orc_warlord",
         "audio": "goblinoid",
         "name": "Orc Warlord",
-        "flavor": "It leads from the front of the charge because nothing has yet stopped it there.",
+        "flavor": "It leads from the front of every charge because nothing has yet stopped it there. Cut down, it leaves fine war-gear — and a leaderless host suddenly unsure of itself.",
         "threatLevel"   : 16,    // DPS 59.4 | effHP 126 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2963,7 +2963,7 @@
         "id": "orc_blackguard",
         "audio": "goblinoid",
         "name": "Orc Blackguard",
-        "flavor": "Sworn to its warboss and to the killing, in that order.",
+        "flavor": "Sworn to its warboss and to the killing, in that order and no other. Disciplined, well-armed, and worth the danger of stripping once it is down.",
         "threatLevel"   : 15,    // DPS 60.3 | effHP 115 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -2999,7 +2999,7 @@
         "id": "orc_chosen",
         "audio": "goblinoid",
         "name": "Orc Chosen",
-        "flavor": "Marked out by scar and rite as the one the tribe throws at its worst problems.",
+        "flavor": "Marked by scar and rite as the one the tribe throws at its worst problems. Thick-hided and heavily geared — bringing one down cracks open the warlord's own hoard.",
         "threatLevel"   : 19,    // DPS 76.5 | effHP 133 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -3035,7 +3035,7 @@
         "id": "orc_warboss",
         "audio": "goblinoid",
         "name": "Orc Warboss",
-        "flavor": "It holds the warband by the throat of its own strength, and points that strength at you.",
+        "flavor": "It holds the whole warband by the throat of its own strength and points that strength wherever it pleases. The finest iron of the host is its own, and only the strongest hand will ever swing it back.",
         "threatLevel"   : 29,    // DPS 132.9 | effHP 165 | bruiser
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 32}],
@@ -3071,7 +3071,7 @@
         "id": "spiderling",
         "audio": "insect",
         "name": "Spiderling",
-        "flavor": "A scatter of them across the web, each no bigger than a thumbnail and just as sharp.",
+        "flavor": "A scatter of them across the web, each no larger than a thumbnail and just as sharp. Singly nothing; by the dozen, a creeping tide of little fangs.",
         "threatLevel"   : 1,    // DPS 2.0 | effHP 8 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3104,7 +3104,7 @@
         "id": "web_scuttler",
         "audio": "insect",
         "name": "Web-Scuttler",
-        "flavor": "It races the strands to whatever has blundered in, quicker than a falling stone.",
+        "flavor": "It races the strands to whatever has blundered in, quicker than a dropped stone. Small and swift — a nip, not a wound — and a thread of usable silk.",
         "threatLevel"   : 1,    // DPS 4.3 | effHP 20 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3137,7 +3137,7 @@
         "id": "thorn_hatchling",
         "audio": "insect",
         "name": "Thorn Hatchling",
-        "flavor": "Small and venom-quick, its bite runs colder than its size should allow.",
+        "flavor": "Small and venom-quick, its bite running colder than a thing that size has any right to. Brittle enough to crush underfoot, if you reach it before the fangs reach you.",
         "threatLevel"   : 2,    // DPS 6.4 | effHP 27 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3170,7 +3170,7 @@
         "id": "ambush_weaver",
         "audio": "insect",
         "name": "Ambush Weaver",
-        "flavor": "It strings a trip-line snare and waits, still as bark, for the thread to twitch.",
+        "flavor": "It strings a trip-line snare and holds still as bark until the thread twitches. Armoured above and venomed below; the silk it spins is worth more than the fight.",
         "threatLevel"   : 2,    // DPS 6.4 | effHP 37 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3204,7 +3204,7 @@
         "id": "bristle_spider",
         "audio": "insect",
         "name": "Bristle Spider",
-        "flavor": "Stiff hairs bristle from a swollen body; it stands its ground where lesser kin flee.",
+        "flavor": "Stiff hairs bristle from a swollen body, and it holds its ground where lesser kin bolt. Hard-shelled and stubborn — its venom-glands fetch a fair price from those who dare draw them.",
         "threatLevel"   : 3,    // DPS 8.7 | effHP 52 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3238,7 +3238,7 @@
         "id": "broodmother",
         "audio": "insect",
         "name": "Broodmother",
-        "flavor": "She guards a bulging egg-sac and answers any shadow with fang and web.",
+        "flavor": "She squats over a bulging egg-sac and answers every shadow with fang and flung silk. A heavier kill than her brood, and a richer one — silk, venom and all.",
         "threatLevel"   : 4,    // DPS 7.8 | effHP 84 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3272,7 +3272,7 @@
         "id": "venomfang_stalker",
         "audio": "insect",
         "name": "Venomfang Stalker",
-        "flavor": "It does not spin — it hunts, and its bite is a great deal worse than a snare.",
+        "flavor": "It does not spin — it hunts, and its bite is a great deal worse than any snare. Swift, deadly and thin-shelled; strike first, or the venom strikes for it.",
         "threatLevel"   : 5,    // DPS 17.7 | effHP 48 | glass-cannon
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3306,7 +3306,7 @@
         "id": "carapace_lurker",
         "audio": "insect",
         "name": "Carapace Lurker",
-        "flavor": "Plated dark and low, it lets blows glance off and closes at its own pace.",
+        "flavor": "Plated dark and low to the ground, it lets blows glance off and closes at its own unhurried pace. A patient, grinding kill — and a carapace worth the salvaging.",
         "threatLevel"   : 5,    // DPS 9.6 | effHP 81 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3340,7 +3340,7 @@
         "id": "great_weaver",
         "audio": "insect",
         "name": "Great Weaver",
-        "flavor": "It has strung a whole hollow in silk and killed everything else that lived there.",
+        "flavor": "It has webbed a whole hollow in silk and killed everything else that ever lived there. A formidable thing, but its lair hangs heavy with silk, and its glands heavier still with venom.",
         "threatLevel"   : 8,    // DPS 16.7 | effHP 119 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3374,7 +3374,7 @@
         "id": "dread_broodmother",
         "audio": "insect",
         "name": "Dread Broodmother",
-        "flavor": "Ancient and swollen, she has seeded the wood with a hundred hungry broods.",
+        "flavor": "Ancient and swollen, she has seeded the wood with a hundred hungry broods. End her and you end them all — and lay claim to silk no ordinary weaver spins.",
         "threatLevel"   : 9,    // DPS 16.4 | effHP 144 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3408,7 +3408,7 @@
         "id": "chitin_horror",
         "audio": "insect",
         "name": "Chitin Horror",
-        "flavor": "So thickly armoured it barely resembles a spider — more a walking shield with fangs.",
+        "flavor": "So thickly armoured it scarcely reads as a spider — more a walking shield that happens to have fangs. Little will pierce it; only patience and a heavy arm bring the chitin down.",
         "threatLevel"   : 8,    // DPS 13.5 | effHP 145 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3442,7 +3442,7 @@
         "id": "spider_queen",
         "audio": "insect",
         "name": "Spider Queen",
-        "flavor": "The heart of the web-choked dark, and everything that skitters answers to her.",
+        "flavor": "The heart of the web-choked dark, to whom everything that skitters answers. What can be drawn from such a matriarch is no common venom — and few hollows are darker or deadlier to enter.",
         "threatLevel"   : 14,    // DPS 26.4 | effHP 220 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 190}],
@@ -3481,7 +3481,7 @@
         "id": "dire_rat",
         "audio": "rustle",
         "name": "Dire Rat",
-        "flavor": "Grown to the size of a dog on rich filth, and long past bolting from a stick.",
+        "flavor": "Grown to the size of a hound on rich filth, and long past bolting from a raised stick. More nuisance than menace, but a nuisance with teeth — and a hide not quite worthless.",
         "threatLevel"   : 3,    // DPS 7.6 | effHP 48 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 205}],
@@ -3509,7 +3509,7 @@
         "id": "greater_wraith",
         "audio": "wraith",
         "name": "Greater Wraith",
-        "flavor": "The cold of it reaches ahead into the room; where it lingers, nothing living stays.",
+        "flavor": "An older, colder hunger than the common wraith; the chill of it fills a room before it does. Steel slides through it, flame makes it recoil — and it leaves not even a bone behind.",
         "threatLevel"   : 8,    // DPS 24.2 | effHP 85 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "creatures", "id": 173}],
@@ -3542,7 +3542,7 @@
         "id": "fawn",
         "audio": "grunt",
         "name": "Fawn",
-        "flavor": "Dapple-coated and wobble-legged, it freezes where its mother left it and hopes.",
+        "flavor": "Dapple-coated and wobble-legged, it freezes where its mother left it and trusts to stillness. A small, sad kill — and the doe is rarely far.",
         "threatLevel"   : 1,    // DPS 0.8 | effHP 11 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 66}],
@@ -3571,7 +3571,7 @@
         "id": "rabbit_kit",
         "audio": "critter",
         "name": "Rabbit Kit",
-        "flavor": "Blind-new and no bigger than a fist, it barely knows to be afraid yet.",
+        "flavor": "Blind-new and no bigger than a fist, it scarcely knows yet to be afraid. Hardly worth the effort, save to a truly empty pot.",
         "threatLevel"   : 1,    // DPS 0.2 | effHP 4 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 76}],
@@ -3599,7 +3599,7 @@
         "id": "great_elk",
         "audio": "grunt",
         "name": "Great Elk",
-        "flavor": "A stag out of legend, its antlers spanning wider than a man stands tall.",
+        "flavor": "A stag out of the old ballads, its antler-spread wider than a tall man stands. It would flee if it could and gore you through if it cannot; the crowned skull alone is a hall-worthy trophy.",
         "threatLevel"   : 9,    // DPS 17.0 | effHP 159 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 78}],
@@ -3631,7 +3631,7 @@
         "id": "goat_kid",
         "audio": "goat",
         "name": "Goat Kid",
-        "flavor": "It skitters the ledges after its dam, sure-footed before it is sure of anything else.",
+        "flavor": "It skitters the high ledges after its dam, sure-footed before it is sure of anything. Easily kept for the milk to come — if you can lay hands on it at all.",
         "threatLevel"   : 1,    // DPS 0.6 | effHP 9 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 74}],
@@ -3664,7 +3664,7 @@
         "id": "chick",
         "audio": "fowl",
         "name": "Chick",
-        "flavor": "A ball of down on toothpick legs, peeping after whatever moves.",
+        "flavor": "A ball of down on toothpick legs, peeping after whatever moves. No threat, no lore — only a bird in the making, and an egg-layer if it lives.",
         "threatLevel"   : 1,    // DPS 0.1 | effHP 3 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 75}],
@@ -3696,7 +3696,7 @@
         "id": "elder_aurochs",
         "audio": "beast",
         "name": "Elder Aurochs",
-        "flavor": "Grey about the muzzle and vast through the shoulder, the herd-bull no wolf tests twice.",
+        "flavor": "Grey about the muzzle and vast through the shoulder, the herd-bull no wolf tests twice. It suffers no challenge lightly — but one carcass feeds a camp, and one gentled ox works a season.",
         "threatLevel"   : 23,    // DPS 30.9 | effHP 484 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 156}],
@@ -3729,7 +3729,7 @@
         "id": "bull_mammoth",
         "audio": "beast",
         "name": "Bull Mammoth",
-        "flavor": "The great tusker of the herd, so huge the plain seems to tilt as it turns.",
+        "flavor": "The great tusker of the herd, so vast the plain seems to tilt as it wheels; frost is nothing to it, and little else is much more. Fell one and there is ivory, hide and meat for a holdfast — should a warband survive the felling.",
         "threatLevel"   : 58,    // DPS 50.4 | effHP 1535 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 158}],
@@ -3762,7 +3762,7 @@
         "id": "royal_hippogriff",
         "audio": "raptor",
         "name": "Royal Hippogriff",
-        "flavor": "A prince of the crag-winds, plumage bright, its stoop swift as a loosed arrow.",
+        "flavor": "A prince of the crag-winds in bright plumage, its stoop swift as a loosed arrow and its temper princely too. Coveted alive by those who would ride the sky, dead for feathers finer than any common bird's.",
         "threatLevel"   : 11,    // DPS 21.1 | effHP 183 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 22}],
@@ -3797,7 +3797,7 @@
         "id": "hoarfowl_chick",
         "audio": "fowl",
         "name": "Hoarfowl Chick",
-        "flavor": "A puff of frost-white down that hasn't yet learned the cold is meant to be feared.",
+        "flavor": "A puff of frost-white down that hasn't yet learned to fear the cold it was born to. Harmless and slight — an egg-layer in time, if a fox doesn't find it first.",
         "threatLevel"   : 1,    // DPS 0.7 | effHP 12 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 35}],
@@ -3827,7 +3827,7 @@
         "id": "elder_quillback",
         "audio": "critter",
         "name": "Elder Quillback",
-        "flavor": "Grown huge and slow behind a fortress of quills nothing cares to test.",
+        "flavor": "Grown huge and slow behind a fortress of quills that nothing sensible cares to test. A long, patient kill by way of the soft underside — and a harvest of spines for the trouble.",
         "threatLevel"   : 7,    // DPS 6.8 | effHP 252 | tank
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 153}],
@@ -3856,7 +3856,7 @@
         "id": "alpha_worg",
         "audio": "canine",
         "name": "Alpha Worg",
-        "flavor": "The one the worg-pack circles, blacker and crueller than any of them.",
+        "flavor": "The worg the others circle, blacker and crueller than any of them, and it hunts men for the pleasure of it. Bring it down and the pack scatters — and its dark pelt is the finest of the lot.",
         "threatLevel"   : 7,    // DPS 14.4 | effHP 126 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 114}],
@@ -3888,7 +3888,7 @@
         "id": "jackal_pup",
         "audio": "canine",
         "name": "Jackal Pup",
-        "flavor": "Yipping and underfoot, it learns to scavenge long before it learns to hunt.",
+        "flavor": "Yipping and underfoot, it learns to scavenge long before it learns to hunt. Little danger and less reward, save one fewer mouth in the pack.",
         "threatLevel"   : 1,    // DPS 1.7 | effHP 16 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 251}],
@@ -3920,7 +3920,7 @@
         "id": "elder_owlbear",
         "audio": "beast",
         "name": "Elder Owlbear",
-        "flavor": "Grizzled and enormous, its hate has had a lifetime to deepen.",
+        "flavor": "Grizzled and enormous, its unnatural hate given a lifetime to deepen. A brutal, heavy fight — but the great beak and coarse hide make a rare and grisly prize.",
         "threatLevel"   : 22,    // DPS 33.2 | effHP 400 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 168}],
@@ -3954,7 +3954,7 @@
         "id": "dire_sabretooth",
         "audio": "beast",
         "name": "Dire Sabretooth",
-        "flavor": "A great cat the size of a horse, its fangs the length of a forearm.",
+        "flavor": "A great cat the size of a warhorse, its fangs the length of a man's forearm and its lunge a killing thing in itself. Fast, fanged and hard to weather — and its striped hide a trophy few can boast.",
         "threatLevel"   : 15,    // DPS 35.9 | effHP 181 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 130}],
@@ -3986,7 +3986,7 @@
         "id": "elder_crocodile",
         "audio": "reptile",
         "name": "Elder Crocodile",
-        "flavor": "Moss-backed and log-still, it has taken game from this bank longer than the village has stood.",
+        "flavor": "Moss-backed and log-still, it has taken game from this bank longer than the village has stood. Its plated hide turns near everything but a thrust to the soft belly, and makes leather worth the wading.",
         "threatLevel"   : 24,    // DPS 31.7 | effHP 483 | bruiser
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 120}],
@@ -4019,7 +4019,7 @@
         "id": "giant_viper",
         "audio": "reptile",
         "name": "Giant Viper",
-        "flavor": "Thick as a man's arm and swift as a whip; there is no walking off this one's bite.",
+        "flavor": "Thick as a strong man's arm and swift as a cracked whip; there is no simply walking off this one's venom. Cold-blooded and sluggish in the chill — the safest hour to take its prized skin.",
         "threatLevel"   : 4,    // DPS 9.6 | effHP 56 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 238}],
@@ -4051,7 +4051,7 @@
         "id": "stirgeling",
         "audio": "insect",
         "name": "Stirgeling",
-        "flavor": "A newly-fledged blood-drinker, all appetite and no weight, easily swatted.",
+        "flavor": "A newly-fledged blood-drinker, all appetite and no weight, swatted from the air with a stick. A pest and no more; the only gain in its dying is one less bite in the night.",
         "threatLevel"   : 1,    // DPS 0.4 | effHP 6 | harmless
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 163}],
@@ -4081,7 +4081,7 @@
         "id": "grime_horror",
         "audio": "goblinoid",
         "name": "Grime Horror",
-        "flavor": "A wallowing mound of bog-rot and malice that closes its wounds as fast as they open.",
+        "flavor": "A wallowing mound of bog-rot and malice that seals its own wounds as fast as they open. Patience beats it where blades will not — and there is little to take but the peace of its passing.",
         "threatLevel"   : 5,    // DPS 7.4 | effHP 120 | tank
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 231}],
@@ -4110,7 +4110,7 @@
         "id": "elder_olm",
         "audio": "frog",
         "name": "Elder Olm",
-        "flavor": "Old past guessing in the lightless pools, pale as a drowned thing.",
+        "flavor": "Old past guessing in the lightless pools, pale as a drowned thing and just as blind. Slow and no great danger; the cold flesh feeds those unbothered by how it looks.",
         "threatLevel"   : 3,    // DPS 5.7 | effHP 72 | skirmisher
         "entityClass": "animal",
         "charSpans": [{"sheet": "creatures", "id": 196}],
@@ -4137,7 +4137,7 @@
         "id": "kobold_trapper",
         "audio": "goblinoid",
         "name": "Kobold Trapper",
-        "flavor": "It seeds the ground with snares and deadfalls and lets the trap do the killing.",
+        "flavor": "It seeds the ground with snares and deadfalls and lets the trap do its killing for it. Watch your footing more than its blade; the scraps it hoards are humble, but yours once it's dead.",
         "threatLevel"   : 2,    // DPS 5.4 | effHP 44 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "cultures", "id": 64}],
@@ -4169,7 +4169,7 @@
         "id": "gnoll_reaver",
         "audio": "canine",
         "name": "Gnoll Reaver",
-        "flavor": "Bigger, bloodier and hungrier than the pack it runs at the head of.",
+        "flavor": "Bigger, bloodier and hungrier than the pack it runs at the head of, and laughing all the while. Its looted cleaver is heavy and cruel — a fitting reward for a hard fight.",
         "threatLevel"   : 8,    // DPS 21.4 | effHP 100 | glass-cannon
         "entityClass": "mob",
         "charSpans": [{"sheet": "creatures", "id": 252}],
@@ -4201,7 +4201,7 @@
         "id": "harpy_matron",
         "audio": "raptor",
         "name": "Harpy Matron",
-        "flavor": "She leads the roost's stooping, shrieking mob and screams loudest of them all.",
+        "flavor": "She leads the roost's stooping, shrieking mob and screams the loudest of them all. Kill her and the flock loses its nerve — and her plumage is a strange, coveted prize.",
         "threatLevel"   : 5,    // DPS 9.9 | effHP 80 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "creatures", "id": 235}],
@@ -4232,7 +4232,7 @@
         "id": "bullywug_brute",
         "audio": "frog",
         "name": "Bullywug Brute",
-        "flavor": "Bloated and broad, it throngs the reeds bellowing war in a chorus of croaks.",
+        "flavor": "Bloated and broad, it throngs the reeds bellowing war in a chorus of croaks. Simple and swamp-bound, but heavy enough that a mob of them is no laughing matter.",
         "threatLevel"   : 4,    // DPS 8.4 | effHP 81 | skirmisher
         "entityClass": "mob",
         "charSpans": [{"sheet": "creatures", "id": 1}],
@@ -4258,5 +4258,121 @@
         "tier": 3,
         "variantOf": "bullywug",
         "limbMap": "amphibian"
+    },
+    // ── KINGDOMS-TRADE visiting parties ─────────────────────────────────────
+    // Kingdom folk arrive only as spawned parties (KingdomService) — empty biomeWeights keeps them
+    // out of the ambient spawner. entityClass "animal" + neutral/passive so nothing auto-engages;
+    // they carry `kingdomId`/`partyId` on the Mob, and harming them sours kingdom relations.
+    // charSpans reuse existing humanoid glyphs for now (placeholder art — retint via fg).
+    {
+        "id"            : "kingdom_trader",
+        "name"          : "Trader",
+        "flavor": "Road-dust on fine cloth and a ledger where a sword would hang. Every price in the county lives behind those eyes.",
+        "threatLevel"   : 2,    // DPS 2.1 | effHP 45 | harmless
+        "entityClass"   : "animal",
+        "charSpans"     : [ {"sheet": "cultures", "id": 49} ],
+        "fg"            : [0.88, 0.72, 0.32],
+        "bg"            : [0.0, 0.0, 0.0],
+        "statRanges"    : {"str": [12, 16], "dex": [9, 12], "con": [8, 11], "per": [11, 14]},
+        "behaviour"     : "neutral",
+        "diet"          : "none",
+        "eats"          : [],
+        "grazes"        : false,
+        "predator"      : false,
+        "intelligence"  : "primitive",
+        "nocturnalAggro": false,
+        "pack"          : [1, 1],
+        "tameable"      : false,
+        "huntable"      : false,
+        "territorial"   : false,
+        "biomeWeights"  : {},
+        "naturalWeapons": ["fists", "kick"],
+        "species"        : "kingdom_trader",
+        "tier"           : 1,
+        "limbMap"        : "humanoid"
+    },
+    {
+        "id"            : "kingdom_guard",
+        "name"          : "Caravan Guard",
+        "flavor": "Paid by the mile and armed by the crown, it watches the treeline the whole way through — a wall that walks beside the wares.",
+        "threatLevel"   : 9,    // DPS 20 | effHP 110 | bruiser (with drawn gear)
+        "entityClass"   : "animal",
+        "charSpans"     : [ {"sheet": "cultures", "id": 32} ],
+        "fg"            : [0.72, 0.74, 0.8],
+        "bg"            : [0.0, 0.0, 0.0],
+        "statRanges"    : {"str": [26, 34], "dex": [10, 14], "con": [12, 16], "per": [9, 12]},
+        "behaviour"     : "neutral",
+        "diet"          : "none",
+        "eats"          : [],
+        "grazes"        : false,
+        "predator"      : false,
+        "intelligence"  : "primitive",
+        "nocturnalAggro": false,
+        "pack"          : [1, 1],
+        "tameable"      : false,
+        "huntable"      : false,
+        "territorial"   : true,
+        "biomeWeights"  : {},
+        "naturalWeapons": ["fists", "kick"],
+        "lootPool"      : "guard_iron",
+        "species"        : "kingdom_guard",
+        "tier"           : 2,
+        "limbMap"        : "humanoid"
+    },
+    {
+        "id"            : "kingdom_visitor",
+        "name"          : "Visitor",
+        "flavor": "Come to see the colony with their own eyes — and to be seen. Word of the welcome they get travels home ahead of them.",
+        "threatLevel"   : 1,    // DPS 2 | effHP 40 | harmless
+        "entityClass"   : "animal",
+        "charSpans"     : [ {"sheet": "cultures", "id": 64} ],
+        "fg"            : [0.45, 0.62, 0.85],
+        "bg"            : [0.0, 0.0, 0.0],
+        "statRanges"    : {"str": [11, 15], "dex": [9, 12], "con": [8, 11], "per": [10, 13]},
+        "behaviour"     : "neutral",
+        "diet"          : "none",
+        "eats"          : [],
+        "grazes"        : false,
+        "predator"      : false,
+        "intelligence"  : "primitive",
+        "nocturnalAggro": false,
+        "pack"          : [1, 1],
+        "tameable"      : false,
+        "huntable"      : false,
+        "territorial"   : false,
+        "biomeWeights"  : {},
+        "naturalWeapons": ["fists", "kick"],
+        "species"        : "kingdom_visitor",
+        "tier"           : 1,
+        "limbMap"        : "humanoid"
+    },
+    {
+        "id"            : "kingdom_pack_beast",
+        "name"          : "Pack Ox",
+        "flavor": "A broad-backed ox that has carried half a kingdom's wares over every pass worth naming. It plods, it chews, it minds its own burden.",
+        "threatLevel"   : 3,    // DPS 4 | effHP 150 | tank
+        "entityClass"   : "animal",
+        "charSpans"     : [ {"sheet": "creatures", "id": 156} ],
+        "fg"            : [0.6, 0.5, 0.38],
+        "bg"            : [0.0, 0.0, 0.0],
+        "statRanges"    : {"str": [24, 30], "dex": [4, 6], "con": [14, 18], "per": [5, 7]},
+        "naturalArmor"  : 10,
+        "bodyScale"     : 1.6,
+        "behaviour"     : "passive",
+        "diet"          : "herbivore",
+        "eats"          : ["food"],
+        "grazes"        : true,
+        "predator"      : false,
+        "intelligence"  : "primitive",
+        "nocturnalAggro": false,
+        "pack"          : [1, 1],
+        "tameable"      : false,
+        "huntable"      : false,
+        "territorial"   : false,
+        "biomeWeights"  : {},
+        "naturalWeapons": ["kick"],
+        "species"        : "kingdom_pack_beast",
+        "tier"           : 1,
+        "limbMap"        : "quadruped"
     }
 ]
