@@ -1,6 +1,6 @@
 # CREATURE-COMBAT-OVERHAUL
 
-> **Related:** [ENTITIES_SPAWNING (archived — spawn/lair record)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [ANIMAL-HUSBANDRY](./ANIMAL-HUSBANDRY.md) · [PRODUCTION-CHAIN-IIII § Phase D](../open/PRODUCTION-CHAIN-IIII.md) (§I crafted-famed path) · [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) · [ROADMAP.md](./ROADMAP.md) · [../../game/DECISIONS.md](../../game/DECISIONS.md) (ADR-029 layered subtractive armour) · data: `database/limbmap.jsonc`, `database/creatures.jsonc`, `database/traits.jsonc`, `database/items.jsonc`
+> **Related:** [ENTITIES_SPAWNING (archived — spawn/lair record)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [ANIMAL-HUSBANDRY](./ANIMAL-HUSBANDRY.md) · [PRODUCTION-CHAIN-IIII § Phase D](PRODUCTION-CHAIN-IIII-2026-07-12.md) (§I crafted-famed path) · [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) · [ROADMAP.md](./ROADMAP.md) · [../../game/DECISIONS.md](../../game/DECISIONS.md) (ADR-029 layered subtractive armour) · data: `database/limbmap.jsonc`, `database/creatures.jsonc`, `database/traits.jsonc`, `database/items.jsonc`
 
 Rebalance + expansion of creature combat. Fixes the armour **invincible↔trivial binary** (keeping armour subtractive), gives aimed attacks real targets, and adds an elite/variant ladder, humanoid gear, and lair-driven escalation so combat has cross-creature progression.
 
@@ -630,7 +630,7 @@ mobs-attack-buildings regardless, so this is the shape to build toward, not a bu
 
 **This is the only Phase-4 work that ships here (4a is out of scope).** The `famed` tier, instance
 fields, name/history generator, and stat/enchant math all ship; the crafted path (craft-roll stamp +
-display) lives in [PRODUCTION-CHAIN-IIII § Phase D](../open/PRODUCTION-CHAIN-IIII.md).
+display) lives in [PRODUCTION-CHAIN-IIII § Phase D](PRODUCTION-CHAIN-IIII-2026-07-12.md).
 
 **Design (locked): a humanoid boss SPAWNS already wielding its famed item and FIGHTS with it, then drops
 it on death — reusing the existing §2c equipment pipeline, NOT a separate death-time `droppedItems` roll.**

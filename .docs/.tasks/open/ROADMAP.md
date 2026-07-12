@@ -2,7 +2,7 @@
 
 # ROADMAP
 
-> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) · [CREATURE-COMBAT-OVERHAUL](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [PRODUCTION-CHAIN-IIII](PRODUCTION-CHAIN-IIII.md) · [STEALTH](STEALTH.md) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md)
+> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) · [CREATURE-COMBAT-OVERHAUL](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [STEALTH](STEALTH.md) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md)
 
 Everything in one table: **remaining work in priority order first** (owner sequence, set 2026-07-10),
 then the **completed record** below it. Full specs for shipped work live in `.tasks/archive/`.
@@ -11,11 +11,11 @@ Status: `[ ]` not started · `[-]` in progress · `[~]` deferred · `[x]` done.
 | # | Item | Status | Spec / archive |
 |---|------|--------|----------------|
 | **1** | **Creature Combat Overhaul** | `[x]` | [CREATURE-COMBAT-OVERHAUL (archived)](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) — Ph1–3 + Ph4b famed boss-gear done 2026-07-12 (6 ladders/71 variants, monster gear+pools, tiered butchery, lair escalation + attraction, §2h magical drops). Remaining open items are playtest-only; **§4a traps/turrets deferred** (out of scope — blocks on a mobs-attack-buildings system that doesn't exist) |
-| **1b** | **Rare materials & magical economy** | `[-]` | [PRODUCTION-CHAIN-IIII](PRODUCTION-CHAIN-IIII.md) — Phases A–D landed 2026-07-12 (crops/fungi/crystals/treasure + items, 4 flora potions, crystal enchant gear, mana→gem-dust refine, treasure-beside-lairs, §G draught scaling, §I famed craft-stamp/display); **deferred:** arcane turret (mobs-attack-buildings), voidshard/wraith gear + weapon-coating |
+| **1b** | **Rare materials & magical economy** | `[x]` | [PRODUCTION-CHAIN-IIII (archived)](../archive/PRODUCTION-CHAIN-IIII-2026-07-12.md) — Phases A–D + weapon-coating done 2026-07-12 (crops/fungi/crystals/treasure + items, 4 flora potions, crystal enchant gear, mana→gem-dust refine, treasure-beside-lairs, §G draught scaling, §I famed craft-stamp/display, venom-coating subsystem). **Blocked carry-forward:** arcane turret (mobs-attack-buildings), Shadeform Philtre + Wraithbone Blade (need a wraith T5 boss) |
 | **2** | **Kingdoms & Trade** | `[ ]` | [KINGDOMS-TRADE](KINGDOMS-TRADE.md) — = RACE Phase 2; code `faction`→`kingdom` rename part of this |
 | **3** | **Finish Race → Culture System** | `[ ]` | [RACE-SYSTEM](RACE-SYSTEM.md) — Ph0 done; rename `Race`→`Culture`; Ph1 wiring waits on #4 |
 | **4** | **Social Layer** | `[ ]` | [SOCIAL-LAYER](SOCIAL-LAYER.md) — relationships/family/conversation/mood; unblocks RACE Ph1 + prestige/trade |
-| **5** | **Rest from Production Chain III** | `[x]` | [PRODUCTION-CHAIN-IIII § Phase D](PRODUCTION-CHAIN-IIII.md) — done 2026-07-12: §G drink-use action + `alchemy_quality` scaling; §I famed craft-roll stamp + item-card display + equip-enchant flow |
+| **5** | **Rest from Production Chain III** | `[x]` | [PRODUCTION-CHAIN-IIII § Phase D (archived)](../archive/PRODUCTION-CHAIN-IIII-2026-07-12.md) — done 2026-07-12: §G drink-use action + `alchemy_quality` scaling; §I famed craft-roll stamp + item-card display + equip-enchant flow |
 | **6** | **Stealth** | `[ ]` | [STEALTH](STEALTH.md) — design locked; needs an encounter balance re-pass |
 | **7** | **Drafted Job/Need Orders** | `[ ]` | [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) — design locked; small, self-contained |
 | **8** | **Rest from Entity Spawning** | `[ ]` | [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) — taming → husbandry → mounts → animal hauling |

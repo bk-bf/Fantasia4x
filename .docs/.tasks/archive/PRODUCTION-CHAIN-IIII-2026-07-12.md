@@ -2,20 +2,24 @@
 
 # PRODUCTION-CHAIN-IIII — Rare materials, mystical flora & the magical drop economy
 
-> **Related:** [ROADMAP](ROADMAP.md) · [CREATURE-COMBAT-OVERHAUL](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) (Phase 3b lairs-guard-rare-materials consumes this; §2h magical drops feed it) · [PRODUCTION-CHAIN-III (archived)](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) (alchemy/gem-dust/§M magic foundation) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) (foraging/crops) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [game/DESIGN](../../game/DESIGN.md) · data: `database/resources.jsonc`, `items.jsonc`, `recipes.jsonc`
+> **Related:** [ROADMAP](../open/ROADMAP.md) · [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL-2026-07-12.md) (Phase 3b lairs-guard-rare-materials consumes this; §2h magical drops feed it) · [PRODUCTION-CHAIN-III (archived)](PRODUCTION-CHAIN-III-2026-07-10.md) (alchemy/gem-dust/§M magic foundation) · [ANIMAL-HUSBANDRY](../open/ANIMAL-HUSBANDRY.md) (foraging/crops) · [RESEARCH-ENHANCEMENT](../open/RESEARCH-ENHANCEMENT.md) · [game/DESIGN](../../game/DESIGN.md) · data: `database/resources.jsonc`, `items.jsonc`, `recipes.jsonc`
 
 ## Status
 
-**Phases A–D largely landed (2026-07-12).** The rare-material families (§1a crops, §1b fungi, §1d crystals,
+**ARCHIVED 2026-07-12 — Phases A–D done.** The rare-material families (§1a crops, §1b fungi, §1d crystals,
 §1e treasure) + their items ship; the alchemy/enchant economy (4 flora potions, a crystal enchant piece,
-the mana_crystal→gem-dust refine) is wired; treasure dens beside lairs (Phase C); and the Phase-D tails
-(§G alchemy-quality draught scaling, §I famed craft-roll stamp + display + equip-enchant flow) are done.
-Gates: `pnpm check` 0 errors, `itemReferences`/`resourceGen`/`consumeItem`/`famedNames` + full suite green
-(924/925; the 1 red — `recipeService`'s split_firewood — is pre-existing, unrelated). **Still deferred**
-(genuinely blocked): the arcane turret (needs mobs-attack-buildings) and the voidshard/wraith gear +
-weapon-venom coating (need a wraith T5 boss + a coating subsystem).
+the mana_crystal→gem-dust refine) is wired; treasure dens beside lairs (Phase C); the Phase-D tails
+(§G alchemy-quality draught scaling, §I famed craft-roll stamp + display + equip-enchant flow); AND the
+weapon-venom coating subsystem (§2 — `venom_coating` + `applyWeaponCoating` + the on-hit merge). Gates:
+`pnpm check` 0 errors, `itemReferences`/`resourceGen`/`consumeItem`/`famedNames` + full suite green
+(924/925; the 1 red — `recipeService`'s split_firewood — is pre-existing, unrelated).
 
-Originally split out because **[CREATURE-COMBAT-OVERHAUL Phase 3b](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md)**
+**Carried forward (genuinely blocked — tracked in ROADMAP #1b):** the **arcane turret** consumer for
+`mana_crystal`→gem-dust (needs a mobs-attack-buildings system) and the two **voidshard/wraith** items —
+**Shadeform Philtre** + **Wraithbone Blade** (need a wraith **T5 boss** that doesn't exist; `voidshard`
+itself ships). These can't be built until those systems/creatures land; the material half is all here.
+
+Originally split out because **[CREATURE-COMBAT-OVERHAUL Phase 3b](CREATURE-COMBAT-OVERHAUL-2026-07-12.md)**
 wants lairs to spawn near **rare materials** so a dangerous den "guards a reward" — but the map's only
 rare materials today are **ore veins, the four magical groves** (heartwood/moonwood/ironwood/emberwood),
 **native gold, and gems**. That's too thin a lattice to hang lair placement on, and there's no
@@ -137,7 +141,7 @@ dig the prize. One-shot (`persistent: false`), high variance.
 ## 2 · The economy these feed
 
 The point of the rare materials is a **two-input high tier**: a rare *natural* material (this spec) +
-a **creature magical drop** ([CREATURE-COMBAT-OVERHAUL §2h](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md)) combine into
+a **creature magical drop** ([CREATURE-COMBAT-OVERHAUL §2h](CREATURE-COMBAT-OVERHAUL-2026-07-12.md)) combine into
 the powerful late-game outputs. Neither alone suffices — you must both *find the grove* and *kill the
 thing guarding it*.
 
@@ -221,10 +225,10 @@ thing guarding it*.
 ### Phase D — Non-combat tails (merged from PRODUCTION-CHAIN-III-TAILS, 2026-07-12)
 
 The slim non-combat tails of the archived
-[PRODUCTION-CHAIN-III](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) — a potion drink-use action + the
+[PRODUCTION-CHAIN-III](PRODUCTION-CHAIN-III-2026-07-10.md) — a potion drink-use action + the
 famed craft-roll stamp/display. Both are outputs of the same alchemy/enchant economy this spec covers, so
 they live here now instead of in a separate file. (The *combat* tails — traps/turrets + the boss-drop hook
-— live with [CREATURE-COMBAT-OVERHAUL §4](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md).)
+— live with [CREATURE-COMBAT-OVERHAUL §4](CREATURE-COMBAT-OVERHAUL-2026-07-12.md).)
 
 #### §G — the active drink-use action
 
@@ -232,7 +236,7 @@ The `alchemy_lab`, potion items (`potion_of_might`/`draught_of_vigor`/`elixir_of
 `tonic_of_fortitude`), their `grantsConditions`, `Item.conditionDurationTurns`, and `alchemy_quality`
 (`stats.jsonc`) all already shipped.
 
-- [x] **Player-triggered drink → timed condition** — LANDED via [CREATURE-COMBAT-OVERHAUL §2h](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md)
+- [x] **Player-triggered drink → timed condition** — LANDED via [CREATURE-COMBAT-OVERHAUL §2h](CREATURE-COMBAT-OVERHAUL-2026-07-12.md)
       (2026-07-12): `entities/Pawns.applyConsumable` stamps a potion's `grantsConditions` +
       `conditionDurationTurns` into `conditionTimers` (like a meal buff), wired through the
       `useConsumableItem` command + the `PawnConsumables.svelte` DRINK button. This also revived the four
