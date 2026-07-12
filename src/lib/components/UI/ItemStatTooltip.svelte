@@ -44,6 +44,9 @@
     /** Pinned (clicked open) — the panel becomes pointer-interactive; dismissal is handled by the pin
      *  controller. Defaults false so plain-hover callers are unchanged. */
     pinned?: boolean;
+    /** §2 weapon coating active on the hovered equipped instance (name + on-hit effect) — rendered as a
+     *  COATED block. Null/omitted for uncoated items and non-instance callers. */
+    coating?: { name: string; effect: string } | null;
   }
   let {
     item,
@@ -53,7 +56,8 @@
     selectedIngredients = {},
     jobLabel = null,
     natural = null,
-    pinned = false
+    pinned = false,
+    coating = null
   }: Props = $props();
 
   // Per-material weapon/armour deltas for the chosen ingredient(s) (e.g. ash shaft → +3 accuracy).
@@ -289,6 +293,14 @@
     </div>
   {/each}
 
+  {#if coating}
+    <div class="tip-sep">COATED</div>
+    <div class="tip-row">
+      <span class="tip-lbl">{coating.name}</span>
+      <span class="tip-coat-eff">{coating.effect}</span>
+    </div>
+  {/if}
+
   {#if natural}
     <div class="tip-sep">NATURAL</div>
     <div class="tip-row">
@@ -446,5 +458,8 @@
   .tip-mod-val {
     color: var(--text-dim);
     flex-shrink: 0;
+  }
+  .tip-coat-eff {
+    color: #b98fe6;
   }
 </style>

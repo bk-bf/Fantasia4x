@@ -73,11 +73,32 @@
     return { occupants, badges };
   });
 
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  // §2 weapon coating: the active coating on an equipped weapon (name + on-hit effect), for the tooltip.
+  // Null when the slot has no unexpired coating.
+  function activeCoating(it: { coating?: { itemId: string; expiresAtTurn: number } } | undefined) {
+    if (!it?.coating || it.coating.expiresAtTurn <= $gameState.turn) return null;
+    const cDef = gameCoordinator.getItemById(it.coating.itemId);
+    const cond = cDef?.coatingEffect?.condition;
+    return { name: cDef?.name ?? 'Coating', effect: cond ? `${cap(cond)} on hit` : 'on-hit effect' };
+  }
+
   // Hover popup — the same stat/ability breakdown shown on craftable cards (ItemStatTooltip),
   // portaled to the cursor while hovering a filled slot.
-  let statTip: { item: Item; natural?: NaturalGearMeta; x: number; y: number } | null = $state(null);
-  function showTip(def: Item, e: MouseEvent, natural?: NaturalGearMeta) {
-    statTip = { item: def, natural, x: e.clientX, y: e.clientY };
+  let statTip: {
+    item: Item;
+    natural?: NaturalGearMeta;
+    coating?: { name: string; effect: string } | null;
+    x: number;
+    y: number;
+  } | null = $state(null);
+  function showTip(
+    def: Item,
+    e: MouseEvent,
+    natural?: NaturalGearMeta,
+    coating?: { name: string; effect: string } | null
+  ) {
+    statTip = { item: def, natural, coating, x: e.clientX, y: e.clientY };
   }
   function moveTip(e: MouseEvent) {
     if (statTip) statTip = { ...statTip, x: e.clientX, y: e.clientY };
@@ -109,7 +130,7 @@
           : undefined}
       onmouseenter={(e) => {
         const tip = def ?? nat?.tip;
-        if (tip) showTip(tip, e, def ? undefined : nat?.meta);
+        if (tip) showTip(tip, e, def ? undefined : nat?.meta, def ? activeCoating(it) : null);
       }}
       onmousemove={moveTip}
       onmouseleave={hideTip}
@@ -144,12 +165,6 @@
             style="width: {Math.max(0, Math.min(100, (it.durability / maxDur) * 100))}%"
           ></div>
         </div>
-        {#if it.coating && it.coating.expiresAtTurn > $gameState.turn}
-          {@const cDef = gameCoordinator.getItemById(it.coating.itemId)}
-          <span class="coated-badge" title="Coated: {cDef?.name ?? 'active'} — an on-hit effect until it wears off."
-            >☣ COATED</span
-          >
-        {/if}
         <button
           class="unequip"
           title="Unequip {def.name}"
@@ -185,7 +200,13 @@
 {/if}
 
 {#if statTip}
-  <ItemStatTooltip item={statTip.item} natural={statTip.natural} x={statTip.x} y={statTip.y} />
+  <ItemStatTooltip
+    item={statTip.item}
+    natural={statTip.natural}
+    coating={statTip.coating}
+    x={statTip.x}
+    y={statTip.y}
+  />
 {/if}
 
 <style>
@@ -324,14 +345,6 @@
   }
   .dur-fill.low {
     background: var(--neg);
-  }
-  /* §2 weapon coating — a small badge on a coated (equipped) weapon slot while the coating is active. */
-  .coated-badge {
-    font-size: 9px;
-    letter-spacing: 0.05em;
-    color: #b98fe6;
-    text-align: center;
-    line-height: 1;
   }
 
   .empty-mk {
