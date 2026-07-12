@@ -12,7 +12,7 @@ This file is the historical record of Pass III. The deferred tails moved out (20
 - **Combat tails → [CREATURE-COMBAT-OVERHAUL](../open/CREATURE-COMBAT-OVERHAUL.md) §4** — §H combat
   traps + auto-fire turrets (gate on mobs-attack-buildings), and the §I **boss-drop** hook (gates on
   the elite/miniboss ladder). They live with the combat code they need.
-- **Non-combat tails → [PRODUCTION-CHAIN-III-TAILS](../open/PRODUCTION-CHAIN-III-TAILS.md)** — the §G
+- **Non-combat tails → [PRODUCTION-CHAIN-IIII § Phase D](../open/PRODUCTION-CHAIN-IIII.md)** — the §G
   active drink→timed-condition use-action, and the §I craft-roll stamp + famed-name display override.
 
 Original status follows.

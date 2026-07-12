@@ -2,7 +2,7 @@
 
 # PRODUCTION-CHAIN-IIII — Rare materials, mystical flora & the magical drop economy
 
-> **Related:** [ROADMAP](ROADMAP.md) · [CREATURE-COMBAT-OVERHAUL](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) (Phase 3b lairs-guard-rare-materials consumes this; §2h magical drops feed it) · [PRODUCTION-CHAIN-III (archived)](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) (alchemy/gem-dust/§M magic foundation) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) (foraging/crops) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · data: `database/resources.jsonc`, `items.jsonc`, `recipes.jsonc`
+> **Related:** [ROADMAP](ROADMAP.md) · [CREATURE-COMBAT-OVERHAUL](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) (Phase 3b lairs-guard-rare-materials consumes this; §2h magical drops feed it) · [PRODUCTION-CHAIN-III (archived)](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) (alchemy/gem-dust/§M magic foundation) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) (foraging/crops) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [game/DESIGN](../../game/DESIGN.md) · data: `database/resources.jsonc`, `items.jsonc`, `recipes.jsonc`
 
 ## Status
 
@@ -171,7 +171,20 @@ thing guarding it*.
       trait-elixirs.
 - [ ] Enchant recipes: magical lumber/crystal + boss drop → §2h magical-beast gear (condition grant +
       steep `wieldRequirement`).
-- [ ] `mana_crystal` → refined gem-dust → arcane turret/rune-trap fuel (ties CREATURE-COMBAT §4a).
+- [ ] `mana_crystal` → refined gem-dust → arcane turret/rune-trap fuel (ties CREATURE-COMBAT §4a, itself
+      blocked on a mobs-attack-buildings system that doesn't exist yet).
+- [ ] **Voidshard/wraith-gated tails** — carried over from the archived
+      [CREATURE-COMBAT-OVERHAUL §2h](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md); each was *deferred
+      there* precisely because it needs this spec's `voidshard` (§1d) and/or a wraith **T5 boss** that
+      doesn't exist yet (only `greater_wraith` is authored):
+  - [ ] **Weapon-venom coating** — `venom_sac` (great-spider/viper drop) + `nightshade_bolete` (§1b) →
+        coats a weapon, `envenomed` on-hit for a while. Needs a **weapon-coating mechanic** (the only
+        genuinely new subsystem in this list).
+  - [ ] **Shadeform Philtre** — `wraith_essence` + `voidshard` (§1d) → brief invisibility / night-move
+        (ties STEALTH). Blocked on `voidshard` + a wraith T5 boss.
+  - [ ] **Wraithbone Blade** — wraith bone + `voidshard` (§1d) → armour-pierce + fear-on-hit + a **curse
+        condition** (persistent, spend-after-use — per the Open-Q resolution below). Blocked on `voidshard`
+        + a wraith T5 boss.
 
 ### Phase C — Lair attraction (in CREATURE-COMBAT-OVERHAUL Phase 3b)
 - [x] **`lairAttractors` proximity bias — LANDED 2026-07-11** (in `ResourceGeneratorService.placeLairGuardians`,
@@ -181,8 +194,52 @@ thing guarding it*.
       the tier caveat (boss-guards need Phase 3a escalation).
 - [ ] Treasure UNDER the lair (dig after clearing) — waits on §1e treasure nodes (not yet authored).
 
+### Phase D — Non-combat tails (merged from PRODUCTION-CHAIN-III-TAILS, 2026-07-12)
+
+The slim non-combat tails of the archived
+[PRODUCTION-CHAIN-III](../archive/PRODUCTION-CHAIN-III-2026-07-10.md) — a potion drink-use action + the
+famed craft-roll stamp/display. Both are outputs of the same alchemy/enchant economy this spec covers, so
+they live here now instead of in a separate file. (The *combat* tails — traps/turrets + the boss-drop hook
+— live with [CREATURE-COMBAT-OVERHAUL §4](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md).)
+
+#### §G — the active drink-use action
+
+The `alchemy_lab`, potion items (`potion_of_might`/`draught_of_vigor`/`elixir_of_grace`/
+`tonic_of_fortitude`), their `grantsConditions`, `Item.conditionDurationTurns`, and `alchemy_quality`
+(`stats.jsonc`) all already shipped.
+
+- [x] **Player-triggered drink → timed condition** — LANDED via [CREATURE-COMBAT-OVERHAUL §2h](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md)
+      (2026-07-12): `entities/Pawns.applyConsumable` stamps a potion's `grantsConditions` +
+      `conditionDurationTurns` into `conditionTimers` (like a meal buff), wired through the
+      `useConsumableItem` command + the `PawnConsumables.svelte` DRINK button. This also revived the four
+      pre-existing attribute potions.
+- [ ] **Scale duration/strength by `alchemy_quality`** — NOT wired: `applyConsumable` uses the flat
+      `conditionDurationTurns` and never reads `alchemy_quality`. Fold the stat into the timer push.
+- [ ] Tone: imply, don't instruct — potion descriptions describe the draught, not the buff math.
+
+#### §I — famed craft-roll stamp + display
+
+The `famed` tier, the `ItemInstance` fields (`famed`/`famedName`/`famedHistory`/`famedStatMult`/
+`famedEnchants`), the `core/famedNames.ts` generator, and the roll/stat/enchant + per-hit combat scaling
+math all already shipped + tested (`famedNames.test.ts`). Missing: the craft-side stamp and full display.
+
+- [ ] **Craft-roll stamp** — `rollFamed` is currently called nowhere in sim/services. Call it on
+      equipment craft completion in `jobs/craft.ts` (the vanishingly-small, skill/station-scaled tail
+      above Legendary; not targetable) and stamp `famed`/`famedName`/`famedHistory`/`famedStatMult`/
+      `famedEnchants` onto the output.
+- [~] **Famed-name display** — `PawnInventory.svelte` already shows `famedName` in place of the base
+      name; the **item card** (name + generated history + the 1–3 `grantsConditions` enchants) still
+      needs it.
+- [ ] Apply `famedEnchants` (`grantsConditions`) while equipped — reuses the existing pipeline; confirm
+      it flows for famed instances.
+
+> The **boss-drop** path (the other way to obtain a famed item) shipped 2026-07-12 as
+> CREATURE-COMBAT-OVERHAUL §4b (spawn-with-famed-gear → `dropMobGear`).
+
 ## Open questions
 - [ ] Reagent stability vs spoilage — do mystical crops/mushrooms rot (decaySeconds) like food, or keep? //dont spoil
 - [ ] Are magical trees `roofSupport`/beauty like the existing groves (furniture use), or lumber-only? //dont understand this question
 - [ ] Curse mechanics for `voidshard`/`sunken_relic` — a persistent downside condition on the wielder, or 
       a one-time event? (Ties to the §2h "powerful conditions, steep costs" theme.) // persistent, spend after use, can roll negatives, 1 positive + 1 negative or if lucky just 1 positive
+- [ ] **Prestige stat home** (carried from PRODUCTION-CHAIN-III / §I): `Item.prestige` flat field vs
+      derived from material+quality+enchants? Decided by SOCIAL-LAYER; capture either way.

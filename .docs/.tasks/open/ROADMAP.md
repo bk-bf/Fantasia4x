@@ -2,7 +2,7 @@
 
 # ROADMAP
 
-> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) · [CREATURE-COMBAT-OVERHAUL](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [PRODUCTION-CHAIN-III-TAILS](PRODUCTION-CHAIN-III-TAILS.md) · [STEALTH](STEALTH.md) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md)
+> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) · [CREATURE-COMBAT-OVERHAUL](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [PRODUCTION-CHAIN-IIII](PRODUCTION-CHAIN-IIII.md) · [STEALTH](STEALTH.md) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md)
 
 Everything in one table: **remaining work in priority order first** (owner sequence, set 2026-07-10),
 then the **completed record** below it. Full specs for shipped work live in `.tasks/archive/`.
@@ -15,7 +15,7 @@ Status: `[ ]` not started · `[-]` in progress · `[~]` deferred · `[x]` done.
 | **2** | **Kingdoms & Trade** | `[ ]` | [KINGDOMS-TRADE](KINGDOMS-TRADE.md) — = RACE Phase 2; code `faction`→`kingdom` rename part of this |
 | **3** | **Finish Race → Culture System** | `[ ]` | [RACE-SYSTEM](RACE-SYSTEM.md) — Ph0 done; rename `Race`→`Culture`; Ph1 wiring waits on #4 |
 | **4** | **Social Layer** | `[ ]` | [SOCIAL-LAYER](SOCIAL-LAYER.md) — relationships/family/conversation/mood; unblocks RACE Ph1 + prestige/trade |
-| **5** | **Rest from Production Chain III** | `[ ]` | [PRODUCTION-CHAIN-III-TAILS](PRODUCTION-CHAIN-III-TAILS.md) — §G drink-use action + §I famed craft-stamp/display |
+| **5** | **Rest from Production Chain III** | `[-]` | [PRODUCTION-CHAIN-IIII § Phase D](PRODUCTION-CHAIN-IIII.md) (merged there 2026-07-12) — §G drink-use action **done** (via CREATURE-COMBAT §2h); remaining: `alchemy_quality` scaling + §I famed craft-roll stamp/display |
 | **6** | **Stealth** | `[ ]` | [STEALTH](STEALTH.md) — design locked; needs an encounter balance re-pass |
 | **7** | **Drafted Job/Need Orders** | `[ ]` | [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) — design locked; small, self-contained |
 | **8** | **Rest from Entity Spawning** | `[ ]` | [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) — taming → husbandry → mounts → animal hauling |
