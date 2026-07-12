@@ -190,12 +190,16 @@ thing guarding it*.
 - [x] **`mana_crystal` → refined gem-dust (2026-07-12)** — `grind_mana_crystal` (lapidary_bench, runic) →
       `gem_dust` ×4 (a richer yield than any cut gem). The **arcane-turret/rune-trap consumer stays
       deferred** (CREATURE-COMBAT §4a, blocked on mobs-attack-buildings) — but mana_crystal now has its sink.
-- [ ] **Voidshard/wraith-gated tails** — STILL BLOCKED. `voidshard` (§1d) now EXISTS as a mined item
-      (2026-07-12), so the material half is unblocked; but each recipe still needs a wraith **T5 boss**
-      (only `greater_wraith` is authored) and/or a weapon-coating subsystem, so none can ship yet:
-  - [ ] **Weapon-venom coating** — `venom_sac` (great-spider/viper drop) + `nightshade_bolete` (§1b) →
-        coats a weapon, `envenomed` on-hit for a while. Needs a **weapon-coating mechanic** (the only
-        genuinely new subsystem in this list).
+- [~] **Voidshard/wraith-gated tails** — the weapon-venom coating shipped (below); the other two remain
+      BLOCKED on a wraith **T5 boss** that doesn't exist (only `greater_wraith` is authored). `voidshard`
+      (§1d) exists as a mined item now, so only the wraith source is missing:
+  - [x] **Weapon-venom coating — LANDED 2026-07-12.** The new weapon-coating subsystem: a `coating?`
+        field on `ItemInstance` ({`itemId`, `expiresAtTurn`}) + `coatingEffect`/`coatingDurationHours` on
+        the coating item def. `venom_coating` (`venom_sac` + `nightshade_bolete` at the alchemy_lab) is
+        applied to a pawn's mainHand via the `applyWeaponCoating` command (a COAT button in
+        `PawnConsumables`), and `Combat.applyOnHitEffect` now applies the coating's `envenomed` proc ON TOP
+        of the weapon's own while unexpired. A "☣ COATED" badge shows on the equipped weapon (EquipmentDoll).
+        Time-based expiry (charge-based left as a later refinement).
   - [ ] **Shadeform Philtre** — `wraith_essence` + `voidshard` (§1d) → brief invisibility / night-move
         (ties STEALTH). Blocked on `voidshard` + a wraith T5 boss.
   - [ ] **Wraithbone Blade** — wraith bone + `voidshard` (§1d) → armour-pierce + fear-on-hit + a **curse
