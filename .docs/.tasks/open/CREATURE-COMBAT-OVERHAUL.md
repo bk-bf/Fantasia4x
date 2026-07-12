@@ -160,10 +160,12 @@ Green: `pnpm check` 0 errors (732 files), the combat/spawn suites + new `lootPoo
   `pickWeightedByTier` replace the uniform pick in all four spawn paths (ambient `pickSpawnCreature`,
   den seeding, den breeding, new-lair growth). **T5 weight 0** = a boss NEVER ambient-spawns; it waits
   for Phase-3 escalation (dev-spawnable meanwhile). Guarded by `variantLadder.test.ts`.
-- [ ] **Threat model sees equipment** (decided: DO it) — `threat-model.mjs` scores natural weapons only,
-  so an armed orc reads weaker than it fights. Fold the lootpool's expected weapon (the pool's highest-
-  `chance`/weight mainHand pick, scaled by its tier's typical quality) into the estimate so a geared
-  humanoid's annotation reflects how it actually fights, not an unarmed baseline.
+- [x] **Threat model sees equipment** — landed 2026-07-12: `threat-model.mjs` now loads `lootpool.jsonc`,
+  indexes crafted weapons (not just natural), and blends a geared creature's EXPECTED wielded weapon
+  (mainHand picks weighted by `w`, scaled by the pool's expected §Q quality, no bodyScale — mirroring
+  `Combat.attackerProfile`) against its natural fallback by the slot `chance`. 29 geared creatures
+  restamped (orcs jump hardest, as intended — an armed crusher now reads as it fights); `threat:check`
+  128/128 green. maxP unchanged (bull_mammoth still pins TOP), so no global recompression.
 - [x] **Wield-penalty legibility** — solved by the condition move: an under-strength wielder shows the
   `overmatched` pill + floater, so the player sees *why* the pawn swings badly (assign heavy loot to
   bruisers). (Was deferred; the `conditions.jsonc` wiring gave it for free.)
@@ -609,26 +611,27 @@ it on death — reusing the existing §2c equipment pipeline, NOT a separate dea
 So the famed weapon rides the same draw→equip→wear→`dropMobGear` path every geared mob already uses; the
 only new code is stamping the famed roll onto the drawn instance at spawn.
 
-- [ ] **`famed` flag on a lootpool pick** in [lootpool.jsonc](../../../src/lib/game/database/lootpool.jsonc)
-      — extend a slot's `pick` entry with an optional `"famed": true` (schema + `drawLoadout` in
-      `core/LootPools.ts`). When `drawLoadout` draws a famed-flagged pick, it runs `rollFamed` (identity +
-      stat-mult + enchants) and stamps the result onto the `ItemInstance` it creates, instead of a plain
-      instance. Everything downstream is unchanged.
-- [ ] **Boss pools carry the famed signature.** The humanoid boss lootpools set their signature mainHand
-      pick `famed: true` with `chance: 1.0` (guaranteed on the boss) and the pool's `dropChance: 1.0` (the
-      famed piece always survives to drop) — e.g. `orc_warlord_hoard`'s `iron_tide_greataxe`. The boss
-      spawns wielding the named famed weapon, fights with it (gear wears mid-fight as usual), and it lands
-      via the existing `dropMobGear`.
-- [ ] **Beast bosses do NOT use this path** — a wolf/bear/spider boss has no gear; its famed material comes
-      out of the §2h **butcher** route instead (routed by archetype, §2h resolution). One route per boss.
-- **Depends on:** Phase 2 boss ladder (the source, landed) + the Phase 2c draw/equip/`dropMobGear` hook
-      (landed). Only the `famed`-flag stamp is new.
+- [x] **`famed` flag on a lootpool pick** — landed 2026-07-12: `LootPick.famed?: boolean` +
+      `DrawnPiece.famed?: FamedIdentity` in [LootPools.ts](../../../src/lib/game/core/LootPools.ts). When
+      `drawLoadout` draws a famed-flagged pick it runs `rollFamedIdentity` (name/history/×2–5 stat mult/
+      enchants — PURE, deterministic given the rng) and attaches it; `equipFromLootPool`
+      (`entitySpawning.ts`) stamps `famed:true` + the identity onto the spawned `ItemInstance`. Guarded by
+      two new `lootPools.test.ts` cases.
+- [x] **Boss pools carry the famed signature** — landed 2026-07-12: two dedicated BOSS pools
+      `orc_warboss_hoard` (`iron_tide_greataxe`, famed, chance 1, dropChance 1) + `goblin_warlord_hoard`
+      (`goblin_hooked_spear`, famed) in `lootpool.jsonc`; `orc_warboss`/`goblin_warlord` repointed to them.
+      `iron_tide_greataxe` pulled out of the shared T4 `orc_warlord_hoard` so the famed roll is boss-only.
+      The boss spawns wielding the legend (combat reads `famedStatMult` at `Combat.ts:466`), gear wears
+      mid-fight, and it drops via the existing `dropMobGear` (which already ships the full instance).
+- [x] **Beast bosses do NOT use this path** — a wolf/bear/spider boss has no `lootPool`; its famed material
+      comes out of the §2h **butcher** route instead (routed by archetype). One route per boss.
 
 **Phase 4 acceptance:**
 - [ ] *(4a — deferred, not a gate)* A trap/turret damages a hostile mob once mobs-attack-buildings lands.
-- [ ] A **humanoid** boss spawns wielding a named famed weapon, fights with it, and drops it on death via
-      the existing gear-drop path (`famed` lootpool flag → `rollFamed` at spawn → `dropMobGear`).
-- [ ] A **beast** boss's famed material drops out of its butcherable §2h carcass instead.
+- [x] A **humanoid** boss spawns wielding a named famed weapon, fights with it, and drops it on death via
+      the existing gear-drop path (`famed` lootpool flag → `rollFamedIdentity` at spawn → `dropMobGear`).
+      *(mechanics landed 2026-07-12; needs a playtest to confirm the drop reads as a trophy.)*
+- [ ] A **beast** boss's famed material drops out of its butcherable §2h carcass instead. *(§2h in progress)*
 
 ---
 

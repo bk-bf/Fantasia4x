@@ -28,6 +28,11 @@ import path from 'node:path';
 const DB = path.resolve(import.meta.dirname, '../src/lib/game/database');
 const CREATURES = path.join(DB, 'creatures.jsonc');
 const ITEMS = path.join(DB, 'items.jsonc');
+const LOOTPOOL = path.join(DB, 'lootpool.jsonc');
+
+// §Q quality multiplier table (mirror of core/itemQuality.ts) — a geared mob's looted weapon spawns at a
+// rolled quality tier, so the model scales its damage by the pool's EXPECTED tier multiplier.
+const QUALITY_MULT = [0.8, 1.0, 1.15, 1.3, 1.5, 1.8];
 
 // ── Combat constants (keep aligned with Combat.ts / stats.jsonc) ──────────────
 const STAT_SCALE = 10;
@@ -87,9 +92,12 @@ function parseJsonc(text) {
 // ── Load data ─────────────────────────────────────────────────────────────────
 const creatures = parseJsonc(fs.readFileSync(CREATURES, 'utf8'));
 const items = parseJsonc(fs.readFileSync(ITEMS, 'utf8'));
+const lootpools = parseJsonc(fs.readFileSync(LOOTPOOL, 'utf8')).pools ?? {};
 const WEAPONS = new Map();
 for (const it of items) {
-  if (it.category === 'natural_weapon' && it.weaponProperties) {
+  // Index EVERY weapon (natural + crafted/looted), so a geared humanoid's wielded weapon resolves too
+  // (§4b/threat: an armed orc must read as strong as it fights, not as an unarmed baseline).
+  if (it.weaponProperties) {
     // ADR-029: procs live in `onHitCondition` (condition layer) + `onHitWound` (injury layer —
     // bloodletting rides there now, folded into the same danger bump).
     WEAPONS.set(it.id, {
@@ -98,6 +106,58 @@ for (const it of items) {
       onHitWound: it.onHitWound
     });
   }
+}
+
+// A geared humanoid (Combat.attackerProfile) swings its equipped mainHand weapon INSTEAD of natural
+// weapons — with no bodyScale bump (that scales natural weapons only). Return the expected wielded-weapon
+// damage-per-landed-hit + danger bump for a creature's lootpool, blended by the mainHand slot `chance`
+// against its natural fallback. Null when the creature has no pool / no mainHand slot.
+function expectedWieldedDamage(lootPool, str, dex, per) {
+  const pool = lootPool ? lootpools[lootPool] : null;
+  const mh = pool?.slots?.mainHand;
+  if (!mh || !mh.pick?.length) return null;
+  const qmult = expectedQualityMult(pool);
+  let dmgW = 0;
+  let wsum = 0;
+  let bump = 1;
+  for (const pk of mh.pick) {
+    const w = WEAPONS.get(pk.id);
+    if (!w) continue;
+    const wt = Math.max(0, pk.w ?? 1);
+    const { dmg, bump: b } = weaponDamage(w, str, dex, per, 1, false);
+    dmgW += dmg * qmult * wt;
+    wsum += wt;
+    bump = Math.max(bump, b);
+  }
+  if (wsum <= 0) return null;
+  return { dmgPerLanded: dmgW / wsum, bump, chance: mh.chance ?? 1 };
+}
+
+// Expected §Q quality multiplier for a pool's drawn pieces (weighted by its `quality` table; default 1.0).
+function expectedQualityMult(pool) {
+  const table = pool.quality;
+  if (!table || table.length === 0) return 1.0;
+  let tw = 0;
+  let acc = 0;
+  for (const [q, w] of table) {
+    const ww = Math.max(0, w);
+    tw += ww;
+    acc += ww * (QUALITY_MULT[q] ?? 1.0);
+  }
+  return tw > 0 ? acc / tw : 1.0;
+}
+
+// One weapon's damage-per-landed-hit (crit-weighted) + on-hit danger bump. `isNatural` applies the
+// bodyScale bump (natural weapons only, per Combat.ts:509-512); a wielded weapon ignores bodyScale.
+function weaponDamage(w, str, dex, per, scale, isNatural) {
+  const bd = w.damage * (isNatural ? 1 + (scale - 1) * NATURAL_DAMAGE_BODYSCALE_FACTOR : 1);
+  const raw = (bd * str) / STAT_SCALE;
+  let crit = 0.05 + (dex - 10) * 0.005 + (per - 10) * 0.0025 + (w.critMod ?? 0);
+  crit = Math.max(0, Math.min(CRIT_CAP, crit));
+  let bump = 1;
+  if (w.onHitCondition) bump = Math.max(bump, ONHIT_BUMP[w.onHitCondition.condition] ?? 1);
+  if (w.onHitWound?.some((x) => x.wound === 'bloodletting')) bump = Math.max(bump, ONHIT_BUMP.bloodletting);
+  return { dmg: raw * (1 + crit * 0.5), bump };
 }
 
 // A creature authors EITHER a fixed `stats` block OR a symmetric `statRanges` band (an individual rolls
@@ -119,28 +179,32 @@ function model(c) {
 
   let dmgW = 0;
   let wsum = 0;
-  let effBump = 1;
+  let natBump = 1;
   for (const id of wpns) {
     const w = WEAPONS.get(id);
     if (!w) continue;
     const wt = Math.max(0, w.weight ?? 1);
-    const bd = w.damage * (1 + (scale - 1) * NATURAL_DAMAGE_BODYSCALE_FACTOR);
-    const raw = (bd * str) / STAT_SCALE;
-    let crit = 0.05 + (dex - 10) * 0.005 + (per - 10) * 0.0025 + (w.critMod ?? 0);
-    crit = Math.max(0, Math.min(CRIT_CAP, crit));
-    dmgW += raw * (1 + crit * 0.5) * wt;
+    const { dmg, bump } = weaponDamage(w, str, dex, per, scale, true);
+    dmgW += dmg * wt;
     wsum += wt;
-    if (w.onHitCondition)
-      effBump = Math.max(effBump, ONHIT_BUMP[w.onHitCondition.condition] ?? 1);
-    if (w.onHitWound?.some((x) => x.wound === 'bloodletting'))
-      effBump = Math.max(effBump, ONHIT_BUMP.bloodletting);
+    natBump = Math.max(natBump, bump);
   }
-  const dmgPerLanded = wsum > 0 ? dmgW / wsum : 0;
+  const natDmgPerLanded = wsum > 0 ? dmgW / wsum : 0;
+
+  // §4b/threat: a geared humanoid swings its looted weapon `chance` of the time (natural fallback
+  // otherwise). Blend the two damage×danger contributions so an armed orc scores as it actually fights.
+  const wielded = expectedWieldedDamage(c.lootPool, str, dex, per);
+  let contribution = natDmgPerLanded * natBump;
+  if (wielded) {
+    const wpn = wielded.dmgPerLanded * wielded.bump;
+    contribution = wielded.chance * wpn + (1 - wielded.chance) * contribution;
+  }
+
   const hit = Math.max(5, Math.min(95, BASE_MELEE_HIT + (dex - 10) * DEX_HIT_WEIGHT)) / 100;
   const aspd = Math.max(0.1, 1 + (dex - 10) * 0.03);
   const interval = Math.max(MIN_ATTACK_INTERVAL_TICKS, BASE_ATTACK_INTERVAL_TICKS / aspd);
   const aps = TPS / interval;
-  const dps = dmgPerLanded * hit * aps * effBump;
+  const dps = contribution * hit * aps;
 
   const pool = con * 5 * scale;
   const torsoMitig = Math.min(0.9, (arm / 100) * (1 - ATTACKER_ARMOR_PEN));
