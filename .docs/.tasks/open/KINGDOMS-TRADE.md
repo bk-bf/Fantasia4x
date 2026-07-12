@@ -6,10 +6,16 @@
 
 ## Status
 
-Not started. Split out of [SOCIAL-LAYER](SOCIAL-LAYER.md) on 2026-07-10 — kingdoms, visitors, and
-trade caravans are a *world* system distinct from the pawn-to-pawn social layer, though they share the
-culture-disposition data and the prestige stat. **This spec is also RACE-SYSTEM Phase 2** (the
-"other-kingdom entity source" that unblocks the encounter-driven pokédex).
+**Implemented 2026-07-12** (all four phases; `check` + scoped tests green — `Kingdom.test.ts`,
+`kingdomParties.test.ts`, `executeTrade.test.ts`). Split out of [SOCIAL-LAYER](SOCIAL-LAYER.md) on
+2026-07-10 — kingdoms, visitors, and trade caravans are a *world* system distinct from the
+pawn-to-pawn social layer, though they share the culture-disposition data and the prestige stat.
+**This spec is also RACE-SYSTEM Phase 2** (first contact discovers the sender's dominant culture;
+the full mix once familiar). Known deferrals: pawn-level relationship points from visitor
+interaction wait on [SOCIAL-LAYER](SOCIAL-LAYER.md) §1; caravan war/pack-beast roles beyond the
+plain pack ox wait on [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md); hostile-kingdom **raids** are still
+only a trigger (relations pin hostile, no raid event yet). Party glyphs reuse existing humanoid
+sprites (placeholder art, retinted via `fg`).
 
 ---
 
@@ -171,32 +177,55 @@ The player does **not** see a kingdom's full sheet up front. Knowledge is *earne
 ## Implementation Plan
 
 ### Phase A — Kingdom data & generation
-- [ ] `Kingdom` + `kingdomRelations` types; `kingdoms`/`kingdomRelations` on `GameState`.
-- [ ] Fork `Culture.ts` → `Kingdom.ts`: `generateKingdom` (weighted `cultureMix`), `generateKingdomPool`
+- [x] `Kingdom` + `kingdomRelations` types; `kingdoms`/`kingdomRelations` on `GameState`. (2026-07-12 —
+      `core/types/kingdom.ts`; `ensureKingdomPool` in `stores/gameState.ts` runs after `ensureCulturePool`
+      on init/regen/reset, so old saves backfill a fresh pool)
+- [x] Fork `Culture.ts` → `Kingdom.ts`: `generateKingdom` (weighted `cultureMix`), `generateKingdomPool`
       (~20, some `always_hostile`), `generateKingdomRelations` (derive from member-culture dispositions).
-- [ ] `kingdom-lore.jsonc` phrase banks (leader/capital/history/figures/famed-item generators).
+      (2026-07-12 — colony rows ride the same graph under `COLONY_RELATION_ID`; `Kingdom.test.ts`)
+- [x] `kingdom-lore.jsonc` phrase banks (leader/capital/history/figures/famed-item generators). (2026-07-12)
 
 ### Phase B — Knowledge & Kingdoms tab
-- [ ] Hidden `knowledge` xp + tiered `KingdomLore` reveal; `gainKingdomKnowledge(kingdomId, amount)`.
-- [ ] Mutable facets (leader/wealth/famed items) **drift** at runtime; revealed knowledge of them goes
+- [x] Hidden `knowledge` xp + tiered `KingdomLore` reveal; `gainKingdomKnowledge(kingdomId, amount)`.
+      (2026-07-12 — `kingdomService.recordContact` [xp + snapshot + culture-pokédex discovery];
+      tier thresholds in `core/Kingdom.ts` `knowledgeTier`)
+- [x] Mutable facets (leader/wealth/famed items) **drift** at runtime; revealed knowledge of them goes
       **stale after ~a month** without contact (last-contact timestamp per kingdom) — immutable tiers don't rot.
-- [ ] Kingdoms tab (fork `CultureDetail.svelte`) — gated list + tier-gated detail pane; stale mutable
-      values render **greyed** ("as last you knew"), refreshed on re-contact.
+      (2026-07-12 — daily `driftFacets`; `Kingdom.known` snapshot + `isKnowledgeStale`)
+- [x] Kingdoms tab (fork `CultureDetail.svelte`) — gated list + tier-gated detail pane; stale mutable
+      values render **greyed** ("as last you knew"), refreshed on re-contact. (2026-07-12 —
+      `KingdomScreen.svelte` + `kingdom/KingdomDetail.svelte`, KINGDOMS tab / F8)
 
 ### Phase C — Visitors & caravans
-- [ ] Visitor arrival event + entity spawn; positive-interaction → knowledge + pawn relationship.
-- [ ] Trade caravan on ~bi-weekly cadence, frequency & visitor count weighted by `kingdomRelations`
+- [x] Visitor arrival event + entity spawn; positive-interaction → knowledge + ~~pawn relationship~~.
+      (2026-07-12 — `kingdom-arrival` `PendingEvent` + `KingdomArrivalModal`; presence/arrival/trade xp.
+      Pawn-level relationship points deferred to SOCIAL-LAYER §1, which owns `PawnRelationship`)
+- [x] Trade caravan on ~bi-weekly cadence, frequency & visitor count weighted by `kingdomRelations`
       **and colony wealth**; caravan = kingdom-pawn party + war/pack beasts ([ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md)).
-- [ ] Colony wealth **caps** the goods-quality tier a caravan carries.
+      (2026-07-12 — `maybeScheduleArrival` + `entity/kingdomParties.ts` [trader/guards/pack oxen,
+      leash-anchored at the colony edge]; guard gear = `guard_*` lootpools by `wealthBand`; attacking a
+      party member floors the relation [act of war, `Combat.performAttack` hook]. Full war/pack-beast
+      role split stays with ANIMAL-HUSBANDRY)
+- [x] Colony wealth **caps** the goods-quality tier a caravan carries. (2026-07-12 — `colonyWealthTier`
+      caps the stock's item `tier`, also min'd with the kingdom's own wealth)
 
 ### Phase D — Trade
-- [ ] `value` field across `items.jsonc`; effective-value helper (quality/material/Famed).
-- [ ] Item-to-item barter with **gold ingots** as the stable intermediate (skill/relation-independent
-      value).
-- [ ] `trade` stat (`social` category) + `prestige` `FORMULA_VARS` token wiring.
-- [ ] Trader/royal pawn carries a **"?" interaction marker**; a **Trade** verb on the
-      [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) right-click menu opens the screen.
-- [ ] Trade screen (offer assembly → confirm; no auto-execute).
+- [x] `value` field across `items.jsonc`; effective-value helper (quality/material/Famed). (2026-07-12 —
+      `Item.value` + `core/itemValue.ts` [explicit value wins; type/tier/category heuristic prices the
+      rest]; explicit values authored on the metal bars — gold_bar 100 anchor)
+- [x] Item-to-item barter with **gold ingots** as the stable intermediate (skill/relation-independent
+      value). (2026-07-12 — `executeTrade` command; gold_bar exempt from the margin both ways; every
+      caravan manifest leads with gold bars; `executeTrade.test.ts`)
+- [x] `trade` stat (`social` category) + `prestige` `FORMULA_VARS` token wiring. (2026-07-12 — new
+      `social` category in `stats.jsonc`; `prestige` token computed lazily [only when a formula names
+      it] from the net-new `SocialService.getPrestige`)
+- [x] Trader/royal pawn carries a **"?" interaction marker**; a **Trade** verb on the
+      [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) right-click menu opens the screen. (2026-07-12 —
+      gold bobbing `?` glyph float; Trade verb offered before the drafted-attack branch, so the trader
+      isn't auto-targeted; the highlighted pawn negotiates)
+- [x] Trade screen (offer assembly → confirm; no auto-execute). (2026-07-12 — `trade/TradeModal.svelte`
+      + `TradeColumn.svelte`: two-sided offer, running balance, TRADE commits, deal rejected sim-side
+      unless the given value covers the received)
 
 ---
 

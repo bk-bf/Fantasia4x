@@ -68,18 +68,22 @@ Wire the `raceRelations` stub into actual gameplay via the social layer.
 - [ ] Acceptance: two pawns of mutually-`hostile` races start with a negative relationship; a
       regression test asserts the baseline seeding.
 
-## Phase 2 — Encounter-Driven Pokédex  `[ ]` **owned by [KINGDOMS-TRADE](KINGDOMS-TRADE.md)**
+## Phase 2 — Encounter-Driven Pokédex  `[x]` **owned by [KINGDOMS-TRADE](KINGDOMS-TRADE.md)** (done 2026-07-12)
 
 Today the pokédex is populated only by the colony's own races; nothing in the world introduces a
 *new* race. This phase makes the pokédex grow through play. **The other-kingdom entity source is now
 specced** — visitors/caravans in [KINGDOMS-TRADE](KINGDOMS-TRADE.md) §3 are the encounter trigger.
 
-- [ ] Define the encounter source (visitors / caravans / rival settlements / migrant-join events) —
+- [x] Define the encounter source (visitors / caravans / rival settlements / migrant-join events) —
       coordinate with ENTITIES_SPAWNING and any future kingdom layer; pick the lightest that fits.
-- [ ] On first contact, call `discoverRace(state, id)` → the race appears in the pokédex with its
-      full lore even though no colonist is of that race.
-- [ ] Optional: a "first encountered: turn N / where" line on the pokédex entry.
-- [ ] Acceptance: encountering a non-colony pool race flips it `discovered` and renders its entry.
+      (2026-07-12 — kingdom visitor/caravan parties, KINGDOMS-TRADE §3)
+- [x] On first contact, call `discoverRace(state, id)` → the race appears in the pokédex with its
+      full lore even though no colonist is of that race. (2026-07-12 — `kingdomService.recordContact`
+      flips the sender's dominant culture on first contact, the whole `cultureMix` once the colony is
+      familiar [knowledge tier ≥ 2]; sim-side, since the worker can't reach the store's `discoverCulture`)
+- [ ] Optional: a "first encountered: turn N / where" line on the pokédex entry. (still open — nice-to-have)
+- [x] Acceptance: encountering a non-colony pool race flips it `discovered` and renders its entry.
+      (2026-07-12 — asserted in `kingdomParties.test.ts`)
 
 ## Phase 3 — Content & Variety Expansion  `[ ]` (incremental, unblocked)
 

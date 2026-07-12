@@ -38,6 +38,8 @@ Each service implements an interface and exports a singleton. Import the singlet
 | `locationService` | `services/LocationServices.ts` | Exploration missions, location data               |
 | `entityService`   | `services/EntityService.ts`    | Mob spawning, AI, movement, hunger, hunting, corpses |
 | `occupancyService`| `services/OccupancyService.ts` | Single source of "which tiles hold a body" — pathfinding + movement collision (ADR-014) |
+| `kingdomService`  | `services/KingdomService.ts`   | World political layer (KINGDOMS-TRADE): kingdom facet drift, hidden-knowledge contact, visitor/caravan cadence + parties, colony wealth, barter pricing. Runs once per in-game day in the events phase — zero per-tick cost |
+| `socialService`   | `services/SocialService.ts`    | Pawn social layer home (SOCIAL-LAYER) — currently §6 prestige only: `getPrestige` from worn regalia, feeding the `trade` stat's `prestige` formula token |
 
 Two singletons live under `systems/` (they coordinate state-machine/combat logic rather than being
 pure services): **`pawnStateMachineService`** (`systems/PawnStateMachine.ts` — the pawn FSM:
