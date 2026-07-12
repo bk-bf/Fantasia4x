@@ -6,7 +6,16 @@
 
 ## Status
 
-Not started (design). Split out because **[CREATURE-COMBAT-OVERHAUL Phase 3b](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md)**
+**Phases A–D largely landed (2026-07-12).** The rare-material families (§1a crops, §1b fungi, §1d crystals,
+§1e treasure) + their items ship; the alchemy/enchant economy (4 flora potions, a crystal enchant piece,
+the mana_crystal→gem-dust refine) is wired; treasure dens beside lairs (Phase C); and the Phase-D tails
+(§G alchemy-quality draught scaling, §I famed craft-roll stamp + display + equip-enchant flow) are done.
+Gates: `pnpm check` 0 errors, `itemReferences`/`resourceGen`/`consumeItem`/`famedNames` + full suite green
+(924/925; the 1 red — `recipeService`'s split_firewood — is pre-existing, unrelated). **Still deferred**
+(genuinely blocked): the arcane turret (needs mobs-attack-buildings) and the voidshard/wraith gear +
+weapon-venom coating (need a wraith T5 boss + a coating subsystem).
+
+Originally split out because **[CREATURE-COMBAT-OVERHAUL Phase 3b](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md)**
 wants lairs to spawn near **rare materials** so a dangerous den "guards a reward" — but the map's only
 rare materials today are **ore veins, the four magical groves** (heartwood/moonwood/ironwood/emberwood),
 **native gold, and gems**. That's too thin a lattice to hang lair placement on, and there's no
@@ -155,28 +164,35 @@ thing guarding it*.
 ## Implementation Plan
 
 ### Phase A — Rare-material resources + gather
-- [~] **§1c fully done** (all four trees + items, 2026-07-11): `witchwood_grove`/`soulwood_grove` on the
-      new `deep_forest`-only `mossy_ground` (+ `forest_moss` cover), `frostheart_pine` (mountain `cave`),
-      `bonewood_snag` (swamp) — riding the new biome-variant system. Families §1a/§1b/§1d/§1e still to author.
-- [ ] `resources.jsonc`: the ~15 attractor nodes above (spawn weights ~grove-rare↓; biome/subterrain
-      keyed; `glow` on the magical ones; `yields` + `regrowthTurns`; groves `persistent`, crops/mushrooms
-      regrow, crystals/treasure deplete).
-- [ ] `items.jsonc`: the material items (`bloodroot`, `witchwood_log`, `mana_crystal`, `soulwood_heart`,
-      `star_shard`, `voidshard`, treasure items…) with `value` (KINGDOMS-TRADE) + category.
-- [ ] `1e` treasure nodes reuse the EXISTING `dig`/`digging` verb (like clay/soil) — just author the
-      resource entries with `designationTypes: ["dig"]` + a treasure `yields[]`; no new interaction/job/tool.
+- [x] **§1c done** (all four trees + items, 2026-07-11).
+- [x] **§1a/§1b/§1d/§1e nodes authored (2026-07-12)** — 14 new `resources.jsonc` attractors: crops
+      `bloodroot`/`dreamleaf`/`mandrake`/`emberbloom` + fungi `glowcap`/`nightshade_bolete`/`witch_morel`/
+      `spore_of_madness` (forage, biome-keyed, slow regrowth, `glow` on the magical ones); crystals
+      `mana_crystal_vent`/`star_geode`/`voidshard_cluster` (mining, **on `cave`** — the same mountain-
+      interior terrain the gem geodes use — deplete on harvest); treasure `barrow_cache`/`buried_hoard`/
+      `sunken_relic` (the EXISTING `dig`/`digging` verb, one-shot). Listed early so they get first pick on
+      their subterrains. `itemReferences.test.ts` + `resourceGen.test.ts` green.
+- [x] `items.jsonc` (2026-07-12): the 8 flora reagents + `mana_crystal`/`star_shard`/`voidshard`
+      (`magic_crystal`) — note items carry NO `value` field (weightKg/volumeL only; the KINGDOMS-TRADE
+      `value` idea isn't in the item schema). Reagents don't spoil (no decaySeconds, per the Open-Q).
+- [x] `1e` treasure nodes reuse the EXISTING `dig`/`digging` verb — no new interaction/job/tool.
 
 ### Phase B — Alchemy + enchanting economy
-- [ ] Potion recipes (reagent + creature drop) at the alchemy station; the granted conditions/§2h
-      trait-elixirs.
-- [ ] Enchant recipes: magical lumber/crystal + boss drop → §2h magical-beast gear (condition grant +
-      steep `wieldRequirement`).
-- [ ] `mana_crystal` → refined gem-dust → arcane turret/rune-trap fuel (ties CREATURE-COMBAT §4a, itself
-      blocked on a mobs-attack-buildings system that doesn't exist yet).
-- [ ] **Voidshard/wraith-gated tails** — carried over from the archived
-      [CREATURE-COMBAT-OVERHAUL §2h](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md); each was *deferred
-      there* precisely because it needs this spec's `voidshard` (§1d) and/or a wraith **T5 boss** that
-      doesn't exist yet (only `greater_wraith` is authored):
+- [x] **Potion recipes (2026-07-12)** — 4 flora draughts at the `alchemy_lab` (crop/fungus + woundwort +
+      glassware): `vigor_draught` (bloodroot→`vigor`), `calming_draught` (dreamleaf→`soothed`),
+      `nightglow_draught` (glowcap→`moonlit`), `frenzy_draught` (spore_of_madness+mandrake→`berserk`). Each
+      grants an EXISTING condition (no new conditions invented). Duration scales with the drinker's alchemy
+      (§G). *Deferred:* an emberbloom fire-resist draught (no fire-resist condition exists yet) and the
+      mandrake+organ trait-elixir (organs already grant traits on direct consumption).
+- [x] **Enchant recipe (2026-07-12)** — `stargazer_circlet` (crystal enchant gear): `star_shard` +
+      `owlbear_pineal` + `witch_morel` → a head piece granting `keen_senses` while worn (the crafted twin
+      of a boss famed-drop; the existing `grantsConditions` path). Wired at `attunement_altar`.
+- [x] **`mana_crystal` → refined gem-dust (2026-07-12)** — `grind_mana_crystal` (lapidary_bench, runic) →
+      `gem_dust` ×4 (a richer yield than any cut gem). The **arcane-turret/rune-trap consumer stays
+      deferred** (CREATURE-COMBAT §4a, blocked on mobs-attack-buildings) — but mana_crystal now has its sink.
+- [ ] **Voidshard/wraith-gated tails** — STILL BLOCKED. `voidshard` (§1d) now EXISTS as a mined item
+      (2026-07-12), so the material half is unblocked; but each recipe still needs a wraith **T5 boss**
+      (only `greater_wraith` is authored) and/or a weapon-coating subsystem, so none can ship yet:
   - [ ] **Weapon-venom coating** — `venom_sac` (great-spider/viper drop) + `nightshade_bolete` (§1b) →
         coats a weapon, `envenomed` on-hit for a while. Needs a **weapon-coating mechanic** (the only
         genuinely new subsystem in this list).
@@ -192,7 +208,11 @@ thing guarding it*.
       the node, harvestable); tier-matches-tier ✅ via the lair→creature bind (predator_den←witchwood/soulwood,
       wolf_den←frostheart_pine, goblin_warren+swamp_nest←bonewood_snag). See CREATURE-COMBAT §3b for detail +
       the tier caveat (boss-guards need Phase 3a escalation).
-- [ ] Treasure UNDER the lair (dig after clearing) — waits on §1e treasure nodes (not yet authored).
+- [x] **Treasure BESIDE the lair (2026-07-12)** — `ResourceGeneratorService.placeBuriedHoards` (Pass 4,
+      after guardian placement) dens a `buried_hoard` on the nearest empty tile beside ~35% of lairs (dens
+      AND the §3b guardians). The one-resource-per-tile map model can't put the hoard literally ON the den
+      tile, so it sits ADJACENT — diggable under the pack's aggro or after clearing — matching the same
+      "beside, not on" placement the §3b guardians use.
 
 ### Phase D — Non-combat tails (merged from PRODUCTION-CHAIN-III-TAILS, 2026-07-12)
 
@@ -213,9 +233,12 @@ The `alchemy_lab`, potion items (`potion_of_might`/`draught_of_vigor`/`elixir_of
       `conditionDurationTurns` into `conditionTimers` (like a meal buff), wired through the
       `useConsumableItem` command + the `PawnConsumables.svelte` DRINK button. This also revived the four
       pre-existing attribute potions.
-- [ ] **Scale duration/strength by `alchemy_quality`** — NOT wired: `applyConsumable` uses the flat
-      `conditionDurationTurns` and never reads `alchemy_quality`. Fold the stat into the timer push.
-- [ ] Tone: imply, don't instruct — potion descriptions describe the draught, not the buff math.
+- [x] **Scale duration by `alchemy_quality` (2026-07-12)** — `applyConsumable` takes a `durationMult`;
+      the `useConsumableItem` command computes it from the drinker's alchemy work-quality
+      (`getWorkModifiers(pawn, 'alchemy', …).quality`, ~0.8–1.8) and passes it, so a trained alchemist
+      draws a longer effect out of the same draught. (Scales on the DRINKER, not the brewer — potions are
+      bulk with no per-instance quality; brewer-scaling would need per-instance potion quality, a later add.)
+- [x] Tone: imply, don't instruct — the new potion descriptions describe the draught, not the buff math.
 
 #### §I — famed craft-roll stamp + display
 
@@ -223,21 +246,25 @@ The `famed` tier, the `ItemInstance` fields (`famed`/`famedName`/`famedHistory`/
 `famedEnchants`), the `core/famedNames.ts` generator, and the roll/stat/enchant + per-hit combat scaling
 math all already shipped + tested (`famedNames.test.ts`). Missing: the craft-side stamp and full display.
 
-- [ ] **Craft-roll stamp** — `rollFamed` is currently called nowhere in sim/services. Call it on
-      equipment craft completion in `jobs/craft.ts` (the vanishingly-small, skill/station-scaled tail
-      above Legendary; not targetable) and stamp `famed`/`famedName`/`famedHistory`/`famedStatMult`/
-      `famedEnchants` onto the output.
-- [~] **Famed-name display** — `PawnInventory.svelte` already shows `famedName` in place of the base
-      name; the **item card** (name + generated history + the 1–3 `grantsConditions` enchants) still
-      needs it.
-- [ ] Apply `famedEnchants` (`grantsConditions`) while equipped — reuses the existing pipeline; confirm
-      it flows for famed instances.
+- [x] **Craft-roll stamp (2026-07-12)** — `jobs/craft.ts` `complete()` builds a famed-roll closure
+      (`rollFamed(alchemy/craft quality axis, arcaneStation from the station's `effects.arcane`, rng)`);
+      passive furnaces never roll. In `completeCraftOrder`'s quality loop each PRIMARY-output unit rolls
+      the tail and, if it hits, peels out into its OWN unique drop carrying a full `ItemInstance` (name/
+      history/×2–5 stat-mult/enchants) — the same instance-bearing shape as a mob's famed drop, so it never
+      stack-merges and flows straight onto pickup.
+- [x] **Famed identity on the item card (2026-07-12)** — `CarryItemCard.svelte` gained `famed`/
+      `famedHistory`/`famedEnchants` props: a famed item shows a gold name + an italic history sub-line +
+      the enchant list (humanised inline so no backend token leaks). `PawnInventory.svelte` feeds them.
+- [x] **Apply `famedEnchants` while equipped (2026-07-12)** — the equip→conditions loop in
+      `PawnStateMachine.ts` read only the def's `grantsConditions`; it now also pushes the instance's
+      `famedEnchants` through the same transient-condition path.
 
 > The **boss-drop** path (the other way to obtain a famed item) shipped 2026-07-12 as
 > CREATURE-COMBAT-OVERHAUL §4b (spawn-with-famed-gear → `dropMobGear`).
 
 ## Open questions
-- [ ] Reagent stability vs spoilage — do mystical crops/mushrooms rot (decaySeconds) like food, or keep? //dont spoil
+- [x] Reagent stability vs spoilage — **resolved: don't spoil.** The flora reagents + crystals carry no
+      `decaySeconds` (only a slow `deteriorationRate` = ordinary wear), so they keep indefinitely (2026-07-12).
 - [ ] Are magical trees `roofSupport`/beauty like the existing groves (furniture use), or lumber-only? //dont understand this question
 - [ ] Curse mechanics for `voidshard`/`sunken_relic` — a persistent downside condition on the wielder, or 
       a one-time event? (Ties to the §2h "powerful conditions, steep costs" theme.) // persistent, spend after use, can roll negatives, 1 positive + 1 negative or if lucky just 1 positive

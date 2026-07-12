@@ -11,11 +11,11 @@ Status: `[ ]` not started · `[-]` in progress · `[~]` deferred · `[x]` done.
 | # | Item | Status | Spec / archive |
 |---|------|--------|----------------|
 | **1** | **Creature Combat Overhaul** | `[x]` | [CREATURE-COMBAT-OVERHAUL (archived)](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) — Ph1–3 + Ph4b famed boss-gear done 2026-07-12 (6 ladders/71 variants, monster gear+pools, tiered butchery, lair escalation + attraction, §2h magical drops). Remaining open items are playtest-only; **§4a traps/turrets deferred** (out of scope — blocks on a mobs-attack-buildings system that doesn't exist) |
-| **1b** | **Rare materials & magical economy** | `[ ]` | [PRODUCTION-CHAIN-IIII](PRODUCTION-CHAIN-IIII.md) — mystical crops/mushrooms/rare trees/crystals/diggable treasure that gate lairs + feed alchemy & magical-beast gear (consumes CREATURE-COMBAT Ph3b + §2h) |
+| **1b** | **Rare materials & magical economy** | `[-]` | [PRODUCTION-CHAIN-IIII](PRODUCTION-CHAIN-IIII.md) — Phases A–D landed 2026-07-12 (crops/fungi/crystals/treasure + items, 4 flora potions, crystal enchant gear, mana→gem-dust refine, treasure-beside-lairs, §G draught scaling, §I famed craft-stamp/display); **deferred:** arcane turret (mobs-attack-buildings), voidshard/wraith gear + weapon-coating |
 | **2** | **Kingdoms & Trade** | `[ ]` | [KINGDOMS-TRADE](KINGDOMS-TRADE.md) — = RACE Phase 2; code `faction`→`kingdom` rename part of this |
 | **3** | **Finish Race → Culture System** | `[ ]` | [RACE-SYSTEM](RACE-SYSTEM.md) — Ph0 done; rename `Race`→`Culture`; Ph1 wiring waits on #4 |
 | **4** | **Social Layer** | `[ ]` | [SOCIAL-LAYER](SOCIAL-LAYER.md) — relationships/family/conversation/mood; unblocks RACE Ph1 + prestige/trade |
-| **5** | **Rest from Production Chain III** | `[-]` | [PRODUCTION-CHAIN-IIII § Phase D](PRODUCTION-CHAIN-IIII.md) (merged there 2026-07-12) — §G drink-use action **done** (via CREATURE-COMBAT §2h); remaining: `alchemy_quality` scaling + §I famed craft-roll stamp/display |
+| **5** | **Rest from Production Chain III** | `[x]` | [PRODUCTION-CHAIN-IIII § Phase D](PRODUCTION-CHAIN-IIII.md) — done 2026-07-12: §G drink-use action + `alchemy_quality` scaling; §I famed craft-roll stamp + item-card display + equip-enchant flow |
 | **6** | **Stealth** | `[ ]` | [STEALTH](STEALTH.md) — design locked; needs an encounter balance re-pass |
 | **7** | **Drafted Job/Need Orders** | `[ ]` | [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) — design locked; small, self-contained |
 | **8** | **Rest from Entity Spawning** | `[ ]` | [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) — taming → husbandry → mounts → animal hauling |
