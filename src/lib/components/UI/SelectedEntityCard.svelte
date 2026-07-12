@@ -168,6 +168,12 @@
   import ArmorPanel from './gameCanvas/ArmorPanel.svelte';
   import { armorToggle } from './gameCanvas/armorToggle.svelte';
   import { debugMode } from '$lib/stores/uiPrefs';
+  import HoverTip from './HoverTip.svelte';
+  import { createPinnable } from '../util/pinnable.svelte';
+
+  // Hover panel that shows the creature's full flavour text — the header/blurb only show a
+  // truncated teaser, so hovering the name or the blurb reads out the whole line.
+  const flavorPin = createPinnable<string>();
 
   // `embedded`: render as an in-flow flex item instead of self-anchoring to the canvas.
   // Used when a parent (e.g. the building row, which also hosts the fuel-settings panel)
@@ -225,7 +231,14 @@
     <div class="tile-hud-body">
     <div class="pawn-header">
       <div class="pawn-meta">
-        <span class="pawn-name" title={model.flavor}>{model.name}</span>
+        <span
+          class="pawn-name"
+          class:has-flavor={model.flavor}
+          role="note"
+          onmouseenter={(e) => model.flavor && flavorPin.open(model.flavor, 'flavor', e)}
+          onmousemove={(e) => flavorPin.move(e)}
+          onmouseleave={() => flavorPin.close()}>{model.name}</span
+        >
         {#if model.status}<span class="pawn-state">[{model.status}]</span>{/if}
         {#if model.dismissable}<span class="pawn-dismiss" title="Press Esc to deselect">◈</span
           >{/if}
@@ -238,7 +251,22 @@
     </div>
 
     {#if model.flavor}
-      <div class="pawn-flavor" title={model.flavor}>{model.flavor}</div>
+      {@const fv = model.flavor}
+      <div
+        class="pawn-flavor"
+        role="note"
+        onmouseenter={(e) => flavorPin.open(fv, 'flavor', e)}
+        onmousemove={(e) => flavorPin.move(e)}
+        onmouseleave={() => flavorPin.close()}
+      >
+        {fv}
+      </div>
+    {/if}
+
+    {#if flavorPin.active}
+      <HoverTip x={flavorPin.x} y={flavorPin.y} pinned={flavorPin.pinned}>
+        <div class="flavor-tip">{flavorPin.active}</div>
+      </HoverTip>
     {/if}
 
     {#if body}
@@ -497,7 +525,12 @@
     font-weight: bold;
     font-size: 13px;
   }
-  /* Truncated flavour teaser — one line, ellipsised; full text lives on the name's hover title. */
+  .pawn-name.has-flavor {
+    cursor: help;
+  }
+  /* Truncated flavour teaser — one line, ellipsised; hovering it (or the name) opens the full text in a
+     HoverTip. Generous top/bottom margin gives it an empty line of breathing room from the header above
+     and the stats below. */
   .pawn-flavor {
     max-width: 100%;
     overflow: hidden;
@@ -506,7 +539,14 @@
     font-style: italic;
     font-size: 11px;
     color: #9a7a48;
-    margin-bottom: 2px;
+    margin: 8px 0;
+    cursor: help;
+  }
+  /* Full flavour text inside the hover panel — no truncation, wraps to the panel width. */
+  .flavor-tip {
+    font-style: italic;
+    color: #c8b088;
+    line-height: 1.45;
   }
   .pawn-state {
     color: #7a6030;
