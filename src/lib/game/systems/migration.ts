@@ -19,12 +19,14 @@ function completedBuildings(state: GameState): number {
   return (state.buildings ?? []).filter((b) => b.status === 'complete').length;
 }
 
-export function rollMigrantWave(state: GameState): GameState {
+export function rollMigrantWave(state: GameState, force = false): GameState {
   const built = completedBuildings(state);
   const p = Math.min(CFG.maxChance, Math.max(CFG.minChance, CFG.baseChance + CFG.perBuilding * built));
 
   let count = 0;
   for (let i = 0; i < CFG.slots; i++) if (rng.chance(p)) count++;
+  // Debug force (the DEBUG tab's "migrant wave" button): guarantee a non-empty wave.
+  if (force && count === 0) count = rng.int(2, Math.max(2, CFG.slots));
   if (count === 0) return state;
 
   // Re-id with a wave-unique key so a candidate can't be confused with a live `pawn-N` id while it

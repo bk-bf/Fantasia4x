@@ -180,6 +180,41 @@ class KingdomServiceImpl {
     return s;
   }
 
+  /**
+   * DEBUG: force a visitor or caravan to arrive NOW, ignoring the cadence and eligibility gates
+   * (the DEBUG tab's "trigger event" buttons). For a caravan it prefers a town-or-larger power (one
+   * that actually has wares); otherwise any non-raider kingdom. Returns state unchanged only if
+   * there are no non-raider kingdoms at all.
+   */
+  forceArrival(state: GameState, kind?: KingdomParty['kind']): GameState {
+    const nonRaider = (state.kingdoms ?? []).filter((k) => k.relationBias !== 'always_hostile');
+    if (nonRaider.length === 0) return state;
+    const traders = nonRaider.filter((k) => WEALTH_BANDS.indexOf(k.lore.wealthBand) >= 2);
+    const wantCaravan = kind === 'caravan' || (kind == null && traders.length > 0);
+    const pool = wantCaravan && traders.length > 0 ? traders : nonRaider;
+    const kingdom = pool[rng.int(0, pool.length - 1)];
+    const partyKind: KingdomParty['kind'] = wantCaravan ? 'caravan' : 'visitor';
+    const stock =
+      partyKind === 'caravan'
+        ? this.generateCaravanStock(kingdom, this.colonyWealthTier(state))
+        : [];
+    const spawned = spawnKingdomParty(state, kingdom, partyKind, stock, 0);
+    if (!spawned) return state;
+    let s = spawned.state;
+    s = this.recordContact(s, kingdom.id, KNOWLEDGE_XP.arrival);
+    return {
+      ...s,
+      pendingEvent: {
+        kind: 'kingdom-arrival',
+        id: `kingdom-arrival-${s.turn}-dev`,
+        turn: s.turn,
+        kingdomId: kingdom.id,
+        partyKind,
+        partyId: spawned.party.id
+      }
+    };
+  }
+
   /** Non-hostile kingdoms with a colony relation — raiders never visit or trade. */
   private eligibleSenders(state: GameState): { kingdom: Kingdom; relation: KingdomRelation }[] {
     const out: { kingdom: Kingdom; relation: KingdomRelation }[] = [];

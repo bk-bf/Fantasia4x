@@ -65,6 +65,7 @@ import { generatePawns, applyConsumable } from '../entities/Pawns';
 import { pawnGrowthService } from '../services/PawnGrowthService';
 import { devSpawnMobs } from '../services/entity/entitySpawning';
 import { kingdomService, KNOWLEDGE_XP } from '../services/KingdomService';
+import { rollMigrantWave } from '../systems/migration';
 import {
   makeWeather,
   tileWetness,
@@ -1271,6 +1272,13 @@ export const COMMANDS: Record<string, Cmd> = {
   /** Force-spawn `count` mobs (ignores caps / current count). Optional specific creature id. */
   devSpawnEntities: (s, p: { count?: number; creatureId?: string }) =>
     devSpawnMobs(s, p.count ?? 5, p.creatureId),
+
+  /** DEBUG: force a kingdom party (trade caravan or friendly visitors) to arrive now. */
+  devTriggerKingdomArrival: (s, p: { kind?: 'caravan' | 'visitor' }) =>
+    kingdomService.forceArrival(s, p.kind),
+
+  /** DEBUG: force a migrant wave now (guaranteed non-empty). */
+  devTriggerMigrantWave: (s) => rollMigrantWave(s, true),
 
   /** DEBUG insta-kill: kill the pawn OR mob with `id`. Pawns die immediately (killPawn → corpse +
    *  gear drop + chronicle). Mobs are set to 0 health so the entity lifecycle reaps them to a corpse

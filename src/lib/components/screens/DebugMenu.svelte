@@ -122,6 +122,17 @@
   </section>
 
   <section>
+    <h4>Events <span class="hint">(force a world event now)</span></h4>
+    <div class="row">
+      <button onclick={() => cmd('devTriggerKingdomArrival', { kind: 'caravan' })}
+        >Trade caravan</button
+      >
+      <button onclick={() => cmd('devTriggerKingdomArrival', { kind: 'visitor' })}>Visitors</button>
+    </div>
+    <button onclick={() => cmd('devTriggerMigrantWave')}>Migrant wave</button>
+  </section>
+
+  <section>
     <h4>Weather</h4>
     <select value={$gameState.weather?.type ?? 'clear'} onchange={setWeather}>
       {#each WEATHER_IDS as w (w)}<option value={w}>{w} — {WEATHER_LABELS[w]}</option>{/each}
