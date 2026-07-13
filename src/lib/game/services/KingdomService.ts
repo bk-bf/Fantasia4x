@@ -250,7 +250,7 @@ class KingdomServiceImpl {
    * with **no `lastContactTurn`**, so the mutable facets render immediately as a stale memory
    * ("as last you knew") until real contact refreshes them.
    */
-  seedKnowledge(state: GameState, kingdomId: string, xp: number): GameState {
+  seedKnowledge(state: GameState, kingdomId: string, xp: number, via?: string): GameState {
     if (xp <= 0) return state;
     let seeded: Kingdom | undefined;
     const kingdoms = (state.kingdoms ?? []).map((k) => {
@@ -258,6 +258,7 @@ class KingdomServiceImpl {
       seeded = {
         ...k,
         discovered: true,
+        knownVia: k.knownVia ?? via,
         knowledge: Math.min(SEED_KNOWLEDGE_CAP, k.knowledge + xp),
         // deliberately NO lastContactTurn — a remembered homeland reads as out of date.
         known: k.known ?? {
@@ -286,7 +287,9 @@ class KingdomServiceImpl {
       ...(anyNew
         ? {
             culturePool: pool.map((c) =>
-              metCultureIds.has(c.id) && !c.discovered ? { ...c, discovered: true } : c
+              metCultureIds.has(c.id) && !c.discovered
+                ? { ...c, discovered: true, discoveredVia: c.discoveredVia ?? via }
+                : c
             )
           }
         : {})
@@ -295,24 +298,41 @@ class KingdomServiceImpl {
 
   /**
    * Seed the colony's kingdom knowledge from a set of pawns' backgrounds — their home kingdom (grew
-   * up there) plus a few OTHER kingdoms that travelled backgrounds know. Run at colony gen and when
-   * migrants join. Knowledge is shared/colony-level and persists once learned.
+   * up there) plus, if `includeWorldliness`, a few OTHER kingdoms that travelled backgrounds know.
+   * Run at colony gen and when migrants join. Knowledge is shared/colony-level and persists once
+   * learned.
+   *
+   * **Founders skip worldliness** (`includeWorldliness: false`): a founding colonist remembers their
+   * homeland, but the "I've heard of three far realms" flavour is what made a 5-person colony start
+   * knowing a whole atlas — so a fresh colony learns only where its founders are actually FROM.
+   * Migrants keep worldliness (a wandering newcomer genuinely brings word of distant places, and
+   * they trickle in one at a time rather than flooding the pokédex).
    */
-  seedKingdomKnowledgeFromPawns(state: GameState, pawns: Pawn[]): GameState {
+  seedKingdomKnowledgeFromPawns(
+    state: GameState,
+    pawns: Pawn[],
+    includeWorldliness = true
+  ): GameState {
     if (!state.kingdoms || state.kingdoms.length === 0) return state;
     let s = state;
     for (const p of pawns) {
       const childhood = getBackgroundById(p.childhoodId);
       const adulthood = getBackgroundById(p.adulthoodId);
       if (p.homeKingdomId) {
-        s = this.seedKnowledge(s, p.homeKingdomId, backgroundHomeKnowledge(childhood, adulthood));
+        s = this.seedKnowledge(
+          s,
+          p.homeKingdomId,
+          backgroundHomeKnowledge(childhood, adulthood),
+          p.name
+        );
       }
+      if (!includeWorldliness) continue;
       const { count, band } = backgroundWorldliness(childhood, adulthood);
       if (count > 0) {
         const others = (s.kingdoms ?? []).filter((k) => k.id !== p.homeKingdomId);
         for (let i = 0; i < count && others.length > 0; i++) {
           const k = others.splice(rng.int(0, others.length - 1), 1)[0];
-          s = this.seedKnowledge(s, k.id, rng.int(band[0], band[1]));
+          s = this.seedKnowledge(s, k.id, rng.int(band[0], band[1]), p.name);
         }
       }
     }

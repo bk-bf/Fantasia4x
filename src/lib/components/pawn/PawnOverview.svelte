@@ -45,11 +45,9 @@
     : 'no fixed homeland';
   $: childhood = getBackgroundById(pawn.childhoodId);
   $: adulthood = getBackgroundById(pawn.adulthoodId);
-  $: pastLabel = childhood
-    ? adulthood
-      ? `${childhood.title} → ${adulthood.title}`
-      : `${childhood.title} (still young)`
-    : '';
+  // Hover tooltip: the immersive flavour + what the background shaped.
+  const bgTip = (bg: ReturnType<typeof getBackgroundById>) =>
+    bg ? `${bg.description}${bg.influence ? `\n\n${bg.influence}` : ''}` : '';
 
   function stateColor(state: string | undefined): string {
     const normalized = (state ?? 'Idle').replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
@@ -88,11 +86,20 @@
       <span class="val" title={homeKingdom?.lore?.epithet ?? ''}>{originLabel}</span>
     </div>
     <div class="row">
-      <span class="lbl">PAST</span>
-      <span class="val" title={adulthood?.description ?? childhood?.description ?? ''}
-        >{pastLabel}</span
-      >
+      <span class="lbl">CHILDHOOD</span>
+      <span class="val" title={bgTip(childhood)}>{childhood?.title ?? '—'}</span>
     </div>
+    {#if pawn.adulthoodId}
+      <div class="row">
+        <span class="lbl">ADULTHOOD</span>
+        <span class="val" title={bgTip(adulthood)}>{adulthood?.title ?? '—'}</span>
+      </div>
+    {:else}
+      <div class="row">
+        <span class="lbl">ADULTHOOD</span>
+        <span class="val dim-val">still young</span>
+      </div>
+    {/if}
   {/if}
   {#if pawn.age != null}
     <div class="row">
@@ -188,5 +195,9 @@
     color: var(--accent-hi);
     font-weight: bold;
     letter-spacing: 0.03em;
+  }
+  .dim-val {
+    color: var(--text-muted);
+    font-style: italic;
   }
 </style>

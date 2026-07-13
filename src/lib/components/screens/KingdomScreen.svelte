@@ -38,15 +38,21 @@
   const unsubRel = kingdomRelations.subscribe((v) => (relations = v));
   const unsubCultures = culturePool.subscribe((v) => (cultures = v));
   const unsubTurn = currentTurn.subscribe((v) => (turn = v));
-  // Kingdoms any living colonist calls home (BACKGROUNDS) — marked in the list.
-  let homelandIds = new Set<string>();
+  // Kingdoms any living colonist calls home (BACKGROUNDS) → colonist name(s), marked in the list.
+  let homelandBy = new Map<string, string[]>();
   const unsubState = gameState.subscribe((s) => {
-    homelandIds = new Set(
-      (s.pawns ?? [])
-        .filter((p) => p.isAlive !== false && p.homeKingdomId)
-        .map((p) => p.homeKingdomId!)
-    );
+    const m = new Map<string, string[]>();
+    for (const p of s.pawns ?? []) {
+      if (p.isAlive === false || !p.homeKingdomId) continue;
+      const names = m.get(p.homeKingdomId) ?? [];
+      names.push(p.name);
+      m.set(p.homeKingdomId, names);
+    }
+    homelandBy = m;
   });
+  // Compact "whose homeland": one name, or "Name +N" when several colonists share it.
+  const homeLabel = (names: string[]) =>
+    names.length === 1 ? names[0] : `${names[0]} +${names.length - 1}`;
 
   onDestroy(() => {
     unsubKingdoms();
@@ -81,8 +87,10 @@
             on:click={() => (selectedId = kingdom.id)}
           >
             <span class="ki-name"
-              >{kingdom.name}{#if homelandIds.has(kingdom.id)}<span class="ki-home"
-                  >⌂ homeland</span
+              >{kingdom.name}{#if homelandBy.has(kingdom.id)}<span
+                  class="ki-home"
+                  title="home of {homelandBy.get(kingdom.id)!.join(', ')}"
+                  >⌂ {homeLabel(homelandBy.get(kingdom.id)!)}</span
                 >{/if}</span
             >
             <span class="ki-disp">{dispositionTo(kingdom.id)}</span>

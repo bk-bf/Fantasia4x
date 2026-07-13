@@ -97,14 +97,48 @@ describe('BACKGROUNDS — pawn generation & seeded knowledge', () => {
 
   it('generateColonyPawns with kingdoms stamps origin + backgrounds on every founder', () => {
     const { cultures, kingdoms } = world();
-    const pawns = generateColonyPawns(cultures, 8, { kingdoms });
+    const pawns = generateColonyPawns(cultures, 8, { kingdoms, founders: true });
     expect(pawns).toHaveLength(8);
     for (const p of pawns) {
       expect(p.childhoodId).toBeTruthy();
       expect(getBackgroundById(p.childhoodId)).toBeTruthy();
-      if (p.age >= ADULT_AGE) expect(p.adulthoodId).toBeTruthy();
+      if ((p.age ?? 0) >= ADULT_AGE) expect(p.adulthoodId).toBeTruthy();
       else expect(p.adulthoodId).toBeUndefined();
     }
+  });
+
+  it('founders never roll a founder-excluded (founderWeight:0) background like Court Scholar', () => {
+    const { cultures, kingdoms } = world();
+    const founders = generateColonyPawns(cultures, 300, { kingdoms, founders: true });
+    expect(founders.some((p) => p.adulthoodId === 'court_scholar')).toBe(false);
+    // Migrants (no founder rarity) CAN still be a court scholar.
+    const migrants = generateColonyPawns(cultures, 400, { kingdoms });
+    expect(migrants.some((p) => p.adulthoodId === 'court_scholar')).toBe(true);
+  });
+
+  it('founder rarity means a fresh colony knows fewer kingdoms than an un-rarified one', () => {
+    const { cultures, kingdoms, kingdomRelations } = world();
+    const knownCount = (founders: boolean) => {
+      const pawns = generateColonyPawns(cultures, 5, { kingdoms, founders });
+      let s = {
+        turn: 0,
+        culturePool: cultures.map((c) => ({ ...c })),
+        kingdoms: kingdoms.map((k) => ({ ...k })),
+        kingdomRelations
+      } as unknown as GameState;
+      s = kingdomService.seedKingdomKnowledgeFromPawns(s, pawns);
+      return (s.kingdoms ?? []).filter((k) => k.discovered).length;
+    };
+    // Average over a handful of seeds — founders should trend to fewer known realms.
+    let founderTotal = 0;
+    let openTotal = 0;
+    for (let seed = 1; seed <= 12; seed++) {
+      rng.reseed(3000 + seed);
+      founderTotal += knownCount(true);
+      rng.reseed(3000 + seed);
+      openTotal += knownCount(false);
+    }
+    expect(founderTotal).toBeLessThan(openTotal);
   });
 
   it('seeding leaves founders knowing their homelands — stale, tiered, and shared', () => {

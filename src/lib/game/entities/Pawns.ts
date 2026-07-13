@@ -485,18 +485,21 @@ export function generatePawns(culture: Culture, count = 3): Pawn[] {
 export function generateColonyPawns(
   culturePool: Culture[],
   count = 5,
-  opts?: { kingdoms?: Kingdom[] }
+  opts?: { kingdoms?: Kingdom[]; founders?: boolean }
 ): Pawn[] {
   if (culturePool.length === 0) return [];
   const kingdoms = opts?.kingdoms;
   if (!kingdoms || kingdoms.length === 0) {
     return Array.from({ length: count }, (_, i) => buildPawnFromCulture(rng.pick(culturePool), i));
   }
+  // `founders`: the starting colony — apply the founder-rarity background weights so a fresh colony
+  // doesn't roll worldly/noble founders who over-fill the pokédex. Migrants use the normal weights.
+  const forFounder = opts?.founders === true;
   return Array.from({ length: count }, (_, i) => {
     const { homeKingdomId, culture } = rollOrigin(culturePool, kingdoms);
     const age = rng.int(16, 45);
     const home = homeKingdomId ? kingdoms.find((k) => k.id === homeKingdomId) : undefined;
-    const { childhood, adulthood } = rollBackgrounds(home, age);
+    const { childhood, adulthood } = rollBackgrounds(home, age, forFounder);
     return buildPawnFromCulture(culture, i, { homeKingdomId, age, childhood, adulthood });
   });
 }

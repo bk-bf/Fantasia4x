@@ -64,6 +64,11 @@
   <p class="lore-desc">{culture.lore.description}</p>
   <div class="row"><span class="lbl">ARCHETYPE</span><span class="val">{culture.archetype}</span></div>
   <div class="row"><span class="lbl">COLONY</span><span class="val">{headcount} living</span></div>
+  {#if culture.discoveredVia}
+    <div class="row">
+      <span class="lbl">KNOWN VIA</span><span class="val">{culture.discoveredVia}</span>
+    </div>
+  {/if}
   <div class="row">
     <span class="lbl">HOMELAND</span><span class="val">{culture.lore.homeland}</span>
   </div>

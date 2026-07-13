@@ -21,7 +21,12 @@ export interface Background {
   slot?: 'childhood' | 'adulthood';
   title: string;
   description: string;
+  /** Player-facing "what this shaped" line, shown under the flavour on hover. */
+  influence?: string;
   weight?: number;
+  /** Draw weight for a STARTING colonist (falls back to `weight`). 0 = never a founder; low = rare
+   *  at colony start. Migrants ignore it. Keeps a fresh colony off worldly/noble founders. */
+  founderWeight?: number;
   // Eligibility on the home kingdom
   kingdomWealth?: WealthBand[];
   raider?: boolean;
@@ -125,34 +130,49 @@ function adulthoodReachable(adult: Background, childhood: Background): boolean {
 
 // ─── Background selection ─────────────────────────────────────────────────────
 
+/** Draw weight for a background. Starting colonists (`forFounder`) use `founderWeight` when set,
+ *  so worldly/noble stories can be made rare — or excluded (weight 0) — at colony start only. */
+function drawWeight(bg: Background, forFounder: boolean): number {
+  return forFounder ? (bg.founderWeight ?? bg.weight ?? 1) : (bg.weight ?? 1);
+}
+
+/** A founder-excluded background (`founderWeight: 0`) is dropped from a starting-colony pool. */
+function eligibleForRoll(bg: Background, forFounder: boolean): boolean {
+  return !(forFounder && bg.founderWeight === 0);
+}
+
 /**
  * Roll a pawn's childhood and (if adult) adulthood. Childhood is gated by the home kingdom;
- * adulthood is gated by the childhood's opened tags AND the home kingdom. Falls back gracefully so
- * selection never fails. Under-`ADULT_AGE` pawns get a childhood only.
+ * adulthood is gated by the childhood's opened tags AND the home kingdom. `forFounder` applies the
+ * founder-rarity weights (and excludes `founderWeight: 0`). Falls back gracefully so selection never
+ * fails. Under-`ADULT_AGE` pawns get a childhood only.
  */
 export function rollBackgrounds(
   home: Kingdom | undefined,
-  age: number
+  age: number,
+  forFounder = false
 ): { childhood: Background; adulthood?: Background } {
   const childhood =
     weightedPick(
-      CHILDHOODS.filter((c) => childhoodEligible(c, home)),
-      (c) => c.weight ?? 1
+      CHILDHOODS.filter((c) => childhoodEligible(c, home) && eligibleForRoll(c, forFounder)),
+      (c) => drawWeight(c, forFounder)
     ) ??
     weightedPick(
       CHILDHOODS.filter((c) => (home ? !c.stateless : c.stateless)),
-      (c) => c.weight ?? 1
+      (c) => drawWeight(c, forFounder)
     ) ??
     CHILDHOODS[0];
 
   if (age < ADULT_AGE) return { childhood };
 
-  const reachable = ADULTHOODS.filter((a) => adulthoodReachable(a, childhood));
+  const reachable = ADULTHOODS.filter(
+    (a) => adulthoodReachable(a, childhood) && eligibleForRoll(a, forFounder)
+  );
   const adulthood =
     weightedPick(
       reachable.filter((a) => adulthoodEligible(a, home)),
-      (a) => a.weight ?? 1
-    ) ?? weightedPick(reachable, (a) => a.weight ?? 1);
+      (a) => drawWeight(a, forFounder)
+    ) ?? weightedPick(reachable, (a) => drawWeight(a, forFounder));
   return { childhood, adulthood: adulthood ?? undefined };
 }
 

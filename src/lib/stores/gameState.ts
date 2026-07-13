@@ -476,15 +476,22 @@ function normalizeLegacyCulture(culture: GameState['culture']): GameState['cultu
   };
 }
 
-/** Mark every culture that has a colony pawn as discovered, and refresh per-culture headcounts. */
+/** Mark every culture that has a colony pawn as discovered, and refresh per-culture headcounts.
+ *  Records the first living colonist of each culture as the attribution ("known through …"). */
 function markColonyCulturesDiscovered(state: GameState): GameState {
   const counts = new Map<string, number>();
+  const firstColonist = new Map<string, string>();
   for (const p of state.pawns) {
-    if (p.cultureId) counts.set(p.cultureId, (counts.get(p.cultureId) ?? 0) + 1);
+    if (!p.cultureId) continue;
+    counts.set(p.cultureId, (counts.get(p.cultureId) ?? 0) + 1);
+    if (p.isAlive !== false && !firstColonist.has(p.cultureId)) {
+      firstColonist.set(p.cultureId, p.name);
+    }
   }
   const culturePool = state.culturePool.map((r) => ({
     ...r,
     discovered: r.discovered || counts.has(r.id),
+    discoveredVia: r.discoveredVia ?? firstColonist.get(r.id),
     population: counts.get(r.id) ?? r.population
   }));
   return { ...state, culturePool, culture: culturePool.find((r) => r.id === state.culture?.id) ?? culturePool[0] };
@@ -757,13 +764,16 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
   next = {
     ...next,
     pawns: spawnPawnsOnMap(
-      generateColonyPawns(next.culturePool, colonySize, { kingdoms: next.kingdoms }),
+      generateColonyPawns(next.culturePool, colonySize, {
+        kingdoms: next.kingdoms,
+        founders: true
+      }),
       newWorld
     )
   };
   next = markColonyCulturesDiscovered(next);
   // BACKGROUNDS: founders arrive already knowing their homelands (and places they travelled).
-  next = kingdomService.seedKingdomKnowledgeFromPawns(next, next.pawns);
+  next = kingdomService.seedKingdomKnowledgeFromPawns(next, next.pawns, false);
   next = workService.ensureDefaultWorkAssignments(next);
   if (dev) next = applyDevWorld(next, itemQty);
   next = entityService.seedInitialEntities(next);
@@ -938,11 +948,11 @@ function resetGame() {
   fresh = ensureKingdomPool(fresh);
   fresh = {
     ...fresh,
-    pawns: generateColonyPawns(fresh.culturePool, 5, { kingdoms: fresh.kingdoms })
+    pawns: generateColonyPawns(fresh.culturePool, 5, { kingdoms: fresh.kingdoms, founders: true })
   };
   fresh = { ...fresh, pawns: spawnPawnsOnMap(fresh.pawns, world) };
   fresh = markColonyCulturesDiscovered(fresh);
-  fresh = kingdomService.seedKingdomKnowledgeFromPawns(fresh, fresh.pawns);
+  fresh = kingdomService.seedKingdomKnowledgeFromPawns(fresh, fresh.pawns, false);
   fresh = workService.ensureDefaultWorkAssignments(fresh);
   fresh = entityService.seedInitialEntities(fresh);
   loadStateIntoWorker(fresh);
@@ -1357,7 +1367,10 @@ export const savedStateReady: Promise<void> = (async () => {
     // Fresh colony — kingdom-first: each founder is drawn from a homeland with a childhood/adulthood.
     baseState = {
       ...baseState,
-      pawns: generateColonyPawns(baseState.culturePool, 5, { kingdoms: baseState.kingdoms })
+      pawns: generateColonyPawns(baseState.culturePool, 5, {
+        kingdoms: baseState.kingdoms,
+        founders: true
+      })
     };
   }
 
@@ -1372,7 +1385,7 @@ export const savedStateReady: Promise<void> = (async () => {
   // BACKGROUNDS: seed the founders' home-kingdom knowledge — ONLY on a genuinely fresh colony (a
   // loaded save was already seeded when it was first created; re-seeding would double-count).
   if (freshColony) {
-    baseState = kingdomService.seedKingdomKnowledgeFromPawns(baseState, baseState.pawns);
+    baseState = kingdomService.seedKingdomKnowledgeFromPawns(baseState, baseState.pawns, false);
   }
 
   // Give any pawn without a work assignment explicit default labor settings — ONCE.

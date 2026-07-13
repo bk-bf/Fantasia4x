@@ -60,6 +60,9 @@ export interface Kingdom {
   knowledge: number;
   /** First contact made — gates the Kingdoms tab listing (pokédex pattern). */
   discovered?: boolean;
+  /** How this kingdom first became known (attribution): the name of the colonist who remembered it
+   *  from their homeland/travels, or undefined for a kingdom met through a visitor/caravan. */
+  knownVia?: string;
   /** Snapshot of the mutable facets as last learned (staleness rendering). */
   known?: KingdomKnownFacets;
   /** Turn of the last friendly contact (visitor/caravan/trade) — staleness clock. */

@@ -356,6 +356,9 @@ export interface Culture {
 
   /** Pokédex flag — true once the colony hosts this culture or it's been encountered. */
   discovered?: boolean;
+  /** How this culture first became known (attribution): a colonist's name (their own people or a
+   *  founder who remembered them from a homeland), or undefined for a culture met through contact. */
+  discoveredVia?: string;
 
   population: number;
 }

@@ -72,6 +72,10 @@
   </div>
   <p class="epithet">{kingdom.lore.epithet}</p>
   <p class="temperament">{kingdom.lore.temperament}</p>
+  <p class="known-via">
+    {#if kingdom.knownVia}remembered by {kingdom.knownVia}{#if stale}, out of date{/if}{:else}known
+      through contact{/if}
+  </p>
 
   <div class="section">
     <div class="sec-hdr">| PEOPLES</div>
@@ -197,6 +201,12 @@
     color: var(--text-muted);
     font-size: 11px;
     margin: 2px 0 0;
+  }
+  .known-via {
+    color: var(--text-muted);
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    margin: 5px 0 0;
   }
   .section {
     margin-top: 12px;
