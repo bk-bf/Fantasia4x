@@ -6,10 +6,20 @@
 
 ## Status
 
-Not started. Follows combat (there must be injury/death/rescue for pawns to react to).
+**Implemented 2026-07-13** (Phases A–E; `check` + full suite green — `social.test.ts`,
+`socialTurn.test.ts`, 19 tests incl. the hostile-culture seeding regression).
 **Scope split (2026-07-10):** this spec is the *pawn-to-pawn* layer. The *world* layer —
 kingdoms, visitors, trade caravans, and the `trade` attribute — moved to
 [KINGDOMS-TRADE](../archive/KINGDOMS-TRADE-2026-07-12.md). The two share the culture-disposition seam and the prestige stat.
+Known deferrals: **children/reproduction** (§2/§4 TODO stands); **crisis hostility/fleeing AI**
+(a crisis pawn refuses work + is labelled, but doesn't turn on the colony yet); the "failed job
+hurt Pawn B" delta (no such gameplay event exists to hook). Implementation notes: mood modifiers
+LAYER over the existing per-tick drift (`effectiveMood = clamp(state.mood + Σ active)`), rather
+than replacing it with a flat base-50 sum; `beauty`/`prestige` ride stats.jsonc `social` entries
+(the `intact` body scan is a lazy formula token like `prestige`, not a per-tick capacity); the
+daily pass runs beside `processKingdomsDaily` in the events phase (zero per-tick cost); a bonus
+fix — the `sleptUnsheltered` deed (Beast `sleep-wild` awakening) now actually increments on
+ground sleep.
 
 ---
 
@@ -225,38 +235,72 @@ Mood < 20 → a **break** (refuses work 2–10 turns). Mood 0 for 5 turns → **
 ## Implementation Plan
 
 ### Phase A — Data & attributes
-- [ ] `relationships: PawnRelationship[]` on `GameState`; `moodModifiers`, `familyId?`, `kin?` on `Pawn`.
-- [ ] `beauty` stat (`stats.jsonc` `social` category) + intact-bodyparts capacity scan in `PawnStatService`.
-- [ ] `SocialService.getPrestige` + Attributes-tab exposure (banner chip / `social` category wiring).
+- [x] `relationships: PawnRelationship[]` on `GameState`; `moodModifiers`, `familyId?`, `kin?` on `Pawn`.
+      (2026-07-13 — `core/types/social.ts`; new pawn fields are snapshot COLD [`PAWN_COLD`,
+      replace-on-change]; `DeadPawnRecord` retains `id` + `kin` so the tree survives death)
+- [x] `beauty` stat (`stats.jsonc` `social` category) + intact-bodyparts scan in `PawnStatService`.
+      (2026-07-13 — `intact` is a LAZY formula token like `prestige` [whole-body scan only when a
+      formula names it], not a per-tick capacity; scars/missing parts shave it)
+- [x] `SocialService.getPrestige` + Attributes-tab exposure. (getPrestige had landed with
+      KINGDOMS-TRADE; 2026-07-13 adds a `prestige` stats.jsonc entry [formula = the token] + the
+      `social` category in `PawnAttributes`/`PawnScreen`, so trade/beauty/prestige all render)
 
 ### Phase B — SocialService
-- [ ] `processSocialTurn(state)` — daily: proximity/meal deltas, conversation rolls, stage/romance
-      transitions, mood decay, break/crisis checks.
-- [ ] `addMoodModifier` · `getEffectiveMood` · `checkBreakThreshold` · `getBeauty`.
-- [ ] `seedRelationship(a, b)` — culture-disposition baseline before deltas (RACE-SYSTEM Phase 1).
+- [x] `processSocialTurn(state)` — daily: proximity/meal deltas, conversation rolls, stage/romance
+      transitions, mood decay, break/crisis checks. (2026-07-13 — events phase beside
+      `processKingdomsDaily`; unchanged days return the same state ref)
+- [x] `addMoodModifier` · `getEffectiveMood` · `getBeauty` (+ `removeMoodModifier`; break checks live
+      inside the daily pass off the EFFECTIVE mood). (2026-07-13)
+- [x] `seedRelationship(a, b)` — culture-disposition baseline before deltas (RACE-SYSTEM Phase 1).
+      (2026-07-13 — `core/Social.ts` `seedScore` [hostile −40 · wary −15 · 0 · +15 · +30, same-culture
+      +15, kin +50], applied in the service's `ensureRel`; regression test in `social.test.ts`)
 
 ### Phase C — Family generation
-- [ ] ~10% starting-kin pass in `generateColonyPawns` (shared surname, plausible kin ties).
+- [x] ~10% starting-kin pass in `generateColonyPawns` (shared surname, plausible kin ties).
+      (2026-07-13 — `linkStartingKin` [sibling ≤12y gap, parent/child ≥16y, same culture only];
+      migrant waves keep ties through both re-id passes via `remapKinIds`, and a turned-away
+      sibling's tie is dropped)
 
 ### Phase D — Conversations
-- [ ] `conversations.jsonc` fragment banks + procedural assembler.
-- [ ] `'social'` `ActivityLogEntry` type + engagement-session coalescing; `'social'` floater kind +
-      anchored speech-bubble overlay.
+- [x] `conversations.jsonc` fragment banks + procedural assembler. (2026-07-13 — opener→reply→closer
+      per category [small_talk/banter/deep_talk/flirt/comfort/argue/insult], {name}/{subject}/
+      {weather}/{season} slots; `services/social/conversations.ts` picks category by stage/grief/
+      flirt-gate and rolls the outcome off CHA/traits/mood)
+- [x] `'social'` `ActivityLogEntry` type + one expandable entry per exchange; `'social'` floater kind
+      + speech-bubble overlay. (2026-07-13 — the whole exchange is assembled atomically, so ONE
+      chronicle entry carries `details.lines` [click to expand — no session machinery needed];
+      speech bubbles ride the combat-text channel with a 4.5 s dwell + bubble CSS)
 
 ### Phase E — Wiring & UI
-- [ ] `SocialService.processSocialTurn` at the end of the Events phase (once/day, **not** per tick —
-      cross-check [ENGINE-PERFORMANCE](../archive/ENGINE-PERFORMANCE.md); no new per-tick allocation).
-- [ ] Event hooks: rescue / tend / fought-alongside / friendly-fire push `PawnRelationship` deltas.
-- [ ] `'relations'` PawnTab + `PawnRelations.svelte` (family tree + relationship list, reuse `StatBar`).
-- [ ] Mood-modifier list + stage/romance badges on the pawn card; break/crisis state label.
+- [x] `SocialService.processSocialTurn` at the end of the Events phase (once/day, **not** per tick —
+      cross-checked [ENGINE-PERFORMANCE](../archive/ENGINE-PERFORMANCE.md); no new per-tick allocation).
+      (2026-07-13 — daily-gated beside the kingdom call)
+- [x] Event hooks: rescue / tend / fought-alongside / friendly-fire push `PawnRelationship` deltas.
+      (2026-07-13 — `pickUpPawn` +18, `tendPatient` +8, kill-adjacent pawns +4 `battle_forged`
+      [once/pair/day], pawn-hits-pawn −20; plus grief/witness bonds in `finalizePawnDeath`, shared
+      meals +1 and hot-meal/slept-in-bed moods in the needs handlers)
+- [x] `'relations'` PawnTab + `PawnRelations.svelte` (family list + relationship list w/ stage badge,
+      score `StatBar`, tags, romance). (2026-07-13)
+- [x] Mood-modifier list + break/crisis state label. (2026-07-13 — `getMoodBreakdown` now returns
+      effective mood + the modifier list [MOOD popup renders them above the drift drivers];
+      `PawnOverview` MOOD row + STATE line; the map card's status reads "on a break" / "in crisis";
+      a breaking pawn refuses jobs in `handleIdle` and ambles instead)
 
 ---
 
 ## Open Questions
 
-- [ ] Children/reproduction: full pregnancy loop, or instant "child joins tree" event? (deferred — TODO)
-- [ ] Do social traits need new `passive`/`attribute` entries in `traits.jsonc`, or do existing
-      personality traits already carry enough signal for category selection? (audit `traits.jsonc` first)
-- [ ] Conversation cadence — how many fire per day per pawn before it spams the chronicle? (rate-limit)
-- [ ] Should `DeadPawnRecord` retain `kin`/relationships so the family tree survives death now, or when
-      children land? (lean: minimal kin retention now, full when children ship)
+- [ ] Children/reproduction: full pregnancy loop, or instant "child joins tree" event? (deferred — TODO;
+      `familyId` propagation + kin retention hooks are in place)
+- [x] Do social traits need new `passive`/`attribute` entries in `traits.jsonc`? (2026-07-13 — audited:
+      the existing personality block carries enough signal; gregarious/ill-tempered/hot-headed/loner
+      tilt conversation outcomes, industrious↔lazy / meticulous↔slapdash / curious↔incurious /
+      gregarious↔loner drive the daily clash/match delta. No new trait entries.)
+- [x] Conversation cadence. (2026-07-13 — each pawn INITIATES ≤1 and takes part in ≤2 conversations
+      per day, 65% roll, partners within 5 tiles, sleepers/drafted excluded — a 5-pawn colony logs
+      ~2-3 SOC entries a day)
+- [x] `DeadPawnRecord` kin retention. (2026-07-13 — went with the lean: the record keeps `id` + `kin`
+      so the family list still names the lost [rendered "† "], full relationship retention waits on
+      children)
+- [ ] Crisis behaviour: a crisis pawn currently refuses work + is labelled, but doesn't turn hostile
+      or flee — wire the actual crisis AI when combat-adjacent behaviours next open up.
