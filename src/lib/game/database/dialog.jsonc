@@ -360,5 +360,15 @@
         }
       ]
     }
+  },
+  // COMBAT BARKS — short single-line reactions BARKED mid-fight (SocialService.combatBark), NOT a
+  // drawn-out exchange: nobody holds a conversation fighting for their life. Emitted from Combat.ts on
+  // a landed blow (hit), a whiff (miss), taking a wound (hurt), or a finishing blow (kill), throttled +
+  // occasional. `{foe}` = what they're fighting (the boar, a raider). Player-facing; keep them TERSE.
+  "combatBarks": {
+    "hit": ["Take that!", "Ha!", "Down!", "Got you!", "Feel that?", "Back, {foe}!", "For the colony!"],
+    "miss": ["Damn it!", "Hold still!", "Slippery thing.", "Again, then.", "Stand and fight!", "Tsk."],
+    "hurt": ["Argh!", "Gah!", "It's on me!", "First blood to it.", "That stings.", "The {foe} has me!"],
+    "kill": ["Stay down.", "It's done.", "That is the end of it.", "Finished.", "That is you done, {foe}."]
   }
 }

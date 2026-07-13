@@ -78,7 +78,21 @@ interface CategoryBank {
 const DATA = dialogData as unknown as {
   subjects: string[];
   categories: Record<ConversationCategory, CategoryBank>;
+  combatBarks: Record<string, string[]>;
 };
+
+/** Short combat reactions barked mid-fight (SocialService.combatBark orchestrates cooldown/chance). */
+export type CombatBarkKind = 'hit' | 'miss' | 'hurt' | 'kill';
+
+/** Pick a terse combat bark line for `kind`, filling `{foe}` (what they're fighting). `roll` ∈ [0,1)
+ *  selects the line — the caller derives it deterministically (NOT from the combat rng, which must stay
+ *  untouched so barks never perturb hit/damage rolls). '' if the pool is empty. */
+export function combatBark(kind: CombatBarkKind, foeName?: string, roll = 0): string {
+  const pool = DATA.combatBarks?.[kind] ?? [];
+  if (pool.length === 0) return '';
+  const line = pool[Math.floor((roll - Math.floor(roll)) * pool.length)] ?? pool[0];
+  return line.replace(/\{foe\}/g, foeName ?? 'it');
+}
 
 /** PAWN-MEMORY — recall line banks, keyed by MemoryKind (memories.jsonc). `category` says which base
  *  category's deltas/tone the recall borrows (banter for a botch, deep_talk for a death…). Lines fill

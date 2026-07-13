@@ -1390,6 +1390,9 @@ class CombatServiceImpl implements CombatService {
             weapon: result.weaponId
           }
         );
+      // Combat bark: a colonist who whiffs curses under their breath.
+      if (!('entityClass' in attacker) && attacker.isAlive !== false)
+        socialService.combatBark(attacker as Pawn, 'miss', targetName, turn);
       return { state, staminaCost: result.staminaCost };
     }
     if (!result.injury) return { state, staminaCost: result.staminaCost };
@@ -1481,6 +1484,12 @@ class CombatServiceImpl implements CombatService {
         });
       }
     }
+    // Combat barks (colony pawns only): the attacker crows over a landed blow or a finishing one; a
+    // wounded colonist cries out (unless the blow felled them — the dead don't bark).
+    if (!('entityClass' in attacker) && attacker.isAlive !== false)
+      socialService.combatBark(attacker as Pawn, justDied ? 'kill' : 'hit', targetName, turn);
+    if (!isTargetMob && !justDied && (target as Pawn).isAlive !== false)
+      socialService.combatBark(target as Pawn, 'hurt', attackerName, turn);
     // LINEAGES §4: a pawn's kill feeds the Beast/Werewolf/Arachnid awakening deeds (regardless of whether
     // the colony saw it). By creature family + whether the killing blow was unarmed (fists / natural weapon).
     if (justDied && isTargetMob && 'traits' in attacker)

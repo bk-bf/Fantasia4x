@@ -39,7 +39,9 @@ import { TICKS_PER_SECOND } from '../core/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
 import { pawnStatService } from './PawnStatService';
 import {
+  combatBark as pickBark,
   runConversation,
+  type CombatBarkKind,
   type ConversationCategory,
   type ConversationOutcome
 } from './social/conversations';
@@ -78,6 +80,10 @@ const DIALOG_PAWN_COOLDOWN_S = 6; // in-game seconds before a pawn joins ANY new
 const DIALOG_MOOD_FADE_DAYS = 0.5;
 // PAWN-MEMORY: chance an eligible dialog reminisces about a witnessed memory instead of generic chatter.
 const RECALL_CHANCE = 0.5;
+// COMBAT BARKS: short reactions barked mid-fight. Per-pawn spacing + a per-kind chance so they stay
+// occasional (a fight is barks, not a conversation — see the Fighting/Fleeing gate in processDialogTick).
+const BARK_COOLDOWN = 3 * TICKS_PER_SECOND;
+const BARK_CHANCE: Record<CombatBarkKind, number> = { hit: 0.3, miss: 0.25, hurt: 0.5, kill: 0.75 };
 // §4 romance
 const ATTRACTION_MIN_BEAUTY = 0.75;
 const ROMANCE_MIN_AGE = 18;
@@ -115,6 +121,17 @@ const _battleBondDay = new Map<string, number>();
 // Dialog cooldowns (worker-transient): last turn a PAIR talked / a PAWN last joined any dialog.
 const _lastPairDialog = new Map<string, number>();
 const _lastPawnDialog = new Map<string, number>();
+// Combat-bark cooldown (worker-transient): last turn a PAWN barked in a fight.
+const _lastBark = new Map<string, number>();
+// Deterministic 0–1 from (id, turn, salt) — used for combat-bark chance + line selection so barks NEVER
+// consume the shared combat rng (which would perturb hit/damage rolls). Replay-safe, allocation-free.
+function barkHash(id: string, turn: number, salt: number): number {
+  let h = (salt ^ turn) | 0;
+  for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0;
+  return ((h >>> 0) % 100000) / 100000;
+}
+const BARK_CHANCE_SALT: Record<CombatBarkKind, number> = { hit: 1, miss: 2, hurt: 3, kill: 4 };
+const BARK_LINE_SALT = 97;
 
 function hasTrait(p: Pawn, id: string): boolean {
   return p.traits?.some((t) => t.id === id) ?? false;
@@ -795,6 +812,30 @@ class SocialServiceImpl {
     return relsChanged ? { ...state, relationships: working } : state;
   }
 
+  // ── combat barks ──────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * A short combat reaction over a colonist's head (Combat.ts, on a landed/whiffed blow, a wound taken,
+   * or a killing blow). Terse and occasional — a per-pawn cooldown + per-kind chance keep it from
+   * becoming a chat. `foeName` is what they're fighting (fills `{foe}`). A white speech floater.
+   */
+  combatBark(pawn: Pawn, kind: CombatBarkKind, foeName: string | undefined, turn: number): void {
+    if (pawn.isAlive === false || !pawn.position) return;
+    if (turn - (_lastBark.get(pawn.id) ?? -Infinity) < BARK_COOLDOWN) return;
+    // Deterministic gate + line pick (no combat-rng consumption — see barkHash).
+    if (barkHash(pawn.id, turn, BARK_CHANCE_SALT[kind]) >= BARK_CHANCE[kind]) return;
+    _lastBark.set(pawn.id, turn);
+    const text = pickBark(kind, foeName, barkHash(pawn.id, turn, BARK_LINE_SALT));
+    if (!text) return;
+    simLog.pushCombatText({
+      worldX: pawn.position.x,
+      worldY: pawn.position.y,
+      text,
+      kind: 'social',
+      dy: -12 // lift the bark above the damage numbers
+    });
+  }
+
   // ── §3 the proximity dialog tick ──────────────────────────────────────────────────────────────
 
   /**
@@ -812,6 +853,9 @@ class SocialServiceImpl {
       p.isAlive !== false &&
       p.position &&
       p.currentState !== 'Sleeping' &&
+      // No drawn-out exchanges while fighting or fleeing for your life — combat has its own barks.
+      p.currentState !== 'Fighting' &&
+      p.currentState !== 'Fleeing' &&
       turn - (_lastPawnDialog.get(p.id) ?? -Infinity) >= pawnCd;
     const talkers = state.pawns.filter(canTalk);
     if (talkers.length < 2) return state;

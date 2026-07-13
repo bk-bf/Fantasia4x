@@ -2,7 +2,7 @@
 // a recalled memory builds a grounded dialog line (naming the subject + detail).
 import { describe, it, expect, beforeEach } from 'vitest';
 import { memoryService, MEMORABILITY } from './MemoryService';
-import { runConversation } from './social/conversations';
+import { runConversation, combatBark } from './social/conversations';
 import { rng } from '../core/rng';
 import { TICKS_PER_SECOND } from '../core/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
@@ -94,6 +94,19 @@ describe('condition onset → affliction memory', () => {
     const state2 = { turn: 10, pawns: [sufferer, near2] } as unknown as GameState;
     memoryService.recordConditionOnsets(state2, sufferer, new Map([['hypothermia', 'Severe']]), conditions);
     expect(near2.memories ?? []).toHaveLength(0);
+  });
+});
+
+describe('combat barks', () => {
+  it('picks a terse line and fills {foe}, with a fallback when no foe is named', () => {
+    for (const kind of ['hit', 'miss', 'hurt', 'kill'] as const) {
+      const line = combatBark(kind, 'the boar');
+      expect(line.length).toBeGreaterThan(0);
+      expect(line).not.toContain('{foe}'); // placeholder always resolved
+      expect(line.length).toBeLessThan(40); // barks stay short — no drawn-out speeches
+    }
+    // no foe supplied → {foe} slots fall back to "it", never a leftover placeholder
+    expect(combatBark('hurt')).not.toContain('{foe}');
   });
 });
 
