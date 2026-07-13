@@ -1,0 +1,169 @@
+// memories.jsonc — the PAWN-MEMORY registry (MemoryService). Pawns record notable things they WITNESS
+// and later RECALL them in dialog (on the spot, at the campfire later, or both). This file owns
+// EVERYTHING about a memory KIND in one place:
+//   memorability  — 0–1 base weight: how long it stays recallable + how strongly it's weighted.
+//                   ≥0.9 = historic (never pruned). Trivial fades in days, notable weeks, significant a
+//                   season. (death overrides this per witness by their bond — see SocialService.)
+//   category      — which dialog category's tone + relationship/mood deltas the recall borrows.
+//   witnessRadius — tiles around the event within which pawns pick the memory up.
+//   lines         — the recall exchange: {subject} = who it's about, {detail} = the item/foe/affliction,
+//                   {ago} = how long ago, {name} = the listener. All PLAYER-FACING.
+//
+// The RECORDING itself lives in code (each event site knows its own subject/detail): combat kills
+// (Combat.ts), deaths (SocialService.onPawnDeath), craft quality (jobs/craft.ts), idle streaks + the
+// daily prune (SocialService), and condition onsets (PawnStateMachine → fromCondition below). This file
+// drives their tuning + words, not their existence.
+//
+// fromCondition — MOOD-REWORK/PAWN-MEMORY §3: a floater-flagged persistent condition ONSETTING on a
+//   pawn mints an `affliction` memory on nearby witnesses (subject = the afflicted). `detail` is the
+//   verb phrase the line uses ("You see {subject} {detail}?"), `memorability` its weight.
+{
+  "kinds": {
+    "death": {
+      "memorability": 0.95,
+      "category": "deep_talk",
+      "witnessRadius": 10,
+      "lines": {
+        "openers": [
+          "I still think on {subject}. {ago} they went.",
+          "I was there when {subject} fell. {ago}. I do not forget it.",
+          "We do not say {subject}'s name enough, you and I."
+        ],
+        "replies_good": [
+          "I think of them too. Every so often.",
+          "They deserved a longer road.",
+          "We carry them. That is all we can do."
+        ],
+        "replies_bad": [
+          "Do not, {name}. Not today.",
+          "Leave the dead their rest.",
+          "I cannot talk of {subject}. Not yet."
+        ],
+        "closers": ["To {subject}, wherever they are.", "Rest easy.", "Aye. Well."]
+      }
+    },
+    "combat": {
+      "memorability": 0.5,
+      "category": "banter",
+      "witnessRadius": 12,
+      "lines": {
+        "openers": [
+          "You see {subject} drop {detail}? {ago}, that was.",
+          "Still talk about how {subject} put {detail} down. {ago}.",
+          "{subject} and {detail}. Now THAT was a scrap."
+        ],
+        "replies_good": [
+          "Clean work. Wish I had swung like that.",
+          "We will not forget it soon.",
+          "Aye, {subject} earned their supper that day."
+        ],
+        "replies_bad": [
+          "Got lucky, more like.",
+          "You tell it bigger every time, {name}.",
+          "I was there too. It was not so grand."
+        ],
+        "closers": ["Good day, that one.", "To {subject}, then.", "Anyway. Back to it."]
+      }
+    },
+    "masterwork": {
+      "memorability": 0.72,
+      "category": "banter",
+      "witnessRadius": 12,
+      "lines": {
+        "openers": [
+          "That {detail} {subject} turned out? Finest thing in the camp.",
+          "Still cannot believe {subject} made that {detail}. {ago}.",
+          "{subject} has the hands, no mistake. That {detail} proves it."
+        ],
+        "replies_good": [
+          "A true craftsman, that one.",
+          "Puts the rest of us to shame.",
+          "Aye. A thing of beauty."
+        ],
+        "replies_bad": [
+          "Beginner's luck, {name}.",
+          "It is only a {detail}. Do not fawn.",
+          "One good piece does not make a master."
+        ],
+        "closers": ["Credit where it is due.", "Fine work. Fine work.", "Anyway, back to it."]
+      }
+    },
+    "botch": {
+      "memorability": 0.28,
+      "category": "banter",
+      "witnessRadius": 12,
+      "lines": {
+        "openers": [
+          "You see that {detail} {subject} botched? {ago}.",
+          "Still laughing about {subject} and that sorry excuse for a {detail}.",
+          "{subject} called that {detail} finished. Finished! Ha."
+        ],
+        "replies_good": [
+          "Ha! A blind mole does better work.",
+          "We all have our off days. Some more than others.",
+          "Do not let {subject} live it down."
+        ],
+        "replies_bad": [
+          "Leave them be. They tried.",
+          "You could do better, could you, {name}?",
+          "Cruel. Funny, but cruel."
+        ],
+        "closers": ["Poor {subject}.", "Back to it, before I am next.", "Hah. Anyway."]
+      }
+    },
+    "idled": {
+      "memorability": 0.16,
+      "category": "banter",
+      "witnessRadius": 8,
+      "lines": {
+        "openers": [
+          "Caught {subject} dozing again. {ago}, and the days before.",
+          "Does {subject} ever lift a finger? Idle as a fence post, that one.",
+          "Nice life {subject} has. Watched them do nothing for days on end."
+        ],
+        "replies_good": [
+          "Ha, that is {subject} for you.",
+          "Some folk are just born tired.",
+          "I would nap too, if I had the nerve."
+        ],
+        "replies_bad": [
+          "Mind your own, {name}.",
+          "They pull their weight when it counts.",
+          "Not all work is swinging a hammer."
+        ],
+        "closers": ["Anyway. Some of us have work.", "Back to it.", "Hah."]
+      }
+    },
+    "affliction": {
+      "memorability": 0.55,
+      "category": "deep_talk",
+      "witnessRadius": 10,
+      "lines": {
+        "openers": [
+          "Bad business, watching {subject} {detail}. {ago}.",
+          "You were there when {subject} nearly went? Saw them {detail}.",
+          "I still see it. {subject}, {ago}. Watched them {detail}."
+        ],
+        "replies_good": [
+          "Aye. Too close, that.",
+          "They pulled through. Barely.",
+          "Do not remind me. Poor soul."
+        ],
+        "replies_bad": [
+          "They are fine now. Let it be.",
+          "We have all had our brush with it.",
+          "No use dwelling, {name}."
+        ],
+        "closers": ["Glad they are still with us.", "Grim days.", "Anyway."]
+      }
+    }
+  },
+  "fromCondition": {
+    "infection": { "detail": "take a wound that festered", "memorability": 0.55 },
+    "pain_shock": { "detail": "drop senseless from the pain", "memorability": 0.6 },
+    "hypovolemia": { "detail": "bleed near to death", "memorability": 0.65 },
+    "hypothermia": { "detail": "half freeze to death", "memorability": 0.6 },
+    "heat_stroke": { "detail": "keel over in the heat", "memorability": 0.55 },
+    "malnutrition": { "detail": "waste away from hunger", "memorability": 0.6 }
+  }
+}

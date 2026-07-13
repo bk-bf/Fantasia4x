@@ -6,7 +6,7 @@ import { runConversation } from './social/conversations';
 import { rng } from '../core/rng';
 import { TICKS_PER_SECOND } from '../core/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
-import type { EventMemory, GameState, Pawn, PawnRelationship } from '../core/types';
+import type { EntityCondition, EventMemory, GameState, Pawn, PawnRelationship } from '../core/types';
 
 const DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 
@@ -72,6 +72,28 @@ describe('prune', () => {
     const changed = memoryService.prune(p, DAY * 10); // 10 days later
     expect(changed).toBe(true);
     expect(p.memories!.map((m) => m.kind)).toEqual(['death']); // trivial gone, historic pinned
+  });
+});
+
+describe('condition onset → affliction memory', () => {
+  it('a dire condition onsetting mints an affliction memory on witnesses (deduped by prevStages)', () => {
+    const sufferer = pawn('sufferer', 5, 5, { name: 'Bram Oak' });
+    const near = pawn('near', 6, 5);
+    const far = pawn('far', 40, 40);
+    const state = { turn: 0, pawns: [sufferer, near, far] } as unknown as GameState;
+    const conditions: EntityCondition[] = [{ id: 'hypothermia', severity: 0.8 }];
+    memoryService.recordConditionOnsets(state, sufferer, undefined, conditions);
+    expect(near.memories?.length).toBe(1);
+    expect(near.memories?.[0].kind).toBe('affliction');
+    expect(near.memories?.[0].subjectName).toBe('Bram');
+    expect(near.memories?.[0].detail).toBe('half freeze to death');
+    expect(sufferer.memories ?? []).toHaveLength(0); // the sufferer isn't a witness to their own affliction
+    expect(far.memories ?? []).toHaveLength(0);
+    // already present last tick (in prevStages) → not an onset, no new memory
+    const near2 = pawn('near2', 6, 5);
+    const state2 = { turn: 10, pawns: [sufferer, near2] } as unknown as GameState;
+    memoryService.recordConditionOnsets(state2, sufferer, new Map([['hypothermia', 'Severe']]), conditions);
+    expect(near2.memories ?? []).toHaveLength(0);
   });
 });
 

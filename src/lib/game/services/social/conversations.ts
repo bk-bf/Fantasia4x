@@ -10,6 +10,7 @@ import { rng } from '../../core/rng';
 import { TICKS_PER_SECOND } from '../../core/time';
 import { TURNS_PER_DAY } from '../EnvironmentService';
 import dialogData from '../../database/dialog.jsonc';
+import memoriesData from '../../database/memories.jsonc';
 
 // A callback opener only carries the thread on if the pair spoke RECENTLY — beyond this the thread
 // has gone cold and a fresh exchange fits better.
@@ -74,23 +75,20 @@ interface CategoryBank {
   callbacks?: string[];
 }
 
-/** PAWN-MEMORY — lines for recalling a witnessed event, keyed by MemoryKind. `category` says which
- *  base category's deltas/tone the recall borrows (banter for a botch, deep_talk for a death…). Lines
- *  fill `{subject}` (who it's about), `{detail}` (the item/foe), `{ago}` (how long ago), `{name}` (the
- *  listener). */
-interface MemoryBank {
-  category: ConversationCategory;
-  openers: string[];
-  replies_good: string[];
-  replies_bad: string[];
-  closers: string[];
-}
-
 const DATA = dialogData as unknown as {
   subjects: string[];
   categories: Record<ConversationCategory, CategoryBank>;
-  memories: Record<string, MemoryBank>;
 };
+
+/** PAWN-MEMORY — recall line banks, keyed by MemoryKind (memories.jsonc). `category` says which base
+ *  category's deltas/tone the recall borrows (banter for a botch, deep_talk for a death…). Lines fill
+ *  `{subject}` (who it's about), `{detail}` (the item/foe/affliction), `{ago}` (how long ago), `{name}`
+ *  (the listener). */
+interface MemoryBank {
+  category: ConversationCategory;
+  lines: { openers: string[]; replies_good: string[]; replies_bad: string[]; closers: string[] };
+}
+const MEMORIES = memoriesData as unknown as { kinds: Record<string, MemoryBank> };
 
 const RESULT_GOOD: Record<ConversationCategory, string> = {
   small_talk: 'passed the time together',
@@ -306,7 +304,7 @@ function recallConversation(
   recall: { memory: EventMemory; ago: string }
 ): ConversationOutcome {
   const { memory, ago } = recall;
-  const memBank = DATA.memories[memory.kind];
+  const memBank = MEMORIES.kinds[memory.kind];
   const category = memBank.category;
   const catBank = DATA.categories[category];
   const positive = rng.random() < computePGood(a, b, rel, catBank.goodChance, ctx.turn);
@@ -315,12 +313,13 @@ function recallConversation(
   const who = memory.subjectName ?? 'someone';
   const detail = memory.detail ?? '';
   const f = (tpl: string, other: Pawn) => fill(tpl, other, who, weatherWord, ctx.season, detail, ago);
-  const replyPool = positive ? memBank.replies_good : memBank.replies_bad;
+  const L = memBank.lines;
+  const replyPool = positive ? L.replies_good : L.replies_bad;
 
   const lines: ConversationLine[] = [
-    { pawnId: a.id, name: firstName(a), text: f(rng.pick(memBank.openers), b) },
+    { pawnId: a.id, name: firstName(a), text: f(rng.pick(L.openers), b) },
     { pawnId: b.id, name: firstName(b), text: f(rng.pick(replyPool), a) },
-    { pawnId: a.id, name: firstName(a), text: f(rng.pick(memBank.closers), b) }
+    { pawnId: a.id, name: firstName(a), text: f(rng.pick(L.closers), b) }
   ];
 
   return {

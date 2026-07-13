@@ -33,7 +33,7 @@ import {
   stageForScore
 } from '../core/Social';
 import { rng } from '../core/rng';
-import { memoryService, MEMORABILITY } from './MemoryService';
+import { memoryService } from './MemoryService';
 import { simLog } from '../core/logSink';
 import { TICKS_PER_SECOND } from '../core/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
@@ -616,14 +616,9 @@ class SocialServiceImpl {
         // PAWN-MEMORY: the tick a pawn's idling crosses into "days on end", the pawns around notice a
         // loafer — a trivial memory that's banter fodder for a few days. Fires once per idle streak.
         if (deeds.idleDays === 3 && p.position) {
-          const who = firstName(p);
-          memoryService.recordAround(state, p.position.x, p.position.y, p.id, 8, () => ({
-            kind: 'idled',
-            turn,
-            subjectId: p.id,
-            subjectName: who,
-            memorability: MEMORABILITY.idled
-          }));
+          memoryService.recordAroundKind(state, p.position.x, p.position.y, p.id, 'idled', {
+            subjectName: firstName(p)
+          });
         }
       } else {
         this.removeMoodModifier(p, 'idle');

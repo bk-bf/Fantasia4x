@@ -7,12 +7,32 @@
 // never per tick — so the whole subsystem sits outside the sim hot path. In-place pushes are safe: the
 // field is worker-only and these events are rare. Recall is a read the dialog tick performs.
 
-import type { EventMemory, GameState, MemoryKind, Pawn } from '../core/types';
+import type { EntityCondition, EventMemory, GameState, MemoryKind, Pawn } from '../core/types';
 import { rng } from '../core/rng';
 import { TICKS_PER_SECOND } from '../core/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
+import { getConditionCurrentStage } from '../core/needs';
+import memoriesData from '../database/memories.jsonc';
 
 const DAY = TURNS_PER_DAY * TICKS_PER_SECOND; // ticks in one in-game day (18000)
+
+/** One memory KIND's authored definition (memories.jsonc). */
+interface MemoryDef {
+  memorability: number;
+  category: string;
+  witnessRadius: number;
+  lines: { openers: string[]; replies_good: string[]; replies_bad: string[]; closers: string[] };
+}
+const MEM = memoriesData as unknown as {
+  kinds: Record<string, MemoryDef>;
+  /** Floater-persistent condition id → the affliction memory it mints on onset. */
+  fromCondition: Record<string, { detail: string; memorability: number }>;
+};
+
+/** The registry entry (memorability / category / witnessRadius / lines) for a memory kind. */
+export function memoryDef(kind: MemoryKind): MemoryDef {
+  return MEM.kinds[kind];
+}
 
 // Per-pawn cap on the ring buffer; the oldest NON-historic memory is dropped first, so a legendary
 // moment is never crowded out by a week of loafing gossip.
@@ -58,6 +78,55 @@ class MemoryServiceImpl {
       if (p.isAlive === false || p.id === subjectId || !p.position) continue;
       if (Math.max(Math.abs(p.position.x - x), Math.abs(p.position.y - y)) > radius) continue;
       this.record(p, make());
+    }
+  }
+
+  /** Convenience over {@link recordAround}: record a memory of `kind` around `(x,y)`, pulling the
+   *  witness radius + base memorability from the kind's def (memories.jsonc). `extra.memorability`
+   *  overrides the base (e.g. a Legendary craft is historic). */
+  recordAroundKind(
+    state: GameState,
+    x: number,
+    y: number,
+    subjectId: string,
+    kind: MemoryKind,
+    extra: { subjectName?: string; detail?: string; memorability?: number }
+  ): void {
+    const def = MEM.kinds[kind];
+    const memorability = extra.memorability ?? def.memorability;
+    this.recordAround(state, x, y, subjectId, def.witnessRadius, () => ({
+      kind,
+      turn: state.turn,
+      subjectId,
+      subjectName: extra.subjectName,
+      detail: extra.detail,
+      memorability
+    }));
+  }
+
+  /**
+   * PAWN-MEMORY §3: when a dire condition (memories.jsonc `fromCondition`) ONSETS on `pawn`, nearby
+   * pawns remember seeing it — an `affliction` memory. Onset is detected against `prevStages` (the
+   * floater snapshot the FSM already takes this tick), so no new per-tick diffing: a condition present
+   * now but absent from `prevStages` just appeared. Only mapped, floater-persistent conditions qualify.
+   */
+  recordConditionOnsets(
+    state: GameState,
+    pawn: Pawn,
+    prevStages: Map<string, string> | undefined,
+    conditions: EntityCondition[]
+  ): void {
+    if (!pawn.position || conditions.length === 0) return;
+    for (const c of conditions) {
+      const src = MEM.fromCondition[c.id];
+      if (!src) continue;
+      if (prevStages?.has(c.id)) continue; // already present last tick — not an onset
+      if (!getConditionCurrentStage(c)) continue; // not yet at a visible stage
+      this.recordAroundKind(state, pawn.position.x, pawn.position.y, pawn.id, 'affliction', {
+        subjectName: pawn.name.split(' ')[0],
+        detail: src.detail,
+        memorability: src.memorability
+      });
     }
   }
 
@@ -120,13 +189,10 @@ class MemoryServiceImpl {
   }
 }
 
-/** How memorable each kind of witnessed event is (0–1) — its retention window and recall weight. */
-export const MEMORABILITY: Record<MemoryKind, number> = {
-  death: 0.95, // BASE only — actual memorability is scaled per witness by their bond (SocialService.deathMemorability)
-  masterwork: 0.72, // significant — a fine piece of work talked of for a season
-  combat: 0.5, // notable — a kill seen in a scrap
-  botch: 0.28, // trivial — an embarrassing fumble, gossip for a few days
-  idled: 0.16 // trivial — so-and-so loafing about
-};
+/** Base memorability per kind, from memories.jsonc (death is further scaled per witness by their bond,
+ *  SocialService.deathMemorability). Kept as a convenience for callers/tests. */
+export const MEMORABILITY = Object.fromEntries(
+  (Object.keys(MEM.kinds) as MemoryKind[]).map((k) => [k, MEM.kinds[k].memorability])
+) as Record<MemoryKind, number>;
 
 export const memoryService = new MemoryServiceImpl();

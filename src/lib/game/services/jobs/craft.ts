@@ -14,7 +14,7 @@ import { craftWorkCategory } from './craftDiscipline';
 import { rollCraftQuality, qualityMultiplier } from '../../core/itemQuality';
 import { rollFamed, rollFamedIdentity } from '../../core/famedNames';
 import { itemDefById } from '../../core/itemDefs';
-import { memoryService, MEMORABILITY } from '../MemoryService';
+import { memoryService } from '../MemoryService';
 import { aggregateMaterialMods } from '../../core/materialProperties';
 import {
   absorbDropIfOnStockpileTile,
@@ -169,29 +169,17 @@ export function complete(job: Job, gs: GameState): GameState {
   if (pawn && pawn.position && bestTier >= 0) {
     const itemName = itemDefById(entry.item.id)?.name ?? 'their work';
     const who = pawn.name.split(' ')[0];
-    const pid = pawn.id;
-    const px = pawn.position.x;
-    const py = pawn.position.y;
-    const t = gs.turn;
     if (bestTier >= 4) {
-      const mem = bestTier >= 5 ? 0.9 : MEMORABILITY.masterwork; // a Legendary is historic
-      memoryService.recordAround(state, px, py, pid, 12, () => ({
-        kind: 'masterwork',
-        turn: t,
-        subjectId: pid,
+      memoryService.recordAroundKind(state, pawn.position.x, pawn.position.y, pawn.id, 'masterwork', {
         subjectName: who,
         detail: itemName,
-        memorability: mem
-      }));
+        memorability: bestTier >= 5 ? 0.9 : undefined // a Legendary is historic; else the def's base
+      });
     } else if (worstTier === 0) {
-      memoryService.recordAround(state, px, py, pid, 12, () => ({
-        kind: 'botch',
-        turn: t,
-        subjectId: pid,
+      memoryService.recordAroundKind(state, pawn.position.x, pawn.position.y, pawn.id, 'botch', {
         subjectName: who,
-        detail: itemName,
-        memorability: MEMORABILITY.botch
-      }));
+        detail: itemName
+      });
     }
   }
   // ADR-009 step 2: wear the WORKING pawn's craft tool (e.g. the knife used at a butcher spot /

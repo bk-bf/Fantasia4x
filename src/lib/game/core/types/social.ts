@@ -142,7 +142,8 @@ export type MemoryKind =
   | 'death' // witnessed a colonist die
   | 'masterwork' // saw someone finish an exceptional item
   | 'botch' // saw someone turn out shoddy work ("fucked up")
-  | 'idled'; // saw someone loafing for days
+  | 'idled' // saw someone loafing for days
+  | 'affliction'; // saw someone struck by a dire condition (minted from a condition onset — memories.jsonc fromCondition)
 
 /**
  * One thing a pawn witnessed and can bring up later. `memorability` (0–1) sets how long it stays

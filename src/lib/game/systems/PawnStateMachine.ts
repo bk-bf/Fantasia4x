@@ -51,6 +51,7 @@ const BED_TREATMENT_BONUS = new Map<string, number>(
 import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
 import { socialService } from '../services/SocialService';
+import { memoryService } from '../services/MemoryService';
 import { simLog } from '../core/logSink';
 import { gameLogger } from '../dev/gameLogger';
 import { perTick, SECONDS_PER_TICK } from '../core/time';
@@ -896,6 +897,9 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     pawn.position?.x ?? -1,
     pawn.position?.y ?? -1
   );
+  // PAWN-MEMORY: a dire affliction onsetting on this pawn (memories.jsonc fromCondition) is witnessed
+  // by those nearby — reuses `prevStages` for onset detection, so no new per-tick diffing.
+  memoryService.recordConditionOnsets(gameState, pawn, prevStages, conditions);
   // Colony-wide alert (chronicle + bugle) when a colonist's malnutrition/dehydration WORSENS a stage —
   // a starving/dehydrating pawn is an emergency the player should be told about, not just a floater.
   for (const esc of detectVitalEscalations(prevVitalStages, conditions)) {
