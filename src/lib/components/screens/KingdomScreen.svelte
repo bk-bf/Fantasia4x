@@ -10,7 +10,8 @@
     discoveredKingdoms,
     kingdomRelations,
     culturePool,
-    currentTurn
+    currentTurn,
+    gameState
   } from '$lib/stores/gameState';
   import type { Culture, Kingdom, KingdomRelation } from '$lib/game/core/types';
   import { COLONY_RELATION_ID } from '$lib/game/core/types';
@@ -37,12 +38,22 @@
   const unsubRel = kingdomRelations.subscribe((v) => (relations = v));
   const unsubCultures = culturePool.subscribe((v) => (cultures = v));
   const unsubTurn = currentTurn.subscribe((v) => (turn = v));
+  // Kingdoms any living colonist calls home (BACKGROUNDS) — marked in the list.
+  let homelandIds = new Set<string>();
+  const unsubState = gameState.subscribe((s) => {
+    homelandIds = new Set(
+      (s.pawns ?? [])
+        .filter((p) => p.isAlive !== false && p.homeKingdomId)
+        .map((p) => p.homeKingdomId!)
+    );
+  });
 
   onDestroy(() => {
     unsubKingdoms();
     unsubRel();
     unsubCultures();
     unsubTurn();
+    unsubState();
   });
 
   $: selected = known.find((k) => k.id === selectedId) ?? null;
@@ -69,7 +80,11 @@
             class:selected={kingdom.id === selectedId}
             on:click={() => (selectedId = kingdom.id)}
           >
-            <span class="ki-name">{kingdom.name}</span>
+            <span class="ki-name"
+              >{kingdom.name}{#if homelandIds.has(kingdom.id)}<span class="ki-home"
+                  >⌂ homeland</span
+                >{/if}</span
+            >
             <span class="ki-disp">{dispositionTo(kingdom.id)}</span>
             <span class="ki-tier">{ACQUAINTANCE[knowledgeTier(kingdom.knowledge)]}</span>
           </button>
@@ -143,6 +158,12 @@
   }
   .ki-name {
     font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+  .ki-home {
+    margin-left: 6px;
+    font-size: 9px;
+    color: var(--pos);
     letter-spacing: 0.04em;
   }
   .ki-disp,

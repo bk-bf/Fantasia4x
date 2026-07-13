@@ -409,7 +409,11 @@ const MAX_PERSONAL_TRAITS = 3;
  * `physique` (the pawn's rolled weight/height) gates physically-contradictory traits (ADR-028 `requires`):
  * a trait whose physique gate fails is skipped from this pawn — no Gaunt on a 250 kg mass.
  */
-export function drawPawnTraits(culture: Culture, physique?: PawnPhysique): Trait[] {
+export function drawPawnTraits(
+  culture: Culture,
+  physique?: PawnPhysique,
+  affinity?: { boost: Set<string>; guaranteed: string[] }
+): Trait[] {
   const out: Trait[] = [];
   const banned = new Set<string>();
   const ban = (id: string) => {
@@ -470,14 +474,41 @@ export function drawPawnTraits(culture: Culture, physique?: PawnPhysique): Trait
     }
   }
 
+  // BACKGROUNDS: force in any background-guaranteed personal trait first (respecting bans/physique),
+  // then bias the random personal draw toward the background's affinity ids so a Court Scholar tends
+  // to draw `scholar`, a Field Hand `industrious`, etc.
+  if (affinity) {
+    for (const id of affinity.guaranteed) {
+      const t = TRAIT_DATABASE.find((x) => x.id === id);
+      if (t && !banned.has(tid(t)) && fits(t)) {
+        ban(tid(t));
+        out.push(t);
+      }
+    }
+  }
+
   // 0–3 POSITIVE personal quirks (weighted toward a couple), honouring personal conflict groups.
   // Flaws (rarity 'negative') are excluded here — they're the separate Gaussian layer below.
   const r = rng.random();
   const nPersonal = r < 0.2 ? 0 : r < 0.55 ? 1 : r < 0.85 ? 2 : 3;
   const pbag = PERSONAL().filter((t) => t.rarity !== 'negative' && !banned.has(tid(t)) && fits(t));
+  // Background affinity weights a matching personal trait ×5 in the draw (still bounded by nPersonal,
+  // conflict groups, and physique gates — a bias, never a guarantee).
+  const boost = affinity?.boost;
+  const pickWeight = (t: Trait) => (boost?.has(tid(t)) ? 5 : 1);
   let personalCount = 0;
   while (personalCount < nPersonal && pbag.length > 0) {
-    const t = pbag.splice(rng.int(0, pbag.length - 1), 1)[0];
+    const total = pbag.reduce((s, t) => s + pickWeight(t), 0);
+    let roll = rng.random() * total;
+    let idx = pbag.length - 1;
+    for (let i = 0; i < pbag.length; i++) {
+      roll -= pickWeight(pbag[i]);
+      if (roll < 0) {
+        idx = i;
+        break;
+      }
+    }
+    const t = pbag.splice(idx, 1)[0];
     if (banned.has(tid(t))) continue;
     ban(tid(t));
     out.push(t);

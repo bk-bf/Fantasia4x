@@ -14,9 +14,16 @@ import type {
   Kingdom,
   KingdomParty,
   KingdomRelation,
-  Mob
+  Mob,
+  Pawn
 } from '../core/types';
 import { COLONY_RELATION_ID } from '../core/types';
+import {
+  SEED_KNOWLEDGE_CAP,
+  getBackgroundById,
+  backgroundHomeKnowledge,
+  backgroundWorldliness
+} from '../core/Backgrounds';
 import {
   WEALTH_BANDS,
   dispositionForScore,
@@ -235,6 +242,81 @@ class KingdomServiceImpl {
   isKnowledgeStale(kingdom: Kingdom, turn: number): boolean {
     if (kingdom.lastContactTurn == null) return true;
     return turn - kingdom.lastContactTurn > STALE_AFTER_TICKS;
+  }
+
+  /**
+   * SEEDED knowledge (BACKGROUNDS) — a founder/migrant remembers their homeland (and places they
+   * travelled) from before they arrived. Like {@link recordContact} but capped below "complete" and
+   * with **no `lastContactTurn`**, so the mutable facets render immediately as a stale memory
+   * ("as last you knew") until real contact refreshes them.
+   */
+  seedKnowledge(state: GameState, kingdomId: string, xp: number): GameState {
+    if (xp <= 0) return state;
+    let seeded: Kingdom | undefined;
+    const kingdoms = (state.kingdoms ?? []).map((k) => {
+      if (k.id !== kingdomId) return k;
+      seeded = {
+        ...k,
+        discovered: true,
+        knowledge: Math.min(SEED_KNOWLEDGE_CAP, k.knowledge + xp),
+        // deliberately NO lastContactTurn — a remembered homeland reads as out of date.
+        known: k.known ?? {
+          leaderName: k.lore.leaderName,
+          wealthBand: k.lore.wealthBand,
+          famedItems: {
+            created: [...k.lore.famedItems.created],
+            held: [...k.lore.famedItems.held]
+          },
+          asOfTurn: state.turn
+        }
+      };
+      return seeded;
+    });
+    if (!seeded) return state;
+    // Grow the culture pokédex the same way contact does (RACE-SYSTEM Phase 2).
+    const familiar = knowledgeTier(seeded.knowledge) >= 2;
+    const metCultureIds = new Set(
+      (familiar ? seeded.cultureMix : seeded.cultureMix.slice(0, 1)).map((s) => s.cultureId)
+    );
+    const pool = state.culturePool ?? [];
+    const anyNew = pool.some((c) => metCultureIds.has(c.id) && !c.discovered);
+    return {
+      ...state,
+      kingdoms,
+      ...(anyNew
+        ? {
+            culturePool: pool.map((c) =>
+              metCultureIds.has(c.id) && !c.discovered ? { ...c, discovered: true } : c
+            )
+          }
+        : {})
+    };
+  }
+
+  /**
+   * Seed the colony's kingdom knowledge from a set of pawns' backgrounds — their home kingdom (grew
+   * up there) plus a few OTHER kingdoms that travelled backgrounds know. Run at colony gen and when
+   * migrants join. Knowledge is shared/colony-level and persists once learned.
+   */
+  seedKingdomKnowledgeFromPawns(state: GameState, pawns: Pawn[]): GameState {
+    if (!state.kingdoms || state.kingdoms.length === 0) return state;
+    let s = state;
+    for (const p of pawns) {
+      const childhood = getBackgroundById(p.childhoodId);
+      const adulthood = getBackgroundById(p.adulthoodId);
+      if (p.homeKingdomId) {
+        s = this.seedKnowledge(s, p.homeKingdomId, backgroundHomeKnowledge(childhood, adulthood));
+      }
+      const { count, band } = backgroundWorldliness(childhood, adulthood);
+      if (count > 0) {
+        const others = (s.kingdoms ?? []).filter((k) => k.id !== p.homeKingdomId);
+        for (let i = 0; i < count && others.length > 0; i++) {
+          const k = others.splice(rng.int(0, others.length - 1), 1)[0];
+          s = this.seedKnowledge(s, k.id, rng.int(band[0], band[1]));
+        }
+      }
+    }
+    return s;
   }
 
   // ─── Relations ─────────────────────────────────────────────────────────────

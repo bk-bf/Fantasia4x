@@ -1165,7 +1165,9 @@ export const COMMANDS: Record<string, Cmd> = {
       severity: 'success'
     });
 
-    return { ...s, pawns: [...s.pawns, ...placed], pendingEvent: undefined };
+    // BACKGROUNDS: a new arrival brings knowledge of their homeland (and places they travelled).
+    const joined: GameState = { ...s, pawns: [...s.pawns, ...placed], pendingEvent: undefined };
+    return kingdomService.seedKingdomKnowledgeFromPawns(joined, placed);
   },
 
   /** KINGDOMS-TRADE §3: dismiss the arrival announcement — the party is already on the map. */

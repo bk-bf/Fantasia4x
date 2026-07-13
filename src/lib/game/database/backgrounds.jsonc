@@ -1,0 +1,224 @@
+// Pawn backgrounds (KINGDOMS-TRADE / BACKGROUNDS). A pawn has a CHILDHOOD (always) and, if adult
+// (≥18), an ADULTHOOD. Cohesion, unlike RimWorld's free pairing: a childhood `opens` a set of
+// life-path TAGS, and an adulthood is only reachable if its `requires` tag was opened by that
+// childhood — so "street urchin → court scholar" can't happen, but "street urchin → cutpurse" can.
+// Backgrounds also gate on the HOME KINGDOM (wealth band / raider) so a story fits where the pawn
+// was raised. core/Backgrounds.ts loads + rolls these.
+//
+// All strings here are PLAYER-FACING (in-world tone, imply-don't-instruct). Effect fields:
+//   traitAffinity   — trait ids (traits.jsonc) weighted UP in the pawn's personal-trait draw
+//   traitGuaranteed — trait id(s) forced in (respecting CONFLICT_GROUPS / physique gates)
+//   experience      — work category → [min,max] STARTING experience level added on top of the roll
+//   prestige        — [min,max] inherent standing (basePrestige) added at birth
+//   homeKnowledge   — [min,max] xp this bg contributes to the pawn's HOME kingdom (childhood+adult sum)
+//   worldliness     — # of OTHER kingdoms this bg gives partial knowledge of (travelled lives > 0)
+//   worldKnowledge  — [min,max] xp per secondary kingdom
+//
+// Life-path tags: martial · learned · wilderness · labor · craft · social · crime · faith
+{
+  "childhoods": [
+    {
+      "id": "village_child",
+      "title": "Village Child",
+      "description": "Raised where the year turns on the harvest, hands calloused before they were clever.",
+      "weight": 1.4,
+      "opens": ["labor", "wilderness", "faith"],
+      "traitAffinity": ["industrious", "greenthumb", "sturdy"],
+      "experience": { "planting": [1, 4], "foraging": [1, 3] },
+      "homeKnowledge": [20, 55]
+    },
+    {
+      "id": "caravan_born",
+      "title": "Caravan-Born",
+      "description": "First steps taken on a moving wagon; the road was the only home that held still.",
+      "weight": 0.9,
+      "kingdomWealth": ["modest", "prosperous", "wealthy", "opulent"],
+      "opens": ["social", "wilderness", "martial"],
+      "traitAffinity": ["gregarious", "curious"],
+      "experience": { "hauling": [2, 5] },
+      "homeKnowledge": [15, 40],
+      "worldliness": 1,
+      "worldKnowledge": [8, 25]
+    },
+    {
+      "id": "court_ward",
+      "title": "Court Ward",
+      "description": "Grew up underfoot in a great house, learning which silences were dangerous.",
+      "weight": 0.7,
+      "kingdomWealth": ["wealthy", "opulent"],
+      "opens": ["learned", "social", "faith"],
+      "traitAffinity": ["bright", "scholar"],
+      "experience": { "research": [1, 4] },
+      "prestige": [3, 8],
+      "homeKnowledge": [55, 95]
+    },
+    {
+      "id": "street_urchin",
+      "title": "Street Urchin",
+      "description": "Reared by the alleys of the capital, quick of hand and quicker to vanish.",
+      "weight": 1.0,
+      "opens": ["crime", "martial", "social"],
+      "traitAffinity": ["rangy", "curious"],
+      "homeKnowledge": [10, 30]
+    },
+    {
+      "id": "warband_whelp",
+      "title": "Warband Whelp",
+      "description": "Raised among the riders, weaned on plunder and the smell of horses and smoke.",
+      "weight": 0.9,
+      "raider": true,
+      "opens": ["martial", "crime", "wilderness"],
+      "traitAffinity": ["adrenaline", "sturdy"],
+      "experience": { "hunting": [1, 4] },
+      "homeKnowledge": [15, 45]
+    },
+    {
+      "id": "smithy_child",
+      "title": "Smithy Child",
+      "description": "Grew up in the ringing of the anvil, breathing forge-smoke before words.",
+      "weight": 0.9,
+      "opens": ["craft", "labor", "learned"],
+      "traitAffinity": ["handy", "meticulous"],
+      "experience": { "crafting": [1, 4] },
+      "homeKnowledge": [20, 50]
+    },
+    {
+      "id": "temple_novice",
+      "title": "Temple Novice",
+      "description": "Given young to a quiet order, taught to read the sky and hold their tongue.",
+      "weight": 0.7,
+      "opens": ["faith", "learned", "social"],
+      "traitAffinity": ["scholar", "nurturing"],
+      "experience": { "research": [1, 3] },
+      "homeKnowledge": [30, 65]
+    },
+    {
+      "id": "wildlands_foundling",
+      "title": "Wildlands Foundling",
+      "description": "No kingdom's child — raised half-wild at the edge of the maps, by whoever passed through.",
+      "weight": 1.0,
+      "stateless": true,
+      "opens": ["wilderness", "labor", "martial"],
+      "traitAffinity": ["forager", "sturdy"],
+      "experience": { "foraging": [2, 5], "hunting": [1, 4] },
+      "homeKnowledge": [0, 10]
+    }
+  ],
+  "adulthoods": [
+    {
+      "id": "field_hand",
+      "title": "Field Hand",
+      "description": "A life bent to the soil — planting, reaping, mending fences against the dark.",
+      "weight": 1.3,
+      "requires": ["labor"],
+      "traitAffinity": ["industrious", "greenthumb"],
+      "experience": { "planting": [3, 8], "foraging": [1, 4] },
+      "homeKnowledge": [25, 55]
+    },
+    {
+      "id": "caravan_guard",
+      "title": "Caravan Guard",
+      "description": "Paid by the mile to watch the treeline; crossed more borders than they can name.",
+      "weight": 1.0,
+      "requires": ["martial"],
+      "kingdomWealth": ["modest", "prosperous", "wealthy", "opulent"],
+      "traitAffinity": ["sturdy", "adrenaline"],
+      "experience": { "hunting": [3, 7], "hauling": [1, 4] },
+      "prestige": [2, 6],
+      "homeKnowledge": [30, 60],
+      "worldliness": 2,
+      "worldKnowledge": [12, 40]
+    },
+    {
+      "id": "court_scholar",
+      "title": "Court Scholar",
+      "description": "Kept the histories and read the omens for a throne, until the throne no longer needed them.",
+      "weight": 0.6,
+      "requires": ["learned"],
+      "kingdomWealth": ["wealthy", "opulent"],
+      "traitAffinity": ["scholar", "savant"],
+      "experience": { "research": [5, 12] },
+      "prestige": [6, 14],
+      "homeKnowledge": [80, 140]
+    },
+    {
+      "id": "journeyman_smith",
+      "title": "Journeyman Smith",
+      "description": "Years at the anvil turned a child's mimicry into a maker's certainty.",
+      "weight": 0.9,
+      "requires": ["craft"],
+      "traitAffinity": ["handy", "meticulous"],
+      "experience": { "crafting": [4, 10], "metalworking": [2, 6] },
+      "homeKnowledge": [30, 60]
+    },
+    {
+      "id": "caravan_master",
+      "title": "Caravan Master",
+      "description": "Set the prices and read the room; a good year on the roads made small fortunes and enemies.",
+      "weight": 0.7,
+      "requires": ["social"],
+      "kingdomWealth": ["modest", "prosperous", "wealthy", "opulent"],
+      "traitAffinity": ["gregarious", "meticulous"],
+      "experience": { "hauling": [2, 5] },
+      "prestige": [5, 12],
+      "homeKnowledge": [40, 80],
+      "worldliness": 3,
+      "worldKnowledge": [15, 45]
+    },
+    {
+      "id": "cutpurse",
+      "title": "Cutpurse",
+      "description": "Made a trade of other people's pockets, and learned which cities forgive and which remember.",
+      "weight": 0.8,
+      "requires": ["crime"],
+      "traitAffinity": ["rangy", "curious"],
+      "homeKnowledge": [20, 45],
+      "worldliness": 1,
+      "worldKnowledge": [10, 30]
+    },
+    {
+      "id": "reaver",
+      "title": "Reaver",
+      "description": "Rode with the horde and took what the horde takes; left it, or was left by it.",
+      "weight": 0.8,
+      "requires": ["martial"],
+      "traitAffinity": ["adrenaline", "sturdy"],
+      "experience": { "hunting": [3, 7] },
+      "homeKnowledge": [25, 55],
+      "worldliness": 1,
+      "worldKnowledge": [10, 35]
+    },
+    {
+      "id": "hedge_priest",
+      "title": "Hedge Priest",
+      "description": "Carried the rites to villages too small for a temple, and kept faith where none was owed.",
+      "weight": 0.7,
+      "requires": ["faith"],
+      "traitAffinity": ["nurturing", "scholar"],
+      "experience": { "research": [2, 6] },
+      "prestige": [2, 6],
+      "homeKnowledge": [35, 70]
+    },
+    {
+      "id": "hunter_tracker",
+      "title": "Hunter-Tracker",
+      "description": "Read the wilds like a page — spoor, wind, and the long patience of the kill.",
+      "weight": 1.0,
+      "requires": ["wilderness"],
+      "traitAffinity": ["forager", "sharpshooter"],
+      "experience": { "hunting": [4, 9], "foraging": [2, 5] },
+      "homeKnowledge": [20, 50]
+    },
+    {
+      "id": "wanderer",
+      "title": "Wanderer",
+      "description": "Belonged to no gate for long — walked the world's edges and carried its rumours.",
+      "weight": 0.9,
+      "requires": ["wilderness", "social"],
+      "traitAffinity": ["curious", "forager"],
+      "homeKnowledge": [5, 25],
+      "worldliness": 3,
+      "worldKnowledge": [12, 40]
+    }
+  ]
+}

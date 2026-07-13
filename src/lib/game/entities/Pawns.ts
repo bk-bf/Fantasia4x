@@ -1,6 +1,23 @@
-import type { Pawn, EntityNeeds, PawnState, Culture, EntityStats, Trait, Injury } from '../core/types';
+import type {
+  Pawn,
+  EntityNeeds,
+  PawnState,
+  Culture,
+  EntityStats,
+  Trait,
+  Injury,
+  Kingdom
+} from '../core/types';
 import { createPawnInventory, createPawnEquipment } from '../core/PawnEquipment';
 import { drawPawnTraits } from '../core/Culture';
+import {
+  type Background,
+  rollOrigin,
+  rollBackgrounds,
+  backgroundTraitAffinity,
+  applyBackgroundExperience,
+  backgroundPrestige
+} from '../core/Backgrounds';
 import { createBodyPlanLimbs } from '../systems/Combat';
 import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/BodyParts';
 import { SCARRING_CONFIG, makeScarInjury } from '../core/Wounds';
@@ -343,16 +360,30 @@ export function applyConsumable(
   return changed ? next : pawn;
 }
 
+/** A pawn's origin + life story (BACKGROUNDS), rolled before the pawn so the backgrounds can bias the
+ *  trait draw and seed experience/standing. Omitted → a plain culture-only pawn (back-compat). */
+export interface PawnOrigin {
+  homeKingdomId?: string;
+  age?: number;
+  childhood?: Background;
+  adulthood?: Background;
+}
+
 /** Roll a single pawn from a specific culture (stats within the culture's ranges, traits copied,
- *  culture identity stamped). Shared by single-culture and mixed-colony generation. */
-export function buildPawnFromCulture(culture: Culture, index: number): Pawn {
+ *  culture identity stamped). Shared by single-culture and mixed-colony generation. An optional
+ *  {@link PawnOrigin} adds a homeland + childhood/adulthood backgrounds (BACKGROUNDS). */
+export function buildPawnFromCulture(culture: Culture, index: number, origin?: PawnOrigin): Pawn {
   const baseStats = rollStatsFromRanges(culture.statRanges);
   // Roll the base physique FIRST — it gates physically-contradictory traits (ADR-028 `requires`: no
   // Gaunt on a 250 kg mass), so the trait draw needs to know weight/height.
   const physicalTraits = rollPhysicalTraits(culture.physicalTraits);
   // ADR-023: each pawn draws its OWN trait set (guaranteed identity + 1–2 mundane pool + 0–2 personal,
-  // physique-gated), so same-culture pawns differ. Stats then fold in the drawn traits' bonuses.
-  const traits = drawPawnTraits(culture, physicalTraits);
+  // physique-gated), so same-culture pawns differ. BACKGROUNDS bias the personal draw. Stats then fold
+  // in the drawn traits' bonuses.
+  const affinity = origin
+    ? backgroundTraitAffinity(origin.childhood, origin.adulthood)
+    : undefined;
+  const traits = drawPawnTraits(culture, physicalTraits, affinity);
   const finalStats = applyCulturalTraitBonuses(baseStats, traits);
   // TRAIT-SYSTEM-V2 §1: bodyMod weight (heavy bones) mass folded in AFTER the draw (it doesn't change
   // the base build the gate reads) but BEFORE the blood pool is derived from weight.
@@ -362,6 +393,12 @@ export function buildPawnFromCulture(culture: Culture, index: number): Pawn {
   // PAWN-GROWTH: talent-star fav stats + per-stat growth ceilings, a rolled adult age, and a fixed
   // random birthday (age++ + a doubled growth offer land on it).
   const { maxStats, favStats } = rollGrowthProfile(finalStats, culture.statRanges);
+  const age = origin?.age ?? rng.int(16, 45);
+  // BACKGROUNDS: seed base experience, then add the backgrounds' starting-experience bands + standing.
+  const skills = origin
+    ? applyBackgroundExperience(seedWorkLevels(), origin.childhood, origin.adulthood)
+    : seedWorkLevels();
+  const basePrestige = origin ? backgroundPrestige(origin.childhood, origin.adulthood) : 0;
 
   const pawn: Pawn = {
     id: `pawn-${index}`,
@@ -370,11 +407,15 @@ export function buildPawnFromCulture(culture: Culture, index: number): Pawn {
     stats: finalStats,
     maxStats,
     favStats,
-    age: rng.int(16, 45),
+    age,
     birthDayOfYear: rng.int(0, 359),
     physicalTraits,
     cultureId: culture.id,
     cultureName: culture.name,
+    ...(origin?.homeKingdomId ? { homeKingdomId: origin.homeKingdomId } : {}),
+    ...(origin?.childhood ? { childhoodId: origin.childhood.id } : {}),
+    ...(origin?.adulthood ? { adulthoodId: origin.adulthood.id } : {}),
+    ...(basePrestige > 0 ? { basePrestige } : {}),
     traits,
     inventory: createPawnInventory(),
     equipment: createPawnEquipment(),
@@ -392,9 +433,9 @@ export function buildPawnFromCulture(culture: Culture, index: number): Pawn {
       isEating: false
     },
     currentState: 'Idle',
-    // WORK-EXPERIENCE: per-category experience levels (bell-curve + 0–2 talent categories) and the
-    // innate speed↔finesse style — the base drivers of the work stats (core stats are supplements).
-    skills: seedWorkLevels(),
+    // WORK-EXPERIENCE: per-category experience levels (bell-curve + 0–2 talent categories, plus any
+    // BACKGROUND experience) and the innate speed↔finesse style — the base drivers of the work stats.
+    skills,
     workStyle: rollWorkStyle(),
     // Survival & Health
     isAlive: true,
@@ -435,10 +476,29 @@ export function generatePawns(culture: Culture, count = 3): Pawn[] {
   return Array.from({ length: count }, (_, i) => buildPawnFromCulture(culture, i));
 }
 
-/** Generate a fully-mixed starting colony: each pawn is rolled from a random pool culture. */
-export function generateColonyPawns(culturePool: Culture[], count = 5): Pawn[] {
+/**
+ * Generate a fully-mixed starting colony. With a kingdom pool (`opts.kingdoms`), each pawn is rolled
+ * KINGDOM-FIRST (BACKGROUNDS): a homeland is picked, their people drawn from its culture mix, and a
+ * childhood/adulthood rolled to fit — so founders read as people from places. Without it (tests,
+ * back-compat), each pawn is just a random pool culture with no origin or background.
+ */
+export function generateColonyPawns(
+  culturePool: Culture[],
+  count = 5,
+  opts?: { kingdoms?: Kingdom[] }
+): Pawn[] {
   if (culturePool.length === 0) return [];
-  return Array.from({ length: count }, (_, i) => buildPawnFromCulture(rng.pick(culturePool), i));
+  const kingdoms = opts?.kingdoms;
+  if (!kingdoms || kingdoms.length === 0) {
+    return Array.from({ length: count }, (_, i) => buildPawnFromCulture(rng.pick(culturePool), i));
+  }
+  return Array.from({ length: count }, (_, i) => {
+    const { homeKingdomId, culture } = rollOrigin(culturePool, kingdoms);
+    const age = rng.int(16, 45);
+    const home = homeKingdomId ? kingdoms.find((k) => k.id === homeKingdomId) : undefined;
+    const { childhood, adulthood } = rollBackgrounds(home, age);
+    return buildPawnFromCulture(culture, i, { homeKingdomId, age, childhood, adulthood });
+  });
 }
 
 // UPDATED: Simplified categorization focused on basic abilities

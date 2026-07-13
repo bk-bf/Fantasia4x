@@ -309,6 +309,18 @@ export interface Pawn {
   cultureId?: string;
   cultureName?: string;
 
+  // KINGDOMS-TRADE / BACKGROUNDS — origin & life story.
+  /** The polity this pawn was born into (a kingdom id). Drives seeded home-kingdom knowledge and the
+   *  background pool. Undefined = a stateless founder (no fixed homeland). */
+  homeKingdomId?: string;
+  /** Childhood background id (backgrounds.jsonc). Every pawn has one. */
+  childhoodId?: string;
+  /** Adulthood background id (backgrounds.jsonc). Undefined for pawns under 18 — a childhood only. */
+  adulthoodId?: string;
+  /** Inherent standing carried by station/upbringing (a noble bears it even in rags), summed on top of
+   *  equipped `prestigeBonus` by SocialService.getPrestige. Undefined = commoner (0). */
+  basePrestige?: number;
+
   /** The pawn's COMBINED trait set (ADR-023): its guaranteed cultural identity traits + 1–2 drawn from
    *  its culture's mundane pool + 0–2 personal traits — rolled PER PAWN, so same-culture pawns differ. */
   traits: Trait[];

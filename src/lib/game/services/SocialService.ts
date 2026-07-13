@@ -9,11 +9,12 @@ import { itemDefById } from '../core/itemDefs';
 import { combinedQualityMultiplier } from '../core/itemQuality';
 
 class SocialServiceImpl {
-  /** Standing prestige from worn regalia — 0 for the unadorned. */
+  /** Standing prestige: inherent bearing from station/upbringing (BACKGROUNDS `basePrestige`, pawns
+   *  only) plus worn regalia. 0 for a plain commoner in rags. */
   getPrestige(entity: Pawn | Mob): number {
+    let total = 'basePrestige' in entity ? ((entity as Pawn).basePrestige ?? 0) : 0;
     const equipment = entity.equipment;
-    if (!equipment) return 0;
-    let total = 0;
+    if (!equipment) return total;
     for (const inst of Object.values(equipment) as (ItemInstance | undefined | null)[]) {
       if (!inst || !inst.itemId) continue;
       const bonus = itemDefById(inst.itemId)?.armorProperties?.prestigeBonus;

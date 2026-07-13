@@ -31,6 +31,7 @@ import { generateColonyPawns } from '$lib/game/entities/Pawns';
 import { pawnService } from '$lib/game/services/PawnService';
 import { generateCulture, generateCulturePool, generateCultureRelations } from '$lib/game/core/Culture';
 import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/Kingdom';
+import { kingdomService } from '$lib/game/services/KingdomService';
 import { itemService } from '$lib/game/services/ItemService';
 import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
@@ -755,9 +756,14 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
   next = ensureKingdomPool(next);
   next = {
     ...next,
-    pawns: spawnPawnsOnMap(generateColonyPawns(next.culturePool, colonySize), newWorld)
+    pawns: spawnPawnsOnMap(
+      generateColonyPawns(next.culturePool, colonySize, { kingdoms: next.kingdoms }),
+      newWorld
+    )
   };
   next = markColonyCulturesDiscovered(next);
+  // BACKGROUNDS: founders arrive already knowing their homelands (and places they travelled).
+  next = kingdomService.seedKingdomKnowledgeFromPawns(next, next.pawns);
   next = workService.ensureDefaultWorkAssignments(next);
   if (dev) next = applyDevWorld(next, itemQty);
   next = entityService.seedInitialEntities(next);
@@ -930,9 +936,13 @@ function resetGame() {
   };
   fresh = ensureCulturePool(fresh);
   fresh = ensureKingdomPool(fresh);
-  fresh = { ...fresh, pawns: generateColonyPawns(fresh.culturePool, 5) };
+  fresh = {
+    ...fresh,
+    pawns: generateColonyPawns(fresh.culturePool, 5, { kingdoms: fresh.kingdoms })
+  };
   fresh = { ...fresh, pawns: spawnPawnsOnMap(fresh.pawns, world) };
   fresh = markColonyCulturesDiscovered(fresh);
+  fresh = kingdomService.seedKingdomKnowledgeFromPawns(fresh, fresh.pawns);
   fresh = workService.ensureDefaultWorkAssignments(fresh);
   fresh = entityService.seedInitialEntities(fresh);
   loadStateIntoWorker(fresh);
@@ -1342,9 +1352,13 @@ export const savedStateReady: Promise<void> = (async () => {
   // `isGameOver`) instead of resurrecting it. We also do NOT top up an under-5 roster — a colony
   // that lost members stays shrunk. (The old `length < 5` backfill silently undid permadeath on
   // every reload/HMR, spawning strangers next to the persisted corpses. Removed.)
-  if (!savedState && (!baseState.pawns || baseState.pawns.length === 0)) {
-    // Fresh colony — fully mixed: each pawn rolled from a random pool culture.
-    baseState = { ...baseState, pawns: generateColonyPawns(baseState.culturePool, 5) };
+  const freshColony = !savedState && (!baseState.pawns || baseState.pawns.length === 0);
+  if (freshColony) {
+    // Fresh colony — kingdom-first: each founder is drawn from a homeland with a childhood/adulthood.
+    baseState = {
+      ...baseState,
+      pawns: generateColonyPawns(baseState.culturePool, 5, { kingdoms: baseState.kingdoms })
+    };
   }
 
   // Spawn pawns that have no map position yet
@@ -1354,6 +1368,12 @@ export const savedStateReady: Promise<void> = (async () => {
 
   // Flag colony cultures as discovered + set per-culture headcounts for the pokédex.
   baseState = markColonyCulturesDiscovered(baseState);
+
+  // BACKGROUNDS: seed the founders' home-kingdom knowledge — ONLY on a genuinely fresh colony (a
+  // loaded save was already seeded when it was first created; re-seeding would double-count).
+  if (freshColony) {
+    baseState = kingdomService.seedKingdomKnowledgeFromPawns(baseState, baseState.pawns);
+  }
 
   // Give any pawn without a work assignment explicit default labor settings — ONCE.
   // (Replaces the old per-tick workService.ensureBasicWorkAssignments — see D4.)

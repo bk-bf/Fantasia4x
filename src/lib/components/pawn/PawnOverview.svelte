@@ -10,6 +10,7 @@
   } from '$lib/components/util/pawnUtils';
   import { pawnService } from '$lib/game/services/PawnService';
   import { sizeFromHeight } from '$lib/game/core/Culture';
+  import { getBackgroundById } from '$lib/game/core/Backgrounds';
   import PawnStance from './PawnStance.svelte';
   import PawnRestPolicy from './PawnRestPolicy.svelte';
   import PawnForceWork from './PawnForceWork.svelte';
@@ -35,6 +36,20 @@
   $: cultureLabel = pawn.cultureName
     ? `${pawn.cultureName}${culture?.archetype ? ` · ${culture.archetype}` : ''}`
     : 'unknown';
+  // BACKGROUNDS: homeland + life story. Home kingdom name (or "no fixed homeland" for the stateless).
+  $: homeKingdom = pawn.homeKingdomId
+    ? gameState.kingdoms?.find((k) => k.id === pawn.homeKingdomId)
+    : undefined;
+  $: originLabel = pawn.homeKingdomId
+    ? (homeKingdom?.name ?? 'a distant land')
+    : 'no fixed homeland';
+  $: childhood = getBackgroundById(pawn.childhoodId);
+  $: adulthood = getBackgroundById(pawn.adulthoodId);
+  $: pastLabel = childhood
+    ? adulthood
+      ? `${childhood.title} → ${adulthood.title}`
+      : `${childhood.title} (still young)`
+    : '';
 
   function stateColor(state: string | undefined): string {
     const normalized = (state ?? 'Idle').replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
@@ -67,6 +82,18 @@
     <span class="lbl">CULTURE</span>
     <span class="val culture-val" title={culture?.lore?.epithet ?? ''}>{cultureLabel}</span>
   </div>
+  {#if pawn.childhoodId}
+    <div class="row">
+      <span class="lbl">ORIGIN</span>
+      <span class="val" title={homeKingdom?.lore?.epithet ?? ''}>{originLabel}</span>
+    </div>
+    <div class="row">
+      <span class="lbl">PAST</span>
+      <span class="val" title={adulthood?.description ?? childhood?.description ?? ''}
+        >{pastLabel}</span
+      >
+    </div>
+  {/if}
   {#if pawn.age != null}
     <div class="row">
       <span class="lbl">AGE</span><span class="val" title={birthdayLabel}>{pawn.age} yrs</span>
