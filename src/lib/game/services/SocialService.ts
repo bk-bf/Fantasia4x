@@ -45,6 +45,8 @@ const TRAIT_AFFINITY_DELTA = 0.5; // personality match (+) / clash (−) per day
 const IDLE_RIVAL_DELTA = -1; // idling next to a rival/enemy
 const WORK_CLUSTER_RADIUS = 6;
 const IDLE_ADJ_RADIUS = 2;
+// Seeing each other is meeting: pairs within this range get their Strangers row on the daily pass.
+const MEET_RADIUS = 12;
 // §1 event deltas (pushed by the owning systems via the on* hooks)
 const RESCUE_DELTA = 18;
 const TEND_DELTA = 8;
@@ -194,6 +196,29 @@ class SocialServiceImpl {
     if (tags) {
       for (const t of tags) if (!rel.tags.includes(t)) rel.tags.push(t);
     }
+  }
+
+  /**
+   * Everyone in the colony has MET everyone: ensure a (culture-seeded) row for every living pawn
+   * pair, so the Relations tab shows at least Strangers from the first look. Called at colony gen,
+   * on migrant join, and as the old-save backfill on load. Idempotent — returns the SAME state ref
+   * when no pair was missing.
+   */
+  meetColony(state: GameState): GameState {
+    const alive = state.pawns.filter((p) => p.isAlive !== false);
+    let working: PawnRelationship[] | null = null;
+    for (let i = 0; i < alive.length; i++) {
+      for (let j = i + 1; j < alive.length; j++) {
+        const [idA, idB] = sortedPair(alive[i].id, alive[j].id);
+        const exists = (working ?? state.relationships ?? []).some(
+          (r) => r.pawnA === idA && r.pawnB === idB
+        );
+        if (exists) continue;
+        working ??= state.relationships ? [...state.relationships] : [];
+        this.ensureRel(working, alive[i], alive[j], state);
+      }
+    }
+    return working ? { ...state, relationships: working } : state;
   }
 
   /** One-pair event delta from an owning system (rescue/tend/friendly fire…). Returns new state
@@ -419,6 +444,9 @@ class SocialServiceImpl {
         const b = alive[j];
         const d = dist(a, b);
         if (j > i) {
+          // Meeting: any pair within sight of each other has at least a Strangers row (the gen/
+          // join paths call meetColony, so this is the catch-all for debug spawns and stragglers).
+          if (d <= MEET_RADIUS && !findRelationship(working, a.id, b.id)) touch(a, b);
           // one-directional pair work (deltas applied once per pair)
           if (d <= WORK_CLUSTER_RADIUS && a.state?.isWorking && b.state?.isWorking) {
             this.applyDelta(touch(a, b), WORKED_TOGETHER_DELTA);

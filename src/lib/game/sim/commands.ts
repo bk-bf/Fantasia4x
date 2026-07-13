@@ -65,6 +65,7 @@ import { generatePawns, applyConsumable, remapKinIds } from '../entities/Pawns';
 import { pawnGrowthService } from '../services/PawnGrowthService';
 import { devSpawnMobs } from '../services/entity/entitySpawning';
 import { kingdomService, KNOWLEDGE_XP } from '../services/KingdomService';
+import { socialService } from '../services/SocialService';
 import { rollMigrantWave } from '../systems/migration';
 import {
   makeWeather,
@@ -631,7 +632,10 @@ export const COMMANDS: Record<string, Cmd> = {
     const pawns = s.pawns.slice();
     pawns[idx] = {
       ...pawn,
-      equipment: { ...pawn.equipment, mainHand: { ...mh, coating: { itemId: p.itemId, expiresAtTurn } } }
+      equipment: {
+        ...pawn.equipment,
+        mainHand: { ...mh, coating: { itemId: p.itemId, expiresAtTurn } }
+      }
     };
     return consumeFromStockpiles({ ...s, pawns }, { [p.itemId]: 1 });
   },
@@ -1173,7 +1177,8 @@ export const COMMANDS: Record<string, Cmd> = {
 
     // BACKGROUNDS: a new arrival brings knowledge of their homeland (and places they travelled).
     const joined: GameState = { ...s, pawns: [...s.pawns, ...placed], pendingEvent: undefined };
-    return kingdomService.seedKingdomKnowledgeFromPawns(joined, placed);
+    // SOCIAL-LAYER: the newcomers are introduced around — at least a Strangers row with everyone.
+    return socialService.meetColony(kingdomService.seedKingdomKnowledgeFromPawns(joined, placed));
   },
 
   /** KINGDOMS-TRADE §3: dismiss the arrival announcement — the party is already on the map. */

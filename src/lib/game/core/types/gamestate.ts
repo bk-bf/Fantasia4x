@@ -47,8 +47,10 @@ export interface GameState {
   kingdomParties?: KingdomParty[];
   /** KINGDOMS-TRADE: earliest turn the next visitor/caravan may arrive (cadence clock). */
   nextKingdomVisitTurn?: number;
-  /** SOCIAL-LAYER: sparse pawn-pair relationships, created lazily on first real interaction
-   *  (SocialService owns all writes; replaced whole on change for the snapshot sectional diff). */
+  /** SOCIAL-LAYER: pawn-pair relationships. Every colonist pair gets a culture-seeded row on
+   *  MEETING (colony gen / migrant join / daily sight-radius pass — `meetColony`), so the
+   *  Relations tab shows at least Strangers from the first look; interaction moves it from there.
+   *  SocialService owns all writes; replaced whole on change for the snapshot sectional diff. */
   relationships?: PawnRelationship[];
   worldMap: WorldTile[][];
   /** Living-world (SEASONS_WEATHER Phase B): current season + 0-indexed day within it. */

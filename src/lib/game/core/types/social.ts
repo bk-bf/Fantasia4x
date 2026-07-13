@@ -1,6 +1,7 @@
-// Pawn-to-pawn social types (SOCIAL-LAYER). Relationships are SPARSE — a `PawnRelationship` is
-// created lazily on the pair's first real interaction (or seeded for starting kin), never N² up
-// front. The platonic `score`/`stage` ladder and the romance track are separate axes: a pair can
+// Pawn-to-pawn social types (SOCIAL-LAYER). A `PawnRelationship` row exists for every colonist
+// pair that has MET (seeing each other is meeting — `SocialService.meetColony` at colony gen /
+// migrant join / the daily sight pass), culture-seeded at Strangers-or-so; interaction moves it.
+// The platonic `score`/`stage` ladder and the romance track are separate axes: a pair can
 // be Friends AND partners, or ex-partners who slid to Rivals. Mood depth rides `MoodModifier`
 // entries on the pawn — event moods (grief, a hot meal, a breakup) layered over the ambient
 // per-tick mood drift, so the player can read WHY a pawn feels the way it does.

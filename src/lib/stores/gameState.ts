@@ -29,9 +29,14 @@ import type {
 } from '$lib/game/core/types';
 import { generateColonyPawns } from '$lib/game/entities/Pawns';
 import { pawnService } from '$lib/game/services/PawnService';
-import { generateCulture, generateCulturePool, generateCultureRelations } from '$lib/game/core/Culture';
+import {
+  generateCulture,
+  generateCulturePool,
+  generateCultureRelations
+} from '$lib/game/core/Culture';
 import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/Kingdom';
 import { kingdomService } from '$lib/game/services/KingdomService';
+import { socialService } from '$lib/game/services/SocialService';
 import { itemService } from '$lib/game/services/ItemService';
 import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
@@ -494,7 +499,11 @@ function markColonyCulturesDiscovered(state: GameState): GameState {
     discoveredVia: r.discoveredVia ?? firstColonist.get(r.id),
     population: counts.get(r.id) ?? r.population
   }));
-  return { ...state, culturePool, culture: culturePool.find((r) => r.id === state.culture?.id) ?? culturePool[0] };
+  return {
+    ...state,
+    culturePool,
+    culture: culturePool.find((r) => r.id === state.culture?.id) ?? culturePool[0]
+  };
 }
 
 /** Pokédex hook: flag a culture as encountered. NOTE: kingdom visitor/caravan encounters discover
@@ -774,6 +783,8 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
   next = markColonyCulturesDiscovered(next);
   // BACKGROUNDS: founders arrive already knowing their homelands (and places they travelled).
   next = kingdomService.seedKingdomKnowledgeFromPawns(next, next.pawns, false);
+  // SOCIAL-LAYER: founders arrived together — everyone starts with at least a Strangers row.
+  next = socialService.meetColony(next);
   next = workService.ensureDefaultWorkAssignments(next);
   if (dev) next = applyDevWorld(next, itemQty);
   next = entityService.seedInitialEntities(next);
@@ -953,6 +964,8 @@ function resetGame() {
   fresh = { ...fresh, pawns: spawnPawnsOnMap(fresh.pawns, world) };
   fresh = markColonyCulturesDiscovered(fresh);
   fresh = kingdomService.seedKingdomKnowledgeFromPawns(fresh, fresh.pawns, false);
+  // SOCIAL-LAYER: founders arrived together — everyone starts with at least a Strangers row.
+  fresh = socialService.meetColony(fresh);
   fresh = workService.ensureDefaultWorkAssignments(fresh);
   fresh = entityService.seedInitialEntities(fresh);
   loadStateIntoWorker(fresh);
@@ -1388,6 +1401,11 @@ export const savedStateReady: Promise<void> = (async () => {
     baseState = kingdomService.seedKingdomKnowledgeFromPawns(baseState, baseState.pawns, false);
   }
 
+  // SOCIAL-LAYER: colonists who live together have met — ensure every living pair has at least a
+  // Strangers row. Idempotent, so it doubles as the old-save backfill (pre-social saves get their
+  // rows on first load; already-seeded pairs are untouched).
+  baseState = socialService.meetColony(baseState);
+
   // Give any pawn without a work assignment explicit default labor settings — ONCE.
   // (Replaces the old per-tick workService.ensureBasicWorkAssignments — see D4.)
   baseState = workService.ensureDefaultWorkAssignments(baseState);
@@ -1508,14 +1526,20 @@ export const currentCulture = derived(gameState, ($gameState) => $gameState.cult
 /** The full prerolled culture pool (pokédex backing store). */
 export const culturePool = derived(gameState, ($gameState) => $gameState.culturePool ?? []);
 /** Procedural inter-culture relations (stub — data + pokédex display only). */
-export const cultureRelations = derived(gameState, ($gameState) => $gameState.cultureRelations ?? []);
+export const cultureRelations = derived(
+  gameState,
+  ($gameState) => $gameState.cultureRelations ?? []
+);
 /** Known (encountered) cultures — what the Culture-tab pokédex lists. */
 export const discoveredCultures = derived(gameState, ($gameState) =>
   ($gameState.culturePool ?? []).filter((r) => r.discovered)
 );
 /** KINGDOMS-TRADE: the full kingdom pool + relation graph (colony rows keyed COLONY_RELATION_ID). */
 export const kingdoms = derived(gameState, ($gameState) => $gameState.kingdoms ?? []);
-export const kingdomRelations = derived(gameState, ($gameState) => $gameState.kingdomRelations ?? []);
+export const kingdomRelations = derived(
+  gameState,
+  ($gameState) => $gameState.kingdomRelations ?? []
+);
 /** Kingdoms the colony has a relationship with — what the Kingdoms-tab pokédex lists. */
 export const discoveredKingdoms = derived(gameState, ($gameState) =>
   ($gameState.kingdoms ?? []).filter((k) => k.discovered)

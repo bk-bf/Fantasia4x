@@ -68,6 +68,21 @@ describe('relationship seeding through the service', () => {
     expect(rel.tags).toContain('rescued_by');
     expect(rel.points.history).toBe(18);
   });
+
+  it('meetColony gives every living pair at least a Strangers row, idempotently', () => {
+    const a = pawn('pawn-1', 5, 5);
+    const b = pawn('pawn-2', 6, 5, { cultureId: 'c2' });
+    const c = pawn('pawn-3', 40, 40, { cultureId: 'c3' }); // far away — colonists have still met
+    const gone = pawn('pawn-4', 5, 6, { isAlive: false });
+    const s1 = socialService.meetColony(stateWith([a, b, c, gone]));
+    expect(s1.relationships).toHaveLength(3); // the three living pairs, none for the dead
+    // unrelated cultures meet as strangers; same-culture pairs seed warmer (+15, acquaintances)
+    expect(findRelationship(s1.relationships, 'pawn-2', 'pawn-3')!.stage).toBe('strangers');
+    expect(findRelationship(s1.relationships, 'pawn-1', 'pawn-2')!.stage).toBe('rivals'); // hostile seed
+    // idempotent: nothing missing → the SAME state ref back, no row duplicated or reset
+    const s2 = socialService.meetColony(s1);
+    expect(s2).toBe(s1);
+  });
 });
 
 describe('processSocialTurn (daily pass)', () => {
