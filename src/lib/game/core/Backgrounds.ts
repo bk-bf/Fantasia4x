@@ -2,6 +2,8 @@ import type { Culture, Kingdom, WealthBand } from './types';
 import backgroundsData from '../database/backgrounds.jsonc';
 import { rng } from './rng';
 import { MAX_WORK_LEVEL } from './workExperience';
+import { getTraitById } from './Lineages';
+import { WEALTH_BANDS } from './Kingdom';
 
 // Pawn backgrounds (KINGDOMS-TRADE / BACKGROUNDS). A pawn has a childhood (always) and, if adult, an
 // adulthood the childhood makes reachable. Backgrounds are the narrative glue tying a pawn's traits,
@@ -21,8 +23,6 @@ export interface Background {
   slot?: 'childhood' | 'adulthood';
   title: string;
   description: string;
-  /** Player-facing "what this shaped" line, shown under the flavour on hover. */
-  influence?: string;
   weight?: number;
   /** Draw weight for a STARTING colonist (falls back to `weight`). 0 = never a founder; low = rare
    *  at colony start. Migrants ignore it. Keeps a fresh colony off worldly/noble founders. */
@@ -35,6 +35,9 @@ export interface Background {
   opens?: string[];
   requires?: string[];
   // Effects
+  /** Concrete, station-specific phrase of what this background knows about home (distinct per
+   *  background: a field hand knows the farms, a court ward the ruling house). Shown in the tooltip. */
+  knows?: string;
   traitAffinity?: string[];
   traitGuaranteed?: string[];
   experience?: Record<string, [number, number]>;
@@ -84,6 +87,10 @@ function rollBand(band: [number, number] | undefined): number {
  * with a `STATELESS_CHANCE` of a homeland-less wanderer. Raider kingdoms are somewhat less likely
  * origins than settled ones, but any kingdom can be a home.
  */
+/** Origin weight by scale: most people come from small poor places (hamlets, villages), few from
+ *  great powers (a founder out of an empire is rare). Indexed by wealthIdx 0 (hamlet) .. 4 (empire). */
+const ORIGIN_SCALE_WEIGHT = [1.6, 1.4, 1.0, 0.6, 0.3];
+
 export function rollOrigin(
   culturePool: Culture[],
   kingdoms: Kingdom[]
@@ -91,9 +98,11 @@ export function rollOrigin(
   if (kingdoms.length === 0 || rng.random() < STATELESS_CHANCE) {
     return { culture: rng.pick(culturePool) };
   }
-  const kingdom = weightedPick(kingdoms, (k) =>
-    k.relationBias === 'always_hostile' ? 0.4 : 1
-  )!;
+  const kingdom = weightedPick(kingdoms, (k) => {
+    if (k.relationBias === 'always_hostile') return 0.4;
+    const idx = WEALTH_BANDS.indexOf(k.lore.wealthBand);
+    return ORIGIN_SCALE_WEIGHT[idx < 0 ? 2 : idx];
+  })!;
   let culture: Culture | undefined;
   if (kingdom.cultureMix.length > 0) {
     const share = weightedPick(kingdom.cultureMix, (m) => m.weight);
@@ -177,6 +186,34 @@ export function rollBackgrounds(
 }
 
 // ─── Effects ──────────────────────────────────────────────────────────────────
+
+/** Human label for a work-experience category id (plain words → Title Case; no id leak). */
+function skillLabel(cat: string): string {
+  return cat.charAt(0).toUpperCase() + cat.slice(1);
+}
+
+/** Resolve trait ids to their player-facing NAMES (never leak the id), joined for a readout. */
+function traitNames(ids: string[]): string {
+  const names = ids.map((id) => getTraitById(id)?.name ?? id);
+  return names.join(', ');
+}
+
+/**
+ * The "what this shapes" list shown under a background's flavour on hover — GENERATED from the
+ * effect fields (traits, starting skills, standing, homeland knowledge, travel), so it can never
+ * drift from what the background actually does and never reads as a second flavour blurb.
+ */
+export function describeBackgroundEffects(bg: Background): string[] {
+  const out: string[] = [];
+  const traits = [...(bg.traitGuaranteed ?? []), ...(bg.traitAffinity ?? [])];
+  if (traits.length > 0) out.push(`Leans toward ${traitNames(traits)}`);
+  const skills = Object.keys(bg.experience ?? {});
+  if (skills.length > 0) out.push(`A head start in ${skills.map(skillLabel).join(', ')}`);
+  if (bg.prestige && bg.prestige[1] > 0) out.push('Carries some standing');
+  if (bg.knows) out.push(`Knows ${bg.knows}`);
+  if ((bg.worldliness ?? 0) > 0) out.push('Well-travelled, with word of distant realms');
+  return out;
+}
 
 /** Trait bias for the personal-trait draw: ids to weight up + ids to force in. */
 export function backgroundTraitAffinity(

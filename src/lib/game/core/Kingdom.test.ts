@@ -15,7 +15,7 @@ import { rng } from './rng';
 describe('KINGDOMS-TRADE — kingdom pool generation', () => {
   beforeEach(() => rng.reseed(20260712));
 
-  it('generateKingdomPool yields ~20 kingdoms with unique ids and full lore', () => {
+  it('generateKingdomPool yields ~20 kingdoms with unique ids; lore depth scales with wealth', () => {
     const cultures = generateCulturePool(18);
     const pool = generateKingdomPool(cultures, 20);
     expect(pool).toHaveLength(20);
@@ -27,13 +27,23 @@ describe('KINGDOMS-TRADE — kingdom pool generation', () => {
       expect(k.lore.leaderName).toBeTruthy();
       expect(WEALTH_BANDS).toContain(k.lore.wealthBand);
       expect(k.lore.capitalName).toBeTruthy();
-      expect(k.lore.history.length).toBeGreaterThanOrEqual(2);
-      expect(k.lore.figures.length).toBeGreaterThanOrEqual(2);
-      expect(k.lore.famedItems.created.length).toBeGreaterThanOrEqual(1);
-      expect(k.lore.famedItems.held.length).toBeGreaterThanOrEqual(1);
       expect(k.knowledge).toBe(0);
       expect(k.discovered).toBeFalsy();
     }
+    // Scale = wealth: a grand kingdom has deep lore, a small poor one is sparse.
+    const idx = (k: (typeof pool)[number]) => WEALTH_BANDS.indexOf(k.lore.wealthBand);
+    const grand = pool.filter((k) => idx(k) >= 3);
+    const small = pool.filter((k) => idx(k) <= 1);
+    for (const k of grand) {
+      expect(k.lore.history.length + k.lore.figures.length).toBeGreaterThanOrEqual(3);
+      expect(
+        k.lore.famedItems.created.length + k.lore.famedItems.held.length
+      ).toBeGreaterThanOrEqual(1);
+    }
+    // Small places are meant to be unremarkable: at least one carries no famed works at all.
+    expect(
+      small.some((k) => k.lore.famedItems.created.length + k.lore.famedItems.held.length === 0)
+    ).toBe(true);
   });
 
   it('kingdoms are downstream from the culture pool — no new cultures minted', () => {

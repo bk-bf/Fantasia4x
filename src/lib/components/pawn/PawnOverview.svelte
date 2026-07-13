@@ -10,7 +10,12 @@
   } from '$lib/components/util/pawnUtils';
   import { pawnService } from '$lib/game/services/PawnService';
   import { sizeFromHeight } from '$lib/game/core/Culture';
-  import { getBackgroundById } from '$lib/game/core/Backgrounds';
+  import {
+    getBackgroundById,
+    describeBackgroundEffects,
+    type Background
+  } from '$lib/game/core/Backgrounds';
+  import HoverTip from '$lib/components/UI/HoverTip.svelte';
   import PawnStance from './PawnStance.svelte';
   import PawnRestPolicy from './PawnRestPolicy.svelte';
   import PawnForceWork from './PawnForceWork.svelte';
@@ -45,9 +50,18 @@
     : 'no fixed homeland';
   $: childhood = getBackgroundById(pawn.childhoodId);
   $: adulthood = getBackgroundById(pawn.adulthoodId);
-  // Hover tooltip: the immersive flavour + what the background shaped.
-  const bgTip = (bg: ReturnType<typeof getBackgroundById>) =>
-    bg ? `${bg.description}${bg.influence ? `\n\n${bg.influence}` : ''}` : '';
+  // Background hover tooltip (custom HoverTip — native `title` doesn't show reliably in the app shell):
+  // the immersive flavour + what the background shaped, following the cursor.
+  let bgTip: { x: number; y: number; bg: Background } | null = null;
+  function bgEnter(e: MouseEvent, bg: Background | undefined) {
+    if (bg) bgTip = { x: e.clientX, y: e.clientY, bg };
+  }
+  function bgMove(e: MouseEvent) {
+    if (bgTip) bgTip = { ...bgTip, x: e.clientX, y: e.clientY };
+  }
+  function bgLeave() {
+    bgTip = null;
+  }
 
   function stateColor(state: string | undefined): string {
     const normalized = (state ?? 'Idle').replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
@@ -85,14 +99,26 @@
       <span class="lbl">ORIGIN</span>
       <span class="val" title={homeKingdom?.lore?.epithet ?? ''}>{originLabel}</span>
     </div>
-    <div class="row">
+    <div
+      class="row"
+      role="note"
+      on:mouseenter={(e) => bgEnter(e, childhood)}
+      on:mousemove={bgMove}
+      on:mouseleave={bgLeave}
+    >
       <span class="lbl">CHILDHOOD</span>
-      <span class="val" title={bgTip(childhood)}>{childhood?.title ?? '—'}</span>
+      <span class="val bg-val">{childhood?.title ?? '—'}</span>
     </div>
     {#if pawn.adulthoodId}
-      <div class="row">
+      <div
+        class="row"
+        role="note"
+        on:mouseenter={(e) => bgEnter(e, adulthood)}
+        on:mousemove={bgMove}
+        on:mouseleave={bgLeave}
+      >
         <span class="lbl">ADULTHOOD</span>
-        <span class="val" title={bgTip(adulthood)}>{adulthood?.title ?? '—'}</span>
+        <span class="val bg-val">{adulthood?.title ?? '—'}</span>
       </div>
     {:else}
       <div class="row">
@@ -157,6 +183,22 @@
   </div>
 </div>
 
+{#if bgTip}
+  <HoverTip x={bgTip.x} y={bgTip.y}>
+    <div class="bgtip-title">{bgTip.bg.title}</div>
+    <div class="bgtip-flavor">{bgTip.bg.description}</div>
+    {@const effects = describeBackgroundEffects(bgTip.bg)}
+    {#if effects.length > 0}
+      <div class="bgtip-shapes">
+        <div class="bgtip-shapes-hdr">Shapes</div>
+        {#each effects as line}
+          <div class="bgtip-effect">· {line}</div>
+        {/each}
+      </div>
+    {/if}
+  </HoverTip>
+{/if}
+
 <style>
   .section-hdr {
     padding: 4px 8px;
@@ -199,5 +241,35 @@
   .dim-val {
     color: var(--text-muted);
     font-style: italic;
+  }
+  .bg-val {
+    cursor: help;
+  }
+  .bgtip-title {
+    color: var(--accent-hi);
+    font-weight: bold;
+    letter-spacing: 0.04em;
+    margin-bottom: 3px;
+  }
+  .bgtip-flavor {
+    color: var(--text-dim);
+    font-style: italic;
+    line-height: 1.4;
+  }
+  .bgtip-shapes {
+    margin-top: 6px;
+    border-top: 1px solid var(--border);
+    padding-top: 4px;
+  }
+  .bgtip-shapes-hdr {
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 10px;
+    margin-bottom: 2px;
+  }
+  .bgtip-effect {
+    color: var(--text);
+    line-height: 1.45;
   }
 </style>

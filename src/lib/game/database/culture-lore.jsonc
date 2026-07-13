@@ -1,10 +1,10 @@
-// Race lore database — data-only word/phrase banks consumed by core/Race.ts.
+// Race lore database , data-only word/phrase banks consumed by core/Race.ts.
 // No logic lives here (AGENTS.md: data files are definitions only).
 //
-//  archetypes[] — each biases a generated race: which stats it favours/dumps, preferred
+//  archetypes[] , each biases a generated race: which stats it favours/dumps, preferred
 //                 size, thematically-fitting trait ids, and the lore field option pools
 //                 (epithet / origin / homeland / temperament / belief).
-//  phrases      — the description clause banks. The generator buckets a race's stats/size
+//  phrases      , the description clause banks. The generator buckets a race's stats/size
 //                 to a key, then picks a variant at random (see generateRaceDescription).
 {
     "archetypes": [
@@ -180,7 +180,7 @@
         "mind": {
             "mighty"  : ["keen and quick of mind", "brilliant past the reckoning of most folk"],
             "strong"  : ["clever and curious", "sharp-witted and given to questions"],
-            "average" : ["of plain and practical wit", "shrewd in the moment if not the abstract"],
+            "average" : ["of plain and practical wit", "of a shrewd, practical turn of mind"],
             "frail"   : ["slow to abstraction, but cunning where it counts", "no scholars, but no fools either"]
         },
         "perception": {

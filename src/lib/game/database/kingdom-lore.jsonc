@@ -1,144 +1,169 @@
-// Kingdom lore database — phrase banks for procedural kingdom generation (KINGDOMS-TRADE).
-// Consumed by core/Kingdom.ts. All strings here are PLAYER-FACING: in-world tone, no dev jargon.
-// Templates use {slot} placeholders filled by the generator: {stem} {polity} {kingdom} {leader}
-// {capital} {culture}.
+// Kingdom lore database, phrase banks for procedural kingdom generation (KINGDOMS-TRADE).
+// Consumed by core/Kingdom.ts. All strings here are PLAYER-FACING: in-world tone, no dev jargon,
+// no em dashes, concrete over abstract. Templates use {slot} placeholders filled by the generator:
+// {stem} {polity} {leader} {capital} {polity_lower}.
+//
+// SCALE = WEALTH. A kingdom's wealthBand (destitute..opulent, index 0..4) is also its scale and
+// influence: index 0 is a poor hamlet, index 4 a grand empire. Naming, leader titles, epithets,
+// history tone, settlement counts, and how much lore exists all scale off that index. `scaleTiers`,
+// `leaderTitlesByTier` are indexed 0..4; `epithetsSmall`/`epithetsGrand` and `humbleHistory`/
+// `grandHistory` split at index 2 (town).
 {
-    // ── Naming ──────────────────────────────────────────────────────────────
-    // A kingdom's name = a nameForm with {stem} (invented root) and {polity} (government flavour).
-    "nameStems": [
-        "Ashen", "Briar", "Cinder", "Dun", "Ebon", "Fallow", "Gale", "Hollow",
-        "Iron", "Karst", "Lorn", "Mistral", "Norn", "Oster", "Pale", "Quill",
-        "Raven", "Sable", "Thorn", "Umber", "Vael", "Wold", "Yarrow", "Zephyrine",
-        "Amber", "Bleak", "Crag", "Drift", "Elder", "Frost"
-    ],
-    "polities": [
-        "Kingdom", "Dominion", "League", "Compact", "Freeholds", "Marches",
-        "Throne", "Principality", "Reach", "Covenant", "Clans", "Baronies"
-    ],
-    "nameForms": [
-        "{stem} {polity}",
-        "{polity} of {stem}",
-        "The {stem} {polity}"
-    ],
-    // Raider bands name themselves differently — no thrones, no charters.
-    "raiderPolities": [ "Horde", "Reavers", "Wolves", "Blades", "Scourge", "Riders" ],
-    "raiderNameForms": [
-        "{stem} {polity}",
-        "The {stem} {polity}"
-    ],
+  // ── Naming by scale ───────────────────────────────────────────────────────
+  "nameStems": [
+    "Ashen", "Briar", "Cinder", "Dun", "Ebon", "Fallow", "Gale", "Hollow",
+    "Iron", "Karst", "Lorn", "Mistral", "Norn", "Oster", "Pale", "Quill",
+    "Raven", "Sable", "Thorn", "Umber", "Vael", "Wold", "Yarrow", "Zephyrine",
+    "Amber", "Bleak", "Crag", "Drift", "Elder", "Frost"
+  ],
+  "scaleTiers": [
+    { "polities": ["Hamlet", "Steading", "Croft", "Holding"],
+      "forms": ["the {polity} of {stem}", "{stem} {polity}"] },
+    { "polities": ["Village", "Freehold", "Parish", "Commons"],
+      "forms": ["{stem} {polity}", "the {polity} of {stem}"] },
+    { "polities": ["Town", "Market", "Burgh", "Reach"],
+      "forms": ["the {polity} of {stem}", "{stem} {polity}"] },
+    { "polities": ["Kingdom", "Dominion", "Principality", "March"],
+      "forms": ["{stem} {polity}", "the {stem} {polity}", "{polity} of {stem}"] },
+    { "polities": ["Empire", "Imperium", "Hegemony", "Crown"],
+      "forms": ["the {stem} {polity}", "{polity} of {stem}"] }
+  ],
+  // Raider bands name themselves the same at any size: no thrones, no charters.
+  "raiderPolities": ["Horde", "Reavers", "Wolves", "Blades", "Scourge", "Riders"],
+  "raiderNameForms": ["{stem} {polity}", "The {stem} {polity}"],
 
-    // ── Tier 0 — epithet & temperament ─────────────────────────────────────
-    "epithets": [
-        "the granary of a hungry coast",
-        "old blood on a young throne",
-        "a land of tollgates and ledgers",
-        "keepers of a road older than their kings",
-        "a quiet people behind loud walls",
-        "heirs to a war nobody else remembers",
-        "salt-traders and oath-keepers",
-        "a crown propped up by its caravans",
-        "shepherds of terraced valleys",
-        "a court of poets and poisoners",
-        "smiths first, soldiers when they must be",
-        "a patchwork of feuding valleys under one banner"
-    ],
-    "raiderEpithets": [
-        "a smoke-column on every horizon they visit",
-        "landless, restless, and owed nothing",
-        "the reason the border villages build towers",
-        "wolves who learned to ride",
-        "a kingdom only in the sense that it takes tribute"
-    ],
-    "temperaments": [
-        "courteous to guests, merciless to debtors",
-        "slow to promise, slower to forget",
-        "boastful, generous, easily insulted",
-        "wary of strangers until the second meeting",
-        "devout, and suspicious of the impious",
-        "pragmatic to the point of coldness",
-        "warm-hearted hagglers who feign offence for sport",
-        "proud of their word and quick to give it",
-        "curious about everything foreign, loyal to nothing foreign",
-        "gruff traders whose contempt hides respect"
-    ],
-    "raiderTemperaments": [
-        "they parley only when outnumbered",
-        "tribute first, talk second, torches third",
-        "they respect strength and read weakness like a map",
-        "no oaths with outsiders — only truces that expire"
-    ],
+  // ── Epithet & temperament (tier 0) ────────────────────────────────────────
+  "epithetsSmall": [
+    "a wind-scoured cluster of turf roofs and stubborn people",
+    "a valley too poor to raid and too far to tax",
+    "a handful of farms that answer to no one in particular",
+    "a fishing hamlet that smells of tar and smoked eel",
+    "a waystation that grew into a village and stopped there",
+    "an upland parish that counts its winters in the graveyard",
+    "a backwater whose one bridge is its whole fortune",
+    "a mining camp that never got around to disbanding"
+  ],
+  "epithetsGrand": [
+    "a land of tollgates and ledgers",
+    "a crown propped up by its caravans",
+    "old blood on a young throne",
+    "a court of poets and poisoners",
+    "a hundred banners under one weary crown",
+    "keepers of a road older than their kings",
+    "smiths first, soldiers only when they must be",
+    "a patchwork of feuding valleys under one banner",
+    "the granary of a hungry coast",
+    "salt-traders and oath-keepers"
+  ],
+  "raiderEpithets": [
+    "a smoke-column on every horizon they visit",
+    "landless, restless, and owed nothing",
+    "the reason the border villages build towers",
+    "wolves who learned to ride",
+    "a warband that calls itself a kingdom when it takes tribute"
+  ],
+  "temperaments": [
+    "courteous to guests, merciless to debtors",
+    "slow to promise, slower to forget",
+    "boastful, generous, easily insulted",
+    "wary of strangers until the second meeting",
+    "devout, and suspicious of the impious",
+    "pragmatic to the point of coldness",
+    "warm-hearted hagglers who feign offence for sport",
+    "proud of their word and quick to give it",
+    "curious about foreign things, loyal to none of them",
+    "gruff traders whose contempt hides respect"
+  ],
+  "raiderTemperaments": [
+    "they parley only when outnumbered",
+    "tribute first, talk second, torches third",
+    "they respect strength and read weakness like a map",
+    "no oaths with outsiders, only truces that expire"
+  ],
 
-    // ── Tier 1 — leader ─────────────────────────────────────────────────────
-    "leaderTitles": [
-        "King", "Queen", "High Chief", "Prince", "Margrave", "Warden",
-        "Elder", "Speaker", "Khan", "Matriarch", "Patriarch", "Doge"
-    ],
-    "raiderLeaderTitles": [ "Warlord", "Chieftain", "Reaver-King", "First Blade", "Khan" ],
-    "leaderGivenNames": [
-        "Aldric", "Berenice", "Cassia", "Doran", "Elsbeth", "Fenwick", "Gudrun",
-        "Hakon", "Isolde", "Jorven", "Katla", "Leofric", "Maelis", "Njall",
-        "Ottoline", "Pryce", "Ragna", "Sigmund", "Thessaly", "Ulfar", "Verena",
-        "Wystan", "Ysolde", "Zoric"
-    ],
-    "leaderEpithets": [
-        "the Bold", "the Grey", "the Unready", "the Lawgiver", "the Fat",
-        "the Pious", "the Coin-Counter", "the Younger", "the Elder", "Ironhand",
-        "the Quiet", "the Magnificent", "Half-Crowned", "the Wanderer"
-    ],
+  // ── Leaders by scale (tier 1) ─────────────────────────────────────────────
+  "leaderTitlesByTier": [
+    ["Elder", "Reeve", "Headman", "Headwoman", "Warden"],
+    ["Elder", "Reeve", "Bailiff", "Speaker", "Warden"],
+    ["Provost", "Burgomaster", "Mayor", "Alderman", "Master"],
+    ["King", "Queen", "Prince", "Princess", "Margrave", "Doge"],
+    ["Emperor", "Empress", "High King", "High Queen", "Archon", "Autarch"]
+  ],
+  "raiderLeaderTitles": ["Warlord", "Chieftain", "Reaver-King", "First Blade", "Khan"],
+  "leaderGivenNames": [
+    "Aldric", "Berenice", "Cassia", "Doran", "Elsbeth", "Fenwick", "Gudrun",
+    "Hakon", "Isolde", "Jorven", "Katla", "Leofric", "Maelis", "Njall",
+    "Ottoline", "Pryce", "Ragna", "Sigmund", "Thessaly", "Ulfar", "Verena",
+    "Wystan", "Ysolde", "Zoric"
+  ],
+  "leaderEpithets": [
+    "the Bold", "the Grey", "the Unready", "the Lawgiver", "the Fat",
+    "the Pious", "the Coin-Counter", "the Younger", "the Elder", "Ironhand",
+    "the Quiet", "the Magnificent", "Half-Crowned", "the Wanderer"
+  ],
 
-    // ── Tier 2 — capital & settlements ──────────────────────────────────────
-    "capitalPrefixes": [
-        "Hart", "Grim", "Wester", "Stone", "Fair", "Black", "High", "Old",
-        "Salt", "Winter", "Gold", "Raven", "Bright", "Marsh", "Thorn", "Kings"
-    ],
-    "capitalSuffixes": [
-        "holm", "gard", "haven", "burg", "ford", "mere", "stead", "wick",
-        "keep", "spire", "march", "fell", "harbour", "cross", "vale", "gate"
-    ],
+  // ── Seat & settlements (tier 2) ───────────────────────────────────────────
+  "capitalPrefixes": [
+    "Hart", "Grim", "Wester", "Stone", "Fair", "Black", "High", "Old",
+    "Salt", "Winter", "Gold", "Raven", "Bright", "Marsh", "Thorn", "Kings"
+  ],
+  "capitalSuffixes": [
+    "holm", "gard", "haven", "burg", "ford", "mere", "stead", "wick",
+    "keep", "spire", "march", "fell", "harbour", "cross", "vale", "gate"
+  ],
 
-    // ── Tier 3 — history & figures ──────────────────────────────────────────
-    // {kingdom} {leader} {capital} filled at generation time.
-    "historyTemplates": [
-        "A famine three generations back emptied half its villages; the survivors still hoard grain like treasure.",
-        "The old royal line ended on a hunting trip nobody speaks plainly about, and {leader}'s house took the throne.",
-        "{capital} burned once, long ago — the rebuilt city keeps its firebreaks wide and its grudges wider.",
-        "A border war over a bridge toll lasted nine years and settled nothing; the bridge still stands, tolled from both ends.",
-        "They once paid tribute to a greater power, and the shame of it flavours their politics to this day.",
-        "A plague year taught them quarantine before it taught them mercy.",
-        "The {polity_lower} was stitched together by marriage, not conquest, and every noble house remembers which thread is theirs.",
-        "A vein of silver made {capital} rich for a lifetime, and the mines' emptiness has haunted the treasury since.",
-        "An exiled heir returned with foreign mercenaries and a foreign wife; both dynasties now claim the founding.",
-        "They won their independence at a ford whose name every child knows, against a kingdom that no longer exists."
-    ],
-    "raiderHistoryTemplates": [
-        "They were farmers once, before a war took the land and left the horses.",
-        "Three warbands became one the winter the passes froze; the banner still shows three knots.",
-        "Every few years they burn one of their own camps — nobody outside knows why, and asking is unwise.",
-        "A dozen kingdoms have declared them destroyed. The declarations are collected, and mocked, around their fires."
-    ],
-    "figureRoles": [
-        "a war-scholar whose treatises are read by enemy generals",
-        "a masked judge who rides circuit between the villages",
-        "a shipwright whose hulls are said never to founder",
-        "a hermit-saint the court pretends not to consult",
-        "a spymaster known to exist but never named at table",
-        "a bridge-builder who signs every span with a hidden mark",
-        "a duellist retired undefeated, now a beekeeper",
-        "a chronicler whose honesty has survived four reigns"
-    ],
+  // ── History (tier 3) ──────────────────────────────────────────────────────
+  // {leader} {capital} {polity_lower} filled at generation. Small places get humble history,
+  // town-and-up get grand history.
+  "humbleHistory": [
+    "A bad winter some years back halved the households, and they still ration firewood in autumn out of plain habit.",
+    "A landslide took the old road, and the detour has added a day to every journey since.",
+    "The last outsider who tried to collect a tax here left without his cart.",
+    "Two families have feuded over a millpond for so long that nobody living recalls the first quarrel.",
+    "A traveling smith settled here a lifetime ago, and his grandchildren still shoe every horse for a day's ride.",
+    "They buried a plague in a field to the north, and no one has ploughed it since."
+  ],
+  "grandHistory": [
+    "The old ruling line ended on a hunting trip nobody speaks plainly about, and {leader}'s house took the seat.",
+    "{capital} burned once, long ago, and the rebuilt city keeps its firebreaks wide and its grudges wider.",
+    "A border war over a bridge toll dragged on for nine years and settled nothing; the bridge still stands, tolled from both ends.",
+    "They once paid tribute to a greater power, and the shame of it still flavours their politics.",
+    "A vein of silver made {capital} rich for a lifetime, and the empty mines have haunted the treasury ever since.",
+    "An exiled heir came back with foreign soldiers and a foreign wife, and both dynasties now claim the founding.",
+    "The {polity_lower} was stitched together by marriage rather than conquest, and every noble house remembers which thread is theirs.",
+    "They won their independence at a ford whose name every child knows, against a power that no longer exists."
+  ],
+  "raiderHistory": [
+    "They were farmers once, before a war took the land and left the horses.",
+    "Three warbands became one the winter the passes froze, and the banner still shows three knots.",
+    "Every few years they burn one of their own camps, and asking why is unwise.",
+    "A dozen kingdoms have declared them destroyed, and the declarations are read aloud, and mocked, around their fires."
+  ],
 
-    // ── Tier 4 — famed items ────────────────────────────────────────────────
-    "famedItemMaterials": [
-        "Emberwrought", "Moonsilver", "Oathbound", "Winterforged", "Serpentine",
-        "Gilded", "Runemarked", "Stormtempered", "Bone-Inlaid", "Duskglass"
-    ],
-    "famedItemTypes": [
-        "Crown", "Blade", "Chalice", "Standard", "Mantle", "Signet",
-        "Harp", "Shield", "Lantern", "Reliquary", "Torque", "Sceptre"
-    ],
-    "famedItemEpithets": [
-        "of the First Oath", "of the Nine Fords", "of the Long Winter",
-        "of the Broken Siege", "of the Salt Road", "of the Last Queen",
-        "of the Quiet Vale", "of the Red Harvest"
-    ]
+  // ── Notable figures (tier 3) ──────────────────────────────────────────────
+  "figureRoles": [
+    "a war-scholar whose treatises are read by enemy generals",
+    "a masked judge who rides circuit between the villages",
+    "a shipwright whose hulls are said never to founder",
+    "a hermit-saint the court pretends not to consult",
+    "a spymaster everyone knows exists and no one names at table",
+    "a bridge-builder who signs every span with a hidden mark",
+    "a duellist retired undefeated, now a beekeeper",
+    "a chronicler whose honesty has survived four reigns"
+  ],
+
+  // ── Famed items (tier 4) ──────────────────────────────────────────────────
+  "famedItemMaterials": [
+    "Emberwrought", "Moonsilver", "Oathbound", "Winterforged", "Serpentine",
+    "Gilded", "Runemarked", "Stormtempered", "Bone-Inlaid", "Duskglass"
+  ],
+  "famedItemTypes": [
+    "Crown", "Blade", "Chalice", "Standard", "Mantle", "Signet",
+    "Harp", "Shield", "Lantern", "Reliquary", "Torque", "Sceptre"
+  ],
+  "famedItemEpithets": [
+    "of the First Oath", "of the Nine Fords", "of the Long Winter",
+    "of the Broken Siege", "of the Salt Road", "of the Last Queen",
+    "of the Quiet Vale", "of the Red Harvest"
+  ]
 }

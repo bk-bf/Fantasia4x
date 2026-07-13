@@ -36,6 +36,17 @@
   const stale = $derived(kingdomService.isKnowledgeStale(kingdom, turn));
   const known = $derived(kingdom.known);
 
+  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  const settlementsLabel = $derived.by(() => {
+    const s = kingdom.lore.settlements;
+    if (s.towns === 0 && s.villages <= 1) return 'a single settlement';
+    const parts = [
+      s.towns > 0 ? plural(s.towns, 'town', 'towns') : null,
+      s.villages > 0 ? plural(s.villages, 'village', 'villages') : null
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : 'no holdings to speak of';
+  });
+
   const cultureName = (id: string) =>
     cultures.find((c) => c.id === id)?.discovered
       ? (cultures.find((c) => c.id === id)?.name ?? 'an unfamiliar people')
@@ -101,61 +112,73 @@
         <span class="k">Wealth</span>
         <span class="v">{WEALTH_BAND_LABEL[known.wealthBand]}</span>
       </div>
-      {#if stale}<div class="stale-note">as last you knew — word may be out of date</div>{/if}
+      {#if stale}<div class="stale-note">as last you knew, word may be out of date</div>{/if}
     {:else}
-      <div class="teaser">Who rules, and how deep the coffers run — unknown.</div>
+      <div class="teaser">Who rules, and how deep the coffers run, unknown.</div>
     {/if}
   </div>
 
-  <!-- Tier 2 — capital & settlements (immutable) -->
+  <!-- Tier 2 — seat & settlements (immutable) -->
   <div class="section">
     <div class="sec-hdr">| LANDS</div>
     {#if tier >= 2}
-      <div class="kv"><span class="k">Capital</span><span class="v">{kingdom.lore.capitalName}</span></div>
+      <div class="kv"><span class="k">Seat</span><span class="v">{kingdom.lore.capitalName}</span></div>
       <div class="kv">
-        <span class="k">Settlements</span>
-        <span class="v"
-          >{kingdom.lore.settlements.towns} towns, {kingdom.lore.settlements.villages} villages</span
-        >
+        <span class="k">Holdings</span>
+        <span class="v">{settlementsLabel}</span>
       </div>
     {:else}
-      <div class="teaser">Their seat and holdings — unknown.</div>
+      <div class="teaser">Their seat and holdings, unknown.</div>
     {/if}
   </div>
 
-  <!-- Tier 3 — history & figures (immutable) -->
+  <!-- Tier 3 — history & figures (immutable). A small place has little of either. -->
   <div class="section">
     <div class="sec-hdr">| CHRONICLE</div>
     {#if tier >= 3}
-      {#each kingdom.lore.history as line}
-        <p class="lore-line">{line}</p>
-      {/each}
-      <div class="sub-hdr">Notable figures</div>
-      {#each kingdom.lore.figures as fig}
-        <p class="lore-line">{fig}</p>
-      {/each}
+      {#if kingdom.lore.history.length === 0 && kingdom.lore.figures.length === 0}
+        <p class="lore-line muted">A quiet place, with little of note remembered.</p>
+      {:else}
+        {#each kingdom.lore.history as line}
+          <p class="lore-line">{line}</p>
+        {/each}
+        {#if kingdom.lore.figures.length > 0}
+          <div class="sub-hdr">Notable figures</div>
+          {#each kingdom.lore.figures as fig}
+            <p class="lore-line">{fig}</p>
+          {/each}
+        {/if}
+      {/if}
     {:else}
-      <div class="teaser">Their past, and the names that shaped it — unknown.</div>
+      <div class="teaser">Their past, and the names that shaped it, unknown.</div>
     {/if}
   </div>
 
-  <!-- Tier 4 — famed items (mutable → known snapshot, greys when stale) -->
+  <!-- Tier 4 — famed items (mutable → known snapshot, greys when stale). A hamlet has none. -->
   <div class="section">
     <div class="sec-hdr">| FAMED WORKS</div>
     {#if tier >= 4 && known}
-      <div class:stale>
-        <div class="sub-hdr">Forged by their hands</div>
-        {#each known.famedItems.created as item}
-          <p class="lore-line">{item}</p>
-        {/each}
-        <div class="sub-hdr">Held in their vaults</div>
-        {#each known.famedItems.held as item}
-          <p class="lore-line">{item}</p>
-        {/each}
-      </div>
-      {#if stale}<div class="stale-note">as last you knew — treasures change hands</div>{/if}
+      {#if known.famedItems.created.length === 0 && known.famedItems.held.length === 0}
+        <p class="lore-line muted">Nothing famed to its name.</p>
+      {:else}
+        <div class:stale>
+          {#if known.famedItems.created.length > 0}
+            <div class="sub-hdr">Forged by their hands</div>
+            {#each known.famedItems.created as item}
+              <p class="lore-line">{item}</p>
+            {/each}
+          {/if}
+          {#if known.famedItems.held.length > 0}
+            <div class="sub-hdr">Held in their vaults</div>
+            {#each known.famedItems.held as item}
+              <p class="lore-line">{item}</p>
+            {/each}
+          {/if}
+        </div>
+        {#if stale}<div class="stale-note">as last you knew, treasures change hands</div>{/if}
+      {/if}
     {:else}
-      <div class="teaser">What treasures they forge and hoard — unknown.</div>
+      <div class="teaser">What treasures they forge and hoard, unknown.</div>
     {/if}
   </div>
 
@@ -245,6 +268,10 @@
     font-size: 11px;
     line-height: 1.5;
     margin: 0 0 4px;
+  }
+  .lore-line.muted {
+    color: var(--text-muted);
+    font-style: italic;
   }
   .teaser {
     color: var(--text-muted);

@@ -19,27 +19,44 @@ import { clamp } from './math';
 
 const LORE = loreData as unknown as {
   nameStems: string[];
-  polities: string[];
-  nameForms: string[];
+  scaleTiers: { polities: string[]; forms: string[] }[];
   raiderPolities: string[];
   raiderNameForms: string[];
-  epithets: string[];
+  epithetsSmall: string[];
+  epithetsGrand: string[];
   raiderEpithets: string[];
   temperaments: string[];
   raiderTemperaments: string[];
-  leaderTitles: string[];
+  leaderTitlesByTier: string[][];
   raiderLeaderTitles: string[];
   leaderGivenNames: string[];
   leaderEpithets: string[];
   capitalPrefixes: string[];
   capitalSuffixes: string[];
-  historyTemplates: string[];
-  raiderHistoryTemplates: string[];
+  humbleHistory: string[];
+  grandHistory: string[];
+  raiderHistory: string[];
   figureRoles: string[];
   famedItemMaterials: string[];
   famedItemTypes: string[];
   famedItemEpithets: string[];
 };
+
+// ── Scale = wealth. Per-tier [min,max] counts, indexed by wealthIdx 0 (hamlet) .. 4 (empire). ──
+const HISTORY_COUNT: [number, number][] = [[0, 1], [1, 1], [1, 2], [2, 3], [3, 4]];
+const FIGURE_COUNT: [number, number][] = [[0, 0], [0, 1], [1, 2], [2, 3], [3, 4]];
+const FAMED_CREATED_COUNT: [number, number][] = [[0, 0], [0, 0], [0, 1], [1, 2], [2, 3]];
+const FAMED_HELD_COUNT: [number, number][] = [[0, 0], [0, 1], [0, 1], [1, 2], [2, 3]];
+const TOWN_COUNT: [number, number][] = [[0, 0], [0, 1], [1, 3], [2, 6], [5, 12]];
+const VILLAGE_COUNT: [number, number][] = [[0, 1], [1, 3], [2, 5], [4, 10], [8, 20]];
+
+/** The "town and up" threshold: index ≥ 2 gets grand naming/leaders/epithets/history. */
+const GRAND_TIER = 2;
+
+function countFor(table: [number, number][], idx: number): number {
+  const [lo, hi] = table[clamp(idx, 0, table.length - 1)];
+  return rng.int(lo, hi);
+}
 
 // ─── Knowledge tiers ─────────────────────────────────────────────────────────
 
@@ -108,16 +125,25 @@ function fill(template: string, slots: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (m, key) => slots[key] ?? m);
 }
 
-function generateKingdomName(raider: boolean): string {
+/** Name a kingdom by its scale (wealthIdx): a hamlet is "the Steading of Crag", an empire "the Crag
+ *  Imperium". Returns the polity word too (for the {polity_lower} history slot). */
+function generateKingdomName(raider: boolean, wealthIdx: number): { name: string; polity: string } {
   const stem = rng.pick(LORE.nameStems);
-  const polity = rng.pick(raider ? LORE.raiderPolities : LORE.polities);
-  const form = rng.pick(raider ? LORE.raiderNameForms : LORE.nameForms);
-  return fill(form, { stem, polity });
+  const polity = rng.pick(
+    raider ? LORE.raiderPolities : LORE.scaleTiers[clamp(wealthIdx, 0, 4)].polities
+  );
+  const form = rng.pick(
+    raider ? LORE.raiderNameForms : LORE.scaleTiers[clamp(wealthIdx, 0, 4)].forms
+  );
+  return { name: fill(form, { stem, polity }), polity };
 }
 
-/** Roll a leader name — also used by the runtime drift (succession). */
-export function generateLeaderName(raider: boolean): string {
-  const title = rng.pick(raider ? LORE.raiderLeaderTitles : LORE.leaderTitles);
+/** Roll a leader name, titled to the kingdom's scale (a hamlet has a Reeve, an empire an Emperor).
+ *  Also used by the runtime drift (succession). */
+export function generateLeaderName(raider: boolean, wealthIdx = 3): string {
+  const title = rng.pick(
+    raider ? LORE.raiderLeaderTitles : LORE.leaderTitlesByTier[clamp(wealthIdx, 0, 4)]
+  );
   const given = rng.pick(LORE.leaderGivenNames);
   const epithet = rng.random() < 0.6 ? ` ${rng.pick(LORE.leaderEpithets)}` : '';
   return `${title} ${given}${epithet}`;
@@ -135,11 +161,11 @@ function generateCapitalName(): string {
   return rng.pick(LORE.capitalPrefixes) + rng.pick(LORE.capitalSuffixes);
 }
 
-function generateFamedItems(): KingdomFamedItems {
+function generateFamedItems(wealthIdx: number): KingdomFamedItems {
   const created: string[] = [];
   const held: string[] = [];
-  const nCreated = rng.int(1, 2);
-  const nHeld = rng.int(1, 2);
+  const nCreated = countFor(FAMED_CREATED_COUNT, wealthIdx);
+  const nHeld = countFor(FAMED_HELD_COUNT, wealthIdx);
   for (let i = 0; i < nCreated; i++) created.push(generateFamedItemName());
   for (let i = 0; i < nHeld; i++) held.push(generateFamedItemName());
   return { created, held };
@@ -155,19 +181,25 @@ function pickSome<T>(pool: T[], count: number): T[] {
   return out;
 }
 
-function generateFigures(): string[] {
-  return pickSome(LORE.figureRoles, rng.int(2, 3)).map((role) => {
+function generateFigures(wealthIdx: number): string[] {
+  return pickSome(LORE.figureRoles, countFor(FIGURE_COUNT, wealthIdx)).map((role) => {
     const given = rng.pick(LORE.leaderGivenNames);
     const epithet = rng.pick(LORE.leaderEpithets);
     return `${given} ${epithet}, ${role}`;
   });
 }
 
-function generateHistory(raider: boolean, slots: Record<string, string>): string[] {
+function generateHistory(
+  raider: boolean,
+  wealthIdx: number,
+  slots: Record<string, string>
+): string[] {
   const bank = raider
-    ? [...LORE.raiderHistoryTemplates, ...pickSome(LORE.historyTemplates, 2)]
-    : LORE.historyTemplates;
-  return pickSome(bank, rng.int(2, 3)).map((t) => fill(t, slots));
+    ? LORE.raiderHistory
+    : wealthIdx < GRAND_TIER
+      ? LORE.humbleHistory
+      : LORE.grandHistory;
+  return pickSome(bank, countFor(HISTORY_COUNT, wealthIdx)).map((t) => fill(t, slots));
 }
 
 // ─── Culture composition ─────────────────────────────────────────────────────
@@ -187,33 +219,38 @@ function generateCultureMix(cultures: Culture[]): KingdomCultureShare[] {
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
-/** Generate one procedural kingdom as a weighted blend of the given culture pool. */
+/** Generate one procedural kingdom as a weighted blend of the given culture pool. Scale (a poor
+ *  hamlet vs a grand empire) is the wealth band: naming, leader title, epithet, history tone,
+ *  settlement counts, and how much lore exists all follow it. */
 export function generateKingdom(cultures: Culture[], alwaysHostile = false): Kingdom {
   const raider = alwaysHostile;
-  const name = generateKingdomName(raider);
-  const leaderName = generateLeaderName(raider);
-  const capitalName = generateCapitalName();
-  const polity = name.split(' ').pop() ?? 'realm';
+  // Wealth FIRST — it is the scale, so naming/leaders/lore all read from it.
   const wealthBand = rollWealthBand(raider);
   const wealthIdx = WEALTH_BANDS.indexOf(wealthBand);
+  const { name, polity } = generateKingdomName(raider, wealthIdx);
+  const leaderName = generateLeaderName(raider, wealthIdx);
+  const capitalName = generateCapitalName();
+  const grand = wealthIdx >= GRAND_TIER;
 
   const lore: KingdomLore = {
-    epithet: rng.pick(raider ? LORE.raiderEpithets : LORE.epithets),
+    epithet: rng.pick(
+      raider ? LORE.raiderEpithets : grand ? LORE.epithetsGrand : LORE.epithetsSmall
+    ),
     temperament: rng.pick(raider ? LORE.raiderTemperaments : LORE.temperaments),
     leaderName,
     wealthBand,
     capitalName,
     settlements: {
-      towns: rng.int(wealthIdx, 2 + wealthIdx * 2),
-      villages: rng.int(2 + wealthIdx * 3, 8 + wealthIdx * 6)
+      towns: countFor(TOWN_COUNT, wealthIdx),
+      villages: countFor(VILLAGE_COUNT, wealthIdx)
     },
-    history: generateHistory(raider, {
+    history: generateHistory(raider, wealthIdx, {
       leader: leaderName,
       capital: capitalName,
       polity_lower: polity.toLowerCase()
     }),
-    figures: generateFigures(),
-    famedItems: generateFamedItems()
+    figures: generateFigures(wealthIdx),
+    famedItems: generateFamedItems(wealthIdx)
   };
 
   return {

@@ -1,23 +1,26 @@
 // Pawn backgrounds (KINGDOMS-TRADE / BACKGROUNDS). A pawn has a CHILDHOOD (always) and, if adult
 // (≥18), an ADULTHOOD the childhood makes reachable. Cohesion, unlike RimWorld's free pairing: a
 // childhood `opens` a set of life-path TAGS, and an adulthood is only reachable if its `requires`
-// tag was opened by that childhood — so "street urchin → court scholar" can't happen, but
-// "street urchin → cutpurse" can. Backgrounds also gate on the HOME KINGDOM (wealth band / raider)
-// so a story fits where the pawn was raised. core/Backgrounds.ts loads + rolls these.
+// tag was opened by that childhood, so "street urchin to court scholar" can't happen but
+// "street urchin to cutpurse" can. Backgrounds also gate on the HOME KINGDOM (wealth/scale, raider)
+// so a story fits where the pawn was raised. core/Backgrounds.ts loads and rolls these.
 //
-// All strings are PLAYER-FACING (in-world tone, imply-don't-instruct). `description` is the flavour;
-// `influence` is the "what this shaped" line shown under it on hover. Effect fields:
-//   traitAffinity   — trait ids (traits.jsonc) weighted UP in the pawn's personal-trait draw
-//   traitGuaranteed — trait id(s) forced in (respecting CONFLICT_GROUPS / physique gates)
-//   experience      — work category → [min,max] STARTING experience level added on top of the roll
-//   prestige        — [min,max] inherent standing (basePrestige) added at birth
-//   homeKnowledge   — [min,max] xp this bg contributes to the pawn's HOME kingdom (childhood+adult sum)
-//   worldliness     — # of OTHER kingdoms this bg gives partial knowledge of (travelled lives > 0)
-//   worldKnowledge  — [min,max] xp per secondary kingdom
+// PLAYER-FACING strings: concrete, grounded lore, no em dashes, no "X if not Y" idiom. `description`
+// is the ONE flavour line. The "what this shapes" hover list is GENERATED from the effect fields
+// (core/Backgrounds.ts describeBackgroundEffects); `knows` is the ONE authored effect string, a
+// concrete and DISTINCT phrase of what this life taught the pawn about home. Effect fields:
+//   knows           - concrete phrase for the "Knows ..." effect line (distinct per background)
+//   traitAffinity   - trait ids (traits.jsonc) weighted UP in the pawn's personal-trait draw
+//   traitGuaranteed - trait id(s) forced in (respecting CONFLICT_GROUPS / physique gates)
+//   experience      - work category to [min,max] STARTING experience level added on top of the roll
+//   prestige        - [min,max] inherent standing (basePrestige) added at birth
+//   homeKnowledge   - [min,max] xp this bg contributes to the pawn's HOME kingdom (childhood+adult sum)
+//   worldliness     - # of OTHER kingdoms this bg gives partial knowledge of (travelled lives > 0)
+//   worldKnowledge  - [min,max] xp per secondary kingdom
 //
-// `founderWeight` — draw weight for a STARTING colonist (falls back to `weight`). 0 = a founder is
-// never this; low = rare at colony start. Migrants ignore it (use `weight`). This is the knob that
-// keeps a fresh colony from starting with worldly/noble founders who over-fill the pokédex.
+// `founderWeight` - draw weight for a STARTING colonist (falls back to `weight`). 0 = a founder is
+// never this; low = rare at colony start. Migrants ignore it. Keeps a fresh colony off worldly/noble
+// founders who over-fill the pokédex.
 //
 // Life-path tags: martial · learned · wilderness · labor · craft · social · crime · faith
 {
@@ -25,8 +28,8 @@
     {
       "id": "village_child",
       "title": "Village Child",
-      "description": "Raised where the year turns on the harvest, hands calloused before they were clever.",
-      "influence": "A steady hand with soil and season, and a plain, close knowledge of home.",
+      "description": "Grew up hoeing turnip rows and hauling water, working a scythe before they could write their name.",
+      "knows": "the fields, the seasons, and every family in the nearby villages",
       "weight": 1.4,
       "opens": ["labor", "wilderness", "faith"],
       "traitAffinity": ["industrious", "greenthumb", "sturdy"],
@@ -36,8 +39,8 @@
     {
       "id": "caravan_born",
       "title": "Caravan-Born",
-      "description": "First steps taken on a moving wagon; the road was the only home that held still.",
-      "influence": "Easy with strangers, and carries the names of a few far-off lands.",
+      "description": "Born on a trade wagon between two towns, counting coins and minding oxen before their letters.",
+      "knows": "the trade roads in and out, and the look of the next town over",
       "weight": 0.9,
       "founderWeight": 0.5,
       "kingdomWealth": ["modest", "prosperous", "wealthy", "opulent"],
@@ -51,8 +54,8 @@
     {
       "id": "court_ward",
       "title": "Court Ward",
-      "description": "Grew up underfoot in a great house, learning which silences were dangerous.",
-      "influence": "Lettered and poised, with an insider's knowledge of a court — and its airs.",
+      "description": "Raised as a ward in a great hall, pouring wine at feasts and carrying messages between quarreling cousins.",
+      "knows": "the ruling house, the court's factions, and the histories kept in its library",
       "weight": 0.7,
       "founderWeight": 0.3,
       "kingdomWealth": ["wealthy", "opulent"],
@@ -65,8 +68,8 @@
     {
       "id": "street_urchin",
       "title": "Street Urchin",
-      "description": "Reared by the alleys of the capital, quick of hand and quicker to vanish.",
-      "influence": "Nimble and sharp-eyed, and knows the city's underside if not its histories.",
+      "description": "Slept under the market fish-stalls and lifted bread from carts, learning the watch's rounds by heart.",
+      "knows": "the backstreets, the fences, and which magistrates look the other way",
       "weight": 1.0,
       "opens": ["crime", "martial", "social"],
       "traitAffinity": ["rangy", "curious"],
@@ -75,8 +78,8 @@
     {
       "id": "warband_whelp",
       "title": "Warband Whelp",
-      "description": "Raised among the riders, weaned on plunder and the smell of horses and smoke.",
-      "influence": "Hard and quick to the fight, and knows the horde it rode with.",
+      "description": "Grew up in a raiders' camp, minding the horses and picking through whatever the riders hauled back.",
+      "knows": "the band's riders, their feuds, and the villages they burn",
       "weight": 0.9,
       "raider": true,
       "opens": ["martial", "crime", "wilderness"],
@@ -87,8 +90,8 @@
     {
       "id": "smithy_child",
       "title": "Smithy Child",
-      "description": "Grew up in the ringing of the anvil, breathing forge-smoke before words.",
-      "influence": "Deft and careful at the bench, with a maker's eye and a home well-known.",
+      "description": "Grew up pumping the forge bellows in a family smithy, ears ringing from the hammer by nightfall.",
+      "knows": "the craftsmen's quarter, the ore roads, and who owes the smith money",
       "weight": 0.9,
       "opens": ["craft", "labor", "learned"],
       "traitAffinity": ["handy", "meticulous"],
@@ -98,8 +101,8 @@
     {
       "id": "temple_novice",
       "title": "Temple Novice",
-      "description": "Given young to a quiet order, taught to read the sky and hold their tongue.",
-      "influence": "Patient and learned, and remembers its homeland's shrines and stories.",
+      "description": "Given young to a shrine, sweeping the altar steps and learning to read the old calendars.",
+      "knows": "the temples, the feast days, and the quiet politics of the priesthood",
       "weight": 0.7,
       "opens": ["faith", "learned", "social"],
       "traitAffinity": ["scholar", "nurturing"],
@@ -109,8 +112,8 @@
     {
       "id": "wildlands_foundling",
       "title": "Wildlands Foundling",
-      "description": "No kingdom's child — raised half-wild at the edge of the maps, by whoever passed through.",
-      "influence": "At home in the wild and hard to kill, but claims no homeland and knows few.",
+      "description": "Raised on the frontier by trappers and drifters, no town to name, taught to set snares and read the weather.",
+      "knows": "the trails, the game, and the few hard folk who live past the maps",
       "weight": 1.0,
       "stateless": true,
       "opens": ["wilderness", "labor", "martial"],
@@ -123,8 +126,8 @@
     {
       "id": "field_hand",
       "title": "Field Hand",
-      "description": "A life bent to the soil — planting, reaping, mending fences against the dark.",
-      "influence": "Strong and tireless at field work, and knows their home ground well.",
+      "description": "Worked another man's fields for a share of the crop, planting in the spring rain and reaping under autumn frost.",
+      "knows": "the farms, the mills, and the roads to the nearest market",
       "weight": 1.3,
       "requires": ["labor"],
       "traitAffinity": ["industrious", "greenthumb"],
@@ -134,8 +137,8 @@
     {
       "id": "caravan_guard",
       "title": "Caravan Guard",
-      "description": "Paid by the mile to watch the treeline; crossed more borders than they can name.",
-      "influence": "Steady in a fight and widely travelled — knows a couple of distant realms.",
+      "description": "Hired to walk beside merchant wagons with a spear, watching the trees on a dozen different roads.",
+      "knows": "the trade roads, the tollgates, and the borders of neighbouring lands",
       "weight": 1.0,
       "founderWeight": 0.5,
       "requires": ["martial"],
@@ -150,8 +153,8 @@
     {
       "id": "court_scholar",
       "title": "Court Scholar",
-      "description": "Kept the histories and read the omens for a throne, until the throne no longer needed them.",
-      "influence": "Deeply learned and highly regarded, with a scholar's knowledge of a whole realm.",
+      "description": "Kept a kingdom's records and read its charts, until a change of rulers left them without a post.",
+      "knows": "the ruling house, the treasury, and the histories few others are allowed to read",
       "weight": 0.6,
       "founderWeight": 0,
       "requires": ["learned"],
@@ -164,8 +167,8 @@
     {
       "id": "journeyman_smith",
       "title": "Journeyman Smith",
-      "description": "Years at the anvil turned a child's mimicry into a maker's certainty.",
-      "influence": "A practised smith and craftsman, with a firm knowledge of home.",
+      "description": "Served out an apprenticeship and took to the road, shoeing horses and mending tools for coin.",
+      "knows": "the forges, the ore roads, and the guild that sets the prices",
       "weight": 0.9,
       "requires": ["craft"],
       "traitAffinity": ["handy", "meticulous"],
@@ -175,8 +178,8 @@
     {
       "id": "caravan_master",
       "title": "Caravan Master",
-      "description": "Set the prices and read the room; a good year on the roads made small fortunes and enemies.",
-      "influence": "A trader's tongue and real standing, and word of many far realms.",
+      "description": "Ran their own trade caravan for years, setting prices and paying guards, richer some seasons than others.",
+      "knows": "the markets, the merchant houses, and the roads to distant realms",
       "weight": 0.7,
       "founderWeight": 0.2,
       "requires": ["social"],
@@ -191,8 +194,8 @@
     {
       "id": "cutpurse",
       "title": "Cutpurse",
-      "description": "Made a trade of other people's pockets, and learned which cities forgive and which remember.",
-      "influence": "Light-fingered and quick, and knows a rival city or two.",
+      "description": "Made a living cutting purses in market crowds, moving to a new city whenever a face grew too familiar.",
+      "knows": "the backstreets, the fences, and which cities to avoid for a while",
       "weight": 0.8,
       "founderWeight": 0.6,
       "requires": ["crime"],
@@ -204,8 +207,8 @@
     {
       "id": "reaver",
       "title": "Reaver",
-      "description": "Rode with the horde and took what the horde takes; left it, or was left by it.",
-      "influence": "Battle-hardened, and carries the memory of a raided land or two.",
+      "description": "Rode with a raiding band for years, burning border villages for grain and cattle, before parting from it.",
+      "knows": "the raiding trails, the soft targets, and the warlords who lead them",
       "weight": 0.8,
       "founderWeight": 0.7,
       "requires": ["martial"],
@@ -218,8 +221,8 @@
     {
       "id": "hedge_priest",
       "title": "Hedge Priest",
-      "description": "Carried the rites to villages too small for a temple, and kept faith where none was owed.",
-      "influence": "Learned in the rites and gently regarded, and knows its homeland's byways.",
+      "description": "Walked a circuit of villages too poor for a temple, saying the rites at weddings and gravesides for bread.",
+      "knows": "the outlying villages, the shrines, and the troubles people confess",
       "weight": 0.7,
       "requires": ["faith"],
       "traitAffinity": ["nurturing", "scholar"],
@@ -230,8 +233,8 @@
     {
       "id": "hunter_tracker",
       "title": "Hunter-Tracker",
-      "description": "Read the wilds like a page — spoor, wind, and the long patience of the kill.",
-      "influence": "A deadly hand at the hunt and forage, and knows the land around home.",
+      "description": "Made a living by the bow, tracking deer and boar for days and selling the hides in town.",
+      "knows": "the deep woods, the game trails, and the tanners who buy the hides",
       "weight": 1.0,
       "requires": ["wilderness"],
       "traitAffinity": ["forager", "sharpshooter"],
@@ -241,8 +244,8 @@
     {
       "id": "wanderer",
       "title": "Wanderer",
-      "description": "Belonged to no gate for long — walked the world's edges and carried its rumours.",
-      "influence": "Curious and self-reliant; scarcely knows home, but has heard of many lands.",
+      "description": "Never stayed in one town a full season, working odd jobs from road to road and trading in rumour.",
+      "knows": "a little of many roads, and the rumours that travel them",
       "weight": 0.9,
       "founderWeight": 0.25,
       "requires": ["wilderness", "social"],

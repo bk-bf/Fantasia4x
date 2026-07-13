@@ -78,7 +78,13 @@ class KingdomServiceImpl {
     const kingdoms = state.kingdoms!.map((k) => {
       let lore = k.lore;
       if (rng.random() < 1 / 120) {
-        lore = { ...lore, leaderName: generateLeaderName(k.relationBias === 'always_hostile') };
+        lore = {
+          ...lore,
+          leaderName: generateLeaderName(
+            k.relationBias === 'always_hostile',
+            WEALTH_BANDS.indexOf(lore.wealthBand)
+          )
+        };
       }
       if (rng.random() < 1 / 90) {
         lore = { ...lore, wealthBand: stepWealthBand(lore.wealthBand, rng.random() < 0.5 ? 1 : -1) };
@@ -146,7 +152,10 @@ class KingdomServiceImpl {
       }
     }
 
-    const kind: KingdomParty['kind'] = rng.random() < 0.65 ? 'caravan' : 'visitor';
+    // Only a town-or-larger power (prosperous+) mounts a trade caravan across the map; small
+    // hamlets and villages send friendly visitors, not wares. Scale = influence.
+    const canTrade = WEALTH_BANDS.indexOf(picked.kingdom.lore.wealthBand) >= 2;
+    const kind: KingdomParty['kind'] = canTrade && rng.random() < 0.65 ? 'caravan' : 'visitor';
     const wealthTier = this.colonyWealthTier(state);
     const stock = kind === 'caravan' ? this.generateCaravanStock(picked.kingdom, wealthTier) : [];
 
