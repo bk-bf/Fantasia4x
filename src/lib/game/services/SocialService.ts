@@ -294,6 +294,28 @@ class SocialServiceImpl {
     return working ? { ...state, relationships: working } : state;
   }
 
+  /**
+   * SOCIAL-LAYER: seed a culture+warmth relationship row for every KIN tie a colony pawn holds —
+   * whether the relative is another colonist OR an off-colony person in `worldPawns`. Called once
+   * at colony gen (after `worldPawns` is set). Idempotent; returns the same state ref if nothing new.
+   */
+  seedFamilyRelationships(state: GameState): GameState {
+    const lookup = new Map<string, Pawn>();
+    for (const p of state.pawns) lookup.set(p.id, p);
+    for (const p of state.worldPawns ?? []) lookup.set(p.id, p);
+    let working: PawnRelationship[] | null = null;
+    for (const p of state.pawns) {
+      for (const tie of p.kin ?? []) {
+        const other = lookup.get(tie.pawnId);
+        if (!other) continue;
+        if (findRelationship(working ?? state.relationships, p.id, other.id)) continue;
+        working ??= state.relationships ? [...state.relationships] : [];
+        this.ensureRel(working, p, other, state);
+      }
+    }
+    return working ? { ...state, relationships: working } : state;
+  }
+
   /** One-pair event delta from an owning system (rescue/tend/friendly fire…). Returns new state
    *  (relationships array replaced) — the caller reassigns its gameState. `label`/`kind` name the
    *  moment for the history log (defaulting `turn` to the current turn). */

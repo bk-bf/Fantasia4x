@@ -37,6 +37,7 @@ import { allItemDefs, itemDefById } from '../core/itemDefs';
 import { baseItemValue } from '../core/itemValue';
 import { clamp } from '../core/math';
 import { rng } from '../core/rng';
+import { kinRelationPhrase } from '../core/Social';
 import { simLog } from '../core/logSink';
 import { TICKS_PER_SECOND } from '../core/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
@@ -88,7 +89,10 @@ class KingdomServiceImpl {
         };
       }
       if (rng.random() < 1 / 90) {
-        lore = { ...lore, wealthBand: stepWealthBand(lore.wealthBand, rng.random() < 0.5 ? 1 : -1) };
+        lore = {
+          ...lore,
+          wealthBand: stepWealthBand(lore.wealthBand, rng.random() < 0.5 ? 1 : -1)
+        };
       }
       if (rng.random() < 1 / 100) {
         const famed = { created: [...lore.famedItems.created], held: [...lore.famedItems.held] };
@@ -140,8 +144,13 @@ class KingdomServiceImpl {
     if (eligible.length === 0) {
       return { ...state, nextKingdomVisitTurn: turn + 7 * TICKS_PER_DAY };
     }
-    // Relation-weighted pick — friendlier kingdoms visit more often.
-    const weights = eligible.map((e) => Math.max(1, e.relation.score + 40));
+    // Relation-weighted pick — friendlier kingdoms visit more often, and a realm where the colony
+    // has kin pulls a little harder (a relative nudges the caravan this way).
+    const weights = eligible.map(
+      (e) =>
+        Math.max(1, e.relation.score + 40) +
+        (this.colonyKinInKingdom(state, e.kingdom.id).length > 0 ? 25 : 0)
+    );
     const total = weights.reduce((a, b) => a + b, 0);
     let roll = rng.random() * total;
     let picked = eligible[0];
@@ -166,6 +175,9 @@ class KingdomServiceImpl {
     }
     let s = spawned.state;
     s = this.recordContact(s, picked.kingdom.id, KNOWLEDGE_XP.arrival);
+    // SOCIAL-LAYER: a founder's off-colony relative may travel with the party (refresh their
+    // "last known" + rename the lead mob to them).
+    s = this.reuniteKin(s, picked.kingdom.id, spawned.party);
     const lead = this.partyLead(s, spawned.party);
     this.logArrival(
       turn,
@@ -257,6 +269,60 @@ class KingdomServiceImpl {
   private partyLead(state: GameState, party: KingdomParty): Mob | undefined {
     const id = party.traderMobId ?? party.mobIds[0];
     return (state.mobs ?? []).find((m) => m.id === id);
+  }
+
+  /** SOCIAL-LAYER: off-colony relatives (`worldPawns`) who live in `kingdomId` and are kin to a
+   *  LIVING colony pawn — the pool a caravan from that realm might carry home. */
+  private colonyKinInKingdom(state: GameState, kingdomId: string): Pawn[] {
+    const worldKin = (state.worldPawns ?? []).filter((w) => w.homeKingdomId === kingdomId);
+    if (worldKin.length === 0) return [];
+    const kinIds = new Set<string>();
+    for (const p of state.pawns) {
+      if (p.isAlive === false) continue;
+      for (const k of p.kin ?? []) kinIds.add(k.pawnId);
+    }
+    return worldKin.filter((w) => kinIds.has(w.id));
+  }
+
+  /** SOCIAL-LAYER: with a bias, seat one of the colony's relatives from `kingdomId` in the arriving
+   *  party — refresh their "last known" snapshot (staleness), rename the lead mob to them, tag the
+   *  party, and post the news. No-op when the realm holds no colony kin (or the roll declines). */
+  private reuniteKin(state: GameState, kingdomId: string, party: KingdomParty): GameState {
+    const candidates = this.colonyKinInKingdom(state, kingdomId);
+    if (candidates.length === 0 || rng.random() > 0.6) return state;
+    const visitor = rng.pick(candidates);
+    const turn = state.turn;
+    // Whose relative, and what tie (for the chronicle + card wording).
+    const founder = state.pawns.find((p) => (p.kin ?? []).some((k) => k.pawnId === visitor.id));
+    const tie = founder?.kin?.find((k) => k.pawnId === visitor.id);
+    const phrase =
+      founder && tie ? kinRelationPhrase(tie.kind, founder.name.split(' ')[0]) : 'a relative';
+    // Refresh staleness (new worldPawns ref so the slim sectional diff ships it — this is the ONLY
+    // time worldPawns changes after gen, and it's daily-gated).
+    const worldPawns = (state.worldPawns ?? []).map((p) =>
+      p.id === visitor.id ? { ...p, lastSeenTurn: turn } : p
+    );
+    // Rename the lead mob to the relative + tag its tie.
+    const leadId = party.traderMobId ?? party.mobIds[0];
+    const mobs = (state.mobs ?? []).map((m) =>
+      m.id === leadId ? { ...m, name: visitor.name, worldKinRelation: phrase } : m
+    );
+    const kingdomParties = (state.kingdomParties ?? []).map((p) =>
+      p.id === party.id ? { ...p, kinVisitorId: visitor.id } : p
+    );
+    const lead = mobs.find((m) => m.id === leadId);
+    simLog.logActivity({
+      turn,
+      type: 'social',
+      actor: 'system',
+      action: 'Kin among the party',
+      result: `${visitor.name}, ${phrase}, has come with the ${party.kind}`,
+      severity: 'success',
+      entityIds: lead ? [lead.id] : undefined,
+      focusX: lead?.x,
+      focusY: lead?.y
+    });
+    return { ...state, worldPawns, mobs, kingdomParties };
   }
 
   /** Non-hostile kingdoms with a colony relation — raiders never visit or trade. */
@@ -542,11 +608,7 @@ class KingdomServiceImpl {
     const base = baseItemValue(def) * this.qualityMult(good.quality);
     if (def.type === 'currency' || def.id === 'gold_bar') return Math.round(base);
     const relation = this.colonyRelationTo(state, kingdomId);
-    const margin = clamp(
-      0.4 - 0.25 * (tradeStat - 1) - (relation?.score ?? 0) * 0.001,
-      0.05,
-      0.6
-    );
+    const margin = clamp(0.4 - 0.25 * (tradeStat - 1) - (relation?.score ?? 0) * 0.001, 0.05, 0.6);
     const price = side === 'receive' ? base * (1 + margin) : base * (1 - margin);
     return Math.max(1, Math.round(price));
   }

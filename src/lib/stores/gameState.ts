@@ -27,7 +27,7 @@ import type {
   FilterableZoneType,
   DesignationType
 } from '$lib/game/core/types';
-import { generateColonyPawns } from '$lib/game/entities/Pawns';
+import { generateColonyPawns, generateWorldKin } from '$lib/game/entities/Pawns';
 import { pawnService } from '$lib/game/services/PawnService';
 import {
   generateCulture,
@@ -770,21 +770,20 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
   };
   next = ensureCulturePool(next);
   next = ensureKingdomPool(next);
-  next = {
-    ...next,
-    pawns: spawnPawnsOnMap(
-      generateColonyPawns(next.culturePool, colonySize, {
-        kingdoms: next.kingdoms,
-        founders: true
-      }),
-      newWorld
-    )
-  };
+  const founders = generateColonyPawns(next.culturePool, colonySize, {
+    kingdoms: next.kingdoms,
+    founders: true
+  });
+  // SOCIAL-LAYER: each founder's off-colony family web (mutates founders' `kin` before they spawn).
+  const worldKin = generateWorldKin(founders, next.culturePool, next.kingdoms ?? []);
+  next = { ...next, pawns: spawnPawnsOnMap(founders, newWorld), worldPawns: worldKin };
   next = markColonyCulturesDiscovered(next);
   // BACKGROUNDS: founders arrive already knowing their homelands (and places they travelled).
   next = kingdomService.seedKingdomKnowledgeFromPawns(next, next.pawns, false);
   // SOCIAL-LAYER: founders arrived together — everyone starts with at least a Strangers row.
   next = socialService.meetColony(next);
+  // SOCIAL-LAYER: seed the culture+warmth standing for every family tie (colony + world kin).
+  next = socialService.seedFamilyRelationships(next);
   next = workService.ensureDefaultWorkAssignments(next);
   if (dev) next = applyDevWorld(next, itemQty);
   next = entityService.seedInitialEntities(next);
@@ -961,11 +960,14 @@ function resetGame() {
     ...fresh,
     pawns: generateColonyPawns(fresh.culturePool, 5, { kingdoms: fresh.kingdoms, founders: true })
   };
-  fresh = { ...fresh, pawns: spawnPawnsOnMap(fresh.pawns, world) };
+  // SOCIAL-LAYER: off-colony family web (mutates founders' `kin` before spawn).
+  const resetWorldKin = generateWorldKin(fresh.pawns, fresh.culturePool, fresh.kingdoms ?? []);
+  fresh = { ...fresh, pawns: spawnPawnsOnMap(fresh.pawns, world), worldPawns: resetWorldKin };
   fresh = markColonyCulturesDiscovered(fresh);
   fresh = kingdomService.seedKingdomKnowledgeFromPawns(fresh, fresh.pawns, false);
   // SOCIAL-LAYER: founders arrived together — everyone starts with at least a Strangers row.
   fresh = socialService.meetColony(fresh);
+  fresh = socialService.seedFamilyRelationships(fresh);
   fresh = workService.ensureDefaultWorkAssignments(fresh);
   fresh = entityService.seedInitialEntities(fresh);
   loadStateIntoWorker(fresh);
@@ -1378,13 +1380,14 @@ export const savedStateReady: Promise<void> = (async () => {
   const freshColony = !savedState && (!baseState.pawns || baseState.pawns.length === 0);
   if (freshColony) {
     // Fresh colony — kingdom-first: each founder is drawn from a homeland with a childhood/adulthood.
-    baseState = {
-      ...baseState,
-      pawns: generateColonyPawns(baseState.culturePool, 5, {
-        kingdoms: baseState.kingdoms,
-        founders: true
-      })
-    };
+    const founders = generateColonyPawns(baseState.culturePool, 5, {
+      kingdoms: baseState.kingdoms,
+      founders: true
+    });
+    // SOCIAL-LAYER: off-colony family web (mutates founders' `kin` before they spawn below).
+    const worldKin = generateWorldKin(founders, baseState.culturePool, baseState.kingdoms ?? []);
+    baseState = { ...baseState, pawns: founders, worldPawns: worldKin };
+    // (Old saves predate this feature and get no world kin — their FAMILY view stays colony-only.)
   }
 
   // Spawn pawns that have no map position yet
@@ -1405,6 +1408,9 @@ export const savedStateReady: Promise<void> = (async () => {
   // Strangers row. Idempotent, so it doubles as the old-save backfill (pre-social saves get their
   // rows on first load; already-seeded pairs are untouched).
   baseState = socialService.meetColony(baseState);
+  // SOCIAL-LAYER: seed the culture+warmth standing for every family tie (colony + world kin).
+  // Idempotent — a loaded save's persisted rows are untouched; a fresh colony gets them now.
+  baseState = socialService.seedFamilyRelationships(baseState);
 
   // Give any pawn without a work assignment explicit default labor settings — ONCE.
   // (Replaces the old per-tick workService.ensureBasicWorkAssignments — see D4.)

@@ -27,8 +27,17 @@ export interface RomanceState {
   since: number;
 }
 
-/** Blood-tie kinds (starting-kin pass; children later). */
-export type KinKind = 'parent' | 'child' | 'sibling';
+/** Blood-tie kinds. Colony ties are `parent`/`child`/`sibling` (starting-kin pass); the wider web
+ *  (grandparent…cousin) is generated for OFF-COLONY kin who live out in the world. */
+export type KinKind =
+  | 'parent'
+  | 'child'
+  | 'sibling'
+  | 'grandparent'
+  | 'grandchild'
+  | 'auntuncle'
+  | 'nibling' // niece / nephew
+  | 'cousin';
 
 /** What produced a relationship-log entry — drives the breakdown's icon/colour. */
 export type RelationEventKind =
@@ -54,10 +63,14 @@ export interface RelationshipEvent {
 }
 
 /** One blood tie on a pawn: `kind` is what the OTHER pawn is to this one
- *  (`{ pawnId: X, kind: 'parent' }` on P means X is P's parent). */
+ *  (`{ pawnId: X, kind: 'parent' }` on P means X is P's parent). `pawnId` may reference a colony
+ *  pawn, a `DeadPawnRecord`, or an off-colony person in `GameState.worldPawns`. */
 export interface KinTie {
   pawnId: string;
   kind: KinKind;
+  /** The bond's starting warmth — the kin CONTRIBUTION to the relationship seed. Rolled per family
+   *  tie (biased warm, but a hated brother is possible). Absent ⇒ the flat legacy kin bonus. */
+  warmth?: number;
 }
 
 /**

@@ -1,14 +1,18 @@
 <script lang="ts">
-  /** SOCIAL-LAYER §2: the RELATIONS tab — the pawn's blood ties (family) and its standing with
-   *  every colonist it has a history with (stage badge, score bar, story tags, romance). */
-  import type {
-    GameState,
-    KinKind,
-    Pawn,
-    PawnRelationship,
-    RelationTag
-  } from '$lib/game/core/types';
-  import { STAGE_LABEL, otherOf, relationshipsOf, relKey } from '$lib/game/core/Social';
+  /** SOCIAL-LAYER: the RELATIONS tab — the pawn's blood ties (colony kin AND off-colony family out
+   *  in the world, shown "as last you knew" with staleness) plus its standing with every colonist
+   *  it has a history with (stage badge, score bar, story tags, romance). */
+  import type { GameState, Pawn, PawnRelationship, RelationTag } from '$lib/game/core/types';
+  import {
+    KIN_LABEL,
+    STAGE_LABEL,
+    findRelationship,
+    isKinStale,
+    otherOf,
+    relationshipsOf,
+    relKey
+  } from '$lib/game/core/Social';
+  import { dayIndexForTurn } from '$lib/game/services/EnvironmentService';
   import StatBar from '../UI/StatBar.svelte';
   import RelationBreakdown from './RelationBreakdown.svelte';
 
@@ -23,11 +27,6 @@
     expanded = expanded; // nudge Svelte reactivity
   }
 
-  const KIN_LABEL: Record<KinKind, string> = {
-    parent: 'Parent',
-    child: 'Child',
-    sibling: 'Sibling'
-  };
   const TAG_LABEL: Record<RelationTag, string> = {
     grief_bond: 'shared grief',
     battle_forged: 'battle-forged',
@@ -51,14 +50,32 @@
 
   $: living = new Map((gameState.pawns ?? []).map((p) => [p.id, p]));
   $: fallen = new Map((gameState.deadPawns ?? []).filter((d) => d.id).map((d) => [d.id!, d]));
+  $: world = new Map((gameState.worldPawns ?? []).map((p) => [p.id, p]));
+  $: kingdomName = new Map((gameState.kingdoms ?? []).map((k) => [k.id, k.name]));
 
+  // Blood ties: colony kin (selectable) + off-colony family (viewed as last known, with staleness).
   $: kinRows = (pawn.kin ?? []).map((tie) => {
     const alive = living.get(tie.pawnId);
     const dead = fallen.get(tie.pawnId);
+    const away = world.get(tie.pawnId);
+    const rel = findRelationship(gameState.relationships, pawn.id, tie.pawnId);
+    let sinceDays: number | null = null;
+    if (away) {
+      sinceDays =
+        away.lastSeenTurn == null
+          ? null
+          : dayIndexForTurn(gameState.turn) - dayIndexForTurn(away.lastSeenTurn);
+    }
     return {
       kind: KIN_LABEL[tie.kind],
-      name: alive?.name ?? (dead ? `${dead.name} †` : 'Lost to memory'),
-      target: alive && alive.isAlive !== false ? alive : null
+      name: alive?.name ?? away?.name ?? (dead ? `${dead.name} †` : 'Lost to memory'),
+      target: alive && alive.isAlive !== false ? alive : null,
+      away, // off-colony record (or undefined)
+      home: away?.homeKingdomId ? (kingdomName.get(away.homeKingdomId) ?? 'a far realm') : null,
+      stale: away ? isKinStale(sinceDays) : false,
+      seen: sinceDays,
+      stage: rel ? STAGE_LABEL[rel.stage] : null,
+      stageColor: rel ? (STAGE_COLOR[rel.stage] ?? '#888') : '#888'
     };
   });
 
@@ -77,7 +94,7 @@
     <div class="hdr">FAMILY</div>
     {#if kinRows.length > 0}
       {#each kinRows as row}
-        <div class="kin-row">
+        <div class="kin-row" class:stale={row.stale}>
           <span class="kin-kind">{row.kind}</span>
           {#if row.target}
             <button class="kin-name link" on:click={() => row.target && onSelect(row.target)}
@@ -86,10 +103,22 @@
           {:else}
             <span class="kin-name gone">{row.name}</span>
           {/if}
+          {#if row.stage}
+            <span class="kin-stage" style:color={row.stageColor}>{row.stage}</span>
+          {/if}
+          {#if row.away}
+            <span class="kin-where">
+              away in {row.home}{#if row.stale}
+                · <span class="as-known"
+                  >{row.seen == null ? 'as you last knew' : 'long unseen'}</span
+                >{:else}
+                · seen recently{/if}
+            </span>
+          {/if}
         </div>
       {/each}
     {:else}
-      <div class="empty">no kin among the colony</div>
+      <div class="empty">no known kin</div>
     {/if}
   </div>
 
@@ -161,11 +190,28 @@
   .kin-row {
     display: flex;
     gap: 8px;
+    align-items: baseline;
     padding: 1px 0;
+    flex-wrap: wrap;
+  }
+  /* Off-colony kin the colony hasn't heard from in ~a month render greyed — "as you last knew". */
+  .kin-row.stale {
+    opacity: 0.55;
   }
   .kin-kind {
     color: var(--text-dim, #888);
     min-width: 64px;
+  }
+  .kin-stage {
+    font-size: 11px;
+  }
+  .kin-where {
+    font-size: 11px;
+    color: var(--text-dim, #888);
+    font-style: italic;
+  }
+  .as-known {
+    color: #b08040;
   }
   .link {
     background: none;

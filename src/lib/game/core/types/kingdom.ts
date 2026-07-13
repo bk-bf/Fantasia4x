@@ -99,6 +99,10 @@ export interface KingdomParty {
   stock: CaravanGood[];
   /** Gold bars the caravan carries to settle lopsided trades. */
   gold: number;
+  /** SOCIAL-LAYER: id of a colony founder's off-colony relative (`worldPawns`) travelling with this
+   *  party — the party's lead mob is renamed to them. Set on arrival when the sending kingdom is a
+   *  founder's homeland and they have kin there. */
+  kinVisitorId?: string;
 }
 
 /** Symmetric kingdom↔kingdom (and colony↔kingdom, via COLONY_RELATION_ID) relation. */

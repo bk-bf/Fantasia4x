@@ -23,6 +23,7 @@ import { createBodyPlanLimbs } from '../systems/Combat';
 import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/BodyParts';
 import { SCARRING_CONFIG, makeScarInjury } from '../core/Wounds';
 import { seedAwakeningPaths, getTraitById, rollFlawTrait } from '../core/Lineages';
+import { KIN_INVERSE } from '../core/Social';
 import { itemDefById } from '../core/itemDefs';
 import { seedWorkLevels, rollWorkStyle } from '../core/workExperience';
 import { rng } from '../core/rng';
@@ -112,7 +113,11 @@ export function applyTraitWounds(pawn: Pawn): void {
         const limb = limbs.find((l) => l.parts?.some((p) => p.id === partId));
         if (!limb || limb.isMissing) continue;
         // Non-lethal cap: never amputate a limb whose parts include a vital/critical organ.
-        if ((limb.parts ?? []).some((p) => PART_DEF_MAP[p.id]?.isVital || PART_DEF_MAP[p.id]?.isCritical))
+        if (
+          (limb.parts ?? []).some(
+            (p) => PART_DEF_MAP[p.id]?.isVital || PART_DEF_MAP[p.id]?.isCritical
+          )
+        )
           continue;
         for (const p of limb.parts ?? []) {
           p.health = 0;
@@ -213,8 +218,7 @@ export function applyTraitWounds(pawn: Pawn): void {
  *  weight BEFORE the blood pool is derived, so a heavy-boned pawn carries a proportionally larger pool. */
 function traitBodyWeightDelta(traits: Trait[]): number {
   let delta = 0;
-  for (const t of traits)
-    for (const m of t.bodyMods ?? []) delta += m.weightKg ?? 0;
+  for (const t of traits) for (const m of t.bodyMods ?? []) delta += m.weightKg ?? 0;
   return delta;
 }
 
@@ -381,9 +385,7 @@ export function buildPawnFromCulture(culture: Culture, index: number, origin?: P
   // ADR-023: each pawn draws its OWN trait set (guaranteed identity + 1–2 mundane pool + 0–2 personal,
   // physique-gated), so same-culture pawns differ. BACKGROUNDS bias the personal draw. Stats then fold
   // in the drawn traits' bonuses.
-  const affinity = origin
-    ? backgroundTraitAffinity(origin.childhood, origin.adulthood)
-    : undefined;
+  const affinity = origin ? backgroundTraitAffinity(origin.childhood, origin.adulthood) : undefined;
   const traits = drawPawnTraits(culture, physicalTraits, affinity);
   const finalStats = applyCulturalTraitBonuses(baseStats, traits);
   // TRAIT-SYSTEM-V2 §1: bodyMod weight (heavy bones) mass folded in AFTER the draw (it doesn't change
@@ -482,6 +484,19 @@ export function generatePawns(culture: Culture, count = 3): Pawn[] {
 const KIN_LINK_CHANCE = 0.1;
 
 /**
+ * SOCIAL-LAYER: a family bond's starting WARMTH — the kin contribution to the relationship seed.
+ * Biased warm (blood usually counts for something), but family can sour: ~12% are estranged/hated,
+ * ~18% cool/distant, the rest close. So a founder can have a brother they love or a father they
+ * can't stand — kinship is a strong bias, never a guarantee.
+ */
+export function rollKinWarmth(): number {
+  const r = rng.random();
+  if (r < 0.12) return rng.int(-70, -30); // estranged / hated
+  if (r < 0.3) return rng.int(-25, 15); // cool / distant
+  return rng.int(30, 85); // close
+}
+
+/**
  * SOCIAL-LAYER §2: the starting-kin pass. Each pawn (after the first) has a small chance to be
  * tied to an earlier SAME-CULTURE pawn — sibling on a close age gap, parent/child on a wide one
  * (13–15 years fits neither, so no link) — sharing that family's surname and `familyId`. Mutates
@@ -515,8 +530,9 @@ export function linkStartingKin(pawns: Pawn[]): void {
     const surname = q.name.split(' ').slice(-1)[0];
     const given = p.name.split(' ')[0];
     p.name = `${given} ${surname}`;
-    p.kin = [...(p.kin ?? []), { pawnId: q.id, kind: qIsToP }];
-    q.kin = [...(q.kin ?? []), { pawnId: p.id, kind: pIsToQ }];
+    const warmth = rollKinWarmth(); // one bond, one warmth on both sides
+    p.kin = [...(p.kin ?? []), { pawnId: q.id, kind: qIsToP, warmth }];
+    q.kin = [...(q.kin ?? []), { pawnId: p.id, kind: pIsToQ, warmth }];
   }
 }
 
@@ -537,6 +553,61 @@ export function remapKinIds(pawns: Pawn[], idMap: Map<string, string>): void {
       p.familyId = undefined;
     }
   }
+}
+
+// SOCIAL-LAYER: the off-colony family web per founder. `ageDelta` is added to the founder's age
+// (parents/grandparents older, children younger). Counts kept modest so the registry stays small.
+const WORLD_KIN_PLAN: { kind: KinKind; count: [number, number]; ageDelta: [number, number] }[] = [
+  { kind: 'parent', count: [1, 2], ageDelta: [20, 38] },
+  { kind: 'sibling', count: [0, 2], ageDelta: [-14, 14] },
+  { kind: 'grandparent', count: [0, 1], ageDelta: [45, 68] },
+  { kind: 'auntuncle', count: [0, 2], ageDelta: [16, 42] },
+  { kind: 'cousin', count: [0, 2], ageDelta: [-16, 16] },
+  { kind: 'child', count: [0, 1], ageDelta: [-34, -18] }
+];
+
+/**
+ * SOCIAL-LAYER: generate each founder's OFF-COLONY family — full people who live out in the world
+ * (`GameState.worldPawns`), tied back to the founder with a rolled {@link rollKinWarmth} (so a
+ * relative can be dear or loathed). They share the founder's homeland (a stateless founder's kin
+ * get a random realm so they can still travel in) and surname. Mutates each founder's `kin` in
+ * place; returns the world-pawn records. Inert — never simulated; only their `lastSeenTurn` ever
+ * changes, and only on a caravan/visitor arrival.
+ */
+export function generateWorldKin(
+  founders: Pawn[],
+  culturePool: Culture[],
+  kingdoms: Kingdom[]
+): Pawn[] {
+  if (culturePool.length === 0) return [];
+  const world: Pawn[] = [];
+  let seq = 0;
+  for (let fi = 0; fi < founders.length; fi++) {
+    const founder = founders[fi];
+    const culture = culturePool.find((c) => c.id === founder.cultureId) ?? rng.pick(culturePool);
+    const homeKingdomId =
+      founder.homeKingdomId ?? (kingdoms.length > 0 ? rng.pick(kingdoms).id : undefined);
+    const founderAge = founder.age ?? 30;
+    const surname = founder.name.split(' ').slice(-1)[0];
+    for (const plan of WORLD_KIN_PLAN) {
+      let n = rng.int(plan.count[0], plan.count[1]);
+      if (plan.kind === 'child' && founderAge < 30) n = 0; // too young to have grown kin out there
+      for (let k = 0; k < n; k++) {
+        const age = founderAge + rng.int(plan.ageDelta[0], plan.ageDelta[1]);
+        if (age < 1) continue;
+        const id = `world-${fi}-${seq++}`;
+        const kin = buildPawnFromCulture(culture, 0, { age, homeKingdomId });
+        kin.id = id;
+        kin.name = `${kin.name.split(' ')[0]} ${surname}`; // one family line
+        const warmth = rollKinWarmth();
+        // `plan.kind` = what the world pawn is TO the founder; the reciprocal is its inverse.
+        founder.kin = [...(founder.kin ?? []), { pawnId: id, kind: plan.kind, warmth }];
+        kin.kin = [{ pawnId: founder.id, kind: KIN_INVERSE[plan.kind], warmth }];
+        world.push(kin);
+      }
+    }
+  }
+  return world;
 }
 
 /**

@@ -778,7 +778,8 @@ export function buildMobCard(
     // "<Species>, <Variant>" ("Boar, Razorback") so the group + the individual both show; a species
     // whose name IS the species label (base wolf) or an un-laddered creature just shows its own name.
     name: mobDisplayName(mob, def) + entityDebugLabel(mob),
-    flavor: def.flavor,
+    // SOCIAL-LAYER: a visiting off-colony relative reads as "Kael's sister", not the creature flavour.
+    flavor: mob.worldKinRelation ?? def.flavor,
     // A marching kingdom party reads as its intent (heading for the colony), not the raw FSM state.
     status:
       mob.state === 'Traveling' ? `Approaching ${deps.colonyName ?? 'the colony'}` : mob.state,

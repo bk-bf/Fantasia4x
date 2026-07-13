@@ -52,6 +52,11 @@ export interface GameState {
    *  Relations tab shows at least Strangers from the first look; interaction moves it from there.
    *  SocialService owns all writes; replaced whole on change for the snapshot sectional diff. */
   relationships?: PawnRelationship[];
+  /** SOCIAL-LAYER: the colony's OFF-COLONY family — founders' relatives who live out in the world
+   *  (kin ties point here). Inert person records (identity/stats/traits, no live body/needs); never
+   *  simulated, outside the complexity bubble. Generated once at colony gen; only `lastSeenTurn`
+   *  changes, and only on a caravan/visitor arrival (daily-gated). */
+  worldPawns?: Pawn[];
   worldMap: WorldTile[][];
   /** Living-world (SEASONS_WEATHER Phase B): current season + 0-indexed day within it. */
   season?: Season;

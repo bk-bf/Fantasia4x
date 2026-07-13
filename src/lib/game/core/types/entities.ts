@@ -203,6 +203,9 @@ export interface Mob {
   partyId?: string;
   /** Role within the party — the `trader` is the interaction target for barter. */
   partyRole?: 'trader' | 'guard' | 'visitor' | 'pack';
+  /** SOCIAL-LAYER: when this party member IS a colony founder's off-colony relative, their tie in
+   *  words ("Kael's sister") — shown on the selected-entity card. `name` carries the kin's name. */
+  worldKinRelation?: string;
   /** 'Traveling' goal tile — the entity walks toward it, then settles (Wander) on arrival. */
   travelGoalX?: number;
   travelGoalY?: number;
@@ -332,8 +335,14 @@ export interface Pawn {
   // mutate in place.
   /** Shared family key — pawns of one family carry the same id (and surname). */
   familyId?: string;
-  /** Blood ties to other pawns (starting-kin pass; children later). Sparse — most pawns have none. */
+  /** Blood ties to other pawns (colony kin) OR to off-colony people in `GameState.worldPawns`
+   *  (the wider family web). Sparse — most colony pawns have a few. */
   kin?: KinTie[];
+  /** OFF-COLONY kin only (records in `GameState.worldPawns`): the turn the colony last had word of
+   *  them (a caravan visit). Undefined ⇒ never seen since the founder emigrated — the FAMILY view
+   *  renders them greyed "as you last knew" (the KINGDOMS-TRADE staleness principle). Refreshed
+   *  ONLY on a caravan/visitor arrival (daily-gated) — never touched per tick. */
+  lastSeenTurn?: number;
   /** Active event moods (grief, a hot meal, a breakup…), layered additively over the ambient
    *  `state.mood` drift by SocialService.getEffectiveMood. Pruned on the daily social pass. */
   moodModifiers?: MoodModifier[];

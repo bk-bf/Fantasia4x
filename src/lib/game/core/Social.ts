@@ -2,7 +2,14 @@
 // cultural relationship seeding, canonical pair keys, and effective-mood math. No state writes
 // here; SocialService owns all mutation. Mirrors core/Kingdom.ts (pure) vs KingdomService (runtime).
 
-import type { CultureRelation, MoodModifier, Pawn, PawnRelationship, RelationStage } from './types';
+import type {
+  CultureRelation,
+  KinKind,
+  MoodModifier,
+  Pawn,
+  PawnRelationship,
+  RelationStage
+} from './types';
 
 /** Ladder order, worst → best. */
 export const STAGE_ORDER: RelationStage[] = [
@@ -64,10 +71,11 @@ const DISPOSITION_SEED: Record<CultureRelation['disposition'], number> = {
 
 /** Same-people familiarity: two pawns of one culture start on friendly footing. */
 const SAME_CULTURE_SEED = 15;
-/** Blood is thicker: kin pairs start solidly as friends. */
+/** Legacy flat kin bonus, used only when a tie carries no rolled `warmth` (back-compat / tests). */
 export const KIN_SEED_BONUS = 50;
 
-/** The cultural baseline a fresh `PawnRelationship` starts from, before any deltas. */
+/** The cultural baseline a fresh `PawnRelationship` starts from, before any deltas. Kinship adds
+ *  the tie's rolled `warmth` (a real bias, but a hated brother is possible), NOT a guaranteed bond. */
 export function seedScore(a: Pawn, b: Pawn, cultureRelations: CultureRelation[]): number {
   const ca = a.cultureId;
   const cb = b.cultureId;
@@ -82,8 +90,57 @@ export function seedScore(a: Pawn, b: Pawn, cultureRelations: CultureRelation[])
       if (rel) seed = DISPOSITION_SEED[rel.disposition] ?? 0;
     }
   }
-  if (a.kin?.some((k) => k.pawnId === b.id)) seed += KIN_SEED_BONUS;
+  const tie = a.kin?.find((k) => k.pawnId === b.id);
+  if (tie) seed += tie.warmth ?? KIN_SEED_BONUS;
   return seed;
+}
+
+// ── Kinship taxonomy (colony ties + the wider off-colony web) ────────────────────────────────────
+
+/** What P is to Q, given what Q is to P (kin ties are stored on both sides). */
+export const KIN_INVERSE: Record<KinKind, KinKind> = {
+  parent: 'child',
+  child: 'parent',
+  sibling: 'sibling',
+  grandparent: 'grandchild',
+  grandchild: 'grandparent',
+  auntuncle: 'nibling',
+  nibling: 'auntuncle',
+  cousin: 'cousin'
+};
+
+/** Player-facing kin labels (never leak the snake/camel ids). */
+export const KIN_LABEL: Record<KinKind, string> = {
+  parent: 'Parent',
+  child: 'Child',
+  sibling: 'Sibling',
+  grandparent: 'Grandparent',
+  grandchild: 'Grandchild',
+  auntuncle: 'Aunt/Uncle',
+  nibling: 'Niece/Nephew',
+  cousin: 'Cousin'
+};
+
+/** Possessive kin phrase for the entity card ("Kael's sister"). Coarse gender-neutral wording. */
+export function kinRelationPhrase(kind: KinKind, ofName: string): string {
+  const word: Record<KinKind, string> = {
+    parent: 'parent',
+    child: 'child',
+    sibling: 'sibling',
+    grandparent: 'grandparent',
+    grandchild: 'grandchild',
+    auntuncle: 'aunt or uncle',
+    nibling: 'niece or nephew',
+    cousin: 'cousin'
+  };
+  return `${ofName}'s ${word[kind]}`;
+}
+
+/** Off-colony kin knowledge goes stale after ~a month without word (mirrors the KINGDOMS-TRADE
+ *  staleness clock). `daysSince` is computed by the caller from the game's day index. */
+export const KIN_STALE_DAYS = 30;
+export function isKinStale(daysSinceSeen: number | null): boolean {
+  return daysSinceSeen === null || daysSinceSeen > KIN_STALE_DAYS;
 }
 
 // ── Pair keys & lookup ────────────────────────────────────────────────────────────────────────

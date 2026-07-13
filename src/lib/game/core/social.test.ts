@@ -7,6 +7,7 @@ import {
   seedScore,
   stageForScore,
   relKey,
+  isKinStale,
   KIN_SEED_BONUS
 } from './Social';
 import type { CultureRelation, Pawn } from './types';
@@ -63,12 +64,34 @@ describe('cultural seeding (RACE-SYSTEM Phase 1 regression)', () => {
     expect(seedScore(pawnOf('a', 'c-orc'), pawnOf('b', 'c-dwarf'), relations)).toBe(0);
   });
 
-  it('same-culture pawns start friendly; kin start as friends', () => {
+  it('same-culture pawns start friendly; a kin tie without warmth uses the flat bonus', () => {
     expect(seedScore(pawnOf('a', 'c-orc'), pawnOf('b', 'c-orc'), relations)).toBe(15);
     const sib = pawnOf('a', 'c-orc', {
       kin: [{ pawnId: 'b', kind: 'sibling' }]
     } as Partial<Pawn>);
     expect(seedScore(sib, pawnOf('b', 'c-orc'), relations)).toBe(15 + KIN_SEED_BONUS);
+  });
+
+  it('kinship warmth is a bias, not a guarantee: a hated brother starts as a rival', () => {
+    const warm = pawnOf('a', 'c-orc', {
+      kin: [{ pawnId: 'b', kind: 'sibling', warmth: 60 }]
+    } as Partial<Pawn>);
+    expect(seedScore(warm, pawnOf('b', 'c-orc'), relations)).toBe(15 + 60); // close kin
+    const estranged = pawnOf('a', 'c-orc', {
+      kin: [{ pawnId: 'b', kind: 'sibling', warmth: -55 }]
+    } as Partial<Pawn>);
+    const seed = seedScore(estranged, pawnOf('b', 'c-orc'), relations);
+    expect(seed).toBe(15 - 55); // same people +15, but the bond is poison
+    expect(rawStageForScore(seed)).toBe('rivals');
+  });
+});
+
+describe('off-colony kin staleness', () => {
+  it('is stale when never seen or a month has passed', () => {
+    expect(isKinStale(null)).toBe(true); // never seen since the founder emigrated
+    expect(isKinStale(5)).toBe(false);
+    expect(isKinStale(30)).toBe(false);
+    expect(isKinStale(31)).toBe(true);
   });
 });
 
