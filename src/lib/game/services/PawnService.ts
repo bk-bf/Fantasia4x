@@ -21,6 +21,7 @@ import { occupancyService } from './OccupancyService';
 import conditionsData from '../database/conditions.jsonc';
 import { getConditionCurrentStage, conditionNeedMultipliers } from '../core/needs';
 import { amenityAt } from '../core/buildingAmenity';
+import { activeMoodModifiers, effectiveMood } from '../core/Social';
 import {
   getAmbientLight,
   weatherEffects,
@@ -695,7 +696,12 @@ export class PawnServiceImpl implements PawnService {
   getMoodBreakdown(
     pawn: Pawn,
     gameState: GameState
-  ): { mood: number; trend: number; drivers: { label: string; delta: number }[] } {
+  ): {
+    mood: number;
+    trend: number;
+    drivers: { label: string; delta: number }[];
+    modifiers: { label: string; value: number }[];
+  } {
     const needs = pawn.needs;
     const st = pawn.state;
     const drivers: { label: string; delta: number }[] = [];
@@ -728,7 +734,13 @@ export class PawnServiceImpl implements PawnService {
       drivers.push({ label: 'Absorbed in work', delta: 1 });
 
     const trend = drivers.reduce((s, d) => s + d.delta, 0);
-    return { mood: Math.round(st.mood ?? 50), trend, drivers };
+    // SOCIAL-LAYER §7: standing event moods (grief, a hot meal, a breakup…) layered over the
+    // per-tick drift; the headline number is the EFFECTIVE mood every consumer acts on.
+    const modifiers = activeMoodModifiers(pawn, gameState.turn).map((m) => ({
+      label: m.label,
+      value: m.value
+    }));
+    return { mood: Math.round(effectiveMood(pawn, gameState.turn)), trend, drivers, modifiers };
   }
 
   private calculateMorale(pawn: Pawn, gameState: GameState): number {

@@ -147,6 +147,9 @@ const FORMULA_VARS = [
   // KINGDOMS-TRADE §4: standing prestige from worn regalia (SocialService.getPrestige). Computed
   // ONLY when a formula references it (see evaluateFormula) — 0 on every hot-path call.
   'prestige',
+  // SOCIAL-LAYER §5: fraction of body parts still whole and unscarred (beauty). Same lazy pattern
+  // as prestige — the whole-body scan runs ONLY when a formula references it; 1 on hot-path calls.
+  'intact',
   // WORK-EXPERIENCE: the work stats' experience-level base — levelBase(level) × style weight,
   // resolved per work category + axis by getWorkModifiers/evaluateStat. 1.0 in non-work formulas.
   'SKILL'
@@ -179,6 +182,50 @@ function formulaUsesPrestige(formula: string): boolean {
     _formulaUsesPrestige.set(formula, uses);
   }
   return uses;
+}
+
+// Whether a formula references `intact` — cached like prestige so only the social formulas
+// (beauty) ever pay for the whole-body part scan.
+const _formulaUsesIntact = new Map<string, boolean>();
+
+function formulaUsesIntact(formula: string): boolean {
+  let uses = _formulaUsesIntact.get(formula);
+  if (uses === undefined) {
+    uses = /\bintact\b/.test(formula);
+    _formulaUsesIntact.set(formula, uses);
+  }
+  return uses;
+}
+
+/**
+ * SOCIAL-LAYER §5: fraction of the body still whole and unscarred, 0..1. Each fine part counts 1;
+ * a missing part (or one on a severed limb) counts 0, and every lasting mark — a healed-over scar
+ * (`*_scar` type or `permanent`) — shaves a quarter, floored at half for a scarred-but-whole part.
+ * Entities without a limb model read as pristine (1).
+ */
+function intactBodyFraction(p: Pawn | Mob): number {
+  const limbs = p.limbs;
+  if (!limbs || limbs.length === 0) return 1;
+  let total = 0;
+  let sum = 0;
+  for (const limb of limbs) {
+    const parts = limb.parts;
+    if (!parts || parts.length === 0) {
+      total += 1;
+      sum += limb.isMissing ? 0 : 1;
+      continue;
+    }
+    for (const part of parts) {
+      total += 1;
+      if (limb.isMissing || part.isMissing) continue;
+      let scars = 0;
+      for (const inj of part.injuries ?? []) {
+        if (inj.permanent || inj.type.endsWith('_scar')) scars++;
+      }
+      sum += Math.max(0.5, 1 - 0.25 * scars);
+    }
+  }
+  return total > 0 ? sum / total : 1;
 }
 
 function compileFormula(formula: string): ((...vars: number[]) => number) | null {
@@ -223,6 +270,8 @@ function evaluateFormula(
   // Prestige scans the whole equipment doll — pay for it only when the formula asks (trade/social
   // stats), never on the ~328×/tick work/combat formulas.
   const prestige = formulaUsesPrestige(formula) ? socialService.getPrestige(p) : 0;
+  // Same deal for the whole-body `intact` scan (beauty only).
+  const intact = formulaUsesIntact(formula) ? intactBodyFraction(p) : 1;
   const v = fn(
     (s?.strength ?? 10) * sm.strength,
     (s?.dexterity ?? 10) * sm.dexterity,
@@ -244,6 +293,7 @@ function evaluateFormula(
     capacities.hearing ?? 1,
     capacities.pain ?? 0,
     prestige,
+    intact,
     skill
   );
   return isFinite(v) ? Math.round(v * 1000) / 1000 : 1.0;

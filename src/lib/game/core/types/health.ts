@@ -1,6 +1,8 @@
 // Survival, needs, transient conditions, and the combat body model. Split out of core/types.ts (P-4);
 // re-exported via the barrel. (SURVIVAL-HEALTH + COMBAT-SYSTEM specs.)
 
+import type { KinTie } from './social';
+
 export interface EntityNeeds {
   hunger: number; // 0-100, 100 = starving
   fatigue: number; // 0-100, 100 = exhausted
@@ -364,4 +366,8 @@ export interface DeadPawnRecord {
     | 'burning';
   turn: number;
   stats: { strength: number; dexterity: number; intelligence: number };
+  /** SOCIAL-LAYER: the dead pawn's id + blood ties, retained minimally so a survivor's family
+   *  tree can still name a lost parent/sibling (full retention waits on children). */
+  id?: string;
+  kin?: KinTie[];
 }

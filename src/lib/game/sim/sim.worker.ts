@@ -166,7 +166,13 @@ const PAWN_COLD = new Set<string>([
   'limbs',
   'injuries',
   'conditions',
-  'conditionTimers'
+  'conditionTimers',
+  // SOCIAL-LAYER: family ties + event moods + break state — change on the daily social pass or on
+  // rare events, always by REF REPLACEMENT (never in-place), so the cold ref-diff ships them only
+  // the flush they actually change.
+  'kin',
+  'moodModifiers',
+  'socialBreak'
 ]);
 const MOB_COLD = new Set<string>([
   'stats',

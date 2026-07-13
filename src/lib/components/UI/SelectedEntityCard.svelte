@@ -85,12 +85,20 @@
     delta: number;
   }
 
-  /** §M Whole mood snapshot rendered by the MOOD popup: current value, net per-tick `trend`, and the
-   *  active drivers. Mirrors `pawnService.getMoodBreakdown` / `calculateStateUpdate`. */
+  /** SOCIAL-LAYER §7: one standing event mood (grief, a hot meal, a breakup…) with its offset. */
+  export interface MoodEventModifier {
+    label: string;
+    value: number;
+  }
+
+  /** §M Whole mood snapshot rendered by the MOOD popup: current (EFFECTIVE) value, net per-tick
+   *  `trend`, the active drift drivers, and the standing event moods layered on top. Mirrors
+   *  `pawnService.getMoodBreakdown` / `calculateStateUpdate`. */
   export interface MoodModel {
     mood: number;
     trend: number;
     drivers: MoodDriver[];
+    modifiers?: MoodEventModifier[];
   }
 
   /** One wound line on a body part, or an active condition. */

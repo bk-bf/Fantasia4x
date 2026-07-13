@@ -1,5 +1,6 @@
 // World-space effects layer store: GameCanvas writes overlay positions, WorldEffectsLayer renders.
 import { writable } from 'svelte/store';
+import type { CombatTextKind } from '$lib/game/core/logSink';
 
 /** Anchored, looping glyph float pinned to a tile/entity (sleep Zzz, recovery ✚, campfire sparks…);
  *  `kind` selects the inner glyphs + animation in WorldEffectsLayer. */
@@ -56,7 +57,8 @@ export interface FloatingTextOverlay {
   left: number;
   top: number;
   text: string;
-  kind: 'damage' | 'crit' | 'miss' | 'dodge' | 'bleed' | 'knockdown' | 'fracture' | 'condition';
+  /** Mirrors the sim's CombatTextKind (single source — includes the `social` speech-bubble kind). */
+  kind: CombatTextKind;
   /** Explicit colour for data-driven `kind: 'condition'` labels (else the per-kind CSS colour). */
   color?: string;
 }

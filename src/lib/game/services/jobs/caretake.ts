@@ -8,6 +8,7 @@
 // tile (and especially a bed with a `treatmentBonus`) is what makes a tend viable.
 import type { GameState, Job, Pawn } from '../../core/types';
 import { pawnStatService } from '../PawnStatService';
+import { socialService } from '../SocialService';
 import { itemService } from '../ItemService';
 import { buildingService } from '../BuildingService';
 import { isRoofedTile } from '../EnvironmentService';
@@ -189,6 +190,9 @@ export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameStat
     )
   };
   if (med) next = consumeFromStockpiles(next, { [med.id]: 1 }); // one dose per tend
+  // SOCIAL-LAYER: being cared for warms the patient to the medic (+8 per real tend; the botched
+  // rolls above returned early, so only genuine care bonds).
+  next = socialService.onTend(next, medic, patient);
   return next;
 }
 

@@ -25,6 +25,8 @@ import {
 } from '../pawnQueries';
 import { pickUpFromTile } from '../pawnHauling';
 import { pawnStatService } from '../../../services/PawnStatService';
+import { socialService } from '../../../services/SocialService';
+import { itemDefById } from '../../../core/itemDefs';
 import {
   findNearestStorageBuilding,
   tryAssignPath,
@@ -84,7 +86,7 @@ function startEatingFromInventory(
     () =>
       `${pawn.name} starts eating [${fmtMeal(meal)}] hunger=${(pawn.needs?.hunger ?? 0).toFixed(1)} at ${fmtPos(pawn)} (${where})`
   );
-  return mutatePawn(gameState, pawn.id, (p) => {
+  let next = mutatePawn(gameState, pawn.id, (p) => {
     // Eat from the pack: deduct the consumed units (drop the key once a stack is finished).
     const items = { ...(p.inventory?.items ?? {}) };
     for (const m of meal) {
@@ -101,6 +103,10 @@ function startEatingFromInventory(
     applyFoodPoisoning(p, meal, poisonRes); // §F8: a tainted serving may bring on nausea/dysentery
     applyMealBuff(p, meal); // §F8: a cooked dish grants its meal buff (well_fed/hearty_meal/…)
     recordMealDeeds(p, meal); // LINEAGES §4: carnivore eating feeds Beast/Werewolf awakening deeds
+    // SOCIAL-LAYER §7: a cooked dish (anything carrying a meal buff) is a hot meal — a day-long lift.
+    if (meal.some((m) => itemDefById(m.id)?.mealBuff)) {
+      socialService.onAteHotMeal(p, gameState.turn);
+    }
     p.activeJob = {
       type: 'need' as const,
       targetX: p.position?.x ?? 0,
@@ -111,6 +117,18 @@ function startEatingFromInventory(
       hungerToRecover: hungerRecovered
     };
   });
+  // SOCIAL-LAYER §1: breaking bread beside someone already eating warms the pair (+1 each sit-down).
+  if (pawn.position) {
+    const px = pawn.position.x;
+    const py = pawn.position.y;
+    for (const q of next.pawns) {
+      if (q.id === pawn.id || q.isAlive === false || !q.position) continue;
+      if (q.currentState !== PAWN_STATE.EATING) continue;
+      if (Math.max(Math.abs(q.position.x - px), Math.abs(q.position.y - py)) > 2) continue;
+      next = socialService.onSharedMeal(next, pawn, q);
+    }
+  }
+  return next;
 }
 
 /**
@@ -719,6 +737,14 @@ export function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
       p.state = updatedState;
       p.currentState = PAWN_STATE.IDLE;
       p.activeJob = undefined;
+      // SOCIAL-LAYER §7: waking from a real bed (any rest building) leaves a day-long lift; a
+      // night on the bare ground counts toward the wild-sleeper deeds instead.
+      if (restBuilding) {
+        socialService.onSleptInBed(p, gameState.turn);
+      } else {
+        const deeds = (p.deeds ??= {});
+        deeds.sleptUnsheltered = (deeds.sleptUnsheltered ?? 0) + 1;
+      }
     });
   }
 

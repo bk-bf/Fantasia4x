@@ -13,6 +13,7 @@
  *  carried pawn can NEVER vanish (the bug this module replaced). */
 import type { GameState, Pawn, ItemInstance } from '../../core/types';
 import { itemService } from '../../services/ItemService';
+import { socialService } from '../../services/SocialService';
 
 /** The hidden stand-in item id (items.jsonc). */
 export const CARRIED_PAWN_ITEM = 'carried_pawn';
@@ -86,6 +87,10 @@ function isActivelyCarrying(carrier: Pawn | undefined, victimId: string): boolea
 export function pickUpPawn(gs: GameState, carrierId: string, victimId: string): GameState {
   const victim = gs.pawns.find((p) => p.id === victimId);
   if (!victim || victim.carriedBy === carrierId) return gs;
+  // SOCIAL-LAYER: being carried out of danger forges a bond (+relationship, a gratitude mood).
+  // Fires on the FIRST pickup only, not a mid-haul carrier swap.
+  const carrier = gs.pawns.find((p) => p.id === carrierId);
+  if (carrier && !victim.carriedBy) gs = socialService.onRescue(gs, carrier, victim);
   const inst: ItemInstance = {
     instanceId: carriedInstanceId(victimId),
     itemId: CARRIED_PAWN_ITEM,

@@ -41,12 +41,13 @@
     return set;
   })();
 
-  const CATEGORY_ORDER = ['physical', 'capacity', 'combat', 'resistance', 'work'];
+  const CATEGORY_ORDER = ['physical', 'capacity', 'combat', 'resistance', 'social', 'work'];
   const CATEGORY_LABEL: Record<string, string> = {
     physical: 'PHYSICAL',
     capacity: 'CAPACITIES',
     combat: 'COMBAT',
     resistance: 'RESISTANCES',
+    social: 'SOCIAL',
     work: 'WORK'
   };
 

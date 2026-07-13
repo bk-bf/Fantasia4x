@@ -34,7 +34,10 @@ export type CombatTextKind =
   // (10px, like dodge) instead of borrowing `crit`'s 14px damage-number emphasis.
   | 'fracture'
   // A data-driven condition-onset label (name from conditions.jsonc); colour comes via `color`.
-  | 'condition';
+  | 'condition'
+  // SOCIAL-LAYER: a conversation line spoken over a pawn's head — rendered as a speech-bubble
+  // float with a longer dwell than the rising combat numbers.
+  | 'social';
 
 /** A world-space floating-text request (tile coordinates, never pixels). */
 export interface CombatTextRequest {

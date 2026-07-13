@@ -72,11 +72,7 @@
   import { uiState } from '$lib/stores/uiState.js';
   import { worldEffects } from '$lib/stores/worldEffects.js';
   import type { GlyphFloat, GlyphFloatKind } from '$lib/stores/worldEffects.js';
-  import {
-    combatFeedback,
-    FLOAT_TTL_MS,
-    type CombatTextEvent
-  } from '$lib/stores/combatFeedback.js';
+  import { combatFeedback, floatTtl, type CombatTextEvent } from '$lib/stores/combatFeedback.js';
   import { attackLunges, LUNGE_TTL_MS, type AttackLungeEvent } from '$lib/stores/attackLunges.js';
   import { projectiles, type ProjectileEvent } from '$lib/stores/projectiles.js';
   import { renderFps } from '$lib/stores/perfStats.js';
@@ -1998,7 +1994,7 @@
     // each to a screen position (so labels track the camera as it pans/follows).
     const now = Date.now();
     const newFloats = combatTexts
-      .filter((e) => now - e.spawnTime < FLOAT_TTL_MS)
+      .filter((e) => now - e.spawnTime < floatTtl(e.kind))
       .map((e) => ({
         id: e.id,
         left: (e.worldX - viewX + 0.5) * tW,

@@ -5,6 +5,7 @@ import type { EntityStats, StatKey, GrowthOffer, LineagePath } from './culture';
 import type { EntityNeeds, EntityCondition, Injury, LimbState } from './health';
 import type { PawnInventory, PawnEquipment, EquipmentSlot } from './items';
 import type { Trait } from './culture';
+import type { KinTie, MoodModifier, SocialBreak } from './social';
 
 /** FSM state for a live entity. Hostile + neutral share one machine. */
 export type MobState =
@@ -325,6 +326,20 @@ export interface Pawn {
   /** Inherent standing carried by station/upbringing (a noble bears it even in rags), summed on top of
    *  equipped `prestigeBonus` by SocialService.getPrestige. Undefined = commoner (0). */
   basePrestige?: number;
+
+  // SOCIAL-LAYER — family, event moods, breaks. All three object/array fields are snapshot COLD
+  // (sim.worker PAWN_COLD): they change rarely and ship by ref-diff, so REPLACE on change, never
+  // mutate in place.
+  /** Shared family key — pawns of one family carry the same id (and surname). */
+  familyId?: string;
+  /** Blood ties to other pawns (starting-kin pass; children later). Sparse — most pawns have none. */
+  kin?: KinTie[];
+  /** Active event moods (grief, a hot meal, a breakup…), layered additively over the ambient
+   *  `state.mood` drift by SocialService.getEffectiveMood. Pruned on the daily social pass. */
+  moodModifiers?: MoodModifier[];
+  /** Active mental break — the pawn refuses colony work until `until`. Set/cleared by the daily
+   *  social pass; the FSM job-claim path gates on it. */
+  socialBreak?: SocialBreak;
 
   /** The pawn's COMBINED trait set (ADR-023): its guaranteed cultural identity traits + 1–2 drawn from
    *  its culture's mundane pool + 0–2 personal traits — rolled PER PAWN, so same-culture pawns differ. */

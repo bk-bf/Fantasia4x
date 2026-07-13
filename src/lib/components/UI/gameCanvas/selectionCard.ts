@@ -625,10 +625,17 @@ export function buildPawnCard(
   const stats: EntityStat[] = [...coreStats(pawn), moveSpeedStat(pawn)];
   return {
     name: pawn.name + entityDebugLabel(pawn),
-    status: pawnStateLabel(pawn),
+    // SOCIAL-LAYER §7: a mental break overrides the FSM state tag — the player should see WHY the
+    // pawn is wandering instead of working.
+    status: pawn.socialBreak
+      ? pawn.socialBreak.kind === 'crisis'
+        ? 'in crisis'
+        : 'on a break'
+      : pawnStateLabel(pawn),
     selected,
     dismissable: selected,
-    mood: Math.floor(pawn.state.mood),
+    // Effective mood (drift + event modifiers) when the breakdown is available (selected/hover card).
+    mood: moodModel ? moodModel.mood : Math.floor(pawn.state.mood),
     stats,
     conditionViews: getActiveConditionViews(pawn),
     bars,

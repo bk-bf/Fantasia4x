@@ -58,6 +58,7 @@ import {
 } from '../services/EnvironmentService';
 import { isWitnessedByColony } from '../core/vision';
 import { kingdomService } from '../services/KingdomService';
+import { socialService } from '../services/SocialService';
 // Re-exported below for callers that import these via Combat.
 import {
   PART_DEF_MAP,
@@ -1332,6 +1333,17 @@ class CombatServiceImpl implements CombatService {
       }
     }
 
+    // SOCIAL-LAYER §1: a colonist striking a fellow colonist (a brawl, a stray blow) sours the
+    // pair hard. Only landed hits count — a parried swing leaves no wound to resent.
+    if (
+      result.hit &&
+      !('entityClass' in attacker) &&
+      !('entityClass' in target) &&
+      attacker.id !== target.id
+    ) {
+      state = socialService.onFriendlyFire(state, attacker as Pawn, target as Pawn);
+    }
+
     // Visual lunge: thrust the attacker glyph toward the struck tile and snap it back
     // (renderer-only; emitted for hit AND miss so the swing reads regardless of outcome).
     const apos = this.entityPos(attacker);
@@ -1464,6 +1476,11 @@ class CombatServiceImpl implements CombatService {
     // the colony saw it). By creature family + whether the killing blow was unarmed (fists / natural weapon).
     if (justDied && isTargetMob && 'traits' in attacker)
       creditKillDeeds(attacker, target as Mob, result.weaponId, turn);
+    // SOCIAL-LAYER §1: colonists who stood together when the beast fell share the bond — every pawn
+    // near the kill gets pairwise `battle_forged` points (deduped inside to once per pair per day).
+    if (justDied && isTargetMob && !('entityClass' in attacker)) {
+      next = socialService.onFoughtTogether(next, attacker as Pawn, pos.x, pos.y);
+    }
     // On-hit status effect: venom/bleed/screech/tongue natural weapons roll to inflict a timed
     // transient condition (mitigated by the defender's resistance stat). Applied to the post-injury
     // state so it stacks onto the same target update.

@@ -30,6 +30,7 @@ import buildingsData from '../database/buildings.jsonc';
 import { pawnStateMachineService, reapDeadPawns } from './PawnStateMachine';
 import { rollMigrantWave } from './migration';
 import { kingdomService } from '../services/KingdomService';
+import { socialService } from '../services/SocialService';
 import { findNearestDepositPoint, depositInventory, pickUpFromTile } from './pawn/pawnHauling';
 import { nearestShelterTile } from './pawn/handlers/rescue';
 import { isAdjacent } from './pawn/pawnQueries';
@@ -361,6 +362,9 @@ export class GameEngineImpl implements GameEngine {
         // Daily-gated, so it adds zero per-tick cost on the hot path.
         if (this.gameState!.turn % (TURNS_PER_DAY * TICKS_PER_SECOND) === 0) {
           this.gameState = kingdomService.processKingdomsDaily(this.gameState!);
+          // SOCIAL-LAYER: the daily social pass — proximity/trait deltas, conversations, romance,
+          // standing moods, break checks. Same zero-per-tick-cost daily gate.
+          this.gameState = socialService.processSocialTurn(this.gameState!);
         }
       });
       this.debugLogPawns();

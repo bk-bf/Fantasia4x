@@ -43,7 +43,7 @@ interface UIState {
   /** Chosen materials for the active blueprint's `category:` cost slots (cost-key → itemId). */
   blueprintMaterials: Record<string, string> | null;
   /** Requests the pawn screen to open a specific tab. Cleared after reading. */
-  pawnScreenTab: 'status' | 'attributes' | 'gear' | null;
+  pawnScreenTab: 'status' | 'attributes' | 'relations' | 'gear' | null;
   /** Debug click-brush (in-game DEBUG tab). null = inactive. `id` is the resource/building id the
    *  spawn brushes paint; unused by `regrow`/`kill`/`resurrect`. Clicking the map applies the brush at
    *  that tile (`kill` insta-kills the pawn/mob there; `resurrect` revives the corpse there). */
@@ -152,7 +152,7 @@ function createUIState() {
     setFollowMob: (id: string | null) =>
       update((state) => ({ ...state, cameraFollowMobId: id, cameraFollowPawnId: null })),
 
-    setPawnTab: (tab: 'status' | 'attributes' | 'gear' | null) =>
+    setPawnTab: (tab: 'status' | 'attributes' | 'relations' | 'gear' | null) =>
       update((state) => ({ ...state, pawnScreenTab: tab })),
 
     openTrade: (partyId: string, pawnId: string) =>

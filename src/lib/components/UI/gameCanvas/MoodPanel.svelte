@@ -15,9 +15,12 @@
   const drivers = $derived(
     [...(mood?.drivers ?? [])].sort((a, b) => b.delta - a.delta)
   );
+  // SOCIAL-LAYER §7: standing event moods (grief, a hot meal…) — fixed offsets, not per-tick drift.
+  const modifiers = $derived([...(mood?.modifiers ?? [])].sort((a, b) => b.value - a.value));
   const trend = $derived(mood?.trend ?? 0);
   const moodVal = $derived(mood?.mood ?? 50);
   const fmt = (n: number) => (n >= 0 ? '+' : '') + n.toFixed(1);
+  const fmtInt = (n: number) => (n >= 0 ? '+' : '') + Math.round(n);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -52,6 +55,18 @@
     {/if}
   </div>
 
+  {#if modifiers.length > 0}
+    <div class="mood-drivers">
+      {#each modifiers as m (m.label)}
+        <div class="mood-row" class:good={m.value > 0} class:bad={m.value < 0}>
+          <span class="mood-label">{m.label}</span>
+          <span class="mood-delta">{fmtInt(m.value)}</span>
+        </div>
+      {/each}
+    </div>
+    <div class="mood-sep"></div>
+  {/if}
+
   {#if drivers.length > 0}
     <div class="mood-drivers">
       {#each drivers as d (d.label)}
@@ -61,7 +76,7 @@
         </div>
       {/each}
     </div>
-  {:else}
+  {:else if modifiers.length === 0}
     <div class="mood-none">No active influences — drifting to baseline.</div>
   {/if}
 </div>
@@ -166,6 +181,10 @@
     display: flex;
     flex-direction: column;
     gap: 1px;
+  }
+  .mood-sep {
+    border-top: 1px solid #5a4620;
+    margin: 4px 0;
   }
   .mood-row {
     display: flex;

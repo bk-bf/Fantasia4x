@@ -6,7 +6,8 @@ import type {
   EntityStats,
   Trait,
   Injury,
-  Kingdom
+  Kingdom,
+  KinKind
 } from '../core/types';
 import { createPawnInventory, createPawnEquipment } from '../core/PawnEquipment';
 import { drawPawnTraits } from '../core/Culture';
@@ -476,6 +477,68 @@ export function generatePawns(culture: Culture, count = 3): Pawn[] {
   return Array.from({ length: count }, (_, i) => buildPawnFromCulture(culture, i));
 }
 
+// SOCIAL-LAYER §2: chance for each rolled pawn to arrive tied to an earlier one. Sparse by
+// design — most colonists start unrelated; the tree just isn't empty on turn 1.
+const KIN_LINK_CHANCE = 0.1;
+
+/**
+ * SOCIAL-LAYER §2: the starting-kin pass. Each pawn (after the first) has a small chance to be
+ * tied to an earlier SAME-CULTURE pawn — sibling on a close age gap, parent/child on a wide one
+ * (13–15 years fits neither, so no link) — sharing that family's surname and `familyId`. Mutates
+ * the freshly-rolled pawns in place; kin ids reference `pawn.id`, so any later re-id pass must
+ * run {@link remapKinIds}.
+ */
+export function linkStartingKin(pawns: Pawn[]): void {
+  for (let i = 1; i < pawns.length; i++) {
+    if (!rng.chance(KIN_LINK_CHANCE)) continue;
+    const p = pawns[i];
+    const candidates = pawns.slice(0, i).filter((q) => q.cultureId === p.cultureId);
+    if (candidates.length === 0) continue;
+    const q = rng.pick(candidates);
+    const gap = Math.abs((p.age ?? 25) - (q.age ?? 25));
+    let qIsToP: KinKind; // what q is to p
+    let pIsToQ: KinKind;
+    if (gap <= 12) {
+      qIsToP = 'sibling';
+      pIsToQ = 'sibling';
+    } else if (gap >= 16) {
+      const qOlder = (q.age ?? 0) > (p.age ?? 0);
+      qIsToP = qOlder ? 'parent' : 'child';
+      pIsToQ = qOlder ? 'child' : 'parent';
+    } else {
+      continue;
+    }
+    // One family, one surname (q's line wins; p keeps their given name).
+    const familyId = q.familyId ?? `family-${q.id}`;
+    q.familyId = familyId;
+    p.familyId = familyId;
+    const surname = q.name.split(' ').slice(-1)[0];
+    const given = p.name.split(' ')[0];
+    p.name = `${given} ${surname}`;
+    p.kin = [...(p.kin ?? []), { pawnId: q.id, kind: qIsToP }];
+    q.kin = [...(q.kin ?? []), { pawnId: p.id, kind: pIsToQ }];
+  }
+}
+
+/**
+ * SOCIAL-LAYER §2: rewrite kin ids after a re-id pass (migrant waves re-id twice: wave-unique ids
+ * in the pending event, fresh colony ids on commit). Ties whose target is not in `idMap` — a
+ * sibling the player turned away — are dropped. Replaces the `kin` array (snapshot cold-field
+ * contract).
+ */
+export function remapKinIds(pawns: Pawn[], idMap: Map<string, string>): void {
+  for (const p of pawns) {
+    if (!p.kin || p.kin.length === 0) continue;
+    p.kin = p.kin
+      .filter((t) => idMap.has(t.pawnId))
+      .map((t) => ({ ...t, pawnId: idMap.get(t.pawnId)! }));
+    if (p.kin.length === 0) {
+      p.kin = undefined;
+      p.familyId = undefined;
+    }
+  }
+}
+
 /**
  * Generate a fully-mixed starting colony. With a kingdom pool (`opts.kingdoms`), each pawn is rolled
  * KINGDOM-FIRST (BACKGROUNDS): a homeland is picked, their people drawn from its culture mix, and a
@@ -490,18 +553,25 @@ export function generateColonyPawns(
   if (culturePool.length === 0) return [];
   const kingdoms = opts?.kingdoms;
   if (!kingdoms || kingdoms.length === 0) {
-    return Array.from({ length: count }, (_, i) => buildPawnFromCulture(rng.pick(culturePool), i));
+    const plain = Array.from({ length: count }, (_, i) =>
+      buildPawnFromCulture(rng.pick(culturePool), i)
+    );
+    linkStartingKin(plain);
+    return plain;
   }
   // `founders`: the starting colony — apply the founder-rarity background weights so a fresh colony
   // doesn't roll worldly/noble founders who over-fill the pokédex. Migrants use the normal weights.
   const forFounder = opts?.founders === true;
-  return Array.from({ length: count }, (_, i) => {
+  const pawns = Array.from({ length: count }, (_, i) => {
     const { homeKingdomId, culture } = rollOrigin(culturePool, kingdoms);
     const age = rng.int(16, 45);
     const home = homeKingdomId ? kingdoms.find((k) => k.id === homeKingdomId) : undefined;
     const { childhood, adulthood } = rollBackgrounds(home, age, forFounder);
     return buildPawnFromCulture(culture, i, { homeKingdomId, age, childhood, adulthood });
   });
+  // SOCIAL-LAYER §2: sparse starting kin (shared surname + family) among the fresh roster.
+  linkStartingKin(pawns);
+  return pawns;
 }
 
 // UPDATED: Simplified categorization focused on basic abilities

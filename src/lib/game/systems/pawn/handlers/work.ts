@@ -276,6 +276,14 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     }
   }
 
+  // SOCIAL-LAYER §7: a pawn in a mental break refuses colony work until it passes. It still eats,
+  // drinks and sleeps (needs above) and delivers what it carries, but claims no jobs — a forced
+  // work order is dropped rather than looping at the queue head. It ambles instead of working.
+  if (pawn.socialBreak && gameState.turn < pawn.socialBreak.until) {
+    if (forcedJob) return mutatePawn(gameState, pawn.id, advancePawnOrders);
+    return tryWanderStep(pawn, gameState) ?? gameState;
+  }
+
   // Restriction zones: a confined (non-drafted) pawn may only claim jobs whose target tile lies inside
   // its allowed area, so it never grabs out-of-zone work and then churns failing to path there. Built
   // once here (only for confined pawns) so the isReachable predicate is O(1) per candidate.

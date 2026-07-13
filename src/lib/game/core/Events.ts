@@ -82,6 +82,9 @@ export interface ActivityLogEntry {
     | 'system'
     | 'combat'
     | 'entity'
+    // SOCIAL-LAYER: conversations, romance beats, breaks — one expandable entry per exchange
+    // (`details.lines` holds the assembled dialogue).
+    | 'social'
     // Living-world records surfaced in the Chronicle.
     | 'weather'
     | 'season'

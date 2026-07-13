@@ -61,7 +61,7 @@ import { pawnStatService } from '../services/PawnStatService';
 import { researchService } from '../services/ResearchService';
 import { devSpawnLooseItems, devDestroyAllItems } from '../dev/devWorld';
 import { gameLogger } from '../dev/gameLogger';
-import { generatePawns, applyConsumable } from '../entities/Pawns';
+import { generatePawns, applyConsumable, remapKinIds } from '../entities/Pawns';
 import { pawnGrowthService } from '../services/PawnGrowthService';
 import { devSpawnMobs } from '../services/entity/entitySpawning';
 import { kingdomService, KNOWLEDGE_XP } from '../services/KingdomService';
@@ -1145,14 +1145,19 @@ export const COMMANDS: Record<string, Cmd> = {
     // Re-id to fresh, collision-free colony ids (candidates carried wave-unique `migrant-*` ids).
     const existingIds = new Set(s.pawns.map((pw) => pw.id));
     let n = s.pawns.length;
+    const commitIds = new Map<string, string>();
     const placed = chosen.map((c) => {
       let id = `pawn-${n++}`;
       while (existingIds.has(id)) id = `pawn-${n++}`;
       existingIds.add(id);
+      commitIds.set(c.id, id);
       const pos = nearestFreeTile(s.worldMap, cx, cy, occupied) ?? { x: cx, y: cy };
       occupied.add(`${pos.x},${pos.y}`);
       return { ...c, id, position: pos, path: [], pathIndex: 0 };
     });
+    // SOCIAL-LAYER §2: repoint wave-internal kin ids at the fresh colony ids; a tie to a candidate
+    // the player turned away is dropped (that sibling walked on).
+    remapKinIds(placed, commitIds);
 
     simLog.logActivity({
       turn: s.turn,

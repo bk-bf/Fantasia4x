@@ -9,6 +9,7 @@ export * from './types/world';
 export * from './types/environment';
 export * from './types/culture';
 export * from './types/kingdom';
+export * from './types/social';
 export * from './types/health';
 export * from './types/items';
 export * from './types/buildings';

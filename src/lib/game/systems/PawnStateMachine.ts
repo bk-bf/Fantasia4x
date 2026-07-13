@@ -50,6 +50,7 @@ const BED_TREATMENT_BONUS = new Map<string, number>(
 );
 import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
+import { socialService } from '../services/SocialService';
 import { simLog } from '../core/logSink';
 import { gameLogger } from '../dev/gameLogger';
 import { perTick, SECONDS_PER_TICK } from '../core/time';
@@ -264,8 +265,15 @@ function finalizePawnDeath(
       strength: pawn.stats.strength ?? 10,
       dexterity: pawn.stats.dexterity ?? 10,
       intelligence: pawn.stats.intelligence ?? 10
-    }
+    },
+    // SOCIAL-LAYER: id + blood ties retained so a survivor's family tree still names the lost.
+    id: pawn.id,
+    ...(pawn.kin ? { kin: pawn.kin } : {})
   };
+
+  // SOCIAL-LAYER: personal grief (partners/kin/friends get mood modifiers), witness bonds, and the
+  // dead pawn's relationship rows retired. Runs on the live state BEFORE the survivor map below.
+  gameState = socialService.onPawnDeath(gameState, pawn);
 
   // R10: a slain pawn leaves its carried goods, equipped gear, and a corpse on the death tile so
   // they re-enter the economy (permadeath must not silently delete the colony's best equipment).

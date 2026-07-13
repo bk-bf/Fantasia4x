@@ -9,6 +9,7 @@
     getPawnTaskSummary
   } from '$lib/components/util/pawnUtils';
   import { pawnService } from '$lib/game/services/PawnService';
+  import { effectiveMood } from '$lib/game/core/Social';
   import { sizeFromHeight } from '$lib/game/core/Culture';
   import {
     getBackgroundById,
@@ -167,12 +168,25 @@
       >{sizeFromHeight(pawn.physicalTraits.height)}</span
     >
   </div>
+  <!-- SOCIAL-LAYER §7: the EFFECTIVE mood (ambient drift + event moods like grief or a hot meal). -->
   <div class="row">
     <span class="lbl">MOOD</span>
-    <span class="val" style="color: {getMoodColor(pawn.state.mood)}"
-      >{Math.round(pawn.state.mood)}% — {getMoodDescription(pawn.state.mood)}</span
+    <span class="val" style="color: {getMoodColor(effectiveMood(pawn, gameState.turn))}"
+      >{Math.round(effectiveMood(pawn, gameState.turn))}% — {getMoodDescription(
+        effectiveMood(pawn, gameState.turn)
+      )}</span
     >
   </div>
+  {#if pawn.socialBreak}
+    <div class="row">
+      <span class="lbl">STATE</span>
+      <span class="val" style="color: #ee8844"
+        >{pawn.socialBreak.kind === 'crisis'
+          ? 'past the breaking point'
+          : 'refusing work for a while'}</span
+      >
+    </div>
+  {/if}
   <div class="row">
     <span class="lbl">HEALTH</span>
     <span class="val" style="color: {getHealthColor(pawn.state.health ?? 100)}"

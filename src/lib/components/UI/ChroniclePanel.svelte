@@ -18,6 +18,7 @@
     system: 'SYS',
     combat: 'CBT',
     entity: 'ENT',
+    social: 'SOC',
     weather: 'WTR',
     season: 'SEA'
   };
@@ -35,6 +36,7 @@
     system: 'Chronicle',
     combat: 'Battle',
     entity: 'Wildlife',
+    social: 'Company',
     weather: 'Weather',
     season: 'Season'
   };
@@ -57,9 +59,20 @@
 
   let expandedId: string | null = null;
 
+  // SOCIAL-LAYER: an assembled conversation carried in `details.lines` — expandable like combat.
+  function socialLines(entry: ActivityLogEntry): { name: string; text: string }[] {
+    if (entry.type !== 'social') return [];
+    const lines = entry.details?.lines;
+    return Array.isArray(lines) ? lines : [];
+  }
+
   function handleClick(entry: ActivityLogEntry) {
     // Toggle combat breakdown expansion
     if (entry.type === 'combat' && entry.combatBreakdown && entry.combatBreakdown.length > 0) {
+      expandedId = expandedId === entry.id ? null : entry.id;
+    }
+    // Toggle conversation expansion
+    if (socialLines(entry).length > 0) {
       expandedId = expandedId === entry.id ? null : entry.id;
     }
     // Focus map on the event location. If the entry names an entity we select it by id below, so pan
@@ -153,6 +166,13 @@
           {#if expandedId === entry.id && entry.combatBreakdown && entry.combatBreakdown.length > 0}
             <CombatBreakdown turns={entry.combatBreakdown} />
           {/if}
+          {#if expandedId === entry.id && socialLines(entry).length > 0}
+            <div class="convo">
+              {#each socialLines(entry) as line}
+                <div class="convo-line"><span class="convo-who">{line.name}:</span> “{line.text}”</div>
+              {/each}
+            </div>
+          {/if}
         {/each}
       {/if}
     </ScrollArea>
@@ -173,6 +193,9 @@
         <div class="tip-hint">
           {hoverEntry.combatBreakdown.length} blows traded · click to relive the exchange
         </div>
+      {/if}
+      {#if socialLines(hoverEntry).length > 0}
+        <div class="tip-hint">click to hear the exchange</div>
       {/if}
     </HoverTip>
   {/if}
@@ -434,6 +457,22 @@
     margin-top: 2px;
     font-style: italic;
   }
+  /* SOCIAL-LAYER: expanded conversation lines under a social entry. */
+  .convo {
+    padding: 3px 8px 5px 40px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .convo-line {
+    font-style: italic;
+    opacity: 0.9;
+    line-height: 1.5;
+  }
+  .convo-who {
+    font-style: normal;
+    color: var(--accent-hi);
+  }
+
   .tip-hint {
     margin-top: 5px;
     padding-top: 4px;

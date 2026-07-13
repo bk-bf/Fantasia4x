@@ -1076,4 +1076,39 @@
     font-size: 11px;
     font-style: italic;
   }
+  /* SOCIAL-LAYER conversation lines: a speech bubble that dwells long enough to read (duration
+     must match SOCIAL_TTL_MS in combatFeedback.ts), gently drifting instead of the combat rise.
+     Wraps at a readable width; the tail-less rounded box keeps the retro-terminal look. */
+  .combat-float.social {
+    color: #e8e0c8;
+    font-size: 10px;
+    font-weight: normal;
+    font-style: italic;
+    white-space: normal;
+    max-width: 160px;
+    width: max-content;
+    padding: 2px 6px;
+    background: rgba(20, 24, 18, 0.85);
+    border: 1px solid #4a5240;
+    border-radius: 6px;
+    text-shadow: none;
+    animation: social-float-dwell 4.5s ease-out forwards;
+  }
+  @keyframes social-float-dwell {
+    0% {
+      opacity: 0;
+      margin-top: 2px;
+    }
+    6% {
+      opacity: 1;
+    }
+    80% {
+      opacity: 1;
+      margin-top: -10px;
+    }
+    100% {
+      opacity: 0;
+      margin-top: -14px;
+    }
+  }
 </style>

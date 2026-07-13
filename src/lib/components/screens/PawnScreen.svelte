@@ -34,6 +34,7 @@
   import PawnOverview from '../pawn/PawnOverview.svelte';
   import PawnHealth from '../pawn/PawnHealth.svelte';
   import PawnAttributes from '../pawn/PawnAttributes.svelte';
+  import PawnRelations from '../pawn/PawnRelations.svelte';
   import PawnNeeds from '../pawn/PawnNeeds.svelte';
   import PawnTraits from '../pawn/PawnTraits.svelte';
   import PawnEquipment from '../pawn/PawnEquipment.svelte';
@@ -53,7 +54,7 @@
   // its current value synchronously on subscribe, and the uiState callback assigns
   // `activeTab` — if it were declared later it would be in its temporal dead zone
   // and navigating in with a tab set (e.g. the GEAR button) would throw.
-  type PawnTab = 'status' | 'attributes' | 'gear';
+  type PawnTab = 'status' | 'attributes' | 'relations' | 'gear';
   // Restored across tab toggles; an explicit pawnScreenTab nav (e.g. the GEAR button) still overrides.
   let activeTab: PawnTab = persisted<PawnTab>('pawn.tab', 'status');
   $: persist('pawn.tab', activeTab);
@@ -61,6 +62,7 @@
   const TABS: { id: PawnTab; label: string }[] = [
     { id: 'status', label: 'STATUS' },
     { id: 'attributes', label: 'ATTRIBUTES' },
+    { id: 'relations', label: 'RELATIONS' },
     { id: 'gear', label: 'GEAR' }
   ];
 
@@ -168,8 +170,10 @@
         <!-- WORK-EXPERIENCE UI split: the body only — the work skills live on the Work screen. -->
         <PawnAttributes
           pawn={selectedPawn}
-          categories={['physical', 'capacity', 'combat', 'resistance']}
+          categories={['physical', 'capacity', 'combat', 'resistance', 'social']}
         />
+      {:else if activeTab === 'relations'}
+        <PawnRelations pawn={selectedPawn} gameState={$gameState} onSelect={selectPawn} />
       {:else if activeTab === 'gear'}
         <PawnEquipment pawn={selectedPawn} />
       {/if}

@@ -2,6 +2,7 @@
 
 import type { Culture, CultureRelation } from './culture';
 import type { Kingdom, KingdomParty, KingdomRelation } from './kingdom';
+import type { PawnRelationship } from './social';
 import type { WorldTile } from './world';
 import type { Season, WeatherState } from './environment';
 import type {
@@ -46,6 +47,9 @@ export interface GameState {
   kingdomParties?: KingdomParty[];
   /** KINGDOMS-TRADE: earliest turn the next visitor/caravan may arrive (cadence clock). */
   nextKingdomVisitTurn?: number;
+  /** SOCIAL-LAYER: sparse pawn-pair relationships, created lazily on first real interaction
+   *  (SocialService owns all writes; replaced whole on change for the snapshot sectional diff). */
+  relationships?: PawnRelationship[];
   worldMap: WorldTile[][];
   /** Living-world (SEASONS_WEATHER Phase B): current season + 0-indexed day within it. */
   season?: Season;
