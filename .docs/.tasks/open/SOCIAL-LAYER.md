@@ -317,6 +317,15 @@ Mood < 20 → a **break** (refuses work 2–10 turns). Mood 0 for 5 turns → **
       tick). Per-pair (25 s) + per-pawn (6 s) cooldowns pace it. `battle_talk` fires when both are
       drafted. The daily `processSocialTurn` no longer fires conversations (keeps drift/moods/romance/
       breaks).
+- [x] **Floaters freeze on pause** (2026-07-13). New `stores/animClock.ts` — `animNow()` is a
+      monotonic clock that halts while `isPaused`; every floater store (combatFeedback/attackLunges/
+      projectiles) and the GameCanvas ageing read it, so lifetimes freeze instead of ageing out during
+      a pause. `WorldEffectsLayer` sets `animation-play-state: paused` on all its animations in
+      parallel (visual + logical lifetime in lockstep). Dialog float is now **plain white cursive
+      text** (no bubble background/border) with a strong shadow.
+- [x] **Dialog transcript in the Relations tab** (2026-07-13). Each `talk` `RelationshipEvent` stores
+      its assembled `lines`; `RelationBreakdown` renders a per-entry ▸ toggle that reveals the actual
+      exchange, nested under the point-breakdown line.
 - [x] `'social'` `ActivityLogEntry` type + one expandable entry per exchange; `'social'` floater kind
       + speech-bubble overlay. (2026-07-13 — the whole exchange is assembled atomically, so ONE
       chronicle entry carries `details.lines` [click to expand — no session machinery needed];
