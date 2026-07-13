@@ -86,13 +86,12 @@
             class:selected={kingdom.id === selectedId}
             on:click={() => (selectedId = kingdom.id)}
           >
-            <span class="ki-name"
-              >{kingdom.name}{#if homelandBy.has(kingdom.id)}<span
-                  class="ki-home"
-                  title="home of {homelandBy.get(kingdom.id)!.join(', ')}"
-                  >⌂ {homeLabel(homelandBy.get(kingdom.id)!)}</span
-                >{/if}</span
-            >
+            <span class="ki-name">{kingdom.name}</span>
+            {#if homelandBy.has(kingdom.id)}
+              <span class="ki-home" title="home of {homelandBy.get(kingdom.id)!.join(', ')}"
+                >⌂ {homeLabel(homelandBy.get(kingdom.id)!)}</span
+              >
+            {/if}
             <span class="ki-disp">{dispositionTo(kingdom.id)}</span>
             <span class="ki-tier">{ACQUAINTANCE[knowledgeTier(kingdom.knowledge)]}</span>
           </button>
@@ -169,8 +168,7 @@
     letter-spacing: 0.04em;
   }
   .ki-home {
-    margin-left: 6px;
-    font-size: 9px;
+    font-size: 10px;
     color: var(--pos);
     letter-spacing: 0.04em;
   }
