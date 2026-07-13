@@ -163,7 +163,7 @@ option:hover {
 }
 
 /* ── Tab panels: sticky header + auto-hide scrollbars ──────────────────────────
-   Every tab screen (Pawn/Work/Race/…) headers it with `.screen-hdr`. Pin it to the
+   Every tab screen (Pawn/Work/Culture/…) headers it with `.screen-hdr`. Pin it to the
    top of its scroll area so it never scrolls away. */
 .screen-hdr {
   position: sticky;
