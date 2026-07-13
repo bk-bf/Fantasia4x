@@ -1,4 +1,6 @@
-// Lineages.ts — ancestral-blood mutation trees (LINEAGES spec). Loads lineages.jsonc and drives the
+// Lineages.ts — ancestral-blood mutation trees (LINEAGES spec). The lineage registry + awakening table
+// are DERIVED from the parent marker traits in traits.jsonc (the old lineages.jsonc was folded onto
+// them — see LINEAGE_DEFS/AWAKENING_DEFS below). Drives the
 // per-pawn lineage progression that rides the seasonal growth event (PawnGrowthService):
 //   • seedAwakeningPaths — at pawn-gen, a standalone gateway trait seeds ≥2 awakening meters (§4).
 //   • advanceAwakeningMeters — per DAY: fold fresh deeds into the meters, decay idle ones.
@@ -6,7 +8,6 @@
 //     first trait), else EVOLVE a staged trait (~10%, prioritised), else GROW a new member (~10%).
 // Self-contained: reads its own copy of the trait catalog (no Culture import → no cycle). Trait EFFECTS
 // of a newly-granted trait are applied by the caller's `applyTrait` callback (kept out of core→entities).
-import lineagesRaw from '../database/lineages.jsonc';
 import traitDbData from '../database/traits.jsonc';
 import { rng } from './rng';
 import { recomputeWound } from './Wounds';
@@ -27,17 +28,30 @@ interface AwakeningDef {
   label: string;
 }
 
-export const LINEAGE_DEFS: LineageDef[] = (lineagesRaw as { lineages: LineageDef[] }).lineages;
-export const AWAKENING_DEFS: AwakeningDef[] = (lineagesRaw as { awakenings: AwakeningDef[] }).awakenings;
-
-const LINEAGE_BY_ID = new Map(LINEAGE_DEFS.map((l) => [l.id, l]));
-const AWAKENING_BY_ID = new Map(AWAKENING_DEFS.map((a) => [a.id, a]));
-const PARENT_TRAIT_IDS = new Set(LINEAGE_DEFS.map((l) => l.parent));
-
 // The trait catalog keyed by id — the pool lineage growth draws from. FLAT since the LINEAGES-II
 // heritage flatten (no nested bundles exist; `traitExpansion.test.ts` guards against their return).
 const ALL_TRAITS: Trait[] = traitDbData as unknown as Trait[];
 const TRAIT_BY_ID = new Map(ALL_TRAITS.filter((t) => t.id).map((t) => [t.id as string, t]));
+
+// Lineage registry + awakening table, DERIVED from the parent marker traits (the old `lineages.jsonc`
+// folded onto them). A trait with `lineageParent` set IS a bloodline's parent — it carries the
+// bloodline's display name/description and, one-to-many so still single-source, its awakening
+// conditions. `parent` is the trait's own id, so it can never point at a trait that isn't there.
+export const LINEAGE_DEFS: LineageDef[] = ALL_TRAITS.filter((t) => t.lineageParent).map((t) => ({
+  id: t.lineageParent as string,
+  name: t.lineageName ?? (t.lineageParent as string),
+  parent: t.id as string,
+  description: t.lineageDescription ?? ''
+}));
+export const AWAKENING_DEFS: AwakeningDef[] = ALL_TRAITS.flatMap((t) =>
+  t.lineageParent && t.awakenDefs
+    ? t.awakenDefs.map((a) => ({ ...a, lineage: t.lineageParent as string }))
+    : []
+);
+
+const LINEAGE_BY_ID = new Map(LINEAGE_DEFS.map((l) => [l.id, l]));
+const AWAKENING_BY_ID = new Map(AWAKENING_DEFS.map((a) => [a.id, a]));
+const PARENT_TRAIT_IDS = new Set(LINEAGE_DEFS.map((l) => l.parent));
 
 export function lineageDef(id: string): LineageDef | undefined {
   return LINEAGE_BY_ID.get(id);

@@ -35,7 +35,7 @@ export interface GrowthOffer {
  * player picks a path by which deeds they perform; whichever fills first wins.
  */
 export interface LineagePath {
-  /** The awakening-condition id (`database/lineages.jsonc`) this meter follows. */
+  /** The awakening-condition id (defined in the lineage parent's `awakenDefs`) this meter follows. */
   condition: string;
   /** The lineage awakened when the meter fills (its parent trait granted). */
   lineage: string;
@@ -145,10 +145,22 @@ export interface Trait {
    *  only reachable through its lineage. A standalone gateway can still only EVOLVE its own stage until
    *  it awakens (§4) — it can't grow new lineage traits without the parent. */
   lineageExclusive?: boolean;
-  /** LINEAGES §4 — awakening-condition ids a STANDALONE gateway carries (from `database/lineages.jsonc`).
+  /** LINEAGES §4 — awakening-condition ids a STANDALONE gateway carries (defined in each lineage parent's `awakenDefs`).
    *  At pawn-gen the gateway seeds an awakening meter toward EACH condition's lineage (≥2, so the player
    *  chooses a path by which deeds the pawn does); the first to fill grants that lineage's parent. */
   awakens?: string[];
+  /** LINEAGES — when set, THIS trait is a bloodline's PARENT marker and the value is the lineage id
+   *  (e.g. `beast-heritage` → `"beast"`). Its display name/description live in `lineageName`/
+   *  `lineageDescription`, and its awakening conditions in `awakenDefs`. `Lineages.ts` derives
+   *  `LINEAGE_DEFS`/`AWAKENING_DEFS` from these fields — the old `lineages.jsonc` was folded onto the
+   *  parent traits, so a lineage's `parent` is always this trait's own id and can't drift. */
+  lineageParent?: string;
+  lineageName?: string;
+  lineageDescription?: string;
+  /** Awakening conditions this lineage offers (one-to-many on the parent, so still single-source). A
+   *  gateway trait's `awakens` references these by `id`; the meter tracks `deed`, targets a roll inside
+   *  `range`, and shows `label`. */
+  awakenDefs?: { id: string; deed: string; range: [number, number]; label: string }[];
   /** LINEAGES §2 — a mutually-exclusive lineage BRANCH tag: a pawn growing its lineage may hold at most
    *  one trait from a given `conflictGroup` (robust-skin branch vs ranged branch), so the tree forks
    *  per pawn. Checked when GROWING a member trait at a growth event. */
