@@ -4263,14 +4263,15 @@
     // Kingdom folk arrive only as spawned parties (KingdomService) — empty biomeWeights keeps them
     // out of the ambient spawner. entityClass "animal" + neutral/passive so nothing auto-engages;
     // they carry `kingdomId`/`partyId` on the Mob, and harming them sours kingdom relations.
-    // charSpans reuse existing humanoid glyphs for now (placeholder art — retint via fg).
+    // Caravan/visitor humanoids render as PEOPLE: the `map` sheet's humanoid sprites (the same set
+    // colonists draw from), retinted per role via fg. The pack beast keeps its aurochs glyph.
     {
         "id"            : "kingdom_trader",
         "name"          : "Trader",
         "flavor": "Road-dust on fine cloth and a ledger where a sword would hang. Every price in the county lives behind those eyes.",
         "threatLevel"   : 2,    // DPS 2.1 | effHP 45 | harmless
         "entityClass"   : "animal",
-        "charSpans"     : [ {"sheet": "cultures", "id": 49} ],
+        "charSpans"     : [ {"sheet": "map", "id": 85} ],
         "fg"            : [0.88, 0.72, 0.32],
         "bg"            : [0.0, 0.0, 0.0],
         "statRanges"    : {"str": [12, 16], "dex": [9, 12], "con": [8, 11], "per": [11, 14]},
@@ -4292,10 +4293,10 @@
     {
         "id"            : "kingdom_guard",
         "name"          : "Caravan Guard",
-        "flavor": "Paid by the mile and armed by the crown, it watches the treeline the whole way through — a wall that walks beside the wares.",
+        "flavor": "Paid by the mile and armed by the crown, it watches the treeline the whole way through, a wall that walks beside the wares.",
         "threatLevel"   : 9,    // DPS 20 | effHP 110 | bruiser (with drawn gear)
         "entityClass"   : "animal",
-        "charSpans"     : [ {"sheet": "cultures", "id": 32} ],
+        "charSpans"     : [ {"sheet": "map", "id": 103} ],
         "fg"            : [0.72, 0.74, 0.8],
         "bg"            : [0.0, 0.0, 0.0],
         "statRanges"    : {"str": [26, 34], "dex": [10, 14], "con": [12, 16], "per": [9, 12]},
@@ -4318,10 +4319,10 @@
     {
         "id"            : "kingdom_visitor",
         "name"          : "Visitor",
-        "flavor": "Come to see the colony with their own eyes — and to be seen. Word of the welcome they get travels home ahead of them.",
+        "flavor": "Come to see the colony with their own eyes, and to be seen. Word of the welcome they get travels home ahead of them.",
         "threatLevel"   : 1,    // DPS 2 | effHP 40 | harmless
         "entityClass"   : "animal",
-        "charSpans"     : [ {"sheet": "cultures", "id": 64} ],
+        "charSpans"     : [ {"sheet": "map", "id": 69} ],
         "fg"            : [0.45, 0.62, 0.85],
         "bg"            : [0.0, 0.0, 0.0],
         "statRanges"    : {"str": [11, 15], "dex": [9, 12], "con": [8, 11], "per": [10, 13]},
