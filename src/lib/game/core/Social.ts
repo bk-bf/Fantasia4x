@@ -109,7 +109,7 @@ export const KIN_INVERSE: Record<KinKind, KinKind> = {
   cousin: 'cousin'
 };
 
-/** Player-facing kin labels (never leak the snake/camel ids). */
+/** Sex-neutral kin labels — the fallback when the relative's sex is unknown. */
 export const KIN_LABEL: Record<KinKind, string> = {
   parent: 'Parent',
   child: 'Child',
@@ -121,19 +121,29 @@ export const KIN_LABEL: Record<KinKind, string> = {
   cousin: 'Cousin'
 };
 
-/** Possessive kin phrase for the entity card ("Kael's sister"). Coarse gender-neutral wording. */
-export function kinRelationPhrase(kind: KinKind, ofName: string): string {
-  const word: Record<KinKind, string> = {
-    parent: 'parent',
-    child: 'child',
-    sibling: 'sibling',
-    grandparent: 'grandparent',
-    grandchild: 'grandchild',
-    auntuncle: 'aunt or uncle',
-    nibling: 'niece or nephew',
-    cousin: 'cousin'
-  };
-  return `${ofName}'s ${word[kind]}`;
+/** Gendered kin words by the RELATIVE's sex — `[male, female]` (cousin is the same either way). */
+const KIN_LABEL_SEXED: Record<KinKind, [string, string]> = {
+  parent: ['Father', 'Mother'],
+  child: ['Son', 'Daughter'],
+  sibling: ['Brother', 'Sister'],
+  grandparent: ['Grandfather', 'Grandmother'],
+  grandchild: ['Grandson', 'Granddaughter'],
+  auntuncle: ['Uncle', 'Aunt'],
+  nibling: ['Nephew', 'Niece'],
+  cousin: ['Cousin', 'Cousin']
+};
+
+/** The kin label for a relative of the given `kind`, resolved by their `sex` (Father vs Mother).
+ *  Falls back to the sex-neutral label when sex is unknown. */
+export function kinLabel(kind: KinKind, sex?: 'male' | 'female'): string {
+  if (sex === 'male') return KIN_LABEL_SEXED[kind][0];
+  if (sex === 'female') return KIN_LABEL_SEXED[kind][1];
+  return KIN_LABEL[kind];
+}
+
+/** Possessive kin phrase for the entity card ("Kael's sister"), gendered by the relative's sex. */
+export function kinRelationPhrase(kind: KinKind, ofName: string, sex?: 'male' | 'female'): string {
+  return `${ofName}'s ${kinLabel(kind, sex).toLowerCase()}`;
 }
 
 /** Off-colony kin knowledge goes stale after ~a month without word (mirrors the KINGDOMS-TRADE

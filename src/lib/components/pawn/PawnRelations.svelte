@@ -4,7 +4,7 @@
    *  it has a history with (stage badge, score bar, story tags, romance). */
   import type { GameState, Pawn, PawnRelationship, RelationTag } from '$lib/game/core/types';
   import {
-    KIN_LABEL,
+    kinLabel,
     STAGE_LABEL,
     findRelationship,
     isKinStale,
@@ -66,8 +66,10 @@
           ? null
           : dayIndexForTurn(gameState.turn) - dayIndexForTurn(away.lastSeenTurn);
     }
+    // Gender the kin word by the relative's own sex (Father vs Mother, Aunt vs Uncle…).
+    const relativeSex = (alive ?? away)?.sex;
     return {
-      kind: KIN_LABEL[tie.kind],
+      kind: kinLabel(tie.kind, relativeSex),
       name: alive?.name ?? away?.name ?? (dead ? `${dead.name} †` : 'Lost to memory'),
       target: alive && alive.isAlive !== false ? alive : null,
       away, // off-colony record (or undefined)

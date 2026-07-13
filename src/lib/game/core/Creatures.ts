@@ -139,6 +139,9 @@ export interface CreatureDefinition {
   /** Body-size multiplier (default 1.0). Scales blood/health pool at spawn and softly scales
    *  natural-weapon damage. Does NOT rescale the shared body-part HP table. */
   bodyScale?: number;
+  /** `sex: false` opts a creature out of the 50/50 spawn sex roll — a wraith/ooze/construct has no
+   *  sex (its card shows none, and no gendered wording applies). Omit for ordinary sexed creatures. */
+  sex?: false;
   /** Body plan from limbmap.jsonc (omitted = "humanoid"). Drives structure + hit locations;
    *  per-limb HP = bodyScale × the plan's default sizes. */
   limbMap?: string;
@@ -259,6 +262,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     resistances: (raw.resistances as Partial<Record<DamageType, number>> | undefined) ?? undefined,
     naturalArmor: (raw.naturalArmor as number | undefined) ?? undefined,
     bodyScale: (raw.bodyScale as number | undefined) ?? undefined,
+    sex: raw.sex === false ? false : undefined,
     limbMap: (raw.limbMap as string | undefined) ?? undefined,
     spawnsInMountain: (raw.spawnsInMountain as boolean | undefined) ?? undefined,
     maxMountainDistance: (raw.maxMountainDistance as number | undefined) ?? undefined,

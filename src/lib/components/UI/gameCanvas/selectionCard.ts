@@ -625,6 +625,8 @@ export function buildPawnCard(
   const stats: EntityStat[] = [...coreStats(pawn), moveSpeedStat(pawn)];
   return {
     name: pawn.name + entityDebugLabel(pawn),
+    // Sex under the name in the hover/info panel.
+    flavor: pawn.sex ? (pawn.sex === 'male' ? '♂ Male' : '♀ Female') : undefined,
     // SOCIAL-LAYER §7: a mental break overrides the FSM state tag — the player should see WHY the
     // pawn is wandering instead of working.
     status: pawn.socialBreak
@@ -791,7 +793,9 @@ export function buildMobCard(
     bars,
     note: `${def.entityClass === 'mob' ? '⚔ hostile' : '◆ neutral'} · ${def.behaviour}${
       def.tameable ? ' · tameable' : ''
-    }${mob.age != null ? ` · ${mob.age} yrs` : ''}`,
+    }${mob.age != null ? ` · ${mob.age} yrs` : ''}${
+      mob.sex ? ` · ${mob.sex === 'male' ? '♂' : '♀'}` : ''
+    }`,
     pos: selected ? { x: mob.x, y: mob.y } : undefined,
     // Built for hover cards too so the shared HEALTH toggle works on hover, not just selection.
     health: buildHealthModel(mob),

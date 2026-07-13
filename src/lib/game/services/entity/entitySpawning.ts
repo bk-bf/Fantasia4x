@@ -565,7 +565,8 @@ export function tickLairs(state: GameState): GameState {
     if (inStartingBubble(state, lt.x, lt.y)) continue; // dormant dens don't escalate
     const alive = aliveByLair.get(lt.lairId) ?? 0;
     let level = prevEsc[lt.lairId] ?? 0;
-    if (alive === 0) level = 0; // cleared → reset to base
+    if (alive === 0)
+      level = 0; // cleared → reset to base
     else if (level < LAIR_MAX_ESCALATION && rng.random() < LAIR_ESCALATION_CHANCE) level += 1;
     if (level > 0) esc[lt.lairId] = level;
   }
@@ -876,6 +877,8 @@ export function makeMob(
     entityClass: def.entityClass,
     // PAWN-GROWTH: a rolled age (display-only flavour — creatures don't grow like pawns).
     age: rng.int(1, 12),
+    // Sex rolled 50/50 at spawn (display flavour) — unless the creature is sexless (wraith/ooze).
+    sex: def.sex === false ? undefined : rng.chance(0.5) ? 'male' : 'female',
     x,
     y,
     health: scaledHealth,

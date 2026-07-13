@@ -8,6 +8,8 @@ import {
   stageForScore,
   relKey,
   isKinStale,
+  kinLabel,
+  kinRelationPhrase,
   KIN_SEED_BONUS
 } from './Social';
 import type { CultureRelation, Pawn } from './types';
@@ -83,6 +85,25 @@ describe('cultural seeding (RACE-SYSTEM Phase 1 regression)', () => {
     const seed = seedScore(estranged, pawnOf('b', 'c-orc'), relations);
     expect(seed).toBe(15 - 55); // same people +15, but the bond is poison
     expect(rawStageForScore(seed)).toBe('rivals');
+  });
+});
+
+describe('kin labels are gendered by the relative’s sex', () => {
+  it('resolves the right word per kind + sex, falling back to neutral', () => {
+    expect(kinLabel('parent', 'male')).toBe('Father');
+    expect(kinLabel('parent', 'female')).toBe('Mother');
+    expect(kinLabel('sibling', 'female')).toBe('Sister');
+    expect(kinLabel('auntuncle', 'male')).toBe('Uncle');
+    expect(kinLabel('auntuncle', 'female')).toBe('Aunt');
+    expect(kinLabel('nibling', 'male')).toBe('Nephew');
+    expect(kinLabel('grandparent', 'female')).toBe('Grandmother');
+    expect(kinLabel('cousin', 'male')).toBe('Cousin'); // no gendered form
+    expect(kinLabel('parent')).toBe('Parent'); // unknown sex → neutral
+  });
+
+  it('phrases the possessive with the relative’s gendered word', () => {
+    expect(kinRelationPhrase('sibling', 'Kael', 'female')).toBe("Kael's sister");
+    expect(kinRelationPhrase('parent', 'Kael', 'male')).toBe("Kael's father");
   });
 });
 

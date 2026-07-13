@@ -296,7 +296,9 @@ class KingdomServiceImpl {
     const founder = state.pawns.find((p) => (p.kin ?? []).some((k) => k.pawnId === visitor.id));
     const tie = founder?.kin?.find((k) => k.pawnId === visitor.id);
     const phrase =
-      founder && tie ? kinRelationPhrase(tie.kind, founder.name.split(' ')[0]) : 'a relative';
+      founder && tie
+        ? kinRelationPhrase(tie.kind, founder.name.split(' ')[0], visitor.sex)
+        : 'a relative';
     // Refresh staleness (new worldPawns ref so the slim sectional diff ships it — this is the ONLY
     // time worldPawns changes after gen, and it's daily-gated).
     const worldPawns = (state.worldPawns ?? []).map((p) =>

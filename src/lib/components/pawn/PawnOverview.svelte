@@ -133,6 +133,13 @@
       <span class="lbl">AGE</span><span class="val" title={birthdayLabel}>{pawn.age} yrs</span>
     </div>
   {/if}
+  {#if pawn.sex}
+    <div class="row">
+      <span class="lbl">SEX</span><span class="val"
+        >{pawn.sex === 'male' ? '♂ Male' : '♀ Female'}</span
+      >
+    </div>
+  {/if}
   <div class="row">
     <span class="lbl">STATE</span>
     <span class="val" style="color: {stateColor(pawn.currentState)}"

@@ -49,6 +49,9 @@ export interface Mob {
   /** Age in whole years, rolled at spawn (display-only flavour for the entity card — creatures don't
    *  grow). */
   age?: number;
+  /** Biological sex — rolled 50/50 at spawn (unless the creature def fixes or opts out). Shown on
+   *  the entity card. */
+  sex?: 'male' | 'female';
   x: number;
   y: number;
   health: number;
@@ -278,6 +281,9 @@ export interface Pawn {
   /** The pawn's favoured ("talent-star") stats — a rolled 0–2 of them: higher caps AND biased to roll
    *  bigger growth gains. Some pawns have no innate talent; a rare few have two. */
   favStats?: StatKey[];
+  /** Biological sex — rolled 50/50 at generation. Drives the gendered kin word (Father/Mother,
+   *  Aunt/Uncle…) and shows in the Status tab / info panel. */
+  sex?: 'male' | 'female';
   /** Age in whole years (rolled at generation; +1 each birthday). Shown in the Status tab. */
   age?: number;
   /** Fixed birthday as a 0-indexed day-of-year (0..359). On this day each year age++ and a guaranteed

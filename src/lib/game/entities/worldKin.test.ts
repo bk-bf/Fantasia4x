@@ -41,7 +41,13 @@ describe('generateWorldKin', () => {
       // lives somewhere in the world (a kingdom) and shares the founder's surname
       expect(w.homeKingdomId).toBeTruthy();
       expect(w.name.split(' ').slice(-1)[0]).toBe(founder!.name.split(' ').slice(-1)[0]);
+      // sex is rolled so the kin word can gender (Father/Mother…)
+      expect(w.sex === 'male' || w.sex === 'female').toBe(true);
     }
+    // 50/50 roll produces a mix across the whole web (not all one sex)
+    const males = worldKin.filter((w) => w.sex === 'male').length;
+    expect(males).toBeGreaterThan(0);
+    expect(males).toBeLessThan(worldKin.length);
     // world kin are NOT colony pawns (kept out of state.pawns)
     expect(founders.some((f) => byId.has(f.id))).toBe(false);
   });

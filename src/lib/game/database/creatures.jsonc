@@ -211,6 +211,7 @@
         "id"              : "shadow_wraith",
         "species": "shadow_wraith",
         "tier": 2,
+        "sex": false,
         "audio"              : "wraith",
         "name"            : "Grave Shade",
         "flavor": "A knot of cold that drifts through solid rock and leaves frost where it lingers; steel bites it poorly, but living flame makes it flinch. It falls fast once struck, and leaves nothing behind but the chill.",
@@ -812,6 +813,7 @@
         "id"            : "grimeling",
         "species": "grimeling",
         "tier": 2,
+        "sex": false,
         "audio"            : "goblinoid",
         "name"          : "Bog Ooze",
         "flavor": "A crawling knot of bog-rot and ill will that keeps moving well past when it ought to stop. Cut it down and it slumps back into the muck it rose from, taking its trouble with it.",
@@ -3507,6 +3509,7 @@
     },
     {
         "id": "greater_wraith",
+        "sex": false,
         "audio": "wraith",
         "name": "Greater Wraith",
         "flavor": "An older, colder hunger than the common wraith; the chill of it fills a room before it does. Steel slides through it, flame makes it recoil — and it leaves not even a bone behind.",
@@ -4079,6 +4082,7 @@
     },
     {
         "id": "grime_horror",
+        "sex": false,
         "audio": "goblinoid",
         "name": "Grime Horror",
         "flavor": "A wallowing mound of bog-rot and malice that seals its own wounds as fast as they open. Patience beats it where blades will not; when it finally sags, it leaves the marsh a little cleaner and nothing else.",

@@ -402,11 +402,14 @@ export function buildPawnFromCulture(culture: Culture, index: number, origin?: P
     ? applyBackgroundExperience(seedWorkLevels(), origin.childhood, origin.adulthood)
     : seedWorkLevels();
   const basePrestige = origin ? backgroundPrestige(origin.childhood, origin.adulthood) : 0;
+  // Sex is rolled 50/50; the name is drawn to match it.
+  const sex: 'male' | 'female' = rng.chance(0.5) ? 'male' : 'female';
 
   const pawn: Pawn = {
     id: `pawn-${index}`,
     debugId: _pawnDebugIdCounter++,
-    name: generatePawnName(),
+    name: generatePawnName(sex),
+    sex,
     stats: finalStats,
     maxStats,
     favStats,
@@ -847,59 +850,81 @@ function rollPhysicalTraits(culturePhysicalTraits: any): any {
     size: size
   };
 }
-function generatePawnName(): string {
-  const firstNames = [
-    'Aria',
-    'Brom',
-    'Celia',
-    'Dain',
-    'Enna',
-    'Finn',
-    'Greta',
-    'Hale',
-    'Ivy',
-    'Jax',
-    'Kira',
-    'Lark',
-    'Mira',
-    'Nix',
-    'Opal',
-    'Pike',
-    'Quinn',
-    'Ren',
-    'Sage',
-    'Thea',
-    'Uma',
-    'Vale',
-    'Wren',
-    'Xara',
-    'Yuki',
-    'Zara',
-    'Axel',
-    'Blair',
-    'Clay',
-    'Dawn',
-    'Echo',
-    'Frost',
-    'Gage',
-    'Haven',
-    'Indigo',
-    'Jade',
-    'Knox',
-    'Luna',
-    'Moss',
-    'Nova',
-    'Onyx',
-    'Petra',
-    'Quest',
-    'River',
-    'Storm',
-    'Thorn',
-    'Unity',
-    'Vex',
-    'Wolf',
-    'Zephyr'
-  ];
+// Sex-keyed given-name pools — `generatePawnName` draws from the pool matching the pawn's sex so a
+// name reads with its bearer. (Surnames are shared.)
+const MALE_FIRST_NAMES = [
+  'Brom',
+  'Dain',
+  'Finn',
+  'Hale',
+  'Jax',
+  'Nix',
+  'Pike',
+  'Ren',
+  'Vale',
+  'Axel',
+  'Clay',
+  'Gage',
+  'Knox',
+  'Moss',
+  'Onyx',
+  'Storm',
+  'Thorn',
+  'Vex',
+  'Wolf',
+  'Zephyr',
+  'Frost',
+  'Bram',
+  'Kael',
+  'Doran',
+  'Garrick',
+  'Tomas',
+  'Aldric',
+  'Roderick',
+  'Cael',
+  'Halvard'
+];
+
+const FEMALE_FIRST_NAMES = [
+  'Aria',
+  'Celia',
+  'Enna',
+  'Greta',
+  'Ivy',
+  'Kira',
+  'Mira',
+  'Opal',
+  'Thea',
+  'Uma',
+  'Xara',
+  'Yuki',
+  'Zara',
+  'Dawn',
+  'Luna',
+  'Nova',
+  'Petra',
+  'Wren',
+  'Elara',
+  'Rowan',
+  'Sylvi',
+  'Maren',
+  'Isolde',
+  'Freya',
+  'Nadia',
+  'Liora',
+  'Bryn',
+  'Astrid',
+  'Signy',
+  'Wilda'
+];
+
+function generatePawnName(sex?: 'male' | 'female'): string {
+  const firstNames =
+    sex === 'male'
+      ? MALE_FIRST_NAMES
+      : sex === 'female'
+        ? FEMALE_FIRST_NAMES
+        : [...MALE_FIRST_NAMES, ...FEMALE_FIRST_NAMES];
 
   const surnames = [
     'Ashbrook',
