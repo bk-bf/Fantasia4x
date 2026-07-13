@@ -153,10 +153,13 @@ KINGDOMS-TRADE staleness principle). Answers "the FAMILY box is empty / only lis
 
 - **World-kin generation** (`entities/Pawns.ts` `generateWorldKin`, called from the 3 founder
   colony-gen store paths). Each founder gets an **extended web** — `parent`/`sibling`/`grandparent`/
-  `auntuncle`/`cousin`/`child` (`KinKind` widened; `KIN_INVERSE`/`KIN_LABEL` in `core/Social.ts`) —
+  `auntuncle`/`cousin`/`child`/`nibling` (`KinKind` widened; `KIN_INVERSE`/`KIN_LABEL` in `core/Social.ts`) —
   as **full inert Pawn records** in `GameState.worldPawns` (identity/stats/traits, no live body/needs;
   never simulated, outside the complexity bubble). They share the founder's homeland (a stateless
   founder's kin get a random realm so they can still travel in) and surname. Modest counts (~5/founder).
+  **Ages are generation-tiered with non-overlapping bands** (2026-07-13 fix): grandparents older than
+  parents/aunts-uncles, older than the founder's generation (siblings/cousins), older than the next
+  down (children/nieces-nephews) — no relative can come out older than the generation above it.
 - **Kinship is a weighted bond, not a guarantee** (`rollKinWarmth` on every tie, colony + world):
   ~12% estranged/hated, ~18% cool, ~70% close. `KinTie.warmth` is the kin CONTRIBUTION to the
   relationship seed (`seedScore` adds it on top of the culture seed), so a founder can have a brother
@@ -302,10 +305,18 @@ Mood < 20 → a **break** (refuses work 2–10 turns). Mood 0 for 5 turns → **
       sibling's tie is dropped)
 
 ### Phase D — Conversations
-- [x] `conversations.jsonc` fragment banks + procedural assembler. (2026-07-13 — opener→reply→closer
-      per category [small_talk/banter/deep_talk/flirt/comfort/argue/insult], {name}/{subject}/
-      {weather}/{season} slots; `services/social/conversations.ts` picks category by stage/grief/
-      flirt-gate and rolls the outcome off CHA/traits/mood)
+- [x] `dialog.jsonc` (renamed from `conversations.jsonc` 2026-07-13) flavor banks + procedural
+      assembler. (opener→reply→closer per category [small_talk/banter/deep_talk/flirt/comfort/argue/
+      insult/**battle_talk**], {name}/{subject}/{weather}/{season} slots; `services/social/conversations.ts`
+      picks category by stage/grief/flirt-gate/**battle-context** and rolls the outcome off CHA/traits/
+      mood. **Relationship effects are authored in the DATA now** — each category carries `goodDelta`/
+      `badDelta`/`goodChance`.)
+- [x] **Proximity trigger** (2026-07-13, playtest — daily rolls were invisible). `SocialService.processDialogTick`
+      fires a dialog when two awake colonists pass within **2 tiles**; run on a THROTTLED engine tick
+      (`DIALOG_INTERVAL_TICKS = 90` ≈ 1.5 s — off the hot path, returns the same state ref on a quiet
+      tick). Per-pair (25 s) + per-pawn (6 s) cooldowns pace it. `battle_talk` fires when both are
+      drafted. The daily `processSocialTurn` no longer fires conversations (keeps drift/moods/romance/
+      breaks).
 - [x] `'social'` `ActivityLogEntry` type + one expandable entry per exchange; `'social'` floater kind
       + speech-bubble overlay. (2026-07-13 — the whole exchange is assembled atomically, so ONE
       chronicle entry carries `details.lines` [click to expand — no session machinery needed];
