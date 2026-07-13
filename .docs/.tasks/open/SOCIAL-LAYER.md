@@ -145,6 +145,35 @@ start disliking each other; a regression test asserts the seeding.
   tree is a follow-up; leave a hook (`familyId` propagation, `DeadPawnRecord` retaining kin so the
   tree survives death) but do not build birth/pregnancy this pass.
 
+### 2b · Off-colony family in the world — done 2026-07-13
+
+A colony's FAMILY isn't just who's in the colony: each founder is born into a **wider family web**
+that lives out in the world, tracked behind the scenes and viewable **as last you knew them** (the
+KINGDOMS-TRADE staleness principle). Answers "the FAMILY box is empty / only lists colonists."
+
+- **World-kin generation** (`entities/Pawns.ts` `generateWorldKin`, called from the 3 founder
+  colony-gen store paths). Each founder gets an **extended web** — `parent`/`sibling`/`grandparent`/
+  `auntuncle`/`cousin`/`child` (`KinKind` widened; `KIN_INVERSE`/`KIN_LABEL` in `core/Social.ts`) —
+  as **full inert Pawn records** in `GameState.worldPawns` (identity/stats/traits, no live body/needs;
+  never simulated, outside the complexity bubble). They share the founder's homeland (a stateless
+  founder's kin get a random realm so they can still travel in) and surname. Modest counts (~5/founder).
+- **Kinship is a weighted bond, not a guarantee** (`rollKinWarmth` on every tie, colony + world):
+  ~12% estranged/hated, ~18% cool, ~70% close. `KinTie.warmth` is the kin CONTRIBUTION to the
+  relationship seed (`seedScore` adds it on top of the culture seed), so a founder can have a brother
+  they love **or a father they can't stand** (rivals/enemies). `socialService.seedFamilyRelationships`
+  stands up a row per family tie (colony + world) at gen.
+- **Staleness** — world kin carry `lastSeenTurn` (undefined = never seen since the founder emigrated
+  → rendered greyed "as you last knew" from turn 1, an emigrant's out-of-date memory). Refreshed
+  ONLY on a caravan/visitor arrival — **never touched per tick** (the whole system is generated once
+  and only mutated on the daily-gated arrival path).
+- **Bias to visit + come with a caravan** (`KingdomService`): a realm where the colony has kin pulls
+  harder in the arrival weighting, and on a party's arrival `reuniteKin` may (bias-rolled) seat a
+  relative in the party — **refresh their `lastSeenTurn`, rename the lead mob to them** (`Mob.name` +
+  `worldKinRelation` → the entity card reads "Kael's sister"), tag the party (`KingdomParty.kinVisitorId`),
+  and post the news. On-map, no recruit (a recruitment hook is left for later).
+- **UI** — `PawnRelations.svelte` FAMILY section now lists colony kin AND off-colony family with their
+  **standing** (stage badge — a hated brother reads Rivals), **homeland**, and greyed staleness.
+
 ---
 
 ## 3 · Conversation system
