@@ -16,6 +16,7 @@ import type {
   MoodModifier,
   Pawn,
   PawnRelationship,
+  RelationEventKind,
   RelationTag
 } from '../core/types';
 import { itemDefById } from '../core/itemDefs';
@@ -33,10 +34,17 @@ import { simLog } from '../core/logSink';
 import { TICKS_PER_SECOND } from '../core/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
 import { pawnStatService } from './PawnStatService';
-import { runConversation, type ConversationCategory } from './social/conversations';
+import {
+  runConversation,
+  type ConversationCategory,
+  type ConversationOutcome
+} from './social/conversations';
 
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 const days = (n: number) => Math.round(n * TICKS_PER_DAY);
+// Per-pair history depth: keep the last N discrete events (rescues, talks, fights…). The rolled-up
+// ambient `time`/`seed` entries are pinned and don't count against this, so meaningful moments show.
+const REL_LOG_CAP = 12;
 
 // ── Tunables ──────────────────────────────────────────────────────────────────────────────────
 // §1 procedural daily deltas
@@ -184,18 +192,83 @@ class SocialServiceImpl {
       points: { history: 0 },
       ...(kinFromA ? { kin: kinFromA } : {})
     };
+    // Seed the history with the first-impression baseline (kin/culture) when it isn't a plain 0.
+    if (seed !== 0) {
+      rel.log = [
+        {
+          turn: state.turn,
+          delta: seed,
+          label: kinFromA
+            ? 'Family ties'
+            : seed > 0
+              ? 'A familiar people'
+              : 'Old grudges between peoples',
+          kind: 'seed'
+        }
+      ];
+    }
     working.push(rel);
     return rel;
   }
 
-  /** Apply a signed delta to a working row: clamp, tally history, restage with hysteresis. */
-  private applyDelta(rel: PawnRelationship, delta: number, tags?: RelationTag[]): void {
+  /** Apply a signed delta to a working row: clamp, tally history, restage, tag, and (when the
+   *  caller names the moment) record it in the pair's history log. */
+  private applyDelta(
+    rel: PawnRelationship,
+    delta: number,
+    opts?: {
+      tags?: RelationTag[];
+      turn?: number;
+      label?: string;
+      kind?: RelationEventKind;
+      /** Fold into an existing same-kind/same-label entry (ambient day-to-day drift) instead of
+       *  pushing a fresh line. */
+      coalesce?: boolean;
+    }
+  ): void {
     rel.score = Math.max(-100, Math.min(100, rel.score + delta));
     rel.points.history += Math.abs(delta);
     rel.stage = stageForScore(rel.score, rel.stage);
-    if (tags) {
-      for (const t of tags) if (!rel.tags.includes(t)) rel.tags.push(t);
+    if (opts?.tags) {
+      for (const t of opts.tags) if (!rel.tags.includes(t)) rel.tags.push(t);
     }
+    if (opts?.turn != null && opts.label && opts.kind && delta !== 0) {
+      this.recordEvent(
+        rel,
+        { turn: opts.turn, delta, label: opts.label, kind: opts.kind },
+        opts.coalesce ?? false
+      );
+    }
+  }
+
+  /** Append (or coalesce) one history line, keeping the log bounded. The pinned `seed`/`time`
+   *  totals survive the cap so the rolling "day to day" figure is never crowded out. */
+  private recordEvent(
+    rel: PawnRelationship,
+    ev: { turn: number; delta: number; label: string; kind: RelationEventKind },
+    coalesce: boolean
+  ): void {
+    const delta = Math.round(ev.delta * 10) / 10;
+    const log = rel.log ? rel.log.slice() : [];
+    if (coalesce) {
+      const idx = log.findIndex((e) => e.kind === ev.kind && e.label === ev.label);
+      if (idx >= 0) {
+        log[idx] = {
+          ...log[idx],
+          delta: Math.round((log[idx].delta + delta) * 10) / 10,
+          turn: ev.turn
+        };
+        rel.log = log;
+        return;
+      }
+    }
+    log.push({ turn: ev.turn, delta, label: ev.label, kind: ev.kind });
+    // Cap the DISCRETE tail; drop the oldest non-pinned entry first (pinned = seed + ambient time).
+    while (log.length > REL_LOG_CAP) {
+      const i = log.findIndex((e) => e.kind !== 'time' && e.kind !== 'seed');
+      log.splice(i >= 0 ? i : 0, 1);
+    }
+    rel.log = log;
   }
 
   /**
@@ -222,18 +295,19 @@ class SocialServiceImpl {
   }
 
   /** One-pair event delta from an owning system (rescue/tend/friendly fire…). Returns new state
-   *  (relationships array replaced) — the caller reassigns its gameState. */
+   *  (relationships array replaced) — the caller reassigns its gameState. `label`/`kind` name the
+   *  moment for the history log (defaulting `turn` to the current turn). */
   adjustRelation(
     state: GameState,
     a: Pawn,
     b: Pawn,
     delta: number,
-    tags?: RelationTag[]
+    opts?: { tags?: RelationTag[]; label?: string; kind?: RelationEventKind; coalesce?: boolean }
   ): GameState {
     if (a.id === b.id) return state;
     const working = state.relationships ? [...state.relationships] : [];
     const rel = this.ensureRel(working, a, b, state);
-    this.applyDelta(rel, delta, tags);
+    this.applyDelta(rel, delta, { turn: state.turn, ...opts });
     return { ...state, relationships: working };
   }
 
@@ -249,20 +323,27 @@ class SocialServiceImpl {
       days(3),
       state.turn
     );
-    return this.adjustRelation(state, rescuer, rescued, RESCUE_DELTA, [
-      'rescued_by',
-      'battle_forged'
-    ]);
+    return this.adjustRelation(state, rescuer, rescued, RESCUE_DELTA, {
+      tags: ['rescued_by', 'battle_forged'],
+      label: `Carried out of danger by ${firstName(rescuer)}`,
+      kind: 'rescue'
+    });
   }
 
   /** A medic dressed the patient's wounds (services/jobs/caretake.ts). */
   onTend(state: GameState, medic: Pawn, patient: Pawn): GameState {
-    return this.adjustRelation(state, medic, patient, TEND_DELTA);
+    return this.adjustRelation(state, medic, patient, TEND_DELTA, {
+      label: `${firstName(medic)} tended their wounds`,
+      kind: 'tend'
+    });
   }
 
   /** A colonist hurt a fellow colonist (brawl / stray blow — Combat.performAttack). */
   onFriendlyFire(state: GameState, attacker: Pawn, victim: Pawn): GameState {
-    return this.adjustRelation(state, attacker, victim, FRIENDLY_FIRE_DELTA);
+    return this.adjustRelation(state, attacker, victim, FRIENDLY_FIRE_DELTA, {
+      label: `${firstName(attacker)} drew their blood`,
+      kind: 'strife'
+    });
   }
 
   /** A pawn landed a kill; every colonist near the fight shares the bond (once per pair per day). */
@@ -284,7 +365,13 @@ class SocialServiceImpl {
         _battleBondDay.set(key, day);
         working ??= state.relationships ? [...state.relationships] : [];
         const rel = this.ensureRel(working, near[i], near[j], state);
-        this.applyDelta(rel, FOUGHT_ALONGSIDE_DELTA, ['battle_forged']);
+        this.applyDelta(rel, FOUGHT_ALONGSIDE_DELTA, {
+          tags: ['battle_forged'],
+          turn: state.turn,
+          label: 'Fought side by side',
+          kind: 'battle',
+          coalesce: true
+        });
       }
     }
     return working ? { ...state, relationships: working } : state;
@@ -352,7 +439,12 @@ class SocialServiceImpl {
       for (let i = 0; i < witnesses.length; i++) {
         for (let j = i + 1; j < witnesses.length; j++) {
           const rel = this.ensureRel(working, witnesses[i], witnesses[j], state);
-          this.applyDelta(rel, WITNESS_DEATH_DELTA, ['grief_bond']);
+          this.applyDelta(rel, WITNESS_DEATH_DELTA, {
+            tags: ['grief_bond'],
+            turn,
+            label: `Grieved ${firstName(dead)} together`,
+            kind: 'grief'
+          });
         }
       }
     }
@@ -371,7 +463,11 @@ class SocialServiceImpl {
 
   /** Two pawns shared a meal by the fire (needs handler, eat-start adjacency). */
   onSharedMeal(state: GameState, a: Pawn, b: Pawn): GameState {
-    return this.adjustRelation(state, a, b, 1);
+    return this.adjustRelation(state, a, b, 1, {
+      label: 'Time spent together',
+      kind: 'time',
+      coalesce: true
+    });
   }
 
   // ── §B the daily social pass ────────────────────────────────────────────────────────────────
@@ -449,7 +545,12 @@ class SocialServiceImpl {
           if (d <= MEET_RADIUS && !findRelationship(working, a.id, b.id)) touch(a, b);
           // one-directional pair work (deltas applied once per pair)
           if (d <= WORK_CLUSTER_RADIUS && a.state?.isWorking && b.state?.isWorking) {
-            this.applyDelta(touch(a, b), WORKED_TOGETHER_DELTA);
+            this.applyDelta(touch(a, b), WORKED_TOGETHER_DELTA, {
+              turn,
+              label: 'Time spent together',
+              kind: 'time',
+              coalesce: true
+            });
           }
           const rel = findRelationship(working, a.id, b.id);
           if (rel) {
@@ -469,7 +570,12 @@ class SocialServiceImpl {
             }
             if (affinity !== 0) {
               relsChanged = true;
-              this.applyDelta(rel, affinity);
+              this.applyDelta(rel, affinity, {
+                turn,
+                label: affinity > 0 ? 'Kindred temperaments' : 'Grating temperaments',
+                kind: 'time',
+                coalesce: true
+              });
             }
             // idling next to a rival grates
             if (
@@ -479,7 +585,12 @@ class SocialServiceImpl {
               (rel.stage === 'rivals' || rel.stage === 'enemies')
             ) {
               relsChanged = true;
-              this.applyDelta(rel, IDLE_RIVAL_DELTA);
+              this.applyDelta(rel, IDLE_RIVAL_DELTA, {
+                turn,
+                label: 'Festering resentment',
+                kind: 'time',
+                coalesce: true
+              });
             }
           }
         }
@@ -530,7 +641,11 @@ class SocialServiceImpl {
         { turn, weatherType: state.weather?.type, season: state.season },
         { flirtEligible, targetGrieving: grieving }
       );
-      this.applyDelta(rel, outcome.delta);
+      this.applyDelta(rel, outcome.delta, {
+        turn,
+        label: this.convoLogLabel(outcome),
+        kind: 'talk'
+      });
       convoCount.set(a.id, (convoCount.get(a.id) ?? 0) + 1);
       convoCount.set(b.id, (convoCount.get(b.id) ?? 0) + 1);
       // romance beats ride flirt outcomes
@@ -575,8 +690,14 @@ class SocialServiceImpl {
       if ((stage === 'partners' || stage === 'courting') && rel.score < 0) {
         relsChanged = true;
         rel.romance = { stage: 'ex', since: turn };
+        const before = rel.score;
         rel.score = Math.min(rel.score, -25);
         rel.stage = stageForScore(rel.score, rel.stage);
+        this.recordEvent(
+          rel,
+          { turn, delta: rel.score - before, label: 'Parted ways', kind: 'romance' },
+          false
+        );
         const a = alive.find((p) => p.id === rel.pawnA);
         const b = alive.find((p) => p.id === rel.pawnB);
         for (const p of [a, b]) {
@@ -699,6 +820,7 @@ class SocialServiceImpl {
       rel.score >= PARTNER_MIN_SCORE
     ) {
       rel.romance = { stage: 'partners', since: turn };
+      this.recordEvent(rel, { turn, delta: 0, label: 'Became a couple', kind: 'romance' }, false);
       for (const p of [a, b]) {
         const love = p === a ? b : a;
         this.addMoodModifier(
@@ -743,10 +865,32 @@ class SocialServiceImpl {
             turn
           );
           const jRel = this.ensureRel(working, partner, p, state);
-          this.applyDelta(jRel, -10);
+          this.applyDelta(jRel, -10, {
+            turn,
+            label: `${firstName(p)} has a wandering eye`,
+            kind: 'romance'
+          });
         }
         this.applyDelta(this.ensureRel(working, p, other, state), 0); // ensure row exists for the affair
       }
+    }
+  }
+
+  /** Compact "what they talked about" line for the relationship history log. */
+  private convoLogLabel(o: ConversationOutcome): string {
+    switch (o.category) {
+      case 'small_talk':
+      case 'banter':
+      case 'deep_talk':
+        return o.positive ? `Talked about ${o.subject}` : `Fell out over ${o.subject}`;
+      case 'comfort':
+        return o.positive ? 'Shared a moment of comfort' : 'Comfort was not wanted';
+      case 'flirt':
+        return o.positive ? 'A warm exchange' : 'A rebuffed advance';
+      case 'argue':
+        return `Argued over ${o.subject}`;
+      case 'insult':
+        return 'Traded harsh words';
     }
   }
 

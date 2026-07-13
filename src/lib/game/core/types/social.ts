@@ -30,6 +30,29 @@ export interface RomanceState {
 /** Blood-tie kinds (starting-kin pass; children later). */
 export type KinKind = 'parent' | 'child' | 'sibling';
 
+/** What produced a relationship-log entry — drives the breakdown's icon/colour. */
+export type RelationEventKind =
+  | 'seed' // the cultural/kin first-impression baseline
+  | 'talk' // a conversation (label carries the subject)
+  | 'time' // ambient day-to-day drift (proximity, temperament) — coalesced into a rolling total
+  | 'rescue'
+  | 'tend'
+  | 'battle' // fought side by side / witnessed a death together
+  | 'grief'
+  | 'strife' // friendly fire, festering resentment
+  | 'romance'; // courtship milestones, breakups, jealousy
+
+/** One line of a relationship's history — a dated, signed point change with a human label. Kept
+ *  bounded per pair (`REL_LOG_CAP`); the ambient `time` drift is coalesced into a rolling total
+ *  rather than one entry per day. */
+export interface RelationshipEvent {
+  turn: number;
+  /** Signed points this event moved the score (rounded to 0.1). */
+  delta: number;
+  label: string;
+  kind: RelationEventKind;
+}
+
 /** One blood tie on a pawn: `kind` is what the OTHER pawn is to this one
  *  (`{ pawnId: X, kind: 'parent' }` on P means X is P's parent). */
 export interface KinTie {
@@ -58,6 +81,9 @@ export interface PawnRelationship {
   points: { history: number };
   /** Successful flirt count — the courtship gate (romance needs a few before advancing). */
   flirts?: number;
+  /** Recent history — what happened between them and the points each moment gave, newest last.
+   *  Bounded (`REL_LOG_CAP`); surfaced as the toggleable breakdown on the Relations tab. */
+  log?: RelationshipEvent[];
 }
 
 /**

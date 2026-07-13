@@ -31,6 +31,8 @@ export interface ConversationOutcome {
   lines: ConversationLine[];
   /** Chronicle `result` phrase ("warmed to each other" / "it turned into an argument"). */
   resultText: string;
+  /** What they talked about (the filled subject phrase) — surfaced in the relationship breakdown. */
+  subject: string;
 }
 
 interface CategoryBank {
@@ -198,6 +200,7 @@ export function runConversation(
     positive,
     delta: positive ? DELTA[category].good : DELTA[category].bad,
     lines,
-    resultText: positive ? RESULT_GOOD[category] : RESULT_BAD[category]
+    resultText: positive ? RESULT_GOOD[category] : RESULT_BAD[category],
+    subject
   };
 }

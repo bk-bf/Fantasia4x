@@ -62,11 +62,18 @@ describe('relationship seeding through the service', () => {
     const a = pawn('pawn-1', 5, 5);
     const b = pawn('pawn-2', 6, 5);
     let s = stateWith([a, b]);
-    s = socialService.adjustRelation(s, a, b, 18, ['rescued_by']); // rescue
+    s = socialService.adjustRelation(s, a, b, 18, {
+      tags: ['rescued_by'],
+      label: 'A rescue',
+      kind: 'rescue'
+    }); // rescue
     const rel = findRelationship(s.relationships, 'pawn-1', 'pawn-2')!;
     expect(rel.score).toBe(15 + 18); // same-culture seed + rescue
     expect(rel.tags).toContain('rescued_by');
     expect(rel.points.history).toBe(18);
+    // the moment is logged: the same-people seed baseline + the rescue line
+    expect(rel.log?.some((e) => e.kind === 'seed')).toBe(true);
+    expect(rel.log?.some((e) => e.kind === 'rescue' && e.delta === 18)).toBe(true);
   });
 
   it('meetColony gives every living pair at least a Strangers row, idempotently', () => {
@@ -102,7 +109,7 @@ describe('processSocialTurn (daily pass)', () => {
     expect(rel.points.history).toBeGreaterThan(0);
   });
 
-  it('conversations fire between idle neighbours over a few days', () => {
+  it('conversations fire between idle neighbours over a few days and are logged with a label', () => {
     const a = pawn('pawn-1', 5, 5);
     const b = pawn('pawn-2', 6, 5);
     let s = stateWith([a, b]);
@@ -113,6 +120,29 @@ describe('processSocialTurn (daily pass)', () => {
     const rel = findRelationship(s.relationships, 'pawn-1', 'pawn-2');
     expect(rel).toBeDefined();
     expect(rel!.points.history).toBeGreaterThan(0);
+    // the point breakdown captured the conversations (kind 'talk') with a human label
+    const talks = (rel!.log ?? []).filter((e) => e.kind === 'talk');
+    expect(talks.length).toBeGreaterThan(0);
+    expect(talks[0].label.length).toBeGreaterThan(0);
+  });
+
+  it('ambient day-to-day drift coalesces into a single rolling time entry', () => {
+    const working = () => ({
+      state: { mood: 50, isWorking: true, isSleeping: false, isEating: false }
+    });
+    const a = pawn('pawn-1', 5, 5, working());
+    const b = pawn('pawn-2', 6, 5, working());
+    let s = stateWith([a, b]);
+    for (let day = 0; day < 4; day++) {
+      s = { ...s, turn: 18000 * (day + 1) };
+      // keep them working side by side each day
+      s.pawns.forEach((p) => (p.state = { ...p.state, isWorking: true }));
+      s = socialService.processSocialTurn(s);
+    }
+    const rel = findRelationship(s.relationships, 'pawn-1', 'pawn-2')!;
+    const timeEntries = (rel.log ?? []).filter((e) => e.label === 'Time spent together');
+    expect(timeEntries).toHaveLength(1); // one rolling total, not one per day
+    expect(timeEntries[0].delta).toBeGreaterThan(0.5); // accumulated across the days
   });
 
   it('a rock-bottom pawn goes on a break and refuses work', () => {

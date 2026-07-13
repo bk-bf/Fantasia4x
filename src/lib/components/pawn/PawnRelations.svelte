@@ -8,12 +8,20 @@
     PawnRelationship,
     RelationTag
   } from '$lib/game/core/types';
-  import { STAGE_LABEL, otherOf, relationshipsOf } from '$lib/game/core/Social';
+  import { STAGE_LABEL, otherOf, relationshipsOf, relKey } from '$lib/game/core/Social';
   import StatBar from '../UI/StatBar.svelte';
+  import RelationBreakdown from './RelationBreakdown.svelte';
 
   export let pawn: Pawn;
   export let gameState: GameState;
   export let onSelect: (p: Pawn) => void = () => {};
+
+  // Which relationship rows have their point breakdown expanded (keyed by canonical pair).
+  let expanded = new Set<string>();
+  function toggle(key: string) {
+    expanded.has(key) ? expanded.delete(key) : expanded.add(key);
+    expanded = expanded; // nudge Svelte reactivity
+  }
 
   const KIN_LABEL: Record<KinKind, string> = {
     parent: 'Parent',
@@ -89,8 +97,16 @@
     <div class="hdr">RELATIONSHIPS</div>
     {#if rels.length > 0}
       {#each rels as { r, other } (r.pawnA + r.pawnB)}
+        {@const key = relKey(r.pawnA, r.pawnB)}
+        {@const isOpen = expanded.has(key)}
         <div class="rel-row">
           <div class="rel-head">
+            <button
+              class="disclose"
+              class:open={isOpen}
+              title="Show what has passed between them"
+              on:click={() => toggle(key)}>▸</button
+            >
             <button class="rel-name link" on:click={() => onSelect(other)}>{other.name}</button>
             <span class="stage" style:color={STAGE_COLOR[r.stage] ?? '#888'}
               >{STAGE_LABEL[r.stage]}</span
@@ -113,6 +129,9 @@
                 <span class="tag">{TAG_LABEL[tag] ?? ''}</span>
               {/each}
             </div>
+          {/if}
+          {#if isOpen}
+            <RelationBreakdown rel={r} />
           {/if}
         </div>
       {/each}
@@ -175,6 +194,20 @@
     display: flex;
     gap: 8px;
     align-items: baseline;
+  }
+  .disclose {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text-dim, #888);
+    cursor: pointer;
+    font-size: 10px;
+    line-height: 1;
+    transition: transform 0.1s ease;
+  }
+  .disclose.open {
+    transform: rotate(90deg);
+    color: var(--accent-hi);
   }
   .stage {
     font-size: 11px;
