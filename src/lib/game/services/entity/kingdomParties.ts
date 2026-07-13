@@ -196,6 +196,9 @@ export function spawnKingdomParty(
     mob.kingdomId = kingdom.id;
     mob.partyId = partyId;
     mob.partyRole = spec.role;
+    // The human members (traders, guards, visitors) are working adults, not the 1-12 creature-flavour
+    // age makeMob rolls — a 6-year-old caravan guard was possible. Pack beasts stay on the animal roll.
+    if (spec.role !== 'pack') mob.age = rng.int(18, 60);
     // Goal-directed march (no leash): head straight for the anchor near the colony, then settle
     // (Wander) on arrival — the 'Traveling' FSM state.
     mob.state = 'Traveling';
