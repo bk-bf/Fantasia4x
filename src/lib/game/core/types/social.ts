@@ -97,6 +97,10 @@ export interface PawnRelationship {
   points: { history: number };
   /** Successful flirt count — the courtship gate (romance needs a few before advancing). */
   flirts?: number;
+  /** The last dialog this pair had — lets the NEXT one carry on the thread (a callback opener that
+   *  references the same subject) instead of a fresh, unrelated exchange. Slim on purpose (it ships
+   *  with the relationships array); `category` is the ConversationCategory string. */
+  lastTalk?: { subject: string; category: string; positive: boolean; turn: number };
   /** Recent history — what happened between them and the points each moment gave, newest last.
    *  Bounded (`REL_LOG_CAP`); surfaced as the toggleable breakdown on the Relations tab. */
   log?: RelationshipEvent[];

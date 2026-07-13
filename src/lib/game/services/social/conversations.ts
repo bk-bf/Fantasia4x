@@ -7,7 +7,15 @@
 import type { Pawn, PawnRelationship, RelationStage, Season } from '../../core/types';
 import { effectiveMood } from '../../core/Social';
 import { rng } from '../../core/rng';
+import { TICKS_PER_SECOND } from '../../core/time';
+import { TURNS_PER_DAY } from '../EnvironmentService';
 import dialogData from '../../database/dialog.jsonc';
+
+// A callback opener only carries the thread on if the pair spoke RECENTLY — beyond this the thread
+// has gone cold and a fresh exchange fits better.
+const CALLBACK_MAX_TICKS = 6 * TURNS_PER_DAY * TICKS_PER_SECOND;
+const CALLBACK_CHANCE = 0.45; // chance a recent thread is picked up rather than starting cold
+const CHAIN_CHANCE = 0.3; // chance a warm exchange flows into a follow-on beat (the `next` graph)
 
 export type ConversationCategory =
   | 'small_talk'
@@ -37,16 +45,26 @@ export interface ConversationOutcome {
   subject: string;
 }
 
+/** One coherent little exchange: an opener (A) with matched good/bad { reply (B), close (A) }, so the
+ *  three lines always fit together. `next` optionally links a warm exchange into a follow-on beat. */
+interface Beat {
+  id: string;
+  open: string;
+  /** Present on every conversational beat; absent for argue/insult (which never resolve positive). */
+  good?: { reply: string; close: string };
+  bad: { reply: string; close: string };
+  /** Refs a warm exchange may flow into: "category" (random beat) or "category:beatId". */
+  next?: { good?: string[] };
+}
+
 interface CategoryBank {
   /** Relationship effect (authored in dialog.jsonc). */
   goodDelta: number;
   badDelta: number;
   goodChance: number;
-  openers: string[];
-  replies_good?: string[];
-  replies_bad: string[];
-  closers_good?: string[];
-  closers_bad: string[];
+  beats: Beat[];
+  /** Opener lines used when the pair spoke recently — they reference `{subject}` to carry the thread. */
+  callbacks?: string[];
 }
 
 const DATA = dialogData as unknown as {
@@ -137,6 +155,16 @@ function fill(
     .replace(/\{season\}/g, season ?? 'autumn');
 }
 
+/** Resolve a `next` ref — "category" (random beat) or "category:beatId" — to a concrete beat. */
+function resolveBeatRef(ref: string): { category: ConversationCategory; beat: Beat } | null {
+  const [catStr, beatId] = ref.split(':');
+  const category = catStr as ConversationCategory;
+  const bank = DATA.categories[category];
+  if (!bank?.beats?.length) return null;
+  const beat = beatId ? bank.beats.find((x) => x.id === beatId) : rng.pick(bank.beats);
+  return beat ? { category, beat } : null;
+}
+
 /**
  * Assemble and resolve one conversation between initiator `a` and partner `b`. Pure over the
  * shared seeded rng; applies NO state — the caller applies `delta` and logs.
@@ -167,21 +195,52 @@ export function runConversation(
   }
   const positive = rng.random() < pGood;
 
-  // Assemble: opener (A) → reply (B) → closer (A). {name} resolves to the OTHER speaker.
-  const subjectRaw = rng.pick(DATA.subjects);
+  // Assemble from ONE beat so opener → reply → closer fit together (speakers A → B → A).
   const weatherWord = WEATHER_WORD[ctx.weatherType ?? ''] ?? 'sky';
-  const subject = fill(subjectRaw, b, '', weatherWord, ctx.season);
-  const opener = fill(rng.pick(bank.openers), b, subject, weatherWord, ctx.season);
-  const replyPool = (positive && bank.replies_good) || bank.replies_bad;
-  const reply = fill(rng.pick(replyPool), a, subject, weatherWord, ctx.season);
-  const closerPool = (positive && bank.closers_good) || bank.closers_bad;
-  const closer = fill(rng.pick(closerPool), b, subject, weatherWord, ctx.season);
+
+  // Memory: if the pair spoke recently, pick the thread back up — a callback opener that references
+  // the SAME subject — rather than starting a fresh, unrelated exchange.
+  const mem = rel.lastTalk;
+  const carryOn =
+    !!mem &&
+    !!bank.callbacks?.length &&
+    ctx.turn - mem.turn <= CALLBACK_MAX_TICKS &&
+    rng.random() < CALLBACK_CHANCE;
+  const subject = carryOn
+    ? mem!.subject
+    : fill(rng.pick(DATA.subjects), b, '', weatherWord, ctx.season);
+
+  const beat = rng.pick(bank.beats);
+  const branch = (positive && beat.good) || beat.bad;
+  const openerRaw = carryOn ? rng.pick(bank.callbacks!) : beat.open;
 
   const lines: ConversationLine[] = [
-    { pawnId: a.id, name: firstName(a), text: opener },
-    { pawnId: b.id, name: firstName(b), text: reply },
-    { pawnId: a.id, name: firstName(a), text: closer }
+    { pawnId: a.id, name: firstName(a), text: fill(openerRaw, b, subject, weatherWord, ctx.season) },
+    { pawnId: b.id, name: firstName(b), text: fill(branch.reply, a, subject, weatherWord, ctx.season) }
   ];
+
+  // Graph: a warm exchange can flow into a follow-on beat (a deeper turn) before the closer.
+  if (positive && beat.next?.good?.length && rng.random() < CHAIN_CHANCE) {
+    const nxt = resolveBeatRef(rng.pick(beat.next.good));
+    if (nxt?.beat.good) {
+      lines.push({
+        pawnId: a.id,
+        name: firstName(a),
+        text: fill(nxt.beat.open, b, subject, weatherWord, ctx.season)
+      });
+      lines.push({
+        pawnId: b.id,
+        name: firstName(b),
+        text: fill(nxt.beat.good.reply, a, subject, weatherWord, ctx.season)
+      });
+    }
+  }
+
+  lines.push({
+    pawnId: a.id,
+    name: firstName(a),
+    text: fill(branch.close, b, subject, weatherWord, ctx.season)
+  });
 
   return {
     category,

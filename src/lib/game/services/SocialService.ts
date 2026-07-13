@@ -74,6 +74,10 @@ const DIALOG_PAWN_COOLDOWN_S = 6; // in-game seconds before a pawn joins ANY new
 // §4 romance
 const ATTRACTION_MIN_BEAUTY = 0.75;
 const ROMANCE_MIN_AGE = 18;
+// Age-gap plausibility: gaps up to FREE years carry no penalty; attraction then falls off linearly
+// to nil at FREE+SPAN (a ~20y gap is unlikely, ~30y near-impossible). Both are already adults.
+const ROMANCE_AGE_GAP_FREE = 5;
+const ROMANCE_AGE_GAP_SPAN = 20;
 const FLIRTS_TO_INTEREST = 3;
 const FLIRTS_TO_COURT = 6;
 const FLIRTS_TO_PARTNER = 10;
@@ -830,6 +834,13 @@ class SocialServiceImpl {
       // Store the assembled exchange so the Relations tab can show WHAT was said (nested breakdown).
       lines: outcome.lines.map((l) => ({ name: l.name, text: l.text }))
     });
+    // Remember the thread so their NEXT dialog can carry it on (callback opener) instead of cold.
+    rel.lastTalk = {
+      subject: outcome.subject,
+      category: outcome.category,
+      positive: outcome.positive,
+      turn
+    };
     if (outcome.category === 'flirt') {
       this.afterFlirt(state, working, a, b, rel, outcome.positive, turn);
     }
@@ -867,6 +878,14 @@ class SocialServiceImpl {
 
   // ── §4 romance internals ────────────────────────────────────────────────────────────────────
 
+  /** Chance a pair's age gap allows attraction: 1 up to FREE years, linear to 0 at FREE+SPAN. */
+  private ageGapPlausible(a: Pawn, b: Pawn): boolean {
+    const gap = Math.abs((a.age ?? 25) - (b.age ?? 25));
+    if (gap <= ROMANCE_AGE_GAP_FREE) return true;
+    const chance = 1 - (gap - ROMANCE_AGE_GAP_FREE) / ROMANCE_AGE_GAP_SPAN;
+    return chance > 0 && rng.random() < chance;
+  }
+
   private flirtEligible(
     a: Pawn,
     b: Pawn,
@@ -876,6 +895,10 @@ class SocialServiceImpl {
     beautyB: number
   ): boolean {
     if ((a.age ?? 25) < ROMANCE_MIN_AGE || (b.age ?? 25) < ROMANCE_MIN_AGE) return false;
+    // Opposite-sex attraction: both must have a sex and differ (sexless entities never flirt).
+    if (!a.sex || !b.sex || a.sex === b.sex) return false;
+    // A wide age gap rarely sparks (falls off past ROMANCE_AGE_GAP_FREE years).
+    if (!this.ageGapPlausible(a, b)) return false;
     if (rel.kin) return false;
     if (rel.romance?.stage === 'ex') return false;
     if (rel.score < 10) return false;

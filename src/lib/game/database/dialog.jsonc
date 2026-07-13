@@ -4,11 +4,24 @@
 //   goodDelta  — score change on a warm/successful exchange
 //   badDelta   — score change when it lands wrong
 //   goodChance — base chance it goes well (charm/mood/temperament tilt it; argue/insult never do)
-// Assembly: an opener (speaker A) + a reply (speaker B) + a closer, drawn from the pools below.
-// Placeholders: {name} = the other speaker's first name, {subject} = a draw from `subjects`,
-// {weather} / {season} = the live sky and season. All strings are PLAYER-FACING.
-// Categories: small_talk · banter · deep_talk · flirt · comfort · argue · insult · battle_talk
-// (battle_talk fires when both are drafted for a fight — quick words traded under arms).
+//
+// COHERENCE — lines are authored as BEATS, not shuffled from separate pools. A beat is one complete
+// little exchange: an `open` (speaker A) + a matched `good`/`bad` { reply (B), close (A) }, so the
+// three lines always FIT (a weather opener draws a weather reply, not a non-sequitur). The outcome
+// roll picks the good or bad branch of the SAME beat.
+//
+// GRAPH — a beat may carry `next: { good?: [refs] }`: on a warm exchange it can flow into a follow-on
+// beat (a deeper turn) drawn from another category. A ref is "category" (a random beat there) or
+// "category:beatId" (a specific one). This is what lets small talk warm into real talk.
+//
+// MEMORY — each category may list `callbacks`: opener lines used when this pair spoke RECENTLY
+// (SocialService stores the last subject on the relationship). They reference `{subject}` so a later
+// dialog carries the SAME thread on ("You still chewing on {subject}?") instead of starting cold.
+//
+// Placeholders: {name} = the OTHER speaker's first name, {subject} = a draw from `subjects` (or the
+// remembered one, for callbacks), {weather} / {season} = the live sky and season.
+// All strings are PLAYER-FACING. Categories: small_talk · banter · deep_talk · flirt · comfort ·
+// argue · insult · battle_talk (battle_talk fires when both are drafted for a fight).
 {
   // What pawns talk about. Kept concrete and small-world: the colony, the land, the work.
   "subjects": [
@@ -36,241 +49,304 @@
   "categories": {
     "small_talk": {
       "goodDelta": 1, "badDelta": -2, "goodChance": 0.75,
-      "openers": [
-        "Fine {weather} for it, no?",
-        "You been thinking about {subject} too?",
-        "Long day. They are all long days.",
-        "Heard anything of {subject}?",
-        "That {weather} is settling in, I reckon.",
-        "Come, sit a moment. Tell me of {subject}."
+      "beats": [
+        {
+          "id": "weather",
+          "open": "Fine {weather} for it, no?",
+          "good": { "reply": "Aye, that it is.", "close": "Well. Back to it, then." },
+          "bad": { "reply": "What do you want, {name}?", "close": "Forget I asked." }
+        },
+        {
+          "id": "subject",
+          "open": "You been thinking about {subject} too?",
+          "good": { "reply": "You always notice these things, {name}.", "close": "Good talking, {name}." },
+          "bad": { "reply": "I have work waiting.", "close": "Suit yourself, then." },
+          "next": { "good": ["deep_talk"] }
+        },
+        {
+          "id": "longday",
+          "open": "Long day. They are all long days.",
+          "good": { "reply": "Same as ever. But I do not mind it.", "close": "We will make something of this place yet." },
+          "bad": { "reply": "You talk a lot for someone with empty hands.", "close": "Right. Back to work." }
+        },
+        {
+          "id": "sit",
+          "open": "Come, sit a moment. Tell me of {subject}.",
+          "good": { "reply": "Mm. Could be worse, could be raining arrows.", "close": "Good talking, {name}." },
+          "bad": { "reply": "Mm.", "close": "Suit yourself, then." },
+          "next": { "good": ["banter"] }
+        }
       ],
-      "replies_good": [
-        "Ha, true enough.",
-        "Aye, that it is.",
-        "You always notice these things, {name}.",
-        "Mm. Could be worse, could be raining arrows.",
-        "Same as ever. But I do not mind it."
-      ],
-      "replies_bad": [
-        "What do you want, {name}?",
-        "I have work waiting.",
-        "Mm.",
-        "You talk a lot for someone with empty hands."
-      ],
-      "closers_good": [
-        "Well. Back to it, then.",
-        "Good talking, {name}.",
-        "We will make something of this place yet."
-      ],
-      "closers_bad": [
-        "Forget I asked.",
-        "Suit yourself, then.",
-        "Right. Back to work."
+      "callbacks": [
+        "You still chewing on {subject}?",
+        "We never did finish about {subject}.",
+        "Back again. Any more word of {subject}?"
       ]
     },
     "banter": {
       "goodDelta": 2, "badDelta": -3, "goodChance": 0.7,
-      "openers": [
-        "Seen anything slower than {name} with a hauling sack? Me neither.",
-        "You still owe me for that wager, {name}.",
-        "Careful, {name}, you nearly did some work just now.",
-        "I told the tale of {subject} again. It gets better each telling.",
-        "If snoring were a craft, {name}, you would be a master."
+      "beats": [
+        {
+          "id": "slow",
+          "open": "Seen anything slower than {name} with a hauling sack? Me neither.",
+          "good": { "reply": "Ha! And you would know, would you?", "close": "Ah, you are all right, {name}." },
+          "bad": { "reply": "Funny. Very funny.", "close": "It was only a joke, friend." }
+        },
+        {
+          "id": "wager",
+          "open": "You still owe me for that wager, {name}.",
+          "good": { "reply": "Keep talking. I can wait.", "close": "Next time the wager doubles." },
+          "bad": { "reply": "Say that again when your hands are empty.", "close": "Fine, fine. Peace." }
+        },
+        {
+          "id": "work",
+          "open": "Careful, {name}, you nearly did some work just now.",
+          "good": { "reply": "You wound me. Do it again.", "close": "Come find me at the fire later." },
+          "bad": { "reply": "I am not in the mood, {name}.", "close": "No humor in this one." },
+          "next": { "good": ["deep_talk"] }
+        },
+        {
+          "id": "tale",
+          "open": "I told the tale of {subject} again. It gets better each telling.",
+          "good": { "reply": "One day I will tell them what really happened.", "close": "Come find me at the fire later." },
+          "bad": { "reply": "Funny. Very funny.", "close": "Fine, fine. Peace." }
+        },
+        {
+          "id": "snore",
+          "open": "If snoring were a craft, {name}, you would be a master.",
+          "good": { "reply": "That joke was old when the hills were young.", "close": "Ah, you are all right, {name}." },
+          "bad": { "reply": "Say that again when your hands are empty.", "close": "No humor in this one." }
+        }
       ],
-      "replies_good": [
-        "Ha! And you would know, would you?",
-        "Keep talking. I can wait.",
-        "One day I will tell them what really happened.",
-        "You wound me. Do it again.",
-        "That joke was old when the hills were young."
-      ],
-      "replies_bad": [
-        "Funny. Very funny.",
-        "Say that again when your hands are empty.",
-        "I am not in the mood, {name}."
-      ],
-      "closers_good": [
-        "Ah, you are all right, {name}.",
-        "Come find me at the fire later.",
-        "Next time the wager doubles."
-      ],
-      "closers_bad": [
-        "It was only a joke, friend.",
-        "Fine, fine. Peace.",
-        "No humor in this one."
+      "callbacks": [
+        "Still owe me for that wager, mind.",
+        "Thought any more on {subject}? The tale, I mean.",
+        "Back for more punishment, {name}?"
       ]
     },
     "deep_talk": {
       "goodDelta": 4, "badDelta": -4, "goodChance": 0.6,
-      "openers": [
-        "Do you ever think of before, {name}? Of home?",
-        "I buried a friend once, over such a thing as {subject}. Never told anyone.",
-        "Some nights I lie awake and listen to the dark.",
-        "What do you want out of all this, {name}? Truly.",
-        "I was not always the person you see hauling logs."
+      "beats": [
+        {
+          "id": "home",
+          "open": "Do you ever think of before, {name}? Of home?",
+          "good": { "reply": "I think of it every day. Every single day.", "close": "You are a better friend than I deserve, {name}." },
+          "bad": { "reply": "Keep that to yourself, {name}.", "close": "Forget I spoke." }
+        },
+        {
+          "id": "buried",
+          "open": "I buried a friend once, over such a thing as {subject}. Never told anyone.",
+          "good": { "reply": "You can tell me. I keep what I am given.", "close": "This stays between us." },
+          "bad": { "reply": "I do not dig in other people's graves. Do not dig in mine.", "close": "As you like. The dark keeps its own counsel." }
+        },
+        {
+          "id": "dark",
+          "open": "Some nights I lie awake and listen to the dark.",
+          "good": { "reply": "Truth be told, the same fear sits in me.", "close": "We carry it together, then. Lighter that way." },
+          "bad": { "reply": "Heavy talk. I have enough to carry.", "close": "Should not have said anything." }
+        },
+        {
+          "id": "want",
+          "open": "What do you want out of all this, {name}? Truly.",
+          "good": { "reply": "That is the most honest thing anyone has said here.", "close": "Thank you for hearing it." },
+          "bad": { "reply": "Keep that to yourself, {name}.", "close": "Forget I spoke." }
+        },
+        {
+          "id": "notalways",
+          "open": "I was not always the person you see hauling logs.",
+          "good": { "reply": "You can tell me. I keep what I am given.", "close": "This stays between us." },
+          "bad": { "reply": "Heavy talk. I have enough to carry.", "close": "Should not have said anything." }
+        }
       ],
-      "replies_good": [
-        "I think of it every day. Every single day.",
-        "You can tell me. I keep what I am given.",
-        "Truth be told, the same fear sits in me.",
-        "That is the most honest thing anyone has said here.",
-        "We carry it together, then. Lighter that way."
-      ],
-      "replies_bad": [
-        "Keep that to yourself, {name}.",
-        "I do not dig in other people's graves. Do not dig in mine.",
-        "Heavy talk. I have enough to carry."
-      ],
-      "closers_good": [
-        "Thank you for hearing it.",
-        "This stays between us.",
-        "You are a better friend than I deserve, {name}."
-      ],
-      "closers_bad": [
-        "Forget I spoke.",
-        "As you like. The dark keeps its own counsel.",
-        "Should not have said anything."
+      "callbacks": [
+        "I have thought about what you told me of {subject}.",
+        "That thing you said, {name}. About home. It stayed with me.",
+        "You never did finish, about {subject}."
       ]
     },
     "flirt": {
       "goodDelta": 3, "badDelta": -3, "goodChance": 0.55,
-      "openers": [
-        "That is fine work, {name}. The hands that did it are finer.",
-        "I saved you the good seat by the fire. Again.",
-        "Strange. The {weather} looks kinder when you are in it.",
-        "I carved this. It is yours, if you will have it.",
-        "Walk the fence line with me, {name}. The company improves the view."
+      "beats": [
+        {
+          "id": "hands",
+          "open": "That is fine work, {name}. The hands that did it are finer.",
+          "good": { "reply": "Took you long enough to say so.", "close": "Tonight, then. By the fire." },
+          "bad": { "reply": "You are sweet, {name}. But no.", "close": "Well. Cannot fault a soul for trying." }
+        },
+        {
+          "id": "seat",
+          "open": "I saved you the good seat by the fire. Again.",
+          "good": { "reply": "Careful, {name}, someone might hear you.", "close": "You have made the whole day worth it." },
+          "bad": { "reply": "Save it for the next caravan.", "close": "Forget it. Wind took the words." }
+        },
+        {
+          "id": "weather",
+          "open": "Strange. The {weather} looks kinder when you are in it.",
+          "good": { "reply": "You have a honeyed tongue for someone covered in sawdust.", "close": "I will hold you to that." },
+          "bad": { "reply": "Not tonight. Not any night, I think.", "close": "As you say. The fence line walks itself." }
+        },
+        {
+          "id": "carve",
+          "open": "I carved this. It is yours, if you will have it.",
+          "good": { "reply": "Ask me again by the fire tonight.", "close": "Tonight, then. By the fire." },
+          "bad": { "reply": "My heart is spoken for, or busy, or both.", "close": "Well. Cannot fault a soul for trying." }
+        },
+        {
+          "id": "walk",
+          "open": "Walk the fence line with me, {name}. The company improves the view.",
+          "good": { "reply": "Then walk slowly. I am in no hurry.", "close": "You have made the whole day worth it." },
+          "bad": { "reply": "You are sweet, {name}. But no.", "close": "Forget it. Wind took the words." }
+        }
       ],
-      "replies_good": [
-        "Careful, {name}, someone might hear you.",
-        "Took you long enough to say so.",
-        "Then walk slowly. I am in no hurry.",
-        "You have a honeyed tongue for someone covered in sawdust.",
-        "Ask me again by the fire tonight."
-      ],
-      "replies_bad": [
-        "You are sweet, {name}. But no.",
-        "Save it for the next caravan.",
-        "My heart is spoken for, or busy, or both.",
-        "Not tonight. Not any night, I think."
-      ],
-      "closers_good": [
-        "Tonight, then. By the fire.",
-        "You have made the whole day worth it.",
-        "I will hold you to that."
-      ],
-      "closers_bad": [
-        "Well. Cannot fault a soul for trying.",
-        "Forget it. Wind took the words.",
-        "As you say. The fence line walks itself."
+      "callbacks": [
+        "Still thinking on that walk, {name}?",
+        "You never gave me your answer, by the fire.",
+        "That good seat is still yours, you know."
       ]
     },
     "comfort": {
       "goodDelta": 5, "badDelta": -2, "goodChance": 0.7,
-      "openers": [
-        "Sit. You do not have to speak, {name}. I will sit with you.",
-        "They would not want you hollowed out like this. Eat something.",
-        "I lost people too. The weight shifts, in time. It does not leave, but it shifts.",
-        "Here. A warm bowl. Grief is lighter on a full stomach, a little.",
-        "Cry if you need to. Nobody counts tears out here."
+      "beats": [
+        {
+          "id": "sit",
+          "open": "Sit. You do not have to speak, {name}. I will sit with you.",
+          "good": { "reply": "Stay a while, then. Just a while.", "close": "I am here. Tomorrow too." },
+          "bad": { "reply": "Leave me be, {name}.", "close": "I will leave the bowl by the door." }
+        },
+        {
+          "id": "eat",
+          "open": "They would not want you hollowed out like this. Eat something.",
+          "good": { "reply": "Thank you, {name}. Truly.", "close": "When it gets heavy, come find me." },
+          "bad": { "reply": "Words. What good are words.", "close": "As you wish. My fire is lit if you change your mind." }
+        },
+        {
+          "id": "shifts",
+          "open": "I lost people too. The weight shifts, in time. It does not leave, but it shifts.",
+          "good": { "reply": "In time. You are sure it shifts, in time?", "close": "They were lucky to have you. So are we." },
+          "bad": { "reply": "You cannot carry this for me. No one can.", "close": "Grief keeps its own hours. I will come back." }
+        },
+        {
+          "id": "bowl",
+          "open": "Here. A warm bowl. Grief is lighter on a full stomach, a little.",
+          "good": { "reply": "The bowl helps. The company more.", "close": "I am here. Tomorrow too." },
+          "bad": { "reply": "Leave me be, {name}.", "close": "I will leave the bowl by the door." }
+        },
+        {
+          "id": "cry",
+          "open": "Cry if you need to. Nobody counts tears out here.",
+          "good": { "reply": "I keep looking for them at the fire. Every night I look.", "close": "When it gets heavy, come find me." },
+          "bad": { "reply": "Words. What good are words.", "close": "Grief keeps its own hours. I will come back." }
+        }
       ],
-      "replies_good": [
-        "Stay a while, then. Just a while.",
-        "I keep looking for them at the fire. Every night I look.",
-        "Thank you, {name}. Truly.",
-        "The bowl helps. The company more.",
-        "In time. You are sure it shifts in time?"
-      ],
-      "replies_bad": [
-        "Leave me be, {name}.",
-        "Words. What good are words.",
-        "You cannot carry this for me. No one can."
-      ],
-      "closers_good": [
-        "I am here. Tomorrow too.",
-        "When it gets heavy, come find me.",
-        "They were lucky to have you. So are we."
-      ],
-      "closers_bad": [
-        "I will leave the bowl by the door.",
-        "As you wish. My fire is lit if you change your mind.",
-        "Grief keeps its own hours. I will come back."
+      "callbacks": [
+        "How are you holding, {name}? Truly.",
+        "Still looking for them at the fire?",
+        "I kept the fire lit, like I said."
       ]
     },
     "argue": {
       "goodDelta": 0, "badDelta": -5, "goodChance": 0.0,
-      "openers": [
-        "You left the stores open again. Again, {name}!",
-        "Half a day's work and you call that a wall?",
-        "I am sick of hearing about {subject} from you.",
-        "You take the warm spot every night and think nobody sees.",
-        "Say it to my face, not behind the woodpile."
+      "beats": [
+        {
+          "id": "stores",
+          "open": "You left the stores open again. Again, {name}!",
+          "bad": { "reply": "And who made you master of the stores?", "close": "This is not finished." }
+        },
+        {
+          "id": "wall",
+          "open": "Half a day's work and you call that a wall?",
+          "bad": { "reply": "Do it yourself then, if your hands are so golden!", "close": "Out of my sight, {name}." }
+        },
+        {
+          "id": "subject",
+          "open": "I am sick of hearing about {subject} from you.",
+          "bad": { "reply": "I will say it anywhere I please!", "close": "The whole camp will hear of this." }
+        },
+        {
+          "id": "warmspot",
+          "open": "You take the warm spot every night and think nobody sees.",
+          "bad": { "reply": "You count other people's work and never your own.", "close": "Fine words from a fool." }
+        },
+        {
+          "id": "face",
+          "open": "Say it to my face, not behind the woodpile.",
+          "bad": { "reply": "Enough! I am done listening to you.", "close": "This is not finished." }
+        }
       ],
-      "replies_bad": [
-        "And who made you master of the stores?",
-        "Do it yourself then, if your hands are so golden!",
-        "I will say it anywhere I please!",
-        "You count other people's work and never your own.",
-        "Enough! I am done listening to you."
-      ],
-      "closers_bad": [
-        "This is not finished.",
-        "Out of my sight, {name}.",
-        "The whole camp will hear of this.",
-        "Fine words from a fool."
+      "callbacks": [
+        "Are we still sore about {subject}, then?",
+        "You have not forgotten {subject}. I can tell.",
+        "Back to pick at {subject} again, are we?"
       ]
     },
     "insult": {
       "goodDelta": 0, "badDelta": -7, "goodChance": 0.0,
-      "openers": [
-        "There walks the laziest pair of hands in the colony.",
-        "They should trade you to the next caravan, {name}. For half a boot.",
-        "I have seen mules with more wit.",
-        "Everything you touch ends up crooked, {name}.",
-        "The wolves would spit you back out."
+      "beats": [
+        {
+          "id": "lazy",
+          "open": "There walks the laziest pair of hands in the colony.",
+          "bad": { "reply": "Better crooked hands than a crooked tongue.", "close": "Pah." }
+        },
+        {
+          "id": "trade",
+          "open": "They should trade you to the next caravan, {name}. For half a boot.",
+          "bad": { "reply": "Keep walking, before I forget my manners.", "close": "Waste of breath, this one." }
+        },
+        {
+          "id": "mule",
+          "open": "I have seen mules with more wit.",
+          "bad": { "reply": "At least the mule works.", "close": "Pah." }
+        },
+        {
+          "id": "crooked",
+          "open": "Everything you touch ends up crooked, {name}.",
+          "bad": { "reply": "One day that mouth will cost you teeth.", "close": "Remember this, {name}. I will." }
+        },
+        {
+          "id": "wolves",
+          "open": "The wolves would spit you back out.",
+          "bad": { "reply": "Keep walking, before I forget my manners.", "close": "Waste of breath, this one." }
+        }
       ],
-      "replies_bad": [
-        "Better crooked hands than a crooked tongue.",
-        "Keep walking, before I forget my manners.",
-        "One day that mouth will cost you teeth.",
-        "At least the mule works."
-      ],
-      "closers_bad": [
-        "Pah.",
-        "Waste of breath, this one.",
-        "Remember this, {name}. I will."
+      "callbacks": [
+        "Still here, {name}? Thought the wolves had you.",
+        "Crooked as ever, I see.",
+        "Back for another helping, are you?"
       ]
     },
     "battle_talk": {
       "goodDelta": 3, "badDelta": -1, "goodChance": 0.8,
-      "openers": [
-        "Stay on my flank, {name}. We come out of this together.",
-        "Eyes up. I have your back if you have mine.",
-        "Ready? Good. Do not do anything clever.",
-        "If it goes bad, you run. I mean it.",
-        "Whatever comes, {name} — steady."
-      ],
-      "replies_good": [
-        "Shoulder to shoulder, then.",
-        "Always. Now quiet — here they come.",
-        "You watch the left, I take the right.",
-        "We have walked out of worse.",
-        "On your word."
-      ],
-      "replies_bad": [
-        "Just do not get in my way.",
-        "Save the speeches for after.",
-        "I fight better without the chatter."
-      ],
-      "closers_good": [
-        "Good. Blades ready.",
-        "Then let them come.",
-        "See you on the other side of it, {name}."
-      ],
-      "closers_bad": [
-        "Fine. Every one for themselves.",
-        "Do not expect me to cover you.",
-        "Hmph."
+      "beats": [
+        {
+          "id": "flank",
+          "open": "Stay on my flank, {name}. We come out of this together.",
+          "good": { "reply": "Shoulder to shoulder, then.", "close": "Good. Blades ready." },
+          "bad": { "reply": "Just do not get in my way.", "close": "Fine. Every one for themselves." }
+        },
+        {
+          "id": "eyes",
+          "open": "Eyes up. I have your back if you have mine.",
+          "good": { "reply": "Always. Now quiet — here they come.", "close": "Then let them come." },
+          "bad": { "reply": "Save the speeches for after.", "close": "Do not expect me to cover you." }
+        },
+        {
+          "id": "ready",
+          "open": "Ready? Good. Do not do anything clever.",
+          "good": { "reply": "You watch the left, I take the right.", "close": "See you on the other side of it, {name}." },
+          "bad": { "reply": "I fight better without the chatter.", "close": "Hmph." }
+        },
+        {
+          "id": "run",
+          "open": "If it goes bad, you run. I mean it.",
+          "good": { "reply": "We have walked out of worse.", "close": "Then let them come." },
+          "bad": { "reply": "Just do not get in my way.", "close": "Hmph." }
+        },
+        {
+          "id": "steady",
+          "open": "Whatever comes, {name} — steady.",
+          "good": { "reply": "On your word.", "close": "Good. Blades ready." },
+          "bad": { "reply": "Save the speeches for after.", "close": "Fine. Every one for themselves." }
+        }
       ]
     }
   }
