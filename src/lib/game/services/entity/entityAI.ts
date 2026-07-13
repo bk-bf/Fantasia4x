@@ -1368,9 +1368,11 @@ export function stepAnimal(
   // `visionRange` is the §G light-scaled, perception-based sight range (computed in stepOne) — the
   // SAME model mobs and pawns share. Detection uses it; flee DISTANCE still uses def.stats.fleeRange.
 
-  // Combined threat: pawn in vision OR a predatory mob nearby.
+  // Combined threat: pawn in vision OR a predatory mob nearby. A KINGDOMS-TRADE party pack beast
+  // (partyId set) is a guest of the colony, so a colonist walking up is NOT a threat to it — it still
+  // flees actual predators, mirroring the guard's `territorial:false` friendliness on the hostile side.
   const predatorThreat = nearestPredatorThreat(mob, def, allMobs, visionRange);
-  const threat = inVision ?? predatorThreat;
+  const threat = mob.partyId != null ? predatorThreat : (inVision ?? predatorThreat);
 
   // ── Hunger / fatigue FSM transitions (only when safe) ──────────────────────
   if (!threat) {
