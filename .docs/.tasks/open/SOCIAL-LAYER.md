@@ -171,8 +171,16 @@ KINGDOMS-TRADE staleness principle). Answers "the FAMILY box is empty / only lis
   relative in the party — **refresh their `lastSeenTurn`, rename the lead mob to them** (`Mob.name` +
   `worldKinRelation` → the entity card reads "Kael's sister"), tag the party (`KingdomParty.kinVisitorId`),
   and post the news. On-map, no recruit (a recruitment hook is left for later).
+- **Sex** (2026-07-13) — every pawn AND mob rolls a biological `sex` 50/50 at spawn (`buildPawnFromCulture`
+  / `makeMob`); pawn **name generation is sex-keyed** (`MALE_FIRST_NAMES`/`FEMALE_FIRST_NAMES`, shared
+  surnames). A creature def opts out with **`"sex": false`** in `creatures.jsonc` (wraiths + oozes —
+  `shadow_wraith`/`greater_wraith`/`grimeling`/`grime_horror` — spawn sexless). Sex shows in the Status
+  tab (SEX row) and the hover/info card. Kin words are **gendered by the relative's own sex** —
+  `kinLabel(kind, sex)` / `kinRelationPhrase` resolve Father/Mother, Aunt/Uncle, Brother/Sister,
+  Grandmother, Nephew… (Cousin ungendered; neutral fallback when sex is unknown).
 - **UI** — `PawnRelations.svelte` FAMILY section now lists colony kin AND off-colony family with their
-  **standing** (stage badge — a hated brother reads Rivals), **homeland**, and greyed staleness.
+  **standing** (stage badge — a hated brother reads Rivals), **homeland**, greyed staleness, and the
+  correctly-gendered relation word.
 
 ---
 
