@@ -109,21 +109,55 @@ describe('processSocialTurn (daily pass)', () => {
     expect(rel.points.history).toBeGreaterThan(0);
   });
 
-  it('conversations fire between idle neighbours over a few days and are logged with a label', () => {
+  it('proximity dialog: pawns within 2 tiles chat (logged), far-apart pawns do not', () => {
+    const a = pawn('pawn-1', 5, 5);
+    const b = pawn('pawn-2', 6, 5); // adjacent
+    const far = pawn('pawn-3', 60, 60); // out of range
+    let s = stateWith([a, b, far]);
+    // run the throttled dialog tick a few times; cooldowns pace it, so step the clock between
+    for (let k = 0; k < 8; k++) {
+      s = { ...s, turn: (k + 1) * 90 };
+      s = socialService.processDialogTick(s);
+    }
+    const near = findRelationship(s.relationships, 'pawn-1', 'pawn-2');
+    expect(near).toBeDefined();
+    const talks = (near!.log ?? []).filter((e) => e.kind === 'talk');
+    expect(talks.length).toBeGreaterThan(0);
+    expect(talks[0].label.length).toBeGreaterThan(0);
+    // the far pawn never came within range → no dialog rows with it
+    expect(findRelationship(s.relationships, 'pawn-1', 'pawn-3')).toBeUndefined();
+    expect(findRelationship(s.relationships, 'pawn-2', 'pawn-3')).toBeUndefined();
+  });
+
+  it('proximity dialog respects the per-pair cooldown (no back-to-back chatter)', () => {
     const a = pawn('pawn-1', 5, 5);
     const b = pawn('pawn-2', 6, 5);
     let s = stateWith([a, b]);
-    for (let day = 0; day < 5; day++) {
-      s = { ...s, turn: 18000 * (day + 1) };
-      s = socialService.processSocialTurn(s);
+    // fire many ticks within the cooldown window (25s * 60 = 1500 ticks) at 90-tick spacing
+    let chats = 0;
+    for (let k = 0; k < 15; k++) {
+      s = { ...s, turn: (k + 1) * 90 }; // up to turn 1350 < 1500 cooldown
+      const before = findRelationship(s.relationships, 'pawn-1', 'pawn-2')?.log?.length ?? 0;
+      s = socialService.processDialogTick(s);
+      const after = findRelationship(s.relationships, 'pawn-1', 'pawn-2')?.log?.length ?? 0;
+      if (after > before) chats++;
     }
-    const rel = findRelationship(s.relationships, 'pawn-1', 'pawn-2');
-    expect(rel).toBeDefined();
-    expect(rel!.points.history).toBeGreaterThan(0);
-    // the point breakdown captured the conversations (kind 'talk') with a human label
-    const talks = (rel!.log ?? []).filter((e) => e.kind === 'talk');
-    expect(talks.length).toBeGreaterThan(0);
-    expect(talks[0].label.length).toBeGreaterThan(0);
+    // seed row aside, at most ONE actual dialog inside a single cooldown window
+    expect(chats).toBeLessThanOrEqual(1);
+  });
+
+  it('battle_talk fires when both pawns are drafted for a fight', () => {
+    const a = pawn('pawn-1', 5, 5, { drafted: true });
+    const b = pawn('pawn-2', 6, 5, { drafted: true });
+    let s = stateWith([a, b]);
+    let sawBattleTalk = false;
+    for (let k = 0; k < 30 && !sawBattleTalk; k++) {
+      s = { ...s, turn: (k + 1) * 2000 }; // step past the pair cooldown each time
+      s = socialService.processDialogTick(s);
+      const log = findRelationship(s.relationships, 'pawn-1', 'pawn-2')?.log ?? [];
+      if (log.some((e) => /under arms|before the fight/i.test(e.label))) sawBattleTalk = true;
+    }
+    expect(sawBattleTalk).toBe(true);
   });
 
   it('ambient day-to-day drift coalesces into a single rolling time entry', () => {

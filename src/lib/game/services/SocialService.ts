@@ -1,6 +1,7 @@
 // SocialService — the pawn-to-pawn social layer (SOCIAL-LAYER). Owns:
 //   §1 relationships  — sparse PawnRelationship rows, culture-seeded, stage ladder w/ hysteresis
-//   §3 conversations  — the daily heartbeat: assembled exchanges, floaters, one chronicle entry each
+//   §3 dialog         — PROXIMITY-triggered (processDialogTick): pawns chat when they pass within a
+//                       couple of tiles — assembled exchange, floaters, one chronicle entry each
 //   §4 romance        — interested → courting → partners over flirt successes; breakups; jealousy
 //   §6 prestige       — basePrestige + worn regalia × quality/Famed (the `prestige` formula token)
 //   §7 mood depth     — event MoodModifiers layered over the ambient state.mood drift; breaks/crises
@@ -25,6 +26,7 @@ import {
   activeMoodModifiers,
   effectiveMood,
   findRelationship,
+  relKey,
   seedScore,
   sortedPair,
   stageForScore
@@ -63,10 +65,12 @@ const WITNESS_DEATH_DELTA = 6;
 const FRIENDLY_FIRE_DELTA = -20;
 const FOUGHT_ALONGSIDE_RADIUS = 6;
 const WITNESS_RADIUS = 10;
-// §3 conversations
-const CONVO_RADIUS = 5;
-const CONVO_CHANCE = 0.65;
-const MAX_CONVOS_PER_PAWN = 2;
+// §3 dialog — PROXIMITY-triggered (pawns chat when they pass close by), on a throttled tick so the
+// player sees it happen. Cooldowns keep a busy colony from flooding the chronicle.
+const DIALOG_RANGE = 2; // tiles — pawns strike up a dialog within this of each other
+const DIALOG_CHANCE = 0.6; // chance an eligible, off-cooldown pair actually starts talking this tick
+const DIALOG_PAIR_COOLDOWN_S = 25; // in-game seconds before the SAME pair chats again
+const DIALOG_PAWN_COOLDOWN_S = 6; // in-game seconds before a pawn joins ANY new dialog
 // §4 romance
 const ATTRACTION_MIN_BEAUTY = 0.75;
 const ROMANCE_MIN_AGE = 18;
@@ -94,6 +98,9 @@ const TRAIT_MATCHES = ['industrious', 'meticulous', 'curious', 'gregarious', 'lo
 // Fought-alongside dedupe (once per pair per day). Worker-transient — a reload forgetting it only
 // risks one duplicate +4, not worth persisting.
 const _battleBondDay = new Map<string, number>();
+// Dialog cooldowns (worker-transient): last turn a PAIR talked / a PAWN last joined any dialog.
+const _lastPairDialog = new Map<string, number>();
+const _lastPawnDialog = new Map<string, number>();
 
 function hasTrait(p: Pawn, id: string): boolean {
   return p.traits?.some((t) => t.id === id) ?? false;
@@ -511,7 +518,6 @@ class SocialServiceImpl {
     };
 
     // Per-pawn upkeep: prune expired moods, standing bands, idle streaks, breaks.
-    const beautyOf = new Map<string, number>();
     for (const p of alive) {
       // prune expired modifiers
       if (p.moodModifiers && p.moodModifiers.length > 0) {
@@ -530,7 +536,6 @@ class SocialServiceImpl {
       }
       // standing beauty band
       const beauty = this.getBeauty(p);
-      beautyOf.set(p.id, beauty);
       if (beauty >= 1.25) {
         this.addMoodModifier(p, 'beauty-band', 'Turns heads', 3, 0, turn);
       } else if (beauty <= 0.7) {
@@ -632,79 +637,9 @@ class SocialServiceImpl {
       else this.removeMoodModifier(a, 'near-rival');
     }
 
-    // Conversations (§3): a few a day, capped per pawn, between awake neighbours.
-    const convoCount = new Map<string, number>();
-    const order = [...alive];
-    for (let i = order.length - 1; i > 0; i--) {
-      const j = rng.int(0, i);
-      [order[i], order[j]] = [order[j], order[i]];
-    }
-    const canTalk = (p: Pawn) =>
-      p.position &&
-      p.currentState !== 'Sleeping' &&
-      !p.drafted &&
-      (convoCount.get(p.id) ?? 0) < MAX_CONVOS_PER_PAWN;
-    for (const a of order) {
-      if (!canTalk(a) || (convoCount.get(a.id) ?? 0) >= 1) continue; // one initiation each
-      const partners = order.filter(
-        (b) => b.id !== a.id && canTalk(b) && dist(a, b) <= CONVO_RADIUS
-      );
-      if (partners.length === 0) continue;
-      if (rng.random() >= CONVO_CHANCE) continue;
-      const b = rng.pick(partners);
-      relsChanged = true;
-      const rel = this.ensureRel(working, a, b, state);
-      const grieving = activeMoodModifiers(b, turn).some((m) => m.id.startsWith('grief:'));
-      const flirtEligible = this.flirtEligible(a, b, rel, working, beautyOf);
-      const outcome = runConversation(
-        a,
-        b,
-        rel,
-        { turn, weatherType: state.weather?.type, season: state.season },
-        { flirtEligible, targetGrieving: grieving }
-      );
-      this.applyDelta(rel, outcome.delta, {
-        turn,
-        label: this.convoLogLabel(outcome),
-        kind: 'talk'
-      });
-      convoCount.set(a.id, (convoCount.get(a.id) ?? 0) + 1);
-      convoCount.set(b.id, (convoCount.get(b.id) ?? 0) + 1);
-      // romance beats ride flirt outcomes
-      if (outcome.category === 'flirt') {
-        this.afterFlirt(state, working, a, b, rel, outcome.positive, turn);
-      }
-      // floaters: each speaker's line over their head
-      if (a.position)
-        simLog.pushCombatText({
-          worldX: a.position.x,
-          worldY: a.position.y,
-          text: outcome.lines[0].text,
-          kind: 'social'
-        });
-      if (b.position)
-        simLog.pushCombatText({
-          worldX: b.position.x,
-          worldY: b.position.y,
-          text: outcome.lines[1].text,
-          kind: 'social',
-          dy: 8
-        });
-      // one expandable chronicle entry per conversation
-      simLog.logActivity({
-        turn,
-        type: 'social',
-        actor: a.name,
-        target: b.name,
-        action: this.categoryLabel(outcome.category),
-        result: `${firstName(a)} and ${firstName(b)}: ${outcome.resultText}`,
-        severity: outcome.positive ? 'info' : 'warning',
-        entityIds: [a.id, b.id],
-        focusX: a.position?.x,
-        focusY: a.position?.y,
-        details: { lines: outcome.lines, category: outcome.category }
-      });
-    }
+    // Conversations no longer fire here — they're PROXIMITY-triggered in `processDialogTick`
+    // (pawns chat when they pass within a couple of tiles), so the player actually sees them.
+    // This daily pass keeps the ambient drift, standing moods, romance upkeep, and break checks.
 
     // Romance upkeep (§4): breakups when a partnership has soured.
     for (const rel of working) {
@@ -792,6 +727,124 @@ class SocialServiceImpl {
     return relsChanged ? { ...state, relationships: working } : state;
   }
 
+  // ── §3 the proximity dialog tick ──────────────────────────────────────────────────────────────
+
+  /**
+   * Runs on a THROTTLED tick (every few in-game seconds, GameEngineImpl) — NOT per tick. Any two
+   * awake colonists who pass within {@link DIALOG_RANGE} tiles may strike up a dialog: an assembled
+   * exchange with floaters over their heads and one expandable chronicle entry, moving their
+   * relationship. Cooldowns (per pair + per pawn) keep it lively but not spammy. Returns the same
+   * state ref on a quiet tick (nobody in range / all on cooldown) so it never churns the snapshot.
+   */
+  processDialogTick(state: GameState): GameState {
+    const turn = state.turn;
+    const pairCd = DIALOG_PAIR_COOLDOWN_S * TICKS_PER_SECOND;
+    const pawnCd = DIALOG_PAWN_COOLDOWN_S * TICKS_PER_SECOND;
+    const canTalk = (p: Pawn) =>
+      p.isAlive !== false &&
+      p.position &&
+      p.currentState !== 'Sleeping' &&
+      turn - (_lastPawnDialog.get(p.id) ?? -Infinity) >= pawnCd;
+    const talkers = state.pawns.filter(canTalk);
+    if (talkers.length < 2) return state;
+    // Shuffle so the same early-index pawn doesn't always initiate.
+    for (let i = talkers.length - 1; i > 0; i--) {
+      const j = rng.int(0, i);
+      [talkers[i], talkers[j]] = [talkers[j], talkers[i]];
+    }
+
+    let working: PawnRelationship[] | null = null;
+    const busy = new Set<string>(); // pawns already chatting this tick
+
+    for (const a of talkers) {
+      if (busy.has(a.id)) continue;
+      // Nearest eligible partner in range, off both cooldowns, not already chatting.
+      let b: Pawn | undefined;
+      for (const cand of talkers) {
+        if (cand.id === a.id || busy.has(cand.id)) continue;
+        if (dist(a, cand) > DIALOG_RANGE) continue;
+        if (turn - (_lastPairDialog.get(relKey(a.id, cand.id)) ?? -Infinity) < pairCd) continue;
+        b = cand;
+        break;
+      }
+      if (!b) continue;
+      if (rng.random() >= DIALOG_CHANCE) continue; // not every eligible pass sparks talk
+
+      busy.add(a.id);
+      busy.add(b.id);
+      _lastPairDialog.set(relKey(a.id, b.id), turn);
+      _lastPawnDialog.set(a.id, turn);
+      _lastPawnDialog.set(b.id, turn);
+      working ??= state.relationships ? [...state.relationships] : [];
+      this.runDialogBetween(state, working, a, b, turn);
+    }
+    return working ? { ...state, relationships: working } : state;
+  }
+
+  /** Assemble + resolve one dialog between `a` and `b`: move the relationship (logged), advance
+   *  romance on a flirt, float each line over its speaker, and drop one expandable chronicle entry. */
+  private runDialogBetween(
+    state: GameState,
+    working: PawnRelationship[],
+    a: Pawn,
+    b: Pawn,
+    turn: number
+  ): void {
+    const rel = this.ensureRel(working, a, b, state);
+    const grieving = activeMoodModifiers(b, turn).some((m) => m.id.startsWith('grief:'));
+    // Battle context: both are drafted for a fight — the talk turns to the coming clash.
+    const battleContext = a.drafted === true && b.drafted === true;
+    const flirtEligible = this.flirtEligible(
+      a,
+      b,
+      rel,
+      working,
+      this.getBeauty(a),
+      this.getBeauty(b)
+    );
+    const outcome = runConversation(
+      a,
+      b,
+      rel,
+      { turn, weatherType: state.weather?.type, season: state.season },
+      { flirtEligible, targetGrieving: grieving, battleContext }
+    );
+    this.applyDelta(rel, outcome.delta, { turn, label: this.convoLogLabel(outcome), kind: 'talk' });
+    if (outcome.category === 'flirt') {
+      this.afterFlirt(state, working, a, b, rel, outcome.positive, turn);
+    }
+    // Floaters: each speaker's line over their head (speech-bubble kind, long dwell).
+    if (a.position)
+      simLog.pushCombatText({
+        worldX: a.position.x,
+        worldY: a.position.y,
+        text: outcome.lines[0].text,
+        kind: 'social'
+      });
+    if (b.position)
+      simLog.pushCombatText({
+        worldX: b.position.x,
+        worldY: b.position.y,
+        text: outcome.lines[1].text,
+        kind: 'social',
+        dy: 8
+      });
+    // One expandable chronicle entry per dialog.
+    simLog.logActivity({
+      turn,
+      type: 'social',
+      actor: a.name,
+      target: b.name,
+      action: this.categoryLabel(outcome.category),
+      result: `${firstName(a)} and ${firstName(b)}: ${outcome.resultText}`,
+      severity: outcome.positive ? 'info' : 'warning',
+      entityIds: [a.id, b.id],
+      focusX: a.position?.x,
+      focusY: a.position?.y,
+      details: { lines: outcome.lines, category: outcome.category }
+    });
+  }
+
   // ── §4 romance internals ────────────────────────────────────────────────────────────────────
 
   private flirtEligible(
@@ -799,15 +852,16 @@ class SocialServiceImpl {
     b: Pawn,
     rel: PawnRelationship,
     working: PawnRelationship[],
-    beautyOf: Map<string, number>
+    beautyA: number,
+    beautyB: number
   ): boolean {
     if ((a.age ?? 25) < ROMANCE_MIN_AGE || (b.age ?? 25) < ROMANCE_MIN_AGE) return false;
     if (rel.kin) return false;
     if (rel.romance?.stage === 'ex') return false;
     if (rel.score < 10) return false;
     // mutual attraction: each finds the other easy to look at
-    if ((beautyOf.get(a.id) ?? 1) < ATTRACTION_MIN_BEAUTY) return false;
-    if ((beautyOf.get(b.id) ?? 1) < ATTRACTION_MIN_BEAUTY) return false;
+    if (beautyA < ATTRACTION_MIN_BEAUTY) return false;
+    if (beautyB < ATTRACTION_MIN_BEAUTY) return false;
     // loyalty: a pawn partnered elsewhere only strays rarely (jealousy follows)
     const partneredElsewhere = (p: Pawn) =>
       working.some(
@@ -909,6 +963,8 @@ class SocialServiceImpl {
         return o.positive ? 'Shared a moment of comfort' : 'Comfort was not wanted';
       case 'flirt':
         return o.positive ? 'A warm exchange' : 'A rebuffed advance';
+      case 'battle_talk':
+        return o.positive ? 'Steadied each other under arms' : 'Frayed nerves before the fight';
       case 'argue':
         return `Argued over ${o.subject}`;
       case 'insult':
@@ -928,6 +984,8 @@ class SocialServiceImpl {
         return 'Courtship';
       case 'comfort':
         return 'Consolation';
+      case 'battle_talk':
+        return 'Words under arms';
       case 'argue':
         return 'An argument';
       case 'insult':

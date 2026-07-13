@@ -558,15 +558,19 @@ export function remapKinIds(pawns: Pawn[], idMap: Map<string, string>): void {
   }
 }
 
-// SOCIAL-LAYER: the off-colony family web per founder. `ageDelta` is added to the founder's age
-// (parents/grandparents older, children younger). Counts kept modest so the registry stays small.
+// SOCIAL-LAYER: the off-colony family web per founder. `ageDelta` (added to the founder's age) is
+// banded BY GENERATION with NON-OVERLAPPING ranges, so ages always read right up and down the tree:
+// grandparents older than parents/aunts-uncles, who are older than the founder's own generation
+// (siblings/cousins), who are older than the next one down (children/nieces-nephews). No relative can
+// come out older than the generation above it. ~25 years a generation, ±spread that never crosses.
 const WORLD_KIN_PLAN: { kind: KinKind; count: [number, number]; ageDelta: [number, number] }[] = [
-  { kind: 'parent', count: [1, 2], ageDelta: [20, 38] },
-  { kind: 'sibling', count: [0, 2], ageDelta: [-14, 14] },
-  { kind: 'grandparent', count: [0, 1], ageDelta: [45, 68] },
-  { kind: 'auntuncle', count: [0, 2], ageDelta: [16, 42] },
-  { kind: 'cousin', count: [0, 2], ageDelta: [-16, 16] },
-  { kind: 'child', count: [0, 1], ageDelta: [-34, -18] }
+  { kind: 'grandparent', count: [0, 1], ageDelta: [40, 56] }, // gen +2
+  { kind: 'parent', count: [1, 2], ageDelta: [18, 30] }, // gen +1
+  { kind: 'auntuncle', count: [0, 2], ageDelta: [18, 30] }, // gen +1
+  { kind: 'sibling', count: [0, 2], ageDelta: [-12, 12] }, // gen 0
+  { kind: 'cousin', count: [0, 2], ageDelta: [-12, 12] }, // gen 0
+  { kind: 'child', count: [0, 1], ageDelta: [-30, -18] }, // gen −1
+  { kind: 'nibling', count: [0, 1], ageDelta: [-30, -18] } // gen −1 (a sibling's child)
 ];
 
 /**
@@ -594,7 +598,9 @@ export function generateWorldKin(
     const surname = founder.name.split(' ').slice(-1)[0];
     for (const plan of WORLD_KIN_PLAN) {
       let n = rng.int(plan.count[0], plan.count[1]);
-      if (plan.kind === 'child' && founderAge < 30) n = 0; // too young to have grown kin out there
+      // A too-young founder has no grown-generation-down kin yet.
+      if (plan.kind === 'child' && founderAge < 30) n = 0;
+      if (plan.kind === 'nibling' && founderAge < 22) n = 0;
       for (let k = 0; k < n; k++) {
         const age = founderAge + rng.int(plan.ageDelta[0], plan.ageDelta[1]);
         if (age < 1) continue;

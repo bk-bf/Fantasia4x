@@ -126,6 +126,11 @@ const DETERIORATION_INTERVAL_TICKS = 600;
  *  boundary EVERY flush (the carcass-FPS regression). 60 ticks ≈ 1 s: invisible for spoilage, but cuts
  *  the ref-churn (and thus the cross-boundary clone) ~60×. Erosion is scaled by the elapsed ticks. */
 const DECAY_INTERVAL_TICKS = 60;
+/** SOCIAL-LAYER: the proximity dialog check runs every N ticks (NOT per tick) — pawns strike up a
+ *  chat when they pass within a couple of tiles. 90 ticks ≈ 1.5 s: frequent enough that the player
+ *  sees interactions happen, cheap enough that the pairwise scan (≤50 pawns) is negligible, and
+ *  cooldowns inside the tick keep it from flooding. Off the hot path, like the decay/kingdom ticks. */
+const DIALOG_INTERVAL_TICKS = 90;
 /** Drying (`stepDrying`) runs every N ticks for the same reason as spoilage: a drying clock is
  *  days-long, so per-tick re-referencing of the whole `droppedItems` array is wasted churn. 60 ticks
  *  ≈ 1 s — invisible for drying. Accrual is scaled by the elapsed ticks. */
@@ -362,9 +367,14 @@ export class GameEngineImpl implements GameEngine {
         // Daily-gated, so it adds zero per-tick cost on the hot path.
         if (this.gameState!.turn % (TURNS_PER_DAY * TICKS_PER_SECOND) === 0) {
           this.gameState = kingdomService.processKingdomsDaily(this.gameState!);
-          // SOCIAL-LAYER: the daily social pass — proximity/trait deltas, conversations, romance,
-          // standing moods, break checks. Same zero-per-tick-cost daily gate.
+          // SOCIAL-LAYER: the daily social pass — ambient drift, standing moods, romance upkeep,
+          // break checks. Same zero-per-tick-cost daily gate.
           this.gameState = socialService.processSocialTurn(this.gameState!);
+        }
+        // SOCIAL-LAYER: proximity dialog — pawns chat when they pass close by. Throttled (not per
+        // tick) so the player sees interactions without taxing the hot path.
+        if (this.gameState!.turn % DIALOG_INTERVAL_TICKS === 0) {
+          this.gameState = socialService.processDialogTick(this.gameState!);
         }
       });
       this.debugLogPawns();

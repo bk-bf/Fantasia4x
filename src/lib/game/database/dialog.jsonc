@@ -1,8 +1,14 @@
-// conversations.jsonc — fragment banks for the pawn conversation system (SOCIAL-LAYER §3).
-// Data only: category choice, outcome rolls, and point deltas live in services/social/conversations.ts.
+// dialog.jsonc — flavor-line banks + relationship effects for the pawn dialog system (SOCIAL-LAYER §3).
+// Pawns strike up a dialog when they come within a couple of tiles of each other (proximity-triggered;
+// SocialService.processDialogTick). Each CATEGORY carries both its lines AND its relationship EFFECT:
+//   goodDelta  — score change on a warm/successful exchange
+//   badDelta   — score change when it lands wrong
+//   goodChance — base chance it goes well (charm/mood/temperament tilt it; argue/insult never do)
 // Assembly: an opener (speaker A) + a reply (speaker B) + a closer, drawn from the pools below.
-// Placeholders resolved at assembly: {name} = the other speaker's first name, {subject} = a draw
-// from `subjects`, {weather} / {season} = the live sky and season. All strings are PLAYER-FACING.
+// Placeholders: {name} = the other speaker's first name, {subject} = a draw from `subjects`,
+// {weather} / {season} = the live sky and season. All strings are PLAYER-FACING.
+// Categories: small_talk · banter · deep_talk · flirt · comfort · argue · insult · battle_talk
+// (battle_talk fires when both are drafted for a fight — quick words traded under arms).
 {
   // What pawns talk about. Kept concrete and small-world: the colony, the land, the work.
   "subjects": [
@@ -29,6 +35,7 @@
   ],
   "categories": {
     "small_talk": {
+      "goodDelta": 1, "badDelta": -2, "goodChance": 0.75,
       "openers": [
         "Fine {weather} for it, no?",
         "You been thinking about {subject} too?",
@@ -62,6 +69,7 @@
       ]
     },
     "banter": {
+      "goodDelta": 2, "badDelta": -3, "goodChance": 0.7,
       "openers": [
         "Seen anything slower than {name} with a hauling sack? Me neither.",
         "You still owe me for that wager, {name}.",
@@ -93,6 +101,7 @@
       ]
     },
     "deep_talk": {
+      "goodDelta": 4, "badDelta": -4, "goodChance": 0.6,
       "openers": [
         "Do you ever think of before, {name}? Of home?",
         "I buried a friend once, over such a thing as {subject}. Never told anyone.",
@@ -124,6 +133,7 @@
       ]
     },
     "flirt": {
+      "goodDelta": 3, "badDelta": -3, "goodChance": 0.55,
       "openers": [
         "That is fine work, {name}. The hands that did it are finer.",
         "I saved you the good seat by the fire. Again.",
@@ -156,6 +166,7 @@
       ]
     },
     "comfort": {
+      "goodDelta": 5, "badDelta": -2, "goodChance": 0.7,
       "openers": [
         "Sit. You do not have to speak, {name}. I will sit with you.",
         "They would not want you hollowed out like this. Eat something.",
@@ -187,6 +198,7 @@
       ]
     },
     "argue": {
+      "goodDelta": 0, "badDelta": -5, "goodChance": 0.0,
       "openers": [
         "You left the stores open again. Again, {name}!",
         "Half a day's work and you call that a wall?",
@@ -209,6 +221,7 @@
       ]
     },
     "insult": {
+      "goodDelta": 0, "badDelta": -7, "goodChance": 0.0,
       "openers": [
         "There walks the laziest pair of hands in the colony.",
         "They should trade you to the next caravan, {name}. For half a boot.",
@@ -226,6 +239,38 @@
         "Pah.",
         "Waste of breath, this one.",
         "Remember this, {name}. I will."
+      ]
+    },
+    "battle_talk": {
+      "goodDelta": 3, "badDelta": -1, "goodChance": 0.8,
+      "openers": [
+        "Stay on my flank, {name}. We come out of this together.",
+        "Eyes up. I have your back if you have mine.",
+        "Ready? Good. Do not do anything clever.",
+        "If it goes bad, you run. I mean it.",
+        "Whatever comes, {name} — steady."
+      ],
+      "replies_good": [
+        "Shoulder to shoulder, then.",
+        "Always. Now quiet — here they come.",
+        "You watch the left, I take the right.",
+        "We have walked out of worse.",
+        "On your word."
+      ],
+      "replies_bad": [
+        "Just do not get in my way.",
+        "Save the speeches for after.",
+        "I fight better without the chatter."
+      ],
+      "closers_good": [
+        "Good. Blades ready.",
+        "Then let them come.",
+        "See you on the other side of it, {name}."
+      ],
+      "closers_bad": [
+        "Fine. Every one for themselves.",
+        "Do not expect me to cover you.",
+        "Hmph."
       ]
     }
   }

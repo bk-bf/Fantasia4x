@@ -48,8 +48,44 @@ describe('generateWorldKin', () => {
     const males = worldKin.filter((w) => w.sex === 'male').length;
     expect(males).toBeGreaterThan(0);
     expect(males).toBeLessThan(worldKin.length);
-    // world kin are NOT colony pawns (kept out of state.pawns)
-    expect(founders.some((f) => byId.has(f.id))).toBe(false);
+  });
+
+  it('generates generationally-consistent ages (no child older than a parent, etc.)', () => {
+    const { cultures, kingdoms } = world();
+    const founders = generateColonyPawns(cultures, 5, { kingdoms, founders: true });
+    const worldKin = generateWorldKin(founders, cultures, kingdoms);
+    const byId = new Map(founders.map((f) => [f.id, f]));
+    // `founder.kin` entry for a world pawn carries what THAT PAWN is TO the founder (plan.kind).
+    const kindToFounder = (founder: (typeof founders)[number], wId: string) =>
+      founder.kin!.find((k) => k.pawnId === wId)!.kind;
+    for (const w of worldKin) {
+      const founder = byId.get(w.kin![0].pawnId)!;
+      const fAge = founder.age ?? 30;
+      const wAge = w.age ?? 30;
+      switch (kindToFounder(founder, w.id)) {
+        case 'grandparent':
+        case 'parent':
+        case 'auntuncle':
+          expect(wAge).toBeGreaterThan(fAge); // an elder generation is older than the founder
+          break;
+        case 'child':
+        case 'nibling':
+          expect(wAge).toBeLessThan(fAge); // a younger generation is younger
+          break;
+      }
+      expect(wAge).toBeGreaterThanOrEqual(1);
+    }
+    // within a founder: every grandparent is older than every parent/aunt-uncle
+    for (const founder of founders) {
+      const kin = worldKin.filter((w) => w.kin![0].pawnId === founder.id);
+      const grand = kin
+        .filter((w) => kindToFounder(founder, w.id) === 'grandparent')
+        .map((w) => w.age ?? 0);
+      const parentGen = kin
+        .filter((w) => ['parent', 'auntuncle'].includes(kindToFounder(founder, w.id)))
+        .map((w) => w.age ?? 0);
+      for (const g of grand) for (const p of parentGen) expect(g).toBeGreaterThan(p);
+    }
   });
 
   it('seedFamilyRelationships stands up a warmth-driven row per family tie (incl. hated kin)', () => {

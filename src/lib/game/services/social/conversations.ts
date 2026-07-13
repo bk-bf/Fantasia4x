@@ -1,12 +1,13 @@
-// Conversation assembly + outcome rolls (SOCIAL-LAYER §3). Reads the fragment banks in
-// database/conversations.jsonc and turns a pawn pair + their relationship into a short assembled
-// exchange (opener → reply → closer), a positive/negative outcome, and the score delta to apply.
-// The daily orchestration (who talks to whom, caps, logging) lives in SocialService.
+// Dialog assembly + outcome rolls (SOCIAL-LAYER §3). Reads the flavor-line banks + per-category
+// relationship effects in database/dialog.jsonc and turns a pawn pair + their relationship into a
+// short assembled exchange (opener → reply → closer), a positive/negative outcome, and the score
+// delta to apply. The orchestration (who talks to whom, proximity, cooldowns, logging) lives in
+// SocialService.processDialogTick.
 
 import type { Pawn, PawnRelationship, RelationStage, Season } from '../../core/types';
 import { effectiveMood } from '../../core/Social';
 import { rng } from '../../core/rng';
-import conversationData from '../../database/conversations.jsonc';
+import dialogData from '../../database/dialog.jsonc';
 
 export type ConversationCategory =
   | 'small_talk'
@@ -15,7 +16,8 @@ export type ConversationCategory =
   | 'flirt'
   | 'comfort'
   | 'argue'
-  | 'insult';
+  | 'insult'
+  | 'battle_talk';
 
 export interface ConversationLine {
   pawnId: string;
@@ -36,6 +38,10 @@ export interface ConversationOutcome {
 }
 
 interface CategoryBank {
+  /** Relationship effect (authored in dialog.jsonc). */
+  goodDelta: number;
+  badDelta: number;
+  goodChance: number;
   openers: string[];
   replies_good?: string[];
   replies_bad: string[];
@@ -43,31 +49,9 @@ interface CategoryBank {
   closers_bad: string[];
 }
 
-const DATA = conversationData as unknown as {
+const DATA = dialogData as unknown as {
   subjects: string[];
   categories: Record<ConversationCategory, CategoryBank>;
-};
-
-// Score delta per category by outcome (spec §1: positive +1…+6, negative −2…−8).
-const DELTA: Record<ConversationCategory, { good: number; bad: number }> = {
-  small_talk: { good: 1, bad: -2 },
-  banter: { good: 2, bad: -3 },
-  deep_talk: { good: 4, bad: -4 },
-  comfort: { good: 5, bad: -2 },
-  flirt: { good: 3, bad: -3 },
-  argue: { good: 0, bad: -5 },
-  insult: { good: 0, bad: -7 }
-};
-
-// Base chance the exchange lands well (argue/insult never do).
-const BASE_GOOD: Record<ConversationCategory, number> = {
-  small_talk: 0.75,
-  banter: 0.7,
-  deep_talk: 0.6,
-  comfort: 0.7,
-  flirt: 0.55,
-  argue: 0,
-  insult: 0
 };
 
 const RESULT_GOOD: Record<ConversationCategory, string> = {
@@ -76,6 +60,7 @@ const RESULT_GOOD: Record<ConversationCategory, string> = {
   deep_talk: 'shared something true',
   comfort: 'found a little comfort',
   flirt: 'sparks kindled between them',
+  battle_talk: 'steeled each other for the fight',
   argue: '',
   insult: ''
 };
@@ -86,6 +71,7 @@ const RESULT_BAD: Record<ConversationCategory, string> = {
   deep_talk: 'it cut too close and turned into an argument',
   comfort: 'the comfort was not wanted',
   flirt: 'the advance was rebuffed',
+  battle_talk: 'the nerves frayed between them',
   argue: 'it turned into a shouting match',
   insult: 'cruel words were said'
 };
@@ -116,9 +102,11 @@ function firstName(p: Pawn): string {
  */
 export function chooseCategory(
   rel: PawnRelationship,
-  opts: { flirtEligible: boolean; targetGrieving: boolean }
+  opts: { flirtEligible: boolean; targetGrieving: boolean; battleContext: boolean }
 ): ConversationCategory {
   const stage: RelationStage = rel.stage;
+  // Under arms, the talk turns to the fight (unless they actively loathe each other).
+  if (opts.battleContext && stage !== 'enemies') return 'battle_talk';
   if (opts.targetGrieving && rel.score >= 15 && rng.random() < 0.6) return 'comfort';
   if (opts.flirtEligible && rng.random() < 0.35) return 'flirt';
   if (stage === 'enemies') return rng.random() < 0.6 ? 'insult' : 'argue';
@@ -158,13 +146,13 @@ export function runConversation(
   b: Pawn,
   rel: PawnRelationship,
   ctx: { turn: number; weatherType?: string; season?: Season },
-  opts: { flirtEligible: boolean; targetGrieving: boolean }
+  opts: { flirtEligible: boolean; targetGrieving: boolean; battleContext: boolean }
 ): ConversationOutcome {
   const category = chooseCategory(rel, opts);
   const bank = DATA.categories[category];
 
-  // Outcome roll: charm and temperament tilt it.
-  let pGood = BASE_GOOD[category];
+  // Outcome roll: charm and temperament tilt the data-authored base chance.
+  let pGood = bank.goodChance;
   if (pGood > 0) {
     pGood += ((a.stats?.charisma ?? 10) - 10) * 0.01;
     for (const p of [a, b]) {
@@ -198,7 +186,7 @@ export function runConversation(
   return {
     category,
     positive,
-    delta: positive ? DELTA[category].good : DELTA[category].bad,
+    delta: positive ? bank.goodDelta : bank.badDelta,
     lines,
     resultText: positive ? RESULT_GOOD[category] : RESULT_BAD[category],
     subject
