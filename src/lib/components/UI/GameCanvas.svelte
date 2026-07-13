@@ -762,7 +762,8 @@
     return def
       ? buildMobCard(hoverMob, def, false, {
           cameraFollowMobId,
-          startMark: () => startMarkDrag('mob')
+          startMark: () => startMarkDrag('mob'),
+          colonyName: $gameState?.culture?.name
         })
       : null;
   })();
@@ -771,7 +772,8 @@
     if (!selectedMob || !selectedMobDef) return null;
     return buildMobCard(selectedMob, selectedMobDef, true, {
       cameraFollowMobId,
-      startMark: () => startMarkDrag('mob')
+      startMark: () => startMarkDrag('mob'),
+      colonyName: $gameState?.culture?.name
     });
   })();
 
