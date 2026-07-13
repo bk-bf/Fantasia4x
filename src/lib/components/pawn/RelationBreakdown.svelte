@@ -22,18 +22,51 @@
   // Newest first; each `time` line is a rolled-up running total, the rest are discrete moments.
   $: entries = [...(rel.log ?? [])].reverse();
   $: sign = (n: number) => (n >= 0 ? '+' : '') + (Math.round(n * 10) / 10).toString();
+
+  // Which dialog entries have their transcript expanded (a talk entry carries `lines`).
+  let openLines = new Set<number>();
+  function toggleLines(i: number) {
+    openLines.has(i) ? openLines.delete(i) : openLines.add(i);
+    openLines = openLines;
+  }
 </script>
 
 <div class="breakdown">
   {#if entries.length > 0}
-    {#each entries as e}
-      <div class="brk-row">
-        <span class="brk-day">day {dayIndexForTurn(e.turn) + 1}</span>
-        <span class="brk-label" style:color={KIND_COLOR[e.kind]}>{e.label}</span>
-        <span class="brk-delta" class:pos={e.delta > 0} class:neg={e.delta < 0}>
-          {e.delta === 0 ? '·' : sign(e.delta)}
-        </span>
-      </div>
+    {#each entries as e, i}
+      {@const hasLines = !!(e.lines && e.lines.length)}
+      {#if hasLines}
+        <!-- A dialog entry — click to reveal the transcript. -->
+        <button
+          class="brk-row has-lines"
+          class:open={openLines.has(i)}
+          title="Click to read what was said"
+          on:click={() => toggleLines(i)}
+        >
+          <span class="brk-day">day {dayIndexForTurn(e.turn) + 1}</span>
+          <span class="brk-label" style:color={KIND_COLOR[e.kind]}
+            >{openLines.has(i) ? '▾ ' : '▸ '}{e.label}</span
+          >
+          <span class="brk-delta" class:pos={e.delta > 0} class:neg={e.delta < 0}>
+            {e.delta === 0 ? '·' : sign(e.delta)}
+          </span>
+        </button>
+        {#if openLines.has(i)}
+          <div class="transcript">
+            {#each e.lines ?? [] as line}
+              <div class="ts-line"><span class="ts-who">{line.name}:</span> “{line.text}”</div>
+            {/each}
+          </div>
+        {/if}
+      {:else}
+        <div class="brk-row">
+          <span class="brk-day">day {dayIndexForTurn(e.turn) + 1}</span>
+          <span class="brk-label" style:color={KIND_COLOR[e.kind]}>{e.label}</span>
+          <span class="brk-delta" class:pos={e.delta > 0} class:neg={e.delta < 0}>
+            {e.delta === 0 ? '·' : sign(e.delta)}
+          </span>
+        </div>
+      {/if}
     {/each}
   {:else}
     <div class="brk-empty">nothing has passed between them yet</div>
@@ -55,6 +88,42 @@
     gap: 6px;
     font-size: 11px;
     line-height: 1.4;
+  }
+  /* Reset the button-flavoured (dialog) rows to look like the plain ones. */
+  button.brk-row {
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+  }
+  .brk-row.has-lines {
+    cursor: pointer;
+  }
+  .brk-row.has-lines:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+  /* The dialog transcript nested under an expanded talk entry. */
+  .transcript {
+    margin: 1px 0 3px 58px;
+    padding-left: 6px;
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .ts-line {
+    font-size: 11px;
+    font-style: italic;
+    opacity: 0.9;
+    line-height: 1.4;
+  }
+  .ts-who {
+    font-style: normal;
+    color: var(--accent-hi);
   }
   .brk-day {
     color: var(--text-dim, #777);

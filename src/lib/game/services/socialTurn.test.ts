@@ -124,6 +124,9 @@ describe('processSocialTurn (daily pass)', () => {
     const talks = (near!.log ?? []).filter((e) => e.kind === 'talk');
     expect(talks.length).toBeGreaterThan(0);
     expect(talks[0].label.length).toBeGreaterThan(0);
+    // the dialog transcript is stored on the event (for the Relations-tab nested log)
+    expect(talks[0].lines?.length).toBeGreaterThan(0);
+    expect(talks[0].lines![0].text.length).toBeGreaterThan(0);
     // the far pawn never came within range → no dialog rows with it
     expect(findRelationship(s.relationships, 'pawn-1', 'pawn-3')).toBeUndefined();
     expect(findRelationship(s.relationships, 'pawn-2', 'pawn-3')).toBeUndefined();

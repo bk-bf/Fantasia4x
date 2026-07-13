@@ -2,6 +2,7 @@
 // nudges the attacker's glyph toward the struck tile and back over LUNGE_TTL_MS. Only the most
 // recent lunge per attacker is kept; entries self-prune after the TTL even when nothing reads them.
 import { writable } from 'svelte/store';
+import { animNow } from './animClock';
 // Request shape lives in the core sink so Combat can emit without importing this store (layer direction).
 import type { CombatLungeRequest } from '$lib/game/core/logSink';
 
@@ -21,7 +22,7 @@ function createAttackLungeStore() {
     subscribe,
     /** Replaces any in-flight lunge for the same attacker. */
     push(req: CombatLungeRequest) {
-      const now = Date.now();
+      const now = animNow();
       update((list) => {
         const live = list.filter(
           (e) => now - e.spawnTime < LUNGE_TTL_MS && e.attackerId !== req.attackerId

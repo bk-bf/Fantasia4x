@@ -228,6 +228,8 @@ class SocialServiceImpl {
       turn?: number;
       label?: string;
       kind?: RelationEventKind;
+      /** For `talk`: the assembled dialogue, stored on the event for the Relations-tab transcript. */
+      lines?: { name: string; text: string }[];
       /** Fold into an existing same-kind/same-label entry (ambient day-to-day drift) instead of
        *  pushing a fresh line. */
       coalesce?: boolean;
@@ -242,7 +244,7 @@ class SocialServiceImpl {
     if (opts?.turn != null && opts.label && opts.kind && delta !== 0) {
       this.recordEvent(
         rel,
-        { turn: opts.turn, delta, label: opts.label, kind: opts.kind },
+        { turn: opts.turn, delta, label: opts.label, kind: opts.kind, lines: opts.lines },
         opts.coalesce ?? false
       );
     }
@@ -252,7 +254,13 @@ class SocialServiceImpl {
    *  totals survive the cap so the rolling "day to day" figure is never crowded out. */
   private recordEvent(
     rel: PawnRelationship,
-    ev: { turn: number; delta: number; label: string; kind: RelationEventKind },
+    ev: {
+      turn: number;
+      delta: number;
+      label: string;
+      kind: RelationEventKind;
+      lines?: { name: string; text: string }[];
+    },
     coalesce: boolean
   ): void {
     const delta = Math.round(ev.delta * 10) / 10;
@@ -269,7 +277,13 @@ class SocialServiceImpl {
         return;
       }
     }
-    log.push({ turn: ev.turn, delta, label: ev.label, kind: ev.kind });
+    log.push({
+      turn: ev.turn,
+      delta,
+      label: ev.label,
+      kind: ev.kind,
+      ...(ev.lines ? { lines: ev.lines } : {})
+    });
     // Cap the DISCRETE tail; drop the oldest non-pinned entry first (pinned = seed + ambient time).
     while (log.length > REL_LOG_CAP) {
       const i = log.findIndex((e) => e.kind !== 'time' && e.kind !== 'seed');
@@ -809,7 +823,13 @@ class SocialServiceImpl {
       { turn, weatherType: state.weather?.type, season: state.season },
       { flirtEligible, targetGrieving: grieving, battleContext }
     );
-    this.applyDelta(rel, outcome.delta, { turn, label: this.convoLogLabel(outcome), kind: 'talk' });
+    this.applyDelta(rel, outcome.delta, {
+      turn,
+      label: this.convoLogLabel(outcome),
+      kind: 'talk',
+      // Store the assembled exchange so the Relations tab can show WHAT was said (nested breakdown).
+      lines: outcome.lines.map((l) => ({ name: l.name, text: l.text }))
+    });
     if (outcome.category === 'flirt') {
       this.afterFlirt(state, working, a, b, rel, outcome.positive, turn);
     }

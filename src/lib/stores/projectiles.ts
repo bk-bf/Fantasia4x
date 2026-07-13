@@ -2,6 +2,7 @@
 // lerps it from→to for WorldEffectsLayer. The hit is already resolved hitscan — purely cosmetic.
 // Entries self-prune after their duration even when nothing reads them.
 import { writable } from 'svelte/store';
+import { animNow } from './animClock';
 import type { CombatProjectileRequest } from '$lib/game/core/logSink';
 
 export type { CombatProjectileRequest };
@@ -28,7 +29,7 @@ function createProjectileStore() {
   return {
     subscribe,
     push(req: CombatProjectileRequest) {
-      const now = Date.now();
+      const now = animNow();
       const dist = Math.hypot(req.toX - req.fromX, req.toY - req.fromY);
       const durationMs = Math.max(MIN_FLIGHT_MS, Math.min(MAX_FLIGHT_MS, dist * MS_PER_TILE));
       update((list) => {

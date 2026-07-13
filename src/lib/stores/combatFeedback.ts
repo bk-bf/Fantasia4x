@@ -2,6 +2,7 @@
 // hit/miss/dodge; GameCanvas converts to screen space for WorldEffectsLayer. Positions are world
 // TILE coordinates, never pixels — the renderer owns camera math. Self-prunes after FLOAT_TTL_MS.
 import { writable } from 'svelte/store';
+import { animNow } from './animClock';
 // Kind enum lives in the core sink so Combat can reference it without importing this store.
 import type { CombatTextKind } from '$lib/game/core/logSink';
 
@@ -41,7 +42,7 @@ function createCombatFeedbackStore() {
   return {
     subscribe,
     push(evt: Omit<CombatTextEvent, 'id' | 'spawnTime'>) {
-      const now = Date.now();
+      const now = animNow();
       update((list) => {
         const live = list.filter((e) => now - e.spawnTime < floatTtl(e.kind));
         live.push({ ...evt, id: `cbt-${now}-${seq++}`, spawnTime: now });

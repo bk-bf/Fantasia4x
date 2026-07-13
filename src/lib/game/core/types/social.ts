@@ -60,6 +60,9 @@ export interface RelationshipEvent {
   delta: number;
   label: string;
   kind: RelationEventKind;
+  /** For `talk` events: the assembled dialogue exchange (speaker + line), so the Relations tab can
+   *  show WHAT was actually said, nested under the entry. Absent for non-dialog events. */
+  lines?: { name: string; text: string }[];
 }
 
 /** One blood tie on a pawn: `kind` is what the OTHER pawn is to this one

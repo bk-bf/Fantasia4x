@@ -73,6 +73,7 @@
   import { worldEffects } from '$lib/stores/worldEffects.js';
   import type { GlyphFloat, GlyphFloatKind } from '$lib/stores/worldEffects.js';
   import { combatFeedback, floatTtl, type CombatTextEvent } from '$lib/stores/combatFeedback.js';
+  import { animNow, setAnimPaused } from '$lib/stores/animClock.js';
   import { attackLunges, LUNGE_TTL_MS, type AttackLungeEvent } from '$lib/stores/attackLunges.js';
   import { projectiles, type ProjectileEvent } from '$lib/stores/projectiles.js';
   import { renderFps } from '$lib/stores/perfStats.js';
@@ -359,6 +360,10 @@
   const unsubCombatFeedback = combatFeedback.subscribe((list) => {
     combatTexts = list;
   });
+
+  // Freeze the floater/overlay lifetime clock while the game is paused (setAnimPaused), so combat
+  // text, dialog bubbles, lunges and projectiles hold instead of ageing out during a pause.
+  const unsubAnimPause = gameState.isPaused.subscribe((p) => setAnimPaused(p));
 
   // Attack lunges: active thrusts keyed by attacker id, read every frame in updatePawnOverlay.
   let attackLungeList: AttackLungeEvent[] = [];
@@ -1542,8 +1547,8 @@
     const clampedDt = Math.min(dt, 0.05);
     // Exponential smoothing factor — shared for pawns and mobs this frame.
     const alpha = clampedDt > 0 ? 1 - Math.exp(-clampedDt / MOVE_SMOOTH_TAU) : 1;
-    // Wall-clock for attack-lunge curves (lunge spawn times are Date.now-based).
-    const nowMs = Date.now();
+    // Paused-aware clock for attack-lunge curves — freezes with the game (matches lunge spawn times).
+    const nowMs = animNow();
 
     // Read the freshest game state directly from the store's held value.
     // The engine calls gameStore.setSilent() every tick, so get(gameState) is
@@ -1992,7 +1997,8 @@
 
     // Floating combat text: age out expired events, convert the live tile coord of
     // each to a screen position (so labels track the camera as it pans/follows).
-    const now = Date.now();
+    // Paused-aware clock: floaters (combat text, dialog bubbles, projectiles) FREEZE while paused.
+    const now = animNow();
     const newFloats = combatTexts
       .filter((e) => now - e.spawnTime < floatTtl(e.kind))
       .map((e) => ({
@@ -3329,6 +3335,7 @@
     unsubUI();
     unsubWorldGen();
     unsubCombatFeedback();
+    unsubAnimPause();
     unsubAttackLunges();
     unsubProjectiles();
     _unsubMenuPerf();

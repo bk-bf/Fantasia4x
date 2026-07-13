@@ -22,6 +22,7 @@
   import { worldEffects } from '$lib/stores/worldEffects';
   import { cameraTileSize } from '$lib/stores/cameraView';
   import { gameState } from '$lib/stores/gameState';
+  const isPaused = gameState.isPaused; // freeze floater animations while paused
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
   import { weatherEffects } from '$lib/stores/uiPrefs';
   import WeatherCanvas from './WeatherCanvas.svelte';
@@ -43,7 +44,9 @@
   $: combatFloatScale = Math.min(floatScale, 1.2);
 </script>
 
-<div class="world-effects-layer">
+<!-- `paused` freezes every floater animation (combat text, dialog bubbles, glyph loops) in place
+     while the game is paused — visual freeze in lockstep with the frozen lifetime clock (animClock). -->
+<div class="world-effects-layer" class:paused={$isPaused}>
   <!-- ── World-Space Animations (positions derived from tile coordinates) ──────── -->
 
   <!-- Anchored looping glyph floats — ONE each-block over a `kind`-discriminated array (was four
@@ -246,6 +249,11 @@
     z-index: 5;
     pointer-events: none;
     overflow: hidden;
+  }
+  /* PAUSE: freeze every floater/glyph animation in the layer (the lifetime clock is frozen in
+     parallel via animClock, so they resume together on unpause). */
+  .world-effects-layer.paused :global(*) {
+    animation-play-state: paused !important;
   }
 
   /* ── Working progress bar ───────────────────────────────────────────────────── */
@@ -1076,22 +1084,21 @@
     font-size: 11px;
     font-style: italic;
   }
-  /* SOCIAL-LAYER conversation lines: a speech bubble that dwells long enough to read (duration
-     must match SOCIAL_TTL_MS in combatFeedback.ts), gently drifting instead of the combat rise.
-     Wraps at a readable width; the tail-less rounded box keeps the retro-terminal look. */
+  /* SOCIAL-LAYER conversation lines: plain WHITE cursive text (no bubble), dwelling long enough to
+     read (duration must match SOCIAL_TTL_MS in combatFeedback.ts) and gently drifting. A strong
+     shadow keeps it legible over the map without a background box. */
   .combat-float.social {
-    color: #e8e0c8;
+    color: #ffffff;
     font-size: 10px;
     font-weight: normal;
     font-style: italic;
     white-space: normal;
     max-width: 160px;
     width: max-content;
-    padding: 2px 6px;
-    background: rgba(20, 24, 18, 0.85);
-    border: 1px solid #4a5240;
-    border-radius: 6px;
-    text-shadow: none;
+    text-shadow:
+      0 0 3px #000,
+      0 1px 2px #000,
+      0 0 6px #000;
     animation: social-float-dwell 4.5s ease-out forwards;
   }
   @keyframes social-float-dwell {
