@@ -37,6 +37,7 @@ import { allItemDefs, itemDefById } from '../core/itemDefs';
 import { baseItemValue } from '../core/itemValue';
 import { clamp } from '../core/math';
 import { rng } from '../core/rng';
+import { simLog } from '../core/logSink';
 import { TICKS_PER_SECOND } from '../core/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
 import { spawnKingdomParty, despawnKingdomParty } from './entity/kingdomParties';
@@ -165,6 +166,13 @@ class KingdomServiceImpl {
     }
     let s = spawned.state;
     s = this.recordContact(s, picked.kingdom.id, KNOWLEDGE_XP.arrival);
+    const lead = this.partyLead(s, spawned.party);
+    this.logArrival(
+      turn,
+      picked.kingdom.name,
+      kind,
+      lead ? { x: lead.x, y: lead.y, entityId: lead.id } : undefined
+    );
     s = {
       ...s,
       pendingEvent: {
@@ -202,6 +210,13 @@ class KingdomServiceImpl {
     if (!spawned) return state;
     let s = spawned.state;
     s = this.recordContact(s, kingdom.id, KNOWLEDGE_XP.arrival);
+    const lead = this.partyLead(s, spawned.party);
+    this.logArrival(
+      s.turn,
+      kingdom.name,
+      partyKind,
+      lead ? { x: lead.x, y: lead.y, entityId: lead.id } : undefined
+    );
     return {
       ...s,
       pendingEvent: {
@@ -213,6 +228,35 @@ class KingdomServiceImpl {
         partyId: spawned.party.id
       }
     };
+  }
+
+  /** Chronicle the moment a party crosses onto the map (mirrors the migrant-wave "approaches" log).
+   *  `focus` (the trader/lead mob's tile + id) makes the entry click-to-jump: pan the camera to the
+   *  party and select its lead. */
+  private logArrival(
+    turn: number,
+    kingdomName: string,
+    kind: KingdomParty['kind'],
+    focus?: { x: number; y: number; entityId: string }
+  ): void {
+    simLog.logActivity({
+      turn,
+      type: 'event',
+      actor: 'system',
+      action:
+        kind === 'caravan'
+          ? `A trade caravan from ${kingdomName} enters your lands`
+          : `Visitors from ${kingdomName} arrive at the colony`,
+      result: '',
+      severity: 'info',
+      ...(focus ? { focusX: focus.x, focusY: focus.y, entityIds: [focus.entityId] } : {})
+    });
+  }
+
+  /** The lead mob (trader, or first member) of a spawned party, for camera focus / selection. */
+  private partyLead(state: GameState, party: KingdomParty): Mob | undefined {
+    const id = party.traderMobId ?? party.mobIds[0];
+    return (state.mobs ?? []).find((m) => m.id === id);
   }
 
   /** Non-hostile kingdoms with a colony relation — raiders never visit or trade. */
