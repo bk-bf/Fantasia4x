@@ -169,8 +169,9 @@ export function spawnKingdomParty(
 ): { state: GameState; party: KingdomParty } | null {
   const map = state.worldMap;
   const center = colonyCenter(state);
-  // Anchor: where the party settles to mill and trade — within ~10 tiles of the colony (spec §3).
-  const anchor = findWalkableNear(map, center.x, center.y, 6, 10);
+  // Anchor: where the party settles to mill and trade — a ~15-20 tile ring from the colony so it
+  // camps at a respectful distance instead of sitting on top of the colonists (spec §3).
+  const anchor = findWalkableNear(map, center.x, center.y, 15, 20);
   if (!anchor) return null;
   // Entry: a walkable tile at the MAP EDGE, so the party visibly marches the map to reach the colony.
   // Fall back to a far-from-colony ring, then the anchor, if the edge is all water/mountain.
