@@ -130,15 +130,22 @@
       {#each rels as { r, other } (r.pawnA + r.pawnB)}
         {@const key = relKey(r.pawnA, r.pawnB)}
         {@const isOpen = expanded.has(key)}
-        <div class="rel-row">
+        <!-- The whole card toggles the history breakdown; the name still selects the pawn. -->
+        <div
+          class="rel-row clickable"
+          class:open={isOpen}
+          role="button"
+          tabindex="0"
+          title="Click to show what has passed between them"
+          on:click={() => toggle(key)}
+          on:keydown={(e) =>
+            (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), toggle(key))}
+        >
           <div class="rel-head">
-            <button
-              class="disclose"
-              class:open={isOpen}
-              title="Show what has passed between them"
-              on:click={() => toggle(key)}>▸</button
+            <span class="disclose" class:open={isOpen}>▸</span>
+            <button class="rel-name link" on:click|stopPropagation={() => onSelect(other)}
+              >{other.name}</button
             >
-            <button class="rel-name link" on:click={() => onSelect(other)}>{other.name}</button>
             <span class="stage" style:color={STAGE_COLOR[r.stage] ?? '#888'}
               >{STAGE_LABEL[r.stage]}</span
             >
@@ -232,8 +239,18 @@
     font-style: italic;
   }
   .rel-row {
-    padding: 4px 0;
+    padding: 4px 6px;
     border-bottom: 1px solid var(--border);
+    border-radius: 3px;
+  }
+  .rel-row.clickable {
+    cursor: pointer;
+  }
+  .rel-row.clickable:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .rel-row.open {
+    background: rgba(255, 255, 255, 0.03);
   }
   .rel-row:last-child {
     border-bottom: none;
@@ -244,14 +261,11 @@
     align-items: baseline;
   }
   .disclose {
-    background: none;
-    border: none;
-    padding: 0;
     color: var(--text-dim, #888);
-    cursor: pointer;
     font-size: 10px;
     line-height: 1;
     transition: transform 0.1s ease;
+    display: inline-block;
   }
   .disclose.open {
     transform: rotate(90deg);
