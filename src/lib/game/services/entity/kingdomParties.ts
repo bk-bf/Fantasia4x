@@ -69,6 +69,39 @@ function findWalkableNear(
   return null;
 }
 
+/** A walkable tile within the outer BORDER band of the map — where a caravan enters from. Prefers
+ *  the edge nearest the colony's side so the march isn't absurdly long, but any walkable edge works. */
+function findMapEdgeTile(map: WorldTile[][]): { x: number; y: number } | null {
+  const h = map.length;
+  const w = map[0]?.length ?? 0;
+  if (w === 0 || h === 0) return null;
+  const BAND = 4; // how deep from the very edge is still "the edge"
+  for (let attempt = 0; attempt < 300; attempt++) {
+    let x: number;
+    let y: number;
+    switch (rng.int(0, 3)) {
+      case 0: // top
+        x = rng.int(0, w - 1);
+        y = rng.int(0, BAND);
+        break;
+      case 1: // bottom
+        x = rng.int(0, w - 1);
+        y = rng.int(h - 1 - BAND, h - 1);
+        break;
+      case 2: // left
+        x = rng.int(0, BAND);
+        y = rng.int(0, h - 1);
+        break;
+      default: // right
+        x = rng.int(w - 1 - BAND, w - 1);
+        y = rng.int(0, h - 1);
+        break;
+    }
+    if (isSpawnableTile(map[y]?.[x])) return { x, y };
+  }
+  return null;
+}
+
 /** Free tiles around a start point for placing the party members as a cluster. */
 function clusterTiles(
   map: WorldTile[][],
@@ -139,12 +172,14 @@ export function spawnKingdomParty(
 ): { state: GameState; party: KingdomParty } | null {
   const map = state.worldMap;
   const center = colonyCenter(state);
-  const anchor = findWalkableNear(map, center.x, center.y, 5, 10);
+  // Anchor: where the party settles to mill and trade — within ~10 tiles of the colony (spec §3).
+  const anchor = findWalkableNear(map, center.x, center.y, 6, 10);
   if (!anchor) return null;
-  // Entry point: far out from the colony so the party visibly walks in.
+  // Entry: a walkable tile at the MAP EDGE, so the party visibly marches the map to reach the colony.
+  // Fall back to a far-from-colony ring, then the anchor, if the edge is all water/mountain.
   const entry =
-    findWalkableNear(map, center.x, center.y, 35, 60) ??
-    findWalkableNear(map, center.x, center.y, 15, 34) ??
+    findMapEdgeTile(map) ??
+    findWalkableNear(map, center.x, center.y, 40, 90) ??
     anchor;
 
   const roster = partyRoster(kingdom, kind);

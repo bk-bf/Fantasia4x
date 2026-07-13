@@ -4310,7 +4310,9 @@
         "pack"          : [1, 1],
         "tameable"      : false,
         "huntable"      : false,
-        "territorial"   : true,
+        // NOT territorial: a guard escorts the wares and only fights if the caravan is attacked
+        // (self-defence). Territorial would make it charge any pawn that wandered near, on sight.
+        "territorial"   : false,
         "biomeWeights"  : {},
         "naturalWeapons": ["fists", "kick"],
         "lootPool"      : "guard_iron",

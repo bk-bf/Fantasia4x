@@ -1794,7 +1794,10 @@
       // (right-click → Trade). Beats the status tells: the invitation is the point of the visit.
       if (m.partyRole === 'trader') kind = 'trade';
       if (kind) {
-        const o = glyphOf(m.id, m.x, m.y, kind);
+        // Anchor the float to the SMOOTHED render position (not the discrete snapshot tile), so a
+        // marker over a moving mob (the caravan trader's "?") tracks the sprite instead of lagging it.
+        const rp = mobRenderPos.get(m.id);
+        const o = glyphOf(m.id, rp?.x ?? m.x, rp?.y ?? m.y, kind);
         if (onScreen(o)) newGlyphs.push(o);
       }
     }
