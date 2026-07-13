@@ -118,6 +118,32 @@ The player does **not** see a kingdom's full sheet up front. Knowledge is *earne
   again. Immutable tiers (name, capital, history) don't rot.
 - This is **RACE-SYSTEM Phase 2**: first contact flips a kingdom visible; positive interaction grows it.
 
+### 2b · Pawn origin & backgrounds (seeded knowledge) — done 2026-07-13
+
+Founders don't arrive blank: each is born into a **home kingdom** and carries a two-slot **background**
+(childhood + adulthood) that seeds what the colony starts knowing. Answers "the Kingdoms tab is empty
+on turn 1" — a fresh colony already knows the 2-4 realms its founders came from.
+
+- **Kingdom-first origin** (`core/Backgrounds.ts` `rollOrigin`): a founder's homeland is picked first
+  (raiders a bit rarer), their **culture drawn from that kingdom's `cultureMix`** — so a pawn reads as
+  "of the Norn people, out of the Ashen Marches." ~12% are **stateless** (no homeland). `Pawn` gains
+  `homeKingdomId?`, `childhoodId?`, `adulthoodId?`, `basePrestige?`.
+- **Backgrounds** (`database/backgrounds.jsonc`): childhood + adulthood, **cohesive not RimWorld-random**
+  — a childhood `opens` life-path tags and an adulthood is only reachable if it `requires` one of them
+  (street urchin → cutpurse, never → court scholar). **Age-gated**: under-18 founders get a childhood
+  only. Eligibility gates on the home kingdom (a Court Ward needs a wealthy realm; a Warband Whelp a
+  raider one). Backgrounds drive four levers: **trait affinity** (bias `drawPawnTraits`), **starting
+  work experience**, **`basePrestige`** (feeds the `trade` stat), and the **kingdom-knowledge profile**.
+- **Random, partial, stale, shared knowledge** (`KingdomService.seedKingdomKnowledge` /
+  `seedKingdomKnowledgeFromPawns`): each founder seeds a random xp band into their home kingdom (stacking
+  across founders from the same realm, **capped below "complete"** at `SEED_KNOWLEDGE_CAP`), plus a few
+  **other** kingdoms that *travelled* backgrounds (caravan guard, wanderer) know. Seeded knowledge sets
+  the `known` snapshot but **leaves `lastContactTurn` null** → it renders greyed "as last you knew" from
+  turn 1 (an emigrant's out-of-date memory), refreshed on first real caravan contact. Knowledge is
+  **colony-shared and persists** once learned, even if the founder who brought it dies. Migrants seed the
+  same way when they join (`commitMigrants`). *(Old saves: pre-existing pawns have no homeland, so their
+  Kingdoms tab stays contact-only — can't retro-assign origins.)*
+
 ---
 
 ## 3 · Visitors & caravans (the contact surface)
