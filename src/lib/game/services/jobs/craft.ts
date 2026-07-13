@@ -13,6 +13,8 @@ import { buildingService } from '../BuildingService';
 import { craftWorkCategory } from './craftDiscipline';
 import { rollCraftQuality, qualityMultiplier } from '../../core/itemQuality';
 import { rollFamed, rollFamedIdentity } from '../../core/famedNames';
+import { itemDefById } from '../../core/itemDefs';
+import { memoryService, MEMORABILITY } from '../MemoryService';
 import { aggregateMaterialMods } from '../../core/materialProperties';
 import {
   absorbDropIfOnStockpileTile,
@@ -142,10 +144,19 @@ export function complete(job: Job, gs: GameState): GameState {
   // legend identity when it hits, else null.
   let rollFamedFn: (() => ReturnType<typeof rollFamedIdentity> | null) | undefined;
   const pawn = job.claimedBy ? gs.pawns.find((p) => p.id === job.claimedBy) : undefined;
+  // PAWN-MEMORY: track the best/worst tier this pawn rolls across the batch — a masterwork or a botch
+  // is a memory nearby pawns pick up and may bring up later (a boast, or a ribbing about a fumble).
+  let bestTier = -1;
+  let worstTier = 6;
   if (pawn) {
     const discipline = craftWorkCategory(entry);
     const axis = pawnStatService.getWorkModifiers(pawn, discipline, undefined, 'crafting').quality ?? 1;
-    rollQuality = () => rollCraftQuality(axis, () => rng.random());
+    rollQuality = () => {
+      const q = rollCraftQuality(axis, () => rng.random());
+      if (q > bestTier) bestTier = q;
+      if (q < worstTier) worstTier = q;
+      return q;
+    };
     const stationEffects = (entry.stationType
       ? ((buildingService.getBuildingById(entry.stationType)?.effects ?? {}) as Record<string, unknown>)
       : {}) as Record<string, unknown>;
@@ -154,6 +165,35 @@ export function complete(job: Job, gs: GameState): GameState {
       rollFamed(axis, arcane, () => rng.random()) ? rollFamedIdentity(() => rng.random()) : null;
   }
   let state = completeCraftOrder(entry, gs, rollQuality, rollFamedFn);
+  // Record the craft memory once the tiers are known (Masterwork+ → masterwork; Awful → botch).
+  if (pawn && pawn.position && bestTier >= 0) {
+    const itemName = itemDefById(entry.item.id)?.name ?? 'their work';
+    const who = pawn.name.split(' ')[0];
+    const pid = pawn.id;
+    const px = pawn.position.x;
+    const py = pawn.position.y;
+    const t = gs.turn;
+    if (bestTier >= 4) {
+      const mem = bestTier >= 5 ? 0.9 : MEMORABILITY.masterwork; // a Legendary is historic
+      memoryService.recordAround(state, px, py, pid, 12, () => ({
+        kind: 'masterwork',
+        turn: t,
+        subjectId: pid,
+        subjectName: who,
+        detail: itemName,
+        memorability: mem
+      }));
+    } else if (worstTier === 0) {
+      memoryService.recordAround(state, px, py, pid, 12, () => ({
+        kind: 'botch',
+        turn: t,
+        subjectId: pid,
+        subjectName: who,
+        detail: itemName,
+        memorability: MEMORABILITY.botch
+      }));
+    }
+  }
   // ADR-009 step 2: wear the WORKING pawn's craft tool (e.g. the knife used at a butcher spot /
   // tannery). Only the pawn-worked path wears a tool — passive furnace production has no pawn.
   const req = recipeService.toolRequirementForRecipe(recipeService.getRecipeForItem(entry.item.id));

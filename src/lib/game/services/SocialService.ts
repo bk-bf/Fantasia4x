@@ -11,6 +11,7 @@
 // relationships array is replaced whole on change, and unchanged days return the same state ref.
 
 import type {
+  EventMemory,
   GameState,
   ItemInstance,
   Mob,
@@ -32,6 +33,7 @@ import {
   stageForScore
 } from '../core/Social';
 import { rng } from '../core/rng';
+import { memoryService, MEMORABILITY } from './MemoryService';
 import { simLog } from '../core/logSink';
 import { TICKS_PER_SECOND } from '../core/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
@@ -74,9 +76,14 @@ const DIALOG_PAWN_COOLDOWN_S = 6; // in-game seconds before a pawn joins ANY new
 // MOOD-REWORK: a dialog leaves a faded mood "thought" on both talkers (dialog.jsonc moodGood/moodBad).
 // The magnitude carries the weight; they all fade over this window (a chat's afterglow / an insult's sting).
 const DIALOG_MOOD_FADE_DAYS = 0.5;
+// PAWN-MEMORY: chance an eligible dialog reminisces about a witnessed memory instead of generic chatter.
+const RECALL_CHANCE = 0.5;
 // §4 romance
 const ATTRACTION_MIN_BEAUTY = 0.75;
 const ROMANCE_MIN_AGE = 18;
+// Attraction only kindles once there's a real bond — friends territory, not a pair who just met.
+// (Same-culture pawns SEED at ~15, so the old score>=10 gate let near-strangers flirt on sight.)
+const FLIRT_MIN_SCORE = 40;
 // Age-gap plausibility: gaps up to FREE years carry no penalty; attraction then falls off linearly
 // to nil at FREE+SPAN (a ~20y gap is unlikely, ~30y near-impossible). Both are already adults.
 const ROMANCE_AGE_GAP_FREE = 5;
@@ -433,6 +440,18 @@ class SocialServiceImpl {
     return working ? { ...state, relationships: working } : state;
   }
 
+  /** PAWN-MEMORY: how memorable `dead`'s passing is to `witness`, by their bond. A partner/kin/best
+   *  friend's death is historic (never forgotten); a rival's lingers; a stranger's fades in weeks. */
+  private deathMemorability(witness: Pawn, dead: Pawn, rels: PawnRelationship[]): number {
+    const kin = witness.kin?.some((k) => k.pawnId === dead.id);
+    const rel = findRelationship(rels, witness.id, dead.id);
+    if (kin || rel?.romance?.stage === 'partners' || rel?.stage === 'best_friends') return 0.96; // historic
+    if (rel?.stage === 'friends') return 0.72; // significant — carried for a season
+    if (rel?.stage === 'rivals' || rel?.stage === 'enemies') return 0.55; // you don't forget a rival's fall
+    if (rel?.stage === 'acquaintances') return 0.48; // notable — weeks
+    return 0.4; // a stranger's death — a pall, but it fades
+  }
+
   /**
    * A pawn died (PawnStateMachine.finalizePawnDeath, before the record is built). Grief lands on
    * everyone who loved them, witnesses bond, and the dead pawn's rows are retired (the family
@@ -492,6 +511,19 @@ class SocialServiceImpl {
         (p) =>
           p.id !== dead.id && p.isAlive !== false && p.position && dist(p, dead) <= WITNESS_RADIUS
       );
+      const deadName = firstName(dead);
+      for (const w of witnesses) {
+        // PAWN-MEMORY: how deeply a death is remembered depends on the bond — a loved one's passing is
+        // historic (never forgotten); a stranger's fades in weeks. Read from `rels` (still holds the
+        // dead's rows here, before `working` retires them).
+        memoryService.record(w, {
+          kind: 'death',
+          turn,
+          subjectId: dead.id,
+          subjectName: deadName,
+          memorability: this.deathMemorability(w, dead, rels)
+        });
+      }
       for (let i = 0; i < witnesses.length; i++) {
         for (let j = i + 1; j < witnesses.length; j++) {
           const rel = this.ensureRel(working, witnesses[i], witnesses[j], state);
@@ -551,6 +583,8 @@ class SocialServiceImpl {
         const live = activeMoodModifiers(p, turn);
         if (live.length !== p.moodModifiers.length) p.moodModifiers = live;
       }
+      // PAWN-MEMORY: drop faded (non-historic) memories past their recall window.
+      memoryService.prune(p, turn);
       // standing prestige band
       const prestige = this.getPrestige(p);
       const dressed = p.equipment && Object.values(p.equipment).some((i) => i);
@@ -579,6 +613,18 @@ class SocialServiceImpl {
       }
       if ((deeds.idleDays ?? 0) >= 3) {
         this.addMoodModifier(p, 'idle', 'Nothing to do for days', -8, 0, turn);
+        // PAWN-MEMORY: the tick a pawn's idling crosses into "days on end", the pawns around notice a
+        // loafer — a trivial memory that's banter fodder for a few days. Fires once per idle streak.
+        if (deeds.idleDays === 3 && p.position) {
+          const who = firstName(p);
+          memoryService.recordAround(state, p.position.x, p.position.y, p.id, 8, () => ({
+            kind: 'idled',
+            turn,
+            subjectId: p.id,
+            subjectName: who,
+            memorability: MEMORABILITY.idled
+          }));
+        }
       } else {
         this.removeMoodModifier(p, 'idle');
       }
@@ -827,20 +873,21 @@ class SocialServiceImpl {
     const grieving = activeMoodModifiers(b, turn).some((m) => m.id.startsWith('grief:'));
     // Battle context: both are drafted for a fight — the talk turns to the coming clash.
     const battleContext = a.drafted === true && b.drafted === true;
-    const flirtEligible = this.flirtEligible(
-      a,
-      b,
-      rel,
-      working,
-      this.getBeauty(a),
-      this.getBeauty(b)
-    );
+    // PAWN-MEMORY: outside a fight, and if they don't loathe each other, the initiator may bring up
+    // something witnessed — a kill, a death, a masterwork, a botch, a loafer (on the spot or later).
+    let recall: { memory: EventMemory; ago: string } | undefined;
+    if (!battleContext && rel.stage !== 'enemies' && rng.chance(RECALL_CHANCE)) {
+      const memory = memoryService.recall(a, b, turn);
+      if (memory) recall = { memory, ago: memoryService.agoPhrase(turn - memory.turn) };
+    }
+    const flirtEligible =
+      !recall && this.flirtEligible(a, b, rel, working, this.getBeauty(a), this.getBeauty(b));
     const outcome = runConversation(
       a,
       b,
       rel,
       { turn, weatherType: state.weather?.type, season: state.season },
-      { flirtEligible, targetGrieving: grieving, battleContext }
+      { flirtEligible, targetGrieving: grieving, battleContext, recall }
     );
     this.applyDelta(rel, outcome.delta, {
       turn,
@@ -922,7 +969,7 @@ class SocialServiceImpl {
     if (!this.ageGapPlausible(a, b)) return false;
     if (rel.kin) return false;
     if (rel.romance?.stage === 'ex') return false;
-    if (rel.score < 10) return false;
+    if (rel.score < FLIRT_MIN_SCORE) return false; // must actually be close first, not near-strangers
     // mutual attraction: each finds the other easy to look at
     if (beautyA < ATTRACTION_MIN_BEAUTY) return false;
     if (beautyB < ATTRACTION_MIN_BEAUTY) return false;

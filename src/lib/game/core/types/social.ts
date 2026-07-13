@@ -130,3 +130,37 @@ export interface SocialBreak {
   kind: 'break' | 'crisis';
   until: number;
 }
+
+// ── PAWN-MEMORY (dialog recall) ─────────────────────────────────────────────────────────────────
+// A pawn records the notable things it witnesses (a comrade's death, a fight, a masterwork, a botched
+// job, a loafer) and later RECALLS them in dialog — on the spot, at the campfire later, or both. The
+// store is worker-only (stripped by ENTITY_DROP; never ships to the renderer) and bounded per pawn.
+
+/** What kind of event a memory is — drives its base memorability and which dialog category recalls it. */
+export type MemoryKind =
+  | 'combat' // witnessed a kill in a fight
+  | 'death' // witnessed a colonist die
+  | 'masterwork' // saw someone finish an exceptional item
+  | 'botch' // saw someone turn out shoddy work ("fucked up")
+  | 'idled'; // saw someone loafing for days
+
+/**
+ * One thing a pawn witnessed and can bring up later. `memorability` (0–1) sets how long it stays
+ * recallable (trivial fades in days, `historic` never) and how strongly it's weighted; `told` counts
+ * how often it's been retold so the same story wears out. `subjectName`/`detail` are cached at record
+ * time (the subject may be dead or gone) so the dialog line can name them without a lookup.
+ */
+export interface EventMemory {
+  kind: MemoryKind;
+  /** Tick it happened (recency + expiry are measured from here). */
+  turn: number;
+  /** The pawn/entity the memory is ABOUT (who died, who fumbled, who fought). */
+  subjectId?: string;
+  subjectName?: string;
+  /** 0–1: retention window + recall weight. ≥0.9 = historic (never pruned). */
+  memorability: number;
+  /** Extra colour for the line — the item made, the foe fought. */
+  detail?: string;
+  /** Times recalled in dialog; each retelling lowers the weight so it isn't repeated to death. */
+  told?: number;
+}

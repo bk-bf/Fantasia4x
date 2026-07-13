@@ -59,6 +59,7 @@ import {
 import { isWitnessedByColony } from '../core/vision';
 import { kingdomService } from '../services/KingdomService';
 import { socialService } from '../services/SocialService';
+import { memoryService, MEMORABILITY } from '../services/MemoryService';
 // Re-exported below for callers that import these via Combat.
 import {
   PART_DEF_MAP,
@@ -1471,6 +1472,18 @@ class CombatServiceImpl implements CombatService {
         pos.y,
         result.weaponId
       );
+      // PAWN-MEMORY: a colonist's kill is talked about — nearby pawns remember who dropped what, and
+      // may bring it up in banter (on the spot or later). Only a COLONY pawn's kill (mobs have entityClass).
+      if (!('entityClass' in attacker) && attacker.isAlive !== false) {
+        memoryService.recordAround(next, pos.x, pos.y, attacker.id, 12, () => ({
+          kind: 'combat',
+          turn,
+          subjectId: attacker.id,
+          subjectName: attackerName.split(' ')[0],
+          detail: targetName,
+          memorability: MEMORABILITY.combat
+        }));
+      }
     }
     // LINEAGES §4: a pawn's kill feeds the Beast/Werewolf/Arachnid awakening deeds (regardless of whether
     // the colony saw it). By creature family + whether the killing blow was unarmed (fists / natural weapon).

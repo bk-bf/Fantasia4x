@@ -5,7 +5,7 @@ import type { EntityStats, StatKey, GrowthOffer, LineagePath } from './culture';
 import type { EntityNeeds, EntityCondition, Injury, LimbState } from './health';
 import type { PawnInventory, PawnEquipment, EquipmentSlot } from './items';
 import type { Trait } from './culture';
-import type { KinTie, MoodModifier, SocialBreak } from './social';
+import type { KinTie, MoodModifier, SocialBreak, EventMemory } from './social';
 
 /** FSM state for a live entity. Hostile + neutral share one machine. */
 export type MobState =
@@ -354,6 +354,10 @@ export interface Pawn {
    *  (PawnService.computeMoodTarget) that mood eases toward — the expiring ones FADE to zero over their
    *  life (MOOD-REWORK). Pruned on the daily social pass. */
   moodModifiers?: MoodModifier[];
+  /** PAWN-MEMORY — notable things this pawn has witnessed (a death, a fight, a masterwork, a botched
+   *  job, a loafer), recalled later in dialog. Bounded ring buffer + pinned historic; WORKER-ONLY
+   *  (stripped by ENTITY_DROP — never ships to the renderer). Managed by MemoryService. */
+  memories?: EventMemory[];
   /** Active mental break — the pawn refuses colony work until `until`. Set/cleared by the daily
    *  social pass; the FSM job-claim path gates on it. */
   socialBreak?: SocialBreak;

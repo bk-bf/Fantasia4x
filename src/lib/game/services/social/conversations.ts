@@ -4,7 +4,7 @@
 // delta to apply. The orchestration (who talks to whom, proximity, cooldowns, logging) lives in
 // SocialService.processDialogTick.
 
-import type { Pawn, PawnRelationship, RelationStage, Season } from '../../core/types';
+import type { EventMemory, Pawn, PawnRelationship, RelationStage, Season } from '../../core/types';
 import { effectiveMood } from '../../core/Social';
 import { rng } from '../../core/rng';
 import { TICKS_PER_SECOND } from '../../core/time';
@@ -74,9 +74,22 @@ interface CategoryBank {
   callbacks?: string[];
 }
 
+/** PAWN-MEMORY — lines for recalling a witnessed event, keyed by MemoryKind. `category` says which
+ *  base category's deltas/tone the recall borrows (banter for a botch, deep_talk for a death…). Lines
+ *  fill `{subject}` (who it's about), `{detail}` (the item/foe), `{ago}` (how long ago), `{name}` (the
+ *  listener). */
+interface MemoryBank {
+  category: ConversationCategory;
+  openers: string[];
+  replies_good: string[];
+  replies_bad: string[];
+  closers: string[];
+}
+
 const DATA = dialogData as unknown as {
   subjects: string[];
   categories: Record<ConversationCategory, CategoryBank>;
+  memories: Record<string, MemoryBank>;
 };
 
 const RESULT_GOOD: Record<ConversationCategory, string> = {
@@ -153,13 +166,39 @@ function fill(
   other: Pawn,
   subject: string,
   weatherWord: string,
-  season: Season | undefined
+  season: Season | undefined,
+  detail = '',
+  ago = ''
 ): string {
   return template
     .replace(/\{name\}/g, firstName(other))
     .replace(/\{subject\}/g, subject)
+    .replace(/\{detail\}/g, detail)
+    .replace(/\{ago\}/g, ago)
     .replace(/\{weather\}/g, weatherWord)
     .replace(/\{season\}/g, season ?? 'autumn');
+}
+
+/** Outcome roll: the data-authored base chance, tilted by charm, temperament, mood, and closeness. */
+function computePGood(
+  a: Pawn,
+  b: Pawn,
+  rel: PawnRelationship,
+  goodChance: number,
+  turn: number
+): number {
+  let pGood = goodChance;
+  if (pGood <= 0) return 0;
+  pGood += ((a.stats?.charisma ?? 10) - 10) * 0.01;
+  for (const p of [a, b]) {
+    if (hasTrait(p, 'gregarious')) pGood += 0.08;
+    if (hasTrait(p, 'ill-tempered')) pGood -= 0.1;
+    if (hasTrait(p, 'hot-headed')) pGood -= 0.05;
+    if (hasTrait(p, 'loner')) pGood -= 0.05;
+    if (effectiveMood(p, turn) < 30) pGood -= 0.1;
+  }
+  if (rel.stage === 'friends' || rel.stage === 'best_friends') pGood += 0.1;
+  return Math.max(0.05, Math.min(0.95, pGood));
 }
 
 /** Resolve a `next` ref — "category" (random beat) or "category:beatId" — to a concrete beat. */
@@ -181,26 +220,20 @@ export function runConversation(
   b: Pawn,
   rel: PawnRelationship,
   ctx: { turn: number; weatherType?: string; season?: Season },
-  opts: { flirtEligible: boolean; targetGrieving: boolean; battleContext: boolean }
+  opts: {
+    flirtEligible: boolean;
+    targetGrieving: boolean;
+    battleContext: boolean;
+    /** PAWN-MEMORY: a witnessed event `a` recalls, built into the exchange instead of a generic beat. */
+    recall?: { memory: EventMemory; ago: string };
+  }
 ): ConversationOutcome {
+  // PAWN-MEMORY recall: reminisce about a remembered event instead of drawing a generic beat.
+  if (opts.recall) return recallConversation(a, b, rel, ctx, opts.recall);
+
   const category = chooseCategory(rel, opts);
   const bank = DATA.categories[category];
-
-  // Outcome roll: charm and temperament tilt the data-authored base chance.
-  let pGood = bank.goodChance;
-  if (pGood > 0) {
-    pGood += ((a.stats?.charisma ?? 10) - 10) * 0.01;
-    for (const p of [a, b]) {
-      if (hasTrait(p, 'gregarious')) pGood += 0.08;
-      if (hasTrait(p, 'ill-tempered')) pGood -= 0.1;
-      if (hasTrait(p, 'hot-headed')) pGood -= 0.05;
-      if (hasTrait(p, 'loner')) pGood -= 0.05;
-      if (effectiveMood(p, ctx.turn) < 30) pGood -= 0.1;
-    }
-    if (rel.stage === 'friends' || rel.stage === 'best_friends') pGood += 0.1;
-    pGood = Math.max(0.05, Math.min(0.95, pGood));
-  }
-  const positive = rng.random() < pGood;
+  const positive = rng.random() < computePGood(a, b, rel, bank.goodChance, ctx.turn);
 
   // Assemble from ONE beat so opener → reply → closer fit together (speakers A → B → A).
   const weatherWord = WEATHER_WORD[ctx.weatherType ?? ''] ?? 'sky';
@@ -257,5 +290,46 @@ export function runConversation(
     lines,
     resultText: positive ? RESULT_GOOD[category] : RESULT_BAD[category],
     subject
+  };
+}
+
+/**
+ * PAWN-MEMORY — assemble an exchange that RECALLS a witnessed event: `a` brings up the memory (naming
+ * its subject, the item/foe, and how long ago), `b` reacts, `a` closes. Borrows the tone + deltas of
+ * the memory kind's mapped category (banter for a botch, deep_talk for a death). Pure; the caller logs.
+ */
+function recallConversation(
+  a: Pawn,
+  b: Pawn,
+  rel: PawnRelationship,
+  ctx: { turn: number; weatherType?: string; season?: Season },
+  recall: { memory: EventMemory; ago: string }
+): ConversationOutcome {
+  const { memory, ago } = recall;
+  const memBank = DATA.memories[memory.kind];
+  const category = memBank.category;
+  const catBank = DATA.categories[category];
+  const positive = rng.random() < computePGood(a, b, rel, catBank.goodChance, ctx.turn);
+
+  const weatherWord = WEATHER_WORD[ctx.weatherType ?? ''] ?? 'sky';
+  const who = memory.subjectName ?? 'someone';
+  const detail = memory.detail ?? '';
+  const f = (tpl: string, other: Pawn) => fill(tpl, other, who, weatherWord, ctx.season, detail, ago);
+  const replyPool = positive ? memBank.replies_good : memBank.replies_bad;
+
+  const lines: ConversationLine[] = [
+    { pawnId: a.id, name: firstName(a), text: f(rng.pick(memBank.openers), b) },
+    { pawnId: b.id, name: firstName(b), text: f(rng.pick(replyPool), a) },
+    { pawnId: a.id, name: firstName(a), text: f(rng.pick(memBank.closers), b) }
+  ];
+
+  return {
+    category,
+    positive,
+    delta: positive ? catBank.goodDelta : catBank.badDelta,
+    moodDelta: positive ? (catBank.moodGood ?? 0) : (catBank.moodBad ?? 0),
+    lines,
+    resultText: positive ? RESULT_GOOD[category] : RESULT_BAD[category],
+    subject: detail ? `${who} and ${detail}` : who
   };
 }
