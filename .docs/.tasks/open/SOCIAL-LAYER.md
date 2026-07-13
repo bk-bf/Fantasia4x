@@ -58,8 +58,11 @@ reference feel; the assembly and stage machinery below is ours.
 
 ## 1 · Relationship system
 
-Every meaningful pair of pawns has a `PawnRelationship`. Sparse — created lazily on first real
-interaction (or at colony gen for seeded pairs), not N² up front.
+Every meaningful pair of pawns has a `PawnRelationship`. **Seeing each other is meeting**
+(amended 2026-07-13, playtest): every colonist pair gets its culture-seeded row on meeting —
+colony gen, migrant join, or the daily sight-radius pass (`meetColony`) — so the Relations tab
+shows at least Strangers immediately instead of sitting empty until the first interaction. The
+colony is small, so the pair count stays trivial.
 
 ```typescript
 interface PawnRelationship {
