@@ -21,6 +21,7 @@ import {
   dist,
   adjacent,
   moveToward,
+  pathTo,
   fleeToSafety,
   wanderStep,
   nearestPredatorThreat,
@@ -485,9 +486,11 @@ export function stepEntities(state: GameState): GameState {
 const TRAVEL_ARRIVE_DIST = 4;
 
 /**
- * KINGDOMS-TRADE: goal-directed march (a kingdom party walking to the colony). Step straight toward
- * the `travelGoal` each tick; once within {@link TRAVEL_ARRIVE_DIST}, settle to Wander (mill/trade at
- * the colony) and drop the goal. No leash — it's a one-way move order, not a tether.
+ * KINGDOMS-TRADE: goal-directed march (a kingdom party walking to the colony). Follows a FULL-BUDGET
+ * A* path to the `travelGoal` (so it routes around mountain ranges / water instead of grinding into
+ * them, the greedy-mover bug), recomputing only when the path runs out or gets dropped (blocked).
+ * Once within {@link TRAVEL_ARRIVE_DIST}, settle to Wander (mill/trade at the colony) and drop the
+ * goal. No leash — it's a one-way move order, not a tether. Greedy fallback if the goal is unreachable.
  */
 function travelStep(mob: Mob, state: GameState): Mob {
   const gx = mob.travelGoalX;
@@ -503,6 +506,12 @@ function travelStep(mob: Mob, state: GameState): Mob {
       path: []
     };
   }
+  // Still steps left in the current route → let advanceMobMovement keep following it (no re-path).
+  if (mob.path && (mob.pathIndex ?? 0) < mob.path.length) return mob;
+  // Compute a fresh cross-map route (maxIter 0 = full budget so it can route around big obstacles).
+  const path = pathTo(state, mob.x, mob.y, gx, gy, mob.id, 'caravan-travel', 0);
+  if (path.length > 0) return { ...mob, path, pathIndex: 0, nextCellCostLeft: undefined };
+  // Unreachable (island/blocked) → greedy nudge so it isn't a hard freeze.
   return moveToward(mob, { x: gx, y: gy }, state);
 }
 

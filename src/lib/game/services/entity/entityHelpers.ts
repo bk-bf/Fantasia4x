@@ -741,7 +741,11 @@ export function pathTo(
   ex: number,
   ey: number,
   selfId?: string,
-  label = '?'
+  label = '?',
+  /** Node-expansion cap. Defaults to the tight short-range mob cap; pass 0 for the full-grid budget
+   *  (long cross-map routes, e.g. a kingdom party marching in — it must route around mountain ranges,
+   *  which the short cap would bail on). */
+  maxIter: number = MOB_PATH_MAX_ITER
 ): { x: number; y: number }[] {
   if (!pathfinderService.isReady()) return [];
   // Entities are SOFT obstacles: each body adds a routing-cost penalty so paths prefer to route AROUND
@@ -762,17 +766,7 @@ export function pathTo(
   // diagnostics below are Debug-mode-gated.)
   const dbg = isVerboseLogging();
   const _t0 = dbg ? performance.now() : 0;
-  const res = pathfinderService.findPath(
-    walkable,
-    costs,
-    width,
-    height,
-    sx,
-    sy,
-    ex,
-    ey,
-    MOB_PATH_MAX_ITER
-  );
+  const res = pathfinderService.findPath(walkable, costs, width, height, sx, sy, ex, ey, maxIter);
   // A* diagnostics (Debug mode only; read+reset by GameEngineImpl's phase log): a FAIL is an empty result
   // — an unreachable goal. Distinguishes "too many cheap paths" (high calls) from "few ruinous searches"
   // (high fails / ms-per-call), broken down by call-site label, with sampled from→to lines to ai.log.
