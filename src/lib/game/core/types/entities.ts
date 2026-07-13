@@ -13,6 +13,8 @@ export type MobState =
   | 'Alerted'
   | 'Attacking'
   | 'Fleeing'
+  // goal-directed travel (KINGDOMS-TRADE): a party marching to a fixed destination (the colony)
+  | 'Traveling'
   // neutral animal states
   | 'Grazing'
   | 'Startled'
@@ -200,6 +202,9 @@ export interface Mob {
   partyId?: string;
   /** Role within the party — the `trader` is the interaction target for barter. */
   partyRole?: 'trader' | 'guard' | 'visitor' | 'pack';
+  /** 'Traveling' goal tile — the entity walks toward it, then settles (Wander) on arrival. */
+  travelGoalX?: number;
+  travelGoalY?: number;
 }
 
 /** An animal tamed and bound to an owning pawn (Phase C+). */

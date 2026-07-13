@@ -323,7 +323,11 @@ export function stepEntities(state: GameState): GameState {
       // sampled once/N, which dropped the wander rate ~N×). wanderStep early-outs while mid-step, so this
       // is near-free most ticks; the expensive FSM (forage/hunt/A*) still only runs on the think-tick.
       next[i] =
-        mob.state === 'Wander' || mob.state === 'Grazing' ? wanderStep(mob, def, state) : mob;
+        mob.state === 'Traveling'
+          ? travelStep(mob, state)
+          : mob.state === 'Wander' || mob.state === 'Grazing'
+            ? wanderStep(mob, def, state)
+            : mob;
       traceMobTick(next[i], state, turn, 'throttled');
       continue;
     }
@@ -475,6 +479,31 @@ export function stepEntities(state: GameState): GameState {
   }
 
   return finalState;
+}
+
+/** Arrival radius for a goal-directed march — paths can't always land exactly on a far tile. */
+const TRAVEL_ARRIVE_DIST = 4;
+
+/**
+ * KINGDOMS-TRADE: goal-directed march (a kingdom party walking to the colony). Step straight toward
+ * the `travelGoal` each tick; once within {@link TRAVEL_ARRIVE_DIST}, settle to Wander (mill/trade at
+ * the colony) and drop the goal. No leash — it's a one-way move order, not a tether.
+ */
+function travelStep(mob: Mob, state: GameState): Mob {
+  const gx = mob.travelGoalX;
+  const gy = mob.travelGoalY;
+  if (gx == null || gy == null) return { ...mob, state: 'Wander', stateSince: state.turn };
+  if (chebyshev(mob.x, mob.y, gx, gy) <= TRAVEL_ARRIVE_DIST) {
+    return {
+      ...mob,
+      state: 'Wander',
+      stateSince: state.turn,
+      travelGoalX: undefined,
+      travelGoalY: undefined,
+      path: []
+    };
+  }
+  return moveToward(mob, { x: gx, y: gy }, state);
 }
 
 export function stepOne(
@@ -1017,6 +1046,9 @@ export function stepHostile(
   }
 
   switch (mob.state) {
+    // KINGDOMS-TRADE: goal-directed march (a party heading to the colony) — see stepAnimal.
+    case 'Traveling':
+      return travelStep(mob, state);
     case 'Wander': {
       // Aggressive creatures attack on full sight range.
       // Neutral creatures are territorial: defend personal space when a pawn
@@ -1356,7 +1388,8 @@ export function stepAnimal(
       mob.state !== 'Eating' &&
       mob.state !== 'Fleeing' &&
       mob.state !== 'Startled' &&
-      mob.state !== 'Sleeping'
+      mob.state !== 'Sleeping' &&
+      mob.state !== 'Traveling'
     ) {
       // Forage (graze grass / eat wild food) first; hunt or scavenge a corpse only
       // as a fallback. Live-prey hunting requires `predator`/`carnivore`; scavenging
@@ -1386,7 +1419,8 @@ export function stepAnimal(
       mob.state !== 'Startled' &&
       mob.state !== 'Foraging' &&
       mob.state !== 'Hunting' &&
-      mob.state !== 'Eating'
+      mob.state !== 'Eating' &&
+      mob.state !== 'Traveling'
     ) {
       return sleepOrReturnHome(mob, turn, state);
     }
@@ -1404,6 +1438,10 @@ export function stepAnimal(
   }
 
   switch (mob.state) {
+    // KINGDOMS-TRADE: a party marching to the colony. Single-minded — walk to the goal, ignore
+    // roaming/threat/hunger, then settle to Wander on arrival.
+    case 'Traveling':
+      return travelStep(mob, state);
     case 'Grazing': {
       if (threat) {
         logFleeTrigger(mob, def, threat, inVision != null, turn, visionRange);

@@ -50,7 +50,7 @@ function withKingdoms(state: GameState): { state: GameState; kingdom: Kingdom } 
 describe('spawnKingdomParty', () => {
   beforeEach(() => rng.reseed(20260712));
 
-  it('a caravan spawns a trader + guards + pack beasts, all flagged and leashed', () => {
+  it('a caravan spawns a trader + guards + pack beasts, flagged and marching to the colony', () => {
     const { state, kingdom } = withKingdoms(plainsState());
     const out = spawnKingdomParty(state, kingdom, 'caravan', [{ itemId: 'copper_bar', qty: 5 }], 0);
     expect(out).toBeTruthy();
@@ -62,8 +62,11 @@ describe('spawnKingdomParty', () => {
     expect(members.some((m) => m.partyRole === 'guard')).toBe(true);
     for (const m of members) {
       expect(m.kingdomId).toBe(kingdom.id);
-      expect(m.lairX).toBeDefined(); // leashed toward the colony anchor
-      expect(m.lairRange).toBeGreaterThan(0);
+      // Goal-directed march toward the colony (no leash).
+      expect(m.state).toBe('Traveling');
+      expect(m.travelGoalX).toBeDefined();
+      expect(m.travelGoalY).toBeDefined();
+      expect(m.lairId).toBeUndefined();
     }
     // Guards drew a wealth-rung loadout from the guard_* pools.
     const guards = members.filter((m) => m.partyRole === 'guard');

@@ -26,9 +26,6 @@ const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 const CARAVAN_STAY_DAYS = 2;
 const VISITOR_STAY_DAYS = 1.5;
 
-/** Leash radius around the arrival anchor — the party mills about just outside the colony. */
-const PARTY_LEASH_RANGE = 6;
-
 /** Caravan guard gear rung per the sending kingdom's wealth (lootpool.jsonc guard_* pools). */
 export const GUARD_POOL_BY_WEALTH: Record<WealthBand, string> = {
   destitute: 'guard_scraps',
@@ -159,9 +156,9 @@ function partyRoster(kingdom: Kingdom, kind: KingdomParty['kind']): MemberSpec[]
 }
 
 /**
- * Spawn a visiting party from `kingdom`. Members enter at the map edge (walkable tile far from
- * the colony) with their leash anchored just OUTSIDE the colony, so the existing lair-leash AI
- * marches them toward the anchor and keeps them milling there until departure.
+ * Spawn a visiting party from `kingdom`. Members enter at the MAP EDGE and are given a goal-directed
+ * march ('Traveling' state, `travelGoal` = an anchor near the colony), so they walk straight in and
+ * then settle (Wander) to mill and trade until departure. No leash.
  */
 export function spawnKingdomParty(
   state: GameState,
@@ -198,11 +195,11 @@ export function spawnKingdomParty(
     mob.kingdomId = kingdom.id;
     mob.partyId = partyId;
     mob.partyRole = spec.role;
-    // Leash to the arrival anchor — the shared lair-leash AI walks them there and keeps them close.
-    mob.lairId = partyId;
-    mob.lairX = anchor.x;
-    mob.lairY = anchor.y;
-    mob.lairRange = PARTY_LEASH_RANGE;
+    // Goal-directed march (no leash): head straight for the anchor near the colony, then settle
+    // (Wander) on arrival — the 'Traveling' FSM state.
+    mob.state = 'Traveling';
+    mob.travelGoalX = anchor.x;
+    mob.travelGoalY = anchor.y;
     // Guards draw the wealth-appropriate rung, overriding the def's default pool.
     if (spec.lootPool) mob.equipment = equipFromLootPool(spec.lootPool) ?? mob.equipment;
     members.push(mob);

@@ -770,7 +770,8 @@ export function buildMobCard(
     // whose name IS the species label (base wolf) or an un-laddered creature just shows its own name.
     name: mobDisplayName(mob, def) + entityDebugLabel(mob),
     flavor: def.flavor,
-    status: mob.state,
+    // A marching kingdom party reads as its intent, not the raw FSM state.
+    status: mob.state === 'Traveling' ? 'Approaching the colony' : mob.state,
     selected,
     dismissable: selected,
     // No flat "HP" stat: the body model (limbs/blood/pain) is the real health — see the HEALTH popup.
