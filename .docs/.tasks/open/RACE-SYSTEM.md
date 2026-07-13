@@ -18,6 +18,15 @@ gated by other specs (SOCIAL-LAYER, an other-kingdom entity source).
 > (≤2 racial + ≤3 personal); natural armor as gear (weight → encumbrance); afflictions as real
 > permanent wounds. See [TRAITS (archived)](../archive/TRAITS-2026-07-10.md).
 
+> **`Race` → `Culture` rename complete (2026-07-13).** The concept is now **Culture** throughout
+> code and UI: `core/Culture.ts`, `types/culture.ts`, `database/culture-lore.jsonc`,
+> `CultureScreen.svelte` + `culture/CultureDetail.svelte`, and the `culturePool` / `cultureId` /
+> `cultureMix` / `discoverCulture` / `cultureRelations` identifiers. Landed piecemeal across the
+> 2026-07-09 trait cleanup and the 2026-07-12 KINGDOMS-TRADE work; no `race*` identifiers remain and
+> no user-facing "Race" strings survive. **Phase 0 below is described in the original `Race`/`racePool`
+> vocabulary — read it as `Culture`/`culturePool`.** Only Phase 1 (relations → social baseline) is
+> still open, and it stays blocked on SOCIAL-LAYER.
+
 
 ---
 
@@ -32,8 +41,8 @@ social friction between individual pawns.
 
 ## Phase 0 — Foundation (DELIVERED, ADR-023)
 
-What exists today (`core/Race.ts`, `database/racial-traits.jsonc` + `race-lore.jsonc`,
-`stores/gameState.ts`, `services/PawnStatService.ts`, `screens/RaceScreen.svelte` + `race/RaceDetail.svelte`):
+What exists today (`core/Culture.ts`, `database/traits.jsonc` + `culture-lore.jsonc`,
+`stores/gameState.ts`, `services/PawnStatService.ts`, `screens/CultureScreen.svelte` + `culture/CultureDetail.svelte`):
 
 - [x] **Race pool** — `GameState.racePool` holds 15–25 prerolled archetype-biased races, each with a
       unique kebab `id`, `archetype`, and `lore`. `race` kept as the home alias (`racePool[0]`).

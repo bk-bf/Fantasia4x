@@ -105,7 +105,7 @@ Never compute flat bonus sums manually when a modifier system method exists.
 | `core/Buildings.ts` | Building definitions and unlock conditions                               |
 | `core/Research.ts`  | Research tree and unlock costs                                           |
 | `core/Work.ts`      | Work category definitions                                                |
-| `core/Race.ts`      | Race generation: archetype-biased pool (15–25), procedural lore/description, relations (ADR-023) |
+| `core/Culture.ts`   | Culture generation: archetype-biased pool (15–25), procedural lore/description, relations (ADR-023) |
 | `core/BodyParts.ts` | **Anatomy loader** (ADR-024): loads `database/limbmap.jsonc` → global `PART_DEF_MAP`, per-plan hit-roll tables, `createBodyPlanLimbs(plan, bodyScale)`, part→weapon/armour bindings |
 | `core/Locations.ts` | Exploration zone definitions                                             |
 | `core/Events.ts`    | Event type definitions                                                   |
