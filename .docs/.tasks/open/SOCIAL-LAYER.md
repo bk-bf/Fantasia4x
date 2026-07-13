@@ -288,6 +288,15 @@ Mood < 20 → a **break** (refuses work 2–10 turns). Mood 0 for 5 turns → **
       effective mood + the modifier list [MOOD popup renders them above the drift drivers];
       `PawnOverview` MOOD row + STATE line; the map card's status reads "on a break" / "in crisis";
       a breaking pawn refuses jobs in `handleIdle` and ambles instead)
+- [x] **Per-relationship point breakdown + interaction log** (2026-07-13, playtest ask). Each
+      `PawnRelationship` keeps a bounded `log: RelationshipEvent[]` — every delta site records a dated,
+      labelled, signed line (`recordEvent`/`applyDelta` opts): the culture/kin seed baseline, each
+      conversation ("Talked about the last hunt +3", subject surfaced from `ConversationOutcome`),
+      rescue/tend/fought-together/grief/friendly-fire, romance milestones (became a couple / parted
+      ways / jealousy). Ambient day-to-day drift (proximity, temperament, resentment) coalesces into a
+      single rolling `time` total instead of one line per day; `seed`+`time` are pinned so the last
+      `REL_LOG_CAP` (12) discrete moments always show. Surfaced as a toggleable ▸ breakdown per row in
+      the RELATIONS tab (`RelationBreakdown.svelte`).
 
 ---
 
