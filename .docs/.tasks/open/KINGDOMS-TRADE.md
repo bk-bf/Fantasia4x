@@ -136,13 +136,27 @@ on turn 1" — a fresh colony already knows the 2-4 realms its founders came fro
   work experience**, **`basePrestige`** (feeds the `trade` stat), and the **kingdom-knowledge profile**.
 - **Random, partial, stale, shared knowledge** (`KingdomService.seedKingdomKnowledge` /
   `seedKingdomKnowledgeFromPawns`): each founder seeds a random xp band into their home kingdom (stacking
-  across founders from the same realm, **capped below "complete"** at `SEED_KNOWLEDGE_CAP`), plus a few
-  **other** kingdoms that *travelled* backgrounds (caravan guard, wanderer) know. Seeded knowledge sets
-  the `known` snapshot but **leaves `lastContactTurn` null** → it renders greyed "as last you knew" from
-  turn 1 (an emigrant's out-of-date memory), refreshed on first real caravan contact. Knowledge is
-  **colony-shared and persists** once learned, even if the founder who brought it dies. Migrants seed the
-  same way when they join (`commitMigrants`). *(Old saves: pre-existing pawns have no homeland, so their
-  Kingdoms tab stays contact-only — can't retro-assign origins.)*
+  across founders from the same realm, **capped below "complete"** at `SEED_KNOWLEDGE_CAP`). Seeded
+  knowledge sets the `known` snapshot but **leaves `lastContactTurn` null** → it renders greyed "as last
+  you knew" from turn 1 (an emigrant's out-of-date memory), refreshed on first real caravan contact.
+  Knowledge is **colony-shared and persists** once learned, even if the founder who brought it dies.
+- **Founder restraint (2026-07-13)** — a fresh 5-person colony was starting out knowing ~8-9 realms/
+  cultures. Two knobs fixed it (measured: known kingdoms 8.6→**4.2**, cultures 9.3→**6.8**):
+  (1) **`founderWeight`** in `backgrounds.jsonc` rarifies/excludes worldly & noble backgrounds *for
+  starting colonists only* (Court Scholar `founderWeight:0` = never a founder; migrants still can be);
+  (2) **founders skip worldliness** — `seedKingdomKnowledgeFromPawns(state, pawns, /*includeWorldliness*/ false)`
+  on the three colony-gen paths, so a founder seeds only their actual **homeland**, not "realms they'd
+  heard of." **Migrants keep worldliness** (they trickle in and genuinely bring far word). So the
+  Kingdoms tab now tracks "the homelands your founders came from."
+- **Attribution** — `Kingdom.knownVia` / `Culture.discoveredVia` record *who* the knowledge came from
+  (the colonist's name), shown in the detail panes ("remembered by …") and the Kingdoms list marks a
+  homeland compactly with the colonist's name (`⌂ Bram`). Real contact leaves `knownVia` null → "known
+  through contact."
+- *(Old saves: pre-existing pawns have no homeland, so their Kingdoms tab stays contact-only — can't
+  retro-assign origins.)*
+- **Remaining knob** (not pulled): to tighten cultures toward ~5, stop **seeding** from discovering a
+  homeland's dominant culture (leave the culture pokédex to colonists + real contact). Left in because
+  "you know the main people of your homeland" reads intuitively; flip if the count still grates.
 
 ---
 
