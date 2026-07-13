@@ -1,9 +1,9 @@
 <!--
-  MoodPanel — pop-up mood readout for a selected pawn (§M). Mirrors HealthPanel: it floats above the
-  info card, the parent owns the open/close toggle (`open`) and the MOOD button that flips it.
-  Read-only — lists the signed per-tick mood drivers acting on the pawn right now (benefits in green,
-  debuffs in red) and the net trend the bar is drifting toward. Sourced from
-  `pawnService.getMoodBreakdown`, which mirrors the deltas applied in `calculateStateUpdate`.
+  MoodPanel — pop-up mood readout for a selected pawn (MOOD-REWORK). Mirrors HealthPanel: it floats
+  above the info card, the parent owns the open/close toggle (`open`) and the MOOD button that flips it.
+  Read-only — shows the pawn's CURRENT (eased) mood, the TARGET it is easing toward, and every signed
+  contribution behind that target (benefits green, debuffs red). Sourced from
+  `pawnService.getMoodBreakdown` (= `computeMoodTarget`).
 -->
 <script lang="ts">
   import type { MoodModel } from '$lib/components/UI/SelectedEntityCard.svelte';
@@ -11,15 +11,13 @@
 
   let { mood, open = false }: { mood: MoodModel | undefined; open?: boolean } = $props();
 
-  // Drivers sorted strongest-first within sign: benefits on top, debuffs below.
-  const drivers = $derived(
-    [...(mood?.drivers ?? [])].sort((a, b) => b.delta - a.delta)
+  // MOOD-REWORK: every contribution to the target, benefits on top and debuffs below.
+  const contributions = $derived(
+    [...(mood?.contributions ?? [])].sort((a, b) => b.value - a.value)
   );
-  // SOCIAL-LAYER §7: standing event moods (grief, a hot meal…) — fixed offsets, not per-tick drift.
-  const modifiers = $derived([...(mood?.modifiers ?? [])].sort((a, b) => b.value - a.value));
-  const trend = $derived(mood?.trend ?? 0);
   const moodVal = $derived(mood?.mood ?? 50);
-  const fmt = (n: number) => (n >= 0 ? '+' : '') + n.toFixed(1);
+  const target = $derived(mood?.target ?? moodVal);
+  const gap = $derived(target - moodVal);
   const fmtInt = (n: number) => (n >= 0 ? '+' : '') + Math.round(n);
 </script>
 
@@ -41,43 +39,27 @@
     </span>
   </div>
 
-  <div
-    class="mood-trend"
-    class:up={trend > 0.05}
-    class:down={trend < -0.05}
-  >
-    {#if trend > 0.05}
-      ▲ rising {fmt(trend)}/t
-    {:else if trend < -0.05}
-      ▼ falling {fmt(trend)}/t
+  <div class="mood-trend" class:up={gap > 0.5} class:down={gap < -0.5}>
+    {#if gap > 0.5}
+      ▲ rising toward {target}
+    {:else if gap < -0.5}
+      ▼ falling toward {target}
     {:else}
-      ◦ steady
+      ◦ settled at {target}
     {/if}
   </div>
 
-  {#if modifiers.length > 0}
+  {#if contributions.length > 0}
     <div class="mood-drivers">
-      {#each modifiers as m (m.label)}
-        <div class="mood-row" class:good={m.value > 0} class:bad={m.value < 0}>
-          <span class="mood-label">{m.label}</span>
-          <span class="mood-delta">{fmtInt(m.value)}</span>
+      {#each contributions as c (c.label)}
+        <div class="mood-row" class:good={c.value > 0} class:bad={c.value < 0}>
+          <span class="mood-label">{c.label}</span>
+          <span class="mood-delta">{fmtInt(c.value)}</span>
         </div>
       {/each}
     </div>
-    <div class="mood-sep"></div>
-  {/if}
-
-  {#if drivers.length > 0}
-    <div class="mood-drivers">
-      {#each drivers as d (d.label)}
-        <div class="mood-row" class:good={d.delta > 0} class:bad={d.delta < 0}>
-          <span class="mood-label">{d.label}</span>
-          <span class="mood-delta">{fmt(d.delta)}</span>
-        </div>
-      {/each}
-    </div>
-  {:else if modifiers.length === 0}
-    <div class="mood-none">No active influences — drifting to baseline.</div>
+  {:else}
+    <div class="mood-none">Nothing weighs on them — an even 50.</div>
   {/if}
 </div>
 
@@ -181,10 +163,6 @@
     display: flex;
     flex-direction: column;
     gap: 1px;
-  }
-  .mood-sep {
-    border-top: 1px solid #5a4620;
-    margin: 4px 0;
   }
   .mood-row {
     display: flex;

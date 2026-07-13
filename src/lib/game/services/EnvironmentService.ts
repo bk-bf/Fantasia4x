@@ -415,7 +415,8 @@ export interface WeatherEffects {
   hungerMul: number;
   /** Multiplier on movement cost (gameplay hook; not yet consumed by movement). */
   moveCostMul: number;
-  /** Per-second mood drift while this weather holds (+ pleasant, − miserable). */
+  /** MOOD-REWORK: a STANDING mood-target offset in points while this weather holds (+ pleasant,
+   *  − miserable) — summed into the pawn's mood target, NOT a per-second drift. */
   mood: number;
 }
 

@@ -198,15 +198,24 @@ export function activeMoodModifiers(pawn: Pawn, turn: number): MoodModifier[] {
   return mods.filter((m) => m.expiresAt === 0 || m.expiresAt > turn);
 }
 
-/** Ambient drift mood + Σ active event modifiers, clamped 0–100. The number every consumer
- *  (UI, break checks, work refusal) should read instead of raw `state.mood`. */
-export function effectiveMood(pawn: Pawn, turn: number): number {
-  let mood = pawn.state?.mood ?? 50;
-  const mods = pawn.moodModifiers;
-  if (mods && mods.length > 0) {
-    for (const m of mods) {
-      if (m.expiresAt === 0 || m.expiresAt > turn) mood += m.value;
-    }
-  }
+/**
+ * MOOD-REWORK — a modifier's CURRENT contribution to the mood target. A standing band (`expiresAt: 0`)
+ * contributes its full value; an expiring thought fades linearly from `value` at `startedAt` to 0 at
+ * `expiresAt` (a memory lifting over time). Past its expiry it contributes nothing.
+ */
+export function moodModifierValue(m: MoodModifier, turn: number): number {
+  if (m.expiresAt === 0) return m.value; // standing band — no fade
+  if (m.expiresAt <= turn) return 0; // expired
+  const start = m.startedAt ?? m.expiresAt;
+  if (start >= m.expiresAt) return m.value; // no fade window recorded → full until expiry
+  const frac = (m.expiresAt - turn) / (m.expiresAt - start); // 1 at start → 0 at expiry
+  return m.value * (frac < 0 ? 0 : frac > 1 ? 1 : frac);
+}
+
+/** MOOD-REWORK — the number every consumer (UI, break checks, work refusal) reads: the pawn's single
+ *  eased mood value, clamped 0–100. All event/condition/weather/trait contributions now feed the
+ *  TARGET this value eases toward (PawnService.computeMoodTarget), so nothing is layered on at read. */
+export function effectiveMood(pawn: Pawn, _turn?: number): number {
+  const mood = pawn.state?.mood ?? 50;
   return Math.max(0, Math.min(100, mood));
 }

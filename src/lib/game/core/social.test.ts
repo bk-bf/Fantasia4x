@@ -3,6 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   effectiveMood,
+  moodModifierValue,
   rawStageForScore,
   seedScore,
   stageForScore,
@@ -117,25 +118,34 @@ describe('off-colony kin staleness', () => {
 });
 
 describe('effective mood', () => {
-  it('layers active modifiers over the drift mood and clamps', () => {
+  // MOOD-REWORK: effectiveMood is now just the pawn's eased state.mood, clamped. Modifiers no longer
+  // layer on at read time — they feed the TARGET the mood eases toward (PawnService.computeMoodTarget).
+  it('returns the eased state.mood, ignoring modifiers (they feed the target, not the read)', () => {
     const p = pawnOf('a', 'c1', {
-      moodModifiers: [
-        { id: 'grief:x', label: 'Grieving', value: -25, expiresAt: 5000 },
-        { id: 'meal', label: 'Ate a hot meal', value: 8, expiresAt: 100 }, // expired at turn 200
-        { id: 'band', label: 'Finely arrayed', value: 5, expiresAt: 0 } // standing
-      ]
-    } as Partial<Pawn>);
-    // 50 - 25 + 5 (meal expired)
-    expect(effectiveMood(p, 200)).toBe(30);
-    // all live before turn 100
-    expect(effectiveMood(p, 50)).toBe(38);
+      state: { mood: 42, isWorking: false, isSleeping: false, isEating: false },
+      moodModifiers: [{ id: 'grief:x', label: 'Grieving', value: -25, expiresAt: 5000, startedAt: 0 }]
+    } as unknown as Partial<Pawn>);
+    expect(effectiveMood(p, 200)).toBe(42);
   });
 
-  it('clamps to 0..100', () => {
-    const p = pawnOf('a', 'c1', {
-      moodModifiers: [{ id: 'x', label: 'x', value: -90, expiresAt: 0 }]
-    } as Partial<Pawn>);
-    expect(effectiveMood(p, 1)).toBe(0);
+  it('clamps to 0..100 and defaults to 50 when state.mood is absent', () => {
+    const low = pawnOf('a', 'c1', {
+      state: { mood: -30, isWorking: false, isSleeping: false, isEating: false }
+    } as unknown as Partial<Pawn>);
+    expect(effectiveMood(low, 1)).toBe(0);
+    const none = pawnOf('b', 'c1', {} as Partial<Pawn>);
+    expect(effectiveMood(none, 1)).toBe(50);
+  });
+});
+
+describe('moodModifierValue (fade-to-zero)', () => {
+  it('standing bands hold full value; expiring thoughts fade linearly to zero', () => {
+    expect(moodModifierValue({ id: 's', label: 's', value: 5, expiresAt: 0 }, 999)).toBe(5);
+    const thought = { id: 't', label: 't', value: -10, expiresAt: 100, startedAt: 0 };
+    expect(moodModifierValue(thought, 0)).toBe(-10); // full at start
+    expect(moodModifierValue(thought, 50)).toBeCloseTo(-5, 5); // half faded
+    expect(moodModifierValue(thought, 100)).toBe(0); // expired
+    expect(moodModifierValue(thought, 200)).toBe(0);
   });
 });
 

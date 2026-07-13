@@ -19,9 +19,9 @@ import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
 import { stepBody } from './MovementSystem';
 import { occupancyService } from './OccupancyService';
 import conditionsData from '../database/conditions.jsonc';
-import { getConditionCurrentStage, conditionNeedMultipliers } from '../core/needs';
+import { getConditionCurrentStage, conditionNeedMultipliers, getConditionDefById } from '../core/needs';
 import { amenityAt } from '../core/buildingAmenity';
-import { activeMoodModifiers, effectiveMood } from '../core/Social';
+import { effectiveMood, moodModifierValue } from '../core/Social';
 import {
   getAmbientLight,
   weatherEffects,
@@ -50,6 +50,25 @@ function getActiveTransientConditions(entity: Pawn | Mob): TransientConditionDef
     .filter((e): e is TransientConditionDef => e !== undefined);
 }
 
+// ── MOOD-REWORK tunables (realistic scale) ──────────────────────────────────────────────────────
+// Mood is a single 0–100 value that eases toward a computed TARGET; it does NOT drift by per-tick
+// nudges anymore. Everything (weather/conditions/traits/needs/events) is a signed point offset summed
+// into that target (computeMoodTarget). Data-authored offsets live in the four *.jsonc files.
+const MOOD_BASE = 50; // where every pawn starts and drifts back toward with nothing acting on them
+// Ease at ~0.4 mood/in-game-second → a ~10-point gap closes in ~2 in-game hours (the design target).
+const MOOD_EASE_STEP = perTick(0.4);
+// Raw-need standing offsets — the everyday discomfort. The escalated MEDICAL states (malnutrition,
+// dehydration, hypothermia…) stack MORE on top through their condition `mood`, so chronic suffering bites.
+const MOOD_STARVING = -12;
+const MOOD_HUNGRY = -5;
+const MOOD_EXHAUSTED = -8;
+const MOOD_TIRED = -4;
+const MOOD_PARCHED = -10;
+const MOOD_THIRSTY = -4;
+const MOOD_FILTHY = -4;
+const MOOD_BADLY_HURT = -12;
+const MOOD_WOUNDED = -5;
+
 /**
  * PawnService - Clean interface for pawn behavior and need management
  * Handles ONLY pawn-specific business logic, delegates to other systems for calculations
@@ -60,7 +79,6 @@ export interface PawnService {
 
   // State Management (PawnService responsibility)
   updatePawnState(pawnId: string, gameState: GameState): GameState;
-  updateMorale(pawnId: string, gameState: GameState): GameState;
 
   // Activity Management (PawnService responsibility)
   getPawnActivities(pawnId: string, gameState: GameState): string[];
@@ -230,32 +248,7 @@ export class PawnServiceImpl implements PawnService {
   updatePawnState(pawnId: string, gameState: GameState): GameState {
     const pawn = pawnById(gameState.pawns, pawnId);
     if (!pawn) return gameState;
-    // Weather mood drift; a sheltered (roofed) pawn feels a storm's gloom much less.
-    let weatherMood = weatherEffects(gameState.weather).mood;
-    if (weatherMood < 0 && pawn.position && isRoofedTile(pawn.position.x, pawn.position.y)) {
-      weatherMood *= 0.4;
-    }
-    // §M pleasant surroundings: a pawn standing on a comfortable, beautiful, finely-furnished tile
-    // drifts toward a better mood, proportional to that tile's amenity (material choice feeds in).
-    let amenityMood = 0;
-    if (pawn.position) {
-      const a = amenityAt(gameState.buildings, pawn.position.x, pawn.position.y);
-      amenityMood = Math.min(3, (a.comfort + a.beauty) * 1.5);
-    }
-    pawn.state = this.calculateStateUpdate(
-      pawn.state,
-      pawn.needs,
-      gameState.turn,
-      weatherMood,
-      amenityMood
-    );
-    return gameState;
-  }
-
-  updateMorale(pawnId: string, gameState: GameState): GameState {
-    const pawn = pawnById(gameState.pawns, pawnId);
-    if (!pawn) return gameState;
-    pawn.state.mood = this.calculateMorale(pawn, gameState);
+    pawn.state = this.calculateStateUpdate(pawn, gameState);
     return gameState;
   }
 
@@ -336,7 +329,6 @@ export class PawnServiceImpl implements PawnService {
       if (pawn.isAlive === false) return; // skip dead pawns
       if (pawn.drafted) return; // skip drafted pawns — player-controlled
       newState = this.updatePawnState(pawn.id, newState);
-      newState = this.updateMorale(pawn.id, newState);
     });
 
     return newState;
@@ -623,138 +615,165 @@ export class PawnServiceImpl implements PawnService {
     return false;
   }
 
-  private calculateStateUpdate(
-    state: PawnState,
-    needs: EntityNeeds,
-    currentTurn: number,
-    weatherMood = 0,
-    amenityMood = 0
-  ): PawnState {
-    const newState = { ...state };
+  /**
+   * MOOD-REWORK — per-tick pawn state update: keep the critical-need activity booleans, then EASE the
+   * pawn's single mood value toward its computed TARGET (no more per-tick nudges). The gap closes at a
+   * fixed step so a ~10-point move takes ~2 in-game hours. Runs every tick for each non-drafted living
+   * pawn (hot path — allocation-free; `computeMoodTarget` takes no `out` array here).
+   */
+  private calculateStateUpdate(pawn: Pawn, gameState: GameState): PawnState {
+    const needs = pawn.needs;
+    const newState = { ...pawn.state };
 
-    // SEASONS_WEATHER: weather sets a gentle mood drift (pleasant skies lift, storms depress).
-    if (weatherMood !== 0) {
-      newState.mood = Math.max(0, Math.min(100, newState.mood + perTick(weatherMood)));
-    }
-    // §M pleasant-surroundings mood lift, proportional to the occupied tile's comfort + beauty.
-    if (amenityMood > 0) {
-      newState.mood = Math.min(100, newState.mood + perTick(amenityMood));
-    }
-
-    // Critical needs override current activities.
-    // NOTE: isEating=true here is safe for sleeping pawns because handleSleeping in
-    // PawnStateMachine explicitly sets isEating:false each tick before syncTransientConditions
-    // reads it, preventing the stale "eating while sleeping" badge.
+    // Critical needs override current activities (booleans only — mood is handled by the target below).
+    // NOTE: isEating=true here is safe for sleeping pawns because handleSleeping in PawnStateMachine
+    // explicitly sets isEating:false each tick before syncTransientConditions reads it.
     if (needs.hunger > 90) {
       newState.isWorking = false;
       newState.isSleeping = false;
       newState.isEating = true;
-      newState.mood = Math.max(0, newState.mood - perTick(5));
     } else if (needs.fatigue > 95) {
-      // Use fatigue as single rest need
       newState.isWorking = false;
       newState.isEating = false;
       newState.isSleeping = true;
-      newState.mood = Math.max(0, newState.mood - perTick(3));
     } else if (needs.fatigue > 90) {
-      // Medium fatigue - stop working but don't force sleep
       newState.isWorking = false;
-      newState.mood = Math.max(0, newState.mood - perTick(2));
     }
 
-    // §D water needs: parched / filthy pawns lose mood — the mood pressure on top of the
-    // drink/wash AI (auto-drink/wash + FSM routing to drink/wash zones) and the dehydration
-    // condition that the state machine already drive.
-    if ((needs.thirst ?? 0) > 90) {
-      newState.mood = Math.max(0, newState.mood - perTick(4));
-    }
-    if ((needs.hygiene ?? 0) > 85) {
-      newState.mood = Math.max(0, newState.mood - perTick(1));
-    }
-
-    // Positive mood from activities
-    if (newState.isEating && needs.hunger > 50) {
-      newState.mood = Math.min(100, newState.mood + perTick(3));
-    } else if (newState.isSleeping && needs.fatigue > 50) {
-      // Use fatigue for sleep benefit
-      newState.mood = Math.min(100, newState.mood + perTick(2));
-    } else if (newState.isWorking && needs.fatigue < 80) {
-      newState.mood = Math.min(100, newState.mood + perTick(1));
-    }
-
-    // Health regeneration is accrued per tick (processNeedsTick), not here, so the
-    // HP bar climbs smoothly. This per-turn pass only handles mood reactions.
+    // Ease mood toward its target; snap when within a step so it settles exactly on the target.
+    const target = this.computeMoodTarget(pawn, gameState);
+    const cur = newState.mood ?? MOOD_BASE;
+    const gap = target - cur;
+    newState.mood =
+      Math.abs(gap) <= MOOD_EASE_STEP ? target : cur + Math.sign(gap) * MOOD_EASE_STEP;
 
     return newState;
   }
 
   /**
-   * §M Mood breakdown for the info-panel MOOD pop-up — the signed per-tick mood drivers acting on the
-   * pawn right now (benefits + debuffs) and their net `trend`. MUST mirror the deltas applied in
-   * `calculateStateUpdate` so the readout matches what actually moves the bar.
+   * MOOD-REWORK — the pawn's mood TARGET: BASE(50) + Σ signed contributions (weather, surroundings, raw
+   * needs, health, permanent trait temperament, active conditions, and event "thought" modifiers — the
+   * expiring ones FADED to zero over their life). The live path calls this allocation-free (`out` null);
+   * the MOOD panel passes an `out` array to also collect the itemised, labelled contributions. Clamped
+   * 0–100. MUST stay the single source of truth — nothing else should nudge `state.mood`.
+   */
+  computeMoodTarget(
+    pawn: Pawn,
+    gameState: GameState,
+    out: { label: string; value: number }[] | null = null
+  ): number {
+    let t = MOOD_BASE;
+
+    // Weather — a roof softens foul weather's gloom (matches the old drift path).
+    let weatherMood = weatherEffects(gameState.weather).mood;
+    if (weatherMood < 0 && pawn.position && isRoofedTile(pawn.position.x, pawn.position.y))
+      weatherMood *= 0.4;
+    if (weatherMood) {
+      t += weatherMood;
+      if (out)
+        out.push({ label: weatherMood > 0 ? 'Fair skies' : 'Foul weather', value: weatherMood });
+    }
+
+    // Pleasant surroundings — comfort + beauty of the occupied tile (material choice feeds in).
+    if (pawn.position) {
+      const a = amenityAt(gameState.buildings, pawn.position.x, pawn.position.y);
+      const am = Math.min(3, (a.comfort + a.beauty) * 1.5);
+      if (am > 0) {
+        t += am;
+        if (out) out.push({ label: 'Pleasant surroundings', value: am });
+      }
+    }
+
+    // Raw needs — the everyday discomfort (medical escalations add more via conditions below).
+    const n = pawn.needs;
+    if (n.hunger > 90) {
+      t += MOOD_STARVING;
+      if (out) out.push({ label: 'Starving', value: MOOD_STARVING });
+    } else if (n.hunger > 75) {
+      t += MOOD_HUNGRY;
+      if (out) out.push({ label: 'Hungry', value: MOOD_HUNGRY });
+    }
+    if (n.fatigue > 95) {
+      t += MOOD_EXHAUSTED;
+      if (out) out.push({ label: 'Exhausted', value: MOOD_EXHAUSTED });
+    } else if (n.fatigue > 85) {
+      t += MOOD_TIRED;
+      if (out) out.push({ label: 'Very tired', value: MOOD_TIRED });
+    }
+    if ((n.thirst ?? 0) > 90) {
+      t += MOOD_PARCHED;
+      if (out) out.push({ label: 'Parched', value: MOOD_PARCHED });
+    } else if ((n.thirst ?? 0) > 75) {
+      t += MOOD_THIRSTY;
+      if (out) out.push({ label: 'Thirsty', value: MOOD_THIRSTY });
+    }
+    if ((n.hygiene ?? 0) > 85) {
+      t += MOOD_FILTHY;
+      if (out) out.push({ label: 'Filthy', value: MOOD_FILTHY });
+    }
+
+    // Health (legacy state.health field).
+    const hp = pawn.state?.health ?? 100;
+    if (hp < 50) {
+      t += MOOD_BADLY_HURT;
+      if (out) out.push({ label: 'Badly hurt', value: MOOD_BADLY_HURT });
+    } else if (hp < 80) {
+      t += MOOD_WOUNDED;
+      if (out) out.push({ label: 'Wounded', value: MOOD_WOUNDED });
+    }
+
+    // Traits — permanent temperament baseline (traits.jsonc top-level `mood`).
+    for (const tr of pawn.traits ?? []) {
+      const m = tr.mood;
+      if (m) {
+        t += m;
+        if (out) out.push({ label: tr.name ?? tr.id ?? 'Temperament', value: m });
+      }
+    }
+
+    // Conditions — standing offsets while active (conditions.jsonc `mood`). Both persistent and
+    // transient conditions; a transient may be stored as "id:stage", so take the id before the colon.
+    for (const c of pawn.conditions ?? []) {
+      const def = getConditionDefById(c.id);
+      if (def?.mood) {
+        t += def.mood;
+        if (out) out.push({ label: def.name ?? c.id, value: def.mood });
+      }
+    }
+    for (const id of pawn.transientConditions ?? []) {
+      const cid = id.includes(':') ? id.split(':')[0] : id;
+      const def = getConditionDefById(cid);
+      if (def?.mood) {
+        t += def.mood;
+        if (out) out.push({ label: def.name ?? cid, value: def.mood });
+      }
+    }
+
+    // Event "thought" modifiers (grief, meals, insults, breakups…) — expiring ones faded to zero.
+    for (const m of pawn.moodModifiers ?? []) {
+      const v = moodModifierValue(m, gameState.turn);
+      if (v) {
+        t += v;
+        if (out) out.push({ label: m.label, value: v });
+      }
+    }
+
+    return t < 0 ? 0 : t > 100 ? 100 : t;
+  }
+
+  /**
+   * MOOD-REWORK — breakdown for the MOOD pop-up: the pawn's CURRENT (eased) mood, the TARGET it is
+   * easing toward, and the itemised signed contributions behind that target (weather, needs, health,
+   * traits, conditions, event thoughts). Delegates to `computeMoodTarget` so the readout can never
+   * drift from what actually moves the bar.
    */
   getMoodBreakdown(
     pawn: Pawn,
     gameState: GameState
-  ): {
-    mood: number;
-    trend: number;
-    drivers: { label: string; delta: number }[];
-    modifiers: { label: string; value: number }[];
-  } {
-    const needs = pawn.needs;
-    const st = pawn.state;
-    const drivers: { label: string; delta: number }[] = [];
-
-    // Weather (a roof softens a storm's gloom — same as the live path).
-    let weatherMood = weatherEffects(gameState.weather).mood;
-    if (weatherMood < 0 && pawn.position && isRoofedTile(pawn.position.x, pawn.position.y))
-      weatherMood *= 0.4;
-    if (weatherMood !== 0)
-      drivers.push({ label: weatherMood > 0 ? 'Fair skies' : 'Foul weather', delta: weatherMood });
-
-    // §M pleasant surroundings — comfort + beauty of the occupied tile.
-    if (pawn.position) {
-      const a = amenityAt(gameState.buildings, pawn.position.x, pawn.position.y);
-      const amenityMood = Math.min(3, (a.comfort + a.beauty) * 1.5);
-      if (amenityMood > 0) drivers.push({ label: 'Pleasant surroundings', delta: amenityMood });
-    }
-
-    // Need debuffs (mutually-exclusive critical block, then thirst/hygiene).
-    if (needs.hunger > 90) drivers.push({ label: 'Starving', delta: -5 });
-    else if (needs.fatigue > 95) drivers.push({ label: 'Exhausted', delta: -3 });
-    else if (needs.fatigue > 90) drivers.push({ label: 'Very tired', delta: -2 });
-    if ((needs.thirst ?? 0) > 90) drivers.push({ label: 'Parched', delta: -4 });
-    if ((needs.hygiene ?? 0) > 85) drivers.push({ label: 'Filthy', delta: -1 });
-
-    // Activity benefits.
-    if (st.isEating && needs.hunger > 50) drivers.push({ label: 'Eating', delta: 3 });
-    else if (st.isSleeping && needs.fatigue > 50) drivers.push({ label: 'Resting', delta: 2 });
-    else if (st.isWorking && needs.fatigue < 80)
-      drivers.push({ label: 'Absorbed in work', delta: 1 });
-
-    const trend = drivers.reduce((s, d) => s + d.delta, 0);
-    // SOCIAL-LAYER §7: standing event moods (grief, a hot meal, a breakup…) layered over the
-    // per-tick drift; the headline number is the EFFECTIVE mood every consumer acts on.
-    const modifiers = activeMoodModifiers(pawn, gameState.turn).map((m) => ({
-      label: m.label,
-      value: m.value
-    }));
-    return { mood: Math.round(effectiveMood(pawn, gameState.turn)), trend, drivers, modifiers };
-  }
-
-  private calculateMorale(pawn: Pawn, gameState: GameState): number {
-    let morale = pawn.state.mood;
-
-    // Need-based morale modifiers (only hunger and fatigue/rest)
-    if (pawn.needs.hunger > 80) morale -= 10;
-    if (pawn.needs.fatigue > 80) morale -= 12; // Slightly higher penalty for tiredness
-
-    // Health-based morale (legacy field)
-    if ((pawn.state.health ?? 100) < 50) morale -= 20;
-    else if ((pawn.state.health ?? 100) < 80) morale -= 10;
-
-    return Math.max(0, Math.min(100, morale));
+  ): { mood: number; target: number; contributions: { label: string; value: number }[] } {
+    const contributions: { label: string; value: number }[] = [];
+    const target = this.computeMoodTarget(pawn, gameState, contributions);
+    return { mood: Math.round(effectiveMood(pawn)), target: Math.round(target), contributions };
   }
 
   // Per-second magnitude. Applied smoothly each tick (via perTick) by processNeedsTick().

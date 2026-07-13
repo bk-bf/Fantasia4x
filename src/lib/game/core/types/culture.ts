@@ -136,6 +136,11 @@ export interface Trait {
    *  event, `lineageGrowthEvent` may EVOLVE a staged trait to this target (~10%, favoured over gaining
    *  a new lineage member), swapping the trait and applying the new rung's one-shot effects. */
   evolvesTo?: string;
+  /** MOOD-REWORK — a permanent temperament offset (in mood points) this trait confers, summed into the
+   *  pawn's mood target (PawnService.computeMoodTarget). Top-level (NOT in `effects`) so it applies to
+   *  any trait `kind` without touching the ADR-028 stat/attribute effect validators. Ill-tempered lowers
+   *  the baseline, an even temperament raises it a little. */
+  mood?: number;
   /** LINEAGES §2 — the ancestral-blood lineages this trait belongs to (an ARRAY: Feral Adrenaline is
    *  `["beast","werewolf"]`, both pools draw it). A pawn that carries the lineage's parent marker can
    *  GROW any trait whose `lineage` includes its lineage id, at a seasonal growth event. */

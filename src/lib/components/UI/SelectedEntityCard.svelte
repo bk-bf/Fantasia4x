@@ -79,26 +79,20 @@
     onSelect?: () => void;
   }
 
-  /** §M One signed per-tick mood driver acting on the pawn (benefit if `delta > 0`, debuff if `< 0`). */
-  export interface MoodDriver {
-    label: string;
-    delta: number;
-  }
-
-  /** SOCIAL-LAYER §7: one standing event mood (grief, a hot meal, a breakup…) with its offset. */
-  export interface MoodEventModifier {
+  /** MOOD-REWORK — one signed contribution to the mood target (benefit if `value > 0`, debuff if `< 0`):
+   *  weather, surroundings, a need, a condition, a trait, or an event "thought". */
+  export interface MoodContribution {
     label: string;
     value: number;
   }
 
-  /** §M Whole mood snapshot rendered by the MOOD popup: current (EFFECTIVE) value, net per-tick
-   *  `trend`, the active drift drivers, and the standing event moods layered on top. Mirrors
-   *  `pawnService.getMoodBreakdown` / `calculateStateUpdate`. */
+  /** MOOD-REWORK — the MOOD popup snapshot: the pawn's CURRENT (eased) value, the TARGET it is easing
+   *  toward, and the itemised contributions behind that target. Sourced from
+   *  `pawnService.getMoodBreakdown` (= `computeMoodTarget`). */
   export interface MoodModel {
     mood: number;
-    trend: number;
-    drivers: MoodDriver[];
-    modifiers?: MoodEventModifier[];
+    target: number;
+    contributions: MoodContribution[];
   }
 
   /** One wound line on a body part, or an active condition. */
@@ -391,12 +385,12 @@
         </button>
       {/if}
       {#if model.moodModel && model.selected}
-        <!-- §M MOOD button — only on the SELECTED card; the pop-up shows on hover when the shared
-             toggle is on. Warn-tinted when mood is trending down. -->
+        <!-- MOOD button — only on the SELECTED card; the pop-up shows on hover when the shared
+             toggle is on. Warn-tinted when mood is falling (target below the current value). -->
         <button
           class="hud-btn"
           class:hud-btn--active={moodToggle.open}
-          class:hud-btn--warn={model.moodModel.trend < -0.05}
+          class:hud-btn--warn={model.moodModel.target < model.moodModel.mood - 0.5}
           onmousedown={(e) => e.stopPropagation()}
           onmouseup={(e) => e.stopPropagation()}
           onclick={(e) => {

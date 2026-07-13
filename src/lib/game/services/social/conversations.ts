@@ -38,6 +38,10 @@ export interface ConversationOutcome {
   positive: boolean;
   /** Score delta for the pair (signed). */
   delta: number;
+  /** MOOD-REWORK — the mood "thought" this exchange leaves on BOTH participants (a warm chat lifts,
+   *  an insult/rebuffed advance stings). Authored per category in dialog.jsonc (`moodGood`/`moodBad`);
+   *  0 when the category has no mood bearing. SocialService applies it as a faded thought. */
+  moodDelta: number;
   lines: ConversationLine[];
   /** Chronicle `result` phrase ("warmed to each other" / "it turned into an argument"). */
   resultText: string;
@@ -62,6 +66,9 @@ interface CategoryBank {
   goodDelta: number;
   badDelta: number;
   goodChance: number;
+  /** MOOD-REWORK — the mood thought a warm / soured exchange leaves on each participant. */
+  moodGood?: number;
+  moodBad?: number;
   beats: Beat[];
   /** Opener lines used when the pair spoke recently — they reference `{subject}` to carry the thread. */
   callbacks?: string[];
@@ -246,6 +253,7 @@ export function runConversation(
     category,
     positive,
     delta: positive ? bank.goodDelta : bank.badDelta,
+    moodDelta: positive ? (bank.moodGood ?? 0) : (bank.moodBad ?? 0),
     lines,
     resultText: positive ? RESULT_GOOD[category] : RESULT_BAD[category],
     subject

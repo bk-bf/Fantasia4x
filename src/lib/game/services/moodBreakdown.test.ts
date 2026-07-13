@@ -3,11 +3,15 @@ import { pawnService } from './PawnService';
 import type { GameState, Pawn, PlacedBuilding } from '../core/types';
 
 /**
- * §M getMoodBreakdown — the signed per-tick mood drivers + net trend surfaced by the MOOD pop-up.
- * MUST mirror the deltas applied in calculateStateUpdate (a drift here means the readout lies). These
- * lock the sign of each driver and that `trend` is their sum.
+ * MOOD-REWORK — getMoodBreakdown surfaces the pawn's CURRENT (eased) mood, the TARGET it eases toward,
+ * and the itemised signed contributions behind that target. These lock the sign of each contribution
+ * and that `target` = clamp(50 + Σ contributions) — the single source of truth mood moves toward.
  */
-function pawn(needs: Partial<Pawn['needs']> = {}, state: Partial<Pawn['state']> = {}): Pawn {
+function pawn(
+  needs: Partial<Pawn['needs']> = {},
+  state: Partial<Pawn['state']> = {},
+  extra: Partial<Pawn> = {}
+): Pawn {
   return {
     id: 'p1',
     name: 'Tester',
@@ -17,45 +21,66 @@ function pawn(needs: Partial<Pawn['needs']> = {}, state: Partial<Pawn['state']> 
     needs: { hunger: 10, fatigue: 10, thirst: 10, hygiene: 10, sleep: 0, lastSleep: 0, lastMeal: 0, ...needs },
     state: { health: 100, mood: 50, isWorking: false, isSleeping: false, isEating: false, ...state },
     conditions: [],
-    traits: []
+    transientConditions: [],
+    traits: [],
+    ...extra
   } as unknown as Pawn;
 }
 
-function makeState(p: Pawn, buildings: PlacedBuilding[] = []): GameState {
-  return { seed: 1, turn: 0, pawns: [p], buildings, weather: undefined } as unknown as GameState;
+function makeState(p: Pawn, buildings: PlacedBuilding[] = [], turn = 0): GameState {
+  return { seed: 1, turn, pawns: [p], buildings, weather: undefined } as unknown as GameState;
 }
 
-describe('§M getMoodBreakdown', () => {
-  it('a contented pawn (low needs) has no debuff drivers — only the ambient weather, if any', () => {
-    const out = pawnService.getMoodBreakdown(pawn(), makeState(pawn()));
-    expect(out.drivers.every((d) => d.delta >= 0)).toBe(true);
-    expect(out.trend).toBeGreaterThanOrEqual(0);
-    expect(out.mood).toBe(50);
+const sum = (cs: { value: number }[]) => cs.reduce((s, c) => s + c.value, 0);
+
+describe('MOOD-REWORK getMoodBreakdown', () => {
+  it('a contented pawn (low needs) has no debuff contributions and a target at/above baseline', () => {
+    const p = pawn();
+    const out = pawnService.getMoodBreakdown(p, makeState(p));
+    expect(out.contributions.every((c) => c.value >= 0)).toBe(true);
+    expect(out.mood).toBe(50); // the eased value (state.mood)
+    expect(out.target).toBeGreaterThanOrEqual(50);
   });
 
-  it('a starving pawn gets a negative "Starving" driver and a falling trend', () => {
-    const out = pawnService.getMoodBreakdown(pawn({ hunger: 95 }), makeState(pawn({ hunger: 95 })));
-    const starving = out.drivers.find((d) => d.label === 'Starving');
-    expect(starving?.delta).toBe(-5);
-    expect(out.trend).toBeLessThan(0);
-  });
-
-  it('trend equals the sum of all driver deltas', () => {
+  it('target equals clamp(50 + Σ contributions)', () => {
     const p = pawn({ thirst: 95, hygiene: 90 });
     const out = pawnService.getMoodBreakdown(p, makeState(p));
-    const sum = out.drivers.reduce((s, d) => s + d.delta, 0);
-    expect(out.trend).toBeCloseTo(sum, 5);
-    // Parched (-4) and Filthy (-1) both fire.
-    expect(out.drivers.find((d) => d.label === 'Parched')?.delta).toBe(-4);
-    expect(out.drivers.find((d) => d.label === 'Filthy')?.delta).toBe(-1);
+    expect(out.target).toBe(Math.max(0, Math.min(100, Math.round(50 + sum(out.contributions)))));
+    // Parched (-10) and Filthy (-4) both fire.
+    expect(out.contributions.find((c) => c.label === 'Parched')?.value).toBe(-10);
+    expect(out.contributions.find((c) => c.label === 'Filthy')?.value).toBe(-4);
   });
 
-  it('§M pleasant surroundings (nearby couch) add a positive driver', () => {
+  it('a starving pawn gets a negative "Starving" contribution and a target below baseline', () => {
+    const p = pawn({ hunger: 95 });
+    const out = pawnService.getMoodBreakdown(p, makeState(p));
+    expect(out.contributions.find((c) => c.label === 'Starving')?.value).toBe(-12);
+    expect(out.target).toBeLessThan(50);
+  });
+
+  it('pleasant surroundings (nearby couch) add a positive contribution', () => {
     const couch = { id: 'c1', type: 'couch', x: 0, y: 0, status: 'complete', progress: 1 } as PlacedBuilding;
     const p = pawn();
     const out = pawnService.getMoodBreakdown(p, makeState(p, [couch]));
-    const pleasant = out.drivers.find((d) => d.label === 'Pleasant surroundings');
+    const pleasant = out.contributions.find((c) => c.label === 'Pleasant surroundings');
     expect(pleasant).toBeDefined();
-    expect(pleasant!.delta).toBeGreaterThan(0);
+    expect(pleasant!.value).toBeGreaterThan(0);
+  });
+
+  it('an event "thought" feeds the target and FADES to zero over its life', () => {
+    const p = pawn(
+      {},
+      {},
+      { moodModifiers: [{ id: 'grief:x', label: 'Grieving', value: -12, expiresAt: 200, startedAt: 0 }] }
+    );
+    // full weight at the moment it lands
+    const atStart = pawnService.getMoodBreakdown(p, makeState(p, [], 0));
+    expect(atStart.contributions.find((c) => c.label === 'Grieving')?.value).toBe(-12);
+    // ~half faded halfway through its life
+    const atHalf = pawnService.getMoodBreakdown(p, makeState(p, [], 100));
+    expect(atHalf.contributions.find((c) => c.label === 'Grieving')?.value).toBeCloseTo(-6, 5);
+    // gone once expired
+    const afterExpiry = pawnService.getMoodBreakdown(p, makeState(p, [], 200));
+    expect(afterExpiry.contributions.find((c) => c.label === 'Grieving')).toBeUndefined();
   });
 });

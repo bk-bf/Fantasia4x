@@ -71,6 +71,9 @@ const DIALOG_RANGE = 2; // tiles — pawns strike up a dialog within this of eac
 const DIALOG_CHANCE = 0.6; // chance an eligible, off-cooldown pair actually starts talking this tick
 const DIALOG_PAIR_COOLDOWN_S = 25; // in-game seconds before the SAME pair chats again
 const DIALOG_PAWN_COOLDOWN_S = 6; // in-game seconds before a pawn joins ANY new dialog
+// MOOD-REWORK: a dialog leaves a faded mood "thought" on both talkers (dialog.jsonc moodGood/moodBad).
+// The magnitude carries the weight; they all fade over this window (a chat's afterglow / an insult's sting).
+const DIALOG_MOOD_FADE_DAYS = 0.5;
 // §4 romance
 const ATTRACTION_MIN_BEAUTY = 0.75;
 const ROMANCE_MIN_AGE = 18;
@@ -158,7 +161,13 @@ class SocialServiceImpl {
     turn: number
   ): void {
     const next = (pawn.moodModifiers ?? []).filter((m) => m.id !== id);
-    next.push({ id, label, value, expiresAt: durationTicks > 0 ? turn + durationTicks : 0 });
+    next.push({
+      id,
+      label,
+      value,
+      expiresAt: durationTicks > 0 ? turn + durationTicks : 0,
+      startedAt: turn // fade window start (ignored for standing bands, expiresAt: 0)
+    });
     pawn.moodModifiers = next;
   }
 
@@ -799,6 +808,12 @@ class SocialServiceImpl {
     return working ? { ...state, relationships: working } : state;
   }
 
+  /** MOOD-REWORK: leave a faded mood thought on `p` from a dialog with `other`. */
+  private applyDialogMood(p: Pawn, other: Pawn, delta: number, turn: number): void {
+    const label = delta > 0 ? `A warm word with ${firstName(other)}` : `Cross words with ${firstName(other)}`;
+    this.addMoodModifier(p, `talk:${other.id}`, label, delta, days(DIALOG_MOOD_FADE_DAYS), turn);
+  }
+
   /** Assemble + resolve one dialog between `a` and `b`: move the relationship (logged), advance
    *  romance on a flirt, float each line over its speaker, and drop one expandable chronicle entry. */
   private runDialogBetween(
@@ -841,6 +856,12 @@ class SocialServiceImpl {
       positive: outcome.positive,
       turn
     };
+    // MOOD-REWORK: the exchange leaves a faded mood thought on each talker (a warm word lifts, cross
+    // words sting). Keyed per-partner so it refreshes rather than stacking without bound.
+    if (outcome.moodDelta) {
+      this.applyDialogMood(a, b, outcome.moodDelta, turn);
+      this.applyDialogMood(b, a, outcome.moodDelta, turn);
+    }
     if (outcome.category === 'flirt') {
       this.afterFlirt(state, working, a, b, rel, outcome.positive, turn);
     }

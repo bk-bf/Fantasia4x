@@ -107,16 +107,21 @@ export interface PawnRelationship {
 }
 
 /**
- * One readable mood source with an expiry (SOCIAL-LAYER §7). Applied ADDITIVELY over the ambient
- * drift mood: effective mood = clamp(state.mood + Σ active values). `expiresAt` is an absolute
- * tick; 0 = standing (re-evaluated each daily social pass). REPLACE the pawn's array on change,
- * never push in place — the snapshot cold-field diff ships it by ref.
+ * One readable mood source (SOCIAL-LAYER §7 / MOOD-REWORK). A signed point contribution to the mood
+ * TARGET the pawn eases toward (PawnService.computeMoodTarget); NOT added at read time. `expiresAt` is
+ * an absolute tick; an expiring thought FADES linearly to 0 over [`startedAt`, `expiresAt`]. 0 = a
+ * standing band (full value, re-evaluated each daily social pass; never fades). REPLACE the pawn's
+ * array on change, never push in place — the snapshot cold-field diff ships it by ref.
  */
 export interface MoodModifier {
   id: string;
   label: string;
   value: number;
   expiresAt: number;
+  /** MOOD-REWORK — the tick the thought landed. An expiring thought's contribution FADES linearly
+   *  from `value` (at `startedAt`) to 0 (at `expiresAt`), so a memory lifts over time rather than
+   *  snapping off. Absent ⇒ full value until it expires (standing bands, `expiresAt: 0`, never fade). */
+  startedAt?: number;
 }
 
 /** A mental break (SOCIAL-LAYER §7): the pawn refuses work until the given tick. `crisis` is the

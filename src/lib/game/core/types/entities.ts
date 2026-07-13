@@ -349,8 +349,10 @@ export interface Pawn {
    *  renders them greyed "as you last knew" (the KINGDOMS-TRADE staleness principle). Refreshed
    *  ONLY on a caravan/visitor arrival (daily-gated) — never touched per tick. */
   lastSeenTurn?: number;
-  /** Active event moods (grief, a hot meal, a breakup…), layered additively over the ambient
-   *  `state.mood` drift by SocialService.getEffectiveMood. Pruned on the daily social pass. */
+  /** Event mood "thoughts" (grief, a hot meal, a breakup, an insult…) plus standing social bands
+   *  (finely arrayed, working among friends…). Each is a signed point contribution to the mood TARGET
+   *  (PawnService.computeMoodTarget) that mood eases toward — the expiring ones FADE to zero over their
+   *  life (MOOD-REWORK). Pruned on the daily social pass. */
   moodModifiers?: MoodModifier[];
   /** Active mental break — the pawn refuses colony work until `until`. Set/cleared by the daily
    *  social pass; the FSM job-claim path gates on it. */

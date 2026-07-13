@@ -1,9 +1,12 @@
 // dialog.jsonc — flavor-line banks + relationship effects for the pawn dialog system (SOCIAL-LAYER §3).
 // Pawns strike up a dialog when they come within a couple of tiles of each other (proximity-triggered;
 // SocialService.processDialogTick). Each CATEGORY carries both its lines AND its relationship EFFECT:
-//   goodDelta  — score change on a warm/successful exchange
-//   badDelta   — score change when it lands wrong
+//   goodDelta  — relationship score change on a warm/successful exchange
+//   badDelta   — relationship score change when it lands wrong
 //   goodChance — base chance it goes well (charm/mood/temperament tilt it; argue/insult never do)
+//   moodGood / moodBad — MOOD-REWORK: the mood "thought" the exchange leaves on BOTH talkers (a warm
+//                word lifts, an insult / rebuffed advance stings). A faded thought summed into each
+//                pawn's mood target (SocialService.applyDialogMood → PawnService.computeMoodTarget).
 //
 // COHERENCE — lines are authored as BEATS, not shuffled from separate pools. A beat is one complete
 // little exchange: an `open` (speaker A) + a matched `good`/`bad` { reply (B), close (A) }, so the
@@ -49,6 +52,7 @@
   "categories": {
     "small_talk": {
       "goodDelta": 1, "badDelta": -2, "goodChance": 0.75,
+      "moodGood": 1, "moodBad": -1,
       "beats": [
         {
           "id": "weather",
@@ -85,6 +89,7 @@
     },
     "banter": {
       "goodDelta": 2, "badDelta": -3, "goodChance": 0.7,
+      "moodGood": 2, "moodBad": -2,
       "beats": [
         {
           "id": "slow",
@@ -126,6 +131,7 @@
     },
     "deep_talk": {
       "goodDelta": 4, "badDelta": -4, "goodChance": 0.6,
+      "moodGood": 3, "moodBad": -3,
       "beats": [
         {
           "id": "home",
@@ -166,6 +172,7 @@
     },
     "flirt": {
       "goodDelta": 3, "badDelta": -3, "goodChance": 0.55,
+      "moodGood": 4, "moodBad": -4,
       "beats": [
         {
           "id": "hands",
@@ -206,6 +213,7 @@
     },
     "comfort": {
       "goodDelta": 5, "badDelta": -2, "goodChance": 0.7,
+      "moodGood": 3, "moodBad": -1,
       "beats": [
         {
           "id": "sit",
@@ -246,6 +254,7 @@
     },
     "argue": {
       "goodDelta": 0, "badDelta": -5, "goodChance": 0.0,
+      "moodGood": 0, "moodBad": -5,
       "beats": [
         {
           "id": "stores",
@@ -281,6 +290,7 @@
     },
     "insult": {
       "goodDelta": 0, "badDelta": -7, "goodChance": 0.0,
+      "moodGood": 0, "moodBad": -6,
       "beats": [
         {
           "id": "lazy",
@@ -316,6 +326,7 @@
     },
     "battle_talk": {
       "goodDelta": 3, "badDelta": -1, "goodChance": 0.8,
+      "moodGood": 1, "moodBad": -1,
       "beats": [
         {
           "id": "flank",
