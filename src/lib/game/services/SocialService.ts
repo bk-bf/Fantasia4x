@@ -36,7 +36,7 @@ import { rng } from '../core/rng';
 import { memoryService } from './MemoryService';
 import { simLog } from '../core/logSink';
 import { TICKS_PER_SECOND } from '../core/time';
-import { TURNS_PER_DAY, getAmbientLight } from './EnvironmentService';
+import { TURNS_PER_DAY } from './EnvironmentService';
 import { nearGatheringPlace } from '../core/buildingAmenity';
 import { pawnStatService } from './PawnStatService';
 import {
@@ -77,10 +77,6 @@ const DIALOG_CHANCE = 0.6; // chance an eligible, off-cooldown pair actually sta
 const DIALOG_PAIR_COOLDOWN_S = 25; // in-game seconds before the SAME pair chats again
 const DIALOG_PAWN_COOLDOWN_S = 6; // in-game seconds before a pawn joins ANY new dialog
 const DIALOG_DANGER_RADIUS = 8; // no drawn-out dialog within this many tiles of an active fight
-// A drawn-out chat wants a LULL — the low-light social window (dusk → night → pre-dawn), not the busy
-// midday. Below this ambient-light level counts as the evening/night lull. Idle pawns and pawns at a
-// gathering place (campfire/hearth) are always sociable regardless of the hour.
-const DIALOG_LULL_LIGHT = 0.45;
 // MOOD-REWORK: a dialog leaves a faded mood "thought" on both talkers (dialog.jsonc moodGood/moodBad).
 // The magnitude carries the weight; they all fade over this window (a chat's afterglow / an insult's sting).
 const DIALOG_MOOD_FADE_DAYS = 0.5;
@@ -868,13 +864,10 @@ class SocialServiceImpl {
       danger.some(
         (d) => Math.max(Math.abs(d.x - p.position!.x), Math.abs(d.y - p.position!.y)) <= DIALOG_DANGER_RADIUS
       );
-    // Temporal/activity awareness: a real conversation belongs to a LULL — a pawn who is idle, or it's
-    // the evening/night social window, or they're gathered at a fire. Two pawns busily hauling at midday
-    // don't strike up a deep talk; that's reserved for downtime (matches the campfire idea).
-    const inLull = getAmbientLight(turn) < DIALOG_LULL_LIGHT;
+    // Activity awareness: a real conversation belongs to downtime — a pawn who is idle, or gathered at
+    // a fire. Two pawns busily hauling (or just awake in the night) don't strike up a deep talk.
     const sociable = (p: Pawn) =>
       p.currentState === 'Idle' ||
-      inLull ||
       (!!p.position && nearGatheringPlace(state.buildings, p.position.x, p.position.y));
     const canTalk = (p: Pawn) =>
       p.isAlive !== false &&
