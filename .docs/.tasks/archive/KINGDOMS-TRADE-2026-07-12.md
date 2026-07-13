@@ -2,18 +2,18 @@
 
 # KINGDOMS, VISITORS & TRADE — the world social layer
 
-> **Related:** [ROADMAP](ROADMAP.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) (pawn-to-pawn layer; shares culture-disposition + prestige) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) (caravans are kingdom pawns + war/pack beasts; creatures' `kingdom` flag; taming) · [CREATURE-COMBAT-OVERHAUL](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) (§2c lootpool system — caravan guards draw the human `guard_*` pools) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) (the right-click-a-pawn menu the trade action reuses) · [RACE-SYSTEM (archived)](../archive/RACE-SYSTEM-2026-07-13.md) (Phase 2 encounter-pokédex is this spec) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) (visitor/caravan entities on the map) · [game/DESIGN](../../game/DESIGN.md) · ADR-023 in [game/DECISIONS](../../game/DECISIONS.md)
+> **Related:** [ROADMAP](../open/ROADMAP.md) · [SOCIAL-LAYER](../open/SOCIAL-LAYER.md) (pawn-to-pawn layer; shares culture-disposition + prestige) · [ANIMAL-HUSBANDRY](../open/ANIMAL-HUSBANDRY.md) (caravans are kingdom pawns + war/pack beasts; creatures' `kingdom` flag; taming) · [CREATURE-COMBAT-OVERHAUL](CREATURE-COMBAT-OVERHAUL-2026-07-12.md) (§2c lootpool system — caravan guards draw the human `guard_*` pools) · [DRAFTED-JOB-ORDERS](../open/DRAFTED-JOB-ORDERS.md) (the right-click-a-pawn menu the trade action reuses) · [RACE-SYSTEM (archived)](RACE-SYSTEM-2026-07-13.md) (Phase 2 encounter-pokédex is this spec) · [ENTITIES_SPAWNING (archived)](ENTITIES_SPAWNING-2026-07-10.md) (visitor/caravan entities on the map) · [game/DESIGN](../../game/DESIGN.md) · ADR-023 in [game/DECISIONS](../../game/DECISIONS.md)
 
 ## Status
 
 **Implemented 2026-07-12** (all four phases; `check` + scoped tests green — `Kingdom.test.ts`,
-`kingdomParties.test.ts`, `executeTrade.test.ts`). Split out of [SOCIAL-LAYER](SOCIAL-LAYER.md) on
+`kingdomParties.test.ts`, `executeTrade.test.ts`). Split out of [SOCIAL-LAYER](../open/SOCIAL-LAYER.md) on
 2026-07-10 — kingdoms, visitors, and trade caravans are a *world* system distinct from the
 pawn-to-pawn social layer, though they share the culture-disposition data and the prestige stat.
 **This spec is also RACE-SYSTEM Phase 2** (first contact discovers the sender's dominant culture;
 the full mix once familiar). Known deferrals: pawn-level relationship points from visitor
-interaction wait on [SOCIAL-LAYER](SOCIAL-LAYER.md) §1; caravan war/pack-beast roles beyond the
-plain pack ox wait on [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md); hostile-kingdom **raids** are still
+interaction wait on [SOCIAL-LAYER](../open/SOCIAL-LAYER.md) §1; caravan war/pack-beast roles beyond the
+plain pack ox wait on [ANIMAL-HUSBANDRY](../open/ANIMAL-HUSBANDRY.md); hostile-kingdom **raids** are still
 only a trigger (relations pin hostile, no raid event yet). Party glyphs reuse existing humanoid
 sprites (placeholder art, retinted via `fg`).
 
@@ -43,9 +43,9 @@ caravans arrive on a rhythm and open a barter screen where a pawn's **`trade` at
   but **graded** (hidden knowledge levels, below) rather than a binary flag.
 - **Events** — `PendingEvent`/`MigrantWaveEvent` (`core/types/events.ts`) is the player-decision world
   event system; visitor/caravan **arrival** rides it. Entities on the map come from
-  `services/entity/entitySpawning.ts` (coordinate with [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md)).
+  `services/entity/entitySpawning.ts` (coordinate with [ENTITIES_SPAWNING (archived)](ENTITIES_SPAWNING-2026-07-10.md)).
 - **Items** — `items.jsonc` has no economic **value** field yet; trade needs one. `prestigeBonus`
-  exists on `armorProperties` (exposed by [SOCIAL-LAYER §6](SOCIAL-LAYER.md)).
+  exists on `armorProperties` (exposed by [SOCIAL-LAYER §6](../open/SOCIAL-LAYER.md)).
 
 ---
 
@@ -94,7 +94,7 @@ The player does **not** see a kingdom's full sheet up front. Knowledge is *earne
   encountered). Like the culture pokédex, but graded.
 - **Hidden knowledge level** — each kingdom carries hidden `knowledge` xp. Pawns who interact
   **positively** with that kingdom's visitors/traders (successful conversations §
-  [SOCIAL-LAYER §3](SOCIAL-LAYER.md), completed trades, gifts) earn knowledge xp about it. Higher pawn
+  [SOCIAL-LAYER §3](../open/SOCIAL-LAYER.md), completed trades, gifts) earn knowledge xp about it. Higher pawn
   **`trade`/CHA** → more xp per interaction.
 - **Tiered reveal** — each level-up unlocks the next `KingdomLore` tier, so the tab entry visibly
   *grows* as the colony learns:
@@ -164,15 +164,15 @@ on turn 1" — a fresh colony already knows the 2-4 realms its founders came fro
 
 - **Visitor event** — a friendly/neutral kingdom sends a small party that arrives on the map (a
   `PendingEvent`-style world event + spawned entities). Pawns interacting positively earn kingdom
-  knowledge (§2) and pawn-level relationship points ([SOCIAL-LAYER §1](SOCIAL-LAYER.md)) with the
+  knowledge (§2) and pawn-level relationship points ([SOCIAL-LAYER §1](../open/SOCIAL-LAYER.md)) with the
   visitors. Hostile kingdoms instead send **raids** (combat, not this spec's job beyond the trigger).
 - **Trade caravan** — a neutral-or-better kingdom sends a caravan **~bi-weekly** (tunable cadence,
   weighted by `kingdomRelations` — friendlier kingdoms visit more often). The caravan is a **spawned
   party of that kingdom's pawns + war/pack beasts** that marches across the map (full model in
-  [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) — attacking it is an act of war). Reaching the trader opens
+  [ANIMAL-HUSBANDRY](../open/ANIMAL-HUSBANDRY.md) — attacking it is an act of war). Reaching the trader opens
   the trade action (§4).
 - **Caravan guards use the human `guard_*` lootpools** (`database/lootpool.jsonc` — the loadout system
-  built by [CREATURE-COMBAT-OVERHAUL §2c](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md): per-slot draw, rolled quality +
+  built by [CREATURE-COMBAT-OVERHAUL §2c](CREATURE-COMBAT-OVERHAUL-2026-07-12.md): per-slot draw, rolled quality +
   condition, drop-on-death). Five rungs of existing human craftables — `guard_scraps` / `guard_bronze` /
   `guard_iron` / `guard_steel` / `guard_royal` (concrete slot tables in that spec) — scaled to the
   kingdom's `wealthBand`. Human gear carries **no `wieldRequirement`** (monster gear is what gates on
@@ -198,7 +198,7 @@ on turn 1" — a fresh colony already knows the 2-4 realms its founders came fro
   prices, gold anchors). Not a hard currency; just the most liquid barter good.
 - **Manual trigger via the pawn menu** — trading is **player-initiated**, not auto-on-arrival. The
   caravan's **trader/royal pawn** carries a floating **"?" indicator** above its head marking it as an
-  interaction target. Right-clicking it reuses the [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md)
+  interaction target. Right-clicking it reuses the [DRAFTED-JOB-ORDERS](../open/DRAFTED-JOB-ORDERS.md)
   right-click-a-pawn menu, which offers a **Trade** verb → opens the trade screen. **No designated
   diplomat role** — the deal is negotiated by **whichever colony pawn is currently highlighted** (the
   DRAFTED-JOB-ORDERS selection), so *that* pawn's `trade` attribute is what prices the barter. Sending
@@ -208,7 +208,7 @@ on turn 1" — a fresh colony already knows the 2-4 realms its founders came fro
   auto-executes.
 - **`trade` derived attribute** — new `stats.jsonc` entry, **`category: 'social'`,
   `primaryStat: charisma`**, formula over **CHA + prestige + talking**. Prestige comes from
-  `SocialService.getPrestige` ([SOCIAL-LAYER §6](SOCIAL-LAYER.md)) — add `prestige` as a `FORMULA_VARS`
+  `SocialService.getPrestige` ([SOCIAL-LAYER §6](../open/SOCIAL-LAYER.md)) — add `prestige` as a `FORMULA_VARS`
   token (net-new: it isn't a token today); `talking` already is. The trading pawn's `trade` shifts
   prices in the colony's favour and boosts kingdom-knowledge gain per deal.
 
@@ -241,7 +241,7 @@ on turn 1" — a fresh colony already knows the 2-4 realms its founders came fro
       (2026-07-12 — `kingdom-arrival` `PendingEvent` + `KingdomArrivalModal`; presence/arrival/trade xp.
       Pawn-level relationship points deferred to SOCIAL-LAYER §1, which owns `PawnRelationship`)
 - [x] Trade caravan on ~bi-weekly cadence, frequency & visitor count weighted by `kingdomRelations`
-      **and colony wealth**; caravan = kingdom-pawn party + war/pack beasts ([ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md)).
+      **and colony wealth**; caravan = kingdom-pawn party + war/pack beasts ([ANIMAL-HUSBANDRY](../open/ANIMAL-HUSBANDRY.md)).
       (2026-07-12 — `maybeScheduleArrival` + `entity/kingdomParties.ts` [trader/guards/pack oxen,
       leash-anchored at the colony edge]; guard gear = `guard_*` lootpools by `wealthBand`; attacking a
       party member floors the relation [act of war, `Combat.performAttack` hook]. Full war/pack-beast
@@ -260,7 +260,7 @@ on turn 1" — a fresh colony already knows the 2-4 realms its founders came fro
       `social` category in `stats.jsonc`; `prestige` token computed lazily [only when a formula names
       it] from the net-new `SocialService.getPrestige`)
 - [x] Trader/royal pawn carries a **"?" interaction marker**; a **Trade** verb on the
-      [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) right-click menu opens the screen. (2026-07-12 —
+      [DRAFTED-JOB-ORDERS](../open/DRAFTED-JOB-ORDERS.md) right-click menu opens the screen. (2026-07-12 —
       gold bobbing `?` glyph float; Trade verb offered before the drafted-attack branch, so the trader
       isn't auto-targeted; the highlighted pawn negotiates)
 - [x] Trade screen (offer assembly → confirm; no auto-execute). (2026-07-12 — `trade/TradeModal.svelte`

@@ -96,7 +96,7 @@ damage + `armorDamage`, and a **`wieldRequirement`** (raw STR) so a scrawny colo
 *flails* (worse accuracy, far heavier stamina drain, softer blows). You must field a STRONG pawn — the
 loot gates on capability, not on picking it up (Battle-Brothers "heavy" weapons). **Goblin** gear is
 light/weird/nasty — low damage, status procs (poison/ensnare/hook-bleed), no strength bar. The human
-bronze/iron/steel pools are for **[KINGDOMS-TRADE](KINGDOMS-TRADE.md) caravan guards**, not monsters.
+bronze/iron/steel pools are for **[KINGDOMS-TRADE](KINGDOMS-TRADE-2026-07-12.md) caravan guards**, not monsters.
 
 ### 2a–2d Engine + example data — ✅ LANDED (2026-07-10 → 07-11)
 
@@ -217,7 +217,7 @@ authored (`orc_warband`, `goblin_warband`); the rest follow the same shape. `qua
 The `wieldRequirement` scales up-tier so higher orc gear demands an ever-stronger looter — end-game orc
 weapons are only worthwhile on your dedicated bruiser, a real "who do I hand this to?" decision.
 
-#### Caravan-guard lootpools → moved to [KINGDOMS-TRADE](KINGDOMS-TRADE.md)
+#### Caravan-guard lootpools → moved to [KINGDOMS-TRADE](KINGDOMS-TRADE-2026-07-12.md)
 
 The human bronze/iron/steel pools drafted earlier are **not monster gear** — they fit **kingdom caravan
 guards** (well-equipped human pawns escorting a trade caravan). They belong to KINGDOMS-TRADE §3; recorded

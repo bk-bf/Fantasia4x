@@ -2,7 +2,7 @@
 
 # RACE SYSTEM — Procedural Pool, Lore & Relations
 
-> **Related:** [ROADMAP](../open/ROADMAP.md) · [SOCIAL-LAYER](../open/SOCIAL-LAYER.md) · [KINGDOMS-TRADE](../open/KINGDOMS-TRADE.md) (Phase 2's other-kingdom entity source) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · ADR-023 in [game/DECISIONS](../game/DECISIONS.md)
+> **Related:** [ROADMAP](../open/ROADMAP.md) · [SOCIAL-LAYER](../open/SOCIAL-LAYER.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE-2026-07-12.md) (Phase 2's other-kingdom entity source) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · ADR-023 in [game/DECISIONS](../game/DECISIONS.md)
 
 ## Status
 
@@ -17,7 +17,7 @@ open document.
   (§1 "Cultural seeding", "What already exists", Phase B `seedRelationship`). It can only be built
   *after* the social layer exists, so it lives inside that spec, in sequence.
 - **Phase 2 — Encounter-driven pokédex** — `[x]` shipped 2026-07-12, owned by
-  [KINGDOMS-TRADE](../open/KINGDOMS-TRADE.md) §3 (visitor/caravan first-contact discovery).
+  [KINGDOMS-TRADE](KINGDOMS-TRADE-2026-07-12.md) §3 (visitor/caravan first-contact discovery).
 - **Phase 3 — Content & variety expansion** — unblocked opportunistic content depth; folded into the
   ROADMAP "loose ends, do opportunistically" row. No standalone spec needed.
 
@@ -92,11 +92,11 @@ carries `score` + `disposition`; dispositions are `hostile`/`wary`/`neutral`/`fr
 - [ ] Acceptance: two pawns of mutually-`hostile` cultures start with a negative relationship; a
       regression test asserts the baseline seeding.
 
-## Phase 2 — Encounter-Driven Pokédex  `[x]` **owned by [KINGDOMS-TRADE](../open/KINGDOMS-TRADE.md)** (done 2026-07-12)
+## Phase 2 — Encounter-Driven Pokédex  `[x]` **owned by [KINGDOMS-TRADE](KINGDOMS-TRADE-2026-07-12.md)** (done 2026-07-12)
 
 Today the pokédex is populated only by the colony's own races; nothing in the world introduces a
 *new* race. This phase makes the pokédex grow through play. **The other-kingdom entity source is now
-specced** — visitors/caravans in [KINGDOMS-TRADE](../open/KINGDOMS-TRADE.md) §3 are the encounter trigger.
+specced** — visitors/caravans in [KINGDOMS-TRADE](KINGDOMS-TRADE-2026-07-12.md) §3 are the encounter trigger.
 
 - [x] Define the encounter source (visitors / caravans / rival settlements / migrant-join events) —
       coordinate with ENTITIES_SPAWNING and any future kingdom layer; pick the lightest that fits.
