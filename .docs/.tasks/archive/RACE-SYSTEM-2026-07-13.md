@@ -2,16 +2,26 @@
 
 # RACE SYSTEM — Procedural Pool, Lore & Relations
 
-> **Related:** [ROADMAP](ROADMAP.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [KINGDOMS-TRADE](KINGDOMS-TRADE.md) (Phase 2's other-kingdom entity source) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · ADR-023 in [game/DECISIONS](../game/DECISIONS.md)
+> **Related:** [ROADMAP](../open/ROADMAP.md) · [SOCIAL-LAYER](../open/SOCIAL-LAYER.md) · [KINGDOMS-TRADE](../open/KINGDOMS-TRADE.md) (Phase 2's other-kingdom entity source) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · ADR-023 in [game/DECISIONS](../game/DECISIONS.md)
 
 ## Status
 
-**Phase 0 (Foundation) — [x] 2026-06-17, ADR-023.** Shipped in one pass: procedural race
-pool, mixed colonies, procedural lore/description, trait-DB cleanup + condition hook, the
-known-races pokédex, and the `raceRelations` data stub. This spec records that foundation and
-**lays out the forward phases** it deliberately stubbed — relations→social wiring, encounter-driven
-pokédex population, and content/variety expansion. Phases 1–3 are **not started** and several are
-gated by other specs (SOCIAL-LAYER, an other-kingdom entity source).
+**CLOSED / ARCHIVED — 2026-07-13.** Nothing here is still open; every phase has shipped or been
+relocated into the correctly-sequenced spec that owns it. This standalone spec should not have
+outlived Phase 0 — its forward phases belonged in the specs they depend on, not in a parallel
+open document.
+
+- **Phase 0 — Foundation** — `[x]` shipped 2026-06-17, ADR-023 (procedural culture pool, mixed
+  colonies, lore, condition-resistance hook, pokédex, `cultureRelations` stub, save migration).
+- **Phase 1 — Relations → pawn social baseline** — **relocated to [SOCIAL-LAYER](../open/SOCIAL-LAYER.md)**
+  (§1 "Cultural seeding", "What already exists", Phase B `seedRelationship`). It can only be built
+  *after* the social layer exists, so it lives inside that spec, in sequence.
+- **Phase 2 — Encounter-driven pokédex** — `[x]` shipped 2026-07-12, owned by
+  [KINGDOMS-TRADE](../open/KINGDOMS-TRADE.md) §3 (visitor/caravan first-contact discovery).
+- **Phase 3 — Content & variety expansion** — unblocked opportunistic content depth; folded into the
+  ROADMAP "loose ends, do opportunistically" row. No standalone spec needed.
+
+The forward-phase detail below is retained as the historical design record only.
 
 > **Trait model superseded (2026-07-06, ADR-028):** `racial-traits.jsonc` → `traits.jsonc` with
 > `scope` (racial/personal), `rarity` (rarities.jsonc scale) and typed `kind` payloads; per-pawn draw
@@ -24,8 +34,8 @@ gated by other specs (SOCIAL-LAYER, an other-kingdom entity source).
 > `cultureMix` / `discoverCulture` / `cultureRelations` identifiers. Landed piecemeal across the
 > 2026-07-09 trait cleanup and the 2026-07-12 KINGDOMS-TRADE work; no `race*` identifiers remain and
 > no user-facing "Race" strings survive. **Phase 0 below is described in the original `Race`/`racePool`
-> vocabulary — read it as `Culture`/`culturePool`.** Only Phase 1 (relations → social baseline) is
-> still open, and it stays blocked on SOCIAL-LAYER.
+> vocabulary — read it as `Culture`/`culturePool`.** Phase 1 (relations → social baseline) now lives
+> in [SOCIAL-LAYER](../open/SOCIAL-LAYER.md); this spec is archived.
 
 
 ---
@@ -63,25 +73,30 @@ What exists today (`core/Culture.ts`, `database/traits.jsonc` + `culture-lore.js
 
 ---
 
-## Phase 1 — Relations → Pawn Social Baseline  `[ ]` **blocked on SOCIAL-LAYER**
+## Phase 1 — Relations → Pawn Social Baseline  **→ MOVED to [SOCIAL-LAYER](../open/SOCIAL-LAYER.md)**
 
-Wire the `raceRelations` stub into actual gameplay via the social layer.
+> This phase is now owned by [SOCIAL-LAYER](../open/SOCIAL-LAYER.md) — see its §1 "Cultural seeding",
+> the "What already exists" seams, and Phase B `seedRelationship`. The text below is the original
+> statement, kept for provenance.
 
-- [ ] When `SocialService` seeds a `PawnRelationship`, initialise its `score` from the racial
-      baseline of the two pawns' `raceId`s (look up `raceRelations`), **before** proximity/event deltas.
+Wire the `cultureRelations` stub into actual gameplay via the social layer. (`CultureRelation`
+carries `score` + `disposition`; dispositions are `hostile`/`wary`/`neutral`/`friendly`/`allied`.)
+
+- [ ] When `SocialService` seeds a `PawnRelationship`, initialise its `score` from the cultural
+      baseline of the two pawns' `cultureId`s (look up `cultureRelations`), **before** proximity/event deltas.
 - [ ] Map `disposition` → a starting bias (e.g. `hostile` −40, `wary` −15, `neutral` 0, `friendly`
       +15, `allied` +30); decay toward individual experience over time so a friendship can still form
-      across a racial divide (and vice-versa).
-- [ ] Mood/break thresholds (SOCIAL-LAYER) then pick this up for free — cross-race colonies become
-      harder to keep harmonious. **No new race code** beyond the lookup.
-- [ ] Acceptance: two pawns of mutually-`hostile` races start with a negative relationship; a
+      across a cultural divide (and vice-versa).
+- [ ] Mood/break thresholds (SOCIAL-LAYER) then pick this up for free — cross-culture colonies become
+      harder to keep harmonious. **No new culture code** beyond the lookup.
+- [ ] Acceptance: two pawns of mutually-`hostile` cultures start with a negative relationship; a
       regression test asserts the baseline seeding.
 
-## Phase 2 — Encounter-Driven Pokédex  `[x]` **owned by [KINGDOMS-TRADE](KINGDOMS-TRADE.md)** (done 2026-07-12)
+## Phase 2 — Encounter-Driven Pokédex  `[x]` **owned by [KINGDOMS-TRADE](../open/KINGDOMS-TRADE.md)** (done 2026-07-12)
 
 Today the pokédex is populated only by the colony's own races; nothing in the world introduces a
 *new* race. This phase makes the pokédex grow through play. **The other-kingdom entity source is now
-specced** — visitors/caravans in [KINGDOMS-TRADE](KINGDOMS-TRADE.md) §3 are the encounter trigger.
+specced** — visitors/caravans in [KINGDOMS-TRADE](../open/KINGDOMS-TRADE.md) §3 are the encounter trigger.
 
 - [x] Define the encounter source (visitors / caravans / rival settlements / migrant-join events) —
       coordinate with ENTITIES_SPAWNING and any future kingdom layer; pick the lightest that fits.
@@ -94,7 +109,10 @@ specced** — visitors/caravans in [KINGDOMS-TRADE](KINGDOMS-TRADE.md) §3 are t
 - [x] Acceptance: encountering a non-colony pool race flips it `discovered` and renders its entry.
       (2026-07-12 — asserted in `kingdomParties.test.ts`)
 
-## Phase 3 — Content & Variety Expansion  `[ ]` (incremental, unblocked)
+## Phase 3 — Content & Variety Expansion  **→ tracked as a ROADMAP opportunistic loose-end**
+
+> Unblocked content depth with no dependency and no need for its own spec; folded into the ROADMAP
+> "loose ends, do opportunistically" row. Original list kept below.
 
 Pure content depth on the existing generator — do opportunistically.
 

@@ -2,7 +2,7 @@
 
 # KINGDOMS, VISITORS & TRADE — the world social layer
 
-> **Related:** [ROADMAP](ROADMAP.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) (pawn-to-pawn layer; shares culture-disposition + prestige) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) (caravans are kingdom pawns + war/pack beasts; creatures' `kingdom` flag; taming) · [CREATURE-COMBAT-OVERHAUL](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) (§2c lootpool system — caravan guards draw the human `guard_*` pools) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) (the right-click-a-pawn menu the trade action reuses) · [RACE-SYSTEM](RACE-SYSTEM.md) (Phase 2 encounter-pokédex is this spec) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) (visitor/caravan entities on the map) · [game/DESIGN](../../game/DESIGN.md) · ADR-023 in [game/DECISIONS](../../game/DECISIONS.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) (pawn-to-pawn layer; shares culture-disposition + prestige) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) (caravans are kingdom pawns + war/pack beasts; creatures' `kingdom` flag; taming) · [CREATURE-COMBAT-OVERHAUL](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) (§2c lootpool system — caravan guards draw the human `guard_*` pools) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) (the right-click-a-pawn menu the trade action reuses) · [RACE-SYSTEM (archived)](../archive/RACE-SYSTEM-2026-07-13.md) (Phase 2 encounter-pokédex is this spec) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) (visitor/caravan entities on the map) · [game/DESIGN](../../game/DESIGN.md) · ADR-023 in [game/DECISIONS](../../game/DECISIONS.md)
 
 ## Status
 
