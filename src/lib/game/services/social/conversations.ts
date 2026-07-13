@@ -152,7 +152,7 @@ function firstName(p: Pawn): string {
  */
 export function chooseCategory(
   rel: PawnRelationship,
-  opts: { flirtEligible: boolean; targetGrieving: boolean; battleContext: boolean }
+  opts: { flirtEligible: boolean; targetGrieving: boolean; battleContext: boolean; atGathering?: boolean }
 ): ConversationCategory {
   const stage: RelationStage = rel.stage;
   // Under arms, the talk turns to the fight (unless they actively loathe each other).
@@ -164,12 +164,16 @@ export function chooseCategory(
     const r = rng.random();
     return r < 0.55 ? 'argue' : r < 0.8 ? 'insult' : 'small_talk';
   }
+  // At the fireside the talk runs warmer + deeper — less idle small talk, more banter and real talk.
+  const fire = opts.atGathering === true;
   if (stage === 'friends' || stage === 'best_friends') {
     const r = rng.random();
+    if (fire) return r < 0.4 ? 'banter' : 'deep_talk';
     return r < 0.45 ? 'banter' : r < 0.75 ? 'deep_talk' : 'small_talk';
   }
   // strangers / acquaintances
   const r = rng.random();
+  if (fire) return r < 0.45 ? 'small_talk' : r < 0.8 ? 'banter' : 'deep_talk';
   return r < 0.65 ? 'small_talk' : r < 0.85 ? 'banter' : 'deep_talk';
 }
 
@@ -236,6 +240,8 @@ export function runConversation(
     flirtEligible: boolean;
     targetGrieving: boolean;
     battleContext: boolean;
+    /** SOCIAL: the pair are at a gathering place (campfire/hearth) — bias the category warmer/deeper. */
+    atGathering?: boolean;
     /** PAWN-MEMORY: a witnessed event `a` recalls, built into the exchange instead of a generic beat. */
     recall?: { memory: EventMemory; ago: string };
   }

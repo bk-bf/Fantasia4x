@@ -48,8 +48,8 @@
       "witnessRadius": 12,
       "lines": {
         "openers": [
-          "You see {subject} drop {detail}? {ago}, that was.",
-          "Still talk about how {subject} put {detail} down. {ago}.",
+          "You see the blow {subject} landed on {detail}? {ago}, that.",
+          "Still talk about how {subject} took {detail} on. {ago}.",
           "{subject} and {detail}. Now THAT was a scrap."
         ],
         "replies_good": [

@@ -248,6 +248,9 @@ export interface Building {
     weatherProtection?: number;
     morale?: number;
     defenseBonus?: number;
+    /** SOCIAL: a GATHERING PLACE (campfire, hearth) — pawns nearby are in a sociable context, so
+     *  drawn-out dialog can happen here even mid-day and leans warmer (SocialService.processDialogTick). */
+    gathering?: boolean;
 
     // Production properties
     craftingSpeed?: number;

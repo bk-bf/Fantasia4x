@@ -36,7 +36,8 @@ import { rng } from '../core/rng';
 import { memoryService } from './MemoryService';
 import { simLog } from '../core/logSink';
 import { TICKS_PER_SECOND } from '../core/time';
-import { TURNS_PER_DAY } from './EnvironmentService';
+import { TURNS_PER_DAY, getAmbientLight } from './EnvironmentService';
+import { nearGatheringPlace } from '../core/buildingAmenity';
 import { pawnStatService } from './PawnStatService';
 import {
   combatBark as pickBark,
@@ -75,6 +76,11 @@ const DIALOG_RANGE = 2; // tiles — pawns strike up a dialog within this of eac
 const DIALOG_CHANCE = 0.6; // chance an eligible, off-cooldown pair actually starts talking this tick
 const DIALOG_PAIR_COOLDOWN_S = 25; // in-game seconds before the SAME pair chats again
 const DIALOG_PAWN_COOLDOWN_S = 6; // in-game seconds before a pawn joins ANY new dialog
+const DIALOG_DANGER_RADIUS = 8; // no drawn-out dialog within this many tiles of an active fight
+// A drawn-out chat wants a LULL — the low-light social window (dusk → night → pre-dawn), not the busy
+// midday. Below this ambient-light level counts as the evening/night lull. Idle pawns and pawns at a
+// gathering place (campfire/hearth) are always sociable regardless of the hour.
+const DIALOG_LULL_LIGHT = 0.45;
 // MOOD-REWORK: a dialog leaves a faded mood "thought" on both talkers (dialog.jsonc moodGood/moodBad).
 // The magnitude carries the weight; they all fade over this window (a chat's afterglow / an insult's sting).
 const DIALOG_MOOD_FADE_DAYS = 0.5;
@@ -849,6 +855,27 @@ class SocialServiceImpl {
     const turn = state.turn;
     const pairCd = DIALOG_PAIR_COOLDOWN_S * TICKS_PER_SECOND;
     const pawnCd = DIALOG_PAWN_COOLDOWN_S * TICKS_PER_SECOND;
+    // Situational awareness: a fight nearby (a comrade trading blows, or an aggressive beast bearing in)
+    // is no time for chatter — even for a bystander who isn't the one swinging. Gather the danger points
+    // once, then keep any pawn within DIALOG_DANGER_RADIUS of one out of the dialog.
+    const danger: { x: number; y: number }[] = [];
+    for (const p of state.pawns)
+      if (p.isAlive !== false && p.currentState === 'Fighting' && p.position) danger.push(p.position);
+    for (const m of state.mobs ?? [])
+      if (m.state === 'Attacking' || m.state === 'Alerted') danger.push({ x: m.x, y: m.y });
+    const nearDanger = (p: Pawn) =>
+      !!p.position &&
+      danger.some(
+        (d) => Math.max(Math.abs(d.x - p.position!.x), Math.abs(d.y - p.position!.y)) <= DIALOG_DANGER_RADIUS
+      );
+    // Temporal/activity awareness: a real conversation belongs to a LULL — a pawn who is idle, or it's
+    // the evening/night social window, or they're gathered at a fire. Two pawns busily hauling at midday
+    // don't strike up a deep talk; that's reserved for downtime (matches the campfire idea).
+    const inLull = getAmbientLight(turn) < DIALOG_LULL_LIGHT;
+    const sociable = (p: Pawn) =>
+      p.currentState === 'Idle' ||
+      inLull ||
+      (!!p.position && nearGatheringPlace(state.buildings, p.position.x, p.position.y));
     const canTalk = (p: Pawn) =>
       p.isAlive !== false &&
       p.position &&
@@ -856,6 +883,8 @@ class SocialServiceImpl {
       // No drawn-out exchanges while fighting or fleeing for your life — combat has its own barks.
       p.currentState !== 'Fighting' &&
       p.currentState !== 'Fleeing' &&
+      !nearDanger(p) && // ...nor while a fight rages next to you
+      sociable(p) && // ...nor mid-task at midday — save it for the lull / the fire
       turn - (_lastPawnDialog.get(p.id) ?? -Infinity) >= pawnCd;
     const talkers = state.pawns.filter(canTalk);
     if (talkers.length < 2) return state;
@@ -912,10 +941,15 @@ class SocialServiceImpl {
     const grieving = activeMoodModifiers(b, turn).some((m) => m.id.startsWith('grief:'));
     // Battle context: both are drafted for a fight — the talk turns to the coming clash.
     const battleContext = a.drafted === true && b.drafted === true;
+    // Fireside: at a gathering place the talk runs warmer + deeper, and they reminisce more.
+    const atGathering =
+      (!!a.position && nearGatheringPlace(state.buildings, a.position.x, a.position.y)) ||
+      (!!b.position && nearGatheringPlace(state.buildings, b.position.x, b.position.y));
     // PAWN-MEMORY: outside a fight, and if they don't loathe each other, the initiator may bring up
     // something witnessed — a kill, a death, a masterwork, a botch, a loafer (on the spot or later).
+    // Reminiscing runs higher by the fire (the evening's when the old stories come out).
     let recall: { memory: EventMemory; ago: string } | undefined;
-    if (!battleContext && rel.stage !== 'enemies' && rng.chance(RECALL_CHANCE)) {
+    if (!battleContext && rel.stage !== 'enemies' && rng.chance(atGathering ? 0.65 : RECALL_CHANCE)) {
       const memory = memoryService.recall(a, b, turn);
       if (memory) recall = { memory, ago: memoryService.agoPhrase(turn - memory.turn) };
     }
@@ -926,7 +960,7 @@ class SocialServiceImpl {
       b,
       rel,
       { turn, weatherType: state.weather?.type, season: state.season },
-      { flirtEligible, targetGrieving: grieving, battleContext, recall }
+      { flirtEligible, targetGrieving: grieving, battleContext, recall, atGathering }
     );
     this.applyDelta(rel, outcome.delta, {
       turn,

@@ -8,6 +8,21 @@ const BUILDING_DEFS = buildingsData as unknown as Building[];
  *  to a pawn occupying that tile (a "room" of nearby furnishings). */
 export const AMENITY_RADIUS = 2;
 
+/** SOCIAL: how close a pawn must be to a gathering-place building (campfire/hearth) to count as "at
+ *  the fire" — a touch wider than a furniture room; you cluster loosely around a fire. */
+export const GATHERING_RADIUS = 3;
+
+/** SOCIAL: is (x,y) within GATHERING_RADIUS of a COMPLETE gathering-place building (buildingProperties
+ *  `gathering`)? Drives the sociable-context gate + fireside warmth in SocialService.processDialogTick. */
+export function nearGatheringPlace(buildings: PlacedBuilding[] | undefined, x: number, y: number): boolean {
+  for (const b of buildings ?? []) {
+    if (b.status !== 'complete') continue;
+    if (Math.abs(b.x - x) > GATHERING_RADIUS || Math.abs(b.y - y) > GATHERING_RADIUS) continue;
+    if (BUILDING_DEFS.find((d) => d.id === b.type)?.buildingProperties?.gathering) return true;
+  }
+  return false;
+}
+
 /**
  * §M Sum the MATERIAL-ADJUSTED `comfort` + `beauty` (+ `insulation`) of all complete buildings within
  * `AMENITY_RADIUS` of (x,y) — a soft "how nice is this spot" score. Drives rest (handleSleeping), wound

@@ -1484,6 +1484,23 @@ class CombatServiceImpl implements CombatService {
         });
       }
     }
+    // PAWN-MEMORY: a devastating but NON-fatal blow a colonist lands is also worth remembering — the
+    // day so-and-so near split the boar in two (recalled later like the kill). Kills are handled above.
+    if (
+      witnessed &&
+      !justDied &&
+      !('entityClass' in attacker) &&
+      attacker.isAlive !== false &&
+      (result.crit ||
+        result.injury.severity === 'critical' ||
+        result.injury.severity === 'destroyed')
+    ) {
+      memoryService.recordAroundKind(next, pos.x, pos.y, attacker.id, 'combat', {
+        subjectName: attackerName.split(' ')[0],
+        detail: targetName,
+        memorability: 0.4 // a savage blow — notable, but a shade below a clean kill
+      });
+    }
     // Combat barks (colony pawns only): the attacker crows over a landed blow or a finishing one; a
     // wounded colonist cries out (unless the blow felled them — the dead don't bark).
     if (!('entityClass' in attacker) && attacker.isAlive !== false)
