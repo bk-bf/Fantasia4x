@@ -87,6 +87,11 @@
     "talk_argue_bad": { "label": "A row with {name}", "value": -5 },
     "talk_insult_bad": { "label": "Harsh words with {name}", "value": -6 },
     "talk_battle_good": { "label": "Steadied alongside {name}", "value": 1 },
-    "talk_battle_bad": { "label": "Frayed nerves with {name}", "value": -1 }
+    "talk_battle_bad": { "label": "Frayed nerves with {name}", "value": -1 },
+
+    // ── Event thoughts (applied as a fading moodModifier, not a standing source) ───────────────────
+    // Catharsis: the big lift a pawn gets on the far side of a mental breakdown (handlers/breakdown), so
+    // a spent-out pawn climbs clear of the breakpoint instead of breaking again the moment it recovers.
+    "mood_catharsis": { "label": "A great weight lifted", "value": 40 }
   }
 }

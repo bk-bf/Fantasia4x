@@ -28,7 +28,24 @@ export const PAWN_STATE = {
   RESCUING: 'Rescuing',
   // LINEAGES-II: bloodthirst has the body — an UNCONTROLLABLE hunt (draft refused, like Collapsed)
   // that chases and devours/drains the nearest living thing until fed. See handlers/combat.ts.
-  BLOOD_HUNT: 'BloodHunt'
+  BLOOD_HUNT: 'BloodHunt',
+  // MOOD: worn down past a mood breakpoint and lost control — an UNCONTROLLABLE state (draft refused,
+  // like Collapsed) that plays out as crying / hiding / fleeing until it passes. See handlers/breakdown.ts.
+  BREAKDOWN: 'Breakdown'
 } as const;
 
 export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];
+
+/** States in which the pawn cannot be commanded — a draft/move/attack order is refused and the FSM
+ *  force-undrafts the pawn each tick (it's out of the player's hands until it recovers). Collapse and a
+ *  mental breakdown both qualify; BloodHunt enforces its own refusal inside the combat handler. */
+export const UNCONTROLLABLE_STATES: ReadonlySet<string> = new Set([
+  PAWN_STATE.COLLAPSED,
+  PAWN_STATE.BREAKDOWN
+]);
+
+/** True while the pawn is in an uncontrollable state (see UNCONTROLLABLE_STATES) — the single check the
+ *  draft commands gate on, instead of hardcoding `!== 'Collapsed'` at each call site. */
+export function isUncontrollable(state: string | undefined): boolean {
+  return state != null && UNCONTROLLABLE_STATES.has(state);
+}

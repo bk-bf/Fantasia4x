@@ -19,7 +19,7 @@ import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
 import { stepBody } from './MovementSystem';
 import { occupancyService } from './OccupancyService';
 import conditionsData from '../database/conditions.jsonc';
-import needsData from '../database/needs.jsonc';
+import { NEEDS_DB, needNum } from '../core/needsDefs';
 import { moodEffect, MOOD_BASE } from '../core/moodEffects';
 import { getConditionCurrentStage, conditionNeedMultipliers, getConditionDefById } from '../core/needs';
 import { amenityAt } from '../core/buildingAmenity';
@@ -60,14 +60,8 @@ function getActiveTransientConditions(entity: Pawn | Mob): TransientConditionDef
 // MOOD-REWORK bands are DATA — tunable without code. Mood-general bands (base/health/labels) live in
 // mood.jsonc; the PER-NEED mood bands live in needs.jsonc (each need owns its mood effect). The dynamic
 // contributions (weather/trait/condition/thought/amenity) are still computed live in computeMoodTarget.
-/** A need→mood threshold band (needs.jsonc): past the threshold, apply the named mood effect. */
-interface MoodBand {
-  atOrAbove?: number;
-  atOrBelow?: number;
-  effect: string;
-}
-/** Per-need mood bands (needs.jsonc), keyed by the `Pawn.needs` field. */
-const NEED_MOOD = needsData as unknown as Record<string, { moodBands: MoodBand[] }>;
+/** Per-need defs (needs.jsonc) — iterated below for each need's mood bands. */
+const NEED_MOOD = NEEDS_DB;
 // Ease at ~0.4 mood/in-game-second → a ~10-point gap closes in ~2 in-game hours (the design target).
 const MOOD_EASE_STEP = perTick(0.4);
 
@@ -146,18 +140,19 @@ export interface PawnService {
   getTransientConditions(entity: Pawn | Mob): TransientConditionDef[];
 }
 
-// §D water needs — per-second accrual (hunger baseline is ~0.54/s for reference).
-const THIRST_INCREASE_PER_SECOND = 0.7; // thirst builds a bit faster than hunger
-const HYGIENE_INCREASE_PER_SECOND = 0.3; // grime builds slowly
+// §D water needs — per-second accrual (hunger baseline is ~0.54/s for reference). Values live in
+// needs.jsonc (resolved once at load; the per-tick loop still reads these plain numbers).
+const THIRST_INCREASE_PER_SECOND = needNum('thirst', 'rate', 0.7); // thirst builds a bit faster than hunger
+const HYGIENE_INCREASE_PER_SECOND = needNum('hygiene', 'rate', 0.3); // grime builds slowly
 // SOCIAL: `fun` DECAYS toward 0 (100 = entertained). ~100→0 over ~2.5 in-game days of no company, so a
 // pawn seeks the fire every couple of days. Paused while SOCIALISING (recovery happens there instead).
-const FUN_DECREASE_PER_SECOND = 0.13;
+const FUN_DECREASE_PER_SECOND = needNum('fun', 'decayRate', 0.13);
 // §D auto-drink: thirst threshold to drink, and relief per unit of water.
-const AUTO_DRINK_THIRST = 70;
-const WATER_THIRST_RELIEF = 65;
+const AUTO_DRINK_THIRST = needNum('thirst', 'autoSatisfy', 70);
+const WATER_THIRST_RELIEF = needNum('thirst', 'relief', 65);
 // §D auto-wash: hygiene threshold to wash at water, and the cleanliness restored.
-const AUTO_WASH_HYGIENE = 75;
-const WASH_HYGIENE_RELIEF = 70;
+const AUTO_WASH_HYGIENE = needNum('hygiene', 'autoSatisfy', 75);
+const WASH_HYGIENE_RELIEF = needNum('hygiene', 'relief', 70);
 
 // SEASONS_WEATHER Subsystem 3 — temperature/night need effects (PERF-3: scalar constants, read in
 // the per-tick loop; no allocation). Per-degree multipliers match the spec (cold→fatigue, heat→hunger).
@@ -748,7 +743,7 @@ export class PawnServiceImpl implements PawnService {
         default:
           continue;
       }
-      for (const band of NEED_MOOD[need].moodBands) {
+      for (const band of NEED_MOOD[need].moodBands ?? []) {
         const hit =
           (band.atOrAbove != null && v >= band.atOrAbove) ||
           (band.atOrBelow != null && v <= band.atOrBelow);

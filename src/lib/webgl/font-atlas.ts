@@ -661,7 +661,10 @@ export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): 
     { url: '/tilesets/bitlands_workshops.bmp', puaBase: 0xe600 },
     { url: '/tilesets/bitlands_crops.bmp', puaBase: 0xe700 },
     { url: '/tilesets/creatures.bmp', puaBase: 0xe800 },
-    { url: '/tilesets/cultures.bmp', puaBase: 0xe900 }
+    // TEMP: the dedicated cultures sheet doesn't exist yet (the Race→Culture rename dropped the
+    // asset). Point the U+E900 slot at the old races.bmp so nothing 404s; sprites may sit
+    // misaligned until a proper 192×288 cultures.bmp lands.
+    { url: '/tilesets/races.bmp', puaBase: 0xe900 }
   ];
 
   const results = await Promise.allSettled(

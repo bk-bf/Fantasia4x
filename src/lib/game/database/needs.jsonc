@@ -1,34 +1,80 @@
-// needs.jsonc — per-need definitions (keyed by the `Pawn.needs` field). Each need declares how it
-// affects MOOD: `moodBands` apply while the need is past a threshold, and each band REFERENCES a mood
-// effect id (mood.jsonc `effects`) rather than carrying its own label/value. Bands are SEVERE-FIRST —
-// the first matching band for a need wins (so Starving beats Hungry). Survival needs use `atOrAbove`
-// (high = bad); `fun` is INVERTED and uses `atOrBelow` (low = bad).
+// needs.jsonc — per-need definitions (keyed by the `Pawn.needs` field). The single data home for how
+// each need BEHAVES: how fast it builds/decays, the thresholds that pull a pawn off work to satisfy it,
+// how much a session relieves, how long that session takes, and how it colours MOOD.
+//
+// Units are authored the same way the code always authored them (see core/time.ts): RATES are per
+// in-game SECOND, DURATIONS are in in-game SECONDS (the sim converts both to tick-space at load), and
+// thresholds/relief are 0–100 need points. The loader (core/needsDefs.ts) resolves these into the same
+// module constants PawnService / pawnHelpers used before, so the per-tick hot path still reads plain
+// numbers — only the VALUES moved out of code into here.
+//
+//   rate/decayRate  — per-second build (survival needs) or decay (`fun`, inverted: 100 = entertained)
+//   seek            — abandon work to go satisfy the need at/above this (fun: at/below)
+//   autoSatisfy     — opportunistic top-up threshold when already at the water/well (drink/wash)
+//   relief          — need points removed (survival) / restored (fun) by one full session
+//   durationSeconds — how long a satisfy session takes
+//   moodBands       — each band references a mood effect id (mood.jsonc `effects`), SEVERE-FIRST
+//
+// NOT here (stay in code): the hunger (~0.54×hunger_rate) and fatigue (~0.32×fatigue_rate) BASE build
+// rates — they're stat/trait-derived formulas, not flat numbers (see PawnService.getHungerIncreasePerTurn).
 {
   "hunger": {
+    "seek": 70,
+    "eatDurationSeconds": 2,
+    "eatGroundDurationSeconds": 3,
     "moodBands": [
       { "atOrAbove": 90, "effect": "need_starving" },
       { "atOrAbove": 75, "effect": "need_hungry" }
     ]
   },
   "fatigue": {
+    "seek": 72,
+    "sleepDurationSeconds": 100,
+    "sleepGroundDurationSeconds": 124,
+    "groundRecoveryPerSecond": 0.58,
+    "wakeThresholdFed": 0,
+    "wakeThresholdHungry": 30,
     "moodBands": [
       { "atOrAbove": 95, "effect": "need_exhausted" },
       { "atOrAbove": 85, "effect": "need_very_tired" }
     ]
   },
   "thirst": {
+    "rate": 0.7,
+    "autoSatisfy": 70,
+    "seek": 82,
+    "relief": 65,
+    "durationSeconds": 2,
     "moodBands": [
       { "atOrAbove": 90, "effect": "need_parched" },
       { "atOrAbove": 75, "effect": "need_thirsty" }
     ]
   },
   "hygiene": {
+    "rate": 0.3,
+    "autoSatisfy": 75,
+    "seek": 88,
+    "relief": 70,
+    "durationSeconds": 4,
     "moodBands": [{ "atOrAbove": 85, "effect": "need_filthy" }]
   },
   "fun": {
+    "decayRate": 0.13,
+    "seek": 30,
+    "relief": 70,
+    "durationSeconds": 20,
     "moodBands": [
       { "atOrBelow": 5, "effect": "need_starved_company" },
       { "atOrBelow": 12, "effect": "need_restless" }
     ]
+  },
+  // bloodHunger (LINEAGES-II) — the vampire/werewolf feeding need. Only pawns with a `bloodNeedKind`
+  // carry it; it fills on the hourly lineage cadence (PawnStateMachine). No mood bands.
+  "bloodHunger": {
+    "fillPerGameHour": 2,
+    "feedThreshold": 70,
+    "feedRadius": 12,
+    "rageThreshold": 100,
+    "rageDurationHours": 6
   }
 }

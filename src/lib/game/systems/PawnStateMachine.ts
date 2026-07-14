@@ -111,7 +111,14 @@ import { pawnById } from '../core/pawnIndex';
 // `pawn/pawnHelpers.ts`, the stateless queries in `pawn/pawnQueries.ts`, and the state enum in
 // `pawn/pawnStates.ts`. What remains here is the health/lifecycle block + the per-pawn dispatcher.
 import { PAWN_STATE, type PawnStateName } from './pawn/pawnStates';
-import { findCombatThreat, amenityAt, FILTHY_THRESHOLD, WET_THRESHOLD } from './pawn/pawnHelpers';
+import {
+  findCombatThreat,
+  amenityAt,
+  FILTHY_THRESHOLD,
+  WET_THRESHOLD,
+  releaseClaimedJobs,
+  forceUncontrolled
+} from './pawn/pawnHelpers';
 import {
   handleIdle,
   handleMovingToResource,
@@ -135,6 +142,16 @@ import {
   handleHunting,
   handleBloodHunt
 } from './pawn/handlers/combat';
+import {
+  handleBreakdown,
+  shouldRollBreakdown,
+  breakdownChance,
+  rollBreakdown,
+  pickBreakdownKind,
+  CATHARSIS_HOURS
+} from './pawn/handlers/breakdown';
+import { moodEffect } from '../core/moodEffects';
+import { needNum } from '../core/needsDefs';
 // Re-exported for external consumers that imported them from this module historically.
 export { PAWN_STATE, type PawnStateName };
 export { resetUnreachableJobs } from './pawn/pawnHelpers';
@@ -854,27 +871,40 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
         pawn.inventory.weightKg += itemService.getItemById('raw_silk')?.weightKg ?? 0;
       }
     }
-    // Blood hunger (LINEAGES-II §1/§2): fills ~2/hour → full in ~2 in-game days of neglect.
+    // Blood hunger (LINEAGES-II §1/§2): fills ~2/hour → full in ~2 in-game days of neglect. Feeding /
+    // rage tuning lives in needs.jsonc `bloodHunger`.
     if (pawn.bloodNeedKind && pawn.isAlive !== false && pawn.needs) {
-      const hunger = Math.min(100, (pawn.needs.bloodHunger ?? 0) + 2);
+      const hunger = Math.min(
+        100,
+        (pawn.needs.bloodHunger ?? 0) + needNum('bloodHunger', 'fillPerGameHour', 2)
+      );
       pawn.needs.bloodHunger = hunger;
-      // Vampiric ROUTINE feeding: at 70+ the pawn helps itself to the nearest colonist within 12 tiles
-      // (a neck puncture + a blood drain — the victim wakes lighter). Kept abstract in v1: no walk-up.
-      if (pawn.bloodNeedKind === 'humanoid' && hunger >= 70 && pawn.position) {
+      // Vampiric ROUTINE feeding: at the feed threshold the pawn helps itself to the nearest colonist
+      // within the feed radius (a neck puncture + a blood drain — the victim wakes lighter). Kept
+      // abstract in v1: no walk-up.
+      if (
+        pawn.bloodNeedKind === 'humanoid' &&
+        hunger >= needNum('bloodHunger', 'feedThreshold', 70) &&
+        pawn.position
+      ) {
+        const feedRadius = needNum('bloodHunger', 'feedRadius', 12);
         const victim = gameState.pawns.find(
           (v) =>
             v.id !== pawn.id &&
             v.isAlive !== false &&
             v.position &&
             Math.abs(v.position.x - pawn.position!.x) + Math.abs(v.position.y - pawn.position!.y) <=
-              12
+              feedRadius
         );
         if (victim) feedOnVictim(pawn, victim, gameState.turn);
       }
       // Unfed to the brim → the bloodthirst rage seizes the pawn (refreshed while the meter stays full).
-      if ((pawn.needs.bloodHunger ?? 0) >= 100) {
+      if ((pawn.needs.bloodHunger ?? 0) >= needNum('bloodHunger', 'rageThreshold', 100)) {
         const timers = (pawn.conditionTimers ??= {});
-        timers.bloodthirst = Math.max(timers.bloodthirst ?? 0, ticksFromGameHours(6));
+        timers.bloodthirst = Math.max(
+          timers.bloodthirst ?? 0,
+          ticksFromGameHours(needNum('bloodHunger', 'rageDurationHours', 6))
+        );
       }
     }
   }
@@ -1398,7 +1428,8 @@ const STATE_HANDLERS: Record<string, PawnHandler> = {
   [PAWN_STATE.FIGHTING]: handleFighting,
   [PAWN_STATE.FLEEING]: handleFleeing,
   [PAWN_STATE.HUNTING]: handleHunting,
-  [PAWN_STATE.BLOOD_HUNT]: handleBloodHunt
+  [PAWN_STATE.BLOOD_HUNT]: handleBloodHunt,
+  [PAWN_STATE.BREAKDOWN]: handleBreakdown
 };
 
 function tickPawn(pawn: Pawn, gameState: GameState): GameState {
@@ -1510,11 +1541,7 @@ class PawnStateMachineImpl {
         } else {
           // Enter collapse: stamp the condition and release the claimed job.
           durations.collapse = Math.max(durations.collapse ?? 0, 2);
-          jobs = (state.jobs ?? []).some((j) => j.claimedBy === afterConditions.id)
-            ? (state.jobs ?? []).map((j) =>
-                j.claimedBy === afterConditions.id ? { ...j, claimedBy: null } : j
-              )
-            : state.jobs;
+          jobs = releaseClaimedJobs(state.jobs, afterConditions.id);
         }
         // Materialise conditions from the timers, then read the data-driven forced FSM state from the
         // active conditions — the FSM never hardcodes the `collapse` id / Collapsed state.
@@ -1529,21 +1556,11 @@ class PawnStateMachineImpl {
             break;
           }
         }
+        // Going down RELEASES the draft (an unconscious pawn can't be commanded) and halts movement —
+        // otherwise the draft-path loop kept crawling it toward its target, a downed pawn dragging
+        // itself in to "attack" a wolf. forceUncontrolled is the shared tail with the breakdown block.
         const downed: Pawn = forced
-          ? {
-              ...synced,
-              currentState: forced,
-              activeJob: undefined,
-              // Going down RELEASES the draft: an unconscious pawn can't be commanded, so drop the
-              // drafted flag + any attack/move order. Otherwise the draft-path loop kept crawling it
-              // toward its target at a fraction of a tile/s — a downed pawn dragging itself in to
-              // "attack" a wolf.
-              drafted: false,
-              draftTarget: undefined,
-              path: [],
-              isMoving: false,
-              hasReachedDestination: false
-            }
+          ? forceUncontrolled(synced, forced)
           : { ...synced, currentState: PAWN_STATE.IDLE }; // recovered — stand back up
         state = {
           ...state,
@@ -1551,6 +1568,93 @@ class PawnStateMachineImpl {
           pawns: state.pawns.map((p) => (p.id === pawn.id ? downed : p))
         };
         continue;
+      }
+
+      // ── Mental breakdown lifecycle (MOOD) — a pawn ground down past a mood breakpoint can fail a
+      // moral check (vs mental resistance) and lose control: an UNCONTROLLABLE crying / hiding / fleeing
+      // state (draft refused, like the collapse block above) for a rolled span, then recovery with a
+      // cathartic lift so it can't spiral straight back down. Forced state is data-driven (the def's
+      // `fsmState`). The `mood > tier1` early-out in shouldRollBreakdown keeps the PEACE path cheap.
+      if (
+        (afterConditions.conditionTimers?.mental_breakdown ?? 0) > 0 ||
+        afterConditions.currentState === PAWN_STATE.BREAKDOWN
+      ) {
+        // Count the breakdown down; when it runs out, stand back up with catharsis.
+        const stepped = tickConditionTimers(afterConditions);
+        if ((stepped.conditionTimers?.mental_breakdown ?? 0) <= 0) {
+          const cath = moodEffect('mood_catharsis');
+          socialService.addMoodModifier(
+            stepped,
+            'catharsis',
+            cath?.label ?? 'A great weight lifted',
+            cath?.value ?? 40,
+            ticksFromGameHours(CATHARSIS_HOURS),
+            gameState.turn
+          );
+          const recovered = syncTransientConditions(
+            {
+              ...stepped,
+              currentState: PAWN_STATE.IDLE,
+              breakdownKind: undefined,
+              activeJob: undefined,
+              path: [],
+              isMoving: false,
+              hasReachedDestination: false
+            },
+            gameState.turn
+          );
+          state = { ...state, pawns: state.pawns.map((p) => (p.id === pawn.id ? recovered : p)) };
+          continue;
+        }
+        // Still under: force the data-driven state, drop any draft/claimed job, run the behaviour.
+        // `halt: false` — keep the pawn's path so a fleeing breakdown doesn't re-path every tick.
+        const forced = FSM_STATE_BY_CONDITION['mental_breakdown'] ?? PAWN_STATE.BREAKDOWN;
+        const jobs = releaseClaimedJobs(state.jobs, afterConditions.id);
+        const broken = forceUncontrolled(stepped, forced, false);
+        state = { ...state, jobs, pawns: state.pawns.map((p) => (p.id === pawn.id ? broken : p)) };
+        state = tickPawn(broken, state);
+        const after = pawnById(state.pawns, pawn.id);
+        if (after) {
+          const synced = syncTransientConditions(after, gameState.turn);
+          if (synced !== after)
+            state = { ...state, pawns: state.pawns.map((p) => (p.id === pawn.id ? synced : p)) };
+        }
+        continue;
+      }
+      // Not broken — a miserable pawn faces its once-an-hour moral check.
+      if (shouldRollBreakdown(afterConditions, gameState.turn)) {
+        const resist = pawnStatService.evaluateStat('mental_resistance', afterConditions);
+        const chance = breakdownChance(afterConditions.state?.mood ?? 50, resist);
+        const broke = rollBreakdown(afterConditions, gameState.turn, chance);
+        if (broke) {
+          // Combat-aware flavour: a threat nearby usually means it bolts.
+          const kind = pickBreakdownKind(
+            afterConditions.id,
+            gameState.turn,
+            !!findCombatThreat(afterConditions, state)
+          );
+          const forced = FSM_STATE_BY_CONDITION['mental_breakdown'] ?? PAWN_STATE.BREAKDOWN;
+          const timers = {
+            ...(afterConditions.conditionTimers ?? {}),
+            mental_breakdown: ticksFromGameHours(broke.hours)
+          };
+          const jobs = releaseClaimedJobs(state.jobs, afterConditions.id);
+          const synced = syncTransientConditions(
+            { ...afterConditions, conditionTimers: timers },
+            gameState.turn
+          );
+          // Force the state + halt movement (the breakdown just landed), and stamp which way it plays out.
+          const broken: Pawn = { ...forceUncontrolled(synced, forced), breakdownKind: kind };
+          state = { ...state, jobs, pawns: state.pawns.map((p) => (p.id === pawn.id ? broken : p)) };
+          state = tickPawn(broken, state);
+          const after = pawnById(state.pawns, pawn.id);
+          if (after) {
+            const synced2 = syncTransientConditions(after, gameState.turn);
+            if (synced2 !== after)
+              state = { ...state, pawns: state.pawns.map((p) => (p.id === pawn.id ? synced2 : p)) };
+          }
+          continue;
+        }
       }
 
       let forCollapse = afterConditions;

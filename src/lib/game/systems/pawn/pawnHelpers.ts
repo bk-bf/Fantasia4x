@@ -7,6 +7,7 @@
  */
 import type { GameState, Pawn, Mob, Building, PlacedBuilding, Job } from '../../core/types';
 import { transientNeedOnset } from '../../core/needs';
+import { needNum } from '../../core/needsDefs';
 import { isUncareable } from '../../core/Wounds';
 import BUILDINGS_DATABASE_RAW from '../../database/buildings.jsonc';
 import { jobService } from '../../services/JobService';
@@ -43,9 +44,9 @@ import { tileHasBody } from './carry';
 //   Bed sleep: 0.72/turn → 72→0 in ~100 turns = 1/3 day ≈ 8h   (Rimworld 8h bed sleep)
 //   Ground:    0.58/turn → 72→0 in ~124 turns ≈ 9.9h             (Rimworld ~10h ground sleep)
 //   At 2× speed everything is 2× faster; at 4× speed 4× faster — matching Rimworld multi-speed feel.
-export const HUNGER_THRESHOLD = 70; // Seek food at 70% (= Rimworld 30% saturation trigger)
+export const HUNGER_THRESHOLD = needNum('hunger', 'seek', 70); // Seek food at 70% (= Rimworld 30% saturation trigger)
 
-export const FATIGUE_THRESHOLD = 72; // Seek rest after ~225 turns ≈ 0.75 days (28% rest = 72% fatigue)
+export const FATIGUE_THRESHOLD = needNum('fatigue', 'seek', 72); // Seek rest after ~225 turns ≈ 0.75 days (28% rest = 72% fatigue)
 
 // Hygiene / wetness need at/above which the `filthy` / `wet` conditions show — both the FULL meter (100),
 // sourced from the conditions.jsonc `needOnset` (single source of truth, like `tired`), so designers tune
@@ -129,22 +130,22 @@ export const JOB_QUEUE_SIZE = 4;
 // whole pipeline every tick, so DURATIONS are converted to ticks via ticksFromSeconds()
 // and per-second RATES are converted to per-tick amounts via perTick(). One knob
 // (TICKS_PER_SECOND in core/time) retunes all of them at once.
-export const EATING_TURNS = ticksFromSeconds(2); // ~2 in-game min to eat at a campfire
+export const EATING_TURNS = ticksFromSeconds(needNum('hunger', 'eatDurationSeconds', 2)); // ~2 in-game min to eat at a campfire
 
-export const EATING_TURNS_GROUND = ticksFromSeconds(3); // eating in-place (cold, uncomfortable)
+export const EATING_TURNS_GROUND = ticksFromSeconds(needNum('hunger', 'eatGroundDurationSeconds', 3)); // eating in-place (cold, uncomfortable)
 
-export const SLEEPING_TURNS = ticksFromSeconds(100); // Full recovery in bed: 72 / 0.72 = 100s = 1/3 day (progress bar ref)
+export const SLEEPING_TURNS = ticksFromSeconds(needNum('fatigue', 'sleepDurationSeconds', 100)); // Full recovery in bed: 72 / 0.72 = 100s = 1/3 day (progress bar ref)
 
-export const SLEEPING_TURNS_GROUND = ticksFromSeconds(124); // Full recovery on ground: 72 / 0.58 ≈ 124s ≈ 9.9h
+export const SLEEPING_TURNS_GROUND = ticksFromSeconds(needNum('fatigue', 'sleepGroundDurationSeconds', 124)); // Full recovery on ground: 72 / 0.58 ≈ 124s ≈ 9.9h
 
 // Bed sleep = ground rate + the bed's fatigueRecovery bonus (see handleSleeping), so only the
 // ground rate is a constant here.
-export const FATIGUE_PER_SLEEPING_GROUND = 0.58; // Ground: 72 → 0 in ~124s ≈ 9.9 in-game hours (per second; perTick at use)
+export const FATIGUE_PER_SLEEPING_GROUND = needNum('fatigue', 'groundRecoveryPerSecond', 0.58); // Ground: 72 → 0 in ~124s ≈ 9.9 in-game hours (per second; perTick at use)
 
 // Wake thresholds — prevents yo-yo by requiring proper rest before resuming activity
-export const SLEEP_WAKE_THRESHOLD_FED = 0; // Sleep until fully restored when not hungry
+export const SLEEP_WAKE_THRESHOLD_FED = needNum('fatigue', 'wakeThresholdFed', 0); // Sleep until fully restored when not hungry
 
-export const SLEEP_WAKE_THRESHOLD_HUNGRY = 30; // Allow early waking at 30% to go eat
+export const SLEEP_WAKE_THRESHOLD_HUNGRY = needNum('fatigue', 'wakeThresholdHungry', 30); // Allow early waking at 30% to go eat
 
 // Building definitions (for sleep quality lookup)
 export const BUILDINGS_DB = BUILDINGS_DATABASE_RAW as unknown as Building[];
@@ -777,6 +778,29 @@ export function goIdle(pawn: Pawn, gs: GameState): GameState {
   return gs;
 }
 
+/** Null out any pool job this pawn has claimed. Returns the SAME array ref when it claimed nothing, so
+ *  the caller can skip a state write. Shared by the forced-state (collapse / breakdown) lifecycle blocks. */
+export function releaseClaimedJobs(jobs: Job[], pawnId: string): Job[] {
+  if (!jobs?.some((j) => j.claimedBy === pawnId)) return jobs;
+  return jobs.map((j) => (j.claimedBy === pawnId ? { ...j, claimedBy: null } : j));
+}
+
+/** Force a pawn into an UNCONTROLLABLE forced FSM state (the shared tail of the collapse + breakdown
+ *  blocks): drop the draft + any order, release the active job. It can't be commanded until it recovers.
+ *  `halt` (default true) also stops movement — collapse and the moment a breakdown lands clear the path,
+ *  but a breakdown already in progress passes `false` so its handler can keep steering (a fleeing pawn
+ *  shouldn't have its retreat path wiped every tick). */
+export function forceUncontrolled(pawn: Pawn, forcedState: string, halt = true): Pawn {
+  const base: Pawn = {
+    ...pawn,
+    currentState: forcedState,
+    drafted: false,
+    draftTarget: undefined,
+    activeJob: undefined
+  };
+  return halt ? { ...base, path: [], isMoving: false, hasReachedDestination: false } : base;
+}
+
 /**
  * M2-core: apply `mutate` to one pawn (found by id) IN PLACE and return the SAME state ref — the
  * mutable replacement for the `{...gs, pawns: gs.pawns.map(p => p.id===id ? {...p, …} : p)}` splice
@@ -950,25 +974,25 @@ export function endHunt(pawn: Pawn, state: PawnStateName, gs: GameState): GameSt
 
 // §D water-need routing thresholds (higher than the opportunistic auto-drink/wash at 70/75, so a
 // pawn only abandons work to seek water when it's getting urgent) and relief amounts.
-export const ROUTE_TO_DRINK_THIRST = 82;
+export const ROUTE_TO_DRINK_THIRST = needNum('thirst', 'seek', 82);
 
-export const ROUTE_TO_WASH_HYGIENE = 88;
+export const ROUTE_TO_WASH_HYGIENE = needNum('hygiene', 'seek', 88);
 
-export const DRINK_NEED_RELIEF = 65;
+export const DRINK_NEED_RELIEF = needNum('thirst', 'relief', 65);
 // SOCIAL: a pawn seeks a gathering place (campfire/hearth) when `fun` drops below this; a session there
 // lasts SOCIALISE_TURNS and restores SOCIALISE_FUN_RELIEF (fun climbs from ~threshold back toward full).
-export const FUN_THRESHOLD = 30;
-export const SOCIALISE_TURNS = ticksFromSeconds(20);
-export const SOCIALISE_FUN_RELIEF = 70;
+export const FUN_THRESHOLD = needNum('fun', 'seek', 30);
+export const SOCIALISE_TURNS = ticksFromSeconds(needNum('fun', 'durationSeconds', 20));
+export const SOCIALISE_FUN_RELIEF = needNum('fun', 'relief', 70);
 
-export const WASH_NEED_RELIEF = 70;
+export const WASH_NEED_RELIEF = needNum('hygiene', 'relief', 70);
 
 // Durations for drinking/washing — these take time like eating/sleeping (not instant). The need
 // relief above is distributed evenly over the duration. Drinking is quick (a few sips); washing is
 // a longer chore.
-export const DRINK_TURNS = ticksFromSeconds(2);
+export const DRINK_TURNS = ticksFromSeconds(needNum('thirst', 'durationSeconds', 2));
 
-export const WASH_TURNS = ticksFromSeconds(4);
+export const WASH_TURNS = ticksFromSeconds(needNum('hygiene', 'durationSeconds', 4));
 
 /**
  * §D: nearest place to satisfy a water need — a player-painted `drink`/`wash` zone tile (the way

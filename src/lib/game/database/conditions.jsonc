@@ -991,6 +991,25 @@
         "charSpans"  : [ {"sheet": "font", "id": 31} ],
         "modifiers"  : {"workEfficiency": 0.6}
     },
+    {
+        // MOOD: a full mental break. Stamped as a timed condition (rolled span) when a miserable pawn
+        // fails its moral check; while it holds, the FSM forces the pawn into the Breakdown state and
+        // refuses the draft (`fsmState` + the incapacitated flag, exactly like collapse). It clears on
+        // its own when the timer runs out, and the pawn stands up with a wave of catharsis (mood_catharsis).
+        "id"         : "mental_breakdown",
+        "name"       : "Breaking Down",
+        "flags"      : ["mood", "incapacitated"],
+        "transient"  : true,
+        "description": "Something has finally given way. Beyond reach and beyond orders, the mind turns inward until the worst of it passes.",
+        "color"      : "#7E57C2",
+        "floater"    : true,
+        "charSpans"  : [ {"sheet": "font", "id": 31} ],
+        // Priority just under collapse (100) — a body on the ground still reads first, but a breakdown
+        // outranks every ordinary state tell.
+        "priority"   : 90,
+        "fsmState"   : "Breakdown",
+        "modifiers"  : {}
+    },
     // ── On-hit combat effects (inflicted by creature natural weapons) ─────────
     // Timed transient debuffs applied when a venom/feeding/screech/tongue natural weapon lands (see
     // the weapon's `onHitEffect` in items.jsonc). Stored via conditionTimers like knockdown, so they

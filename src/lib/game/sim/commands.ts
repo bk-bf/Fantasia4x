@@ -48,7 +48,7 @@ import {
 import { equipItem, unequipItem, equipDropToPawn } from '../core/PawnEquipment';
 import { rng } from '../core/rng';
 import { pickUpFromTile } from '../systems/pawn/pawnHauling';
-import { PAWN_STATE } from '../systems/pawn/pawnStates';
+import { PAWN_STATE, isUncontrollable } from '../systems/pawn/pawnStates';
 import { killPawn } from '../systems/PawnStateMachine';
 import { hasShelter } from '../systems/pawn/handlers/rescue';
 import { dropCarriedPawn, freeDropTileNear, CARRIED_PAWN_ITEM } from '../systems/pawn/carry';
@@ -253,7 +253,7 @@ export const COMMANDS: Record<string, Cmd> = {
     }
     if (target && target.type === 'move') {
       const pawn = gs.pawns.find((pw) => pw.id === p.pawnId);
-      if (pawn && pawn.position && pawn.currentState !== 'Collapsed') {
+      if (pawn && pawn.position && !isUncontrollable(pawn.currentState)) {
         gs = assignDraftMovePath(gs, pawn, target.x, target.y);
       }
     }
@@ -314,6 +314,7 @@ export const COMMANDS: Record<string, Cmd> = {
     // Nearest pawn that can actually go: alive, on-map, not already drafted, not busy with its own crisis.
     const BUSY = new Set<string>([
       PAWN_STATE.COLLAPSED,
+      PAWN_STATE.BREAKDOWN,
       PAWN_STATE.SLEEPING,
       PAWN_STATE.FIGHTING,
       PAWN_STATE.FLEEING,
@@ -380,7 +381,7 @@ export const COMMANDS: Record<string, Cmd> = {
     const occ = occupancyService.blockedTiles(gs);
     for (const [id, t] of targets) {
       const pawn = gs.pawns.find((pw) => pw.id === id);
-      if (pawn && pawn.drafted && pawn.position && pawn.currentState !== 'Collapsed') {
+      if (pawn && pawn.drafted && pawn.position && !isUncontrollable(pawn.currentState)) {
         gs = assignDraftMovePath(gs, pawn, t.x, t.y, occ);
       }
     }
@@ -390,7 +391,7 @@ export const COMMANDS: Record<string, Cmd> = {
    *  — see lineFormationTargets. Same paths-now behaviour as movePawnsFormation. */
   movePawnsLine: (s, p: { ids: string[]; ax: number; ay: number; bx: number; by: number }) => {
     const pawns = s.pawns.filter(
-      (pw) => p.ids.includes(pw.id) && pw.drafted && pw.position && pw.currentState !== 'Collapsed'
+      (pw) => p.ids.includes(pw.id) && pw.drafted && pw.position && !isUncontrollable(pw.currentState)
     );
     const targets = lineFormationTargets(s.worldMap, pawns, p.ax, p.ay, p.bx, p.by);
     let gs: GameState = {
@@ -405,7 +406,7 @@ export const COMMANDS: Record<string, Cmd> = {
     const occ = occupancyService.blockedTiles(gs);
     for (const [id, t] of targets) {
       const pawn = gs.pawns.find((pw) => pw.id === id);
-      if (pawn && pawn.drafted && pawn.position && pawn.currentState !== 'Collapsed') {
+      if (pawn && pawn.drafted && pawn.position && !isUncontrollable(pawn.currentState)) {
         gs = assignDraftMovePath(gs, pawn, t.x, t.y, occ);
       }
     }
@@ -423,7 +424,7 @@ export const COMMANDS: Record<string, Cmd> = {
       p.ids.includes(pw.id) &&
       pw.drafted &&
       pw.isAlive !== false &&
-      pw.currentState !== PAWN_STATE.COLLAPSED
+      !isUncontrollable(pw.currentState)
         ? {
             ...pw,
             draftTarget: {
