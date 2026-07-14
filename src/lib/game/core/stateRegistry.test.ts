@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { PAWN_STATE } from '../systems/pawn/pawnStates';
 import { STATE_DEFS, UNCONTROLLABLE_STATES, stateLabel } from './stateDefs';
+import { NEED_OWNED_STATES } from './needsDefs';
 
 /**
  * The FSM state registry (states.jsonc) and the typed `PAWN_STATE` ids are two halves of one thing:
@@ -9,20 +10,18 @@ import { STATE_DEFS, UNCONTROLLABLE_STATES, stateLabel } from './stateDefs';
  * they serve — needs.jsonc is their home); they render via stateLabel's clean-id fallback. These guard
  * the split against drift (a new structural state can't silently skip the registry).
  */
-// Owned by needs.jsonc, not states.jsonc — the satisfy/decision states of a need. Their labels come from
-// stateLabel's id fallback (each already reads as a clean word). MovingToNeed is the shared TRAVEL phase,
-// so it stays in states.jsonc with the other move-to-X states, not here.
-const NEED_OWNED_STATES = new Set<string>([
-  PAWN_STATE.HUNGRY,
-  PAWN_STATE.TIRED,
-  PAWN_STATE.EATING,
-  PAWN_STATE.SLEEPING,
-  PAWN_STATE.DRINKING,
-  PAWN_STATE.WASHING,
-  PAWN_STATE.SOCIALISING
-]);
+// The satisfy states of a need (Hungry, Eating, Sleeping, Drinking, Washing, Socialising…) are OWNED by
+// needs.jsonc — each need declares its `states` there — and derived into NEED_OWNED_STATES. They render
+// via stateLabel's id fallback (each already reads as a clean word). MovingToNeed is the shared TRAVEL
+// phase, so it stays in states.jsonc with the other move-to-X states, not here.
 
 describe('FSM state registry ↔ PAWN_STATE', () => {
+  it('every need-owned state (needs.jsonc `states`) is a real PAWN_STATE — typo guard', () => {
+    const enumVals = new Set<string>(Object.values(PAWN_STATE));
+    for (const s of NEED_OWNED_STATES)
+      expect(enumVals.has(s), `needs.jsonc names a non-existent state '${s}'`).toBe(true);
+  });
+
   it('every STRUCTURAL PAWN_STATE has a states.jsonc entry; need states are owned by needs.jsonc; no orphans', () => {
     const defKeys = new Set(Object.keys(STATE_DEFS));
     for (const v of Object.values(PAWN_STATE)) {

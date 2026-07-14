@@ -8,6 +8,10 @@
 // module constants PawnService / pawnHelpers used before, so the per-tick hot path still reads plain
 // numbers — only the VALUES moved out of code into here.
 //
+//   states          — the FSM state(s) that SATISFY this need (e.g. fun → Socialising, hunger → Hungry,
+//                      Eating). This is where those states are OWNED — they are deliberately kept OUT of
+//                      states.jsonc (which registers only the structural states) so they aren't declared
+//                      twice; stateRegistry.test.ts derives its need-owned set from here.
 //   rate/decayRate  — per-second build (survival needs) or decay (`fun`, inverted: 100 = entertained)
 //   seek            — abandon work to go satisfy the need at/above this (fun: at/below)
 //   autoSatisfy     — opportunistic top-up threshold when already at the water/well (drink/wash)
@@ -19,6 +23,7 @@
 // rates — they're stat/trait-derived formulas, not flat numbers (see PawnService.getHungerIncreasePerTurn).
 {
   "hunger": {
+    "states": ["Hungry", "Eating"],
     "seek": 70,
     "eatDurationSeconds": 2,
     "eatGroundDurationSeconds": 3,
@@ -28,6 +33,7 @@
     ]
   },
   "fatigue": {
+    "states": ["Tired", "Sleeping"],
     "seek": 72,
     "sleepDurationSeconds": 100,
     "sleepGroundDurationSeconds": 124,
@@ -40,6 +46,7 @@
     ]
   },
   "thirst": {
+    "states": ["Drinking"],
     "rate": 0.7,
     "autoSatisfy": 70,
     "seek": 82,
@@ -51,6 +58,7 @@
     ]
   },
   "hygiene": {
+    "states": ["Washing"],
     "rate": 0.3,
     "autoSatisfy": 75,
     "seek": 88,
@@ -59,6 +67,7 @@
     "moodBands": [{ "atOrAbove": 85, "effect": "need_filthy" }]
   },
   "fun": {
+    "states": ["Socialising"],
     "decayRate": 0.13,
     "seek": 30,
     "relief": 70,

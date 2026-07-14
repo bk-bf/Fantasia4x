@@ -16,6 +16,9 @@ export interface NeedMoodBand {
 /** One need's behaviour block. Every field is optional — a need only declares what applies to it
  *  (survival needs have `rate`, `fun` has `decayRate`, bloodHunger has its lineage feeding knobs). */
 export interface NeedDef {
+  /** The FSM state(s) that satisfy this need (e.g. fun → ["Socialising"]). Owned here, kept OUT of
+   *  states.jsonc so they aren't declared twice; the state registry's drift test reads this. */
+  states?: string[];
   /** Per-second build rate (survival needs). */
   rate?: number;
   /** Per-second decay rate (`fun`, inverted: 100 = entertained → 0). */
@@ -55,6 +58,13 @@ export const NEEDS_DB: Readonly<Record<string, NeedDef>> = NEEDS;
 export function needDef(id: string): NeedDef {
   return NEEDS[id] ?? {};
 }
+
+/** The FSM states OWNED by a need (the union of every need's `states`) — e.g. Hungry, Eating, Sleeping,
+ *  Drinking, Washing, Socialising… These live here, not in states.jsonc (which registers only the
+ *  structural states); the state-registry drift test reads this to enforce the split. */
+export const NEED_OWNED_STATES: ReadonlySet<string> = new Set(
+  Object.values(NEEDS).flatMap((d) => d.states ?? [])
+);
 
 /** Read one numeric field off a need, with a fallback if the field (or the need) is absent. Keeps the
  *  call sites terse: `needNum('thirst', 'rate', 0.7)`. */
