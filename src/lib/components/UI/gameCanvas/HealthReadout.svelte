@@ -45,7 +45,8 @@
             {/if}
           </div>
           {#each limb.parts as part (part.label)}
-            <div class="hp-part" class:hp-gone={part.health <= 0 || part.missing}>
+            {@const gone = part.health <= 0 || part.missing}
+            <div class="hp-part" class:hp-gone={gone}>
               <span class="hp-part-name">{part.label}</span>
               <span
                 class="hp-part-hp"
@@ -58,14 +59,17 @@
                   >▼ {part.bleedRate.toFixed(1)}</span
                 >
               {/if}
-              {#each part.wounds as w (w.text)}
-                <span class="hp-wound" class:hp-warn={w.warn}
-                  >· {w.text}{#if w.treated}<span class="hp-treated" title="tended by a caretaker"
-                      >+</span
-                    >{/if}</span
-                >
-              {/each}
-              {#if part.missing && part.wounds.length === 0}
+              {#if !gone}
+                {#each part.wounds as w (w.text)}
+                  <span class="hp-wound" class:hp-warn={w.warn}
+                    >· {w.text}{#if w.treated}<span class="hp-treated" title="tended by a caretaker"
+                        >+</span
+                      >{/if}</span
+                  >
+                {/each}
+              {:else}
+                <!-- Destroyed (0 HP or severed): the part is gone — the scar/wound lines no longer
+                     apply, so a single "gone" replaces them (matches the engine's isMissing || health<=0). -->
                 <span class="hp-wound">· gone</span>
               {/if}
             </div>
