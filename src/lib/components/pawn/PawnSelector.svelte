@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
+  import { stateLabel } from '$lib/game/core/stateDefs';
 
   export let pawns: Pawn[];
   export let selectedPawn: Pawn | null;
@@ -15,7 +16,7 @@
     >
       <span class="name">{pawn.name}</span>
       {#if pawn.cultureName}<span class="culture">{pawn.cultureName}</span>{/if}
-      <span class="state">{(pawn.currentState ?? 'idle').toUpperCase()}</span>
+      <span class="state">{stateLabel(pawn.currentState).toUpperCase()}</span>
     </button>
   {/each}
 </div>

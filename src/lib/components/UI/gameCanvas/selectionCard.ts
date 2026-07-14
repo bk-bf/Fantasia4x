@@ -14,6 +14,7 @@ import { pawnStatService } from '$lib/game/services/PawnStatService.js';
 import { itemService } from '$lib/game/services/ItemService.js';
 import type { DryingStatus } from '$lib/game/services/ItemService.js';
 import { jobService } from '$lib/game/services/JobService.js';
+import { stateLabel } from '$lib/game/core/stateDefs';
 import { getConditionCurrentStage, conditionStatMultipliers } from '$lib/game/core/needs.js';
 import type { GrowthDirection } from '$lib/game/core/cropHealth.js';
 import type {
@@ -457,7 +458,7 @@ export function pawnStateLabel(p: Pawn): string {
     const label = jobService.getJobLabel(p.activeJob.type);
     if (label) return label;
   }
-  return s.replace(/([A-Z])/g, ' $1').trim();
+  return stateLabel(s);
 }
 
 /** Display name for a job's resource (resource def display name, else prettified id). */

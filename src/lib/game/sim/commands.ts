@@ -48,7 +48,8 @@ import {
 import { equipItem, unequipItem, equipDropToPawn } from '../core/PawnEquipment';
 import { rng } from '../core/rng';
 import { pickUpFromTile } from '../systems/pawn/pawnHauling';
-import { PAWN_STATE, isUncontrollable } from '../systems/pawn/pawnStates';
+import { PAWN_STATE } from '../systems/pawn/pawnStates';
+import { isUncontrollable } from '../core/stateDefs';
 import { killPawn } from '../systems/PawnStateMachine';
 import { hasShelter } from '../systems/pawn/handlers/rescue';
 import { dropCarriedPawn, freeDropTileNear, CARRIED_PAWN_ITEM } from '../systems/pawn/carry';

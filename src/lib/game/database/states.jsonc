@@ -1,0 +1,51 @@
+// states.jsonc — the pawn FSM state registry: metadata for the STRUCTURAL `PAWN_STATE`s. The state
+// STRING ids + their TS literal types live in systems/pawn/pawnStates.ts (the typed source of truth code
+// references as `PAWN_STATE.IDLE`); this file hangs the DATA off those ids — a player-facing label, what
+// bucket the state is in, what triggers entry, and whether it's uncontrollable/rolled.
+//
+// NOT here (to avoid duplicating needs.jsonc): the pure need-satisfaction states — Hungry, Tired, Eating,
+// Sleeping, Drinking, Washing, Socialising. Those belong to the NEEDS they serve (needs.jsonc is their
+// home); stateLabel falls back to their id, which already reads as a clean word ("Eating", "Sleeping"…).
+// The shared TRAVEL phase toward a need (MovingToNeed) DOES stay here with the other move-to-X states —
+// it's a travel state, not a need. stateRegistry.test.ts guards the split (every structural PAWN_STATE
+// has an entry; the need states are covered by needs.jsonc).
+//
+// What this file does NOT hold either: the state's BEHAVIOUR. Each state's logic (A* travel, work
+// ticking, combat) is a hand-written handler bound by id in PawnStateMachine's STATE_HANDLERS —
+// pathfinding can't live in JSON. So a "MovingToResource" here is the TRAVEL PHASE metadata; the walking
+// itself stays in handlers/work.ts.
+//
+//   label          — player-facing display name (never the raw id; see stateDefs.stateLabel)
+//   kind           — the primary bucket: idle | travel | work | combat | uncontrollable
+//   source         — what puts a pawn INTO this state: job | need | combat | condition | player | auto
+//                    (the `job`-source states are the "triggered by jobs.jsonc" ones — travel/work phases
+//                     of a colony job; `need` marks the shared travel-to-a-need phase)
+//   uncontrollable — while in it the pawn refuses the draft (drives UNCONTROLLABLE_STATES); the FSM
+//                    force-undrafts each tick. Set on the condition-forced states (collapse/blood-hunt/break)
+//   rollable       — entered by a probabilistic check rather than a decision (the mood breakdown roll)
+//   condition      — the conditions.jsonc id whose `fsmState` forces this state (for the forced ones)
+{
+  "Idle": { "label": "Idle", "kind": "idle", "source": "auto" },
+
+  // ── Travel: the shared "move to X" phases (source declares whether a job or a need sent it) ────────
+  "MovingToResource": { "label": "Traveling", "kind": "travel", "source": "job" },
+  "MovingToDeposit": { "label": "Hauling", "kind": "travel", "source": "job" },
+  "MovingToNeed": { "label": "Traveling", "kind": "travel", "source": "need" },
+
+  // ── Work: colony-job phases (jobs.jsonc-triggered) ────────────────────────────────────────────────
+  "Working": { "label": "Working", "kind": "work", "source": "job" },
+  "Hauling": { "label": "Hauling", "kind": "work", "source": "job" },
+  // Hunting is work-driven — the player marks a mob for the hunt — but plays out as combat.
+  "Hunting": { "label": "Hunting", "kind": "combat", "source": "job" },
+  // Carrying a downed colonist to shelter (a player rescue order).
+  "Rescuing": { "label": "Rescuing", "kind": "work", "source": "player" },
+
+  // ── Combat: auto-engagement when a hostile enters aggro range ─────────────────────────────────────
+  "Fighting": { "label": "Fighting", "kind": "combat", "source": "combat" },
+  "Fleeing": { "label": "Fleeing", "kind": "combat", "source": "combat" },
+
+  // ── Uncontrollable: a condition takes the body; the draft is refused until it clears ──────────────
+  "Collapsed": { "label": "Collapsed", "kind": "uncontrollable", "source": "condition", "uncontrollable": true, "condition": "collapse" },
+  "BloodHunt": { "label": "Blood Hunt", "kind": "uncontrollable", "source": "condition", "uncontrollable": true, "condition": "bloodthirst" },
+  "Breakdown": { "label": "Breaking Down", "kind": "uncontrollable", "source": "condition", "uncontrollable": true, "rollable": true, "condition": "mental_breakdown" }
+}

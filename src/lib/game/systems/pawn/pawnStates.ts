@@ -36,16 +36,7 @@ export const PAWN_STATE = {
 
 export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];
 
-/** States in which the pawn cannot be commanded — a draft/move/attack order is refused and the FSM
- *  force-undrafts the pawn each tick (it's out of the player's hands until it recovers). Collapse and a
- *  mental breakdown both qualify; BloodHunt enforces its own refusal inside the combat handler. */
-export const UNCONTROLLABLE_STATES: ReadonlySet<string> = new Set([
-  PAWN_STATE.COLLAPSED,
-  PAWN_STATE.BREAKDOWN
-]);
-
-/** True while the pawn is in an uncontrollable state (see UNCONTROLLABLE_STATES) — the single check the
- *  draft commands gate on, instead of hardcoding `!== 'Collapsed'` at each call site. */
-export function isUncontrollable(state: string | undefined): boolean {
-  return state != null && UNCONTROLLABLE_STATES.has(state);
-}
+// State METADATA — the player-facing label, bucket, trigger source, and the uncontrollable flag +
+// `isUncontrollable()` — lives in the data-driven registry (database/states.jsonc via core/stateDefs.ts),
+// kept in lockstep with the ids above by stateRegistry.test.ts. This module stays a pure leaf (the typed
+// id source of truth) so every handler/helper can depend on it without pulling in the data layer.
