@@ -28,7 +28,7 @@ export function truncateSentPath(o: Record<string, unknown>): void {
 // DENYLISTS (not allowlists) so a newly-added *read* field stays included by default — fail-safe.
 // All continuously-drifting need values stay hot (shown live in the UI); only the `lastX` event
 // timestamps drop.
-const NEEDS_DROP = new Set(['lastSleep', 'lastMeal', 'lastDrink', 'lastWash']);
+const NEEDS_DROP = new Set(['lastSleep', 'lastMeal', 'lastDrink', 'lastWash', 'lastSocialise']);
 // activeJob: the main thread reads only `type` / `resourceId` / `progress`.
 const ACTIVE_JOB_DROP = new Set([
   'jobId',

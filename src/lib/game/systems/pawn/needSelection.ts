@@ -17,10 +17,12 @@ import {
   FATIGUE_THRESHOLD,
   ROUTE_TO_DRINK_THIRST,
   ROUTE_TO_WASH_HYGIENE,
+  FUN_THRESHOLD,
   needsRecovery,
   findNearestRestBuilding,
   transitionTo,
   tryRouteToWaterNeed,
+  tryRouteToSocialise,
   distToNearestFoodSource,
   distToNearestFoodFetch,
   distToNearestDrinkTarget,
@@ -39,6 +41,7 @@ export type NeedChoice =
   | { kind: 'eat' }
   | { kind: 'sleep' }
   | { kind: 'water'; need: 'drink' | 'wash'; routedState: GameState }
+  | { kind: 'social'; routedState: GameState }
   | null;
 
 /**
@@ -107,6 +110,12 @@ export function selectIdleNeed(pawn: Pawn, gameState: GameState): NeedChoice {
   }
   if ((pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) {
     return { kind: 'sleep' };
+  }
+  // SOCIAL (lowest priority — a mood need, not survival): a bored idle pawn heads to the fire to
+  // socialise instead of loafing. Only from Idle, so it never interrupts real work.
+  if ((pawn.needs?.fun ?? 100) < FUN_THRESHOLD) {
+    const routed = tryRouteToSocialise(pawn, gameState);
+    if (routed) return { kind: 'social', routedState: routed };
   }
   return null;
 }
@@ -235,6 +244,9 @@ export function applyNeed(
     }
     case 'water':
       // tryRouteToWaterNeed already set the MOVING_TO_NEED state on routedState.
+      return jobId ? jobService.releaseJob(pawn.id, jobId, choice.routedState) : choice.routedState;
+    case 'social':
+      // tryRouteToSocialise already set MOVING_TO_NEED (or SOCIALISING if adjacent) on routedState.
       return jobId ? jobService.releaseJob(pawn.id, jobId, choice.routedState) : choice.routedState;
   }
 }

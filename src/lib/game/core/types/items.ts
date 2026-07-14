@@ -141,8 +141,8 @@ export interface DynamicIngredientSlot {
 
 /**
  * Material properties — a dynamic build/craft material (oak vs pine plank, granite vs marble block)
- * shifts the finished building's / item's stats. Authored in `materialProperties.jsonc`, keyed by
- * material item id. `building` mods adjust a placed building's stats; `item` mods the crafted output.
+ * shifts the finished building's / item's stats. Authored on the material's `Item.material` field in
+ * `items.jsonc`. `building` mods adjust a placed building's stats; `item` mods the crafted output.
  * Multipliers default to 1 (neutral), additive deltas to 0.
  */
 export interface MaterialStatMods {
@@ -572,6 +572,11 @@ export interface Item {
     uses: number;
     consumeTime: number;
   };
+
+  /** §M material properties — present on a dynamic build/craft material (oak vs pine plank, granite
+   *  vs marble block). Its `building`/`item` deltas shift the finished building's / crafted item's
+   *  stats when this material fills a `category:` cost slot. Sourced by `core/materialProperties.ts`. */
+  material?: MaterialProperty;
 }
 
 export interface CraftingInProgress {

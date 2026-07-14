@@ -60,6 +60,8 @@
     note?: string;
     /** Map position footer. */
     pos?: { x: number; y: number };
+    /** Extra footer text shown beside the position (e.g. a pawn's sex + age). */
+    posMeta?: string;
     /** Free-form text lines rendered below the header (description, progress, refund, etc.). */
     lines?: string[];
     /** Resource growth maturity 0–100, rendered with the same colour ramp + tooltip as the hover HUD. */
@@ -245,11 +247,6 @@
         {#if model.dismissable}<span class="pawn-dismiss" title="Press Esc to deselect">◈</span
           >{/if}
       </div>
-      {#if model.mood != null}
-        <span class="pawn-mood" class:pawn-warn={model.mood < 30}
-          >Mood {Math.round(model.mood)}</span
-        >
-      {/if}
     </div>
 
     {#if model.flavor}
@@ -344,8 +341,11 @@
     {#if model.note}
       <div class="pawn-job">{model.note}</div>
     {/if}
-    {#if model.pos}
-      <div class="pawn-pos">pos ({model.pos.x},{model.pos.y})</div>
+    {#if model.pos || model.posMeta}
+      <div class="pawn-pos">
+        {#if model.pos}<span>pos ({model.pos.x},{model.pos.y})</span>{/if}
+        {#if model.posMeta}<span class="pawn-pos-meta">{model.posMeta}</span>{/if}
+      </div>
     {/if}
     </div>
   </div>
@@ -502,11 +502,12 @@
     filter: url(#ambient-tint-legible);
   }
   /* NT-U3: fixed-width skeleton, identical for every object type, so long descriptions
-     wrap inside the box instead of stretching it across the map. 300px is the building
-     panel's reference width — every info panel (pawn/mob/resource/item/building, hover or
-     selected) uses exactly this, so none is narrower or wider than another. */
+     wrap inside the box instead of stretching it across the map. Every info panel
+     (pawn/mob/resource/item/building, hover or selected) uses exactly this, so none is
+     narrower or wider than another. Sized so the header (name + a long state tag like
+     "[Moving To Resource]") stays on one line without wrapping. */
   .tile-hud--pawn {
-    width: 300px;
+    width: 340px;
     box-sizing: border-box;
   }
   .pawn-header {
@@ -520,7 +521,8 @@
     display: flex;
     align-items: baseline;
     gap: 5px;
-    flex-wrap: wrap;
+    /* Keep the name + state tag on a single line (the box is sized to fit them). */
+    flex-wrap: nowrap;
   }
   .pawn-name {
     color: #c8a060;
@@ -553,17 +555,11 @@
   .pawn-state {
     color: #7a6030;
     font-size: 12px;
+    white-space: nowrap;
   }
   .pawn-dismiss {
     color: #886630;
     font-size: 12px;
-  }
-  /* Mood pinned to the right of the header (next to the name). */
-  .pawn-mood {
-    color: #c0a040;
-    font-size: 12px;
-    flex-shrink: 0;
-    white-space: nowrap;
   }
   /* ── Button column (NT-U2: outside the box, to the right) ────── */
   .btn-col {
@@ -709,7 +705,13 @@
     color: #887040;
   }
   .pawn-pos {
+    display: flex;
+    gap: 8px;
     color: #776040;
     font-size: 12px;
+  }
+  /* Sex + age riding alongside the position — plain muted tag, matching the mob card's tag line. */
+  .pawn-pos-meta {
+    color: #8a7040;
   }
 </style>

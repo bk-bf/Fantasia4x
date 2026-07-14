@@ -511,6 +511,24 @@ export function findNearestRestBuilding(
   return best ? { x: best.x, y: best.y, buildingId: best.buildingId } : null;
 }
 
+/** SOCIAL: nearest COMPLETE gathering-place building (buildingProperties `gathering` — campfire/hearth).
+ *  Unlike a bed, a fire holds many pawns, so there's NO exclusive claim/occupancy check. */
+export function findNearestGatheringBuilding(
+  pawn: Pawn,
+  gs: GameState
+): { x: number; y: number } | null {
+  if (!pawn.position) return null;
+  const gatherings = (gs.buildings ?? []).filter(
+    (b) =>
+      b.status === 'complete' &&
+      BUILDINGS_DB.find((d) => d.id === b.type)?.buildingProperties?.gathering
+  );
+  const b = findNearestBy(gatherings, (c) =>
+    manhattan(c.x, c.y, pawn.position!.x, pawn.position!.y)
+  );
+  return b ? { x: b.x, y: b.y } : null;
+}
+
 /** True when the pawn is adjacent to a lit campfire (better eating). */
 export function isAtFoodBuilding(pawn: Pawn, gs: GameState): boolean {
   if (!pawn.position) return false;
@@ -937,6 +955,11 @@ export const ROUTE_TO_DRINK_THIRST = 82;
 export const ROUTE_TO_WASH_HYGIENE = 88;
 
 export const DRINK_NEED_RELIEF = 65;
+// SOCIAL: a pawn seeks a gathering place (campfire/hearth) when `fun` drops below this; a session there
+// lasts SOCIALISE_TURNS and restores SOCIALISE_FUN_RELIEF (fun climbs from ~threshold back toward full).
+export const FUN_THRESHOLD = 30;
+export const SOCIALISE_TURNS = ticksFromSeconds(20);
+export const SOCIALISE_FUN_RELIEF = 70;
 
 export const WASH_NEED_RELIEF = 70;
 
@@ -1016,6 +1039,45 @@ export function tryRouteToWaterNeed(
               timeRequired: 1,
               turnsInState: 0,
               targetState
+            }
+          }
+        : p
+    )
+  };
+}
+
+/** SOCIAL: route the pawn to the nearest gathering place to socialise (mirrors tryRouteToWaterNeed).
+ *  Adjacent → start SOCIALISING in place; else path there and enter MOVING_TO_NEED (targetState
+ *  SOCIALISING). Returns null when there's no gathering building or it's unreachable. */
+export function tryRouteToSocialise(pawn: Pawn, gameState: GameState): GameState | null {
+  const target = findNearestGatheringBuilding(pawn, gameState);
+  if (!target || !pawn.position) return null;
+  if (isAdjacent(pawn.position.x, pawn.position.y, target.x, target.y)) {
+    const gs = transitionTo(pawn, PAWN_STATE.SOCIALISING, gameState);
+    return {
+      ...gs,
+      pawns: gs.pawns.map((p) =>
+        p.id === pawn.id ? { ...p, path: [], isMoving: false, nextCellCostLeft: undefined } : p
+      )
+    };
+  }
+  const afterPath = tryAssignPath(pawn, target.x, target.y, gameState);
+  if (!afterPath) return null;
+  return {
+    ...afterPath,
+    pawns: afterPath.pawns.map((p) =>
+      p.id === pawn.id
+        ? {
+            ...p,
+            currentState: PAWN_STATE.MOVING_TO_NEED,
+            activeJob: {
+              type: 'need' as const,
+              targetX: target.x,
+              targetY: target.y,
+              progress: 0,
+              timeRequired: 1,
+              turnsInState: 0,
+              targetState: PAWN_STATE.SOCIALISING
             }
           }
         : p

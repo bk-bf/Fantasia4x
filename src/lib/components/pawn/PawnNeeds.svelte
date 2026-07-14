@@ -40,6 +40,16 @@
     if (pct >= 30) return '#c8a030';
     return '#c86030';
   }
+  // Fun is INVERTED (100 = entertained). Only shown once it drops low (autohide); green→amber→red.
+  const FUN_SHOW_BELOW = 12;
+  function getFunColor(pct: number): string {
+    if (pct >= 50) return 'var(--pos)';
+    if (pct >= 20) return '#c8a030';
+    return '#c86030';
+  }
+  function funDesc(pct: number): string {
+    return pct < 5 ? 'starved for company' : pct < 12 ? 'restless' : 'content';
+  }
 </script>
 
 <div class="needs-section">
@@ -75,12 +85,24 @@
     <span class="desc">{getNeedDescription('hygiene', hygienePct)}</span>
   </div>
 
-  <div class="need-row">
-    <span class="lbl">WETNESS</span>
-    <span class="block-bar" style="color: {getWetColor(wetnessPct)}">{blockBar(wetnessPct)}</span>
-    <span class="val" style="color: {getWetColor(wetnessPct)}">{wetnessPct}/100</span>
-    <span class="desc">{wetDesc(wetnessPct)}</span>
-  </div>
+  {#if wetnessPct > 0}
+    <div class="need-row">
+      <span class="lbl">WETNESS</span>
+      <span class="block-bar" style="color: {getWetColor(wetnessPct)}">{blockBar(wetnessPct)}</span>
+      <span class="val" style="color: {getWetColor(wetnessPct)}">{wetnessPct}/100</span>
+      <span class="desc">{wetDesc(wetnessPct)}</span>
+    </div>
+  {/if}
+
+  {#if (needs.fun ?? 100) < FUN_SHOW_BELOW}
+    {@const funPct = Math.round(needs.fun ?? 100)}
+    <div class="need-row">
+      <span class="lbl">FUN</span>
+      <span class="block-bar" style="color: {getFunColor(funPct)}">{blockBar(funPct)}</span>
+      <span class="val" style="color: {getFunColor(funPct)}">{funPct}/100</span>
+      <span class="desc">{funDesc(funPct)}</span>
+    </div>
+  {/if}
 
   {#if needs.bloodHunger !== undefined}
     {@const bhPct = Math.round(needs.bloodHunger)}
@@ -98,40 +120,44 @@
     {@const maxBV = pawn.maxBloodVolume}
     {@const curBV = pawn.bloodVolume ?? maxBV}
     {@const bloodPct = Math.round((curBV / maxBV) * 100)}
-    <div class="need-row">
-      <span class="lbl">BLOOD</span>
-      <span class="block-bar" style="color: {getBloodColor(bloodPct)}">{blockBar(bloodPct)}</span>
-      <span class="val" style="color: {getBloodColor(bloodPct)}">{Math.round(curBV)}/{maxBV}</span>
-      <span class="desc"
-        >{bloodPct >= 90
-          ? 'healthy'
-          : bloodPct >= 60
-            ? 'low'
-            : bloodPct >= 30
-              ? 'critical'
-              : 'near death'}</span
-      >
-    </div>
+    {#if bloodPct < 100}
+      <div class="need-row">
+        <span class="lbl">BLOOD</span>
+        <span class="block-bar" style="color: {getBloodColor(bloodPct)}">{blockBar(bloodPct)}</span>
+        <span class="val" style="color: {getBloodColor(bloodPct)}">{Math.round(curBV)}/{maxBV}</span>
+        <span class="desc"
+          >{bloodPct >= 90
+            ? 'healthy'
+            : bloodPct >= 60
+              ? 'low'
+              : bloodPct >= 30
+                ? 'critical'
+                : 'near death'}</span
+        >
+      </div>
+    {/if}
   {/if}
 
   {#if pawn.maxStamina !== undefined}
     {@const maxST = pawn.maxStamina}
     {@const curST = pawn.stamina ?? maxST}
     {@const stPct = Math.round((curST / maxST) * 100)}
-    <div class="need-row">
-      <span class="lbl">STAMINA</span>
-      <span class="block-bar" style="color: {getStaminaColor(stPct)}">{blockBar(stPct)}</span>
-      <span class="val" style="color: {getStaminaColor(stPct)}">{Math.round(curST)}/{maxST}</span>
-      <span class="desc"
-        >{stPct >= 80
-          ? 'fresh'
-          : stPct >= 50
-            ? 'tired'
-            : stPct >= 20
-              ? 'winded'
-              : 'exhausted'}</span
-      >
-    </div>
+    {#if stPct < 100}
+      <div class="need-row">
+        <span class="lbl">STAMINA</span>
+        <span class="block-bar" style="color: {getStaminaColor(stPct)}">{blockBar(stPct)}</span>
+        <span class="val" style="color: {getStaminaColor(stPct)}">{Math.round(curST)}/{maxST}</span>
+        <span class="desc"
+          >{stPct >= 80
+            ? 'fresh'
+            : stPct >= 50
+              ? 'tired'
+              : stPct >= 20
+                ? 'winded'
+                : 'exhausted'}</span
+        >
+      </div>
+    {/if}
   {/if}
 
   <ConditionChips views={conditionViews} />

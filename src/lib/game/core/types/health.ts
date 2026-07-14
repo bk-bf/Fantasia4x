@@ -27,6 +27,12 @@ export interface EntityNeeds {
    *  days (hourly cadence); sated by carcass-eating (werewolf) or feeding on a colonist (vampiric).
    *  At 100 the `bloodthirst` condition seizes the pawn into the lose-control hunt. */
   bloodHunger?: number;
+  /** SOCIAL — recreation/company meter 0–100 (INVERTED vs the survival needs: 100 = well-entertained,
+   *  0 = starved for company). Decays slowly each tick; recovered by SOCIALISING at a gathering place.
+   *  Low fun seeds a mood debuff and drives the pawn to seek the fire. */
+  fun?: number;
+  /** Turn the pawn last socialised (for cadence/analytics; stripped from the snapshot). */
+  lastSocialise?: number;
 }
 
 /**

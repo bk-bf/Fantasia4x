@@ -69,7 +69,7 @@
     position: absolute;
     bottom: calc(100% + 4px);
     left: 0;
-    width: 300px;
+    width: 340px;
     box-sizing: border-box;
     opacity: 0;
     transform: translateY(6px);

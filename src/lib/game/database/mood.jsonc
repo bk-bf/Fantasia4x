@@ -1,0 +1,35 @@
+// mood.jsonc — the MOOD-REWORK tuning tables (PawnService.computeMoodTarget). Mood is a single 0–100
+// value that EASES toward a TARGET = base + Σ signed contributions. The dynamic contributions (weather
+// value from weather.jsonc, trait `mood`, condition `mood`, event thoughts, amenity) are computed live;
+// this file owns the fixed BANDS that were previously hardcoded, so they're tunable without code:
+//
+//   base        — where a pawn with nothing acting on them sits (and drifts back toward).
+//   needBands   — a standing offset while a need is past a threshold. `atOrAbove` (survival needs:
+//                 high = bad) OR `atOrBelow` (fun: low = bad). Ordered SEVERE-FIRST per need — the
+//                 first matching band for a given need wins (so Starving beats Hungry).
+//   healthBands — offsets by low `state.health` (atOrBelow), severe-first; first match wins.
+//   labels      — the player-facing labels for the live weather/amenity contributions.
+// All labels are PLAYER-FACING.
+{
+  "base": 50,
+  "labels": {
+    "weatherGood": "Fair skies",
+    "weatherBad": "Foul weather",
+    "amenity": "Pleasant surroundings"
+  },
+  "needBands": [
+    { "need": "hunger", "atOrAbove": 90, "label": "Starving", "value": -12 },
+    { "need": "hunger", "atOrAbove": 75, "label": "Hungry", "value": -5 },
+    { "need": "fatigue", "atOrAbove": 95, "label": "Exhausted", "value": -8 },
+    { "need": "fatigue", "atOrAbove": 85, "label": "Very tired", "value": -4 },
+    { "need": "thirst", "atOrAbove": 90, "label": "Parched", "value": -10 },
+    { "need": "thirst", "atOrAbove": 75, "label": "Thirsty", "value": -4 },
+    { "need": "hygiene", "atOrAbove": 85, "label": "Filthy", "value": -4 },
+    { "need": "fun", "atOrBelow": 5, "label": "Starved for company", "value": -9 },
+    { "need": "fun", "atOrBelow": 12, "label": "Restless", "value": -4 }
+  ],
+  "healthBands": [
+    { "atOrBelow": 50, "label": "Badly hurt", "value": -12 },
+    { "atOrBelow": 80, "label": "Wounded", "value": -5 }
+  ]
+}

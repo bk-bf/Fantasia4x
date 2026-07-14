@@ -227,7 +227,7 @@
     left: 0;
     /* width matches the info card's 300px cap */
     width: 100%;
-    max-width: 300px;
+    max-width: 340px;
     opacity: 0;
     transform: translateY(6px);
     overflow: hidden;

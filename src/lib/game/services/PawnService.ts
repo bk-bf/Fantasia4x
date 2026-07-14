@@ -19,6 +19,7 @@ import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
 import { stepBody } from './MovementSystem';
 import { occupancyService } from './OccupancyService';
 import conditionsData from '../database/conditions.jsonc';
+import moodData from '../database/mood.jsonc';
 import { getConditionCurrentStage, conditionNeedMultipliers, getConditionDefById } from '../core/needs';
 import { amenityAt } from '../core/buildingAmenity';
 import { effectiveMood, moodModifierValue } from '../core/Social';
@@ -54,20 +55,32 @@ function getActiveTransientConditions(entity: Pawn | Mob): TransientConditionDef
 // Mood is a single 0–100 value that eases toward a computed TARGET; it does NOT drift by per-tick
 // nudges anymore. Everything (weather/conditions/traits/needs/events) is a signed point offset summed
 // into that target (computeMoodTarget). Data-authored offsets live in the four *.jsonc files.
-const MOOD_BASE = 50; // where every pawn starts and drifts back toward with nothing acting on them
+// MOOD-REWORK bands are DATA (mood.jsonc) — tunable without code. The dynamic contributions
+// (weather/trait/condition/thought/amenity) are still computed live in computeMoodTarget.
+interface MoodNeedBand {
+  need: string;
+  atOrAbove?: number;
+  atOrBelow?: number;
+  label: string;
+  value: number;
+}
+interface MoodHealthBand {
+  atOrBelow: number;
+  label: string;
+  value: number;
+}
+const MOOD = moodData as unknown as {
+  base: number;
+  labels: { weatherGood: string; weatherBad: string; amenity: string };
+  needBands: MoodNeedBand[];
+  healthBands: MoodHealthBand[];
+};
+const MOOD_BASE = MOOD.base; // where a pawn drifts back toward with nothing acting on them
 // Ease at ~0.4 mood/in-game-second → a ~10-point gap closes in ~2 in-game hours (the design target).
 const MOOD_EASE_STEP = perTick(0.4);
-// Raw-need standing offsets — the everyday discomfort. The escalated MEDICAL states (malnutrition,
-// dehydration, hypothermia…) stack MORE on top through their condition `mood`, so chronic suffering bites.
-const MOOD_STARVING = -12;
-const MOOD_HUNGRY = -5;
-const MOOD_EXHAUSTED = -8;
-const MOOD_TIRED = -4;
-const MOOD_PARCHED = -10;
-const MOOD_THIRSTY = -4;
-const MOOD_FILTHY = -4;
-const MOOD_BADLY_HURT = -12;
-const MOOD_WOUNDED = -5;
+// Per-need bit so the band loop can take the FIRST match per need without a per-call Set/object
+// allocation (computeMoodTarget runs every tick per pawn — see ENGINE-PERFORMANCE).
+const MOOD_NEED_BIT: Record<string, number> = { hunger: 1, fatigue: 2, thirst: 4, hygiene: 8, fun: 16 };
 
 /**
  * PawnService - Clean interface for pawn behavior and need management
@@ -138,6 +151,9 @@ export interface PawnService {
 // §D water needs — per-second accrual (hunger baseline is ~0.54/s for reference).
 const THIRST_INCREASE_PER_SECOND = 0.7; // thirst builds a bit faster than hunger
 const HYGIENE_INCREASE_PER_SECOND = 0.3; // grime builds slowly
+// SOCIAL: `fun` DECAYS toward 0 (100 = entertained). ~100→0 over ~2.5 in-game days of no company, so a
+// pawn seeks the fire every couple of days. Paused while SOCIALISING (recovery happens there instead).
+const FUN_DECREASE_PER_SECOND = 0.13;
 // §D auto-drink: thirst threshold to drink, and relief per unit of water.
 const AUTO_DRINK_THIRST = 70;
 const WATER_THIRST_RELIEF = 65;
@@ -497,6 +513,13 @@ export class PawnServiceImpl implements PawnService {
       const wetRes = pawnStatService.evaluateStat('wetness_resistance', pawn);
       const wetness = accrueWetness(wet0, tileWet, dt, wetRes, drySpeed);
 
+      // SOCIAL: fun decays toward 0 (recovered by SOCIALISING — paused while in that state).
+      const fun0 = needs.fun ?? 100;
+      const fun =
+        pawn.currentState === 'Socialising'
+          ? fun0
+          : Math.max(0, fun0 - FUN_DECREASE_PER_SECOND * dt);
+
       const prevHealth = pawn.state.health ?? 100;
       const health =
         prevHealth < 100
@@ -509,6 +532,7 @@ export class PawnServiceImpl implements PawnService {
         thirst === (needs.thirst ?? 0) &&
         hygiene === (needs.hygiene ?? 0) &&
         wetness === wet0 &&
+        fun === fun0 &&
         health === prevHealth
       ) {
         continue;
@@ -519,6 +543,7 @@ export class PawnServiceImpl implements PawnService {
       needs.thirst = thirst;
       needs.hygiene = hygiene;
       needs.wetness = wetness;
+      needs.fun = fun;
       pawn.state.health = health;
       changed = true;
     }
@@ -671,7 +696,10 @@ export class PawnServiceImpl implements PawnService {
     if (weatherMood) {
       t += weatherMood;
       if (out)
-        out.push({ label: weatherMood > 0 ? 'Fair skies' : 'Foul weather', value: weatherMood });
+        out.push({
+          label: weatherMood > 0 ? MOOD.labels.weatherGood : MOOD.labels.weatherBad,
+          value: weatherMood
+        });
     }
 
     // Pleasant surroundings — comfort + beauty of the occupied tile (material choice feeds in).
@@ -680,46 +708,56 @@ export class PawnServiceImpl implements PawnService {
       const am = Math.min(3, (a.comfort + a.beauty) * 1.5);
       if (am > 0) {
         t += am;
-        if (out) out.push({ label: 'Pleasant surroundings', value: am });
+        if (out) out.push({ label: MOOD.labels.amenity, value: am });
       }
     }
 
-    // Raw needs — the everyday discomfort (medical escalations add more via conditions below).
+    // Need bands (mood.jsonc) — the everyday discomfort; medical escalations add more via conditions.
+    // First (most severe) matching band per need wins (deduped by MOOD_NEED_BIT). `fun` is inverted
+    // (low = bad → atOrBelow); survival needs use atOrAbove.
     const n = pawn.needs;
-    if (n.hunger > 90) {
-      t += MOOD_STARVING;
-      if (out) out.push({ label: 'Starving', value: MOOD_STARVING });
-    } else if (n.hunger > 75) {
-      t += MOOD_HUNGRY;
-      if (out) out.push({ label: 'Hungry', value: MOOD_HUNGRY });
-    }
-    if (n.fatigue > 95) {
-      t += MOOD_EXHAUSTED;
-      if (out) out.push({ label: 'Exhausted', value: MOOD_EXHAUSTED });
-    } else if (n.fatigue > 85) {
-      t += MOOD_TIRED;
-      if (out) out.push({ label: 'Very tired', value: MOOD_TIRED });
-    }
-    if ((n.thirst ?? 0) > 90) {
-      t += MOOD_PARCHED;
-      if (out) out.push({ label: 'Parched', value: MOOD_PARCHED });
-    } else if ((n.thirst ?? 0) > 75) {
-      t += MOOD_THIRSTY;
-      if (out) out.push({ label: 'Thirsty', value: MOOD_THIRSTY });
-    }
-    if ((n.hygiene ?? 0) > 85) {
-      t += MOOD_FILTHY;
-      if (out) out.push({ label: 'Filthy', value: MOOD_FILTHY });
+    let doneNeeds = 0;
+    for (const band of MOOD.needBands) {
+      const bit = MOOD_NEED_BIT[band.need] ?? 0;
+      if (bit === 0 || (doneNeeds & bit) !== 0) continue;
+      let v: number;
+      switch (band.need) {
+        case 'hunger':
+          v = n.hunger;
+          break;
+        case 'fatigue':
+          v = n.fatigue;
+          break;
+        case 'thirst':
+          v = n.thirst ?? 0;
+          break;
+        case 'hygiene':
+          v = n.hygiene ?? 0;
+          break;
+        case 'fun':
+          v = n.fun ?? 100;
+          break;
+        default:
+          continue;
+      }
+      const hit =
+        (band.atOrAbove != null && v >= band.atOrAbove) ||
+        (band.atOrBelow != null && v <= band.atOrBelow);
+      if (hit) {
+        t += band.value;
+        if (out) out.push({ label: band.label, value: band.value });
+        doneNeeds |= bit;
+      }
     }
 
-    // Health (legacy state.health field).
+    // Health bands (mood.jsonc) — severe-first; first match wins.
     const hp = pawn.state?.health ?? 100;
-    if (hp < 50) {
-      t += MOOD_BADLY_HURT;
-      if (out) out.push({ label: 'Badly hurt', value: MOOD_BADLY_HURT });
-    } else if (hp < 80) {
-      t += MOOD_WOUNDED;
-      if (out) out.push({ label: 'Wounded', value: MOOD_WOUNDED });
+    for (const band of MOOD.healthBands) {
+      if (hp <= band.atOrBelow) {
+        t += band.value;
+        if (out) out.push({ label: band.label, value: band.value });
+        break;
+      }
     }
 
     // Traits — permanent temperament baseline (traits.jsonc top-level `mood`).

@@ -332,7 +332,8 @@
     "color"            : "#C8A878",
     "amount"           : 0,
     "weightKg"         : 0.5,
-    "volumeL"          : 1
+    "volumeL"          : 1,
+    "material"         : { "label": "Thin Leather", "desc": "thin, light", "building": { "durability": 0.9 }, "item": { "durability": 0.85, "weight": 0.9 } }
   },
   {
     "id"               : "light_leather",
@@ -346,7 +347,8 @@
     "color"            : "#B8935E",
     "amount"           : 0,
     "weightKg"         : 0.8,
-    "volumeL"          : 1.5
+    "volumeL"          : 1.5,
+    "material"         : { "label": "Light Leather", "desc": "supple", "building": { "durability": 1, "insulation": 0.05 }, "item": { "durability": 1 } }
   },
   {
     "id"               : "sturdy_leather",
@@ -360,7 +362,8 @@
     "color"            : "#9A7848",
     "amount"           : 0,
     "weightKg"         : 1.2,
-    "volumeL"          : 2.5
+    "volumeL"          : 2.5,
+    "material"         : { "label": "Sturdy Leather", "desc": "+durable", "building": { "durability": 1.15, "insulation": 0.05 }, "item": { "durability": 1.15, "weight": 1.1 } }
   },
   {
     "id"               : "heavy_leather",
@@ -374,7 +377,8 @@
     "color"            : "#7E5E36",
     "amount"           : 0,
     "weightKg"         : 1.8,
-    "volumeL"          : 3.5
+    "volumeL"          : 3.5,
+    "material"         : { "label": "Heavy Leather", "desc": "+durable, +warm — heavy", "building": { "durability": 1.3, "insulation": 0.1 }, "item": { "durability": 1.3, "weight": 1.2 } }
   },
   {
     "id"               : "thick_leather",
@@ -611,7 +615,8 @@
     "burnDuration"     : 1.5,
     "deteriorationRate": 0.05,
     "maxDurability"    : 120,
-    "gatheringTypes"   : ["woodcutting"]
+    "gatheringTypes"   : ["woodcutting"],
+    "material"         : { "label": "Pine", "desc": "cheap, soft", "building": { "durability": 0.8 }, "item": { "durability": 0.8 } }
   },
   {
     "id"               : "birch_log",
@@ -629,7 +634,8 @@
     "burnDuration"     : 1.5,
     "deteriorationRate": 0.05,
     "maxDurability"    : 120,
-    "gatheringTypes"   : ["woodcutting"]
+    "gatheringTypes"   : ["woodcutting"],
+    "material"         : { "label": "Birch", "desc": "light, pale", "building": { "durability": 1, "beauty": 0.05 }, "item": { "durability": 1, "weight": 0.9 } }
   },
   {
     "id": "apple_log",
@@ -664,7 +670,8 @@
     "fuelHeat"         : 1,
     "deteriorationRate": 0.04,
     "maxDurability"    : 120,
-    "gatheringTypes"   : ["woodcutting"]
+    "gatheringTypes"   : ["woodcutting"],
+    "material"         : { "label": "Oak", "desc": "+durable — heavier", "building": { "durability": 1.25, "beauty": 0.1 }, "item": { "durability": 1.2, "weight": 1.2 } }
   },
   {
     "id"               : "ash_log",
@@ -681,7 +688,8 @@
     "fuelHeat"         : 1,
     "deteriorationRate": 0.04,
     "maxDurability"    : 120,
-    "gatheringTypes"   : ["woodcutting"]
+    "gatheringTypes"   : ["woodcutting"],
+    "material"         : { "label": "Ash", "desc": "springy, tough", "building": { "durability": 1.2 }, "item": { "durability": 1.2 } }
   },
   {
     "id"               : "willow_log",
@@ -716,7 +724,8 @@
     "fuelHeat"         : 1,
     "deteriorationRate": 0.03,
     "maxDurability"    : 120,
-    "gatheringTypes"   : ["woodcutting"]
+    "gatheringTypes"   : ["woodcutting"],
+    "material"         : { "label": "Yew", "desc": "prized timber", "building": { "durability": 1.1, "beauty": 0.15 }, "item": { "durability": 1.1 } }
   },
   {
     "id"               : "green_firewood",
@@ -1401,7 +1410,8 @@
     "fuelHeat"         : 1,
     "deteriorationRate": 0.03,
     "maxDurability"    : 120,
-    "toolTierRequired" : 0
+    "toolTierRequired" : 0,
+    "material"         : { "label": "Pine", "desc": "cheap, soft — low durability", "building": { "durability": 0.85 }, "item": { "durability": 0.85 } }
   },
   {
     "id": "beam",
@@ -1435,7 +1445,8 @@
     "fuelHeat"         : 1,
     "deteriorationRate": 0.025,
     "maxDurability"    : 120,
-    "toolTierRequired" : 0
+    "toolTierRequired" : 0,
+    "material"         : { "label": "Oak", "desc": "+durable, +handsome — heavier", "building": { "durability": 1.3, "beauty": 0.15 }, "item": { "durability": 1.25, "weight": 1.2 } }
   },
   {
     "id"               : "birch_plank",
@@ -1452,7 +1463,8 @@
     "fuelHeat"         : 1,
     "deteriorationRate": 0.03,
     "maxDurability"    : 120,
-    "toolTierRequired" : 0
+    "toolTierRequired" : 0,
+    "material"         : { "label": "Birch", "desc": "pale & pretty, light", "building": { "durability": 1, "beauty": 0.1 }, "item": { "durability": 1, "weight": 0.9 } }
   },
   {
     "id"               : "ash_plank",
@@ -1469,7 +1481,8 @@
     "fuelHeat"         : 1,
     "deteriorationRate": 0.025,
     "maxDurability"    : 120,
-    "toolTierRequired" : 0
+    "toolTierRequired" : 0,
+    "material"         : { "label": "Ash", "desc": "springy, tough", "building": { "durability": 1.2 }, "item": { "durability": 1.2 } }
   },
   {
     "id"               : "willow_plank",
@@ -1503,7 +1516,8 @@
     "fuelHeat"         : 1,
     "deteriorationRate": 0.02,
     "maxDurability"    : 120,
-    "toolTierRequired" : 0
+    "toolTierRequired" : 0,
+    "material"         : { "label": "Yew", "desc": "prized, handsome", "building": { "durability": 1.1, "beauty": 0.2 }, "item": { "durability": 1.1 } }
   },
   {
     "id": "saw",
@@ -1611,7 +1625,8 @@
     "amount"           : 0,
     "weightKg"         : 5,
     "volumeL"          : 3,
-    "toolTierRequired" : 1
+    "toolTierRequired" : 1,
+    "material"         : { "label": "Granite", "desc": "+durable, heavy", "building": { "durability": 1.3 } }
   },
   {
     "id"               : "limestone_block",
@@ -1626,7 +1641,8 @@
     "amount"           : 0,
     "weightKg"         : 5,
     "volumeL"          : 3,
-    "toolTierRequired" : 1
+    "toolTierRequired" : 1,
+    "material"         : { "label": "Limestone", "desc": "soft, easily worked", "building": { "durability": 1.1 } }
   },
   {
     "id"               : "sandstone_block",
@@ -1641,7 +1657,8 @@
     "amount"           : 0,
     "weightKg"         : 5,
     "volumeL"          : 3,
-    "toolTierRequired" : 1
+    "toolTierRequired" : 1,
+    "material"         : { "label": "Sandstone", "desc": "cheap, crumbly", "building": { "durability": 0.9 } }
   },
   {
     "id"               : "marble_block",
@@ -1656,7 +1673,8 @@
     "amount"           : 0,
     "weightKg"         : 5,
     "volumeL"          : 3,
-    "toolTierRequired" : 1
+    "toolTierRequired" : 1,
+    "material"         : { "label": "Marble", "desc": "+beauty, prestige", "building": { "durability": 1.15, "beauty": 0.3 } }
   },
   {
     "id"               : "slate_tile",
@@ -8039,7 +8057,8 @@
     "color"            : "#E8E0C8",
     "amount"           : 0,
     "weightKg"         : 0.2,
-    "volumeL"          : 0.4
+    "volumeL"          : 0.4,
+    "material"         : { "label": "Linen", "desc": "breathable, plain", "building": { "comfort": 0.05 }, "item": { "durability": 1 } }
   },
   // ═══════════════════════════════════════════════════════════════════════════
   // PRODUCTION-CHAIN-II §M — Magical Resources & Gear
@@ -8063,7 +8082,8 @@
     "fuelHeat": 1,
     "deteriorationRate": 0.02,
     "maxDurability": 160,
-    "gatheringTypes": ["woodcutting"]
+    "gatheringTypes": ["woodcutting"],
+    "material"         : { "label": "Heartwood", "desc": "runed timber, warm", "building": { "durability": 1.3, "beauty": 0.2, "insulation": 0.1 }, "item": { "durability": 1.3 } }
   },
   {
     "id": "moonwood_log",
@@ -8081,7 +8101,8 @@
     "fuelHeat": 1,
     "deteriorationRate": 0.02,
     "maxDurability": 140,
-    "gatheringTypes": ["woodcutting"]
+    "gatheringTypes": ["woodcutting"],
+    "material"         : { "label": "Moonwood", "desc": "moon-pale, very light", "building": { "durability": 1.1, "beauty": 0.25 }, "item": { "durability": 1.1, "weight": 0.7 } }
   },
   {
     "id": "witchwood_log",
@@ -8171,7 +8192,8 @@
     "fuelHeat": 1,
     "deteriorationRate": 0.015,
     "maxDurability": 200,
-    "gatheringTypes": ["woodcutting"]
+    "gatheringTypes": ["woodcutting"],
+    "material"         : { "label": "Ironwood", "desc": "iron-hard, heavy", "building": { "durability": 1.6, "beauty": 0.05 }, "item": { "durability": 1.6, "weight": 1.3 } }
   },
   {
     "id": "emberwood_log",
@@ -8189,7 +8211,8 @@
     "fuelHeat": 2,
     "deteriorationRate": 0.02,
     "maxDurability": 150,
-    "gatheringTypes": ["woodcutting"]
+    "gatheringTypes": ["woodcutting"],
+    "material"         : { "label": "Emberwood", "desc": "ember-warm", "building": { "durability": 1.2, "insulation": 0.15 }, "item": { "durability": 1.2 } }
   },
   // ── PRODUCTION-CHAIN-IIII §1a/§1b — mystical flora: wild magical crops & fungi, foraged from rare
   //    biome-keyed nodes. Alchemy reagents (§2). Preserved materials — they do NOT spoil (no decaySeconds;
@@ -8388,7 +8411,8 @@
     "fuelHeat": 1,
     "deteriorationRate": 0.015,
     "maxDurability": 220,
-    "toolTierRequired": 2
+    "toolTierRequired": 2,
+    "material"         : { "label": "Heartwood", "desc": "runed, warm, fine", "building": { "durability": 1.3, "beauty": 0.25, "insulation": 0.1 }, "item": { "durability": 1.3 } }
   },
   {
     "id": "moonwood_plank",
@@ -8406,7 +8430,8 @@
     "fuelHeat": 1,
     "deteriorationRate": 0.015,
     "maxDurability": 200,
-    "toolTierRequired": 2
+    "toolTierRequired": 2,
+    "material"         : { "label": "Moonwood", "desc": "silver-pale, prized, very light", "building": { "durability": 1.1, "beauty": 0.3 }, "item": { "durability": 1.1, "weight": 0.7 } }
   },
   {
     "id": "ironwood_plank",
@@ -8424,7 +8449,8 @@
     "fuelHeat": 1,
     "deteriorationRate": 0.01,
     "maxDurability": 320,
-    "toolTierRequired": 2
+    "toolTierRequired": 2,
+    "material"         : { "label": "Ironwood", "desc": "near unbreakable — heavy", "building": { "durability": 1.7, "beauty": 0.1 }, "item": { "durability": 1.7, "weight": 1.3 } }
   },
   {
     "id": "emberwood_plank",
@@ -8442,7 +8468,8 @@
     "fuelHeat": 2,
     "deteriorationRate": 0.015,
     "maxDurability": 200,
-    "toolTierRequired": 2
+    "toolTierRequired": 2,
+    "material"         : { "label": "Emberwood", "desc": "ember-warm to the touch", "building": { "durability": 1.2, "insulation": 0.2 }, "item": { "durability": 1.2 } }
   },
   // ── Crystals — per mineral: normal (trade) + infused (enchant) raw, then cut/attuned gems,
   //    then a ring + amulet that grant the mineral's magical buff condition while worn. ──
@@ -10762,7 +10789,8 @@
     "amount"           : 0,
     "weightKg"         : 0.4,
     "volumeL"          : 1.2,
-    "processingType"   : ["weaving"]
+    "processingType"   : ["weaving"],
+    "material"         : { "label": "Wool", "desc": "soft, warm", "building": { "comfort": 0.1, "insulation": 0.12 } }
   },
   {
     "id"               : "coarse_wool",
@@ -10777,7 +10805,8 @@
     "amount"           : 0,
     "weightKg"         : 0.5,
     "volumeL"          : 1.4,
-    "processingType"   : ["weaving"]
+    "processingType"   : ["weaving"],
+    "material"         : { "label": "Coarse Wool", "desc": "coarse, warm", "building": { "comfort": 0.05, "insulation": 0.1 } }
   },
   {
     "id"               : "fine_wool",
@@ -10792,7 +10821,8 @@
     "amount"           : 0,
     "weightKg"         : 0.3,
     "volumeL"          : 1,
-    "processingType"   : ["weaving"]
+    "processingType"   : ["weaving"],
+    "material"         : { "label": "Fine Wool", "desc": "fine, soft, warmest", "building": { "comfort": 0.2, "insulation": 0.15 } }
   },
   {
     "id"               : "felt",
@@ -10807,7 +10837,8 @@
     "amount"           : 0,
     "weightKg"         : 0.5,
     "volumeL"          : 1.2,
-    "processingType"   : ["weaving"]
+    "processingType"   : ["weaving"],
+    "material"         : { "label": "Felt", "desc": "+warm, padded", "building": { "comfort": 0.15, "insulation": 0.2 }, "item": { "durability": 0.9 } }
   },
   {
     "id"               : "woolcloth",
@@ -10822,7 +10853,8 @@
     "amount"           : 0,
     "weightKg"         : 0.4,
     "volumeL"          : 1,
-    "processingType"   : ["weaving"]
+    "processingType"   : ["weaving"],
+    "material"         : { "label": "Wool", "desc": "+warm, +comfort", "building": { "comfort": 0.2, "insulation": 0.15 }, "item": { "durability": 1.05 } }
   },
   // ── Fabric extension — cotton & silk cloth, plush stuffing, and mage garments ──────────────────
   {
@@ -10866,7 +10898,8 @@
     "amount"           : 0,
     "weightKg"         : 0.3,
     "volumeL"          : 0.9,
-    "processingType"   : ["weaving"]
+    "processingType"   : ["weaving"],
+    "material"         : { "label": "Cotton", "desc": "+comfort, soft", "building": { "comfort": 0.15 }, "item": { "durability": 1 } }
   },
   {
     "id": "raw_silk",
@@ -10895,7 +10928,8 @@
     "amount": 0,
     "weightKg": 0.2,
     "volumeL": 0.6,
-    "processingType": ["weaving"]
+    "processingType": ["weaving"],
+    "material"         : { "label": "Silk", "desc": "+beauty, prestige — fragile", "building": { "beauty": 0.3, "comfort": 0.1, "durability": 0.8 }, "item": { "durability": 0.8 } }
   },
   {
     "id": "cushion",

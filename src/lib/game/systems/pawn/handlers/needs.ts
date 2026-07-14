@@ -51,6 +51,8 @@ import {
   mutatePawn,
   advancePawnOrders,
   DRINK_NEED_RELIEF,
+  SOCIALISE_TURNS,
+  SOCIALISE_FUN_RELIEF,
   WASH_NEED_RELIEF,
   DRINK_TURNS,
   WASH_TURNS,
@@ -251,6 +253,35 @@ export function handleDrinking(pawn: Pawn, gameState: GameState): GameState {
     p.needs.thirst = Math.max(0, (p.needs.thirst ?? 0) - reliefPerTurn);
     p.needs.lastDrink = state.turn;
     p.currentState = done ? PAWN_STATE.IDLE : PAWN_STATE.DRINKING;
+    p.activeJob = done
+      ? undefined
+      : {
+          type: 'need' as const,
+          targetX: p.position?.x ?? activeJob?.targetX ?? 0,
+          targetY: p.position?.y ?? activeJob?.targetY ?? 0,
+          progress: turnsInState / duration,
+          timeRequired: duration,
+          turnsInState
+        };
+  });
+}
+
+/** SOCIAL: socialise at the reached gathering place over SOCIALISE_TURNS, recovering `fun` (which is
+ *  INVERTED — 100 = entertained). Mirrors handleDrinking; the shared proximity-dialog system fires
+ *  around the fire on its own. Ends early once fun is full. */
+export function handleSocialising(pawn: Pawn, gameState: GameState): GameState {
+  const activeJob = pawn.activeJob;
+  const turnsInState = (activeJob?.turnsInState ?? 0) + 1;
+  const duration = SOCIALISE_TURNS;
+  const reliefPerTurn = SOCIALISE_FUN_RELIEF / duration;
+  const done = turnsInState >= duration || (pawn.needs?.fun ?? 100) >= 100;
+  return mutatePawn(gameState, pawn.id, (p) => {
+    // Gate the pawn at the fire for the session — clear any residual path.
+    p.path = [];
+    p.isMoving = false;
+    p.needs.fun = Math.min(100, (p.needs.fun ?? 100) + reliefPerTurn);
+    p.needs.lastSocialise = gameState.turn;
+    p.currentState = done ? PAWN_STATE.IDLE : PAWN_STATE.SOCIALISING;
     p.activeJob = done
       ? undefined
       : {

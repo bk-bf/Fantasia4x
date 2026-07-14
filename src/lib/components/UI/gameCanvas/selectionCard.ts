@@ -597,36 +597,63 @@ export function buildPawnCard(
     { label: 'THIRST', value: pawn.needs.thirst ?? 0, warn: (pawn.needs.thirst ?? 0) > 60 },
     { label: 'HYGIENE', value: pawn.needs.hygiene ?? 0, warn: (pawn.needs.hygiene ?? 0) > 60 }
   ];
+  // Autohide meters that are irrelevant: BLOOD/STAMINA only matter when NOT full, WETNESS only when
+  // wet, FUN only once it drops low.
   if (pawn.maxBloodVolume) {
     const curBV = pawn.bloodVolume ?? pawn.maxBloodVolume;
-    bars.push({
-      label: 'BLOOD',
-      value: Math.round((curBV / pawn.maxBloodVolume) * 100),
-      warn: curBV < pawn.maxBloodVolume * 0.6
-    });
+    if (curBV < pawn.maxBloodVolume) {
+      bars.push({
+        label: 'BLOOD',
+        value: Math.round((curBV / pawn.maxBloodVolume) * 100),
+        warn: curBV < pawn.maxBloodVolume * 0.6
+      });
+    }
   }
   if (pawn.maxStamina !== undefined) {
     const curST = pawn.stamina ?? pawn.maxStamina;
+    if (curST < pawn.maxStamina) {
+      bars.push({
+        label: 'STAMINA',
+        value: Math.round((curST / pawn.maxStamina) * 100),
+        warn: curST < pawn.maxStamina * 0.25
+      });
+    }
+  }
+  // SEASONS_WEATHER: how soaked the pawn is, as a body-state bar like BLOOD (blue = water) — only
+  // shown while actually damp.
+  if ((pawn.needs.wetness ?? 0) > 0) {
+    bars.push({ label: 'WETNESS', value: Math.round(pawn.needs.wetness ?? 0), color: '#4FA3D1' });
+  }
+  // SOCIAL: FUN is inverted (100 = entertained) and only surfaces once it drops low (a bored pawn).
+  const funVal = pawn.needs.fun ?? 100;
+  if (funVal < 12) {
     bars.push({
-      label: 'STAMINA',
-      value: Math.round((curST / pawn.maxStamina) * 100),
-      warn: curST < pawn.maxStamina * 0.25
+      label: 'FUN',
+      value: Math.round(funVal),
+      color: funVal < 5 ? '#c86030' : '#c8a030',
+      warn: funVal < 5
     });
   }
-  // SEASONS_WEATHER: how soaked the pawn is, as a body-state bar like BLOOD (blue = water). This
-  // replaces the old redundant job line — the activity is already shown by the [state] tag + pills.
-  bars.push({
-    label: 'WETNESS',
-    value: Math.round(pawn.needs.wetness ?? 0),
-    color: '#4FA3D1'
-  });
   // No flat "HP" stat: the body model (limbs/blood/pain) is the real health — see the HEALTH popup.
-  // Mood moves to the header (right of the name); core attributes then MOVE (current movement speed).
-  const stats: EntityStat[] = [...coreStats(pawn), moveSpeedStat(pawn)];
+  // Core attributes, then MOVE (current movement speed), then Mood — Mood rides with the movement
+  // readout rather than the header (which is left free for the name + long state tag).
+  const moodValue = moodModel ? Math.round(moodModel.mood) : Math.floor(pawn.state.mood);
+  const stats: EntityStat[] = [
+    ...coreStats(pawn),
+    moveSpeedStat(pawn),
+    { label: 'Mood', value: moodValue, warn: moodValue < 30 }
+  ];
+  // Sex + age footer, shown beside the map position. Same convention as the mob card's tag line:
+  // "<age> yrs · <sex symbol>" (e.g. "34 yrs · ♂").
+  const posMeta =
+    [
+      pawn.age != null ? `${pawn.age} yrs` : undefined,
+      pawn.sex ? (pawn.sex === 'male' ? '♂' : '♀') : undefined
+    ]
+      .filter(Boolean)
+      .join(' · ') || undefined;
   return {
     name: pawn.name + entityDebugLabel(pawn),
-    // Sex under the name in the hover/info panel.
-    flavor: pawn.sex ? (pawn.sex === 'male' ? '♂ Male' : '♀ Female') : undefined,
     // SOCIAL-LAYER §7: a mental break overrides the FSM state tag — the player should see WHY the
     // pawn is wandering instead of working.
     status: pawn.socialBreak
@@ -636,8 +663,6 @@ export function buildPawnCard(
       : pawnStateLabel(pawn),
     selected,
     dismissable: selected,
-    // Effective mood (drift + event modifiers) when the breakdown is available (selected/hover card).
-    mood: moodModel ? moodModel.mood : Math.floor(pawn.state.mood),
     stats,
     conditionViews: getActiveConditionViews(pawn),
     bars,
@@ -654,6 +679,7 @@ export function buildPawnCard(
         ? (pawn.activeJob.progress ?? 0)
         : undefined,
     pos: selected ? (pawn.position ?? undefined) : undefined,
+    posMeta,
     // Built for hover cards too so the shared HEALTH toggle works on hover, not just selection.
     health: buildHealthModel(pawn),
     // §M Mood breakdown for the MOOD pop-up (computed in GameCanvas, which holds the live GameState).

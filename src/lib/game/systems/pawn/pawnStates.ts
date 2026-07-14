@@ -15,6 +15,8 @@ export const PAWN_STATE = {
   // §D water needs: route to a drink/wash zone (or well), then drink/wash.
   DRINKING: 'Drinking',
   WASHING: 'Washing',
+  // SOCIAL: route to a gathering place (campfire/hearth) and socialise to recover `fun`.
+  SOCIALISING: 'Socialising',
   // Combat states (COMBAT-SYSTEM): auto-engagement when a hostile enters aggro range.
   FIGHTING: 'Fighting',
   FLEEING: 'Fleeing',

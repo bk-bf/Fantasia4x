@@ -1,21 +1,29 @@
-import materialData from '../database/materialProperties.jsonc';
+import { allItemDefs } from './itemDefs';
 import type { MaterialProperty, MaterialStatMods } from './types';
 
 /**
  * §M material-property accessor. The chosen material for a dynamic `category:` cost slot (oak vs pine
- * plank, granite vs marble block, silk vs linen) shifts the finished building's / item's stats per its
- * entry in `materialProperties.jsonc`. `durability`/`weight` are multipliers (combine by ×);
- * `beauty`/`comfort`/`insulation` are additive (combine by +).
+ * plank, granite vs marble block, silk vs linen) shifts the finished building's / item's stats per the
+ * material item's `Item.material` field in `items.jsonc`. `durability`/`weight` are multipliers
+ * (combine by ×); `beauty`/`comfort`/`insulation` are additive (combine by +). Indexed once.
  */
-const MATERIAL_PROPS = materialData as unknown as Record<string, MaterialProperty>;
+let _materialProps: Record<string, MaterialProperty> | null = null;
+function materialProps(): Record<string, MaterialProperty> {
+  if (_materialProps) return _materialProps;
+  const props: Record<string, MaterialProperty> = {};
+  for (const def of allItemDefs()) {
+    if (def.material) props[def.id] = def.material;
+  }
+  return (_materialProps = props);
+}
 
 export function getMaterialProperty(itemId: string): MaterialProperty | undefined {
-  return MATERIAL_PROPS[itemId];
+  return materialProps()[itemId];
 }
 
 /** True when this item id carries material properties (i.e. is a recognised dynamic-slot material). */
 export function isMaterialWithProps(itemId: string): boolean {
-  return itemId in MATERIAL_PROPS;
+  return itemId in materialProps();
 }
 
 export type AggregatedMods = Required<MaterialStatMods>;
@@ -31,8 +39,9 @@ export function aggregateMaterialMods(
   target: 'building' | 'item'
 ): AggregatedMods {
   const out: AggregatedMods = { ...NEUTRAL };
+  const props = materialProps();
   for (const id of materialIds) {
-    const m = MATERIAL_PROPS[id]?.[target];
+    const m = props[id]?.[target];
     if (!m) continue;
     if (m.durability != null) out.durability *= m.durability;
     if (m.weight != null) out.weight *= m.weight;
