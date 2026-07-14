@@ -1464,6 +1464,41 @@ class CombatServiceImpl implements CombatService {
       : next.pawns.find((p) => p.id === target.id);
     const justDied =
       !!after && (after.isAlive === false || ('state' in after && after.state === 'Corpse'));
+
+    // A wounded charger (chargesWhenWounded — mammoth, aurochs, boar…) turns on whoever just struck it,
+    // PAWN or MOB, instead of standing inert. This mirrors the melee-hunt hand-off (handleHunting) but
+    // fires for ANY hit — ranged, drafted, or another creature — so a placid grazer actually retaliates
+    // (previously it only fought back when a MELEE hunter reached adjacency). It locks the attacker
+    // (huntTargetId) and engages: Attacking if the attacker is adjacent (a melee blow), else Alerted so it
+    // closes the gap (a ranged shot). Left alone if already Attacking, or Fleeing (a badly-hurt beast that
+    // has already broken off keeps running rather than yo-yoing between fight and flight).
+    if (isTargetMob && after && !justDied) {
+      const victim = after as Mob;
+      const victimDef = getCreatureById(victim.creatureId);
+      if (
+        victimDef?.chargesWhenWounded &&
+        victim.state !== 'Attacking' &&
+        victim.state !== 'Fleeing'
+      ) {
+        const attackerPos = this.entityPos(attacker);
+        const adj =
+          Math.max(Math.abs(victim.x - attackerPos.x), Math.abs(victim.y - attackerPos.y)) <= 1;
+        next = {
+          ...next,
+          mobs: (next.mobs ?? []).map((m) =>
+            m.id === victim.id
+              ? {
+                  ...m,
+                  state: adj ? 'Attacking' : 'Alerted',
+                  stateSince: turn,
+                  huntTargetId: attacker.id,
+                  path: []
+                }
+              : m
+          )
+        };
+      }
+    }
     if (witnessed && justDied) {
       simLog.logCombatKill(
         attacker.id,

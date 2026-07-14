@@ -1140,8 +1140,13 @@ export function stepHostile(
           adjacent(mob, p.position)
       );
       // Placid grazers never escalate on a bystander pawn — they only fight the attacker they locked
-      // onto in the prey FSM (handled in Attacking/Hunting). An adjacent colonist is ignored here.
-      if (adjPawn && !placid) return { ...mob, state: 'Attacking', stateSince: turn };
+      // onto (huntTargetId). A grazer LOCKED onto a pawn (it was just struck — chargesWhenWounded set the
+      // huntTargetId in performAttack) IS allowed to close and strike on contact; an unlocked placid
+      // grazer still ignores an adjacent colonist, so a mammoth gored by a worg won't turn on the colony.
+      const lockedOntoPawn =
+        mob.huntTargetId != null && state.pawns.some((p) => p.id === mob.huntTargetId);
+      if (adjPawn && (!placid || lockedOntoPawn))
+        return { ...mob, state: 'Attacking', stateSince: turn };
       // Territorial leash: a NON-aggressive charger (neutral game — boar/aurochs/mammoth defending its
       // space) gives up once IT has strayed past the short TERRITORIAL_LEASH from where the charge began
       // (chaseAnchor), then heads back. Anchoring to the START tile — not the live pawn distance — is

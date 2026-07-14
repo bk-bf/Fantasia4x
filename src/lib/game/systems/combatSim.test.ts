@@ -107,6 +107,33 @@ describe('combat sim (headless tickCombat)', () => {
     expect(mobInjured).toBe(true);
   });
 
+  it('a wounded charger (chargesWhenWounded) retaliates against its attacker — the mammoth bug', () => {
+    // A placid grazer (boar / mammoth / aurochs) in Wander that a pawn strikes must LOCK the attacker and
+    // fight back (huntTargetId + Attacking) instead of standing inert. Regression: attacking a woolly
+    // mammoth never proc'd a counter — only the melee-hunt handler ever set a placid grazer's retaliation,
+    // so a drafted or ranged hit left it passive.
+    let state = makeState([makePawn()], [makeGoblin({ creatureId: 'boar', state: 'Wander' })]);
+    let retaliated = false;
+    for (let t = 0; t < 1500 && !retaliated; t++) {
+      state = { ...state, turn: t };
+      state = combatService.tickCombat(state, 16);
+      const m = state.mobs![0];
+      if (m.state === 'Attacking' && m.huntTargetId === 'p1') retaliated = true;
+    }
+    expect(retaliated).toBe(true);
+  });
+
+  it('a non-charger (no chargesWhenWounded) is NOT flipped into combat by a hit — the gate holds', () => {
+    // Retaliation is opt-in via chargesWhenWounded; a plain goblin never adopts its attacker as a
+    // huntTargetId through this path (tickCombat only ever downs it under the beating).
+    let state = makeState([makePawn({ stats: weakStats })], [makeGoblin({ state: 'Wander' })]);
+    for (let t = 0; t < 400; t++) {
+      state = { ...state, turn: t };
+      state = combatService.tickCombat(state, 16);
+      expect(state.mobs![0].huntTargetId).toBeUndefined();
+    }
+  });
+
   it('part damage accumulates and a sustained beating DOWNS a mob via pain collapse (not instant death)', () => {
     // Pawn-only attacker (goblin Wandering, so it never swings back). Vital organs (hitWeight 0) are
     // never directly struck, so the only resolution is cumulative pain/shock → COLLAPSE. Combat collapse
