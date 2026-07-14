@@ -15,7 +15,7 @@ import type {
 } from './buildings';
 import type { Job, DroppedItem, WorkAssignment } from './jobs';
 import type { CraftingInProgress } from './items';
-import type { ResearchProject, LoreItem } from './research';
+import type { ResearchProject } from './research';
 import type { Pawn, Mob, TamedAnimal } from './entities';
 import type { DeadPawnRecord } from './health';
 import type { PendingEvent } from './events';
@@ -112,7 +112,6 @@ export interface GameState {
   availableResearch: string[];
   completedResearch: string[];
   currentResearch?: ResearchProject;
-  discoveredLore: LoreItem[];
   _woodBonus?: number;
   _stoneBonus?: number;
   // inventory: Record<string, number>; // REMOVE THIS LINE

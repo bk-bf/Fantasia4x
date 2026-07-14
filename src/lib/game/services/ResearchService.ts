@@ -1,14 +1,12 @@
-import type { ResearchProject, LoreItem, EntityStats, GameState } from '../core/types';
+import type { ResearchProject, EntityStats, GameState } from '../core/types';
 import { consumeFromStockpiles, availableQuantityFromDrops } from '../core/GameState';
 import researchData from '../database/research.jsonc';
-import loreData from '../database/lore.jsonc';
 import { perTick } from '../core/time';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
 // gameDebug(true); console.error still surfaces.
 import { gatedConsole as console } from '../core/log';
 
 const RESEARCH_DATABASE = researchData as unknown as ResearchProject[];
-const LORE_DATABASE = loreData as unknown as LoreItem[];
 
 /**
  * ResearchService - Clean interface for research progression and management
@@ -29,12 +27,6 @@ export interface ResearchService {
   hasRequiredMaterials(researchId: string, gameState: GameState): boolean;
   hasRequiredBuilding(researchId: string, gameState: GameState): boolean;
   hasRequiredPopulation(researchId: string, gameState: GameState): boolean;
-
-  // Lore System Methods
-  canUnlockWithLore(researchId: string, gameState: GameState): boolean;
-  getLoreItem(id: string): LoreItem | undefined;
-  getAllLore(): LoreItem[];
-  getApplicableLore(researchId: string): LoreItem[];
 
   // Calculation Methods
   calculateResearchProgress(
@@ -154,25 +146,6 @@ export class ResearchServiceImpl implements ResearchService {
     if (!research?.populationRequired) return true;
 
     return gameState.pawns.length >= research.populationRequired;
-  }
-
-  canUnlockWithLore(researchId: string, gameState: GameState): boolean {
-    const research = this.getResearchById(researchId);
-    if (!research?.canBypassWithLore) return false;
-
-    return gameState.discoveredLore.some((lore) => lore.researchUnlocks.includes(researchId));
-  }
-
-  getLoreItem(id: string): LoreItem | undefined {
-    return LORE_DATABASE.find((lore) => lore.id === id);
-  }
-
-  getAllLore(): LoreItem[] {
-    return [...LORE_DATABASE];
-  }
-
-  getApplicableLore(researchId: string): LoreItem[] {
-    return LORE_DATABASE.filter((lore) => lore.researchUnlocks.includes(researchId));
   }
 
   calculateResearchProgress(

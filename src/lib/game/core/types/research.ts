@@ -33,10 +33,6 @@ export interface ResearchProject {
     maxStats?: Partial<EntityStats>;
   };
 
-  // Lore bypass system
-  loreItemRequired?: string;
-  canBypassWithLore: boolean;
-
   // What this research unlocks
   unlocks: {
     toolTierRequired?: number; // Matches item system naming
@@ -51,13 +47,4 @@ export interface ResearchProject {
 
   // Research timing
   researchTime: number;
-}
-
-export interface LoreItem {
-  id: string;
-  name: string;
-  description: string;
-  type: 'scroll' | 'tome' | 'artifact' | 'manual' | 'fragment';
-  researchUnlocks: string[];
-  discoveryWeight: number;
 }

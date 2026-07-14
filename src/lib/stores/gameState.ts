@@ -143,7 +143,6 @@ export const initialGameState: GameState = {
   availableResearch: [],
   completedResearch: [],
   currentResearch: undefined,
-  discoveredLore: [],
   _woodBonus: 0,
   _stoneBonus: 0,
   equippedItems: {

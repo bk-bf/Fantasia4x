@@ -11,7 +11,6 @@
   let availableResearch: any[] = [];
   let completedResearch: string[] = [];
   let currentResearch: any = null;
-  let discoveredLore: any[] = [];
   // Item fetching methods
   $: getItemAmount = (itemId: string): number => $gameState?.stockpile?.[itemId] ?? 0;
 
@@ -24,7 +23,6 @@
   const unsubscribeGame = gameState.subscribe((state) => {
     completedResearch = state.completedResearch || [];
     currentResearch = state.currentResearch || null;
-    discoveredLore = state.discoveredLore || [];
 
     if (culture) {
       // ✅ Use service method instead
@@ -138,20 +136,6 @@
     <div class="row"><span class="muted">no active research</span></div>
   {/if}
 
-  <!-- Discovered Lore -->
-  {#if discoveredLore.length > 0}
-    <div class="section-hdr sub">| LORE ({discoveredLore.length})</div>
-    {#each discoveredLore as lore}
-      <div class="lore-name">{lore.name.toUpperCase()}</div>
-      <div class="desc-row">{lore.description}</div>
-      {#if lore.researchUnlocks?.length > 0}
-        <div class="row">
-          <span class="lbl">UNLOCKS</span><span class="val">{lore.researchUnlocks.join(', ')}</span>
-        </div>
-      {/if}
-    {/each}
-  {/if}
-
   <!-- Available Research -->
   <div class="section-hdr">| AVAILABLE ({availableResearch.length})</div>
   {#each availableResearch as research}
@@ -242,7 +226,6 @@
           disabled={!canStartResearch(research)}
         >
           {#if currentResearch}BUSY
-          {:else if researchService.canUnlockWithLore(research.id, $gameState)}UNLOCK (LORE)
           {:else if canStartResearch(research)}BEGIN
           {:else}UNAVAILABLE
           {/if}
@@ -362,16 +345,6 @@
   }
   .neg {
     color: var(--neg);
-  }
-
-  /* Lore */
-  .lore-name {
-    padding: 3px 8px;
-    color: var(--accent-hi);
-    font-size: 12px;
-    letter-spacing: 0.04em;
-    border-bottom: 1px solid var(--border);
-    margin-top: 2px;
   }
 
   .desc-row {

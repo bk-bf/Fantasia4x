@@ -9,7 +9,6 @@
     "scrollRequirement": {
       "bark_scrolls": 3
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "items": ["hide_scrolls", "parchment"],
       "effects": {
@@ -33,8 +32,6 @@
       "copper_ore": 3,
       "charcoal": 2
     },
-    "canBypassWithLore": true,
-    "loreItemRequired": "ancient_forge_manual",
     "unlocks": {
       "buildings": ["smelting_furnace"],
       "items": ["copper_ingot"],
@@ -57,8 +54,6 @@
       "limestone": 10,
       "sandstone": 5
     },
-    "canBypassWithLore": true,
-    "loreItemRequired": "builders_codex",
     "unlocks": {
       "buildings": ["stone_hut"],
       "items": ["cut_stone"],
@@ -82,7 +77,6 @@
     "materialRequirement": {
       "oak_wood": 10
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["charcoal_kiln"],
       "items": ["charcoal"],
@@ -105,7 +99,6 @@
       "bark_scrolls": 10,
       "hide_scrolls": 5
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["learning_hall"],
       "items": ["scholars_ink"],
@@ -131,8 +124,6 @@
       "tin_ore": 5,
       "charcoal": 3
     },
-    "canBypassWithLore": true,
-    "loreItemRequired": "ancient_forge_manual",
     "unlocks": {
       "items": ["tin_ingot"],
       "effects": {
@@ -157,8 +148,6 @@
       "copper_ingot": 5,
       "tin_ingot": 2
     },
-    "canBypassWithLore": true,
-    "loreItemRequired": "ancient_forge_manual",
     "unlocks": {
       "buildings": ["bronze_foundry"],
       "items": ["bronze_ingot"],
@@ -181,7 +170,6 @@
       "hide": 10,
       "oak_bark": 5
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["tannery"],
       "items": ["leather"],
@@ -206,7 +194,6 @@
       "fire_clay": 8,
       "charcoal": 4
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["advanced_kiln"],
       "items": ["fire_bricks"],
@@ -232,7 +219,6 @@
     "materialRequirement": {
       "porcelain_clay": 5
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["porcelain_workshop"],
       "items": ["porcelain_vessels"],
@@ -257,7 +243,6 @@
       "clay_pot": 2,
       "wild_sage": 5
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["kitchen"],
       "items": ["hearty_stew"],
@@ -283,7 +268,6 @@
       "wheat": 10,
       "fire_bricks": 5
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["bakery"],
       "items": ["fresh_bread"],
@@ -308,7 +292,6 @@
       "wild_berries": 15,
       "honey": 5
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["brewery"],
       "items": ["berry_wine"],
@@ -333,7 +316,6 @@
       "bone_fishhook": 5,
       "sinew": 10
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["fishing_dock"],
       "effects": {
@@ -357,7 +339,6 @@
       "bronze_weapons": 3,
       "leather": 5
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["hunting_lodge"],
       "effects": {
@@ -382,7 +363,6 @@
       "bronze_weapons": 5,
       "bronze_armor": 3
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["armory", "war_camp"],
       "effects": {
@@ -408,7 +388,6 @@
       "wild_sage": 15,
       "bronze_vessel": 3
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["alchemist_lab"],
       "items": ["miners_elixir", "crafters_focus"],
@@ -434,7 +413,6 @@
       "crystal": 5,
       "bronze_tools": 3
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["crystal_workshop"],
       "items": ["crystal_focus"],
@@ -457,7 +435,6 @@
       "parchment": 20,
       "scholars_ink": 10
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["scholars_workshop"],
       "items": ["research_notes"],
@@ -483,8 +460,6 @@
       "iron_ore": 10,
       "charcoal": 15
     },
-    "canBypassWithLore": true,
-    "loreItemRequired": "ancient_forge_manual",
     "unlocks": {
       "items": ["wrought_iron"],
       "effects": {
@@ -510,8 +485,6 @@
       "wrought_iron": 8,
       "charcoal": 10
     },
-    "canBypassWithLore": true,
-    "loreItemRequired": "ancient_forge_manual",
     "unlocks": {
       "buildings": ["iron_forge"],
       "toolTierRequired": 2,
@@ -539,7 +512,6 @@
       "charcoal": 30,
       "limestone": 10
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["blast_furnace"],
       "items": ["steel_ingot"],
@@ -565,7 +537,6 @@
       "salt": 10,
       "porcelain_vessels": 5
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["granary"],
       "effects": {
@@ -591,7 +562,6 @@
       "bronze_ingot": 8,
       "crystal": 2
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["distillery"],
       "items": ["distilled_spirits"],
@@ -619,7 +589,6 @@
       "granite": 25,
       "wrought_iron": 10
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["fortress_wall"],
       "effects": {
@@ -645,7 +614,6 @@
       "rare_herbs": 20,
       "steel_essence": 5
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["grand_laboratory"],
       "items": ["master_crafters_elixir"],
@@ -671,7 +639,6 @@
       "bronze_ingot": 5,
       "porcelain_vessels": 3
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["marketplace"],
       "effects": {
@@ -698,7 +665,6 @@
       "luxury_goods": 10,
       "steel_ingot": 3
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "buildings": ["trading_post"],
       "effects": {
@@ -722,7 +688,6 @@
       "oak_wood": 20,
       "ash_wood": 15
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "items": ["yew_wood", "hickory_wood"],
       "effects": {
@@ -746,8 +711,6 @@
       "granite": 15,
       "limestone": 20
     },
-    "canBypassWithLore": true,
-    "loreItemRequired": "builders_codex",
     "unlocks": {
       "items": ["marble", "cut_granite"],
       "effects": {
@@ -770,8 +733,6 @@
     "materialRequirement": {
       "bronze_bar": 2
     },
-    "canBypassWithLore": true,
-    "loreItemRequired": "lapidary_treatise",
     "unlocks": {
       "buildings": ["lapidary_bench"],
       "items": ["cut_ruby", "cut_sapphire", "cut_emerald", "cut_topaz", "cut_amethyst", "cut_citrine", "cut_moonstone"]
@@ -792,8 +753,6 @@
     "materialRequirement": {
       "gold_bar": 2
     },
-    "canBypassWithLore": true,
-    "loreItemRequired": "tome_of_attunement",
     "unlocks": {
       "items": [
         "attuned_ruby", "attuned_sapphire", "attuned_emerald", "attuned_topaz", "attuned_amethyst", "attuned_citrine", "attuned_moonstone",
@@ -818,8 +777,6 @@
       "gold_bar": 4,
       "steel_bar": 4
     },
-    "canBypassWithLore": true,
-    "loreItemRequired": "tome_of_attunement",
     "unlocks": {
       "items": ["gem_dust", "magic_concrete", "arcane_resin"],
       "buildings": ["magic_concrete_wall"]
@@ -840,7 +797,6 @@
     "materialRequirement": {
       "gem_dust": 6
     },
-    "canBypassWithLore": false,
     "unlocks": {
       "effects": {
         "mythicAttunement": 1
