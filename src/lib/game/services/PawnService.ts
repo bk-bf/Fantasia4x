@@ -27,6 +27,7 @@ import { effectiveMood, moodModifierValue } from '../core/Social';
 import {
   getAmbientLight,
   weatherEffects,
+  celestialMoodEffect,
   diurnalTempDelta,
   thermalAt,
   effectiveTemperature,
@@ -69,6 +70,15 @@ interface MoodBand {
 const NEED_MOOD = needsData as unknown as Record<string, { moodBands: MoodBand[] }>;
 // Ease at ~0.4 mood/in-game-second → a ~10-point gap closes in ~2 in-game hours (the design target).
 const MOOD_EASE_STEP = perTick(0.4);
+
+/** Does the pawn have condition `id` (persistent OR transient, allowing an "id:stage" transient)? Used
+ *  for a mood effect's `negatedBy` gate. Allocation-free. */
+function pawnHasCondition(pawn: Pawn, id: string): boolean {
+  if (pawn.conditions?.some((c) => c.id === id)) return true;
+  const tc = pawn.transientConditions;
+  if (tc) for (const t of tc) if (t === id || (t.includes(':') && t.split(':')[0] === id)) return true;
+  return false;
+}
 
 /**
  * PawnService - Clean interface for pawn behavior and need management
@@ -699,6 +709,19 @@ export class PawnServiceImpl implements PawnService {
         const e = moodEffect('amenity_pleasant');
         if (out && e) out.push({ label: e.label, value: am });
       }
+    }
+
+    // Celestial — the rising/setting sun or a full moon (day/night + lunar cycle). Skipped by its
+    // `negatedBy` condition (sheltered ⇒ can't see the sky).
+    const cEff = moodEffect(celestialMoodEffect(gameState.turn) ?? undefined);
+    if (
+      cEff &&
+      cEff.value != null &&
+      cEff.value !== 0 &&
+      !(cEff.negatedBy && pawnHasCondition(pawn, cEff.negatedBy))
+    ) {
+      t += cEff.value;
+      if (out) out.push({ label: cEff.label, value: cEff.value });
     }
 
     // Per-need mood bands (needs.jsonc) — each need applies its FIRST (most-severe) matching band,

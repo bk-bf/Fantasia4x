@@ -32,6 +32,12 @@
     // ── Surroundings (computed value — amenity) ───────────────────────────────────────────────────
     "amenity_pleasant": { "label": "Pleasant surroundings" },
 
+    // ── Celestial (day/night + lunar cycle — computeMoodTarget). `negatedBy` cancels the effect while
+    //    the pawn has that condition — you can't watch the sky from under a roof. ────────────────────
+    "celestial_dawn": { "label": "The rising sun", "value": 3, "negatedBy": "sheltered" },
+    "celestial_dusk": { "label": "The setting sun", "value": 3, "negatedBy": "sheltered" },
+    "celestial_full_moon": { "label": "A full moon", "value": 5, "negatedBy": "sheltered" },
+
     // ── Needs (needs.jsonc bands) ─────────────────────────────────────────────────────────────────
     "need_starving": { "label": "Starving", "value": -12 },
     "need_hungry": { "label": "Hungry", "value": -5 },

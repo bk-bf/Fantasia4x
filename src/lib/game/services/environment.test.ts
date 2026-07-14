@@ -14,6 +14,7 @@ import {
   moonPhaseIndex,
   moonPhaseName,
   isFullMoon,
+  celestialMoodEffect,
   isSunUp,
   sunPhaseName,
   recomputeWorldTemperature,
@@ -450,6 +451,17 @@ describe('EnvironmentService — weather mood', () => {
     expect(val('clear')).toBeGreaterThan(0);
     expect(val('blizzard')).toBeLessThan(0);
     expect(val('blizzard')).toBeLessThan(val('rain'));
+  });
+
+  it('celestialMoodEffect fires the sky windows (dawn / dusk / full moon), else null', () => {
+    const D = TURNS_PER_DAY * TICKS_PER_SECOND; // ticks in a day
+    expect(celestialMoodEffect(Math.round(0.28 * D))).toBe('celestial_dawn'); // rising sun
+    expect(celestialMoodEffect(Math.round(0.86 * D))).toBe('celestial_dusk'); // setting sun
+    expect(celestialMoodEffect(Math.round(0.5 * D))).toBeNull(); // midday
+    // deep night on a full-moon day (15) → the moon; new-moon day (0) → nothing.
+    expect(isFullMoon(15)).toBe(true);
+    expect(celestialMoodEffect(15 * D + Math.round(0.95 * D))).toBe('celestial_full_moon');
+    expect(celestialMoodEffect(Math.round(0.95 * D))).toBeNull();
   });
 });
 

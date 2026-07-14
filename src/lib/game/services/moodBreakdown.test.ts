@@ -67,6 +67,17 @@ describe('MOOD-REWORK getMoodBreakdown', () => {
     expect(pleasant!.value).toBeGreaterThan(0);
   });
 
+  it('a full moon lifts mood — unless the pawn is sheltered (negatedBy)', () => {
+    const D = 300 * 60; // ticks per in-game day
+    const fullMoonNight = 15 * D + Math.round(0.95 * D); // day 15 (full moon), deep night
+    const outdoor = pawnService.getMoodBreakdown(pawn(), makeState(pawn(), [], fullMoonNight));
+    expect(outdoor.contributions.find((c) => c.label === 'A full moon')?.value).toBe(5);
+    // Sheltered under a roof → the moon isn't visible, so the effect is negated.
+    const sheltered = pawn({}, {}, { transientConditions: ['sheltered'] });
+    const out = pawnService.getMoodBreakdown(sheltered, makeState(sheltered, [], fullMoonNight));
+    expect(out.contributions.find((c) => c.label === 'A full moon')).toBeUndefined();
+  });
+
   it('an event "thought" feeds the target and FADES to zero over its life', () => {
     const p = pawn(
       {},

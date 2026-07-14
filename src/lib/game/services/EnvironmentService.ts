@@ -280,6 +280,20 @@ export function isFullMoon(dayIndex: number): boolean {
   return moonPhaseIndex(dayIndex) === 4;
 }
 
+/** MOOD-REWORK: the active CELESTIAL mood-effect id (mood.jsonc) for a turn, from the day/night + lunar
+ *  cycle — the rising sun (dawn), the setting sun (dusk), or a full moon at night. `null` at plain
+ *  midday/ordinary night. A "sky-view" effect: the effect's `negatedBy` skips it when the pawn is
+ *  sheltered (can't see the sky under a roof). Same shape as weather — a standing contribution while
+ *  the window holds, so mood eases up through the dawn and back down after. */
+export function celestialMoodEffect(turn: number): string | null {
+  const tod = getTimeOfDay(turn);
+  if (tod >= 0.24 && tod <= 0.33) return 'celestial_dawn'; // the rising sun
+  if (tod >= 0.82 && tod <= 0.91) return 'celestial_dusk'; // the setting sun
+  // Deep night (the moon is out) + the full-moon window → the moon rides high and bright.
+  if ((tod > 0.91 || tod < 0.21) && isFullMoon(dayIndexForTurn(turn))) return 'celestial_full_moon';
+  return null;
+}
+
 // Sun state for the topbar (and anything hour-gated): tracks the ambient keyframes — dawn glow starts
 // ~06:00, sunset dimming begins ~18:43 — rounded to whole HUD hours.
 export const SUNRISE_HOUR = 6;

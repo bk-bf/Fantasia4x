@@ -5,10 +5,13 @@
 // dialog.jsonc `moodGood`/`moodBad`, needs.jsonc bands, mood.jsonc healthBands).
 import moodData from '../database/mood.jsonc';
 
-/** A resolved mood effect. `value` is absent when the source computes it live (amenity). */
+/** A resolved mood effect. `value` is absent when the source computes it live (amenity). `negatedBy`
+ *  names a condition id that CANCELS the effect while the pawn has it (e.g. a full moon isn't visible
+ *  when `sheltered` under a roof). */
 export interface MoodEffect {
   label: string;
   value?: number;
+  negatedBy?: string;
 }
 
 const MOOD = moodData as unknown as {
