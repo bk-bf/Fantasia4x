@@ -643,15 +643,14 @@ export function buildPawnCard(
     moveSpeedStat(pawn),
     { label: 'Mood', value: moodValue, warn: moodValue < 30 }
   ];
-  // Sex + age footer, shown beside the map position. Same convention as the mob card's tag line:
-  // "<age> yrs · <sex symbol>" (e.g. "34 yrs · ♂").
+  // Sex + age footer, shown beside the map position (e.g. "Male, 34 years").
   const posMeta =
     [
-      pawn.age != null ? `${pawn.age} yrs` : undefined,
-      pawn.sex ? (pawn.sex === 'male' ? '♂' : '♀') : undefined
+      pawn.sex ? (pawn.sex === 'male' ? 'Male' : 'Female') : undefined,
+      pawn.age != null ? `${pawn.age} years` : undefined
     ]
       .filter(Boolean)
-      .join(' · ') || undefined;
+      .join(', ') || undefined;
   return {
     name: pawn.name + entityDebugLabel(pawn),
     // SOCIAL-LAYER §7: a mental break overrides the FSM state tag — the player should see WHY the

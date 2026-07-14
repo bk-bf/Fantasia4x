@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SeededRng } from '../core/rng';
 import { TICKS_PER_SECOND } from '../core/time';
+import { moodEffect } from '../core/moodEffects';
 import type { WorldTile, WeatherType, WeatherState } from '../core/types';
 import {
   TURNS_PER_DAY,
@@ -443,15 +444,12 @@ describe('EnvironmentService — per-tile display fields (HUD)', () => {
 
 describe('EnvironmentService — weather mood', () => {
   it('clear skies lift mood, storms depress it', () => {
-    expect(weatherEffects({ type: 'clear', intensity: 0, turnsRemaining: 0 }).mood).toBeGreaterThan(
-      0
-    );
-    expect(weatherEffects({ type: 'blizzard', intensity: 1, turnsRemaining: 0 }).mood).toBeLessThan(
-      0
-    );
-    expect(weatherEffects({ type: 'blizzard', intensity: 1, turnsRemaining: 0 }).mood).toBeLessThan(
-      weatherEffects({ type: 'rain', intensity: 0.5, turnsRemaining: 0 }).mood
-    );
+    // MOOD-REWORK: weather `mood` is now an effect id (mood.jsonc); resolve to its value.
+    const val = (type: string) =>
+      moodEffect(weatherEffects({ type, intensity: 0, turnsRemaining: 0 }).mood)?.value ?? 0;
+    expect(val('clear')).toBeGreaterThan(0);
+    expect(val('blizzard')).toBeLessThan(0);
+    expect(val('blizzard')).toBeLessThan(val('rain'));
   });
 });
 

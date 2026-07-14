@@ -1,0 +1,34 @@
+// needs.jsonc — per-need definitions (keyed by the `Pawn.needs` field). Each need declares how it
+// affects MOOD: `moodBands` apply while the need is past a threshold, and each band REFERENCES a mood
+// effect id (mood.jsonc `effects`) rather than carrying its own label/value. Bands are SEVERE-FIRST —
+// the first matching band for a need wins (so Starving beats Hungry). Survival needs use `atOrAbove`
+// (high = bad); `fun` is INVERTED and uses `atOrBelow` (low = bad).
+{
+  "hunger": {
+    "moodBands": [
+      { "atOrAbove": 90, "effect": "need_starving" },
+      { "atOrAbove": 75, "effect": "need_hungry" }
+    ]
+  },
+  "fatigue": {
+    "moodBands": [
+      { "atOrAbove": 95, "effect": "need_exhausted" },
+      { "atOrAbove": 85, "effect": "need_very_tired" }
+    ]
+  },
+  "thirst": {
+    "moodBands": [
+      { "atOrAbove": 90, "effect": "need_parched" },
+      { "atOrAbove": 75, "effect": "need_thirsty" }
+    ]
+  },
+  "hygiene": {
+    "moodBands": [{ "atOrAbove": 85, "effect": "need_filthy" }]
+  },
+  "fun": {
+    "moodBands": [
+      { "atOrBelow": 5, "effect": "need_starved_company" },
+      { "atOrBelow": 12, "effect": "need_restless" }
+    ]
+  }
+}

@@ -19,7 +19,8 @@ import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
 import { stepBody } from './MovementSystem';
 import { occupancyService } from './OccupancyService';
 import conditionsData from '../database/conditions.jsonc';
-import moodData from '../database/mood.jsonc';
+import needsData from '../database/needs.jsonc';
+import { moodEffect, MOOD_BASE } from '../core/moodEffects';
 import { getConditionCurrentStage, conditionNeedMultipliers, getConditionDefById } from '../core/needs';
 import { amenityAt } from '../core/buildingAmenity';
 import { effectiveMood, moodModifierValue } from '../core/Social';
@@ -55,32 +56,19 @@ function getActiveTransientConditions(entity: Pawn | Mob): TransientConditionDef
 // Mood is a single 0–100 value that eases toward a computed TARGET; it does NOT drift by per-tick
 // nudges anymore. Everything (weather/conditions/traits/needs/events) is a signed point offset summed
 // into that target (computeMoodTarget). Data-authored offsets live in the four *.jsonc files.
-// MOOD-REWORK bands are DATA (mood.jsonc) — tunable without code. The dynamic contributions
-// (weather/trait/condition/thought/amenity) are still computed live in computeMoodTarget.
-interface MoodNeedBand {
-  need: string;
+// MOOD-REWORK bands are DATA — tunable without code. Mood-general bands (base/health/labels) live in
+// mood.jsonc; the PER-NEED mood bands live in needs.jsonc (each need owns its mood effect). The dynamic
+// contributions (weather/trait/condition/thought/amenity) are still computed live in computeMoodTarget.
+/** A need→mood threshold band (needs.jsonc): past the threshold, apply the named mood effect. */
+interface MoodBand {
   atOrAbove?: number;
   atOrBelow?: number;
-  label: string;
-  value: number;
+  effect: string;
 }
-interface MoodHealthBand {
-  atOrBelow: number;
-  label: string;
-  value: number;
-}
-const MOOD = moodData as unknown as {
-  base: number;
-  labels: { weatherGood: string; weatherBad: string; amenity: string };
-  needBands: MoodNeedBand[];
-  healthBands: MoodHealthBand[];
-};
-const MOOD_BASE = MOOD.base; // where a pawn drifts back toward with nothing acting on them
+/** Per-need mood bands (needs.jsonc), keyed by the `Pawn.needs` field. */
+const NEED_MOOD = needsData as unknown as Record<string, { moodBands: MoodBand[] }>;
 // Ease at ~0.4 mood/in-game-second → a ~10-point gap closes in ~2 in-game hours (the design target).
 const MOOD_EASE_STEP = perTick(0.4);
-// Per-need bit so the band loop can take the FIRST match per need without a per-call Set/object
-// allocation (computeMoodTarget runs every tick per pawn — see ENGINE-PERFORMANCE).
-const MOOD_NEED_BIT: Record<string, number> = { hunger: 1, fatigue: 2, thirst: 4, hygiene: 8, fun: 16 };
 
 /**
  * PawnService - Clean interface for pawn behavior and need management
@@ -689,39 +677,36 @@ export class PawnServiceImpl implements PawnService {
   ): number {
     let t = MOOD_BASE;
 
-    // Weather — a roof softens foul weather's gloom (matches the old drift path).
-    let weatherMood = weatherEffects(gameState.weather).mood;
-    if (weatherMood < 0 && pawn.position && isRoofedTile(pawn.position.x, pawn.position.y))
-      weatherMood *= 0.4;
-    if (weatherMood) {
-      t += weatherMood;
-      if (out)
-        out.push({
-          label: weatherMood > 0 ? MOOD.labels.weatherGood : MOOD.labels.weatherBad,
-          value: weatherMood
-        });
+    // Every contribution below resolves a mood-effect id → { label, value } from the registry
+    // (mood.jsonc via moodEffect). Allocation-free on the hot path: `moodEffect` returns a shared ref,
+    // and the `{ label, value }` push happens only when `out` is provided (the MOOD panel).
+
+    // Weather — a roof softens foul weather's gloom.
+    const wEff = moodEffect(weatherEffects(gameState.weather).mood);
+    if (wEff && wEff.value != null && wEff.value !== 0) {
+      let v = wEff.value;
+      if (v < 0 && pawn.position && isRoofedTile(pawn.position.x, pawn.position.y)) v *= 0.4;
+      t += v;
+      if (out) out.push({ label: wEff.label, value: v });
     }
 
-    // Pleasant surroundings — comfort + beauty of the occupied tile (material choice feeds in).
+    // Pleasant surroundings — comfort + beauty of the occupied tile (value computed; effect = label).
     if (pawn.position) {
       const a = amenityAt(gameState.buildings, pawn.position.x, pawn.position.y);
       const am = Math.min(3, (a.comfort + a.beauty) * 1.5);
       if (am > 0) {
         t += am;
-        if (out) out.push({ label: MOOD.labels.amenity, value: am });
+        const e = moodEffect('amenity_pleasant');
+        if (out && e) out.push({ label: e.label, value: am });
       }
     }
 
-    // Need bands (mood.jsonc) — the everyday discomfort; medical escalations add more via conditions.
-    // First (most severe) matching band per need wins (deduped by MOOD_NEED_BIT). `fun` is inverted
-    // (low = bad → atOrBelow); survival needs use atOrAbove.
+    // Per-need mood bands (needs.jsonc) — each need applies its FIRST (most-severe) matching band,
+    // resolving the named effect. `fun` is inverted (low = bad → atOrBelow); survival needs use atOrAbove.
     const n = pawn.needs;
-    let doneNeeds = 0;
-    for (const band of MOOD.needBands) {
-      const bit = MOOD_NEED_BIT[band.need] ?? 0;
-      if (bit === 0 || (doneNeeds & bit) !== 0) continue;
+    for (const need in NEED_MOOD) {
       let v: number;
-      switch (band.need) {
+      switch (need) {
         case 'hunger':
           v = n.hunger;
           break;
@@ -740,50 +725,48 @@ export class PawnServiceImpl implements PawnService {
         default:
           continue;
       }
-      const hit =
-        (band.atOrAbove != null && v >= band.atOrAbove) ||
-        (band.atOrBelow != null && v <= band.atOrBelow);
-      if (hit) {
-        t += band.value;
-        if (out) out.push({ label: band.label, value: band.value });
-        doneNeeds |= bit;
+      for (const band of NEED_MOOD[need].moodBands) {
+        const hit =
+          (band.atOrAbove != null && v >= band.atOrAbove) ||
+          (band.atOrBelow != null && v <= band.atOrBelow);
+        if (hit) {
+          const e = moodEffect(band.effect);
+          if (e && e.value != null) {
+            t += e.value;
+            if (out) out.push({ label: e.label, value: e.value });
+          }
+          break; // first (most severe) band per need wins
+        }
       }
     }
 
-    // Health bands (mood.jsonc) — severe-first; first match wins.
-    const hp = pawn.state?.health ?? 100;
-    for (const band of MOOD.healthBands) {
-      if (hp <= band.atOrBelow) {
-        t += band.value;
-        if (out) out.push({ label: band.label, value: band.value });
-        break;
-      }
-    }
+    // (No separate health→mood band: being HURT flows through injury conditions — cond_bleeding,
+    // cond_fractured, cond_pain_shock, cond_hypovolemia — below. The old flat state.health is vestigial.)
 
-    // Traits — permanent temperament baseline (traits.jsonc top-level `mood`).
+    // Traits — permanent temperament effect (traits.jsonc top-level `mood` = effect id).
     for (const tr of pawn.traits ?? []) {
-      const m = tr.mood;
-      if (m) {
-        t += m;
-        if (out) out.push({ label: tr.name ?? tr.id ?? 'Temperament', value: m });
+      const e = moodEffect(tr.mood);
+      if (e && e.value != null) {
+        t += e.value;
+        if (out) out.push({ label: e.label, value: e.value });
       }
     }
 
-    // Conditions — standing offsets while active (conditions.jsonc `mood`). Both persistent and
-    // transient conditions; a transient may be stored as "id:stage", so take the id before the colon.
+    // Conditions — the condition's `mood` effect id while active. Both persistent + transient; a
+    // transient may be stored as "id:stage", so take the id before the colon.
     for (const c of pawn.conditions ?? []) {
-      const def = getConditionDefById(c.id);
-      if (def?.mood) {
-        t += def.mood;
-        if (out) out.push({ label: def.name ?? c.id, value: def.mood });
+      const e = moodEffect(getConditionDefById(c.id)?.mood);
+      if (e && e.value != null) {
+        t += e.value;
+        if (out) out.push({ label: e.label, value: e.value });
       }
     }
     for (const id of pawn.transientConditions ?? []) {
       const cid = id.includes(':') ? id.split(':')[0] : id;
-      const def = getConditionDefById(cid);
-      if (def?.mood) {
-        t += def.mood;
-        if (out) out.push({ label: def.name ?? cid, value: def.mood });
+      const e = moodEffect(getConditionDefById(cid)?.mood);
+      if (e && e.value != null) {
+        t += e.value;
+        if (out) out.push({ label: e.label, value: e.value });
       }
     }
 

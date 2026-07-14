@@ -80,7 +80,7 @@
         "id": "windchilled",
         "name": "Windchilled",
         // MOOD-REWORK: a standing mood-target offset while this condition holds (PawnService.computeMoodTarget).
-        "mood": -3,
+        "mood": "cond_windchilled",
         "flags": ["environmental", "wind"],
         "charSpans": [ {"sheet": "font", "id": 126} ],
         "description": "Buffeted by the wind. Graded by how hard it's blowing, slightly windy barely registers, a gale claws at balance, aim and footing and tires the body out. Severity = the tile's effective wind (driven directly, not over time): a roof or the lee of a wall/mountain blocks most of it. On its own it only nags; in the cold it bites far harder, driving hypothermia faster (windchill).",
@@ -122,7 +122,7 @@
         "id": "fractured",
         "audio": "fracture",
         "name": "Fractured Bone",
-        "mood": -6,
+        "mood": "cond_fractured",
         "flags": ["injury", "bone"],
         "description": "A cracked or shattered bone, graded by how far the break has gone. Severity tracks the worst fracture on the body: a hairline crack nags, but a fully shattered bone (bone HP driven to 0) is agony that collapses strength and dexterity and crawls all work. The struck limb's own function, manipulation for an arm, movement for a leg, is gutted on top via the body model. The limb is NOT lost: bone mends over WEEKS of rest (dressing + a caretaker speed it).",
         "lethalSeverity": 99,
@@ -150,7 +150,7 @@
     {
         "id": "dehydration",
         "name": "Dehydration",
-        "mood": -6,
+        "mood": "cond_dehydration",
         "flags": ["need", "thirst", "driver"],
         "charSpans": [ {"sheet": "font", "id": 247} ],
         "description": "Lack of water, progressive and fast. Saps strength, dexterity and endurance; lethal within days if no water is drunk.",
@@ -214,7 +214,7 @@
     {
         "id": "malnutrition",
         "name": "Malnutrition",
-        "mood": -6,
+        "mood": "cond_malnutrition",
         "flags": ["need", "hunger", "driver"],
         "charSpans": [ {"sheet": "font", "id": 31} ],
         "description": "A diet deficiency causing progressive physical deterioration, the muscles waste and the body fails. Ultimately lethal if unchecked.",
@@ -305,7 +305,7 @@
     {
         "id": "infection",
         "name": "Infection",
-        "mood": -6,
+        "mood": "cond_infection",
         "flags": ["disease", "wound", "driver"],
         "charSpans": [ {"sheet": "font", "id": 21} ],
         "description": "A wound has gone septic, fever wracks the body, draining its strength and clouding the mind. Untreated, it spreads and kills.",
@@ -372,7 +372,7 @@
         "id": "pain_shock",
         "audio": "shock",
         "name": "Pain-Shock",
-        "mood": -10,
+        "mood": "cond_pain_shock",
         "flags": ["combat", "crisis", "driver"],
         "charSpans": [ {"sheet": "font", "id": 19} ],
         "description": "Severe pain has driven the body into shock, HALF the old unified crisis, the pain half. Strength, dexterity, focus and footing all falter. When it stacks with Hypovolemia (blood-loss shock) the two together are the full crisis of old. Numbed by painkillers/drink.",
@@ -437,7 +437,7 @@
         "id": "hypovolemia",
         "audio": "shock",
         "name": "Hypovolemia",
-        "mood": -6,
+        "mood": "cond_hypovolemia",
         "flags": ["combat", "crisis", "driver"],
         "charSpans": [ {"sheet": "font", "id": 19} ],
         "description": "Too much blood lost, the body runs cold, dim and clumsy: HALF the old unified crisis, the blood-loss half. Unaffected by painkillers (this is emptiness, not pain). When it stacks with Pain-Shock the two together are the full crisis of old.",
@@ -501,7 +501,7 @@
     {
         "id": "hypothermia",
         "name": "Hypothermia",
-        "mood": -10,
+        "mood": "cond_hypothermia",
         "flags": ["environmental", "cold", "driver"],
         "charSpans": [ {"sheet": "font", "id": 42} ],
         "description": "Prolonged exposure to cold below the pawn's comfort range. Numb fingers wreck dexterity and the stiffened body loses its strength; lethal if the pawn never warms up. Cold resistance (CON) slows onset; shelter, fire, and warmer seasons drive it back.",
@@ -567,7 +567,7 @@
     {
         "id": "heat_stroke",
         "name": "Heat Stroke",
-        "mood": -8,
+        "mood": "cond_heat_stroke",
         "flags": ["environmental", "heat", "driver"],
         "charSpans": [ {"sheet": "font", "id": 15} ],
         "description": "Prolonged exposure to heat above the pawn's comfort range. The body wilts, strength, dexterity and endurance drain away; lethal if the pawn never cools down. Fire resistance (CON) slows onset; shade, water, and cooler seasons drive it back.",
@@ -643,7 +643,7 @@
         // in PawnStateMachine; this is purely the at-a-glance readout.
         "id": "bleeding",
         "name": "Bleeding",
-        "mood": -4,
+        "mood": "cond_bleeding",
         "flags": ["combat", "bleed", "readout"],
         "transient": true,
         "description": "Open wounds are seeping blood. On its own it does nothing to the body, it's a warning of how fast blood is being lost and how long until it runs out. Dress the wounds (or let them clot) to stop it.",
@@ -743,7 +743,7 @@
     {
         "id": "wet",
         "name": "Wet",
-        "mood": -5,
+        "mood": "cond_wet",
         "transient": true,
         "description": "Soaked through from rain or wet ground. Chilled and sluggish, cold bites far harder (and heat far less). Dries off in the warmth or under a roof.",
         "color": "#4FA3D1",
@@ -770,7 +770,7 @@
     {
         "id": "sheltered",
         "name": "Sheltered",
-        "mood": 2,
+        "mood": "cond_sheltered",
         "flags": ["environmental", "shelter"],
         "transient": true,
         "description": "Under a roof, out of the weather. Recovers from cold and heat far faster, dries off quickly, breaks the wind so windchill barely bites, and a storm's gloom is held at bay.",
@@ -804,7 +804,7 @@
     {
         "id": "intoxicated",
         "name": "Intoxicated",
-        "mood": 6,
+        "mood": "cond_intoxicated",
         "flags": ["food", "drink"],
         "description": "Warm and merry from drink. Drink lifts the mood and dulls pain, but the more that goes down the unsteadier the hands, eyes and feet, until it wears off. Severity rises with each cup and decays over time.",
         "color": "#D8A52A",
@@ -892,7 +892,7 @@
     {
         "id"         : "well_fed",
         "name"       : "Well Fed",
-        "mood"       : 6,
+        "mood"       : "cond_well_fed",
         "flags"      : ["food", "buff"],
         "transient"  : true,
         "description": "A proper hot meal in the belly. Settled and ready to work.",
@@ -933,7 +933,7 @@
     {
         "id"         : "refreshed",
         "name"       : "Refreshed",
-        "mood"       : 4,
+        "mood"       : "cond_refreshed",
         "flags"      : ["food", "buff"],
         "transient"  : true,
         "description": "Sweet, cool fruit, a welcome lift. Senses sharpen and the step lightens.",

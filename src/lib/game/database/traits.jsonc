@@ -357,7 +357,7 @@
         "name"       : "Stoic",
         "description": "Old hardships have toughened the mind, hard to rattle, inured to pain.",
         "flavorLine" : "little in the world seems able to shake them anymore",
-        "mood": 2,
+        "mood": "trait_stoic",
         "effects": {}, "resistances": {"mental": 0.15}
     },
     {
@@ -521,7 +521,7 @@
         "kind"       : "stat",
         "name"       : "Ill-Tempered",
         "description": "Sour and abrasive, poor company at the best of times.",
-        "mood"       : -4,
+        "mood"       : "trait_ill_tempered",
         "effects"    : {"charismaPenalty": 2}
     },
     {
@@ -531,7 +531,7 @@
         "kind"       : "stat",
         "name"       : "Hot-Headed",
         "description": "Quick to anger, throws itself into a fight, careless of the odds.",
-        "mood"       : -2,
+        "mood"       : "trait_hot_headed",
         "effects"    : {"strengthBonus": 1, "intelligencePenalty": 1}
     },
     {
@@ -2726,7 +2726,7 @@
         "kind"       : "stat",
         "name"       : "Tempered",
         "description": "Sound of body and mind.",
-        "mood"       : 2,
+        "mood"       : "trait_tempered",
         "effects"    : {"constitutionBonus": 1, "intelligenceBonus": 1}
     },
     {

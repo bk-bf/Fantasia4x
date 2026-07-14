@@ -415,9 +415,9 @@ export interface WeatherEffects {
   hungerMul: number;
   /** Multiplier on movement cost (gameplay hook; not yet consumed by movement). */
   moveCostMul: number;
-  /** MOOD-REWORK: a STANDING mood-target offset in points while this weather holds (+ pleasant,
-   *  − miserable) — summed into the pawn's mood target, NOT a per-second drift. */
-  mood: number;
+  /** MOOD-REWORK: a mood-effect id (mood.jsonc `effects`, e.g. "weather_storm") applied while this
+   *  weather holds — the effect's label + value feed the pawn's mood target (a roof softens a negative). */
+  mood: string;
 }
 
 /** The overlay animation the WeatherCanvas draws for a weather type. */

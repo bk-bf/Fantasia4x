@@ -321,12 +321,11 @@ export interface ConditionGraphFields {
   /** Categorisation tags for querying, relationship rules, and UI grouping — e.g.
    *  ["environmental","cold"], ["combat","bleed"], ["disease"], ["cultural","aura"]. */
   flags?: string[];
-  /** MOOD-REWORK — a STANDING mood-target offset (in 0–100 points) applied while this condition is
-   *  active: negative for suffering (wet/hypothermia/pain…), positive for comfort (well_fed/intoxicated).
-   *  Summed into the pawn's mood TARGET (PawnService.computeMoodTarget), which mood eases toward — NOT a
-   *  per-tick drift. Omit for conditions with no bearing on mood (the `mood_*` band conditions omit it to
-   *  avoid a feedback loop, since they are DERIVED from mood). */
-  mood?: number;
+  /** MOOD-REWORK — a mood-effect id (mood.jsonc `effects`, e.g. "cond_wet") applied while this condition
+   *  is active. The effect's label + value are summed into the pawn's mood TARGET
+   *  (PawnService.computeMoodTarget). Omit for conditions with no bearing on mood (the `mood_*` band
+   *  conditions omit it to avoid a feedback loop, since they are DERIVED from mood). */
+  mood?: string;
   /** Outgoing edges: while active, these may trigger other conditions (probabilistic or deterministic). */
   triggers?: ConditionTrigger[];
   /** Environment gate — the condition is ACTIVE only while this predicate holds (generalises

@@ -42,14 +42,32 @@ import { simLog } from '../core/logSink';
 import { TICKS_PER_SECOND } from '../core/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
 import { spawnKingdomParty, despawnKingdomParty } from './entity/kingdomParties';
+import events from '../database/events.jsonc';
 
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 
 /** Mutable-facet knowledge greys out after ~a month without contact (§2). */
 const STALE_AFTER_TICKS = 30 * TICKS_PER_DAY;
 
-/** Base arrival cadence (~bi-weekly), squeezed by relations + colony wealth. */
-const BASE_CADENCE_DAYS = 14;
+/** Arrival-scheduling tuning (cadence, backoffs, trade-split) — data-driven, see
+ *  database/events.jsonc. One clock paces both visitors and caravans; the shared cadence + backoffs
+ *  live under `visitors`, the caravan upgrade chance under `caravan`. */
+const ARRIVAL = events as {
+  visitors: {
+    baseCadenceDays: number;
+    firstArrivalDays: [number, number];
+    cadenceWealthSqueeze: number;
+    cadenceRelationDivisor: number;
+    cadenceClamp: [number, number];
+    cadenceJitterDays: number;
+    cadenceFloorTicks: number;
+    busyBackoffDays: number;
+    spawnFailBackoffDays: number;
+    noSenderBackoffDays: number;
+  };
+  caravan: { tradeChance: number };
+};
+const V = ARRIVAL.visitors;
 
 /** Knowledge xp awards. */
 export const KNOWLEDGE_XP = {
@@ -132,17 +150,21 @@ class KingdomServiceImpl {
     const turn = state.turn;
     if (state.nextKingdomVisitTurn == null) {
       // First-ever clock: give the young colony a few quiet days.
-      return { ...state, nextKingdomVisitTurn: turn + rng.int(4, 8) * TICKS_PER_DAY };
+      return {
+        ...state,
+        nextKingdomVisitTurn:
+          turn + rng.int(V.firstArrivalDays[0], V.firstArrivalDays[1]) * TICKS_PER_DAY
+      };
     }
     if (turn < state.nextKingdomVisitTurn) return state;
     // One party at a time, and never while another decision is pending.
     if (state.pendingEvent || (state.kingdomParties?.length ?? 0) > 0) {
-      return { ...state, nextKingdomVisitTurn: turn + TICKS_PER_DAY };
+      return { ...state, nextKingdomVisitTurn: turn + V.busyBackoffDays * TICKS_PER_DAY };
     }
 
     const eligible = this.eligibleSenders(state);
     if (eligible.length === 0) {
-      return { ...state, nextKingdomVisitTurn: turn + 7 * TICKS_PER_DAY };
+      return { ...state, nextKingdomVisitTurn: turn + V.noSenderBackoffDays * TICKS_PER_DAY };
     }
     // Relation-weighted pick — friendlier kingdoms visit more often, and a realm where the colony
     // has kin pulls a little harder (a relative nudges the caravan this way).
@@ -165,13 +187,14 @@ class KingdomServiceImpl {
     // Only a town-or-larger power (prosperous+) mounts a trade caravan across the map; small
     // hamlets and villages send friendly visitors, not wares. Scale = influence.
     const canTrade = WEALTH_BANDS.indexOf(picked.kingdom.lore.wealthBand) >= 2;
-    const kind: KingdomParty['kind'] = canTrade && rng.random() < 0.65 ? 'caravan' : 'visitor';
+    const kind: KingdomParty['kind'] =
+      canTrade && rng.random() < ARRIVAL.caravan.tradeChance ? 'caravan' : 'visitor';
     const wealthTier = this.colonyWealthTier(state);
     const stock = kind === 'caravan' ? this.generateCaravanStock(picked.kingdom, wealthTier) : [];
 
     const spawned = spawnKingdomParty(state, picked.kingdom, kind, stock, 0);
     if (!spawned) {
-      return { ...state, nextKingdomVisitTurn: turn + 2 * TICKS_PER_DAY };
+      return { ...state, nextKingdomVisitTurn: turn + V.spawnFailBackoffDays * TICKS_PER_DAY };
     }
     let s = spawned.state;
     s = this.recordContact(s, picked.kingdom.id, KNOWLEDGE_XP.arrival);
@@ -343,9 +366,16 @@ class KingdomServiceImpl {
 
   /** Cadence squeeze: wealthier colonies and warmer relations pull more frequent parties. */
   private nextCadenceTicks(state: GameState, relationScore: number, wealthTier: number): number {
-    const freq = clamp(1 - 0.06 * wealthTier - relationScore / 400, 0.45, 1.3);
-    const jitterDays = rng.range(-2, 2);
-    return Math.max(3, Math.round((BASE_CADENCE_DAYS * freq + jitterDays) * TICKS_PER_DAY));
+    const freq = clamp(
+      1 - V.cadenceWealthSqueeze * wealthTier - relationScore / V.cadenceRelationDivisor,
+      V.cadenceClamp[0],
+      V.cadenceClamp[1]
+    );
+    const jitterDays = rng.range(-V.cadenceJitterDays, V.cadenceJitterDays);
+    return Math.max(
+      V.cadenceFloorTicks,
+      Math.round((V.baseCadenceDays * freq + jitterDays) * TICKS_PER_DAY)
+    );
   }
 
   // ─── Knowledge & contact (§2) ──────────────────────────────────────────────

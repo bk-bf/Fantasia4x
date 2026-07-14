@@ -1,6 +1,47 @@
-// World-event definitions — intentionally empty.
-//
-// The world-event system is a PLANNED feature (random encounters / opportunities /
-// disasters with consequences), not the in-game Chronicle log. See the note in
-// `core/Events.ts`. Add `GameEvent` entries here when that system is built.
-[]
+// Centralised, data-driven event configs — one keyed entry per world-event type. Each event system
+// reads its own key (e.g. systems/migration.ts reads `migration`). Migrant waves live here now;
+// visitor parties and trading caravans (KINGDOMS-TRADE / entity/kingdomParties.ts) join as they gain
+// data-driven tuning. The Chronicle log and the GameEvent skeleton are unrelated — see core/Events.ts.
+{
+  // Migrant wave tuning (systems/migration.ts). At each season boundary (~every 3 months) up to
+  // `slots` hopefuls may seek to join the colony. Each slot independently rolls a migrant with
+  // probability `baseChance + perBuilding * <completed buildings>`, clamped to [minChance, maxChance].
+  // More buildings ⇒ higher chance of a full wave — a rough "how developed is this colony" heuristic
+  // (buildings are the only player-driven progress signal on the map today).
+  "migration": {
+    "slots": 3,
+    "baseChance": 0.15,
+    "perBuilding": 0.04,
+    "minChance": 0.1,
+    "maxChance": 0.85
+  },
+
+  // Kingdom visitors — a friendly party from a known realm (services/KingdomService.ts,
+  // entity/kingdomParties.ts). One arrival clock (below) paces BOTH visitors and caravans; a
+  // prosperous-enough sender upgrades the arrival into a trade caravan (see `caravan`). The visitor
+  // config therefore carries the shared arrival cadence + backoffs.
+  "visitors": {
+    "baseCadenceDays": 14, //          ~bi-weekly base rhythm, squeezed by relations + colony wealth
+    "firstArrivalDays": [4, 8], //     grace window (days) before the first-ever arrival
+    "cadenceWealthSqueeze": 0.06, //   each colony wealth tier shortens the gap by this fraction
+    "cadenceRelationDivisor": 400, //  friendlier senders arrive sooner (relationScore / this)
+    "cadenceClamp": [0.45, 1.3], //    floor/ceiling on the cadence multiplier
+    "cadenceJitterDays": 2, //         ± random days on each scheduled gap
+    "cadenceFloorTicks": 3, //         never schedule closer than this many ticks
+    "busyBackoffDays": 1, //           retry gap while a party/decision is already in play
+    "spawnFailBackoffDays": 2, //      retry gap when a spawn could not be placed
+    "noSenderBackoffDays": 7, //       retry gap when no eligible kingdom exists
+    "partySize": [2, 4], //            number of pawns in a visitor party
+    "stayDays": 1.5, //                days a visitor party lingers before leaving
+    "anchorRing": [15, 20] //          tiles from the colony where the party settles
+  },
+
+  // Trading caravans — a prosperous realm's trade party, rolled on the same arrival clock as
+  // `visitors`. When the chosen sender is a town-or-larger power, the arrival becomes a caravan
+  // with probability `tradeChance`. Carries wares to barter.
+  "caravan": {
+    "tradeChance": 0.65, //            chance a trade-capable sender sends a caravan vs a plain visit
+    "stayDays": 2, //                  days a caravan camps before moving on
+    "anchorRing": [15, 20] //          tiles from the colony where the caravan camps
+  }
+}

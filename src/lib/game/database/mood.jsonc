@@ -1,35 +1,86 @@
-// mood.jsonc — the MOOD-REWORK tuning tables (PawnService.computeMoodTarget). Mood is a single 0–100
-// value that EASES toward a TARGET = base + Σ signed contributions. The dynamic contributions (weather
-// value from weather.jsonc, trait `mood`, condition `mood`, event thoughts, amenity) are computed live;
-// this file owns the fixed BANDS that were previously hardcoded, so they're tunable without code:
-//
-//   base        — where a pawn with nothing acting on them sits (and drifts back toward).
-//   needBands   — a standing offset while a need is past a threshold. `atOrAbove` (survival needs:
-//                 high = bad) OR `atOrBelow` (fun: low = bad). Ordered SEVERE-FIRST per need — the
-//                 first matching band for a given need wins (so Starving beats Hungry).
-//   healthBands — offsets by low `state.health` (atOrBelow), severe-first; first match wins.
-//   labels      — the player-facing labels for the live weather/amenity contributions.
-// All labels are PLAYER-FACING.
+// mood.jsonc — THE registry of every named mood effect (MOOD-REWORK). Mood is a single 0–100 value
+// that EASES toward a TARGET = base + Σ active effects. Instead of scattering labels + point values
+// across code and the other data files, EVERY mood contribution is defined here as `id → { label, value }`
+// and REFERENCED by id from its source (the same convention as recipes→items, condition triggers→to):
+//   weather.jsonc   `mood: "weather_*"`      conditions.jsonc `mood: "cond_*"`
+//   traits.jsonc    `mood: "trait_*"`        dialog.jsonc     `moodGood/moodBad: "talk_*"`
+//   needs.jsonc     band  `effect: "need_*"` health/amenity   referenced from computeMoodTarget
+// `value` omitted ⇒ the source computes it live (amenity, from tile comfort+beauty). `{name}` in a
+// dialog effect's label is filled with the other speaker at apply time. All labels are PLAYER-FACING.
 {
+  // The mood baseline: every contribution below sums onto this, and mood eases toward the total.
   "base": 50,
-  "labels": {
-    "weatherGood": "Fair skies",
-    "weatherBad": "Foul weather",
-    "amenity": "Pleasant surroundings"
-  },
-  "needBands": [
-    { "need": "hunger", "atOrAbove": 90, "label": "Starving", "value": -12 },
-    { "need": "hunger", "atOrAbove": 75, "label": "Hungry", "value": -5 },
-    { "need": "fatigue", "atOrAbove": 95, "label": "Exhausted", "value": -8 },
-    { "need": "fatigue", "atOrAbove": 85, "label": "Very tired", "value": -4 },
-    { "need": "thirst", "atOrAbove": 90, "label": "Parched", "value": -10 },
-    { "need": "thirst", "atOrAbove": 75, "label": "Thirsty", "value": -4 },
-    { "need": "hygiene", "atOrAbove": 85, "label": "Filthy", "value": -4 },
-    { "need": "fun", "atOrBelow": 5, "label": "Starved for company", "value": -9 },
-    { "need": "fun", "atOrBelow": 12, "label": "Restless", "value": -4 }
-  ],
-  "healthBands": [
-    { "atOrBelow": 50, "label": "Badly hurt", "value": -12 },
-    { "atOrBelow": 80, "label": "Wounded", "value": -5 }
-  ]
+  "effects": {
+    // ── Weather (weather.jsonc `mood`) — one per type, each with its own flavour ──────────────────
+    "weather_clear": { "label": "Clear skies", "value": 8 },
+    "weather_spring_windy": { "label": "A fresh breeze", "value": 3 },
+    "weather_summer_windy": { "label": "A cooling wind", "value": 2 },
+    "weather_autumn_windy": { "label": "A grey, gusty day", "value": -2 },
+    "weather_winter_windy": { "label": "Bitter wind and snow", "value": -10 },
+    "weather_drizzle": { "label": "Dreary drizzle", "value": -5 },
+    "weather_rain": { "label": "Steady rain", "value": -12 },
+    "weather_windy_rain": { "label": "Wind-driven rain", "value": -16 },
+    "weather_heavy_rain": { "label": "Heavy rain", "value": -16 },
+    "weather_storm": { "label": "A howling storm", "value": -24 },
+    "weather_snow": { "label": "Falling snow", "value": -12 },
+    "weather_blizzard": { "label": "A blinding blizzard", "value": -25 },
+    "weather_fog": { "label": "Cold, clinging fog", "value": -6 },
+    "weather_foggy_rain": { "label": "Fog and rain", "value": -12 },
+    "weather_heat_wave": { "label": "Sweltering heat", "value": -18 },
+    "weather_gale": { "label": "A roaring gale", "value": -14 },
+
+    // ── Surroundings (computed value — amenity) ───────────────────────────────────────────────────
+    "amenity_pleasant": { "label": "Pleasant surroundings" },
+
+    // ── Needs (needs.jsonc bands) ─────────────────────────────────────────────────────────────────
+    "need_starving": { "label": "Starving", "value": -12 },
+    "need_hungry": { "label": "Hungry", "value": -5 },
+    "need_exhausted": { "label": "Exhausted", "value": -8 },
+    "need_very_tired": { "label": "Very tired", "value": -4 },
+    "need_parched": { "label": "Parched", "value": -10 },
+    "need_thirsty": { "label": "Thirsty", "value": -4 },
+    "need_filthy": { "label": "Filthy", "value": -4 },
+    "need_starved_company": { "label": "Starved for company", "value": -9 },
+    "need_restless": { "label": "Restless", "value": -4 },
+
+    // ── Conditions (conditions.jsonc `mood`) — being HURT flows through these injury conditions, so
+    //    there is no separate "health" mood band (the old flat state.health is vestigial). ────────────
+    "cond_wet": { "label": "Soaked through", "value": -5 },
+    "cond_windchilled": { "label": "Wind-bitten", "value": -3 },
+    "cond_fractured": { "label": "A broken bone", "value": -6 },
+    "cond_dehydration": { "label": "Dying of thirst", "value": -6 },
+    "cond_malnutrition": { "label": "Wasting away", "value": -6 },
+    "cond_infection": { "label": "A festering wound", "value": -6 },
+    "cond_pain_shock": { "label": "Blinding pain", "value": -10 },
+    "cond_hypovolemia": { "label": "Bled white", "value": -6 },
+    "cond_hypothermia": { "label": "Freezing", "value": -10 },
+    "cond_heat_stroke": { "label": "Overcome by heat", "value": -8 },
+    "cond_bleeding": { "label": "Bleeding", "value": -4 },
+    "cond_sheltered": { "label": "Out of the weather", "value": 2 },
+    "cond_intoxicated": { "label": "Warm with drink", "value": 6 },
+    "cond_well_fed": { "label": "Well fed", "value": 6 },
+    "cond_refreshed": { "label": "Refreshed", "value": 4 },
+
+    // ── Temperament traits (traits.jsonc `mood`) ──────────────────────────────────────────────────
+    "trait_ill_tempered": { "label": "A sour temperament", "value": -4 },
+    "trait_hot_headed": { "label": "A short fuse", "value": -2 },
+    "trait_stoic": { "label": "An even keel", "value": 2 },
+    "trait_tempered": { "label": "A settled mind", "value": 2 },
+
+    // ── Dialog thoughts (dialog.jsonc `moodGood`/`moodBad`) — {name} = the other talker ───────────
+    "talk_smalltalk_good": { "label": "A pleasant word with {name}", "value": 1 },
+    "talk_smalltalk_bad": { "label": "A sour exchange with {name}", "value": -1 },
+    "talk_banter_good": { "label": "A good laugh with {name}", "value": 2 },
+    "talk_banter_bad": { "label": "A joke gone wrong with {name}", "value": -2 },
+    "talk_deep_good": { "label": "A heart-to-heart with {name}", "value": 3 },
+    "talk_deep_bad": { "label": "A hard talk with {name}", "value": -3 },
+    "talk_flirt_good": { "label": "A warm moment with {name}", "value": 4 },
+    "talk_flirt_bad": { "label": "A rebuff from {name}", "value": -4 },
+    "talk_comfort_good": { "label": "A moment of comfort with {name}", "value": 3 },
+    "talk_comfort_bad": { "label": "A comfort that fell flat with {name}", "value": -1 },
+    "talk_argue_bad": { "label": "A row with {name}", "value": -5 },
+    "talk_insult_bad": { "label": "Harsh words with {name}", "value": -6 },
+    "talk_battle_good": { "label": "Steadied alongside {name}", "value": 1 },
+    "talk_battle_bad": { "label": "Frayed nerves with {name}", "value": -1 }
+  }
 }

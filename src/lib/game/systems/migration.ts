@@ -5,15 +5,19 @@ import type { GameState } from '../core/types';
 import { rng } from '../core/rng';
 import { generateColonyPawns, remapKinIds } from '../entities/Pawns';
 import { simLog } from '../core/logSink';
-import config from '../database/migration.jsonc';
+import events from '../database/events.jsonc';
 
-const CFG = config as {
-  slots: number;
-  baseChance: number;
-  perBuilding: number;
-  minChance: number;
-  maxChance: number;
-};
+const CFG = (
+  events as {
+    migration: {
+      slots: number;
+      baseChance: number;
+      perBuilding: number;
+      minChance: number;
+      maxChance: number;
+    };
+  }
+).migration;
 
 function completedBuildings(state: GameState): number {
   return (state.buildings ?? []).filter((b) => b.status === 'complete').length;

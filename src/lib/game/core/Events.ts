@@ -1,5 +1,3 @@
-import eventData from '../database/events.jsonc';
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Two DIFFERENT things live in this file — do not conflate them:
 //
@@ -13,7 +11,9 @@ import eventData from '../database/events.jsonc';
 //
 // A previous half-built EventSystem rolled `events.jsonc` entries every few ticks
 // and dumped them straight into the Chronicle, which read as spam (they weren't
-// real gameplay). That engine was removed; `events.jsonc` is intentionally empty.
+// real gameplay). That engine was removed; `events.jsonc` now holds only per-type
+// event CONFIG (migrant-wave rates, later visitor/caravan cadence), read directly
+// by each event system — it carries no `GameEvent` definitions yet.
 // Build the real system here when the design is ready — keep its output OUT of the
 // raw Chronicle unless an event genuinely produces a chronicle-worthy record.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -38,8 +38,10 @@ export interface EventLog {
   timestamp: Date;
 }
 
-/** Event definitions — currently empty (see note above). */
-export const EVENT_DATABASE = eventData as unknown as GameEvent[];
+/** Event definitions — currently empty (see note above). Event CONFIG tuning (migrant-wave rates,
+ *  later visitor/caravan cadence) lives in `database/events.jsonc`, keyed by type and read per-system
+ *  (e.g. systems/migration.ts); this array holds `GameEvent` DEFINITIONS once that system is built. */
+export const EVENT_DATABASE: GameEvent[] = [];
 
 // ── Chronicle log ────────────────────────────────────────────────────────────
 

@@ -19,12 +19,15 @@ import { WEALTH_BANDS } from '../../core/Kingdom';
 import { makeMob, equipFromLootPool } from './entitySpawning';
 import { TICKS_PER_SECOND } from '../../core/time';
 import { TURNS_PER_DAY } from '../EnvironmentService';
+import events from '../../database/events.jsonc';
 
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 
-/** How long a party lingers before packing up (days). */
-const CARAVAN_STAY_DAYS = 2;
-const VISITOR_STAY_DAYS = 1.5;
+/** Party tuning (stay length, size, camp distance) — data-driven, see database/events.jsonc. */
+const EVENTS = events as {
+  visitors: { partySize: [number, number]; stayDays: number; anchorRing: [number, number] };
+  caravan: { stayDays: number; anchorRing: [number, number] };
+};
 
 /** Caravan guard gear rung per the sending kingdom's wealth (lootpool.jsonc guard_* pools). */
 export const GUARD_POOL_BY_WEALTH: Record<WealthBand, string> = {
@@ -132,7 +135,7 @@ interface MemberSpec {
 function partyRoster(kingdom: Kingdom, kind: KingdomParty['kind']): MemberSpec[] {
   const wealthIdx = WEALTH_BANDS.indexOf(kingdom.lore.wealthBand);
   if (kind === 'visitor') {
-    const n = rng.int(2, 4);
+    const n = rng.int(EVENTS.visitors.partySize[0], EVENTS.visitors.partySize[1]);
     return Array.from({ length: n }, () => ({
       creatureId: 'kingdom_visitor',
       role: 'visitor' as const
@@ -169,9 +172,10 @@ export function spawnKingdomParty(
 ): { state: GameState; party: KingdomParty } | null {
   const map = state.worldMap;
   const center = colonyCenter(state);
-  // Anchor: where the party settles to mill and trade — a ~15-20 tile ring from the colony so it
-  // camps at a respectful distance instead of sitting on top of the colonists (spec §3).
-  const anchor = findWalkableNear(map, center.x, center.y, 15, 20);
+  // Anchor: where the party settles to mill and trade — a ring from the colony so it camps at a
+  // respectful distance instead of sitting on top of the colonists (spec §3).
+  const ring = kind === 'caravan' ? EVENTS.caravan.anchorRing : EVENTS.visitors.anchorRing;
+  const anchor = findWalkableNear(map, center.x, center.y, ring[0], ring[1]);
   if (!anchor) return null;
   // Entry: a walkable tile at the MAP EDGE, so the party visibly marches the map to reach the colony.
   // Fall back to a far-from-colony ring, then the anchor, if the edge is all water/mountain.
@@ -210,7 +214,7 @@ export function spawnKingdomParty(
   }
   if (members.length === 0) return null;
 
-  const stayDays = kind === 'caravan' ? CARAVAN_STAY_DAYS : VISITOR_STAY_DAYS;
+  const stayDays = kind === 'caravan' ? EVENTS.caravan.stayDays : EVENTS.visitors.stayDays;
   const party: KingdomParty = {
     id: partyId,
     kingdomId: kingdom.id,

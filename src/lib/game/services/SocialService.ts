@@ -33,6 +33,7 @@ import {
   stageForScore
 } from '../core/Social';
 import { rng } from '../core/rng';
+import { moodEffect } from '../core/moodEffects';
 import { memoryService } from './MemoryService';
 import { simLog } from '../core/logSink';
 import { TICKS_PER_SECOND } from '../core/time';
@@ -915,10 +916,13 @@ class SocialServiceImpl {
     return working ? { ...state, relationships: working } : state;
   }
 
-  /** MOOD-REWORK: leave a faded mood thought on `p` from a dialog with `other`. */
-  private applyDialogMood(p: Pawn, other: Pawn, delta: number, turn: number): void {
-    const label = delta > 0 ? `A warm word with ${firstName(other)}` : `Cross words with ${firstName(other)}`;
-    this.addMoodModifier(p, `talk:${other.id}`, label, delta, days(DIALOG_MOOD_FADE_DAYS), turn);
+  /** MOOD-REWORK: leave a faded mood thought on `p` from a dialog with `other`, resolving the named
+   *  mood effect (mood.jsonc) — its label ({name} → the other talker) + value. No-op if unknown. */
+  private applyDialogMood(p: Pawn, other: Pawn, effectId: string, turn: number): void {
+    const eff = moodEffect(effectId);
+    if (!eff || eff.value == null || eff.value === 0) return;
+    const label = eff.label.replace(/\{name\}/g, firstName(other));
+    this.addMoodModifier(p, `talk:${other.id}`, label, eff.value, days(DIALOG_MOOD_FADE_DAYS), turn);
   }
 
   /** Assemble + resolve one dialog between `a` and `b`: move the relationship (logged), advance
@@ -971,9 +975,9 @@ class SocialServiceImpl {
     };
     // MOOD-REWORK: the exchange leaves a faded mood thought on each talker (a warm word lifts, cross
     // words sting). Keyed per-partner so it refreshes rather than stacking without bound.
-    if (outcome.moodDelta) {
-      this.applyDialogMood(a, b, outcome.moodDelta, turn);
-      this.applyDialogMood(b, a, outcome.moodDelta, turn);
+    if (outcome.moodEffect) {
+      this.applyDialogMood(a, b, outcome.moodEffect, turn);
+      this.applyDialogMood(b, a, outcome.moodEffect, turn);
     }
     if (outcome.category === 'flirt') {
       this.afterFlirt(state, working, a, b, rel, outcome.positive, turn);

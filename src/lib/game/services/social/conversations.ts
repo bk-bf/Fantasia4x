@@ -39,10 +39,10 @@ export interface ConversationOutcome {
   positive: boolean;
   /** Score delta for the pair (signed). */
   delta: number;
-  /** MOOD-REWORK — the mood "thought" this exchange leaves on BOTH participants (a warm chat lifts,
-   *  an insult/rebuffed advance stings). Authored per category in dialog.jsonc (`moodGood`/`moodBad`);
-   *  0 when the category has no mood bearing. SocialService applies it as a faded thought. */
-  moodDelta: number;
+  /** MOOD-REWORK — the mood-effect id (mood.jsonc, e.g. "talk_banter_good") this exchange leaves on BOTH
+   *  participants; `null` when the category has no mood bearing (argue/insult have no positive one).
+   *  SocialService.applyDialogMood resolves it (label {name}-filled + value) into a faded thought. */
+  moodEffect: string | null;
   lines: ConversationLine[];
   /** Chronicle `result` phrase ("warmed to each other" / "it turned into an argument"). */
   resultText: string;
@@ -67,9 +67,9 @@ interface CategoryBank {
   goodDelta: number;
   badDelta: number;
   goodChance: number;
-  /** MOOD-REWORK — the mood thought a warm / soured exchange leaves on each participant. */
-  moodGood?: number;
-  moodBad?: number;
+  /** MOOD-REWORK — the mood-effect id a warm / soured exchange leaves on each participant (`null` = none). */
+  moodGood?: string | null;
+  moodBad?: string | null;
   beats: Beat[];
   /** Opener lines used when the pair spoke recently — they reference `{subject}` to carry the thread. */
   callbacks?: string[];
@@ -304,7 +304,7 @@ export function runConversation(
     category,
     positive,
     delta: positive ? bank.goodDelta : bank.badDelta,
-    moodDelta: positive ? (bank.moodGood ?? 0) : (bank.moodBad ?? 0),
+    moodEffect: (positive ? bank.moodGood : bank.moodBad) ?? null,
     lines,
     resultText: positive ? RESULT_GOOD[category] : RESULT_BAD[category],
     subject
@@ -346,7 +346,7 @@ function recallConversation(
     category,
     positive,
     delta: positive ? catBank.goodDelta : catBank.badDelta,
-    moodDelta: positive ? (catBank.moodGood ?? 0) : (catBank.moodBad ?? 0),
+    moodEffect: (positive ? catBank.moodGood : catBank.moodBad) ?? null,
     lines,
     resultText: positive ? RESULT_GOOD[category] : RESULT_BAD[category],
     subject: detail ? `${who} and ${detail}` : who
