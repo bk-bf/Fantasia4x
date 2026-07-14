@@ -4507,12 +4507,10 @@
         "stage"       : 1,
         "scope"        : "cultural",
         "kind"         : "naturalGear",
-        "stage"        : 1,
         "name"         : "Pebbled Skin",
         "description"  : "Skin studded with mineral nodules, the first setting of a stone hide.",
         "naturalArmor": 10,
         "carryPenalty": 0.08,
-        "evolvesTo"    : "granite-hide",
         "effects"      : {}
     },
     {
@@ -4523,12 +4521,10 @@
         "stage"       : 2,
         "scope"        : "cultural",
         "kind"         : "naturalGear",
-        "stage"        : 2,
         "name"         : "Granite Hide",
         "description"  : "A hide set hard as quarried granite, heavy living armor.",
         "naturalArmor": 18,
         "carryPenalty": 0.14,
-        "evolvesTo"    : "living-rock",
         "effects"      : {}
     },
     {
@@ -4538,7 +4534,6 @@
         "stage"       : 3,
         "scope"        : "cultural",
         "kind"         : "naturalGear",
-        "stage"        : 3,
         "name"         : "Living Rock",
         "description"  : "Flesh gone to living stone, armor beyond forged plate, mineral-slow.",
         "naturalArmor": 26,
