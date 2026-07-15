@@ -17,7 +17,7 @@ import {
   FATIGUE_THRESHOLD,
   ROUTE_TO_DRINK_THIRST,
   ROUTE_TO_WASH_HYGIENE,
-  FUN_THRESHOLD,
+  RELAXATION_THRESHOLD,
   needsRecovery,
   findNearestRestBuilding,
   transitionTo,
@@ -113,7 +113,7 @@ export function selectIdleNeed(pawn: Pawn, gameState: GameState): NeedChoice {
   }
   // SOCIAL (lowest priority — a mood need, not survival): a bored idle pawn heads to the fire to
   // socialise instead of loafing. Only from Idle, so it never interrupts real work.
-  if ((pawn.needs?.fun ?? 100) < FUN_THRESHOLD) {
+  if ((pawn.needs?.relaxation ?? 100) < RELAXATION_THRESHOLD) {
     const routed = tryRouteToSocialise(pawn, gameState);
     if (routed) return { kind: 'social', routedState: routed };
   }

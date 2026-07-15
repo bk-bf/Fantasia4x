@@ -40,14 +40,14 @@
     if (pct >= 30) return '#c8a030';
     return '#c86030';
   }
-  // Fun is INVERTED (100 = entertained). Only shown once it drops low (autohide); green→amber→red.
-  const FUN_SHOW_BELOW = 12;
-  function getFunColor(pct: number): string {
+  // Relaxation is INVERTED (100 = entertained). Only shown once it drops low (autohide); green→amber→red.
+  const RELAXATION_SHOW_BELOW = 12;
+  function getRelaxationColor(pct: number): string {
     if (pct >= 50) return 'var(--pos)';
     if (pct >= 20) return '#c8a030';
     return '#c86030';
   }
-  function funDesc(pct: number): string {
+  function relaxationDesc(pct: number): string {
     return pct < 5 ? 'starved for company' : pct < 12 ? 'restless' : 'content';
   }
 </script>
@@ -94,13 +94,13 @@
     </div>
   {/if}
 
-  {#if (needs.fun ?? 100) < FUN_SHOW_BELOW}
-    {@const funPct = Math.round(needs.fun ?? 100)}
+  {#if (needs.relaxation ?? 100) < RELAXATION_SHOW_BELOW}
+    {@const relaxPct = Math.round(needs.relaxation ?? 100)}
     <div class="need-row">
-      <span class="lbl">FUN</span>
-      <span class="block-bar" style="color: {getFunColor(funPct)}">{blockBar(funPct)}</span>
-      <span class="val" style="color: {getFunColor(funPct)}">{funPct}/100</span>
-      <span class="desc">{funDesc(funPct)}</span>
+      <span class="lbl">RELAXATION</span>
+      <span class="block-bar" style="color: {getRelaxationColor(relaxPct)}">{blockBar(relaxPct)}</span>
+      <span class="val" style="color: {getRelaxationColor(relaxPct)}">{relaxPct}/100</span>
+      <span class="desc">{relaxationDesc(relaxPct)}</span>
     </div>
   {/if}
 

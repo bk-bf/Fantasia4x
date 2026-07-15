@@ -979,11 +979,12 @@ export const ROUTE_TO_DRINK_THIRST = needNum('thirst', 'seek', 82);
 export const ROUTE_TO_WASH_HYGIENE = needNum('hygiene', 'seek', 88);
 
 export const DRINK_NEED_RELIEF = needNum('thirst', 'relief', 65);
-// SOCIAL: a pawn seeks a gathering place (campfire/hearth) when `fun` drops below this; a session there
-// lasts SOCIALISE_TURNS and restores SOCIALISE_FUN_RELIEF (fun climbs from ~threshold back toward full).
-export const FUN_THRESHOLD = needNum('fun', 'seek', 30);
-export const SOCIALISE_TURNS = ticksFromSeconds(needNum('fun', 'durationSeconds', 20));
-export const SOCIALISE_FUN_RELIEF = needNum('fun', 'relief', 70);
+// SOCIAL: a pawn seeks a gathering place (campfire/hearth) when `relaxation` drops below this; a session
+// there lasts SOCIALISE_TURNS and restores SOCIALISE_RELAXATION_RELIEF (relaxation climbs from ~threshold
+// back toward full).
+export const RELAXATION_THRESHOLD = needNum('relaxation', 'seek', 30);
+export const SOCIALISE_TURNS = ticksFromSeconds(needNum('relaxation', 'durationSeconds', 20));
+export const SOCIALISE_RELAXATION_RELIEF = needNum('relaxation', 'relief', 70);
 
 export const WASH_NEED_RELIEF = needNum('hygiene', 'relief', 70);
 

@@ -603,7 +603,7 @@ export function buildPawnCard(
     { label: 'HYGIENE', value: pawn.needs.hygiene ?? 0, warn: (pawn.needs.hygiene ?? 0) > 60 }
   ];
   // Autohide meters that are irrelevant: BLOOD/STAMINA only matter when NOT full, WETNESS only when
-  // wet, FUN only once it drops low.
+  // wet, RELAXATION only once it drops low.
   if (pawn.maxBloodVolume) {
     const curBV = pawn.bloodVolume ?? pawn.maxBloodVolume;
     if (curBV < pawn.maxBloodVolume) {
@@ -629,14 +629,14 @@ export function buildPawnCard(
   if ((pawn.needs.wetness ?? 0) > 0) {
     bars.push({ label: 'WETNESS', value: Math.round(pawn.needs.wetness ?? 0), color: '#4FA3D1' });
   }
-  // SOCIAL: FUN is inverted (100 = entertained) and only surfaces once it drops low (a bored pawn).
-  const funVal = pawn.needs.fun ?? 100;
-  if (funVal < 12) {
+  // SOCIAL: RELAXATION is inverted (100 = entertained) and only surfaces once it drops low (a bored pawn).
+  const relaxVal = pawn.needs.relaxation ?? 100;
+  if (relaxVal < 12) {
     bars.push({
-      label: 'FUN',
-      value: Math.round(funVal),
-      color: funVal < 5 ? '#c86030' : '#c8a030',
-      warn: funVal < 5
+      label: 'RELAXATION',
+      value: Math.round(relaxVal),
+      color: relaxVal < 5 ? '#c86030' : '#c8a030',
+      warn: relaxVal < 5
     });
   }
   // No flat "HP" stat: the body model (limbs/blood/pain) is the real health — see the HEALTH popup.

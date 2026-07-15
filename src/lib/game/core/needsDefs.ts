@@ -5,8 +5,8 @@
 // as they did when these were inline constants — so nothing about the per-tick hot path changes.
 import needsData from '../database/pawns/needs.jsonc';
 
-/** A mood band on a need: applies while the need is past `atOrAbove` (survival) / `atOrBelow` (fun),
- *  and references a mood effect id from mood.jsonc. */
+/** A mood band on a need: applies while the need is past `atOrAbove` (survival) / `atOrBelow`
+ *  (relaxation), and references a mood effect id from mood.jsonc. */
 export interface NeedMoodBand {
   atOrAbove?: number;
   atOrBelow?: number;
@@ -14,20 +14,20 @@ export interface NeedMoodBand {
 }
 
 /** One need's behaviour block. Every field is optional — a need only declares what applies to it
- *  (survival needs have `rate`, `fun` has `decayRate`, bloodHunger has its lineage feeding knobs). */
+ *  (survival needs have `rate`, `relaxation` has `decayRate`, bloodHunger has its lineage feeding knobs). */
 export interface NeedDef {
-  /** The FSM state(s) that satisfy this need (e.g. fun → ["Socialising"]). Owned here, kept OUT of
+  /** The FSM state(s) that satisfy this need (e.g. relaxation → ["Socialising"]). Owned here, kept OUT of
    *  states.jsonc so they aren't declared twice; the state registry's drift test reads this. */
   states?: string[];
   /** Per-second build rate (survival needs). */
   rate?: number;
-  /** Per-second decay rate (`fun`, inverted: 100 = entertained → 0). */
+  /** Per-second decay rate (`relaxation`, inverted: 100 = entertained → 0). */
   decayRate?: number;
-  /** Abandon work to satisfy the need at/above this (fun: at/below). */
+  /** Abandon work to satisfy the need at/above this (relaxation: at/below). */
   seek?: number;
   /** Opportunistic top-up threshold while already at the water/well. */
   autoSatisfy?: number;
-  /** Need points removed (survival) / restored (fun) by one full satisfy session. */
+  /** Need points removed (survival) / restored (relaxation) by one full satisfy session. */
   relief?: number;
   /** How long a satisfy session takes (in-game seconds). */
   durationSeconds?: number;

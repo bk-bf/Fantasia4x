@@ -5409,7 +5409,7 @@
         on:mousedown|stopPropagation
         on:mouseup|stopPropagation
       >
-        <SelectedEntityCard model={selectedPawnCard} embedded />
+        <SelectedEntityCard model={selectedPawnCard} embedded fitContent />
         <FoodFilterPanel open={showFoodSettings} />
       </div>
     {:else if selectedMobCard}

@@ -144,9 +144,9 @@ export interface PawnService {
 // needs.jsonc (resolved once at load; the per-tick loop still reads these plain numbers).
 const THIRST_INCREASE_PER_SECOND = needNum('thirst', 'rate', 0.7); // thirst builds a bit faster than hunger
 const HYGIENE_INCREASE_PER_SECOND = needNum('hygiene', 'rate', 0.3); // grime builds slowly
-// SOCIAL: `fun` DECAYS toward 0 (100 = entertained). ~100→0 over ~2.5 in-game days of no company, so a
-// pawn seeks the fire every couple of days. Paused while SOCIALISING (recovery happens there instead).
-const FUN_DECREASE_PER_SECOND = needNum('fun', 'decayRate', 0.13);
+// SOCIAL: `relaxation` DECAYS toward 0 (100 = entertained). ~100→0 over ~2.5 in-game days of no company,
+// so a pawn seeks the fire every couple of days. Paused while SOCIALISING (recovery happens there instead).
+const RELAXATION_DECREASE_PER_SECOND = needNum('relaxation', 'decayRate', 0.13);
 // §D auto-drink: thirst threshold to drink, and relief per unit of water.
 const AUTO_DRINK_THIRST = needNum('thirst', 'autoSatisfy', 70);
 const WATER_THIRST_RELIEF = needNum('thirst', 'relief', 65);
@@ -506,12 +506,12 @@ export class PawnServiceImpl implements PawnService {
       const wetRes = pawnStatService.evaluateStat('wetness_resistance', pawn);
       const wetness = accrueWetness(wet0, tileWet, dt, wetRes, drySpeed);
 
-      // SOCIAL: fun decays toward 0 (recovered by SOCIALISING — paused while in that state).
-      const fun0 = needs.fun ?? 100;
-      const fun =
+      // SOCIAL: relaxation decays toward 0 (recovered by SOCIALISING — paused while in that state).
+      const relaxation0 = needs.relaxation ?? 100;
+      const relaxation =
         pawn.currentState === 'Socialising'
-          ? fun0
-          : Math.max(0, fun0 - FUN_DECREASE_PER_SECOND * dt);
+          ? relaxation0
+          : Math.max(0, relaxation0 - RELAXATION_DECREASE_PER_SECOND * dt);
 
       const prevHealth = pawn.state.health ?? 100;
       const health =
@@ -525,7 +525,7 @@ export class PawnServiceImpl implements PawnService {
         thirst === (needs.thirst ?? 0) &&
         hygiene === (needs.hygiene ?? 0) &&
         wetness === wet0 &&
-        fun === fun0 &&
+        relaxation === relaxation0 &&
         health === prevHealth
       ) {
         continue;
@@ -536,7 +536,7 @@ export class PawnServiceImpl implements PawnService {
       needs.thirst = thirst;
       needs.hygiene = hygiene;
       needs.wetness = wetness;
-      needs.fun = fun;
+      needs.relaxation = relaxation;
       pawn.state.health = health;
       changed = true;
     }
@@ -720,7 +720,7 @@ export class PawnServiceImpl implements PawnService {
     }
 
     // Per-need mood bands (needs.jsonc) — each need applies its FIRST (most-severe) matching band,
-    // resolving the named effect. `fun` is inverted (low = bad → atOrBelow); survival needs use atOrAbove.
+    // resolving the named effect. `relaxation` is inverted (low = bad → atOrBelow); survival needs use atOrAbove.
     const n = pawn.needs;
     for (const need in NEED_MOOD) {
       let v: number;
@@ -737,8 +737,8 @@ export class PawnServiceImpl implements PawnService {
         case 'hygiene':
           v = n.hygiene ?? 0;
           break;
-        case 'fun':
-          v = n.fun ?? 100;
+        case 'relaxation':
+          v = n.relaxation ?? 100;
           break;
         default:
           continue;

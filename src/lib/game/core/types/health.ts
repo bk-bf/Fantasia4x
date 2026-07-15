@@ -29,8 +29,8 @@ export interface EntityNeeds {
   bloodHunger?: number;
   /** SOCIAL — recreation/company meter 0–100 (INVERTED vs the survival needs: 100 = well-entertained,
    *  0 = starved for company). Decays slowly each tick; recovered by SOCIALISING at a gathering place.
-   *  Low fun seeds a mood debuff and drives the pawn to seek the fire. */
-  fun?: number;
+   *  Low relaxation seeds a mood debuff and drives the pawn to seek the fire. */
+  relaxation?: number;
   /** Turn the pawn last socialised (for cadence/analytics; stripped from the snapshot). */
   lastSocialise?: number;
 }
