@@ -185,20 +185,11 @@
   // `body`: optional rich/colour-coded body snippet rendered in place of `model.lines` (e.g. the
   // building card passes <BuildingInfo>). Lets a type supply structured content while still getting the
   // shared shell — header, status, dismiss, the button column, health/mood pop-ups.
-  // `fitContent`: when embedded, let the info box hug its own content instead of stretching to the
-  // (taller, fixed) button column's height. The pawn card sets this so its box grows/shrinks with the
-  // autohidden need bars (BLOOD/STAMINA/WETNESS/…) rather than sitting at a fixed button-driven height.
   let {
     model,
     embedded = false,
-    fitContent = false,
     body
-  }: {
-    model: SelectedEntityModel;
-    embedded?: boolean;
-    fitContent?: boolean;
-    body?: import('svelte').Snippet;
-  } = $props();
+  }: { model: SelectedEntityModel; embedded?: boolean; body?: import('svelte').Snippet } = $props();
 
   // NT-U1: the HEALTH button opens a pop-up health panel (like the fuel panel) above the card.
   // The open/closed flag is SHARED (healthToggle) so it persists across every selected/hovered
@@ -231,7 +222,6 @@
 <div
   class="tile-hud-wrap"
   class:tile-hud-wrap--embedded={embedded}
-  class:tile-hud-wrap--fit={fitContent}
   onmousedown={(e) => {
     e.stopPropagation();
     if (!model.selected) model.onSelect?.();
@@ -476,11 +466,6 @@
        lays out. Stretch both to a shared height so the box's bottom border lines up with the button
        column's bottom even when the buttons are taller than the card's content (the short zone card). */
     align-items: stretch;
-  }
-  /* Opt-out for the pawn card: top-align the columns so the info box keeps its OWN content height and
-     resizes as need bars appear/disappear, instead of being padded up to the button column's height. */
-  .tile-hud-wrap--fit {
-    align-items: flex-start;
   }
   .tile-hud {
     position: relative;
