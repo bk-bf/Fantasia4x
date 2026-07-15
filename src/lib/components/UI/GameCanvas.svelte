@@ -2010,25 +2010,43 @@
         color: e.color
       }))
       .filter((o) => o.left >= -tW && o.top >= -tH && o.left <= W + tW && o.top <= H + tH);
-    // De-overlap dialog bubbles: distinct conversations are already kept ≥10 tiles apart, but the two
-    // speakers of ONE exchange can be stacked vertically and clip. Reserve a vertical box per social
-    // float (≈ the .social-bubble min-height, scaled with zoom) and push any that would collide with an
-    // already-placed one downward.
-    const socialGap = Math.max(20, tH);
-    const socialHalfW = 55; // horizontal half-width; only stack lines that are also side-by-side close
-    const placedSocial: { left: number; top: number }[] = [];
+    // De-overlap dialog bubbles. Distinct conversations are already kept ≥10 tiles apart, but the two
+    // speakers of ONE exchange can sit side by side OR stacked and clip. Estimate each bubble's box
+    // from its text (a long line wraps to .social-bubble's 152px cap over several rows), and for any two
+    // that visually overlap — bubbles scale with zoom around their centre (combatFloatScale) — drop the
+    // later one just below the one it hits. Using real widths means side-by-side short lines separate
+    // without over-spacing far-apart ones, and multi-row lines get enough vertical clearance.
+    const flScale = Math.min(1.2, Math.max(0.25, tW / 20)); // mirrors combatFloatScale in the layer
+    const CHAR_W = 5; // ≈ px per glyph at the 10px italic dialog font
+    const MAX_TXT_W = 152; // .social-bubble text cap (160px max-width − padding)
+    const LINE_H = 15;
+    const boxOf = (text: string) => {
+      const full = Math.max(text.length * CHAR_W, 30);
+      return {
+        w: Math.min(MAX_TXT_W, full) + 8, // + horizontal padding
+        h: Math.max(1, Math.ceil(full / MAX_TXT_W)) * LINE_H + 6
+      };
+    };
+    const placedSocial: { left: number; top: number; w: number; h: number }[] = [];
     for (const o of newFloats) {
       if (o.kind !== 'social') continue;
+      const ob = boxOf(o.text);
       let moved = true;
       while (moved) {
         moved = false;
-        for (const p of placedSocial)
-          if (Math.abs(p.left - o.left) < socialHalfW * 2 && Math.abs(p.top - o.top) < socialGap) {
-            o.top = p.top + socialGap;
+        for (const p of placedSocial) {
+          // Bubbles centre on `left` (translateX(-50%)) and scale about their middle, so overlap is a
+          // centre-distance test against the summed half-extents.
+          const horiz = Math.abs(p.left - o.left) < (flScale * (p.w + ob.w)) / 2 + 2;
+          const vert =
+            Math.abs(p.top + p.h / 2 - (o.top + ob.h / 2)) < (flScale * (p.h + ob.h)) / 2 + 2;
+          if (horiz && vert) {
+            o.top = p.top + (p.h - ob.h) / 2 + (flScale * (p.h + ob.h)) / 2 + 2; // seat just below p
             moved = true;
           }
+        }
       }
-      placedSocial.push({ left: o.left, top: o.top });
+      placedSocial.push({ left: o.left, top: o.top, w: ob.w, h: ob.h });
     }
     // Key on id + rounded position: the set changes whenever an event spawns,
     // expires, or the camera moves a label by ≥1px.
