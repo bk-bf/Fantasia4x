@@ -223,14 +223,25 @@
        pixel size (a wall of full-size text when zoomed out on a busy fight). The rise/fade keyframe
        animates margin-top, so this scale() on the inline transform is preserved throughout. -->
   {#each $worldEffects.floatingTextOverlays as overlay (overlay.id)}
-    <div
-      class="combat-float {overlay.kind}"
-      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({combatFloatScale});{overlay.color
-        ? ` color:${overlay.color};`
-        : ''}"
-    >
-      {overlay.text}
-    </div>
+    {#if overlay.kind === 'social'}
+      <!-- Dialog line nested in a transparent bubble: an invisible min-box that reserves space so
+           stacked conversations (GameCanvas de-overlaps their positions) never clip into each other. -->
+      <div
+        class="social-bubble"
+        style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({combatFloatScale});"
+      >
+        <span class="combat-float social">{overlay.text}</span>
+      </div>
+    {:else}
+      <div
+        class="combat-float {overlay.kind}"
+        style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({combatFloatScale});{overlay.color
+          ? ` color:${overlay.color};`
+          : ''}"
+      >
+        {overlay.text}
+      </div>
+    {/if}
   {/each}
 
   <!-- ── Fullscreen Weather Overlay (SEASONS_WEATHER) ──────────────────────────── -->
@@ -1083,6 +1094,29 @@
     color: #cccccc;
     font-size: 11px;
     font-style: italic;
+  }
+  /* Transparent spacer around a dialog line — no background/border, just a reserved min box that
+     keeps two speech lines from clipping when their speakers stack vertically (GameCanvas pushes the
+     positions apart by roughly this box's height). */
+  .social-bubble {
+    position: absolute;
+    left: 0;
+    top: 0;
+    min-width: 40px;
+    min-height: 24px;
+    padding: 2px 4px;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    pointer-events: none;
+  }
+  /* Inside the bubble the line flows in the flex box (not absolutely positioned like a bare float),
+     so its own drift/dwell animation moves the text within the reserved space. */
+  .social-bubble .combat-float.social {
+    position: relative;
+    left: auto;
+    top: auto;
   }
   /* SOCIAL-LAYER conversation lines: plain WHITE cursive text (no bubble), dwelling long enough to
      read (duration must match SOCIAL_TTL_MS in combatFeedback.ts) and gently drifting. A strong

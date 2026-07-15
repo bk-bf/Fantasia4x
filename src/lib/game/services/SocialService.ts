@@ -78,6 +78,12 @@ const DIALOG_CHANCE = 0.6; // chance an eligible, off-cooldown pair actually sta
 const DIALOG_PAIR_COOLDOWN_S = 25; // in-game seconds before the SAME pair chats again
 const DIALOG_PAWN_COOLDOWN_S = 6; // in-game seconds before a pawn joins ANY new dialog
 const DIALOG_DANGER_RADIUS = 8; // no drawn-out dialog within this many tiles of an active fight
+// Anti-clutter: two conversations too close together spam overlapping speech bubbles, so a new dialog
+// can't start within DIALOG_SPACING_RADIUS tiles of one whose bubbles are still on screen — near pairs
+// take turns, distant pairs (≥ this apart) may talk at once. Kept live for DIALOG_HOLD_S (≥ the 4.5s
+// SOCIAL_TTL_MS bubble dwell in combatFeedback.ts) after a dialog fires.
+const DIALOG_SPACING_RADIUS = 10;
+const DIALOG_HOLD_S = 5;
 // MOOD-REWORK: a dialog leaves a faded mood "thought" on both talkers (dialog.jsonc moodGood/moodBad).
 // The magnitude carries the weight; they all fade over this window (a chat's afterglow / an insult's sting).
 const DIALOG_MOOD_FADE_DAYS = 0.5;
@@ -124,6 +130,9 @@ const _battleBondDay = new Map<string, number>();
 // Dialog cooldowns (worker-transient): last turn a PAIR talked / a PAWN last joined any dialog.
 const _lastPairDialog = new Map<string, number>();
 const _lastPawnDialog = new Map<string, number>();
+// Conversations whose bubbles are still on screen (centre tile + expiry turn) — new dialogs keep
+// DIALOG_SPACING_RADIUS clear of these so nearby talk takes turns instead of overlapping.
+const _activeDialogs: { x: number; y: number; until: number }[] = [];
 // Combat-bark cooldown (worker-transient): last turn a PAWN barked in a fight.
 const _lastBark = new Map<string, number>();
 // Deterministic 0–1 from (id, turn, salt) — used for combat-bark chance + line selection so barks NEVER
@@ -890,6 +899,14 @@ class SocialServiceImpl {
 
     let working: PawnRelationship[] | null = null;
     const busy = new Set<string>(); // pawns already chatting this tick
+    // Drop conversations whose bubbles have faded so they stop reserving space.
+    for (let i = _activeDialogs.length - 1; i >= 0; i--)
+      if (_activeDialogs[i].until <= turn) _activeDialogs.splice(i, 1);
+    const dialogHold = DIALOG_HOLD_S * TICKS_PER_SECOND;
+    const spacedClear = (x: number, y: number) =>
+      !_activeDialogs.some(
+        (d) => Math.max(Math.abs(d.x - x), Math.abs(d.y - y)) < DIALOG_SPACING_RADIUS
+      );
 
     for (const a of talkers) {
       if (busy.has(a.id)) continue;
@@ -903,10 +920,15 @@ class SocialServiceImpl {
         break;
       }
       if (!b) continue;
+      // Keep clear of any conversation still on screen nearby — near pairs take turns.
+      const cx = Math.round((a.position!.x + b.position!.x) / 2);
+      const cy = Math.round((a.position!.y + b.position!.y) / 2);
+      if (!spacedClear(cx, cy)) continue;
       if (rng.random() >= DIALOG_CHANCE) continue; // not every eligible pass sparks talk
 
       busy.add(a.id);
       busy.add(b.id);
+      _activeDialogs.push({ x: cx, y: cy, until: turn + dialogHold });
       _lastPairDialog.set(relKey(a.id, b.id), turn);
       _lastPawnDialog.set(a.id, turn);
       _lastPawnDialog.set(b.id, turn);
@@ -995,8 +1017,7 @@ class SocialServiceImpl {
         worldX: b.position.x,
         worldY: b.position.y,
         text: outcome.lines[1].text,
-        kind: 'social',
-        dy: 8
+        kind: 'social'
       });
     // One expandable chronicle entry per dialog.
     simLog.logActivity({

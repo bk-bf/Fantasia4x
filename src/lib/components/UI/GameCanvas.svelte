@@ -2010,6 +2010,26 @@
         color: e.color
       }))
       .filter((o) => o.left >= -tW && o.top >= -tH && o.left <= W + tW && o.top <= H + tH);
+    // De-overlap dialog bubbles: distinct conversations are already kept ≥10 tiles apart, but the two
+    // speakers of ONE exchange can be stacked vertically and clip. Reserve a vertical box per social
+    // float (≈ the .social-bubble min-height, scaled with zoom) and push any that would collide with an
+    // already-placed one downward.
+    const socialGap = Math.max(20, tH);
+    const socialHalfW = 55; // horizontal half-width; only stack lines that are also side-by-side close
+    const placedSocial: { left: number; top: number }[] = [];
+    for (const o of newFloats) {
+      if (o.kind !== 'social') continue;
+      let moved = true;
+      while (moved) {
+        moved = false;
+        for (const p of placedSocial)
+          if (Math.abs(p.left - o.left) < socialHalfW * 2 && Math.abs(p.top - o.top) < socialGap) {
+            o.top = p.top + socialGap;
+            moved = true;
+          }
+      }
+      placedSocial.push({ left: o.left, top: o.top });
+    }
     // Key on id + rounded position: the set changes whenever an event spawns,
     // expires, or the camera moves a label by ≥1px.
     const floatKey = newFloats
