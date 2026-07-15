@@ -37,6 +37,6 @@ export const PAWN_STATE = {
 export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];
 
 // State METADATA — the player-facing label, bucket, trigger source, and the uncontrollable flag +
-// `isUncontrollable()` — lives in the data-driven registry (database/states.jsonc via core/stateDefs.ts),
+// `isUncontrollable()` — lives in the data-driven registry (database/pawns/states.jsonc via core/stateDefs.ts),
 // kept in lockstep with the ids above by stateRegistry.test.ts. This module stays a pure leaf (the typed
 // id source of truth) so every handler/helper can depend on it without pulling in the data layer.

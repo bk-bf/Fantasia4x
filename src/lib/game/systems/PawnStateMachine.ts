@@ -38,8 +38,8 @@ import {
 } from '../core/Wounds';
 import { feedOnVictim } from '../core/Lineages';
 import { lethalAnatomyCause } from '../core/BodyParts';
-import conditionsData from '../database/conditions.jsonc';
-import buildingsData from '../database/buildings.jsonc';
+import conditionsData from '../database/pawns/conditions.jsonc';
+import buildingsData from '../database/world/buildings.jsonc';
 // Per-bed wound-recovery: a sleeping pawn knits faster on a better bed. We reuse each bed's
 // `treatmentBonus` (the same quality gradient the caretaker dressing uses: sleeping_spot 0.1 →
 // feather_bed 0.7) as a heal multiplier, so a colonist heals fastest in the softest bed.

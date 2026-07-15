@@ -8,8 +8,8 @@ import { buildingLight } from './LightingService';
 import { buildingService } from './BuildingService';
 import { resourceObjectService } from './ResourceObjectService';
 import { BIOMES, SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
-import seasonsData from '../database/seasons.jsonc';
-import weatherData from '../database/weather.jsonc';
+import seasonsData from '../database/world/seasons.jsonc';
+import weatherData from '../database/world/weather.jsonc';
 import type { SeededRng } from '../core/rng';
 import type { Season, WeatherState, WeatherType, WorldTile, PlacedBuilding } from '../core/types';
 
@@ -208,7 +208,7 @@ export interface SeasonDef {
   tint: [number, number, number];
 }
 
-// Data-driven from database/seasons.jsonc.
+// Data-driven from database/world/seasons.jsonc.
 interface SeasonFileEntry extends SeasonDef {
   id: Season;
   label: string;
@@ -445,7 +445,7 @@ export type WeatherOverlayKind =
   | 'snowdust'
   | 'foggy_rain';
 
-// Data-driven from database/weather.jsonc: weather types plus two orthogonal Markov chains
+// Data-driven from database/world/weather.jsonc: weather types plus two orthogonal Markov chains
 // (`precip` × `wind`) whose product derives the active type via `grid`.
 interface WeatherTransition {
   to: string;

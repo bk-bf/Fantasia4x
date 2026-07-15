@@ -2,7 +2,7 @@
 // from JobService (P-4, ADR-017 handler split): these are pure predicates over GameState with no
 // per-type behaviour, so they live alongside the job handlers rather than inside the service.
 import type { DesignationType, GameState, Item, ZoneFilter } from '../../core/types';
-import itemsData from '../../database/items.jsonc';
+import itemsData from '../../database/items/items.jsonc';
 import { resourceObjectService } from '../ResourceObjectService';
 import { zoneInstanceIdAt } from '../DesignationService';
 

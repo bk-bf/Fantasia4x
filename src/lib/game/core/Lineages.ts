@@ -8,7 +8,7 @@
 //     first trait), else EVOLVE a staged trait (~10%, prioritised), else GROW a new member (~10%).
 // Self-contained: reads its own copy of the trait catalog (no Culture import → no cycle). Trait EFFECTS
 // of a newly-granted trait are applied by the caller's `applyTrait` callback (kept out of core→entities).
-import traitDbData from '../database/traits.jsonc';
+import traitDbData from '../database/pawns/traits.jsonc';
 import { rng } from './rng';
 import { recomputeWound } from './Wounds';
 import type { Pawn, Trait } from './types';

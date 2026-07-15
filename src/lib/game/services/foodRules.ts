@@ -3,7 +3,7 @@
 // `gs.foodSettings.allowedFoodItemIds`; the meal selector (pawnQueries.selectFoodForMeal) resolves the
 // effective eat-list through here, and the per-item nutrition (incl. raw carcasses) comes from here too.
 import type { Item, FoodSettings } from '../core/types';
-import itemsData from '../database/items.jsonc';
+import itemsData from '../database/items/items.jsonc';
 
 const ITEMS_DB = itemsData as unknown as Item[];
 

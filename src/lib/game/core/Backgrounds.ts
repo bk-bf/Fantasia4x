@@ -1,5 +1,5 @@
 import type { Culture, Kingdom, WealthBand } from './types';
-import backgroundsData from '../database/backgrounds.jsonc';
+import backgroundsData from '../database/pawns/backgrounds.jsonc';
 import { rng } from './rng';
 import { MAX_WORK_LEVEL } from './workExperience';
 import { getTraitById } from './Lineages';

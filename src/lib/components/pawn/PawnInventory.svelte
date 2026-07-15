@@ -1,7 +1,7 @@
 <!-- PawnInventory.svelte — shows items the pawn is currently carrying -->
 <script lang="ts">
   import type { Pawn, Item, ItemInstance } from '$lib/game/core/types';
-  import ITEMS_DATABASE from '$lib/game/database/items.jsonc';
+  import ITEMS_DATABASE from '$lib/game/database/items/items.jsonc';
   import { itemService } from '$lib/game/services/ItemService';
   import { gameState } from '$lib/stores/gameState';
   import CarryItemCard from './CarryItemCard.svelte';

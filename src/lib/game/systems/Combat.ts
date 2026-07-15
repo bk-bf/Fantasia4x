@@ -44,7 +44,7 @@ import { woundForDamageType, woundById, severityFromFrac, recomputeWound } from 
 import { scaleWeaponQuality, scaleArmorQuality } from '../core/itemQuality';
 import { pawnStatService } from '../services/PawnStatService';
 import { calcMaxStamina } from '../entities/Pawns';
-import conditionsData from '../database/conditions.jsonc';
+import conditionsData from '../database/pawns/conditions.jsonc';
 import type { ConditionDef, TransientConditionDef } from '../core/types';
 import { simLog, type CombatTextKind } from '../core/logSink';
 import { rng } from '../core/rng';

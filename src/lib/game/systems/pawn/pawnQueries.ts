@@ -8,8 +8,8 @@
  * architecture is unchanged and so each is trivially unit-testable.
  */
 import type { GameState, Pawn } from '../../core/types';
-import ITEMS_DATABASE from '../../database/items.jsonc';
-import RARITIES from '../../database/rarities.jsonc';
+import ITEMS_DATABASE from '../../database/items/items.jsonc';
+import RARITIES from '../../database/items/rarities.jsonc';
 import { consumeFromStockpiles } from '../../core/GameState';
 import { manhattan } from '../../core/distance';
 import { ticksFromSeconds } from '../../core/time';

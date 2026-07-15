@@ -20,8 +20,8 @@ import type {
   DroppedItem,
   DesignationType
 } from '../core/types';
-import itemsData from '../database/items.jsonc';
-import researchData from '../database/research.jsonc';
+import itemsData from '../database/items/items.jsonc';
+import researchData from '../database/progression/research.jsonc';
 
 // Exclude `natural_weapon` items (fists/kick/claw/bite…) — they're innate attacks, never real
 // droppable objects, so spawning/pre-stocking them as physical piles is nonsensical.

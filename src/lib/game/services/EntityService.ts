@@ -8,7 +8,7 @@
 //   • entityAI        — per-tick FSM brain (wander/flee/hunt/forage/sleep + feeding sub-steps)
 //   • entityLifecycle — hunger/blood-loss tick, death→corpse, carcass drops, corpse decay
 //
-// Rosters stay DB-driven (core/Creatures.ts ← database/creatures.jsonc). This facade just exposes
+// Rosters stay DB-driven (core/Creatures.ts ← database/pawns/creatures.jsonc). This facade just exposes
 // the per-turn entry points GameEngineImpl (and world seeding) call.
 import type { GameState } from '../core/types';
 import * as spawning from './entity/entitySpawning';

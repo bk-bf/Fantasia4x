@@ -8,6 +8,7 @@ import { resourceObjectService } from '$lib/game/services/ResourceObjectService.
 import { type CreatureDefinition, getCreatureById } from '$lib/game/core/Creatures.js';
 import type { Pawn, Mob, Injury } from '$lib/game/core/types.js';
 import { limbLabel, partLabel } from '$lib/utils/bodyLabels';
+import { woundById } from '$lib/game/core/Wounds';
 import { getActiveConditionViews } from '$lib/components/util/conditionInfo.js';
 import { pawnService } from '$lib/game/services/PawnService.js';
 import { pawnStatService } from '$lib/game/services/PawnStatService.js';
@@ -191,7 +192,9 @@ function painLocationRows(entity: Pawn | Mob): StatPillRow[] {
       const pain = (part.injuries ?? []).reduce((sum, inj) => sum + (inj.painContribution ?? 0), 0);
       if (pain <= 0) continue;
       const worst = part.injuries?.[0];
-      const wound = worst ? ` · ${worst.type}${worst.infected ? ' · infected' : ''}` : '';
+      const wound = worst
+        ? ` · ${woundById(worst.type)?.name ?? worst.type}${worst.infected ? ' · infected' : ''}`
+        : '';
       found.push({ label: `${partLabel(part.id)} (${limbLabel(limb.id)})${wound}`, pain });
     }
     // Soft-tissue damage / bleeding on a limb with no specific injured part still hurts.
@@ -358,11 +361,12 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
         missing: part.isMissing,
         bleedRate: partBleed > 0 ? partBleed : undefined,
         wounds: part.injuries.map((inj) => ({
-          // A PERMANENT (trait-stamped) wound is an old, healed-over SCAR — it reads as such and never
-          // "warns" (it isn't deteriorating and can't be treated), distinct from an active injury.
+          // A PERMANENT (trait-stamped) wound is an old, healed-over SCAR — it reads as such (the scar
+          // def's name already carries "Old …") and never "warns" (it isn't deteriorating and can't be
+          // treated), distinct from an active injury.
           text: inj.permanent
-            ? `old ${inj.type} scar`
-            : `${inj.type} (${inj.severity})${inj.infected ? ' · infected' : ''}`,
+            ? (woundById(inj.type)?.name ?? inj.type)
+            : `${woundById(inj.type)?.name ?? inj.type} (${inj.severity})${inj.infected ? ' · infected' : ''}`,
           warn: !inj.permanent && woundWarn(inj),
           treated: inj.treatedAt != null // tended by a caretaker → green `+`
         }))

@@ -1,5 +1,5 @@
-import terrainsData from '../database/terrains.jsonc';
-import subterrainsData from '../database/subterrains.jsonc';
+import terrainsData from '../database/world/terrains.jsonc';
+import subterrainsData from '../database/world/subterrains.jsonc';
 import { CP437_TO_UNICODE } from './cp437.js';
 import { hexToRgb01 } from './color';
 import type { WorldTile } from './types';

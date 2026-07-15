@@ -14,7 +14,7 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
   import { itemService } from '$lib/game/services/ItemService';
-  import itemsData from '$lib/game/database/items.jsonc';
+  import itemsData from '$lib/game/database/items/items.jsonc';
   import type { Item, ZoneFilter, ZonePriority } from '$lib/game/core/types';
   import ItemFilterChecklist from '$lib/components/UI/gameCanvas/ItemFilterChecklist.svelte';
 

@@ -139,7 +139,7 @@
   // Shared with `movePawnsLine` so the drag preview's dots land exactly where the pawns will.
   import { lineFormationTargets } from '$lib/game/sim/commands';
   import type { ItemPillView } from '$lib/components/UI/ItemPills.svelte';
-  import itemsData from '$lib/game/database/items.jsonc';
+  import itemsData from '$lib/game/database/items/items.jsonc';
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
 

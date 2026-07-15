@@ -1,8 +1,8 @@
-import creaturesData from '../database/creatures.jsonc';
+import creaturesData from '../database/pawns/creatures.jsonc';
 import { resolveCharSpans, type CharSpan } from './Terrains';
 import type { DamageType } from './types/health';
 
-// Entity (mob + animal) definitions loaded from database/creatures.jsonc — never
+// Entity (mob + animal) definitions loaded from database/pawns/creatures.jsonc — never
 // hardcode a creature in a service. EntityService consumes these to spawn Mobs.
 
 export type EntityClass = 'mob' | 'animal';
@@ -127,7 +127,7 @@ export interface CreatureDefinition {
   statRanges?: Partial<Record<'str' | 'dex' | 'con' | 'per', [number, number]>>;
   /** §2a per-spawn natural-armour spread, rolled like `statRanges`; absent = fixed `naturalArmor`. */
   naturalArmorRange?: [number, number];
-  /** §2c lootpool id (database/lootpool.jsonc) — a geared humanoid draws a weapon/armour loadout at
+  /** §2c lootpool id (database/items/lootpool.jsonc) — a geared humanoid draws a weapon/armour loadout at
    *  spawn (quality + condition rolled) and drops a subset on death. Omitted = unarmed/natural only. */
   lootPool?: string;
   /** §2b ladder metadata. `species` groups a creature's whole 5-tier ladder (every wolf variant shares

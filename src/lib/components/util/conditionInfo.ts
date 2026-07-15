@@ -12,7 +12,7 @@ import type {
   ConditionModifiers,
   Injury
 } from '$lib/game/core/types';
-import conditionsData from '$lib/game/database/conditions.jsonc';
+import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
 import { gameHoursFromTicks } from '$lib/game/services/EnvironmentService';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { getNightVision } from '$lib/game/core/vision';

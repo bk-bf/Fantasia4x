@@ -3,7 +3,7 @@
 // importing `itemService` from core reaches UP into the services layer and closed a
 // PawnEquipment → ItemService → EnvironmentService → … → PawnStatService → PawnEquipment module
 // cycle. ItemService.getItemById delegates here, so there is exactly one index.
-import itemsData from '../database/items.jsonc';
+import itemsData from '../database/items/items.jsonc';
 import type { Item } from './types';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];

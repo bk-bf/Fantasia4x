@@ -1,7 +1,7 @@
 import type { Building, GameState, PlacedBuilding } from '../core/types';
-import buildingsData from '../database/buildings.jsonc';
-import itemsData from '../database/items.jsonc';
-import resourcesData from '../database/resources.jsonc';
+import buildingsData from '../database/world/buildings.jsonc';
+import itemsData from '../database/items/items.jsonc';
+import resourcesData from '../database/world/resources.jsonc';
 import type { Item } from '../core/types';
 import { resolveCharSpans } from '../core/Terrains';
 import { buildingDefById } from '../core/buildingDefs';

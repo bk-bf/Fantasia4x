@@ -125,7 +125,7 @@ export interface Job {
 
 /**
  * Declarative definition of a colony job type — the data half of the job system, authored in
- * `database/jobs.jsonc` (one entry per pool job type). The *behaviour* (how a job of this type is
+ * `database/pawns/jobs.jsonc` (one entry per pool job type). The *behaviour* (how a job of this type is
  * generated and completed) is bound by `id` in `JobService`'s handler registry, exactly as
  * recipes.jsonc pairs with `JobService._completeCraft`. Adding a colony job = one jsonc entry + one
  * registry binding + one `Job['type']` union member (a `graph:check` rule guards the three from

@@ -9,7 +9,7 @@ import type { GameState, Pawn, Mob, Building, PlacedBuilding, Job } from '../../
 import { transientNeedOnset } from '../../core/needs';
 import { needNum } from '../../core/needsDefs';
 import { isUncareable } from '../../core/Wounds';
-import BUILDINGS_DATABASE_RAW from '../../database/buildings.jsonc';
+import BUILDINGS_DATABASE_RAW from '../../database/world/buildings.jsonc';
 import { jobService } from '../../services/JobService';
 import { pawnService } from '../../services/PawnService';
 import {

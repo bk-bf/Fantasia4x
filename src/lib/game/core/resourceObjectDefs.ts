@@ -3,7 +3,7 @@
 // for glyphs/tints from here without reaching into the services layer.
 import type { DesignationType, Season } from './types';
 import { resolveCharSpans, type CharSpan } from './Terrains';
-import resourceObjectsData from '../database/resources.jsonc';
+import resourceObjectsData from '../database/world/resources.jsonc';
 import { hexToRgb01 } from './color';
 
 export interface ResourceYieldDef {

@@ -1,5 +1,5 @@
 // Dialog assembly + outcome rolls (SOCIAL-LAYER §3). Reads the flavor-line banks + per-category
-// relationship effects in database/dialog.jsonc and turns a pawn pair + their relationship into a
+// relationship effects in database/social/dialog.jsonc and turns a pawn pair + their relationship into a
 // short assembled exchange (opener → reply → closer), a positive/negative outcome, and the score
 // delta to apply. The orchestration (who talks to whom, proximity, cooldowns, logging) lives in
 // SocialService.processDialogTick.
@@ -9,8 +9,8 @@ import { effectiveMood } from '../../core/Social';
 import { rng } from '../../core/rng';
 import { TICKS_PER_SECOND } from '../../core/time';
 import { TURNS_PER_DAY } from '../EnvironmentService';
-import dialogData from '../../database/dialog.jsonc';
-import memoriesData from '../../database/memories.jsonc';
+import dialogData from '../../database/social/dialog.jsonc';
+import memoriesData from '../../database/pawns/memories.jsonc';
 
 // A callback opener only carries the thread on if the pair spoke RECENTLY — beyond this the thread
 // has gone cold and a fresh exchange fits better.

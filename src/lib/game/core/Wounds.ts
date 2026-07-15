@@ -1,7 +1,7 @@
 // Wounds.ts — loads wounds.jsonc and resolves wound types + severity (data-driven).
 // Combat maps each hit's damage type to a wound here; severity escalates with the
 // wound's accumulated damage relative to the struck part's max HP.
-import woundsRaw from '../database/wounds.jsonc';
+import woundsRaw from '../database/pawns/wounds.jsonc';
 import { PART_DEF_MAP, boneBreakBudget } from './BodyParts';
 import { rng } from './rng';
 import type { DamageType } from './types';

@@ -1,7 +1,7 @@
 import type { Item, Recipe, Building } from '../core/types';
-import itemsData from '../database/items.jsonc';
-import recipesData from '../database/recipes.jsonc';
-import buildingsData from '../database/buildings.jsonc';
+import itemsData from '../database/items/items.jsonc';
+import recipesData from '../database/items/recipes.jsonc';
+import buildingsData from '../database/world/buildings.jsonc';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
 

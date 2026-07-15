@@ -19,11 +19,11 @@ import { WEALTH_BANDS } from '../../core/Kingdom';
 import { makeMob, equipFromLootPool } from './entitySpawning';
 import { TICKS_PER_SECOND } from '../../core/time';
 import { TURNS_PER_DAY } from '../EnvironmentService';
-import events from '../../database/events.jsonc';
+import events from '../../database/social/events.jsonc';
 
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 
-/** Party tuning (stay length, size, camp distance) — data-driven, see database/events.jsonc. */
+/** Party tuning (stay length, size, camp distance) — data-driven, see database/social/events.jsonc. */
 const EVENTS = events as {
   visitors: { partySize: [number, number]; stayDays: number; anchorRing: [number, number] };
   caravan: { stayDays: number; anchorRing: [number, number] };

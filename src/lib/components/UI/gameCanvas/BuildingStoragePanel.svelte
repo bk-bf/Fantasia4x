@@ -11,7 +11,7 @@
   import { gameState } from '$lib/stores/gameState.js';
   import type { PlacedBuilding, Item, ZonePriority } from '$lib/game/core/types.js';
   import ItemFilterChecklist from '$lib/components/UI/gameCanvas/ItemFilterChecklist.svelte';
-  import itemsData from '$lib/game/database/items.jsonc';
+  import itemsData from '$lib/game/database/items/items.jsonc';
   import { buildingService } from '$lib/game/services/BuildingService';
 
   let { building, open = false }: { building: PlacedBuilding; open?: boolean } = $props();

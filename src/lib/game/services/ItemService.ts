@@ -32,8 +32,8 @@ import {
   weatherEffects,
   diurnalTempDelta
 } from './EnvironmentService';
-import itemsData from '../database/items.jsonc';
-import buildingsData from '../database/buildings.jsonc';
+import itemsData from '../database/items/items.jsonc';
+import buildingsData from '../database/world/buildings.jsonc';
 import { SECONDS_PER_TICK } from '../core/time';
 import { chebyshev } from '../core/distance';
 import { sizeFromHeight } from '../core/Culture';

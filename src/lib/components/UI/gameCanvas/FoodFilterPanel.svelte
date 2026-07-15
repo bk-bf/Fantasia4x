@@ -10,7 +10,7 @@
   import { hudSpriteIconAction } from '$lib/components/UI/gameCanvas/hudSpriteIcon';
   import type { HudSpriteIconRef } from '$lib/components/UI/gameCanvas/spriteSheets';
   import ItemFilterChecklist from '$lib/components/UI/gameCanvas/ItemFilterChecklist.svelte';
-  import itemsData from '$lib/game/database/items.jsonc';
+  import itemsData from '$lib/game/database/items/items.jsonc';
   import {
     isEdibleFood,
     resolveAllowedFoodIds,

@@ -5,7 +5,7 @@ import type { GameState } from '../core/types';
 import { rng } from '../core/rng';
 import { generateColonyPawns, remapKinIds } from '../entities/Pawns';
 import { simLog } from '../core/logSink';
-import events from '../database/events.jsonc';
+import events from '../database/social/events.jsonc';
 
 const CFG = (
   events as {

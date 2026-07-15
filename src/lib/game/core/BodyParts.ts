@@ -2,7 +2,7 @@
 // part catalog, builds per-plan limb trees + hit-roll tables, and scales part HP by bodyScale.
 import type { BodyPartId, LimbId, BodyPartState, LimbState } from './types';
 import { rng } from './rng';
-import limbmapRaw from '../database/limbmap.jsonc';
+import limbmapRaw from '../database/pawns/limbmap.jsonc';
 
 export interface BodyPartDef {
   id: BodyPartId;

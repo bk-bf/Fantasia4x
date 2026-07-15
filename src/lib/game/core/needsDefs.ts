@@ -3,7 +3,7 @@
 // PawnStateMachine (bloodHunger) all resolve their tuning from one place. Values are authored in
 // in-game SECONDS / need points; callers convert rates/durations to tick-space at their use site, exactly
 // as they did when these were inline constants — so nothing about the per-tick hot path changes.
-import needsData from '../database/needs.jsonc';
+import needsData from '../database/pawns/needs.jsonc';
 
 /** A mood band on a need: applies while the need is past `atOrAbove` (survival) / `atOrBelow` (fun),
  *  and references a mood effect id from mood.jsonc. */

@@ -5,7 +5,7 @@
   import { workAxisLabel } from '$lib/components/util/pawnUtils';
   import { partLabel, limbLabel } from '$lib/utils/bodyLabels';
   import { getTransientConditionDef } from '$lib/game/core/needs';
-  import raritiesData from '$lib/game/database/rarities.jsonc';
+  import raritiesData from '$lib/game/database/items/rarities.jsonc';
   import HoverTip from '$lib/components/UI/HoverTip.svelte';
   import ItemStatTooltip from '$lib/components/UI/ItemStatTooltip.svelte';
   import WorkCellTooltip from '$lib/components/screens/work/WorkCellTooltip.svelte';

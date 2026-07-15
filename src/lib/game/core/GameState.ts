@@ -10,8 +10,8 @@ import type {
 } from './types';
 import { rng } from './rng';
 import { mergeConditions } from './carcassCondition';
-import buildingsData from '../database/buildings.jsonc';
-import itemsData from '../database/items.jsonc';
+import buildingsData from '../database/world/buildings.jsonc';
+import itemsData from '../database/items/items.jsonc';
 
 // Static tier table for tool items (type === 'tool', numeric `tier`). Built once — the item DB never
 // mutates at runtime. Used by `colonyToolTier` so owning a crafted tool satisfies tier gates.

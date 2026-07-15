@@ -10,7 +10,7 @@ export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
 
 /**
  * A weather id. DATA-DRIVEN: the set of weather types — and all their effects, visuals, and Markov
- * transitions — live in `database/weather.jsonc` (loaded by EnvironmentService). This is a plain
+ * transitions — live in `database/world/weather.jsonc` (loaded by EnvironmentService). This is a plain
  * `string` so new weather can be added in the JSONC alone. The built-ins are: clear, rain, heavy_rain,
  * snow, blizzard, heat_wave, fog.
  */

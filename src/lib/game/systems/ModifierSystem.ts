@@ -8,8 +8,8 @@
  */
 
 import type { GameState, Pawn, Item, Building, Trait } from '../core/types';
-import itemsData from '../database/items.jsonc';
-import buildingsData from '../database/buildings.jsonc';
+import itemsData from '../database/items/items.jsonc';
+import buildingsData from '../database/world/buildings.jsonc';
 import { WORK_CATEGORIES } from '../core/Work';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];

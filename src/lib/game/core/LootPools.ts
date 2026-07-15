@@ -1,8 +1,8 @@
-// LootPools.ts — loads database/lootpool.jsonc and draws a geared humanoid's loadout at spawn
+// LootPools.ts — loads database/items/lootpool.jsonc and draws a geared humanoid's loadout at spawn
 // (CREATURE-COMBAT-OVERHAUL §2c). Data-only rosters live in the JSONC; this file is the loader + the
 // PURE weighted-draw logic (no ItemService/rng singleton dependency — the caller passes an rng and
 // resolves item durability), so the draw is unit-testable in isolation.
-import lootpoolRaw from '../database/lootpool.jsonc';
+import lootpoolRaw from '../database/items/lootpool.jsonc';
 import { rollFamedIdentity } from './famedNames';
 import type { EquipmentSlot, ItemQuality } from './types/items';
 

@@ -42,7 +42,7 @@ import { simLog } from '../core/logSink';
 import { TICKS_PER_SECOND } from '../core/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
 import { spawnKingdomParty, despawnKingdomParty } from './entity/kingdomParties';
-import events from '../database/events.jsonc';
+import events from '../database/social/events.jsonc';
 
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 
@@ -50,7 +50,7 @@ const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 const STALE_AFTER_TICKS = 30 * TICKS_PER_DAY;
 
 /** Arrival-scheduling tuning (cadence, backoffs, trade-split) — data-driven, see
- *  database/events.jsonc. One clock paces both visitors and caravans; the shared cadence + backoffs
+ *  database/social/events.jsonc. One clock paces both visitors and caravans; the shared cadence + backoffs
  *  live under `visitors`, the caravan upgrade chance under `caravan`. */
 const ARRIVAL = events as {
   visitors: {

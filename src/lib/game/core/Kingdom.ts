@@ -9,7 +9,7 @@ import type {
   WealthBand
 } from './types';
 import { COLONY_RELATION_ID } from './types';
-import loreData from '../database/kingdom-lore.jsonc';
+import loreData from '../database/social/kingdom-lore.jsonc';
 import { rng } from './rng';
 import { clamp } from './math';
 

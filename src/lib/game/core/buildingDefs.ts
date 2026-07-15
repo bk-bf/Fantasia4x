@@ -2,7 +2,7 @@
 // core/itemDefs.ts. `getBuildingById` was a per-call `.find()` and showed up hot in the sim worker
 // profile (~3.6%); the DB never mutates at runtime, so it indexes once. BuildingService delegates
 // here, and the WebGL renderer reads defs (roof/effects flags) without importing the service.
-import buildingsData from '../database/buildings.jsonc';
+import buildingsData from '../database/world/buildings.jsonc';
 import type { Building } from './types';
 
 const BUILDINGS_DATABASE = buildingsData as unknown as Building[];

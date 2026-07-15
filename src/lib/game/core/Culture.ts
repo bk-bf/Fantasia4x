@@ -1,6 +1,6 @@
 import type { Culture, Trait, CultureLore, CultureRelation } from './types';
-import traitDbData from '../database/traits.jsonc';
-import loreData from '../database/culture-lore.jsonc';
+import traitDbData from '../database/pawns/traits.jsonc';
+import loreData from '../database/social/culture-lore.jsonc';
 import { rng } from './rng';
 import { clamp } from './math';
 

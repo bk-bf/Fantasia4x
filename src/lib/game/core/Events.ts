@@ -39,7 +39,7 @@ export interface EventLog {
 }
 
 /** Event definitions — currently empty (see note above). Event CONFIG tuning (migrant-wave rates,
- *  later visitor/caravan cadence) lives in `database/events.jsonc`, keyed by type and read per-system
+ *  later visitor/caravan cadence) lives in `database/social/events.jsonc`, keyed by type and read per-system
  *  (e.g. systems/migration.ts); this array holds `GameEvent` DEFINITIONS once that system is built. */
 export const EVENT_DATABASE: GameEvent[] = [];
 

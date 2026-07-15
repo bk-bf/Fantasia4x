@@ -2,7 +2,7 @@
 // data file) so any layer can resolve a state id → its label / bucket / uncontrollable flag from one
 // place. The state STRING ids + their TS literal types stay in systems/pawn/pawnStates.ts (`PAWN_STATE`);
 // this hangs the metadata off them. stateRegistry.test.ts keeps the two in lockstep.
-import statesData from '../database/states.jsonc';
+import statesData from '../database/pawns/states.jsonc';
 
 /** Primary bucket a structural state sits in. (Pure need-satisfaction states aren't in this registry —
  *  they're owned by needs.jsonc — so there's no `need` kind here.) */

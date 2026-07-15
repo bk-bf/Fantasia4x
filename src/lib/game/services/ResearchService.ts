@@ -1,6 +1,6 @@
 import type { ResearchProject, EntityStats, GameState } from '../core/types';
 import { consumeFromStockpiles, availableQuantityFromDrops } from '../core/GameState';
-import researchData from '../database/research.jsonc';
+import researchData from '../database/progression/research.jsonc';
 import { perTick } from '../core/time';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
 // gameDebug(true); console.error still surfaces.

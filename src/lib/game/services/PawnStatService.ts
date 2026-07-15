@@ -8,9 +8,9 @@ import type {
   ItemInstance,
   Trait
 } from '../core/types';
-import statsData from '../database/stats.jsonc';
-import conditionsData from '../database/conditions.jsonc';
-import itemsData from '../database/items.jsonc';
+import statsData from '../database/pawns/stats.jsonc';
+import conditionsData from '../database/pawns/conditions.jsonc';
+import itemsData from '../database/items/items.jsonc';
 import { WORK_CATEGORIES } from '../core/Work';
 import { getNightVision } from '../core/vision';
 import { vlog } from '../core/logSink';

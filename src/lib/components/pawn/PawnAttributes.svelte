@@ -4,7 +4,7 @@
      so the trait card's stat/resistance pill renders the identical panel (no more baked-in duplication). -->
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
-  import statsData from '$lib/game/database/stats.jsonc';
+  import statsData from '$lib/game/database/pawns/stats.jsonc';
   import PawnStatBanner from './PawnStatBanner.svelte';
   import PawnSkillBanner from './PawnSkillBanner.svelte';
   import StatTooltip from './StatTooltip.svelte';

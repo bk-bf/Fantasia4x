@@ -3,7 +3,7 @@
 // SocialService (dialog thoughts) can resolve an effect id → { label, value } from one place. Sources
 // reference effects by string id (weather.jsonc `mood`, conditions.jsonc `mood`, traits.jsonc `mood`,
 // dialog.jsonc `moodGood`/`moodBad`, needs.jsonc bands, mood.jsonc healthBands).
-import moodData from '../database/mood.jsonc';
+import moodData from '../database/pawns/mood.jsonc';
 
 /** A resolved mood effect. `value` is absent when the source computes it live (amenity). `negatedBy`
  *  names a condition id that CANCELS the effect while the pawn has it (e.g. a full moon isn't visible

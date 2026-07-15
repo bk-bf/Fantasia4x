@@ -3,7 +3,7 @@
 // the god-module limit, so these live as focused free functions. JobService still owns refuel job
 // generation/completion and calls in here for the rules.
 import type { GameState, PlacedBuilding, Item, FuelSettings } from '../core/types';
-import itemsData from '../database/items.jsonc';
+import itemsData from '../database/items/items.jsonc';
 import { buildingService } from './BuildingService';
 
 const ITEMS_DB = itemsData as unknown as Item[];

@@ -12,7 +12,7 @@ import { rng } from '../core/rng';
 import { TICKS_PER_SECOND } from '../core/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
 import { getConditionCurrentStage } from '../core/needs';
-import memoriesData from '../database/memories.jsonc';
+import memoriesData from '../database/pawns/memories.jsonc';
 
 const DAY = TURNS_PER_DAY * TICKS_PER_SECOND; // ticks in one in-game day (18000)
 

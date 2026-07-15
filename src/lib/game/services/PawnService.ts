@@ -18,7 +18,7 @@ import { WORK_CATEGORIES } from '../core/Work';
 import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
 import { stepBody } from './MovementSystem';
 import { occupancyService } from './OccupancyService';
-import conditionsData from '../database/conditions.jsonc';
+import conditionsData from '../database/pawns/conditions.jsonc';
 import { NEEDS_DB, needNum } from '../core/needsDefs';
 import { moodEffect, MOOD_BASE } from '../core/moodEffects';
 import { getConditionCurrentStage, conditionNeedMultipliers, getConditionDefById } from '../core/needs';
