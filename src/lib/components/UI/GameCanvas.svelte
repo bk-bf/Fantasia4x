@@ -2027,24 +2027,29 @@
         h: Math.max(1, Math.ceil(full / MAX_TXT_W)) * LINE_H + 6
       };
     };
+    const SEAT_EPS = 0.5; // seat strictly BELOW the collision boundary (see below)
     const placedSocial: { left: number; top: number; w: number; h: number }[] = [];
     for (const o of newFloats) {
       if (o.kind !== 'social') continue;
       const ob = boxOf(o.text);
-      let moved = true;
-      while (moved) {
-        moved = false;
+      // Push `o` down past any already-placed bubble it overlaps. Passes are BOUNDED by the placed
+      // count, and the seat clears the overlap by SEAT_EPS: a naive re-check-until-stable `while` loop
+      // could spin forever, because float rounding of large screen coords made the "just cleared" gap
+      // read as still-colliding (the exact-boundary seat never terminated) — that froze the game.
+      for (let pass = 0; pass < placedSocial.length; pass++) {
+        let moved = false;
         for (const p of placedSocial) {
           // Bubbles centre on `left` (translateX(-50%)) and scale about their middle, so overlap is a
           // centre-distance test against the summed half-extents.
           const horiz = Math.abs(p.left - o.left) < (flScale * (p.w + ob.w)) / 2 + 2;
-          const vert =
-            Math.abs(p.top + p.h / 2 - (o.top + ob.h / 2)) < (flScale * (p.h + ob.h)) / 2 + 2;
-          if (horiz && vert) {
-            o.top = p.top + (p.h - ob.h) / 2 + (flScale * (p.h + ob.h)) / 2 + 2; // seat just below p
+          if (!horiz) continue;
+          const gap = (flScale * (p.h + ob.h)) / 2 + 2;
+          if (Math.abs(p.top + p.h / 2 - (o.top + ob.h / 2)) < gap) {
+            o.top = p.top + p.h / 2 + gap + SEAT_EPS - ob.h / 2; // seat just below p, strictly clear
             moved = true;
           }
         }
+        if (!moved) break;
       }
       placedSocial.push({ left: o.left, top: o.top, w: ob.w, h: ob.h });
     }
