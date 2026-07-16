@@ -13,6 +13,7 @@ node_modules
 
 # Worktrees
 .worktrees/
+.claude/worktrees/
 
 # OS
 .DS_Store
