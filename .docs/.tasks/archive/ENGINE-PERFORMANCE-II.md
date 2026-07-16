@@ -149,6 +149,59 @@ closes without new micro-opt:
 
 ---
 
+## Pass III — the per-mob vision/light tax + the snow-onset freeze (2026-07-16)
+
+A 500² winter save fell to ~40 TPS, **flat across 1×/2×/4×** (⇒ compute-bound: one ~25 ms tick per batch).
+Two independent, both **worker-side** causes, each located by measurement (headless CPU profiler + the
+in-tree `PHASE-MS` / `A*-STATS`), not by guessing — the recurring session lesson was *prove, don't assume*
+(stealth and the snow chunk were each suspected and **disproved** by an A/B before the real cause was found).
+
+### The vision/light tax (the TPS cap) — SHIPPED
+
+`es:step` (mob AI) was the whole tick. Self-time profiling of `stepEntities` put ~45% of the mob step in
+**vision/lighting recomputed per in-bubble mob per tick, uncached**:
+
+- [x] **`livingPartNightVision` regression (from `d555950d`, 2026-07-09).** "Scarring mechanics" turned mob
+  `getNightVision` from an O(1) `def.nightVision` read into a **full-anatomy walk every call** (~15% of the
+  step) that summed to 0 for every non-arachnid. Gated behind a per-`creatureId` cache of "does this body
+  plan have any NV-granting part" → O(1) for the common creature (`core/vision.ts`).
+- [x] **`getNightVision` computed twice/mob/tick** in `stepOne` (once for `mel`, once inside
+  `effectiveVisionRange`) → computed once and threaded in.
+- [x] **`buildingLight` def-lookup per building per mob.** `computeTileLightLevel` re-resolved every
+  building's light (`getBuildingById`) every call → lit emitters resolved **once per `buildings`-array ref**
+  (`litBuildingSources`).
+- [x] **`getAmbientLight` per mob → per turn** (keyframe interp is identical for all mobs in a tick;
+  memoised by `turn`).
+- [x] **Grove-glow O(all glows) per mob → spatial grid.** The glow loop scanned **every glow on the map**
+  per mob — cost ∝ map area, so a 500² map paid ~2.7× a small map's per-call cost (THE live-vs-bench gap).
+  A uniform-cell bucket index (`groveGrid`, rebuilt only on worldMap-ref change) makes it O(nearby).
+  **Proven map-size-independent: 358 ns/call @ 240² vs 361 ns/call @ 500².**
+- Net: `es:step` 10.5 → 1.8 ms at a sparse-mob moment; the grove grid removes the 500²-map inflator that
+  had pushed a winter colony's `es:step` back to ~12 ms (the cap).
+
+### The snow-onset freeze (the 4× hang) — SHIPPED
+
+Hitting snow at 4× froze the game (the long-known snow hiccup, escalated to a full freeze at speed).
+
+- [x] **`accumulateSnow` was an O(map) scan run as ONE atomic tick** (all ~562k tiles every
+  `snowInterval`=750 ticks). The batch budget is checked only *between* ticks, so a single O(map) tick can't
+  be time-sliced — and at 4× it recurred 4× more often in real time. Now **chunked**: a rolling band of rows
+  each tick (`GameEngineImpl._snowScanRow` cursor) covers the map every `snowInterval` ticks, with `hours`
+  scaled to the sweep so accrual/melt rate is exactly preserved. Spreads the onset delta wave across the
+  sweep instead of one spike.
+- [x] **`drainTileDeltasBudgeted` re-walked a saturated queue O(n)/flush.** When snow marking outran the
+  3000/flush drain, the loop iterated every held-back entry (~map size) each flush. Split `dirty` into
+  separate terrain/snow maps so the snow drain stops at the budget → O(budget)/flush (`core/tileDeltas.ts`).
+- Confirmed post-fix: `env:snowIce` = 0.07 ms/tick.
+
+### What's still open after Pass III
+
+- [ ] **Full 4× under heavy winter mob load** still needs the **complexity-bubble tuning** from "Path to
+  1000²" (extend off-bubble interval / layered bubbles) — `stepOne`'s core (FSM + `nearestPawn` + LOS) is
+  ~35% of the step, so per-mob micro-opt alone won't quadruple TPS when many mobs are in-bubble.
+
+---
+
 ## Method (Pass-I trace methodology, reused)
 
 Electron Performance trace → `/tmp/parsetrace.mjs` parses the V8 CPU-profiler chunks for **per-thread
@@ -157,8 +210,19 @@ snapshot-boundary change against [ENGINE-PERFORMANCE.md](ENGINE-PERFORMANCE.md)*
 peace path; don't churn array refs; keep the snapshot slim) and re-check `perf.log` + a fresh trace after —
 the recurring trap is fixing one cost while reopening another.
 
+**Headless CPU profiler (Pass III, no Electron needed).** A throwaway vitest drives the REAL pipeline —
+`buildProfilerScenario({pawns, mobs})` → warm → `entityService.stepEntities(state)` in a loop — inside a
+`node:inspector` `Session` (`Profiler.start`/`stop`, 50 µs sampling), aggregating each node's `hitCount`
+into per-function self-time. It reproduced the live `es:step` faithfully and located `computeTileLightLevel`
+in minutes. Pair it with an **A/B toggle** (a `globalThis` flag the hot function early-outs on) to *prove*
+a suspected cost before optimising — this pass disproved "it's stealth" and "it's the snow chunk" that way.
+Delete the probe test + toggle when done. `A*-STATS`/`PATHFAIL` (Debug-gated) confirm pathfinding is/ isn't
+the driver without any new code.
+
 ## Status
 
-**SHIPPED + validated in-game 2026-06-22.** 750² @ 120 FPS / 60 TPS @1×, ~120 TPS @4×. Remaining open
-work: **S3** (pathfinding at scale) and the **1000² LOD crank** (extend off-bubble interval + layered
-bubbles) — both incremental, neither blocking.
+**SHIPPED + validated in-game 2026-06-22.** 750² @ 120 FPS / 60 TPS @1×, ~120 TPS @4×.
+**Pass III (2026-07-16) SHIPPED + confirmed in-game:** fixed the per-mob vision/light tax (a 500² winter
+save's ~40 TPS cap) and the snow-onset freeze at 4×. Remaining open work: **S3** (pathfinding at scale), the
+**1000² LOD crank**, and **complexity-bubble tuning** to unlock full 4× under heavy winter mob load — all
+incremental, none blocking.
