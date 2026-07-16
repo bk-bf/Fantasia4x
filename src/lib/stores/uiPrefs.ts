@@ -150,10 +150,10 @@ export const weatherEffects = createPersistedBool('fx.gfx.weather', true);
  *  separate and unaffected — this is the UI tint only. */
 export const dayNightTint = createPersistedBool('fx.gfx.dayNightTint', true);
 
-/** Graphics — render the social speech-bubble floaters over pawns during conversations. ON by
+/** Graphics — render the social speech-bubble floaters over pawns during conversations. OFF by
  *  default; persisted. Gates the social-kind floater render in WorldEffectsLayer (the chronicle SOC
  *  log entries are unaffected). */
-export const showDialogBubbles = createPersistedBool('fx.gfx.dialogBubbles', true);
+export const showDialogBubbles = createPersistedBool('fx.gfx.dialogBubbles', false);
 
 /** Display — show the render FPS / simulation TPS readouts in the top bar. Each gates its own half of
  *  the perf chip in GameControls. ON by default; persisted. */
