@@ -22,17 +22,14 @@
 // NOT here (stay in code): the hunger (~0.54×hunger_rate) and fatigue (~0.32×fatigue_rate) BASE build
 // rates — they're stat/trait-derived formulas, not flat numbers (see PawnService.getHungerIncreasePerTurn).
 {
-  "hunger": {
+  "hunger"     : {
     "states": ["Hungry", "Eating"],
     "seek": 70,
     "eatDurationSeconds": 2,
     "eatGroundDurationSeconds": 3,
-    "moodBands": [
-      { "atOrAbove": 90, "effect": "need_starving" },
-      { "atOrAbove": 75, "effect": "need_hungry" }
-    ]
+    "moodBands": [ {"atOrAbove": 90, "effect": "need_starving"}, {"atOrAbove": 75, "effect": "need_hungry"} ]
   },
-  "fatigue": {
+  "fatigue"    : {
     "states": ["Tired", "Sleeping"],
     "seek": 72,
     "sleepDurationSeconds": 100,
@@ -40,50 +37,44 @@
     "groundRecoveryPerSecond": 0.58,
     "wakeThresholdFed": 0,
     "wakeThresholdHungry": 30,
-    "moodBands": [
-      { "atOrAbove": 95, "effect": "need_exhausted" },
-      { "atOrAbove": 85, "effect": "need_very_tired" }
-    ]
+    "moodBands": [ {"atOrAbove": 95, "effect": "need_exhausted"}, {"atOrAbove": 85, "effect": "need_very_tired"} ]
   },
-  "thirst": {
-    "states": ["Drinking"],
-    "rate": 0.7,
-    "autoSatisfy": 70,
-    "seek": 82,
-    "relief": 65,
+  "thirst"     : {
+    "states"         : ["Drinking"],
+    "rate"           : 0.7,
+    "autoSatisfy"    : 70,
+    "seek"           : 82,
+    "relief"         : 65,
     "durationSeconds": 2,
-    "moodBands": [
-      { "atOrAbove": 90, "effect": "need_parched" },
-      { "atOrAbove": 75, "effect": "need_thirsty" }
-    ]
+    "moodBands"      : [ {"atOrAbove": 90, "effect": "need_parched"}, {"atOrAbove": 75, "effect": "need_thirsty"} ]
   },
-  "hygiene": {
-    "states": ["Washing"],
-    "rate": 0.3,
-    "autoSatisfy": 75,
-    "seek": 88,
-    "relief": 70,
+  "hygiene"    : {
+    "states"         : ["Washing"],
+    "rate"           : 0.3,
+    "autoSatisfy"    : 75,
+    "seek"           : 88,
+    "relief"         : 70,
     "durationSeconds": 4,
-    "moodBands": [{ "atOrAbove": 85, "effect": "need_filthy" }]
+    "moodBands"      : [ {"atOrAbove": 85, "effect": "need_filthy"} ]
   },
-  "relaxation": {
-    "states": ["Socialising"],
-    "decayRate": 0.13,
-    "seek": 30,
-    "relief": 70,
+  "relaxation" : {
+    "states"         : ["Socialising"],
+    "decayRate"      : 0.13,
+    "seek"           : 30,
+    "relief"         : 70,
     "durationSeconds": 20,
-    "moodBands": [
-      { "atOrBelow": 5, "effect": "need_starved_company" },
-      { "atOrBelow": 12, "effect": "need_restless" }
+    "moodBands"      : [
+      {"atOrBelow":  5, "effect": "need_starved_company"},
+      {"atOrBelow": 12, "effect": "need_restless"       }
     ]
   },
   // bloodHunger (LINEAGES-II) — the vampire/werewolf feeding need. Only pawns with a `bloodNeedKind`
   // carry it; it fills on the hourly lineage cadence (PawnStateMachine). No mood bands.
   "bloodHunger": {
-    "fillPerGameHour": 2,
-    "feedThreshold": 70,
-    "feedRadius": 12,
-    "rageThreshold": 100,
-    "rageDurationHours": 6
+    "fillPerGameHour"  :   2,
+    "feedThreshold"    :  70,
+    "feedRadius"       :  12,
+    "rageThreshold"    : 100,
+    "rageDurationHours":   6
   }
 }
