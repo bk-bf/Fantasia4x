@@ -46,16 +46,18 @@ describe('FSM state registry ↔ PAWN_STATE', () => {
     }
   });
 
-  it('UNCONTROLLABLE_STATES is derived from the flag and refuses the draft (collapse/blood-hunt/break)', () => {
+  it('UNCONTROLLABLE_STATES is derived from the flag and refuses the draft (collapse/blood-hunt/breakdown)', () => {
     expect(UNCONTROLLABLE_STATES.has(PAWN_STATE.COLLAPSED)).toBe(true);
-    expect(UNCONTROLLABLE_STATES.has(PAWN_STATE.BREAKDOWN)).toBe(true);
+    expect(UNCONTROLLABLE_STATES.has(PAWN_STATE.CRYING)).toBe(true);
+    expect(UNCONTROLLABLE_STATES.has(PAWN_STATE.HIDING)).toBe(true);
+    expect(UNCONTROLLABLE_STATES.has(PAWN_STATE.PANICKING)).toBe(true);
     expect(UNCONTROLLABLE_STATES.has(PAWN_STATE.BLOOD_HUNT)).toBe(true);
     expect(UNCONTROLLABLE_STATES.has(PAWN_STATE.IDLE)).toBe(false);
   });
 
   it('stateLabel never leaks a raw camelCase id to the UI', () => {
     expect(stateLabel(PAWN_STATE.MOVING_TO_RESOURCE)).toBe('Traveling');
-    expect(stateLabel(PAWN_STATE.BREAKDOWN)).toBe('Breaking Down');
+    expect(stateLabel(PAWN_STATE.CRYING)).toBe('Crying');
     // Need states aren't in states.jsonc — they fall back to their id, which already reads clean.
     expect(stateLabel(PAWN_STATE.EATING)).toBe('Eating');
     expect(stateLabel(PAWN_STATE.SLEEPING)).toBe('Sleeping');

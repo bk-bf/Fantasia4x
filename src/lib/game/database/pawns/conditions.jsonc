@@ -1007,7 +1007,8 @@
         // Priority just under collapse (100) — a body on the ground still reads first, but a breakdown
         // outranks every ordinary state tell.
         "priority"   : 90,
-        "fsmState"   : "Breakdown",
+        // Default coping substate; the onset overrides it with the rolled kind (Crying/Hiding/Panicking).
+        "fsmState"   : "Crying",
         "modifiers"  : {}
     },
     // ── On-hit combat effects (inflicted by creature natural weapons) ─────────

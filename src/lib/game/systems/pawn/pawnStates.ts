@@ -29,9 +29,12 @@ export const PAWN_STATE = {
   // LINEAGES-II: bloodthirst has the body — an UNCONTROLLABLE hunt (draft refused, like Collapsed)
   // that chases and devours/drains the nearest living thing until fed. See handlers/combat.ts.
   BLOOD_HUNT: 'BloodHunt',
-  // MOOD: worn down past a mood breakpoint and lost control — an UNCONTROLLABLE state (draft refused,
-  // like Collapsed) that plays out as crying / hiding / fleeing until it passes. See handlers/breakdown.ts.
-  BREAKDOWN: 'Breakdown'
+  // MOOD: worn down past a mood breakpoint and lost control — UNCONTROLLABLE states (draft refused, like
+  // Collapsed), driven by the `mental_breakdown` condition. The pawn enters ONE of these directly at onset
+  // and the panel shows it; "Breaking Down" is now just the parent condition. See handlers/breakdown.ts.
+  CRYING: 'Crying',
+  HIDING: 'Hiding',
+  PANICKING: 'Panicking'
 } as const;
 
 export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];

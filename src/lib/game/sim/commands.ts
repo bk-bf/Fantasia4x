@@ -315,7 +315,9 @@ export const COMMANDS: Record<string, Cmd> = {
     // Nearest pawn that can actually go: alive, on-map, not already drafted, not busy with its own crisis.
     const BUSY = new Set<string>([
       PAWN_STATE.COLLAPSED,
-      PAWN_STATE.BREAKDOWN,
+      PAWN_STATE.CRYING,
+      PAWN_STATE.HIDING,
+      PAWN_STATE.PANICKING,
       PAWN_STATE.SLEEPING,
       PAWN_STATE.FIGHTING,
       PAWN_STATE.FLEEING,

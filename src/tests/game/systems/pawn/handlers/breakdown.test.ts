@@ -70,8 +70,9 @@ describe('breakdown onset', () => {
 });
 
 describe('breakdown data wiring', () => {
-  it('mental_breakdown forces the Breakdown state and refuses control (fsmState + incapacitated)', () => {
-    expect(FSM_STATE_BY_CONDITION['mental_breakdown']).toBe('Breakdown');
+  it('mental_breakdown forces a breakdown substate and refuses control (fsmState + incapacitated)', () => {
+    // Default coping substate; the onset overrides it with the rolled kind (Crying/Hiding/Panicking).
+    expect(FSM_STATE_BY_CONDITION['mental_breakdown']).toBe('Crying');
     const def = getConditionDefById('mental_breakdown');
     expect(def?.flags).toContain('incapacitated');
   });

@@ -92,22 +92,26 @@ export function pickBreakdownKind(id: string, turn: number, hasThreat: boolean):
 }
 
 /**
- * BREAKDOWN: the pawn is not in control — a FORCED IDLE. It executes the kind rolled when the breakdown
- *  landed — `fleeing` bolts from any hostile, `hiding` scurries away from the nearest other pawn — and
- *  otherwise (`crying`, the default) just wanders restlessly. In every case it AMBLES rather than freezing.
- *  Because this handler never runs need-selection, a broken pawn CANNOT eat/drink/wash/sleep — it mills
- *  about uncontrollably until the breakdown timer runs out (the tick block then stands it back up with a
- *  cathartic mood lift) or it collapses from an unmet need.
+ * The three coping substates a broken pawn enters directly at onset (uncontrollable, `mental_breakdown`
+ * condition) — distinct FSM states so the panel shows what it's actually doing, not a generic "Breaking
+ * Down". In every case the pawn AMBLES rather than freezing. None runs need-selection, so a broken pawn
+ * CANNOT eat/drink/wash/sleep — it copes uncontrollably until the breakdown timer runs out (the tick block
+ * then stands it up with a cathartic lift) or it collapses from an unmet need.
  */
-export function handleBreakdown(pawn: Pawn, gameState: GameState): GameState {
-  switch (pawn.breakdownKind) {
-    case 'fleeing':
-      return fleeFrom(pawn, gameState);
-    case 'hiding':
-      return hide(pawn, gameState);
-    default:
-      return tryWanderStep(pawn, gameState) ?? gameState; // crying — wander restlessly, not frozen
-  }
+
+/** Crying (the default): a forced idle — wanders restlessly, out in the open, weeping. */
+export function handleCrying(pawn: Pawn, gameState: GameState): GameState {
+  return tryWanderStep(pawn, gameState) ?? gameState;
+}
+
+/** Hiding: scurries away from the nearest other pawn to be alone, then wanders. */
+export function handleHiding(pawn: Pawn, gameState: GameState): GameState {
+  return hide(pawn, gameState);
+}
+
+/** Panicking: bolts from any hostile, then wanders once nothing's chasing. */
+export function handlePanicking(pawn: Pawn, gameState: GameState): GameState {
+  return fleeFrom(pawn, gameState);
 }
 
 /** Path away from the nearest hostile (mirrors handleFleeing); amble once nothing's chasing. */

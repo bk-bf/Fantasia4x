@@ -143,13 +143,29 @@ import {
   handleBloodHunt
 } from './pawn/handlers/combat';
 import {
-  handleBreakdown,
+  handleCrying,
+  handleHiding,
+  handlePanicking,
   shouldRollBreakdown,
   breakdownChance,
   rollBreakdown,
   pickBreakdownKind,
   CATHARSIS_HOURS
 } from './pawn/handlers/breakdown';
+
+// A breakdown roll's kind → the FSM substate the pawn enters directly (the state IS the kind now).
+const BREAKDOWN_STATE_BY_KIND: Record<string, string> = {
+  crying: PAWN_STATE.CRYING,
+  hiding: PAWN_STATE.HIDING,
+  fleeing: PAWN_STATE.PANICKING
+};
+// The three breakdown substates — the lifecycle block gates/re-forces on this set (all share the
+// `mental_breakdown` condition).
+const BREAKDOWN_STATES: ReadonlySet<string> = new Set([
+  PAWN_STATE.CRYING,
+  PAWN_STATE.HIDING,
+  PAWN_STATE.PANICKING
+]);
 import { moodEffect } from '../core/moodEffects';
 import { needNum } from '../core/needsDefs';
 // Re-exported for external consumers that imported them from this module historically.
@@ -1429,7 +1445,9 @@ const STATE_HANDLERS: Record<string, PawnHandler> = {
   [PAWN_STATE.FLEEING]: handleFleeing,
   [PAWN_STATE.HUNTING]: handleHunting,
   [PAWN_STATE.BLOOD_HUNT]: handleBloodHunt,
-  [PAWN_STATE.BREAKDOWN]: handleBreakdown
+  [PAWN_STATE.CRYING]: handleCrying,
+  [PAWN_STATE.HIDING]: handleHiding,
+  [PAWN_STATE.PANICKING]: handlePanicking
 };
 
 function tickPawn(pawn: Pawn, gameState: GameState): GameState {
@@ -1577,7 +1595,7 @@ class PawnStateMachineImpl {
       // `fsmState`). The `mood > tier1` early-out in shouldRollBreakdown keeps the PEACE path cheap.
       if (
         (afterConditions.conditionTimers?.mental_breakdown ?? 0) > 0 ||
-        afterConditions.currentState === PAWN_STATE.BREAKDOWN
+        BREAKDOWN_STATES.has(afterConditions.currentState ?? '')
       ) {
         // Count the breakdown down; when it runs out, stand back up with catharsis.
         const stepped = tickConditionTimers(afterConditions);
@@ -1595,7 +1613,6 @@ class PawnStateMachineImpl {
             {
               ...stepped,
               currentState: PAWN_STATE.IDLE,
-              breakdownKind: undefined,
               activeJob: undefined,
               path: [],
               isMoving: false,
@@ -1606,9 +1623,11 @@ class PawnStateMachineImpl {
           state = { ...state, pawns: state.pawns.map((p) => (p.id === pawn.id ? recovered : p)) };
           continue;
         }
-        // Still under: force the data-driven state, drop any draft/claimed job, run the behaviour.
-        // `halt: false` — keep the pawn's path so a fleeing breakdown doesn't re-path every tick.
-        const forced = FSM_STATE_BY_CONDITION['mental_breakdown'] ?? PAWN_STATE.BREAKDOWN;
+        // Still under: re-force the pawn's CURRENT coping substate (set at onset), drop any draft/claimed
+        // job, run the behaviour. `halt: false` — keep the pawn's path so a panicking pawn doesn't re-path.
+        const forced = BREAKDOWN_STATES.has(afterConditions.currentState ?? '')
+          ? afterConditions.currentState!
+          : PAWN_STATE.CRYING;
         const jobs = releaseClaimedJobs(state.jobs, afterConditions.id);
         const broken = forceUncontrolled(stepped, forced, false);
         state = { ...state, jobs, pawns: state.pawns.map((p) => (p.id === pawn.id ? broken : p)) };
@@ -1627,13 +1646,13 @@ class PawnStateMachineImpl {
         const chance = breakdownChance(afterConditions.state?.mood ?? 50, resist);
         const broke = rollBreakdown(afterConditions, gameState.turn, chance);
         if (broke) {
-          // Combat-aware flavour: a threat nearby usually means it bolts.
+          // Combat-aware flavour: a threat nearby usually means it bolts. The rolled kind IS the state.
           const kind = pickBreakdownKind(
             afterConditions.id,
             gameState.turn,
             !!findCombatThreat(afterConditions, state)
           );
-          const forced = FSM_STATE_BY_CONDITION['mental_breakdown'] ?? PAWN_STATE.BREAKDOWN;
+          const forced = BREAKDOWN_STATE_BY_KIND[kind];
           const timers = {
             ...(afterConditions.conditionTimers ?? {}),
             mental_breakdown: ticksFromGameHours(broke.hours)
@@ -1643,8 +1662,8 @@ class PawnStateMachineImpl {
             { ...afterConditions, conditionTimers: timers },
             gameState.turn
           );
-          // Force the state + halt movement (the breakdown just landed), and stamp which way it plays out.
-          const broken: Pawn = { ...forceUncontrolled(synced, forced), breakdownKind: kind };
+          // Force the coping substate + halt movement (the breakdown just landed).
+          const broken: Pawn = forceUncontrolled(synced, forced);
           state = { ...state, jobs, pawns: state.pawns.map((p) => (p.id === pawn.id ? broken : p)) };
           state = tickPawn(broken, state);
           const after = pawnById(state.pawns, pawn.id);

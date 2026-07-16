@@ -512,11 +512,7 @@ export interface Pawn {
   carriedBy?: string;
 
   // Phase 4/5: State machine primary state
-  currentState?: string; // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Fighting' | 'Fleeing' | 'Collapsed' | 'Breakdown' | 'Dead'
-  /** MOOD: while in a mental breakdown, which way it's playing out — set when the breakdown lands
-   *  (combat-aware roll), read by handleBreakdown to steer behaviour, cleared on catharsis. Worker-only
-   *  (drives FSM behaviour); never read on the main thread. */
-  breakdownKind?: 'crying' | 'hiding' | 'fleeing';
+  currentState?: string; // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Fighting' | 'Fleeing' | 'Collapsed' | 'Crying' | 'Hiding' | 'Panicking' | 'Dead'
   /** Soft-preview of the next up-to-4 unclaimed job IDs the pawn would take after activeJob.
    *  Not claimed — used only for need-priority lookahead in the state machine. */
   jobQueue?: string[];

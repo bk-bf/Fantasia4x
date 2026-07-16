@@ -47,5 +47,10 @@
   // ── Uncontrollable: a condition takes the body; the draft is refused until it clears ──────────────
   "Collapsed": { "label": "Collapsed", "kind": "uncontrollable", "source": "condition", "uncontrollable": true, "condition": "collapse" },
   "BloodHunt": { "label": "Blood Hunt", "kind": "uncontrollable", "source": "condition", "uncontrollable": true, "condition": "bloodthirst" },
-  "Breakdown": { "label": "Breaking Down", "kind": "uncontrollable", "source": "condition", "uncontrollable": true, "rollable": true, "condition": "mental_breakdown" }
+
+  // ── Mental breakdown: the three coping substates a broken pawn enters directly (mental_breakdown
+  //    condition). Distinct so the panel shows what it's actually doing, not a generic "Breaking Down". ──
+  "Crying": { "label": "Crying", "kind": "uncontrollable", "source": "condition", "uncontrollable": true, "rollable": true, "condition": "mental_breakdown" },
+  "Hiding": { "label": "Hiding", "kind": "uncontrollable", "source": "condition", "uncontrollable": true, "rollable": true, "condition": "mental_breakdown" },
+  "Panicking": { "label": "Panicking", "kind": "uncontrollable", "source": "condition", "uncontrollable": true, "rollable": true, "condition": "mental_breakdown" }
 }
