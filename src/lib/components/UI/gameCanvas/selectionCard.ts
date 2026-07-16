@@ -602,43 +602,37 @@ export function buildPawnCard(
     { label: 'THIRST', value: pawn.needs.thirst ?? 0, warn: (pawn.needs.thirst ?? 0) > 60 },
     { label: 'HYGIENE', value: pawn.needs.hygiene ?? 0, warn: (pawn.needs.hygiene ?? 0) > 60 }
   ];
-  // Autohide meters that are irrelevant: BLOOD/STAMINA only matter when NOT full, WETNESS only when
-  // wet, RELAXATION only once it drops low.
+  // BLOOD / STAMINA: always shown for pawns that carry them (green when full, warn colour as they drop).
   if (pawn.maxBloodVolume) {
     const curBV = pawn.bloodVolume ?? pawn.maxBloodVolume;
-    if (curBV < pawn.maxBloodVolume) {
-      bars.push({
-        label: 'BLOOD',
-        value: Math.round((curBV / pawn.maxBloodVolume) * 100),
-        warn: curBV < pawn.maxBloodVolume * 0.6
-      });
-    }
+    bars.push({
+      label: 'BLOOD',
+      value: Math.round((curBV / pawn.maxBloodVolume) * 100),
+      warn: curBV < pawn.maxBloodVolume * 0.6
+    });
   }
   if (pawn.maxStamina !== undefined) {
     const curST = pawn.stamina ?? pawn.maxStamina;
-    if (curST < pawn.maxStamina) {
-      bars.push({
-        label: 'STAMINA',
-        value: Math.round((curST / pawn.maxStamina) * 100),
-        warn: curST < pawn.maxStamina * 0.25
-      });
-    }
+    bars.push({
+      label: 'STAMINA',
+      value: Math.round((curST / pawn.maxStamina) * 100),
+      warn: curST < pawn.maxStamina * 0.25
+    });
   }
   // SEASONS_WEATHER: how soaked the pawn is, as a body-state bar like BLOOD (blue = water) — only
   // shown while actually damp.
   if ((pawn.needs.wetness ?? 0) > 0) {
     bars.push({ label: 'WETNESS', value: Math.round(pawn.needs.wetness ?? 0), color: '#4FA3D1' });
   }
-  // SOCIAL: RELAXATION is inverted (100 = entertained) and only surfaces once it drops low (a bored pawn).
+  // SOCIAL: RELAXATION is inverted (100 = entertained). Always shown; the colour ramps green→amber→red
+  // as it falls, matching the pawn Needs tab.
   const relaxVal = pawn.needs.relaxation ?? 100;
-  if (relaxVal < 12) {
-    bars.push({
-      label: 'RELAXATION',
-      value: Math.round(relaxVal),
-      color: relaxVal < 5 ? '#c86030' : '#c8a030',
-      warn: relaxVal < 5
-    });
-  }
+  bars.push({
+    label: 'RELAXATION',
+    value: Math.round(relaxVal),
+    color: relaxVal >= 50 ? '#68a030' : relaxVal >= 20 ? '#c8a030' : '#c86030',
+    warn: relaxVal < 20
+  });
   // No flat "HP" stat: the body model (limbs/blood/pain) is the real health — see the HEALTH popup.
   // Core attributes, then MOVE (current movement speed), then Mood — Mood rides with the movement
   // readout rather than the header (which is left free for the name + long state tag).
