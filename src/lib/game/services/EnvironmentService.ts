@@ -30,9 +30,16 @@ export function getTimeOfDay(turn: number): number {
 
 /** Ambient brightness in [0.15, 1.0]. Midnight floors at 0.15 so glyphs stay readable;
  *  both the WebGL map and the HTML panels read this single value. */
+// Ambient light is identical for every tile in a given tick, but computeTileLightLevel calls this
+// once per in-bubble mob per tick — memoise by turn so the keyframe interpolation runs once, not N×.
+let _ambientTurn = Number.NaN;
+let _ambientLight = 1;
 export function getAmbientLight(turn: number): number {
+  if (turn === _ambientTurn) return _ambientLight;
+  _ambientTurn = turn;
   const { a, b, f } = resolveKeyframes(getTimeOfDay(turn));
-  return lerp(a.light, b.light, f);
+  _ambientLight = lerp(a.light, b.light, f);
+  return _ambientLight;
 }
 
 // Ambient keyframes — t = timeOfDay; first/last carry the same values so the day wraps.
@@ -129,6 +136,28 @@ interface GroveLight {
 let groveLightSources: GroveLight[] = [];
 let groveLightMapRef: WorldTile[][] | null = null;
 
+// Spatial bucket index over the grove glows so computeTileLightLevel checks only NEARBY glows, not the
+// whole map's worth every call. The linear scan was O(all glows) per in-bubble mob per tick — fine on a
+// small map, but on a 500²+ map the glow count (∝ area) made it the dominant mob-step cost. Rebuilt only
+// when the grove list is (i.e. on worldMap-ref change), so it adds no per-tick work. Cell ≥ any glow
+// radius so a mob's own cell ± the max-radius reach covers every in-range glow.
+const GROVE_CELL = 8;
+const GROVE_STRIDE = 100000; // > any map dimension / GROVE_CELL, so (cx,cy)→key never collides
+let groveGrid = new Map<number, GroveLight[]>();
+let groveMaxRadius = 0;
+
+function rebuildGroveIndex(sources: GroveLight[]): void {
+  groveGrid = new Map();
+  groveMaxRadius = 0;
+  for (const s of sources) {
+    if (s.radius > groveMaxRadius) groveMaxRadius = s.radius;
+    const key = ((s.x / GROVE_CELL) | 0) * GROVE_STRIDE + ((s.y / GROVE_CELL) | 0);
+    let bucket = groveGrid.get(key);
+    if (!bucket) groveGrid.set(key, (bucket = []));
+    bucket.push(s);
+  }
+}
+
 // Lit-building emitters resolved ONCE per buildings-array ref, mirroring the grove cache. Without this,
 // computeTileLightLevel re-ran buildingLight() (a getBuildingById def lookup) for EVERY building on EVERY
 // call — i.e. once per building per thinking mob per tick (~30% of the mob step in the profiler). The
@@ -199,19 +228,34 @@ export function computeTileLightLevel(
     }
   }
   // Grove glow contributes to the gameplay light like a building lamp (cached scan, ref-invalidated).
+  // Only the glows in the cells within reach of (x,y) are checked — O(nearby), not O(all glows).
   if (worldMap) {
     if (worldMap !== groveLightMapRef) {
       groveLightMapRef = worldMap;
       groveLightSources = scanGroveLight(worldMap);
+      rebuildGroveIndex(groveLightSources);
     }
-    for (let i = 0; i < groveLightSources.length; i++) {
-      const s = groveLightSources[i];
-      const dx = x - s.x;
-      const dy = y - s.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < s.radius) {
-        const falloff = (1 - dist / s.radius) * (1 - dist / s.radius);
-        point += s.intensity * falloff;
+    if (groveLightSources.length > 0) {
+      const range = Math.max(1, Math.ceil(groveMaxRadius / GROVE_CELL));
+      const cx = (x / GROVE_CELL) | 0;
+      const cy = (y / GROVE_CELL) | 0;
+      for (let gx = cx - range; gx <= cx + range; gx++) {
+        if (gx < 0) continue; // no glows at negative coords → skip (also avoids key-sign collisions)
+        for (let gy = cy - range; gy <= cy + range; gy++) {
+          if (gy < 0) continue;
+          const bucket = groveGrid.get(gx * GROVE_STRIDE + gy);
+          if (!bucket) continue;
+          for (let i = 0; i < bucket.length; i++) {
+            const s = bucket[i];
+            const dx = x - s.x;
+            const dy = y - s.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < s.radius) {
+              const falloff = (1 - dist / s.radius) * (1 - dist / s.radius);
+              point += s.intensity * falloff;
+            }
+          }
+        }
       }
     }
   }
