@@ -23,6 +23,26 @@ function livingPartNightVision(entity: Pawn | Mob): number {
   return nv;
 }
 
+/** Per-creatureId: does this body plan contain ANY part that grants night-vision (arachnid eyes)?
+ *  Cached forever — part loss only REMOVES a grant, never adds one, so "no NV part" is permanent. Lets
+ *  the overwhelmingly-common mob (no such part) skip the whole-anatomy walk in getNightVision entirely
+ *  (the walk was ~15% of the mob step — it summed to 0 for every creature that isn't a spider). */
+const _creatureHasNvPart = new Map<string, boolean>();
+function creatureHasNvPart(mob: Mob): boolean {
+  let has = _creatureHasNvPart.get(mob.creatureId);
+  if (has === undefined) {
+    has = false;
+    outer: for (const limb of mob.limbs ?? [])
+      for (const part of limb.parts ?? [])
+        if ((PART_DEF_MAP[part.id]?.grants?.nightVision ?? 0) > 0) {
+          has = true;
+          break outer;
+        }
+    _creatureHasNvPart.set(mob.creatureId, has);
+  }
+  return has;
+}
+
 /** Vision can't drop below this fraction of its base, even in pitch dark — you can always make out
  *  the next couple of tiles. (Work uses its own 0.4 floor in lightWorkMultiplier.) */
 const VISION_LIGHT_FLOOR = 0.35;
@@ -42,8 +62,11 @@ export function baseVisionRange(perception: number): number {
  *  sum it across their cultural traits. Default 0 (normal — full darkness penalty). */
 export function getNightVision(entity: Pawn | Mob): number {
   if ('creatureId' in entity) {
-    // Mobs: the creature-def value PLUS anything its living parts grant (arachnid eyes).
-    return Math.min(1, Math.max(0, (getCreatureById(entity.creatureId)?.nightVision ?? 0) + livingPartNightVision(entity)));
+    // Mobs: the creature-def value PLUS anything its living parts grant (arachnid eyes). The part walk
+    // is skipped unless this body plan actually has a NV-granting part (the rare arachnid case).
+    const base = getCreatureById(entity.creatureId)?.nightVision ?? 0;
+    const parts = creatureHasNvPart(entity) ? livingPartNightVision(entity) : 0;
+    return Math.min(1, Math.max(0, base + parts));
   }
   let nv = 0;
   for (const trait of entity.traits ?? []) nv += trait.effects?.nightVision ?? 0;
@@ -95,10 +118,12 @@ export function lightVisionMultiplier(lightLevel: number, nightVision: number): 
 export function effectiveVisionRange(
   entity: Pawn | Mob,
   lightLevel: number,
-  weatherSightMul = 1
+  weatherSightMul = 1,
+  nightVision?: number
 ): number {
   const base = baseVisionRange(entity.stats?.perception ?? 10);
-  const lit = base * lightVisionMultiplier(lightLevel, getNightVision(entity));
+  const nv = nightVision ?? getNightVision(entity);
+  const lit = base * lightVisionMultiplier(lightLevel, nv);
   return Math.max(1, Math.round(lit * weatherSightMul));
 }
 

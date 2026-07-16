@@ -619,12 +619,19 @@ export function stepOne(
   // the light per check). Daytime with nightVision 0 ≈ the old def.stats.visionRange.
   const tileLight = computeTileLightLevel(turn, state.buildings ?? [], mob.x, mob.y, state.worldMap);
   // §G stash the mob's sight multiplier (night-vision-dampened light) so its `sight` dims in the dark too
-  // (combat aim), matching pawns: no penalty at ≥50% light, then a linear ramp to a floor.
-  const mel = dampenLightByNightVision(tileLight, getNightVision(mob));
+  // (combat aim), matching pawns: no penalty at ≥50% light, then a linear ramp to a floor. Compute the
+  // mob's night-vision ONCE and thread it into effectiveVisionRange (which would otherwise recompute it).
+  const nightVision = getNightVision(mob);
+  const mel = dampenLightByNightVision(tileLight, nightVision);
   mob.effectiveLight = mel >= 0.5 ? 1 : Math.max(0.1, mel / 0.5);
   // Weather shortens detection too (fog/storm/blizzard — SEASONS_WEATHER): folds into the shared
   // vision model so both this mob's sight and (via the same fn) pawn detection degrade in murk.
-  const visionRange = effectiveVisionRange(mob, tileLight, weatherSightMul(state.weather?.type));
+  const visionRange = effectiveVisionRange(
+    mob,
+    tileLight,
+    weatherSightMul(state.weather?.type),
+    nightVision
+  );
   // A pawn is "in vision" only with an unobstructed line of sight — the SAME `blocksSight` Bresenham
   // ranged combat uses — so a mob can't detect (and start chasing) a pawn spotted THROUGH a wall. The
   // LOS test runs only when a pawn is already within range, so the cost stays on mobs that have a

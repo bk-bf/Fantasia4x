@@ -129,6 +129,34 @@ interface GroveLight {
 let groveLightSources: GroveLight[] = [];
 let groveLightMapRef: WorldTile[][] | null = null;
 
+// Lit-building emitters resolved ONCE per buildings-array ref, mirroring the grove cache. Without this,
+// computeTileLightLevel re-ran buildingLight() (a getBuildingById def lookup) for EVERY building on EVERY
+// call — i.e. once per building per thinking mob per tick (~30% of the mob step in the profiler). The
+// buildings ref is immutable (a new array on any light/fuel change — GameEngineImpl._processCampfireFuel),
+// so it self-invalidates; a burning campfile bumps the ref each tick, so this rebuilds at most once/tick.
+interface BuildingLightSource {
+  x: number;
+  y: number;
+  intensity: number;
+  radius: number;
+}
+let buildingLightSources: BuildingLightSource[] = [];
+let buildingLightRef: unknown = null;
+
+function litBuildingSources(
+  buildings: { type: string; status: string; lit?: boolean; x: number; y: number }[]
+): BuildingLightSource[] {
+  if (buildings === buildingLightRef) return buildingLightSources;
+  buildingLightRef = buildings;
+  const out: BuildingLightSource[] = [];
+  for (const b of buildings) {
+    const light = buildingLight(b);
+    if (light) out.push({ x: b.x, y: b.y, intensity: light.intensity, radius: light.radius });
+  }
+  buildingLightSources = out;
+  return out;
+}
+
 function scanGroveLight(worldMap: WorldTile[][]): GroveLight[] {
   const out: GroveLight[] = [];
   for (let y = 0; y < worldMap.length; y++) {
@@ -159,15 +187,15 @@ export function computeTileLightLevel(
 ): number {
   const ambient = getAmbientLight(turn);
   let point = 0;
-  for (const b of buildings) {
-    const light = buildingLight(b);
-    if (!light) continue;
-    const dx = x - b.x;
-    const dy = y - b.y;
+  const emitters = litBuildingSources(buildings);
+  for (let i = 0; i < emitters.length; i++) {
+    const e = emitters[i];
+    const dx = x - e.x;
+    const dy = y - e.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < light.radius) {
-      const falloff = (1 - dist / light.radius) * (1 - dist / light.radius);
-      point += light.intensity * falloff;
+    if (dist < e.radius) {
+      const falloff = (1 - dist / e.radius) * (1 - dist / e.radius);
+      point += e.intensity * falloff;
     }
   }
   // Grove glow contributes to the gameplay light like a building lamp (cached scan, ref-invalidated).
