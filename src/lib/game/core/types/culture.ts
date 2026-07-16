@@ -316,6 +316,10 @@ export interface Trait {
     /** Darkness immunity 0–1 (0 = full night penalty, 1 = sees in the dark as by day).
      *  Summed across traits by core/vision.ts; also un-penalises night work. */
     nightVision?: number;
+
+    /** STEALTH: flat delta on the pawn's stealth value (positive or negative — Constant Howling
+     *  vetoes a build outright). Summed across traits by core/stealth.ts, like nightVision. */
+    stealth?: number;
   };
 }
 

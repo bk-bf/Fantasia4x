@@ -5,7 +5,16 @@ import type { GameState, Mob, Pawn, WorldTile } from '../../core/types';
 import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
 import { pawnById } from '../../core/pawnIndex';
 import { manhattan, chebyshev } from '../../core/distance';
-import { SECONDS_PER_TICK } from '../../core/time';
+import { SECONDS_PER_TICK, ticksFromSeconds } from '../../core/time';
+import { getNightVision } from '../../core/vision';
+import {
+  detectionScore,
+  detectionChance,
+  STEALTH_CHECK_INTERVAL_S,
+  STEALTH_CHECK_JITTER_S,
+  STEALTH_FORGET_S
+} from '../../core/stealth';
+import { pawnStatService } from '../PawnStatService';
 import { stepBody, seedMidCrossClaims } from '../MovementSystem';
 import { resourceObjectService } from '../ResourceObjectService';
 import { buildSharedSoftBlockedGrid, pathfinderService } from '../PathfinderService';
@@ -699,19 +708,24 @@ export function isThinkTick(id: string, turn: number): boolean {
 export function nearestPawn(
   mob: Mob,
   pawns: Pawn[],
-  skipDowned = false
+  skipDowned = false,
+  skipIds?: string[]
 ): { pawn: Pawn; pos: { x: number; y: number } } | null {
   // Hot path: called once per mob per tick (O(mobs × pawns) aggregate) — the #1 dip-correlated
   // spatial cost (ENGINE-PERFORMANCE §C). Indexed loop (no `for…of` iterator allocation — the
   // self-hosted `next` churn) + build the result object ONCE at the end (not per improvement).
   // `skipDowned`: ignore Collapsed pawns so a mob that won't finish them off doesn't even SEE them as a
   // threat — it keeps wandering instead of ping-ponging Wander↔Alerted over an unconscious body.
+  // `skipIds`: STEALTH — pawns this mob has failed to detect, excluded so an unseen scout can't
+  // body-block aggro for a visible ally behind them. Allocated by the caller only when a skip
+  // actually happens (stealthy pawns are rare), so the common path stays allocation-free.
   let best: Pawn | null = null;
   let bestDist = Infinity;
   const mx = mob.x;
   const my = mob.y;
   for (let i = 0; i < pawns.length; i++) {
     if (skipDowned && pawns[i].currentState === 'Collapsed') continue;
+    if (skipIds && skipIds.includes(pawns[i].id)) continue;
     const pos = pawns[i].position!;
     const d = manhattan(pos.x, pos.y, mx, my);
     if (d < bestDist) {
@@ -720,6 +734,48 @@ export function nearestPawn(
     }
   }
   return best ? { pawn: best, pos: best.position! } : null;
+}
+
+/**
+ * STEALTH detection gate: has this mob noticed this pawn? Runs ONLY for a pawn already inside the
+ * mob's vision range WITH line of sight (it rides the existing per-mob scan — no new spatial sweep),
+ * and rolls at most every ~2 s (jittered) per mob-pawn pair; between rolls the cached result holds.
+ * A success sticks (`detected: true`, `at` refreshed each call while the pawn stays in sight) until
+ * the pawn goes unseen past the forget window or the mob abandons its hunt (the lastSeen give-up
+ * path clears `stealthChecks`) — then the pawn is stealthable again. Entries mutate in place
+ * (ADR-002 cold field; `stealthChecks` never ships — entityProjection drops it).
+ */
+export function isPawnDetected(
+  mob: Mob,
+  pawn: Pawn,
+  distToPawn: number,
+  visionRange: number,
+  tileLight: number,
+  turn: number
+): boolean {
+  const checks = (mob.stealthChecks ??= {});
+  const e = checks[pawn.id];
+  if (e?.detected) {
+    if (turn - e.at <= ticksFromSeconds(STEALTH_FORGET_S)) {
+      e.at = turn; // still watched — refresh the memory
+      return true;
+    }
+    delete checks[pawn.id]; // long unseen: forgotten, fall through to a fresh roll
+  } else if (e && turn < e.at) {
+    return false; // failed roll cached; next attempt not due yet
+  }
+  const score = detectionScore(mob.stats?.perception ?? 10, tileLight, getNightVision(mob));
+  const stealth = pawnStatService.evaluateStat('stealth', pawn);
+  const proximityFrac = 1 - distToPawn / Math.max(1, visionRange);
+  if (rng.random() < detectionChance(score, stealth, proximityFrac)) {
+    checks[pawn.id] = { at: turn, detected: true };
+    return true;
+  }
+  checks[pawn.id] = {
+    at: turn + ticksFromSeconds(STEALTH_CHECK_INTERVAL_S + rng.random() * STEALTH_CHECK_JITTER_S),
+    detected: false
+  };
+  return false;
 }
 
 /** Chebyshev distance between a mob and a point (object-shaped convenience over `chebyshev`). */

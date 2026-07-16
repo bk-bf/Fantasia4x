@@ -13,6 +13,7 @@ import conditionsData from '../database/conditions.jsonc';
 import itemsData from '../database/items.jsonc';
 import { WORK_CATEGORIES } from '../core/Work';
 import { getNightVision } from '../core/vision';
+import { getStealth } from '../core/stealth';
 import { vlog } from '../core/logSink';
 import { combinedQualityMultiplier } from '../core/itemQuality';
 import {
@@ -228,21 +229,28 @@ function intactBodyFraction(p: Pawn | Mob): number {
   return total > 0 ? sum / total : 1;
 }
 
+// The one function formulas may call: clamp(x, lo, hi) — hard floors/caps (stealth's DEX gate
+// needs a true zero below the floor, which no arithmetic-only expression can produce).
+const FORMULA_CLAMP = (x: number, lo: number, hi: number): number =>
+  x < lo ? lo : x > hi ? hi : x;
+
 function compileFormula(formula: string): ((...vars: number[]) => number) | null {
   const cached = _formulaCache.get(formula);
   if (cached !== undefined) return cached;
   // Normalise unicode operators; variable names stay as identifiers (they become fn params).
   const expr = formula.replace(/×/g, '*').replace(/−/g, '-');
-  // Safety: after blanking known vars, only arithmetic may remain (formulas are project JSONC, but
-  // this still blocks a malformed/unknown-token formula from compiling to arbitrary code).
-  const stripped = expr.replace(FORMULA_VAR_RE, '0');
+  // Safety: after blanking known vars + the clamp keyword, only arithmetic may remain (formulas are
+  // project JSONC, but this still blocks a malformed/unknown-token formula from compiling to
+  // arbitrary code). Commas are allowed solely for clamp's argument list.
+  const stripped = expr.replace(/\bclamp\b/g, '').replace(FORMULA_VAR_RE, '0');
   let fn: ((...vars: number[]) => number) | null = null;
-  if (/^[\d\s+\-*/.()]+$/.test(stripped)) {
+  if (/^[\d\s+\-*/.(),]+$/.test(stripped)) {
     try {
-       
-      fn = new Function(...FORMULA_VARS, '"use strict"; return (' + expr + ');') as (
+      const raw = new Function('clamp', ...FORMULA_VARS, '"use strict"; return (' + expr + ');') as (
+        clamp: typeof FORMULA_CLAMP,
         ...vars: number[]
       ) => number;
+      fn = (...vars: number[]) => raw(FORMULA_CLAMP, ...vars);
     } catch {
       fn = null;
     }
@@ -819,12 +827,15 @@ export class PawnStatServiceImpl implements PawnStatService {
       def.category === 'work' ? (this.workSkillInfo(statId, pawn)?.factor ?? 1) : 1;
     // Trait combatMods multiply a combat stat's formula output (×1 for every other category);
     // trait resistances stay an ADDITIVE bridge on the 0-baseline resistance stats.
-    return (
+    const v =
       evaluateFormula(def.formula, pawn, capacities, skill) *
         traitCombatMult(pawn, statId) *
         (statId === 'attack_speed' ? equippedWeaponSpeedMult(pawn) : 1) +
-      traitResistanceBonus(pawn, statId)
-    );
+      traitResistanceBonus(pawn, statId);
+    // STEALTH Layer B: fold the flat additives (trait stealth, living-part grants, worn-armour
+    // stealthMod / weight drag, natural-armour drag) onto the formula base — same stat-specific
+    // augmentation precedent as attack_speed's weapon mult, so reading the stat gives the FULL value.
+    return statId === 'stealth' ? getStealth(pawn, v) : v;
   }
 
   /**

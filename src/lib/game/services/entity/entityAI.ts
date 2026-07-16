@@ -18,6 +18,7 @@ import { pawnStatService } from '../PawnStatService';
 import { COLLAPSE_CONSCIOUSNESS, RECOVER_CONSCIOUSNESS } from '../../core/needs';
 import {
   nearestPawn,
+  isPawnDetected,
   dist,
   adjacent,
   moveToward,
@@ -613,7 +614,6 @@ export function stepOne(
   // for everyone else it's invisible to threat detection, so they never alert on it (and so never
   // oscillate Wander↔Alerted beside the body) — they just keep wandering off. Finishers still see + engage.
   const finisher = willFinishOffDowned(mob.needs.hunger ?? 0, def);
-  const nearest = nearestPawn(mob, pawns, !finisher);
   // §G shared vision: perception-based range scaled by this tile's light + the mob's night_vision,
   // computed ONCE here and threaded into the FSM (so darkness shortens detection without recomputing
   // the light per check). Daytime with nightVision 0 ≈ the old def.stats.visionRange.
@@ -629,12 +629,26 @@ export function stepOne(
   // ranged combat uses — so a mob can't detect (and start chasing) a pawn spotted THROUGH a wall. The
   // LOS test runs only when a pawn is already within range, so the cost stays on mobs that have a
   // candidate in sight range, not every mob every tick.
-  const inVision =
+  // STEALTH filter on the same gate: a pawn in range WITH LOS must ALSO have been detected
+  // (isPawnDetected — a cached ~2 s roll of the mob's perception vs the pawn's stealth). An
+  // undetected pawn is treated as not in vision AND skipped as `nearest`, so it can't body-block
+  // aggro for a visible ally behind it. The loop re-picks the next-nearest only while an actual
+  // stealther is in sight — the common path costs exactly one nearestPawn + one LOS, as before.
+  let nearest = nearestPawn(mob, pawns, !finisher);
+  let inVision: typeof nearest = null;
+  let undetected: string[] | undefined;
+  while (
     nearest &&
     dist(mob, nearest.pos) <= visionRange &&
     hasLineOfSight(state.worldMap, mob.x, mob.y, nearest.pos.x, nearest.pos.y)
-      ? nearest
-      : null;
+  ) {
+    if (isPawnDetected(mob, nearest.pawn, dist(mob, nearest.pos), visionRange, tileLight, turn)) {
+      inVision = nearest;
+      break;
+    }
+    (undetected ??= []).push(nearest.pawn.id);
+    nearest = nearestPawn(mob, pawns, !finisher, undetected);
+  }
   // LOS memory: while the mob can actually SEE a pawn, remember WHERE. When the pawn slips behind cover
   // the mob presses to this last-seen tile (see Alerted) instead of tracking it through the wall, and
   // gives up there if it can't re-acquire. A mob that has never had LOS carries no memory, so it can't
@@ -1183,7 +1197,10 @@ export function stepHostile(
           chaseAnchorY: undefined,
           lastSeenX: undefined,
           lastSeenY: undefined,
-          alertedPawn: undefined
+          alertedPawn: undefined,
+          // STEALTH re-stealth: abandoning the hunt IS the forget — every pawn must pass a fresh
+          // detection roll to be re-acquired, so break contact → leave vision → strike again works.
+          stealthChecks: undefined
         };
       }
       // Surround, don't stack: route to a DISTINCT free tile adjacent to the pawn via the shared

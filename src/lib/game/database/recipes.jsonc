@@ -1608,6 +1608,42 @@
     "workAmount"      : 3,
     "toolTierRequired": 0
   },
+  // STEALTH §8 — the precision-ranged pair + darts.
+  {
+    "id"              : "make_blowgun",
+    "station"         : "makers_bench",
+    "inputs"          : {"branch": 1, "cordage": 1},
+    "outputs"         : {"blowgun": 1},
+    "workAmount"      : 4,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_blow_dart",
+    "station"         : "makers_bench",
+    "inputs"          : {"branch": 1, "plant_fiber": 1},
+    "outputs"         : {"blow_dart": 6},
+    "workAmount"      : 2,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_hunting_recurve",
+    "station"         : "makers_bench",
+    "inputs"          : {"sinew": 2, "cordage": 1},
+    "outputs"         : {"hunting_recurve": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working",
+    "dynamicRecipe"   : {
+      "stave": {
+        "acceptsCategory": "wood",
+        "quantity"       : 1,
+        "variants"       : { "yew_log": {"name": "Yew Hunting Recurve"}, "ash_log": {"name": "Ash Hunting Recurve"} }
+      }
+    },
+    "materialBonuses" : {
+      "stave": { "yew_log": {"critMod": 0.03}, "ash_log": {"accuracy": 3} }
+    }
+  },
   {
     "id"              : "make_throwing_spear",
     "station"         : "makers_bench",
@@ -1837,6 +1873,15 @@
     "materialBonuses" : {
       "hide": { "bear_pelt": {"armorValue": 2, "fatiguePerTurn": 0.05}, "elk_hide": {"armorValue": 1}, "deer_hide": {} }
     }
+  },
+  // STEALTH §8 — the one stealth-positive garment (soot-blacked, near-zero protection).
+  {
+    "id"              : "make_soot_darkened_jerkin",
+    "station"         : "makers_bench",
+    "inputs"          : {"light_leather": 2, "charcoal": 1, "cordage": 1},
+    "outputs"         : {"soot_darkened_jerkin": 1},
+    "workAmount"      : 6,
+    "toolTierRequired": 0
   },
   {
     "id"              : "make_padded_cap",

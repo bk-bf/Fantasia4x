@@ -111,6 +111,13 @@ export interface Mob {
    *  hunt there if it can't re-acquire. Cleared on disengage. AI-internal — not in the render snapshot. */
   lastSeenX?: number;
   lastSeenY?: number;
+  /** STEALTH: this creature's per-pawn detection memory, keyed by pawn id. `detected: false`
+   *  caches a failed roll until tick `at` (the next-roll time, jittered ~2 s); `detected: true`
+   *  means the pawn is acquired-able, with `at` refreshed to the last tick it was actually in
+   *  vision — go unseen past the forget window (or make the mob give up its hunt) and the entry
+   *  clears, so the pawn is stealthable again. Entries mutate in place (ADR-002 cold field);
+   *  AI-internal — stripped from the render snapshot (entityProjection ENTITY_DROP). */
+  stealthChecks?: Record<string, { at: number; detected: boolean }>;
   /** Set while this mob is in an active alert episode against a colonist (entered Alerted on a pawn).
    *  Gates the one-shot `threatAlert` (auto-pause + chronicle pulse) so it fires once per episode, not
    *  every tick; cleared when the mob disengages back to Wander. AI-internal — not in the render snapshot. */

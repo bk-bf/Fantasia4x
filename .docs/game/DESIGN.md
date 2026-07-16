@@ -198,6 +198,29 @@ A combat-depth pass built on the per-part model — see ADR-024; it partially un
 - **Bone fractures & broken limbs** — heavy/blunt hits can break the bone (a separate `fracture` wound) without severing the limb: it's crippled (gutted manipulation/moving + a **graded `fractured` condition** crushing STR/DEX — severity tracks bone-damage %, hairline→cracked→shattered, maxing when the bone hits 0), heals over weeks. A **destroyed skull = instant death**.
 - **Dismemberment matters** — natural weapons are **bound to parts** (jaw→bite, paw→claw, hoof→kick…): lose the part, lose the attack. A creature stripped of every weapon-part reverts to a weak `thrash`; a pawn who loses both hands drops its weapon. Natural **armour is per-part** too — the plan sets the *shape* (armoured trunk, soft belly, exposed eyes) via an `armor` share, the creature's `naturalArmor` sets the *magnitude* (wolf 8 vs bear 32), so a bear's chest soaks 32% while its belly is the weak spot.
 
+### Stealth & detection (2026-07-14, ADR-032)
+
+The hit-and-run assassin build (STEALTH spec) — a filter on the existing mob vision gate, not a new
+subsystem:
+
+- **Always-on passive detection** — every pawn's `stealth` value gates whether a creature *acquires*
+  it: a pawn inside vision range with line of sight must also pass a per-mob ~2 s cached detection
+  roll (perception + night vision + light vs stealth, +25 % likelier adjacent than at the vision
+  border). Undetected pawns are skipped by targeting entirely.
+- **Stealth is two-layered** (mirrors night vision) — a `stealth` stat (`sizeFactor(weight) ×
+  dexGate(zero ≤ DEX 8) × moving`; size dominant, so beasts/werewolves are poor sneakers for free)
+  plus additives in `core/stealth.ts`: trait `stealth` effects (padded-prowl, chameleon-skin,
+  ambush-stillness, duskshroud, soft-tread; constant-howling vetoes), living-part grants, worn
+  `stealthMod` (the soot-darkened jerkin is the one positive) or a per-kg weight drag, and a
+  natural-armour drag (the thick-fur pelt chain IS the beast's tanky↔stealth fork). Default pawn
+  ≈ 0.2; a full specialist ≈ 1.5–2.2.
+- **The undetected strike** — ×3.5 on `hit_precision` (crit + gap-aiming) for melee AND ranged via
+  the shared `resolveHit` path; the blowgun/hunting-recurve are the precision-ranged class. A landed
+  hit auto-reveals (self + nearby packmates) — re-stealth means breaking contact until the mob gives
+  up its hunt (or ~30 s unseen).
+- **Night synergy is free** — creature vision already shrinks in the dark, so stealth strengthens at
+  night against diurnal animals while nocturnal predators stay dangerous.
+
 ### Hunting (work-driven)
 
 A player marks a huntable animal (`markedForHunt`); a pawn whose hunting labour comes up chases it and **resolves the kill through the same combat system** — `handleHunting` flips the quarry into the shared prey "fight-back" state, so a boar gores the hunter and a cornered deer kicks back exactly like predator-vs-prey (reuses the `EntityService` hunt circuits + `combatService`, not a parallel code path). The kill drops a carcass → butchery → meat. Hunting is **fearless** (no auto-flee) — a colonist death is a normal consequence of picking too big a target.

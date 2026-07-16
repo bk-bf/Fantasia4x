@@ -6643,6 +6643,79 @@
     },
     "aimBonuses": {"speed": 0.1}
   },
+  // STEALTH §8 — the precision ranged pair: sneak-shot crits ride the same hit_precision path as a
+  // dagger, so a high-critMod launcher IS the ranged assassin class. Both trade raw punch for
+  // placement (low damage/drawPower, high critMod).
+  {
+    "id": "blowgun",
+    "audio": "bow",
+    "charSpans": [ {"sheet": "items", "id": 200} ],
+    "name": "Blowgun",
+    "type": "weapon",
+    "category": "combat",
+    "deteriorationRate": 0.008,
+    "description": "A long hollowed cane that spits a slim dart on a breath of air. Barely a whisper in flight, and the dart asks for an eye or a throat to matter.",
+    "color": "#9C8B5A",
+    "amount": 0,
+    "weightKg": 0.3,
+    "volumeL": 0.8,
+    "tier": 1,
+    "maxDurability": 40,
+    "durabilityLossPerCombatHit": 4,
+    "weaponProperties": {
+      "damage"          : 1,
+      "attackSpeed"     : 1.1,
+      "range"           : 5,
+      "damMin"          : 1,
+      "damMax"          : 2,
+      "reach"           : 1,
+      "damageType"      : "blunt",
+      "armorPenetration": 0.0,
+      "drawPower"       : 1.0,
+      "critMod"         : 0.15,
+      "staminaCost"     : 1,
+      "twoHanded"       : true,
+      "ammoCategory"    : "dart",
+      "reload"          : 1,
+      "strScaled"       : false
+    },
+    "aimBonuses": {"speed": 0.2, "accuracy": 2}
+  },
+  {
+    "id": "hunting_recurve",
+    "audio": "bow",
+    "charSpans": [ {"sheet": "items", "id": 200} ],
+    "name": "Hunting Recurve",
+    "type": "weapon",
+    "category": "combat",
+    "deteriorationRate": 0.01,
+    "description": "A short bow of laid wood and sinew, curved back on itself for a smooth, quiet loose. It gives up the war bow's punch for a hunter's placement.",
+    "color": "#7B5A2E",
+    "amount": 0,
+    "weightKg": 0.9,
+    "volumeL": 1.8,
+    "tier": 2,
+    "maxDurability": 90,
+    "durabilityLossPerCombatHit": 10,
+    "weaponProperties": {
+      "damage"          : 4,
+      "attackSpeed"     : 1.0,
+      "range"           : 9,
+      "damMin"          : 2,
+      "damMax"          : 6,
+      "reach"           : 1,
+      "damageType"      : "blunt",
+      "armorPenetration": 0.0,
+      "drawPower"       : 1.2,
+      "critMod"         : 0.10,
+      "staminaCost"     : 2,
+      "twoHanded"       : true,
+      "ammoCategory"    : "arrow",
+      "reload"          : 1,
+      "strScaled"       : true
+    },
+    "aimBonuses": {"accuracy": 5, "range": 2}
+  },
   {
     "id": "sling",
     "audio": "bow",
@@ -6746,6 +6819,30 @@
       "strScaled"       : false
     },
     "aimBonuses": {"accuracy": 10}
+  },
+  // STEALTH §8 — blowgun ammunition. Low flat damage; the class leans on the sneak-shot crit.
+  {
+    "id"            : "blow_dart",
+    "charSpans"     : [ {"sheet": "items", "id": 196} ],
+    "name"          : "Blow Dart",
+    "type"          : "consumable",
+    "category"      : "ammunition",
+    "deteriorationRate": 0.01,
+    "description"   : "A slim hardwood needle fletched with a twist of down, sized to a blowgun's bore.",
+    "color"         : "#B09A6A",
+    "amount"        : 0,
+    "weightKg"      : 0.01,
+    "volumeL"       : 0.02,
+    "tier"          : 1,
+    "maxDurability" : 5,
+    "ammoProperties": {
+      "ammoCategory": "dart",
+      "projectile"  : "arrow",
+      "damage"      : 3,
+      "damageType"  : "piercing",
+      "armorPen"    : 0.0,
+      "recoverable" : 0.25
+    }
   },
   {
     "id"               : "sling_stone",
@@ -7211,6 +7308,36 @@
       "fatiguePerTurn" : 0.25,
       "movementPenalty": 0.0,
       "coldResistance" : 0.1
+    }
+  },
+  // STEALTH §8 — the one garment that HELPS stealth (explicit positive stealthMod; every other
+  // worn piece derives a weight penalty in core/stealth.ts). Near-zero protection on purpose:
+  // the sneak build wears little or nothing, and this is the deliberate exception.
+  {
+    "id": "soot_darkened_jerkin",
+    "charSpans": [ {"sheet": "items", "id": 8} ],
+    "name": "Soot-Darkened Jerkin",
+    "type": "armor",
+    "category": "leather",
+    "deteriorationRate": 0.01,
+    "description": "A quilted jerkin of supple leather rubbed with lamp-soot until it swallows the light. Thin stuff against a blade; the work it does is not being seen.",
+    "color": "#3A3530",
+    "amount": 0,
+    "weightKg": 1.2,
+    "volumeL": 2.5,
+    "tier": 1,
+    "maxDurability": 50,
+    "durabilityLossPerCombatHit": 14,
+    "armorProperties": {
+      "defense"        : 1,
+      "armorType"      : "light",
+      "slot"           : "bodyBase",
+      "equipmentSlot"  : "bodyBase",
+      "armorLayer"     : "gambeson",
+      "armorValue"     : 1,
+      "fatiguePerTurn" : 0.05,
+      "movementPenalty": 0.0,
+      "stealthMod"     : 0.3
     }
   },
   {

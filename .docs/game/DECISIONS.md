@@ -1275,3 +1275,47 @@ from the sent snapshot (`entityProjection.ts` ENTITY_DROP) — worker-only scrat
 quillback, hardened cephalothorax on the thornwood spider), so aimed attacks have authored weak
 points. Not graph-checkable — combat-runtime math + data-schema, not a call-edge invariant; guarded
 by the combat suite (`combatSim`, `creatureDurability`, `entityProjection` tests).
+
+### ADR-032 [GAME]: Stealth as a Detection Filter on Existing Mob Vision (not a new subsystem)
+
+**Status:** Accepted (2026-07-14). Implements STEALTH (design locked 2026-07-10; the spec drafted
+this as "ADR-031" before that number was taken).
+
+**Context.** A specialised sneak build — small, deft, lightly-armoured, one devastating opening
+strike, then break contact and re-approach — needs a "creature notices pawn" gate. The trap to avoid
+is a parallel spatial/awareness subsystem with its own per-tick sweep.
+
+**Decision.** Stealth is a **filter inserted at the existing `inVision` gate** in `entityAI.stepOne`:
+a pawn inside a mob's (light- and weather-shortened) vision range WITH line of sight must also pass
+`isPawnDetected` — a per-mob-pawn roll of the mob's perception/night-vision detection score against
+the pawn's stealth value, with a flat proximity term (+25 % adjacent vs the vision border), rolled at
+most every ~2 s (jittered) and cached in `Mob.stealthChecks` between rolls. Undetected pawns are also
+skipped by `nearestPawn`, so a stealther can't body-block aggro for a visible ally.
+
+- **The stealth value is two-layered, mirroring night vision**: a `stealth` stat in `stats.jsonc`
+  (`sizeFactor(weight) × dexGate(hard zero ≤ DEX 8) × moving` — the formula engine gained `clamp()`
+  for the hard gate) plus flat additives summed in `core/stealth.ts` (trait `effects.stealth`,
+  living-part `grants.stealth`, worn `armorProperties.stealthMod` or a derived −0.03/kg weight drag,
+  and −0.04 per point of trait `naturalArmor` — the beast tanky↔stealth fork falls out of the pelt
+  itself). `evaluateStat('stealth', pawn)` folds both layers (same stat-specific augmentation
+  precedent as `attack_speed`'s weapon mult).
+- **The reward routes through the existing `resolveHit` crit**: an attacker the defender has not
+  detected multiplies `hit_precision` ×3.5 before the weapon's `critMod` adds — melee and ranged
+  share the path, so a blowgun sneak-shot needs no extra plumbing. The landed hit **auto-reveals**
+  (self + packmates within 12 tiles sharing a lair/party) — no chain-backstab.
+- **Re-stealth reuses the give-up path**: abandoning a hunt clears `stealthChecks` alongside
+  `lastSeen*`; elsewhere a detected entry expires after ~30 s unseen.
+
+**Perf (ENGINE-PERFORMANCE cross-checked).** No new spatial sweep — the roll rides the existing
+LOS-gated scan; failed rolls are cached on a jittered `Until` timestamp (no per-tick re-rolling); the
+common path costs one `nearestPawn` + one LOS exactly as before, with extra iterations only while an
+actual stealther is in sight. `stealthChecks` mutates in place (ADR-002 cold field) and is dropped
+from the sent snapshot (`entityProjection` ENTITY_DROP).
+
+**Consequences.** The aggro-acquisition contract changed: detection is always-on and probabilistic
+for every pawn (a default pawn is ~9 % per check at the vision border, ~34 % adjacent), so mobs no
+longer acquire instantly — headless FSM tests stamp their fixtures as pre-detected, and an encounter
+balance pass is owed. Sight-only detection makes dull-eyed predators easy to sneak and sharp-eyed
+grazers hard; the hearing/smell channel is parked for Phase 2 along with screen-invisible stealthy
+creatures. Guarded by `core/stealth.test.ts` (layers, roll math, §9 constraint audit) and
+`traitRegistry.test.ts`.

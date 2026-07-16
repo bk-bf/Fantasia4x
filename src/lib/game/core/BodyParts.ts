@@ -35,8 +35,9 @@ export interface BodyPartDef {
    *  condition: `nightVision` is summed live over the entity's LIVING parts (vision.ts) — lose the eye,
    *  lose the sight; `perceptionBonus` (a core stat) is baked in once at pawn-gen from the grafted parts
    *  (applyCulturalTraitBonuses). Only a part unique to the granting body carries it, so it never leaks to
-   *  a plain humanoid eye. Conditional benefits (gills only help when wet) still use a hostParts condition. */
-  grants?: { nightVision?: number; perceptionBonus?: number };
+   *  a plain humanoid eye. Conditional benefits (gills only help when wet) still use a hostParts condition.
+   *  `stealth` is summed the same live way (core/stealth.ts) — a translucent membrane hides while it lives. */
+  grants?: { nightVision?: number; perceptionBonus?: number; stealth?: number };
 }
 
 interface CatalogPart {
@@ -51,7 +52,7 @@ interface CatalogPart {
   weapons?: string[];
   armor?: number;
   artery?: boolean;
-  grants?: { nightVision?: number; perceptionBonus?: number };
+  grants?: { nightVision?: number; perceptionBonus?: number; stealth?: number };
 }
 interface PlanBlock {
   parts?: Record<string, CatalogPart>;
