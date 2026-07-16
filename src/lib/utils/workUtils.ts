@@ -1,4 +1,6 @@
 import type { Pawn, WorkAssignment } from '$lib/game/core/types';
+import { stateLabel as stateDefLabel } from '$lib/game/core/stateDefs';
+import { resourceObjectDefById } from '$lib/game/core/resourceObjectDefs';
 
 /** A pawn's labor level (0–4) for a work id: a `laborSettings` override wins, else the legacy 0–12
  *  `workPriorities` value bucketed. Single source for the work tab and WorkCellTooltip. */
@@ -84,12 +86,15 @@ export function stateColor(pawn: Pick<Pawn, 'currentState'>): string {
 export function stateLabel(pawn: Pick<Pawn, 'currentState' | 'activeJob'>): string {
   const s = pawn.currentState ?? 'Idle';
   if (s === 'Working' && pawn.activeJob) {
-    if (pawn.activeJob.type === 'harvest')
-      return pawn.activeJob.resourceId?.toUpperCase() ?? 'HARVEST';
+    if (pawn.activeJob.type === 'harvest') {
+      const rid = pawn.activeJob.resourceId;
+      const name = rid ? (resourceObjectDefById(rid)?.displayName ?? rid) : 'Harvesting';
+      return name.toUpperCase();
+    }
     if (pawn.activeJob.type === 'construct') return 'BUILDING';
     if (pawn.activeJob.type === 'craft') return 'CRAFTING';
   }
-  return s.toUpperCase();
+  return stateDefLabel(s).toUpperCase();
 }
 
 export function needBar(val: number): string {

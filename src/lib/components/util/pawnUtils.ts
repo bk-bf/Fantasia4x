@@ -1,5 +1,14 @@
 import type { GameState, Job, Pawn } from '$lib/game/core/types';
 import { jobService } from '$lib/game/services/JobService';
+import { itemService } from '$lib/game/services/ItemService';
+import { resourceObjectDefById } from '$lib/game/core/resourceObjectDefs';
+
+/** Human name for a harvest-node or item id — resource-object nodes (berry_bush) via their displayName,
+ *  otherwise the item def name, never the raw id. */
+function resourceLabel(id: string | undefined): string {
+  if (!id) return 'resource';
+  return resourceObjectDefById(id)?.displayName ?? itemService.getItemDisplayName({ resourceId: id });
+}
 
 export interface PawnTaskSummary {
   currentState: string;
@@ -17,11 +26,11 @@ function getWorkKeyForJob(job: Job): string {
 function describeJob(job: Job): string {
   switch (job.type) {
     case 'harvest':
-      return `harvest ${job.resourceId ?? 'resource'} @ (${job.targetX},${job.targetY})`;
+      return `harvest ${resourceLabel(job.resourceId)} @ (${job.targetX},${job.targetY})`;
     case 'construct':
       return `build @ (${job.targetX},${job.targetY})`;
     case 'haul':
-      return `haul ${job.resourceId ?? 'goods'} @ (${job.targetX},${job.targetY})`;
+      return `haul ${resourceLabel(job.resourceId)} @ (${job.targetX},${job.targetY})`;
     case 'craft':
       return 'craft item';
     case 'eat':
@@ -40,15 +49,17 @@ function describeJob(job: Job): string {
 function describeActiveJob(job: Pawn['activeJob']): string {
   if (!job) return 'idle';
 
+  // NOTE: the active job's targetX/targetY are stripped from the worker→main projection
+  // (entityProjection.ts), so they're always undefined here — never render active-job coords.
   switch (job.type) {
     case 'harvest':
-      return `harvest ${job.resourceId ?? 'resource'} @ (${job.targetX},${job.targetY})`;
+      return `harvest ${resourceLabel(job.resourceId)}`;
     case 'construct':
-      return `build @ (${job.targetX},${job.targetY})`;
+      return 'build';
     case 'craft':
       return 'craft item';
     case 'haul':
-      return `haul ${job.resourceId ?? 'goods'} @ (${job.targetX},${job.targetY})`;
+      return `haul ${resourceLabel(job.resourceId)}`;
     case 'need':
       return job.targetState === 'Sleeping' ? 'rest' : 'eat';
     default:
