@@ -1,12 +1,25 @@
 <!-- STEALTH — a specialised sneak build: size-driven stealth value vs creature detection, a hit-and-run
-     assassin identity. Phase 1 = pawns only. Design locked with the user 2026-07-10; NOT yet built. -->
+     assassin identity. Phase 1 = pawns only. Design locked with the user 2026-07-10; built 2026-07-14. -->
 
 # STEALTH — Sneak Value, Detection Rolls & the Hit-and-Run Assassin
 
-> **Related:** [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md) (ADR-031 draft below) · [ROADMAP](ROADMAP.md) · [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [ENGINE-PERFORMANCE](../archive/ENGINE-PERFORMANCE.md)
+> **Related:** [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md) (ADR-032) · [ROADMAP](ROADMAP.md) · [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [ENGINE-PERFORMANCE](../archive/ENGINE-PERFORMANCE.md)
 
-**Status:** Design locked (2026-07-10), unimplemented. Phase 1 = **pawns only**. Phase 2 (screen-invisible
-stealthy creatures) is scoped at the end but deferred.
+**Status:** Phase 1 **built 2026-07-14** (landed as **ADR-032** — this spec's "ADR-031" draft number
+was taken by hide wear in the interim). The **encounter balance pass is the one open item** (§12).
+Phase 2 (screen-invisible stealthy creatures) stays deferred. Build-time deviations, each reconciling
+the spec against systems that landed after it locked:
+
+- `matted-hide` is NOT a new trait — the existing `downy-coat → thick-fur → winter-mane` pelt chain
+  IS the beast tanky fork (ADR-029 moved natural armour onto the trait), and `getStealth` now drags
+  stealth −0.04 per `naturalArmor` point generically, so ANY pelt/plating vetoes the prowl by itself.
+- The generic personal trait ships as **`soft-tread`** (`light-footed` already exists as the
+  dodge/knockdown trait).
+- `chameleon-skin` keeps its id but is NAMED **"Chameleon Guise"** (ADR-028 naming law: no anatomy
+  words in stat/attribute trait names).
+- Armour `stealthMod` is **auto-derived from weight** (−0.03/kg) with an explicit value only on the
+  soot-darkened jerkin — §13's recommended resolution of that dial.
+- The stats.jsonc formula engine gained **`clamp()`** (it had none) for the DEX hard gate.
 
 ---
 
@@ -25,14 +38,14 @@ is literally zero), and armour/natural-armour **subtracts** from it. This is wha
 
 ## 2. Locked design decisions (from the 2026-07-10 Q&A)
 
-- [ ] **Always-on passive.** Every pawn's stealth value passively gates whether creatures *acquire* them as
+- [x] **Always-on passive.** Every pawn's stealth value passively gates whether creatures *acquire* them as
   a target — no stance toggle. A nimble scout naturally avoids notice; the reward only fires when an
   undetected pawn actually lands a hit.
-- [ ] **Reward = ×3–4 on `hit_precision`** while undetected (final multiplier a tuning dial, §6). Doubling a
+- [x] **Reward = ×3–4 on `hit_precision`** while undetected (final multiplier a tuning dial, §6). Doubling a
   ~0.05 base is too weak for a fully specialised build.
-- [ ] **A stealth strike auto-reveals** the pawn. No chain-backstab. To re-strike from stealth you must exit
+- [x] **A stealth strike auto-reveals** the pawn. No chain-backstab. To re-strike from stealth you must exit
   the creature's vision range and re-enter → **hit-and-run**.
-- [ ] **Re-stealth reuses the existing LOS give-up path** ([entityAI.ts](../../../src/lib/game/services/entity/entityAI.ts) `lastSeenX/Y` memory): break line-of-sight + leave
+- [x] **Re-stealth reuses the existing LOS give-up path** ([entityAI.ts](../../../src/lib/game/services/entity/entityAI.ts) `lastSeenX/Y` memory): break line-of-sight + leave
   vision → the mob forgets → the pawn is stealthable again.
 
 ## 3. Where it plugs in (all pre-existing machinery)
@@ -287,23 +300,41 @@ own pass. Also parks the **hearing/smell detection channel** (§5 realism upgrad
 
 ## 12. Acceptance criteria
 
-- [ ] `stealth` stat added to `stats.jsonc` (size×DEX×moving base); `getStealth()` in `core/stealth.ts` sums
-  base + trait `stealth` + part grants + armour `stealthMod`.
-- [ ] `armorProperties.stealthBonus` renamed to `stealthMod`; summed by `getStealth`.
-- [ ] Detection roll wired at the `entityAI` `inVision` gate (per-mob ~2 s timer, cached; proximity +0.25;
+- [x] `stealth` stat added to `stats.jsonc` (size×DEX×moving base); `getStealth()` in `core/stealth.ts` sums
+  base + trait `stealth` + part grants + armour `stealthMod`. *(2026-07-14 — `evaluateStat('stealth')`
+  folds both layers; `compileFormula` gained `clamp()` for the DEX gate. `core/stealth.test.ts`.)*
+- [x] `armorProperties.stealthBonus` renamed to `stealthMod`; summed by `getStealth`. *(2026-07-14 — with
+  the weight-derived fallback, −0.03/kg, for unauthored pieces.)*
+- [x] Detection roll wired at the `entityAI` `inVision` gate (per-mob ~2 s timer, cached; proximity +0.25;
   night dampening via `dampenLightByNightVision`); `nearestPawn` skips undetected candidates.
-- [ ] Undetected strike applies `×STEALTH_STRIKE_MULT` to `hit_precision` in `resolveHit`, then auto-reveals
-  (self + pack); verified for **both** melee and ranged.
-- [ ] Re-stealth reuses the LOS give-up / `lastSeen` forget path.
-- [ ] Traits added: `padded-prowl`, `matted-hide`, `constant-howling` (beast split); `chameleon-skin`,
-  `ambush-stillness`, `duskshroud`, `light-footed`; `translucent-skin` gated behind a future slime lineage.
-  All pass `traitRegistry.test.ts`; all strings player-facing (no jargon).
-- [ ] New stealth gear: one `stealthMod +0.3` light garment; **blowgun** + precision-ranged variant with
-  high `critMod`; natural-armour `stealthMod` penalties set.
-- [ ] Constraint audit re-verified: no existing pawn/creature ≥ ~0.3 stealth without deliberate build.
-- [ ] Encounter balance pass after always-on detection lands.
-- [ ] ADR-031 written into `DECISIONS.md` + onboarded into `codegraph.config.json`.
-- [ ] `.docs/game/DESIGN.md` (combat/mechanics) + `ARCHITECTURE.md` (new `core/stealth.ts`) updated.
+  *(2026-07-14 — `entityHelpers.isPawnDetected`, cache in `Mob.stealthChecks` (ENTITY_DROP-stripped,
+  in-place mutation), jittered retry stamp; skip loop costs nothing while no stealther is in sight.)*
+- [x] Undetected strike applies `×STEALTH_STRIKE_MULT` to `hit_precision` in `resolveHit`, then auto-reveals
+  (self + pack); verified for **both** melee and ranged. *(2026-07-14 — mult 3.5 before `critMod`, under
+  the existing 0.6 crit cap; reveal in `performAttack` on LANDED pawn→mob hits, packmates = shared
+  lair/party within 12 tiles. Melee and ranged share the one `resolveHit` crit line.)*
+- [x] Re-stealth reuses the LOS give-up / `lastSeen` forget path. *(2026-07-14 — the give-up return also
+  clears `stealthChecks`; elsewhere a detected entry expires after ~30 s unseen, so grazers can be
+  re-stalked.)*
+- [x] Traits added: `padded-prowl`, ~~`matted-hide`~~, `constant-howling` (beast split); `chameleon-skin`,
+  `ambush-stillness`, `duskshroud`, ~~`light-footed`~~ `soft-tread`; `translucent-skin` gated behind a
+  future slime lineage. All pass `traitRegistry.test.ts`; all strings player-facing (no jargon).
+  *(2026-07-14 — matted-hide folded into the existing thick-fur pelt chain via the generic
+  natural-armour drag; translucent-skin is a commented block beside chameleon-skin until slime lands.)*
+- [x] New stealth gear: one `stealthMod +0.3` light garment; **blowgun** + precision-ranged variant with
+  high `critMod`; natural-armour `stealthMod` penalties set. *(2026-07-14 — `soot_darkened_jerkin`,
+  `blowgun` (critMod 0.15) + `blow_dart`, `hunting_recurve` (critMod 0.10, drawPower 1.2 vs war bow's
+  1.7); all craftable at the makers_bench. Natural-armour penalty = −0.04/`naturalArmor` point.)*
+- [x] Constraint audit re-verified: no existing pawn/creature ≥ ~0.3 stealth without deliberate build.
+  *(2026-07-14 — enforced by `core/stealth.test.ts` §9 suite: default pawn ≈ 0.2, positive `stealth`
+  effects whitelisted, big beast + prowl stays < 1.0.)*
+- [ ] Encounter balance pass after always-on detection lands. *(OPEN — mobs no longer acquire pawns
+  instantly: ~9 %/check at the vision border, ~34 % adjacent for a default pawn. Playtest wolf/goblin
+  encounters and tune §13 dials in `core/stealth.ts`.)*
+- [x] ~~ADR-031~~ **ADR-032** written into `DECISIONS.md` + onboarded into `codegraph.config.json`.
+  *(2026-07-14 — the draft number was taken by hide wear.)*
+- [x] `.docs/game/DESIGN.md` (combat/mechanics) + `ARCHITECTURE.md` (new `core/stealth.ts`) updated.
+  *(2026-07-14.)*
 
 ## 13. Open tuning dials
 

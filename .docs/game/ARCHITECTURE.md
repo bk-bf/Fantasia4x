@@ -107,6 +107,7 @@ Never compute flat bonus sums manually when a modifier system method exists.
 | `core/Work.ts`      | Work category definitions                                                |
 | `core/Culture.ts`   | Culture generation: archetype-biased pool (15–25), procedural lore/description, relations (ADR-023) |
 | `core/BodyParts.ts` | **Anatomy loader** (ADR-024): loads `database/limbmap.jsonc` → global `PART_DEF_MAP`, per-plan hit-roll tables, `createBodyPlanLimbs(plan, bodyScale)`, part→weapon/armour bindings |
+| `core/stealth.ts`   | **Stealth model** (ADR-032): Layer B additives on the `stealth` stat (trait effects, living-part grants, worn `stealthMod`/weight drag, natural-armour drag), pure detection-roll math (`detectionScore`/`detectionChance`), reveal helpers, and every stealth tuning dial. The roll rides the `entityAI` vision gate (`entityHelpers.isPawnDetected`), cached per mob-pawn in `Mob.stealthChecks` |
 | `core/Locations.ts` | Exploration zone definitions                                             |
 | `core/Events.ts`    | Event type definitions                                                   |
 

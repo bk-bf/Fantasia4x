@@ -10,6 +10,8 @@
 //                        style weight; see core/workExperience.ts. 1.0 for non-work formulas.)
 //              Non-capacity formulas multiply by relevant capacities so limb damage
 //              cascades into stat reduction. Example: dodge = (1.0 + (DEX−10)×0.02) × moving
+//              clamp(x, lo, hi) is the one supported function (hard floors/caps, e.g. stealth's
+//              DEX gate — zero below the floor, not merely small).
 //              Work formulas: SKILL is the BASE; core stats are only a small tertiary supplement
 //              (STR+DEX → speed, INT+PER → yield, all four → quality; ≈ +0.27 max at stat 100).
 [
@@ -48,6 +50,16 @@
         "primaryStat": "dexterity",
         "formula"    : "(1.0 + (DEX − 10) × 0.02 − (weight − 70) × 0.002) × moving",
         "description": "evasion (× moving; heavier = harder to dodge)"
+    },
+    {
+        // STEALTH base (Layer A): sizeFactor (weight, dominant) × dexGate (hard zero below DEX 8)
+        // × moving. Traits/part grants/armour stealthMod layer on top in core/stealth.ts (Layer B),
+        // folded in by evaluateStat — so reading this stat gives the FULL stealth value.
+        "id"         : "stealth",
+        "category"   : "combat",
+        "primaryStat": "dexterity",
+        "formula"    : "clamp(1 + (70 − weight) × 0.015, 0.2, 2.2) × clamp((DEX − 8) × 0.1, 0.0, 1.4) × moving",
+        "description": "how easily the body goes unnoticed — a small, deft, sound-footed frame slips a watch that a big or clumsy one never could (× moving; a bad leg gives you away). Armour and a heavy tread cost it."
     },
     {
         "id"         : "knockdown_resistance",

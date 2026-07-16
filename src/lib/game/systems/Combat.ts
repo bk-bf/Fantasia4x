@@ -57,6 +57,12 @@ import {
   weatherSightMul
 } from '../services/EnvironmentService';
 import { isWitnessedByColony } from '../core/vision';
+import {
+  isDetectedBy,
+  revealPawnToMob,
+  STEALTH_STRIKE_MULT,
+  STEALTH_PACK_ALERT_RADIUS
+} from '../core/stealth';
 import { kingdomService } from '../services/KingdomService';
 import { socialService } from '../services/SocialService';
 import { memoryService } from '../services/MemoryService';
@@ -840,8 +846,18 @@ class CombatServiceImpl implements CombatService {
     // Crit: base hit_precision stat (DEX/PER + capacities) plus this weapon's critMod.
     // A crit multiplies the post-mitigation damage — so a high-crit build with a
     // high-crit weapon spikes hard.
+    // STEALTH strike: a pawn the defending creature has NOT detected multiplies its hit_precision
+    // (before the weapon's critMod adds) — the one devastating opening blow that finds an eye or the
+    // throat. Melee and ranged share this path, so a sneak-shot gets it too. The landed hit then
+    // auto-reveals (performAttack), so the bonus never applies to the second swing.
+    const stealthStrike =
+      'entityClass' in defender &&
+      !('entityClass' in attacker) &&
+      !isDetectedBy(defender as Mob, attacker.id);
     const critChance = clamp(
-      pawnStatService.evaluateStat('hit_precision', attacker) + critMod,
+      pawnStatService.evaluateStat('hit_precision', attacker) *
+        (stealthStrike ? STEALTH_STRIKE_MULT : 1) +
+        critMod,
       0,
       CRIT_CHANCE_CAP
     );
@@ -1343,6 +1359,24 @@ class CombatServiceImpl implements CombatService {
       attacker.id !== target.id
     ) {
       state = socialService.onFriendlyFire(state, attacker as Pawn, target as Pawn);
+    }
+
+    // STEALTH auto-reveal: a pawn's LANDED hit on a creature marks the pawn detected by it — and by
+    // its packmates nearby (same lair brood / kingdom party — the yelp carries), so there is no
+    // chain-backstab: to strike from stealth again the pawn must break contact, leave vision, and
+    // let the pack forget. A whiffed swing reveals nothing (the crit bonus only pays on hits anyway).
+    if (result.hit && !('entityClass' in attacker) && 'entityClass' in target) {
+      const struck = target as Mob;
+      revealPawnToMob(struck, attacker.id, turn);
+      const packKey = struck.lairId ?? struck.partyId;
+      if (packKey != null) {
+        for (const m of state.mobs ?? []) {
+          if (m.id === struck.id || m.isAlive === false) continue;
+          if ((m.lairId ?? m.partyId) !== packKey) continue;
+          if (chebyshev(m.x, m.y, struck.x, struck.y) <= STEALTH_PACK_ALERT_RADIUS)
+            revealPawnToMob(m, attacker.id, turn);
+        }
+      }
     }
 
     // Visual lunge: thrust the attacker glyph toward the struck tile and snap it back

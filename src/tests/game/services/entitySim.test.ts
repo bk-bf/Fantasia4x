@@ -43,6 +43,18 @@ function smallWorld(w = 20, h = 20) {
   );
 }
 
+/** STEALTH: these suites exercise POST-detection FSM behaviour (aggro, alerts, flee, combat), so the
+ *  fixtures stamp every test pawn as already-detected — otherwise the probabilistic ~2 s detection
+ *  roll at the vision gate makes single-tick assertions a coin flip. Fresh object per mob (entries
+ *  mutate in place); `at: Infinity` survives any test turn until the first refresh. */
+function detectedTestPawns(): Mob['stealthChecks'] {
+  return {
+    p: { at: Infinity, detected: true },
+    p1: { at: Infinity, detected: true },
+    hunter: { at: Infinity, detected: true }
+  };
+}
+
 function makeGoblin(over: Partial<Mob> = {}): Mob {
   return {
     id: 'g1',
@@ -60,6 +72,7 @@ function makeGoblin(over: Partial<Mob> = {}): Mob {
     conditions: [],
     needs: { hunger: 0, fatigue: 0 },
     stateSince: 0,
+    stealthChecks: detectedTestPawns(),
     ...(over as object)
   } as unknown as Mob;
 }
@@ -360,6 +373,7 @@ describe('prey reacts to a pawn hunter (same circuits as predator-prey)', () => 
       conditions: [],
       needs: { hunger: 0, fatigue: 0 },
       stateSince: 0,
+      stealthChecks: detectedTestPawns(),
       ...(over as object)
     } as unknown as Mob;
   }
@@ -499,6 +513,7 @@ describe('feeding states do not oscillate (hostile FSM + unreachable forage)', (
       conditions: [],
       needs: { hunger: 0, fatigue: 0 },
       stateSince: 0,
+      stealthChecks: detectedTestPawns(),
       ...(over as object)
     } as unknown as Mob;
   }
@@ -519,6 +534,7 @@ describe('feeding states do not oscillate (hostile FSM + unreachable forage)', (
       conditions: [],
       needs: { hunger: 0, fatigue: 0 },
       stateSince: 0,
+      stealthChecks: detectedTestPawns(),
       ...(over as object)
     } as unknown as Mob;
   }

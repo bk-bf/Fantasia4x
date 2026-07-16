@@ -747,6 +747,32 @@
         "aura"        : { "condition": "pack_fury", "radius": 3, "affects": "allies" },
         "effects"     : {}
     },
+    // STEALTH §7a — the beast fork: a soft-footed prowler OR a thick-pelted tank, never both. The
+    // tanky path is the EXISTING downy-coat→thick-fur→winter-mane chain (its `naturalArmor` now
+    // drags stealth down via core/stealth.ts, so the pelt itself vetoes the prowl — no matted-hide
+    // duplicate needed), and constant-howling can veto the stealth path outright.
+    {
+        "id"          : "padded-prowl",
+        "scope"       : "cultural",
+        "rarity"      : "rare",
+        "kind"        : "attribute",
+        "lineage"     : ["beast"],
+        "name"        : "Padded Prowl",
+        "description" : "They move on the balls of their feet, weight rolling silent through each step, the way a cat crosses a room.",
+        "flavorLine"  : "you never hear them come into the room",
+        "effects"     : { "stealth": 0.4 }
+    },
+    {
+        "id"          : "constant-howling",
+        "scope"       : "cultural",
+        "rarity"      : "negative",
+        "kind"        : "attribute",
+        "lineage"     : ["beast", "werewolf"],
+        "name"        : "Constant Howling",
+        "description" : "The throat is never wholly quiet: a low growl under the breath, a huff, the odd cry answered from the tree line.",
+        "flavorLine"  : "even asleep they mutter and grumble at something",
+        "effects"     : { "stealth": -1.5 }
+    },
     // ── LINEAGE MARKERS (LINEAGES §1) — the identity a pawn holds once born into or awakened to the
     //    bloodline. Pure markers: members carry the payloads. Werewolf's transform set, Vampiric's
     //    feeding and the rest of their catalogs land with their subsystems (LINEAGES-II). ──
@@ -931,6 +957,25 @@
         "description" : "Eyes made for silted water and moonless bogs, the murk is no curtain to them.",
         "effects"     : {"nightVision": 0.5}
     },
+    // STEALTH §7b — colour-shifting camouflage (attribute: the ability, not the organ — ADR-028
+    // naming law keeps "skin" out of the NAME; the id predates the law and stays for stability).
+    {
+        "id"          : "chameleon-skin",
+        "scope"       : "cultural",
+        "rarity"      : "rare",
+        "kind"        : "attribute",
+        "lineage"     : ["amphibian"],
+        "name"        : "Chameleon Guise",
+        "description" : "The skin drinks the colour of whatever lies behind it, bark or mud or wet stone, until the outline is simply gone.",
+        "flavorLine"  : "against the reeds you lose them entirely",
+        "effects"     : { "stealth": 0.5 }
+    },
+    // STEALTH §7b FUTURE — slime lineage (not in the lineage roster yet). The strongest stealth
+    // additive (a half-see-through body); ship it when the slime lineage lands:
+    // { "id": "translucent-skin", "scope": "cultural", "rarity": "rare", "kind": "attribute",
+    //   "lineage": ["slime"], "name": "Translucent Guise",
+    //   "description": "Light passes half through them; at a distance they are little more than a smear of the wall behind.",
+    //   "flavorLine": "you only catch them by the wet gleam", "effects": { "stealth": 0.6 } },
     {
         "id"           : "torpid-blood",
         "scope"        : "cultural",
@@ -967,6 +1012,18 @@
         "grafts"      : [ { "limb": "spinnerets", "parts": ["spinneret"] } ],
         "effects"     : {}
     },
+    // STEALTH §7b — the ambush hunter's stillness.
+    {
+        "id"          : "ambush-stillness",
+        "scope"       : "cultural",
+        "rarity"      : "uncommon",
+        "kind"        : "attribute",
+        "lineage"     : ["arachnid"],
+        "name"        : "Ambush Stillness",
+        "description" : "They can hold utterly motionless for as long as it takes, until the eye slides past them as part of the ground.",
+        "flavorLine"  : "you'd swear the corner was empty a moment ago",
+        "effects"     : { "stealth": 0.3 }
+    },
     {
         "id"           : "parched-skin",
         "scope"        : "cultural",
@@ -1000,6 +1057,19 @@
         "name"        : "Unnatural Vigor",
         "description" : "A strength that was not earned and does not tire the way honest muscle does.",
         "effects"     : {"strengthBonus": 2}
+    },
+    // STEALTH §7b — a dusk-shroud: moderate, strongest in the dark the line already loves (night
+    // synergy is free — creature vision ranges shrink after dark).
+    {
+        "id"          : "duskshroud",
+        "scope"       : "cultural",
+        "rarity"      : "uncommon",
+        "kind"        : "attribute",
+        "lineage"     : ["vampiric"],
+        "name"        : "Duskshroud",
+        "description" : "In low light the edges of them go soft and uncertain, as if the dark were reluctant to give them up.",
+        "flavorLine"  : "at dusk you keep losing where they end and the shadow begins",
+        "effects"     : { "stealth": 0.3 }
     },
     {
         // (id distinct from the old vampiric bundle's nested "sun-cursed" subcap — that bundle flattens
@@ -1310,6 +1380,18 @@
         "name"       : "Light-Footed",
         "description": "A shifting, hard-to-pin target that keeps its feet.",
         "effects"    : { "combatMods": {"dodge": 1.15, "knockdown_resistance": 1.15} }
+    },
+    // STEALTH §7b — the generic (non-lineage) stealth aptitude, so a small vanilla race can build
+    // toward the sneak too. (light-footed above is the dodge cousin; this one is the quiet cousin.)
+    {
+        "id"         : "soft-tread",
+        "scope"      : "personal",
+        "rarity"     : "uncommon",
+        "kind"       : "attribute",
+        "name"       : "Soft Tread",
+        "description": "A quiet, economical way of moving that leaves the floorboards and the dry leaves undisturbed.",
+        "flavorLine" : "they cross a still room and nothing stirs",
+        "effects"    : { "stealth": 0.25 }
     },
     {
         "id"         : "untouchable",

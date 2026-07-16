@@ -556,7 +556,10 @@ export interface Item {
     // Environmental bonuses
     coldResistance?: number; // 0–1: reduces cold exposure (hypothermia) while worn
     heatResistance?: number; // 0–1: reduces heat exposure (heat stroke) while worn
-    stealthBonus?: number;
+    /** STEALTH: flat stealth delta while worn — bonus OR penalty. When absent, a worn piece costs
+     *  weight × ARMOR_WEIGHT_STEALTH_DRAG instead (core/stealth.ts), so only deliberately quiet
+     *  (or deliberately loud) garments author it. */
+    stealthMod?: number;
     terrainBonus?: number;
 
     // Social effects
