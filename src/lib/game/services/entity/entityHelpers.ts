@@ -290,7 +290,9 @@ export function nearestPredatorThreat(
   allMobs: Mob[],
   visionRange: number
 ): { pos: { x: number; y: number } } | null {
-  if (!def.huntable) return null;
+  // A creature that is itself a predator (e.g. a huntable-but-threatening hippogriff)
+  // does not flee from other predators — huntable here only gates pawn hunting.
+  if (!def.huntable || def.predator) return null;
   // §S1: O(1) lookup into the per-tick WASM batch result (nearest predator within THREAT_QUERY_RANGE);
   // apply this prey's own light-scaled vision to the cached nearest.
   const best = nearestPredatorMap(allMobs).get(prey.id);
