@@ -167,17 +167,21 @@ in-tree `PHASE-MS` / `A*-STATS`), not by guessing — the recurring session less
   plan have any NV-granting part" → O(1) for the common creature (`core/vision.ts`).
 - [x] **`getNightVision` computed twice/mob/tick** in `stepOne` (once for `mel`, once inside
   `effectiveVisionRange`) → computed once and threaded in.
-- [x] **`buildingLight` def-lookup per building per mob.** `computeTileLightLevel` re-resolved every
-  building's light (`getBuildingById`) every call → lit emitters resolved **once per `buildings`-array ref**
-  (`litBuildingSources`).
 - [x] **`getAmbientLight` per mob → per turn** (keyframe interp is identical for all mobs in a tick;
   memoised by `turn`).
-- [x] **Grove-glow O(all glows) per mob → spatial grid.** The glow loop scanned **every glow on the map**
-  per mob — cost ∝ map area, so a 500² map paid ~2.7× a small map's per-call cost (THE live-vs-bench gap).
-  A uniform-cell bucket index (`groveGrid`, rebuilt only on worldMap-ref change) makes it O(nearby).
-  **Proven map-size-independent: 358 ns/call @ 240² vs 361 ns/call @ 500².**
-- Net: `es:step` 10.5 → 1.8 ms at a sparse-mob moment; the grove grid removes the 500²-map inflator that
-  had pushed a winter colony's `es:step` back to ~12 ms (the cap).
+- [x] **Point light (campfires + grove glows) → a baked per-tile field.** The core fix, and the shape the
+  gameplay light path always should have had. `computeTileLightLevel` looped **every source on the map** per
+  mob per tick (cost ∝ source count ∝ map area — a 500² map paid ~2.7× a small map's per-call cost, THE
+  live-vs-bench gap; `buildingLight` also re-did a `getBuildingById` per building per call). Now the sources
+  are **splatted once per source-set change** into a flat `Float32Array` (`pointLightField`); the call is an
+  **O(1) field read + the per-tick ambient scalar**, allocation-free (an int-version staleness check, not a
+  per-call sig). Re-splats only when a fire toggles or a grove is harvested (`buildingLightVersion` /
+  `groveVersion`), never per tick. **Map-size-independent and near-free: 52.8 ns/call @ 500² (was ~360).**
+  One field serves the sim, pawns, AND the info-panel — the same shape as the renderer's §R1 `_lcData` splat
+  and snow's dirty-baked tile state, finally applied to the gameplay/HUD light path. *(An intermediate
+  spatial grid — O(nearby), 358 ns/call — was tried first and superseded by the field.)*
+- Net: `es:step` 10.5 → 1.8 ms at a sparse-mob moment; the baked field removes the 500²-map light inflator
+  that had pushed a winter colony's `es:step` back to ~12 ms (the cap) — light is now ~0% of the mob step.
 
 ### The snow-onset freeze (the 4× hang) — SHIPPED
 
