@@ -31,7 +31,12 @@ export interface TileDelta {
 }
 
 // Keyed by "y,x" so repeated changes to the same tile within a flush window collapse to one entry.
-const dirty = new Map<string, TileDelta>();
+// SPLIT into two queues (terrain vs snow) so a saturated snow backlog is never re-walked: the budgeted
+// drain iterates at most `snowBudget` snow entries and stops, instead of scanning every held-back entry
+// (a whole-map freeze that outran the drain left ~map-size snow deltas re-walked O(n) EVERY flush).
+// Invariant: a key is in AT MOST one map — 'terrain' is the superset repaint, so it supersedes 'snow'.
+const dirtyTerrain = new Map<string, TileDelta>();
+const dirtySnow = new Map<string, TileDelta>();
 
 /** Record that `worldMap[y][x]` was mutated in place this tick. */
 export function markTileDirty(
@@ -41,44 +46,55 @@ export function markTileDirty(
   kind: 'terrain' | 'snow' = 'terrain'
 ): void {
   const key = y + ',' + x;
-  // 'terrain' wins a collision — it repaints the snow cell too, but not vice versa.
-  const prev = dirty.get(key);
-  dirty.set(key, { y, x, tile, kind: prev?.kind === 'terrain' ? 'terrain' : kind });
+  if (kind === 'terrain') {
+    // Terrain repaint covers the snow cell too — supersede any pending snow-only entry for this tile.
+    dirtySnow.delete(key);
+    dirtyTerrain.set(key, { y, x, tile, kind: 'terrain' });
+  } else if (!dirtyTerrain.has(key)) {
+    // Snow-only: skip if a terrain delta already covers this tile ('terrain' wins the collision).
+    dirtySnow.set(key, { y, x, tile, kind: 'snow' });
+  }
 }
 
 /** Drain accumulated tile deltas for the current flush, or `null` if none changed. */
 export function drainTileDeltas(): TileDelta[] | null {
-  if (dirty.size === 0) return null;
-  const out = Array.from(dirty.values());
-  dirty.clear();
+  if (dirtyTerrain.size === 0 && dirtySnow.size === 0) return null;
+  const out = [...dirtyTerrain.values(), ...dirtySnow.values()];
+  dirtyTerrain.clear();
+  dirtySnow.clear();
   return out;
 }
 
 /**
  * Drain ALL terrain deltas but at most `snowBudget` SNOW deltas, leaving the rest of the snow deltas
- * queued for later flushes. A whole-map snow onset/melt (or the debug slider) marks ~one delta PER TILE
- * in a single tick; shipping all ~150k in one snapshot cost ~800ms on the main thread (structured-clone
- * deserialize + merge). Capping the snow deltas per flush spreads that wave across snapshots so no single
- * postMessage is huge. Terrain deltas are NEVER held back (they're gameplay-latency-sensitive and few).
+ * queued for later flushes. A whole-map snow onset/melt (or the debug slider) marks ~one delta PER TILE;
+ * shipping all ~150k in one snapshot cost ~800ms on the main thread (structured-clone deserialize +
+ * merge). Capping the snow deltas per flush spreads that wave across snapshots so no single postMessage
+ * is huge. Terrain deltas are NEVER held back (gameplay-latency-sensitive and few). The snow drain now
+ * iterates only up to `snowBudget` entries then stops — a saturated queue is O(budget)/flush, not O(n).
  * Returns `null` when nothing was drained this flush. Snow deltas keep `snowRev` bumping each flush they
  * ship, so the main thread stays triggered until the queue empties.
  */
 export function drainTileDeltasBudgeted(snowBudget: number): TileDelta[] | null {
-  if (dirty.size === 0) return null;
   const out: TileDelta[] = [];
+  // Terrain: drain in full (few, latency-sensitive).
+  if (dirtyTerrain.size > 0) {
+    for (const d of dirtyTerrain.values()) out.push(d);
+    dirtyTerrain.clear();
+  }
+  // Snow: at most `snowBudget`, then stop — never walks the held-back remainder.
   let snow = 0;
-  for (const [key, d] of dirty) {
-    if (d.kind === 'snow') {
-      if (snow >= snowBudget) continue; // hold this snow delta for a later flush
-      snow++;
-    }
+  for (const [key, d] of dirtySnow) {
+    if (snow >= snowBudget) break;
     out.push(d);
-    dirty.delete(key); // safe to delete the current entry mid-iteration
+    dirtySnow.delete(key); // safe to delete the current entry mid-iteration
+    snow++;
   }
   return out.length ? out : null;
 }
 
 /** Discard pending deltas (a full worldMap send already carries the same changes). */
 export function clearTileDeltas(): void {
-  dirty.clear();
+  dirtyTerrain.clear();
+  dirtySnow.clear();
 }

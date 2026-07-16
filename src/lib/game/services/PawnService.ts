@@ -771,8 +771,12 @@ export class PawnServiceImpl implements PawnService {
     }
 
     // Conditions — the condition's `mood` effect id while active. Both persistent + transient; a
-    // transient may be stored as "id:stage", so take the id before the colon.
+    // transient may be stored as "id:stage", so take the id before the colon. A STAGED persistent
+    // condition (hypothermia, malnutrition…) ALSO surfaces as a transient pill ("hypothermia:frostbitten"),
+    // so track the ids counted here and skip them below — else its mood counts twice (the −20/−10 bug).
+    const countedConditions = new Set<string>();
     for (const c of pawn.conditions ?? []) {
+      countedConditions.add(c.id);
       const e = moodEffect(getConditionDefById(c.id)?.mood);
       if (e && e.value != null) {
         t += e.value;
@@ -781,6 +785,7 @@ export class PawnServiceImpl implements PawnService {
     }
     for (const id of pawn.transientConditions ?? []) {
       const cid = id.includes(':') ? id.split(':')[0] : id;
+      if (countedConditions.has(cid)) continue; // already counted as a persistent condition above
       const e = moodEffect(getConditionDefById(cid)?.mood);
       if (e && e.value != null) {
         t += e.value;

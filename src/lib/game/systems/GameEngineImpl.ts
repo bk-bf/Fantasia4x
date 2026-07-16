@@ -190,6 +190,9 @@ export class GameEngineImpl implements GameEngine {
   /** Hysteresis latch for the rain⇄snow weather phase (SEASONS_WEATHER ice) — held across ticks so
    *  precipitation doesn't flicker type in the −1…+1°C dead zone around freezing. */
   private weatherFreezing = false;
+  /** Rolling row cursor for the chunked snow/ice scan — the map is swept a band at a time across ticks
+   *  (see the snow phase) instead of one atomic whole-map pass that hitched the worker at high speed. */
+  private _snowScanRow = 0;
   /** Per-phase wall-clock accumulator (ms) + tick count for the periodic perf breakdown logged to
    *  `.debug/perf.log` (verbose only). Names which tick phase is eating time so a regression is located
    *  by measurement, not guesswork. Reset each window. */
@@ -598,14 +601,34 @@ export class GameEngineImpl implements GameEngine {
     }
 
     // Snow + ice: a slow (hourly) IN-PLACE pass — snow builds while snowing & below freezing; ice freezes
-    // a tile's own moisture below freezing; both melt above. Cadence-gated so the per-tile churn stays
-    // bounded (only bucket-crossing tiles ship a delta). `patchPathfindingWalkable` keeps the A* grid in
-    // sync when a water tile freezes solid (walkable) or thaws (impassable).
+    // a tile's own moisture below freezing; both melt above. Only bucket-crossing tiles ship a delta.
+    // `patchPathfindingWalkable` keeps the A* grid in sync when a water tile freezes solid or thaws.
+    // CHUNKED: a whole-map scan run as one atomic tick hitched the worker (an O(map) tick can't be
+    // time-sliced by the batch budget, and at 4× it recurred 4× more often — the snow-onset freeze).
+    // Instead we sweep a band of rows each tick so the map is fully covered every ~snowInterval ticks:
+    // each tile still updates ~once/hour, and the onset delta wave is spread across the sweep, not
+    // dumped in one tick. `hours` = the real time between a row's successive touches (one full sweep).
     const snowInterval = Math.max(1, Math.floor(ticksPerDay / 24));
-    if (gs.worldMap.length > 0 && gs.turn % snowInterval === 0) {
+    const H = gs.worldMap.length;
+    if (H > 0) {
+      const rowsPerTick = Math.max(1, Math.ceil(H / snowInterval));
+      const sweepTicks = Math.ceil(H / rowsPerTick); // ticks for one full-map pass
+      const hours = sweepTicks / (ticksPerDay / 24); // in-game hours a row accrues per touch
+      const startRow = this._snowScanRow >= H ? 0 : this._snowScanRow;
+      const endRow = Math.min(H, startRow + rowsPerTick);
       this.timed('env:snowIce', () =>
-        accumulateSnow(gs.worldMap, gs.weather, gs.season, gs.turn, 1, patchPathfindingWalkable)
+        accumulateSnow(
+          gs.worldMap,
+          gs.weather,
+          gs.season,
+          gs.turn,
+          hours,
+          patchPathfindingWalkable,
+          startRow,
+          endRow
+        )
       );
+      this._snowScanRow = endRow >= H ? 0 : endRow;
     }
 
     // Rebuild the fire-warmth + roof-shelter field once per tick (before needs/conditions read it).

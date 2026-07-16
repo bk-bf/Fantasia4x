@@ -11,10 +11,14 @@
 
   let { mood, open = false }: { mood: MoodModel | undefined; open?: boolean } = $props();
 
-  // MOOD-REWORK: every contribution to the target, benefits on top and debuffs below.
-  const contributions = $derived(
-    [...(mood?.contributions ?? [])].sort((a, b) => b.value - a.value)
-  );
+  // MOOD-REWORK: every contribution to the target, benefits on top and debuffs below. Same-label
+  // contributions are merged (summed) so the keyed {#each} below can never see a duplicate key — two
+  // sources can legitimately share a label (e.g. two traits), which would otherwise crash the block.
+  const contributions = $derived.by(() => {
+    const merged = new Map<string, number>();
+    for (const c of mood?.contributions ?? []) merged.set(c.label, (merged.get(c.label) ?? 0) + c.value);
+    return [...merged].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
+  });
   const moodVal = $derived(mood?.mood ?? 50);
   const target = $derived(mood?.target ?? moodVal);
   const gap = $derived(target - moodVal);

@@ -1190,11 +1190,16 @@ export function accumulateSnow(
   season: Season | undefined,
   turn: number,
   hours = 1,
-  patchWalkable?: (x: number, y: number, walkable: boolean) => void
+  patchWalkable?: (x: number, y: number, walkable: boolean) => void,
+  // Row band [startRow, endRow) to process this call. The caller sweeps the whole map across ticks
+  // (a single atomic whole-map scan hitched the worker, badly at 4×) — see GameEngineImpl's snow phase.
+  startRow = 0,
+  endRow = worldMap.length
 ): void {
   const snowing = isSnowingWeather(weather);
   const wDelta = weatherEffects(weather).tempDelta + diurnalTempDelta(turn, season);
-  for (const row of worldMap) {
+  for (let y = startRow; y < endRow; y++) {
+    const row = worldMap[y];
     for (const tile of row) {
       // Walkable tiles read their baked cache; impassable tiles (cliffs/peaks) carry no cached temp, so
       // recompute their biome temp on the fly here — keeps high peaks snow-capped without storing a temp.
