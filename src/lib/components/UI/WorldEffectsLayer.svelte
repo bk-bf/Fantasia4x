@@ -24,7 +24,7 @@
   import { gameState } from '$lib/stores/gameState';
   const isPaused = gameState.isPaused; // freeze floater animations while paused
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
-  import { weatherEffects } from '$lib/stores/uiPrefs';
+  import { weatherEffects, showDialogBubbles } from '$lib/stores/uiPrefs';
   import WeatherCanvas from './WeatherCanvas.svelte';
 
   // Lair effects are authored at this reference tile size (px); fxScale tracks the live zoom so a
@@ -225,13 +225,16 @@
   {#each $worldEffects.floatingTextOverlays as overlay (overlay.id)}
     {#if overlay.kind === 'social'}
       <!-- Dialog line nested in a transparent bubble: an invisible min-box that reserves space so
-           stacked conversations (GameCanvas de-overlaps their positions) never clip into each other. -->
-      <div
-        class="social-bubble"
-        style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({combatFloatScale});"
-      >
-        <span class="combat-float social">{overlay.text}</span>
-      </div>
+           stacked conversations (GameCanvas de-overlaps their positions) never clip into each other.
+           Suppressed when the player turns off "Dialog bubbles" in Settings. -->
+      {#if $showDialogBubbles}
+        <div
+          class="social-bubble"
+          style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({combatFloatScale});"
+        >
+          <span class="combat-float social">{overlay.text}</span>
+        </div>
+      {/if}
     {:else}
       <div
         class="combat-float {overlay.kind}"

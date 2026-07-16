@@ -20,6 +20,7 @@
   import {
     weatherEffects,
     dayNightTint,
+    showDialogBubbles,
     showFps,
     showTps,
     hideSidebars,
@@ -152,6 +153,12 @@
         label="Day/night UI tint"
         checked={$dayNightTint}
         onToggle={dayNightTint.toggle}
+      />
+      <SettingRow
+        type="checkbox"
+        label="Dialog bubbles"
+        checked={$showDialogBubbles}
+        onToggle={showDialogBubbles.toggle}
       />
 
       <div class="section">Interface</div>
