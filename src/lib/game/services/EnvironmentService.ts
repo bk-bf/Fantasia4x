@@ -136,27 +136,9 @@ interface GroveLight {
 let groveLightSources: GroveLight[] = [];
 let groveLightMapRef: WorldTile[][] | null = null;
 
-// Spatial bucket index over the grove glows so computeTileLightLevel checks only NEARBY glows, not the
-// whole map's worth every call. The linear scan was O(all glows) per in-bubble mob per tick — fine on a
-// small map, but on a 500²+ map the glow count (∝ area) made it the dominant mob-step cost. Rebuilt only
-// when the grove list is (i.e. on worldMap-ref change), so it adds no per-tick work. Cell ≥ any glow
-// radius so a mob's own cell ± the max-radius reach covers every in-range glow.
-const GROVE_CELL = 8;
-const GROVE_STRIDE = 100000; // > any map dimension / GROVE_CELL, so (cx,cy)→key never collides
-let groveGrid = new Map<number, GroveLight[]>();
-let groveMaxRadius = 0;
-
-function rebuildGroveIndex(sources: GroveLight[]): void {
-  groveGrid = new Map();
-  groveMaxRadius = 0;
-  for (const s of sources) {
-    if (s.radius > groveMaxRadius) groveMaxRadius = s.radius;
-    const key = ((s.x / GROVE_CELL) | 0) * GROVE_STRIDE + ((s.y / GROVE_CELL) | 0);
-    let bucket = groveGrid.get(key);
-    if (!bucket) groveGrid.set(key, (bucket = []));
-    bucket.push(s);
-  }
-}
+// Grove rescan version — bumps whenever the grove list is rebuilt (worldMap-ref change), so the baked
+// point-light field (below) knows to re-splat. Harvest-to-depletion staleness matches the thermal cache.
+let groveVersion = 0;
 
 // Lit-building emitters resolved ONCE per buildings-array ref, mirroring the grove cache. Without this,
 // computeTileLightLevel re-ran buildingLight() (a getBuildingById def lookup) for EVERY building on EVERY
@@ -171,6 +153,11 @@ interface BuildingLightSource {
 }
 let buildingLightSources: BuildingLightSource[] = [];
 let buildingLightRef: unknown = null;
+// Signature of the emitter SET (position/radius/intensity only). The buildings ref churns every tick as
+// campfire fuel drains, but this stays stable unless a fire actually toggles — `buildingLightVersion`
+// bumps only on a real change, so the field's per-call staleness check is an int compare (no per-call sig).
+let buildingLightSig = '';
+let buildingLightVersion = 0;
 
 function litBuildingSources(
   buildings: { type: string; status: string; lit?: boolean; x: number; y: number }[]
@@ -178,11 +165,19 @@ function litBuildingSources(
   if (buildings === buildingLightRef) return buildingLightSources;
   buildingLightRef = buildings;
   const out: BuildingLightSource[] = [];
+  let sig = '';
   for (const b of buildings) {
     const light = buildingLight(b);
-    if (light) out.push({ x: b.x, y: b.y, intensity: light.intensity, radius: light.radius });
+    if (light) {
+      out.push({ x: b.x, y: b.y, intensity: light.intensity, radius: light.radius });
+      sig += b.x + ',' + b.y + ',' + light.radius + ',' + light.intensity + ';';
+    }
   }
   buildingLightSources = out;
+  if (sig !== buildingLightSig) {
+    buildingLightSig = sig;
+    buildingLightVersion++; // real emitter-set change → the field must re-splat
+  }
   return out;
 }
 
@@ -204,9 +199,67 @@ function scanGroveLight(worldMap: WorldTile[][]): GroveLight[] {
   return out;
 }
 
-/** Total light (ambient + point sources) at a tile centre — mirrors LightingService.sample()
- *  so UI numbers match what the player sees on the map. When `worldMap` is supplied, glowing groves
- *  fold in (rescanned only on map-ref change) so the gameplay light matches the rendered aura. */
+// ── Baked point-light field ──────────────────────────────────────────────────────────────────────
+// Point light (lit campfires + glowing groves) SPLATTED once per source-set change into a flat per-tile
+// Float32Array, so computeTileLightLevel is an O(1) field read + the per-tick ambient scalar — no
+// per-query loop over sources (the old cost, ∝ source count ∝ map area, per mob/pawn per tick). The
+// source set rarely changes (a fire toggles / a grove is harvested); the day/night ambient is uniform
+// and added at read time. One field serves the sim AND the renderer/info-panel. Same pattern as the
+// WebGL renderer's §R1 `_lcData` splat and snow's dirty-baked tile state, applied to the gameplay light.
+let pointLightField: Float32Array | null = null;
+let pointLightW = 0;
+let pointLightH = 0;
+let fieldBuildVer = -1; // emitter-set version the field was splatted for (never built = -1)
+let fieldGroveVer = -1; // grove-set version the field was splatted for
+
+function splatSource(
+  W: number,
+  H: number,
+  sx: number,
+  sy: number,
+  intensity: number,
+  radius: number
+): void {
+  const field = pointLightField!;
+  const r = Math.ceil(radius);
+  const minX = Math.max(0, sx - r);
+  const maxX = Math.min(W - 1, sx + r);
+  const minY = Math.max(0, sy - r);
+  const maxY = Math.min(H - 1, sy + r);
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      const dx = x - sx;
+      const dy = y - sy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < radius) {
+        const falloff = (1 - dist / radius) * (1 - dist / radius);
+        field[y * W + x] += intensity * falloff;
+      }
+    }
+  }
+}
+
+function rebuildPointLightField(
+  W: number,
+  H: number,
+  emitters: BuildingLightSource[],
+  groves: GroveLight[]
+): void {
+  if (!pointLightField || pointLightW !== W || pointLightH !== H) {
+    pointLightField = new Float32Array(W * H);
+    pointLightW = W;
+    pointLightH = H;
+  } else {
+    pointLightField.fill(0);
+  }
+  for (const e of emitters) splatSource(W, H, e.x, e.y, e.intensity, e.radius);
+  for (const g of groves) splatSource(W, H, g.x, g.y, g.intensity, g.radius);
+}
+
+/** Total light (ambient + point sources) at a tile centre — mirrors LightingService.sample() so UI
+ *  numbers match the map. Point light (campfires + glowing groves) is an O(1) read from a field splatted
+ *  only when the source set changes; the per-tick day/night ambient is added here. `worldMap` supplies the
+ *  field dimensions + grove sources. */
 export function computeTileLightLevel(
   turn: number,
   buildings: { type: string; status: string; lit?: boolean; x: number; y: number }[],
@@ -215,53 +268,38 @@ export function computeTileLightLevel(
   worldMap?: WorldTile[][]
 ): number {
   const ambient = getAmbientLight(turn);
-  let point = 0;
-  const emitters = litBuildingSources(buildings);
-  for (let i = 0; i < emitters.length; i++) {
-    const e = emitters[i];
-    const dx = x - e.x;
-    const dy = y - e.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < e.radius) {
-      const falloff = (1 - dist / e.radius) * (1 - dist / e.radius);
-      point += e.intensity * falloff;
-    }
+  const emitters = litBuildingSources(buildings); // refreshes buildingLightSig
+  if (worldMap && worldMap !== groveLightMapRef) {
+    groveLightMapRef = worldMap;
+    groveLightSources = scanGroveLight(worldMap);
+    groveVersion++;
   }
-  // Grove glow contributes to the gameplay light like a building lamp (cached scan, ref-invalidated).
-  // Only the glows in the cells within reach of (x,y) are checked — O(nearby), not O(all glows).
-  if (worldMap) {
-    if (worldMap !== groveLightMapRef) {
-      groveLightMapRef = worldMap;
-      groveLightSources = scanGroveLight(worldMap);
-      rebuildGroveIndex(groveLightSources);
+  const W = worldMap?.[0]?.length ?? 0;
+  const H = worldMap?.length ?? 0;
+  if (W === 0 || H === 0) {
+    // No map (emitters-only contract) — direct sum, no field to index into.
+    let point = 0;
+    for (let i = 0; i < emitters.length; i++) {
+      const e = emitters[i];
+      const dist = Math.sqrt((x - e.x) ** 2 + (y - e.y) ** 2);
+      if (dist < e.radius) point += e.intensity * (1 - dist / e.radius) ** 2;
     }
-    if (groveLightSources.length > 0) {
-      const range = Math.max(1, Math.ceil(groveMaxRadius / GROVE_CELL));
-      const cx = (x / GROVE_CELL) | 0;
-      const cy = (y / GROVE_CELL) | 0;
-      for (let gx = cx - range; gx <= cx + range; gx++) {
-        if (gx < 0) continue; // no glows at negative coords → skip (also avoids key-sign collisions)
-        for (let gy = cy - range; gy <= cy + range; gy++) {
-          if (gy < 0) continue;
-          const bucket = groveGrid.get(gx * GROVE_STRIDE + gy);
-          if (!bucket) continue;
-          for (let i = 0; i < bucket.length; i++) {
-            const s = bucket[i];
-            const dx = x - s.x;
-            const dy = y - s.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < s.radius) {
-              const falloff = (1 - dist / s.radius) * (1 - dist / s.radius);
-              point += s.intensity * falloff;
-            }
-          }
-        }
-      }
-    }
+    return Math.min(1, Math.max(0.1, ambient + point));
   }
-  // Light is a 0–1 fraction (1 = fully lit): floor at 0.1 (never pitch black for gameplay), and CAP at
-  // 1.0 — ambient + point glows can sum past full (a grove/lamp cluster in daylight), which reads as a
-  // nonsensical >100% in the HUD and gives no extra sight/work benefit beyond fully lit.
+  // Re-splat only when the source set (emitters / groves) or map size actually changed — never per tick.
+  if (
+    buildingLightVersion !== fieldBuildVer ||
+    groveVersion !== fieldGroveVer ||
+    pointLightW !== W ||
+    pointLightH !== H
+  ) {
+    rebuildPointLightField(W, H, emitters, groveLightSources);
+    fieldBuildVer = buildingLightVersion;
+    fieldGroveVer = groveVersion;
+  }
+  const point = x >= 0 && x < W && y >= 0 && y < H ? pointLightField![y * W + x] : 0;
+  // Light is a 0–1 fraction (1 = fully lit): floor at 0.1 (never pitch black), CAP at 1.0 (a grove/lamp
+  // cluster in daylight can sum past full, which reads as a nonsensical >100% and grants no extra sight).
   return Math.min(1, Math.max(0.1, ambient + point));
 }
 
