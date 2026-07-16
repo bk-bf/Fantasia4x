@@ -901,6 +901,20 @@
         "modifiers"  : {"workEfficiency": 1.05}
     },
     {
+        // RALLY: stamped when a comrade talks a broken pawn back to its feet (systems/pawn/rally). Its
+        // `mood` gives a modest lift (cond_rallied), and while its timer holds, shouldRollBreakdown is
+        // suppressed — the grace window that stops a rally→re-break yo-yo. Purely a timed buff, no stat mods.
+        "id"         : "rallied",
+        "name"       : "Rallied",
+        "mood"       : "cond_rallied",
+        "flags"      : ["buff"],
+        "transient"  : true,
+        "description": "Talked back from the brink by someone who got through. Shaken still, but holding.",
+        "color"      : "#8BC34A",
+        "charSpans"  : [ {"sheet": "font", "id": 1} ],
+        "modifiers"  : {}
+    },
+    {
         "id"         : "hearty_meal",
         "name"       : "Hearty Meal",
         "flags"      : ["food", "buff"],

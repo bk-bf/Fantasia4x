@@ -58,6 +58,9 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 export function shouldRollBreakdown(pawn: Pawn, turn: number): boolean {
   const mood = pawn.state?.mood ?? 50;
   if (mood > BREAKDOWN_MOOD_TIER1) return false;
+  // RALLY grace: a freshly-rallied pawn can't break again while the `rallied` buffer holds — the anti-
+  // yo-yo window (mirrors how catharsis' mood lift keeps a naturally-recovered pawn clear of the breakpoint).
+  if ((pawn.conditionTimers?.rallied ?? 0) > 0) return false;
   return (turn + (pawn.debugId ?? 0)) % TICKS_PER_GAME_HOUR === 0;
 }
 

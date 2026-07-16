@@ -647,6 +647,13 @@
         "formula"    : "(1.0 + (CHA − 10) × 0.02 + prestige × 0.004) × ((talking + 1) / 2)",
         "description": "a feel for what a thing is worth to the one across the table — charm carries it, fine regalia lends weight, and a clear voice closes it (× ((talking + 1) / 2))"
     },
+    {
+        "id"         : "oratory",
+        "category"   : "social",
+        "primaryStat": "charisma",
+        "formula"    : "(1.0 + (CHA − 10) × 0.025 + prestige × 0.004) × ((talking + 1) / 2)",
+        "description": "the knack for reaching someone who has come apart and steadying them with a word — warmth carries it, a name that commands respect lends weight, and a clear voice drives it home (× ((talking + 1) / 2))"
+    },
     // SOCIAL-LAYER §5: `intact` is the whole-body scan capacity (fraction of parts still whole and
     // unscarred, PawnStatService). Beauty gates romantic attraction and colours how others react.
     {

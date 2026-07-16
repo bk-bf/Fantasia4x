@@ -152,6 +152,7 @@ import {
   pickBreakdownKind,
   CATHARSIS_HOURS
 } from './pawn/handlers/breakdown';
+import { tryRally, RALLIED_HOURS, RALLY_RELATION_BOOST } from './pawn/rally';
 
 // A breakdown roll's kind → the FSM substate the pawn enters directly (the state IS the kind now).
 const BREAKDOWN_STATE_BY_KIND: Record<string, string> = {
@@ -1620,6 +1621,43 @@ class PawnStateMachineImpl {
             },
             gameState.turn
           );
+          state = { ...state, pawns: state.pawns.map((p) => (p.id === pawn.id ? recovered : p)) };
+          continue;
+        }
+        // A nearby comrade may rally the pawn out of the breakdown early (battle-brother style) — clears it
+        // with the weaker `rallied` buffer + grace window instead of the full natural-recovery catharsis.
+        const rallier = tryRally(stepped, state, gameState.turn);
+        if (rallier) {
+          const timers = { ...(stepped.conditionTimers ?? {}) };
+          delete timers.mental_breakdown;
+          timers.rallied = ticksFromGameHours(RALLIED_HOURS);
+          const recovered = syncTransientConditions(
+            {
+              ...stepped,
+              conditionTimers: timers,
+              currentState: PAWN_STATE.IDLE,
+              activeJob: undefined,
+              path: [],
+              isMoving: false,
+              hasReachedDestination: false
+            },
+            gameState.turn
+          );
+          // Gratitude: getting talked back from the brink strengthens the rallied pawn's bond with
+          // whoever got through (relationships are one symmetric row per pair).
+          state = socialService.adjustRelation(state, stepped, rallier, RALLY_RELATION_BOOST, {
+            label: 'Talked me back from the brink',
+            kind: 'rescue'
+          });
+          simLog.logActivity({
+            turn: gameState.turn,
+            type: 'social',
+            actor: rallier.id,
+            action: 'rallies',
+            target: stepped.id,
+            result: `${rallier.name} talks ${stepped.name} back to their feet.`,
+            severity: 'success'
+          });
           state = { ...state, pawns: state.pawns.map((p) => (p.id === pawn.id ? recovered : p)) };
           continue;
         }

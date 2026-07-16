@@ -92,6 +92,9 @@
     // ── Event thoughts (applied as a fading moodModifier, not a standing source) ───────────────────
     // Catharsis: the big lift a pawn gets on the far side of a mental breakdown (handlers/breakdown), so
     // a spent-out pawn climbs clear of the breakpoint instead of breaking again the moment it recovers.
-    "mood_catharsis": { "label": "A great weight lifted", "value": 40 }
+    "mood_catharsis": { "label": "A great weight lifted", "value": 40 },
+    // RALLY: the modest lift of being talked back to your feet by a comrade — ~1/3 of catharsis, and it
+    // holds only for the `rallied` grace window (conditions.jsonc), so it steadies without curing.
+    "cond_rallied": { "label": "Rallied", "value": 12 }
   }
 }
