@@ -13,7 +13,7 @@ import type { GameState, Pawn } from '../../../core/types';
 import { chebyshev } from '../../../core/distance';
 import { TICKS_PER_GAME_HOUR } from '../../../services/EnvironmentService';
 import { PAWN_STATE } from '../pawnStates';
-import { findCombatThreat, haltMovement, tryAssignSleepPath, FLEE_DISTANCE } from '../pawnHelpers';
+import { findCombatThreat, tryWanderStep, tryAssignSleepPath, FLEE_DISTANCE } from '../pawnHelpers';
 
 export type BreakdownKind = 'crying' | 'hiding' | 'fleeing';
 
@@ -92,10 +92,12 @@ export function pickBreakdownKind(id: string, turn: number, hasThreat: boolean):
 }
 
 /**
- * BREAKDOWN: the pawn is not in control. It executes the kind rolled when the breakdown landed —
- *  `fleeing` bolts from any hostile, `hiding` scurries away from the nearest other pawn to be alone, and
- *  `crying` (the default) just huddles in place. It stays in this state until the breakdown timer runs
- *  out (handled in the tick block, which then stands it back up with a cathartic mood lift).
+ * BREAKDOWN: the pawn is not in control — a FORCED IDLE. It executes the kind rolled when the breakdown
+ *  landed — `fleeing` bolts from any hostile, `hiding` scurries away from the nearest other pawn — and
+ *  otherwise (`crying`, the default) just wanders restlessly. In every case it AMBLES rather than freezing.
+ *  Because this handler never runs need-selection, a broken pawn CANNOT eat/drink/wash/sleep — it mills
+ *  about uncontrollably until the breakdown timer runs out (the tick block then stands it back up with a
+ *  cathartic mood lift) or it collapses from an unmet need.
  */
 export function handleBreakdown(pawn: Pawn, gameState: GameState): GameState {
   switch (pawn.breakdownKind) {
@@ -104,14 +106,14 @@ export function handleBreakdown(pawn: Pawn, gameState: GameState): GameState {
     case 'hiding':
       return hide(pawn, gameState);
     default:
-      return haltMovement(pawn, gameState); // crying — weep where it stands
+      return tryWanderStep(pawn, gameState) ?? gameState; // crying — wander restlessly, not frozen
   }
 }
 
-/** Path away from the nearest hostile (mirrors handleFleeing); huddle once nothing's chasing. */
+/** Path away from the nearest hostile (mirrors handleFleeing); amble once nothing's chasing. */
 function fleeFrom(pawn: Pawn, gameState: GameState): GameState {
   const threat = findCombatThreat(pawn, gameState);
-  if (!threat || !pawn.position) return haltMovement(pawn, gameState);
+  if (!threat || !pawn.position) return tryWanderStep(pawn, gameState) ?? gameState; // nothing to flee — amble
   if ((pawn.path?.length ?? 0) > 0) return gameState; // already retreating
   const mapH = gameState.worldMap.length;
   const mapW = mapH > 0 ? gameState.worldMap[0].length : 0;
@@ -119,12 +121,12 @@ function fleeFrom(pawn: Pawn, gameState: GameState): GameState {
   const dy = Math.sign(pawn.position.y - threat.y) || 1;
   const fleeX = clamp(pawn.position.x + dx * FLEE_DISTANCE, 0, mapW - 1);
   const fleeY = clamp(pawn.position.y + dy * FLEE_DISTANCE, 0, mapH - 1);
-  return tryAssignSleepPath(pawn, fleeX, fleeY, gameState) ?? haltMovement(pawn, gameState);
+  return tryAssignSleepPath(pawn, fleeX, fleeY, gameState) ?? tryWanderStep(pawn, gameState) ?? gameState;
 }
 
-/** Scurry away from the nearest other living pawn to be alone; huddle once far enough. */
+/** Scurry away from the nearest other living pawn to be alone; amble once far enough. */
 function hide(pawn: Pawn, gameState: GameState): GameState {
-  if (!pawn.position) return haltMovement(pawn, gameState);
+  if (!pawn.position) return tryWanderStep(pawn, gameState) ?? gameState;
   if ((pawn.path?.length ?? 0) > 0) return gameState; // already scurrying off
   let nearX = 0;
   let nearY = 0;
@@ -138,12 +140,12 @@ function hide(pawn: Pawn, gameState: GameState): GameState {
       nearY = other.position.y;
     }
   }
-  if (best > HIDE_TRIGGER_DIST) return haltMovement(pawn, gameState); // alone enough — huddle
+  if (best > HIDE_TRIGGER_DIST) return tryWanderStep(pawn, gameState) ?? gameState; // alone enough — amble restlessly
   const mapH = gameState.worldMap.length;
   const mapW = mapH > 0 ? gameState.worldMap[0].length : 0;
   const dx = Math.sign(pawn.position.x - nearX) || 1;
   const dy = Math.sign(pawn.position.y - nearY) || 1;
   const hideX = clamp(pawn.position.x + dx * FLEE_DISTANCE, 0, mapW - 1);
   const hideY = clamp(pawn.position.y + dy * FLEE_DISTANCE, 0, mapH - 1);
-  return tryAssignSleepPath(pawn, hideX, hideY, gameState) ?? haltMovement(pawn, gameState);
+  return tryAssignSleepPath(pawn, hideX, hideY, gameState) ?? tryWanderStep(pawn, gameState) ?? gameState;
 }
