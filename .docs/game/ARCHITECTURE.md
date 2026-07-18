@@ -123,6 +123,24 @@ Gemini API calls live exclusively in `src/routes/api/`. Client code calls the ro
 - **Profiling is browser-native** (the custom in-game profiler was retired — it scaled with entity count and couldn't see the worker boundary). Capture with the **Firefox Profiler** on the `--profiler` sandbox, read headless via `scripts/profile-self.mjs` (JS self-time per worker function) or `pq`. See ENGINE-PERFORMANCE §10.
 - **Gated logging** (`core/log.ts`) — hot-path modules do `import { gatedConsole as console } from '../core/log'` to silence per-tick `log`/`debug`/`info`/`warn` (errors stay live). Hot-path logging was ~75% of per-tick cost before this. New per-tick code must use the shim, not the global `console`.
 
+## Headless Sim & Scenarios (ADR-033)
+
+A **dev-only, in-thread driver** over the same engine + command registry — no second engine, no worker. Spec: [HEADLESS-SIM](../.tasks/open/HEADLESS-SIM.md).
+
+```
+Scenario spec / snapshot  →  game/headless/Scenario.ts   (resetGame bootstrap + dev* command deltas)
+        ↓ GameState
+game/headless/HeadlessSession.ts                          (own GameEngineImpl, synchronous tick/command)
+        ↓
+src/routes/api/sim/*  (+ $lib/server/simSession.ts)       (dev-only HTTP: session/tick/command/state/query/save/load)
+```
+
+- **One primitive, three fronts:** the `/api/sim` HTTP driver (curl/agent), the DEBUG tab's scenario/godmode panel (`DebugGodmode.svelte` + `gameState.loadScenarioPreset`), and the invariant suite (`src/tests/game/headless/`). All steer via `sim/commands.ts` — one registry.
+- **Guarded three ways:** routes are dev-only (`import.meta.env.DEV`), opt-in (`./dev.sh --headless` → `VITE_HEADLESS=1`; 404 otherwise, and the desktop-shell guard exempts `/api/sim/` only under the flag), and inert until `POST /api/sim/session`. The adapter-static build contains no `/api` output at all.
+- **Determinism is a contract:** same scenario + seed + command script ⇒ **byte-identical** state. Everything sim-path is seeded-rng + turn-derived — no `Date.now()` in ids (job/drop/craft/building/instance ids are `t${turn}`-stamped), and module counters/cooldown maps reset at session start (`resetPawnDebugIds`, `resetMobIdCounter`, `resetSocialTransients`). Guarded by the seed-replay test.
+- **WASM under Node:** `WasmPathfinderService.init()` loads the same `.wasm` via `fs` bytes + `initSync` when `!isClientRuntime`, so headless pathfinding is byte-identical to the client's.
+- **One live session per process** (module-singleton `rng`); creating a session replaces the previous one.
+
 ## UI Layer
 
 ### Component tree

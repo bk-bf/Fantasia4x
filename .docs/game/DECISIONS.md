@@ -34,7 +34,7 @@ ADR-027 [GAME]: Dense Glyph Overlays Render via the Cached Chunk Path (2026-07-0
 ADR-028 [GAME]: Typed Trait Kinds + Condition Relationship Graph (TRAIT-SYSTEM-V2) (2026-07-06, Accepted)
 ADR-029 [GAME]: Anatomy-Bound Natural Gear + Layered Subtractive Armour + Unified On-Hit Procs (2026-07-08, Accepted)
 ADR-030 [GAME]: Desktop Wrapper — Electron over Tauri (2026-07-09, Accepted)
-ADR-033 [GAME]: Headless, API-Driven Sim — dev-only in-thread driver over the existing engine + command registry (2026-07-18, Accepted — design, impl deferred)
+ADR-033 [GAME]: Headless, API-Driven Sim — dev-only in-thread driver over the existing engine + command registry (2026-07-18, Accepted — implemented same day)
 
 ---
 
@@ -1325,8 +1325,11 @@ creatures. Guarded by `core/stealth.test.ts` (layers, roll math, §9 constraint 
 
 ### ADR-033 [GAME]: Headless, API-Driven Sim — dev-only in-thread driver over the existing engine + command registry
 
-**Status:** Accepted (2026-07-18) — design; implementation deferred. Full plan in
-[HEADLESS-SIM](../.tasks/open/HEADLESS-SIM.md).
+**Status:** Accepted (2026-07-18) — implemented same day (Phases 0–5; Phase 6 GUI-attach open). Full
+plan + outcomes in [HEADLESS-SIM](../.tasks/open/HEADLESS-SIM.md). Implementation note: the replay
+guarantee hardened into a byte-identical contract — every sim-path id is now turn-derived (no
+`Date.now()`), and module counters/cooldowns (`_pawnDebugIdCounter`, mob `idCounter`, social dialog
+maps) reset per session.
 
 **Context.** The content past the stone age is large and only reachable after an hour+ of play, so it is
 chronically under-tested — the developer always re-tests early game and never fast-forwards into bronze/iron+.

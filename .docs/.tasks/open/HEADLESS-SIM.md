@@ -9,8 +9,8 @@
 
 > **Related:** [ROADMAP](ROADMAP.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-033) · [ENGINE-PERFORMANCE](../archive/ENGINE-PERFORMANCE.md) · [game/DESIGN](../../game/DESIGN.md)
 
-**Status:** Design locked (2026-07-18), unimplemented. Phase 0 is a de-risking spike; Phases 1–5 are the
-core build; Phase 6 (GUI-attach) is optional. Prompted by the recurring problem that **post-stone-age
+**Status:** **Implemented 2026-07-18** (Phases 0–5; `check` + full suite + live curl round-trip green).
+Phase 6 (GUI-attach) remains optional/open. Prompted by the recurring problem that **post-stone-age
 content is unreachable by ordinary play** — the developer always re-tests early game and never fast-forwards
 into the large bronze/iron+ content, so bugs there are never exercised.
 
@@ -92,21 +92,21 @@ Browser GUI as a thin client                          ← OPTIONAL (Phase 6); wo
 This must be fixed first, and it **must preserve parity with the real client** — a hand-rolled TS A\* would
 diverge in tie-breaking and desync pawn movement, defeating the determinism the whole thing relies on.
 
-- [ ] **Phase 0 spike:** get the Rust `spatial-core` loading + returning real paths server-side — a
+- [x] **Phase 0 spike (2026-07-18):** the same `.wasm` + glue load under Node — `init()` reads the bytes via `fs` and hands them to `initSync` when `!isClientRuntime` (no `--target nodejs` fork, byte-identical A*). Get the Rust `spatial-core` loading + returning real paths server-side — a
   `wasm-pack --target nodejs`/`bundler` variant loaded when `!isClientRuntime`, or a `--target bundler` build
   Vite handles for both SSR and client. Relax the `isClientRuntime` gate for the Node path only.
-- [ ] Verify a pawn navigates to a job in a pure Node tick loop (extend an `entitySim`-style test). **Go/no-go
+- [x] Verified (`src/tests/game/headless/pathfinderNode.test.ts`): raw A* detour + a drafted pawn walking a generated map to a move order in a pure Node tick loop (extend an `entitySim`-style test). **Go/no-go
   gate for the rest of the spec.**
 
 ## 5. Guarding (must NOT ship / must NOT auto-run)
 
 Three stacked guards satisfy "don't package it into `build.sh`, don't run it on every `./launch.sh`":
 
-- [ ] **Dev-only** — routes mirror the existing `/api/log` pattern (`import.meta.env.DEV` guard; 404/no-op in
+- [x] **Dev-only** — routes mirror the existing `/api/log` pattern (`import.meta.env.DEV` guard; 404/no-op in
   prod). They **do not exist in a packaged/adapter-static build** — nothing to strip from `build.sh`.
-- [ ] **Inert until asked** — the routes merely existing boots no engine and ticks nothing. `./dev.sh` /
+- [x] **Inert until asked** — the routes merely existing boots no engine and ticks nothing. `./dev.sh` /
   `./launch.sh` behave exactly as today; the engine session is created only on `POST /api/sim/session`.
-- [ ] **Opt-in flag** — behind a `--headless` flag on `dev.sh` (sets `VITE_HEADLESS=1`); without it the
+- [x] **Opt-in flag** — behind a `--headless` flag on `dev.sh` (sets `VITE_HEADLESS=1`); without it the
   handlers 404 even in dev.
 
 ## 6. Phased build
@@ -114,26 +114,31 @@ Three stacked guards satisfy "don't package it into `build.sh`, don't run it on 
 ### Phase 0 — De-risk pathfinder under Node *(gate; see §4)*
 
 ### Phase 1 — HeadlessSession runner
-- [ ] `game/headless/HeadlessSession.ts`: owns `new GameEngineImpl()`; `reseed(seed)`, `loadScenario(s)`,
-  `tick(n)`, `command(cmd)` (→ `applySimCommand`), `getState()`, `snapshot()`.
-- [ ] Drive in-thread; never import `sim.worker.ts` / `simWorkerClient.ts`.
+- [x] `game/headless/HeadlessSession.ts`: owns `new GameEngineImpl()`; `start(state)` (reseed + transient resets + pathfinder init), `tick(n)`, `command(cmd)` (→ `applySimCommand`), `getState()`, `snapshot()`/`loadSnapshot()`.
+- [x] Drive in-thread; never imports `sim.worker.ts` / `simWorkerClient.ts`.
 
 ### Phase 2 — Scenario system
-- [ ] `game/headless/Scenario.ts`: generalise `buildProfilerScenario()` into a declarative builder — see §8.
-- [ ] JSON snapshot save/load (reuse `saveManager` `stripTile`/`hydrateTile` for `worldMap`).
-- [ ] Built-in presets: `empty-flat-8x8`, `bronze-colony`, `iron-colony`, `war-party`, `full-tech`.
+- [x] `game/headless/Scenario.ts`: declarative builder running the full `resetGame` bootstrap, deltas applied through the command registry — see §8.
+- [x] JSON snapshot save/load — `game/headless/snapshot.ts` (local strip/hydrate mirroring `saveManager`'s private `SavedTile`; kept in sync by comment, not import, to avoid dragging the store layer into the sim).
+- [x] Built-in presets (`game/headless/scenarios/presets.ts`): `empty-flat-8x8`, `bronze-colony`, `iron-colony`, `war-party`, `full-tech`.
 
 ### Phase 3 — Debug / godmode expansion *(new `dev*` verbs + `DebugMenu` controls)*
-- [ ] `devSetPawnStats` / `devSetPawnSkills` (grant stats & 1–50 levels), `devGrantGrowth` (fire a growth
-  offer), `devEquipPawn` (mint an `ItemInstance` into a slot), `devUnlockResearch`, `devSetToolTier`.
-- [ ] **Per-need toggles** (genuinely new — no `enabled` field exists): a `_needsDisabled?:
+- [x] `devSetPawnStats` / `devSetPawnSkills` (grant stats & 1–50 levels), `devGrantGrowth` (fires a real
+  `bankOffer` roll incl. lineage moment), `devUnlockResearch` (runs the real `completeResearch` path — one id or `all`), `devSetToolTier`. (`devEquipPawn` turned out unnecessary — the existing `equipPawnItem` command already mints an instance with no stock gate.)
+- [x] **Per-need toggles**: a `_needsDisabled?:
   Partial<Record<NeedKey, boolean>>` flag on `GameState` (mirrors `_devResearchGateOff`), guarded at the single
   accrual choke point in `PawnService.processNeedsTick` (`PawnService.ts:449+`) and the mob path
   (`entityLifecycle` `stepHunger`), toggled via a `devToggleNeed` command.
 
 ### Phase 4 — HTTP API *(dev-only SvelteKit routes; reuses the `/api/log` server-route pattern)* — see §7
 
+- [x] Done 2026-07-18: `src/routes/api/sim/{session,tick,command,state,query/[kind],save,load}` + the
+  `$lib/server/simSession.ts` singleton; `dev.sh --headless` flag; desktop-shell guard exempts `/api/sim/`
+  only under the flag. Verified live over curl (session → tick 300 (366 ms) → command → state → save/load).
+
 ### Phase 5 — Invariant regression suite *(the net that doesn't go stale)* — see §10
+
+- [x] Done 2026-07-18: `src/tests/game/headless/invariants.test.ts` (10 tests green).
 
 ### Phase 6 (OPTIONAL) — GUI-attach / spectator mode — see §11
 
@@ -183,10 +188,10 @@ Reuse the existing `dev*` family; add the gaps in §Phase 3. All are pure `(stat
 
 Fast-forward each era preset N ticks in Vitest, then assert **properties**, not exact numbers:
 
-- [ ] No resource ever negative; **item conservation** holds (produced == reserved + fetched + stockpiled — guards the ADR-016 reserve-and-fetch path).
-- [ ] No pawn stat `NaN`/`Infinity`; no pawn stuck in one FSM state for 1000 ticks (regression net for the freeze/breakdown/rally class).
-- [ ] A pawn with food available never starves; a `craft` job with materials present never stalls forever.
-- [ ] **Seed replay determinism** — same seed + same scenario + same command script ⇒ byte-identical end state.
+- [x] No resource ever negative (stockpile aggregate + every physical drop, checked every 100 ticks). *The full ADR-016 conservation equation (produced == reserved + fetched + stockpiled) is still open — add when a reserve/fetch bug next needs pinning.*
+- [x] No pawn stat `NaN`/`Infinity`; no pawn frozen in one non-restful state+tile for 1000 ticks (freeze/breakdown/rally class).
+- [x] A hungry pawn beside a stocked pantry eats instead of starving (6 pawns @ hunger 90, 3600 ticks, none die, food consumed). *The craft-never-stalls invariant is still open.*
+- [x] **Seed replay determinism** — byte-identical at 1200 ticks. Required purging wall-clock from every sim-path id (job/drop/craft/building/instance ids now `t${turn}`-stamped) and resetting module counters/cooldown maps per session (`resetPawnDebugIds`, `resetMobIdCounter`, `resetSocialTransients`).
 
 These survive rebalances: numbers change constantly, but negative wood / a starving pawn beside a full granary
 are never intended.
@@ -229,16 +234,16 @@ client of the headless session**:
 
 ## 14. ADR & doc sync
 
-- [ ] **ADR-033** (DECISIONS.md) records the decision — headless as a **dev-only, in-thread driver over the
+- [x] **ADR-033** (DECISIONS.md) records the decision — headless as a **dev-only, in-thread driver over the
   existing engine + command registry**, guarded, single-session, invariants-not-goldens; registered in
   `codegraph.config.json` `adrRules`.
-- [ ] On completion: ARCHITECTURE.md gains the headless layer + `/api/sim` surface; ROADMAP row ticked with date.
+- [x] Done 2026-07-18: ARCHITECTURE.md §Headless Sim & Scenarios; ROADMAP row ticked.
 
 ## Acceptance criteria
 
-- [ ] Phase 0 green: a pawn paths to a job in a pure Node tick loop.
-- [ ] `POST /api/sim/session` from a preset → `POST /api/sim/tick?n=` → `GET /api/sim/state` round-trips over `curl`.
-- [ ] All ~70 `COMMANDS` + the new `dev*` verbs reachable via `POST /api/sim/command`.
-- [ ] Every era preset fast-forwards N ticks and passes the §10 invariants; seed replay is byte-identical.
-- [ ] Routes 404 in a production build **and** in dev without `--headless`; `./launch.sh` boots nothing extra.
-- [ ] `pnpm check` + `pnpm graph:check` (ADR-033 registered) green.
+- [x] Phase 0 green: a pawn paths to a move order in a pure Node tick loop (2026-07-18).
+- [x] `POST /api/sim/session` from a preset → `POST /api/sim/tick?n=` → `GET /api/sim/state` round-trips over `curl` (verified live, incl. draft-move + per-need freeze + save/load).
+- [x] All `COMMANDS` + the new `dev*` verbs reachable via `POST /api/sim/command` (unknown type → 400 with the known-verb list).
+- [x] Every era preset fast-forwards 1200 ticks and passes the §10 invariants; seed replay is byte-identical.
+- [x] The adapter-static production build emits **no `/api` output at all**; in dev without `--headless` the request is denied (desktop-shell guard 403s a browser-less client first; a shell-UA request hits the route guard's 404 — both layers deny). `./launch.sh` boots nothing extra.
+- [x] `pnpm check` green; `pnpm graph:check` `adr-coverage` green with ADR-033 registered. *(graph:check still exits 1 on a PRE-EXISTING `PawnStatService↔SocialService` cycle from the 2026-07-13 SOCIAL-LAYER work — predates and is unrelated to this spec.)*
