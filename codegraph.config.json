@@ -3,18 +3,29 @@
   "tsconfig": "tsconfig.json",
   "srcDir": "src/lib",
   "svelteRoot": "src",
-  "rustCrates": ["spatial-core"],
+  "rustCrates": [
+    "spatial-core"
+  ],
   "adrsDoc": ".docs/game/DECISIONS.md",
   "descriptions": "codegraph.descriptions.json",
   "godFunctions": 40,
-  "group": { "namespacePrefix": "game" },
+  "group": {
+    "namespacePrefix": "game"
+  },
   "layers": {
-    "rust": 0, "core": 0, "utils": 0, "database": 0,
-    "webgl": 1, "entities": 1,
-    "ai": 2, "services": 2,
-    "world": 3, "systems": 3,
+    "rust": 0,
+    "core": 0,
+    "utils": 0,
+    "database": 0,
+    "webgl": 1,
+    "entities": 1,
+    "ai": 2,
+    "services": 2,
+    "world": 3,
+    "systems": 3,
     "stores": 4,
-    "components": 5, "routes": 5,
+    "components": 5,
+    "routes": 5,
     "dev": -1
   },
   "adrRules": [
@@ -26,37 +37,183 @@
       "module": "game/services/WasmPathfinderService",
       "msg": "calls WasmPathfinderService directly (use the PathfinderService interface)"
     },
-    { "adr": "ADR-001", "checkable": false, "reason": "Layered singletons — layer direction is enforced by the `layers` rule; \"import the singleton, never new XImpl()\" needs new-expression analysis." },
-    { "adr": "ADR-002", "checkable": false, "reason": "GameStateManager-only mutation — needs field-assignment analysis, not call edges." },
-    { "adr": "ADR-003", "checkable": false, "reason": "All stat calcs via ModifierSystem — a semantic contract, not a structural edge." },
-    { "adr": "ADR-004", "checkable": false, "reason": "AI generation server-side only — a deployment/runtime boundary." },
-    { "adr": "ADR-005", "checkable": false, "reason": "LocalStorage persistence via store — runtime behaviour." },
-    { "adr": "ADR-006", "checkable": false, "reason": "Data files = definitions not logic — partly covered by the `layers` rule (core must not call services)." },
-    { "adr": "ADR-007", "checkable": false, "reason": "Tech-stack choice (SvelteKit + WebGL2) — not an invariant." },
-    { "adr": "ADR-009", "checkable": false, "reason": "Production-chain game design — content, not structure." },
-    { "adr": "ADR-010", "checkable": false, "reason": "Need-priority interruption formula — runtime behaviour." },
-    { "adr": "ADR-011", "checkable": false, "reason": "Gated hot-path logging — runtime behaviour." },
-    { "adr": "ADR-012", "checkable": false, "reason": "Combat wound model — game design." },
-    { "adr": "ADR-013", "checkable": false, "reason": "Deferred combat depth — game design." },
-    { "adr": "ADR-014", "checkable": false, "reason": "Tile occupancy via OccupancyService — bypass detection needs field-level analysis." },
-    { "adr": "ADR-015", "checkable": false, "reason": "Single work model — the superseded path was deleted; nothing to detect." },
-    { "adr": "ADR-016", "checkable": false, "reason": "Physical production (reserve-and-fetch) — runtime behaviour." },
-    { "adr": "ADR-017", "checkable": false, "reason": "Data-driven jobs (jobs.jsonc <-> Job[type] union <-> JobService handler registry) — a data-coverage invariant, not a call edge. Drift is enforced by jobRegistry.test.ts + compile-time JobPoolType guards." },
-    { "adr": "ADR-018", "checkable": false, "reason": "Perception via target persistence + push alerting — runtime AI behaviour and per-entity state, not a call edge." },
-    { "adr": "ADR-019", "checkable": false, "reason": "Line of sight via blocksSight occluder + WASM raycast — data-schema + runtime; the 'callsites never import spatial-core directly' part is already covered by the ADR-008 forbidden-callee-module rule." },
-    { "adr": "ADR-020", "checkable": false, "reason": "Sim scaling strategy (algorithms->WASM->worker, defer multicore) — a sequencing/runtime decision, not a structural invariant." },
-    { "adr": "ADR-021", "checkable": false, "reason": "Sim/render decouple (soft-body pathfinding, terrain cache, MAX_STEPS cap, sim->Worker) — runtime/perf behaviour, not a call-edge invariant." },
-    { "adr": "ADR-022", "checkable": false, "reason": "Throttled job-board reconcile (6-tick cadence, not event-driven) — a runtime cadence/perf decision, not a structural call-edge invariant." },
-    { "adr": "ADR-023", "checkable": false, "reason": "Procedural race pool + pawn raceId (racePool canonical, race = home alias; mixed colonies; trait-resistance condition hook; raceRelations stub) — a data-model + runtime decision, not a structural call-edge invariant. Generator drift is guarded by Race.test.ts." },
-    { "adr": "ADR-024", "checkable": false, "reason": "Data-driven body plans (limbmap.jsonc) + part-bound natural weapons & armour + bodyScale-scaled limb HP + fractures — a data-schema + runtime decision, not a structural call-edge invariant. Drift is guarded by bodyPlans.test.ts + fractures.test.ts." },
-    { "adr": "ADR-025", "checkable": false, "reason": "Graded wind → staged windchilled condition (direct-set), windchill cold coupling, 8-way windDir, and per-pawn upwind ray-march wind-shadow (chosen over a precomputed field) — a data + runtime/perf decision, not a structural call-edge invariant. Guarded by windchill.test.ts." },
-    { "adr": "ADR-026", "severity": "error", "title": "Full-map terrain build only via the terrainPaint seam", "type": "restricted-callee", "callee": "buildGameGrid", "allowFrom": ["components/UI/gameCanvas/terrainPaint::fullRebuildTerrain"], "msg": "full-map terrain rebuild outside the terrainPaint seam (ADR-026: the per-delta path must repaint only changed tiles)" },
-    { "adr": "ADR-026", "severity": "error", "title": "Whole-map hidden-mask BFS only via the terrainPaint seam", "type": "restricted-callee", "callee": "computeHiddenMaskState", "allowFrom": ["components/UI/gameCanvas/terrainPaint::fullRebuildTerrain", "webgl/fantasia-world::computeHiddenMask"], "msg": "whole-map hidden-mask BFS outside the terrainPaint seam (ADR-026: use updateHiddenMaskAt incrementally on a delta)" },
-    { "adr": "ADR-027", "checkable": false, "reason": "Dense glyph overlays (resource short/tall) render via the cached chunk path, not the per-frame dynamic path — a runtime ARGUMENT property (renderGrid always holds both branches; the cached one is selected by passing chunkLayer/cacheVersion), so a regression drops an argument without changing any call edge. Same class as ADR-021's terrain cache. Flagged instead by the resourceRebuilds= counter in perf.log (spikes every frame if the cache breaks)." },
-    { "adr": "ADR-028", "checkable": false, "reason": "Typed trait kinds (stat/attribute strictly separated + naming law; bodyMod reshapes the limbmap; naturalGear armor→encumbrance + limb-bound weapons via hostParts; wounds-as-permanent-injuries; a negative FLAW tier drawn as a Gaussian count) and the condition relationship graph (flags/triggers/activateWhen; chance-less edges stay deterministic) — data-schema + payload-shape + RNG-distribution invariants, not call-edge ones. Guarded by traitRegistry.test.ts, traitFlaws.test.ts, conditionGraph(.Data).test.ts, traitWounds.test.ts." },
-    { "adr": "ADR-029", "checkable": false, "reason": "Anatomy-bound natural gear (weapons via part.weapons + graft; armour = per-part additive armorMods, unified pawn/creature) + layered SUBTRACTIVE per-item-coverage mitigation (partArmorReduction rewrite) + onHitCondition/onHitWound proc split + conditions trigger-only — a data-schema + combat-runtime rewrite, not a call-edge invariant. Guarded by partArmorReduction unit tests, traitRegistry.test.ts (armorMods/covers shape), and the proc tests." },
-    { "adr": "ADR-030", "checkable": false, "reason": "Desktop wrapper resolved to Electron over Tauri (uniform V8 beats Tauri's WebKitGTK/JSC on the JS-bound sim; larger bundle accepted). A distribution/build-target decision — no call edge to check; reflected in root package.json (electron + electron-builder) and desktop-spike/." },
-    { "adr": "ADR-031", "checkable": false, "reason": "Precision-routed vitals (organ/fracture chance × (1 + critChance × K)) + per-fight natural-hide degradation (Mob.hideWear chipped per landed hit, expiring scratch subtracted in naturalArmorPoints) + artery soft targets in limbmap — combat-runtime math + data-schema, not a call-edge invariant. Guarded by the combat suite (combatSim/creatureDurability) and entityProjection.test.ts (snapshot drop)." },
-    { "adr": "ADR-032", "checkable": false, "reason": "Stealth as a detection filter on the existing entityAI inVision gate (per-mob ~2 s cached roll of getStealth vs a PER/night-vision score; reward through the existing resolveHit hit_precision crit; auto-reveal + lastSeen give-up re-stealth) — runtime detection-roll behaviour and data-schema, not a structural call-graph rule. Guarded by core/stealth.test.ts (layers, roll math, constraint audit) and traitRegistry.test.ts." }
+    {
+      "adr": "ADR-001",
+      "checkable": false,
+      "reason": "Layered singletons — layer direction is enforced by the `layers` rule; \"import the singleton, never new XImpl()\" needs new-expression analysis."
+    },
+    {
+      "adr": "ADR-002",
+      "checkable": false,
+      "reason": "GameStateManager-only mutation — needs field-assignment analysis, not call edges."
+    },
+    {
+      "adr": "ADR-003",
+      "checkable": false,
+      "reason": "All stat calcs via ModifierSystem — a semantic contract, not a structural edge."
+    },
+    {
+      "adr": "ADR-004",
+      "checkable": false,
+      "reason": "AI generation server-side only — a deployment/runtime boundary."
+    },
+    {
+      "adr": "ADR-005",
+      "checkable": false,
+      "reason": "LocalStorage persistence via store — runtime behaviour."
+    },
+    {
+      "adr": "ADR-006",
+      "checkable": false,
+      "reason": "Data files = definitions not logic — partly covered by the `layers` rule (core must not call services)."
+    },
+    {
+      "adr": "ADR-007",
+      "checkable": false,
+      "reason": "Tech-stack choice (SvelteKit + WebGL2) — not an invariant."
+    },
+    {
+      "adr": "ADR-009",
+      "checkable": false,
+      "reason": "Production-chain game design — content, not structure."
+    },
+    {
+      "adr": "ADR-010",
+      "checkable": false,
+      "reason": "Need-priority interruption formula — runtime behaviour."
+    },
+    {
+      "adr": "ADR-011",
+      "checkable": false,
+      "reason": "Gated hot-path logging — runtime behaviour."
+    },
+    {
+      "adr": "ADR-012",
+      "checkable": false,
+      "reason": "Combat wound model — game design."
+    },
+    {
+      "adr": "ADR-013",
+      "checkable": false,
+      "reason": "Deferred combat depth — game design."
+    },
+    {
+      "adr": "ADR-014",
+      "checkable": false,
+      "reason": "Tile occupancy via OccupancyService — bypass detection needs field-level analysis."
+    },
+    {
+      "adr": "ADR-015",
+      "checkable": false,
+      "reason": "Single work model — the superseded path was deleted; nothing to detect."
+    },
+    {
+      "adr": "ADR-016",
+      "checkable": false,
+      "reason": "Physical production (reserve-and-fetch) — runtime behaviour."
+    },
+    {
+      "adr": "ADR-017",
+      "checkable": false,
+      "reason": "Data-driven jobs (jobs.jsonc <-> Job[type] union <-> JobService handler registry) — a data-coverage invariant, not a call edge. Drift is enforced by jobRegistry.test.ts + compile-time JobPoolType guards."
+    },
+    {
+      "adr": "ADR-018",
+      "checkable": false,
+      "reason": "Perception via target persistence + push alerting — runtime AI behaviour and per-entity state, not a call edge."
+    },
+    {
+      "adr": "ADR-019",
+      "checkable": false,
+      "reason": "Line of sight via blocksSight occluder + WASM raycast — data-schema + runtime; the 'callsites never import spatial-core directly' part is already covered by the ADR-008 forbidden-callee-module rule."
+    },
+    {
+      "adr": "ADR-020",
+      "checkable": false,
+      "reason": "Sim scaling strategy (algorithms->WASM->worker, defer multicore) — a sequencing/runtime decision, not a structural invariant."
+    },
+    {
+      "adr": "ADR-021",
+      "checkable": false,
+      "reason": "Sim/render decouple (soft-body pathfinding, terrain cache, MAX_STEPS cap, sim->Worker) — runtime/perf behaviour, not a call-edge invariant."
+    },
+    {
+      "adr": "ADR-022",
+      "checkable": false,
+      "reason": "Throttled job-board reconcile (6-tick cadence, not event-driven) — a runtime cadence/perf decision, not a structural call-edge invariant."
+    },
+    {
+      "adr": "ADR-023",
+      "checkable": false,
+      "reason": "Procedural race pool + pawn raceId (racePool canonical, race = home alias; mixed colonies; trait-resistance condition hook; raceRelations stub) — a data-model + runtime decision, not a structural call-edge invariant. Generator drift is guarded by Race.test.ts."
+    },
+    {
+      "adr": "ADR-024",
+      "checkable": false,
+      "reason": "Data-driven body plans (limbmap.jsonc) + part-bound natural weapons & armour + bodyScale-scaled limb HP + fractures — a data-schema + runtime decision, not a structural call-edge invariant. Drift is guarded by bodyPlans.test.ts + fractures.test.ts."
+    },
+    {
+      "adr": "ADR-025",
+      "checkable": false,
+      "reason": "Graded wind → staged windchilled condition (direct-set), windchill cold coupling, 8-way windDir, and per-pawn upwind ray-march wind-shadow (chosen over a precomputed field) — a data + runtime/perf decision, not a structural call-edge invariant. Guarded by windchill.test.ts."
+    },
+    {
+      "adr": "ADR-026",
+      "severity": "error",
+      "title": "Full-map terrain build only via the terrainPaint seam",
+      "type": "restricted-callee",
+      "callee": "buildGameGrid",
+      "allowFrom": [
+        "components/UI/gameCanvas/terrainPaint::fullRebuildTerrain"
+      ],
+      "msg": "full-map terrain rebuild outside the terrainPaint seam (ADR-026: the per-delta path must repaint only changed tiles)"
+    },
+    {
+      "adr": "ADR-026",
+      "severity": "error",
+      "title": "Whole-map hidden-mask BFS only via the terrainPaint seam",
+      "type": "restricted-callee",
+      "callee": "computeHiddenMaskState",
+      "allowFrom": [
+        "components/UI/gameCanvas/terrainPaint::fullRebuildTerrain",
+        "webgl/fantasia-world::computeHiddenMask"
+      ],
+      "msg": "whole-map hidden-mask BFS outside the terrainPaint seam (ADR-026: use updateHiddenMaskAt incrementally on a delta)"
+    },
+    {
+      "adr": "ADR-027",
+      "checkable": false,
+      "reason": "Dense glyph overlays (resource short/tall) render via the cached chunk path, not the per-frame dynamic path — a runtime ARGUMENT property (renderGrid always holds both branches; the cached one is selected by passing chunkLayer/cacheVersion), so a regression drops an argument without changing any call edge. Same class as ADR-021's terrain cache. Flagged instead by the resourceRebuilds= counter in perf.log (spikes every frame if the cache breaks)."
+    },
+    {
+      "adr": "ADR-028",
+      "checkable": false,
+      "reason": "Typed trait kinds (stat/attribute strictly separated + naming law; bodyMod reshapes the limbmap; naturalGear armor→encumbrance + limb-bound weapons via hostParts; wounds-as-permanent-injuries; a negative FLAW tier drawn as a Gaussian count) and the condition relationship graph (flags/triggers/activateWhen; chance-less edges stay deterministic) — data-schema + payload-shape + RNG-distribution invariants, not call-edge ones. Guarded by traitRegistry.test.ts, traitFlaws.test.ts, conditionGraph(.Data).test.ts, traitWounds.test.ts."
+    },
+    {
+      "adr": "ADR-029",
+      "checkable": false,
+      "reason": "Anatomy-bound natural gear (weapons via part.weapons + graft; armour = per-part additive armorMods, unified pawn/creature) + layered SUBTRACTIVE per-item-coverage mitigation (partArmorReduction rewrite) + onHitCondition/onHitWound proc split + conditions trigger-only — a data-schema + combat-runtime rewrite, not a call-edge invariant. Guarded by partArmorReduction unit tests, traitRegistry.test.ts (armorMods/covers shape), and the proc tests."
+    },
+    {
+      "adr": "ADR-030",
+      "checkable": false,
+      "reason": "Desktop wrapper resolved to Electron over Tauri (uniform V8 beats Tauri's WebKitGTK/JSC on the JS-bound sim; larger bundle accepted). A distribution/build-target decision — no call edge to check; reflected in root package.json (electron + electron-builder) and desktop-spike/."
+    },
+    {
+      "adr": "ADR-031",
+      "checkable": false,
+      "reason": "Precision-routed vitals (organ/fracture chance × (1 + critChance × K)) + per-fight natural-hide degradation (Mob.hideWear chipped per landed hit, expiring scratch subtracted in naturalArmorPoints) + artery soft targets in limbmap — combat-runtime math + data-schema, not a call-edge invariant. Guarded by the combat suite (combatSim/creatureDurability) and entityProjection.test.ts (snapshot drop)."
+    },
+    {
+      "adr": "ADR-032",
+      "checkable": false,
+      "reason": "Stealth as a detection filter on the existing entityAI inVision gate (per-mob ~2 s cached roll of getStealth vs a PER/night-vision score; reward through the existing resolveHit hit_precision crit; auto-reveal + lastSeen give-up re-stealth) — runtime detection-roll behaviour and data-schema, not a structural call-graph rule. Guarded by core/stealth.test.ts (layers, roll math, constraint audit) and traitRegistry.test.ts."
+    },
+    {
+      "adr": "ADR-033",
+      "checkable": false,
+      "reason": "Headless, API-driven sim — a dev-only HeadlessSession drives its own GameEngineImpl in-thread (bypassing the worker), started from a Scenario/snapshot and steered via the existing sim/commands.ts COMMANDS registry, exposed over dev-only /api/sim routes. A dev-tooling + runtime-topology decision guarded by env (import.meta.env.DEV + --headless) and inert-until-POST, not a call-edge invariant; the shippable graph is unchanged (routes 404 in prod). Verified by the invariant suite over era scenarios (Phase 5) and Phase-0 pathfinder-under-Node spike."
+    }
   ]
 }

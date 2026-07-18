@@ -34,6 +34,7 @@ ADR-027 [GAME]: Dense Glyph Overlays Render via the Cached Chunk Path (2026-07-0
 ADR-028 [GAME]: Typed Trait Kinds + Condition Relationship Graph (TRAIT-SYSTEM-V2) (2026-07-06, Accepted)
 ADR-029 [GAME]: Anatomy-Bound Natural Gear + Layered Subtractive Armour + Unified On-Hit Procs (2026-07-08, Accepted)
 ADR-030 [GAME]: Desktop Wrapper — Electron over Tauri (2026-07-09, Accepted)
+ADR-033 [GAME]: Headless, API-Driven Sim — dev-only in-thread driver over the existing engine + command registry (2026-07-18, Accepted — design, impl deferred)
 
 ---
 
@@ -1319,3 +1320,51 @@ balance pass is owed. Sight-only detection makes dull-eyed predators easy to sne
 grazers hard; the hearing/smell channel is parked for Phase 2 along with screen-invisible stealthy
 creatures. Guarded by `core/stealth.test.ts` (layers, roll math, §9 constraint audit) and
 `traitRegistry.test.ts`.
+
+---
+
+### ADR-033 [GAME]: Headless, API-Driven Sim — dev-only in-thread driver over the existing engine + command registry
+
+**Status:** Accepted (2026-07-18) — design; implementation deferred. Full plan in
+[HEADLESS-SIM](../.tasks/open/HEADLESS-SIM.md).
+
+**Context.** The content past the stone age is large and only reachable after an hour+ of play, so it is
+chronically under-tested — the developer always re-tests early game and never fast-forwards into bronze/iron+.
+The `~800`-test Vitest suite asserts exact values, so it goes stale on every rebalance and has never caught a
+real bug. Golden-screenshot regression (the Prime-video inspiration) is the wrong fit: this game's option
+space is combinatorial, not a fixed tower-defense path. Two problems were being conflated — **reachability**
+(getting to the state you want to exercise) and **regression detection**.
+
+**Decision.** Add a **dev-only headless mode**: a `HeadlessSession` that owns its own `new GameEngineImpl()`
+and drives the sim **in-thread** (bypassing `sim.worker.ts`/`simWorkerClient.ts`), started from a declarative
+**Scenario** (or a serialized-`GameState` snapshot), steered by the **existing** `sim/commands.ts` `COMMANDS`
+registry via `applySimCommand`, and exposed over **dev-only SvelteKit routes** (`/api/sim/*`) that both a human
+(`curl`/GUI) and an agent drive identically. This is deliberately **not** a new engine — it wraps code that
+already runs DOM-free (`GameEngineImpl.processGameTurn` is a pure reducer; Vitest already ticks it headless).
+
+- **In-thread, synchronous** — the worker is fire-and-forget; a request/response API needs apply-then-read, so
+  the session calls the engine directly and reads `getState()` back.
+- **Single active session per process (v1)** — `core/rng.ts` is a module singleton; interleaving sessions
+  would clobber the shared RNG stream and break determinism. Multi-session deferred.
+- **Reachability** is served by the Scenario builder (generalises `dev/profilerScenario.ts`) + an expanded
+  `dev*`/godmode surface (grant stats/skills, spawn gear, unlock research, **per-need on/off toggles** via a
+  new `_needsDisabled` GameState flag guarded in `processNeedsTick`). **Regression** is served by
+  **invariants, not goldens** — properties asserted over a fast-forwarded scenario (no negative resources,
+  item conservation, no frozen pawn, seed-replay determinism) that survive rebalances.
+- **Guarded three ways** so it never ships and never auto-runs: dev-only (`import.meta.env.DEV`, 404 in prod —
+  absent from `build.sh`), inert until `POST /api/sim/session` (so `./launch.sh` boots nothing extra), and
+  behind a `--headless` opt-in flag on `dev.sh`.
+- **One blocker (Phase 0):** the WASM pathfinder is gated off under Node (`isClientRuntime === false` →
+  `findPath` returns `[]`), so pawns won't navigate headless. Fix by loading a Node-target `spatial-core`
+  build — **not** a hand-rolled TS A\*, which would diverge in tie-breaking and desync movement from the real
+  client, defeating determinism parity.
+- **Optional (Phase 6):** the browser GUI can attach as a thin client (worker sim off, state streamed from the
+  server into the existing `onState` seam) so the developer can watch an agent play, with the server as sole
+  writer.
+
+**Consequences.** The one scenario-built-`GameState` primitive serves three consumers: the interactive HTTP
+driver, the in-game `DebugMenu`, and the invariant suite. Late-game content becomes reachable and testable in
+seconds; the regression net stops going stale. Cost: a Node-target WASM path, one new dev-only route surface,
+and the discipline that headless stays in-thread and dev-only so it adds **zero** per-tick allocation or
+snapshot fields to the shipped browser/worker path (ENGINE-PERFORMANCE cross-check on any hot-path/boundary
+touch). Not graph-checkable — it's a dev-tooling/runtime-topology decision, not a call-edge invariant.
