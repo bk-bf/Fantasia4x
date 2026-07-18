@@ -173,9 +173,15 @@
       const pct = Math.round((m.hpMult - 1) * 100);
       const signed = `${pct >= 0 ? '+' : ''}${pct}%`;
       if (m.target === 'skeleton')
-        bits.push(pct >= 0 ? `${signed} bone — fractures far harder` : `${signed} bone — fractures easily`);
+        bits.push(
+          pct >= 0 ? `${signed} bone — fractures far harder` : `${signed} bone — fractures easily`
+        );
       else if (m.target === 'flesh')
-        bits.push(pct >= 0 ? `${signed} flesh — a wound bites deeper before it tells` : `${signed} flesh — wounds bite faster`);
+        bits.push(
+          pct >= 0
+            ? `${signed} flesh — a wound bites deeper before it tells`
+            : `${signed} flesh — wounds bite faster`
+        );
       else bits.push(`${signed} part HP`);
     }
     if (m.weightKg) bits.push(`+${m.weightKg} kg body weight (loads the body, slows the pawn)`);
@@ -282,11 +288,23 @@
       for (const [name, value] of Object.entries(trait.effects || {})) {
         if (name.endsWith('Bonus') && typeof value === 'number') {
           const stat = name.replace('Bonus', '');
-          tags.push({ label: STAT_ABBR[stat] ?? stat, value: `+${value}`, type: 'pos', kind: 'attr', statId: stat });
+          tags.push({
+            label: STAT_ABBR[stat] ?? stat,
+            value: `+${value}`,
+            type: 'pos',
+            kind: 'attr',
+            statId: stat
+          });
         } else if (name.endsWith('Penalty') && typeof value === 'number') {
           const stat = name.replace('Penalty', '');
           // A penalty is stored positive — render it SIGNED so it reads "CHA -1".
-          tags.push({ label: STAT_ABBR[stat] ?? stat, value: `-${value}`, type: 'neg', kind: 'attr', statId: stat });
+          tags.push({
+            label: STAT_ABBR[stat] ?? stat,
+            value: `-${value}`,
+            type: 'neg',
+            kind: 'attr',
+            statId: stat
+          });
         } else if (name === 'combatMods' && value && typeof value === 'object') {
           // §1 combat combos: each key is a stats.jsonc COMBAT stat (hit_chance, dodge…) → its pill routes
           // to the SAME attributes-tab tooltip (kind 'attr'), value is a bare signed % (no "combat mods" tail).
@@ -437,7 +455,9 @@
       />
     {/if}
   {:else if tag.kind === 'cond'}
-    {@const cview = tag.condId ? conditionViewForId(tag.condId, tag.condSource, tag.condGrants) : null}
+    {@const cview = tag.condId
+      ? conditionViewForId(tag.condId, tag.condSource, tag.condGrants)
+      : null}
     {#if cview}
       <HoverTip x={pill.x} y={pill.y} pinned={pill.pinned}>
         <ConditionTooltip view={cview} />
@@ -459,7 +479,8 @@
     {/if}
   {:else if tag.kind === 'attr'}
     {@const sid = tag.statId ?? ''}
-    {@const view = pawn && statCtx && isDerivedStat(sid) ? computeStatView(sid, pawn, statCtx) : null}
+    {@const view =
+      pawn && statCtx && isDerivedStat(sid) ? computeStatView(sid, pawn, statCtx) : null}
     {#if view}
       <!-- Resistance / heal_rate: the IDENTICAL attributes-tab panel (shared StatTooltip). -->
       <HoverTip x={pill.x} y={pill.y} pinned={pill.pinned}>
@@ -471,9 +492,14 @@
     {:else}
       <!-- Core stat (STR/DEX) — no stats.jsonc formula panel; show what it drives + this pawn's value. -->
       <HoverTip x={pill.x} y={pill.y} pinned={pill.pinned}>
-        <div class="tip-name">{sid.charAt(0).toUpperCase() + sid.slice(1)}<span class="tip-val">{tag.value}</span></div>
+        <div class="tip-name">
+          {sid.charAt(0).toUpperCase() + sid.slice(1)}<span class="tip-val">{tag.value}</span>
+        </div>
         {#if STAT_DRIVES[sid]}<div class="tip-desc">Drives {STAT_DRIVES[sid]}.</div>{/if}
-        {#if pawn}<div class="tip-row"><span class="tip-lbl">This pawn</span> {pawn.stats[sid as keyof typeof pawn.stats] ?? '—'}</div>{/if}
+        {#if pawn}<div class="tip-row">
+            <span class="tip-lbl">This pawn</span>
+            {pawn.stats[sid as keyof typeof pawn.stats] ?? '—'}
+          </div>{/if}
       </HoverTip>
     {/if}
   {:else}

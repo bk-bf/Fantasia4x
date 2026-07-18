@@ -72,12 +72,40 @@ const EPITHETS = [
   "Winter's Due"
 ];
 
-const SMITHS = ['Hálfdan', 'Mira the Grey', 'old Bröccan', 'the Pale Smith', 'Yara Ironhand', 'a forgotten hand'];
-const FOES = ['the Bone Tyrant', 'a mountain wyrm', 'the Reaver-King', 'the Owlbear of the Fen', 'three hundred orcs', 'the Sorrow-Wraith'];
-const PLACES = ['Blackmere', 'the Sundered Vale', 'Karrowfell', 'the Drowned Hall', 'Hollow Crag', 'the Ashen Reach'];
-const AGES = ['an elder age', 'the long winter', 'the first founding', 'a year of war', 'the time before names'];
+const SMITHS = [
+  'Hálfdan',
+  'Mira the Grey',
+  'old Bröccan',
+  'the Pale Smith',
+  'Yara Ironhand',
+  'a forgotten hand'
+];
+const FOES = [
+  'the Bone Tyrant',
+  'a mountain wyrm',
+  'the Reaver-King',
+  'the Owlbear of the Fen',
+  'three hundred orcs',
+  'the Sorrow-Wraith'
+];
+const PLACES = [
+  'Blackmere',
+  'the Sundered Vale',
+  'Karrowfell',
+  'the Drowned Hall',
+  'Hollow Crag',
+  'the Ashen Reach'
+];
+const AGES = [
+  'an elder age',
+  'the long winter',
+  'the first founding',
+  'a year of war',
+  'the time before names'
+];
 
-const pick = <T>(arr: readonly T[], rand: () => number): T => arr[Math.floor(rand() * arr.length) % arr.length];
+const pick = <T>(arr: readonly T[], rand: () => number): T =>
+  arr[Math.floor(rand() * arr.length) % arr.length];
 
 /**
  * Whether a qualifying equipment craft rolls Famed — the extreme tail ABOVE Legendary. Vanishingly
@@ -105,7 +133,10 @@ export function rollFamedStatMult(rand: () => number): number {
 }
 
 /** 1–3 distinct enchant condition ids drawn from {@link FAMED_ENCHANT_POOL} (or a passed pool). */
-export function rollFamedEnchants(rand: () => number, pool: readonly string[] = FAMED_ENCHANT_POOL): string[] {
+export function rollFamedEnchants(
+  rand: () => number,
+  pool: readonly string[] = FAMED_ENCHANT_POOL
+): string[] {
   const count = 1 + Math.floor(rand() * 3); // 1–3
   const chosen: string[] = [];
   const avail = [...pool];

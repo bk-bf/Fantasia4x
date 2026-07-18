@@ -10,10 +10,7 @@ import type { Pawn, Job } from '$lib/game/core/types';
  * parent category's level via the SKILL token) and the innate speed↔finesse work style — core
  * stats are only a small supplement.
  */
-const pawn = (
-  stats: Partial<Record<string, number>>,
-  extra: Partial<Pawn> = {}
-): Pawn =>
+const pawn = (stats: Partial<Record<string, number>>, extra: Partial<Pawn> = {}): Pawn =>
   ({
     limbs: [],
     injuries: [],
@@ -33,15 +30,27 @@ const pawn = (
 const job = (type: string): Job => ({ type, targetX: 0, targetY: 0 }) as unknown as Job;
 
 describe('per-subjob work stats', () => {
-  it('a subjob shares its parent category\'s experience level (repair rides construction)', () => {
+  it("a subjob shares its parent category's experience level (repair rides construction)", () => {
     const novice = pawn({}, { skills: { construction: 3 } });
     const master = pawn({}, { skills: { construction: 45 } });
-    const repairNovice = pawnStatService.getWorkModifiers(novice, 'repair', undefined, 'construction').speed;
-    const repairMaster = pawnStatService.getWorkModifiers(master, 'repair', undefined, 'construction').speed;
+    const repairNovice = pawnStatService.getWorkModifiers(
+      novice,
+      'repair',
+      undefined,
+      'construction'
+    ).speed;
+    const repairMaster = pawnStatService.getWorkModifiers(
+      master,
+      'repair',
+      undefined,
+      'construction'
+    ).speed;
     expect(repairMaster).toBeGreaterThan(repairNovice * 2); // levelBase 0.6ish → ~1.8
     // and the parent's own speed moves in lockstep with the same level
     const buildMaster = pawnStatService.getWorkModifiers(master, 'construction').speed;
-    expect(buildMaster).toBeGreaterThan(pawnStatService.getWorkModifiers(novice, 'construction').speed);
+    expect(buildMaster).toBeGreaterThan(
+      pawnStatService.getWorkModifiers(novice, 'construction').speed
+    );
   });
 
   it('work style splits speed vs quality (fast-but-rough vs slow-but-fine twins)', () => {

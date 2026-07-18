@@ -24,7 +24,12 @@ function sleeper(needs: Partial<Pawn['needs']>): Pawn {
 
 // A drink target the pawn could walk to (the way findNearestWaterTarget discovers one).
 const withDrinkZone = (p: Pawn): GameState =>
-  ({ turn: 1, pawns: [p], buildings: [], designations: { '2,2': 'drink' } }) as unknown as GameState;
+  ({
+    turn: 1,
+    pawns: [p],
+    buildings: [],
+    designations: { '2,2': 'drink' }
+  }) as unknown as GameState;
 const noWater = (p: Pawn): GameState =>
   ({ turn: 1, pawns: [p], buildings: [], designations: {} }) as unknown as GameState;
 

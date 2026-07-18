@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { makeMob } from '$lib/game/services/entity/entitySpawning';
-import { HUNGER_EAT_THRESHOLD, SEED_HUNGER_GRACE, willFinishOffDowned } from '$lib/game/services/entity/entityConstants';
+import {
+  HUNGER_EAT_THRESHOLD,
+  SEED_HUNGER_GRACE,
+  willFinishOffDowned
+} from '$lib/game/services/entity/entityConstants';
 import { CREATURES } from '$lib/game/core/Creatures';
 
 const predator = CREATURES.find((c) => c.predator) ?? CREATURES[0];

@@ -25,10 +25,24 @@ function order(id: string): any {
 }
 
 function baseState(): GameState {
-  const station = { id: 'cb-1', type: order('x').stationType, x: 5, y: 5, status: 'complete' } as any;
+  const station = {
+    id: 'cb-1',
+    type: order('x').stationType,
+    x: 5,
+    y: 5,
+    status: 'complete'
+  } as any;
   // Two staged log inputs, one reserved per order — the station tile (5,5) is NOT a stockpile.
   const drops: DroppedItem[] = [
-    { id: 'in1', resourceId: 'pine_log', x: 5, y: 5, quantity: 1, stored: true, reservedFor: 'cq1' },
+    {
+      id: 'in1',
+      resourceId: 'pine_log',
+      x: 5,
+      y: 5,
+      quantity: 1,
+      stored: true,
+      reservedFor: 'cq1'
+    },
     { id: 'in2', resourceId: 'pine_log', x: 5, y: 5, quantity: 1, stored: true, reservedFor: 'cq2' }
   ];
   return {

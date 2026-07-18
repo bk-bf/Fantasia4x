@@ -14,7 +14,11 @@ export const GATHERING_RADIUS = 3;
 
 /** SOCIAL: is (x,y) within GATHERING_RADIUS of a COMPLETE gathering-place building (buildingProperties
  *  `gathering`)? Drives the sociable-context gate + fireside warmth in SocialService.processDialogTick. */
-export function nearGatheringPlace(buildings: PlacedBuilding[] | undefined, x: number, y: number): boolean {
+export function nearGatheringPlace(
+  buildings: PlacedBuilding[] | undefined,
+  x: number,
+  y: number
+): boolean {
   for (const b of buildings ?? []) {
     if (b.status !== 'complete') continue;
     if (Math.abs(b.x - x) > GATHERING_RADIUS || Math.abs(b.y - y) > GATHERING_RADIUS) continue;

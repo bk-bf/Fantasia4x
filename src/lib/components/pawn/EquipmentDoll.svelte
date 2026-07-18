@@ -80,7 +80,10 @@
     if (!it?.coating || it.coating.expiresAtTurn <= $gameState.turn) return null;
     const cDef = gameCoordinator.getItemById(it.coating.itemId);
     const cond = cDef?.coatingEffect?.condition;
-    return { name: cDef?.name ?? 'Coating', effect: cond ? `${cap(cond)} on hit` : 'on-hit effect' };
+    return {
+      name: cDef?.name ?? 'Coating',
+      effect: cond ? `${cap(cond)} on hit` : 'on-hit effect'
+    };
   }
 
   // Hover popup — the same stat/ability breakdown shown on craftable cards (ItemStatTooltip),

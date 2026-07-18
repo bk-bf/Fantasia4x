@@ -11,7 +11,14 @@
 //
 // Aging is realistic (1 year = 4 seasons = 360 days); only the growth cadence is seasonal.
 
-import type { GameState, Pawn, EntityStats, StatKey, GrowthOffer, Trait } from '$lib/game/core/types';
+import type {
+  GameState,
+  Pawn,
+  EntityStats,
+  StatKey,
+  GrowthOffer,
+  Trait
+} from '$lib/game/core/types';
 import { rng } from '$lib/game/core/rng';
 import { DAYS_PER_SEASON } from '$lib/game/services/EnvironmentService';
 import { advanceAwakeningMeters, lineageGrowthEvent } from '$lib/game/core/Lineages';
@@ -91,6 +98,16 @@ class PawnGrowthService {
         }
       }
     }
+  }
+
+  /**
+   * Dev/headless hook (HEADLESS-SIM, `devGrantGrowth`): bank one growth offer on the pawn right now,
+   * outside the seasonal cadence — same roll logic (`bankOffer`, incl. the lineage-progression
+   * moment), so a debug-granted offer is indistinguishable from an earned one. Mutates the pawn
+   * in place (matches `processDay`); callers on the command path pass a fresh pawn copy.
+   */
+  grantGrowthOffer(pawn: Pawn, doubled = false): void {
+    bankOffer(pawn, doubled ? 'birthday' : 'season', doubled);
   }
 
   /**

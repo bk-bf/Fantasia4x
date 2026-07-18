@@ -405,7 +405,7 @@ function applyMigrations(state: GameState): GameState {
  *  - Fresh run (no pool, no pawns): generate a full pool, relations, and a home culture.
  *  - Legacy save (no pool, but pawns exist): synthesize a single-entry pool from the
  *    existing `culture`, normalising it to the new shape, and tag pawns to it. */
-function ensureCulturePool(state: GameState): GameState {
+export function ensureCulturePool(state: GameState): GameState {
   if (state.culturePool && state.culturePool.length > 0) {
     // Backfill relations if a pool exists but relations were never generated.
     if (!state.cultureRelations || state.cultureRelations.length === 0) {
@@ -438,7 +438,7 @@ function ensureCulturePool(state: GameState): GameState {
  *  Must run AFTER ensureCulturePool — kingdoms are downstream from the culture pool (no new
  *  cultures are minted; each kingdom is a weighted mix of pool cultures). Old saves arrive with
  *  `kingdoms` undefined and get a fresh pool here. */
-function ensureKingdomPool(state: GameState): GameState {
+export function ensureKingdomPool(state: GameState): GameState {
   if (state.kingdoms && state.kingdoms.length > 0) {
     // Backfill relations if a pool exists but relations were never generated.
     if (!state.kingdomRelations || state.kingdomRelations.length === 0) {
@@ -482,7 +482,7 @@ function normalizeLegacyCulture(culture: GameState['culture']): GameState['cultu
 
 /** Mark every culture that has a colony pawn as discovered, and refresh per-culture headcounts.
  *  Records the first living colonist of each culture as the attribution ("known through …"). */
-function markColonyCulturesDiscovered(state: GameState): GameState {
+export function markColonyCulturesDiscovered(state: GameState): GameState {
   const counts = new Map<string, number>();
   const firstColonist = new Map<string, string>();
   for (const p of state.pawns) {
@@ -544,7 +544,7 @@ function findNearestWalkable(
   return null;
 }
 
-function spawnPawnsOnMap(pawns: Pawn[], worldMap: WorldTile[][]): Pawn[] {
+export function spawnPawnsOnMap(pawns: Pawn[], worldMap: WorldTile[][]): Pawn[] {
   const mapW = worldMap[0]?.length ?? 120;
   const mapH = worldMap.length;
   const cx = Math.floor(mapW / 2);
@@ -971,6 +971,31 @@ function resetGame() {
   fresh = entityService.seedInitialEntities(fresh);
   loadStateIntoWorker(fresh);
   console.info('[GameState] Game reset to initial state.');
+}
+
+/**
+ * Load a HEADLESS-SIM scenario preset as the live game (ADR-033 — the in-browser third front of the
+ * scenario system; the other two are the /api/sim driver and the invariant suite). Mints a FRESH
+ * active save id first (New-Game semantics), so the scenario autosaves as its own entry and never
+ * clobbers the playthrough save you were on. Returns false for an unknown preset id.
+ */
+async function loadScenarioPreset(presetId: string): Promise<boolean> {
+  // Dynamic import (same pattern as the profiler-scenario boot at savedStateReady): Scenario.ts
+  // statically imports this store's boot helpers, so a static import back would be a module cycle.
+  const [{ buildScenario }, { getScenarioPreset }] = await Promise.all([
+    import('$lib/game/headless/Scenario'),
+    import('$lib/game/headless/scenarios/presets')
+  ]);
+  const preset = getScenarioPreset(presetId);
+  if (!preset) return false;
+  clearActivityLog();
+  mintActiveSave(); // the scenario gets its own autosave snapshot…
+  setActiveCommitted(true); // …committed immediately — it's a real, playable session
+  resetUnreachableJobs();
+  const state = buildScenario(preset.spec);
+  loadStateIntoWorker(state);
+  console.info(`[GameState] Loaded scenario preset '${presetId}'.`);
+  return true;
 }
 
 // ===== STORE READY FLAG =====
@@ -1500,7 +1525,9 @@ export const gameState = {
   regenWorld,
   restoreWorld,
   setMapSize,
-  getMapSize
+  getMapSize,
+  /** DEBUG tab scenario loader (ADR-033): swap the live game for a scenario preset (own save id). */
+  loadScenarioPreset
 };
 
 // Export the updateWithSave function directly for GameEngine

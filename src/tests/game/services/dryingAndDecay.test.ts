@@ -148,7 +148,10 @@ describe('hay-making (stepDrying: plant_fiber → hay)', () => {
 
   it('salted_meat opts out of meat drying (driesTo: null)', () => {
     const out = itemService.stepDrying(
-      hayState([drop({ resourceId: 'salted_meat', x: 0, y: 0, drying: 599.999 })], [tile('plains', 30)])
+      hayState(
+        [drop({ resourceId: 'salted_meat', x: 0, y: 0, drying: 599.999 })],
+        [tile('plains', 30)]
+      )
     );
     expect(out.droppedItems![0].resourceId).toBe('salted_meat');
   });

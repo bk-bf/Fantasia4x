@@ -4,7 +4,10 @@ import { resourceObjectDefById } from '$lib/game/core/resourceObjectDefs';
 
 /** A pawn's labor level (0–4) for a work id: a `laborSettings` override wins, else the legacy 0–12
  *  `workPriorities` value bucketed. Single source for the work tab and WorkCellTooltip. */
-export function getPawnLaborLevel(a: WorkAssignment | undefined, workId: string): 0 | 1 | 2 | 3 | 4 {
+export function getPawnLaborLevel(
+  a: WorkAssignment | undefined,
+  workId: string
+): 0 | 1 | 2 | 3 | 4 {
   const ls = a?.laborSettings;
   if (ls && workId in ls) return ls[workId] as 0 | 1 | 2 | 3 | 4;
   const pri = a?.workPriorities?.[workId] ?? 0;

@@ -269,12 +269,20 @@ describe('EnvironmentService — weather (Phase C)', () => {
     for (let i = 0; i < 500; i++) {
       // freezing=true → the wet branch falls as snow; freezing=false → as drizzle. Independent of season.
       frozenTypes.add(
-        advanceWeatherForDay({ type: 'clear', intensity: 0, turnsRemaining: 0 }, 'winter', rng, true)
-          .type
+        advanceWeatherForDay(
+          { type: 'clear', intensity: 0, turnsRemaining: 0 },
+          'winter',
+          rng,
+          true
+        ).type
       );
       warmTypes.add(
-        advanceWeatherForDay({ type: 'clear', intensity: 0, turnsRemaining: 0 }, 'spring', rng, false)
-          .type
+        advanceWeatherForDay(
+          { type: 'clear', intensity: 0, turnsRemaining: 0 },
+          'spring',
+          rng,
+          false
+        ).type
       );
     }
     expect(frozenTypes.has('snow')).toBe(true);

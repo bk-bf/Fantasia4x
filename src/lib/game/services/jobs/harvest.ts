@@ -86,7 +86,7 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
       harvestKeys.add(existKey);
 
       jobs.push({
-        id: `harvest-${x}-${y}-${resourceId}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`,
+        id: `harvest-${x}-${y}-${resourceId}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`,
         type: 'harvest',
         targetX: x,
         targetY: y,
@@ -279,7 +279,7 @@ export function complete(job: Job, gs: GameState): GameState {
   const newDropped = [...(gs.droppedItems ?? [])];
   const newDropIds: string[] = [];
   for (const [dropResourceId, dropAmount] of yieldEntries) {
-    const id = `drop-${dropResourceId}-${job.targetX}-${job.targetY}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
+    const id = `drop-${dropResourceId}-${job.targetX}-${job.targetY}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`;
     newDropped.push({
       id,
       resourceId: dropResourceId,

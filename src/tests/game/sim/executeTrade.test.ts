@@ -43,7 +43,14 @@ const negotiator = (): Pawn =>
     name: 'Vale',
     isAlive: true,
     position: { x: 1, y: 1 },
-    stats: { strength: 10, dexterity: 10, constitution: 10, perception: 10, intelligence: 10, charisma: 10 }
+    stats: {
+      strength: 10,
+      dexterity: 10,
+      constitution: 10,
+      perception: 10,
+      intelligence: 10,
+      charisma: 10
+    }
   }) as unknown as Pawn;
 
 function stateWith(colonyGold: number, stock: { itemId: string; qty: number }[]): GameState {

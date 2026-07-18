@@ -24,7 +24,15 @@ const pawnWith = (w: Injury): Pawn =>
     id: 'p',
     isAlive: true,
     position: { x: 0, y: 0 },
-    limbs: [{ id: 'left_arm', health: 0, isMissing: false, bleedRate: 0, parts: [{ id: w.bodyPart, health: 0, maxHp: 30, isMissing: true, injuries: [w] }] }]
+    limbs: [
+      {
+        id: 'left_arm',
+        health: 0,
+        isMissing: false,
+        bleedRate: 0,
+        parts: [{ id: w.bodyPart, health: 0, maxHp: 30, isMissing: true, injuries: [w] }]
+      }
+    ]
   }) as unknown as Pawn;
 
 describe('destroyed non-bleeding wounds are uncareable', () => {

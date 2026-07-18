@@ -190,18 +190,22 @@ export function handleBloodHunt(pawn: Pawn, gameState: GameState): GameState {
     for (const m of gameState.mobs ?? []) {
       if (m.isAlive === false || m.state === 'Corpse') continue;
       const d = chebyshev(px, py, m.x, m.y);
-      if (d < bestD) { bestD = d; best = { x: m.x, y: m.y, id: m.id, isMob: true }; }
+      if (d < bestD) {
+        bestD = d;
+        best = { x: m.x, y: m.y, id: m.id, isMob: true };
+      }
     }
     for (const p of gameState.pawns) {
       if (p.id === pawn.id || p.isAlive === false || !p.position) continue;
       const d = chebyshev(px, py, p.position.x, p.position.y);
-      if (d < bestD) { bestD = d; best = { x: p.position.x, y: p.position.y, id: p.id, isMob: false }; }
+      if (d < bestD) {
+        bestD = d;
+        best = { x: p.position.x, y: p.position.y, id: p.id, isMob: false };
+      }
     }
     if (!best) return haltMovement(pawn, gameState); // nothing alive in range — pace and rage
     pawn.huntTargetId = best.id; // live-pawn mutation (FSM convention)
-    mobT = best.isMob
-      ? (gameState.mobs ?? []).find((m) => m.id === best!.id)
-      : undefined;
+    mobT = best.isMob ? (gameState.mobs ?? []).find((m) => m.id === best!.id) : undefined;
     pawnT = best.isMob ? undefined : gameState.pawns.find((p) => p.id === best!.id);
   }
 
@@ -223,7 +227,13 @@ export function handleBloodHunt(pawn: Pawn, gameState: GameState): GameState {
         ...halted,
         mobs: (halted.mobs ?? []).map((m) =>
           m.id === mobT!.id
-            ? { ...m, state: 'Attacking', stateSince: gameState.turn, huntTargetId: pawn.id, path: [] }
+            ? {
+                ...m,
+                state: 'Attacking',
+                stateSince: gameState.turn,
+                huntTargetId: pawn.id,
+                path: []
+              }
             : m
         )
       };

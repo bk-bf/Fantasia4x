@@ -79,7 +79,11 @@
   <!-- Day/night "reverse shadow" glows radiating into the map: a warm sun arcing across by day, a cool
        moon tracking the top border by night (positions/opacity driven by the preview time-of-day). -->
   <div class="sun-glow" aria-hidden="true" style="left:{sunX}%; top:{sunY}%; opacity:{sunO};"></div>
-  <div class="moon-glow" aria-hidden="true" style="left:{moonX}%; top:{moonY}%; opacity:{moonO};"></div>
+  <div
+    class="moon-glow"
+    aria-hidden="true"
+    style="left:{moonX}%; top:{moonY}%; opacity:{moonO};"
+  ></div>
 
   <div class="content">
     <h1 class="title">FANTASIA</h1>

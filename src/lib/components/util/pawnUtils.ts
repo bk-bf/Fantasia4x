@@ -7,7 +7,9 @@ import { resourceObjectDefById } from '$lib/game/core/resourceObjectDefs';
  *  otherwise the item def name, never the raw id. */
 function resourceLabel(id: string | undefined): string {
   if (!id) return 'resource';
-  return resourceObjectDefById(id)?.displayName ?? itemService.getItemDisplayName({ resourceId: id });
+  return (
+    resourceObjectDefById(id)?.displayName ?? itemService.getItemDisplayName({ resourceId: id })
+  );
 }
 
 export interface PawnTaskSummary {

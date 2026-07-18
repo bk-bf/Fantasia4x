@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { inStartingBubble } from '$lib/game/services/entity/entitySpawning';
-import { STARTING_BUBBLE_RADIUS, STARTING_BUBBLE_TURNS } from '$lib/game/services/entity/entityConstants';
+import {
+  STARTING_BUBBLE_RADIUS,
+  STARTING_BUBBLE_TURNS
+} from '$lib/game/services/entity/entityConstants';
 import type { GameState } from '$lib/game/core/types';
 
 // A bare 100×100 world (centre = 50,50) at the given turn — only the fields inStartingBubble reads.
@@ -44,7 +47,10 @@ describe('lair starting bubble', () => {
     // the (now empty) centre clear and the area around the pawn protected.
     const px = 12;
     const py = 12;
-    const state = { ...stateAt(0), pawns: [{ position: { x: px, y: py } }] } as unknown as GameState;
+    const state = {
+      ...stateAt(0),
+      pawns: [{ position: { x: px, y: py } }]
+    } as unknown as GameState;
     expect(inStartingBubble(state, px, py)).toBe(true);
     expect(inStartingBubble(state, px + (STARTING_BUBBLE_RADIUS - 1), py)).toBe(true);
     expect(inStartingBubble(state, px + STARTING_BUBBLE_RADIUS + 2, py)).toBe(false);

@@ -23,9 +23,7 @@ function plainsState(): GameState {
   return {
     turn: 0,
     worldMap,
-    pawns: [
-      { id: 'p1', name: 'Vale', isAlive: true, position: { x: 40, y: 40 } }
-    ],
+    pawns: [{ id: 'p1', name: 'Vale', isAlive: true, position: { x: 40, y: 40 } }],
     mobs: [],
     droppedItems: [],
     stockpile: {},

@@ -34,7 +34,9 @@ describe('data-driven building light', () => {
   });
 
   it('only completed buildings emit', () => {
-    expect(buildingLight({ type: 'hearth', status: 'under_construction', lit: true } as any)).toBeNull();
+    expect(
+      buildingLight({ type: 'hearth', status: 'under_construction', lit: true } as any)
+    ).toBeNull();
   });
 
   it('collectEmitters returns one emitter per lit light-building', () => {

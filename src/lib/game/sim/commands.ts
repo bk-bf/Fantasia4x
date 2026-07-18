@@ -33,7 +33,9 @@ import type {
   FoodSettings,
   ItemInstance,
   DesignationType,
-  StatKey
+  StatKey,
+  EntityStats,
+  DisableableNeed
 } from '../core/types';
 import { isHarvestableTileNow } from '../services/jobs/filters';
 import { findAdjacentApproach, isAdjacent } from '../systems/pawn/pawnQueries';
@@ -394,7 +396,8 @@ export const COMMANDS: Record<string, Cmd> = {
    *  — see lineFormationTargets. Same paths-now behaviour as movePawnsFormation. */
   movePawnsLine: (s, p: { ids: string[]; ax: number; ay: number; bx: number; by: number }) => {
     const pawns = s.pawns.filter(
-      (pw) => p.ids.includes(pw.id) && pw.drafted && pw.position && !isUncontrollable(pw.currentState)
+      (pw) =>
+        p.ids.includes(pw.id) && pw.drafted && pw.position && !isUncontrollable(pw.currentState)
     );
     const targets = lineFormationTargets(s.worldMap, pawns, p.ax, p.ay, p.bx, p.by);
     let gs: GameState = {
@@ -586,7 +589,7 @@ export const COMMANDS: Record<string, Cmd> = {
   },
   equipPawnItem: (s, p: { pawnId: string; itemId: string }) => ({
     ...s,
-    pawns: s.pawns.map((pw) => (pw.id === p.pawnId ? equipItem(pw, p.itemId) : pw))
+    pawns: s.pawns.map((pw) => (pw.id === p.pawnId ? equipItem(pw, p.itemId, s.turn) : pw))
   }),
   unequipPawnItem: (s, p: { pawnId: string; slot: string }) => {
     const pawn = s.pawns.find((pw) => pw.id === p.pawnId);
@@ -1103,7 +1106,8 @@ export const COMMANDS: Record<string, Cmd> = {
     const x = p.x ?? start.x;
     const y = p.y ?? start.y;
     const drop = {
-      id: `dev-spawn-${p.itemId}-${x}-${y}-${Date.now()}`,
+      // Turn-derived id (not Date.now()) so a scenario build replays byte-identically (ADR-033).
+      id: `dev-spawn-${p.itemId}-${x}-${y}-t${s.turn}`,
       resourceId: p.itemId,
       x,
       y,
@@ -1399,13 +1403,93 @@ export const COMMANDS: Record<string, Cmd> = {
     _devResearchGateOff: p.off || undefined
   }),
 
+  // ── HEADLESS-SIM (ADR-033) godmode verbs — scenario spin-up + debug steering ─────────────
+
+  /** DEBUG: set a pawn's base stats (merge). Each set value also raises that stat's `maxStats`
+   *  growth ceiling to at least the new value, so a granted stat isn't immediately capped away. */
+  devSetPawnStats: (s, p: { pawnId: string; stats: Partial<EntityStats> }) => ({
+    ...s,
+    pawns: s.pawns.map((pw) => {
+      if (pw.id !== p.pawnId) return pw;
+      const stats = { ...pw.stats, ...p.stats };
+      const maxStats = pw.maxStats ? { ...pw.maxStats } : undefined;
+      if (maxStats) {
+        for (const k of Object.keys(p.stats) as (keyof EntityStats)[]) {
+          maxStats[k] = Math.max(maxStats[k] ?? 0, stats[k]);
+        }
+      }
+      return { ...pw, stats, maxStats };
+    })
+  }),
+
+  /** DEBUG: set a pawn's work-skill levels (WORK-EXPERIENCE, clamped 1–50; resets that skill's
+   *  in-level XP so the bar reads clean). Keys are work-category ids from Work.ts. */
+  devSetPawnSkills: (s, p: { pawnId: string; skills: Record<string, number> }) => ({
+    ...s,
+    pawns: s.pawns.map((pw) => {
+      if (pw.id !== p.pawnId) return pw;
+      const skills = { ...pw.skills };
+      const skillXp = { ...(pw.skillXp ?? {}) };
+      for (const [k, v] of Object.entries(p.skills)) {
+        skills[k] = Math.max(1, Math.min(50, Math.round(v)));
+        skillXp[k] = 0;
+      }
+      return { ...pw, skills, skillXp };
+    })
+  }),
+
+  /** DEBUG: bank a growth offer on a pawn right now (outside the seasonal cadence) — same roll as
+   *  an earned one, incl. the lineage-progression moment. `doubled` = birthday-strength rolls. */
+  devGrantGrowth: (s, p: { pawnId: string; doubled?: boolean }) => ({
+    ...s,
+    pawns: s.pawns.map((pw) => {
+      if (pw.id !== p.pawnId) return pw;
+      const copy = { ...pw, pendingGrowth: [...(pw.pendingGrowth ?? [])] };
+      pawnGrowthService.grantGrowthOffer(copy, p.doubled ?? false);
+      return copy;
+    })
+  }),
+
+  /** DEBUG: complete research instantly — one id, or the whole tree (`all: true`). Runs the REAL
+   *  completion path (`researchService.completeResearch`) so tool-tier bumps and unlock lists apply
+   *  exactly as if researched. */
+  devUnlockResearch: (s, p: { researchId?: string; all?: boolean }) => {
+    if (p.all) {
+      let gs = s;
+      for (const r of researchService.getAllResearch()) {
+        gs = researchService.completeResearch(r.id, gs);
+      }
+      return gs;
+    }
+    if (!p.researchId) return s;
+    return researchService.completeResearch(p.researchId, s);
+  },
+
+  /** DEBUG: set the research-granted tool-tier floor (`currentToolLevel`). The colony's effective
+   *  tier is still the max of this and the best physical tool in stock (ADR-009 `colonyToolTier`). */
+  devSetToolTier: (s, p: { tier: number }) => ({
+    ...s,
+    currentToolLevel: Math.max(0, Math.round(p.tier))
+  }),
+
+  /** DEBUG: freeze/resume one need's per-tick accrual (HEADLESS-SIM per-need toggles). `off: true`
+   *  freezes the need at its current value; `off: false` resumes. The map rides gameState so the
+   *  worker and a headless session both honour it (see `_needsDisabled`). */
+  devToggleNeed: (s, p: { need: DisableableNeed; off: boolean }) => {
+    const cur = { ...(s._needsDisabled ?? {}) };
+    if (p.off) cur[p.need] = true;
+    else delete cur[p.need];
+    return { ...s, _needsDisabled: Object.keys(cur).length > 0 ? cur : undefined };
+  },
+
   /** Instantly place a complete building on a tile (no cost, no construction work). */
   devSpawnBuildingAt: (s, p: { buildingId: string; x: number; y: number }) => {
     const def = buildingService.getBuildingById(p.buildingId);
     if (!def) return s;
     if (s.worldMap?.[p.y]?.[p.x]?.walkable === false) return s;
     const placed: PlacedBuilding = {
-      id: `${p.buildingId}-${p.x}-${p.y}-${Date.now()}`,
+      // Turn-derived id (not Date.now()) so a scenario build replays byte-identically (ADR-033).
+      id: `${p.buildingId}-${p.x}-${p.y}-t${s.turn}`,
       type: p.buildingId,
       status: 'complete',
       progress: 1,

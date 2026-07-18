@@ -39,9 +39,13 @@ describe('foodRules — colony food filter', () => {
   });
 
   it('rotten food + carcasses are edible but NOT default-allowed', () => {
-    expect(isDefaultFood({ id: 'rotten_meat', category: 'food', nutrition: 8 } as never)).toBe(false);
+    expect(isDefaultFood({ id: 'rotten_meat', category: 'food', nutrition: 8 } as never)).toBe(
+      false
+    );
     expect(isDefaultFood({ id: 'rabbit_carcass', category: 'food' } as never)).toBe(false);
-    expect(isDefaultFood({ id: 'wild_berries', category: 'food', nutrition: 3 } as never)).toBe(true);
+    expect(isDefaultFood({ id: 'wild_berries', category: 'food', nutrition: 3 } as never)).toBe(
+      true
+    );
   });
 
   it('resolve honours an explicit list (even empty = eat nothing); undefined falls back to default', () => {

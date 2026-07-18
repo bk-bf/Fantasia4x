@@ -61,6 +61,10 @@ export function stepHunger(state: GameState): GameState {
   const mobs = state.mobs;
   if (!mobs || mobs.length === 0) return state;
   const { turn } = state;
+  // HEADLESS-SIM `devToggleNeed` mobHunger kill-switch: freeze the whole mob metabolism (hunger,
+  // fatigue, forage/starve escalation). Bleed-out/death handling below is skipped too — the toggle
+  // is a debug tool for isolating pawn behaviour from mob churn, not a partial sim mode.
+  if (state._needsDisabled?.mobHunger === true) return state;
 
   // M3 (ENGINE-PERFORMANCE ★ ACTIVE): mutate mob fields IN PLACE (no per-mob {...mob} spread).
   // Deaths are captured explicitly in `justDied` because the old new-object-vs-old diff used for

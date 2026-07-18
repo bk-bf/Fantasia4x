@@ -53,9 +53,7 @@ const DATA = backgroundsData as unknown as {
 };
 const CHILDHOODS: Background[] = DATA.childhoods.map((b) => ({ ...b, slot: 'childhood' }));
 const ADULTHOODS: Background[] = DATA.adulthoods.map((b) => ({ ...b, slot: 'adulthood' }));
-const BY_ID = new Map<string, Background>(
-  [...CHILDHOODS, ...ADULTHOODS].map((b) => [b.id, b])
-);
+const BY_ID = new Map<string, Background>([...CHILDHOODS, ...ADULTHOODS].map((b) => [b.id, b]));
 
 export function getBackgroundById(id: string | undefined): Background | undefined {
   return id ? BY_ID.get(id) : undefined;

@@ -66,8 +66,7 @@ function recoveryChoice(pawn: Pawn, gameState: GameState): NeedChoice {
 /** True when a pawn must seek water from a zone/well (thirst urgent AND no stockpiled water to sip). */
 function thirstNeedsRouting(pawn: Pawn, gameState: GameState): boolean {
   return (
-    (pawn.needs?.thirst ?? 0) >= ROUTE_TO_DRINK_THIRST &&
-    (gameState.stockpile?.['water'] ?? 0) <= 0
+    (pawn.needs?.thirst ?? 0) >= ROUTE_TO_DRINK_THIRST && (gameState.stockpile?.['water'] ?? 0) <= 0
   );
 }
 
@@ -87,8 +86,7 @@ function shouldDrinkBeforeEating(pawn: Pawn, gameState: GameState): boolean {
 export function selectIdleNeed(pawn: Pawn, gameState: GameState): NeedChoice {
   // FORCE WORK: neglect every need and go straight to work (the FSM finds a job when no need wins).
   if (pawn.forceWork) return null;
-  const hungerActive =
-    (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD && hasAvailableFood(gameState);
+  const hungerActive = (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD && hasAvailableFood(gameState);
   const thirstActive = thirstNeedsRouting(pawn, gameState);
   // Thirst before hunger when its source is at least as close (or hunger isn't active at all).
   if (thirstActive && (!hungerActive || shouldDrinkBeforeEating(pawn, gameState))) {

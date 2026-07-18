@@ -133,7 +133,15 @@ export function seedAwakeningPaths(pawn: Pawn, dayIndex = 0): void {
       const a = pool[rng.int(0, pool.length - 1)];
       const target = a.range[0] + Math.round(rng.random() * (a.range[1] - a.range[0]));
       seededLineages.add(lineage);
-      paths.push({ condition: a.id, lineage, deed: a.deed, target, value: 0, seen: 0, lastFedDay: dayIndex });
+      paths.push({
+        condition: a.id,
+        lineage,
+        deed: a.deed,
+        target,
+        value: 0,
+        seen: 0,
+        lastFedDay: dayIndex
+      });
     }
   }
   if (paths.length) pawn.lineagePaths = paths;
@@ -225,7 +233,10 @@ export interface LineageGrowthResult {
  * the caller's hook to apply a newly-granted trait's EFFECTS (stat bonus, grafts, bodyMods…). Priority:
  * awaken (full meter) → evolve a stage → grow a new member. Returns what happened (for the activity log).
  */
-export function lineageGrowthEvent(pawn: Pawn, applyTrait: (t: Trait) => void): LineageGrowthResult {
+export function lineageGrowthEvent(
+  pawn: Pawn,
+  applyTrait: (t: Trait) => void
+): LineageGrowthResult {
   // 1) AWAKEN — a full meter grants the lineage parent + its first member, and clears the meters.
   const full = pawn.lineagePaths?.find((p) => p.value >= p.target);
   if (full && !pawnLineage(pawn)) {

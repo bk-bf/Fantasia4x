@@ -286,7 +286,9 @@ describe('combat sim (headless tickCombat)', () => {
     expect(fractures).toBeGreaterThan(20); // blunt blows crack bone
     expect(diverged / fractures).toBeGreaterThan(0.8); // flesh vs bone depth decoupled
     // Blunt shock drives through to bone FAR more readily than a cut does, per landed hit.
-    expect(bluntFractures / Math.max(1, bluntHits)).toBeGreaterThan(cutFractures / Math.max(1, cutHits));
+    expect(bluntFractures / Math.max(1, bluntHits)).toBeGreaterThan(
+      cutFractures / Math.max(1, cutHits)
+    );
   });
 
   it('organsOf lists a cavity’s internal organs, and nothing for a part with none', () => {
@@ -340,7 +342,9 @@ describe('combat sim (headless tickCombat)', () => {
     expect(blunt.misTargeted).toBe(0);
     // Penetrating wounds find organs FAR more readily, per landed hit, than blunt force ruptures one — so a
     // shallow battering craters the abdomen HP while the kidneys stay intact (the realism this whole fix is for).
-    expect(pen.organ / Math.max(1, pen.hits)).toBeGreaterThan(blunt.organ / Math.max(1, blunt.hits));
+    expect(pen.organ / Math.max(1, pen.hits)).toBeGreaterThan(
+      blunt.organ / Math.max(1, blunt.hits)
+    );
   });
 
   it('melee lands a sane ~60% at parity (no more ~80% dodge whiff-slog)', () => {

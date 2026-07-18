@@ -24,12 +24,20 @@ function hexToRgb(hex?: string): { r: number; g: number; b: number } | null {
 // at runtime, so `resolveCharSpans`/`hexToRgb`/`getItemById` — previously called for EVERY drop EVERY
 // frame in the loop below — are memoised here, killing that per-frame allocation churn (the GC the perf
 // spec warns about). Keyed by resourceId.
-const _dropVisCache = new Map<string, { sprite: string | null; storedColor: { r: number; g: number; b: number } | null }>();
-function dropVisFor(resourceId: string): { sprite: string | null; storedColor: { r: number; g: number; b: number } | null } {
+const _dropVisCache = new Map<
+  string,
+  { sprite: string | null; storedColor: { r: number; g: number; b: number } | null }
+>();
+function dropVisFor(resourceId: string): {
+  sprite: string | null;
+  storedColor: { r: number; g: number; b: number } | null;
+} {
   let v = _dropVisCache.get(resourceId);
   if (!v) {
     const def = itemService.getItemById(resourceId);
-    const sprite = def?.charSpans ? (resolveCharSpans(def.charSpans as CharSpan[])[0] ?? null) : null;
+    const sprite = def?.charSpans
+      ? (resolveCharSpans(def.charSpans as CharSpan[])[0] ?? null)
+      : null;
     v = { sprite, storedColor: hexToRgb(def?.color) };
     _dropVisCache.set(resourceId, v);
   }
@@ -86,8 +94,14 @@ const DECONSTRUCT_FG = { r: 1.0, g: 0.25, b: 0.05 };
 
 // Per-building-type static visuals (sprite glyph + tint), resolved once — same memo trick as
 // dropVisFor so overlayBuildings never re-resolves charSpans/colour per building per frame.
-const _buildingVisCache = new Map<string, { sprite: string; color: { r: number; g: number; b: number } }>();
-function buildingVisFor(typeId: string): { sprite: string; color: { r: number; g: number; b: number } } {
+const _buildingVisCache = new Map<
+  string,
+  { sprite: string; color: { r: number; g: number; b: number } }
+>();
+function buildingVisFor(typeId: string): {
+  sprite: string;
+  color: { r: number; g: number; b: number };
+} {
   let v = _buildingVisCache.get(typeId);
   if (!v) {
     const def = buildingService.getBuildingById(typeId);

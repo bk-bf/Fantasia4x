@@ -28,7 +28,11 @@
         loading={equipmentLoading}
         onUnequip={(slot) => unequipPawnItem(pawn.id, slot)}
         onTogglePin={(itemId) =>
-          gameState.command({ type: 'togglePinItem', payload: { pawnId: pawn.id, itemId }, save: true })}
+          gameState.command({
+            type: 'togglePinItem',
+            payload: { pawnId: pawn.id, itemId },
+            save: true
+          })}
       />
     </div>
 

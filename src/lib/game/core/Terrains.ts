@@ -371,7 +371,8 @@ export function isSpawnableTile(tile: WorldTile | undefined | null): boolean {
   if (!tile || !tile.walkable) return false;
   // A variant is spawnable if its parent is (deep_forest inherits forest's spawnability).
   const biome = tile.terrainType;
-  if (!SPAWNABLE_BIOMES.has(biome) && !SPAWNABLE_BIOMES.has(BIOMES[biome]?.parent ?? '')) return false;
+  if (!SPAWNABLE_BIOMES.has(biome) && !SPAWNABLE_BIOMES.has(BIOMES[biome]?.parent ?? ''))
+    return false;
   if (WATER_SUBTYPES.has(tile.subType)) return false;
   return true;
 }

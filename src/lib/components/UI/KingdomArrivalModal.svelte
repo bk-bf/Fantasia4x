@@ -39,7 +39,9 @@
         Seek out the trader while they linger — a highlighted colonist can strike a bargain.
       </p>
     {:else}
-      <p class="hint">They will linger a while. What they learn of you, their kingdom learns too.</p>
+      <p class="hint">
+        They will linger a while. What they learn of you, their kingdom learns too.
+      </p>
     {/if}
 
     <button class="done" onclick={onResolve}>RECEIVE THEM</button>

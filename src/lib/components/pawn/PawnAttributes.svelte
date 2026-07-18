@@ -94,11 +94,13 @@
     return { destroy: () => cell.removeEventListener('mouseenter', onEnter) };
   }
 
-  $: grouped = CATEGORY_ORDER.filter((cat) => categories.includes(cat)).map((cat) => ({
-    cat,
-    label: CATEGORY_LABEL[cat] ?? cat.toUpperCase(),
-    stats: STATS.filter((s) => s.category === cat)
-  })).filter((g) => g.stats.length > 0);
+  $: grouped = CATEGORY_ORDER.filter((cat) => categories.includes(cat))
+    .map((cat) => ({
+      cat,
+      label: CATEGORY_LABEL[cat] ?? cat.toUpperCase(),
+      stats: STATS.filter((s) => s.category === cat)
+    }))
+    .filter((g) => g.stats.length > 0);
 
   // buildRows takes the reactive values (pawn, ctx, relevant) as args purely so Svelte tracks them as
   // dependencies and recomputes the whole table on any change (function calls hide deps from the compiler).

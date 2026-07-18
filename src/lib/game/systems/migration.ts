@@ -25,7 +25,10 @@ function completedBuildings(state: GameState): number {
 
 export function rollMigrantWave(state: GameState, force = false): GameState {
   const built = completedBuildings(state);
-  const p = Math.min(CFG.maxChance, Math.max(CFG.minChance, CFG.baseChance + CFG.perBuilding * built));
+  const p = Math.min(
+    CFG.maxChance,
+    Math.max(CFG.minChance, CFG.baseChance + CFG.perBuilding * built)
+  );
 
   let count = 0;
   for (let i = 0; i < CFG.slots; i++) if (rng.chance(p)) count++;
@@ -44,13 +47,12 @@ export function rollMigrantWave(state: GameState, force = false): GameState {
   remapKinIds(candidates, waveIds);
   if (candidates.length === 0) return state; // empty culture pool — nothing to offer
 
-
-
   simLog.logActivity({
     turn: state.turn,
     type: 'event',
     actor: 'system',
-    action: count === 1 ? 'A wanderer approaches the colony' : `${count} wanderers approach the colony`,
+    action:
+      count === 1 ? 'A wanderer approaches the colony' : `${count} wanderers approach the colony`,
     result: 'seeking to join',
     severity: 'info'
   });

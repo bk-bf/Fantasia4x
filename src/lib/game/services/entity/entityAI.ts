@@ -617,7 +617,13 @@ export function stepOne(
   // §G shared vision: perception-based range scaled by this tile's light + the mob's night_vision,
   // computed ONCE here and threaded into the FSM (so darkness shortens detection without recomputing
   // the light per check). Daytime with nightVision 0 ≈ the old def.stats.visionRange.
-  const tileLight = computeTileLightLevel(turn, state.buildings ?? [], mob.x, mob.y, state.worldMap);
+  const tileLight = computeTileLightLevel(
+    turn,
+    state.buildings ?? [],
+    mob.x,
+    mob.y,
+    state.worldMap
+  );
   // §G stash the mob's sight multiplier (night-vision-dampened light) so its `sight` dims in the dark too
   // (combat aim), matching pawns: no penalty at ≥50% light, then a linear ramp to a floor. Compute the
   // mob's night-vision ONCE and thread it into effectiveVisionRange (which would otherwise recompute it).

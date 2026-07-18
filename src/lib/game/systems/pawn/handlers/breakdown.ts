@@ -128,7 +128,9 @@ function fleeFrom(pawn: Pawn, gameState: GameState): GameState {
   const dy = Math.sign(pawn.position.y - threat.y) || 1;
   const fleeX = clamp(pawn.position.x + dx * FLEE_DISTANCE, 0, mapW - 1);
   const fleeY = clamp(pawn.position.y + dy * FLEE_DISTANCE, 0, mapH - 1);
-  return tryAssignSleepPath(pawn, fleeX, fleeY, gameState) ?? tryWanderStep(pawn, gameState) ?? gameState;
+  return (
+    tryAssignSleepPath(pawn, fleeX, fleeY, gameState) ?? tryWanderStep(pawn, gameState) ?? gameState
+  );
 }
 
 /** Scurry away from the nearest other living pawn to be alone; amble once far enough. */
@@ -154,5 +156,7 @@ function hide(pawn: Pawn, gameState: GameState): GameState {
   const dy = Math.sign(pawn.position.y - nearY) || 1;
   const hideX = clamp(pawn.position.x + dx * FLEE_DISTANCE, 0, mapW - 1);
   const hideY = clamp(pawn.position.y + dy * FLEE_DISTANCE, 0, mapH - 1);
-  return tryAssignSleepPath(pawn, hideX, hideY, gameState) ?? tryWanderStep(pawn, gameState) ?? gameState;
+  return (
+    tryAssignSleepPath(pawn, hideX, hideY, gameState) ?? tryWanderStep(pawn, gameState) ?? gameState
+  );
 }

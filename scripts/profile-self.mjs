@@ -17,7 +17,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const DEBUG = path.resolve(import.meta.dirname, '../.debug');
-const SIM_MARKERS = ['processGameTurn', 'tickPawn', 'computeCapacities', 'evaluateFormula', 'stepEntities'];
+const SIM_MARKERS = [
+  'processGameTurn',
+  'tickPawn',
+  'computeCapacities',
+  'evaluateFormula',
+  'stepEntities'
+];
 
 function newestProfile() {
   const cands = fs
@@ -62,7 +68,9 @@ function jsSelf(thread) {
   return { self, total, idle };
 }
 
-console.log(`profile: ${path.basename(file)}  (interval ${p.meta?.interval}ms, ${p.threads.length} threads)\n`);
+console.log(
+  `profile: ${path.basename(file)}  (interval ${p.meta?.interval}ms, ${p.threads.length} threads)\n`
+);
 for (const t of p.threads) {
   if (t.name !== 'DOM Worker') continue;
   const { self, total, idle } = jsSelf(t);

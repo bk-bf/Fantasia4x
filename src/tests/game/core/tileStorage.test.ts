@@ -144,7 +144,14 @@ describe('drops-authoritative storage core (Stage 2 flip)', () => {
   it('absorbDropIfOnStockpileTile keeps a named drop distinct instead of merging', () => {
     const gs = withDesig(
       [
-        drop({ id: 'c1', resourceId: 'pawn_carcass', x: 2, y: 2, quantity: 1, name: "Vale's Carcass" }),
+        drop({
+          id: 'c1',
+          resourceId: 'pawn_carcass',
+          x: 2,
+          y: 2,
+          quantity: 1,
+          name: "Vale's Carcass"
+        }),
         drop({
           id: 'c2',
           resourceId: 'pawn_carcass',

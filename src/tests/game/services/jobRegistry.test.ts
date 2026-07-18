@@ -46,8 +46,7 @@ describe('job registry (jobs.jsonc ↔ JobService)', () => {
   });
 
   it('maps static job types to their declared work category', () => {
-    const wk = (type: string) =>
-      jobService.getJobWorkCategory({ type, targetX: 0, targetY: 0 });
+    const wk = (type: string) => jobService.getJobWorkCategory({ type, targetX: 0, targetY: 0 });
     expect(wk('haul')).toBe('hauling');
     expect(wk('fetch')).toBe('hauling');
     expect(wk('construct')).toBe('construction');

@@ -133,7 +133,10 @@ function leafFrames(thread, t0, t1) {
     tally.set(nm, (tally.get(nm) || 0) + 1);
     n++;
   }
-  return [...tally.entries()].sort((a, b) => b[1] - a[1]).slice(0, 16).map(([k, v]) => [k, ((100 * v) / n).toFixed(1)]);
+  return [...tally.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 16)
+    .map(([k, v]) => [k, ((100 * v) / n).toFixed(1)]);
 }
 const t0 = sim.samples.time ? sim.samples.time[0] : 0;
 console.log(`\n── top DEEPEST leaf frames in first ${earlySec}s (native/GC/wasm visible) ──`);

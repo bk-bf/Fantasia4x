@@ -179,10 +179,7 @@ export function spawnKingdomParty(
   if (!anchor) return null;
   // Entry: a walkable tile at the MAP EDGE, so the party visibly marches the map to reach the colony.
   // Fall back to a far-from-colony ring, then the anchor, if the edge is all water/mountain.
-  const entry =
-    findMapEdgeTile(map) ??
-    findWalkableNear(map, center.x, center.y, 40, 90) ??
-    anchor;
+  const entry = findMapEdgeTile(map) ?? findWalkableNear(map, center.x, center.y, 40, 90) ?? anchor;
 
   const roster = partyRoster(kingdom, kind);
   const tiles = clusterTiles(map, entry, roster.length);

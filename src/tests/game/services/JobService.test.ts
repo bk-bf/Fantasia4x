@@ -87,13 +87,19 @@ describe('JobService subjobs (Work-tab fine-tuning)', () => {
   }
 
   it('exposes subjobs only for categories that aggregate multiple job types', () => {
-    expect(jobService.getSubjobsForCategory('construction').map((s) => s.id).sort()).toEqual(
-      ['construct', 'deconstruct', 'repair'].sort()
-    );
+    expect(
+      jobService
+        .getSubjobsForCategory('construction')
+        .map((s) => s.id)
+        .sort()
+    ).toEqual(['construct', 'deconstruct', 'repair'].sort());
     // refuel is a carrying chore — it sits under hauling with haul/fetch.
-    expect(jobService.getSubjobsForCategory('hauling').map((s) => s.id).sort()).toEqual(
-      ['fetch', 'haul', 'refuel'].sort()
-    );
+    expect(
+      jobService
+        .getSubjobsForCategory('hauling')
+        .map((s) => s.id)
+        .sort()
+    ).toEqual(['fetch', 'haul', 'refuel'].sort());
     expect(jobService.getSubjobsForCategory('crafting')).toEqual([]); // 1:1, nothing to expand
   });
 
@@ -113,10 +119,7 @@ describe('JobService subjobs (Work-tab fine-tuning)', () => {
     // construction=normal with repair=urgent; hauling=high. The haul must still outrank the repair —
     // repair's high subjob only matters among construction jobs.
     const gs = makeState({
-      jobs: [
-        makeJob({ id: 'j-haul', type: 'haul' }),
-        makeJob({ id: 'j-repair', type: 'repair' })
-      ],
+      jobs: [makeJob({ id: 'j-haul', type: 'haul' }), makeJob({ id: 'j-repair', type: 'repair' })],
       workAssignments: withLabor({ construction: 2, repair: 4, hauling: 3 })
     });
     const order = jobService.getAvailableJobs(makePawn('pawn-a'), gs).map((j) => j.id);

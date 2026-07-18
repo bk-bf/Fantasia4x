@@ -54,8 +54,7 @@
 
   // §I Famed: a legend outshines the quality tint (gold name) and surfaces its history + enchant list.
   // Enchant ids are humanised inline (capitalise, `_`→space) so no backend token leaks into the card.
-  const humanize = (id: string) =>
-    id.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  const humanize = (id: string) => id.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   let enchantLabels = $derived((famedEnchants ?? []).map(humanize).join(', '));
 
   // Stat panel portaled to the cursor while hovering the name (same UX as EquipmentDoll).
@@ -95,7 +94,7 @@
     {#if def.charSpans}
       <SpriteIcon charSpans={def.charSpans} tint={qColor ?? def.color ?? null} px={16} />
     {/if}
-    <span class="name-text" class:famed style="{famed ? 'color:var(--accent-hi, #ffd24a)' : ''}"
+    <span class="name-text" class:famed style={famed ? 'color:var(--accent-hi, #ffd24a)' : ''}
       >{#if hasPrefix}<span class="rarity" style="color:{qColor}">{prefix}</span
         >&nbsp;{/if}{baseName}</span
     >

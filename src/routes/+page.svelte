@@ -152,7 +152,11 @@
   };
 
   /** Tinted RGB (0–1) for a #rrggbb colour under the same feColorMatrix the panel filter used. */
-  function tintRGB(hex: string, tint: [number, number, number], s: number): [number, number, number] {
+  function tintRGB(
+    hex: string,
+    tint: [number, number, number],
+    s: number
+  ): [number, number, number] {
     const r = parseInt(hex.slice(1, 3), 16) / 255;
     const g = parseInt(hex.slice(3, 5), 16) / 255;
     const b = parseInt(hex.slice(5, 7), 16) / 255;

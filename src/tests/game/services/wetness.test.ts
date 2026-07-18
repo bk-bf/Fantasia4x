@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { pawnService } from '$lib/game/services/PawnService';
 import { rebuildThermalField, biomeBaseMoisture } from '$lib/game/services/EnvironmentService';
-import type { GameState, Pawn, WorldTile, WeatherState, PlacedBuilding } from '$lib/game/core/types';
+import type {
+  GameState,
+  Pawn,
+  WorldTile,
+  WeatherState,
+  PlacedBuilding
+} from '$lib/game/core/types';
 
 // SEASONS_WEATHER — pawn wetness meter: soaks over time on wet (>50%) tiles (rain raises tile
 // wetness), dries off when warm/sheltered. Roofs keep the tile under them dry. Base tile wetness is

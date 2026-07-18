@@ -152,7 +152,12 @@ function firstName(p: Pawn): string {
  */
 export function chooseCategory(
   rel: PawnRelationship,
-  opts: { flirtEligible: boolean; targetGrieving: boolean; battleContext: boolean; atGathering?: boolean }
+  opts: {
+    flirtEligible: boolean;
+    targetGrieving: boolean;
+    battleContext: boolean;
+    atGathering?: boolean;
+  }
 ): ConversationCategory {
   const stage: RelationStage = rel.stage;
   // Under arms, the talk turns to the fight (unless they actively loathe each other).
@@ -273,8 +278,16 @@ export function runConversation(
   const openerRaw = carryOn ? rng.pick(bank.callbacks!) : beat.open;
 
   const lines: ConversationLine[] = [
-    { pawnId: a.id, name: firstName(a), text: fill(openerRaw, b, subject, weatherWord, ctx.season) },
-    { pawnId: b.id, name: firstName(b), text: fill(branch.reply, a, subject, weatherWord, ctx.season) }
+    {
+      pawnId: a.id,
+      name: firstName(a),
+      text: fill(openerRaw, b, subject, weatherWord, ctx.season)
+    },
+    {
+      pawnId: b.id,
+      name: firstName(b),
+      text: fill(branch.reply, a, subject, weatherWord, ctx.season)
+    }
   ];
 
   // Graph: a warm exchange can flow into a follow-on beat (a deeper turn) before the closer.
@@ -332,7 +345,8 @@ function recallConversation(
   const weatherWord = WEATHER_WORD[ctx.weatherType ?? ''] ?? 'sky';
   const who = memory.subjectName ?? 'someone';
   const detail = memory.detail ?? '';
-  const f = (tpl: string, other: Pawn) => fill(tpl, other, who, weatherWord, ctx.season, detail, ago);
+  const f = (tpl: string, other: Pawn) =>
+    fill(tpl, other, who, weatherWord, ctx.season, detail, ago);
   const L = memBank.lines;
   const replyPool = positive ? L.replies_good : L.replies_bad;
 

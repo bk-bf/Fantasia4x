@@ -178,7 +178,14 @@
       if (ap.armorType) out.push({ label: 'Class', val: cap(ap.armorType) });
       const slot = ap.slot ?? ap.equipmentSlot;
       if (slot)
-        out.push({ label: 'Slot', val: cap(String(slot).replace(/([A-Z])/g, ' $1').trim()) });
+        out.push({
+          label: 'Slot',
+          val: cap(
+            String(slot)
+              .replace(/([A-Z])/g, ' $1')
+              .trim()
+          )
+        });
       // ADR-029: which body parts this piece actually protects (a breastplate ≠ head cover).
       const covers = slot ? coveredParts(item, slot as EquipmentSlot) : [];
       if (covers.length) out.push({ label: 'Covers', val: coversSummary(covers) });

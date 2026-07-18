@@ -32,7 +32,8 @@
         onmousemove={(e) => pin.move(e)}
         onmouseleave={() => pin.close()}
         onclick={(e) => pin.toggle(v, v.kind + ':' + v.id, e)}
-        onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && pin.toggle(v, v.kind + ':' + v.id, e)}
+        onkeydown={(e) =>
+          (e.key === 'Enter' || e.key === ' ') && pin.toggle(v, v.kind + ':' + v.id, e)}
       >
         {#if v.charSpans}
           <SpriteIcon charSpans={v.charSpans} tint={v.color} px={iconPx} />

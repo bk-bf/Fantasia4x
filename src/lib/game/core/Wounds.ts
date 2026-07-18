@@ -315,7 +315,11 @@ export function recomputeWound(
     // scaled maxHp = nominal) this equals the old accum × painPerDamage; bigger creatures hurt ÷ bodyScale.
     painContribution:
       Math.round(
-        frac * (partDef?.maxHp ?? maxHp) * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10
+        frac *
+          (partDef?.maxHp ?? maxHp) *
+          (wd?.painPerDamage ?? 0.5) *
+          (partDef?.isVital ? 2 : 1) *
+          10
       ) / 10,
     infected: prev?.infected ?? false,
     // Carry the active dressing across recomputes — otherwise a wound reverts to "untended" the first
@@ -377,7 +381,11 @@ export function recomputeWoundInPlace(
   // Size-invariant, fraction-based pain (mirrors recomputeWound): frac × nominal part size × painPerDamage.
   w.painContribution =
     Math.round(
-      frac * (partDef?.maxHp ?? maxHp) * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10
+      frac *
+        (partDef?.maxHp ?? maxHp) *
+        (wd?.painPerDamage ?? 0.5) *
+        (partDef?.isVital ? 2 : 1) *
+        10
     ) / 10;
   if (w.inflictedAt == null) w.inflictedAt = turn;
 }

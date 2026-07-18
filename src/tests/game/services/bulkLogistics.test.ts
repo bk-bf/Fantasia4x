@@ -24,7 +24,9 @@ function makePawn(over: Partial<Pawn> = {}): Pawn {
   } as unknown as Pawn;
 }
 
-const HANDCART = { mainHand: { instanceId: 'c', itemId: 'handcart', durability: 300 } } as Pawn['equipment'];
+const HANDCART = {
+  mainHand: { instanceId: 'c', itemId: 'handcart', durability: 300 }
+} as Pawn['equipment'];
 
 describe('§L carts are two-handed tools that expand carry capacity', () => {
   it('wheel + carts exist; carts are mainHand tools with an inventoryBonus and no weapon', () => {
@@ -56,7 +58,12 @@ describe('§L carts are two-handed tools that expand carry capacity', () => {
 
   it('lets a hauler pick up far more bulk goods than by hand', () => {
     const byHand = itemService.clampPickupQuantity(makePawn(), 'granite', 999, state);
-    const withCart = itemService.clampPickupQuantity(makePawn({ equipment: HANDCART }), 'granite', 999, state);
+    const withCart = itemService.clampPickupQuantity(
+      makePawn({ equipment: HANDCART }),
+      'granite',
+      999,
+      state
+    );
     expect(withCart).toBeGreaterThan(byHand * 5);
   });
 });

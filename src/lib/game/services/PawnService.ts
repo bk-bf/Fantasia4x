@@ -21,7 +21,11 @@ import { occupancyService } from './OccupancyService';
 import conditionsData from '../database/pawns/conditions.jsonc';
 import { NEEDS_DB, needNum } from '../core/needsDefs';
 import { moodEffect, MOOD_BASE } from '../core/moodEffects';
-import { getConditionCurrentStage, conditionNeedMultipliers, getConditionDefById } from '../core/needs';
+import {
+  getConditionCurrentStage,
+  conditionNeedMultipliers,
+  getConditionDefById
+} from '../core/needs';
 import { amenityAt } from '../core/buildingAmenity';
 import { effectiveMood, moodModifierValue } from '../core/Social';
 import {
@@ -70,7 +74,8 @@ const MOOD_EASE_STEP = perTick(0.4);
 function pawnHasCondition(pawn: Pawn, id: string): boolean {
   if (pawn.conditions?.some((c) => c.id === id)) return true;
   const tc = pawn.transientConditions;
-  if (tc) for (const t of tc) if (t === id || (t.includes(':') && t.split(':')[0] === id)) return true;
+  if (tc)
+    for (const t of tc) if (t === id || (t.includes(':') && t.split(':')[0] === id)) return true;
   return false;
 }
 
@@ -446,6 +451,15 @@ export class PawnServiceImpl implements PawnService {
     const weatherTemp = weatherFx.tempDelta + diurnalTempDelta(gameState.turn, gameState.season);
     const nightFatigueMul =
       getAmbientLight(gameState.turn) < NIGHT_LIGHT_THRESHOLD ? NIGHT_FATIGUE_MUL : 1;
+    // HEADLESS-SIM per-need kill-switches (`devToggleNeed`): hoisted to scalars once per tick —
+    // zero per-pawn cost on the common all-enabled path (ENGINE-PERFORMANCE: no new allocation).
+    const dis = gameState._needsDisabled;
+    const disHunger = dis?.hunger === true;
+    const disFatigue = dis?.fatigue === true;
+    const disThirst = dis?.thirst === true;
+    const disHygiene = dis?.hygiene === true;
+    const disWetness = dis?.wetness === true;
+    const disRelaxation = dis?.relaxation === true;
     const worldMap = gameState.worldMap;
     for (let i = 0; i < pawns.length; i++) {
       const pawn = pawns[i];
@@ -472,16 +486,21 @@ export class PawnServiceImpl implements PawnService {
       const hungerMul = weatherFx.hungerMul * (heat > 0 ? 1 + heat * HEAT_HUNGER_PER_DEG : 1);
 
       const needs = pawn.needs;
-      const hunger = Math.min(100, needs.hunger + rate.hunger * hungerMul * dt);
-      const fatigue = Math.min(100, needs.fatigue + rate.fatigue * fatigueMul * dt);
+      const hunger = disHunger
+        ? needs.hunger
+        : Math.min(100, needs.hunger + rate.hunger * hungerMul * dt);
+      const fatigue = disFatigue
+        ? needs.fatigue
+        : Math.min(100, needs.fatigue + rate.fatigue * fatigueMul * dt);
       // §D water needs: thirst & hygiene accrue each tick like hunger. Eating quenches
       // some thirst (handled where meals are consumed); drinking/washing reset them. A condition's
       // `thirstRate` (dysentery's fluid loss) speeds the climb.
-      const thirst = Math.min(
-        100,
-        (needs.thirst ?? 0) + THIRST_INCREASE_PER_SECOND * rate.thirstRate * dt
-      );
-      const hygiene = Math.min(100, (needs.hygiene ?? 0) + HYGIENE_INCREASE_PER_SECOND * dt);
+      const thirst = disThirst
+        ? (needs.thirst ?? 0)
+        : Math.min(100, (needs.thirst ?? 0) + THIRST_INCREASE_PER_SECOND * rate.thirstRate * dt);
+      const hygiene = disHygiene
+        ? (needs.hygiene ?? 0)
+        : Math.min(100, (needs.hygiene ?? 0) + HYGIENE_INCREASE_PER_SECOND * dt);
 
       // SEASONS_WEATHER wetness: soak fast on wet (>50%) tiles (roofs keep tiles dry — tileWetness
       // already cuts the rain contribution under cover); a fully-wet tile is instant. Off wet ground
@@ -504,12 +523,12 @@ export class PawnServiceImpl implements PawnService {
         warmth * WET_DRY_WARMTH_SPEED + (thermal?.roofed ? WET_DRY_SHELTER_SPEED : 0)
       );
       const wetRes = pawnStatService.evaluateStat('wetness_resistance', pawn);
-      const wetness = accrueWetness(wet0, tileWet, dt, wetRes, drySpeed);
+      const wetness = disWetness ? wet0 : accrueWetness(wet0, tileWet, dt, wetRes, drySpeed);
 
       // SOCIAL: relaxation decays toward 0 (recovered by SOCIALISING — paused while in that state).
       const relaxation0 = needs.relaxation ?? 100;
       const relaxation =
-        pawn.currentState === 'Socialising'
+        disRelaxation || pawn.currentState === 'Socialising'
           ? relaxation0
           : Math.max(0, relaxation0 - RELAXATION_DECREASE_PER_SECOND * dt);
 

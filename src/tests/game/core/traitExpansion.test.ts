@@ -19,7 +19,14 @@ function makePawn(id: string, traits: Trait[], pos?: { x: number; y: number }): 
   return {
     id,
     name: id,
-    stats: { strength: 10, dexterity: 10, intelligence: 10, perception: 10, charisma: 10, constitution: 10 },
+    stats: {
+      strength: 10,
+      dexterity: 10,
+      intelligence: 10,
+      perception: 10,
+      charisma: 10,
+      constitution: 10
+    },
     physicalTraits: { height: 170, weight: 70, size: 'medium' },
     traits,
     needs: { hunger: 0, fatigue: 0, sleep: 0, lastSleep: 0, lastMeal: 0 },
@@ -128,11 +135,16 @@ describe('TRAIT-LIBRARY-EXPANSION mechanics', () => {
     // (`lineage` set, no payload) whose members are top-level traits tagged with its lineage id,
     // grown at seasonal growth events.
     const markers: Array<[string, string]> = [
-      ['stoneblood-heritage', 'stoneblood'], ['echoborn-heritage', 'echoborn'],
-      ['sporeborn-heritage', 'sporeborn'], ['crustacean-heritage', 'crustacean'],
-      ['stormborn-heritage', 'stormborn'], ['shadeborn-heritage', 'shadeborn'],
-      ['colossus-heritage', 'colossus'], ['wildblooded-heritage', 'wildblooded'],
-      ['farseer-heritage', 'farseer'], ['blighted-heritage', 'blighted'],
+      ['stoneblood-heritage', 'stoneblood'],
+      ['echoborn-heritage', 'echoborn'],
+      ['sporeborn-heritage', 'sporeborn'],
+      ['crustacean-heritage', 'crustacean'],
+      ['stormborn-heritage', 'stormborn'],
+      ['shadeborn-heritage', 'shadeborn'],
+      ['colossus-heritage', 'colossus'],
+      ['wildblooded-heritage', 'wildblooded'],
+      ['farseer-heritage', 'farseer'],
+      ['blighted-heritage', 'blighted'],
       ['dragon-heritage', 'dragon']
     ];
     for (const [id, lineage] of markers) {

@@ -17,6 +17,9 @@
 # Pass --profiler-autorun for the CAPTURE run: same heavy sandbox but auto-unpaused at 4× with the
 #   overlay dropped immediately, so the running sim's startup can be recorded in the Firefox Profiler.
 #   See src/lib/game/dev/profilerScenario.ts.
+# Pass --headless to enable the /api/sim/* headless-sim routes (HEADLESS-SIM / ADR-033): start a
+#   scenario, tick, and steer the sim over HTTP (curl/agent). OFF by default — without this flag the
+#   routes 404 even in dev, and nothing boots until the first POST /api/sim/session.
 #
 # Worktree-local port: create a .devport file next to dev.sh containing just the
 # port number (e.g. "5174"). Gitignored — only affects the checkout it lives in.
@@ -29,6 +32,7 @@ PROFILER_AUTORUN=false
 HMR_MODE=false
 BROWSER_MODE=false
 LEGACY_MENU_MODE=false
+HEADLESS_MODE=false
 
 # Read worktree-local port override if present
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -45,6 +49,7 @@ while [[ $# -gt 0 ]]; do
     --hmr) HMR_MODE=true ;; # opt into Vite hot-reload / live page-reload (off by default)
     --browser) BROWSER_MODE=true ;; # lift the desktop-shell guard so a plain browser can load the game
     --legacy-menu) LEGACY_MENU_MODE=true ;; # render the original centred main menu (MainMenu)
+    --headless) HEADLESS_MODE=true ;; # enable the /api/sim/* headless-sim routes (ADR-033)
     --port) PORT="$2"; shift ;;
     --port=*) PORT="${1#--port=}" ;;
   esac
@@ -143,11 +148,19 @@ if [[ "$LEGACY_MENU_MODE" == "true" ]]; then
   LEGACY_ENV="VITE_LEGACY_MENU=true"
 fi
 
+# Headless-sim routes (ADR-033): opt-in — without the flag the /api/sim/* handlers 404 even in dev,
+# and nothing simulates until the first POST /api/sim/session. Never present in a packaged build.
+HEADLESS_ENV=""
+if [[ "$HEADLESS_MODE" == "true" ]]; then
+  echo "Headless sim ENABLED — /api/sim/* routes live (start with: curl -X POST localhost:$PORT/api/sim/session -d '{\"preset\":\"bronze-colony\"}')."
+  HEADLESS_ENV="VITE_HEADLESS=1"
+fi
+
 # --config.fetch-retries=0: `pnpm exec` first runs an implicit dependency verify that resolves optional
 # native deps (detect-libc) against the npm registry. With network that's instant; but in launch.sh's
 # sandboxed net namespace (no network) the fetch fails ENETUNREACH and pnpm's default backoff (10s +
 # 60s) blocks dev-server startup for ~70s before giving up. Zero retries makes it fail fast and start
 # immediately. No-op on the host (the first fetch succeeds there, so retries never trigger). Must be the
 # `--config.X` form — `pnpm --fetch-retries=… exec` is rejected as an unknown option.
-# shellcheck disable=SC2086 -- $PROFILER_ENV/$DEBUG_ENV/$HMR_ENV/$BROWSER_ENV/$LEGACY_ENV are intentional VAR=val flag passthroughs
-exec env $PROFILER_ENV $DEBUG_ENV $HMR_ENV $BROWSER_ENV $LEGACY_ENV VITE_DEV_BRANCH="$BRANCH" VITE_DEV_COMMIT="$COMMIT" pnpm --config.fetch-retries=0 exec vite dev --host --port $PORT
+# shellcheck disable=SC2086 -- $PROFILER_ENV/$DEBUG_ENV/$HMR_ENV/$BROWSER_ENV/$LEGACY_ENV/$HEADLESS_ENV are intentional VAR=val flag passthroughs
+exec env $PROFILER_ENV $DEBUG_ENV $HMR_ENV $BROWSER_ENV $LEGACY_ENV $HEADLESS_ENV VITE_DEV_BRANCH="$BRANCH" VITE_DEV_COMMIT="$COMMIT" pnpm --config.fetch-retries=0 exec vite dev --host --port $PORT

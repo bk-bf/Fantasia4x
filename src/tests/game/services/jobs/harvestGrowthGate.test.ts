@@ -31,7 +31,9 @@ describe('isHarvestableTileNow — harvest-mark growth gate (pine_tree)', () => 
   });
 
   it('rejects any harvest mark on a tile with no matching resource', () => {
-    const gs: Pick<GameState, 'worldMap'> = { worldMap: [[{ resources: {} } as unknown as WorldTile]] };
+    const gs: Pick<GameState, 'worldMap'> = {
+      worldMap: [[{ resources: {} } as unknown as WorldTile]]
+    };
     expect(isHarvestableTileNow(gs, 0, 0, 'forage')).toBe(false);
   });
 

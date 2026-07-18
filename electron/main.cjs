@@ -35,7 +35,13 @@ const MIME = {
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'app',
-    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, codeCache: true }
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+      codeCache: true
+    }
   }
 ]);
 
@@ -112,7 +118,9 @@ function createWindow() {
   win.webContents.on('before-input-event', (event, input) => {
     if (debugMode || input.type !== 'keyDown') return;
     const key = (input.key || '').toLowerCase();
-    const isDevTools = key === 'f12' || (input.control && input.shift && (key === 'i' || key === 'j' || key === 'c'));
+    const isDevTools =
+      key === 'f12' ||
+      (input.control && input.shift && (key === 'i' || key === 'j' || key === 'c'));
     const isReload = key === 'f5' || ((input.control || input.meta) && key === 'r');
     if (isDevTools || isReload) event.preventDefault();
   });

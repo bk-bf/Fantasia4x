@@ -48,7 +48,10 @@ function landTemplate(world: WorldTile[][]): { biome: string; subId: string } {
 // SPRING & SUMMER favour the dry WIND variants (the season breeze + gale, which blow leaves/dust) over
 // the RAIN variants (drizzle/rain/windy_rain/heavy_rain/storm), so the title mostly shows a pleasant
 // breeze and only occasionally rain. Autumn/winter stay evenly weighted (weight 1 each).
-const SEASON_WEATHER_POOL: Record<Season, ReadonlyArray<readonly [type: string, weight: number]>> = {
+const SEASON_WEATHER_POOL: Record<
+  Season,
+  ReadonlyArray<readonly [type: string, weight: number]>
+> = {
   spring: [
     ['spring_windy', 7],
     ['gale', 3],

@@ -16,9 +16,7 @@
   import type { TradeRow } from './TradeColumn.svelte';
 
   const session = $derived($uiState.tradeSession);
-  const party = $derived(
-    $gameState.kingdomParties?.find((p) => p.id === session?.partyId) ?? null
-  );
+  const party = $derived($gameState.kingdomParties?.find((p) => p.id === session?.partyId) ?? null);
   const pawn = $derived($gameState.pawns.find((p) => p.id === session?.pawnId) ?? null);
   const kingdom = $derived($gameState.kingdoms?.find((k) => k.id === party?.kingdomId) ?? null);
 
@@ -35,7 +33,13 @@
 
   const priceOf = (itemId: string, side: 'receive' | 'give') =>
     party
-      ? kingdomService.effectiveTradePrice($gameState, party.kingdomId, { itemId, qty: 1 }, side, tradeStat)
+      ? kingdomService.effectiveTradePrice(
+          $gameState,
+          party.kingdomId,
+          { itemId, qty: 1 },
+          side,
+          tradeStat
+        )
       : 0;
 
   const caravanRows = $derived<TradeRow[]>(
@@ -64,9 +68,7 @@
       .sort((a, b) => a.name.localeCompare(b.name))
   );
 
-  const receiveTotal = $derived(
-    caravanRows.reduce((sum, r) => sum + r.price * r.offered, 0)
-  );
+  const receiveTotal = $derived(caravanRows.reduce((sum, r) => sum + r.price * r.offered, 0));
   const giveTotal = $derived(colonyRows.reduce((sum, r) => sum + r.price * r.offered, 0));
   const balance = $derived(giveTotal - receiveTotal);
   const anythingOffered = $derived(receiveTotal > 0 || giveTotal > 0);

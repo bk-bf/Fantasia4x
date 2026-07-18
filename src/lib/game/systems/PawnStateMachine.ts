@@ -457,7 +457,13 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   {
     const pos = pawn.position;
     const tileLight = pos
-      ? computeTileLightLevel(gameState.turn, gameState.buildings ?? [], pos.x, pos.y, gameState.worldMap)
+      ? computeTileLightLevel(
+          gameState.turn,
+          gameState.buildings ?? [],
+          pos.x,
+          pos.y,
+          gameState.worldMap
+        )
       : 1;
     const el = dampenLightByNightVision(tileLight, getNightVision(pawn));
     pawn.effectiveLight =
@@ -1702,7 +1708,11 @@ class PawnStateMachineImpl {
           );
           // Force the coping substate + halt movement (the breakdown just landed).
           const broken: Pawn = forceUncontrolled(synced, forced);
-          state = { ...state, jobs, pawns: state.pawns.map((p) => (p.id === pawn.id ? broken : p)) };
+          state = {
+            ...state,
+            jobs,
+            pawns: state.pawns.map((p) => (p.id === pawn.id ? broken : p))
+          };
           state = tickPawn(broken, state);
           const after = pawnById(state.pawns, pawn.id);
           if (after) {

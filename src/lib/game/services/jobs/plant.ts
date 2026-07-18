@@ -39,7 +39,11 @@ function hasCrop(tile: { resources?: Record<string, number> }): boolean {
 
 /** The crop to sow on a grow-zone tile: the first crop whose seed passes the zone's filter, fits the
  *  tile's soil tier, and is in stock. Null when nothing plantable applies. */
-function cropForTile(gs: GameState, tile: { subType: string }, tileKey: string): ResourceObjectDef | null {
+function cropForTile(
+  gs: GameState,
+  tile: { subType: string },
+  tileKey: string
+): ResourceObjectDef | null {
   const instId = zoneInstanceIdAt(gs, tileKey, 'grow');
   const inst = (gs.zoneInstances ?? []).find((z) => z.id === instId);
   const filter = inst?.filter;
@@ -81,7 +85,7 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
     const crop = cropForTile(gs, tile, key);
     if (!crop) continue;
     jobs.push({
-      id: `plant-${x}-${y}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`,
+      id: `plant-${x}-${y}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`,
       type: 'plant',
       targetX: x,
       targetY: y,
@@ -120,7 +124,7 @@ export function complete(job: Job, gs: GameState): GameState {
     const growthPct = col.growth?.[id] ?? 100;
     const yields = resourceObjectService.calculateYield(id, pawn, undefined, undefined, growthPct);
     for (const [dropResourceId, dropAmount] of Object.entries(yields)) {
-      const dropId = `drop-${dropResourceId}-${job.targetX}-${job.targetY}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
+      const dropId = `drop-${dropResourceId}-${job.targetX}-${job.targetY}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`;
       newDropped.push({
         id: dropId,
         resourceId: dropResourceId,

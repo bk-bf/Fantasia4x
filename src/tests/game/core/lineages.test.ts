@@ -52,8 +52,18 @@ describe('LINEAGES §4 awakening meters', () => {
     // The real Rending Claws gateway lists 6 conditions (3 beast + 3 werewolf) → exactly 2 meters,
     // and WHICH deed each meter tracks varies pawn to pawn.
     const fullClaws: Trait = {
-      name: 'Rending Claws', description: '', kind: 'naturalGear', lineageExclusive: false,
-      awakens: ['devour-raw-meat', 'devour-carcass', 'wild-kills', 'moon-bathing', 'cull-canines', 'night-hunter']
+      name: 'Rending Claws',
+      description: '',
+      kind: 'naturalGear',
+      lineageExclusive: false,
+      awakens: [
+        'devour-raw-meat',
+        'devour-carcass',
+        'wild-kills',
+        'moon-bathing',
+        'cull-canines',
+        'night-hunter'
+      ]
     } as Trait;
     const p = pawn({ traits: [fullClaws] });
     seedAwakeningPaths(p);
@@ -72,7 +82,10 @@ describe('LINEAGES §4 awakening meters', () => {
 
   it('two gateways with overlapping lineages DEDUPE by lineage (claws + fur ⇒ still 2 meters)', () => {
     const fur: Trait = {
-      name: 'Thick Fur', description: '', kind: 'naturalGear', lineageExclusive: false,
+      name: 'Thick Fur',
+      description: '',
+      kind: 'naturalGear',
+      lineageExclusive: false,
       awakens: ['devour-carcass', 'sleep-wild', 'moon-bathing', 'eat-canine']
     } as Trait;
     const p = pawn({ traits: [clawGateway, fur] });
@@ -101,11 +114,23 @@ describe('LINEAGES §4 awakening meters', () => {
   it('gateway draw cap: at most TWO gateways per pawn, and a second is rare (~1 in 20)', () => {
     // A culture whose pool is nothing but gateways — without the cap every pawn would draw two.
     const gw = (id: string, lineages: string[]): Trait =>
-      ({ id, name: id, description: '', kind: 'naturalGear', lineage: lineages,
-         lineageExclusive: false, awakens: ['devour-raw-meat', 'moon-bathing'], effects: {} }) as Trait;
+      ({
+        id,
+        name: id,
+        description: '',
+        kind: 'naturalGear',
+        lineage: lineages,
+        lineageExclusive: false,
+        awakens: ['devour-raw-meat', 'moon-bathing'],
+        effects: {}
+      }) as Trait;
     const culture = {
       guaranteedTraits: [],
-      culturalTraitPool: [gw('gw-a', ['beast']), gw('gw-b', ['werewolf']), gw('gw-c', ['amphibian'])],
+      culturalTraitPool: [
+        gw('gw-a', ['beast']),
+        gw('gw-b', ['werewolf']),
+        gw('gw-c', ['amphibian'])
+      ],
       statRanges: {}
     } as unknown as Culture;
     let twos = 0;
@@ -134,8 +159,19 @@ describe('LINEAGES §4 awakening meters', () => {
 
   it('a full meter AWAKENS the pawn: grants the lineage parent + its first member', () => {
     // Inject a minimal beast lineage into the pool via the pawn's own gateway → parent + member.
-    const parent: Trait = { id: 'beast-heritage', name: 'Beast', description: '', kind: 'passive' } as Trait;
-    const member: Trait = { id: 'savage-bite', name: 'Savage Bite', description: '', kind: 'naturalGear', lineage: ['beast'] } as Trait;
+    const parent: Trait = {
+      id: 'beast-heritage',
+      name: 'Beast',
+      description: '',
+      kind: 'passive'
+    } as Trait;
+    const member: Trait = {
+      id: 'savage-bite',
+      name: 'Savage Bite',
+      description: '',
+      kind: 'naturalGear',
+      lineage: ['beast']
+    } as Trait;
     // Point the beast lineage's parent at our fixture and register the member in the catalog via a
     // pawn that already lists them is not enough — so we drive lineageGrowthEvent with a pawn whose
     // meter is full and whose lineage parent resolves. We simulate by pre-granting nothing and relying
@@ -143,7 +179,15 @@ describe('LINEAGES §4 awakening meters', () => {
     const p = pawn({
       traits: [clawGateway],
       lineagePaths: [
-        { condition: 'devour-raw-meat', lineage: LINEAGE_DEFS[0].id, deed: 'ateRawMeat', target: 5, value: 5, seen: 5, lastFedDay: 0 }
+        {
+          condition: 'devour-raw-meat',
+          lineage: LINEAGE_DEFS[0].id,
+          deed: 'ateRawMeat',
+          target: 5,
+          value: 5,
+          seen: 5,
+          lastFedDay: 0
+        }
       ]
     });
     // Parent trait for LINEAGE_DEFS[0] ('beast') resolves only if beast-heritage exists in the catalog.
@@ -158,15 +202,34 @@ describe('LINEAGES §4 awakening meters', () => {
   it('Beast content: a FULL meter awakens the pawn → beast-heritage + a first beast member', () => {
     // Real Beast content now exists (beast-heritage parent + members tagged lineage:["beast"]).
     const gateway: Trait = {
-      id: 'rending-claws', name: 'Rending Claws', description: '', kind: 'naturalGear',
-      lineageExclusive: false, lineage: ['beast', 'werewolf']
+      id: 'rending-claws',
+      name: 'Rending Claws',
+      description: '',
+      kind: 'naturalGear',
+      lineageExclusive: false,
+      lineage: ['beast', 'werewolf']
     } as Trait;
     const applied: Trait[] = [];
     const p = pawn({
       traits: [gateway],
-      stats: { strength: 10, constitution: 10, charisma: 10, perception: 10, dexterity: 10, intelligence: 10 },
+      stats: {
+        strength: 10,
+        constitution: 10,
+        charisma: 10,
+        perception: 10,
+        dexterity: 10,
+        intelligence: 10
+      },
       lineagePaths: [
-        { condition: 'devour-raw-meat', lineage: 'beast', deed: 'ateRawMeat', target: 5, value: 5, seen: 5, lastFedDay: 0 }
+        {
+          condition: 'devour-raw-meat',
+          lineage: 'beast',
+          deed: 'ateRawMeat',
+          target: 5,
+          value: 5,
+          seen: 5,
+          lastFedDay: 0
+        }
       ]
     });
     const res = lineageGrowthEvent(p, (t) => applied.push(t));
@@ -180,13 +243,26 @@ describe('LINEAGES §4 awakening meters', () => {
   });
 
   it('Beast content: a born beast pawn GROWS a new member at a growth event', () => {
-    const parent: Trait = { id: 'beast-heritage', name: 'Beast Blood', description: '', kind: 'passive', lineage: ['beast'] } as Trait;
+    const parent: Trait = {
+      id: 'beast-heritage',
+      name: 'Beast Blood',
+      description: '',
+      kind: 'passive',
+      lineage: ['beast']
+    } as Trait;
     let grew = false;
     for (let seed = 1; seed < 300 && !grew; seed++) {
       rng.reseed(seed);
       const p = pawn({
         traits: [{ ...parent }],
-        stats: { strength: 10, constitution: 10, charisma: 10, perception: 10, dexterity: 10, intelligence: 10 }
+        stats: {
+          strength: 10,
+          constitution: 10,
+          charisma: 10,
+          perception: 10,
+          dexterity: 10,
+          intelligence: 10
+        }
       });
       const res = lineageGrowthEvent(p, () => {});
       if (res.kind === 'grow') {
@@ -201,7 +277,14 @@ describe('LINEAGES §4 awakening meters', () => {
 
   it('a staged trait EVOLVES to its next rung at a growth event', () => {
     // spider-eyes-lesser (S1) → spider-eyes (S2) is a real staged line in traits.jsonc.
-    const s1: Trait = { id: 'spider-eyes-lesser', name: 'Extra Eye', description: '', kind: 'bodyMod', stage: 1, evolvesTo: 'spider-eyes' } as Trait;
+    const s1: Trait = {
+      id: 'spider-eyes-lesser',
+      name: 'Extra Eye',
+      description: '',
+      kind: 'bodyMod',
+      stage: 1,
+      evolvesTo: 'spider-eyes'
+    } as Trait;
     const p = pawn({ traits: [s1] });
     // Force the evolve roll to fire by seeding a stream that lands under EVOLVE_CHANCE; retry seeds
     // until an evolve happens (deterministic within the loop).
@@ -227,11 +310,16 @@ describe('LINEAGES §4 awakening meters', () => {
 describe('vampiric feeding (feedOnVictim)', () => {
   it('stamps a small neck puncture + drains blood on the victim, and sates the feeder', () => {
     const feeder = {
-      id: 'vamp', isAlive: true, needs: { bloodHunger: 100 },
+      id: 'vamp',
+      isAlive: true,
+      needs: { bloodHunger: 100 },
       conditionTimers: { bloodthirst: 500 }
     } as unknown as Pawn;
     const victim = {
-      id: 'meal', isAlive: true, bloodVolume: 100, maxBloodVolume: 100,
+      id: 'meal',
+      isAlive: true,
+      bloodVolume: 100,
+      maxBloodVolume: 100,
       limbs: createBodyPlanLimbs('humanoid', 1)
     } as unknown as Pawn;
     feedOnVictim(feeder, victim, 1000);
@@ -248,7 +336,9 @@ describe('vampiric feeding (feedOnVictim)', () => {
 
   it('sateBloodHunger resets the meter and lifts the rage (the werewolf devour path)', () => {
     const wolf = {
-      id: 'wolf', needs: { bloodHunger: 100 }, conditionTimers: { bloodthirst: 300 }
+      id: 'wolf',
+      needs: { bloodHunger: 100 },
+      conditionTimers: { bloodthirst: 300 }
     } as unknown as Pawn;
     sateBloodHunger(wolf);
     expect(wolf.needs!.bloodHunger).toBe(0);

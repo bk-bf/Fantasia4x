@@ -56,7 +56,10 @@ describe('planRefuel — shared generate/complete plan (any fuel loads; heat gat
   });
 
   it('steel finery (heat 5): any fuel loads, but only coke gets the fire hot enough to smelt', () => {
-    const charcoalPlan = planRefuel(gs({ plant_fiber: 10, charcoal: 50 }), building('finery_forge'));
+    const charcoalPlan = planRefuel(
+      gs({ plant_fiber: 10, charcoal: 50 }),
+      building('finery_forge')
+    );
     expect(charcoalPlan).not.toBeNull(); // it still loads…
     expect(charcoalPlan!.fireHeat).toBeLessThan(5); // …but too cool to make steel
     const cokePlan = planRefuel(gs({ plant_fiber: 10, coke: 50 }), building('finery_forge'));

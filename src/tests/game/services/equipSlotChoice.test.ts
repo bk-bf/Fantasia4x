@@ -21,9 +21,7 @@ const pawnWith = (over: Partial<Pawn> = {}): Pawn =>
 function stateWithDrop(): GameState {
   return {
     pawns: [pawnWith()],
-    droppedItems: [
-      { id: 'd1', resourceId: 'flint_knife', x: 0, y: 0, quantity: 1, stored: false }
-    ],
+    droppedItems: [{ id: 'd1', resourceId: 'flint_knife', x: 0, y: 0, quantity: 1, stored: false }],
     stockpile: {}
   } as unknown as GameState;
 }

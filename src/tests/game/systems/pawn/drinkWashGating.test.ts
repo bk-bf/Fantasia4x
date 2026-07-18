@@ -15,11 +15,21 @@ function drinkingPawn(state: string): Pawn {
     position: { x: 5, y: 5 },
     needs: { hunger: 0, fatigue: 0, thirst: 80, hygiene: 80 },
     // Residual movement from however it entered the state.
-    path: [{ x: 6, y: 5 }, { x: 7, y: 5 }],
+    path: [
+      { x: 6, y: 5 },
+      { x: 7, y: 5 }
+    ],
     pathIndex: 0,
     isMoving: true,
     currentState: state,
-    activeJob: { type: 'need', targetX: 5, targetY: 5, progress: 0, timeRequired: 120, turnsInState: 1 }
+    activeJob: {
+      type: 'need',
+      targetX: 5,
+      targetY: 5,
+      progress: 0,
+      timeRequired: 120,
+      turnsInState: 1
+    }
   } as unknown as Pawn;
 }
 
@@ -28,7 +38,10 @@ const stateWith = (p: Pawn): GameState =>
 
 describe('drinking/washing gate the pawn in place', () => {
   it('handleDrinking clears the residual path so the pawn stays put', () => {
-    const out = handleDrinking(drinkingPawn(PAWN_STATE.DRINKING), stateWith(drinkingPawn(PAWN_STATE.DRINKING)));
+    const out = handleDrinking(
+      drinkingPawn(PAWN_STATE.DRINKING),
+      stateWith(drinkingPawn(PAWN_STATE.DRINKING))
+    );
     const p = out.pawns[0];
     expect(p.currentState).toBe(PAWN_STATE.DRINKING); // still drinking (1/120 done)
     expect(p.path?.length ?? 0).toBe(0);
@@ -36,7 +49,10 @@ describe('drinking/washing gate the pawn in place', () => {
   });
 
   it('handleWashing clears the residual path so the pawn stays put', () => {
-    const out = handleWashing(drinkingPawn(PAWN_STATE.WASHING), stateWith(drinkingPawn(PAWN_STATE.WASHING)));
+    const out = handleWashing(
+      drinkingPawn(PAWN_STATE.WASHING),
+      stateWith(drinkingPawn(PAWN_STATE.WASHING))
+    );
     const p = out.pawns[0];
     expect(p.currentState).toBe(PAWN_STATE.WASHING);
     expect(p.path?.length ?? 0).toBe(0);
@@ -44,7 +60,10 @@ describe('drinking/washing gate the pawn in place', () => {
   });
 
   it('handleEating clears the residual path so the pawn stays put', () => {
-    const out = handleEating(drinkingPawn(PAWN_STATE.EATING), stateWith(drinkingPawn(PAWN_STATE.EATING)));
+    const out = handleEating(
+      drinkingPawn(PAWN_STATE.EATING),
+      stateWith(drinkingPawn(PAWN_STATE.EATING))
+    );
     const p = out.pawns[0];
     expect(p.path?.length ?? 0).toBe(0);
     expect(p.isMoving).toBe(false);

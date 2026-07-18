@@ -123,7 +123,9 @@ describe('effective mood', () => {
   it('returns the eased state.mood, ignoring modifiers (they feed the target, not the read)', () => {
     const p = pawnOf('a', 'c1', {
       state: { mood: 42, isWorking: false, isSleeping: false, isEating: false },
-      moodModifiers: [{ id: 'grief:x', label: 'Grieving', value: -25, expiresAt: 5000, startedAt: 0 }]
+      moodModifiers: [
+        { id: 'grief:x', label: 'Grieving', value: -25, expiresAt: 5000, startedAt: 0 }
+      ]
     } as unknown as Partial<Pawn>);
     expect(effectiveMood(p, 200)).toBe(42);
   });

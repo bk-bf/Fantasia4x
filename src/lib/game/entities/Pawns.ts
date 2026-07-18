@@ -31,6 +31,12 @@ import { rng } from '../core/rng';
 // Module-level counter for sequential debug IDs across all generated pawns.
 let _pawnDebugIdCounter = 1;
 
+/** Reset the debug-id counter (fresh run / scenario build — ADR-033 replay determinism: without
+ *  this, a second build in the same process numbers its pawns where the first left off). */
+export function resetPawnDebugIds(): void {
+  _pawnDebugIdCounter = 1;
+}
+
 /** Stamina pool derived from constitution and dexterity — shared by Pawn and Mob. */
 export function calcMaxStamina(stats: EntityStats): number {
   return 50 + (stats.constitution - 10) * 4 + (stats.dexterity - 10) * 2;

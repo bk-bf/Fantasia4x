@@ -92,7 +92,8 @@ export function isHarvestableTileNow(
       resourceId,
       designationType
     );
-    if (isForageGated(interaction) && (tile.growth?.[resourceId] ?? 100) < MIN_FORAGE_GROWTH) continue;
+    if (isForageGated(interaction) && (tile.growth?.[resourceId] ?? 100) < MIN_FORAGE_GROWTH)
+      continue;
     return true;
   }
   return false;

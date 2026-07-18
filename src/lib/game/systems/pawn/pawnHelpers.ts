@@ -100,7 +100,13 @@ export const FLEE_DISTANCE = 6;
  *  threat detection. Defensive pawns ignore this (they only react to adjacent hostiles). */
 export function pawnVisionTiles(pawn: Pawn, gs: GameState): number {
   const light = pawn.position
-    ? computeTileLightLevel(gs.turn, gs.buildings ?? [], pawn.position.x, pawn.position.y, gs.worldMap)
+    ? computeTileLightLevel(
+        gs.turn,
+        gs.buildings ?? [],
+        pawn.position.x,
+        pawn.position.y,
+        gs.worldMap
+      )
     : 1;
   return effectiveVisionRange(pawn, light);
 }
@@ -132,11 +138,15 @@ export const JOB_QUEUE_SIZE = 4;
 // (TICKS_PER_SECOND in core/time) retunes all of them at once.
 export const EATING_TURNS = ticksFromSeconds(needNum('hunger', 'eatDurationSeconds', 2)); // ~2 in-game min to eat at a campfire
 
-export const EATING_TURNS_GROUND = ticksFromSeconds(needNum('hunger', 'eatGroundDurationSeconds', 3)); // eating in-place (cold, uncomfortable)
+export const EATING_TURNS_GROUND = ticksFromSeconds(
+  needNum('hunger', 'eatGroundDurationSeconds', 3)
+); // eating in-place (cold, uncomfortable)
 
 export const SLEEPING_TURNS = ticksFromSeconds(needNum('fatigue', 'sleepDurationSeconds', 100)); // Full recovery in bed: 72 / 0.72 = 100s = 1/3 day (progress bar ref)
 
-export const SLEEPING_TURNS_GROUND = ticksFromSeconds(needNum('fatigue', 'sleepGroundDurationSeconds', 124)); // Full recovery on ground: 72 / 0.58 ≈ 124s ≈ 9.9h
+export const SLEEPING_TURNS_GROUND = ticksFromSeconds(
+  needNum('fatigue', 'sleepGroundDurationSeconds', 124)
+); // Full recovery on ground: 72 / 0.58 ≈ 124s ≈ 9.9h
 
 // Bed sleep = ground rate + the bed's fatigueRecovery bonus (see handleSleeping), so only the
 // ground rate is a constant here.

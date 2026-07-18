@@ -26,7 +26,9 @@ function makeState(p: Pawn, drinkAt: { x: number; y: number }, foodAt: { x: numb
     turn: 5,
     pawns: [p],
     stockpile: { bread: 5 },
-    droppedItems: [{ id: 'b', resourceId: 'bread', x: foodAt.x, y: foodAt.y, quantity: 5, stored: true }],
+    droppedItems: [
+      { id: 'b', resourceId: 'bread', x: foodAt.x, y: foodAt.y, quantity: 5, stored: true }
+    ],
     designations: { [`${drinkAt.x},${drinkAt.y}`]: 'drink' },
     buildings: []
   } as unknown as GameState;

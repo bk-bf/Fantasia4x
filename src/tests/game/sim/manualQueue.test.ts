@@ -67,8 +67,17 @@ describe('setPawnDraftTarget — manual order queue', () => {
 
   it('clearing (target null) drops all orders, idles the pawn, and releases its force-claimed job', () => {
     const s = stateWith(
-      [pawn('p1', { draftTarget: harvest('j1'), manualQueue: [harvest('j2')], activeJob: { jobId: 'j1' } as never })],
-      [{ id: 'j1', claimedBy: 'p1' }, { id: 'j2', claimedBy: null }]
+      [
+        pawn('p1', {
+          draftTarget: harvest('j1'),
+          manualQueue: [harvest('j2')],
+          activeJob: { jobId: 'j1' } as never
+        })
+      ],
+      [
+        { id: 'j1', claimedBy: 'p1' },
+        { id: 'j2', claimedBy: null }
+      ]
     );
     const out = COMMANDS.setPawnDraftTarget(s, { pawnId: 'p1', target: null });
     const p = out.pawns[0];
@@ -82,7 +91,10 @@ describe('setPawnDraftTarget — manual order queue', () => {
 
 describe('advancePawnOrders — drain on completion', () => {
   it('pops the next queued order into the head', () => {
-    const p = pawn('p1', { draftTarget: harvest('j1'), manualQueue: [harvest('j2'), harvest('j3')] });
+    const p = pawn('p1', {
+      draftTarget: harvest('j1'),
+      manualQueue: [harvest('j2'), harvest('j3')]
+    });
     advancePawnOrders(p);
     expect(p.draftTarget).toEqual(harvest('j2'));
     expect(p.manualQueue).toEqual([harvest('j3')]);

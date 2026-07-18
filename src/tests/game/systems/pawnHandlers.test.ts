@@ -118,7 +118,9 @@ describe('PawnStateMachine handler behaviour locks', () => {
 
   describe('Working', () => {
     it('goes Idle when it has no active job', () => {
-      const gs = makeState({ pawns: [makePawn({ currentState: 'Working', activeJob: undefined })] });
+      const gs = makeState({
+        pawns: [makePawn({ currentState: 'Working', activeJob: undefined })]
+      });
       expect(tick1(gs).pawns[0].currentState).toBe('Idle');
     });
 

@@ -6,7 +6,12 @@ import type { PlacedBuilding } from '$lib/game/core/types';
  * §M room amenity — comfort/beauty of complete furniture within AMENITY_RADIUS of a tile, used to speed
  * rest (handleSleeping) and wound healing (healWounds). The build material feeds in via `materials`.
  */
-const b = (type: string, x: number, y: number, materials?: Record<string, string>): PlacedBuilding =>
+const b = (
+  type: string,
+  x: number,
+  y: number,
+  materials?: Record<string, string>
+): PlacedBuilding =>
   ({
     id: `${type}-${x}-${y}`,
     type,

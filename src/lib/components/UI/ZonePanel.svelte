@@ -135,7 +135,11 @@
     // while the rest re-hide. The colour stays revealed during drawing either way (the map gates the
     // tint on designation mode), then re-hides on exit alongside the others.
     if (allColorsHidden) {
-      gameState.command({ type: 'setZoneColorHidden', payload: { instanceId: id, hidden: true }, save: true });
+      gameState.command({
+        type: 'setZoneColorHidden',
+        payload: { instanceId: id, hidden: true },
+        save: true
+      });
     }
     uiState.activateDesignation(type, id);
   }
@@ -355,7 +359,8 @@
           <div class="category-grid">
             {#if isGrow}
               {#each CROP_SEEDS as crop}
-                {@const checked = !hasFilter || inst.filter.allowedCategories.includes(crop.category)}
+                {@const checked =
+                  !hasFilter || inst.filter.allowedCategories.includes(crop.category)}
                 <label class="cat-label" class:checked>
                   <input
                     type="checkbox"

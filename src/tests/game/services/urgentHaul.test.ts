@@ -33,7 +33,8 @@ function baseState(droppedItems: DroppedItem[], jobs: GameState['jobs'] = []): G
   } as unknown as GameState;
 }
 
-const pawnAt = (x: number, y: number): Pawn => ({ id: 'p1', position: { x, y } }) as unknown as Pawn;
+const pawnAt = (x: number, y: number): Pawn =>
+  ({ id: 'p1', position: { x, y } }) as unknown as Pawn;
 
 describe('urgent haul', () => {
   it('stamps the generated haul job urgent for an urgent stack', () => {

@@ -26,7 +26,9 @@ function makeState(drops: DroppedItem[], currentToolLevel = 0): GameState {
 
 describe('ADR-009 colony tool-tier gate', () => {
   it('colonyToolTier returns the highest owned tool tier even with currentToolLevel 0', () => {
-    const gs = makeState([{ id: 'a', resourceId: 'stone_axe', x: 0, y: 0, quantity: 1, stored: true }]);
+    const gs = makeState([
+      { id: 'a', resourceId: 'stone_axe', x: 0, y: 0, quantity: 1, stored: true }
+    ]);
     expect(gs.currentToolLevel).toBe(0);
     expect(colonyToolTier(gs)).toBe(1); // stone_axe is tier 1
   });

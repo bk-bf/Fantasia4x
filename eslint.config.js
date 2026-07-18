@@ -76,7 +76,7 @@ export default [
         {
           selector: "CallExpression[callee.name='fetch'] > Literal[value=/^\\/?src\\//]",
           message:
-            "fetch() of a /src path 404s in the packaged/static build (it only works against the dev server). Import the asset with ?raw or ?url, or move it to static/ and fetch from the site root."
+            'fetch() of a /src path 404s in the packaged/static build (it only works against the dev server). Import the asset with ?raw or ?url, or move it to static/ and fetch from the site root.'
         }
       ]
     }

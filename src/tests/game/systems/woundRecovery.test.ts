@@ -165,7 +165,11 @@ describe('wound recovery & bleeding', () => {
   });
 
   it('tends only the worst untended wound per pass (most-bleeding first), leaving the rest', () => {
-    let gs = combatService.applyInjury('p1', { ...cut(50), bodyPart: 'chest' }, state([makePawn()]));
+    let gs = combatService.applyInjury(
+      'p1',
+      { ...cut(50), bodyPart: 'chest' },
+      state([makePawn()])
+    );
     gs = combatService.applyInjury('p1', { ...cut(30), bodyPart: 'leftHand' }, gs);
     // Force a deterministic bleed order: the chest wound bleeds harder than the hand wound.
     gs = {
@@ -183,7 +187,9 @@ describe('wound recovery & bleeding', () => {
           }))
         }))
       })),
-      buildings: [{ id: 'b', type: 'hay_bed', x: 5, y: 5, status: 'complete', progress: 1 }] as never
+      buildings: [
+        { id: 'b', type: 'hay_bed', x: 5, y: 5, status: 'complete', progress: 1 }
+      ] as never
     };
     const medic = makePawn({ id: 'm1', name: 'Medic' });
     rng.reseed(3);

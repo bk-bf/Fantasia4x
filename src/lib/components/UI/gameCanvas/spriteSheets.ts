@@ -23,12 +23,14 @@ const SHEET_URLS: Record<SheetName, string> = {
   crops: '/tilesets/bitlands_crops.bmp'
 };
 
-const cache = Object.fromEntries(
-  Object.keys(SHEET_URLS).map((k) => [k, null])
-) as Record<SheetName, HTMLCanvasElement | null>;
-const loading = Object.fromEntries(
-  Object.keys(SHEET_URLS).map((k) => [k, false])
-) as Record<SheetName, boolean>;
+const cache = Object.fromEntries(Object.keys(SHEET_URLS).map((k) => [k, null])) as Record<
+  SheetName,
+  HTMLCanvasElement | null
+>;
+const loading = Object.fromEntries(Object.keys(SHEET_URLS).map((k) => [k, false])) as Record<
+  SheetName,
+  boolean
+>;
 let onLoadedCb: (() => void) | null = null;
 
 /** Register a callback fired whenever a sheet finishes loading (component redraws HUD + overlay). */

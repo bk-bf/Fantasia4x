@@ -44,7 +44,9 @@ describe('engagement-scoped combat logging', () => {
     // The killing swing is flagged in the nested breakdown, and only that one.
     const fatal = sessionEntry.combatBreakdown?.filter((b) => b.fatal) ?? [];
     expect(fatal).toHaveLength(1);
-    expect(sessionEntry.combatBreakdown?.[sessionEntry.combatBreakdown.length - 1].fatal).toBe(true);
+    expect(sessionEntry.combatBreakdown?.[sessionEntry.combatBreakdown.length - 1].fatal).toBe(
+      true
+    );
   });
 
   it('a kill bumps the engagement to the newest slot of the chronicle', () => {

@@ -467,7 +467,7 @@ function acquireToolAndProceed(pawn: Pawn, gameState: GameState): GameState {
     stockpile: aggregateFromDrops(newDropped),
     pawns: gameState.pawns.map((p) => {
       if (p.id !== pawn.id) return p;
-      const carried = addInstanceToInventory(p, tf.itemId);
+      const carried = addInstanceToInventory(p, tf.itemId, gameState.turn);
       return {
         ...carried,
         activeJob: { ...aj, toolFetch: undefined, targetX: tf.siteX, targetY: tf.siteY },

@@ -3,7 +3,13 @@
 // producing recipe: destroy staged inputs, spawn outputs on the station tile, apply mold wear, drain
 // the queue. `completeCraftOrder` is also called directly for passive furnace production. Extracted
 // from JobService (P-4 handler split).
-import type { CraftingInProgress, GameState, Job, ItemQuality, ItemInstance } from '../../core/types';
+import type {
+  CraftingInProgress,
+  GameState,
+  Job,
+  ItemQuality,
+  ItemInstance
+} from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
 import { gatedConsole as console } from '../../core/log';
 import { itemService } from '../ItemService';
@@ -150,16 +156,22 @@ export function complete(job: Job, gs: GameState): GameState {
   let worstTier = 6;
   if (pawn) {
     const discipline = craftWorkCategory(entry);
-    const axis = pawnStatService.getWorkModifiers(pawn, discipline, undefined, 'crafting').quality ?? 1;
+    const axis =
+      pawnStatService.getWorkModifiers(pawn, discipline, undefined, 'crafting').quality ?? 1;
     rollQuality = () => {
       const q = rollCraftQuality(axis, () => rng.random());
       if (q > bestTier) bestTier = q;
       if (q < worstTier) worstTier = q;
       return q;
     };
-    const stationEffects = (entry.stationType
-      ? ((buildingService.getBuildingById(entry.stationType)?.effects ?? {}) as Record<string, unknown>)
-      : {}) as Record<string, unknown>;
+    const stationEffects = (
+      entry.stationType
+        ? ((buildingService.getBuildingById(entry.stationType)?.effects ?? {}) as Record<
+            string,
+            unknown
+          >)
+        : {}
+    ) as Record<string, unknown>;
     const arcane = !!stationEffects.arcane;
     rollFamedFn = () =>
       rollFamed(axis, arcane, () => rng.random()) ? rollFamedIdentity(() => rng.random()) : null;
@@ -170,11 +182,18 @@ export function complete(job: Job, gs: GameState): GameState {
     const itemName = itemDefById(entry.item.id)?.name ?? 'their work';
     const who = pawn.name.split(' ')[0];
     if (bestTier >= 4) {
-      memoryService.recordAroundKind(state, pawn.position.x, pawn.position.y, pawn.id, 'masterwork', {
-        subjectName: who,
-        detail: itemName,
-        memorability: bestTier >= 5 ? 0.9 : undefined // a Legendary is historic; else the def's base
-      });
+      memoryService.recordAroundKind(
+        state,
+        pawn.position.x,
+        pawn.position.y,
+        pawn.id,
+        'masterwork',
+        {
+          subjectName: who,
+          detail: itemName,
+          memorability: bestTier >= 5 ? 0.9 : undefined // a Legendary is historic; else the def's base
+        }
+      );
     } else if (worstTier === 0) {
       memoryService.recordAroundKind(state, pawn.position.x, pawn.position.y, pawn.id, 'botch', {
         subjectName: who,
@@ -321,7 +340,7 @@ export function completeCraftOrder(
           else byTier.set(q, (byTier.get(q) ?? 0) + 1);
         }
         for (const [q, n] of byTier) {
-          const id = `craft-${outId}-${station.x}-${station.y}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
+          const id = `craft-${outId}-${station.x}-${station.y}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`;
           next.push({
             id,
             resourceId: outId,
@@ -335,12 +354,12 @@ export function completeCraftOrder(
           newDropIds.push(id);
         }
         for (const { q, id: identity } of famedUnits) {
-          const id = `craft-${outId}-${station.x}-${station.y}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
+          const id = `craft-${outId}-${station.x}-${station.y}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`;
           // A Famed unit rides a full ItemInstance (like a mob's famed drop via dropMobGear) — an
           // instance-bearing drop never stack-merges, so the legend keeps its unique identity through
           // haul/stockpile and carries straight onto the equipped/carried instance on pickup.
           const instance: ItemInstance = {
-            instanceId: `famed-${outId}-${station.x}-${station.y}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`,
+            instanceId: `famed-${outId}-${station.x}-${station.y}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`,
             itemId: outId,
             durability: Math.round((itemService.getItemById(outId)?.maxDurability ?? 100) * matDur),
             quality: q,
@@ -364,7 +383,7 @@ export function completeCraftOrder(
         }
         continue;
       }
-      const id = `craft-${outId}-${station.x}-${station.y}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
+      const id = `craft-${outId}-${station.x}-${station.y}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`;
       next.push({
         id,
         resourceId: outId,

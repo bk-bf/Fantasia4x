@@ -319,8 +319,10 @@ class JobServiceImpl {
       if (workKeyA === workKeyB) {
         const subKeyA = this._jobSubKey(a, workKeyA);
         const subKeyB = this._jobSubKey(b, workKeyB);
-        const subA = subKeyA !== workKeyA && subKeyA in laborSettings ? laborSettings[subKeyA] ?? 2 : labA;
-        const subB = subKeyB !== workKeyB && subKeyB in laborSettings ? laborSettings[subKeyB] ?? 2 : labB;
+        const subA =
+          subKeyA !== workKeyA && subKeyA in laborSettings ? (laborSettings[subKeyA] ?? 2) : labA;
+        const subB =
+          subKeyB !== workKeyB && subKeyB in laborSettings ? (laborSettings[subKeyB] ?? 2) : labB;
         if (subB !== subA) return subB - subA;
       }
       const dA = manhattan(a.targetX, a.targetY, px, py);
@@ -604,7 +606,9 @@ class JobServiceImpl {
    * `jobs/craftDiscipline.ts` resolver — the SINGLE source shared by job routing (priority/speed)
    * and the quality roll (jobs/craft.ts) so the two can't drift.
    */
-  craftWorkCategory(order: { item: { id: string }; stationType?: string | null } | undefined): string {
+  craftWorkCategory(
+    order: { item: { id: string }; stationType?: string | null } | undefined
+  ): string {
     return craftWorkCategory(order);
   }
 }

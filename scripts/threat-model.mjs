@@ -156,7 +156,8 @@ function weaponDamage(w, str, dex, per, scale, isNatural) {
   crit = Math.max(0, Math.min(CRIT_CAP, crit));
   let bump = 1;
   if (w.onHitCondition) bump = Math.max(bump, ONHIT_BUMP[w.onHitCondition.condition] ?? 1);
-  if (w.onHitWound?.some((x) => x.wound === 'bloodletting')) bump = Math.max(bump, ONHIT_BUMP.bloodletting);
+  if (w.onHitWound?.some((x) => x.wound === 'bloodletting'))
+    bump = Math.max(bump, ONHIT_BUMP.bloodletting);
   return { dmg: raw * (1 + crit * 0.5), bump };
 }
 
@@ -270,7 +271,9 @@ if (args.includes('--check')) {
   if (drift.length) {
     console.error(`✗ ${drift.length} creature(s) drifted from the committed annotations:\n`);
     for (const d of drift) console.error('  ' + d);
-    console.error('\nUpdate the inline `// DPS x | effHP y | profile` + threatLevel in creatures.jsonc.');
+    console.error(
+      '\nUpdate the inline `// DPS x | effHP y | profile` + threatLevel in creatures.jsonc.'
+    );
     process.exit(1);
   }
   console.log(`✓ all ${rows.length} creatures match their committed threatLevel annotations.`);
@@ -279,13 +282,7 @@ if (args.includes('--check')) {
 
 // ── Default: print the recomputed table sorted by threat ────────────────────────
 rows.sort((a, b) => a.threat - b.threat);
-console.log(
-  'id'.padEnd(18),
-  'thr'.padStart(3),
-  'DPS'.padStart(6),
-  'effHP'.padStart(6),
-  'profile'
-);
+console.log('id'.padEnd(18), 'thr'.padStart(3), 'DPS'.padStart(6), 'effHP'.padStart(6), 'profile');
 for (const r of rows) {
   console.log(
     r.id.padEnd(18),

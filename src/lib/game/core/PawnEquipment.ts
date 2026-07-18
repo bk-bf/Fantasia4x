@@ -175,7 +175,7 @@ export function equipDropToPawn(
   // ADR-023: the body forbids this slot (claws fill the hands, horns the crown…) — refuse the equip.
   if (blockedSlots(pawn).has(slot)) return state;
   const instance: ItemInstance = drop.instance ?? {
-    instanceId: `${item.id}-${pawnId}-${Date.now()}`,
+    instanceId: `${item.id}-${pawnId}-t${state.turn}`,
     itemId: item.id,
     // §M a tougher material (oak/sturdy leather ×1.3, ironwood ×1.7) gives the item more durability to
     // wear through; a flimsy one (pine/silk) less.
@@ -193,7 +193,7 @@ export function equipDropToPawn(
     drops = [
       ...drops,
       {
-        id: `unequip-${prev.instanceId}-${Date.now()}`,
+        id: `unequip-${prev.instanceId}-t${state.turn}`,
         resourceId: prev.itemId,
         x: px,
         y: py,
@@ -225,7 +225,7 @@ export function carryDropToInventory(state: GameState, pawnId: string, dropId: s
   if (pawnIdx < 0) return state;
   const pawn = state.pawns[pawnIdx];
   const instance: ItemInstance = drop.instance ?? {
-    instanceId: `${item.id}-${pawnId}-${Date.now()}`,
+    instanceId: `${item.id}-${pawnId}-t${state.turn}`,
     itemId: item.id,
     // §M a tougher material (oak/sturdy leather ×1.3, ironwood ×1.7) gives the item more durability to
     // wear through; a flimsy one (pine/silk) less.
@@ -260,11 +260,13 @@ export function canEquipItem(_pawn: Pawn, itemId: string): boolean {
  * accepts a carried tool, so the pawn keeps it in inventory rather than occupying the belt slot.
  * Deposit + craft-staging both preserve `instances`, so the carried tool isn't dropped at a stockpile.
  */
-export function addInstanceToInventory(pawn: Pawn, itemId: string): Pawn {
+export function addInstanceToInventory(pawn: Pawn, itemId: string, turn?: number): Pawn {
   const item = itemDefById(itemId);
   if (!item) return pawn;
   const instance: ItemInstance = {
-    instanceId: `${itemId}-${pawn.id}-${Date.now()}`,
+    // Turn-stamped when the caller has one (tick path — keeps a scenario replay byte-identical,
+    // ADR-033); wall-clock only as the no-context fallback.
+    instanceId: `${itemId}-${pawn.id}-${turn !== undefined ? `t${turn}` : Date.now()}`,
     itemId,
     durability: item.maxDurability ?? 100
   };
@@ -275,7 +277,7 @@ export function addInstanceToInventory(pawn: Pawn, itemId: string): Pawn {
   };
 }
 
-export function equipItem(pawn: Pawn, itemId: string): Pawn {
+export function equipItem(pawn: Pawn, itemId: string, turn?: number): Pawn {
   const item = itemDefById(itemId);
   if (!item || !canEquipItem(pawn, itemId)) return pawn;
 
@@ -290,9 +292,10 @@ export function equipItem(pawn: Pawn, itemId: string): Pawn {
     updatedPawn = unequipItem(updatedPawn, slot);
   }
 
-  // Create ItemInstance for the equipped item
+  // Create ItemInstance for the equipped item (turn-stamped when the caller has one — ADR-033
+  // replay determinism; wall-clock only as the no-context fallback)
   const instance: ItemInstance = {
-    instanceId: `${itemId}-${pawn.id}-${Date.now()}`,
+    instanceId: `${itemId}-${pawn.id}-${turn !== undefined ? `t${turn}` : Date.now()}`,
     itemId,
     durability: item.maxDurability ?? 100
   };

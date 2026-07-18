@@ -31,7 +31,14 @@ function state(stock: Record<string, number>): GameState {
 describe('§5 casting consumes a single-use clay mold', () => {
   it('cast metals and cast items list clay_mold as a consumed input', () => {
     // Cast bars (poured into a mold) + shaped bronze casts.
-    for (const id of ['copper_bar', 'tin_bar', 'bronze_bar', 'cast_sling_bullet', 'bronze_punch_dagger', 'leaf_blade_spear'])
+    for (const id of [
+      'copper_bar',
+      'tin_bar',
+      'bronze_bar',
+      'cast_sling_bullet',
+      'bronze_punch_dagger',
+      'leaf_blade_spear'
+    ])
       expect(moldInputs(id)).toContain('clay_mold');
   });
 
@@ -45,7 +52,9 @@ describe('§5 casting consumes a single-use clay mold', () => {
   });
 
   it('a casting recipe is unaffordable without a clay mold in stock', () => {
-    expect(itemService.hasRequiredMaterials('cast_sling_bullet', state({ copper_bar: 1 }))).toBe(false);
+    expect(itemService.hasRequiredMaterials('cast_sling_bullet', state({ copper_bar: 1 }))).toBe(
+      false
+    );
     expect(
       itemService.hasRequiredMaterials('cast_sling_bullet', state({ copper_bar: 1, clay_mold: 1 }))
     ).toBe(true);

@@ -29,8 +29,7 @@
 </script>
 
 <div class="env-readout">
-  <span
-    style="color:{light >= 0.8 ? '#68b030' : light >= 0.4 ? '#b09030' : '#c83018'}"
+  <span style="color:{light >= 0.8 ? '#68b030' : light >= 0.4 ? '#b09030' : '#c83018'}"
     >light {Math.round(light * 100)}%</span
   >
   <span style="color:{temp <= 0 ? '#5aa0e0' : temp >= 30 ? '#e07a2a' : '#b0a060'}"

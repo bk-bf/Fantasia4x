@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { truncateSentPath, projectSentEntity, PATH_LOOKAHEAD } from '$lib/game/sim/entityProjection';
+import {
+  truncateSentPath,
+  projectSentEntity,
+  PATH_LOOKAHEAD
+} from '$lib/game/sim/entityProjection';
 
 const cells = (n: number) => Array.from({ length: n }, (_, i) => ({ x: i, y: 0 }));
 

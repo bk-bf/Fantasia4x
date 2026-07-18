@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { computeTileLightLevel, getAmbientLight, TURNS_PER_DAY } from '$lib/game/services/EnvironmentService';
+import {
+  computeTileLightLevel,
+  getAmbientLight,
+  TURNS_PER_DAY
+} from '$lib/game/services/EnvironmentService';
 import { TICKS_PER_SECOND } from '$lib/game/core/time';
 import { lightWorkMultiplier } from '$lib/game/systems/pawn/pawnHelpers';
 import { jobService } from '$lib/game/services/JobService';

@@ -131,7 +131,9 @@
     <div class="fuel-settings-label">refuel needs</div>
     <div class="fuel-req">
       <span>{refuelReq.tinderAmount}× {tinderName}</span>
-      <span class="fuel-pill" title="Tinder is always consumed to light the fire — it can't be turned off."
+      <span
+        class="fuel-pill"
+        title="Tinder is always consumed to light the fire — it can't be turned off."
         >tinder · always</span
       >
       <span class="fuel-req-dim">+ any fuel</span>

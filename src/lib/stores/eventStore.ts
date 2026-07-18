@@ -7,7 +7,7 @@ import type { PendingEvent } from '$lib/game/core/types';
 
 export const currentEvent = derived(
   gameState,
-  ($gs) => (($gs?.pendingEvent ?? null) as PendingEvent | null)
+  ($gs) => ($gs?.pendingEvent ?? null) as PendingEvent | null
 );
 
 /** Accept the migrant candidates with these ids (empty = reject all); the sim clears the event,

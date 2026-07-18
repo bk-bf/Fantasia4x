@@ -12,7 +12,14 @@ function makePawn(injury: Injury): Pawn {
     isAlive: true,
     position: { x: 5, y: 5 },
     currentState: 'Idle',
-    stats: { strength: 12, dexterity: 12, constitution: 10, intelligence: 10, perception: 10, charisma: 10 },
+    stats: {
+      strength: 12,
+      dexterity: 12,
+      constitution: 10,
+      intelligence: 10,
+      perception: 10,
+      charisma: 10
+    },
     traits: [],
     equipment: {},
     skills: {},

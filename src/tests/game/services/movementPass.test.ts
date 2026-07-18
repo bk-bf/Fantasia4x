@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { stepBody, seedMidCrossClaims, MAX_BLOCKED_TICKS, type MovableBody } from '$lib/game/services/MovementSystem';
+import {
+  stepBody,
+  seedMidCrossClaims,
+  MAX_BLOCKED_TICKS,
+  type MovableBody
+} from '$lib/game/services/MovementSystem';
 import type { WorldTile } from '$lib/game/core/types';
 
 // MOVE-1: the shared per-tick move step used by BOTH the pawn (PawnService.processMovement) and mob
@@ -58,7 +63,11 @@ describe('stepBody — shared move pass', () => {
 
   it('drops the path after MAX_BLOCKED_TICKS so the FSM re-routes', () => {
     const occ = new Set(['1,0']);
-    let b = body('a', 0, 0, { path: [{ x: 1, y: 0 }], pathIndex: 0, blockedTicks: MAX_BLOCKED_TICKS });
+    let b = body('a', 0, 0, {
+      path: [{ x: 1, y: 0 }],
+      pathIndex: 0,
+      blockedTicks: MAX_BLOCKED_TICKS
+    });
     const res = stepBody(b, occ, new Set(), world(), 4);
     expect(res.status).toBe('dropped');
     expect(res.body.path?.length ?? 0).toBe(0);
@@ -86,11 +95,23 @@ describe('stepBody — shared move pass', () => {
 
   it('prevents two fresh movers converging on one tile (claim set)', () => {
     const claimed = new Set<string>();
-    const a = stepBody(body('a', 0, 0, { path: [{ x: 1, y: 1 }], pathIndex: 0 }), new Set(), claimed, world(), 200);
+    const a = stepBody(
+      body('a', 0, 0, { path: [{ x: 1, y: 1 }], pathIndex: 0 }),
+      new Set(),
+      claimed,
+      world(),
+      200
+    );
     expect(a.status).toBe('moved');
     expect(claimed.has('1,1')).toBe(true);
     // Second mover targeting the same tile this tick is blocked by the claim.
-    const b = stepBody(body('b', 2, 2, { path: [{ x: 1, y: 1 }], pathIndex: 0 }), new Set(), claimed, world(), 200);
+    const b = stepBody(
+      body('b', 2, 2, { path: [{ x: 1, y: 1 }], pathIndex: 0 }),
+      new Set(),
+      claimed,
+      world(),
+      200
+    );
     expect(b.status).toBe('held');
   });
 

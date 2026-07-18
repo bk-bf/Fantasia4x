@@ -70,8 +70,6 @@ const DEFAULT_CONDITION_DECAY = 0.15;
 // calm baseline (use/age), NOT the full weather rate: furniture indoors doesn't rot in the rain.
 const SHELTERED_EXPOSURE = 0.12;
 
-
-
 /**
  * BuildingService - Clean interface for building queries and validation
  * Separates business logic from data definitions
@@ -560,7 +558,7 @@ export class BuildingServiceImpl implements BuildingService {
     }
     const instant = building.workAmount === 0;
     const placed: PlacedBuilding = {
-      id: `${type}-${x}-${y}-${Date.now()}`,
+      id: `${type}-${x}-${y}-t${gameState.turn}`,
       type,
       // zero-workAmount buildings (craft_spot) are complete immediately
       status: instant ? 'complete' : 'planned',
@@ -876,7 +874,9 @@ export class BuildingServiceImpl implements BuildingService {
     };
     for (const b of broken as PlacedBuilding[]) {
       state = this.applyBuildingFootprint(state, b, false);
-      console.warn(`[BuildingService] ${b.type} at (${b.x},${b.y}) failed at 0% condition — removed`);
+      console.warn(
+        `[BuildingService] ${b.type} at (${b.x},${b.y}) failed at 0% condition — removed`
+      );
     }
     return state;
   }

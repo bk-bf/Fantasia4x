@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { WorldTile } from '$lib/game/core/types';
-import { rebuildConnectivity, reachable, componentAt, clearConnectivity } from '$lib/game/services/entity/connectivity';
+import {
+  rebuildConnectivity,
+  reachable,
+  componentAt,
+  clearConnectivity
+} from '$lib/game/services/entity/connectivity';
 
 // Minimal walkable grid from an ASCII map: '#' = wall, anything else = floor.
 function grid(rows: string[]): WorldTile[][] {

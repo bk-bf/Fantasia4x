@@ -32,7 +32,8 @@ class ResourceObjectServiceImpl {
   }
 
   /** Lazily-built map: item id → the cultivated crop it belongs to, as its SEED or harvested PRODUCE. */
-  private cropByItem: Map<string, { def: ResourceObjectDef; role: 'seed' | 'produce' }> | null = null;
+  private cropByItem: Map<string, { def: ResourceObjectDef; role: 'seed' | 'produce' }> | null =
+    null;
 
   /**
    * The cultivated crop an ITEM relates to — its SEED (`crop.seedItem`) or its harvested PRODUCE (a reap
@@ -42,7 +43,8 @@ class ResourceObjectServiceImpl {
   getCropForItem(itemId: string): { def: ResourceObjectDef; role: 'seed' | 'produce' } | undefined {
     if (!this.cropByItem) {
       const m = new Map<string, { def: ResourceObjectDef; role: 'seed' | 'produce' }>();
-      for (const def of RESOURCE_OBJECT_DEFS) if (def.crop) m.set(def.crop.seedItem, { def, role: 'seed' });
+      for (const def of RESOURCE_OBJECT_DEFS)
+        if (def.crop) m.set(def.crop.seedItem, { def, role: 'seed' });
       for (const def of RESOURCE_OBJECT_DEFS) {
         if (!def.crop) continue;
         for (const y of def.interaction.yields ?? [])

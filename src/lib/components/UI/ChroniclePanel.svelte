@@ -169,7 +169,9 @@
           {#if expandedId === entry.id && socialLines(entry).length > 0}
             <div class="convo">
               {#each socialLines(entry) as line}
-                <div class="convo-line"><span class="convo-who">{line.name}:</span> “{line.text}”</div>
+                <div class="convo-line">
+                  <span class="convo-who">{line.name}:</span> “{line.text}”
+                </div>
               {/each}
             </div>
           {/if}

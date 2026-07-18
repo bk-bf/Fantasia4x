@@ -376,7 +376,6 @@ export async function createSquareCellAtlas(cellSize = 16, debug = false): Promi
 // Bitmap tileset atlas loader (Dwarf Fortress / CP437-layout PNGs)
 // ---------------------------------------------------------------------------
 
-
 /**
  * Load a CP437-layout tileset PNG as a WebGL font atlas.
  *

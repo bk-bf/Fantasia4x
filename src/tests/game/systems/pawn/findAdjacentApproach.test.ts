@@ -10,9 +10,8 @@ import { findAdjacentApproach } from '$lib/game/systems/pawn/pawnQueries';
  */
 describe('findAdjacentApproach', () => {
   // 5×5 all-walkable map; the build target sits at the centre.
-  const map = Array.from(
-    { length: 5 },
-    () => Array.from({ length: 5 }, () => ({ walkable: true, movementCost: 1 }) as unknown as WorldTile)
+  const map = Array.from({ length: 5 }, () =>
+    Array.from({ length: 5 }, () => ({ walkable: true, movementCost: 1 }) as unknown as WorldTile)
   ) as WorldTile[][];
   const TX = 2;
   const TY = 2;

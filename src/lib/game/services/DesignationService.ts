@@ -321,7 +321,8 @@ class DesignationServiceImpl {
         if (standingZone) this.addZoneTile(newZoneTiles!, k, type);
         else newDesignations![k] = type;
         paintedTiles.add(k);
-        if (zoneInstanceId && newZoneIds) newZoneIds[k] = { ...newZoneIds[k], [type]: zoneInstanceId };
+        if (zoneInstanceId && newZoneIds)
+          newZoneIds[k] = { ...newZoneIds[k], [type]: zoneInstanceId };
       }
     }
     let state: GameState = {
@@ -399,7 +400,7 @@ class DesignationServiceImpl {
     label: string,
     gs: GameState
   ): { state: GameState; id: string } {
-    const id = `${type}-${Date.now().toString(36)}-${rng.random().toString(36).slice(2, 6)}`;
+    const id = `${type}-t${gs.turn.toString(36)}-${rng.random().toString(36).slice(2, 6)}`;
     return { state: this.createZoneInstanceWithId(type, label, id, gs), id };
   }
 

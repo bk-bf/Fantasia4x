@@ -106,7 +106,10 @@ const CATEGORY_DRYING: Record<string, DryingRule> = {
 function ambientDryRate(temp: number, wetness: number, bonus: number, warmth = 0): number {
   const wet = dryingWetness(wetness, warmth);
   // Signed wetness factor: +1 (dry) → 0 (stall ~DRY_WET_DAMP..SOAK midpoint) → −1 (saturated).
-  const wetF = Math.max(-1, Math.min(1, 1 - (2 * (wet - DRY_WET_DAMP)) / (DRY_WET_SOAK - DRY_WET_DAMP)));
+  const wetF = Math.max(
+    -1,
+    Math.min(1, 1 - (2 * (wet - DRY_WET_DAMP)) / (DRY_WET_SOAK - DRY_WET_DAMP))
+  );
   if (wetF < 0) return wetF * DRY_WET_DECAY; // reversing, scaled by how saturated
   const tempF = Math.max(0, Math.min(1, (temp - DRY_TEMP_FLOOR) / (DRY_TEMP_REF - DRY_TEMP_FLOOR)));
   return tempF * wetF * bonus;
@@ -123,7 +126,11 @@ function dryingRuleFor(resourceId: string): DryingRule | null {
 
 // Per-pass drying context (built once): lit fires (fire-ring seasoning) + rack tiles (dryingBonus) +
 // the global weather/diurnal temperature delta.
-type DryingCtx = { fires: { x: number; y: number }[]; dryRacks: Map<string, number>; weatherTemp: number };
+type DryingCtx = {
+  fires: { x: number; y: number }[];
+  dryRacks: Map<string, number>;
+  weatherTemp: number;
+};
 function dryingContext(gameState: GameState): DryingCtx {
   const fires: { x: number; y: number }[] = [];
   const dryRacks = new Map<string, number>();
@@ -137,7 +144,8 @@ function dryingContext(gameState: GameState): DryingCtx {
     }
   }
   const weatherTemp =
-    weatherEffects(gameState.weather).tempDelta + diurnalTempDelta(gameState.turn, gameState.season);
+    weatherEffects(gameState.weather).tempDelta +
+    diurnalTempDelta(gameState.turn, gameState.season);
   return { fires, dryRacks, weatherTemp };
 }
 
@@ -159,7 +167,11 @@ function dryRateFor(d: DroppedItem, gameState: GameState, ctx: DryingCtx): numbe
   const tile = gameState.worldMap?.[d.y]?.[d.x];
   if (!tile) return 0;
   const thermal = thermalAt(d.x, d.y);
-  const temp = effectiveTemperature(seasonBakedTemp(tile.terrainType, gameState.season), ctx.weatherTemp, thermal);
+  const temp = effectiveTemperature(
+    seasonBakedTemp(tile.terrainType, gameState.season),
+    ctx.weatherTemp,
+    thermal
+  );
   const wet = tileWetness(tile.moisture ?? 0, gameState.weather, thermal);
   return ambientDryRate(temp, wet, ctx.dryRacks.get(d.y + ',' + d.x) ?? 1, thermal.warmth);
 }
@@ -233,10 +245,7 @@ export interface ItemService {
   getItemDisplayName(drop: { resourceId: string; name?: string; quality?: ItemQuality }): string;
   /** §F8: compose a mixed-ingredient dish's per-instance name from the chosen ingredients
    *  ("Venison & Cabbage Stew"). Returns undefined unless the item is a `dynamicName` dynamicRecipe. */
-  composeDynamicDishName(
-    itemId: string,
-    selected?: Record<string, string>
-  ): string | undefined;
+  composeDynamicDishName(itemId: string, selected?: Record<string, string>): string | undefined;
   getItemsByType(type: string): Item[];
   getItemsByCategory(category: string): Item[];
   /** Distinct item categories (sorted), across the whole item DB. */
@@ -335,10 +344,7 @@ export class ItemServiceImpl implements ItemService {
     return `${subjectName}'s ${def.name}`;
   }
 
-  composeDynamicDishName(
-    itemId: string,
-    selected?: Record<string, string>
-  ): string | undefined {
+  composeDynamicDishName(itemId: string, selected?: Record<string, string>): string | undefined {
     const def = this.getItemById(itemId);
     const recipe = recipeService.getRecipeForItem(itemId);
     if (!def?.dynamicName || !recipe?.dynamicRecipe || !selected) return undefined;
@@ -843,7 +849,10 @@ export class ItemServiceImpl implements ItemService {
     }
     for (const b of gameState.buildings ?? []) {
       if (b.status !== 'complete') continue;
-      bump(`${b.x},${b.y}`, BUILDING_DEFS_FOR_ITEMS.find((def) => def.id === b.type)?.effects?.preservation);
+      bump(
+        `${b.x},${b.y}`,
+        BUILDING_DEFS_FOR_ITEMS.find((def) => def.id === b.type)?.effects?.preservation
+      );
     }
 
     // Drying context — so spoilage and drying can never run on the same stack at once (a stack is
@@ -1032,10 +1041,17 @@ export class ItemServiceImpl implements ItemService {
       // Seasons only inside the lit-fire ring (Chebyshev exactly 2), at a fixed rate.
       let nearest = Infinity;
       for (const b of gameState.buildings ?? []) {
-        if (b.status === 'complete' && b.lit) nearest = Math.min(nearest, chebyshev(d.x, d.y, b.x, b.y));
+        if (b.status === 'complete' && b.lit)
+          nearest = Math.min(nearest, chebyshev(d.x, d.y, b.x, b.y));
       }
       const inRing = nearest === 2;
-      return { target, progress, rate: inRing ? 1 : 0, reason: inRing ? undefined : 'no-fire', bonus: 1 };
+      return {
+        target,
+        progress,
+        rate: inRing ? 1 : 0,
+        reason: inRing ? undefined : 'no-fire',
+        bonus: 1
+      };
     }
 
     // Ambient cure (hay, dried meat): temperature/wetness, multiplied by a rack's dryingBonus.
@@ -1043,16 +1059,29 @@ export class ItemServiceImpl implements ItemService {
     if (!tile) return { target, progress, rate: 0, reason: 'cold', bonus: 1 };
     const thermal = computeThermalAt(d.x, d.y, gameState.buildings, gameState.worldMap);
     const weatherTemp =
-      weatherEffects(gameState.weather).tempDelta + diurnalTempDelta(gameState.turn, gameState.season);
-    const temp = effectiveTemperature(seasonBakedTemp(tile.terrainType, gameState.season), weatherTemp, thermal);
+      weatherEffects(gameState.weather).tempDelta +
+      diurnalTempDelta(gameState.turn, gameState.season);
+    const temp = effectiveTemperature(
+      seasonBakedTemp(tile.terrainType, gameState.season),
+      weatherTemp,
+      thermal
+    );
     let bonus = 1;
     for (const b of gameState.buildings ?? []) {
       if (b.status !== 'complete' || b.x !== d.x || b.y !== d.y) continue;
       bonus = Math.max(bonus, buildingService.getBuildingById(b.type)?.effects?.dryingBonus ?? 0);
     }
-    const rate = ambientDryRate(temp, tileWetness(tile.moisture ?? 0, gameState.weather, thermal), bonus, thermal.warmth);
+    const rate = ambientDryRate(
+      temp,
+      tileWetness(tile.moisture ?? 0, gameState.weather, thermal),
+      bonus,
+      thermal.warmth
+    );
     // Effective wetness the stack feels — a nearby fire evaporates surface moisture (dryingWetness).
-    const wetness = dryingWetness(tileWetness(tile.moisture ?? 0, gameState.weather, thermal), thermal.warmth);
+    const wetness = dryingWetness(
+      tileWetness(tile.moisture ?? 0, gameState.weather, thermal),
+      thermal.warmth
+    );
     // rate ≤ 0 is either too wet (reversing / wetness-stall) or too cold — report whichever is binding.
     const reason = rate > 0 ? undefined : wetness >= DRY_WET_DAMP ? 'wet' : 'cold';
     return { target, progress, rate, reason, temp, wetness, bonus };
@@ -1098,7 +1127,8 @@ export class ItemServiceImpl implements ItemService {
       if (rate < 0 && have <= 0) return d; // wet, but nothing to lose
       const drying = Math.max(0, have + dt * rate);
       changed = true;
-      if (rate > 0 && drying >= rule.seconds) return { ...d, resourceId: rule.itemId, drying: undefined };
+      if (rate > 0 && drying >= rule.seconds)
+        return { ...d, resourceId: rule.itemId, drying: undefined };
       return { ...d, drying };
     });
 

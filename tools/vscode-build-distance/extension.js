@@ -90,7 +90,11 @@ async function onClick() {
   if (!root) return;
 
   const picks = [
-    { label: '$(sync) Refresh badge', detail: 'Re-read commits since the last v* tag', action: 'refresh' },
+    {
+      label: '$(sync) Refresh badge',
+      detail: 'Re-read commits since the last v* tag',
+      action: 'refresh'
+    },
     {
       label: '$(rocket) Local build — this machine',
       detail: './build.sh --local  (unpacked, run immediately)',

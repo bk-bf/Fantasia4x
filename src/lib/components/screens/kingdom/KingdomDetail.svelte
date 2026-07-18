@@ -61,7 +61,12 @@
   );
   const otherRels = $derived(
     relations
-      .filter((r) => (r.a === kingdom.id || r.b === kingdom.id) && r.a !== COLONY_RELATION_ID && r.b !== COLONY_RELATION_ID)
+      .filter(
+        (r) =>
+          (r.a === kingdom.id || r.b === kingdom.id) &&
+          r.a !== COLONY_RELATION_ID &&
+          r.b !== COLONY_RELATION_ID
+      )
       .map((r) => ({
         other: knownKingdoms.find((k) => k.id === (r.a === kingdom.id ? r.b : r.a)),
         rel: r
@@ -93,9 +98,11 @@
     {#each kingdom.cultureMix as share}
       <div class="mix-row">
         <span class="mix-name">{cultureName(share.cultureId)}</span>
-        <span class="mix-bar">{'█'.repeat(Math.max(1, Math.round(share.weight * 10)))}{'░'.repeat(
+        <span class="mix-bar"
+          >{'█'.repeat(Math.max(1, Math.round(share.weight * 10)))}{'░'.repeat(
             10 - Math.max(1, Math.round(share.weight * 10))
-          )}</span>
+          )}</span
+        >
       </div>
     {/each}
   </div>
@@ -122,7 +129,9 @@
   <div class="section">
     <div class="sec-hdr">| LANDS</div>
     {#if tier >= 2}
-      <div class="kv"><span class="k">Seat</span><span class="v">{kingdom.lore.capitalName}</span></div>
+      <div class="kv">
+        <span class="k">Seat</span><span class="v">{kingdom.lore.capitalName}</span>
+      </div>
       <div class="kv">
         <span class="k">Holdings</span>
         <span class="v">{settlementsLabel}</span>
@@ -188,7 +197,9 @@
       {#each otherRels as { other, rel }}
         <div class="kv">
           <span class="k">{other!.name}</span>
-          <span class="v" style="color: {DISPOSITION_COLOR[rel.disposition]}">{rel.disposition}</span>
+          <span class="v" style="color: {DISPOSITION_COLOR[rel.disposition]}"
+            >{rel.disposition}</span
+          >
         </div>
       {/each}
     </div>

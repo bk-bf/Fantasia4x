@@ -54,7 +54,8 @@ function bestRallier(broken: Pawn, state: GameState): { pawn: Pawn; power: numbe
   for (const p of state.pawns) {
     if (p.id === broken.id || p.isAlive === false || !p.position) continue;
     // A rallier can't be down or broken itself.
-    if (p.currentState === PAWN_STATE.COLLAPSED || (p.conditionTimers?.mental_breakdown ?? 0) > 0) continue;
+    if (p.currentState === PAWN_STATE.COLLAPSED || (p.conditionTimers?.mental_breakdown ?? 0) > 0)
+      continue;
     if (chebyshev(bx, by, p.position.x, p.position.y) > RALLY_RANGE) continue;
     if (pawnStatService.evaluateStat('talking', p) < MIN_TALKING) continue; // can't speak → can't rally
     const rel = findRelationship(state.relationships, broken.id, p.id)?.score ?? 0;

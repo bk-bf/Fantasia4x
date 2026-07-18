@@ -60,9 +60,16 @@ function desktopShellGuardPlugin(): Plugin {
   // debug mode — i.e. `./dev.sh --debug`, the way the Electron spike is run for debugging. Without it,
   // those paths stay behind the desktop-shell guard like everything else.
   const debugMode = process.env.VITE_DEBUG_MODE === 'true';
+  // Headless-sim routes (ADR-033): `./dev.sh --headless` drives the sim via curl/agents — no shell
+  // UA there, so exempt /api/sim/ when headless mode is on (the routes themselves 404 without it).
+  const headlessMode = process.env.VITE_HEADLESS === '1';
   const guard = (
     req: { url?: string; headers: Record<string, string | string[] | undefined> },
-    res: { statusCode: number; setHeader: (k: string, v: string) => void; end: (body?: string) => void },
+    res: {
+      statusCode: number;
+      setHeader: (k: string, v: string) => void;
+      end: (body?: string) => void;
+    },
     next: () => void
   ) => {
     if (allowBrowser) return next();
@@ -71,6 +78,7 @@ function desktopShellGuardPlugin(): Plugin {
     // (/tilesets/). Those are just images; the playable app (root document + bundle) stays guarded.
     const url = req.url || '';
     if (debugMode && (url.startsWith('/dev/') || url.startsWith('/tilesets/'))) return next();
+    if (headlessMode && url.startsWith('/api/sim/')) return next();
     const ua = String(req.headers['user-agent'] || '');
     if (ua.includes(SHELL_UA_MARKER)) return next();
     res.statusCode = 403;

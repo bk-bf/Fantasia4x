@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { generateCulture, generateCulturePool, generateCultureRelations } from '$lib/game/core/Culture';
+import {
+  generateCulture,
+  generateCulturePool,
+  generateCultureRelations
+} from '$lib/game/core/Culture';
 import { generateColonyPawns } from '$lib/game/entities/Pawns';
 import { rng } from '$lib/game/core/rng';
 

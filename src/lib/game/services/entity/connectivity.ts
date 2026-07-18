@@ -46,7 +46,8 @@ export function rebuildConnectivity(worldMap: WorldTile[][]): void {
           const ni = ny * w + nx;
           if (comp[ni] !== -1 || !row[nx].walkable) continue;
           // Corner-cut rule (match A*): a diagonal links only if an orthogonal neighbour is also open.
-          if (dx !== 0 && dy !== 0 && !worldMap[cy][nx].walkable && !worldMap[ny][cx].walkable) continue;
+          if (dx !== 0 && dy !== 0 && !worldMap[cy][nx].walkable && !worldMap[ny][cx].walkable)
+            continue;
           comp[ni] = id;
           stack[sp++] = ni;
         }

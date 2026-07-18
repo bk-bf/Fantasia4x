@@ -233,120 +233,120 @@
     <!-- Text layer: lifted above the dimmed background/frame (which lives on .tile-hud::before) so the
          info font stays readable at night/in fog while the card chrome still darkens with the scene. -->
     <div class="tile-hud-body">
-    <div class="pawn-header">
-      <div class="pawn-meta">
-        <span
-          class="pawn-name"
-          class:has-flavor={model.flavor}
+      <div class="pawn-header">
+        <div class="pawn-meta">
+          <span
+            class="pawn-name"
+            class:has-flavor={model.flavor}
+            role="note"
+            onmouseenter={(e) => model.flavor && flavorPin.open(model.flavor, 'flavor', e)}
+            onmousemove={(e) => flavorPin.move(e)}
+            onmouseleave={() => flavorPin.close()}>{model.name}</span
+          >
+          {#if model.status}<span class="pawn-state">[{model.status}]</span>{/if}
+          {#if model.dismissable}<span class="pawn-dismiss" title="Press Esc to deselect">◈</span
+            >{/if}
+        </div>
+      </div>
+
+      {#if model.flavor}
+        {@const fv = model.flavor}
+        <div
+          class="pawn-flavor"
           role="note"
-          onmouseenter={(e) => model.flavor && flavorPin.open(model.flavor, 'flavor', e)}
+          onmouseenter={(e) => flavorPin.open(fv, 'flavor', e)}
           onmousemove={(e) => flavorPin.move(e)}
-          onmouseleave={() => flavorPin.close()}>{model.name}</span
+          onmouseleave={() => flavorPin.close()}
         >
-        {#if model.status}<span class="pawn-state">[{model.status}]</span>{/if}
-        {#if model.dismissable}<span class="pawn-dismiss" title="Press Esc to deselect">◈</span
-          >{/if}
-      </div>
-    </div>
+          {fv}
+        </div>
+      {/if}
 
-    {#if model.flavor}
-      {@const fv = model.flavor}
-      <div
-        class="pawn-flavor"
-        role="note"
-        onmouseenter={(e) => flavorPin.open(fv, 'flavor', e)}
-        onmousemove={(e) => flavorPin.move(e)}
-        onmouseleave={() => flavorPin.close()}
-      >
-        {fv}
-      </div>
-    {/if}
+      {#if flavorPin.active}
+        <HoverTip x={flavorPin.x} y={flavorPin.y} pinned={flavorPin.pinned}>
+          <div class="flavor-tip">{flavorPin.active}</div>
+        </HoverTip>
+      {/if}
 
-    {#if flavorPin.active}
-      <HoverTip x={flavorPin.x} y={flavorPin.y} pinned={flavorPin.pinned}>
-        <div class="flavor-tip">{flavorPin.active}</div>
-      </HoverTip>
-    {/if}
+      {#if body}
+        {@render body()}
+      {:else if model.lines && model.lines.length > 0}
+        <div class="text-lines">
+          {#each model.lines as line}
+            <div class="text-line">{line}</div>
+          {/each}
+        </div>
+      {/if}
 
-    {#if body}
-      {@render body()}
-    {:else if model.lines && model.lines.length > 0}
-      <div class="text-lines">
-        {#each model.lines as line}
-          <div class="text-line">{line}</div>
-        {/each}
-      </div>
-    {/if}
+      {#if model.growthPct != null}
+        {@const gpct = Math.round(model.growthPct)}
+        <div
+          class="growth-line"
+          style="color:{gpct >= 100 ? '#68b030' : gpct >= 50 ? '#9aac3a' : '#c89a3a'}"
+          title="resource maturity — scales harvest yield; crops grow only with enough fertility, warmth, water and light"
+        >
+          growth {gpct}%
+        </div>
+      {/if}
 
-    {#if model.growthPct != null}
-      {@const gpct = Math.round(model.growthPct)}
-      <div
-        class="growth-line"
-        style="color:{gpct >= 100 ? '#68b030' : gpct >= 50 ? '#9aac3a' : '#c89a3a'}"
-        title="resource maturity — scales harvest yield; crops grow only with enough fertility, warmth, water and light"
-      >
-        growth {gpct}%
-      </div>
-    {/if}
+      {#if model.stats && model.stats.length > 0}
+        <div class="pawn-row">
+          {#each model.stats as stat (stat.label)}
+            <span class="pawn-stat">
+              <span class="pawn-stat-label">{stat.label}</span>
+              <span class="pawn-stat-val" class:pawn-warn={stat.warn}>{stat.value}</span>
+            </span>
+          {/each}
+        </div>
+      {/if}
 
-    {#if model.stats && model.stats.length > 0}
-      <div class="pawn-row">
-        {#each model.stats as stat (stat.label)}
-          <span class="pawn-stat">
-            <span class="pawn-stat-label">{stat.label}</span>
-            <span class="pawn-stat-val" class:pawn-warn={stat.warn}>{stat.value}</span>
-          </span>
-        {/each}
-      </div>
-    {/if}
+      {#if model.conditionViews && model.conditionViews.length > 0}
+        <ConditionChips views={model.conditionViews} showHeader={false} iconPx={12} />
+      {/if}
 
-    {#if model.conditionViews && model.conditionViews.length > 0}
-      <ConditionChips views={model.conditionViews} showHeader={false} iconPx={12} />
-    {/if}
+      {#if model.itemPills && model.itemPills.length > 0}
+        <ItemPills pills={model.itemPills} />
+      {/if}
 
-    {#if model.itemPills && model.itemPills.length > 0}
-      <ItemPills pills={model.itemPills} />
-    {/if}
+      {#if model.bars && model.bars.length > 0}
+        <div class="bar-rows">
+          {#each model.bars as bar (bar.label)}
+            <StatBar
+              label={bar.label}
+              value={bar.value}
+              max={bar.max ?? 100}
+              color={bar.color ?? (bar.warn ? BAR_WARN : BAR_OK)}
+              valueText={bar.valueText ?? `${Math.floor(bar.value)}%`}
+              title={bar.title ?? null}
+            />
+          {/each}
+        </div>
+      {/if}
 
-    {#if model.bars && model.bars.length > 0}
-      <div class="bar-rows">
-        {#each model.bars as bar (bar.label)}
+      {#if model.job}
+        <div class="pawn-job" class:pawn-idle={model.job.idle}>{model.job.text}</div>
+      {/if}
+      {#if model.progress != null}
+        <!-- Task progress as a StatBar (empty label) so its track lines up with the need bars above. -->
+        <div class="job-progress">
           <StatBar
-            label={bar.label}
-            value={bar.value}
-            max={bar.max ?? 100}
-            color={bar.color ?? (bar.warn ? BAR_WARN : BAR_OK)}
-            valueText={bar.valueText ?? `${Math.floor(bar.value)}%`}
-            title={bar.title ?? null}
+            label=""
+            value={model.progress * 100}
+            max={100}
+            color={BAR_OK}
+            valueText={`${Math.round(model.progress * 100)}%`}
           />
-        {/each}
-      </div>
-    {/if}
-
-    {#if model.job}
-      <div class="pawn-job" class:pawn-idle={model.job.idle}>{model.job.text}</div>
-    {/if}
-    {#if model.progress != null}
-      <!-- Task progress as a StatBar (empty label) so its track lines up with the need bars above. -->
-      <div class="job-progress">
-        <StatBar
-          label=""
-          value={model.progress * 100}
-          max={100}
-          color={BAR_OK}
-          valueText={`${Math.round(model.progress * 100)}%`}
-        />
-      </div>
-    {/if}
-    {#if model.note}
-      <div class="pawn-job">{model.note}</div>
-    {/if}
-    {#if model.pos || model.posMeta}
-      <div class="pawn-pos">
-        {#if model.pos}<span>pos ({model.pos.x},{model.pos.y})</span>{/if}
-        {#if model.posMeta}<span class="pawn-pos-meta">{model.posMeta}</span>{/if}
-      </div>
-    {/if}
+        </div>
+      {/if}
+      {#if model.note}
+        <div class="pawn-job">{model.note}</div>
+      {/if}
+      {#if model.pos || model.posMeta}
+        <div class="pawn-pos">
+          {#if model.pos}<span>pos ({model.pos.x},{model.pos.y})</span>{/if}
+          {#if model.posMeta}<span class="pawn-pos-meta">{model.posMeta}</span>{/if}
+        </div>
+      {/if}
     </div>
   </div>
 

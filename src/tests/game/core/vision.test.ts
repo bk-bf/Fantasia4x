@@ -44,28 +44,50 @@ describe('shared vision model', () => {
     expect(getNightVision(pawn(10))).toBe(0);
     expect(getNightVision(pawn(10, [{ effects: { nightVision: 0.4 } }]))).toBeCloseTo(0.4);
     expect(
-      getNightVision(pawn(10, [{ effects: { nightVision: 0.8 } }, { effects: { nightVision: 0.5 } }]))
+      getNightVision(
+        pawn(10, [{ effects: { nightVision: 0.8 } }, { effects: { nightVision: 0.5 } }])
+      )
     ).toBe(1); // clamped
   });
 
   it('Spider Eyes: grafted arachnid eyes grant night vision from the PART, self-gating on damage', () => {
     // spider-eyes-greater grafts 4 eyes @ 0.15 each → 0.6 night vision, sourced from the parts (no
     // trait effect). Losing eyes removes the sight; all eyes gone → 0.
-    const eye = (id: string, hp = 4) => ({ id, health: hp, maxHp: 4, isMissing: false, injuries: [] });
+    const eye = (id: string, hp = 4) => ({
+      id,
+      health: hp,
+      maxHp: 4,
+      isMissing: false,
+      injuries: []
+    });
     const spiderEyed = (parts: ReturnType<typeof eye>[]) =>
-      ({ stats: { perception: 10 }, traits: [], limbs: [{ id: 'extra_eyes', parts }] }) as unknown as Pawn;
-    const fourEyes = ['anteriorMedianLeftEye', 'anteriorMedianRightEye', 'anteriorLateralLeftEye', 'anteriorLateralRightEye'];
+      ({
+        stats: { perception: 10 },
+        traits: [],
+        limbs: [{ id: 'extra_eyes', parts }]
+      }) as unknown as Pawn;
+    const fourEyes = [
+      'anteriorMedianLeftEye',
+      'anteriorMedianRightEye',
+      'anteriorLateralLeftEye',
+      'anteriorLateralRightEye'
+    ];
     expect(getNightVision(spiderEyed(fourEyes.map((id) => eye(id))))).toBeCloseTo(0.6);
     // Two eyes destroyed → only the two living ones count (0.3).
     const halfBlind = fourEyes.map((id, i) => (i < 2 ? { ...eye(id), isMissing: true } : eye(id)));
     expect(getNightVision(spiderEyed(halfBlind))).toBeCloseTo(0.3);
     // All eyes gone → blind in the dark.
-    expect(getNightVision(spiderEyed(fourEyes.map((id) => ({ ...eye(id), isMissing: true }))))).toBe(0);
+    expect(
+      getNightVision(spiderEyed(fourEyes.map((id) => ({ ...eye(id), isMissing: true }))))
+    ).toBe(0);
   });
 
   it('pawns and mobs use the SAME range at full light (unified)', () => {
     const p = effectiveVisionRange(pawn(12), 1);
-    const m = effectiveVisionRange({ creatureId: 'nope', stats: { perception: 12 } } as unknown as Mob, 1);
+    const m = effectiveVisionRange(
+      { creatureId: 'nope', stats: { perception: 12 } } as unknown as Mob,
+      1
+    );
     expect(p).toBe(m);
     expect(p).toBe(baseVisionRange(12));
   });
@@ -73,7 +95,13 @@ describe('shared vision model', () => {
 
 // Chronicle scoping: only log combat/deaths a colonist could see (range only — walls don't gate it).
 const atPawn = (x: number, y: number, over: Partial<Pawn> = {}): Pawn =>
-  ({ id: `p${x}_${y}`, isAlive: true, position: { x, y }, stats: { perception: 10 }, ...over }) as Pawn;
+  ({
+    id: `p${x}_${y}`,
+    isAlive: true,
+    position: { x, y },
+    stats: { perception: 10 },
+    ...over
+  }) as Pawn;
 
 describe('isWitnessedByColony', () => {
   const DAY = 1.0;

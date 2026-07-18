@@ -6,7 +6,11 @@ import type { GameState, Pawn } from '$lib/game/core/types';
 // Idle pawns amble one tile at a time instead of standing frozen — natural milling, and it
 // keeps idlers off build-site approach tiles (the construct deadlock). Mirrors the mob mover.
 
-function makeWorld(w: number, h: number, blocked: Array<[number, number]> = []): GameState['worldMap'] {
+function makeWorld(
+  w: number,
+  h: number,
+  blocked: Array<[number, number]> = []
+): GameState['worldMap'] {
   const set = new Set(blocked.map(([x, y]) => `${x},${y}`));
   return Array.from({ length: h }, (_, y) =>
     Array.from({ length: w }, (_, x) => ({ x, y, walkable: !set.has(`${x},${y}`) }))

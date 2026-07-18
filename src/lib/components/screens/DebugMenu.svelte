@@ -19,6 +19,7 @@
   import itemsData from '$lib/game/database/items/items.jsonc';
   import buildingsData from '$lib/game/database/world/buildings.jsonc';
   import AudioNowPlaying from '$lib/components/UI/AudioNowPlaying.svelte';
+  import DebugGodmode from './DebugGodmode.svelte';
 
   type NamedDef = { id: string; name?: string; category?: string };
   const ITEMS = (itemsData as unknown as NamedDef[]).filter((i) => i.category !== 'natural_weapon');
@@ -166,6 +167,9 @@
       Research gate off <span class="hint">(show + allow unresearched recipes & buildings)</span>
     </label>
   </section>
+
+  <!-- HEADLESS-SIM (ADR-033): scenario presets, need freezes, pawn godmode, instant research. -->
+  <DebugGodmode />
 
   <section>
     <h4>Snow cover <span class="hint">(× tile wetness)</span></h4>

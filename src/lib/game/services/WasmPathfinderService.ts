@@ -25,13 +25,36 @@ class WasmPathfinderServiceImpl implements PathfinderService {
   private mod: WasmMod | null = null;
   private _initPromise: Promise<void> | null = null;
 
-  /** Initialize WASM. Idempotent — safe to call multiple times. */
+  /**
+   * Initialize WASM. Idempotent — safe to call multiple times.
+   *
+   * Browser/worker: the wasm-bindgen `--target web` default path (fetch by URL).
+   * Node (HEADLESS-SIM / ADR-033): the same glue + the same `.wasm`, but the bytes are read off
+   * disk and handed to `initSync` — `fetch` can't load `file:` URLs in Node, and rebuilding with
+   * `--target nodejs` would fork the artifact. Same module either way, so A* tie-breaking is
+   * byte-identical between the client and a headless run. Existing non-headless vitest suites are
+   * unaffected: nothing inits unless it explicitly awaits `init()`.
+   */
   async init(): Promise<void> {
-    if (!isClientRuntime || this.mod) return;
+    if (this.mod) return;
     if (!this._initPromise) {
       this._initPromise = (async () => {
         const m = await import('$lib/spatial-core-pkg/spatial_core.js');
-        await (m as { default: () => Promise<unknown> }).default();
+        if (isClientRuntime) {
+          await (m as { default: () => Promise<unknown> }).default();
+        } else {
+          // Dynamic specifier via a variable so client/worker bundles never try to resolve node:fs.
+          const fsSpecifier = 'node:fs/promises';
+          const { readFile } = (await import(/* @vite-ignore */ fsSpecifier)) as {
+            readFile: (p: URL) => Promise<Uint8Array>;
+          };
+          const bytes = await readFile(
+            new URL('../../spatial-core-pkg/spatial_core_bg.wasm', import.meta.url)
+          );
+          (m as unknown as { initSync: (o: { module: BufferSource }) => unknown }).initSync({
+            module: bytes as BufferSource
+          });
+        }
         this.mod = m as unknown as WasmMod;
       })();
     }

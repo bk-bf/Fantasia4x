@@ -27,6 +27,18 @@ export interface FoodSettings {
   allowedFoodItemIds?: string[];
 }
 
+/** The needs whose per-tick accrual can be frozen via `_needsDisabled` (HEADLESS-SIM debug toggles).
+ *  All but `mobHunger` are pawn needs gated in `processNeedsTick`; `mobHunger` freezes the mob
+ *  metabolism instead. */
+export type DisableableNeed =
+  | 'hunger'
+  | 'fatigue'
+  | 'thirst'
+  | 'hygiene'
+  | 'wetness'
+  | 'relaxation'
+  | 'mobHunger';
+
 export interface GameState {
   /** Deterministic RNG seed (P0-2). Persisted so a loaded save replays identically. */
   seed: number;
@@ -74,6 +86,12 @@ export interface GameState {
    *  the Crafting/Building tabs AND can be queued/built without the prerequisite research (station,
    *  tools, materials still apply). Toggled from the DEBUG tab; rides gameState so the worker sees it. */
   _devResearchGateOff?: boolean;
+  /** Debug override (HEADLESS-SIM / ADR-033): per-need accrual kill-switches. A `true` key freezes
+   *  that need's per-tick accrual at its current value — `hunger`/`fatigue`/`thirst`/`hygiene`/
+   *  `wetness`/`relaxation` gate the pawn loop in `processNeedsTick`, `mobHunger` gates the mob
+   *  metabolism in `entityLifecycle`. Toggled via the `devToggleNeed` command; rides gameState so
+   *  the worker (and a headless session) see it. Absent/false = normal accrual. */
+  _needsDisabled?: Partial<Record<DisableableNeed, boolean>>;
   /** Average effective map temperature (°C, baked tile avg + weather delta), computed worker-side
    *  for the HUD readout. A scalar — tile `temperature` itself stays worker-only (PERF-2). */
   avgTemperature?: number;

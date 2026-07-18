@@ -194,7 +194,7 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
         `[HAUL-SYNC] creating ${drop.urgent ? 'URGENT ' : ''}haul job for drop ${drop.id} (${drop.resourceId}×${drop.quantity})`
       );
       jobs.push({
-        id: `haul-${drop.id}-${Date.now()}`,
+        id: `haul-${drop.id}-t${gs.turn}`,
         type: 'haul',
         targetX: drop.x,
         targetY: drop.y,

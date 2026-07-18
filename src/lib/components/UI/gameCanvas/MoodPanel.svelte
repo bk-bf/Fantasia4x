@@ -16,8 +16,11 @@
   // sources can legitimately share a label (e.g. two traits), which would otherwise crash the block.
   const contributions = $derived.by(() => {
     const merged = new Map<string, number>();
-    for (const c of mood?.contributions ?? []) merged.set(c.label, (merged.get(c.label) ?? 0) + c.value);
-    return [...merged].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
+    for (const c of mood?.contributions ?? [])
+      merged.set(c.label, (merged.get(c.label) ?? 0) + c.value);
+    return [...merged]
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value);
   });
   const moodVal = $derived(mood?.mood ?? 50);
   const target = $derived(mood?.target ?? moodVal);

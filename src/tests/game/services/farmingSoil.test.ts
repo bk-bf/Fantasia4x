@@ -4,7 +4,10 @@ import { buildingService } from '$lib/game/services/BuildingService';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService';
 import { complete as constructComplete } from '$lib/game/services/jobs/construct';
 import { complete as plantComplete } from '$lib/game/services/jobs/plant';
-import { complete as harvestComplete, generate as harvestGenerate } from '$lib/game/services/jobs/harvest';
+import {
+  complete as harvestComplete,
+  generate as harvestGenerate
+} from '$lib/game/services/jobs/harvest';
 import { isGrowableResource } from '$lib/game/services/ResourceObjectService';
 import { SUBTERRAINS, soilFertilityPct } from '$lib/game/core/Terrains';
 import type { GameState, Job } from '$lib/game/core/types';
@@ -37,15 +40,15 @@ describe('§F crop seeds', () => {
 
 describe('§F wild crops drop a few seeds when harvested', () => {
   it('wild barley yields grain_seed, wild rye yields rye_seed; berry bush yields berry_seed; each wild veg yields its own seed', () => {
-    expect(resourceObjectService.calculateYield('wild_barley', undefined, undefined, 'harvest')).toHaveProperty(
-      'grain_seed'
-    );
-    expect(resourceObjectService.calculateYield('wild_rye', undefined, undefined, 'harvest')).toHaveProperty(
-      'rye_seed'
-    );
-    expect(resourceObjectService.calculateYield('berry_bush', undefined, undefined, 'harvest')).toHaveProperty(
-      'berry_seed'
-    );
+    expect(
+      resourceObjectService.calculateYield('wild_barley', undefined, undefined, 'harvest')
+    ).toHaveProperty('grain_seed');
+    expect(
+      resourceObjectService.calculateYield('wild_rye', undefined, undefined, 'harvest')
+    ).toHaveProperty('rye_seed');
+    expect(
+      resourceObjectService.calculateYield('berry_bush', undefined, undefined, 'harvest')
+    ).toHaveProperty('berry_seed');
     // Each wild crop is its own plant, dropping its OWN vegetable + matching seed (no grab-bag plant).
     for (const [resId, seed] of [
       ['wild_turnip', 'turnip_seed'],
@@ -54,7 +57,9 @@ describe('§F wild crops drop a few seeds when harvested', () => {
       ['wild_beans', 'bean_seed'],
       ['wild_peas', 'pea_seed']
     ] as const) {
-      expect(resourceObjectService.calculateYield(resId, undefined, undefined, 'harvest')).toHaveProperty(seed);
+      expect(
+        resourceObjectService.calculateYield(resId, undefined, undefined, 'harvest')
+      ).toHaveProperty(seed);
     }
   });
 });
@@ -117,7 +122,13 @@ describe('§F Soil-Works terraform builds', () => {
     // fix the grid so [1][1] is the building's tile
     (gs.worldMap as unknown as Record<number, Record<number, typeof tile>>)[1][1] = tile;
 
-    const job = { id: 'j', type: 'construct', buildingId: 'b1', targetX: 1, targetY: 1 } as unknown as Job;
+    const job = {
+      id: 'j',
+      type: 'construct',
+      buildingId: 'b1',
+      targetX: 1,
+      targetY: 1
+    } as unknown as Job;
     const next = constructComplete(job, gs);
 
     expect(next.worldMap[1][1].subType).toBe('deep_grass'); // rich soil
@@ -176,7 +187,13 @@ describe('§F crops + planting', () => {
       pawns: []
     } as unknown as GameState;
 
-    const job = { id: 'p', type: 'plant', resourceId: 'crop_wheat', targetX: 2, targetY: 0 } as unknown as Job;
+    const job = {
+      id: 'p',
+      type: 'plant',
+      resourceId: 'crop_wheat',
+      targetX: 2,
+      targetY: 0
+    } as unknown as Job;
     const next = plantComplete(job, gs);
 
     const t = next.worldMap[0][2];
@@ -194,9 +211,21 @@ describe('§F resource growth/maturity', () => {
   });
 
   it('growth scales harvest yield — an ungrown node yields nothing, a full one yields normally', () => {
-    const none = resourceObjectService.calculateYield('grass_patch', undefined, undefined, 'harvest', 0);
+    const none = resourceObjectService.calculateYield(
+      'grass_patch',
+      undefined,
+      undefined,
+      'harvest',
+      0
+    );
     expect(Object.keys(none).length).toBe(0); // 0% growth → no harvest
-    const full = resourceObjectService.calculateYield('grass_patch', undefined, undefined, 'harvest', 100);
+    const full = resourceObjectService.calculateYield(
+      'grass_patch',
+      undefined,
+      undefined,
+      'harvest',
+      100
+    );
     expect(full).toHaveProperty('plant_fiber');
   });
 
@@ -280,7 +309,14 @@ describe('§F soil exhaustion from farming', () => {
       t.resources = { crop_pumpkin: 1 };
       t.growth = { crop_pumpkin: 100 };
       gs = harvestComplete(
-        { id: 'h', type: 'harvest', resourceId: 'crop_pumpkin', targetX: 0, targetY: 0, claimedBy: null } as unknown as Job,
+        {
+          id: 'h',
+          type: 'harvest',
+          resourceId: 'crop_pumpkin',
+          targetX: 0,
+          targetY: 0,
+          claimedBy: null
+        } as unknown as Job,
         gs
       );
     };

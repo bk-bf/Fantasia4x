@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { generateCulture, drawPawnTraits, pawnMeetsRequires, TRAIT_DATABASE } from '$lib/game/core/Culture';
+import {
+  generateCulture,
+  drawPawnTraits,
+  pawnMeetsRequires,
+  TRAIT_DATABASE
+} from '$lib/game/core/Culture';
 import { generateColonyPawns } from '$lib/game/entities/Pawns';
 import { generateCulturePool } from '$lib/game/core/Culture';
 import { rng } from '$lib/game/core/rng';
@@ -72,7 +77,9 @@ describe('negative-trait (flaw) layer', () => {
     const culture = generateCulture();
     for (let i = 0; i < 2000; i++) {
       const ids = new Set(drawPawnTraits(culture).map((t) => t.id));
-      expect(ids.has('brittle-boned') && (ids.has('heavy-boned') || ids.has('stone-bones'))).toBe(false);
+      expect(ids.has('brittle-boned') && (ids.has('heavy-boned') || ids.has('stone-bones'))).toBe(
+        false
+      );
       expect(ids.has('night-blind') && (ids.has('night-owl') || ids.has('nocturnal'))).toBe(false);
     }
   });

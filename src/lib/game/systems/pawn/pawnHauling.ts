@@ -404,7 +404,7 @@ function dropLooseAtPawn(
   for (const [resourceId, qty] of Object.entries(inv)) {
     if (qty <= 0 || pinned.has(resourceId)) continue;
     newDropped.push({
-      id: `loose-${resourceId}-${px}-${py}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`,
+      id: `loose-${resourceId}-${px}-${py}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`,
       resourceId,
       x: px,
       y: py,
@@ -563,7 +563,7 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
     if (tile) {
       // Create an UNSTORED drop at the tile — the absorption trigger below
       // will detect it, mark it stored, and credit the zone.
-      const id = `deposit-${resourceId}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
+      const id = `deposit-${resourceId}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`;
       newDropIds.push(id);
       newDropped.push({ id, resourceId, x: tile.x, y: tile.y, quantity: qty, stored: false });
       placed.add(resourceId);

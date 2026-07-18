@@ -11,9 +11,18 @@ const ALL: Trait[] = TRAIT_DATABASE;
 const RARITY_IDS = new Set((raritiesData as { id: string }[]).map((r) => r.id));
 const KINDS = new Set(['stat', 'attribute', 'naturalGear', 'passive', 'wound', 'bodyMod']);
 const STAT_KEYS = new Set([
-  'strengthBonus', 'dexterityBonus', 'intelligenceBonus', 'perceptionBonus', 'charismaBonus',
-  'constitutionBonus', 'strengthPenalty', 'dexterityPenalty', 'intelligencePenalty',
-  'perceptionPenalty', 'charismaPenalty', 'constitutionPenalty'
+  'strengthBonus',
+  'dexterityBonus',
+  'intelligenceBonus',
+  'perceptionBonus',
+  'charismaBonus',
+  'constitutionBonus',
+  'strengthPenalty',
+  'dexterityPenalty',
+  'intelligencePenalty',
+  'perceptionPenalty',
+  'charismaPenalty',
+  'constitutionPenalty'
 ]);
 // ADR-028 NAMING LAW: a stat/attribute trait's NAME must not evoke a natural weapon/armor or a losable
 // body part — those imply a body-model mechanic the abstract trait lacks. Only body-touching kinds
@@ -37,7 +46,9 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
       }
       if (t.kind === 'attribute') {
         for (const k of Object.keys(t.effects ?? {}))
-          expect(STAT_KEYS.has(k), `${t.id} attribute-kind carries core-stat rider ${k}`).toBe(false);
+          expect(STAT_KEYS.has(k), `${t.id} attribute-kind carries core-stat rider ${k}`).toBe(
+            false
+          );
       }
     }
   });
@@ -95,7 +106,9 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
       if (t.kind === 'wound') {
         // §4: the affliction IS the injury — a wounds payload, no stat fudge riding along.
         expect(t.wounds?.length, `${t.id} wound-kind needs wounds[]`).toBeGreaterThan(0);
-        expect(Object.keys(t.effects ?? {}), `${t.id} wound-kind must carry no effects`).toEqual([]);
+        expect(Object.keys(t.effects ?? {}), `${t.id} wound-kind must carry no effects`).toEqual(
+          []
+        );
         for (const w of t.wounds ?? []) {
           const def = PART_DEF_MAP[w.part];
           expect(def, `${t.id} wound part ${w.part} not in limbmap`).toBeTruthy();
@@ -136,13 +149,17 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
     }
     // every evolvesTo target exists
     const ids = new Set(ALL.map((t) => t.id));
-    for (const t of ALL) if (t.evolvesTo) expect(ids.has(t.evolvesTo), `evolvesTo ${t.evolvesTo}`).toBe(true);
+    for (const t of ALL)
+      if (t.evolvesTo) expect(ids.has(t.evolvesTo), `evolvesTo ${t.evolvesTo}`).toBe(true);
     // §3a stage chains are ordered: a staged trait's evolvesTo target is the NEXT stage.
     const byId = new Map(ALL.map((t) => [t.id, t]));
     for (const t of ALL) {
       if (t.stage && t.evolvesTo) {
         const next = byId.get(t.evolvesTo);
-        expect(next?.stage, `${t.id} (S${t.stage}) evolvesTo ${t.evolvesTo} must be S${t.stage + 1}`).toBe(t.stage + 1);
+        expect(
+          next?.stage,
+          `${t.id} (S${t.stage}) evolvesTo ${t.evolvesTo} must be S${t.stage + 1}`
+        ).toBe(t.stage + 1);
       }
     }
   });
@@ -151,9 +168,17 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
     // §0a: a resistance is carried by the dedicated `resistances` block on coverings/affinities — NEVER
     // smuggled into the generic `effects` bag (where it read as a free-floating pawn-wide stat rider).
     const RESISTANCE_KEYS = [
-      'fireResistance', 'coldResistance', 'poisonResistance', 'diseaseResistance',
-      'mentalResistance', 'lightningResistance', 'shadowResistance', 'wetnessResistance',
-      'blunt_resistance', 'cutting_resistance', 'piercing_resistance'
+      'fireResistance',
+      'coldResistance',
+      'poisonResistance',
+      'diseaseResistance',
+      'mentalResistance',
+      'lightningResistance',
+      'shadowResistance',
+      'wetnessResistance',
+      'blunt_resistance',
+      'cutting_resistance',
+      'piercing_resistance'
     ];
     for (const t of ALL)
       for (const k of RESISTANCE_KEYS)
@@ -167,7 +192,11 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
     // Owner exemption: a hand-REPLACEMENT's manipulation cost/benefit stays on the gear trait (claws,
     // pincers, plating) — everything else routes through the weapon item / condition / part grants.
     const EXEMPT = new Set([
-      'rending-claws', 'ripping-talons', 'crushing-claws', 'burrowing-claws', 'chitin-plating'
+      'rending-claws',
+      'ripping-talons',
+      'crushing-claws',
+      'burrowing-claws',
+      'chitin-plating'
     ]);
     for (const t of ALL) {
       if (!['naturalGear', 'passive', 'wound', 'bodyMod'].includes(t.kind ?? '')) continue;
@@ -185,23 +214,47 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
     // `combatMods.melee_damage`). The Trait type no longer declares them; assert no DATA smuggles them.
     for (const t of ALL) {
       const raw = t as unknown as Record<string, unknown>;
-      expect('onHitCondition' in raw, `${t.id} carries a trait onHitCondition — procs belong on the weapon item`).toBe(false);
-      expect('weaponBonus' in raw, `${t.id} carries weaponBonus — fold it into combatMods.melee_damage`).toBe(false);
+      expect(
+        'onHitCondition' in raw,
+        `${t.id} carries a trait onHitCondition — procs belong on the weapon item`
+      ).toBe(false);
+      expect(
+        'weaponBonus' in raw,
+        `${t.id} carries weaponBonus — fold it into combatMods.melee_damage`
+      ).toBe(false);
     }
   });
 
   it('§1 combatMods only name real combat stats; §6a auras name real conditions with finite radius', () => {
     const COMBAT_STAT_IDS = new Set([
-      'melee_damage', 'armor_damage', 'hit_chance', 'dodge', 'knockdown_resistance', 'vision_range',
-      'attack_speed', 'hit_precision', 'aim_accuracy', 'aim_speed', 'reload_speed', 'aim_range', 'ranged_damage'
+      'melee_damage',
+      'armor_damage',
+      'hit_chance',
+      'dodge',
+      'knockdown_resistance',
+      'vision_range',
+      'attack_speed',
+      'hit_precision',
+      'aim_accuracy',
+      'aim_speed',
+      'reload_speed',
+      'aim_range',
+      'ranged_damage'
     ]);
     for (const t of ALL) {
       for (const k of Object.keys(t.effects?.combatMods ?? {}))
-        expect(COMBAT_STAT_IDS.has(k), `${t.id} combatMods names unknown combat stat ${k}`).toBe(true);
+        expect(COMBAT_STAT_IDS.has(k), `${t.id} combatMods names unknown combat stat ${k}`).toBe(
+          true
+        );
       if (t.aura) {
-        expect(getTransientConditionDef(t.aura.condition), `${t.id} aura condition ${t.aura.condition} missing`).toBeTruthy();
+        expect(
+          getTransientConditionDef(t.aura.condition),
+          `${t.id} aura condition ${t.aura.condition} missing`
+        ).toBeTruthy();
         expect(t.aura.radius, `${t.id} aura radius must be finite and small`).toBeGreaterThan(0);
-        expect(t.aura.radius, `${t.id} aura radius must be finite and small`).toBeLessThanOrEqual(6);
+        expect(t.aura.radius, `${t.id} aura radius must be finite and small`).toBeLessThanOrEqual(
+          6
+        );
       }
       // §3d grafts reference real limbmap parts.
       for (const g of t.grafts ?? [])
@@ -212,7 +265,8 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
 
   it('§6 gamification purge: the illogical work bonuses are gone', () => {
     const byId = Object.fromEntries(ALL.filter((t) => t.id).map((t) => [t.id!, t]));
-    const ws = (id: string) => (byId[id]?.effects as { workSpeed?: Record<string, number> })?.workSpeed;
+    const ws = (id: string) =>
+      (byId[id]?.effects as { workSpeed?: Record<string, number> })?.workSpeed;
     expect(ws('iron-skin')?.mining).toBeUndefined(); // metallic skin ≠ mining
     expect(ws('frost-born')?.fishing).toBeUndefined(); // cold resistance ≠ fishing skill
     expect(ws('strong-backed')?.mining).toBeUndefined();
@@ -243,8 +297,18 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
   it('flaw tier: the marquee flaws (afflictions + shitty commons) are rarity negative', () => {
     const byId = Object.fromEntries(TRAIT_DATABASE.filter((t) => t.id).map((t) => [t.id!, t]));
     for (const id of [
-      'frail', 'clumsy', 'dull', 'one-eyed', 'hard-of-hearing', 'bad-back',
-      'sluggard', 'slow-mending', 'night-blind', 'thin-blooded', 'pox-marked', 'stiff-jointed'
+      'frail',
+      'clumsy',
+      'dull',
+      'one-eyed',
+      'hard-of-hearing',
+      'bad-back',
+      'sluggard',
+      'slow-mending',
+      'night-blind',
+      'thin-blooded',
+      'pox-marked',
+      'stiff-jointed'
     ]) {
       expect(byId[id]?.rarity, `${id} must be a flaw`).toBe('negative');
     }

@@ -12,7 +12,15 @@ const worldMap = Array.from({ length: W }, (_, y) =>
 ) as WorldTile[][];
 
 const pawn = (id: string, x: number, y: number, extra: Partial<Pawn> = {}): Pawn =>
-  ({ id, name: id, position: { x, y }, isAlive: true, path: [], isMoving: false, ...extra }) as unknown as Pawn;
+  ({
+    id,
+    name: id,
+    position: { x, y },
+    isAlive: true,
+    path: [],
+    isMoving: false,
+    ...extra
+  }) as unknown as Pawn;
 
 const mob = (id: string, x: number, y: number, state = 'Wander'): Mob =>
   ({ id, x, y, state }) as unknown as Mob;
@@ -43,7 +51,9 @@ describe('one-body-per-tile occupancy (carry / de-overlap)', () => {
   });
 
   it('separateStackedBodies nudges the mob off a pawn-occupied tile, keeping the pawn put', () => {
-    const out = separateStackedBodies(gs([pawn('colonist', 2, 2)], [mob('wolf', 2, 2, 'Collapsed')]));
+    const out = separateStackedBodies(
+      gs([pawn('colonist', 2, 2)], [mob('wolf', 2, 2, 'Collapsed')])
+    );
     expect(out.pawns.find((q) => q.id === 'colonist')!.position).toEqual({ x: 2, y: 2 }); // pawn stays
     const w = out.mobs!.find((q) => q.id === 'wolf')!;
     expect(w.x === 2 && w.y === 2).toBe(false); // wolf relocated

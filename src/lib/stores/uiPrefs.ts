@@ -108,7 +108,8 @@ export const debugMode = createPersistedBool(DEBUG_MODE_KEY, false);
 // player enables Debug mode in Settings. `subscribe` fires immediately with the persisted value, so
 // the main process is in sync from startup, then on every toggle. No-op in a plain browser.
 if (typeof window !== 'undefined') {
-  const shell = (window as unknown as { fantasia?: { setDebugMode?: (on: boolean) => void } }).fantasia;
+  const shell = (window as unknown as { fantasia?: { setDebugMode?: (on: boolean) => void } })
+    .fantasia;
   if (shell?.setDebugMode) debugMode.subscribe((on) => shell.setDebugMode!(on));
 }
 

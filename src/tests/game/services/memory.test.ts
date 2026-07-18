@@ -6,7 +6,13 @@ import { runConversation, combatBark } from '$lib/game/services/social/conversat
 import { rng } from '$lib/game/core/rng';
 import { TICKS_PER_SECOND } from '$lib/game/core/time';
 import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService';
-import type { EntityCondition, EventMemory, GameState, Pawn, PawnRelationship } from '$lib/game/core/types';
+import type {
+  EntityCondition,
+  EventMemory,
+  GameState,
+  Pawn,
+  PawnRelationship
+} from '$lib/game/core/types';
 
 const DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 
@@ -52,7 +58,14 @@ describe('recall', () => {
     const b = pawn('b', 1, 0);
     expect(memoryService.recall(a, b, 0)).toBeUndefined();
     a.memories = [
-      { kind: 'combat', turn: 0, subjectId: 'x', subjectName: 'Bram', detail: 'a boar', memorability: 0.5 }
+      {
+        kind: 'combat',
+        turn: 0,
+        subjectId: 'x',
+        subjectName: 'Bram',
+        detail: 'a boar',
+        memorability: 0.5
+      }
     ];
     const got = memoryService.recall(a, b, 100);
     expect(got).toBeDefined();
@@ -92,7 +105,12 @@ describe('condition onset → affliction memory', () => {
     // already present last tick (in prevStages) → not an onset, no new memory
     const near2 = pawn('near2', 6, 5);
     const state2 = { turn: 10, pawns: [sufferer, near2] } as unknown as GameState;
-    memoryService.recordConditionOnsets(state2, sufferer, new Map([['hypothermia', 'Severe']]), conditions);
+    memoryService.recordConditionOnsets(
+      state2,
+      sufferer,
+      new Map([['hypothermia', 'Severe']]),
+      conditions
+    );
     expect(near2.memories ?? []).toHaveLength(0);
   });
 });
@@ -135,7 +153,12 @@ describe('recall → grounded dialog line', () => {
       b,
       rel,
       { turn: 200 },
-      { flirtEligible: false, targetGrieving: false, battleContext: false, recall: { memory, ago: 'the other day' } }
+      {
+        flirtEligible: false,
+        targetGrieving: false,
+        battleContext: false,
+        recall: { memory, ago: 'the other day' }
+      }
     );
     expect(out.category).toBe('banter'); // botch borrows banter's tone
     expect(out.lines).toHaveLength(3);

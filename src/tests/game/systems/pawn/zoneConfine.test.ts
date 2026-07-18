@@ -11,7 +11,8 @@ function stateWith(
   restrictTiles: Record<string, string>
 ): GameState {
   const designationZoneId: Record<string, { restrict: string }> = {};
-  for (const [tile, id] of Object.entries(restrictTiles)) designationZoneId[tile] = { restrict: id };
+  for (const [tile, id] of Object.entries(restrictTiles))
+    designationZoneId[tile] = { restrict: id };
   return { zoneInstances, designationZoneId } as unknown as GameState;
 }
 const restrictZone = (id: string, assignedPawnIds: string[]): ZoneInstance => ({

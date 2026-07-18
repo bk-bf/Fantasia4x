@@ -26,12 +26,19 @@ describe('FSM state registry ↔ PAWN_STATE', () => {
     const defKeys = new Set(Object.keys(STATE_DEFS));
     for (const v of Object.values(PAWN_STATE)) {
       if (NEED_OWNED_STATES.has(v)) {
-        expect(defKeys.has(v), `need state '${v}' should NOT be in states.jsonc (needs.jsonc owns it)`).toBe(false);
+        expect(
+          defKeys.has(v),
+          `need state '${v}' should NOT be in states.jsonc (needs.jsonc owns it)`
+        ).toBe(false);
       } else {
         expect(defKeys.has(v), `no states.jsonc entry for structural state '${v}'`).toBe(true);
       }
     }
-    for (const k of defKeys) expect(new Set<string>(Object.values(PAWN_STATE)).has(k), `orphan states.jsonc entry '${k}'`).toBe(true);
+    for (const k of defKeys)
+      expect(
+        new Set<string>(Object.values(PAWN_STATE)).has(k),
+        `orphan states.jsonc entry '${k}'`
+      ).toBe(true);
   });
 
   it('every entry has a non-empty label and a valid kind/source', () => {
@@ -42,7 +49,8 @@ describe('FSM state registry ↔ PAWN_STATE', () => {
       expect(kinds.has(def.kind), `'${id}' has bad kind '${def.kind}'`).toBe(true);
       expect(sources.has(def.source), `'${id}' has bad source '${def.source}'`).toBe(true);
       // A forced (uncontrollable) state names the condition that drives it.
-      if (def.uncontrollable) expect(def.condition, `'${id}' should name its condition`).toBeTruthy();
+      if (def.uncontrollable)
+        expect(def.condition, `'${id}' should name its condition`).toBeTruthy();
     }
   });
 

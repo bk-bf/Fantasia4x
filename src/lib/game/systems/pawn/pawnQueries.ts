@@ -309,7 +309,10 @@ export function applyMealBuff(p: Pawn, meal: MealPortion[]): void {
  *  'carnivore' ⇒ only raw meat + carcasses register as food at all. Applied in meal selection AND the
  *  food-drop fetch, so a carnivore never hauls bread it can't stomach (and can starve in a plant larder —
  *  the intended tension). */
-export function pawnDietAllows(pawn: Pawn, def: { id?: string; category?: string } | undefined): boolean {
+export function pawnDietAllows(
+  pawn: Pawn,
+  def: { id?: string; category?: string } | undefined
+): boolean {
   const restriction = (pawn.traits ?? []).find((t) => t.dietRestriction)?.dietRestriction;
   if (!restriction || !def) return true;
   // aquatic (Amphibian Palate): only fish register as food.

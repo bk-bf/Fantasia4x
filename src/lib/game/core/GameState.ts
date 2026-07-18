@@ -37,7 +37,10 @@ function binStacksForType(type: string): number {
 // A specialized store's allow-list (categories OR item ids); only types that actually restrict appear.
 // Category MATCHING lives in the services layer — core only knows the list / whether a tile is filtered.
 const STORAGE_BIN_FILTER = new Map<string, string[]>(
-  BUILDING_DEFS.filter((d) => (d.storageFilter?.length ?? 0) > 0).map((d) => [d.id, d.storageFilter!])
+  BUILDING_DEFS.filter((d) => (d.storageFilter?.length ?? 0) > 0).map((d) => [
+    d.id,
+    d.storageFilter!
+  ])
 );
 
 export class GameStateManager {

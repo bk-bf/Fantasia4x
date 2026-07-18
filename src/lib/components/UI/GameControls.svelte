@@ -238,7 +238,9 @@
         class="bi perf"
         title="Render {fps} FPS · Simulation {tps} TPS (target {TICKS_PER_SECOND *
           gameSpeed} at {gameSpeed}×)"
-        >{#if $showFps}{fps}FPS{/if}{#if $showFps && $showTps} · {/if}{#if $showTps}{tps}TPS{/if}</span
+        >{#if $showFps}{fps}FPS{/if}{#if $showFps && $showTps}
+          ·
+        {/if}{#if $showTps}{tps}TPS{/if}</span
       >
     {/if}
     <span class="bi" class:running={!isPaused} class:paused={isPaused}>

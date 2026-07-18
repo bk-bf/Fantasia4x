@@ -35,10 +35,8 @@
         <span class="have">×{row.have}</span>
         <span class="price">{row.price}</span>
         <span class="ctrl">
-          <button
-            class="btn"
-            disabled={row.offered <= 0}
-            onclick={() => onAdjust(row.itemId, -(1))}>−</button
+          <button class="btn" disabled={row.offered <= 0} onclick={() => onAdjust(row.itemId, -1)}
+            >−</button
           >
           <span class="offered">{row.offered}</span>
           <button

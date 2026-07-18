@@ -46,6 +46,12 @@ import { getCreatureById } from '../../core/Creatures';
 
 let idCounter = 0;
 
+/** Reset the mob id/debug counter (fresh run / scenario build — ADR-033 replay determinism:
+ *  without this, a second build in the same process numbers its mobs where the first left off). */
+export function resetMobIdCounter(): void {
+  idCounter = 0;
+}
+
 /** Opening-game safety bubble: true while (x,y) sits within `STARTING_BUBBLE_RADIUS` of the colony AND
  *  the game is still in its first month. Gates every lair-spawn path (seed / repopulate / grow) so no
  *  den lands on the player's doorstep before they can arm up. Measured against the ACTUAL placed pawns,

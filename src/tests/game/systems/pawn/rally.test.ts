@@ -12,13 +12,20 @@ import type { GameState, Pawn } from '$lib/game/core/types';
 /** A broken pawn at (10,10) plus one ally `dx` tiles east, bonded at `score`. Unique ids per case. */
 function scene(id: string, dx: number, score: number) {
   const gen = generatePawns(initialGameState.culture, 2);
-  const broken = { ...gen[0], id: `${id}_b`, position: { x: 10, y: 10 }, conditionTimers: { mental_breakdown: 500 } };
+  const broken = {
+    ...gen[0],
+    id: `${id}_b`,
+    position: { x: 10, y: 10 },
+    conditionTimers: { mental_breakdown: 500 }
+  };
   const ally = { ...gen[1], id: `${id}_a`, position: { x: 10 + dx, y: 10 }, conditionTimers: {} };
   const [pawnA, pawnB] = [broken.id, ally.id].sort();
   const state = {
     ...initialGameState,
     pawns: [broken, ally],
-    relationships: [{ pawnA, pawnB, score, stage: 'best_friends', tags: [], points: { history: 0 } }]
+    relationships: [
+      { pawnA, pawnB, score, stage: 'best_friends', tags: [], points: { history: 0 } }
+    ]
   } as unknown as GameState;
   return { broken: broken as Pawn, state };
 }
@@ -40,22 +47,31 @@ describe('rally system', () => {
   it('grace window: a rallied pawn cannot re-break while the buffer holds', () => {
     const [p] = generatePawns(initialGameState.culture, 1);
     const base = { ...p, state: { ...p.state, mood: 5 }, debugId: 0 }; // debugId 0 → turn=HOUR hits the hourly gate
-    expect(shouldRollBreakdown({ ...base, conditionTimers: { rallied: 100 } } as Pawn, TICKS_PER_GAME_HOUR)).toBe(false);
-    expect(shouldRollBreakdown({ ...base, conditionTimers: {} } as Pawn, TICKS_PER_GAME_HOUR)).toBe(true);
+    expect(
+      shouldRollBreakdown(
+        { ...base, conditionTimers: { rallied: 100 } } as Pawn,
+        TICKS_PER_GAME_HOUR
+      )
+    ).toBe(false);
+    expect(shouldRollBreakdown({ ...base, conditionTimers: {} } as Pawn, TICKS_PER_GAME_HOUR)).toBe(
+      true
+    );
   });
 
   it('a broken pawn is rallied by a close ally next to them', () => {
     const { broken, state } = scene('near', 1, 90); // adjacent
     let rallied = false;
     // One attempt per game-hour; over a day a +90 friend lands at least one.
-    for (let h = 1; h <= 24; h++) if (tryRally(broken, state, h * TICKS_PER_GAME_HOUR)) rallied = true;
+    for (let h = 1; h <= 24; h++)
+      if (tryRally(broken, state, h * TICKS_PER_GAME_HOUR)) rallied = true;
     expect(rallied).toBe(true);
   });
 
   it('no rally beyond a face-to-face range (RALLY_RANGE = 2)', () => {
     const { broken, state } = scene('far', 4, 90); // 4 tiles away → out of earshot
     let rallied = false;
-    for (let h = 1; h <= 24; h++) if (tryRally(broken, state, h * TICKS_PER_GAME_HOUR)) rallied = true;
+    for (let h = 1; h <= 24; h++)
+      if (tryRally(broken, state, h * TICKS_PER_GAME_HOUR)) rallied = true;
     expect(rallied).toBe(false);
   });
 

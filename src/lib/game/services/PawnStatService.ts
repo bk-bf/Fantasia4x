@@ -246,10 +246,11 @@ function compileFormula(formula: string): ((...vars: number[]) => number) | null
   let fn: ((...vars: number[]) => number) | null = null;
   if (/^[\d\s+\-*/.(),]+$/.test(stripped)) {
     try {
-      const raw = new Function('clamp', ...FORMULA_VARS, '"use strict"; return (' + expr + ');') as (
-        clamp: typeof FORMULA_CLAMP,
-        ...vars: number[]
-      ) => number;
+      const raw = new Function(
+        'clamp',
+        ...FORMULA_VARS,
+        '"use strict"; return (' + expr + ');'
+      ) as (clamp: typeof FORMULA_CLAMP, ...vars: number[]) => number;
       fn = (...vars: number[]) => raw(FORMULA_CLAMP, ...vars);
     } catch {
       fn = null;
@@ -439,7 +440,10 @@ function calculateCapacityValue(
       // §F8: heavy intoxication dims alertness (drunk → woozy, blackout → can collapse) — a
       // `consciousness` condition modifier, multiplied straight onto the capacity.
       value =
-        (baseCon + hearingCap * 0.05) * painMult * bloodMult * conditionConsciousnessMultiplier(pawn);
+        (baseCon + hearingCap * 0.05) *
+        painMult *
+        bloodMult *
+        conditionConsciousnessMultiplier(pawn);
       break;
     }
     case 'pain': {
@@ -752,11 +756,21 @@ export class PawnStatServiceImpl implements PawnStatService {
     // the light key is visible immediately — the thing you asked for to troubleshoot fast.
     if ((this._capHits + this._capMiss) % 4096 === 0) {
       const total = this._capHits + this._capMiss;
-      vlog('perf', 0, () => `capCache hit ${Math.round((this._capHits / total) * 100)}% (${this._capHits}/${total}), size ${this._capCache.size}`);
+      vlog(
+        'perf',
+        0,
+        () =>
+          `capCache hit ${Math.round((this._capHits / total) * 100)}% (${this._capHits}/${total}), size ${this._capCache.size}`
+      );
     }
     const caps = this._buildCapacities(pawn, light);
     if (this._capCache.size > 2048) this._capCache.clear(); // bound memory across entity churn
-    this._capCache.set(pawn.id, { limbs: pawn.limbs, injuries: pawn.injuries, light: lightBucket, caps });
+    this._capCache.set(pawn.id, {
+      limbs: pawn.limbs,
+      injuries: pawn.injuries,
+      light: lightBucket,
+      caps
+    });
     return caps;
   }
 
@@ -823,8 +837,7 @@ export class PawnStatServiceImpl implements PawnStatService {
       def.category === 'capacity' ? this.computeCapacities(pawn) : this.computeCapacities(pawn);
     // WORK-EXPERIENCE: work stats need their SKILL token resolved (level × style weight) so the
     // stand-alone read (UI stat tables, caretake tend roll) matches getWorkModifiers.
-    const skill =
-      def.category === 'work' ? (this.workSkillInfo(statId, pawn)?.factor ?? 1) : 1;
+    const skill = def.category === 'work' ? (this.workSkillInfo(statId, pawn)?.factor ?? 1) : 1;
     // Trait combatMods multiply a combat stat's formula output (×1 for every other category);
     // trait resistances stay an ADDITIVE bridge on the 0-baseline resistance stats.
     const v =
@@ -948,8 +961,10 @@ export class PawnStatServiceImpl implements PawnStatService {
     // Subjobs (Work-tab expand): resolve `${workType}_${axis}` first, then the parent category
     // (`fallbackType`) — so a subjob inherits any axis it doesn't define (Build = construction, etc).
     const formulaFor = (axis: string): string | undefined =>
-      (STAT_MAP[`${workType}_${axis}`] ?? (fallbackType ? STAT_MAP[`${fallbackType}_${axis}`] : undefined))
-        ?.formula;
+      (
+        STAT_MAP[`${workType}_${axis}`] ??
+        (fallbackType ? STAT_MAP[`${fallbackType}_${axis}`] : undefined)
+      )?.formula;
     // WORK-EXPERIENCE: the SKILL token — the pawn's experience level in the job's category (a subjob
     // reads its parent's level) × the innate speed↔finesse style split. Entities with no seeded
     // skills (mobs, minimal fixtures) act at the neutral level (levelBase ≈ 1.0). Core stats only
@@ -967,7 +982,8 @@ export class PawnStatServiceImpl implements PawnStatService {
     const stateMult = pawnStateWorkMultiplier(pawn);
     const speed = Math.max(
       0.1,
-      (evaluateFormula(formulaFor('speed'), pawn, capacities, speedSkill) + (toolBoost?.speed ?? 0)) *
+      (evaluateFormula(formulaFor('speed'), pawn, capacities, speedSkill) +
+        (toolBoost?.speed ?? 0)) *
         traitWorkMult(pawn, 'workSpeed', workType, fallbackType) *
         stateMult
     );

@@ -101,7 +101,8 @@
     />
     <div class="store-mini-btn-row">
       <button class="store-mini-btn" onclick={() => setAllowed(undefined)}>defaults</button>
-      <button class="store-mini-btn" onclick={() => setAllowed([...candidateIds])}>check all</button>
+      <button class="store-mini-btn" onclick={() => setAllowed([...candidateIds])}>check all</button
+      >
       <button class="store-mini-btn" onclick={() => setAllowed([])}>uncheck all</button>
     </div>
   </div>

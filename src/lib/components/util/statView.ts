@@ -136,7 +136,11 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   // §G night_vision is grouped as a capacity but is trait-summed (not organ-derived), so skip the generic
   // capacity boilerplate and show its own description + the cultural contributions (via RES_KEY → traitMods).
   if (s.id === 'night_vision') {
-    return { formula: 'Σ cultural night-vision grants (capped at 1.0)', vars: [], description: s.description };
+    return {
+      formula: 'Σ cultural night-vision grants (capped at 1.0)',
+      vars: [],
+      description: s.description
+    };
   }
   if (s.id === 'carry_weight') {
     return {

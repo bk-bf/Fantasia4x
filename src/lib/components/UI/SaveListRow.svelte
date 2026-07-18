@@ -78,8 +78,8 @@
       </span>
     </div>
     <div class="sub">
-      {seasonCap(save.meta.season)} · Day {save.meta.day} · {save.meta.population} colonist{save.meta
-        .population === 1
+      {seasonCap(save.meta.season)} · Day {save.meta.day} · {save.meta.population} colonist{save
+        .meta.population === 1
         ? ''
         : 's'}
     </div>
@@ -87,12 +87,7 @@
   </button>
 
   {#if save.meta.seed != null}
-    <button
-      class="seed"
-      class:copied
-      title="Copy world-gen seed"
-      onclick={copySeed}
-    >
+    <button class="seed" class:copied title="Copy world-gen seed" onclick={copySeed}>
       {copied ? 'Copied ✓' : `Seed ${save.meta.seed} ⧉`}
     </button>
   {/if}

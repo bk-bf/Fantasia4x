@@ -53,7 +53,8 @@
       return other ? { other, score: rel.score, disposition: rel.disposition } : null;
     })
     .filter(
-      (v): v is { other: Culture; score: number; disposition: CultureRelation['disposition'] } => !!v
+      (v): v is { other: Culture; score: number; disposition: CultureRelation['disposition'] } =>
+        !!v
     )
     .sort((a, b) => b.score - a.score);
 </script>
@@ -62,7 +63,9 @@
   <!-- Lore -->
   <div class="section-hdr">| {culture.name.toUpperCase()} — {culture.lore.epithet}</div>
   <p class="lore-desc">{culture.lore.description}</p>
-  <div class="row"><span class="lbl">ARCHETYPE</span><span class="val">{culture.archetype}</span></div>
+  <div class="row">
+    <span class="lbl">ARCHETYPE</span><span class="val">{culture.archetype}</span>
+  </div>
   <div class="row"><span class="lbl">COLONY</span><span class="val">{headcount} living</span></div>
   {#if culture.discoveredVia}
     <div class="row">

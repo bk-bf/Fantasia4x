@@ -92,7 +92,9 @@ function createWindow() {
   win.webContents.on('before-input-event', (event, input) => {
     if (!PLAY_MODE || debugMode || input.type !== 'keyDown') return;
     const key = (input.key || '').toLowerCase();
-    const isDevTools = key === 'f12' || (input.control && input.shift && (key === 'i' || key === 'j' || key === 'c'));
+    const isDevTools =
+      key === 'f12' ||
+      (input.control && input.shift && (key === 'i' || key === 'j' || key === 'c'));
     const isReload = key === 'f5' || ((input.control || input.meta) && key === 'r');
     if (isDevTools || isReload) event.preventDefault();
   });
@@ -110,7 +112,12 @@ function createWindow() {
   const APP = (() => {
     try {
       const u = new URL(APP_URL);
-      return { origin: u.origin, port: u.port, protocol: u.protocol, loopback: LOOPBACK_HOSTS.has(u.hostname) };
+      return {
+        origin: u.origin,
+        port: u.port,
+        protocol: u.protocol,
+        loopback: LOOPBACK_HOSTS.has(u.hostname)
+      };
     } catch {
       return null;
     }
@@ -128,7 +135,12 @@ function createWindow() {
       const x = new URL(u);
       if (x.origin === APP.origin) return true;
       // Same server reached via a different loopback alias (localhost ⇄ 127.0.0.1 ⇄ ::1).
-      return APP.loopback && LOOPBACK_HOSTS.has(x.hostname) && x.port === APP.port && x.protocol === APP.protocol;
+      return (
+        APP.loopback &&
+        LOOPBACK_HOSTS.has(x.hostname) &&
+        x.port === APP.port &&
+        x.protocol === APP.protocol
+      );
     } catch {
       return false;
     }

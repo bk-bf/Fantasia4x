@@ -48,5 +48,8 @@ export function effectiveItemValue(
   quality?: ItemQuality,
   famedStatMult?: number
 ): number {
-  return Math.max(1, Math.round(baseItemValue(def) * combinedQualityMultiplier(quality, famedStatMult)));
+  return Math.max(
+    1,
+    Math.round(baseItemValue(def) * combinedQualityMultiplier(quality, famedStatMult))
+  );
 }

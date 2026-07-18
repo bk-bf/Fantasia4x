@@ -32,9 +32,21 @@
     { role: 'Ambience', lines: ['JC Sounds — Nature Ambient Pack'] },
     {
       role: 'Sound Effects',
-      lines: ['rubberduck', 'Kenney', 'artisticdude', 'qubodup', 'AntumDeluge', 'leone', 'Vinrax', 'IMadeIt']
+      lines: [
+        'rubberduck',
+        'Kenney',
+        'artisticdude',
+        'qubodup',
+        'AntumDeluge',
+        'leone',
+        'Vinrax',
+        'IMadeIt'
+      ]
     },
-    { role: 'Typography', lines: ['Cousine', 'Cinzel', 'Dancing Script', '— SIL Open Font License'] },
+    {
+      role: 'Typography',
+      lines: ['Cousine', 'Cinzel', 'Dancing Script', '— SIL Open Font License']
+    },
     { role: 'Audio via', lines: ['OpenGameArt.org', 'CC0 / CC-BY 4.0'] }
   ];
 

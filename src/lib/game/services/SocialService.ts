@@ -135,6 +135,17 @@ const _lastPawnDialog = new Map<string, number>();
 const _activeDialogs: { x: number; y: number; until: number }[] = [];
 // Combat-bark cooldown (worker-transient): last turn a PAWN barked in a fight.
 const _lastBark = new Map<string, number>();
+
+/** Reset every worker-transient social cooldown/dedupe (fresh run / headless session start —
+ *  ADR-033 replay determinism). A fresh worker gets this for free by being a new module instance;
+ *  an in-process HeadlessSession must ask for it, else run A's chat history mutes run B's. */
+export function resetSocialTransients(): void {
+  _battleBondDay.clear();
+  _lastPairDialog.clear();
+  _lastPawnDialog.clear();
+  _activeDialogs.length = 0;
+  _lastBark.clear();
+}
 // Deterministic 0–1 from (id, turn, salt) — used for combat-bark chance + line selection so barks NEVER
 // consume the shared combat rng (which would perturb hit/damage rolls). Replay-safe, allocation-free.
 function barkHash(id: string, turn: number, salt: number): number {
@@ -866,13 +877,16 @@ class SocialServiceImpl {
     // once, then keep any pawn within DIALOG_DANGER_RADIUS of one out of the dialog.
     const danger: { x: number; y: number }[] = [];
     for (const p of state.pawns)
-      if (p.isAlive !== false && p.currentState === 'Fighting' && p.position) danger.push(p.position);
+      if (p.isAlive !== false && p.currentState === 'Fighting' && p.position)
+        danger.push(p.position);
     for (const m of state.mobs ?? [])
       if (m.state === 'Attacking' || m.state === 'Alerted') danger.push({ x: m.x, y: m.y });
     const nearDanger = (p: Pawn) =>
       !!p.position &&
       danger.some(
-        (d) => Math.max(Math.abs(d.x - p.position!.x), Math.abs(d.y - p.position!.y)) <= DIALOG_DANGER_RADIUS
+        (d) =>
+          Math.max(Math.abs(d.x - p.position!.x), Math.abs(d.y - p.position!.y)) <=
+          DIALOG_DANGER_RADIUS
       );
     // Activity awareness: a real conversation belongs to downtime — a pawn who is idle, or gathered at
     // a fire. Two pawns busily hauling (or just awake in the night) don't strike up a deep talk.
@@ -944,7 +958,14 @@ class SocialServiceImpl {
     const eff = moodEffect(effectId);
     if (!eff || eff.value == null || eff.value === 0) return;
     const label = eff.label.replace(/\{name\}/g, firstName(other));
-    this.addMoodModifier(p, `talk:${other.id}`, label, eff.value, days(DIALOG_MOOD_FADE_DAYS), turn);
+    this.addMoodModifier(
+      p,
+      `talk:${other.id}`,
+      label,
+      eff.value,
+      days(DIALOG_MOOD_FADE_DAYS),
+      turn
+    );
   }
 
   /** Assemble + resolve one dialog between `a` and `b`: move the relationship (logged), advance
@@ -968,7 +989,11 @@ class SocialServiceImpl {
     // something witnessed — a kill, a death, a masterwork, a botch, a loafer (on the spot or later).
     // Reminiscing runs higher by the fire (the evening's when the old stories come out).
     let recall: { memory: EventMemory; ago: string } | undefined;
-    if (!battleContext && rel.stage !== 'enemies' && rng.chance(atGathering ? 0.65 : RECALL_CHANCE)) {
+    if (
+      !battleContext &&
+      rel.stage !== 'enemies' &&
+      rng.chance(atGathering ? 0.65 : RECALL_CHANCE)
+    ) {
       const memory = memoryService.recall(a, b, turn);
       if (memory) recall = { memory, ago: memoryService.agoPhrase(turn - memory.turn) };
     }

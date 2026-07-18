@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { COMMANDS } from '$lib/game/sim/commands';
 import { PAWN_STATE } from '$lib/game/systems/pawn/pawnStates';
-import { pickUpPawn, dropCarriedPawn, reconcileCarriedPawns, CARRIED_PAWN_ITEM } from '$lib/game/systems/pawn/carry';
+import {
+  pickUpPawn,
+  dropCarriedPawn,
+  reconcileCarriedPawns,
+  CARRIED_PAWN_ITEM
+} from '$lib/game/systems/pawn/carry';
 import { itemService } from '$lib/game/services/ItemService';
 import { nearestShelterTile } from '$lib/game/systems/pawn/handlers/rescue';
 import type { GameState, Pawn } from '$lib/game/core/types';

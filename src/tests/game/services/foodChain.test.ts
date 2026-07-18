@@ -19,7 +19,7 @@ describe('§F8 food-chain items', () => {
   it('flour/malt are organic intermediates; bread/pie are prepared meals', () => {
     expect(itemService.getItemById('flour')?.category).toBe('organic');
     expect(itemService.getItemById('malt')?.category).toBe('organic');
-    expect((itemService.getItemById('bread')?.nutrition ?? 0)).toBeGreaterThan(0);
+    expect(itemService.getItemById('bread')?.nutrition ?? 0).toBeGreaterThan(0);
     // Cooked dishes group under `meal` now (the overloaded `food` category was split up).
     expect(itemService.getItemById('bread')?.category).toBe('meal');
     expect(itemService.getItemById('meat_pie')?.category).toBe('meal');
@@ -69,7 +69,7 @@ describe('§F8 alcohol = mood good', () => {
       }>
     ).find((c) => c.id === 'intoxicated')!;
     expect(intox.transient).toBeUndefined(); // persistent (severity-driven)
-    expect((intox.stages?.length ?? 0)).toBeGreaterThanOrEqual(3);
+    expect(intox.stages?.length ?? 0).toBeGreaterThanOrEqual(3);
     // every stage numbs pain (< 1), more so the drunker
     expect(intox.stages!.every((s) => (s.modifiers.pain ?? 1) < 1)).toBe(true);
     // the deepest stage also dims consciousness (can black out)
@@ -166,8 +166,12 @@ describe('§F8 mixed dishes & meal buffs', () => {
   it('pies are flour-gated dishes with a fruit/veg/meat/fish pool; tiers add fillings + flour', () => {
     expect(recipeService.getRecipeById('bake_simple_pie')!.inputs.flour).toBe(1);
     expect(recipeService.getRecipeById('bake_hearty_pie')!.inputs.flour).toBe(2);
-    expect(Object.keys(recipeService.getRecipeById('bake_simple_pie')!.dynamicRecipe!).length).toBe(1);
-    expect(Object.keys(recipeService.getRecipeById('bake_hearty_pie')!.dynamicRecipe!).length).toBe(3);
+    expect(Object.keys(recipeService.getRecipeById('bake_simple_pie')!.dynamicRecipe!).length).toBe(
+      1
+    );
+    expect(Object.keys(recipeService.getRecipeById('bake_hearty_pie')!.dynamicRecipe!).length).toBe(
+      3
+    );
     const slot = Object.values(recipeService.getRecipeById('bake_pie')!.dynamicRecipe!)[0];
     expect(recipeService.slotCategories(slot)).toContain('fruit');
   });
@@ -181,7 +185,9 @@ describe('§F8 mixed dishes & meal buffs', () => {
   });
 
   it('resolveActiveCost sums quantities when two slots pick the same ingredient', () => {
-    const gs = { droppedItems: [{ resourceId: 'venison', quantity: 9, stored: true }] } as unknown as GameState;
+    const gs = {
+      droppedItems: [{ resourceId: 'venison', quantity: 9, stored: true }]
+    } as unknown as GameState;
     const cost = itemService.resolveActiveCost('fine_stew', gs, {
       ingredient1: 'venison',
       ingredient2: 'venison',
@@ -214,9 +220,11 @@ describe('§F8 mixed dishes & meal buffs', () => {
     expect(itemService.getItemById('hearty_pie')!.mealBuff!.condition).toBe('fortified');
     // herbal tea is the cooked outlet for herbs → soothed (recovery)
     expect(itemService.getItemById('herbal_tea')!.mealBuff!.condition).toBe('soothed');
-    expect(recipeService.slotCategories(
-      Object.values(recipeService.getRecipeById('brew_herb_tea')!.dynamicRecipe!)[0]
-    )).toContain('herb');
+    expect(
+      recipeService.slotCategories(
+        Object.values(recipeService.getRecipeById('brew_herb_tea')!.dynamicRecipe!)[0]
+      )
+    ).toContain('herb');
   });
 
   it('eating a dish stamps its meal buff onto conditionTimers (max-duration, refreshed each meal)', () => {

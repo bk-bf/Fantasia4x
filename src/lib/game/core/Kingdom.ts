@@ -43,12 +43,48 @@ const LORE = loreData as unknown as {
 };
 
 // ── Scale = wealth. Per-tier [min,max] counts, indexed by wealthIdx 0 (hamlet) .. 4 (empire). ──
-const HISTORY_COUNT: [number, number][] = [[0, 1], [1, 1], [1, 2], [2, 3], [3, 4]];
-const FIGURE_COUNT: [number, number][] = [[0, 0], [0, 1], [1, 2], [2, 3], [3, 4]];
-const FAMED_CREATED_COUNT: [number, number][] = [[0, 0], [0, 0], [0, 1], [1, 2], [2, 3]];
-const FAMED_HELD_COUNT: [number, number][] = [[0, 0], [0, 1], [0, 1], [1, 2], [2, 3]];
-const TOWN_COUNT: [number, number][] = [[0, 0], [0, 1], [1, 3], [2, 6], [5, 12]];
-const VILLAGE_COUNT: [number, number][] = [[0, 1], [1, 3], [2, 5], [4, 10], [8, 20]];
+const HISTORY_COUNT: [number, number][] = [
+  [0, 1],
+  [1, 1],
+  [1, 2],
+  [2, 3],
+  [3, 4]
+];
+const FIGURE_COUNT: [number, number][] = [
+  [0, 0],
+  [0, 1],
+  [1, 2],
+  [2, 3],
+  [3, 4]
+];
+const FAMED_CREATED_COUNT: [number, number][] = [
+  [0, 0],
+  [0, 0],
+  [0, 1],
+  [1, 2],
+  [2, 3]
+];
+const FAMED_HELD_COUNT: [number, number][] = [
+  [0, 0],
+  [0, 1],
+  [0, 1],
+  [1, 2],
+  [2, 3]
+];
+const TOWN_COUNT: [number, number][] = [
+  [0, 0],
+  [0, 1],
+  [1, 3],
+  [2, 6],
+  [5, 12]
+];
+const VILLAGE_COUNT: [number, number][] = [
+  [0, 1],
+  [1, 3],
+  [2, 5],
+  [4, 10],
+  [8, 20]
+];
 
 /** The "town and up" threshold: index ≥ 2 gets grand naming/leaders/epithets/history. */
 const GRAND_TIER = 2;

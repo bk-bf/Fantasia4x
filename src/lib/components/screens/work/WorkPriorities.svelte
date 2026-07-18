@@ -98,9 +98,8 @@
   }
   function cycleSubjob(pawnId: string, catId: string, subId: string, dir: 1 | -1) {
     const cur = getSubjobLevel(pawnId, catId, subId).level;
-    updatePawnLaborLevel(pawnId, subId, (((cur + dir + 5) % 5) as 0 | 1 | 2 | 3 | 4));
+    updatePawnLaborLevel(pawnId, subId, ((cur + dir + 5) % 5) as 0 | 1 | 2 | 3 | 4);
   }
-
 
   function updatePawnLaborLevel(pawnId: string, workId: string, level: 0 | 1 | 2 | 3 | 4) {
     gameState.command({ type: 'setPawnLaborLevel', payload: { pawnId, workId, level } });
@@ -108,7 +107,7 @@
 
   function cycleLevel(pawnId: string, workId: string, dir: 1 | -1 = 1) {
     const cur = getPawnLaborLevel(workAssignments[pawnId], workId);
-    updatePawnLaborLevel(pawnId, workId, (((cur + dir + 5) % 5) as 0 | 1 | 2 | 3 | 4));
+    updatePawnLaborLevel(pawnId, workId, ((cur + dir + 5) % 5) as 0 | 1 | 2 | 3 | 4);
   }
 
   // Speed / yield / quality per pawn/work from the single stats.jsonc model — drives both
@@ -257,7 +256,9 @@
                   class="cell-btn"
                   class:inherited={sj.inherited}
                   style="color:{LABOR_COLORS[sj.level]}"
-                  title="{col.label}: {sj.inherited ? 'inherits parent' : 'override'} — click to set, right-click to lower"
+                  title="{col.label}: {sj.inherited
+                    ? 'inherits parent'
+                    : 'override'} — click to set, right-click to lower"
                   onmouseenter={(e) => showTip(e, pawn.id, col.catId, col.subId, col.label)}
                   onmousemove={moveTip}
                   onmouseleave={hideTip}
@@ -295,8 +296,8 @@
   <span class="leg" style="color:{STAR_COLORS[0]}">{STAR_MARK} top jobs</span>
   <span class="leg" style="color:{WORST_COLORS[0]}">{WORST_MARK} weakest</span>
   <span class="leg-hint"
-    >· click cell ↑ · right-click ↓ · right-click a ▸ column header to expand subjobs · click row for
-    detail</span
+    >· click cell ↑ · right-click ↓ · right-click a ▸ column header to expand subjobs · click row
+    for detail</span
   >
 </div>
 

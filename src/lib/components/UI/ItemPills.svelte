@@ -74,7 +74,9 @@
     {#if h.farming}
       <div class="tip-hdr">FARMING · {h.farming.crop}</div>
       {#each h.farming.rows as r}
-        <div class="tip-row tip-farm"><span class="tip-dim">{r.label}</span><span>{r.val}</span></div>
+        <div class="tip-row tip-farm">
+          <span class="tip-dim">{r.label}</span><span>{r.val}</span>
+        </div>
       {/each}
     {/if}
     {#if h.craftedInto.length > 0}

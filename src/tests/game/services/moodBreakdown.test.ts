@@ -18,8 +18,24 @@ function pawn(
     isAlive: true,
     drafted: false,
     position: { x: 0, y: 0 },
-    needs: { hunger: 10, fatigue: 10, thirst: 10, hygiene: 10, sleep: 0, lastSleep: 0, lastMeal: 0, ...needs },
-    state: { health: 100, mood: 50, isWorking: false, isSleeping: false, isEating: false, ...state },
+    needs: {
+      hunger: 10,
+      fatigue: 10,
+      thirst: 10,
+      hygiene: 10,
+      sleep: 0,
+      lastSleep: 0,
+      lastMeal: 0,
+      ...needs
+    },
+    state: {
+      health: 100,
+      mood: 50,
+      isWorking: false,
+      isSleeping: false,
+      isEating: false,
+      ...state
+    },
     conditions: [],
     transientConditions: [],
     traits: [],
@@ -59,7 +75,14 @@ describe('MOOD-REWORK getMoodBreakdown', () => {
   });
 
   it('pleasant surroundings (nearby couch) add a positive contribution', () => {
-    const couch = { id: 'c1', type: 'couch', x: 0, y: 0, status: 'complete', progress: 1 } as PlacedBuilding;
+    const couch = {
+      id: 'c1',
+      type: 'couch',
+      x: 0,
+      y: 0,
+      status: 'complete',
+      progress: 1
+    } as PlacedBuilding;
     const p = pawn();
     const out = pawnService.getMoodBreakdown(p, makeState(p, [couch]));
     const pleasant = out.contributions.find((c) => c.label === 'Pleasant surroundings');
@@ -82,7 +105,11 @@ describe('MOOD-REWORK getMoodBreakdown', () => {
     const p = pawn(
       {},
       {},
-      { moodModifiers: [{ id: 'grief:x', label: 'Grieving', value: -12, expiresAt: 200, startedAt: 0 }] }
+      {
+        moodModifiers: [
+          { id: 'grief:x', label: 'Grieving', value: -12, expiresAt: 200, startedAt: 0 }
+        ]
+      }
     );
     // full weight at the moment it lands
     const atStart = pawnService.getMoodBreakdown(p, makeState(p, [], 0));

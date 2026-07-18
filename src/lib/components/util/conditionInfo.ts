@@ -132,7 +132,9 @@ export function traitGrantLines(trait: Trait): string[] {
     } else if (value && typeof value === 'object') {
       for (const [workType, mul] of Object.entries(value as Record<string, number>)) {
         const p = Math.round((mul - 1) * 100);
-        out.push(cap(`${workType.replace(/_/g, ' ')} ${p >= 0 ? '+' : ''}${p}% ${grantAxis(name)}`));
+        out.push(
+          cap(`${workType.replace(/_/g, ' ')} ${p >= 0 ? '+' : ''}${p}% ${grantAxis(name)}`)
+        );
       }
     } else if (typeof value === 'number' && value !== 0) {
       const label = name
@@ -320,14 +322,17 @@ function transientSources(entity: Pawn | Mob, id: string): string[] {
       };
       const pain = Math.round(e.pain ?? 0);
       const maxBlood = e.maxBloodVolume ?? 100;
-      const bloodLossPct = Math.round(Math.max(0, 1 - (e.bloodVolume ?? maxBlood) / maxBlood) * 100);
+      const bloodLossPct = Math.round(
+        Math.max(0, 1 - (e.bloodVolume ?? maxBlood) / maxBlood) * 100
+      );
       const bleeding = (e.limbs ?? []).reduce((s, l) => s + (l?.bleedRate ?? 0), 0) > 0;
       // Mirror the consciousness suppressors (PawnStatService): the LOWER multiplier is the bigger cause.
       const painMult = 1 - Math.max(0, pain / 100 - 0.1);
       const bloodMult = 1 - Math.min(1, Math.max(0, (bloodLossPct / 100 - 0.2) / 0.35));
       let cause: string;
       if (bleeding) cause = `bleeding out (${bloodLossPct}% lost)`;
-      else if (bloodMult < painMult && bloodMult < 0.99) cause = `blood loss (${bloodLossPct}% lost)`;
+      else if (bloodMult < painMult && bloodMult < 0.99)
+        cause = `blood loss (${bloodLossPct}% lost)`;
       else if (painMult < 0.99) cause = `pain (${pain}/100)`;
       else if (bloodMult < 0.99) cause = `blood loss (${bloodLossPct}% lost)`;
       else cause = '';

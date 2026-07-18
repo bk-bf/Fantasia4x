@@ -98,7 +98,9 @@
     {@const relaxPct = Math.round(needs.relaxation ?? 100)}
     <div class="need-row">
       <span class="lbl">RELAXATION</span>
-      <span class="block-bar" style="color: {getRelaxationColor(relaxPct)}">{blockBar(relaxPct)}</span>
+      <span class="block-bar" style="color: {getRelaxationColor(relaxPct)}"
+        >{blockBar(relaxPct)}</span
+      >
       <span class="val" style="color: {getRelaxationColor(relaxPct)}">{relaxPct}/100</span>
       <span class="desc">{relaxationDesc(relaxPct)}</span>
     </div>
@@ -111,7 +113,13 @@
       <span class="block-bar" style="color: {getNeedColor(bhPct)}">{blockBar(bhPct)}</span>
       <span class="val" style="color: {getNeedColor(bhPct)}">{bhPct}/100</span>
       <span class="desc"
-        >{bhPct < 40 ? 'sated' : bhPct < 70 ? 'stirring' : bhPct < 100 ? 'ravenous' : 'frenzied'}</span
+        >{bhPct < 40
+          ? 'sated'
+          : bhPct < 70
+            ? 'stirring'
+            : bhPct < 100
+              ? 'ravenous'
+              : 'frenzied'}</span
       >
     </div>
   {/if}
@@ -124,7 +132,8 @@
       <div class="need-row">
         <span class="lbl">BLOOD</span>
         <span class="block-bar" style="color: {getBloodColor(bloodPct)}">{blockBar(bloodPct)}</span>
-        <span class="val" style="color: {getBloodColor(bloodPct)}">{Math.round(curBV)}/{maxBV}</span>
+        <span class="val" style="color: {getBloodColor(bloodPct)}">{Math.round(curBV)}/{maxBV}</span
+        >
         <span class="desc"
           >{bloodPct >= 90
             ? 'healthy'

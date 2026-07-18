@@ -48,7 +48,15 @@ const CONFLICT_GROUPS: string[][] = [
   ['thick-skinned', 'thin-skinned', 'scaled-hide', 'iron-skin', 'thick-fur'], // one kind of hide
   ['heavy-boned', 'stone-bones', 'brittle-boned'], // dense vs brittle bone — one skeleton
   ['keen-eyed', 'nearsighted'], // one visual acuity
-  ['frost-loving', 'frost-born', 'warm-blooded', 'ever-warm', 'cold-blooded', 'flame-touched', 'thin-blooded'], // one thermal identity
+  [
+    'frost-loving',
+    'frost-born',
+    'warm-blooded',
+    'ever-warm',
+    'cold-blooded',
+    'flame-touched',
+    'thin-blooded'
+  ], // one thermal identity
   ['adrenaline', 'berserker-blood', 'feral-adrenaline'], // one adrenal identity (staged vs terminal)
   ['night-owl', 'nocturnal', 'night-blind'], // one night-sight identity
   ['fast-healer', 'regenerative'],
@@ -60,20 +68,106 @@ const CONFLICT_GROUPS: string[][] = [
   ['gregarious', 'loner', 'ill-tempered'],
   // ── TRAIT-LIBRARY-EXPANSION ──────────────────────────────────────────────
   // §2a/§2b single-stat ladders — one rung per stat (incl. the pre-existing single-stat kin).
-  ['str-plus-1', 'str-plus-3', 'str-plus-5', 'str-minus-1', 'str-minus-3', 'str-minus-5', 'strong-backed'],
+  [
+    'str-plus-1',
+    'str-plus-3',
+    'str-plus-5',
+    'str-minus-1',
+    'str-minus-3',
+    'str-minus-5',
+    'strong-backed'
+  ],
   ['dex-plus-1', 'dex-plus-3', 'dex-plus-5', 'dex-minus-1', 'dex-minus-3', 'dex-minus-5', 'clumsy'],
-  ['con-plus-1', 'con-plus-3', 'con-plus-5', 'con-minus-1', 'con-minus-3', 'con-minus-5', 'sturdy', 'frail'],
-  ['per-plus-1', 'per-plus-3', 'per-plus-5', 'per-minus-1', 'per-minus-3', 'per-minus-5', 'keen-eyed', 'nearsighted'],
-  ['int-plus-1', 'int-plus-3', 'int-plus-5', 'int-minus-1', 'int-minus-3', 'int-minus-5', 'bright', 'dull'],
-  ['cha-plus-1', 'cha-plus-3', 'cha-plus-5', 'cha-minus-1', 'cha-minus-3', 'cha-minus-5', 'gregarious', 'ill-tempered'],
+  [
+    'con-plus-1',
+    'con-plus-3',
+    'con-plus-5',
+    'con-minus-1',
+    'con-minus-3',
+    'con-minus-5',
+    'sturdy',
+    'frail'
+  ],
+  [
+    'per-plus-1',
+    'per-plus-3',
+    'per-plus-5',
+    'per-minus-1',
+    'per-minus-3',
+    'per-minus-5',
+    'keen-eyed',
+    'nearsighted'
+  ],
+  [
+    'int-plus-1',
+    'int-plus-3',
+    'int-plus-5',
+    'int-minus-1',
+    'int-minus-3',
+    'int-minus-5',
+    'bright',
+    'dull'
+  ],
+  [
+    'cha-plus-1',
+    'cha-plus-3',
+    'cha-plus-5',
+    'cha-minus-1',
+    'cha-minus-3',
+    'cha-minus-5',
+    'gregarious',
+    'ill-tempered'
+  ],
   ['str-for-dex-1', 'str-for-dex-3', 'str-for-dex-5', 'dex-for-str-3'],
   // §2c two-stat ladders — one rung per pair.
-  ['str-dex-plus-1', 'str-dex-plus-3', 'str-dex-plus-5', 'str-dex-minus-1', 'str-dex-minus-3', 'str-dex-minus-5'],
-  ['con-str-plus-1', 'con-str-plus-3', 'con-str-plus-5', 'con-str-minus-1', 'con-str-minus-3', 'con-str-minus-5'],
-  ['int-per-plus-1', 'int-per-plus-3', 'int-per-plus-5', 'int-per-minus-1', 'int-per-minus-3', 'int-per-minus-5'],
-  ['cha-int-plus-1', 'cha-int-plus-3', 'cha-int-plus-5', 'cha-int-minus-1', 'cha-int-minus-3', 'cha-int-minus-5'],
-  ['per-dex-plus-1', 'per-dex-plus-3', 'per-dex-plus-5', 'per-dex-minus-1', 'per-dex-minus-3', 'per-dex-minus-5'],
-  ['con-int-plus-1', 'con-int-plus-3', 'con-int-plus-5', 'con-int-minus-1', 'con-int-minus-3', 'con-int-minus-5'],
+  [
+    'str-dex-plus-1',
+    'str-dex-plus-3',
+    'str-dex-plus-5',
+    'str-dex-minus-1',
+    'str-dex-minus-3',
+    'str-dex-minus-5'
+  ],
+  [
+    'con-str-plus-1',
+    'con-str-plus-3',
+    'con-str-plus-5',
+    'con-str-minus-1',
+    'con-str-minus-3',
+    'con-str-minus-5'
+  ],
+  [
+    'int-per-plus-1',
+    'int-per-plus-3',
+    'int-per-plus-5',
+    'int-per-minus-1',
+    'int-per-minus-3',
+    'int-per-minus-5'
+  ],
+  [
+    'cha-int-plus-1',
+    'cha-int-plus-3',
+    'cha-int-plus-5',
+    'cha-int-minus-1',
+    'cha-int-minus-3',
+    'cha-int-minus-5'
+  ],
+  [
+    'per-dex-plus-1',
+    'per-dex-plus-3',
+    'per-dex-plus-5',
+    'per-dex-minus-1',
+    'per-dex-minus-3',
+    'per-dex-minus-5'
+  ],
+  [
+    'con-int-plus-1',
+    'con-int-plus-3',
+    'con-int-plus-5',
+    'con-int-minus-1',
+    'con-int-minus-3',
+    'con-int-minus-5'
+  ],
   // §2d grand pulls — one per pawn (the deep curses live inside the Blighted banner).
   ['all-plus-1', 'all-plus-3', 'all-plus-5', 'all-minus-1'],
   // §1 work specialists — one rung per work type (folded one-offs join their line).
@@ -105,16 +199,51 @@ const CONFLICT_GROUPS: string[][] = [
   ['hardy-gut', 'plagueproof', 'weak-gutted', 'marsh-dweller', 'sickly'],
   // §3 staged gear — one rung per line; competing coverings/skeletons share one slot.
   ['budding-claws', 'rending-claws', 'ripping-talons', 'crushing-claws', 'burrowing-claws'], // one set of hands
-  ['jagged-teeth', 'goring-fangs', 'sabre-fangs', 'small-tusks', 'tusks', 'great-tusks', 'pecking-beak', 'tearing-beak', 'rending-beak'], // one jaw
+  [
+    'jagged-teeth',
+    'goring-fangs',
+    'sabre-fangs',
+    'small-tusks',
+    'tusks',
+    'great-tusks',
+    'pecking-beak',
+    'tearing-beak',
+    'rending-beak'
+  ], // one jaw
   ['mild-venom', 'venomous', 'deathly-venom'],
   ['nub-horns', 'gore-horns', 'great-horns'],
   ['ember-breath', 'searing-breath', 'dragonfire-breath'],
   ['raking-talons', 'hooked-talons', 'raptor-talons'], // one set of feet
-  ['thick-hide', 'downy-coat', 'winter-mane', 'chitin-plates', 'carapace', 'ironshell', 'plumed-coat', 'storm-plumage', 'thick-skinned', 'thin-skinned', 'scaled-hide', 'iron-skin', 'thick-fur', 'feathered'], // ONE covering
+  [
+    'thick-hide',
+    'downy-coat',
+    'winter-mane',
+    'chitin-plates',
+    'carapace',
+    'ironshell',
+    'plumed-coat',
+    'storm-plumage',
+    'thick-skinned',
+    'thin-skinned',
+    'scaled-hide',
+    'iron-skin',
+    'thick-fur',
+    'feathered'
+  ], // ONE covering
   ['heavy-boned', 'stone-bones', 'brittle-boned', 'hollow-boned'], // one skeleton density
   ['budding-wings', 'wings', 'great-wings', 'gliding-membrane'], // one back
   // §6a auras — a pawn carries AT MOST ONE aura (balance: rare, lineage-gated, exclusive).
-  ['aura-fortitude', 'aura-insight', 'spore-cloud', 'static-aura', 'dread-aura', 'aura-might', 'plague-vector', 'unnerving-aura', 'pack-fury'],
+  [
+    'aura-fortitude',
+    'aura-insight',
+    'spore-cloud',
+    'static-aura',
+    'dread-aura',
+    'aura-might',
+    'plague-vector',
+    'unnerving-aura',
+    'pack-fury'
+  ],
   // §6b trigger pairs — a pawn is never both the blessed and cursed side of one affliction.
   ['hydro-vigor', 'waterlogged'],
   ['coldsurge', 'frostbrittle'],
@@ -129,10 +258,60 @@ const CONFLICT_GROUPS: string[][] = [
   ['emberheart', 'tinder-skin'],
   ['camel-bodied', 'ravenous'],
   // §5 wounds — one old ruin per body region (the applier may still flip sides).
-  ['one-armed', 'one-handed', 'missing-fingers', 'arm-scar-minor', 'arm-scar-serious', 'arm-scar-critical', 'arm-burn-minor', 'arm-burn-serious', 'arm-burn-critical', 'arm-frostbite-minor', 'arm-frostbite-serious', 'arm-frostbite-critical'],
-  ['one-legged', 'one-footed', 'missing-toes', 'leg-scar-minor', 'leg-scar-serious', 'leg-scar-critical', 'leg-burn-minor', 'leg-burn-serious', 'leg-burn-critical', 'leg-frostbite-minor', 'leg-frostbite-serious', 'leg-frostbite-critical'],
-  ['one-kidney', 'torso-scar-minor', 'torso-scar-serious', 'torso-scar-critical', 'torso-burn-minor', 'torso-burn-serious', 'torso-burn-critical', 'torso-frostbite-minor', 'torso-frostbite-serious', 'torso-frostbite-critical', 'bad-back'],
-  ['noseless', 'broken-jaw', 'head-scar-minor', 'head-scar-serious', 'head-scar-critical', 'head-burn-minor', 'head-burn-serious', 'head-burn-critical', 'head-frostbite-minor', 'head-frostbite-serious', 'head-frostbite-critical']
+  [
+    'one-armed',
+    'one-handed',
+    'missing-fingers',
+    'arm-scar-minor',
+    'arm-scar-serious',
+    'arm-scar-critical',
+    'arm-burn-minor',
+    'arm-burn-serious',
+    'arm-burn-critical',
+    'arm-frostbite-minor',
+    'arm-frostbite-serious',
+    'arm-frostbite-critical'
+  ],
+  [
+    'one-legged',
+    'one-footed',
+    'missing-toes',
+    'leg-scar-minor',
+    'leg-scar-serious',
+    'leg-scar-critical',
+    'leg-burn-minor',
+    'leg-burn-serious',
+    'leg-burn-critical',
+    'leg-frostbite-minor',
+    'leg-frostbite-serious',
+    'leg-frostbite-critical'
+  ],
+  [
+    'one-kidney',
+    'torso-scar-minor',
+    'torso-scar-serious',
+    'torso-scar-critical',
+    'torso-burn-minor',
+    'torso-burn-serious',
+    'torso-burn-critical',
+    'torso-frostbite-minor',
+    'torso-frostbite-serious',
+    'torso-frostbite-critical',
+    'bad-back'
+  ],
+  [
+    'noseless',
+    'broken-jaw',
+    'head-scar-minor',
+    'head-scar-serious',
+    'head-scar-critical',
+    'head-burn-minor',
+    'head-burn-serious',
+    'head-burn-critical',
+    'head-frostbite-minor',
+    'head-frostbite-serious',
+    'head-frostbite-critical'
+  ]
 ];
 
 function cap(s: string): string {
@@ -292,7 +471,10 @@ const isMundaneRarity = (r: Trait['rarity']) => (r ?? 'common') === 'common' || 
 const NEGATIVE_TRAIT_SIGMA = 1.25;
 const MAX_NEGATIVE_TRAITS = 4;
 function rollNegativeCount(): number {
-  return Math.max(0, Math.min(MAX_NEGATIVE_TRAITS, Math.round(Math.abs(rng.gaussian(0, NEGATIVE_TRAIT_SIGMA)))));
+  return Math.max(
+    0,
+    Math.min(MAX_NEGATIVE_TRAITS, Math.round(Math.abs(rng.gaussian(0, NEGATIVE_TRAIT_SIGMA))))
+  );
 }
 
 /** A pawn's rolled base physique, for gating physically-contradictory traits (ADR-028 `requires`). */
