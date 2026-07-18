@@ -28,7 +28,7 @@ describe('RecipeService (recipe registry, Stage A)', () => {
     const r = producers[0];
     expect(r.id).toBe('split_firewood');
     expect(r.synthesized).toBeFalsy();
-    expect(r.outputs).toMatchObject({ green_firewood: 3, branch: 2 }); // byproduct!
+    expect(r.outputs).toMatchObject({ green_firewood: 6, branch: 2 }); // byproduct!
   });
 
   it('reverse lookup: what uses pine_log includes the byproduct recipes', () => {

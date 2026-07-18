@@ -21,8 +21,7 @@ import type {
   RelationEventKind,
   RelationTag
 } from '../core/types';
-import { itemDefById } from '../core/itemDefs';
-import { combinedQualityMultiplier } from '../core/itemQuality';
+import { computePrestige } from '../core/prestige';
 import {
   activeMoodModifiers,
   effectiveMood,
@@ -171,18 +170,10 @@ function dist(a: Pawn, b: Pawn): number {
 
 class SocialServiceImpl {
   /** Standing prestige: inherent bearing from station/upbringing (BACKGROUNDS `basePrestige`, pawns
-   *  only) plus worn regalia. 0 for a plain commoner in rags. */
+   *  only) plus worn regalia. 0 for a plain commoner in rags. The scan itself lives in
+   *  `core/prestige.ts` so PawnStatService's `prestige` stat can read it without a module cycle. */
   getPrestige(entity: Pawn | Mob): number {
-    let total = 'basePrestige' in entity ? ((entity as Pawn).basePrestige ?? 0) : 0;
-    const equipment = entity.equipment;
-    if (!equipment) return total;
-    for (const inst of Object.values(equipment) as (ItemInstance | undefined | null)[]) {
-      if (!inst || !inst.itemId) continue;
-      const bonus = itemDefById(inst.itemId)?.armorProperties?.prestigeBonus;
-      if (!bonus) continue;
-      total += bonus * combinedQualityMultiplier(inst.quality, inst.famedStatMult);
-    }
-    return Math.round(total);
+    return computePrestige(entity);
   }
 
   /** §5 beauty (the `beauty` stats.jsonc formula: CHA × intact body). */

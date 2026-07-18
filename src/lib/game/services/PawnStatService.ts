@@ -24,7 +24,7 @@ import {
   RECOVER_CONSCIOUSNESS
 } from '../core/needs';
 import { equippedTemperatureSources, type WornThermalSource } from '../core/PawnEquipment';
-import { socialService } from './SocialService';
+import { computePrestige } from '../core/prestige';
 import { SECONDS_PER_TICK } from '../core/time';
 import {
   levelBase,
@@ -145,7 +145,7 @@ const FORMULA_VARS = [
   'talking',
   'hearing',
   'pain',
-  // KINGDOMS-TRADE §4: standing prestige from worn regalia (SocialService.getPrestige). Computed
+  // KINGDOMS-TRADE §4: standing prestige from worn regalia (core/prestige.computePrestige). Computed
   // ONLY when a formula references it (see evaluateFormula) — 0 on every hot-path call.
   'prestige',
   // SOCIAL-LAYER §5: fraction of body parts still whole and unscarred (beauty). Same lazy pattern
@@ -278,7 +278,7 @@ function evaluateFormula(
   const sm = conditionStatMultipliers(p);
   // Prestige scans the whole equipment doll — pay for it only when the formula asks (trade/social
   // stats), never on the ~328×/tick work/combat formulas.
-  const prestige = formulaUsesPrestige(formula) ? socialService.getPrestige(p) : 0;
+  const prestige = formulaUsesPrestige(formula) ? computePrestige(p) : 0;
   // Same deal for the whole-body `intact` scan (beauty only).
   const intact = formulaUsesIntact(formula) ? intactBodyFraction(p) : 1;
   const v = fn(
