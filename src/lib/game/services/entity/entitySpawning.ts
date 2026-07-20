@@ -702,7 +702,20 @@ export function devSpawnMobs(state: GameState, count = 5, creatureId?: string): 
     const def = pool[Math.floor(rng.random() * pool.length)];
     const origin = findSpawnTile(state, def) ?? findNearbyWalkable(state, 0, 0);
     if (!origin) continue;
-    seeded.push(makeMob(def, origin.x, origin.y, state.turn));
+    const mob = makeMob(def, origin.x, origin.y, state.turn);
+    // A HUNTER needs a lair, or the leash give-up (stepEntities' territorial pull-home) never fires —
+    // the leash is gated on `lairId != null`, so a lairless hunter that chases prey onto an unreachable
+    // tile stays wedged in Hunting forever (found via the headless creature monitor). Natural spawns are
+    // always laired (seedLairs / spawnPackAt); the dev tool skipped it. Anchor each dev hunter's lair to
+    // its own spawn tile with the def's leash radius (same convention as spawnPackAt). Turn-derived id so
+    // a scenario build replays byte-identically (ADR-033).
+    if (def.predator || def.diet === 'carnivore') {
+      mob.lairId = `dev-lair-${def.id}-${origin.x}-${origin.y}-t${state.turn}`;
+      mob.lairX = origin.x;
+      mob.lairY = origin.y;
+      mob.lairRange = def.lairRange ?? 40;
+    }
+    seeded.push(mob);
   }
   if (seeded.length === 0) return state;
   return { ...state, mobs: [...(state.mobs ?? []), ...seeded] };
