@@ -215,13 +215,64 @@ function traceStuck(mob: Mob, def: CreatureDefinition, state: GameState, turn: n
 // EVERY mob of a creature type — robust to losing a save / not knowing the id up front, so the next
 // kobold that bounces is captured automatically. Set EITHER (or both); '' disables that selector. Reset
 // both to '' when done. Sleeping/Corpse mobs are skipped to bound the per-tick log volume.
+// Source defaults (kept for the old "flip a const, restart" workflow). Runtime callers (HEADLESS-SIM)
+// override these via setEntityTrace without editing source — see below.
 const TRACE_MOB_ID = '';
-const TRACE_CREATURE = 'kobold_skulker';
+const TRACE_CREATURE = '';
+
+// Runtime trace control (HEADLESS-SIM / ADR-033). `_traceActive` gates ALL the extra per-tick trace +
+// timing work behind a single boolean, so the GUI/prod sim — where nothing calls setEntityTrace — pays
+// nothing. The headless session flips it on to follow a live entity's FSM (which branch ran, how long).
+let _traceMobId = TRACE_MOB_ID;
+let _traceCreature = TRACE_CREATURE;
+let _traceActive = !!(TRACE_MOB_ID || TRACE_CREATURE);
+
+/** Trace a live entity by id-suffix and/or creatureId (null clears). Enables the per-tick FSM trace +
+ *  branch attribution + per-function timing. Requires verbose logging on for the lines to actually ship. */
+export function setEntityTrace(opts: { id?: string; creature?: string } | null): void {
+  _traceMobId = opts?.id ?? '';
+  _traceCreature = opts?.creature ?? '';
+  _traceActive = !!(_traceMobId || _traceCreature);
+  _stepReason = null;
+  _stepTiming.clear();
+}
+export function isEntityTraceActive(): boolean {
+  return _traceActive;
+}
+
+// Branch attribution: each FSM decision that produces a mob's next state stamps a short reason here;
+// traceMobTick prints it beside the state, so a Wander→Hunting flip reads e.g. "via=wander:opp-hunt".
+let _stepReason: string | null = null;
+function stepReason(tag: string): void {
+  if (_traceActive) _stepReason = tag;
+}
+
+// Per-function wall-time accumulator (label → {calls, ms}); only measures while a trace target is set.
+const _stepTiming = new Map<string, { calls: number; ms: number }>();
+function timedStep<T>(label: string, fn: () => T): T {
+  if (!_traceActive) return fn();
+  const t0 = performance.now();
+  const r = fn();
+  const e = _stepTiming.get(label) ?? { calls: 0, ms: 0 };
+  e.calls++;
+  e.ms += performance.now() - t0;
+  _stepTiming.set(label, e);
+  return r;
+}
+/** Drain the per-function timing table (label, calls, total ms), busiest first. Clears it. */
+export function drainEntityTiming(): Array<{ label: string; calls: number; ms: number }> {
+  const out = [..._stepTiming.entries()]
+    .map(([label, e]) => ({ label, calls: e.calls, ms: Math.round(e.ms * 1000) / 1000 }))
+    .sort((a, b) => b.ms - a.ms);
+  _stepTiming.clear();
+  return out;
+}
+
 function isTraced(mob: Mob): boolean {
   if (!gameLogger.isEnabled || mob.state === 'Sleeping' || mob.state === 'Corpse') return false;
   return (
-    (!!TRACE_MOB_ID && mob.id.endsWith(TRACE_MOB_ID)) ||
-    (!!TRACE_CREATURE && mob.creatureId === TRACE_CREATURE)
+    (!!_traceMobId && mob.id.endsWith(_traceMobId)) ||
+    (!!_traceCreature && mob.creatureId === _traceCreature)
   );
 }
 /** Ground-truth food state on tile (x,y): tile resources, dropped carcass items, and any corpse mob —
@@ -246,15 +297,24 @@ function foodCtx(state: GameState, x: number, y: number): string {
       : '')
   );
 }
-function traceMobTick(mob: Mob, state: GameState, turn: number, phase: string): void {
+function traceMobTick(
+  mob: Mob,
+  state: GameState,
+  turn: number,
+  phase: string,
+  prevState?: string
+): void {
   if (!isTraced(mob)) return;
   const pathLen = mob.path?.length ?? 0;
   const nc = pathLen > 0 ? mob.path![mob.pathIndex ?? 0] : null;
   const end = pathLen > 0 ? mob.path![pathLen - 1] : null;
+  // Flag a state TRANSITION and the branch (`via=`) that produced it — the "which function ran" the
+  // headless trace is for. `‹via›` is the last stepReason() stamped during this mob's think.
+  const transition = prevState && prevState !== mob.state ? `${prevState}→${mob.state} ` : '';
   gameLogger.log(
     turn,
     'ENTITY-STATE',
-    `${getCreatureById(mob.creatureId)?.id ?? 'mob'}#${mob.id.slice(-6)} [${phase}] state=${mob.state}` +
+    `${getCreatureById(mob.creatureId)?.id ?? 'mob'}#${mob.id.slice(-6)} [${phase}] ${transition}via=${_stepReason ?? '-'} state=${mob.state}` +
       ` pos=(${mob.x},${mob.y}) hunger=${mob.needs.hunger.toFixed(1)} fatigue=${mob.needs.fatigue.toFixed(1)}` +
       ` eat=${mob.eatProgress?.toFixed(2) ?? '-'} since=${turn - mob.stateSince}` +
       ` blocked=${mob.blockedTicks ?? 0} costLeft=${(mob.nextCellCostLeft ?? 0).toFixed(1)}` +
@@ -324,13 +384,14 @@ export function stepEntities(state: GameState): GameState {
       // 8-neighbour walkable scan at the same WANDER_MOVES_PER_SECOND probability used in-bubble (NOT
       // sampled once/N, which dropped the wander rate ~N×). wanderStep early-outs while mid-step, so this
       // is near-free most ticks; the expensive FSM (forage/hunt/A*) still only runs on the think-tick.
+      if (_traceActive) _stepReason = 'throttled';
       next[i] =
         mob.state === 'Traveling'
           ? travelStep(mob, state)
           : mob.state === 'Wander' || mob.state === 'Grazing'
             ? wanderStep(mob, def, state)
             : mob;
-      traceMobTick(next[i], state, turn, 'throttled');
+      traceMobTick(next[i], state, turn, 'throttled', mob.state);
       continue;
     }
     // Elapsed-time scale for time-based FSM progress (eat progress, flee stamina): use the ACTUAL gap
@@ -341,20 +402,23 @@ export function stepEntities(state: GameState): GameState {
       ? 1
       : Math.min(AI_THROTTLE_TICKS, Math.max(1, turn - (mob.lastThinkTick ?? turn - 1)));
     mob.lastThinkTick = turn; // ADR-002 hot path: mutate in place; carried forward by stepOne's spread
-    const stepped = stepOne(
-      mob,
-      def,
-      livePawns,
-      mobs,
-      state,
-      pendingDamage,
-      pendingMeatConsumption,
-      pendingTileDepletion,
-      pendingMobState
+    if (_traceActive) _stepReason = null; // fresh attribution slot for this mob's think
+    const stepped = timedStep('stepOne', () =>
+      stepOne(
+        mob,
+        def,
+        livePawns,
+        mobs,
+        state,
+        pendingDamage,
+        pendingMeatConsumption,
+        pendingTileDepletion,
+        pendingMobState
+      )
     );
     const ticked = tickMobConditionTimers(stepped);
     next[i] = ticked;
-    traceMobTick(ticked, state, turn, 'fsm');
+    traceMobTick(ticked, state, turn, 'fsm', mob.state);
     if (ticked !== mob) changed = true;
   }
 
@@ -924,6 +988,7 @@ export function stepHostile(
   if (mob.state === 'Hunting' || mob.state === 'Eating' || mob.state === 'Foraging') {
     // Snap back to aggro if a pawn enters vision while aggressive.
     if (inVision && aggressive) {
+      stepReason('maint:aggro-snap');
       return {
         ...mob,
         state: 'Alerted',
@@ -933,6 +998,7 @@ export function stepHostile(
       };
     }
     if (mob.needs.hunger <= HUNGER_SATED_THRESHOLD) {
+      stepReason('maint:sated');
       return {
         ...mob,
         state: 'Wander',
@@ -959,17 +1025,21 @@ export function stepHostile(
     // Foraging (and grazing-style Eating with no hunt target) routes to the forage
     // stepper; corpse-eating (huntTargetId set) and Hunting route to the hunt stepper.
     if (mob.state === 'Foraging' || (mob.state === 'Eating' && !mob.huntTargetId)) {
-      return stepForaging(mob, def, turn, state, pendingTileDepletion);
+      return timedStep('stepForaging', () =>
+        stepForaging(mob, def, turn, state, pendingTileDepletion)
+      );
     }
-    return stepHunting(
-      mob,
-      def,
-      turn,
-      state,
-      allMobs,
-      pendingDamage,
-      pendingMeatConsumption,
-      pendingMobState
+    return timedStep('stepHunting', () =>
+      stepHunting(
+        mob,
+        def,
+        turn,
+        state,
+        allMobs,
+        pendingDamage,
+        pendingMeatConsumption,
+        pendingMobState
+      )
     );
   }
   const huntCooldownExpired = !mob.huntCooldownUntil || turn >= mob.huntCooldownUntil;
@@ -1036,11 +1106,16 @@ export function stepHostile(
         mob.huntCooldownUntil =
           turn +
           ticksFromSeconds(HUNT_BUSY_BACKOFF_MIN_S + rng.random() * HUNT_BUSY_BACKOFF_JITTER_S);
+        stepReason('food:hunt-slotfull');
         return null;
       }
+      stepReason('food:hunt');
       return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
     };
-    const enterForage = (): Mob => ({ ...mob, state: 'Foraging', stateSince: turn, path: [] });
+    const enterForage = (): Mob => {
+      stepReason('food:forage');
+      return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
+    };
 
     // A ground carcass is free, no-combat food (no hunt slot needed) — take it when it's the nearest of
     // the three sources. The scavenge stepper (dispatched next tick on carcassTargetId) owns the walk/eat.
@@ -1120,6 +1195,7 @@ export function stepHostile(
         // A non-aggressive territorial charger anchors to its current tile so the chase stays leashed
         // (escapeable); an aggressive hunter has no anchor and pursues freely.
         const charger = aggressive ? mob : { ...mob, chaseAnchorX: mob.x, chaseAnchorY: mob.y };
+        stepReason('wander:alert-pawn');
         return moveToward(
           { ...charger, state: 'Alerted', stateSince: turn, alertedPawn: true },
           inVision.pos,
@@ -1138,6 +1214,7 @@ export function stepHostile(
           dist(mob, spotted) <= visionRange &&
           takeHuntSlot()
         ) {
+          stepReason('wander:opp-hunt');
           return { ...mob, state: 'Hunting', stateSince: turn, huntTargetId: spotted.id, path: [] };
         }
         // No pounce (nothing live in sight, or the hunt budget was full): back off a jittered interval
@@ -1900,6 +1977,7 @@ export function stepHunting(
 
   if (!prey) {
     // No prey in range — exit Hunting state and wander.
+    stepReason('hunt:no-prey');
     const restState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
     return {
       ...wanderStep(mob, def, state),
@@ -1932,6 +2010,7 @@ export function stepHunting(
     }
     // Live prey — both enter combat (Attacking state) and fight it out.
     // combatService.tickCombat() resolves actual damage each tick.
+    stepReason('hunt:attack');
     pendingMobState.set(prey.id, { state: 'Attacking', stateSince: turn, huntTargetId: mob.id });
     return { ...mob, state: 'Attacking', stateSince: turn, huntTargetId: prey.id, path: [] };
   }
@@ -1940,6 +2019,7 @@ export function stepHunting(
   // ever closing to attack range, abandon it and cool down. Prevents the endless chase of
   // uncatchable prey (e.g. equal-speed Wolf↔Wolf) that re-triggered every tick.
   if (turn - mob.stateSince > ticksFromSeconds(HUNT_GIVE_UP_SECONDS)) {
+    stepReason('hunt:giveup');
     const restState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
     return {
       ...wanderStep(mob, def, state),
@@ -1957,6 +2037,7 @@ export function stepHunting(
   // helper's note) — resetting it mid-crossing produces the hunt "yoyo".
   const decision = approachForMelee(mob, preyPos, state, turn);
   if (decision.kind === 'unreachable') {
+    stepReason('hunt:unreachable');
     gameLogger.log(
       turn,
       'ENTITY-FEED',
@@ -1974,7 +2055,9 @@ export function stepHunting(
     };
   }
   if (decision.kind === 'repath') {
+    stepReason('hunt:repath');
     return { ...mob, huntTargetId: prey.id, path: decision.path, pathIndex: 0 };
   }
+  stepReason('hunt:hold');
   return { ...mob, huntTargetId: prey.id }; // 'hold' — keep following the committed route
 }

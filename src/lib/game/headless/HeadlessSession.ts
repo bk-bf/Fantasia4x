@@ -22,10 +22,43 @@ import { pathfinderService } from '../services/PathfinderService';
 import { rng } from '../core/rng';
 import type { GameState } from '../core/types';
 import { toSnapshot, fromSnapshot, type HeadlessSnapshot } from './snapshot';
+import { setSimLogSink, setVerboseLogging, type SimLogSink } from '../core/logSink';
+import { setEntityTrace, drainEntityTiming } from '../services/entity/entityAI';
+
+export interface TraceLine {
+  turn: number;
+  category: string;
+  message: string;
+}
+
+/** A capturing SimLogSink for headless: buffers the gated diagnostic firehose (`logEvent`, the
+ *  `vlog` category stream — ai/needs/job/…) into a ring so a caller can drain it. Everything else is a
+ *  no-op (headless has no renderer/chronicle). Headless can afford the buffer the GUI can't. */
+function makeCaptureSink(buf: TraceLine[], cap: number): SimLogSink {
+  const noop = () => {};
+  return {
+    logActivity: () => '',
+    logEvent: (e: { category: string; turn: number; message: string }) => {
+      buf.push({ turn: e.turn, category: e.category, message: e.message });
+      if (buf.length > cap) buf.splice(0, buf.length - cap);
+    },
+    logCombatSwing: noop,
+    logCombatKill: noop,
+    pushCombatText: noop,
+    pushAttackLunge: noop,
+    pushCombatSound: noop,
+    pushProjectile: noop,
+    logEntityDeath: noop,
+    threatAlert: noop,
+    vitalAlert: noop,
+    pawnDeath: noop
+  } as unknown as SimLogSink;
+}
 
 export class HeadlessSession {
   private engine = new GameEngineImpl();
   private started = false;
+  private traceBuf: TraceLine[] | null = null;
 
   /** Boot the session from a ready GameState (a scenario build or a hydrated snapshot). */
   async start(state: GameState): Promise<void> {
@@ -79,6 +112,40 @@ export class HeadlessSession {
   /** Boot from a previously-dumped snapshot. */
   async loadSnapshot(snap: HeadlessSnapshot): Promise<void> {
     await this.start(fromSnapshot(snap));
+  }
+
+  /**
+   * Turn on the FSM firehose (HEADLESS-SIM logging). Installs an in-memory capture sink + verbose
+   * logging, and optionally pins the per-entity FSM tracer to a creature type / id-suffix — so the
+   * capture records, every tick, WHICH branch ran (`via=…`) and each state transition, plus
+   * per-function timing (see `drainTiming`). Off in the GUI/prod sim (nothing calls this).
+   */
+  enableTrace(opts?: { creature?: string; id?: string; capacity?: number }): void {
+    this.traceBuf = [];
+    setSimLogSink(makeCaptureSink(this.traceBuf, opts?.capacity ?? 50_000));
+    setVerboseLogging(true);
+    if (opts?.creature || opts?.id) setEntityTrace({ creature: opts.creature, id: opts.id });
+  }
+
+  /** Stop tracing (clears the entity trace target + verbose gate). Keeps the buffered lines. */
+  disableTrace(): void {
+    setEntityTrace(null);
+    setVerboseLogging(false);
+  }
+
+  /** Drain buffered trace lines (optionally filtered by category, e.g. 'ai'), newest last. Clears the buffer. */
+  drainLogs(opts?: { category?: string; limit?: number }): TraceLine[] {
+    if (!this.traceBuf) return [];
+    let lines = this.traceBuf;
+    if (opts?.category) lines = lines.filter((l) => l.category === opts.category);
+    if (opts?.limit && lines.length > opts.limit) lines = lines.slice(lines.length - opts.limit);
+    this.traceBuf = [];
+    return lines;
+  }
+
+  /** Per-function wall-time table (label, calls, ms), busiest first. Clears it. */
+  drainTiming(): Array<{ label: string; calls: number; ms: number }> {
+    return drainEntityTiming();
   }
 
   get isStarted(): boolean {
