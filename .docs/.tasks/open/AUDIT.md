@@ -16,7 +16,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 ## Crafting & building
 
 ### Known defects (repro headless → fix)
-- [ ] ⚠ Lower-tier station disappears when higher tier built — `bestCraftStation` collapses to top `effects.tier` ([BuildingService.ts:460](../../../src/lib/game/services/BuildingService.ts#L460)); makers_bench re-pins all 14 craft_spot recipes. **Confirmed intent = COEXIST** (a craft spot must keep working alongside a workbench); collapse is the bug. Fix: lower tiers stay valid options, only prefer higher when unpinned.
+- [x] ⚠→fixed: Lower-tier station disappeared when higher tier built. Root cause was UI-only — `craftLanes` (CraftingScreen) only surfaced station types already hosting an order, so once auto-assign funnelled everything to the workbench the craft_spot got no droppable lane and was unreachable. The service already supports it (`stationFulfills` true for craft_spot↔craft_spot, `moveCraftOrder` re-pins, `craft.ts` runs one order per physical station in parallel). Fix: `craftLanes` now shows a lane for **every** complete station that can host a queued recipe, including idle lower/alternate tiers. Auto-assign still prefers the top tier (`bestCraftStation` unchanged).
 - [ ] ⚠ Fermentation ignores temperature — `processPassiveProduction` runs a pure timer with no temp gate. **Confirmed oversight**: fermentation should only proceed in an optimal temp range (expected temp-dependent). Needs a temp window on fermenter/brewing_barrel recipes.
 - [ ] ⚠ Onion-on-grass tile not cleared — `plant.ts complete()` skips regrowing grass (count 0, growth>0) ([plant.ts:122](../../../src/lib/game/services/jobs/plant.ts#L122))
 - [ ] ⚠ `make_hide_arrow_sheath` — eats generic `hide` (no source); should be `acceptsCategory:"hide"`
@@ -79,7 +79,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 
 ### Stations & navigation
 - [ ] Recipe blocked when required station absent; pawn navigates to station tile to craft
-- [ ] Tier coexistence: craft_spot recipes still queueable after makers_bench/carpenter_bench exist (⚠)
+- [x] Tier coexistence: craft_spot stays a droppable lane after makers_bench/carpenter_bench exist (fixed — see Known defects)
 - [ ] Higher tier preferred when unpinned; `craftingBonusOf` feeds speed/quality
 - [ ] Specialised (non-tiered) stations never superseded; passive⚙ stations process with no pawn; fuel stations refuse cold; `maxCount` enforced
 

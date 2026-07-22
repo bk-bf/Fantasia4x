@@ -367,10 +367,11 @@
   }
 
   // Active queue as per-physical-station LANES. A lane = one complete workstation building. We show a
-  // lane for every station of any TYPE that currently hosts ≥1 order — including that type's idle
-  // siblings — so tasks can be dragged between e.g. Crafting Spot 1 and Crafting Spot 2. Orders with no
-  // resolvable station (no craft_spot built / station deconstructed) fall into a Hand Crafting lane.
-  // Array order within a lane is the live priority (craft.ts runs one order per station in order).
+  // lane for every complete station that CAN host a queued order — the in-use ones AND idle lower/
+  // alternate tiers — so tasks can be dragged between e.g. Crafting Spot 1 and Crafting Spot 2, or from
+  // a Workbench back onto a Craft Spot (lower tiers coexist, never vanish once a higher tier exists).
+  // Orders with no resolvable station fall into a Hand Crafting lane. Array order within a lane is the
+  // live priority (craft.ts runs one order per station in order).
   $: buildingsList = $gameState?.buildings ?? [];
   const stationTypeOf = (qi: any): string | null => {
     const b = buildingsList.find(
@@ -379,17 +380,33 @@
     return b ? b.type : null;
   };
   $: craftLanes = (() => {
-    const typesInUse = new Set<string>();
+    // Surface a lane for every complete station that CAN host a queued order — including idle lower or
+    // alternate tiers that currently hold nothing. A Craft Spot must stay a usable target after a
+    // Workbench is built (they coexist): auto-assign prefers the top tier, but the player can still
+    // drag an order onto the Craft Spot. Orders whose required station isn't built fall to Hand Crafting.
+    const hostIds = new Set<string>();
     let hasHand = false;
     for (const qi of craftingQueue) {
-      const t = stationTypeOf(qi);
-      if (t) typesInUse.add(t);
-      else hasHand = true;
+      const need = qi.stationType;
+      if (!need) {
+        hasHand = true;
+        continue;
+      }
+      const hosts = buildingsList.filter(
+        (b: any) => b.status === 'complete' && buildingService.stationFulfills(b.type, need)
+      );
+      if (hosts.length === 0) hasHand = true;
+      else for (const b of hosts) hostIds.add(b.id);
     }
     const lanes: { id: string | null; label: string; items: any[] }[] = [];
-    for (const type of typesInUse) {
-      const name = buildingService.getBuildingById(type)?.name ?? type.replace(/_/g, ' ');
-      const stations = buildingsList.filter((b: any) => b.type === type && b.status === 'complete');
+    const typesShown = new Set<string>();
+    for (const host of buildingsList.filter((b: any) => hostIds.has(b.id))) {
+      if (typesShown.has(host.type)) continue;
+      typesShown.add(host.type);
+      const name = buildingService.getBuildingById(host.type)?.name ?? host.type.replace(/_/g, ' ');
+      const stations = buildingsList.filter(
+        (b: any) => b.type === host.type && b.status === 'complete'
+      );
       stations.forEach((b: any, i: number) => {
         lanes.push({
           id: b.id,
