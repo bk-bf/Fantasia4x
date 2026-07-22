@@ -1202,11 +1202,21 @@ export function stepHostile(
           state
         );
       }
-      // Opportunistic hunt: a predator pounces on LIVE prey that has wandered within SIGHT, regardless of
-      // hunger — the old hunger-only trigger let hunters engage too late and starve. Throttled by the hunt
-      // cooldown so the O(prey) scan isn't re-run every tick (the ENGINE-PERFORMANCE O(N²) trap), gated by
-      // the §S5 concurrent-hunt budget (takeHuntSlot); the territory leash still reins in any over-chase.
-      if (!inVision && canHunt && huntCooldownExpired) {
+      // Opportunistic hunt: a predator pounces on LIVE prey that has wandered within SIGHT once it's at
+      // all peckish — the old hunger-only trigger (full HUNGER_EAT_THRESHOLD) let hunters engage too late
+      // and starve, so this fires early, but NOT while genuinely SATED. Gating on the SAME
+      // `hunger > HUNGER_SATED_THRESHOLD` the hunt-maintenance exit uses (see the `maint:sated` branch)
+      // closes the Wander↔Hunting oscillation the FSM tracer caught: a sated predator (incl. every
+      // freshly-spawned one, which starts on negative spawn-grace hunger) used to pounce here and get
+      // ejected as sated the very next tick, forever. Throttled by the hunt cooldown so the O(prey) scan
+      // isn't re-run every tick (the ENGINE-PERFORMANCE O(N²) trap), gated by the §S5 concurrent-hunt
+      // budget (takeHuntSlot); the territory leash still reins in any over-chase.
+      if (
+        !inVision &&
+        canHunt &&
+        huntCooldownExpired &&
+        mob.needs.hunger > HUNGER_SATED_THRESHOLD
+      ) {
         const spotted = findNearestPrey(mob, allMobs, canHunt, state.worldMap);
         if (
           spotted &&
