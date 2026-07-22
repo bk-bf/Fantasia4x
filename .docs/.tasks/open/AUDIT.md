@@ -2,6 +2,8 @@
 
 Master checklist of system audits. Driven via headless sim (`./dev.sh --headless` → `/api/sim/*`; dev verbs in `sim/commands.ts`). Tick a box only when a headless run confirms it. ⚠ = known defect. `T0–3` = toolTier. `⚙` = passive station.
 
+Audit only what's implemented. An unrealistic simplification that doesn't match the rest of the game is either a misunderstanding (raise it) or deliberate (track *why* here) — never just pass it.
+
 ## Done (this session)
 
 - [x] Headless sim end-to-end — session/tick/command/state/query/save/load/trace verified live over curl
@@ -14,7 +16,8 @@ Master checklist of system audits. Driven via headless sim (`./dev.sh --headless
 ## Crafting & building
 
 ### Known defects (repro headless → fix)
-- [ ] ⚠ Lower-tier station disappears when higher tier built — `bestCraftStation` collapses to top `effects.tier` ([BuildingService.ts:460](../../../src/lib/game/services/BuildingService.ts#L460)); makers_bench re-pins all 14 craft_spot recipes. **Decide first: coexist vs collapse.**
+- [ ] ⚠ Lower-tier station disappears when higher tier built — `bestCraftStation` collapses to top `effects.tier` ([BuildingService.ts:460](../../../src/lib/game/services/BuildingService.ts#L460)); makers_bench re-pins all 14 craft_spot recipes. **Confirmed intent = COEXIST** (a craft spot must keep working alongside a workbench); collapse is the bug. Fix: lower tiers stay valid options, only prefer higher when unpinned.
+- [ ] ⚠ Fermentation ignores temperature — `processPassiveProduction` runs a pure timer with no temp gate. **Confirmed oversight**: fermentation should only proceed in an optimal temp range (expected temp-dependent). Needs a temp window on fermenter/brewing_barrel recipes.
 - [ ] ⚠ Onion-on-grass tile not cleared — `plant.ts complete()` skips regrowing grass (count 0, growth>0) ([plant.ts:122](../../../src/lib/game/services/jobs/plant.ts#L122))
 - [ ] ⚠ `make_hide_arrow_sheath` — eats generic `hide` (no source); should be `acceptsCategory:"hide"`
 - [ ] ⚠ `ferment_mead` — needs `honey` (no source, awaits beekeeping)
@@ -100,10 +103,10 @@ Master checklist of system audits. Driven via headless sim (`./dev.sh --headless
 
 ### Time-based progression
 - [ ] Drying (plant_fiber→hay, meat→dried, wood seasoning) — respects temp (<12°C slow, ≥28 fast) & wetness (soaked reverses); fire-ring faster
-- [ ] Fuel depletes per tick, fire dies at empty, cold fire won't process — (temp/wetness ignored; design call?)
-- [ ] Fermentation (ale/wine/mead/brines) passive timer, respects minFuelHeat — (temp ignored; design call?)
+- [ ] Fuel depletes per tick, fire dies at empty, cold fire won't process — wet fuel burns worse? raise if inconsistent or track reason
+- [ ] Fermentation (ale/wine/mead/brines) passive timer, respects minFuelHeat — ⚠ ignores temp (see Known defects)
 - [ ] Spoilage: food→decaysTo, freezing halts, preservation+roof slow; drying/spoiling mutually exclusive
-- [ ] Item deterioration by category every 600 ticks, roof/stored exempts — (flat rate; design call?)
+- [ ] Item deterioration by category every 600 ticks, roof/stored exempts — flat rate, no temp/wetness; raise if unrealistic or track reason
 - [ ] Building condition by material×weatherExposure (rain/snow up to 3×), roof shelters; decay buildings need repair
 
 ### Crops
