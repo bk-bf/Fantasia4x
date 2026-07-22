@@ -17,13 +17,13 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 
 ### Known defects (repro headless → fix)
 - [x] ⚠→fixed: Lower-tier station disappeared when higher tier built. Root cause was UI-only — `craftLanes` (CraftingScreen) only surfaced station types already hosting an order, so once auto-assign funnelled everything to the workbench the craft_spot got no droppable lane and was unreachable. The service already supports it (`stationFulfills` true for craft_spot↔craft_spot, `moveCraftOrder` re-pins, `craft.ts` runs one order per physical station in parallel). Fix: `craftLanes` now shows a lane for **every** complete station that can host a queued recipe, including idle lower/alternate tiers. Auto-assign still prefers the top tier (`bestCraftStation` unchanged).
-- [ ] ⚠ Fermentation ignores temperature — `processPassiveProduction` runs a pure timer with no temp gate. **Confirmed oversight**: fermentation should only proceed in an optimal temp range (expected temp-dependent). Needs a temp window on fermenter/brewing_barrel recipes.
-- [ ] ⚠ Onion-on-grass tile not cleared — `plant.ts complete()` skips regrowing grass (count 0, growth>0) ([plant.ts:122](../../../src/lib/game/services/jobs/plant.ts#L122))
-- [ ] ⚠ `make_hide_arrow_sheath` — eats generic `hide` (no source); should be `acceptsCategory:"hide"`
-- [ ] ⚠ `ferment_mead` — needs `honey` (no source, awaits beekeeping)
-- [ ] ⚠ `dressing_stone` (+0.25 yield) — zero recipes authored to it; dead station or yield routes elsewhere?
-- [ ] `make_firestarter` disabled — confirm intentional
-- [ ] low-work outliers: `make_woven_basket`, `make_wicker_vest` (huge material, ~0 work)
+- [x] ⚠→fixed: Fermentation ignored temperature. Added `fermentTempRate(temp)` (EnvironmentService, two-sided window: dormant ≤4°C, full 15–28°C, killed ≥40°C — mirrors the drying gate but with an upper bound); `processPassiveProduction` now scales the fermenter's passive work by the station tile's temp, stalling when too cold/hot. Data-driven via `effects.fermentation` on the fermenter (brewing_barrel brines unaffected).
+- [x] ⚠→fixed: Onion-on-grass tile not cleared. `plant.ts complete()` now clears occupants by resource count **or** a live growth entry, so a regrowing grass_patch (count 0, growth>0) is stripped and the tile renders dirt→crop correctly. Count-0 patches strip with no drops (no extra rng draw → determinism preserved).
+- [x] ⚠→fixed: `make_hide_arrow_sheath` now uses `cured_light_hide` (was the sourceless generic `hide`). Audit of all `hide` inputs: this was the only broken one — the other `hide` uses are `acceptsCategory:"hide"` dynamic slots on rawhide products (raw_hide_vest, rawhide_round_shield), which correctly use raw hide by design.
+- [x] ⚠→fixed: `ferment_mead` removed (beekeeping deferred). Replaced with `ferment_cider` (apples → cider) — a `cider` drink item brewable from existing apples at the fermenter. Mead item → cider; honey/fermenter text de-referenced.
+- [x] ⚠→fixed: `dressing_stone` was dead (no recipes + `butcheryYieldBonus` read by zero code). Gave butchery stations their own tier ladder (`effects.butcheryTier` 0/1/2/3, separate from the generic tier) so any butchery station renders lower-tier butcher_spot recipes; wired `butcheryYieldBonus` into `craft.ts` so the ACTUAL station's bonus multiplies meat/hide/bone (dressing_stone +25%, flensing/altar +45%). Verified: small_bones 4→5 at a dressing stone.
+- [x] ⚠→fixed: `make_firestarter` removed (deprecated recipe + commented-out item both deleted).
+- [x] ⚠→fixed: low-work outliers rebalanced — `make_woven_basket` workAmount 2→10, `make_wicker_vest` 5→12 (proportionate to snapsack 8 / gambeson 12 given their material cost).
 
 ### Recipes craftable + sane materials (every recipe, grouped by station)
 - [ ] chopping_block: split_firewood, hew_beam
@@ -38,7 +38,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [ ] campfire (cooking): make_spit_meat, make_{small,fine,lavish}_stew, make_pottage, brew_herb_tea, make_clay_cooking_pot
 - [ ] quern: mill_flour, grind_bone_meal
 - [ ] oven: bake_bread, bake_{simple,,hearty}_pie
-- [ ] fermenter⚙: malt_grain, brew_ale, ferment_wine, ⚠ferment_mead
+- [ ] fermenter⚙: malt_grain, brew_ale, ferment_wine, ferment_cider
 - [ ] brewing_barrel⚙: brew_tanning_brine, brew_beast_brine
 - [ ] compost_bin⚙: make_compost, make_fertiliser
 - [ ] resin_tap⚙: tap_resin
@@ -68,9 +68,9 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [ ] makers_bench — tools: make_saw, make_stone_{pick,hoe,spear,spade}, make_bone_cleaver, make_candle
 - [ ] makers_bench — melee: make_flint_handaxe, make_bone_knife, make_antler_club, make_bone_tipped_spear, make_fang_reaver
 - [ ] makers_bench — ranged: make_{self_bow,hunting_recurve,war_bow,sling,blowgun}, make_throwing_{stone,spear}, make_{blow_dart,sling_stone,flint_arrow,bone_arrow}
-- [ ] makers_bench — shields/carry: make_wattle_buckler, make_rawhide_round_shield, make_woven_basket, make_hide_scrip, make_hide_tool_roll, make_linen_snapsack, make_wicker_frame_pack, ⚠make_hide_arrow_sheath, make_leather_back_quiver, make_leather_bolt_case
+- [ ] makers_bench — shields/carry: make_wattle_buckler, make_rawhide_round_shield, make_woven_basket, make_hide_scrip, make_hide_tool_roll, make_linen_snapsack, make_wicker_frame_pack, make_hide_arrow_sheath, make_leather_back_quiver, make_leather_bolt_case
 - [ ] makers_bench — armor: make_rangers_hood, make_archers_bracers, make_marksmans_cloak, make_raw_hide_vest, make_soot_darkened_jerkin, make_padded_cap, make_boiled_leather_jerkin, make_leather_coif, make_stitched_gauntlets, make_tallow_boots, make_scale_cuirass, make_beast_leather_plate, make_bone_plated_cuirass, make_horned_helm
-- [ ] craft_spot: make_cordage, make_torch, make_chewed_poultice, make_mud_brick, make_flint_{knife,sickle}, make_stone_{chopper,axe,hammer,maul}, make_digging_stick, make_wooden_tongs, make_wicker_vest (+ ⚠make_firestarter disabled)
+- [ ] craft_spot: make_cordage, make_torch, make_chewed_poultice, make_mud_brick, make_flint_{knife,sickle}, make_stone_{chopper,axe,hammer,maul}, make_digging_stick, make_wooden_tongs, make_wicker_vest
 - [ ] lapidary_bench: cut_{ruby,sapphire,emerald,topaz,amethyst,citrine,moonstone}, attune_*, make_*_ring, make_*_amulet, crowns/pendants, grind_gem_dust, grind_mana_crystal, make_arcane_resin
 - [ ] runecarver_bench: make_{ember,frost,spark}_staff
 - [ ] attunement_altar: make_{pyre,rime,tempest}_staff, make_stargazer_circlet
@@ -104,7 +104,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 ### Time-based progression
 - [ ] Drying (plant_fiber→hay, meat→dried, wood seasoning) — respects temp (<12°C slow, ≥28 fast) & wetness (soaked reverses); fire-ring faster
 - [ ] Fuel depletes per tick, fire dies at empty, cold fire won't process — wet fuel burns worse? raise if inconsistent or track reason
-- [ ] Fermentation (ale/wine/mead/brines) passive timer, respects minFuelHeat — ⚠ ignores temp (see Known defects)
+- [x] Fermentation (ale/wine/cider) temp-gated via `fermentTempRate` (dormant <4°C, full 15–28, killed >40); brines stay a plain passive timer
 - [ ] Spoilage: food→decaysTo, freezing halts, preservation+roof slow; drying/spoiling mutually exclusive
 - [ ] Item deterioration by category every 600 ticks, roof/stored exempts — flat rate, no temp/wetness; raise if unrealistic or track reason
 - [ ] Building condition by material×weatherExposure (rain/snow up to 3×), roof shelters; decay buildings need repair
@@ -116,6 +116,8 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [ ] Soil terraform (lay_poor/loam/rich/terra_preta) changes subterrain + growth rate
 
 ### Butchery
+- Yield-vs-speed rule (established): butchery stations give a **yield** bonus (better tools → more off a carcass); stations where more-out-than-in makes no sense (tools, smelting ore→ingots, cooking) give **speed** (`craftingBonus`) instead. Fires give more max fuel. Generic stations already give speed; butchery yield now wired.
+- [x] Butchery yield bonus wired + tier ladder (`butcheryTier`): dressing_stone/flensing/altar render lower recipes and their `butcheryYieldBonus` (+25/+45%) multiplies output
 - [ ] Gating: needs knife/butchery tool; T2 needs tier 2 — below-tier pawn blocked
 - [ ] Spoiled carcass yields proportionally less (conditionMult)
 - [ ] butcher_spot T0 — all common game: make_{rabbit,venison,wolf,bear,boar,elk,goat,chicken,rat,aurochs,mammoth,owlbear,sabretooth,crocodile,hippogriff,hoarfowl,worg,jackal,quillback,olm}_meat, harvest_thornwood_silk
