@@ -18,7 +18,7 @@ import { edibleNutrition, resolveAllowedFoodIds, isCarcass } from '../../service
 
 // ── §F8 alcohol (mood good) ──────────────────────────────────────────────────────────────────────
 /** Drink intoxication → `intoxicated` severity: each point of mood-lift adds 1/40 severity (an ale ≈
- *  +0.2 → tipsy/merry, a mead ≈ +0.35). It decays via needs.ts `decayIntoxication`. */
+ *  +0.2 → tipsy/merry, a wine ≈ +0.3). It decays via needs.ts `decayIntoxication`. */
 const INTOX_SEVERITY_PER_MOOD = 1 / 40;
 
 // ── §F8 food poisoning ───────────────────────────────────────────────────────────────────────────

@@ -116,7 +116,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"butcheringEnabled": true},
+    "effects": {"butcheringEnabled": true, "butcheryTier": 0},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 3}
   },
@@ -135,7 +135,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"butcheringEnabled": true, "butcheryYieldBonus": 0.25},
+    "effects": {"butcheringEnabled": true, "butcheryTier": 1, "butcheryYieldBonus": 0.25},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 2}
   },
@@ -155,7 +155,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"butcheringEnabled": true, "butcheryYieldBonus": 0.45},
+    "effects": {"butcheringEnabled": true, "butcheryTier": 2, "butcheryYieldBonus": 0.45},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 2}
   },
@@ -175,7 +175,7 @@
     "populationRequired": 1,
     "researchRequired": "runic_inscription",
     "upkeepCost": {},
-    "effects": {"butcheringEnabled": true, "butcheryYieldBonus": 0.45},
+    "effects": {"butcheringEnabled": true, "butcheryTier": 3, "butcheryYieldBonus": 0.45},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 1}
   },
@@ -1594,7 +1594,7 @@
     "color": "#6E4B2A",
     "charSpans": [ {"sheet": "items", "id": 24} ],
     "transparentBg": true,
-    "description": "A row of covered casks where malt, fruit and honey ferment over days into ale, wine and mead. A passive timer, load it and let it work.",
+    "description": "A row of covered casks where malt and fruit ferment over days into ale, wine and cider. Needs a mild, steady warmth: too cold and the brew sleeps, too hot and it spoils.",
     "category": "production",
     "buildingCost": {"category:plank": 10, "resin": 3},
     "workAmount": 16,
@@ -1602,7 +1602,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"craftingEnabled": true, "cooking": 1},
+    "effects": {"craftingEnabled": true, "cooking": 1, "fermentation": 1},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 4}
   },

@@ -84,7 +84,8 @@ import {
   weatherChronicleSeverity,
   seasonRegrowthMultiplier,
   thermalAt,
-  tileTemperature
+  tileTemperature,
+  fermentTempRate
 } from '../services/EnvironmentService';
 import { zoneTileKeys } from '../services/DesignationService';
 import { soilTierForTile } from '../core/Terrains';
@@ -1448,7 +1449,24 @@ export class GameEngineImpl implements GameEngine {
         if ((station.fireHeat ?? 0) < (def?.minFuelHeat ?? 0)) continue;
       }
 
-      const newDone = (order.workDone ?? 0) + perTick(PASSIVE_WORK_PER_SECOND);
+      // Fermentation is temperature-gated: yeast only works in an optimal band, so a fermenter runs at
+      // full speed when temperate, slower at the shoulders, and STALLS when too cold or too hot. Scales
+      // the passive work this tick by the station tile's effective temperature. Non-fermentation
+      // passive stations (kilns, furnaces, brine barrels) carry no `fermentation` flag → rate 1.
+      let workRate = 1;
+      if (def?.effects?.fermentation) {
+        const tile = state.worldMap?.[station.y]?.[station.x];
+        const temp = tileTemperature(
+          tile?.terrainType ?? 'plains',
+          state.season,
+          state.turn,
+          state.weather
+        );
+        workRate = fermentTempRate(temp);
+        if (workRate <= 0) continue; // too cold or too hot — no progress this tick
+      }
+
+      const newDone = (order.workDone ?? 0) + perTick(PASSIVE_WORK_PER_SECOND) * workRate;
       if (newDone >= (order.workRequired ?? 1)) {
         state = jobService.completeCraftOrder(order, state);
       } else {

@@ -118,9 +118,21 @@ export function complete(job: Job, gs: GameState): GameState {
   const cleared: string[] = [];
   const newDropped = [...(state.droppedItems ?? [])];
   const newDropIds: string[] = [];
-  for (const [id, amt] of Object.entries(col.resources ?? {})) {
-    if ((amt ?? 0) <= 0 || ids.has(id)) continue;
+  // Clear every non-crop occupant — by resource COUNT *or* by a live GROWTH entry. A REGROWING patch
+  // (e.g. grass) sits at count 0 while growth > 0 and is still rendered, so clearing only by count
+  // would leave grass painted over the freshly-sown crop tile. A count-bearing occupant yields its
+  // harvest drops; a count-0 regrowing one is just stripped (nothing to harvest).
+  const occupantIds = new Set([
+    ...Object.keys(col.resources ?? {}),
+    ...Object.keys(col.growth ?? {})
+  ]);
+  for (const id of occupantIds) {
+    if (ids.has(id)) continue;
+    const amt = col.resources?.[id] ?? 0;
+    const grw = col.growth?.[id] ?? 0;
+    if (amt <= 0 && grw <= 0) continue;
     cleared.push(id);
+    if (amt <= 0) continue; // regrowing patch with no harvestable count — strip it, no drops
     const growthPct = col.growth?.[id] ?? 100;
     const yields = resourceObjectService.calculateYield(id, pawn, undefined, undefined, growthPct);
     for (const [dropResourceId, dropAmount] of Object.entries(yields)) {

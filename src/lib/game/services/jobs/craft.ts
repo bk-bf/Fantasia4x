@@ -243,13 +243,25 @@ export function completeCraftOrder(
   );
   const conditionMult = carcassInput ? (carcassInput.unitConditions![0] ?? 100) / 100 : 1;
 
+  // Butchery station YIELD bonus: a better-equipped butcher station (Dressing Stone +25%, Flensing
+  // Table / Sanguinary Altar +45%) renders more meat/hide/bone from the same carcass. Read off the
+  // ACTUAL station the order ran at (stationBuildingId), not the recipe's authored station — the
+  // player may have re-pinned it. 0 for every non-butchery station, so ordinary crafts are untouched.
+  const actualStationType = entry.stationBuildingId
+    ? (gs.buildings ?? []).find((b) => b.id === entry.stationBuildingId)?.type
+    : (entry.stationType ?? undefined);
+  const yieldMult =
+    1 + (actualStationType ? buildingService.butcheryYieldBonusOf(actualStationType) : 0);
+
   const outputs: Record<string, number> = {};
   for (const [outId, outQty] of Object.entries(recipeOutputs)) {
     let qty = outQty * quantity;
-    // Carcass condition scales the yield (floor + rng "carry" so a low-condition carcass still has a
-    // proportional chance at each unit rather than always rounding down to nothing).
-    if (conditionMult < 1) {
-      const scaled = qty * conditionMult;
+    // Carcass condition (spoilage) and the butchery station's yield bonus both scale the output
+    // (floor + rng "carry" so a fractional multiplier still pays off proportionally per unit rather
+    // than rounding away). yieldMult is 1 for non-butchery crafts, so this is a no-op for them.
+    const yieldScale = conditionMult * yieldMult;
+    if (yieldScale !== 1) {
+      const scaled = qty * yieldScale;
       const whole = Math.floor(scaled);
       qty = whole + (rng.random() < scaled - whole ? 1 : 0);
     }

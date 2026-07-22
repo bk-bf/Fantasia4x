@@ -1888,27 +1888,6 @@
     "volumeL": 0.8,
     "toolTierRequired": 0
   },
-  /* DISABLED — the Firestarter isn't implemented yet (no code requires it to light a fire; its
-     `processingType: ["light"]` is unused). Re-enable together with the `make_firestarter` recipe.
-  {
-    "id"               : "firestarter",
-    "charSpans"        : [ {"sheet": "items", "id": 159} ],
-    "name"             : "Firestarter",
-    "type"             : "tool",
-    "category"         : "primitive",
-    "deteriorationRate": 0.01,
-    "description"      : "Friction fire kit. Required to light a campfire.",
-    "color"            : "#FF6600",
-    "amount"           : 0,
-    "weightKg"         : 0.3,
-    "volumeL"          : 0.4,
-    "durability"       : 10,
-    "maxDurability"    : 10,
-    "tier"             : 0,
-    "toolTierRequired" : 0,
-    "processingType"   : ["light"]
-  },
-  */
   {
     "id"               : "flint_knife",
     "charSpans"        : [ {"sheet": "items", "id": 201} ],
@@ -10197,7 +10176,7 @@
     "deteriorationRate": 0.03
   },
   // ── PRODUCTION-CHAIN-II §F8 — Milling, baking, brewing (the food chain) ──────────────────────
-  // Quern → flour; Oven → bread/pies; Fermenter (passive) → malt → ale, fruit → wine, honey → mead.
+  // Quern → flour; Oven → bread/pies; Fermenter (passive) → malt → ale, fruit → wine, apples → cider.
   {
     "id"               : "flour",
     "charSpans"        : [ {"sheet": "items", "id": 113} ],
@@ -10294,7 +10273,7 @@
     "name": "Honey",
     "type": "food",
     "category": "food",
-    "description": "Sweet golden honey. Eaten as a treat, kept indefinitely, and fermented into mead. (Beekeeping, ENTITIES D.)",
+    "description": "Sweet golden honey. Eaten as a treat and kept indefinitely. (Beekeeping, ENTITIES D.)",
     "color": "#E0A52A",
     "amount": 0,
     "weightKg": 0.4,
@@ -10369,20 +10348,20 @@
     "deteriorationRate": 0.004
   },
   {
-    "id"               : "mead",
+    "id"               : "cider",
     "charSpans"        : [ {"sheet": "items", "id": 71} ],
-    "name"             : "Mead",
+    "name"             : "Cider",
     "type"             : "consumable",
     "category"         : "drink",
-    "description"      : "Honey wine, golden and potent. The oldest brew there is, and the one that bites hardest.",
-    "color"            : "#D8A52A",
+    "description"      : "Pressed apples left to work in the cask until they turn sharp and bright. Keeps through winter and warms a cold night.",
+    "color"            : "#C8912A",
     "amount"           : 0,
     "weightKg"         : 0.9,
     "volumeL"          : 1,
-    "nutrition"        : 12,
-    "intoxication"     : 14,
+    "nutrition"        : 8,
+    "intoxication"     : 9,
     "maxDurability"    : 300,
-    "deteriorationRate": 0.004
+    "deteriorationRate": 0.005
   },
   // ════════════════════════════════════════════════════════════════════════════════════════════
   // PRODUCTION-CHAIN-III §D — Resin & Glue (the binder chain)

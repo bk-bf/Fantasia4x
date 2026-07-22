@@ -1088,6 +1088,26 @@ export function effectiveTemperature(
   return insulated + thermal.warmth;
 }
 
+// Fermentation temperature window (mirrors the drying gate ambientDryRate, but TWO-SIDED — yeast is
+// dormant below the floor AND dies above the ceiling, unlike drying which only has a lower bound).
+const FERMENT_TEMP_FLOOR = 4; // °C below which fermentation does not progress (yeast dormant)
+const FERMENT_TEMP_OPT_LO = 15; // °C at which it reaches full speed
+const FERMENT_TEMP_OPT_HI = 28; // °C up to which it holds full speed (the optimal band)
+const FERMENT_TEMP_CEIL = 40; // °C at/above which it stalls again (yeast killed by heat)
+
+/** Fermentation progress multiplier (0..1) for a temperature: 0 outside the [floor, ceiling] band,
+ *  ramping to 1 across the shoulders and holding full through the optimal band. A fermenter left out in
+ *  winter (or a heat wave) stops working; a cellar-temperate one runs full. Consumed by the passive
+ *  production pass (GameEngineImpl.processPassiveProduction) for fermentation stations only. */
+export function fermentTempRate(temp: number): number {
+  if (temp <= FERMENT_TEMP_FLOOR || temp >= FERMENT_TEMP_CEIL) return 0;
+  if (temp < FERMENT_TEMP_OPT_LO)
+    return (temp - FERMENT_TEMP_FLOOR) / (FERMENT_TEMP_OPT_LO - FERMENT_TEMP_FLOOR);
+  if (temp > FERMENT_TEMP_OPT_HI)
+    return (FERMENT_TEMP_CEIL - temp) / (FERMENT_TEMP_CEIL - FERMENT_TEMP_OPT_HI);
+  return 1;
+}
+
 // Per-biome baseline wetness (0–100%) lives in terrains.jsonc (`baseMoisture`). Weather adds/removes
 // on top. Derived display value — not a persisted per-tile field, so it never rides the snapshot
 // (computed on demand for the hovered tile).

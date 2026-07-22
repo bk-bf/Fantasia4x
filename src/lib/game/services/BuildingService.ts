@@ -115,7 +115,9 @@ export interface BuildingService {
   // ADR-016 station tiers: generic crafting stations form a tier ladder (craft_spot 0 →
   // makers_bench 1 → …); a higher tier supersedes lower ones and crafts their recipes faster.
   stationTier(buildingType: string): number | undefined;
+  butcheryTier(buildingType: string): number | undefined;
   craftingBonusOf(buildingType: string): number;
+  butcheryYieldBonusOf(buildingType: string): number;
   stationFulfills(haveType: string, recipeStation: string): boolean;
   bestCraftStation(recipeStation: string, gameState: GameState): PlacedBuilding | null;
 
@@ -438,32 +440,57 @@ export class BuildingServiceImpl implements BuildingService {
     return this.getBuildingById(buildingType)?.effects?.tier;
   }
 
+  /** Butchery tier of a station (effects.butcheryTier); undefined for non-butchery stations. Butchery
+   *  stations form their OWN tier ladder (butcher_spot 0 → dressing_stone 1 → flensing_table 2 →
+   *  sanguinary_altar 3), kept separate from the generic crafting tier so the two families never mix. */
+  butcheryTier(buildingType: string): number | undefined {
+    return this.getBuildingById(buildingType)?.effects?.butcheryTier;
+  }
+
   /** Crafting speed bonus of a station (effects.craftingBonus, e.g. 0.2 = +20%); 0 if none. */
   craftingBonusOf(buildingType: string): number {
     return this.getBuildingById(buildingType)?.effects?.craftingBonus ?? 0;
   }
 
+  /** Butchery YIELD bonus of a station (effects.butcheryYieldBonus, e.g. 0.25 = +25% meat/hide/bone
+   *  off each carcass — better tools waste less). 0 if none. Applied in craft.ts completeCraftOrder. */
+  butcheryYieldBonusOf(buildingType: string): number {
+    return this.getBuildingById(buildingType)?.effects?.butcheryYieldBonus ?? 0;
+  }
+
+  /** Overall rank of a station within whichever family it belongs to (generic crafting tier or the
+   *  separate butchery tier) — drives "prefer the best station" in bestCraftStation. */
+  private stationRank(buildingType: string): number {
+    return this.stationTier(buildingType) ?? this.butcheryTier(buildingType) ?? -1;
+  }
+
   /**
    * Can a complete building of `haveType` craft a recipe authored for `recipeStation`?
-   * Generic tiered stations supersede lower tiers (a Crude Workbench can do craft_spot recipes);
-   * a specialised station (sawtable, forge, …) needs an exact-type match.
+   * Generic tiered stations supersede lower tiers (a Crude Workbench can do craft_spot recipes) and
+   * butchery stations supersede lower butchery stations (a Flensing Table can render a rabbit) — but
+   * the two ladders are SEPARATE (a butcher spot never fulfils a craft_spot recipe). A specialised
+   * station (sawtable, forge, …) needs an exact-type match.
    */
   stationFulfills(haveType: string, recipeStation: string): boolean {
     if (haveType === recipeStation) return true;
-    const need = this.stationTier(recipeStation);
-    const have = this.stationTier(haveType);
-    return need !== undefined && have !== undefined && have >= need;
+    const needT = this.stationTier(recipeStation);
+    const haveT = this.stationTier(haveType);
+    if (needT !== undefined && haveT !== undefined && haveT >= needT) return true;
+    const needB = this.butcheryTier(recipeStation);
+    const haveB = this.butcheryTier(haveType);
+    return needB !== undefined && haveB !== undefined && haveB >= needB;
   }
 
-  /** Best complete building that can craft a recipe for `recipeStation` — highest tier wins (so a
-   *  shared recipe runs at the better, faster workshop). Null if none can. */
+  /** Best complete building that can craft a recipe for `recipeStation` — highest rank wins (a shared
+   *  recipe runs at the better workshop: faster for generic crafts, higher-yield for butchery). Lower
+   *  tiers still COEXIST as valid targets (the player can re-pin an order to them). Null if none can. */
   bestCraftStation(recipeStation: string, gameState: GameState): PlacedBuilding | null {
     const eligible = (gameState.buildings ?? []).filter(
       (b) => b.status === 'complete' && this.stationFulfills(b.type, recipeStation)
     );
     if (eligible.length === 0) return null;
     return eligible.reduce((best, b) =>
-      (this.stationTier(b.type) ?? -1) > (this.stationTier(best.type) ?? -1) ? b : best
+      this.stationRank(b.type) > this.stationRank(best.type) ? b : best
     );
   }
 
