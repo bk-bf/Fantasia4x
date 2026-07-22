@@ -7,6 +7,55 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 
 ---
 
+## [FIXED] Sated predators freeze in place — opportunistic hunt vs sated-exit oscillation (Wander↔Hunting)
+
+**Symptom:** Predators — most visibly **every freshly-spawned one** — sit motionless, flipping
+`Wander`↔`Hunting` roughly **every 2 ticks** while never moving, with `blockedTicks=0` (so not a
+movement/occupancy block). Surfaced while stress-testing content headless (a dense creature map spun up
+via the dev spawn tool), but it is a **real gameplay bug**: any sated predator with prey in sight does it,
+not just dev spawns.
+
+**Root cause (`services/entity/entityAI.ts` — two contradicting features):**
+- The **opportunistic hunt** (Wander handler) pounces on live prey that wanders within sight *regardless
+  of hunger* — deliberately, so a predator doesn't "engage too late and starve."
+- The **hunt-maintenance sated exit** ejects a `Hunting` mob back to `Wander` the moment
+  `hunger <= HUNGER_SATED_THRESHOLD`.
+
+So a **sated** predator pounces (`wander:opp-hunt` → `Hunting`) and is ejected as sated (`maint:sated` →
+`Wander`) the very next tick, then re-pounces — pinned to one tile forever. Freshly-spawned predators
+start on **negative hunger** (the §S5 spawn-grace stagger, which desyncs the first hunt wave), i.e. fully
+sated, so they *all* oscillate on spawn until hunger climbs past the threshold. Two features that each
+made sense alone contradicted at the boundary.
+
+**Why earlier fixes missed:** the first attempts added a give-up **watchdog inside `stepHunting`** (a
+distance-progress timer, then a hunter-position-stall timer). Both were dead on arrival because the mob
+**never runs `stepHunting` during the freeze** — it's ejected by the *maintenance* block that runs
+*before* `stepHunting` is dispatched. The leash give-up doesn't fire either (the mob is stationary, well
+within its lair range). A related dev-only gap was fixed alongside — `devSpawnMobs` created **lairless**
+hunters, so the territorial-leash give-up (gated on `lairId != null`) never applied to them; dev-spawned
+hunters now get a lair at their spawn tile.
+
+**How it was finally pinned (the headless FSM tracer):** the give-up attempts were reverted and a
+**branch-attribution tracer** built instead (`setEntityTrace` + gated `stepReason(tag)` at every FSM
+decision + per-function timing; driven from `HeadlessSession.enableTrace` / `POST /api/sim/trace`). One
+traced wolf run printed the transition histogram outright:
+`{wander:opp-hunt: 731, maint:sated: 732, …}` with each `Hunting→Wander` line tagged
+`via=maint:sated` — the exact 2-tick flip and the exact branch, in one run. The `via=-` on the pre-fix
+exits (no `stepHunting` branch stamped) is what proved the give-up was in the wrong place.
+
+**Fix (`services/entity/entityAI.ts`):** gate the opportunistic hunt on
+`mob.needs.hunger > HUNGER_SATED_THRESHOLD` — the **same** threshold the maintenance exit uses — so a
+predator only pounces once it's at all peckish and can no longer be ejected as sated the next tick. It
+still engages *early* (well before the full `HUNGER_EAT_THRESHOLD`), preserving the "don't starve"
+intent. Tracer-verified: `wander:opp-hunt` transitions **731 → 3**, `maint:sated` **732 → 0**, opp-hunt→
+sated flip-backs **~700+ → 0**. `check`/`lint` clean, entity FSM tests **63/63**, and the headless
+invariant suite still replays **byte-identically** (the fix only removes wasted work).
+
+**Lesson (the recurring one):** the earlier give-up code was correct logic in the wrong place; hours of
+reasoning about `stepHunting` were wrong because the mob wasn't in `stepHunting`. **The tracer's branch
+attribution ("which return produced this transition") found it in one run** — it's kept as a permanent
+headless tool (gated, zero-cost when off). Measure the actual control flow; don't theorise about it.
+
 ## [FIXED] Zoomed-out panning stutters — the dense resource overlay re-vertexed every frame
 
 **Symptom:** With the map zoomed out, panning (mouse or keyboard) **stuttered badly** — `perf.log` showed
