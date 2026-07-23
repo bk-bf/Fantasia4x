@@ -30,61 +30,64 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [x] ⚠→fixed: low-work outliers rebalanced — `make_woven_basket` workAmount 2→10, `make_wicker_vest` 5→12 (proportionate to snapsack 8 / gambeson 12 given their material cost).
 
 ### Recipes craftable + sane materials (every recipe, grouped by station)
-- [ ] chopping_block: split_firewood, hew_beam
-- [ ] charcoal_pit⚙: burn_charcoal, make_coke
-- [ ] sawtable: saw_pine_planks, make_{oak,birch,ash,yew,willow}_plank, make_tanning_bucket, make_wooden_chest, make_wheelbarrow, make_handcart
-- [ ] heartwood_joiner: make_{heartwood,moonwood,ironwood,emberwood}_plank
-- [ ] hide_rack⚙: make_cured_{thin,light,sturdy,heavy,thick}_hide, cure_beast_hide
-- [ ] tanning_rack: make_{thin,light,sturdy,heavy,thick}_leather, harden_boiled_leather
-- [ ] tanning_bucket_station⚙: tan_{thin,light,sturdy,heavy,thick}_leather_bucket
-- [ ] beast_tanning_bucket⚙: tan_beast_leather, tan_scale_plate
-- [ ] hearth: make_ash, make_animal_fat, boil_bone_glue, boil_hide_glue
-- [ ] campfire (cooking): make_spit_meat, make_{small,fine,lavish}_stew, make_pottage, brew_herb_tea, make_clay_cooking_pot
-- [ ] quern: mill_flour, grind_bone_meal
-- [ ] oven: bake_bread, bake_{simple,,hearty}_pie
-- [ ] fermenter⚙: malt_grain, brew_ale, ferment_wine, ferment_cider
-- [ ] brewing_barrel⚙: brew_tanning_brine, brew_beast_brine
-- [ ] compost_bin⚙: make_compost, make_fertiliser
-- [ ] resin_tap⚙: tap_resin
-- [ ] carpenter_bench: make_wooden_bucket, make_wooden_barrel
-- [ ] ropewalk: make_rope
-- [ ] masons_bench: make_{granite,limestone,sandstone,marble}_block, make_slate_tile, make_mortar, crush_stone, make_concrete, mix_magic_concrete
-- [ ] pottery_kiln⚙: make_fired_brick, make_fire_bricks, make_water_urn, make_clay_mold, make_clay_roof_tile, burn_quicklime, fire_clay_alembic
-- [ ] advanced_kiln⚙: blow_glassware
-- [ ] potters_wheel: throw_clay_jug
-- [ ] porcelain_workshop: refine_porcelain_clay, fire_porcelain_vessels
-- [ ] spinning_wheel: spin_thread
-- [ ] weaving_frame: weave_linen, weave_cotton, reel_silk, card_wool, comb_fine_wool, make_felt, weave_woolcloth, make_cushion, make_wool_cloak, make_linen_gambeson, make_direwolf_warcloak, make_regal_robes
-- [ ] stone_forge⚙: make_{copper,tin,lead,silver,gold}_bar
-- [ ] casting_hearth: make_bronze_bar, make_bronze_nail, make_tile_mold, make_cast_sling_bullet, make_bronze_punch_dagger, make_leaf_blade_spear, make_cast_bronze_hatchet, make_cast_bronze_skullcap
-- [ ] bloomery⚙: make_iron_bar
-- [ ] finery_forge⚙: make_steel_bar
-- [ ] crucible_steelworks: make_crucible_steel
-- [ ] blast_furnace: smelt_blast_steel
-- [ ] clockwork_bench: make_mechanism
-- [ ] anvil — tools: make_{iron,steel}_{tongs,axe,hammer,shovel,hoe}
-- [ ] anvil — fasteners/wire: make_iron_nail, make_steel_rivet, draw_rebar, draw_iron_wire, make_mail_rings
-- [ ] anvil — blades: make_short_seax, make_spatha, make_iron_rondel, make_iron_estoc, make_steel_{longsword,greatsword,stiletto,rapier,cleaver,greatcleaver}, make_iron_greatsword
-- [ ] anvil — impact: make_iron_{mace,warhammer}, make_steel_{mace,warhammer,flail,pike}
-- [ ] anvil — ranged/ammo: make_crossbow, make_{iron_arrow,iron_bolt,broadhead_arrow,barbed_arrow,heavy_quarrel}, make_{stiffened_war,banded_bolt}_quiver
-- [ ] anvil — armor: make_mail_coif, make_mail_hauberk, make_iron_nasal_helm, make_iron_gauntlets, make_iron_shod_boots, make_iron_gorget, make_brigandine_coat, make_iron_boss_shield, make_cave_bear_plate, make_wheel
-- [ ] anvil — steel plate (T3): make_plate_cuirass, make_great_helm, make_ceremonial_plate
-- [ ] makers_bench — tools: make_saw, make_stone_{pick,hoe,spear,spade}, make_bone_cleaver, make_candle
-- [ ] makers_bench — melee: make_flint_handaxe, make_bone_knife, make_antler_club, make_bone_tipped_spear, make_fang_reaver
-- [ ] makers_bench — ranged: make_{self_bow,hunting_recurve,war_bow,sling,blowgun}, make_throwing_{stone,spear}, make_{blow_dart,sling_stone,flint_arrow,bone_arrow}
-- [ ] makers_bench — shields/carry: make_wattle_buckler, make_rawhide_round_shield, make_woven_basket, make_hide_scrip, make_hide_tool_roll, make_linen_snapsack, make_wicker_frame_pack, make_hide_arrow_sheath, make_leather_back_quiver, make_leather_bolt_case
-- [ ] makers_bench — armor: make_rangers_hood, make_archers_bracers, make_marksmans_cloak, make_raw_hide_vest, make_soot_darkened_jerkin, make_padded_cap, make_boiled_leather_jerkin, make_leather_coif, make_stitched_gauntlets, make_tallow_boots, make_scale_cuirass, make_beast_leather_plate, make_bone_plated_cuirass, make_horned_helm
-- [ ] craft_spot: make_cordage, make_torch, make_chewed_poultice, make_mud_brick, make_flint_{knife,sickle}, make_stone_{chopper,axe,hammer,maul}, make_digging_stick, make_wooden_tongs, make_wicker_vest
-- [ ] lapidary_bench: cut_{ruby,sapphire,emerald,topaz,amethyst,citrine,moonstone}, attune_*, make_*_ring, make_*_amulet, crowns/pendants, grind_gem_dust, grind_mana_crystal, make_arcane_resin
-- [ ] runecarver_bench: make_{ember,frost,spark}_staff
-- [ ] attunement_altar: make_{pyre,rime,tempest}_staff, make_stargazer_circlet
-- [ ] runic_crucible/loom/glyph: smelt_magic_alloy, make_arcane_robe, spin_enchant_thread, cut_runed_block
-- [ ] alchemy_lab: distil_tannin, make_dye, make_soap, brew_{might,vigor,grace,fortitude} potions, brew_{bloodrage,ironhide,vigor,calming,nightglow,frenzy}_draught, brew_venom_coating
+
+**Swept via headless (`_auditSweep`): 326/334 targets queue (real `craftItem` gating + reservation + carcass dispatch) AND produce correct outputs (`completeCraftOrder`) in a fully-provisioned colony (all research, tool tier 3, every station built, deterioration frozen). Butchery tested per-carcass. Only failures = the 8 shadowed non-butchery duplicates below.** Pawn fetch/walk/craft pipeline verified separately for representatives (cordage etc.); fuel/lighting for passive furnaces is pawn-driven and not exercised per-recipe here.
+
+- [x] chopping_block: split_firewood, hew_beam
+- [x] charcoal_pit⚙: burn_charcoal, make_coke
+- [x] sawtable: saw_pine_planks, make_{oak,birch,ash,yew,willow}_plank, make_tanning_bucket, make_wooden_chest, make_wheelbarrow, make_handcart
+- [x] heartwood_joiner: make_{heartwood,moonwood,ironwood,emberwood}_plank
+- [x] hide_rack⚙: make_cured_{thin,light,sturdy,heavy,thick}_hide, cure_beast_hide
+- [x] tanning_rack: make_{thin,light,sturdy,heavy,thick}_leather, harden_boiled_leather
+- [ ] ⚠ tanning_bucket_station⚙: tan_{thin,light,sturdy,heavy,thick}_leather_bucket — ALL 5 SHADOWED by tanning_rack `make_*_leather` (whole station dead; needs per-recipe card or prune)
+- [x] beast_tanning_bucket⚙: tan_beast_leather, tan_scale_plate
+- [x] hearth: make_animal_fat, boil_bone_glue, boil_hide_glue — ⚠ `make_ash` SHADOWED by burn_charcoal byproduct
+- [x] campfire (cooking): make_spit_meat, make_{small,fine,lavish}_stew, make_pottage, brew_herb_tea, make_clay_cooking_pot
+- [x] quern: mill_flour, grind_bone_meal
+- [x] oven: bake_bread, bake_{simple,,hearty}_pie
+- [x] fermenter⚙: malt_grain, brew_ale, ferment_wine, ferment_cider
+- [x] brewing_barrel⚙: brew_tanning_brine, brew_beast_brine
+- [x] compost_bin⚙: make_compost, make_fertiliser
+- [x] resin_tap⚙: tap_resin
+- [x] carpenter_bench: make_wooden_bucket, make_wooden_barrel
+- [x] ropewalk: make_rope
+- [x] masons_bench: make_{granite,limestone,sandstone,marble}_block, make_slate_tile, make_mortar, crush_stone, make_concrete, mix_magic_concrete
+- [x] pottery_kiln⚙: make_fired_brick, make_fire_bricks, make_water_urn, make_clay_mold, make_clay_roof_tile, burn_quicklime, fire_clay_alembic
+- [x] advanced_kiln⚙: blow_glassware
+- [x] potters_wheel: throw_clay_jug
+- [x] porcelain_workshop: refine_porcelain_clay, fire_porcelain_vessels
+- [x] spinning_wheel: spin_thread
+- [x] weaving_frame: weave_linen, weave_cotton, reel_silk, card_wool, comb_fine_wool, make_felt, weave_woolcloth, make_cushion, make_wool_cloak, make_linen_gambeson, make_direwolf_warcloak, make_regal_robes
+- [x] stone_forge⚙: make_{copper,tin,lead,silver,gold}_bar
+- [x] casting_hearth: make_bronze_bar, make_bronze_nail, make_tile_mold, make_cast_sling_bullet, make_bronze_punch_dagger, make_leaf_blade_spear, make_cast_bronze_hatchet, make_cast_bronze_skullcap
+- [x] bloomery⚙: make_iron_bar
+- [x] finery_forge⚙: make_steel_bar
+- [x] crucible_steelworks: make_crucible_steel
+- [ ] ⚠ blast_furnace: smelt_blast_steel — SHADOWED by finery `make_steel_bar` (bulk-steel path dead; keep + expose or prune)
+- [x] clockwork_bench: make_mechanism
+- [x] anvil — tools: make_{iron,steel}_{tongs,axe,hammer,shovel,hoe}
+- [x] anvil — fasteners/wire: make_iron_nail, make_steel_rivet, draw_rebar, draw_iron_wire, make_mail_rings
+- [x] anvil — blades: make_short_seax, make_spatha, make_iron_rondel, make_iron_estoc, make_steel_{longsword,greatsword,stiletto,rapier,cleaver,greatcleaver}, make_iron_greatsword
+- [x] anvil — impact: make_iron_{mace,warhammer}, make_steel_{mace,warhammer,flail,pike}
+- [x] anvil — ranged/ammo: make_crossbow, make_{iron_arrow,iron_bolt,broadhead_arrow,barbed_arrow,heavy_quarrel}, make_{stiffened_war,banded_bolt}_quiver
+- [x] anvil — armor: make_mail_coif, make_mail_hauberk, make_iron_nasal_helm, make_iron_gauntlets, make_iron_shod_boots, make_iron_gorget, make_brigandine_coat, make_iron_boss_shield, make_cave_bear_plate, make_wheel
+- [x] anvil — steel plate (T3): make_plate_cuirass, make_great_helm, make_ceremonial_plate
+- [x] makers_bench — tools: make_saw, make_stone_{pick,hoe,spear,spade}, make_bone_cleaver, make_candle
+- [x] makers_bench — melee: make_flint_handaxe, make_bone_knife, make_antler_club, make_bone_tipped_spear, make_fang_reaver
+- [x] makers_bench — ranged: make_{self_bow,hunting_recurve,war_bow,sling,blowgun}, make_throwing_{stone,spear}, make_{blow_dart,sling_stone,flint_arrow,bone_arrow}
+- [x] makers_bench — shields/carry: make_wattle_buckler, make_rawhide_round_shield, make_woven_basket, make_hide_scrip, make_hide_tool_roll, make_linen_snapsack, make_wicker_frame_pack, make_hide_arrow_sheath, make_leather_back_quiver, make_leather_bolt_case
+- [x] makers_bench — armor: make_rangers_hood, make_archers_bracers, make_marksmans_cloak, make_raw_hide_vest, make_soot_darkened_jerkin, make_padded_cap, make_boiled_leather_jerkin, make_leather_coif, make_stitched_gauntlets, make_tallow_boots, make_scale_cuirass, make_beast_leather_plate, make_bone_plated_cuirass, make_horned_helm
+- [x] craft_spot: make_cordage, make_torch, make_chewed_poultice, make_mud_brick, make_flint_{knife,sickle}, make_stone_{chopper,axe,hammer,maul}, make_digging_stick, make_wooden_tongs, make_wicker_vest
+- [x] lapidary_bench: cut_{ruby,sapphire,emerald,topaz,amethyst,citrine,moonstone}, attune_*, make_*_ring, make_*_amulet, crowns/pendants, grind_gem_dust, make_arcane_resin — ⚠ `grind_mana_crystal` SHADOWED by grind_gem_dust
+- [x] runecarver_bench: make_{ember,frost,spark}_staff
+- [x] attunement_altar: make_{pyre,rime,tempest}_staff, make_stargazer_circlet
+- [x] runic_crucible/loom/glyph: smelt_magic_alloy, make_arcane_robe, spin_enchant_thread, cut_runed_block
+- [x] alchemy_lab: distil_tannin, make_dye, make_soap, brew_{might,vigor,grace,fortitude} potions, brew_{bloodrage,ironhide,vigor,calming,nightglow,frenzy}_draught, brew_venom_coating
 
 ### Stations & navigation
-- [ ] Recipe blocked when required station absent; pawn navigates to station tile to craft
+- [x] Recipe blocked when required station absent (canQueueCraft station gate); pawn navigates to station tile to craft (verified headless for representatives — cordage etc.)
 - [x] Tier coexistence: craft_spot stays a droppable lane after makers_bench/carpenter_bench exist (fixed — see Known defects)
-- [ ] Higher tier preferred when unpinned; `craftingBonusOf` feeds speed/quality
+- [x] Higher tier preferred when unpinned (`bestCraftStation`); `craftingBonusOf` feeds workRequired (speed)
 - [ ] Specialised (non-tiered) stations never superseded; passive⚙ stations process with no pawn; fuel stations refuse cold; `maxCount` enforced
 
 ### Weapons
