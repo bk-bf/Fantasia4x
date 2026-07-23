@@ -721,6 +721,30 @@ export function devSpawnMobs(state: GameState, count = 5, creatureId?: string): 
   return { ...state, mobs: [...(state.mobs ?? []), ...seeded] };
 }
 
+/** DEBUG (HEADLESS-SIM): spawn ONE mob of `creatureId` at a chosen tile (or the nearest walkable) —
+ *  the controlled-placement counterpart to devSpawnMobs, so a test can stand a hostile next to an armed
+ *  pawn. Predators get a lair anchored at the spawn (same as devSpawnMobs) so the leash give-up works. */
+export function devSpawnMobAt(
+  state: GameState,
+  creatureId: string,
+  x: number,
+  y: number
+): GameState {
+  const def = CREATURES.find((c) => c.id === creatureId);
+  if (!def) return state;
+  const origin =
+    state.worldMap?.[y]?.[x]?.walkable !== false ? { x, y } : findNearbyWalkable(state, x, y);
+  if (!origin) return state;
+  const mob = makeMob(def, origin.x, origin.y, state.turn);
+  if (def.predator || def.diet === 'carnivore') {
+    mob.lairId = `dev-lair-${def.id}-${origin.x}-${origin.y}-t${state.turn}`;
+    mob.lairX = origin.x;
+    mob.lairY = origin.y;
+    mob.lairRange = def.lairRange ?? 40;
+  }
+  return { ...state, mobs: [...(state.mobs ?? []), mob] };
+}
+
 // ===== SPAWNING =================================================================
 
 export function spawnEntities(state: GameState, opts?: { preyOnly?: boolean }): GameState {

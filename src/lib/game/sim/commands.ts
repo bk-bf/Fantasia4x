@@ -66,7 +66,7 @@ import { devSpawnLooseItems, devDestroyAllItems } from '../dev/devWorld';
 import { gameLogger } from '../dev/gameLogger';
 import { generatePawns, applyConsumable, remapKinIds } from '../entities/Pawns';
 import { pawnGrowthService } from '../services/PawnGrowthService';
-import { devSpawnMobs } from '../services/entity/entitySpawning';
+import { devSpawnMobs, devSpawnMobAt } from '../services/entity/entitySpawning';
 import { kingdomService, KNOWLEDGE_XP } from '../services/KingdomService';
 import { socialService } from '../services/SocialService';
 import { rollMigrantWave } from '../systems/migration';
@@ -1302,6 +1302,11 @@ export const COMMANDS: Record<string, Cmd> = {
   /** Force-spawn `count` mobs (ignores caps / current count). Optional specific creature id. */
   devSpawnEntities: (s, p: { count?: number; creatureId?: string }) =>
     devSpawnMobs(s, p.count ?? 5, p.creatureId),
+
+  /** DEBUG: spawn one mob of `creatureId` at a chosen tile (controlled placement, e.g. a hostile next
+   *  to an armed pawn for a combat test). */
+  devSpawnMobAt: (s, p: { creatureId: string; x: number; y: number }) =>
+    devSpawnMobAt(s, p.creatureId, p.x, p.y),
 
   /** DEBUG: force a kingdom party (trade caravan or friendly visitors) to arrive now. */
   devTriggerKingdomArrival: (s, p: { kind?: 'caravan' | 'visitor' }) =>

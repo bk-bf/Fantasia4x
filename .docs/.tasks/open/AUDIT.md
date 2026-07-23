@@ -91,6 +91,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [ ] Specialised (non-tiered) stations never superseded; passive⚙ stations process with no pawn; fuel stations refuse cold; `maxCount` enforced
 
 ### Weapons
+- ⚠ **BLOCKER — combat is dormant headless.** Built the harness (`devSpawnMobAt` new dev lever + drafted pawn + equip + attack order), but a drafted pawn with an explicit ADJACENT attack order never swings (mob stays `Wander`, pawn stamina flat), and the war-party preset (6 armed drafted pawns + 8 goblins) never fights over 200t (`draftedAttacking:0`, goblins never aggro). So the existing "war party fights" invariant exercises no combat, and the weapons audit can't proceed headless until this is root-caused (tickCombat/performAttack gate, or a missing combat-trigger step). **Needs investigation before the boxes below.**
 - [ ] Melee → mainHand (2H blocks offHand); shields → offHand; 2H+shield blocked; `wieldRequirement.strength` gates
 - [ ] Damage in damMin–damMax; damageType/AP/armorDamage/stun/knockback/on-hit conditions apply
 - [ ] finesse→PER, strScaled→STR, arcane→INT (no STR+INT double-dip on staves); attackSpeed/reach respected
