@@ -4,6 +4,27 @@ Master checklist of system audits. Driven via headless sim (`./dev.sh --headless
 
 Audit only what's implemented. An unrealistic simplification that doesn't match the rest of the game is either a misunderstanding (raise it) or deliberate (track *why* here) — never just pass it.
 
+> **What counts as "headless-verified" (READ THIS — do not weaken it).** A box is headless-verified ONLY
+> when driven through the REAL sim end-to-end: `buildScenario(...)` → `HeadlessSession.start/command/tick`
+> with **real pawns over real ticks**, observing the actual stock/state delta the loop produces (or the same
+> over `./dev.sh --headless` + `/api/sim/*`). A unit/service assertion — `completeCraftOrder`, `canQueueCraft`,
+> static `recipeService` reachability, `resolveHit` sampling — is a **supplement, NEVER a substitute**: it
+> proves a function in isolation, not that the pawn-driven game loop works. **Do not tick a box, and do not
+> call anything "end-to-end / playtested / headless-verified", on the strength of unit tests alone.** Every
+> ticked box must name the mechanism it was verified by (e.g. "HeadlessSession, 3000 ticks, hide_scrip 0→1,
+> buckskin 20→18") so a substitution can never be hidden. If you only unit-tested it, say exactly that and
+> leave the box `[~]`, not `[x]`.
+>
+> **Headless-harness gotchas (so "it wouldn't run" is never an excuse to fall back to unit tests):**
+> - **Founders default to NO enabled labor** — call `setPawnLaborLevel { pawnId, workId, level }` for each
+>   `workService.getAllWorkCategories()` or the pawns sit Idle and nothing is crafted/hauled.
+> - **The reserve→haul→stage→craft pipeline is multi-tick** — a single craft needs ~900+ ticks; weaving-frame
+>   crafts and multiple competing orders need more (bump pawn count + tick budget). Idle ≠ broken; give it time.
+> - **`buildScenario` designates the ENTIRE map as stockpile** (2026-07-23) — storage/reachability can never be
+>   the hidden blocker; if a craft still stalls, it's labor or tick-budget, not the stockpile.
+> - **The sim starts at NIGHT** (`ambientLight 0.15`) so mobs don't self-aggro (vision-gated) — drive fights
+>   with an explicit draft attack order.
+
 ## Done (this session)
 
 - [x] Headless sim end-to-end — session/tick/command/state/query/save/load/trace verified live over curl
