@@ -92,20 +92,20 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 
 ### Weapons
 - **Combat verified headless** (`_weaponsAudit`, 5/5). Two headless facts had to be understood first: attack cadence ≈ 133 ticks (`BASE_ATTACK_INTERVAL_TICKS 120` / attackSpeed, `TICKS_PER_SECOND 60`) so fights need HUNDREDS of ticks; and the sim starts at NIGHT (`ambientLight 0.15`) so mobs don't self-aggro (vision-gated) — an explicit draft attack order drives the fight regardless. New lever added: `devSpawnMobAt {creatureId,x,y}`.
-- [x] Melee equips `mainHand` + deals damage (iron_mace → goblin Corpse). — *2H/offHand-block, shield→offHand, `wieldRequirement.strength` not yet exercised*
-- [ ] Damage in damMin–damMax; damageType/AP/armorDamage/stun/knockback/on-hit conditions — *not yet asserted numerically*
-- [ ] finesse→PER, strScaled→STR, arcane→INT (no STR+INT double-dip on staves); attackSpeed/reach — *not yet asserted*
+- [x] Melee equips `mainHand` + deals damage of the weapon's type (iron_mace → goblin Corpse; `resolveHit` avg 44, type blunt).
+- [x] finesse→PER (steel_rapier PER6 avg 10.4 → PER26 avg 43.6), arcane→INT (ember_staff INT6 6.5 → INT26 25.8), AP applied (armor mitigation below). — *exact damMin–damMax band, strScaled numeric, armorDamage/stun/knockback/on-hit conditions, attackSpeed/reach still not asserted*
 - [x] Ranged ammo lifecycle: fires only with matching ammo + consumes it (war_bow arrows 8→6); NO phantom shots at 0 ammo (goblin unharmed, holds); WRONG ammo doesn't feed (bolts in a bow untouched, no fire). — *drawPower scaling / crossbow reload / recoverable-retrieval not yet asserted numerically*
 - [x] Magic staves: channeled (no ammo), pays `staminaCost` as mana (ember_staff stamina 124→117 per cast)
+- [x] Shield equips to `offHand`. — [ ] ⚠ **2H weapon does NOT clear the off-hand: a 2H greatsword + shield coexist** (`equipItem` never enforces "2H blocks off-hand"; the shield still occupies the slot + contributes defense). `wieldRequirement.strength` still not exercised.
 
 ### Gear
-- [ ] Worn armor raises armorValue on covered parts (sane values); layers stack; resistances apply
-- [ ] Hit on covered part mitigated (no hit-through); uncovered part bypasses; fatigue/movePenalty apply
+- [x] Worn armor mitigates incoming damage (plate_cuirass: `resolveHit` avg 44 → 32.7). — *per-part coverage, layer-stacking, individual slash/crush/pierce resistances, sane-per-piece values not yet asserted individually*
+- [ ] Hit on covered part mitigated (no hit-through); uncovered part bypasses; fatigue/movePenalty apply — *needs per-body-part resolveHit control*
 - [ ] armorDamage degrades worn armor; shields mitigate via defense/parry not armorValue
-- [ ] Jewelry grants conditions while worn (removed on unequip); aim gear/quivers feed ranged; cold/heat/stealth mods feed their systems
+- [x] Jewelry grants conditions while worn (ruby_ring → `might` in transientConditions; re-derived each tick, auto-clears on unequip). — *aim gear/quivers → ranged, cold/heat/stealth mods still not asserted*
 
 ### Capacity & hauling
-- [ ] Worn carriers add inventoryBonus to carry budget; back-slot carriers compete
+- [x] Worn carriers add inventoryBonus to carry budget (wicker_frame: `getCarryBudget` maxWeightKg 16.3→28.3, +12kg). — *back-slot competition not yet asserted*
 - [ ] Carts (wheelbarrow/handcart) boost budget + used by haul jobs; quivers add carry+drawspeed
 - [ ] Liquid containers track fill/capacity; static storage holds off-budget; carry budget enforced on pickup
 
