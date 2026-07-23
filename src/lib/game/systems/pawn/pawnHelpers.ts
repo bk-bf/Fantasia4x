@@ -540,6 +540,23 @@ export function findNearestGatheringBuilding(
   return b ? { x: b.x, y: b.y } : null;
 }
 
+/** COMFORT: nearest COMPLETE seat (buildingProperties `seat` — chair/couch/bench/stool). Like a fire,
+ *  no exclusive claim for now (a hall's seats aren't individually reserved). */
+export function findNearestSeatBuilding(
+  pawn: Pawn,
+  gs: GameState
+): { x: number; y: number } | null {
+  if (!pawn.position) return null;
+  const seats = (gs.buildings ?? []).filter(
+    (b) =>
+      b.status === 'complete' && BUILDINGS_DB.find((d) => d.id === b.type)?.buildingProperties?.seat
+  );
+  const b = findNearestBy(seats, (c) =>
+    manhattan(c.x, c.y, pawn.position!.x, pawn.position!.y)
+  );
+  return b ? { x: b.x, y: b.y } : null;
+}
+
 /** True when the pawn is adjacent to a lit campfire (better eating). */
 export function isAtFoodBuilding(pawn: Pawn, gs: GameState): boolean {
   if (!pawn.position) return false;
@@ -996,6 +1013,12 @@ export const RELAXATION_THRESHOLD = needNum('relaxation', 'seek', 30);
 export const SOCIALISE_TURNS = ticksFromSeconds(needNum('relaxation', 'durationSeconds', 20));
 export const SOCIALISE_RELAXATION_RELIEF = needNum('relaxation', 'relief', 70);
 
+// COMFORT: a pawn seeks a SEAT when `comfort` drops below this; a lounge session lasts LOUNGE_TURNS and
+// restores LOUNGE_COMFORT_RELIEF (scaled up by the seat's comfort amenity in handleLounging).
+export const COMFORT_THRESHOLD = needNum('comfort', 'seek', 35);
+export const LOUNGE_TURNS = ticksFromSeconds(needNum('comfort', 'durationSeconds', 25));
+export const LOUNGE_COMFORT_RELIEF = needNum('comfort', 'relief', 75);
+
 export const WASH_NEED_RELIEF = needNum('hygiene', 'relief', 70);
 
 // Durations for drinking/washing — these take time like eating/sleeping (not instant). The need
@@ -1113,6 +1136,44 @@ export function tryRouteToSocialise(pawn: Pawn, gameState: GameState): GameState
               timeRequired: 1,
               turnsInState: 0,
               targetState: PAWN_STATE.SOCIALISING
+            }
+          }
+        : p
+    )
+  };
+}
+
+/** COMFORT: route the pawn to the nearest seat to LOUNGE (mirrors tryRouteToSocialise). Adjacent → sit
+ *  now (LOUNGING); else path there (MOVING_TO_NEED with a LOUNGING target). Null when no reachable seat. */
+export function tryRouteToLounge(pawn: Pawn, gameState: GameState): GameState | null {
+  const target = findNearestSeatBuilding(pawn, gameState);
+  if (!target || !pawn.position) return null;
+  if (isAdjacent(pawn.position.x, pawn.position.y, target.x, target.y)) {
+    const gs = transitionTo(pawn, PAWN_STATE.LOUNGING, gameState);
+    return {
+      ...gs,
+      pawns: gs.pawns.map((p) =>
+        p.id === pawn.id ? { ...p, path: [], isMoving: false, nextCellCostLeft: undefined } : p
+      )
+    };
+  }
+  const afterPath = tryAssignPath(pawn, target.x, target.y, gameState);
+  if (!afterPath) return null;
+  return {
+    ...afterPath,
+    pawns: afterPath.pawns.map((p) =>
+      p.id === pawn.id
+        ? {
+            ...p,
+            currentState: PAWN_STATE.MOVING_TO_NEED,
+            activeJob: {
+              type: 'need' as const,
+              targetX: target.x,
+              targetY: target.y,
+              progress: 0,
+              timeRequired: 1,
+              turnsInState: 0,
+              targetState: PAWN_STATE.LOUNGING
             }
           }
         : p

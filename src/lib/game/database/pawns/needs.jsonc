@@ -68,6 +68,21 @@
       {"atOrBelow": 12, "effect": "need_restless"       }
     ]
   },
+  // comfort (FURNITURE-COMFORT) — inverted like relaxation (100 = comfortable). Decays each tick; an idle
+  // pawn below `seek` paths to the best free SEAT and LOUNGES, filling it (per-tick fill scales with the
+  // seat's comfort amenity — a couch fills faster than a stool). High comfort grants the tiered
+  // `comfortable` condition (slower fatigue + faster relaxation + mood). Distinct from the temperature
+  // `tempRange` band. NOTE: not the same axis as relaxation (social) — good furniture, not company.
+  "comfort"    : {
+    "states"         : ["Lounging"],
+    "decayRate"      : 0.10,
+    "seek"           : 35,
+    "relief"         : 75,
+    "durationSeconds": 25,
+    "moodBands"      : [
+      {"atOrBelow": 10, "effect": "need_uncomfortable"}
+    ]
+  },
   // bloodHunger (LINEAGES-II) — the vampire/werewolf feeding need. Only pawns with a `bloodNeedKind`
   // carry it; it fills on the hourly lineage cadence (PawnStateMachine). No mood bands.
   "bloodHunger": {

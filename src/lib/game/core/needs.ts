@@ -445,7 +445,7 @@ export const COMFORT_MAX_DEFAULT = 30;
  * A pawn/entity's comfortable temperature range, shifted by cultural traits. Outside this band cold
  * tires and heat starves (PawnService need-rate) and drives hypothermia / heat stroke.
  */
-export function comfortRange(traits: ReadonlyArray<{ name: string }> | undefined): {
+export function tempRange(traits: ReadonlyArray<{ name: string }> | undefined): {
   min: number;
   max: number;
 } {
@@ -474,19 +474,22 @@ export function conditionNeedMultipliers(conditions: EntityCondition[]): {
   hungerRate: number;
   fatigueRate: number;
   thirstRate: number;
+  relaxationRate: number;
 } {
   let hungerRate = 1;
   let fatigueRate = 1;
   let thirstRate = 1;
+  let relaxationRate = 1; // < 1 = relaxation decays slower (the `comfortable` condition boosts it)
   for (const c of conditions) {
     const stage = getConditionCurrentStage(c);
     if (stage) {
       hungerRate *= stage.modifiers.hungerRate ?? 1;
       fatigueRate *= stage.modifiers.fatigueRate ?? 1;
       thirstRate *= stage.modifiers.thirstRate ?? 1;
+      relaxationRate *= stage.modifiers.relaxationRate ?? 1;
     }
   }
-  return { hungerRate, fatigueRate, thirstRate };
+  return { hungerRate, fatigueRate, thirstRate, relaxationRate };
 }
 
 /**

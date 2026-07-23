@@ -37,6 +37,7 @@ export type DisableableNeed =
   | 'hygiene'
   | 'wetness'
   | 'relaxation'
+  | 'comfort'
   | 'mobHunger';
 
 export interface GameState {

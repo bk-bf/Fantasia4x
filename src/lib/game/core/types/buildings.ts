@@ -251,6 +251,9 @@ export interface Building {
     /** SOCIAL: a GATHERING PLACE (campfire, hearth) — pawns nearby are in a sociable context, so
      *  drawn-out dialog can happen here even mid-day and leans warmer (SocialService.processDialogTick). */
     gathering?: boolean;
+    /** COMFORT: a SEAT (chair/bench/couch/stool) — an idle, uncomfortable pawn paths here and LOUNGES to
+     *  fill the `comfort` need; fill rate scales with the seat's `comfort` amenity. */
+    seat?: boolean;
 
     // Production properties
     craftingSpeed?: number;

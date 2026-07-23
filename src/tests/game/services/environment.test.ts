@@ -50,7 +50,7 @@ import {
   SEASON_LABELS,
   type ThermalSample
 } from '$lib/game/services/EnvironmentService';
-import { comfortRange, driveTemperatureConditions } from '$lib/game/core/needs';
+import { tempRange, driveTemperatureConditions } from '$lib/game/core/needs';
 import type { EntityCondition, PlacedBuilding } from '$lib/game/core/types';
 
 function bld(
@@ -474,10 +474,10 @@ describe('EnvironmentService — weather mood', () => {
 });
 
 describe('Temperature comfort + exposure (hypothermia / heat stroke)', () => {
-  it('comfortRange shifts with traits', () => {
-    expect(comfortRange(undefined)).toEqual({ min: 5, max: 30 });
-    expect(comfortRange([{ name: 'Insulated' }])).toEqual({ min: -5, max: 25 });
-    expect(comfortRange([{ name: 'Cold Blooded' }])).toEqual({ min: 15, max: 40 });
+  it('tempRange shifts with traits', () => {
+    expect(tempRange(undefined)).toEqual({ min: 5, max: 30 });
+    expect(tempRange([{ name: 'Insulated' }])).toEqual({ min: -5, max: 25 });
+    expect(tempRange([{ name: 'Cold Blooded' }])).toEqual({ min: 15, max: 40 });
   });
 
   it('exposure is 0 inside the comfort band and grows outside it', () => {

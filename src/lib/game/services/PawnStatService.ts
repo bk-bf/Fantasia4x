@@ -20,7 +20,7 @@ import {
   conditionStatMultipliers,
   conditionPainMultiplier,
   conditionConsciousnessMultiplier,
-  comfortRange,
+  tempRange,
   RECOVER_CONSCIOUSNESS
 } from '../core/needs';
 import { equippedTemperatureSources, type WornThermalSource } from '../core/PawnEquipment';
@@ -867,7 +867,7 @@ export class PawnStatServiceImpl implements PawnStatService {
   }
 
   temperatureTolerance(pawn: Pawn | Mob): TemperatureTolerance {
-    const { min: comfortMin, max: comfortMax } = comfortRange((pawn as Pawn).traits);
+    const { min: comfortMin, max: comfortMax } = tempRange((pawn as Pawn).traits);
     const gear = equippedTemperatureSources(pawn as Pawn);
     // Split each side's resistance into its sources (in degrees): the CON-derived stat base, any trait
     // resistance bonus, and EACH worn garment by name. `evaluateStat` already folds the trait bonus into

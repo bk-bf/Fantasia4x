@@ -867,6 +867,27 @@
         ]
     },
     {
+        // FURNITURE-COMFORT — a positive, tiered, severity-decaying condition (modeled on `intoxicated`).
+        // Granted by a high `comfort` need; deepens the longer a pawn stays comfortable and lingers as an
+        // afterglow when they leave. Each stage slows fatigue (`fatigueRate`) and speeds relaxation recovery
+        // (`relaxationRate`, wired into the relaxation need decay), and it lifts mood (`cond_comfortable`).
+        "id": "comfortable",
+        "name": "Comfortable",
+        "mood": "cond_comfortable",
+        "flags": ["comfort"],
+        "description": "Settled somewhere soft and warm. The body unwinds, tires more slowly, and the ease of it seeps into the mood.",
+        "color": "#C8A86A",
+        // Driven by the (inverted) `comfort` need: severity accrues while comfort ≥ 70 (faster the snugger,
+        // toward 100), recovers below it. No `lethalSeverity` → a pure positive buff, never fatal.
+        "driver": {"need": "comfort", "onset": 70, "safe": 70, "rateCritical": 0.003, "rateMax": 0.006, "recovery": 0.004, "onsetDelay": 0},
+        "stages": [
+            {"label": "content",  "minSeverity": 0,    "color": "#D8BE86", "modifiers": {"fatigueRate": 0.97, "relaxationRate": 0.90}},
+            {"label": "comfy",    "minSeverity": 0.3,  "color": "#C8A86A", "modifiers": {"fatigueRate": 0.92, "relaxationRate": 0.80}},
+            {"label": "cosy",     "minSeverity": 0.6,  "color": "#B8924E", "modifiers": {"fatigueRate": 0.86, "relaxationRate": 0.70}},
+            {"label": "pampered", "minSeverity": 0.85, "color": "#A87E36", "modifiers": {"fatigueRate": 0.80, "relaxationRate": 0.60}}
+        ]
+    },
+    {
         "id": "nausea",
         "name": "Nausea",
         "flags": ["food", "sickness"],

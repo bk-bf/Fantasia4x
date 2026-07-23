@@ -17,6 +17,8 @@ export const PAWN_STATE = {
   WASHING: 'Washing',
   // SOCIAL: route to a gathering place (campfire/hearth) and socialise to recover `relaxation`.
   SOCIALISING: 'Socialising',
+  // COMFORT: route to a seat (chair/couch/bench) and lounge to recover `comfort`.
+  LOUNGING: 'Lounging',
   // Combat states (COMBAT-SYSTEM): auto-engagement when a hostile enters aggro range.
   FIGHTING: 'Fighting',
   FLEEING: 'Fleeing',

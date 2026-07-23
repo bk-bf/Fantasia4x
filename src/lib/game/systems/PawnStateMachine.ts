@@ -134,7 +134,8 @@ import {
   handleSleeping,
   handleDrinking,
   handleWashing,
-  handleSocialising
+  handleSocialising,
+  handleLounging
 } from './pawn/handlers/needs';
 import {
   handleFighting,
@@ -1454,6 +1455,7 @@ const STATE_HANDLERS: Record<string, PawnHandler> = {
   [PAWN_STATE.DRINKING]: handleDrinking,
   [PAWN_STATE.WASHING]: handleWashing,
   [PAWN_STATE.SOCIALISING]: handleSocialising,
+  [PAWN_STATE.LOUNGING]: handleLounging,
   [PAWN_STATE.FIGHTING]: handleFighting,
   [PAWN_STATE.FLEEING]: handleFleeing,
   [PAWN_STATE.HUNTING]: handleHunting,

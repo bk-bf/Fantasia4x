@@ -48,6 +48,7 @@
     "need_filthy": { "label": "Filthy", "value": -4 },
     "need_starved_company": { "label": "Starved for company", "value": -9 },
     "need_restless": { "label": "Restless", "value": -4 },
+    "need_uncomfortable": { "label": "Nowhere comfortable", "value": -5 },
 
     // ── Conditions (conditions.jsonc `mood`) — being HURT flows through these injury conditions, so
     //    there is no separate "health" mood band (the old flat state.health is vestigial). ────────────
@@ -64,6 +65,7 @@
     "cond_bleeding": { "label": "Bleeding", "value": -4 },
     "cond_sheltered": { "label": "Out of the weather", "value": 2 },
     "cond_intoxicated": { "label": "Warm with drink", "value": 6 },
+    "cond_comfortable": { "label": "Comfortable", "value": 5 },
     "cond_well_fed": { "label": "Well fed", "value": 6 },
     "cond_refreshed": { "label": "Refreshed", "value": 4 },
 

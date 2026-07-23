@@ -33,6 +33,12 @@ export interface EntityNeeds {
   relaxation?: number;
   /** Turn the pawn last socialised (for cadence/analytics; stripped from the snapshot). */
   lastSocialise?: number;
+  /** COMFORT (FURNITURE-COMFORT) — physical-comfort meter 0–100 (INVERTED like relaxation: 100 = snug,
+   *  0 = nothing comfortable). Decays each tick; recovered by LOUNGING on a seat. High comfort drives the
+   *  positive `comfortable` condition; distinct from the temperature `tempRange` band and from relaxation. */
+  comfort?: number;
+  /** Turn the pawn last lounged (cadence; stripped from the snapshot). */
+  lastLounge?: number;
 }
 
 /**

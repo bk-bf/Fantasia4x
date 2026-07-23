@@ -18,11 +18,13 @@ import {
   ROUTE_TO_DRINK_THIRST,
   ROUTE_TO_WASH_HYGIENE,
   RELAXATION_THRESHOLD,
+  COMFORT_THRESHOLD,
   needsRecovery,
   findNearestRestBuilding,
   transitionTo,
   tryRouteToWaterNeed,
   tryRouteToSocialise,
+  tryRouteToLounge,
   distToNearestFoodSource,
   distToNearestFoodFetch,
   distToNearestDrinkTarget,
@@ -42,6 +44,7 @@ export type NeedChoice =
   | { kind: 'sleep' }
   | { kind: 'water'; need: 'drink' | 'wash'; routedState: GameState }
   | { kind: 'social'; routedState: GameState }
+  | { kind: 'comfort'; routedState: GameState }
   | null;
 
 /**
@@ -114,6 +117,11 @@ export function selectIdleNeed(pawn: Pawn, gameState: GameState): NeedChoice {
   if ((pawn.needs?.relaxation ?? 100) < RELAXATION_THRESHOLD) {
     const routed = tryRouteToSocialise(pawn, gameState);
     if (routed) return { kind: 'social', routedState: routed };
+  }
+  // COMFORT (also a mood need, from Idle only): an uncomfortable idle pawn seeks a seat to lounge.
+  if ((pawn.needs?.comfort ?? 100) < COMFORT_THRESHOLD) {
+    const routed = tryRouteToLounge(pawn, gameState);
+    if (routed) return { kind: 'comfort', routedState: routed };
   }
   return null;
 }
@@ -245,6 +253,9 @@ export function applyNeed(
       return jobId ? jobService.releaseJob(pawn.id, jobId, choice.routedState) : choice.routedState;
     case 'social':
       // tryRouteToSocialise already set MOVING_TO_NEED (or SOCIALISING if adjacent) on routedState.
+      return jobId ? jobService.releaseJob(pawn.id, jobId, choice.routedState) : choice.routedState;
+    case 'comfort':
+      // tryRouteToLounge already set MOVING_TO_NEED (or LOUNGING if adjacent) on routedState.
       return jobId ? jobService.releaseJob(pawn.id, jobId, choice.routedState) : choice.routedState;
   }
 }

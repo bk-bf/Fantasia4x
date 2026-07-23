@@ -53,6 +53,8 @@ import {
   DRINK_NEED_RELIEF,
   SOCIALISE_TURNS,
   SOCIALISE_RELAXATION_RELIEF,
+  LOUNGE_TURNS,
+  LOUNGE_COMFORT_RELIEF,
   WASH_NEED_RELIEF,
   DRINK_TURNS,
   WASH_TURNS,
@@ -282,6 +284,37 @@ export function handleSocialising(pawn: Pawn, gameState: GameState): GameState {
     p.needs.relaxation = Math.min(100, (p.needs.relaxation ?? 100) + reliefPerTurn);
     p.needs.lastSocialise = gameState.turn;
     p.currentState = done ? PAWN_STATE.IDLE : PAWN_STATE.SOCIALISING;
+    p.activeJob = done
+      ? undefined
+      : {
+          type: 'need' as const,
+          targetX: p.position?.x ?? activeJob?.targetX ?? 0,
+          targetY: p.position?.y ?? activeJob?.targetY ?? 0,
+          progress: turnsInState / duration,
+          timeRequired: duration,
+          turnsInState
+        };
+  });
+}
+
+/** COMFORT: lounge on the reached seat over LOUNGE_TURNS, recovering `comfort`. Fill scales with the
+ *  spot's comfort amenity (seat + nearby furniture via `amenityAt`) — a couch/armchair fills faster than
+ *  a stool. High comfort drives the `comfortable` condition (via its `driver`). Mirrors handleSocialising. */
+export function handleLounging(pawn: Pawn, gameState: GameState): GameState {
+  const activeJob = pawn.activeJob;
+  const turnsInState = (activeJob?.turnsInState ?? 0) + 1;
+  const duration = LOUNGE_TURNS;
+  const spotComfort = pawn.position
+    ? amenityAt(gameState.buildings, pawn.position.x, pawn.position.y).comfort
+    : 0;
+  const reliefPerTurn = (LOUNGE_COMFORT_RELIEF / duration) * (0.5 + spotComfort);
+  const done = turnsInState >= duration || (pawn.needs?.comfort ?? 100) >= 100;
+  return mutatePawn(gameState, pawn.id, (p) => {
+    p.path = [];
+    p.isMoving = false;
+    p.needs.comfort = Math.min(100, (p.needs.comfort ?? 100) + reliefPerTurn);
+    p.needs.lastLounge = gameState.turn;
+    p.currentState = done ? PAWN_STATE.IDLE : PAWN_STATE.LOUNGING;
     p.activeJob = done
       ? undefined
       : {

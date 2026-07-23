@@ -152,6 +152,8 @@ const HYGIENE_INCREASE_PER_SECOND = needNum('hygiene', 'rate', 0.3); // grime bu
 // SOCIAL: `relaxation` DECAYS toward 0 (100 = entertained). ~100→0 over ~2.5 in-game days of no company,
 // so a pawn seeks the fire every couple of days. Paused while SOCIALISING (recovery happens there instead).
 const RELAXATION_DECREASE_PER_SECOND = needNum('relaxation', 'decayRate', 0.13);
+// COMFORT: `comfort` decays toward 0 (100 = snug). Paused while LOUNGING (recovery happens there instead).
+const COMFORT_DECREASE_PER_SECOND = needNum('comfort', 'decayRate', 0.1);
 // §D auto-drink: thirst threshold to drink, and relief per unit of water.
 const AUTO_DRINK_THIRST = needNum('thirst', 'autoSatisfy', 70);
 const WATER_THIRST_RELIEF = needNum('thirst', 'relief', 65);
@@ -161,7 +163,7 @@ const WASH_HYGIENE_RELIEF = needNum('hygiene', 'relief', 70);
 
 // SEASONS_WEATHER Subsystem 3 — temperature/night need effects (PERF-3: scalar constants, read in
 // the per-tick loop; no allocation). Per-degree multipliers match the spec (cold→fatigue, heat→hunger).
-// Comfort range lives in core/needs.ts (comfortRange), shared with the hypothermia/heat-stroke driver.
+// Temperature range lives in core/needs.ts (tempRange), shared with the hypothermia/heat-stroke driver.
 const DEFAULT_COMFORT_TEMP = 15; // fallback when a pawn has no tile (unspawned)
 const COLD_FATIGUE_PER_DEG = 0.03;
 const HEAT_HUNGER_PER_DEG = 0.02;
@@ -460,6 +462,7 @@ export class PawnServiceImpl implements PawnService {
     const disHygiene = dis?.hygiene === true;
     const disWetness = dis?.wetness === true;
     const disRelaxation = dis?.relaxation === true;
+    const disComfort = dis?.comfort === true;
     const worldMap = gameState.worldMap;
     for (let i = 0; i < pawns.length; i++) {
       const pawn = pawns[i];
@@ -525,12 +528,24 @@ export class PawnServiceImpl implements PawnService {
       const wetRes = pawnStatService.evaluateStat('wetness_resistance', pawn);
       const wetness = disWetness ? wet0 : accrueWetness(wet0, tileWet, dt, wetRes, drySpeed);
 
-      // SOCIAL: relaxation decays toward 0 (recovered by SOCIALISING — paused while in that state).
+      // SOCIAL: relaxation decays toward 0 (recovered by SOCIALISING — paused while in that state). The
+      // `comfortable` condition slows the decay (its staged `relaxationRate` < 1) — a snug pawn stays
+      // relaxed longer. Guarded on conditions so a bare pawn stays alloc-free on the hot path.
       const relaxation0 = needs.relaxation ?? 100;
+      const relaxRate = pawn.conditions?.length
+        ? conditionNeedMultipliers(pawn.conditions).relaxationRate
+        : 1;
       const relaxation =
         disRelaxation || pawn.currentState === 'Socialising'
           ? relaxation0
-          : Math.max(0, relaxation0 - RELAXATION_DECREASE_PER_SECOND * dt);
+          : Math.max(0, relaxation0 - RELAXATION_DECREASE_PER_SECOND * relaxRate * dt);
+
+      // COMFORT: comfort decays toward 0 (recovered by LOUNGING — paused while in that state).
+      const comfort0 = needs.comfort ?? 100;
+      const comfort =
+        disComfort || pawn.currentState === 'Lounging'
+          ? comfort0
+          : Math.max(0, comfort0 - COMFORT_DECREASE_PER_SECOND * dt);
 
       const prevHealth = pawn.state.health ?? 100;
       const health =
@@ -545,6 +560,7 @@ export class PawnServiceImpl implements PawnService {
         hygiene === (needs.hygiene ?? 0) &&
         wetness === wet0 &&
         relaxation === relaxation0 &&
+        comfort === comfort0 &&
         health === prevHealth
       ) {
         continue;
@@ -556,6 +572,7 @@ export class PawnServiceImpl implements PawnService {
       needs.hygiene = hygiene;
       needs.wetness = wetness;
       needs.relaxation = relaxation;
+      needs.comfort = comfort;
       pawn.state.health = health;
       changed = true;
     }
