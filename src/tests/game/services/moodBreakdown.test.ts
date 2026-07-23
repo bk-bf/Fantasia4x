@@ -74,7 +74,26 @@ describe('MOOD-REWORK getMoodBreakdown', () => {
     expect(out.target).toBeLessThan(50);
   });
 
-  it('pleasant surroundings (nearby couch) add a positive contribution', () => {
+  // Ambient mood comes from BEAUTY only. A bear rug is handsome (beauty 0.4), so being near it lifts mood.
+  it('pleasant surroundings (nearby beautiful furniture) add a positive contribution', () => {
+    const rug = {
+      id: 'r1',
+      type: 'bear_rug',
+      x: 0,
+      y: 0,
+      status: 'complete',
+      progress: 1
+    } as PlacedBuilding;
+    const p = pawn();
+    const out = pawnService.getMoodBreakdown(p, makeState(p, [rug]));
+    const pleasant = out.contributions.find((c) => c.label === 'Pleasant surroundings');
+    expect(pleasant).toBeDefined();
+    expect(pleasant!.value).toBeGreaterThan(0);
+  });
+
+  // COMFORT IS NOT AMBIENT: a couch is comfort-only (0.7) with no beauty, so merely STANDING near it
+  // must not lift mood — a pawn earns comfort by sitting in it (handleLounging), not by walking past.
+  it('a comfort-only piece (couch) gives no ambient lift — comfort is never ambient', () => {
     const couch = {
       id: 'c1',
       type: 'couch',
@@ -86,8 +105,7 @@ describe('MOOD-REWORK getMoodBreakdown', () => {
     const p = pawn();
     const out = pawnService.getMoodBreakdown(p, makeState(p, [couch]));
     const pleasant = out.contributions.find((c) => c.label === 'Pleasant surroundings');
-    expect(pleasant).toBeDefined();
-    expect(pleasant!.value).toBeGreaterThan(0);
+    expect(pleasant?.value ?? 0).toBe(0);
   });
 
   it('a full moon lifts mood — unless the pawn is sheltered (negatedBy)', () => {

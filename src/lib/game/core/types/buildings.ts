@@ -251,8 +251,11 @@ export interface Building {
     /** SOCIAL: a GATHERING PLACE (campfire, hearth) — pawns nearby are in a sociable context, so
      *  drawn-out dialog can happen here even mid-day and leans warmer (SocialService.processDialogTick). */
     gathering?: boolean;
+    /** SOCIAL: how good a gathering place this is (default 1). Pawns are drawn to the HIGHEST-level
+     *  reachable one — campfire 1 < hearth 2 ≈ hewn table 2 < planked hall table 3. */
+    gatheringLevel?: number;
     /** COMFORT: a SEAT (chair/bench/couch/stool) — an idle, uncomfortable pawn paths here and LOUNGES to
-     *  fill the `comfort` need; fill rate scales with the seat's `comfort` amenity. */
+     *  fill the `comfort` need; fill rate scales with THAT SEAT's own comfort (never ambient). */
     seat?: boolean;
 
     // Production properties

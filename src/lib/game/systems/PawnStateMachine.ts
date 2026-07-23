@@ -995,10 +995,10 @@ export function healWounds(pawn: Pawn, turn = 0, buildings?: PlacedBuilding[]): 
         if (bonus) mult *= 1 + bonus;
         break;
       }
-      // §M room amenity: recovering in a comfortable, beautiful, finely-furnished room (couch/cushions/
-      // silk/wool) knits wounds faster — the surrounding furniture, scaled small + capped.
+      // §M room amenity: recovering in a beautiful, finely-furnished room knits wounds faster — the
+      // surrounding furniture's BEAUTY, scaled small + capped (comfort is never ambient).
       const a = amenityAt(buildings, px, py);
-      const amenityHeal = Math.min(0.5, (a.comfort + a.beauty) * 0.15);
+      const amenityHeal = Math.min(0.5, a.beauty * 0.15);
       if (amenityHeal > 0) mult *= 1 + amenityHeal;
     }
   }

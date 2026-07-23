@@ -66,6 +66,7 @@
     "cond_sheltered": { "label": "Out of the weather", "value": 2 },
     "cond_intoxicated": { "label": "Warm with drink", "value": 6 },
     "cond_comfortable": { "label": "Comfortable", "value": 5 },
+    "cond_well_rested": { "label": "Well rested", "value": 4 },
     "cond_well_fed": { "label": "Well fed", "value": 6 },
     "cond_refreshed": { "label": "Refreshed", "value": 4 },
 

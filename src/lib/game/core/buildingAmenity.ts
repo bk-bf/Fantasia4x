@@ -28,19 +28,20 @@ export function nearGatheringPlace(
 }
 
 /**
- * §M Sum the MATERIAL-ADJUSTED `comfort` + `beauty` (+ `insulation`) of all complete buildings within
- * `AMENITY_RADIUS` of (x,y) — a soft "how nice is this spot" score. Drives rest (handleSleeping), wound
- * healing (healWounds), and the pleasant-surroundings mood lift (PawnService). The chosen build material
- * feeds in via each building's `materials` (silk → +beauty, wool/cotton → +comfort), so a finely-built,
- * well-furnished room measurably out-rests/out-heals/out-cheers a bare one. No mood-system or AI: it
- * reads only the pawn's surroundings. Kept in `core` so services AND pawn systems can use it acyclically.
+ * §M Sum the MATERIAL-ADJUSTED `beauty` (+ `insulation`) of all complete buildings within
+ * `AMENITY_RADIUS` of (x,y) — a soft "how handsome is this spot" score. Drives rest (handleSleeping),
+ * wound healing (healWounds), and the pleasant-surroundings mood lift (PawnService).
+ *
+ * COMFORT IS DELIBERATELY NOT HERE. Comfort is not ambient — a pawn gets it by USING a piece of
+ * furniture (sitting in the chair, sleeping in the bed), never by standing near one. Read a single
+ * piece's comfort with {@link buildingComfortOf}. Beauty stays ambient: a handsome room genuinely is
+ * pleasant to be in. Kept in `core` so services AND pawn systems can use it acyclically.
  */
 export function amenityAt(
   buildings: PlacedBuilding[] | undefined,
   x: number,
   y: number
-): { comfort: number; beauty: number; insulation: number } {
-  let comfort = 0;
+): { beauty: number; insulation: number } {
   let beauty = 0;
   let insulation = 0;
   for (const b of buildings ?? []) {
@@ -49,9 +50,31 @@ export function amenityAt(
     const eff = BUILDING_DEFS.find((d) => d.id === b.type)?.effects;
     if (!eff) continue;
     const mods = b.materials ? aggregateMaterialMods(Object.values(b.materials), 'building') : null;
-    comfort += (eff.comfort ?? 0) + (mods?.comfort ?? 0);
     beauty += (eff.beauty ?? 0) + (mods?.beauty ?? 0);
     insulation += (eff.thermalInsulation ?? 0) + (mods?.insulation ?? 0);
   }
-  return { comfort, beauty, insulation };
+  return { beauty, insulation };
+}
+
+/**
+ * COMFORT: the MATERIAL-ADJUSTED `comfort` of ONE placed building — the piece a pawn is actually USING
+ * (the seat it lounges on, the bed it sleeps in). This is the only way comfort enters the sim: a better
+ * piece, or the same piece built from a finer material (mammoth wool over goat wool), is measurably
+ * comfier to use. Returns 0 for a missing/incomplete building or one with no comfort.
+ */
+export function buildingComfortOf(b: PlacedBuilding | undefined | null): number {
+  if (!b || b.status !== 'complete') return 0;
+  const eff = BUILDING_DEFS.find((d) => d.id === b.type)?.effects;
+  if (!eff) return 0;
+  const mods = b.materials ? aggregateMaterialMods(Object.values(b.materials), 'building') : null;
+  return (eff.comfort ?? 0) + (mods?.comfort ?? 0);
+}
+
+/** SOCIAL: a gathering place's LEVEL (buildingProperties `gatheringLevel`, default 1 when it merely
+ *  carries `gathering`). Pawns prefer the HIGHEST-level place they can reach — a hall table out-draws a
+ *  hearth, which out-draws a bare campfire. */
+export function gatheringLevelOf(b: PlacedBuilding | undefined | null): number {
+  if (!b || b.status !== 'complete') return 0;
+  const p = BUILDING_DEFS.find((d) => d.id === b.type)?.buildingProperties;
+  return p?.gathering ? (p.gatheringLevel ?? 1) : 0;
 }

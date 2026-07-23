@@ -4,7 +4,7 @@
  *  live array element in place, no per-call `pawns.map` array allocation). Safe — see mutatePawn. */
 import type { GameState, Pawn } from '../../../core/types';
 import { gameLogger } from '../../../dev/gameLogger';
-import { perTick } from '../../../core/time';
+import { perTick, ticksFromSeconds } from '../../../core/time';
 import { consumeFromStockpiles, availableQuantityFromDrops } from '../../../core/GameState';
 import { PAWN_STATE, type PawnStateName } from '../pawnStates';
 import { tileHasBody } from '../carry';
@@ -55,11 +55,18 @@ import {
   SOCIALISE_RELAXATION_RELIEF,
   LOUNGE_TURNS,
   LOUNGE_COMFORT_RELIEF,
+  buildingComfortOf,
   WASH_NEED_RELIEF,
   DRINK_TURNS,
   WASH_TURNS,
   repathStuckMover
 } from '../pawnHelpers';
+
+/** COMFORT: per-second comfort a BED fills while the pawn sleeps, scaled by that bed's own
+ *  material-adjusted comfort (feather bed 0.4 → 0.6/s). Bare ground (0) fills nothing. */
+const BED_COMFORT_FILL = 1.5;
+/** COMFORT: how long `well_rested` lasts after waking from a real bed. */
+const WELL_RESTED_TICKS = ticksFromSeconds(240);
 
 /** Debug helpers — compact need-event formatting (only built when LOG_VERBOSE; logs use thunks). */
 function fmtMeal(meal: { id: string; units: number }[]): string {
@@ -297,16 +304,25 @@ export function handleSocialising(pawn: Pawn, gameState: GameState): GameState {
   });
 }
 
-/** COMFORT: lounge on the reached seat over LOUNGE_TURNS, recovering `comfort`. Fill scales with the
- *  spot's comfort amenity (seat + nearby furniture via `amenityAt`) — a couch/armchair fills faster than
- *  a stool. High comfort drives the `comfortable` condition (via its `driver`). Mirrors handleSocialising. */
+/** COMFORT: lounge on the reached seat over LOUNGE_TURNS, recovering `comfort`. Fill scales with THAT
+ *  SEAT's own material-adjusted comfort (never ambient — you get comfort from sitting in the chair, not
+ *  from standing near it), so a couch/armchair fills faster than a stool, and a finer fleece faster
+ *  still. High comfort drives the `comfortable` condition (via its `driver`). Mirrors handleSocialising. */
 export function handleLounging(pawn: Pawn, gameState: GameState): GameState {
   const activeJob = pawn.activeJob;
   const turnsInState = (activeJob?.turnsInState ?? 0) + 1;
   const duration = LOUNGE_TURNS;
-  const spotComfort = pawn.position
-    ? amenityAt(gameState.buildings, pawn.position.x, pawn.position.y).comfort
-    : 0;
+  const pos0 = pawn.position;
+  const seat = pos0
+    ? (gameState.buildings ?? []).find(
+        (b) =>
+          b.status === 'complete' &&
+          Math.abs(b.x - pos0.x) <= 1 &&
+          Math.abs(b.y - pos0.y) <= 1 &&
+          BUILDINGS_DB.find((d) => d.id === b.type)?.buildingProperties?.seat
+      )
+    : undefined;
+  const spotComfort = buildingComfortOf(seat);
   const reliefPerTurn = (LOUNGE_COMFORT_RELIEF / duration) * (0.5 + spotComfort);
   const done = turnsInState >= duration || (pawn.needs?.comfort ?? 100) >= 100;
   return mutatePawn(gameState, pawn.id, (p) => {
@@ -724,19 +740,16 @@ export function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
   const shelterBonus = restBuilding
     ? (def?.effects?.fatigueRecovery ?? def?.effects?.sleepQuality ?? 0)
     : 0;
-  // §M room amenity: a comfortable, beautiful, finely-built bedroom (couch/cushioned chair/feather bed,
-  // silk/wool/cotton material) rests a pawn faster. Scaled small + capped so it tops up the bed's rest
-  // quality without dwarfing it. Material choice feeds in via amenityAt (the building's `materials`).
+  // §M room amenity: a beautiful, finely-built bedroom rests a pawn faster. Scaled small + capped so it
+  // tops up the bed's rest quality without dwarfing it. BEAUTY only — the bed's own comfort is not
+  // ambient; it fills the `comfort` need directly below (buildingComfortOf).
   const pos = pawn.position;
   const amenityBonus = pos
-    ? Math.min(
-        0.4,
-        (() => {
-          const a = amenityAt(gameState.buildings, pos.x, pos.y);
-          return (a.comfort + a.beauty) * 0.15;
-        })()
-      )
+    ? Math.min(0.4, amenityAt(gameState.buildings, pos.x, pos.y).beauty * 0.15)
     : 0;
+  // COMFORT: the BED the pawn is actually lying in fills the comfort need as it sleeps (a feather bed
+  // out-comforts a hay bed; a finer stuffing out-comforts a coarse one). Bare ground gives nothing.
+  const bedComfort = buildingComfortOf(restBuilding);
   const fatigueRecovery = FATIGUE_PER_SLEEPING_GROUND + shelterBonus + amenityBonus;
   const sleepDuration = restBuilding ? SLEEPING_TURNS : SLEEPING_TURNS_GROUND; // for progress bar only
   // fatigueRecovery is a per-second rate; apply one tick's worth each step.
@@ -775,7 +788,10 @@ export function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
     ...(pawn.needs ?? { hunger: 0, fatigue: 0, sleep: 0, lastSleep: 0, lastMeal: 0 }),
     fatigue: newFatigue,
     sleep: newSleep,
-    lastSleep: gameState.turn
+    lastSleep: gameState.turn,
+    // COMFORT: the bed fills the comfort need while the pawn sleeps — a feather bed out-comforts a hay
+    // bed, and a finer stuffing out-comforts a coarse one. The bare ground (bedComfort 0) gives nothing.
+    comfort: Math.min(100, (pawn.needs?.comfort ?? 100) + perTick(bedComfort * BED_COMFORT_FILL))
   };
   const updatedState = {
     ...(pawn.state ?? {
@@ -801,6 +817,14 @@ export function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
       p.state = updatedState;
       p.currentState = PAWN_STATE.IDLE;
       p.activeJob = undefined;
+      // COMFORT: waking from a real BED leaves the pawn `well_rested` (a timed buff, like a meal buff).
+      // The bare ground never grants it; a comfier bed is worth more because it also filled `comfort`.
+      if (restBuilding) {
+        p.conditionTimers = {
+          ...(p.conditionTimers ?? {}),
+          well_rested: Math.max(p.conditionTimers?.well_rested ?? 0, WELL_RESTED_TICKS)
+        };
+      }
       // SOCIAL-LAYER §7: waking from a real bed (any rest building) leaves a day-long lift; a
       // night on the bare ground counts toward the wild-sleeper deeds instead.
       if (restBuilding) {

@@ -733,8 +733,9 @@ export class PawnServiceImpl implements PawnService {
 
     // Pleasant surroundings — comfort + beauty of the occupied tile (value computed; effect = label).
     if (pawn.position) {
+      // Beauty only — comfort is never ambient (it comes from USING a seat/bed; see buildingComfortOf).
       const a = amenityAt(gameState.buildings, pawn.position.x, pawn.position.y);
-      const am = Math.min(3, (a.comfort + a.beauty) * 1.5);
+      const am = Math.min(3, a.beauty * 1.5);
       if (am > 0) {
         t += am;
         const e = moodEffect('amenity_pleasant');

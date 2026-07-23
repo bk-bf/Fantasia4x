@@ -871,6 +871,18 @@
         // Granted by a high `comfort` need; deepens the longer a pawn stays comfortable and lingers as an
         // afterglow when they leave. Each stage slows fatigue (`fatigueRate`) and speeds relaxation recovery
         // (`relaxationRate`, wired into the relaxation need decay), and it lifts mood (`cond_comfortable`).
+        // COMFORT — a timed buff stamped on waking from a real BED (never from the bare ground), like a
+        // meal buff. Rested limbs work a touch better and tire a touch slower.
+        "id": "well_rested",
+        "name": "Well Rested",
+        "mood": "cond_well_rested",
+        "flags": ["buff", "comfort"],
+        "transient": true,
+        "description": "Woke from a proper bed with the night's stiffness gone. The day starts easier.",
+        "color": "#9FC8E8",
+        "modifiers": {"workEfficiency": 1.05, "fatigueRate": 0.95}
+    },
+    {
         "id": "comfortable",
         "name": "Comfortable",
         "mood": "cond_comfortable",

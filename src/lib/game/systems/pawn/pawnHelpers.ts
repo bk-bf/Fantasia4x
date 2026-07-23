@@ -7,6 +7,7 @@
  */
 import type { GameState, Pawn, Mob, Building, PlacedBuilding, Job } from '../../core/types';
 import { transientNeedOnset } from '../../core/needs';
+import { gatheringLevelOf } from '../../core/buildingAmenity';
 import { needNum } from '../../core/needsDefs';
 import { isUncareable } from '../../core/Wounds';
 import BUILDINGS_DATABASE_RAW from '../../database/world/buildings.jsonc';
@@ -522,20 +523,21 @@ export function findNearestRestBuilding(
   return best ? { x: best.x, y: best.y, buildingId: best.buildingId } : null;
 }
 
-/** SOCIAL: nearest COMPLETE gathering-place building (buildingProperties `gathering` — campfire/hearth).
- *  Unlike a bed, a fire holds many pawns, so there's NO exclusive claim/occupancy check. */
+/** SOCIAL: the BEST COMPLETE gathering place (buildingProperties `gathering` — campfire/hearth/tables).
+ *  Pawns are drawn to the HIGHEST `gatheringLevel` they can reach (a hall table out-draws a hearth, which
+ *  out-draws a bare campfire), and only then to the nearest of that level — so a colony that builds a
+ *  proper table actually gathers there. Like a fire, no exclusive claim (many pawns share one). */
 export function findNearestGatheringBuilding(
   pawn: Pawn,
   gs: GameState
 ): { x: number; y: number } | null {
   if (!pawn.position) return null;
-  const gatherings = (gs.buildings ?? []).filter(
-    (b) =>
-      b.status === 'complete' &&
-      BUILDINGS_DB.find((d) => d.id === b.type)?.buildingProperties?.gathering
-  );
-  const b = findNearestBy(gatherings, (c) =>
-    manhattan(c.x, c.y, pawn.position!.x, pawn.position!.y)
+  const gatherings = (gs.buildings ?? []).filter((b) => gatheringLevelOf(b) > 0);
+  if (!gatherings.length) return null;
+  const best = Math.max(...gatherings.map((b) => gatheringLevelOf(b)));
+  const b = findNearestBy(
+    gatherings.filter((c) => gatheringLevelOf(c) === best),
+    (c) => manhattan(c.x, c.y, pawn.position!.x, pawn.position!.y)
   );
   return b ? { x: b.x, y: b.y } : null;
 }
@@ -585,7 +587,8 @@ export function getRestBuildingAtPawn(pawn: Pawn, gs: GameState): PlacedBuilding
 }
 
 // §M room amenity helper lives in core/buildingAmenity (acyclic: services + pawn systems both use it).
-export { amenityAt, AMENITY_RADIUS } from '../../core/buildingAmenity';
+export { amenityAt, AMENITY_RADIUS, buildingComfortOf } from '../../core/buildingAmenity';
+export { gatheringLevelOf };
 
 /** True when the pawn is adjacent to a shelter (better sleep). */
 export function isAtRestBuilding(pawn: Pawn, gs: GameState): boolean {

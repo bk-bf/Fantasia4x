@@ -353,12 +353,23 @@ byproduct ash; cooking/baking/kiln/smelting fires emit none. Universal fire-ash 
 - [ ] OR treat ash-as-waste intentionally (a disposal/compost loop) — realistic, but only if designed on purpose.
 - [ ] Until one is chosen, do NOT sprinkle ash byproducts onto fire recipes (avoids an unmanaged waste leak).
 
-## Furniture → pawn systems (comfort / relaxation / socialisation) — AUDIT + proposal
+## Furniture → pawn systems (comfort / relaxation / socialisation) — ✅ BUILT (2026-07-23)
 
-- [x] AUDITED (three code sweeps) — findings below. Nothing implemented yet. Headline: **most of the target
-      system is already scaffolded** — this is EXTEND-and-rewire, not build-from-scratch.
+- [x] AUDITED (three code sweeps) — findings below. Headline was **most of the target system is already
+      scaffolded** — EXTEND-and-rewire, not build-from-scratch. That proved right; it's now implemented.
 
-**EXISTS today:**
+> **Headless-verified** (`comfortLoop.test.ts`, kept as a regression test, 4/4 — real `HeadlessSession`
+> pawns over real ticks, not unit assertions):
+> - **Lounge loop:** uncomfortable pawn (comfort 20) paths to a couch and lounges → **comfort 20→72.7**,
+>   `comfortable` condition granted, by turn 1200.
+> - **Copper-tier seat:** the new `tacked_chair` works as a seat → **comfort 20→76.1** (`MovingToNeed,Lounging`).
+> - **Beds:** a pawn sleeps in a `feather_bed` and wakes → **comfort 20→49.1** and **`well_rested` granted**
+>   (bare ground grants neither).
+> - **Gathering level:** with a level-1 campfire ADJACENT and a level-3 table across the map, the pawn
+>   **walked past the fire to the table** (distToTable 1, distToCampfire 5) — level beats proximity.
+
+**EXISTED BEFORE THIS WORK** (the pre-implementation audit findings — kept for the reasoning trail; the
+two ⚠ points below are exactly what the IMPLEMENTED list then changed, so read that as current state):
 - Beds are the only interactive furniture. 5 tiers (`sleeping_spot`→`hay_bed`→`hide_bed`→`leather_bed`→
   `feather_bed`) carry `sleepQuality`/`fatigueRecovery` → measurably faster rest vs the ground (0.58/s). So
   **"bedroom furniture gives rest-speed bonuses" is ALREADY DONE.** (Only `feather_bed` also carries `comfort` 0.4.)
@@ -373,28 +384,45 @@ byproduct ash; cooking/baking/kiln/smelting fires emit none. Universal fire-ash 
   severity-decaying condition (the template for a tiered `comfortable`); conditions can slow fatigue
   (`fatigueRate < 1`, e.g. `sheltered` 0.9) and boost mood (`"mood": "cond_*"` → mood.jsonc).
 
-**MISSING (the work to track):**
-- [ ] **`comfort` pawn meter/need** — model on `relaxation` (decay block in `processNeedsTick`, kill-switch,
-      `moodBands`, `case 'comfort'` in `computeMoodTarget`). Fed by the comfort of furniture the pawn sits on/near.
-      ⚠ NAME COLLISION: temperature "comfort band" (cold/heat exposure, `comfortRange`) already exists — keep the
-      furniture meter distinct in naming/docs so the two axes don't merge.
-- [ ] **Tables/chairs as socialisation anchors** — today only fires. Give dining/gathering furniture
-      `gathering: true` (or a new anchor flag) so pawns gather at a table, not just the hearth.
-- [ ] **New "sit & relax at table" state** — clone the Socialising path (`tryRouteToSocialise` →
-      `handleMovingToNeed` → `handleSocialising`): pawn paths to a chair around a table, sits, fills
-      relaxation/comfort. Register the state in **needs.jsonc `states`** (not states.jsonc — the split
-      `stateRegistry.test.ts` enforces) + add to `STATE_HANDLERS`.
-- [ ] **Chair tiers → comfort** — map each seat/couch tier's `comfort` value into the comfort-meter fill rate
-      (better chair = more comfort per sit).
-- [ ] **Tiered `comfortable` condition** — model on `intoxicated`: stages (e.g. content → comfy → cosy →
-      pampered), each `fatigueRate < 1` (slows tiring) + `"mood": "cond_comfortable"` (mood boost). Granted at
-      high comfort, decays when the pawn leaves comfortable surroundings. Add `cond_comfortable` tiers to mood.jsonc.
-- [ ] **Bed tier → rested/comfort link** — sleeping in a good bed should feed the comfort meter / grant a
-      "well-rested" buff (no positive rested/well_rested condition exists today).
+**IMPLEMENTED:**
+- [x] **`comfort` pawn meter/need** — `comfort` in needs.jsonc, inverted like `relaxation` (100 = snug,
+      decay 0.10/s, seek 35, relief 75), decayed in `PawnService` (paused while Lounging), `need_uncomfortable`
+      mood band at ≤10. NAME COLLISION resolved by **renaming the temperature band `comfortRange` → `tempRange`**,
+      freeing `comfort` for the furniture meter.
+- [x] **⚠→fixed: comfort is NO LONGER AMBIENT.** It used to be a radius-2 "how nice is this spot" number
+      feeding sleep speed / wound heal / mood. A pawn now gets comfort ONLY by USING a piece — lounging on the
+      seat, sleeping in the bed — read per-building via `buildingComfortOf` (material-adjusted). `amenityAt`
+      keeps **beauty + insulation** ambient (a handsome room genuinely is pleasant); its three consumers
+      (mood cap +3, sleep-speed bonus, wound-heal bonus) are now beauty-only.
+- [x] **Tables as gathering anchors + LEVELS** — `gatheringLevel` on `buildingProperties`: campfire 1,
+      hearth 2, `hewn_table` 2, `wooden_table` 3. `findNearestGatheringBuilding` picks the **highest level
+      reachable**, then the nearest of that level — so a colony that builds a table actually gathers there.
+- [x] **New Lounging state** — `PAWN_STATE.LOUNGING` + `findNearestSeatBuilding` → `tryRouteToLounge` →
+      `handleLounging`, cloned from the Socialising path. Declared in **needs.jsonc `states`** (so
+      `stateRegistry.test.ts` derives it) + `STATE_HANDLERS`. Seats are marked `buildingProperties.seat`.
+- [x] **Chair tiers → comfort** — the lounge fill rate scales with THAT SEAT's own material-adjusted comfort,
+      so a couch fills faster than a stool and a mammoth-wool bench beats a goat-wool one.
+- [x] **Tiered `comfortable` condition** — content → comfy → cosy → pampered, each deepening `fatigueRate`
+      (0.97→0.80) and `relaxationRate` (0.90→0.60), + `cond_comfortable` (+5 mood). Granting needed **zero
+      code**: it uses the existing data-driven `driver` block (`need: comfort, onset: 70`, no `lethalSeverity`
+      → pure buff). The `relaxationRate` wire was added to `conditionNeedMultipliers` + the relaxation decay.
+- [x] **Bed tier → comfort + well-rested** — a bed fills `comfort` while the pawn sleeps (scaled by that
+      bed's comfort; bare ground gives nothing) and waking from a real bed stamps the new timed
+      **`well_rested`** buff (`workEfficiency` 1.05, `fatigueRate` 0.95, `cond_well_rested` +4 mood).
+- [x] **Furniture ladder completed** — seats now cover EVERY age (log_stool prim:2 → wicker_chair prim:3 →
+      tacked_chair copper:2 → padded_bench bronze:1 → cushioned_chair/couch iron:1 → armchair steel:1), plus
+      `wool_tick_bed` (bronze:1) filling the copper/bronze bed gap and `hewn_table` (prim:3). Metal tiers are
+      gated by a **fastener component**, never raw bars — the ladder is cordage → **`copper_tack` (new)** →
+      bronze_nail → iron_nail → steel_rivet.
+
+**STILL OPEN:**
 - [ ] (optional) **positive `cond_socialised`** — a timed mood lift after socialising (today social only clears
       the negative `restless`/`starved_company` bands, no positive thought).
-- [ ] **Validate the intended loop end-to-end:** kill woolly animals → wool → better beds/chairs → comfort
-      meter ↑ → `comfortable` (slower fatigue + mood ↑) → higher productivity.
+- [ ] **Comfort BAR in the UI** — `PawnNeeds.svelte` hardcodes each need's bar and has no comfort row, so the
+      meter drives the sim but the player can't see it. (Mirror the relaxation row, which shows below a threshold.)
+- [ ] **Validate the FULL chain end-to-end:** kill woolly animals → wool → *build* the furniture → comfort ↑ →
+      `comfortable` → productivity. The comfort half is headless-verified above, but with dev-spawned furniture —
+      the harvest→build half has NOT been driven.
 
 ## Other categories (not yet audited)
 

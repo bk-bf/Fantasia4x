@@ -17,7 +17,7 @@
     "researchRequired": null,
     "upkeepCost": {},
     "effects": {"warmth": 0.3, "cookingEnabled": true},
-    "buildingProperties": {"gathering": true},
+    "buildingProperties": {"gathering": true, "gatheringLevel": 1},
     "storageCapacity": {},
     "requiresLighting": true,
     "maxFuel": 120,
@@ -45,7 +45,7 @@
     "researchRequired": null,
     "upkeepCost": {},
     "effects": {"warmth": 0.6, "cookingEnabled": true, "boilingEnabled": true, "isFire": 1},
-    "buildingProperties": {"gathering": true},
+    "buildingProperties": {"gathering": true, "gatheringLevel": 2},
     "storageCapacity": {},
     "requiresLighting": true,
     "maxFuel": 240,
@@ -573,6 +573,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
+    "buildingProperties": {"gathering": true, "gatheringLevel": 3},
     "effects": {"comfort": 0.3},
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
@@ -1477,6 +1478,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
+    "buildingProperties": {"gathering": true, "gatheringLevel": 2},
     "effects": {"comfort": 0.15, "beauty": 0.1},
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
