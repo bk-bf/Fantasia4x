@@ -39,7 +39,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [x] heartwood_joiner: make_{heartwood,moonwood,ironwood,emberwood}_plank
 - [x] hide_rack⚙: make_cured_{thin,light,sturdy,heavy,thick}_hide, cure_beast_hide
 - [x] tanning_rack: make_{thin,light,sturdy,heavy,thick}_leather, harden_boiled_leather
-- [ ] ⚠ tanning_bucket_station⚙: tan_{thin,light,sturdy,heavy,thick}_leather_bucket — ALL 5 SHADOWED by tanning_rack `make_*_leather` (whole station dead; needs per-recipe card or prune)
+- [ ] ⚠ tanning_bucket_station⚙: tan_{thin,light,sturdy,heavy,thick}_leather_bucket — ALL 5 SHADOWED by tanning_rack `make_*_leather` (whole station dead). **RESOLUTION: folded into the Tanning chain redesign below (remove the rack; buckets become the only tanning path).**
 - [x] beast_tanning_bucket⚙: tan_beast_leather, tan_scale_plate
 - [x] hearth: make_animal_fat, boil_bone_glue, boil_hide_glue — ⚠ `make_ash` SHADOWED by burn_charcoal byproduct
 - [x] campfire (cooking): make_spit_meat, make_{small,fine,lavish}_stew, make_pottage, brew_herb_tea, make_clay_cooking_pot
@@ -63,7 +63,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [x] bloomery⚙: make_iron_bar
 - [x] finery_forge⚙: make_steel_bar
 - [x] crucible_steelworks: make_crucible_steel
-- [ ] ⚠ blast_furnace: smelt_blast_steel — SHADOWED by finery `make_steel_bar` (bulk-steel path dead; keep + expose or prune)
+- [ ] ⚠ blast_furnace: smelt_blast_steel — SHADOWED by finery `make_steel_bar`. **RESOLUTION: folded into the Steel chain realism rework below — BOTH recipes are metallurgically wrong and get replaced, not deduped.**
 - [x] clockwork_bench: make_mechanism
 - [x] anvil — tools: make_{iron,steel}_{tongs,axe,hammer,shovel,hoe}
 - [x] anvil — fasteners/wire: make_iron_nail, make_steel_rivet, draw_rebar, draw_iron_wire, make_mail_rings
@@ -130,7 +130,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - Yield-vs-speed rule (established): butchery stations give a **yield** bonus (better tools → more off a carcass); stations where more-out-than-in makes no sense (tools, smelting ore→ingots, cooking) give **speed** (`craftingBonus`) instead. Fires give more max fuel. Generic stations already give speed; butchery yield now wired.
 - [x] Butchery yield bonus wired + tier ladder (`butcheryTier`): dressing_stone/flensing/altar render lower recipes and their `butcheryYieldBonus` (+25/+45%) multiplies output
 - [x] ⚠→fixed: great-carcass renders/flenses + humanoid `*_remains` + jackal/quillback/olm were UNREACHABLE (their meat/bones dispatched to a different recipe). Root: butchery dispatched by output meat, and the carcass-card path was dead (`isCarcass` never set → carcass cards never rendered). Fix: `isCarcass` derived from `category==='carcass'` at the item index; orders carry `recipeId`; `craftItem`/`canQueueCraft`/`completeCraftOrder` dispatch butchery by the CARCASS (`resolveCarcassRecipe`, picks the best built station via `butcheryTier`); crafting-screen carcass cards gated on `category` + yields from the recipe. Verified headless: great_wolf→render_great_wolf, goblin→make_goblin_remains, dire_wolf→make_dire_wolf @flensing_table.
-- [ ] ⚠ 7 NON-butchery recipes still shadowed (share an output at a different station): `smelt_blast_steel` (vs make_steel_bar), `grind_mana_crystal` (vs grind_gem_dust), `make_ash` (vs burn_charcoal byproduct), `tan_{thin,light,sturdy,heavy,thick}_leather_bucket` (vs tanning_rack). The `recipeId`-on-order plumbing is in place; they need the crafting screen to offer a card PER RECIPE for multi-recipe outputs (or removal if redundant). **Your call: per-recipe cards vs prune.**
+- [ ] ⚠ 7 NON-butchery recipes still shadowed (share an output at a different station). **RESOLUTION (see "Material & production reworks" below):** `tan_*_leather_bucket` (×5) → Tanning redesign (rack removed); `smelt_blast_steel` → Steel rework (both steel recipes replaced); `grind_mana_crystal` → Crystal/magic-reagent rework (redesign, not prune — see below); `make_ash` → unshadow (Ash economy section — hearth ash path earns its place). NEITHER is a prune.
 - [ ] Gating: needs knife/butchery tool; T2 needs tier 2 — below-tier pawn blocked
 - [ ] Spoiled carcass yields proportionally less (conditionMult)
 - [ ] butcher_spot T0 — all common game: make_{rabbit,venison,wolf,bear,boar,elk,goat,chicken,rat,aurochs,mammoth,owlbear,sabretooth,crocodile,hippogriff,hoarfowl,worg,jackal,quillback,olm}_meat, harvest_thornwood_silk
@@ -145,6 +145,218 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [ ] Butchery skill raises yield; recipe→discipline routing correct (craftDiscipline)
 - [ ] Zero-skill pawn still completes T0 (no bootstrap deadlock); tool-tier gates only where intended
 - [ ] Quality matters downstream (better weapon/armor/tool stats into combat/work)
+
+## Material & production reworks (PROPOSED — track only, not implemented)
+
+> These supersede the "shadowed recipe" ⚠ notes above (lines: tanning_bucket_station, blast_furnace,
+> the 7-shadowed list): the shadows were masking that whole CHAINS need reworking, not just
+> de-duplicating. The shadow-bug's own fix = **option 1, prune the loser** — but for tanning & steel
+> the prune is absorbed into the reworks below (the "losing" recipes are being replaced, not just cut).
+
+### Tanning chain redesign + hide/leather variety split
+Reference: VilesMods "Hell-Bent for Leather" (mandatory tanning step, per-animal leathers) + Hardcore SK.
+
+**Current chain (3 stages):** raw pelt/hide → **cure** (passive, `hide_rack` "Curing Frame", +ash×2 or
+salt×1) → **tan** (TWO competing paths: active `tanning_rack` +bark, OR passive `tanning_bucket_station`
+fuelled by `tanning_brine`) → **harden** (`tanning_rack`, beast_leather + water → boiled_leather). Brine
+brewed passively at `brewing_barrel` (bark+salt+ash+water). ⚠ Bucket recipes take NO material input —
+brine is consumed only as station FUEL (`defaultAllowedFuelItemIds`), so it's "cured hide → leather for free".
+
+**Decided direction:**
+- [ ] **Remove `tanning_rack` entirely.** Tanning happens only at bucket stations (`tanning_bucket_station`
+      / `beast_tanning_bucket`), passive. Prune the 5 `make_*_leather` rack recipes (this unshadows the buckets).
+- [ ] **Relocate `harden_boiled_leather`** off the rack (→ beast bucket or a dedicated hardening step).
+- [ ] Bucket tanning must consume **real materials** — brine as a LISTED input (± tannin/bark), not just as
+      fuel. Close the "free leather" hole.
+- [ ] Keep **curing passive** at the Curing Frame (already correct — curing preserves the raw skin so it
+      doesn't spoil; that IS its purpose, keep it).
+- [ ] Keep an early **`make_ash`** source reachable (see Shadow resolution below): ash is a core tanning
+      reagent (every cure + every brine needs it) — the whole chain must not hard-gate on a charcoal pit.
+
+**Hide/leather split** — no more collapsing distinct animals into one leather. Today wolf/boar/worg → one
+"sturdy" leather; elk/aurochs → one "heavy"; and jackal literally drops `wolf_hide`. Proposed: each hide
+tans to its OWN leather, differentiated along axes **suppleness↔stiffness · insulation · armor · durability
+· weight · beauty/value** — so downstream recipes pick the leather whose identity fits (supple buckskin →
+light garments; stiff oxhide/boarhide → boiled cuirass & shields; warm bearhide/wolf → winter cloaks;
+sabretooth/direwolf → prestige).
+
+| Source | Raw hide (today → proposed) | Leather (proposed) | Identity |
+| --- | --- | --- | --- |
+| rabbit | rabbit_pelt | coney_fur | supple · warm · v.low armor · trim/lining, tiny yield |
+| giant_rat | rat_pelt | vermin_hide | poor · low · v.low · bottom-tier cheap |
+| deer | deer_hide | buckskin | supple · low insul · low armor · fine light clothing |
+| goat | goat_hide | kidskin | supple · low · low · soft (goat also yields wool) |
+| wolf | wolf_hide | wolf_leather | med-stiff · warm · med · winter pelt |
+| worg | worg_hide | worg_leather | denser than wolf · warm · med-hi · dire flavour |
+| jackal | ⚠ wolf_hide → jackal_hide | jackal_leather | thin · heat-resistant · low · arid, light |
+| boar | boar_hide | boarhide | stiff/bristly · low insul · med · shields/hard backing |
+| elk | elk_hide | elk_leather | tough+supple · med · med-hi · general armour |
+| aurochs | aurochs_hide | oxhide | v.stiff · med · high · heavy; boiled armour/straps/shields |
+| bear | bear_pelt | bearhide | thick · v.warm · high · rugs/heavy coats |
+| cave_bear | cave_bear_pelt | cave_bear_hide | thickest · top insul · high · boss-tier |
+| owlbear | owlbear_pelt | owlbear_leather | coarse/tough · med · high · exotic |
+| sabretooth | sabretooth_pelt | sabretooth_leather | dense fur · high insul · med · beauty/prestige |
+| mammoth | mammoth_fur | mammoth_leather (+ fur → wool) | massive · extreme insul · high · heavy, arctic |
+| hippogriff | hippogriff_feathered_hide | hippogriff_leather | light/feathered · med · low-med · beauty, aerial |
+| dire/great wolf | dire_wolf_pelt | direwolf_leather | prime · warm · high · beauty |
+| mire_crocodile | croc_scaled_hide | crocodile_scale (`scale_plate`) | rigid scutes · low insul · v.high armor · own line, NOT "leather" |
+
+- [ ] Fix `jackal` dropping `wolf_hide` → its own `jackal_hide`.
+- [ ] Decide cure-stage shape: per-hide cured intermediate (~18 hand recipes) vs a **generic passive cure**
+      (rawHide + preservative → cured-of-same-species via category/dynamic recipe). Recommend generic.
+- [ ] Rebalance downstream armour/clothing recipes to request the leather whose identity fits (not a flat tier).
+
+### Wool sourcing & furniture materials
+**Current:** only `mountain_goat` + `woolly_mammoth` carcasses drop `coarse_wool`; NO shearing (ANIMAL-HUSBANDRY
+Phase D wants a `sheep` + live-shear — still open). Wool ladder exists at `weaving_frame`
+(`coarse_wool`→`wool`→`fine_wool`→`woolcloth`, + `felt`). Wool items ALREADY carry a `material.building`
+comfort/insulation block (wired as a furniture material) — the hook is in place.
+
+**Decided direction** (wool = dominant furniture material; leather only gates top-tier):
+- [ ] Add a wool/fur output to every **wool-yes** carcass butchery recipe (mirror `make_goat_meat`'s
+      `coarse_wool` line — butchery gives BOTH hide→leather AND wool/fur→soft-goods). Wool-yes carcasses
+      lacking it today: aurochs, bear/cave_bear/great_bear, owlbear, worg, jackal, sabretooth,
+      wolf/dire_wolf/great_wolf; boar (bristly, borderline); rabbit (tiny). goat + mammoth already have it.
+- [ ] Grade wool by source: true fleece (goat/sheep/mammoth) → `coarse_wool`→fine ladder; predator/ursine
+      coats → a parallel **fur/pelt-down** soft-goods input (stuffing/trim). Decide: one `coarse_wool` bucket
+      vs distinct `bear_fur`/`wolf_fur` grades.
+- [ ] Re-gate furniture materials: mid beds & seating built from **wool** (wool-stuffed mattress = the
+      "proper bed"; wool-cushioned chair); reserve **leather** for top beds, armchairs, couches only.
+- [ ] Cross-link ANIMAL-HUSBANDRY: live-shear (renewable) + butchery-drop (from kills) are complementary
+      wool sources — both feed the same ladder.
+
+### Steel chain — realism rework + specific steel types
+**Current recipes are metallurgically INVERTED.** `make_steel_bar` (finery_forge: iron_bar+coal+limestone
+→ steel) — the real finery forge DECARBURIZES pig iron INTO wrought iron; it never made steel.
+`smelt_blast_steel` (blast_furnace: iron_bar → steel×3) — a real blast furnace consumes ORE → **pig iron**,
+not bars → steel. `iron_bar` from the bloomery ≈ wrought iron already (a fine base). Goal: replace generic
+"steel" with a **carbon-content + process-provenance material FAMILY** — differs deliberately from
+RimWorld/HSK's single upgraded ingot: here steel is NOT a tier, each type is use-locked with orthogonal
+hardness/toughness tradeoffs (the historical difficulty of hitting the ~0.2–2.1% carbon window is the tension).
+
+**Bases (non-steel):** `pig_iron` (blast furnace, brittle high-C, castable only), `iron_bar` = wrought iron
+(bloomery / finery-decarbed pig iron; soft/tough/weldable; cementation feedstock).
+
+**Full family (6)** — decided scope:
+
+| Steel | Process / station | Hard | Tough | Cost | Use-lock |
+| --- | --- | --- | --- | --- | --- |
+| `bloom_steel` | bloomery + carburize (primitive) | med | med | low | early weapons/tools |
+| `blister_steel` | cementation furnace (passive; wrought iron + charcoal, long bake) | med-hi | med | med | tools, heads, springs |
+| `shear_steel` | forge-fold blister at anvil | high | med-hi | med-hi | quality blades/edge tools |
+| `crucible_steel` *(exists)* | crucible steelworks (sealed melt) | v.high | med (brittle untempered) | high | premium blades, razors, fine tools |
+| `pattern_welded` | anvil forge-weld (wrought iron + high-C steel) | high | high | v.high (labour) | legendary swords |
+| `mild_steel` | puddling / Bessemer at blast tier (bulk) | low-med | high | low per-unit, high tech gate | plate armour, structural, mass tools |
+
+- [ ] Replace `make_steel_bar` + `smelt_blast_steel` with the ore → pig_iron → wrought → steel chain above.
+- [ ] Add stations: `cementation_furnace` (blister), a puddling/bessemer step (mild). `crucible_steelworks` exists.
+- [ ] Differentiate downstream: blades request crucible/pattern_welded/shear; plate requests mild; springs
+      request blister; cast goods request pig_iron; fittings request wrought iron.
+- [ ] Add each steel's material stats (hardness → armour-pen/edge, toughness → shatter resistance) to items.
+- [ ] This replaces the blast-vs-finery shadow entirely — no prune needed, both current recipes are wrong.
+
+### Crystal / magic-reagent chain — rework (make it as intricate as steel)
+
+**AUDIT — crystal types that exist, sources, sinks** (all minable crystals come from `crystal_formation`
+subterrain veins + dig sites; deplete, no regrowth; cluster in the mountain interior):
+
+| Item(s) | category / affinity | Mined from | Sinks (uses) |
+| --- | --- | --- | --- |
+| mundane gems: ruby, sapphire, emerald, topaz, amethyst, citrine, moonstone | `crystal` | Ruby/Sapphire/…Crystals nodes | `cut_*` → jewelry (rings/amulets/crowns/pendants); cut ruby/sapphire/topaz → element staves |
+| infused gems: infused_ruby…infused_moonstone | `magic_crystal` | occasional (0–1) from the same nodes + star_geode / amethyst node | `attune_*` → `attuned_*` → jewelry + T2 staves; **grind_gem_dust → gem_dust×2** |
+| `mana_crystal` | `magic_crystal` / arcane | `mana_crystal_vent`, `buried_hoard` | ⚠ ONLY `grind_mana_crystal` → gem_dust×4 (SHADOWED = dead). Minable but effectively useless. |
+| `star_shard` | `magic_crystal` / arcane | `star_geode`, `sunken_relic` | exactly ONE sink: `make_stargazer_circlet` |
+| `voidshard` | `magic_crystal` / necrotic | `voidshard_cluster`, `sunken_relic` | ⚠ ZERO sinks — item desc says "awaiting its (blocked) recipes". Fully dead. |
+| `arcane_resin` | `magic_crystal` | crafted (resin + gem_dust), not mined | ⚠ ZERO consumers — produced, never used. Dead-ended. |
+| `gem_dust` | reagent | grind_gem_dust / grind_mana_crystal | the FUNNEL: ~13 recipes (arcane_robe, magic_concrete, arcane_resin, all potions/draughts/elixirs/tonics, magic_alloy_bar, enchant_thread, runed_block) |
+
+**Finding — same anti-pattern as generic steel.** `mana_crystal` is NOT a deprecated duplicate (own vent +
+lore); the real problem is that ALL crystal variety collapses into one generic **`gem_dust`** that feeds
+everything undifferentiated. Elemental/affinity identity EXISTS on the inputs (ruby=fire/ember, sapphire=
+frost/rime, topaz=lightning/spark; mana=arcane, void=necrotic) but is WASHED OUT at the dust step. star_shard
+(1 use), voidshard (0), arcane_resin (0) are stubs.
+
+**Decided direction — a real multi-stage, affinity-differentiated chain (parallel to the 6-steel family):**
+- [ ] **Differentiate the dust by element/affinity** so downstream items require the MATCHING crystal, not
+      generic dust (use-lock, like steel): ember_dust (ruby)→fire gear, rime_dust (sapphire)→frost, spark_dust
+      (topaz)→lightning, arcane_dust (mana_crystal)→neutral/high enchant. Kills the identity-washout hole.
+- [ ] **Give `mana_crystal` a distinct high-grade role** (arcane — the pure/neutral top reagent: strongest
+      enchants / a mana-charge system / base for magic_alloy) instead of "×4 gem dust". Unshadows it AND makes
+      mining its vent worthwhile. (This resolves the grind_mana_crystal shadow by REDESIGN, not prune.)
+- [ ] **Wire up `voidshard`** (necrotic — the cursed/dark path: high power + a deliberate downside) — currently dead.
+- [ ] **Expand `star_shard`** beyond the single circlet (celestial/arcane enchant line).
+- [ ] **Give `arcane_resin` consumers** (produced but used nowhere) — or prune it.
+- [ ] Multi-stage refinement matching steel's depth: raw crystal → cut/refined → attuned/charged → alloyed/inscribed.
+
+### Ash economy — producers, sinks, and the make_ash decision
+
+**AUDIT:**
+- Producers: `make_ash` (hearth **primitive:1**, dedicated: green/dry firewood or branches → ash),
+  `burn_charcoal` (charcoal_pit **primitive:2**, byproduct alongside charcoal), `make_coke` (charcoal_pit
+  primitive:2, byproduct).
+- Consumers: **curing** (hide_rack primitive:2, ash×2–4 per hide — the big early sink, but every cure has a
+  `salt` alternative), `brew_tanning_brine`/`brew_beast_brine` (brewing_barrel, ash×1–2), `make_soap`
+  (alchemy_lab, ash×2, basic_alchemy-gated). Salt (the ash alt) comes from mined `rock_salt`.
+
+**Q1 — worth grinding ash BEFORE charcoal? Finding: yes, in a real window.** The main sink (curing) is
+primitive:2, same tier as the charcoal_pit — but the pit's ash is a *byproduct of making charcoal*, and
+charcoal isn't needed until iron smelting (bloomery iron:1, much later). So a primitive leatherworking colony
+has no reason to build a charcoal_pit yet; `make_ash` at the hearth (primitive:1) is their only practical ash
+source — unless they have mined salt (the cure alternative). **So keep `make_ash` reachable** — it earns its
+place for a no-salt primitive path.
+- [ ] Unshadow `make_ash` (per-recipe card or list-order) so the hearth ash path is reachable.
+
+**Q2 — should ash be a byproduct of fires in general (realistic)?** Today only the charcoal_pit emits
+byproduct ash; cooking/baking/kiln/smelting fires emit none. Universal fire-ash is realistic BUT floods supply
+— current sinks can't absorb a baking-heavy colony's output, so ash becomes a waste-management resource.
+**Decision required, must be DELIBERATE:**
+- [ ] EITHER expand ash sinks FIRST (real ones: potash → `fertiliser` at the compost_bin; lye → soap/leaching;
+      ash-glaze for pottery; concrete/mortar filler) so universal ash byproduct is absorbed,
+- [ ] OR treat ash-as-waste intentionally (a disposal/compost loop) — realistic, but only if designed on purpose.
+- [ ] Until one is chosen, do NOT sprinkle ash byproducts onto fire recipes (avoids an unmanaged waste leak).
+
+## Furniture → pawn systems (comfort / relaxation / socialisation) — AUDIT + proposal
+
+- [x] AUDITED (three code sweeps) — findings below. Nothing implemented yet. Headline: **most of the target
+      system is already scaffolded** — this is EXTEND-and-rewire, not build-from-scratch.
+
+**EXISTS today:**
+- Beds are the only interactive furniture. 5 tiers (`sleeping_spot`→`hay_bed`→`hide_bed`→`leather_bed`→
+  `feather_bed`) carry `sleepQuality`/`fatigueRecovery` → measurably faster rest vs the ground (0.58/s). So
+  **"bedroom furniture gives rest-speed bonuses" is ALREADY DONE.** (Only `feather_bed` also carries `comfort` 0.4.)
+- A `relaxation` NEED already exists (needs.jsonc; inverted 0–100, decay 0.13/s) + a `Socialising` FSM state —
+  the exact template for a new comfort meter + relax state.
+- Socialising is satisfied at **gathering buildings** (`buildingProperties.gathering` = campfire + hearth only,
+  radius 3), NOT at tables/chairs.
+- `comfort` exists only as a building/material **amenity number** (radius 2), feeding 3 small ambient bonuses:
+  sleep speed, wound-heal speed, mood lift (cap +3). Chairs/stools/tables/couches emit comfort+beauty but are
+  **never sat on or pathed to** — pure scenery.
+- Condition plumbing already supports the target: `intoxicated` is a positive-style TIERED, timed,
+  severity-decaying condition (the template for a tiered `comfortable`); conditions can slow fatigue
+  (`fatigueRate < 1`, e.g. `sheltered` 0.9) and boost mood (`"mood": "cond_*"` → mood.jsonc).
+
+**MISSING (the work to track):**
+- [ ] **`comfort` pawn meter/need** — model on `relaxation` (decay block in `processNeedsTick`, kill-switch,
+      `moodBands`, `case 'comfort'` in `computeMoodTarget`). Fed by the comfort of furniture the pawn sits on/near.
+      ⚠ NAME COLLISION: temperature "comfort band" (cold/heat exposure, `comfortRange`) already exists — keep the
+      furniture meter distinct in naming/docs so the two axes don't merge.
+- [ ] **Tables/chairs as socialisation anchors** — today only fires. Give dining/gathering furniture
+      `gathering: true` (or a new anchor flag) so pawns gather at a table, not just the hearth.
+- [ ] **New "sit & relax at table" state** — clone the Socialising path (`tryRouteToSocialise` →
+      `handleMovingToNeed` → `handleSocialising`): pawn paths to a chair around a table, sits, fills
+      relaxation/comfort. Register the state in **needs.jsonc `states`** (not states.jsonc — the split
+      `stateRegistry.test.ts` enforces) + add to `STATE_HANDLERS`.
+- [ ] **Chair tiers → comfort** — map each seat/couch tier's `comfort` value into the comfort-meter fill rate
+      (better chair = more comfort per sit).
+- [ ] **Tiered `comfortable` condition** — model on `intoxicated`: stages (e.g. content → comfy → cosy →
+      pampered), each `fatigueRate < 1` (slows tiring) + `"mood": "cond_comfortable"` (mood boost). Granted at
+      high comfort, decays when the pawn leaves comfortable surroundings. Add `cond_comfortable` tiers to mood.jsonc.
+- [ ] **Bed tier → rested/comfort link** — sleeping in a good bed should feed the comfort meter / grant a
+      "well-rested" buff (no positive rested/well_rested condition exists today).
+- [ ] (optional) **positive `cond_socialised`** — a timed mood lift after socialising (today social only clears
+      the negative `restless`/`starved_company` bands, no positive thought).
+- [ ] **Validate the intended loop end-to-end:** kill woolly animals → wool → better beds/chairs → comfort
+      meter ↑ → `comfortable` (slower fatigue + mood ↑) → higher productivity.
 
 ## Other categories (not yet audited)
 
