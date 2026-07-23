@@ -45,8 +45,8 @@ describe('comfort loop — headless (pawn lounges on a seat → comfort fills �
     const session = new HeadlessSession();
     await session.start(
       buildScenario({
-        seed: 12,
-        map: { w: 16, h: 16 },
+        seed: 11,
+        map: { w: 18, h: 18 },
         researchMaxTier: 9,
         toolTier: 3,
         pawns: [{ count: 2, skillLevel: 10, needs: { comfort: 20, hunger: 5, fatigue: 5 } as never }],
