@@ -50,3 +50,6 @@ src/lib/sim-core-pkg/
 
 # Per-user MCP config (machine-local paths; see AGENTS.md → Performance Profiling)
 .mcp.json
+
+# Local architecture vault (Obsidian/Foam notes; not version-controlled for now)
+.docs/architecture/vault/
