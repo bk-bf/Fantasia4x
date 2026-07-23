@@ -2393,7 +2393,7 @@ class CombatServiceImpl implements CombatService {
    *  `blockBonus`, halved vs a ranged attack. Never weight-penalized — the heavy tank's negation. */
   private blockChance(defender: Pawn | Mob, ranged: boolean): number {
     const bonus = this.shieldDef(defender)?.armorProperties?.blockBonus ?? 0;
-    const base = pawnStatService.evaluateStat('block', defender) + bonus;
+    const base = (pawnStatService.evaluateStat('block', defender) + bonus) * this.conditionMult(defender, 'block');
     return clamp(base * (ranged ? RANGED_BLOCK_MULT : 1), 0, BLOCK_CAP);
   }
 

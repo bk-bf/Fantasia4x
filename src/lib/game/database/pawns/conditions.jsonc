@@ -703,7 +703,7 @@
         "transient"  : true,
         "description": "Swinging a two-handed weapon with a shield still strapped to the off-arm. Neither has room to work, so the guard drops, the blow drags in slow and weak, and the point wanders wide.",
         "color"      : "#8D6E63",
-        "modifiers"  : {"dodge": 0.5, "hitChance": 0.5, "attackSpeed": 0.5, "weaponDamage": 0.5, "critChance": 0.5}
+        "modifiers"  : {"dodge": 0.5, "block": 0.5, "hitChance": 0.5, "attackSpeed": 0.5, "weaponDamage": 0.5, "critChance": 0.5}
     },
     {
         "id"         : "eating",
