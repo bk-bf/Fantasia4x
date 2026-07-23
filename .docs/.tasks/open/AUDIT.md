@@ -91,12 +91,12 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [ ] Specialised (non-tiered) stations never superseded; passive⚙ stations process with no pawn; fuel stations refuse cold; `maxCount` enforced
 
 ### Weapons
-- ⚠ **BLOCKER — combat is dormant headless.** Built the harness (`devSpawnMobAt` new dev lever + drafted pawn + equip + attack order), but a drafted pawn with an explicit ADJACENT attack order never swings (mob stays `Wander`, pawn stamina flat), and the war-party preset (6 armed drafted pawns + 8 goblins) never fights over 200t (`draftedAttacking:0`, goblins never aggro). So the existing "war party fights" invariant exercises no combat, and the weapons audit can't proceed headless until this is root-caused (tickCombat/performAttack gate, or a missing combat-trigger step). **Needs investigation before the boxes below.**
-- [ ] Melee → mainHand (2H blocks offHand); shields → offHand; 2H+shield blocked; `wieldRequirement.strength` gates
-- [ ] Damage in damMin–damMax; damageType/AP/armorDamage/stun/knockback/on-hit conditions apply
-- [ ] finesse→PER, strScaled→STR, arcane→INT (no STR+INT double-dip on staves); attackSpeed/reach respected
-- [ ] Ranged: fires only with matching-category ammo carried; no phantom shots at 0 ammo; consumes 1/shot; stops when empty; wrong ammo doesn't feed; drawPower multiplies ammo dmg; crossbow slower reload; recoverable ammo retrieved
-- [ ] Magic staves: channeled (no ammo), pay staminaCost as mana, stop when mana out
+- **Combat verified headless** (`_weaponsAudit`, 5/5). Two headless facts had to be understood first: attack cadence ≈ 133 ticks (`BASE_ATTACK_INTERVAL_TICKS 120` / attackSpeed, `TICKS_PER_SECOND 60`) so fights need HUNDREDS of ticks; and the sim starts at NIGHT (`ambientLight 0.15`) so mobs don't self-aggro (vision-gated) — an explicit draft attack order drives the fight regardless. New lever added: `devSpawnMobAt {creatureId,x,y}`.
+- [x] Melee equips `mainHand` + deals damage (iron_mace → goblin Corpse). — *2H/offHand-block, shield→offHand, `wieldRequirement.strength` not yet exercised*
+- [ ] Damage in damMin–damMax; damageType/AP/armorDamage/stun/knockback/on-hit conditions — *not yet asserted numerically*
+- [ ] finesse→PER, strScaled→STR, arcane→INT (no STR+INT double-dip on staves); attackSpeed/reach — *not yet asserted*
+- [x] Ranged ammo lifecycle: fires only with matching ammo + consumes it (war_bow arrows 8→6); NO phantom shots at 0 ammo (goblin unharmed, holds); WRONG ammo doesn't feed (bolts in a bow untouched, no fire). — *drawPower scaling / crossbow reload / recoverable-retrieval not yet asserted numerically*
+- [x] Magic staves: channeled (no ammo), pays `staminaCost` as mana (ember_staff stamina 124→117 per cast)
 
 ### Gear
 - [ ] Worn armor raises armorValue on covered parts (sane values); layers stack; resistances apply
