@@ -127,7 +127,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - Yield-vs-speed rule (established): butchery stations give a **yield** bonus (better tools → more off a carcass); stations where more-out-than-in makes no sense (tools, smelting ore→ingots, cooking) give **speed** (`craftingBonus`) instead. Fires give more max fuel. Generic stations already give speed; butchery yield now wired.
 - [x] Butchery yield bonus wired + tier ladder (`butcheryTier`): dressing_stone/flensing/altar render lower recipes and their `butcheryYieldBonus` (+25/+45%) multiplies output
 - [x] ⚠→fixed: great-carcass renders/flenses + humanoid `*_remains` + jackal/quillback/olm were UNREACHABLE (their meat/bones dispatched to a different recipe). Root: butchery dispatched by output meat, and the carcass-card path was dead (`isCarcass` never set → carcass cards never rendered). Fix: `isCarcass` derived from `category==='carcass'` at the item index; orders carry `recipeId`; `craftItem`/`canQueueCraft`/`completeCraftOrder` dispatch butchery by the CARCASS (`resolveCarcassRecipe`, picks the best built station via `butcheryTier`); crafting-screen carcass cards gated on `category` + yields from the recipe. Verified headless: great_wolf→render_great_wolf, goblin→make_goblin_remains, dire_wolf→make_dire_wolf @flensing_table.
-- [ ] ⚠ 7 NON-butchery recipes still shadowed (share an output at a different station). **RESOLUTION (see "Material & production reworks" below):** `tan_*_leather_bucket` (×5) → Tanning redesign (rack removed); `smelt_blast_steel` → Steel rework (both steel recipes replaced); `grind_mana_crystal` + `make_ash` → keep-both via per-recipe cards (prune would delete legit sources — winner decision pending).
+- [ ] ⚠ 7 NON-butchery recipes still shadowed (share an output at a different station). **RESOLUTION (see "Material & production reworks" below):** `tan_*_leather_bucket` (×5) → Tanning redesign (rack removed); `smelt_blast_steel` → Steel rework (both steel recipes replaced); `grind_mana_crystal` → Crystal/magic-reagent rework (redesign, not prune — see below); `make_ash` → unshadow (Ash economy section — hearth ash path earns its place). NEITHER is a prune.
 - [ ] Gating: needs knife/butchery tool; T2 needs tier 2 — below-tier pawn blocked
 - [ ] Spoiled carcass yields proportionally less (conditionMult)
 - [ ] butcher_spot T0 — all common game: make_{rabbit,venison,wolf,bear,boar,elk,goat,chicken,rat,aurochs,mammoth,owlbear,sabretooth,crocodile,hippogriff,hoarfowl,worg,jackal,quillback,olm}_meat, harvest_thornwood_silk
@@ -252,13 +252,65 @@ hardness/toughness tradeoffs (the historical difficulty of hitting the ~0.2–2.
 - [ ] Add each steel's material stats (hardness → armour-pen/edge, toughness → shatter resistance) to items.
 - [ ] This replaces the blast-vs-finery shadow entirely — no prune needed, both current recipes are wrong.
 
-### Shadow-bug resolution (option 1 = prune) — remaining INDEPENDENT cases
-- [ ] `grind_mana_crystal` vs `grind_gem_dust` (both → `gem_dust`): NOT truly redundant — `mana_crystal` is a
-      richer 4-dust sink; infused gems the 2-dust path. A prune deletes a legit source → **recommend keep both
-      via per-recipe cards** instead. Needs a winner decision.
-- [ ] `make_ash` (hearth) vs `burn_charcoal` byproduct (both → `ash`): `make_ash` is the early ash bootstrap
-      for the tanning chain; charcoal-pit ash is a byproduct. **Recommend keep `make_ash` reachable** (per-recipe
-      card or reorder) rather than prune, since tanning depends on early ash. Needs a decision.
+### Crystal / magic-reagent chain — rework (make it as intricate as steel)
+
+**AUDIT — crystal types that exist, sources, sinks** (all minable crystals come from `crystal_formation`
+subterrain veins + dig sites; deplete, no regrowth; cluster in the mountain interior):
+
+| Item(s) | category / affinity | Mined from | Sinks (uses) |
+| --- | --- | --- | --- |
+| mundane gems: ruby, sapphire, emerald, topaz, amethyst, citrine, moonstone | `crystal` | Ruby/Sapphire/…Crystals nodes | `cut_*` → jewelry (rings/amulets/crowns/pendants); cut ruby/sapphire/topaz → element staves |
+| infused gems: infused_ruby…infused_moonstone | `magic_crystal` | occasional (0–1) from the same nodes + star_geode / amethyst node | `attune_*` → `attuned_*` → jewelry + T2 staves; **grind_gem_dust → gem_dust×2** |
+| `mana_crystal` | `magic_crystal` / arcane | `mana_crystal_vent`, `buried_hoard` | ⚠ ONLY `grind_mana_crystal` → gem_dust×4 (SHADOWED = dead). Minable but effectively useless. |
+| `star_shard` | `magic_crystal` / arcane | `star_geode`, `sunken_relic` | exactly ONE sink: `make_stargazer_circlet` |
+| `voidshard` | `magic_crystal` / necrotic | `voidshard_cluster`, `sunken_relic` | ⚠ ZERO sinks — item desc says "awaiting its (blocked) recipes". Fully dead. |
+| `arcane_resin` | `magic_crystal` | crafted (resin + gem_dust), not mined | ⚠ ZERO consumers — produced, never used. Dead-ended. |
+| `gem_dust` | reagent | grind_gem_dust / grind_mana_crystal | the FUNNEL: ~13 recipes (arcane_robe, magic_concrete, arcane_resin, all potions/draughts/elixirs/tonics, magic_alloy_bar, enchant_thread, runed_block) |
+
+**Finding — same anti-pattern as generic steel.** `mana_crystal` is NOT a deprecated duplicate (own vent +
+lore); the real problem is that ALL crystal variety collapses into one generic **`gem_dust`** that feeds
+everything undifferentiated. Elemental/affinity identity EXISTS on the inputs (ruby=fire/ember, sapphire=
+frost/rime, topaz=lightning/spark; mana=arcane, void=necrotic) but is WASHED OUT at the dust step. star_shard
+(1 use), voidshard (0), arcane_resin (0) are stubs.
+
+**Decided direction — a real multi-stage, affinity-differentiated chain (parallel to the 6-steel family):**
+- [ ] **Differentiate the dust by element/affinity** so downstream items require the MATCHING crystal, not
+      generic dust (use-lock, like steel): ember_dust (ruby)→fire gear, rime_dust (sapphire)→frost, spark_dust
+      (topaz)→lightning, arcane_dust (mana_crystal)→neutral/high enchant. Kills the identity-washout hole.
+- [ ] **Give `mana_crystal` a distinct high-grade role** (arcane — the pure/neutral top reagent: strongest
+      enchants / a mana-charge system / base for magic_alloy) instead of "×4 gem dust". Unshadows it AND makes
+      mining its vent worthwhile. (This resolves the grind_mana_crystal shadow by REDESIGN, not prune.)
+- [ ] **Wire up `voidshard`** (necrotic — the cursed/dark path: high power + a deliberate downside) — currently dead.
+- [ ] **Expand `star_shard`** beyond the single circlet (celestial/arcane enchant line).
+- [ ] **Give `arcane_resin` consumers** (produced but used nowhere) — or prune it.
+- [ ] Multi-stage refinement matching steel's depth: raw crystal → cut/refined → attuned/charged → alloyed/inscribed.
+
+### Ash economy — producers, sinks, and the make_ash decision
+
+**AUDIT:**
+- Producers: `make_ash` (hearth **primitive:1**, dedicated: green/dry firewood or branches → ash),
+  `burn_charcoal` (charcoal_pit **primitive:2**, byproduct alongside charcoal), `make_coke` (charcoal_pit
+  primitive:2, byproduct).
+- Consumers: **curing** (hide_rack primitive:2, ash×2–4 per hide — the big early sink, but every cure has a
+  `salt` alternative), `brew_tanning_brine`/`brew_beast_brine` (brewing_barrel, ash×1–2), `make_soap`
+  (alchemy_lab, ash×2, basic_alchemy-gated). Salt (the ash alt) comes from mined `rock_salt`.
+
+**Q1 — worth grinding ash BEFORE charcoal? Finding: yes, in a real window.** The main sink (curing) is
+primitive:2, same tier as the charcoal_pit — but the pit's ash is a *byproduct of making charcoal*, and
+charcoal isn't needed until iron smelting (bloomery iron:1, much later). So a primitive leatherworking colony
+has no reason to build a charcoal_pit yet; `make_ash` at the hearth (primitive:1) is their only practical ash
+source — unless they have mined salt (the cure alternative). **So keep `make_ash` reachable** — it earns its
+place for a no-salt primitive path.
+- [ ] Unshadow `make_ash` (per-recipe card or list-order) so the hearth ash path is reachable.
+
+**Q2 — should ash be a byproduct of fires in general (realistic)?** Today only the charcoal_pit emits
+byproduct ash; cooking/baking/kiln/smelting fires emit none. Universal fire-ash is realistic BUT floods supply
+— current sinks can't absorb a baking-heavy colony's output, so ash becomes a waste-management resource.
+**Decision required, must be DELIBERATE:**
+- [ ] EITHER expand ash sinks FIRST (real ones: potash → `fertiliser` at the compost_bin; lye → soap/leaching;
+      ash-glaze for pottery; concrete/mortar filler) so universal ash byproduct is absorbed,
+- [ ] OR treat ash-as-waste intentionally (a disposal/compost loop) — realistic, but only if designed on purpose.
+- [ ] Until one is chosen, do NOT sprinkle ash byproducts onto fire recipes (avoids an unmanaged waste leak).
 
 ## Furniture → pawn systems (comfort / relaxation / socialisation) — AUDIT + proposal
 
