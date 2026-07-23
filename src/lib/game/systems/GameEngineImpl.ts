@@ -1427,7 +1427,11 @@ export class GameEngineImpl implements GameEngine {
       // here without a pawn job, even at a mixed station (stone_forge smelts passively but its
       // shaping recipes stay pawn-worked). `isPassive` falls back to the legacy passive-station set.
       if (
-        !recipeService.isPassive(recipeService.getRecipeForItem(order.item.id)) &&
+        !recipeService.isPassive(
+          order.recipeId
+            ? recipeService.getRecipeById(order.recipeId)
+            : recipeService.getRecipeForItem(order.item.id)
+        ) &&
         !recipeService.isPassiveStation(order.stationType)
       )
         continue;

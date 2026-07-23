@@ -92,6 +92,14 @@ export interface GameState {
    *  metabolism in `entityLifecycle`. Toggled via the `devToggleNeed` command; rides gameState so
    *  the worker (and a headless session) see it. Absent/false = normal accrual. */
   _needsDisabled?: Partial<Record<DisableableNeed, boolean>>;
+  /** Debug override (HEADLESS-SIM): freeze WEATHER-DRIVEN deterioration — building condition wear
+   *  (`stepBuildingCondition`) and loose-item weather wear (`stepItemDeterioration`) — so dev-spawned
+   *  stations/gear don't rot away mid-test. Toggled via `devToggleDecay {kind:'deterioration'}`. */
+  _devFreezeDeterioration?: boolean;
+  /** Debug override (HEADLESS-SIM): freeze food/carcass SPOILAGE (`stepItemDecay` → `decaysTo`), so
+   *  stocked food and carcasses keep indefinitely during a test. Toggled via
+   *  `devToggleDecay {kind:'spoilage'}`. */
+  _devFreezeSpoilage?: boolean;
   /** Average effective map temperature (°C, baked tile avg + weather delta), computed worker-side
    *  for the HUD readout. A scalar — tile `temperature` itself stays worker-only (PERF-2). */
   avgTemperature?: number;

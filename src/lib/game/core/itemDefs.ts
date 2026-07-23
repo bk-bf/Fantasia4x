@@ -10,9 +10,13 @@ const ITEMS_DATABASE = itemsData as unknown as Item[];
 
 let _byId: Map<string, Item> | null = null;
 
-/** The static item DEFINITION for an id, or undefined. */
+/** The static item DEFINITION for an id, or undefined. `isCarcass` is derived from `category` at index
+ *  time (the data files never set it) so every carcass-detecting consumer — butchery dispatch, craft
+ *  yield-condition scaling — sees it from the one index. */
 export function itemDefById(id: string): Item | undefined {
-  return (_byId ??= new Map(ITEMS_DATABASE.map((i) => [i.id, i]))).get(id);
+  return (_byId ??= new Map(
+    ITEMS_DATABASE.map((i) => [i.id, i.category === 'carcass' ? { ...i, isCarcass: true } : i])
+  )).get(id);
 }
 
 /** The full static item DB (read-only) — for whole-catalogue scans (caravan stock, wealth). */

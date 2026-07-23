@@ -590,6 +590,11 @@ export interface CraftingInProgress {
   selectedIngredients?: Record<string, string>;
   // Work-based crafting (produced by craftItem, consumed by JobService)
   id: string; // unique id for job correlation
+  /** The EXACT producing recipe id. Set so completion/gating dispatch to THIS recipe rather than
+   *  re-resolving by output item (getRecipeForItem = first-producer-wins, which shadows recipes that
+   *  share an output — butchery keyed by carcass, blast-vs-finery steel…). Absent on legacy/simple
+   *  orders → callers fall back to getRecipeForItem(item.id). */
+  recipeId?: string;
   workRequired: number; // recipe.workAmount × quantity
   workDone: number; // accumulated work points
   // Reserve-and-fetch:

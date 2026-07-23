@@ -65,7 +65,7 @@
   const workName = (id: string): string =>
     WORK_CATEGORIES.find((c) => c.id === id)?.name ?? id.replace(/_/g, ' ');
   function jobLabelOf(item: Item): string {
-    if (item.isCarcass) return 'Butchery';
+    if (item.category === 'carcass') return 'Butchery';
     const req = recipeService.toolRequirementForRecipe(recipeOf(item.id));
     if (req?.workType) return workName(req.workType);
     // Mirror JobService._jobTypeToWorkKey: a food/edible craft is Cooking, everything else General Crafting.
@@ -107,11 +107,19 @@
   // visible for built stations; the per-item craftable flag controls the CRAFT button.
   $: allCraftableItems = $gameState
     ? (ITEMS_DATABASE as Item[]).filter((item) => {
-        // Include carcass items for butchery
-        if (item.isCarcass && item.yields) return true;
+        // Include carcass items for butchery (dispatched by carcass → its butchery recipe).
+        if (item.category === 'carcass') return true;
         // Include items with a producing recipe (authored or synthesised)
         const recipe = recipeOf(item.id);
         if (!recipe) return false;
+        // Butchery OUTPUTS (meat/hide/bone) are obtained from the CARCASS card, not crafted directly —
+        // suppress their redundant item cards. A recipe that consumes a carcass IS a butchery recipe.
+        if (
+          Object.keys(recipe.inputs ?? {}).some(
+            (i) => itemService.getItemById(i)?.category === 'carcass'
+          )
+        )
+          return false;
         // Dedup byproducts: only a recipe's PRIMARY (first) output gets a card. Otherwise a recipe that
         // also yields branches/sawdust/ash is listed a SECOND time under that byproduct's category (the
         // "Green Firewood" duplicate — split_firewood's branch byproduct rendered its own card set).
@@ -222,7 +230,7 @@
         dynamicCost: {}
       }
     ];
-    if ((item.isCarcass && item.yields) || !recipe?.dynamicRecipe) return plain();
+    if (item.category === 'carcass' || !recipe?.dynamicRecipe) return plain();
 
     const slotEntries = Object.entries(recipe.dynamicRecipe);
 
@@ -551,7 +559,7 @@
           {@const recipe = recipeOf(item.id)}
           {@const toolReq = requiredToolOf(item.id)}
           {@const toolReqMet = toolReq?.met ?? true}
-          {@const isCarcass = item.isCarcass && item.yields}
+          {@const isCarcass = item.category === 'carcass'}
           {@const isPlaceholder = !!recipe?.dynamicRecipe && !entry.selectedIngredients}
           {@const baseCost = isCarcass ? {} : { ...costOf(item.id), ...entry.dynamicCost }}
           {@const stationReady =
@@ -624,13 +632,15 @@
             onAction={() => startCrafting(item, entry.selectedIngredients)}
           >
             {#if isCarcass}
-              {@const yieldPills = (item.yields ?? []).map((output) => ({
-                itemId: output.item,
-                qty: `×${Math.max(1, Math.round((output.min * intactness) / 100))}-${Math.max(
-                  1,
-                  Math.round((output.max * intactness) / 100)
-                )}`
-              })) satisfies ItemPillView[]}
+              {@const carcassRecipe = $gameState
+                ? itemService.resolveCarcassRecipe(item.id, $gameState)
+                : undefined}
+              {@const yieldPills = Object.entries(carcassRecipe?.outputs ?? {}).map(
+                ([itemId, qty]) => ({
+                  itemId,
+                  qty: `×${Math.max(1, Math.round(((qty as number) * intactness) / 100))}`
+                })
+              ) satisfies ItemPillView[]}
               <ItemPills pills={yieldPills} />
             {:else}
               {#if entry.slots}

@@ -959,7 +959,9 @@ export const COMMANDS: Record<string, Cmd> = {
         target &&
         buildingService.stationFulfills(target.type, order.stationType ?? 'craft_spot')
       ) {
-        const recipe = recipeService.getRecipeForItem(order.item.id);
+        const recipe = order.recipeId
+          ? recipeService.getRecipeById(order.recipeId)
+          : recipeService.getRecipeForItem(order.item.id);
         const bonus = buildingService.craftingBonusOf(target.type);
         const newRequired = Math.max(
           1,
@@ -1020,22 +1022,31 @@ export const COMMANDS: Record<string, Cmd> = {
     // research/population/mold) block queueing. A materials-short order is created `pending` and the
     // engine reserves its inputs once they're stocked (reservePendingOrders).
     if (!itemService.canQueueCraft(p.itemId, s)) return s;
-    const resolved = p.selectedIngredients ?? itemService.autoSelectIngredients(p.itemId, s) ?? {};
-    // resolveActiveCost returns null for a dynamic recipe whose chosen ingredient isn't stocked. Fall
-    // back to the recipe's static/base cost so a dynamic order can still be queued pending materials.
-    const activeCost =
-      itemService.resolveActiveCost(item.id, s, resolved) ??
-      itemService.calculateCraftingCost(item.id);
-    const recipe = recipeService.getRecipeForItem(item.id);
+    // Resolve the EXACT producing recipe. Butchery: a carcass is an INPUT with no producing recipe —
+    // dispatch by the carcass to its butchery recipe (best built station). Else the item's recipe.
+    const recipe = item.isCarcass
+      ? itemService.resolveCarcassRecipe(item.id, s)
+      : recipeService.getRecipeForItem(item.id);
+    if (!recipe) return s;
+    // Input cost: butchery consumes the carcass (recipe.inputs); a normal craft resolves its (possibly
+    // dynamic) cost. resolveActiveCost returns null for a dynamic recipe whose chosen ingredient isn't
+    // stocked → fall back to the static/base cost so it can queue pending materials.
+    const resolved = item.isCarcass
+      ? {}
+      : (p.selectedIngredients ?? itemService.autoSelectIngredients(p.itemId, s) ?? {});
+    const activeCost = item.isCarcass
+      ? { ...recipe.inputs }
+      : (itemService.resolveActiveCost(item.id, s, resolved) ??
+        itemService.calculateCraftingCost(item.id));
     const inputs: Record<string, number> = {};
     for (const [id, q] of Object.entries(activeCost)) inputs[id] = q * quantity;
-    const stationType = recipe?.station ?? null;
+    const stationType = recipe.station ?? null;
     const station = buildingService.bestCraftStation(stationType ?? 'craft_spot', s);
     const stationBuildingId = station?.id;
     const craftBonus = station ? buildingService.craftingBonusOf(station.type) : 0;
     const workRequired = Math.max(
       1,
-      Math.ceil(((recipe?.workAmount ?? 1) * quantity) / (1 + craftBonus))
+      Math.ceil(((recipe.workAmount ?? 1) * quantity) / (1 + craftBonus))
     );
     const orderId = crypto.randomUUID();
     let gs = s;
@@ -1054,6 +1065,7 @@ export const COMMANDS: Record<string, Cmd> = {
     const order: CraftingInProgress = {
       id: orderId,
       item,
+      recipeId: recipe.id,
       quantity,
       workRequired,
       workDone: 0,
@@ -1402,6 +1414,14 @@ export const COMMANDS: Record<string, Cmd> = {
     ...s,
     _devResearchGateOff: p.off || undefined
   }),
+
+  /** DEBUG: freeze time-based decay so dev-spawned stuff survives a test. `deterioration` = weather
+   *  wear on buildings + loose items; `spoilage` = food/carcass rot. `off:true` freezes, `off:false`
+   *  resumes. Rides gameState so a worker or headless session both honour it. */
+  devToggleDecay: (s, p: { kind: 'deterioration' | 'spoilage'; off: boolean }) => {
+    const key = p.kind === 'spoilage' ? '_devFreezeSpoilage' : '_devFreezeDeterioration';
+    return { ...s, [key]: p.off || undefined };
+  },
 
   // ── HEADLESS-SIM (ADR-033) godmode verbs — scenario spin-up + debug steering ─────────────
 

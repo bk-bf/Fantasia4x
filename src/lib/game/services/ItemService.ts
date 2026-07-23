@@ -258,6 +258,13 @@ export interface ItemService {
   /** Non-material craftability gates (station/tools/research/population/mold). Materials may be
    *  absent — a queued order then waits as `pending` until they're stocked. */
   canQueueCraft(itemId: string, gameState: GameState): boolean;
+  /** The recipe-driven form of the non-material gate — used when the exact recipe is known (butchery
+   *  resolved by carcass, an explicit alt-station recipe) rather than looked up by output item. */
+  canQueueCraftRecipe(recipe: Recipe | undefined, gameState: GameState): boolean;
+  /** Butchery dispatches by the CARCASS, not the shared meat output: the butchery recipe that consumes
+   *  `carcassId`, preferring the highest-yield station currently built, else the lowest-tier recipe so
+   *  it can queue pending a station. Undefined if nothing butchers this carcass. */
+  resolveCarcassRecipe(carcassId: string, gameState: GameState): Recipe | undefined;
   hasRequiredMaterials(itemId: string, gameState: GameState): boolean;
   hasRequiredTools(itemId: string, gameState: GameState): boolean;
   hasRequiredBuilding(itemId: string, gameState: GameState): boolean;
@@ -413,42 +420,69 @@ export class ItemServiceImpl implements ItemService {
   }
 
   canQueueCraft(itemId: string, gameState: GameState): boolean {
+    // Butchery: a carcass has no producing recipe (it's an INPUT) — dispatch by the carcass to its
+    // butchery recipe. Everything else flows from the item's producing recipe.
     const item = this.getItemById(itemId);
     if (!item) return false;
+    const recipe = item.isCarcass
+      ? this.resolveCarcassRecipe(itemId, gameState)
+      : recipeService.getRecipeForItem(itemId);
+    return this.canQueueCraftRecipe(recipe, gameState);
+  }
 
-    // Recipe registry: all craftability flows from the producing recipe. (Butchery is just a
-    // butcher_spot recipe — carcass in, meat/pelt out, one carcass per run; ADR-016.)
-    const recipe = recipeService.getRecipeForItem(itemId);
+  canQueueCraftRecipe(recipe: Recipe | undefined, gameState: GameState): boolean {
     if (!recipe) return false;
-
-    // Check tools
-    if (!this.hasRequiredTools(itemId, gameState)) return false;
-
-    // Check building
-    if (!this.hasRequiredBuilding(itemId, gameState)) return false;
-
-    // Check research (DEBUG: `_devResearchGateOff` turns this gate off — see gamestate.ts)
+    // Tools (ADR-009: a crafted/owned tool of the required tier satisfies the gate).
+    if ((recipe.toolTierRequired ?? 0) > colonyToolTier(gameState)) return false;
+    // Station (ADR-016 tiers: a higher generic/butchery station supersedes a lower one).
+    if (!buildingService.bestCraftStation(recipe.station ?? 'craft_spot', gameState)) return false;
+    if (
+      recipe.buildingRequired &&
+      !(gameState.buildings ?? []).some(
+        (b) => b.type === recipe.buildingRequired && b.status === 'complete'
+      )
+    )
+      return false;
+    // Research (DEBUG: `_devResearchGateOff` turns this gate off — see gamestate.ts).
     if (
       !gameState._devResearchGateOff &&
       recipe.researchRequired &&
       !gameState.completedResearch.includes(recipe.researchRequired)
-    ) {
+    )
       return false;
-    }
-
-    // Check population
-    if (recipe.populationRequired && gameState.pawns.length < recipe.populationRequired) {
+    // Population.
+    if (recipe.populationRequired && gameState.pawns.length < recipe.populationRequired)
       return false;
-    }
-
-    // Stews require the clay cooking pot — now wired through the ADR-009 craft-tool gate (the recipes
-    // declare a `cooking` toolRequirement + the Cooking work category lists clay_cooking_pot), so a cook
-    // fetches/holds the pot to claim the job and it wears with use. No ad-hoc stockpile check needed.
-
-    // §5 casting molds are ordinary single-use inputs now: a casting recipe lists `clay_mold` in
-    // its inputs, so the generic material check below already gates on having one in stock.
-
     return true;
+  }
+
+  resolveCarcassRecipe(carcassId: string, gameState: GameState): Recipe | undefined {
+    const recipes = recipeService
+      .getRecipesUsing(carcassId)
+      .filter((r) => (r.inputs?.[carcassId] ?? 0) > 0);
+    if (recipes.length === 0) return undefined;
+    // Prefer the recipe whose station is currently BUILT and highest-yield (a Sanguinary Altar flense
+    // over a butcher-spot render); if none is built, the lowest-tier recipe so it queues pending.
+    const builtRank = (r: Recipe): number => {
+      const b = buildingService.bestCraftStation(r.station ?? 'craft_spot', gameState);
+      return b
+        ? (buildingService.butcheryTier(b.type) ?? buildingService.stationTier(b.type) ?? 0)
+        : -1;
+    };
+    let best = recipes[0];
+    let bestRank = builtRank(best);
+    for (const r of recipes.slice(1)) {
+      const rank = builtRank(r);
+      if (rank > bestRank) {
+        bestRank = rank;
+        best = r;
+      }
+    }
+    if (bestRank < 0) {
+      const bt = (r: Recipe) => buildingService.butcheryTier(r.station ?? '') ?? 99;
+      best = recipes.reduce((lo, r) => (bt(r) < bt(lo) ? r : lo), recipes[0]);
+    }
+    return best;
   }
 
   hasRequiredMaterials(itemId: string, gameState: GameState): boolean {
@@ -832,6 +866,7 @@ export class ItemServiceImpl implements ItemService {
    * owned by the temperature system (Living World), not containers.
    */
   stepItemDecay(gameState: GameState, elapsedTicks = 1): GameState {
+    if (gameState._devFreezeSpoilage) return gameState; // DEBUG: freeze food/carcass spoilage (headless tests)
     const drops = gameState.droppedItems;
     if (!drops || drops.length === 0) return gameState;
 
@@ -970,6 +1005,7 @@ export class ItemServiceImpl implements ItemService {
    * of 0 means weather-immune.
    */
   stepItemDeterioration(gameState: GameState, elapsedTicks = 1): GameState {
+    if (gameState._devFreezeDeterioration) return gameState; // DEBUG: freeze weather wear (headless tests)
     const dropped = gameState.droppedItems;
     if (!dropped || dropped.length === 0) return gameState;
 

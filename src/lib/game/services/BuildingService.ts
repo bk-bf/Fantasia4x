@@ -843,6 +843,7 @@ export class BuildingServiceImpl implements BuildingService {
   }
 
   stepBuildingCondition(gameState: GameState): GameState {
+    if (gameState._devFreezeDeterioration) return gameState; // DEBUG: freeze weather wear (headless tests)
     // ROOF-SUPPORT / weather wear: structural wear scales with how harsh the weather is — a storm rots
     // an exposed roof/wall fast, a clear calm day barely ages it. One scalar per tick (cheap).
     const weatherFactor = weatherExposureFactor(gameState.weather);

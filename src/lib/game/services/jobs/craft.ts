@@ -31,6 +31,12 @@ import { rng } from '../../core/rng';
 import { stationTileFor, orderSupplied } from './staging';
 import { wearWorkingPawnTool } from './harvest';
 
+/** The exact recipe an order runs — its stamped `recipeId` (butchery-by-carcass, alt-station recipes)
+ *  or, for legacy/simple orders, the item's first producing recipe. Never re-resolve by output item
+ *  alone: a shared output (meat from several carcasses, steel from two furnaces) shadows all but one. */
+const recipeForOrder = (o: CraftingInProgress) =>
+  o.recipeId ? recipeService.getRecipeById(o.recipeId) : recipeService.getRecipeForItem(o.item.id);
+
 /**
  * Queue-without-materials (ADR-016): a `pending` craft order holds no input reservations. Each tick
  * we retry reserving its full input set ATOMICALLY — only when every input is reservable do we commit
@@ -102,7 +108,7 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
     // per-RECIPE `passive` (not just passive STATIONS) so a mixed station like stone_forge/hearth can
     // smelt/render passively while its shaping/cooking recipes stay pawn-worked.
     if (
-      recipeService.isPassive(recipeService.getRecipeForItem(order.item.id)) ||
+      recipeService.isPassive(recipeForOrder(order)) ||
       recipeService.isPassiveStation(order.stationType)
     )
       continue;
@@ -203,7 +209,7 @@ export function complete(job: Job, gs: GameState): GameState {
   }
   // ADR-009 step 2: wear the WORKING pawn's craft tool (e.g. the knife used at a butcher spot /
   // tannery). Only the pawn-worked path wears a tool — passive furnace production has no pawn.
-  const req = recipeService.toolRequirementForRecipe(recipeService.getRecipeForItem(entry.item.id));
+  const req = recipeService.toolRequirementForRecipe(recipeForOrder(entry));
   if (req && job.claimedBy) state = wearWorkingPawnTool(job.claimedBy, req.workType, state);
   return state;
 }
@@ -229,7 +235,9 @@ export function completeCraftOrder(
   // a log yields firewood AND branches; charcoal burns yield ash).
   const itemId = entry.item.id;
   const quantity = entry.quantity ?? 1;
-  const recipe = recipeService.getRecipeForItem(itemId);
+  // Use the order's EXACT recipe (butchery-by-carcass etc.) — NOT getRecipeForItem(itemId), which for a
+  // carcass order (item = carcass, an input) would find no recipe and wrongly emit the carcass itself.
+  const recipe = recipeForOrder(entry);
   const recipeOutputs: Record<string, number> = recipe ? recipe.outputs : { [itemId]: 1 };
 
   // Butchery: the consumed carcass's CONDITION (its top unit — see core/carcassCondition.ts) scales the

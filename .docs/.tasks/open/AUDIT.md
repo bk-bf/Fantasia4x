@@ -12,6 +12,10 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
   - [x] Needs/hunger driving FSM correctly
   - [x] ⚠→fixed: sated predators froze (Wander↔Hunting flip) — opp-hunt vs sated-exit contradiction; gated opp-hunt on hunger. See [BUGS](../../game/BUGS.md)
   - [x] Dev-spawned hunters auto-assigned a nearby lair
+- [x] Headless crafting made usable + swept: crafting works end-to-end (queue→fetch→walk→craft→output). Fixes landed while driving it:
+  - [x] `buildScenario` now auto-designates a stockpile (shipped a zero-tile zone → crafts silently stalled)
+  - [x] `devToggleDecay {kind:'deterioration'|'spoilage'}` — freeze weather wear (buildings+items) / food+carcass spoilage so dev-spawned stuff survives a test
+  - [x] Root finding: `getRecipeForItem` = first-producer-wins → 25 recipes sharing an output are unreachable via the card. **18 butchery ones FIXED** (see Butchery); **7 non-butchery remain** (see below)
 
 ## Crafting & building
 
@@ -118,6 +122,8 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 ### Butchery
 - Yield-vs-speed rule (established): butchery stations give a **yield** bonus (better tools → more off a carcass); stations where more-out-than-in makes no sense (tools, smelting ore→ingots, cooking) give **speed** (`craftingBonus`) instead. Fires give more max fuel. Generic stations already give speed; butchery yield now wired.
 - [x] Butchery yield bonus wired + tier ladder (`butcheryTier`): dressing_stone/flensing/altar render lower recipes and their `butcheryYieldBonus` (+25/+45%) multiplies output
+- [x] ⚠→fixed: great-carcass renders/flenses + humanoid `*_remains` + jackal/quillback/olm were UNREACHABLE (their meat/bones dispatched to a different recipe). Root: butchery dispatched by output meat, and the carcass-card path was dead (`isCarcass` never set → carcass cards never rendered). Fix: `isCarcass` derived from `category==='carcass'` at the item index; orders carry `recipeId`; `craftItem`/`canQueueCraft`/`completeCraftOrder` dispatch butchery by the CARCASS (`resolveCarcassRecipe`, picks the best built station via `butcheryTier`); crafting-screen carcass cards gated on `category` + yields from the recipe. Verified headless: great_wolf→render_great_wolf, goblin→make_goblin_remains, dire_wolf→make_dire_wolf @flensing_table.
+- [ ] ⚠ 7 NON-butchery recipes still shadowed (share an output at a different station): `smelt_blast_steel` (vs make_steel_bar), `grind_mana_crystal` (vs grind_gem_dust), `make_ash` (vs burn_charcoal byproduct), `tan_{thin,light,sturdy,heavy,thick}_leather_bucket` (vs tanning_rack). The `recipeId`-on-order plumbing is in place; they need the crafting screen to offer a card PER RECIPE for multi-recipe outputs (or removal if redundant). **Your call: per-recipe cards vs prune.**
 - [ ] Gating: needs knife/butchery tool; T2 needs tier 2 — below-tier pawn blocked
 - [ ] Spoiled carcass yields proportionally less (conditionMult)
 - [ ] butcher_spot T0 — all common game: make_{rabbit,venison,wolf,bear,boar,elk,goat,chicken,rat,aurochs,mammoth,owlbear,sabretooth,crocodile,hippogriff,hoarfowl,worg,jackal,quillback,olm}_meat, harvest_thornwood_silk
