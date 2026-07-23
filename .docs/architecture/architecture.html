@@ -18,7 +18,10 @@
         <h1>Fantasia<span style="color:var(--amber)">4x</span><br>from screen to sim</h1>
         <div class="rule"></div>
         <p class="lead">A walk down through the game — from the screen you look at, to the moment-by-moment simulation running underneath it.</p>
-        <p class="small text-muted" style="margin-top:16px">A turn-based colony sim: raise a race of pawns, work the land, craft and build, weather the world.</p>
+        <div class="eg" style="margin-top:20px; max-width:760px">
+          <span class="lbl">One thread we'll follow the whole way down</span>
+          You mark an <b>oak</b> to be chopped. Many ticks later, eight logs of <b>wood</b> are sitting in your stockpile. Every slide shows that same chop, one floor lower.
+        </div>
       </section>
 
       <!-- 2 · LAYER MAP -->
@@ -37,8 +40,8 @@
             <div class="flow-arrow">↓</div>
             <div class="layer"><span class="lname">The rulebook + the vault</span><span class="ldesc">All the data, and the one gatekeeper every change must pass through.</span><span class="lpath">core/ · database/</span></div>
           </div>
+          <div class="eg" style="margin-top:12px"><span class="lbl">In the game</span>Marking the oak is a click on the top floor. The wood landing in your pile is the bottom floor. The chop falls through every floor in between.</div>
         </div>
-        <div class="footnote">Nothing on a lower floor is allowed to reach up to a higher one. That one rule keeps the whole thing untangled.</div>
       </section>
 
       <!-- 3 · UI -->
@@ -54,16 +57,12 @@
             <div class="node cool"><div class="t">that screen<br>appears</div><span class="s">everything else hidden</span></div>
           </div>
           <p class="caption">Click a tab → it flips one value → the app swaps in that screen. Nothing shows at all until the game has finished loading.</p>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:18px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px;">
             <div class="card">
               <h4>In the code</h4>
-              <p class="small">The single value is <span class="c">uiState.currentScreen</span>. A plain list of “if it's this, show that” in <span class="c">+page.svelte</span> picks the screen. Clicking a tab calls <span class="c">setScreen()</span>. The loading gate is <span class="c">appPhase</span> going from <span class="c">'menu'</span> to <span class="c">'game'</span>.</p>
+              <p class="small">The single value is <span class="c">uiState.currentScreen</span>. A plain list of “if it's this, show that” in <span class="c">+page.svelte</span> picks the screen; a tab click calls <span class="c">setScreen()</span>.</p>
             </div>
-            <div class="card cool">
-              <h4>The screens themselves</h4>
-              <p class="names">Pawns · Work · Building · Crafting · Exploration · Culture · Kingdoms · Research · Entities · Debug</p>
-              <p class="tiny text-muted" style="margin-top:7px">The map itself is drawn by one big canvas component, separate from the menus.</p>
-            </div>
+            <div class="eg"><span class="lbl">In the game</span>You mark the oak from the <b>Work</b> screen. Click the <b>Crafting</b> tab and the work board is gone, the bench is there — same world underneath, just a different viewer on top.</div>
           </div>
         </div>
         <div class="footnote">The screens are just viewers. They never change the world directly — they only ask for it to change (next slides).</div>
@@ -81,10 +80,11 @@
             <div class="arrow">→<span class="l">screens read</span></div>
             <div class="node cool"><div class="t">the UI redraws</div></div>
           </div>
-          <p class="caption" style="margin-top:14px">The screens only ever <em>look</em> at this picture. They can't reach in and edit the world — the picture is read-only on their side.</p>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px;">
+          <p class="caption" style="margin-top:12px">The screens only ever <em>look</em> at this picture. They can't reach in and edit the world — the picture is read-only on their side.</p>
+          <div class="eg" style="margin-top:14px"><span class="lbl">In the game</span>Your pawn carries the log one tile east. About fifteen times a second a new picture arrives, and you watch the log slide across the map.</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px;">
             <div class="card"><h4>Saving your game</h4><p class="small">Whenever the picture updates, it's quietly written to a small database in the browser <span class="c">saveManager → IndexedDB</span>. Autosave rides along.</p></div>
-            <div class="card cool"><h4>Other little pictures</h4><p class="small">Which screen you're on <span class="c">uiState</span>, the popup event <span class="c">eventStore</span>, the activity log <span class="c">Log</span>, and your view preferences.</p></div>
+            <div class="card cool"><h4>Other little pictures</h4><p class="small">Which screen you're on <span class="c">uiState</span>, the popup event <span class="c">eventStore</span>, the activity log <span class="c">Log</span>.</p></div>
           </div>
         </div>
         <div class="footnote">Heads-up: the old notes say saves live in localStorage — the code moved to IndexedDB. localStorage now only holds view preferences.</div>
@@ -112,7 +112,7 @@
                 <p style="margin-top:8px"><span class="c">background Web Worker</span></p>
               </div>
             </div>
-            <p class="caption" style="margin-top:16px">Because the heavy thinking happens on the other side of the wall, thousands of things can tick without the screen ever freezing.</p>
+            <div class="eg" style="margin-top:16px"><span class="lbl">In the game</span>While your pawn hauls its log and 39 others eat, sleep and wander, you pan the camera and it stays perfectly smooth — all that living is happening on the far side of the wall.</div>
           </div>
           <div class="footnote">60 ticks/sec inside · a fresh picture handed across ~15×/sec · they only ever talk by passing messages, never by sharing memory.</div>
         </section>
@@ -121,7 +121,7 @@
           <p class="kicker"><span class="n">2½</span>The wall in the middle</p>
           <h2>It only sends what actually changed</h2>
           <div class="content">
-            <p class="lead text-center" style="margin-bottom:16px">Shipping the entire world 15 times a second was too heavy — it was a third of the game's whole workload. So each update carries only the differences.</p>
+            <p class="lead text-center" style="margin-bottom:14px">Shipping the entire world 15 times a second was too heavy — a third of the game's whole workload. So each update carries only the differences.</p>
             <div class="diagram">
               <div class="node ghost"><div class="t">the whole world</div><span class="s">mostly unchanged</span></div>
               <div class="arrow">→</div>
@@ -129,7 +129,7 @@
               <div class="arrow">→</div>
               <div class="node accent"><div class="t">re-stitched<br>on the other side</div></div>
             </div>
-            <p class="caption" style="margin-top:16px">A pawn that didn't move sends nothing. A carcass rotting on the ground sends nothing until it changes. That “send nothing when nothing happened” rule is what keeps the frame rate up.</p>
+            <div class="eg" style="margin-top:16px"><span class="lbl">In the game</span>That one pawn took a step; the other 39 stood still. Only the hauler's new position crosses the wall. A carcass rotting untouched sends nothing at all.</div>
           </div>
           <div class="footnote">In the code: a per-thing “what changed since last time” diff (EntitySync) reassembled by simWorkerClient.</div>
         </section>
@@ -141,7 +141,7 @@
         <h2>You don't edit the world — you send it a request</h2>
         <div class="content">
           <div class="diagram">
-            <div class="node cool"><div class="t">you click</div><span class="s">“chop that tree”</span></div>
+            <div class="node cool"><div class="t">you click</div><span class="s">“chop that oak”</span></div>
             <div class="arrow">→</div>
             <div class="node"><div class="t">a named request</div><span class="s">a plain little message</span></div>
             <div class="arrow">→<span class="l">across the wall</span></div>
@@ -149,13 +149,13 @@
             <div class="arrow">→</div>
             <div class="node accent"><div class="t">the world<br>changes</div></div>
           </div>
-          <p class="caption" style="margin-top:16px">Every possible action — chop, equip, draft, research, haul — is a named entry in one list. The request is just data (“chop tree #12”), so it can safely cross the wall and be replayed.</p>
-          <div class="callout ok" style="margin-top:16px">
+          <div class="eg" style="margin-top:16px"><span class="lbl">In the game</span>Marking the oak becomes the request <span class="c">designate(chop, tile 14,9)</span>. It crosses the wall, gets looked up in the list, and now that tile is flagged for chopping. That request <em>is</em> the only way the world learned about your intent.</div>
+          <div class="callout ok" style="margin-top:14px">
             <span class="h">WHY IT'S BUILT THIS WAY</span>
-            <p class="small">One doorway, three users: the buttons you click, the automated test scripts, and the dev tools all send the exact same requests. Same requests in the same order always produce the exact same game — which is what makes bug-hunting and replays possible.</p>
+            <p class="small">One doorway, three users: the buttons you click, the automated test scripts, and the dev tools all send the exact same requests. Same requests in the same order always produce the exact same game.</p>
           </div>
         </div>
-        <div class="footnote">In the code: the list is COMMANDS in commands.ts (88 entries) · e.g. chop = designate, equip = equipPawnItem, draft = toggleDraft.</div>
+        <div class="footnote">In the code: the list is COMMANDS in commands.ts (88 entries) · chop = designate, equip = equipPawnItem, draft = toggleDraft.</div>
       </section>
 
       <!-- 7 · TURN LOOP (stack of 2) -->
@@ -165,7 +165,7 @@
           <h2>One tick = one tiny moment, always in the same order</h2>
           <div class="content">
             <p class="lead text-center">Sixty times a second, the game plays out a single moment of time. The steps always run in the same fixed order, because each one relies on what the step before it just did.</p>
-            <div class="diagram" style="margin-top:22px; gap:8px;">
+            <div class="diagram" style="margin-top:18px; gap:8px;">
               <div class="node"><div class="t">bodies</div><span class="s">hunger · sleep</span></div>
               <div class="arrow">→</div>
               <div class="node"><div class="t">stuff</div><span class="s">rot · dry · research</span></div>
@@ -178,7 +178,7 @@
               <div class="arrow">→</div>
               <div class="node cool"><div class="t">events</div></div>
             </div>
-            <p class="caption text-amber" style="margin-top:22px"><strong>The order is load-bearing. Shuffle it and things break.</strong></p>
+            <div class="eg" style="margin-top:18px"><span class="lbl">In the game</span>Across many ticks: the pawn is handed the chop job, walks to the oak, swings and swings — then on some later tick the oak finally falls and the logs drop to the ground.</div>
           </div>
           <div class="footnote">In the code: GameEngineImpl.processGameTurn — it doesn't hold the rules itself, it just calls the specialists in this order. Full list next →</div>
         </section>
@@ -186,7 +186,7 @@
         <section id="turn-2">
           <p class="kicker"><span class="n">3</span>The turn-taker — every step</p>
           <h2 style="font-size:23pt">The 19 steps of one tick <span class="tiny text-muted" style="font-weight:400">(plain name · code call)</span></h2>
-          <div class="content" style="padding-top:14px">
+          <div class="content" style="padding-top:12px">
             <div class="phase-grid">
               <div class="phase"><span class="pn">01</span><span class="pname">weather &amp; light</span><span class="pcall">environment</span></div>
               <div class="phase big"><span class="pn">02</span><span class="pname">hunger, thirst, sleep</span><span class="pcall">needsTick · drink/wash</span></div>
@@ -209,9 +209,9 @@
               <div class="phase thr"><span class="pn">19</span><span class="pname">world events</span><span class="pcall">migrants · trade · talk</span></div>
               <div class="phase" style="border-style:dashed; opacity:0.7"><span class="pn">↳</span><span class="pname">hand over the picture</span><span class="pcall">~15×/sec</span></div>
             </div>
-            <p class="tiny text-muted" style="margin-top:10px"><span style="color:var(--amber)">▍</span> amber = doesn't run every tick, only every so often &nbsp;·&nbsp; <span style="color:var(--phosphor)">▍</span> phosphor = the heavy steps</p>
+            <div class="eg" style="margin-top:10px"><span class="lbl">Your oak lives here</span><b>Step 8</b> makes the “chop” job · <b>Step 11</b> is where the pawn actually swings · <b>Step 13</b> is where the stump eventually regrows.</div>
           </div>
-          <div class="footnote">The old notes said 13 steps; the code runs 19.</div>
+          <div class="footnote">The old notes said 13 steps; the code runs 19. Amber = runs only every so often · phosphor = the heavy steps.</div>
         </section>
       </section>
 
@@ -228,9 +228,9 @@
             <div class="card cool"><h4>Other kingdoms</h4><p class="names">kingdomService</p></div>
             <div class="card cool"><h4>Research</h4><p class="names">researchService</p></div>
           </div>
-          <p class="caption" style="margin-top:16px">The turn-taker just calls these in order. Each one takes the world, applies its slice of the rules, and hands it back. About 25 of them in total.</p>
+          <div class="eg" style="margin-top:16px"><span class="lbl">In the game</span>Felling the oak passes through three experts: the job list hands the pawn the task <span class="c">jobService</span>, the tree decides how much it yields <span class="c">resourceObjectService</span>, and the logs become real, pick-up-able items <span class="c">itemService</span>.</div>
         </div>
-        <div class="footnote">You grab a specialist by its ready-made instance (e.g. itemService), never by building a new one.</div>
+        <div class="footnote">The turn-taker just calls these in order — about 25 in total. You grab one by its ready-made instance (itemService), never by building a new one.</div>
       </section>
 
       <!-- 9 · SYSTEMS VS SERVICES -->
@@ -251,11 +251,10 @@
             </div>
             <div class="card cool">
               <h4>Answers questions — <span class="c">services/</span></h4>
-              <p class="small">Everything else. Give it the world and a question, it gives you an answer or an updated world.</p>
-              <p class="small" style="margin-top:8px">“How much wood is here?” “Can this be crafted?” “Where's the nearest deer?” Each stays inside its own topic, and the drivers above call on them.</p>
+              <p class="small">Everything else. Give it the world and a question, it hands back an answer or an updated world. Each stays inside its own topic; the drivers on the left call on them.</p>
             </div>
           </div>
-          <p class="caption" style="margin-top:14px">Rough rule of thumb — not a hard wall. A couple of files sit in the “wrong” folder for historical reasons.</p>
+          <div class="eg" style="margin-top:16px"><span class="lbl">In the game</span>“Is there a chop job near this pawn?” is a <b>question</b> → a service. “Advance this pawn's axe-swing by one tick” <b>drives the clock</b> → a system.</div>
         </div>
       </section>
 
@@ -274,9 +273,9 @@
             <div class="fa">→</div>
             <div class="node accent big" style="margin:0"><div class="t">the gatekeeper</div><span class="s">GameStateManager</span></div>
           </div>
-          <p class="caption" style="margin-top:16px">Nothing writes to the world on its own. It all funnels through this one gate — so there's always a single, known place where reality changes.</p>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px;">
-            <div class="card"><h4>The rulebook is data, not code</h4><p class="small">Creatures, items, recipes, traits, buildings — all live in big data files <span class="c">database/*.jsonc</span>. Code just loads them. Adding content usually means editing data, not writing logic.</p></div>
+          <div class="eg" style="margin-top:16px"><span class="lbl">In the game</span>The oak falls — but the wood doesn't just <em>appear</em>. It passes the gate: <span class="c">addResource('wood', 8)</span>. That one call is the only reason your stockpile ticked up by eight.</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px;">
+            <div class="card"><h4>The rulebook is data, not code</h4><p class="small">Creatures, items, recipes, traits, buildings — all live in big data files <span class="c">database/*.jsonc</span>. Adding content usually means editing data, not writing logic.</p></div>
             <div class="card cool"><h4>The shapes of everything</h4><p class="small">What a pawn, a building, an item <em>is</em> — the definitions live in <span class="c">core/types/</span>.</p></div>
           </div>
         </div>
@@ -289,12 +288,12 @@
         <h2>When there's one right way, there's only one way</h2>
         <div class="content">
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-            <div class="qcard"><p class="q">“How good is this pawn at this job?”</p><p class="a">Answered in exactly one place, from their body and traits. There is no second opinion. <span class="c">pawnStatService.getWorkModifiers</span></p></div>
-            <div class="qcard"><p class="q">“What bonuses apply right now?”</p><p class="a">One tallier adds up gear, buildings and traits — and always shows its receipts. <span class="c">ModifierSystem</span></p></div>
-            <div class="qcard"><p class="q">“How do things move across the map?”</p><p class="a">The heavy path-finding math is written in Rust for speed, reached through one tidy door. <span class="c">PathfinderService → WASM</span></p></div>
-            <div class="qcard"><p class="q">“Can it run with no window open?”</p><p class="a">Yes — the same game, driven by scripts instead of clicks, for tests and replays. <span class="c">headless sim</span></p></div>
+            <div class="qcard"><p class="q">“How good is this pawn at this job?”</p><p class="a">One place, from body and traits — no second opinion. <em>A strong, axe-trained pawn fells the oak in half the swings.</em> <span class="c">getWorkModifiers</span></p></div>
+            <div class="qcard"><p class="q">“What bonuses apply right now?”</p><p class="a">One tallier adds up gear, buildings and traits, and shows its receipts. <em>Your sharpened axe's +2 shows up here.</em> <span class="c">ModifierSystem</span></p></div>
+            <div class="qcard"><p class="q">“How do things move across the map?”</p><p class="a">Heavy path-finding math, in Rust for speed, behind one tidy door. <em>The pawn routes around the pond to reach the oak.</em> <span class="c">PathfinderService → WASM</span></p></div>
+            <div class="qcard"><p class="q">“Can it run with no window open?”</p><p class="a">Yes — the same game, driven by scripts. <em>A test fells 1000 oaks with no window, just to check the wood adds up.</em> <span class="c">headless sim</span></p></div>
           </div>
-          <p class="caption" style="margin-top:16px">Each of these has burned in a “don't build a second one of these” rule. It's why a new feature is usually new <em>data</em>, not a new code path.</p>
+          <p class="caption" style="margin-top:14px">Each has a “don't build a second one of these” rule burned in — which is why a new feature is usually new <em>data</em>, not a new code path.</p>
         </div>
       </section>
 
@@ -326,21 +325,15 @@
         <p class="kicker">Finding your way around</p>
         <h2>Two threads to pull, five knots to know</h2>
         <div class="content">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
-            <div class="card">
-              <h4>Follow a click</h4>
-              <p class="small">button → a named request → across the wall → looked up in the list → the gatekeeper changes the world → a fresh picture comes back → the screen redraws.</p>
-            </div>
-            <div class="card cool">
-              <h4>Follow a moment of time</h4>
-              <p class="small">the turn-taker → its 19 steps → each specialist does its bit → the world moves one tick forward.</p>
-            </div>
+          <div class="eg" style="margin-bottom:16px"><span class="lbl">Follow the chop, end to end</span>you mark the <b>oak</b> → a named request → across the wall → looked up in the list → the gatekeeper runs <span class="c">addResource('wood', 8)</span> → a fresh picture comes back → you watch the stockpile tick up.</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="card"><h4>Follow a click</h4><p class="small">button → a named request → across the wall → looked up → the gate changes the world → a fresh picture → the screen redraws.</p></div>
+            <div class="card cool"><h4>Follow a moment of time</h4><p class="small">the turn-taker → its 19 steps → each specialist does its bit → the world moves one tick forward.</p></div>
           </div>
           <div class="card" style="margin-top:14px; border-left-color:var(--phosphor)">
             <h4>The five knots — learn these and the rest untangles</h4>
             <p class="small">the one gate that changes the world <span class="c">GameStateManager</span> · the one doorway of requests <span class="c">commands.ts</span> · the one answer to “how good at this job” <span class="c">getWorkModifiers</span> · the one bonus-tallier <span class="c">ModifierSystem</span> · the one door to map-movement <span class="c">PathfinderService</span>.</p>
           </div>
-          <p class="lead text-amber text-center" style="margin-top:20px">One gate changes the world. One doorway carries every request. One answer to each question.</p>
         </div>
         <div class="footnote">.docs/architecture/architecture.html — F fullscreen · ↓ for sub-slides · O for the overview grid</div>
       </section>

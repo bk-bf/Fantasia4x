@@ -198,6 +198,23 @@
 .callout .h { font-family: var(--mono); font-weight: 600; color: var(--terracotta); font-size: 10.5pt; letter-spacing: 0.04em; display: block; margin-bottom: 3px; }
 .callout.ok .h { color: var(--phosphor); }
 
+/* Concrete "in the game" example — the running oak-chopping thread */
+.eg {
+  background: rgba(204,127,92,0.10);
+  border-left: 3px solid var(--clay);
+  border-radius: 4px;
+  padding: 8px 15px;
+  font-size: 13.5pt; line-height: 1.4;
+  color: var(--parchment);
+}
+.eg .lbl {
+  font-family: var(--mono); font-size: 8.5pt; font-weight: 600;
+  letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--clay); display: block; margin-bottom: 2px;
+}
+.eg b { color: #e8a685; font-weight: 600; }
+.eg .c { color:#f0c884; }
+
 /* was/now delta */
 .delta { display: grid; grid-template-columns: 1fr 1.15fr; gap: 8px 20px; }
 .delta .was { color: var(--muted-color); font-size: 13pt; }
