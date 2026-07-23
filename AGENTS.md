@@ -108,6 +108,15 @@ pnpm graph:diff           # diff the graph against the saved baseline
 > (`node ../codegraph/bin/codegraph.mjs … Fantasia4x`) — it must be checked out as a
 > sibling of this repo. Override its location with `CODEGRAPH_DIR`.
 
+> **Audit/playtest/verify = drive the REAL sim.** Any "verify / audit / playtest / end-to-end" claim must
+> come from `HeadlessSession` (or `./dev.sh --headless` + `/api/sim/*`) with real pawns over real ticks, and
+> must state the mechanism + observed delta ("N ticks, stock X→Y"). Unit/service tests (`completeCraftOrder`,
+> `canQueueCraft`, static reachability, `resolveHit` sampling) are a **supplement, never a substitute** — they
+> prove a function, not that the pawn-driven loop works. If something is only unit-tested, say so plainly and
+> mark it `[~]`, never `[x]`. Never dress a unit test up as a headless playtest. (Harness setup lives in
+> AUDIT.md's "What counts as headless-verified" block: founders start with no labor → `setPawnLaborLevel`;
+> reserve→haul→stage→craft needs ~900+ ticks; the whole map is a stockpile; sim starts at night.)
+
 ## Codebase Graph (standalone `codegraph` tool)
 
 The call-graph explorer + **JSON query API for agents** lives in its own repo at
