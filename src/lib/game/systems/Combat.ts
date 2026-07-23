@@ -215,6 +215,11 @@ function fatigueStaminaFactor(e: Pawn | Mob): number {
 // ── Public types ─────────────────────────────────────────────────────────────
 export interface HitResult {
   hit: boolean;
+  /** Negated by the defender's shield: fully stopped (blocked) or deflected into a free riposte
+   *  (parried). Both mean hit=false + damage 0, but read distinctly for the floater/log and (parry) to
+   *  trigger the counter-attack in performAttack. */
+  blocked?: boolean;
+  parried?: boolean;
   bodyPart: BodyPartId | null;
   /** Final damage after armour reduction (and crit multiplier, if any). */
   damage: number;
@@ -338,8 +343,11 @@ const DUELIST_CRIT = 0.05;
 /** Bonus a two-handed grip adds. */
 const TWOHAND_DAMAGE_MULT = 1.15;
 const TWOHAND_ARMOR_PEN = 0.05;
-/** Multiplier a shield applies to the WEARER's dodge (no active block — BB-style, defence = dodge). */
-const SHIELD_DODGE_MULT = 1.25;
+// SHIELD DEFENCE (block/parry). A shield is now its OWN negation axis (the `block` stat + the shield's
+// `blockBonus`), NOT a dodge boost — so a heavy tank negates where it can't evade. Block is all-or-nothing.
+const BLOCK_CAP = 0.65; // hard ceiling on total block chance
+const PARRY_CAP = 0.4; // hard ceiling on parry chance
+const RANGED_BLOCK_MULT = 0.5; // a shield stops fewer projectiles than melee blows
 // Weight on a weapon's flat `accuracy` in the melee hit roll — ×2 so the accurate-vs-brutish weapon
 // axis actually moves hit chance. Ranged uses `hitMod` instead, so launchers are unaffected.
 const MELEE_ACCURACY_WEIGHT = 2;
@@ -784,7 +792,8 @@ class CombatServiceImpl implements CombatService {
     attacker: Pawn | Mob,
     defender: Pawn | Mob,
     state: GameState,
-    override?: RangedOverride
+    override?: RangedOverride,
+    guaranteed = false
   ): HitResult {
     const {
       str,
@@ -804,6 +813,19 @@ class CombatServiceImpl implements CombatService {
     } = override
       ? override.profile
       : attackerProfile(attacker, this.entityDistance(attacker, defender));
+
+    // SHIELD DEFENCE — the shield answers BEFORE evasion. Melee: PARRY (turn the blow aside → free
+    // guaranteed counter in performAttack) then BLOCK (stop it cold). Ranged: block only, halved. A
+    // guaranteed riposte skips this entirely (it can't itself be parried/blocked → no recursion).
+    const ranged = !!override;
+    if (!guaranteed) {
+      const pc = ranged ? 0 : this.parryChanceOf(defender);
+      if (pc > 0 && rng.random() < pc)
+        return this.negatedHit(weaponId, staminaCost, damageType, 'parried');
+      const bc = this.blockChance(defender, ranged);
+      if (bc > 0 && rng.random() < bc)
+        return this.negatedHit(weaponId, staminaCost, damageType, 'blocked');
+    }
     // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw dexterity, so injury,
     // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
     // `defDex × 2` term (dodge ≈ 1.0 at DEX 10 → 20).
@@ -812,8 +834,7 @@ class CombatServiceImpl implements CombatService {
     const armorDrag = entityNaturalArmor(defender) * NATURAL_ARMOR_DODGE_DRAG;
     const defDodge =
       Math.max(0, pawnStatService.evaluateStat('dodge', defender) - armorDrag) *
-      this.conditionMult(defender, 'dodge') * // injuries, winded, encumbrance, fouled guard (easier to hit)
-      (getGrip(defender) === 'shield' ? SHIELD_DODGE_MULT : 1); // BB: a shield raises evasion, not a block
+      this.conditionMult(defender, 'dodge'); // injuries, winded, encumbrance, fouled guard (easier to hit)
 
     // MELEE gets the sane base (BASE_MELEE_HIT ± DEX/dodge edges). RANGED keeps its OWN calibrated
     // curve — its `hitMod` IS rangedAccuracyMod (aim_accuracy + distance + cover), layered on the
@@ -826,7 +847,7 @@ class CombatServiceImpl implements CombatService {
         accuracy * MELEE_ACCURACY_WEIGHT -
         (defDodge - 1.0) * DODGE_HIT_WEIGHT;
     const hitChance = clamp(toHit * this.conditionMult(attacker, 'hitChance'), 5, 95);
-    if (rng.random() * 100 > hitChance) {
+    if (!guaranteed && rng.random() * 100 > hitChance) {
       return {
         hit: false,
         bodyPart: null,
@@ -1337,9 +1358,10 @@ class CombatServiceImpl implements CombatService {
     target: Pawn | Mob,
     state: GameState,
     turn: number,
-    override?: RangedOverride
+    override?: RangedOverride,
+    guaranteed = false
   ): { state: GameState; staminaCost: number } {
-    const result = this.resolveHit(attacker, target, state, override);
+    const result = this.resolveHit(attacker, target, state, override, guaranteed);
     const pos = this.entityPos(target);
 
     // KINGDOMS-TRADE §3: a colonist raising a hand against a kingdom's party member is an act of
@@ -1406,6 +1428,18 @@ class CombatServiceImpl implements CombatService {
       weatherSightMul(state.weather?.type)
     );
 
+    // Parried → the swing is turned aside AND the defender earns an IMMEDIATE free counter that lands
+    // for certain (the riposte skips the target's own parry/block/dodge, so it can't recurse). Blocked →
+    // simply stopped cold. Both cost the attacker the swing's stamina; neither leaves a wound.
+    if (result.parried) {
+      this.emitFloat(pos.x, pos.y, 'dodge', 'PARRY');
+      state = this.performAttack(target, attacker, state, turn, undefined, true).state;
+      return { state, staminaCost: result.staminaCost };
+    }
+    if (result.blocked) {
+      this.emitFloat(pos.x, pos.y, 'dodge', 'BLOCK');
+      return { state, staminaCost: result.staminaCost };
+    }
     // Miss → no injury, but log + show the dodge. The swing still cost stamina.
     if (!result.hit) {
       this.emitFloat(pos.x, pos.y, 'dodge', 'dodge');
@@ -1455,6 +1489,10 @@ class CombatServiceImpl implements CombatService {
         : this.applyInjury(target.id, result.organInjury, next, false);
       this.emitFloat(pos.x, pos.y, 'fracture', 'Organ hit!', 26);
     }
+
+    // SHIELD BASH — a shield in the attacker's off-hand turns a landed MELEE blow into control (stagger /
+    // knockdown / shove), higher tiers only. Melee only (ranged has no override-less swing here).
+    if (!override) next = this.applyShieldBash(next, attacker, target, isTargetMob, pos, apos);
 
     // Floating text: damage number — a rolled crit OR a part-wrecking hit reads as
     // 'crit'; plus a secondary knockdown / bleed cue.
@@ -1822,6 +1860,60 @@ class CombatServiceImpl implements CombatService {
     return Math.max(1, Math.max(Math.abs(ap.x - bp.x), Math.abs(ap.y - bp.y)));
   }
 
+  /** SHIELD BASH — a shield in the WIELDER'S off-hand adds control to a landed MELEE blow: chances to
+   *  stagger, knock down (timed conditions, cut by knockdown_resistance) or shove the target back one
+   *  tile. Bucklers carry none; heavier shields do. Rolls are independent (a heavy blow can do several). */
+  private applyShieldBash(
+    state: GameState,
+    attacker: Pawn | Mob,
+    target: Pawn | Mob,
+    isMob: boolean,
+    pos: { x: number; y: number },
+    apos: { x: number; y: number }
+  ): GameState {
+    const sh = this.shieldDef(attacker)?.armorProperties;
+    if (!sh) return state;
+    if (sh.bashStagger)
+      state = this.applyOneOnHitEffect(
+        state,
+        {
+          condition: 'staggered',
+          chance: sh.bashStagger,
+          resist: 'knockdown_resistance',
+          durationHours: 0.5
+        },
+        target.id,
+        isMob,
+        pos,
+        attacker
+      );
+    if (sh.bashKnockdown)
+      state = this.applyOneOnHitEffect(
+        state,
+        {
+          condition: 'knockdown',
+          chance: sh.bashKnockdown,
+          resist: 'knockdown_resistance',
+          durationHours: 0.4
+        },
+        target.id,
+        isMob,
+        pos,
+        attacker
+      );
+    if (sh.bashKnockback)
+      state = this.applyKnockback(
+        state,
+        attacker,
+        target,
+        isMob,
+        undefined,
+        apos,
+        sh.bashKnockback
+      );
+    return state;
+  }
+
   /**
    * Spear KNOCKBACK: on a landed reach-weapon hit whose weapon carries `knockback`, roll a STR-scaled
    * chance to shove the target one tile directly away from the attacker. The push only takes if the
@@ -1835,10 +1927,13 @@ class CombatServiceImpl implements CombatService {
     target: Pawn | Mob,
     isMob: boolean,
     weaponId: string | undefined,
-    apos: { x: number; y: number }
+    apos: { x: number; y: number },
+    baseOverride?: number
   ): GameState {
-    if (!weaponId) return state;
-    const base = itemService.getItemById(weaponId)?.weaponProperties?.knockback ?? 0;
+    // Base push chance: an explicit override (shield bash) else the weapon's own `knockback`.
+    const base =
+      baseOverride ??
+      (weaponId ? (itemService.getItemById(weaponId)?.weaponProperties?.knockback ?? 0) : 0);
     if (base <= 0) return state;
     const tgt = isMob
       ? state.mobs?.find((m) => m.id === target.id)
@@ -2285,6 +2380,48 @@ class CombatServiceImpl implements CombatService {
       if (mods?.[key] != null) m *= mods[key];
     }
     return m;
+  }
+
+  /** The equipped off-hand SHIELD item def (armorType 'shield'), or undefined. */
+  private shieldDef(e: Pawn | Mob): Item | undefined {
+    const eq = 'equipment' in e ? e.equipment : undefined;
+    const off = eq?.offHand ? itemService.getItemById(eq.offHand.itemId) : undefined;
+    return off?.armorProperties?.armorType === 'shield' ? off : undefined;
+  }
+
+  /** Chance (0..BLOCK_CAP) to FULLY stop a blow: the `block` stat (CON + body mass) + the shield's flat
+   *  `blockBonus`, halved vs a ranged attack. Never weight-penalized — the heavy tank's negation. */
+  private blockChance(defender: Pawn | Mob, ranged: boolean): number {
+    const bonus = this.shieldDef(defender)?.armorProperties?.blockBonus ?? 0;
+    const base = pawnStatService.evaluateStat('block', defender) + bonus;
+    return clamp(base * (ranged ? RANGED_BLOCK_MULT : 1), 0, BLOCK_CAP);
+  }
+
+  /** Melee parry chance from the shield's `parryChance` (0 without a shield). */
+  private parryChanceOf(defender: Pawn | Mob): number {
+    return clamp(this.shieldDef(defender)?.armorProperties?.parryChance ?? 0, 0, PARRY_CAP);
+  }
+
+  /** A blow the defender's shield stops cold (blocked) or turns aside (parried): hit=false, no damage. */
+  private negatedHit(
+    weaponId: string,
+    staminaCost: number,
+    damageType: DamageType,
+    kind: 'blocked' | 'parried'
+  ): HitResult {
+    return {
+      hit: false,
+      blocked: kind === 'blocked',
+      parried: kind === 'parried',
+      bodyPart: null,
+      damage: 0,
+      injury: null,
+      knockdown: false,
+      crit: false,
+      damageType,
+      weaponId,
+      staminaCost
+    };
   }
 
   /**

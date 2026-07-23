@@ -52,6 +52,17 @@
         "description": "evasion (× moving; heavier = harder to dodge)"
     },
     {
+        // The other negation axis (Combat.blockChance): a CHANCE (0–1) to fully stop a melee blow,
+        // NOT weight-penalized (heavier braces BETTER — opposite of dodge) and never × moving, so a
+        // plate-and-shield tank negates even when it can't dodge. Bare-handed this is small; a shield's
+        // `blockBonus` is the bulk of it. Halved vs ranged. Clamped to the cap in Combat.
+        "id"         : "block",
+        "category"   : "combat",
+        "primaryStat": "constitution",
+        "formula"    : "0.03 + (CON − 10) × 0.006 + (weight − 70) × 0.0015",
+        "description": "block chance (CON + body mass; a shield adds the bulk of it)"
+    },
+    {
         // STEALTH base (Layer A): sizeFactor (weight, dominant) × dexGate (hard zero below DEX 8)
         // × moving. Traits/part grants/armour stealthMod layer on top in core/stealth.ts (Layer B),
         // folded in by evaluateStat — so reading this stat gives the FULL stealth value.

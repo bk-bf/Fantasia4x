@@ -543,10 +543,17 @@ export interface Item {
     crushResistance?: number;
     pierceResistance?: number;
 
-    // Combat bonuses
+    // Shield combat (armorType 'shield'): the negation + control kit. Read in Combat.ts.
+    /** Flat addition to the wearer's `block` chance — the shield tier ladder made real. */
+    blockBonus?: number;
+    /** Melee chance to PARRY an incoming blow (deflect it, no damage) and earn a free guaranteed counter. */
     parryChance?: number;
+    /** On the WIELDER'S landed melee hits (shield-bash style): chances to stagger / knock back / knock
+     *  down the target. Higher-tier shields carry these; bucklers 0. */
+    bashStagger?: number;
+    bashKnockback?: number;
+    bashKnockdown?: number;
     bashDamage?: number;
-    kickDamage?: number;
 
     // Special properties
     flexibility?: number;
