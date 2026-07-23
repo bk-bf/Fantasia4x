@@ -37,10 +37,10 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [x] charcoal_pit⚙: burn_charcoal, make_coke
 - [x] sawtable: saw_pine_planks, make_{oak,birch,ash,yew,willow}_plank, make_tanning_bucket, make_wooden_chest, make_wheelbarrow, make_handcart
 - [x] heartwood_joiner: make_{heartwood,moonwood,ironwood,emberwood}_plank
-- [x] hide_rack⚙: make_cured_{thin,light,sturdy,heavy,thick}_hide, cure_beast_hide
-- [x] tanning_rack: make_{thin,light,sturdy,heavy,thick}_leather, harden_boiled_leather
-- [x] ⚠→fixed: tanning_bucket_station⚙ — was shadowed by the tanning_rack. **RESOLVED via the Tanning chain redesign (rack removed; the passive buckets are now the only tanning path, one `tan_<leather>` recipe per species consuming brine).**
-- [x] beast_tanning_bucket⚙: tan_beast_leather, tan_scale_plate
+- [x] hide_rack⚙ (post-rework): make_cured_{rabbit_pelt,rat_pelt,deer_hide,goat_hide,jackal_hide,wolf_hide,worg_hide,boar_hide,elk_hide,aurochs_hide,bear_pelt,…} — one passive cure per species (17)
+- [x] ⚠→fixed: tanning_rack REMOVED (was shadowing the buckets). Tanning is now bucket-only.
+- [x] tanning_bucket_station⚙ (post-rework): tan_{coney_fur,vermin_hide,buckskin,kidskin,jackal_leather,wolf_leather,worg_leather,boarhide,elk_leather,oxhide,bearhide} — 11 common leathers, passive, brine-consuming
+- [x] beast_tanning_bucket⚙ (post-rework): tan_{cave_bear_hide,owlbear_leather,sabretooth_leather,mammoth_leather,hippogriff_leather,direwolf_leather}, tan_scale_plate, harden_boiled_leather
 - [x] hearth: make_animal_fat, boil_bone_glue, boil_hide_glue — ⚠ `make_ash` SHADOWED by burn_charcoal byproduct
 - [x] campfire (cooking): make_spit_meat, make_{small,fine,lavish}_stew, make_pottage, brew_herb_tea, make_clay_cooking_pot
 - [x] quern: mill_flour, grind_bone_meal
@@ -57,7 +57,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [x] potters_wheel: throw_clay_jug
 - [x] porcelain_workshop: refine_porcelain_clay, fire_porcelain_vessels
 - [x] spinning_wheel: spin_thread
-- [x] weaving_frame: weave_linen, weave_cotton, reel_silk, card_wool, comb_fine_wool, make_felt, weave_woolcloth, make_cushion, make_wool_cloak, make_linen_gambeson, make_direwolf_warcloak, make_regal_robes
+- [x] weaving_frame (post-rework): weave_linen, weave_cotton, reel_silk, weave_woolcloth (now `category:wool`), make_cushion, make_wool_cloak, make_linen_gambeson, make_direwolf_warcloak, make_regal_robes — ⚠ card_wool/comb_fine_wool/make_felt REMOVED (source-graded wool, no refine ladder)
 - [x] stone_forge⚙: make_{copper,tin,lead,silver,gold}_bar
 - [x] casting_hearth: make_bronze_bar, make_bronze_nail, make_tile_mold, make_cast_sling_bullet, make_bronze_punch_dagger, make_leaf_blade_spear, make_cast_bronze_hatchet, make_cast_bronze_skullcap
 - [x] bloomery⚙: make_iron_bar
@@ -130,7 +130,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - Yield-vs-speed rule (established): butchery stations give a **yield** bonus (better tools → more off a carcass); stations where more-out-than-in makes no sense (tools, smelting ore→ingots, cooking) give **speed** (`craftingBonus`) instead. Fires give more max fuel. Generic stations already give speed; butchery yield now wired.
 - [x] Butchery yield bonus wired + tier ladder (`butcheryTier`): dressing_stone/flensing/altar render lower recipes and their `butcheryYieldBonus` (+25/+45%) multiplies output
 - [x] ⚠→fixed: great-carcass renders/flenses + humanoid `*_remains` + jackal/quillback/olm were UNREACHABLE (their meat/bones dispatched to a different recipe). Root: butchery dispatched by output meat, and the carcass-card path was dead (`isCarcass` never set → carcass cards never rendered). Fix: `isCarcass` derived from `category==='carcass'` at the item index; orders carry `recipeId`; `craftItem`/`canQueueCraft`/`completeCraftOrder` dispatch butchery by the CARCASS (`resolveCarcassRecipe`, picks the best built station via `butcheryTier`); crafting-screen carcass cards gated on `category` + yields from the recipe. Verified headless: great_wolf→render_great_wolf, goblin→make_goblin_remains, dire_wolf→make_dire_wolf @flensing_table.
-- [ ] ⚠ 7 NON-butchery recipes still shadowed (share an output at a different station). **RESOLUTION (see "Material & production reworks" below):** `tan_*_leather_bucket` (×5) → Tanning redesign (rack removed); `smelt_blast_steel` → Steel rework (both steel recipes replaced); `grind_mana_crystal` → Crystal/magic-reagent rework (redesign, not prune — see below); `make_ash` → unshadow (Ash economy section — hearth ash path earns its place). NEITHER is a prune.
+- [~] ⚠ NON-butchery shadows: **`tan_*_leather_bucket` (×5) RESOLVED** (Tanning redesign — rack removed, buckets are the only path, one `tan_<leather>` per species). Still open: `smelt_blast_steel` → Steel rework (both steel recipes replaced); `grind_mana_crystal` → Crystal/magic-reagent rework (redesign, not prune); `make_ash` → unshadow (Ash economy section).
 - [ ] Gating: needs knife/butchery tool; T2 needs tier 2 — below-tier pawn blocked
 - [ ] Spoiled carcass yields proportionally less (conditionMult)
 - [ ] butcher_spot T0 — all common game: make_{rabbit,venison,wolf,bear,boar,elk,goat,chicken,rat,aurochs,mammoth,owlbear,sabretooth,crocodile,hippogriff,hoarfowl,worg,jackal,quillback,olm}_meat, harvest_thornwood_silk
@@ -153,8 +153,25 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 > de-duplicating. The shadow-bug's own fix = **option 1, prune the loser** — but for tanning & steel
 > the prune is absorbed into the reworks below (the "losing" recipes are being replaced, not just cut).
 
-### Tanning chain redesign + hide/leather variety split
+### Tanning chain redesign + hide/leather variety split — ✅ COMPLETE (re-audited headless 2026-07-23)
 Reference: VilesMods "Hell-Bent for Leather" (mandatory tanning step, per-animal leathers) + Hardcore SK.
+
+> **Re-audit (`_leatherChainAudit`, adversarial, 9/9, real recipeService/itemService/completeCraftOrder):**
+> ✓ the 6 abstract tiers + felt/coarse/fine wool are gone as items; ✓ 17 leathers (all `category:leather`)
+> + 5 wools (`category:wool`) + `jackal_hide` exist; ✓ every leather has exactly ONE tan recipe (no
+> shadowing), each passive + consuming brine; ✓ every cured hide has ONE passive cure recipe at the Curing
+> Frame with ash/salt; ✓ `tanning_rack`/`card_wool`/`comb_fine_wool`/`make_felt`/`cure_beast_hide` removed,
+> `weave_woolcloth` takes `category:wool`; ✓ all 7 fletched-ammo recipes feather-gated; ✓ wool butchery
+> drops wired (rabbit/goat/aurochs/mammoth); ✓ **material flow** — a jerkin crafted from mammoth_leather
+> stamps matDur 1.3 / matWeight 1.35 vs coney_fur 0.8 / 0.75 (heavier, tougher item from the heavier hide).
+>
+> **⚠→fixed during the re-audit — finished armour satisfied a material slot.** Armour uses `category` as
+> its armour CLASS (leather/metal/cloth/organic), so a finished `boiled_leather_jerkin` is `category:leather`
+> — and once 52 inputs became `category:leather`, `itemMatchesCostCategory` let a jerkin be consumed as raw
+> leather. The collision spans every class (leather 19 mat + 16 gear; metal 16 + 22; cloth 1 + 3; organic
+> 29 + 3). Fixed at the chokepoint: `itemMatchesCostCategory` (+ the RecipeService copy) now excludes
+> `type` armor/weapon/tool, so a cost/slot only ever draws raw stock. Verified: `category:leather` →
+> the 19 leather MATERIALS (17 + boiled_leather + scale_plate), no armour.
 
 **Current chain (3 stages):** raw pelt/hide → **cure** (passive, `hide_rack` "Curing Frame", +ash×2 or
 salt×1) → **tan** (TWO competing paths: active `tanning_rack` +bark, OR passive `tanning_bucket_station`

@@ -7,9 +7,14 @@ const ITEMS_DATABASE = itemsData as unknown as Item[];
 
 // `category:<cat>` slot match (local copy of ItemService.itemMatchesCostCategory to avoid a
 // RecipeService↔ItemService import cycle): `plank`/`log` match any *_plank / *_log; else item.category.
-function recipeItemMatchesCategory(item: { id: string; category?: string }, cat: string): boolean {
+function recipeItemMatchesCategory(
+  item: { id: string; category?: string; type?: string },
+  cat: string
+): boolean {
   if (cat === 'plank') return item.id.endsWith('_plank');
   if (cat === 'log') return item.id.endsWith('_log');
+  // Never a finished weapon/armour/tool — their `category` doubles as an armour class (see itemDefs).
+  if (item.type === 'armor' || item.type === 'weapon' || item.type === 'tool') return false;
   return item.category === cat;
 }
 const AUTHORED_RECIPES = recipesData as unknown as Recipe[];

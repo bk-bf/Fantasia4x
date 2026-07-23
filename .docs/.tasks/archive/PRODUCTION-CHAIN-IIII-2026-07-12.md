@@ -278,3 +278,49 @@ math all already shipped + tested (`famedNames.test.ts`). Missing: the craft-sid
       a one-time event? (Ties to the §2h "powerful conditions, steep costs" theme.) // persistent, spend after use, can roll negatives, 1 positive + 1 negative or if lucky just 1 positive
 - [ ] **Prestige stat home** (carried from PRODUCTION-CHAIN-III / §I): `Item.prestige` flat field vs
       derived from material+quality+enchants? Decided by SOCIAL-LAYER; capture either way.
+
+---
+
+## Post-archive corrections — leather/wool material rework (2026-07-23)
+
+Extends the §M material system (PRODUCTION-CHAIN-III's `material.item`/`material.building` multipliers).
+Driven from the AUDIT pass; re-audited headless (`_leatherChainAudit`, 9/9). Gates: `pnpm check` 0 errors,
+byte-identical seed replay, recipe/craft/building suites green.
+
+#### Hide → leather variety split
+- [x] **17 per-animal leathers replace the 6 abstract tiers** (thin/light/sturdy/heavy/thick/beast_leather
+      removed): `coney_fur` (rabbit) … `direwolf_leather` (dire wolf) — see the source table in AUDIT.md.
+      Each `category:leather`, identity carried by graded `material.item` (durability/weight → crafted item)
+      + `material.building` (insulation/comfort/beauty → furniture). `scale_plate` (croc) + `boiled_leather`
+      stay their own material lines.
+- [x] **Two-step passive chain, per species**: raw hide → (cure, Curing Frame, +ash/salt) → `cured_*` (17
+      new intermediates, `category:cured_hide`) → (tan, bucket, +brine) → leather. `tanning_rack` removed;
+      tanning is bucket-only. Bucket tanning now consumes **`tanning_brine`/`beast_brine` as a listed input**
+      (was burned as station fuel = "free leather"), giving `brew_*_brine` real consumers. `jackal` drops its
+      own `jackal_hide` (was `wolf_hide`). `harden_boiled_leather` relocated to the beast bucket.
+- [x] **Downstream not hard-gated by leather type** — 52 hard tier-leather inputs → `category:leather`; any
+      leather crafts, and its `material.item` multipliers flow to the output.
+
+#### §M extension — per-instance WEIGHT (new)
+- [x] `material.item.weight` was authored but unapplied. Built the per-instance weight path mirroring
+      `matDur`: **`matWeight`** stamped at craft (`craft.ts`) → carried onto the `ItemInstance`
+      (`PawnEquipment`) → applied against `def.weightKg` in `ItemService.getCurrentCarryLoad`. A piece from a
+      heavier hide is heavier to carry (mammoth ×1.35 vs coney ×0.75). Surfaced in the craft tooltip as
+      `Durability ×N` / `Weight ×N` rows (mirrors the building/stone tooltip).
+- [x] **`Recipe.materialBonuses` removed** — display-only dead code (computed for the tooltip, never stamped
+      on the item). Type + `applyMaterialBonuses` + tooltip path + 15 data blocks deleted.
+
+#### ⚠→fixed: finished equipment satisfied a material slot
+- [x] Armour uses `category` as its armour CLASS (leather/metal/cloth/organic), so a finished
+      `boiled_leather_jerkin` is `category:leather`. Once inputs became `category:leather`,
+      `itemMatchesCostCategory` let a jerkin be consumed as raw leather (collision spans all classes: metal
+      16 mat + 22 gear, etc.). Fixed at the chokepoint (`itemDefs` + the RecipeService copy): a `category:`
+      cost/slot excludes `type` armor/weapon/tool, so it only ever draws raw stock.
+
+#### Wool + feathers (smaller, same pass)
+- [x] **5 source-graded fleeces** replace generic `coarse_wool`/`wool`/`fine_wool` (`coney_wool` … `mammoth_wool`,
+      tiered by hunt difficulty), `category:wool`; butchery drops wired (rabbit/goat/aurochs/mammoth;
+      sheep_fleece husbandry-pending). No refine ladder (grading at source); `card_wool`/`comb_fine_wool`/
+      `make_felt` removed, `felt` item deleted; `weave_woolcloth` takes `category:wool`.
+- [x] **Feathers gate fletched ammo** — the 7 arrow/bolt recipes require `feathers` (or `chicken_feathers`),
+      so ranged ammo is gated behind hunting fowl.

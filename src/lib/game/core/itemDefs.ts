@@ -32,10 +32,15 @@ export function allItemDefs(): readonly Item[] {
  * ItemService and BuildingService to dodge a service↔service cycle; core is below both, so one copy.)
  */
 export function itemMatchesCostCategory(
-  item: { id: string; category?: string },
+  item: { id: string; category?: string; type?: string },
   cat: string
 ): boolean {
   if (cat === 'plank') return item.id.endsWith('_plank');
   if (cat === 'log') return item.id.endsWith('_log');
+  // A `category:<cat>` cost/slot consumes raw stock — a material (or food, for cooking slots), never a
+  // finished weapon/armour/tool. Those carry a `category` that doubles as their armour CLASS
+  // (leather/metal/cloth), so without this guard a `category:leather` grip could be "crafted" from a
+  // finished leather jerkin. Exclude the equipment types.
+  if (item.type === 'armor' || item.type === 'weapon' || item.type === 'tool') return false;
   return item.category === cat;
 }
