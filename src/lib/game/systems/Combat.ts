@@ -812,7 +812,7 @@ class CombatServiceImpl implements CombatService {
     const armorDrag = entityNaturalArmor(defender) * NATURAL_ARMOR_DODGE_DRAG;
     const defDodge =
       Math.max(0, pawnStatService.evaluateStat('dodge', defender) - armorDrag) *
-      this.conditionDodgeMult(defender) * // injuries, winded, AND encumbrance (heavy load = easier to hit)
+      this.conditionMult(defender, 'dodge') * // injuries, winded, encumbrance, fouled guard (easier to hit)
       (getGrip(defender) === 'shield' ? SHIELD_DODGE_MULT : 1); // BB: a shield raises evasion, not a block
 
     // MELEE gets the sane base (BASE_MELEE_HIT ± DEX/dodge edges). RANGED keeps its OWN calibrated
@@ -825,7 +825,7 @@ class CombatServiceImpl implements CombatService {
         (dex - 10) * DEX_HIT_WEIGHT +
         accuracy * MELEE_ACCURACY_WEIGHT -
         (defDodge - 1.0) * DODGE_HIT_WEIGHT;
-    const hitChance = clamp(toHit * this.conditionHitMult(attacker), 5, 95);
+    const hitChance = clamp(toHit * this.conditionMult(attacker, 'hitChance'), 5, 95);
     if (rng.random() * 100 > hitChance) {
       return {
         hit: false,
@@ -855,9 +855,10 @@ class CombatServiceImpl implements CombatService {
       !('entityClass' in attacker) &&
       !isDetectedBy(defender as Mob, attacker.id);
     const critChance = clamp(
-      pawnStatService.evaluateStat('hit_precision', attacker) *
+      (pawnStatService.evaluateStat('hit_precision', attacker) *
         (stealthStrike ? STEALTH_STRIKE_MULT : 1) +
-        critMod,
+        critMod) *
+        this.conditionMult(attacker, 'critChance'),
       0,
       CRIT_CHANCE_CAP
     );
@@ -890,7 +891,8 @@ class CombatServiceImpl implements CombatService {
     const armorRed = partArmorReduction(defender, partId, armorPen, raw, state.turn);
     const physRes = physicalResistance(defender, damageType);
     const mitigated = raw * (1 - armorRed) * (1 - physRes);
-    const scaled = mitigated * (crit ? CRIT_MULTIPLIER : 1);
+    const scaled =
+      mitigated * (crit ? CRIT_MULTIPLIER : 1) * this.conditionMult(attacker, 'weaponDamage');
     // ADR-029: armour can FULLY stop a weak hit — 0 damage (was floored at 1). A 0 means the blow
     // clanged off; the wound below is a no-op (severity/bleed/fracture all gate on hpMissing > 0).
     const final = scaled <= 0 ? 0 : Math.max(1, Math.round(scaled));
@@ -2133,7 +2135,10 @@ class CombatServiceImpl implements CombatService {
 
     // Aim cadence = AIM time (aim_speed/DEX, distance-scaled, draw gear) + SPAN time (reload_speed/DEX,
     // crossbow crank only). The DEX SPEED axis governs both; PER governs precision (accuracy/range).
-    const attackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', pawn));
+    const attackSpeed = Math.max(
+      0.5,
+      pawnStatService.evaluateStat('attack_speed', pawn) * this.conditionMult(pawn, 'attackSpeed')
+    );
     const baseInterval = Math.max(
       MIN_ATTACK_INTERVAL_TICKS,
       Math.round(BASE_ATTACK_INTERVAL_TICKS / attackSpeed)
@@ -2263,28 +2268,21 @@ class CombatServiceImpl implements CombatService {
     return (e as Mob).state === 'Attacking';
   }
 
-  /** Product of all active transient condition `dodge` modifiers (winded → 0.5 → easier to hit). */
-  private conditionDodgeMult(e: Pawn | Mob): number {
+  /** Product of all active condition (transient + persistent) `key` modifiers — the general form behind
+   *  every combat modifier a condition carries (dodge, hitChance, attackSpeed, weaponDamage, critChance).
+   *  Scales the DERIVED combat value directly, never a base attribute (winded → dodge 0.5; a fouled 2H
+   *  guard → all five at 0.5). 1 = nothing active carries the key. */
+  private conditionMult(e: Pawn | Mob, key: string): number {
     let m = 1;
     for (const id of e.transientConditions ?? []) {
-      const v = TRANSIENT_CONDITIONS_DB.find((s) => s.id === id)?.modifiers.dodge;
-      if (v != null) m *= v;
+      const mods = TRANSIENT_CONDITIONS_DB.find((s) => s.id === id)?.modifiers as
+        | Record<string, number>
+        | undefined;
+      if (mods?.[key] != null) m *= mods[key];
     }
-    // Persistent conditions (encumbered…) — the active stage's `dodge` modifier.
     for (const c of e.conditions ?? []) {
-      const v = getConditionCurrentStage(c)?.modifiers.dodge;
-      if (v != null) m *= v;
-    }
-    return m;
-  }
-
-  /** Product of active persistent conditions' `hitChance` modifiers (encumbered → the attacker's aim
-   *  suffers). Transient conditions carry no hitChance today. */
-  private conditionHitMult(e: Pawn | Mob): number {
-    let m = 1;
-    for (const c of e.conditions ?? []) {
-      const v = getConditionCurrentStage(c)?.modifiers.hitChance;
-      if (v != null) m *= v;
+      const mods = getConditionCurrentStage(c)?.modifiers as Record<string, number> | undefined;
+      if (mods?.[key] != null) m *= mods[key];
     }
     return m;
   }
@@ -2530,7 +2528,10 @@ class CombatServiceImpl implements CombatService {
       if (tdist > this.meleeReach(pawn)) continue;
 
       // Attack cadence — scaled by attack_speed stat.
-      const pawnAttackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', pawn));
+      const pawnAttackSpeed = Math.max(
+        0.5,
+        pawnStatService.evaluateStat('attack_speed', pawn) * this.conditionMult(pawn, 'attackSpeed')
+      );
       const pawnInterval = Math.max(
         MIN_ATTACK_INTERVAL_TICKS,
         Math.round(BASE_ATTACK_INTERVAL_TICKS / pawnAttackSpeed)

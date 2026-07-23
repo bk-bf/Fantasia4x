@@ -693,6 +693,19 @@
         "modifiers": {"dodge": 0.0}
     },
     {
+        // A two-handed weapon carried with a shield still on the off-arm — allowed, never forbidden, but
+        // clumsy: the two foul each other. Modifiers scale the DERIVED combat values directly (dodge, aim,
+        // speed, damage, crit) rather than the base attributes (Combat.conditionMult). Granted by
+        // syncTransientConditions when mainHand is twoHanded AND the off-hand is occupied.
+        "id"         : "fouled_guard",
+        "name"       : "Fouled Guard",
+        "flags"      : ["combat"],
+        "transient"  : true,
+        "description": "Swinging a two-handed weapon with a shield still strapped to the off-arm. Neither has room to work, so the guard drops, the blow drags in slow and weak, and the point wanders wide.",
+        "color"      : "#8D6E63",
+        "modifiers"  : {"dodge": 0.5, "hitChance": 0.5, "attackSpeed": 0.5, "weaponDamage": 0.5, "critChance": 0.5}
+    },
+    {
         "id"         : "eating",
         "name"       : "Eating",
         "flags"      : ["fsm"],

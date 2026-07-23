@@ -1342,6 +1342,12 @@ export function syncTransientConditions(pawn: Pawn, turn?: number): Pawn {
       if (inst.famed && inst.famedEnchants)
         for (const cid of inst.famedEnchants) if (!ids.includes(cid)) ids.push(cid);
     }
+    // A two-handed weapon fought with a shield/off-hand item still in place: allowed, but the two foul
+    // each other → the `fouled_guard` debuff (slower/weaker swing, worse aim/dodge/crit — Combat reads
+    // its modifiers). Not forbidden at equip time; the penalty just makes it a poor choice.
+    const mh = equipment.mainHand;
+    if (mh && equipment.offHand && itemService.getItemById(mh.itemId)?.weaponProperties?.twoHanded)
+      ids.push('fouled_guard');
   }
 
   // Bleeding tell (info-only): while any wound is seeping, surface HOW urgent it is — staged off the
