@@ -188,8 +188,10 @@ function setInstanceDownOnTile(
 /** Registry. Add a command here + call `gameState.command({ type, payload, save })` at the site. */
 export const COMMANDS: Record<string, Cmd> = {
   // ── items / stockpile ──────────────────────────────────────────────────────
-  addItem: (s, p: { itemId: string; amount: number }) =>
-    addToStockpileZone(s, null, { [p.itemId]: p.amount }),
+  /** `tileKey` ("x,y") pins WHERE the stock lands. Without it the generic fallback takes the first
+   *  storage tile it scans — which, with a whole-map stockpile, can be an unreachable map-edge pocket. */
+  addItem: (s, p: { itemId: string; amount: number; tileKey?: string }) =>
+    addToStockpileZone(s, p.tileKey ?? null, { [p.itemId]: p.amount }),
   consumeGlobalItem: (s, p: { itemId: string; quantity: number }) => {
     const current = (s.stockpile ?? {})[p.itemId] ?? 0;
     if (current < p.quantity) return s;

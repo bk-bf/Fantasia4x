@@ -57,8 +57,36 @@ describe('steel chain', () => {
     expect(fail, fail.join('\n')).toEqual([]);
   });
 
-  // ⚠ NOT COVERED HERE: the PHYSICAL pawn pipeline for metal stations. Fuel-gated furnaces
-  // (bloomery/blast/finery) are never fuelled+lit by pawns headless, and anvil work needs a pawn to be
-  // CARRYING a metalworking tool. Both are PRE-EXISTING gaps — the untouched `make_iron_bar` bloomery
-  // recipe fails identically — and are tracked in AUDIT (fuel stations / tool gating), not introduced here.
+  // HEADLESS: pawns actually smelt + bake the chain over real ticks (fuel handled by `infiniteFuel`,
+  // which deliberately takes the haul-fuel-and-light loop out of scope — that has its own audit).
+  it('pawns physically smelt iron at the bloomery and bake blister steel at the cementation furnace', async () => {
+    const s = new HeadlessSession();
+    await s.start(
+      buildScenario({
+        seed: 11,
+        map: { w: 20, h: 20 },
+        researchMaxTier: 9,
+        toolTier: 3,
+        infiniteFuel: true,
+        pawns: [{ count: 6, skillLevel: 12 }],
+        needsDisabled: ['hunger', 'fatigue'],
+        buildings: [{ id: 'bloomery' }, { id: 'cementation_furnace' }],
+        items: { hematite: 60, limestone: 40, charcoal: 60, iron_bar: 20 },
+        seedEntities: false
+      })
+    );
+    for (const p of s.getState().pawns)
+      for (const w of workService.getAllWorkCategories())
+        s.command({ type: 'setPawnLaborLevel', payload: { pawnId: p.id, workId: w.id, level: 3 } } as never);
+    const stk = () => (s.getState().stockpile ?? {}) as Record<string, number>;
+    const ore0 = stk().hematite ?? 0;
+    s.command({ type: 'craftItem', payload: { itemId: 'iron_bar', quantity: 1 } } as never);
+    s.command({ type: 'craftItem', payload: { itemId: 'blister_steel', quantity: 1 } } as never);
+    // NB: the cementation order EATS iron_bar (2) while the bloomery makes 1, so net iron_bar can dip —
+    // assert on the ore actually consumed by the smelt, not on the shared iron_bar balance.
+    for (let i = 0; i < 16 && !(stk().blister_steel > 0 && (stk().hematite ?? 0) < ore0); i++) s.tick(400);
+    console.log(`[STEEL-PIPELINE] hematite ${ore0}→${stk().hematite}, iron_bar=${stk().iron_bar}, blister_steel=${stk().blister_steel}, turn=${s.getState().turn}`);
+    expect(stk().hematite ?? 0, 'bloomery smelted ore into iron').toBeLessThan(ore0);
+    expect(stk().blister_steel ?? 0, 'cementation baked blister steel').toBeGreaterThan(0);
+  });
 });

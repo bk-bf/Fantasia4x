@@ -301,11 +301,11 @@ hardness/toughness tradeoffs (the historical difficulty of hitting the ~0.2–2.
       → 1.25 (shear) → 1.35 (crucible) → 1.40 (pattern-welded)**, surfaced in the craft tooltip. `steel_bar` removed.
 **Verified:** all 8 chain steps queue (`canQueueCraft`) and produce (`completeCraftOrder`) in a provisioned
 colony; the 6 steels each satisfy a `category:steel` consumer with the distinct multipliers above.
-- [~] ⚠ **NOT headless-playtested — service-level only.** The PHYSICAL pawn pipeline for metal stations could
-      not be driven: fuel-gated furnaces (bloomery/blast/finery) are never fuelled+lit by pawns headless, and
-      anvil work needs the pawn to be CARRYING a metalworking tool (stockpiled isn't enough). **Both are
-      PRE-EXISTING** — the untouched `make_iron_bar` bloomery recipe fails identically — so the whole smelting
-      tier is currently unproven in the pawn loop. See the fuel-station + tool-gating open items.
+- [x] **HEADLESS-PLAYTESTED** (`steelChain.test.ts`, `HeadlessSession`, real pawns/ticks, `infiniteFuel` so the
+      haul-fuel-and-light loop stays out of scope): pawns smelt ore at the bloomery AND bake blister steel at
+      the cementation furnace — **hematite 60→56, blister_steel 0→2 by turn 3200**.
+- [ ] Anvil-side steps (shear/pattern-weld) still unproven physically: anvil work needs the pawn to be
+      CARRYING a metalworking tool (stockpiled isn't enough) — a tool-gating question, not a chain defect.
 - [x] ⚠→fixed: **no shadow.** The finery's output was renamed to a DISTINCT `wrought_iron` (cleaner, more
       even than a bloom — `material.item.durability` 1.08 vs 1.0), so `iron_bar` and `wrought_iron` each have
       exactly ONE producer. Both share **`category: iron`**, and the steel processes (cementation, crucible,
@@ -315,15 +315,19 @@ colony; the 6 steels each satisfy a `category:steel` consumer with the distinct 
       smelting/baking without also exercising the haul-fuel-and-light loop. Verified working (bloomery goes
       `lit=true fuel=160 fireHeat=5`).
 
-> ### ⚠⚠ MAJOR FINDING — the PASSIVE production tier never runs in the headless pawn loop
-> Driving the chain with fuel solved, the bloomery order still stalls: inputs are **reserved (2 drops) but
-> never STAGED**, and the pawns sit **Idle** forever. The untouched **`charcoal_pit`** (`burn_charcoal`)
-> fails **identically**, so this is **PRE-EXISTING and not caused by the steel work** — but it means every
-> ⚙ passive station is unproven in the pawn loop: charcoal pit, bloomery, cementation furnace, curing racks,
-> tanning buckets, fermenter, brewing barrel, kilns, compost bin, resin tap.
-> - Consequence: the leather chain's cure→tan and the steel chain's bloomery/cementation steps are
->   **service-verified only** — their physical pawn pipeline has never actually run.
-> - Also noted: **`blast_furnace` carries no fuel fields at all** (no `maxFuel`/`minFuelHeat`/
->   `requiresLighting`), unlike bloomery/finery — a data gap worth settling in the ore audit.
-> - [ ] Diagnose why staging jobs aren't generated for passive stations (compare against the ACTIVE path,
->       which works: makers_bench + weaving_frame both stage and craft fine headless).
+> ### ⚠→FIXED — passive stations DO run; the stall was my own stockpile regression
+> **My first diagnosis ("the passive production tier never runs") was WRONG.** Corrected by driving it:
+> on a FLAT (fully reachable) map the passive `charcoal_pit` produced fine, so the tier was never broken.
+> Two real bugs were behind the stall, both now fixed:
+> - [x] ⚠→fixed: **starting stock landed on unreachable tiles.** `addItem` drops stock on the *first*
+>       storage tile it scans — and once I made the WHOLE MAP a stockpile, that became a map-edge tile that
+>       can be cut off from the pawns. The fetch job was generated but never claimable (`selectJobForPawn`
+>       filters on reachability), so crafting stalled silently with no visible cause. `addItem` now takes an
+>       optional `tileKey`, and `buildScenario` pins starting stock to the PAWN CLUSTER.
+> - [x] ⚠→fixed: **a PASSIVE station was tool-gated.** `cementation_furnace` carried a
+>       `toolRequirement` (copied from the finery), which blocks the order even though no pawn ever stands
+>       at a passive bake. Removed — matches the bloomery, which is passive and has none.
+> - Verified after the fix on a GENERATED map: `charcoal_pit` charcoal 0→2 and `bloomery` iron_bar 0→1.
+> - Still noted: **`blast_furnace` carries no fuel fields at all** (no `maxFuel`/`minFuelHeat`/
+>   `requiresLighting`), unlike bloomery/finery — a data gap to settle in the ore audit.
+

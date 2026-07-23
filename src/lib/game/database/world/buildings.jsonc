@@ -573,7 +573,6 @@
     "buildingCost": {"fired_brick": 24, "category:block": 6, "iron_bar": 3},
     "workAmount": 36,
     "toolTierRequired": 2,
-    "toolRequirement": {"workType": "metalworking", "minTier": 1},
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},

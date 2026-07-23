@@ -217,9 +217,16 @@ export function buildScenario(spec: ScenarioSpec): GameState {
     }
   }
 
-  // Stock: straight into the general stockpile (deterministic `addItem`, ADR-016-sanctioned).
+  // Stock: straight into the general stockpile (deterministic `addItem`, ADR-016-sanctioned). PINNED to
+  // the pawn cluster — the whole map is a stockpile, so the generic tile-scan fallback would otherwise
+  // drop the starting stock on a map-edge tile that may be unreachable from the pawns, and every fetch
+  // job for it would sit unclaimed forever (crafting silently stalls with no visible cause).
+  const stockTile = gs.pawns.length
+    ? `${Math.round(gs.pawns.reduce((a, p) => a + (p.position?.x ?? 0), 0) / gs.pawns.length)},` +
+      `${Math.round(gs.pawns.reduce((a, p) => a + (p.position?.y ?? 0), 0) / gs.pawns.length)}`
+    : undefined;
   for (const [itemId, amount] of Object.entries(spec.items ?? {})) {
-    if (amount > 0) cmd('addItem', { itemId, amount });
+    if (amount > 0) cmd('addItem', { itemId, amount, tileKey: stockTile });
   }
 
   // Mobs (on top of natural seeding, or alone on a quiet map).
