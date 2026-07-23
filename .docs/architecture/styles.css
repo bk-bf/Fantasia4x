@@ -222,6 +222,51 @@
 .delta .now { color: var(--parchment); font-size: 13pt; }
 .delta .now b { color: var(--phosphor); }
 
+/* ---- Design-tension hook: the "why is it like this?" audit thread ---- */
+:root { --query: #bd94d4; }
+.tension {
+  background: rgba(189,148,212,0.10);
+  border-left: 3px solid var(--query);
+  border-radius: 4px;
+  padding: 9px 15px;
+  font-size: 13.5pt; line-height: 1.4; color: var(--parchment);
+}
+.tension .h {
+  font-family: var(--mono); font-size: 8.5pt; font-weight: 600;
+  letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--query); display: block; margin-bottom: 2px;
+}
+.tension b { color: #dcc2ec; font-weight: 600; }
+.tension .c { color: #f0c884; }
+
+/* ---- Part dividers ---- */
+.part-num { font-family: var(--mono); font-size: 15pt; color: var(--amber); letter-spacing: 0.2em; margin: 0 0 6px; }
+
+/* ---- Bar chart (module shape) ---- */
+.bars { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
+.bar-row { display: grid; grid-template-columns: 132px 1fr 92px; align-items: center; gap: 12px; }
+.bar-row .lab { font-family: var(--mono); font-size: 11.5pt; color: var(--parchment); text-align: right; }
+.bar-track { height: 17px; background: rgba(255,255,255,0.045); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; background: linear-gradient(90deg, var(--clay), var(--amber)); border-radius: 3px; }
+.bar-fill.cool { background: linear-gradient(90deg, #3f6b64, var(--phosphor)); }
+.bar-row .val { font-family: var(--mono); font-size: 9.5pt; color: var(--muted-color); }
+
+/* ---- Ranked hub / god-module list ---- */
+.hublist { display: flex; flex-direction: column; }
+.hubrow { display: grid; grid-template-columns: 52px 1fr; align-items: baseline; gap: 14px; padding: 5px 0; border-bottom: 1px solid var(--line-color); }
+.hubrow .badge { font-family: var(--mono); font-weight: 700; font-size: 15pt; color: var(--amber); text-align: right; }
+.hubrow .badge.cool { color: var(--phosphor); }
+.hubrow .nm { font-family: var(--mono); font-size: 12.5pt; color: var(--parchment); }
+.hubrow .ds { font-size: 11.5pt; color: var(--muted-color); font-family: var(--serif); }
+
+/* dependency-direction chips for the layering slide */
+.deprow { display: grid; grid-template-columns: 200px 60px 1fr; align-items: center; gap: 8px; margin-bottom: 5px; }
+.deprow .from { font-family: var(--mono); font-size: 12pt; color: var(--parchment); text-align: right; }
+.deprow .cnt { font-family: var(--mono); font-size: 12pt; font-weight: 700; text-align: center; }
+.deprow .note { font-size: 11.5pt; color: var(--muted-color); }
+.deprow.good .cnt { color: var(--phosphor); }
+.deprow.watch .cnt { color: var(--query); }
+
 .text-muted { color: var(--muted-color) !important; }
 .text-amber { color: var(--amber) !important; }
 .text-center { text-align: center !important; }

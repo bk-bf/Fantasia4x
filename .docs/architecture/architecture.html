@@ -12,19 +12,28 @@
   <div class="reveal">
     <div class="slides">
 
-      <!-- 1 · TITLE -->
+      <!-- ============ TITLE ============ -->
       <section id="title" class="section-divider" data-state="is-section-divider">
         <p class="kicker">How the machine is built</p>
         <h1>Fantasia<span style="color:var(--amber)">4x</span><br>from screen to sim</h1>
         <div class="rule"></div>
-        <p class="lead">A walk down through the game — from the screen you look at, to the moment-by-moment simulation running underneath it.</p>
-        <div class="eg" style="margin-top:20px; max-width:760px">
+        <p class="lead">A walk down through the game — from the screen you look at, to the moment-by-moment simulation running underneath it — and the design tensions hiding in each floor.</p>
+        <div class="eg" style="margin-top:18px; max-width:780px">
           <span class="lbl">One thread we'll follow the whole way down</span>
-          You mark an <b>oak</b> to be chopped. Many ticks later, eight logs of <b>wood</b> are sitting in your stockpile. Every slide shows that same chop, one floor lower.
+          You mark an <b>oak</b> to be chopped. Many ticks later, eight logs of <b>wood</b> are sitting in your stockpile. Early slides show that same chop, one floor lower.
         </div>
+        <p class="tiny text-muted" style="margin-top:14px; font-family:var(--mono)">Part I the machine · Part II the subsystems · Part III the graph · Part IV the open questions</p>
       </section>
 
-      <!-- 2 · LAYER MAP -->
+      <!-- ============ PART I DIVIDER ============ -->
+      <section class="section-divider" data-state="is-section-divider">
+        <p class="part-num">PART I</p>
+        <h1>The machine</h1>
+        <div class="rule"></div>
+        <p class="lead">The five floors, the wall in the middle, and the one moment of time that runs sixty times a second.</p>
+      </section>
+
+      <!-- LAYER MAP -->
       <section id="layer-map">
         <p class="kicker"><span class="n">0</span>The whole thing at a glance</p>
         <h2>Five floors, and things only ever fall downward</h2>
@@ -44,7 +53,7 @@
         </div>
       </section>
 
-      <!-- 3 · UI -->
+      <!-- UI -->
       <section id="ui">
         <p class="kicker"><span class="n">1</span>What you see</p>
         <h2>The game shows exactly one screen at a time</h2>
@@ -58,65 +67,50 @@
           </div>
           <p class="caption">Click a tab → it flips one value → the app swaps in that screen. Nothing shows at all until the game has finished loading.</p>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px;">
-            <div class="card">
-              <h4>In the code</h4>
-              <p class="small">The single value is <span class="c">uiState.currentScreen</span>. A plain list of “if it's this, show that” in <span class="c">+page.svelte</span> picks the screen; a tab click calls <span class="c">setScreen()</span>.</p>
-            </div>
+            <div class="card"><h4>In the code</h4><p class="small">The single value is <span class="c">uiState.currentScreen</span>. A plain list of “if it's this, show that” in <span class="c">+page.svelte</span> picks the screen; a tab click calls <span class="c">setScreen()</span>.</p></div>
             <div class="eg"><span class="lbl">In the game</span>You mark the oak from the <b>Work</b> screen. Click the <b>Crafting</b> tab and the work board is gone, the bench is there — same world underneath, just a different viewer on top.</div>
           </div>
         </div>
         <div class="footnote">The screens are just viewers. They never change the world directly — they only ask for it to change (next slides).</div>
       </section>
 
-      <!-- 4 · STORES -->
+      <!-- STORES -->
       <section id="stores">
         <p class="kicker"><span class="n">2</span>The latest picture</p>
         <h2>The screens read a picture; they don't run the game</h2>
         <div class="content">
           <div class="diagram">
             <div class="node warm" style="border-top:3px solid var(--amber)"><div class="t">the running game</div><span class="s">background thread</span></div>
-            <div class="arrow">→<span class="l">hands over a fresh snapshot<br>~15×/sec</span></div>
+            <div class="arrow">→<span class="l">fresh snapshot<br>~15×/sec</span></div>
             <div class="node accent big"><div class="t">“the latest picture”</div><span class="s">gameState</span></div>
             <div class="arrow">→<span class="l">screens read</span></div>
             <div class="node cool"><div class="t">the UI redraws</div></div>
           </div>
-          <p class="caption" style="margin-top:12px">The screens only ever <em>look</em> at this picture. They can't reach in and edit the world — the picture is read-only on their side.</p>
+          <p class="caption" style="margin-top:12px">The screens only ever <em>look</em> at this picture. They can't reach in and edit the world — it's read-only on their side.</p>
           <div class="eg" style="margin-top:14px"><span class="lbl">In the game</span>Your pawn carries the log one tile east. About fifteen times a second a new picture arrives, and you watch the log slide across the map.</div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px;">
-            <div class="card"><h4>Saving your game</h4><p class="small">Whenever the picture updates, it's quietly written to a small database in the browser <span class="c">saveManager → IndexedDB</span>. Autosave rides along.</p></div>
+            <div class="card"><h4>Saving your game</h4><p class="small">Every update is quietly written to a small database in the browser <span class="c">saveManager → IndexedDB</span>. Autosave rides along.</p></div>
             <div class="card cool"><h4>Other little pictures</h4><p class="small">Which screen you're on <span class="c">uiState</span>, the popup event <span class="c">eventStore</span>, the activity log <span class="c">Log</span>.</p></div>
           </div>
         </div>
         <div class="footnote">Heads-up: the old notes say saves live in localStorage — the code moved to IndexedDB. localStorage now only holds view preferences.</div>
       </section>
 
-      <!-- 5 · WORKER (stack of 2) -->
+      <!-- WORKER stack -->
       <section>
         <section id="worker-1">
           <p class="kicker"><span class="n">2½</span>The wall in the middle</p>
           <h2>The real game runs off to the side, so the screen stays smooth</h2>
           <div class="content">
             <div class="lanes">
-              <div class="lane cool">
-                <h4>Your window</h4>
-                <p>Draws the map, handles clicks, plays sound. Must never stutter.</p>
-                <p style="margin-top:8px"><span class="c">main thread</span></p>
-              </div>
-              <div class="cross">
-                <div>→</div><div class="m">“do this”</div>
-                <div>←</div><div class="m">“here's the<br>new picture”</div>
-              </div>
-              <div class="lane warm">
-                <h4>The game itself</h4>
-                <p>Runs the simulation 60 times a second — hunger, jobs, growth, fights, everything.</p>
-                <p style="margin-top:8px"><span class="c">background Web Worker</span></p>
-              </div>
+              <div class="lane cool"><h4>Your window</h4><p>Draws the map, handles clicks, plays sound. Must never stutter.</p><p style="margin-top:8px"><span class="c">main thread</span></p></div>
+              <div class="cross"><div>→</div><div class="m">“do this”</div><div>←</div><div class="m">“here's the<br>new picture”</div></div>
+              <div class="lane warm"><h4>The game itself</h4><p>Runs the simulation 60 times a second — hunger, jobs, growth, fights, everything.</p><p style="margin-top:8px"><span class="c">background Web Worker</span></p></div>
             </div>
             <div class="eg" style="margin-top:16px"><span class="lbl">In the game</span>While your pawn hauls its log and 39 others eat, sleep and wander, you pan the camera and it stays perfectly smooth — all that living is happening on the far side of the wall.</div>
           </div>
           <div class="footnote">60 ticks/sec inside · a fresh picture handed across ~15×/sec · they only ever talk by passing messages, never by sharing memory.</div>
         </section>
-
         <section id="worker-2">
           <p class="kicker"><span class="n">2½</span>The wall in the middle</p>
           <h2>It only sends what actually changed</h2>
@@ -135,7 +129,7 @@
         </section>
       </section>
 
-      <!-- 6 · COMMANDS -->
+      <!-- COMMANDS -->
       <section id="commands">
         <p class="kicker"><span class="n">2½</span>The one doorway to change things</p>
         <h2>You don't edit the world — you send it a request</h2>
@@ -143,22 +137,19 @@
           <div class="diagram">
             <div class="node cool"><div class="t">you click</div><span class="s">“chop that oak”</span></div>
             <div class="arrow">→</div>
-            <div class="node"><div class="t">a named request</div><span class="s">a plain little message</span></div>
+            <div class="node"><div class="t">a named request</div><span class="s">a plain message</span></div>
             <div class="arrow">→<span class="l">across the wall</span></div>
-            <div class="node"><div class="t">looked up in the<br>list of allowed moves</div><span class="s">88 of them</span></div>
+            <div class="node"><div class="t">looked up in the<br>list of moves</div><span class="s">88 of them</span></div>
             <div class="arrow">→</div>
             <div class="node accent"><div class="t">the world<br>changes</div></div>
           </div>
-          <div class="eg" style="margin-top:16px"><span class="lbl">In the game</span>Marking the oak becomes the request <span class="c">designate(chop, tile 14,9)</span>. It crosses the wall, gets looked up in the list, and now that tile is flagged for chopping. That request <em>is</em> the only way the world learned about your intent.</div>
-          <div class="callout ok" style="margin-top:14px">
-            <span class="h">WHY IT'S BUILT THIS WAY</span>
-            <p class="small">One doorway, three users: the buttons you click, the automated test scripts, and the dev tools all send the exact same requests. Same requests in the same order always produce the exact same game.</p>
-          </div>
+          <div class="eg" style="margin-top:16px"><span class="lbl">In the game</span>Marking the oak becomes the request <span class="c">designate(chop, tile 14,9)</span>. It crosses the wall, gets looked up, and now that tile is flagged. That request <em>is</em> the only way the world learned your intent.</div>
+          <div class="callout ok" style="margin-top:14px"><span class="h">WHY IT'S BUILT THIS WAY</span><p class="small">One doorway, three users: the buttons you click, the automated test scripts, and the dev tools all send the exact same requests. Same requests in the same order always produce the exact same game.</p></div>
         </div>
         <div class="footnote">In the code: the list is COMMANDS in commands.ts (88 entries) · chop = designate, equip = equipPawnItem, draft = toggleDraft.</div>
       </section>
 
-      <!-- 7 · TURN LOOP (stack of 2) -->
+      <!-- TURN LOOP stack -->
       <section>
         <section id="turn-1">
           <p class="kicker"><span class="n">3</span>The turn-taker</p>
@@ -166,23 +157,17 @@
           <div class="content">
             <p class="lead text-center">Sixty times a second, the game plays out a single moment of time. The steps always run in the same fixed order, because each one relies on what the step before it just did.</p>
             <div class="diagram" style="margin-top:18px; gap:8px;">
-              <div class="node"><div class="t">bodies</div><span class="s">hunger · sleep</span></div>
-              <div class="arrow">→</div>
-              <div class="node"><div class="t">stuff</div><span class="s">rot · dry · research</span></div>
-              <div class="arrow">→</div>
-              <div class="node"><div class="t">work</div><span class="s">jobs · building</span></div>
-              <div class="arrow">→</div>
-              <div class="node"><div class="t">world</div><span class="s">growth · animals</span></div>
-              <div class="arrow">→</div>
-              <div class="node accent"><div class="t">fights &amp;<br>the dead</div></div>
-              <div class="arrow">→</div>
+              <div class="node"><div class="t">bodies</div><span class="s">hunger · sleep</span></div><div class="arrow">→</div>
+              <div class="node"><div class="t">stuff</div><span class="s">rot · dry · research</span></div><div class="arrow">→</div>
+              <div class="node"><div class="t">work</div><span class="s">jobs · building</span></div><div class="arrow">→</div>
+              <div class="node"><div class="t">world</div><span class="s">growth · animals</span></div><div class="arrow">→</div>
+              <div class="node accent"><div class="t">fights &amp;<br>the dead</div></div><div class="arrow">→</div>
               <div class="node cool"><div class="t">events</div></div>
             </div>
-            <div class="eg" style="margin-top:18px"><span class="lbl">In the game</span>Across many ticks: the pawn is handed the chop job, walks to the oak, swings and swings — then on some later tick the oak finally falls and the logs drop to the ground.</div>
+            <div class="eg" style="margin-top:18px"><span class="lbl">In the game</span>Across many ticks: the pawn is handed the chop job, walks to the oak, swings and swings — then on some later tick the oak finally falls and the logs drop.</div>
           </div>
-          <div class="footnote">In the code: GameEngineImpl.processGameTurn — it doesn't hold the rules itself, it just calls the specialists in this order. Full list next →</div>
+          <div class="footnote">In the code: GameEngineImpl.processGameTurn — it doesn't hold the rules, it just calls the specialists in this order. Full list next →</div>
         </section>
-
         <section id="turn-2">
           <p class="kicker"><span class="n">3</span>The turn-taker — every step</p>
           <h2 style="font-size:23pt">The 19 steps of one tick <span class="tiny text-muted" style="font-weight:400">(plain name · code call)</span></h2>
@@ -209,13 +194,13 @@
               <div class="phase thr"><span class="pn">19</span><span class="pname">world events</span><span class="pcall">migrants · trade · talk</span></div>
               <div class="phase" style="border-style:dashed; opacity:0.7"><span class="pn">↳</span><span class="pname">hand over the picture</span><span class="pcall">~15×/sec</span></div>
             </div>
-            <div class="eg" style="margin-top:10px"><span class="lbl">Your oak lives here</span><b>Step 8</b> makes the “chop” job · <b>Step 11</b> is where the pawn actually swings · <b>Step 13</b> is where the stump eventually regrows.</div>
+            <div class="tension" style="margin-top:10px"><span class="h">Why is it like this?</span>Steps <b>11 pawns act</b> and <b>12 pawns grow</b> are separate top-level phases. Growth isn't something a pawn “does” while acting — it's the once-a-day meta hook. But that's exactly the smell: see the Growth slide in Part II.</div>
           </div>
           <div class="footnote">The old notes said 13 steps; the code runs 19. Amber = runs only every so often · phosphor = the heavy steps.</div>
         </section>
       </section>
 
-      <!-- 8 · SERVICES -->
+      <!-- SPECIALISTS -->
       <section id="services">
         <p class="kicker"><span class="n">4</span>The specialists</p>
         <h2>One expert per topic — and it only knows its own topic</h2>
@@ -228,112 +213,472 @@
             <div class="card cool"><h4>Other kingdoms</h4><p class="names">kingdomService</p></div>
             <div class="card cool"><h4>Research</h4><p class="names">researchService</p></div>
           </div>
-          <div class="eg" style="margin-top:16px"><span class="lbl">In the game</span>Felling the oak passes through three experts: the job list hands the pawn the task <span class="c">jobService</span>, the tree decides how much it yields <span class="c">resourceObjectService</span>, and the logs become real, pick-up-able items <span class="c">itemService</span>.</div>
+          <div class="eg" style="margin-top:16px"><span class="lbl">In the game</span>Felling the oak passes through three experts: the job list hands the pawn the task <span class="c">jobService</span>, the tree decides its yield <span class="c">resourceObjectService</span>, and the logs become real, pick-up-able items <span class="c">itemService</span>.</div>
         </div>
         <div class="footnote">The turn-taker just calls these in order — about 25 in total. You grab one by its ready-made instance (itemService), never by building a new one.</div>
       </section>
 
-      <!-- 9 · SYSTEMS VS SERVICES -->
+      <!-- SYSTEMS VS SERVICES -->
       <section id="sys-vs-svc">
         <p class="kicker"><span class="n">4</span>Two folders that look similar</p>
         <h2>Does it drive the clock, or does it answer a question?</h2>
         <div class="content">
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start;">
-            <div class="card">
-              <h4>Drives the clock — <span class="c">systems/</span></h4>
-              <p class="small">The few things that push time forward or reach across everything at once:</p>
-              <ul class="tiny" style="margin-top:6px">
-                <li>the turn-taker <span class="c">gameEngine</span></li>
-                <li>each pawn's moment-to-moment state <span class="c">PawnStateMachine</span></li>
-                <li>the blow-by-blow of fights <span class="c">Combat</span></li>
-                <li>totalling up every bonus <span class="c">ModifierSystem</span></li>
-              </ul>
-            </div>
-            <div class="card cool">
-              <h4>Answers questions — <span class="c">services/</span></h4>
-              <p class="small">Everything else. Give it the world and a question, it hands back an answer or an updated world. Each stays inside its own topic; the drivers on the left call on them.</p>
-            </div>
+            <div class="card"><h4>Drives the clock — <span class="c">systems/</span></h4><p class="small">The few things that push time forward or reach across everything at once:</p><ul class="tiny" style="margin-top:6px"><li>the turn-taker <span class="c">gameEngine</span></li><li>each pawn's moment-to-moment state <span class="c">PawnStateMachine</span></li><li>the blow-by-blow of fights <span class="c">Combat</span></li><li>totalling up every bonus <span class="c">ModifierSystem</span></li></ul></div>
+            <div class="card cool"><h4>Answers questions — <span class="c">services/</span></h4><p class="small">Everything else. Give it the world and a question, it hands back an answer or an updated world. Each stays inside its own topic; the drivers on the left call on them.</p></div>
           </div>
           <div class="eg" style="margin-top:16px"><span class="lbl">In the game</span>“Is there a chop job near this pawn?” is a <b>question</b> → a service. “Advance this pawn's axe-swing by one tick” <b>drives the clock</b> → a system.</div>
         </div>
       </section>
 
-      <!-- 10 · CORE -->
+      <!-- CORE / GATE -->
       <section id="core">
         <p class="kicker"><span class="n">5</span>The vault + the rulebook</p>
         <h2>Every change to the world goes through one gate</h2>
         <div class="content">
           <div class="funnel">
-            <div class="ins">
-              <div class="in">add wood</div>
-              <div class="in">hurt this pawn</div>
-              <div class="in">place a building</div>
-              <div class="in">finish a job</div>
-            </div>
+            <div class="ins"><div class="in">add wood</div><div class="in">hurt this pawn</div><div class="in">place a building</div><div class="in">finish a job</div></div>
             <div class="fa">→</div>
             <div class="node accent big" style="margin:0"><div class="t">the gatekeeper</div><span class="s">GameStateManager</span></div>
           </div>
           <div class="eg" style="margin-top:16px"><span class="lbl">In the game</span>The oak falls — but the wood doesn't just <em>appear</em>. It passes the gate: <span class="c">addResource('wood', 8)</span>. That one call is the only reason your stockpile ticked up by eight.</div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px;">
-            <div class="card"><h4>The rulebook is data, not code</h4><p class="small">Creatures, items, recipes, traits, buildings — all live in big data files <span class="c">database/*.jsonc</span>. Adding content usually means editing data, not writing logic.</p></div>
+            <div class="card"><h4>The rulebook is data, not code</h4><p class="small">Creatures, items, recipes, traits, buildings — all in big data files <span class="c">database/*.jsonc</span>. Adding content usually means editing data, not writing logic.</p></div>
             <div class="card cool"><h4>The shapes of everything</h4><p class="small">What a pawn, a building, an item <em>is</em> — the definitions live in <span class="c">core/types/</span>.</p></div>
           </div>
         </div>
         <div class="footnote">Heads-up: the old notes point at core/Items.ts and Buildings.ts — those are gone. It's all database/*.jsonc now.</div>
       </section>
 
-      <!-- 11 · CROSS-CUTTING -->
+      <!-- CROSS-CUTTING -->
       <section id="crosscutting">
         <p class="kicker">Four rules that hold everywhere</p>
         <h2>When there's one right way, there's only one way</h2>
         <div class="content">
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-            <div class="qcard"><p class="q">“How good is this pawn at this job?”</p><p class="a">One place, from body and traits — no second opinion. <em>A strong, axe-trained pawn fells the oak in half the swings.</em> <span class="c">getWorkModifiers</span></p></div>
-            <div class="qcard"><p class="q">“What bonuses apply right now?”</p><p class="a">One tallier adds up gear, buildings and traits, and shows its receipts. <em>Your sharpened axe's +2 shows up here.</em> <span class="c">ModifierSystem</span></p></div>
-            <div class="qcard"><p class="q">“How do things move across the map?”</p><p class="a">Heavy path-finding math, in Rust for speed, behind one tidy door. <em>The pawn routes around the pond to reach the oak.</em> <span class="c">PathfinderService → WASM</span></p></div>
-            <div class="qcard"><p class="q">“Can it run with no window open?”</p><p class="a">Yes — the same game, driven by scripts. <em>A test fells 1000 oaks with no window, just to check the wood adds up.</em> <span class="c">headless sim</span></p></div>
+            <div class="qcard"><p class="q">“How good is this pawn at this job?”</p><p class="a">One place, from body and traits. <em>A strong, axe-trained pawn fells the oak in half the swings.</em> <span class="c">getWorkModifiers</span></p></div>
+            <div class="qcard"><p class="q">“What bonuses apply right now?”</p><p class="a">One tallier adds up gear, buildings and traits, with receipts. <em>Your sharpened axe's +2 shows up here.</em> <span class="c">ModifierSystem</span></p></div>
+            <div class="qcard"><p class="q">“How do things move across the map?”</p><p class="a">Heavy path-finding, in Rust, behind one door. <em>The pawn routes around the pond to reach the oak.</em> <span class="c">PathfinderService → WASM</span></p></div>
+            <div class="qcard"><p class="q">“Can it run with no window open?”</p><p class="a">Yes — the same game, driven by scripts. <em>A test fells 1000 oaks headless to check the wood adds up.</em> <span class="c">headless sim</span></p></div>
           </div>
-          <p class="caption" style="margin-top:14px">Each has a “don't build a second one of these” rule burned in — which is why a new feature is usually new <em>data</em>, not a new code path.</p>
+          <p class="caption" style="margin-top:14px">Each has a “don't build a second one” rule burned in — which is why a new feature is usually new <em>data</em>, not a new code path.</p>
         </div>
       </section>
 
-      <!-- 12 · REALITY CHECK -->
-      <section id="reality">
-        <p class="kicker">The docs vs. the running code</p>
-        <h2>Where the written docs have quietly drifted</h2>
+      <!-- ============ PART II DIVIDER ============ -->
+      <section class="section-divider" data-state="is-section-divider">
+        <p class="part-num">PART II</p>
+        <h1>The subsystems<br><span style="color:var(--amber)">and where they creak</span></h1>
+        <div class="rule"></div>
+        <p class="lead">Each specialist, up close: what it does, where it lives, and the one thing that makes you tilt your head. Every <span style="color:var(--query)">◆ open question</span> is drawn from the real code.</p>
+      </section>
+
+      <!-- PAWNS / FSM -->
+      <section id="sub-fsm">
+        <p class="kicker">Pawns · the state machine</p>
+        <h2>Each pawn is always in exactly one of 22 states</h2>
         <div class="content">
-          <div class="delta">
-            <div class="was">One turn had <s>13 steps</s></div>
-            <div class="now">it actually runs <b>19</b> now</div>
-            <div class="was">Game data in <s>Items.ts / Buildings.ts</s></div>
-            <div class="now">moved to <b>data files</b> the code loads</div>
-            <div class="was">Saves in <s>the browser's localStorage</s></div>
-            <div class="now">moved to a small <b>database</b> (IndexedDB)</div>
-            <div class="was">One giant <s>types file</s></div>
-            <div class="now">split into <b>many smaller ones</b></div>
-            <div class="was"><s>“worldState” store</s> listed as real</div>
-            <div class="now">it's an <b>empty leftover</b></div>
+          <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:16px;">
+            <div>
+              <p class="small">Idle, MovingToResource, Working, Hungry, Eating, Sleeping, Hauling, Socialising, Fighting, Fleeing, Hunting, Collapsed, Rescuing, BloodHunt, Crying, Hiding, Panicking… A lookup table picks the handler, so adding a state is one line.</p>
+              <p class="small">Priority each tick: <b>health &amp; bleeding first</b> (even for drafted pawns), then a combat interrupt, then needs, then work.</p>
+            </div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">systems/PawnStateMachine.ts</span> · handlers in <span class="c">systems/pawn/handlers/*</span> · states enum in <span class="c">pawnStates.ts</span></p></div>
           </div>
-          <div class="callout warn" style="margin-top:20px">
-            <p class="small"><strong>The code is the truth; the written notes lag behind it.</strong> On a project moving this fast that gap is just normal wear — worth a periodic pass to close it.</p>
-          </div>
+          <div class="tension" style="margin-top:16px"><span class="h">◆ Why is it like this?</span>The file's own header says the pawn AI “was decomposed out” as a 2026 hotspot — yet <b>1,851 lines remain</b>. The easy 15 handlers left; the hard half (bleed, heal, death, collapse, aura radiation) never did. So “state-machine tick” is really <b>state machine + a full medical simulation</b> in one per-pawn loop.</div>
         </div>
+        <div class="footnote">specs: COMBAT-SYSTEM, SURVIVAL-HEALTH · code: systems/PawnStateMachine.ts (1851 lines)</div>
       </section>
 
-      <!-- 13 · CLOSING -->
+      <!-- GROWTH / LINEAGE (the flagship question) -->
+      <section id="sub-growth">
+        <p class="kicker">Pawns · growth, aging &amp; lineage</p>
+        <h2>“Pawns grow” is a separate step — and that's the tell</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div>
+              <p class="small">Once per in-game <b>day</b>, each pawn banks a growth <em>offer</em> (four a year: three seasonal + a birthday that also ages them +1). An offer rolls all six stats; <b>you</b> later pick two to keep. It's opt-in meta-progression, not something a pawn does while acting — which is why it isn't an FSM state.</p>
+            </div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">GameEngineImpl.processGrowth</span> → <span class="c">pawnGrowthService.processDay</span> · lineage in <span class="c">core/Lineages.ts</span></p></div>
+          </div>
+          <div class="tension" style="margin-top:14px"><span class="h">◆ Why is it like this? — your instinct was right</span><span class="c">processDay</span> isn't really “growth” — it's the <b>catch-all “once a day” hook</b>. In one loop it (a) banks stat offers, (b) <b>ages</b> the pawn, and (c) drives the entire <b>lineage / awakening</b> system. And it mutates pawns <b>in place</b> while step 11 threads immutable copies — a mutation-model mismatch in adjacent phases.</div>
+          <div class="tension" style="margin-top:8px"><span class="h">◆ And a second one</span>Lineage keeps its <b>own duplicate index</b> of the trait catalog purely to dodge a circular import between <span class="c">Lineages</span> and <span class="c">Culture</span> — a layering problem papered over with two copies of the same data.</div>
+        </div>
+        <div class="footnote">specs: LINEAGES I/II, TRAITS, RACE-SYSTEM · code: PawnGrowthService.ts, core/Lineages.ts</div>
+      </section>
+
+      <!-- HEALTH -->
+      <section id="sub-health">
+        <p class="kicker">Pawns · health, wounds &amp; death</p>
+        <h2>A real body: nested parts, stacking wounds, three ways to die</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div>
+              <p class="small">Body parts nest and contain each other; destroying a vital one (a caved-in skull) is instant death, and severing cascades to everything inside. Wounds stack by damage type into one escalating entry; healing is deliberately slow, sped by sleep, food and tending.</p>
+              <p class="small"><b>Three death paths:</b> lethal anatomy · bleeding out (blood ≤ 0) · a downed <em>Collapsed</em> state that can recover or be finished off.</p>
+            </div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">core/BodyParts.ts</span> · <span class="c">database/pawns/wounds.jsonc</span> · applied in <span class="c">Combat.ts</span></p></div>
+          </div>
+          <div class="tension" style="margin-top:16px"><span class="h">◆ Why is it like this?</span>The death rule <span class="c">lethalAnatomyCause</span> is <b>called from three places</b> — inside combat's injury step, and independently by the per-tick pawn <em>and</em> mob reapers. “Dead means dead” is held together by three call sites staying in sync, not by a single choke point. Correctness-by-repetition.</div>
+        </div>
+        <div class="footnote">spec: SURVIVAL-HEALTH · realism-first: bone destruction ≠ death, only a destroyed flesh-container kills</div>
+      </section>
+
+      <!-- COMBAT -->
+      <section id="sub-combat">
+        <p class="kicker">Combat</p>
+        <h2>Swings, layered armour, and a block/parry axis</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div>
+              <p class="small">Weapons pull a damage profile; armour is <b>layered</b> — twelve slots map to body parts and mitigation walks outer-to-inner. Shields are a real second defence (block + parry + bash), distinct from dodge. A two-hander that also straps a shield is penalised, not forbidden.</p>
+            </div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">systems/Combat.ts</span> (2,746 lines) · ranged split into <span class="c">rangedCombat.ts</span> to avoid an import cycle</p></div>
+          </div>
+          <div class="tension" style="margin-top:14px"><span class="h">◆ Why is it like this?</span>Combat isn't pure damage resolution — <span class="c">_applyInjuryToEntity</span> reaches in to credit <b>lineage awakening progress</b> mid-crush-hit, and the file also owns durability, natural weapons, bloodletting and the death rule. Combat “knows about” lineages and moods, so it can't be reasoned about alone.</div>
+          <div class="tension" style="margin-top:8px"><span class="h">◆ From the audit</span>Because block is CON + body-mass, <b>every mob now negates ~1.8%</b> of melee with no shield — unintended “bracing.” Your call whether to gate it behind actually holding a shield.</div>
+        </div>
+        <div class="footnote">specs: COMBAT-SYSTEM, RANGED-COMBAT, CREATURE-COMBAT-OVERHAUL, EQUIPMENT-EXPANSION</div>
+      </section>
+
+      <!-- EQUIPMENT / CARRY -->
+      <section id="sub-equip">
+        <p class="kicker">Equipment &amp; carrying</p>
+        <h2>What you can wear, and how much you can lug</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div><p class="small">Carry budget is a strength-scaled slice of the pawn's own body weight; worn packs and carts add capacity, and even armour adds a little volume (“armour isn't a pure carry sink”). Volume, oddly, ignores strength entirely.</p></div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">ItemService.getCarryBudget</span> · slots in <span class="c">core/armorCoverage.ts</span> · consumed by haul jobs</p></div>
+          </div>
+          <div class="tension" style="margin-top:16px"><span class="h">◆ Why is it like this?</span><span class="c">getCarryBudget(pawn, _state)</span> takes a <b>GameState it never uses</b> (underscore-ignored) — and one caller fabricates an empty <span class="c">{} as GameState</span> just to satisfy the signature. The function advertises a dependency that doesn't exist, forcing a caller to lie.</div>
+        </div>
+        <div class="footnote">spec: EQUIPMENT-EXPANSION · code: services/ItemService.ts:688</div>
+      </section>
+
+      <!-- PRODUCTION -->
+      <section id="sub-production">
+        <p class="kicker">Production · reserve-and-fetch</p>
+        <h2>Items are always physical — a craft reserves, then fetches</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div><p class="small">A craft order starts as a wish. Each tick it tries to reserve <b>all</b> its inputs at once against a trial world — commit only if every input is free, else drop it so stock stays open for other orders. Once staged on the station tile, a pawn is sent to fetch, walk and work it. Furnaces are <b>passive</b>: no pawn, they cook on their own if lit.</p></div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">jobService</span> · <span class="c">services/jobs/craft.ts</span> · passive in <span class="c">processPassiveProduction</span> (ADR-016)</p></div>
+          </div>
+          <div class="tension" style="margin-top:16px"><span class="h">◆ Why is it like this?</span>Whether a craft needs a pawn is decided in <b>two independent places that must agree</b> — the job generator skips passive stations, and the engine re-derives the same fact to know what to advance. Miss one and a furnace either produces nothing or spawns a phantom job no pawn can work.</div>
+        </div>
+        <div class="footnote">specs: PHYSICAL-PRODUCTION, PRODUCTION-CHAIN I–IIII · code: services/jobs/craft.ts</div>
+      </section>
+
+      <!-- CRAFTING STATIONS -->
+      <section id="sub-crafting">
+        <p class="kicker">Crafting · stations, tiers &amp; recipes</p>
+        <h2>~330 recipes across tiered stations</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div><p class="small">Recipes live at stations that ladder up in tier (craft_spot → makers_bench; hearth → oven; bloomery → finery). A lower tier stays usable after you build a higher one. Butchery stations give a <b>yield</b> bonus (more off a carcass); tool/smelting/cooking stations give <b>speed</b> instead.</p></div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">recipeService</span> · <span class="c">database/items/recipes.jsonc</span> (132k) · station defs in <span class="c">buildings.jsonc</span></p></div>
+          </div>
+          <div class="tension" style="margin-top:16px"><span class="h">◆ From the audit</span>“How is X made?” returns the <b>first</b> recipe producing it — so <b>25 recipes sharing an output</b> were unreachable from the card (18 butchery ones fixed, 8 still shadowed). And the steel recipes are <b>metallurgically inverted</b>: the finery forge <em>decarburises</em> iron in reality, it never made steel; the blast furnace makes pig iron, not steel×3.</p></div>
+        </div>
+        <div class="footnote">specs: PRODUCTION-CHAIN II/III/IIII, AUDIT (crafting) · steel &amp; crystal reworks tracked, not yet built</div>
+      </section>
+
+      <!-- MATERIALS -->
+      <section id="sub-materials">
+        <p class="kicker">Materials · the rulebook of stuff</p>
+        <h2>Every material carries an identity — mostly</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div><p class="small">Materials are a fixed, hand-authored table keyed by item id (oak vs pine, granite vs marble). The leather rework split one-leather-per-animal into <b>17 per-animal leathers</b> (buckskin, oxhide, bearhide, direwolf…), each with durability / warmth / beauty identity; five source wools too.</p></div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">core/materialProperties.ts</span> · material blocks in <span class="c">items.jsonc</span> (410k)</p></div>
+          </div>
+          <div class="tension" style="margin-top:16px"><span class="h">◆ Why is it like this?</span>“Procedural metals” isn't endgame-open — it's <b>simply not modelled</b>; materials are a static lookup, and the property cache assumes static-forever. Meanwhile a material's authored <b>weight is never applied per-instance</b> (no per-instance weight subsystem exists), and the old per-recipe <span class="c">materialBonuses</span> turned out to be a display-only “cosmetic lie,” since removed.</div>
+        </div>
+        <div class="footnote">specs: PROCEDURAL-METALS, PRODUCTION-CHAIN III, AUDIT (materials)</div>
+      </section>
+
+      <!-- JOBS -->
+      <section id="sub-jobs">
+        <p class="kicker">Jobs &amp; work</p>
+        <h2>Colony work is data, not a switch statement</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div><p class="small">Eleven job types (harvest, haul, fetch, construct, deconstruct, craft, refuel, repair, plant, caretake…) are declared as <b>data</b>, each bound to a generate/complete handler by id. Work category, labour priority, UI and claim-gating all flow from the definition. You can also right-click a pawn to <b>force</b> a job or need.</p></div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">database/pawns/jobs.jsonc</span> · <span class="c">JobService.handlers</span> (ADR-017) · skill from <span class="c">getWorkModifiers</span> (ADR-015)</p></div>
+          </div>
+          <div class="tension" style="margin-top:16px"><span class="h">◆ Worth knowing</span>Colony jobs (a `JobDef` each) and the FSM's internal kinds (<span class="c">eat</span>, <span class="c">sleep</span>, <span class="c">need</span>) are two different registries — the FSM kinds have no `JobDef`. The old duplicated “job type → work category” switch was deleted; everything now routes through <span class="c">getJobWorkCategory</span>. One place, on purpose.</div>
+        </div>
+        <div class="footnote">specs: WORK-EXPERIENCE, DRAFTED-JOB-ORDERS · ADR-015 (single work model), ADR-017 (data-driven jobs)</div>
+      </section>
+
+      <!-- SOCIAL -->
+      <section id="sub-social">
+        <p class="kicker">The social layer</p>
+        <h2>Relationships, mood and gossip — once a day</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div><p class="small">Pawns form culture-seeded relationships that drift through stages, hold conversations, fall in love, and feed a mood layer over their baseline. Big jumps arrive via hooks (a death, a rescue, a battle fought together). The heavy pass runs <b>once per in-game day</b>, in the events phase — zero per-tick cost.</p></div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">SocialService.processSocialTurn</span> · pure math in <span class="c">core/Social.ts</span> · dialog split out</p></div>
+          </div>
+          <div class="tension" style="margin-top:16px"><span class="h">◆ Why is it like this?</span>The daily pass is <b>O(n²)</b> over living pawns (~1,225 pairs at 50 pawns). There's no spatial partition — the whole design leans on a hard <b>pawn-count ceiling</b>, and the once-a-day gate <em>is</em> the mitigation. Dialog got its own file; mood/relationship upkeep stayed in the 1,215-line class — a half-finished decomposition.</div>
+        </div>
+        <div class="footnote">spec: SOCIAL-LAYER · runs beside kingdoms in the daily events pass</div>
+      </section>
+
+      <!-- KINGDOMS -->
+      <section id="sub-kingdoms">
+        <p class="kicker">Kingdoms, visitors &amp; trade</p>
+        <h2>A world beyond the colony — arriving on a clock</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div><p class="small">Other kingdoms drift in their own traits, make hidden-knowledge contact, and send visitors and caravans that you can barter with. Caravans need you to be at least a town. It all ticks once per in-game day, alongside the social pass.</p></div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">KingdomService.processKingdomsDaily</span> · pure half in <span class="c">core/Kingdom.ts</span> · caravan parties in <span class="c">entity/kingdomParties.ts</span></p></div>
+          </div>
+          <div class="tension" style="margin-top:16px"><span class="h">◆ Why is it like this?</span>A <b>single arrival clock</b> paces both visitors and caravans — a caravan is just a “trade chance” upgrade roll on a visitor. Trade is <b>bolted onto the visit system</b> rather than being its own economic loop, so caravan frequency is structurally chained to social-visit frequency.</div>
+        </div>
+        <div class="footnote">specs: KINGDOMS-TRADE, VISITORS, RACE-SYSTEM (Phase 2)</div>
+      </section>
+
+      <!-- ENTITIES / HUSBANDRY -->
+      <section id="sub-entities">
+        <p class="kicker">Wildlife, spawning &amp; husbandry</p>
+        <h2>The map is alive — but you can't tame it yet</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div><p class="small">Creatures seed and spawn from lairs, run a per-tick brain (wander, hunt, hunger, flee), and leave corpses to butcher. That whole loop is <b>live</b>. Taming and animal husbandry are <b>not</b>.</p></div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">EntityService</span> facade over <span class="c">entity/entitySpawning · entityAI · entityLifecycle</span></p></div>
+          </div>
+          <div class="tension" style="margin-top:16px"><span class="h">◆ Why is it like this?</span>The schema commits to a feature the sim doesn't have: a <span class="c">TamedAnimal</span> type, a <span class="c">tamedAnimals</span> save slot, and a <span class="c">tameable</span> flag on <b>every</b> creature — with <b>zero code reading any of it</b>. Speculative data-modelling ahead of behaviour: it inflates the creature DB and every save with fields that currently do nothing.</div>
+        </div>
+        <div class="footnote">specs: ENTITIES_SPAWNING, ANIMAL-HUSBANDRY (open) · husbandry = OPEN</div>
+      </section>
+
+      <!-- STEALTH -->
+      <section id="sub-stealth">
+        <p class="kicker">Stealth</p>
+        <h2>Being unseen is a filter on being seen</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div><p class="small">A pawn in a mob's line of sight must <em>also</em> lose a perception-vs-stealth roll to actually be noticed; darkness and weather shorten sight. The maths is pure and lives in one small file; the roll is cached per mob-pawn for ~2 seconds.</p></div>
+            <div class="card"><h4>Where it lives</h4><p class="small">pure math in <span class="c">core/stealth.ts</span> (ADR-032) · gated inside <span class="c">entityAI.isPawnDetected</span></p></div>
+          </div>
+          <div class="tension" style="margin-top:16px"><span class="h">◆ Why is it like this?</span>The detection cache is stored <b>on the mob</b> and cleared when it gives up a hunt (“forget → re-stealth”). So stealth correctness is <b>entangled with the hunt-FSM's give-up path</b> — a bug in those state transitions silently breaks re-stealthing. The pure module owns the maths; the invariant lives in mob memory.</div>
+        </div>
+        <div class="footnote">spec: STEALTH (open) · ADR-032</div>
+      </section>
+
+      <!-- WORLD / WEATHER -->
+      <section id="sub-world">
+        <p class="kicker">The living world · seasons &amp; weather</p>
+        <h2>Day, night, seasons, temperature, snow — one service</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div><p class="small">Light and tint cycle through the day; seasons bake a per-tile temperature that swings between noon and midnight; weather rolls and snow accumulates; fires project a heat field. All of it in one place.</p></div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">services/EnvironmentService.ts</span> — 1,682 lines, ~72 functions</p></div>
+          </div>
+          <div class="tension" style="margin-top:16px"><span class="h">◆ Why is it like this? — the clearest god-module</span>One file fuses <b>five distinct domains</b>: light, season, weather, a thermal/fire field, <em>and</em> gameplay crafting rules (fermentation &amp; drying temperature windows). Those crafting windows sitting in the world-physics service is a plain misplacement — they leaked in because they happen to need temperature. The light-field and heat-field caches even copy-paste the same staleness logic instead of sharing one abstraction.</div>
+        </div>
+        <div class="footnote">spec: SEASONS_WEATHER · biome variants, fog-of-war (deferred)</div>
+      </section>
+
+      <!-- PATHFINDING -->
+      <section id="sub-pathfinding">
+        <p class="kicker">The map · grid &amp; pathfinding</p>
+        <h2>Movement maths is Rust, behind one TypeScript door</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div><p class="small">A* pathfinding and nearest-enemy queries are written in Rust, compiled to WASM, and reached only through an interface — callsites never touch the Rust directly. One body per tile; routes plan around occupied tiles. It even loads byte-identically under Node for headless replays.</p></div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">PathfinderService</span> → <span class="c">wasmPathfinderService</span> → <span class="c">spatial-core</span> (Rust, ADR-008) · <span class="c">occupancyService</span></p></div>
+          </div>
+          <div class="tension" style="margin-top:16px"><span class="h">◆ Why is it like this?</span>WASM loads <b>asynchronously</b>, but the sim tick is <b>synchronous</b>. Nothing guarantees the pathfinder is ready before the sim starts — so <b>every callsite</b> carries a defensive “is it ready? else fall back to a JS scan / assume-connected” branch. The impedance mismatch is smeared across all callers instead of fixed once at boot.</div>
+        </div>
+        <div class="footnote">spec: GRID-PATHFINDING · ADR-008 (spatial behind an interface)</div>
+      </section>
+
+      <!-- RESEARCH -->
+      <section id="sub-research">
+        <p class="kicker">Research</p>
+        <h2>A tiered tree that unlocks buildings, items &amp; tools</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div><p class="small">Research is tiered; each node lists prerequisites that must all be complete, and completing it unlocks buildings, items, abilities and a tool-tier bump. Progress accrues in the turn loop's research step.</p></div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">services/ResearchService.ts</span> · <span class="c">database/progression/research.jsonc</span></p></div>
+          </div>
+          <div class="tension" style="margin-top:16px"><span class="h">◆ Why is it like this?</span>There's an empty <span class="c">systems/Research.ts</span> — a one-line <b>fossil</b> of an abandoned systems→services migration that survives to mislead. And research applies its unlocks by <b>mutating state in place</b> (direct pushes) rather than the immutable-return style its neighbours use — an inconsistency in update discipline.</div>
+        </div>
+        <div class="footnote">spec: RESEARCH-ENHANCEMENT (open) · three-tier design</div>
+      </section>
+
+      <!-- HEADLESS / DETERMINISM -->
+      <section id="sub-headless">
+        <p class="kicker">Determinism &amp; the headless sim</p>
+        <h2>The same game, with no window — and byte-identical replays</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div><p class="small">A dev-only driver runs the <b>same</b> engine and the <b>same</b> 88-command registry with no worker and no screen — over HTTP (curl/agent), the DEBUG panel, and the test suite. Same seed + scenario + script ⇒ exactly the same world, every time.</p></div>
+            <div class="card"><h4>Where it lives</h4><p class="small"><span class="c">game/headless/*</span> · <span class="c">routes/api/sim/*</span> (ADR-033) · guarded dev-only</p></div>
+          </div>
+          <div class="tension" style="margin-top:16px"><span class="h">◆ The contract that makes it work</span>Determinism is <b>enforced</b>: no <span class="c">Date.now()</span> anywhere in the sim path — job, drop, craft and building ids are all turn-stamped (<span class="c">t42-…</span>) — and module counters reset at session start. The whole AUDIT is driven through this: tick a box only when a headless run confirms it.</div>
+        </div>
+        <div class="footnote">spec: HEADLESS-SIM · ADR-033 · this is the harness behind AUDIT.md</div>
+      </section>
+
+      <!-- AUDIO + DISTRIBUTION + ROADS NOT TAKEN (stack) -->
+      <section>
+        <section id="sub-audio">
+          <p class="kicker">Audio &amp; distribution</p>
+          <h2>Sound, and shipping it as a real app</h2>
+          <div class="content">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+              <div class="card cool"><h4>Audio</h4><p class="small">A Howler wrapper plays; a reactive driver decides <em>what</em> (night track, fade the rain) from game state. <span class="c">AudioService</span> + <span class="c">AudioController.svelte</span>.</p></div>
+              <div class="card cool"><h4>Distribution</h4><p class="small">Ships as an <b>Electron</b> app (chosen over Tauri for ~2.5× the tick rate). Static build, desktop shell. <span class="c">ADR-020</span></p></div>
+            </div>
+            <div class="tension" style="margin-top:16px"><span class="h">◆ Why is it like this?</span>All the audio <b>orchestration logic lives in a Svelte component</b> — so core sound behaviour is only alive while that component is mounted, and it reaches into <span class="c">environmentService</span> from inside the UI layer. Sound decisions sit one floor too high.</div>
+          </div>
+          <div class="footnote">specs: DISTRIBUTION · audio subsystem (Howler, CC-BY assets)</div>
+        </section>
+        <section id="sub-roads">
+          <p class="kicker">Roads not taken</p>
+          <h2>Two big forks the project weighed and parked</h2>
+          <div class="content">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+              <div class="card"><h4>The Dwarf-Fortress migration</h4><p class="small">An early proposal to become DF-like — tiles, Z-less depth, anatomy, embark. Marked complete; it's the DNA of today's anatomy + tile model.</p></div>
+              <div class="card"><h4>The Rust / Dioxus port</h4><p class="small">A 1,184-line evaluation session on porting the whole thing to Rust/Dioxus. <b>Parked</b> — the WASM spatial core is the pragmatic compromise instead.</p></div>
+            </div>
+            <p class="caption" style="margin-top:16px">Kept here because the specs are part of the map: they explain <em>why</em> the anatomy is so deep, and why performance lives in a worker + Rust rather than a rewrite.</p>
+          </div>
+          <div class="footnote">specs: DF-MIGRATION (archive), research/dioxus-port-evaluation</div>
+        </section>
+      </section>
+
+      <!-- ============ PART III DIVIDER ============ -->
+      <section class="section-divider" data-state="is-section-divider">
+        <p class="part-num">PART III</p>
+        <h1>The graph</h1>
+        <div class="rule"></div>
+        <p class="lead">328 files, 2,474 functions, 3,995 call edges. What the shape of the whole thing tells us — the load-bearing pieces, where complexity pools, and what the graph flags on its own.</p>
+      </section>
+
+      <!-- SHAPE -->
+      <section id="graph-shape">
+        <p class="kicker">The graph · the shape</p>
+        <h2>Where the logic actually sits</h2>
+        <div class="content">
+          <div class="bars">
+            <div class="bar-row"><span class="lab">services</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="val">696 fns · 47 files</span></div>
+            <div class="bar-row"><span class="lab">core</span><div class="bar-track"><div class="bar-fill" style="width:59%"></div></div><span class="val">408 · 47</span></div>
+            <div class="bar-row"><span class="lab">systems</span><div class="bar-track"><div class="bar-fill" style="width:47%"></div></div><span class="val">324 · 20</span></div>
+            <div class="bar-row"><span class="lab">stores</span><div class="bar-track"><div class="bar-fill" style="width:36%"></div></div><span class="val">251 · 18</span></div>
+            <div class="bar-row"><span class="lab">components</span><div class="bar-track"><div class="bar-fill cool" style="width:34%"></div></div><span class="val">240 · <b style="color:var(--phosphor)">118</b></span></div>
+            <div class="bar-row"><span class="lab">webgl</span><div class="bar-track"><div class="bar-fill cool" style="width:34%"></div></div><span class="val">234 · 17</span></div>
+            <div class="bar-row"><span class="lab">sim</span><div class="bar-track"><div class="bar-fill" style="width:19%"></div></div><span class="val">131 · <b style="color:var(--amber)">4</b></span></div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px;">
+            <div class="callout ok"><span class="h">HEALTHY</span><p class="small">Components: 240 functions across <b>118 files</b> — ~2 functions each. The 200-line rule is holding; the UI is genuinely broken into small pieces.</p></div>
+            <div class="callout"><span class="h" style="color:var(--amber)">DENSE</span><p class="small">sim: 131 functions in just <b>4 files</b>. The worker boundary is concentrated — powerful, but heavy per file.</p></div>
+          </div>
+        </div>
+        <div class="footnote">bar length = total function count per group · source: codegraph extract, 294 modules</div>
+      </section>
+
+      <!-- CHOKEPOINTS -->
+      <section id="graph-hubs">
+        <p class="kicker">The graph · the load-bearing pieces</p>
+        <h2>The functions the whole game leans on</h2>
+        <div class="content">
+          <p class="small text-muted" style="margin-bottom:8px">Ranked by how many other functions call them. Break one of these and a lot breaks.</p>
+          <div class="hublist">
+            <div class="hubrow"><span class="badge">85</span><span><span class="nm">SeededRng.random</span> &nbsp;<span class="ds">every random draw — the seed of determinism itself</span></span></div>
+            <div class="hubrow"><span class="badge">73</span><span><span class="nm">ItemService.getItemById</span> &nbsp;<span class="ds">the item lookup — items are referenced by id everywhere</span></span></div>
+            <div class="hubrow"><span class="badge">54</span><span><span class="nm">BuildingService.getBuildingById</span> &nbsp;<span class="ds">the building lookup</span></span></div>
+            <div class="hubrow"><span class="badge">46</span><span><span class="nm">gameState</span> &nbsp;<span class="ds">the store the whole UI reads from</span></span></div>
+            <div class="hubrow"><span class="badge cool">30</span><span><span class="nm">PawnStatService.evaluateStat</span> &nbsp;<span class="ds">the one place a pawn stat is computed</span></span></div>
+            <div class="hubrow"><span class="badge cool">29</span><span><span class="nm">distance.manhattan</span> &nbsp;<span class="ds">grid distance — movement, ranges, nearest-queries</span></span></div>
+          </div>
+          <div class="tension" style="margin-top:14px"><span class="h">◆ What it means</span>The centre of gravity is <b>lookups and randomness</b>, not any one subsystem. <span class="c">SeededRng.random</span> at 85 callers is why determinism is a project-wide contract: one un-seeded draw and every replay diverges.</div>
+        </div>
+        <div class="footnote">ranked by inbound call count · codegraph /nodes sorted by inDegree</div>
+      </section>
+
+      <!-- GOD MODULES -->
+      <section id="graph-god">
+        <p class="kicker">The graph · where complexity pools</p>
+        <h2>Eleven files carry more than 40 functions each</h2>
+        <div class="content">
+          <div class="hublist">
+            <div class="hubrow"><span class="badge">104</span><span><span class="nm">sim/commands</span> &nbsp;<span class="ds">the write path — arguably fine, it's a registry</span></span></div>
+            <div class="hubrow"><span class="badge">88</span><span><span class="nm">services/EnvironmentService</span> &nbsp;<span class="ds">five domains fused (see the World slide)</span></span></div>
+            <div class="hubrow"><span class="badge">75</span><span><span class="nm">stores/gameState</span> &nbsp;<span class="ds">facade + actions + selectors, all in one</span></span></div>
+            <div class="hubrow"><span class="badge">63</span><span><span class="nm">systems/Combat</span> &nbsp;<span class="ds">damage + armour + durability + lineage credit</span></span></div>
+            <div class="hubrow"><span class="badge">49</span><span><span class="nm">ItemService · BuildingService · saveManager</span></span></div>
+            <div class="hubrow"><span class="badge">48</span><span><span class="nm">GameEngineImpl · pawnHelpers</span> &nbsp;<span class="ds">+ GameState &amp; SocialService at 42</span></span></div>
+          </div>
+          <div class="tension" style="margin-top:14px"><span class="h">◆ The honest read</span>Not all god-modules are bugs — <span class="c">commands</span> is a registry, a big flat list is <em>correct</em>. But <b>EnvironmentService, Combat and gameState</b> earn the flag: they each fuse concerns that could split. The graph agrees with what Part II found by reading the code.</div>
+        </div>
+        <div class="footnote">codegraph check: “god-module” warns above 40 functions · 11 flagged, 0 errors</div>
+      </section>
+
+      <!-- LAYERING + SMELLS -->
+      <section id="graph-smells">
+        <p class="kicker">The graph · what it flags on its own</p>
+        <h2>The dependency directions — and three real smells</h2>
+        <div class="content">
+          <div style="margin-bottom:6px">
+            <div class="deprow good"><span class="from">services → core</span><span class="cnt">410</span><span class="note">leaning on the rulebook — correct direction</span></div>
+            <div class="deprow good"><span class="from">components → stores</span><span class="cnt">288</span><span class="note">UI reads the picture — exactly the rule</span></div>
+            <div class="deprow watch"><span class="from">components → services</span><span class="cnt">183</span><span class="note">◆ but the rule says UI goes through stores, not straight to services</span></div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;">
+            <div class="callout warn"><span class="h">DEAD CODE (4)</span><p class="small"><span class="mono tiny">PawnStateMachine.hasCondition</span> · three <span class="mono tiny">HeadlessSession</span> helpers — defined, never called.</p></div>
+            <div class="callout warn"><span class="h">DUPLICATED UTILS (13)</span><p class="small"><span class="mono tiny">clamp · dist · slugify · weightedPick · stripTile · pick …</span> each defined in two modules — one shared util wanted.</p></div>
+          </div>
+          <div class="tension" style="margin-top:12px"><span class="h">◆ The one to look at</span><b>183 component→service edges</b> contradict the stated rule (“components route through store actions, never call services directly”). Some are type-only imports — but it's worth a pass to see which are real reach-arounds.</div>
+        </div>
+        <div class="footnote">codegraph check: 0 errors, 28 warnings · cycles ✓ clean · layers ✓ clean · ADR-008 ✓</div>
+      </section>
+
+      <!-- ============ PART IV DIVIDER ============ -->
+      <section class="section-divider" data-state="is-section-divider">
+        <p class="part-num">PART IV</p>
+        <h1>The open questions</h1>
+        <div class="rule"></div>
+        <p class="lead">Everything the map surfaced, on one board — the “why is it like this?” list worth deciding on purpose, not by drift.</p>
+      </section>
+
+      <!-- THE BOARD -->
+      <section id="board">
+        <p class="kicker">The audit board</p>
+        <h2>Decide these deliberately</h2>
+        <div class="content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:9px;">
+            <div class="tension"><span class="h">◆ structure</span><b>Growth is the “once a day” grab-bag</b> — stat offers + aging + lineage, mutated in place. Split the daily hook from stat growth?</div>
+            <div class="tension"><span class="h">◆ structure</span><b>PawnStateMachine &amp; Combat</b> never finished decomposing — medical sim + lineage credit still live inside them.</div>
+            <div class="tension"><span class="h">◆ correctness</span><b>The death rule runs in 3 places</b>; passivity is decided in 2. Single-source them?</div>
+            <div class="tension"><span class="h">◆ naming</span><b>A new furniture <span class="c">comfort</span> meter collides</b> with the existing temperature “comfort band.” Keep them distinct.</div>
+            <div class="tension"><span class="h">◆ content</span><b>Crystals all collapse into one <span class="c">gem_dust</span></b>; <span class="c">voidshard</span> has 0 uses, <span class="c">arcane_resin</span> 0 consumers — identity washed out.</div>
+            <div class="tension"><span class="h">◆ realism</span><b>Steel recipes are inverted</b> — finery decarburises, blast makes pig iron. The whole chain needs the rework already tracked.</div>
+            <div class="tension"><span class="h">◆ scope</span><b>Taming/husbandry schema exists, behaviour doesn't.</b> Build it or stop paying for it in every save.</div>
+            <div class="tension"><span class="h">◆ hygiene</span><b>13 duplicated utils, 4 dead functions, a fossil <span class="c">systems/Research.ts</span></b> — a cheap consolidation pass.</div>
+          </div>
+        </div>
+        <div class="footnote">drawn from AUDIT.md + codegraph + the code sweeps behind Part II</div>
+      </section>
+
+      <!-- CLOSING -->
       <section id="closing">
         <p class="kicker">Finding your way around</p>
         <h2>Two threads to pull, five knots to know</h2>
         <div class="content">
-          <div class="eg" style="margin-bottom:16px"><span class="lbl">Follow the chop, end to end</span>you mark the <b>oak</b> → a named request → across the wall → looked up in the list → the gatekeeper runs <span class="c">addResource('wood', 8)</span> → a fresh picture comes back → you watch the stockpile tick up.</div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="eg" style="margin-bottom:14px"><span class="lbl">Follow the chop, end to end</span>you mark the <b>oak</b> → a named request → across the wall → looked up → the gatekeeper runs <span class="c">addResource('wood', 8)</span> → a fresh picture comes back → you watch the stockpile tick up.</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
             <div class="card"><h4>Follow a click</h4><p class="small">button → a named request → across the wall → looked up → the gate changes the world → a fresh picture → the screen redraws.</p></div>
             <div class="card cool"><h4>Follow a moment of time</h4><p class="small">the turn-taker → its 19 steps → each specialist does its bit → the world moves one tick forward.</p></div>
           </div>
-          <div class="card" style="margin-top:14px; border-left-color:var(--phosphor)">
+          <div class="card" style="margin-top:12px; border-left-color:var(--phosphor)">
             <h4>The five knots — learn these and the rest untangles</h4>
             <p class="small">the one gate that changes the world <span class="c">GameStateManager</span> · the one doorway of requests <span class="c">commands.ts</span> · the one answer to “how good at this job” <span class="c">getWorkModifiers</span> · the one bonus-tallier <span class="c">ModifierSystem</span> · the one door to map-movement <span class="c">PathfinderService</span>.</p>
           </div>
+          <p class="lead text-amber text-center" style="margin-top:16px">One gate changes the world. One doorway carries every request. One answer to each question.</p>
         </div>
         <div class="footnote">.docs/architecture/architecture.html — F fullscreen · ↓ for sub-slides · O for the overview grid</div>
       </section>
