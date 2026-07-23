@@ -156,22 +156,27 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 ### Tanning chain redesign + hide/leather variety split — ✅ COMPLETE (re-audited headless 2026-07-23)
 Reference: VilesMods "Hell-Bent for Leather" (mandatory tanning step, per-animal leathers) + Hardcore SK.
 
-> **Re-audit (`_leatherChainAudit`, adversarial, 9/9, real recipeService/itemService/completeCraftOrder):**
-> ✓ the 6 abstract tiers + felt/coarse/fine wool are gone as items; ✓ 17 leathers (all `category:leather`)
-> + 5 wools (`category:wool`) + `jackal_hide` exist; ✓ every leather has exactly ONE tan recipe (no
-> shadowing), each passive + consuming brine; ✓ every cured hide has ONE passive cure recipe at the Curing
-> Frame with ash/salt; ✓ `tanning_rack`/`card_wool`/`comb_fine_wool`/`make_felt`/`cure_beast_hide` removed,
-> `weave_woolcloth` takes `category:wool`; ✓ all 7 fletched-ammo recipes feather-gated; ✓ wool butchery
-> drops wired (rabbit/goat/aurochs/mammoth); ✓ **material flow** — a jerkin crafted from mammoth_leather
-> stamps matDur 1.3 / matWeight 1.35 vs coney_fur 0.8 / 0.75 (heavier, tougher item from the heavier hide).
+> **Re-audit — driven headless end-to-end (`leatherChainE2E`, kept as a regression test, 4/4):**
+> - **Coverage sweep** (provisioned colony via `buildScenario` — all research, tool 3, every station,
+>   999 of every material; real `canQueueCraft` gating + real `completeCraftOrder` output): **all 35 cure+tan
+>   recipes** and **all 65 category:leather/wool/cured_hide consumers** QUEUE and PRODUCE, 0 failures; the 3
+>   affected buildings (hide_bed, leather_bed, stargazer_circlet) resolve their cost.
+> - **Physical pawn pipeline** (`HeadlessSession`, real ticks): 6 pawns FETCH leather + wool from the
+>   stockpile and CRAFT a `category:leather` item (hide_scrip, buckskin consumed) AND a `category:wool` item
+>   (woolcloth, goat_wool consumed) over the real reserve→haul→stage→craft flow. Confirms `category:leather`
+>   resolves to a concrete id in the order (`inputs: {buckskin:2, cordage:1}`) and reserves/hauls correctly.
+> - **Material flow**: a jerkin from mammoth_leather stamps matDur 1.3 / matWeight 1.35 vs coney_fur 0.8 / 0.75.
 >
-> **⚠→fixed during the re-audit — finished armour satisfied a material slot.** Armour uses `category` as
-> its armour CLASS (leather/metal/cloth/organic), so a finished `boiled_leather_jerkin` is `category:leather`
-> — and once 52 inputs became `category:leather`, `itemMatchesCostCategory` let a jerkin be consumed as raw
-> leather. The collision spans every class (leather 19 mat + 16 gear; metal 16 + 22; cloth 1 + 3; organic
-> 29 + 3). Fixed at the chokepoint: `itemMatchesCostCategory` (+ the RecipeService copy) now excludes
-> `type` armor/weapon/tool, so a cost/slot only ever draws raw stock. Verified: `category:leather` →
-> the 19 leather MATERIALS (17 + boiled_leather + scale_plate), no armour.
+> **Bugs the end-to-end drive caught (all fixed):**
+> - ⚠→fixed: **finished armour satisfied a material slot.** Armour uses `category` as its armour CLASS
+>   (leather/metal/cloth/organic), so `boiled_leather_jerkin` is `category:leather` — once 52 inputs became
+>   `category:leather`, `itemMatchesCostCategory` let a jerkin be consumed as raw leather (collision spans all
+>   classes: leather 19 mat + 16 gear, metal 16 + 22, cloth 1 + 3, organic 29 + 3). Fixed at the chokepoint
+>   (`itemDefs` + RecipeService copy): a cost/slot excludes `type` armor/weapon/tool, so it only draws raw stock.
+> - ⚠→fixed: **`leather_bed` + two scenario presets still referenced the removed `light_leather`/`thick_leather`**
+>   (missed in the recipes-only pass). `leather_bed` → `category:leather`; presets → `buckskin`/`oxhide`.
+> - **Infra:** `buildScenario` now designates the ENTIRE map as stockpile (was a 7×7 rect), so a headless test
+>   can never be silently bottlenecked on storage/reachability. Determinism byte-identical.
 
 **Current chain (3 stages):** raw pelt/hide → **cure** (passive, `hide_rack` "Curing Frame", +ash×2 or
 salt×1) → **tan** (TWO competing paths: active `tanning_rack` +bark, OR passive `tanning_bucket_station`

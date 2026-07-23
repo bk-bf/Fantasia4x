@@ -1272,7 +1272,7 @@
     "transparentBg": true,
     "description": "A planked bedstead with a stuffed leather mattress. The best rest a mundane colony can build, full, restorative sleep.",
     "category": "shelter",
-    "buildingCost": {"light_leather": 4, "category:plank": 4, "iron_nail": 4},
+    "buildingCost": {"category:leather": 4, "category:plank": 4, "iron_nail": 4},
     "workAmount": 40,
     "toolTierRequired": 1,
     "populationRequired": 1,

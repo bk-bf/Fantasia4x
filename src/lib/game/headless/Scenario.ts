@@ -185,20 +185,10 @@ export function buildScenario(spec: ScenarioSpec): GameState {
 
   // Colony stockpile: the fresh-colony state ships a `zone-general` with NO tiles, so hauled goods and
   // craft inputs have nowhere to live — crafting silently stalls (no reachable stockpile to fetch from).
-  // Designate a compact stockpile around the pawn cluster so a headless scenario is haul/craft-ready out
-  // of the box (a real colony always has one). Deterministic (no rng) ⇒ replay stays byte-identical.
-  if (gs.pawns.length) {
-    const clamp = (v: number, hi: number) => Math.max(0, Math.min(hi, v));
-    const px = Math.round(gs.pawns.reduce((a, p) => a + (p.position?.x ?? 0), 0) / gs.pawns.length);
-    const py = Math.round(gs.pawns.reduce((a, p) => a + (p.position?.y ?? 0), 0) / gs.pawns.length);
-    cmd('designateRect', {
-      x1: clamp(px - 3, w - 1),
-      y1: clamp(py - 3, h - 1),
-      x2: clamp(px + 3, w - 1),
-      y2: clamp(py + 3, h - 1),
-      type: 'stockpile'
-    });
-  }
+  // Designate the ENTIRE map as stockpile so a headless scenario is never bottlenecked on storage /
+  // reachability — every walkable tile can hold hauled goods and craft inputs, so "nowhere to fetch
+  // from" can never be a hidden variable in a test. Deterministic (no rng) ⇒ replay stays byte-identical.
+  cmd('designateRect', { x1: 0, y1: 0, x2: w - 1, y2: h - 1, type: 'stockpile' });
 
   // Research: era tier sweep first, then explicit ids.
   if (spec.researchMaxTier !== undefined) {
