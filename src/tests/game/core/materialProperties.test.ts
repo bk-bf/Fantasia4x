@@ -15,7 +15,7 @@ describe('material properties', () => {
   });
 
   it('every entry has a label + desc for the hover card', () => {
-    for (const id of ['oak_plank', 'marble_block', 'silk_cloth', 'heavy_leather', 'fine_wool']) {
+    for (const id of ['oak_plank', 'marble_block', 'silk_cloth', 'oxhide', 'mammoth_wool']) {
       const m = getMaterialProperty(id);
       expect(m?.label, id).toBeTruthy();
       expect(m?.desc, id).toBeTruthy();

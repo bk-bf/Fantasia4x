@@ -69,7 +69,7 @@
     "id"              : "make_rabbit_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"rabbit_carcass": 1},
-    "outputs"         : {"rabbit_meat": 3, "rabbit_pelt": 2, "small_bones": 4, "sinew": 2},
+    "outputs"         : {"rabbit_meat": 3, "rabbit_pelt": 2, "coney_wool": 2, "small_bones": 4, "sinew": 2},
     "workAmount"      : 15,
     "toolTierRequired": 0
   },
@@ -89,101 +89,341 @@
     "workAmount"      : 5,
     "toolTierRequired": 0
   },
+  // ── Curing (passive, Curing Frame): raw hide + ash/salt → a stable cured hide, per species ──
   {
-    "id"               : "make_cured_thin_hide",
+    "id"               : "make_cured_rabbit_pelt",
     "station"          : "hide_rack",
     "passive"          : true,
     "inputs"           : {"rabbit_pelt": 1, "ash": 2},
-    "inputAlternatives": [ {"rat_pelt": 1, "ash": 2}, {"rabbit_pelt": 1, "salt": 1}, {"rat_pelt": 1, "salt": 1} ],
-    "outputs"          : {"cured_thin_hide": 1},
+    "inputAlternatives": [ {"rabbit_pelt": 1, "salt": 1} ],
+    "outputs"          : {"cured_rabbit_pelt": 1},
     "workAmount"       : 40,
     "toolTierRequired" : 0
   },
   {
-    "id"               : "make_cured_light_hide",
+    "id"               : "make_cured_rat_pelt",
+    "station"          : "hide_rack",
+    "passive"          : true,
+    "inputs"           : {"rat_pelt": 1, "ash": 2},
+    "inputAlternatives": [ {"rat_pelt": 1, "salt": 1} ],
+    "outputs"          : {"cured_rat_pelt": 1},
+    "workAmount"       : 40,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "make_cured_deer_hide",
     "station"          : "hide_rack",
     "passive"          : true,
     "inputs"           : {"deer_hide": 1, "ash": 2},
-    "inputAlternatives": [ {"goat_hide": 1, "ash": 2}, {"deer_hide": 1, "salt": 1}, {"goat_hide": 1, "salt": 1} ],
-    "outputs"          : {"cured_light_hide": 1},
+    "inputAlternatives": [ {"deer_hide": 1, "salt": 1} ],
+    "outputs"          : {"cured_deer_hide": 1},
     "workAmount"       : 50,
     "toolTierRequired" : 0
   },
   {
-    "id"               : "make_cured_sturdy_hide",
+    "id"               : "make_cured_goat_hide",
+    "station"          : "hide_rack",
+    "passive"          : true,
+    "inputs"           : {"goat_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"goat_hide": 1, "salt": 1} ],
+    "outputs"          : {"cured_goat_hide": 1},
+    "workAmount"       : 50,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "make_cured_jackal_hide",
+    "station"          : "hide_rack",
+    "passive"          : true,
+    "inputs"           : {"jackal_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"jackal_hide": 1, "salt": 1} ],
+    "outputs"          : {"cured_jackal_hide": 1},
+    "workAmount"       : 50,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "make_cured_wolf_hide",
     "station"          : "hide_rack",
     "passive"          : true,
     "inputs"           : {"wolf_hide": 1, "ash": 2},
-    "inputAlternatives": [
-      {"boar_hide": 1, "ash": 2                                           },
-      {                          "wolf_hide": 1, "salt": 1                },
-      {"boar_hide": 1,                           "salt": 1                },
-      {                "ash": 2,                            "worg_hide": 1},
-      {                                          "salt": 1, "worg_hide": 1}
-    ],
-    "outputs"          : {"cured_sturdy_hide": 1},
+    "inputAlternatives": [ {"wolf_hide": 1, "salt": 1} ],
+    "outputs"          : {"cured_wolf_hide": 1},
     "workAmount"       : 60,
     "toolTierRequired" : 0
   },
   {
-    "id"               : "make_cured_heavy_hide",
+    "id"               : "make_cured_worg_hide",
+    "station"          : "hide_rack",
+    "passive"          : true,
+    "inputs"           : {"worg_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"worg_hide": 1, "salt": 1} ],
+    "outputs"          : {"cured_worg_hide": 1},
+    "workAmount"       : 60,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "make_cured_boar_hide",
+    "station"          : "hide_rack",
+    "passive"          : true,
+    "inputs"           : {"boar_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"boar_hide": 1, "salt": 1} ],
+    "outputs"          : {"cured_boar_hide": 1},
+    "workAmount"       : 60,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "make_cured_elk_hide",
     "station"          : "hide_rack",
     "passive"          : true,
     "inputs"           : {"elk_hide": 1, "ash": 2},
-    "inputAlternatives": [ {"elk_hide": 1, "salt": 1}, {"aurochs_hide": 1, "ash": 2}, {"aurochs_hide": 1, "salt": 1} ],
-    "outputs"          : {"cured_heavy_hide": 1},
+    "inputAlternatives": [ {"elk_hide": 1, "salt": 1} ],
+    "outputs"          : {"cured_elk_hide": 1},
+    "workAmount"       : 60,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "make_cured_aurochs_hide",
+    "station"          : "hide_rack",
+    "passive"          : true,
+    "inputs"           : {"aurochs_hide": 1, "ash": 3},
+    "inputAlternatives": [ {"aurochs_hide": 1, "salt": 1} ],
+    "outputs"          : {"cured_aurochs_hide": 1},
     "workAmount"       : 70,
     "toolTierRequired" : 0
   },
   {
-    "id"               : "make_cured_thick_hide",
+    "id"               : "make_cured_bear_pelt",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"bear_pelt": 1, "ash": 2},
+    "inputs"           : {"bear_pelt": 1, "ash": 3},
     "inputAlternatives": [ {"bear_pelt": 1, "salt": 1} ],
-    "outputs"          : {"cured_thick_hide": 1},
-    "workAmount"       : 80,
+    "outputs"          : {"cured_bear_pelt": 1},
+    "workAmount"       : 70,
     "toolTierRequired" : 0
   },
   {
-    "id"              : "make_thin_leather",
-    "station"         : "tanning_rack",
-    "inputs"          : {"cured_thin_hide": 1, "bark": 1},
-    "outputs"         : {"thin_leather": 1},
-    "workAmount"      : 30,
-    "toolTierRequired": 0
+    "id"               : "make_cured_cave_bear_pelt",
+    "station"          : "hide_rack",
+    "passive"          : true,
+    "inputs"           : {"cave_bear_pelt": 1, "ash": 3},
+    "inputAlternatives": [ {"cave_bear_pelt": 1, "salt": 2} ],
+    "outputs"          : {"cured_cave_bear_pelt": 1},
+    "workAmount"       : 90,
+    "toolTierRequired" : 1
   },
   {
-    "id"              : "make_light_leather",
-    "station"         : "tanning_rack",
-    "inputs"          : {"cured_light_hide": 1, "bark": 1},
-    "outputs"         : {"light_leather": 1},
-    "workAmount"      : 35,
-    "toolTierRequired": 0
+    "id"               : "make_cured_owlbear_pelt",
+    "station"          : "hide_rack",
+    "passive"          : true,
+    "inputs"           : {"owlbear_pelt": 1, "ash": 3},
+    "inputAlternatives": [ {"owlbear_pelt": 1, "salt": 2} ],
+    "outputs"          : {"cured_owlbear_pelt": 1},
+    "workAmount"       : 90,
+    "toolTierRequired" : 1
   },
   {
-    "id"              : "make_sturdy_leather",
-    "station"         : "tanning_rack",
-    "inputs"          : {"cured_sturdy_hide": 1, "bark": 2},
-    "outputs"         : {"sturdy_leather": 1},
-    "workAmount"      : 40,
-    "toolTierRequired": 0
+    "id"               : "make_cured_sabretooth_pelt",
+    "station"          : "hide_rack",
+    "passive"          : true,
+    "inputs"           : {"sabretooth_pelt": 1, "ash": 3},
+    "inputAlternatives": [ {"sabretooth_pelt": 1, "salt": 2} ],
+    "outputs"          : {"cured_sabretooth_pelt": 1},
+    "workAmount"       : 90,
+    "toolTierRequired" : 1
   },
   {
-    "id"              : "make_heavy_leather",
-    "station"         : "tanning_rack",
-    "inputs"          : {"cured_heavy_hide": 1, "bark": 2},
-    "outputs"         : {"heavy_leather": 1},
-    "workAmount"      : 45,
-    "toolTierRequired": 0
+    "id"               : "make_cured_mammoth_fur",
+    "station"          : "hide_rack",
+    "passive"          : true,
+    "inputs"           : {"mammoth_fur": 1, "ash": 3},
+    "inputAlternatives": [ {"mammoth_fur": 1, "salt": 2} ],
+    "outputs"          : {"cured_mammoth_fur": 1},
+    "workAmount"       : 90,
+    "toolTierRequired" : 1
   },
   {
-    "id"              : "make_thick_leather",
-    "station"         : "tanning_rack",
-    "inputs"          : {"cured_thick_hide": 1, "bark": 3},
-    "outputs"         : {"thick_leather": 1},
-    "workAmount"      : 55,
-    "toolTierRequired": 0
+    "id"               : "make_cured_hippogriff_hide",
+    "station"          : "hide_rack",
+    "passive"          : true,
+    "inputs"           : {"hippogriff_feathered_hide": 1, "ash": 3},
+    "inputAlternatives": [ {"hippogriff_feathered_hide": 1, "salt": 2} ],
+    "outputs"          : {"cured_hippogriff_hide": 1},
+    "workAmount"       : 90,
+    "toolTierRequired" : 1
+  },
+  {
+    "id"               : "make_cured_dire_wolf_pelt",
+    "station"          : "hide_rack",
+    "passive"          : true,
+    "inputs"           : {"dire_wolf_pelt": 1, "ash": 3},
+    "inputAlternatives": [ {"dire_wolf_pelt": 1, "salt": 2} ],
+    "outputs"          : {"cured_dire_wolf_pelt": 1},
+    "workAmount"       : 90,
+    "toolTierRequired" : 1
+  },
+  // ── Tanning (passive, bucket): cured hide soaked in brine → that species' own leather ──
+  {
+    "id"               : "tan_coney_fur",
+    "station"          : "tanning_bucket_station",
+    "passive"          : true,
+    "inputs"           : {"cured_rabbit_pelt": 1, "tanning_brine": 1},
+    "outputs"          : {"coney_fur": 1},
+    "workAmount"       : 40,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "tan_vermin_hide",
+    "station"          : "tanning_bucket_station",
+    "passive"          : true,
+    "inputs"           : {"cured_rat_pelt": 1, "tanning_brine": 1},
+    "outputs"          : {"vermin_hide": 1},
+    "workAmount"       : 40,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "tan_buckskin",
+    "station"          : "tanning_bucket_station",
+    "passive"          : true,
+    "inputs"           : {"cured_deer_hide": 1, "tanning_brine": 1},
+    "outputs"          : {"buckskin": 1},
+    "workAmount"       : 48,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "tan_kidskin",
+    "station"          : "tanning_bucket_station",
+    "passive"          : true,
+    "inputs"           : {"cured_goat_hide": 1, "tanning_brine": 1},
+    "outputs"          : {"kidskin": 1},
+    "workAmount"       : 48,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "tan_jackal_leather",
+    "station"          : "tanning_bucket_station",
+    "passive"          : true,
+    "inputs"           : {"cured_jackal_hide": 1, "tanning_brine": 1},
+    "outputs"          : {"jackal_leather": 1},
+    "workAmount"       : 48,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "tan_wolf_leather",
+    "station"          : "tanning_bucket_station",
+    "passive"          : true,
+    "inputs"           : {"cured_wolf_hide": 1, "tanning_brine": 1},
+    "outputs"          : {"wolf_leather": 1},
+    "workAmount"       : 56,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "tan_worg_leather",
+    "station"          : "tanning_bucket_station",
+    "passive"          : true,
+    "inputs"           : {"cured_worg_hide": 1, "tanning_brine": 1},
+    "outputs"          : {"worg_leather": 1},
+    "workAmount"       : 56,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "tan_boarhide",
+    "station"          : "tanning_bucket_station",
+    "passive"          : true,
+    "inputs"           : {"cured_boar_hide": 1, "tanning_brine": 1},
+    "outputs"          : {"boarhide": 1},
+    "workAmount"       : 56,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "tan_elk_leather",
+    "station"          : "tanning_bucket_station",
+    "passive"          : true,
+    "inputs"           : {"cured_elk_hide": 1, "tanning_brine": 1},
+    "outputs"          : {"elk_leather": 1},
+    "workAmount"       : 56,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "tan_oxhide",
+    "station"          : "tanning_bucket_station",
+    "passive"          : true,
+    "inputs"           : {"cured_aurochs_hide": 1, "tanning_brine": 2},
+    "outputs"          : {"oxhide": 1},
+    "workAmount"       : 64,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "tan_bearhide",
+    "station"          : "tanning_bucket_station",
+    "passive"          : true,
+    "inputs"           : {"cured_bear_pelt": 1, "tanning_brine": 2},
+    "outputs"          : {"bearhide": 1},
+    "workAmount"       : 64,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "tan_cave_bear_hide",
+    "station"          : "beast_tanning_bucket",
+    "passive"          : true,
+    "inputs"           : {"cured_cave_bear_pelt": 1, "beast_brine": 1},
+    "outputs"          : {"cave_bear_hide": 1},
+    "workAmount"       : 120,
+    "toolTierRequired" : 1
+  },
+  {
+    "id"               : "tan_owlbear_leather",
+    "station"          : "beast_tanning_bucket",
+    "passive"          : true,
+    "inputs"           : {"cured_owlbear_pelt": 1, "beast_brine": 1},
+    "outputs"          : {"owlbear_leather": 1},
+    "workAmount"       : 120,
+    "toolTierRequired" : 1
+  },
+  {
+    "id"               : "tan_sabretooth_leather",
+    "station"          : "beast_tanning_bucket",
+    "passive"          : true,
+    "inputs"           : {"cured_sabretooth_pelt": 1, "beast_brine": 1},
+    "outputs"          : {"sabretooth_leather": 1},
+    "workAmount"       : 120,
+    "toolTierRequired" : 1
+  },
+  {
+    "id"               : "tan_mammoth_leather",
+    "station"          : "beast_tanning_bucket",
+    "passive"          : true,
+    "inputs"           : {"cured_mammoth_fur": 1, "beast_brine": 1},
+    "outputs"          : {"mammoth_leather": 1},
+    "workAmount"       : 120,
+    "toolTierRequired" : 1
+  },
+  {
+    "id"               : "tan_hippogriff_leather",
+    "station"          : "beast_tanning_bucket",
+    "passive"          : true,
+    "inputs"           : {"cured_hippogriff_hide": 1, "beast_brine": 1},
+    "outputs"          : {"hippogriff_leather": 1},
+    "workAmount"       : 120,
+    "toolTierRequired" : 1
+  },
+  {
+    "id"               : "tan_direwolf_leather",
+    "station"          : "beast_tanning_bucket",
+    "passive"          : true,
+    "inputs"           : {"cured_dire_wolf_pelt": 1, "beast_brine": 1},
+    "outputs"          : {"direwolf_leather": 1},
+    "workAmount"       : 120,
+    "toolTierRequired" : 1
+  },
+  // ── Boiled leather: a stiff leather hardened in hot water (relocated off the removed rack) ──
+  {
+    "id"               : "harden_boiled_leather",
+    "station"          : "beast_tanning_bucket",
+    "passive"          : true,
+    "inputs"           : {"boarhide": 1, "water": 1},
+    "inputAlternatives": [ {"oxhide": 1, "water": 1} ],
+    "outputs"          : {"boiled_leather": 1},
+    "workAmount"       : 60,
+    "toolTierRequired" : 1
   },
   {
     "id"              : "make_spit_meat",
@@ -826,7 +1066,7 @@
     "id"              : "make_goat_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"mountain_goat_carcass": 1},
-    "outputs"         : {"goat_meat": 8, "goat_hide": 2, "coarse_wool": 8, "medium_bones": 10, "sinew": 8},
+    "outputs"         : {"goat_meat": 8, "goat_hide": 2, "goat_wool": 8, "medium_bones": 10, "sinew": 8},
     "workAmount"      : 30,
     "toolTierRequired": 0
   },
@@ -877,7 +1117,7 @@
   {
     "id"              : "make_iron_tongs",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "light_leather": 1},
+    "inputs"          : {"iron_bar": 1, "category:leather": 1},
     "outputs"         : {"iron_tongs": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -886,7 +1126,7 @@
   {
     "id"              : "make_steel_tongs",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "light_leather": 1},
+    "inputs"          : {"steel_bar": 1, "category:leather": 1},
     "outputs"         : {"steel_tongs": 1},
     "workAmount"      : 8,
     "toolTierRequired": 2,
@@ -895,7 +1135,7 @@
   {
     "id"              : "make_iron_axe",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "branch": 1, "light_leather": 1},
+    "inputs"          : {"iron_bar": 2, "branch": 1, "category:leather": 1},
     "outputs"         : {"iron_axe": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -904,7 +1144,7 @@
   {
     "id"              : "make_steel_axe",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "branch": 1, "light_leather": 1},
+    "inputs"          : {"steel_bar": 2, "branch": 1, "category:leather": 1},
     "outputs"         : {"steel_axe": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -913,7 +1153,7 @@
   {
     "id"              : "make_iron_hammer",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "branch": 1, "light_leather": 1},
+    "inputs"          : {"iron_bar": 2, "branch": 1, "category:leather": 1},
     "outputs"         : {"iron_hammer": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -922,7 +1162,7 @@
   {
     "id"              : "make_steel_hammer",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "branch": 1, "light_leather": 1},
+    "inputs"          : {"steel_bar": 2, "branch": 1, "category:leather": 1},
     "outputs"         : {"steel_hammer": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -931,7 +1171,7 @@
   {
     "id"              : "make_iron_shovel",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "branch": 1, "light_leather": 1},
+    "inputs"          : {"iron_bar": 2, "branch": 1, "category:leather": 1},
     "outputs"         : {"iron_shovel": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -940,7 +1180,7 @@
   {
     "id"              : "make_steel_shovel",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "branch": 1, "light_leather": 1},
+    "inputs"          : {"steel_bar": 2, "branch": 1, "category:leather": 1},
     "outputs"         : {"steel_shovel": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -949,7 +1189,7 @@
   {
     "id"              : "make_iron_hoe",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "branch": 1, "light_leather": 1},
+    "inputs"          : {"iron_bar": 2, "branch": 1, "category:leather": 1},
     "outputs"         : {"iron_hoe": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -958,7 +1198,7 @@
   {
     "id"              : "make_steel_hoe",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "branch": 1, "light_leather": 1},
+    "inputs"          : {"steel_bar": 2, "branch": 1, "category:leather": 1},
     "outputs"         : {"steel_hoe": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -992,7 +1232,7 @@
     "id"               : "spin_thread",
     "station"          : "spinning_wheel",
     "inputs"           : {"flax_fiber": 2},
-    "inputAlternatives": [ {"coarse_wool": 2}, {"wool": 1} ],
+    "inputAlternatives": [ {"category:wool": 2} ],
     "outputs"          : {"thread": 3},
     "workAmount"       : 3,
     "toolTierRequired" : 1
@@ -1057,7 +1297,7 @@
   {
     "id"              : "make_hide_scrip",
     "station"         : "makers_bench",
-    "inputs"          : {"light_leather": 2, "cordage": 1},
+    "inputs"          : {"category:leather": 2, "cordage": 1},
     "outputs"         : {"hide_scrip": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0
@@ -1065,7 +1305,7 @@
   {
     "id"              : "make_hide_tool_roll",
     "station"         : "makers_bench",
-    "inputs"          : {"sturdy_leather": 1, "cordage": 1},
+    "inputs"          : {"category:leather": 1, "cordage": 1},
     "outputs"         : {"hide_tool_roll": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1073,7 +1313,7 @@
   {
     "id"              : "make_linen_snapsack",
     "station"         : "makers_bench",
-    "inputs"          : {"linen_cloth": 2, "sturdy_leather": 1, "cordage": 2},
+    "inputs"          : {"linen_cloth": 2, "category:leather": 1, "cordage": 2},
     "outputs"         : {"linen_snapsack": 1},
     "workAmount"      : 8,
     "toolTierRequired": 0
@@ -1198,7 +1438,7 @@
   {
     "id"              : "make_bronze_punch_dagger",
     "station"         : "casting_hearth",
-    "inputs"          : {"copper_bar": 1, "clay_mold": 1, "medium_bones": 1, "light_leather": 1},
+    "inputs"          : {"copper_bar": 1, "clay_mold": 1, "medium_bones": 1, "category:leather": 1},
     "outputs"         : {"bronze_punch_dagger": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -1207,7 +1447,7 @@
   {
     "id"              : "make_leaf_blade_spear",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "light_leather": 1},
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"leaf_blade_spear": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -1227,7 +1467,7 @@
   {
     "id"              : "make_cast_bronze_hatchet",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "light_leather": 1},
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"cast_bronze_hatchet": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -1296,7 +1536,7 @@
   {
     "id"              : "make_short_seax",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "light_leather": 1},
+    "inputs"          : {"iron_bar": 1, "category:leather": 1},
     "outputs"         : {"short_seax": 1},
     "workAmount"      : 8,
     "toolTierRequired": 2,
@@ -1316,7 +1556,7 @@
   {
     "id"              : "make_spatha",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "light_leather": 1},
+    "inputs"          : {"iron_bar": 2, "category:leather": 1},
     "outputs"         : {"spatha": 1},
     "workAmount"      : 12,
     "toolTierRequired": 2,
@@ -1333,19 +1573,14 @@
       },
       "wrap": {
         "acceptsCategory": "leather",
-        "quantity"       : 1,
-        "variants"       : {
-          "light_leather" : {"name": "Light-Wrapped Spatha" },
-          "sturdy_leather": {"name": "Sturdy-Wrapped Spatha"},
-          "heavy_leather" : {"name": "Heavy-Wrapped Spatha" }
-        }
+        "quantity"       : 1
       }
     }
   },
   {
     "id"              : "make_bearded_axe",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "light_leather": 1},
+    "inputs"          : {"iron_bar": 2, "category:leather": 1},
     "outputs"         : {"bearded_axe": 1},
     "workAmount"      : 12,
     "toolTierRequired": 2,
@@ -1365,7 +1600,7 @@
   {
     "id"              : "make_framea",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "light_leather": 1},
+    "inputs"          : {"iron_bar": 1, "category:leather": 1},
     "outputs"         : {"framea": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -1393,7 +1628,7 @@
   {
     "id"              : "make_iron_mace",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "light_leather": 1},
+    "inputs"          : {"iron_bar": 1, "category:leather": 1},
     "outputs"         : {"iron_mace": 1},
     "workAmount"      : 9,
     "toolTierRequired": 2,
@@ -1402,7 +1637,7 @@
   {
     "id"              : "make_iron_warhammer",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "oak_plank": 1, "light_leather": 1},
+    "inputs"          : {"iron_bar": 2, "oak_plank": 1, "category:leather": 1},
     "outputs"         : {"iron_warhammer": 1},
     "workAmount"      : 13,
     "toolTierRequired": 2,
@@ -1411,7 +1646,7 @@
   {
     "id"              : "make_iron_greatsword",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "light_leather": 1},
+    "inputs"          : {"iron_bar": 2, "category:leather": 1},
     "outputs"         : {"iron_greatsword": 1},
     "workAmount"      : 14,
     "toolTierRequired": 2,
@@ -1420,7 +1655,7 @@
   {
     "id"              : "make_steel_longsword",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "light_leather": 1},
+    "inputs"          : {"steel_bar": 1, "category:leather": 1},
     "outputs"         : {"steel_longsword": 1},
     "workAmount"      : 14,
     "toolTierRequired": 2,
@@ -1429,7 +1664,7 @@
   {
     "id"              : "make_steel_greatsword",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "light_leather": 1},
+    "inputs"          : {"steel_bar": 2, "category:leather": 1},
     "outputs"         : {"steel_greatsword": 1},
     "workAmount"      : 18,
     "toolTierRequired": 2,
@@ -1438,7 +1673,7 @@
   {
     "id"              : "make_steel_pike",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "oak_plank": 1, "light_leather": 1},
+    "inputs"          : {"steel_bar": 1, "oak_plank": 1, "category:leather": 1},
     "outputs"         : {"steel_pike": 1},
     "workAmount"      : 13,
     "toolTierRequired": 2,
@@ -1447,7 +1682,7 @@
   {
     "id"              : "make_steel_mace",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "light_leather": 1},
+    "inputs"          : {"steel_bar": 1, "category:leather": 1},
     "outputs"         : {"steel_mace": 1},
     "workAmount"      : 13,
     "toolTierRequired": 2,
@@ -1456,7 +1691,7 @@
   {
     "id"              : "make_steel_warhammer",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "oak_plank": 1, "light_leather": 1},
+    "inputs"          : {"steel_bar": 2, "oak_plank": 1, "category:leather": 1},
     "outputs"         : {"steel_warhammer": 1},
     "workAmount"      : 17,
     "toolTierRequired": 2,
@@ -1465,7 +1700,7 @@
   {
     "id"              : "make_steel_cleaver",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "light_leather": 1},
+    "inputs"          : {"steel_bar": 2, "category:leather": 1},
     "outputs"         : {"steel_cleaver": 1},
     "workAmount"      : 15,
     "toolTierRequired": 2,
@@ -1474,7 +1709,7 @@
   {
     "id"              : "make_steel_greatcleaver",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 3, "light_leather": 1},
+    "inputs"          : {"steel_bar": 3, "category:leather": 1},
     "outputs"         : {"steel_greatcleaver": 1},
     "workAmount"      : 20,
     "toolTierRequired": 2,
@@ -1483,7 +1718,7 @@
   {
     "id"              : "make_steel_flail",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "iron_bar": 1, "light_leather": 1},
+    "inputs"          : {"steel_bar": 1, "iron_bar": 1, "category:leather": 1},
     "outputs"         : {"steel_flail": 1},
     "workAmount"      : 14,
     "toolTierRequired": 2,
@@ -1492,7 +1727,7 @@
   {
     "id"              : "make_iron_rondel",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "light_leather": 1},
+    "inputs"          : {"iron_bar": 1, "category:leather": 1},
     "outputs"         : {"iron_rondel": 1},
     "workAmount"      : 7,
     "toolTierRequired": 2,
@@ -1501,7 +1736,7 @@
   {
     "id"              : "make_steel_stiletto",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "light_leather": 1},
+    "inputs"          : {"steel_bar": 1, "category:leather": 1},
     "outputs"         : {"steel_stiletto": 1},
     "workAmount"      : 9,
     "toolTierRequired": 2,
@@ -1510,7 +1745,7 @@
   {
     "id"              : "make_iron_estoc",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "light_leather": 1},
+    "inputs"          : {"iron_bar": 1, "category:leather": 1},
     "outputs"         : {"iron_estoc": 1},
     "workAmount"      : 12,
     "toolTierRequired": 2,
@@ -1519,7 +1754,7 @@
   {
     "id"              : "make_steel_rapier",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "light_leather": 1},
+    "inputs"          : {"steel_bar": 1, "category:leather": 1},
     "outputs"         : {"steel_rapier": 1},
     "workAmount"      : 15,
     "toolTierRequired": 2,
@@ -1552,7 +1787,7 @@
   {
     "id"              : "make_sling",
     "station"         : "makers_bench",
-    "inputs"          : {"light_leather": 1, "cordage": 1},
+    "inputs"          : {"category:leather": 1, "cordage": 1},
     "outputs"         : {"sling": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -1601,7 +1836,7 @@
   {
     "id"              : "make_crossbow",
     "station"         : "anvil",
-    "inputs"          : {"oak_plank": 2, "iron_bar": 1, "sinew": 1, "light_leather": 1},
+    "inputs"          : {"oak_plank": 2, "iron_bar": 1, "sinew": 1, "category:leather": 1},
     "outputs"         : {"crossbow": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -1618,7 +1853,8 @@
   {
     "id"              : "make_flint_arrow",
     "station"         : "makers_bench",
-    "inputs"          : {"branch": 1, "flint_shard": 1, "cordage": 1},
+    "inputs"           : {"branch": 1, "flint_shard": 1, "cordage": 1, "feathers": 1},
+    "inputAlternatives": [ {"branch": 1, "flint_shard": 1, "cordage": 1, "chicken_feathers": 1} ],
     "outputs"         : {"flint_arrow": 4},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1626,7 +1862,8 @@
   {
     "id"              : "make_bone_arrow",
     "station"         : "makers_bench",
-    "inputs"          : {"branch": 1, "medium_bones": 1, "cordage": 1},
+    "inputs"           : {"branch": 1, "medium_bones": 1, "cordage": 1, "feathers": 1},
+    "inputAlternatives": [ {"branch": 1, "medium_bones": 1, "cordage": 1, "chicken_feathers": 1} ],
     "outputs"         : {"bone_arrow": 4},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1634,7 +1871,8 @@
   {
     "id"              : "make_iron_arrow",
     "station"         : "anvil",
-    "inputs"          : {"branch": 1, "iron_bar": 1, "sinew": 1},
+    "inputs"           : {"branch": 1, "iron_bar": 1, "sinew": 1, "feathers": 1},
+    "inputAlternatives": [ {"branch": 1, "iron_bar": 1, "sinew": 1, "chicken_feathers": 1} ],
     "outputs"         : {"iron_arrow": 8},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -1643,7 +1881,8 @@
   {
     "id"              : "make_iron_bolt",
     "station"         : "anvil",
-    "inputs"          : {"branch": 1, "iron_bar": 1, "sinew": 1},
+    "inputs"           : {"branch": 1, "iron_bar": 1, "sinew": 1, "feathers": 1},
+    "inputAlternatives": [ {"branch": 1, "iron_bar": 1, "sinew": 1, "chicken_feathers": 1} ],
     "outputs"         : {"iron_bolt": 6},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -1652,7 +1891,7 @@
   {
     "id"              : "make_rangers_hood",
     "station"         : "makers_bench",
-    "inputs"          : {"light_leather": 1, "cordage": 1},
+    "inputs"          : {"category:leather": 1, "cordage": 1},
     "outputs"         : {"rangers_hood": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1660,7 +1899,7 @@
   {
     "id"              : "make_archers_bracers",
     "station"         : "makers_bench",
-    "inputs"          : {"light_leather": 1, "cordage": 1},
+    "inputs"          : {"category:leather": 1, "cordage": 1},
     "outputs"         : {"archers_bracers": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1668,7 +1907,7 @@
   {
     "id"              : "make_marksmans_cloak",
     "station"         : "makers_bench",
-    "inputs"          : {"light_leather": 2, "cordage": 1},
+    "inputs"          : {"category:leather": 2, "cordage": 1},
     "outputs"         : {"marksmans_cloak": 1},
     "workAmount"      : 6,
     "toolTierRequired": 0
@@ -1684,7 +1923,8 @@
   {
     "id"              : "make_broadhead_arrow",
     "station"         : "anvil",
-    "inputs"          : {"branch": 1, "iron_bar": 1, "sinew": 1},
+    "inputs"           : {"branch": 1, "iron_bar": 1, "sinew": 1, "feathers": 1},
+    "inputAlternatives": [ {"branch": 1, "iron_bar": 1, "sinew": 1, "chicken_feathers": 1} ],
     "outputs"         : {"broadhead_arrow": 6},
     "workAmount"      : 5,
     "toolTierRequired": 1,
@@ -1693,7 +1933,8 @@
   {
     "id"              : "make_barbed_arrow",
     "station"         : "anvil",
-    "inputs"          : {"branch": 1, "iron_bar": 1, "sinew": 1},
+    "inputs"           : {"branch": 1, "iron_bar": 1, "sinew": 1, "feathers": 1},
+    "inputAlternatives": [ {"branch": 1, "iron_bar": 1, "sinew": 1, "chicken_feathers": 1} ],
     "outputs"         : {"barbed_arrow": 4},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -1702,7 +1943,8 @@
   {
     "id"              : "make_heavy_quarrel",
     "station"         : "anvil",
-    "inputs"          : {"branch": 1, "iron_bar": 1, "sinew": 1},
+    "inputs"           : {"branch": 1, "iron_bar": 1, "sinew": 1, "feathers": 1},
+    "inputAlternatives": [ {"branch": 1, "iron_bar": 1, "sinew": 1, "chicken_feathers": 1} ],
     "outputs"         : {"heavy_quarrel": 6},
     "workAmount"      : 7,
     "toolTierRequired": 1,
@@ -1711,7 +1953,7 @@
   {
     "id"              : "make_hide_arrow_sheath",
     "station"         : "makers_bench",
-    "inputs"          : {"cured_light_hide": 1, "cordage": 1},
+    "inputs"          : {"category:cured_hide": 1, "cordage": 1},
     "outputs"         : {"hide_arrow_sheath": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -1719,7 +1961,7 @@
   {
     "id"              : "make_leather_back_quiver",
     "station"         : "makers_bench",
-    "inputs"          : {"light_leather": 2, "sinew": 1, "cordage": 1},
+    "inputs"          : {"category:leather": 2, "sinew": 1, "cordage": 1},
     "outputs"         : {"leather_back_quiver": 1},
     "workAmount"      : 6,
     "toolTierRequired": 0,
@@ -1728,7 +1970,7 @@
   {
     "id"              : "make_stiffened_war_quiver",
     "station"         : "anvil",
-    "inputs"          : {"heavy_leather": 1, "iron_bar": 1, "sinew": 1},
+    "inputs"          : {"category:leather": 1, "iron_bar": 1, "sinew": 1},
     "outputs"         : {"stiffened_war_quiver": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -1737,7 +1979,7 @@
   {
     "id"              : "make_leather_bolt_case",
     "station"         : "makers_bench",
-    "inputs"          : {"light_leather": 1, "sinew": 1, "cordage": 1},
+    "inputs"          : {"category:leather": 1, "sinew": 1, "cordage": 1},
     "outputs"         : {"leather_bolt_case": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0,
@@ -1746,7 +1988,7 @@
   {
     "id"              : "make_banded_bolt_quiver",
     "station"         : "anvil",
-    "inputs"          : {"heavy_leather": 1, "iron_bar": 1, "oak_plank": 1},
+    "inputs"          : {"category:leather": 1, "iron_bar": 1, "oak_plank": 1},
     "outputs"         : {"banded_bolt_quiver": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -1755,7 +1997,7 @@
   {
     "id"              : "make_iron_boss_shield",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "light_leather": 1},
+    "inputs"          : {"iron_bar": 1, "category:leather": 1},
     "outputs"         : {"iron_boss_shield": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -1771,12 +2013,7 @@
       },
       "facing": {
         "acceptsCategory": "leather",
-        "quantity"       : 1,
-        "variants"       : {
-          "light_leather" : {"name": "Light-Faced Iron Shield" },
-          "sturdy_leather": {"name": "Iron-Bossed Kite Shield" },
-          "heavy_leather" : {"name": "Heavy Iron-Bossed Shield"}
-        }
+        "quantity"       : 1
       }
     }
   },
@@ -1814,7 +2051,7 @@
   {
     "id"              : "make_soot_darkened_jerkin",
     "station"         : "makers_bench",
-    "inputs"          : {"light_leather": 2, "charcoal": 1, "cordage": 1},
+    "inputs"          : {"category:leather": 2, "charcoal": 1, "cordage": 1},
     "outputs"         : {"soot_darkened_jerkin": 1},
     "workAmount"      : 6,
     "toolTierRequired": 0
@@ -1846,14 +2083,7 @@
     "dynamicRecipe"   : {
       "leather": {
         "acceptsCategory": "leather",
-        "quantity"       : 3,
-        "variants"       : {
-          "thin_leather"  : {"name": "Thin-Leather Jerkin"  },
-          "light_leather" : {"name": "Light-Leather Jerkin" },
-          "sturdy_leather": {"name": "Sturdy-Leather Jerkin"},
-          "heavy_leather" : {"name": "Heavy-Leather Jerkin" },
-          "thick_leather" : {"name": "Thick-Leather Jerkin" }
-        }
+        "quantity"       : 3
       }
     }
   },
@@ -1867,12 +2097,7 @@
     "dynamicRecipe"   : {
       "leather": {
         "acceptsCategory": "leather",
-        "quantity"       : 2,
-        "variants"       : {
-          "light_leather" : {"name": "Light-Leather Coif"},
-          "sturdy_leather": {"name": "Leather Coif"      },
-          "heavy_leather" : {"name": "Heavy-Leather Coif"}
-        }
+        "quantity"       : 2
       }
     }
   },
@@ -1895,12 +2120,7 @@
     "dynamicRecipe"   : {
       "leather": {
         "acceptsCategory": "leather",
-        "quantity"       : 1,
-        "variants"       : {
-          "light_leather" : {"name": "Light-Leather Gauntlets"   },
-          "sturdy_leather": {"name": "Stitched Leather Gauntlets"},
-          "heavy_leather" : {"name": "Heavy-Leather Gauntlets"   }
-        }
+        "quantity"       : 1
       }
     }
   },
@@ -1914,12 +2134,7 @@
     "dynamicRecipe"   : {
       "leather": {
         "acceptsCategory": "leather",
-        "quantity"       : 2,
-        "variants"       : {
-          "light_leather" : {"name": "Light-Leather Boots"      },
-          "sturdy_leather": {"name": "Tallow-Dressed Hide Boots"},
-          "heavy_leather" : {"name": "Heavy Hide Boots"         }
-        }
+        "quantity"       : 2
       }
     }
   },
@@ -1944,11 +2159,7 @@
     "dynamicRecipe"   : {
       "padding": {
         "acceptsCategory": "leather",
-        "quantity"       : 1,
-        "variants"       : {
-          "light_leather" : {"name": "Iron Nasal Helm (Light Pad)"},
-          "sturdy_leather": {"name": "Iron Nasal Helm"            }
-        }
+        "quantity"       : 1
       }
     }
   },
@@ -1972,11 +2183,7 @@
     "dynamicRecipe"   : {
       "leather": {
         "acceptsCategory": "leather",
-        "quantity"       : 4,
-        "variants"       : {
-          "sturdy_leather": {"name": "Brigandine Coat"      },
-          "heavy_leather" : {"name": "Heavy Brigandine Coat"}
-        }
+        "quantity"       : 4
       }
     }
   },
@@ -1991,11 +2198,7 @@
     "dynamicRecipe"   : {
       "lining": {
         "acceptsCategory": "leather",
-        "quantity"       : 1,
-        "variants"       : {
-          "light_leather" : {"name": "Iron Gauntlets (Light Lined)"},
-          "sturdy_leather": {"name": "Riveted Iron Gauntlets"      }
-        }
+        "quantity"       : 1
       }
     }
   },
@@ -2010,11 +2213,7 @@
     "dynamicRecipe"   : {
       "leather": {
         "acceptsCategory": "leather",
-        "quantity"       : 2,
-        "variants"       : {
-          "sturdy_leather": {"name": "Iron-Shod Boots"      },
-          "heavy_leather" : {"name": "Heavy Iron-Shod Boots"}
-        }
+        "quantity"       : 2
       }
     }
   },
@@ -2029,11 +2228,7 @@
     "dynamicRecipe"   : {
       "lining": {
         "acceptsCategory": "leather",
-        "quantity"       : 1,
-        "variants"       : {
-          "light_leather" : {"name": "Iron Gorget (Light Lined)"},
-          "sturdy_leather": {"name": "Riveted Iron Gorget"      }
-        }
+        "quantity"       : 1
       }
     }
   },
@@ -2648,7 +2843,7 @@
     "id"               : "boil_hide_glue",
     "station"          : "hearth",
     "inputs"           : {"rotten_hide": 1, "water": 1},
-    "inputAlternatives": [ {"cured_thin_hide": 1, "water": 1} ],
+    "inputAlternatives": [ {"category:cured_hide": 1, "water": 1} ],
     "outputs"          : {"hide_glue": 1},
     "workAmount"       : 24,
     "toolTierRequired" : 0
@@ -2692,53 +2887,6 @@
     "workAmount"      : 96,
     "toolTierRequired": 0
   },
-  // Common leather tanned PASSIVELY in a bucket (the brine is the tannin, burned as fuel — no bark).
-  // tanning_rack (active batch) recipes are kept as the throughput upgrade above hand-buckets.
-  {
-    "id"              : "tan_thin_leather_bucket",
-    "station"         : "tanning_bucket_station",
-    "passive"         : true,
-    "inputs"          : {"cured_thin_hide": 1},
-    "outputs"         : {"thin_leather": 1},
-    "workAmount"      : 40,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "tan_light_leather_bucket",
-    "station"         : "tanning_bucket_station",
-    "passive"         : true,
-    "inputs"          : {"cured_light_hide": 1},
-    "outputs"         : {"light_leather": 1},
-    "workAmount"      : 48,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "tan_sturdy_leather_bucket",
-    "station"         : "tanning_bucket_station",
-    "passive"         : true,
-    "inputs"          : {"cured_sturdy_hide": 1},
-    "outputs"         : {"sturdy_leather": 1},
-    "workAmount"      : 56,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "tan_heavy_leather_bucket",
-    "station"         : "tanning_bucket_station",
-    "passive"         : true,
-    "inputs"          : {"cured_heavy_hide": 1},
-    "outputs"         : {"heavy_leather": 1},
-    "workAmount"      : 64,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "tan_thick_leather_bucket",
-    "station"         : "tanning_bucket_station",
-    "passive"         : true,
-    "inputs"          : {"cured_thick_hide": 1},
-    "outputs"         : {"thick_leather": 1},
-    "workAmount"      : 72,
-    "toolTierRequired": 0
-  },
   // ════════════════════════════════════════════════════════════════════════════════════════════
   // PRODUCTION-CHAIN-III §E — Butchery yields for new carcasses (closing the ENTITIES Phase B gap)
   // ════════════════════════════════════════════════════════════════════════════════════════════
@@ -2746,7 +2894,7 @@
     "id"              : "make_aurochs_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"aurochs_carcass": 1},
-    "outputs"         : {"aurochs_meat": 18, "aurochs_hide": 3, "large_bones": 18, "sinew": 16},
+    "outputs"         : {"aurochs_meat": 18, "aurochs_hide": 3, "ox_wool": 4, "large_bones": 18, "sinew": 16},
     "workAmount"      : 60,
     "toolTierRequired": 0
   },
@@ -2754,7 +2902,7 @@
     "id"              : "make_mammoth_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"woolly_mammoth_carcass": 1},
-    "outputs"         : {"mammoth_meat": 40, "mammoth_fur": 6, "ivory": 2, "huge_bones": 24, "coarse_wool": 12, "sinew": 30},
+    "outputs"         : {"mammoth_meat": 40, "mammoth_fur": 6, "ivory": 2, "huge_bones": 24, "mammoth_wool": 12, "sinew": 30},
     "workAmount"      : 90,
     "toolTierRequired": 0
   },
@@ -3038,33 +3186,6 @@
   },
   // Beast-grade leather: raw → cured (hide_rack) → tanned in BEAST brine (beast bucket) → hardened.
   {
-    "id"               : "cure_beast_hide",
-    "station"          : "hide_rack",
-    "passive"          : true,
-    "inputs"           : {"owlbear_pelt": 1, "ash": 3},
-    "inputAlternatives": [
-      {"sabretooth_pelt": 1, "ash": 3},
-      {"mammoth_fur": 1, "ash": 4},
-      {"bear_pelt": 1, "ash": 3},
-      {"hippogriff_feathered_hide": 1, "ash": 3},
-      {"owlbear_pelt": 1, "salt": 2},
-      {"sabretooth_pelt": 1, "salt": 2},
-      {"bear_pelt": 1, "salt": 2}
-    ],
-    "outputs"          : {"cured_beast_hide": 1},
-    "workAmount"       : 90,
-    "toolTierRequired" : 1
-  },
-  {
-    "id"              : "tan_beast_leather",
-    "station"         : "beast_tanning_bucket",
-    "passive"         : true,
-    "inputs"          : {"cured_beast_hide": 1},
-    "outputs"         : {"beast_leather": 1},
-    "workAmount"      : 120,
-    "toolTierRequired": 1
-  },
-  {
     "id"              : "tan_scale_plate",
     "station"         : "beast_tanning_bucket",
     "passive"         : true,
@@ -3073,46 +3194,15 @@
     "workAmount"      : 120,
     "toolTierRequired": 1
   },
-  {
-    "id"              : "harden_boiled_leather",
-    "station"         : "tanning_rack",
-    "inputs"          : {"beast_leather": 1, "water": 1},
-    "outputs"         : {"boiled_leather": 1},
-    "workAmount"      : 60,
-    "toolTierRequired": 1
-  },
   // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §E.2 — Wool line (soft goods). coarse_wool sourced from §E butchery; the
-  // refine/felt/weave ladder lives at the weaving frame. (Live-shear / sheep source: see spec note.)
+  // PRODUCTION-CHAIN-III §E.2 — Wool line (soft goods). The 5 source fleeces (§E butchery + live-shear)
+  // are graded at source, so there is no refine ladder: any wool weaves straight to cloth, the finer the
+  // fleece the better the cloth (material multiplier). Raw wool is itself the bedding/padding material.
   // ════════════════════════════════════════════════════════════════════════════════════════════
-  {
-    "id"              : "card_wool",
-    "station"         : "weaving_frame",
-    "inputs"          : {"coarse_wool": 2},
-    "outputs"         : {"wool": 1},
-    "workAmount"      : 14,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "comb_fine_wool",
-    "station"         : "weaving_frame",
-    "inputs"          : {"wool": 2},
-    "outputs"         : {"fine_wool": 1},
-    "workAmount"      : 18,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "make_felt",
-    "station"         : "weaving_frame",
-    "inputs"          : {"wool": 3},
-    "outputs"         : {"felt": 1},
-    "workAmount"      : 20,
-    "toolTierRequired": 0
-  },
   {
     "id"              : "weave_woolcloth",
     "station"         : "weaving_frame",
-    "inputs"          : {"fine_wool": 2},
+    "inputs"          : {"category:wool": 3},
     "outputs"         : {"woolcloth": 1},
     "workAmount"      : 24,
     "toolTierRequired": 0
@@ -3234,7 +3324,7 @@
   {
     "id"              : "make_scale_cuirass",
     "station"         : "makers_bench",
-    "inputs"          : {"scale_plate": 4, "sturdy_leather": 2},
+    "inputs"          : {"scale_plate": 4, "category:leather": 2},
     "outputs"         : {"scale_cuirass": 1},
     "workAmount"      : 60,
     "toolTierRequired": 1
@@ -3260,8 +3350,8 @@
   {
     "id"               : "make_beast_leather_plate",
     "station"          : "makers_bench",
-    "inputs"           : {"boiled_leather": 4, "sturdy_leather": 2},
-    "inputAlternatives": [ {"boiled_leather": 4, "heavy_leather": 2} ],
+    "inputs"           : {"boiled_leather": 4, "category:leather": 2},
+    "inputAlternatives": [ {"boiled_leather": 4, "category:leather": 2} ],
     "outputs"          : {"beast_leather_plate": 1},
     "workAmount"       : 72,
     "toolTierRequired" : 1
@@ -3269,8 +3359,8 @@
   {
     "id"               : "make_bone_plated_cuirass",
     "station"          : "makers_bench",
-    "inputs"           : {"huge_bones": 3, "heavy_leather": 2},
-    "inputAlternatives": [ {"large_bones": 5, "heavy_leather": 2} ],
+    "inputs"           : {"huge_bones": 3, "category:leather": 2},
+    "inputAlternatives": [ {"large_bones": 5, "category:leather": 2} ],
     "outputs"          : {"bone_plated_cuirass": 1},
     "workAmount"       : 64,
     "toolTierRequired" : 1
@@ -3278,7 +3368,7 @@
   {
     "id"              : "make_horned_helm",
     "station"         : "makers_bench",
-    "inputs"          : {"huge_bones": 1, "large_bones": 2, "sturdy_leather": 1},
+    "inputs"          : {"huge_bones": 1, "large_bones": 2, "category:leather": 1},
     "outputs"         : {"horned_helm": 1},
     "workAmount"      : 48,
     "toolTierRequired": 1
@@ -3295,7 +3385,7 @@
   {
     "id"              : "make_regal_robes",
     "station"         : "weaving_frame",
-    "inputs"          : {"woolcloth": 4, "fine_wool": 2},
+    "inputs"          : {"woolcloth": 4, "category:wool": 2},
     "outputs"         : {"regal_robes": 1},
     "workAmount"      : 36,
     "toolTierRequired": 0
@@ -3461,7 +3551,7 @@
     "id"               : "spin_enchant_thread",
     "station"          : "runic_loom",
     "researchRequired" : "runic_inscription",
-    "inputs"           : {"fine_wool": 2, "gem_dust": 1},
+    "inputs"           : {"category:wool": 2, "gem_dust": 1},
     "inputAlternatives": [ {"woolcloth": 2, "gem_dust": 1} ],
     "outputs"          : {"enchant_thread": 2},
     "workAmount"       : 28,

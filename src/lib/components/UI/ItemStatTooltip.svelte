@@ -6,7 +6,7 @@
   import type { NaturalGearMeta } from '$lib/components/util/naturalGear';
   import { coveredParts } from '$lib/game/core/armorCoverage';
   import { partLabel } from '$lib/utils/bodyLabels';
-  import { getMaterialProperty } from '$lib/game/core/materialProperties';
+  import { getMaterialProperty, aggregateMaterialMods } from '$lib/game/core/materialProperties';
   import { itemService } from '$lib/game/services/ItemService';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService';
   import { SOIL_TIER_NAME, type SoilTier } from '$lib/game/core/Terrains';
@@ -71,6 +71,13 @@
       .map((id) => getMaterialProperty(id))
       .filter((m): m is NonNullable<typeof m> => !!m)
       .map((m) => `${m.label}: ${m.desc}`)
+  );
+  // §M the COMPUTED durability multiplier the chosen material(s) stamp onto the crafted item (leather,
+  // plank, …) — the number the game actually applies, shown like the building tooltip's material rows.
+  let matItemDur = $derived(
+    Object.values(selectedIngredients).length
+      ? aggregateMaterialMods(Object.values(selectedIngredients), 'item').durability
+      : 1
   );
   // Dynamic-recipe variant nutrition tweak (e.g. cooked-meat-over-venison), added to base nutrition.
   let nutritionBonus = $derived.by(() => {
@@ -309,11 +316,19 @@
     {/each}
   {/if}
 
-  {#if matNotes.length > 0}
+  {#if matNotes.length > 0 || matItemDur !== 1}
     <div class="tip-sep">
       MATERIAL{#if matNames}
         · {matNames}{/if}
     </div>
+    {#if matItemDur !== 1}
+      <div class="tip-mod">
+        <span class="tip-mod-name">Durability</span>
+        <span class="tip-mod-val" style="color:{matItemDur >= 1 ? '#6bc' : '#e08'}"
+          >×{matItemDur.toFixed(2)}</span
+        >
+      </div>
+    {/if}
     {#each matNotes as note}
       <div class="tip-mod" style="color:#7e9fbf">{note}</div>
     {/each}

@@ -39,7 +39,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [x] heartwood_joiner: make_{heartwood,moonwood,ironwood,emberwood}_plank
 - [x] hide_rack⚙: make_cured_{thin,light,sturdy,heavy,thick}_hide, cure_beast_hide
 - [x] tanning_rack: make_{thin,light,sturdy,heavy,thick}_leather, harden_boiled_leather
-- [ ] ⚠ tanning_bucket_station⚙: tan_{thin,light,sturdy,heavy,thick}_leather_bucket — ALL 5 SHADOWED by tanning_rack `make_*_leather` (whole station dead). **RESOLUTION: folded into the Tanning chain redesign below (remove the rack; buckets become the only tanning path).**
+- [x] ⚠→fixed: tanning_bucket_station⚙ — was shadowed by the tanning_rack. **RESOLVED via the Tanning chain redesign (rack removed; the passive buckets are now the only tanning path, one `tan_<leather>` recipe per species consuming brine).**
 - [x] beast_tanning_bucket⚙: tan_beast_leather, tan_scale_plate
 - [x] hearth: make_animal_fat, boil_bone_glue, boil_hide_glue — ⚠ `make_ash` SHADOWED by burn_charcoal byproduct
 - [x] campfire (cooking): make_spit_meat, make_{small,fine,lavish}_stew, make_pottage, brew_herb_tea, make_clay_cooking_pot
@@ -162,16 +162,12 @@ fuelled by `tanning_brine`) → **harden** (`tanning_rack`, beast_leather + wate
 brewed passively at `brewing_barrel` (bark+salt+ash+water). ⚠ Bucket recipes take NO material input —
 brine is consumed only as station FUEL (`defaultAllowedFuelItemIds`), so it's "cured hide → leather for free".
 
-**Decided direction:**
-- [ ] **Remove `tanning_rack` entirely.** Tanning happens only at bucket stations (`tanning_bucket_station`
-      / `beast_tanning_bucket`), passive. Prune the 5 `make_*_leather` rack recipes (this unshadows the buckets).
-- [ ] **Relocate `harden_boiled_leather`** off the rack (→ beast bucket or a dedicated hardening step).
-- [ ] Bucket tanning must consume **real materials** — brine as a LISTED input (± tannin/bark), not just as
-      fuel. Close the "free leather" hole.
-- [ ] Keep **curing passive** at the Curing Frame (already correct — curing preserves the raw skin so it
-      doesn't spoil; that IS its purpose, keep it).
-- [ ] Keep an early **`make_ash`** source reachable (see Shadow resolution below): ash is a core tanning
-      reagent (every cure + every brine needs it) — the whole chain must not hard-gate on a charcoal pit.
+**Decided direction — IMPLEMENTED (2026-07-23; `pnpm check` clean, 0 new dangling refs, recipe/craft tests green):**
+- [x] **Removed `tanning_rack` entirely** (building + its 5 `make_*_leather` recipes). Tanning is now only the passive bucket stations.
+- [x] **Relocated `harden_boiled_leather`** → `beast_tanning_bucket` (passive): a stiff leather (`boarhide`/`oxhide`) + water → `boiled_leather`.
+- [x] **Bucket tanning consumes brine as a LISTED input** (`tanning_brine`/`beast_brine`), and the buckets' brine-as-fuel config was stripped (they're plain passive stations like the Curing Frame). Closes the "free leather" hole and gives `brew_*_brine` real consumers.
+- [x] **Curing kept passive** at the Curing Frame (two-step chain: cure → tan).
+- [x] `make_ash` reachability unchanged (still a hearth recipe; see Ash section).
 
 **Hide/leather split** — no more collapsing distinct animals into one leather. Today wolf/boar/worg → one
 "sturdy" leather; elk/aurochs → one "heavy"; and jackal literally drops `wolf_hide`. Proposed: each hide
@@ -201,10 +197,11 @@ sabretooth/direwolf → prestige).
 | dire/great wolf | dire_wolf_pelt | direwolf_leather | prime · warm · high · beauty |
 | mire_crocodile | croc_scaled_hide | crocodile_scale (`scale_plate`) | rigid scutes · low insul · v.high armor · own line, NOT "leather" |
 
-- [ ] Fix `jackal` dropping `wolf_hide` → its own `jackal_hide`.
-- [ ] Decide cure-stage shape: per-hide cured intermediate (~18 hand recipes) vs a **generic passive cure**
-      (rawHide + preservative → cured-of-same-species via category/dynamic recipe). Recommend generic.
-- [ ] Rebalance downstream armour/clothing recipes to request the leather whose identity fits (not a flat tier).
+- [x] **17 per-animal leathers IMPLEMENTED** (the table above, minus croc scale which stays `scale_plate`). Each `category:leather` with graded `material.item` (durability/weight → crafted item) + `material.building` (insulation/comfort/beauty → furniture). The 6 abstract tiers (thin/light/sturdy/heavy/thick/beast_leather) removed.
+- [x] Fixed `jackal` dropping `wolf_hide` → new `jackal_hide` item → `jackal_leather`.
+- [x] **Cure-stage shape decided: per-species cured intermediate** (17 `cured_*` items, all `category:cured_hide`; 17 passive cure recipes) — the two-step passive process the user wanted. Downstream `category:cured_hide` consumers (`hide_bed`, `boil_hide_glue`, arrow sheath) accept any cured hide.
+- [x] **Downstream NOT hard-gated by leather type** (user decision): 52 hard tier-leather inputs → `category:leather` (any leather works); 11 stale variant blocks stripped. "Wrong" leather still crafts, but its `material.item.durability` multiplier flows to the output, surfaced as a `Durability ×N` row in the craft tooltip (mirrors the building/stone tooltip). ⚠ `material.item.weight` is authored but NOT applied per-instance (no per-instance weight subsystem exists; deferred rather than fake-displayed).
+- [x] **`Recipe.materialBonuses` removed** (was display-only dead code — a "cosmetic lie" never stamped on the item; type + `applyMaterialBonuses` + tooltip path + 15 data blocks all deleted).
 
 ### Wool sourcing & furniture materials
 **Current:** only `mountain_goat` + `woolly_mammoth` carcasses drop `coarse_wool`; NO shearing (ANIMAL-HUSBANDRY
@@ -212,18 +209,16 @@ Phase D wants a `sheep` + live-shear — still open). Wool ladder exists at `wea
 (`coarse_wool`→`wool`→`fine_wool`→`woolcloth`, + `felt`). Wool items ALREADY carry a `material.building`
 comfort/insulation block (wired as a furniture material) — the hook is in place.
 
-**Decided direction** (wool = dominant furniture material; leather only gates top-tier):
-- [ ] Add a wool/fur output to every **wool-yes** carcass butchery recipe (mirror `make_goat_meat`'s
-      `coarse_wool` line — butchery gives BOTH hide→leather AND wool/fur→soft-goods). Wool-yes carcasses
-      lacking it today: aurochs, bear/cave_bear/great_bear, owlbear, worg, jackal, sabretooth,
-      wolf/dire_wolf/great_wolf; boar (bristly, borderline); rabbit (tiny). goat + mammoth already have it.
-- [ ] Grade wool by source: true fleece (goat/sheep/mammoth) → `coarse_wool`→fine ladder; predator/ursine
-      coats → a parallel **fur/pelt-down** soft-goods input (stuffing/trim). Decide: one `coarse_wool` bucket
-      vs distinct `bear_fur`/`wolf_fur` grades.
-- [ ] Re-gate furniture materials: mid beds & seating built from **wool** (wool-stuffed mattress = the
-      "proper bed"; wool-cushioned chair); reserve **leather** for top beds, armchairs, couches only.
-- [ ] Cross-link ANIMAL-HUSBANDRY: live-shear (renewable) + butchery-drop (from kills) are complementary
-      wool sources — both feed the same ladder.
+**Decided direction — IMPLEMENTED (2026-07-23). Scope kept deliberately smaller than leather (user call): 5 source-graded fleeces, no fur/pelt-down second axis, no refine ladder.**
+- [x] **5 source wools**, tiered by how hard the animal is to take (replaces the generic `coarse_wool`/`wool`/`fine_wool`): `coney_wool` (rabbit, trivial), `goat_wool` (goat, easy), `sheep_fleece` (sheep, husbandry-pending), `ox_wool` (aurochs, dangerous), `mammoth_wool` (mammoth, apex). All `category:wool`; identity via `material.building` comfort/insulation + `material.item` durability (coarse ox = bulk warmth/low comfort; fine coney/mammoth = comfort).
+- [x] **Butchery drops wired**: `make_goat_meat` coarse_wool→goat_wool; `make_mammoth_meat` coarse_wool→mammoth_wool; added `coney_wool` to `make_rabbit_meat`, `ox_wool` to `make_aurochs_meat`. sheep_fleece has no butchery drop (arrives with ANIMAL-HUSBANDRY live-shear; item + ladder ready).
+- [x] **No refine ladder**: grading is at the source, so `card_wool`/`comb_fine_wool` removed; `weave_woolcloth` now takes `category:wool`×3 (any fleece → cloth, finer fleece = better cloth via multiplier). `spin_thread`/`regal_robes`/`enchant_thread`/`stargazer_circlet` re-gated to `category:wool`.
+- [x] **`felt` removed** (dead-end material — nothing consumed it); its bedding/padding role is filled by raw wool directly (each fleece carries `material.building` comfort/insulation).
+- [ ] Furniture re-gate (mid beds/seating built from wool, leather only for top) — deferred to the furniture/comfort-system section (not part of this pass).
+- [ ] Cross-link ANIMAL-HUSBANDRY live-shear (sheep_fleece source) — still open.
+
+### Feathers → fletched ammo (added this pass)
+- [x] The 7 fletched-ammo recipes (`make_{flint,bone,iron,broadhead,barbed}_arrow`, `make_{iron_bolt,heavy_quarrel}`) now require `feathers` (with `chicken_feathers` as an alternative), gating ranged ammo behind hunting fowl (chicken/hoarfowl/hippogriff). Feather items left `category:organic` (not recategorised, to avoid flipping their trade/scavenge behaviour).
 
 ### Steel chain — realism rework + specific steel types
 **Current recipes are metallurgically INVERTED.** `make_steel_bar` (finery_forge: iron_bar+coal+limestone
