@@ -1192,13 +1192,6 @@
           "ash_log" : {"name": "Ash-Shafted Bone Spear" }
         }
       }
-    },
-    "materialBonuses" : {
-      "shaft": {
-        "ash_log": {"accuracy": 3, "damMax": 1                                      },
-        "oak_log": {                            "maxDurability": 10                 },
-        "yew_log": {               "damMax": 2,                      "critMod": 0.02}
-      }
     }
   },
   // ── Phase B: Tier 1 weapon recipes ───────────────────────────────────────
@@ -1229,13 +1222,6 @@
           "ash_log" : {"name": "Ash-Shafted Leaf-Blade Spear" }
         }
       }
-    },
-    "materialBonuses" : {
-      "shaft": {
-        "ash_log": {"accuracy": 3, "damMax": 1                                      },
-        "oak_log": {                            "maxDurability": 15                 },
-        "yew_log": {               "damMax": 2,                      "critMod": 0.02}
-      }
     }
   },
   {
@@ -1256,9 +1242,6 @@
           "ash_log" : {"name": "Ash-Hafted Bronze Hatchet" }
         }
       }
-    },
-    "materialBonuses" : {
-      "haft": { "ash_log": {"accuracy": 2}, "oak_log": {"maxDurability": 10} }
     }
   },
   {
@@ -1278,14 +1261,6 @@
           "oak_log" : {"name": "Oak Self Bow" },
           "pine_log": {"name": "Pine Self Bow"}
         }
-      }
-    },
-    "materialBonuses" : {
-      "stave": {
-        "yew_log" : {"damMax": 2, "critMod": 0.03                                    },
-        "ash_log" : {"damMax": 1,                  "accuracy": 3                     },
-        "oak_log" : {                                             "maxDurability": 20},
-        "pine_log": {                                                                }
       }
     }
   },
@@ -1315,9 +1290,6 @@
           "bear_pelt": {"name": "Bear-Faced Round Shield"}
         }
       }
-    },
-    "materialBonuses" : {
-      "facing": { "bear_pelt": {"armorValue": 2}, "deer_hide": {} }
     }
   },
   // ── Phase B: Tier 2 weapon recipes ───────────────────────────────────────
@@ -1368,9 +1340,6 @@
           "heavy_leather" : {"name": "Heavy-Wrapped Spatha" }
         }
       }
-    },
-    "materialBonuses" : {
-      "wrap": { "sturdy_leather": {"accuracy": 1}, "heavy_leather": {"accuracy": 2} }
     }
   },
   {
@@ -1391,9 +1360,6 @@
           "pine_log": {"name": "Pine-Hafted Bearded Axe"}
         }
       }
-    },
-    "materialBonuses" : {
-      "haft": { "ash_log": {"accuracy": 2}, "oak_log": {"maxDurability": 15} }
     }
   },
   {
@@ -1414,9 +1380,6 @@
           "pine_log": {"name": "Pine-Shafted Framea"}
         }
       }
-    },
-    "materialBonuses" : {
-      "shaft": { "ash_log": {"accuracy": 3, "damMax": 1}, "oak_log": {"maxDurability": 15} }
     }
   },
   {
@@ -1576,9 +1539,6 @@
         "quantity"       : 1,
         "variants"       : { "yew_log": {"name": "Yew War Bow"}, "ash_log": {"name": "Ash War Bow"} }
       }
-    },
-    "materialBonuses" : {
-      "stave": { "yew_log": {"damMax": 3, "critMod": 0.03}, "ash_log": {"accuracy": 3, "damMax": 1} }
     }
   },
   {
@@ -1628,9 +1588,6 @@
         "quantity"       : 1,
         "variants"       : { "yew_log": {"name": "Yew Hunting Recurve"}, "ash_log": {"name": "Ash Hunting Recurve"} }
       }
-    },
-    "materialBonuses" : {
-      "stave": { "yew_log": {"critMod": 0.03}, "ash_log": {"accuracy": 3} }
     }
   },
   {
@@ -1821,13 +1778,6 @@
           "heavy_leather" : {"name": "Heavy Iron-Bossed Shield"}
         }
       }
-    },
-    "materialBonuses" : {
-      "facing": {
-        "heavy_leather" : {"armorValue":  2},
-        "sturdy_leather": {"armorValue":  1},
-        "thin_leather"  : {"armorValue": -1}
-      }
     }
   },
   // ── Phase B: Tier 0 armour recipes ────────────────────────────────────────
@@ -1858,9 +1808,6 @@
           "elk_hide" : {"name": "Elk-Hide Vest" }
         }
       }
-    },
-    "materialBonuses" : {
-      "hide": { "bear_pelt": {"armorValue": 2, "fatiguePerTurn": 0.05}, "elk_hide": {"armorValue": 1}, "deer_hide": {} }
     }
   },
   // STEALTH §8 — the one stealth-positive garment (soot-blacked, near-zero protection).
@@ -1908,15 +1855,6 @@
           "thick_leather" : {"name": "Thick-Leather Jerkin" }
         }
       }
-    },
-    "materialBonuses" : {
-      "leather": {
-        "thick_leather" : {"armorValue":  4, "fatiguePerTurn": 0.1},
-        "heavy_leather" : {"armorValue":  2                       },
-        "sturdy_leather": {"armorValue":  1                       },
-        "light_leather" : {                                       },
-        "thin_leather"  : {"armorValue": -1                       }
-      }
     }
   },
   {
@@ -1936,9 +1874,6 @@
           "heavy_leather" : {"name": "Heavy-Leather Coif"}
         }
       }
-    },
-    "materialBonuses" : {
-      "leather": { "heavy_leather": {"armorValue": 2}, "sturdy_leather": {"armorValue": 1}, "light_leather": {} }
     }
   },
   {
@@ -2043,9 +1978,6 @@
           "heavy_leather" : {"name": "Heavy Brigandine Coat"}
         }
       }
-    },
-    "materialBonuses" : {
-      "leather": { "heavy_leather": {"armorValue": 2} }
     }
   },
   {
@@ -3084,7 +3016,7 @@
     "id"              : "make_jackal_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"jackal_carcass": 1},
-    "outputs"         : {"worg_meat": 4, "wolf_hide": 1, "small_bones": 5, "sinew": 4},
+    "outputs"         : {"worg_meat": 4, "jackal_hide": 1, "small_bones": 5, "sinew": 4},
     "workAmount"      : 20,
     "toolTierRequired": 0
   },

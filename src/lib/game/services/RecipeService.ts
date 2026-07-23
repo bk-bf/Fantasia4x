@@ -68,15 +68,6 @@ export interface RecipeService {
   toolRequirementForRecipe(
     recipe: Recipe | undefined
   ): { workType: string; minTier: number } | null;
-  /**
-   * Merge per-slot material bonuses into weaponProperties/armorProperties deltas.
-   * Called during output assembly when `selectedIngredients` (slot → chosenItemId) are known.
-   * Returns a partial Item override (only populated keys from materialBonuses).
-   */
-  applyMaterialBonuses(
-    recipe: Recipe,
-    selectedIngredients: Record<string, string>
-  ): { weaponDelta: Record<string, number>; armorDelta: Record<string, number> };
 }
 
 /** Synthesise a Recipe from an item that carries legacy inline crafting fields. */
@@ -199,42 +190,6 @@ export class RecipeServiceImpl implements RecipeService {
     return (recipe.station && STATION_TOOL_REQ.get(recipe.station)) || null;
   }
 
-  applyMaterialBonuses(
-    recipe: Recipe,
-    selectedIngredients: Record<string, string>
-  ): { weaponDelta: Record<string, number>; armorDelta: Record<string, number> } {
-    const weaponDelta: Record<string, number> = {};
-    const armorDelta: Record<string, number> = {};
-    if (!recipe.materialBonuses) return { weaponDelta, armorDelta };
-
-    for (const [slotKey, chosenItemId] of Object.entries(selectedIngredients)) {
-      const slotBonuses = recipe.materialBonuses[slotKey];
-      if (!slotBonuses) continue;
-      const itemBonuses = slotBonuses[chosenItemId];
-      if (!itemBonuses) continue;
-      for (const [field, value] of Object.entries(itemBonuses)) {
-        const weaponFields = new Set([
-          'damage',
-          'damMin',
-          'damMax',
-          'attackSpeed',
-          'range',
-          'reach',
-          'accuracy',
-          'armorPenetration',
-          'bluntMod',
-          'critMod',
-          'staminaCost'
-        ]);
-        if (weaponFields.has(field)) {
-          weaponDelta[field] = (weaponDelta[field] ?? 0) + value;
-        } else {
-          armorDelta[field] = (armorDelta[field] ?? 0) + value;
-        }
-      }
-    }
-    return { weaponDelta, armorDelta };
-  }
 }
 
 export const recipeService = new RecipeServiceImpl();

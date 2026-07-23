@@ -182,12 +182,6 @@ export interface Recipe {
   buildingRequired?: string | null;
   /** Variant-output slot (e.g. spit_meat, stew). */
   dynamicRecipe?: Record<string, DynamicIngredientSlot>;
-  /**
-   * Per-slot, per-material stat deltas applied to the crafted output.
-   * Key = slot name → itemId → weaponProperties/armorProperties delta fields.
-   * e.g. { "shaft": { "ash_log": { "accuracy": 3 }, "oak_log": { "maxDurability": 15 } } }
-   */
-  materialBonuses?: Record<string, Record<string, Record<string, number>>>;
   /** True when synthesised from an item's inline fields rather than authored in recipes.jsonc. */
   synthesized?: boolean;
   /**

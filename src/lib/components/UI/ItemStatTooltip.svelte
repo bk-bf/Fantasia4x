@@ -6,7 +6,6 @@
   import type { NaturalGearMeta } from '$lib/components/util/naturalGear';
   import { coveredParts } from '$lib/game/core/armorCoverage';
   import { partLabel } from '$lib/utils/bodyLabels';
-  import { recipeService } from '$lib/game/services/RecipeService';
   import { getMaterialProperty } from '$lib/game/core/materialProperties';
   import { itemService } from '$lib/game/services/ItemService';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService';
@@ -60,16 +59,6 @@
     coating = null
   }: Props = $props();
 
-  // Per-material weapon/armour deltas for the chosen ingredient(s) (e.g. ash shaft → +3 accuracy).
-  let deltas = $derived(
-    recipe
-      ? recipeService.applyMaterialBonuses(recipe, selectedIngredients)
-      : { weaponDelta: {}, armorDelta: {} }
-  );
-  let matDelta = $derived([
-    ...Object.entries(deltas.weaponDelta),
-    ...Object.entries(deltas.armorDelta)
-  ] as [string, number][]);
   // Names of the chosen materials, for the section header.
   let matNames = $derived(
     Object.values(selectedIngredients)
@@ -120,24 +109,6 @@
   };
   const pct = (n: number) => `${n > 0 ? '+' : ''}${Math.round(n * 100)}%`;
   const signed = (n: number) => `${n > 0 ? '+' : ''}${n}`;
-
-  const FIELD_LABELS: Record<string, string> = {
-    damMin: 'Min dmg',
-    damMax: 'Max dmg',
-    damage: 'Damage',
-    accuracy: 'Accuracy',
-    armorPenetration: 'Armor pen.',
-    critMod: 'Crit',
-    attackSpeed: 'Atk speed',
-    reach: 'Reach',
-    range: 'Range',
-    staminaCost: 'Stamina',
-    bluntMod: 'Blunt',
-    maxDurability: 'Durability',
-    defense: 'Defense'
-  };
-  const fieldLabel = (f: string) => FIELD_LABELS[f] ?? cap(f.replace(/([A-Z])/g, ' $1').trim());
-  const fmtDelta = (f: string, v: number) => (f === 'critMod' ? pct(v) : signed(v));
 
   type Row = { label: string; val: string };
 
@@ -338,19 +309,11 @@
     {/each}
   {/if}
 
-  {#if matDelta.length > 0 || matNotes.length > 0}
+  {#if matNotes.length > 0}
     <div class="tip-sep">
       MATERIAL{#if matNames}
         · {matNames}{/if}
     </div>
-    {#each matDelta as [field, val]}
-      <div class="tip-mod">
-        <span class="tip-mod-name">{fieldLabel(field)}</span>
-        <span class="tip-mod-val" style="color:{val >= 0 ? '#6bc' : '#e08'}"
-          >{fmtDelta(field, val)}</span
-        >
-      </div>
-    {/each}
     {#each matNotes as note}
       <div class="tip-mod" style="color:#7e9fbf">{note}</div>
     {/each}
