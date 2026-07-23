@@ -78,6 +78,9 @@ export interface ScenarioSpec {
   needsDisabled?: DisableableNeed[];
   /** Research-granted tool-tier floor (`currentToolLevel`). */
   toolTier?: number;
+  /** Hold every fuel station full/lit/hot and skip the smelt fuel gate, so a test can drive smelting
+   *  without also exercising the haul-fuel-and-light loop. See `_devInfiniteFuel`. */
+  infiniteFuel?: boolean;
   /** Seed the map's natural wildlife/lairs (default true; `false` = quiet map). */
   seedEntities?: boolean;
 }
@@ -198,6 +201,7 @@ export function buildScenario(spec: ScenarioSpec): GameState {
   }
   for (const id of spec.research ?? []) cmd('devUnlockResearch', { researchId: id });
   if (spec.toolTier !== undefined) cmd('devSetToolTier', { tier: spec.toolTier });
+  if (spec.infiniteFuel) cmd('devInfiniteFuel', { on: true });
 
   // Buildings: explicit tiles, else auto-place spiralling from centre (skipping pawn tiles).
   if (spec.buildings?.length) {

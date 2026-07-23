@@ -9,6 +9,7 @@ import type { GameState } from '$lib/game/core/types';
 
 const CHAIN = ['smelt_pig_iron','refine_wrought_iron','make_bloom_steel','bake_blister_steel',
   'forge_shear_steel','make_crucible_steel','forge_pattern_welded','puddle_mild_steel'];
+const IRONS = ['iron_bar','wrought_iron'];
 
 describe('steel chain', () => {
   const stations = new Set<string>();
@@ -32,6 +33,12 @@ describe('steel chain', () => {
     }
     console.log(`[STEEL] ${CHAIN.length} chain steps, ${fail.length} failures`);
     expect(fail, fail.join('\n')).toEqual([]);
+  });
+
+  it('both irons share category:iron and each has exactly ONE producer (no shadow)', () => {
+    expect(itemService.getItemsByCategory('iron').map((i) => i.id).sort()).toEqual([...IRONS].sort());
+    for (const [item, recipe] of [['iron_bar','make_iron_bar'],['wrought_iron','refine_wrought_iron']] as const)
+      expect(recipeService.getRecipeForItem(item)?.id, item).toBe(recipe);
   });
 
   it('the 6 steels all satisfy a category:steel consumer (any steel crafts a steel item)', () => {

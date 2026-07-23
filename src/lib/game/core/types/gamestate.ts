@@ -93,6 +93,11 @@ export interface GameState {
    *  metabolism in `entityLifecycle`. Toggled via the `devToggleNeed` command; rides gameState so
    *  the worker (and a headless session) see it. Absent/false = normal accrual. */
   _needsDisabled?: Partial<Record<DisableableNeed, boolean>>;
+  /** Debug override (HEADLESS-SIM): hold every fuel station full, LIT and at its hottest, and skip the
+   *  fuel/heat smelt gate — so a test can drive smelting/baking without also exercising the
+   *  haul-fuel-and-light loop (which is a separate system under its own audit). Toggled via
+   *  `devInfiniteFuel {on}` / `ScenarioSpec.infiniteFuel`. */
+  _devInfiniteFuel?: boolean;
   /** Debug override (HEADLESS-SIM): freeze WEATHER-DRIVEN deterioration — building condition wear
    *  (`stepBuildingCondition`) and loose-item weather wear (`stepItemDeterioration`) — so dev-spawned
    *  stations/gear don't rot away mid-test. Toggled via `devToggleDecay {kind:'deterioration'}`. */

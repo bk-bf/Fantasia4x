@@ -1448,7 +1448,7 @@ export class GameEngineImpl implements GameEngine {
       // fuel arrives. Furnaces without a fuel tank (e.g. charcoal_pit, where the loaded wood IS the
       // fuel) run as soon as they're loaded.
       const def = AVAILABLE_BUILDINGS.find((d) => d.id === station.type);
-      if ((def?.maxFuel ?? 0) > 0) {
+      if ((def?.maxFuel ?? 0) > 0 && !state._devInfiniteFuel) {
         if (!station.lit) continue;
         if ((station.fireHeat ?? 0) < (def?.minFuelHeat ?? 0)) continue;
       }
@@ -1510,6 +1510,14 @@ export class GameEngineImpl implements GameEngine {
       const buildingDef = AVAILABLE_BUILDINGS.find((def) => def.id === b.type);
       if (!buildingDef?.maxFuel || !buildingDef.fuelConsumptionRate) return b;
       if (b.status !== 'complete') return b;
+      // DEV (`devInfiniteFuel`): hold every fuel station full, lit and at its hottest so a headless test
+      // can drive smelting/baking WITHOUT also exercising the haul-fuel-and-light loop. Not a game rule.
+      if (gs._devInfiniteFuel) {
+        const heat = Math.max(buildingDef.minFuelHeat ?? 0, 5);
+        if (b.lit && b.fuel === buildingDef.maxFuel && b.fireHeat === heat) return b;
+        changed = true;
+        return { ...b, lit: true, fuel: buildingDef.maxFuel, fireHeat: heat, burnFactor: 1 };
+      }
       // Auto-light: campfire ignites itself whenever it has fuel.
       if (!b.lit && (b.fuel ?? 0) > 0) {
         changed = true;

@@ -1402,17 +1402,36 @@
   {
     "id"               : "iron_bar",
     "charSpans"        : [ {"sheet": "items", "id": 23} ],
-    "name"             : "Iron Bar",
+    "name"             : "Bloomery Iron",
     "type"             : "material",
-    "category"         : "metal",
+    "category"         : "iron",
     "maxDurability"    : 250,
     "deteriorationRate": 0.008,
-    "description"      : "Bloomery iron ingot. Tier-2 tools, weapons and armour. Needs limestone flux.",
+    "description"      : "A bloomery ingot, still freckled with slag from the hearth. Soft, tough and endlessly forgeable, the everyday iron.",
     "value"            : 16,
     "color"            : "#6E7378",
     "amount"           : 0,
     "weightKg"         : 4,
-    "volumeL"          : 0.5
+    "volumeL"          : 0.5,
+    "material"         : { "label": "Bloomery Iron", "desc": "soft, tough, slaggy", "item": { "durability": 1 } }
+  },
+  {
+    // The finery's output: pig iron with the carbon burned back out. Cleaner than a bloom because the
+    // slag is worked out under the hammer — a DISTINCT item so it never shadows the bloomery's recipe.
+    "id"               : "wrought_iron",
+    "charSpans"        : [ {"sheet": "items", "id": 23} ],
+    "name"             : "Wrought Iron",
+    "type"             : "material",
+    "category"         : "iron",
+    "maxDurability"    : 280,
+    "deteriorationRate": 0.007,
+    "description"      : "Iron drawn back out of pig metal and worked until the slag runs out in threads. Cleaner and more even than anything a bloomery gives up.",
+    "value"            : 20,
+    "color"            : "#7C8288",
+    "amount"           : 0,
+    "weightKg"         : 4,
+    "volumeL"          : 0.5,
+    "material"         : { "label": "Wrought Iron", "desc": "clean, even, +durable", "item": { "durability": 1.08 } }
   },
   {
     "id": "iron_nail",

@@ -683,7 +683,7 @@
     "station"         : "finery_forge",
     "passive"         : true,
     "inputs"          : {"pig_iron": 2, "charcoal": 2},
-    "outputs"         : {"iron_bar": 3},
+    "outputs"         : {"wrought_iron": 3},
     "workAmount"      : 20,
     "toolTierRequired": 2
   },
@@ -1274,7 +1274,7 @@
   {
     "id"              : "make_crucible_steel",
     "station"         : "crucible_steelworks",
-    "inputs"          : {"iron_bar": 2, "coke": 2, "sand": 1},
+    "inputs"          : {"category:iron": 2, "coke": 2, "sand": 1},
     "outputs"         : {"crucible_steel": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2
@@ -1298,7 +1298,7 @@
     "id"              : "bake_blister_steel",
     "station"         : "cementation_furnace",
     "passive"         : true,
-    "inputs"          : {"iron_bar": 2, "charcoal": 4},
+    "inputs"          : {"category:iron": 2, "charcoal": 4},
     "outputs"         : {"blister_steel": 2},
     "workAmount"      : 40,
     "toolTierRequired": 2
@@ -1316,8 +1316,8 @@
     // Pattern welding: soft wrought iron folded through hard steel. The most labour per bar of anything.
     "id"               : "forge_pattern_welded",
     "station"          : "anvil",
-    "inputs"           : {"iron_bar": 2, "shear_steel": 1},
-    "inputAlternatives": [ {"iron_bar": 2, "crucible_steel": 1} ],
+    "inputs"           : {"category:iron": 2, "shear_steel": 1},
+    "inputAlternatives": [ {"category:iron": 2, "crucible_steel": 1} ],
     "outputs"          : {"pattern_welded_steel": 1},
     "workAmount"       : 60,
     "toolTierRequired" : 2

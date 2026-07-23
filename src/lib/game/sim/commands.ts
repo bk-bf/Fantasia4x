@@ -1428,6 +1428,11 @@ export const COMMANDS: Record<string, Cmd> = {
     return { ...s, [key]: p.off || undefined };
   },
 
+  /** DEBUG: give every fuel station infinite fuel — held full, lit and at its hottest, with the
+   *  fuel/heat smelt gate skipped. Lets a headless test drive smelting/baking without also having to
+   *  haul fuel and light fires (a separate system with its own audit). */
+  devInfiniteFuel: (s, p: { on: boolean }) => ({ ...s, _devInfiniteFuel: p.on || undefined }),
+
   // ── HEADLESS-SIM (ADR-033) godmode verbs — scenario spin-up + debug steering ─────────────
 
   /** DEBUG: set a pawn's base stats (merge). Each set value also raises that stat's `maxStats`

@@ -299,10 +299,6 @@ hardness/toughness tradeoffs (the historical difficulty of hitting the ~0.2–2.
       "use-lock" wording): all 24 `steel_bar` refs → `category:steel`, so any steel crafts any steel item, but
       the choice is *felt* — the same longsword comes out **matDur 1.05 (bloom) → 1.15 (blister) → 1.10 (mild)
       → 1.25 (shear) → 1.35 (crucible) → 1.40 (pattern-welded)**, surfaced in the craft tooltip. `steel_bar` removed.
-- [~] **Material stats**: differentiation currently rides `material.item.durability` (+weight/beauty). Dedicated
-      **hardness → armour-pen/edge** and **toughness → shatter-resistance** fields do NOT exist yet — that needs
-      the §M per-instance stat plumbing widened beyond durability/weight. Tracked, not done.
-
 **Verified:** all 8 chain steps queue (`canQueueCraft`) and produce (`completeCraftOrder`) in a provisioned
 colony; the 6 steels each satisfy a `category:steel` consumer with the distinct multipliers above.
 - [~] ⚠ **NOT headless-playtested — service-level only.** The PHYSICAL pawn pipeline for metal stations could
@@ -310,151 +306,24 @@ colony; the 6 steels each satisfy a `category:steel` consumer with the distinct 
       anvil work needs the pawn to be CARRYING a metalworking tool (stockpiled isn't enough). **Both are
       PRE-EXISTING** — the untouched `make_iron_bar` bloomery recipe fails identically — so the whole smelting
       tier is currently unproven in the pawn loop. See the fuel-station + tool-gating open items.
-- [ ] ⚠ **NEW SHADOW introduced (deliberate, realism-first):** `iron_bar` now has TWO producers —
-      `make_iron_bar` (bloomery, ore route) and `refine_wrought_iron` (finery, pig-iron route). `getRecipeForItem`
-      is first-producer-wins, so the finery route is **unreachable via the item card**, making the
-      blast→pig_iron→finery→wrought path dead content. Both routes are historically correct (two eras, same
-      product), so the data was NOT distorted to dodge a dispatch limitation. Fix options: per-recipe queueing
-      (the `recipeId` path butchery already uses), or split the finery output into a distinct refined wrought iron.
+- [x] ⚠→fixed: **no shadow.** The finery's output was renamed to a DISTINCT `wrought_iron` (cleaner, more
+      even than a bloom — `material.item.durability` 1.08 vs 1.0), so `iron_bar` and `wrought_iron` each have
+      exactly ONE producer. Both share **`category: iron`**, and the steel processes (cementation, crucible,
+      pattern-welding) take `category:iron`, so either iron feeds them. `iron_bar`'s 38 consumers untouched.
+- [x] **DEV LEVER ADDED — `devInfiniteFuel {on}` / `ScenarioSpec.infiniteFuel`**: holds every fuel station
+      full, lit and at its hottest and skips the smelt fuel/heat gate, so a headless test can drive
+      smelting/baking without also exercising the haul-fuel-and-light loop. Verified working (bloomery goes
+      `lit=true fuel=160 fireHeat=5`).
 
-### Crystal / magic-reagent chain — rework (make it as intricate as steel)
-
-**AUDIT — crystal types that exist, sources, sinks** (all minable crystals come from `crystal_formation`
-subterrain veins + dig sites; deplete, no regrowth; cluster in the mountain interior):
-
-| Item(s) | category / affinity | Mined from | Sinks (uses) |
-| --- | --- | --- | --- |
-| mundane gems: ruby, sapphire, emerald, topaz, amethyst, citrine, moonstone | `crystal` | Ruby/Sapphire/…Crystals nodes | `cut_*` → jewelry (rings/amulets/crowns/pendants); cut ruby/sapphire/topaz → element staves |
-| infused gems: infused_ruby…infused_moonstone | `magic_crystal` | occasional (0–1) from the same nodes + star_geode / amethyst node | `attune_*` → `attuned_*` → jewelry + T2 staves; **grind_gem_dust → gem_dust×2** |
-| `mana_crystal` | `magic_crystal` / arcane | `mana_crystal_vent`, `buried_hoard` | ⚠ ONLY `grind_mana_crystal` → gem_dust×4 (SHADOWED = dead). Minable but effectively useless. |
-| `star_shard` | `magic_crystal` / arcane | `star_geode`, `sunken_relic` | exactly ONE sink: `make_stargazer_circlet` |
-| `voidshard` | `magic_crystal` / necrotic | `voidshard_cluster`, `sunken_relic` | ⚠ ZERO sinks — item desc says "awaiting its (blocked) recipes". Fully dead. |
-| `arcane_resin` | `magic_crystal` | crafted (resin + gem_dust), not mined | ⚠ ZERO consumers — produced, never used. Dead-ended. |
-| `gem_dust` | reagent | grind_gem_dust / grind_mana_crystal | the FUNNEL: ~13 recipes (arcane_robe, magic_concrete, arcane_resin, all potions/draughts/elixirs/tonics, magic_alloy_bar, enchant_thread, runed_block) |
-
-**Finding — same anti-pattern as generic steel.** `mana_crystal` is NOT a deprecated duplicate (own vent +
-lore); the real problem is that ALL crystal variety collapses into one generic **`gem_dust`** that feeds
-everything undifferentiated. Elemental/affinity identity EXISTS on the inputs (ruby=fire/ember, sapphire=
-frost/rime, topaz=lightning/spark; mana=arcane, void=necrotic) but is WASHED OUT at the dust step. star_shard
-(1 use), voidshard (0), arcane_resin (0) are stubs.
-
-**Decided direction — a real multi-stage, affinity-differentiated chain (parallel to the 6-steel family):**
-- [ ] **Differentiate the dust by element/affinity** so downstream items require the MATCHING crystal, not
-      generic dust (use-lock, like steel): ember_dust (ruby)→fire gear, rime_dust (sapphire)→frost, spark_dust
-      (topaz)→lightning, arcane_dust (mana_crystal)→neutral/high enchant. Kills the identity-washout hole.
-- [ ] **Give `mana_crystal` a distinct high-grade role** (arcane — the pure/neutral top reagent: strongest
-      enchants / a mana-charge system / base for magic_alloy) instead of "×4 gem dust". Unshadows it AND makes
-      mining its vent worthwhile. (This resolves the grind_mana_crystal shadow by REDESIGN, not prune.)
-- [ ] **Wire up `voidshard`** (necrotic — the cursed/dark path: high power + a deliberate downside) — currently dead.
-- [ ] **Expand `star_shard`** beyond the single circlet (celestial/arcane enchant line).
-- [ ] **Give `arcane_resin` consumers** (produced but used nowhere) — or prune it.
-- [ ] Multi-stage refinement matching steel's depth: raw crystal → cut/refined → attuned/charged → alloyed/inscribed.
-
-### Ash economy — producers, sinks, and the make_ash decision
-
-**AUDIT:**
-- Producers: `make_ash` (hearth **primitive:1**, dedicated: green/dry firewood or branches → ash),
-  `burn_charcoal` (charcoal_pit **primitive:2**, byproduct alongside charcoal), `make_coke` (charcoal_pit
-  primitive:2, byproduct).
-- Consumers: **curing** (hide_rack primitive:2, ash×2–4 per hide — the big early sink, but every cure has a
-  `salt` alternative), `brew_tanning_brine`/`brew_beast_brine` (brewing_barrel, ash×1–2), `make_soap`
-  (alchemy_lab, ash×2, basic_alchemy-gated). Salt (the ash alt) comes from mined `rock_salt`.
-
-**Q1 — worth grinding ash BEFORE charcoal? Finding: yes, in a real window.** The main sink (curing) is
-primitive:2, same tier as the charcoal_pit — but the pit's ash is a *byproduct of making charcoal*, and
-charcoal isn't needed until iron smelting (bloomery iron:1, much later). So a primitive leatherworking colony
-has no reason to build a charcoal_pit yet; `make_ash` at the hearth (primitive:1) is their only practical ash
-source — unless they have mined salt (the cure alternative). **So keep `make_ash` reachable** — it earns its
-place for a no-salt primitive path.
-- [ ] Unshadow `make_ash` (per-recipe card or list-order) so the hearth ash path is reachable.
-
-**Q2 — should ash be a byproduct of fires in general (realistic)?** Today only the charcoal_pit emits
-byproduct ash; cooking/baking/kiln/smelting fires emit none. Universal fire-ash is realistic BUT floods supply
-— current sinks can't absorb a baking-heavy colony's output, so ash becomes a waste-management resource.
-**Decision required, must be DELIBERATE:**
-- [ ] EITHER expand ash sinks FIRST (real ones: potash → `fertiliser` at the compost_bin; lye → soap/leaching;
-      ash-glaze for pottery; concrete/mortar filler) so universal ash byproduct is absorbed,
-- [ ] OR treat ash-as-waste intentionally (a disposal/compost loop) — realistic, but only if designed on purpose.
-- [ ] Until one is chosen, do NOT sprinkle ash byproducts onto fire recipes (avoids an unmanaged waste leak).
-
-## Furniture → pawn systems (comfort / relaxation / socialisation) — ✅ BUILT (2026-07-23)
-
-- [x] AUDITED (three code sweeps) — findings below. Headline was **most of the target system is already
-      scaffolded** — EXTEND-and-rewire, not build-from-scratch. That proved right; it's now implemented.
-
-> **Headless-verified** (`comfortLoop.test.ts`, kept as a regression test, 4/4 — real `HeadlessSession`
-> pawns over real ticks, not unit assertions):
-> - **Lounge loop:** uncomfortable pawn (comfort 20) paths to a couch and lounges → **comfort 20→72.7**,
->   `comfortable` condition granted, by turn 1200.
-> - **Copper-tier seat:** the new `tacked_chair` works as a seat → **comfort 20→76.1** (`MovingToNeed,Lounging`).
-> - **Beds:** a pawn sleeps in a `feather_bed` and wakes → **comfort 20→49.1** and **`well_rested` granted**
->   (bare ground grants neither).
-> - **Gathering level:** with a level-1 campfire ADJACENT and a level-3 table across the map, the pawn
->   **walked past the fire to the table** (distToTable 1, distToCampfire 5) — level beats proximity.
-
-**EXISTED BEFORE THIS WORK** (the pre-implementation audit findings — kept for the reasoning trail; the
-two ⚠ points below are exactly what the IMPLEMENTED list then changed, so read that as current state):
-- Beds are the only interactive furniture. 5 tiers (`sleeping_spot`→`hay_bed`→`hide_bed`→`leather_bed`→
-  `feather_bed`) carry `sleepQuality`/`fatigueRecovery` → measurably faster rest vs the ground (0.58/s). So
-  **"bedroom furniture gives rest-speed bonuses" is ALREADY DONE.** (Only `feather_bed` also carries `comfort` 0.4.)
-- A `relaxation` NEED already exists (needs.jsonc; inverted 0–100, decay 0.13/s) + a `Socialising` FSM state —
-  the exact template for a new comfort meter + relax state.
-- Socialising is satisfied at **gathering buildings** (`buildingProperties.gathering` = campfire + hearth only,
-  radius 3), NOT at tables/chairs.
-- `comfort` exists only as a building/material **amenity number** (radius 2), feeding 3 small ambient bonuses:
-  sleep speed, wound-heal speed, mood lift (cap +3). Chairs/stools/tables/couches emit comfort+beauty but are
-  **never sat on or pathed to** — pure scenery.
-- Condition plumbing already supports the target: `intoxicated` is a positive-style TIERED, timed,
-  severity-decaying condition (the template for a tiered `comfortable`); conditions can slow fatigue
-  (`fatigueRate < 1`, e.g. `sheltered` 0.9) and boost mood (`"mood": "cond_*"` → mood.jsonc).
-
-**IMPLEMENTED:**
-- [x] **`comfort` pawn meter/need** — `comfort` in needs.jsonc, inverted like `relaxation` (100 = snug,
-      decay 0.10/s, seek 35, relief 75), decayed in `PawnService` (paused while Lounging), `need_uncomfortable`
-      mood band at ≤10. NAME COLLISION resolved by **renaming the temperature band `comfortRange` → `tempRange`**,
-      freeing `comfort` for the furniture meter.
-- [x] **⚠→fixed: comfort is NO LONGER AMBIENT.** It used to be a radius-2 "how nice is this spot" number
-      feeding sleep speed / wound heal / mood. A pawn now gets comfort ONLY by USING a piece — lounging on the
-      seat, sleeping in the bed — read per-building via `buildingComfortOf` (material-adjusted). `amenityAt`
-      keeps **beauty + insulation** ambient (a handsome room genuinely is pleasant); its three consumers
-      (mood cap +3, sleep-speed bonus, wound-heal bonus) are now beauty-only.
-- [x] **Tables as gathering anchors + LEVELS** — `gatheringLevel` on `buildingProperties`: campfire 1,
-      hearth 2, `hewn_table` 2, `wooden_table` 3. `findNearestGatheringBuilding` picks the **highest level
-      reachable**, then the nearest of that level — so a colony that builds a table actually gathers there.
-- [x] **New Lounging state** — `PAWN_STATE.LOUNGING` + `findNearestSeatBuilding` → `tryRouteToLounge` →
-      `handleLounging`, cloned from the Socialising path. Declared in **needs.jsonc `states`** (so
-      `stateRegistry.test.ts` derives it) + `STATE_HANDLERS`. Seats are marked `buildingProperties.seat`.
-- [x] **Chair tiers → comfort** — the lounge fill rate scales with THAT SEAT's own material-adjusted comfort,
-      so a couch fills faster than a stool and a mammoth-wool bench beats a goat-wool one.
-- [x] **Tiered `comfortable` condition** — content → comfy → cosy → pampered, each deepening `fatigueRate`
-      (0.97→0.80) and `relaxationRate` (0.90→0.60), + `cond_comfortable` (+5 mood). Granting needed **zero
-      code**: it uses the existing data-driven `driver` block (`need: comfort, onset: 70`, no `lethalSeverity`
-      → pure buff). The `relaxationRate` wire was added to `conditionNeedMultipliers` + the relaxation decay.
-- [x] **Bed tier → comfort + well-rested** — a bed fills `comfort` while the pawn sleeps (scaled by that
-      bed's comfort; bare ground gives nothing) and waking from a real bed stamps the new timed
-      **`well_rested`** buff (`workEfficiency` 1.05, `fatigueRate` 0.95, `cond_well_rested` +4 mood).
-- [x] **Furniture ladder completed** — seats now cover EVERY age (log_stool prim:2 → wicker_chair prim:3 →
-      tacked_chair copper:2 → padded_bench bronze:1 → cushioned_chair/couch iron:1 → armchair steel:1), plus
-      `wool_tick_bed` (bronze:1) filling the copper/bronze bed gap and `hewn_table` (prim:3). Metal tiers are
-      gated by a **fastener component**, never raw bars — the ladder is cordage → **`copper_tack` (new)** →
-      bronze_nail → iron_nail → steel_rivet.
-
-**STILL OPEN:**
-- [ ] (optional) **positive `cond_socialised`** — a timed mood lift after socialising (today social only clears
-      the negative `restless`/`starved_company` bands, no positive thought).
-- [ ] **Comfort BAR in the UI** — `PawnNeeds.svelte` hardcodes each need's bar and has no comfort row, so the
-      meter drives the sim but the player can't see it. (Mirror the relaxation row, which shows below a threshold.)
-- [ ] **Validate the FULL chain end-to-end:** kill woolly animals → wool → *build* the furniture → comfort ↑ →
-      `comfortable` → productivity. The comfort half is headless-verified above, but with dev-spawned furniture —
-      the harvest→build half has NOT been driven.
-
-## Other categories (not yet audited)
-
-- [ ] Combat resolution — hit/dodge/parry rolls, wound/limb model, death conditions, ranged vs melee balance
-- [ ] Needs & mood — hunger/sleep/comfort/social decay rates, mood effects, break thresholds
-- [ ] Social — relationships, dialog, prestige, kingdom events
-- [ ] Research — unlock gating, tier progression, cost balance
-- [ ] Exploration & fog-of-war — reveal, nearest-entity queries, spatial correctness
-- [ ] World/weather — seasons, temperature, wetness, biome variants, terrain effects
-- [ ] Economy balance — resource flow, tool bootstrap (ADR-009), scarcity gates (flint)
-- [ ] Save/load & determinism — seed replay byte-identical across all presets
+> ### ⚠⚠ MAJOR FINDING — the PASSIVE production tier never runs in the headless pawn loop
+> Driving the chain with fuel solved, the bloomery order still stalls: inputs are **reserved (2 drops) but
+> never STAGED**, and the pawns sit **Idle** forever. The untouched **`charcoal_pit`** (`burn_charcoal`)
+> fails **identically**, so this is **PRE-EXISTING and not caused by the steel work** — but it means every
+> ⚙ passive station is unproven in the pawn loop: charcoal pit, bloomery, cementation furnace, curing racks,
+> tanning buckets, fermenter, brewing barrel, kilns, compost bin, resin tap.
+> - Consequence: the leather chain's cure→tan and the steel chain's bloomery/cementation steps are
+>   **service-verified only** — their physical pawn pipeline has never actually run.
+> - Also noted: **`blast_furnace` carries no fuel fields at all** (no `maxFuel`/`minFuelHeat`/
+>   `requiresLighting`), unlike bloomery/finery — a data gap worth settling in the ore audit.
+> - [ ] Diagnose why staging jobs aren't generated for passive stations (compare against the ACTIVE path,
+>       which works: makers_bench + weaving_frame both stage and craft fine headless).
