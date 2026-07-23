@@ -293,7 +293,7 @@ echo "=== All Rust crates in repo ===" && find . -name Cargo.toml -not -path '*/
 echo "=== sim-core rust source? ===" && find . -path '*sim-core*' -name '*.rs' -not -path '*/target/*' 2>/dev/null | head; find . -type d -name 'sim-core*' -not -path '*/node_modules/*' -not -path '*/target/*'
 echo "=== desktop-spike ===" && ls desktop-spike 2>/dev/null && find desktop-spike -maxdepth 2 -name '*.md' 2>/dev/null
 echo "=== what sim_core.d.ts exposes ===" && head -60 src/lib/sim-core-pkg/sim_core.d.ts 2>/dev/null
-echo "=== ENGINE-PERFORMANCE snippet on rust plans ===" && grep -niE 'slint|tauri|dioxus|avalonia|native|port|rust.*ui|electron' .docs/.tasks/open/ENGINE-PERFORMANCE.md | head -30
+echo "=== ENGINE-PERFORMANCE snippet on rust plans ===" && grep -niE 'slint|tauri|dioxus|avalonia|native|port|rust.*ui|electron' docs/tasks/open/ENGINE-PERFORMANCE.md | head -30
 
 OUT
 === All Rust crates in repo ===
@@ -373,14 +373,14 @@ export class SimWorld {
     t_res_amt_ptr(): number;
     t_res_cd_ptr(): number;
 === ENGINE-PERFORMANCE snippet on rust plans ===
-ugrep: warning: .docs/.tasks/open/ENGINE-PERFORMANCE.md: No such file or directory
+ugrep: warning: docs/tasks/open/ENGINE-PERFORMANCE.md: No such file or directory
 Both Electron and Tauri spikes already exist, plus a Rust sim-core (SoA world) is underway. Let me read the spike README and the perf doc to see what's already been decided.
 
 Bash Read desktop spike README and locate perf doc
 IN
 cd /home/kirill/Documents/Projects/Fantasia4x
 echo "=== desktop-spike/README.md ===" && cat desktop-spike/README.md
-echo "=== perf doc location ===" && find .docs -iname '*PERFORMANCE*' -o -iname '*ENGINE*' | head
+echo "=== perf doc location ===" && find docs -iname '*PERFORMANCE*' -o -iname '*ENGINE*' | head
 echo "=== tauri spike contents ===" && find desktop-spike/tauri -maxdepth 3 -not -path '*/target/*' -not -path '*/node_modules/*' | head -40
 
 OUT
@@ -443,9 +443,9 @@ context creation, and the worker↔main snapshot bridge (the §0 "multi-instance
 symptom). If JSC holds 60+ TPS with no render glitches, Tauri is viable; if it cliffs, that's a
 distribution decision (lean Electron) made *now* instead of at the milestone.
 === perf doc location ===
-.docs/.tasks/archive/ENGINE-PERFORMANCE-II.md
-.docs/.tasks/archive/ENGINE-PERFORMANCE.md
-.docs/.tasks/archive/GAMEENGINE-REFACTORING-2026-05-25.md
+docs/tasks/archive/ENGINE-PERFORMANCE-II.md
+docs/tasks/archive/ENGINE-PERFORMANCE.md
+docs/tasks/archive/GAMEENGINE-REFACTORING-2026-05-25.md
 === tauri spike contents ===
 desktop-spike/tauri
 desktop-spike/tauri/src-tauri
@@ -466,11 +466,11 @@ I have a clear picture now. Let me check the DISTRIBUTION spec that governs this
 Bash Read DISTRIBUTION spec and scan for native-UI mentions
 IN
 cd /home/kirill/Documents/Projects/Fantasia4x
-f=$(find .docs -iname '*DISTRIBUTION*' | head -1); echo "FILE: $f"; echo "=== head ==="; sed -n '1,80p' "$f" 2>/dev/null
-echo "=== any mention of native UI toolkits across docs ==="; grep -rniE 'slint|dioxus|avalonia|adapter-static|webview' .docs/.tasks/open/ 2>/dev/null | head -20
+f=$(find docs -iname '*DISTRIBUTION*' | head -1); echo "FILE: $f"; echo "=== head ==="; sed -n '1,80p' "$f" 2>/dev/null
+echo "=== any mention of native UI toolkits across docs ==="; grep -rniE 'slint|dioxus|avalonia|adapter-static|webview' docs/tasks/open/ 2>/dev/null | head -20
 
 OUT
-FILE: .docs/.tasks/open/DISTRIBUTION.md
+FILE: docs/tasks/open/DISTRIBUTION.md
 === head ===
 <!-- LOC cap: 300 (created: 2026-05-30) -->
 
@@ -553,26 +553,26 @@ export interface SaveAdapter {
 ### A4 — Spike acceptance criteria
 
 === any mention of native UI toolkits across docs ===
-.docs/.tasks/open/DISTRIBUTION.md:5:> **Related:** [ROADMAP](ROADMAP.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) (the shipped WebView is the perf-measurement target) · [game/DECISIONS](../../game/DECISIONS.md) ADR-020 · [[electron-over-tauri-distribution]]
-.docs/.tasks/open/DISTRIBUTION.md:14:> for the wrapper choice; the adapter-static migration + save-adapter work (Phase B) still apply to Electron.
-.docs/.tasks/open/DISTRIBUTION.md:39:  `@sveltejs/adapter-static` output).
-.docs/.tasks/open/DISTRIBUTION.md:40:- Switch SvelteKit adapter from `adapter-auto` to `adapter-static` with
-.docs/.tasks/open/DISTRIBUTION.md:45:### A2 — WASM loading in WebView
-.docs/.tasks/open/DISTRIBUTION.md:50:  output and the asset path resolves correctly from the bundled WebView.
-.docs/.tasks/open/DISTRIBUTION.md:82:- [ ] Spatial WASM initialises (no "failed to load WASM" errors in WebView devtools).
-.docs/.tasks/open/DISTRIBUTION.md:88:      (SpiderMonkey); the shipped Linux WebView is **WebKitGTK (JavaScriptCore)**, which
-.docs/.tasks/open/DISTRIBUTION.md:132:> packaged build for (a) a one-time "does the adapter-static prod bundle run" smoke test before the
-.docs/.tasks/open/DISTRIBUTION.md:174:  WebViews (Chromium-based on Linux/Windows; WebKit on macOS).
-.docs/.tasks/open/DISTRIBUTION.md:181:Those server routes **do not exist** in a static build — they are removed by `adapter-static`.
-.docs/.tasks/open/DISTRIBUTION.md:186:> called from the client at all** (legacy endpoints). So `adapter-static` dropping the server routes
-.docs/.tasks/open/DISTRIBUTION.md:258:(JavaScriptCore), Windows = **WebView2** (V8), macOS = **WKWebView** (JavaScriptCore);
-.docs/.tasks/open/DISTRIBUTION.md:268:  | JS engine(s) | **three** (WebKitGTK/JSC, WebView2/V8, WKWebView/JSC) | **one** (Chromium/V8) everywhere |
-.docs/.tasks/open/DISTRIBUTION.md:284:  (reliable on V8-based runtimes, spotty on WebKitGTK/WKWebView). A future "sim → one
-.docs/.tasks/open/DISTRIBUTION.md:290:- [x] Will `adapter-static` break any existing SvelteKit route that is not `api/`?
-.docs/.tasks/open/DISTRIBUTION.md:293:- [ ] What minimum WebView version do target platforms ship with? (WASM +
-.docs/.tasks/open/DISTRIBUTION.md:299:      webviews honour them? (Only relevant once that step is on the table.)
-.docs/.tasks/open/DISTRIBUTION.md:306:hardening) **done 2026-06-21**. `/api` confirmed dev-only, so adapter-static is unblocked. Remaining:
-.docs/.tasks/open/DISTRIBUTION.md:307:Phase B (adapter-static migration, save adapter, Electron-process hardening) → Phase C (packaging +
+docs/tasks/open/DISTRIBUTION.md:5:> **Related:** [ROADMAP](ROADMAP.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) (the shipped WebView is the perf-measurement target) · [game/DECISIONS](../../game/DECISIONS.md) ADR-020 · [[electron-over-tauri-distribution]]
+docs/tasks/open/DISTRIBUTION.md:14:> for the wrapper choice; the adapter-static migration + save-adapter work (Phase B) still apply to Electron.
+docs/tasks/open/DISTRIBUTION.md:39:  `@sveltejs/adapter-static` output).
+docs/tasks/open/DISTRIBUTION.md:40:- Switch SvelteKit adapter from `adapter-auto` to `adapter-static` with
+docs/tasks/open/DISTRIBUTION.md:45:### A2 — WASM loading in WebView
+docs/tasks/open/DISTRIBUTION.md:50:  output and the asset path resolves correctly from the bundled WebView.
+docs/tasks/open/DISTRIBUTION.md:82:- [ ] Spatial WASM initialises (no "failed to load WASM" errors in WebView devtools).
+docs/tasks/open/DISTRIBUTION.md:88:      (SpiderMonkey); the shipped Linux WebView is **WebKitGTK (JavaScriptCore)**, which
+docs/tasks/open/DISTRIBUTION.md:132:> packaged build for (a) a one-time "does the adapter-static prod bundle run" smoke test before the
+docs/tasks/open/DISTRIBUTION.md:174:  WebViews (Chromium-based on Linux/Windows; WebKit on macOS).
+docs/tasks/open/DISTRIBUTION.md:181:Those server routes **do not exist** in a static build — they are removed by `adapter-static`.
+docs/tasks/open/DISTRIBUTION.md:186:> called from the client at all** (legacy endpoints). So `adapter-static` dropping the server routes
+docs/tasks/open/DISTRIBUTION.md:258:(JavaScriptCore), Windows = **WebView2** (V8), macOS = **WKWebView** (JavaScriptCore);
+docs/tasks/open/DISTRIBUTION.md:268:  | JS engine(s) | **three** (WebKitGTK/JSC, WebView2/V8, WKWebView/JSC) | **one** (Chromium/V8) everywhere |
+docs/tasks/open/DISTRIBUTION.md:284:  (reliable on V8-based runtimes, spotty on WebKitGTK/WKWebView). A future "sim → one
+docs/tasks/open/DISTRIBUTION.md:290:- [x] Will `adapter-static` break any existing SvelteKit route that is not `api/`?
+docs/tasks/open/DISTRIBUTION.md:293:- [ ] What minimum WebView version do target platforms ship with? (WASM +
+docs/tasks/open/DISTRIBUTION.md:299:      webviews honour them? (Only relevant once that step is on the table.)
+docs/tasks/open/DISTRIBUTION.md:306:hardening) **done 2026-06-21**. `/api` confirmed dev-only, so adapter-static is unblocked. Remaining:
+docs/tasks/open/DISTRIBUTION.md:307:Phase B (adapter-static migration, save adapter, Electron-process hardening) → Phase C (packaging +
 I dug into your actual codebase, and the picture changes the framing of that comparison substantially. Here's the grounded assessment.
 
 What you actually have
@@ -1042,7 +1042,7 @@ Bash Confirm GC/allocation framing in perf doc
 IN
 cd /home/kirill/Documents/Projects/Fantasia4x
 echo "=== GC / allocation is the doc's central theme? (grep the perf docs) ==="
-grep -niE 'alloc|garbage|GC|gc pause|per-tick|immutable|12.5|mutat' .docs/.tasks/archive/ENGINE-PERFORMANCE.md | head -40
+grep -niE 'alloc|garbage|GC|gc pause|per-tick|immutable|12.5|mutat' docs/tasks/archive/ENGINE-PERFORMANCE.md | head -40
 
 OUT
 === GC / allocation is the doc's central theme? (grep the perf docs) ===

@@ -1,19 +1,19 @@
 # Codebase Review — open items
 
-> **Related:** [game/ARCHITECTURE](game/ARCHITECTURE.md) · [game/DESIGN](game/DESIGN.md) · [game/DECISIONS](game/DECISIONS.md) · [game/BUGS](game/BUGS.md) · [ROADMAP](.tasks/open/ROADMAP.md) · [ENGINE-PERFORMANCE (archive)](.tasks/archive/ENGINE-PERFORMANCE.md) · [ENGINE-PERFORMANCE-II (archive)](.tasks/archive/ENGINE-PERFORMANCE-II.md) · [resolved (archive)](.tasks/archive/CODEBASE-REVIEW-RESOLVED-2026-06-13.md)
+> **Related:** [game/ARCHITECTURE](game/ARCHITECTURE.md) · [game/DESIGN](game/DESIGN.md) · [game/DECISIONS](game/DECISIONS.md) · [game/BUGS](game/BUGS.md) · [ROADMAP](tasks/open/ROADMAP.md) · [ENGINE-PERFORMANCE (archive)](tasks/archive/ENGINE-PERFORMANCE.md) · [ENGINE-PERFORMANCE-II (archive)](tasks/archive/ENGINE-PERFORMANCE-II.md) · [resolved (archive)](tasks/archive/CODEBASE-REVIEW-RESOLVED-2026-06-13.md)
 
 Living tracker of **open** architecture/defect items. The resolved half is in the
-[resolved archive](.tasks/archive/CODEBASE-REVIEW-RESOLVED-2026-06-13.md): R1–R12, the PawnStateMachine
+[resolved archive](tasks/archive/CODEBASE-REVIEW-RESOLVED-2026-06-13.md): R1–R12, the PawnStateMachine
 decomposition, the **2026-06-14/16 second wave** (P-2/P-2b/P-3/P-4b, the done P-4 god-file splits, INV-1/LIGHT-1/FLEE-1/MOVE-1,
 Tier 0, P-5 + D9/D-perf), and the playtest N-2..N-5. Runtime **defects** now live in
 [game/BUGS.md](game/BUGS.md) (root-caused log; all entries there are FIXED as of this pass) — this file
 tracks architecture debt + whatever the gates flag.
 
 **Since the last update (2026-06-16 → 2026-07-01, ~790 commits)** the big arcs shipped and were archived:
-[ENGINE-PERFORMANCE-II](.tasks/archive/ENGINE-PERFORMANCE-II.md) (victory 2026-06-22 — 500² map at 120 FPS / 60 TPS @1×,
+[ENGINE-PERFORMANCE-II](tasks/archive/ENGINE-PERFORMANCE-II.md) (victory 2026-06-22 — 500² map at 120 FPS / 60 TPS @1×,
 ~120 TPS @4×, via the entity complexity bubble + ADR-026 incremental-only terrain),
-[SEASONS_WEATHER](.tasks/archive/SEASONS_WEATHER-2026-06-17.md), [PRODUCTION-CHAIN-II](.tasks/archive/PRODUCTION-CHAIN-II-2026-06-21.md),
-[RANGED-COMBAT](.tasks/archive/RANGED-COMBAT-2026-06-21.md), plus
+[SEASONS_WEATHER](tasks/archive/SEASONS_WEATHER-2026-06-17.md), [PRODUCTION-CHAIN-II](tasks/archive/PRODUCTION-CHAIN-II-2026-06-21.md),
+[RANGED-COMBAT](tasks/archive/RANGED-COMBAT-2026-06-21.md), plus
 ADR-018..ADR-026, the audio subsystem, main menu + app-shell hardening, the terrain/art rework (bi-colour glyphs,
 trees, ore veins, ice), and the temperature/connectivity bug arcs logged in BUGS.md.
 
@@ -136,4 +136,4 @@ Graph after the fixes: 269 files · 1,979 functions · 2,981 edges · `graph:che
   weapons (`c65cb6c3`). Tuned together with the NT-3 speed change as intended.
 
 _All carried-forward deferred items (D9.7/ADR-022, ADR-009 step 2, R11) and the physical-production follow-ups
-shipped 2026-06-16 — see the [resolved archive](.tasks/archive/CODEBASE-REVIEW-RESOLVED-2026-06-13.md)._
+shipped 2026-06-16 — see the [resolved archive](tasks/archive/CODEBASE-REVIEW-RESOLVED-2026-06-13.md)._

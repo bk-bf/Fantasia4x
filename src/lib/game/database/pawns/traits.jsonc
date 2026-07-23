@@ -1228,7 +1228,7 @@
     },
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // ══ TRAIT-LIBRARY-EXPANSION (spec: .docs/.tasks/open/TRAIT-LIBRARY-EXPANSION.md) ══
+    // ══ TRAIT-LIBRARY-EXPANSION (spec: docs/tasks/open/TRAIT-LIBRARY-EXPANSION.md) ══
     // §1 · Attribute-combo traits — never a lone axis: every combo pairs two logically-linked
     // stats.jsonc axes, with a moderate (±15%) and a significant (±40-50%) rung on both sides.
     // Combat combos use `effects.combatMods` (combat statId → multiplier, the combat twin of

@@ -39,4 +39,27 @@ describe('comfort loop — headless (pawn lounges on a seat → comfort fills �
     expect(comfort(), 'comfort refilled by lounging').toBeGreaterThan(70);
     expect(hasComfortable(), 'comfortable condition granted at high comfort').toBe(true);
   });
+
+  // The copper-tier seat (gated by the `copper_tack` fastener) must work as a seat like any other.
+  it('the copper-tier tacked_chair is a usable seat (pawn lounges on it)', async () => {
+    const session = new HeadlessSession();
+    await session.start(
+      buildScenario({
+        seed: 12,
+        map: { w: 16, h: 16 },
+        researchMaxTier: 9,
+        toolTier: 3,
+        pawns: [{ count: 2, skillLevel: 10, needs: { comfort: 20, hunger: 5, fatigue: 5 } as never }],
+        needsDisabled: ['hunger', 'fatigue'],
+        buildings: [{ id: 'tacked_chair' }], // the ONLY seat — comfort must come from it
+        seedEntities: false
+      })
+    );
+    const p0 = () => session.getState().pawns[0];
+    const comfort = () => p0().needs?.comfort ?? -1;
+    const start = comfort();
+    for (let i = 0; i < 16 && comfort() <= 70; i++) session.tick(200);
+    console.log(`[COMFORT-COPPER] tacked_chair: comfort ${start}→${comfort().toFixed(1)} turn=${session.getState().turn}`);
+    expect(comfort(), 'copper-tier seat refills comfort').toBeGreaterThan(70);
+  });
 });

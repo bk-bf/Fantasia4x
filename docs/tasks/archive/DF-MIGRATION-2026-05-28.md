@@ -466,7 +466,7 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 
 **Sources from Celestia used:** `pathfinder.gd` (A\* algorithm — ported to Rust, not TypeScript), `grid.gd` (`get_neighbors()`, diagonal wall-cut logic), `pawn.gd` (`movement_path`, `current_path_index`, `is_moving` fields).
 
-**Toolchain added:** Rust stable + `wasm-pack`. See ADR-008 in `.docs/game/DECISIONS.md`.
+**Toolchain added:** Rust stable + `wasm-pack`. See ADR-008 in `docs/game/DECISIONS.md`.
 
 **Complexity:** Medium-high. The A\* logic itself is well-defined; the added cost is the `wasm-pack` build pipeline integration and the typed-array sync layer between `GameState.worldMap` and the Rust grid representation.
 

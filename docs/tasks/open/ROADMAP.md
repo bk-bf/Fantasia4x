@@ -5,7 +5,7 @@
 > **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) · [CREATURE-COMBAT-OVERHAUL](../archive/CREATURE-COMBAT-OVERHAUL-2026-07-12.md) · [KINGDOMS-TRADE (archived)](../archive/KINGDOMS-TRADE-2026-07-12.md) · [RACE-SYSTEM (archived)](../archive/RACE-SYSTEM-2026-07-13.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [STEALTH](STEALTH.md) · [DRAFTED-JOB-ORDERS](DRAFTED-JOB-ORDERS.md) · [ANIMAL-HUSBANDRY](ANIMAL-HUSBANDRY.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [VISITORS](VISITORS.md)
 
 Everything in one table: **remaining work in priority order first** (owner sequence, set 2026-07-10),
-then the **completed record** below it. Full specs for shipped work live in `.tasks/archive/`.
+then the **completed record** below it. Full specs for shipped work live in `tasks/archive/`.
 Status: `[ ]` not started · `[-]` in progress · `[~]` deferred · `[x]` done.
 
 | # | Item | Status | Spec / archive |

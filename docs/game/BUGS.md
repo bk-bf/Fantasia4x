@@ -3,7 +3,7 @@
 Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 
 > Performance bugs found in the 2026-06-14 profiling pass live with full context in
-> [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) + ADR-021. Summarised here.
+> [tasks/open/ENGINE-PERFORMANCE.md](../tasks/open/ENGINE-PERFORMANCE.md) + ADR-021. Summarised here.
 
 ---
 
@@ -178,7 +178,7 @@ cost was `entityStep`; **sub-timers** → `es:step` (`stepEntities`); the **CPU-
 "I think it's X" was wrong. **Measure — per-phase timing → profiler subtree → per-call stats → concrete
 from→to samples — don't theorise.** The `PHASE-MS` / `A*-STATS` / `PATHFAIL` instrumentation is kept
 in-tree, gated behind the Settings → Debug-mode toggle (zero cost when off). Full perf context:
-[.tasks/open/ENGINE-PERFORMANCE-II.md §S3](../.tasks/open/ENGINE-PERFORMANCE-II.md).
+[tasks/open/ENGINE-PERFORMANCE-II.md §S3](../tasks/open/ENGINE-PERFORMANCE-II.md).
 
 ## [FIXED] Pawns freeze in hot weather — tile-temperature cache stuck at 0 (bake gated on season alone)
 
@@ -323,7 +323,7 @@ inlined in the worker since `overlay.ts` pulls webgl/DOM and isn't worker-safe),
 designations / zoneTiles refs. The renderer rebuilds the 38k-tile terrain only when `_terrainRev`
 bumps. **Freezes resolved** (user-confirmed). Commits `22290e8` (revert), `1d52954` (fuel-excluding
 sig). Full context + post-mortem in
-[.tasks/open/ENGINE-PERFORMANCE.md §4b](../.tasks/open/ENGINE-PERFORMANCE.md).
+[tasks/open/ENGINE-PERFORMANCE.md §4b](../tasks/open/ENGINE-PERFORMANCE.md).
 
 ## [FIXED] Pathfinding body-block flood — A* re-flooded the map every tick (perf)
 

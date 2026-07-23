@@ -173,7 +173,7 @@ needed.
 
 ## Performance Profiling & Debugging
 
-**⚠️ Cross-check `.docs/.tasks/open/ENGINE-PERFORMANCE.md` BEFORE changing any per-tick sim hot path,
+**⚠️ Cross-check `docs/tasks/open/ENGINE-PERFORMANCE.md` BEFORE changing any per-tick sim hot path,
 the worker→main snapshot boundary (`sim.worker.ts` / `simWorkerClient.ts`), or the render/store flow —
 and re-check `.debug/perf.log` AFTER.** Perf regressions have recurred *multiple times* from optimising
 one thing while reintroducing a cost the spec already documents. Treat the spec as a pre-flight
@@ -193,7 +193,7 @@ checklist, not background reading. The recurring traps it covers:
 When you land a perf-relevant change, update the spec (see "When to Update" / Doc Sync).
 
 Diagnose runtime cost (per-tick sim hot path — see
-`.docs/.tasks/open/ENGINE-PERFORMANCE.md`).
+`docs/tasks/open/ENGINE-PERFORMANCE.md`).
 
 - **`electron-debug`** — MCP server (Chrome DevTools Protocol) for the Electron/V8
   shell in `desktop-spike/electron` (the cross-engine TPS spike): process
@@ -209,20 +209,20 @@ Firefox/Gecko profiling (`firefox-devtools-mcp` + `pq`) is parked in the
 
 ## Documentation
 
-Full architecture, design decisions, philosophy, and task tracking live in `.docs/`.
+Full architecture, design decisions, philosophy, and task tracking live in `docs/`.
 
 | Path                                        | Scope                                                                      |
 | ------------------------------------------- | -------------------------------------------------------------------------- |
-| `.docs/game/ARCHITECTURE.md`                | Layer map, service boundaries, turn order, data flow                       |
-| `.docs/game/DESIGN.md`                      | Core gameplay loop, race/pawn mechanics, combat system design              |
-| `.docs/game/DECISIONS.md`                   | ADRs — add one when a non-obvious design choice is locked in               |
-| `.docs/game/PHILOSOPHY.md`                  | Guiding development principles; edit only if a principle genuinely changes |
-| `.docs/ui/ARCHITECTURE.md`                  | Component breakdown, screen structure, store usage patterns                |
-| `.docs/ui/DESIGN.md`                        | Visual direction, retro terminal style, colour and typography rules        |
-| `.docs/.tasks/open/ROADMAP.md`              | Planned work; keep entries actionable and brief                            |
-| `.docs/.tasks/open/SCREEN-REFACTORING.md`   | Break down WorkScreen, ExplorationScreen, CraftingScreen                   |
-| `.docs/.tasks/open/RESEARCH-ENHANCEMENT.md` | Three-tier research system design and requirements                         |
-| `.docs/.tasks/archive/`                     | Completed specs, filename pattern: `FEATURE-YYYY-MM-DD.md`                 |
+| `docs/game/ARCHITECTURE.md`                | Layer map, service boundaries, turn order, data flow                       |
+| `docs/game/DESIGN.md`                      | Core gameplay loop, race/pawn mechanics, combat system design              |
+| `docs/game/DECISIONS.md`                   | ADRs — add one when a non-obvious design choice is locked in               |
+| `docs/game/PHILOSOPHY.md`                  | Guiding development principles; edit only if a principle genuinely changes |
+| `docs/ui/ARCHITECTURE.md`                  | Component breakdown, screen structure, store usage patterns                |
+| `docs/ui/DESIGN.md`                        | Visual direction, retro terminal style, colour and typography rules        |
+| `docs/tasks/open/ROADMAP.md`              | Planned work; keep entries actionable and brief                            |
+| `docs/tasks/open/SCREEN-REFACTORING.md`   | Break down WorkScreen, ExplorationScreen, CraftingScreen                   |
+| `docs/tasks/open/RESEARCH-ENHANCEMENT.md` | Three-tier research system design and requirements                         |
+| `docs/tasks/archive/`                     | Completed specs, filename pattern: `FEATURE-YYYY-MM-DD.md`                 |
 
 ## When to Update
 
@@ -245,10 +245,10 @@ Do **not** speculatively update docs on every prompt. Update docs only when expl
 
 | Code path changed                                    | Check these docs                                        |
 | ---------------------------------------------------- | ------------------------------------------------------- |
-| `src/lib/game/core/types.ts`                         | `.docs/game/ARCHITECTURE.md` (data model section)       |
-| `src/lib/game/systems/GameEngineImpl.ts`             | `.docs/game/ARCHITECTURE.md` (turn order section)       |
-| `src/lib/game/services/`                             | `.docs/game/ARCHITECTURE.md` (services section)         |
-| `src/lib/game/systems/ModifierSystem.ts`             | `.docs/game/ARCHITECTURE.md`, `.docs/game/DECISIONS.md` |
-| `src/lib/game/core/` (Items/Buildings/Research/Work) | `.docs/game/DESIGN.md`                                  |
-| `src/lib/components/screens/`                        | `.docs/ui/ARCHITECTURE.md`                              |
-| `src/app.css`                                        | `.docs/ui/DESIGN.md`                                    |
+| `src/lib/game/core/types.ts`                         | `docs/game/ARCHITECTURE.md` (data model section)       |
+| `src/lib/game/systems/GameEngineImpl.ts`             | `docs/game/ARCHITECTURE.md` (turn order section)       |
+| `src/lib/game/services/`                             | `docs/game/ARCHITECTURE.md` (services section)         |
+| `src/lib/game/systems/ModifierSystem.ts`             | `docs/game/ARCHITECTURE.md`, `docs/game/DECISIONS.md` |
+| `src/lib/game/core/` (Items/Buildings/Research/Work) | `docs/game/DESIGN.md`                                  |
+| `src/lib/components/screens/`                        | `docs/ui/ARCHITECTURE.md`                              |
+| `src/app.css`                                        | `docs/ui/DESIGN.md`                                    |

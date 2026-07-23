@@ -6,7 +6,7 @@
   "rustCrates": [
     "spatial-core"
   ],
-  "adrsDoc": ".docs/game/DECISIONS.md",
+  "adrsDoc": "docs/game/DECISIONS.md",
   "descriptions": "codegraph.descriptions.json",
   "godFunctions": 40,
   "group": {

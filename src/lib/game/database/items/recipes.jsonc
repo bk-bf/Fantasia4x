@@ -623,6 +623,14 @@
     "toolTierRequired": 1
   },
   {
+    "id"              : "make_copper_tack",
+    "station"         : "stone_forge",
+    "inputs"          : {"copper_bar": 1},
+    "outputs"         : {"copper_tack": 12},
+    "workAmount"      : 6,
+    "toolTierRequired": 1
+  },
+  {
     "id"              : "make_bronze_nail",
     "station"         : "casting_hearth",
     "inputs"          : {"bronze_bar": 1, "clay_mold": 1},

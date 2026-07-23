@@ -125,4 +125,4 @@ Graph-checkable candidate: flag raw `state.pawns.length` in the gate modules onc
 - [ ] Auto-departure after `stayDaysRange`; parting gift when mood ≥ `giftMoodThreshold`.
 - [ ] `evictVisitor` applies `guest_evicted` colonist mood debuff + kingdom relation penalty.
 - [ ] `events.jsonc` `visitors` updated (§6); ADR-032 written into `DECISIONS.md` + onboarded into `codegraph.config.json`.
-- [ ] `.docs/game/DESIGN.md` (visitor mechanic) + `ARCHITECTURE.md` (`colonists()` helper / visitor spawn) updated; ROADMAP row added.
+- [ ] `docs/game/DESIGN.md` (visitor mechanic) + `ARCHITECTURE.md` (`colonists()` helper / visitor spawn) updated; ROADMAP row added.

@@ -2,7 +2,7 @@
   AudioController — headless reactive driver for the audio engine (no DOM). Mounted once in
   +page.svelte. It watches the existing game stores and translates state into engine calls; all
   playback lives in audioService (Howler). Purely renderer-side and event-driven: it adds NO per-tick
-  sim cost and NO snapshot field (see .docs/.tasks/open/ENGINE-PERFORMANCE.md) — it only reads stores
+  sim cost and NO snapshot field (see docs/tasks/open/ENGINE-PERFORMANCE.md) — it only reads stores
   that already update at ~15 Hz, plus a 1 s timer for combat-hold / dusk transitions.
 
   Music scene priority:  menu (title screen, isMenu) → combat (recent attack OR any drafted pawn) →

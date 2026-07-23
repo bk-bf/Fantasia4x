@@ -2,7 +2,7 @@
 
 # DESIGN
 
-> **Related:** [ARCHITECTURE](ARCHITECTURE.md) · [DECISIONS](DECISIONS.md) · [ROADMAP](../.tasks/open/ROADMAP.md) · [TRAITS](../.tasks/archive/TRAITS-2026-07-10.md)
+> **Related:** [ARCHITECTURE](ARCHITECTURE.md) · [DECISIONS](DECISIONS.md) · [ROADMAP](../tasks/open/ROADMAP.md) · [TRAITS](../tasks/archive/TRAITS-2026-07-10.md)
 
 ## Core Gameplay Loop
 
@@ -30,7 +30,7 @@ Fantasia4x targets **peak production chain complexity** — the design reference
 
 **Core principles:**
 
-- **Items are always physical** (ADR-016): every item occupies a location — a tile (loose or `stored` `DroppedItem`) or a pawn's inventory. There is no ethereal global item pool. To produce an item by any means, a pawn must have held the inputs, carried them to the production location (usually a workstation tile), and the output is created **at that location**. A craft order _reserves_ its inputs (locks, doesn't delete), a pawn _fetches_ them to the workstation and stages them on it, the craft job spends `recipe.workAmount` work points, then the inputs are destroyed and the output spawns on the station. See [PHYSICAL-PRODUCTION](../.tasks/archive/PHYSICAL-PRODUCTION-2026-06-13.md) (archived). _(Tool-gated gathering is now enforced at claim time against colony stock, and carry-weight is enforced at pickup; per-pawn-inventory + `minTier` gating is the remaining step 2.)_
+- **Items are always physical** (ADR-016): every item occupies a location — a tile (loose or `stored` `DroppedItem`) or a pawn's inventory. There is no ethereal global item pool. To produce an item by any means, a pawn must have held the inputs, carried them to the production location (usually a workstation tile), and the output is created **at that location**. A craft order _reserves_ its inputs (locks, doesn't delete), a pawn _fetches_ them to the workstation and stages them on it, the craft job spends `recipe.workAmount` work points, then the inputs are destroyed and the output spawns on the station. See [PHYSICAL-PRODUCTION](../tasks/archive/PHYSICAL-PRODUCTION-2026-06-13.md) (archived). _(Tool-gated gathering is now enforced at claim time against colony stock, and carry-weight is enforced at pickup; per-pawn-inventory + `minTier` gating is the remaining step 2.)_
 - **Tool-gated gathering**: woodcutting requires at least a Stone Axe; mining requires a Stone Pick; hunting requires a Stone Spear. Without the tool, the job cannot be claimed — the forest stays whole.
 - **Bootstrapping chain**: the starting colony has _nothing_. Survival begins with hand-gathered primitives (twigs, surface flint, plant fiber, wild berries). These enable Tier 0 tools. Tier 0 tools enable woodcutting. Wood enables workshop buildings. Workshops enable Tier 1 tools and processed materials.
 - **No free lunches**: building costs use real crafted materials. A `lean_to` shelter costs `pine_wood`, which requires the axe, which requires the knapping stone, which requires finding surface flint. Every shortcut eliminated is a failure state to navigate.
@@ -165,7 +165,7 @@ Labour is assigned per pawn via a 5-level priority grid (off/low/normal/high/urg
 
 ## Research System (Three-Tier, Planned)
 
-See `.tasks/open/RESEARCH-ENHANCEMENT.md` for full spec.
+See `tasks/open/RESEARCH-ENHANCEMENT.md` for full spec.
 
 | Tier           | Unlock Mechanism                                                           |
 | -------------- | -------------------------------------------------------------------------- |
@@ -175,7 +175,7 @@ See `.tasks/open/RESEARCH-ENHANCEMENT.md` for full spec.
 
 ## Combat System (Implemented)
 
-Real-time, tile-based melee resolved by `combatService.tickCombat` each tick — full spec in [.tasks/archive/COMBAT-SYSTEM-2026-06-11.md](../.tasks/archive/COMBAT-SYSTEM-2026-06-11.md) (ADR-012/013).
+Real-time, tile-based melee resolved by `combatService.tickCombat` each tick — full spec in [tasks/archive/COMBAT-SYSTEM-2026-06-11.md](../tasks/archive/COMBAT-SYSTEM-2026-06-11.md) (ADR-012/013).
 
 **Key mechanics:**
 

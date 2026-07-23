@@ -1430,6 +1430,20 @@
     "toolTierRequired": 1
   },
   {
+    "id": "copper_tack",
+    "charSpans": [ {"sheet": "items", "id": 162} ],
+    "name": "Copper Tacks",
+    "type": "material",
+    "category": "metal",
+    "maxDurability": 140,
+    "deteriorationRate": 0.02,
+    "description": "Soft copper hammered into short tacks. The first metal fastener, holding boards where cordage would only lash them.",
+    "color": "#B87333",
+    "amount": 0,
+    "weightKg": 0.2,
+    "volumeL": 0.1
+  },
+  {
     "id": "bronze_nail",
     "charSpans": [ {"sheet": "items", "id": 162} ],
     "name": "Bronze Nails",

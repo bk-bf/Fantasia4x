@@ -333,7 +333,7 @@ own pass. Also parks the **hearing/smell detection channel** (§5 realism upgrad
   encounters and tune §13 dials in `core/stealth.ts`.)*
 - [x] ~~ADR-031~~ **ADR-032** written into `DECISIONS.md` + onboarded into `codegraph.config.json`.
   *(2026-07-14 — the draft number was taken by hide wear.)*
-- [x] `.docs/game/DESIGN.md` (combat/mechanics) + `ARCHITECTURE.md` (new `core/stealth.ts`) updated.
+- [x] `docs/game/DESIGN.md` (combat/mechanics) + `ARCHITECTURE.md` (new `core/stealth.ts`) updated.
   *(2026-07-14.)*
 
 ## 13. Open tuning dials

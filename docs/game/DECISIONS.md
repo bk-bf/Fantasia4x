@@ -344,7 +344,7 @@ adjustedThreshold = baseThreshold
 
 - **Date**: 2026-05-30
 - **Status**: Accepted
-- **Spec**: superseded SIMULATION-PERF spec (deleted; see [ENGINE-PERFORMANCE](../.tasks/archive/ENGINE-PERFORMANCE.md))
+- **Spec**: superseded SIMULATION-PERF spec (deleted; see [ENGINE-PERFORMANCE](../tasks/archive/ENGINE-PERFORMANCE.md))
 
 #### Context
 
@@ -377,7 +377,7 @@ No call sites change. Applied to the per-tick services: `WorkService`, `PawnServ
 
 - **Date**: 2026-06-11
 - **Status**: Accepted
-- **Spec**: [.tasks/archive/COMBAT-SYSTEM-2026-06-11.md](../.tasks/archive/COMBAT-SYSTEM-2026-06-11.md)
+- **Spec**: [tasks/archive/COMBAT-SYSTEM-2026-06-11.md](../tasks/archive/COMBAT-SYSTEM-2026-06-11.md)
 
 #### Context
 
@@ -468,7 +468,7 @@ Two systems independently computed how good a pawn is at work and disagreed. `Mo
 
 - **Date**: 2026-06-13
 - **Status**: Accepted
-- **Spec**: [.tasks/archive/PHYSICAL-PRODUCTION-2026-06-13.md](../.tasks/archive/PHYSICAL-PRODUCTION-2026-06-13.md) (archived — shipped)
+- **Spec**: [tasks/archive/PHYSICAL-PRODUCTION-2026-06-13.md](../tasks/archive/PHYSICAL-PRODUCTION-2026-06-13.md) (archived — shipped)
 
 #### Context
 
@@ -567,7 +567,7 @@ union member** — down from ~6 scattered edits with a duplicate.
   more (see ADR-021). Target-persistence + push-alerting are **demoted to a deferred AI-correctness
   feature** (predators commit, prey react only to perceived, attacked animals fight back) — NOT a
   performance fix. Do not build it for FPS. The actual perf work is ADR-021.
-- **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) §5 (deferred)
+- **Spec**: [tasks/open/ENGINE-PERFORMANCE.md](../tasks/open/ENGINE-PERFORMANCE.md) §5 (deferred)
 
 #### Context
 
@@ -614,7 +614,7 @@ persistence = *how often we ask*. They multiply; none is redundant.
 
 - **Date**: 2026-06-14
 - **Status**: Accepted (design) — implementation deferred to spec P3 (after ADR-018 lands)
-- **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) §4
+- **Spec**: [tasks/open/ENGINE-PERFORMANCE.md](../tasks/open/ENGINE-PERFORMANCE.md) §4
 
 #### Context
 
@@ -653,7 +653,7 @@ lower-frequency consumer, never per entity.
   (ADR-018 falsified). The wrapper-agnostic principle and the deferred SAB/Rust decisions
   stand; the concrete ordered plan is **superseded by ADR-021** with the real bottlenecks. The
   **wrapper choice ("Tauri vs Electron: explicitly OPEN" below) has since been resolved to Electron — see ADR-030.**
-- **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) §5, §6
+- **Spec**: [tasks/open/ENGINE-PERFORMANCE.md](../tasks/open/ENGINE-PERFORMANCE.md) §5, §6
 
 #### Context
 
@@ -704,7 +704,7 @@ wrapper choice.
 
 - **Date**: 2026-06-14 (Worker + snapshot protocol landed 2026-06-15)
 - **Status**: Accepted (bug-fixes + Worker + W2/W2b snapshot protocol shipped; **worker is the only sim path — `?simworker` flag retired**)
-- **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) (§B = the snapshot win) · bugs in [BUGS.md](BUGS.md)
+- **Spec**: [tasks/open/ENGINE-PERFORMANCE.md](../tasks/open/ENGINE-PERFORMANCE.md) (§B = the snapshot win) · bugs in [BUGS.md](BUGS.md)
 
 #### Context
 
@@ -1020,7 +1020,7 @@ accounts for it.
 ### ADR-028 [GAME]: Typed Trait Kinds + Condition Relationship Graph (TRAIT-SYSTEM-V2)
 
 **Status:** Accepted (2026-07-06). Extends ADR-023 (condition-backed traits) and ADR-024 (body plans).
-Spec: `.docs/.tasks/archive/TRAITS-2026-07-10.md`.
+Spec: `docs/tasks/archive/TRAITS-2026-07-10.md`.
 
 **Context.** Trait payloads were an untyped `effects` bag, so nothing enforced *what kind* of thing a
 trait could do — which produced gamification the design rejects (`iron-skin` stacking +CON/−DEX/+mining%
@@ -1079,7 +1079,7 @@ data edges.**
   generalising photosynthesis/light-sensitivity). Pure allocation-free evaluator in `conditionGraph.ts`,
   cheap-gated by `CONDITION_IDS_WITH_TRIGGERS`. Continuous meter-driven severities (shock, infection)
   stay code and are flagged `driver` — forcing them into accruing edges would change behaviour.
-- **TRAIT-LIBRARY-EXPANSION (2026-07-07, spec `.docs/.tasks/archive/TRAITS-2026-07-10.md`)** — the
+- **TRAIT-LIBRARY-EXPANSION (2026-07-07, spec `docs/tasks/archive/TRAITS-2026-07-10.md`)** — the
   methodical build-out of the pool (~300 new traits) plus the mechanics it forced:
   - **`effects.combatMods`** — combat statId → multiplier, applied by `PawnStatService.evaluateStat`
     to combat-category stats only (the combat twin of `workSpeed`). Combos always pair two axes;
@@ -1326,7 +1326,7 @@ creatures. Guarded by `core/stealth.test.ts` (layers, roll math, §9 constraint 
 ### ADR-033 [GAME]: Headless, API-Driven Sim — dev-only in-thread driver over the existing engine + command registry
 
 **Status:** Accepted (2026-07-18) — implemented same day (Phases 0–5; Phase 6 GUI-attach open). Full
-plan + outcomes in [HEADLESS-SIM](../.tasks/open/HEADLESS-SIM.md). Implementation note: the replay
+plan + outcomes in [HEADLESS-SIM](../tasks/open/HEADLESS-SIM.md). Implementation note: the replay
 guarantee hardened into a byte-identical contract — every sim-path id is now turn-derived (no
 `Date.now()`), and module counters/cooldowns (`_pawnDebugIdCounter`, mob `idCounter`, social dialog
 maps) reset per session.
