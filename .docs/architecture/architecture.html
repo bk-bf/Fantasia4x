@@ -3,16 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fantasia4x — Architecture (code-grounded)</title>
-
-  <!-- Reveal.js core -->
+  <title>Fantasia4x — Architecture</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
-
-  <!-- Font Awesome for icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-  <!-- Custom styles -->
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -21,358 +14,335 @@
 
       <!-- 1 · TITLE -->
       <section id="title" class="section-divider" data-state="is-section-divider">
-        <p class="kicker">Architecture map · read top-down</p>
-        <h1>Fantasia4x<br><span style="color:var(--amber)">Engine Architecture</span></h1>
+        <p class="kicker">How the machine is built</p>
+        <h1>Fantasia<span style="color:var(--amber)">4x</span><br>from screen to sim</h1>
         <div class="rule"></div>
-        <p class="lead">A layer-by-layer tour of the <strong>running code</strong> — SvelteKit&nbsp;5&nbsp;+&nbsp;TypeScript over a WASM&nbsp;+&nbsp;Web-Worker sim core.</p>
-        <p class="small text-muted" style="margin-top:14px">Every claim traced to a <span class="ref">file:line</span> in source. Docs are treated as secondary — they carry staleness risk on a fast-moving codebase.</p>
+        <p class="lead">A walk down through the game — from the screen you look at, to the moment-by-moment simulation running underneath it.</p>
+        <p class="small text-muted" style="margin-top:16px">A turn-based colony sim: raise a race of pawns, work the land, craft and build, weather the world.</p>
       </section>
 
       <!-- 2 · LAYER MAP -->
       <section id="layer-map">
-        <p class="kicker"><span class="n">0</span>The big picture</p>
-        <h2>Five layers, one direction of dependency</h2>
+        <p class="kicker"><span class="n">0</span>The whole thing at a glance</p>
+        <h2>Five floors, and things only ever fall downward</h2>
         <div class="content">
           <div class="layer-stack">
-            <div class="layer"><span class="lname">Presentation</span><span class="lpath">routes/ + lib/components/</span><span class="ldesc">Svelte 5 runes · renders state, holds no logic</span></div>
+            <div class="layer"><span class="lname">What you see</span><span class="ldesc">The screens and buttons. They draw the picture — they don't decide anything.</span><span class="lpath">routes/ · components/</span></div>
             <div class="flow-arrow">↓</div>
-            <div class="layer"><span class="lname">Stores</span><span class="lpath">src/lib/stores/</span><span class="ldesc">Reactive read-only projection + persistence</span></div>
-            <div class="flow-arrow">↕<span class="lbl">WEB WORKER · postMessage · structured-clone · commands ↓ / snapshots ↑</span></div>
-            <div class="layer hl"><span class="lname">Turn coordinator</span><span class="lpath">systems/GameEngineImpl.ts</span><span class="ldesc">processGameTurn() — 19 ordered phases</span></div>
+            <div class="layer"><span class="lname">The latest picture</span><span class="ldesc">Holds the most recent snapshot of the world for the screens to read.</span><span class="lpath">lib/stores/</span></div>
+            <div class="flow-arrow">↕<span class="lbl">a real wall here: the game runs in a separate background thread — the two sides talk by passing messages</span></div>
+            <div class="layer hl"><span class="lname">The turn-taker</span><span class="ldesc">Plays out one tiny moment of time, over and over, in a fixed order.</span><span class="lpath">GameEngineImpl</span></div>
             <div class="flow-arrow">↓</div>
-            <div class="layer"><span class="lname">Services</span><span class="lpath">game/services/ (+ systems/)</span><span class="ldesc">~25 domain-logic singletons</span></div>
+            <div class="layer"><span class="lname">The specialists</span><span class="ldesc">One expert per topic — pawns, jobs, crafting, combat — each owns its own rules.</span><span class="lpath">game/services/</span></div>
             <div class="flow-arrow">↓</div>
-            <div class="layer"><span class="lname">Core</span><span class="lpath">game/core/ + database/*.jsonc</span><span class="ldesc">Types · GameStateManager · static data</span></div>
+            <div class="layer"><span class="lname">The rulebook + the vault</span><span class="ldesc">All the data, and the one gatekeeper every change must pass through.</span><span class="lpath">core/ · database/</span></div>
           </div>
         </div>
-        <div class="footnote">Strict rule: lower layers never import upward. The sim runs in a Web Worker, so the Stores↔Engine hop is a serialized message boundary — not a function call.</div>
+        <div class="footnote">Nothing on a lower floor is allowed to reach up to a higher one. That one rule keeps the whole thing untangled.</div>
       </section>
 
       <!-- 3 · UI -->
       <section id="ui">
-        <p class="kicker"><span class="n">1</span>Presentation</p>
-        <h2>UI: one screen at a time, switched by a store</h2>
+        <p class="kicker"><span class="n">1</span>What you see</p>
+        <h2>The game shows exactly one screen at a time</h2>
         <div class="content">
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:22px;">
-            <div>
-              <p class="small">The root <span class="ref">routes/+page.svelte</span> mirrors <code>uiState.currentScreen</code> <span class="ref">:203</span> into an <code>{#if}/{:else if}</code> ladder <span class="ref">:443–464</span>. Navigation calls <code>uiState.setScreen()</code> / <code>toggleScreen()</code>.</p>
-              <p class="small">The <code>Screen</code> union <span class="ref">uiState.ts:4</span>:</p>
-              <p class="tiny mono text-muted" style="line-height:1.5">main · pawns · work · building · crafting · research · exploration · culture · kingdoms · entities · debug</p>
-              <p class="small"><code>appPhase</code> (<span class="mono">menu | game</span>) + <code>storeReady</code> gate the whole app before any screen shows.</p>
+          <div class="diagram" style="margin-bottom:6px">
+            <div class="node"><div class="t">the tabs</div><span class="s">Pawns · Work · Crafting · …</span></div>
+            <div class="arrow">→<span class="l">you click one</span></div>
+            <div class="node accent big"><div class="t">“which screen?”</div><span class="s">one single value</span></div>
+            <div class="arrow">→<span class="l">app reads it</span></div>
+            <div class="node cool"><div class="t">that screen<br>appears</div><span class="s">everything else hidden</span></div>
+          </div>
+          <p class="caption">Click a tab → it flips one value → the app swaps in that screen. Nothing shows at all until the game has finished loading.</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:18px;">
+            <div class="card">
+              <h4>In the code</h4>
+              <p class="small">The single value is <span class="c">uiState.currentScreen</span>. A plain list of “if it's this, show that” in <span class="c">+page.svelte</span> picks the screen. Clicking a tab calls <span class="c">setScreen()</span>. The loading gate is <span class="c">appPhase</span> going from <span class="c">'menu'</span> to <span class="c">'game'</span>.</p>
             </div>
             <div class="card cool">
-              <h4>Screen components — screens/</h4>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1px 14px;">
-                <p class="tiny">Pawn · Work</p><p class="tiny">Building · Crafting*</p>
-                <p class="tiny">Exploration</p><p class="tiny">Culture · Kingdom</p>
-                <p class="tiny">Research</p><p class="tiny">Entity · Debug*</p>
-              </div>
-              <p class="tiny text-muted" style="margin-top:8px">*CraftingScreen is the largest (39k). <code>UI/GameCanvas.svelte</code> (265k) draws the world.</p>
-              <p class="tiny" style="margin-top:8px"><strong>Dirs:</strong> <span class="mono">UI/</span> chrome+canvas · <span class="mono">pawn/</span> inspector widgets · <span class="mono">screens/</span> · <span class="mono">util/</span> non-Svelte helpers</p>
+              <h4>The screens themselves</h4>
+              <p class="names">Pawns · Work · Building · Crafting · Exploration · Culture · Kingdoms · Research · Entities · Debug</p>
+              <p class="tiny text-muted" style="margin-top:7px">The map itself is drawn by one big canvas component, separate from the menus.</p>
             </div>
           </div>
-          <div class="callout ok" style="margin-top:16px">
-            <span class="h">RULES</span>
-            <p class="small">200-line cap per component · components route through <strong>store actions</strong>, never call services directly · Svelte 5 runes (<code>$state/$derived/$effect</code>), no legacy <code>$:</code>.</p>
-          </div>
         </div>
-        <div class="footnote">Screens switch via the uiState store — NOT SvelteKit routing.</div>
+        <div class="footnote">The screens are just viewers. They never change the world directly — they only ask for it to change (next slides).</div>
       </section>
 
       <!-- 4 · STORES -->
       <section id="stores">
-        <p class="kicker"><span class="n">2</span>Stores</p>
-        <h2>Stores: the reactive read-only projection</h2>
+        <p class="kicker"><span class="n">2</span>The latest picture</p>
+        <h2>The screens read a picture; they don't run the game</h2>
         <div class="content">
-          <div style="display:grid; grid-template-columns: 1.15fr 1fr; gap:22px;">
-            <div>
-              <p class="small"><code>gameState.ts</code> is the facade <span class="ref">:1484</span> — <code>subscribe</code>, <code>command</code>, <code>pushFromEngine</code>, game actions (<span class="mono tiny">addItem · haulTileToStockpile · saveGame · loadScenarioPreset</span>), and <code>derived</code> selectors (<span class="mono tiny">currentTurn · currentStockpile</span> <span class="ref">:1582</span> · <span class="mono tiny">isGameOver</span> <span class="ref">:1550</span>).</p>
-              <p class="small">It <em>“never derives new state itself”</em> <span class="ref">:1207</span> — it just holds the latest worker snapshot for the renderer.</p>
-              <ul class="tiny" style="margin-top:6px">
-                <li><span class="mono">uiState</span> — screen + selection/designation/camera</li>
-                <li><span class="mono">eventStore</span> — derived over <code>pendingEvent</code></li>
-                <li><span class="mono">Log</span> — activity/combat/system log</li>
-                <li><span class="mono">uiPrefs / uiPersist</span> — <code>fx.*</code> localStorage view prefs</li>
-              </ul>
-            </div>
-            <div class="card">
-              <h4>Persistence</h4>
-              <p class="tiny">Game saves → <strong>IndexedDB</strong> via <span class="mono">saveManager.ts</span>. Autosave flows through <code>gameState.updateWithSave</code>.</p>
-              <p class="tiny" style="margin-top:6px">The legacy <span class="mono">localStorage['fantasia4x-save']</span> key survives only for a one-time migration read <span class="ref">saveManager.ts:147</span>.</p>
-            </div>
+          <div class="diagram">
+            <div class="node warm" style="border-top:3px solid var(--amber)"><div class="t">the running game</div><span class="s">background thread</span></div>
+            <div class="arrow">→<span class="l">hands over a fresh snapshot<br>~15×/sec</span></div>
+            <div class="node accent big"><div class="t">“the latest picture”</div><span class="s">gameState</span></div>
+            <div class="arrow">→<span class="l">screens read</span></div>
+            <div class="node cool"><div class="t">the UI redraws</div></div>
           </div>
-          <div class="callout warn" style="margin-top:14px">
-            <span class="h">CODE ≠ DOCS</span>
-            <p class="small">ARCHITECTURE.md still says persistence is <span class="mono">localStorage['fantasia4x-save']</span> and lists <span class="mono">worldState</span> as an active store. In code: persistence is IndexedDB, and <span class="mono">worldState.ts</span> is an empty stub.</p>
+          <p class="caption" style="margin-top:14px">The screens only ever <em>look</em> at this picture. They can't reach in and edit the world — the picture is read-only on their side.</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px;">
+            <div class="card"><h4>Saving your game</h4><p class="small">Whenever the picture updates, it's quietly written to a small database in the browser <span class="c">saveManager → IndexedDB</span>. Autosave rides along.</p></div>
+            <div class="card cool"><h4>Other little pictures</h4><p class="small">Which screen you're on <span class="c">uiState</span>, the popup event <span class="c">eventStore</span>, the activity log <span class="c">Log</span>, and your view preferences.</p></div>
           </div>
         </div>
+        <div class="footnote">Heads-up: the old notes say saves live in localStorage — the code moved to IndexedDB. localStorage now only holds view preferences.</div>
       </section>
 
-      <!-- 5 · WORKER BOUNDARY (stack of 2) -->
+      <!-- 5 · WORKER (stack of 2) -->
       <section>
         <section id="worker-1">
-          <p class="kicker"><span class="n">2½</span>The worker boundary &nbsp;<span class="tag adr">ADR-021</span></p>
-          <h2>The sim runs off the main thread</h2>
+          <p class="kicker"><span class="n">2½</span>The wall in the middle</p>
+          <h2>The real game runs off to the side, so the screen stays smooth</h2>
           <div class="content">
-            <ul class="small">
-              <li>The <strong>worker owns the canonical <code>GameState</code></strong> and runs the whole tick loop off-thread <span class="ref">sim.worker.ts:2–8, :536</span>. It constructs the <code>GameStateManager</code> and drives <code>gameEngine.processGameTurn()</code> in a <code>batch()</code> loop.</li>
-              <li>The main-thread store is a <strong>read-only projection</strong> <span class="ref">gameState.ts:1207</span> — <code>setSilent(v)</code> every tick so <code>get(gameState)</code> is current for the renderer; <code>notify()</code> + save fire only on <em>flush</em> <span class="ref">:1677</span>.</li>
-              <li>The engine never imports the store — it publishes through an injected <code>outputSink</code> <span class="ref">sim.worker.ts:600</span>.</li>
-            </ul>
-            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:12px;">
-              <div class="card cool" style="border-left-width:2px"><h4 style="font-size:11pt">60</h4><p class="tiny">ticks/sec — <span class="mono">TICKS_PER_SECOND</span> <span class="ref">time.ts:22</span></p></div>
-              <div class="card cool" style="border-left-width:2px"><h4 style="font-size:11pt">~15 Hz</h4><p class="tiny">UI flush — <span class="mono">UI_PUSH_MS</span>, wall-clock gated <span class="ref">:115</span></p></div>
-              <div class="card cool" style="border-left-width:2px"><h4 style="font-size:11pt">16 ms</h4><p class="tiny">worker batch loop; ≤120 steps/batch</p></div>
-              <div class="card" style="border-left-width:2px"><h4 style="font-size:11pt">~32%</h4><p class="tiny">of worker time was full-state cloning — hence the diff protocol →</p></div>
+            <div class="lanes">
+              <div class="lane cool">
+                <h4>Your window</h4>
+                <p>Draws the map, handles clicks, plays sound. Must never stutter.</p>
+                <p style="margin-top:8px"><span class="c">main thread</span></p>
+              </div>
+              <div class="cross">
+                <div>→</div><div class="m">“do this”</div>
+                <div>←</div><div class="m">“here's the<br>new picture”</div>
+              </div>
+              <div class="lane warm">
+                <h4>The game itself</h4>
+                <p>Runs the simulation 60 times a second — hunger, jobs, growth, fights, everything.</p>
+                <p style="margin-top:8px"><span class="c">background Web Worker</span></p>
+              </div>
             </div>
+            <p class="caption" style="margin-top:16px">Because the heavy thinking happens on the other side of the wall, thousands of things can tick without the screen ever freezing.</p>
           </div>
-          <div class="footnote">TICKS_PER_SECOND is the seconds↔ticks constant; effective TPS is driven by the worker's wall-clock accumulator × speed multiplier.</div>
+          <div class="footnote">60 ticks/sec inside · a fresh picture handed across ~15×/sec · they only ever talk by passing messages, never by sharing memory.</div>
         </section>
 
         <section id="worker-2">
-          <p class="kicker"><span class="n">2½</span>The worker boundary</p>
-          <h2>What actually ships each flush</h2>
+          <p class="kicker"><span class="n">2½</span>The wall in the middle</p>
+          <h2>It only sends what actually changed</h2>
           <div class="content">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:9px;">
-              <div class="card"><h4>state — sectional diff</h4><p class="tiny">Only top-level fields whose <strong>ref</strong> changed. <code>pawns/mobs/worldMap/droppedItems</code> excluded (<span class="mono">SECTIONAL_SKIP</span>); 3 synthetic revs <span class="mono">_terrainRev/_snowRev/_designationRev</span> forced.</p></div>
-              <div class="card"><h4>pawns / mobs — EntitySync</h4><p class="tiny">Per-entity: slim hot projection + any <em>cold</em> field whose ref changed (<span class="mono">PAWN_COLD/MOB_COLD</span>). Mob <code>needs</code> ships every flush; <code>removed[]</code> reaps despawns.</p></div>
-              <div class="card"><h4>drops — per-id ref diff</h4><p class="tiny">Only stacks whose object ref changed ship; an unchanging pile ships <strong>nothing</strong> — the carcass-FPS fix.</p></div>
-              <div class="card"><h4>worldMap / worldMapDelta</h4><p class="tiny">Full tile array only on ref change (worldgen/load); otherwise slim in-place tile deltas (<span class="mono">TILE_RENDER_FIELDS</span>), snow tagged <code>k:1</code>, budgeted.</p></div>
+            <p class="lead text-center" style="margin-bottom:16px">Shipping the entire world 15 times a second was too heavy — it was a third of the game's whole workload. So each update carries only the differences.</p>
+            <div class="diagram">
+              <div class="node ghost"><div class="t">the whole world</div><span class="s">mostly unchanged</span></div>
+              <div class="arrow">→</div>
+              <div class="node cool"><div class="t">only the changed bits</div><span class="s">this pawn moved · that tree fell · this pile shrank</span></div>
+              <div class="arrow">→</div>
+              <div class="node accent"><div class="t">re-stitched<br>on the other side</div></div>
             </div>
-            <p class="tiny text-muted" style="margin-top:10px">Consumer <span class="mono">simWorkerClient</span> merges the diff onto <code>lastState</code>, rebuilds pawns/mobs/drops from per-id mirrors via <code>applyEntitySync</code>, reattaches the cached worldMap, then <code>onState(state, flush)</code>. <code>commit</code> frames apply even while paused.</p>
+            <p class="caption" style="margin-top:16px">A pawn that didn't move sends nothing. A carcass rotting on the ground sends nothing until it changes. That “send nothing when nothing happened” rule is what keeps the frame rate up.</p>
           </div>
-          <div class="footnote">Producer: sim.worker.ts:362 (publish) · protocol: simProtocol.ts (EntitySync :18)</div>
+          <div class="footnote">In the code: a per-thing “what changed since last time” diff (EntitySync) reassembled by simWorkerClient.</div>
         </section>
       </section>
 
       <!-- 6 · COMMANDS -->
       <section id="commands">
-        <p class="kicker"><span class="n">2½</span>Commands — the write path &nbsp;<span class="tag adr">ADR-033</span></p>
-        <h2>Player &amp; dev actions are serializable commands</h2>
+        <p class="kicker"><span class="n">2½</span>The one doorway to change things</p>
+        <h2>You don't edit the world — you send it a request</h2>
         <div class="content">
-          <div style="display:grid; grid-template-columns:1.1fr 1fr; gap:22px;">
-            <div>
-              <ul class="small">
-                <li>Registry <code>COMMANDS: Record&lt;string,Cmd&gt;</code> — <strong>88 entries</strong> <span class="ref">commands.ts:189</span>. Each is a pure <code>(state, payload) ⇒ GameState</code>.</li>
-                <li>A command is <code>{type, payload?, save?}</code> — <strong>no closures</strong>, so it survives structured-clone across the worker boundary <span class="ref">simProtocol.ts:22</span>.</li>
-                <li>Dispatch: UI → <code>gameState.command(cmd)</code> → <code>dispatchCommand</code> <span class="ref">:1246</span>. Worker mode posts <code>{kind:'command'}</code>; else applies in-thread.</li>
-                <li>Worker: <code>applyCommand(s ⇒ applySimCommand(s, cmd))</code> <span class="ref">sim.worker.ts:621</span> → looks up <code>COMMANDS[cmd.type]</code>.</li>
-              </ul>
-            </div>
-            <div class="card cool">
-              <h4>Example commands</h4>
-              <p class="tiny mono" style="line-height:1.6">addItem · toggleDraft · attackTargetWith · equipPawnItem · designate · startResearch · haulTileToStockpile</p>
-              <p class="tiny mono text-muted" style="margin-top:6px">dev: devSpawnPawns · devSpawnAllItems · devSpawnItem</p>
-            </div>
+          <div class="diagram">
+            <div class="node cool"><div class="t">you click</div><span class="s">“chop that tree”</span></div>
+            <div class="arrow">→</div>
+            <div class="node"><div class="t">a named request</div><span class="s">a plain little message</span></div>
+            <div class="arrow">→<span class="l">across the wall</span></div>
+            <div class="node"><div class="t">looked up in the<br>list of allowed moves</div><span class="s">88 of them</span></div>
+            <div class="arrow">→</div>
+            <div class="node accent"><div class="t">the world<br>changes</div></div>
           </div>
-          <div class="callout" style="margin-top:16px">
-            <span class="h" style="color:var(--amber)">ONE REGISTRY, THREE FRONTS</span>
-            <p class="small">The same <span class="mono">commands.ts</span> is steered by the UI, the dev-only <span class="mono">/api/sim</span> HTTP driver, and the invariant test suite. Same seed + scenario + command script ⇒ <strong>byte-identical</strong> state (no <code>Date.now()</code> in ids).</p>
+          <p class="caption" style="margin-top:16px">Every possible action — chop, equip, draft, research, haul — is a named entry in one list. The request is just data (“chop tree #12”), so it can safely cross the wall and be replayed.</p>
+          <div class="callout ok" style="margin-top:16px">
+            <span class="h">WHY IT'S BUILT THIS WAY</span>
+            <p class="small">One doorway, three users: the buttons you click, the automated test scripts, and the dev tools all send the exact same requests. Same requests in the same order always produce the exact same game — which is what makes bug-hunting and replays possible.</p>
           </div>
         </div>
+        <div class="footnote">In the code: the list is COMMANDS in commands.ts (88 entries) · e.g. chop = designate, equip = equipPawnItem, draft = toggleDraft.</div>
       </section>
 
       <!-- 7 · TURN LOOP (stack of 2) -->
       <section>
         <section id="turn-1">
-          <p class="kicker"><span class="n">3</span>Turn coordinator &nbsp;<span class="tag">GameEngineImpl.ts:263</span></p>
-          <h2>One tick = processGameTurn()</h2>
+          <p class="kicker"><span class="n">3</span>The turn-taker</p>
+          <h2>One tick = one tiny moment, always in the same order</h2>
           <div class="content">
-            <ul class="small">
-              <li><code>gameEngine</code> is the <strong>orchestrator, not the logic</strong> — it sequences service calls and owns the sinks.</li>
-              <li>Each tick: shallow-copy state + bump counter <span class="ref">:278</span> → run phases through a <code>timed()</code> perf wrapper → <code>GameStateManager.updateState()</code> <span class="ref">:387</span> → wall-clock-gated push ~15 Hz <span class="ref">:393</span>.</li>
-              <li><strong>19 phases, fixed order</strong> — later phases read what earlier ones wrote. Some are throttled (run every N ticks).</li>
-            </ul>
-            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:14px; align-items:center;">
-              <span class="tag">needs</span><span class="text-muted">→</span>
-              <span class="tag">item upkeep</span><span class="text-muted">→</span>
-              <span class="tag">research</span><span class="text-muted">→</span>
-              <span class="tag">jobs</span><span class="text-muted">→</span>
-              <span class="tag">buildings</span><span class="text-muted">→</span>
-              <span class="tag">pawns</span><span class="text-muted">→</span>
-              <span class="tag">growth</span><span class="text-muted">→</span>
-              <span class="tag">entities</span><span class="text-muted">→</span>
-              <span class="tag">combat</span><span class="text-muted">→</span>
-              <span class="tag">reap</span><span class="text-muted">→</span>
-              <span class="tag">events</span>
+            <p class="lead text-center">Sixty times a second, the game plays out a single moment of time. The steps always run in the same fixed order, because each one relies on what the step before it just did.</p>
+            <div class="diagram" style="margin-top:22px; gap:8px;">
+              <div class="node"><div class="t">bodies</div><span class="s">hunger · sleep</span></div>
+              <div class="arrow">→</div>
+              <div class="node"><div class="t">stuff</div><span class="s">rot · dry · research</span></div>
+              <div class="arrow">→</div>
+              <div class="node"><div class="t">work</div><span class="s">jobs · building</span></div>
+              <div class="arrow">→</div>
+              <div class="node"><div class="t">world</div><span class="s">growth · animals</span></div>
+              <div class="arrow">→</div>
+              <div class="node accent"><div class="t">fights &amp;<br>the dead</div></div>
+              <div class="arrow">→</div>
+              <div class="node cool"><div class="t">events</div></div>
             </div>
-            <p class="small text-amber" style="margin-top:16px"><strong>The order is load-bearing. Do not reorder.</strong></p>
+            <p class="caption text-amber" style="margin-top:22px"><strong>The order is load-bearing. Shuffle it and things break.</strong></p>
           </div>
-          <div class="footnote">Throttles: jobs /6 · decay &amp; drying /60 · deterioration /600 · dialog /90 ticks.</div>
+          <div class="footnote">In the code: GameEngineImpl.processGameTurn — it doesn't hold the rules itself, it just calls the specialists in this order. Full list next →</div>
         </section>
 
         <section id="turn-2">
-          <p class="kicker"><span class="n">3</span>The 19 phases — verbatim from code</p>
-          <h2 style="font-size:20pt">processGameTurn() &nbsp;<span class="tiny text-muted">GameEngineImpl.ts:295–381</span></h2>
-          <div class="content" style="padding-top:12px">
+          <p class="kicker"><span class="n">3</span>The turn-taker — every step</p>
+          <h2 style="font-size:23pt">The 19 steps of one tick <span class="tiny text-muted" style="font-weight:400">(plain name · code call)</span></h2>
+          <div class="content" style="padding-top:14px">
             <div class="phase-grid">
-              <div class="phase"><span class="pn">01</span><span class="pname">environment</span><span class="pcall">processEnvironment()</span></div>
-              <div class="phase big"><span class="pn">02</span><span class="pname">needsTick</span><span class="pcall">pawnService · +autoDrink/Wash</span></div>
-              <div class="phase thr"><span class="pn">03</span><span class="pname">itemDecay</span><span class="pcall">stepItemDecay /60</span></div>
-              <div class="phase thr"><span class="pn">04</span><span class="pname">deterioration</span><span class="pcall">stepItemDeterioration /600</span></div>
-              <div class="phase thr"><span class="pn">05</span><span class="pname">drying</span><span class="pcall">itemService.stepDrying /60</span></div>
-              <div class="phase"><span class="pn">06</span><span class="pname">researchTick</span><span class="pcall">researchService</span></div>
-              <div class="phase"><span class="pn">07</span><span class="pname">pendingCrafts</span><span class="pcall">reservePendingCraftOrders</span></div>
-              <div class="phase thr"><span class="pn">08</span><span class="pname">generateJobs</span><span class="pcall">jobService /6</span></div>
-              <div class="phase"><span class="pn">09</span><span class="pname">buildings</span><span class="pcall">processBuildings()</span></div>
-              <div class="phase"><span class="pn">10</span><span class="pname">passiveProd</span><span class="pcall">processPassiveProduction()</span></div>
-              <div class="phase big"><span class="pn">11</span><span class="pname">pawns</span><span class="pcall">→ pawnStateMachine.tick</span></div>
-              <div class="phase"><span class="pn">12</span><span class="pname">growth</span><span class="pcall">processGrowth()</span></div>
-              <div class="phase"><span class="pn">13</span><span class="pname">resourceRegrowth</span><span class="pcall">processResourceRegrowth()</span></div>
-              <div class="phase"><span class="pn">14</span><span class="pname">cropGrowth</span><span class="pcall">processCropGrowth()</span></div>
-              <div class="phase"><span class="pn">15</span><span class="pname">wildGrowth</span><span class="pcall">processWildGrowth()</span></div>
-              <div class="phase big"><span class="pn">16</span><span class="pname">entityStep</span><span class="pcall">×6 spawn/lairs/step/move/hunger/dead</span></div>
-              <div class="phase big"><span class="pn">17</span><span class="pname">combat</span><span class="pcall">tickCombat + corpses</span></div>
-              <div class="phase"><span class="pn">18</span><span class="pname">reapDead</span><span class="pcall">reapDeadPawns()</span></div>
-              <div class="phase thr"><span class="pn">19</span><span class="pname">events</span><span class="pcall">migrants · kingdoms+social /day · dialog /90</span></div>
-              <div class="phase" style="border-style:dashed; opacity:0.75"><span class="pn">↳</span><span class="pname">commit + push</span><span class="pcall">updateState → outputSink ~15Hz</span></div>
+              <div class="phase"><span class="pn">01</span><span class="pname">weather &amp; light</span><span class="pcall">environment</span></div>
+              <div class="phase big"><span class="pn">02</span><span class="pname">hunger, thirst, sleep</span><span class="pcall">needsTick · drink/wash</span></div>
+              <div class="phase thr"><span class="pn">03</span><span class="pname">food spoils</span><span class="pcall">itemDecay</span></div>
+              <div class="phase thr"><span class="pn">04</span><span class="pname">gear wears out</span><span class="pcall">deterioration</span></div>
+              <div class="phase thr"><span class="pn">05</span><span class="pname">wood dries</span><span class="pcall">drying</span></div>
+              <div class="phase"><span class="pn">06</span><span class="pname">research ticks up</span><span class="pcall">researchTick</span></div>
+              <div class="phase"><span class="pn">07</span><span class="pname">reserve craft parts</span><span class="pcall">pendingCrafts</span></div>
+              <div class="phase thr"><span class="pn">08</span><span class="pname">rebuild the to-do list</span><span class="pcall">generateJobs</span></div>
+              <div class="phase"><span class="pn">09</span><span class="pname">buildings &amp; fires</span><span class="pcall">buildings</span></div>
+              <div class="phase"><span class="pn">10</span><span class="pname">furnaces cook</span><span class="pcall">passiveProd</span></div>
+              <div class="phase big"><span class="pn">11</span><span class="pname">pawns act</span><span class="pcall">pawns → stateMachine</span></div>
+              <div class="phase"><span class="pn">12</span><span class="pname">pawns grow</span><span class="pcall">growth</span></div>
+              <div class="phase"><span class="pn">13</span><span class="pname">plants regrow</span><span class="pcall">resourceRegrowth</span></div>
+              <div class="phase"><span class="pn">14</span><span class="pname">crops grow</span><span class="pcall">cropGrowth</span></div>
+              <div class="phase"><span class="pn">15</span><span class="pname">wild spreads</span><span class="pcall">wildGrowth</span></div>
+              <div class="phase big"><span class="pn">16</span><span class="pname">animals &amp; monsters</span><span class="pcall">entityStep ×6</span></div>
+              <div class="phase big"><span class="pn">17</span><span class="pname">combat resolves</span><span class="pcall">combat</span></div>
+              <div class="phase"><span class="pn">18</span><span class="pname">clear the dead</span><span class="pcall">reapDead</span></div>
+              <div class="phase thr"><span class="pn">19</span><span class="pname">world events</span><span class="pcall">migrants · trade · talk</span></div>
+              <div class="phase" style="border-style:dashed; opacity:0.7"><span class="pn">↳</span><span class="pname">hand over the picture</span><span class="pcall">~15×/sec</span></div>
             </div>
+            <p class="tiny text-muted" style="margin-top:10px"><span style="color:var(--amber)">▍</span> amber = doesn't run every tick, only every so often &nbsp;·&nbsp; <span style="color:var(--phosphor)">▍</span> phosphor = the heavy steps</p>
           </div>
-          <div class="footnote">Docs claim 13 phases. The code runs 19 — plus the environment, growth, crop/wild-growth, and 6-step entity block the docs omit.</div>
+          <div class="footnote">The old notes said 13 steps; the code runs 19.</div>
         </section>
       </section>
 
       <!-- 8 · SERVICES -->
       <section id="services">
-        <p class="kicker"><span class="n">4</span>Services</p>
-        <h2>~25 domain singletons — import the instance, never the class</h2>
+        <p class="kicker"><span class="n">4</span>The specialists</p>
+        <h2>One expert per topic — and it only knows its own topic</h2>
         <div class="content">
-          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:9px;">
-            <div class="card"><h4>Pawns &amp; social</h4><p class="tiny mono">pawnService · pawnStatService · workService · pawnGrowthService · socialService · memoryService</p></div>
-            <div class="card"><h4>Production</h4><p class="tiny mono">itemService · recipeService · jobService · buildingService · resourceObjectService</p></div>
-            <div class="card"><h4>World &amp; spatial</h4><p class="tiny mono">entityService · wasmPathfinderService · occupancyService · designationService · resourceGeneratorService</p></div>
-            <div class="card cool"><h4>Environment / render</h4><p class="tiny mono">environmentService · lightingService</p></div>
-            <div class="card cool"><h4>World-political</h4><p class="tiny mono">kingdomService</p></div>
-            <div class="card cool"><h4>Research</h4><p class="tiny mono">researchService</p></div>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
+            <div class="card"><h4>Pawns &amp; people</h4><p class="tiny">needs, stats, work skill, growth, relationships, memory</p><p class="names">pawnService · pawnStatService · socialService …</p></div>
+            <div class="card"><h4>Making things</h4><p class="tiny">items, recipes, the job queue, buildings, harvesting</p><p class="names">itemService · recipeService · jobService · buildingService</p></div>
+            <div class="card"><h4>The map &amp; moving on it</h4><p class="tiny">wildlife, pathfinding, who-stands-where, designations</p><p class="names">entityService · pathfinder · occupancyService</p></div>
+            <div class="card cool"><h4>Light &amp; weather</h4><p class="names">environmentService · lightingService</p></div>
+            <div class="card cool"><h4>Other kingdoms</h4><p class="names">kingdomService</p></div>
+            <div class="card cool"><h4>Research</h4><p class="names">researchService</p></div>
           </div>
-          <div class="callout warn" style="margin-top:14px">
-            <span class="h">BARREL IS PARTIAL</span>
-            <p class="small"><span class="mono">services/index.ts</span> wires only <strong>6</strong> (itemService, buildingService, workService, researchService, modifierSystem, gameEngine). The other ~20 are imported directly — no runtime DI, just module-level <code>export const</code>. The <span class="mono">ServiceIntegration.ts</span> the barrel references no longer exists.</p>
-          </div>
+          <p class="caption" style="margin-top:16px">The turn-taker just calls these in order. Each one takes the world, applies its slice of the rules, and hands it back. About 25 of them in total.</p>
         </div>
-        <div class="footnote">Each singleton implements an interface (PawnService, ItemService, PathfinderService…) and exports one instance.</div>
+        <div class="footnote">You grab a specialist by its ready-made instance (e.g. itemService), never by building a new one.</div>
       </section>
 
       <!-- 9 · SYSTEMS VS SERVICES -->
       <section id="sys-vs-svc">
-        <p class="kicker"><span class="n">4</span>systems/ vs services/</p>
-        <h2>Two folders, one rule of thumb</h2>
+        <p class="kicker"><span class="n">4</span>Two folders that look similar</p>
+        <h2>Does it drive the clock, or does it answer a question?</h2>
         <div class="content">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start;">
             <div class="card">
-              <h4>systems/ — drives the loop / aggregates across every domain</h4>
-              <ul class="tiny">
-                <li><span class="mono">gameEngine</span> — the tick pipeline + sinks</li>
-                <li><span class="mono">pawnStateMachineService</span> — advances every pawn's condition FSM each tick <span class="ref">:1476</span></li>
-                <li><span class="mono">combatService</span> — real-time <code>tickCombat(dtMs)</code> (2608 lines)</li>
-                <li><span class="mono">modifierSystem</span> — fans out over buildings/items/traits/research</li>
-                <li><span class="mono">gameCoordinator</span> — the odd one: a tiny UI facade</li>
+              <h4>Drives the clock — <span class="c">systems/</span></h4>
+              <p class="small">The few things that push time forward or reach across everything at once:</p>
+              <ul class="tiny" style="margin-top:6px">
+                <li>the turn-taker <span class="c">gameEngine</span></li>
+                <li>each pawn's moment-to-moment state <span class="c">PawnStateMachine</span></li>
+                <li>the blow-by-blow of fights <span class="c">Combat</span></li>
+                <li>totalling up every bonus <span class="c">ModifierSystem</span></li>
               </ul>
             </div>
             <div class="card cool">
-              <h4>services/ — stateless domain helpers keyed on GameState</h4>
-              <p class="tiny">Almost all are <code>(…args, gameState) ⇒ GameState</code> or pure lookups scoped to a single domain (items, jobs, pawns, kingdoms, resources, lighting).</p>
-              <p class="tiny" style="margin-top:6px">They are consumed <strong>by</strong> the systems layer — the engine drives pawnService/jobService/entityService; gameCoordinator delegates to itemService/buildingService.</p>
+              <h4>Answers questions — <span class="c">services/</span></h4>
+              <p class="small">Everything else. Give it the world and a question, it gives you an answer or an updated world.</p>
+              <p class="small" style="margin-top:8px">“How much wood is here?” “Can this be crafted?” “Where's the nearest deer?” Each stays inside its own topic, and the drivers above call on them.</p>
             </div>
           </div>
-          <div class="callout warn" style="margin-top:14px">
-            <span class="h">NAMING QUIRKS IN THE ACTUAL CODE</span>
-            <p class="small"><span class="mono">services/MovementSystem.ts</span> is named "System" but lives under services/ and exports only functions · <span class="mono">PathfinderService.ts</span> is an interface + alias, not a class · <span class="mono">systems/Diplomacy.ts · Events.ts · Research.ts</span> are 1-line stubs (real research = <span class="mono">services/ResearchService.ts</span>).</p>
-          </div>
+          <p class="caption" style="margin-top:14px">Rough rule of thumb — not a hard wall. A couple of files sit in the “wrong” folder for historical reasons.</p>
         </div>
       </section>
 
       <!-- 10 · CORE -->
       <section id="core">
-        <p class="kicker"><span class="n">5</span>Core</p>
-        <h2>Core: the only mutation surface + all static data</h2>
+        <p class="kicker"><span class="n">5</span>The vault + the rulebook</p>
+        <h2>Every change to the world goes through one gate</h2>
         <div class="content">
-          <div style="display:grid; grid-template-columns:1fr 1.05fr; gap:22px;">
-            <div class="card">
-              <h4>GameStateManager <span class="tiny text-muted mono">core/GameState.ts:46</span></h4>
-              <p class="tiny">The sole way to mutate state:</p>
-              <p class="tiny mono" style="line-height:1.55; margin-top:4px">updateState · advanceTurn · addResource · removeItemAmount · addBuilding/update/remove · updatePawn · addJob/update/remove · addToStockpile · depleteWorldResource · startResearch</p>
-              <p class="tiny text-amber" style="margin-top:7px">Never assign to <code>GameState</code> fields directly — except hot per-tick in-place mutation (ADR-002 amendment, the sim perf tax).</p>
+          <div class="funnel">
+            <div class="ins">
+              <div class="in">add wood</div>
+              <div class="in">hurt this pawn</div>
+              <div class="in">place a building</div>
+              <div class="in">finish a job</div>
             </div>
-            <div>
-              <p class="small"><strong>Types</strong> split into <span class="mono">core/types/*.ts</span> (world · entities · items · buildings · jobs · health · social · kingdom · research · events · gamestate) behind a barrel <span class="mono">core/types.ts</span>. <code>GameState</code> at <span class="ref">gamestate.ts:42</span>.</p>
-              <p class="small" style="margin-top:8px"><strong>Static data</strong> moved to <span class="mono">database/*.jsonc</span>, loaded by thin <span class="mono">core/*.ts</span> projectors:</p>
-              <p class="tiny mono text-muted" style="line-height:1.5">items 410k · traits 216k · creatures 183k · resources 148k · recipes 132k · buildings 83k · limbmap · conditions · research · dialog · seasons…</p>
-            </div>
+            <div class="fa">→</div>
+            <div class="node accent big" style="margin:0"><div class="t">the gatekeeper</div><span class="s">GameStateManager</span></div>
           </div>
-          <div class="callout warn" style="margin-top:14px">
-            <span class="h">CODE ≠ DOCS</span>
-            <p class="small">Docs reference <span class="mono">core/Items.ts · Buildings.ts · Research.ts</span>. Those files don't exist — data is <span class="mono">database/*.jsonc</span> + loaders (<span class="mono">itemDefs.ts · buildingDefs.ts · resourceObjectDefs.ts</span>).</p>
+          <p class="caption" style="margin-top:16px">Nothing writes to the world on its own. It all funnels through this one gate — so there's always a single, known place where reality changes.</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px;">
+            <div class="card"><h4>The rulebook is data, not code</h4><p class="small">Creatures, items, recipes, traits, buildings — all live in big data files <span class="c">database/*.jsonc</span>. Code just loads them. Adding content usually means editing data, not writing logic.</p></div>
+            <div class="card cool"><h4>The shapes of everything</h4><p class="small">What a pawn, a building, an item <em>is</em> — the definitions live in <span class="c">core/types/</span>.</p></div>
           </div>
         </div>
+        <div class="footnote">Heads-up: the old notes point at core/Items.ts and Buildings.ts — those are gone. It's all database/*.jsonc now.</div>
       </section>
 
       <!-- 11 · CROSS-CUTTING -->
       <section id="crosscutting">
-        <p class="kicker">Cross-cutting</p>
-        <h2>Four systems that touch every layer</h2>
+        <p class="kicker">Four rules that hold everywhere</p>
+        <h2>When there's one right way, there's only one way</h2>
         <div class="content">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:11px;">
-            <div class="card"><h4>ModifierSystem</h4><p class="tiny">Aggregates building + item + equipment + trait + research bonuses. Every result carries <code>sources[]</code>. <strong>Never hand-sum bonuses</strong> when a method exists.</p></div>
-            <div class="card"><h4>Single work model <span class="tag adr">ADR-015</span></h4><p class="tiny">Work speed/yield/quality lives ONLY in <code>pawnStatService.getWorkModifiers</code> (stats.jsonc × body capacities × trait effects). The old <code>calculateWorkEfficiency</code> path was deleted — don't reintroduce a second one.</p></div>
-            <div class="card cool"><h4>Spatial = WASM behind an interface <span class="tag adr">ADR-008</span></h4><p class="tiny">A* pathfinding, nearest-entity, fog-of-war → Rust→WASM via <code>wasmPathfinderService</code>. Callsites use only the <code>PathfinderService</code> interface, never import <span class="mono">spatial-core/</span>.</p></div>
-            <div class="card cool"><h4>Headless sim <span class="tag adr">ADR-033</span></h4><p class="tiny">In-thread driver over the same engine + the 88-command registry: <span class="mono">/api/sim</span> HTTP, the DEBUG godmode panel, and the invariant tests. Byte-identical replay.</p></div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="qcard"><p class="q">“How good is this pawn at this job?”</p><p class="a">Answered in exactly one place, from their body and traits. There is no second opinion. <span class="c">pawnStatService.getWorkModifiers</span></p></div>
+            <div class="qcard"><p class="q">“What bonuses apply right now?”</p><p class="a">One tallier adds up gear, buildings and traits — and always shows its receipts. <span class="c">ModifierSystem</span></p></div>
+            <div class="qcard"><p class="q">“How do things move across the map?”</p><p class="a">The heavy path-finding math is written in Rust for speed, reached through one tidy door. <span class="c">PathfinderService → WASM</span></p></div>
+            <div class="qcard"><p class="q">“Can it run with no window open?”</p><p class="a">Yes — the same game, driven by scripts instead of clicks, for tests and replays. <span class="c">headless sim</span></p></div>
           </div>
-          <p class="small text-muted text-center" style="margin-top:16px">These are the invariants that keep the layers honest — the reason a feature rarely needs a new code path, just new data.</p>
+          <p class="caption" style="margin-top:16px">Each of these has burned in a “don't build a second one of these” rule. It's why a new feature is usually new <em>data</em>, not a new code path.</p>
         </div>
       </section>
 
       <!-- 12 · REALITY CHECK -->
       <section id="reality">
-        <p class="kicker">Why this deck reads the code first</p>
-        <h2>Where the docs have drifted</h2>
+        <p class="kicker">The docs vs. the running code</p>
+        <h2>Where the written docs have quietly drifted</h2>
         <div class="content">
           <div class="delta">
-            <div class="was">Turn loop: <s>“13 phases”</s></div>
-            <div class="now">code runs <b>19</b> — adds environment, growth, crop/wild-growth, 6-step entity block</div>
-            <div class="was">Static data: <s>core/Items.ts · Buildings.ts · Research.ts</s></div>
-            <div class="now">gone → <b>database/*.jsonc</b> + thin loaders</div>
-            <div class="was">Types: <s>one core/types.ts monolith</s></div>
-            <div class="now">split into <b>core/types/*.ts</b> behind a barrel</div>
-            <div class="was">Persistence: <s>localStorage['fantasia4x-save']</s></div>
-            <div class="now"><b>IndexedDB</b> (saveManager.ts); localStorage only legacy + UI prefs</div>
-            <div class="was">Stores: <s>worldState listed as active</s></div>
-            <div class="now">it's a <b>stub</b>; many render stores undocumented</div>
-            <div class="was">Service barrel: <s>implies a full registry</s></div>
-            <div class="now">only <b>6 of ~25</b> wired; ServiceIntegration.ts gone</div>
+            <div class="was">One turn had <s>13 steps</s></div>
+            <div class="now">it actually runs <b>19</b> now</div>
+            <div class="was">Game data in <s>Items.ts / Buildings.ts</s></div>
+            <div class="now">moved to <b>data files</b> the code loads</div>
+            <div class="was">Saves in <s>the browser's localStorage</s></div>
+            <div class="now">moved to a small <b>database</b> (IndexedDB)</div>
+            <div class="was">One giant <s>types file</s></div>
+            <div class="now">split into <b>many smaller ones</b></div>
+            <div class="was"><s>“worldState” store</s> listed as real</div>
+            <div class="now">it's an <b>empty leftover</b></div>
           </div>
-          <div class="callout warn" style="margin-top:16px">
-            <p class="small"><strong>The codebase is the source of truth; ARCHITECTURE.md lags behind it.</strong> When in doubt, re-derive the map from source — or query codegraph — not from the doc.</p>
+          <div class="callout warn" style="margin-top:20px">
+            <p class="small"><strong>The code is the truth; the written notes lag behind it.</strong> On a project moving this fast that gap is just normal wear — worth a periodic pass to close it.</p>
           </div>
         </div>
       </section>
 
       <!-- 13 · CLOSING -->
       <section id="closing">
-        <p class="kicker">Navigating the map</p>
-        <h2>Two traces + five chokepoints</h2>
+        <p class="kicker">Finding your way around</p>
+        <h2>Two threads to pull, five knots to know</h2>
         <div class="content">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:22px;">
-            <div>
-              <h3 style="font-size:15pt">Follow a player action</h3>
-              <p class="tiny mono" style="line-height:1.5">component → gameState action → command (commands.ts) → worker applySimCommand → COMMANDS[type] → GameStateManager → snapshot → store → re-render</p>
-              <h3 style="font-size:15pt; margin-top:14px">Follow a tick</h3>
-              <p class="tiny mono" style="line-height:1.5">GameEngineImpl.processGameTurn :263 → 19 phases → each service's process*()</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+            <div class="card">
+              <h4>Follow a click</h4>
+              <p class="small">button → a named request → across the wall → looked up in the list → the gatekeeper changes the world → a fresh picture comes back → the screen redraws.</p>
             </div>
             <div class="card cool">
-              <h4>The five chokepoints to know</h4>
-              <ul class="tiny">
-                <li><span class="mono">gameStateManager</span> — only mutation surface</li>
-                <li><span class="mono">commands.ts</span> — only write path across the worker</li>
-                <li><span class="mono">pawnStatService.getWorkModifiers</span> — only work math</li>
-                <li><span class="mono">ModifierSystem</span> — only bonus math</li>
-                <li><span class="mono">PathfinderService</span> — only spatial seam</li>
-              </ul>
+              <h4>Follow a moment of time</h4>
+              <p class="small">the turn-taker → its 19 steps → each specialist does its bit → the world moves one tick forward.</p>
             </div>
           </div>
-          <p class="lead text-amber text-center" style="margin-top:22px">Read top-down. Trust the code. Docs are a hint, not the truth.</p>
+          <div class="card" style="margin-top:14px; border-left-color:var(--phosphor)">
+            <h4>The five knots — learn these and the rest untangles</h4>
+            <p class="small">the one gate that changes the world <span class="c">GameStateManager</span> · the one doorway of requests <span class="c">commands.ts</span> · the one answer to “how good at this job” <span class="c">getWorkModifiers</span> · the one bonus-tallier <span class="c">ModifierSystem</span> · the one door to map-movement <span class="c">PathfinderService</span>.</p>
+          </div>
+          <p class="lead text-amber text-center" style="margin-top:20px">One gate changes the world. One doorway carries every request. One answer to each question.</p>
         </div>
-        <div class="footnote">.docs/architecture/architecture.html · present: F fullscreen · S speaker notes · O overview · E/?print-pdf to export</div>
+        <div class="footnote">.docs/architecture/architecture.html — F fullscreen · ↓ for sub-slides · O for the overview grid</div>
       </section>
 
     </div>
@@ -381,16 +351,9 @@
   <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
   <script>
     Reveal.initialize({
-      width: 1280,
-      height: 720,
-      margin: 0,
-      controls: true,
-      progress: true,
-      slideNumber: 'c/t',
-      hash: true,
-      transition: 'slide',
-      transitionSpeed: 'fast',
-      center: false
+      width: 1280, height: 720, margin: 0,
+      controls: true, progress: true, slideNumber: 'c/t',
+      hash: true, transition: 'slide', transitionSpeed: 'fast', center: false
     });
   </script>
 </body>
