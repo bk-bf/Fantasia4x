@@ -72,12 +72,12 @@
       .filter((m): m is NonNullable<typeof m> => !!m)
       .map((m) => `${m.label}: ${m.desc}`)
   );
-  // §M the COMPUTED durability multiplier the chosen material(s) stamp onto the crafted item (leather,
-  // plank, …) — the number the game actually applies, shown like the building tooltip's material rows.
-  let matItemDur = $derived(
+  // §M the COMPUTED multipliers the chosen material(s) stamp onto the crafted item (leather, plank, …):
+  // durability and carry weight — the numbers the game actually applies, shown like the building tooltip.
+  let matItemMods = $derived(
     Object.values(selectedIngredients).length
-      ? aggregateMaterialMods(Object.values(selectedIngredients), 'item').durability
-      : 1
+      ? aggregateMaterialMods(Object.values(selectedIngredients), 'item')
+      : { durability: 1, weight: 1 }
   );
   // Dynamic-recipe variant nutrition tweak (e.g. cooked-meat-over-venison), added to base nutrition.
   let nutritionBonus = $derived.by(() => {
@@ -316,16 +316,24 @@
     {/each}
   {/if}
 
-  {#if matNotes.length > 0 || matItemDur !== 1}
+  {#if matNotes.length > 0 || matItemMods.durability !== 1 || matItemMods.weight !== 1}
     <div class="tip-sep">
       MATERIAL{#if matNames}
         · {matNames}{/if}
     </div>
-    {#if matItemDur !== 1}
+    {#if matItemMods.durability !== 1}
       <div class="tip-mod">
         <span class="tip-mod-name">Durability</span>
-        <span class="tip-mod-val" style="color:{matItemDur >= 1 ? '#6bc' : '#e08'}"
-          >×{matItemDur.toFixed(2)}</span
+        <span class="tip-mod-val" style="color:{matItemMods.durability >= 1 ? '#6bc' : '#e08'}"
+          >×{matItemMods.durability.toFixed(2)}</span
+        >
+      </div>
+    {/if}
+    {#if matItemMods.weight !== 1}
+      <div class="tip-mod">
+        <span class="tip-mod-name">Weight</span>
+        <span class="tip-mod-val" style="color:{matItemMods.weight <= 1 ? '#6bc' : '#e08'}"
+          >×{matItemMods.weight.toFixed(2)}</span
         >
       </div>
     {/if}

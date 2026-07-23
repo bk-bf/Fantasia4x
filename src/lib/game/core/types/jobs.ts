@@ -51,6 +51,13 @@ export interface DroppedItem {
    */
   matDur?: number;
   /**
+   * §M material WEIGHT multiplier (1 = neutral) of the dynamic material this stack was crafted from
+   * (light coney fur ×0.75, heavy mammoth leather ×1.35). Stamped at craft completion for
+   * equipment/tools and carried onto the `ItemInstance`, so a piece made from a heavier hide is
+   * heavier to carry. Read against `def.weightKg` in `getCurrentCarryLoad`. Undefined = neutral (×1).
+   */
+  matWeight?: number;
+  /**
    * Per-drop display-name override (R10). Used for `dynamicName` items (e.g. a pawn corpse, which
    * reads "Bjorn's Corpse" instead of the generic def name). Resolved at spawn; see
    * `itemService.makeDynamicName` / `getItemDisplayName`.

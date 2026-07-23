@@ -25,13 +25,13 @@ describe('§F8 food-chain items', () => {
     expect(itemService.getItemById('meat_pie')?.category).toBe('meal');
   });
 
-  it('ale/wine/mead are drinks carrying an intoxication mood-lift (mead strongest)', () => {
-    for (const id of ['ale', 'wine', 'mead']) {
+  it('ale/wine/cider are drinks carrying an intoxication mood-lift (cider over ale)', () => {
+    for (const id of ['ale', 'wine', 'cider']) {
       const d = itemService.getItemById(id)!;
       expect(d.category).toBe('drink');
       expect(d.intoxication ?? 0).toBeGreaterThan(0);
     }
-    expect(itemService.getItemById('mead')!.intoxication!).toBeGreaterThan(
+    expect(itemService.getItemById('cider')!.intoxication!).toBeGreaterThan(
       itemService.getItemById('ale')!.intoxication!
     );
   });
@@ -47,7 +47,7 @@ describe('§F8 stations + recipes', () => {
   it('milling/baking wire to quern/oven; brewing is passive at the fermenter', () => {
     expect(recipeService.getRecipeById('mill_flour')?.station).toBe('quern');
     expect(recipeService.getRecipeById('bake_bread')?.station).toBe('oven');
-    for (const id of ['malt_grain', 'brew_ale', 'ferment_wine', 'ferment_mead']) {
+    for (const id of ['malt_grain', 'brew_ale', 'ferment_wine', 'ferment_cider']) {
       const r = recipeService.getRecipeById(id)!;
       expect(r.station).toBe('fermenter');
       expect(r.passive).toBe(true);
@@ -80,9 +80,9 @@ describe('§F8 alcohol = mood good', () => {
   });
 
   it('a drink lifts mood + raises intoxicated severity; it decays back off over time', () => {
-    const gs = { stockpile: { mead: 5 }, droppedItems: [] } as unknown as GameState;
-    const { intoxication } = consumeMeal([{ id: 'mead', units: 2 }], gs);
-    expect(intoxication).toBe(2 * itemService.getItemById('mead')!.intoxication!);
+    const gs = { stockpile: { cider: 5 }, droppedItems: [] } as unknown as GameState;
+    const { intoxication } = consumeMeal([{ id: 'cider', units: 2 }], gs);
+    expect(intoxication).toBe(2 * itemService.getItemById('cider')!.intoxication!);
 
     const pawn = { state: { mood: 50 }, conditions: [] } as unknown as Pawn;
     applyIntoxication(pawn, intoxication);

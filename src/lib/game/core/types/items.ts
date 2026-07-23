@@ -21,6 +21,10 @@ export interface ItemInstance {
    *  `qualityMultiplier(quality)`. Undefined = Standard (×1.0) — uncrafted / world-spawned items and
    *  bulk materials carry no quality. */
   quality?: ItemQuality;
+  /** §M material WEIGHT multiplier (1 = neutral) of the material this instance was crafted from — a
+   *  piece made from a heavier hide weighs more to carry. Read against `def.weightKg` in
+   *  `getCurrentCarryLoad`. Undefined = neutral (×1); mirrors how `matDur` was baked into durability. */
+  matWeight?: number;
   /**
    * Famed: a named legend ABOVE the quality tier scale, set on a vanishingly-rare craft roll (see
    * `rollFamed`) or a high-level mob drop. Carries a generated `famedName`/`famedHistory`, a per-stat

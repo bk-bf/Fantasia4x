@@ -795,10 +795,11 @@ export class ItemServiceImpl implements ItemService {
       volumeL += (def?.volumeL ?? 0.2) * qty;
     }
 
-    // Tracked instances in inventory (pack) — weight + volume
+    // Tracked instances in inventory (pack) — weight + volume. §M the material it was crafted from
+    // scales its weight (heavier hide → heavier item).
     for (const inst of pawn.inventory?.instances ?? []) {
       const def = this.getItemById(inst.itemId);
-      weightKg += def?.weightKg ?? 0.5;
+      weightKg += (def?.weightKg ?? 0.5) * (inst.matWeight ?? 1);
       volumeL += def?.volumeL ?? 0.5;
     }
 
@@ -806,7 +807,7 @@ export class ItemServiceImpl implements ItemService {
     for (const inst of Object.values(pawn.equipment ?? {})) {
       if (!inst) continue;
       const def = this.getItemById(inst.itemId);
-      weightKg += def?.weightKg ?? 0.5;
+      weightKg += (def?.weightKg ?? 0.5) * (inst.matWeight ?? 1);
     }
 
     // TRAIT-SYSTEM-V2 §3 (ADR-028 rev): natural armor's burden is a CAPACITY reduction (getCarryBudget),

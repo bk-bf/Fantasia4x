@@ -291,10 +291,14 @@ export function completeCraftOrder(
   // §M material durability: the dynamic material this craft consumed (oak vs pine plank, sturdy vs thin
   // leather) scales the finished item's durability. Read it off the reserved inputs before they're
   // destroyed below; 1 (neutral) when nothing material was used.
-  const matDur = aggregateMaterialMods(
+  const matMods = aggregateMaterialMods(
     (gs.droppedItems ?? []).filter((d) => d.reservedFor === entry.id).map((d) => d.resourceId),
     'item'
-  ).durability;
+  );
+  const matDur = matMods.durability;
+  // §M material weight: a piece made from a heavier hide (mammoth ×1.35) carries heavier than one from a
+  // light one (coney ×0.75). Stamped like matDur; applied against def.weightKg in getCurrentCarryLoad.
+  const matWeight = matMods.weight;
 
   const station = stationTileFor(entry, gs);
   const droppedItems = (gs.droppedItems ?? []).filter((d) => d.reservedFor !== entry.id);
@@ -369,6 +373,7 @@ export function completeCraftOrder(
             quantity: n,
             quality: q,
             ...(matDur !== 1 ? { matDur } : {}),
+            ...(matWeight !== 1 ? { matWeight } : {}),
             ...(dishName ? { name: dishName } : {})
           });
           newDropIds.push(id);
@@ -382,6 +387,7 @@ export function completeCraftOrder(
             instanceId: `famed-${outId}-${station.x}-${station.y}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`,
             itemId: outId,
             durability: Math.round((itemService.getItemById(outId)?.maxDurability ?? 100) * matDur),
+            ...(matWeight !== 1 ? { matWeight } : {}),
             quality: q,
             famed: true,
             famedName: identity.famedName,
@@ -397,7 +403,8 @@ export function completeCraftOrder(
             quantity: 1,
             quality: q,
             instance,
-            ...(matDur !== 1 ? { matDur } : {})
+            ...(matDur !== 1 ? { matDur } : {}),
+            ...(matWeight !== 1 ? { matWeight } : {})
           });
           newDropIds.push(id);
         }

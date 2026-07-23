@@ -180,6 +180,8 @@ export function equipDropToPawn(
     // §M a tougher material (oak/sturdy leather ×1.3, ironwood ×1.7) gives the item more durability to
     // wear through; a flimsy one (pine/silk) less.
     durability: Math.round((item.maxDurability ?? 100) * (drop.matDur ?? 1)),
+    // §M carry the material weight multiplier onto the instance (heavier hide → heavier to carry).
+    ...(drop.matWeight !== undefined && drop.matWeight !== 1 ? { matWeight: drop.matWeight } : {}),
     // §Q: carry the stack's craft-quality tier onto the equipped instance (like durability).
     ...(drop.quality !== undefined ? { quality: drop.quality } : {})
   };
