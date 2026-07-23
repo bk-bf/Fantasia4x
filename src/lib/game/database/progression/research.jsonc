@@ -775,7 +775,7 @@
     },
     "materialRequirement": {
       "gold_bar": 4,
-      "steel_bar": 4
+      "category:steel": 4
     },
     "unlocks": {
       "items": ["gem_dust", "magic_concrete", "arcane_resin"],

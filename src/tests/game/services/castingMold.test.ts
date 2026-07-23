@@ -43,7 +43,7 @@ describe('§5 casting consumes a single-use clay mold', () => {
   });
 
   it('iron/steel are bloom-forged → NO mold (the age-progression speed-up)', () => {
-    for (const id of ['iron_bar', 'steel_bar', 'steel_longsword', 'spatha', 'iron_mace'])
+    for (const id of ['iron_bar', 'shear_steel', 'steel_longsword', 'spatha', 'iron_mace'])
       expect(moldInputs(id)).not.toContain('clay_mold');
   });
 

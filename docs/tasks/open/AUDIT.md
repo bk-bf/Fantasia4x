@@ -84,7 +84,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [x] bloomery⚙: make_iron_bar
 - [x] finery_forge⚙: make_steel_bar
 - [x] crucible_steelworks: make_crucible_steel
-- [ ] ⚠ blast_furnace: smelt_blast_steel — SHADOWED by finery `make_steel_bar`. **RESOLUTION: folded into the Steel chain realism rework below — BOTH recipes are metallurgically wrong and get replaced, not deduped.**
+- [x] ⚠→fixed: blast_furnace/finery shadow RESOLVED — both recipes were metallurgically inverted and were REPLACED (`smelt_pig_iron` + `refine_wrought_iron`), not deduped. See the Steel chain section.
 - [x] clockwork_bench: make_mechanism
 - [x] anvil — tools: make_{iron,steel}_{tongs,axe,hammer,shovel,hoe}
 - [x] anvil — fasteners/wire: make_iron_nail, make_steel_rivet, draw_rebar, draw_iron_wire, make_mail_rings
@@ -263,7 +263,7 @@ comfort/insulation block (wired as a furniture material) — the hook is in plac
 ### Feathers → fletched ammo (added this pass)
 - [x] The 7 fletched-ammo recipes (`make_{flint,bone,iron,broadhead,barbed}_arrow`, `make_{iron_bolt,heavy_quarrel}`) now require `feathers` (with `chicken_feathers` as an alternative), gating ranged ammo behind hunting fowl (chicken/hoarfowl/hippogriff). Feather items left `category:organic` (not recategorised, to avoid flipping their trade/scavenge behaviour).
 
-### Steel chain — realism rework + specific steel types
+### Steel chain — realism rework + specific steel types — ✅ IMPLEMENTED (2026-07-23)
 **Current recipes are metallurgically INVERTED.** `make_steel_bar` (finery_forge: iron_bar+coal+limestone
 → steel) — the real finery forge DECARBURIZES pig iron INTO wrought iron; it never made steel.
 `smelt_blast_steel` (blast_furnace: iron_bar → steel×3) — a real blast furnace consumes ORE → **pig iron**,
@@ -286,12 +286,36 @@ hardness/toughness tradeoffs (the historical difficulty of hitting the ~0.2–2.
 | `pattern_welded` | anvil forge-weld (wrought iron + high-C steel) | high | high | v.high (labour) | legendary swords |
 | `mild_steel` | puddling / Bessemer at blast tier (bulk) | low-med | high | low per-unit, high tech gate | plate armour, structural, mass tools |
 
-- [ ] Replace `make_steel_bar` + `smelt_blast_steel` with the ore → pig_iron → wrought → steel chain above.
-- [ ] Add stations: `cementation_furnace` (blister), a puddling/bessemer step (mild). `crucible_steelworks` exists.
-- [ ] Differentiate downstream: blades request crucible/pattern_welded/shear; plate requests mild; springs
-      request blister; cast goods request pig_iron; fittings request wrought iron.
-- [ ] Add each steel's material stats (hardness → armour-pen/edge, toughness → shatter resistance) to items.
-- [ ] This replaces the blast-vs-finery shadow entirely — no prune needed, both current recipes are wrong.
+**IMPLEMENTED (2026-07-23)** — `pnpm check` clean, 0 dangling refs, `steelChain.test.ts` kept as a regression test.
+- [x] **Replaced both inverted recipes.** `make_steel_bar` (finery *making* steel) → **`refine_wrought_iron`**
+      (finery DECARBURISES `pig_iron` + charcoal → `iron_bar`, its real job). `smelt_blast_steel` (bars→steel,
+      and 3 out of 2 in — more mass out than in) → **`smelt_pig_iron`** (blast furnace reduces ORE → `pig_iron`).
+- [x] **New bases + 5 new steels**: `pig_iron` (brittle, castable, `material.item.durability` 0.7) and
+      `bloom_steel` / `blister_steel` / `shear_steel` / `mild_steel` / `pattern_welded_steel`, joining the
+      existing `crucible_steel`. All six share **`category: steel`**.
+- [x] **New stations**: `cementation_furnace` (iron:2, passive — the long charcoal bake for blister) and
+      `puddling_furnace` (steel:1 — bulk mild steel). `crucible_steelworks` unchanged.
+- [x] **Downstream differentiated WITHOUT hard gates** (following the leather precedent, not the original
+      "use-lock" wording): all 24 `steel_bar` refs → `category:steel`, so any steel crafts any steel item, but
+      the choice is *felt* — the same longsword comes out **matDur 1.05 (bloom) → 1.15 (blister) → 1.10 (mild)
+      → 1.25 (shear) → 1.35 (crucible) → 1.40 (pattern-welded)**, surfaced in the craft tooltip. `steel_bar` removed.
+- [~] **Material stats**: differentiation currently rides `material.item.durability` (+weight/beauty). Dedicated
+      **hardness → armour-pen/edge** and **toughness → shatter-resistance** fields do NOT exist yet — that needs
+      the §M per-instance stat plumbing widened beyond durability/weight. Tracked, not done.
+
+**Verified:** all 8 chain steps queue (`canQueueCraft`) and produce (`completeCraftOrder`) in a provisioned
+colony; the 6 steels each satisfy a `category:steel` consumer with the distinct multipliers above.
+- [~] ⚠ **NOT headless-playtested — service-level only.** The PHYSICAL pawn pipeline for metal stations could
+      not be driven: fuel-gated furnaces (bloomery/blast/finery) are never fuelled+lit by pawns headless, and
+      anvil work needs the pawn to be CARRYING a metalworking tool (stockpiled isn't enough). **Both are
+      PRE-EXISTING** — the untouched `make_iron_bar` bloomery recipe fails identically — so the whole smelting
+      tier is currently unproven in the pawn loop. See the fuel-station + tool-gating open items.
+- [ ] ⚠ **NEW SHADOW introduced (deliberate, realism-first):** `iron_bar` now has TWO producers —
+      `make_iron_bar` (bloomery, ore route) and `refine_wrought_iron` (finery, pig-iron route). `getRecipeForItem`
+      is first-producer-wins, so the finery route is **unreachable via the item card**, making the
+      blast→pig_iron→finery→wrought path dead content. Both routes are historically correct (two eras, same
+      product), so the data was NOT distorted to dodge a dispatch limitation. Fix options: per-recipe queueing
+      (the `recipeId` path butchery already uses), or split the finery output into a distinct refined wrought iron.
 
 ### Crystal / magic-reagent chain — rework (make it as intricate as steel)
 

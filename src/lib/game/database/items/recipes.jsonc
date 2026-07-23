@@ -677,11 +677,13 @@
     "toolTierRequired" : 1
   },
   {
-    "id"              : "make_steel_bar",
+    // STEEL-REALISM: the finery forge's REAL job is decarburising brittle pig iron back into soft,
+    // tough WROUGHT iron — it never made steel. (It used to output steel_bar, which was inverted.)
+    "id"              : "refine_wrought_iron",
     "station"         : "finery_forge",
     "passive"         : true,
-    "inputs"          : {"iron_bar": 2, "coal": 1, "limestone": 1},
-    "outputs"         : {"steel_bar": 1},
+    "inputs"          : {"pig_iron": 2, "charcoal": 2},
+    "outputs"         : {"iron_bar": 3},
     "workAmount"      : 20,
     "toolTierRequired": 2
   },
@@ -1134,7 +1136,7 @@
   {
     "id"              : "make_steel_tongs",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 1, "category:leather": 1},
     "outputs"         : {"steel_tongs": 1},
     "workAmount"      : 8,
     "toolTierRequired": 2,
@@ -1152,7 +1154,7 @@
   {
     "id"              : "make_steel_axe",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "branch": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 2, "branch": 1, "category:leather": 1},
     "outputs"         : {"steel_axe": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -1170,7 +1172,7 @@
   {
     "id"              : "make_steel_hammer",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "branch": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 2, "branch": 1, "category:leather": 1},
     "outputs"         : {"steel_hammer": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -1188,7 +1190,7 @@
   {
     "id"              : "make_steel_shovel",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "branch": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 2, "branch": 1, "category:leather": 1},
     "outputs"         : {"steel_shovel": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -1206,7 +1208,7 @@
   {
     "id"              : "make_steel_hoe",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "branch": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 2, "branch": 1, "category:leather": 1},
     "outputs"         : {"steel_hoe": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -1231,7 +1233,7 @@
   {
     "id"              : "make_steel_rivet",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1},
+    "inputs"          : {"category:steel": 1},
     "outputs"         : {"steel_rivet": 12},
     "workAmount"      : 8,
     "toolTierRequired": 2
@@ -1277,13 +1279,68 @@
     "workAmount"      : 10,
     "toolTierRequired": 2
   },
+  // ── The steel family (STEEL-REALISM). Each is a real historical process, not a tier of one ingot:
+  // carburise a bloom (rough), bake wrought iron in charcoal (blister), fold that even (shear), melt it
+  // sealed (crucible), fold iron THROUGH steel (pattern-welded), or puddle pig iron in bulk (mild).
   {
-    "id"              : "smelt_blast_steel",
-    "station"         : "blast_furnace",
-    "inputs"          : {"iron_bar": 2, "coke": 2, "limestone": 1},
-    "outputs"         : {"steel_bar": 3},
-    "workAmount"      : 8,
+    // Carburising the bloom in the hearth — the earliest steel, uneven but available at the iron age.
+    "id"               : "make_bloom_steel",
+    "station"          : "bloomery",
+    "passive"          : true,
+    "inputs"           : {"hematite": 4, "charcoal": 3, "limestone": 1},
+    "inputAlternatives": [ {"magnetite": 3, "charcoal": 3, "limestone": 1} ],
+    "outputs"          : {"bloom_steel": 1},
+    "workAmount"       : 18,
+    "toolTierRequired" : 1
+  },
+  {
+    // Cementation: wrought iron packed in charcoal and baked for days. Passive + slow by nature.
+    "id"              : "bake_blister_steel",
+    "station"         : "cementation_furnace",
+    "passive"         : true,
+    "inputs"          : {"iron_bar": 2, "charcoal": 4},
+    "outputs"         : {"blister_steel": 2},
+    "workAmount"      : 40,
     "toolTierRequired": 2
+  },
+  {
+    // Shear steel: cut, stack and forge-weld blister until the carbon runs even. Pure anvil labour.
+    "id"              : "forge_shear_steel",
+    "station"         : "anvil",
+    "inputs"          : {"blister_steel": 2},
+    "outputs"         : {"shear_steel": 1},
+    "workAmount"      : 24,
+    "toolTierRequired": 2
+  },
+  {
+    // Pattern welding: soft wrought iron folded through hard steel. The most labour per bar of anything.
+    "id"               : "forge_pattern_welded",
+    "station"          : "anvil",
+    "inputs"           : {"iron_bar": 2, "shear_steel": 1},
+    "inputAlternatives": [ {"iron_bar": 2, "crucible_steel": 1} ],
+    "outputs"          : {"pattern_welded_steel": 1},
+    "workAmount"       : 60,
+    "toolTierRequired" : 2
+  },
+  {
+    // Puddling: stirring the carbon out of pig iron in quantity. Cheap per bar, needs the blast tier.
+    "id"              : "puddle_mild_steel",
+    "station"         : "puddling_furnace",
+    "inputs"          : {"pig_iron": 3, "limestone": 2},
+    "outputs"         : {"mild_steel": 4},
+    "workAmount"      : 16,
+    "toolTierRequired": 2
+  },
+  {
+    // STEEL-REALISM: a blast furnace reduces ORE to brittle high-carbon PIG IRON — it never took bars in
+    // and poured steel out (the old recipe also produced 3 bars from 2, more mass out than in).
+    "id"               : "smelt_pig_iron",
+    "station"          : "blast_furnace",
+    "inputs"           : {"hematite": 6, "coke": 3, "limestone": 2},
+    "inputAlternatives": [ {"magnetite": 5, "coke": 3, "limestone": 2}, {"limonite": 7, "coke": 3, "limestone": 2} ],
+    "outputs"          : {"pig_iron": 4},
+    "workAmount"       : 12,
+    "toolTierRequired" : 2
   },
   {
     "id"              : "make_mechanism",
@@ -1663,7 +1720,7 @@
   {
     "id"              : "make_steel_longsword",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 1, "category:leather": 1},
     "outputs"         : {"steel_longsword": 1},
     "workAmount"      : 14,
     "toolTierRequired": 2,
@@ -1672,7 +1729,7 @@
   {
     "id"              : "make_steel_greatsword",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "category:leather": 1},
+    "inputs"          : {"category:steel": 2, "category:leather": 1},
     "outputs"         : {"steel_greatsword": 1},
     "workAmount"      : 18,
     "toolTierRequired": 2,
@@ -1681,7 +1738,7 @@
   {
     "id"              : "make_steel_pike",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "oak_plank": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 1, "oak_plank": 1, "category:leather": 1},
     "outputs"         : {"steel_pike": 1},
     "workAmount"      : 13,
     "toolTierRequired": 2,
@@ -1690,7 +1747,7 @@
   {
     "id"              : "make_steel_mace",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 1, "category:leather": 1},
     "outputs"         : {"steel_mace": 1},
     "workAmount"      : 13,
     "toolTierRequired": 2,
@@ -1699,7 +1756,7 @@
   {
     "id"              : "make_steel_warhammer",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "oak_plank": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 2, "oak_plank": 1, "category:leather": 1},
     "outputs"         : {"steel_warhammer": 1},
     "workAmount"      : 17,
     "toolTierRequired": 2,
@@ -1708,7 +1765,7 @@
   {
     "id"              : "make_steel_cleaver",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 2, "category:leather": 1},
+    "inputs"          : {"category:steel": 2, "category:leather": 1},
     "outputs"         : {"steel_cleaver": 1},
     "workAmount"      : 15,
     "toolTierRequired": 2,
@@ -1717,7 +1774,7 @@
   {
     "id"              : "make_steel_greatcleaver",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 3, "category:leather": 1},
+    "inputs"          : {"category:steel": 3, "category:leather": 1},
     "outputs"         : {"steel_greatcleaver": 1},
     "workAmount"      : 20,
     "toolTierRequired": 2,
@@ -1726,7 +1783,7 @@
   {
     "id"              : "make_steel_flail",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "iron_bar": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 1, "iron_bar": 1, "category:leather": 1},
     "outputs"         : {"steel_flail": 1},
     "workAmount"      : 14,
     "toolTierRequired": 2,
@@ -1744,7 +1801,7 @@
   {
     "id"              : "make_steel_stiletto",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 1, "category:leather": 1},
     "outputs"         : {"steel_stiletto": 1},
     "workAmount"      : 9,
     "toolTierRequired": 2,
@@ -1762,7 +1819,7 @@
   {
     "id"              : "make_steel_rapier",
     "station"         : "anvil",
-    "inputs"          : {"steel_bar": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 1, "category:leather": 1},
     "outputs"         : {"steel_rapier": 1},
     "workAmount"      : 15,
     "toolTierRequired": 2,
@@ -3256,7 +3313,7 @@
     "id"               : "draw_rebar",
     "station"          : "anvil",
     "inputs"           : {"iron_bar": 1},
-    "inputAlternatives": [ {"steel_bar": 1} ],
+    "inputAlternatives": [ {"category:steel": 1} ],
     "outputs"          : {"rebar": 2},
     "workAmount"       : 24,
     "toolTierRequired" : 2
@@ -3341,7 +3398,7 @@
     "id"              : "make_plate_cuirass",
     "station"         : "anvil",
     "researchRequired": "steel_making",
-    "inputs"          : {"steel_bar": 8, "boiled_leather": 1},
+    "inputs"          : {"category:steel": 8, "boiled_leather": 1},
     "outputs"         : {"plate_cuirass": 1},
     "workAmount"      : 64,
     "toolTierRequired": 3
@@ -3350,7 +3407,7 @@
     "id"              : "make_great_helm",
     "station"         : "anvil",
     "researchRequired": "steel_making",
-    "inputs"          : {"steel_bar": 4},
+    "inputs"          : {"category:steel": 4},
     "outputs"         : {"great_helm": 1},
     "workAmount"      : 40,
     "toolTierRequired": 3
@@ -3385,7 +3442,7 @@
     "id"              : "make_ceremonial_plate",
     "station"         : "anvil",
     "researchRequired": "steel_making",
-    "inputs"          : {"steel_bar": 6, "gold_bar": 2},
+    "inputs"          : {"category:steel": 6, "gold_bar": 2},
     "outputs"         : {"ceremonial_plate": 1},
     "workAmount"      : 80,
     "toolTierRequired": 3
@@ -3550,7 +3607,7 @@
     "id"              : "smelt_magic_alloy",
     "station"         : "runic_crucible",
     "researchRequired": "runic_inscription",
-    "inputs"          : {"steel_bar": 2, "gem_dust": 1},
+    "inputs"          : {"category:steel": 2, "gem_dust": 1},
     "outputs"         : {"magic_alloy_bar": 1},
     "workAmount"      : 36,
     "toolTierRequired": 2
