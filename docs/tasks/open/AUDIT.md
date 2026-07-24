@@ -236,11 +236,30 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       (only mob-KILL drops do, `dropCarcass` = intactness×100), so a real drive needs a killed + un-forbidden +
       spoiled carcass — setup not built. Mark supplement, not headless-verified.
 
-### Pawn skill effects
-- [ ] Skill speeds craft (getWorkModifiers) & raises output quality (itemQuality §Q)
-- [ ] Butchery skill raises yield; recipe→discipline routing correct (craftDiscipline)
-- [ ] Zero-skill pawn still completes T0 (no bootstrap deadlock); tool-tier gates only where intended
-- [ ] Quality matters downstream (better weapon/armor/tool stats into combat/work)
+### Pawn skill effects — ✅ AUDITED HEADLESS (2026-07-25, `pawnSkillEffects.test.ts` + `combatSim.test.ts`)
+> Driven end-to-end via `HeadlessSession` over real ticks. Skill level seeded per pawn-group
+> (`skillLevel`/`skills`); `levelBase(1)=0.6 … 25=1.0 … 50=2.0` so skill 1 vs 50 is a ~3.3× span.
+- [x] **Skill SPEEDS a craft** (`getWorkModifiers.speed` → work.ts per-tick rate): a 3-pawn colony reached
+      **6 cordage in 1000 ticks at skill 50 vs 2900 ticks at skill 1** (~2.9× faster). ✅
+- [x] **Skill RAISES output quality** (§Q `rollCraftQuality` off `getWorkModifiers(discipline).quality`,
+      per-drop tier in `droppedItems`): a batch of 14 flint_knives came out **mean tier 0.00 (all Crude) at
+      skill 1 vs 3.64 (Superior/Masterwork) at skill 50**. ✅
+- [x] **recipe→discipline routing** (`craftWorkCategory`): a butcher-spot carcass order routes to `butchery`,
+      a stone-forge order to `metalworking` (its own `*_speed/_quality` stats/tools apply, not generic crafting). ✅
+- [x] ⚠ **FINDING — butchery SKILL does NOT raise yield** (headless: same deer at the same butcher spot →
+      **venison 10 at butchery-skill 1 AND 50**, identical). Root: `craft.ts` scales butchery output by the
+      STATION's `butcheryYieldBonus` + carcass condition ONLY; pawn `.yield` (`getWorkModifiers.yield`) is
+      applied for HARVEST alone (`ResourceObjectService:130`), never for a craft. Yet a **`butchery_yield`
+      stat IS defined** in `stats.jsonc` (computed by `getWorkModifiers`, surfaced in the work-stat model) —
+      so it's a **dead/misleading stat**, the same "cosmetic lie" class as the removed `materialBonuses`.
+      Also matches the established rule (line ~185: butchery *stations* give yield, skill gives speed). **User
+      call (not fixed):** either (a) WIRE `butchery_yield` into `craft.ts` butchery output so skill matters
+      for yield too, or (b) REMOVE the `butchery_yield` stat (station-only yield is the intended model).
+- [x] **Zero-skill pawn completes a T0 craft** — a skill-1 colony bootstrapped **cordage 0→3** (slower, not
+      stuck); no deadlock. Tool-tier gating is unchanged (butchery/tool gates proven in their own sections). ✅
+- [x] **Quality matters DOWNSTREAM** (`scaleWeaponQuality` — the exact function `resolveHit` calls on the
+      stamped tier): a `steel_longsword` scales **damage 15.2 (Crude) < 19 (Standard) < 28.5 (Masterwork)**;
+      driven through real combat, a Masterwork blade landed **avg 69.4 vs a Crude 36.3** over 3000 `resolveHit`s. ✅
 
 ### Alchemy & material-sink completeness — 🚧 IN PROGRESS (2026-07-24)
 > Prompted by the butchery gate work (user direction). Every material the colony can PRODUCE should feed ≥1

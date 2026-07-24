@@ -361,6 +361,36 @@ describe('combat sim (headless tickCombat)', () => {
     expect(rate).toBeLessThan(0.8);
   });
 
+  it('§Q quality flows into combat: a Masterwork blade hits harder than a Crude one (resolveHit)', () => {
+    // The downstream half of the pawn-skill audit: a higher §Q tier (from a skilled crafter) scales the
+    // equipped weapon's stats through the SAME resolveHit path a real fight uses. Same weapon, same pawns,
+    // only the stamped instance quality differs.
+    const empty = makeState([], []);
+    const avgDamage = (quality: 0 | 4) => {
+      const attacker = makePawn({
+        stats: { ...stats, strength: 18, dexterity: 20 },
+        limbs: createBodyPlanLimbs('humanoid', 1),
+        equipment: { mainHand: { itemId: 'steel_longsword', instanceId: 'w1', durability: 100, quality } }
+      });
+      const defender = makePawn({ id: 'def', stats: { ...stats, dexterity: 1 }, limbs: createBodyPlanLimbs('humanoid', 1) });
+      let dmg = 0;
+      let hits = 0;
+      for (let i = 0; i < 3000; i++) {
+        const r = combatService.resolveHit(attacker, defender, empty);
+        if (r.hit) {
+          dmg += r.damage;
+          hits++;
+        }
+      }
+      return dmg / Math.max(1, hits);
+    };
+    const crude = avgDamage(0);
+    const masterwork = avgDamage(4);
+    // eslint-disable-next-line no-console
+    console.log(`[SKILL downstream/combat] steel_longsword avg hit: crude=${crude.toFixed(1)} masterwork=${masterwork.toFixed(1)}`);
+    expect(masterwork, 'a Masterwork blade lands harder blows than a Crude one').toBeGreaterThan(crude + 3);
+  });
+
   it('SHARPNESS coating multiplies bleed on a cutting weapon but CANNOT bleed a maul (§C)', () => {
     // A honing oil (`razors_grace`, bleedMult 3.0) multiplies the SWUNG weapon's own bloodletting proc.
     // Multiplicative by design: a steel longsword (base bloodletting 0.18) leaves far more non-clotting
