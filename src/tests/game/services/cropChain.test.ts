@@ -160,4 +160,85 @@ describe('crops', () => {
     expect(after.subType, 'terraformed to tall_grass').toBe('tall_grass');
     expect(tier1, 'soil tier rose (fertility 25→50)').toBeGreaterThan(tier0);
   });
+
+  // ALL 17 crops, end to end: each is planted from its OWN seed on terra_preta (tier 4 ⇒ every minSoil
+  // met), GROWS for real under a season inside its temp window (growth climbs off the floor), then is
+  // matured (lever — the multi-day clock itself is proven real by the radish full-cycle above) and REAPED
+  // into its OWN yield item. Season per crop from its temp window (baked: spring 5°C, summer 26°C,
+  // autumn 7°C ± ~7 diurnal); moisture 55 is inside EVERY crop's [minMoisture, maxMoisture].
+  const CROPS: Array<{ id: string; seed: string; yield: string; season: string }> = [
+    { id: 'crop_wheat', seed: 'grain_seed', yield: 'wheat', season: 'summer' },
+    { id: 'crop_beans', seed: 'bean_seed', yield: 'beans', season: 'summer' },
+    { id: 'crop_cotton', seed: 'cotton_seed', yield: 'cotton_fiber', season: 'summer' },
+    { id: 'crop_grapes', seed: 'grape_seed', yield: 'grapes', season: 'summer' },
+    { id: 'crop_pumpkin', seed: 'prize_seed', yield: 'pumpkin', season: 'summer' },
+    { id: 'crop_rye', seed: 'rye_seed', yield: 'rye', season: 'spring' },
+    { id: 'crop_kale', seed: 'kale_seed', yield: 'kale', season: 'spring' },
+    { id: 'crop_radish', seed: 'radish_seed', yield: 'radish', season: 'spring' },
+    { id: 'crop_turnip', seed: 'turnip_seed', yield: 'turnip', season: 'spring' },
+    { id: 'crop_cabbage', seed: 'cabbage_seed', yield: 'cabbage', season: 'autumn' },
+    { id: 'crop_apples', seed: 'apple_seed', yield: 'apple', season: 'autumn' },
+    { id: 'crop_onion', seed: 'onion_seed', yield: 'onion', season: 'autumn' },
+    { id: 'crop_peas', seed: 'pea_seed', yield: 'peas', season: 'autumn' },
+    { id: 'crop_flax', seed: 'fibre_seed', yield: 'flax_fiber', season: 'autumn' },
+    { id: 'crop_berries', seed: 'berry_seed', yield: 'wild_berries', season: 'autumn' },
+    { id: 'crop_thyme', seed: 'thyme_seed', yield: 'thyme', season: 'autumn' },
+    { id: 'crop_mint', seed: 'mint_seed', yield: 'mint', season: 'autumn' }
+  ];
+
+  it.each(CROPS)('all crops: $id plants, grows, matures & reaps to $yield', async (c) => {
+    const s = new HeadlessSession();
+    await s.start(
+      buildScenario({
+        seed: 44,
+        map: { w: 14, h: 14 },
+        workReady: true,
+        pawns: [{ count: 4, skillLevel: 20 }],
+        needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
+        items: { [c.seed]: 6, spit_meat: 10 },
+        seedEntities: false
+      })
+    );
+    s.command({ type: 'setSeason', payload: { season: c.season } } as never);
+    s.command({ type: 'setWeather', payload: { type: 'clear' } } as never);
+    s.command({ type: 'devSetMapSoil', payload: { subType: 'terra_preta' } } as never); // tier 4 ⇒ any minSoil
+    s.command({ type: 'devSetMapMoisture', payload: { value: 55 } } as never);
+    const zone = [6, 6, 7, 7];
+    s.command({
+      type: 'designateRect',
+      payload: { x1: zone[0], y1: zone[1], x2: zone[2], y2: zone[3], type: 'grow' }
+    } as never);
+    const growthOf = () => {
+      let g = 0;
+      for (let y = zone[1]; y <= zone[3]; y++)
+        for (let x = zone[0]; x <= zone[2]; x++)
+          g = Math.max(g, tileAt(s, x, y).growth?.[c.id] ?? 0);
+      return g;
+    };
+    const sown = () => {
+      for (let y = zone[1]; y <= zone[3]; y++)
+        for (let x = zone[0]; x <= zone[2]; x++)
+          if (c.id in (tileAt(s, x, y).growth ?? {})) return true;
+      return false;
+    };
+    // 1. PLANT — a plant job sows the crop from its seed.
+    for (let i = 0; i < 15 && !sown(); i++) s.tick(200);
+    expect(sown(), `${c.id} sown from ${c.seed}`).toBe(true);
+    // 2. GROW for real — climbs off the 1% wither floor within ~one day-night cycle in its window.
+    for (let i = 0; i < 50 && growthOf() < 2; i++) s.tick(400);
+    const grew = growthOf();
+    // 3. MATURE (lever) + 4. REAP into the crop's own yield item.
+    s.command({ type: 'devMatureCrops', payload: {} } as never);
+    for (let y = zone[1]; y <= zone[3]; y++)
+      for (let x = zone[0]; x <= zone[2]; x++)
+        if ((tileAt(s, x, y).resources?.[c.id] ?? 0) > 0)
+          s.command({ type: 'designateRect', payload: { x1: x, y1: y, x2: x, y2: y, type: 'harvest' } } as never);
+    const stk = () => (s.getState().stockpile ?? {}) as Record<string, number>;
+    const y0 = stk()[c.yield] ?? 0;
+    for (let i = 0; i < 25 && (stk()[c.yield] ?? 0) === y0; i++) s.tick(300);
+    const yNow = stk()[c.yield] ?? 0;
+    console.log(`[CROP all] ${c.id.padEnd(13)} (${c.season}) grew→${grew.toFixed(1)}%  reaped ${c.yield} ${y0}→${yNow}`);
+    expect(grew, `${c.id} grew under its window (off the floor)`).toBeGreaterThan(2);
+    expect(yNow, `${c.id} reaped into ${c.yield}`).toBeGreaterThan(y0);
+  });
 });

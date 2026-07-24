@@ -169,9 +169,14 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       **grass → tall_grass, soil tier 1→2** (fertility 25→50) — the one-shot self-removing terraform
       (`construct.complete` reads `terraformSubType`). Higher tier lifts `cropHealth.soilDead`/growth for
       pickier crops (minSoil 2–4).
-- [~] Mechanism verified on **2 of 17 crops** (wheat + radish) end-to-end; the other 15 share the identical
-      data-driven `plant.ts`/`processCropGrowth` path, differing only in window params (soil/temp/moisture/
-      growthTurns) already listed in `resources.jsonc`. Not each individually driven.
+- [x] **ALL 17 crops driven end-to-end** (`it.each`, real pawn loop): each PLANTS from its own seed on
+      terra_preta (tier 4 ⇒ every `minSoil` met), GROWS for real off the 1% floor under a season inside its
+      temp window (summer/spring/autumn per crop; moisture 55 is inside every crop's band), then MATURES
+      (via the `devMatureCrops` lever — the multi-day growth *clock* is proven for real by radish above) and
+      is REAPED into its OWN yield item: wheat 0→36, beans 0→5, cotton_fiber 0→6, grapes 0→26, pumpkin 0→11,
+      rye 0→29, kale 0→5, radish 0→6, turnip 0→5, cabbage 0→4, apple 0→22, onion 0→21, peas 0→8, flax_fiber
+      0→3, wild_berries 0→41, thyme 0→3, mint 0→3. New levers: `devSetMapSoil` (set tile subterrain) +
+      `devMatureCrops` (jump grow-zone crops to harvestable), alongside `devSetMapMoisture`.
 
 ### Butchery
 - Yield-vs-speed rule (established): butchery stations give a **yield** bonus (better tools → more off a carcass); stations where more-out-than-in makes no sense (tools, smelting ore→ingots, cooking) give **speed** (`craftingBonus`) instead. Fires give more max fuel. Generic stations already give speed; butchery yield now wired.
