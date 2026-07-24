@@ -108,23 +108,18 @@ pnpm graph:diff           # diff the graph against the saved baseline
 > (`node ../codegraph/bin/codegraph.mjs … Fantasia4x`) — it must be checked out as a
 > sibling of this repo. Override its location with `CODEGRAPH_DIR`.
 
-> **Headless map choice — the #1 silent-stall trap.** `buildScenario` defaults to `preset: 'flat'`
-> (uniformly walkable, every tile reachable, whole map a stockpile). Only pass `preset: 'generated'` when
-> the test is ABOUT the world (worldgen/biomes/pathfinding/wildlife/ore). On a generated map a tile can be
-> unreachable from the pawns, and an unreachable job is **silently dropped** — the order stays queued, its
-> inputs stay reserved, pawns sit Idle, and nothing errors. That trap has already produced two wrong
-> diagnoses ("passive stations are broken", "anvil needs a carried tool"). Every scenario logs its map
-> (`[scenario] map WxH preset=…`). Related: starting stock is pinned to the pawn cluster, and tool-gated
-> jobs pass if the COLONY has the tool (put it in `items`; the pawn grabs it en route).
-
-> **Audit/playtest/verify = drive the REAL sim.** Any "verify / audit / playtest / end-to-end" claim must
-> come from `HeadlessSession` (or `./dev.sh --headless` + `/api/sim/*`) with real pawns over real ticks, and
-> must state the mechanism + observed delta ("N ticks, stock X→Y"). Unit/service tests (`completeCraftOrder`,
-> `canQueueCraft`, static reachability, `resolveHit` sampling) are a **supplement, never a substitute** — they
-> prove a function, not that the pawn-driven loop works. If something is only unit-tested, say so plainly and
-> mark it `[~]`, never `[x]`. Never dress a unit test up as a headless playtest. (Harness setup lives in
-> AUDIT.md's "What counts as headless-verified" block: founders start with no labor → `setPawnLaborLevel`;
-> reserve→haul→stage→craft needs ~900+ ticks; the whole map is a stockpile; sim starts at night.)
+> **Audit/playtest/verify = drive the REAL sim → invoke the `headless` skill.** Any "verify / audit /
+> playtest / end-to-end" claim must come from `HeadlessSession` (or `./dev.sh --headless` + `/api/sim/*`)
+> with real pawns over real ticks, and must state the mechanism + observed delta ("N ticks, stock X→Y").
+> Unit/service tests (`completeCraftOrder`, `canQueueCraft`, static reachability, `resolveHit` sampling)
+> are a **supplement, never a substitute** — they prove a function, not that the pawn-driven loop works.
+> If something is only unit-tested, say so plainly and mark it `[~]`, never `[x]`. Never dress a unit test
+> up as a headless playtest.
+>
+> The `headless` skill (`.claude/skills/headless/SKILL.md`) carries the setup preflight and the
+> stall-debugging order — **read it before writing a scenario.** Skipping it has already produced three
+> wrong diagnoses ("passive stations are broken", "anvil needs a carried tool", "the ore chain is
+> broken"), every one of them a setup mistake that looks exactly like a game bug.
 
 ## Codebase Graph (standalone `codegraph` tool)
 

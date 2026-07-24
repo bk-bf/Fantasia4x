@@ -15,48 +15,12 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 > buckskin 20→18") so a substitution can never be hidden. If you only unit-tested it, say exactly that and
 > leave the box `[~]`, not `[x]`.
 >
-> **PREFLIGHT — run this checklist BEFORE writing a headless scenario.** Every stall so far has been one
-> of these, and every one of them presents *identically*: pawns sit `Idle`, the order stays queued, and
-> nothing prints an error. Do not start debugging the game until all four are ticked.
->
-> - [ ] **Map** — leave it `flat` (the default). Pass `generated` ONLY if the test is about the world.
-> - [ ] **`workReady: true`** — set it on any scenario where pawns must WORK. It enables all labor and
->       stocks a tool for every ADR-009 gate. Skipping it is what made "the forge is lit but nobody
->       smelts" look like a passive-station bug (it was a missing `metalworking` tool).
-> - [ ] **`infiniteFuel: true`** — unless the test is *about* hauling/lighting fuel.
-> - [ ] **Tick budget** — one craft ≈ 900+ ticks; loop `tick(400)` until the goal, don't tick once.
->
-> `buildScenario` now also **warns at build time** when a scenario cannot work — no labor enabled, or no
-> tool in stock for a gated work type. If a run stalls, **read the `[scenario]` lines first.**
->
-> **Headless-harness gotchas (so "it wouldn't run" is never an excuse to fall back to unit tests):**
-> - **THE MAP IS THE #1 TRAP — `buildScenario` now defaults to `preset: 'flat'`.** A flat map is uniformly
->   walkable, so every tile is reachable and the whole map is a stockpile. On a **`generated`** map tiles can
->   be cut off from the pawns by water/mountain, and a job on an unreachable tile is **silently dropped** by
->   `selectJobForPawn`'s reachability filter: the order stays queued, its inputs stay reserved, the pawns sit
->   Idle, and NOTHING reports an error. This one trap masqueraded as "passive stations are broken" AND as
->   "anvil work needs a carried tool" — both were false. **Only pass `preset: 'generated'` when the test is
->   ABOUT the world** (worldgen, biomes, pathfinding around obstacles, wildlife, ore nodes). Every
->   `buildScenario` call now LOGS its map choice (`[scenario] map WxH preset=…`) with a warning on generated.
-> - **Starting stock is pinned to the pawn cluster** (`addItem` takes an optional `tileKey`). Don't
->   hand-place stock on a far/edge tile — if pawns can't reach it, every fetch job for it sits unclaimed.
-> - **THE TOOL GATE IS THE #2 TRAP.** ADR-009 gates a job on `{workType, minTier}` — with no qualifying
->   tool held *or in colony stock*, the job is silently unclaimable, exactly like the map trap. It pass
->   if the COLONY has the tool (put a hammer in `items`; the pawn grabs it en route — it does NOT have
->   to be equipped), but `workReady: true` covers every category and is the safe default. This trap
->   masqueraded as "the ore chain is broken" (2026-07-24) — the forge was lit, fuelled and correctly
->   bound; only a `metalworking` tool was missing.
-> - **~~Founders default to NO enabled labor~~ — FALSE, corrected 2026-07-24.** `ensureDefaultWorkAssignments`
->   gives every fresh pawn **all labor at level 2**, and `laborSettings` is what `selectJobForPawn` reads.
->   Verified: a scenario with **no** `setPawnLaborLevel` call smelts copper (malachite 60→57, turn 800).
->   The per-category `setPawnLaborLevel` loop copied into older tests is redundant boilerplate, not a
->   requirement — the real blocker was always the tool gate above.
-> - **The reserve→haul→stage→craft pipeline is multi-tick** — a single craft needs ~900+ ticks; weaving-frame
->   crafts and multiple competing orders need more (bump pawn count + tick budget). Idle ≠ broken; give it time.
-> - **`buildScenario` designates the ENTIRE map as stockpile** (2026-07-23) — storage/reachability can never be
->   the hidden blocker; if a craft still stalls, it's labor or tick-budget, not the stockpile.
-> - **The sim starts at NIGHT** (`ambientLight 0.15`) so mobs don't self-aggro (vision-gated) — drive fights
->   with an explicit draft attack order.
+> **How to actually drive it → the `headless` skill** (`.claude/skills/headless/SKILL.md`). It carries the
+> preflight checklist (map / `workReady` / `infiniteFuel` / tick budget), the scenario template, the
+> stall-debugging order, and the harness gotchas. **Invoke it before writing any headless scenario** —
+> every stall so far has been a setup mistake that looks exactly like a game bug: pawns sit `Idle`, the
+> order stays queued, and nothing errors. `buildScenario` also warns at build time when a scenario
+> physically cannot work, so **read the `[scenario]` lines first.**
 
 ## Done (this session)
 
