@@ -169,14 +169,17 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       **grass → tall_grass, soil tier 1→2** (fertility 25→50) — the one-shot self-removing terraform
       (`construct.complete` reads `terraformSubType`). Higher tier lifts `cropHealth.soilDead`/growth for
       pickier crops (minSoil 2–4).
-- [x] **ALL 17 crops driven end-to-end** (`it.each`, real pawn loop): each PLANTS from its own seed on
-      terra_preta (tier 4 ⇒ every `minSoil` met), GROWS for real off the 1% floor under a season inside its
-      temp window (summer/spring/autumn per crop; moisture 55 is inside every crop's band), then MATURES
-      (via the `devMatureCrops` lever — the multi-day growth *clock* is proven for real by radish above) and
-      is REAPED into its OWN yield item: wheat 0→36, beans 0→5, cotton_fiber 0→6, grapes 0→26, pumpkin 0→11,
-      rye 0→29, kale 0→5, radish 0→6, turnip 0→5, cabbage 0→4, apple 0→22, onion 0→21, peas 0→8, flax_fiber
-      0→3, wild_berries 0→41, thyme 0→3, mint 0→3. New levers: `devSetMapSoil` (set tile subterrain) +
-      `devMatureCrops` (jump grow-zone crops to harvestable), alongside `devSetMapMoisture`.
+- [x] **ALL 17 crops driven to REAL 100% maturity** (`it.each`, real pawn loop, no gate bypass): each PLANTS
+      from its own seed on terra_preta (tier 4 ⇒ every `minSoil` met), GROWS to a genuine 100% through the
+      per-tick `cropHealth` gate under a season inside its temp window (summer/spring/autumn per crop;
+      moisture 55 is inside every crop's band), then is REAPED into its OWN yield item. Time-compressed 20×
+      via **`devCropGrowthScale`** — which scales the growth ADVANCE and the wither LOSS together, so the
+      gate's mature/never-mature verdict is preserved (a mis-tuned window would still fail to reach 100% and
+      FAIL the test — this is NOT a teleport-to-mature). Real maturation turns vary with each crop's
+      `growthTurns` × season rate: radish@3900 · kale/turnip@4900 · rye@6100 · wheat@7900 … apples@15100 ·
+      flax@16400 · berries@16600 — all matured=true, then reaped (wheat 0→43, rye 0→38, wild_berries 0→20,
+      cotton_fiber 0→6, pumpkin 0→2, … mint 0→2). Levers: `devSetMapSoil`, `devSetMapMoisture`,
+      `devCropGrowthScale` (all condition-setters/faithful compression — none bypass the growth gate).
 
 ### Butchery
 - Yield-vs-speed rule (established): butchery stations give a **yield** bonus (better tools → more off a carcass); stations where more-out-than-in makes no sense (tools, smelting ore→ingots, cooking) give **speed** (`craftingBonus`) instead. Fires give more max fuel. Generic stations already give speed; butchery yield now wired.

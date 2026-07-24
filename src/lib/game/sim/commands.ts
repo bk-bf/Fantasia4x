@@ -56,7 +56,7 @@ import { killPawn } from '../systems/PawnStateMachine';
 import { hasShelter } from '../systems/pawn/handlers/rescue';
 import { dropCarriedPawn, freeDropTileNear, CARRIED_PAWN_ITEM } from '../systems/pawn/carry';
 import { manhattan } from '../core/distance';
-import { designationService, zoneTileKeys } from '../services/DesignationService';
+import { designationService } from '../services/DesignationService';
 import { buildingService } from '../services/BuildingService';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
@@ -1611,29 +1611,13 @@ export const COMMANDS: Record<string, Cmd> = {
     }
     return { ...s };
   },
-  /** Debug: jump every planted crop in a grow zone to 100% growth + fill its harvestable count, so a test
-   *  can drive the reap→stock→reset half for many crops without grinding each crop's multi-day growth clock
-   *  (the clock itself is proven for real by the radish full-cycle test). */
-  devMatureCrops: (s) => {
-    for (const key of zoneTileKeys(s, 'grow')) {
-      const ci = key.indexOf(',');
-      const x = +key.slice(0, ci);
-      const y = +key.slice(ci + 1);
-      const tile = s.worldMap[y]?.[x];
-      if (!tile?.growth) continue;
-      for (const id in tile.growth) {
-        const def = resourceObjectService.getById(id);
-        if (!def?.crop) continue;
-        tile.growth[id] = 100;
-        if ((tile.resources?.[id] ?? 0) <= 0) {
-          const mn = def.nodeAmountRange?.[0] ?? 1;
-          tile.resources = { ...(tile.resources ?? {}), [id]: mn };
-        }
-        markTileDirty(y, x, tile);
-      }
-    }
-    return { ...s };
-  },
+  /** Debug: FAITHFUL crop-growth time-compression (see `_devCropGrowthScale`). Scales BOTH the growth
+   *  advance and the wither loss, so the gate's mature/never-mature verdict is preserved — a test drives
+   *  REAL maturation through the real per-tick `cropHealth` gate in 1/factor the ticks, never bypassing it. */
+  devCropGrowthScale: (s, p: { factor: number }) => ({
+    ...s,
+    _devCropGrowthScale: Math.max(1, p.factor || 1)
+  }),
   devSetMapSnow: (s, p: { value: number }) => {
     const v = Math.max(0, Math.min(100, p.value ?? 0));
     for (const row of s.worldMap) {

@@ -203,42 +203,44 @@ describe('crops', () => {
     s.command({ type: 'setWeather', payload: { type: 'clear' } } as never);
     s.command({ type: 'devSetMapSoil', payload: { subType: 'terra_preta' } } as never); // tier 4 ⇒ any minSoil
     s.command({ type: 'devSetMapMoisture', payload: { value: 55 } } as never);
+    // 20× FAITHFUL growth speed: scales advance AND wither together, so the per-tick cropHealth gate's
+    // verdict is unchanged — a crop that can't net-mature in its window STILL never reaches 100%.
+    s.command({ type: 'devCropGrowthScale', payload: { factor: 20 } } as never);
     const zone = [6, 6, 7, 7];
     s.command({
       type: 'designateRect',
       payload: { x1: zone[0], y1: zone[1], x2: zone[2], y2: zone[3], type: 'grow' }
     } as never);
-    const growthOf = () => {
+    const mature = () => {
+      for (let y = zone[1]; y <= zone[3]; y++)
+        for (let x = zone[0]; x <= zone[2]; x++) {
+          const t = tileAt(s, x, y);
+          if ((t.growth?.[c.id] ?? 0) >= 100 && (t.resources?.[c.id] ?? 0) > 0) return { x, y };
+        }
+      return null;
+    };
+    const maxGrowthOf = () => {
       let g = 0;
       for (let y = zone[1]; y <= zone[3]; y++)
-        for (let x = zone[0]; x <= zone[2]; x++)
-          g = Math.max(g, tileAt(s, x, y).growth?.[c.id] ?? 0);
+        for (let x = zone[0]; x <= zone[2]; x++) g = Math.max(g, tileAt(s, x, y).growth?.[c.id] ?? 0);
       return g;
     };
-    const sown = () => {
-      for (let y = zone[1]; y <= zone[3]; y++)
-        for (let x = zone[0]; x <= zone[2]; x++)
-          if (c.id in (tileAt(s, x, y).growth ?? {})) return true;
-      return false;
-    };
-    // 1. PLANT — a plant job sows the crop from its seed.
-    for (let i = 0; i < 15 && !sown(); i++) s.tick(200);
-    expect(sown(), `${c.id} sown from ${c.seed}`).toBe(true);
-    // 2. GROW for real — climbs off the 1% wither floor within ~one day-night cycle in its window.
-    for (let i = 0; i < 50 && growthOf() < 2; i++) s.tick(400);
-    const grew = growthOf();
-    // 3. MATURE (lever) + 4. REAP into the crop's own yield item.
-    s.command({ type: 'devMatureCrops', payload: {} } as never);
-    for (let y = zone[1]; y <= zone[3]; y++)
-      for (let x = zone[0]; x <= zone[2]; x++)
-        if ((tileAt(s, x, y).resources?.[c.id] ?? 0) > 0)
-          s.command({ type: 'designateRect', payload: { x1: x, y1: y, x2: x, y2: y, type: 'harvest' } } as never);
+    // 1–2. PLANT from seed, then GROW to REAL 100% through the real per-tick gate (compressed 20×, not
+    // bypassed). Cap ≈ full real growthTurns × 60 / 20 with margin; a crop that CAN'T mature hits the cap.
+    let mat: { x: number; y: number } | null = null;
+    for (let i = 0; i < 120 && !(mat = mature()); i++) s.tick(500); // up to 60k ticks ≈ 1.2M real ticks @20×
+    // 3. REAP the real-matured crop into its OWN yield item.
     const stk = () => (s.getState().stockpile ?? {}) as Record<string, number>;
-    const y0 = stk()[c.yield] ?? 0;
-    for (let i = 0; i < 25 && (stk()[c.yield] ?? 0) === y0; i++) s.tick(300);
+    const y0 = mat ? stk()[c.yield] ?? 0 : 0;
+    if (mat) {
+      s.command({ type: 'designateRect', payload: { x1: mat.x, y1: mat.y, x2: mat.x, y2: mat.y, type: 'harvest' } } as never);
+      for (let i = 0; i < 25 && (stk()[c.yield] ?? 0) === y0; i++) s.tick(300);
+    }
     const yNow = stk()[c.yield] ?? 0;
-    console.log(`[CROP all] ${c.id.padEnd(13)} (${c.season}) grew→${grew.toFixed(1)}%  reaped ${c.yield} ${y0}→${yNow}`);
-    expect(grew, `${c.id} grew under its window (off the floor)`).toBeGreaterThan(2);
+    console.log(
+      `[CROP all] ${c.id.padEnd(13)} (${c.season}) matured=${!!mat} maxGrowth=${maxGrowthOf().toFixed(0)}% reaped ${c.yield} ${y0}→${yNow} @turn ${s.getState().turn}`
+    );
+    expect(mat, `${c.id} reached REAL 100% maturity in ${c.season} (window is viable)`).toBeTruthy();
     expect(yNow, `${c.id} reaped into ${c.yield}`).toBeGreaterThan(y0);
   });
 });

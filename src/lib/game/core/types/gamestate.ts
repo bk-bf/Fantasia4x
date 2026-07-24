@@ -98,6 +98,13 @@ export interface GameState {
    *  haul-fuel-and-light loop (which is a separate system under its own audit). Toggled via
    *  `devInfiniteFuel {on}` / `ScenarioSpec.infiniteFuel`. */
   _devInfiniteFuel?: boolean;
+  /** Debug override (HEADLESS-SIM): FAITHFUL time-compression for crop growth — multiplies BOTH the
+   *  per-tick growth advance AND the per-tick wither loss in `processCropGrowth` by this factor. Because
+   *  gain and loss scale together, the `cropHealth` gate's verdict is PRESERVED (a net-negative window
+   *  still stalls/dies and never matures; a viable one just matures in 1/factor the ticks) — so a test
+   *  can drive real maturation without a multi-day grind and WITHOUT bypassing the gate. 1/undefined =
+   *  normal. Set via `devCropGrowthScale {factor}`. */
+  _devCropGrowthScale?: number;
   /** Debug override (HEADLESS-SIM): freeze WEATHER-DRIVEN deterioration — building condition wear
    *  (`stepBuildingCondition`) and loose-item weather wear (`stepItemDeterioration`) — so dev-spawned
    *  stations/gear don't rot away mid-test. Toggled via `devToggleDecay {kind:'deterioration'}`. */

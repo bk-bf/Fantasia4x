@@ -771,6 +771,9 @@ export class GameEngineImpl implements GameEngine {
     if (growTiles.length === 0) return;
     const rate = seasonRegrowthMultiplier(gs.season);
     const ticksPerDay = TURNS_PER_DAY * TICKS_PER_SECOND; // for the gradual cold-decline rate
+    // Debug (HEADLESS-SIM): faithful growth time-compression — scales BOTH the advance and the wither
+    // loss below, so the gate's mature/never-mature verdict is unchanged (see `_devCropGrowthScale`).
+    const growthScale = gs._devCropGrowthScale ?? 1;
 
     for (const key of growTiles) {
       const ci = key.indexOf(',');
@@ -813,7 +816,7 @@ export class GameEngineImpl implements GameEngine {
         // further past its window — and recovers on a warm afternoon. It bottoms out at 1% (count
         // cleared = dead), never below, so a withered plot still never charges soil wear.
         if (health.severity > 0) {
-          const loss = cropLossPerDay(health.severity) / ticksPerDay;
+          const loss = (cropLossPerDay(health.severity) / ticksPerDay) * growthScale;
           const next = Math.max(1, growth[id] - loss);
           if (next !== growth[id]) {
             growth[id] = next;
@@ -827,7 +830,7 @@ export class GameEngineImpl implements GameEngine {
 
         // Advance toward 100% at the base rate (season-scaled). In place — no per-tick allocation.
         const totalTicks = Math.max(1, ticksFromSeconds(c.growthTurns) / rate);
-        const next = Math.min(100, growth[id] + 100 / totalTicks);
+        const next = Math.min(100, growth[id] + (100 / totalTicks) * growthScale);
         growth[id] = next;
         if (next >= 100 && (tile.resources[id] ?? 0) <= 0) {
           const [mn, mx] = def!.nodeAmountRange ?? [1, 1];
