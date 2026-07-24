@@ -210,7 +210,23 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       not primitive cordage; the thread gates the kit behind spinning), added to butchery `toolsRequired`. `sanguinary_altar` bumped to minTier 3 (steel
       kit); flensing_table stays minTier 2 (iron kit). **Verified headless** (`butcheryAudit.test.ts`):
       no-tool→rabbit 0 (gate restored); T0 knife→rabbit butchers but dire_wolf flense blocked; T2 kit→flense
-      works (alpha_ichor); both kits craftable from iron/steel+leather+cordage.
+      works (alpha_ichor); both kits craftable.
+- [x] **Cordage supersession audit** (all recipes): 49 use `cordage`; 46 are primitive (tier 0–1 — lashing
+      stone/bone/wood, stringing primitive bows, tying hide/wicker) where cordage is correct. The 3 iron-age
+      ones (`iron_working`) — `make_war_bow`, `make_hunting_recurve`, `make_leather_bolt_case` — swapped
+      cordage → `thread`. Zero steel-age recipes used cordage. Now 0 iron-age+ recipes use cordage.
+- [x] **Spider silk → thread gate** (DF-style): `harvest_thornwood_silk` already butchers a
+      `thornwood_spider_carcass` → `raw_silk`, but raw_silk only became silk CLOTH. Added `raw_silk` as a
+      `spin_thread` alternative, so spider butchery now feeds the THREAD chain (flax / wool / spider-silk →
+      thread) — a silk-thread gate that also supplies the butchery kits' `thread`.
+- [x] **Thread as an ADDITIONAL ingredient on high-tier stitched gear** (the additive half of the audit):
+      swept all armor/quiver/robe recipes at tier 2+ (or iron/steel research) for a missing binder — every one
+      with a leather/cloth/bone body that's SEWN or LACED but listed no thread/cordage/sinew/rivets. Added
+      `thread` (stitching/lacing) to 10: `make_banded_bolt_quiver`, `make_iron_boss_shield`,
+      `make_brigandine_coat`, `make_scale_cuirass`, `make_regal_robes`, `make_arcane_robe`,
+      `make_beast_leather_plate`, `make_bone_plated_cuirass`, `make_horned_helm`, `make_plate_cuirass`. Left
+      pure-forged metal (helms/gauntlets/boots/gorget/great_helm/ceremonial_plate) and jewelry alone — no
+      textile component, no stitching. Verified: 0 high-tier stitched-gear recipes now lack a binder.
 - [ ] **`grimeling_carcass` (+ other magical creatures) → alchemy reagents** (user direction): rather than a
       plain meat/bones recipe, magical creatures should drop ORGANS/glands usable in coating tonics & potions.
       Folded into the new Alchemy & material-sink audit below.
