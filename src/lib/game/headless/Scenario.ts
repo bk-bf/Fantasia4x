@@ -33,6 +33,7 @@ import { entityService } from '../services/EntityService';
 import { kingdomService } from '../services/KingdomService';
 import { socialService } from '../services/SocialService';
 import { researchService } from '../services/ResearchService';
+import { itemService } from '../services/ItemService';
 import { applySimCommand } from '../sim/commands';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '../core/Terrains';
 import { rng } from '../core/rng';
@@ -93,6 +94,22 @@ export interface ScenarioSpec {
   infiniteFuel?: boolean;
   /** Seed the map's natural wildlife/lairs (default true; `false` = quiet map). */
   seedEntities?: boolean;
+  /**
+   * **Set this on any scenario that expects pawns to WORK.** Clears the two setup traps that both
+   * present identically — pawns sit `Idle`, the order stays queued, and nothing reports why:
+   *
+   * 1. **No labor enabled.** Founders start with every labor at 0, so no work job is ever claimed.
+   * 2. **No tool for the gate.** ADR-009 gates a job on `{workType, minTier}`; with no qualifying
+   *    tool held OR in colony stock, the job is silently unclaimable. A tool in stock is enough —
+   *    the pawn picks it up en route.
+   *
+   * Enables all labor at level 3 for every pawn and stocks one top-tier tool per work category
+   * (derived from `WorkCategory.toolsRequired`, so a newly added category is covered automatically).
+   *
+   * Leave it OFF only when the test is ABOUT labor priorities or tool scarcity — the era presets do,
+   * because their limited toolset is the point.
+   */
+  workReady?: boolean;
 }
 
 /** Announce the scenario's world choice. Deliberately LOUD: which map a headless run got is the single
@@ -291,6 +308,48 @@ export function buildScenario(spec: ScenarioSpec): GameState {
           members.some((m) => m.id === p.id) ? { ...p, needs: { ...p.needs, ...g.needs } } : p
         )
       };
+    }
+  }
+
+  // ── Work-readiness (see ScenarioSpec.workReady) ───────────────────────────────────────
+  const categories = workService.getAllWorkCategories() as Array<{
+    id: string;
+    toolsRequired?: string[];
+  }>;
+  if (spec.workReady) {
+    for (const p of gs.pawns) {
+      for (const c of categories) cmd('setPawnLaborLevel', { pawnId: p.id, workId: c.id, level: 3 });
+    }
+    // One qualifying tool per gated category — highest tier available, so any `minTier` is met.
+    const stocked = new Set(Object.keys(spec.items ?? {}));
+    for (const c of categories) {
+      const best = (c.toolsRequired ?? [])
+        .map((id) => ({ id, tier: (itemService.getItemById(id) as { tier?: number })?.tier ?? 1 }))
+        .sort((a, b) => b.tier - a.tier)[0];
+      if (best && !stocked.has(best.id)) cmd('addItem', { itemId: best.id, amount: 2, tileKey: stockTile });
+    }
+  }
+
+  // Preflight: a scenario that CANNOT work is announced here rather than discovered as a silent stall.
+  const anyLabor = gs.pawns.some((p) =>
+    Object.values(gs.workAssignments?.[p.id]?.laborSettings ?? {}).some((l) => (l ?? 0) > 0)
+  );
+  if (gs.pawns.length && !anyLabor) {
+    scenarioLog(
+      '⚠ NO pawn has any labor enabled — every work job will go unclaimed and pawns will sit Idle. ' +
+        'Set `workReady: true` (or call setPawnLaborLevel yourself) if this scenario expects work.'
+    );
+  }
+  if (gs.pawns.length && !spec.workReady) {
+    const held = new Set(Object.keys(spec.items ?? {}));
+    const uncovered = categories
+      .filter((c) => (c.toolsRequired ?? []).length && !(c.toolsRequired ?? []).some((t) => held.has(t)))
+      .map((c) => c.id);
+    if (uncovered.length) {
+      scenarioLog(
+        `⚠ no tool in stock for tool-gated work: ${uncovered.join(', ')}. Jobs needing one are ` +
+          'silently unclaimable (ADR-009). Stock a tool or set `workReady: true`.'
+      );
     }
   }
 

@@ -15,6 +15,20 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 > buckskin 20→18") so a substitution can never be hidden. If you only unit-tested it, say exactly that and
 > leave the box `[~]`, not `[x]`.
 >
+> **PREFLIGHT — run this checklist BEFORE writing a headless scenario.** Every stall so far has been one
+> of these, and every one of them presents *identically*: pawns sit `Idle`, the order stays queued, and
+> nothing prints an error. Do not start debugging the game until all four are ticked.
+>
+> - [ ] **Map** — leave it `flat` (the default). Pass `generated` ONLY if the test is about the world.
+> - [ ] **`workReady: true`** — set it on any scenario where pawns must WORK. It enables all labor and
+>       stocks a tool for every ADR-009 gate. Skipping it is what made "the forge is lit but nobody
+>       smelts" look like a passive-station bug (it was a missing `metalworking` tool).
+> - [ ] **`infiniteFuel: true`** — unless the test is *about* hauling/lighting fuel.
+> - [ ] **Tick budget** — one craft ≈ 900+ ticks; loop `tick(400)` until the goal, don't tick once.
+>
+> `buildScenario` now also **warns at build time** when a scenario cannot work — no labor enabled, or no
+> tool in stock for a gated work type. If a run stalls, **read the `[scenario]` lines first.**
+>
 > **Headless-harness gotchas (so "it wouldn't run" is never an excuse to fall back to unit tests):**
 > - **THE MAP IS THE #1 TRAP — `buildScenario` now defaults to `preset: 'flat'`.** A flat map is uniformly
 >   walkable, so every tile is reachable and the whole map is a stockpile. On a **`generated`** map tiles can
@@ -26,10 +40,17 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 >   `buildScenario` call now LOGS its map choice (`[scenario] map WxH preset=…`) with a warning on generated.
 > - **Starting stock is pinned to the pawn cluster** (`addItem` takes an optional `tileKey`). Don't
 >   hand-place stock on a far/edge tile — if pawns can't reach it, every fetch job for it sits unclaimed.
-> - **Tool-gated jobs (anvil/butchery) pass if the COLONY has the tool** — just put a hammer in `items`;
->   the pawn auto-grabs it en route. It does NOT have to be equipped.
-> - **Founders default to NO enabled labor** — call `setPawnLaborLevel { pawnId, workId, level }` for each
->   `workService.getAllWorkCategories()` or the pawns sit Idle and nothing is crafted/hauled.
+> - **THE TOOL GATE IS THE #2 TRAP.** ADR-009 gates a job on `{workType, minTier}` — with no qualifying
+>   tool held *or in colony stock*, the job is silently unclaimable, exactly like the map trap. It pass
+>   if the COLONY has the tool (put a hammer in `items`; the pawn grabs it en route — it does NOT have
+>   to be equipped), but `workReady: true` covers every category and is the safe default. This trap
+>   masqueraded as "the ore chain is broken" (2026-07-24) — the forge was lit, fuelled and correctly
+>   bound; only a `metalworking` tool was missing.
+> - **~~Founders default to NO enabled labor~~ — FALSE, corrected 2026-07-24.** `ensureDefaultWorkAssignments`
+>   gives every fresh pawn **all labor at level 2**, and `laborSettings` is what `selectJobForPawn` reads.
+>   Verified: a scenario with **no** `setPawnLaborLevel` call smelts copper (malachite 60→57, turn 800).
+>   The per-category `setPawnLaborLevel` loop copied into older tests is redundant boilerplate, not a
+>   requirement — the real blocker was always the tool gate above.
 > - **The reserve→haul→stage→craft pipeline is multi-tick** — a single craft needs ~900+ ticks; weaving-frame
 >   crafts and multiple competing orders need more (bump pawn count + tick budget). Idle ≠ broken; give it time.
 > - **`buildScenario` designates the ENTIRE map as stockpile** (2026-07-23) — storage/reachability can never be
@@ -342,5 +363,41 @@ colony; the 6 steels each satisfy a `category:steel` consumer with the distinct 
 >       at a passive bake. Removed — matches the bloomery, which is passive and has none.
 > - Verified after the fix on a GENERATED map: `charcoal_pit` charcoal 0→2 and `bloomery` iron_bar 0→1.
 > - Still noted: **`blast_furnace` carries no fuel fields at all** (no `maxFuel`/`minFuelHeat`/
->   `requiresLighting`), unlike bloomery/finery — a data gap to settle in the ore audit.
+>   `requiresLighting`), unlike bloomery/finery — a data gap to settle in the ore audit. **→ FIXED below.**
+
+### Ore chains — copper / tin / bronze / lead→silver / gold — ✅ IMPLEMENTED (2026-07-24)
+
+Follow-up to the steel rework ("audit iron, copper, bronze and other ores similarly"). **Every ore has a
+consumer — no dead ore.** The defects were in the *quantities and the chain shape*, plus two dead metals.
+
+- [x] ⚠→fixed: **copper ore costs were backwards.** `chalcopyrite` (CuFeS₂, ~35% Cu, a sulfide that has to
+      be roasted first) cost the FEWEST units (2) while the richer carbonates `malachite`/`azurite`
+      (~57%/~55% Cu) cost more. Now cost tracks copper content: `malachite 3`, `azurite 3`, `chalcopyrite 5`.
+- [x] ⚠→fixed: **bronze was 25% tin.** Real bronze is ~10–12%; 25% is a brittle speculum-metal ratio, and it
+      made scarce tin the binding constraint on the whole bronze age. Now `copper_bar 7 + tin_bar 1 +
+      clay_mold → bronze_bar 2` (12.5% tin, same 4:1 metal→bar conversion as before).
+- [x] ⚠→fixed: **lead was a dead metal, because silver skipped cupellation.** `make_silver_bar` conjured
+      silver straight out of `galena 5` — but galena IS the lead ore, and historically silver is won by
+      smelting it to lead and then **cupelling** the lead away on a bone-ash hearth. Replaced with
+      `cupel_silver` (`lead_bar 3 + bone_meal 1 → silver_bar 1`, passive at the stone forge). The chain is
+      now galena → `lead_bar` → cupellation → `silver_bar`, which gives lead its purpose and gives `bone_meal`
+      a second consumer.
+- [x] ⚠→fixed: **`blast_furnace` and `crucible_steelworks` smelted for free** — alone among the smelters they
+      carried no fuel fields at all. Given `maxFuel` 220/160, `fuelConsumptionRate` 4/3, `minFuelHeat` 5,
+      `requiresLighting`. Checked that `coke` reaches `fuelHeat 5`, so neither is now unfuellable.
+- [x] **HEADLESS-PLAYTESTED** (`oreChain.test.ts`, `HeadlessSession`, real pawns over real ticks, flat map +
+      `workReady` + `infiniteFuel`): pawns smelted the whole non-ferrous set and cupelled silver out of lead —
+      **malachite 60→57 → copper_bar; cassiterite 60→57 → tin_bar; galena 60→48 → 4× lead_bar; native_gold
+      30→27 → gold_bar; copper_bar 40→34 + tin → bronze_bar 0→2; lead_bar 4→1 → silver_bar 0→1, by turn 3600.**
+- [x] **No shadowed producer**: `copper_bar`/`tin_bar`/`bronze_bar`/`lead_bar`/`silver_bar`/`gold_bar`/`pig_iron`
+      each have exactly ONE producing recipe (`getRecipeForItem` is first-producer-wins, so a second producer
+      would be unreachable from the craft card). Locked by a regression test.
+
+**Open — needs a design call (not defects I should decide alone):**
+- [ ] **`magic_alloy_bar` is DEAD** — one producer (`manaforge`), zero consumers. Belongs with the deferred
+      crystal/magic-reagent rework rather than being given a token consumer now. Prune or wire it there.
+- [ ] **`electrum` silently loses its silver.** Electrum is a natural gold-silver alloy (~20–50% Ag), but it
+      is only an `inputAlternatives` entry on `make_gold_bar`, so smelting it yields gold and the silver
+      vanishes. The realistic fix (parting → gold + silver) can't just be a second recipe: `gold_bar` would
+      then have two producers and one would be shadowed. Needs a decision on the recipe-addressing model.
 

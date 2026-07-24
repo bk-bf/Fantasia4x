@@ -599,7 +599,7 @@
     "passive"          : true,
     "station"          : "stone_forge",
     "inputs"           : {"malachite": 3, "clay_mold": 1},
-    "inputAlternatives": [ {"chalcopyrite": 2, "clay_mold": 1}, {"azurite": 4, "clay_mold": 1} ],
+    "inputAlternatives": [ {"azurite": 3, "clay_mold": 1}, {"chalcopyrite": 5, "clay_mold": 1} ],
     "outputs"          : {"copper_bar": 1},
     "workAmount"       : 8,
     "toolTierRequired" : 0
@@ -617,8 +617,8 @@
     "id"              : "make_bronze_bar",
     "passive"         : true,
     "station"         : "casting_hearth",
-    "inputs"          : {"copper_bar": 3, "tin_bar": 1, "clay_mold": 1},
-    "outputs"         : {"bronze_bar": 1},
+    "inputs"          : {"copper_bar": 7, "tin_bar": 1, "clay_mold": 1},
+    "outputs"         : {"bronze_bar": 2},
     "workAmount"      : 10,
     "toolTierRequired": 1
   },
@@ -658,10 +658,13 @@
     "toolTierRequired": 0
   },
   {
-    "id"              : "make_silver_bar",
+    // Cupellation: molten lead blown with air on a bone-ash hearth burns away as litharge and leaves the
+    // silver behind. Silver never came straight out of galena — the ore smelts to LEAD first, and this is
+    // what lead is FOR (it was dead content before this step existed).
+    "id"              : "cupel_silver",
     "passive"         : true,
     "station"         : "stone_forge",
-    "inputs"          : {"galena": 5, "clay_mold": 1},
+    "inputs"          : {"lead_bar": 3, "bone_meal": 1},
     "outputs"         : {"silver_bar": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1

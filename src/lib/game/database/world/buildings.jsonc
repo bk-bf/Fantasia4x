@@ -1883,6 +1883,11 @@
     "upkeepCost": {},
     "effects": {"craftingEnabled": true, "warmth": 0.9},
     "storageCapacity": {},
+    "requiresLighting": true,
+    "maxFuel": 220,
+    "fuelConsumptionRate": 4,
+    "minFuelHeat": 5,
+    "fuelRequirements": {"tinderItemId": "plant_fiber", "tinderAmount": 2},
     "buildingState": {"isUnique": false}
   },
   {
@@ -1903,6 +1908,11 @@
     "upkeepCost": {},
     "effects": {"craftingEnabled": true, "warmth": 0.7},
     "storageCapacity": {},
+    "requiresLighting": true,
+    "maxFuel": 160,
+    "fuelConsumptionRate": 3,
+    "minFuelHeat": 5,
+    "fuelRequirements": {"tinderItemId": "plant_fiber", "tinderAmount": 2},
     "buildingState": {"isUnique": false}
   },
   {
