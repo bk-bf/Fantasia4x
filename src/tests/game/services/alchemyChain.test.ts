@@ -230,6 +230,37 @@ describe('alchemy / magical-creature reagents', () => {
     expect(stk(s).purified_catalyst ?? 0, 'gem_dust refined into a purified catalyst at the apothecary').toBeGreaterThan(0);
   });
 
+  it('§C container-tool gate: refine_sugar needs a clay cooking pot — blocks without, works with (headless A/B)', async () => {
+    // Boiling cane juice down needs a vessel. The ONLY difference between the two runs is a clay cooking
+    // pot in stock — cooking labor is force-enabled in both — so a 0-vs-positive split isolates the gate.
+    const run = async (withPot: boolean) => {
+      const s = new HeadlessSession();
+      await s.start(
+        buildScenario({
+          seed: 77,
+          map: { w: 16, h: 16 },
+          researchMaxTier: 9,
+          toolTier: 3,
+          pawns: [{ count: 6, skillLevel: 20 }],
+          needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
+          buildings: [{ id: 'campfire' }],
+          items: withPot ? { sugarcane: 18, clay_cooking_pot: 2 } : { sugarcane: 18 },
+          seedEntities: false
+        })
+      );
+      for (const p of s.getState().pawns)
+        s.command({ type: 'setPawnLaborLevel', payload: { pawnId: p.id, workId: 'cooking', level: 3 } } as never);
+      s.command({ type: 'craftItem', payload: { itemId: 'sugar', quantity: 2 } } as never);
+      for (let i = 0; i < 18 && (stk(s).sugar ?? 0) === 0; i++) s.tick(400);
+      return stk(s).sugar ?? 0;
+    };
+    const without = await run(false);
+    const withPot = await run(true);
+    console.log(`[SUGAR gate] refine_sugar sugar produced: without pot=${without} with pot=${withPot}`);
+    expect(without, 'no clay cooking pot → refine_sugar is unclaimable, no sugar boiled').toBe(0);
+    expect(withPot, 'a clay cooking pot in stock → cane boils down to sugar').toBeGreaterThan(0);
+  });
+
   it('§C new effect lines: a T1 coating + tonic brew, and a T2 gated on distilled_spirit — headless', async () => {
     const s = new HeadlessSession();
     await s.start(

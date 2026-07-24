@@ -95,7 +95,8 @@ become three items, not one.
       rate climbs (0.18 → 0.53 at T3). Verified headless in combat (`combatSim.test.ts` `[SHARP]`) + the
       brew/effect chains (`alchemyChain.test.ts`). Bleed stays a physical wound (no timed-`bleeding` pill).
 - [x] **Reagent depth — DONE.** Two intermediate crafts are the new T2/T3 bases: `fermented_mash` (grain +
-      `sugar`, the sugar itself refined from a foraged `sugarcane` wetland reed → `refine_sugar` at the campfire)
+      `sugar`, the sugar itself refined from a foraged `sugarcane` wetland reed → `refine_sugar` at the campfire,
+      **gated on a clay cooking pot** — boiling cane juice needs a vessel, headless A/B: no pot ⇒ 0 sugar, pot ⇒ boils)
       distilled at the lab into **`distilled_spirit`** (the T2 carrier), and `gem_dust` refined at the
       apothecary into **`purified_catalyst`** (the T3 catalyst). All 12 existing Greater/Grand brews (and every
       new line) were rewired to consume the base/catalyst instead of escalating raw `gem_dust` counts, so the

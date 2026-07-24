@@ -4002,7 +4002,9 @@
 ,
   {
     // Crush the cane and boil its juice down to coarse sugar — the concentrated fermentable behind the
-    // distilled-spirit chain (sugar cane is a foraged wetland reed, resources.jsonc `sugarcane`).
+    // distilled-spirit chain (sugar cane is a foraged wetland reed, resources.jsonc `sugarcane`). Boiling
+    // the juice down needs a cooking vessel: gated on the clay cooking pot (cooking `toolRequirement`,
+    // same container tool the stews use), so a colony with no pot cannot refine sugar.
     "id": "refine_sugar",
     "station": "campfire",
     "inputs": {
@@ -4012,7 +4014,8 @@
       "sugar": 2
     },
     "workAmount": 16,
-    "toolTierRequired": 0
+    "toolTierRequired": 0,
+    "toolRequirement": {"workType": "cooking", "minTier": 0}
   },
   {
     "id": "ferment_mash",
