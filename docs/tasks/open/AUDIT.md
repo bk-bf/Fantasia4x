@@ -172,27 +172,52 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [ ] Zero-skill pawn still completes T0 (no bootstrap deadlock); tool-tier gates only where intended
 - [ ] Quality matters downstream (better weapon/armor/tool stats into combat/work)
 
-### Needs & mood — ⭐ NEW AUDIT TASK (proposed 2026-07-24, not yet driven)
-> The tick-by-tick heart of the colony sim, and the biggest live system with NO audit section yet. Needs
-> (`needs.jsonc`: hunger, fatigue, thirst, hygiene, relaxation, comfort, + bloodHunger) build/decay each
-> tick (`processNeedsTick`), pull a pawn off work at their `seek` threshold into the FSM state that
-> satisfies them, and feed `moodBands` into a single 0–100 mood that eases toward `computeMoodTarget`.
-> Only `moodBreakdown.test.ts` covers this, and it's UNIT-level — the need→FSM→relief loop and mood over
-> real ticks are unproven. All headless-drivable: `devToggleNeed` freezes a need; a need meter can be set
-> at spawn (`ScenarioPawnGroup.needs`); comfort/well_rested were just wired (see furniture section).
-- [ ] **Survival needs pull a pawn off work at `seek`** and into the satisfying FSM state — hunger→eat,
-      thirst→drink, fatigue→sleep, hygiene→wash — then one session applies `relief` and returns it to work.
-- [ ] **Inverted needs** (relaxation, comfort: 100 = satisfied) seek at/BELOW their threshold; relaxation
-      → Socialising, comfort → drawn to the highest-`gatheringLevel` seat/bed.
-- [ ] **Mood eases toward `computeMoodTarget`**, not per-tick drift: a starving/exhausted pawn's `moodBands`
-      drag the target down; amenities (beauty) + positive thoughts lift it; a thought FADES to zero over its life.
-- [ ] **Turn order holds** (needs → work → …): a need crossing `seek` mid-work interrupts correctly, and a
-      long craft still yields to a critical need (ADR: long jobs yield to needs).
-- [ ] **Mental/behaviour effects of low mood** — whatever break/threshold behaviour exists fires at low mood
-      (identify the mechanism first; may be none — track as such if so).
-- [ ] **Comfort + well_rested** (just built): a bed grants comfort + the `well_rested` buff; sitting at a
-      table raises comfort; no ambient comfort leaks (locked by `moodBreakdown`, re-drive headless).
-- [ ] **bloodHunger** (LINEAGES-II): only pawns with a `bloodNeedKind` accrue it; feeding relieves it.
+### Needs & mood — ✅ AUDITED HEADLESS (2026-07-24)
+> Driven end-to-end via `HeadlessSession` over real ticks (`needsAndMood.test.ts`, kept as a regression).
+> Needs (`needs.jsonc`) build/decay each tick (`processNeedsTick`), cross their `seek` threshold, pull the
+> pawn into the satisfying FSM state (`selectIdleNeed`/`selectInterruptNeed`), and feed `moodBands` into a
+> mood that eases toward `computeMoodTarget` (BASE 50 + Σ contributions, `MOOD_EASE_STEP` 0.4/tick). Needs
+> set at spawn (`ScenarioPawnGroup.needs`), frozen with `needsDisabled`. `TICKS_PER_GAME_HOUR` = 750.
+- [x] **Survival needs pull a pawn off work at `seek`, satisfy, and fall**: hunger 85→**0.2** (ate `spit_meat`);
+      fatigue 92→**0.6** slept in a `hay_bed`, Sleeping→Idle; thirst 92→**29.3** drank at a `well`. The idle
+      pawn eats/sleeps instead of taking a job (need > work), confirming the needs→work turn order.
+  - [~] **hygiene→wash** NOT driven end-to-end: washing routes to a painted `wash` zone on a WATER tile (a well
+        only serves `drink`), and flat test maps have no water — so a pawn correctly can't bathe and hygiene
+        climbs to 100. Same `tryRouteToWaterNeed`/`findNearestWaterTarget` machinery as thirst, which IS driven.
+- [x] **Inverted needs** (100 = satisfied, seek at/BELOW): comfort 8→**54.3** (lounged at a `log_stool`);
+      relaxation 12→**81.9** (socialised at a `campfire`). Confirms the seat/gathering routing + fill.
+- [x] **Mood eases toward `computeMoodTarget`**: a needs-maxed frozen pawn eased to **42** while a low-needs
+      pawn rose to **58** (base 50) — the `moodBands` drag the target below baseline, not a per-tick drift.
+- [x] **Mental breakdown at low mood** (`breakdown.ts`): a 10-pawn colony pinned at rock-bottom needs sank to
+      **min mood 8.3** (tier-3 band) and produced a real **uncontrollable break** (mental_breakdown / Crying-
+      Hiding-Fleeing) via the once-per-game-hour moral check vs mental resistance. Deterministic hash (replay-safe).
+- [x] **Comfort + well_rested** (furniture work): waking from a bed set `well_rested` (timer **14204**); no
+      ambient comfort leak stays locked by `moodBreakdown.test.ts`.
+- [~] **bloodHunger** (LINEAGES-II) NOT driven: only pawns with a `bloodNeedKind` (vampire/werewolf lineage)
+      accrue it; needs a lineage-pawn scenario the harness doesn't set up yet. Tracked for a lineages pass.
+- [~] **Mid-craft interrupt** (`selectInterruptNeed`): the idle-priority half is shown (a hungry pawn won't
+      take work); a need crossing `seek` DURING a long craft to force a job-release+re-queue is unit-territory
+      (`selectInterruptNeed` is pure) — not separately driven headless here.
+
+### FSM transition & interrupt-priority audit — ⭐ NEW AUDIT TASK (proposed 2026-07-24)
+> **Evaluation of "expand to a full FSM audit" (asked 2026-07-24): worth it, but SCOPED.** The 24 FSM
+> states (`pawnStates.ts` / `STATE_HANDLERS`) are mostly ENTRY-covered piecemeal already — Idle/Working/
+> MovingToResource/Hauling/MovingToDeposit (crafting+production audits), Hungry/Eating/Tired/Sleeping/
+> Drinking/MovingToNeed/Socialising/Lounging + Crying/Hiding/Fleeing (Needs & mood, above), Fighting/
+> Fleeing/Hunting (weapons + creature-AI sweeps). Re-driving each happy-path entry would mostly repeat
+> that. The UNCOVERED, HIGH-VALUE parts are the EDGES between subsystems and the incapacitation states —
+> exactly where the historically nasty bugs lived (sated-predator freeze, Wander↔Hunting flip). Drive:
+- [ ] **Interrupt-priority matrix** — when pulls compete, the right one wins AND the loser releases cleanly
+      (job back to pool with its accrued work, no lost/duplicated work): draft order vs critical need vs
+      combat threat vs active job vs breakdown. One scenario per contested pair.
+- [ ] **Incapacitation & recovery** — `COLLAPSED` (wound-downed: entry, held-until-heal, exit), `RESCUING`
+      (a pawn carries a downed ally to safety), restPolicy-gated recovery-rest. Life-and-death, undriven.
+- [ ] **Undriven states**: `WASHING` (needs a water-tile map), `BLOOD_HUNT`/`PANICKING` (lineage/breakdown
+      tails), `MOVING_TO_DEPOSIT` edge cases.
+- [ ] **Stuck / oscillation invariant** — a mixed realistic colony over thousands of ticks: assert NO pawn
+      sits in a non-terminal state indefinitely or ping-pongs between two states (the recurring FSM bug class).
+- [ ] **Draft override** — a drafted pawn ignores non-critical needs (`forceWork`) but a truly lethal need /
+      collapse still wins; clearing the order returns it to normal need-driven behaviour.
 
 ## Material & production reworks (PROPOSED — track only, not implemented)
 
