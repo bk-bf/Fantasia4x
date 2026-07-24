@@ -186,20 +186,71 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [x] Butchery yield bonus wired + tier ladder (`butcheryTier`): dressing_stone/flensing/altar render lower recipes and their `butcheryYieldBonus` (+25/+45%) multiplies output
 - [x] ⚠→fixed: great-carcass renders/flenses + humanoid `*_remains` + jackal/quillback/olm were UNREACHABLE (their meat/bones dispatched to a different recipe). Root: butchery dispatched by output meat, and the carcass-card path was dead (`isCarcass` never set → carcass cards never rendered). Fix: `isCarcass` derived from `category==='carcass'` at the item index; orders carry `recipeId`; `craftItem`/`canQueueCraft`/`completeCraftOrder` dispatch butchery by the CARCASS (`resolveCarcassRecipe`, picks the best built station via `butcheryTier`); crafting-screen carcass cards gated on `category` + yields from the recipe. Verified headless: great_wolf→render_great_wolf, goblin→make_goblin_remains, dire_wolf→make_dire_wolf @flensing_table.
 - [~] ⚠ NON-butchery shadows: **`tan_*_leather_bucket` (×5) RESOLVED** (Tanning redesign — rack removed, buckets are the only path, one `tan_<leather>` per species). Still open: `smelt_blast_steel` → Steel rework (both steel recipes replaced); `grind_mana_crystal` + `magic_alloy_bar` (dead, `smelt_magic_alloy`) → Crystal/magic-reagent rework (redesign, not prune); `make_ash` → unshadow (Ash economy section).
-- [ ] Gating: needs knife/butchery tool; T2 needs tier 2 — below-tier pawn blocked
-- [ ] Spoiled carcass yields proportionally less (conditionMult)
-- [ ] butcher_spot T0 — all common game: make_{rabbit,venison,wolf,bear,boar,elk,goat,chicken,rat,aurochs,mammoth,owlbear,sabretooth,crocodile,hippogriff,hoarfowl,worg,jackal,quillback,olm}_meat, harvest_thornwood_silk
-- [ ] butcher_spot T0 — humanoid remains (bones/sinew only): make_{goblin,kobold,gnoll,orc,harpy,bullywug,stirge,viper}_remains; make_salted_meat
-- [ ] butcher_spot T1 — boss render: render_great_{wolf,bear,boar,weaver}
-- [ ] flensing_table T2: make_{dire_wolf,cave_bear,direboar,broodmother}
-- [ ] sanguinary_altar T2 — full flense (rare organs): flense_great_{wolf,bear,boar,weaver}
-- [ ] ~220 creatures have NO butchery recipe — list spawnable un-butcherable carcasses; decide add/generic/none
+> **Audited headless 2026-07-24** (`butcheryAudit.test.ts`). Carcass butchered via `craftItem({itemId:
+> <carcass>})` → `resolveCarcassRecipe` (best-built station by `butcheryTier`) → output × `butcheryYieldBonus`
+> × `conditionMult`.
+- [x] **Coverage**: 38 carcass items; **every one resolves to a butchery recipe with outputs** EXCEPT the
+      intentional `rotten_carcass` (spoiled end-state) / `pawn_carcass` (no cannibalism), and `grimeling_carcass`
+      (a real content gap — see below). Creature side: of 132 creatures, 126 carry a carcass and **124 are
+      butcherable** — the old "~220 un-butcherable" figure was stale/wrong.
+- [x] **butcher_spot T0 game + humanoid remains + boss render + flensing_table T2** driven PHYSICALLY (real
+      pawns, real ticks): rabbit→rabbit_meat 4; goblin→medium_bones 6/sinew 8 (bones+sinew only, no meat —
+      correct for a humanoid); great_wolf render + dire_wolf flense→wolf_meat 20. (Altar T3 shares the flense
+      path; not separately driven.)
+- [x] **Yield bonus by tier**: the same deer carcass rendered **venison 10 at butcher_spot vs 14 at a
+      flensing_table** (+45% `butcheryYieldBonus`, verified headless).
+- [x] ⚠→FIXED: **butchery tool gate was completely DEAD** — a colony with ZERO knives butchered a rabbit.
+      Root cause: `JobService.requiredToolForJob` resolved the tool via `getRecipeForItem(order.item.id)`, but a
+      butchery order's `item.id` is the CARCASS (an input with no producing recipe → undefined), so no tool was
+      ever required, and flensing's minTier-2 was dead flavour. **Fixed** to use the order's stamped `recipeId`
+      (mirrors `craft.ts`). **Tool ladder built** (per user: kits, not blades — a metal butchery knife reads as
+      a weapon and collides with the cleaver line): new **`iron_butchery_kit`** ("Butcher's Kit", T2) and
+      **`steel_butchery_kit`** ("Flensing Kit", T3) — a leather-bagged toolset (recipe at the anvil: metal +
+      `category:leather` + spun `thread` + metal fasteners `iron_nail`/`steel_rivet` — age-appropriate binding,
+      not primitive cordage; the thread gates the kit behind spinning), added to butchery `toolsRequired`. `sanguinary_altar` bumped to minTier 3 (steel
+      kit); flensing_table stays minTier 2 (iron kit). **Verified headless** (`butcheryAudit.test.ts`):
+      no-tool→rabbit 0 (gate restored); T0 knife→rabbit butchers but dire_wolf flense blocked; T2 kit→flense
+      works (alpha_ichor); both kits craftable from iron/steel+leather+cordage.
+- [ ] **`grimeling_carcass` (+ other magical creatures) → alchemy reagents** (user direction): rather than a
+      plain meat/bones recipe, magical creatures should drop ORGANS/glands usable in coating tonics & potions.
+      Folded into the new Alchemy & material-sink audit below.
+- [~] **Spoiled carcass yields less** (`conditionMult` = carcass `unitConditions[0]/100`, `craft.ts`): the
+      scaling is WIRED (applied to output in `completeCraftOrder`) and UNIT-tested (`carcassCondition.test.ts`
+      — `consumeTop`/`decayAll` erosion). NOT driven headless: scenario-added carcasses carry no `unitConditions`
+      (only mob-KILL drops do, `dropCarcass` = intactness×100), so a real drive needs a killed + un-forbidden +
+      spoiled carcass — setup not built. Mark supplement, not headless-verified.
 
 ### Pawn skill effects
 - [ ] Skill speeds craft (getWorkModifiers) & raises output quality (itemQuality §Q)
 - [ ] Butchery skill raises yield; recipe→discipline routing correct (craftDiscipline)
 - [ ] Zero-skill pawn still completes T0 (no bootstrap deadlock); tool-tier gates only where intended
 - [ ] Quality matters downstream (better weapon/armor/tool stats into combat/work)
+
+### Alchemy & material-sink completeness — ⭐ NEW AUDIT TASK (proposed 2026-07-24)
+> Prompted by the butchery gate work (user direction). Every material the colony can PRODUCE — crop yields,
+> smelted metals/ores, butchery returns (meat/hide/bone/sinew + special organs), forage — should feed into at
+> least one appropriate crafting recipe; a material with no consumer is a dead end. Alchemy is the biggest
+> suspected hole (magical creature parts, reagents). Audit thoroughly and recommend completion.
+- [ ] **Material-sink sweep**: for every producible item (crop `yields`, ore→bar chain, all butchery recipe
+      OUTPUTS, forage drops), assert ≥1 recipe consumes it. List the dead-ends (no consumer) — expect holes.
+- [ ] **Alchemy tree audit** (`alchemy_lab` + `distil_*`/`make_dye`/`make_soap`/`brew_*` potions & draughts &
+      coatings): every reagent has a source; every alchemy output has a use; drive representatives headless.
+- [ ] **Magical-creature parts → reagents**: `grimeling_carcass` and other magical/rare creatures should
+      butcher into ORGANS/glands/ichor (not just meat) that feed coating tonics, potions, draughts. Wire the
+      missing butchery returns + their alchemy consumers.
+- [ ] **Use the anatomy (`limbmap.jsonc`) as the return table**: special organs, bones, claws, fangs, scales
+      etc. from a creature's body plan are the natural butchery returns + crafting materials — map body parts →
+      drop items → recipes so a beast's distinctive anatomy shows up in what it yields and what that makes.
+
+### Tool-tier parity across work categories — ⭐ NEW AUDIT TASK (proposed 2026-07-24)
+> Butchery now has a tool per tier (flint/bone → iron kit → steel kit; gate fixed). The user wants this
+> checked for EVERY tool-gated work category — "a tool for each appropriate job for each tier", matching the
+> melee-weapon progression. A station that gates on `minTier: N` must have a craftable tool of tier ≥N in its
+> work category's `toolsRequired`, or the job is unbuildable (the exact bug butchery had).
+- [ ] For each work category with `toolsRequired`, list the tool tiers present vs the `minTier` any station/
+      recipe demands; flag gaps (a required tier with no tool) and over-gates (a tier no station needs).
+- [ ] Confirm the `requiredToolForJob` fix (order.recipeId) didn't leave any OTHER dispatch-by-input job type
+      (like butchery-by-carcass) silently ungated.
 
 ### Needs & mood — ✅ AUDITED HEADLESS (2026-07-24)
 > Driven end-to-end via `HeadlessSession` over real ticks (`needsAndMood.test.ts`, kept as a regression).

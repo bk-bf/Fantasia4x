@@ -4331,6 +4331,48 @@
     "effects": {"butcheryYieldBonus": 0.25}
   },
   {
+    // A KIT, not a blade: a leather roll of skinning knives, hooks and a saw. Deliberately NOT a
+    // standalone cleaver, so it never reads as (or competes with) the cleaver weapon line.
+    "id": "iron_butchery_kit",
+    "charSpans": [ {"sheet": "items", "id": 20} ],
+    "name": "Butcher's Kit",
+    "type": "tool",
+    "category": "butchery",
+    "deteriorationRate": 0.008,
+    "description": "A roll of iron skinning knives, boning hooks and a fine-toothed saw, laced into a leather satchel. The set for opening a big beast cleanly, where a single blade would bind and tear.",
+    "color": "#9AA0A6",
+    "amount": 0,
+    "weightKg": 1.2,
+    "volumeL": 1.6,
+    "tier": 2,
+    "durability": 150,
+    "maxDurability": 150,
+    "toolTierRequired": 0,
+    "toolBoost": {"speed": 1.0, "yield": 0.9},
+    "processingType": ["butchery"],
+    "effects": {"butcheryYieldBonus": 0.4}
+  },
+  {
+    "id": "steel_butchery_kit",
+    "charSpans": [ {"sheet": "items", "id": 20} ],
+    "name": "Flensing Kit",
+    "type": "tool",
+    "category": "butchery",
+    "deteriorationRate": 0.006,
+    "description": "Steel blades, gambrels and a bone saw laid in a fitted leather roll and buckled shut. A full field-dressing set that strips even the rarest carcass down to its last useful organ.",
+    "color": "#C0C6CC",
+    "amount": 0,
+    "weightKg": 1.4,
+    "volumeL": 1.8,
+    "tier": 3,
+    "durability": 260,
+    "maxDurability": 260,
+    "toolTierRequired": 0,
+    "toolBoost": {"speed": 1.3, "yield": 1.1},
+    "processingType": ["butchery"],
+    "effects": {"butcheryYieldBonus": 0.55}
+  },
+  {
     "id": "wooden_tongs",
     "charSpans": [ {"sheet": "items", "id": 159} ],
     "name": "Green-Wood Tongs",

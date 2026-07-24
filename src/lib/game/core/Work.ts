@@ -51,7 +51,13 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Butchery',
     description: 'Process animal carcasses into meat, hide, and bone at a butcher spot',
     color: '#C62828',
-    toolsRequired: ['flint_knife', 'stone_chopper', 'bone_cleaver'],
+    toolsRequired: [
+      'flint_knife',
+      'stone_chopper',
+      'bone_cleaver',
+      'iron_butchery_kit',
+      'steel_butchery_kit'
+    ],
     primaryStat: 'strength',
     secondaryStat: 'dexterity',
     baseEfficiency: 1.0

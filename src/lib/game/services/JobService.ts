@@ -483,7 +483,13 @@ class JobServiceImpl {
     if (job.type === 'craft' || job.craftQueueId) {
       const order = (gs.craftingQueue ?? []).find((e) => e.id === job.craftQueueId);
       if (!order) return null;
-      const recipe = recipeService.getRecipeForItem(order.item.id);
+      // Use the order's STAMPED recipe (butchery-by-carcass, alt-station recipes) — NOT
+      // getRecipeForItem(item.id), which for a butchery order (item = the carcass, an INPUT with no
+      // producing recipe) returns undefined and silently drops the tool gate (a knife-less colony could
+      // butcher, and flensing's minTier-2 was dead). Mirrors craft.ts's recipe resolution.
+      const recipe = order.recipeId
+        ? recipeService.getRecipeById(order.recipeId)
+        : recipeService.getRecipeForItem(order.item.id);
       const req = recipeService.toolRequirementForRecipe(recipe);
       if (!req) return null;
       const tools = WORK_CATEGORIES.find((w) => w.id === req.workType)?.toolsRequired ?? [];

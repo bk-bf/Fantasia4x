@@ -1118,6 +1118,28 @@
     "workAmount"      : 4,
     "toolTierRequired": 0
   },
+  {
+    // Butchery KITS (a bagged toolset, not a weapon): forged blades, a leather roll STITCHED with spun
+    // thread and buckled with metal FASTENERS. Age-appropriate binding (thread + nails/rivets), not
+    // primitive cordage — the thread gates the kit behind spinning (flax/wool/silk). Iron gates the
+    // flensing table, steel the sanguinary altar.
+    "id"              : "make_iron_butchery_kit",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 2, "category:leather": 1, "thread": 2, "iron_nail": 2},
+    "outputs"         : {"iron_butchery_kit": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_steel_butchery_kit",
+    "station"         : "anvil",
+    "inputs"          : {"category:steel": 2, "category:leather": 1, "thread": 2, "steel_rivet": 2},
+    "outputs"         : {"steel_butchery_kit": 1},
+    "workAmount"      : 11,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
   // ── Metalworking tools (the forge/anvil craft-tool gate) ──────────────────
   // Crude green-wood tongs are knappable at the free craft spot with NO tool, so a colony can make
   // its first metalworking tool and never soft-lock the (tool-gated) forge/anvil. Iron/steel tongs
