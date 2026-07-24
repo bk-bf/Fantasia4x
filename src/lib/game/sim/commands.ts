@@ -1579,6 +1579,20 @@ export const COMMANDS: Record<string, Cmd> = {
 
   /** Debug: set snow cover across the whole map to `value` (0–100), scaled per tile by its wetness
    *  (wetter = whiter) so you can eyeball the non-uniform cover. 0 clears it. One-shot full-map pass. */
+  /** Debug: set every tile's soil MOISTURE (0–100) — the static field crop growth reads (`cropHealth`
+   *  min/maxMoisture). Lets a headless test drive crop growth on a flat map without a rain-fed generated
+   *  world (mirrors devSetMapSnow/devSetMapIce). One-shot full-map pass. */
+  devSetMapMoisture: (s, p: { value: number }) => {
+    const v = Math.max(0, Math.min(100, p.value ?? 0));
+    for (const row of s.worldMap) {
+      for (const tile of row) {
+        if ((tile.moisture ?? 0) === v) continue;
+        tile.moisture = v;
+        markTileDirty(tile.y, tile.x, tile);
+      }
+    }
+    return { ...s };
+  },
   devSetMapSnow: (s, p: { value: number }) => {
     const v = Math.max(0, Math.min(100, p.value ?? 0));
     for (const row of s.worldMap) {

@@ -89,6 +89,23 @@ describe('needs & mood', () => {
     expect(need(s, 0, 'thirst'), 'thirst fell after drinking at the well').toBeLessThan(82);
   });
 
+  it('hygiene: a filthy pawn washes at a well and its hygiene falls', async () => {
+    const s = new HeadlessSession();
+    await s.start(
+      buildScenario({
+        seed: 37,
+        map: { w: 14, h: 14 },
+        workReady: true,
+        pawns: [{ count: 2, skillLevel: 10, needs: { hygiene: 94 } }], // seek = 88
+        buildings: [{ id: 'well' }], // a well now draws water for washing too (not just drinking)
+        seedEntities: false
+      })
+    );
+    for (let i = 0; i < 30 && need(s, 0, 'hygiene') >= 60; i++) s.tick(200);
+    console.log(`[NM hygiene] hygiene 94 → ${need(s, 0, 'hygiene').toFixed(1)} (seek 88)`);
+    expect(need(s, 0, 'hygiene'), 'hygiene fell after washing at the well').toBeLessThan(88);
+  });
+
   it('relaxation: a bored idle pawn socialises at the fire and relaxation recovers', async () => {
     const s = new HeadlessSession();
     await s.start(

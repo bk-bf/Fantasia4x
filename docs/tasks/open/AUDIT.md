@@ -146,11 +146,32 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [x] **Building condition** by weather exposure, roof shelters, decays to failure. `thatch_roof` (structural roof) **condition 100→98.4 in ~1600 ticks of clear sky vs 100→52 under storm** (~30× faster via the shared `weatherExposureFactor`); at 0% the structure FAILS and is removed. A roofed NON-structural building ages at the calm `SHELTERED_EXPOSURE` baseline; a more durable material decays slower (`aggregateMaterialMods…durability`).
 - [x] **Repair** (pawn-driven, `repair.ts` + `planRepair`): a worn `thatch_roof` **repaired 82%→~100% by a construction pawn, consuming 2 units of stock** (hay/branch 40→38). Cost is proportional to the damage (`repairUnitsNeeded`), drawn greedily from the building's `repairMaterials`; `planRepair` is shared by the job's generate+complete so a queued repair never no-ops. Below-threshold gating (default 30%) via `getRepairThresholdPct`.
 
-### Crops
-- [ ] All 17 crops plantable in soil grow-zone; plant job per eligible tile
-- [ ] Tile→empty dirt at plant (clears regrowing grass ⚠); crop glyph only after 20% growth
-- [ ] Growth 0→100 gated by temp/moisture/soil/light; 100% yields harvestable; harvest resets tile
-- [ ] Soil terraform (lay_poor/loam/rich/terra_preta) changes subterrain + growth rate
+### Crops — ✅ AUDITED HEADLESS (2026-07-24)
+> Driven end-to-end via `HeadlessSession` over real ticks (`cropChain.test.ts`, kept as a regression). A
+> `grow` zone (`designateRect type:'grow'`) drives sowing (`plant.ts`): soil-eligible tile + seed in stock
+> → plant job → sown IMMATURE (growth 0) → `processCropGrowth` advances toward 100% gated by `cropHealth`
+> (soil tier / temp / moisture / light) → at 100% the tile gets a harvestable count → reaped by an ordinary
+> `harvest` designation. Flat 'grass' = soil tier 1 (fertility 25). New lever: **`devSetMapMoisture`** (the
+> static field growth reads; mirrors `devSetMapSnow`), since crop growth needs moisture ≥ the crop's min and
+> flat tiles are moisture 0 (weather does NOT feed `tile.moisture`).
+- [x] **Plant job per eligible tile**: a `grow` zone with `grain_seed` in stock sowed `crop_wheat` IMMATURE
+      (growth 0) on its tiles. Planting also CLEARS any vegetation on the tile (yielding it) then sows in
+      place (`plant.ts complete`); the count-0 regrowing-grass strip is the earlier onion-on-grass fix.
+- [x] **Growth 0→100 GATED**: at 26°C + moisture 40, wheat climbed to **6.63%** over ~9000 ticks; a dry bed
+      (moisture 5, below minMoisture) stayed at **1.00%** (withered to the 1% floor, never grows). The
+      `cropHealth` temp/moisture window is real — and correctly cool-season-aware: **radish (maxTemp 28)
+      would NOT mature in summer** (afternoons overheat it); grown in spring (within its −5…28 window) it
+      matured fine. That temp gate working is a realism confirmation, not a bug.
+- [x] **Full cycle → harvestable → reaped**: radish (fastest crop, growthTurns 900) grown in spring
+      **reached 100% and set a harvestable count by turn 46000**; a `harvest` designation on the mature tile
+      was reaped by a planting pawn → **radish stock 0→12** (yields radish + seed; `harvestDepletes` resets).
+- [x] **Soil terraform**: a `lay_loam` build (pawn-staged materials + construct) raised tile (7,7) from
+      **grass → tall_grass, soil tier 1→2** (fertility 25→50) — the one-shot self-removing terraform
+      (`construct.complete` reads `terraformSubType`). Higher tier lifts `cropHealth.soilDead`/growth for
+      pickier crops (minSoil 2–4).
+- [~] Mechanism verified on **2 of 17 crops** (wheat + radish) end-to-end; the other 15 share the identical
+      data-driven `plant.ts`/`processCropGrowth` path, differing only in window params (soil/temp/moisture/
+      growthTurns) already listed in `resources.jsonc`. Not each individually driven.
 
 ### Butchery
 - Yield-vs-speed rule (established): butchery stations give a **yield** bonus (better tools → more off a carcass); stations where more-out-than-in makes no sense (tools, smelting ore→ingots, cooking) give **speed** (`craftingBonus`) instead. Fires give more max fuel. Generic stations already give speed; butchery yield now wired.
@@ -179,11 +200,15 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 > mood that eases toward `computeMoodTarget` (BASE 50 + Σ contributions, `MOOD_EASE_STEP` 0.4/tick). Needs
 > set at spawn (`ScenarioPawnGroup.needs`), frozen with `needsDisabled`. `TICKS_PER_GAME_HOUR` = 750.
 - [x] **Survival needs pull a pawn off work at `seek`, satisfy, and fall**: hunger 85→**0.2** (ate `spit_meat`);
-      fatigue 92→**0.6** slept in a `hay_bed`, Sleeping→Idle; thirst 92→**29.3** drank at a `well`. The idle
-      pawn eats/sleeps instead of taking a job (need > work), confirming the needs→work turn order.
-  - [~] **hygiene→wash** NOT driven end-to-end: washing routes to a painted `wash` zone on a WATER tile (a well
-        only serves `drink`), and flat test maps have no water — so a pawn correctly can't bathe and hygiene
-        climbs to 100. Same `tryRouteToWaterNeed`/`findNearestWaterTarget` machinery as thirst, which IS driven.
+      fatigue 92→**0.6** slept in a `hay_bed`, Sleeping→Idle; thirst 92→**29.3** drank at a `well`;
+      hygiene 94→**37.0** washed at a `well`. The idle pawn eats/sleeps instead of taking a job (need > work),
+      confirming the needs→work turn order.
+  - ✅ **hygiene→wash fixed to work at a well (2026-07-24)**: washing previously required a painted `wash`
+        zone on an open-WATER tile (a well served `drink` only), so a colony with only a well could never keep
+        clean. `findNearestWaterTarget` now lets a `well` serve BOTH drink and wash (you draw well water to
+        wash — realistic, and no open water body needed). Same routing as thirst; `handleWashing` applies
+        relief by time-in-state, no water-tile recheck. Verified headless above. (Open water auto-wash via
+        `isNextToWater`/`processAutoWash` unchanged — a river still works too.)
 - [x] **Inverted needs** (100 = satisfied, seek at/BELOW): comfort 8→**54.3** (lounged at a `log_stool`);
       relaxation 12→**81.9** (socialised at a `campfire`). Confirms the seat/gathering routing + fill.
 - [x] **Mood eases toward `computeMoodTarget`**: a needs-maxed frozen pawn eased to **42** while a low-needs
@@ -212,8 +237,8 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       combat threat vs active job vs breakdown. One scenario per contested pair.
 - [ ] **Incapacitation & recovery** — `COLLAPSED` (wound-downed: entry, held-until-heal, exit), `RESCUING`
       (a pawn carries a downed ally to safety), restPolicy-gated recovery-rest. Life-and-death, undriven.
-- [ ] **Undriven states**: `WASHING` (needs a water-tile map), `BLOOD_HUNT`/`PANICKING` (lineage/breakdown
-      tails), `MOVING_TO_DEPOSIT` edge cases.
+- [ ] **Undriven states**: `BLOOD_HUNT`/`PANICKING` (lineage/breakdown tails), `MOVING_TO_DEPOSIT` edge
+      cases. (`WASHING` is now driven — a well serves washing; see Needs & mood above.)
 - [ ] **Stuck / oscillation invariant** — a mixed realistic colony over thousands of ticks: assert NO pawn
       sits in a non-terminal state indefinitely or ping-pongs between two states (the recurring FSM bug class).
 - [ ] **Draft override** — a drafted pawn ignores non-critical needs (`forceWork`) but a truly lethal need /

@@ -1033,8 +1033,9 @@ export const WASH_TURNS = ticksFromSeconds(needNum('hygiene', 'durationSeconds',
 
 /**
  * §D: nearest place to satisfy a water need — a player-painted `drink`/`wash` zone tile (the way
- * the player controls where pawns go, exactly like stockpile drop-off), or for drinking a `well`
- * building. Mirrors findNearestDepositPoint (cheap: scans designations + buildings, not the map).
+ * the player controls where pawns go, exactly like stockpile drop-off), or a `well` building (its
+ * drawn water serves BOTH drinking and washing, so a colony with a well but no open water body can
+ * still keep clean). Mirrors findNearestDepositPoint (cheap: scans designations + buildings, not the map).
  */
 export function findNearestWaterTarget(
   pawn: Pawn,
@@ -1053,12 +1054,11 @@ export function findNearestWaterTarget(
   }
   if (best) return { x: best.x, y: best.y };
 
-  if (kind === 'drink') {
-    for (const b of gs.buildings ?? []) {
-      if (b.status !== 'complete' || b.type !== 'well') continue;
-      const dist = manhattan(b.x, b.y, px, py);
-      if (!best || dist < best.dist) best = { x: b.x, y: b.y, dist };
-    }
+  // A well draws water for drinking OR washing (no open water body needed).
+  for (const b of gs.buildings ?? []) {
+    if (b.status !== 'complete' || b.type !== 'well') continue;
+    const dist = manhattan(b.x, b.y, px, py);
+    if (!best || dist < best.dist) best = { x: b.x, y: b.y, dist };
   }
   return best ? { x: best.x, y: best.y } : null;
 }
