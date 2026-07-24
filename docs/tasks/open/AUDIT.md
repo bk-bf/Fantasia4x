@@ -130,13 +130,20 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [ ] Carts (wheelbarrow/handcart) boost budget + used by haul jobs; quivers add carry+drawspeed
 - [ ] Liquid containers track fill/capacity; static storage holds off-budget; carry budget enforced on pickup
 
-### Time-based progression
-- [ ] Drying (plant_fiber→hay, meat→dried, wood seasoning) — respects temp (<12°C slow, ≥28 fast) & wetness (soaked reverses); fire-ring faster
-- [ ] Fuel depletes per tick, fire dies at empty, cold fire won't process — wet fuel burns worse? raise if inconsistent or track reason
+### Time-based progression — ✅ AUDITED HEADLESS (2026-07-24)
+> Driven end-to-end via `HeadlessSession` over real ticks (`timeProgression.test.ts`, kept as a regression).
+> Plains baked temp = 10°C + season offset (spring −5→5°C, summer +16→26°C, winter −18→−8°C) is the gate
+> behind spoilage/drying; the season/weather are set with `setSeason`/`setWeather`. Each clock is throttled
+> (decay/drying every 60 ticks, deterioration every 600, building-condition every tick) so the deltas are
+> game-days long — the tests loop `tick(400)` to reach them.
+- [x] **Drying** cures where warm, STALLS where cold. `plant_fiber` drying progress **36.7s accrued at 26°C vs 0s at 5°C** (<12°C floor) over ~4800 ticks. Fire-ring / rack (`dryingBonus`) + wetness-reversal are unit-covered in `dryingAndDecay.test.ts`; the temp GATE is the headless part. (`d.drying` accumulator → converts to `hay` at `driesTo.seconds`.)
+- [x] **Fuel** depletes per tick, fire dies COLD at empty. Real pawn refuel loop (no `infiniteFuel`): 4 pawns hauled `dry_firewood` (+`plant_fiber` tinder) into a campfire → **auto-lit, peakFuel 31, fuel fell tick-over-tick while lit, ended fuel=0 lit=false fireHeat=0**. "Cold fire won't process" = the `minFuelHeat` smelt gate, verified in the Ore/Steel audits (blast furnace unfuelled → no smelt until fuelled to heat 5).
+  - ⚠ **Wet fuel is NOT modelled** — burn quality is `burnFactor` (density: charcoal outlasts firewood) + `fuelHeat` (green vs dry firewood), never tile wetness. Deliberate simplification: fuel is a dry stockpile good; the green→dry axis already carries the "worse fuel" idea.
 - [x] Fermentation (ale/wine/cider) temp-gated via `fermentTempRate` (dormant <4°C, full 15–28, killed >40); brines stay a plain passive timer
-- [ ] Spoilage: food→decaysTo, freezing halts, preservation+roof slow; drying/spoiling mutually exclusive
-- [ ] Item deterioration by category every 600 ticks, roof/stored exempts — flat rate, no temp/wetness; raise if unrealistic or track reason
-- [ ] Building condition by material×weatherExposure (rain/snow up to 3×), roof shelters; decay buildings need repair
+- [x] **Spoilage**: food → `decaysTo`, freezing HALTS. `common_carp` (decaySeconds 300) **rotted to `rotten_food` by turn 18000 at 26°C; at winter −8°C it did NOT rot at all** (6/6 intact, frozen). Preservation (stored + container/building `preservation`) slows via `mult`; a drying/`reservedFor` stack never spoils (mutually exclusive — same `dryRateFor` consulted).
+- [x] **Item deterioration**: a LOOSE stack weathers, a STORED/roofed one is sheltered. Loose `branch` **durability 120→118.4** over 8000 ticks; the stored copy never even got a `durability` field written (step skips it). Destroyed at 0.
+  - ⚠ **Flat rate by category, no temp/wetness modulation** (stone 0.004 … food 0.08, ×`DETERIORATION_GLOBAL_SCALE` 0.02). Deliberate: the dominant real factor — shelter — IS modelled (stored/roof exempt); a per-tile weather multiplier on loose-item wear was judged not worth the per-tick cost for the rare loose stack.
+- [x] **Building condition** by weather exposure, roof shelters, decays to failure. `thatch_roof` (structural roof) **condition 100→98.4 in ~1600 ticks of clear sky vs 100→52 under storm** (~30× faster via `weatherExposureFactor`); at 0% the structure FAILS and is removed. A roofed NON-structural building ages at the calm `SHELTERED_EXPOSURE` baseline; a more durable material decays slower (`aggregateMaterialMods…durability`). Pawn-driven repair (`refuel.ts`/`repair.ts`, `planRepair`) restores condition — repair job wiring not re-driven here.
 
 ### Crops
 - [ ] All 17 crops plantable in soil grow-zone; plant job per eligible tile
