@@ -89,4 +89,37 @@ describe('steel chain', () => {
     expect(stk().hematite ?? 0, 'bloomery smelted ore into iron').toBeLessThan(ore0);
     expect(stk().blister_steel ?? 0, 'cementation baked blister steel').toBeGreaterThan(0);
   });
+
+  // Anvil-side steps, physically. The craftTool gate passes when the pawn holds a metalworking tool OR
+  // the colony has one in stock (auto-grabbed en route) — so stock the hammer/tongs and let them work.
+  it('pawns physically forge shear steel and pattern-welded steel at the anvil', async () => {
+    const s = new HeadlessSession();
+    await s.start(
+      buildScenario({
+        seed: 11,
+        map: { w: 20, h: 20 },
+        researchMaxTier: 9,
+        toolTier: 3,
+        pawns: [{ count: 6, skillLevel: 20, equip: ['iron_hammer'] }],
+        needsDisabled: ['hunger', 'fatigue'],
+        buildings: [{ id: 'anvil' }],
+        items: { blister_steel: 40, iron_bar: 40, iron_hammer: 4, iron_tongs: 4 },
+        seedEntities: false
+      })
+    );
+    for (const p of s.getState().pawns)
+      for (const w of workService.getAllWorkCategories())
+        s.command({ type: 'setPawnLaborLevel', payload: { pawnId: p.id, workId: w.id, level: 3 } } as never);
+    const stk = () => (s.getState().stockpile ?? {}) as Record<string, number>;
+    s.command({ type: 'craftItem', payload: { itemId: 'shear_steel', quantity: 1 } } as never);
+    for (let i = 0; i < 16 && !(stk().shear_steel > 0); i++) s.tick(400);
+    const shear = stk().shear_steel ?? 0;
+    s.command({ type: 'craftItem', payload: { itemId: 'pattern_welded_steel', quantity: 1 } } as never);
+    for (let i = 0; i < 16 && !(stk().pattern_welded_steel > 0); i++) s.tick(400);
+    console.log(
+      `[STEEL-ANVIL] blister ${stk().blister_steel}/40 → shear_steel=${shear}, pattern_welded=${stk().pattern_welded_steel}, iron_bar=${stk().iron_bar}/40, turn=${s.getState().turn}`
+    );
+    expect(shear, 'anvil forged shear steel').toBeGreaterThan(0);
+    expect(stk().pattern_welded_steel ?? 0, 'anvil forge-welded pattern steel').toBeGreaterThan(0);
+  });
 });

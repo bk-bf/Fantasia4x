@@ -108,6 +108,15 @@ pnpm graph:diff           # diff the graph against the saved baseline
 > (`node ../codegraph/bin/codegraph.mjs … Fantasia4x`) — it must be checked out as a
 > sibling of this repo. Override its location with `CODEGRAPH_DIR`.
 
+> **Headless map choice — the #1 silent-stall trap.** `buildScenario` defaults to `preset: 'flat'`
+> (uniformly walkable, every tile reachable, whole map a stockpile). Only pass `preset: 'generated'` when
+> the test is ABOUT the world (worldgen/biomes/pathfinding/wildlife/ore). On a generated map a tile can be
+> unreachable from the pawns, and an unreachable job is **silently dropped** — the order stays queued, its
+> inputs stay reserved, pawns sit Idle, and nothing errors. That trap has already produced two wrong
+> diagnoses ("passive stations are broken", "anvil needs a carried tool"). Every scenario logs its map
+> (`[scenario] map WxH preset=…`). Related: starting stock is pinned to the pawn cluster, and tool-gated
+> jobs pass if the COLONY has the tool (put it in `items`; the pawn grabs it en route).
+
 > **Audit/playtest/verify = drive the REAL sim.** Any "verify / audit / playtest / end-to-end" claim must
 > come from `HeadlessSession` (or `./dev.sh --headless` + `/api/sim/*`) with real pawns over real ticks, and
 > must state the mechanism + observed delta ("N ticks, stock X→Y"). Unit/service tests (`completeCraftOrder`,

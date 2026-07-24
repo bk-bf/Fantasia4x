@@ -16,6 +16,18 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 > leave the box `[~]`, not `[x]`.
 >
 > **Headless-harness gotchas (so "it wouldn't run" is never an excuse to fall back to unit tests):**
+> - **THE MAP IS THE #1 TRAP — `buildScenario` now defaults to `preset: 'flat'`.** A flat map is uniformly
+>   walkable, so every tile is reachable and the whole map is a stockpile. On a **`generated`** map tiles can
+>   be cut off from the pawns by water/mountain, and a job on an unreachable tile is **silently dropped** by
+>   `selectJobForPawn`'s reachability filter: the order stays queued, its inputs stay reserved, the pawns sit
+>   Idle, and NOTHING reports an error. This one trap masqueraded as "passive stations are broken" AND as
+>   "anvil work needs a carried tool" — both were false. **Only pass `preset: 'generated'` when the test is
+>   ABOUT the world** (worldgen, biomes, pathfinding around obstacles, wildlife, ore nodes). Every
+>   `buildScenario` call now LOGS its map choice (`[scenario] map WxH preset=…`) with a warning on generated.
+> - **Starting stock is pinned to the pawn cluster** (`addItem` takes an optional `tileKey`). Don't
+>   hand-place stock on a far/edge tile — if pawns can't reach it, every fetch job for it sits unclaimed.
+> - **Tool-gated jobs (anvil/butchery) pass if the COLONY has the tool** — just put a hammer in `items`;
+>   the pawn auto-grabs it en route. It does NOT have to be equipped.
 > - **Founders default to NO enabled labor** — call `setPawnLaborLevel { pawnId, workId, level }` for each
 >   `workService.getAllWorkCategories()` or the pawns sit Idle and nothing is crafted/hauled.
 > - **The reserve→haul→stage→craft pipeline is multi-tick** — a single craft needs ~900+ ticks; weaving-frame
@@ -304,8 +316,9 @@ colony; the 6 steels each satisfy a `category:steel` consumer with the distinct 
 - [x] **HEADLESS-PLAYTESTED** (`steelChain.test.ts`, `HeadlessSession`, real pawns/ticks, `infiniteFuel` so the
       haul-fuel-and-light loop stays out of scope): pawns smelt ore at the bloomery AND bake blister steel at
       the cementation furnace — **hematite 60→56, blister_steel 0→2 by turn 3200**.
-- [ ] Anvil-side steps (shear/pattern-weld) still unproven physically: anvil work needs the pawn to be
-      CARRYING a metalworking tool (stockpiled isn't enough) — a tool-gating question, not a chain defect.
+- [x] **Anvil-side steps proven physically too**: pawns forged **shear_steel=1 and pattern_welded=1**
+      (blister 40→38, iron_bar 40→38) with only a hammer in colony stock — the earlier "needs a carried
+      tool" theory was WRONG, it was the same unreachable-stock bug. The FULL steel chain is playtested.
 - [x] ⚠→fixed: **no shadow.** The finery's output was renamed to a DISTINCT `wrought_iron` (cleaner, more
       even than a bloom — `material.item.durability` 1.08 vs 1.0), so `iron_bar` and `wrought_iron` each have
       exactly ONE producer. Both share **`category: iron`**, and the steel processes (cementation, crucible,

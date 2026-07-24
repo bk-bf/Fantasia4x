@@ -79,7 +79,7 @@ it('MONITOR: dense creature map behaviour', async () => {
   const session = new HeadlessSession();
   // A quiet colony (no pawns to steal aggro) so we watch pure creature ecology.
   await session.start(
-    buildScenario({ seed: 0xbeef, map: { w: 96, h: 96 }, pawns: [], seedEntities: true })
+    buildScenario({ seed: 0xbeef, map: { w: 96, h: 96, preset: 'generated' }, pawns: [], seedEntities: true })
   );
   for (const { id, n } of SPAWN_MIX) {
     session.command({ type: 'devSpawnEntities', payload: { count: n, creatureId: id } });

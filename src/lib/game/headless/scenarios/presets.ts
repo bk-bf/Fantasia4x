@@ -32,7 +32,7 @@ export const SCENARIO_PRESETS: ScenarioPreset[] = [
       'Eight practised colonists with tier-1 research done, a casting yard, and bronze-age stock.',
     spec: {
       seed: 0xb407e,
-      map: { w: 96, h: 96 },
+      map: { w: 96, h: 96, preset: 'generated' },
       pawns: [{ count: 8, skillLevel: 12 }],
       researchMaxTier: 1,
       buildings: [
@@ -75,7 +75,7 @@ export const SCENARIO_PRESETS: ScenarioPreset[] = [
       'Ten seasoned colonists with tier-2 research done, a bloomery-and-anvil yard, and iron stock.',
     spec: {
       seed: 0x140c0,
-      map: { w: 96, h: 96 },
+      map: { w: 96, h: 96, preset: 'generated' },
       pawns: [{ count: 10, skillLevel: 20 }],
       researchMaxTier: 2,
       buildings: [
@@ -120,7 +120,7 @@ export const SCENARIO_PRESETS: ScenarioPreset[] = [
       'Six drafted, armed veterans on a quiet map against a goblin pack — needs frozen so only the fight matters.',
     spec: {
       seed: 0xa47a5,
-      map: { w: 64, h: 64 },
+      map: { w: 64, h: 64, preset: 'generated' },
       pawns: [
         {
           count: 6,
@@ -143,7 +143,7 @@ export const SCENARIO_PRESETS: ScenarioPreset[] = [
       'Twelve master colonists with the entire research tree complete — the late-game surface, reachable in seconds.',
     spec: {
       seed: 0xf011,
-      map: { w: 96, h: 96 },
+      map: { w: 96, h: 96, preset: 'generated' },
       pawns: [{ count: 12, skillLevel: 35 }],
       researchMaxTier: 99,
       buildings: [

@@ -59,7 +59,17 @@ export interface ScenarioSpec {
   map?: {
     w?: number;
     h?: number;
-    /** `generated` (default) = real world gen; `flat` = uniform walkable grass, no resources. */
+    /**
+     * `flat` (**DEFAULT**) = uniform walkable grass, every tile reachable, no resources/entities — the
+     * safe TEST map. `generated` = real world gen (biomes, water, mountains, ore, wildlife).
+     *
+     * ⚠ **Pick `generated` only when the test is ABOUT the world** (worldgen, biomes, pathfinding around
+     * obstacles, wildlife, resource nodes). On a generated map, tiles can be **unreachable** from the
+     * pawns — cut off by water/mountain — and an unreachable job is silently dropped by
+     * `selectJobForPawn`'s reachability filter. A craft then stalls forever with NO error: the order
+     * sits queued, its inputs sit reserved, and the pawns sit Idle. That exact trap cost a long debug
+     * session (mis-diagnosed as "passive stations are broken"); `flat` makes it impossible.
+     */
     preset?: 'flat' | 'generated';
   };
   /** Pawn groups (default: one plain group of 5 founders). */
@@ -83,6 +93,12 @@ export interface ScenarioSpec {
   infiniteFuel?: boolean;
   /** Seed the map's natural wildlife/lairs (default true; `false` = quiet map). */
   seedEntities?: boolean;
+}
+
+/** Announce the scenario's world choice. Deliberately LOUD: which map a headless run got is the single
+ *  most common source of "the craft stalls and nothing says why" (see ScenarioSpec.map). */
+function scenarioLog(msg: string): void {
+  console.log(`[scenario] ${msg}`);
 }
 
 /** A uniform walkable grass field — every WorldTile field a real generateWorld tile carries. */
@@ -145,7 +161,18 @@ export function buildScenario(spec: ScenarioSpec): GameState {
 
   const w = spec.map?.w ?? 96;
   const h = spec.map?.h ?? 96;
-  const world = spec.map?.preset === 'flat' ? flatWorld(w, h) : generateWorld(w, h, seed);
+  // DEFAULT = flat. A flat map is uniformly walkable, so every tile is reachable and no job can be
+  // silently dropped by the reachability filter. Real world gen is an explicit opt-in (see ScenarioSpec).
+  const generated = spec.map?.preset === 'generated';
+  const world = generated ? generateWorld(w, h, seed) : flatWorld(w, h);
+  scenarioLog(
+    `map ${w}x${h} preset=${generated ? 'generated' : 'flat'}` +
+      (generated
+        ? ' ⚠ generated: tiles may be UNREACHABLE from the pawns — a job on an unreachable tile is' +
+          ' silently dropped and the craft stalls with no error. Use the default flat map unless the' +
+          ' test is ABOUT the world (biomes/pathfinding/wildlife/ore).'
+        : ' (uniformly walkable — every tile reachable; whole map is a stockpile)')
+  );
 
   // ── The resetGame fresh-colony bootstrap ─────────────────────────────────────────────
   let gs: GameState = {
@@ -177,7 +204,8 @@ export function buildScenario(spec: ScenarioSpec): GameState {
     gs = socialService.seedFamilyRelationships(gs);
   }
   gs = workService.ensureDefaultWorkAssignments(gs);
-  if (spec.seedEntities !== false && spec.map?.preset !== 'flat') {
+  // Wildlife/lairs only seed on a real generated world (a flat test field has no biomes to seed into).
+  if (spec.seedEntities !== false && generated) {
     gs = entityService.seedInitialEntities(gs);
   }
 

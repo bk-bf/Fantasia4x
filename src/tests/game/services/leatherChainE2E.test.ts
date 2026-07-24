@@ -117,4 +117,40 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
     expect(stock().woolcloth ?? 0, 'pawn crafts a category:wool item').toBeGreaterThan(0);
     expect(stock().goat_wool, 'wool consumed').toBeLessThan(20);
   });
+
+  // The two-step PASSIVE chain, physically: pawns haul hide+ash to the Curing Frame, it cures, then they
+  // haul the cured hide + brine to the tanning bucket and it tans. Now provable — the earlier stall was
+  // unreachable starting stock on a generated map, not a passive-station defect.
+  it('pawns physically cure a hide then tan it into leather (two passive stations, real ticks)', async () => {
+    const session = new HeadlessSession();
+    await session.start(
+      buildScenario({
+        seed: 11,
+        map: { w: 20, h: 20 }, // flat by default → every tile reachable
+        researchMaxTier: 9,
+        toolTier: 3,
+        pawns: [{ count: 6, skillLevel: 12 }],
+        needsDisabled: ['hunger', 'fatigue'],
+        buildings: [{ id: 'hide_rack' }, { id: 'tanning_bucket_station' }],
+        items: { deer_hide: 20, ash: 40, tanning_brine: 20 },
+        seedEntities: false
+      })
+    );
+    for (const p of session.getState().pawns)
+      for (const w of workService.getAllWorkCategories())
+        session.command({ type: 'setPawnLaborLevel', payload: { pawnId: p.id, workId: w.id, level: 3 } } as never);
+    const stk = () => (session.getState().stockpile ?? {}) as Record<string, number>;
+    session.command({ type: 'craftItem', payload: { itemId: 'cured_deer_hide', quantity: 1 } } as never);
+    for (let i = 0; i < 16 && !(stk().cured_deer_hide > 0); i++) session.tick(400);
+    const cured = stk().cured_deer_hide ?? 0;
+    // …then tan that cured hide into buckskin at the bucket (brine consumed as a real input).
+    session.command({ type: 'craftItem', payload: { itemId: 'buckskin', quantity: 1 } } as never);
+    for (let i = 0; i < 16 && !(stk().buckskin > 0); i++) session.tick(400);
+    console.log(
+      `[LEATHER-PIPELINE] deer_hide ${stk().deer_hide}/20, cured_deer_hide=${cured}, buckskin=${stk().buckskin}, brine=${stk().tanning_brine}/20, turn=${session.getState().turn}`
+    );
+    expect(cured, 'Curing Frame cured a hide').toBeGreaterThan(0);
+    expect(stk().buckskin ?? 0, 'tanning bucket produced leather').toBeGreaterThan(0);
+    expect(stk().tanning_brine, 'brine consumed as a real input').toBeLessThan(20);
+  });
 });
