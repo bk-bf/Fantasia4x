@@ -22,7 +22,7 @@ import {
   colonyToolTier
 } from '../core/GameState';
 import { recipeService } from './RecipeService';
-import { buildingService } from './BuildingService';
+import { buildingService, weatherExposureFactor } from './BuildingService';
 import {
   thermalAt,
   computeThermalAt,
@@ -1018,6 +1018,10 @@ export class ItemServiceImpl implements ItemService {
       if ((def?.effects as Record<string, number> | undefined)?.['roof'])
         roofed.add(`${b.x},${b.y}`);
     }
+    // Weather scales the wear on EXPOSED (loose, un-roofed) stacks the same way it scales structural
+    // wear — a storm rusts/warps loose gear fast, a clear calm day barely touches it. One scalar per
+    // tick (SHARED with stepBuildingCondition, no per-tile calc; sheltered items are excluded below).
+    const weatherMul = weatherExposureFactor(gameState.weather);
 
     let changed = false;
     const next: DroppedItem[] = [];
@@ -1037,7 +1041,8 @@ export class ItemServiceImpl implements ItemService {
         continue;
       }
       const max = def.maxDurability ?? DEFAULT_MAX_DURABILITY;
-      const left = (di.durability ?? max) - rate * DETERIORATION_GLOBAL_SCALE * elapsedTicks;
+      const left =
+        (di.durability ?? max) - rate * DETERIORATION_GLOBAL_SCALE * elapsedTicks * weatherMul;
       changed = true;
       if (left <= 0) {
         // destroyed by the elements — the stack is removed

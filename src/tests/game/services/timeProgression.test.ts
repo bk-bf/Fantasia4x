@@ -110,41 +110,43 @@ describe('time-based progression', () => {
     expect(coldDry, 'cold tile (<12°C) does not dry').toBe(0);
   });
 
-  it('deterioration: a LOOSE stack weathers, a STORED one is sheltered', async () => {
+  it('deterioration: LOOSE stack weathers (storm >> clear), STORED one sheltered', async () => {
     // NO pawns — otherwise they'd HAUL the loose stack onto a stockpile (→ stored → exempt) and there'd
-    // be nothing left to weather.
-    const s = new HeadlessSession();
-    await s.start(
-      buildScenario({
-        seed: 23,
-        map: { w: 14, h: 14 },
-        pawns: [],
-        items: { branch: 10 }, // branch: no decaySeconds, no driesTo → ONLY deteriorates
-        seedEntities: false
-      })
-    );
-    const stored0 = drops(s, 'branch').find((d) => d.stored) as Record<string, unknown>;
-    // Free ONE tile from the map-wide stockpile so a spawned stack stays LOOSE (not auto-absorbed as
-    // stored). The whole-map `designateRect('stockpile')` writes no instance id, so clearDesignation on
-    // the tile — which deletes its zoneTiles entry — is the way to un-stockpile it.
-    const lx = 3;
-    const ly = 3;
-    s.command({ type: 'clearDesignation', payload: { x: lx, y: ly } } as never);
-    s.command({ type: 'devSpawnItem', payload: { itemId: 'branch', amount: 10, x: lx, y: ly } } as never);
-    const loose0 = drops(s, 'branch').find((d) => !d.stored) as Record<string, unknown>;
-    expect(loose0, 'loose stack exists (stockpile removed)').toBeTruthy();
-
-    for (let i = 0; i < 20; i++) s.tick(400); // 8000 ticks → ~13 deterioration passes
-    const looseNow = drops(s, 'branch').find((d) => !d.stored) as Record<string, unknown> | undefined;
-    const storedNow = drops(s, 'branch').find((d) => d.stored) as Record<string, unknown> | undefined;
-    const looseDur = (looseNow?.durability as number) ?? Infinity;
+    // be nothing left to weather. Returns [looseDurability, storedGotAWearField].
+    const run = async (weatherType: string): Promise<[number, boolean]> => {
+      const s = new HeadlessSession();
+      await s.start(
+        buildScenario({
+          seed: 23,
+          map: { w: 14, h: 14 },
+          pawns: [],
+          items: { branch: 10 }, // branch: no decaySeconds, no driesTo → ONLY deteriorates
+          seedEntities: false
+        })
+      );
+      s.command({ type: 'setWeather', payload: { type: weatherType } } as never);
+      // Free ONE tile from the map-wide stockpile so a spawned stack stays LOOSE (not auto-absorbed as
+      // stored). The whole-map `designateRect('stockpile')` writes no instance id, so clearDesignation
+      // on the tile — which deletes its zoneTiles entry — is the way to un-stockpile it.
+      const lx = 3;
+      const ly = 3;
+      s.command({ type: 'clearDesignation', payload: { x: lx, y: ly } } as never);
+      s.command({ type: 'devSpawnItem', payload: { itemId: 'branch', amount: 10, x: lx, y: ly } } as never);
+      expect(drops(s, 'branch').find((d) => !d.stored), 'loose stack exists').toBeTruthy();
+      for (let i = 0; i < 20; i++) s.tick(400); // 8000 ticks → ~13 deterioration passes
+      const looseNow = drops(s, 'branch').find((d) => !d.stored) as Record<string, unknown> | undefined;
+      const storedNow = drops(s, 'branch').find((d) => d.stored) as Record<string, unknown> | undefined;
+      return [(looseNow?.durability as number) ?? 120, storedNow?.durability !== undefined];
+    };
+    const [clearDur, clearWornStored] = await run('clear');
+    const [stormDur, stormWornStored] = await run('storm');
     console.log(
-      `[TIME deteriorate] loose branch durability=${looseDur} (max 120); stored branch durability=${storedNow?.durability ?? 'untouched'}`
+      `[TIME deteriorate] loose branch durability (max 120): clear=${clearDur.toFixed(2)} storm=${stormDur.toFixed(2)}; stored ever worn? ${clearWornStored || stormWornStored}`
     );
-    expect(looseDur, 'loose branch lost durability to weather').toBeLessThan(120);
+    expect(clearDur, 'loose branch wears even in clear weather').toBeLessThan(120);
+    expect(stormDur, 'storm weathers a loose stack faster than clear').toBeLessThan(clearDur);
     // A stored stack never gets a durability field written (sheltered — the step skips it entirely).
-    expect(storedNow?.durability, 'stored branch untouched').toBeUndefined();
-    expect(stored0?.durability, 'stored was never weathered').toBeUndefined();
+    expect(clearWornStored || stormWornStored, 'stored branch never weathered').toBe(false);
   });
 
   it('fuel: pawns load a campfire, it burns down per tick and dies COLD at empty', async () => {
@@ -223,5 +225,46 @@ describe('time-based progression', () => {
     );
     expect(clearCond, 'wears even in fair weather').toBeLessThan(100);
     expect(stormCond, 'storm wears it faster than clear').toBeLessThan(clearCond);
+  });
+
+  it('repair: a construction pawn restores a worn building, consuming stock', async () => {
+    const s = new HeadlessSession();
+    await s.start(
+      buildScenario({
+        seed: 26,
+        map: { w: 16, h: 16 },
+        workReady: true, // construction labor on for the repair job
+        pawns: [{ count: 4, skillLevel: 15 }],
+        needsDisabled: ['hunger', 'fatigue', 'thirst'],
+        buildings: [{ id: 'thatch_roof' }],
+        items: { hay: 20, branch: 20 }, // thatch_roof repairMaterials
+        seedEntities: false
+      })
+    );
+    const roof = () =>
+      (s.getState().buildings ?? []).find((b) => (b as { type: string }).type === 'thatch_roof') as
+        | { condition?: number }
+        | undefined;
+    // Wear it down a little under storm (stays well above 0 — a few hundred ticks).
+    s.command({ type: 'setWeather', payload: { type: 'storm' } } as never);
+    for (let i = 0; i < 2; i++) s.tick(300);
+    const worn = roof()?.condition ?? 100;
+    // Force the repair to qualify by raising the threshold above the worn %, then calm the sky so wear
+    // doesn't outrun the repair while we watch it.
+    s.command({ type: 'setAllBuildingsRepairThreshold', payload: { pct: 100 } } as never);
+    s.command({ type: 'setWeather', payload: { type: 'clear' } } as never);
+    const hay0 = (stk(s).hay ?? 0) + (stk(s).branch ?? 0);
+    let repairedTo = worn;
+    for (let i = 0; i < 30 && repairedTo < 99.5; i++) {
+      s.tick(200);
+      repairedTo = Math.max(repairedTo, roof()?.condition ?? 0);
+    }
+    const matNow = (stk(s).hay ?? 0) + (stk(s).branch ?? 0);
+    console.log(
+      `[TIME repair] thatch_roof worn to ${worn.toFixed(2)} → repaired to ${repairedTo.toFixed(2)}; repair stock ${hay0}→${matNow}`
+    );
+    expect(worn, 'building actually wore down first').toBeLessThan(100);
+    expect(repairedTo, 'pawn repaired it back toward pristine').toBeGreaterThan(worn);
+    expect(matNow, 'repair consumed material from stock').toBeLessThan(hay0);
   });
 });

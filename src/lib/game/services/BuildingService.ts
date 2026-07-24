@@ -38,14 +38,15 @@ const ROOF_SUPPORT_RESOURCE_IDS: Set<string> = new Set(
 );
 
 /**
- * Weather-exposure multiplier on structural wear (1 = the def's nominal `conditionDecayPerTurn`).
- * Wet, violent weather rots thatch and scours mortar fast; clear/calm skies barely age a structure
- * (a small fair-weather baseline remains — sun/thermal cycling). Computed ONCE per
- * `stepBuildingCondition` tick (never per building) from the small top-level `weather` scalar — no
- * per-tick allocation beyond the existing buildings `.map()`. Absent weather (tests / pre-weather
- * saves) returns the nominal 1 so behaviour is unchanged.
+ * Weather-exposure multiplier on wear (1 = the nominal rate). Wet, violent weather rots thatch, scours
+ * mortar, and rusts/warps loose gear fast; clear/calm skies barely age anything (a small fair-weather
+ * baseline remains — sun/thermal cycling). Computed ONCE per tick (never per entity) from the small
+ * top-level `weather` scalar — no per-tile calc, and sheltered/stored things are excluded by their
+ * callers before this ever applies. SHARED by `stepBuildingCondition` (structures) and
+ * `stepItemDeterioration` (loose items) so the two curves can never drift. Absent weather (tests /
+ * pre-weather saves) returns the nominal 1 so behaviour is unchanged.
  */
-function weatherExposureFactor(weather: GameState['weather']): number {
+export function weatherExposureFactor(weather: GameState['weather']): number {
   if (!weather) return 1;
   const type = weather.type ?? 'clear';
   const intensity = weather.intensity ?? 0;

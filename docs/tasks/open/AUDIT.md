@@ -130,7 +130,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [ ] Carts (wheelbarrow/handcart) boost budget + used by haul jobs; quivers add carry+drawspeed
 - [ ] Liquid containers track fill/capacity; static storage holds off-budget; carry budget enforced on pickup
 
-### Time-based progression — ✅ AUDITED HEADLESS (2026-07-24)
+### Time-based progression — ✅ AUDITED HEADLESS (2026-07-24, incl. weather-scaled deterioration + repair)
 > Driven end-to-end via `HeadlessSession` over real ticks (`timeProgression.test.ts`, kept as a regression).
 > Plains baked temp = 10°C + season offset (spring −5→5°C, summer +16→26°C, winter −18→−8°C) is the gate
 > behind spoilage/drying; the season/weather are set with `setSeason`/`setWeather`. Each clock is throttled
@@ -141,9 +141,10 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
   - ⚠ **Wet fuel is NOT modelled** — burn quality is `burnFactor` (density: charcoal outlasts firewood) + `fuelHeat` (green vs dry firewood), never tile wetness. Deliberate simplification: fuel is a dry stockpile good; the green→dry axis already carries the "worse fuel" idea.
 - [x] Fermentation (ale/wine/cider) temp-gated via `fermentTempRate` (dormant <4°C, full 15–28, killed >40); brines stay a plain passive timer
 - [x] **Spoilage**: food → `decaysTo`, freezing HALTS. `common_carp` (decaySeconds 300) **rotted to `rotten_food` by turn 18000 at 26°C; at winter −8°C it did NOT rot at all** (6/6 intact, frozen). Preservation (stored + container/building `preservation`) slows via `mult`; a drying/`reservedFor` stack never spoils (mutually exclusive — same `dryRateFor` consulted).
-- [x] **Item deterioration**: a LOOSE stack weathers, a STORED/roofed one is sheltered. Loose `branch` **durability 120→118.4** over 8000 ticks; the stored copy never even got a `durability` field written (step skips it). Destroyed at 0.
-  - ⚠ **Flat rate by category, no temp/wetness modulation** (stone 0.004 … food 0.08, ×`DETERIORATION_GLOBAL_SCALE` 0.02). Deliberate: the dominant real factor — shelter — IS modelled (stored/roof exempt); a per-tile weather multiplier on loose-item wear was judged not worth the per-tick cost for the rare loose stack.
-- [x] **Building condition** by weather exposure, roof shelters, decays to failure. `thatch_roof` (structural roof) **condition 100→98.4 in ~1600 ticks of clear sky vs 100→52 under storm** (~30× faster via `weatherExposureFactor`); at 0% the structure FAILS and is removed. A roofed NON-structural building ages at the calm `SHELTERED_EXPOSURE` baseline; a more durable material decays slower (`aggregateMaterialMods…durability`). Pawn-driven repair (`refuel.ts`/`repair.ts`, `planRepair`) restores condition — repair job wiring not re-driven here.
+- [x] **Item deterioration**: a LOOSE stack weathers (WEATHER-SCALED), a STORED/roofed one is sheltered. Loose `branch` **durability clear 119.84 vs storm 115.32** over 8000 ticks (~29× faster in a storm); the stored copy never even got a `durability` field written (step skips it). Destroyed at 0.
+  - ✅ **Now weather-scaled (2026-07-24)**: `stepItemDeterioration` multiplies exposed-stack wear by the SAME `weatherExposureFactor` structures use (clear/heat_wave 0.12 … drizzle 0.8 … rain/snow 1.6 … storm/heavy_rain/blizzard 3.0, ×intensity). The function was exported from BuildingService and shared, so the item + building curves can't drift. No per-tile calc (one global scalar); stored/roofed stacks are excluded before it applies. Base rate is still per-category (stone 0.004 … food 0.08, ×`DETERIORATION_GLOBAL_SCALE` 0.02).
+- [x] **Building condition** by weather exposure, roof shelters, decays to failure. `thatch_roof` (structural roof) **condition 100→98.4 in ~1600 ticks of clear sky vs 100→52 under storm** (~30× faster via the shared `weatherExposureFactor`); at 0% the structure FAILS and is removed. A roofed NON-structural building ages at the calm `SHELTERED_EXPOSURE` baseline; a more durable material decays slower (`aggregateMaterialMods…durability`).
+- [x] **Repair** (pawn-driven, `repair.ts` + `planRepair`): a worn `thatch_roof` **repaired 82%→~100% by a construction pawn, consuming 2 units of stock** (hay/branch 40→38). Cost is proportional to the damage (`repairUnitsNeeded`), drawn greedily from the building's `repairMaterials`; `planRepair` is shared by the job's generate+complete so a queued repair never no-ops. Below-threshold gating (default 30%) via `getRepairThresholdPct`.
 
 ### Crops
 - [ ] All 17 crops plantable in soil grow-zone; plant job per eligible tile
@@ -170,6 +171,28 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [ ] Butchery skill raises yield; recipe→discipline routing correct (craftDiscipline)
 - [ ] Zero-skill pawn still completes T0 (no bootstrap deadlock); tool-tier gates only where intended
 - [ ] Quality matters downstream (better weapon/armor/tool stats into combat/work)
+
+### Needs & mood — ⭐ NEW AUDIT TASK (proposed 2026-07-24, not yet driven)
+> The tick-by-tick heart of the colony sim, and the biggest live system with NO audit section yet. Needs
+> (`needs.jsonc`: hunger, fatigue, thirst, hygiene, relaxation, comfort, + bloodHunger) build/decay each
+> tick (`processNeedsTick`), pull a pawn off work at their `seek` threshold into the FSM state that
+> satisfies them, and feed `moodBands` into a single 0–100 mood that eases toward `computeMoodTarget`.
+> Only `moodBreakdown.test.ts` covers this, and it's UNIT-level — the need→FSM→relief loop and mood over
+> real ticks are unproven. All headless-drivable: `devToggleNeed` freezes a need; a need meter can be set
+> at spawn (`ScenarioPawnGroup.needs`); comfort/well_rested were just wired (see furniture section).
+- [ ] **Survival needs pull a pawn off work at `seek`** and into the satisfying FSM state — hunger→eat,
+      thirst→drink, fatigue→sleep, hygiene→wash — then one session applies `relief` and returns it to work.
+- [ ] **Inverted needs** (relaxation, comfort: 100 = satisfied) seek at/BELOW their threshold; relaxation
+      → Socialising, comfort → drawn to the highest-`gatheringLevel` seat/bed.
+- [ ] **Mood eases toward `computeMoodTarget`**, not per-tick drift: a starving/exhausted pawn's `moodBands`
+      drag the target down; amenities (beauty) + positive thoughts lift it; a thought FADES to zero over its life.
+- [ ] **Turn order holds** (needs → work → …): a need crossing `seek` mid-work interrupts correctly, and a
+      long craft still yields to a critical need (ADR: long jobs yield to needs).
+- [ ] **Mental/behaviour effects of low mood** — whatever break/threshold behaviour exists fires at low mood
+      (identify the mechanism first; may be none — track as such if so).
+- [ ] **Comfort + well_rested** (just built): a bed grants comfort + the `well_rested` buff; sitting at a
+      table raises comfort; no ambient comfort leaks (locked by `moodBreakdown`, re-drive headless).
+- [ ] **bloodHunger** (LINEAGES-II): only pawns with a `bloodNeedKind` accrue it; feeding relieves it.
 
 ## Material & production reworks (PROPOSED — track only, not implemented)
 
