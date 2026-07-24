@@ -248,12 +248,12 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [x] **Material-sink sweep (butchery parts)**: swept all carcass-recipe outputs vs every recipe/building
       consumer. The boss organs (`alpha_heart`, `sabretooth_glands`, `direwolf_hackles`, `owlbear_pineal`) are
       "consumed" only by being eaten RAW for a guaranteed trait via `grantsTraitOnConsume` (`Pawns.ts:356`).
-- [ ] ⚠ **Raw-eat trait handout is a design defect** (user call): eating a boss organ raw grants the good
-      trait for certain (+ one flaw), with NO alchemy, skill, or station. Rework → gate powerful traits behind
+- [x] ⚠→**FIXED** **Raw-eat trait handout** (user call): eating a boss organ raw granted the good
+      trait for certain (+ one flaw), with NO alchemy, skill, or station. Reworked → powerful traits now gated behind
       TIERED alchemical brews whose success ODDS and trait/flaw POOLS scale with draught tier × pawn alchemy ×
-      workstation. Full design in **[ALCHEMY-BUTCHERY-EXPANSION](ALCHEMY-BUTCHERY-EXPANSION.md) §A**.
-- [ ] **Crafting-MATERIAL dead-ends** `great_bone`, `ivory`, `great_tusk` (no consumer) → anatomy-driven
-      weapons/trophies/buildings. Design in **[ALCHEMY-BUTCHERY-EXPANSION](ALCHEMY-BUTCHERY-EXPANSION.md) §B/§D**.
+      workstation. Delivered in **[ALCHEMY-BUTCHERY-EXPANSION (archived)](../archive/ALCHEMY-BUTCHERY-EXPANSION-2026-07-24.md) §A**.
+- [x] ⚠→**FIXED** **Crafting-MATERIAL dead-ends** `great_bone`, `ivory`, `great_tusk` (+ `great_fang`, claws,
+      antlers, horns) → anatomy-driven weapons/trophies/buildings. Delivered in **[ALCHEMY-BUTCHERY-EXPANSION (archived)](../archive/ALCHEMY-BUTCHERY-EXPANSION-2026-07-24.md) §B/§D**.
 - [x] **Alchemy tree audit**: every `alchemy_lab` reagent HAS a source (verified — 0 unsourced inputs); the
       organ→draught template is coherent (`alpha_ichor`→bloodrage, `owlbear_bile`→ironhide, `venom_sac`→venom
       coating). Grimeling chain driven headless below.
@@ -262,8 +262,8 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       `nightshade_bolete` + `glassware` → `caustic_coating`, a `nausea`-on-hit weapon coating). **Verified
       headless** (`alchemyChain.test.ts`): grimeling → caustic_bile 2 → caustic_coating 3 by turn 2000. Bog
       Ooze is now a real alchemy source instead of a dead carcass.
-- [x] **Alchemy / potions / tonics / loot-crafting EXPANSION** → **[ALCHEMY-BUTCHERY-EXPANSION.md](ALCHEMY-BUTCHERY-EXPANSION.md)**
-      IMPLEMENTED (§A + §B + §C + §D stations), headless-verified (`alchemyChain.test.ts`; full suite 1105 green):
+- [x] **Alchemy / potions / tonics / loot-crafting EXPANSION** → **COMPLETE & ARCHIVED [ALCHEMY-BUTCHERY-EXPANSION-2026-07-24.md](../archive/ALCHEMY-BUTCHERY-EXPANSION-2026-07-24.md)**
+      IMPLEMENTED (§A + §B + §C + §D stations), headless-verified (`alchemyChain.test.ts`, `combatSim.test.ts`, `butcheryAudit.test.ts`):
       §A raw organs neutered (sickness + flaw, no free trait) → 4 organs × 3-tier `traitGamble` draughts whose
       odds+pools scale with tier × alchemy (T1/novice good-rate 0.05 → T3/master 0.65); §B `great_bone`/`ivory`/
       `great_tusk` → maul / ivory idol / ivory (no dead drops); §C all 12 buff/coating lines given Greater(T2)+
@@ -273,7 +273,10 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       coating whose `bleedMult` multiplies a cutting weapon's unclottable-wound proc — headless-verified in combat,
       0.18→0.53 on a blade, 0 on a maul by construction), and a **reagent-depth** supply chain
       (`fermented_mash`→`distilled_spirit` T2 base, `purified_catalyst` T3 base) that all 12 existing Greater/Grand
-      brews were rewired onto. Only §B trophy extras (great_fang / prestige-pelt rugs / full anatomy pass) remain.
+      brews were rewired onto. **§B trophy extras now DONE too** — `great_fang` → fang_charm + fang_arrow;
+      prestige pelts → dire_wolf/cave_bear/sabretooth rugs; anatomy pass closed the claw/antler/horn dead drops
+      (`predator_claw`/`antler_rack`/`curved_horn` each drop from butchery and feed ≥1 craft, `[ANATOMY]` A→Z headless).
+      **Spec fully complete and archived.**
 
 ### Tool-tier parity across work categories — ⭐ NEW AUDIT TASK (proposed 2026-07-24)
 > Butchery now has a tool per tier (flint/bone → iron kit → steel kit; gate fixed). The user wants this

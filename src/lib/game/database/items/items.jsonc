@@ -13475,4 +13475,154 @@
       "weightKg": 0.3,
       "volumeL": 0.2
     }
+,
+    {
+      "id": "fang_charm",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 33
+        }
+      ],
+      "name": "Fang-and-Claw Charm",
+      "type": "armor",
+      "category": "jewelry",
+      "grantsConditions": [
+        "might"
+      ],
+      "armorProperties": {
+        "defense": 0,
+        "armorValue": 0,
+        "equipmentSlot": "amulet"
+      },
+      "description": "A great fang and a fan of curved claws strung on a leather cord, taken from something that ruled its ground. The wearer carries a little of its ferocity into a fight.",
+      "color": "#D8C0A0",
+      "amount": 0,
+      "weightKg": 0.4,
+      "volumeL": 0.2,
+      "maxDurability": 220,
+      "deteriorationRate": 0.002
+    },
+    {
+      "id": "fang_arrow",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 196
+        }
+      ],
+      "name": "Fang-Tipped Arrow",
+      "type": "consumable",
+      "category": "ammunition",
+      "deteriorationRate": 0.008,
+      "description": "A shaft crowned with a splinter of great fang, honed to a cruel edge. It holds a point flint never could and lays open a wide, hard-bleeding wound.",
+      "color": "#E0D2B0",
+      "amount": 0,
+      "weightKg": 0.05,
+      "volumeL": 0.08,
+      "tier": 2,
+      "maxDurability": 18,
+      "ammoProperties": {
+        "ammoCategory": "arrow",
+        "projectile": "arrow",
+        "damage": 9,
+        "damageType": "cutting",
+        "armorPen": 0.05,
+        "recoverable": 0.3
+      }
+    },
+    {
+      "id": "predator_claw",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 138
+        }
+      ],
+      "name": "Predator Claw",
+      "type": "material",
+      "category": "organic",
+      "maxDurability": 180,
+      "deteriorationRate": 0.002,
+      "description": "A hooked claw the length of a finger, still edged where it raked. Kept for charms, barbs and trophies.",
+      "color": "#3a2f28",
+      "amount": 0,
+      "weightKg": 0.15,
+      "volumeL": 0.1,
+      "processingType": [
+        "crafting"
+      ]
+    },
+    {
+      "id": "antler_rack",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 138
+        }
+      ],
+      "name": "Antler Rack",
+      "type": "material",
+      "category": "organic",
+      "maxDurability": 200,
+      "deteriorationRate": 0.001,
+      "description": "A shed-hard rack of bony antler, forked and heavy. Splits into stubborn, springy tines that take an edge and outlast wood.",
+      "color": "#B8A078",
+      "amount": 0,
+      "weightKg": 1.2,
+      "volumeL": 1.2,
+      "processingType": [
+        "crafting"
+      ]
+    },
+    {
+      "id": "curved_horn",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 138
+        }
+      ],
+      "name": "Curved Horn",
+      "type": "material",
+      "category": "organic",
+      "maxDurability": 200,
+      "deteriorationRate": 0.001,
+      "description": "A ridged, curving horn sheath, hollow and light. Softens over heat to be worked, then sets hard as it cools.",
+      "color": "#54463a",
+      "amount": 0,
+      "weightKg": 0.6,
+      "volumeL": 0.8,
+      "processingType": [
+        "crafting"
+      ]
+    },
+    {
+      "id": "barbed_bone_arrow",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 196
+        }
+      ],
+      "name": "Barbed Bone Arrow",
+      "type": "consumable",
+      "category": "ammunition",
+      "deteriorationRate": 0.01,
+      "description": "A shaft tipped and rear-barbed with worked claw, tine or horn. The barbs lodge in the wound and tear on the draw, so it bleeds on and is rarely pulled whole.",
+      "color": "#8a7458",
+      "amount": 0,
+      "weightKg": 0.05,
+      "volumeL": 0.08,
+      "tier": 1,
+      "maxDurability": 10,
+      "ammoProperties": {
+        "ammoCategory": "arrow",
+        "projectile": "arrow",
+        "damage": 6,
+        "damageType": "piercing",
+        "armorPen": 0.08,
+        "recoverable": 0.15
+      }
+    }
 ]

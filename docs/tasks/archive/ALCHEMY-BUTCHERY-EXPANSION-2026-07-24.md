@@ -2,12 +2,15 @@
 
 # ALCHEMY & BUTCHERY-LOOT EXPANSION
 
-> **Related:** [AUDIT.md](AUDIT.md) · [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md)
+> **Related:** [AUDIT.md](../open/AUDIT.md) · [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md)
+>
+> **Archived 2026-07-24 — COMPLETE.** All of §A–§D implemented and headless-verified; see the status line below.
 
-**Status (2026-07-24): §A, §B, §C (tier every existing brew + the two breadth follow-ons: 6 net-new effect
-lines and the distilled-spirit/purified-catalyst reagent chain), and the two new stations are all IMPLEMENTED
-& headless-verified (`alchemyChain.test.ts`, `combatSim.test.ts`).** Remaining are only a few §B trophy extras
-(great_fang / prestige-pelt rugs / the full limbmap anatomy pass). Original framing: Prompted by the butchery audit: powerful beast traits are
+**Status (2026-07-24): COMPLETE — §A, §B, §C, §D all IMPLEMENTED & headless-verified** (`alchemyChain.test.ts`,
+`combatSim.test.ts`, `butcheryAudit.test.ts`). Every checkbox and acceptance criterion below is ticked: the
+Faustian trait draughts, the full loot→crafting chains (bone/ivory/tusk/fang/claw/antler/horn, no dead drops),
+the 3-tier ladder on every effect + 6 net-new lines + the sugarcane→sugar→spirit reagent chain (pot-gated), and
+the Apothecary + Bone Carver's Bench. Original framing: Prompted by the butchery audit: powerful beast traits are
 currently handed out for eating an organ **raw**, and several boss loot drops (`great_bone`, `ivory`,
 `great_tusk`) have no consumer. This reworks the trait path into a **risky, tiered alchemical craft** and
 turns the anatomy loot into real crafting/building chains.
@@ -62,12 +65,18 @@ return→material table so a beast's anatomy shows up in what it drops AND what 
       material (bone totem / trophy frame). Heavy, cheap-ish, primitive-flavoured brute gear.
 - [x] **`ivory` / `great_tusk`** → carved prestige goods: ivory-inlaid weapon grips, ivory idol/trophy
       (high beauty furniture), tusk pike/spear. A value + beauty sink, not combat power.
-- [ ] **`great_fang`** → expand beyond `fang_reaver`: fang necklace/charm (a fear or prestige trinket),
-      fang-tipped ammo.
-- [ ] **Prestige pelts** (`sabretooth_pelt`, `dire_wolf_pelt`, `cave_bear_pelt`) → trophy rugs / regal
-      furniture (beauty + comfort) beyond the existing cloaks.
-- [ ] **Anatomy pass**: audit `limbmap.jsonc` special parts (claws, scales, glands, horns, hearts) → ensure
-      each maps to a butchery return item AND ≥1 recipe, so no distinctive part is a dead drop.
+- [x] **`great_fang` — DONE.** Beyond `fang_reaver`: **`fang_charm`** (amulet, grants Might — a predator
+      fang-and-claw neck-piece, also a second claw sink) and **`fang_arrow`** (fang-tipped ammo, ×10 per fang,
+      a keen cutting head that bleeds hard). Headless: flensed/stocked fang → both craft.
+- [x] **Prestige pelts — DONE.** Three trophy rugs — **`dire_wolf_rug`** (comfort 0.45 / beauty 0.6),
+      **`cave_bear_rug`** (0.5 / 0.65), **`sabretooth_rug`** (0.45 / 0.7) — finer than the plain bear rug, a
+      beauty+comfort sink competing with the warcloaks. Furniture defs verified (`butcheryAudit.test.ts`).
+- [x] **Anatomy pass — DONE.** Audited every carcass drop vs `limbmap.jsonc`: **scales** (`croc_scaled_hide`),
+      **glands** (`venom_sac`/`raw_silk`/`owlbear_bile`/`sabretooth_glands`/`caustic_bile`) and **hearts**
+      (`alpha_heart`) already mapped + consumed. The two dead families — **claws/talons** and **antlers/horns** —
+      are now closed: `predator_claw` (drops from 10 clawed predators → fang_charm + claw_totem + barbed arrow),
+      `antler_rack` (deer/elk) and `curved_horn` (goat/aurochs) → the shared `barbed_bone_arrow`. Headless A→Z:
+      butcher wolf/deer/goat ⇒ claw/antler/horn drop ⇒ every consumer crafts (`butcheryAudit.test.ts` `[ANATOMY]`).
 
 ## C. Alchemy / potions / tonics breadth — 3 TIERS per effect
 
@@ -120,5 +129,6 @@ become three items, not one.
 - [x] Draught outcome odds AND trait/flaw pools measurably improve with draught tier × pawn alchemy × station
       (headless: same organ, low-tier/novice/basic-lab vs high-tier/master/apothecary → different outcome
       distributions over N brews).
-- [ ] `great_bone`, `ivory`, `great_tusk` each have ≥1 crafting consumer; no boss/anatomy drop is a dead end.
+- [x] `great_bone`, `ivory`, `great_tusk` each have ≥1 crafting consumer; no boss/anatomy drop is a dead end
+      (verified by a dead-drop cross-audit: every carcass output is consumed by a recipe, building, or cooking).
 - [x] New alchemy/coating/tonic recipes each drive end-to-end headless (reagent sourced → brewed → effect).

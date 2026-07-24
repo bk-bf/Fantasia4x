@@ -77,7 +77,7 @@
     "id"              : "make_venison",
     "station"         : "butcher_spot",
     "inputs"          : {"deer_carcass": 1},
-    "outputs"         : {"venison": 10, "deer_hide": 3, "medium_bones": 12, "sinew": 9},
+    "outputs"         : {"venison": 10, "deer_hide": 3, "medium_bones": 12, "sinew": 9, "antler_rack": 1},
     "workAmount"      : 30,
     "toolTierRequired": 0
   },
@@ -1050,7 +1050,7 @@
     "id"              : "make_wolf_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"wolf_carcass": 1},
-    "outputs"         : {"wolf_meat": 7, "wolf_hide": 2, "medium_bones": 10, "sinew": 8},
+    "outputs"         : {"wolf_meat": 7, "wolf_hide": 2, "medium_bones": 10, "sinew": 8, "predator_claw": 1},
     "workAmount"      : 30,
     "toolTierRequired": 0
   },
@@ -1058,7 +1058,7 @@
     "id"              : "make_bear_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"bear_carcass": 1},
-    "outputs"         : {"bear_meat": 16, "bear_pelt": 2, "large_bones": 16, "sinew": 16},
+    "outputs"         : {"bear_meat": 16, "bear_pelt": 2, "large_bones": 16, "sinew": 16, "predator_claw": 1},
     "workAmount"      : 60,
     "toolTierRequired": 0
   },
@@ -1074,7 +1074,7 @@
     "id"              : "make_elk_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"elk_carcass": 1},
-    "outputs"         : {"elk_meat": 16, "elk_hide": 3, "large_bones": 16, "sinew": 16},
+    "outputs"         : {"elk_meat": 16, "elk_hide": 3, "large_bones": 16, "sinew": 16, "antler_rack": 2},
     "workAmount"      : 60,
     "toolTierRequired": 0
   },
@@ -1082,7 +1082,7 @@
     "id"              : "make_goat_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"mountain_goat_carcass": 1},
-    "outputs"         : {"goat_meat": 8, "goat_hide": 2, "goat_wool": 8, "medium_bones": 10, "sinew": 8},
+    "outputs"         : {"goat_meat": 8, "goat_hide": 2, "goat_wool": 8, "medium_bones": 10, "sinew": 8, "curved_horn": 1},
     "workAmount"      : 30,
     "toolTierRequired": 0
   },
@@ -3005,7 +3005,7 @@
     "id"              : "make_aurochs_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"aurochs_carcass": 1},
-    "outputs"         : {"aurochs_meat": 18, "aurochs_hide": 3, "ox_wool": 4, "large_bones": 18, "sinew": 16},
+    "outputs"         : {"aurochs_meat": 18, "aurochs_hide": 3, "ox_wool": 4, "large_bones": 18, "sinew": 16, "curved_horn": 2},
     "workAmount"      : 60,
     "toolTierRequired": 0
   },
@@ -3023,7 +3023,7 @@
     "id"              : "make_owlbear_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"owlbear_carcass": 1},
-    "outputs"         : {"owlbear_meat": 16, "owlbear_pelt": 2, "owlbear_bile": 1, "large_bones": 16, "sinew": 14},
+    "outputs"         : {"owlbear_meat": 16, "owlbear_pelt": 2, "owlbear_bile": 1, "large_bones": 16, "sinew": 14, "predator_claw": 1},
     "workAmount"      : 60,
     "toolTierRequired": 0
   },
@@ -3032,7 +3032,7 @@
     "id"              : "make_dire_wolf",
     "station"         : "flensing_table",
     "inputs"          : {"dire_wolf_carcass": 1},
-    "outputs"         : {"wolf_meat": 10, "dire_wolf_pelt": 2, "alpha_ichor": 1, "large_bones": 10, "sinew": 8},
+    "outputs"         : {"wolf_meat": 10, "dire_wolf_pelt": 2, "alpha_ichor": 1, "large_bones": 10, "sinew": 8, "predator_claw": 2},
     "workAmount"      : 50,
     "toolTierRequired": 2
   },
@@ -3040,7 +3040,7 @@
     "id"              : "make_cave_bear",
     "station"         : "flensing_table",
     "inputs"          : {"cave_bear_carcass": 1},
-    "outputs"         : {"bear_meat": 22, "cave_bear_pelt": 2, "owlbear_bile": 1, "large_bones": 18, "sinew": 16, "animal_fat": 3},
+    "outputs"         : {"bear_meat": 22, "cave_bear_pelt": 2, "owlbear_bile": 1, "large_bones": 18, "sinew": 16, "animal_fat": 3, "predator_claw": 2},
     "workAmount"      : 80,
     "toolTierRequired": 2
   },
@@ -3075,7 +3075,7 @@
     "id"              : "flense_great_wolf",
     "station"         : "sanguinary_altar",
     "inputs"          : {"great_wolf_carcass": 1},
-    "outputs"         : {"wolf_meat": 14, "dire_wolf_pelt": 3, "alpha_ichor": 2, "alpha_heart": 1, "direwolf_hackles": 1, "great_fang": 1, "large_bones": 10, "sinew": 8},
+    "outputs"         : {"wolf_meat": 14, "dire_wolf_pelt": 3, "alpha_ichor": 2, "alpha_heart": 1, "direwolf_hackles": 1, "great_fang": 1, "large_bones": 10, "sinew": 8, "predator_claw": 2},
     "workAmount"      : 80,
     "toolTierRequired": 2
   },
@@ -3091,7 +3091,7 @@
     "id"              : "flense_great_bear",
     "station"         : "sanguinary_altar",
     "inputs"          : {"great_bear_carcass": 1},
-    "outputs"         : {"bear_meat": 26, "cave_bear_pelt": 3, "owlbear_bile": 2, "owlbear_pineal": 1, "sabretooth_glands": 1, "great_bone": 2, "great_fang": 1, "animal_fat": 5},
+    "outputs"         : {"bear_meat": 26, "cave_bear_pelt": 3, "owlbear_bile": 2, "owlbear_pineal": 1, "sabretooth_glands": 1, "great_bone": 2, "great_fang": 1, "animal_fat": 5, "predator_claw": 2},
     "workAmount"      : 100,
     "toolTierRequired": 2
   },
@@ -3245,7 +3245,7 @@
     "id"              : "make_sabretooth_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"sabretooth_carcass": 1},
-    "outputs"         : {"sabretooth_meat": 12, "sabretooth_pelt": 2, "large_bones": 14, "sinew": 12},
+    "outputs"         : {"sabretooth_meat": 12, "sabretooth_pelt": 2, "large_bones": 14, "sinew": 12, "predator_claw": 1},
     "workAmount"      : 45,
     "toolTierRequired": 0
   },
@@ -3261,7 +3261,7 @@
     "id"              : "make_hippogriff_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"hippogriff_carcass": 1},
-    "outputs"         : {"hippogriff_meat": 12, "hippogriff_feathered_hide": 2, "feathers": 10, "medium_bones": 12, "sinew": 10},
+    "outputs"         : {"hippogriff_meat": 12, "hippogriff_feathered_hide": 2, "feathers": 10, "medium_bones": 12, "sinew": 10, "predator_claw": 2},
     "workAmount"      : 45,
     "toolTierRequired": 0
   },
@@ -3277,7 +3277,7 @@
     "id"              : "make_worg_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"worg_carcass": 1},
-    "outputs"         : {"worg_meat": 8, "worg_hide": 2, "medium_bones": 10, "sinew": 8},
+    "outputs"         : {"worg_meat": 8, "worg_hide": 2, "medium_bones": 10, "sinew": 8, "predator_claw": 1},
     "workAmount"      : 30,
     "toolTierRequired": 0
   },
@@ -4313,5 +4313,50 @@
     },
     "workAmount": 16,
     "toolTierRequired": 2
+  }
+,
+  {
+    "id": "make_fang_charm",
+    "station": "bone_carvers_bench",
+    "inputs": {"great_fang": 1, "predator_claw": 2, "cordage": 2},
+    "outputs": {
+      "fang_charm": 1
+    },
+    "workAmount": 40,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "make_fang_arrow",
+    "station": "makers_bench",
+    "inputs": {
+      "great_fang": 1,
+      "branch": 2,
+      "sinew": 2,
+      "feathers": 2
+    },
+    "inputAlternatives": [
+      {
+        "great_fang": 1,
+        "branch": 2,
+        "sinew": 2,
+        "chicken_feathers": 2
+      }
+    ],
+    "outputs": {
+      "fang_arrow": 10
+    },
+    "workAmount": 8,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "make_barbed_bone_arrow",
+    "station": "makers_bench",
+    "inputs": {"branch": 1, "cordage": 1, "feathers": 1, "antler_rack": 1},
+    "inputAlternatives": [{"curved_horn": 1, "branch": 1, "cordage": 1, "feathers": 1}, {"predator_claw": 2, "branch": 1, "cordage": 1, "feathers": 1}, {"branch": 1, "cordage": 1, "chicken_feathers": 1, "antler_rack": 1}],
+    "outputs": {
+      "barbed_bone_arrow": 6
+    },
+    "workAmount": 5,
+    "toolTierRequired": 0
   }
 ]

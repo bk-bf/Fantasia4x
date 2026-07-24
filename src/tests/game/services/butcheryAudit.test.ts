@@ -3,6 +3,7 @@ import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { itemService } from '$lib/game/services/ItemService';
 import { workService } from '$lib/game/services/WorkService';
+import { buildingService } from '$lib/game/services/BuildingService';
 
 /**
  * BUTCHERY AUDIT (headless). A carcass (item `category:carcass`) is butchered through the craft pipeline:
@@ -176,5 +177,84 @@ describe('butchery', () => {
     );
     expect(stk(s).iron_butchery_kit ?? 0, 'iron kit crafted').toBeGreaterThan(0);
     expect(stk(s).steel_butchery_kit ?? 0, 'steel kit crafted').toBeGreaterThan(0);
+  });
+
+  it('§B anatomy pass: claws/antlers/horns DROP from butchery and each feeds ≥1 craft — headless', async () => {
+    // The distinctive parts that were dead drops. Butcher a wolf (claws), a deer (antlers) and a goat
+    // (horns) at the butcher spot, then craft every consumer: fang-and-claw charm, fang arrows, and the
+    // barbed bone arrow that any of claw/antler/horn feeds.
+    const s = new HeadlessSession();
+    await s.start(
+      buildScenario({
+        seed: 62,
+        map: { w: 20, h: 20 },
+        workReady: true,
+        researchMaxTier: 9,
+        toolTier: 3,
+        pawns: [{ count: 6, skillLevel: 20 }],
+        needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
+        buildings: [{ id: 'butcher_spot' }, { id: 'makers_bench' }, { id: 'bone_carvers_bench' }],
+        items: {
+          wolf_carcass: 2,
+          deer_carcass: 2,
+          mountain_goat_carcass: 2,
+          great_fang: 3,
+          branch: 16,
+          cordage: 16,
+          sinew: 16,
+          feathers: 16,
+          spit_meat: 10
+        },
+        seedEntities: false
+      })
+    );
+    s.command({ type: 'craftItem', payload: { itemId: 'wolf_carcass', quantity: 2 } } as never); // 2 claws for the charm
+    for (const c of ['deer_carcass', 'mountain_goat_carcass'])
+      s.command({ type: 'craftItem', payload: { itemId: c } } as never);
+    for (
+      let i = 0;
+      i < 30 && !((stk(s).predator_claw ?? 0) >= 2 && (stk(s).antler_rack ?? 0) > 0 && (stk(s).curved_horn ?? 0) > 0);
+      i++
+    )
+      s.tick(400);
+    console.log(
+      `[ANATOMY] drops: predator_claw=${stk(s).predator_claw ?? 0} antler=${stk(s).antler_rack ?? 0} curved_horn=${stk(s).curved_horn ?? 0}`
+    );
+    expect(stk(s).predator_claw ?? 0, 'wolf butchery drops claws').toBeGreaterThan(0);
+    expect(stk(s).antler_rack ?? 0, 'deer butchery drops antlers').toBeGreaterThan(0);
+    expect(stk(s).curved_horn ?? 0, 'goat butchery drops horns').toBeGreaterThan(0);
+
+    // Now every consumer: fang-and-claw charm, fang arrows, and the barbed bone arrow (antler/horn/claw).
+    for (const item of ['fang_charm', 'fang_arrow', 'barbed_bone_arrow'])
+      s.command({ type: 'craftItem', payload: { itemId: item } } as never);
+    for (
+      let i = 0;
+      i < 30 &&
+      !((stk(s).fang_charm ?? 0) > 0 && (stk(s).fang_arrow ?? 0) > 0 && (stk(s).barbed_bone_arrow ?? 0) > 0);
+      i++
+    )
+      s.tick(400);
+    console.log(
+      `[ANATOMY] crafts: fang_charm=${stk(s).fang_charm ?? 0} fang_arrow=${stk(s).fang_arrow ?? 0} barbed_bone_arrow=${stk(s).barbed_bone_arrow ?? 0}`
+    );
+    expect(stk(s).fang_charm ?? 0, 'great_fang + claws → fang charm').toBeGreaterThan(0);
+    expect(stk(s).fang_arrow ?? 0, 'great_fang → fang-tipped arrows').toBeGreaterThan(0);
+    expect(stk(s).barbed_bone_arrow ?? 0, 'antler/horn/claw → barbed bone arrows').toBeGreaterThan(0);
+  });
+
+  it('§B prestige-pelt rugs + claw totem exist with the right anatomy cost (furniture defs)', () => {
+    const bld = (id: string) =>
+      buildingService.getBuildingById(id) as { id: string; buildingCost?: Record<string, number> } | undefined;
+    const rugs: Array<[string, string]> = [
+      ['dire_wolf_rug', 'dire_wolf_pelt'],
+      ['cave_bear_rug', 'cave_bear_pelt'],
+      ['sabretooth_rug', 'sabretooth_pelt'],
+      ['claw_totem', 'predator_claw']
+    ];
+    for (const [id, mat] of rugs) {
+      const b = bld(id);
+      expect(b, `${id} building def exists`).toBeTruthy();
+      expect(Object.keys(b?.buildingCost ?? {}), `${id} costs ${mat}`).toContain(mat);
+    }
   });
 });
