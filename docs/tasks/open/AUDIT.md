@@ -227,9 +227,9 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       `make_beast_leather_plate`, `make_bone_plated_cuirass`, `make_horned_helm`, `make_plate_cuirass`. Left
       pure-forged metal (helms/gauntlets/boots/gorget/great_helm/ceremonial_plate) and jewelry alone — no
       textile component, no stitching. Verified: 0 high-tier stitched-gear recipes now lack a binder.
-- [ ] **`grimeling_carcass` (+ other magical creatures) → alchemy reagents** (user direction): rather than a
-      plain meat/bones recipe, magical creatures should drop ORGANS/glands usable in coating tonics & potions.
-      Folded into the new Alchemy & material-sink audit below.
+- [x] **`grimeling_carcass` → alchemy reagent DONE** (see Alchemy audit below): `render_grimeling` →
+      `caustic_bile` → `brew_caustic_coating` (nausea coating), driven headless. Boss organs already feed the
+      raw-eat trait path (`grantsTraitOnConsume`); other magical creatures already drop organs/remains.
 - [~] **Spoiled carcass yields less** (`conditionMult` = carcass `unitConditions[0]/100`, `craft.ts`): the
       scaling is WIRED (applied to output in `completeCraftOrder`) and UNIT-tested (`carcassCondition.test.ts`
       — `consumeTop`/`decayAll` erosion). NOT driven headless: scenario-added carcasses carry no `unitConditions`
@@ -242,21 +242,29 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [ ] Zero-skill pawn still completes T0 (no bootstrap deadlock); tool-tier gates only where intended
 - [ ] Quality matters downstream (better weapon/armor/tool stats into combat/work)
 
-### Alchemy & material-sink completeness — ⭐ NEW AUDIT TASK (proposed 2026-07-24)
-> Prompted by the butchery gate work (user direction). Every material the colony can PRODUCE — crop yields,
-> smelted metals/ores, butchery returns (meat/hide/bone/sinew + special organs), forage — should feed into at
-> least one appropriate crafting recipe; a material with no consumer is a dead end. Alchemy is the biggest
-> suspected hole (magical creature parts, reagents). Audit thoroughly and recommend completion.
-- [ ] **Material-sink sweep**: for every producible item (crop `yields`, ore→bar chain, all butchery recipe
-      OUTPUTS, forage drops), assert ≥1 recipe consumes it. List the dead-ends (no consumer) — expect holes.
-- [ ] **Alchemy tree audit** (`alchemy_lab` + `distil_*`/`make_dye`/`make_soap`/`brew_*` potions & draughts &
-      coatings): every reagent has a source; every alchemy output has a use; drive representatives headless.
-- [ ] **Magical-creature parts → reagents**: `grimeling_carcass` and other magical/rare creatures should
-      butcher into ORGANS/glands/ichor (not just meat) that feed coating tonics, potions, draughts. Wire the
-      missing butchery returns + their alchemy consumers.
-- [ ] **Use the anatomy (`limbmap.jsonc`) as the return table**: special organs, bones, claws, fangs, scales
-      etc. from a creature's body plan are the natural butchery returns + crafting materials — map body parts →
-      drop items → recipes so a beast's distinctive anatomy shows up in what it yields and what that makes.
+### Alchemy & material-sink completeness — 🚧 IN PROGRESS (2026-07-24)
+> Prompted by the butchery gate work (user direction). Every material the colony can PRODUCE should feed ≥1
+> appropriate recipe; a material with no consumer is a dead end. Alchemy audited via `alchemyChain.test.ts`.
+- [x] **Material-sink sweep (butchery parts)**: swept all carcass-recipe outputs vs every recipe/building
+      consumer. The boss organs (`alpha_heart`, `sabretooth_glands`, `direwolf_hackles`, `owlbear_pineal`) are
+      "consumed" only by being eaten RAW for a guaranteed trait via `grantsTraitOnConsume` (`Pawns.ts:356`).
+- [ ] ⚠ **Raw-eat trait handout is a design defect** (user call): eating a boss organ raw grants the good
+      trait for certain (+ one flaw), with NO alchemy, skill, or station. Rework → gate powerful traits behind
+      TIERED alchemical brews whose success ODDS and trait/flaw POOLS scale with draught tier × pawn alchemy ×
+      workstation. Full design in **[ALCHEMY-BUTCHERY-EXPANSION](ALCHEMY-BUTCHERY-EXPANSION.md) §A**.
+- [ ] **Crafting-MATERIAL dead-ends** `great_bone`, `ivory`, `great_tusk` (no consumer) → anatomy-driven
+      weapons/trophies/buildings. Design in **[ALCHEMY-BUTCHERY-EXPANSION](ALCHEMY-BUTCHERY-EXPANSION.md) §B/§D**.
+- [x] **Alchemy tree audit**: every `alchemy_lab` reagent HAS a source (verified — 0 unsourced inputs); the
+      organ→draught template is coherent (`alpha_ichor`→bloodrage, `owlbear_bile`→ironhide, `venom_sac`→venom
+      coating). Grimeling chain driven headless below.
+- [x] **Magical-creature → reagent (grimeling)**: added `render_grimeling` (butcher_spot: `grimeling_carcass`
+      → `caustic_bile` 2 + `plant_fiber` 2) and `brew_caustic_coating` (alchemy_lab: `caustic_bile` +
+      `nightshade_bolete` + `glassware` → `caustic_coating`, a `nausea`-on-hit weapon coating). **Verified
+      headless** (`alchemyChain.test.ts`): grimeling → caustic_bile 2 → caustic_coating 3 by turn 2000. Bog
+      Ooze is now a real alchemy source instead of a dead carcass.
+- [ ] **Alchemy / potions / tonics / loot-crafting EXPANSION** → tracked as its own proposal:
+      **[ALCHEMY-BUTCHERY-EXPANSION.md](ALCHEMY-BUTCHERY-EXPANSION.md)** (trait-organ Faustian rework §A;
+      anatomy loot → weapons/trophies/buildings §B; alchemy breadth §C; apothecary + carver stations §D).
 
 ### Tool-tier parity across work categories — ⭐ NEW AUDIT TASK (proposed 2026-07-24)
 > Butchery now has a tool per tier (flint/bone → iron kit → steel kit; gate fixed). The user wants this

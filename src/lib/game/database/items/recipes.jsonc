@@ -3123,6 +3123,16 @@
     "toolTierRequired": 0
   },
   {
+    // A magical creature yields an ALCHEMY reagent, not meat: rendering a bog ooze gives its caustic
+    // humour (+ the fibrous matter in the muck). Feeds brew_caustic_coating.
+    "id"              : "render_grimeling",
+    "station"         : "butcher_spot",
+    "inputs"          : {"grimeling_carcass": 1},
+    "outputs"         : {"caustic_bile": 2, "plant_fiber": 2},
+    "workAmount"      : 14,
+    "toolTierRequired": 0
+  },
+  {
     "id"              : "make_kobold_remains",
     "station"         : "butcher_spot",
     "inputs"          : {"kobold_skulker_carcass": 1},
@@ -3622,6 +3632,14 @@
     "toolTierRequired": 1
   },
   // §2 weapon coating — rendered venom-sac + nightshade → a paste brushed onto a blade (applyWeaponCoating).
+  {
+    "id"              : "brew_caustic_coating",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"caustic_bile": 2, "nightshade_bolete": 1, "glassware": 1},
+    "outputs"         : {"caustic_coating": 3},
+    "workAmount"      : 12,
+    "toolTierRequired": 1
+  },
   {
     "id"              : "brew_venom_coating",
     "station"         : "alchemy_lab",

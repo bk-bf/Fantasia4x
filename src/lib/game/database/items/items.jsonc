@@ -3058,6 +3058,37 @@
     "coatingDurationHours": 6
   },
   {
+    // Grimeling (Bog Ooze) alchemy reagent — the caustic humour of the muck, rendered at the butcher spot.
+    "id"               : "caustic_bile",
+    "charSpans"        : [ {"sheet": "items", "id": 1} ],
+    "name"             : "Caustic Bile",
+    "type"             : "material",
+    "category"         : "reagent",
+    "maxDurability"    : 40,
+    "deteriorationRate": 0.03,
+    "description"      : "Acrid green humour wrung from a bog ooze, still faintly hissing. It eats at leather and skin alike, so it is kept in a sealed clay pot.",
+    "color"            : "#6b7a2a",
+    "amount"           : 0,
+    "weightKg"         : 0.3,
+    "volumeL"          : 0.2
+  },
+  {
+    "id"                 : "caustic_coating",
+    "charSpans"          : [ {"sheet": "items", "id": 71} ],
+    "name"               : "Caustic Coating",
+    "type"               : "consumable",
+    "category"           : "reagent",
+    "maxDurability"      : 120,
+    "deteriorationRate"  : 0.005,
+    "description"        : "Bog bile cooked down with nightshade into a clinging grey slime. Smeared on an edge, it turns the smallest cut foul and roils the stomach.",
+    "color"              : "#4a5230",
+    "amount"             : 0,
+    "weightKg"           : 0.2,
+    "volumeL"            : 0.2,
+    "coatingEffect"      : {"condition": "nausea", "chance": 0.6, "durationHours": 2.0, "resist": "poison_resistance"},
+    "coatingDurationHours": 6
+  },
+  {
     "id"               : "direwolf_warcloak",
     "charSpans"        : [ {"sheet": "items", "id": 138} ],
     "name"             : "Direwolf Warcloak",
