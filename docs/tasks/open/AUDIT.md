@@ -246,15 +246,17 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       skill 1 vs 3.64 (Superior/Masterwork) at skill 50**. ✅
 - [x] **recipe→discipline routing** (`craftWorkCategory`): a butcher-spot carcass order routes to `butchery`,
       a stone-forge order to `metalworking` (its own `*_speed/_quality` stats/tools apply, not generic crafting). ✅
-- [x] ⚠ **FINDING — butchery SKILL does NOT raise yield** (headless: same deer at the same butcher spot →
-      **venison 10 at butchery-skill 1 AND 50**, identical). Root: `craft.ts` scales butchery output by the
-      STATION's `butcheryYieldBonus` + carcass condition ONLY; pawn `.yield` (`getWorkModifiers.yield`) is
-      applied for HARVEST alone (`ResourceObjectService:130`), never for a craft. Yet a **`butchery_yield`
-      stat IS defined** in `stats.jsonc` (computed by `getWorkModifiers`, surfaced in the work-stat model) —
-      so it's a **dead/misleading stat**, the same "cosmetic lie" class as the removed `materialBonuses`.
-      Also matches the established rule (line ~185: butchery *stations* give yield, skill gives speed). **User
-      call (not fixed):** either (a) WIRE `butchery_yield` into `craft.ts` butchery output so skill matters
-      for yield too, or (b) REMOVE the `butchery_yield` stat (station-only yield is the intended model).
+- [x] ⚠→**FIXED — butchery SKILL now raises yield** (user chose "wire it"). The finding: `craft.ts` scaled
+      butchery output by the STATION's `butcheryYieldBonus` + carcass condition ONLY, so the `butchery_yield`
+      stat (defined in `stats.jsonc`, computed by `getWorkModifiers`, and SHOWN in the Work-tab
+      `WorkCellTooltip`) was a dead/misleading stat — skill 1 and 50 both rendered venison 10. **Fix:** the
+      working pawn's `getWorkModifiers(pawn,'butchery').yield` now multiplies butchery craft output in
+      `craft.ts` (`yieldMult = (1 + stationBonus) × skillYieldMult`), the same model as harvest yield
+      (`ResourceObjectService:130`) and using the identical `butchery_yield` formula. Only butchery defines a
+      yield axis, so ordinary crafts stay a clean ×1; passive furnaces (no pawn) default to 1. **Verified
+      headless** (`pawnSkillEffects.test.ts`): same deer at the same butcher spot → **venison 8 at
+      butchery-skill 1 vs 25 at skill 50**. (Consequence to note: an unskilled butcher now renders somewhat
+      LESS than the flat base — consistent with harvest, tune the formula if too harsh.)
 - [x] **Zero-skill pawn completes a T0 craft** — a skill-1 colony bootstrapped **cordage 0→3** (slower, not
       stuck); no deadlock. Tool-tier gating is unchanged (butchery/tool gates proven in their own sections). ✅
 - [x] **Quality matters DOWNSTREAM** (`scaleWeaponQuality` — the exact function `resolveHit` calls on the

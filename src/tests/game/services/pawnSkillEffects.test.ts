@@ -92,10 +92,11 @@ describe('pawn skill effects', () => {
     );
   });
 
-  it('butchery-craft yield is skill-INVARIANT (finding); discipline routes to butchery', async () => {
-    // craft.ts scales butchery output by the STATION bonus + carcass condition ONLY — pawn `.yield`
-    // (butchery_yield) is never applied to a craft (it is wired for HARVEST alone, ResourceObjectService).
-    // So the same deer at the same butcher spot yields the same venison whatever the pawn's butchery skill.
+  it('butchery SKILL raises carcass yield (butchery_yield wired); discipline routes to butchery', async () => {
+    // craft.ts now scales butchery output by the STATION bonus × carcass condition × the working pawn's
+    // `butchery_yield` skill axis (same model as harvest yield) — so a skilled butcher renders more meat
+    // off the same deer at the same butcher spot. Only butchery has a yield axis, so ordinary crafts are
+    // untouched.
     const venisonFor = async (butchery: number) => {
       const s = new HeadlessSession();
       await s.start(
@@ -118,9 +119,9 @@ describe('pawn skill effects', () => {
     };
     const unskilled = await venisonFor(1);
     const master = await venisonFor(50);
-    console.log(`[SKILL butchery-yield] venison: butchery1=${unskilled} vs butchery50=${master} (station-only bonus)`);
+    console.log(`[SKILL butchery-yield] venison: butchery1=${unskilled} vs butchery50=${master} (skill now wired)`);
     expect(unskilled, 'deer was butchered').toBeGreaterThan(0);
-    expect(master, 'butchery SKILL does not change carcass yield — only the station does').toBe(unskilled);
+    expect(master, 'a skilled butcher renders MORE off the same carcass than an unskilled one').toBeGreaterThan(unskilled);
     // recipe→discipline routing: a butcher-spot carcass order routes to the `butchery` discipline
     // (so its own *_speed/_quality stats + tools apply), not generic crafting.
     expect(craftWorkCategory({ item: { id: 'venison' }, stationType: 'butcher_spot' })).toBe('butchery');

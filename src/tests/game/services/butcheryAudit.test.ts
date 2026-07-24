@@ -191,7 +191,9 @@ describe('butchery', () => {
         workReady: true,
         researchMaxTier: 9,
         toolTier: 3,
-        pawns: [{ count: 6, skillLevel: 20 }],
+        // Skilled butchers (butchery_yield ≥1) so a single-unit anatomy drop (1 antler/horn per carcass)
+        // isn't scaled below 1 and rounded away — this test is about drops existing, not yield magnitude.
+        pawns: [{ count: 6, skillLevel: 40 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
         buildings: [{ id: 'butcher_spot' }, { id: 'makers_bench' }, { id: 'bone_carvers_bench' }],
         items: {

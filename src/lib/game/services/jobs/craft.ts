@@ -160,10 +160,16 @@ export function complete(job: Job, gs: GameState): GameState {
   // is a memory nearby pawns pick up and may bring up later (a boast, or a ribbing about a fumble).
   let bestTier = -1;
   let worstTier = 6;
+  // Pawn-skill yield: the working pawn's `*_yield` work-axis scales the OUTPUT (like harvest yield in
+  // ResourceObjectService). Only butchery defines a yield axis, so this is 1 for every other discipline
+  // and for passive furnaces (no pawn) — i.e. a skilled butcher renders more off a carcass, on top of the
+  // station's `butcheryYieldBonus`; ordinary crafts are untouched.
+  let skillYieldMult = 1;
   if (pawn) {
     const discipline = craftWorkCategory(entry);
-    const axis =
-      pawnStatService.getWorkModifiers(pawn, discipline, undefined, 'crafting').quality ?? 1;
+    const mods = pawnStatService.getWorkModifiers(pawn, discipline, undefined, 'crafting');
+    const axis = mods.quality ?? 1;
+    skillYieldMult = mods.yield ?? 1;
     rollQuality = () => {
       const q = rollCraftQuality(axis, () => rng.random());
       if (q > bestTier) bestTier = q;
@@ -182,7 +188,7 @@ export function complete(job: Job, gs: GameState): GameState {
     rollFamedFn = () =>
       rollFamed(axis, arcane, () => rng.random()) ? rollFamedIdentity(() => rng.random()) : null;
   }
-  let state = completeCraftOrder(entry, gs, rollQuality, rollFamedFn);
+  let state = completeCraftOrder(entry, gs, rollQuality, rollFamedFn, skillYieldMult);
   // Record the craft memory once the tiers are known (Masterwork+ → masterwork; Awful → botch).
   if (pawn && pawn.position && bestTier >= 0) {
     const itemName = itemDefById(entry.item.id)?.name ?? 'their work';
@@ -228,7 +234,9 @@ export function completeCraftOrder(
   entry: CraftingInProgress,
   gs: GameState,
   rollQuality?: () => ItemQuality,
-  rollFamedFn?: () => ReturnType<typeof rollFamedIdentity> | null
+  rollFamedFn?: () => ReturnType<typeof rollFamedIdentity> | null,
+  // The working pawn's `*_yield` skill multiplier on output (1 for non-butchery / passive furnaces).
+  skillYieldMult = 1
 ): GameState {
   // Recipe registry (Stage C): a craft completion runs the producing recipe once per queued
   // unit and emits ALL its outputs — the primary product plus any byproducts (e.g. splitting
@@ -251,15 +259,18 @@ export function completeCraftOrder(
   );
   const conditionMult = carcassInput ? (carcassInput.unitConditions![0] ?? 100) / 100 : 1;
 
-  // Butchery station YIELD bonus: a better-equipped butcher station (Dressing Stone +25%, Flensing
-  // Table / Sanguinary Altar +45%) renders more meat/hide/bone from the same carcass. Read off the
-  // ACTUAL station the order ran at (stationBuildingId), not the recipe's authored station — the
-  // player may have re-pinned it. 0 for every non-butchery station, so ordinary crafts are untouched.
+  // Butchery YIELD: a better-equipped butcher STATION (Dressing Stone +25%, Flensing Table / Sanguinary
+  // Altar +45%) AND a more skilled butcher (the working pawn's `butchery_yield` skill axis, passed as
+  // `skillYieldMult`) both render more meat/hide/bone from the same carcass. Station read off the ACTUAL
+  // station the order ran at (stationBuildingId), not the authored one — the player may have re-pinned it.
+  // Station bonus is 0 for non-butchery stations and skillYieldMult is 1 for non-butchery disciplines
+  // (only butchery defines a yield axis), so ordinary crafts stay a clean ×1 no-op.
   const actualStationType = entry.stationBuildingId
     ? (gs.buildings ?? []).find((b) => b.id === entry.stationBuildingId)?.type
     : (entry.stationType ?? undefined);
   const yieldMult =
-    1 + (actualStationType ? buildingService.butcheryYieldBonusOf(actualStationType) : 0);
+    (1 + (actualStationType ? buildingService.butcheryYieldBonusOf(actualStationType) : 0)) *
+    skillYieldMult;
 
   const outputs: Record<string, number> = {};
   for (const [outId, outQty] of Object.entries(recipeOutputs)) {
