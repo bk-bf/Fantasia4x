@@ -90,6 +90,61 @@ export function rollFlawTrait(rand: () => number): Trait | undefined {
   if (FLAW_POOL.length === 0) return undefined;
   return FLAW_POOL[Math.floor(rand() * FLAW_POOL.length) % FLAW_POOL.length];
 }
+
+// ALCHEMY-BUTCHERY-EXPANSION §A: harsh vs mild flaw sub-pools. A crude/low-tier trait draught inflicts a
+// heavy flaw; a refined high-tier one, if it fails, only leaves a light one.
+const HARSH_FLAWS = ['frail', 'clumsy', 'feral-manner', 'wild-swinging', 'sluggard'];
+const MILD_FLAWS = ['nearsighted', 'flat-footed', 'short-winded', 'slow-mending', 'night-blind'];
+function pickFlaw(ids: string[], rand: () => number): Trait | undefined {
+  const pool = ids.map((id) => TRAIT_BY_ID.get(id)).filter((t): t is Trait => !!t);
+  return pool.length ? pool[Math.floor(rand() * pool.length) % pool.length] : rollFlawTrait(rand);
+}
+
+export interface TraitGambleSpec {
+  tier: number;
+  traitPool: string[];
+  flawSeverity?: 'mild' | 'harsh';
+}
+
+/**
+ * ALCHEMY-BUTCHERY-EXPANSION §A — resolve a trait-transfusion draught into an outcome. Weighted GAMBLE:
+ *   • good  → the target trait, NO flaw
+ *   • mixed → the target trait + a flaw (Faustian)
+ *   • bad   → a flaw only (rejected)
+ * `alchemy01` (0–1, the drinker's alchemy proficiency) AND the draught `tier` both shift the odds toward
+ * good/away from bad AND bias the trait DRAW toward the stronger end of `traitPool` (better pool at higher
+ * investment). Deterministic given `rand`.
+ */
+export function resolveTraitGamble(
+  spec: TraitGambleSpec,
+  alchemy01: number,
+  rand: () => number
+): { trait?: Trait; flaw?: Trait } {
+  const t = Math.max(1, Math.min(3, Math.round(spec.tier)));
+  const a = Math.max(0, Math.min(1, alchemy01));
+  const goodBase = [0.05, 0.2, 0.4][t - 1];
+  const badBase = [0.6, 0.35, 0.15][t - 1];
+  const good = Math.min(0.85, goodBase + a * 0.25);
+  const bad = Math.max(0.05, badBase - a * 0.25);
+  const r = rand();
+  const outcome = r < bad ? 'bad' : r < 1 - good ? 'mixed' : 'good';
+
+  let trait: Trait | undefined;
+  if (outcome !== 'bad' && spec.traitPool.length) {
+    // Bias the draw toward the END (stronger) of the pool with tier + alchemy: pow<1 skews high.
+    const skew = 1 / (1 + t * 0.4 + a);
+    const idx = Math.min(
+      spec.traitPool.length - 1,
+      Math.floor(Math.pow(rand(), skew) * spec.traitPool.length)
+    );
+    trait = TRAIT_BY_ID.get(spec.traitPool[idx]);
+  }
+  const flaw =
+    outcome === 'good'
+      ? undefined
+      : pickFlaw(spec.flawSeverity === 'mild' ? MILD_FLAWS : HARSH_FLAWS, rand);
+  return { trait, flaw };
+}
 /** The lineage id whose parent marker this pawn holds, or undefined (not a lineage member). */
 export function pawnLineage(pawn: Pawn): string | undefined {
   for (const t of pawn.traits ?? [])

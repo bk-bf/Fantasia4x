@@ -329,6 +329,47 @@
     "buildingState": {"isUnique": false}
   },
   {
+    // ALCHEMY-BUTCHERY-EXPANSION §B/§D — the station that turns big-beast bone/tusk/ivory into weapons + carved
+    // trophies, so a boss's anatomy has somewhere to go.
+    "id": "bone_carvers_bench",
+    "ageTier": "primitive:3",
+    "name": "Bone Carver's Bench",
+    "color": "#B8A88A",
+    "charSpans": [ {"sheet": "items", "id": 22} ],
+    "transparentBg": true,
+    "description": "A pitted worktop of antler tines and rasps, strewn with bone-dust. Splits great bones for hafts, carves tusk down to ivory, and works trophies from what a beast leaves behind.",
+    "category": "production",
+    "buildingCost": {"large_bones": 4, "category:log": 3, "flint_shard": 2},
+    "workAmount": 16,
+    "toolTierRequired": 0,
+    "populationRequired": 1,
+    "researchRequired": null,
+    "upkeepCost": {},
+    "effects": {"craftingEnabled": true},
+    "storageCapacity": {},
+    "buildingState": {"isUnique": false}
+  },
+  {
+    // ALCHEMY-BUTCHERY-EXPANSION §B — an ivory trophy: a beauty sink for `ivory` (carved from great tusks).
+    "id": "ivory_idol",
+    "ageTier": "iron:1",
+    "name": "Ivory Idol",
+    "color": "#EFE6CE",
+    "charSpans": [ {"sheet": "buildings", "id": 39} ],
+    "transparentBg": true,
+    "description": "A figure carved whole from a single great tusk, pale and cold to the touch. It draws the eye and lends a hall the weight of a place that has taken great beasts and lived.",
+    "category": "furniture",
+    "buildingCost": {"ivory": 2, "category:plank": 2},
+    "workAmount": 30,
+    "toolTierRequired": 1,
+    "populationRequired": 1,
+    "researchRequired": null,
+    "upkeepCost": {},
+    "effects": {"beauty": 0.8},
+    "storageCapacity": {},
+    "buildingState": {"isUnique": false}
+  },
+  {
     "id": "charcoal_pit",
     "ageTier": "primitive:2",
     "passive": true,
@@ -2020,6 +2061,27 @@
     "researchRequired": "basic_alchemy",
     "upkeepCost": {},
     "effects": {"craftingEnabled": true, "alchemyEnabled": true, "tier": 2},
+    "storageCapacity": {},
+    "buildingState": {"isUnique": false, "maxCount": 2}
+  },
+  {
+    // ALCHEMY-BUTCHERY-EXPANSION §D — the advanced alchemy station (tier 3). Gates the high-tier trait
+    // transfusions and best potions; its tier is what makes T3 brews possible (better gamble odds + pool).
+    "id": "apothecary",
+    "ageTier": "iron:2",
+    "name": "Apothecary",
+    "color": "#5E35B1",
+    "charSpans": [ {"sheet": "buildings", "id": 39} ],
+    "transparentBg": true,
+    "description": "A cabinet of tinctures, a fractioning still and a cold slab for handling humours. Where a plain lab boils, this draws essences off clean, the work that turns a beast's organ into a controlled draught.",
+    "category": "production",
+    "buildingCost": {"clay_alembic": 2, "glassware": 4, "fired_brick": 10, "gem_dust": 2},
+    "workAmount": 60,
+    "toolTierRequired": 2,
+    "populationRequired": 1,
+    "researchRequired": "master_alchemy",
+    "upkeepCost": {},
+    "effects": {"craftingEnabled": true, "alchemyEnabled": true, "tier": 3},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 2}
   },

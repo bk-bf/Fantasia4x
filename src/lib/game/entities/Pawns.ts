@@ -22,7 +22,7 @@ import {
 import { createBodyPlanLimbs } from '../systems/Combat';
 import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/BodyParts';
 import { SCARRING_CONFIG, makeScarInjury } from '../core/Wounds';
-import { seedAwakeningPaths, getTraitById, rollFlawTrait } from '../core/Lineages';
+import { seedAwakeningPaths, getTraitById, rollFlawTrait, resolveTraitGamble } from '../core/Lineages';
 import { KIN_INVERSE } from '../core/Social';
 import { itemDefById } from '../core/itemDefs';
 import { seedWorkLevels, rollWorkStyle } from '../core/workExperience';
@@ -352,20 +352,44 @@ export function applyConsumable(
     changed = true;
   }
 
-  // (ii) Permanent trait grant + Faustian flaw.
+  const bake = (trait: ReturnType<typeof getTraitById> | undefined) => {
+    if (trait && !next.traits.some((t) => t.id === trait.id)) {
+      next.traits.push(trait);
+      applyGainedTrait(next, trait);
+      changed = true;
+    }
+  };
+
+  // (ii) Permanent trait grant + Faustian flaw (legacy `grantsTraitOnConsume` — kept for any item still
+  // using it; the beast organs were moved to the raw-risk + brewed-gamble path below).
   if (def.grantsTraitOnConsume) {
     const trait = getTraitById(def.grantsTraitOnConsume);
     const alreadyHas = next.traits.some((t) => t.id === trait?.id);
     if (trait && !alreadyHas) {
-      next.traits.push(trait);
-      applyGainedTrait(next, trait);
-      const flaw = rollFlawTrait(rand);
-      if (flaw && !next.traits.some((t) => t.id === flaw.id)) {
-        next.traits.push(flaw);
-        applyGainedTrait(next, flaw);
-      }
+      bake(trait);
+      bake(rollFlawTrait(rand));
+    }
+  }
+
+  // (iii) ALCHEMY-BUTCHERY-EXPANSION §A — RAW beast organ: no reward, only risk. Sicken the eater, and at
+  // `flawChance` inflict a random Faustian flaw. The GOOD trait comes only from the brewed draught below.
+  if (def.rawConsumeRisk) {
+    const { sickness, flawChance = 0 } = def.rawConsumeRisk;
+    if (sickness) {
+      const timers = { ...(next.conditionTimers ?? {}) };
+      timers[sickness] = Math.max(timers[sickness] ?? 0, Math.round(3000 * durationMult));
+      next.conditionTimers = timers;
       changed = true;
     }
+    if (rand() < flawChance) bake(rollFlawTrait(rand));
+  }
+
+  // (iv) ALCHEMY-BUTCHERY-EXPANSION §A — brewed trait draught: a weighted gamble. Odds + trait draw scale
+  // with the draught tier and the drinker's alchemy proficiency (`durationMult` folds that in).
+  if (def.traitGamble) {
+    const { trait, flaw } = resolveTraitGamble(def.traitGamble, Math.min(1, durationMult - 1), rand);
+    bake(trait);
+    bake(flaw);
   }
 
   return changed ? next : pawn;

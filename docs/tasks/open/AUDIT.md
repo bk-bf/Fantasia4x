@@ -262,9 +262,13 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       `nightshade_bolete` + `glassware` → `caustic_coating`, a `nausea`-on-hit weapon coating). **Verified
       headless** (`alchemyChain.test.ts`): grimeling → caustic_bile 2 → caustic_coating 3 by turn 2000. Bog
       Ooze is now a real alchemy source instead of a dead carcass.
-- [ ] **Alchemy / potions / tonics / loot-crafting EXPANSION** → tracked as its own proposal:
-      **[ALCHEMY-BUTCHERY-EXPANSION.md](ALCHEMY-BUTCHERY-EXPANSION.md)** (trait-organ Faustian rework §A;
-      anatomy loot → weapons/trophies/buildings §B; alchemy breadth §C; apothecary + carver stations §D).
+- [~] **Alchemy / potions / tonics / loot-crafting EXPANSION** → **[ALCHEMY-BUTCHERY-EXPANSION.md](ALCHEMY-BUTCHERY-EXPANSION.md)**.
+      **§A (trait-organ Faustian rework) + §B (anatomy loot → weapons/trophies/buildings) + the apothecary &
+      bone-carver stations are IMPLEMENTED & headless-verified** (`alchemyChain.test.ts`): raw organs neutered
+      (sickness + flaw, no free trait), 4 organs × 3-tier `traitGamble` draughts whose odds+pools scale with
+      tier × alchemy (T1/novice good-rate 0.05 → T3/master 0.65), and `great_bone`/`ivory`/`great_tusk` now
+      craft into a maul / ivory idol / ivory. **§C (tier the existing potions/coatings to 3 tiers each) is the
+      remaining chunk.**
 
 ### Tool-tier parity across work categories — ⭐ NEW AUDIT TASK (proposed 2026-07-24)
 > Butchery now has a tool per tier (flint/bone → iron kit → steel kit; gate fixed). The user wants this

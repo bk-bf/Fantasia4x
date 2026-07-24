@@ -1713,6 +1713,22 @@
     }
   },
   {
+    "id"              : "carve_ivory",
+    "station"         : "bone_carvers_bench",
+    "inputs"          : {"great_tusk": 1},
+    "outputs"         : {"ivory": 2},
+    "workAmount"      : 10,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_great_bone_maul",
+    "station"         : "bone_carvers_bench",
+    "inputs"          : {"great_bone": 1, "oak_plank": 1, "cordage": 2},
+    "outputs"         : {"great_bone_maul": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 0
+  },
+  {
     "id"              : "make_stone_maul",
     "station"         : "craft_spot",
     "inputs"          : {"small_stone": 2, "branch": 1, "cordage": 1},
@@ -3647,6 +3663,104 @@
     "outputs"         : {"venom_coating": 2},
     "workAmount"      : 30,
     "toolTierRequired": 1
+  },
+  // ALCHEMY-BUTCHERY-EXPANSION §A — beast-organ trait TRANSFUSIONS (3-tier ladder per organ; drinking
+  // is a gamble resolved by traitGamble). T1 at the alchemy lab, T2/T3 at the apothecary (tier 3 station).
+  {
+    "id"              : "brew_crude_feral_draught",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"alpha_heart": 1, "woundwort": 1, "glassware": 1},
+    "outputs"         : {"crude_feral_draught": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_feral_transfusion",
+    "station"         : "apothecary",
+    "inputs"          : {"alpha_heart": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
+    "outputs"         : {"feral_transfusion": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_alpha_essence",
+    "station"         : "apothecary",
+    "inputs"          : {"alpha_heart": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
+    "outputs"         : {"alpha_essence": 1},
+    "workAmount"      : 22,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "brew_crude_hide_draught",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"direwolf_hackles": 1, "woundwort": 1, "glassware": 1},
+    "outputs"         : {"crude_hide_draught": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_hide_transfusion",
+    "station"         : "apothecary",
+    "inputs"          : {"direwolf_hackles": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
+    "outputs"         : {"hide_transfusion": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_ironhide_essence",
+    "station"         : "apothecary",
+    "inputs"          : {"direwolf_hackles": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
+    "outputs"         : {"ironhide_essence": 1},
+    "workAmount"      : 22,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "brew_crude_predator_draught",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"sabretooth_glands": 1, "woundwort": 1, "glassware": 1},
+    "outputs"         : {"crude_predator_draught": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_predator_transfusion",
+    "station"         : "apothecary",
+    "inputs"          : {"sabretooth_glands": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
+    "outputs"         : {"predator_transfusion": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_sabretooth_essence",
+    "station"         : "apothecary",
+    "inputs"          : {"sabretooth_glands": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
+    "outputs"         : {"sabretooth_essence": 1},
+    "workAmount"      : 22,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "brew_crude_sight_draught",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"owlbear_pineal": 1, "woundwort": 1, "glassware": 1},
+    "outputs"         : {"crude_sight_draught": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_sight_transfusion",
+    "station"         : "apothecary",
+    "inputs"          : {"owlbear_pineal": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
+    "outputs"         : {"sight_transfusion": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_third_eye_essence",
+    "station"         : "apothecary",
+    "inputs"          : {"owlbear_pineal": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
+    "outputs"         : {"third_eye_essence": 1},
+    "workAmount"      : 22,
+    "toolTierRequired": 2
   },
   // ════════════════════════════════════════════════════════════════════════════════════════════
   // PRODUCTION-CHAIN-III §B.3 — Magic recipe families gated to the infused capstone stations

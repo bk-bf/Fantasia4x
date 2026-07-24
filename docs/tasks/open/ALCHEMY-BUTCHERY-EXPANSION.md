@@ -1,10 +1,11 @@
 <!-- LOC cap: 200 (created: 2026-07-24) -->
 
-# ALCHEMY & BUTCHERY-LOOT EXPANSION (proposal)
+# ALCHEMY & BUTCHERY-LOOT EXPANSION
 
 > **Related:** [AUDIT.md](AUDIT.md) · [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md)
 
-Proposal only — nothing here is implemented yet. Prompted by the butchery audit: powerful beast traits are
+**Status (2026-07-24): §A + §B + the two stations IMPLEMENTED & headless-verified (`alchemyChain.test.ts`);
+§C (tier the EXISTING potions/coatings to 3 tiers) is the remaining chunk.** Original framing: Prompted by the butchery audit: powerful beast traits are
 currently handed out for eating an organ **raw**, and several boss loot drops (`great_bone`, `ivory`,
 `great_tusk`) have no consumer. This reworks the trait path into a **risky, tiered alchemical craft** and
 turns the anatomy loot into real crafting/building chains.
@@ -26,25 +27,25 @@ no station, no real risk of *not* getting the prize. That trivialises the best t
 **Design.** The organ is a REAGENT, not a snack. The coveted trait only comes from **brewing it into a
 tiered draught**, and even then the result is a gamble whose odds AND reward-pool scale with investment.
 
-- [ ] **Neuter raw eating.** Remove `grantsTraitOnConsume` from the four organs (they become recipe inputs).
+- [x] **Neuter raw eating.** Remove `grantsTraitOnConsume` from the four organs (they become recipe inputs).
       Eating one raw still *does* something — but only the downside: a sickness condition + a decent chance of
       a pure flaw, never the good trait. Raw beast-flesh should punish, not reward.
-- [ ] **A 3-TIER draught ladder per organ** (`ageTier`-gated, NOT rarity — think `iron:1 → iron:2 → runed:1`
+- [x] **A 3-TIER draught ladder per organ** (`ageTier`-gated, NOT rarity — think `iron:1 → iron:2 → runed:1`
       or `copper → iron → runed`, whatever fits the effect). Each rung is a **distinct recipe** demanding more
       and better material than the last — organ + escalating rare reagents + a purified base (distilled spirit
       / gem-dust catalyst / rare fungus) at rising counts — plus a higher research/station gate. T1 is a crude,
       risky transfusion; T3 is the refined apothecary version.
-- [ ] **The outcome is a weighted GAMBLE on drink** (`traitGamble` block on the draught):
+- [x] **The outcome is a weighted GAMBLE on drink** (`traitGamble` block on the draught):
       - a **good** result: the target trait alone (best case),
       - a **mixed** result: the target trait + a flaw (Faustian),
       - a **bad** result: a flaw only (the body rejected it).
-- [ ] **Draught TIER × pawn alchemy × station shift BOTH the odds AND the pools** (the core of the direction):
+- [x] **Draught TIER × pawn alchemy × station shift BOTH the odds AND the pools** (the core of the direction):
       - **Odds** — a higher-tier draught (T3 > T1), a higher pawn **alchemy** stat, and a better **workstation**
         all push the weighting toward the good/mixed results and away from pure-flaw.
       - **Pools** — the same three factors unlock a **better draw**: T3 by a master alchemist at the apothecary
         can roll a *stronger/rarer* trait (beyond the organ's base trait) and pull flaws from a *milder* set; a
         T1 brew by a novice draws the base trait at best and the harsh flaw set.
-- [ ] **Data hooks**: replace `grantsTraitOnConsume` with a `traitGamble` on the DRAUGHT item — target-trait
+- [x] **Data hooks**: replace `grantsTraitOnConsume` with a `traitGamble` on the DRAUGHT item — target-trait
       pool by tier, flaw pool by tier, and a base odds table modified at drink-time by `getWorkModifiers(pawn,
       'alchemy')` (or the alchemy stat) + the crafting station's tier + the draught's own tier/quality (§Q).
       Extend `rollFlawTrait` into a pool-and-weight roll. Wire in `Pawns.ts`/`commands.ts §2h`.
@@ -55,9 +56,9 @@ Dead boss materials today: **`great_bone`**, **`ivory`**, **`great_tusk`** (no c
 (only `make_fang_reaver`) and the prestige pelts are under-used. Use the body plan (`limbmap.jsonc`) as the
 return→material table so a beast's anatomy shows up in what it drops AND what that makes.
 
-- [ ] **`great_bone`** → bone weapons/armour (great-bone maul, bone-plated cuirass upgrade), and a building
+- [x] **`great_bone`** → bone weapons/armour (great-bone maul, bone-plated cuirass upgrade), and a building
       material (bone totem / trophy frame). Heavy, cheap-ish, primitive-flavoured brute gear.
-- [ ] **`ivory` / `great_tusk`** → carved prestige goods: ivory-inlaid weapon grips, ivory idol/trophy
+- [x] **`ivory` / `great_tusk`** → carved prestige goods: ivory-inlaid weapon grips, ivory idol/trophy
       (high beauty furniture), tusk pike/spear. A value + beauty sink, not combat power.
 - [ ] **`great_fang`** → expand beyond `fang_reaver`: fang necklace/charm (a fear or prestige trinket),
       fang-tipped ammo.
@@ -85,10 +86,10 @@ become three items, not one.
 
 ## D. Workstations & building recipes
 
-- [ ] **Apothecary / advanced alchemy station** (tier above `alchemy_lab`): gates the high-tier trait
+- [x] **Apothecary / advanced alchemy station** (tier above `alchemy_lab`): gates the high-tier trait
       draughts and best potions; its station tier is one of the three factors in the §A gamble.
-- [ ] **Bone/trophy carver's bench**: the station for §B ivory/bone/tusk carving + trophy furniture.
-- [ ] **Building materials from loot**: `great_bone` → a bone-totem/altar building; prestige pelts/ivory →
+- [x] **Bone/trophy carver's bench**: the station for §B ivory/bone/tusk carving + trophy furniture.
+- [x] **Building materials from loot**: `great_bone` → a bone-totem/altar building; prestige pelts/ivory →
       high-beauty furniture, tying the loot chains back into the base-building loop.
 
 ## Acceptance (when built)

@@ -375,6 +375,23 @@ export interface Item {
    * via the `useConsumableItem` command. One-shot; a no-op if the pawn already carries the trait.
    */
   grantsTraitOnConsume?: string;
+  /**
+   * ALCHEMY-BUTCHERY-EXPANSION §A: consuming this RAW beast organ punishes (never rewards) — it makes the
+   * eater sick and, at `chance`, inflicts a random Faustian flaw. The GOOD trait only comes from brewing
+   * the organ into a `traitGamble` draught. Resolved in `applyConsumable`.
+   */
+  rawConsumeRisk?: { sickness?: string; flawChance?: number };
+  /**
+   * ALCHEMY-BUTCHERY-EXPANSION §A: a brewed "transfusion" draught. Drinking it is a weighted GAMBLE (good
+   * = a trait, no flaw / mixed = trait + flaw / bad = flaw only). `tier` (1–3, the draught's `ageTier` rung)
+   * and the drinker's alchemy proficiency both shift the odds toward good and unlock the higher `traitPool`
+   * entries; `flawSeverity` picks the mild vs harsh flaw sub-pool. Resolved by `resolveTraitGamble`.
+   */
+  traitGamble?: {
+    tier: number;
+    traitPool: string[];
+    flawSeverity?: 'mild' | 'harsh';
+  };
   /** Magic-material affinity hook (e.g. "lunar"|"fire"|"earth") — quality/flavour edge now; a
    *  mana/affinity bonus later. Carried by ancient `magic_wood` species. */
   affinity?: string;
