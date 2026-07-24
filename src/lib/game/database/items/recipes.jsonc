@@ -674,7 +674,10 @@
     "passive"          : true,
     "station"          : "stone_forge",
     "inputs"           : {"native_gold": 3, "clay_mold": 1},
-    "inputAlternatives": [ {"electrum": 3, "clay_mold": 1} ],
+    // Electrum is a gold-silver alloy ore, poorer in gold than native metal, so it takes more to net a
+    // bar. Its silver fraction is not recovered here — true parting (gold + silver from one melt) needs a
+    // per-recipe craft card the engine doesn't have yet (getRecipeForItem is first-producer-wins).
+    "inputAlternatives": [ {"electrum": 4, "clay_mold": 1} ],
     "outputs"          : {"gold_bar": 1},
     "workAmount"       : 10,
     "toolTierRequired" : 1

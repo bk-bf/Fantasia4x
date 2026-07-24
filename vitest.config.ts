@@ -61,6 +61,18 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.{test,spec}.ts'],
-    exclude: ['node_modules/**', '.svelte-kit/**', 'build/**']
+    exclude: ['node_modules/**', '.svelte-kit/**', 'build/**'],
+    // RESOURCE CAP (laptop OOM guard). Vitest defaults to one worker PER CORE — on a 22-thread box
+    // that is ~21 parallel Node forks, each loading worldgen + WASM + the big JSONC databases. On a
+    // 15 GB machine already deep into swap that thrashes RAM and OOM-kills the session. The suite does
+    // not run in CI (the desktop build is manual, no test step), so a small default costs nothing
+    // elsewhere. Override for a beefier box with `VITEST_MAX_FORKS=8 pnpm test`.
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        minForks: 1,
+        maxForks: Math.max(1, Number(process.env.VITEST_MAX_FORKS) || 3)
+      }
+    }
   }
 });

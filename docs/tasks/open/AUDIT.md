@@ -148,7 +148,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - Yield-vs-speed rule (established): butchery stations give a **yield** bonus (better tools → more off a carcass); stations where more-out-than-in makes no sense (tools, smelting ore→ingots, cooking) give **speed** (`craftingBonus`) instead. Fires give more max fuel. Generic stations already give speed; butchery yield now wired.
 - [x] Butchery yield bonus wired + tier ladder (`butcheryTier`): dressing_stone/flensing/altar render lower recipes and their `butcheryYieldBonus` (+25/+45%) multiplies output
 - [x] ⚠→fixed: great-carcass renders/flenses + humanoid `*_remains` + jackal/quillback/olm were UNREACHABLE (their meat/bones dispatched to a different recipe). Root: butchery dispatched by output meat, and the carcass-card path was dead (`isCarcass` never set → carcass cards never rendered). Fix: `isCarcass` derived from `category==='carcass'` at the item index; orders carry `recipeId`; `craftItem`/`canQueueCraft`/`completeCraftOrder` dispatch butchery by the CARCASS (`resolveCarcassRecipe`, picks the best built station via `butcheryTier`); crafting-screen carcass cards gated on `category` + yields from the recipe. Verified headless: great_wolf→render_great_wolf, goblin→make_goblin_remains, dire_wolf→make_dire_wolf @flensing_table.
-- [~] ⚠ NON-butchery shadows: **`tan_*_leather_bucket` (×5) RESOLVED** (Tanning redesign — rack removed, buckets are the only path, one `tan_<leather>` per species). Still open: `smelt_blast_steel` → Steel rework (both steel recipes replaced); `grind_mana_crystal` → Crystal/magic-reagent rework (redesign, not prune); `make_ash` → unshadow (Ash economy section).
+- [~] ⚠ NON-butchery shadows: **`tan_*_leather_bucket` (×5) RESOLVED** (Tanning redesign — rack removed, buckets are the only path, one `tan_<leather>` per species). Still open: `smelt_blast_steel` → Steel rework (both steel recipes replaced); `grind_mana_crystal` + `magic_alloy_bar` (dead, `smelt_magic_alloy`) → Crystal/magic-reagent rework (redesign, not prune); `make_ash` → unshadow (Ash economy section).
 - [ ] Gating: needs knife/butchery tool; T2 needs tier 2 — below-tier pawn blocked
 - [ ] Spoiled carcass yields proportionally less (conditionMult)
 - [ ] butcher_spot T0 — all common game: make_{rabbit,venison,wolf,bear,boar,elk,goat,chicken,rat,aurochs,mammoth,owlbear,sabretooth,crocodile,hippogriff,hoarfowl,worg,jackal,quillback,olm}_meat, harvest_thornwood_silk
@@ -357,11 +357,17 @@ consumer — no dead ore.** The defects were in the *quantities and the chain sh
       each have exactly ONE producing recipe (`getRecipeForItem` is first-producer-wins, so a second producer
       would be unreachable from the craft card). Locked by a regression test.
 
-**Open — needs a design call (not defects I should decide alone):**
-- [ ] **`magic_alloy_bar` is DEAD** — one producer (`manaforge`), zero consumers. Belongs with the deferred
-      crystal/magic-reagent rework rather than being given a token consumer now. Prune or wire it there.
-- [ ] **`electrum` silently loses its silver.** Electrum is a natural gold-silver alloy (~20–50% Ag), but it
-      is only an `inputAlternatives` entry on `make_gold_bar`, so smelting it yields gold and the silver
-      vanishes. The realistic fix (parting → gold + silver) can't just be a second recipe: `gold_bar` would
-      then have two producers and one would be shadowed. Needs a decision on the recipe-addressing model.
+**Design calls — RESOLVED (2026-07-24):**
+- [x] **`magic_alloy_bar` is DEAD → FOLDED into the crystal/magic-reagent rework** (not pruned). Producer is
+      `smelt_magic_alloy` at `runic_crucible` (behind `runic_inscription`), zero consumers. It's one symptom
+      of the whole unfinished runic tier, tracked with `grind_mana_crystal` in the shadow list (line ~151) —
+      pruning one bar while the rest of the tier is redesigned wholesale would be churn the rework undoes.
+- [x] **`electrum` silver-loss → DELIBERATE SIMPLIFICATION (documented in the recipe).** Electrum is a
+      gold-silver alloy ore poorer in gold than native metal, so its `make_gold_bar` alternative now costs
+      **4** electrum per bar (vs 3 native_gold) to reflect the dilution. Its silver is NOT recovered: true
+      parting (gold + silver from one melt) can't be a second recipe because the craft card is keyed on a
+      recipe's primary output and `getRecipeForItem` is first-producer-wins — `part_electrum` would be
+      shadowed under both `gold_bar` and `silver_bar` and be totally unreachable. Recovering it needs a
+      per-recipe craft-card ("recipe-addressing") the engine lacks; deferred as a future enhancement.
+      Electrum is a rare ore and silver is already common via galena→cupellation, so the payoff is small.
 
