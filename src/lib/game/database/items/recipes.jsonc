@@ -3664,6 +3664,199 @@
     "workAmount"      : 30,
     "toolTierRequired": 1
   },
+  // ALCHEMY-BUTCHERY-EXPANSION §C — Greater (T2) / Grand (T3) tiers of the existing brews.
+  {
+    "id"              : "brew_greater_potion_of_might",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"woundwort": 3, "gem_dust": 2, "glassware": 1},
+    "outputs"         : {"greater_potion_of_might": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_grand_potion_of_might",
+    "station"         : "apothecary",
+    "inputs"          : {"woundwort": 3, "gem_dust": 3, "glassware": 1, "mandrake": 1},
+    "outputs"         : {"grand_potion_of_might": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "brew_greater_draught_of_vigor",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"woundwort": 3, "gem_dust": 2, "glassware": 1},
+    "outputs"         : {"greater_draught_of_vigor": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_grand_draught_of_vigor",
+    "station"         : "apothecary",
+    "inputs"          : {"woundwort": 3, "gem_dust": 3, "glassware": 1, "mandrake": 1},
+    "outputs"         : {"grand_draught_of_vigor": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "brew_greater_elixir_of_grace",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"woundwort": 3, "gem_dust": 2, "glassware": 1},
+    "outputs"         : {"greater_elixir_of_grace": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_grand_elixir_of_grace",
+    "station"         : "apothecary",
+    "inputs"          : {"woundwort": 3, "gem_dust": 3, "glassware": 1, "mandrake": 1},
+    "outputs"         : {"grand_elixir_of_grace": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "brew_greater_tonic_of_fortitude",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"woundwort": 3, "gem_dust": 2, "glassware": 1},
+    "outputs"         : {"greater_tonic_of_fortitude": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_grand_tonic_of_fortitude",
+    "station"         : "apothecary",
+    "inputs"          : {"woundwort": 3, "gem_dust": 3, "glassware": 1, "mandrake": 1},
+    "outputs"         : {"grand_tonic_of_fortitude": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "brew_greater_bloodrage_draught",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"alpha_ichor": 2, "woundwort": 1, "glassware": 1, "gem_dust": 1},
+    "outputs"         : {"greater_bloodrage_draught": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_grand_bloodrage_draught",
+    "station"         : "apothecary",
+    "inputs"          : {"alpha_ichor": 2, "woundwort": 1, "glassware": 1, "gem_dust": 2, "mandrake": 1},
+    "outputs"         : {"grand_bloodrage_draught": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "brew_greater_ironhide_tonic",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"owlbear_bile": 2, "woundwort": 1, "glassware": 1, "gem_dust": 1},
+    "outputs"         : {"greater_ironhide_tonic": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_grand_ironhide_tonic",
+    "station"         : "apothecary",
+    "inputs"          : {"owlbear_bile": 2, "woundwort": 1, "glassware": 1, "gem_dust": 2, "mandrake": 1},
+    "outputs"         : {"grand_ironhide_tonic": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "brew_greater_vigor_draught",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"bloodroot": 3, "woundwort": 1, "glassware": 1, "gem_dust": 1},
+    "outputs"         : {"greater_vigor_draught": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_grand_vigor_draught",
+    "station"         : "apothecary",
+    "inputs"          : {"bloodroot": 3, "woundwort": 1, "glassware": 1, "gem_dust": 2, "mandrake": 1},
+    "outputs"         : {"grand_vigor_draught": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "brew_greater_calming_draught",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "gem_dust": 1},
+    "outputs"         : {"greater_calming_draught": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_grand_calming_draught",
+    "station"         : "apothecary",
+    "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "gem_dust": 2, "mandrake": 1},
+    "outputs"         : {"grand_calming_draught": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "brew_greater_nightglow_draught",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"glowcap": 3, "woundwort": 1, "glassware": 1, "gem_dust": 1},
+    "outputs"         : {"greater_nightglow_draught": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_grand_nightglow_draught",
+    "station"         : "apothecary",
+    "inputs"          : {"glowcap": 3, "woundwort": 1, "glassware": 1, "gem_dust": 2, "mandrake": 1},
+    "outputs"         : {"grand_nightglow_draught": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "brew_greater_frenzy_draught",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "gem_dust": 1},
+    "outputs"         : {"greater_frenzy_draught": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_grand_frenzy_draught",
+    "station"         : "apothecary",
+    "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "gem_dust": 2, "nightshade_bolete": 1},
+    "outputs"         : {"grand_frenzy_draught": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "brew_greater_venom_coating",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"venom_sac": 2, "nightshade_bolete": 1, "glassware": 1, "gem_dust": 1},
+    "outputs"         : {"greater_venom_coating": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_grand_venom_coating",
+    "station"         : "apothecary",
+    "inputs"          : {"venom_sac": 2, "nightshade_bolete": 1, "glassware": 1, "gem_dust": 2, "mandrake": 1},
+    "outputs"         : {"grand_venom_coating": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id"              : "brew_greater_caustic_coating",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"caustic_bile": 3, "nightshade_bolete": 1, "glassware": 1, "gem_dust": 1},
+    "outputs"         : {"greater_caustic_coating": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "brew_grand_caustic_coating",
+    "station"         : "apothecary",
+    "inputs"          : {"caustic_bile": 3, "nightshade_bolete": 1, "glassware": 1, "gem_dust": 2, "mandrake": 1},
+    "outputs"         : {"grand_caustic_coating": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 2
+  },
   // ALCHEMY-BUTCHERY-EXPANSION §A — beast-organ trait TRANSFUSIONS (3-tier ladder per organ; drinking
   // is a gamble resolved by traitGamble). T1 at the alchemy lab, T2/T3 at the apothecary (tier 3 station).
   {

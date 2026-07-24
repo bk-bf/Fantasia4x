@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { resolveTraitGamble } from '$lib/game/core/Lineages';
+import { itemService } from '$lib/game/services/ItemService';
 
 /**
  * ALCHEMY / MATERIAL-SINK AUDIT (headless). Magical creatures should yield ALCHEMY reagents (not plain
@@ -136,5 +137,53 @@ describe('alchemy / magical-creature reagents', () => {
     console.log(`[ALCH loot] great_tusk→ivory=${stk(s).ivory ?? 0}; great_bone→great_bone_maul=${stk(s).great_bone_maul ?? 0}`);
     expect(stk(s).ivory ?? 0, 'great_tusk carved into ivory').toBeGreaterThan(0);
     expect(stk(s).great_bone_maul ?? 0, 'great_bone forged into a maul').toBeGreaterThan(0);
+  });
+
+  it('§C potion tiers: every effect is a 3-tier ladder with a rising effect + station gate', () => {
+    // Effect magnitude (buff duration / coating chance) strictly rises T1 → T2 → T3.
+    const dur = (id: string) =>
+      (itemService.getItemById(id) as { conditionDurationTurns?: number })?.conditionDurationTurns ?? 0;
+    for (const base of ['potion_of_might', 'bloodrage_draught', 'calming_draught']) {
+      const t1 = dur(base);
+      const t2 = dur(`greater_${base}`);
+      const t3 = dur(`grand_${base}`);
+      expect(t2, `${base}: T2 > T1`).toBeGreaterThan(t1);
+      expect(t3, `${base}: T3 > T2`).toBeGreaterThan(t2);
+    }
+    // Coatings: proc chance rises up the ladder.
+    const ch = (id: string) =>
+      (itemService.getItemById(id) as { coatingEffect?: { chance?: number } })?.coatingEffect?.chance ?? 0;
+    expect(ch('greater_venom_coating')).toBeGreaterThan(ch('venom_coating'));
+    expect(ch('grand_venom_coating')).toBeGreaterThan(ch('greater_venom_coating'));
+    console.log(
+      `[ALCH tiers] potion_of_might dur ${dur('potion_of_might')}/${dur('greater_potion_of_might')}/${dur('grand_potion_of_might')}; venom chance ${ch('venom_coating')}/${ch('greater_venom_coating')}/${ch('grand_venom_coating')}`
+    );
+  });
+
+  it('§C: T2 brews at the lab, T3 (Grand) requires the apothecary — driven headless', async () => {
+    const s = new HeadlessSession();
+    await s.start(
+      buildScenario({
+        seed: 74,
+        map: { w: 16, h: 16 },
+        workReady: true,
+        researchMaxTier: 9,
+        toolTier: 3,
+        pawns: [{ count: 5, skillLevel: 20 }],
+        needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
+        buildings: [{ id: 'alchemy_lab' }, { id: 'apothecary' }],
+        items: { woundwort: 20, gem_dust: 20, mandrake: 8, glassware: 20, spit_meat: 10 },
+        seedEntities: false
+      })
+    );
+    s.command({ type: 'craftItem', payload: { itemId: 'greater_potion_of_might' } } as never);
+    s.command({ type: 'craftItem', payload: { itemId: 'grand_potion_of_might' } } as never);
+    for (let i = 0; i < 25 && !((stk(s).greater_potion_of_might ?? 0) > 0 && (stk(s).grand_potion_of_might ?? 0) > 0); i++)
+      s.tick(400);
+    console.log(
+      `[ALCH tier-brew] greater=${stk(s).greater_potion_of_might ?? 0} grand=${stk(s).grand_potion_of_might ?? 0}`
+    );
+    expect(stk(s).greater_potion_of_might ?? 0, 'T2 brewed').toBeGreaterThan(0);
+    expect(stk(s).grand_potion_of_might ?? 0, 'T3 brewed at the apothecary').toBeGreaterThan(0);
   });
 });

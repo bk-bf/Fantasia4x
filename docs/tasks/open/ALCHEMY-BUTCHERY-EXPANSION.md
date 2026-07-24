@@ -4,8 +4,9 @@
 
 > **Related:** [AUDIT.md](AUDIT.md) · [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md)
 
-**Status (2026-07-24): §A + §B + the two stations IMPLEMENTED & headless-verified (`alchemyChain.test.ts`);
-§C (tier the EXISTING potions/coatings to 3 tiers) is the remaining chunk.** Original framing: Prompted by the butchery audit: powerful beast traits are
+**Status (2026-07-24): §A, §B, §C (tier every existing brew), and the two new stations are all IMPLEMENTED &
+headless-verified (`alchemyChain.test.ts`).** Remaining are two OPTIONAL breadth follow-ons (net-new effect
+lines + distilled reagent bases) and a few §B trophy extras. Original framing: Prompted by the butchery audit: powerful beast traits are
 currently handed out for eating an organ **raw**, and several boss loot drops (`great_bone`, `ivory`,
 `great_tusk`) have no consumer. This reworks the trait path into a **risky, tiered alchemical craft** and
 turns the anatomy loot into real crafting/building chains.
@@ -76,13 +77,16 @@ for the §A organ draughts, better odds + better trait pool). This applies **per
 condition-application** — so a "might" line, a "venom coating" line, an "alpha-heart transfusion" line each
 become three items, not one.
 
-- [ ] **Tier every existing brew**: `potion_of_might`/`draught_of_vigor`/`elixir_of_grace`/`tonic_of_fortitude`,
-      the `*_draught`/`*_tonic` buffs, and `venom_coating`/`caustic_coating` each get a T1/T2/T3 ladder. Effect
-      magnitude + duration scale up the ladder; higher tiers demand rarer reagents + a better station.
-- [ ] **More effect LINES** for under-covered ground (fear/terror, corrosion/armour-eat, bleed, slow coatings;
-      perception/antidote/rest-mood tonics) — each authored as a 3-tier ladder from the start, not a one-off.
-- [ ] **Reagent depth to support the tiers**: distilled bases (spirits), purified catalysts (gem-dust,
-      quicklime), so the T2/T3 rungs demand a real supply chain — the same bases feed §A's trait draughts.
+- [x] **Tier every existing brew — DONE.** All 12 buff/coating lines (`potion_of_might`, `draught_of_vigor`,
+      `elixir_of_grace`, `tonic_of_fortitude`, `bloodrage_draught`, `ironhide_tonic`, `vigor_draught`,
+      `calming_draught`, `nightglow_draught`, `frenzy_draught`, `venom_coating`, `caustic_coating`) kept as T1
+      and given **Greater (T2)** + **Grand (T3)** rungs — buff duration ×1.6/×2.5 (e.g. 1200→1920→3000), coating
+      chance +0.15/+0.30 (0.6→0.75→0.9) & longer, escalating reagents; T2 at the lab, T3 at the apothecary.
+      Verified headless (`alchemyChain.test.ts`).
+- [ ] **More effect LINES** (fear/corrosion/bleed/slow coatings; perception/antidote/rest-mood tonics) — net-new
+      breadth beyond tiering the existing set. Optional follow-on; author each as a 3-tier ladder.
+- [ ] **Reagent depth** (distilled spirits/purified catalysts as T2/T3 bases) — net-new supply chain; the
+      current tiering escalates existing reagents (woundwort/gem_dust/mandrake) instead. Optional follow-on.
 
 ## D. Workstations & building recipes
 
@@ -94,13 +98,13 @@ become three items, not one.
 
 ## Acceptance (when built)
 
-- [ ] **Every potion/tonic/coating effect is a 3-tier `ageTier` ladder** (T1/T2/T3), distinct from the
+- [x] **Every potion/tonic/coating effect is a 3-tier `ageTier` ladder** (T1/T2/T3), distinct from the
       per-instance `rarities.jsonc` quality roll — no effect is a single flat item.
-- [ ] Effect magnitude/duration rises up the tier ladder; each rung has a strictly higher material/tech/station
+- [x] Effect magnitude/duration rises up the tier ladder; each rung has a strictly higher material/tech/station
       gate than the last.
-- [ ] Raw-eating an organ never grants the good trait; the trait only comes from a brewed draught.
-- [ ] Draught outcome odds AND trait/flaw pools measurably improve with draught tier × pawn alchemy × station
+- [x] Raw-eating an organ never grants the good trait; the trait only comes from a brewed draught.
+- [x] Draught outcome odds AND trait/flaw pools measurably improve with draught tier × pawn alchemy × station
       (headless: same organ, low-tier/novice/basic-lab vs high-tier/master/apothecary → different outcome
       distributions over N brews).
 - [ ] `great_bone`, `ivory`, `great_tusk` each have ≥1 crafting consumer; no boss/anatomy drop is a dead end.
-- [ ] New alchemy/coating/tonic recipes each drive end-to-end headless (reagent sourced → brewed → effect).
+- [x] New alchemy/coating/tonic recipes each drive end-to-end headless (reagent sourced → brewed → effect).
