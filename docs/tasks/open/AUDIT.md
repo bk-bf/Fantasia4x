@@ -268,8 +268,12 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       odds+pools scale with tier × alchemy (T1/novice good-rate 0.05 → T3/master 0.65); §B `great_bone`/`ivory`/
       `great_tusk` → maul / ivory idol / ivory (no dead drops); §C all 12 buff/coating lines given Greater(T2)+
       Grand(T3) rungs (duration 1200→1920→3000, venom chance 0.6→0.75→0.9; T3 gated at the apothecary); §D new
-      Apothecary + Bone Carver's Bench. Optional breadth follow-ons (net-new effect lines, distilled bases,
-      trophy extras) left open in the spec.
+      Apothecary + Bone Carver's Bench. **Both §C breadth follow-ons now DONE too** (full suite 1109 green):
+      6 net-new 3-tier effect lines (slow/fear/perception/antidote/rest-mood tonics+coatings, plus a **sharpness**
+      coating whose `bleedMult` multiplies a cutting weapon's unclottable-wound proc — headless-verified in combat,
+      0.18→0.53 on a blade, 0 on a maul by construction), and a **reagent-depth** supply chain
+      (`fermented_mash`→`distilled_spirit` T2 base, `purified_catalyst` T3 base) that all 12 existing Greater/Grand
+      brews were rewired onto. Only §B trophy extras (great_fang / prestige-pelt rugs / full anatomy pass) remain.
 
 ### Tool-tier parity across work categories — ⭐ NEW AUDIT TASK (proposed 2026-07-24)
 > Butchery now has a tool per tier (flint/bone → iron kit → steel kit; gate fixed). The user wants this

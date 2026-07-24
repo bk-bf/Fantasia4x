@@ -361,6 +361,47 @@ describe('combat sim (headless tickCombat)', () => {
     expect(rate).toBeLessThan(0.8);
   });
 
+  it('SHARPNESS coating multiplies bleed on a cutting weapon but CANNOT bleed a maul (§C)', () => {
+    // A honing oil (`razors_grace`, bleedMult 3.0) multiplies the SWUNG weapon's own bloodletting proc.
+    // Multiplicative by design: a steel longsword (base bloodletting 0.18) leaves far more non-clotting
+    // wounds when coated; a great bone maul (crush, NO bloodletting proc, bleedMod 0) leaves ZERO however
+    // keen the oil — the guard the design requires (blunt weapons never gain sword-like bleed).
+    const empty = makeState([], []);
+    const bloodlettingRate = (weaponId: string, coated: boolean) => {
+      const attacker = makePawn({
+        stats: { ...stats, strength: 22, dexterity: 20 },
+        limbs: createBodyPlanLimbs('humanoid', 1),
+        equipment: {
+          mainHand: {
+            itemId: weaponId,
+            instanceId: 'w1',
+            durability: 100,
+            ...(coated ? { coating: { itemId: 'razors_grace', expiresAtTurn: 1_000_000 } } : {})
+          }
+        }
+      });
+      const defender = makePawn({ id: 'def', stats: { ...stats, dexterity: 1 }, limbs: createBodyPlanLimbs('humanoid', 1) });
+      let hits = 0;
+      let bled = 0;
+      for (let i = 0; i < 4000; i++) {
+        const r = combatService.resolveHit(attacker, defender, empty);
+        if (!r.hit || !r.injury) continue;
+        hits++;
+        if (r.injury.bloodletting) bled++;
+      }
+      return bled / Math.max(1, hits);
+    };
+    const swordBare = bloodlettingRate('steel_longsword', false);
+    const swordKeen = bloodlettingRate('steel_longsword', true);
+    const maulBare = bloodlettingRate('great_bone_maul', false);
+    const maulKeen = bloodlettingRate('great_bone_maul', true);
+    // eslint-disable-next-line no-console
+    console.log(`[SHARP] sword bleed-rate bare=${swordBare.toFixed(2)} keen=${swordKeen.toFixed(2)}; maul bare=${maulBare.toFixed(2)} keen=${maulKeen.toFixed(2)}`);
+    expect(swordKeen, 'honing oil raises a cutting weapon\'s non-clotting-wound rate').toBeGreaterThan(swordBare + 0.1);
+    expect(maulBare, 'a maul never leaves a non-clotting wound').toBe(0);
+    expect(maulKeen, 'and the sharpest oil cannot make a maul bleed like a blade').toBe(0);
+  });
+
   it('a Hunting pawn attacks its marked quarry even though the prey is neutral', () => {
     // A huntable deer is NOT a "hostile" (the Fighting/auto-engage path would ignore it), so this proves
     // the work-driven hunt path: a pawn in Hunting with huntTargetId set swings at that specific mob and

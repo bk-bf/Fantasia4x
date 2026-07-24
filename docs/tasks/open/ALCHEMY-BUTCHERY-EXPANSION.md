@@ -4,9 +4,10 @@
 
 > **Related:** [AUDIT.md](AUDIT.md) · [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md)
 
-**Status (2026-07-24): §A, §B, §C (tier every existing brew), and the two new stations are all IMPLEMENTED &
-headless-verified (`alchemyChain.test.ts`).** Remaining are two OPTIONAL breadth follow-ons (net-new effect
-lines + distilled reagent bases) and a few §B trophy extras. Original framing: Prompted by the butchery audit: powerful beast traits are
+**Status (2026-07-24): §A, §B, §C (tier every existing brew + the two breadth follow-ons: 6 net-new effect
+lines and the distilled-spirit/purified-catalyst reagent chain), and the two new stations are all IMPLEMENTED
+& headless-verified (`alchemyChain.test.ts`, `combatSim.test.ts`).** Remaining are only a few §B trophy extras
+(great_fang / prestige-pelt rugs / the full limbmap anatomy pass). Original framing: Prompted by the butchery audit: powerful beast traits are
 currently handed out for eating an organ **raw**, and several boss loot drops (`great_bone`, `ivory`,
 `great_tusk`) have no consumer. This reworks the trait path into a **risky, tiered alchemical craft** and
 turns the anatomy loot into real crafting/building chains.
@@ -83,10 +84,22 @@ become three items, not one.
       and given **Greater (T2)** + **Grand (T3)** rungs — buff duration ×1.6/×2.5 (e.g. 1200→1920→3000), coating
       chance +0.15/+0.30 (0.6→0.75→0.9) & longer, escalating reagents; T2 at the lab, T3 at the apothecary.
       Verified headless (`alchemyChain.test.ts`).
-- [ ] **More effect LINES** (fear/corrosion/bleed/slow coatings; perception/antidote/rest-mood tonics) — net-new
-      breadth beyond tiering the existing set. Optional follow-on; author each as a 3-tier ladder.
-- [ ] **Reagent depth** (distilled spirits/purified catalysts as T2/T3 bases) — net-new supply chain; the
-      current tiering escalates existing reagents (woundwort/gem_dust/mandrake) instead. Optional follow-on.
+- [x] **More effect LINES — DONE.** Six net-new lines, each a 3-tier ladder (T1 lab / T2 lab / T3 apothecary):
+      **slow** (`tanglefoot_coating` → `hamstrung`), **fear** (`dread_coating` → new `cowed` condition),
+      **perception** (`farsight_tonic` → `keen_senses`), **antidote** (`antivenin_tonic` → cures active
+      envenomed/nausea/dysentery + a `toxin_immune` window — the counter to the venom/caustic coatings),
+      **rest-mood** (`restful_tonic` → `refreshed`), and a **sharpness** coating replacing the dropped
+      bleed line: `honing_oil`/`keen_edge_oil`/`razors_grace` carry a `coatingEffect.bleedMult` that
+      MULTIPLIES the swung weapon's own `bloodletting` (unclottable-wound) proc — multiplicative by design,
+      so a maul (crush, no bleed proc) stays at 0 however keen the oil, while a cutting blade's non-clotting
+      rate climbs (0.18 → 0.53 at T3). Verified headless in combat (`combatSim.test.ts` `[SHARP]`) + the
+      brew/effect chains (`alchemyChain.test.ts`). Bleed stays a physical wound (no timed-`bleeding` pill).
+- [x] **Reagent depth — DONE.** Two intermediate crafts are the new T2/T3 bases: `fermented_mash` (grain +
+      `sugar`, the sugar itself refined from a foraged `sugarcane` wetland reed → `refine_sugar` at the campfire)
+      distilled at the lab into **`distilled_spirit`** (the T2 carrier), and `gem_dust` refined at the
+      apothecary into **`purified_catalyst`** (the T3 catalyst). All 12 existing Greater/Grand brews (and every
+      new line) were rewired to consume the base/catalyst instead of escalating raw `gem_dust` counts, so the
+      tier ladder now gates on a real supply chain. Verified headless (`alchemyChain.test.ts` `[ALCH reagents]`).
 
 ## D. Workstations & building recipes
 

@@ -1165,6 +1165,20 @@
         "charSpans": [ {"sheet": "font", "id": 3} ],
         "modifiers": {"moveSpeed": 0.4, "dexterity": 0.75}
     },
+    // ALCHEMY-BUTCHERY-EXPANSION §C — a DREAD coating's on-hit mark: the nerve breaks, the arm loses
+    // its conviction and the feet want to be elsewhere. Onset cut by mental resistance (INT).
+    {
+        "id": "cowed",
+        "audio": "disoriented",
+        "name": "Cowed",
+        "flags": ["combat", "mental"],
+        "transient": true,
+        "description": "Nerve broken by a wave of dread, flinching and half-minded to run. The arm swings without conviction and the feet drag.",
+        "color": "#6A5ACD",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 19} ],
+        "modifiers": {"strength": 0.8, "hitChance": 0.75, "moveSpeed": 0.85, "workEfficiency": 0.85}
+    },
     // ── Racial trait conditions (ADR-023 · ADR-028) ──────────────────────────
     // The legible pill for a rare/epic/legendary body trait — pushed by syncTransientConditions for
     // every trait carrying the id as `selfCondition`, and the HUB for its combat capability:

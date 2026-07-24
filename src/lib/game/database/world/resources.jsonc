@@ -2422,6 +2422,32 @@
       "regrowthTurns"  : 2800
     }
   },
+  {
+    "id"              : "sugarcane",
+    "displayName"     : "Sugar Cane",
+    "subterrain"      : "bush",
+    "walkable"        : true,
+    "charSpans"       : [ {"sheet": "crops", "id": 121} ],
+    "fg"              : "#8fbf5a",
+    "bg"              : "#17120a",
+    "spawn"           : {
+      "subterrains": {"riverbank": 0.02, "mud": 0.012, "bog": 0.008, "tall_grass": 0.005}
+    },
+    "nodeAmountRange" : [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "gather",
+      "workCategory"   : "foraging",
+      "workAmount"     : 9,
+      "toolRequirement": null,
+      "yields"         : [
+        {"itemId": "sugarcane", "min": 12, "max": 22, "skillId": "foraging", "skillMultiplier": 0.2}
+      ],
+      "persistent"     : true,
+      "regrowsFromZero": true,
+      "regrowthTurns"  : 2800
+    }
+  },
   // ─────────────────────────────────────────────────────────────────────────
   // MINING — ORE VEINS  (mountain / mineral_deposit subterrain)
   // ─────────────────────────────────────────────────────────────────────────

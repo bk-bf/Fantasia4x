@@ -3668,7 +3668,7 @@
   {
     "id"              : "brew_greater_potion_of_might",
     "station"         : "alchemy_lab",
-    "inputs"          : {"woundwort": 3, "gem_dust": 2, "glassware": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 1},
     "outputs"         : {"greater_potion_of_might": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -3676,7 +3676,7 @@
   {
     "id"              : "brew_grand_potion_of_might",
     "station"         : "apothecary",
-    "inputs"          : {"woundwort": 3, "gem_dust": 3, "glassware": 1, "mandrake": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
     "outputs"         : {"grand_potion_of_might": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2
@@ -3684,7 +3684,7 @@
   {
     "id"              : "brew_greater_draught_of_vigor",
     "station"         : "alchemy_lab",
-    "inputs"          : {"woundwort": 3, "gem_dust": 2, "glassware": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 1},
     "outputs"         : {"greater_draught_of_vigor": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -3692,7 +3692,7 @@
   {
     "id"              : "brew_grand_draught_of_vigor",
     "station"         : "apothecary",
-    "inputs"          : {"woundwort": 3, "gem_dust": 3, "glassware": 1, "mandrake": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
     "outputs"         : {"grand_draught_of_vigor": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2
@@ -3700,7 +3700,7 @@
   {
     "id"              : "brew_greater_elixir_of_grace",
     "station"         : "alchemy_lab",
-    "inputs"          : {"woundwort": 3, "gem_dust": 2, "glassware": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 1},
     "outputs"         : {"greater_elixir_of_grace": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -3708,7 +3708,7 @@
   {
     "id"              : "brew_grand_elixir_of_grace",
     "station"         : "apothecary",
-    "inputs"          : {"woundwort": 3, "gem_dust": 3, "glassware": 1, "mandrake": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
     "outputs"         : {"grand_elixir_of_grace": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2
@@ -3716,7 +3716,7 @@
   {
     "id"              : "brew_greater_tonic_of_fortitude",
     "station"         : "alchemy_lab",
-    "inputs"          : {"woundwort": 3, "gem_dust": 2, "glassware": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 1},
     "outputs"         : {"greater_tonic_of_fortitude": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -3724,7 +3724,7 @@
   {
     "id"              : "brew_grand_tonic_of_fortitude",
     "station"         : "apothecary",
-    "inputs"          : {"woundwort": 3, "gem_dust": 3, "glassware": 1, "mandrake": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
     "outputs"         : {"grand_tonic_of_fortitude": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2
@@ -3732,7 +3732,7 @@
   {
     "id"              : "brew_greater_bloodrage_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"alpha_ichor": 2, "woundwort": 1, "glassware": 1, "gem_dust": 1},
+    "inputs"          : {"alpha_ichor": 2, "woundwort": 1, "glassware": 1, "distilled_spirit": 1},
     "outputs"         : {"greater_bloodrage_draught": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -3740,7 +3740,7 @@
   {
     "id"              : "brew_grand_bloodrage_draught",
     "station"         : "apothecary",
-    "inputs"          : {"alpha_ichor": 2, "woundwort": 1, "glassware": 1, "gem_dust": 2, "mandrake": 1},
+    "inputs"          : {"alpha_ichor": 2, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
     "outputs"         : {"grand_bloodrage_draught": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2
@@ -3748,7 +3748,7 @@
   {
     "id"              : "brew_greater_ironhide_tonic",
     "station"         : "alchemy_lab",
-    "inputs"          : {"owlbear_bile": 2, "woundwort": 1, "glassware": 1, "gem_dust": 1},
+    "inputs"          : {"owlbear_bile": 2, "woundwort": 1, "glassware": 1, "distilled_spirit": 1},
     "outputs"         : {"greater_ironhide_tonic": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -3756,7 +3756,7 @@
   {
     "id"              : "brew_grand_ironhide_tonic",
     "station"         : "apothecary",
-    "inputs"          : {"owlbear_bile": 2, "woundwort": 1, "glassware": 1, "gem_dust": 2, "mandrake": 1},
+    "inputs"          : {"owlbear_bile": 2, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
     "outputs"         : {"grand_ironhide_tonic": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2
@@ -3764,7 +3764,7 @@
   {
     "id"              : "brew_greater_vigor_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"bloodroot": 3, "woundwort": 1, "glassware": 1, "gem_dust": 1},
+    "inputs"          : {"bloodroot": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 1},
     "outputs"         : {"greater_vigor_draught": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -3772,7 +3772,7 @@
   {
     "id"              : "brew_grand_vigor_draught",
     "station"         : "apothecary",
-    "inputs"          : {"bloodroot": 3, "woundwort": 1, "glassware": 1, "gem_dust": 2, "mandrake": 1},
+    "inputs"          : {"bloodroot": 3, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
     "outputs"         : {"grand_vigor_draught": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2
@@ -3780,7 +3780,7 @@
   {
     "id"              : "brew_greater_calming_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "gem_dust": 1},
+    "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 1},
     "outputs"         : {"greater_calming_draught": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -3788,7 +3788,7 @@
   {
     "id"              : "brew_grand_calming_draught",
     "station"         : "apothecary",
-    "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "gem_dust": 2, "mandrake": 1},
+    "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
     "outputs"         : {"grand_calming_draught": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2
@@ -3796,7 +3796,7 @@
   {
     "id"              : "brew_greater_nightglow_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"glowcap": 3, "woundwort": 1, "glassware": 1, "gem_dust": 1},
+    "inputs"          : {"glowcap": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 1},
     "outputs"         : {"greater_nightglow_draught": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -3804,7 +3804,7 @@
   {
     "id"              : "brew_grand_nightglow_draught",
     "station"         : "apothecary",
-    "inputs"          : {"glowcap": 3, "woundwort": 1, "glassware": 1, "gem_dust": 2, "mandrake": 1},
+    "inputs"          : {"glowcap": 3, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
     "outputs"         : {"grand_nightglow_draught": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2
@@ -3812,7 +3812,7 @@
   {
     "id"              : "brew_greater_frenzy_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "gem_dust": 1},
+    "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "distilled_spirit": 1},
     "outputs"         : {"greater_frenzy_draught": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -3820,7 +3820,7 @@
   {
     "id"              : "brew_grand_frenzy_draught",
     "station"         : "apothecary",
-    "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "gem_dust": 2, "nightshade_bolete": 1},
+    "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "nightshade_bolete": 1, "purified_catalyst": 1},
     "outputs"         : {"grand_frenzy_draught": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2
@@ -3828,7 +3828,7 @@
   {
     "id"              : "brew_greater_venom_coating",
     "station"         : "alchemy_lab",
-    "inputs"          : {"venom_sac": 2, "nightshade_bolete": 1, "glassware": 1, "gem_dust": 1},
+    "inputs"          : {"venom_sac": 2, "nightshade_bolete": 1, "glassware": 1, "distilled_spirit": 1},
     "outputs"         : {"greater_venom_coating": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -3836,7 +3836,7 @@
   {
     "id"              : "brew_grand_venom_coating",
     "station"         : "apothecary",
-    "inputs"          : {"venom_sac": 2, "nightshade_bolete": 1, "glassware": 1, "gem_dust": 2, "mandrake": 1},
+    "inputs"          : {"venom_sac": 2, "nightshade_bolete": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
     "outputs"         : {"grand_venom_coating": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2
@@ -3844,7 +3844,7 @@
   {
     "id"              : "brew_greater_caustic_coating",
     "station"         : "alchemy_lab",
-    "inputs"          : {"caustic_bile": 3, "nightshade_bolete": 1, "glassware": 1, "gem_dust": 1},
+    "inputs"          : {"caustic_bile": 3, "nightshade_bolete": 1, "glassware": 1, "distilled_spirit": 1},
     "outputs"         : {"greater_caustic_coating": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -3852,7 +3852,7 @@
   {
     "id"              : "brew_grand_caustic_coating",
     "station"         : "apothecary",
-    "inputs"          : {"caustic_bile": 3, "nightshade_bolete": 1, "glassware": 1, "gem_dust": 2, "mandrake": 1},
+    "inputs"          : {"caustic_bile": 3, "nightshade_bolete": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
     "outputs"         : {"grand_caustic_coating": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2
@@ -3998,5 +3998,317 @@
     "outputs"          : {"resin": 2},
     "workAmount"       : 60,
     "toolTierRequired" : 1
+  }
+,
+  {
+    // Crush the cane and boil its juice down to coarse sugar — the concentrated fermentable behind the
+    // distilled-spirit chain (sugar cane is a foraged wetland reed, resources.jsonc `sugarcane`).
+    "id": "refine_sugar",
+    "station": "campfire",
+    "inputs": {
+      "sugarcane": 3
+    },
+    "outputs": {
+      "sugar": 2
+    },
+    "workAmount": 16,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "ferment_mash",
+    "station": "alchemy_lab",
+    "inputs": {
+      "wheat": 2,
+      "sugar": 1,
+      "glassware": 1
+    },
+    "outputs": {
+      "fermented_mash": 2
+    },
+    "workAmount": 20,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "distill_spirit",
+    "station": "alchemy_lab",
+    "inputs": {
+      "fermented_mash": 2,
+      "charcoal": 1
+    },
+    "outputs": {
+      "distilled_spirit": 1
+    },
+    "workAmount": 24,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "purify_catalyst",
+    "station": "apothecary",
+    "inputs": {
+      "gem_dust": 3,
+      "charcoal": 2
+    },
+    "outputs": {
+      "purified_catalyst": 1
+    },
+    "workAmount": 24,
+    "toolTierRequired": 2
+  },
+  {
+    "id": "brew_tanglefoot_coating",
+    "station": "alchemy_lab",
+    "inputs": {
+      "resin": 2,
+      "animal_fat": 1,
+      "glassware": 1
+    },
+    "outputs": {
+      "tanglefoot_coating": 2
+    },
+    "workAmount": 20,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "brew_greater_tanglefoot_coating",
+    "station": "alchemy_lab",
+    "inputs": {
+      "resin": 2,
+      "distilled_spirit": 1,
+      "glassware": 1
+    },
+    "outputs": {
+      "greater_tanglefoot_coating": 2
+    },
+    "workAmount": 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "brew_grand_tanglefoot_coating",
+    "station": "apothecary",
+    "inputs": {
+      "resin": 2,
+      "purified_catalyst": 1,
+      "glassware": 1
+    },
+    "outputs": {
+      "grand_tanglefoot_coating": 2
+    },
+    "workAmount": 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id": "brew_dread_coating",
+    "station": "alchemy_lab",
+    "inputs": {
+      "mandrake": 1,
+      "spore_of_madness": 1,
+      "glassware": 1
+    },
+    "outputs": {
+      "dread_coating": 2
+    },
+    "workAmount": 20,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "brew_greater_dread_coating",
+    "station": "alchemy_lab",
+    "inputs": {
+      "mandrake": 1,
+      "spore_of_madness": 1,
+      "distilled_spirit": 1,
+      "glassware": 1
+    },
+    "outputs": {
+      "greater_dread_coating": 2
+    },
+    "workAmount": 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "brew_grand_dread_coating",
+    "station": "apothecary",
+    "inputs": {
+      "mandrake": 1,
+      "spore_of_madness": 1,
+      "purified_catalyst": 1,
+      "glassware": 1
+    },
+    "outputs": {
+      "grand_dread_coating": 2
+    },
+    "workAmount": 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id": "brew_farsight_tonic",
+    "station": "alchemy_lab",
+    "inputs": {
+      "glowcap": 2,
+      "woundwort": 1,
+      "glassware": 1
+    },
+    "outputs": {
+      "farsight_tonic": 1
+    },
+    "workAmount": 28,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "brew_greater_farsight_tonic",
+    "station": "alchemy_lab",
+    "inputs": {
+      "glowcap": 2,
+      "distilled_spirit": 1,
+      "glassware": 1
+    },
+    "outputs": {
+      "greater_farsight_tonic": 1
+    },
+    "workAmount": 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "brew_grand_farsight_tonic",
+    "station": "apothecary",
+    "inputs": {
+      "glowcap": 2,
+      "purified_catalyst": 1,
+      "glassware": 1
+    },
+    "outputs": {
+      "grand_farsight_tonic": 1
+    },
+    "workAmount": 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id": "brew_antivenin_tonic",
+    "station": "alchemy_lab",
+    "inputs": {
+      "charcoal": 1,
+      "woundwort": 2,
+      "glassware": 1
+    },
+    "outputs": {
+      "antivenin_tonic": 1
+    },
+    "workAmount": 28,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "brew_greater_antivenin_tonic",
+    "station": "alchemy_lab",
+    "inputs": {
+      "charcoal": 1,
+      "woundwort": 1,
+      "distilled_spirit": 1,
+      "glassware": 1
+    },
+    "outputs": {
+      "greater_antivenin_tonic": 1
+    },
+    "workAmount": 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "brew_grand_antivenin_tonic",
+    "station": "apothecary",
+    "inputs": {
+      "charcoal": 1,
+      "woundwort": 1,
+      "purified_catalyst": 1,
+      "glassware": 1
+    },
+    "outputs": {
+      "grand_antivenin_tonic": 1
+    },
+    "workAmount": 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id": "brew_restful_tonic",
+    "station": "alchemy_lab",
+    "inputs": {
+      "dreamleaf": 1,
+      "wild_berries": 3,
+      "glassware": 1
+    },
+    "outputs": {
+      "restful_tonic": 1
+    },
+    "workAmount": 28,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "brew_greater_restful_tonic",
+    "station": "alchemy_lab",
+    "inputs": {
+      "dreamleaf": 1,
+      "wild_berries": 1,
+      "distilled_spirit": 1,
+      "glassware": 1
+    },
+    "outputs": {
+      "greater_restful_tonic": 1
+    },
+    "workAmount": 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "brew_grand_restful_tonic",
+    "station": "apothecary",
+    "inputs": {
+      "dreamleaf": 1,
+      "wild_berries": 1,
+      "purified_catalyst": 1,
+      "glassware": 1
+    },
+    "outputs": {
+      "grand_restful_tonic": 1
+    },
+    "workAmount": 16,
+    "toolTierRequired": 2
+  },
+  {
+    "id": "brew_honing_oil",
+    "station": "alchemy_lab",
+    "inputs": {
+      "animal_fat": 1,
+      "sand": 2
+    },
+    "outputs": {
+      "honing_oil": 2
+    },
+    "workAmount": 18,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "brew_keen_edge_oil",
+    "station": "alchemy_lab",
+    "inputs": {
+      "animal_fat": 1,
+      "sand": 2,
+      "distilled_spirit": 1
+    },
+    "outputs": {
+      "keen_edge_oil": 2
+    },
+    "workAmount": 12,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "brew_razors_grace",
+    "station": "apothecary",
+    "inputs": {
+      "animal_fat": 1,
+      "sand": 2,
+      "purified_catalyst": 1
+    },
+    "outputs": {
+      "razors_grace": 2
+    },
+    "workAmount": 16,
+    "toolTierRequired": 2
   }
 ]

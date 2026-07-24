@@ -418,6 +418,22 @@ function bloodlettingChance(item: Item | undefined): number | undefined {
   return c && c > 0 ? c : undefined;
 }
 
+/** ALCHEMY-BUTCHERY-EXPANSION §C SHARPNESS coating: the `bleedMult` on an equipped, unexpired coating
+ *  whose `coatingEffect` carries no condition (a honing oil, not a venom). Multiplies the SWUNG weapon's
+ *  own bloodletting proc — so it can only sharpen a weapon already built to cut (a maul's 0 stays 0).
+ *  1 when the attacker holds no sharpness coating on the weapon actually swung. */
+function sharpnessBleedMult(attacker: Pawn | Mob, weaponId: string | undefined, turn: number): number {
+  if (!weaponId || !('equipment' in attacker)) return 1;
+  const mh = attacker.equipment?.mainHand;
+  if (!mh?.coating || mh.coating.expiresAtTurn <= turn) return 1;
+  // The swing's `weaponId` is the profile's label — the item NAME for a crafted weapon — so match the
+  // coated mainHand by id OR name to confirm THIS weapon was the one actually swung (not a natural attack).
+  const wpItem = itemService.getItemById(mh.itemId);
+  if (weaponId !== mh.itemId && weaponId !== wpItem?.name) return 1;
+  const m = itemService.getItemById(mh.coating.itemId)?.coatingEffect?.bleedMult;
+  return typeof m === 'number' && m > 0 ? m : 1;
+}
+
 /** LINEAGES §4: credit a PAWN's kill toward its awakening deeds, by the victim's creature family and
  *  whether the killing blow was unarmed (fists / a natural weapon, not a crafted one). Mobs never accrue
  *  deeds (they don't grow lineages). Cheap: a couple of map lookups on a kill event. */
@@ -935,9 +951,14 @@ class CombatServiceImpl implements CombatService {
       bleeding: (woundDef.bleedMod > 0 || hpMissing >= 1.0) && hpMissing > 0 ? 1 : 0,
       painContribution: 0,
       infected: false,
-      // §3b bleed-weapon: at the weapon's `bloodletting` chance, the open wound never self-clots —
-      // it flows until a caretaker dresses it (the physical successor of `bloodletting`).
-      ...(bloodletting && woundDef.bleedMod > 0 && hpMissing > 0 && rng.random() < bloodletting
+      // §3b bleed-weapon: at the weapon's `bloodletting` chance, the open wound never self-clots — it
+      // flows until a caretaker dresses it (the physical successor of `bloodletting`). §C: a sharpness
+      // coating on the swung weapon multiplies that chance (capped) — only ever amplifying a weapon that
+      // already cuts, since a crush wound (bleedMod 0) is gated out below regardless.
+      ...(bloodletting &&
+      woundDef.bleedMod > 0 &&
+      hpMissing > 0 &&
+      rng.random() < Math.min(0.95, bloodletting * sharpnessBleedMult(attacker, weaponId, state.turn))
         ? { bloodletting: true }
         : {})
     };

@@ -68,6 +68,11 @@ export interface OnHitCondition {
   resist?: string;
   /** Optional bloodVolume drain on trigger (feeding / bleed weapons). */
   bloodDrain?: number;
+  /** ALCHEMY-BUTCHERY-EXPANSION §C — a SHARPNESS coating rides this on `coatingEffect` (no `condition`):
+   *  a MULTIPLIER on the coated weapon's own `bloodletting` (unclottable-wound) proc chance. Multiplicative
+   *  by design — a weapon with no base bleed proc (mauls/hammers, crush `bleedMod` 0) stays at 0 however
+   *  keen the oil, so only a weapon already built to cut gains the deeper, non-clotting wound. */
+  bleedMult?: number;
 }
 
 /** ADR-029: on-hit WOUND proc — flags the physical wound a landed hit opened (parallel to

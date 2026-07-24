@@ -11334,6 +11334,36 @@
     "deteriorationRate": 0.12
   },
   {
+    "id"               : "sugarcane",
+    "charSpans"        : [ {"sheet": "items", "id": 113} ],
+    "name"             : "Sugar Cane",
+    "type"             : "food",
+    "category"         : "plant",
+    "description"      : "Thick, fibrous canes that grow in wet ground. Sweet to chew, but the sugar only comes free once the stalks are crushed and the juice boiled down.",
+    "color"            : "#8fbf5a",
+    "amount"           : 0,
+    "weightKg"         : 0.25,
+    "volumeL"          : 0.3,
+    "nutrition"        : 4,
+    "gatheringTypes"   : ["foraging"],
+    "maxDurability"    : 90,
+    "deteriorationRate": 0.04
+  },
+  {
+    "id"               : "sugar",
+    "charSpans"        : [ {"sheet": "items", "id": 1} ],
+    "name"             : "Sugar",
+    "type"             : "material",
+    "category"         : "ingredient",
+    "description"      : "Coarse pale crystals boiled down from cane juice. It keeps for a long time and feeds a strong ferment far better than plain fruit.",
+    "color"            : "#e8e0d0",
+    "amount"           : 0,
+    "weightKg"         : 0.1,
+    "volumeL"          : 0.08,
+    "maxDurability"    : 400,
+    "deteriorationRate": 0.001
+  },
+  {
     "id"               : "thyme",
     "charSpans"        : [ {"sheet": "items", "id": 114} ],
     "name"             : "Thyme",
@@ -12928,4 +12958,521 @@
     "volumeL": 3,
     "processingType": ["masonry"]
   }
+,
+    {
+      "id": "tanglefoot_coating",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Tanglefoot Coating",
+      "type": "consumable",
+      "category": "reagent",
+      "maxDurability": 120,
+      "deteriorationRate": 0.005,
+      "description": "A stringy amber gum boiled from pine resin and fat, daubed thick along an edge. Where it catches, it drags at sinew and gums a leg to slowness.",
+      "color": "#6b5a2a",
+      "amount": 0,
+      "weightKg": 0.2,
+      "volumeL": 0.2,
+      "coatingEffect": {
+        "condition": "hamstrung",
+        "chance": 0.5,
+        "durationHours": 2.0,
+        "resist": "blunt_resistance"
+      },
+      "coatingDurationHours": 6
+    },
+    {
+      "id": "greater_tanglefoot_coating",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Greater Tanglefoot Coating",
+      "type": "consumable",
+      "category": "reagent",
+      "ageTier": "iron:1",
+      "maxDurability": 80,
+      "deteriorationRate": 0.005,
+      "description": "A more potent, longer-lasting preparation of the tanglefoot coating, drawn off at the lab with finer reagents.",
+      "color": "#7E57C2",
+      "amount": 0,
+      "weightKg": 0.2,
+      "volumeL": 0.2,
+      "coatingEffect": {
+        "condition": "hamstrung",
+        "chance": 0.65,
+        "durationHours": 2.5,
+        "resist": "blunt_resistance"
+      },
+      "coatingDurationHours": 10
+    },
+    {
+      "id": "grand_tanglefoot_coating",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Grand Tanglefoot Coating",
+      "type": "consumable",
+      "category": "reagent",
+      "ageTier": "runed:1",
+      "maxDurability": 80,
+      "deteriorationRate": 0.005,
+      "description": "A masterfully refined, powerful preparation of the tanglefoot coating, drawn off at the apothecary with finer reagents.",
+      "color": "#7E57C2",
+      "amount": 0,
+      "weightKg": 0.2,
+      "volumeL": 0.2,
+      "coatingEffect": {
+        "condition": "hamstrung",
+        "chance": 0.8,
+        "durationHours": 3.5,
+        "resist": "blunt_resistance"
+      },
+      "coatingDurationHours": 16
+    },
+    {
+      "id": "dread_coating",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Dread Coating",
+      "type": "consumable",
+      "category": "reagent",
+      "maxDurability": 120,
+      "deteriorationRate": 0.005,
+      "description": "A grey unguent of mandrake and madness-spore that smells of an open grave. The wound it rides carries a wave of unreasoning fear into the blood.",
+      "color": "#4a3a6a",
+      "amount": 0,
+      "weightKg": 0.2,
+      "volumeL": 0.2,
+      "coatingEffect": {
+        "condition": "cowed",
+        "chance": 0.55,
+        "durationHours": 2.0,
+        "resist": "mental_resistance"
+      },
+      "coatingDurationHours": 6
+    },
+    {
+      "id": "greater_dread_coating",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Greater Dread Coating",
+      "type": "consumable",
+      "category": "reagent",
+      "ageTier": "iron:1",
+      "maxDurability": 80,
+      "deteriorationRate": 0.005,
+      "description": "A more potent, longer-lasting preparation of the dread coating, drawn off at the lab with finer reagents.",
+      "color": "#7E57C2",
+      "amount": 0,
+      "weightKg": 0.2,
+      "volumeL": 0.2,
+      "coatingEffect": {
+        "condition": "cowed",
+        "chance": 0.7,
+        "durationHours": 2.5,
+        "resist": "mental_resistance"
+      },
+      "coatingDurationHours": 10
+    },
+    {
+      "id": "grand_dread_coating",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Grand Dread Coating",
+      "type": "consumable",
+      "category": "reagent",
+      "ageTier": "runed:1",
+      "maxDurability": 80,
+      "deteriorationRate": 0.005,
+      "description": "A masterfully refined, powerful preparation of the dread coating, drawn off at the apothecary with finer reagents.",
+      "color": "#7E57C2",
+      "amount": 0,
+      "weightKg": 0.2,
+      "volumeL": 0.2,
+      "coatingEffect": {
+        "condition": "cowed",
+        "chance": 0.85,
+        "durationHours": 3.5,
+        "resist": "mental_resistance"
+      },
+      "coatingDurationHours": 16
+    },
+    {
+      "id": "farsight_tonic",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Farsight Tonic",
+      "type": "consumable",
+      "category": "drink",
+      "maxDurability": 200,
+      "deteriorationRate": 0.005,
+      "description": "A pale blue infusion of glowcap that pricks the senses awake. The world sharpens at its edges and little escapes the eye.",
+      "color": "#4a80c0",
+      "amount": 0,
+      "weightKg": 0.3,
+      "volumeL": 0.3,
+      "grantsConditions": [
+        "keen_senses"
+      ],
+      "conditionDurationTurns": 1200
+    },
+    {
+      "id": "greater_farsight_tonic",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Greater Farsight Tonic",
+      "type": "consumable",
+      "category": "drink",
+      "ageTier": "iron:1",
+      "maxDurability": 80,
+      "deteriorationRate": 0.005,
+      "description": "A more potent, longer-lasting preparation of the farsight tonic, drawn off at the lab with finer reagents.",
+      "color": "#7E57C2",
+      "amount": 0,
+      "weightKg": 0.3,
+      "volumeL": 0.3,
+      "grantsConditions": [
+        "keen_senses"
+      ],
+      "conditionDurationTurns": 1920
+    },
+    {
+      "id": "grand_farsight_tonic",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Grand Farsight Tonic",
+      "type": "consumable",
+      "category": "drink",
+      "ageTier": "runed:1",
+      "maxDurability": 80,
+      "deteriorationRate": 0.005,
+      "description": "A masterfully refined, powerful preparation of the farsight tonic, drawn off at the apothecary with finer reagents.",
+      "color": "#7E57C2",
+      "amount": 0,
+      "weightKg": 0.3,
+      "volumeL": 0.3,
+      "grantsConditions": [
+        "keen_senses"
+      ],
+      "conditionDurationTurns": 3000
+    },
+    {
+      "id": "antivenin_tonic",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Antivenin Tonic",
+      "type": "consumable",
+      "category": "drink",
+      "maxDurability": 200,
+      "deteriorationRate": 0.005,
+      "description": "A bitter charcoal draught that scours the gut. It settles a churning stomach and draws the sickness out.",
+      "color": "#3a8a5a",
+      "amount": 0,
+      "weightKg": 0.3,
+      "volumeL": 0.3,
+      "grantsConditions": [
+        "toxin_immune"
+      ],
+      "conditionDurationTurns": 900,
+      "curesConditions": [
+        "nausea"
+      ]
+    },
+    {
+      "id": "greater_antivenin_tonic",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Greater Antivenin Tonic",
+      "type": "consumable",
+      "category": "drink",
+      "ageTier": "iron:1",
+      "maxDurability": 80,
+      "deteriorationRate": 0.005,
+      "description": "A more potent, longer-lasting preparation of the antivenin tonic, drawn off at the lab with finer reagents.",
+      "color": "#7E57C2",
+      "amount": 0,
+      "weightKg": 0.3,
+      "volumeL": 0.3,
+      "grantsConditions": [
+        "toxin_immune"
+      ],
+      "conditionDurationTurns": 1500,
+      "curesConditions": [
+        "nausea",
+        "envenomed"
+      ]
+    },
+    {
+      "id": "grand_antivenin_tonic",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Grand Antivenin Tonic",
+      "type": "consumable",
+      "category": "drink",
+      "ageTier": "runed:1",
+      "maxDurability": 80,
+      "deteriorationRate": 0.005,
+      "description": "A masterfully refined, powerful preparation of the antivenin tonic, drawn off at the apothecary with finer reagents.",
+      "color": "#7E57C2",
+      "amount": 0,
+      "weightKg": 0.3,
+      "volumeL": 0.3,
+      "grantsConditions": [
+        "toxin_immune"
+      ],
+      "conditionDurationTurns": 2400,
+      "curesConditions": [
+        "nausea",
+        "envenomed",
+        "dysentery"
+      ]
+    },
+    {
+      "id": "restful_tonic",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Restful Tonic",
+      "type": "consumable",
+      "category": "drink",
+      "maxDurability": 200,
+      "deteriorationRate": 0.005,
+      "description": "A sweet cordial of dreamleaf steeped with plenty of pressed berries. It unknots a tired body and lifts a low head.",
+      "color": "#7aa0b0",
+      "amount": 0,
+      "weightKg": 0.3,
+      "volumeL": 0.3,
+      "grantsConditions": [
+        "refreshed"
+      ],
+      "conditionDurationTurns": 1200
+    },
+    {
+      "id": "greater_restful_tonic",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Greater Restful Tonic",
+      "type": "consumable",
+      "category": "drink",
+      "ageTier": "iron:1",
+      "maxDurability": 80,
+      "deteriorationRate": 0.005,
+      "description": "A more potent, longer-lasting preparation of the restful tonic, drawn off at the lab with finer reagents.",
+      "color": "#7E57C2",
+      "amount": 0,
+      "weightKg": 0.3,
+      "volumeL": 0.3,
+      "grantsConditions": [
+        "refreshed"
+      ],
+      "conditionDurationTurns": 1920
+    },
+    {
+      "id": "grand_restful_tonic",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Grand Restful Tonic",
+      "type": "consumable",
+      "category": "drink",
+      "ageTier": "runed:1",
+      "maxDurability": 80,
+      "deteriorationRate": 0.005,
+      "description": "A masterfully refined, powerful preparation of the restful tonic, drawn off at the apothecary with finer reagents.",
+      "color": "#7E57C2",
+      "amount": 0,
+      "weightKg": 0.3,
+      "volumeL": 0.3,
+      "grantsConditions": [
+        "refreshed"
+      ],
+      "conditionDurationTurns": 3000
+    },
+    {
+      "id": "honing_oil",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Honing Oil",
+      "type": "consumable",
+      "category": "reagent",
+      "maxDurability": 120,
+      "deteriorationRate": 0.005,
+      "description": "A fine grit of river sand worked into rendered fat, rubbed the length of a blade. It draws a wicked edge that bites deep and leaves a wound slow to close.",
+      "color": "#8a8a80",
+      "amount": 0,
+      "weightKg": 0.2,
+      "volumeL": 0.2,
+      "coatingEffect": {
+        "chance": 0,
+        "bleedMult": 1.6
+      },
+      "coatingDurationHours": 6
+    },
+    {
+      "id": "keen_edge_oil",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Keen-Edge Oil",
+      "type": "consumable",
+      "category": "reagent",
+      "ageTier": "iron:1",
+      "maxDurability": 80,
+      "deteriorationRate": 0.005,
+      "description": "A more potent, longer-lasting preparation of the honing oil, drawn off at the lab with finer reagents.",
+      "color": "#7E57C2",
+      "amount": 0,
+      "weightKg": 0.2,
+      "volumeL": 0.2,
+      "coatingEffect": {
+        "chance": 0,
+        "bleedMult": 2.2
+      },
+      "coatingDurationHours": 10
+    },
+    {
+      "id": "razors_grace",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Razor's Grace",
+      "type": "consumable",
+      "category": "reagent",
+      "ageTier": "runed:1",
+      "maxDurability": 80,
+      "deteriorationRate": 0.005,
+      "description": "A masterfully refined, powerful preparation of the honing oil, drawn off at the apothecary with finer reagents.",
+      "color": "#7E57C2",
+      "amount": 0,
+      "weightKg": 0.2,
+      "volumeL": 0.2,
+      "coatingEffect": {
+        "chance": 0,
+        "bleedMult": 3.0
+      },
+      "coatingDurationHours": 16
+    },
+    {
+      "id": "fermented_mash",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 1
+        }
+      ],
+      "name": "Fermented Mash",
+      "type": "material",
+      "category": "reagent",
+      "maxDurability": 30,
+      "deteriorationRate": 0.03,
+      "description": "A sour, bubbling porridge of grain and raw sugar left to work in the dark. Not fit to eat, but the beginning of a strong spirit.",
+      "color": "#a08a4a",
+      "amount": 0,
+      "weightKg": 0.3,
+      "volumeL": 0.2
+    },
+    {
+      "id": "distilled_spirit",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 71
+        }
+      ],
+      "name": "Distilled Spirit",
+      "type": "material",
+      "category": "reagent",
+      "maxDurability": 60,
+      "deteriorationRate": 0.01,
+      "description": "A clear, biting liquor drawn off the still and filtered through charcoal. It carries an alchemist's essences far better than water or wine.",
+      "color": "#d8e0e8",
+      "amount": 0,
+      "weightKg": 0.3,
+      "volumeL": 0.3
+    },
+    {
+      "id": "purified_catalyst",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 1
+        }
+      ],
+      "name": "Purified Catalyst",
+      "type": "material",
+      "category": "reagent",
+      "maxDurability": 60,
+      "deteriorationRate": 0.01,
+      "description": "Gem-dust dissolved, filtered and dried back to a faintly glowing powder, all its grit burned away. A little steadies the fiercest reaction.",
+      "color": "#c0a0e0",
+      "amount": 0,
+      "weightKg": 0.3,
+      "volumeL": 0.2
+    }
 ]

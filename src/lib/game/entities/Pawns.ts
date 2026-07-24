@@ -352,6 +352,22 @@ export function applyConsumable(
     changed = true;
   }
 
+  // (i.b) ALCHEMY-BUTCHERY-EXPANSION §C — antidote tonic: clear the listed active conditions (a cure for
+  // the venom/caustic coatings). Runs alongside any grantsConditions window (e.g. a brief toxin_immune).
+  if (def.curesConditions?.length && next.conditionTimers) {
+    const timers = { ...next.conditionTimers };
+    let cured = false;
+    for (const cid of def.curesConditions)
+      if ((timers[cid] ?? 0) > 0) {
+        delete timers[cid];
+        cured = true;
+      }
+    if (cured) {
+      next.conditionTimers = timers;
+      changed = true;
+    }
+  }
+
   const bake = (trait: ReturnType<typeof getTraitById> | undefined) => {
     if (trait && !next.traits.some((t) => t.id === trait.id)) {
       next.traits.push(trait);

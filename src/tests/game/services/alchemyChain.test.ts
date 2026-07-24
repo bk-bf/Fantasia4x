@@ -3,6 +3,8 @@ import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { resolveTraitGamble } from '$lib/game/core/Lineages';
 import { itemService } from '$lib/game/services/ItemService';
+import { applyConsumable } from '$lib/game/entities/Pawns';
+import type { Pawn } from '$lib/game/core/types';
 
 /**
  * ALCHEMY / MATERIAL-SINK AUDIT (headless). Magical creatures should yield ALCHEMY reagents (not plain
@@ -172,7 +174,14 @@ describe('alchemy / magical-creature reagents', () => {
         pawns: [{ count: 5, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
         buildings: [{ id: 'alchemy_lab' }, { id: 'apothecary' }],
-        items: { woundwort: 20, gem_dust: 20, mandrake: 8, glassware: 20, spit_meat: 10 },
+        items: {
+          woundwort: 20,
+          distilled_spirit: 8,
+          purified_catalyst: 8,
+          mandrake: 8,
+          glassware: 20,
+          spit_meat: 10
+        },
         seedEntities: false
       })
     );
@@ -185,5 +194,96 @@ describe('alchemy / magical-creature reagents', () => {
     );
     expect(stk(s).greater_potion_of_might ?? 0, 'T2 brewed').toBeGreaterThan(0);
     expect(stk(s).grand_potion_of_might ?? 0, 'T3 brewed at the apothecary').toBeGreaterThan(0);
+  });
+
+  it('§C reagent depth: sugarcane → sugar → mash → distilled_spirit, and purified_catalyst — headless', async () => {
+    const s = new HeadlessSession();
+    await s.start(
+      buildScenario({
+        seed: 75,
+        map: { w: 16, h: 16 },
+        workReady: true,
+        researchMaxTier: 9,
+        toolTier: 3,
+        pawns: [{ count: 6, skillLevel: 20 }],
+        needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
+        buildings: [{ id: 'campfire' }, { id: 'alchemy_lab' }, { id: 'apothecary' }],
+        items: { sugarcane: 18, wheat: 12, charcoal: 12, gem_dust: 12, glassware: 8, spit_meat: 10 },
+        seedEntities: false
+      })
+    );
+    // crush cane → sugar (the processing step), then ferment the mash and distill it into spirit
+    s.command({ type: 'craftItem', payload: { itemId: 'sugar', quantity: 2 } } as never);
+    for (let i = 0; i < 20 && (stk(s).sugar ?? 0) < 2; i++) s.tick(400);
+    const sugar = stk(s).sugar ?? 0;
+    s.command({ type: 'craftItem', payload: { itemId: 'fermented_mash', quantity: 2 } } as never);
+    for (let i = 0; i < 20 && (stk(s).fermented_mash ?? 0) < 2; i++) s.tick(400);
+    s.command({ type: 'craftItem', payload: { itemId: 'distilled_spirit' } } as never);
+    s.command({ type: 'craftItem', payload: { itemId: 'purified_catalyst' } } as never);
+    for (let i = 0; i < 25 && !((stk(s).distilled_spirit ?? 0) > 0 && (stk(s).purified_catalyst ?? 0) > 0); i++)
+      s.tick(400);
+    console.log(
+      `[ALCH reagents] sugarcane→sugar=${sugar} fermented_mash=${stk(s).fermented_mash ?? 0} distilled_spirit=${stk(s).distilled_spirit ?? 0} purified_catalyst=${stk(s).purified_catalyst ?? 0}`
+    );
+    expect(sugar, 'cane crushed + boiled down into sugar').toBeGreaterThan(0);
+    expect(stk(s).distilled_spirit ?? 0, 'grain+sugar fermented then distilled into spirit').toBeGreaterThan(0);
+    expect(stk(s).purified_catalyst ?? 0, 'gem_dust refined into a purified catalyst at the apothecary').toBeGreaterThan(0);
+  });
+
+  it('§C new effect lines: a T1 coating + tonic brew, and a T2 gated on distilled_spirit — headless', async () => {
+    const s = new HeadlessSession();
+    await s.start(
+      buildScenario({
+        seed: 76,
+        map: { w: 16, h: 16 },
+        workReady: true,
+        researchMaxTier: 9,
+        toolTier: 3,
+        pawns: [{ count: 6, skillLevel: 20 }],
+        needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
+        buildings: [{ id: 'alchemy_lab' }],
+        items: {
+          resin: 6,
+          animal_fat: 6,
+          glowcap: 6,
+          woundwort: 6,
+          distilled_spirit: 4,
+          glassware: 8,
+          spit_meat: 10
+        },
+        seedEntities: false
+      })
+    );
+    s.command({ type: 'craftItem', payload: { itemId: 'tanglefoot_coating' } } as never); // slow coating T1
+    s.command({ type: 'craftItem', payload: { itemId: 'farsight_tonic' } } as never); // perception tonic T1
+    s.command({ type: 'craftItem', payload: { itemId: 'greater_farsight_tonic' } } as never); // T2 needs the base
+    for (
+      let i = 0;
+      i < 25 &&
+      !((stk(s).tanglefoot_coating ?? 0) > 0 && (stk(s).farsight_tonic ?? 0) > 0 && (stk(s).greater_farsight_tonic ?? 0) > 0);
+      i++
+    )
+      s.tick(400);
+    console.log(
+      `[ALCH lines] tanglefoot=${stk(s).tanglefoot_coating ?? 0} farsight=${stk(s).farsight_tonic ?? 0} greater_farsight=${stk(s).greater_farsight_tonic ?? 0}`
+    );
+    expect(stk(s).tanglefoot_coating ?? 0, 'slow coating brewed').toBeGreaterThan(0);
+    expect(stk(s).farsight_tonic ?? 0, 'perception tonic brewed').toBeGreaterThan(0);
+    expect(stk(s).greater_farsight_tonic ?? 0, 'T2 tonic brewed off the distilled-spirit base').toBeGreaterThan(0);
+  });
+
+  it('§C antidote tonic CURES an active poison (the counter to the venom/caustic coatings)', () => {
+    // A pawn carrying an active envenomed + nausea timer drinks a grand antivenin → both cleared, and a
+    // toxin_immune window stamped. The counterplay the new coating threats needed.
+    const poisoned = {
+      id: 'p1',
+      stats: { strength: 10, dexterity: 10, constitution: 10, intelligence: 10, wisdom: 10, charisma: 10, perception: 10 },
+      traits: [],
+      conditionTimers: { envenomed: 900, nausea: 600 }
+    } as unknown as Pawn;
+    const after = applyConsumable(poisoned, 'grand_antivenin_tonic', () => 0.42);
+    expect(after.conditionTimers?.envenomed ?? 0, 'envenomed purged').toBe(0);
+    expect(after.conditionTimers?.nausea ?? 0, 'nausea purged').toBe(0);
+    expect(after.conditionTimers?.toxin_immune ?? 0, 'a protective window is stamped').toBeGreaterThan(0);
   });
 });

@@ -369,6 +369,12 @@ export interface Item {
    */
   conditionDurationTurns?: number;
   /**
+   * ALCHEMY-BUTCHERY-EXPANSION §C — an ANTIDOTE tonic: drinking one CLEARS these active condition timers
+   * (envenomed / nausea / dysentery…), the counter to the game's venom & caustic coatings. Applied in
+   * `applyConsumable` alongside any `grantsConditions` window (e.g. a brief `toxin_immune` pill).
+   */
+  curesConditions?: string[];
+  /**
    * §2h(ii): consuming one of this item (a rare beast organ) PERMANENTLY grants this `traits.jsonc`
    * trait to the eater (pushed to `pawn.traits` + baked via `applyGainedTrait`) AND rolls a random
    * `negative` trait as a Faustian flaw — power with a price. Applied by `entities/Pawns.applyConsumable`
