@@ -82,6 +82,16 @@
     "toolTierRequired": 0
   },
   {
+    // A fully-spoiled carcass (any species decays to `rotten_carcass`) is still butcherable — but it
+    // yields only rotten meat + rotten hide + bones, feedstock for compost/fertiliser, not good meat.
+    "id"              : "butcher_rotten_carcass",
+    "station"         : "butcher_spot",
+    "inputs"          : {"rotten_carcass": 1},
+    "outputs"         : {"rotten_meat": 8, "rotten_hide": 2, "medium_bones": 6},
+    "workAmount"      : 20,
+    "toolTierRequired": 0
+  },
+  {
     "id"              : "make_tanning_bucket",
     "station"         : "sawtable",
     "inputs"          : {"category:plank": 2, "resin": 1},
@@ -4358,5 +4368,36 @@
     },
     "workAmount": 5,
     "toolTierRequired": 0
+  }
+,
+  {
+    "id": "make_iron_pick",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 2,
+      "branch": 1,
+      "category:leather": 1
+    },
+    "outputs": {
+      "iron_pick": 1
+    },
+    "workAmount": 8,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_steel_pick",
+    "station": "anvil",
+    "inputs": {
+      "category:steel": 2,
+      "branch": 1,
+      "category:leather": 1
+    },
+    "outputs": {
+      "steel_pick": 1
+    },
+    "workAmount": 8,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
   }
 ]

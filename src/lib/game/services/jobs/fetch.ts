@@ -95,9 +95,18 @@ export function complete(job: Job, gs: GameState): GameState {
   const taken = itemService.clampPickupQuantity(pawn, drop.resourceId, drop.quantity, gs);
   if (taken <= 0) return gs;
   const remainder = drop.quantity - taken;
+  // CARCASS FRESHNESS: a carcass carries per-unit `unitConditions`; the pawn takes the TOP `taken` units'
+  // conditions with it (captured below) and leaves the rest on the remainder stack, so spoilage survives
+  // the fetch instead of being flattened into the count-based inventory.
+  const carcassConds = drop.unitConditions?.length ? drop.unitConditions : undefined;
+  const takenConds = carcassConds?.slice(0, taken);
   const newDropped =
     remainder > 0
-      ? (gs.droppedItems ?? []).map((d) => (d.id === drop.id ? { ...d, quantity: remainder } : d))
+      ? (gs.droppedItems ?? []).map((d) =>
+          d.id === drop.id
+            ? { ...d, quantity: remainder, ...(carcassConds ? { unitConditions: carcassConds.slice(taken) } : {}) }
+            : d
+        )
       : (gs.droppedItems ?? []).filter((d) => d.id !== drop.id);
 
   const newPawns = gs.pawns.map((p) => {
@@ -112,7 +121,13 @@ export function complete(job: Job, gs: GameState): GameState {
     };
     const newItems = { ...inv.items };
     newItems[drop.resourceId] = (newItems[drop.resourceId] ?? 0) + taken;
-    return { ...p, inventory: { ...inv, items: newItems }, carryingForOrder: owner };
+    const carriedUnitConditions = takenConds
+      ? {
+          ...(p.carriedUnitConditions ?? {}),
+          [drop.resourceId]: [...(p.carriedUnitConditions?.[drop.resourceId] ?? []), ...takenConds]
+        }
+      : p.carriedUnitConditions;
+    return { ...p, inventory: { ...inv, items: newItems }, carryingForOrder: owner, carriedUnitConditions };
   });
   return { ...gs, droppedItems: newDropped, pawns: newPawns };
 }

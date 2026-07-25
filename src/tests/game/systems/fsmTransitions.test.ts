@@ -65,6 +65,42 @@ describe('FSM transitions & interrupt priority', () => {
     expect(stk(s).cordage ?? 0, 'the 4-unit batch completes exactly, no work lost or double-counted').toBe(4);
   });
 
+  it('MID-CRAFT NEED interrupt: hunger crossing seek DURING a craft releases the job, then it resumes (no lost work)', async () => {
+    const s = new HeadlessSession();
+    await s.start(
+      buildScenario({
+        seed: 109,
+        map: { w: 16, h: 16 },
+        workReady: true,
+        needsDisabled: ['fatigue', 'thirst', 'hygiene'], // hunger LIVE
+        pawns: [{ count: 1, skillLevel: 1, needs: { hunger: 68 } }], // slow crafter, hunger just below seek 70
+        buildings: [{ id: 'craft_spot' }],
+        items: { plant_fiber: 60, spit_meat: 20 },
+        seedEntities: false
+      })
+    );
+    const p = pawn(s, 0);
+    s.command({ type: 'craftItem', payload: { itemId: 'cordage', quantity: 6 } } as never);
+    let sawWorking = false;
+    let interruptedToEat = false;
+    let releasedWhileEating = false;
+    for (let i = 0; i < 60 && (stk(s).cordage ?? 0) < 6; i++) {
+      s.tick(30);
+      const st = stateOf(s, p.id) ?? '';
+      if (st === 'Working' || st === 'MovingToResource') sawWorking = true;
+      if (sawWorking && ['Eating', 'MovingToNeed', 'Hungry'].includes(st)) {
+        interruptedToEat = true;
+        const claimed = (gs(s).jobs ?? []).filter((j: { type?: string; claimedBy?: string | null }) => j.type === 'craft' && j.claimedBy === p.id).length;
+        if (claimed === 0) releasedWhileEating = true;
+      }
+    }
+    console.log(`[FSM mid-craft] worked=${sawWorking}; interrupted to eat=${interruptedToEat}; craft released while eating=${releasedWhileEating}; cordage=${stk(s).cordage ?? 0}/6`);
+    expect(sawWorking, 'the pawn started the craft').toBe(true);
+    expect(interruptedToEat, 'hunger crossing seek mid-craft pulled the pawn off to eat').toBe(true);
+    expect(releasedWhileEating, 'the craft job was released back to the pool while it ate (not held)').toBe(true);
+    expect(stk(s).cordage ?? 0, 'the batch still completes — the accrued work was not lost or duplicated').toBe(6);
+  });
+
   it('COMBAT threat interrupts work: an adjacent hostile pulls a working pawn into Fighting, job released', async () => {
     const s = await workingColony(102);
     s.command({ type: 'craftItem', payload: { itemId: 'cordage', quantity: 6 } } as never);
@@ -223,6 +259,36 @@ describe('FSM transitions & interrupt priority', () => {
     // … and none wedged in a movement/haul state across many consecutive samples (the classic stuck bug)
     expect(maxTransientRun, 'no pawn is stuck in a MovingTo*/Hauling state for thousands of ticks').toBeLessThan(6);
     expect(anyDead, 'no pawn died from a behavioural deadlock in a provisioned colony').toBe(false);
+  });
+
+  it('MOVING_TO_DEPOSIT: a fetch-carry routes the pawn through the deposit state to the station', async () => {
+    const s = new HeadlessSession();
+    await s.start(
+      buildScenario({
+        seed: 112,
+        map: { w: 20, h: 20 },
+        workReady: true,
+        researchMaxTier: 9,
+        toolTier: 3,
+        needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
+        pawns: [{ count: 4, skillLevel: 20 }],
+        buildings: [{ id: 'butcher_spot' }],
+        items: { deer_carcass: 2, spit_meat: 10 },
+        seedEntities: false
+      })
+    );
+    // butchery FETCHES the carcass from stock to the butcher spot — the carrier passes through
+    // MovingToDeposit (handleHauling with carryingForOrder → the station tile).
+    s.command({ type: 'craftItem', payload: { itemId: 'deer_carcass' } } as never);
+    let sawDeposit = false;
+    const seen = new Set<string>();
+    for (let i = 0; i < 200 && (stk(s).venison ?? 0) === 0; i++) {
+      s.tick(3); // fine-grained to catch the transient carry states
+      for (const p of gs(s).pawns) seen.add(p.currentState ?? '');
+      if (gs(s).pawns.some((p) => p.currentState === 'MovingToDeposit' || p.currentState === 'Hauling')) sawDeposit = true;
+    }
+    console.log(`[FSM deposit] states seen during butchery fetch: ${[...seen].sort().join(', ')}; MovingToDeposit/Hauling=${sawDeposit}`);
+    expect(sawDeposit, 'the fetch-carry drives the MovingToDeposit/Hauling states').toBe(true);
   });
 
   it('AUTO RESCUE (caretaking job, NOT drafted): an idle caretaker carries a downed colonist to shelter, entering Rescuing', async () => {

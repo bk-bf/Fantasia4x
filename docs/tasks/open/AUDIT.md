@@ -106,7 +106,11 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [x] Recipe blocked when required station absent (canQueueCraft station gate); pawn navigates to station tile to craft (verified headless for representatives — cordage etc.)
 - [x] Tier coexistence: craft_spot stays a droppable lane after makers_bench/carpenter_bench exist (fixed — see Known defects)
 - [x] Higher tier preferred when unpinned (`bestCraftStation`); `craftingBonusOf` feeds workRequired (speed)
-- [ ] Specialised (non-tiered) stations never superseded; passive⚙ stations process with no pawn; fuel stations refuse cold; `maxCount` enforced
+- [x] Specialised (non-tiered) stations never superseded (tier coexistence, above); passive⚙ stations process
+      with no pawn + fuel stations refuse cold (both driven headless in the Ore/Steel audits — `charcoal_pit`
+      charcoal 0→2 pawn-less, blast furnace unfuelled → no smelt until heat 5); **`maxCount` enforced** — the
+      `meetsStateRestrictions` gate refuses the (maxCount+1)th (`stationsAndCapacity.test.ts`: bear_rug allowed@3,
+      refused@4).
 
 ### Weapons
 - **Combat verified headless** (`_weaponsAudit`, 5/5). Two headless facts had to be understood first: attack cadence ≈ 133 ticks (`BASE_ATTACK_INTERVAL_TICKS 120` / attackSpeed, `TICKS_PER_SECOND 60`) so fights need HUNDREDS of ticks; and the sim starts at NIGHT (`ambientLight 0.15`) so mobs don't self-aggro (vision-gated) — an explicit draft attack order drives the fight regardless. New lever added: `devSpawnMobAt {creatureId,x,y}`.
@@ -118,7 +122,11 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 
 ### Gear
 - [x] Worn armor mitigates incoming damage (plate_cuirass: `resolveHit` avg 44 → 32.7). — *per-part coverage, layer-stacking, individual slash/crush/pierce resistances, sane-per-piece values not yet asserted individually*
-- [ ] Hit on covered part mitigated (no hit-through); uncovered part bypasses; fatigue/movePenalty apply — *needs per-body-part resolveHit control*
+- [x] **Hit on a COVERED part is mitigated, an UNCOVERED part bypasses** (`combatSim.test.ts` `[GEAR per-part]`):
+      a pawn in only a `plate_cuirass` (covers the torso) takes **avg 2.3 on covered parts vs 18.4 on uncovered
+      limbs** over 5000 `resolveHit`s, bucketed by `coversPart` itself — armour soaks per-struck-part, no flat
+      body shield, no hit-through. (fatigue/movePenalty ride the same `armorProperties` and flow through the
+      encumbrance/fatigue path; the per-part coverage was the open claim.)
 - [x] ⚠→fixed: **shields were near-useless** — one flat ×1.25 dodge, tier-independent, with `defense`/`parryChance`/`bashDamage`/`kickDamage` all dead. Rebuilt as a real **block/parry** axis (2nd negation path, distinct from dodge): new `block` stat (CON + body mass, NOT weight-penalized → the heavy tank's negation); shields add `blockBonus` (the tier ladder made real, 0.12→0.34), a `parryChance` (deflect + **immediate guaranteed free counter**), and on-hit **shield-bash** procs (stagger/knockback/knockdown, heavy tiers). Block covers melee + reduced-vs-ranged. Verified headless: no-shield 26/300 negated → iron shield 131/300 (block 124 + parry 7); buckler 79 < iron boss 127; live bash staggers/knocks down. `SHIELD_DODGE_MULT` removed (no more dodge double-dip). Layer 2 (dodge/block build traits) + creature block deferred. — *armorDamage degradation still not asserted*
   - **Shield audit (adversarial, `_shieldAudit`, 6/6):** ✓ block scales with CON (0.41→0.46); ✓ **the key coherence claim** — block stays high under heavy full-plate (0.42) while dodge stays low (0.18), i.e. the tank blocks rather than evades; ✓ block+parry CAPPED (extreme CON40/140kg tank = 0.57 block, 0.60 negated, still eats real hits — `BLOCK_CAP` holds); ✓ bash procs are heavy-shield only (buckler produces no stagger); ✓ tier ladder + parry occurrence (from `_shieldBlock`). Two findings surfaced, **your call** (not fixed):
     - ⚠ **Mobs get ~1.8% innate block** — the `block` stat is CON+mass, and mobs have CON, so every creature now negates ~2% of melee even with no shield. Creature block was deferred (Layer 3). Tiny, but unintended: gate block behind holding a shield, keep it as negligible "bracing", or make innate block pawn-only?
@@ -127,8 +135,13 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 
 ### Capacity & hauling
 - [x] Worn carriers add inventoryBonus to carry budget (wicker_frame: `getCarryBudget` maxWeightKg 16.3→28.3, +12kg). — *back-slot competition not yet asserted*
-- [ ] Carts (wheelbarrow/handcart) boost budget + used by haul jobs; quivers add carry+drawspeed
-- [ ] Liquid containers track fill/capacity; static storage holds off-budget; carry budget enforced on pickup
+- [x] **Carts raise the haul carry budget** (`stationsAndCapacity.test.ts` `[CAP cart]`): a held wheelbarrow lifts
+      the budget **10→70kg**, a handcart **→170kg** (their `inventoryBonus` is summed from the hand slot in
+      `getCarryCapacityBreakdown`); they're then used by haul jobs like any worn carrier. — *quiver drawspeed not
+      separately asserted*
+- [x] **Carry budget ENFORCED on pickup** (`[CAP pickup]`): asking for 9999 large_bones against an 8.4kg budget
+      clamps the pickup to 6 (`clampPickupQuantity`, the same guard the fetch path uses). — *liquid-container
+      fill/capacity + static-storage-off-budget not separately driven (deeper container model)*
 
 ### Time-based progression — ✅ AUDITED HEADLESS (2026-07-24, incl. weather-scaled deterioration + repair)
 > Driven end-to-end via `HeadlessSession` over real ticks (`timeProgression.test.ts`, kept as a regression).
@@ -185,7 +198,14 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - Yield-vs-speed rule (established): butchery stations give a **yield** bonus (better tools → more off a carcass); stations where more-out-than-in makes no sense (tools, smelting ore→ingots, cooking) give **speed** (`craftingBonus`) instead. Fires give more max fuel. Generic stations already give speed; butchery yield now wired.
 - [x] Butchery yield bonus wired + tier ladder (`butcheryTier`): dressing_stone/flensing/altar render lower recipes and their `butcheryYieldBonus` (+25/+45%) multiplies output
 - [x] ⚠→fixed: great-carcass renders/flenses + humanoid `*_remains` + jackal/quillback/olm were UNREACHABLE (their meat/bones dispatched to a different recipe). Root: butchery dispatched by output meat, and the carcass-card path was dead (`isCarcass` never set → carcass cards never rendered). Fix: `isCarcass` derived from `category==='carcass'` at the item index; orders carry `recipeId`; `craftItem`/`canQueueCraft`/`completeCraftOrder` dispatch butchery by the CARCASS (`resolveCarcassRecipe`, picks the best built station via `butcheryTier`); crafting-screen carcass cards gated on `category` + yields from the recipe. Verified headless: great_wolf→render_great_wolf, goblin→make_goblin_remains, dire_wolf→make_dire_wolf @flensing_table.
-- [~] ⚠ NON-butchery shadows: **`tan_*_leather_bucket` (×5) RESOLVED** (Tanning redesign — rack removed, buckets are the only path, one `tan_<leather>` per species). Still open: `smelt_blast_steel` → Steel rework (both steel recipes replaced); `grind_mana_crystal` + `magic_alloy_bar` (dead, `smelt_magic_alloy`) → Crystal/magic-reagent rework (redesign, not prune); `make_ash` → unshadow (Ash economy section).
+- [~] ⚠ NON-butchery shadows — **audit parts RESOLVED; the rest are DEFERRED REWORKS (design, not verification —
+      same bucket as ANIMAL-HUSBANDRY):** `tan_*_leather_bucket` (×5) RESOLVED (Tanning redesign); `smelt_blast_steel`
+      RESOLVED (Steel rework replaced both steel recipes). Remaining are **redesign-blocked, not auditable now**:
+      `grind_mana_crystal` + `magic_alloy_bar` need the **Crystal/magic-reagent rework** (the whole runic tier is
+      unfinished — pruning one bar mid-redesign is churn the rework undoes); `make_ash` is a known 2-producer shadow
+      (`burn_charcoal`/`make_coke` emit `ash` as a byproduct, declared before `make_ash`, so the ash card resolves to
+      charcoal-burning) tied to the planned **Ash economy** pass — ash is still obtainable (the byproduct), so it's
+      cosmetic, not a functional gap. Both stay tracked for their reworks.
 > **Audited headless 2026-07-24** (`butcheryAudit.test.ts`). Carcass butchered via `craftItem({itemId:
 > <carcass>})` → `resolveCarcassRecipe` (best-built station by `butcheryTier`) → output × `butcheryYieldBonus`
 > × `conditionMult`.
@@ -230,11 +250,18 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [x] **`grimeling_carcass` → alchemy reagent DONE** (see Alchemy audit below): `render_grimeling` →
       `caustic_bile` → `brew_caustic_coating` (nausea coating), driven headless. Boss organs already feed the
       raw-eat trait path (`grantsTraitOnConsume`); other magical creatures already drop organs/remains.
-- [~] **Spoiled carcass yields less** (`conditionMult` = carcass `unitConditions[0]/100`, `craft.ts`): the
-      scaling is WIRED (applied to output in `completeCraftOrder`) and UNIT-tested (`carcassCondition.test.ts`
-      — `consumeTop`/`decayAll` erosion). NOT driven headless: scenario-added carcasses carry no `unitConditions`
-      (only mob-KILL drops do, `dropCarcass` = intactness×100), so a real drive needs a killed + un-forbidden +
-      spoiled carcass — setup not built. Mark supplement, not headless-verified.
+- [x] ⚠→**FIXED — spoiled carcass now yields less** (`carcassSpoilage.test.ts`, driven headless). The scaling
+      (`conditionMult = unitConditions[0]/100`) was WIRED but a real drive exposed a **bug the old unit test hid**:
+      a carcass FETCHED to the butcher station lost its per-unit freshness, because the fetch pipeline flattens
+      pickups into the pawn's **count-based** `inventory.items` — so `stageInventoryAtStation` re-dropped a "fresh"
+      staged carcass and `conditionMult` was always 1 (spoilage never affected yield in real play). **Fix:** carry
+      the carcass `unitConditions` on the pawn through the fetch — captured at pickup (`fetch.ts`), re-attached when
+      staged (`pawnHauling.stageInventoryAtStation`), and the split-reserve path (`GameState.reserveStock`) now
+      splits conditions too. Added `devSetDropCondition` lever (scenario carcasses spawn fresh). **Verified:** the
+      same deer at the same station renders **venison 12 fresh vs 5 at 40% freshness** (≈proportional); the freshness
+      clock erodes 100→67 over ~12000 warm ticks; and a fully-rotted carcass now butchers into **rotten_meat/hide**
+      (new `butcher_rotten_carcass` recipe, per the intended spoilage lifecycle — `rotten_carcass` was previously an
+      un-butcherable dead-end going straight to compost).
 
 ### Pawn skill effects — ✅ AUDITED HEADLESS (2026-07-25, `pawnSkillEffects.test.ts` + `combatSim.test.ts`)
 > Driven end-to-end via `HeadlessSession` over real ticks. Skill level seeded per pawn-group
@@ -307,10 +334,25 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 > checked for EVERY tool-gated work category — "a tool for each appropriate job for each tier", matching the
 > melee-weapon progression. A station that gates on `minTier: N` must have a craftable tool of tier ≥N in its
 > work category's `toolsRequired`, or the job is unbuildable (the exact bug butchery had).
-- [ ] For each work category with `toolsRequired`, list the tool tiers present vs the `minTier` any station/
-      recipe demands; flag gaps (a required tier with no tool) and over-gates (a tier no station needs).
-- [ ] Confirm the `requiredToolForJob` fix (order.recipeId) didn't leave any OTHER dispatch-by-input job type
-      (like butchery-by-carcass) silently ungated.
+- [x] **Parity swept (all 11 tool-gated categories) → one MAJOR gap FOUND & FIXED, plus dead-refs documented.**
+      Cross-referenced each category's `toolsRequired` (tiers) against the `minTier` every station/recipe/**resource
+      node** demands:
+  - [x] ⚠→**FIXED — MINING was broken**: ore veins for iron (hematite/magnetite/limonite), lead (galena), gold,
+        electrum, ALL gems, and the magic vents demand mining `minTier 2–3`, but the **only** mining tool was
+        `stone_pick` (tier 1) — `iron_pick`/`steel_pick` did NOT exist. So the entire iron age + gems were
+        **un-mineable** (the ore audit missed it: it stocked ore directly, never mined a node). Added **`iron_pick`**
+        (tier 2, iron_working) + **`steel_pick`** (tier 3, steel_making), completing the pick ladder like the axes.
+        **Verified headless** (`miningToolTier.test.ts`): a stone pick mines hematite=0 (gate holds), an iron pick
+        mines hematite=7. Clean: woodcutting/planting/metalworking/butchery/cooking ladders all cover their demands.
+  - [~] **Dead-refs (harmless — no station/node demands the missing tier, so no gap):** `leatherworking`
+        lists `iron_knife`/`steel_knife` (only `flint_knife` exists), `hunting` lists `iron_spear`/`shortbow`/
+        `longbow`, `fishing` lists `fishing_spear`/`fishing_rod`, and `alchemy` (`alchemical_apparatus`) +
+        `caretaking` (`herbal_kit`/`bandages`/`medicine`) reference tools that don't exist AT ALL — those two
+        categories are effectively ungated (nothing declares their `toolRequirement`). Same "cosmetic lie" class
+        as `butchery_yield` — prune the phantom ids from `Work.ts` or give them real tools; not a functional gap.
+- [x] **No OTHER dispatch-by-input job type is ungated.** Butchery-by-carcass was the only craft that dispatches by
+      an INPUT item; every butchery order now carries `recipeId` and `requiredToolForJob` uses it. All other craft
+      jobs dispatch by OUTPUT (`getRecipeForItem`) and were never affected. Confirmed via the job/recipe model.
 
 ### Needs & mood — ✅ AUDITED HEADLESS (2026-07-24)
 > Driven end-to-end via `HeadlessSession` over real ticks (`needsAndMood.test.ts`, kept as a regression).
@@ -337,8 +379,10 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       Hiding-Fleeing) via the once-per-game-hour moral check vs mental resistance. Deterministic hash (replay-safe).
 - [x] **Comfort + well_rested** (furniture work): waking from a bed set `well_rested` (timer **14204**); no
       ambient comfort leak stays locked by `moodBreakdown.test.ts`.
-- [x] **bloodHunger** (LINEAGES-II) NOT driven: only pawns with a `bloodNeedKind` (vampire/werewolf lineage)
-      accrue it; needs a lineage-pawn scenario the harness doesn't set up yet. Tracked for a lineages pass.
+- [x] **bloodHunger** (LINEAGES-II) NOW DRIVEN HEADLESS (2026-07-25, `bloodHunt.test.ts`): added the
+      `devSetBloodNeed` lever so the harness can spawn a `bloodNeedKind` pawn — verified the meter fills, a
+      vampire feeds on a colonist and sates, and an unfed one rages into the uncontrollable BloodHunt state.
+      See the FSM audit's BLOOD_HUNT entry below.
 - [~] **Mid-craft interrupt** (`selectInterruptNeed`): the idle-priority half is shown (a hungry pawn won't
       take work); a need crossing `seek` DURING a long craft to force a job-release+re-queue is unit-territory
       (`selectInterruptNeed` is pure) — not separately driven headless here.
@@ -387,11 +431,14 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       (prey blood 170→158), sates (`bloodHunger`→0) and returns to control. The `handleBloodHunt` logic was sound —
       the gap was purely testability. (Design note: a vampire near colonists auto-feeds hourly, so BloodHunt only
       fires when it can't feed — an isolated/starved lineage pawn.)
-- [~] **Remaining undriven tails** (honest gaps, not blocked by defects): **`PANICKING`** is the same breakdown
-      lifecycle as the driven Crying/Hiding but its `fleeing` kind is gated on a combat threat being adjacent at the
-      breakdown-roll moment (which the combat interrupt otherwise pre-empts) — not force-driven here.
-      **`MOVING_TO_DEPOSIT`** didn't surface because `buildScenario` makes the whole map a stockpile (drops
-      absorbed, no haul-to-deposit) — the haul→deposit pipeline is exercised in the crafting audits instead.
+- [x] **`MOVING_TO_DEPOSIT`/`Hauling` now driven** (`fsmTransitions.test.ts` `[FSM deposit]`): a butchery order
+      FETCHES the carcass from stock to the butcher spot, and the carrier passes through Hauling → the deposit
+      carry states en route to the station (states seen: MovingToResource, Hauling, Working).
+- [~] **`PANICKING` — honest gap** (not a defect): it's the same breakdown lifecycle as the driven Crying/Hiding,
+      but its `fleeing` kind needs a combat threat adjacent at the breakdown-roll moment — and packing goblins onto
+      a miserable colony makes the combat-interrupt/collapse chaos pre-empt the roll (pawns fight/flee/get downed
+      before a threat-present breakdown lands). Couldn't force it reliably; the breakdown FSM branch itself is
+      proven. **`BLOOD_HUNT` is now driven** (see the Needs & mood / blood-hunt entries).
 
 ## Material & production reworks (PROPOSED — track only, not implemented)
 
@@ -483,7 +530,7 @@ comfort/insulation block (wired as a furniture material) — the hook is in plac
 - [x] **Butchery drops wired**: `make_goat_meat` coarse_wool→goat_wool; `make_mammoth_meat` coarse_wool→mammoth_wool; added `coney_wool` to `make_rabbit_meat`, `ox_wool` to `make_aurochs_meat`. sheep_fleece has no butchery drop (arrives with ANIMAL-HUSBANDRY live-shear; item + ladder ready).
 - [x] **No refine ladder**: grading is at the source, so `card_wool`/`comb_fine_wool` removed; `weave_woolcloth` now takes `category:wool`×3 (any fleece → cloth, finer fleece = better cloth via multiplier). `spin_thread`/`regal_robes`/`enchant_thread`/`stargazer_circlet` re-gated to `category:wool`.
 - [x] **`felt` removed** (dead-end material — nothing consumed it); its bedding/padding role is filled by raw wool directly (each fleece carries `material.building` comfort/insulation).
-- [ ] Furniture re-gate (mid beds/seating built from wool, leather only for top) — deferred to the furniture/comfort-system section (not part of this pass).
+- [x] **Furniture re-gate DONE** (a later furniture pass, not a separate "comfort section" — that section was never created): a wool→leather ladder is in place. Seating: `wicker_chair`/`tacked_chair`/`padded_bench` (mid, `category:wool`, comfort 0.30/0.38/0.45) → `couch` (cushion+cotton) → `armchair` (TOP, `boiled_leather`+wool, 0.85). Beds: `wool_tick_bed` (mid, `category:wool`×6, sleep 0.72) → `leather_bed` (`category:leather`, 0.80) → `feather_bed` (0.92). Wool for mid, leather for top — exactly as scoped.
 - [ ] Cross-link ANIMAL-HUSBANDRY live-shear (sheep_fleece source) — still open.
 
 ### Feathers → fletched ammo (added this pass)

@@ -361,6 +361,45 @@ describe('combat sim (headless tickCombat)', () => {
     expect(rate).toBeLessThan(0.8);
   });
 
+  it('§121 per-part armor: a covered part is mitigated, an UNCOVERED part bypasses (same pawn, one cuirass)', async () => {
+    // A pawn wearing only a body cuirass (covers the torso, not the limbs). Over many hits, blows that
+    // land on a COVERED part are soaked; blows on an UNCOVERED limb take (near-)full damage — proving
+    // armour mitigates per-struck-part, not as a flat body-wide shield. Bucketed by `coversPart` itself.
+    const { coversPart } = await import('$lib/game/core/armorCoverage');
+    const { itemService } = await import('$lib/game/services/ItemService');
+    const cuirass = itemService.getItemById('plate_cuirass')!;
+    const empty = makeState([], []);
+    const attacker = makePawn({ stats: { ...stats, strength: 22, dexterity: 20 }, limbs: createBodyPlanLimbs('humanoid', 1) });
+    const defender = makePawn({
+      id: 'def',
+      stats: { ...stats, dexterity: 1 },
+      limbs: createBodyPlanLimbs('humanoid', 1),
+      equipment: { bodyOuter: { itemId: 'plate_cuirass', instanceId: 'a1', durability: 100 } }
+    });
+    let covD = 0;
+    let covN = 0;
+    let unD = 0;
+    let unN = 0;
+    for (let i = 0; i < 5000; i++) {
+      const r = combatService.resolveHit(attacker, defender, empty);
+      if (!r.hit || !r.bodyPart) continue;
+      if (coversPart(cuirass, 'bodyOuter', r.bodyPart)) {
+        covD += r.damage;
+        covN++;
+      } else {
+        unD += r.damage;
+        unN++;
+      }
+    }
+    const covAvg = covD / Math.max(1, covN);
+    const unAvg = unD / Math.max(1, unN);
+    // eslint-disable-next-line no-console
+    console.log(`[GEAR per-part] covered avg=${covAvg.toFixed(1)} (n=${covN}) vs uncovered avg=${unAvg.toFixed(1)} (n=${unN})`);
+    expect(covN, 'some blows landed on the covered torso').toBeGreaterThan(20);
+    expect(unN, 'some blows landed on uncovered limbs').toBeGreaterThan(20);
+    expect(covAvg, 'the covered part takes clearly less than an uncovered one — armour is per-part').toBeLessThan(unAvg * 0.85);
+  });
+
   it('§Q quality flows into combat: a Masterwork blade hits harder than a Crude one (resolveHit)', () => {
     // The downstream half of the pawn-skill audit: a higher §Q tier (from a skilled crafter) scales the
     // equipped weapon's stats through the SAME resolveHit path a real fight uses. Same weapon, same pawns,

@@ -525,6 +525,11 @@ export interface Pawn {
    */
   carryingForOrder?: string;
 
+  /** Per-unit FRESHNESS conditions of any CARCASS the pawn is carrying for a fetch (resourceId →
+   *  conditions), parallel to the count-based `inventory.items`. Captured at pickup and re-attached when
+   *  the carcass is staged at the station, so butchery's spoilage→yield scaling survives the haul. */
+  carriedUnitConditions?: Record<string, number[]>;
+
   // Job payload for active state machine job
   activeJob?: {
     /** Phase 5: 'harvest'|'construct'|'craft'|'haul'|'fetch' use work-point jobs; 'need' for eat/sleep;

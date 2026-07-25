@@ -21,6 +21,7 @@ import { zonePriorityRankAt } from '../../services/DesignationService';
 import { ENC_OVERLOAD_FULL } from '../../core/needs';
 import { gameLogger } from '../../dev/gameLogger';
 import { rng } from '../../core/rng';
+import { mergeConditions } from '../../core/carcassCondition';
 import { PAWN_STATE } from './pawnStates';
 import { goIdle } from './pawnHelpers';
 import { isCarriedPawnInstance } from './carry';
@@ -337,8 +338,18 @@ export function stageInventoryAtStation(pawn: Pawn, orderId: string, gs: GameSta
         d.x === station.x &&
         d.y === station.y
     );
+    // CARCASS FRESHNESS: re-attach the per-unit conditions the pawn carried for this carcass, so the
+    // staged drop butchery reads carries the spoilage the fetched carcass had (not a flat "fresh").
+    const carried = pawn.carriedUnitConditions?.[resourceId];
+    const conds = carried?.slice(0, qty);
     if (idx >= 0) {
-      drops[idx] = { ...drops[idx], quantity: drops[idx].quantity + qty };
+      drops[idx] = {
+        ...drops[idx],
+        quantity: drops[idx].quantity + qty,
+        ...(conds || drops[idx].unitConditions
+          ? { unitConditions: mergeConditions(drops[idx].unitConditions, drops[idx].quantity, conds, qty) }
+          : {})
+      };
     } else {
       drops.push({
         id: `staged-${orderId.slice(-6)}-${resourceId}-${station.x}-${station.y}`,
@@ -347,7 +358,8 @@ export function stageInventoryAtStation(pawn: Pawn, orderId: string, gs: GameSta
         y: station.y,
         quantity: qty,
         stored: true,
-        reservedFor: orderId
+        reservedFor: orderId,
+        ...(conds ? { unitConditions: conds } : {})
       });
     }
   }
@@ -361,6 +373,7 @@ export function stageInventoryAtStation(pawn: Pawn, orderId: string, gs: GameSta
         ? {
             ...p,
             carryingForOrder: undefined,
+            carriedUnitConditions: undefined,
             currentState: PAWN_STATE.IDLE,
             activeJob: undefined,
             inventory: {

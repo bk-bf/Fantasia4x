@@ -13625,4 +13625,65 @@
         "recoverable": 0.15
       }
     }
+,
+    {
+      "id": "iron_pick",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 159
+        }
+      ],
+      "name": "Iron Pick",
+      "type": "tool",
+      "category": "mining",
+      "deteriorationRate": 0.01,
+      "description": "An iron-headed pick that bites hard rock and the richer ores stone can't touch. It holds an edge through a long shift at the face.",
+      "color": "#8a8a94",
+      "amount": 0,
+      "weightKg": 1.8,
+      "volumeL": 1.4,
+      "tier": 2,
+      "durability": 70,
+      "maxDurability": 70,
+      "durabilityLossPerAction": 1,
+      "toolTierRequired": 0,
+      "toolBoost": {
+        "speed": 1.0,
+        "yield": 0.85
+      },
+      "processingType": [
+        "mining"
+      ]
+    },
+    {
+      "id": "steel_pick",
+      "charSpans": [
+        {
+          "sheet": "items",
+          "id": 159
+        }
+      ],
+      "name": "Steel Pick",
+      "type": "tool",
+      "category": "mining",
+      "deteriorationRate": 0.01,
+      "description": "A steel pickaxe, hard and tough at once. It shrugs off the deepest veins and the toughest gem matrix without chipping.",
+      "color": "#b8c0cc",
+      "amount": 0,
+      "weightKg": 1.8,
+      "volumeL": 1.4,
+      "tier": 3,
+      "durability": 120,
+      "maxDurability": 120,
+      "durabilityLossPerAction": 1,
+      "toolTierRequired": 0,
+      "toolBoost": {
+        "speed": 1.3,
+        "yield": 1.05
+      },
+      "processingType": [
+        "mining"
+      ]
+    }
 ]

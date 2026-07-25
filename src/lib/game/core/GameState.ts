@@ -286,9 +286,15 @@ export function reserveForOrder(
       drops.push({ ...d, reservedFor: orderId });
       remaining -= d.quantity;
     } else {
-      // Split: reserve a new stack of `remaining`, leave the rest free.
-      drops.push({ ...d, quantity: d.quantity - remaining });
+      // Split: reserve a new stack of `remaining`, leave the rest free. Carcass `unitConditions` follow
+      // the split (top `remaining` units reserved, the rest stay free) so freshness isn't lost/duplicated.
       drops.push({
+        ...d,
+        quantity: d.quantity - remaining,
+        ...(d.unitConditions ? { unitConditions: d.unitConditions.slice(remaining) } : {})
+      });
+      drops.push({
+        ...(d.unitConditions ? { unitConditions: d.unitConditions.slice(0, remaining) } : {}),
         // Use the FULL orderId, not `slice(-6)`: the last-6 was the placement timestamp's tail,
         // which COLLIDES for every building drag-placed in the same batch (they share one Date.now()).
         // Colliding drop ids made `_syncFetchJobs` match the wrong stack's `reservedFor` and re-mint

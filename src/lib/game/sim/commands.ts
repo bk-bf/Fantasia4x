@@ -1489,6 +1489,18 @@ export const COMMANDS: Record<string, Cmd> = {
     })
   }),
 
+  /** DEBUG: set the per-unit FRESHNESS condition (0–100) on every dropped stack of a carcass resource, so
+   *  the spoilage → butchery-yield scaling (`conditionMult`, craft.ts) can be driven headless. Scenario
+   *  carcasses spawn fresh (no `unitConditions`); this stamps the freshness meter a real kill would carry. */
+  devSetDropCondition: (s, p: { resourceId: string; condition: number }) => ({
+    ...s,
+    droppedItems: (s.droppedItems ?? []).map((d) =>
+      d.resourceId === p.resourceId
+        ? { ...d, unitConditions: Array(d.quantity ?? 1).fill(Math.max(0, Math.min(100, p.condition))) }
+        : d
+    )
+  }),
+
   /** DEBUG: bank a growth offer on a pawn right now (outside the seasonal cadence) — same roll as
    *  an earned one, incl. the lineage-progression moment. `doubled` = birthday-strength rolls. */
   devGrantGrowth: (s, p: { pawnId: string; doubled?: boolean }) => ({

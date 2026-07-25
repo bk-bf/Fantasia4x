@@ -37,8 +37,9 @@ describe('butchery', () => {
       })
     );
     const gs = s.getState();
-    // rotten_carcass (the spoiled end-state) + pawn_carcass (no cannibalism) are intentionally un-butcherable.
-    const INTENTIONAL = new Set(['rotten_carcass', 'pawn_carcass']);
+    // pawn_carcass (no cannibalism) is the only intentionally un-butcherable carcass. rotten_carcass now
+    // butchers into rotten meat/hide (butcher_rotten_carcass) for compost.
+    const INTENTIONAL = new Set(['pawn_carcass']);
     const carcasses = itemService.getItemsByType('material').filter((i) => i.category === 'carcass');
     const dead: string[] = [];
     for (const c of carcasses) {
