@@ -73,13 +73,48 @@ describe('job registry (jobs.jsonc ↔ JobService)', () => {
     expect(jobService.getJobWorkCategory(job)).toBe('crafting');
   });
 
-  it('routes a craft order to its station DISCIPLINE (smith ≠ tanner ≠ brewer ≠ generalist)', () => {
+  it('routes a craft order to its station DISCIPLINE — the Work-tab PARENT category', () => {
+    // craftWorkCategory is the labor CATEGORY (the Work-tab parent): a butcher spot's leaf is
+    // `butchery`, but that sits UNDER Cooking, so the labor slider it answers to is `cooking`.
     const at = (stationType: string) =>
       jobService.craftWorkCategory({ item: { id: 'iron_dagger' }, stationType });
-    expect(at('anvil')).toBe('metalworking'); // toolRequirement.workType
-    expect(at('butcher_spot')).toBe('butchery');
-    expect(at('alchemy_lab')).toBe('alchemy'); // alchemyEnabled flag (basic lab carries no tool gate)
+    expect(at('anvil')).toBe('metalworking'); // flat discipline → its own parent
+    expect(at('butcher_spot')).toBe('cooking'); // butchery leaf → Cooking parent
+    expect(at('alchemy_lab')).toBe('alchemy'); // potions leaf → Alchemy parent
     expect(at('craft_spot')).toBe('crafting'); // generic station → no discipline
     expect(jobService.craftWorkCategory(undefined)).toBe('crafting');
+  });
+
+  it('a craft job resolves to its LEAF discipline as the within-parent subjob stat key', () => {
+    const statKey = (stationType: string, itemId = 'iron_dagger') =>
+      jobService.getJobWorkStatKey(
+        { type: 'craft', targetX: 0, targetY: 0, craftQueueId: 'q' },
+        { craftingQueue: [{ id: 'q', item: { id: itemId }, stationType }] } as never
+      );
+    expect(statKey('butcher_spot')).toBe('butchery'); // leaf under Cooking
+    expect(statKey('tanning_bucket_station')).toBe('leatherworking'); // leaf under Tailoring
+    expect(statKey('hide_rack')).toBe('leatherworking'); // curing is leatherwork, not generic crafting
+    expect(statKey('anvil')).toBe('metalworking'); // flat: leaf == parent
+    expect(statKey('masons_bench')).toBe('masonry'); // leaf under Stoneworking
+    expect(statKey('lapidary_bench')).toBe('lapidary'); // leaf under Stoneworking (was mis-routed to alchemy)
+    expect(statKey('oven')).toBe('baking'); // leaf under Cooking
+    expect(statKey('fermenter')).toBe('brewing'); // leaf under Cooking
+    expect(statKey('weaving_frame')).toBe('weaving'); // leaf under Tailoring
+    // A meal output is the `meals` leaf of Cooking.
+    expect(statKey('campfire', 'small_stew')).toBe('meals');
+  });
+
+  it('the Work tab nests craft disciplines under their parent, like Construction', () => {
+    const kids = (cat: string) => jobService.getSubjobsForCategory(cat).map((s) => s.id);
+    expect(kids('construction')).toEqual(
+      expect.arrayContaining(['construct', 'deconstruct', 'repair'])
+    );
+    expect(kids('tailoring')).toEqual(['leatherworking', 'weaving']);
+    expect(kids('cooking')).toEqual(['meals', 'butchery', 'baking', 'brewing']);
+    expect(kids('stoneworking')).toEqual(['knapping', 'masonry', 'lapidary']);
+    expect(kids('metalworking')).toEqual([]); // flat — nothing to expand
+    // leaf disciplines are dropped from the top-level Work-tab row
+    expect(jobService.isCraftSubjob('butchery')).toBe(true);
+    expect(jobService.isCraftSubjob('cooking')).toBe(false);
   });
 });

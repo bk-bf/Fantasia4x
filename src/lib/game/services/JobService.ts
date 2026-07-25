@@ -35,7 +35,13 @@ import * as refuel from './jobs/refuel';
 import * as repair from './jobs/repair';
 import * as plant from './jobs/plant';
 import { isOrderSupplied as stagingIsOrderSupplied } from './jobs/staging';
-import { craftWorkCategory } from './jobs/craftDiscipline';
+import { craftWorkCategory, craftDiscipline } from './jobs/craftDiscipline';
+import {
+  DISCIPLINE_PARENTS,
+  DISCIPLINE_LEAVES,
+  disciplineLeaves,
+  DISCIPLINE_LABEL
+} from './jobs/disciplineTree';
 
 // ===== JOB REGISTRY (data-driven, jobs.jsonc) =====
 // The declarative half of the job system. jobs.jsonc lists the colony job types + their
@@ -44,10 +50,13 @@ import { craftWorkCategory } from './jobs/craftDiscipline';
 const JOB_DEFS = jobsData as unknown as JobDef[];
 const JOB_DEF_BY_ID = new Map<string, JobDef>(JOB_DEFS.map((d) => [d.id, d]));
 
-// Subjobs: job types that share a STATIC work category (e.g. construction = construct/deconstruct/
-// refuel/repair, hauling = haul/fetch). A category with >1 of these is "splittable" — the Work tab can
-// expand it and the player can rank the subjobs WITHIN the parent. Dynamic-category jobs (harvest by
-// designation, craft→cooking) are excluded — they already resolve to their own granular category.
+// Subjobs: a splittable Work-tab category — one the player can expand to rank sub-tasks WITHIN it.
+// Two sources, unified here so crafts nest exactly like building does:
+//  • VERB subjobs — job types sharing a static work category (construction = construct/deconstruct/
+//    repair). A category with >1 such verb splits.
+//  • CRAFT DISCIPLINE subjobs — the leaf disciplines of each parent category (tailoring =
+//    leatherworking/weaving, cooking = meals/butchery/baking/brewing). All run through the one `craft`
+//    handler; a craft order's station picks its leaf.
 const SUBJOBS_BY_CATEGORY: Map<string, string[]> = (() => {
   const m = new Map<string, string[]>();
   for (const def of JOB_DEFS) {
@@ -55,6 +64,10 @@ const SUBJOBS_BY_CATEGORY: Map<string, string[]> = (() => {
     const arr = m.get(def.workCategory) ?? [];
     arr.push(def.id);
     m.set(def.workCategory, arr);
+  }
+  for (const parent of DISCIPLINE_PARENTS) {
+    const leaves = disciplineLeaves(parent);
+    if (leaves.length) m.set(parent, [...(m.get(parent) ?? []), ...leaves]);
   }
   return m;
 })();
@@ -299,7 +312,7 @@ class JobServiceImpl {
       if (priority <= 0) return false;
       // Subjob override: an explicit 0 on a subjob key (e.g. `repair`) disables just THAT subjob,
       // while the parent category (construction) stays enabled.
-      const subKey = this._jobSubKey(j, workKey);
+      const subKey = this._jobSubKey(j, workKey, gameState);
       if (subKey !== workKey && subKey in laborSettings && (laborSettings[subKey] ?? 2) <= 0)
         return false;
       return true;
@@ -320,8 +333,8 @@ class JobServiceImpl {
       // SECONDARY: subjob level, but ONLY between jobs of the SAME category — a subjob's level ranks it
       // among its siblings (repair before construct), it does not lift it above other categories.
       if (workKeyA === workKeyB) {
-        const subKeyA = this._jobSubKey(a, workKeyA);
-        const subKeyB = this._jobSubKey(b, workKeyB);
+        const subKeyA = this._jobSubKey(a, workKeyA, gameState);
+        const subKeyB = this._jobSubKey(b, workKeyB, gameState);
         const subA =
           subKeyA !== workKeyA && subKeyA in laborSettings ? (laborSettings[subKeyA] ?? 2) : labA;
         const subB =
@@ -336,17 +349,36 @@ class JobServiceImpl {
 
   /** The within-parent ranking key for a job: its job-type id when its category is splittable (the
    *  job is one of several sharing that category), else just the category key (no subjob). */
-  private _jobSubKey(job: WorkKeyJob, categoryKey: string): string {
+  private _jobSubKey(job: WorkKeyJob, categoryKey: string, gs?: GameState): string {
     const subs = SUBJOBS_BY_CATEGORY.get(categoryKey);
-    return subs && subs.length > 1 && subs.includes(job.type) ? job.type : categoryKey;
+    if (!subs || subs.length <= 1) return categoryKey;
+    // A craft job's subjob is its LEAF discipline (leatherworking under tailoring, butchery under
+    // cooking), resolved from the order's station — not its literal `craft` type.
+    if (job.type === 'craft') {
+      const leaf = craftDiscipline(
+        (gs?.craftingQueue ?? []).find((o) => o.id === job.craftQueueId)
+      );
+      return subs.includes(leaf) ? leaf : categoryKey;
+    }
+    return subs.includes(job.type) ? job.type : categoryKey;
   }
 
-  /** Splittable categories' subjobs for the Work tab — `{id,label}` per job type, empty if the
-   *  category aggregates only one job type (nothing to expand). */
+  /** True for a craft-discipline LEAF that is also a legacy `WORK_CATEGORIES` entry (leatherworking,
+   *  butchery). The Work tab drops these from its top-level row — they appear only as subjobs of their
+   *  parent category (Tailoring, Cooking). */
+  isCraftSubjob(categoryId: string): boolean {
+    return DISCIPLINE_LEAVES.has(categoryId);
+  }
+
+  /** Splittable categories' subjobs for the Work tab — `{id,label}` per subjob, empty if the category
+   *  has nothing to expand. Labels come from a verb's JobDef or a discipline leaf's tree entry. */
   getSubjobsForCategory(categoryId: string): { id: string; label: string }[] {
     const subs = SUBJOBS_BY_CATEGORY.get(categoryId);
     if (!subs || subs.length <= 1) return [];
-    return subs.map((id) => ({ id, label: JOB_DEF_BY_ID.get(id)?.label ?? id }));
+    return subs.map((id) => ({
+      id,
+      label: JOB_DEF_BY_ID.get(id)?.label ?? DISCIPLINE_LABEL.get(id) ?? id
+    }));
   }
 
   /**
@@ -444,7 +476,7 @@ class JobServiceImpl {
    *  reads `repair_speed`), else the category. Pair with `getJobWorkCategory` as the fallback so a
    *  subjob inherits any axis it doesn't define (`getWorkModifiers(pawn, statKey, light, category)`). */
   getJobWorkStatKey(job: WorkKeyJob, gs?: GameState): string {
-    return this._jobSubKey(job, this._jobTypeToWorkKey(job, gs));
+    return this._jobSubKey(job, this._jobTypeToWorkKey(job, gs), gs);
   }
 
   /** Whether low light slows this job type (§G light→work). Defaults to true; jobs.jsonc sets it

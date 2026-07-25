@@ -419,6 +419,36 @@
         "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "leather quality (× ((manipulation + sight) / 2))"
     },
+    // ── Tailoring PARENT (soft goods): fallback for the Weaving leaf; Leatherwork has its own above.
+    {
+        "id"         : "tailoring_speed",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "description": "soft-goods work speed (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "tailoring_quality",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "description": "cloth / garment quality (× ((manipulation + sight) / 2))"
+    },
+    // ── Stoneworking PARENT: fallback for the Knapping / Masonry / Lapidary leaves.
+    {
+        "id"         : "stoneworking_speed",
+        "category"   : "work",
+        "primaryStat": "strength",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "description": "stone-shaping speed (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "stoneworking_quality",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
+        "description": "cut / dressed-stone quality (× ((manipulation + sight + consciousness) / 3))"
+    },
     {
         "id"         : "digging_speed",
         "category"   : "work",

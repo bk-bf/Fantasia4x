@@ -163,6 +163,24 @@ export interface JobDef {
    *  omitted, the audio layer falls back to the job's resolved WORK CATEGORY — so `harvest` (no audio)
    *  still splits into woodcutting / mining / foraging by the harvested resource. Backend ref only. */
   audio?: string;
+  /** Only on the `craft` verb: the craft DISCIPLINE tree (see {@link DisciplineDef}). Every craft runs
+   *  the one `craft` handler; this says what it counts as, chosen from its station. */
+  disciplines?: DisciplineDef[];
+}
+
+/**
+ * A craft DISCIPLINE, authored in `database/pawns/jobs.jsonc` under `disciplines`. A parent nests leaf
+ * disciplines via `subjobs` (tailoring → leatherworking/weaving); a flat discipline (metalworking) has
+ * none. `station` is the effects-flag matcher that routes a craft order here (an effects-flag name,
+ * `a|b` = either flag, or the special `foodOutput`). NOT a `Job['type']` — every craft runs the single
+ * `craft` handler; a discipline only tags/routes it for labor priority, stats and tools. Parsed by
+ * `services/jobs/disciplineTree.ts`.
+ */
+export interface DisciplineDef {
+  id: string;
+  label: string;
+  station?: string;
+  subjobs?: DisciplineDef[];
 }
 
 export interface WorkCategory {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
-import { craftWorkCategory } from '$lib/game/services/jobs/craftDiscipline';
+import { craftWorkCategory, craftDiscipline } from '$lib/game/services/jobs/craftDiscipline';
 import { scaleWeaponQuality } from '$lib/game/core/itemQuality';
 import { itemService } from '$lib/game/services/ItemService';
 
@@ -124,9 +124,10 @@ describe('pawn skill effects', () => {
     // NOT a reduced amount — so a qty-1 rare drop can never be rounded away by low skill.
     expect(unskilled, 'unskilled butcher still gets the full base drop (no sub-1 penalty)').toBe(10);
     expect(master, 'a skilled butcher renders MORE off the same carcass than an unskilled one').toBeGreaterThan(unskilled);
-    // recipe→discipline routing: a butcher-spot carcass order routes to the `butchery` discipline
-    // (so its own *_speed/_quality stats + tools apply), not generic crafting.
-    expect(craftWorkCategory({ item: { id: 'venison' }, stationType: 'butcher_spot' })).toBe('butchery');
+    // recipe→discipline routing: a butcher-spot carcass order routes to the `butchery` LEAF discipline
+    // (its own *_speed/_quality/_yield stats + tools apply), which nests under the Cooking parent category.
+    expect(craftDiscipline({ item: { id: 'venison' }, stationType: 'butcher_spot' })).toBe('butchery');
+    expect(craftWorkCategory({ item: { id: 'venison' }, stationType: 'butcher_spot' })).toBe('cooking');
     expect(craftWorkCategory({ item: { id: 'copper_bar' }, stationType: 'stone_forge' })).toBe('metalworking');
   });
 

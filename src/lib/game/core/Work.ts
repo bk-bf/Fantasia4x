@@ -104,13 +104,35 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     baseEfficiency: 1.0
   },
   {
+    // Soft-goods PARENT (jobs.jsonc discipline tree). Splits into the Leatherwork + Weaving subjobs;
+    // a craft order at a tannery/loom routes here, and the leaf drives its stats/tools.
+    id: 'tailoring',
+    name: 'Tailoring',
+    description: 'Work hides and fibres into leather, cloth, and finished apparel',
+    color: '#A1887F',
+    primaryStat: 'dexterity',
+    secondaryStat: 'intelligence',
+    baseEfficiency: 1.0
+  },
+  {
     id: 'leatherworking',
-    name: 'Leatherworking',
-    description: 'Process hides into leather and create leather goods',
+    name: 'Leatherwork',
+    description: 'Flesh, curry, and sew hides into leather goods',
     color: '#8D6E63',
     toolsRequired: ['flint_knife', 'iron_knife', 'steel_knife'],
     primaryStat: 'dexterity',
     secondaryStat: 'intelligence',
+    baseEfficiency: 1.0
+  },
+  {
+    // Stone-shaping PARENT: one skill across the whole game (Knapping → Masonry → Lapidary), so the
+    // stone specialist never goes obsolete when metal arrives.
+    id: 'stoneworking',
+    name: 'Stoneworking',
+    description: 'Shape stone — chipped tools, dressed blocks, and cut gems',
+    color: '#78909C',
+    primaryStat: 'strength',
+    secondaryStat: 'dexterity',
     baseEfficiency: 1.0
   },
   {

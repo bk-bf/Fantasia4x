@@ -40,10 +40,15 @@
     selectedColumn = selectedColumn === id ? null : id;
   }
 
-  // ── Subjobs: splittable categories (construction = build/demolish/refuel/repair, hauling =
-  // haul/fetch) can be right-click-EXPANDED to rank their job types WITHIN the parent. ───────────────
+  // Top-level Work-tab categories = every WorkCategory EXCEPT the craft-discipline leaves
+  // (leatherworking, butchery): those appear only as subjobs of their parent (Tailoring, Cooking).
+  const TOP_CATEGORIES = WORK_CATEGORIES.filter((wc) => !jobService.isCraftSubjob(wc.id));
+
+  // ── Subjobs: a splittable category (Construction = Build/Demolish/Repair, Tailoring =
+  // Leatherwork/Weaving, Cooking = Meals/Butchery/Baking/Brewing) can be right-click-EXPANDED to rank
+  // its sub-tasks WITHIN the parent. ────────────────────────────────────────────────────────────────
   const subjobsByCat: Record<string, { id: string; label: string }[]> = {};
-  for (const wc of WORK_CATEGORIES) subjobsByCat[wc.id] = jobService.getSubjobsForCategory(wc.id);
+  for (const wc of TOP_CATEGORIES) subjobsByCat[wc.id] = jobService.getSubjobsForCategory(wc.id);
 
   // Which splittable columns are currently expanded (persisted across tab toggles).
   let expanded = $state<string[]>(persisted('work.expandedCols', []) ?? []);
@@ -62,7 +67,7 @@
   // header row and every pawn row, so they can't drift.
   let columns = $derived.by<Col[]>(() => {
     const cols: Col[] = [];
-    for (const wc of WORK_CATEGORIES) {
+    for (const wc of TOP_CATEGORIES) {
       const subs = subjobsByCat[wc.id];
       cols.push({
         kind: 'cat',
@@ -119,7 +124,7 @@
     const map: Record<string, Record<string, WorkMods>> = {};
     for (const pawn of pawns) {
       const row: Record<string, WorkMods> = {};
-      for (const wc of WORK_CATEGORIES) {
+      for (const wc of TOP_CATEGORIES) {
         row[wc.id] = pawnStatService.getWorkModifiers(pawn, wc.id);
         // Subjob mods: each reads its own `*_speed`/quality with the category as per-axis fallback, so
         // an expanded cell + its tooltip show the pawn's actual aptitude for THAT subjob.
@@ -135,7 +140,7 @@
     const map: Record<string, Record<string, CellRank>> = {};
     for (const pawn of pawns) {
       const eff: Record<string, number> = {};
-      for (const wc of WORK_CATEGORIES) {
+      for (const wc of TOP_CATEGORIES) {
         // Non-skill tasks (hunting = combat, hauling = carrying) are excluded from the best/weakest
         // medal ranking — they're not learned skills, so ranking them alongside crafts is nonsense
         // (and hunting, being combat-driven, was topping every colonist). Leaving them out of `eff`

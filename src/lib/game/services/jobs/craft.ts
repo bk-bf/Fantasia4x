@@ -16,7 +16,7 @@ import { itemService } from '../ItemService';
 import { recipeService } from '../RecipeService';
 import { pawnStatService } from '../PawnStatService';
 import { buildingService } from '../BuildingService';
-import { craftWorkCategory } from './craftDiscipline';
+import { craftDiscipline, disciplineParent } from './craftDiscipline';
 import { rollCraftQuality, qualityMultiplier } from '../../core/itemQuality';
 import { rollFamed, rollFamedIdentity } from '../../core/famedNames';
 import { itemDefById } from '../../core/itemDefs';
@@ -166,8 +166,13 @@ export function complete(job: Job, gs: GameState): GameState {
   // station's `butcheryYieldBonus`; ordinary crafts are untouched.
   let skillYieldMult = 1;
   if (pawn) {
-    const discipline = craftWorkCategory(entry);
-    const mods = pawnStatService.getWorkModifiers(pawn, discipline, undefined, 'crafting');
+    const discipline = craftDiscipline(entry); // the LEAF (so butchery_yield fires; falls back to parent)
+    const mods = pawnStatService.getWorkModifiers(
+      pawn,
+      discipline,
+      undefined,
+      disciplineParent(discipline)
+    );
     const axis = mods.quality ?? 1;
     // A yield BONUS only (floored at 1): a skilled butcher renders MORE off a carcass, but a poor one
     // still gets the full base drop — never a penalty. Critical because the signature drops (great_fang,

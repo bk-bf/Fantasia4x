@@ -102,6 +102,19 @@ gap in the grid, deliberately slotted to a build.
 - [ ] Keep the grid in sync with the AUDIT class/build audit — this section is its GEAR-supply side.
 
 ## Phasing
+- [x] **Phase 0 — job-registry unification (2026-07-25):** crafts now nest under a parent category the same
+      way Construction nests Build/Repair, instead of being flat top-level disciplines. `jobs.jsonc` → `{jobs,
+      disciplines}` (nested tree); new pure `services/jobs/disciplineTree.ts` parses it; a craft resolves to a
+      LEAF discipline (stat/quality/tools) under a PARENT category (labor priority/XP). New parents `tailoring`
+      {leatherwork, weaving}, `stoneworking` {knapping, masonry, lapidary}; `cooking` gains {meals, butchery,
+      baking, brewing}; `alchemy` gains {herbalism, potions}; `metalworking` stays flat. Leaves share the parent
+      skill (like repair→construction). Verified: `pnpm check` 0 errors, full suite 1141/1141, leather-chain +
+      butchery headless E2E green, Work tab nests via `getSubjobsForCategory`. New leaves route as B/C/D wire
+      their stations; only existing-flag stations (tannery→Leatherwork, butcher→Butchery, campfire→Meals,
+      apothecary→Potions, anvil→Metalworking) route live so far. **Station routing then completed** (added
+      leaf effect-flags): looms→Weaving, masons_bench→Masonry, lapidary_bench→Lapidary (fixing its old
+      mis-route to alchemy), oven/quern→Baking, fermenter→Brewing, hide_rack→Leatherwork. Only **Knapping**
+      and **Herbalism** stay unrouted — they need per-recipe splits out of the mixed `craft_spot` (tail of D).
 - [ ] **Phase 1 (fix now):** `tailoring` category + leatherwork/weaving subjobs + the kits; the active flesh (A1)
       + curry (A4) steps, per-animal; retarget beast gear to `prime_<animal>_leather`. The "fix tailoring & tools" deliverable.
 - [ ] **Phase 2:** route wicker/basketry + cloth into weaving (C); the wound-medicine pass (AUDIT §4, herbalism).

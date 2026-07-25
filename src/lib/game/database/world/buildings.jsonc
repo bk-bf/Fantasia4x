@@ -403,7 +403,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"craftingEnabled": true},
+    "effects": {"masonryEnabled": true, "craftingEnabled": true},
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
   },
@@ -543,7 +543,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"craftingEnabled": true},
+    "effects": {"leatherworkingEnabled": true, "craftingEnabled": true},
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
   },
@@ -1672,7 +1672,7 @@
     "populationRequired": 1,
     "researchRequired"  : null,
     "upkeepCost"        : {},
-    "effects"           : {"craftingEnabled": true},
+    "effects"           : {"weavingEnabled": true, "craftingEnabled": true},
     "storageCapacity"   : {},
     "buildingState"     : {"isUnique": false}
   },
@@ -1691,7 +1691,7 @@
     "populationRequired": 1,
     "researchRequired": "arcane_lapidary",
     "upkeepCost": {},
-    "effects": {"craftingEnabled": true, "tier": 1, "arcane": 1},
+    "effects": {"lapidaryEnabled": true, "craftingEnabled": true, "tier": 1, "arcane": 1},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 2}
   },
@@ -1863,7 +1863,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"craftingEnabled": true, "cooking": 1},
+    "effects": {"bakingEnabled": true, "craftingEnabled": true, "cooking": 1},
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
   },
@@ -1882,7 +1882,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"craftingEnabled": true, "cooking": 1},
+    "effects": {"bakingEnabled": true, "craftingEnabled": true, "cooking": 1},
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
   },
@@ -1902,7 +1902,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"craftingEnabled": true, "cooking": 1, "fermentation": 1},
+    "effects": {"brewingEnabled": true, "craftingEnabled": true, "cooking": 1, "fermentation": 1},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 4}
   },
@@ -1962,7 +1962,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"craftingEnabled": true, "tier": 1},
+    "effects": {"weavingEnabled": true, "craftingEnabled": true, "tier": 1},
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
   },
@@ -2228,7 +2228,7 @@
     "populationRequired": 1,
     "researchRequired": "runic_inscription",
     "upkeepCost": {},
-    "effects": {"craftingEnabled": true, "tier": 3, "craftingBonus": 0.4, "arcane": 1},
+    "effects": {"weavingEnabled": true, "craftingEnabled": true, "tier": 3, "craftingBonus": 0.4, "arcane": 1},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 2}
   },
