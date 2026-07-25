@@ -41,7 +41,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Hunting',
     description: 'Hunt animals for meat, hide, and other materials',
     color: '#8D4E85',
-    toolsRequired: ['stone_spear', 'iron_spear', 'shortbow', 'longbow'],
+    // No tool gate: hunting is gated by the WEAPON the pawn carries (combat), not a harvest tool.
     primaryStat: 'dexterity',
     secondaryStat: 'perception',
     baseEfficiency: 1.0
@@ -67,7 +67,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Fishing',
     description: 'Catch fish from rivers, lakes, and streams',
     color: '#4FC3F7',
-    toolsRequired: ['digging_stick', 'fishing_spear', 'fishing_rod'],
+    // No tool gate yet: fishing has no world content (0 fish nodes). Add a rod when fishing ships.
     primaryStat: 'dexterity',
     secondaryStat: 'perception',
     baseEfficiency: 1.0
@@ -154,7 +154,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Alchemy',
     description: 'Create potions, elixirs, and magical compounds',
     color: '#9C27B0',
-    toolsRequired: ['alchemical_apparatus'],
+    // No tool gate: alchemy is STATION-gated (alchemy_lab / apothecary), not tool-gated.
     skillRequired: 'alchemy',
     primaryStat: 'intelligence',
     secondaryStat: 'perception',

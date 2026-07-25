@@ -440,12 +440,84 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       before a threat-present breakdown lands). Couldn't force it reliably; the breakdown FSM branch itself is
       proven. **`BLOOD_HUNT` is now driven** (see the Needs & mood / blood-hunt entries).
 
+## Class/build-centered gear, apparel & medicine audit — ⭐ NEW (proposed 2026-07-25)
+
+> **Why:** we're striving for distinct pawn BUILDS off `stats.jsonc`/`traits.jsonc`, but the builds aren't
+> documented anywhere, so gear gaps are invisible. Symptom the user flagged: **end-game apparel is expansive,
+> early-mid (t0–t2) is thin** (t0 has 7 pieces, mostly wicker/rawhide; medicine is 2 items). This section is the
+> LENS: define builds → check each has a gear/weapon/tool/apparel path at every tier → fill the gaps.
+
+### 1. Build/class map (the evaluation lens) — [ ] establish + track in `docs/game/DESIGN.md`
+Archetypes from the stat model (each row = primary stats → the gear it *wants*; use it to find holes):
+| Build | Key stats | Weapons | Armour | Tools/gear it wants |
+| --- | --- | --- | --- | --- |
+| Bruiser | STR/CON | mauls, greataxes, cleavers (blunt/cleave) | heavy plate | high carry, big two-handers |
+| Duelist / skirmisher | DEX | finesse blades (rapier/seax), spears | light/medium, dodge | attack-speed, parry shield |
+| Marksman / sniper | PER + DEX | bows, crossbows | light | quivers, bracers, aim gear |
+| Tank | CON + mass | one-hand + shield | heaviest plate | shields (block), knockdown-resist |
+| Skirmish-scout | DEX/PER | sling, short bow, dagger | light/quiet | stealth gear, night-vision, soft boots |
+| Artisan/smith | INT/DEX | — | work apron | crafting-quality tools (tongs, kit) |
+| Medic | INT | — | — | physicians_kit + wound medicines (§4) |
+| Face/leader | CHA | — | regalia | prestige robes, circlets, trade goods |
+- [ ] For each build × tech tier (primitive1-3 / copper / bronze / iron / steel / runed), mark whether a viable
+      weapon + armour + role-tool exists; the empties are the backlog. (This audit *is* that grid.)
+
+### 2. Early–mid apparel gap (t0–t2) — [ ] propose-then-fill (historically real, no conflict with existing)
+t0 today = wicker_vest, raw_hide_vest, padded_cap, rawhide wraps (shoulder/arm/leg), wattle_buckler — **no
+primitive full-body/leg/warmth clothing, no cloth base layer.** Proposed additions (all first-3-tier, non-conflicting):
+- [ ] **`woven_grass_cloak`** / **`rush_cape`** (t0, foraged grass+cordage) — cheap warmth/rain, scout-light.
+- [ ] **`bast_fiber_tunic`** / **`nettle_shift`** (t0–1, plant fiber) — the missing CLOTH base layer before linen.
+- [ ] **`fur_wrap`** / **`hide_leggings`** / **`hide_cap`** (t0, raw pelt/hide) — cold-region body/leg/head before boiled leather.
+- [ ] **`bark_sandals`** / **`hide_moccasins`** (t0) — the missing primitive FOOT slot (boots start at t1 tallow_boots).
+- [ ] slot-coverage pass: ensure head/body/legs/feet/hands each have a t0 AND t1 option per build lean (light vs warm).
+
+### 3. Tailoring category + tools — [ ] FIX FIRST (structure to confirm, then build)
+- New parent work category **`tailoring`** with SUBJOBS (mirrors construction's build/repair/deconstruct): **`leatherwork`**
+  (leather → leather gear) + **`weaving`/`clothier`** (fiber/cloth → cloth gear). Subjob stats key off the job id and
+  fall back to `tailoring_*`. **Tanning stays a PASSIVE material step (not tailoring, no tool).**
+- Tools (durable, NON-organic per the user's rule — metal implements + a leather roll/thread binding, butcher's-kit style;
+  NO handle sub-chain): **`sewing_kit`** (iron) + **`tailors_kit`** (steel). Gate the ~18 active leather/cloth GEAR recipes
+  at **iron+ tier** — **primitive apparel is wicker/woven, needs no needle**, so it stays ungated.
+- ⚠ **Structure to confirm before the refactor:** the current `leatherworking` category/discipline actually means TANNING
+  (passive). Do we (a) rename it `tanning` and make `tailoring` the new craft parent, or (b) keep `leatherworking` as the
+  tailoring parent and treat tanning as a passive non-tool step under it? (Leaning (a) — cleaner names.)
+
+### 4. Wound-specific tiered medicine — [ ] propose-then-build (AFTER tailoring)
+Design rule (user): **TOOL = non-organic & durable → SPEED; CONSUMABLE = organic → QUALITY**, used together. No
+"herbal kit" (a durable tool made of one herb). Today: only `woundwort` + `chewed_poultice`.
+- [ ] **Tool:** `physicians_kit` (iron implements+roll) → `surgeons_kit` (steel) — SPEEDS the tend job (caretaking tool-boost).
+- [ ] **Consumables — 1 per `wounds.jsonc` type per tier** (organic, consumed per tend, raises that wound's tend QUALITY):
+      grid = {cut, puncture, crush, fracture, burn, frostbite, scorch} × {t1 crude, t2, t3}. Proposed t1 line:
+      cut→`styptic_poultice` · puncture→`packing_moss` · crush→`arnica_salve` · fracture→`splint_wrap`(+comfrey) ·
+      burn→`tallow_burn_salve` · frostbite→`warming_liniment` · scorch→`cooling_clay_pack`; higher tiers = honey/
+      distilled-tincture/apothecary versions (ties into the alchemy apothecary already built).
+- [ ] New mechanic on the tend job: a matching wound-medicine in stock is consumed and boosts the dressing quality for
+      THAT wound type (tool speeds, medicine qualities) — the general tool/consumable split, applied to caretaking.
+
 ## Material & production reworks (PROPOSED — track only, not implemented)
 
 > These supersede the "shadowed recipe" ⚠ notes above (lines: tanning_bucket_station, blast_furnace,
 > the 7-shadowed list): the shadows were masking that whole CHAINS need reworking, not just
 > de-duplicating. The shadow-bug's own fix = **option 1, prune the loser** — but for tanning & steel
 > the prune is absorbed into the reworks below (the "losing" recipes are being replaced, not just cut).
+
+### Runic / magic-reagent tier redesign — ⭐ PROPOSED (track only, 2026-07-25; user: "needs a separate pass")
+> The runic tier is half-built: three products are **dead-ended** (found in the tool-tier audit). This is a
+> DESIGN pass, not a prune — the user wants a real reagent economy here, not the products deleted.
+- [ ] **`magic_alloy_bar`** (`smelt_magic_alloy`: steel + gem_dust) has **NO consumer** — needs the `runed`-tier
+      gear chain (runed weapons/armour/tools) that currently exists only as item stubs.
+- [ ] **`arcane_resin`** (`make_arcane_resin`: resin + gem_dust) has **NO consumer** — needs a rune-binding /
+      enchant recipe (bind a rune/enchant to gear; or a magical coating).
+- [ ] **`mana_crystal`** (mined at `mana_crystal_vent`) is a **dead-end drop**: its only use `grind_mana_crystal`
+      is shadowed by `grind_gem_dust` (both → gem_dust). Give `mana_crystal` a DISTINCT output (a mana-infusion
+      reagent, not gem_dust) so it stops being shadowed and gains a purpose.
+- [ ] **Magic-wood ash economy (user idea, liked):** burning the four magic logs (heartwood / moonwood /
+      ironwood / emberwood) yields **magic ash(es)** — a HIGHER-TIER reagent, **keeping the ordinary ash
+      byproduct** (which the user wants to keep). Magic tree → magic ash → the runic reagents above. This gives
+      the tier its input economy and makes `make_ash`'s shadow moot (magic ashes are distinct items). Open
+      question to settle in the pass: one generic `arcane_ash` vs per-wood ashes with different reagent roles.
+- Net: build **magic tree → magic ash → {arcane_resin / rune-binding / runed gear}** as one chain, giving the
+  three dead products real consumers. Separate feature pass; do not prune the recipes in the meantime.
 
 ### Tanning chain redesign + hide/leather variety split — ✅ COMPLETE (re-audited headless 2026-07-23)
 Reference: VilesMods "Hell-Bent for Leather" (mandatory tanning step, per-animal leathers) + Hardcore SK.
