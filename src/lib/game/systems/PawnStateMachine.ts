@@ -143,6 +143,7 @@ import {
   handleHunting,
   handleBloodHunt
 } from './pawn/handlers/combat';
+import { handleRescuing } from './pawn/handlers/rescue';
 import {
   handleCrying,
   handleHiding,
@@ -1460,6 +1461,7 @@ const STATE_HANDLERS: Record<string, PawnHandler> = {
   [PAWN_STATE.FLEEING]: handleFleeing,
   [PAWN_STATE.HUNTING]: handleHunting,
   [PAWN_STATE.BLOOD_HUNT]: handleBloodHunt,
+  [PAWN_STATE.RESCUING]: handleRescuing,
   [PAWN_STATE.CRYING]: handleCrying,
   [PAWN_STATE.HIDING]: handleHiding,
   [PAWN_STATE.PANICKING]: handlePanicking

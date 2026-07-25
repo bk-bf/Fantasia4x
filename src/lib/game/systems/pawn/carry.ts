@@ -14,6 +14,7 @@
 import type { GameState, Pawn, ItemInstance } from '../../core/types';
 import { itemService } from '../../services/ItemService';
 import { socialService } from '../../services/SocialService';
+import { PAWN_STATE } from './pawnStates';
 
 /** The hidden stand-in item id (items.jsonc). */
 export const CARRIED_PAWN_ITEM = 'carried_pawn';
@@ -73,13 +74,16 @@ export function freeDropTileNear(
 /** Does this pawn validly count `victim` as carried right now? — it's drafted with the live rescue
  *  order for that victim. (The carry is drafted-only, so this is the single source of "still carrying".) */
 function isActivelyCarrying(carrier: Pawn | undefined, victimId: string): boolean {
-  return (
-    !!carrier &&
-    carrier.isAlive !== false &&
+  if (!carrier || carrier.isAlive === false) return false;
+  // (a) the DRAFTED rescue order (player / auto rescuePawn command).
+  if (
     carrier.drafted === true &&
     carrier.draftTarget?.type === 'rescue' &&
     carrier.draftTarget.victimId === victimId
-  );
+  )
+    return true;
+  // (b) the AUTO caretaking rescue JOB — the `Rescuing` FSM state carrying its patient.
+  return carrier.currentState === PAWN_STATE.RESCUING && carrier.activeJob?.patientId === victimId;
 }
 
 /** Pick `victim` up into `carrier`'s arms: hide the victim (carriedBy) and add the named stand-in to

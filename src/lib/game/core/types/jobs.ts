@@ -104,6 +104,7 @@ export interface Job {
     | 'fetch' // ADR-016: carry a reserved input stack from stockpile to a workstation tile
     | 'craft'
     | 'caretake' // ADR-017: a medic walks to a resting wounded patient and dresses its wounds
+    | 'rescue' // a caretaker carries a downed (Collapsed) colonist to shelter (auto, non-drafted)
     | 'eat'
     | 'sleep'
     | 'light'
@@ -113,7 +114,8 @@ export interface Job {
     | 'plant'; // PRODUCTION-CHAIN-II §F: sow a crop on a grow-zone tile
   targetX: number;
   targetY: number;
-  /** caretake: id of the wounded pawn being tended (the job targets that pawn's tile). */
+  /** caretake: id of the wounded pawn being tended; rescue: id of the downed pawn being carried
+   *  (the job targets that pawn's tile). */
   patientId?: string;
   resourceId?: string; // harvest / haul / fetch: which resource
   droppedItemId?: string; // haul / fetch: which DroppedItem to pick up

@@ -30,6 +30,7 @@ import * as deconstruct from './jobs/deconstruct';
 import * as fetch from './jobs/fetch';
 import * as craft from './jobs/craft';
 import * as caretake from './jobs/caretake';
+import * as rescue from './jobs/rescue';
 import * as refuel from './jobs/refuel';
 import * as repair from './jobs/repair';
 import * as plant from './jobs/plant';
@@ -67,6 +68,7 @@ type JobPoolType =
   | 'fetch'
   | 'craft'
   | 'caretake'
+  | 'rescue'
   | 'refuel'
   | 'repair'
   | 'plant';
@@ -116,6 +118,7 @@ class JobServiceImpl {
     fetch: { generate: fetch.generate, complete: fetch.complete },
     craft: { generate: craft.generate, complete: craft.complete },
     caretake: { generate: caretake.generate, complete: caretake.complete },
+    rescue: { generate: rescue.generate, complete: rescue.complete },
     refuel: { generate: refuel.generate, complete: refuel.complete },
     repair: { generate: repair.generate, complete: repair.complete },
     plant: { generate: plant.generate, complete: plant.complete }

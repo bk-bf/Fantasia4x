@@ -1470,6 +1470,25 @@ export const COMMANDS: Record<string, Cmd> = {
     })
   }),
 
+  /** DEBUG: give a pawn a lineage BLOOD NEED (LINEAGES-II vampire/werewolf) so the bloodHunger →
+   *  bloodthirst → BLOOD_HUNT loop can be driven headless. `kind` 'humanoid' = vampiric (feeds on
+   *  colonists), 'carcass' = feeds on kills; optional `bloodHunger` seeds the meter (100 = ready to rage
+   *  on the next hourly tick); `rage` stamps the bloodthirst condition immediately (seizes the FSM now). */
+  devSetBloodNeed: (
+    s,
+    p: { pawnId: string; kind: 'carcass' | 'humanoid'; bloodHunger?: number; rage?: boolean }
+  ) => ({
+    ...s,
+    pawns: s.pawns.map((pw) => {
+      if (pw.id !== p.pawnId) return pw;
+      const needs = { ...(pw.needs ?? {}) };
+      if (p.bloodHunger !== undefined) needs.bloodHunger = Math.max(0, Math.min(100, p.bloodHunger));
+      const conditionTimers = { ...(pw.conditionTimers ?? {}) };
+      if (p.rage) conditionTimers.bloodthirst = Math.max(conditionTimers.bloodthirst ?? 0, 6 * 750);
+      return { ...pw, bloodNeedKind: p.kind, needs, conditionTimers };
+    })
+  }),
+
   /** DEBUG: bank a growth offer on a pawn right now (outside the seasonal cadence) — same roll as
    *  an earned one, incl. the lineage-progression moment. `doubled` = birthday-strength rolls. */
   devGrantGrowth: (s, p: { pawnId: string; doubled?: boolean }) => ({

@@ -341,6 +341,25 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
 
   let gs = jobService.claimJob(pawn.id, job.id, gameState);
 
+  // Rescue is a CARRY job (like haul, no tool / no work-accrual): claim it and enter the Rescuing FSM
+  // state — handleRescuing walks to the downed colonist, lifts it, and carries it to shelter.
+  if (job.type === 'rescue') {
+    return mutatePawn(gs, pawn.id, (p) => {
+      p.currentState = PAWN_STATE.RESCUING;
+      p.activeJob = {
+        type: 'rescue',
+        jobId: job.id,
+        patientId: job.patientId,
+        targetX: job.targetX,
+        targetY: job.targetY,
+        progress: 0,
+        timeRequired: 1,
+        startedTurn: gameState.turn
+      };
+      p.jobQueue = queuePreview;
+    });
+  }
+
   // ADR-009 step 2: if this is a tool-gated job and the pawn isn't already holding the tool, detour
   // to grab one from colony stock first (carried in inventory, not belted), THEN proceed to the job.
   // `toolFetch` makes the first leg target the tool's stockpile tile; the pickup re-targets the site.

@@ -360,13 +360,16 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       **stands back up (Collapsed → Sleeping, resting to mend)**. **RESCUING** carry works: `rescuePawn` drafts an
       able pawn with a `rescue` order → it walks to the downed colonist and **lifts it (`carriedBy` set)** →
       carries to the `hay_bed` shelter (`GameEngineImpl._processDraftOrders` + `carry.ts`).
-- [x] ⚠ **FINDING — `PAWN_STATE.RESCUING` is a DEAD state.** It's defined in `pawnStates.ts` AND has a handler
-      slot registered (`[PAWN_STATE.RESCUING]: handleRescuing`), but **nothing ever assigns it** — the carry runs
-      entirely on the drafted `rescue` `draftTarget` + `carriedBy`/`carried_pawn` item, so a carrying pawn's
-      `currentState` never becomes `'Rescuing'` (headless-confirmed: victim picked up, state never 'Rescuing').
-      Same dead-code class as `butchery_yield`/`materialBonuses`. **User call (not fixed):** (a) set
-      `currentState = RESCUING` on the carrier during the carry so the panel/UI reads "Rescuing", or (b) delete the
-      dead state + `handleRescuing` handler. `handleRescuing` is unreachable either way.
+- [x] ⚠→**FIXED — `RESCUING` is now a LIVE state, driven by an AUTO caretaking rescue JOB** (user chose "wire it
+      as a caretaking job, not drafted"). Was dead: defined in `pawnStates.ts` but never assigned (the carry ran
+      only on the drafted `rescue` order). **Fix:** a new `rescue` colony job type (jobs.jsonc + `Job['type']` +
+      JobService handler, guarded by `jobRegistry.test.ts`) — `jobs/rescue.ts` generates a rescue job for each
+      downed (Collapsed) colonist when shelter exists; a caretaker CLAIMS it (caretaking labor, no draft) and
+      enters the `Rescuing` FSM state; the new `handleRescuing` walks to the colonist, lifts it, carries it to the
+      nearest shelter and lays it down (`carry.ts` helpers). Also fixed `isActivelyCarrying` (the reconcile safety
+      net) to recognise a `Rescuing` carrier, not just the drafted one. **Verified headless** (`fsmTransitions.test.ts`
+      `[FSM auto-rescue]`): an idle caretaker enters Rescuing and delivers the downed colonist to the bed, with NO
+      pawn drafted. The drafted `rescuePawn` command still works (manual override).
 - [x] **Stuck / oscillation invariant** — a provisioned 6-pawn colony (all needs live: craft_spot/campfire/2×bed/
       well/stool) over ~16000 ticks: every pawn cycled through **≥2 states** (none frozen), NO pawn wedged in a
       MovingTo*/Hauling state across consecutive samples (longest transient run = 1 sample), zero deaths from a
@@ -377,13 +380,18 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [x] **Mental breakdown is uncontrollable** — a sustained-miserable 10-pawn colony produced an uncontrollable
       break (reached **Hiding**); DRAFTING the broken pawn is refused — it stays in the breakdown (Hiding→Crying)
       and `drafted` drops to false (breakdown outranks draft, like Collapsed). Crying/Hiding driven.
-- [~] **Undriven tails** (honest gaps, not blocked by defects): **`PANICKING`** is the same breakdown lifecycle
-      as the driven Crying/Hiding but its `fleeing` kind is gated on a combat threat being adjacent at the
+- [x] **`BLOOD_HUNT` now DRIVEN HEADLESS** (`bloodHunt.test.ts`, closing the old `[~]`). Added the `devSetBloodNeed`
+      lever (grant a lineage `bloodNeedKind` + seed `bloodHunger`/`rage` — the harness couldn't spawn a blood-need
+      pawn before). Verified: an unfed lone vampire fills `bloodHunger` and the rage SEIZES it into the
+      uncontrollable **BloodHunt** state (draft refused, like Collapsed); a vampire beside a colonist FEEDS on it
+      (prey blood 170→158), sates (`bloodHunger`→0) and returns to control. The `handleBloodHunt` logic was sound —
+      the gap was purely testability. (Design note: a vampire near colonists auto-feeds hourly, so BloodHunt only
+      fires when it can't feed — an isolated/starved lineage pawn.)
+- [~] **Remaining undriven tails** (honest gaps, not blocked by defects): **`PANICKING`** is the same breakdown
+      lifecycle as the driven Crying/Hiding but its `fleeing` kind is gated on a combat threat being adjacent at the
       breakdown-roll moment (which the combat interrupt otherwise pre-empts) — not force-driven here.
-      **`BLOOD_HUNT`** needs a lineage pawn with `bloodNeedKind` (vampire/werewolf) the harness doesn't spawn yet
-      (also tracked in Needs & mood). **`MOVING_TO_DEPOSIT`** didn't surface because `buildScenario` makes the
-      whole map a stockpile (drops absorbed, no haul-to-deposit) — the haul→deposit pipeline is exercised in the
-      crafting audits instead.
+      **`MOVING_TO_DEPOSIT`** didn't surface because `buildScenario` makes the whole map a stockpile (drops
+      absorbed, no haul-to-deposit) — the haul→deposit pipeline is exercised in the crafting audits instead.
 
 ## Material & production reworks (PROPOSED — track only, not implemented)
 

@@ -527,12 +527,15 @@ export interface Pawn {
 
   // Job payload for active state machine job
   activeJob?: {
-    /** Phase 5: 'harvest'|'construct'|'craft'|'haul'|'fetch' use work-point jobs; 'need' for eat/sleep */
-    type: 'harvest' | 'construct' | 'craft' | 'haul' | 'fetch' | 'need' | 'deconstruct' | 'plant';
+    /** Phase 5: 'harvest'|'construct'|'craft'|'haul'|'fetch' use work-point jobs; 'need' for eat/sleep;
+     *  'rescue' is a carry job (walk→lift→carry a downed colonist to shelter, FSM-driven). */
+    type: 'harvest' | 'construct' | 'craft' | 'haul' | 'fetch' | 'need' | 'deconstruct' | 'plant' | 'rescue';
     /** Phase 5a: id of the Job in gameState.jobs[] (null for need-type jobs) */
     jobId?: string;
     targetX: number;
     targetY: number;
+    /** rescue: id of the downed colonist being carried to shelter. */
+    patientId?: string;
     resourceId?: string;
     droppedItemId?: string; // haul / fetch: id of the DroppedItem being picked up
     buildingId?: string; // for construct jobs; fetch: the station building

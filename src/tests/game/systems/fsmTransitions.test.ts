@@ -225,26 +225,26 @@ describe('FSM transitions & interrupt priority', () => {
     expect(anyDead, 'no pawn died from a behavioural deadlock in a provisioned colony').toBe(false);
   });
 
-  it('RESCUING: a downed colonist is carried to shelter by an able pawn', async () => {
+  it('AUTO RESCUE (caretaking job, NOT drafted): an idle caretaker carries a downed colonist to shelter, entering Rescuing', async () => {
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
         seed: 107,
         map: { w: 16, h: 16 },
-        workReady: true,
+        workReady: true, // caretaking labor on for everyone
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
         pawns: [
           { count: 1, skillLevel: 5, stats: { strength: 4, constitution: 6, dexterity: 8 } }, // frail victim
-          { count: 2, skillLevel: 20 } // able rescuers
+          { count: 2, skillLevel: 20 } // able caretakers
         ],
-        buildings: [{ id: 'hay_bed' }], // a rest building → hasShelter true
+        buildings: [{ id: 'hay_bed' }], // a rest building → shelter to carry to
         items: { spit_meat: 10 },
         seedEntities: false
       })
     );
     const victim = pawn(s, 0);
     const vpos = victim.position!;
-    // down the frail pawn with goblins packed on it only
+    const bed = (gs(s).buildings ?? []).find((b) => (b as { type?: string }).type === 'hay_bed') as { x: number; y: number };
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1]] as const)
       s.command({ type: 'devSpawnMobAt', payload: { creatureId: 'goblin', x: vpos.x + dx, y: vpos.y + dy } } as never);
     for (let i = 0; i < 80 && stateOf(s, victim.id) !== 'Collapsed'; i++) {
@@ -252,32 +252,28 @@ describe('FSM transitions & interrupt priority', () => {
       if (gs(s).pawns.find((x) => x.id === victim.id)?.isAlive === false) break;
     }
     expect(stateOf(s, victim.id), 'victim is down').toBe('Collapsed');
-    // clear the threat, then let any hurt rescuer settle (a beaten rescuer rests → excluded from rescue).
+    // clear the threat — then issue NO draft/command. An idle caretaker should pick up the rescue as a JOB.
     for (const m of [...(gs(s).mobs ?? [])]) s.command({ type: 'devKillEntity', payload: { id: (m as { id: string }).id } } as never);
-    for (let i = 0; i < 30; i++) s.tick(30); // let bystanders finish healing back to able
-    console.log(`[FSM rescue] pre-rescue states: ${gs(s).pawns.map((p) => `${p.id.slice(-2)}:${p.currentState}`).join(' ')}`);
-    s.command({ type: 'rescuePawn', payload: { victimId: victim.id } } as never);
-    // the rescue ORDER is taken up (an able pawn is drafted with a `rescue` draftTarget) …
-    const ordered = gs(s).pawns.find(
-      (p) => p.id !== victim.id && (p as { draftTarget?: { type?: string } }).draftTarget?.type === 'rescue'
-    );
-    // … then it walks to the victim and PICKS IT UP (the real carry mechanism: `carriedBy` + a
-    // `carried_pawn` inventory item), driven by GameEngineImpl._processDraftOrders.
+    let sawRescuing = false;
     let everCarried = false;
-    let sawRescuingState = false;
-    for (let i = 0; i < 60 && !everCarried; i++) {
-      s.tick(20);
-      const v = gs(s).pawns.find((p) => p.id === victim.id) as { carriedBy?: string };
+    let delivered = false;
+    for (let i = 0; i < 400 && !delivered; i++) {
+      s.tick(3); // fine-grained: the carry is fast, so sample often to catch Rescuing / carriedBy
+      const carrier = gs(s).pawns.find((p) => p.id !== victim.id && p.currentState === 'Rescuing');
+      if (carrier) sawRescuing = true;
+      const v = gs(s).pawns.find((p) => p.id === victim.id) as { carriedBy?: string; position?: { x: number; y: number } };
       if (v.carriedBy) everCarried = true;
-      if (gs(s).pawns.some((p) => p.currentState === 'Rescuing')) sawRescuingState = true;
+      // delivered = the downed colonist has been laid on (or next to) the bed and no longer being carried
+      if (!v.carriedBy && v.position && Math.abs(v.position.x - bed.x) + Math.abs(v.position.y - bed.y) <= 1) delivered = true;
     }
-    console.log(`[FSM rescue] order taken up=${!!ordered}; victim picked up (carriedBy)=${everCarried}; ever entered 'Rescuing' state=${sawRescuingState}`);
-    expect(ordered, 'an able pawn takes up the rescue order (drafted with a rescue target)').toBeTruthy();
-    expect(everCarried, 'the carrier walks to the downed colonist and lifts it (carriedBy set)').toBe(true);
-    // FINDING: `PAWN_STATE.RESCUING` is defined (+ a handler slot) but never assigned — the carry runs on
-    // draftTarget + carriedBy, so the pawn's currentState never becomes 'Rescuing'. Locked here so a future
-    // fix (set the state during the carry) or removal is a deliberate change, not a silent drift.
-    expect(sawRescuingState, "FINDING: the 'Rescuing' FSM state is dead — the carry never sets it").toBe(false);
+    const anyDrafted = gs(s).pawns.some((p) => p.drafted);
+    void everCarried; // the ~1-tick carriedBy window is often skipped by sampling; `delivered` proves the carry
+    console.log(`[FSM auto-rescue] entered Rescuing=${sawRescuing}; carriedBy seen=${everCarried}; delivered to bed=${delivered}; anyone drafted=${anyDrafted}`);
+    // The three signals that prove the feature: the new Rescuing state is LIVE, the downed colonist was
+    // moved from its collapse tile to the shelter, and it all happened as a caretaking JOB (no draft).
+    expect(sawRescuing, 'an idle caretaker took the rescue JOB and entered the (now-live) Rescuing state').toBe(true);
+    expect(delivered, 'the downed colonist was carried to the shelter (bed) and set down').toBe(true);
+    expect(anyDrafted, 'the rescue happened via the caretaking JOB, with NO pawn drafted').toBe(false);
   });
 
   it('BREAKDOWN is an uncontrollable state (draft refused): a broken pawn can\'t be commanded out of it', async () => {
