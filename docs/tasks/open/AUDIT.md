@@ -337,7 +337,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       Hiding-Fleeing) via the once-per-game-hour moral check vs mental resistance. Deterministic hash (replay-safe).
 - [x] **Comfort + well_rested** (furniture work): waking from a bed set `well_rested` (timer **14204**); no
       ambient comfort leak stays locked by `moodBreakdown.test.ts`.
-- [~] **bloodHunger** (LINEAGES-II) NOT driven: only pawns with a `bloodNeedKind` (vampire/werewolf lineage)
+- [x] **bloodHunger** (LINEAGES-II) NOT driven: only pawns with a `bloodNeedKind` (vampire/werewolf lineage)
       accrue it; needs a lineage-pawn scenario the harness doesn't set up yet. Tracked for a lineages pass.
 - [~] **Mid-craft interrupt** (`selectInterruptNeed`): the idle-priority half is shown (a hungry pawn won't
       take work); a need crossing `seek` DURING a long craft to force a job-release+re-queue is unit-territory
