@@ -82,24 +82,24 @@ never strands a pawn). Parent disciplines with construction-style **{subjobs}**:
 - End state: **no generic `crafting` bucket** — every craft routes to a discipline whose specialist stays relevant.
   **Biggest, most invasive part — do LAST.**
 
-## E. Apparel gaps — thin early-mid AND boss-themed high-end
-- [ ] **Early–mid (t0–t2):** historically-real, non-conflicting adds (feed off §B/§C): `woven_grass_cloak`,
-      `bast_fiber_tunic`/`nettle_shift` (the missing CLOTH base layer), `fur_wrap`/`hide_leggings`/`hide_cap`,
-      `hide_moccasins`/`bark_sandals` (the missing primitive FOOT slot); per-slot coverage per build lean (light vs warm).
-- [ ] **Boss-themed gear (T4 → double for T5)** — the apex of the animal-identity principle: **every great/boss mob**
-      (great wolf/bear/boar/weaver, broodmother, sabretooth, cave bear, direwolf, mammoth, hippogriff…) gets a
-      CRAFTABLE piece/set themed after IT — built from its `prime_<animal>_leather` + fang/bone/pelt/horn — NOT a
-      generic "beast plate". Some exist (Direwolf Warcloak, Cave Bear Plate, Horned Helm); extend to a themed
-      weapon/armour/trophy per boss, so a T5 kill visibly reads on the pawn who wears its coat.
-
-## F. Gear passthrough × class/build cross-reference
-A coverage pass tying the crafted gear (this spec's leather/apparel/boss lines + weapons) to the **class/build map
-([AUDIT.md](AUDIT.md) §1)** — the SUPPLY side to that audit's DEMAND side.
-- [ ] Build the grid **build × tier** (bruiser/duelist/marksman/tank/scout/artisan/medic/face × primitive1-3 →
-      copper → bronze → iron → steel → runed → **boss-themed**): mark, per cell, whether a viable **weapon + armour
-      (per slot) + role-tool** exists. Empties = the fill backlog.
-- [ ] Flag builds with no viable path at a tier (e.g. no light/quiet armour for a mid-game scout) as fill targets.
-- [ ] Boss-themed pieces (§E) occupy the top row per build; keep the grid in sync with the AUDIT class/build audit.
+## E. Class/build-driven gear & apparel coverage
+Gear is designed **build-first**, not as a free list: the **class/build map ([AUDIT.md](AUDIT.md) §1)** is the driver
+and the GATE — every apparel/weapon add (early-mid fills AND boss-themed high-end) must earn its place by filling a
+gap in the grid, deliberately slotted to a build.
+- [ ] **Build the grid `build × tier`** (bruiser/duelist/marksman/tank/scout/artisan/medic/face × primitive1-3 →
+      copper → bronze → iron → steel → runed → **boss-themed**): mark per cell whether a viable **weapon + armour
+      (per slot) + role-tool** exists. Empties = the fill backlog; this grid gates every add below. Flag builds with
+      no viable path at a tier (e.g. no light/quiet armour for a mid-game scout) as priority fills.
+- [ ] **Early–mid fills (t0–t2)** — driven by the grid's early empties, per build lean (light vs warm), feeding off
+      §B/§C: the missing CLOTH base layer (`bast_fiber_tunic`/`nettle_shift`, `woven_grass_cloak`), fur/hide pieces
+      (`fur_wrap`/`hide_leggings`/`hide_cap`), the missing primitive FOOT slot (`hide_moccasins`/`bark_sandals`).
+- [ ] **Boss-themed gear (T4 → double for T5)** — the apex of the animal-identity principle AND the grid's top row:
+      **every great/boss mob** (great wolf/bear/boar/weaver, broodmother, sabretooth, cave bear, direwolf, mammoth,
+      hippogriff…) gets a CRAFTABLE piece/set themed after IT — from its `prime_<animal>_leather` + fang/bone/pelt/
+      horn, NOT a generic "beast plate" — and deliberately slotted to a build (direwolf warcloak → scout/skirmisher,
+      cave-bear plate → tank…). Some exist (Direwolf Warcloak, Cave Bear Plate, Horned Helm); extend to a themed
+      weapon/armour/trophy per boss so a T5 kill visibly reads on the pawn who wears its coat.
+- [ ] Keep the grid in sync with the AUDIT class/build audit — this section is its GEAR-supply side.
 
 ## Phasing
 - [ ] **Phase 1 (fix now):** `tailoring` category + leatherwork/weaving subjobs + the kits; the active flesh (A1)
