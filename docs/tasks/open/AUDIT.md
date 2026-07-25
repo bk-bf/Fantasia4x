@@ -471,16 +471,11 @@ primitive full-body/leg/warmth clothing, no cloth base layer.** Proposed additio
 - [ ] **`bark_sandals`** / **`hide_moccasins`** (t0) — the missing primitive FOOT slot (boots start at t1 tallow_boots).
 - [ ] slot-coverage pass: ensure head/body/legs/feet/hands each have a t0 AND t1 option per build lean (light vs warm).
 
-### 3. Tailoring category + tools — [ ] FIX FIRST (structure to confirm, then build)
-- New parent work category **`tailoring`** with SUBJOBS (mirrors construction's build/repair/deconstruct): **`leatherwork`**
-  (leather → leather gear) + **`weaving`/`clothier`** (fiber/cloth → cloth gear). Subjob stats key off the job id and
-  fall back to `tailoring_*`. **Tanning stays a PASSIVE material step (not tailoring, no tool).**
-- Tools (durable, NON-organic per the user's rule — metal implements + a leather roll/thread binding, butcher's-kit style;
-  NO handle sub-chain): **`sewing_kit`** (iron) + **`tailors_kit`** (steel). Gate the ~18 active leather/cloth GEAR recipes
-  at **iron+ tier** — **primitive apparel is wicker/woven, needs no needle**, so it stays ungated.
-- ⚠ **Structure to confirm before the refactor:** the current `leatherworking` category/discipline actually means TANNING
-  (passive). Do we (a) rename it `tanning` and make `tailoring` the new craft parent, or (b) keep `leatherworking` as the
-  tailoring parent and treat tanning as a passive non-tool step under it? (Leaning (a) — cleaner names.)
+### 3. Tailoring category + realistic per-animal leather → **full spec: [SOFT-GOODS-CRAFTING.md](SOFT-GOODS-CRAFTING.md)**
+- Grew past a checklist: the passive tanning chain gets ACTIVE leatherwork steps (flesh + curry, per-animal, tooled),
+  a new `tailoring` category with `leatherwork`/`weaving` subjobs + kits, and general `crafting` deprecates into
+  specialised disciplines. Animal identity preserved end-to-end (wolf → wolf leather → wolf gear/rug). See the spec
+  for the chain table, tools, phasing (Phase 1 = the "fix tailoring & tools" deliverable), and acceptance criteria.
 
 ### 4. Wound-specific tiered medicine — [ ] propose-then-build (AFTER tailoring)
 Design rule (user): **TOOL = non-organic & durable → SPEED; CONSUMABLE = organic → QUALITY**, used together. No
