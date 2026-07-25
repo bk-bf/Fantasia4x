@@ -343,25 +343,47 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       take work); a need crossing `seek` DURING a long craft to force a job-release+re-queue is unit-territory
       (`selectInterruptNeed` is pure) — not separately driven headless here.
 
-### FSM transition & interrupt-priority audit — ⭐ NEW AUDIT TASK (proposed 2026-07-24)
-> **Evaluation of "expand to a full FSM audit" (asked 2026-07-24): worth it, but SCOPED.** The 24 FSM
-> states (`pawnStates.ts` / `STATE_HANDLERS`) are mostly ENTRY-covered piecemeal already — Idle/Working/
-> MovingToResource/Hauling/MovingToDeposit (crafting+production audits), Hungry/Eating/Tired/Sleeping/
-> Drinking/MovingToNeed/Socialising/Lounging + Crying/Hiding/Fleeing (Needs & mood, above), Fighting/
-> Fleeing/Hunting (weapons + creature-AI sweeps). Re-driving each happy-path entry would mostly repeat
-> that. The UNCOVERED, HIGH-VALUE parts are the EDGES between subsystems and the incapacitation states —
-> exactly where the historically nasty bugs lived (sated-predator freeze, Wander↔Hunting flip). Drive:
-- [ ] **Interrupt-priority matrix** — when pulls compete, the right one wins AND the loser releases cleanly
-      (job back to pool with its accrued work, no lost/duplicated work): draft order vs critical need vs
-      combat threat vs active job vs breakdown. One scenario per contested pair.
-- [ ] **Incapacitation & recovery** — `COLLAPSED` (wound-downed: entry, held-until-heal, exit), `RESCUING`
-      (a pawn carries a downed ally to safety), restPolicy-gated recovery-rest. Life-and-death, undriven.
-- [ ] **Undriven states**: `BLOOD_HUNT`/`PANICKING` (lineage/breakdown tails), `MOVING_TO_DEPOSIT` edge
-      cases. (`WASHING` is now driven — a well serves washing; see Needs & mood above.)
-- [ ] **Stuck / oscillation invariant** — a mixed realistic colony over thousands of ticks: assert NO pawn
-      sits in a non-terminal state indefinitely or ping-pongs between two states (the recurring FSM bug class).
-- [ ] **Draft override** — a drafted pawn ignores non-critical needs (`forceWork`) but a truly lethal need /
-      collapse still wins; clearing the order returns it to normal need-driven behaviour.
+### FSM transition & interrupt-priority audit — ✅ AUDITED HEADLESS (2026-07-25, `fsmTransitions.test.ts`)
+> Driven end-to-end via `HeadlessSession` over real ticks. The tickPawn priority ladder is
+> **collapse (consciousness) > mental breakdown > DRAFT (skips behaviour) > combat threat > needs > work**;
+> a losing pull releases its claimed job to the pool (`claimedBy → null`) with no lost/duplicated work.
+> Levers: `toggleDraft`, `devSpawnMobAt` (real fight → pain-collapse), `devKillEntity`, `rescuePawn`.
+- [x] **Interrupt-priority matrix** — every contested pair driven, loser releases cleanly:
+      **DRAFT > active job** (a Working pawn drafts → Idle, job `claimedBy` 1→0, no dangling `activeJob`; un-draft
+      → the 4-unit batch completes EXACTLY once, no lost/double work); **COMBAT threat > job** (a hostile spawned
+      adjacent → the worker enters Fighting, job released); **DRAFT > combat auto-engage** (a drafted pawn beside a
+      hostile stays Idle+drafted, never auto-fights); **DRAFT > non-critical need** (a drafted hungry pawn holds,
+      does NOT walk off to eat); **COLLAPSE > draft** and **BREAKDOWN > draft** (below).
+- [x] **Incapacitation & recovery** — **COLLAPSE lifecycle** driven: a frail *drafted* pawn packed with goblins
+      goes down via cumulative pain → **Collapsed, the draft RELEASED** (an unconscious pawn can't be commanded,
+      alive not killed) → held down while threatened → after the threat clears and consciousness recovers it
+      **stands back up (Collapsed → Sleeping, resting to mend)**. **RESCUING** carry works: `rescuePawn` drafts an
+      able pawn with a `rescue` order → it walks to the downed colonist and **lifts it (`carriedBy` set)** →
+      carries to the `hay_bed` shelter (`GameEngineImpl._processDraftOrders` + `carry.ts`).
+- [x] ⚠ **FINDING — `PAWN_STATE.RESCUING` is a DEAD state.** It's defined in `pawnStates.ts` AND has a handler
+      slot registered (`[PAWN_STATE.RESCUING]: handleRescuing`), but **nothing ever assigns it** — the carry runs
+      entirely on the drafted `rescue` `draftTarget` + `carriedBy`/`carried_pawn` item, so a carrying pawn's
+      `currentState` never becomes `'Rescuing'` (headless-confirmed: victim picked up, state never 'Rescuing').
+      Same dead-code class as `butchery_yield`/`materialBonuses`. **User call (not fixed):** (a) set
+      `currentState = RESCUING` on the carrier during the carry so the panel/UI reads "Rescuing", or (b) delete the
+      dead state + `handleRescuing` handler. `handleRescuing` is unreachable either way.
+- [x] **Stuck / oscillation invariant** — a provisioned 6-pawn colony (all needs live: craft_spot/campfire/2×bed/
+      well/stool) over ~16000 ticks: every pawn cycled through **≥2 states** (none frozen), NO pawn wedged in a
+      MovingTo*/Hauling state across consecutive samples (longest transient run = 1 sample), zero deaths from a
+      behavioural deadlock. States exercised: Working, MovingToNeed, Eating, Sleeping, Drinking, Idle.
+- [x] **Draft override** — a drafted pawn ignores a non-critical hunger need (stays Idle, doesn't eat); **clearing
+      the draft returns it to need-driven behaviour** (it then goes to Eat). The lethal override is the COLLAPSE >
+      draft result above (a going-down drafted pawn is force-released from the draft).
+- [x] **Mental breakdown is uncontrollable** — a sustained-miserable 10-pawn colony produced an uncontrollable
+      break (reached **Hiding**); DRAFTING the broken pawn is refused — it stays in the breakdown (Hiding→Crying)
+      and `drafted` drops to false (breakdown outranks draft, like Collapsed). Crying/Hiding driven.
+- [~] **Undriven tails** (honest gaps, not blocked by defects): **`PANICKING`** is the same breakdown lifecycle
+      as the driven Crying/Hiding but its `fleeing` kind is gated on a combat threat being adjacent at the
+      breakdown-roll moment (which the combat interrupt otherwise pre-empts) — not force-driven here.
+      **`BLOOD_HUNT`** needs a lineage pawn with `bloodNeedKind` (vampire/werewolf) the harness doesn't spawn yet
+      (also tracked in Needs & mood). **`MOVING_TO_DEPOSIT`** didn't surface because `buildScenario` makes the
+      whole map a stockpile (drops absorbed, no haul-to-deposit) — the haul→deposit pipeline is exercised in the
+      crafting audits instead.
 
 ## Material & production reworks (PROPOSED — track only, not implemented)
 
