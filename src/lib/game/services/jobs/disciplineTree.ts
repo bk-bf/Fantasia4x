@@ -16,6 +16,10 @@ const DISCIPLINES: DisciplineDef[] =
 export const DISCIPLINE_PARENTS: string[] = DISCIPLINES.map((d) => d.id);
 /** Every leaf discipline id (leatherworking, weaving, knapping, butchery, …). Flat disciplines excluded. */
 export const DISCIPLINE_LEAVES = new Set<string>();
+/** Parent categories that split into leaf disciplines (tailoring, stoneworking, cooking, alchemy). Each
+ *  leaf is its OWN skill, so a split parent is a grouping/labor category, NOT a skill (unlike a flat
+ *  discipline such as metalworking, which IS the skill). */
+export const DISCIPLINE_SPLIT_PARENTS = new Set<string>();
 /** leaf id → parent category id. */
 const PARENT_OF = new Map<string, string>();
 /** parent id → ordered leaf ids (empty for a flat discipline). */
@@ -39,6 +43,7 @@ function pushMatch(d: DisciplineDef) {
 for (const d of DISCIPLINES) {
   DISCIPLINE_LABEL.set(d.id, d.label);
   if (d.subjobs?.length) {
+    DISCIPLINE_SPLIT_PARENTS.add(d.id);
     LEAVES_OF.set(
       d.id,
       d.subjobs.map((s) => s.id)

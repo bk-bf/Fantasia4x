@@ -125,11 +125,23 @@
     for (const pawn of pawns) {
       const row: Record<string, WorkMods> = {};
       for (const wc of TOP_CATEGORIES) {
-        row[wc.id] = pawnStatService.getWorkModifiers(pawn, wc.id);
         // Subjob mods: each reads its own `*_speed`/quality with the category as per-axis fallback, so
         // an expanded cell + its tooltip show the pawn's actual aptitude for THAT subjob.
-        for (const sj of subjobsByCat[wc.id])
+        const subs = subjobsByCat[wc.id];
+        for (const sj of subs)
           row[sj.id] = pawnStatService.getWorkModifiers(pawn, sj.id, undefined, wc.id);
+        // A craft grouping-parent (Tailoring, Cooking) is NOT a skill — its leaves are. Show the pawn's
+        // BEST leaf so the column still reflects their top aptitude in that family. A flat category (or
+        // Construction, whose verbs share its skill) reads its own skill directly.
+        if (subs.length && jobService.isGroupingParent(wc.id)) {
+          const tput = (m: WorkMods) => m.speed * (m.yield ?? 1) * (m.quality ?? 1);
+          row[wc.id] = subs.reduce(
+            (best, sj) => (tput(row[sj.id]) > tput(best) ? row[sj.id] : best),
+            row[subs[0].id]
+          );
+        } else {
+          row[wc.id] = pawnStatService.getWorkModifiers(pawn, wc.id);
+        }
       }
       map[pawn.id] = row;
     }

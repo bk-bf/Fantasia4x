@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { jobService } from '$lib/game/services/JobService';
+import { SKILL_CATEGORIES, workSkillCategory } from '$lib/game/core/workExperience';
 import type { Pawn, Job } from '$lib/game/core/types';
 
 /**
@@ -93,5 +94,34 @@ describe('per-subjob work stats', () => {
     expect(jobService.getJobWorkStatKey(job('construct'))).toBe('construct');
     expect(jobService.getJobWorkStatKey(job('fetch'))).toBe('fetch');
     expect(jobService.getJobWorkStatKey(job('craft'))).toBe('crafting'); // 1:1, no subjob split
+  });
+});
+
+describe('craft-discipline leaves are INDEPENDENT skills', () => {
+  it('each leaf trains itself — a weaver never levels leatherworking (and vice versa)', () => {
+    // The learn-by-doing target: a craft trains its LEAF skill, so the two do not bleed into each other.
+    expect(workSkillCategory('weaving')).toBe('weaving');
+    expect(workSkillCategory('leatherworking')).toBe('leatherworking');
+    expect(workSkillCategory('butchery')).toBe('butchery');
+    expect(workSkillCategory('baking')).toBe('baking');
+    // …but a VERB subjob still shares its parent (repair rides construction), unchanged.
+    expect(workSkillCategory('repair')).toBe('construction');
+  });
+
+  it('every leaf is a real skill; the grouping parents are NOT', () => {
+    for (const leaf of ['leatherworking', 'weaving', 'knapping', 'masonry', 'lapidary', 'butchery', 'baking', 'brewing', 'meals', 'herbalism', 'potions'])
+      expect(SKILL_CATEGORIES, `${leaf} is a skill`).toContain(leaf);
+    for (const parent of ['tailoring', 'stoneworking', 'cooking', 'alchemy'])
+      expect(SKILL_CATEGORIES, `${parent} is a grouping category, not a skill`).not.toContain(parent);
+    expect(SKILL_CATEGORIES, 'metalworking is flat → a skill').toContain('metalworking');
+    expect(SKILL_CATEGORIES, 'construction verbs share it → a skill').toContain('construction');
+  });
+
+  it("a pawn's weaving level does not touch its leatherworking throughput", () => {
+    const p = pawn({}, { skills: { weaving: 45, leatherworking: 3 } });
+    const weave = pawnStatService.getWorkModifiers(p, 'weaving', undefined, 'tailoring').speed;
+    const leather = pawnStatService.getWorkModifiers(p, 'leatherworking', undefined, 'tailoring').speed;
+    // Master weaver, novice leatherworker — the gap proves the skills are read independently.
+    expect(weave).toBeGreaterThan(leather * 2);
   });
 });

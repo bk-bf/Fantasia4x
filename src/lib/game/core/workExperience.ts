@@ -15,7 +15,7 @@
 import type { Pawn } from './types';
 import { WORK_CATEGORIES } from './Work';
 import { rng } from './rng';
-import { DISCIPLINE_LEAVES, disciplineParent } from '../services/jobs/disciplineTree';
+import { DISCIPLINE_LEAVES, DISCIPLINE_SPLIT_PARENTS } from '../services/jobs/disciplineTree';
 
 export const MAX_WORK_LEVEL = 50;
 
@@ -27,27 +27,34 @@ export const NEUTRAL_WORK_LEVEL = 25;
  *  hauling is carry-capacity + movement driven. Kept in sync with `workUtils.NON_SKILL_TASKS` (UI). */
 export const NON_SKILL_CATEGORIES = new Set(['hunting', 'hauling']);
 
-/** Work categories that carry an experience level: all top-level categories except the non-skill
- *  tasks — and NOT the craft-discipline leaves (leatherworking, butchery, knapping…), which share
- *  their parent category's skill exactly as repair shares construction's. */
-export const SKILL_CATEGORIES: readonly string[] = WORK_CATEGORIES.filter(
-  (c) => !NON_SKILL_CATEGORIES.has(c.id) && !DISCIPLINE_LEAVES.has(c.id)
-).map((c) => c.id);
+/** Work categories that carry an experience level. Each craft-discipline LEAF (leatherworking, weaving,
+ *  knapping, butchery, baking…) is its OWN independent skill — a weaver does NOT level leatherworking.
+ *  The craft split-PARENTS (tailoring, stoneworking, cooking, alchemy) are grouping/labor categories,
+ *  not skills, so they're dropped here. (Flat disciplines like metalworking, and construction whose
+ *  Build/Repair VERB subjobs genuinely share it, stay.) Non-skill tasks (hunting, hauling) drop too. */
+export const SKILL_CATEGORIES: readonly string[] = [
+  ...new Set([
+    ...WORK_CATEGORIES.filter(
+      (c) => !NON_SKILL_CATEGORIES.has(c.id) && !DISCIPLINE_SPLIT_PARENTS.has(c.id)
+    ).map((c) => c.id),
+    ...DISCIPLINE_LEAVES // weaving/knapping/masonry/lapidary/meals/baking/brewing/herbalism/potions
+  ])
+];
 
 /** Verb subjob stat prefix → the parent category whose skill LEVEL it trains and reads (mirrors the
  *  per-axis stats.jsonc fallback: a repair runs at `repair_speed` but on the construction skill).
  *  `fetch`'s parent `hauling` is NOT a skill, so fetch has no entry here — it reads no level. Craft
- *  discipline leaves route to their parent via `disciplineParent` below, not this map. */
+ *  discipline leaves are their OWN skill (not here) — they do not roll up to their parent. */
 const SUBJOB_SKILL_PARENT: Record<string, string> = {
   repair: 'construction',
   deconstruct: 'construction',
   refuel: 'construction'
 };
 
-/** The skill category behind a work-stat prefix: a verb subjob (`repair` → `construction`), a craft
- *  discipline leaf (`leatherworking` → `tailoring`, `butchery` → `cooking`), else itself. */
+/** The skill category behind a work-stat prefix: a verb subjob (`repair` → `construction`), else itself
+ *  — a craft discipline leaf (`weaving`, `butchery`) is its own skill, so it maps to itself. */
 export function workSkillCategory(statPrefix: string): string {
-  return SUBJOB_SKILL_PARENT[statPrefix] ?? disciplineParent(statPrefix);
+  return SUBJOB_SKILL_PARENT[statPrefix] ?? statPrefix;
 }
 
 /**

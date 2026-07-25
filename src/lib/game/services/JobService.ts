@@ -18,7 +18,7 @@
 import type { DesignationType, DroppedItem, GameState, Job, JobDef, Pawn } from '../core/types';
 import { manhattan } from '../core/distance';
 import { WORK_CATEGORIES } from '../core/Work';
-import { applyWorkXp, workXpForJob, SKILL_CATEGORIES } from '../core/workExperience';
+import { applyWorkXp, workXpForJob, SKILL_CATEGORIES, workSkillCategory } from '../core/workExperience';
 import jobsData from '../database/pawns/jobs.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
 import { itemService } from './ItemService';
@@ -39,6 +39,7 @@ import { craftWorkCategory, craftDiscipline } from './jobs/craftDiscipline';
 import {
   DISCIPLINE_PARENTS,
   DISCIPLINE_LEAVES,
+  DISCIPLINE_SPLIT_PARENTS,
   disciplineLeaves,
   DISCIPLINE_LABEL
 } from './jobs/disciplineTree';
@@ -370,6 +371,13 @@ class JobServiceImpl {
     return DISCIPLINE_LEAVES.has(categoryId);
   }
 
+  /** True for a craft PARENT that splits into independent-skill leaves (Tailoring, Cooking, …). It is a
+   *  grouping/labor category, NOT a skill, so the Work tab shows its BEST leaf rather than its own level.
+   *  (Construction, whose Build/Repair verbs SHARE its skill, is not one of these.) */
+  isGroupingParent(categoryId: string): boolean {
+    return DISCIPLINE_SPLIT_PARENTS.has(categoryId);
+  }
+
   /** Splittable categories' subjobs for the Work tab — `{id,label}` per subjob, empty if the category
    *  has nothing to expand. Labels come from a verb's JobDef or a discipline leaf's tree entry. */
   getSubjobsForCategory(categoryId: string): { id: string; label: string }[] {
@@ -431,14 +439,14 @@ class JobServiceImpl {
     return this._grantWorkXp(job, handler ? handler.complete(job, state) : state);
   }
 
-  /** WORK-EXPERIENCE: finishing a colony job teaches its work category — the ONE learn-by-doing
-   *  hook (every job type completes through _completeJob). XP scales with the job's authored work;
-   *  levels 1–50 drive the work stats via the SKILL token. Only LEARNED skills gain XP: hunting
-   *  (combat) and hauling (carry + movement) are not skills; passive furnace output has no pawn and
-   *  never reaches here. */
+  /** WORK-EXPERIENCE: finishing a colony job teaches its SKILL — the ONE learn-by-doing hook (every
+   *  job type completes through _completeJob). XP goes to the job's own skill: a craft discipline LEAF
+   *  (weaving trains `weaving`, NOT its Tailoring parent), a verb subjob's shared parent (repair trains
+   *  `construction`), else the category itself. Only LEARNED skills gain XP: hunting (combat) and
+   *  hauling (carry + movement) aren't skills; passive furnace output has no pawn and never reaches here. */
   private _grantWorkXp(job: Job, state: GameState): GameState {
     if (!job.claimedBy) return state;
-    const category = this.getJobWorkCategory(job, state);
+    const category = workSkillCategory(this.getJobWorkStatKey(job, state));
     if (!category || !SKILL_CATEGORIES.includes(category)) return state;
     const idx = state.pawns.findIndex((p) => p.id === job.claimedBy);
     if (idx < 0) return state;
