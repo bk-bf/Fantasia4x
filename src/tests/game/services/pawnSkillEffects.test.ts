@@ -92,11 +92,11 @@ describe('pawn skill effects', () => {
     );
   });
 
-  it('butchery SKILL raises carcass yield (butchery_yield wired); discipline routes to butchery', async () => {
-    // craft.ts now scales butchery output by the STATION bonus × carcass condition × the working pawn's
-    // `butchery_yield` skill axis (same model as harvest yield) — so a skilled butcher renders more meat
-    // off the same deer at the same butcher spot. Only butchery has a yield axis, so ordinary crafts are
-    // untouched.
+  it('butchery SKILL is a yield BONUS: master renders more, unskilled still gets the full base', async () => {
+    // craft.ts scales butchery output by the STATION bonus × the working pawn's `butchery_yield` axis,
+    // FLOORED at ×1 — so a skilled butcher renders more, but an unskilled one still gets the full recipe
+    // drop (never a sub-1 penalty that would round a qty-1 signature drop away). Only butchery has a yield
+    // axis, so ordinary crafts are untouched.
     const venisonFor = async (butchery: number) => {
       const s = new HeadlessSession();
       await s.start(
@@ -119,8 +119,10 @@ describe('pawn skill effects', () => {
     };
     const unskilled = await venisonFor(1);
     const master = await venisonFor(50);
-    console.log(`[SKILL butchery-yield] venison: butchery1=${unskilled} vs butchery50=${master} (skill now wired)`);
-    expect(unskilled, 'deer was butchered').toBeGreaterThan(0);
+    console.log(`[SKILL butchery-yield] venison: butchery1=${unskilled} (base) vs butchery50=${master} (bonus)`);
+    // The FLOOR: an unskilled butcher still renders the full recipe base (venison 10 at butcher_spot),
+    // NOT a reduced amount — so a qty-1 rare drop can never be rounded away by low skill.
+    expect(unskilled, 'unskilled butcher still gets the full base drop (no sub-1 penalty)').toBe(10);
     expect(master, 'a skilled butcher renders MORE off the same carcass than an unskilled one').toBeGreaterThan(unskilled);
     // recipe→discipline routing: a butcher-spot carcass order routes to the `butchery` discipline
     // (so its own *_speed/_quality stats + tools apply), not generic crafting.

@@ -251,12 +251,15 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       stat (defined in `stats.jsonc`, computed by `getWorkModifiers`, and SHOWN in the Work-tab
       `WorkCellTooltip`) was a dead/misleading stat — skill 1 and 50 both rendered venison 10. **Fix:** the
       working pawn's `getWorkModifiers(pawn,'butchery').yield` now multiplies butchery craft output in
-      `craft.ts` (`yieldMult = (1 + stationBonus) × skillYieldMult`), the same model as harvest yield
-      (`ResourceObjectService:130`) and using the identical `butchery_yield` formula. Only butchery defines a
-      yield axis, so ordinary crafts stay a clean ×1; passive furnaces (no pawn) default to 1. **Verified
-      headless** (`pawnSkillEffects.test.ts`): same deer at the same butcher spot → **venison 8 at
-      butchery-skill 1 vs 25 at skill 50**. (Consequence to note: an unskilled butcher now renders somewhat
-      LESS than the flat base — consistent with harvest, tune the formula if too harsh.)
+      `craft.ts` (`yieldMult = (1 + stationBonus) × skillYieldMult`), only butchery defines a yield axis so
+      ordinary crafts stay ×1 and passive furnaces default to 1. **`skillYieldMult` is FLOORED at 1 (a bonus,
+      never a penalty)** — a second, subtler bug it exposed: the signature carcass drops (`great_fang`, boss
+      organs, `ivory`, `great_tusk`, `antler_rack`, `curved_horn`) come off as a SINGLE unit, so a raw sub-1
+      skill multiplier would round them to ZERO — an unskilled butcher could lose the boss trophy entirely.
+      Flooring at 1 makes an unskilled butcher still get the full base drop; skill only adds on top. **Verified
+      headless** (`pawnSkillEffects.test.ts`): same deer at the same butcher spot → **venison 10 (full base)
+      at butchery-skill 1 vs 25 at skill 50**, and the qty-1 anatomy drops survive at ordinary skill
+      (`butcheryAudit.test.ts` `[ANATOMY]`, no skill inflation needed).
 - [x] **Zero-skill pawn completes a T0 craft** — a skill-1 colony bootstrapped **cordage 0→3** (slower, not
       stuck); no deadlock. Tool-tier gating is unchanged (butchery/tool gates proven in their own sections). ✅
 - [x] **Quality matters DOWNSTREAM** (`scaleWeaponQuality` — the exact function `resolveHit` calls on the

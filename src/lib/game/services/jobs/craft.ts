@@ -169,7 +169,11 @@ export function complete(job: Job, gs: GameState): GameState {
     const discipline = craftWorkCategory(entry);
     const mods = pawnStatService.getWorkModifiers(pawn, discipline, undefined, 'crafting');
     const axis = mods.quality ?? 1;
-    skillYieldMult = mods.yield ?? 1;
+    // A yield BONUS only (floored at 1): a skilled butcher renders MORE off a carcass, but a poor one
+    // still gets the full base drop — never a penalty. Critical because the signature drops (great_fang,
+    // boss organs, ivory, antler/horn) come off as a SINGLE unit; a sub-1 multiplier would round them
+    // away entirely, so an unskilled butcher could lose the boss trophy. Skill is upside, not a tax.
+    skillYieldMult = Math.max(1, mods.yield ?? 1);
     rollQuality = () => {
       const q = rollCraftQuality(axis, () => rng.random());
       if (q > bestTier) bestTier = q;
