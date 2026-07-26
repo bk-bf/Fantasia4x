@@ -447,7 +447,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 > early-mid (t0–t2) is thin** (t0 has 7 pieces, mostly wicker/rawhide; medicine is 2 items). This section is the
 > LENS: define builds → check each has a gear/weapon/tool/apparel path at every tier → fill the gaps.
 
-### 1. Build/class map (the evaluation lens) — [x] DONE → **full spec: [BUILD-ARCHETYPES.md](BUILD-ARCHETYPES.md)** ([visual](https://claude.ai/code/artifact/f87ef907-46e2-4015-a455-b698799eea4f))
+### 1. Build/class map (the evaluation lens) — [x] DONE → **full audit: [BUILD-ARCHETYPES (artifact)](https://claude.ai/code/artifact/f87ef907-46e2-4015-a455-b698799eea4f)**
 Grew into its own spec: 9 builds (8 + Mage) audited against stats/traits/gear/lineages, gaps flagged, backlog P1–P5.
 Quick reference (each row = primary stats → the gear it *wants*):
 | Build | Key stats | Weapons | Armour | Tools/gear it wants |
