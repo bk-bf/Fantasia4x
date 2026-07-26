@@ -10,6 +10,7 @@
     AGES,
     BUILDS,
     BUILD_CAT,
+    REAL_RARITIES,
     buildSummaries,
     describeClasses,
     type GearRow,
@@ -38,8 +39,6 @@
 
   // Traits/lineages grid: build × gating → the actual traits (lineage badge shows the marker).
   const GATINGS = ['ungated', 'cultural', 'lineage', 'flaw'] as const;
-  const RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'negative'] as const;
-  const rarityLabel = (r: string) => (r === 'negative' ? 'flaw' : r);
   const byEvoRarity = (a: GearRow, b: GearRow) => a.evoStage - b.evoStage || a.rarityRank - b.rarityRank || a.name.localeCompare(b.name);
   const traitMap = new Map<string, GearRow[]>();
   for (const g of GEAR) {
@@ -53,6 +52,12 @@
   for (const arr of traitMap.values()) arr.sort(byEvoRarity); // by evolution stage, then rarity
   const traitCell = (build: string, gating: string) => traitMap.get(`${build}|${gating}`) ?? [];
   const allTraits = (build: string) => GEAR.filter((g) => g.kind === 'trait' && g.classes.includes(build as never)).sort(byEvoRarity);
+  // Traits at a given rarity — positives first, then flaws (rendered red); flaws are graded INTO the
+  // real rarity columns (no separate flaw column).
+  const raritycell = (build: string, rarity: string) =>
+    allTraits(build)
+      .filter((t) => t.gradeRarity === rarity)
+      .sort((a, b) => (a.polarity === 'negative' ? 1 : 0) - (b.polarity === 'negative' ? 1 : 0) || a.evoStage - b.evoStage || a.name.localeCompare(b.name));
 
   const pBview = page.url?.searchParams?.get('bview') ?? '';
   let bview = $state<'weapon' | 'armor' | 'trait' | 'all'>(
@@ -321,33 +326,38 @@
         </table>
       </div>
     {:else if bview === 'all'}
-      <p class="hint">Everything per build in one table — weapons &amp; armour by age (tier-sorted), traits by evolution stage then rarity. <code>T#</code> = tier; trait badge = rarity (<code>·s#</code> = evolution stage). Click any to highlight.</p>
+      <p class="hint">One row per build — weapons &amp; armour by age (tier-sorted), then traits by rarity (<b class="neg">flaws in red</b>). <code>T#</code> = tier · <code>s#</code> = evolution stage. Click any to highlight.</p>
       <div class="scroll">
         <table class="grid">
-          <thead><tr><th>Build / facet</th>{#each AGES as a (a)}<th>{a}</th>{/each}</tr></thead>
+          <thead>
+            <tr class="grouphead">
+              <th></th>
+              <th colspan={AGES.length}>Weapons · by age</th>
+              <th colspan={AGES.length}>Armour · by age</th>
+              <th colspan={REAL_RARITIES.length}>Traits · by rarity</th>
+            </tr>
+            <tr>
+              <th>Build</th>
+              {#each AGES as a (a)}<th>{a}</th>{/each}
+              {#each AGES as a (a)}<th>{a}</th>{/each}
+              {#each REAL_RARITIES as r (r)}<th>{r}</th>{/each}
+            </tr>
+          </thead>
           <tbody>
             {#each BUILDS as b (b)}
-              <tr class="grp"><td class="cls clickable" data-cat={BUILD_CAT[b]} colspan={AGES.length + 1} onclick={() => openBuild(b)}>{b}</td></tr>
               <tr>
-                <td class="facet">Weapons</td>
+                <td class="name cls clickable" data-cat={BUILD_CAT[b]} onclick={() => openBuild(b)}>{b}</td>
                 {#each AGES as a (a)}
                   {@const its = cell(b, 'weapon', a)}
                   <td class="cellwrap" class:gap={its.length === 0}>{#if its.length}{#each its as it (it.id)}<button type="button" class="pill" class:sel={sel[it.id]} onclick={() => toggleSel(it.id)}>{it.name}<i>T{it.tier}</i></button>{/each}{:else}<span class="dot">·</span>{/if}</td>
                 {/each}
-              </tr>
-              <tr>
-                <td class="facet">Armour</td>
                 {#each AGES as a (a)}
                   {@const its = cell(b, 'armor', a)}
                   <td class="cellwrap" class:gap={its.length === 0}>{#if its.length}{#each its as it (it.id)}<button type="button" class="pill" class:sel={sel[it.id]} onclick={() => toggleSel(it.id)}>{it.name}<i>T{it.tier}</i></button>{/each}{:else}<span class="dot">·</span>{/if}</td>
                 {/each}
-              </tr>
-              <tr class="subhead"><td class="facet">Traits ▸ rarity</td>{#each RARITIES as r (r)}<td class="rlabel">{rarityLabel(r)}</td>{/each}</tr>
-              <tr>
-                <td class="facet"></td>
-                {#each RARITIES as r (r)}
-                  {@const ts = allTraits(b).filter((t) => t.rarity === r)}
-                  <td class="cellwrap" class:gap={ts.length === 0}>{#if ts.length}{#each ts as t (t.id)}<button type="button" class="pill" class:sel={sel[t.id]} onclick={() => toggleSel(t.id)}>{t.name}{#if t.evoStage}<i>s{t.evoStage}</i>{/if}</button>{/each}{:else}<span class="dot">·</span>{/if}</td>
+                {#each REAL_RARITIES as r (r)}
+                  {@const ts = raritycell(b, r)}
+                  <td class="cellwrap" class:gap={ts.length === 0}>{#if ts.length}{#each ts as t (t.id)}<button type="button" class="pill" class:neg={t.polarity === 'negative'} class:sel={sel[t.id]} onclick={() => toggleSel(t.id)}>{t.name}{#if t.evoStage}<i>s{t.evoStage}</i>{/if}</button>{/each}{:else}<span class="dot">·</span>{/if}</td>
                 {/each}
               </tr>
             {/each}
@@ -659,31 +669,25 @@
   .dot {
     color: #4a4436;
   }
-  tr.grp td {
-    background: #1b1811;
-    border-top: 2px solid #2a2519;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-  }
-  td.facet {
-    color: #9a9279;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    white-space: nowrap;
-    vertical-align: top;
-  }
-  tr.subhead td {
-    color: #6d6653;
-    font-size: 10px;
-    text-transform: uppercase;
+  tr.grouphead th {
+    background: #221e15;
+    color: #d8ab52;
+    font-size: 10.5px;
     letter-spacing: 0.1em;
-    padding: 6px 10px 1px;
-    border-bottom: none;
+    border-bottom: 1px solid #4a4030;
+    border-left: 1px solid #362f22;
+    text-align: left;
   }
-  tr.subhead td.rlabel {
-    color: #9a9279;
+  b.neg {
+    color: #d76f5d;
+  }
+  .pill.neg {
+    color: #d99a8e;
+    border-color: rgba(215, 111, 93, 0.35);
+  }
+  .pill.neg.sel {
+    color: #fff;
+    border-color: #d8ab52;
   }
 
   /* autocomplete */

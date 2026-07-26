@@ -160,12 +160,17 @@ export interface GearRow {
   effect: string | null;
   gating: TraitGating | null;
   scope: string | null;
-  rarity: string | null;
-  rarityRank: number; // 0=common … 5=mythic, 6=flaw — for sorting
+  rarity: string | null; // raw data value (may be the pseudo-"negative")
+  rarityRank: number;
+  polarity: 'positive' | 'negative'; // derived from the effects, NOT the rarity field
+  gradeRarity: string | null; // real rarity (common…mythic); "negative"-rarity flaws derived by magnitude
+  gradeRank: number;
   lineageNames: string | null;
   evolvesTo: string | null;
   evoStage: number; // 0 = base, +1 per step down an evolution chain
 }
+
+export const REAL_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'] as const;
 
 // ── lookup maps ─────────────────────────────────────────────────────────────
 const prettify = (id: string) =>
@@ -372,6 +377,9 @@ function toRow(item: any): GearRow | null {
     scope: null,
     rarity: null,
     rarityRank: 0,
+    polarity: 'positive',
+    gradeRarity: null,
+    gradeRank: 0,
     lineageNames: null,
     evolvesTo: null,
     evoStage: 0
@@ -401,6 +409,53 @@ function evoStage(id: string, seen = new Set<string>()): number {
   const s = p ? evoStage(p, seen) + 1 : 0;
   evoStageCache.set(id, s);
   return s;
+}
+
+// Polarity from the EFFECTS, not the rarity field: a trait is negative only when every non-zero
+// effect is a downside (all penalties / debuff multipliers) — this catches all-penalty curse traits
+// like Accursed Blood (rarity "epic") that the raw rarity would otherwise hide among positives.
+function traitPolarity(t: any): 'positive' | 'negative' {
+  if (t.kind === 'wound') return 'negative';
+  const e = t.effects ?? {};
+  let pos = false;
+  let neg = false;
+  for (const [k, v] of Object.entries(e)) {
+    if (k.endsWith('Bonus')) pos = true;
+    else if (k.endsWith('Penalty')) neg = true;
+    else if (v && typeof v === 'object') {
+      for (const mv of Object.values(v)) {
+        if (typeof mv === 'number') {
+          if (mv > 1) pos = true;
+          else if (mv < 1) neg = true;
+        }
+      }
+    } else if (typeof v === 'number') {
+      if (v > 0) pos = true;
+      else if (v < 0) neg = true;
+    }
+  }
+  if (t.rarity === 'negative' && !pos) return 'negative';
+  return neg && !pos ? 'negative' : 'positive';
+}
+
+// The rarity a trait occupies in the REAL rarity table. Graded traits keep their rarity (so an
+// all-penalty epic like Accursed Blood stays epic, just on the negative side). The flat "negative"
+// pool (ungraded mundane flaws) is graded by the magnitude of its penalty so it spreads across the
+// same table instead of collapsing into a fake "flaw" rarity.
+function flawMagnitude(t: any): number {
+  const e = t.effects ?? {};
+  let m = 0;
+  for (const [k, v] of Object.entries(e)) {
+    if (k.endsWith('Penalty')) m += Math.abs(v as number);
+    else if (v && typeof v === 'object') for (const mv of Object.values(v)) if (typeof mv === 'number' && mv < 1) m += (1 - mv) * 6;
+  }
+  if (t.kind === 'wound') m += 5; // a permanent injury is a heavy flaw even with no stat block
+  return m;
+}
+function gradeRarityOf(t: any): string {
+  if ((REAL_RARITIES as readonly string[]).includes(t.rarity)) return t.rarity;
+  const m = flawMagnitude(t);
+  return m < 1.5 ? 'common' : m < 2.5 ? 'uncommon' : m < 3.5 ? 'rare' : m < 5 ? 'epic' : m < 7 ? 'legendary' : 'mythic';
 }
 
 function traitGating(t: any): TraitGating {
@@ -481,6 +536,9 @@ function traitRow(t: any): GearRow {
     scope: t.scope ?? null,
     rarity: t.rarity ?? null,
     rarityRank: rarityRank(t.rarity),
+    polarity: traitPolarity(t),
+    gradeRarity: gradeRarityOf(t),
+    gradeRank: (REAL_RARITIES as readonly string[]).indexOf(gradeRarityOf(t)),
     lineageNames: t.lineage && t.lineage.length ? t.lineage.join(', ') : null,
     evolvesTo: t.evolvesTo ?? null,
     evoStage: evoStage(t.id)
