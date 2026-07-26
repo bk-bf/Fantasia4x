@@ -25,8 +25,12 @@ const traits = traitsData as any[];
 export type BuildClass =
   // one-handed + shield (STR frontline)
   | 'Sword & Shield' | 'Axe & Shield' | 'Mace & Shield' | 'Cleaver & Shield' | 'Flail & Shield' | 'Spear & Shield'
+  // one-handed duel-grip, no shield / free off-hand (needs the Duelist trait — Workstream B)
+  | 'Sword (Duelist)' | 'Axe (Duelist)' | 'Mace (Duelist)' | 'Cleaver (Duelist)' | 'Flail (Duelist)' | 'Spear (Duelist)'
   // two-handed (STR)
   | 'Greatsword (2H)' | '2H Cleaver' | '2H Axe' | '2H Hammer' | 'Polearm (2H)'
+  // pure defensive anchor (heaviest armour + shield, taunt/provoke — Workstream B)
+  | 'Pure Tank'
   // finesse
   | 'Fencer (Rapier)' | 'Assassin (Dagger)'
   // ranged
@@ -36,28 +40,34 @@ export type BuildClass =
   // non-build (crafting/healing/social skills)
   | 'General';
 
-export type BuildCategory = 'melee' | 'finesse' | 'ranged' | 'caster' | 'general';
+export type BuildCategory = 'melee' | 'duelist' | 'tank' | 'finesse' | 'ranged' | 'caster' | 'general';
 export type GearKind = 'weapon' | 'armor' | 'tool' | 'ammo' | 'medicine' | 'trait';
 export type TraitGating = 'ungated' | 'cultural' | 'lineage' | 'flaw';
 
 // ── build groups (used by the classifiers) ──────────────────────────────────
 const SHIELD_BUILDS: BuildClass[] = ['Sword & Shield', 'Axe & Shield', 'Mace & Shield', 'Cleaver & Shield', 'Flail & Shield', 'Spear & Shield'];
+const DUELIST: BuildClass[] = ['Sword (Duelist)', 'Axe (Duelist)', 'Mace (Duelist)', 'Cleaver (Duelist)', 'Flail (Duelist)', 'Spear (Duelist)'];
 const TWOH: BuildClass[] = ['Greatsword (2H)', '2H Cleaver', '2H Axe', '2H Hammer', 'Polearm (2H)'];
 const FRONTLINE: BuildClass[] = [...SHIELD_BUILDS, ...TWOH];
-const MELEE_ALL: BuildClass[] = [...FRONTLINE, 'Fencer (Rapier)', 'Assassin (Dagger)'];
+const MELEE_ALL: BuildClass[] = [...FRONTLINE, ...DUELIST, 'Pure Tank', 'Fencer (Rapier)', 'Assassin (Dagger)'];
 const RANGED: BuildClass[] = ['Archer (Bow)', 'Crossbowman', 'Skirmisher (Throwing)', 'Slinger (Sling)'];
 const PER_BUILDS: BuildClass[] = ['Fencer (Rapier)', ...RANGED];
 const CASTERS: BuildClass[] = ['Battlemage (1H Staff)', 'War-Caster (2H Staff)'];
-const NIMBLE: BuildClass[] = ['Assassin (Dagger)', 'Fencer (Rapier)', ...RANGED, 'Stunwaller (2H Staff)'];
+// Light-medium / dodge-based builds (duelists live here too — heavy armour claps their speed).
+const NIMBLE: BuildClass[] = ['Assassin (Dagger)', 'Fencer (Rapier)', ...RANGED, ...DUELIST, 'Stunwaller (2H Staff)'];
 
 // Every real build (order = display order). 'General' is deliberately excluded — it is not a build.
-export const BUILDS: BuildClass[] = [...FRONTLINE, 'Fencer (Rapier)', 'Assassin (Dagger)', ...RANGED, ...CASTERS, 'Stunwaller (2H Staff)'];
+export const BUILDS: BuildClass[] = [
+  ...SHIELD_BUILDS, ...DUELIST, ...TWOH, 'Pure Tank', 'Fencer (Rapier)', 'Assassin (Dagger)', ...RANGED, ...CASTERS, 'Stunwaller (2H Staff)'
+];
 export const CLASSES: BuildClass[] = [...BUILDS, 'General'];
 export const KINDS: GearKind[] = ['weapon', 'armor', 'tool', 'ammo', 'medicine', 'trait'];
 
 export const BUILD_CAT: Record<string, BuildCategory> = (() => {
   const m: Record<string, BuildCategory> = { General: 'general' };
   FRONTLINE.forEach((b) => (m[b] = 'melee'));
+  DUELIST.forEach((b) => (m[b] = 'duelist'));
+  m['Pure Tank'] = 'tank';
   m['Fencer (Rapier)'] = 'finesse';
   m['Assassin (Dagger)'] = 'finesse';
   RANGED.forEach((b) => (m[b] = 'ranged'));
@@ -72,6 +82,7 @@ export const BUILD_CAT: Record<string, BuildCategory> = (() => {
 const GROUP_LABELS: [BuildClass[], string][] = [
   [MELEE_ALL, 'all melee'],
   [FRONTLINE, 'frontline'],
+  [DUELIST, 'duelists'],
   [PER_BUILDS, 'PER builds'],
   [RANGED, 'ranged'],
   [CASTERS, 'casters'],
@@ -150,7 +161,10 @@ export interface GearRow {
   gating: TraitGating | null;
   scope: string | null;
   rarity: string | null;
+  rarityRank: number; // 0=common … 5=mythic, 6=flaw — for sorting
   lineageNames: string | null;
+  evolvesTo: string | null;
+  evoStage: number; // 0 = base, +1 per step down an evolution chain
 }
 
 // ── lookup maps ─────────────────────────────────────────────────────────────
@@ -206,7 +220,9 @@ function classifyWeapon(item: any, wp: any): BuildClass {
   const pierce = dt === 'piercing' || dt === 'pierce';
   const has = (re: RegExp) => re.test(id);
   if (wp.arcane) return 'War-Caster (2H Staff)'; // all current staves are 2H magic
-  const ranged = wp.ammoCategory || wp.drawPower != null || (wp.range ?? 0) >= 4;
+  const ranged =
+    wp.ammoCategory || wp.drawPower != null || (wp.range ?? 0) >= 4 ||
+    /throw|javelin|dart|sling|blowgun|firepot|bow|crossbow/.test(id);
   if (ranged) {
     if (has(/sling/)) return 'Slinger (Sling)';
     if (has(/crossbow|xbow/)) return 'Crossbowman';
@@ -234,21 +250,32 @@ function classifyWeapon(item: any, wp: any): BuildClass {
 // Armour → the builds whose weight/role favour it (multi-build).
 function classifyArmor(item: any): BuildClass[] {
   const ap = item.armorProperties;
-  if (ap?.armorType === 'shield') return [...SHIELD_BUILDS, 'Battlemage (1H Staff)'];
+  if (ap?.armorType === 'shield') return [...SHIELD_BUILDS, 'Pure Tank', 'Battlemage (1H Staff)'];
   if (ap?.stealthMod) return ['Assassin (Dagger)', 'Fencer (Rapier)', ...RANGED];
   if (item.magicResistance != null || ap?.magicResistance != null || /robe|circlet|arcane/.test(item.id)) return [...CASTERS];
   switch (ap?.armorType) {
-    case 'heavy': return [...FRONTLINE];
-    case 'medium': return [...FRONTLINE, 'Fencer (Rapier)'];
+    case 'heavy': return [...FRONTLINE, 'Pure Tank']; // duelists excluded — heavy claps their speed
+    case 'medium': return [...FRONTLINE, ...DUELIST, 'Fencer (Rapier)'];
     case 'light': return [...NIMBLE, ...CASTERS];
     default: return ['General'];
   }
 }
 
+// 1H melee weapons serve both their "& Shield" build and their duel-grip (no-shield) variant.
+const DUELIST_OF: Partial<Record<BuildClass, BuildClass>> = {
+  'Sword & Shield': 'Sword (Duelist)', 'Axe & Shield': 'Axe (Duelist)', 'Mace & Shield': 'Mace (Duelist)',
+  'Cleaver & Shield': 'Cleaver (Duelist)', 'Flail & Shield': 'Flail (Duelist)', 'Spear & Shield': 'Spear (Duelist)'
+};
+
 function classifyItem(item: any, kind: GearKind): BuildClass[] {
   if (kind === 'weapon' || kind === 'ammo') {
     const wp = item.weaponProperties;
-    return wp ? [classifyWeapon(item, wp)] : ['General'];
+    if (!wp) return ['General'];
+    const base = classifyWeapon(item, wp);
+    const duel = DUELIST_OF[base];
+    // A 1H melee weapon also serves its duel-grip variant AND Pure Tank (which has no bespoke weapon —
+    // it wields a shield and whichever 1H turns out least stamina-hungry once balanced).
+    return duel ? [base, duel, 'Pure Tank'] : [base];
   }
   if (kind === 'armor') return classifyArmor(item);
   return ['General']; // tool / medicine — pawn skills, not builds
@@ -344,7 +371,10 @@ function toRow(item: any): GearRow | null {
     gating: null,
     scope: null,
     rarity: null,
-    lineageNames: null
+    rarityRank: 0,
+    lineageNames: null,
+    evolvesTo: null,
+    evoStage: 0
   };
 }
 
@@ -352,6 +382,26 @@ function toRow(item: any): GearRow | null {
 const STAT_ABBR: Record<string, string> = {
   strength: 'STR', dexterity: 'DEX', constitution: 'CON', perception: 'PER', intelligence: 'INT', charisma: 'CHA'
 };
+
+const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'negative'];
+const rarityRank = (r: string) => {
+  const i = RARITY_ORDER.indexOf(r);
+  return i < 0 ? 0 : i;
+};
+
+// Evolution chains: a base trait names the higher trait it grows into (evolvesTo). Stage = depth.
+const evolvesParent = new Map<string, string>(); // child id → parent id
+for (const t of traits) if (t?.id && t?.evolvesTo) evolvesParent.set(t.evolvesTo, t.id);
+const evoStageCache = new Map<string, number>();
+function evoStage(id: string, seen = new Set<string>()): number {
+  if (evoStageCache.has(id)) return evoStageCache.get(id)!;
+  if (seen.has(id)) return 0;
+  seen.add(id);
+  const p = evolvesParent.get(id);
+  const s = p ? evoStage(p, seen) + 1 : 0;
+  evoStageCache.set(id, s);
+  return s;
+}
 
 function traitGating(t: any): TraitGating {
   if (t.rarity === 'negative') return 'flaw';
@@ -365,8 +415,9 @@ function classifyTrait(t: any): BuildClass[] {
   const e = t.effects ?? {};
   const set = new Set<BuildClass>();
   const stat = (k: string) => e[k + 'Bonus'] != null || e[k + 'Penalty'] != null;
-  if (stat('strength') || stat('constitution')) FRONTLINE.forEach((b) => set.add(b));
-  if (stat('dexterity')) { set.add('Assassin (Dagger)'); set.add('Fencer (Rapier)'); }
+  if (stat('strength')) MELEE_ALL.forEach((b) => set.add(b));
+  if (stat('constitution')) { FRONTLINE.forEach((b) => set.add(b)); set.add('Pure Tank'); }
+  if (stat('dexterity')) { set.add('Assassin (Dagger)'); set.add('Fencer (Rapier)'); DUELIST.forEach((b) => set.add(b)); }
   if (stat('perception')) PER_BUILDS.forEach((b) => set.add(b));
   if (stat('intelligence')) CASTERS.forEach((b) => set.add(b));
   const cm = e.combatMods ?? {};
@@ -377,7 +428,7 @@ function classifyTrait(t: any): BuildClass[] {
     else if (/dodge|knockdown|block|parry/.test(k)) NIMBLE.forEach((b) => set.add(b));
   }
   if (e.stealth != null || e.nightVision != null) set.add('Assassin (Dagger)');
-  if (t.kind === 'bodyMod' || e.resistances) FRONTLINE.forEach((b) => set.add(b));
+  if (t.kind === 'bodyMod' || e.resistances) { FRONTLINE.forEach((b) => set.add(b)); set.add('Pure Tank'); }
   return set.size ? [...set] : ['General'];
 }
 
@@ -429,7 +480,10 @@ function traitRow(t: any): GearRow {
     gating: traitGating(t),
     scope: t.scope ?? null,
     rarity: t.rarity ?? null,
-    lineageNames: t.lineage && t.lineage.length ? t.lineage.join(', ') : null
+    rarityRank: rarityRank(t.rarity),
+    lineageNames: t.lineage && t.lineage.length ? t.lineage.join(', ') : null,
+    evolvesTo: t.evolvesTo ?? null,
+    evoStage: evoStage(t.id)
   };
 }
 

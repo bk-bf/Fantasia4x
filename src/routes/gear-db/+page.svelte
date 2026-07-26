@@ -23,6 +23,82 @@
   const CATALOGUE = GEAR.filter((g) => ['weapon', 'armor', 'ammo', 'trait'].includes(g.kind));
   const summaries = buildSummaries();
 
+  // Coverage grid: build × kind × age → the actual items (precomputed once; GEAR is static).
+  const cellMap = new Map<string, GearRow[]>();
+  for (const g of GEAR) {
+    if (g.kind !== 'weapon' && g.kind !== 'armor') continue;
+    for (const b of g.classes) {
+      const key = `${b}|${g.kind}|${g.age}`;
+      const arr = cellMap.get(key) ?? cellMap.set(key, []).get(key)!;
+      arr.push(g);
+    }
+  }
+  for (const arr of cellMap.values()) arr.sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name)); // by tier
+  const cell = (build: string, gkind: 'weapon' | 'armor', age: string) => cellMap.get(`${build}|${gkind}|${age}`) ?? [];
+
+  // Traits/lineages grid: build × gating → the actual traits (lineage badge shows the marker).
+  const GATINGS = ['ungated', 'cultural', 'lineage', 'flaw'] as const;
+  const RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'negative'] as const;
+  const rarityLabel = (r: string) => (r === 'negative' ? 'flaw' : r);
+  const byEvoRarity = (a: GearRow, b: GearRow) => a.evoStage - b.evoStage || a.rarityRank - b.rarityRank || a.name.localeCompare(b.name);
+  const traitMap = new Map<string, GearRow[]>();
+  for (const g of GEAR) {
+    if (g.kind !== 'trait' || !g.gating) continue;
+    for (const b of g.classes) {
+      const key = `${b}|${g.gating}`;
+      const arr = traitMap.get(key) ?? traitMap.set(key, []).get(key)!;
+      arr.push(g);
+    }
+  }
+  for (const arr of traitMap.values()) arr.sort(byEvoRarity); // by evolution stage, then rarity
+  const traitCell = (build: string, gating: string) => traitMap.get(`${build}|${gating}`) ?? [];
+  const allTraits = (build: string) => GEAR.filter((g) => g.kind === 'trait' && g.classes.includes(build as never)).sort(byEvoRarity);
+
+  const pBview = page.url?.searchParams?.get('bview') ?? '';
+  let bview = $state<'weapon' | 'armor' | 'trait' | 'all'>(
+    (['armor', 'trait', 'all'] as string[]).includes(pBview) ? (pBview as 'armor' | 'trait' | 'all') : 'weapon'
+  );
+
+  // Cross-table multi-select: click any item/trait to highlight every instance of it in the table.
+  let sel = $state<Record<string, boolean>>({});
+  const selCount = $derived(Object.keys(sel).length);
+  function toggleSel(id: string) {
+    if (sel[id]) delete sel[id];
+    else sel[id] = true;
+  }
+  const clearSel = () => (sel = {});
+
+  // Autocomplete: type to find any weapon/armour/trait; ↑↓ to cycle, Enter/click to highlight it.
+  let acq = $state('');
+  let acIdx = $state(0);
+  const acMatches = $derived.by(() => {
+    const q = acq.trim().toLowerCase();
+    if (!q) return [] as GearRow[];
+    const seen = new Set<string>();
+    const out: GearRow[] = [];
+    for (const g of GEAR) {
+      if (g.kind === 'tool' || g.kind === 'medicine' || seen.has(g.id)) continue;
+      if (g.name.toLowerCase().includes(q) || g.id.includes(q)) {
+        seen.add(g.id);
+        out.push(g);
+      }
+      if (out.length >= 40) break;
+    }
+    return out;
+  });
+  $effect(() => {
+    void acq;
+    acIdx = 0;
+  });
+  function acKey(e: KeyboardEvent) {
+    const n = acMatches.length;
+    if (!n) return;
+    if (e.key === 'ArrowDown') { acIdx = (acIdx + 1) % n; e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { acIdx = (acIdx - 1 + n) % n; e.preventDefault(); }
+    else if (e.key === 'Enter') { toggleSel(acMatches[acIdx].id); e.preventDefault(); }
+    else if (e.key === 'Escape') acq = '';
+  }
+
   // Initial view from the URL (?view=catalogue&kind=weapon&build=Marksman) so SSR + deep-links agree.
   const params = page.url?.searchParams ?? new URLSearchParams();
   const pKind = params.get('kind');
@@ -199,32 +275,110 @@
   </div>
 
   {#if view === 'builds'}
-    <p class="hint">Every archetype's real support, extracted from the data. Click a build to see its entries.</p>
-    <div class="scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>Build</th><th class="num">Weapons</th><th class="num">Armour</th>
-            <th class="num">Ungated</th><th class="num">Cultural</th><th class="num">Lineage</th>
-            <th>Lineages</th><th>Gaps</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each summaries as s (s.build)}
-            <tr class="clickable" onclick={() => openBuild(s.build)}>
-              <td class="name cls" data-cat={BUILD_CAT[s.build]}>{s.build}</td>
-              <td class="num">{s.weapons}</td>
-              <td class="num">{s.armor}</td>
-              <td class="num" class:warn={s.ungatedTraits <= 1}>{s.ungatedTraits}</td>
-              <td class="num">{s.culturalTraits}</td>
-              <td class="num">{s.lineageTraits}</td>
-              <td class="sub">{s.lineages.length ? s.lineages.join(' · ') : '—'}</td>
-              <td class="gaps">{#if s.gaps.length}{s.gaps.join(' · ')}{:else}—{/if}</td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
+    <div class="tabs sub">
+      <button class="tab" class:active={bview === 'weapon'} onclick={() => (bview = 'weapon')}>Weapons by age</button>
+      <button class="tab" class:active={bview === 'armor'} onclick={() => (bview = 'armor')}>Armour by age</button>
+      <button class="tab" class:active={bview === 'trait'} onclick={() => (bview = 'trait')}>Traits &amp; lineages</button>
+      <button class="tab" class:active={bview === 'all'} onclick={() => (bview = 'all')}>ALL</button>
+      {#if selCount}<button class="tab clear" onclick={clearSel}>clear {selCount} selected ✕</button>{/if}
     </div>
+    <div class="ac">
+      <input class="search" type="search" autocomplete="off" placeholder="find weapon / armour / trait — ↑↓ to cycle, Enter to highlight" bind:value={acq} onkeydown={acKey} />
+      {#if acMatches.length}
+        <div class="acmenu" role="listbox" aria-label="matches">
+          {#each acMatches as g, i (g.id)}
+            <button type="button" class="acitem" class:hl={i === acIdx} class:selli={sel[g.id]} onclick={() => toggleSel(g.id)}>
+              <span class="acname">{g.name}</span>
+              <span class="ackind">{g.kind}</span>
+              <span class="acbuild">{clsStr(g)}</span>
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </div>
+    {#if bview === 'trait'}
+      <p class="hint">Each build's traits by gating — <b>ungated</b> = freely rollable. Lineage pills show the marker. Click any to highlight it across the table.</p>
+      <div class="scroll">
+        <table class="grid">
+          <thead>
+            <tr><th>Build</th>{#each GATINGS as gt (gt)}<th>{gt}</th>{/each}</tr>
+          </thead>
+          <tbody>
+            {#each BUILDS as b (b)}
+              <tr>
+                <td class="name cls clickable" data-cat={BUILD_CAT[b]} onclick={() => openBuild(b)}>{b}</td>
+                {#each GATINGS as gt (gt)}
+                  {@const ts = traitCell(b, gt)}
+                  <td class="cellwrap" class:gap={ts.length === 0}>
+                    {#if ts.length}
+                      {#each ts as t (t.id)}<button type="button" class="pill" class:sel={sel[t.id]} onclick={() => toggleSel(t.id)}>{t.name}{#if t.lineageNames}<i>{t.lineageNames}</i>{/if}</button>{/each}
+                    {:else}<span class="dot">·</span>{/if}
+                  </td>
+                {/each}
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {:else if bview === 'all'}
+      <p class="hint">Everything per build in one table — weapons &amp; armour by age (tier-sorted), traits by evolution stage then rarity. <code>T#</code> = tier; trait badge = rarity (<code>·s#</code> = evolution stage). Click any to highlight.</p>
+      <div class="scroll">
+        <table class="grid">
+          <thead><tr><th>Build / facet</th>{#each AGES as a (a)}<th>{a}</th>{/each}</tr></thead>
+          <tbody>
+            {#each BUILDS as b (b)}
+              <tr class="grp"><td class="cls clickable" data-cat={BUILD_CAT[b]} colspan={AGES.length + 1} onclick={() => openBuild(b)}>{b}</td></tr>
+              <tr>
+                <td class="facet">Weapons</td>
+                {#each AGES as a (a)}
+                  {@const its = cell(b, 'weapon', a)}
+                  <td class="cellwrap" class:gap={its.length === 0}>{#if its.length}{#each its as it (it.id)}<button type="button" class="pill" class:sel={sel[it.id]} onclick={() => toggleSel(it.id)}>{it.name}<i>T{it.tier}</i></button>{/each}{:else}<span class="dot">·</span>{/if}</td>
+                {/each}
+              </tr>
+              <tr>
+                <td class="facet">Armour</td>
+                {#each AGES as a (a)}
+                  {@const its = cell(b, 'armor', a)}
+                  <td class="cellwrap" class:gap={its.length === 0}>{#if its.length}{#each its as it (it.id)}<button type="button" class="pill" class:sel={sel[it.id]} onclick={() => toggleSel(it.id)}>{it.name}<i>T{it.tier}</i></button>{/each}{:else}<span class="dot">·</span>{/if}</td>
+                {/each}
+              </tr>
+              <tr class="subhead"><td class="facet">Traits ▸ rarity</td>{#each RARITIES as r (r)}<td class="rlabel">{rarityLabel(r)}</td>{/each}</tr>
+              <tr>
+                <td class="facet"></td>
+                {#each RARITIES as r (r)}
+                  {@const ts = allTraits(b).filter((t) => t.rarity === r)}
+                  <td class="cellwrap" class:gap={ts.length === 0}>{#if ts.length}{#each ts as t (t.id)}<button type="button" class="pill" class:sel={sel[t.id]} onclick={() => toggleSel(t.id)}>{t.name}{#if t.evoStage}<i>s{t.evoStage}</i>{/if}</button>{/each}{:else}<span class="dot">·</span>{/if}</td>
+                {/each}
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {:else}
+      <p class="hint">Each build's {bview === 'weapon' ? 'weapons' : 'armour'} laid out by age — empty cells are coverage gaps. <code>T#</code> = tier. Click an item to highlight it across the table; click a build name for its full list.</p>
+      <div class="scroll">
+        <table class="grid">
+          <thead>
+            <tr><th>Build</th>{#each AGES as a (a)}<th>{a}</th>{/each}</tr>
+          </thead>
+          <tbody>
+            {#each BUILDS as b (b)}
+              <tr>
+                <td class="name cls clickable" data-cat={BUILD_CAT[b]} onclick={() => openBuild(b)}>{b}</td>
+                {#each AGES as a (a)}
+                  {@const its = cell(b, bview, a)}
+                  <td class="cellwrap" class:gap={its.length === 0}>
+                    {#if its.length}
+                      {#each its as it (it.id)}<button type="button" class="pill" class:sel={sel[it.id]} onclick={() => toggleSel(it.id)}>{it.name}<i>T{it.tier}</i></button>{/each}
+                    {:else}<span class="dot">·</span>{/if}
+                  </td>
+                {/each}
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
   {:else}
     <div class="controls">
       <input class="search" type="search" placeholder="search…" bind:value={q} />
@@ -255,7 +409,7 @@
         </thead>
         <tbody>
           {#each rows as g (g.id)}
-            <tr>
+            <tr class="clickable" class:sel={sel[g.id]} onclick={() => toggleSel(g.id)}>
               {#each cols as c (c.key)}
                 <td class:num={c.numeric} class:name={c.key === 'name'} class:cls={c.clscol} data-cat={BUILD_CAT[g.cls]}>
                   {c.disp ? c.disp(g) : (c.get(g) ?? '—')}
@@ -428,13 +582,6 @@
     color: #ece6d4;
     font-weight: 600;
   }
-  td.num.warn {
-    color: #d76f5d;
-  }
-  td.gaps {
-    color: #d76f5d;
-    font-size: 12px;
-  }
   td.cls {
     font-weight: 600;
   }
@@ -450,8 +597,155 @@
   td.cls[data-cat='caster'] {
     color: #a98fd6;
   }
+  td.cls[data-cat='duelist'] {
+    color: #d3a04e;
+  }
+  td.cls[data-cat='tank'] {
+    color: #6fa0c8;
+  }
   td.cls[data-cat='general'] {
     color: #6d6653;
+  }
+
+  /* build × age coverage grid */
+  .tabs.sub {
+    margin-bottom: 10px;
+  }
+  table.grid td.cellwrap {
+    white-space: normal;
+    vertical-align: top;
+    min-width: 120px;
+  }
+  table.grid td.gap {
+    background: rgba(215, 111, 93, 0.06);
+  }
+  .pill {
+    display: inline-block;
+    margin: 1px 2px 1px 0;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: #221e15;
+    border: 1px solid #362f22;
+    font-family: inherit;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #ece6d4;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .pill:hover {
+    border-color: #6b5a2f;
+  }
+  .pill.sel {
+    border-color: #d8ab52;
+    background: rgba(216, 171, 82, 0.3);
+    color: #fff;
+  }
+  tbody tr.sel td,
+  tbody tr.sel:hover td {
+    background: rgba(216, 171, 82, 0.16);
+  }
+  .tab.clear {
+    color: #d8ab52;
+    border-color: #6b5a2f;
+    margin-left: auto;
+  }
+  .pill i {
+    color: #6d6653;
+    font-style: normal;
+    margin-left: 4px;
+    font-size: 9.5px;
+  }
+  .dot {
+    color: #4a4436;
+  }
+  tr.grp td {
+    background: #1b1811;
+    border-top: 2px solid #2a2519;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+  }
+  td.facet {
+    color: #9a9279;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    vertical-align: top;
+  }
+  tr.subhead td {
+    color: #6d6653;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 6px 10px 1px;
+    border-bottom: none;
+  }
+  tr.subhead td.rlabel {
+    color: #9a9279;
+  }
+
+  /* autocomplete */
+  .ac {
+    position: relative;
+    max-width: 460px;
+    margin-bottom: 14px;
+  }
+  .ac .search {
+    width: 100%;
+    margin: 0;
+  }
+  .acmenu {
+    position: absolute;
+    z-index: 30;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 3px;
+    max-height: 340px;
+    overflow-y: auto;
+    background: #1b1811;
+    border: 1px solid #4a4030;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+  .acitem {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #221e15;
+    padding: 5px 11px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: #ece6d4;
+  }
+  .acitem.hl {
+    background: rgba(216, 171, 82, 0.16);
+  }
+  .acitem.selli .acname {
+    color: #d8ab52;
+    font-weight: 600;
+  }
+  .acitem .ackind {
+    color: #6d6653;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .acitem .acbuild {
+    color: #9a9279;
+    font-size: 11px;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+  td.clickable {
+    cursor: pointer;
   }
   .sub {
     color: #9a9279;
