@@ -14,8 +14,12 @@ per-animal leather chain, and specialised disciplines that replace the generic c
 ## Principles (apply throughout)
 - **Tool = durable, strictly NON-organic** (metal + at most a leather/thread/wood binding) → it gives **SPEED**.
   **Organic = consumable** (herb / oil / food / medicine) → it gives **QUALITY**. The two are used together. Never
-  craft a durable tool from a raw consumable ("herbal kit from one woundwort" is the anti-pattern). **No separate
-  tool-handle sub-chains** — `branch` is the handle inline, exactly as the existing axes/picks/kits already do.
+  craft a durable tool from a raw consumable ("herbal kit from one woundwort" is the anti-pattern).
+- **Handles are crafted, progressively (reversed 2026-07-25).** A raw `branch` hafts a STONE tool (a hand-axe *is* a
+  stick + stone — correct), but a metal head wants a real handle, gated by **carpentry**, not just ore: copper/bronze
+  use a carved `wooden_haft`; iron/steel need a **`seasoned_haft`** — carve+sand a batch (active woodworking), then
+  **soak** the batch at a passive soaking trough (the iron-age reward: load six, walk away). No soak → no robust iron
+  tool. Hilted blades (swords/daggers) keep their leather grip; arrows keep their branch shaft. **DONE + headless-verified.**
 - **Preserve ANIMAL IDENTITY end-to-end.** A wolf stays a wolf: `wolf_pelt → … → wolf_leather → prime_wolf_leather`
   → a wolf-flavoured cloak / rug / bed. A wolfskin coat reads far more immersive than a generic "leather coat".
   **Generic leather is reserved for boring animals** you'd never want gear to reference (rat/vermin). The flavour

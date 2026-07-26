@@ -434,6 +434,21 @@
         "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "cloth / garment quality (× ((manipulation + sight) / 2))"
     },
+    // ── Woodworking (carpentry): planks, furniture, hafts.
+    {
+        "id"         : "woodworking_speed",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "description": "woodworking speed (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "woodworking_quality",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "description": "joinery / haft quality (× ((manipulation + sight) / 2))"
+    },
     // ── Stoneworking PARENT: fallback for the Knapping / Masonry / Lapidary leaves.
     {
         "id"         : "stoneworking_speed",

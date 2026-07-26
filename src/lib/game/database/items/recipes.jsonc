@@ -1150,6 +1150,92 @@
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
   },
+  // ── Tailoring / leatherwork tools ───────────────────────────────────────
+  // The bone fleshing scraper is knappable at the free craft spot from butchery bone, so a colony can
+  // always make its first fleshing tool and never soft-lock the (now-active) leather chain. Iron/steel
+  // are the forged upgrades. Handles are the branch inline — no separate handle chain.
+  {
+    "id"              : "make_bone_fleshing_scraper",
+    "station"         : "craft_spot",
+    "inputs"          : {"large_bones": 1, "branch": 1, "cordage": 1},
+    "outputs"         : {"bone_fleshing_scraper": 1},
+    "workAmount"      : 3,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_iron_fleshing_knife",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 1, "seasoned_haft": 1, "category:leather": 1},
+    "outputs"         : {"iron_fleshing_knife": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_curriers_kit",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 1, "category:plank": 1, "category:leather": 1},
+    "outputs"         : {"curriers_kit": 1},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_steel_curriers_kit",
+    "station"         : "anvil",
+    "inputs"          : {"category:steel": 1, "category:plank": 1, "category:leather": 1},
+    "outputs"         : {"steel_curriers_kit": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_sewing_kit",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 1, "thread": 2},
+    "outputs"         : {"sewing_kit": 1},
+    "workAmount"      : 6,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_tailors_kit",
+    "station"         : "anvil",
+    "inputs"          : {"category:steel": 1, "thread": 2},
+    "outputs"         : {"tailors_kit": 1},
+    "workAmount"      : 8,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  // ── Tool / weapon HAFTS (carpentry) ─────────────────────────────────────
+  // A raw branch hafts a STONE tool; a metal head wants a carved handle. Copper/bronze use a carved
+  // `wooden_haft`; iron/steel need a SEASONED haft — carve+sand a batch (active), then soak the batch at
+  // the passive soaking trough (the iron-age reward: load six, walk away). No soak → no robust iron tool.
+  {
+    "id"              : "make_wooden_haft",
+    "station"         : "sawtable",
+    "inputs"          : {"branch": 1},
+    "outputs"         : {"wooden_haft": 1},
+    "workAmount"      : 2,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_sanded_hafts",
+    "station"         : "sawtable",
+    "inputs"          : {"branch": 6},
+    "outputs"         : {"sanded_haft": 6},
+    "workAmount"      : 6,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "soak_seasoned_hafts",
+    "station"         : "soaking_trough",
+    "passive"         : true,
+    "inputs"          : {"sanded_haft": 6, "water": 1},
+    "outputs"         : {"seasoned_haft": 6},
+    "workAmount"      : 5,
+    "toolTierRequired": 0
+  },
   // ── Metalworking tools (the forge/anvil craft-tool gate) ──────────────────
   // Crude green-wood tongs are knappable at the free craft spot with NO tool, so a colony can make
   // its first metalworking tool and never soft-lock the (tool-gated) forge/anvil. Iron/steel tongs
@@ -1183,7 +1269,7 @@
   {
     "id"              : "make_iron_axe",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "branch": 1, "category:leather": 1},
+    "inputs"          : {"iron_bar": 2, "seasoned_haft": 1, "category:leather": 1},
     "outputs"         : {"iron_axe": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -1192,7 +1278,7 @@
   {
     "id"              : "make_steel_axe",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 2, "branch": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 2, "seasoned_haft": 1, "category:leather": 1},
     "outputs"         : {"steel_axe": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -1201,7 +1287,7 @@
   {
     "id"              : "make_iron_hammer",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "branch": 1, "category:leather": 1},
+    "inputs"          : {"iron_bar": 2, "seasoned_haft": 1, "category:leather": 1},
     "outputs"         : {"iron_hammer": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -1210,7 +1296,7 @@
   {
     "id"              : "make_steel_hammer",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 2, "branch": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 2, "seasoned_haft": 1, "category:leather": 1},
     "outputs"         : {"steel_hammer": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -1219,7 +1305,7 @@
   {
     "id"              : "make_iron_shovel",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "branch": 1, "category:leather": 1},
+    "inputs"          : {"iron_bar": 2, "seasoned_haft": 1, "category:leather": 1},
     "outputs"         : {"iron_shovel": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -1228,7 +1314,7 @@
   {
     "id"              : "make_steel_shovel",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 2, "branch": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 2, "seasoned_haft": 1, "category:leather": 1},
     "outputs"         : {"steel_shovel": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -1237,7 +1323,7 @@
   {
     "id"              : "make_iron_hoe",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "branch": 1, "category:leather": 1},
+    "inputs"          : {"iron_bar": 2, "seasoned_haft": 1, "category:leather": 1},
     "outputs"         : {"iron_hoe": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -1246,7 +1332,7 @@
   {
     "id"              : "make_steel_hoe",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 2, "branch": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 2, "seasoned_haft": 1, "category:leather": 1},
     "outputs"         : {"steel_hoe": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -1552,7 +1638,7 @@
   {
     "id"              : "make_leaf_blade_spear",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"wooden_haft": 1, "bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"leaf_blade_spear": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -1572,7 +1658,7 @@
   {
     "id"              : "make_cast_bronze_hatchet",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"wooden_haft": 1, "bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"cast_bronze_hatchet": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -1685,7 +1771,7 @@
   {
     "id"              : "make_bearded_axe",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "category:leather": 1},
+    "inputs"          : {"seasoned_haft": 1, "iron_bar": 2, "category:leather": 1},
     "outputs"         : {"bearded_axe": 1},
     "workAmount"      : 12,
     "toolTierRequired": 2,
@@ -1705,7 +1791,7 @@
   {
     "id"              : "make_framea",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "category:leather": 1},
+    "inputs"          : {"seasoned_haft": 1, "iron_bar": 1, "category:leather": 1},
     "outputs"         : {"framea": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -1749,7 +1835,7 @@
   {
     "id"              : "make_iron_mace",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "category:leather": 1},
+    "inputs"          : {"seasoned_haft": 1, "iron_bar": 1, "category:leather": 1},
     "outputs"         : {"iron_mace": 1},
     "workAmount"      : 9,
     "toolTierRequired": 2,
@@ -1758,7 +1844,7 @@
   {
     "id"              : "make_iron_warhammer",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "oak_plank": 1, "category:leather": 1},
+    "inputs"          : {"iron_bar": 2, "seasoned_haft": 1, "category:leather": 1},
     "outputs"         : {"iron_warhammer": 1},
     "workAmount"      : 13,
     "toolTierRequired": 2,
@@ -1794,7 +1880,7 @@
   {
     "id"              : "make_steel_pike",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 1, "oak_plank": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 1, "seasoned_haft": 1, "category:leather": 1},
     "outputs"         : {"steel_pike": 1},
     "workAmount"      : 13,
     "toolTierRequired": 2,
@@ -1803,7 +1889,7 @@
   {
     "id"              : "make_steel_mace",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 1, "category:leather": 1},
+    "inputs"          : {"seasoned_haft": 1, "category:steel": 1, "category:leather": 1},
     "outputs"         : {"steel_mace": 1},
     "workAmount"      : 13,
     "toolTierRequired": 2,
@@ -1812,7 +1898,7 @@
   {
     "id"              : "make_steel_warhammer",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 2, "oak_plank": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 2, "seasoned_haft": 1, "category:leather": 1},
     "outputs"         : {"steel_warhammer": 1},
     "workAmount"      : 17,
     "toolTierRequired": 2,
@@ -1830,7 +1916,7 @@
   {
     "id"              : "make_steel_greatcleaver",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 3, "category:leather": 1},
+    "inputs"          : {"seasoned_haft": 1, "category:steel": 3, "category:leather": 1},
     "outputs"         : {"steel_greatcleaver": 1},
     "workAmount"      : 20,
     "toolTierRequired": 2,
@@ -1839,7 +1925,7 @@
   {
     "id"              : "make_steel_flail",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 1, "iron_bar": 1, "category:leather": 1},
+    "inputs"          : {"seasoned_haft": 1, "category:steel": 1, "iron_bar": 1, "category:leather": 1},
     "outputs"         : {"steel_flail": 1},
     "workAmount"      : 14,
     "toolTierRequired": 2,
@@ -4375,7 +4461,7 @@
     "station": "anvil",
     "inputs": {
       "iron_bar": 2,
-      "branch": 1,
+      "seasoned_haft": 1,
       "category:leather": 1
     },
     "outputs": {
@@ -4390,7 +4476,7 @@
     "station": "anvil",
     "inputs": {
       "category:steel": 2,
-      "branch": 1,
+      "seasoned_haft": 1,
       "category:leather": 1
     },
     "outputs": {

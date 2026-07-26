@@ -119,9 +119,34 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Leatherwork',
     description: 'Flesh, curry, and sew hides into leather goods',
     color: '#8D6E63',
-    toolsRequired: ['flint_knife', 'iron_knife', 'steel_knife'],
+    // The fleshing/currying/sewing tools gate + boost by tier: a flint knife (t0) can't flesh a hide
+    // (the flesh recipe needs a t1 fleshing tool), so a colony must craft a bone scraper first. Knives
+    // stay in the list for the sewing/cutting steps.
+    toolsRequired: [
+      'flint_knife',
+      'iron_knife',
+      'steel_knife',
+      'bone_fleshing_scraper',
+      'iron_fleshing_knife',
+      'curriers_kit',
+      'steel_curriers_kit',
+      'sewing_kit',
+      'tailors_kit'
+    ],
     primaryStat: 'dexterity',
     secondaryStat: 'intelligence',
+    baseEfficiency: 1.0
+  },
+  {
+    // Carpentry: planks, furniture, bows, and tool/weapon hafts. Station-gated (sawtable / carpenter's
+    // bench); a knife/adze speeds carving but never gates it.
+    id: 'woodworking',
+    name: 'Woodworking',
+    description: 'Carve wood — planks, furniture, bows, and seasoned tool hafts',
+    color: '#A0522D',
+    boostTools: ['flint_knife', 'iron_knife', 'steel_knife'],
+    primaryStat: 'dexterity',
+    secondaryStat: 'strength',
     baseEfficiency: 1.0
   },
   {

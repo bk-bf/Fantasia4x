@@ -100,6 +100,7 @@ describe('job registry (jobs.jsonc ↔ JobService)', () => {
     expect(statKey('oven')).toBe('baking'); // leaf under Cooking
     expect(statKey('fermenter')).toBe('brewing'); // leaf under Cooking
     expect(statKey('weaving_frame')).toBe('weaving'); // leaf under Tailoring
+    expect(statKey('sawtable')).toBe('woodworking'); // carpentry (hafts, planks, furniture)
     // A meal output is the `meals` leaf of Cooking.
     expect(statKey('campfire', 'small_stew')).toBe('meals');
   });

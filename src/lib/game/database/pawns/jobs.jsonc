@@ -31,6 +31,10 @@
       // Flat discipline — no leaves; an anvil/forge order counts as metalworking directly.
       { "id": "metalworking", "label": "Metalworking", "station": "smithingEnabled|smeltingEnabled" },
 
+      // Carpentry — planks, furniture, bows, and (progressively) tool/weapon HAFTS: carve → sand a
+      // handle here, then season it at the passive soaking trough. Flat discipline.
+      { "id": "woodworking", "label": "Woodworking", "station": "woodworkingEnabled" },
+
       // Soft goods. Leaf id `leatherworking` is legacy (keeps its existing stats/tools/traits) — it is the
       // Leatherwork leaf of Tailoring. Weaving is the thread/fabric line (stays useful late game).
       { "id": "tailoring", "label": "Tailoring", "subjobs": [

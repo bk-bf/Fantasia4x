@@ -63,6 +63,7 @@ export const ABBR: Record<string, string> = {
   fishing: 'FSH',
   crafting: 'CRF',
   metalworking: 'MTL',
+  woodworking: 'WWK',
   tailoring: 'TLR',
   leatherworking: 'LTH',
   stoneworking: 'STN',
