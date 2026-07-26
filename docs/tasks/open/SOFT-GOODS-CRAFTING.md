@@ -130,10 +130,14 @@ gap in the grid, deliberately slotted to a build.
   swapped off raw `branch` onto crafted hafts. See Principles. Headless-verified (carve→soak→iron_axe).
 
 ## Open questions
-- [ ] Beast gear/rug/bed retarget to specific `prime_<leather>` per-piece (only the 2 flagship pieces done; the rest
-      accept `category:leather`, which prime satisfies).
-- [ ] Sewn iron+ gear kit-gating per-piece (the kit + gate mechanism exist; not applied to each gear recipe yet).
-- [ ] Oddball homes to review: candle/torch → cooking; compost/fertiliser/resin → alchemy (best-fit calls in §D).
+- [x] Beast gear/rug/bed retarget — RESOLVED: beast **rugs** already animal-specific (`dire_wolf_rug`←pelt, etc. —
+      identity already there; a FUR rug isn't leather, so no prime retarget); beast **gear**
+      (`cave_bear_plate`/`direwolf_warcloak`) requires `prime_<leather>`; regular gear uses `category:leather`
+      (prime qualifies). No per-animal beds exist. *(Rug→cured-fur realism is a minor tracked follow-up in AUDIT §3.)*
+- [x] Oddball homes — RESOLVED (accepted): candle/torch → cooking; compost/fertiliser/resin → alchemy.
+- [ ] Sewn iron+ gear kit-gating per-piece — **tracked in [AUDIT.md](AUDIT.md) §3 follow-ups** (recipe sweep; needs a
+      `weaving` WORK_CATEGORY for cloth-apparel gating).
+- [ ] End-to-end headless sweep of ALL new recipes/items/buildings — **tracked in [AUDIT.md](AUDIT.md) §3** (`craftAllNew.test.ts`).
 
 ## Acceptance (headless-verified)
 - [x] A hide can't become leather without the ACTIVE flesh step (flint knife can't flesh — a t1 fleshing tool is needed).

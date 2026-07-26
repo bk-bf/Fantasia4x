@@ -471,11 +471,29 @@ primitive full-body/leg/warmth clothing, no cloth base layer.** Proposed additio
 - [ ] **`bark_sandals`** / **`hide_moccasins`** (t0) — the missing primitive FOOT slot (boots start at t1 tallow_boots).
 - [ ] slot-coverage pass: ensure head/body/legs/feet/hands each have a t0 AND t1 option per build lean (light vs warm).
 
-### 3. Tailoring category + realistic per-animal leather → **full spec: [SOFT-GOODS-CRAFTING.md](SOFT-GOODS-CRAFTING.md)**
-- Grew past a checklist: the passive tanning chain gets ACTIVE leatherwork steps (flesh + curry, per-animal, tooled),
-  a new `tailoring` category with `leatherwork`/`weaving` subjobs + kits, and general `crafting` deprecates into
-  specialised disciplines. Animal identity preserved end-to-end (wolf → wolf leather → wolf gear/rug). See the spec
-  for the chain table, tools, phasing (Phase 1 = the "fix tailoring & tools" deliverable), and acceptance criteria.
+### 3. Tailoring category + realistic per-animal leather → **full spec: [SOFT-GOODS-CRAFTING.md](SOFT-GOODS-CRAFTING.md)** — ✅ DONE (2026-07-25)
+- [x] Built end-to-end (full suite 1148, headless-verified): job registry unified (crafts nest like building);
+      craft subjobs are INDEPENDENT skills; ACTIVE per-animal leather chain (flesh + curry, tooled, animal identity
+      kept — headless deer + wolf→prime_wolf_leather→direwolf_warcloak); **generic `crafting` fully DISSOLVED** into
+      disciplines via a recipe-`discipline` tag (+Pottery, +Bonecarving, +Woodworking; ~90 recipes routed; 20 per-leaf
+      work stats; traits' `crafts` meta-key). **BONUS: tool/weapon HANDLE chain** (carve→sand→soak `seasoned_haft`).
+- [x] Beast **rugs** already carry animal identity (`dire_wolf_rug`←`dire_wolf_pelt`, etc.) — no change; "prime
+      leather" doesn't apply to a FUR rug. Beast **gear** (`cave_bear_plate`, `direwolf_warcloak`) requires
+      `prime_<leather>`; regular gear uses `category:leather` (prime qualifies). Oddball routing settled
+      (candle/torch→cooking; compost/fertiliser/resin→alchemy).
+- [ ] **FOLLOW-UP — rug realism** (track only, minor): beast rugs consume RAW pelts; a fur rug is a *cured* fur — swap
+      to `cured_<pelt>` (breaks `butcheryAudit` §B rug-cost assertions, so update those together).
+- [x] **All 10 craft-discipline LEAVES are now first-class WORK_CATEGORIES** (weaving/knapping/masonry/lapidary/
+      bonecarving/meals/baking/brewing/herbalism/potions) — each can carry its own tools/boosts. **Fixed a regression:**
+      `getWorkModifiers` read tool boosts from the PARENT, so leaf tools (fleshing scraper, currier's/butchery kit) had
+      stopped boosting after the rework — now a leaf prefers its OWN tools, parent only as fallback.
+- [ ] **FOLLOW-UP — per-piece sewn-gear kit-gating** (track only): the `weaving` category + `sewing_kit`/`tailors_kit`
+      now EXIST, so this is just a recipe sweep — add `toolRequirement:{leatherworking|weaving, minTier:2}` to the sewn
+      iron+ leather/cloth APPAREL (jerkins/coifs/gauntlets/boots/hoods/cloaks). Deferred per user.
+- [ ] **FOLLOW-UP — end-to-end HEADLESS SWEEP of all new content** (track only, per user): drive EVERY new recipe /
+      item / building through the real sim (HeadlessSession, provisioned colony) and assert each produces — the 17
+      fleshed + 12 prime + 6 tailoring tools + 3 hafts + `curriers_bench`/`soaking_trough` + the Pottery/Bonecarving/
+      Woodworking-routed recipes. Extend the `leatherChainE2E` provisioned-sweep pattern; a `craftAllNew.test.ts`.
 
 ### 4. Wound-specific tiered medicine — [ ] propose-then-build (AFTER tailoring)
 Design rule (user): **TOOL = non-organic & durable → SPEED; CONSUMABLE = organic → QUALITY**, used together. No

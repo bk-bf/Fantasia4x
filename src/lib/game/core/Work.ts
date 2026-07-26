@@ -240,6 +240,107 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     secondaryStat: 'dexterity',
     baseEfficiency: 1.0
   },
+
+  // ── CRAFT-DISCIPLINE LEAVES — first-class work categories so each can carry its OWN tools/boosts and
+  //    be tool-gated. They render as SUBJOBS of their parent in the Work tab (filtered from the top row
+  //    by `jobService.isCraftSubjob`), and each is its own independent skill. `leatherworking`/`butchery`
+  //    (legacy leaves) already have entries above; these are the rest.
+  {
+    id: 'weaving',
+    name: 'Weaving',
+    description: 'Twist fibre and weave cloth, wicker, and basketry; sew cloth garments',
+    color: '#C0A060',
+    // Only recipes that DECLARE `toolRequirement:{weaving,…}` gate on a kit — tool-free wicker is unaffected.
+    toolsRequired: ['sewing_kit', 'tailors_kit'],
+    primaryStat: 'dexterity',
+    secondaryStat: 'intelligence',
+    baseEfficiency: 1.0
+  },
+  {
+    id: 'knapping',
+    name: 'Knapping',
+    description: 'Knap flint and stone into edges, heads, and points',
+    color: '#9AA0A6',
+    // Bootstrap-free (the first tools are knapped bare-handed); a hammerstone-grade hammer speeds it.
+    boostTools: ['stone_hammer', 'iron_hammer', 'steel_hammer'],
+    primaryStat: 'strength',
+    secondaryStat: 'dexterity',
+    baseEfficiency: 1.0
+  },
+  {
+    id: 'masonry',
+    name: 'Masonry',
+    description: 'Dress and lay stone — blocks, walls, querns',
+    color: '#78909C',
+    boostTools: ['stone_hammer', 'iron_hammer', 'steel_hammer'],
+    primaryStat: 'strength',
+    secondaryStat: 'dexterity',
+    baseEfficiency: 1.0
+  },
+  {
+    id: 'lapidary',
+    name: 'Lapidary',
+    description: 'Cut and polish gems',
+    color: '#7E57C2',
+    primaryStat: 'dexterity',
+    secondaryStat: 'perception',
+    baseEfficiency: 1.0
+  },
+  {
+    id: 'bonecarving',
+    name: 'Bonecarving',
+    description: 'Carve bone, antler, and ivory into tools, weapons, and charms',
+    color: '#C8A87A',
+    boostTools: ['flint_knife', 'iron_knife', 'steel_knife'],
+    primaryStat: 'dexterity',
+    secondaryStat: 'perception',
+    baseEfficiency: 1.0
+  },
+  {
+    id: 'meals',
+    name: 'Meals',
+    description: 'Cook stews, roasts, and prepared dishes',
+    color: '#FF9800',
+    primaryStat: 'dexterity',
+    secondaryStat: 'intelligence',
+    baseEfficiency: 1.0
+  },
+  {
+    id: 'baking',
+    name: 'Baking',
+    description: 'Mill flour and bake bread and pies',
+    color: '#D4A056',
+    primaryStat: 'dexterity',
+    secondaryStat: 'intelligence',
+    baseEfficiency: 1.0
+  },
+  {
+    id: 'brewing',
+    name: 'Brewing',
+    description: 'Ferment ale, wine, and cider',
+    color: '#B5651D',
+    primaryStat: 'intelligence',
+    secondaryStat: 'perception',
+    baseEfficiency: 1.0
+  },
+  {
+    id: 'herbalism',
+    name: 'Herbalism',
+    description: 'Gather and prepare herbal poultices, salves, and washes',
+    color: '#6FA06F',
+    primaryStat: 'intelligence',
+    secondaryStat: 'perception',
+    baseEfficiency: 1.0
+  },
+  {
+    id: 'potions',
+    name: 'Potions',
+    description: 'Brew potions, tonics, and coatings from reagents',
+    color: '#9C27B0',
+    primaryStat: 'intelligence',
+    secondaryStat: 'perception',
+    baseEfficiency: 1.0
+  },
   // Phase 7: hauling — carry dropped items to storage
   {
     id: 'hauling',

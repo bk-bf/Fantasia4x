@@ -120,9 +120,11 @@ describe('pawn skill effects', () => {
     const unskilled = await venisonFor(1);
     const master = await venisonFor(50);
     console.log(`[SKILL butchery-yield] venison: butchery1=${unskilled} (base) vs butchery50=${master} (bonus)`);
-    // The FLOOR: an unskilled butcher still renders the full recipe base (venison 10 at butcher_spot),
-    // NOT a reduced amount — so a qty-1 rare drop can never be rounded away by low skill.
-    expect(unskilled, 'unskilled butcher still gets the full base drop (no sub-1 penalty)').toBe(10);
+    // The FLOOR: an unskilled butcher renders AT LEAST the full recipe base (venison 10 at butcher_spot),
+    // NOT a reduced amount — so a qty-1 rare drop can never be rounded away by low skill. (It renders a
+    // little MORE than 10 here because the workReady butchery KIT's yield boost now applies — a good kit
+    // helps regardless of skill; the point is the floor, never a sub-1 penalty.)
+    expect(unskilled, 'unskilled butcher gets the full base drop or more (no sub-1 penalty)').toBeGreaterThanOrEqual(10);
     expect(master, 'a skilled butcher renders MORE off the same carcass than an unskilled one').toBeGreaterThan(unskilled);
     // recipe→discipline routing: a butcher-spot carcass order routes to the `butchery` LEAF discipline
     // (its own *_speed/_quality/_yield stats + tools apply), which nests under the Cooking parent category.

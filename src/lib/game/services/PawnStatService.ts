@@ -961,9 +961,11 @@ export class PawnStatServiceImpl implements PawnStatService {
     // §G: a light multiplier dims the `sight` capacity, which every `*_speed`/`_yield`/`_quality`
     // formula multiplies by → work (and its quality) slows in the dark through the existing model.
     const capacities = this.computeCapacities(pawn, lightMultiplier);
-    // A held tool ADDS its toolBoost to the speed/yield modifier (items.jsonc `toolBoost`). Tools are
-    // authored per CATEGORY (a hammer boosts construction), so a subjob resolves them under its parent.
-    const toolBoost = heldToolBoost(pawn, fallbackType ?? workType);
+    // A held tool ADDS its toolBoost to the speed/yield modifier (items.jsonc `toolBoost`). A subjob
+    // prefers its OWN tools (a fleshing scraper boosts leatherworking, a sewing kit weaving), falling
+    // back to the parent's (a hammer boosts construction → its repair/deconstruct verbs inherit it).
+    const toolBoost =
+      heldToolBoost(pawn, workType) ?? (fallbackType ? heldToolBoost(pawn, fallbackType) : null);
     // Subjobs (Work-tab expand): resolve `${workType}_${axis}` first, then the parent category
     // (`fallbackType`) — so a subjob inherits any axis it doesn't define (Build = construction, etc).
     const formulaFor = (axis: string): string | undefined =>
