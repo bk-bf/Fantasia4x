@@ -37,27 +37,22 @@
   for (const arr of cellMap.values()) arr.sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name)); // by tier
   const cell = (build: string, gkind: 'weapon' | 'armor', age: string) => cellMap.get(`${build}|${gkind}|${age}`) ?? [];
 
-  // Traits/lineages grid: build × gating → the actual traits (lineage badge shows the marker).
-  const GATINGS = ['ungated', 'cultural', 'lineage', 'flaw'] as const;
   const byEvoRarity = (a: GearRow, b: GearRow) => a.evoStage - b.evoStage || a.rarityRank - b.rarityRank || a.name.localeCompare(b.name);
-  const traitMap = new Map<string, GearRow[]>();
-  for (const g of GEAR) {
-    if (g.kind !== 'trait' || !g.gating) continue;
-    for (const b of g.classes) {
-      const key = `${b}|${g.gating}`;
-      const arr = traitMap.get(key) ?? traitMap.set(key, []).get(key)!;
-      arr.push(g);
-    }
-  }
-  for (const arr of traitMap.values()) arr.sort(byEvoRarity); // by evolution stage, then rarity
-  const traitCell = (build: string, gating: string) => traitMap.get(`${build}|${gating}`) ?? [];
+  const posFirst = (a: GearRow, b: GearRow) =>
+    (a.polarity === 'negative' ? 1 : 0) - (b.polarity === 'negative' ? 1 : 0) || a.evoStage - b.evoStage || a.name.localeCompare(b.name);
   const allTraits = (build: string) => GEAR.filter((g) => g.kind === 'trait' && g.classes.includes(build as never)).sort(byEvoRarity);
-  // Traits at a given rarity — positives first, then flaws (rendered red); flaws are graded INTO the
-  // real rarity columns (no separate flaw column).
-  const raritycell = (build: string, rarity: string) =>
+  // Traits at a given rarity — positives first, then flaws (red); flaws graded INTO the real rarity
+  // columns (no separate flaw column). excludeLineage pulls lineage-marked traits out (they get their
+  // own column when the lineage column is toggled on).
+  const raritycell = (build: string, rarity: string, excludeLineage = false) =>
     allTraits(build)
-      .filter((t) => t.gradeRarity === rarity)
-      .sort((a, b) => (a.polarity === 'negative' ? 1 : 0) - (b.polarity === 'negative' ? 1 : 0) || a.evoStage - b.evoStage || a.name.localeCompare(b.name));
+      .filter((t) => t.gradeRarity === rarity && (!excludeLineage || !t.lineageNames))
+      .sort(posFirst);
+  const lineageColTraits = (build: string) =>
+    allTraits(build)
+      .filter((t) => t.lineageNames != null)
+      .sort((a, b) => a.gradeRank - b.gradeRank || (a.lineageNames ?? '').localeCompare(b.lineageNames ?? '') || a.name.localeCompare(b.name));
+  let showLineageCol = $state(false);
 
   const pBview = page.url?.searchParams?.get('bview') ?? '';
   let bview = $state<'weapon' | 'armor' | 'trait' | 'all'>(
@@ -302,24 +297,28 @@
       {/if}
     </div>
     {#if bview === 'trait'}
-      <p class="hint">Each build's traits by gating — <b>ungated</b> = freely rollable. Lineage pills show the marker. Click any to highlight it across the table.</p>
+      <p class="hint">
+        Each build's traits by rarity — <b class="neg">flaws in red</b>, lineage marker as a grey pill.
+        <label class="chk" style="margin-left:14px"><input type="checkbox" bind:checked={showLineageCol} /> show lineage column</label>
+        <span class="sub" style="margin-left:8px">{showLineageCol ? '(lineage traits pulled into their own column)' : '(lineage traits shown in their rarity column)'}</span>
+      </p>
       <div class="scroll">
         <table class="grid">
           <thead>
-            <tr><th>Build</th>{#each GATINGS as gt (gt)}<th>{gt}</th>{/each}</tr>
+            <tr><th>Build</th>{#each REAL_RARITIES as r (r)}<th>{r}</th>{/each}{#if showLineageCol}<th>lineage</th>{/if}</tr>
           </thead>
           <tbody>
             {#each BUILDS as b (b)}
               <tr>
                 <td class="name cls clickable" data-cat={BUILD_CAT[b]} onclick={() => openBuild(b)}>{b}</td>
-                {#each GATINGS as gt (gt)}
-                  {@const ts = traitCell(b, gt)}
-                  <td class="cellwrap" class:gap={ts.length === 0}>
-                    {#if ts.length}
-                      {#each ts as t (t.id)}<button type="button" class="pill" class:sel={sel[t.id]} onclick={() => toggleSel(t.id)}>{t.name}{#if t.lineageNames}<i>{t.lineageNames}</i>{/if}</button>{/each}
-                    {:else}<span class="dot">·</span>{/if}
-                  </td>
+                {#each REAL_RARITIES as r (r)}
+                  {@const ts = raritycell(b, r, showLineageCol)}
+                  <td class="cellwrap" class:gap={ts.length === 0}>{#if ts.length}{#each ts as t (t.id)}<button type="button" class="pill" class:neg={t.polarity === 'negative'} class:sel={sel[t.id]} onclick={() => toggleSel(t.id)}>{t.name}{#if t.lineageNames}<i class="lin">{t.lineageNames}</i>{:else if t.evoStage}<i>s{t.evoStage}</i>{/if}</button>{/each}{:else}<span class="dot">·</span>{/if}</td>
                 {/each}
+                {#if showLineageCol}
+                  {@const ls = lineageColTraits(b)}
+                  <td class="cellwrap" class:gap={ls.length === 0}>{#if ls.length}{#each ls as t (t.id)}<button type="button" class="pill" class:neg={t.polarity === 'negative'} class:sel={sel[t.id]} onclick={() => toggleSel(t.id)}>{t.name}<i class="lin">{t.lineageNames}</i></button>{/each}{:else}<span class="dot">·</span>{/if}</td>
+                {/if}
               </tr>
             {/each}
           </tbody>
@@ -357,7 +356,7 @@
                 {/each}
                 {#each REAL_RARITIES as r (r)}
                   {@const ts = raritycell(b, r)}
-                  <td class="cellwrap" class:gap={ts.length === 0}>{#if ts.length}{#each ts as t (t.id)}<button type="button" class="pill" class:neg={t.polarity === 'negative'} class:sel={sel[t.id]} onclick={() => toggleSel(t.id)}>{t.name}{#if t.evoStage}<i>s{t.evoStage}</i>{/if}</button>{/each}{:else}<span class="dot">·</span>{/if}</td>
+                  <td class="cellwrap" class:gap={ts.length === 0}>{#if ts.length}{#each ts as t (t.id)}<button type="button" class="pill" class:neg={t.polarity === 'negative'} class:sel={sel[t.id]} onclick={() => toggleSel(t.id)}>{t.name}{#if t.lineageNames}<i class="lin">{t.lineageNames}</i>{:else if t.evoStage}<i>s{t.evoStage}</i>{/if}</button>{/each}{:else}<span class="dot">·</span>{/if}</td>
                 {/each}
               </tr>
             {/each}
@@ -665,6 +664,13 @@
     font-style: normal;
     margin-left: 4px;
     font-size: 9.5px;
+  }
+  .pill i.lin {
+    color: #9a9279;
+    background: #2f2a1e;
+    padding: 0 3px;
+    border-radius: 2px;
+    font-size: 9px;
   }
   .dot {
     color: #4a4436;
