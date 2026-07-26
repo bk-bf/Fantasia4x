@@ -11,6 +11,7 @@
     BUILDS,
     BUILD_CAT,
     REAL_RARITIES,
+    BODY_PARTS,
     buildSummaries,
     describeClasses,
     type GearRow,
@@ -36,6 +37,7 @@
   }
   for (const arr of cellMap.values()) arr.sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name)); // by tier
   const cell = (build: string, gkind: 'weapon' | 'armor', age: string) => cellMap.get(`${build}|${gkind}|${age}`) ?? [];
+  const missingParts = (items: GearRow[]) => BODY_PARTS.filter((p) => !items.some((it) => it.bodyPart === p));
 
   const byEvoRarity = (a: GearRow, b: GearRow) => a.evoStage - b.evoStage || a.rarityRank - b.rarityRank || a.name.localeCompare(b.name);
   const posFirst = (a: GearRow, b: GearRow) =>
@@ -274,6 +276,12 @@
     {/each}
   </div>
 
+  {#snippet gearCell(items: GearRow[], armour: boolean)}
+    {#each items as it (it.id)}<button type="button" class="pill" class:sel={sel[it.id]} onclick={() => toggleSel(it.id)}>{it.name}<i>T{it.tier}</i>{#if armour && it.bodyPart}<i class="slot">{it.bodyPart}</i>{/if}</button>{/each}
+    {#if armour}{#each missingParts(items) as p (p)}<span class="miss">– {p}</span>{/each}{/if}
+    {#if !items.length && !armour}<span class="dot">·</span>{/if}
+  {/snippet}
+
   {#if view === 'builds'}
     <div class="tabs sub">
       <button class="tab" class:active={bview === 'weapon'} onclick={() => (bview = 'weapon')}>Weapons by age</button>
@@ -348,11 +356,11 @@
                 <td class="name cls clickable" data-cat={BUILD_CAT[b]} onclick={() => openBuild(b)}>{b}</td>
                 {#each AGES as a (a)}
                   {@const its = cell(b, 'weapon', a)}
-                  <td class="cellwrap" class:gap={its.length === 0}>{#if its.length}{#each its as it (it.id)}<button type="button" class="pill" class:sel={sel[it.id]} onclick={() => toggleSel(it.id)}>{it.name}<i>T{it.tier}</i></button>{/each}{:else}<span class="dot">·</span>{/if}</td>
+                  <td class="cellwrap" class:gap={its.length === 0}>{@render gearCell(its, false)}</td>
                 {/each}
                 {#each AGES as a (a)}
                   {@const its = cell(b, 'armor', a)}
-                  <td class="cellwrap" class:gap={its.length === 0}>{#if its.length}{#each its as it (it.id)}<button type="button" class="pill" class:sel={sel[it.id]} onclick={() => toggleSel(it.id)}>{it.name}<i>T{it.tier}</i></button>{/each}{:else}<span class="dot">·</span>{/if}</td>
+                  <td class="cellwrap" class:gap={its.length === 0}>{@render gearCell(its, true)}</td>
                 {/each}
                 {#each REAL_RARITIES as r (r)}
                   {@const ts = raritycell(b, r)}
@@ -376,11 +384,7 @@
                 <td class="name cls clickable" data-cat={BUILD_CAT[b]} onclick={() => openBuild(b)}>{b}</td>
                 {#each AGES as a (a)}
                   {@const its = cell(b, bview, a)}
-                  <td class="cellwrap" class:gap={its.length === 0}>
-                    {#if its.length}
-                      {#each its as it (it.id)}<button type="button" class="pill" class:sel={sel[it.id]} onclick={() => toggleSel(it.id)}>{it.name}<i>T{it.tier}</i></button>{/each}
-                    {:else}<span class="dot">·</span>{/if}
-                  </td>
+                  <td class="cellwrap" class:gap={its.length === 0}>{@render gearCell(its, bview === 'armor')}</td>
                 {/each}
               </tr>
             {/each}
@@ -641,6 +645,8 @@
     color: #ece6d4;
     white-space: nowrap;
     cursor: pointer;
+    -webkit-user-select: text;
+    user-select: text;
   }
   .pill:hover {
     border-color: #6b5a2f;
@@ -671,6 +677,22 @@
     padding: 0 3px;
     border-radius: 2px;
     font-size: 9px;
+  }
+  .pill i.slot {
+    color: #8fb0c8;
+    background: #1e2731;
+    padding: 0 3px;
+    border-radius: 2px;
+    font-size: 9px;
+  }
+  .miss {
+    display: inline-block;
+    margin: 1px 4px 1px 0;
+    font-size: 10px;
+    color: #8a564a;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
   }
   .dot {
     color: #4a4436;

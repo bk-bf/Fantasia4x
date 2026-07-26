@@ -146,6 +146,7 @@ export interface GearRow {
   defense: number | null;
   armorType: string | null;
   slot: string | null;
+  bodyPart: string | null; // canonical body slot the piece equips to
   movePen: number | null;
   stealthMod: number | null;
   block: number | null;
@@ -286,6 +287,25 @@ function classifyItem(item: any, kind: GearKind): BuildClass[] {
   return ['General']; // tool / medicine — pawn skills, not builds
 }
 
+// Canonical body slots, in head→feet order. Used to show where a piece equips and which parts a
+// build has NO armour for at a given age.
+export const BODY_PARTS = ['head', 'torso', 'shoulders', 'arms', 'hands', 'legs', 'feet'] as const;
+function bodyPartOf(slot: string | null): string | null {
+  if (!slot) return null;
+  const s = slot.toLowerCase();
+  if (s.includes('offhand') || s.includes('shield')) return 'shield'; // before 'hand' — "offhand" contains it
+  if (s.includes('head')) return 'head';
+  if (s.includes('body') || s.includes('torso') || s.includes('cuirass')) return 'torso';
+  if (s.includes('pauldron') || s.includes('spaulder') || s.includes('shoulder')) return 'shoulders';
+  if (s.includes('bracer') || s.includes('vambrace') || s === 'arms') return 'arms';
+  if (s.includes('glove') || s.includes('gauntlet') || s.includes('hand')) return 'hands';
+  if (s.includes('greave') || s.includes('leg')) return 'legs';
+  if (s.includes('boot') || s.includes('feet') || s.includes('foot') || s.includes('sabaton')) return 'feet';
+  if (s.includes('gorget') || s.includes('neck')) return 'neck';
+  if (s.includes('back') || s.includes('cloak')) return 'cloak';
+  return null;
+}
+
 function scalingOf(wp: any): GearRow['scaling'] {
   if (!wp) return null;
   if (wp.arcane) return 'INT';
@@ -364,6 +384,7 @@ function toRow(item: any): GearRow | null {
     defense: ap?.defense ?? null,
     armorType: ap?.armorType ?? null,
     slot: ap?.slot ?? ap?.equipmentSlot ?? null,
+    bodyPart: kind === 'armor' ? bodyPartOf(ap?.slot ?? ap?.equipmentSlot ?? null) : null,
     movePen: ap?.movementPenalty ?? null,
     stealthMod: ap?.stealthMod ?? null,
     block: ap?.block ?? null,
@@ -529,7 +550,7 @@ function traitRow(t: any): GearRow {
     dmg: null, damMin: null, damMax: null, damageType: null, ap: null, armorDmg: null, crit: null,
     accuracy: null, atkSpeed: null, stamina: null, reach: null, range: null, stun: null,
     scaling: null, twoHanded: null, onHit: null, wieldStr: null,
-    defense: null, armorType: null, slot: null, movePen: null, stealthMod: null, block: null,
+    defense: null, armorType: null, slot: null, bodyPart: null, movePen: null, stealthMod: null, block: null,
     boostSpeed: null, boostYield: null, boostQuality: null, work: null, medicine: null,
     effect: traitEffect(t),
     gating: traitGating(t),
