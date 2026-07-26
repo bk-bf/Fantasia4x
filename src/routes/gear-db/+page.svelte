@@ -9,7 +9,9 @@
     CLASSES,
     AGES,
     BUILDS,
+    BUILD_CAT,
     buildSummaries,
+    describeClasses,
     type GearRow,
     type GearKind
   } from '$lib/dev/gearDb';
@@ -38,7 +40,7 @@
   const pct = (v: number | null) => (v == null ? '—' : Math.round(v * 100) + '%');
   const numf = (v: number | null) => (v == null ? '—' : String(v));
   const dash = (v: string | null | undefined) => (v == null || v === '' ? '—' : v);
-  const clsStr = (g: GearRow) => g.classes.join(', ');
+  const clsStr = (g: GearRow) => describeClasses(g.classes);
   const inputsStr = (g: GearRow) =>
     g.recipe && g.recipe.inputs.length ? g.recipe.inputs.map((i) => `${i.qty}× ${i.name}`).join(', ') : '—';
   const detail = (g: GearRow) => {
@@ -84,8 +86,11 @@
       { key: 'dmg', label: 'Dmg', get: (g) => g.dmg, disp: (g) => (g.dmg == null ? '—' : `${g.dmg} (${g.damMin}–${g.damMax})`), numeric: true },
       { key: 'damageType', label: 'Type', get: (g) => g.damageType, disp: (g) => dash(g.damageType) },
       { key: 'ap', label: 'AP', get: (g) => g.ap, disp: (g) => pct(g.ap), numeric: true },
+      { key: 'armorDmg', label: 'ArmDmg', get: (g) => g.armorDmg, disp: (g) => numf(g.armorDmg), numeric: true },
       { key: 'crit', label: 'Crit', get: (g) => g.crit, disp: (g) => pct(g.crit), numeric: true },
+      { key: 'accuracy', label: 'Acc', get: (g) => g.accuracy, disp: (g) => numf(g.accuracy), numeric: true },
       { key: 'atkSpeed', label: 'Spd', get: (g) => g.atkSpeed, disp: (g) => numf(g.atkSpeed), numeric: true },
+      { key: 'stamina', label: 'Stam', get: (g) => g.stamina, disp: (g) => numf(g.stamina), numeric: true },
       { key: 'reach', label: 'Reach', get: (g) => g.reach, disp: (g) => numf(g.reach), numeric: true },
       { key: 'range', label: 'Range', get: (g) => g.range, disp: (g) => numf(g.range), numeric: true },
       { key: 'stun', label: 'Stun', get: (g) => g.stun, disp: (g) => pct(g.stun), numeric: true },
@@ -118,6 +123,7 @@
       { key: 'dmg', label: 'Dmg', get: (g) => g.dmg, disp: (g) => numf(g.dmg), numeric: true },
       { key: 'damageType', label: 'Type', get: (g) => g.damageType, disp: (g) => dash(g.damageType) },
       { key: 'ap', label: 'AP', get: (g) => g.ap, disp: (g) => pct(g.ap), numeric: true },
+      { key: 'armorDmg', label: 'ArmDmg', get: (g) => g.armorDmg, disp: (g) => numf(g.armorDmg), numeric: true },
       { key: 'age', label: 'Age', get: (g) => g.ageRank, disp: (g) => g.age, numeric: true },
       ...recipeCols
     ],
@@ -206,7 +212,7 @@
         <tbody>
           {#each summaries as s (s.build)}
             <tr class="clickable" onclick={() => openBuild(s.build)}>
-              <td class="name cls" data-cls={s.build}>{s.build}</td>
+              <td class="name cls" data-cat={BUILD_CAT[s.build]}>{s.build}</td>
               <td class="num">{s.weapons}</td>
               <td class="num">{s.armor}</td>
               <td class="num" class:warn={s.ungatedTraits <= 1}>{s.ungatedTraits}</td>
@@ -251,7 +257,7 @@
           {#each rows as g (g.id)}
             <tr>
               {#each cols as c (c.key)}
-                <td class:num={c.numeric} class:name={c.key === 'name'} class:cls={c.clscol} data-cls={g.cls}>
+                <td class:num={c.numeric} class:name={c.key === 'name'} class:cls={c.clscol} data-cat={BUILD_CAT[g.cls]}>
                   {c.disp ? c.disp(g) : (c.get(g) ?? '—')}
                 </td>
               {/each}
@@ -432,22 +438,19 @@
   td.cls {
     font-weight: 600;
   }
-  td.cls[data-cls='Marksman'],
-  td.cls[data-cls='Skulker'],
-  td.cls[data-cls='Medic'],
-  td.cls[data-cls='Commander'] {
-    color: #d76f5d;
-  }
-  td.cls[data-cls='Bruiser'],
-  td.cls[data-cls='Tank'],
-  td.cls[data-cls='Artisan'] {
+  td.cls[data-cat='melee'] {
     color: #83bb6f;
   }
-  td.cls[data-cls='Duelist'],
-  td.cls[data-cls='Mage'] {
+  td.cls[data-cat='finesse'] {
     color: #e6bf57;
   }
-  td.cls[data-cls='Utility'] {
+  td.cls[data-cat='ranged'] {
+    color: #d76f5d;
+  }
+  td.cls[data-cat='caster'] {
+    color: #a98fd6;
+  }
+  td.cls[data-cat='general'] {
     color: #6d6653;
   }
   .sub {

@@ -1,10 +1,13 @@
-// gearDb.ts — DEV TOOL (not a game system). Reads the real item/recipe/building/research
-// databases and derives a flat, auto-classified gear catalogue for the /gear-db browser route.
-// Nothing here runs in the sim; it exists so the build-archetype audit is data-driven instead of
-// hand-curated. Classification is by STATS ONLY (damage axis, weight, armour class) — see classify().
+// gearDb.ts — DEV TOOL (not a game system). Reads the real item/recipe/building/research/trait
+// databases and derives a flat, auto-classified BUILD catalogue for the /gear-db browser route.
+// Nothing here runs in the sim; it exists so the build audit is data-driven instead of hand-curated.
 //
-// It imports the same .jsonc databases the game does (vite jsonc plugin), so the table is always in
-// sync with the data — edit items.jsonc/recipes.jsonc, save, and the route re-renders.
+// Builds are WEAPON-DEFINED (Battle-Brothers style): a weapon maps to exactly one build by its
+// damage type + handedness + finesse/arcane + family. Armour maps by weight class to the builds that
+// favour it. Traits map by the combat stat/effect they touch. Crafting/healing/gather traits are
+// NOT builds — they are general pawn skills (→ 'General'), since any build can also craft or heal.
+//
+// It imports the same .jsonc the game does (vite jsonc plugin), so it stays in sync with the data.
 
 import itemsData from '../game/database/items/items.jsonc';
 import recipesData from '../game/database/items/recipes.jsonc';
@@ -20,18 +23,74 @@ const research = researchData as any[];
 const traits = traitsData as any[];
 
 export type BuildClass =
-  | 'Bruiser' | 'Tank' | 'Duelist' | 'Marksman' | 'Skulker'
-  | 'Mage' | 'Artisan' | 'Medic' | 'Commander' | 'Utility';
+  // one-handed + shield (STR frontline)
+  | 'Sword & Shield' | 'Axe & Shield' | 'Mace & Shield' | 'Cleaver & Shield' | 'Flail & Shield' | 'Spear & Shield'
+  // two-handed (STR)
+  | 'Greatsword (2H)' | '2H Cleaver' | '2H Axe' | '2H Hammer' | 'Polearm (2H)'
+  // finesse
+  | 'Fencer (Rapier)' | 'Assassin (Dagger)'
+  // ranged
+  | 'Archer (Bow)' | 'Crossbowman' | 'Skirmisher (Throwing)' | 'Slinger (Sling)'
+  // arcane / caster
+  | 'Battlemage (1H Staff)' | 'War-Caster (2H Staff)' | 'Stunwaller (2H Staff)'
+  // non-build (crafting/healing/social skills)
+  | 'General';
 
+export type BuildCategory = 'melee' | 'finesse' | 'ranged' | 'caster' | 'general';
 export type GearKind = 'weapon' | 'armor' | 'tool' | 'ammo' | 'medicine' | 'trait';
-
 export type TraitGating = 'ungated' | 'cultural' | 'lineage' | 'flaw';
+
+// ── build groups (used by the classifiers) ──────────────────────────────────
+const SHIELD_BUILDS: BuildClass[] = ['Sword & Shield', 'Axe & Shield', 'Mace & Shield', 'Cleaver & Shield', 'Flail & Shield', 'Spear & Shield'];
+const TWOH: BuildClass[] = ['Greatsword (2H)', '2H Cleaver', '2H Axe', '2H Hammer', 'Polearm (2H)'];
+const FRONTLINE: BuildClass[] = [...SHIELD_BUILDS, ...TWOH];
+const MELEE_ALL: BuildClass[] = [...FRONTLINE, 'Fencer (Rapier)', 'Assassin (Dagger)'];
+const RANGED: BuildClass[] = ['Archer (Bow)', 'Crossbowman', 'Skirmisher (Throwing)', 'Slinger (Sling)'];
+const PER_BUILDS: BuildClass[] = ['Fencer (Rapier)', ...RANGED];
+const CASTERS: BuildClass[] = ['Battlemage (1H Staff)', 'War-Caster (2H Staff)'];
+const NIMBLE: BuildClass[] = ['Assassin (Dagger)', 'Fencer (Rapier)', ...RANGED, 'Stunwaller (2H Staff)'];
+
+// Every real build (order = display order). 'General' is deliberately excluded — it is not a build.
+export const BUILDS: BuildClass[] = [...FRONTLINE, 'Fencer (Rapier)', 'Assassin (Dagger)', ...RANGED, ...CASTERS, 'Stunwaller (2H Staff)'];
+export const CLASSES: BuildClass[] = [...BUILDS, 'General'];
+export const KINDS: GearKind[] = ['weapon', 'armor', 'tool', 'ammo', 'medicine', 'trait'];
+
+export const BUILD_CAT: Record<string, BuildCategory> = (() => {
+  const m: Record<string, BuildCategory> = { General: 'general' };
+  FRONTLINE.forEach((b) => (m[b] = 'melee'));
+  m['Fencer (Rapier)'] = 'finesse';
+  m['Assassin (Dagger)'] = 'finesse';
+  RANGED.forEach((b) => (m[b] = 'ranged'));
+  m['Battlemage (1H Staff)'] = 'caster';
+  m['War-Caster (2H Staff)'] = 'caster';
+  m['Stunwaller (2H Staff)'] = 'caster';
+  return m;
+})();
+
+// Collapse a multi-build support list into readable group labels for the UI (filter still uses the
+// full array). e.g. all frontline + fencer + assassin → "all melee".
+const GROUP_LABELS: [BuildClass[], string][] = [
+  [MELEE_ALL, 'all melee'],
+  [FRONTLINE, 'frontline'],
+  [PER_BUILDS, 'PER builds'],
+  [RANGED, 'ranged'],
+  [CASTERS, 'casters'],
+  [NIMBLE, 'nimble']
+];
+export function describeClasses(cs: BuildClass[]): string {
+  if (!cs.length || (cs.length === 1 && cs[0] === 'General')) return 'general';
+  const rest = new Set(cs);
+  const labels: string[] = [];
+  for (const [grp, label] of GROUP_LABELS) if (grp.every((x) => rest.has(x))) { labels.push(label); grp.forEach((x) => rest.delete(x)); }
+  for (const x of rest) labels.push(x);
+  return labels.join(' · ');
+}
 
 export const AGES = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed', 'Boss'] as const;
 export type Age = (typeof AGES)[number];
 
 export interface RecipeInfo {
-  station: string; // human building name, or 'anywhere'
+  station: string;
   stationId: string;
   toolTier: number;
   discipline: string | null;
@@ -44,8 +103,8 @@ export interface GearRow {
   id: string;
   name: string;
   kind: GearKind;
-  cls: BuildClass; // primary build (for display/sort)
-  classes: BuildClass[]; // every build this supports (traits often serve several) — filtered on
+  cls: BuildClass; // primary build (for display/sort/colour)
+  classes: BuildClass[]; // every build this supports — filtered on
   age: Age;
   ageRank: number;
   tier: number;
@@ -59,9 +118,12 @@ export interface GearRow {
   damMin: number | null;
   damMax: number | null;
   damageType: string | null;
-  ap: number | null; // armour penetration 0–1
-  crit: number | null; // crit modifier
+  ap: number | null;
+  armorDmg: number | null;
+  crit: number | null;
+  accuracy: number | null;
   atkSpeed: number | null;
+  stamina: number | null;
   reach: number | null;
   range: number | null;
   stun: number | null;
@@ -84,34 +146,30 @@ export interface GearRow {
   // medicine
   medicine: number | null;
   // trait
-  effect: string | null; // compact effect summary ("STR +2 · aim_speed ×1.15")
-  gating: TraitGating | null; // ungated (roll toward) · cultural · lineage · flaw
-  scope: string | null; // personal | cultural
+  effect: string | null;
+  gating: TraitGating | null;
+  scope: string | null;
   rarity: string | null;
-  lineageNames: string | null; // lineage(s) the trait belongs to, if any
+  lineageNames: string | null;
 }
 
-// ── lookup maps ───────────────────────────────────────────────────────────
+// ── lookup maps ─────────────────────────────────────────────────────────────
 const prettify = (id: string) =>
   id.replace(/^category:/, '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 const buildingName = new Map<string, string>();
 for (const b of buildings) if (b?.id) buildingName.set(b.id, b.name ?? prettify(b.id));
-
 const researchName = new Map<string, string>();
 for (const r of research) if (r?.id) researchName.set(r.id, r.name ?? prettify(r.id));
-
 const itemName = new Map<string, string>();
 for (const it of items) if (it?.id) itemName.set(it.id, it.name ?? prettify(it.id));
-
-// primary-output → recipe (first output key is the product)
 const recipeByOutput = new Map<string, any>();
 for (const rec of recipes) {
   const outs = rec?.outputs ? Object.keys(rec.outputs) : [];
-  if (outs.length) if (!recipeByOutput.has(outs[0])) recipeByOutput.set(outs[0], rec);
+  if (outs.length && !recipeByOutput.has(outs[0])) recipeByOutput.set(outs[0], rec);
 }
 
-// ── derivations ───────────────────────────────────────────────────────────
+// ── derivations ─────────────────────────────────────────────────────────────
 function ageOf(id: string, researchId: string | null, tier: number, craftable: boolean): Age {
   const r = researchId ?? '';
   if (/rune|arcane|attunement|manaforge|lapidary/.test(r)) return 'Runed';
@@ -140,39 +198,60 @@ function kindOf(item: any): GearKind | null {
   return null;
 }
 
-// Classification is by STATS, not a hand-maintained list.
-function classify(item: any, kind: GearKind): BuildClass {
-  const wp = item.weaponProperties;
+// Weapon → exactly one weapon-build, by stats + family keywords.
+function classifyWeapon(item: any, wp: any): BuildClass {
+  const id = item.id;
+  const dt = wp.damageType;
+  const two = !!wp.twoHanded;
+  const pierce = dt === 'piercing' || dt === 'pierce';
+  const has = (re: RegExp) => re.test(id);
+  if (wp.arcane) return 'War-Caster (2H Staff)'; // all current staves are 2H magic
+  const ranged = wp.ammoCategory || wp.drawPower != null || (wp.range ?? 0) >= 4;
+  if (ranged) {
+    if (has(/sling/)) return 'Slinger (Sling)';
+    if (has(/crossbow|xbow/)) return 'Crossbowman';
+    if (has(/throw|javelin|firepot|dart|blowgun/) || (!wp.ammoCategory && !wp.drawPower)) return 'Skirmisher (Throwing)';
+    return 'Archer (Bow)';
+  }
+  if (wp.finesse) return 'Fencer (Rapier)';
+  const light = (item.weightKg ?? 9) <= 1.3;
+  const fast = (wp.attackSpeed ?? 1) >= 1.2;
+  if (!two && has(/dagger|knife|rondel|stiletto|shank|punch|dirk/)) return 'Assassin (Dagger)';
+  if (!two && pierce && light && fast && !has(/spear|pike/)) return 'Assassin (Dagger)';
+  if (has(/flail/)) return 'Flail & Shield';
+  if (has(/maul|warhammer|hammer/)) return two ? '2H Hammer' : 'Mace & Shield';
+  if (has(/mace|club/)) return 'Mace & Shield';
+  if (has(/cleaver/)) return two ? '2H Cleaver' : 'Cleaver & Shield';
+  if (has(/axe|hatchet/)) return two ? '2H Axe' : 'Axe & Shield';
+  if (has(/pike|spear|framea|leaf|glaive|halberd|lance/)) return two ? 'Polearm (2H)' : 'Spear & Shield';
+  if (has(/greatsword/)) return 'Greatsword (2H)';
+  if (has(/sword|seax|spatha|estoc|rapier|blade|sabre|saber|falchion/)) return two ? 'Greatsword (2H)' : 'Sword & Shield';
+  // fallback by damage type + handedness
+  if (two) return dt === 'blunt' ? '2H Hammer' : pierce ? 'Polearm (2H)' : 'Greatsword (2H)';
+  return dt === 'blunt' ? 'Mace & Shield' : pierce ? 'Spear & Shield' : 'Sword & Shield';
+}
+
+// Armour → the builds whose weight/role favour it (multi-build).
+function classifyArmor(item: any): BuildClass[] {
   const ap = item.armorProperties;
-  if (kind === 'medicine') return 'Medic';
+  if (ap?.armorType === 'shield') return [...SHIELD_BUILDS, 'Battlemage (1H Staff)'];
+  if (ap?.stealthMod) return ['Assassin (Dagger)', 'Fencer (Rapier)', ...RANGED];
+  if (item.magicResistance != null || ap?.magicResistance != null || /robe|circlet|arcane/.test(item.id)) return [...CASTERS];
+  switch (ap?.armorType) {
+    case 'heavy': return [...FRONTLINE];
+    case 'medium': return [...FRONTLINE, 'Fencer (Rapier)'];
+    case 'light': return [...NIMBLE, ...CASTERS];
+    default: return ['General'];
+  }
+}
+
+function classifyItem(item: any, kind: GearKind): BuildClass[] {
   if (kind === 'weapon' || kind === 'ammo') {
-    if (!wp) return 'Utility';
-    if (wp.arcane) return 'Mage';
-    const ranged = wp.ammoCategory || wp.drawPower != null || (wp.range ?? 0) >= 4 || kind === 'ammo';
-    if (ranged) return 'Marksman';
-    if (wp.finesse) return 'Duelist';
-    const fast = (wp.attackSpeed ?? 1) >= 1.2;
-    const light = (item.weightKg ?? 9) <= 1.2;
-    const piercing = wp.damageType === 'piercing' || wp.damageType === 'pierce';
-    if (piercing && (light || fast) && !wp.twoHanded) return 'Skulker';
-    if (wp.twoHanded) return 'Bruiser';
-    return 'Tank';
+    const wp = item.weaponProperties;
+    return wp ? [classifyWeapon(item, wp)] : ['General'];
   }
-  if (kind === 'armor') {
-    if (ap?.stealthMod) return 'Skulker';
-    if (item.magicResistance != null || ap?.magicResistance != null || /robe|circlet|arcane/.test(item.id))
-      return 'Mage';
-    if (/regal|ceremonial|crown|torc|circlet_sovereign|sovereign|warden|champion|regalia/.test(item.id))
-      return 'Commander';
-    if (ap?.armorType === 'shield' || ap?.armorType === 'heavy') return 'Tank';
-    if (ap?.armorType === 'medium') return 'Bruiser';
-    if (ap?.armorType === 'light') return 'Marksman';
-    return 'Utility';
-  }
-  // tool
-  const boost = item.toolBoost;
-  if (!boost && !item.processingType) return 'Utility';
-  return 'Artisan';
+  if (kind === 'armor') return classifyArmor(item);
+  return ['General']; // tool / medicine — pawn skills, not builds
 }
 
 function scalingOf(wp: any): GearRow['scaling'] {
@@ -188,8 +267,7 @@ function recipeInfo(rec: any): RecipeInfo | null {
   const inputs: { name: string; qty: number }[] = [];
   const push = (obj: any) => {
     if (!obj) return;
-    for (const [k, v] of Object.entries(obj))
-      inputs.push({ name: itemName.get(k) ?? prettify(k), qty: v as number });
+    for (const [k, v] of Object.entries(obj)) inputs.push({ name: itemName.get(k) ?? prettify(k), qty: v as number });
   };
   push(rec.inputs);
   if (rec.dynamicRecipe)
@@ -219,13 +297,13 @@ function toRow(item: any): GearRow | null {
   const ap = item.armorProperties;
   const tb = item.toolBoost;
   const oh = item.onHitCondition;
-  const cls = classify(item, kind);
+  const classes = classifyItem(item, kind);
   return {
     id: item.id,
     name: item.name ?? prettify(item.id),
     kind,
-    cls,
-    classes: [cls],
+    cls: classes[0] ?? 'General',
+    classes,
     age,
     ageRank: AGES.indexOf(age),
     tier,
@@ -239,8 +317,11 @@ function toRow(item: any): GearRow | null {
     damMax: wp?.damMax ?? null,
     damageType: wp?.damageType ?? item.ammoProperties?.damageType ?? null,
     ap: wp?.armorPenetration ?? item.ammoProperties?.armorPenetration ?? null,
+    armorDmg: wp?.armorDamage ?? item.ammoProperties?.armorDamage ?? null,
     crit: wp?.critMod ?? null,
+    accuracy: wp?.accuracy ?? null,
     atkSpeed: wp?.attackSpeed ?? null,
+    stamina: wp?.staminaCost ?? null,
     reach: wp?.reach ?? null,
     range: wp?.range ?? null,
     stun: wp?.stunChance ?? null,
@@ -267,15 +348,9 @@ function toRow(item: any): GearRow | null {
   };
 }
 
-// ── traits ────────────────────────────────────────────────────────────────
+// ── traits ──────────────────────────────────────────────────────────────────
 const STAT_ABBR: Record<string, string> = {
-  strength: 'STR', dexterity: 'DEX', constitution: 'CON',
-  perception: 'PER', intelligence: 'INT', charisma: 'CHA'
-};
-// Which build(s) a stat feeds.
-const STAT_BUILDS: Record<string, BuildClass[]> = {
-  strength: ['Bruiser', 'Tank'], dexterity: ['Duelist', 'Skulker'], constitution: ['Tank'],
-  perception: ['Marksman'], intelligence: ['Artisan', 'Medic', 'Mage'], charisma: ['Commander']
+  strength: 'STR', dexterity: 'DEX', constitution: 'CON', perception: 'PER', intelligence: 'INT', charisma: 'CHA'
 };
 
 function traitGating(t: any): TraitGating {
@@ -285,24 +360,25 @@ function traitGating(t: any): TraitGating {
   return 'cultural';
 }
 
-// Classify a trait to the build(s) it supports — by the STAT/effect keys it touches, not by hand.
+// Trait → the build(s) its stat/effect keys support. Work/heal/CHA-only traits touch no build → General.
 function classifyTrait(t: any): BuildClass[] {
   const e = t.effects ?? {};
   const set = new Set<BuildClass>();
-  for (const [stat, builds] of Object.entries(STAT_BUILDS))
-    if (e[stat + 'Bonus'] != null || e[stat + 'Penalty'] != null) builds.forEach((b) => set.add(b));
+  const stat = (k: string) => e[k + 'Bonus'] != null || e[k + 'Penalty'] != null;
+  if (stat('strength') || stat('constitution')) FRONTLINE.forEach((b) => set.add(b));
+  if (stat('dexterity')) { set.add('Assassin (Dagger)'); set.add('Fencer (Rapier)'); }
+  if (stat('perception')) PER_BUILDS.forEach((b) => set.add(b));
+  if (stat('intelligence')) CASTERS.forEach((b) => set.add(b));
   const cm = e.combatMods ?? {};
   for (const k of Object.keys(cm)) {
-    if (/aim|reload|ranged|vision_range/.test(k)) set.add('Marksman');
-    else if (/melee_damage|hit_chance|hit_precision|attack_speed|crit/.test(k)) { set.add('Bruiser'); set.add('Duelist'); }
-    else if (/dodge|knockdown|block|parry/.test(k)) { set.add('Tank'); set.add('Duelist'); }
+    if (/aim|reload|ranged|vision_range/.test(k)) RANGED.forEach((b) => set.add(b));
+    else if (/melee_damage|attack_speed/.test(k)) MELEE_ALL.forEach((b) => set.add(b));
+    else if (/hit_precision|hit_chance/.test(k)) { (['Fencer (Rapier)', 'Assassin (Dagger)', 'Archer (Bow)'] as BuildClass[]).forEach((b) => set.add(b)); MELEE_ALL.forEach((b) => set.add(b)); }
+    else if (/dodge|knockdown|block|parry/.test(k)) NIMBLE.forEach((b) => set.add(b));
   }
-  const works = { ...(e.workSpeed ?? {}), ...(e.workQuality ?? {}), ...(e.workYield ?? {}) };
-  for (const k of Object.keys(works)) set.add(k === 'caretaking' ? 'Medic' : 'Artisan');
-  if (e.stealth != null || e.nightVision != null) set.add('Skulker');
-  if (e.healRate != null) set.add('Medic');
-  if (t.kind === 'bodyMod' || e.resistances) set.add('Tank');
-  return set.size ? [...set] : ['Utility'];
+  if (e.stealth != null || e.nightVision != null) set.add('Assassin (Dagger)');
+  if (t.kind === 'bodyMod' || e.resistances) FRONTLINE.forEach((b) => set.add(b));
+  return set.size ? [...set] : ['General'];
 }
 
 function traitEffect(t: any): string {
@@ -330,7 +406,6 @@ function traitEffect(t: any): string {
 
 function traitRow(t: any): GearRow {
   const classes = classifyTrait(t);
-  const gating = traitGating(t);
   return {
     id: t.id,
     name: t.name ?? prettify(t.id),
@@ -345,12 +420,13 @@ function traitRow(t: any): GearRow {
     research: null,
     craftable: false,
     recipe: null,
-    dmg: null, damMin: null, damMax: null, damageType: null, ap: null, crit: null, atkSpeed: null,
-    reach: null, range: null, stun: null, scaling: null, twoHanded: null, onHit: null, wieldStr: null,
+    dmg: null, damMin: null, damMax: null, damageType: null, ap: null, armorDmg: null, crit: null,
+    accuracy: null, atkSpeed: null, stamina: null, reach: null, range: null, stun: null,
+    scaling: null, twoHanded: null, onHit: null, wieldStr: null,
     defense: null, armorType: null, slot: null, movePen: null, stealthMod: null, block: null,
     boostSpeed: null, boostYield: null, boostQuality: null, work: null, medicine: null,
     effect: traitEffect(t),
-    gating,
+    gating: traitGating(t),
     scope: t.scope ?? null,
     rarity: t.rarity ?? null,
     lineageNames: t.lineage && t.lineage.length ? t.lineage.join(', ') : null
@@ -361,32 +437,20 @@ const itemRows = items.map(toRow).filter((r): r is GearRow => r !== null);
 const traitRows = traits.filter((t) => t?.id && t?.name).map(traitRow);
 export const GEAR: GearRow[] = [...itemRows, ...traitRows];
 
-export const CLASSES: BuildClass[] = [
-  'Bruiser', 'Tank', 'Duelist', 'Marksman', 'Skulker', 'Mage', 'Artisan', 'Medic', 'Commander', 'Utility'
-];
-export const KINDS: GearKind[] = ['weapon', 'armor', 'tool', 'ammo', 'medicine', 'trait'];
-
-// The nine real archetypes (Utility is a catch-all, not a build).
-export const BUILDS: BuildClass[] = [
-  'Bruiser', 'Tank', 'Duelist', 'Marksman', 'Skulker', 'Artisan', 'Medic', 'Commander', 'Mage'
-];
-
 export interface BuildSummary {
   build: BuildClass;
   weapons: number;
   armor: number;
-  tools: number;
-  medicine: number;
   ungatedTraits: number;
   culturalTraits: number;
   lineageTraits: number;
   flaws: number;
-  lineages: string[]; // distinct lineage markers that support this build
-  gaps: string[]; // data-derived shortfalls
+  lineages: string[];
+  gaps: string[];
 }
 
-// "Extract builds": aggregate the whole catalogue by archetype so each build's real support (gear +
-// trait spread + lineages) is tracked from the data, not hand-listed. Powers the tool's By-build view.
+// "Extract builds": aggregate the whole catalogue by archetype so each build's real support is tracked
+// from the data, not hand-listed. Powers the tool's By-build overview.
 export function buildSummaries(): BuildSummary[] {
   return BUILDS.map((build) => {
     const rows = GEAR.filter((g) => g.classes.includes(build));
@@ -396,19 +460,17 @@ export function buildSummaries(): BuildSummary[] {
       ...new Set(traitsFor.filter((t) => t.gating === 'lineage' && t.lineageNames).flatMap((t) => t.lineageNames!.split(', ')))
     ].sort();
     const ungated = traitsFor.filter((t) => t.gating === 'ungated').length;
-    const cultural = traitsFor.filter((t) => t.gating === 'cultural').length;
-    const lineageTraits = traitsFor.filter((t) => t.gating === 'lineage').length;
     const weapons = of('weapon').length;
     const armor = of('armor').length;
-    const tools = of('tool').length + of('medicine').length;
     const gaps: string[] = [];
+    if (weapons === 0) gaps.push('no weapon');
     if (ungated <= 1) gaps.push('≤1 ungated trait');
     if (lineages.length === 0) gaps.push('no lineage');
-    if (weapons + tools + of('medicine').length === 0 && armor === 0) gaps.push('no gear');
     return {
-      build, weapons, armor, tools,
-      medicine: of('medicine').length,
-      ungatedTraits: ungated, culturalTraits: cultural, lineageTraits,
+      build, weapons, armor,
+      ungatedTraits: ungated,
+      culturalTraits: traitsFor.filter((t) => t.gating === 'cultural').length,
+      lineageTraits: traitsFor.filter((t) => t.gating === 'lineage').length,
       flaws: traitsFor.filter((t) => t.gating === 'flaw').length,
       lineages, gaps
     };
