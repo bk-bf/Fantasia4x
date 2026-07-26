@@ -63,6 +63,12 @@ function desktopShellGuardPlugin(): Plugin {
   // Headless-sim routes (ADR-033): `./dev.sh --headless` drives the sim via curl/agents — no shell
   // UA there, so exempt /api/sim/ when headless mode is on (the routes themselves 404 without it).
   const headlessMode = process.env.VITE_HEADLESS === '1';
+  // Dev-tools session (dev.sh --tools / launch.sh --tools): the /gear-db browser route is allowlisted
+  // WITHOUT lifting the guard for the game. Unlike F4X_ALLOW_BROWSER (which opens everything, game
+  // included, for profiling), this keeps the game's root document 403 — opening the bare server URL
+  // must NEVER launch the game — while letting the dev route + the Vite/SvelteKit module graph it needs
+  // through so it can hydrate in a plain browser.
+  const toolsMode = process.env.VITE_TOOLS_MODE === 'true';
   const guard = (
     req: { url?: string; headers: Record<string, string | string[] | undefined> },
     res: {
@@ -79,6 +85,23 @@ function desktopShellGuardPlugin(): Plugin {
     const url = req.url || '';
     if (debugMode && (url.startsWith('/dev/') || url.startsWith('/tilesets/'))) return next();
     if (headlessMode && url.startsWith('/api/sim/')) return next();
+    // Tools mode: allow the /gear-db dev route + the Vite/SvelteKit module graph it loads to hydrate,
+    // but NOT the game. The game entry is the root document ('/'); it is never in this list, so a
+    // browser hitting '/' still gets the 403 "runs in the desktop app" page.
+    if (
+      toolsMode &&
+      (url === '/gear-db' ||
+        url.startsWith('/gear-db/') ||
+        url.startsWith('/gear-db?') ||
+        url.startsWith('/dev/') ||
+        url.startsWith('/tilesets/') ||
+        url.startsWith('/@') || // /@vite/, /@fs/, /@id/ — Vite dev module requests
+        url.startsWith('/node_modules/') ||
+        url.startsWith('/.svelte-kit/') ||
+        url.startsWith('/src/') ||
+        url.startsWith('/favicon'))
+    )
+      return next();
     const ua = String(req.headers['user-agent'] || '');
     if (ua.includes(SHELL_UA_MARKER)) return next();
     res.statusCode = 403;

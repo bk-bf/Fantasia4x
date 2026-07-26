@@ -48,6 +48,7 @@ while [[ $# -gt 0 ]]; do
     --profiler-autorun) PROFILER_MODE=true; PROFILER_AUTORUN=true ;; # heavy sandbox, capture run
     --hmr) HMR_MODE=true ;; # opt into Vite hot-reload / live page-reload (off by default)
     --browser) BROWSER_MODE=true ;; # lift the desktop-shell guard so a plain browser can load the game
+    --tools) TOOLS_MODE=true ;; # dev-tools mode — allowlist the /gear-db browser route; game STAYS guarded
     --legacy-menu) LEGACY_MENU_MODE=true ;; # render the original centred main menu (MainMenu)
     --headless) HEADLESS_MODE=true ;; # enable the /api/sim/* headless-sim routes (ADR-033)
     --port) PORT="$2"; shift ;;
@@ -148,6 +149,16 @@ if [[ "$LEGACY_MENU_MODE" == "true" ]]; then
   LEGACY_ENV="VITE_LEGACY_MENU=true"
 fi
 
+# Dev-tools mode: make the /gear-db browser route reachable in a plain browser WITHOUT lifting the
+# desktop-shell guard for the game. VITE_TOOLS_MODE allowlists that route + the module graph it needs;
+# the game's root document stays 403, so opening the bare server URL never launches the game. Used by
+# `./launch.sh --tools`. Distinct from --browser (which opens EVERYTHING, game included, for profiling).
+TOOLS_ENV=""
+if [[ "$TOOLS_MODE" == "true" ]]; then
+  echo "Dev-tools mode — /gear-db is browsable; the GAME stays guarded (only the desktop shell loads it)."
+  TOOLS_ENV="VITE_TOOLS_MODE=true"
+fi
+
 # Headless-sim routes (ADR-033): opt-in — without the flag the /api/sim/* handlers 404 even in dev,
 # and nothing simulates until the first POST /api/sim/session. Never present in a packaged build.
 HEADLESS_ENV=""
@@ -162,5 +173,5 @@ fi
 # 60s) blocks dev-server startup for ~70s before giving up. Zero retries makes it fail fast and start
 # immediately. No-op on the host (the first fetch succeeds there, so retries never trigger). Must be the
 # `--config.X` form — `pnpm --fetch-retries=… exec` is rejected as an unknown option.
-# shellcheck disable=SC2086 -- $PROFILER_ENV/$DEBUG_ENV/$HMR_ENV/$BROWSER_ENV/$LEGACY_ENV/$HEADLESS_ENV are intentional VAR=val flag passthroughs
-exec env $PROFILER_ENV $DEBUG_ENV $HMR_ENV $BROWSER_ENV $LEGACY_ENV $HEADLESS_ENV VITE_DEV_BRANCH="$BRANCH" VITE_DEV_COMMIT="$COMMIT" pnpm --config.fetch-retries=0 exec vite dev --host --port $PORT
+# shellcheck disable=SC2086 -- $PROFILER_ENV/$DEBUG_ENV/$HMR_ENV/$BROWSER_ENV/$TOOLS_ENV/$LEGACY_ENV/$HEADLESS_ENV are intentional VAR=val flag passthroughs
+exec env $PROFILER_ENV $DEBUG_ENV $HMR_ENV $BROWSER_ENV $TOOLS_ENV $LEGACY_ENV $HEADLESS_ENV VITE_DEV_BRANCH="$BRANCH" VITE_DEV_COMMIT="$COMMIT" pnpm --config.fetch-retries=0 exec vite dev --host --port $PORT

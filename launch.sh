@@ -2,6 +2,13 @@
 # launch.sh — start main + all .worktrees/launch/* dev servers with debug mode.
 # Ctrl-C kills them all.
 #
+# --tools: browsable DEV-TOOLS session — the Vite server with the /gear-db dev route ALLOWLISTED in
+#   the desktop-shell guard (VITE_TOOLS_MODE), so a plain browser can open it. The GAME itself stays
+#   guarded — opening the bare server URL still 403s to the "runs in the desktop app" page, never the
+#   game. Serves the /gear-db gear database (data-driven from items/recipes.jsonc) PLUS the static
+#   spritesheet viewer one port above. Hot-reload is ON (edit a .jsonc, the table re-renders). It kills
+#   whatever holds the ports first, so re-running it is a clean RESTART. ./launch.sh --tools
+#
 # --profiler: focused profiling session — launches ONLY the main server in the heavy
 #   profiler sandbox (./dev.sh --profiler), skipping the worktree fan-out.
 # --electron / --tauri: wrap a SINGLE main server in a desktop webview for the cross-engine
@@ -48,10 +55,12 @@ PROFILER=false
 LOG=false
 PLAY=false
 LEGACY_MENU=false
+TOOLS=false
 SANDBOX=auto   # auto = default ON for electron (OFF under --profiler); --sandbox forces on, --net-host forces off
 SHELL_TARGET=""
 for arg in "$@"; do
   case "$arg" in
+    --tools) TOOLS=true ;;
     --profiler) PROFILER=true ;;
     --log) LOG=true ;;
     --play) PLAY=true ;;
@@ -132,7 +141,7 @@ launch() {
 # Vite. (A second Vite against this same root thrashes the shared node_modules/.vite dep cache and makes
 # startup crawl; a static server sidesteps that entirely.) Tracked in PIDS so cleanup stops it; quiet.
 start_spritesheet_viewer() {
-  local vport=5174
+  local vport="${1:-5174}"
   if ! command -v python3 >/dev/null 2>&1; then
     echo "  [spritesheet] skipped — python3 not found (needed for the static viewer server)" >&2
     return
@@ -223,6 +232,51 @@ run_isolated_electron() {
     cleanup_ns
 NSEOF
 }
+
+# Browsable dev-tools session: the Vite server with the desktop-shell guard lifted (so a plain
+# browser can open /gear-db and friends) + the static spritesheet viewer one port above. Kills
+# whatever holds the ports first, so re-running --tools is a clean restart. Hot-reload ON.
+if [[ "$TOOLS" == true ]]; then
+  PORT=5173
+  [[ -f "$SCRIPT_DIR/.devport" ]] && PORT=$(< "$SCRIPT_DIR/.devport")
+  VPORT=$((PORT + 1))   # spritesheet viewer sits one port above the dev server (avoids the clash)
+
+  echo "Fantasia4x — dev tools (browsable, hot-reload)"
+  echo ""
+  # Clean restart: free the ports so a re-run relaunches instead of hitting "already running".
+  # Loop + escalate to -9 until BOTH ports are actually free (a plain kill can leave a ghost that
+  # dev.sh then reports as "already running", serving nothing new).
+  # NB: `lsof -ti tcp:A tcp:B` (multi-arg) returns nothing — lsof needs ONE port per invocation, so
+  # query each port separately and combine.
+  port_holders() { { lsof -ti tcp:"$PORT"; lsof -ti tcp:"$VPORT"; } 2>/dev/null; }
+  announced=false
+  for _ in 1 2 3 4; do
+    holders=$(port_holders)
+    [[ -z "$holders" ]] && break
+    if [[ "$announced" == false ]]; then echo "  restarting — stopping servers on :$PORT/:$VPORT"; announced=true; fi
+    kill -CONT $holders 2>/dev/null || true   # wake any Ctrl-Z'd holder so it can die
+    kill $holders 2>/dev/null || true
+    sleep 0.7
+    holders=$(port_holders)
+    [[ -n "$holders" ]] && kill -9 $holders 2>/dev/null || true
+    sleep 0.4
+  done
+
+  # dev.sh --tools allowlists ONLY the /gear-db dev route in the vite.config guard (VITE_TOOLS_MODE) —
+  # it does NOT lift the guard for the game, so opening the bare server URL never launches it. --hmr
+  # keeps hot-reload on so an edited .jsonc re-renders.
+  launch "$SCRIPT_DIR" "dev-server" "--hmr --tools"
+  wait_for_port "$PORT" || { cleanup; exit 1; }
+  start_spritesheet_viewer "$VPORT"
+  codegraph_hint
+  echo ""
+  echo "  → gear database   http://localhost:$PORT/gear-db"
+  echo "  → spritesheets    http://localhost:$VPORT/dev/spritesheet-viewer.html"
+  echo ""
+  echo "  Ctrl-C to stop · re-run ./launch.sh --tools to restart."
+  wait
+  exit 0
+fi
 
 # Desktop webview shell over a single main server (cross-engine TPS spike).
 if [[ -n "$SHELL_TARGET" ]]; then
