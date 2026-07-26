@@ -1,22 +1,55 @@
 <script lang="ts">
-  // DEV TOOL — data-driven gear browser. Reads the derived catalogue from $lib/dev/gearDb (which
-  // imports the real items/recipes/buildings/research .jsonc), so it stays in sync with the data.
-  // Classification is by stats (see gearDb.classify). Filter + sort by class / age / tier / kind.
-  import { GEAR, CLASSES, KINDS, AGES, type GearRow, type GearKind } from '$lib/dev/gearDb';
+  // DEV TOOL — data-driven BUILD database. Reads the derived catalogue from $lib/dev/gearDb (which
+  // imports the real items/recipes/buildings/research/traits .jsonc), so it stays in sync with the
+  // data. Everything is auto-classified to build archetypes by stats. Views: a Builds overview + a
+  // filterable/sortable catalogue of weapons, armour, ammo and traits.
+  import { page } from '$app/state';
+  import {
+    GEAR,
+    CLASSES,
+    AGES,
+    BUILDS,
+    buildSummaries,
+    type GearRow,
+    type GearKind
+  } from '$lib/dev/gearDb';
 
-  let kind = $state<GearKind>('weapon');
+  const CAT_KINDS: (GearKind | 'all')[] = ['all', 'weapon', 'armor', 'ammo', 'trait'];
+  const KIND_LABEL: Record<string, string> = {
+    all: 'All', weapon: 'Weapons', armor: 'Armour', ammo: 'Ammo', trait: 'Traits'
+  };
+  const CATALOGUE = GEAR.filter((g) => ['weapon', 'armor', 'ammo', 'trait'].includes(g.kind));
+  const summaries = buildSummaries();
+
+  // Initial view from the URL (?view=catalogue&kind=weapon&build=Marksman) so SSR + deep-links agree.
+  const params = page.url?.searchParams ?? new URLSearchParams();
+  const pKind = params.get('kind');
+  const pBuild = params.get('build');
+  let view = $state<'builds' | 'catalogue'>(
+    pKind || pBuild || params.get('view') === 'catalogue' ? 'catalogue' : 'builds'
+  );
+  let kind = $state<GearKind | 'all'>(pKind && CAT_KINDS.includes(pKind as never) ? (pKind as GearKind | 'all') : 'all');
   let q = $state('');
-  let cls = $state('All');
+  let cls = $state(pBuild ?? 'All');
   let age = $state('All');
-  let craftableOnly = $state(false);
-  let sortKey = $state<string>('ageRank');
+  let sortKey = $state<string>('name');
   let sortDir = $state(1);
 
   const pct = (v: number | null) => (v == null ? '—' : Math.round(v * 100) + '%');
-  const num = (v: number | null) => (v == null ? '—' : String(v));
+  const numf = (v: number | null) => (v == null ? '—' : String(v));
   const dash = (v: string | null | undefined) => (v == null || v === '' ? '—' : v);
+  const clsStr = (g: GearRow) => g.classes.join(', ');
   const inputsStr = (g: GearRow) =>
     g.recipe && g.recipe.inputs.length ? g.recipe.inputs.map((i) => `${i.qty}× ${i.name}`).join(', ') : '—';
+  const detail = (g: GearRow) => {
+    if (g.kind === 'weapon' || g.kind === 'ammo')
+      return g.dmg == null ? '—' : `${g.dmg}${g.damMin != null ? ` (${g.damMin}–${g.damMax})` : ''} ${g.damageType ?? ''}${g.ap ? ` · AP ${pct(g.ap)}` : ''}${g.crit ? ` · crit ${pct(g.crit)}` : ''}`;
+    if (g.kind === 'armor') return `def ${numf(g.defense)} · ${dash(g.armorType)}${g.slot ? ` · ${g.slot}` : ''}${g.stealthMod ? ` · stealth +${g.stealthMod}` : ''}`;
+    if (g.kind === 'trait') return dash(g.effect);
+    return '—';
+  };
+  const source = (g: GearRow) =>
+    g.kind === 'trait' ? dash(g.gating) : g.recipe ? g.recipe.station : g.craftable ? 'craftable' : 'wild/boss';
 
   interface Col {
     key: string;
@@ -24,96 +57,92 @@
     get: (g: GearRow) => string | number | null;
     disp?: (g: GearRow) => string;
     numeric?: boolean;
+    clscol?: boolean;
   }
 
+  const clsCol: Col = { key: 'cls', label: 'Class', get: (g) => g.cls, disp: clsStr, clscol: true };
   const recipeCols: Col[] = [
     { key: 'station', label: 'Station', get: (g) => g.recipe?.station ?? null, disp: (g) => dash(g.recipe?.station) },
     { key: 'toolTier', label: 'Tool tier', get: (g) => g.recipe?.toolTier ?? null, disp: (g) => (g.recipe ? 'T' + g.recipe.toolTier : '—'), numeric: true },
-    { key: 'discipline', label: 'Discipline', get: (g) => g.recipe?.discipline ?? null, disp: (g) => dash(g.recipe?.discipline) },
     { key: 'inputs', label: 'Inputs', get: (g) => inputsStr(g), disp: inputsStr },
     { key: 'research', label: 'Research', get: (g) => g.research, disp: (g) => dash(g.research) },
     { key: 'craftable', label: 'Source', get: (g) => (g.craftable ? 1 : 0), disp: (g) => (g.craftable ? 'craftable' : 'wild/boss'), numeric: true }
   ];
 
-  const colsByKind: Record<GearKind, Col[]> = {
+  const colsByKind: Record<string, Col[]> = {
+    all: [
+      { key: 'name', label: 'Item · trait', get: (g) => g.name },
+      { key: 'kind', label: 'Kind', get: (g) => g.kind },
+      clsCol,
+      { key: 'age', label: 'Age', get: (g) => g.ageRank, disp: (g) => (g.kind === 'trait' ? '—' : g.age), numeric: true },
+      { key: 'detail', label: 'Detail', get: (g) => detail(g) },
+      { key: 'source', label: 'Source', get: (g) => source(g), disp: source }
+    ],
     weapon: [
       { key: 'name', label: 'Weapon', get: (g) => g.name },
-      { key: 'cls', label: 'Class', get: (g) => g.cls },
+      clsCol,
       { key: 'dmg', label: 'Dmg', get: (g) => g.dmg, disp: (g) => (g.dmg == null ? '—' : `${g.dmg} (${g.damMin}–${g.damMax})`), numeric: true },
       { key: 'damageType', label: 'Type', get: (g) => g.damageType, disp: (g) => dash(g.damageType) },
       { key: 'ap', label: 'AP', get: (g) => g.ap, disp: (g) => pct(g.ap), numeric: true },
       { key: 'crit', label: 'Crit', get: (g) => g.crit, disp: (g) => pct(g.crit), numeric: true },
-      { key: 'atkSpeed', label: 'Spd', get: (g) => g.atkSpeed, disp: (g) => num(g.atkSpeed), numeric: true },
-      { key: 'reach', label: 'Reach', get: (g) => g.reach, disp: (g) => num(g.reach), numeric: true },
-      { key: 'range', label: 'Range', get: (g) => g.range, disp: (g) => num(g.range), numeric: true },
+      { key: 'atkSpeed', label: 'Spd', get: (g) => g.atkSpeed, disp: (g) => numf(g.atkSpeed), numeric: true },
+      { key: 'reach', label: 'Reach', get: (g) => g.reach, disp: (g) => numf(g.reach), numeric: true },
+      { key: 'range', label: 'Range', get: (g) => g.range, disp: (g) => numf(g.range), numeric: true },
       { key: 'stun', label: 'Stun', get: (g) => g.stun, disp: (g) => pct(g.stun), numeric: true },
       { key: 'scaling', label: 'Scales', get: (g) => g.scaling, disp: (g) => dash(g.scaling) },
       { key: 'twoHanded', label: 'Hands', get: (g) => (g.twoHanded ? 2 : 1), disp: (g) => (g.twoHanded ? '2H' : '1H'), numeric: true },
       { key: 'onHit', label: 'On-hit', get: (g) => g.onHit, disp: (g) => dash(g.onHit) },
-      { key: 'wieldStr', label: 'STR gate', get: (g) => g.wieldStr, disp: (g) => num(g.wieldStr), numeric: true },
+      { key: 'wieldStr', label: 'STR gate', get: (g) => g.wieldStr, disp: (g) => numf(g.wieldStr), numeric: true },
       { key: 'weightKg', label: 'Wt', get: (g) => g.weightKg, disp: (g) => g.weightKg + 'kg', numeric: true },
-      { key: 'durability', label: 'Dur', get: (g) => g.durability, numeric: true },
       { key: 'age', label: 'Age', get: (g) => g.ageRank, disp: (g) => g.age, numeric: true },
       { key: 'tier', label: 'Tier', get: (g) => g.tier, numeric: true },
       ...recipeCols
     ],
     armor: [
       { key: 'name', label: 'Armour', get: (g) => g.name },
-      { key: 'cls', label: 'Class', get: (g) => g.cls },
-      { key: 'defense', label: 'Def', get: (g) => g.defense, disp: (g) => num(g.defense), numeric: true },
+      clsCol,
+      { key: 'defense', label: 'Def', get: (g) => g.defense, disp: (g) => numf(g.defense), numeric: true },
       { key: 'armorType', label: 'Weight', get: (g) => g.armorType, disp: (g) => dash(g.armorType) },
       { key: 'slot', label: 'Slot', get: (g) => g.slot, disp: (g) => dash(g.slot) },
       { key: 'block', label: 'Block', get: (g) => g.block, disp: (g) => pct(g.block), numeric: true },
       { key: 'stealthMod', label: 'Stealth', get: (g) => g.stealthMod, disp: (g) => (g.stealthMod == null ? '—' : '+' + g.stealthMod), numeric: true },
       { key: 'movePen', label: 'Move pen', get: (g) => g.movePen, disp: (g) => pct(g.movePen), numeric: true },
       { key: 'weightKg', label: 'Wt', get: (g) => g.weightKg, disp: (g) => g.weightKg + 'kg', numeric: true },
-      { key: 'durability', label: 'Dur', get: (g) => g.durability, numeric: true },
-      { key: 'age', label: 'Age', get: (g) => g.ageRank, disp: (g) => g.age, numeric: true },
-      { key: 'tier', label: 'Tier', get: (g) => g.tier, numeric: true },
-      ...recipeCols
-    ],
-    tool: [
-      { key: 'name', label: 'Tool', get: (g) => g.name },
-      { key: 'cls', label: 'Class', get: (g) => g.cls },
-      { key: 'work', label: 'Work', get: (g) => g.work, disp: (g) => dash(g.work) },
-      { key: 'boostSpeed', label: 'Speed', get: (g) => g.boostSpeed, disp: (g) => num(g.boostSpeed), numeric: true },
-      { key: 'boostYield', label: 'Yield', get: (g) => g.boostYield, disp: (g) => num(g.boostYield), numeric: true },
-      { key: 'boostQuality', label: 'Quality', get: (g) => g.boostQuality, disp: (g) => num(g.boostQuality), numeric: true },
-      { key: 'weightKg', label: 'Wt', get: (g) => g.weightKg, disp: (g) => g.weightKg + 'kg', numeric: true },
-      { key: 'durability', label: 'Dur', get: (g) => g.durability, numeric: true },
       { key: 'age', label: 'Age', get: (g) => g.ageRank, disp: (g) => g.age, numeric: true },
       { key: 'tier', label: 'Tier', get: (g) => g.tier, numeric: true },
       ...recipeCols
     ],
     ammo: [
       { key: 'name', label: 'Ammunition', get: (g) => g.name },
-      { key: 'cls', label: 'Class', get: (g) => g.cls },
-      { key: 'dmg', label: 'Dmg', get: (g) => g.dmg, disp: (g) => num(g.dmg), numeric: true },
+      clsCol,
+      { key: 'dmg', label: 'Dmg', get: (g) => g.dmg, disp: (g) => numf(g.dmg), numeric: true },
       { key: 'damageType', label: 'Type', get: (g) => g.damageType, disp: (g) => dash(g.damageType) },
       { key: 'ap', label: 'AP', get: (g) => g.ap, disp: (g) => pct(g.ap), numeric: true },
       { key: 'age', label: 'Age', get: (g) => g.ageRank, disp: (g) => g.age, numeric: true },
-      { key: 'tier', label: 'Tier', get: (g) => g.tier, numeric: true },
       ...recipeCols
     ],
-    medicine: [
-      { key: 'name', label: 'Medicine', get: (g) => g.name },
-      { key: 'cls', label: 'Class', get: (g) => g.cls },
-      { key: 'medicine', label: 'Quality', get: (g) => g.medicine, disp: (g) => num(g.medicine), numeric: true },
-      { key: 'age', label: 'Age', get: (g) => g.ageRank, disp: (g) => g.age, numeric: true },
-      ...recipeCols
+    trait: [
+      { key: 'name', label: 'Trait', get: (g) => g.name },
+      { key: 'cls', label: 'Supports', get: (g) => g.cls, disp: clsStr, clscol: true },
+      { key: 'effect', label: 'Effect', get: (g) => g.effect, disp: (g) => dash(g.effect) },
+      { key: 'gating', label: 'Gating', get: (g) => g.gating, disp: (g) => dash(g.gating) },
+      { key: 'scope', label: 'Scope', get: (g) => g.scope, disp: (g) => dash(g.scope) },
+      { key: 'rarity', label: 'Rarity', get: (g) => g.rarity, disp: (g) => dash(g.rarity) },
+      { key: 'lineageNames', label: 'Lineage', get: (g) => g.lineageNames, disp: (g) => dash(g.lineageNames) }
     ]
   };
 
   const cols = $derived(colsByKind[kind]);
 
   const rows = $derived.by(() => {
-    let r = GEAR.filter((g) => g.kind === kind);
-    if (cls !== 'All') r = r.filter((g) => g.cls === cls);
+    let r = kind === 'all' ? CATALOGUE : GEAR.filter((g) => g.kind === kind);
+    if (cls !== 'All') r = r.filter((g) => g.classes.includes(cls as never));
     if (age !== 'All') r = r.filter((g) => g.age === age);
-    if (craftableOnly) r = r.filter((g) => g.craftable);
     if (q.trim()) {
       const s = q.trim().toLowerCase();
-      r = r.filter((g) => (g.name + ' ' + g.id + ' ' + (g.work ?? '') + ' ' + (g.damageType ?? '') + ' ' + (g.cls ?? '')).toLowerCase().includes(s));
+      r = r.filter((g) =>
+        (g.name + ' ' + g.id + ' ' + clsStr(g) + ' ' + (g.effect ?? '') + ' ' + (g.damageType ?? '')).toLowerCase().includes(s)
+      );
     }
     const col = cols.find((c) => c.key === sortKey) ?? cols[0];
     return [...r].sort((a, b) => {
@@ -134,77 +163,117 @@
       sortDir = 1;
     }
   }
-
-  const classCounts = $derived.by(() => {
-    const inKind = GEAR.filter((g) => g.kind === kind);
-    const m: Record<string, number> = {};
-    for (const g of inKind) m[g.cls] = (m[g.cls] ?? 0) + 1;
-    return m;
-  });
+  function openBuild(b: string) {
+    cls = b;
+    kind = 'all';
+    view = 'catalogue';
+    sortKey = 'name';
+    sortDir = 1;
+  }
+  function selectKind(k: GearKind | 'all') {
+    kind = k;
+    view = 'catalogue';
+    sortKey = 'name';
+    sortDir = 1;
+  }
 </script>
 
-<div class="gear-db">
+<div class="build-db">
   <header>
-    <h1>Gear database <span class="live">live · {GEAR.length} items</span></h1>
-    <p>Auto-classified from <code>items.jsonc</code> + <code>recipes.jsonc</code> by stats. Edit the data, save, reload.</p>
+    <h1>Build database <span class="live">live · {BUILDS.length} builds · {GEAR.length} entries</span></h1>
+    <p>Auto-classified from <code>items.jsonc</code>, <code>recipes.jsonc</code> &amp; <code>traits.jsonc</code> by stats. Edit the data, save, reload.</p>
   </header>
 
-  <div class="controls">
-    <div class="kinds">
-      {#each KINDS as k (k)}
-        <button class:active={kind === k} onclick={() => (kind = k)}>{k}</button>
-      {/each}
-    </div>
-    <input class="search" type="search" placeholder="search…" bind:value={q} />
-    <label>class
-      <select bind:value={cls}>
-        <option>All</option>
-        {#each CLASSES as c (c)}<option>{c}</option>{/each}
-      </select>
-    </label>
-    <label>age
-      <select bind:value={age}>
-        <option>All</option>
-        {#each AGES as a (a)}<option>{a}</option>{/each}
-      </select>
-    </label>
-    <label class="chk"><input type="checkbox" bind:checked={craftableOnly} /> craftable only</label>
-    <span class="count">{rows.length} shown</span>
+  <div class="tabs">
+    <button class="tab lead" class:active={view === 'builds'} onclick={() => (view = 'builds')}>Builds</button>
+    <span class="sep"></span>
+    {#each CAT_KINDS as k (k)}
+      <button class="tab" class:active={view === 'catalogue' && kind === k} onclick={() => selectKind(k)}>{KIND_LABEL[k]}</button>
+    {/each}
   </div>
 
-  <div class="scroll">
-    <table>
-      <thead>
-        <tr>
-          {#each cols as c (c.key)}
-            <th class:num={c.numeric} class:sorted={sortKey === c.key} onclick={() => sortBy(c.key)}>
-              {c.label}{#if sortKey === c.key}<span class="arrow">{sortDir === 1 ? '▲' : '▼'}</span>{/if}
-            </th>
+  {#if view === 'builds'}
+    <p class="hint">Every archetype's real support, extracted from the data. Click a build to see its entries.</p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Build</th><th class="num">Weapons</th><th class="num">Armour</th>
+            <th class="num">Ungated</th><th class="num">Cultural</th><th class="num">Lineage</th>
+            <th>Lineages</th><th>Gaps</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each summaries as s (s.build)}
+            <tr class="clickable" onclick={() => openBuild(s.build)}>
+              <td class="name cls" data-cls={s.build}>{s.build}</td>
+              <td class="num">{s.weapons}</td>
+              <td class="num">{s.armor}</td>
+              <td class="num" class:warn={s.ungatedTraits <= 1}>{s.ungatedTraits}</td>
+              <td class="num">{s.culturalTraits}</td>
+              <td class="num">{s.lineageTraits}</td>
+              <td class="sub">{s.lineages.length ? s.lineages.join(' · ') : '—'}</td>
+              <td class="gaps">{#if s.gaps.length}{s.gaps.join(' · ')}{:else}—{/if}</td>
+            </tr>
           {/each}
-        </tr>
-      </thead>
-      <tbody>
-        {#each rows as g (g.id)}
+        </tbody>
+      </table>
+    </div>
+  {:else}
+    <div class="controls">
+      <input class="search" type="search" placeholder="search…" bind:value={q} />
+      <label>build
+        <select bind:value={cls}>
+          <option>All</option>
+          {#each CLASSES as c (c)}<option>{c}</option>{/each}
+        </select>
+      </label>
+      <label>age
+        <select bind:value={age}>
+          <option>All</option>
+          {#each AGES as a (a)}<option>{a}</option>{/each}
+        </select>
+      </label>
+      <span class="count">{rows.length} shown</span>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead>
           <tr>
             {#each cols as c (c.key)}
-              <td class:num={c.numeric} class:name={c.key === 'name'} class:cls={c.key === 'cls'} data-cls={g.cls}>
-                {c.disp ? c.disp(g) : (c.get(g) ?? '—')}
-              </td>
+              <th class:num={c.numeric} class:sorted={sortKey === c.key} onclick={() => sortBy(c.key)}>
+                {c.label}{#if sortKey === c.key}<span class="arrow">{sortDir === 1 ? '▲' : '▼'}</span>{/if}
+              </th>
             {/each}
           </tr>
-        {/each}
-      </tbody>
-    </table>
-  </div>
-  {#if rows.length === 0}<p class="empty">No items match.</p>{/if}
+        </thead>
+        <tbody>
+          {#each rows as g (g.id)}
+            <tr>
+              {#each cols as c (c.key)}
+                <td class:num={c.numeric} class:name={c.key === 'name'} class:cls={c.clscol} data-cls={g.cls}>
+                  {c.disp ? c.disp(g) : (c.get(g) ?? '—')}
+                </td>
+              {/each}
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+    {#if rows.length === 0}<p class="empty">No entries match.</p>{/if}
+  {/if}
 </div>
 
 <style>
-  .gear-db {
+  /* app.html forces html,body{overflow:hidden}; this route is its own full-viewport scroll container. */
+  .build-db {
+    position: fixed;
+    inset: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
     font-family: var(--font-mono, ui-monospace, monospace);
     color: #ece6d4;
     background: #13110c;
-    min-height: 100vh;
     padding: 22px 26px 60px;
   }
   header h1 {
@@ -222,7 +291,7 @@
   header p {
     color: #9a9279;
     font-size: 13px;
-    margin: 0 0 18px;
+    margin: 0 0 16px;
   }
   code {
     color: #d8ab52;
@@ -230,18 +299,20 @@
     padding: 1px 4px;
     border-radius: 3px;
   }
-  .controls {
+  .tabs {
     display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
     align-items: center;
-    margin-bottom: 16px;
-  }
-  .kinds {
-    display: flex;
     gap: 4px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
   }
-  .kinds button {
+  .sep {
+    width: 1px;
+    height: 20px;
+    background: #362f22;
+    margin: 0 6px;
+  }
+  .tab {
     font-family: inherit;
     font-size: 12px;
     color: #9a9279;
@@ -250,13 +321,33 @@
     border-radius: 4px;
     padding: 5px 12px;
     cursor: pointer;
-    text-transform: capitalize;
   }
-  .kinds button.active {
+  .tab.lead {
+    color: #d8ab52;
+    border-color: #6b5a2f;
+  }
+  .tab.active {
     color: #13110c;
     background: #d8ab52;
     border-color: #d8ab52;
     font-weight: 700;
+  }
+  .hint,
+  .empty {
+    color: #9a9279;
+    font-size: 12.5px;
+    margin: 0 0 14px;
+  }
+  .empty {
+    padding: 20px;
+    text-align: center;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 14px;
   }
   .search,
   select {
@@ -274,9 +365,6 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-  }
-  .chk {
-    cursor: pointer;
   }
   .count {
     color: #6d6653;
@@ -310,6 +398,7 @@
     text-transform: uppercase;
     cursor: pointer;
     user-select: none;
+    z-index: 1;
   }
   th.sorted {
     color: #d8ab52;
@@ -326,9 +415,19 @@
   tbody tr:hover td {
     background: rgba(216, 171, 82, 0.04);
   }
+  tr.clickable {
+    cursor: pointer;
+  }
   td.name {
     color: #ece6d4;
     font-weight: 600;
+  }
+  td.num.warn {
+    color: #d76f5d;
+  }
+  td.gaps {
+    color: #d76f5d;
+    font-size: 12px;
   }
   td.cls {
     font-weight: 600;
@@ -351,9 +450,9 @@
   td.cls[data-cls='Utility'] {
     color: #6d6653;
   }
-  .empty {
+  .sub {
     color: #9a9279;
-    padding: 20px;
-    text-align: center;
+    font-size: 12px;
+    white-space: normal;
   }
 </style>

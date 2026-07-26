@@ -10,18 +10,22 @@ import itemsData from '../game/database/items/items.jsonc';
 import recipesData from '../game/database/items/recipes.jsonc';
 import buildingsData from '../game/database/world/buildings.jsonc';
 import researchData from '../game/database/progression/research.jsonc';
+import traitsData from '../game/database/pawns/traits.jsonc';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const items = itemsData as any[];
 const recipes = recipesData as any[];
 const buildings = buildingsData as any[];
 const research = researchData as any[];
+const traits = traitsData as any[];
 
 export type BuildClass =
   | 'Bruiser' | 'Tank' | 'Duelist' | 'Marksman' | 'Skulker'
   | 'Mage' | 'Artisan' | 'Medic' | 'Commander' | 'Utility';
 
-export type GearKind = 'weapon' | 'armor' | 'tool' | 'ammo' | 'medicine';
+export type GearKind = 'weapon' | 'armor' | 'tool' | 'ammo' | 'medicine' | 'trait';
+
+export type TraitGating = 'ungated' | 'cultural' | 'lineage' | 'flaw';
 
 export const AGES = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed', 'Boss'] as const;
 export type Age = (typeof AGES)[number];
@@ -40,7 +44,8 @@ export interface GearRow {
   id: string;
   name: string;
   kind: GearKind;
-  cls: BuildClass;
+  cls: BuildClass; // primary build (for display/sort)
+  classes: BuildClass[]; // every build this supports (traits often serve several) — filtered on
   age: Age;
   ageRank: number;
   tier: number;
@@ -78,6 +83,12 @@ export interface GearRow {
   work: string | null;
   // medicine
   medicine: number | null;
+  // trait
+  effect: string | null; // compact effect summary ("STR +2 · aim_speed ×1.15")
+  gating: TraitGating | null; // ungated (roll toward) · cultural · lineage · flaw
+  scope: string | null; // personal | cultural
+  rarity: string | null;
+  lineageNames: string | null; // lineage(s) the trait belongs to, if any
 }
 
 // ── lookup maps ───────────────────────────────────────────────────────────
@@ -208,11 +219,13 @@ function toRow(item: any): GearRow | null {
   const ap = item.armorProperties;
   const tb = item.toolBoost;
   const oh = item.onHitCondition;
+  const cls = classify(item, kind);
   return {
     id: item.id,
     name: item.name ?? prettify(item.id),
     kind,
-    cls: classify(item, kind),
+    cls,
+    classes: [cls],
     age,
     ageRank: AGES.indexOf(age),
     tier,
@@ -245,13 +258,159 @@ function toRow(item: any): GearRow | null {
     boostYield: tb?.yield ?? null,
     boostQuality: tb?.quality ?? null,
     work: item.processingType?.join(', ') ?? item.category ?? null,
-    medicine: item.medicineQuality ?? null
+    medicine: item.medicineQuality ?? null,
+    effect: null,
+    gating: null,
+    scope: null,
+    rarity: null,
+    lineageNames: null
   };
 }
 
-export const GEAR: GearRow[] = items.map(toRow).filter((r): r is GearRow => r !== null);
+// ── traits ────────────────────────────────────────────────────────────────
+const STAT_ABBR: Record<string, string> = {
+  strength: 'STR', dexterity: 'DEX', constitution: 'CON',
+  perception: 'PER', intelligence: 'INT', charisma: 'CHA'
+};
+// Which build(s) a stat feeds.
+const STAT_BUILDS: Record<string, BuildClass[]> = {
+  strength: ['Bruiser', 'Tank'], dexterity: ['Duelist', 'Skulker'], constitution: ['Tank'],
+  perception: ['Marksman'], intelligence: ['Artisan', 'Medic', 'Mage'], charisma: ['Commander']
+};
+
+function traitGating(t: any): TraitGating {
+  if (t.rarity === 'negative') return 'flaw';
+  if (t.scope === 'personal') return 'ungated';
+  if ((t.lineage && t.lineage.length) || ['rare', 'epic', 'legendary'].includes(t.rarity)) return 'lineage';
+  return 'cultural';
+}
+
+// Classify a trait to the build(s) it supports — by the STAT/effect keys it touches, not by hand.
+function classifyTrait(t: any): BuildClass[] {
+  const e = t.effects ?? {};
+  const set = new Set<BuildClass>();
+  for (const [stat, builds] of Object.entries(STAT_BUILDS))
+    if (e[stat + 'Bonus'] != null || e[stat + 'Penalty'] != null) builds.forEach((b) => set.add(b));
+  const cm = e.combatMods ?? {};
+  for (const k of Object.keys(cm)) {
+    if (/aim|reload|ranged|vision_range/.test(k)) set.add('Marksman');
+    else if (/melee_damage|hit_chance|hit_precision|attack_speed|crit/.test(k)) { set.add('Bruiser'); set.add('Duelist'); }
+    else if (/dodge|knockdown|block|parry/.test(k)) { set.add('Tank'); set.add('Duelist'); }
+  }
+  const works = { ...(e.workSpeed ?? {}), ...(e.workQuality ?? {}), ...(e.workYield ?? {}) };
+  for (const k of Object.keys(works)) set.add(k === 'caretaking' ? 'Medic' : 'Artisan');
+  if (e.stealth != null || e.nightVision != null) set.add('Skulker');
+  if (e.healRate != null) set.add('Medic');
+  if (t.kind === 'bodyMod' || e.resistances) set.add('Tank');
+  return set.size ? [...set] : ['Utility'];
+}
+
+function traitEffect(t: any): string {
+  const e = t.effects ?? {};
+  const parts: string[] = [];
+  for (const stat of Object.keys(STAT_ABBR)) {
+    if (e[stat + 'Bonus'] != null) parts.push(`${STAT_ABBR[stat]} +${e[stat + 'Bonus']}`);
+    if (e[stat + 'Penalty'] != null) parts.push(`${STAT_ABBR[stat]} −${e[stat + 'Penalty']}`);
+  }
+  const mults = (obj: any, suffix: string) => {
+    if (!obj) return;
+    for (const [k, v] of Object.entries(obj)) parts.push(`${k}${suffix} ×${v}`);
+  };
+  mults(e.combatMods, '');
+  mults(e.workSpeed, ' spd');
+  mults(e.workQuality, ' qual');
+  mults(e.workYield, ' yld');
+  if (e.stealth != null) parts.push(`stealth +${e.stealth}`);
+  if (e.healRate != null) parts.push(`heal +${e.healRate}`);
+  if (e.nightVision != null) parts.push(`nightVision +${e.nightVision}`);
+  if (t.bodyMods) parts.push('body ' + t.bodyMods.map((b: any) => b.target).join('/'));
+  if (t.selfCondition) parts.push(t.kind === 'naturalGear' ? 'natural gear' : String(t.selfCondition));
+  return parts.join(' · ') || (t.kind ?? '—');
+}
+
+function traitRow(t: any): GearRow {
+  const classes = classifyTrait(t);
+  const gating = traitGating(t);
+  return {
+    id: t.id,
+    name: t.name ?? prettify(t.id),
+    kind: 'trait',
+    cls: classes[0],
+    classes,
+    age: 'Primitive',
+    ageRank: 0,
+    tier: 0,
+    weightKg: 0,
+    durability: 0,
+    research: null,
+    craftable: false,
+    recipe: null,
+    dmg: null, damMin: null, damMax: null, damageType: null, ap: null, crit: null, atkSpeed: null,
+    reach: null, range: null, stun: null, scaling: null, twoHanded: null, onHit: null, wieldStr: null,
+    defense: null, armorType: null, slot: null, movePen: null, stealthMod: null, block: null,
+    boostSpeed: null, boostYield: null, boostQuality: null, work: null, medicine: null,
+    effect: traitEffect(t),
+    gating,
+    scope: t.scope ?? null,
+    rarity: t.rarity ?? null,
+    lineageNames: t.lineage && t.lineage.length ? t.lineage.join(', ') : null
+  };
+}
+
+const itemRows = items.map(toRow).filter((r): r is GearRow => r !== null);
+const traitRows = traits.filter((t) => t?.id && t?.name).map(traitRow);
+export const GEAR: GearRow[] = [...itemRows, ...traitRows];
 
 export const CLASSES: BuildClass[] = [
   'Bruiser', 'Tank', 'Duelist', 'Marksman', 'Skulker', 'Mage', 'Artisan', 'Medic', 'Commander', 'Utility'
 ];
-export const KINDS: GearKind[] = ['weapon', 'armor', 'tool', 'ammo', 'medicine'];
+export const KINDS: GearKind[] = ['weapon', 'armor', 'tool', 'ammo', 'medicine', 'trait'];
+
+// The nine real archetypes (Utility is a catch-all, not a build).
+export const BUILDS: BuildClass[] = [
+  'Bruiser', 'Tank', 'Duelist', 'Marksman', 'Skulker', 'Artisan', 'Medic', 'Commander', 'Mage'
+];
+
+export interface BuildSummary {
+  build: BuildClass;
+  weapons: number;
+  armor: number;
+  tools: number;
+  medicine: number;
+  ungatedTraits: number;
+  culturalTraits: number;
+  lineageTraits: number;
+  flaws: number;
+  lineages: string[]; // distinct lineage markers that support this build
+  gaps: string[]; // data-derived shortfalls
+}
+
+// "Extract builds": aggregate the whole catalogue by archetype so each build's real support (gear +
+// trait spread + lineages) is tracked from the data, not hand-listed. Powers the tool's By-build view.
+export function buildSummaries(): BuildSummary[] {
+  return BUILDS.map((build) => {
+    const rows = GEAR.filter((g) => g.classes.includes(build));
+    const of = (kind: GearKind) => rows.filter((g) => g.kind === kind);
+    const traitsFor = of('trait');
+    const lineages = [
+      ...new Set(traitsFor.filter((t) => t.gating === 'lineage' && t.lineageNames).flatMap((t) => t.lineageNames!.split(', ')))
+    ].sort();
+    const ungated = traitsFor.filter((t) => t.gating === 'ungated').length;
+    const cultural = traitsFor.filter((t) => t.gating === 'cultural').length;
+    const lineageTraits = traitsFor.filter((t) => t.gating === 'lineage').length;
+    const weapons = of('weapon').length;
+    const armor = of('armor').length;
+    const tools = of('tool').length + of('medicine').length;
+    const gaps: string[] = [];
+    if (ungated <= 1) gaps.push('≤1 ungated trait');
+    if (lineages.length === 0) gaps.push('no lineage');
+    if (weapons + tools + of('medicine').length === 0 && armor === 0) gaps.push('no gear');
+    return {
+      build, weapons, armor, tools,
+      medicine: of('medicine').length,
+      ungatedTraits: ungated, culturalTraits: cultural, lineageTraits,
+      flaws: traitsFor.filter((t) => t.gating === 'flaw').length,
+      lineages, gaps
+    };
+  });
+}
