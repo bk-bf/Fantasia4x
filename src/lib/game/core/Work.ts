@@ -21,7 +21,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Woodcutting',
     description: 'Harvest wood from trees in forests and groves',
     color: '#8D6E63',
-    toolsRequired: ['stone_axe', 'iron_axe', 'steel_axe'],
+    toolsRequired: ['stone_axe', 'copper_axe', 'iron_axe', 'steel_axe'],
     primaryStat: 'strength',
     secondaryStat: 'constitution',
     baseEfficiency: 1.0
@@ -31,7 +31,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Mining',
     description: 'Extract stone, ore, and minerals from quarries and mines',
     color: '#607D8B',
-    toolsRequired: ['stone_pick', 'iron_pick', 'steel_pick'],
+    toolsRequired: ['stone_pick', 'copper_pick', 'iron_pick', 'steel_pick'],
     primaryStat: 'strength',
     secondaryStat: 'constitution',
     baseEfficiency: 1.0
@@ -53,6 +53,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     color: '#C62828',
     toolsRequired: [
       'flint_knife',
+      'copper_knife',
       'stone_chopper',
       'bone_cleaver',
       'iron_butchery_kit',
@@ -118,6 +119,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     // stay in the list for the sewing/cutting steps.
     toolsRequired: [
       'flint_knife',
+      'copper_knife',
       'iron_knife',
       'steel_knife',
       'bone_fleshing_scraper',

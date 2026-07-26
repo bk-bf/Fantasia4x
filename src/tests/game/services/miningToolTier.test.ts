@@ -4,7 +4,7 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 
 /**
  * TOOL-TIER PARITY audit (§310), headless. A parity sweep found the ore nodes for iron/lead/gold/gems and
- * the magic vents demand mining `minTier: 2–3`, but only `stone_pick` (tier 1) existed — so the entire iron
+ * the magic vents demand mining `minTier: 2–3`, but only `stone_pick` (tier 0, post tin re-tier) existed — so the entire iron
  * age + gems were UN-MINEABLE (the butchery-gate bug class, uncaught because the ore audit stocked ore
  * directly). Fix: added `iron_pick` (tier 2) + `steel_pick` (tier 3). This drives the gate on a real hematite
  * node: a stone pick can't touch it, an iron pick can.
@@ -35,9 +35,9 @@ describe('mining tool-tier gate (iron/steel pick)', () => {
     return stk(s).hematite ?? 0;
   };
 
-  it('a STONE pick (tier 1) cannot mine hematite (demands mining tier 2) — the gap that existed', async () => {
+  it('a STONE pick (tier 0) cannot mine hematite (demands mining tier 2) — the gap that existed', async () => {
     const mined = await mineHematiteWith('stone_pick');
-    console.log(`[MINE gate] stone_pick (tier 1) → hematite=${mined}`);
+    console.log(`[MINE gate] stone_pick (tier 0) → hematite=${mined}`);
     expect(mined, 'a tier-1 pick cannot work a tier-2 ore vein — the gate holds').toBe(0);
   });
 

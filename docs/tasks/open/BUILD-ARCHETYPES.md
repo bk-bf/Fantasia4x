@@ -13,8 +13,10 @@ them — **stat requirements, traits, gear, lineages** — against that lens, ma
 soft-goods gear rework ([archived](../archive/SOFT-GOODS-CRAFTING-2026-07-26.md)) is one supply source.
 
 **Ground truths (verified against source):** the engine has **6 base stats — no Wisdom** (STR DEX CON PER INT CHA).
-Tiers are numeric `tier` 0–4: **t0 primitive · t1 bronze+leather · t2 iron · t3 steel · t4 boss/runed** — there is **no
-copper tier**, and primitive is one band, not three. The only build-like concept that exists is the 10 **culture
+Tiers are numeric `tier` 0–4: **t0 primitive · (copper) · t1 bronze+leather · t2 iron · t3 steel · t4 boss/runed**.
+*(2026-07-26: a thin **copper** stepping stone was added — `copper_axe`/`copper_pick`/`copper_knife`/`copper_dagger`,
+soft, forged at the copper-age hearth, filling the empty stone→iron tool rung. Pick re-tier: `stone_pick`→tier 0, so
+**tin now needs a copper pick** — a real metallurgical gate before bronze.)* Primitive is one band, not three. The only build-like concept that exists is the 10 **culture
 archetypes** (racial stat leans, none CHA-led) — there is **no player-chosen class/role system**; builds are steered
 only coarsely, via culture + background (a weighted bias, never a guarantee) and, once in life, lineage awakening.
 
@@ -140,7 +142,8 @@ Player-craftable only. Tiers t0 prim · t1 bronze · t2 iron · t3 steel · t4 b
 - [ ] **P2 Scout pass:** light/quiet head+gloves+boots+limbs+cloak at t2–t3; ≥2 ungated stealth traits.
 - [ ] **P3 Medic pass:** physician's/surgeon's kit (tool=speed) + wound-specific tiered medicines (AUDIT §4); healer traits + cultural identity.
 - [ ] **P4 Face decision + fill:** resolve CHA-sink (decision ②); if yes, CHA work category + trait rungs.
-- [ ] **P5 Slot/family evenness:** no-copper is fine, but fill the sword/finesse/axe/cleaver/flail tier holes + the boots/gloves/gorget/shield gaps; one themed craftable per remaining boss.
+- [ ] **P5 Slot/family evenness:** fill the sword/finesse/axe/cleaver/flail tier holes + the boots/gloves/gorget/shield gaps; one themed craftable per remaining boss. *(Copper tool rung added 2026-07-26; copper WEAPONS still thin — only `copper_dagger`.)*
+- [ ] **P6 Harvest tool-axis — metal SCYTHES** (tracked 2026-07-26, user idea): a scythe line (copper→iron→steel) trading yield for SPEED that **sweeps 3 grass tiles per swing** for fast hay — the mirror of the sickle (yield over speed). The scythe *claps* yield on non-grass so it can't harvest crops until a high tier where it "redeems itself"; both scale up sharply with tier. Needs 3 new harvest mechanics: **(a) multi-tile harvest** (one job clears 3 adjacent grass tiles — today it's one tile/job), **(b) target-dependent yield** (`toolBoost` is flat; scythe yield depends on grass vs crop), **(c) a type gate that lifts by tier**. A focused `harvest.ts` pass + a scythe tool line — its own increment, not a data add.
 
 ## Acceptance (how we know builds are "intentional")
 - [ ] Every build has ≥1 viable weapon + armour set + role-tool at EVERY reachable tier (the Audit 3 grid has no ✗ in a build's core row), OR the gap is a documented deliberate choice.

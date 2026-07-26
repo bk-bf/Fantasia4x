@@ -2471,7 +2471,7 @@
       "workCategory"   : "mining",
       "harvestSubType" : "cave",
       "workAmount"     : 30,
-      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "toolRequirement": {"workType": "mining", "minTier": 0},
       "yields"         : [ {"itemId": "malachite", "min": 2, "max": 6, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
@@ -2495,7 +2495,7 @@
       "workCategory"   : "mining",
       "harvestSubType" : "cave",
       "workAmount"     : 30,
-      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "toolRequirement": {"workType": "mining", "minTier": 0},
       "yields"         : [ {"itemId": "chalcopyrite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
@@ -2519,7 +2519,7 @@
       "workCategory"   : "mining",
       "harvestSubType" : "cave",
       "workAmount"     : 30,
-      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "toolRequirement": {"workType": "mining", "minTier": 0},
       "yields"         : [ {"itemId": "azurite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
@@ -2711,7 +2711,7 @@
       "workCategory"   : "mining",
       "harvestSubType" : "cave",
       "workAmount"     : 30,
-      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "toolRequirement": {"workType": "mining", "minTier": 0},
       "yields"         : [ {"itemId": "coal", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
@@ -2735,7 +2735,7 @@
       "workCategory"   : "mining",
       "harvestSubType" : "cave",
       "workAmount"     : 30,
-      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "toolRequirement": {"workType": "mining", "minTier": 0},
       "yields"         : [ {"itemId": "salt", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
@@ -2762,7 +2762,7 @@
       "workCategory"   : "mining",
       "harvestSubType" : "cave",
       "workAmount"     : 30,
-      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "toolRequirement": {"workType": "mining", "minTier": 0},
       "yields"         : [
         {"itemId": "granite",     "min": 2, "max":  5, "skillId": "mining", "skillMultiplier": 0.2},
         {"itemId": "marble",      "min": 0, "max":  1, "skillId": "mining", "skillMultiplier": 0.1},
@@ -2789,7 +2789,7 @@
       "workCategory"   : "mining",
       "harvestSubType" : "cave",
       "workAmount"     : 36,
-      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "toolRequirement": {"workType": "mining", "minTier": 0},
       "yields"         : [
         {"itemId": "sandstone", "min": 3, "max": 6, "skillId": "mining", "skillMultiplier": 0.2 },
         {"itemId": "slate",     "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.15}

@@ -617,6 +617,45 @@
     "workAmount"       : 8,
     "toolTierRequired" : 0
   },
+  // ── Copper tools/weapon — the Chalcolithic stepping stone (research `copper_smelting`, forged at the
+  // copper-age Smelting Hearth from a bar + a plain branch haft; no wooden_haft until the bronze-age
+  // sawtable). Fills the empty stone→iron rung for the axe/pick/knife; soft, so they wear fast.
+  {
+    "id"              : "make_copper_axe",
+    "station"         : "stone_forge",
+    "inputs"          : {"copper_bar": 2, "branch": 1},
+    "outputs"         : {"copper_axe": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 0,
+    "researchRequired": "copper_smelting"
+  },
+  {
+    "id"              : "make_copper_pick",
+    "station"         : "stone_forge",
+    "inputs"          : {"copper_bar": 2, "branch": 1},
+    "outputs"         : {"copper_pick": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 0,
+    "researchRequired": "copper_smelting"
+  },
+  {
+    "id"              : "make_copper_knife",
+    "station"         : "stone_forge",
+    "inputs"          : {"copper_bar": 1, "branch": 1},
+    "outputs"         : {"copper_knife": 1},
+    "workAmount"      : 4,
+    "toolTierRequired": 0,
+    "researchRequired": "copper_smelting"
+  },
+  {
+    "id"              : "make_copper_dagger",
+    "station"         : "stone_forge",
+    "inputs"          : {"copper_bar": 1, "medium_bones": 1},
+    "outputs"         : {"copper_dagger": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 0,
+    "researchRequired": "copper_smelting"
+  },
   {
     "id"              : "make_tin_bar",
     "passive"         : true,

@@ -509,15 +509,36 @@ describe('mining tool gating (bugfix)', () => {
     }) as unknown as Pawn;
 
   it('mountain_wall requires a mining tool (was tool-free — pawns mined walls barehanded)', () => {
+    // minTier 0 = the basic (stone) pick — still tool-gated, not barehanded. (Tin re-tier: stone_pick
+    // dropped to tier 0, so every stone-mineable node is minTier 0; only cassiterite stays minTier 1.)
     expect(
       jobService.requiredToolForJob(mineJob('mountain_wall'), makeState({ designations }))
-    ).toEqual({ workType: 'mining', minTier: 1 });
+    ).toEqual({ workType: 'mining', minTier: 0 });
   });
 
   it('cliff_wall also requires a mining tool', () => {
     expect(
       jobService.requiredToolForJob(mineJob('cliff_wall'), makeState({ designations }))
-    ).toEqual({ workType: 'mining', minTier: 1 });
+    ).toEqual({ workType: 'mining', minTier: 0 });
+  });
+
+  it('TIN (cassiterite) requires a COPPER pick — a stone pick is too soft (bronze gate)', () => {
+    // The metallurgical progression gate: stone gets you copper ore + coal, but tin — and thus bronze —
+    // needs a copper pick first. cassiterite stays minTier 1; stone_pick is tier 0, copper_pick tier 1.
+    expect(jobService.requiredToolForJob(mineJob('cassiterite'), makeState({ designations }))).toEqual({
+      workType: 'mining',
+      minTier: 1
+    });
+    const stonePick = addInstanceToInventory(
+      { id: 'p', equipment: {}, inventory: { items: {}, instances: [] } } as unknown as Pawn,
+      'stone_pick'
+    );
+    const copperPick = addInstanceToInventory(
+      { id: 'p', equipment: {}, inventory: { items: {}, instances: [] } } as unknown as Pawn,
+      'copper_pick'
+    );
+    expect(jobService.pawnHasToolFor(stonePick, 'mining', 1), 'stone pick too soft for tin').toBe(false);
+    expect(jobService.pawnHasToolFor(copperPick, 'mining', 1), 'copper pick wins tin').toBe(true);
   });
 
   it('stone_outcrop stays tool-free (ADR-009 bootstrap surface scavenge)', () => {
@@ -553,6 +574,6 @@ describe('tool carry / slot (bugfix)', () => {
     const withPick = addInstanceToInventory(bare, 'stone_pick');
     expect(withPick.inventory.instances.some((i) => i.itemId === 'stone_pick')).toBe(true);
     expect((withPick.equipment as Record<string, unknown>).belt).toBeUndefined();
-    expect(jobService.pawnHasToolFor(withPick, 'mining', 1)).toBe(true);
+    expect(jobService.pawnHasToolFor(withPick, 'mining', 0)).toBe(true); // stone_pick is tier 0 (tin re-tier)
   });
 });
