@@ -62,14 +62,14 @@ describe('job registry (jobs.jsonc ↔ JobService)', () => {
     expect(wk('sleep')).toBe('sleep');
   });
 
-  it('routes a meal-producing craft job to the cooking category (recipe-output source)', () => {
+  it('routes a craft job to its discipline PARENT (meal → cooking, stone tool → stoneworking)', () => {
     const job = { type: 'craft', targetX: 0, targetY: 0, craftQueueId: 'q1' };
-    // A craft order whose output is a prepared `meal` is a cooking job; any other output stays `crafting`.
+    // A prepared `meal` cooks; a stone axe (tagged `knapping`) sits under Stoneworking — no generic bucket.
     const cookGs = { craftingQueue: [{ id: 'q1', item: { id: 'small_stew' } }] } as never;
-    const craftGs = { craftingQueue: [{ id: 'q1', item: { id: 'stone_axe' } }] } as never;
+    const knapGs = { craftingQueue: [{ id: 'q1', item: { id: 'stone_axe' } }] } as never;
     expect(jobService.getJobWorkCategory(job, cookGs)).toBe('cooking');
-    expect(jobService.getJobWorkCategory(job, craftGs)).toBe('crafting');
-    // No gs / unknown order → static fallback.
+    expect(jobService.getJobWorkCategory(job, knapGs)).toBe('stoneworking'); // knapping leaf → its parent
+    // No gs / unknown order → the `crafting` sentinel (dissolved as a Work-tab category; never a real route).
     expect(jobService.getJobWorkCategory(job)).toBe('crafting');
   });
 
@@ -112,7 +112,7 @@ describe('job registry (jobs.jsonc ↔ JobService)', () => {
     );
     expect(kids('tailoring')).toEqual(['leatherworking', 'weaving']);
     expect(kids('cooking')).toEqual(['meals', 'butchery', 'baking', 'brewing']);
-    expect(kids('stoneworking')).toEqual(['knapping', 'masonry', 'lapidary']);
+    expect(kids('stoneworking')).toEqual(['knapping', 'masonry', 'lapidary', 'bonecarving']);
     expect(kids('metalworking')).toEqual([]); // flat — nothing to expand
     // leaf disciplines are dropped from the top-level Work-tab row
     expect(jobService.isCraftSubjob('butchery')).toBe(true);

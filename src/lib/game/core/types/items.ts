@@ -181,6 +181,11 @@ export interface Recipe {
   /** Per-recipe craft-tool gate (overrides the recipe's station `toolRequirement`). A pawn must
    *  carry a qualifying tool to work this recipe. Omitted = inherit the station's. */
   toolRequirement?: { workType: string; minTier: number };
+  /** Explicit craft DISCIPLINE (leaf id: `knapping`, `bonecarving`, `leatherworking`, `pottery`…),
+   *  overriding station-flag derivation. Lets ONE mixed station (a craft spot, a maker's bench) route
+   *  each recipe to its real discipline — the way stone tools, bows, and leather gear share a bench but
+   *  train different skills. See `services/jobs/craftDiscipline.ts`. */
+  discipline?: string;
   researchRequired?: string | null;
   populationRequired?: number;
   buildingRequired?: string | null;

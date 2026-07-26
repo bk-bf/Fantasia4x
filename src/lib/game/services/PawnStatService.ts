@@ -33,6 +33,7 @@ import {
   workSkillCategory,
   NEUTRAL_WORK_LEVEL
 } from '../core/workExperience';
+import { isDiscipline } from './jobs/disciplineTree';
 
 // conditions.jsonc holds both persistent conditions (severity/stages) and transient ones
 // (re-derived each tick); split them by the `duration` discriminant — see the file header.
@@ -536,6 +537,11 @@ function traitWorkMult(
     // (workSpeed.construction) still boosts the repair/demolish subjobs.
     const specific = map[workType] ?? (fallbackType ? map[fallbackType] : undefined);
     if (specific) mult *= specific;
+    // `crafts` meta-key: a generalist-crafter trait applies to EVERY craft discipline (metalworking,
+    // woodworking, tailoring/leatherwork/weaving, stoneworking/knapping…, pottery, cooking, alchemy) —
+    // but NOT construction or the harvest jobs. Lets one key stand in for "good with their hands".
+    if (map['crafts'] && (isDiscipline(workType) || (fallbackType != null && isDiscipline(fallbackType))))
+      mult *= map['crafts'];
     if (map['all']) mult *= map['all'];
   }
   return mult;

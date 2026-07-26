@@ -83,16 +83,10 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     baseEfficiency: 1.0
   },
 
-  // CRAFTING WORK
-  {
-    id: 'crafting',
-    name: 'General Crafting',
-    description: 'Create tools, weapons, and basic equipment',
-    color: '#FF9800',
-    primaryStat: 'dexterity',
-    secondaryStat: 'intelligence',
-    baseEfficiency: 1.0
-  },
+  // CRAFTING WORK — the generic `crafting` catch-all is DISSOLVED (§D): every craft now routes to a
+  // real discipline (metalworking / woodworking / tailoring / stoneworking / pottery / cooking / alchemy)
+  // by its recipe `discipline` tag or its station. `crafting` survives only as a code sentinel + the
+  // `crafting_*` fallback stats; a `recipeDiscipline.test.ts` guard fails if any recipe routes to it.
   {
     id: 'metalworking',
     name: 'Metalworking',
@@ -150,14 +144,24 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     baseEfficiency: 1.0
   },
   {
-    // Stone-shaping PARENT: one skill across the whole game (Knapping → Masonry → Lapidary), so the
-    // stone specialist never goes obsolete when metal arrives.
+    // Stone-shaping PARENT: one skill across the whole game (Knapping → Masonry → Lapidary →
+    // Bonecarving), so the hard-material specialist never goes obsolete when metal arrives.
     id: 'stoneworking',
     name: 'Stoneworking',
-    description: 'Shape stone — chipped tools, dressed blocks, and cut gems',
+    description: 'Shape hard material — chipped tools, dressed blocks, cut gems, carved bone',
     color: '#78909C',
     primaryStat: 'strength',
     secondaryStat: 'dexterity',
+    baseEfficiency: 1.0
+  },
+  {
+    // Ceramics: clay formed and kiln-fired (pots, bricks, tiles, urns, porcelain, glass). Station-gated.
+    id: 'pottery',
+    name: 'Pottery',
+    description: 'Form and fire clay — pots, bricks, tiles, urns, and glass',
+    color: '#B5651D',
+    primaryStat: 'dexterity',
+    secondaryStat: 'intelligence',
     baseEfficiency: 1.0
   },
   {

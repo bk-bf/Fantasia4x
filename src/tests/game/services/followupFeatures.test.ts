@@ -239,9 +239,9 @@ describe('station tiers + bootstrap (ADR-016 / ADR-009)', () => {
     expect(buildingService.bestCraftStation('craft_spot', gs)?.id).toBe('mb');
   });
 
-  it('bootstrap: stone_axe/stone_hammer are now craft_spot-tier, so the Crude Workbench is buildable', () => {
-    // The axe/hammer moved to craft_spot (tier 0) — no longer crafted only at the bench whose
-    // build cost lists them, so the circular dependency is broken.
+  it('bootstrap: stone_axe/stone_hammer knap at the free tier-0 craft_spot, so the Crude Workbench is buildable', () => {
+    // The axe/hammer knap at the free tier-0 craft_spot (tagged `knapping`) — no longer crafted only at
+    // the bench whose build cost lists them, so the circular dependency is broken.
     expect(recipeService.getRecipeForItem('stone_axe')?.station).toBe('craft_spot');
     expect(recipeService.getRecipeForItem('stone_hammer')?.station).toBe('craft_spot');
     // And a craft_spot recipe is satisfiable when only the higher-tier bench is built.

@@ -41,10 +41,11 @@ jackal/goat…; rat/rabbit stay the "boring", near-generic line).
 
 - **Common hides = 1 active step** (flesh → cure → tan). **Beast/prime hides = 2 active steps** (…+ curry) — the
   "higher tier is more involved" the design wants; `prime_<animal>_leather` is the input for top-tier beast gear/furniture.
-- [ ] Insert step 1 (`fleshed_<animal>_hide`) before cure; cure/tan take the fleshed hide (small input rename).
-- [ ] Add step 4 curry for BEAST/prime species only → `prime_<animal>_leather`.
-- [ ] Retarget top-tier beast gear/rugs/beds to `prime_<animal>_leather` (the wolfskin warcloak needs *finished*
-      wolf leather, not a raw tan) — so the flavour reads through into the highest-value pieces.
+- [x] **DONE (2026-07-25):** step 1 flesh (`fleshed_<animal>_hide` ×17) inserted before cure (17 cure inputs
+      rewired raw→fleshed); step 4 curry (`prime_<leather>` ×12) at the `curriers_bench` for beasts. Headless-verified:
+      deer raw→flesh→cure→tan and wolf hide→…→`prime_wolf_leather` (fat consumed), animal identity intact end-to-end.
+- [x] Retargeted `cave_bear_plate` (→ `prime_cave_bear_hide`) + `direwolf_warcloak` (→ `prime_direwolf_leather`); the
+      rest of the beast-gear/rug/bed retarget accepts `category:leather` (prime qualifies) — extend per-piece as needed.
 
 ## B. `tailoring` work category + subjobs + tools
 - New parent category **`tailoring`** (soft-goods) with construction-style SUBJOBS:
@@ -54,37 +55,37 @@ jackal/goat…; rat/rabbit stay the "boring", near-generic line).
 - Tools (durable/non-organic): **`fleshing_scraper`** (bone t0 / iron t2) for step 1; **`curriers_kit`** (iron/steel)
   for step 4; **`sewing_kit`** (iron) → **`tailors_kit`** (steel) for sewn gear assembly. Each gates at the tier it
   logically appears; **primitive apparel is wicker/woven → needs no tool** (stays ungated).
-- [ ] Add `tailoring` to WORK_CATEGORIES + CRAFT_DISCIPLINES; add `tailoring_speed/quality` + subjob stats.
-- [ ] Gate the ~18 active leather/cloth GEAR recipes on the appropriate kit (iron+); passive tanning stays ungated.
+- [x] **DONE:** `tailoring` parent + `leatherworking`/`weaving` leaf disciplines (own stats, own skills); the six
+      tools (`bone_fleshing_scraper`/`iron_fleshing_knife`, `curriers_kit`/`steel_curriers_kit`, `sewing_kit`/`tailors_kit`)
+      + recipes + the `curriers_bench`; flesh/curry gated on the leatherworking tool tier (a flint knife can't flesh).
+- [~] Gating the ~18 sewn leather/cloth GEAR recipes on the kit is not yet applied per-piece (tools + gate mechanism
+      exist; the flesh/curry steps ARE gated). Follow-up.
 
 ## C. `weaving` subjob — route wicker/basketry + cloth
 Wicker/basket/wattle work IS weaving, not "general crafting" — and it's the right early path:
-- [ ] Move `woven_basket`, `wicker_frame`, `wattle_buckler`, `wicker_vest` off craft_spot/generic → **weaving**
-      (hand-woven; station = a simple weaving spot; no metal tool early).
-- [ ] Cloth weaving (`weave_linen/cotton/woolcloth` @loom) → **weaving**; sewn cloth apparel → weaving + sewing kit.
+- [x] Move `woven_basket`, `wicker_frame`, `wattle_buckler`, `wicker_vest` → **weaving** (folded into `craft_spot`,
+      tagged `weaving` — see §D; hand-woven, no tool).
+- [x] Cloth weaving (`weave_linen/cotton/woolcloth`) already routes to **weaving** via the loom's `weavingEnabled`.
 
-## D. Retire general `crafting` → specialised disciplines (each with a lifelong through-line)
-`craft_spot` is a grab-bag; route each output to its real discipline so skill / tool / Work-tab slider all follow.
-**Design guard: no discipline may go obsolete** — every specialist must stay useful into late game (so specialising
-never strands a pawn). Parent disciplines with construction-style **{subjobs}**:
+## D. Retire general `crafting` → specialised disciplines — **DONE (2026-07-25)**
+**Generic `crafting` is fully DISSOLVED**: every craft now routes to a real discipline, guarded by
+`recipeDiscipline.test.ts` (fails the moment a recipe has no route). Two enablers built:
+- **Recipe-level `discipline` tag** (`Recipe.discipline`, resolved in `craftDiscipline.ts` BEFORE the station flag) —
+  so one mixed station (`craft_spot`, `makers_bench`) routes each recipe to its own discipline. The 3 free spots
+  (knapping/weaving/herbalist) were folded back into a single `craft_spot`; ~90 recipes tagged.
+- Two new disciplines: **Pottery** (clay/ceramics/glass) and **Bonecarving** (a Stoneworking leaf — bone/antler/ivory
+  is the hard-material family, keeping the stone specialist relevant late).
 
-- **`metalworking`** (blacksmithing) — smelt / forge metal tools, weapons, armour.
-- **`tailoring`** {**leatherwork**, **weaving**} — soft goods; weaving stays relevant late as the thread/fabric line (§A–§C).
-- **`woodworking`** — planks, furniture, wooden tools, bows, carts.
-- **`stoneworking`** {**knapping** (chipped stone tools) → **masonry** (dressed blocks / walls / querns) → **lapidary**
-  (cut / polished gems)} — **the knapping-obsolescence FIX**: knapping is just the EARLY face of one stone-shaping
-  skill that carries the specialist all game (flint tools → granite walls → cut rubies), not a dead-end stone-age job.
-- **`cooking`** {**butchery** (carcass → meat/hide/bone), **baking** (bread / pies @oven), **brewing** (ale / wine /
-  cider @fermenter), meals @campfire} — one food-craft family.
-- **`alchemy`** {**herbalism** (gather + prepare herbal medicines / poultices / salves — feeds the caretaking medicine
-  pass, AUDIT §4), potions / tonics / coatings} — herbalism is the plant-prep face, alchemy proper the reagent face.
-
-- [ ] **Route the craft_spot grab-bag:** stone tools (flint knife/axe/hammer/sickle/chopper, digging stick, wooden
-      tongs) → **knapping** (stoneworking); `wicker_vest` → **weaving**; `chewed_poultice` → **herbalism** (alchemy);
-      `cordage`/`torch`/`mud_brick` → **woodworking** / a thin survival residual.
-- [ ] Move existing `masons_bench`/`lapidary_bench` recipes under `stoneworking`; `oven`/`fermenter` under `cooking`.
-- End state: **no generic `crafting` bucket** — every craft routes to a discipline whose specialist stays relevant.
-  **Biggest, most invasive part — do LAST.**
+**Final discipline taxonomy** (all equal top-level Work-tab parents; leaves are INDEPENDENT skills — a weaver never
+levels a leatherworker, guaranteed by `SKILL_CATEGORIES` + XP-to-leaf):
+`metalworking · woodworking · tailoring{leatherworking, weaving} · stoneworking{knapping, masonry, lapidary,
+bonecarving} · pottery · cooking{meals, butchery, baking, brewing} · alchemy{herbalism, potions}`
+- [x] Routed: leather gear → leatherworking; bone/antler/ivory → bonecarving; bows → woodworking; clay/glass →
+      pottery; smelt-prep (pig_iron/coke/charcoal/crucible_steel/mechanism) → metalworking; cordage/rope → weaving;
+      mud_brick/quicklime → masonry; brines → leatherworking; stone tools → knapping; poultice → herbalism.
+      Oddballs (flag for review): candle/torch → cooking; compost/fertiliser/resin → alchemy.
+- [x] Per-leaf work stats (20) tuned to each craft; traits' generalist `crafting` key → `crafts` meta-key (applies to
+      every craft discipline, not construction/harvest).
 
 ## E. Class/build-driven gear & apparel coverage
 Gear is designed **build-first**, not as a free list: the **class/build map ([AUDIT.md](AUDIT.md) §1)** is the driver
@@ -119,20 +120,24 @@ gap in the grid, deliberately slotted to a build.
       leaf effect-flags): looms→Weaving, masons_bench→Masonry, lapidary_bench→Lapidary (fixing its old
       mis-route to alchemy), oven/quern→Baking, fermenter→Brewing, hide_rack→Leatherwork. Only **Knapping**
       and **Herbalism** stay unrouted — they need per-recipe splits out of the mixed `craft_spot` (tail of D).
-- [ ] **Phase 1 (fix now):** `tailoring` category + leatherwork/weaving subjobs + the kits; the active flesh (A1)
-      + curry (A4) steps, per-animal; retarget beast gear to `prime_<animal>_leather`. The "fix tailoring & tools" deliverable.
-- [ ] **Phase 2:** route wicker/basketry + cloth into weaving (C); the wound-medicine pass (AUDIT §4, herbalism).
-- [ ] **Phase 3:** the broad `crafting` → specialised-discipline reshuffle (D). Touches many recipes; last.
+- [x] **Phase 1 (DONE):** `tailoring` + leatherwork/weaving + the kits + `curriers_bench`; active flesh (A1) + curry
+      (A4) per-animal; beast gear retargeted to `prime_<leather>`.
+- [x] **Phase 2 (DONE):** wicker/basketry + cloth → weaving (C). *(Wound-medicine pass — AUDIT §4 herbalism — still open.)*
+- [x] **Phase 3 (DONE):** `crafting` fully dissolved into disciplines (D) via the recipe-`discipline` tag; +Pottery,
+      +Bonecarving; ~90 recipes routed; per-leaf stats; traits' `crafts` meta-key.
+- **BONUS (not originally specced):** tool/weapon **HANDLE chain** — Woodworking discipline + `wooden_haft`/`sanded_haft`/
+  `seasoned_haft` (carve→sand→passive batch-soak at the `soaking_trough`); 22 iron/steel/bronze tool+weapon recipes
+  swapped off raw `branch` onto crafted hafts. See Principles. Headless-verified (carve→soak→iron_axe).
 
 ## Open questions
-- [ ] Curry: a dedicated `curriers_bench`, or fold the active curry into the beast-tanning area as an active pre-step? (lean: one new `curriers_bench`.)
-- [ ] Flesh output: per-animal `fleshed_<animal>_hide` (17 new items, keeps identity cleanly) vs a shared `fleshed_hide`
-      that re-splits at tan (fewer items, muddier). Lean: **per-animal**, to keep flavour unbroken.
-- [ ] `knapping` as a real new discipline vs folding stone tools into a residual `crafting`.
+- [ ] Beast gear/rug/bed retarget to specific `prime_<leather>` per-piece (only the 2 flagship pieces done; the rest
+      accept `category:leather`, which prime satisfies).
+- [ ] Sewn iron+ gear kit-gating per-piece (the kit + gate mechanism exist; not applied to each gear recipe yet).
+- [ ] Oddball homes to review: candle/torch → cooking; compost/fertiliser/resin → alchemy (best-fit calls in §D).
 
-## Acceptance (headless-verifiable when built)
-- [ ] A hide can't become leather without the ACTIVE flesh step (a colony with no scraper stalls at the raw pelt).
-- [ ] A beast leather requires the active curry step → `prime_<animal>_leather` (headless: pelt → … → prime, kit-gated).
-- [ ] `tailoring` splits into leatherwork/weaving in the Work tab; each subjob's speed/quality respond to skill + kit tier.
-- [ ] Per-animal identity survives end-to-end: `wolf_pelt` drives a wolf-named leather → a wolf-named piece of gear/rug.
-- [ ] Primitive wicker apparel still crafts with NO tool; iron+ sewn gear requires the kit.
+## Acceptance (headless-verified)
+- [x] A hide can't become leather without the ACTIVE flesh step (flint knife can't flesh — a t1 fleshing tool is needed).
+- [x] A beast leather requires the active curry step → `prime_<leather>` (headless: wolf hide → … → prime, kit-gated).
+- [x] `tailoring` splits into leatherworking/weaving in the Work tab; each is its OWN skill (independent leveling).
+- [x] Per-animal identity survives end-to-end: `wolf_hide` → wolf-named prime leather → `direwolf_warcloak`.
+- [~] Primitive wicker apparel crafts with NO tool (done); per-piece iron+ sewn-gear kit-gating is the follow-up above.

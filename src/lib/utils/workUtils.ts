@@ -67,6 +67,7 @@ export const ABBR: Record<string, string> = {
   tailoring: 'TLR',
   leatherworking: 'LTH',
   stoneworking: 'STN',
+  pottery: 'POT',
   digging: 'DIG',
   research: 'RSH',
   construction: 'BLD',

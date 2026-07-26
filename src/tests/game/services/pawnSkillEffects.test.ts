@@ -70,7 +70,7 @@ describe('pawn skill effects', () => {
           workReady: true,
           pawns: [{ count: 4, skillLevel }],
           needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-          buildings: [{ id: 'craft_spot' }],
+          buildings: [{ id: 'craft_spot' }], // flint tools knap here, tagged `knapping` (§D)
           items: { flint_shard: 60, branch: 60, cordage: 40, spit_meat: 10 },
           seedEntities: false
         })

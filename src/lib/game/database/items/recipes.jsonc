@@ -40,6 +40,7 @@
   },
   {
     "id"               : "burn_charcoal",
+    "discipline"      : "metalworking",
     "station"          : "charcoal_pit",
     "passive"          : true,
     "inputs"           : {"category:log": 2},
@@ -50,6 +51,7 @@
   },
   {
     "id"              : "make_coke",
+    "discipline"      : "metalworking",
     "station"         : "charcoal_pit",
     "passive"         : true,
     "inputs"          : {"coal": 2},
@@ -59,6 +61,7 @@
   },
   {
     "id"              : "make_chewed_poultice",
+    "discipline"      : "herbalism",
     "station"         : "craft_spot",
     "inputs"          : {"woundwort": 2, "cordage": 1},
     "outputs"         : {"chewed_poultice": 1},
@@ -104,8 +107,8 @@
     "id"               : "make_cured_rabbit_pelt",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"rabbit_pelt": 1, "ash": 2},
-    "inputAlternatives": [ {"rabbit_pelt": 1, "salt": 1} ],
+    "inputs"           : {"fleshed_rabbit_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"fleshed_rabbit_hide": 1, "salt": 1} ],
     "outputs"          : {"cured_rabbit_pelt": 1},
     "workAmount"       : 40,
     "toolTierRequired" : 0
@@ -114,8 +117,8 @@
     "id"               : "make_cured_rat_pelt",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"rat_pelt": 1, "ash": 2},
-    "inputAlternatives": [ {"rat_pelt": 1, "salt": 1} ],
+    "inputs"           : {"fleshed_rat_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"fleshed_rat_hide": 1, "salt": 1} ],
     "outputs"          : {"cured_rat_pelt": 1},
     "workAmount"       : 40,
     "toolTierRequired" : 0
@@ -124,8 +127,8 @@
     "id"               : "make_cured_deer_hide",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"deer_hide": 1, "ash": 2},
-    "inputAlternatives": [ {"deer_hide": 1, "salt": 1} ],
+    "inputs"           : {"fleshed_deer_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"fleshed_deer_hide": 1, "salt": 1} ],
     "outputs"          : {"cured_deer_hide": 1},
     "workAmount"       : 50,
     "toolTierRequired" : 0
@@ -134,8 +137,8 @@
     "id"               : "make_cured_goat_hide",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"goat_hide": 1, "ash": 2},
-    "inputAlternatives": [ {"goat_hide": 1, "salt": 1} ],
+    "inputs"           : {"fleshed_goat_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"fleshed_goat_hide": 1, "salt": 1} ],
     "outputs"          : {"cured_goat_hide": 1},
     "workAmount"       : 50,
     "toolTierRequired" : 0
@@ -144,8 +147,8 @@
     "id"               : "make_cured_jackal_hide",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"jackal_hide": 1, "ash": 2},
-    "inputAlternatives": [ {"jackal_hide": 1, "salt": 1} ],
+    "inputs"           : {"fleshed_jackal_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"fleshed_jackal_hide": 1, "salt": 1} ],
     "outputs"          : {"cured_jackal_hide": 1},
     "workAmount"       : 50,
     "toolTierRequired" : 0
@@ -154,8 +157,8 @@
     "id"               : "make_cured_wolf_hide",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"wolf_hide": 1, "ash": 2},
-    "inputAlternatives": [ {"wolf_hide": 1, "salt": 1} ],
+    "inputs"           : {"fleshed_wolf_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"fleshed_wolf_hide": 1, "salt": 1} ],
     "outputs"          : {"cured_wolf_hide": 1},
     "workAmount"       : 60,
     "toolTierRequired" : 0
@@ -164,8 +167,8 @@
     "id"               : "make_cured_worg_hide",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"worg_hide": 1, "ash": 2},
-    "inputAlternatives": [ {"worg_hide": 1, "salt": 1} ],
+    "inputs"           : {"fleshed_worg_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"fleshed_worg_hide": 1, "salt": 1} ],
     "outputs"          : {"cured_worg_hide": 1},
     "workAmount"       : 60,
     "toolTierRequired" : 0
@@ -174,8 +177,8 @@
     "id"               : "make_cured_boar_hide",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"boar_hide": 1, "ash": 2},
-    "inputAlternatives": [ {"boar_hide": 1, "salt": 1} ],
+    "inputs"           : {"fleshed_boar_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"fleshed_boar_hide": 1, "salt": 1} ],
     "outputs"          : {"cured_boar_hide": 1},
     "workAmount"       : 60,
     "toolTierRequired" : 0
@@ -184,8 +187,8 @@
     "id"               : "make_cured_elk_hide",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"elk_hide": 1, "ash": 2},
-    "inputAlternatives": [ {"elk_hide": 1, "salt": 1} ],
+    "inputs"           : {"fleshed_elk_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"fleshed_elk_hide": 1, "salt": 1} ],
     "outputs"          : {"cured_elk_hide": 1},
     "workAmount"       : 60,
     "toolTierRequired" : 0
@@ -194,8 +197,8 @@
     "id"               : "make_cured_aurochs_hide",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"aurochs_hide": 1, "ash": 3},
-    "inputAlternatives": [ {"aurochs_hide": 1, "salt": 1} ],
+    "inputs"           : {"fleshed_aurochs_hide": 1, "ash": 3},
+    "inputAlternatives": [ {"fleshed_aurochs_hide": 1, "salt": 1} ],
     "outputs"          : {"cured_aurochs_hide": 1},
     "workAmount"       : 70,
     "toolTierRequired" : 0
@@ -204,8 +207,8 @@
     "id"               : "make_cured_bear_pelt",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"bear_pelt": 1, "ash": 3},
-    "inputAlternatives": [ {"bear_pelt": 1, "salt": 1} ],
+    "inputs"           : {"fleshed_bear_hide": 1, "ash": 3},
+    "inputAlternatives": [ {"fleshed_bear_hide": 1, "salt": 1} ],
     "outputs"          : {"cured_bear_pelt": 1},
     "workAmount"       : 70,
     "toolTierRequired" : 0
@@ -214,8 +217,8 @@
     "id"               : "make_cured_cave_bear_pelt",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"cave_bear_pelt": 1, "ash": 3},
-    "inputAlternatives": [ {"cave_bear_pelt": 1, "salt": 2} ],
+    "inputs"           : {"fleshed_cave_bear_hide": 1, "ash": 3},
+    "inputAlternatives": [ {"fleshed_cave_bear_hide": 1, "salt": 2} ],
     "outputs"          : {"cured_cave_bear_pelt": 1},
     "workAmount"       : 90,
     "toolTierRequired" : 1
@@ -224,8 +227,8 @@
     "id"               : "make_cured_owlbear_pelt",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"owlbear_pelt": 1, "ash": 3},
-    "inputAlternatives": [ {"owlbear_pelt": 1, "salt": 2} ],
+    "inputs"           : {"fleshed_owlbear_hide": 1, "ash": 3},
+    "inputAlternatives": [ {"fleshed_owlbear_hide": 1, "salt": 2} ],
     "outputs"          : {"cured_owlbear_pelt": 1},
     "workAmount"       : 90,
     "toolTierRequired" : 1
@@ -234,8 +237,8 @@
     "id"               : "make_cured_sabretooth_pelt",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"sabretooth_pelt": 1, "ash": 3},
-    "inputAlternatives": [ {"sabretooth_pelt": 1, "salt": 2} ],
+    "inputs"           : {"fleshed_sabretooth_hide": 1, "ash": 3},
+    "inputAlternatives": [ {"fleshed_sabretooth_hide": 1, "salt": 2} ],
     "outputs"          : {"cured_sabretooth_pelt": 1},
     "workAmount"       : 90,
     "toolTierRequired" : 1
@@ -244,8 +247,8 @@
     "id"               : "make_cured_mammoth_fur",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"mammoth_fur": 1, "ash": 3},
-    "inputAlternatives": [ {"mammoth_fur": 1, "salt": 2} ],
+    "inputs"           : {"fleshed_mammoth_hide": 1, "ash": 3},
+    "inputAlternatives": [ {"fleshed_mammoth_hide": 1, "salt": 2} ],
     "outputs"          : {"cured_mammoth_fur": 1},
     "workAmount"       : 90,
     "toolTierRequired" : 1
@@ -254,8 +257,8 @@
     "id"               : "make_cured_hippogriff_hide",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"hippogriff_feathered_hide": 1, "ash": 3},
-    "inputAlternatives": [ {"hippogriff_feathered_hide": 1, "salt": 2} ],
+    "inputs"           : {"fleshed_hippogriff_hide": 1, "ash": 3},
+    "inputAlternatives": [ {"fleshed_hippogriff_hide": 1, "salt": 2} ],
     "outputs"          : {"cured_hippogriff_hide": 1},
     "workAmount"       : 90,
     "toolTierRequired" : 1
@@ -264,8 +267,8 @@
     "id"               : "make_cured_dire_wolf_pelt",
     "station"          : "hide_rack",
     "passive"          : true,
-    "inputs"           : {"dire_wolf_pelt": 1, "ash": 3},
-    "inputAlternatives": [ {"dire_wolf_pelt": 1, "salt": 2} ],
+    "inputs"           : {"fleshed_dire_wolf_hide": 1, "ash": 3},
+    "inputAlternatives": [ {"fleshed_dire_wolf_hide": 1, "salt": 2} ],
     "outputs"          : {"cured_dire_wolf_pelt": 1},
     "workAmount"       : 90,
     "toolTierRequired" : 1
@@ -725,6 +728,7 @@
   },
   {
     "id"              : "make_torch",
+    "discipline"      : "cooking",
     "station"         : "craft_spot",
     "inputs"          : {"branch": 1, "animal_fat": 1, "plant_fiber": 1},
     "outputs"         : {"torch": 1},
@@ -733,6 +737,7 @@
   },
   {
     "id"              : "make_candle",
+    "discipline"      : "cooking",
     "station"         : "makers_bench",
     "inputs"          : {"animal_fat": 2, "plant_fiber": 1},
     "outputs"         : {"candle": 1},
@@ -830,6 +835,7 @@
   },
   {
     "id"              : "make_saw",
+    "discipline"      : "woodworking",
     "station"         : "makers_bench",
     "inputs"          : {"bronze_bar": 1, "ash_log": 1},
     "outputs"         : {"saw": 1},
@@ -878,6 +884,7 @@
   },
   {
     "id"              : "make_cordage",
+    "discipline"      : "weaving",
     "station"         : "craft_spot",
     "inputs"          : {"plant_fiber": 5},
     "outputs"         : {"cordage": 1},
@@ -886,6 +893,7 @@
   },
   {
     "id"              : "make_mud_brick",
+    "discipline"      : "masonry",
     "station"         : "craft_spot",
     "inputs"          : {"blue_clay": 2},
     "outputs"         : {"mud_brick": 1},
@@ -894,6 +902,7 @@
   },
   {
     "id"              : "make_fired_brick",
+    "discipline"      : "pottery",
     "station"         : "pottery_kiln",
     "passive"         : true,
     "inputs"          : {"blue_clay": 2},
@@ -903,6 +912,7 @@
   },
   {
     "id"              : "make_fire_bricks",
+    "discipline"      : "pottery",
     "station"         : "pottery_kiln",
     "passive"         : true,
     "inputs"          : {"fire_clay": 2},
@@ -912,6 +922,7 @@
   },
   {
     "id"              : "make_water_urn",
+    "discipline"      : "pottery",
     "station"         : "pottery_kiln",
     "passive"         : true,
     "inputs"          : {"blue_clay": 1},
@@ -921,6 +932,7 @@
   },
   {
     "id"              : "make_clay_mold",
+    "discipline"      : "pottery",
     "station"         : "pottery_kiln",
     "passive"         : true,
     "inputs"          : {"blue_clay": 1},
@@ -938,6 +950,7 @@
   },
   {
     "id"              : "make_clay_roof_tile",
+    "discipline"      : "pottery",
     "station"         : "pottery_kiln",
     "passive"         : true,
     "inputs"          : {"blue_clay": 2},
@@ -947,6 +960,7 @@
   },
   {
     "id"              : "make_flint_knife",
+    "discipline"      : "knapping",
     "station"         : "craft_spot",
     "inputs"          : {"flint_shard": 2, "branch": 2, "cordage": 1},
     "outputs"         : {"flint_knife": 1},
@@ -955,6 +969,7 @@
   },
   {
     "id"              : "make_flint_sickle",
+    "discipline"      : "knapping",
     "station"         : "craft_spot",
     "inputs"          : {"flint_shard": 3, "branch": 2, "cordage": 1},
     "outputs"         : {"flint_sickle": 1},
@@ -963,6 +978,7 @@
   },
   {
     "id"              : "make_stone_chopper",
+    "discipline"      : "knapping",
     "station"         : "craft_spot",
     "inputs"          : {"small_stone": 1, "branch": 3, "cordage": 1},
     "outputs"         : {"stone_chopper": 1},
@@ -971,6 +987,7 @@
   },
   {
     "id"              : "make_digging_stick",
+    "discipline"      : "woodworking",
     "station"         : "craft_spot",
     "inputs"          : {"branch": 2, "plant_fiber": 2},
     "outputs"         : {"digging_stick": 1},
@@ -981,6 +998,7 @@
     // Tier-0 (craft_spot): the axe must be knappable at the free ground spot, since the Crude
     // Workbench's own build cost lists a stone_axe — a higher-tier bench crafts it faster.
     "id"              : "make_stone_axe",
+    "discipline"      : "knapping",
     "station"         : "craft_spot",
     "inputs"          : {"flint_shard": 2, "branch": 3, "cordage": 2},
     "outputs"         : {"stone_axe": 1},
@@ -990,6 +1008,7 @@
   {
     // Tier-0 (craft_spot): same reason — the Crude Workbench's build cost lists a stone_hammer.
     "id"              : "make_stone_hammer",
+    "discipline"      : "knapping",
     "station"         : "craft_spot",
     "inputs"          : {"granite": 2, "branch": 3, "cordage": 1},
     "outputs"         : {"stone_hammer": 1},
@@ -999,7 +1018,8 @@
   {
     // Tier-1 (Crude Workbench): the first tool that can break rock/ore — gates mining (coal, clay).
     "id"              : "make_stone_pick",
-    "station"         : "makers_bench",
+    "discipline"      : "knapping",
+    "station"         : "craft_spot",
     "inputs"          : {"granite": 2, "branch": 3, "cordage": 2},
     "outputs"         : {"stone_pick": 1},
     "workAmount"      : 3,
@@ -1008,7 +1028,8 @@
   {
     // Tier-1 (Crude Workbench): gates planting/tilling (digging_stick is the cruder alternative).
     "id"              : "make_stone_hoe",
-    "station"         : "makers_bench",
+    "discipline"      : "knapping",
+    "station"         : "craft_spot",
     "inputs"          : {"flint_shard": 1, "branch": 2, "cordage": 1},
     "outputs"         : {"stone_hoe": 1},
     "workAmount"      : 2,
@@ -1016,7 +1037,8 @@
   },
   {
     "id"              : "make_stone_spear",
-    "station"         : "makers_bench",
+    "discipline"      : "knapping",
+    "station"         : "craft_spot",
     "inputs"          : {"flint_shard": 3, "branch": 4, "cordage": 1},
     "outputs"         : {"stone_spear": 1},
     "workAmount"      : 3,
@@ -1024,7 +1046,8 @@
   },
   {
     "id"              : "make_stone_spade",
-    "station"         : "makers_bench",
+    "discipline"      : "knapping",
+    "station"         : "craft_spot",
     "inputs"          : {"granite": 2, "branch": 2, "cordage": 2},
     "outputs"         : {"stone_spade": 1},
     "workAmount"      : 3,
@@ -1040,7 +1063,8 @@
   },
   {
     "id"              : "make_woven_basket",
-    "station"         : "makers_bench",
+    "discipline"      : "weaving",
+    "station"         : "craft_spot",
     "inputs"          : {"branch": 15, "cordage": 10},
     "outputs"         : {"woven_basket": 1},
     "workAmount"      : 10,
@@ -1122,6 +1146,7 @@
   },
   {
     "id"              : "make_bone_cleaver",
+    "discipline"      : "bonecarving",
     "station"         : "makers_bench",
     "inputs"          : {"large_bones": 1, "flint_shard": 2, "branch": 3, "cordage": 2},
     "outputs"         : {"bone_cleaver": 1},
@@ -1156,6 +1181,7 @@
   // are the forged upgrades. Handles are the branch inline — no separate handle chain.
   {
     "id"              : "make_bone_fleshing_scraper",
+    "discipline"      : "bonecarving",
     "station"         : "craft_spot",
     "inputs"          : {"large_bones": 1, "branch": 1, "cordage": 1},
     "outputs"         : {"bone_fleshing_scraper": 1},
@@ -1242,6 +1268,7 @@
   // are the durable upgrades, forged once you already hold a pair.
   {
     "id"              : "make_wooden_tongs",
+    "discipline"      : "woodworking",
     "station"         : "craft_spot",
     "inputs"          : {"branch": 3, "cordage": 1},
     "outputs"         : {"wooden_tongs": 1},
@@ -1340,6 +1367,7 @@
   },
   {
     "id"              : "make_rope",
+    "discipline"      : "weaving",
     "station"         : "ropewalk",
     "inputs"          : {"cordage": 6},
     "outputs"         : {"rope": 1},
@@ -1375,6 +1403,7 @@
   },
   {
     "id"              : "throw_clay_jug",
+    "discipline"      : "pottery",
     "station"         : "potters_wheel",
     "inputs"          : {"blue_clay": 1},
     "outputs"         : {"clay_jug": 1},
@@ -1383,6 +1412,7 @@
   },
   {
     "id"              : "refine_porcelain_clay",
+    "discipline"      : "pottery",
     "station"         : "porcelain_workshop",
     "inputs"          : {"blue_clay": 3, "sand": 1},
     "outputs"         : {"porcelain_clay": 2},
@@ -1391,6 +1421,7 @@
   },
   {
     "id"              : "fire_porcelain_vessels",
+    "discipline"      : "pottery",
     "station"         : "porcelain_workshop",
     "inputs"          : {"porcelain_clay": 2},
     "outputs"         : {"porcelain_vessels": 1},
@@ -1399,6 +1430,7 @@
   },
   {
     "id"              : "make_crucible_steel",
+    "discipline"      : "metalworking",
     "station"         : "crucible_steelworks",
     "inputs"          : {"category:iron": 2, "coke": 2, "sand": 1},
     "outputs"         : {"crucible_steel": 1},
@@ -1461,6 +1493,7 @@
     // STEEL-REALISM: a blast furnace reduces ORE to brittle high-carbon PIG IRON — it never took bars in
     // and poured steel out (the old recipe also produced 3 bars from 2, more mass out than in).
     "id"               : "smelt_pig_iron",
+    "discipline"      : "metalworking",
     "station"          : "blast_furnace",
     "inputs"           : {"hematite": 6, "coke": 3, "limestone": 2},
     "inputAlternatives": [ {"magnetite": 5, "coke": 3, "limestone": 2}, {"limonite": 7, "coke": 3, "limestone": 2} ],
@@ -1470,6 +1503,7 @@
   },
   {
     "id"              : "make_mechanism",
+    "discipline"      : "metalworking",
     "station"         : "clockwork_bench",
     "inputs"          : {"crucible_steel": 1, "iron_bar": 1},
     "outputs"         : {"mechanism": 2},
@@ -1487,6 +1521,7 @@
   // ── Phase B: carry containers ─────────────────────────────────────────────
   {
     "id"              : "make_hide_scrip",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"category:leather": 2, "cordage": 1},
     "outputs"         : {"hide_scrip": 1},
@@ -1495,6 +1530,7 @@
   },
   {
     "id"              : "make_hide_tool_roll",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"category:leather": 1, "cordage": 1},
     "outputs"         : {"hide_tool_roll": 1},
@@ -1503,6 +1539,7 @@
   },
   {
     "id"              : "make_linen_snapsack",
+    "discipline"      : "weaving",
     "station"         : "makers_bench",
     "inputs"          : {"linen_cloth": 2, "category:leather": 1, "cordage": 2},
     "outputs"         : {"linen_snapsack": 1},
@@ -1511,7 +1548,8 @@
   },
   {
     "id"              : "make_wicker_frame_pack",
-    "station"         : "makers_bench",
+    "discipline"      : "weaving",
+    "station"         : "craft_spot",
     "inputs"          : {"branch": 4, "plant_fiber": 3, "cordage": 2},
     "outputs"         : {"wicker_frame": 1},
     "workAmount"      : 6,
@@ -1575,7 +1613,8 @@
   // ── Phase B: Tier 0 weapon recipes ───────────────────────────────────────
   {
     "id"              : "make_flint_handaxe",
-    "station"         : "makers_bench",
+    "discipline"      : "knapping",
+    "station"         : "craft_spot",
     "inputs"          : {"flint_shard": 2, "branch": 1, "cordage": 1},
     "outputs"         : {"flint_handaxe": 1},
     "workAmount"      : 3,
@@ -1583,7 +1622,8 @@
   },
   {
     "id"              : "make_wattle_buckler",
-    "station"         : "makers_bench",
+    "discipline"      : "weaving",
+    "station"         : "craft_spot",
     "inputs"          : {"branch": 4, "cordage": 2},
     "outputs"         : {"wattle_buckler": 1},
     "workAmount"      : 4,
@@ -1592,6 +1632,7 @@
   // ── Phase B: Tier 0.5 weapon recipes ─────────────────────────────────────
   {
     "id"              : "make_bone_knife",
+    "discipline"      : "bonecarving",
     "station"         : "makers_bench",
     "inputs"          : {"medium_bones": 1, "cordage": 1},
     "outputs"         : {"bone_knife": 1},
@@ -1600,6 +1641,7 @@
   },
   {
     "id"              : "make_antler_club",
+    "discipline"      : "bonecarving",
     "station"         : "makers_bench",
     "inputs"          : {"large_bones": 1, "cordage": 1},
     "outputs"         : {"antler_club": 1},
@@ -1608,6 +1650,7 @@
   },
   {
     "id"              : "make_bone_tipped_spear",
+    "discipline"      : "bonecarving",
     "station"         : "makers_bench",
     "inputs"          : {"medium_bones": 1, "cordage": 1},
     "outputs"         : {"bone_tipped_spear": 1},
@@ -1677,6 +1720,7 @@
   },
   {
     "id"              : "make_self_bow",
+    "discipline"      : "woodworking",
     "station"         : "makers_bench",
     "inputs"          : {"sinew": 1, "cordage": 1},
     "outputs"         : {"self_bow": 1},
@@ -1697,6 +1741,7 @@
   },
   {
     "id"              : "make_rawhide_round_shield",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"cordage": 1},
     "outputs"         : {"rawhide_round_shield": 1},
@@ -1810,6 +1855,7 @@
   },
   {
     "id"              : "carve_ivory",
+    "discipline"      : "bonecarving",
     "station"         : "bone_carvers_bench",
     "inputs"          : {"great_tusk": 1},
     "outputs"         : {"ivory": 2},
@@ -1818,6 +1864,7 @@
   },
   {
     "id"              : "make_great_bone_maul",
+    "discipline"      : "bonecarving",
     "station"         : "bone_carvers_bench",
     "inputs"          : {"great_bone": 1, "oak_plank": 1, "cordage": 2},
     "outputs"         : {"great_bone_maul": 1},
@@ -1826,6 +1873,7 @@
   },
   {
     "id"              : "make_stone_maul",
+    "discipline"      : "knapping",
     "station"         : "craft_spot",
     "inputs"          : {"small_stone": 2, "branch": 1, "cordage": 1},
     "outputs"         : {"stone_maul": 1},
@@ -1969,6 +2017,7 @@
   },
   {
     "id"              : "make_war_bow",
+    "discipline"      : "woodworking",
     "station"         : "makers_bench",
     "inputs"          : {"sinew": 2, "thread": 1},
     "outputs"         : {"war_bow": 1},
@@ -1985,6 +2034,7 @@
   },
   {
     "id"              : "make_throwing_stone",
+    "discipline"      : "knapping",
     "station"         : "makers_bench",
     "inputs"          : {"small_stone": 1},
     "outputs"         : {"throwing_stone": 2},
@@ -1993,6 +2043,7 @@
   },
   {
     "id"              : "make_sling",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"category:leather": 1, "cordage": 1},
     "outputs"         : {"sling": 1},
@@ -2002,6 +2053,7 @@
   // STEALTH §8 — the precision-ranged pair + darts.
   {
     "id"              : "make_blowgun",
+    "discipline"      : "woodworking",
     "station"         : "makers_bench",
     "inputs"          : {"branch": 1, "cordage": 1},
     "outputs"         : {"blowgun": 1},
@@ -2010,6 +2062,7 @@
   },
   {
     "id"              : "make_blow_dart",
+    "discipline"      : "woodworking",
     "station"         : "makers_bench",
     "inputs"          : {"branch": 1, "plant_fiber": 1},
     "outputs"         : {"blow_dart": 6},
@@ -2018,6 +2071,7 @@
   },
   {
     "id"              : "make_hunting_recurve",
+    "discipline"      : "woodworking",
     "station"         : "makers_bench",
     "inputs"          : {"sinew": 2, "thread": 1},
     "outputs"         : {"hunting_recurve": 1},
@@ -2034,6 +2088,7 @@
   },
   {
     "id"              : "make_throwing_spear",
+    "discipline"      : "woodworking",
     "station"         : "makers_bench",
     "inputs"          : {"branch": 1, "flint_shard": 1, "cordage": 1},
     "outputs"         : {"throwing_spear": 1},
@@ -2051,6 +2106,7 @@
   },
   {
     "id"              : "make_sling_stone",
+    "discipline"      : "knapping",
     "station"         : "makers_bench",
     "inputs"          : {"small_stone": 1},
     "outputs"         : {"sling_stone": 4},
@@ -2059,6 +2115,7 @@
   },
   {
     "id"              : "make_flint_arrow",
+    "discipline"      : "knapping",
     "station"         : "makers_bench",
     "inputs"           : {"branch": 1, "flint_shard": 1, "cordage": 1, "feathers": 1},
     "inputAlternatives": [ {"branch": 1, "flint_shard": 1, "cordage": 1, "chicken_feathers": 1} ],
@@ -2068,6 +2125,7 @@
   },
   {
     "id"              : "make_bone_arrow",
+    "discipline"      : "bonecarving",
     "station"         : "makers_bench",
     "inputs"           : {"branch": 1, "medium_bones": 1, "cordage": 1, "feathers": 1},
     "inputAlternatives": [ {"branch": 1, "medium_bones": 1, "cordage": 1, "chicken_feathers": 1} ],
@@ -2097,6 +2155,7 @@
   },
   {
     "id"              : "make_rangers_hood",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"category:leather": 1, "cordage": 1},
     "outputs"         : {"rangers_hood": 1},
@@ -2105,6 +2164,7 @@
   },
   {
     "id"              : "make_archers_bracers",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"category:leather": 1, "cordage": 1},
     "outputs"         : {"archers_bracers": 1},
@@ -2113,6 +2173,7 @@
   },
   {
     "id"              : "make_marksmans_cloak",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"category:leather": 2, "cordage": 1},
     "outputs"         : {"marksmans_cloak": 1},
@@ -2159,6 +2220,7 @@
   },
   {
     "id"              : "make_hide_arrow_sheath",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"category:cured_hide": 1, "cordage": 1},
     "outputs"         : {"hide_arrow_sheath": 1},
@@ -2167,6 +2229,7 @@
   },
   {
     "id"              : "make_leather_back_quiver",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"category:leather": 2, "sinew": 1, "cordage": 1},
     "outputs"         : {"leather_back_quiver": 1},
@@ -2185,6 +2248,7 @@
   },
   {
     "id"              : "make_leather_bolt_case",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"category:leather": 1, "sinew": 1, "thread": 1},
     "outputs"         : {"leather_bolt_case": 1},
@@ -2227,6 +2291,7 @@
   // ── Phase B: Tier 0 armour recipes ────────────────────────────────────────
   {
     "id"              : "make_wicker_vest",
+    "discipline"      : "weaving",
     "station"         : "craft_spot",
     "inputs"          : {"branch": 15, "cordage": 30},
     "outputs"         : {"wicker_vest": 1},
@@ -2235,6 +2300,7 @@
   },
   {
     "id"              : "make_raw_hide_vest",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"cordage": 2},
     "outputs"         : {"raw_hide_vest": 1},
@@ -2257,6 +2323,7 @@
   // STEALTH §8 — the one stealth-positive garment (soot-blacked, near-zero protection).
   {
     "id"              : "make_soot_darkened_jerkin",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"category:leather": 2, "charcoal": 1, "cordage": 1},
     "outputs"         : {"soot_darkened_jerkin": 1},
@@ -2265,6 +2332,7 @@
   },
   {
     "id"              : "make_padded_cap",
+    "discipline"      : "weaving",
     "station"         : "makers_bench",
     "inputs"          : {"linen_cloth": 1, "plant_fiber": 2, "cordage": 1},
     "outputs"         : {"padded_cap": 1},
@@ -2282,6 +2350,7 @@
   },
   {
     "id"              : "make_boiled_leather_jerkin",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"cordage": 1},
     "outputs"         : {"boiled_leather_jerkin": 1},
@@ -2296,6 +2365,7 @@
   },
   {
     "id"              : "make_leather_coif",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"cordage": 1},
     "outputs"         : {"leather_coif": 1},
@@ -2319,6 +2389,7 @@
   },
   {
     "id"              : "make_stitched_gauntlets",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"cordage": 1},
     "outputs"         : {"stitched_gauntlets": 1},
@@ -2333,6 +2404,7 @@
   },
   {
     "id"              : "make_tallow_boots",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"cordage": 1},
     "outputs"         : {"tallow_boots": 1},
@@ -2879,6 +2951,7 @@
   // Any spoiled organic matter works (inputAlternatives), always with hay as the carbon bulk.
   {
     "id"               : "make_compost",
+    "discipline"      : "alchemy",
     "station"          : "compost_bin",
     "passive"          : true,
     "inputs"           : {"rotten_food": 3, "hay": 5},
@@ -2895,6 +2968,7 @@
   // fertiliser is the expensive amendment the complex soils (loam→terra preta) are built from.
   {
     "id"              : "make_fertiliser",
+    "discipline"      : "alchemy",
     "station"         : "compost_bin",
     "passive"         : true,
     "inputs"          : {"compost": 3},
@@ -3078,6 +3152,7 @@
   },
   {
     "id"              : "brew_tanning_brine",
+    "discipline"      : "leatherworking",
     "station"         : "brewing_barrel",
     "passive"         : true,
     "inputs"          : {"bark": 3, "salt": 1, "ash": 1, "water": 2},
@@ -3087,6 +3162,7 @@
   },
   {
     "id"              : "brew_beast_brine",
+    "discipline"      : "leatherworking",
     "station"         : "brewing_barrel",
     "passive"         : true,
     "inputs"          : {"bark": 4, "salt": 2, "ash": 2, "water": 3},
@@ -3304,13 +3380,14 @@
   {
     "id"              : "make_cave_bear_plate",
     "station"         : "anvil",
-    "inputs"          : {"cave_bear_pelt": 3, "iron_bar": 2, "sinew": 6},
+    "inputs"          : {"prime_cave_bear_hide": 2, "iron_bar": 2, "sinew": 6},
     "outputs"         : {"cave_bear_plate": 1},
     "workAmount"      : 60,
     "toolTierRequired": 2
   },
   {
     "id"              : "make_fang_reaver",
+    "discipline"      : "bonecarving",
     "station"         : "makers_bench",
     "inputs"          : {"great_fang": 1, "heartwood_log": 1, "sinew": 4},
     "outputs"         : {"fang_reaver": 1},
@@ -3322,7 +3399,7 @@
     // (grants Might while worn). The crafted twin of a boss famed-drop; the tool-tier gate keeps it late.
     "id"              : "make_direwolf_warcloak",
     "station"         : "weaving_frame",
-    "inputs"          : {"dire_wolf_pelt": 2, "cordage": 3},
+    "inputs"          : {"prime_direwolf_leather": 2, "cordage": 3},
     "outputs"         : {"direwolf_warcloak": 1},
     "workAmount"      : 40,
     "toolTierRequired": 1
@@ -3429,6 +3506,7 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id"              : "burn_quicklime",
+    "discipline"      : "masonry",
     "station"         : "pottery_kiln",
     "passive"         : true,
     "inputs"          : {"limestone": 2},
@@ -3540,6 +3618,7 @@
   },
   {
     "id"              : "make_scale_cuirass",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"scale_plate": 4, "category:leather": 2, "thread": 2},
     "outputs"         : {"scale_cuirass": 1},
@@ -3566,6 +3645,7 @@
   },
   {
     "id"               : "make_beast_leather_plate",
+    "discipline"      : "leatherworking",
     "station"          : "makers_bench",
     "inputs"           : {"boiled_leather": 4, "category:leather": 2, "thread": 2},
     "inputAlternatives": [ {"boiled_leather": 4, "category:leather": 2} ],
@@ -3575,6 +3655,7 @@
   },
   {
     "id"               : "make_bone_plated_cuirass",
+    "discipline"      : "bonecarving",
     "station"          : "makers_bench",
     "inputs"           : {"huge_bones": 3, "category:leather": 2, "thread": 2},
     "inputAlternatives": [ {"large_bones": 5, "category:leather": 2} ],
@@ -3584,6 +3665,7 @@
   },
   {
     "id"              : "make_horned_helm",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"huge_bones": 1, "large_bones": 2, "category:leather": 1, "thread": 1},
     "outputs"         : {"horned_helm": 1},
@@ -3612,6 +3694,7 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id"              : "fire_clay_alembic",
+    "discipline"      : "pottery",
     "station"         : "pottery_kiln",
     "passive"         : true,
     "inputs"          : {"blue_clay": 4},
@@ -3621,6 +3704,7 @@
   },
   {
     "id"              : "blow_glassware",
+    "discipline"      : "pottery",
     "station"         : "advanced_kiln",
     "passive"         : true,
     "inputs"          : {"sand": 3},
@@ -4087,6 +4171,7 @@
   // purpose: resin is a gate material, so the tap draws pitch from conifer bark/logs over time.
   {
     "id"               : "tap_resin",
+    "discipline"      : "alchemy",
     "station"          : "resin_tap",
     "passive"          : true,
     "inputs"           : {"bark": 2},
@@ -4413,6 +4498,7 @@
 ,
   {
     "id": "make_fang_charm",
+    "discipline"      : "bonecarving",
     "station": "bone_carvers_bench",
     "inputs": {"great_fang": 1, "predator_claw": 2, "cordage": 2},
     "outputs": {
@@ -4423,6 +4509,7 @@
   },
   {
     "id": "make_fang_arrow",
+    "discipline"      : "bonecarving",
     "station": "makers_bench",
     "inputs": {
       "great_fang": 1,
@@ -4446,6 +4533,7 @@
   },
   {
     "id": "make_barbed_bone_arrow",
+    "discipline"      : "bonecarving",
     "station": "makers_bench",
     "inputs": {"branch": 1, "cordage": 1, "feathers": 1, "antler_rack": 1},
     "inputAlternatives": [{"curved_horn": 1, "branch": 1, "cordage": 1, "feathers": 1}, {"predator_claw": 2, "branch": 1, "cordage": 1, "feathers": 1}, {"branch": 1, "cordage": 1, "chicken_feathers": 1, "antler_rack": 1}],
@@ -4485,5 +4573,280 @@
     "workAmount": 8,
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
+  },
+
+  // ===== Active leather chain: flesh (§A step 1) + curry (§A step 4) recipes =====
+  {
+    "id"              : "make_fleshed_rabbit_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"rabbit_pelt": 1},
+    "outputs"         : {"fleshed_rabbit_hide": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_rat_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"rat_pelt": 1},
+    "outputs"         : {"fleshed_rat_hide": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_deer_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"deer_hide": 1},
+    "outputs"         : {"fleshed_deer_hide": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_goat_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"goat_hide": 1},
+    "outputs"         : {"fleshed_goat_hide": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_jackal_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"jackal_hide": 1},
+    "outputs"         : {"fleshed_jackal_hide": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_wolf_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"wolf_hide": 1},
+    "outputs"         : {"fleshed_wolf_hide": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_worg_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"worg_hide": 1},
+    "outputs"         : {"fleshed_worg_hide": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_boar_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"boar_hide": 1},
+    "outputs"         : {"fleshed_boar_hide": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_elk_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"elk_hide": 1},
+    "outputs"         : {"fleshed_elk_hide": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_aurochs_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"aurochs_hide": 1},
+    "outputs"         : {"fleshed_aurochs_hide": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_bear_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"bear_pelt": 1},
+    "outputs"         : {"fleshed_bear_hide": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_cave_bear_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"cave_bear_pelt": 1},
+    "outputs"         : {"fleshed_cave_bear_hide": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_owlbear_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"owlbear_pelt": 1},
+    "outputs"         : {"fleshed_owlbear_hide": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_sabretooth_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"sabretooth_pelt": 1},
+    "outputs"         : {"fleshed_sabretooth_hide": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_mammoth_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"mammoth_fur": 1},
+    "outputs"         : {"fleshed_mammoth_hide": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_hippogriff_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"hippogriff_feathered_hide": 1},
+    "outputs"         : {"fleshed_hippogriff_hide": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_fleshed_dire_wolf_hide",
+    "station"         : "hide_rack",
+    "inputs"          : {"dire_wolf_pelt": 1},
+    "outputs"         : {"fleshed_dire_wolf_hide": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 0,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 1}
+  },
+  {
+    "id"              : "make_prime_wolf_leather",
+    "station"         : "curriers_bench",
+    "inputs"          : {"wolf_leather": 1, "animal_fat": 1},
+    "outputs"         : {"prime_wolf_leather": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 2},
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_prime_worg_leather",
+    "station"         : "curriers_bench",
+    "inputs"          : {"worg_leather": 1, "animal_fat": 1},
+    "outputs"         : {"prime_worg_leather": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 2},
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_prime_boarhide",
+    "station"         : "curriers_bench",
+    "inputs"          : {"boarhide": 1, "animal_fat": 1},
+    "outputs"         : {"prime_boarhide": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 2},
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_prime_elk_leather",
+    "station"         : "curriers_bench",
+    "inputs"          : {"elk_leather": 1, "animal_fat": 1},
+    "outputs"         : {"prime_elk_leather": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 2},
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_prime_oxhide",
+    "station"         : "curriers_bench",
+    "inputs"          : {"oxhide": 1, "animal_fat": 1},
+    "outputs"         : {"prime_oxhide": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 2},
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_prime_bearhide",
+    "station"         : "curriers_bench",
+    "inputs"          : {"bearhide": 1, "animal_fat": 1},
+    "outputs"         : {"prime_bearhide": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 2},
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_prime_cave_bear_hide",
+    "station"         : "curriers_bench",
+    "inputs"          : {"cave_bear_hide": 1, "animal_fat": 1},
+    "outputs"         : {"prime_cave_bear_hide": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 2},
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_prime_owlbear_leather",
+    "station"         : "curriers_bench",
+    "inputs"          : {"owlbear_leather": 1, "animal_fat": 1},
+    "outputs"         : {"prime_owlbear_leather": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 2},
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_prime_sabretooth_leather",
+    "station"         : "curriers_bench",
+    "inputs"          : {"sabretooth_leather": 1, "animal_fat": 1},
+    "outputs"         : {"prime_sabretooth_leather": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 2},
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_prime_mammoth_leather",
+    "station"         : "curriers_bench",
+    "inputs"          : {"mammoth_leather": 1, "animal_fat": 1},
+    "outputs"         : {"prime_mammoth_leather": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 2},
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_prime_hippogriff_leather",
+    "station"         : "curriers_bench",
+    "inputs"          : {"hippogriff_leather": 1, "animal_fat": 1},
+    "outputs"         : {"prime_hippogriff_leather": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 2},
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_prime_direwolf_leather",
+    "station"         : "curriers_bench",
+    "inputs"          : {"direwolf_leather": 1, "animal_fat": 1},
+    "outputs"         : {"prime_direwolf_leather": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "toolRequirement" : {"workType": "leatherworking", "minTier": 2},
+    "researchRequired": "iron_working"
   }
 ]

@@ -439,7 +439,7 @@
         "name"       : "Maladroit",
         "description": "Awkward and inept at fine work, slow, fumbling craftwork.",
         "flavorLine" : "delicate work seems to fight them at every turn",
-        "effects"    : { "workSpeed": {"crafting": 0.85, "construction": 0.95} }
+        "effects"    : { "workSpeed": {"crafts": 0.85, "construction": 0.95} }
     },
     // ══ PERSONAL — temperament / aptitude, one INDIVIDUAL pawn at a time ═══════════
     {
@@ -467,7 +467,7 @@
         "kind"       : "attribute",
         "name"       : "Meticulous",
         "description": "Careful and precise, slow, but the work is clean.",
-        "effects"    : { "workSpeed": {"crafting": 1.05}, "workQuality": {"crafting": 1.2, "construction": 1.15} }
+        "effects"    : { "workSpeed": {"crafts": 1.05}, "workQuality": {"crafts": 1.2, "construction": 1.15} }
     },
     {
         "id"         : "slapdash",
@@ -476,7 +476,7 @@
         "kind"       : "attribute",
         "name"       : "Slapdash",
         "description": "Quick and careless, fast hands, shoddy results.",
-        "effects"    : { "workSpeed": {"crafting": 1.1}, "workQuality": {"crafting": 0.85, "construction": 0.9} }
+        "effects"    : { "workSpeed": {"crafts": 1.1}, "workQuality": {"crafts": 0.85, "construction": 0.9} }
     },
     {
         "id"         : "curious",
@@ -503,7 +503,7 @@
         "kind"       : "attribute",
         "name"       : "Loner",
         "description": "Prefers solitude; works best where no one else is near.",
-        "effects"    : { "workSpeed": {"research": 1.15, "crafting": 1.1} }
+        "effects"    : { "workSpeed": {"research": 1.15, "crafts": 1.1} }
     },
     {
         "id"         : "gregarious",
@@ -614,7 +614,7 @@
         // inventory, so mainHand stays free. Apex (stage 3) blocks the weapon hands, see ripping-talons.
         "blocksSlots"  : ["gloves"],
         // dexterityPenalty folds the retired `clawed` condition's DEX ×0.95 (clumsy claw-hands).
-        "effects"      : { "dexterityPenalty": 1, "workSpeed": {"crafting": 0.75, "leatherworking": 0.8, "construction": 0.85} }
+        "effects"      : { "dexterityPenalty": 1, "workSpeed": {"crafts": 0.75, "leatherworking": 0.8, "construction": 0.85} }
     },
     // ══ LINEAGE · BEAST (LINEAGES §5) — feral-predator blood: always-on power at the cost of a wild
     //    life. The parent is the identity marker a pawn holds once born into or awakened to the line;
@@ -1575,7 +1575,7 @@
         "kind"       : "attribute",
         "name"       : "Handy",
         "description": "Their hands find the shape of a thing quickly, and find it well.",
-        "effects"    : { "workSpeed": {"crafting": 1.15}, "workQuality": {"crafting": 1.15} }
+        "effects"    : { "workSpeed": {"crafts": 1.15}, "workQuality": {"crafts": 1.15} }
     },
     {
         "id"         : "master-artisan",
@@ -1584,7 +1584,7 @@
         "kind"       : "attribute",
         "name"       : "Master Artisan",
         "description": "What leaves their bench is spoken of in other households.",
-        "effects"    : { "workSpeed": {"crafting": 1.4}, "workQuality": {"crafting": 1.5} }
+        "effects"    : { "workSpeed": {"crafts": 1.4}, "workQuality": {"crafts": 1.5} }
     },
     {
         "id"         : "ham-fisted",
@@ -1593,7 +1593,7 @@
         "kind"       : "attribute",
         "name"       : "Ham-Fisted",
         "description": "Fine work fights them, and it shows in the seams.",
-        "effects"    : { "workSpeed": {"crafting": 0.9}, "workQuality": {"crafting": 0.9} }
+        "effects"    : { "workSpeed": {"crafts": 0.9}, "workQuality": {"crafts": 0.9} }
     },
     {
         "id"         : "botcher",
@@ -1602,7 +1602,7 @@
         "kind"       : "attribute",
         "name"       : "Botcher",
         "description": "Whatever they touch comes out crooked, and slowly at that.",
-        "effects"    : { "workSpeed": {"crafting": 0.6}, "workQuality": {"crafting": 0.5} }
+        "effects"    : { "workSpeed": {"crafts": 0.6}, "workQuality": {"crafts": 0.5} }
     },
     {
         "id"         : "timberwright",
@@ -2959,7 +2959,7 @@
         // Stage 3 apex: the talons are too big to grip anything — no gloves, and no weapon/shield either.
         "blocksSlots": ["gloves", "mainHand", "offHand"],
         // dexterityPenalty folds the retired `taloned` condition's DEX ×0.92 (killing tools, not hands).
-        "effects": { "dexterityPenalty": 1, "workSpeed": {"crafting": 0.7, "leatherworking": 0.75, "construction": 0.8} }
+        "effects": { "dexterityPenalty": 1, "workSpeed": {"crafts": 0.7, "leatherworking": 0.75, "construction": 0.8} }
     },
     {
         "id"           : "jagged-teeth",
@@ -4786,7 +4786,7 @@
         // Unstaged (not a stage-3 line), so it blocks gloves only — mainHand/offHand stay free.
         "blocksSlots"  : ["gloves"],
         // dexterityPenalty folds the retired `crusher_clawed` condition's DEX ×0.92 (pincers).
-        "effects"      : { "dexterityPenalty": 1, "workSpeed": {"crafting": 0.75, "leatherworking": 0.8} }
+        "effects"      : { "dexterityPenalty": 1, "workSpeed": {"crafts": 0.75, "leatherworking": 0.8} }
     },
     {
         "id"         : "ponderous-plating",

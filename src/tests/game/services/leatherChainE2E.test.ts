@@ -131,6 +131,7 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
         toolTier: 3,
         pawns: [{ count: 6, skillLevel: 12 }],
         needsDisabled: ['hunger', 'fatigue'],
+        workReady: true, // stocks a fleshing tool for the ACTIVE flesh step (§A)
         buildings: [{ id: 'hide_rack' }, { id: 'tanning_bucket_station' }],
         items: { deer_hide: 20, ash: 40, tanning_brine: 20 },
         seedEntities: false
@@ -140,6 +141,11 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
       for (const w of workService.getAllWorkCategories())
         session.command({ type: 'setPawnLaborLevel', payload: { pawnId: p.id, workId: w.id, level: 3 } } as never);
     const stk = () => (session.getState().stockpile ?? {}) as Record<string, number>;
+    // §A: the ACTIVE flesh step now comes FIRST — a raw hide must be scraped clean before it can cure.
+    session.command({ type: 'craftItem', payload: { itemId: 'fleshed_deer_hide', quantity: 1 } } as never);
+    for (let i = 0; i < 16 && !(stk().fleshed_deer_hide > 0); i++) session.tick(400);
+    const fleshed = stk().fleshed_deer_hide ?? 0;
+    // …then cure the FLESHED hide at the rack…
     session.command({ type: 'craftItem', payload: { itemId: 'cured_deer_hide', quantity: 1 } } as never);
     for (let i = 0; i < 16 && !(stk().cured_deer_hide > 0); i++) session.tick(400);
     const cured = stk().cured_deer_hide ?? 0;
@@ -147,10 +153,47 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
     session.command({ type: 'craftItem', payload: { itemId: 'buckskin', quantity: 1 } } as never);
     for (let i = 0; i < 16 && !(stk().buckskin > 0); i++) session.tick(400);
     console.log(
-      `[LEATHER-PIPELINE] deer_hide ${stk().deer_hide}/20, cured_deer_hide=${cured}, buckskin=${stk().buckskin}, brine=${stk().tanning_brine}/20, turn=${session.getState().turn}`
+      `[LEATHER-PIPELINE] deer_hide ${stk().deer_hide}/20, fleshed=${fleshed}, cured=${cured}, buckskin=${stk().buckskin}, brine=${stk().tanning_brine}/20, turn=${session.getState().turn}`
     );
-    expect(cured, 'Curing Frame cured a hide').toBeGreaterThan(0);
+    expect(fleshed, 'a raw hide was fleshed (active step)').toBeGreaterThan(0);
+    expect(cured, 'Curing Frame cured the fleshed hide').toBeGreaterThan(0);
     expect(stk().buckskin ?? 0, 'tanning bucket produced leather').toBeGreaterThan(0);
     expect(stk().tanning_brine, 'brine consumed as a real input').toBeLessThan(20);
+  });
+
+  it('BEAST chain: wolf hide → flesh → cure → tan → CURRY → prime wolf leather (kit-gated, animal identity kept)', async () => {
+    const session = new HeadlessSession();
+    await session.start(
+      buildScenario({
+        seed: 13,
+        map: { w: 20, h: 20 },
+        researchMaxTier: 9,
+        toolTier: 3,
+        workReady: true, // stocks a leatherworking tool that clears both the flesh (t1) and curry (t2) gates
+        pawns: [{ count: 6, skillLevel: 16 }],
+        needsDisabled: ['hunger', 'fatigue'],
+        buildings: [{ id: 'hide_rack' }, { id: 'tanning_bucket_station' }, { id: 'curriers_bench' }],
+        items: { wolf_hide: 20, ash: 60, tanning_brine: 20, animal_fat: 20 },
+        seedEntities: false
+      })
+    );
+    for (const p of session.getState().pawns)
+      for (const w of workService.getAllWorkCategories())
+        session.command({ type: 'setPawnLaborLevel', payload: { pawnId: p.id, workId: w.id, level: 3 } } as never);
+    const stk = () => (session.getState().stockpile ?? {}) as Record<string, number>;
+    const step = (item: string) => {
+      session.command({ type: 'craftItem', payload: { itemId: item, quantity: 1 } } as never);
+      for (let i = 0; i < 16 && !(stk()[item] > 0); i++) session.tick(400);
+    };
+    step('fleshed_wolf_hide'); // active flesh
+    step('cured_wolf_hide'); // passive cure (of the FLESHED hide)
+    step('wolf_leather'); // passive tan
+    step('prime_wolf_leather'); // ACTIVE curry at the currier's bench — the beast-tier gate
+    console.log(
+      `[BEAST-CHAIN] fleshed_wolf=${stk().fleshed_wolf_hide} cured_wolf=${stk().cured_wolf_hide} wolf_leather=${stk().wolf_leather} prime_wolf_leather=${stk().prime_wolf_leather} fat=${stk().animal_fat}/20`
+    );
+    // The whole animal-identity chain survives: a WOLF hide drives a WOLF-named prime leather.
+    expect(stk().prime_wolf_leather ?? 0, 'curry produced prime wolf leather (2 active steps for a beast)').toBeGreaterThan(0);
+    expect(stk().animal_fat, 'the oil/fat consumable was consumed by the curry (organic → quality)').toBeLessThan(20);
   });
 });

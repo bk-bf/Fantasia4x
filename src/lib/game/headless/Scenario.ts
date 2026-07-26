@@ -29,6 +29,7 @@ import { generateWorld } from '../world/WorldGenerator';
 import { generateColonyPawns, generateWorldKin, resetPawnDebugIds } from '../entities/Pawns';
 import { resetMobIdCounter } from '../services/entity/entitySpawning';
 import { workService } from '../services/WorkService';
+import { SKILL_CATEGORIES } from '../core/workExperience';
 import { entityService } from '../services/EntityService';
 import { kingdomService } from '../services/KingdomService';
 import { socialService } from '../services/SocialService';
@@ -292,7 +293,10 @@ export function buildScenario(spec: ScenarioSpec): GameState {
       if (g.skillLevel !== undefined || g.skills) {
         const skills: Record<string, number> = {};
         if (g.skillLevel !== undefined) {
-          for (const c of workService.getAllWorkCategories()) skills[c.id] = g.skillLevel;
+          // Seed every LEARNABLE skill — matches real pawn-gen (`seedWorkLevels` seeds SKILL_CATEGORIES),
+          // which includes the craft-discipline leaves (knapping, weaving, butchery…), NOT just the
+          // top-level WORK_CATEGORIES. Seeding by category alone would leave the leaves at neutral.
+          for (const c of SKILL_CATEGORIES) skills[c] = g.skillLevel;
         }
         Object.assign(skills, g.skills ?? {});
         cmd('devSetPawnSkills', { pawnId: p.id, skills });

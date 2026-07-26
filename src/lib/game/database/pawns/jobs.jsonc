@@ -42,13 +42,18 @@
         { "id": "weaving",        "label": "Weaving",     "station": "weavingEnabled" }
       ] },
 
-      // One stone-shaping skill across the whole game: chipped tools (early) → dressed blocks (mid) →
-      // cut gems (late), so a stone specialist never goes obsolete.
+      // One hard-material-shaping skill across the whole game: chipped tools (early) → dressed blocks
+      // (mid) → cut gems (late), plus bone/antler/ivory carving — so the stone specialist never goes
+      // obsolete (bone tools/weapons persist well past the stone age).
       { "id": "stoneworking", "label": "Stoneworking", "subjobs": [
-        { "id": "knapping", "label": "Knapping", "station": "knappingEnabled" },
-        { "id": "masonry",  "label": "Masonry",  "station": "masonryEnabled" },
-        { "id": "lapidary", "label": "Lapidary", "station": "lapidaryEnabled" }
+        { "id": "knapping",    "label": "Knapping",    "station": "knappingEnabled" },
+        { "id": "masonry",     "label": "Masonry",     "station": "masonryEnabled" },
+        { "id": "lapidary",    "label": "Lapidary",    "station": "lapidaryEnabled" },
+        { "id": "bonecarving", "label": "Bonecarving", "station": "bonecarvingEnabled" }
       ] },
+
+      // Ceramics: clay thrown/formed and kiln-fired — pots, jugs, bricks, tiles, urns, porcelain, glass.
+      { "id": "pottery", "label": "Pottery", "station": "potteryEnabled" },
 
       // One food-craft family. `meals` (stews/roasts) is the prepared-food leaf a `food`/`meal` output
       // routes to; butchery (carcass → meat/hide/bone) sits here too.

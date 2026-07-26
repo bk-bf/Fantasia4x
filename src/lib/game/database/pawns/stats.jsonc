@@ -449,7 +449,22 @@
         "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "joinery / haft quality (× ((manipulation + sight) / 2))"
     },
-    // ── Stoneworking PARENT: fallback for the Knapping / Masonry / Lapidary leaves.
+    // ── Pottery (ceramics): forming + kiln work.
+    {
+        "id"         : "pottery_speed",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "description": "pottery speed (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "pottery_quality",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "description": "ceramic / glass quality (× ((manipulation + sight) / 2))"
+    },
+    // ── Stoneworking PARENT: fallback for the Knapping / Masonry / Lapidary / Bonecarving leaves.
     {
         "id"         : "stoneworking_speed",
         "category"   : "work",
@@ -463,6 +478,149 @@
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
         "description": "cut / dressed-stone quality (× ((manipulation + sight + consciousness) / 3))"
+    },
+    // ── Craft-discipline LEAF work skills — each an INDEPENDENT skill (a weaver never levels a
+    //    leatherworker); own formula tuned to the craft, own SKILL level. Fall back to the parent only
+    //    for an axis they do not define.
+    {
+        "id"         : "knapping_speed",
+        "category"   : "work",
+        "primaryStat": "strength",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "description": "flint / stone knapping speed (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "knapping_quality",
+        "category"   : "work",
+        "primaryStat": "strength",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "description": "knapped-edge quality (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "masonry_speed",
+        "category"   : "work",
+        "primaryStat": "strength",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + moving) / 2)",
+        "description": "stone-dressing speed (× ((manipulation + moving) / 2))"
+    },
+    {
+        "id"         : "masonry_quality",
+        "category"   : "work",
+        "primaryStat": "strength",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + moving) / 2)",
+        "description": "dressed-block quality (× ((manipulation + moving) / 2))"
+    },
+    {
+        "id"         : "lapidary_speed",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (DEX − 10) × 0.0015 + (PER − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "description": "gem-cutting speed (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "lapidary_quality",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "description": "cut-gem brilliance (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "bonecarving_speed",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (DEX − 10) × 0.0015 + (STR − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "description": "bone / antler carving speed (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "bonecarving_quality",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "description": "carved-bone quality (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "weaving_speed",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (DEX − 10) × 0.0015 + (PER − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "description": "weaving speed (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "weaving_quality",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "description": "cloth / thread quality (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "meals_speed",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (DEX − 10) × 0.0015 + (INT − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "description": "cooking speed (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "meals_quality",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "description": "meal quality (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "baking_speed",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (DEX − 10) × 0.0015 + (INT − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "description": "baking speed (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "baking_quality",
+        "category"   : "work",
+        "primaryStat": "dexterity",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "description": "baked-good quality (× ((manipulation + sight) / 2))"
+    },
+    {
+        "id"         : "brewing_speed",
+        "category"   : "work",
+        "primaryStat": "intelligence",
+        "formula"    : "SKILL × (1.0 + (INT − 10) × 0.0015 + (PER − 10) × 0.0015) × ((sight + consciousness) / 2)",
+        "description": "brewing / fermentation speed (× ((sight + consciousness) / 2))"
+    },
+    {
+        "id"         : "brewing_quality",
+        "category"   : "work",
+        "primaryStat": "intelligence",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((sight + consciousness) / 2)",
+        "description": "brew quality (× ((sight + consciousness) / 2))"
+    },
+    {
+        "id"         : "herbalism_speed",
+        "category"   : "work",
+        "primaryStat": "intelligence",
+        "formula"    : "SKILL × (1.0 + (INT − 10) × 0.0015 + (PER − 10) × 0.0015) × ((sight + consciousness) / 2)",
+        "description": "herb-preparation speed (× ((sight + consciousness) / 2))"
+    },
+    {
+        "id"         : "herbalism_quality",
+        "category"   : "work",
+        "primaryStat": "intelligence",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((sight + consciousness) / 2)",
+        "description": "herbal-remedy quality (× ((sight + consciousness) / 2))"
+    },
+    {
+        "id"         : "potions_speed",
+        "category"   : "work",
+        "primaryStat": "intelligence",
+        "formula"    : "SKILL × (1.0 + (INT − 10) × 0.0015 + (PER − 10) × 0.0015) × ((sight + consciousness) / 2)",
+        "description": "potion-brewing speed (× ((sight + consciousness) / 2))"
+    },
+    {
+        "id"         : "potions_quality",
+        "category"   : "work",
+        "primaryStat": "intelligence",
+        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((sight + consciousness) / 2)",
+        "description": "potion potency (× ((sight + consciousness) / 2))"
     },
     {
         "id"         : "digging_speed",
