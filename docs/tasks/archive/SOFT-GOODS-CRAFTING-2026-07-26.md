@@ -2,9 +2,12 @@
 
 # SOFT-GOODS CRAFTING — tailoring, realistic per-animal leather & discipline specialisation
 
-> **Related:** [AUDIT.md](AUDIT.md) · [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md)
+> **Related:** [AUDIT.md](../open/AUDIT.md) · [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md)
 
-**Status (2026-07-25): PROPOSED — design locked in chat, not yet built.** Prompted by the tool-tier-parity
+**Status (2026-07-26): ✅ DONE + ARCHIVED.** Built end-to-end, full suite 1148, headless-verified. §E (class/build
+gear coverage) continues in the AUDIT class/build audit → [ROADMAP 8c](../open/ROADMAP.md). Original brief below.
+
+**Origin: PROPOSED — design locked in chat.** Prompted by the tool-tier-parity
 audit: `leatherworking` was a phantom tool-gate on a purely PASSIVE tanning chain (raw pelt → hang with ash →
 soak in brine → leather) — no active work, no tool, i.e. just hauling + waiting. Meanwhile generic `crafting`
 is a grab-bag and early–mid apparel is thin (t0 = 7 pieces, no cloth base layer, no primitive footwear). This

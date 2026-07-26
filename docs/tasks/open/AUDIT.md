@@ -471,7 +471,7 @@ primitive full-body/leg/warmth clothing, no cloth base layer.** Proposed additio
 - [ ] **`bark_sandals`** / **`hide_moccasins`** (t0) — the missing primitive FOOT slot (boots start at t1 tallow_boots).
 - [ ] slot-coverage pass: ensure head/body/legs/feet/hands each have a t0 AND t1 option per build lean (light vs warm).
 
-### 3. Tailoring category + realistic per-animal leather → **full spec: [SOFT-GOODS-CRAFTING.md](SOFT-GOODS-CRAFTING.md)** — ✅ DONE (2026-07-25)
+### 3. Tailoring category + realistic per-animal leather → **full spec: [SOFT-GOODS-CRAFTING.md](../archive/SOFT-GOODS-CRAFTING-2026-07-26.md)** — ✅ DONE (2026-07-25)
 - [x] Built end-to-end (full suite 1148, headless-verified): job registry unified (crafts nest like building);
       craft subjobs are INDEPENDENT skills; ACTIVE per-animal leather chain (flesh + curry, tooled, animal identity
       kept — headless deer + wolf→prime_wolf_leather→direwolf_warcloak); **generic `crafting` fully DISSOLVED** into
