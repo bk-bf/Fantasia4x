@@ -100,6 +100,42 @@ export function describeClasses(cs: BuildClass[]): string {
 export const AGES = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed', 'Boss'] as const;
 export type Age = (typeof AGES)[number];
 
+// Formal per-build spec — the design intent to check the implementation against. Hand-authored.
+export interface BuildSpec {
+  goal: string;
+  requires: string;
+  downside: string;
+}
+export const BUILD_SPEC: Record<string, BuildSpec> = {
+  'Sword & Shield': { goal: 'Balanced frontline anchor: reliable damage with a solid guard.', requires: 'STR, a shield, medium–heavy armour.', downside: 'Master of none — out-damaged by 2H, out-tanked by Pure Tank.' },
+  'Axe & Shield': { goal: 'Shield-breaker: strip an enemy shield, then cut.', requires: 'STR, an axe (bonus shield damage), a shield.', downside: 'Lower raw damage than swords once the shield is gone.' },
+  'Mace & Shield': { goal: 'Anti-armour control: stun / knockdown and dent armour.', requires: 'STR, a mace (2nd-best armour damage + stun), a shield.', downside: 'Wasted on unarmoured foes; modest cutting damage.' },
+  'Cleaver & Shield': { goal: 'Bleed-and-crit bruiser behind a shield.', requires: 'STR, a cleaver (high bleed/crit), a shield.', downside: 'High stamina drain; bleed is slow against armour.' },
+  'Flail & Shield': { goal: 'Ignore the enemy guard and hit weak spots (top precision).', requires: 'STR, a flail (highest weakspot precision + stun), a shield.', downside: 'Erratic, lower base damage than swords/axes.' },
+  'Spear & Shield': { goal: 'Defensive anti-flanker: reach + knockback holds a line.', requires: 'STR, a spear (reach, knockback at tier), a shield.', downside: 'Low damage — a holder/support, not a killer.' },
+  'Sword (Duelist)': { goal: 'High-tempo 1H swordsman: faster and more precise than 2H, no shield.', requires: 'High DEX + dodge, the Duelist trait, light–medium armour, a free off-hand.', downside: 'Fragile (no shield, light armour); heavy armour caps its speed.' },
+  'Axe (Duelist)': { goal: 'Duel-grip axe: fast shield-splitting with a free off-hand bonus.', requires: 'High DEX + dodge, the Duelist trait, light–medium armour.', downside: 'Fragile; loses the shield-break value against unshielded foes.' },
+  'Mace (Duelist)': { goal: 'Fast duel-grip stun: precise blunt control, no shield.', requires: 'High DEX + dodge, the Duelist trait, light–medium armour.', downside: 'Low damage on unarmoured foes; fragile.' },
+  'Cleaver (Duelist)': { goal: 'Fast bleed duelist: high crit + bleed with a free off-hand.', requires: 'High DEX + dodge, the Duelist trait, light–medium armour.', downside: 'Stamina hungry; fragile.' },
+  'Flail (Duelist)': { goal: 'Duel-grip flail: weak-spot hunter that ignores the guard.', requires: 'High DEX + dodge, the Duelist trait, light–medium armour.', downside: 'Erratic damage; fragile.' },
+  'Spear (Duelist)': { goal: 'Reach duelist: keep distance, poke and knock back, no shield.', requires: 'High DEX + dodge, the Duelist trait, light–medium armour.', downside: 'Low damage; very exposed once closed on.' },
+  'Greatsword (2H)': { goal: 'Cleaving frontline that punishes crowds (AoE swings).', requires: 'STR, a 2H sword, room to swing.', downside: 'No shield, slow, stamina-heavy.' },
+  '2H Cleaver': { goal: 'Maximum bleed, crit and raw cutting damage.', requires: 'STR and a deep stamina pool.', downside: 'Highest stamina drain of any weapon; slow.' },
+  '2H Axe': { goal: 'Shield-destroyer with armour-damage AoE.', requires: 'STR, a 2H axe (devastating shield damage).', downside: 'Slow; no shield; less raw damage than the greatsword.' },
+  '2H Hammer': { goal: 'Armour-crusher and boss-breaker: top armour-durability damage + stun/knockdown.', requires: 'STR, a 2H hammer/maul.', downside: 'Slow; poor against unarmoured foes; no shield.' },
+  'Polearm (2H)': { goal: 'Backline reach + the highest knockback; anti-flank spacing.', requires: 'STR, a rank behind the front line.', downside: '2H slow, less precise; weak once an enemy closes.' },
+  'Pure Tank': { goal: 'Unkillable anchor that soaks hits and provokes enemies onto itself.', requires: 'Heaviest armour + heaviest shield, high CON, taunt/provoke traits, a stamina-cheap weapon.', downside: 'Negligible damage — a wall, not a threat.' },
+  'Fencer (Rapier)': { goal: 'Precision duelist: the highest precision, armour-piercing thrusts.', requires: 'PER (finesse), light–medium armour, a rapier/estoc.', downside: 'Low raw damage; fragile.' },
+  'Assassin (Dagger)': { goal: 'Fastest attacker; bypass armour and backstab from stealth.', requires: 'DEX, low encumbrance, stealth, a dagger.', downside: 'Tiny per-hit damage without position; very fragile.' },
+  'Archer (Bow)': { goal: 'Longest-range precision fire with the best ranged crit.', requires: 'PER, high skill, a clear line, arrows.', downside: 'Needs the most skill; helpless in melee.' },
+  'Crossbowman': { goal: 'Armour-piercing ranged with a low skill floor.', requires: 'PER, bolts.', downside: 'Shorter range than a bow; slow reload.' },
+  'Skirmisher (Throwing)': { goal: 'Close-range harasser with the highest AP and armour damage of the ranged builds.', requires: 'STR/PER, a stock of thrown weapons.', downside: 'Shortest range; limited ammo.' },
+  'Slinger (Sling)': { goal: 'Cheapest, fastest-firing chip damage; easiest to land.', requires: 'Minimal skill, stones.', downside: 'Lowest damage / AP / armour damage; blunt only.' },
+  'Battlemage (1H Staff)': { goal: 'Elemental caster that keeps a shield or off-hand: massive per-shot damage, unlimited ammo.', requires: 'INT, a 1H staff, stamina management.', downside: 'Slow, huge stamina per shot (Magic Drained); frail.' },
+  'War-Caster (2H Staff)': { goal: '2H elemental staff that doubles as a high-stun blunt weapon.', requires: 'INT, a 2H staff, stamina.', downside: 'Slow; Magic Drained on overuse; no off-hand.' },
+  'Stunwaller (2H Staff)': { goal: 'Non-magical allrounder: best blunt precision + fastest attack to stun-wall with weak pawns.', requires: 'A 2H staff; very low stat bar to use.', downside: 'Lowest damage / AP / armour damage — pure control, no kills.' }
+};
+
 export interface RecipeInfo {
   station: string;
   stationId: string;
@@ -169,6 +205,8 @@ export interface GearRow {
   lineageNames: string | null;
   evolvesTo: string | null;
   evoStage: number; // 0 = base, +1 per step down an evolution chain
+  desc: string | null; // player-facing description
+  raw: any; // the source item/trait object — for the info panel to format its fields directly
 }
 
 export const REAL_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'] as const;
@@ -403,7 +441,9 @@ function toRow(item: any): GearRow | null {
     gradeRank: 0,
     lineageNames: null,
     evolvesTo: null,
-    evoStage: 0
+    evoStage: 0,
+    desc: item.description ?? null,
+    raw: item
   };
 }
 
@@ -562,7 +602,9 @@ function traitRow(t: any): GearRow {
     gradeRank: (REAL_RARITIES as readonly string[]).indexOf(gradeRarityOf(t)),
     lineageNames: t.lineage && t.lineage.length ? t.lineage.join(', ') : null,
     evolvesTo: t.evolvesTo ?? null,
-    evoStage: evoStage(t.id)
+    evoStage: evoStage(t.id),
+    desc: t.description ?? null,
+    raw: t
   };
 }
 

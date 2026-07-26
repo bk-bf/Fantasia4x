@@ -12,6 +12,7 @@
     BUILD_CAT,
     REAL_RARITIES,
     BODY_PARTS,
+    BUILD_SPEC,
     buildSummaries,
     describeClasses,
     type GearRow,
@@ -69,6 +70,141 @@
     else sel[id] = true;
   }
   const clearSel = () => (sel = {});
+
+  // Hover / info panel: a formatted, colour-coded breakdown of any item, trait, or build.
+  let hovered = $state<GearRow | null>(null);
+  let hoveredBuild = $state<string | null>(null);
+  let hx = $state(0);
+  let hy = $state(0);
+  let pinInfo = $state(false);
+  function pos(e: MouseEvent) {
+    hx = e.clientX;
+    hy = e.clientY;
+  }
+  // Action that keeps the floating tooltip fully on-screen: drop it near the cursor, then measure its
+  // real size and clamp it back inside the viewport (a plain clamp, not a binary up/down flip). Re-runs
+  // via `update` whenever the cursor position or the hovered target changes.
+  function place(node: HTMLElement, _param: unknown) {
+    const reposition = () => {
+      if (typeof window === 'undefined') return;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const r = node.getBoundingClientRect();
+      let left = hx + 14;
+      if (left + r.width > vw - 8) left = hx - r.width - 14;
+      node.style.left = Math.max(8, left) + 'px';
+      let top = hy + 14;
+      if (top + r.height > vh - 8) top = vh - r.height - 8;
+      node.style.top = Math.max(8, top) + 'px';
+    };
+    reposition();
+    return { update: (_p: unknown) => reposition() };
+  }
+  function hoverGear(g: GearRow, e: MouseEvent) {
+    hovered = g;
+    hoveredBuild = null;
+    pos(e);
+  }
+  function hoverBuild(b: string, e: MouseEvent) {
+    hoveredBuild = b;
+    hovered = null;
+    pos(e);
+  }
+  function hoverOut() {
+    if (pinInfo) return; // keep the last breakdown pinned
+    hovered = null;
+    hoveredBuild = null;
+  }
+
+  interface InfoRow {
+    label: string;
+    val: string;
+    tone: 'good' | 'bad' | 'info';
+  }
+  function infoRows(g: GearRow): InfoRow[] {
+    const rows: InfoRow[] = [];
+    const push = (label: string, val: unknown, tone: InfoRow['tone'] = 'info') => {
+      if (val !== null && val !== undefined && val !== '') rows.push({ label, val: String(val), tone });
+    };
+    const e = g.raw?.effects ?? {};
+    const mults = (obj: Record<string, number> | undefined, suffix = '') => {
+      if (!obj) return;
+      for (const [k, v] of Object.entries(obj)) push(k + suffix, '×' + v, v >= 1 ? 'good' : 'bad');
+    };
+    if (g.kind === 'weapon' || g.kind === 'ammo') {
+      push('damage', g.dmg != null ? `${g.dmg}${g.damMin != null ? ` (${g.damMin}–${g.damMax})` : ''} ${g.damageType ?? ''}`.trim() : null, 'good');
+      push('armour pen', g.ap != null ? pct(g.ap) : null, 'good');
+      push('armour damage', g.armorDmg, 'good');
+      push('crit', g.crit != null ? pct(g.crit) : null, 'good');
+      push('accuracy', g.accuracy, g.accuracy != null && g.accuracy < 0 ? 'bad' : 'good');
+      push('attack speed', g.atkSpeed);
+      push('reach', g.reach);
+      push('range', g.range);
+      push('stun', g.stun != null ? pct(g.stun) : null, 'good');
+      push('stamina / hit', g.stamina, 'bad');
+      push('scales with', g.scaling);
+      push('grip', g.twoHanded ? 'two-handed' : 'one-handed');
+      push('on-hit', g.onHit, 'bad');
+      push('STR to wield', g.wieldStr, 'bad');
+    } else if (g.kind === 'armor') {
+      push('defense', g.defense, 'good');
+      push('weight class', g.armorType);
+      push('equips', g.bodyPart ?? g.slot);
+      push('block', g.block != null ? pct(g.block) : null, 'good');
+      push('stealth', g.stealthMod != null ? '+' + g.stealthMod : null, 'good');
+      push('move penalty', g.movePen != null ? pct(g.movePen) : null, 'bad');
+      const ap = g.raw?.armorProperties ?? {};
+      if (ap.slashResistance) push('slash resist', pct(ap.slashResistance), 'good');
+      if (ap.pierceResistance) push('pierce resist', pct(ap.pierceResistance), 'good');
+      if (ap.crushResistance) push('crush resist', pct(ap.crushResistance), 'good');
+    } else if (g.kind === 'tool') {
+      push('work', g.work);
+      push('speed', g.boostSpeed, 'good');
+      push('yield', g.boostYield, 'good');
+      push('quality', g.boostQuality, 'good');
+    } else if (g.kind === 'medicine') {
+      push('medicine quality', g.medicine, 'good');
+    } else if (g.kind === 'trait') {
+      push('gating', g.gating);
+      push('rarity', g.rarity === 'negative' ? `flaw (graded ${g.gradeRarity})` : g.rarity);
+      push('polarity', g.polarity, g.polarity === 'negative' ? 'bad' : 'good');
+      push('lineage', g.lineageNames);
+      if (g.evoStage) push('evolution stage', g.evoStage);
+      push('evolves into', g.evolvesTo);
+      for (const stat of ['strength', 'dexterity', 'constitution', 'perception', 'intelligence', 'charisma']) {
+        const ab = stat.slice(0, 3).toUpperCase();
+        if (e[stat + 'Bonus'] != null) push(ab, '+' + e[stat + 'Bonus'], 'good');
+        if (e[stat + 'Penalty'] != null) push(ab, '−' + e[stat + 'Penalty'], 'bad');
+      }
+      mults(e.combatMods);
+      mults(e.workSpeed, ' speed');
+      mults(e.workQuality, ' quality');
+      mults(e.workYield, ' yield');
+      push('stealth', e.stealth != null ? '+' + e.stealth : null, 'good');
+      push('heal rate', e.healRate != null ? '+' + e.healRate : null, 'good');
+      push('night vision', e.nightVision != null ? '+' + e.nightVision : null, 'good');
+      const res = g.raw?.resistances ?? {};
+      for (const [k, v] of Object.entries(res)) push(k + ' resist', '×' + v, 'good');
+      if (g.raw?.bodyMods) push('body', g.raw.bodyMods.map((bm: any) => `${bm.target}${bm.hpMult ? ' ×' + bm.hpMult : ''}`).join(', '));
+      if (g.raw?.selfCondition) push('grants', g.raw.selfCondition, 'good');
+      if (g.raw?.aura) push('aura', `${g.raw.aura.condition} · r${g.raw.aura.radius} · ${g.raw.aura.affects}`);
+    }
+    if (g.kind !== 'trait') {
+      push('weight', g.weightKg ? g.weightKg + ' kg' : null);
+      push('durability', g.durability || null);
+      push('age / tier', `${g.age} · T${g.tier}`);
+      if (g.recipe) {
+        push('station', g.recipe.station);
+        push('tool tier', 'T' + g.recipe.toolTier);
+        push('discipline', g.recipe.discipline);
+        push('inputs', g.recipe.inputs.map((i) => `${i.qty}× ${i.name}`).join(', ') || null);
+      } else {
+        push('source', g.craftable ? 'craftable' : 'wild / boss');
+      }
+      push('research', g.research);
+    }
+    return rows;
+  }
 
   // Autocomplete: type to find any weapon/armour/trait; ↑↓ to cycle, Enter/click to highlight it.
   let acq = $state('');
@@ -274,12 +410,41 @@
     {#each CAT_KINDS as k (k)}
       <button class="tab" class:active={view === 'catalogue' && kind === k} onclick={() => selectKind(k)}>{KIND_LABEL[k]}</button>
     {/each}
+    <button class="tab info-toggle" class:active={pinInfo} onclick={() => (pinInfo = !pinInfo)} title="Pin a breakdown panel; otherwise hover shows a tooltip">ⓘ info panel</button>
   </div>
 
+  {#snippet pill(g: GearRow, armour: boolean)}
+    <button
+      type="button"
+      class="pill"
+      class:sel={sel[g.id]}
+      class:neg={g.polarity === 'negative'}
+      onclick={() => toggleSel(g.id)}
+      onmouseenter={(e) => hoverGear(g, e)}
+      onmouseleave={hoverOut}
+    >{g.name}{#if g.kind === 'trait'}{#if g.lineageNames}<i class="lin">{g.lineageNames}</i>{:else if g.evoStage}<i>s{g.evoStage}</i>{/if}{:else}<i>T{g.tier}</i>{#if armour && g.bodyPart}<i class="slot">{g.bodyPart}</i>{/if}{/if}</button>
+  {/snippet}
   {#snippet gearCell(items: GearRow[], armour: boolean)}
-    {#each items as it (it.id)}<button type="button" class="pill" class:sel={sel[it.id]} onclick={() => toggleSel(it.id)}>{it.name}<i>T{it.tier}</i>{#if armour && it.bodyPart}<i class="slot">{it.bodyPart}</i>{/if}</button>{/each}
+    {#each items as it (it.id)}{@render pill(it, armour)}{/each}
     {#if armour}{#each missingParts(items) as p (p)}<span class="miss">– {p}</span>{/each}{/if}
     {#if !items.length && !armour}<span class="dot">·</span>{/if}
+  {/snippet}
+
+  {#snippet infoBody(g: GearRow)}
+    <div class="info-head" data-cat={BUILD_CAT[g.cls] ?? 'general'}>{g.name}<span class="info-kind">{g.kind}</span></div>
+    {#if g.desc}<p class="info-desc">{g.desc}</p>{/if}
+    <div class="info-grid">
+      <div class="info-row"><span class="il">class</span><span class="iv info">{describeClasses(g.classes)}</span></div>
+      {#each infoRows(g) as r, i (i)}<div class="info-row"><span class="il">{r.label}</span><span class="iv {r.tone}">{r.val}</span></div>{/each}
+    </div>
+  {/snippet}
+  {#snippet buildBody(b: string)}
+    <div class="info-head" data-cat={BUILD_CAT[b]}>{b}<span class="info-kind">build spec</span></div>
+    <div class="info-grid">
+      <div class="info-row"><span class="il">goal</span><span class="iv good">{BUILD_SPEC[b]?.goal}</span></div>
+      <div class="info-row"><span class="il">requires</span><span class="iv info">{BUILD_SPEC[b]?.requires}</span></div>
+      <div class="info-row"><span class="il">downside</span><span class="iv bad">{BUILD_SPEC[b]?.downside}</span></div>
+    </div>
   {/snippet}
 
   {#if view === 'builds'}
@@ -318,14 +483,14 @@
           <tbody>
             {#each BUILDS as b (b)}
               <tr>
-                <td class="name cls clickable" data-cat={BUILD_CAT[b]} onclick={() => openBuild(b)}>{b}</td>
+                <td class="name cls clickable" data-cat={BUILD_CAT[b]} onclick={() => openBuild(b)} onmouseenter={(e) => hoverBuild(b, e)} onmouseleave={hoverOut}>{b}</td>
                 {#each REAL_RARITIES as r (r)}
                   {@const ts = raritycell(b, r, showLineageCol)}
-                  <td class="cellwrap" class:gap={ts.length === 0}>{#if ts.length}{#each ts as t (t.id)}<button type="button" class="pill" class:neg={t.polarity === 'negative'} class:sel={sel[t.id]} onclick={() => toggleSel(t.id)}>{t.name}{#if t.lineageNames}<i class="lin">{t.lineageNames}</i>{:else if t.evoStage}<i>s{t.evoStage}</i>{/if}</button>{/each}{:else}<span class="dot">·</span>{/if}</td>
+                  <td class="cellwrap" class:gap={ts.length === 0}>{#if ts.length}{#each ts as t (t.id)}{@render pill(t, false)}{/each}{:else}<span class="dot">·</span>{/if}</td>
                 {/each}
                 {#if showLineageCol}
                   {@const ls = lineageColTraits(b)}
-                  <td class="cellwrap" class:gap={ls.length === 0}>{#if ls.length}{#each ls as t (t.id)}<button type="button" class="pill" class:neg={t.polarity === 'negative'} class:sel={sel[t.id]} onclick={() => toggleSel(t.id)}>{t.name}<i class="lin">{t.lineageNames}</i></button>{/each}{:else}<span class="dot">·</span>{/if}</td>
+                  <td class="cellwrap" class:gap={ls.length === 0}>{#if ls.length}{#each ls as t (t.id)}{@render pill(t, false)}{/each}{:else}<span class="dot">·</span>{/if}</td>
                 {/if}
               </tr>
             {/each}
@@ -353,7 +518,7 @@
           <tbody>
             {#each BUILDS as b (b)}
               <tr>
-                <td class="name cls clickable" data-cat={BUILD_CAT[b]} onclick={() => openBuild(b)}>{b}</td>
+                <td class="name cls clickable" data-cat={BUILD_CAT[b]} onclick={() => openBuild(b)} onmouseenter={(e) => hoverBuild(b, e)} onmouseleave={hoverOut}>{b}</td>
                 {#each AGES as a (a)}
                   {@const its = cell(b, 'weapon', a)}
                   <td class="cellwrap" class:gap={its.length === 0}>{@render gearCell(its, false)}</td>
@@ -364,7 +529,7 @@
                 {/each}
                 {#each REAL_RARITIES as r (r)}
                   {@const ts = raritycell(b, r)}
-                  <td class="cellwrap" class:gap={ts.length === 0}>{#if ts.length}{#each ts as t (t.id)}<button type="button" class="pill" class:neg={t.polarity === 'negative'} class:sel={sel[t.id]} onclick={() => toggleSel(t.id)}>{t.name}{#if t.lineageNames}<i class="lin">{t.lineageNames}</i>{:else if t.evoStage}<i>s{t.evoStage}</i>{/if}</button>{/each}{:else}<span class="dot">·</span>{/if}</td>
+                  <td class="cellwrap" class:gap={ts.length === 0}>{#if ts.length}{#each ts as t (t.id)}{@render pill(t, false)}{/each}{:else}<span class="dot">·</span>{/if}</td>
                 {/each}
               </tr>
             {/each}
@@ -381,7 +546,7 @@
           <tbody>
             {#each BUILDS as b (b)}
               <tr>
-                <td class="name cls clickable" data-cat={BUILD_CAT[b]} onclick={() => openBuild(b)}>{b}</td>
+                <td class="name cls clickable" data-cat={BUILD_CAT[b]} onclick={() => openBuild(b)} onmouseenter={(e) => hoverBuild(b, e)} onmouseleave={hoverOut}>{b}</td>
                 {#each AGES as a (a)}
                   {@const its = cell(b, bview, a)}
                   <td class="cellwrap" class:gap={its.length === 0}>{@render gearCell(its, bview === 'armor')}</td>
@@ -434,6 +599,19 @@
       </table>
     </div>
     {#if rows.length === 0}<p class="empty">No entries match.</p>{/if}
+  {/if}
+
+  {#if pinInfo}
+    <aside class="infopanel">
+      <div class="ip-head">info panel<button type="button" class="ip-close" onclick={() => (pinInfo = false)}>✕</button></div>
+      {#if hoveredBuild}{@render buildBody(hoveredBuild)}
+      {:else if hovered}{@render infoBody(hovered)}
+      {:else}<p class="info-empty">Hover any item, trait, or build name to inspect it here.</p>{/if}
+    </aside>
+  {:else if hoveredBuild}
+    <div class="tooltip" use:place={[hx, hy, hoveredBuild]}>{@render buildBody(hoveredBuild)}</div>
+  {:else if hovered}
+    <div class="tooltip" use:place={[hx, hy, hovered]}>{@render infoBody(hovered)}</div>
   {/if}
 </div>
 
@@ -775,6 +953,121 @@
     font-size: 11px;
     margin-left: auto;
     white-space: nowrap;
+  }
+
+  /* info tooltip / panel */
+  .tab.info-toggle {
+    margin-left: auto;
+  }
+  .tooltip {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 50;
+    width: 340px;
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+    background: #1b1811;
+    border: 1px solid #4a4030;
+    border-radius: 8px;
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.6);
+    padding: 12px 14px;
+    pointer-events: none;
+    font-size: 12.5px;
+  }
+  .infopanel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 340px;
+    overflow-y: auto;
+    background: #171410;
+    border-left: 1px solid #4a4030;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+    padding: 14px 16px 40px;
+    z-index: 40;
+    font-size: 12.5px;
+  }
+  .ip-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #6d6653;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 10px;
+  }
+  .ip-close {
+    background: transparent;
+    border: 1px solid #362f22;
+    color: #9a9279;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 2px 7px;
+    font-size: 11px;
+  }
+  .info-head {
+    font-size: 15px;
+    font-weight: 700;
+    color: #ece6d4;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    border-bottom: 1px solid #2a2519;
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+  }
+  .info-head[data-cat='melee'] { color: #83bb6f; }
+  .info-head[data-cat='duelist'] { color: #d3a04e; }
+  .info-head[data-cat='tank'] { color: #6fa0c8; }
+  .info-head[data-cat='finesse'] { color: #e6bf57; }
+  .info-head[data-cat='ranged'] { color: #d76f5d; }
+  .info-head[data-cat='caster'] { color: #a98fd6; }
+  .info-head[data-cat='general'] { color: #9a9279; }
+  .info-kind {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #6d6653;
+    font-weight: 400;
+    margin-left: auto;
+  }
+  .info-desc {
+    color: #b8b199;
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 0 0 10px;
+    font-style: italic;
+  }
+  .info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .info-row {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+  }
+  .info-row .il {
+    flex: 0 0 34%;
+    color: #6d6653;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .info-row .iv {
+    flex: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .iv.good { color: #83bb6f; }
+  .iv.bad { color: #d76f5d; }
+  .iv.info { color: #ece6d4; }
+  .info-empty {
+    color: #6d6653;
+    font-size: 12px;
   }
   td.clickable {
     cursor: pointer;
