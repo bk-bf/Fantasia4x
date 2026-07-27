@@ -16,8 +16,11 @@ import { getNightVision } from '../core/vision';
 import { getStealth } from '../core/stealth';
 import { vlog } from '../core/logSink';
 import { combinedQualityMultiplier } from '../core/itemQuality';
+import { powerStatOf, powerToken, STAT_SCALE } from '../core/powerScale';
+import { aptitudeOf } from '../core/aptitudes';
 import {
   conditionStatMultipliers,
+  type StatMultipliers,
   conditionPainMultiplier,
   conditionConsciousnessMultiplier,
   tempRange,
@@ -154,7 +157,15 @@ const FORMULA_VARS = [
   'intact',
   // WORK-EXPERIENCE: the work stats' experience-level base — levelBase(level) × style weight,
   // resolved per work category + axis by getWorkModifiers/evaluateStat. 1.0 in non-work formulas.
-  'SKILL'
+  'SKILL',
+  // COMBAT-BALANCE task 3: the DAMAGE power of the equipped weapon's own core stat, damped by
+  // powerScale and expressed on the same 10-baseline the core stats use. It is what lets
+  // `melee_damage`/`ranged_damage` be real stats — the weapon picks WHICH core stat, the formula
+  // applies the capacities. 10 (i.e. ×1.0) for anything holding no weapon.
+  'POWER',
+  // COMBAT-BALANCE tasks 8–9: the pawn's ROLLED aptitude for the stat being evaluated — the second
+  // combat axis. 1.0 for mobs, unrolled pawns and every formula that doesn't name it.
+  'APT'
 ] as const;
 const FORMULA_VAR_RE = new RegExp('\\b(?:' + FORMULA_VARS.join('|') + ')\\b', 'g');
 
@@ -182,6 +193,19 @@ function formulaUsesPrestige(formula: string): boolean {
   if (uses === undefined) {
     uses = formula.includes('prestige');
     _formulaUsesPrestige.set(formula, uses);
+  }
+  return uses;
+}
+
+// Whether a formula references POWER — cached like prestige, so only the two damage formulas ever pay
+// for the equipped-weapon lookup on the ~328×/tick formula path.
+const _formulaUsesPower = new Map<string, boolean>();
+
+function formulaUsesPower(formula: string): boolean {
+  let uses = _formulaUsesPower.get(formula);
+  if (uses === undefined) {
+    uses = formula.includes('POWER');
+    _formulaUsesPower.set(formula, uses);
   }
   return uses;
 }
@@ -265,7 +289,8 @@ function evaluateFormula(
   formula: string | undefined,
   p: Pawn | Mob,
   capacities: Record<string, number> = {},
-  skill = 1.0
+  skill = 1.0,
+  statId = ''
 ): number {
   if (!formula) return 1.0;
   const fn = compileFormula(formula);
@@ -282,6 +307,10 @@ function evaluateFormula(
   const prestige = formulaUsesPrestige(formula) ? computePrestige(p) : 0;
   // Same deal for the whole-body `intact` scan (beauty only).
   const intact = formulaUsesIntact(formula) ? intactBodyFraction(p) : 1;
+  // …and for the equipped-weapon power lookup (the two damage formulas only).
+  const power = formulaUsesPower(formula) ? equippedPowerToken(p, sm) : STAT_SCALE;
+  // The rolled aptitude for THIS stat — a plain record read, no scan.
+  const apt = aptitudeOf(p as { aptitudes?: Record<string, number> }, statId);
   const v = fn(
     (s?.brawn ?? 10) * sm.brawn,
     (s?.agility ?? 10) * sm.agility,
@@ -304,7 +333,9 @@ function evaluateFormula(
     capacities.pain ?? 0,
     prestige,
     intact,
-    skill
+    skill,
+    power,
+    apt
   );
   return isFinite(v) ? Math.round(v * 1000) / 1000 : 1.0;
 }
@@ -568,6 +599,19 @@ function traitCombatMult(pawn: Pawn | Mob, statId: string): number {
 // (0.65) genuinely swings slower and a dagger (1.5) faster — the wired path from a weapon's heft into
 // cadence (Combat's attack interval reads this stat). 1.0 when unarmed / no weapon / for mobs, and for
 // natural attacks (every natural weapon sits at 1.0), so nothing there shifts.
+/**
+ * The POWER token for this pawn: `powerScale(the equipped weapon's power stat)` on the 10-baseline.
+ * The weapon names the stat (two-handed → brawn, one-handed → agility, finesse → awareness, arcane →
+ * intellect); an empty hand — and every mob's natural attack — falls back to brawn, which is what the
+ * old inline term did.
+ */
+function equippedPowerToken(pawn: Pawn | Mob, sm: StatMultipliers): number {
+  const mh = (pawn as Pawn).equipment?.mainHand;
+  const wp = mh ? ITEM_BY_ID.get(mh.itemId)?.weaponProperties : undefined;
+  const key = powerStatOf(wp);
+  return powerToken((pawn.stats?.[key] ?? 10) * (sm[key] ?? 1));
+}
+
 function equippedWeaponSpeedMult(pawn: Pawn | Mob): number {
   const mh = (pawn as Pawn).equipment?.mainHand;
   if (!mh) return 1;
@@ -847,7 +891,7 @@ export class PawnStatServiceImpl implements PawnStatService {
     // Trait combatMods multiply a combat stat's formula output (×1 for every other category);
     // trait resistances stay an ADDITIVE bridge on the 0-baseline resistance stats.
     const v =
-      evaluateFormula(def.formula, pawn, capacities, skill) *
+      evaluateFormula(def.formula, pawn, capacities, skill, statId) *
         traitCombatMult(pawn, statId) *
         (statId === 'attack_speed' ? equippedWeaponSpeedMult(pawn) : 1) +
       traitResistanceBonus(pawn, statId);

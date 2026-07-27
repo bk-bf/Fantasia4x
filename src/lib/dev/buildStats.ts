@@ -105,12 +105,6 @@ const WIRING: Record<string, { wiring: Wiring; where: string; engineFormula?: st
     where: 'Combat stun / knockdown rolls',
     engineFormula: 'knockdown chance × (1 − clamp(knockdown_resistance, 0, 0.9))'
   },
-  vision_range: {
-    wiring: 'dead',
-    where:
-      'superseded by core/vision.baseVisionRange, which pawns and mobs share and which returns TILES from raw AWARENESS — this multiplier is read by nothing',
-    engineFormula: 'sight tiles = round(4 + AWARENESS × 1.3), × light (floor 0.35)'
-  },
   attack_speed: {
     wiring: 'wired',
     where: 'Combat.attackIntervalTicks — the melee cadence',
@@ -179,7 +173,6 @@ const LABEL: Record<string, string> = {
   aim_range: 'aim range',
   reload_speed: 'reload',
   ranged_damage: 'ranged dmg',
-  vision_range: 'vision',
   dodge: 'dodge',
   block: 'block',
   knockdown_resistance: 'knockdown res',
@@ -203,8 +196,7 @@ export const STAT_GROUPS: { label: string; stats: string[] }[] = [
       'aim_speed',
       'aim_range',
       'reload_speed',
-      'ranged_damage',
-      'vision_range'
+      'ranged_damage'
     ]
   },
   { label: 'Defence', stats: ['dodge', 'block', 'knockdown_resistance', 'stealth'] },
@@ -358,9 +350,6 @@ function cellsFor(b: BuildClass): Record<string, StatCell> {
       : p.powerStats.includes('INT')
         ? cell('none', 'a channelled bolt carries no draw — its damage scales on INT')
         : cell('primary', 'draw/throw power behind the shot');
-  c.vision_range = p.ranged
-    ? cell('primary', 'seeing first is what buys a ranged build its free shots')
-    : cell('secondary', 'spotting a flanker before it closes');
 
   // ── defence ──
   c.dodge = p.wearsLight

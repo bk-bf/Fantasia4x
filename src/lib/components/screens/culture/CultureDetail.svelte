@@ -24,8 +24,8 @@
     // Only GUARANTEED identity traits shift the culture's baseline every member shares; pool traits are
     // per-pawn variety, so they don't move the culture-wide stat range shown here.
     for (const t of r.guaranteedTraits) {
-      b += (t.effects as Record<string, number>)[`${stat}Bonus`] ?? 0;
-      b -= (t.effects as Record<string, number>)[`${stat}Penalty`] ?? 0;
+      b += (t.effects as Record<string, number>)[`${stat}Bonus`] ?? 0; // signed
+
     }
     return b;
   }

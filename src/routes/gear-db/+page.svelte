@@ -309,8 +309,8 @@
         'charisma'
       ]) {
         const ab = stat.slice(0, 3).toUpperCase();
-        if (e[stat + 'Bonus'] != null) push(ab, '+' + e[stat + 'Bonus'], 'good');
-        if (e[stat + 'Penalty'] != null) push(ab, '−' + e[stat + 'Penalty'], 'bad');
+        const v = e[stat + 'Bonus'];
+        if (v != null) push(ab, (v < 0 ? '−' : '+') + Math.abs(v), v < 0 ? 'bad' : 'good');
       }
       mults(e.combatMods);
       mults(e.workSpeed, ' speed');

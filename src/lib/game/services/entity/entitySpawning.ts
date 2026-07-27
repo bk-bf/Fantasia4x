@@ -7,6 +7,7 @@ import { calcMaxStamina } from '../../entities/Pawns';
 import { createBodyPlanLimbs } from '../../systems/Combat';
 import { DEFAULT_PLAN } from '../../core/BodyParts';
 import { TRAIT_DATABASE } from '../../core/Culture';
+import { creatureAptitudes } from '../../core/aptitudes';
 import { rng } from '../../core/rng';
 import { getLootPool, drawLoadout, rollCondition, validateLootItemIds } from '../../core/LootPools';
 import { generateBossName } from '../../core/BossNames';
@@ -886,6 +887,10 @@ export function makeMob(
     intellect: def.behaviour === 'passive' ? 4 : 8,
     charisma: 5
   };
+  // COMBAT-BALANCE tasks 8–9: a creature's combat aptitudes come from its OWN stat block, not from a
+  // roll — its stats are its design. This reproduces the pre-decoupling formulas exactly, so encounter
+  // pacing is unchanged while pawns move onto the rolled axis.
+  const aptitudes = creatureAptitudes(stats);
   // Blood/health pool tracks the ROLLED vigour (con×5), so a tougher individual soaks more — for a
   // base creature (no range) this equals the old def.stats.health.
   const scaledHealth = Math.round(stats.vigour * 5 * bodyScale);
@@ -933,6 +938,7 @@ export function makeMob(
     needs,
     conditions: [],
     stats,
+    aptitudes,
     // ── Full health/survival parity with Pawn ────────────────────────────────────────
     bloodVolume: scaledHealth,
     maxBloodVolume: scaledHealth,

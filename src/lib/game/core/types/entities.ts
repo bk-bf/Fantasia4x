@@ -1,6 +1,7 @@
 // Live entities (mobs/animals) and the Pawn model. Split out of core/types.ts (P-4); re-exported
 // via the barrel.
 
+import type { Aptitudes } from '../aptitudes';
 import type { EntityStats, StatKey, GrowthOffer, LineagePath } from './culture';
 import type { EntityNeeds, EntityCondition, Injury, LimbState } from './health';
 import type { PawnInventory, PawnEquipment, EquipmentSlot } from './items';
@@ -75,8 +76,11 @@ export interface Mob {
   needs: EntityNeeds;
   /** Progressive conditions (wounds, malnutrition, etc.) — same system as Pawn. */
   conditions?: EntityCondition[];
-  /** D&D-style stats mapped from CreatureDefinition at spawn. */
+  /** Core stats mapped from CreatureDefinition at spawn. */
   stats: EntityStats;
+  /** Combat aptitudes, DERIVED from the creature's own stat block at spawn (creatureAptitudes) rather
+   *  than rolled — a creature's stats are its design, so a quick wolf stays a quick wolf. */
+  aptitudes?: Aptitudes;
   /** Progress 0–1 through current eat action (shown as progress bar). */
   eatProgress?: number;
   /** Target entity id when in Hunting state. */
@@ -280,6 +284,10 @@ export interface Pawn {
   pinnedItems?: string[];
   // Individual stats (rolled from culture ranges)
   stats: EntityStats;
+  /** COMBAT-BALANCE tasks 8–9: the second combat axis — per-pawn rolls for the stats that decide how
+   *  WELL it fights (hit_chance, attack_speed, hit_precision, armor_damage, dodge, aim_accuracy),
+   *  rolled independently of the core stats. Absent ⇒ 1.0 everywhere (mobs, older saves). */
+  aptitudes?: Aptitudes;
 
   // ===== PAWN-GROWTH: age + Battle-Brothers-style stat growth =====
   /** Per-stat ceilings this pawn can grow toward (rolled at generation, culture-derived, ~70–100 on

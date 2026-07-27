@@ -27,6 +27,7 @@ import { KIN_INVERSE } from '../core/Social';
 import { itemDefById } from '../core/itemDefs';
 import { seedWorkLevels, rollWorkStyle } from '../core/workExperience';
 import { rng } from '../core/rng';
+import { rollAptitudes } from '../core/aptitudes';
 
 // Module-level counter for sequential debug IDs across all generated pawns.
 let _pawnDebugIdCounter = 1;
@@ -270,16 +271,12 @@ export function applyTraitBodyMods(pawn: Pawn): void {
  * place (the growth path already mutates the pawn per-day).
  */
 export function applyGainedTrait(pawn: Pawn, trait: Trait): void {
-  // Core-stat bonus/penalty from effects (as applyCulturalTraitBonuses does at gen; uncapped identity).
+  // Core-stat grants — ONE signed add, no key-suffix branch (as applyCulturalTraitBonuses does at gen).
+  // A flaw authors a negative `*Bonus`; the floor keeps a stacked pile of them off zero.
   for (const [k, v] of Object.entries(trait.effects ?? {})) {
-    if (typeof v !== 'number') continue;
-    if (k.endsWith('Bonus')) {
-      const s = k.replace('Bonus', '').toLowerCase() as keyof EntityStats;
-      if (pawn.stats[s] !== undefined) pawn.stats[s] += v;
-    } else if (k.endsWith('Penalty')) {
-      const s = k.replace('Penalty', '').toLowerCase() as keyof EntityStats;
-      if (pawn.stats[s] !== undefined) pawn.stats[s] = Math.max(1, pawn.stats[s] + v);
-    }
+    if (typeof v !== 'number' || !k.endsWith('Bonus')) continue;
+    const s = k.replace('Bonus', '').toLowerCase() as keyof EntityStats;
+    if (pawn.stats[s] !== undefined) pawn.stats[s] = Math.max(1, pawn.stats[s] + v);
   }
   // Grafts — applyTraitGrafts is idempotent per limb id, so running the all-traits pass only adds the
   // new limb; then credit this trait's grafted parts' core-stat grants (spider-eyes → +awareness).
@@ -457,6 +454,9 @@ export function buildPawnFromCulture(culture: Culture, index: number, origin?: P
     name: generatePawnName(sex),
     sex,
     stats: finalStats,
+    // COMBAT-BALANCE tasks 8–9: the second combat axis, rolled INDEPENDENTLY of the stats above. Two
+    // pawns with the same physique are not the same fighter.
+    aptitudes: rollAptitudes(physicalTraits.weight),
     maxStats,
     favStats,
     age,
@@ -869,13 +869,9 @@ function applyCulturalTraitBonuses(baseStats: EntityStats, traits: Trait[]): Ent
 
   traits.forEach((trait) => {
     Object.entries(trait.effects).forEach(([effectName, effectValue]) => {
+      // ONE signed add. A flaw authors a negative `*Bonus`; the floor keeps a stacked pile off zero.
       if (effectName.endsWith('Bonus') && typeof effectValue === 'number') {
         const statName = effectName.replace('Bonus', '').toLowerCase() as keyof EntityStats;
-        if (modifiedStats[statName] !== undefined) {
-          modifiedStats[statName] += effectValue;
-        }
-      } else if (effectName.endsWith('Penalty') && typeof effectValue === 'number') {
-        const statName = effectName.replace('Penalty', '').toLowerCase() as keyof EntityStats;
         if (modifiedStats[statName] !== undefined) {
           modifiedStats[statName] = Math.max(1, modifiedStats[statName] + effectValue);
         }

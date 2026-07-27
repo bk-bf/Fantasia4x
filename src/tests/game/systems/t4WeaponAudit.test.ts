@@ -173,33 +173,31 @@ describe('trait baking — a gained trait is a born trait', () => {
     expect(grown.stats.agility).toBe(plain.stats.agility + 5);
   });
 
-  it('⚠ every `*Penalty` RAISES its stat — the sign is wrong in both bake paths', () => {
-    // `applyCulturalTraitBonuses` (generation) and `applyGainedTrait` (runtime) both do
-    // `stats[k] = max(1, stats[k] + value)`, and all 103 penalty entries in traits.jsonc are POSITIVE.
-    // So a penalty adds. `frail` grants +2 VIGOUR, `clumsy` +2 AGILITY, `dull` +2 INT.
-    //
-    // This test pins the CURRENT behaviour so the audit numbers are reproducible and the bug cannot be
-    // "fixed" silently — flipping it changes every pawn in every save, so it is a deliberate call.
-    const penalties = TRAITS.flatMap((t) =>
+  it('a flaw LOWERS its stat — core-stat grants are signed, with no `*Penalty` key left', () => {
+    // Both bake paths (`applyCulturalTraitBonuses` at generation, `applyGainedTrait` at runtime) now do
+    // ONE signed add. A flaw authors a negative `*Bonus`; the `*Penalty` key is gone, which is what
+    // makes the sign impossible to get wrong again.
+    const leftovers = TRAITS.flatMap((t) =>
+      Object.keys((t.effects ?? {}) as Record<string, unknown>).filter((k) => k.endsWith('Penalty'))
+    );
+    expect(leftovers, 'no `*Penalty` key survives in traits.jsonc').toEqual([]);
+
+    const negatives = TRAITS.flatMap((t) =>
       Object.entries((t.effects ?? {}) as Record<string, unknown>)
-        .filter(([k, v]) => k.endsWith('Penalty') && typeof v === 'number')
+        .filter(([k, v]) => k.endsWith('Bonus') && typeof v === 'number' && (v as number) < 0)
         .map(([k, v]) => ({ id: t.id as string, key: k, value: v as number }))
     );
-    expect(penalties.length, 'penalty entries exist to check').toBeGreaterThan(50);
-    expect(
-      penalties.every((p) => p.value > 0),
-      'all penalty values are authored POSITIVE'
-    ).toBe(true);
+    expect(negatives.length, 'flaws are authored as negative bonuses').toBeGreaterThan(50);
 
-    const clumsy = TRAITS.find((t) => t.id === 'clumsy'); // agilityPenalty: 2
+    const clumsy = TRAITS.find((t) => t.id === 'clumsy'); // agilityBonus: -2
     const plain = armed('rune_slotted_stiletto', { agility: 20 });
     const cursed = armed('rune_slotted_stiletto', { agility: 20 }, undefined, [
       clumsy as unknown as Trait
     ]);
     console.log(
-      `[SIGN BUG] ${penalties.length} penalty entries, all positive. "clumsy" (agilityPenalty 2): AGILITY ${plain.stats.agility} → ${cursed.stats.agility}`
+      `[SIGNED] ${negatives.length} negative grants. "clumsy" (agilityBonus −2): AGILITY ${plain.stats.agility} → ${cursed.stats.agility}`
     );
-    expect(cursed.stats.agility, 'clumsy currently ADDS agility').toBe(plain.stats.agility + 2);
+    expect(cursed.stats.agility, 'clumsy LOWERS agility').toBe(plain.stats.agility - 2);
   });
 });
 
@@ -275,9 +273,7 @@ const COMBAT_TRAITS = TRAITS.filter((t) => {
     e.agilityBonus ||
     e.awarenessBonus ||
     e.vigourBonus ||
-    e.intellectBonus ||
-    e.brawnPenalty ||
-    e.agilityPenalty
+    e.intellectBonus
   );
 });
 

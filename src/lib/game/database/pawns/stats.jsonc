@@ -20,35 +20,35 @@
         "id": "hit_precision",
         "category": "combat",
         "primaryStat": "agility",
-        "formula": "(0.05 + (AGILITY − 10) × 0.005 + (AWARENESS − 10) × 0.0025) × consciousness × sight",
+        "formula": "0.05 × APT × consciousness × sight",
         "description": "chance per landed blow to strike true — a telling hit that finds a gap (an eye, the throat, a soft belly) instead of glancing off (× consciousness × sight); weapons add their own bonus on top"
     },
     {
         "id"         : "melee_damage",
         "category"   : "combat",
         "primaryStat": "brawn",
-        "formula"    : "(1.0 + (BRAWN − 10) × 0.01) × manipulation",
-        "description": "melee attack damage multiplier, brawn is the muscle behind a blow (× manipulation). Breaking ARMOUR is its own stat (armor_damage); ranged damage is ranged_damage."
+        "formula"    : "(1.0 + (POWER − 10) × 0.1) × manipulation",
+        "description": "melee attack damage multiplier — the force the body can put behind a blow, and the hands that must still be whole to deliver it (× manipulation). Which core stat supplies that force is the weapon's: a two-hander is driven by brawn, a one-hander placed by agility, a thrust by awareness, a staff by intellect. Breaking ARMOUR is its own stat (armor_damage); ranged damage is ranged_damage."
     },
     {
         "id"         : "armor_damage",
         "category"   : "combat",
         "primaryStat": "brawn",
-        "formula"    : "(1.0 + (BRAWN − 10) × 0.02) × manipulation",
+        "formula"    : "APT × manipulation",
         "description": "armour-breaking multiplier, how fast your blows wreck a foe's ARMOUR condition, SEPARATE from the flesh damage you deal through it (× manipulation). brawn drives the force. Armour lost per landed hit = weapon.armorDamage × this: a hammer caves plate in a few blows, a mace dents it, a cleaver's edge barely scratches it (made to open flesh, not crack steel). Wreck the armour, then later blows land clean."
     },
     {
         "id"         : "hit_chance",
         "category"   : "combat",
         "primaryStat": "agility",
-        "formula"    : "(1.0 + (AGILITY − 10) × 0.03) × sight × manipulation",
+        "formula"    : "APT × sight × manipulation",
         "description": "attack accuracy (× sight × manipulation)"
     },
     {
         "id"         : "dodge",
         "category"   : "combat",
         "primaryStat": "agility",
-        "formula"    : "(1.0 + (AGILITY − 10) × 0.02 − (weight − 70) × 0.002) × moving",
+        "formula"    : "(APT − (weight − 70) × 0.002) × moving",
         "description": "evasion (× moving; heavier = harder to dodge)"
     },
     {
@@ -79,18 +79,13 @@
         "formula"    : "(1.0 + (VIGOUR − 10) × 0.025) × consciousness",
         "description": "resistance to stagger (× consciousness; dazed = easier to knock down)"
     },
-    {
-        "id"         : "vision_range",
-        "category"   : "combat",
-        "primaryStat": "awareness",
-        "formula"    : "(1.0 + (AWARENESS − 10) × 0.05) × sight",
-        "description": "threat detection range (× sight)"
-    },
+    // vision_range was deleted (COMBAT-BALANCE task 6): nothing read it. Sight range is
+    // core/vision.baseVisionRange — round(4 + awareness × 1.3) TILES, shared by pawns and mobs.
     {
         "id"         : "attack_speed",
         "category"   : "combat",
         "primaryStat": "agility",
-        "formula"    : "(1.0 + (AGILITY − 10) × 0.03) × manipulation",
+        "formula"    : "APT × manipulation",
         "description": "attack cadence multiplier, higher = faster strikes (× manipulation, × the equipped weapon's own attackSpeed — a light blade darts, a heavy maul swings slow)"
     },
     // ── Ranged — AWARENESS = precision axis (aim_accuracy + aim_range), AGILITY = speed axis (aim_speed +
@@ -99,7 +94,7 @@
         "id": "aim_accuracy",
         "category": "combat",
         "primaryStat": "awareness",
-        "formula": "(1.0 + (AWARENESS − 10) × 0.04) × sight × manipulation",
+        "formula": "APT × sight × manipulation",
         "description": "ranged hit accuracy, the awareness PRECISION axis (deadeye), × sight × manipulation; Combat adds a LINEAR distance penalty + gear/ammo aimBonuses. The sniper stat, pairs with aim_range."
     },
     {
@@ -127,8 +122,8 @@
         "id": "ranged_damage",
         "category": "combat",
         "primaryStat": "brawn",
-        "formula": "(1.0 + (BRAWN − 10) × 0.01) × manipulation",
-        "description": "ranged attack damage multiplier, the DRAW/THROW power behind a shot (× manipulation). brawn's ONLY ranged role: a bow's draw-weight and a thrown weapon's force scale with it (ammo damage × weapon drawPower × this). Crossbows & slings are MECHANICAL, they ignore it (the stock/cord does the work)."
+        "formula": "(1.0 + (POWER − 10) × 0.1) × manipulation",
+        "description": "ranged attack damage multiplier — the draw or throw behind a shot, and the hands that hold it steady (× manipulation). A bow's draw-weight and a thrown weapon's force scale with it (ammo damage × weapon drawPower × this). Crossbows & slings are MECHANICAL, they ignore it (the stock/cord does the work)."
     },
     {
         "id": "heal_rate",

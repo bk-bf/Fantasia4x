@@ -2421,7 +2421,7 @@
     "toolTierRequired": 0,
     "toolBoost": {"speed": 0.35, "yield": 0.2},
     "processingType": ["butchery", "cooking", "crafting", "woodcutting"],
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 7,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -2730,7 +2730,7 @@
     "durability"       : 30,
     "maxDurability"    : 30,
     "toolTierRequired" : 0,
-    "weaponProperties" : {"damage": 10, "attackSpeed": 1, "range": 1, "damMin": 7, "damMax": 14, "reach": 2, "damageType": "piercing", "armorPenetration": 0.1, "knockback": 0.2, "staminaCost": 2},
+    "weaponProperties" : {"powerStat": "agility", "damage": 10, "attackSpeed": 1, "range": 1, "damMin": 7, "damMax": 14, "reach": 2, "damageType": "piercing", "armorPenetration": 0.1, "knockback": 0.2, "staminaCost": 2},
     "toolBoost"        : {"speed": 0.45},
     "processingType"   : ["hunting"]
   },
@@ -4084,7 +4084,7 @@
     "tier": 4,
     "maxDurability": 200,
     "durabilityLossPerCombatHit": 4,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 24,
       "attackSpeed"     : 0.85,
       "range"           : 0,
@@ -6529,7 +6529,7 @@
     "tier": 0,
     "maxDurability": 40,
     "durabilityLossPerCombatHit": 2,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 6,
       "attackSpeed"     : 1.0,
       "range"           : 0,
@@ -6615,7 +6615,7 @@
     "tier": 1,
     "maxDurability": 50,
     "durabilityLossPerCombatHit": 2,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 15,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -6646,7 +6646,7 @@
     "tier": 1,
     "maxDurability": 45,
     "durabilityLossPerCombatHit": 2,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 11,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -6713,7 +6713,7 @@
     "maxDurability": 70,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "bronze_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 12,
       "attackSpeed"     : 1.0,
       "range"           : 0,
@@ -6746,7 +6746,7 @@
     "maxDurability": 65,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "bronze_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 13,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -6777,7 +6777,7 @@
     "tier": 1,
     "maxDurability": 80,
     "durabilityLossPerCombatHit": 12,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 4,
       "attackSpeed"     : 1.0,
       "range"           : 6,
@@ -6839,7 +6839,7 @@
     "maxDurability": 100,
     "durabilityLossPerCombatHit": 5,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 11,
       "attackSpeed"     : 1.1,
       "range"           : 0,
@@ -6870,7 +6870,7 @@
     "maxDurability": 120,
     "durabilityLossPerCombatHit": 5,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 16,
       "attackSpeed"     : 1.0,
       "range"           : 0,
@@ -6903,7 +6903,7 @@
     "maxDurability": 110,
     "durabilityLossPerCombatHit": 5,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 17,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -6941,7 +6941,7 @@
     "tier": 3,
     "maxDurability": 130,
     "durabilityLossPerCombatHit": 6,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 28,
       "attackSpeed"     : 0.595,
       "range"           : 0,
@@ -6975,7 +6975,7 @@
     "tier": 3,
     "maxDurability": 160,
     "durabilityLossPerCombatHit": 4,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 24,
       "attackSpeed"     : 0.51,
       "range"           : 0,
@@ -7009,7 +7009,7 @@
     "tier": 3,
     "maxDurability": 110,
     "durabilityLossPerCombatHit": 6,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 19,
       "attackSpeed"     : 0.85,
       "range"           : 0,
@@ -7102,7 +7102,7 @@
     "tier": 1,
     "maxDurability": 55,
     "durabilityLossPerCombatHit": 4,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 9,
       "attackSpeed"     : 0.95,
       "range"           : 0,
@@ -7131,7 +7131,7 @@
     "tier": 1,
     "maxDurability": 35,
     "durabilityLossPerCombatHit": 4,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 2,
       "attackSpeed"     : 1.0,
       "range"           : 0,
@@ -7186,7 +7186,7 @@
     "tier": 4,
     "maxDurability": 150,
     "durabilityLossPerCombatHit": 5,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 32,
       "attackSpeed"     : 0.552,
       "range"           : 0,
@@ -7220,7 +7220,7 @@
     "tier": 4,
     "maxDurability": 220,
     "durabilityLossPerCombatHit": 4,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 38,
       "attackSpeed"     : 0.552,
       "range"           : 0,
@@ -7309,7 +7309,7 @@
     "tier": 2,
     "maxDurability": 60,
     "durabilityLossPerCombatHit": 10,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 3,
       "attackSpeed"     : 1.0,
       "range"           : 7,
@@ -7343,7 +7343,7 @@
     "tier": 2,
     "maxDurability": 25,
     "durabilityLossPerCombatHit": 5,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 9,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -7370,7 +7370,7 @@
     "tier": 1,
     "maxDurability": 50,
     "durabilityLossPerCombatHit": 4,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 8,
       "attackSpeed"     : 0.95,
       "range"           : 0,
@@ -7399,7 +7399,7 @@
     "tier": 2,
     "maxDurability": 70,
     "durabilityLossPerCombatHit": 5,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 14,
       "attackSpeed"     : 0.85,
       "range"           : 0,
@@ -7430,7 +7430,7 @@
     "tier": 1,
     "maxDurability": 50,
     "durabilityLossPerCombatHit": 6,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 10,
       "attackSpeed"     : 1.0,
       "range"           : 0,
@@ -7459,7 +7459,7 @@
     "maxDurability": 100,
     "durabilityLossPerCombatHit": 5,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 14,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -7491,7 +7491,7 @@
     "tier": 2,
     "maxDurability": 70,
     "durabilityLossPerCombatHit": 2,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 15,
       "attackSpeed"     : 0.595,
       "range"           : 0,
@@ -7524,7 +7524,7 @@
     "tier": 0,
     "maxDurability": 50,
     "durabilityLossPerCombatHit": 2,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 7,
       "attackSpeed"     : 0.68,
       "range"           : 0,
@@ -7557,7 +7557,7 @@
     "maxDurability": 120,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 24,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -7591,7 +7591,7 @@
     "maxDurability": 130,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 34,
       "attackSpeed"     : 0.68,
       "range"           : 0,
@@ -7626,7 +7626,7 @@
     "maxDurability": 110,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 22,
       "attackSpeed"     : 0.595,
       "range"           : 0,
@@ -7660,7 +7660,7 @@
     "maxDurability": 200,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 19,
       "attackSpeed"     : 1.0,
       "range"           : 0,
@@ -7693,7 +7693,7 @@
     "maxDurability": 200,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 27,
       "attackSpeed"     : 0.595,
       "range"           : 0,
@@ -7727,7 +7727,7 @@
     "maxDurability": 180,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 15,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -7761,7 +7761,7 @@
     "maxDurability": 200,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 28,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -7796,7 +7796,7 @@
     "maxDurability": 210,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 40,
       "attackSpeed"     : 0.68,
       "range"           : 0,
@@ -7831,7 +7831,7 @@
     "maxDurability": 170,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 20,
       "attackSpeed"     : 0.95,
       "range"           : 0,
@@ -7865,7 +7865,7 @@
     "maxDurability": 180,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 29,
       "attackSpeed"     : 0.552,
       "range"           : 0,
@@ -7899,7 +7899,7 @@
     "maxDurability": 170,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 28,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -8006,7 +8006,7 @@
     "maxDurability": 130,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 12,
       "attackSpeed"     : 1.0,
       "range"           : 0,
@@ -8041,7 +8041,7 @@
     "maxDurability": 200,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 14,
       "attackSpeed"     : 1.1,
       "range"           : 0,
@@ -8076,7 +8076,7 @@
     "maxDurability": 100,
     "durabilityLossPerCombatHit": 5,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 5,
       "attackSpeed"     : 0.9,
       "range"           : 10,
@@ -8110,7 +8110,7 @@
     "tier": 0,
     "maxDurability": 1,
     "durabilityLossPerCombatHit": 1,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"     : 3,
       "attackSpeed": 1.0,
       "range"      : 3,
@@ -8144,7 +8144,7 @@
     "tier": 1,
     "maxDurability": 40,
     "durabilityLossPerCombatHit": 4,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 1,
       "attackSpeed"     : 1.1,
       "range"           : 5,
@@ -8179,7 +8179,7 @@
     "tier": 2,
     "maxDurability": 90,
     "durabilityLossPerCombatHit": 10,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 4,
       "attackSpeed"     : 1.0,
       "range"           : 9,
@@ -8214,7 +8214,7 @@
     "tier": 0,
     "maxDurability": 25,
     "durabilityLossPerCombatHit": 4,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 2,
       "attackSpeed"     : 1.0,
       "range"           : 5,
@@ -8249,7 +8249,7 @@
     "tier": 0,
     "maxDurability": 20,
     "durabilityLossPerCombatHit": 8,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 8,
       "attackSpeed"     : 0.9,
       "range"           : 4,
@@ -8282,7 +8282,7 @@
     "maxDurability": 130,
     "durabilityLossPerCombatHit": 4,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 6,
       "attackSpeed"     : 1.0,
       "range"           : 8,
@@ -8657,7 +8657,7 @@
     "tier": 0,
     "maxDurability": 55,
     "durabilityLossPerCombatHit": 3,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 9,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -8729,7 +8729,7 @@
     "maxDurability": 85,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "copper_smelting",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 10,
       "attackSpeed"     : 1.0,
       "range"           : 0,
@@ -8760,7 +8760,7 @@
     "maxDurability": 110,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "copper_smelting",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 16,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -8793,7 +8793,7 @@
     "maxDurability": 95,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "copper_smelting",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 12,
       "attackSpeed"     : 0.95,
       "range"           : 0,
@@ -8824,7 +8824,7 @@
     "maxDurability": 100,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "copper_smelting",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 10,
       "attackSpeed"     : 0.95,
       "range"           : 0,
@@ -8857,7 +8857,7 @@
     "maxDurability": 130,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "bronze_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 13,
       "attackSpeed"     : 1.05,
       "range"           : 0,
@@ -8889,7 +8889,7 @@
     "maxDurability": 150,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "bronze_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 19,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -8922,7 +8922,7 @@
     "maxDurability": 140,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "bronze_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 13,
       "attackSpeed"     : 0.95,
       "range"           : 0,
@@ -8953,7 +8953,7 @@
     "maxDurability": 125,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "bronze_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 14,
       "attackSpeed"     : 0.85,
       "range"           : 0,
@@ -8986,7 +8986,7 @@
     "maxDurability": 120,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "bronze_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 14,
       "attackSpeed"     : 0.85,
       "range"           : 0,
@@ -9021,7 +9021,7 @@
     "maxDurability": 70,
     "durabilityLossPerCombatHit": 3,
     "researchRequired": "bronze_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 10,
       "attackSpeed"     : 1.05,
       "range"           : 0,
@@ -9056,7 +9056,7 @@
     "maxDurability": 110,
     "durabilityLossPerCombatHit": 3,
     "researchRequired": "bronze_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 17,
       "attackSpeed"     : 0.637,
       "range"           : 0,
@@ -9091,7 +9091,7 @@
     "maxDurability": 130,
     "durabilityLossPerCombatHit": 3,
     "researchRequired": "bronze_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 18,
       "attackSpeed"     : 0.595,
       "range"           : 0,
@@ -9126,7 +9126,7 @@
     "maxDurability": 140,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "bronze_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 17,
       "attackSpeed"     : 0.595,
       "range"           : 0,
@@ -9160,7 +9160,7 @@
     "maxDurability": 165,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "bronze_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 18,
       "attackSpeed"     : 0.595,
       "range"           : 0,
@@ -9195,7 +9195,7 @@
     "maxDurability": 120,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "bronze_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 8,
       "attackSpeed"     : 1.2,
       "range"           : 0,
@@ -9230,7 +9230,7 @@
     "maxDurability": 165,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 17,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -9263,7 +9263,7 @@
     "maxDurability": 175,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 22,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -9298,7 +9298,7 @@
     "maxDurability": 180,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 15,
       "attackSpeed"     : 0.95,
       "range"           : 0,
@@ -9330,7 +9330,7 @@
     "maxDurability": 185,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 24,
       "attackSpeed"     : 0.578,
       "range"           : 0,
@@ -9364,7 +9364,7 @@
     "maxDurability": 180,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 24,
       "attackSpeed"     : 0.578,
       "range"           : 0,
@@ -9399,7 +9399,7 @@
     "maxDurability": 190,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 10,
       "attackSpeed"     : 1.2,
       "range"           : 0,
@@ -9434,7 +9434,7 @@
     "maxDurability": 210,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 20,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -9466,7 +9466,7 @@
     "maxDurability": 215,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 18,
       "attackSpeed"     : 0.95,
       "range"           : 0,
@@ -9498,7 +9498,7 @@
     "maxDurability": 230,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 30,
       "attackSpeed"     : 0.552,
       "range"           : 0,
@@ -9532,7 +9532,7 @@
     "maxDurability": 220,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 20,
       "attackSpeed"     : 0.85,
       "range"           : 0,
@@ -9566,7 +9566,7 @@
     "maxDurability": 240,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 12,
       "attackSpeed"     : 1.2,
       "range"           : 0,
@@ -9601,7 +9601,7 @@
     "maxDurability": 300,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 23,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -9633,7 +9633,7 @@
     "maxDurability": 310,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 30,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -9667,7 +9667,7 @@
     "maxDurability": 290,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 23,
       "attackSpeed"     : 0.95,
       "range"           : 0,
@@ -9700,7 +9700,7 @@
     "maxDurability": 295,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 30,
       "attackSpeed"     : 0.9,
       "range"           : 0,
@@ -9735,7 +9735,7 @@
     "maxDurability": 300,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "agility", 
       "damage"          : 22,
       "attackSpeed"     : 0.95,
       "range"           : 0,
@@ -9767,7 +9767,7 @@
     "maxDurability": 260,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 18,
       "attackSpeed"     : 1.15,
       "range"           : 0,
@@ -9836,7 +9836,7 @@
     "maxDurability": 320,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 32,
       "attackSpeed"     : 0.595,
       "range"           : 0,
@@ -9871,7 +9871,7 @@
     "maxDurability": 330,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 34,
       "attackSpeed"     : 0.552,
       "range"           : 0,
@@ -9905,7 +9905,7 @@
     "maxDurability": 315,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 31,
       "attackSpeed"     : 0.578,
       "range"           : 0,
@@ -9940,7 +9940,7 @@
     "maxDurability": 340,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 44,
       "attackSpeed"     : 0.68,
       "range"           : 0,
@@ -9976,7 +9976,7 @@
     "maxDurability": 310,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 24,
       "attackSpeed"     : 0.8,
       "range"           : 0,
@@ -10010,7 +10010,7 @@
     "maxDurability": 320,
     "durabilityLossPerCombatHit": 1,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "brawn", 
       "damage"          : 14,
       "attackSpeed"     : 1.25,
       "range"           : 0,
@@ -10049,7 +10049,7 @@
     "tier": 1,
     "maxDurability": 110,
     "durabilityLossPerCombatHit": 9,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 4,
       "attackSpeed"     : 1.0,
       "range"           : 7,
@@ -10085,7 +10085,7 @@
     "maxDurability": 130,
     "durabilityLossPerCombatHit": 7,
     "researchRequired": "organized_hunting",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 5,
       "attackSpeed"     : 1.0,
       "range"           : 9,
@@ -10121,7 +10121,7 @@
     "maxDurability": 150,
     "durabilityLossPerCombatHit": 6,
     "researchRequired": "advanced_forestry",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 6,
       "attackSpeed"     : 0.85,
       "range"           : 12,
@@ -10157,7 +10157,7 @@
     "maxDurability": 260,
     "durabilityLossPerCombatHit": 3,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 7,
       "attackSpeed"     : 0.9,
       "range"           : 13,
@@ -10193,7 +10193,7 @@
     "maxDurability": 100,
     "durabilityLossPerCombatHit": 5,
     "researchRequired": "bronze_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 5,
       "attackSpeed"     : 1.0,
       "range"           : 7,
@@ -10230,7 +10230,7 @@
     "maxDurability": 220,
     "durabilityLossPerCombatHit": 3,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 7,
       "attackSpeed"     : 1.0,
       "range"           : 10,
@@ -10268,7 +10268,7 @@
     "maxDurability": 300,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 8,
       "attackSpeed"     : 1.0,
       "range"           : 11,
@@ -10305,7 +10305,7 @@
     "tier": 1,
     "maxDurability": 60,
     "durabilityLossPerCombatHit": 3,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 3,
       "attackSpeed"     : 0.9,
       "range"           : 8,
@@ -10341,7 +10341,7 @@
     "maxDurability": 200,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 3,
       "attackSpeed"     : 1.0,
       "range"           : 7,
@@ -10379,7 +10379,7 @@
     "maxDurability": 40,
     "durabilityLossPerCombatHit": 6,
     "researchRequired": "bronze_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 11,
       "attackSpeed"     : 0.95,
       "range"           : 5,
@@ -10412,7 +10412,7 @@
     "maxDurability": 30,
     "durabilityLossPerCombatHit": 10,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 13,
       "attackSpeed"     : 0.9,
       "range"           : 4,
@@ -10446,7 +10446,7 @@
     "maxDurability": 60,
     "durabilityLossPerCombatHit": 6,
     "researchRequired": "iron_working",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 14,
       "attackSpeed"     : 0.95,
       "range"           : 3,
@@ -10481,7 +10481,7 @@
     "maxDurability": 40,
     "durabilityLossPerCombatHit": 6,
     "researchRequired": "steel_making",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 9,
       "attackSpeed"     : 1.25,
       "range"           : 5,
@@ -10515,7 +10515,7 @@
     "maxDurability": 120,
     "durabilityLossPerCombatHit": 4,
     "researchRequired": "runic_inscription",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "awareness", 
       "damage"          : 18,
       "attackSpeed"     : 1.0,
       "range"           : 6,
@@ -10553,7 +10553,7 @@
     "maxDurability": 120,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "arcane_lapidary",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "intellect", 
       "damage"          : 6,
       "attackSpeed"     : 0.95,
       "range"           : 5,
@@ -10589,7 +10589,7 @@
     "maxDurability": 120,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "arcane_lapidary",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "intellect", 
       "damage"          : 5,
       "attackSpeed"     : 0.95,
       "range"           : 5,
@@ -10625,7 +10625,7 @@
     "maxDurability": 120,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "arcane_lapidary",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "intellect", 
       "damage"          : 4,
       "attackSpeed"     : 1.0,
       "range"           : 6,
@@ -10661,7 +10661,7 @@
     "maxDurability": 160,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "attunement",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "intellect", 
       "damage"          : 10,
       "attackSpeed"     : 1.0,
       "range"           : 7,
@@ -10697,7 +10697,7 @@
     "maxDurability": 160,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "attunement",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "intellect", 
       "damage"          : 9,
       "attackSpeed"     : 1.0,
       "range"           : 7,
@@ -10733,7 +10733,7 @@
     "maxDurability": 160,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "attunement",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "intellect", 
       "damage"          : 8,
       "attackSpeed"     : 1.05,
       "range"           : 8,
@@ -10769,7 +10769,7 @@
     "maxDurability": 280,
     "durabilityLossPerCombatHit": 2,
     "researchRequired": "mythic_attunement",
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "intellect", 
       "damage"          : 18,
       "attackSpeed"     : 1.0,
       "range"           : 11,
@@ -13229,7 +13229,7 @@
     "tier": 1,
     "maxDurability": 150,
     "durabilityLossPerCombatHit": 2,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "intellect", 
       "damage"          : 9,
       "attackSpeed"     : 0.9,
       "range"           : 7,
@@ -13265,7 +13265,7 @@
     "tier": 2,
     "maxDurability": 180,
     "durabilityLossPerCombatHit": 1,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "intellect", 
       "damage"          : 14,
       "attackSpeed"     : 1.0,
       "range"           : 9,
@@ -13301,7 +13301,7 @@
     "tier": 1,
     "maxDurability": 140,
     "durabilityLossPerCombatHit": 2,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "intellect", 
       "damage"          : 8,
       "attackSpeed"     : 0.9,
       "range"           : 7,
@@ -13337,7 +13337,7 @@
     "tier": 2,
     "maxDurability": 170,
     "durabilityLossPerCombatHit": 1,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "intellect", 
       "damage"          : 13,
       "attackSpeed"     : 1.0,
       "range"           : 9,
@@ -13373,7 +13373,7 @@
     "tier": 1,
     "maxDurability": 150,
     "durabilityLossPerCombatHit": 2,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "intellect", 
       "damage"          : 7,
       "attackSpeed"     : 1.0,
       "range"           : 8,
@@ -13409,7 +13409,7 @@
     "tier": 2,
     "maxDurability": 180,
     "durabilityLossPerCombatHit": 1,
-    "weaponProperties": {
+    "weaponProperties": {"powerStat": "intellect", 
       "damage"          : 12,
       "attackSpeed"     : 1.1,
       "range"           : 10,

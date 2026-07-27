@@ -42,7 +42,7 @@
     const parts: string[] = [];
     for (const t of pawn.traits ?? []) {
       const e = t.effects as Record<string, number> | undefined;
-      const net = (e?.[`${key}Bonus`] ?? 0) - (e?.[`${key}Penalty`] ?? 0);
+      const net = e?.[`${key}Bonus`] ?? 0; // signed: a flaw authors a negative bonus
       if (net) parts.push(`${net > 0 ? '+' : '−'}${Math.abs(net)} ${t.name}`);
     }
     return parts.join(', ');

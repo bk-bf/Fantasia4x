@@ -503,8 +503,7 @@ function traitPolarity(t: any): 'positive' | 'negative' {
   let pos = false;
   let neg = false;
   for (const [k, v] of Object.entries(e)) {
-    if (k.endsWith('Bonus')) pos = true;
-    else if (k.endsWith('Penalty')) neg = true;
+    if (k.endsWith('Bonus')) (v as number) < 0 ? (neg = true) : (pos = true);
     else if (v && typeof v === 'object') {
       for (const mv of Object.values(v)) {
         if (typeof mv === 'number') {
@@ -529,7 +528,7 @@ function flawMagnitude(t: any): number {
   const e = t.effects ?? {};
   let m = 0;
   for (const [k, v] of Object.entries(e)) {
-    if (k.endsWith('Penalty')) m += Math.abs(v as number);
+    if (k.endsWith('Bonus') && (v as number) < 0) m += Math.abs(v as number);
     else if (v && typeof v === 'object') for (const mv of Object.values(v)) if (typeof mv === 'number' && mv < 1) m += (1 - mv) * 6;
   }
   if (t.kind === 'wound') m += 5; // a permanent injury is a heavy flaw even with no stat block
@@ -552,7 +551,7 @@ function traitGating(t: any): TraitGating {
 function classifyTrait(t: any): BuildClass[] {
   const e = t.effects ?? {};
   const set = new Set<BuildClass>();
-  const stat = (k: string) => e[k + 'Bonus'] != null || e[k + 'Penalty'] != null;
+  const stat = (k: string) => e[k + 'Bonus'] != null;
   if (stat('brawn')) MELEE_ALL.forEach((b) => set.add(b));
   if (stat('vigour')) { FRONTLINE.forEach((b) => set.add(b)); set.add('Pure Tank'); }
   if (stat('agility')) { set.add('Assassin (Dagger)'); set.add('Fencer (Rapier)'); DUELIST.forEach((b) => set.add(b)); }
@@ -574,8 +573,8 @@ function traitEffect(t: any): string {
   const e = t.effects ?? {};
   const parts: string[] = [];
   for (const stat of Object.keys(STAT_ABBR)) {
-    if (e[stat + 'Bonus'] != null) parts.push(`${STAT_ABBR[stat]} +${e[stat + 'Bonus']}`);
-    if (e[stat + 'Penalty'] != null) parts.push(`${STAT_ABBR[stat]} −${e[stat + 'Penalty']}`);
+    const v = e[stat + 'Bonus'];
+    if (v != null) parts.push(`${STAT_ABBR[stat]} ${v < 0 ? '−' : '+'}${Math.abs(v as number)}`);
   }
   const mults = (obj: any, suffix: string) => {
     if (!obj) return;

@@ -266,20 +266,17 @@ function dpsProposed(
 
 const FLAT = { strike: 1, cadence: 1, precision: 1 };
 
-describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
+describe('STAT AXIS — the landed two-axis split', () => {
   it('cadence parity: the mirrored constants still match the engine', () => {
-    // The stat ALREADY folds in the equipped weapon's own attackSpeed, so the model must not
-    // double-apply it. Greatsword 0.595 at AGILITY 30 → (1 + 0.6) × 0.595.
+    // LANDED (task 9): the stat is the rolled `attack_speed` APTITUDE × capacities, folding in the
+    // equipped weapon's own attackSpeed. A core stat moves it not at all.
     const w = T4.find((x) => x.id === 'rune_sung_greatsword')!;
     const p = armed(w.id, { agility: 30 });
-    expect(pawnStatService.evaluateStat('attack_speed', p)).toBeCloseTo(
-      (1 + 20 * 0.03) * w.attackSpeed,
-      5
-    );
+    expect(pawnStatService.evaluateStat('attack_speed', p)).toBeCloseTo(w.attackSpeed, 5);
     expect(swingsPerSec(1)).toBeCloseTo(TPS / BASE_ATTACK_INTERVAL_TICKS, 5);
   });
 
-  it('BASELINE — reproduces the failure: a weapon’s own power stat is not its best stat', () => {
+  it('LANDED — a weapon’s own power stat IS its best stat', () => {
     const t = dummy('armoured');
     const rows: string[] = [
       '[SHIPPED] the named power stat raised to 40 vs the rival stat raised to 40'
@@ -309,12 +306,11 @@ describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
         `${lostTwoH.length} of ${twoH.length} two-handers, ${lost.length - lostTwoH.length} of ${T4.length - twoH.length} one-handers`
     );
     console.log(rows.join('\n'));
-    // The mechanism, pinned: AGILITY out-earns BRAWN on exactly the weapons BRAWN is supposed to own. A slow
-    // two-hander sits far below the cadence ceiling, so every AGILITY point still buys swings there, while
-    // a fast one-hander is already capped and AGILITY's biggest channel is dead. The label is decoration
-    // precisely where it matters most.
-    expect(lostTwoH.length).toBeGreaterThanOrEqual(twoH.length * 0.6);
-    expect(lost.length - lostTwoH.length).toBe(0);
+    // LANDED (tasks 3–5, 9). Before the decoupling AGILITY out-earned BRAWN on 6 of the 8 two-handers —
+    // exactly the weapons BRAWN is supposed to own — because it bought cadence, to-hit and crit on top
+    // of its own damage. It buys none of those now, so every weapon answers to the stat it names.
+    expect(lost.length, "the weapon's own power stat is its best stat").toBe(0);
+    expect(lostTwoH.length).toBe(0);
   });
 
   it('ADOPTED — the grip decides which physique wins', () => {
@@ -361,7 +357,7 @@ describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
 
   it('PROPOSAL — a stat point can no longer be spent on the wrong weapon', () => {
     // The specific inversion from the audit: the warhammer and the greatsword are BRAWN weapons that
-    // currently pay MORE for AGILITY. Under the proposal a nimble pawn gains nothing from them.
+    // used to pay MORE for AGILITY. A nimble pawn now gains nothing from them.
     const t = dummy('armoured');
     const rows = [
       '[INVERSION] the two weapons the audit named',
@@ -376,8 +372,8 @@ describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
       rows.push(
         w.name.padEnd(30) + f(sStr) + ' /' + f(sDex) + '       ' + f(pStr) + ' /' + f(pDex)
       );
-      expect(sDex).toBeGreaterThan(sStr); // shipped: the inversion
-      expect(pStr).toBeGreaterThan(pDex); // proposed: corrected
+      expect(sStr).toBeGreaterThan(sDex); // LANDED: the two-hander answers to brawn
+      expect(pStr).toBeGreaterThan(pDex); // …and the model agrees
     }
     console.log(rows.join('\n'));
   });
@@ -581,35 +577,32 @@ describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
     expect(res.proposed[0]).toBeGreaterThan(Math.max(...res.shipped));
   });
 
-  it('SIGNED STAT GRANTS — negative traits currently RAISE their stat; signed values fix it', () => {
-    const flaws = TRAITS.filter((t) =>
+  it('SIGNED STAT GRANTS — a flaw lowers its stat, through the real bake path', () => {
+    // LANDED (task 1): every `*Penalty` key was re-authored as a negative `*Bonus` and both bake paths
+    // collapsed to one signed add. This pins the corrected behaviour.
+    const leftovers = TRAITS.filter((t) =>
       Object.keys(t.effects ?? {}).some((k) => k.endsWith('Penalty'))
     );
-    // Nothing in the data authors a negative *Bonus today, so re-authoring penalties as signed
-    // bonuses cannot double-negate anything already shipped.
-    const negativeBonuses = TRAITS.filter((t) =>
+    const negatives = TRAITS.filter((t) =>
       Object.entries(t.effects ?? {}).some(([k, v]) => k.endsWith('Bonus') && (v as number) < 0)
     );
-    const sample3 = flaws.slice(0, 3);
     const rows = [
-      `[SIGNED GRANTS] ${flaws.length} traits author a *Penalty; ${negativeBonuses.length} author a negative *Bonus`
+      `[SIGNED GRANTS] ${leftovers.length} traits still author a *Penalty; ${negatives.length} author a negative *Bonus`
     ];
-    for (const t of sample3) {
+    for (const t of negatives.slice(0, 3)) {
       const now = makePawn();
       applyGainedTrait(now, t as Trait);
-      const key = Object.keys(t.effects).find((k) => k.endsWith('Penalty'))!;
-      const stat = key.replace('Penalty', '').toLowerCase() as keyof typeof baseStats;
-      // Proposed bake: one signed add, no key-suffix branch at all.
-      const proposed = { ...baseStats };
-      proposed[stat] = Math.max(1, proposed[stat] - (t.effects[key] as number));
+      const key = Object.keys(t.effects).find(
+        (k) => k.endsWith('Bonus') && (t.effects[k] as number) < 0
+      )!;
+      const stat = key.replace('Bonus', '').toLowerCase() as keyof typeof baseStats;
       rows.push(
-        `${String(t.id).padEnd(24)} ${key.padEnd(20)} ${String(t.effects[key]).padStart(3)}  →  shipped ${stat} ${now.stats[stat]}   signed ${proposed[stat]}`
+        `${String(t.id).padEnd(24)} ${key.padEnd(20)} ${String(t.effects[key]).padStart(3)}  →  ${stat} ${baseStats[stat]} → ${now.stats[stat]}`
       );
-      expect(now.stats[stat]).toBeGreaterThan(baseStats[stat]); // the bug
-      expect(proposed[stat]).toBeLessThan(baseStats[stat]); // the fix
+      expect(now.stats[stat]).toBeLessThan(baseStats[stat]);
     }
     console.log(rows.join('\n'));
-    expect(negativeBonuses.length).toBe(0);
+    expect(leftovers.length).toBe(0);
   });
 });
 

@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, beforeEach, expect } from 'vitest';
 import { pickEscalatedCreature, tickLairs } from '$lib/game/services/entity/entitySpawning';
+import { rng } from '$lib/game/core/rng';
 import {
   LAIR_TICK_INTERVAL,
   LAIR_MAX_ESCALATION,
@@ -11,6 +12,9 @@ import type { CreatureDefinition } from '$lib/game/core/Creatures';
 const wolf = (tier: number) =>
   ({ id: `w${tier}`, species: 'wolf', tier }) as unknown as CreatureDefinition;
 const POOL = [wolf(1), wolf(2), wolf(3), wolf(4), wolf(5)];
+
+// Lair escalation rolls; without a pinned seed this file failed ~1 run in 3 in isolation.
+beforeEach(() => rng.reseed(20260727));
 
 describe('§3a pickEscalatedCreature — tier targeting', () => {
   it('climbs the ladder with level; T5 only at max & no living boss', () => {

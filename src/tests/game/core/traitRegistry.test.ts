@@ -280,13 +280,11 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
   it('flaw tier: every negative-rarity trait is a pure downside (no upside effect)', () => {
     for (const t of ALL) {
       if (t.rarity !== 'negative') continue;
-      // A flaw's effects must contain NO positive term (no *Bonus, no >1 mult, no positive resistance).
+      // A flaw's effects must contain NO positive term. Core-stat grants are SIGNED now, so a flaw's
+      // `*Bonus` has to be negative — the key no longer tells you the direction, the value does.
       for (const [k, v] of Object.entries(t.effects ?? {})) {
         if (typeof v === 'number')
-          expect(
-            k.endsWith('Bonus') ? false : k.endsWith('Penalty') ? true : v <= 0,
-            `${t.id} (flaw) has an upside: ${k}=${v}`
-          ).toBe(true);
+          expect(v <= 0, `${t.id} (flaw) has an upside: ${k}=${v}`).toBe(true);
         else
           for (const m of Object.values(v as Record<string, number>))
             expect(m, `${t.id} (flaw) work mult ${m} is an upside`).toBeLessThanOrEqual(1);

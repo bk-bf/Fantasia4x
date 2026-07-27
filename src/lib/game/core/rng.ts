@@ -42,6 +42,14 @@ export function makeSeededRng(seed: number): () => number {
 }
 
 /**
+ * Seed used when a stream is constructed without one. FIXED on purpose: an unseeded stream used to
+ * fall back to `Date.now() ^ Math.random()`, which made any code path that forgot to reseed
+ * irreproducible — and every balance measurement is only as trustworthy as the RNG under it. A new
+ * game still randomises explicitly via `freshSeed()`.
+ */
+const DEFAULT_SEED = 0x5eed_1234;
+
+/**
  * A reseedable random stream with the convenience helpers the codebase needs.
  * Holds its current 32-bit state so it can be snapshotted/reseeded for tests.
  */
@@ -49,7 +57,7 @@ export class SeededRng {
   private next: () => number;
   private _seed: number;
 
-  constructor(seed: number = (Date.now() ^ (Math.random() * 0x100000000)) >>> 0) {
+  constructor(seed: number = DEFAULT_SEED) {
     this._seed = seed >>> 0;
     this.next = mulberry32(this._seed);
   }

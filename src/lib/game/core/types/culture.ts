@@ -270,19 +270,16 @@ export interface Trait {
    *  PawnStatService work mults + resistance stats + heal_rate, and Combat resistances.
    *  The old grab-bag of unread effect keys (telepathicRange, memoryBonus…) was pruned. */
   effects: {
-    // Stat bonuses/penalties — applied at pawn generation (applyCulturalTraitBonuses).
+    // Core-stat grants — SIGNED. A flaw authors a negative value (`"agilityBonus": -2`); there is no
+    // separate `*Penalty` key, because having one meant the bake path had to remember to negate it and
+    // it never did — every flaw in the game was a blessing. One key, one sign, no branch.
+    // Applied at generation (applyCulturalTraitBonuses) and on gain (applyGainedTrait).
     brawnBonus?: number;
     agilityBonus?: number;
     intellectBonus?: number;
     awarenessBonus?: number;
     charismaBonus?: number;
     vigourBonus?: number;
-    brawnPenalty?: number;
-    agilityPenalty?: number;
-    intellectPenalty?: number;
-    awarenessPenalty?: number;
-    charismaPenalty?: number;
-    vigourPenalty?: number;
 
     // Work modifiers — each maps a workType (or "all") to a multiplier applied
     // directly to the matching stats.jsonc output (see traits.jsonc header).

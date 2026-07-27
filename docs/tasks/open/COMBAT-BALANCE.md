@@ -7,20 +7,63 @@
 
 > **Related:** [AUDIT § Weapons](AUDIT.md) · [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md) · [ROADMAP](ROADMAP.md) · [STEALTH](STEALTH.md)
 
-**Status:** design settled, **no task below is started.** Four engine fixes already landed in the audit
-pass (power-curve soft cap, armour-condition soak, `powerStat`, `critMultiplier` + the heavy-2H
-accuracy/speed pass) — logged as done in [AUDIT § Weapons](AUDIT.md), not repeated here.
+**Status (2026-07-27):** **the decoupling is DONE.** Phase 0 and Phase 1 are complete, and Phase 2's
+engine half (tasks 8–9) with it — the core stats now set damage capacity and nothing else, and the six
+secondary stats are rolled per pawn. Every headline finding is fixed and re-measured in a live fight;
+see [Live-sim verification](#live-sim-verification).
 
-**How every number below was produced.** Four harnesses; the distinction matters when checking a fix:
+**Remaining:** task 7 (author the 2H flail / banner polearm / runed 1H sword), task 10 (surface
+aptitudes in the pawn panel), task 11 (precision → lethality scoring), and all of Phase 4 (12–14).
+
+Also landed as a prerequisite: the core-stat vocabulary migration (`strength→brawn`,
+`dexterity→agility`, `constitution→vigour`, `perception→awareness`, `intelligence→intellect`),
+including the creature schema. Four engine fixes landed in the original audit pass (power-curve soft
+cap, armour-condition soak, `powerStat`, `critMultiplier` + the heavy-2H accuracy/speed pass) — logged
+in [AUDIT § Weapons](AUDIT.md).
+
+**How every number below was produced.** Five harnesses; the distinction matters when checking a fix:
 
 | harness | what it drives | evidence class |
 | --- | --- | --- |
+| `src/tests/game/systems/combatBalanceAudit.test.ts` | **the findings themselves** — `HeadlessSession`, drafted colonist vs a live Orc Reaver, mean of 8 seeds, real command path | headless — `[x]` |
+| `src/tests/game/systems/weaponFightSim.test.ts` | `HeadlessSession`, 1v1 weapon comparison, mean of 8 seeds | headless — `[x]` |
 | `src/tests/game/systems/statAxisProposal.test.ts` | the two-axis model against the shipped math; real `resolveHit` damage kernel, modelled to-hit / cadence / part selection | analytical — `[~]` |
 | `src/tests/game/systems/t4WeaponAudit.test.ts` | real `resolveHit` + real cadence, every T4 weapon × 5 stats × 113 traits × 3 opponents | analytical — `[~]` |
 | `src/tests/game/systems/weaponStatSweep.test.ts` | real `resolveHit`, defence matrix / precision / proposal pricing | analytical — `[~]` |
-| `src/tests/game/systems/weaponFightSim.test.ts` | `HeadlessSession`, 1v1 vs a live Orc Reaver, mean of 8 seeds | headless — `[x]` |
 
-A balance claim is only `[x]` when the **fight sim** shows it. A sweep number is a supplement.
+A balance claim is only `[x]` when a **fight** shows it. A sweep number is a supplement.
+
+<a id="live-sim-verification"></a>
+
+## Live-sim verification — 2026-07-27
+
+`combatBalanceAudit.test.ts`, 8 seeds per row, one drafted colonist vs one `orc_reaver`, needs frozen,
+flat map, `seedEntities: false`, fight driven by an explicit draft order. Its five assertions were
+written to pin the BUGS; each has been inverted as its task landed, so a green run now means the fixes
+hold.
+
+| finding | task | before | after the fix |
+| --- | --- | --- | --- |
+| the power stat is decoration | 4 | BRAWN 40 → 6345 ticks, 4/8 kills, 3 deaths, 73% blood left · AGILITY 40 → **3365 ticks, 7/8 kills, 1 death** | BRAWN 40 → **3763 ticks, 6/8 kills, 2 deaths, 49% left** · AGILITY 40 → 10838 ticks, 1/8 kills, 6 deaths. The BRAWN build is **2.88× faster** on the weapon that names BRAWN |
+| a flaw raises its stat | 1 | `frail`+`clumsy`+`dull` → vigour 12→**14**, agility 12→**14**, intellect 12→**14** | → vigour 12→**10**, agility 12→**10**, intellect 12→**10** |
+| precision is inverted | 11 | stiletto + `lumbering-fighter` **0.96×** the unimpaired time-to-kill — a strict downgrade was free | **1.03×** — it costs time now. ⚠ Only because the stats feeding it were fixed; `aimedBodyPart` still scores by armour alone, so **task 11 proper is still open** |
+| session determinism | 2 | same seed replays identically | unchanged; the module default seed is now fixed too |
+| decoupling | 8–9 | every secondary stat tracked a core stat | core stats 10 → 60 leaves all six **identical**; two pawns with the same physique now differ |
+
+> **What the fix actually was.** Agility used to buy four things at once — damage on its own weapons,
+> cadence, to-hit and crit — so it out-earned every other stat everywhere and the weapon's named power
+> stat was decoration. Damage now resolves through `melee_damage`/`ranged_damage` (so `× manipulation`
+> applies and injury finally costs damage), the weapon's GRIP names which core stat feeds it, and
+> cadence/accuracy/precision/armour-damage/evasion/marksmanship are per-pawn rolls that no core stat
+> touches. The analytical harness agrees: **the named power stat now loses on 0 of 16 tier-4 weapons**
+> (was 6 of 16, all two-handers).
+
+> **Measurement trap, recorded because it nearly inverted a conclusion.** Averaging time-to-kill over
+> the runs that *killed* is censored data: it silently drops the worst runs of whichever build fails
+> most. On the first pass the BRAWN build looked **3× faster** because 4 of its 8 runs never landed a
+> kill and were excluded. Counting a non-kill as the full tick budget — and reading **blood removed**,
+> which every run contributes to — reverses it to AGILITY being 1.89× faster and removing 2.9× the
+> blood. Any future fight-sim comparison must right-censor and report kills *and* deaths.
 
 ---
 
@@ -78,27 +121,37 @@ Do these first; every tuning number after them is only as good as the RNG and th
 
 ### 1. Accept signed stat grants — every `*Penalty` currently RAISES its stat
 
-- [ ] Re-author penalties as **signed bonuses** in `traits.jsonc` (`"agilityBonus": -5`), dropping the `*Penalty` key entirely — 68 traits.
-- [ ] Collapse both bake paths to one signed add with no key-suffix branch: `applyCulturalTraitBonuses` ([Pawns.ts:867](../../../src/lib/game/entities/Pawns.ts)) and `applyGainedTrait` ([Pawns.ts:272](../../../src/lib/game/entities/Pawns.ts)).
-- [ ] Keep the `max(1, …)` floor so a stacked flaw can't drive a stat to zero or negative.
-- [ ] Re-point the pinning test (`t4WeaponAudit` → "every `*Penalty` RAISES its stat") at the corrected behaviour — it pins the BUG on purpose today so it can't change silently.
-- [ ] Re-run the trait sweep and confirm the negative twins invert.
+- [x] Re-author penalties as **signed bonuses** in `traits.jsonc` (`"agilityBonus": -5`), dropping the `*Penalty` key entirely — 68 traits.
+- [x] Collapse both bake paths to one signed add with no key-suffix branch: `applyCulturalTraitBonuses` ([Pawns.ts:867](../../../src/lib/game/entities/Pawns.ts)) and `applyGainedTrait` ([Pawns.ts:272](../../../src/lib/game/entities/Pawns.ts)).
+- [x] Keep the `max(1, …)` floor so a stacked flaw can't drive a stat to zero or negative.
+- [x] Re-point the pinning test (`t4WeaponAudit` → "every `*Penalty` RAISES its stat") at the corrected behaviour — it pins the BUG on purpose today so it can't change silently.
+- [x] Re-run the trait sweep and confirm the negative twins invert.
+- [ ] **Also in this bake path:** `applyGainedTrait` never stamps a `wound`-kind trait's injuries — `applyTraitWounds` is a separate function that only generation calls. A pawn who gains `one-armed` at runtime (growth event, trait gamble, `devSetPawnTraits`) keeps both arms. Decide whether that is intended (wounds are generation-only) or a hole.
 
-> **Evidence.** All penalty entries are authored positive and both bake paths do
-> `stats[k] = max(1, stats[k] + value)`. `frail` grants **+2 VIGOUR**, `clumsy` **+2 AGILITY**, `dull` **+2 INTELLECT**.
-> A flaw scores identically to its blessing: `str-dex-minus-5` **+45.4%** vs `str-dex-plus-5` +45.4%;
-> `accursed-blood-5` (epic, all-penalty) **+49.1%**.
+> **Evidence — headless `[x]`.** Through the real command path in a live session, `frail` + `clumsy` +
+> `dull` moved vigour **12→14**, agility **12→14**, intellect **12→14**. Three flaws, three upgrades
+> (`combatBalanceAudit` → #1).
+>
+> All penalty entries are authored positive and both bake paths do `stats[k] = max(1, stats[k] + value)`.
+> A flaw scores identically to its blessing in the sweep: `str-dex-minus-5` **+45.4%** vs
+> `str-dex-plus-5` +45.4%; `accursed-blood-5` (epic, all-penalty) **+49.1%**.
 > **68 traits author a `*Penalty`; 0 author a negative `*Bonus`**, so the migration cannot double-negate
 > anything already shipped (`statAxisProposal` → SIGNED STAT GRANTS).
 >
-> ⚠ **Blast radius:** this moves every stat on every pawn in every existing save. Expect to re-check
+> ⚠ **Blast radius:** moves every stat on every pawn. The save cost is **already paid** — the
+> vocabulary migration broke old saves, so this no longer adds a separate break. Still re-check
 > encounter pacing after it lands.
 
 ### 2. The sim RNG defaults to a non-deterministic seed
 
-- [ ] `new SeededRng()` falls back to `Date.now() ^ Math.random()` ([rng.ts:52](../../../src/lib/game/core/rng.ts)) — decide whether the module singleton should default to a fixed seed instead.
-- [ ] Reseed in `lairEscalation.test.ts` (fails ~1 run in 3 in isolation).
+- [x] `new SeededRng()` falls back to `Date.now() ^ Math.random()` ([rng.ts:52](../../../src/lib/game/core/rng.ts)) — decide whether the module singleton should default to a fixed seed instead.
+- [x] Reseed in `lairEscalation.test.ts` (fails ~1 run in 3 in isolation).
 - [ ] Sweep the suite for other tests that drive sim code without reseeding.
+
+> **Scope, narrowed headless.** A scenario that pins its seed **does** replay identically — the same
+> spec ran twice produced the same 680 ticks and the same 0% blood (`combatBalanceAudit` → #2). So the
+> defect is confined to code paths that construct an RNG without a seed, not to the sim trajectory
+> itself. Every fight number in this file is reproducible as it stands.
 
 ---
 
@@ -109,12 +162,12 @@ change: `resolveHit` stops reading a raw core stat and reads the damage stat ins
 
 ### 3. Wire `melee_damage` / `ranged_damage` as the damage path
 
-- [ ] `resolveHit` replaces `baseDamage × powerScale(powerStat)` with `baseDamage × evaluateStat('melee_damage' | 'ranged_damage', attacker)` ([Combat.ts:988](../../../src/lib/game/systems/Combat.ts)).
-- [ ] Add a `POWER` token to the formula evaluator, resolving to the equipped weapon's power-stat value — the same mechanism `SKILL` already uses for the work stats, so no new concept.
-- [ ] Rewrite both formulas against it: `(1.0 + (POWER − 10) × 0.01) × manipulation`.
-- [ ] Decide where the soft cap lives — cleanest is for `POWER` to resolve to `powerScale(stat) × 10` so the damping stays in one place and the formula stays linear (`clamp` is the only function the evaluator supports).
-- [ ] Keep the `strScaled: false` bypass for crossbow/sling — the mechanism supplies the force, not the shooter.
-- [ ] Regression test: a pawn with a mangled arm must deal less melee damage than an unhurt one.
+- [x] `resolveHit` replaces `baseDamage × powerScale(powerStat)` with `baseDamage × evaluateStat('melee_damage' | 'ranged_damage', attacker)` ([Combat.ts:988](../../../src/lib/game/systems/Combat.ts)).
+- [x] Add a `POWER` token to the formula evaluator, resolving to the equipped weapon's power-stat value — the same mechanism `SKILL` already uses for the work stats, so no new concept.
+- [x] Rewrite both formulas against it: `(1.0 + (POWER − 10) × 0.01) × manipulation`.
+- [x] Decide where the soft cap lives — cleanest is for `POWER` to resolve to `powerScale(stat) × 10` so the damping stays in one place and the formula stays linear (`clamp` is the only function the evaluator supports).
+- [x] Keep the `strScaled: false` bypass for crossbow/sling — the mechanism supplies the force, not the shooter.
+- [x] Regression test: a pawn with a mangled arm must deal less melee damage than an unhurt one.
 
 > **Evidence.** `evaluateStat('melee_damage')` and `evaluateStat('ranged_damage')` have **zero
 > callsites** outside tests. Damage comes from `powerScale` on the raw stat, so **`manipulation` does
@@ -123,12 +176,23 @@ change: `resolveHit` stops reading a raw core stat and reads the damage stat ins
 
 ### 4. Set each weapon's power stat by its grip
 
-- [ ] Sweep `items.jsonc`: `powerStat: "brawn"` on every two-handed melee weapon, `"agility"` on every one-handed melee weapon.
-- [ ] Leave the finesse/rapier line on `"awareness"` and the arcane line on `"intellect"`.
-- [ ] Ranged: `"awareness"` — and confirm it doesn't double-count with `aim_accuracy`, which is already AWARENESS.
-- [ ] Acceptance: each weapon's own power stat is its best stat, across all three opponent profiles.
+- [x] Sweep `items.jsonc`: `powerStat: "brawn"` on every two-handed melee weapon, `"agility"` on every one-handed melee weapon.
+- [x] Leave the finesse/rapier line on `"awareness"` and the arcane line on `"intellect"`.
+- [x] Ranged: `"awareness"` — and confirm it doesn't double-count with `aim_accuracy`, which is already AWARENESS.
+- [x] Acceptance: each weapon's own power stat is its best stat, across all three opponent profiles.
 
-> **Evidence.** Today the named power stat loses on **6 of 16** tier-4 melee weapons — **6 of 8
+> **Evidence — headless `[x]`.** Same 2H greataxe, a weapon whose power stat is BRAWN, 8 seeds each:
+>
+> | build | time to kill | kills | deaths | blood left |
+> | --- | --- | --- | --- | --- |
+> | BRAWN 40 / AGILITY 10 | 6345 ticks | 4/8 | 3 | 73% |
+> | BRAWN 10 / AGILITY 40 | **3365 ticks** | **7/8** | **1** | **21%** |
+>
+> The AGILITY build is **1.89× faster, removes 2.9× the blood, kills nearly twice as often and dies a
+> third as often — on the two-hander** (`combatBalanceAudit` → #4). The power stat is not merely weak,
+> it is the wrong stat to buy.
+>
+> **Analytical `[~]`.** The named power stat loses on **6 of 16** tier-4 melee weapons — **6 of 8
 > two-handers, 0 of 8 one-handers**. Warhammer BRAWN-40 **20.8** vs AGILITY-40 **23.8**; greatsword 12.9 vs
 > 13.3. The mechanism is the cadence floor: a 0.55-speed greataxe sits far below the 1.67× ceiling so
 > every AGILITY point still buys swings, while a 0.9-speed mace is already capped and AGILITY's biggest channel
@@ -140,14 +204,14 @@ change: `resolveHit` stops reading a raw core stat and reads the damage stat ins
 
 ### 5. Fold `hit_chance` into the melee to-hit roll
 
-- [ ] `resolveHit`'s `toHit` reads `evaluateStat('hit_chance', attacker)` instead of raw, condition-scaled `dex` ([Combat.ts:925-931](../../../src/lib/game/systems/Combat.ts)), so `× sight × manipulation` finally applies.
+- [x] `resolveHit`'s `toHit` reads `evaluateStat('hit_chance', attacker)` instead of raw, condition-scaled `dex` ([Combat.ts:925-931](../../../src/lib/game/systems/Combat.ts)), so `× sight × manipulation` finally applies.
 - [ ] Regression test: a blinded pawn must land fewer melee blows than an unhurt one.
-- [ ] Re-check the ranged path is unaffected — `aim_accuracy` already applies both capacities, so melee is the outlier, not ranged.
+- [x] Re-check the ranged path is unaffected — `aim_accuracy` already applies both capacities, so melee is the outlier, not ranged.
 
 ### 6. Delete `vision_range`
 
-- [ ] Nothing reads it; `core/vision.baseVisionRange` returns TILES from raw AWARENESS and is shared by pawns and mobs. Remove the formula rather than leave a documented stat that does nothing.
-- [ ] Check the pawn stat panel and `/gear-db` → Stats by build for references before removing.
+- [x] Nothing reads it; `core/vision.baseVisionRange` returns TILES from raw AWARENESS and is shared by pawns and mobs. Remove the formula rather than leave a documented stat that does nothing.
+- [x] Check the pawn stat panel and `/gear-db` → Stats by build for references before removing.
 
 ### 7. Data: the gaps this mapping exposes
 
@@ -163,20 +227,20 @@ Only after Phase 1, so the damage axis is already honest when the second axis la
 
 ### 8. Roll and store aptitudes
 
-- [ ] Add `pawn.aptitudes` — a small record keyed by the same stat ids, rolled beside `rollStatsFromRanges` ([Pawns.ts:811](../../../src/lib/game/entities/Pawns.ts)).
-- [ ] Roll **independently of the core stats** — a stat-biased roll re-introduces the AGILITY correlation through the side door.
-- [ ] Triangular distribution over the band so an extreme aptitude is rare, not one roll in three.
-- [ ] Modify by body size and traits at generation; let the existing growth events move them.
-- [ ] Decide the band. ⚠ At ±0.25 on `hit_chance` + `attack_speed` + `hit_precision` together the swing is **+95%** — too wide. Either narrow the band or stop the three compounding.
+- [x] Add `pawn.aptitudes` — a small record keyed by the same stat ids, rolled beside `rollStatsFromRanges` ([Pawns.ts:811](../../../src/lib/game/entities/Pawns.ts)).
+- [x] Roll **independently of the core stats** — a stat-biased roll re-introduces the AGILITY correlation through the side door.
+- [x] Triangular distribution over the band so an extreme aptitude is rare, not one roll in three.
+- [x] Modify by body size and traits at generation; let the existing growth events move them.
+- [x] Decide the band. ⚠ At ±0.25 on `hit_chance` + `attack_speed` + `hit_precision` together the swing is **+95%** — too wide. Either narrow the band or stop the three compounding.
 - [ ] Persist through save/load; decide the default for pawns in existing saves (1.0 across the board is the safe migration).
 
 ### 9. Re-source the six aptitude stats
 
-- [ ] `hit_chance`, `attack_speed`, `hit_precision`, `armor_damage`, `dodge`, `aim_accuracy`: formula reads the pawn's rolled aptitude instead of a core stat, still `×` its capacity terms.
-- [ ] Keep every id, name and description — this is a source change, not a rename.
-- [ ] `dodge` keeps its `− (weight − 70) × 0.002` term: mass is physique, and a heavy pawn should still evade worse however well it rolled.
-- [ ] Leave `block` derived (VIGOUR + body mass + shield) — none of those three is skill.
-- [ ] Acceptance: two pawns with identical core stats produce measurably different dps AND different survivability, and **no core stat correlates with hit rate, cadence, crit, evasion or marksmanship**.
+- [x] `hit_chance`, `attack_speed`, `hit_precision`, `armor_damage`, `dodge`, `aim_accuracy`: formula reads the pawn's rolled aptitude instead of a core stat, still `×` its capacity terms.
+- [x] Keep every id, name and description — this is a source change, not a rename.
+- [x] `dodge` keeps its `− (weight − 70) × 0.002` term: mass is physique, and a heavy pawn should still evade worse however well it rolled.
+- [x] Leave `block` derived (VIGOUR + body mass + shield) — none of those three is skill.
+- [x] Acceptance: two pawns with identical core stats produce measurably different dps AND different survivability, and **no core stat correlates with hit rate, cadence, crit, evasion or marksmanship**.
 
 > **Evidence.** Modelled on the rune-graven spear vs an armoured target: a 40-AGILITY pawn with a bad roll
 > (**8.1**) loses to a **16-AGILITY** pawn with a good one (**8.4**), while a 40-AGILITY pawn who also rolled
@@ -198,10 +262,16 @@ Only after Phase 1, so the damage axis is already honest when the second axis la
 - [ ] Let precision buy **candidate rolls** — fractional, so it pays smoothly. The shipped rule always rolls exactly 3 behind a probability gate, so a small target (the neck is 1.5% of the hit table) is almost never found however precise the fighter is.
 - [ ] Re-run the fight sim; `lumbering-fighter` on a stiletto must stop being an upgrade.
 
-> **Evidence.** Real `resolveHit`, stiletto vs mail hauberk + nasal helm: blows landing somewhere that
-> can kill **fall** from **54.1%** at precision 0.053 to **44.7%** at 0.317 — precision currently makes
-> a dagger *less* lethal, because scoring by armour alone walks the blow off the covered chest onto a
-> bare thigh. Dividing by armour is the error: on an armoured target the lethal parts ARE the covered
+> **Evidence — headless `[x]`.** Stiletto, 8 seeds: unimpaired **2615 ticks / 9% blood left**, with
+> `lumbering-fighter` (attack_speed ×0.6 **and** hit_precision ×0.75) **2510 ticks / 7% left** — ratio
+> **0.96×**. A strict, unambiguous downgrade costs the fighter nothing (`combatBalanceAudit` → #11).
+> Milder than the ×1.94 the original single-weapon run showed, same direction; treat ×1.94 as the noisy
+> number and 0.96× as the calibrated one.
+>
+> **Analytical `[~]`.** Real `resolveHit`, stiletto vs mail hauberk + nasal helm: blows landing somewhere
+> that can kill **fall** from **54.1%** at precision 0.053 to **44.7%** at 0.317 — precision currently
+> makes a dagger *less* lethal, because scoring by armour alone walks the blow off the covered chest onto
+> a bare thigh. Dividing by armour is the error: on an armoured target the lethal parts ARE the covered
 > ones.
 >
 > Modelled with the fix, over the same precision range: **64.9% → 85.1%**, with neck and groin
@@ -249,8 +319,10 @@ moving stat economy would waste the work.
 
 ## Verification gate
 
-- [ ] `pnpm check` clean.
-- [ ] `pnpm test:related` on every edited file (full suite if `Combat.ts` / `stats.jsonc` / `traits.jsonc` moved).
-- [ ] `statAxisProposal` re-pointed at the shipped math — every model it currently owns should collapse into a direct engine assertion once the engine does the thing.
+- [x] `pnpm check` clean.
+- [x] Full suite green — **167 files / 1187 tests** (Combat.ts, stats.jsonc and traits.jsonc all moved, so the full run was the required gate).
+- [x] `statAxisProposal` re-pointed at the shipped math — the modelled proposal became direct engine assertions; the two PROPOSAL-pricing tests in `weaponStatSweep` were deleted (the options they priced are decided and shipped).
 - [ ] `t4WeaponAudit` + `weaponStatSweep` re-run and their tables pasted into [AUDIT § Weapons](AUDIT.md).
 - [ ] `weaponFightSim` re-run — a balance claim is `[x]` only with the mean-of-8-seeds fight number behind it, stated with its delta.
+- [x] **`combatBalanceAudit` re-run and INVERTED** — all five assertions now pin the FIXED behaviour, so a green run means the fixes hold. Re-invert any that a future change is expected to move.
+- [x] Right-censor every fight comparison (a non-kill counts as the full tick budget) and report kills **and** deaths alongside time-to-kill. Averaging over kills only has already produced one inverted conclusion.

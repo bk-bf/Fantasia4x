@@ -179,20 +179,30 @@ const STEEL = [
 ];
 
 describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
-  it('cadence caps: attack_speed stops paying past the interval floor', () => {
-    // The clamp the whole audit turns on. A 1.5-speed dagger is already at the ceiling by AGILITY 14; a
-    // 0.7-speed greatsword keeps converting AGILITY into swings until AGILITY ~56.
+  it('cadence caps: the attack_speed APTITUDE stops paying past the interval floor', () => {
+    // Cadence is the rolled `attack_speed` aptitude now, not a core stat (COMBAT-BALANCE task 9). The
+    // clamp is unchanged, and it is the weapon's own speed that decides how much headroom a good roll
+    // has left: a 1.5-speed dagger is already at the ceiling, a 0.6-speed greatsword never reaches it.
     const rows: string[] = [];
-    for (const dex of [10, 14, 20, 30, 45, 60]) {
-      const fast = swingsPerSec(armed('steel_stiletto', { agility: dex }));
-      const slow = swingsPerSec(armed('steel_greatsword', { agility: dex }));
-      rows.push(`AGILITY ${String(dex).padStart(2)}  dagger ${f(fast, 5, 2)}/s  greatsword ${f(slow, 5, 2)}/s`);
+    const withApt = (id: string, apt: number) =>
+      swingsPerSec(makePawn({
+        equipment: { mainHand: { itemId: id, instanceId: 'w', durability: 999 } },
+        aptitudes: { attack_speed: apt }
+      }));
+    for (const apt of [0.85, 1.0, 1.15, 1.5, 2.0]) {
+      rows.push(
+        `aptitude ${apt.toFixed(2)}  dagger ${f(withApt('steel_stiletto', apt), 5, 2)}/s  greatsword ${f(withApt('steel_greatsword', apt), 5, 2)}/s`
+      );
     }
     console.log('[CADENCE]\n' + rows.join('\n'));
-    // Ceiling is shared, and the dagger reaches it while the greatsword is still climbing.
     const capped = TPS / MIN_ATTACK_INTERVAL_TICKS;
-    expect(swingsPerSec(armed('steel_stiletto', { agility: 14 }))).toBeCloseTo(capped, 2);
-    expect(swingsPerSec(armed('steel_greatsword', { agility: 45 }))).toBeLessThan(capped);
+    expect(withApt('steel_stiletto', 1.15)).toBeCloseTo(capped, 2); // fast weapon: already capped
+    expect(withApt('steel_greatsword', 1.15)).toBeLessThan(capped); // slow weapon: still climbing
+    // …and no core stat moves it at all — that is the decoupling.
+    expect(swingsPerSec(armed('steel_stiletto', { agility: 60 }))).toBeCloseTo(
+      swingsPerSec(armed('steel_stiletto', { agility: 10 })),
+      5
+    );
   });
 
   it('DPS matrix by AGILITY (BRAWN fixed at 20) — bare, armoured and evasive targets', () => {
@@ -259,30 +269,35 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
     expect(mace, 'a mace keeps more of its damage through mail than a cleaver').toBeGreaterThan(cleaver);
   });
 
-  it('finesse and arcane scale on their OWN stat, at the same slope as BRAWN', () => {
-    // The BRAWN sweep leaves a rapier flat, which reads like a dead weapon until you sweep AWARENESS instead:
-    // resolveHit takes `powerStat` from the weapon (BRAWN / AWARENESS for finesse / INT for arcane), so each
-    // scales identically on its own axis. Its damage number is the only difference.
+  it('every weapon scales on the stat its GRIP names, at the same slope', () => {
+    // COMBAT-BALANCE task 4: the weapon's `powerStat` decides which core stat feeds `melee_damage` —
+    // two-handed → brawn, one-handed → agility, finesse → awareness, arcane → intellect. Each scales
+    // identically on its own axis; the damage number is the only difference.
     const t = dummy('bare');
     const lines = ['[POWER STAT] each weapon swept on the stat it actually scales with'];
     lines.push('weapon                stat      10      20      30      45      60');
     const trio: [string, string, keyof typeof baseStats, string | undefined][] = [
-      ['steel_longsword', 'longsword', 'brawn', 'iron_boss_shield'],
+      ['steel_longsword', 'longsword', 'agility', 'iron_boss_shield'],
       ['steel_rapier', 'rapier', 'awareness', undefined],
       ['stormglass_scepter', 'stormglass rod', 'intellect', 'iron_boss_shield']
     ];
     for (const [id, label, stat, off] of trio) {
       const cells = [10, 20, 30, 45, 60]
-        .map((v) => f(dps(id, { agility: 20, [stat]: v } as Partial<typeof baseStats>, t, off).dps))
+        .map((v) => f(dps(id, { [stat]: v } as Partial<typeof baseStats>, t, off).dps))
         .join(' ');
       lines.push(label.padEnd(18) + stat.slice(0, 3).toUpperCase().padEnd(6) + cells);
     }
     console.log(lines.join('\n'));
     // Each triples-and-more on its own stat: the finesse/arcane path is not a weaker slope, just a
     // different axis. (Ranged/channeled weapons resolve through the melee path here, at reach.)
-    const lo = dps('steel_rapier', { awareness: 10, agility: 20 }, t).dps;
-    const hi = dps('steel_rapier', { awareness: 60, agility: 20 }, t).dps;
-    expect(hi / lo).toBeGreaterThan(3);
+    const lo = dps('steel_rapier', { awareness: 10 }, t).dps;
+    const hi = dps('steel_rapier', { awareness: 60 }, t).dps;
+    // …and the stats it does NOT name do nothing for it.
+    const offAxis = dps('steel_rapier', { brawn: 60, agility: 60 }, t).dps;
+    expect(Math.abs(offAxis - lo) / lo).toBeLessThan(0.1);
+    // Bounded by the power soft cap (powerScale(60) = 2.875), not by the weapon — which is the point:
+    // one damped channel, and no undamped second one to outrun it.
+    expect(hi / lo).toBeGreaterThan(2.5);
   });
 
   it('the damage term is soft-capped in the power stat, and AGILITY now out-scales it', () => {
@@ -301,8 +316,11 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
       dps('steel_longsword', { brawn: 20, agility: 60 }, t, 'iron_boss_shield').dps /
       dps('steel_longsword', { brawn: 20, agility: 10 }, t, 'iron_boss_shield').dps;
     console.log(`[SLOPE] longsword dps ×${strGain.toFixed(2)} from BRAWN 10→60, ×${dexGain.toFixed(2)} from AGILITY 10→60`);
-    expect(strGain, 'the power term is bounded (was ×6.04 before the soft cap)').toBeLessThan(3.5);
-    expect(dexGain, 'AGILITY still scales — three channels, none of them damped').toBeGreaterThan(2);
+    // A longsword is ONE-HANDED, so agility is its power stat and brawn does nothing for it. The cap
+    // bounds the one channel that remains — there is no longer a second, undamped one to outrun it.
+    expect(dexGain, 'the power term is bounded (was ×6.04 before the soft cap)').toBeLessThan(3.5);
+    expect(dexGain, 'the power stat still pays').toBeGreaterThan(2);
+    expect(Math.abs(strGain - 1), 'brawn does nothing for a one-hander').toBeLessThan(0.15);
   });
 
   it('defence matrix: three dodge tiers × three block tiers, who pulls ahead', () => {
@@ -366,47 +384,6 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
     expect(true).toBe(true);
   });
 
-  it('PROPOSAL A — daggers as finesse scaling on AGILITY', () => {
-    // resolveHit's `powerStat` is BRAWN, or AWARENESS when `finesse`. Scaling a dagger on AGILITY is the same
-    // arithmetic with a different attribute, so it is priced exactly by flagging it finesse and
-    // sweeping the stat that feeds it. Shipping it needs a real powerStat field on the weapon.
-    const bare = dummy('bare');
-    const mail = dummy('armoured');
-    const lines = ['[PROPOSAL A] stiletto, AGILITY 10→60 (BRAWN held at 20)'];
-    lines.push('                       DEX10   DEX20   DEX30   DEX45   DEX60');
-    const sweep = (label: string, target: Pawn, patched: boolean) => {
-      const run = () =>
-        [10, 20, 30, 45, 60]
-          .map((agility) =>
-            f(
-              dps(
-                'steel_stiletto',
-                // finesse reads PERCEPTION, so mirror AGILITY into it to price "scales on AGILITY".
-                { brawn: 20, agility, ...(patched ? { awareness: agility } : {}) },
-                target
-              ).dps,
-              7
-            )
-          )
-          .join(' ');
-      lines.push(
-        label.padEnd(22) + (patched ? withWeaponPatch({ steel_stiletto: { finesse: true } }, run) : run())
-      );
-    };
-    sweep('vs bare  (BRAWN now)', bare, false);
-    sweep('vs bare  (AGILITY prop)', bare, true);
-    sweep('vs mail  (BRAWN now)', mail, false);
-    sweep('vs mail  (AGILITY prop)', mail, true);
-    console.log(lines.join('\n'));
-
-    // The point of the change: a AGILITY-built assassin stops being punished for not stacking BRAWN.
-    const now = dps('steel_stiletto', { brawn: 20, agility: 60 }, bare).dps;
-    const prop = withWeaponPatch({ steel_stiletto: { finesse: true } }, () =>
-      dps('steel_stiletto', { brawn: 20, agility: 60, awareness: 60 }, bare).dps
-    );
-    console.log(`[PROPOSAL A] AGILITY-60 assassin: ${now.toFixed(1)} → ${prop.toFixed(1)} dps (×${(prop / now).toFixed(2)})`);
-    expect(prop).toBeGreaterThan(now);
-  });
 
   it('PROPOSAL B — two-handers hit less often and swing slower', () => {
     // Weapon `accuracy` enters the to-hit at MELEE_ACCURACY_WEIGHT (×2), so accuracy −8 is −16 points
@@ -451,50 +428,6 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
     expect(gsProp).toBeLessThan(gsNow);
   });
 
-  it('PROPOSAL C — speed as a DEBUFF ladder: 1.0 is the ceiling, weight drags it down', () => {
-    // Today attackSpeed runs 0.65–1.5 and the >1.0 half is thrown away by the cadence floor for any
-    // built pawn. Renormalising so nothing exceeds 1.0 (dagger 1.0, longsword 0.85, greatsword 0.55…)
-    // keeps the same RATIOS between weapons but moves them all below the clamp, so AGILITY keeps paying
-    // for everyone and the fast weapons stop hitting a wall first.
-    const RESCALE = 1 / 1.5; // divide every speed by the current fastest
-    const patch = Object.fromEntries(
-      STEEL.map((w) => [
-        w.id,
-        {
-          attackSpeed: Number(
-            ((itemService.getItemById(w.id)!.weaponProperties!.attackSpeed ?? 1) * RESCALE).toFixed(3)
-          )
-        }
-      ])
-    );
-    const t = dummy('bare');
-    const lines = ['[PROPOSAL C] dps at AGILITY 20 / 45 / 60, BRAWN 30 — shipped vs speed-as-debuff'];
-    lines.push('weapon                now20  prop20   now45  prop45   now60  prop60');
-    for (const w of STEEL) {
-      const now = [20, 45, 60].map((d) => dps(w.id, { brawn: 30, agility: d }, t, w.off).dps);
-      const prop = withWeaponPatch(patch, () =>
-        [20, 45, 60].map((d) => dps(w.id, { brawn: 30, agility: d }, t, w.off).dps)
-      );
-      lines.push(
-        w.label.padEnd(20) +
-          f(now[0]) + f(prop[0], 8) + f(now[1], 8) + f(prop[1], 8) + f(now[2], 8) + f(prop[2], 8)
-      );
-    }
-    console.log(lines.join('\n'));
-    // The rescale DELAYS the dagger's ceiling rather than removing it: a 1.0-speed weapon needs the
-    // attack_speed stat itself to reach 1.67, i.e. AGILITY 32, so the flatline moves from AGILITY 14 to ~32
-    // and everything above that is unchanged. Worth knowing before treating this as the fix.
-    const capped = TPS / MIN_ATTACK_INTERVAL_TICKS;
-    expect(swingsPerSec(armed('steel_stiletto', { agility: 30 }))).toBeCloseTo(capped, 2);
-    const delayed = withWeaponPatch(patch, () =>
-      swingsPerSec(armed('steel_stiletto', { agility: 30 }))
-    );
-    expect(delayed, 'rescaled, the dagger is still gaining at AGILITY 30').toBeLessThan(capped);
-    const atForty = withWeaponPatch(patch, () =>
-      swingsPerSec(armed('steel_stiletto', { agility: 45 }))
-    );
-    expect(atForty, 'but it has hit the same ceiling again by AGILITY 45').toBeCloseTo(capped, 2);
-  });
 
   it('STEALTH ceiling: a AGILITY-built assassin opening from the dark', () => {
     // The worry with a AGILITY-scaled, high-crit-multiplier dagger is the opening blow. Combat gives an

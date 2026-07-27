@@ -413,7 +413,7 @@ describe('ranged combat (headless tickCombat)', () => {
     expect(hammerArmor).toBeLessThan(cleaverArmor); // the hammer caves the plate; the cleaver barely scratches it
   });
 
-  it('FINESSE: a rapier scales melee damage with AWARENESS (a sword scales with BRAWN)', () => {
+  it('POWER STAT: a rapier scales melee damage with AWARENESS, a one-handed sword with AGILITY', () => {
     const empty = makeState([], []);
     const defender = makeGoblin({ stats: { ...stats, agility: 2 } }); // low dodge → hits land
     const avgDmg = (weapon: string, st: Partial<typeof stats>) => {
@@ -436,13 +436,18 @@ describe('ranged combat (headless tickCombat)', () => {
     expect(avgDmg('steel_rapier', { brawn: 10, awareness: 20 })).toBeGreaterThan(
       avgDmg('steel_rapier', { brawn: 10, awareness: 4 }) * 1.4
     );
-    // Longsword (not finesse): AWARENESS barely matters (only a little crit); BRAWN is the driver.
-    const swHiPer = avgDmg('steel_longsword', { brawn: 10, awareness: 20 });
-    const swLoPer = avgDmg('steel_longsword', { brawn: 10, awareness: 4 });
+    // Longsword: ONE-HANDED, so the grip names AGILITY (COMBAT-BALANCE task 4). AWARENESS does nothing
+    // for it, and agility is the driver.
+    const swHiPer = avgDmg('steel_longsword', { agility: 10, awareness: 20 });
+    const swLoPer = avgDmg('steel_longsword', { agility: 10, awareness: 4 });
     expect(Math.abs(swHiPer - swLoPer) / swHiPer).toBeLessThan(0.2);
-    expect(avgDmg('steel_longsword', { brawn: 20, awareness: 10 })).toBeGreaterThan(
-      avgDmg('steel_longsword', { brawn: 5, awareness: 10 }) * 1.4
+    expect(avgDmg('steel_longsword', { agility: 20 })).toBeGreaterThan(
+      avgDmg('steel_longsword', { agility: 4 }) * 1.4
     );
+    // …and BRAWN no longer drives a one-hander at all — that is the grip mapping working.
+    const swHiStr = avgDmg('steel_longsword', { agility: 10, brawn: 20 });
+    const swLoStr = avgDmg('steel_longsword', { agility: 10, brawn: 5 });
+    expect(Math.abs(swHiStr - swLoStr) / swHiStr).toBeLessThan(0.2);
   });
 
   it('daggers are fast, crit-heavy and inaccurate; specialists are iron+ gated', () => {
