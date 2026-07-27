@@ -63,6 +63,7 @@ import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
 import { pawnStatService } from '../services/PawnStatService';
 import { getTraitById } from '../core/Lineages';
+import { applyGainedTrait } from '../entities/Pawns';
 import { researchService } from '../services/ResearchService';
 import { devSpawnLooseItems, devDestroyAllItems } from '../dev/devWorld';
 import { gameLogger } from '../dev/gameLogger';
@@ -1459,10 +1460,12 @@ export const COMMANDS: Record<string, Cmd> = {
   /**
    * DEBUG: give a pawn an exact trait list, by id from `traits.jsonc`. Unknown ids are dropped.
    *
-   * A trait's `combatMods` are read live off the trait every `evaluateStat`, so attaching one takes
-   * effect immediately. Its `strengthBonus`/`dexterityPenalty`/… are NOT — generation bakes those
-   * into `pawn.stats` and nothing re-reads them — so this ALSO applies the stat delta, keeping a
-   * dev-assigned trait equivalent to one the pawn was born with. Set stats first if you do both.
+   * A trait's `combatMods`/resistances/nightVision are read live off `pawn.traits` every
+   * `evaluateStat`, so being in the list is enough. Its ONE-SHOT effects are not: core-stat deltas,
+   * grafted limbs and bodyMod HP scaling are baked once when the trait is acquired. That baking is
+   * exactly what a growth event does, so this routes through the SAME `applyGainedTrait` the
+   * lineage-growth path uses (`PawnGrowthService`) rather than re-deriving a partial copy of it —
+   * a dev-assigned trait then behaves identically to one grown into. Set stats first if you do both.
    */
   devSetPawnTraits: (s, p: { pawnId: string; traitIds: string[] }) => {
     const traits = p.traitIds.map((id) => getTraitById(id)).filter((t): t is Trait => !!t);
@@ -1470,14 +1473,17 @@ export const COMMANDS: Record<string, Cmd> = {
       ...s,
       pawns: s.pawns.map((pw) => {
         if (pw.id !== p.pawnId) return pw;
-        const stats = { ...pw.stats };
-        for (const t of traits) {
-          const e = (t.effects ?? {}) as Record<string, number>;
-          for (const k of Object.keys(stats) as (keyof EntityStats)[]) {
-            stats[k] += (e[`${k}Bonus`] ?? 0) - (e[`${k}Penalty`] ?? 0);
-          }
-        }
-        return { ...pw, traits, stats };
+        // `applyGainedTrait` mutates in place (the growth path already does), so clone everything it
+        // reaches before letting it run: stats, the limb/part tree, needs, and the trait list itself.
+        const next: Pawn = {
+          ...pw,
+          traits: [...traits],
+          stats: { ...pw.stats },
+          needs: pw.needs ? { ...pw.needs } : pw.needs,
+          limbs: pw.limbs?.map((l) => ({ ...l, parts: l.parts?.map((pt) => ({ ...pt })) }))
+        } as Pawn;
+        for (const t of traits) applyGainedTrait(next, t);
+        return next;
       })
     };
   },

@@ -146,6 +146,19 @@ proposal pricing), `weaponFightSim.test.ts` (HeadlessSession duels vs a live Orc
 - [ ] ⚠ **`whirlwind` (epic) is the single strongest trait in the game** — `attack_speed ×1.5, hit_precision ×1.5`, up to **+78.5%** dps (Rune-Bitten Greataxe vs duelist) and the top pick in every 2H stack. Headless it is worth ×1.36 on the warhammer.
 - [ ] ⚠ **`giants-grip` (epic) is a flat `melee_damage ×1.3` that bypasses the power cap** — it multiplies `baseDamage` directly (`weaponBonusDamage`), so it is the one damage source the soft cap does not touch. +45.3% on the Orc Greataxe vs knight, and present in every 1H stack.
 - [ ] ⚠ **Flat stat-pile traits outclass every designed combat trait.** `all-plus-5` (legendary) +49.1%, `str-dex-plus-5` (epic) +45.4%, `dex-plus-5` (rare) +35.5% — all above `quick-striking` (+25.7%) and `killer-instinct` (+18.0%). A "+5 to everything" trait is strictly better than a combat-designed one, because it feeds the DEX channels above.
+- [ ] ⚠⚠ **Every `*Penalty` RAISES the stat it should lower — a curse is a blessing.** All **103** penalty entries in `traits.jsonc` are authored POSITIVE, and both bake paths do `stats[k] = max(1, stats[k] + value)`: `applyCulturalTraitBonuses` (generation) and `applyGainedTrait` (runtime growth). So `frail` grants **+2 CON**, `clumsy` **+2 DEX**, `dull` **+2 INT**. The sweep shows it unmistakably — the negative trait and its positive twin score *identically*:
+  | trait | rarity | best-case dps |
+  | --- | --- | --- |
+  | `str-dex-plus-5` | epic | +45.4% |
+  | `str-dex-minus-5` | **negative** | **+45.4%** |
+  | `per-dex-plus-5` | epic | +37.5% |
+  | `per-dex-minus-5` | **negative** | **+37.5%** |
+  | `all-plus-5` | legendary | +49.1% |
+  | `accursed-blood-5` | **epic (all-penalty)** | **+49.1%** |
+  The one-line fix is to subtract in both bake paths (or negate the data), but it moves every stat on
+  every pawn in every existing save, so it is a deliberate call, not a drive-by. Current behaviour is
+  pinned by a test (`t4WeaponAudit` → "every `*Penalty` RAISES its stat") so it cannot change silently,
+  and every trait number in this audit is measured against the engine as it stands.
 - [ ] ⚠ **`lumbering-fighter` (negative) is a −45% dps flaw** — by far the harshest trait in either direction, and roughly double the swing of the best positive common trait. Intended, or overtuned?
 - [ ] ⚠ **Best legal five-trait pile ≈ ×2–4.5 dps** (paper): Rune-Sung Greatsword vs knight 18.3 → 82.1 (**×4.47**), Warhammer vs duelist 10.5 → 39.1 (×3.72). In a real fight the same pile is ×1.72 (greatsword) — the loop's misses and blocks eat over half of it, which is the argument for tuning off fight data, not sweeps.
 

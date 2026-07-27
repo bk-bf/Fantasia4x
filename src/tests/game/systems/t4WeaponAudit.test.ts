@@ -3,6 +3,7 @@ import { combatService } from '$lib/game/systems/Combat';
 import { itemService } from '$lib/game/services/ItemService';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { createDefaultBodyParts } from '$lib/game/core/BodyParts';
+import { applyGainedTrait } from '$lib/game/entities/Pawns';
 import { rng } from '$lib/game/core/rng';
 import itemsData from '$lib/game/database/items/items.jsonc';
 import traitsData from '$lib/game/database/pawns/traits.jsonc';
@@ -87,31 +88,21 @@ const T4_MELEE = T4.filter((w) => !w.ranged);
 const offHandFor = (w: { twoHanded: boolean; id: string }) =>
   w.twoHanded || /stiletto|rapier/.test(w.id) ? undefined : 'iron_boss_shield';
 
-/**
- * A trait's `strengthBonus`/`dexterityPenalty`/… are BAKED INTO `pawn.stats` at generation
- * (`Pawns.applyCulturalTraitBonuses`) — `evaluateStat` never re-reads them. Attaching such a trait to
- * a pawn whose stats are already fixed therefore does nothing, so pricing it means folding the delta
- * into the stats the way generation would. `combatMods` are the opposite: read live off the trait
- * every evaluation, so those ride on the pawn as-is.
- */
-function bakeTraitStats(stats: Stats, traits: Trait[]): Stats {
-  const out = { ...stats };
-  for (const t of traits as unknown as { effects?: Record<string, number> }[]) {
-    const e = t.effects ?? {};
-    for (const k of CORE) out[k] += (e[`${k}Bonus`] ?? 0) - (e[`${k}Penalty`] ?? 0);
-  }
-  return out;
-}
-
 function armed(weaponId: string, stats: Partial<Stats>, offHand?: string, traits: Trait[] = []): Pawn {
-  return makePawn({
-    stats: bakeTraitStats({ ...baseStats, ...stats } as Stats, traits),
+  const pawn = makePawn({
+    stats: { ...baseStats, ...stats },
     traits,
     equipment: {
       mainHand: { itemId: weaponId, instanceId: 'w', durability: 999 },
       ...(offHand ? { offHand: { itemId: offHand, instanceId: 'o', durability: 999 } } : {})
     }
   });
+  // A trait's `combatMods` are read live off `pawn.traits`, but its core-stat deltas, grafts and
+  // bodyMod HP scaling are ONE-SHOT, baked when the trait is acquired. Route through the same
+  // `applyGainedTrait` the growth path uses so the audit prices what the engine actually does —
+  // including its sign convention for `*Penalty` (see the AUDIT finding on that).
+  for (const t of traits) applyGainedTrait(pawn, t);
+  return pawn;
 }
 
 /**
@@ -164,6 +155,53 @@ function dpsOf(attacker: Pawn, defender: Pawn, n = 1200, seed = 77): number {
 }
 
 const f = (x: number, w = 7, d = 1) => x.toFixed(d).padStart(w);
+
+describe('trait baking — a gained trait is a born trait', () => {
+  it('a runtime-gained trait is NOT dead: applyGainedTrait bakes what generation would', () => {
+    // The growth path (`PawnGrowthService` → `lineageGrowthEvent`) pushes the trait then calls
+    // `applyGainedTrait`, which is also what the trait-gamble/consume path and `devSetPawnTraits` use.
+    // So a trait acquired at turn 40,000 lands the same stat deltas as one rolled at generation.
+    const gain = TRAITS.find((t) => t.id === 'str-dex-plus-5');
+    const plain = armed('rune_sung_greatsword', { strength: 20, dexterity: 20 });
+    const grown = armed('rune_sung_greatsword', { strength: 20, dexterity: 20 }, undefined, [
+      gain as unknown as Trait
+    ]);
+    console.log(
+      `[BAKE] str-dex-plus-5 gained at runtime: STR ${plain.stats.strength}→${grown.stats.strength}, DEX ${plain.stats.dexterity}→${grown.stats.dexterity}`
+    );
+    expect(grown.stats.strength).toBe(plain.stats.strength + 5);
+    expect(grown.stats.dexterity).toBe(plain.stats.dexterity + 5);
+  });
+
+  it('⚠ every `*Penalty` RAISES its stat — the sign is wrong in both bake paths', () => {
+    // `applyCulturalTraitBonuses` (generation) and `applyGainedTrait` (runtime) both do
+    // `stats[k] = max(1, stats[k] + value)`, and all 103 penalty entries in traits.jsonc are POSITIVE.
+    // So a penalty adds. `frail` grants +2 CON, `clumsy` +2 DEX, `dull` +2 INT.
+    //
+    // This test pins the CURRENT behaviour so the audit numbers are reproducible and the bug cannot be
+    // "fixed" silently — flipping it changes every pawn in every save, so it is a deliberate call.
+    const penalties = TRAITS.flatMap((t) =>
+      Object.entries((t.effects ?? {}) as Record<string, unknown>)
+        .filter(([k, v]) => k.endsWith('Penalty') && typeof v === 'number')
+        .map(([k, v]) => ({ id: t.id as string, key: k, value: v as number }))
+    );
+    expect(penalties.length, 'penalty entries exist to check').toBeGreaterThan(50);
+    expect(
+      penalties.every((p) => p.value > 0),
+      'all penalty values are authored POSITIVE'
+    ).toBe(true);
+
+    const clumsy = TRAITS.find((t) => t.id === 'clumsy'); // dexterityPenalty: 2
+    const plain = armed('rune_slotted_stiletto', { dexterity: 20 });
+    const cursed = armed('rune_slotted_stiletto', { dexterity: 20 }, undefined, [
+      clumsy as unknown as Trait
+    ]);
+    console.log(
+      `[SIGN BUG] ${penalties.length} penalty entries, all positive. "clumsy" (dexterityPenalty 2): DEX ${plain.stats.dexterity} → ${cursed.stats.dexterity}`
+    );
+    expect(cursed.stats.dexterity, 'clumsy currently ADDS dexterity').toBe(plain.stats.dexterity + 2);
+  });
+});
 
 describe('tier-4 weapon audit — stats', { timeout: 600_000 }, () => {
   it('the power-stat soft cap holds the damage term inside a sane band', () => {

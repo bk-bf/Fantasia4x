@@ -66,17 +66,68 @@
   let sel = $state<Record<string, boolean>>({});
   const selCount = $derived(Object.keys(sel).length);
   function toggleSel(id: string) {
-    if (sel[id]) delete sel[id];
-    else sel[id] = true;
+    if (sel[id]) {
+      delete sel[id];
+      selOrder = selOrder.filter((x) => x !== id);
+      return;
+    }
+    // More than three columns stops being readable, so the oldest pick drops out.
+    if (compare && selOrder.length >= COMPARE_MAX) {
+      const [oldest, ...rest] = selOrder;
+      delete sel[oldest];
+      selOrder = rest;
+    }
+    sel[id] = true;
+    selOrder = [...selOrder, id];
   }
-  const clearSel = () => (sel = {});
+  const clearSel = () => {
+    sel = {};
+    selOrder = [];
+  };
+
+  /**
+   * COMPARE — a popup that lays the picked items out as columns of ONE grid.
+   *
+   * Alignment has to be structural: separate floating panels can never be trusted to line up (they
+   * carry their own content heights and get nudged by viewport clamping), whereas one grid shares its
+   * rows by construction. The popup is size-capped and scrolls internally, so it cannot clip off-screen
+   * either, and it minimises to its title bar when it is in the way.
+   */
+  const COMPARE_MAX = 3;
+  let compare = $state(false);
+  let compareMin = $state(false);
+  /** Click order, so the columns read in the order they were picked. */
+  let selOrder = $state<string[]>([]);
+  const compareRows = $derived(
+    selOrder.map((id) => GEAR.find((g) => g.id === id)).filter((g): g is GearRow => !!g)
+  );
+  /**
+   * Union of every field label across the picks, so each column lines up even when one weapon omits a
+   * field another has. A label the first pick lacks (a stiletto has no `stun`) is spliced in next to its
+   * neighbour from the row that does have it — appending would dump it at the bottom, away from its block.
+   */
+  const compareLabels = $derived.by(() => {
+    const order: string[] = [];
+    for (const g of compareRows) {
+      let at = -1;
+      for (const r of infoRows(g)) {
+        const known = order.indexOf(r.label);
+        if (known >= 0) {
+          at = known;
+          continue;
+        }
+        order.splice(++at, 0, r.label);
+      }
+    }
+    return order;
+  });
+  const cellFor = (g: GearRow, label: string) => infoRows(g).find((r) => r.label === label) ?? null;
 
   // Hover / info panel: a formatted, colour-coded breakdown of any item, trait, or build.
   let hovered = $state<GearRow | null>(null);
   let hoveredBuild = $state<string | null>(null);
   let hx = $state(0);
   let hy = $state(0);
-  let pinInfo = $state(false);
   function pos(e: MouseEvent) {
     hx = e.clientX;
     hy = e.clientY;
@@ -111,7 +162,6 @@
     pos(e);
   }
   function hoverOut() {
-    if (pinInfo) return; // keep the last breakdown pinned
     hovered = null;
     hoveredBuild = null;
   }
@@ -134,16 +184,8 @@
       for (const [k, v] of Object.entries(obj)) push(k + suffix, '×' + v, v >= 1 ? 'good' : 'bad');
     };
     if (g.kind === 'weapon' || g.kind === 'ammo') {
+      // ── DAMAGE, all of it together ──
       push('damage', g.dmg != null ? `${g.dmg}${g.damMin != null ? ` (${g.damMin}–${g.damMax})` : ''} ${g.damageType ?? ''}`.trim() : null, 'good');
-      push('armour pen', g.ap != null ? pct(g.ap) : null, 'good');
-      push('armour damage', g.armorDmg, 'good');
-      push('crit', g.crit != null ? pct(g.crit) : null, 'good');
-      push('accuracy', g.accuracy, g.accuracy != null && g.accuracy < 0 ? 'bad' : 'good');
-      push('attack speed', g.atkSpeed);
-      push('reach', g.reach);
-      push('range', g.range);
-      push('stun', g.stun != null ? pct(g.stun) : null, 'good');
-      push('stamina / hit', g.stamina, 'bad');
       // Audit numbers. Paper dps is damage × the weapon's own speed. It is only reachable while the
       // wielder is slow enough: the weapon's speed multiplies the attack_speed stat and Combat floors
       // the interval at MIN_ATTACK_INTERVAL_TICKS, so cadence stops improving at
@@ -154,14 +196,27 @@
       push('dps (dmg × speed)', dps != null ? dps.toFixed(1) : null, 'good');
       push('dps capped (1.67×)', g.dmg != null ? (g.dmg * CADENCE_CAP).toFixed(1) : null, 'good');
       push('dmg / stamina', g.dmg != null && g.stamina ? (g.dmg / g.stamina).toFixed(1) : null, 'good');
+      push('crit', g.crit != null ? pct(g.crit) : null, 'good');
+      push('crit multiplier', g.critMult != null ? '×' + g.critMult.toFixed(1) : null, 'good');
+      push('scales with', g.scaling);
+      // ── vs ARMOUR ──
+      push('armour pen', g.ap != null ? pct(g.ap) : null, 'good');
+      push('armour damage', g.armorDmg, 'good');
+      // ── LANDING IT ──
+      push('accuracy', g.accuracy, g.accuracy != null && g.accuracy < 0 ? 'bad' : 'good');
+      push('attack speed', g.atkSpeed);
+      push('stun', g.stun != null ? pct(g.stun) : null, 'good');
+      push('on-hit', g.onHit, 'bad');
+      // ── COST & HANDLING ──
+      push('stamina / hit', g.stamina, 'bad');
       push(
         'stamina / sec',
         g.stamina && g.atkSpeed != null ? (g.stamina * g.atkSpeed).toFixed(1) : null,
         'bad'
       );
-      push('scales with', g.scaling);
+      push('reach', g.reach);
+      push('range', g.range);
       push('grip', g.twoHanded ? 'two-handed' : 'one-handed');
-      push('on-hit', g.onHit, 'bad');
       push('STR to wield', g.wieldStr, 'bad');
     } else if (g.kind === 'armor') {
       push('defense', g.defense, 'good');
@@ -427,7 +482,12 @@
     {#each CAT_KINDS as k (k)}
       <button class="tab" class:active={view === 'catalogue' && kind === k} onclick={() => selectKind(k)}>{KIND_LABEL[k]}</button>
     {/each}
-    <button class="tab info-toggle" class:active={pinInfo} onclick={() => (pinInfo = !pinInfo)} title="Pin a breakdown panel; otherwise hover shows a tooltip">ⓘ info panel</button>
+    <button
+      class="tab info-toggle"
+      class:active={compare}
+      onclick={() => (compare = !compare)}
+      title="Compare: pick up to {COMPARE_MAX} entries and read them side by side in one grid"
+    >⇹ compare{compare ? ` ${selOrder.length}/${COMPARE_MAX}` : ''}</button>
   </div>
 
   {#snippet pill(g: GearRow, armour: boolean)}
@@ -618,14 +678,56 @@
     {#if rows.length === 0}<p class="empty">No entries match.</p>{/if}
   {/if}
 
-  {#if pinInfo}
-    <aside class="infopanel">
-      <div class="ip-head">info panel<button type="button" class="ip-close" onclick={() => (pinInfo = false)}>✕</button></div>
-      {#if hoveredBuild}{@render buildBody(hoveredBuild)}
-      {:else if hovered}{@render infoBody(hovered)}
-      {:else}<p class="info-empty">Hover any item, trait, or build name to inspect it here.</p>{/if}
-    </aside>
-  {:else if hoveredBuild}
+  {#if compare}
+    <!-- Size-capped and scrolled internally, so it can never run off-screen however many rows the
+         picks produce. Minimised it collapses to just this title bar. -->
+    <section class="cmp" class:min={compareMin}>
+      <header class="cmp-bar">
+        <span class="cmp-title">compare {compareRows.length}/{COMPARE_MAX}</span>
+        {#if compareRows.length && !compareMin}
+          <button type="button" class="cmp-btn" onclick={clearSel}>clear</button>
+        {/if}
+        <button
+          type="button"
+          class="cmp-btn"
+          title={compareMin ? 'restore' : 'minimise'}
+          onclick={() => (compareMin = !compareMin)}
+        >{compareMin ? '▴' : '▾'}</button>
+        <button type="button" class="cmp-btn" title="close" onclick={() => (compare = false)}>✕</button>
+      </header>
+      {#if !compareMin}
+        <div class="cmp-body">
+          {#if compareRows.length === 0}
+            <p class="info-empty">Click up to {COMPARE_MAX} entries in the table to compare them. A fourth drops the oldest.</p>
+          {:else}
+            <div class="cmp-grid" style="--cols:{compareRows.length}">
+              <div class="cmp-row cmp-head">
+                <span class="il"></span>
+                {#each compareRows as g (g.id)}
+                  <span class="cmp-name" data-cat={BUILD_CAT[g.cls] ?? 'general'}>
+                    {g.name}
+                    <i>{g.kind} · {g.age} · T{g.tier}</i>
+                    <button type="button" class="cmp-drop" title="remove" onclick={() => toggleSel(g.id)}>✕</button>
+                  </span>
+                {/each}
+              </div>
+              {#each compareLabels as label (label)}
+                <div class="cmp-row">
+                  <span class="il">{label}</span>
+                  {#each compareRows as g (g.id)}
+                    {@const c = cellFor(g, label)}
+                    <span class="iv {c?.tone ?? 'info'}" class:absent={!c}>{c ? c.val : '—'}</span>
+                  {/each}
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {/if}
+    </section>
+  {/if}
+
+  {#if hoveredBuild}
     <div class="tooltip" use:place={[hx, hy, hoveredBuild]}>{@render buildBody(hoveredBuild)}</div>
   {:else if hovered}
     <div class="tooltip" use:place={[hx, hy, hovered]}>{@render infoBody(hovered)}</div>
@@ -991,6 +1093,135 @@
     padding: 12px 14px;
     pointer-events: none;
     font-size: 12.5px;
+  }
+  /* ── COMPARE POPUP ─────────────────────────────────────────────────────────
+     Docked bottom-right, capped in both axes and scrolled internally, so no amount of content can
+     push it off-screen. The body is ONE grid: a label gutter plus an equal column per pick, which is
+     what makes the rows line up across items by construction rather than by positioning luck. */
+  .cmp {
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    z-index: 60;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: min(94vw, 1000px);
+    max-height: min(82vh, 760px);
+    background: #171410;
+    border: 1px solid #6d6653;
+    border-radius: 8px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65);
+    font-size: 12.5px;
+  }
+  .cmp.min {
+    width: auto;
+  }
+  .cmp-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-bottom: 1px solid #2a2519;
+    flex: 0 0 auto;
+  }
+  .cmp.min .cmp-bar {
+    border-bottom: none;
+  }
+  .cmp-title {
+    color: #9a9279;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-right: auto;
+  }
+  .cmp-btn {
+    background: transparent;
+    border: 1px solid #362f22;
+    color: #9a9279;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 2px 7px;
+    font-size: 11px;
+    font-family: inherit;
+  }
+  .cmp-btn:hover {
+    color: #ece6d4;
+    border-color: #6d6653;
+  }
+  .cmp-body {
+    overflow: auto;
+    padding: 10px 12px 14px;
+  }
+  .cmp-grid {
+    min-width: fit-content;
+  }
+  .cmp-row {
+    display: grid;
+    grid-template-columns: 15ch repeat(var(--cols), minmax(9ch, 1fr));
+    gap: 12px;
+    align-items: baseline;
+    padding: 1px 0;
+  }
+  .cmp-row:nth-child(even) {
+    background: #1b1811;
+  }
+  .cmp-head {
+    align-items: end;
+    padding-bottom: 6px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #2a2519;
+    background: none;
+  }
+  .cmp-name {
+    display: flex;
+    flex-direction: column;
+    font-weight: 700;
+    color: #ece6d4;
+    position: relative;
+    padding-right: 14px;
+  }
+  .cmp-name[data-cat='melee'] { color: #83bb6f; }
+  .cmp-name[data-cat='duelist'] { color: #d3a04e; }
+  .cmp-name[data-cat='tank'] { color: #6fa0c8; }
+  .cmp-name[data-cat='finesse'] { color: #e6bf57; }
+  .cmp-name[data-cat='ranged'] { color: #d76f5d; }
+  .cmp-name[data-cat='caster'] { color: #a98fd6; }
+  .cmp-name[data-cat='general'] { color: #9a9279; }
+  .cmp-name i {
+    font-style: normal;
+    font-weight: 400;
+    color: #6d6653;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+  }
+  .cmp-drop {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: transparent;
+    border: none;
+    color: #6d6653;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0;
+  }
+  .cmp-drop:hover {
+    color: #d76f5d;
+  }
+  .cmp-row .il {
+    color: #6d6653;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .cmp-row .iv {
+    font-variant-numeric: tabular-nums;
+  }
+  .cmp-row .iv.absent {
+    color: #4a4436;
   }
   .infopanel {
     position: fixed;

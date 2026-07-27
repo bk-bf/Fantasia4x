@@ -168,6 +168,8 @@ export interface GearRow {
   ap: number | null;
   armorDmg: number | null;
   crit: number | null;
+  /** Damage multiplier on a crit — a precision weapon authors a bigger one (default 1.5). */
+  critMult: number | null;
   accuracy: number | null;
   atkSpeed: number | null;
   stamina: number | null;
@@ -424,6 +426,7 @@ function toRow(item: any): GearRow | null {
     ap: wp?.armorPenetration ?? item.ammoProperties?.armorPenetration ?? null,
     armorDmg: wp?.armorDamage ?? item.ammoProperties?.armorDamage ?? null,
     crit: wp?.critMod ?? null,
+    critMult: wp?.critMultiplier ?? null,
     accuracy: wp?.accuracy ?? null,
     atkSpeed: wp?.attackSpeed ?? null,
     stamina: wp?.staminaCost ?? null,
@@ -602,7 +605,7 @@ function traitRow(t: any): GearRow {
     research: null,
     craftable: false,
     recipe: null,
-    dmg: null, damMin: null, damMax: null, damageType: null, ap: null, armorDmg: null, crit: null,
+    dmg: null, damMin: null, damMax: null, damageType: null, ap: null, armorDmg: null, crit: null, critMult: null,
     accuracy: null, atkSpeed: null, stamina: null, reach: null, range: null, stun: null,
     scaling: null, twoHanded: null, onHit: null, wieldStr: null,
     defense: null, armorType: null, slot: null, bodyPart: null, movePen: null, stealthMod: null, block: null,
