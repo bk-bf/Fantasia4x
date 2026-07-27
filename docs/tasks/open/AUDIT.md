@@ -114,6 +114,10 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 
 ### Weapons
 
+> **The fix list for everything ⚠ below lives in [COMBAT-BALANCE](COMBAT-BALANCE.md)** — 11 tasks with
+> the measurement each one came from, sequenced. This section stays the AUDIT (what is true); that file
+> is the WORK (what to change).
+
 Mechanic-level checks (equip, ammo lifecycle, staves, shields) are settled and stay ticked. The
 per-weapon BALANCE tracker below replaces the old five-bullet pass, which only ever sampled two
 weapons and predates the power-curve, `powerStat`, crit-multiplier and armour-condition changes.
