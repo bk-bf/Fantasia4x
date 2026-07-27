@@ -113,6 +113,75 @@ const CONTENDERS: [string, string, string | undefined][] = [
   ['greatcleaver 2H', 'steel_greatcleaver', undefined]
 ];
 
+/**
+ * The trait piles the analytical sweep (`t4WeaponAudit.test.ts`) ranked as the most dangerous, taken
+ * back into the real loop to see whether the paper multiplier survives contact with a live fight.
+ * `whirlwind` and `giants-grip` are the two epics that top every stack; the `*-plus-5` line is the
+ * flat stat pile; `lumbering-fighter` is the worst flaw found.
+ */
+const TRAIT_PILES: [string, string[]][] = [
+  ['baseline (no traits)', []],
+  ['whirlwind', ['whirlwind']],
+  ['giants-grip', ['giants-grip']],
+  ['whirlwind+giants-grip', ['whirlwind', 'giants-grip']],
+  ['audit worst-5 stack', ['whirlwind', 'giants-grip', 'str-dex-plus-5', 'all-plus-5', 'dex-plus-5']],
+  ['lumbering-fighter (flaw)', ['lumbering-fighter']]
+];
+
+async function traitDuel(weaponId: string, traitIds: string[], seed = 4242, maxTicks = 12_000): Promise<Outcome> {
+  const s = new HeadlessSession();
+  await s.start(
+    buildScenario({
+      seed,
+      map: { w: 24, h: 24 },
+      pawns: [
+        {
+          count: 1,
+          drafted: true,
+          stats: { strength: 30, dexterity: 30, constitution: 40, perception: 30 },
+          traits: traitIds,
+          equip: [weaponId]
+        }
+      ],
+      needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
+      spawnMobs: [{ count: 1, creatureId: CREATURE }],
+      seedEntities: false
+    })
+  );
+  const mobOf = (): Mob | undefined => s.getState().mobs?.[0];
+  const start = mobOf();
+  if (!start) throw new Error('no mob spawned');
+  const startBlood = start.bloodVolume ?? 1;
+  const startArmour = armourCondition(start);
+  const ids = (s.getState().pawns as Pawn[]).map((p) => p.id);
+  s.command({
+    type: 'attackTargetWith',
+    payload: { ids, targetId: start.id, targetType: 'mob' }
+  } as never);
+
+  let ticks = 0;
+  let last = mobOf();
+  while (ticks < maxTicks) {
+    s.tick(20);
+    ticks += 20;
+    const m = mobOf();
+    if (!m || m.isAlive === false) {
+      last = m ?? last;
+      break;
+    }
+    last = m;
+  }
+  const alive = last && last.isAlive !== false;
+  return {
+    ticks,
+    killed: !alive,
+    bloodPct: Math.round((((last?.bloodVolume ?? 0) || 0) / startBlood) * 100),
+    armourPct: startArmour > 0 ? Math.round((armourCondition(last!) / startArmour) * 100) : 0,
+    strippedAt: null,
+    early: 0
+  };
+}
+
 describe('fight sim — total damage over a real fight (HeadlessSession)', () => {
   it(
     'time to kill an armoured orc, and whether its armour survived the fight',
@@ -141,6 +210,42 @@ describe('fight sim — total damage over a real fight (HeadlessSession)', () =>
       // The sim ran a real fight: a real pawn damaged a real mob over real ticks.
       const anyProgress = results.some(([, r]) => r.killed || r.bloodPct < 100);
       expect(anyProgress, 'the drafted colonist engaged and damaged the orc').toBe(true);
+    }
+  );
+
+  it(
+    'TRAIT CONFIRMATION — the audit’s worst trait piles, in a real fight',
+    { timeout: 300_000 },
+    async () => {
+      // Time to kill is the honest measure here: the analytical sweep prices dps, but a fight also
+      // spends swings on misses, blocks and a target that fights back. A pile that halves the clock
+      // is doing in the loop what the sweep said it would.
+      // A top-tier weapon kills this orc in a handful of swings, so ONE seed is noise: whether those
+      // two or three swings crit decides the whole run. Every cell is the mean over SEEDS runs.
+      const SEEDS = [4242, 7, 1013, 55, 909, 31337, 64, 2718];
+      const meanTicks = async (weapon: string, ids: string[]) => {
+        let sum = 0;
+        for (const seed of SEEDS) sum += (await traitDuel(weapon, ids, seed)).ticks;
+        return sum / SEEDS.length;
+      };
+      for (const weapon of ['rune_sung_greatsword', 'rune_weighted_warhammer', 'rune_slotted_stiletto']) {
+        const lines = [`[TRAITS vs orc] ${weapon} — mean ticks to kill over ${SEEDS.length} seeds`];
+        let baseline = 0;
+        for (const [label, ids] of TRAIT_PILES) {
+          const t = await meanTicks(weapon, ids);
+          if (label.startsWith('baseline')) baseline = t;
+          lines.push(
+            label.padEnd(26) + t.toFixed(0).padStart(6) + ' ticks   ×' +
+              (baseline > 0 ? (baseline / t).toFixed(2) : '—') + ' vs baseline'
+          );
+        }
+        console.log(lines.join('\n'));
+      }
+      // The pile must be a real, visible advantage in the loop, not just on paper.
+      const plain = await meanTicks('rune_slotted_stiletto', []);
+      const stacked = await meanTicks('rune_slotted_stiletto', TRAIT_PILES[4][1]);
+      console.log(`[TRAITS] stiletto worst-5 pile: ${plain.toFixed(0)} → ${stacked.toFixed(0)} mean ticks`);
+      expect(stacked, 'the worst-5 pile measurably shortens a real fight').toBeLessThan(plain);
     }
   );
 });

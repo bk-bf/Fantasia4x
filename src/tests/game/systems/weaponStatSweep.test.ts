@@ -285,10 +285,14 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
     expect(hi / lo).toBeGreaterThan(3);
   });
 
-  it('the damage term is LINEAR and UNCAPPED in the power stat, unlike cadence', () => {
-    // resolveHit: raw = baseDamage × powerStat / STAT_SCALE (10). STAT_SCALE is documented for a
-    // "~5–22" stat range, but pawns roll 12–22 and grow toward caps of 62–100, so a late-game
-    // fighter multiplies weapon damage by 6–10× while DEX's cadence lever stopped paying at 1.67×.
+  it('the damage term is soft-capped in the power stat, and DEX now out-scales it', () => {
+    // Was: `raw = baseDamage × powerStat / 10`, written for a "~5–22" stat range while pawns actually
+    // grow to caps of 62–100 — a silent ×6–×10 multiplier. `powerScale` now damps everything above the
+    // baseline (POWER_SOFT_CAP), bounded at 4×.
+    //
+    // The consequence this test pins: the cap INVERTED the stat economy. STR buys one damped channel;
+    // DEX buys three that are not damped (cadence to the interval floor, +1 to-hit per point, crit).
+    // Both slopes are asserted so neither side can drift without the other being reconsidered.
     const t = dummy('bare');
     const strGain =
       dps('steel_longsword', { strength: 60, dexterity: 20 }, t, 'iron_boss_shield').dps /
@@ -297,7 +301,8 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
       dps('steel_longsword', { strength: 20, dexterity: 60 }, t, 'iron_boss_shield').dps /
       dps('steel_longsword', { strength: 20, dexterity: 10 }, t, 'iron_boss_shield').dps;
     console.log(`[SLOPE] longsword dps ×${strGain.toFixed(2)} from STR 10→60, ×${dexGain.toFixed(2)} from DEX 10→60`);
-    expect(strGain, 'STR is the dominant, uncapped axis').toBeGreaterThan(dexGain * 2);
+    expect(strGain, 'the power term is bounded (was ×6.04 before the soft cap)').toBeLessThan(3.5);
+    expect(dexGain, 'DEX still scales — three channels, none of them damped').toBeGreaterThan(2);
   });
 
   it('defence matrix: three dodge tiers × three block tiers, who pulls ahead', () => {

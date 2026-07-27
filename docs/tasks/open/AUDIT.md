@@ -113,12 +113,70 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
       refused@4).
 
 ### Weapons
-- **Combat verified headless** (`_weaponsAudit`, 5/5). Two headless facts had to be understood first: attack cadence ≈ 133 ticks (`BASE_ATTACK_INTERVAL_TICKS 120` / attackSpeed, `TICKS_PER_SECOND 60`) so fights need HUNDREDS of ticks; and the sim starts at NIGHT (`ambientLight 0.15`) so mobs don't self-aggro (vision-gated) — an explicit draft attack order drives the fight regardless. New lever added: `devSpawnMobAt {creatureId,x,y}`.
+
+Mechanic-level checks (equip, ammo lifecycle, staves, shields) are settled and stay ticked. The
+per-weapon BALANCE tracker below replaces the old five-bullet pass, which only ever sampled two
+weapons and predates the power-curve, `powerStat`, crit-multiplier and armour-condition changes.
+
+**Harnesses.** `t4WeaponAudit.test.ts` (stat + trait sweeps over every T4 weapon × 3 opponents, real
+`resolveHit` + real cadence — analytical, `[~]`), `weaponStatSweep.test.ts` (defence matrix, precision,
+proposal pricing), `weaponFightSim.test.ts` (HeadlessSession duels vs a live Orc Reaver — `[x]`).
+
+#### Mechanics (settled)
 - [x] Melee equips `mainHand` + deals damage of the weapon's type (iron_mace → goblin Corpse; `resolveHit` avg 44, type blunt).
-- [x] finesse→PER (steel_rapier PER6 avg 10.4 → PER26 avg 43.6), arcane→INT (ember_staff INT6 6.5 → INT26 25.8), AP applied (armor mitigation below). — *exact damMin–damMax band, strScaled numeric, armorDamage/stun/knockback/on-hit conditions, attackSpeed/reach still not asserted*
-- [x] Ranged ammo lifecycle: fires only with matching ammo + consumes it (war_bow arrows 8→6); NO phantom shots at 0 ammo (goblin unharmed, holds); WRONG ammo doesn't feed (bolts in a bow untouched, no fire). — *drawPower scaling / crossbow reload / recoverable-retrieval not yet asserted numerically*
+- [x] Power stat routes correctly: finesse→PER, arcane→INT, and the new explicit `powerStat` field→any attribute (daggers→DEX). Swept per weapon in `t4WeaponAudit`.
+- [x] Ranged ammo lifecycle: fires only with matching ammo + consumes it (war_bow arrows 8→6); NO phantom shots at 0 ammo; WRONG ammo doesn't feed. — *`recoverable`-retrieval still not asserted numerically*
 - [x] Magic staves: channeled (no ammo), pays `staminaCost` as mana (ember_staff stamina 124→117 per cast)
-- [x] Shield equips to `offHand`. 2H + off-hand is ALLOWED (not forbidden) but penalized: ⚠→fixed with the new `fouled_guard` transient condition — granted when a `twoHanded` mainHand shares the hands with an off-hand item, it scales the DERIVED combat values (not base attributes) to 0.5: dodge, hitChance (aim), attackSpeed, weaponDamage, critChance. Verified headless: 2H+shield vs clean 2H → hit 0.67→0.33, dmg 50.1→25.2, crit 0.06→0.03. (Wired via a generalized `Combat.conditionMult(entity, key)`.) `wieldRequirement.strength` still not exercised.
+- [x] Shield equips to `offHand`; 2H + off-hand allowed but penalised via `fouled_guard` (halves dodge/hitChance/attackSpeed/weaponDamage/critChance/block). Verified headless: hit 0.67→0.33, dmg 50.1→25.2.
+- [x] Any launcher fires any ammo of its bucket; damage = `ammo.damage × weapon.drawPower`, so an old bow gains from a new head and a new bow gains from an old one.
+- [ ] `wieldRequirement.strength` (the `overmatched` condition) still not exercised in a fight.
+
+#### Engine fixes landed this pass
+- [x] ⚠→fixed: **the damage term was uncapped.** `raw = baseDamage × stat / 10` was written for a ~5–22 stat band; PAWN-GROWTH later took caps to 62–100, making it a ×6–×10 multiplier that drowned subtractive armour and collapsed weapon choice into "biggest base damage". Now `powerScale()` — linear to 10, damped above by `POWER_SOFT_CAP 30`, bounded at 4×. Early game barely moves (stat 16: ×1.60→×1.50), the ceiling is tamed (stat 100: ×10.0→×3.25).
+- [x] ⚠→fixed: **armour condition did nothing until it shattered.** `partArmorReduction` never read `durability`, so `armorDamage` had no in-fight payoff and a hammer needed an 11-hit strip that never lands (measured: warhammer took 13% off an orc's plate before the orc died). Now `defense × (0.5 + 0.5 × condition)`, mirrored in `partArmorPoints`. Headless: warhammer now strips the orc to **46%** and that feeds back into its own damage.
+- [x] New `weaponProperties.powerStat` — daggers scale on DEX. Stiletto at STR 20: **18.9 → 83.9 dps** across DEX 10→60 (vs bare); flat across a STR sweep, so a strength build gains nothing from a knife.
+- [x] New `weaponProperties.critMultiplier` (default 1.5) — daggers 2.0, rapiers 1.8. Calibrated against an equal-investment STR-60 greatsword: 2.6 gave the assassin 1.80×, 2.0 gives 1.47×.
+- [x] Heavy 2H (22 items: greatsword / 2H axe / 2H hammer / 2H cleaver, all ages incl. orc + boss) took **−8 accuracy, ×0.85 speed**. Vs an evasive target at DEX 60 the greatsword went 65.0 → 47.2, landing just above the sword-and-board control. Polearms and shod staves deliberately untouched — reach and accuracy are what they are for.
+- [x] New dev lever `devSetPawnTraits` + `ScenarioPawnGroup.traits` — assigns an exact trait list and bakes its stat bonuses the way generation does, so a trait pile can be priced in a real fight.
+- [x] ⚠→fixed: `combatRanged.test.ts`'s hammer-vs-cleaver test was measuring FISTS. `makeMeleeAttacker` minted a weapon with no `durability`, and `decrEquipDurability` reads `durability ?? 0`, so it shattered on the first landed hit. Fixture now durable + the defender survives the window: hammer strips **172 vs the cleaver's 20** condition (8.6×).
+
+#### ⚠ Open findings (measured, NOT yet fixed — decisions needed)
+- [ ] ⚠ **DEX is the best stat on 15 of 16 T4 melee weapons, including every STR weapon.** Taming the power term fixed the runaway but inverted the stat economy: STR now buys one soft-capped channel (damage, ≤4×) while DEX buys three (cadence to the interval floor, +1 to-hit per point, +0.005 crit per point). Warhammer at stat 40 vs a raider: STR 19.1 / **DEX 24.9**. Only the Rune-Banded Longstaff prefers STR (its speed is already at the cap). Fix is on the DEX side — damp the to-hit term or `DEX_HIT_WEIGHT` — not by loosening the power cap (parity would need `POWER_SOFT_CAP ≈ 99`, i.e. no cap).
+- [ ] ⚠ **Precision can make a low-damage weapon worse.** Headless, 8 seeds: a stiletto with `lumbering-fighter` (attack_speed ×0.6, hit_precision ×0.75) kills an Orc Reaver in **1290 mean ticks vs 2500 unimpaired — ×1.94 FASTER with the crippling flaw.** Hypothesis: `aimedBodyPart` biases toward the least-armoured part, and for a dagger that is an extremity, so a precise dagger keeps stabbing hands and never reaches a lethal part. Needs a follow-up: weight the aim roll by whether the part can actually kill.
+- [ ] ⚠ **`whirlwind` (epic) is the single strongest trait in the game** — `attack_speed ×1.5, hit_precision ×1.5`, up to **+78.5%** dps (Rune-Bitten Greataxe vs duelist) and the top pick in every 2H stack. Headless it is worth ×1.36 on the warhammer.
+- [ ] ⚠ **`giants-grip` (epic) is a flat `melee_damage ×1.3` that bypasses the power cap** — it multiplies `baseDamage` directly (`weaponBonusDamage`), so it is the one damage source the soft cap does not touch. +45.3% on the Orc Greataxe vs knight, and present in every 1H stack.
+- [ ] ⚠ **Flat stat-pile traits outclass every designed combat trait.** `all-plus-5` (legendary) +49.1%, `str-dex-plus-5` (epic) +45.4%, `dex-plus-5` (rare) +35.5% — all above `quick-striking` (+25.7%) and `killer-instinct` (+18.0%). A "+5 to everything" trait is strictly better than a combat-designed one, because it feeds the DEX channels above.
+- [ ] ⚠ **`lumbering-fighter` (negative) is a −45% dps flaw** — by far the harshest trait in either direction, and roughly double the swing of the best positive common trait. Intended, or overtuned?
+- [ ] ⚠ **Best legal five-trait pile ≈ ×2–4.5 dps** (paper): Rune-Sung Greatsword vs knight 18.3 → 82.1 (**×4.47**), Warhammer vs duelist 10.5 → 39.1 (×3.72). In a real fight the same pile is ×1.72 (greatsword) — the loop's misses and blocks eat over half of it, which is the argument for tuning off fight data, not sweeps.
+
+#### Per-weapon tracker — tier 4 (top tier; there is no T5)
+Tick when the weapon's role is confirmed to survive a real fight against all three opponent profiles
+(raider / knight / duelist) AND its best stat is its own power stat. Every row below is currently
+blocked on the DEX finding above, so none are ticked.
+
+**Melee (16)**
+- [ ] `fang_reaver` Fang-Reaver — STR 15.6 vs DEX 18.9 (raider). Boss-tier 1H sword, `wieldRequirement 22` never exercised.
+- [ ] `orc_greataxe` Orc Greataxe — best `giants-grip` host (+45.3% vs knight); loot-only.
+- [ ] `iron_tide_greataxe` The Iron Tide — famed Warboss drop; ages Boss correctly since the `ageOf` fix.
+- [ ] `rune_etched_axe` Rune-Etched Splitting Axe — 1H axe, armourDmg 7.
+- [ ] `rune_ribbed_mace` Rune-Ribbed Mace — top 1H dps (22.7 vs raider); anti-armour identity holds.
+- [ ] `rune_toothed_cleaver` Rune-Toothed Cleaver — bleed/crit identity; highest 1H stamina cost (7).
+- [ ] `rune_chained_flail` Rune-Chained Flail — 23.5 dps vs raider, second only to the warhammer.
+- [ ] `rune_graven_spear` Rune-Graven Spear — most trait-sensitive weapon in the sweep (top host for 6 of the 15 worst traits).
+- [ ] `rune_needle_rapier` Rune-Needle Rapier — **only weapon whose power stat wins** vs raider/knight (PER 28.6), but DEX overtakes it vs the duelist (9.3 vs 8.6).
+- [ ] `rune_slotted_stiletto` Rune-Slotted Stiletto — DEX 34.0 vs raider, the highest single cell in the audit; also the weapon the precision anomaly hits.
+- [ ] `rune_sung_greatsword` Rune-Sung Greatsword — worst trait-stack blowout (×4.47 paper vs knight).
+- [ ] `rune_bitten_greataxe` Rune-Bitten Greataxe — host of the single worst trait cell (`whirlwind` +78.5%).
+- [ ] `rune_fanged_greatcleaver` Rune-Fanged Greatcleaver — crit 0.26; 2H bleed identity.
+- [ ] `rune_weighted_warhammer` Rune-Weighted Warhammer — highest dps in the game at every opponent; armourDmg 16 (11 hits to strip 200 plate).
+- [ ] `rune_etched_halberd` Rune-Etched Halberd — reach + knockdown; exempt from the 2H accuracy nerf, confirm that is still right.
+- [ ] `rune_banded_longstaff` Rune-Banded Longstaff — **the one weapon that still prefers STR** (20.0 vs DEX 12.3), because its speed is already at the cadence cap. The control case for the DEX finding.
+
+**Ranged / arcane (4)** — not covered by the melee sweep; need their own pass through the ranged path.
+- [ ] `rune_strung_warbow` Rune-Strung Warbow — drawPower 2.4, `wieldRequirement 16`.
+- [ ] `rune_cranked_arbalest` Rune-Cranked Arbalest — drawPower 3.2, reload 4.
+- [ ] `rune_marked_javelin` Rune-Marked Javelin — thrown; self-consuming off-hand path.
+- [ ] `rune_whistling_sling` Rune-Whistling Sling — mechanical (no STR), stun 0.2.
 
 ### Gear
 - [x] Worn armor mitigates incoming damage (plate_cuirass: `resolveHit` avg 44 → 32.7). — *per-part coverage, layer-stacking, individual slash/crush/pierce resistances, sane-per-piece values not yet asserted individually*
@@ -447,7 +505,11 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 > early-mid (t0–t2) is thin** (t0 has 7 pieces, mostly wicker/rawhide; medicine is 2 items). This section is the
 > LENS: define builds → check each has a gear/weapon/tool/apparel path at every tier → fill the gaps.
 
-### 1. Build/class map (the evaluation lens) — [x] DONE → **full audit: [BUILD-ARCHETYPES (artifact)](https://claude.ai/code/artifact/f87ef907-46e2-4015-a455-b698799eea4f)**
+### 1. Build/class map (the evaluation lens) — [x] DONE → **live tool: `/gear-db`** (`./launch.sh --tools`)
+The hand-curated grid below is superseded by `src/lib/dev/gearDb.ts`, which auto-classifies every
+weapon/armour/trait from the real `.jsonc` into 27 weapon-defined builds × 7 ages and shows the
+coverage holes directly. The older narrative audit lives at
+[BUILD-ARCHETYPES (artifact)](https://claude.ai/code/artifact/f87ef907-46e2-4015-a455-b698799eea4f).
 Grew into its own spec: 9 builds (8 + Mage) audited against stats/traits/gear/lineages, gaps flagged, backlog P1–P5.
 Quick reference (each row = primary stats → the gear it *wants*):
 | Build | Key stats | Weapons | Armour | Tools/gear it wants |

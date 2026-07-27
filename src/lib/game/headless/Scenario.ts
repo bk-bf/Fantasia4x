@@ -53,6 +53,10 @@ export interface ScenarioPawnGroup {
   drafted?: boolean;
   /** Item ids equipped onto each pawn in the group (mints instances — godmode equip). */
   equip?: string[];
+  /** Trait ids from `traits.jsonc` assigned to every pawn in the group, REPLACING the rolled set.
+   *  Stat-bonus effects are baked into `stats` the way generation does (see `devSetPawnTraits`), so
+   *  apply after `stats`. Combat audits use this to price a trait pile in a real fight. */
+  traits?: string[];
 }
 
 export interface ScenarioSpec {
@@ -290,6 +294,7 @@ export function buildScenario(spec: ScenarioSpec): GameState {
     idx += g.count;
     for (const p of members) {
       if (g.stats) cmd('devSetPawnStats', { pawnId: p.id, stats: g.stats });
+      if (g.traits) cmd('devSetPawnTraits', { pawnId: p.id, traitIds: g.traits });
       if (g.skillLevel !== undefined || g.skills) {
         const skills: Record<string, number> = {};
         if (g.skillLevel !== undefined) {

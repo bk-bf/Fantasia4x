@@ -35,6 +35,7 @@ import type {
   DesignationType,
   StatKey,
   EntityStats,
+  Trait,
   DisableableNeed
 } from '../core/types';
 import { isHarvestableTileNow } from '../services/jobs/filters';
@@ -61,6 +62,7 @@ import { buildingService } from '../services/BuildingService';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
 import { pawnStatService } from '../services/PawnStatService';
+import { getTraitById } from '../core/Lineages';
 import { researchService } from '../services/ResearchService';
 import { devSpawnLooseItems, devDestroyAllItems } from '../dev/devWorld';
 import { gameLogger } from '../dev/gameLogger';
@@ -1453,6 +1455,32 @@ export const COMMANDS: Record<string, Cmd> = {
       return { ...pw, stats, maxStats };
     })
   }),
+
+  /**
+   * DEBUG: give a pawn an exact trait list, by id from `traits.jsonc`. Unknown ids are dropped.
+   *
+   * A trait's `combatMods` are read live off the trait every `evaluateStat`, so attaching one takes
+   * effect immediately. Its `strengthBonus`/`dexterityPenalty`/… are NOT — generation bakes those
+   * into `pawn.stats` and nothing re-reads them — so this ALSO applies the stat delta, keeping a
+   * dev-assigned trait equivalent to one the pawn was born with. Set stats first if you do both.
+   */
+  devSetPawnTraits: (s, p: { pawnId: string; traitIds: string[] }) => {
+    const traits = p.traitIds.map((id) => getTraitById(id)).filter((t): t is Trait => !!t);
+    return {
+      ...s,
+      pawns: s.pawns.map((pw) => {
+        if (pw.id !== p.pawnId) return pw;
+        const stats = { ...pw.stats };
+        for (const t of traits) {
+          const e = (t.effects ?? {}) as Record<string, number>;
+          for (const k of Object.keys(stats) as (keyof EntityStats)[]) {
+            stats[k] += (e[`${k}Bonus`] ?? 0) - (e[`${k}Penalty`] ?? 0);
+          }
+        }
+        return { ...pw, traits, stats };
+      })
+    };
+  },
 
   /** DEBUG: set a pawn's work-skill levels (WORK-EXPERIENCE, clamped 1–50; resets that skill's
    *  in-level XP so the bar reads clean). Keys are work-category ids from Work.ts. */

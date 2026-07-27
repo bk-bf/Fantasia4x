@@ -167,8 +167,32 @@ const K_PRECISION_FRACTURE = 4;
  *  ticks (~an in-game hour, mirroring MOB_CLOT_ROLL_INTERVAL — the beast's hide "settles" as it
  *  recovers), so a sustained fight progressively opens a tank up but a fled bear resets. */
 const HIDE_WEAR_RESET_TICKS = 750;
-/** Stats are on a ~5–22 scale; this divisor keeps damage in a sensible range. */
+/** Baseline stat: a pawn at 10 swings a weapon for exactly its authored damage. */
 const STAT_SCALE = 10;
+/**
+ * Diminishing-returns span above the baseline for the damage roll. The power term used to be flat
+ * `stat / 10`, written when stats sat in a ~5–22 band. PAWN-GROWTH later shifted rolls to 12–22 and
+ * growth caps to 62–100, so that term silently became a ×6–×10 multiplier: subtractive armour stopped
+ * mattering at high stats, weapon choice collapsed into "whose base damage is biggest", and the
+ * fast/light classes could never catch up because cadence is capped and damage was not.
+ *
+ * Above 10 the headroom is now damped by `1 / (1 + over/POWER_SOFT_CAP)`, which is ~flat where pawns
+ * actually start and bounded by `1 + POWER_SOFT_CAP/STAT_SCALE` (= 4×) at the growth ceiling:
+ *
+ *   stat  10    16    20    30    45    60    100
+ *   old  1.00  1.60  2.00  3.00  4.50  6.00  10.00
+ *   new  1.00  1.50  1.75  2.20  2.75  2.88   3.25
+ *
+ * Below 10 it stays strictly linear — a weakened pawn should keep losing power all the way down.
+ */
+const POWER_SOFT_CAP = 30;
+
+/** Damage multiplier from the attack's power attribute (STR / DEX / PER / INT per the weapon). */
+export function powerScale(stat: number): number {
+  if (stat <= STAT_SCALE) return Math.max(0, stat / STAT_SCALE);
+  const over = stat - STAT_SCALE;
+  return 1 + over / STAT_SCALE / (1 + over / POWER_SOFT_CAP);
+}
 /** How strongly `bodyScale` boosts natural-weapon damage: damageMult = 1 + (bodyScale − 1) × this. */
 const NATURAL_DAMAGE_BODYSCALE_FACTOR = 0.5;
 /** Mob base damage when it has no weapon. */
@@ -954,8 +978,8 @@ class CombatServiceImpl implements CombatService {
     const partMaxHp =
       limbOfPart(defender, partId)?.parts?.find((p) => p.id === partId)?.maxHp ?? partDef.maxHp;
 
-    // Damage: baseDamage × str / STAT_SCALE, then armour + resistance reduce it,
-    // then the crit multiplier. STAT_SCALE=10 matches the real stat range (5–22).
+    // Damage: baseDamage × powerScale(stat), then armour + resistance reduce it, then the crit
+    // multiplier. `powerScale` is linear to the baseline and damped above it (see POWER_SOFT_CAP).
     // Ranged weapons with strScaled:false (crossbow/sling) bypass STR scaling — mechanical advantage.
     // Power stat for the damage roll: the weapon's own `powerStat` when it names one (a dagger keys
     // off DEXTERITY — placement and a fast hand, not shoulder), else the older shorthands, a FINESSE
@@ -963,7 +987,7 @@ class CombatServiceImpl implements CombatService {
     // strScaled:false bypasses all of it — the mechanism did the work.
     const powerStat = powerStatValue(attacker, profile, str);
     const raw =
-      override && !override.strScaled ? baseDamage : (baseDamage * powerStat) / STAT_SCALE;
+      override && !override.strScaled ? baseDamage : baseDamage * powerScale(powerStat);
     const armorRed = partArmorReduction(defender, partId, armorPen, raw, state.turn);
     const physRes = physicalResistance(defender, damageType);
     const mitigated = raw * (1 - armorRed) * (1 - physRes);
