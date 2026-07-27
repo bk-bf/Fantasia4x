@@ -286,8 +286,67 @@ Only after Phase 1, so the damage axis is already honest when the second axis la
 
 ## Phase 4 — Re-evaluate what is left
 
+### 12b. Build fit: does generation serve the builds, and does fitting one pay?
+
+`src/lib/dev/buildFit.ts` grades a pawn against eight build profiles (weighted over the core stats
+their grip names + the aptitudes they lean on) and tiers the fit F–S. `buildFitAudit.test.ts` runs it
+over **300 pawns from 12 cultures through the real generation path**, then fights the best- and
+worst-fit pawn of each build with its own weapon and with a weapon from a melee build it fits worst.
+
+> **GENERATION is lopsided.** Three builds take 76% of the population:
+>
+> | build | share | | build | share |
+> | --- | --- | --- | --- | --- |
+> | Battlemage (1H Staff) | 26.3% | | Assassin (Dagger) | 8.7% |
+> | 2H Hammer | 25.3% | | Greatsword (2H) | 5.7% |
+> | Archer (Bow) | 24.0% | | Fencer (Rapier) | 4.7% |
+> | | | | Mace & Shield | 3.7% |
+> | | | | **Sword & Shield** | **1.7%** |
+>
+> ⚠ **Caveat, not yet controlled for:** a profile demanding TWO stats (2H Hammer: brawn+vigour) is
+> easier to score high on than one demanding THREE (Sword & Shield: agility+vigour+brawn), so some of
+> that spread is the grading formula, not the roller. Normalise by profile concentration before
+> treating the shares as a generation bug.
+>
+> **Pawns are generalists.** Median gap from the best build to the runner-up is **0.037** (p90 0.142,
+> max 0.302) — for most pawns the "best fit" is nearly a coin-toss between several builds. Whether
+> that is the wanted shape is a design call.
+>
+> **The tier ladder works; build identity only half works.** Best-fit beats worst-fit on the same
+> weapon in **every** melee build (2H Hammer S 13.5 vs F 7.3; Greatsword A 8.6 vs F 4.7). But
+> in-build beat out-of-build in only **8 of 12** cases — an S-tier Assassin does **6.3** with its
+> stiletto and **7.2** with a warhammer it is a bad fit for (0.88×), and both Sword & Shield rows lose
+> to the hammer too. The warhammer being the answer to everything is task 14's finding, arriving here.
+
+- [ ] Normalise the fit score by profile concentration, then re-read the generation shares.
+- [ ] Decide the intended specialisation: should the median pawn be a generalist (0.037 gap) or should generation push harder toward one build?
+- [ ] Fix the cases where a build loses to a weapon it should not hold (Assassin, Sword & Shield vs the warhammer) — blocked on task 14's warhammer re-rate.
+- [ ] Then re-read the cadence floor below with these numbers in hand.
+
+
 Everything here was measured against the OLD stat economy and has to be re-measured once Phases 1–3
 land; several may resolve on their own.
+
+### 12a. 1H out-damages 2H, and the Duelist grip is not gated at all
+
+- [ ] **The design intent** (owner, 2026-07-28): a one-hander is *supposed* to be weaker — you play shield+1H as a DEFENSIVE style, or duelist, which approaches 2H damage but is **trait-gated**. Neither holds today.
+- [ ] `getGrip` ([rangedCombat.ts:115](../../../src/lib/game/systems/rangedCombat.ts)) returns `duelist` for ANY one-hander with an empty off-hand — the +20% damage / +10% pen / +5% crit is free. **There is no duelist trait in `traits.jsonc`.** Author one and gate the grip on it.
+- [ ] Bring the styles into the intended order. Measured today at brawn/agility 40 vs a mail-clad dummy:
+
+> | style | dps | vs the best 2H |
+> | --- | --- | --- |
+> | 2H greatsword | 8.5 | 55% |
+> | 2H greataxe | 9.0 | 58% |
+> | 2H warhammer | 15.4 | 100% |
+> | 1H longsword + shield | 12.3 | 80% |
+> | 1H longsword duelist | 15.9 | **104%** |
+> | 1H mace + shield | 16.9 | **110%** |
+> | 1H mace duelist | 21.7 | **141%** |
+>
+> The *defensive* style out-damages every two-hander, and the ungated duelist grip beats the best one
+> by 41%. "Buff the duelist to 80% of a 2H" cannot be applied as stated — from 104–141% that is a
+> nerf, and it presumes 2H is the ceiling, which it is not. The order has to be: make 2H the ceiling
+> (task 12), THEN set the duelist multiplier against it.
 
 ### 12. The cadence floor
 
