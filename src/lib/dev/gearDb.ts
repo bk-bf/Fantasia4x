@@ -174,7 +174,7 @@ export interface GearRow {
   reach: number | null;
   range: number | null;
   stun: number | null;
-  scaling: 'STR' | 'PER' | 'INT' | 'draw' | null;
+  scaling: 'STR' | 'DEX' | 'PER' | 'INT' | 'draw' | null;
   twoHanded: boolean | null;
   onHit: string | null;
   wieldStr: number | null;
@@ -360,6 +360,7 @@ function bodyPartOf(slot: string | null): string | null {
 
 function scalingOf(wp: any): GearRow['scaling'] {
   if (!wp) return null;
+  if (wp.powerStat) return String(wp.powerStat).slice(0, 3).toUpperCase() as GearRow['scaling'];
   if (wp.arcane) return 'INT';
   if (wp.finesse) return 'PER';
   if (wp.strScaled === false) return 'draw';

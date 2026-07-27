@@ -276,6 +276,10 @@ interface AttackProfile {
   finesse: boolean;
   /** Arcane weapon (elemental staff): damage scales with INTELLIGENCE, not STRENGTH. */
   arcane: boolean;
+  /** Explicit power attribute for the damage roll; overrides the finesse/arcane shorthands. */
+  powerStat?: PowerStat;
+  /** Damage multiplier on a critical hit — a precision weapon's crit bites deeper. */
+  critMultiplier?: number;
   /** Chance (0–1) a landed open wound is marked unclottable — it bleeds until dressed. */
   bloodletting?: number;
 }
@@ -335,8 +339,21 @@ function profileFromWeapon(
     staminaCost: wp.staminaCost ?? ATTACK_STAMINA_COST,
     critMod: wp.critMod ?? 0,
     finesse: wp.finesse ?? false,
-    arcane: wp.arcane ?? false
+    arcane: wp.arcane ?? false,
+    powerStat: wp.powerStat,
+    critMultiplier: wp.critMultiplier
   };
+}
+
+/** Attributes a weapon's damage roll can key off. */
+export type PowerStat = 'strength' | 'dexterity' | 'perception' | 'intelligence';
+
+/** The attribute this attack's damage scales with: an explicit `powerStat` first, then the older
+ *  arcane→INT / finesse→PER shorthands, else STRENGTH. */
+function powerStatValue(attacker: Pawn | Mob, p: AttackProfile, str: number): number {
+  const key: PowerStat = p.powerStat ?? (p.arcane ? 'intelligence' : p.finesse ? 'perception' : 'strength');
+  if (key === 'strength') return str; // already condition-scaled by the caller
+  return attacker.stats?.[key] ?? 10;
 }
 
 /** Bonus a duelist (one-handed, off-hand free) adds to damage/armorPen/crit. */
@@ -603,6 +620,22 @@ function physicalResistance(defender: Pawn | Mob, damageType: DamageType): numbe
   return clamp(res, 0, 0.9);
 }
 
+/**
+ * How much of a worn piece's `defense` still soaks, by its CONDITION. A battered hauberk is split
+ * rings and a caved-in helm is a dented shell: `0.5 + 0.5 × condition`, so a pristine piece soaks
+ * fully, a half-wrecked one soaks 75%, and a piece one hit from shattering soaks half.
+ *
+ * This is what makes `armorDamage` a live combat stat rather than an economic one. Before it, armour
+ * protected at 100% right up to condition 0 and then vanished, so a hammer had to land the full
+ * strip (11 hits on orc plate) to see any return — and the target always died first.
+ * Missing durability (test fixtures, freshly minted instances) reads as pristine.
+ */
+function conditionSoakFactor(inst: ItemInstance, item: Item): number {
+  const max = item.maxDurability ?? 0;
+  if (max <= 0 || inst.durability == null) return 1;
+  return 0.5 + 0.5 * clamp(inst.durability / max, 0, 1);
+}
+
 function partArmorReduction(
   defender: Pawn | Mob,
   partId: BodyPartId,
@@ -630,7 +663,10 @@ function partArmorReduction(
       if (!item || !baseAp || !coversPart(item, slot, partId)) continue;
       // §Q/§I: Masterwork/Famed scale the armour value by the stamped tier before it soaks.
       const scaled = scaleArmorQuality(baseAp, inst.quality, inst.famedStatMult);
-      worn.push({ layer: SLOT_LAYER[slot] ?? 1, defense: scaled.defense });
+      worn.push({
+        layer: SLOT_LAYER[slot] ?? 1,
+        defense: scaled.defense * conditionSoakFactor(inst, item)
+      });
     }
     worn.sort((a, b) => a.layer - b.layer);
     for (const w of worn) {
@@ -719,7 +755,9 @@ function partArmorPoints(defender: Pawn | Mob, partId: BodyPartId, turn?: number
       if (!inst) continue;
       const item = itemService.getItemById(inst.itemId);
       if (!item?.armorProperties || !coversPart(item, slot, partId)) continue;
-      pts += scaleArmorQuality(item.armorProperties, inst.quality, inst.famedStatMult).defense;
+      pts +=
+        scaleArmorQuality(item.armorProperties, inst.quality, inst.famedStatMult).defense *
+        conditionSoakFactor(inst, item); // mirrors partArmorReduction so aiming sees the real armour
     }
   }
   return pts + naturalArmorPoints(defender, def.armor ?? DEFAULT_ARMOR_SHARE, partId, turn);
@@ -814,6 +852,11 @@ class CombatServiceImpl implements CombatService {
     override?: RangedOverride,
     guaranteed = false
   ): HitResult {
+    // Kept whole (not just destructured) so the damage roll can read the weapon's `powerStat` and
+    // `critMultiplier` without threading two more locals through.
+    const profile = override
+      ? override.profile
+      : attackerProfile(attacker, this.entityDistance(attacker, defender));
     const {
       str,
       dex,
@@ -826,12 +869,8 @@ class CombatServiceImpl implements CombatService {
       weaponId,
       staminaCost,
       critMod,
-      finesse,
-      arcane,
       bloodletting
-    } = override
-      ? override.profile
-      : attackerProfile(attacker, this.entityDistance(attacker, defender));
+    } = profile;
 
     // SHIELD DEFENCE — the shield answers BEFORE evasion. Melee: PARRY (turn the blow aside → free
     // guaranteed counter in performAttack) then BLOCK (stop it cold). Ranged: block only, halved. A
@@ -918,21 +957,21 @@ class CombatServiceImpl implements CombatService {
     // Damage: baseDamage × str / STAT_SCALE, then armour + resistance reduce it,
     // then the crit multiplier. STAT_SCALE=10 matches the real stat range (5–22).
     // Ranged weapons with strScaled:false (crossbow/sling) bypass STR scaling — mechanical advantage.
-    // Power stat for the damage roll: STR normally, but a FINESSE weapon (rapier) scales with PER and an
-    // ARCANE weapon (§M elemental staff) with INT — a precise thrust / a focused mind finds the vital, no
-    // brute force needed. Ranged (strScaled:false) bypasses both.
-    const powerStat = arcane
-      ? (attacker.stats.intelligence ?? 10)
-      : finesse
-        ? (attacker.stats.perception ?? 10)
-        : str;
+    // Power stat for the damage roll: the weapon's own `powerStat` when it names one (a dagger keys
+    // off DEXTERITY — placement and a fast hand, not shoulder), else the older shorthands, a FINESSE
+    // weapon (rapier) on PER and an ARCANE weapon (§M elemental staff) on INT. Ranged with
+    // strScaled:false bypasses all of it — the mechanism did the work.
+    const powerStat = powerStatValue(attacker, profile, str);
     const raw =
       override && !override.strScaled ? baseDamage : (baseDamage * powerStat) / STAT_SCALE;
     const armorRed = partArmorReduction(defender, partId, armorPen, raw, state.turn);
     const physRes = physicalResistance(defender, damageType);
     const mitigated = raw * (1 - armorRed) * (1 - physRes);
+    // A precision weapon can author a bigger crit multiplier: the stiletto's whole case is that the
+    // thrust which finds the gap is the one that ends it.
+    const critMult = profile.critMultiplier ?? CRIT_MULTIPLIER;
     const scaled =
-      mitigated * (crit ? CRIT_MULTIPLIER : 1) * this.conditionMult(attacker, 'weaponDamage');
+      mitigated * (crit ? critMult : 1) * this.conditionMult(attacker, 'weaponDamage');
     // ADR-029: armour can FULLY stop a weak hit — 0 damage (was floored at 1). A 0 means the blow
     // clanged off; the wound below is a no-op (severity/bleed/fracture all gate on hpMissing > 0).
     const final = scaled <= 0 ? 0 : Math.max(1, Math.round(scaled));

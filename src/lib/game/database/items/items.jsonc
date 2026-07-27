@@ -2564,6 +2564,8 @@
       "armorPenetration": 0.02,
       "armorDamage": 0.5,
       "critMod": 0.08,
+      "powerStat"  : "dexterity",
+      "critMultiplier" : 2.0,
       "staminaCost": 3,
       "twoHanded": false
     }
@@ -6592,6 +6594,8 @@
       "accuracy"        : -1,
       "critMod"         : 0.12,
       "armorDamage"     : 0.5,
+      "powerStat"       : "dexterity",
+      "critMultiplier"  : 2.0,
       "staminaCost"     : 3
     }
   },
@@ -6685,6 +6689,8 @@
       "accuracy"        : -1,
       "critMod"         : 0.12,
       "armorDamage"     : 0.6,
+      "powerStat"       : "dexterity",
+      "critMultiplier"  : 2.0,
       "staminaCost"     : 3,
       "twoHanded"       : false
     },
@@ -6937,14 +6943,14 @@
     "durabilityLossPerCombatHit": 6,
     "weaponProperties": {
       "damage"          : 28,
-      "attackSpeed"     : 0.7,
+      "attackSpeed"     : 0.595,
       "range"           : 0,
       "damMin"          : 22,
       "damMax"          : 34,
       "reach"           : 1,
       "damageType"      : "cutting",
       "armorPenetration": 0.15,
-      "accuracy"        : -2,
+      "accuracy"        : -8,
       "armorDamage"     : 6,
       "critMod"         : 0.05,
       "staminaCost"     : 10,
@@ -6971,7 +6977,7 @@
     "durabilityLossPerCombatHit": 4,
     "weaponProperties": {
       "damage"          : 24,
-      "attackSpeed"     : 0.6,
+      "attackSpeed"     : 0.51,
       "range"           : 0,
       "damMin"          : 18,
       "damMax"          : 30,
@@ -6981,7 +6987,7 @@
       "stunChance"      : 0.3,
       "knockback"       : 0.3,
       "armorDamage"     : 9,
-      "accuracy"        : -3,
+      "accuracy"        : -8,
       "staminaCost"     : 9,
       "twoHanded"       : true,
       "wieldRequirement": {"strength": 22}
@@ -7074,6 +7080,8 @@
       "armorPenetration": 0.06,
       "critMod"         : 0.08,
       "armorDamage"     : 0.5,
+      "powerStat"       : "dexterity",
+      "critMultiplier"  : 2.0,
       "staminaCost"     : 3
     },
     "onHitCondition": {"condition": "envenomed", "chance": 0.2, "durationHours": 2, "resist": "poison_resistance"}
@@ -7180,7 +7188,7 @@
     "durabilityLossPerCombatHit": 5,
     "weaponProperties": {
       "damage"          : 32,
-      "attackSpeed"     : 0.65,
+      "attackSpeed"     : 0.552,
       "range"           : 0,
       "damMin"          : 25,
       "damMax"          : 39,
@@ -7188,7 +7196,7 @@
       "damageType"      : "cutting",
       "armorPenetration": 0.2,
       "armorDamage"     : 7,
-      "accuracy"        : -2,
+      "accuracy"        : -8,
       "critMod"         : 0.06,
       "staminaCost"     : 8,
       "twoHanded"       : true,
@@ -7214,7 +7222,7 @@
     "durabilityLossPerCombatHit": 4,
     "weaponProperties": {
       "damage"          : 38,
-      "attackSpeed"     : 0.65,
+      "attackSpeed"     : 0.552,
       "range"           : 0,
       "damMin"          : 30,
       "damMax"          : 46,
@@ -7224,6 +7232,7 @@
       "armorDamage"     : 8,
       "stunChance"      : 0.15,
       "critMod"         : 0.08,
+      "accuracy"        : -8,
       "staminaCost"     : 9,
       "twoHanded"       : true,
       "wieldRequirement": {"strength": 24}
@@ -7484,7 +7493,7 @@
     "durabilityLossPerCombatHit": 2,
     "weaponProperties": {
       "damage"          : 15,
-      "attackSpeed"     : 0.7,
+      "attackSpeed"     : 0.595,
       "range"           : 0,
       "damMin"          : 11,
       "damMax"          : 21,
@@ -7494,6 +7503,7 @@
       "stunChance"      : 0.22,
       "armorPenetration": 0.2,
       "armorDamage"     : 3,
+      "accuracy"        : -8,
       "staminaCost"     : 7,
       "twoHanded"       : true
     }
@@ -7516,7 +7526,7 @@
     "durabilityLossPerCombatHit": 2,
     "weaponProperties": {
       "damage"          : 7,
-      "attackSpeed"     : 0.8,
+      "attackSpeed"     : 0.68,
       "range"           : 0,
       "damMin"          : 5,
       "damMax"          : 10,
@@ -7525,6 +7535,7 @@
       "bluntMod"        : 1.2,
       "stunChance"      : 0.15,
       "armorPenetration": 0.15,
+      "accuracy"        : -8,
       "staminaCost"     : 7,
       "twoHanded"       : true
     }
@@ -7582,7 +7593,7 @@
     "researchRequired": "iron_working",
     "weaponProperties": {
       "damage"          : 34,
-      "attackSpeed"     : 0.8,
+      "attackSpeed"     : 0.68,
       "range"           : 0,
       "damMin"          : 27,
       "damMax"          : 44,
@@ -7592,7 +7603,7 @@
       "stunChance"      : 0.3,
       "armorPenetration": 0.5,
       "armorDamage"     : 10,
-      "accuracy"        : -1,
+      "accuracy"        : -8,
       "staminaCost"     : 7,
       "twoHanded"       : true
     },
@@ -7617,14 +7628,14 @@
     "researchRequired": "iron_working",
     "weaponProperties": {
       "damage"          : 22,
-      "attackSpeed"     : 0.7,
+      "attackSpeed"     : 0.595,
       "range"           : 0,
       "damMin"          : 17,
       "damMax"          : 27,
       "reach"           : 1,
       "damageType"      : "cutting",
       "armorPenetration": 0.2,
-      "accuracy"        : 0,
+      "accuracy"        : -8,
       "critMod"         : 0.05,
       "armorDamage"     : 3,
       "staminaCost"     : 5,
@@ -7684,14 +7695,14 @@
     "researchRequired": "steel_making",
     "weaponProperties": {
       "damage"          : 27,
-      "attackSpeed"     : 0.7,
+      "attackSpeed"     : 0.595,
       "range"           : 0,
       "damMin"          : 21,
       "damMax"          : 33,
       "reach"           : 1,
       "damageType"      : "cutting",
       "armorPenetration": 0.22,
-      "accuracy"        : 0,
+      "accuracy"        : -8,
       "critMod"         : 0.06,
       "armorDamage"     : 4,
       "staminaCost"     : 5,
@@ -7787,7 +7798,7 @@
     "researchRequired": "steel_making",
     "weaponProperties": {
       "damage"          : 40,
-      "attackSpeed"     : 0.8,
+      "attackSpeed"     : 0.68,
       "range"           : 0,
       "damMin"          : 32,
       "damMax"          : 52,
@@ -7797,7 +7808,7 @@
       "stunChance"      : 0.35,
       "armorPenetration": 0.6,
       "armorDamage"     : 14,
-      "accuracy"        : -1,
+      "accuracy"        : -8,
       "staminaCost"     : 7,
       "twoHanded"       : true
     },
@@ -7856,14 +7867,14 @@
     "researchRequired": "steel_making",
     "weaponProperties": {
       "damage"          : 29,
-      "attackSpeed"     : 0.65,
+      "attackSpeed"     : 0.552,
       "range"           : 0,
       "damMin"          : 22,
       "damMax"          : 37,
       "reach"           : 1,
       "damageType"      : "cutting",
       "armorPenetration": 0.12,
-      "accuracy"        : 0,
+      "accuracy"        : -8,
       "critMod"         : 0.2,
       "armorDamage"     : 2,
       "staminaCost"     : 8,
@@ -7935,6 +7946,8 @@
       "accuracy"        : 0,
       "critMod"         : 0.16,
       "armorDamage"     : 0.8,
+      "powerStat"       : "dexterity",
+      "critMultiplier"  : 2.0,
       "staminaCost"     : 3,
       "twoHanded"       : false
     },
@@ -7969,6 +7982,8 @@
       "accuracy"        : 0,
       "critMod"         : 0.2,
       "armorDamage"     : 0.8,
+      "powerStat"       : "dexterity",
+      "critMultiplier"  : 2.0,
       "staminaCost"     : 3,
       "twoHanded"       : false
     },
@@ -8003,6 +8018,7 @@
       "accuracy"        : 5,
       "critMod"         : 0.1,
       "finesse"         : true,
+      "critMultiplier"  : 1.8,
       "staminaCost"     : 4,
       "twoHanded"       : false
     },
@@ -8037,6 +8053,7 @@
       "accuracy"        : 6,
       "critMod"         : 0.14,
       "finesse"         : true,
+      "critMultiplier"  : 1.8,
       "staminaCost"     : 4,
       "twoHanded"       : false
     },
@@ -8683,6 +8700,8 @@
       "armorPenetration": 0.03,
       "armorDamage"     : 0.5,
       "critMod"         : 0.1,
+      "powerStat"       : "dexterity",
+      "critMultiplier"  : 2.0,
       "staminaCost"     : 3,
       "twoHanded"       : false
     }
@@ -9014,6 +9033,7 @@
       "accuracy"        : 5,
       "critMod"         : 0.08,
       "finesse"         : true,
+      "critMultiplier"  : 1.8,
       "staminaCost"     : 4,
       "twoHanded"       : false
     },
@@ -9038,7 +9058,7 @@
     "researchRequired": "bronze_working",
     "weaponProperties": {
       "damage"          : 17,
-      "attackSpeed"     : 0.75,
+      "attackSpeed"     : 0.637,
       "range"           : 0,
       "damMin"          : 12,
       "damMax"          : 23,
@@ -9047,6 +9067,7 @@
       "armorPenetration": 0.15,
       "armorDamage"     : 2,
       "critMod"         : 0.05,
+      "accuracy"        : -8,
       "staminaCost"     : 5,
       "twoHanded"       : true,
       "wieldRequirement": {"strength": 12}
@@ -9072,7 +9093,7 @@
     "researchRequired": "bronze_working",
     "weaponProperties": {
       "damage"          : 18,
-      "attackSpeed"     : 0.7,
+      "attackSpeed"     : 0.595,
       "range"           : 0,
       "damMin"          : 12,
       "damMax"          : 25,
@@ -9081,6 +9102,7 @@
       "armorPenetration": 0.05,
       "armorDamage"     : 2,
       "critMod"         : 0.12,
+      "accuracy"        : -8,
       "staminaCost"     : 8,
       "twoHanded"       : true,
       "wieldRequirement": {"strength": 13}
@@ -9106,7 +9128,7 @@
     "researchRequired": "bronze_working",
     "weaponProperties": {
       "damage"          : 17,
-      "attackSpeed"     : 0.7,
+      "attackSpeed"     : 0.595,
       "range"           : 0,
       "damMin"          : 12,
       "damMax"          : 24,
@@ -9115,6 +9137,7 @@
       "armorPenetration": 0.15,
       "armorDamage"     : 4,
       "critMod"         : 0.05,
+      "accuracy"        : -8,
       "staminaCost"     : 6,
       "twoHanded"       : true,
       "wieldRequirement": {"strength": 13}
@@ -9139,7 +9162,7 @@
     "researchRequired": "bronze_working",
     "weaponProperties": {
       "damage"          : 18,
-      "attackSpeed"     : 0.7,
+      "attackSpeed"     : 0.595,
       "range"           : 0,
       "damMin"          : 12,
       "damMax"          : 25,
@@ -9149,6 +9172,7 @@
       "armorDamage"     : 5,
       "stunChance"      : 0.22,
       "bluntMod"        : 1.35,
+      "accuracy"        : -8,
       "staminaCost"     : 7,
       "twoHanded"       : true,
       "wieldRequirement": {"strength": 14}
@@ -9308,7 +9332,7 @@
     "researchRequired": "iron_working",
     "weaponProperties": {
       "damage"          : 24,
-      "attackSpeed"     : 0.68,
+      "attackSpeed"     : 0.578,
       "range"           : 0,
       "damMin"          : 17,
       "damMax"          : 33,
@@ -9317,6 +9341,7 @@
       "armorPenetration": 0.2,
       "armorDamage"     : 6,
       "critMod"         : 0.06,
+      "accuracy"        : -8,
       "staminaCost"     : 6,
       "twoHanded"       : true,
       "wieldRequirement": {"strength": 16}
@@ -9341,7 +9366,7 @@
     "researchRequired": "iron_working",
     "weaponProperties": {
       "damage"          : 24,
-      "attackSpeed"     : 0.68,
+      "attackSpeed"     : 0.578,
       "range"           : 0,
       "damMin"          : 16,
       "damMax"          : 34,
@@ -9350,6 +9375,7 @@
       "armorPenetration": 0.1,
       "armorDamage"     : 2,
       "critMod"         : 0.16,
+      "accuracy"        : -8,
       "staminaCost"     : 8,
       "twoHanded"       : true,
       "wieldRequirement": {"strength": 16}
@@ -9474,7 +9500,7 @@
     "researchRequired": "steel_making",
     "weaponProperties": {
       "damage"          : 30,
-      "attackSpeed"     : 0.65,
+      "attackSpeed"     : 0.552,
       "range"           : 0,
       "damMin"          : 21,
       "damMax"          : 41,
@@ -9483,6 +9509,7 @@
       "armorPenetration": 0.25,
       "armorDamage"     : 8,
       "critMod"         : 0.08,
+      "accuracy"        : -8,
       "staminaCost"     : 6,
       "twoHanded"       : true,
       "wieldRequirement": {"strength": 18}
@@ -9752,6 +9779,7 @@
       "accuracy"        : 8,
       "critMod"         : 0.2,
       "finesse"         : true,
+      "critMultiplier"  : 1.8,
       "staminaCost"     : 4,
       "twoHanded"       : false
     },
@@ -9785,6 +9813,8 @@
       "armorPenetration": 0.2,
       "critMod"         : 0.24,
       "armorDamage"     : 1,
+      "powerStat"       : "dexterity",
+      "critMultiplier"  : 2.0,
       "staminaCost"     : 3,
       "twoHanded"       : false
     }
@@ -9808,7 +9838,7 @@
     "researchRequired": "runic_inscription",
     "weaponProperties": {
       "damage"          : 32,
-      "attackSpeed"     : 0.7,
+      "attackSpeed"     : 0.595,
       "range"           : 0,
       "damMin"          : 23,
       "damMax"          : 43,
@@ -9817,6 +9847,7 @@
       "armorPenetration": 0.3,
       "armorDamage"     : 5,
       "critMod"         : 0.1,
+      "accuracy"        : -8,
       "staminaCost"     : 5,
       "twoHanded"       : true,
       "wieldRequirement": {"strength": 18}
@@ -9842,7 +9873,7 @@
     "researchRequired": "runic_inscription",
     "weaponProperties": {
       "damage"          : 34,
-      "attackSpeed"     : 0.65,
+      "attackSpeed"     : 0.552,
       "range"           : 0,
       "damMin"          : 24,
       "damMax"          : 47,
@@ -9851,6 +9882,7 @@
       "armorPenetration": 0.3,
       "armorDamage"     : 10,
       "critMod"         : 0.08,
+      "accuracy"        : -8,
       "staminaCost"     : 6,
       "twoHanded"       : true,
       "wieldRequirement": {"strength": 20}
@@ -9875,7 +9907,7 @@
     "researchRequired": "runic_inscription",
     "weaponProperties": {
       "damage"          : 31,
-      "attackSpeed"     : 0.68,
+      "attackSpeed"     : 0.578,
       "range"           : 0,
       "damMin"          : 21,
       "damMax"          : 43,
@@ -9884,6 +9916,7 @@
       "armorPenetration": 0.15,
       "armorDamage"     : 3,
       "critMod"         : 0.26,
+      "accuracy"        : -8,
       "staminaCost"     : 8,
       "twoHanded"       : true,
       "wieldRequirement": {"strength": 18}
@@ -9909,7 +9942,7 @@
     "researchRequired": "runic_inscription",
     "weaponProperties": {
       "damage"          : 44,
-      "attackSpeed"     : 0.8,
+      "attackSpeed"     : 0.68,
       "range"           : 0,
       "damMin"          : 32,
       "damMax"          : 58,
@@ -9919,6 +9952,7 @@
       "armorDamage"     : 16,
       "stunChance"      : 0.38,
       "bluntMod"        : 1.55,
+      "accuracy"        : -8,
       "staminaCost"     : 7,
       "twoHanded"       : true,
       "wieldRequirement": {"strength": 20}

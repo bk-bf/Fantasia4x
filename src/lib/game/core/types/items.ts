@@ -422,6 +422,17 @@ export interface Item {
     bluntMod?: number; // multiplier on knockdown chance (blunt weapons)
     stunChance?: number; // 0–1 FLAT chance to stun (knock down) the target on a hit, regardless of damage type — maces/hammers/heavy stocks. Adds on top of the blunt damage-based knockdown.
     armorDamage?: number; // armour CONDITION stripped per landed hit (× the attacker's armor_damage stat), SEPARATE from flesh damage. Hammers high, maces mid, cleavers ~0. Omitted = a sensible default by damageType (blunt > piercing > cutting).
+    /**
+     * Which attribute drives the damage roll (`raw = damage × stat / 10`). Omitted, the older
+     * `finesse`/`arcane` shorthands decide it (PER / INT), and failing those it is STRENGTH.
+     * A dagger sets `dexterity`: a knife kills by placement and speed of hand, not by shoulder.
+     */
+    powerStat?: 'strength' | 'dexterity' | 'perception' | 'intelligence';
+    /**
+     * Damage multiplier on a critical hit (default 1.5). A precision weapon raises it: the whole
+     * point of a stiletto is that the hit which finds the gap is the hit that ends the fight.
+     */
+    critMultiplier?: number;
     finesse?: boolean; // a FINESSE weapon (rapier/estoc): melee damage scales with PERCEPTION (precision/timing — finding the gap) instead of STRENGTH. Lets a high-PER duelist hit hard in melee, not just at range.
     arcane?: boolean; // an ARCANE weapon (elemental staff): damage scales with INTELLIGENCE instead of STRENGTH (mirrors `finesse`→PER).
     channeled?: boolean; // a CHANNELED ranged weapon (staff): fires with NO ammo, paying its `staminaCost` as MANA each shot, and is NOT self-consumed/dropped like a thrown weapon (it stays in hand). Bottoming out stamina latches `winded` = out of mana.

@@ -373,18 +373,40 @@ describe('ranged combat (headless tickCombat)', () => {
     // (the test is rng-order-fragile otherwise). Give the armour a HUGE durability pool so it never
     // shatters (condition 0 now removes it from the slot), and measure the WEAR RATE: the hammer caves
     // plate far faster, so its armour ends with much less remaining than the cleaver's.
+    //
+    // Two fixture hazards make this measure something else entirely if left alone:
+    //  • the ATTACKER's weapon needs a durability — `decrEquipDurability` reads `durability ?? 0`, so an
+    //    instance without one shatters on its first landed hit and the pawn punches out the rest of the
+    //    run. Fist wear (blunt default 4) then swamps the weapon's own armorDamage.
+    //  • the DEFENDER must survive the window. Wear only accrues on a landed hit, so a defender that
+    //    dies stops the clock — and the hammer, the harder hitter, ends the fight first. Left mortal,
+    //    the run measures time-to-kill and reports the hammer as the GENTLER weapon.
     const armored = (id: string) => {
       const p = makeArmored(id);
       p.equipment.bodyMid!.durability = 100_000;
+      p.bloodVolume = 1e7;
+      p.maxBloodVolume = 1e7;
+      for (const limb of p.limbs ?? []) {
+        limb.health = 1e7;
+        for (const part of limb.parts ?? []) {
+          part.health = 1e7;
+          part.maxHp = 1e7;
+        }
+      }
+      return p;
+    };
+    const attacker = (id: string, weapon: string, targetId: string) => {
+      const p = makeMeleeAttacker(id, weapon, targetId);
+      p.equipment.mainHand!.durability = 100_000;
       return p;
     };
     rng.reseed(20260627);
-    let h = makeState([makeMeleeAttacker('ha', 'steel_warhammer', 'hd'), armored('hd')], []);
+    let h = makeState([attacker('ha', 'steel_warhammer', 'hd'), armored('hd')], []);
     for (let t = 0; t < 3000; t++) h = combatService.tickCombat({ ...h, turn: t }, 16);
     const hammerArmor = h.pawns.find((p) => p.id === 'hd')!.equipment.bodyMid!.durability!;
 
     rng.reseed(20260627);
-    let c = makeState([makeMeleeAttacker('ca', 'steel_cleaver', 'cd'), armored('cd')], []);
+    let c = makeState([attacker('ca', 'steel_cleaver', 'cd'), armored('cd')], []);
     for (let t = 0; t < 3000; t++) c = combatService.tickCombat({ ...c, turn: t }, 16);
     const cleaverArmor = c.pawns.find((p) => p.id === 'cd')!.equipment.bodyMid!.durability!;
 
