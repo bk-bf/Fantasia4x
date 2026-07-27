@@ -17,14 +17,15 @@ export type EntityIntelligence = 'primitive' | 'sapient';
 
 export interface CreatureStats {
   // ── Primary attributes (set in creatures.jsonc) ───────────────────────
+  // Same four core stats a pawn carries, so a mob and a colonist read identically.
   /** Physical power → melee damage, carry weight. */
-  str: number;
+  brawn: number;
   /** Agility → move speed, dodge, hit chance. */
-  dex: number;
+  agility: number;
   /** Durability → maxHealth. */
-  con: number;
+  vigour: number;
   /** Awareness → vision range. */
-  per: number;
+  awareness: number;
   // ── Derived (computed in toDefinition(); do not set in JSON) ─────────
   health: number;
   /** Tiles per second. */
@@ -32,8 +33,6 @@ export interface CreatureStats {
   /** Tile detection radius. */
   visionRange: number;
   fleeRange: number;
-  /** Alias for str; used by legacy spawn code. */
-  brawn: number;
 }
 
 // Natural attacks are first-class items (category 'natural_weapon' in items.jsonc),
@@ -124,7 +123,7 @@ export interface CreatureDefinition {
    *  an individual rolls uniformly within them at spawn (seeded), so two of a kind differ. The def's
    *  fixed `stats` above is DERIVED as the band midpoint (`creatureMidStats`) for display / threat model
    *  / spawn fallback. (A legacy fixed `stats` block in the JSON is still honoured if present.) */
-  statRanges?: Partial<Record<'str' | 'dex' | 'con' | 'per', [number, number]>>;
+  statRanges?: Partial<Record<'brawn' | 'agility' | 'vigour' | 'awareness', [number, number]>>;
   /** §2a per-spawn natural-armour spread, rolled like `statRanges`; absent = fixed `naturalArmor`. */
   naturalArmorRange?: [number, number];
   /** §2c lootpool id (database/items/lootpool.jsonc) — a geared humanoid draws a weapon/armour loadout at
@@ -185,35 +184,35 @@ function defaultEatsForDiet(diet: EntityDiet): FoodCategory[] {
  *  are given, the def's `stats` is the band MIDPOINT, used for display, the threat model, and the spawn
  *  fallback. Ranges are authored SYMMETRIC so the midpoint is the intended average. */
 function creatureMidStats(raw: RawCreature): {
-  str: number;
-  dex: number;
-  con: number;
-  per: number;
+  brawn: number;
+  agility: number;
+  vigour: number;
+  awareness: number;
 } {
-  if (raw.stats) return raw.stats as { str: number; dex: number; con: number; per: number };
+  if (raw.stats)
+    return raw.stats as { brawn: number; agility: number; vigour: number; awareness: number };
   const sr = raw.statRanges as CreatureDefinition['statRanges'] | undefined;
   const mid = (r: [number, number] | undefined, fallback: number) =>
     r ? Math.round((r[0] + r[1]) / 2) : fallback;
   return {
-    str: mid(sr?.str, 10),
-    dex: mid(sr?.dex, 10),
-    con: mid(sr?.con, 10),
-    per: mid(sr?.per, 10)
+    brawn: mid(sr?.brawn, 10),
+    agility: mid(sr?.agility, 10),
+    vigour: mid(sr?.vigour, 10),
+    awareness: mid(sr?.awareness, 10)
   };
 }
 
 function toDefinition(raw: RawCreature): CreatureDefinition {
   const rs = creatureMidStats(raw);
   // MUST mirror baseVisionRange() in core/vision.ts (doubled sight range); fleeRange scales with it.
-  const visionRange = Math.round(4 + rs.per * 1.3);
+  const visionRange = Math.round(4 + rs.awareness * 1.3);
   const stats: CreatureStats = {
-    str: rs.str,
-    dex: rs.dex,
-    con: rs.con,
-    per: rs.per,
-    brawn: rs.str,
-    health: rs.con * 5,
-    speed: Math.floor(1.5 + rs.dex * 0.35),
+    brawn: rs.brawn,
+    agility: rs.agility,
+    vigour: rs.vigour,
+    awareness: rs.awareness,
+    health: rs.vigour * 5,
+    speed: Math.floor(1.5 + rs.agility * 0.35),
     visionRange,
     fleeRange: Math.round(visionRange * 1.45)
   };

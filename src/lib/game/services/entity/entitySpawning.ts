@@ -869,7 +869,7 @@ export function makeMob(
 ): Mob {
   const initialState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
   const sizeClass: 'large' | 'medium' | 'small' =
-    def.stats.str >= 14 ? 'large' : def.stats.str >= 6 ? 'medium' : 'small';
+    def.stats.brawn >= 14 ? 'large' : def.stats.brawn >= 6 ? 'medium' : 'small';
   // bodyScale (default 1.0) enlarges the creature's blood/health POOL so a big beast soaks a whole
   // squad's hits before bleeding out — the durability half of the big-creature fix (the shared body-part
   // HP table is intentionally NOT rescaled; naturalArmor + this larger pool carry it). RANGED note: this
@@ -879,10 +879,10 @@ export function makeMob(
   // the fixed def value. Base creatures author no `statRanges` → identical to before (fixed stats).
   const sr = def.statRanges;
   const stats: EntityStats = {
-    brawn: rollStatRange(sr?.str, def.stats.str),
-    agility: rollStatRange(sr?.dex, def.stats.dex),
-    awareness: rollStatRange(sr?.per, def.stats.per),
-    vigour: rollStatRange(sr?.con, def.stats.con),
+    brawn: rollStatRange(sr?.brawn, def.stats.brawn),
+    agility: rollStatRange(sr?.agility, def.stats.agility),
+    awareness: rollStatRange(sr?.awareness, def.stats.awareness),
+    vigour: rollStatRange(sr?.vigour, def.stats.vigour),
     intellect: def.behaviour === 'passive' ? 4 : 8,
     charisma: 5
   };
