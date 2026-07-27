@@ -151,7 +151,10 @@ export interface AmmoPick {
 }
 
 /**
- * Best available ammo in inventory matching `category` ("best" = highest damageBonus + armorPen).
+ * Best available ammo in inventory matching `category`. "Best" weighs the head's own `damage` (the
+ * real source of a shot's punch — the launcher only multiplies it), its legacy flat `damageBonus`,
+ * and its armour penetration. Any head fits any launcher of the bucket, so a bronze-age arrow still
+ * flies from a steel-age bow; this just picks the best one carried.
  * Ammo rides normal inventory BY DESIGN — a quiver sells draw SPEED, not storage.
  */
 export function pickAmmo(pawn: Pawn, category: string): AmmoPick | null {
@@ -163,7 +166,8 @@ export function pickAmmo(pawn: Pawn, category: string): AmmoPick | null {
     if ((items[id] ?? 0) <= 0) continue;
     const props = itemService.getItemById(id)?.ammoProperties;
     if (!props || props.ammoCategory !== category) continue;
-    const score = (props.damageBonus ?? 0) + (props.armorPen ?? 0) * 10;
+    const score =
+      (props.damage ?? 0) + (props.damageBonus ?? 0) + (props.armorPen ?? 0) * 10;
     if (score > bestScore) {
       best = { itemId: id, props };
       bestScore = score;

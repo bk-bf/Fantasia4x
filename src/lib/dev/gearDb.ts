@@ -230,19 +230,29 @@ for (const rec of recipes) {
 // ── derivations ─────────────────────────────────────────────────────────────
 function ageOf(id: string, researchId: string | null, tier: number, craftable: boolean): Age {
   const r = researchId ?? '';
-  if (/rune|arcane|attunement|manaforge|lapidary/.test(r)) return 'Runed';
+  if (/rune|runic|arcane|attunement|manaforge|lapidary/.test(r)) return 'Runed';
   if (r === 'steel_making') return 'Steel';
   if (r === 'iron_working') return 'Iron';
   if (r === 'bronze_working') return 'Bronze';
   if (r === 'copper_smelting') return 'Copper';
-  if (/staff$|rune|arcane/.test(id)) return 'Runed';
-  if (/^steel|^clockwork/.test(id)) return 'Steel';
-  if (/^iron/.test(id)) return 'Iron';
-  if (/^bronze|^cast_bronze/.test(id)) return 'Bronze';
-  if (/^copper/.test(id)) return 'Copper';
-  if (/^(flint|stone|bone|wood|antler|rawhide|raw_hide|wicker|hide|great_bone|leaf|padded|linen|tallow|wattle|throwing|sling|self)/.test(id))
-    return 'Primitive';
+  // A high-tier LOOT piece is a boss drop, whatever it is forged from — checked before the material
+  // words so `iron_tide_greataxe` reads as Boss, not as an iron-age craftable.
   if (!craftable && tier >= 4) return 'Boss';
+  if (/staff$|rune|arcane/.test(id)) return 'Runed';
+  // Material words match ANYWHERE in the id, not just at the front: `gnoll_flint_axe` and
+  // `gnoll_bone_cleaver` are stone-age pieces that happen to carry a faction prefix.
+  if (/steel|clockwork/.test(id)) return 'Steel';
+  if (/iron/.test(id)) return 'Iron';
+  if (/bronze/.test(id)) return 'Bronze';
+  if (/copper/.test(id)) return 'Copper';
+  // Bone and antler are butchered, dried and carved at a bench — a band above knapped stone. The
+  // bigger pieces (a two-handed maul, a cleaver) land in bronze rather than copper. Above tier 2 the
+  // material stops deciding: `fang_reaver` is a legendary craft, not a bone-age club.
+  if (tier <= 2 && /bone|antler|fang/.test(id)) return tier >= 2 ? 'Bronze' : 'Copper';
+  if (/flint|stone|wood|rawhide|raw_hide|hide|leaf/.test(id)) return 'Primitive';
+  // Ambiguous words that only mean "primitive" at the FRONT of an id — a `staff_sling` is a later
+  // build than a `sling`, and `padded`/`wicker` name a piece rather than a material.
+  if (/^(throwing|sling|self|padded|linen|tallow|wattle|wicker)/.test(id)) return 'Primitive';
   return (['Primitive', 'Bronze', 'Iron', 'Steel', 'Runed'] as Age[])[Math.min(Math.max(tier, 0), 4)];
 }
 
@@ -263,13 +273,15 @@ function classifyWeapon(item: any, wp: any): BuildClass {
   const two = !!wp.twoHanded;
   const pierce = dt === 'piercing' || dt === 'pierce';
   const has = (re: RegExp) => re.test(id);
-  if (wp.arcane) return 'War-Caster (2H Staff)'; // all current staves are 2H magic
+  // A rod is the same channelled magic in one hand, bought at a lower yield to keep a shield.
+  if (wp.arcane) return two ? 'War-Caster (2H Staff)' : 'Battlemage (1H Staff)';
+  // Same test the engine uses (`rangedCombat.isRangedWeaponProps`): melee authors range 0–1.
   const ranged =
-    wp.ammoCategory || wp.drawPower != null || (wp.range ?? 0) >= 4 ||
+    wp.ammoCategory || wp.drawPower != null || (wp.range ?? 0) > 1 ||
     /throw|javelin|dart|sling|blowgun|firepot|bow|crossbow/.test(id);
   if (ranged) {
     if (has(/sling/)) return 'Slinger (Sling)';
-    if (has(/crossbow|xbow/)) return 'Crossbowman';
+    if (has(/crossbow|xbow|arbalest/)) return 'Crossbowman';
     if (has(/throw|javelin|firepot|dart|blowgun/) || (!wp.ammoCategory && !wp.drawPower)) return 'Skirmisher (Throwing)';
     return 'Archer (Bow)';
   }
@@ -278,12 +290,14 @@ function classifyWeapon(item: any, wp: any): BuildClass {
   const fast = (wp.attackSpeed ?? 1) >= 1.2;
   if (!two && has(/dagger|knife|rondel|stiletto|shank|punch|dirk/)) return 'Assassin (Dagger)';
   if (!two && pierce && light && fast && !has(/spear|pike/)) return 'Assassin (Dagger)';
+  // A plain shod staff: no edge, no magic, all cadence and stun.
+  if (two && has(/staff/)) return 'Stunwaller (2H Staff)';
   if (has(/flail/)) return 'Flail & Shield';
   if (has(/maul|warhammer|hammer/)) return two ? '2H Hammer' : 'Mace & Shield';
   if (has(/mace|club/)) return 'Mace & Shield';
   if (has(/cleaver/)) return two ? '2H Cleaver' : 'Cleaver & Shield';
   if (has(/axe|hatchet/)) return two ? '2H Axe' : 'Axe & Shield';
-  if (has(/pike|spear|framea|leaf|glaive|halberd|lance/)) return two ? 'Polearm (2H)' : 'Spear & Shield';
+  if (has(/pike|spear|framea|glaive|halberd|lance/)) return two ? 'Polearm (2H)' : 'Spear & Shield';
   if (has(/greatsword/)) return 'Greatsword (2H)';
   if (has(/sword|seax|spatha|estoc|rapier|blade|sabre|saber|falchion/)) return two ? 'Greatsword (2H)' : 'Sword & Shield';
   // fallback by damage type + handedness

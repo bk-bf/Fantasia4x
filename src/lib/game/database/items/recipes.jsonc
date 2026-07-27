@@ -4888,4 +4888,666 @@
     "toolRequirement" : {"workType": "leatherworking", "minTier": 2},
     "researchRequired": "iron_working"
   }
+  ,
+  // ── WEAPON-COVERAGE PASS ──────────────────────────────────────────────────
+  // Copper: forged at the stone forge, no mould needed for a flat head or a rolled socket.
+  {
+    "id"              : "make_copper_shortsword",
+    "station"         : "stone_forge",
+    "inputs"          : {"copper_bar": 1, "category:leather": 1},
+    "outputs"         : {"copper_shortsword": 1},
+    "workAmount"      : 6,
+    "toolTierRequired": 0,
+    "researchRequired": "copper_smelting"
+  },
+  {
+    "id"              : "make_copper_mace",
+    "station"         : "stone_forge",
+    "inputs"          : {"copper_bar": 1, "wooden_haft": 1, "category:leather": 1},
+    "outputs"         : {"copper_mace": 1},
+    "workAmount"      : 6,
+    "toolTierRequired": 0,
+    "researchRequired": "copper_smelting"
+  },
+  {
+    "id"              : "make_copper_spear",
+    "station"         : "stone_forge",
+    "inputs"          : {"copper_bar": 1, "wooden_haft": 1, "cordage": 1},
+    "outputs"         : {"copper_spear": 1},
+    "workAmount"      : 6,
+    "toolTierRequired": 0,
+    "researchRequired": "copper_smelting"
+  },
+  {
+    "id"              : "make_copper_flat_axe",
+    "station"         : "stone_forge",
+    "inputs"          : {"copper_bar": 1, "wooden_haft": 1, "cordage": 1},
+    "outputs"         : {"copper_flat_axe": 1},
+    "workAmount"      : 6,
+    "toolTierRequired": 0,
+    "researchRequired": "copper_smelting"
+  },
+  // Bronze: cast to shape in a mould at the hearth.
+  {
+    "id"              : "make_bronze_leaf_sword",
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
+    "outputs"         : {"bronze_leaf_sword": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_bronze_flanged_mace",
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "wooden_haft": 1, "category:leather": 1},
+    "outputs"         : {"bronze_flanged_mace": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_bronze_socketed_spear",
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "wooden_haft": 1, "cordage": 1},
+    "outputs"         : {"bronze_socketed_spear": 1},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_bronze_cleaver",
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 2, "clay_mold": 1, "category:leather": 1},
+    "outputs"         : {"bronze_cleaver": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_bronze_chain_flail",
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 2, "clay_mold": 1, "wooden_haft": 1, "category:leather": 1},
+    "outputs"         : {"bronze_chain_flail": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_bronze_rapier",
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
+    "outputs"         : {"bronze_rapier": 1},
+    "workAmount"      : 11,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_bronze_great_leaf_sword",
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 2, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
+    "outputs"         : {"bronze_great_leaf_sword": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_bronze_greatcleaver",
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 3, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
+    "outputs"         : {"bronze_greatcleaver": 1},
+    "workAmount"      : 15,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_bronze_double_axe",
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 3, "clay_mold": 1, "sanded_haft": 1, "cordage": 1},
+    "outputs"         : {"bronze_double_axe": 1},
+    "workAmount"      : 15,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_bronze_maul",
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 3, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
+    "outputs"         : {"bronze_maul": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_bronze_capped_staff",
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "sanded_haft": 2},
+    "outputs"         : {"bronze_capped_staff": 1},
+    "workAmount"      : 6,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  // Iron.
+  {
+    "id"              : "make_iron_cleaver",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 1, "sanded_haft": 1, "category:leather": 1},
+    "outputs"         : {"iron_cleaver": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_iron_ball_flail",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 2, "sanded_haft": 1, "category:leather": 1},
+    "outputs"         : {"iron_ball_flail": 1},
+    "workAmount"      : 13,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_iron_winged_spear",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 1, "sanded_haft": 1, "cordage": 1},
+    "outputs"         : {"iron_winged_spear": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_iron_broadaxe",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 2, "sanded_haft": 1, "category:leather": 1},
+    "outputs"         : {"iron_broadaxe": 1},
+    "workAmount"      : 15,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_iron_greatcleaver",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 2, "sanded_haft": 1, "category:leather": 1},
+    "outputs"         : {"iron_greatcleaver": 1},
+    "workAmount"      : 15,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_iron_shod_staff",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 1, "sanded_haft": 2},
+    "outputs"         : {"iron_shod_staff": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  // Steel.
+  {
+    "id"              : "make_steel_broadaxe",
+    "station"         : "anvil",
+    "inputs"          : {"category:steel": 1, "seasoned_haft": 1, "category:leather": 1},
+    "outputs"         : {"steel_broadaxe": 1},
+    "workAmount"      : 13,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_steel_boar_spear",
+    "station"         : "anvil",
+    "inputs"          : {"category:steel": 1, "seasoned_haft": 1, "cordage": 1},
+    "outputs"         : {"steel_boar_spear": 1},
+    "workAmount"      : 13,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_steel_greataxe",
+    "station"         : "anvil",
+    "inputs"          : {"category:steel": 2, "seasoned_haft": 1, "category:leather": 1},
+    "outputs"         : {"steel_greataxe": 1},
+    "workAmount"      : 18,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_steel_halberd",
+    "station"         : "anvil",
+    "inputs"          : {"category:steel": 2, "seasoned_haft": 1, "iron_nail": 2},
+    "outputs"         : {"steel_halberd": 1},
+    "workAmount"      : 17,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_steel_shod_longstaff",
+    "station"         : "anvil",
+    "inputs"          : {"category:steel": 1, "seasoned_haft": 2},
+    "outputs"         : {"steel_shod_longstaff": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  // Rune-etched: magic alloy over a seasoned haft, cut at the runecarver's bench.
+  {
+    "id"              : "make_rune_etched_axe",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 1, "category:leather": 1},
+    "outputs"         : {"rune_etched_axe": 1},
+    "workAmount"      : 30,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_ribbed_mace",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 1, "category:leather": 1},
+    "outputs"         : {"rune_ribbed_mace": 1},
+    "workAmount"      : 30,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_toothed_cleaver",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 1, "category:leather": 1},
+    "outputs"         : {"rune_toothed_cleaver": 1},
+    "workAmount"      : 30,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_chained_flail",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "seasoned_haft": 1, "category:leather": 1},
+    "outputs"         : {"rune_chained_flail": 1},
+    "workAmount"      : 34,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_graven_spear",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 1, "cordage": 1},
+    "outputs"         : {"rune_graven_spear": 1},
+    "workAmount"      : 30,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_needle_rapier",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "category:leather": 1},
+    "outputs"         : {"rune_needle_rapier": 1},
+    "workAmount"      : 32,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_slotted_stiletto",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "category:leather": 1},
+    "outputs"         : {"rune_slotted_stiletto": 1},
+    "workAmount"      : 26,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_sung_greatsword",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 2, "seasoned_haft": 1, "category:leather": 1},
+    "outputs"         : {"rune_sung_greatsword": 1},
+    "workAmount"      : 40,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_bitten_greataxe",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 3, "gem_dust": 2, "seasoned_haft": 1, "category:leather": 1},
+    "outputs"         : {"rune_bitten_greataxe": 1},
+    "workAmount"      : 42,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_fanged_greatcleaver",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 2, "seasoned_haft": 1, "category:leather": 1},
+    "outputs"         : {"rune_fanged_greatcleaver": 1},
+    "workAmount"      : 40,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_weighted_warhammer",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 3, "gem_dust": 2, "seasoned_haft": 1, "category:leather": 1},
+    "outputs"         : {"rune_weighted_warhammer": 1},
+    "workAmount"      : 44,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_etched_halberd",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "seasoned_haft": 1, "steel_rivet": 2},
+    "outputs"         : {"rune_etched_halberd": 1},
+    "workAmount"      : 36,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_banded_longstaff",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 2},
+    "outputs"         : {"rune_banded_longstaff": 1},
+    "workAmount"      : 28,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  // Launchers: a turned grip or stock, a string good enough for the draw, and for a crossbow the
+  // cast fasteners that hold the lock together.
+  {
+    "id"              : "spin_silk_bowstring",
+    "station"         : "spinning_wheel",
+    "inputs"          : {"raw_silk": 3},
+    "outputs"         : {"silk_bowstring": 1},
+    "workAmount"      : 6,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "make_sinew_backed_bow",
+    "discipline"      : "woodworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"wooden_haft": 1, "sinew": 3, "cordage": 1},
+    "outputs"         : {"sinew_backed_bow": 1},
+    "workAmount"      : 8,
+    "toolTierRequired": 0,
+    "dynamicRecipe"   : {
+      "stave": {
+        "acceptsCategory": "wood",
+        "quantity": 1,
+        "variants": {
+          "yew_log": {"name": "Yew Sinew-Backed Bow"},
+          "ash_log": {"name": "Ash Sinew-Backed Bow"},
+          "oak_log": {"name": "Oak Sinew-Backed Bow"}
+        }
+      }
+    }
+  },
+  {
+    "id"              : "make_horn_composite_bow",
+    "discipline"      : "woodworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"sanded_haft": 1, "curved_horn": 2, "sinew": 3, "thread": 1},
+    "outputs"         : {"horn_composite_bow": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 1,
+    "researchRequired": "organized_hunting"
+  },
+  {
+    "id"              : "make_yew_longbow",
+    "discipline"      : "woodworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"seasoned_haft": 1, "yew_log": 1, "silk_bowstring": 1, "sinew": 2},
+    "outputs"         : {"yew_longbow": 1},
+    "workAmount"      : 18,
+    "toolTierRequired": 2,
+    "researchRequired": "advanced_forestry"
+  },
+  {
+    "id"              : "make_rune_strung_warbow",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"seasoned_haft": 1, "yew_log": 1, "silk_bowstring": 1, "enchant_thread": 1, "gem_dust": 1},
+    "outputs"         : {"rune_strung_warbow": 1},
+    "workAmount"      : 34,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_composite_crossbow",
+    "discipline"      : "woodworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"sanded_haft": 1, "oak_plank": 1, "curved_horn": 1, "sinew": 2, "bronze_nail": 2, "thread": 1},
+    "outputs"         : {"composite_crossbow": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_steel_arbalest",
+    "station"         : "anvil",
+    "inputs"          : {"seasoned_haft": 1, "oak_plank": 2, "category:steel": 2, "steel_rivet": 4, "silk_bowstring": 1, "category:leather": 1},
+    "outputs"         : {"steel_arbalest": 1},
+    "workAmount"      : 24,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_rune_cranked_arbalest",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"seasoned_haft": 1, "magic_alloy_bar": 1, "steel_rivet": 4, "silk_bowstring": 1, "enchant_thread": 1},
+    "outputs"         : {"rune_cranked_arbalest": 1},
+    "workAmount"      : 38,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_staff_sling",
+    "discipline"      : "leatherworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"wooden_haft": 1, "category:leather": 1, "cordage": 2},
+    "outputs"         : {"staff_sling": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_rune_whistling_sling",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"category:leather": 1, "enchant_thread": 2, "gem_dust": 1},
+    "outputs"         : {"rune_whistling_sling": 1},
+    "workAmount"      : 22,
+    "toolTierRequired": 1,
+    "researchRequired": "runic_inscription"
+  },
+  // Thrown: made in twos and threes, meant to be spent.
+  {
+    "id"              : "make_bronze_javelin",
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "wooden_haft": 1},
+    "outputs"         : {"bronze_javelin": 2},
+    "workAmount"      : 6,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_pilum",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 1, "wooden_haft": 1},
+    "outputs"         : {"pilum": 2},
+    "workAmount"      : 7,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_francisca",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 1, "wooden_haft": 1},
+    "outputs"         : {"francisca": 2},
+    "workAmount"      : 7,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_steel_plumbata",
+    "station"         : "anvil",
+    "inputs"          : {"category:steel": 1, "lead_bar": 1, "branch": 2, "feathers": 1},
+    "inputAlternatives": [{"category:steel": 1, "lead_bar": 1, "branch": 2, "chicken_feathers": 1}],
+    "outputs"         : {"steel_plumbata": 4},
+    "workAmount"      : 8,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_rune_marked_javelin",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 1},
+    "outputs"         : {"rune_marked_javelin": 2},
+    "workAmount"      : 26,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  // One-handed arcane: a cut stone in a collar on a short rod.
+  {
+    "id"              : "make_cinder_rod",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"wooden_haft": 1, "cut_ruby": 1, "copper_bar": 1},
+    "outputs"         : {"cinder_rod": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1,
+    "researchRequired": "arcane_lapidary"
+  },
+  {
+    "id"              : "make_hoarfrost_rod",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"wooden_haft": 1, "cut_sapphire": 1, "copper_bar": 1},
+    "outputs"         : {"hoarfrost_rod": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1,
+    "researchRequired": "arcane_lapidary"
+  },
+  {
+    "id"              : "make_storm_rod",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"wooden_haft": 1, "cut_topaz": 1, "copper_bar": 1},
+    "outputs"         : {"storm_rod": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1,
+    "researchRequired": "arcane_lapidary"
+  },
+  {
+    "id"              : "make_emberglass_scepter",
+    "station"         : "attunement_altar",
+    "inputs"          : {"sanded_haft": 1, "attuned_ruby": 1, "silver_bar": 1},
+    "outputs"         : {"emberglass_scepter": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 2,
+    "researchRequired": "attunement"
+  },
+  {
+    "id"              : "make_rimeglass_scepter",
+    "station"         : "attunement_altar",
+    "inputs"          : {"sanded_haft": 1, "attuned_sapphire": 1, "silver_bar": 1},
+    "outputs"         : {"rimeglass_scepter": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 2,
+    "researchRequired": "attunement"
+  },
+  {
+    "id"              : "make_stormglass_scepter",
+    "station"         : "attunement_altar",
+    "inputs"          : {"sanded_haft": 1, "attuned_topaz": 1, "silver_bar": 1},
+    "outputs"         : {"stormglass_scepter": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 2,
+    "researchRequired": "attunement"
+  },
+  {
+    "id"              : "make_manaforge_greatstaff",
+    "station"         : "attunement_altar",
+    "inputs"          : {"seasoned_haft": 1, "attuned_ruby": 1, "attuned_sapphire": 1, "attuned_topaz": 1, "magic_alloy_bar": 1},
+    "outputs"         : {"manaforge_greatstaff": 1},
+    "workAmount"      : 60,
+    "toolTierRequired": 2,
+    "researchRequired": "mythic_attunement"
+  },
+  // Ammunition: a fraction of the launcher's cost, in whatever the age smelts.
+  {
+    "id"              : "make_bronze_arrow",
+    "station"         : "casting_hearth",
+    "inputs"          : {"branch": 1, "bronze_bar": 1, "clay_mold": 1, "sinew": 1, "feathers": 1},
+    "inputAlternatives": [{"branch": 1, "bronze_bar": 1, "clay_mold": 1, "sinew": 1, "chicken_feathers": 1}],
+    "outputs"         : {"bronze_arrow": 8},
+    "workAmount"      : 5,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_bronze_bolt",
+    "station"         : "casting_hearth",
+    "inputs"          : {"branch": 1, "bronze_bar": 1, "clay_mold": 1, "sinew": 1},
+    "outputs"         : {"bronze_bolt": 6},
+    "workAmount"      : 5,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_steel_bodkin_arrow",
+    "station"         : "anvil",
+    "inputs"          : {"branch": 1, "category:steel": 1, "sinew": 1, "feathers": 1},
+    "inputAlternatives": [{"branch": 1, "category:steel": 1, "sinew": 1, "chicken_feathers": 1}],
+    "outputs"         : {"steel_bodkin_arrow": 10},
+    "workAmount"      : 7,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_steel_broadhead_arrow",
+    "station"         : "anvil",
+    "inputs"          : {"branch": 1, "category:steel": 1, "sinew": 1, "feathers": 1},
+    "inputAlternatives": [{"branch": 1, "category:steel": 1, "sinew": 1, "chicken_feathers": 1}],
+    "outputs"         : {"steel_broadhead_arrow": 8},
+    "workAmount"      : 7,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_steel_quarrel",
+    "station"         : "anvil",
+    "inputs"          : {"branch": 1, "category:steel": 1, "sinew": 1, "feathers": 1},
+    "inputAlternatives": [{"branch": 1, "category:steel": 1, "sinew": 1, "chicken_feathers": 1}],
+    "outputs"         : {"steel_quarrel": 8},
+    "workAmount"      : 7,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_clay_bullet",
+    "discipline"      : "pottery",
+    "station"         : "pottery_kiln",
+    "passive"         : true,
+    "inputs"          : {"blue_clay": 1},
+    "outputs"         : {"clay_bullet": 12},
+    "workAmount"      : 4,
+    "toolTierRequired": 0,
+    "researchRequired": "pottery"
+  },
+  {
+    "id"              : "make_lead_glans",
+    "station"         : "casting_hearth",
+    "inputs"          : {"lead_bar": 1, "clay_mold": 1},
+    "outputs"         : {"lead_glans": 12},
+    "workAmount"      : 4,
+    "toolTierRequired": 1
+  }
+  ,
+  {
+    "id"              : "make_stone_club",
+    "discipline"      : "knapping",
+    "station"         : "craft_spot",
+    "inputs"          : {"small_stone": 2, "branch": 1, "cordage": 1},
+    "outputs"         : {"stone_club": 1},
+    "workAmount"      : 3,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_flint_dagger",
+    "discipline"      : "knapping",
+    "station"         : "craft_spot",
+    "inputs"          : {"flint_shard": 2, "branch": 1, "category:leather": 1},
+    "outputs"         : {"flint_dagger": 1},
+    "workAmount"      : 2,
+    "toolTierRequired": 0
+  }
 ]

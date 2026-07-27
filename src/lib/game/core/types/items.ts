@@ -498,6 +498,7 @@ export interface Item {
     damageBonus?: number; // legacy flat add on top of (damage × drawPower) (default 0)
     accuracyBonus?: number; // flat add to the hit roll (default 0)
     armorPen?: number; // added to the weapon's armorPenetration (default 0)
+    armorDamage?: number; // armour CONDITION stripped per landed shot (× the attacker's armor_damage stat) — the HEAD's contribution, replacing the by-damage-type ranged default. A hardened bodkin wrecks mail; a broadhead barely marks it.
     recoverable?: number; // 0–1 chance to recover the spent projectile as a DroppedItem after a shot (default 0)
     projectile?: string; // visual: particle style of the flying shot ("arrow"|"bolt"|"stone"); omitted = default by ammoCategory. Cosmetic only.
   };

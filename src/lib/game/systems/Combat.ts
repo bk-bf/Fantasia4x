@@ -288,6 +288,9 @@ export interface RangedOverride {
   hitMod: number;
   /** When false (crossbow/sling), damage does NOT scale with STR. */
   strScaled: boolean;
+  /** Armour condition the AMMUNITION strips per hit (before the attacker's `armor_damage` stat).
+   *  Undefined = fall back to the by-damage-type ranged default. */
+  armorDamage?: number;
 }
 
 type WeaponProps = NonNullable<Item['weaponProperties']>;
@@ -1665,7 +1668,12 @@ class CombatServiceImpl implements CombatService {
       : this.applyKnockback(afterEffect, attacker, target, isTargetMob, result.weaponId, apos);
 
     // Every landed blow chips condition: the attacker's weapon + the defender's struck armour.
-    const armorLoss = this.computeArmorDamage(attacker, result.damageType, !!override);
+    const armorLoss = this.computeArmorDamage(
+      attacker,
+      result.damageType,
+      !!override,
+      override?.armorDamage
+    );
     let worn = this.applyGearWear(afterKnock, attacker, target, armorLoss);
     // ADR-031: the same blow chips a creature's NATURAL hide at the struck part (per-fight wear,
     // subtracted from its soak by naturalArmorPoints) — the attrition counter to a subtractive tank.
@@ -2113,15 +2121,18 @@ class CombatServiceImpl implements CombatService {
   };
 
   /** Armour condition this swing strips: weapon.armorDamage (or the by-type default) × the attacker's
-   *  STR-driven `armor_damage` stat. A ranged shot pierces rather than wrecks → much less. */
+   *  STR-driven `armor_damage` stat. A ranged shot pierces rather than wrecks → much less, and it is
+   *  the HEAD that decides: `ammoArmorDamage` (the projectile's own) wins over the by-type default,
+   *  so a hardened quarrel wrecks mail the same bow's broadhead would only scratch. */
   private computeArmorDamage(
     attacker: Pawn | Mob,
     damageType: DamageType,
-    isRanged: boolean
+    isRanged: boolean,
+    ammoArmorDamage?: number
   ): number {
     const stat = pawnStatService.evaluateStat('armor_damage', attacker);
     const byType = CombatServiceImpl.DEFAULT_ARMOR_DAMAGE[damageType] ?? 2;
-    if (isRanged) return byType * 0.4 * stat; // arrows/bolts pierce, they don't cave armour
+    if (isRanged) return (ammoArmorDamage ?? byType * 0.4) * stat; // arrows pierce, they don't cave armour
     const wp =
       'equipment' in attacker && attacker.equipment?.mainHand
         ? itemService.getItemById(attacker.equipment.mainHand.itemId)?.weaponProperties
@@ -2209,7 +2220,7 @@ class CombatServiceImpl implements CombatService {
       dist,
       coverPenalty
     );
-    return { profile, hitMod, strScaled: rw.strScaled };
+    return { profile, hitMod, strScaled: rw.strScaled, armorDamage: ammo?.props.armorDamage };
   }
 
   /**

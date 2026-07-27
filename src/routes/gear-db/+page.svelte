@@ -121,6 +121,8 @@
     val: string;
     tone: 'good' | 'bad' | 'info';
   }
+  /** Combat's cadence ceiling: BASE_ATTACK_INTERVAL_TICKS / MIN_ATTACK_INTERVAL_TICKS (120/72). */
+  const CADENCE_CAP = 120 / 72;
   function infoRows(g: GearRow): InfoRow[] {
     const rows: InfoRow[] = [];
     const push = (label: string, val: unknown, tone: InfoRow['tone'] = 'info') => {
@@ -142,6 +144,21 @@
       push('range', g.range);
       push('stun', g.stun != null ? pct(g.stun) : null, 'good');
       push('stamina / hit', g.stamina, 'bad');
+      // Audit numbers. Paper dps is damage × the weapon's own speed. It is only reachable while the
+      // wielder is slow enough: the weapon's speed multiplies the attack_speed stat and Combat floors
+      // the interval at MIN_ATTACK_INTERVAL_TICKS, so cadence stops improving at
+      // BASE_ATTACK_INTERVAL_TICKS / MIN = 120/72 ≈ 1.67. Past that a fast weapon gains nothing and
+      // only per-hit damage counts, which is what "capped" shows. Read both beside pen and armour
+      // damage: a dagger wins on paper, loses at the cap, and never opens armour either way.
+      const dps = g.dmg != null && g.atkSpeed != null ? g.dmg * g.atkSpeed : null;
+      push('dps (dmg × speed)', dps != null ? dps.toFixed(1) : null, 'good');
+      push('dps capped (1.67×)', g.dmg != null ? (g.dmg * CADENCE_CAP).toFixed(1) : null, 'good');
+      push('dmg / stamina', g.dmg != null && g.stamina ? (g.dmg / g.stamina).toFixed(1) : null, 'good');
+      push(
+        'stamina / sec',
+        g.stamina && g.atkSpeed != null ? (g.stamina * g.atkSpeed).toFixed(1) : null,
+        'bad'
+      );
       push('scales with', g.scaling);
       push('grip', g.twoHanded ? 'two-handed' : 'one-handed');
       push('on-hit', g.onHit, 'bad');

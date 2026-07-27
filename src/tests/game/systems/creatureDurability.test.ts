@@ -105,9 +105,11 @@ describe('big-creature durability (naturalArmor + bodyScale)', () => {
     const mammoth = makeCreature('woolly_mammoth');
     const unarmoured = makeCreature('giant_rat');
 
-    // For each weapon, the fraction of damage surviving the hide = vsMammoth / vsBareFlesh.
-    const lowAp = makeArmedPawn('bone_knife');
-    const highAp = makeArmedPawn('bronze_punch_dagger');
+    // For each weapon, the fraction of damage surviving the hide = vsMammoth / vsBareFlesh (absolute
+    // damage cancels in the ratio, so the two can be different weapons entirely). Daggers all sit at
+    // near-zero pen by design, so the pair straddles the real pen axis: a flake blade vs a boar-spear.
+    const lowAp = makeArmedPawn('flint_dagger'); // pen 0.03
+    const highAp = makeArmedPawn('steel_boar_spear'); // pen 0.32
 
     const lowThrough =
       totalDamage(lowAp, mammoth, 600, 99) / totalDamage(lowAp, unarmoured, 600, 99);

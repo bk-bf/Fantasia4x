@@ -335,7 +335,7 @@ describe('combat sim (headless tickCombat)', () => {
       return { hits, organ, misTargeted };
     }
     const pen = organStats('stone_chopper'); // cutting → penetrating
-    const blunt = organStats('stone_spear'); // no damageType → blunt → shallow
+    const blunt = organStats('stone_club'); // blunt → shallow (a spear is piercing; it belongs above)
 
     expect(pen.organ).toBeGreaterThan(0); // penetrating blows DO reach organs
     expect(pen.misTargeted).toBe(0); // and only ever an organ contained in the struck cavity
