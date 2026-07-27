@@ -18,10 +18,21 @@
     type GearRow,
     type GearKind
   } from '$lib/dev/gearDb';
+  import {
+    STAT_GROUPS,
+    STAT_INFO,
+    buildStatRows,
+    type StatInfo,
+    type Rank
+  } from '$lib/dev/buildStats';
 
   const CAT_KINDS: (GearKind | 'all')[] = ['all', 'weapon', 'armor', 'ammo', 'trait'];
   const KIND_LABEL: Record<string, string> = {
-    all: 'All', weapon: 'Weapons', armor: 'Armour', ammo: 'Ammo', trait: 'Traits'
+    all: 'All',
+    weapon: 'Weapons',
+    armor: 'Armour',
+    ammo: 'Ammo',
+    trait: 'Traits'
   };
   const CATALOGUE = GEAR.filter((g) => ['weapon', 'armor', 'ammo', 'trait'].includes(g.kind));
   const summaries = buildSummaries();
@@ -36,14 +47,21 @@
       arr.push(g);
     }
   }
-  for (const arr of cellMap.values()) arr.sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name)); // by tier
-  const cell = (build: string, gkind: 'weapon' | 'armor', age: string) => cellMap.get(`${build}|${gkind}|${age}`) ?? [];
-  const missingParts = (items: GearRow[]) => BODY_PARTS.filter((p) => !items.some((it) => it.bodyPart === p));
+  for (const arr of cellMap.values())
+    arr.sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name)); // by tier
+  const cell = (build: string, gkind: 'weapon' | 'armor', age: string) =>
+    cellMap.get(`${build}|${gkind}|${age}`) ?? [];
+  const missingParts = (items: GearRow[]) =>
+    BODY_PARTS.filter((p) => !items.some((it) => it.bodyPart === p));
 
-  const byEvoRarity = (a: GearRow, b: GearRow) => a.evoStage - b.evoStage || a.rarityRank - b.rarityRank || a.name.localeCompare(b.name);
+  const byEvoRarity = (a: GearRow, b: GearRow) =>
+    a.evoStage - b.evoStage || a.rarityRank - b.rarityRank || a.name.localeCompare(b.name);
   const posFirst = (a: GearRow, b: GearRow) =>
-    (a.polarity === 'negative' ? 1 : 0) - (b.polarity === 'negative' ? 1 : 0) || a.evoStage - b.evoStage || a.name.localeCompare(b.name);
-  const allTraits = (build: string) => GEAR.filter((g) => g.kind === 'trait' && g.classes.includes(build as never)).sort(byEvoRarity);
+    (a.polarity === 'negative' ? 1 : 0) - (b.polarity === 'negative' ? 1 : 0) ||
+    a.evoStage - b.evoStage ||
+    a.name.localeCompare(b.name);
+  const allTraits = (build: string) =>
+    GEAR.filter((g) => g.kind === 'trait' && g.classes.includes(build as never)).sort(byEvoRarity);
   // Traits at a given rarity — positives first, then flaws (red); flaws graded INTO the real rarity
   // columns (no separate flaw column). excludeLineage pulls lineage-marked traits out (they get their
   // own column when the lineage column is toggled on).
@@ -54,13 +72,23 @@
   const lineageColTraits = (build: string) =>
     allTraits(build)
       .filter((t) => t.lineageNames != null)
-      .sort((a, b) => a.gradeRank - b.gradeRank || (a.lineageNames ?? '').localeCompare(b.lineageNames ?? '') || a.name.localeCompare(b.name));
+      .sort(
+        (a, b) =>
+          a.gradeRank - b.gradeRank ||
+          (a.lineageNames ?? '').localeCompare(b.lineageNames ?? '') ||
+          a.name.localeCompare(b.name)
+      );
   let showLineageCol = $state(false);
 
   const pBview = page.url?.searchParams?.get('bview') ?? '';
-  let bview = $state<'weapon' | 'armor' | 'trait' | 'all'>(
-    (['armor', 'trait', 'all'] as string[]).includes(pBview) ? (pBview as 'armor' | 'trait' | 'all') : 'weapon'
+  type BView = 'weapon' | 'armor' | 'trait' | 'stats' | 'all';
+  let bview = $state<BView>(
+    (['armor', 'trait', 'stats', 'all'] as string[]).includes(pBview) ? (pBview as BView) : 'weapon'
   );
+
+  // Which stats decide each build's fights, and the formula behind each. Static — GEAR is static.
+  const statRows = buildStatRows();
+  const RANK_GLYPH: Record<Rank, string> = { primary: '●', secondary: '○', none: '·' };
 
   // Cross-table multi-select: click any item/trait to highlight every instance of it in the table.
   let sel = $state<Record<string, boolean>>({});
@@ -126,6 +154,10 @@
   // Hover / info panel: a formatted, colour-coded breakdown of any item, trait, or build.
   let hovered = $state<GearRow | null>(null);
   let hoveredBuild = $state<string | null>(null);
+  /** A stat's formula panel — `why` is set when the hover came from a build's cell rather than a header. */
+  let hoveredStat = $state<{ info: StatInfo; build: string | null; why: string | null } | null>(
+    null
+  );
   let hx = $state(0);
   let hy = $state(0);
   function pos(e: MouseEvent) {
@@ -154,16 +186,30 @@
   function hoverGear(g: GearRow, e: MouseEvent) {
     hovered = g;
     hoveredBuild = null;
+    hoveredStat = null;
     pos(e);
   }
   function hoverBuild(b: string, e: MouseEvent) {
     hoveredBuild = b;
     hovered = null;
+    hoveredStat = null;
+    pos(e);
+  }
+  function hoverStat(
+    statId: string,
+    e: MouseEvent,
+    build: string | null = null,
+    why: string | null = null
+  ) {
+    hoveredStat = { info: STAT_INFO[statId], build, why };
+    hovered = null;
+    hoveredBuild = null;
     pos(e);
   }
   function hoverOut() {
     hovered = null;
     hoveredBuild = null;
+    hoveredStat = null;
   }
 
   interface InfoRow {
@@ -176,7 +222,8 @@
   function infoRows(g: GearRow): InfoRow[] {
     const rows: InfoRow[] = [];
     const push = (label: string, val: unknown, tone: InfoRow['tone'] = 'info') => {
-      if (val !== null && val !== undefined && val !== '') rows.push({ label, val: String(val), tone });
+      if (val !== null && val !== undefined && val !== '')
+        rows.push({ label, val: String(val), tone });
     };
     const e = g.raw?.effects ?? {};
     const mults = (obj: Record<string, number> | undefined, suffix = '') => {
@@ -185,7 +232,13 @@
     };
     if (g.kind === 'weapon' || g.kind === 'ammo') {
       // ── DAMAGE, all of it together ──
-      push('damage', g.dmg != null ? `${g.dmg}${g.damMin != null ? ` (${g.damMin}–${g.damMax})` : ''} ${g.damageType ?? ''}`.trim() : null, 'good');
+      push(
+        'damage',
+        g.dmg != null
+          ? `${g.dmg}${g.damMin != null ? ` (${g.damMin}–${g.damMax})` : ''} ${g.damageType ?? ''}`.trim()
+          : null,
+        'good'
+      );
       // Audit numbers. Paper dps is damage × the weapon's own speed. It is only reachable while the
       // wielder is slow enough: the weapon's speed multiplies the attack_speed stat and Combat floors
       // the interval at MIN_ATTACK_INTERVAL_TICKS, so cadence stops improving at
@@ -195,7 +248,11 @@
       const dps = g.dmg != null && g.atkSpeed != null ? g.dmg * g.atkSpeed : null;
       push('dps (dmg × speed)', dps != null ? dps.toFixed(1) : null, 'good');
       push('dps capped (1.67×)', g.dmg != null ? (g.dmg * CADENCE_CAP).toFixed(1) : null, 'good');
-      push('dmg / stamina', g.dmg != null && g.stamina ? (g.dmg / g.stamina).toFixed(1) : null, 'good');
+      push(
+        'dmg / stamina',
+        g.dmg != null && g.stamina ? (g.dmg / g.stamina).toFixed(1) : null,
+        'good'
+      );
       push('crit', g.crit != null ? pct(g.crit) : null, 'good');
       push('crit multiplier', g.critMult != null ? '×' + g.critMult.toFixed(1) : null, 'good');
       push('scales with', g.scaling);
@@ -243,7 +300,14 @@
       push('lineage', g.lineageNames);
       if (g.evoStage) push('evolution stage', g.evoStage);
       push('evolves into', g.evolvesTo);
-      for (const stat of ['strength', 'dexterity', 'constitution', 'perception', 'intelligence', 'charisma']) {
+      for (const stat of [
+        'strength',
+        'dexterity',
+        'constitution',
+        'perception',
+        'intelligence',
+        'charisma'
+      ]) {
         const ab = stat.slice(0, 3).toUpperCase();
         if (e[stat + 'Bonus'] != null) push(ab, '+' + e[stat + 'Bonus'], 'good');
         if (e[stat + 'Penalty'] != null) push(ab, '−' + e[stat + 'Penalty'], 'bad');
@@ -257,9 +321,16 @@
       push('night vision', e.nightVision != null ? '+' + e.nightVision : null, 'good');
       const res = g.raw?.resistances ?? {};
       for (const [k, v] of Object.entries(res)) push(k + ' resist', '×' + v, 'good');
-      if (g.raw?.bodyMods) push('body', g.raw.bodyMods.map((bm: any) => `${bm.target}${bm.hpMult ? ' ×' + bm.hpMult : ''}`).join(', '));
+      if (g.raw?.bodyMods)
+        push(
+          'body',
+          g.raw.bodyMods
+            .map((bm: any) => `${bm.target}${bm.hpMult ? ' ×' + bm.hpMult : ''}`)
+            .join(', ')
+        );
       if (g.raw?.selfCondition) push('grants', g.raw.selfCondition, 'good');
-      if (g.raw?.aura) push('aura', `${g.raw.aura.condition} · r${g.raw.aura.radius} · ${g.raw.aura.affects}`);
+      if (g.raw?.aura)
+        push('aura', `${g.raw.aura.condition} · r${g.raw.aura.radius} · ${g.raw.aura.affects}`);
     }
     if (g.kind !== 'trait') {
       push('weight', g.weightKg ? g.weightKg + ' kg' : null);
@@ -303,10 +374,16 @@
   function acKey(e: KeyboardEvent) {
     const n = acMatches.length;
     if (!n) return;
-    if (e.key === 'ArrowDown') { acIdx = (acIdx + 1) % n; e.preventDefault(); }
-    else if (e.key === 'ArrowUp') { acIdx = (acIdx - 1 + n) % n; e.preventDefault(); }
-    else if (e.key === 'Enter') { toggleSel(acMatches[acIdx].id); e.preventDefault(); }
-    else if (e.key === 'Escape') acq = '';
+    if (e.key === 'ArrowDown') {
+      acIdx = (acIdx + 1) % n;
+      e.preventDefault();
+    } else if (e.key === 'ArrowUp') {
+      acIdx = (acIdx - 1 + n) % n;
+      e.preventDefault();
+    } else if (e.key === 'Enter') {
+      toggleSel(acMatches[acIdx].id);
+      e.preventDefault();
+    } else if (e.key === 'Escape') acq = '';
   }
 
   // Initial view from the URL (?view=catalogue&kind=weapon&build=Marksman) so SSR + deep-links agree.
@@ -316,7 +393,9 @@
   let view = $state<'builds' | 'catalogue'>(
     pKind || pBuild || params.get('view') === 'catalogue' ? 'catalogue' : 'builds'
   );
-  let kind = $state<GearKind | 'all'>(pKind && CAT_KINDS.includes(pKind as never) ? (pKind as GearKind | 'all') : 'all');
+  let kind = $state<GearKind | 'all'>(
+    pKind && CAT_KINDS.includes(pKind as never) ? (pKind as GearKind | 'all') : 'all'
+  );
   let q = $state('');
   let cls = $state(pBuild ?? 'All');
   let age = $state('All');
@@ -328,16 +407,27 @@
   const dash = (v: string | null | undefined) => (v == null || v === '' ? '—' : v);
   const clsStr = (g: GearRow) => describeClasses(g.classes);
   const inputsStr = (g: GearRow) =>
-    g.recipe && g.recipe.inputs.length ? g.recipe.inputs.map((i) => `${i.qty}× ${i.name}`).join(', ') : '—';
+    g.recipe && g.recipe.inputs.length
+      ? g.recipe.inputs.map((i) => `${i.qty}× ${i.name}`).join(', ')
+      : '—';
   const detail = (g: GearRow) => {
     if (g.kind === 'weapon' || g.kind === 'ammo')
-      return g.dmg == null ? '—' : `${g.dmg}${g.damMin != null ? ` (${g.damMin}–${g.damMax})` : ''} ${g.damageType ?? ''}${g.ap ? ` · AP ${pct(g.ap)}` : ''}${g.crit ? ` · crit ${pct(g.crit)}` : ''}`;
-    if (g.kind === 'armor') return `def ${numf(g.defense)} · ${dash(g.armorType)}${g.slot ? ` · ${g.slot}` : ''}${g.stealthMod ? ` · stealth +${g.stealthMod}` : ''}`;
+      return g.dmg == null
+        ? '—'
+        : `${g.dmg}${g.damMin != null ? ` (${g.damMin}–${g.damMax})` : ''} ${g.damageType ?? ''}${g.ap ? ` · AP ${pct(g.ap)}` : ''}${g.crit ? ` · crit ${pct(g.crit)}` : ''}`;
+    if (g.kind === 'armor')
+      return `def ${numf(g.defense)} · ${dash(g.armorType)}${g.slot ? ` · ${g.slot}` : ''}${g.stealthMod ? ` · stealth +${g.stealthMod}` : ''}`;
     if (g.kind === 'trait') return dash(g.effect);
     return '—';
   };
   const source = (g: GearRow) =>
-    g.kind === 'trait' ? dash(g.gating) : g.recipe ? g.recipe.station : g.craftable ? 'craftable' : 'wild/boss';
+    g.kind === 'trait'
+      ? dash(g.gating)
+      : g.recipe
+        ? g.recipe.station
+        : g.craftable
+          ? 'craftable'
+          : 'wild/boss';
 
   interface Col {
     key: string;
@@ -350,11 +440,28 @@
 
   const clsCol: Col = { key: 'cls', label: 'Class', get: (g) => g.cls, disp: clsStr, clscol: true };
   const recipeCols: Col[] = [
-    { key: 'station', label: 'Station', get: (g) => g.recipe?.station ?? null, disp: (g) => dash(g.recipe?.station) },
-    { key: 'toolTier', label: 'Tool tier', get: (g) => g.recipe?.toolTier ?? null, disp: (g) => (g.recipe ? 'T' + g.recipe.toolTier : '—'), numeric: true },
+    {
+      key: 'station',
+      label: 'Station',
+      get: (g) => g.recipe?.station ?? null,
+      disp: (g) => dash(g.recipe?.station)
+    },
+    {
+      key: 'toolTier',
+      label: 'Tool tier',
+      get: (g) => g.recipe?.toolTier ?? null,
+      disp: (g) => (g.recipe ? 'T' + g.recipe.toolTier : '—'),
+      numeric: true
+    },
     { key: 'inputs', label: 'Inputs', get: (g) => inputsStr(g), disp: inputsStr },
     { key: 'research', label: 'Research', get: (g) => g.research, disp: (g) => dash(g.research) },
-    { key: 'craftable', label: 'Source', get: (g) => (g.craftable ? 1 : 0), disp: (g) => (g.craftable ? 'craftable' : 'wild/boss'), numeric: true }
+    {
+      key: 'craftable',
+      label: 'Source',
+      get: (g) => (g.craftable ? 1 : 0),
+      disp: (g) => (g.craftable ? 'craftable' : 'wild/boss'),
+      numeric: true
+    }
   ];
 
   const colsByKind: Record<string, Col[]> = {
@@ -362,29 +469,100 @@
       { key: 'name', label: 'Item · trait', get: (g) => g.name },
       { key: 'kind', label: 'Kind', get: (g) => g.kind },
       clsCol,
-      { key: 'age', label: 'Age', get: (g) => g.ageRank, disp: (g) => (g.kind === 'trait' ? '—' : g.age), numeric: true },
+      {
+        key: 'age',
+        label: 'Age',
+        get: (g) => g.ageRank,
+        disp: (g) => (g.kind === 'trait' ? '—' : g.age),
+        numeric: true
+      },
       { key: 'detail', label: 'Detail', get: (g) => detail(g) },
       { key: 'source', label: 'Source', get: (g) => source(g), disp: source }
     ],
     weapon: [
       { key: 'name', label: 'Weapon', get: (g) => g.name },
       clsCol,
-      { key: 'dmg', label: 'Dmg', get: (g) => g.dmg, disp: (g) => (g.dmg == null ? '—' : `${g.dmg} (${g.damMin}–${g.damMax})`), numeric: true },
-      { key: 'damageType', label: 'Type', get: (g) => g.damageType, disp: (g) => dash(g.damageType) },
+      {
+        key: 'dmg',
+        label: 'Dmg',
+        get: (g) => g.dmg,
+        disp: (g) => (g.dmg == null ? '—' : `${g.dmg} (${g.damMin}–${g.damMax})`),
+        numeric: true
+      },
+      {
+        key: 'damageType',
+        label: 'Type',
+        get: (g) => g.damageType,
+        disp: (g) => dash(g.damageType)
+      },
       { key: 'ap', label: 'AP', get: (g) => g.ap, disp: (g) => pct(g.ap), numeric: true },
-      { key: 'armorDmg', label: 'ArmDmg', get: (g) => g.armorDmg, disp: (g) => numf(g.armorDmg), numeric: true },
+      {
+        key: 'armorDmg',
+        label: 'ArmDmg',
+        get: (g) => g.armorDmg,
+        disp: (g) => numf(g.armorDmg),
+        numeric: true
+      },
       { key: 'crit', label: 'Crit', get: (g) => g.crit, disp: (g) => pct(g.crit), numeric: true },
-      { key: 'accuracy', label: 'Acc', get: (g) => g.accuracy, disp: (g) => numf(g.accuracy), numeric: true },
-      { key: 'atkSpeed', label: 'Spd', get: (g) => g.atkSpeed, disp: (g) => numf(g.atkSpeed), numeric: true },
-      { key: 'stamina', label: 'Stam', get: (g) => g.stamina, disp: (g) => numf(g.stamina), numeric: true },
-      { key: 'reach', label: 'Reach', get: (g) => g.reach, disp: (g) => numf(g.reach), numeric: true },
-      { key: 'range', label: 'Range', get: (g) => g.range, disp: (g) => numf(g.range), numeric: true },
+      {
+        key: 'accuracy',
+        label: 'Acc',
+        get: (g) => g.accuracy,
+        disp: (g) => numf(g.accuracy),
+        numeric: true
+      },
+      {
+        key: 'atkSpeed',
+        label: 'Spd',
+        get: (g) => g.atkSpeed,
+        disp: (g) => numf(g.atkSpeed),
+        numeric: true
+      },
+      {
+        key: 'stamina',
+        label: 'Stam',
+        get: (g) => g.stamina,
+        disp: (g) => numf(g.stamina),
+        numeric: true
+      },
+      {
+        key: 'reach',
+        label: 'Reach',
+        get: (g) => g.reach,
+        disp: (g) => numf(g.reach),
+        numeric: true
+      },
+      {
+        key: 'range',
+        label: 'Range',
+        get: (g) => g.range,
+        disp: (g) => numf(g.range),
+        numeric: true
+      },
       { key: 'stun', label: 'Stun', get: (g) => g.stun, disp: (g) => pct(g.stun), numeric: true },
       { key: 'scaling', label: 'Scales', get: (g) => g.scaling, disp: (g) => dash(g.scaling) },
-      { key: 'twoHanded', label: 'Hands', get: (g) => (g.twoHanded ? 2 : 1), disp: (g) => (g.twoHanded ? '2H' : '1H'), numeric: true },
+      {
+        key: 'twoHanded',
+        label: 'Hands',
+        get: (g) => (g.twoHanded ? 2 : 1),
+        disp: (g) => (g.twoHanded ? '2H' : '1H'),
+        numeric: true
+      },
       { key: 'onHit', label: 'On-hit', get: (g) => g.onHit, disp: (g) => dash(g.onHit) },
-      { key: 'wieldStr', label: 'STR gate', get: (g) => g.wieldStr, disp: (g) => numf(g.wieldStr), numeric: true },
-      { key: 'weightKg', label: 'Wt', get: (g) => g.weightKg, disp: (g) => g.weightKg + 'kg', numeric: true },
+      {
+        key: 'wieldStr',
+        label: 'STR gate',
+        get: (g) => g.wieldStr,
+        disp: (g) => numf(g.wieldStr),
+        numeric: true
+      },
+      {
+        key: 'weightKg',
+        label: 'Wt',
+        get: (g) => g.weightKg,
+        disp: (g) => g.weightKg + 'kg',
+        numeric: true
+      },
       { key: 'age', label: 'Age', get: (g) => g.ageRank, disp: (g) => g.age, numeric: true },
       { key: 'tier', label: 'Tier', get: (g) => g.tier, numeric: true },
       ...recipeCols
@@ -392,13 +570,48 @@
     armor: [
       { key: 'name', label: 'Armour', get: (g) => g.name },
       clsCol,
-      { key: 'defense', label: 'Def', get: (g) => g.defense, disp: (g) => numf(g.defense), numeric: true },
-      { key: 'armorType', label: 'Weight', get: (g) => g.armorType, disp: (g) => dash(g.armorType) },
+      {
+        key: 'defense',
+        label: 'Def',
+        get: (g) => g.defense,
+        disp: (g) => numf(g.defense),
+        numeric: true
+      },
+      {
+        key: 'armorType',
+        label: 'Weight',
+        get: (g) => g.armorType,
+        disp: (g) => dash(g.armorType)
+      },
       { key: 'slot', label: 'Slot', get: (g) => g.slot, disp: (g) => dash(g.slot) },
-      { key: 'block', label: 'Block', get: (g) => g.block, disp: (g) => pct(g.block), numeric: true },
-      { key: 'stealthMod', label: 'Stealth', get: (g) => g.stealthMod, disp: (g) => (g.stealthMod == null ? '—' : '+' + g.stealthMod), numeric: true },
-      { key: 'movePen', label: 'Move pen', get: (g) => g.movePen, disp: (g) => pct(g.movePen), numeric: true },
-      { key: 'weightKg', label: 'Wt', get: (g) => g.weightKg, disp: (g) => g.weightKg + 'kg', numeric: true },
+      {
+        key: 'block',
+        label: 'Block',
+        get: (g) => g.block,
+        disp: (g) => pct(g.block),
+        numeric: true
+      },
+      {
+        key: 'stealthMod',
+        label: 'Stealth',
+        get: (g) => g.stealthMod,
+        disp: (g) => (g.stealthMod == null ? '—' : '+' + g.stealthMod),
+        numeric: true
+      },
+      {
+        key: 'movePen',
+        label: 'Move pen',
+        get: (g) => g.movePen,
+        disp: (g) => pct(g.movePen),
+        numeric: true
+      },
+      {
+        key: 'weightKg',
+        label: 'Wt',
+        get: (g) => g.weightKg,
+        disp: (g) => g.weightKg + 'kg',
+        numeric: true
+      },
       { key: 'age', label: 'Age', get: (g) => g.ageRank, disp: (g) => g.age, numeric: true },
       { key: 'tier', label: 'Tier', get: (g) => g.tier, numeric: true },
       ...recipeCols
@@ -407,9 +620,20 @@
       { key: 'name', label: 'Ammunition', get: (g) => g.name },
       clsCol,
       { key: 'dmg', label: 'Dmg', get: (g) => g.dmg, disp: (g) => numf(g.dmg), numeric: true },
-      { key: 'damageType', label: 'Type', get: (g) => g.damageType, disp: (g) => dash(g.damageType) },
+      {
+        key: 'damageType',
+        label: 'Type',
+        get: (g) => g.damageType,
+        disp: (g) => dash(g.damageType)
+      },
       { key: 'ap', label: 'AP', get: (g) => g.ap, disp: (g) => pct(g.ap), numeric: true },
-      { key: 'armorDmg', label: 'ArmDmg', get: (g) => g.armorDmg, disp: (g) => numf(g.armorDmg), numeric: true },
+      {
+        key: 'armorDmg',
+        label: 'ArmDmg',
+        get: (g) => g.armorDmg,
+        disp: (g) => numf(g.armorDmg),
+        numeric: true
+      },
       { key: 'age', label: 'Age', get: (g) => g.ageRank, disp: (g) => g.age, numeric: true },
       ...recipeCols
     ],
@@ -420,7 +644,12 @@
       { key: 'gating', label: 'Gating', get: (g) => g.gating, disp: (g) => dash(g.gating) },
       { key: 'scope', label: 'Scope', get: (g) => g.scope, disp: (g) => dash(g.scope) },
       { key: 'rarity', label: 'Rarity', get: (g) => g.rarity, disp: (g) => dash(g.rarity) },
-      { key: 'lineageNames', label: 'Lineage', get: (g) => g.lineageNames, disp: (g) => dash(g.lineageNames) }
+      {
+        key: 'lineageNames',
+        label: 'Lineage',
+        get: (g) => g.lineageNames,
+        disp: (g) => dash(g.lineageNames)
+      }
     ]
   };
 
@@ -433,7 +662,19 @@
     if (q.trim()) {
       const s = q.trim().toLowerCase();
       r = r.filter((g) =>
-        (g.name + ' ' + g.id + ' ' + clsStr(g) + ' ' + (g.effect ?? '') + ' ' + (g.damageType ?? '')).toLowerCase().includes(s)
+        (
+          g.name +
+          ' ' +
+          g.id +
+          ' ' +
+          clsStr(g) +
+          ' ' +
+          (g.effect ?? '') +
+          ' ' +
+          (g.damageType ?? '')
+        )
+          .toLowerCase()
+          .includes(s)
       );
     }
     const col = cols.find((c) => c.key === sortKey) ?? cols[0];
@@ -472,22 +713,34 @@
 
 <div class="build-db">
   <header>
-    <h1>Build database <span class="live">live · {BUILDS.length} builds · {GEAR.length} entries</span></h1>
-    <p>Auto-classified from <code>items.jsonc</code>, <code>recipes.jsonc</code> &amp; <code>traits.jsonc</code> by stats. Edit the data, save, reload.</p>
+    <h1>
+      Build database <span class="live">live · {BUILDS.length} builds · {GEAR.length} entries</span>
+    </h1>
+    <p>
+      Auto-classified from <code>items.jsonc</code>, <code>recipes.jsonc</code> &amp;
+      <code>traits.jsonc</code> by stats. Edit the data, save, reload.
+    </p>
   </header>
 
   <div class="tabs">
-    <button class="tab lead" class:active={view === 'builds'} onclick={() => (view = 'builds')}>Builds</button>
+    <button class="tab lead" class:active={view === 'builds'} onclick={() => (view = 'builds')}
+      >Builds</button
+    >
     <span class="sep"></span>
     {#each CAT_KINDS as k (k)}
-      <button class="tab" class:active={view === 'catalogue' && kind === k} onclick={() => selectKind(k)}>{KIND_LABEL[k]}</button>
+      <button
+        class="tab"
+        class:active={view === 'catalogue' && kind === k}
+        onclick={() => selectKind(k)}>{KIND_LABEL[k]}</button
+      >
     {/each}
     <button
       class="tab info-toggle"
       class:active={compare}
       onclick={() => (compare = !compare)}
       title="Compare: pick up to {COMPARE_MAX} entries and read them side by side in one grid"
-    >⇹ compare{compare ? ` ${selOrder.length}/${COMPARE_MAX}` : ''}</button>
+      >⇹ compare{compare ? ` ${selOrder.length}/${COMPARE_MAX}` : ''}</button
+    >
   </div>
 
   {#snippet pill(g: GearRow, armour: boolean)}
@@ -499,7 +752,10 @@
       onclick={() => toggleSel(g.id)}
       onmouseenter={(e) => hoverGear(g, e)}
       onmouseleave={hoverOut}
-    >{g.name}{#if g.kind === 'trait'}{#if g.lineageNames}<i class="lin">{g.lineageNames}</i>{:else if g.evoStage}<i>s{g.evoStage}</i>{/if}{:else}<i>T{g.tier}</i>{#if armour && g.bodyPart}<i class="slot">{g.bodyPart}</i>{/if}{/if}</button>
+      >{g.name}{#if g.kind === 'trait'}{#if g.lineageNames}<i class="lin">{g.lineageNames}</i
+          >{:else if g.evoStage}<i>s{g.evoStage}</i>{/if}{:else}<i>T{g.tier}</i
+        >{#if armour && g.bodyPart}<i class="slot">{g.bodyPart}</i>{/if}{/if}</button
+    >
   {/snippet}
   {#snippet gearCell(items: GearRow[], armour: boolean)}
     {#each items as it (it.id)}{@render pill(it, armour)}{/each}
@@ -508,36 +764,102 @@
   {/snippet}
 
   {#snippet infoBody(g: GearRow)}
-    <div class="info-head" data-cat={BUILD_CAT[g.cls] ?? 'general'}>{g.name}<span class="info-kind">{g.kind}</span></div>
+    <div class="info-head" data-cat={BUILD_CAT[g.cls] ?? 'general'}>
+      {g.name}<span class="info-kind">{g.kind}</span>
+    </div>
     {#if g.desc}<p class="info-desc">{g.desc}</p>{/if}
     <div class="info-grid">
-      <div class="info-row"><span class="il">class</span><span class="iv info">{describeClasses(g.classes)}</span></div>
-      {#each infoRows(g) as r, i (i)}<div class="info-row"><span class="il">{r.label}</span><span class="iv {r.tone}">{r.val}</span></div>{/each}
+      <div class="info-row">
+        <span class="il">class</span><span class="iv info">{describeClasses(g.classes)}</span>
+      </div>
+      {#each infoRows(g) as r, i (i)}<div class="info-row">
+          <span class="il">{r.label}</span><span class="iv {r.tone}">{r.val}</span>
+        </div>{/each}
+    </div>
+  {/snippet}
+  {#snippet statBody(s: StatInfo, build: string | null, why: string | null)}
+    <div class="info-head" data-cat={build ? BUILD_CAT[build] : 'general'}>
+      {s.label}<span class="info-kind">{s.wiring === 'wired' ? 'stat' : s.wiring}</span>
+    </div>
+    {#if s.description}<p class="info-desc">{s.description}</p>{/if}
+    <div class="info-grid">
+      {#if why}<div class="info-row">
+          <span class="il">{build}</span><span class="iv info">{why}</span>
+        </div>{/if}
+      <div class="info-row">
+        <span class="il">keys off</span><span class="iv info">{s.primaryStat ?? '—'}</span>
+      </div>
+      <div class="info-row">
+        <span class="il">formula</span><span class="iv good mono">{s.formula}</span>
+      </div>
+      {#if s.engineFormula}
+        <div class="info-row">
+          <span class="il">in combat</span><span
+            class="iv {s.wiring === 'dead' ? 'bad' : 'info'} mono">{s.engineFormula}</span
+          >
+        </div>
+      {/if}
+      <div class="info-row">
+        <span class="il">read by</span>
+        <span class="iv {s.wiring === 'wired' ? 'good' : 'bad'}">{s.where}</span>
+      </div>
     </div>
   {/snippet}
   {#snippet buildBody(b: string)}
-    <div class="info-head" data-cat={BUILD_CAT[b]}>{b}<span class="info-kind">build spec</span></div>
+    <div class="info-head" data-cat={BUILD_CAT[b]}>
+      {b}<span class="info-kind">build spec</span>
+    </div>
     <div class="info-grid">
-      <div class="info-row"><span class="il">goal</span><span class="iv good">{BUILD_SPEC[b]?.goal}</span></div>
-      <div class="info-row"><span class="il">requires</span><span class="iv info">{BUILD_SPEC[b]?.requires}</span></div>
-      <div class="info-row"><span class="il">downside</span><span class="iv bad">{BUILD_SPEC[b]?.downside}</span></div>
+      <div class="info-row">
+        <span class="il">goal</span><span class="iv good">{BUILD_SPEC[b]?.goal}</span>
+      </div>
+      <div class="info-row">
+        <span class="il">requires</span><span class="iv info">{BUILD_SPEC[b]?.requires}</span>
+      </div>
+      <div class="info-row">
+        <span class="il">downside</span><span class="iv bad">{BUILD_SPEC[b]?.downside}</span>
+      </div>
     </div>
   {/snippet}
 
   {#if view === 'builds'}
     <div class="tabs sub">
-      <button class="tab" class:active={bview === 'weapon'} onclick={() => (bview = 'weapon')}>Weapons by age</button>
-      <button class="tab" class:active={bview === 'armor'} onclick={() => (bview = 'armor')}>Armour by age</button>
-      <button class="tab" class:active={bview === 'trait'} onclick={() => (bview = 'trait')}>Traits &amp; lineages</button>
-      <button class="tab" class:active={bview === 'all'} onclick={() => (bview = 'all')}>ALL</button>
-      {#if selCount}<button class="tab clear" onclick={clearSel}>clear {selCount} selected ✕</button>{/if}
+      <button class="tab" class:active={bview === 'weapon'} onclick={() => (bview = 'weapon')}
+        >Weapons by age</button
+      >
+      <button class="tab" class:active={bview === 'armor'} onclick={() => (bview = 'armor')}
+        >Armour by age</button
+      >
+      <button class="tab" class:active={bview === 'trait'} onclick={() => (bview = 'trait')}
+        >Traits &amp; lineages</button
+      >
+      <button class="tab" class:active={bview === 'stats'} onclick={() => (bview = 'stats')}
+        >Stats by build</button
+      >
+      <button class="tab" class:active={bview === 'all'} onclick={() => (bview = 'all')}>ALL</button
+      >
+      {#if selCount}<button class="tab clear" onclick={clearSel}>clear {selCount} selected ✕</button
+        >{/if}
     </div>
     <div class="ac">
-      <input class="search" type="search" autocomplete="off" placeholder="find weapon / armour / trait — ↑↓ to cycle, Enter to highlight" bind:value={acq} onkeydown={acKey} />
+      <input
+        class="search"
+        type="search"
+        autocomplete="off"
+        placeholder="find weapon / armour / trait — ↑↓ to cycle, Enter to highlight"
+        bind:value={acq}
+        onkeydown={acKey}
+      />
       {#if acMatches.length}
         <div class="acmenu" role="listbox" aria-label="matches">
           {#each acMatches as g, i (g.id)}
-            <button type="button" class="acitem" class:hl={i === acIdx} class:selli={sel[g.id]} onclick={() => toggleSel(g.id)}>
+            <button
+              type="button"
+              class="acitem"
+              class:hl={i === acIdx}
+              class:selli={sel[g.id]}
+              onclick={() => toggleSel(g.id)}
+            >
               <span class="acname">{g.name}</span>
               <span class="ackind">{g.kind}</span>
               <span class="acbuild">{clsStr(g)}</span>
@@ -548,34 +870,127 @@
     </div>
     {#if bview === 'trait'}
       <p class="hint">
-        Each build's traits by rarity — <b class="neg">flaws in red</b>, lineage marker as a grey pill.
-        <label class="chk" style="margin-left:14px"><input type="checkbox" bind:checked={showLineageCol} /> show lineage column</label>
-        <span class="sub" style="margin-left:8px">{showLineageCol ? '(lineage traits pulled into their own column)' : '(lineage traits shown in their rarity column)'}</span>
+        Each build's traits by rarity — <b class="neg">flaws in red</b>, lineage marker as a grey
+        pill.
+        <label class="chk" style="margin-left:14px"
+          ><input type="checkbox" bind:checked={showLineageCol} /> show lineage column</label
+        >
+        <span class="sub" style="margin-left:8px"
+          >{showLineageCol
+            ? '(lineage traits pulled into their own column)'
+            : '(lineage traits shown in their rarity column)'}</span
+        >
       </p>
       <div class="scroll">
         <table class="grid">
           <thead>
-            <tr><th>Build</th>{#each REAL_RARITIES as r (r)}<th>{r}</th>{/each}{#if showLineageCol}<th>lineage</th>{/if}</tr>
+            <tr
+              ><th>Build</th>{#each REAL_RARITIES as r (r)}<th>{r}</th
+                >{/each}{#if showLineageCol}<th>lineage</th>{/if}</tr
+            >
           </thead>
           <tbody>
             {#each BUILDS as b (b)}
               <tr>
-                <td class="name cls clickable" data-cat={BUILD_CAT[b]} onclick={() => openBuild(b)} onmouseenter={(e) => hoverBuild(b, e)} onmouseleave={hoverOut}>{b}</td>
+                <td
+                  class="name cls clickable"
+                  data-cat={BUILD_CAT[b]}
+                  onclick={() => openBuild(b)}
+                  onmouseenter={(e) => hoverBuild(b, e)}
+                  onmouseleave={hoverOut}>{b}</td
+                >
                 {#each REAL_RARITIES as r (r)}
                   {@const ts = raritycell(b, r, showLineageCol)}
-                  <td class="cellwrap" class:gap={ts.length === 0}>{#if ts.length}{#each ts as t (t.id)}{@render pill(t, false)}{/each}{:else}<span class="dot">·</span>{/if}</td>
+                  <td class="cellwrap" class:gap={ts.length === 0}
+                    >{#if ts.length}{#each ts as t (t.id)}{@render pill(
+                          t,
+                          false
+                        )}{/each}{:else}<span class="dot">·</span>{/if}</td
+                  >
                 {/each}
                 {#if showLineageCol}
                   {@const ls = lineageColTraits(b)}
-                  <td class="cellwrap" class:gap={ls.length === 0}>{#if ls.length}{#each ls as t (t.id)}{@render pill(t, false)}{/each}{:else}<span class="dot">·</span>{/if}</td>
+                  <td class="cellwrap" class:gap={ls.length === 0}
+                    >{#if ls.length}{#each ls as t (t.id)}{@render pill(
+                          t,
+                          false
+                        )}{/each}{:else}<span class="dot">·</span>{/if}</td
+                  >
                 {/if}
               </tr>
             {/each}
           </tbody>
         </table>
       </div>
+    {:else if bview === 'stats'}
+      <p class="hint">
+        Which stats decide each build's fights — <b class="pri">●</b> decisive ·
+        <b class="sec">○</b>
+        matters · <span class="dot">·</span> irrelevant. Hover a column head for the formula, a cell
+        for why this build cares. <b class="neg">Struck-through columns are stats no fight reads</b> —
+        the formula is there, the callsite isn't.
+      </p>
+      <div class="scroll">
+        <table class="grid stats">
+          <thead>
+            <tr class="grouphead">
+              <th colspan="2"></th>
+              {#each STAT_GROUPS as grp (grp.label)}<th colspan={grp.stats.length}>{grp.label}</th
+                >{/each}
+            </tr>
+            <tr>
+              <th>Build</th>
+              <th>Scales on</th>
+              {#each STAT_GROUPS as grp (grp.label)}
+                {#each grp.stats as sid (sid)}
+                  {@const s = STAT_INFO[sid]}
+                  <th
+                    class="stath"
+                    class:dead={s.wiring === 'dead'}
+                    class:mirrored={s.wiring === 'mirrored'}
+                    onmouseenter={(e) => hoverStat(sid, e)}
+                    onmouseleave={hoverOut}
+                    >{s.label}{#if s.wiring !== 'wired'}<i class="wire"
+                        >{s.wiring === 'dead' ? '✕' : '≈'}</i
+                      >{/if}</th
+                  >
+                {/each}
+              {/each}
+            </tr>
+          </thead>
+          <tbody>
+            {#each statRows as row (row.build)}
+              <tr>
+                <td
+                  class="name cls clickable"
+                  data-cat={BUILD_CAT[row.build]}
+                  onclick={() => openBuild(row.build)}
+                  onmouseenter={(e) => hoverBuild(row.build, e)}
+                  onmouseleave={hoverOut}>{row.build}</td
+                >
+                <td class="power">{row.powerStats.join(' · ') || '—'}</td>
+                {#each STAT_GROUPS as grp (grp.label)}
+                  {#each grp.stats as sid (sid)}
+                    {@const c = row.cells[sid]}
+                    <td
+                      class="statcell {c.rank}"
+                      class:dead={STAT_INFO[sid].wiring === 'dead'}
+                      onmouseenter={(e) => hoverStat(sid, e, row.build, c.why)}
+                      onmouseleave={hoverOut}>{RANK_GLYPH[c.rank]}</td
+                    >
+                  {/each}
+                {/each}
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
     {:else if bview === 'all'}
-      <p class="hint">One row per build — weapons &amp; armour by age (tier-sorted), then traits by rarity (<b class="neg">flaws in red</b>). <code>T#</code> = tier · <code>s#</code> = evolution stage. Click any to highlight.</p>
+      <p class="hint">
+        One row per build — weapons &amp; armour by age (tier-sorted), then traits by rarity (<b
+          class="neg">flaws in red</b
+        >). <code>T#</code> = tier · <code>s#</code> = evolution stage. Click any to highlight.
+      </p>
       <div class="scroll">
         <table class="grid">
           <thead>
@@ -595,18 +1010,33 @@
           <tbody>
             {#each BUILDS as b (b)}
               <tr>
-                <td class="name cls clickable" data-cat={BUILD_CAT[b]} onclick={() => openBuild(b)} onmouseenter={(e) => hoverBuild(b, e)} onmouseleave={hoverOut}>{b}</td>
+                <td
+                  class="name cls clickable"
+                  data-cat={BUILD_CAT[b]}
+                  onclick={() => openBuild(b)}
+                  onmouseenter={(e) => hoverBuild(b, e)}
+                  onmouseleave={hoverOut}>{b}</td
+                >
                 {#each AGES as a (a)}
                   {@const its = cell(b, 'weapon', a)}
-                  <td class="cellwrap" class:gap={its.length === 0}>{@render gearCell(its, false)}</td>
+                  <td class="cellwrap" class:gap={its.length === 0}
+                    >{@render gearCell(its, false)}</td
+                  >
                 {/each}
                 {#each AGES as a (a)}
                   {@const its = cell(b, 'armor', a)}
-                  <td class="cellwrap" class:gap={its.length === 0}>{@render gearCell(its, true)}</td>
+                  <td class="cellwrap" class:gap={its.length === 0}
+                    >{@render gearCell(its, true)}</td
+                  >
                 {/each}
                 {#each REAL_RARITIES as r (r)}
                   {@const ts = raritycell(b, r)}
-                  <td class="cellwrap" class:gap={ts.length === 0}>{#if ts.length}{#each ts as t (t.id)}{@render pill(t, false)}{/each}{:else}<span class="dot">·</span>{/if}</td>
+                  <td class="cellwrap" class:gap={ts.length === 0}
+                    >{#if ts.length}{#each ts as t (t.id)}{@render pill(
+                          t,
+                          false
+                        )}{/each}{:else}<span class="dot">·</span>{/if}</td
+                  >
                 {/each}
               </tr>
             {/each}
@@ -614,19 +1044,33 @@
         </table>
       </div>
     {:else}
-      <p class="hint">Each build's {bview === 'weapon' ? 'weapons' : 'armour'} laid out by age — empty cells are coverage gaps. <code>T#</code> = tier. Click an item to highlight it across the table; click a build name for its full list.</p>
+      <p class="hint">
+        Each build's {bview === 'weapon' ? 'weapons' : 'armour'} laid out by age — empty cells are coverage
+        gaps. <code>T#</code> = tier. Click an item to highlight it across the table; click a build name
+        for its full list.
+      </p>
       <div class="scroll">
         <table class="grid">
           <thead>
-            <tr><th>Build</th>{#each AGES as a (a)}<th>{a}</th>{/each}</tr>
+            <tr
+              ><th>Build</th>{#each AGES as a (a)}<th>{a}</th>{/each}</tr
+            >
           </thead>
           <tbody>
             {#each BUILDS as b (b)}
               <tr>
-                <td class="name cls clickable" data-cat={BUILD_CAT[b]} onclick={() => openBuild(b)} onmouseenter={(e) => hoverBuild(b, e)} onmouseleave={hoverOut}>{b}</td>
+                <td
+                  class="name cls clickable"
+                  data-cat={BUILD_CAT[b]}
+                  onclick={() => openBuild(b)}
+                  onmouseenter={(e) => hoverBuild(b, e)}
+                  onmouseleave={hoverOut}>{b}</td
+                >
                 {#each AGES as a (a)}
                   {@const its = cell(b, bview, a)}
-                  <td class="cellwrap" class:gap={its.length === 0}>{@render gearCell(its, bview === 'armor')}</td>
+                  <td class="cellwrap" class:gap={its.length === 0}
+                    >{@render gearCell(its, bview === 'armor')}</td
+                  >
                 {/each}
               </tr>
             {/each}
@@ -637,13 +1081,15 @@
   {:else}
     <div class="controls">
       <input class="search" type="search" placeholder="search…" bind:value={q} />
-      <label>build
+      <label
+        >build
         <select bind:value={cls}>
           <option>All</option>
           {#each CLASSES as c (c)}<option>{c}</option>{/each}
         </select>
       </label>
-      <label>age
+      <label
+        >age
         <select bind:value={age}>
           <option>All</option>
           {#each AGES as a (a)}<option>{a}</option>{/each}
@@ -656,8 +1102,14 @@
         <thead>
           <tr>
             {#each cols as c (c.key)}
-              <th class:num={c.numeric} class:sorted={sortKey === c.key} onclick={() => sortBy(c.key)}>
-                {c.label}{#if sortKey === c.key}<span class="arrow">{sortDir === 1 ? '▲' : '▼'}</span>{/if}
+              <th
+                class:num={c.numeric}
+                class:sorted={sortKey === c.key}
+                onclick={() => sortBy(c.key)}
+              >
+                {c.label}{#if sortKey === c.key}<span class="arrow"
+                    >{sortDir === 1 ? '▲' : '▼'}</span
+                  >{/if}
               </th>
             {/each}
           </tr>
@@ -666,7 +1118,12 @@
           {#each rows as g (g.id)}
             <tr class="clickable" class:sel={sel[g.id]} onclick={() => toggleSel(g.id)}>
               {#each cols as c (c.key)}
-                <td class:num={c.numeric} class:name={c.key === 'name'} class:cls={c.clscol} data-cat={BUILD_CAT[g.cls]}>
+                <td
+                  class:num={c.numeric}
+                  class:name={c.key === 'name'}
+                  class:cls={c.clscol}
+                  data-cat={BUILD_CAT[g.cls]}
+                >
                   {c.disp ? c.disp(g) : (c.get(g) ?? '—')}
                 </td>
               {/each}
@@ -691,14 +1148,18 @@
           type="button"
           class="cmp-btn"
           title={compareMin ? 'restore' : 'minimise'}
-          onclick={() => (compareMin = !compareMin)}
-        >{compareMin ? '▴' : '▾'}</button>
-        <button type="button" class="cmp-btn" title="close" onclick={() => (compare = false)}>✕</button>
+          onclick={() => (compareMin = !compareMin)}>{compareMin ? '▴' : '▾'}</button
+        >
+        <button type="button" class="cmp-btn" title="close" onclick={() => (compare = false)}
+          >✕</button
+        >
       </header>
       {#if !compareMin}
         <div class="cmp-body">
           {#if compareRows.length === 0}
-            <p class="info-empty">Click up to {COMPARE_MAX} entries in the table to compare them. A fourth drops the oldest.</p>
+            <p class="info-empty">
+              Click up to {COMPARE_MAX} entries in the table to compare them. A fourth drops the oldest.
+            </p>
           {:else}
             <div class="cmp-grid" style="--cols:{compareRows.length}">
               <div class="cmp-row cmp-head">
@@ -707,7 +1168,12 @@
                   <span class="cmp-name" data-cat={BUILD_CAT[g.cls] ?? 'general'}>
                     {g.name}
                     <i>{g.kind} · {g.age} · T{g.tier}</i>
-                    <button type="button" class="cmp-drop" title="remove" onclick={() => toggleSel(g.id)}>✕</button>
+                    <button
+                      type="button"
+                      class="cmp-drop"
+                      title="remove"
+                      onclick={() => toggleSel(g.id)}>✕</button
+                    >
                   </span>
                 {/each}
               </div>
@@ -727,7 +1193,11 @@
     </section>
   {/if}
 
-  {#if hoveredBuild}
+  {#if hoveredStat}
+    <div class="tooltip wide" use:place={[hx, hy, hoveredStat]}>
+      {@render statBody(hoveredStat.info, hoveredStat.build, hoveredStat.why)}
+    </div>
+  {:else if hoveredBuild}
     <div class="tooltip" use:place={[hx, hy, hoveredBuild]}>{@render buildBody(hoveredBuild)}</div>
   {:else if hovered}
     <div class="tooltip" use:place={[hx, hy, hovered]}>{@render infoBody(hovered)}</div>
@@ -1006,6 +1476,57 @@
   b.neg {
     color: #d76f5d;
   }
+  b.pri {
+    color: #d8ab52;
+  }
+  b.sec {
+    color: #9a9279;
+  }
+
+  /* stats-by-build matrix */
+  table.stats th.stath {
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    padding: 6px 5px;
+  }
+  table.stats th.stath.dead {
+    color: #8a564a;
+    text-decoration: line-through;
+  }
+  table.stats th.stath.mirrored {
+    color: #b08a4a;
+  }
+  th .wire {
+    font-style: normal;
+    margin-left: 3px;
+    font-size: 9px;
+  }
+  td.power {
+    color: #9a9279;
+    font-size: 11px;
+  }
+  td.statcell {
+    text-align: center;
+    cursor: help;
+    font-size: 13px;
+    padding: 4px 5px;
+  }
+  td.statcell.primary {
+    color: #d8ab52;
+  }
+  td.statcell.secondary {
+    color: #7d7663;
+  }
+  td.statcell.none {
+    color: #38332a;
+  }
+  td.statcell.dead {
+    opacity: 0.45;
+  }
+  td.statcell:hover {
+    background: rgba(216, 171, 82, 0.12);
+  }
   .pill.neg {
     color: #d99a8e;
     border-color: rgba(215, 111, 93, 0.35);
@@ -1094,6 +1615,15 @@
     pointer-events: none;
     font-size: 12.5px;
   }
+  /* A formula is a line of code — it needs the room a stat block doesn't. */
+  .tooltip.wide {
+    width: 440px;
+  }
+  .iv.mono {
+    font-size: 11.5px;
+    line-height: 1.45;
+    word-break: break-word;
+  }
   /* ── COMPARE POPUP ─────────────────────────────────────────────────────────
      Docked bottom-right, capped in both axes and scrolled internally, so no amount of content can
      push it off-screen. The body is ONE grid: a label gutter plus an equal column per pick, which is
@@ -1181,13 +1711,27 @@
     position: relative;
     padding-right: 14px;
   }
-  .cmp-name[data-cat='melee'] { color: #83bb6f; }
-  .cmp-name[data-cat='duelist'] { color: #d3a04e; }
-  .cmp-name[data-cat='tank'] { color: #6fa0c8; }
-  .cmp-name[data-cat='finesse'] { color: #e6bf57; }
-  .cmp-name[data-cat='ranged'] { color: #d76f5d; }
-  .cmp-name[data-cat='caster'] { color: #a98fd6; }
-  .cmp-name[data-cat='general'] { color: #9a9279; }
+  .cmp-name[data-cat='melee'] {
+    color: #83bb6f;
+  }
+  .cmp-name[data-cat='duelist'] {
+    color: #d3a04e;
+  }
+  .cmp-name[data-cat='tank'] {
+    color: #6fa0c8;
+  }
+  .cmp-name[data-cat='finesse'] {
+    color: #e6bf57;
+  }
+  .cmp-name[data-cat='ranged'] {
+    color: #d76f5d;
+  }
+  .cmp-name[data-cat='caster'] {
+    color: #a98fd6;
+  }
+  .cmp-name[data-cat='general'] {
+    color: #9a9279;
+  }
   .cmp-name i {
     font-style: normal;
     font-weight: 400;
@@ -1267,13 +1811,27 @@
     padding-bottom: 6px;
     margin-bottom: 8px;
   }
-  .info-head[data-cat='melee'] { color: #83bb6f; }
-  .info-head[data-cat='duelist'] { color: #d3a04e; }
-  .info-head[data-cat='tank'] { color: #6fa0c8; }
-  .info-head[data-cat='finesse'] { color: #e6bf57; }
-  .info-head[data-cat='ranged'] { color: #d76f5d; }
-  .info-head[data-cat='caster'] { color: #a98fd6; }
-  .info-head[data-cat='general'] { color: #9a9279; }
+  .info-head[data-cat='melee'] {
+    color: #83bb6f;
+  }
+  .info-head[data-cat='duelist'] {
+    color: #d3a04e;
+  }
+  .info-head[data-cat='tank'] {
+    color: #6fa0c8;
+  }
+  .info-head[data-cat='finesse'] {
+    color: #e6bf57;
+  }
+  .info-head[data-cat='ranged'] {
+    color: #d76f5d;
+  }
+  .info-head[data-cat='caster'] {
+    color: #a98fd6;
+  }
+  .info-head[data-cat='general'] {
+    color: #9a9279;
+  }
   .info-kind {
     font-size: 10px;
     text-transform: uppercase;
@@ -1310,9 +1868,15 @@
     flex: 1;
     font-variant-numeric: tabular-nums;
   }
-  .iv.good { color: #83bb6f; }
-  .iv.bad { color: #d76f5d; }
-  .iv.info { color: #ece6d4; }
+  .iv.good {
+    color: #83bb6f;
+  }
+  .iv.bad {
+    color: #d76f5d;
+  }
+  .iv.info {
+    color: #ece6d4;
+  }
   .info-empty {
     color: #6d6653;
     font-size: 12px;

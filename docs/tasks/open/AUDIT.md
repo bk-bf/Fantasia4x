@@ -114,9 +114,12 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 
 ### Weapons
 
-> **The fix list for everything ⚠ below lives in [COMBAT-BALANCE](COMBAT-BALANCE.md)** — 11 tasks with
-> the measurement each one came from, sequenced. This section stays the AUDIT (what is true); that file
-> is the WORK (what to change).
+> **The fix list for everything ⚠ below lives in [COMBAT-BALANCE](COMBAT-BALANCE.md)** — 14 tasks in 5
+> phases, each carrying the measurement it came from. This section stays the AUDIT (what is true); that
+> file is the WORK (what to change). The findings resolved into a **two-axis rebuild**: core stats set
+> damage capacity only (through `melee_damage`/`ranged_damage`, so injury applies), the grip picks which
+> core stat, and `hit_chance`/`attack_speed`/`hit_precision`/`armor_damage` become per-pawn rolls
+> instead of DEX derivatives.
 
 Mechanic-level checks (equip, ammo lifecycle, staves, shields) are settled and stay ticked. The
 per-weapon BALANCE tracker below replaces the old five-bullet pass, which only ever sampled two
